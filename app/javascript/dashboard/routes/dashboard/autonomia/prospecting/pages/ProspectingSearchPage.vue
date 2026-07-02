@@ -100,20 +100,22 @@ onMounted(fetchSearches);
 </script>
 
 <template>
-  <main class="flex flex-col min-h-full bg-n-background">
+  <main class="flex h-full min-h-0 flex-col overflow-hidden bg-n-background">
     <header class="border-b border-n-weak px-6 py-4">
       <h1 class="text-xl font-semibold text-n-slate-12">
         {{ t('PROSPECTING.SEARCH.TITLE') }}
       </h1>
     </header>
 
-    <section class="grid gap-4 px-6 py-5">
+    <section
+      class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5"
+    >
       <form
-        class="grid items-end gap-3 rounded-lg border border-n-weak bg-n-solid-1 p-4 md:grid-cols-[minmax(14rem,1fr)_minmax(14rem,1fr)_8rem_8rem_10rem]"
+        class="grid gap-3 rounded-lg border border-n-weak bg-n-solid-1 p-4 md:grid-cols-[minmax(14rem,1fr)_minmax(14rem,1fr)_8rem_8rem_10rem]"
         @submit.prevent="submitSearch"
       >
-        <label class="grid gap-1">
-          <span class="text-xs font-medium text-n-slate-11">
+        <label class="grid grid-rows-[1.25rem_2.5rem] gap-1">
+          <span class="flex items-end text-xs font-medium text-n-slate-11">
             {{ t('PROSPECTING.SEARCH.FIELDS.QUERY') }}
           </span>
           <input
@@ -122,8 +124,8 @@ onMounted(fetchSearches);
             :placeholder="t('PROSPECTING.SEARCH.QUERY_PLACEHOLDER')"
           />
         </label>
-        <label class="grid gap-1">
-          <span class="text-xs font-medium text-n-slate-11">
+        <label class="grid grid-rows-[1.25rem_2.5rem] gap-1">
+          <span class="flex items-end text-xs font-medium text-n-slate-11">
             {{ t('PROSPECTING.SEARCH.FIELDS.LOCATION') }}
           </span>
           <input
@@ -132,8 +134,8 @@ onMounted(fetchSearches);
             :placeholder="t('PROSPECTING.SEARCH.LOCATION_PLACEHOLDER')"
           />
         </label>
-        <label class="grid gap-1">
-          <span class="text-xs font-medium text-n-slate-11">
+        <label class="grid grid-rows-[1.25rem_2.5rem] gap-1">
+          <span class="flex items-end text-xs font-medium text-n-slate-11">
             {{ t('PROSPECTING.SEARCH.FIELDS.RADIUS') }}
           </span>
           <input
@@ -144,8 +146,8 @@ onMounted(fetchSearches);
             class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
           />
         </label>
-        <label class="grid gap-1">
-          <span class="text-xs font-medium text-n-slate-11">
+        <label class="grid grid-rows-[1.25rem_2.5rem] gap-1">
+          <span class="flex items-end text-xs font-medium text-n-slate-11">
             {{ t('PROSPECTING.SEARCH.FIELDS.LIMIT') }}
           </span>
           <input
@@ -156,17 +158,20 @@ onMounted(fetchSearches);
             class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
           />
         </label>
-        <button
-          type="submit"
-          class="h-10 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-          :disabled="!canSearch"
-        >
-          {{
-            isSearching
-              ? t('PROSPECTING.SEARCH.SEARCHING')
-              : t('PROSPECTING.SEARCH.ACTION')
-          }}
-        </button>
+        <div class="grid grid-rows-[1.25rem_2.5rem] gap-1">
+          <span aria-hidden="true" />
+          <button
+            type="submit"
+            class="h-10 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="!canSearch"
+          >
+            {{
+              isSearching
+                ? t('PROSPECTING.SEARCH.SEARCHING')
+                : t('PROSPECTING.SEARCH.ACTION')
+            }}
+          </button>
+        </div>
       </form>
 
       <div
@@ -176,69 +181,78 @@ onMounted(fetchSearches);
         {{ error }}
       </div>
 
-      <div class="overflow-hidden rounded-lg border border-n-weak bg-n-solid-1">
+      <div
+        class="flex min-h-[16rem] max-h-[calc(100vh-18rem)] flex-col overflow-hidden rounded-lg border border-n-weak bg-n-solid-1"
+      >
         <div class="border-b border-n-weak px-4 py-3">
           <h2 class="text-sm font-semibold text-n-slate-12">
             {{ t('PROSPECTING.SEARCH.RESULTS_TITLE') }}
           </h2>
         </div>
-        <div v-if="isSearching" class="px-4 py-8 text-sm text-n-slate-11">
-          {{ t('PROSPECTING.STATES.LOADING') }}
-        </div>
-        <div v-else-if="!hasResults" class="px-4 py-8 text-sm text-n-slate-11">
-          {{ resultsEmptyText }}
-        </div>
-        <div v-else class="divide-y divide-n-weak">
-          <article
-            v-for="lead in leads"
-            :key="lead.id"
-            class="grid gap-2 px-4 py-4 text-sm md:grid-cols-[1.5fr_1fr_1fr_8rem]"
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <div v-if="isSearching" class="px-4 py-8 text-sm text-n-slate-11">
+            {{ t('PROSPECTING.STATES.LOADING') }}
+          </div>
+          <div
+            v-else-if="!hasResults"
+            class="px-4 py-8 text-sm text-n-slate-11"
           >
-            <div class="min-w-0">
-              <h3 class="truncate font-medium text-n-slate-12">
-                {{ lead.name }}
-              </h3>
-              <p class="truncate text-n-slate-10">
-                {{ formatLeadAddress(lead) }}
-              </p>
-            </div>
-            <div class="text-n-slate-11">
-              <div>{{ lead.category || '-' }}</div>
-              <div>{{ lead.provider }}</div>
-            </div>
-            <div class="text-n-slate-11">
-              <a
-                v-if="lead.website"
-                :href="lead.website"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-n-brand underline"
-              >
-                {{ t('PROSPECTING.SEARCH.OPEN_SITE') }}
-              </a>
-              <div>{{ lead.phone || '-' }}</div>
-            </div>
-            <div class="text-n-slate-11">
-              <div>
-                {{
-                  t('PROSPECTING.SEARCH.RATING_LABEL', {
-                    rating: lead.rating || '-',
-                  })
-                }}
+            {{ resultsEmptyText }}
+          </div>
+          <div v-else class="divide-y divide-n-weak">
+            <article
+              v-for="lead in leads"
+              :key="lead.id"
+              class="grid gap-2 px-4 py-4 text-sm md:grid-cols-[1.5fr_1fr_1fr_8rem]"
+            >
+              <div class="min-w-0">
+                <h3 class="truncate font-medium text-n-slate-12">
+                  {{ lead.name }}
+                </h3>
+                <p class="truncate text-n-slate-10">
+                  {{ formatLeadAddress(lead) }}
+                </p>
               </div>
-              <div>
-                {{
-                  t('PROSPECTING.SEARCH.REVIEWS_LABEL', {
-                    count: lead.reviews_count || 0,
-                  })
-                }}
+              <div class="text-n-slate-11">
+                <div>{{ lead.category || '-' }}</div>
+                <div>{{ lead.provider }}</div>
               </div>
-            </div>
-          </article>
+              <div class="text-n-slate-11">
+                <a
+                  v-if="lead.website"
+                  :href="lead.website"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-n-brand underline"
+                >
+                  {{ t('PROSPECTING.SEARCH.OPEN_SITE') }}
+                </a>
+                <div>{{ lead.phone || '-' }}</div>
+              </div>
+              <div class="text-n-slate-11">
+                <div>
+                  {{
+                    t('PROSPECTING.SEARCH.RATING_LABEL', {
+                      rating: lead.rating || '-',
+                    })
+                  }}
+                </div>
+                <div>
+                  {{
+                    t('PROSPECTING.SEARCH.REVIEWS_LABEL', {
+                      count: lead.reviews_count || 0,
+                    })
+                  }}
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
       </div>
 
-      <div class="overflow-hidden rounded-lg border border-n-weak bg-n-solid-1">
+      <div
+        class="flex min-h-[12rem] max-h-[24rem] flex-col overflow-hidden rounded-lg border border-n-weak bg-n-solid-1"
+      >
         <div class="border-b border-n-weak px-4 py-3">
           <h2 class="text-sm font-semibold text-n-slate-12">
             {{ t('PROSPECTING.SEARCH.HISTORY_TITLE') }}
@@ -253,31 +267,33 @@ onMounted(fetchSearches);
           <span>{{ t('PROSPECTING.SEARCH.COLUMNS.RESULTS') }}</span>
           <span>{{ t('PROSPECTING.SEARCH.COLUMNS.CREATED_AT') }}</span>
         </div>
-        <div v-if="isLoading" class="px-4 py-8 text-sm text-n-slate-11">
-          {{ t('PROSPECTING.STATES.LOADING') }}
-        </div>
-        <div
-          v-else-if="!searches.length"
-          class="px-4 py-8 text-sm text-n-slate-11"
-        >
-          {{ t('PROSPECTING.SEARCH.EMPTY') }}
-        </div>
-        <template v-else>
-          <button
-            v-for="search in searches"
-            :key="search.id"
-            type="button"
-            class="grid w-full grid-cols-[1fr_9rem_8rem_8rem_11rem] border-b border-n-weak px-4 py-3 text-left text-sm text-n-slate-12 last:border-b-0 hover:bg-n-solid-2"
-            :class="{ 'bg-n-solid-2': selectedSearchId === search.id }"
-            @click="openSearch(search)"
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <div v-if="isLoading" class="px-4 py-8 text-sm text-n-slate-11">
+            {{ t('PROSPECTING.STATES.LOADING') }}
+          </div>
+          <div
+            v-else-if="!searches.length"
+            class="px-4 py-8 text-sm text-n-slate-11"
           >
-            <span class="truncate">{{ search.query }}</span>
-            <span>{{ search.provider }}</span>
-            <span>{{ search.status }}</span>
-            <span>{{ search.results_count || 0 }}</span>
-            <span>{{ formatDate(search.created_at) }}</span>
-          </button>
-        </template>
+            {{ t('PROSPECTING.SEARCH.EMPTY') }}
+          </div>
+          <template v-else>
+            <button
+              v-for="search in searches"
+              :key="search.id"
+              type="button"
+              class="grid w-full grid-cols-[1fr_9rem_8rem_8rem_11rem] border-b border-n-weak px-4 py-3 text-left text-sm text-n-slate-12 last:border-b-0 hover:bg-n-solid-2"
+              :class="{ 'bg-n-solid-2': selectedSearchId === search.id }"
+              @click="openSearch(search)"
+            >
+              <span class="truncate">{{ search.query }}</span>
+              <span>{{ search.provider }}</span>
+              <span>{{ search.status }}</span>
+              <span>{{ search.results_count || 0 }}</span>
+              <span>{{ formatDate(search.created_at) }}</span>
+            </button>
+          </template>
+        </div>
       </div>
     </section>
   </main>
