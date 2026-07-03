@@ -24,6 +24,11 @@ module Autonomia
       # imutável ao destruir o agente; o Analytics consulta por autonomia_agent_id direto.
       has_many :events, class_name: 'Autonomia::Agents::AgentEvent',
                         foreign_key: :autonomia_agent_id, dependent: :delete_all
+      # G2 — histórico de versões da instrução (auto-refresh/edição manual/rollback). delete_all =
+      # limpeza barata e imutável ao destruir o agente (snapshots não têm callbacks).
+      has_many :instruction_versions, class_name: 'Autonomia::Agents::InstructionVersion',
+                                      foreign_key: :autonomia_agent_id, inverse_of: :agent,
+                                      dependent: :delete_all
 
       enum status: { draft: 0, active: 1, paused: 2 }
       enum mode:   { guided: 0, manual: 1 }
@@ -55,6 +60,15 @@ module Autonomia
       # jbuilder (não está na lista de campos seguros do serializer) e nunca vaza a instrução.
       store_accessor :config, :knowledge_refresh_token
 
+      # C3 (custo): agente declarado SEM base de conhecimento. ATENÇÃO ao default histórico: a
+      # AUSÊNCIA da chave `with_knowledge` significa COM base (true) — só o `false` explícito
+      # (boolean ou a string 'false', como o jsonb pode guardar) desliga. Usado p/ pular o
+      # retrieval/embedding no Answerer (agente sem base não paga embedding por mensagem nem
+      # usa entries residuais). Mesmo contrato do jbuilder (`with_knowledge != false`).
+      def knowledge_disabled?
+        [false, 'false'].include?(config.to_h['with_knowledge'])
+      end
+
       # Aplica config gerada pelo Construtor (token-guarded — análogo a ai_guarded_update do
       # EmailCampaign). `build_token` é o token ativo do BuildThread; a escrita só vence se este
       # ainda for o token da geração corrente (idempotência anti-supersede). `attrs` já vem mapeado
@@ -72,7 +86,9 @@ module Autonomia
           # → no-op (o ajuste mais NOVO vence). É só um SELECT escopado ao agente (sem lock do agente,
           # sem marcação, sem ordem de lock invertida) → não há deadlock com este `lock` na própria
           # thread. Criação (thread única) nunca tem uma mais nova → aplica normal.
-          next false if build_threads.where('id > ?', thread.id).exists?
+          # Escopado à MESMA conta: uma thread legada cross-account (que o runtime aborta, T5)
+          # não pode bloquear o apply de um ajuste legítimo por parecer "mais nova".
+          next false if build_threads.where(account_id: account_id).where('id > ?', thread.id).exists?
 
           # Merge no jsonb `config` em vez de substituí-lo: preserva model/temperature/business_hours/
           # max_turns já setados (o Construtor só gera `guardrails`). Substituir zeraria a config a
@@ -85,12 +101,19 @@ module Autonomia
       end
 
       # #3 INSTRUÇÃO VIVA — Atualiza a instrução fora do fluxo do Construtor (a KB mudou, não há
-      # BuildThread em geração). SEM token: não há geração concorrente do usuário aqui. Toca SÓ a
+      # BuildThread em geração). Escrita CONDICIONAL ATÔMICA (G1, anti-corrida check→write): só
+      # vence se o agente CONTINUA `guided` (modo manual = instrução escrita à mão pelo usuário,
+      # intocável pelo refresh automático) E a instrução no banco ainda é a que o refresh fotografou
+      # (`expected_instruction` — uma edição concorrente do painel perde de propósito). Toca SÓ a
       # coluna `instruction` (oculta); `config` — topic_map/knowledge_summary/confidence — acabou de
       # ser gravado por recompute_overall! no mesmo agente, então NÃO é tocado (preservado por
       # omissão). Não dispara recompute_overall! de volta (não mexe em config/sources): sem loop.
-      def refresh_instruction!(new_instruction)
-        update!(instruction: new_instruction)
+      # Agent não tem callbacks → update_all é seguro. Retorna true se ganhou a escrita.
+      def refresh_instruction!(new_instruction, expected_instruction:)
+        rows = self.class.where(id: id, mode: self.class.modes[:guided], instruction: expected_instruction)
+                   .update_all(instruction: new_instruction, updated_at: Time.current)
+        reload if rows.positive?
+        rows.positive?
       end
 
       # #3 INSTRUÇÃO VIVA (B): grava um token de coalescência novo no jsonb `config` e o retorna.
@@ -105,6 +128,52 @@ module Autonomia
            token.to_json, Time.current]
         )
         token
+      end
+
+      # G2 — grava um snapshot da instrução ATUAL persistida (auditoria best-effort). IDEMPOTENTE:
+      # no-op (retorna nil) se a base ainda não tem instrução OU se a última versão gravada já tem
+      # o mesmo hash — evita duplicatas quando o refresh produz texto idêntico. `reason` classifica
+      # a origem (kb_refresh/manual_edit/rollback); `created_by` = usuário que editou (nil = sistema).
+      def record_instruction_version!(reason:, created_by: nil)
+        current = instruction.to_s
+        return if current.blank?
+
+        digest = Digest::SHA256.hexdigest(current)
+        last = instruction_versions.order(created_at: :desc, id: :desc).first
+        return if last&.instruction_hash == digest
+
+        write_instruction_version!(current, digest, reason, created_by)
+      end
+
+      # G2 — ROLLBACK ATÔMICO: restaura `instruction` para o texto de `version` e grava um novo
+      # snapshot (reason 'rollback'). O agente não tem callbacks → update_columns é seguro e evita
+      # validações tocarem outros campos; setamos updated_at à mão. Guarda de tenancy: a versão TEM
+      # de pertencer a este agente (retorna false caso contrário). O snapshot de rollback é gravado
+      # SEM o dedup por hash: restaurar para um texto igual ao head atual ainda é um evento de
+      # auditoria distinto (o usuário pediu o rollback). Retorna truthy no sucesso.
+      def restore_instruction!(version, created_by: nil)
+        return false if version.blank? || version.autonomia_agent_id != id
+
+        # Atômico: restaurar a instrução e gravar o snapshot 'rollback' vivem na MESMA transação —
+        # se o insert do snapshot falhar, o update da instrução reverte junto (nunca fica restaurado
+        # sem versão correspondente).
+        transaction do
+          update_columns(instruction: version.instruction, updated_at: Time.current)
+          write_instruction_version!(
+            version.instruction, Digest::SHA256.hexdigest(version.instruction), 'rollback', created_by
+          )
+        end
+        true
+      end
+
+      private
+
+      # Cria a linha de versão (sem dedup — o dedup é responsabilidade do chamador público).
+      def write_instruction_version!(text, digest, reason, created_by)
+        instruction_versions.create!(
+          account_id: account_id, instruction: text, instruction_hash: digest,
+          reason: reason, created_by: created_by
+        )
       end
     end
   end

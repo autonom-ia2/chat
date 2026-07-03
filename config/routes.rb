@@ -268,9 +268,18 @@ Rails.application.routes.draw do
               end
               resources :channels, only: [:index, :create, :destroy],
                                    controller: 'agents/channels', param: :inbox_id
+              # G2 — histórico de versões da instrução + rollback atômico.
+              resources :instruction_versions, only: [:index], controller: 'agents/instruction_versions'
+              post 'instruction_versions/:version_id/restore',
+                   to: 'agents/instruction_versions#restore'
             end
             resources :build_threads, only: [:create, :show], controller: 'agents/build_threads' do
-              member { post :messages }
+              member do
+                post :messages
+                # E2 — reexecuta a geração de uma thread failed/presa (novo build_token + SubmitJob).
+                # Action retry_build porque `retry` é palavra reservada do Ruby.
+                post :retry, action: :retry_build
+              end
             end
             # MULTIMODAL (Construtor/Ajustar): upload de imagem do builder (image-only, retorna signed_id;
             # não cria conhecimento). O turno referencia o signed_id; o Builder a lê inline no job.
@@ -294,7 +303,9 @@ Rails.application.routes.draw do
             end
             namespace :prospecting do
               resources :searches, only: [:index, :show, :create]
-              resources :leads, only: [:index, :show]
+              resources :leads, only: [:index, :show] do
+                post :contact, on: :member, action: :create_contact
+              end
               resources :lists, only: [:index, :show, :create]
               resource :settings, only: [:show]
             end

@@ -61,16 +61,46 @@ const saveGreeting = async greeting => {
 
 const connectInbox = async inboxId => {
   if (!inboxId) return;
+  // O backend exige agente ativo para conectar, então ativa primeiro — mas se a
+  // conexão falhar, restaura o estado anterior (senão fica "ativo sem canal").
+  const previous = {
+    enabled: props.agent?.enabled === true,
+    status: props.agent?.status || 'draft',
+  };
+  let activated = false;
   try {
     await store.dispatch('autonomiaAgents/update', {
       id: props.agentId,
       enabled: true,
       status: 'active',
     });
+    activated = true;
     await store.dispatch('autonomiaChannels/connect', {
       agentId: props.agentId,
       inboxId,
     });
+    goToTest();
+  } catch (error) {
+    if (activated) {
+      await store
+        .dispatch('autonomiaAgents/update', { id: props.agentId, ...previous })
+        .catch(() => {});
+    }
+    useAlert(t('AGENTS.CHANNELS.CONNECT_ERROR'));
+  }
+};
+
+// Agente interno (copiloto da equipe) não conecta canal — ativa direto.
+// É o que o lista no seletor "Copiloto Autonom.ia" das conversas (a API
+// só devolve agentes internal/both com status active e enabled).
+const activateInternal = async () => {
+  try {
+    await store.dispatch('autonomiaAgents/update', {
+      id: props.agentId,
+      enabled: true,
+      status: 'active',
+    });
+    useAlert(t('AGENTS.REVIEW.ACTIVATED_INTERNAL'));
     goToTest();
   } catch (error) {
     useAlert(t('AGENTS.CHANNELS.CONNECT_ERROR'));
@@ -99,6 +129,7 @@ onBeforeUnmount(() => {
       @save-greeting="saveGreeting"
       @test="goToTest"
       @connect="connectInbox"
+      @activate="activateInternal"
       @back="goToTest"
     />
   </div>
