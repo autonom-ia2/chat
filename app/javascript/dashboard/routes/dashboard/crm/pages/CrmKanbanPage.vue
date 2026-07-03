@@ -480,7 +480,7 @@ const removeFilterChip = async key => {
 };
 
 const loadPipelineInboxes = async pipelineId => {
-  if (!canManagePipelines.value || !pipelineId) {
+  if (!(canManagePipelines.value || canManageAi.value) || !pipelineId) {
     pipelineInboxes.value = [];
     return [];
   }

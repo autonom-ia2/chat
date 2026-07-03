@@ -284,6 +284,11 @@ watch(
   () => props.stages,
   serverStages => {
     if (!props.show || !isEditing.value) return;
+    if (form.stages.length === 0 && serverStages.length > 0) {
+      form.stages = serverStages.map(cloneStage);
+      resetNewPipelineInbox();
+      return;
+    }
     const serverStageIds = new Set(serverStages.map(stage => stage.id));
     const next = form.stages.filter(
       stage => !stage.id || serverStageIds.has(stage.id)
