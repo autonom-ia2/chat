@@ -83,7 +83,7 @@ RSpec.describe Crm::Ai::Evaluator do
     ENV.delete('CRM_AI_ATTR_EXTRACTION')
     account, admin = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: admin)
-    pipeline.update!(metadata: { 'ai' => { 'attribute_extraction_enabled' => true, 'attribute_prefix' => 'sw_' } })
+    pipeline.update!(metadata: { 'ai' => { 'attribute_extraction_enabled' => true } })
     create(
       :custom_attribute_definition,
       account: account,
@@ -135,7 +135,7 @@ RSpec.describe Crm::Ai::Evaluator do
     ENV['CRM_AI_ATTR_EXTRACTION'] = 'false'
     account, admin = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: admin)
-    pipeline.update!(metadata: { 'ai' => { 'attribute_extraction_enabled' => true, 'attribute_prefix' => 'sw_' } })
+    pipeline.update!(metadata: { 'ai' => { 'attribute_extraction_enabled' => true } })
     card = account.crm_cards.create!(
       pipeline: pipeline,
       stage: stage,

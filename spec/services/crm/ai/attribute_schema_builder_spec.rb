@@ -29,11 +29,12 @@ RSpec.describe Crm::Ai::AttributeSchemaBuilder do
     create_attribute(key: 'other_city', model: 'contact_attribute', type: 'text', label: 'Outra cidade')
     create_attribute(key: 'sw_empresa', model: 'company_attribute', type: 'text', label: 'Empresa')
 
-    schema = described_class.new(account: account, prefix: 'sw_').perform
+    schema = described_class.new(account: account).perform
 
     expect(schema[:contact]).to contain_exactly(
       { key: 'sw_cidade', label: 'Cidade', type: 'text' },
-      { key: 'sw_decisor', label: 'É decisor?', type: 'list', options: ['Sim, decide', 'Há outros decisores'] }
+      { key: 'sw_decisor', label: 'É decisor?', type: 'list', options: ['Sim, decide', 'Há outros decisores'] },
+      { key: 'other_city', label: 'Outra cidade', type: 'text' }
     )
     expect(schema[:conversation]).to contain_exactly(
       { key: 'sw_dor_principal', label: 'Dor principal', type: 'text' },

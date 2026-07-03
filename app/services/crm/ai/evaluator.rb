@@ -114,7 +114,6 @@ module Crm
         AttributeExtractorApplier.new(
           card: @card,
           extracted_attributes: classification[:extracted_attributes],
-          prefix: Config.attribute_extraction_prefix(@card.pipeline),
           min_confidence: Config.attribute_extraction_min_confidence(@card.pipeline)
         ).perform
       rescue StandardError => e
@@ -192,8 +191,7 @@ module Crm
         return { contact: [], conversation: [] } unless attribute_extraction_enabled?
 
         @attribute_schema ||= AttributeSchemaBuilder.new(
-          account: @account,
-          prefix: Config.attribute_extraction_prefix(@card.pipeline)
+          account: @account
         ).perform
       end
 

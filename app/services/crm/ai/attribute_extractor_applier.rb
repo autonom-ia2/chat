@@ -5,11 +5,10 @@ module Crm
 
       Result = Struct.new(:applied, :rejected, keyword_init: true)
 
-      def initialize(card:, extracted_attributes:, prefix:, min_confidence: MIN_CONFIDENCE_DEFAULT)
+      def initialize(card:, extracted_attributes:, min_confidence: MIN_CONFIDENCE_DEFAULT)
         @card = card
         @account = card.account
         @extracted_attributes = extracted_attributes.respond_to?(:with_indifferent_access) ? extracted_attributes.with_indifferent_access : {}
-        @prefix = prefix.to_s
         @min_confidence = min_confidence.to_f
         @applied = []
         @rejected = []
@@ -67,7 +66,6 @@ module Crm
 
       def rejection_reason(item, definition, current)
         return 'unknown_key' if definition.blank?
-        return 'not_whitelisted' unless item[:key].start_with?(@prefix)
         return 'low_confidence' if item[:confidence] < @min_confidence
         return 'already_filled' if filled?(current[item[:key]])
 

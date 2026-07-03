@@ -83,10 +83,6 @@ module Crm
         BOOLEAN.cast(pipeline_ai_settings(pipeline)[:attribute_extraction_enabled])
       end
 
-      def self.attribute_extraction_prefix(pipeline)
-        pipeline_ai_settings(pipeline)[:attribute_prefix].presence || 'sw_'
-      end
-
       def self.attribute_extraction_min_confidence(pipeline)
         raw = pipeline_ai_settings(pipeline)[:attribute_min_confidence].presence || 0.6
         Float(raw).clamp(0.0, 1.0)

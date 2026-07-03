@@ -38,7 +38,6 @@ RSpec.describe Crm::Ai::AttributeExtractorApplier do
 
     result = described_class.new(
       card: card,
-      prefix: 'sw_',
       extracted_attributes: {
         contact: [
           { key: 'sw_cidade', value: 'Guarapuava', confidence: 0.9, evidence: 'Sou de Guarapuava' },
@@ -71,7 +70,6 @@ RSpec.describe Crm::Ai::AttributeExtractorApplier do
 
     result = described_class.new(
       card: card,
-      prefix: 'sw_',
       extracted_attributes: {
         contact: [{ key: 'sw_cidade', value: 'Guarapuava', confidence: 0.95, evidence: 'Sou de Guarapuava' }],
         conversation: []
@@ -82,14 +80,13 @@ RSpec.describe Crm::Ai::AttributeExtractorApplier do
     expect(result.rejected).to include(hash_including(key: 'sw_cidade', reason: 'already_filled'))
   end
 
-  it 'rejects unknown keys, non-whitelisted keys, low confidence, invalid numbers and invalid list values' do
+  it 'rejects unknown keys, low confidence, invalid numbers and invalid list values' do
     create_attribute(key: 'sw_valor_conta_luz', model: 'contact_attribute', type: 'number')
     create_attribute(key: 'sw_decisor', model: 'contact_attribute', type: 'list', values: ['Sim, decide'])
     create_attribute(key: 'other_city', model: 'contact_attribute', type: 'text')
 
     result = described_class.new(
       card: card,
-      prefix: 'sw_',
       extracted_attributes: {
         contact: [
           { key: 'sw_inexistente', value: 'x', confidence: 0.9, evidence: 'x' },
@@ -102,10 +99,9 @@ RSpec.describe Crm::Ai::AttributeExtractorApplier do
       }
     ).perform
 
-    expect(contact.reload.custom_attributes).to be_empty
+    expect(contact.reload.custom_attributes).to include('other_city' => 'Guarapuava')
     expect(result.rejected).to include(
       hash_including(key: 'sw_inexistente', reason: 'unknown_key'),
-      hash_including(key: 'other_city', reason: 'not_whitelisted'),
       hash_including(key: 'sw_valor_conta_luz', reason: 'invalid_value'),
       hash_including(key: 'sw_decisor', reason: 'invalid_value'),
       hash_including(key: 'sw_valor_conta_luz', reason: 'low_confidence')
@@ -117,7 +113,6 @@ RSpec.describe Crm::Ai::AttributeExtractorApplier do
 
     result = described_class.new(
       card: card,
-      prefix: 'sw_',
       extracted_attributes: {
         contact: [],
         conversation: [{ key: 'sw_cidade', value: 'Guarapuava', confidence: 0.9, evidence: 'Sou de Guarapuava' }]

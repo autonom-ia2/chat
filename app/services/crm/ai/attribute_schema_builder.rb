@@ -12,9 +12,8 @@ module Crm
         'checkbox' => 'checkbox'
       }.freeze
 
-      def initialize(account:, prefix:)
+      def initialize(account:)
         @account = account
-        @prefix = prefix.to_s
       end
 
       def perform
@@ -26,7 +25,6 @@ module Crm
       def definitions
         @definitions ||= @account.custom_attribute_definitions
                                .where(attribute_model: %i[contact_attribute conversation_attribute])
-                               .select { |definition| definition.attribute_key.to_s.start_with?(@prefix) }
       end
 
       def payload_for(attribute_model)
