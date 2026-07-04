@@ -6,6 +6,10 @@
 >
 > Convenção de esforço: **P** (≤2h) · **S** (≤½ dia) · **M** (1–2 dias) · **L** (3+ dias).
 > Cada track vira **branch/worktree própria**; merges agrupados para evitar cascata de deploy blue-green.
+>
+> **Mockups das telas (para aprovação):** https://claude.ai/code/artifact/3aab7347-df40-44e9-9163-ceeb8d967bb7
+> — onboarding e-mail MS/Google (P1b), fluxo base-primeiro (P9), etiqueta do funil (P4).
+> **v2 (04/jul):** respostas do PO incorporadas (SES do zero + multi-conta/RD Station, corte de view P8, KB-first interno+externo com skip, Meta CTWA+tráfego, onboarding com guia).
 
 ---
 
@@ -34,6 +38,8 @@
 - **B) ActionMailbox push** — provedor externo entrega no Chatwoot. Ingress por ENV `RAILS_INBOUND_EMAIL_SERVICE` (`config/initializers/mailer.rb:47`, default `relay`); SES-receiving exige `ACTION_MAILBOX_SES_SNS_TOPIC` (`:51`). Roteamento `app/mailboxes/application_mailbox.rb:10-15` → `reply_mailbox.rb`.
 
 Envio é SMTP puro (`config/initializers/mailer.rb:26-27`); **não há SDK AWS SES no envio**.
+
+**Clarificação PO (04/jul):** a inbox conta 6 é **caixa MS / Google / provedor (Hostinger) via IMAP** — **não** depende de SES. **SES é só para disparo em massa de campanha** (Ponto 2), trilho separado. Logo o fix do e-mail não-chegando é **IMAP/OAuth**, não Amazon.
 
 **Hipótese dominante:** inbox da conta 6 é **SMTP-only / IMAP não habilitado** → só envia, nada entra. Bate exato com o sintoma. Segunda hipótese: setup pretendia SES-receiving, que **fisicamente não existe** (ver Ponto 2: zero receipt rules/SNS).
 
@@ -84,7 +90,12 @@ Envio é SMTP puro (`config/initializers/mailer.rb:26-27`); **não há SDK AWS S
 - **Detalhe que economiza tempo:** `hub2you.ai` **já tem `include:amazonses.com` no SPF raiz** (foi preparado pra SES) — a identidade de domínio e os CNAMEs DKIM é que nunca foram criados. DNS na **Hostinger**. Não tocar no MX raiz (recebimento fica na Hostinger).
 - **Checklist do zero (us-east-1, cada 🔴 pede 🟢):** (1) 🟢 `create-email-identity hub2you.ai` → tokens DKIM saem no output; (2) 🟢 `put-email-identity-mail-from-attributes mail.hub2you.ai`; (3) 🟢 publicar na Hostinger 3 CNAMEs + MX `feedback-smtp.us-east-1.amazonses.com` + SPF em `mail.`; (4) `get-email-identity` até SUCCESS; (5) 🟢 `put-account-details --production-access-enabled` us-east-1, **sem** reaproveitar o caso negado `177974592100054`. Relatório com comandos em `scratchpad/ses_hub2you_replication.md`.
 
-**Esforço:** M por domínio (criar identidade + DNS + esperar) + M pra reabrir produção. **Risco:** baixo–médio (DNS reversível; risco real é reputação/aprovação AWS). **Vira Issue de Ops** (padronizar **us-east-1**, que suporta receiving).
+**Multi-conta + coexistência com RD Station (PO 04/jul — pesquisado, docs AWS/RD):**
+- **Mesmo domínio verificado em +1 conta AWS ao mesmo tempo? SIM.** Verificação é por conta; cada conta emite **3 CNAMEs DKIM próprios** (tokens distintos) → 2 contas = **6 CNAMEs**, sem colisão, ambas enviam como o domínio. ([blog AWS "domain in multiple accounts"](https://aws.amazon.com/blogs/messaging-and-targeting/how-to-use-domain-with-amazon-ses-in-multiple-accounts-or-regions/))
+- **SES + RD Station do cliente no mesmo domínio? SIM.** SPF é **1 TXT só, mesclado**: `v=spf1 include:amazonses.com include:_spf.rdstation.com.br ~all`. DKIM não colide (seletores próprios). DMARC é **1 registro só**. Os 3 CNAMEs DKIM da RD **saem do painel dela** (não são públicos — copiar do cliente).
+- **Gotchas (quebram na prática):** (1) **limite de 10 lookups DNS do SPF** (RFC 7208) — RD + SES + eventual Google/M365 estoura fácil → PermError → DMARC fail; **validar contagem antes de publicar**. (2) SPF **mesclar, nunca duplicar** (2 TXT SPF = inválido). (3) MAIL FROM = **exatamente 1 MX**; **subdomínio único por conta SES** (`mail.hub2you.ai`, `mail2.` p/ a 2ª) — RD usa o return-path dela, não compete.
+
+**Esforço:** M por domínio (criar identidade + DNS + esperar) + M pra reabrir produção. **Risco:** baixo–médio (DNS reversível; risco real é SPF 10-lookup + reputação/aprovação AWS). **Vira Issue de Ops** (padronizar **us-east-1**). **Decisão PO:** montar do zero (confirmado); SES = **só disparo em massa de campanha** (ponto 1 do PO), separado do recebimento IMAP da inbox.
 
 ---
 
@@ -146,6 +157,16 @@ Envio é SMTP puro (`config/initializers/mailer.rb:26-27`); **não há SDK AWS S
 - **Ressalva de produto:** depende do **marketing padronizar os links** na LP; cliente **pode apagar** o texto pré-preenchido → atribuição parcial. **É convenção, não dado do Meta.**
 - **2 PRs irmãos** sob a mesma engine conversa→card: **CTWA** (automático, prioridade — cobertura alta) e **LP→WhatsApp** (convenção — só entrega valor após o time de tráfego padronizar os links).
 
+**Schema unificado (PO 04/jul: "deixe preparado pra capturar os dois quando enviarem"):** um único formato em `conversation.additional_attributes['campaign']` que serve as duas origens, escrito na 1ª mensagem:
+```
+{ source: 'meta_ctwa' | 'lp_whatsapp',   # origem do dado
+  campaign_id: <source_id | token da LP>,
+  ctwa_clid: <string|null>,              # só CTWA
+  headline: <string|null>,               # só CTWA
+  raw: { ... } }                          # payload bruto p/ auditoria
+```
+O CardSyncer espelha `campaign_id`+`source` no card; o label `campanha:<id>` é o mesmo nos dois caminhos. Assim, quando o marketing ligar o token na LP, o parser já grava no **mesmo** campo — sem migração. **Google fica fora por ora** (PO).
+
 **Arquivos:** `incoming_message_base_service.rb`, `incoming_message_service_helpers.rb`, `twilio/referral_params_helper.rb`, `crm/sync_conversation_card_job` (espelho), serviço aplicador de label, FE sidebar/card + i18n. **Risco:** baixo (WA, aditivo); médio (FB/IG toca OSS core).
 
 ---
@@ -194,10 +215,11 @@ Efeito: a IA decide estágio/handoff sem o contexto de negócio (Indústria, Or�
 - **(d)** auto-abrir chat ao terminar: M. Sinal "pronto" já existe (`autonomiaSources.js:80-87 getAllReviewed` + `knowledge_confidence`). Tratar falha/skip (fallback "abrir chat agora").
 - **(e)** builder já conhece a base: **retrieval já satisfaz** (Playground roda pipeline contra entries aceitos). Falta só semear a **entrevista** do construtor com `knowledge_summary` (L, reordena o "IA fala primeiro").
 
-**3 perguntas de PO (bloqueiam início):**
-1. KB-first dispara quando `actuation===internal`, quando `withKnowledge===true`, ou só na interseção?
-2. "Máx 30 bases distintas" = 30 linhas `Source` (kind knowledge)? Mídia fora?
-3. Em (d), se fonte falha ou usuário não sobe nada, o que desbloqueia (botão manual vs timeout)?
+**Decisões PO (04/jul — resolvidas, ver mockup seção 2):**
+1. **Gatilho = `withKnowledge===true`** (interno **E** externo). Se o usuário pediu "com base", pede a base primeiro. `actuation` não importa.
+2. **Botão "Pular e ir para o agente"** sempre visível — resolve tanto "desistiu da base" quanto "fonte falhou / não subiu nada" (unblock manual, sem timeout).
+3. **Limite 30** = 30 linhas `Source` (kind knowledge); dropzone desabilita em 30. (mídia fora.)
+- Ainda vale o bloqueador técnico: **criar o draft do agente antes do chat** (hoje nasce no 1º turno) — pré-requisito de anexar fontes na tela KB-first.
 
 **Arquivos-chave:** `AgentBuilderPage.vue`, `BuilderKnowledgePanel.vue`, `AgentTypePicker.vue`, `autonomiaSources.js`, `sources_controller.rb`, `playground_controller.rb`, i18n. **Esforço:** M–L. **Risco:** médio.
 

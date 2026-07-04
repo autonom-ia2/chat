@@ -75,20 +75,30 @@ os domínios na Amazon + sair do modo restrito (2). Cada passo de DNS/infra pede
 
 ---
 
-## Decisões que preciso de você
+## Mockups para aprovar
 
-1. **E-mail (conta 6):** o recebimento vai por **caixa própria do cliente (IMAP/OAuth — mais simples)**,
-   por **encaminhamento**, ou pela **Amazon (mais pesado)**? Sem isso, não conserto às cegas.
-2. **Amazon/SES:** **não temos acesso à conta AWS da Autonomia aqui** para "copiar" — só a do Hub2You. Você
-   me passa a credencial da Autonomia (aí extraio o modelo real) ou **autoriza montar do zero** os domínios
-   do Hub2You em **us-east-1** (cadastrar + DNS + reabrir produção)?
-3. **Custo da IA (8):** confirmo a data-limite **30/jun** para esconder o período caro? (a variável guarda
-   o histórico, só deixa de exibir; dá pra ajustar depois).
-4. **Fluxo "base primeiro" (9):** (a) vale para agente **interno**, para **com base de conhecimento**, ou
-   só os dois juntos? (b) "máximo 30 bases" conta cada arquivo/link como uma base? (c) se um arquivo
-   falhar ou o usuário não subir nada, o que libera o chat?
-5. **Campanha LP→WhatsApp (6):** topa o marketing **padronizar os links** da landing page com um código de
-   campanha? Sem isso, só o anúncio-WhatsApp é atribuído automaticamente. **Google** fica fora por ora?
+**Telas desenhadas (visual real do Chat2You):** https://claude.ai/code/artifact/3aab7347-df40-44e9-9163-ceeb8d967bb7
+— onboarding e-mail Microsoft e Google (guia passo-a-passo na tela), fluxo "base primeiro" (2 estados +
+botão Pular), etiqueta do funil (antes/depois). **Aprove ou peça ajuste antes de eu implementar.**
+
+## Decisões já fechadas nesta rodada
+
+- **E-mail (1):** recebimento por **IMAP (MS/Google/provedor)** — Amazon é só para disparo em massa. ✅
+- **SES (2):** montar **do zero em us-east-1**. **Confirmado por pesquisa:** o mesmo domínio pode ser aprovado
+  em **mais de uma conta AWS** (autonomia + hub2you) **e** conviver com o **RD Station** do cliente — cada um
+  com seus próprios registros, num SPF só mesclado. O risco a vigiar é o limite de 10 consultas do SPF. ✅
+- **Custo IA (8):** data-limite **30/jun** confirmada. ✅
+- **Base primeiro (9):** vale para **interno e externo**; só quando pediu "com base"; **botão Pular** se desistir. ✅
+- **Meta (6):** deixar o modelo **preparado para os dois** (anúncio-WhatsApp automático + campanha de tráfego
+  via código no link). **Google fora** por ora. ✅
+
+## Ainda preciso de você
+
+1. **SES:** me passa a credencial da conta AWS da **Autonomia** (para referência real) ou **sigo do zero**?
+2. **Onda 0:** autoriza eu **ligar a variável do custo (P8)** nos 2 ambientes agora (com backup antes)?
+3. **Campanha de tráfego (6):** confirma que o **marketing vai padronizar os links** da landing page com o
+   código de campanha? (sem isso, só o anúncio-WhatsApp é automático).
+4. **Mockups:** aprova as 4 telas como estão, ou ajusto alguma?
 
 ---
 
