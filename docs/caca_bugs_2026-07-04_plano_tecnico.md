@@ -14,13 +14,14 @@
 | # | Tema | Diagnóstico curto | Tipo | Esforço | Risco |
 |---|------|-------------------|------|---------|-------|
 | 1 | E-mail conta 6 não chega em Conversas | Teste valida **SMTP de envio**, não recebimento. Inbound não montado (IMAP off ou SES-receiving inexistente) | Infra/Ops | S–L | Baixo |
+| 1b | Onboarding MS/Google (guia na tela) | 1 componente compartilhado `OAuthChannel.vue`; input largo + espaço vazio à direita | Código FE | M | Baixo |
 | 2 | Verificação de domínio SES pendente (3 e 6) | Pior que pendente: **zero identidades de domínio** no SES + conta **sandbox** + produção **DENIED** | Infra/Ops | M | Baixo–Médio |
 | 3 | Botão "ativar agente" pede testar antes | **Não há trava real**; efeito de UX (botão "Testar antes" primário + toggle ativar some em `draft`) | Código FE | S | Baixo |
 | 4 | Badge do funil corta a etapa com >1 funil | `max-w-[8rem] truncate` fixo no chip | Código FE | S | Baixo |
 | 5 | Eventos CRM/Kanban em Automações e Macros | Eventos de card existem mas só no barramento **ActionCable**, não no dispatcher de automação. Macro não tem gatilho | Código FE+BE | M–L | Médio |
-| 6 | Marcação de campanha Meta/Google no Kanban | WhatsApp/Twilio **já capturam `referral`** (enterrado). FB/IG descartado. **Google sem caminho de entrada** | Código FE+BE | S–M (WA) / L (Google, bloqueado) | Baixo–Médio |
+| 6 | Marcação de campanha Meta no Kanban | CTWA **já captura `referral`** (enterrado). LP→WhatsApp = token no texto (convenção). FB/IG descartado. Google sem entrada | Código FE+BE | S–M | Baixo–Médio |
 | 7 | Atributos custom usados pelas IAs de CRM | IA recebe só o **schema** dos atributos, não os **valores** já preenchidos | Código BE | M | Médio |
-| 8 | Regressão em Gestão de IA (corte LLM 29/30) | **Sem regressão.** Corte = `xhigh→high` em 4 features mini (#42). Decisão de custo | — | P (opcional) | Baixo |
+| 8 | Gestão de IA mostra gasto do "período caro" | Corte de exibição (`CRM_AI_USAGE_BASELINE_AT`, #48) **existe e funciona** — só **não foi ligado/versionado** em prod | Ops + Código | P | Baixo |
 | 9 | Fluxo KB-first na criação do agente | Viável, mas **1 bloqueador**: draft do agente nasce no 1º turno do chat; KB-first precisa do draft antes | Código FE+BE | M–L | Médio |
 
 ---
@@ -43,6 +44,21 @@ Envio é SMTP puro (`config/initializers/mailer.rb:26-27`); **não há SDK AWS S
 
 **Esforço:** S (habilitar IMAP) a L (montar SES-receiving). **Risco:** baixo (config de inbox, reversível). **Não vira PR de código** — é operação. Vira **Issue de Ops** com checklist.
 
+### Ponto 1b — Onboarding MS/Google: guia passo-a-passo na tela (PO 04/jul)
+
+**Pedido:** nas telas de nova caixa Microsoft/Google, estreitar os inputs (client_id, secret, tenant) e usar o **espaço vazio à direita** para um **guia humanizado** de como criar o app Azure / cliente Google Cloud, com os eventos/permissões e links.
+
+**Achado-chave:** `Microsoft.vue:10`/`Google.vue:10` são **wrappers finos** que renderizam o mesmo componente compartilhado `app/javascript/dashboard/routes/dashboard/settings/inbox/channels/emailChannels/OAuthChannel.vue` (passando `provider` + labels). **O formulário de credenciais vive no `OAuthChannel.vue` — 1 mudança cobre as 2 telas.** Hoje: raiz `col-span-6` full-width + form `max-w-xl` encostado à esquerda (`:118-131`) → o vazio à direita.
+
+**Escopos REAIS (do código, não inventados):**
+- **Microsoft** (`app/controllers/concerns/microsoft_concern.rb:24-32`): `offline_access`, `https://outlook.office.com/IMAP.AccessAsUser.All`, Graph `Mail.Send` + `Mail.ReadWrite`, `openid profile email` (+ `Calendars.ReadWrite` só se reuniões ligadas). **Envio via Graph `sendMail`, não SMTP** (`microsoft/send_mail_service.rb`) — pedir `Mail.Send`/`Mail.ReadWrite` delegadas, **não** `SMTP.Send`.
+- **Google** (`app/controllers/concerns/google_concern.rb:19,22,29`): `email profile https://mail.google.com/` (mailbox full via IMAP/SMTP XOAUTH2) + `https://www.googleapis.com/auth/calendar` **só** se reuniões ligadas. É o escopo restrito — **não** basta `gmail.readonly` (o código envia também).
+- Callback vem do backend (`OAuthChannel.vue:65` `data.callback_url`) — o guia diz "copie o URL mostrado ao lado", robusto a domínio/ambiente.
+
+**Abordagem:** editar **só** `OAuthChannel.vue`: grid 2 colunas (`lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]`), form à esquerda (`max-w-xl`→`max-w-md`), `<aside>` à direita com `<ol>` de passos (Tailwind-only), condicional por `isMicrosoft`, escondido quando `configured`. Passos pt-BR curtos (MS: Entra → Registro → Redirect Web → copiar client/tenant → API permissions delegadas → consentimento admin → secret; Google: projeto → ativar Gmail API → OAuth consent externo → escopo `mail.google.com/` → cliente Web → redirect URIs → copiar id/secret → test users). Links oficiais (learn.microsoft.com, console.cloud.google.com) inline.
+
+**i18n:** `en/inboxMgmt.json` + `pt_BR/inboxMgmt.json` (bloco `OAUTH_CREDENTIALS`, ~:1248) — este fork escreve pt_BR direto, então popular os dois pra o texto aparecer. Branding via `replaceInstallationName` se citar marca. **Esforço:** M (1 componente + ~16 passos i18n × 2 locales). **Risco:** baixo (zero mudança na lógica OAuth/`saveCredentials`).
+
 ---
 
 ## Ponto 2 — Verificação de domínio SES pendente (conta 3 e 6)
@@ -63,7 +79,12 @@ Envio é SMTP puro (`config/initializers/mailer.rb:26-27`); **não há SDK AWS S
 
 **Ligação com Ponto 1 (sem rodeio):** verificação/sandbox afetam **envio**, não **recebimento**. Verificação de domínio **não é** a causa do e-mail não chegar. O único elo: se escolher SES-receiving no Ponto 1, verificar o domínio é o degrau 1.
 
-**Esforço:** M por domínio (criar identidade + DNS + esperar) + M pra reabrir produção. **Risco:** baixo–médio (DNS reversível; risco real é reputação/aprovação AWS). **Vira Issue de Ops** (decisão de região: padronizar **us-east-1**, que suporta receiving).
+**Atualização PO (04/jul): "criar a infra da hub2you na Amazon; só temos na autonomia; use como referência".**
+- **Não dá pra clonar a Autonomia:** não há perfil AWS da Autonomia na máquina (só `default` — token morto — e `hub2you` = a própria conta-alvo 354307071110). Não existe um "SES-fora-do-sandbox comprovado" para espelhar via CLI. **Decisão sua:** (a) fornecer credencial da conta AWS da Autonomia (extraio o template real read-only) OU (b) autorizar montar **do zero em us-east-1** com boas práticas.
+- **Detalhe que economiza tempo:** `hub2you.ai` **já tem `include:amazonses.com` no SPF raiz** (foi preparado pra SES) — a identidade de domínio e os CNAMEs DKIM é que nunca foram criados. DNS na **Hostinger**. Não tocar no MX raiz (recebimento fica na Hostinger).
+- **Checklist do zero (us-east-1, cada 🔴 pede 🟢):** (1) 🟢 `create-email-identity hub2you.ai` → tokens DKIM saem no output; (2) 🟢 `put-email-identity-mail-from-attributes mail.hub2you.ai`; (3) 🟢 publicar na Hostinger 3 CNAMEs + MX `feedback-smtp.us-east-1.amazonses.com` + SPF em `mail.`; (4) `get-email-identity` até SUCCESS; (5) 🟢 `put-account-details --production-access-enabled` us-east-1, **sem** reaproveitar o caso negado `177974592100054`. Relatório com comandos em `scratchpad/ses_hub2you_replication.md`.
+
+**Esforço:** M por domínio (criar identidade + DNS + esperar) + M pra reabrir produção. **Risco:** baixo–médio (DNS reversível; risco real é reputação/aprovação AWS). **Vira Issue de Ops** (padronizar **us-east-1**, que suporta receiving).
 
 ---
 
@@ -115,9 +136,15 @@ Envio é SMTP puro (`config/initializers/mailer.rb:26-27`); **não há SDK AWS S
 **Campos oficiais Meta** (WhatsApp `referral`): `source_url`, `source_type` (ad/post), `source_id`, `headline`, `body`, `media_type`, `ctwa_clid`. Messenger/IG (`messaging.referral`/`postback.referral`): `ref`, `source`, `type`, `ad_id`, `referer_uri`. (developers.facebook.com — CTWA webhooks + messaging_referrals; re-verificar por versão do Graph API na hora.)
 
 **Abordagem:**
-- **Ganho barato (S–M):** promover `referral` da 1ª mensagem para `conversation.additional_attributes['campaign']` (`{source:'meta', source_id, ctwa_clid, headline, source_type}`) + aplicar label `meta-ad`/`campaign:<id>` (mecanismo de label existente) → o `Crm::Card` espelha a conversa (via `card_conversations`), então a tag flui pro Kanban. Guardar "só na criação/1ª mensagem".
+- **Ganho barato (S–M) — CTWA automático:** promover `referral` da 1ª mensagem para `conversation.additional_attributes['campaign']` (`{source:'meta', source_id, ctwa_clid, headline, source_type}`) + aplicar label `meta-ad`/`campaign:<id>` (mecanismo de label existente) → o `Crm::Card` espelha a conversa (via `card_conversations`), então a tag flui pro Kanban. Guardar "só na criação/1ª mensagem".
 - **Paridade FB/IG (M, opcional):** ler `referral`/`ad_id` nos builders Messenger/FB.
 - **Google (L, bloqueado):** só via parse de UTM/`gclid` do `referral.source_url` em funil landing→WhatsApp; sem webhook Google.
+
+**Caminho LP→WhatsApp (PO 04/jul: tráfego normal → landing page → botão WhatsApp na LP):**
+- **Honesto:** esse clique é **orgânico** (`wa.me`) — o Meta **NÃO manda `referral`** (referral existe só em anúncio CTWA; confirmado em docs Meta). Logo, atribuição **não é automática** nesse caminho.
+- **Único mecanismo viável:** texto pré-preenchido `wa.me/<num>?text=…[camp:<id>]` — o token chega no **corpo da 1ª mensagem** (`incoming_message_service_helpers.rb:27-34`). Parser (regex `\[camp:([a-z0-9._-]{1,64})\]`) na 1ª mensagem (guard de conversa nova em `incoming_message_base_service.rb:151-162`) → `additional_attributes['campaign']` + label → espelho no card (`Crm::Conversations::CardSyncer#refresh_attributes`, `card_syncer.rb:127-141`). Greenfield, sem regressão.
+- **Ressalva de produto:** depende do **marketing padronizar os links** na LP; cliente **pode apagar** o texto pré-preenchido → atribuição parcial. **É convenção, não dado do Meta.**
+- **2 PRs irmãos** sob a mesma engine conversa→card: **CTWA** (automático, prioridade — cobertura alta) e **LP→WhatsApp** (convenção — só entrega valor após o time de tráfego padronizar os links).
 
 **Arquivos:** `incoming_message_base_service.rb`, `incoming_message_service_helpers.rb`, `twilio/referral_params_helper.rb`, `crm/sync_conversation_card_job` (espelho), serviço aplicador de label, FE sidebar/card + i18n. **Risco:** baixo (WA, aditivo); médio (FB/IG toca OSS core).
 
@@ -136,17 +163,21 @@ Efeito: a IA decide estágio/handoff sem o contexto de negócio (Indústria, Or�
 
 ---
 
-## Ponto 8 — Regressão em Gestão de IA (corte LLM 29/30)
+## Ponto 8 — Gestão de IA mostra o gasto do "período caro" (REENQUADRADO pelo PO)
 
-**Não há regressão.** "Gestão de IA" = painel de uso/custo (`CrmAiUsagePage.vue`, rota `crm/ai-usage`, tabela `crm_ai_usage_events`). Config de modelo+motor em `app/services/crm/ai/config.rb`.
+**Reenquadramento (PO 04/jul):** o pedido **não** é reverter o corte de custo (o `xhigh→high` fica). O pedido é que a tela de **Gestão de IA (uso)** pare de **exibir** o gasto do período caro (antes de 30/jun). Isto é **corte de exibição por data**, não `reasoning_effort`.
 
-Duas mudanças em `main`:
-- **#36 `5983d2005` (29/jun):** subiu efforts por feature (classify/auto-move `high→xhigh` etc.).
-- **#42 `cb7410e42` (30/jun) — o "corte":** reverteu `xhigh→high` nas 4 features mini (classify/followup/callback/meeting-summary — tocou `config.rb` + `meeting_summary_service.rb` + comentário em `callback_runner.rb`). Só rebaixa `reasoning_effort`. **Não** é threshold, whitelist, nem gate; modelo/schema/fluxo idênticos. Thresholds de decisão intactos (`AUTO_MOVE_THRESHOLD=0.75`, `SUGGESTION_THRESHOLD=0.55`).
+**Achado: o corte de exibição JÁ EXISTE e está correto/testado — só não foi ligado em produção.**
+- Mecanismo: `app/services/crm/reports/ai_usage.rb:46-48` — `since` efetivo = `max(janela pedida pela UI, ENV['CRM_AI_USAGE_BASELINE_AT'])`. O piso propaga para **todos** os agregados (totais, gráfico, ranking por recurso, histórico, cache-savings) via `usage_scope` (`:50-55`). Introduzido no commit **`1b06fbe87` (#48, 30/jun 15:27)** — *"baseline p/ zerar cronômetro da Gestão de IA… esconde telemetria pré-fix… nada é apagado"*. Spec cobre (`spec/services/crm/reports/ai_usage_spec.rb:104-124`).
+- **Causa-raiz do que o PO vê:** `CRM_AI_USAGE_BASELINE_AT` **não está setada em produção** e **não está versionada** (não aparece em `.env.example`, Dockerfile, compose, deploy — só na definição + spec). Sem ela, o default é "sem piso" → a janela de 30 dias ainda alcança o fim de junho (caro). Pode nunca ter sido setada, ou ter sido apagada num `updateEnv` que omitiu o campo `env` (lição M11b).
 
-**Veredito honesto (pós-Codex):** **sem mudança de gate/threshold/schema** — nenhuma regra de decisão mudou. O que não dá pra *provar* é qualidade: rebaixar `xhigh→high` no auto-move pode reduzir marginalmente a precisão da classificação que move card sozinho. **Decisão de custo consciente, severidade BAIXA** — não é regressão de software.
+**Fix (2 partes):**
+- **(A) Operação — 🔴 Vermelha:** setar `CRM_AI_USAGE_BASELINE_AT=2026-06-30T00:00:00-03:00` nos **2 stacks** (autonomia + hub2you). Regras: backup do env ANTES · NUNCA omitir `env` no `updateEnv` · offset de timezone explícito (`parse_time` usa `Time.zone.parse`) · validar healthz + conferir que a página escondeu o pré-30/jun. Dado **não é apagado** (append-only) — remover a ENV restaura a janela cheia.
+- **(B) Código — P (causa-raiz da fragilidade):** versionar a var em `.env.example` + doc de deploy dos stacks, pra não sumir num redeploy. Este é o único código (1 linha) e é o que impede a regressão de voltar.
 
-**Fix opcional (P):** efforts são constantes hardcoded (`config.rb:24-28`) — tornar cada `*_REASONING_EFFORT` ajustável por ENV com default `high` (resolve medo de regressão + custo, sem redeploy). Ver [[pending-reasoning-effort-env]]. **Não bloqueia nada.**
+**Nota lateral (não é o pedido):** os `*_REASONING_EFFORT` seguem hardcoded (`config.rb:24-28`); torná-los ajustáveis por ENV (default `high`) continua como pendência separada — ver [[pending-reasoning-effort-env]]. **Independente deste ponto.**
+
+**Esforço:** A = P (operação nos 2 stacks) · B = P (1 linha + doc). **Risco:** código nulo (já testado em prod); operacional médio (write de env prod, backup obrigatório).
 
 ---
 
@@ -176,16 +207,19 @@ Duas mudanças em `main`:
 
 Cada track = **branch/worktree própria** (`git worktree`), merge agrupado por onda para 1 deploy limpo (evita cascata blue-green — ver [[deploy-stacked-prs-cascade]]).
 
+**Onda 0 — Config imediata (sem código, alto valor):**
+- **P8-A**: setar `CRM_AI_USAGE_BASELINE_AT=2026-06-30` nos 2 stacks (🔴 Vermelha, backup env antes). Esconde o período caro **hoje**, sem deploy.
+
 **Onda A — Quick wins (código, baixo risco):**
-- P4 badge funil (S) · P3 ativar agente (S) · P6-WhatsApp referral→label/Kanban (S–M) · P8 ENV effort opcional (P)
+- P4 badge funil (S) · P3 ativar agente (S) · P6 CTWA referral→label/Kanban (S–M) · P8-B versionar a ENV no `.env.example` (P).
 - 1 PR cada ou 1 PR combinado FE; Codex review; merge agrupado → 1 deploy.
 
 **Onda B — Projetos de código (médio):**
-- P7 custom attrs → IA (M) · P5 eventos CRM→automação, trilho A+B (M–L) · P9 KB-first (M–L, **após responder 3 perguntas de PO**).
+- P1b onboarding MS/Google (M) · P7 custom attrs → IA (M) · P5 eventos CRM→automação, trilho A+B (M–L) · P6 LP→WhatsApp parser (S, após marketing padronizar links) · P9 KB-first (M–L, **após responder 3 perguntas de PO**).
 
 **Onda C — Ops/Infra (não são PRs de código):**
-- P1 e-mail conta 6 (probe prod DB + decisão trilho) · P2 SES (criar identidades + DNS + reabrir produção). Issues de Ops com checklist e 🟢 por ação (DNS/infra).
+- P1 e-mail conta 6 (probe prod DB + decisão trilho) · P2 SES hub2you (decisão autonomia-clone vs from-scratch → criar identidades + DNS + reabrir produção). Issues de Ops com checklist e 🟢 por ação (DNS/infra).
 
-**Fora de escopo agora (honesto):** P6-Google (sem canal de entrada) · P6-FB/IG paridade (M, opcional).
+**Fora de escopo agora (honesto):** P6-Google (sem canal de entrada) · P6-FB/IG paridade (M, opcional) · P8 reasoning_effort por ENV (pendência separada).
 
 **Cross-project safety (VPS multi-tenant):** mudanças em dispatcher/automação (P5) e SES/DNS (P2) tocam base compartilhada — gatear atrás de `Crm::Config.enabled?`, feature flag, e nunca omitir `env` em updates de infra. Reviewer + tester antes de merge ≥30 linhas.

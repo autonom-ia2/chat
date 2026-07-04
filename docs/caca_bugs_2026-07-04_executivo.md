@@ -18,10 +18,11 @@ este material existe para **decidir o que atacar e em que ordem**.
 
 | # | Ponto | Veredito | Impacto no negócio | Recomendação |
 |---|-------|----------|--------------------|--------------|
+| 8 | Gestão de IA mostra o gasto caro | O "botão" de esconder **existe e funciona** — só nunca foi **ligado** em produção | Relatório de custo poluído | ✅ Ligar config (imediato) |
 | 3 | Ativar agente "pede testar antes" | Não é trava — é layout de botão | Fricção na ativação | ✅ Fazer já (rápido) |
 | 4 | Etiqueta do funil cortada | CSS de largura fixa | Leitura ruim no dia a dia | ✅ Fazer já (rápido) |
-| 6 | Marcar campanha Meta no Kanban | Dado do WhatsApp **já chega**, só não é usado | Atribuição de venda por anúncio | ✅ Ganho barato (WhatsApp) |
-| 8 | "Regressão" na Gestão de IA | **Não há regressão** — foi corte de custo consciente | Nenhum. Custo sob controle | ✅ Nada a corrigir |
+| 6 | Marcar campanha Meta no Kanban | Anúncio-WhatsApp **já traz o dado**; LP→WhatsApp exige convenção de link | Atribuição de venda por anúncio | ✅ Ganho barato (anúncio) |
+| 1b | Guia MS/Google na própria tela | 1 tela cobre os 2 (input estreito + guia à direita) | Onboarding de e-mail sem suporte | 🔵 Planejar (médio) |
 | 7 | Atributos usados pelas IAs | IA não enxerga os campos preenchidos | Decisão de IA mais pobre | 🔵 Planejar (médio) |
 | 5 | Automações com eventos do Kanban | Eventos existem, mas não ligados ao motor de automação | Automação de funil | 🔵 Planejar (médio) |
 | 9 | Fluxo "base primeiro" na criação | Viável, com 1 trava técnica + 3 decisões suas | Onboarding do agente | 🔵 Planejar + decidir |
@@ -43,28 +44,34 @@ Legenda: ✅ rápido/decidido · 🔵 projeto de código a planejar · 🟠 oper
    (sandbox)** e um pedido anterior de liberação foi **negado** (com texto de outro cliente). É um
    trabalho de fundação, não um ajuste.
 
-3. **A "regressão" da IA não existe.** No dia 30 baixamos o "esforço de raciocínio" de 4 tarefas para
-   **cortar custo** — de propósito. **Nenhuma regra de decisão mudou** (mesmos limites, mesmo fluxo), só
-   ficou mais barata; no máximo a IA "pensa" um degrau menos ao mover card sozinho. Se quisermos voltar a
-   "caro/mais preciso", hoje exige mexer no código; dá para transformar num **botão de ambiente** (baixo esforço).
+3. **A "regressão" da Gestão de IA é uma config desligada, não um bug.** No dia 30 construímos exatamente
+   o que você pediu: um **corte que esconde o gasto do período caro** da tela (append-only, nada é apagado).
+   Ele **está no código e é testado** — mas o **interruptor nunca foi ligado em produção** (a variável de
+   ambiente nunca foi setada nem salva). Por isso o gasto caro ainda aparece. **Correção: ligar a variável
+   nos 2 ambientes + salvá-la no repositório** pra não sumir de novo. Sem reescrever nada.
 
-4. **A atribuição de campanha do Meta já está no bolso.** Toda venda que chega por anúncio
-   click-to-WhatsApp **já traz** os dados da campanha — só estamos **jogando fora**. Ligar isso a uma
-   etiqueta no Kanban é barato e destrava relatório de "qual anúncio gerou qual venda". **Google, ao
-   contrário, não tem por onde entrar** hoje — precisaria de um canal novo.
+4. **A atribuição de campanha do Meta: metade é de graça, metade exige convenção.** Vendas que chegam por
+   **anúncio click-to-WhatsApp já trazem** os dados da campanha — só estamos jogando fora (ganho barato).
+   Mas o caminho **tráfego → landing page → botão WhatsApp** é um clique "orgânico": o Meta **não manda
+   nada**. Para atribuir esse, o **marketing precisa embutir um código no link** da LP (convenção). **Google
+   não tem por onde entrar** hoje — precisaria de canal novo.
 
 ---
 
 ## Plano em 3 ondas
 
+**Onda 0 — Imediato (sem código):** ligar a variável que esconde o gasto caro na Gestão de IA (8). Resolve
+hoje, sem deploy — só uma configuração de ambiente (com backup antes).
+
 **Onda A — Ganhos rápidos (dias, baixo risco):** ativar agente (3), etiqueta do funil (4), campanha
-WhatsApp→Kanban (6), botão de custo da IA (8). Entram juntos num deploy só.
+anúncio→Kanban (6-CTWA), salvar a config do custo no repo (8). Entram juntos num deploy só.
 
-**Onda B — Projetos de código (1–2 semanas):** IA enxergar atributos (7), automação por evento de
-Kanban (5), fluxo "base primeiro" na criação (9 — **depende de 3 decisões suas**).
+**Onda B — Projetos de código (1–2 semanas):** guia MS/Google na tela (1b), IA enxergar atributos (7),
+automação por evento de Kanban (5), campanha LP→WhatsApp (6, após marketing padronizar os links), fluxo
+"base primeiro" na criação (9 — **depende de 3 decisões suas**).
 
-**Onda C — Operação/Infra (não é código):** ligar o recebimento de e-mail da conta 6 (1) e cadastrar +
-verificar os domínios na Amazon e sair do modo restrito (2). Cada passo de DNS/infra pede seu 🟢.
+**Onda C — Operação/Infra (não é código):** ligar o recebimento de e-mail da conta 6 (1) e montar do zero
+os domínios na Amazon + sair do modo restrito (2). Cada passo de DNS/infra pede seu 🟢.
 
 ---
 
@@ -72,12 +79,16 @@ verificar os domínios na Amazon e sair do modo restrito (2). Cada passo de DNS/
 
 1. **E-mail (conta 6):** o recebimento vai por **caixa própria do cliente (IMAP/OAuth — mais simples)**,
    por **encaminhamento**, ou pela **Amazon (mais pesado)**? Sem isso, não conserto às cegas.
-2. **Domínios/Amazon:** autoriza cadastrar os domínios, publicar os registros de DNS e **reabrir o pedido
-   de produção**? Padronizar tudo em **us-east-1**?
-3. **Fluxo "base primeiro" (9):** (a) vale para agente **interno**, para **com base de conhecimento**, ou
+2. **Amazon/SES:** **não temos acesso à conta AWS da Autonomia aqui** para "copiar" — só a do Hub2You. Você
+   me passa a credencial da Autonomia (aí extraio o modelo real) ou **autoriza montar do zero** os domínios
+   do Hub2You em **us-east-1** (cadastrar + DNS + reabrir produção)?
+3. **Custo da IA (8):** confirmo a data-limite **30/jun** para esconder o período caro? (a variável guarda
+   o histórico, só deixa de exibir; dá pra ajustar depois).
+4. **Fluxo "base primeiro" (9):** (a) vale para agente **interno**, para **com base de conhecimento**, ou
    só os dois juntos? (b) "máximo 30 bases" conta cada arquivo/link como uma base? (c) se um arquivo
    falhar ou o usuário não subir nada, o que libera o chat?
-4. **Google (6):** aceitamos deixar **fora de escopo** por ora (sem canal de entrada), focando no Meta?
+5. **Campanha LP→WhatsApp (6):** topa o marketing **padronizar os links** da landing page com um código de
+   campanha? Sem isso, só o anúncio-WhatsApp é atribuído automaticamente. **Google** fica fora por ora?
 
 ---
 
