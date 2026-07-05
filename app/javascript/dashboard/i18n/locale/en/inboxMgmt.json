@@ -1270,7 +1270,7 @@
       "GUIDE_TITLE": "What this connection does",
       "GUIDE_CAPABILITY_INBOX": "Receives incoming emails through IMAP",
       "GUIDE_CAPABILITY_OUTBOX_MICROSOFT": "Sends replies through the Microsoft Graph mail API",
-      "GUIDE_CAPABILITY_OUTBOX_GOOGLE": "Sends replies through the Gmail API",
+      "GUIDE_CAPABILITY_OUTBOX_GOOGLE": "Sends replies through your Gmail account over SMTP (XOAUTH2)",
       "GUIDE_AFTER_AUTH_TITLE": "After you authorize",
       "GUIDE_AFTER_AUTH_TEXT": "Your mailbox syncs automatically and replies are sent from your address. Calendar access is optional and stays off unless you enable it.",
       "GUIDE_NEXT_STEPS_TITLE": "Next steps",

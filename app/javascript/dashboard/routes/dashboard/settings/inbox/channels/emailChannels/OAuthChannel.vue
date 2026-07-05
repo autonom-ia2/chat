@@ -234,9 +234,10 @@ const requestAuthorization = async () => {
       </div>
 
       <aside
+        aria-labelledby="oauth-guide-title"
         class="lg:col-span-1 flex flex-col gap-4 p-4 h-fit rounded-lg bg-n-alpha-1 border border-n-weak"
       >
-        <h3 class="text-sm font-medium text-n-slate-12">
+        <h3 id="oauth-guide-title" class="text-sm font-medium text-n-slate-12">
           {{ tk('GUIDE_TITLE') }}
         </h3>
 
