@@ -1296,8 +1296,7 @@
       "GUIDE_REQUIREMENT_GOOGLE": "Calendar access requires the Google Calendar API enabled in the Cloud project. Without it, authorization fails when requesting the calendar.",
       "GUIDE_SCOPES_EXPAND": "View the permissions requested",
       "GUIDE_SCOPES_MICROSOFT": "offline_access, IMAP.AccessAsUser.All, Mail.Send, Mail.ReadWrite, openid, profile, email, Calendars.ReadWrite.",
-      "GUIDE_SCOPES_GOOGLE": "email, profile, https://mail.google.com/, https://www.googleapis.com/auth/calendar.",
-      "GUIDE_DOCS_LINK": "View documentation"
+      "GUIDE_SCOPES_GOOGLE": "email, profile, https://mail.google.com/, https://www.googleapis.com/auth/calendar."
     },
     "CHANNELS": {
       "MESSENGER": "Messenger",

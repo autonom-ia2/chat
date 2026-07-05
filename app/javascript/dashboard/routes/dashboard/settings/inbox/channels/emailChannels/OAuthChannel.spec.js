@@ -82,8 +82,8 @@ describe('OAuthChannel onboarding redesign', () => {
     await flushPromises();
 
     const links = wrapper.find('aside').findAll('a[target="_blank"]');
-    // App registration link + calendar setup link + docs link.
-    expect(links.length).toBeGreaterThanOrEqual(3);
+    // App registration link + calendar setup link.
+    expect(links.length).toBeGreaterThanOrEqual(2);
     const hrefs = links.map(a => a.attributes('href'));
     expect(hrefs.some(h => h.includes('portal.azure.com'))).toBe(true);
     expect(hrefs.some(h => h.includes('learn.microsoft.com'))).toBe(true);

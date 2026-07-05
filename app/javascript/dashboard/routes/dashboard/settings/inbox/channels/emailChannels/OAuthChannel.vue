@@ -67,7 +67,6 @@ const calendarSetupUrl = computed(() =>
     ? 'https://learn.microsoft.com/graph/permissions-reference'
     : 'https://console.cloud.google.com/apis/library/calendar-json.googleapis.com'
 );
-const docsUrl = 'https://chatwoot.help/hc/handbook';
 
 onMounted(async () => {
   try {
@@ -373,15 +372,6 @@ const requestAuthorization = async () => {
             }}
           </p>
         </details>
-
-        <a
-          :href="docsUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-sm text-n-brand hover:underline"
-        >
-          {{ tk('GUIDE_DOCS_LINK') }}
-        </a>
       </aside>
     </div>
   </div>
