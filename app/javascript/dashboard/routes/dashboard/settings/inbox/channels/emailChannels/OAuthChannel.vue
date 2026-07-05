@@ -65,7 +65,7 @@ const appRegistrationUrl = computed(() =>
 const calendarSetupUrl = computed(() =>
   isMicrosoft.value
     ? 'https://learn.microsoft.com/graph/permissions-reference'
-    : 'https://console.cloud.google.com/apis/library/calendar-json.googleapis.com'
+    : 'https://console.cloud.google.com/apis/library'
 );
 
 onMounted(async () => {
@@ -156,9 +156,12 @@ const requestAuthorization = async () => {
               {{ tk('CALLBACK_LABEL') }}
             </label>
             <div class="flex items-center gap-2">
-              <code class="flex-1 text-xs break-all text-n-slate-12">{{
-                callbackUrl
-              }}</code>
+              <input
+                :value="callbackUrl"
+                readonly
+                class="flex-1 min-w-0 px-2.5 py-1.5 text-xs font-mono truncate rounded-lg text-n-slate-12 bg-n-alpha-2 border border-n-weak focus:outline-none focus:border-n-brand"
+                @focus="$event.target.select()"
+              />
               <NextButton
                 type="button"
                 sm
@@ -309,7 +312,11 @@ const requestAuthorization = async () => {
             </li>
             <li>
               <span class="inline-flex items-center gap-2">
-                {{ tk('GUIDE_STEP_CALENDAR') }}
+                {{
+                  isMicrosoft
+                    ? tk('GUIDE_STEP_CALENDAR')
+                    : tk('GUIDE_STEP_APIS')
+                }}
                 <span
                   class="px-1.5 py-0.5 text-xs font-semibold uppercase rounded text-n-amber-11 bg-n-amber-3"
                 >
