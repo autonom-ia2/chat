@@ -102,4 +102,34 @@ RSpec.describe WorkingHour do
       expect(described_class.today.open_now?).to be true
     end
   end
+
+  # H3 rewire: an inbox left at its default UTC must NOT silently decide
+  # business hours in UTC. With the account operational (reporting) timezone set
+  # to America/Sao_Paulo (UTC-3), the window is evaluated in local BRT, not UTC.
+  # Both moments below are chosen to STRADDLE the 09:00–17:00 window boundary so
+  # UTC and BRT disagree — they fail against the pre-fix (UTC) behavior and pass
+  # only when the resolver routes the decision through the operational zone.
+  context 'when inbox is default UTC but account has a São Paulo operational timezone' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account, timezone: 'UTC') }
+
+    before do
+      Time.zone = 'UTC'
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+      inbox.working_hours # materialize default 09:00-17:00 weekday hours
+    end
+
+    it 'is out of office at 10:00 UTC because it is 07:00 BRT, before the 09:00 open' do
+      # Pre-fix (UTC) would see 10:00 inside 09-17 and wrongly report open.
+      travel_to '05.05.2025 10:00 UTC'.to_datetime # Monday, 07:00 BRT
+      expect(described_class.today.open_now?).to be false
+      expect(described_class.today.closed_now?).to be true
+    end
+
+    it 'is still open at 17:30 UTC because it is 14:30 BRT, inside 09-17' do
+      # Pre-fix (UTC) would see 17:30 past the 17:00 close and wrongly report closed.
+      travel_to '05.05.2025 17:30 UTC'.to_datetime # Monday, 14:30 BRT
+      expect(described_class.today.open_now?).to be true
+    end
+  end
 end

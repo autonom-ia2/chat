@@ -42,22 +42,21 @@ class WorkingHour < ApplicationRecord
   def self.today
     # While getting the day of the week, consider the timezone as well. `first` would
     # return the first working hour from the list of working hours available per week.
-    inbox = first.inbox
-    find_by(day_of_week: Time.zone.now.in_time_zone(inbox.timezone).to_date.wday)
+    working_hour = first
+    find_by(day_of_week: working_hour.send(:now_in_business_zone).to_date.wday)
   end
 
   def open_at?(time)
     return false if closed_all_day?
 
-    open_time = Time.zone.now.in_time_zone(inbox.timezone).change({ hour: open_hour, min: open_minutes })
-    close_time = Time.zone.now.in_time_zone(inbox.timezone).change({ hour: close_hour, min: close_minutes })
+    open_time = now_in_business_zone.change({ hour: open_hour, min: open_minutes })
+    close_time = now_in_business_zone.change({ hour: close_hour, min: close_minutes })
 
     time.between?(open_time, close_time)
   end
 
   def open_now?
-    inbox_time = Time.zone.now.in_time_zone(inbox.timezone)
-    open_at?(inbox_time)
+    open_at?(now_in_business_zone)
   end
 
   def closed_now?
@@ -65,6 +64,18 @@ class WorkingHour < ApplicationRecord
   end
 
   private
+
+  # Business-hours decisions must never silently collapse to UTC when the inbox
+  # is left at its default UTC. Route through the shared resolver so a default
+  # inbox falls back to the account/ENV operational zone; a genuinely non-UTC
+  # inbox keeps behaving exactly as before.
+  def now_in_business_zone
+    Time.zone.now.in_time_zone(business_zone)
+  end
+
+  def business_zone
+    TimeZoneResolver.zone_for(inbox: inbox, account: inbox.account)
+  end
 
   def assign_account
     self.account_id = inbox.account_id

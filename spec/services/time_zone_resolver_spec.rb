@@ -11,6 +11,63 @@ RSpec.describe TimeZoneResolver do
     instance_double(Account, reporting_timezone: tz_name)
   end
 
+  def inbox_with(tz_name)
+    instance_double(Inbox, timezone: tz_name)
+  end
+
+  describe 'inbox step (H3)' do
+    it 'resolves a genuinely non-UTC inbox timezone as :inbox' do
+      with_modified_env DEFAULT_OPERATIONAL_TIMEZONE: nil do
+        result = described_class.for(
+          contact: contact_with(nil),
+          inbox: inbox_with('Australia/Sydney'),
+          account: account_with('America/New_York')
+        )
+
+        expect(result.source).to eq(:inbox)
+        expect(result.zone.name).to eq('Australia/Sydney')
+      end
+    end
+
+    it 'treats a plain-default UTC inbox as unset and falls through to account' do
+      with_modified_env DEFAULT_OPERATIONAL_TIMEZONE: nil do
+        result = described_class.for(
+          contact: contact_with(nil),
+          inbox: inbox_with('UTC'),
+          account: account_with('America/Sao_Paulo')
+        )
+
+        expect(result.source).to eq(:account)
+        expect(result.zone.name).to eq('America/Sao_Paulo')
+      end
+    end
+
+    it 'prefers the contact timezone over a non-UTC inbox' do
+      with_modified_env DEFAULT_OPERATIONAL_TIMEZONE: nil do
+        result = described_class.for(
+          contact: contact_with('America/Sao_Paulo'),
+          inbox: inbox_with('Australia/Sydney')
+        )
+
+        expect(result.source).to eq(:contact)
+        expect(result.zone.name).to eq('America/Sao_Paulo')
+      end
+    end
+
+    it 'skips an invalid inbox tz and falls through to account' do
+      with_modified_env DEFAULT_OPERATIONAL_TIMEZONE: nil do
+        result = described_class.for(
+          contact: contact_with(nil),
+          inbox: inbox_with('Not/AZone'),
+          account: account_with('America/New_York')
+        )
+
+        expect(result.source).to eq(:account)
+        expect(result.zone.name).to eq('America/New_York')
+      end
+    end
+  end
+
   describe '.for chain order' do
     it 'prefers the contact timezone over account and ENV' do
       with_modified_env DEFAULT_OPERATIONAL_TIMEZONE: 'Europe/Lisbon' do
