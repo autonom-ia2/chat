@@ -42,12 +42,14 @@ module Crm
       end
 
       # Âncora temporal para a IA resolver datas relativas ("amanhã", "terça que vem") em data real.
-      # Fuso resolvido como nos follow-ups (contato → account.reporting_timezone → UTC).
+      # Fuso OPERACIONAL resolvido pelo TimeZoneResolver compartilhado (contato → account → ENV
+      # default → none), o MESMO da gravação do lembrete no CallbackScheduler — assim now_local e
+      # default_hour são interpretados no fuso em que o retorno será agendado, não em UTC silencioso.
       def temporal_context
-        tz = Config.resolved_timezone(account: @card.account, contact: @card.try(:contact))
-        now_local = Time.current.in_time_zone(tz)
+        zone = TimeZoneResolver.for(account: @card.account, contact: @card.try(:contact)).zone
+        now_local = Time.current.in_time_zone(zone)
         {
-          timezone: tz,
+          timezone: zone.name,
           now_local: now_local.strftime('%Y-%m-%dT%H:%M'),
           weekday: now_local.strftime('%A'),
           default_hour: Config::CALLBACK_DEFAULT_HOUR

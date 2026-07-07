@@ -45,9 +45,12 @@ module Crm
       end
 
       # "YYYY-MM-DDTHH:MM" (hora LOCAL) -> Time UTC, validando fuso, futuro e horizonte.
+      # FAIL-CLOSED: se o fuso operacional não resolve (source :none), NÃO agenda — parsear a hora
+      # local ("9h") em UTC dispararia o retorno na hora errada (o footgun do UTC silencioso).
       def resolve_due_at
-        zone = ActiveSupport::TimeZone[timezone] || ActiveSupport::TimeZone['UTC']
-        local = zone.parse(@callback[:requested_at].to_s)
+        return unless timezone_resolution.resolved?
+
+        local = timezone_resolution.zone.parse(@callback[:requested_at].to_s)
         return if local.blank?
 
         utc = local.utc
@@ -135,8 +138,15 @@ module Crm
         }
       end
 
+      # Resolução do fuso OPERACIONAL via TimeZoneResolver compartilhado (mesma cadeia do
+      # AutoFollowupPlanner/Runner): contato -> account -> ENV default -> (none). Guardamos a
+      # Resolution p/ decidir fail-closed (source :none) em vez de cair em UTC silencioso.
+      def timezone_resolution
+        @timezone_resolution ||= TimeZoneResolver.for(contact: contact, account: @card.account)
+      end
+
       def timezone
-        @timezone ||= Config.resolved_timezone(account: @card.account, contact: contact)
+        timezone_resolution.zone.name
       end
 
       def contact
