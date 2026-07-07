@@ -62,6 +62,10 @@ module Crm
         last_inbound = last_inbound_message(conversation)
         return false if last_inbound.blank?
         return false if last_inbound.created_at > cutoff
+        # FAIL-CLOSED: never schedule a send when no operational timezone resolves
+        # (source :none). Firing in silent UTC is the exact 05h-BRT bug; defer
+        # until the account/inbox/ENV configures a real zone.
+        return false unless quiet_hours_resolution(card).resolved?
 
         create_first_touch(card, last_inbound)
         true
@@ -145,18 +149,16 @@ module Crm
         end
       end
 
-      # Quiet-hours zone resolution. MUST stay byte-for-byte identical to
-      # AutoFollowupRunner#quiet_time_zone so touch #1 (planner) and touch #2+
-      # (runner) clamp to the SAME local window: prefer the contact's
-      # additional_attributes['timezone'], else account.reporting_timezone, else
-      # 'UTC'; any value that is not a real ActiveSupport::TimeZone falls through.
-      def quiet_hours_zone(card)
-        contact = card.contact
-        contact_tz = contact&.additional_attributes.to_h['timezone'].presence
-        return contact_tz if ActiveSupport::TimeZone[contact_tz.to_s].present?
+      # Quiet-hours zone resolution via the shared TimeZoneResolver. MUST stay in
+      # lockstep with AutoFollowupRunner#quiet_time_zone so touch #1 (planner) and
+      # touch #2+ (runner) clamp to the SAME local window. Returns a Resolution so
+      # the caller can fail-closed when nothing configured resolves (source :none).
+      def quiet_hours_resolution(card)
+        TimeZoneResolver.for(contact: card.contact, account: @pipeline.account)
+      end
 
-        account_tz = @pipeline.account.try(:reporting_timezone).presence
-        ActiveSupport::TimeZone[account_tz.to_s].present? ? account_tz : 'UTC'
+      def quiet_hours_zone(card)
+        quiet_hours_resolution(card).zone.name
       end
 
       # Seed the full cadence-state shape the runner and the card drawer rely on:

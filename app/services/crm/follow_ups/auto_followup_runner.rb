@@ -508,18 +508,15 @@ module Crm
         candidate
       end
 
-      # Quiet-hours zone resolution. MUST stay byte-for-byte identical to
-      # AutoFollowupPlanner#quiet_hours_zone so touch #1 (planner) and touch #2+
-      # (runner) clamp to the SAME local window: prefer the contact's
-      # additional_attributes['timezone'], else account.reporting_timezone, else
-      # 'UTC'; any value that is not a real ActiveSupport::TimeZone falls through.
-      def quiet_time_zone
-        contact = @follow_up.contact || @card.contact
-        contact_tz = contact&.additional_attributes.to_h['timezone'].presence
-        return contact_tz if ActiveSupport::TimeZone[contact_tz.to_s].present?
+      # Quiet-hours zone resolution via the shared TimeZoneResolver. MUST stay in
+      # lockstep with AutoFollowupPlanner#quiet_hours_zone so touch #1 (planner) and
+      # touch #2+ (runner) clamp to the SAME local window.
+      def quiet_time_resolution
+        TimeZoneResolver.for(contact: @follow_up.contact || @card.contact, account: @card.account)
+      end
 
-        account_tz = @card.account.try(:reporting_timezone).presence
-        ActiveSupport::TimeZone[account_tz.to_s].present? ? account_tz : 'UTC'
+      def quiet_time_zone
+        quiet_time_resolution.zone.name
       end
 
       def last_inbound_at

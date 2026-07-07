@@ -61,8 +61,11 @@ module Crm
         I18n.t('crm.follow_ups.auto_followup.title', touch: @touch, default: "AI follow-up #{@touch}")
       end
 
+      # Persist the operational timezone the cadence clamps to (contact -> account
+      # -> ENV default), resolved through the shared TimeZoneResolver, so the row
+      # never records a silent 'UTC' when a real zone is configured.
       def timezone
-        @card.account.try(:reporting_timezone).presence || 'UTC'
+        TimeZoneResolver.zone_for(contact: @card.contact, account: @card.account).name
       end
 
       def metadata
