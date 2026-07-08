@@ -148,6 +148,48 @@ RSpec.describe 'WhatsApp API campaigns API', type: :request do
     expect(response.parsed_body['error']).to eq('whatsapp_api_campaigns.disabled')
   end
 
+  it 'schedules a naive local-time campaign in the account operational zone, not UTC' do
+    with_modified_env DEFAULT_OPERATIONAL_TIMEZONE: nil do
+      account, user, inbox, label = create_account_user_inbox_and_label
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+      create_labelled_contact(account: account, label: label, name: 'Ana Silva', phone_number: '+5511987654321')
+
+      post "/api/v1/accounts/#{account.id}/whatsapp_api_campaigns",
+           params: {
+             title: 'Campanha API',
+             inbox_id: inbox.id,
+             message_body: 'Olá {{contact.first_name}}',
+             scheduled_at: '2999-07-10 09:00',
+             audience: [{ type: 'Label', id: label.id }]
+           },
+           headers: auth_headers(user)
+
+      expect(response).to have_http_status(:created)
+      # 09:00 in America/Sao_Paulo (UTC-3) is 12:00 UTC — the silent-UTC bug would store 09:00 UTC.
+      expect(WhatsappApiCampaign.last.scheduled_at.utc.strftime('%Y-%m-%d %H:%M')).to eq('2999-07-10 12:00')
+    end
+  end
+
+  it 'rejects a naive scheduled_at when no operational timezone is configured' do
+    with_modified_env DEFAULT_OPERATIONAL_TIMEZONE: nil do
+      account, user, inbox, label = create_account_user_inbox_and_label
+
+      post "/api/v1/accounts/#{account.id}/whatsapp_api_campaigns",
+           params: {
+             title: 'Campanha API',
+             inbox_id: inbox.id,
+             message_body: 'Olá {{contact.first_name}}',
+             scheduled_at: '2999-07-10 09:00',
+             audience: [{ type: 'Label', id: label.id }]
+           },
+           headers: auth_headers(user)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('scheduled_at_naive_timezone')
+      expect(WhatsappApiCampaign.count).to eq(0)
+    end
+  end
+
   def auth_headers(user)
     { 'api_access_token' => user.access_token.token }
   end

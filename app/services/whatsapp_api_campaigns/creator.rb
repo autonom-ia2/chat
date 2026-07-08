@@ -38,8 +38,19 @@ module WhatsappApiCampaigns
         template_snapshot: template_snapshot(template, message_body),
         media_snapshot: media_snapshot,
         media_file_pending: @params[:media_file].present?,
-        scheduled_at: Time.zone.parse(permitted[:scheduled_at].to_s)
+        scheduled_at: resolved_scheduled_at(inbox)
       }
+    end
+
+    # Naive datetime (no offset) is interpreted in the account/inbox operational
+    # zone via TimeZoneResolver instead of collapsing to UTC. When no zone can be
+    # resolved we fail-closed with an ArgumentError -> the controller returns 422.
+    def resolved_scheduled_at(inbox)
+      Campaigns::ScheduledAtParser.call(value: permitted[:scheduled_at], account: @account, inbox: inbox)
+    rescue Campaigns::ScheduledAtParser::NaiveWithoutZoneError
+      raise ArgumentError, 'scheduled_at_naive_timezone'
+    rescue Campaigns::ScheduledAtParser::InvalidError
+      raise ArgumentError, 'scheduled_at_invalid'
     end
 
     def fetch_inbox

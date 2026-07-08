@@ -47,8 +47,13 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
     return render_unprocessable('email_campaign.scheduled_at_required') if params[:scheduled_at].blank?
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.sendable?
 
-    @campaign.update!(status: :scheduled, scheduled_at: params[:scheduled_at])
+    scheduled_at = resolved_scheduled_at
+    @campaign.update!(status: :scheduled, scheduled_at: scheduled_at)
     render :show
+  rescue Campaigns::ScheduledAtParser::NaiveWithoutZoneError
+    render_unprocessable('email_campaign.scheduled_at_naive_timezone')
+  rescue Campaigns::ScheduledAtParser::InvalidError
+    render_unprocessable('email_campaign.scheduled_at_invalid')
   end
 
   def pause
@@ -89,6 +94,14 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   end
 
   private
+
+  def resolved_scheduled_at
+    Campaigns::ScheduledAtParser.call(
+      value: params[:scheduled_at],
+      account: Current.account,
+      inbox: @campaign.sender_inbox
+    )
+  end
 
   def campaign_scope
     EmailCampaign.where(account: Current.account)

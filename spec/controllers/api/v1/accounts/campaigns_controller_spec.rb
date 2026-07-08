@@ -150,6 +150,37 @@ RSpec.describe 'Campaigns API', type: :request do
         expect(response_data[:scheduled_at]).to eq(scheduled_at.to_i)
         expect(response_data[:audience].pluck(:id)).to include(label1.id, label2.id)
       end
+
+      it 'schedules a naive local-time oneoff campaign in the operational zone, not UTC' do
+        with_modified_env DEFAULT_OPERATIONAL_TIMEZONE: nil do
+          account.update!(reporting_timezone: 'America/Sao_Paulo')
+          twilio_sms = create(:channel_twilio_sms, account: account)
+          twilio_inbox = create(:inbox, channel: twilio_sms, account: account)
+
+          post "/api/v1/accounts/#{account.id}/campaigns",
+               params: { inbox_id: twilio_inbox.id, title: 'test', message: 'test message', scheduled_at: '2999-07-10 09:00' },
+               headers: administrator.create_new_auth_token,
+               as: :json
+
+          expect(response).to have_http_status(:success)
+          # 09:00 in America/Sao_Paulo (UTC-3) is 12:00 UTC — the silent-UTC bug would store 09:00 UTC.
+          expect(Campaign.last.scheduled_at.utc.strftime('%Y-%m-%d %H:%M')).to eq('2999-07-10 12:00')
+        end
+      end
+
+      it 'rejects a naive scheduled_at when no operational timezone is configured' do
+        with_modified_env DEFAULT_OPERATIONAL_TIMEZONE: nil do
+          twilio_sms = create(:channel_twilio_sms, account: account)
+          twilio_inbox = create(:inbox, channel: twilio_sms, account: account)
+
+          post "/api/v1/accounts/#{account.id}/campaigns",
+               params: { inbox_id: twilio_inbox.id, title: 'test', message: 'test message', scheduled_at: '2999-07-10 09:00' },
+               headers: administrator.create_new_auth_token,
+               as: :json
+
+          expect(response).to have_http_status(:unprocessable_entity)
+        end
+      end
     end
   end
 
