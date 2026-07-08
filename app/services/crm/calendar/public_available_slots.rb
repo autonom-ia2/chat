@@ -31,9 +31,7 @@ module Crm
 
       # Returns an array of ISO8601 start strings (with offset).
       def perform
-        return strict_empty if local_day.blank?
-        return strict_empty unless allowed_weekday?
-        return strict_empty unless within_booking_window?
+        return strict_empty unless offerable_day?
 
         candidate_starts.reject { |start_at| conflicts?(start_at) }
                         .first(MAX_SLOTS)
@@ -56,6 +54,17 @@ module Crm
         []
       end
 
+      # Fail-closed on timezone: if the profile's operational tz does not resolve
+      # (source :none) we must NOT anchor slots to a silent UTC (that would offer a
+      # BR profile's slots 3h early). The remaining guards are deterministic
+      # profile rules (bad date / disallowed weekday / outside window) (H4-booking).
+      def offerable_day?
+        timezone_resolution.resolved? &&
+          local_day.present? &&
+          allowed_weekday? &&
+          within_booking_window?
+      end
+
       def duration
         profile.duration_minutes.minutes
       end
@@ -64,8 +73,12 @@ module Crm
         profile.buffer_minutes.minutes
       end
 
+      def timezone_resolution
+        @timezone_resolution ||= profile.timezone_resolution
+      end
+
       def time_zone
-        @time_zone ||= ActiveSupport::TimeZone[profile.resolved_timezone] || ActiveSupport::TimeZone['UTC']
+        @time_zone ||= timezone_resolution.zone
       end
 
       def local_day

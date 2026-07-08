@@ -1,3 +1,53 @@
+# == Schema Information
+#
+# Table name: crm_meetings
+#
+#  id                  :bigint           not null, primary key
+#  description         :text
+#  ends_at             :datetime         not null
+#  metadata            :jsonb            not null
+#  online_meeting_type :integer          default("teams"), not null
+#  online_meeting_url  :text
+#  outcome             :integer
+#  outcome_notes       :text
+#  outcome_recorded_at :datetime
+#  provider            :integer          not null
+#  starts_at           :datetime         not null
+#  status              :integer          default("draft"), not null
+#  timezone            :string           default("UTC"), not null
+#  title               :string           not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  account_id          :bigint           not null
+#  card_id             :bigint           not null
+#  created_by_id       :bigint           not null
+#  external_event_id   :string
+#  inbox_id            :bigint
+#  reminder_id         :bigint
+#
+# Indexes
+#
+#  idx_crm_meetings_card                                     (account_id,card_id)
+#  idx_crm_meetings_created_by                               (account_id,created_by_id)
+#  idx_crm_meetings_external_unique                          (external_event_id,provider) UNIQUE WHERE (external_event_id IS NOT NULL)
+#  idx_crm_meetings_inbox                                    (account_id,inbox_id)
+#  idx_crm_meetings_starts_at                                (account_id,starts_at)
+#  idx_crm_meetings_status                                   (account_id,status)
+#  idx_on_account_id_outcome_outcome_recorded_at_085cfbd511  (account_id,outcome,outcome_recorded_at)
+#  index_crm_meetings_on_account_id                          (account_id)
+#  index_crm_meetings_on_card_id                             (card_id)
+#  index_crm_meetings_on_created_by_id                       (created_by_id)
+#  index_crm_meetings_on_inbox_id                            (inbox_id)
+#  index_crm_meetings_on_reminder_id                         (reminder_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (card_id => crm_cards.id)
+#  fk_rails_...  (created_by_id => users.id)
+#  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
+#  fk_rails_...  (reminder_id => crm_follow_ups.id) ON DELETE => nullify
+#
 class Crm::Meeting < ApplicationRecord
   self.table_name = 'crm_meetings'
 
@@ -17,6 +67,11 @@ class Crm::Meeting < ApplicationRecord
   enum outcome: { held: 0, no_show: 1 }, _prefix: true
 
   validates :title, :starts_at, :ends_at, :timezone, :provider, presence: true
+  # timezone is a NOT-NULL column defaulting to 'UTC'; presence alone let a
+  # non-IANA string persist and later collapse date math to a silent UTC. Require
+  # a value ActiveSupport::TimeZone can resolve — accepts both IANA identifiers
+  # (America/Sao_Paulo) and Rails' friendly names (Brasilia) (H4-booking).
+  validate :timezone_must_be_resolvable
   validates :account_id, :card_id, :inbox_id, :created_by_id, presence: true
   validates :external_event_id, uniqueness: { scope: :provider }, allow_blank: true
   validates :metadata, jsonb_attributes_length: true
@@ -36,6 +91,13 @@ class Crm::Meeting < ApplicationRecord
   end
 
   private
+
+  def timezone_must_be_resolvable
+    return if timezone.blank?
+    return if ActiveSupport::TimeZone[timezone].present?
+
+    errors.add(:timezone, 'is not a valid time zone')
+  end
 
   def ends_at_after_starts_at
     return if ends_at.blank? || starts_at.blank?

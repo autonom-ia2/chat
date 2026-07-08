@@ -3,6 +3,41 @@
 # public visitor presents — no account_id is ever trusted from the URL. A disabled
 # profile (or unknown slug) is treated as not-found so there is no enumeration and
 # no PII leak.
+# == Schema Information
+#
+# Table name: crm_agent_booking_profiles
+#
+#  id                  :bigint           not null, primary key
+#  assignment_mode     :integer          default("fixed"), not null
+#  booking_window_days :integer          default(14), not null
+#  buffer_minutes      :integer          default(0), not null
+#  description         :text
+#  duration_minutes    :integer          default(30), not null
+#  enabled             :boolean          default(TRUE), not null
+#  metadata            :jsonb            not null
+#  slug                :string           not null
+#  timezone            :string
+#  title               :string
+#  working_hours       :jsonb            not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  account_id          :bigint           not null
+#  default_assignee_id :bigint
+#  default_pipeline_id :bigint
+#  default_stage_id    :bigint
+#  inbox_id            :bigint           not null
+#
+# Indexes
+#
+#  index_crm_agent_booking_profiles_on_account_id  (account_id)
+#  index_crm_agent_booking_profiles_on_inbox_id    (inbox_id)
+#  index_crm_agent_booking_profiles_on_slug        (slug) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (inbox_id => inboxes.id)
+#
 class Crm::AgentBookingProfile < ApplicationRecord
   self.table_name = 'crm_agent_booking_profiles'
 
@@ -34,6 +69,12 @@ class Crm::AgentBookingProfile < ApplicationRecord
   validates :buffer_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_BUFFER }
   validates :booking_window_days, numericality: { only_integer: true, greater_than_or_equal_to: MIN_WINDOW, less_than_or_equal_to: MAX_WINDOW }
   validates :title, length: { maximum: 255 }, allow_blank: true
+  # The profile timezone anchors every public slot. A non-IANA value used to
+  # silently collapse to UTC (shifting a BR 09:00 window to 06:00 BRT); reject it
+  # at the boundary. Blank is allowed — resolution then falls through to the
+  # account operational tz / ENV default (H4-booking). Accepts both IANA
+  # identifiers and Rails' friendly names.
+  validate :timezone_must_be_resolvable
   validates :metadata, jsonb_attributes_length: true
   validate :inbox_must_belong_to_account
   validate :default_refs_must_belong_to_account
@@ -45,8 +86,23 @@ class Crm::AgentBookingProfile < ApplicationRecord
 
   scope :enabled, -> { where(enabled: true) }
 
+  # Operational timezone resolution for public booking. The operator's explicit
+  # profile timezone is the primary source; when blank/invalid it falls through
+  # to the shared TimeZoneResolver chain (inbox non-UTC -> account -> ENV default
+  # -> :none). Returns a TimeZoneResolver::Resolution so callers can fail-closed
+  # on `source: :none` instead of silently anchoring slots to UTC.
+  def timezone_resolution
+    explicit = ActiveSupport::TimeZone[timezone.to_s] if timezone.present?
+    return TimeZoneResolver::Resolution.new(zone: explicit, source: :profile) if explicit
+
+    TimeZoneResolver.for(account: account, inbox: inbox)
+  end
+
+  # Zone NAME for display/labels. NEVER nil (falls back to UTC when unresolved),
+  # so it stays safe for rendering; scheduling/window callers must use
+  # `timezone_resolution` and honor `:none` (fail-closed).
   def resolved_timezone
-    timezone.presence || 'UTC'
+    timezone_resolution.zone.name
   end
 
   def start_hour
@@ -77,6 +133,13 @@ class Crm::AgentBookingProfile < ApplicationRecord
 
   def normalize_working_hours
     self.working_hours = DEFAULT_WORKING_HOURS.dup if working_hours.blank?
+  end
+
+  def timezone_must_be_resolvable
+    return if timezone.blank?
+    return if ActiveSupport::TimeZone[timezone].present?
+
+    errors.add(:timezone, 'is not a valid time zone')
   end
 
   def inbox_must_belong_to_account

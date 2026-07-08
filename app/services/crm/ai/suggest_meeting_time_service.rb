@@ -57,7 +57,11 @@ module Crm
         @inbox = inbox
         @date = date
         @duration_minutes = positive_duration(duration_minutes)
-        @timezone = timezone.presence || default_timezone
+        # Untrusted client timezone: honor it ONLY when it maps to a real
+        # ActiveSupport::TimeZone, else fall to the resolver-backed operational
+        # default. A bogus value must never slip through to a silent UTC (which
+        # would anchor the free-slot grid 3h off in BR) (H4-booking).
+        @timezone = (timezone if timezone.present? && ActiveSupport::TimeZone[timezone.to_s]) || default_timezone
         @agent = agent
       end
 
@@ -173,8 +177,10 @@ module Crm
         nil
       end
 
+      # `@timezone` is guaranteed resolvable by the constructor, so this maps
+      # straight to its zone with no silent-UTC fallback.
       def time_zone
-        @time_zone ||= ActiveSupport::TimeZone[timezone] || ActiveSupport::TimeZone['UTC']
+        @time_zone ||= ActiveSupport::TimeZone[timezone]
       end
 
       def local_day
