@@ -61,37 +61,42 @@ const emitNewAccount = () => {
         :title="currentAccount.name"
         @click="toggle"
       >
-        <Logo class="size-7" />
+        <Logo class="size-9 object-contain" />
       </button>
-      <!-- Expanded view: Account name trigger -->
-      <button
+      <!-- Expanded view: logo is branding; only the account row opens the switcher. -->
+      <div
         v-else
-        id="sidebar-account-switcher"
-        :data-account-id="accountId"
-        aria-haspopup="listbox"
-        aria-controls="account-options"
-        class="flex items-center gap-2 justify-between w-full rounded-lg px-2"
-        :class="[
-          isOpen && 'bg-n-alpha-1',
-          showAccountSwitcher
-            ? 'hover:bg-n-alpha-1 cursor-pointer'
-            : 'cursor-default',
-        ]"
-        @click="() => showAccountSwitcher && toggle()"
+        class="flex w-full min-w-0 flex-col items-center gap-1.5 text-center"
       >
-        <span
-          class="text-sm font-medium leading-5 text-n-slate-12 truncate"
-          aria-live="polite"
+        <Logo class="h-14 w-full max-w-[10rem] object-contain" />
+        <button
+          id="sidebar-account-switcher"
+          :data-account-id="accountId"
+          aria-haspopup="listbox"
+          aria-controls="account-options"
+          class="flex h-7 w-full min-w-0 items-center justify-center gap-1 rounded-lg px-2 text-center"
+          :class="[
+            isOpen && 'bg-n-alpha-1',
+            showAccountSwitcher
+              ? 'hover:bg-n-alpha-1 cursor-pointer'
+              : 'cursor-default',
+          ]"
+          @click="() => showAccountSwitcher && toggle()"
         >
-          {{ currentAccount.name }}
-        </span>
+          <span
+            class="min-w-0 truncate text-sm font-medium leading-5 text-n-slate-12"
+            aria-live="polite"
+          >
+            {{ currentAccount.name }}
+          </span>
 
-        <span
-          v-if="showAccountSwitcher"
-          aria-hidden="true"
-          class="i-lucide-chevron-down size-4 text-n-slate-10 flex-shrink-0"
-        />
-      </button>
+          <span
+            v-if="showAccountSwitcher"
+            aria-hidden="true"
+            class="i-lucide-chevron-down size-4 flex-shrink-0 text-n-slate-10"
+          />
+        </button>
+      </div>
     </template>
     <DropdownBody
       v-if="showAccountSwitcher || isCollapsed"
