@@ -45,7 +45,9 @@ describe('CrmKanbanCard bubble shortcut', () => {
   it('renders the last-message bubble as a conversation button when a linked conversation exists', () => {
     const wrapper = mountCard();
 
-    expect(wrapper.find('button.crm-card-open-conversation').exists()).toBe(true);
+    expect(wrapper.find('button.crm-card-open-conversation').exists()).toBe(
+      true
+    );
   });
 
   it('emits openConversation (and NOT open) when the bubble is clicked', async () => {
@@ -84,7 +86,9 @@ describe('CrmKanbanCard bubble shortcut', () => {
   it('keeps the bubble as a plain label (no shortcut) when the card has no conversation', async () => {
     const wrapper = mountCard(NO_CONVERSATION_CARD);
 
-    expect(wrapper.find('button.crm-card-open-conversation').exists()).toBe(false);
+    expect(wrapper.find('button.crm-card-open-conversation').exists()).toBe(
+      false
+    );
 
     // The plain label click still bubbles up to the content wrapper -> open.
     await wrapper.find('div.relative.z-10').trigger('click');
