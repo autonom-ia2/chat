@@ -1260,17 +1260,19 @@ onMounted(async () => {
               />
               <button
                 type="button"
-                class="grid w-full gap-2 p-3 pl-4 text-left"
+                class="grid min-w-0 w-full gap-2 overflow-hidden p-3 pl-4 text-left"
                 @click="openSearch(search)"
               >
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0 flex-1">
+                <div
+                  class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 overflow-hidden"
+                >
+                  <div class="min-w-0 overflow-hidden">
                     <h3
-                      class="max-w-full truncate text-sm font-semibold text-n-slate-12"
+                      class="block w-full truncate text-sm font-semibold text-n-slate-12"
                     >
                       {{ search.query }}
                     </h3>
-                    <p class="max-w-full truncate text-xs text-n-slate-10">
+                    <p class="block w-full truncate text-xs text-n-slate-10">
                       {{ search.location }} · {{ formatSearchArea(search) }}
                     </p>
                   </div>
@@ -1284,9 +1286,9 @@ onMounted(async () => {
                   </span>
                 </div>
                 <div
-                  class="flex min-w-0 items-center justify-between gap-2 text-xs text-n-slate-10"
+                  class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 overflow-hidden text-xs text-n-slate-10"
                 >
-                  <span class="min-w-0 truncate">
+                  <span class="block min-w-0 truncate">
                     {{
                       t('PROSPECTING.SEARCH.RECENT_METRICS', {
                         leads: search.results_count || 0,
