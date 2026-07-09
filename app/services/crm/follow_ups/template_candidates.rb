@@ -20,6 +20,7 @@ module Crm
       VARIABLE_PATTERN = /\{\{\s*([^}]+?)\s*\}\}/.freeze
       UNSUPPORTED_COMPONENT_TYPES = %w[LIST PRODUCT CATALOG CALL_PERMISSION_REQUEST].freeze
       CSAT_NAME_PREFIX = 'customer_satisfaction_survey'.freeze
+      TWILIO_ELIGIBLE_CATEGORIES = %w[marketing utility].freeze
 
       def initialize(conversation:)
         @conversation = conversation
@@ -32,6 +33,8 @@ module Crm
         case inbox.channel_type
         when 'Channel::Whatsapp'
           native_candidates(inbox)
+        when 'Channel::TwilioSms'
+          twilio_candidates(inbox)
         when 'Channel::Api'
           api_candidates(inbox)
         else
@@ -40,6 +43,46 @@ module Crm
       end
 
       private
+
+      # Twilio-WhatsApp stores approved templates in channel.content_templates
+      # (Twilio Content API shape) instead of Meta message_templates. Only the
+      # whatsapp medium has the 24h window + template requirement (mirrors
+      # MessagingWindow); the sms medium is never template-capable. Sending reuses
+      # the existing native template_params path (MessageSender ->
+      # SendOnTwilioService -> TemplateProcessorService), which resolves the
+      # content_sid by matching friendly_name (candidate name) + language + status.
+      def twilio_candidates(inbox)
+        channel = inbox.channel
+        return [] unless channel.try(:medium) == 'whatsapp'
+
+        Array(channel.content_templates&.dig('templates')).filter_map do |template|
+          next unless eligible_twilio?(template)
+
+          {
+            kind: 'twilio',
+            name: template['friendly_name'],
+            id: template['content_sid'],
+            content_sid: template['content_sid'],
+            language: template['language'],
+            body: template['body'].to_s,
+            variables: twilio_variables(template['variables']),
+            category: template['category'].to_s.downcase
+          }
+        end
+      end
+
+      def eligible_twilio?(template)
+        return false if template.blank?
+        return false unless template['status'].to_s.casecmp('approved').zero?
+
+        TWILIO_ELIGIBLE_CATEGORIES.include?(template['category'].to_s.downcase)
+      end
+
+      def twilio_variables(variables)
+        return variables.keys.map(&:to_s) if variables.is_a?(Hash)
+
+        Array(variables).map(&:to_s)
+      end
 
       def api_candidates(inbox)
         return [] unless inbox.channel.try(:whatsapp_api_campaign_channel?)
