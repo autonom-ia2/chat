@@ -278,9 +278,11 @@ module Crm
         @send_mode == :choose_template && base_metadata['template_category'].to_s == 'marketing'
       end
 
-      # Newest sent_at across this contact's ai_followup follow-ups that were
-      # delivered as a MARKETING template. Falls back to this card's state when the
-      # follow-up carries no contact_id.
+      # Newest sent_at across this contact's AI follow-ups (auto-followup OR callback)
+      # that were delivered as a MARKETING template. Meta's 131049 cap is per-recipient
+      # regardless of which AI path sent it, so both sources count (mirrors
+      # CallbackRunner). Falls back to this card's state when the follow-up carries no
+      # contact_id.
       def last_contact_template_at
         return @last_contact_template_at if defined?(@last_contact_template_at)
 
@@ -289,7 +291,7 @@ module Crm
           if contact_id.present?
             sent_ats = @card.account.crm_follow_ups
                             .where(contact_id: contact_id)
-                            .where("metadata ->> 'source' = ?", 'ai_followup')
+                            .where("metadata ->> 'source' IN (?)", %w[ai_followup ai_callback])
                             .where("metadata ->> 'send_mode' = ?", 'template')
                             .where("metadata ->> 'template_category' = ?", 'marketing')
                             .pluck(Arel.sql("metadata ->> 'sent_at'"))
