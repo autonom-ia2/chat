@@ -1362,10 +1362,7 @@ const menuItems = computed(() => {
 }
 
 :global(.sidebar-branded-dropdown .n-dropdown-body) {
-  /* A cor de fundo é pintada inline pelo surfaceStyle do DropdownBody (cor de marca dinâmica).
-     Não repetimos aqui via var(--sidebar-background-color): o dropdown é teleportado para fora da
-     sidebar e não herda essa variável, então um !important vazio zeraria o fundo (deixando o menu
-     transparente e sobrepondo o inline). Aqui cuidamos só de borda/sombra/blur. */
+  background-color: var(--sidebar-background-color, #0b1e3f) !important;
   background-image: none !important;
   opacity: 1 !important;
   border-color: rgb(255 255 255 / 16%) !important;
@@ -1389,9 +1386,12 @@ const menuItems = computed(() => {
 }
 
 :global(.sidebar-branded-dropdown hr),
-:global(.sidebar-branded-dropdown .border-n-weak),
-:global(.sidebar-branded-dropdown .bg-n-strong) {
+:global(.sidebar-branded-dropdown .border-n-weak) {
   border-color: rgb(255 255 255 / 14%) !important;
+}
+
+:global(.sidebar-branded-dropdown hr),
+:global(.sidebar-branded-dropdown .bg-n-strong) {
   background-color: rgb(255 255 255 / 14%) !important;
 }
 
