@@ -168,3 +168,13 @@ const emitNewAccount = () => {
     </DropdownBody>
   </DropdownContainer>
 </template>
+
+<style scoped>
+/* DropdownBody uses a frosted surface (bg-n-alpha-3 + backdrop-blur) that composites to
+   near-transparent inside the sidebar's stacking context, so the nav labels behind bleed
+   through the account menu. Paint a solid, theme-aware surface underneath so the menu stays
+   readable regardless of whether backdrop-filter is honored here. */
+:deep(.n-dropdown-body) {
+  background-color: rgb(var(--solid-2));
+}
+</style>
