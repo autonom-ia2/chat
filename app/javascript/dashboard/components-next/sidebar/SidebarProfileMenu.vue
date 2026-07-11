@@ -193,9 +193,10 @@ const sidebarDropdownStyle = computed(() =>
       </button>
     </template>
     <DropdownBody
-      class="sidebar-branded-dropdown bottom-12 z-50 mb-2 w-80 ltr:left-0 rtl:right-0"
+      class="bottom-12 z-50 mb-2 w-80 ltr:left-0 rtl:right-0"
+      :class="{ 'sidebar-branded-dropdown': sidebarBackgroundColor }"
       :style="sidebarDropdownStyle"
-      solid-surface
+      :solid-surface="Boolean(sidebarBackgroundColor)"
       :solid-background-color="sidebarBackgroundColor"
     >
       <SidebarProfileMenuStatus />
