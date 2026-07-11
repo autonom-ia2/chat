@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useBrandedSidebar } from 'dashboard/composables/useBrandedSidebar';
 import { useI18n } from 'vue-i18n';
 import ButtonNext from 'next/button/Button.vue';
 import Icon from 'next/icon/Icon.vue';
@@ -40,9 +41,8 @@ const sortedCurrentUserAccounts = computed(() => {
   );
 });
 
-const sidebarBackgroundColor = computed(
-  () => globalConfig.value?.sidebarBackgroundColor?.trim() || ''
-);
+// Cor de marca efetiva (vazia no tema escuro). Ver dashboard/composables/useBrandedSidebar.
+const { brandedColor: sidebarBackgroundColor } = useBrandedSidebar();
 
 const sidebarDropdownStyle = computed(() =>
   sidebarBackgroundColor.value
