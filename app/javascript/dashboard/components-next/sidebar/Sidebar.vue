@@ -1362,7 +1362,10 @@ const menuItems = computed(() => {
 }
 
 :global(.sidebar-branded-dropdown .n-dropdown-body) {
-  background-color: var(--sidebar-background-color) !important;
+  /* A cor de fundo é pintada inline pelo surfaceStyle do DropdownBody (cor de marca dinâmica).
+     Não repetimos aqui via var(--sidebar-background-color): o dropdown é teleportado para fora da
+     sidebar e não herda essa variável, então um !important vazio zeraria o fundo (deixando o menu
+     transparente e sobrepondo o inline). Aqui cuidamos só de borda/sombra/blur. */
   background-image: none !important;
   opacity: 1 !important;
   border-color: rgb(255 255 255 / 16%) !important;
