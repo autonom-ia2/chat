@@ -25,7 +25,6 @@ const route = useRoute();
 const isLoading = ref(true);
 const isSearching = ref(false);
 const isSuggestingLocations = ref(false);
-const convertingLeadId = ref(null);
 const convertingCrmLeadId = ref(null);
 const enrichingLeadId = ref(null);
 const verifyingWhatsAppLeadIds = ref([]);
@@ -66,15 +65,19 @@ let locationSuggestionTimer;
 const whatsappVerificationRequested = new Set();
 let replaceLead = () => {};
 let verifyLeadsWhatsApp = () => {};
+const REVIEWS_MAX = 5;
 
-const form = ref({
+const defaultSearchForm = () => ({
   query: '',
   location: '',
   area_type: 'radius',
-  radius_km: 5,
+  radius_km: 1,
   requested_limit: 20,
+  score_mode: settings.value?.search_score_mode || 'gbp',
   auto_expand_radius: false,
 });
+
+const form = ref(defaultSearchForm());
 const crmForm = ref({
   pipeline_id: '',
   stage_id: '',
@@ -216,6 +219,81 @@ const leadSignals = lead => leadPrioritySignals(lead);
 const googleMapsApiKey = computed(
   () => settings.value?.google_maps_api_key || ''
 );
+const scoreComponentLabel = key => {
+  const labels = {
+    rating: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.RATING'),
+    reviews_count: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.REVIEWS_COUNT'),
+    website: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.WEBSITE'),
+    phone: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.PHONE'),
+    activity: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.ACTIVITY'),
+    photos: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.PHOTOS'),
+    google_rank: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.GOOGLE_RANK'),
+    query_relevance: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.QUERY_RELEVANCE'),
+  };
+
+  return labels[key] || key;
+};
+const negativeFactorLabel = factor => {
+  const key = typeof factor === 'string' ? factor : factor?.key;
+  const labels = {
+    missing_website: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.MISSING_WEBSITE'),
+    missing_phone: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.MISSING_PHONE'),
+    low_rating: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.LOW_RATING'),
+    low_reviews: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.LOW_REVIEWS'),
+    missing_photos: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.MISSING_PHOTOS'),
+    inactive_gbp: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.INACTIVE_GBP'),
+  };
+
+  return factor?.reason || labels[key] || key || '-';
+};
+const scoreNumber = value => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '-';
+
+  return Number.isInteger(number) ? String(number) : number.toFixed(1);
+};
+const scoreWeight = value => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '-';
+
+  const percent = number <= 1 ? number * 100 : number;
+  return `${scoreNumber(percent)}%`;
+};
+const scoreBreakdownEntries = lead => {
+  const breakdown = lead?.score_breakdown || {};
+  const components =
+    breakdown.components && typeof breakdown.components === 'object'
+      ? breakdown.components
+      : breakdown;
+
+  return Object.entries(components)
+    .filter(([, value]) => value && typeof value === 'object')
+    .map(([key, value]) => ({
+      key,
+      label: scoreComponentLabel(key),
+      signal: value.signal ?? value.score,
+      weight: value.weight,
+      weightedScore: value.weighted_score ?? value.weightedScore,
+    }));
+};
+const negativeFactors = lead => {
+  const factors = lead?.negative_factors;
+  return Array.isArray(factors) ? factors : [];
+};
+const leadReviews = lead =>
+  Array(lead?.reviews_snapshot || []).slice(0, REVIEWS_MAX);
+const reviewText = review => {
+  const text = review?.text;
+  if (typeof text === 'string') return text;
+
+  return text?.text || review?.originalText?.text || review?.comment || '-';
+};
+const reviewAuthor = review =>
+  review?.authorAttribution?.displayName || review?.author_name || '';
+const reviewTime = review =>
+  review?.relativePublishTimeDescription ||
+  review?.relative_time_description ||
+  '';
 const previewMapCenter = computed(() => {
   if (!locationDetails.value?.latitude || !locationDetails.value?.longitude) {
     return null;
@@ -259,7 +337,7 @@ const selectedSearchAreaBounds = computed(() =>
 );
 const selectedSearchMapRadius = computed(() =>
   selectedSearch.value?.area_type === 'radius'
-    ? selectedSearch.value?.radius || 5000
+    ? selectedSearch.value?.radius || 1000
     : 0
 );
 
@@ -509,7 +587,8 @@ const submitSearch = async () => {
         },
         advanced_filters: advancedFilters.value,
         sort_key: sortKey.value,
-        score_mode: settings.value?.scoring_mode,
+        score_mode:
+          form.value.score_mode || settings.value?.search_score_mode || 'gbp',
         scoring_profile_id: settings.value?.scoring_profile_id,
       },
     });
@@ -543,7 +622,22 @@ const openSearch = async search => {
 
 const toggleNewSearch = () => {
   selectedLeadDetailId.value = null;
-  showNewSearch.value = !showNewSearch.value;
+  const nextValue = !showNewSearch.value;
+  showNewSearch.value = nextValue;
+
+  if (nextValue) {
+    form.value = defaultSearchForm();
+    advancedFilters.value = defaultAdvancedLeadFilters();
+    locationSuggestions.value = [];
+    locationDetails.value = null;
+    confirmedLocation.value = '';
+    previewViewport.value = null;
+    return;
+  }
+
+  if (selectedSearch.value) {
+    restoreSearchViewState(selectedSearch.value);
+  }
 };
 
 const confirmDeleteSearch = async search => {
@@ -715,24 +809,6 @@ replaceLead = updatedLead => {
   );
 };
 
-const createContact = async (lead, options = {}) => {
-  if (!lead?.id || lead.contact_id || convertingLeadId.value) return;
-
-  convertingLeadId.value = lead.id;
-
-  try {
-    const { data } = await AutonomiaProspectingAPI.createLeadContact(lead.id);
-    replaceLead(data.payload?.lead);
-    if (options.showAlert !== false) {
-      useAlert(t('PROSPECTING.SEARCH.CONTACT_CREATED'));
-    }
-  } catch (e) {
-    alertError(e, t('PROSPECTING.ERRORS.CREATE_CONTACT'));
-  } finally {
-    convertingLeadId.value = null;
-  }
-};
-
 const createCrmCard = async (lead, options = {}) => {
   if (
     !lead?.id ||
@@ -785,17 +861,6 @@ const runBulkAction = async action => {
   bulkAction.value = action;
 
   try {
-    if (action === 'contacts') {
-      await selectedLeadObjects.value
-        .filter(item => !item.contact_id)
-        .reduce(
-          (promise, lead) =>
-            promise.then(() => createContact(lead, { showAlert: false })),
-          Promise.resolve()
-        );
-      useAlert(t('PROSPECTING.SEARCH.CONTACT_CREATED'));
-    }
-
     if (action === 'crm_cards') {
       await selectedLeadObjects.value
         .filter(item => !item.crm_card_id)
@@ -1049,38 +1114,21 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <div class="grid gap-2">
+              <label class="grid max-w-xs gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('PROSPECTING.SEARCH.FIELDS.AREA_TYPE') }}
                 </span>
-                <div
-                  class="grid grid-cols-2 overflow-hidden rounded-md border border-n-weak bg-n-solid-2 p-1"
+                <select
+                  v-model="form.area_type"
+                  class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
                 >
-                  <button
-                    type="button"
-                    class="h-9 rounded px-3 text-sm font-medium transition"
-                    :class="
-                      form.area_type === 'radius'
-                        ? 'bg-n-solid-1 text-n-slate-12 shadow-sm'
-                        : 'text-n-slate-10 hover:text-n-slate-12'
-                    "
-                    @click="form.area_type = 'radius'"
-                  >
+                  <option value="radius">
                     {{ t('PROSPECTING.SEARCH.AREA_RADIUS') }}
-                  </button>
-                  <button
-                    type="button"
-                    class="h-9 rounded px-3 text-sm font-medium transition"
-                    :class="
-                      form.area_type === 'viewport'
-                        ? 'bg-n-solid-1 text-n-slate-12 shadow-sm'
-                        : 'text-n-slate-10 hover:text-n-slate-12'
-                    "
-                    @click="form.area_type = 'viewport'"
-                  >
+                  </option>
+                  <option value="viewport">
                     {{ t('PROSPECTING.SEARCH.AREA_VIEWPORT') }}
-                  </button>
-                </div>
+                  </option>
+                </select>
                 <p class="text-xs text-n-slate-10">
                   {{
                     form.area_type === 'viewport'
@@ -1088,7 +1136,31 @@ onMounted(async () => {
                       : t('PROSPECTING.SEARCH.AREA_RADIUS_HINT')
                   }}
                 </p>
-              </div>
+              </label>
+
+              <label class="grid gap-1">
+                <span class="text-xs font-medium text-n-slate-11">
+                  {{ t('PROSPECTING.SEARCH.FIELDS.SCORE_MODE') }}
+                </span>
+                <select
+                  v-model="form.score_mode"
+                  class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
+                >
+                  <option value="gbp">
+                    {{ t('PROSPECTING.SEARCH.SCORE_MODES.GBP') }}
+                  </option>
+                  <option value="general">
+                    {{ t('PROSPECTING.SEARCH.SCORE_MODES.GENERAL') }}
+                  </option>
+                </select>
+                <p class="text-xs text-n-slate-10">
+                  {{
+                    form.score_mode === 'gbp'
+                      ? t('PROSPECTING.SEARCH.SCORE_MODE_GBP_HINT')
+                      : t('PROSPECTING.SEARCH.SCORE_MODE_GENERAL_HINT')
+                  }}
+                </p>
+              </label>
 
               <div class="grid gap-4 md:grid-cols-2">
                 <label class="grid gap-1">
@@ -1134,6 +1206,158 @@ onMounted(async () => {
                   </span>
                 </span>
               </label>
+
+              <details
+                class="rounded-md border border-n-weak bg-n-solid-2 px-3 py-2"
+              >
+                <summary
+                  class="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-n-slate-12"
+                >
+                  <span class="inline-flex items-center gap-2">
+                    <span class="i-lucide-sliders-horizontal size-4" />
+                    {{ t('PROSPECTING.SEARCH.SECTIONS.ADVANCED') }}
+                  </span>
+                  <span
+                    v-if="activeAdvancedFiltersCount"
+                    class="rounded-full bg-n-brand px-2 py-0.5 text-[11px] font-semibold text-white"
+                  >
+                    {{
+                      t('PROSPECTING.SEARCH.ACTIVE_FILTERS', {
+                        count: activeAdvancedFiltersCount,
+                      })
+                    }}
+                  </span>
+                </summary>
+                <p class="mt-2 text-xs text-n-slate-10">
+                  {{ t('PROSPECTING.SEARCH.ADVANCED_FILTERS_HINT') }}
+                </p>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label class="grid gap-1">
+                    <span class="text-xs font-medium text-n-slate-11">
+                      {{ t('PROSPECTING.SEARCH.FIELDS.HAS_SITE') }}
+                    </span>
+                    <select
+                      v-model="advancedFilters.has_website"
+                      class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
+                    >
+                      <option value="">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
+                      </option>
+                      <option value="yes">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
+                      </option>
+                      <option value="no">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
+                      </option>
+                    </select>
+                  </label>
+                  <label class="grid gap-1">
+                    <span class="text-xs font-medium text-n-slate-11">
+                      {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE') }}
+                    </span>
+                    <select
+                      v-model="advancedFilters.has_phone"
+                      class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
+                    >
+                      <option value="">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
+                      </option>
+                      <option value="yes">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
+                      </option>
+                      <option value="no">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
+                      </option>
+                    </select>
+                  </label>
+                  <label class="grid gap-1">
+                    <span class="text-xs font-medium text-n-slate-11">
+                      {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS') }}
+                    </span>
+                    <select
+                      v-model="advancedFilters.has_photos"
+                      class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
+                    >
+                      <option value="">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
+                      </option>
+                      <option value="yes">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
+                      </option>
+                      <option value="no">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
+                      </option>
+                    </select>
+                  </label>
+                  <label class="grid gap-1">
+                    <span class="text-xs font-medium text-n-slate-11">
+                      {{ t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW') }}
+                    </span>
+                    <select
+                      v-model="advancedFilters.open_now"
+                      class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
+                    >
+                      <option value="">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
+                      </option>
+                      <option value="yes">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
+                      </option>
+                      <option value="no">
+                        {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
+                      </option>
+                    </select>
+                  </label>
+                  <label class="grid gap-1">
+                    <span class="text-xs font-medium text-n-slate-11">
+                      {{ t('PROSPECTING.SEARCH.FIELDS.RATING_MIN') }}
+                    </span>
+                    <input
+                      v-model="advancedFilters.rating_min"
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
+                    />
+                  </label>
+                  <label class="grid gap-1">
+                    <span class="text-xs font-medium text-n-slate-11">
+                      {{ t('PROSPECTING.SEARCH.FIELDS.RATING_MAX') }}
+                    </span>
+                    <input
+                      v-model="advancedFilters.rating_max"
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
+                    />
+                  </label>
+                  <label class="grid gap-1">
+                    <span class="text-xs font-medium text-n-slate-11">
+                      {{ t('PROSPECTING.SEARCH.FIELDS.REVIEWS_MIN') }}
+                    </span>
+                    <input
+                      v-model="advancedFilters.reviews_min"
+                      type="number"
+                      min="0"
+                      class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
+                    />
+                  </label>
+                  <label class="grid gap-1">
+                    <span class="text-xs font-medium text-n-slate-11">
+                      {{ t('PROSPECTING.SEARCH.FIELDS.SEARCH_RANK_MAX') }}
+                    </span>
+                    <input
+                      v-model="advancedFilters.search_rank_max"
+                      type="number"
+                      min="1"
+                      class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
+                    />
+                  </label>
+                </div>
+              </details>
             </div>
 
             <ProspectingGoogleMap
@@ -1634,14 +1858,6 @@ onMounted(async () => {
                       <button
                         type="button"
                         class="h-7 rounded-md bg-n-brand px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                        :disabled="bulkAction === 'contacts'"
-                        @click="runBulkAction('contacts')"
-                      >
-                        {{ t('PROSPECTING.SEARCH.BULK_CONTACTS') }}
-                      </button>
-                      <button
-                        type="button"
-                        class="h-7 rounded-md bg-n-brand px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="
                           bulkAction === 'crm_cards' || !canCreateCrmCard
                         "
@@ -1924,19 +2140,6 @@ onMounted(async () => {
                     >
                       {{ t('PROSPECTING.SEARCH.OPEN_CONTACT') }}
                     </a>
-                    <button
-                      v-else
-                      type="button"
-                      class="h-8 rounded-md bg-n-brand px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                      :disabled="convertingLeadId === lead.id"
-                      @click="createContact(lead)"
-                    >
-                      {{
-                        convertingLeadId === lead.id
-                          ? t('PROSPECTING.SEARCH.CREATING_CONTACT')
-                          : t('PROSPECTING.SEARCH.CREATE_CONTACT')
-                      }}
-                    </button>
                     <a
                       v-if="lead.crm_card_id"
                       :href="crmCardUrl(lead.crm_card_id)"
@@ -2167,6 +2370,106 @@ onMounted(async () => {
 
             <div
               v-if="
+                scoreBreakdownEntries(selectedLeadDetail).length ||
+                negativeFactors(selectedLeadDetail).length
+              "
+              class="rounded-md border border-n-weak bg-n-solid-2 p-4"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-n-slate-12">
+                    {{ t('PROSPECTING.SEARCH.SCORE_EVALUATION_TITLE') }}
+                  </h3>
+                  <p class="mt-1 text-xs text-n-slate-10">
+                    {{ t('PROSPECTING.SEARCH.SCORE_EVALUATION_HINT') }}
+                  </p>
+                </div>
+                <span
+                  class="shrink-0 rounded-full bg-n-solid-1 px-2.5 py-1 text-xs font-semibold text-n-slate-12"
+                >
+                  {{
+                    t('PROSPECTING.SEARCH.SCORE_VALUE', {
+                      score:
+                        selectedLeadDetail.priority_score ||
+                        selectedLeadDetail.score ||
+                        '-',
+                    })
+                  }}
+                </span>
+              </div>
+
+              <div
+                v-if="scoreBreakdownEntries(selectedLeadDetail).length"
+                class="mt-4 grid gap-2"
+              >
+                <div
+                  v-for="entry in scoreBreakdownEntries(selectedLeadDetail)"
+                  :key="entry.key"
+                  class="grid gap-2 rounded-md border border-n-weak bg-n-solid-1 p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+                >
+                  <div class="min-w-0">
+                    <div class="truncate text-sm font-medium text-n-slate-12">
+                      {{ entry.label }}
+                    </div>
+                    <div class="mt-1 text-xs text-n-slate-10">
+                      {{
+                        t('PROSPECTING.SEARCH.SCORE_SIGNAL', {
+                          value: scoreNumber(entry.signal),
+                        })
+                      }}
+                    </div>
+                  </div>
+                  <div class="text-xs text-n-slate-10 sm:text-right">
+                    <div>{{ t('PROSPECTING.SEARCH.SCORE_WEIGHT') }}</div>
+                    <div class="mt-1 font-medium text-n-slate-12">
+                      {{ scoreWeight(entry.weight) }}
+                    </div>
+                  </div>
+                  <div class="text-xs text-n-slate-10 sm:text-right">
+                    <div>{{ t('PROSPECTING.SEARCH.SCORE_CONTRIBUTION') }}</div>
+                    <div class="mt-1 font-medium text-n-slate-12">
+                      {{ scoreNumber(entry.weightedScore) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                v-if="negativeFactors(selectedLeadDetail).length"
+                class="mt-4 rounded-md border border-amber-100 bg-amber-50 p-3"
+              >
+                <div class="text-xs font-semibold text-amber-900">
+                  {{ t('PROSPECTING.SEARCH.NEGATIVE_FACTORS_TITLE') }}
+                </div>
+                <ul class="mt-2 grid gap-1 text-sm text-amber-950">
+                  <li
+                    v-for="factor in negativeFactors(selectedLeadDetail)"
+                    :key="
+                      typeof factor === 'string'
+                        ? factor
+                        : factor.key || factor.reason
+                    "
+                    class="flex items-start gap-2"
+                  >
+                    <span
+                      class="i-lucide-triangle-alert mt-0.5 size-3.5 shrink-0 text-amber-700"
+                    />
+                    <span class="break-words">
+                      {{ negativeFactorLabel(factor) }}
+                    </span>
+                    <span
+                      v-if="factor?.points"
+                      class="ml-auto shrink-0 font-mono text-xs text-red-600"
+                    >
+                      -{{ factor.points }}
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div
+              v-if="
                 selectedLeadDetail.enrichment_status === 'completed' ||
                 selectedLeadDetail.decision_name ||
                 selectedLeadDetail.enrichment_summary
@@ -2317,6 +2620,55 @@ onMounted(async () => {
               </div>
             </div>
 
+            <div
+              v-if="leadReviews(selectedLeadDetail).length"
+              class="rounded-md border border-n-weak bg-n-solid-2 p-4"
+            >
+              <h3
+                class="text-xs font-semibold uppercase tracking-wide text-n-slate-10"
+              >
+                {{
+                  t('PROSPECTING.SEARCH.LATEST_REVIEWS_TITLE', {
+                    count: REVIEWS_MAX,
+                  })
+                }}
+              </h3>
+              <ul class="mt-3 grid gap-3">
+                <li
+                  v-for="(review, index) in leadReviews(selectedLeadDetail)"
+                  :key="review.name || review.publishTime || index"
+                  class="border-b border-n-weak pb-3 last:border-b-0 last:pb-0"
+                >
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      v-if="review.rating"
+                      class="inline-flex items-center gap-1 text-xs font-semibold text-amber-600"
+                    >
+                      <span class="i-lucide-star size-3 fill-current" />
+                      {{ review.rating }}
+                    </span>
+                    <span
+                      v-if="reviewAuthor(review)"
+                      class="text-xs font-medium text-n-slate-11"
+                    >
+                      {{ reviewAuthor(review) }}
+                    </span>
+                    <span
+                      v-if="reviewTime(review)"
+                      class="text-xs text-n-slate-9"
+                    >
+                      {{ reviewTime(review) }}
+                    </span>
+                  </div>
+                  <p
+                    class="mt-1 whitespace-pre-line break-words text-sm leading-relaxed text-n-slate-11"
+                  >
+                    {{ reviewText(review) }}
+                  </p>
+                </li>
+              </ul>
+            </div>
+
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="rounded-md border border-n-weak bg-n-solid-2 p-3">
                 <div class="text-xs font-medium text-n-slate-10">
@@ -2380,15 +2732,6 @@ onMounted(async () => {
           >
             {{ t('PROSPECTING.SEARCH.OPEN_CONTACT') }}
           </a>
-          <button
-            v-else
-            type="button"
-            class="h-9 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="convertingLeadId === selectedLeadDetail.id"
-            @click="createContact(selectedLeadDetail)"
-          >
-            {{ t('PROSPECTING.SEARCH.CREATE_CONTACT') }}
-          </button>
           <a
             v-if="selectedLeadDetail.crm_card_id"
             :href="crmCardUrl(selectedLeadDetail.crm_card_id)"

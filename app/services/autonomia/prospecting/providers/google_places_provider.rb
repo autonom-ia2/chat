@@ -14,6 +14,7 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     'places.nationalPhoneNumber',
     'places.internationalPhoneNumber',
     'places.websiteUri',
+    'places.reviews',
     'places.photos',
     'places.currentOpeningHours.openNow',
     'places.currentOpeningHours.weekdayDescriptions',
@@ -119,6 +120,7 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
 
   def lead_for(place)
     address = place['formattedAddress'].to_s
+    reviews = Array(place['reviews']).first(5)
     {
       provider: 'google_places',
       provider_place_id: place['id'],
@@ -134,6 +136,7 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
       rating: place['rating'],
       reviews_count: place['userRatingCount'],
       category: Array(place['types']).first,
+      metadata: reviews.present? ? { reviews_snapshot: reviews } : {},
       raw_payload: place
     }
   end

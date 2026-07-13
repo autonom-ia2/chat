@@ -27,8 +27,14 @@ class Autonomia::Prospecting::SearchRunner
 
     ActiveRecord::Base.transaction do
       provider_result = search_provider_results
-      leads = provider_result[:attributes].each_with_index.map do |attributes, index|
-        upsert_lead!(search, attributes, google_rank: index + 1)
+      filtered_attributes = provider_result[:attributes].each_with_index.filter_map do |attributes, index|
+        google_rank = index + 1
+        next unless advanced_filter_matches?(attributes, google_rank)
+
+        [attributes, google_rank]
+      end
+      leads = filtered_attributes.map do |attributes, google_rank|
+        upsert_lead!(search, attributes, google_rank: google_rank)
       end
       assign_priority_positions!(leads)
       search.radius = provider_result[:radius]
@@ -129,7 +135,7 @@ class Autonomia::Prospecting::SearchRunner
                    else
                      0
                    end
-      break if last_attributes.size >= requested_limit
+      break if advanced_filtered_attributes_count(last_attributes) >= requested_limit
     end
 
     {
@@ -148,8 +154,9 @@ class Autonomia::Prospecting::SearchRunner
     dedupe_key = dedupe_key_for(attributes)
     lead = find_existing_lead(attributes, dedupe_key) || Autonomia::Prospecting::Lead.new(account: @account)
     scoring_attributes = score_for(attributes, google_rank)
+    lead_metadata = lead.metadata.to_h.merge(attributes[:metadata].to_h)
     lead.assign_attributes(
-      attributes.merge(scoring_attributes).merge(search: search, dedupe_key: dedupe_key, search_rank: google_rank)
+      attributes.merge(scoring_attributes).merge(search: search, dedupe_key: dedupe_key, search_rank: google_rank, metadata: lead_metadata)
     )
     lead.save!
     lead
@@ -160,16 +167,66 @@ class Autonomia::Prospecting::SearchRunner
       lead_attributes: attributes,
       query: query,
       google_rank: google_rank,
-      weights: @setting.active_scoring_weights
+      weights: @setting.active_scoring_weights,
+      score_mode: search_score_mode
     ).perform
   end
 
   def assign_priority_positions!(leads)
-    leads.compact
-         .sort_by { |lead| [-lead.priority_score.to_f, lead.name.to_s] }
-         .each_with_index do |lead, index|
-           lead.update_column(:priority_position, index + 1)
-         end
+    ranked_priority(leads.compact).each do |item|
+      item[:lead].update_columns(
+        priority_score: item[:priority_score],
+        priority_position: item[:priority_position]
+      )
+      item[:lead].priority_score = item[:priority_score]
+      item[:lead].priority_position = item[:priority_position]
+    end
+  end
+
+  def ranked_priority(leads)
+    return [] if leads.blank?
+
+    ranked = leads.map do |lead|
+      raw_priority = lead.score.to_f * priority_multiplier(lead) - priority_penalty(lead)
+      { lead: lead, raw_priority: raw_priority }
+    end
+
+    percentiles = priority_percentiles(ranked)
+    ranked.map do |item|
+      item.merge(priority_score: percentiles[item[:raw_priority]].to_f.round)
+    end.sort_by do |item|
+      [
+        -item[:priority_score].to_f,
+        -item[:lead].score.to_f,
+        item[:lead].search_rank.to_i.positive? ? item[:lead].search_rank.to_i : Float::INFINITY,
+        item[:lead].name.to_s
+      ]
+    end.each_with_index.map do |item, index|
+      item.merge(priority_position: index + 1)
+    end
+  end
+
+  def priority_percentiles(ranked)
+    sorted = ranked.sort_by { |item| item[:raw_priority] }
+    return { sorted.first[:raw_priority] => 100 } if sorted.one?
+
+    sorted.each_with_index.each_with_object({}) do |(item, index), memo|
+      percentile = (index.to_f / (sorted.size - 1) * 100).round
+      memo[item[:raw_priority]] = [memo[item[:raw_priority]].to_i, percentile].max
+    end
+  end
+
+  def priority_multiplier(lead)
+    contactability = lead.phone.present? ? 1.0 : 0.3
+    contactability = 1.3 if lead.metadata.to_h.dig('whatsapp_verification', 'status') == 'verified'
+    decisor = lead.decision_name.present? ? 1.2 : 1.0
+    hour = lead.raw_payload.to_h.dig('currentOpeningHours', 'openNow') == true ? 1.15 : 1.0
+
+    contactability * decisor * hour
+  end
+
+  def priority_penalty(lead)
+    Array(lead.negative_factors).size * 3
   end
 
   def find_existing_lead(attributes, dedupe_key)
@@ -202,7 +259,7 @@ class Autonomia::Prospecting::SearchRunner
   end
 
   def radius
-    @radius ||= @params[:radius].presence&.to_i || 5000
+    @radius ||= @params[:radius].presence&.to_i || 1000
   end
 
   def area_type
@@ -229,6 +286,64 @@ class Autonomia::Prospecting::SearchRunner
       filters = filters.to_h if filters.respond_to?(:to_h)
       filters.deep_stringify_keys.slice('auto_expand_radius')
     end
+  end
+
+  def advanced_filters
+    @advanced_filters ||= begin
+      filters = metadata['advanced_filters'].presence || @params[:advanced_filters].presence || {}
+      filters = filters.to_unsafe_h if filters.respond_to?(:to_unsafe_h)
+      filters = filters.to_h if filters.respond_to?(:to_h)
+      filters.deep_stringify_keys
+    end
+  end
+
+  def advanced_filter_matches?(attributes, google_rank)
+    return false unless boolean_filter_matches?(attributes[:website], advanced_filters['has_website'])
+    return false unless boolean_filter_matches?(attributes[:phone], advanced_filters['has_phone'])
+    return false unless boolean_filter_matches?(attributes[:has_photos], advanced_filters['has_photos'])
+    return false unless optional_boolean_filter_matches?(attributes[:open_now], advanced_filters['open_now'])
+
+    rating = number_or_nil(attributes[:rating])
+    rating_min = number_or_nil(advanced_filters['rating_min'])
+    return false if rating_min && (rating.nil? || rating < rating_min)
+
+    rating_max = number_or_nil(advanced_filters['rating_max'])
+    return false if rating_max && (rating.nil? || rating > rating_max)
+
+    reviews_min = number_or_nil(advanced_filters['reviews_min'])
+    return false if reviews_min && attributes[:reviews_count].to_i < reviews_min
+
+    search_rank_max = number_or_nil(advanced_filters['search_rank_max'])
+    return false if search_rank_max && google_rank > search_rank_max
+
+    true
+  end
+
+  def advanced_filtered_attributes_count(attributes)
+    attributes.each_with_index.count do |item, index|
+      advanced_filter_matches?(item, index + 1)
+    end
+  end
+
+  def boolean_filter_matches?(value, filter_value)
+    return true if filter_value.blank?
+
+    filter_value == 'yes' ? value.present? : value.blank?
+  end
+
+  def optional_boolean_filter_matches?(value, filter_value)
+    return true if filter_value.blank?
+    return false if value.nil?
+
+    filter_value == 'yes' ? value == true : value == false
+  end
+
+  def number_or_nil(value)
+    return if value.blank?
+
+    Float(value)
+  rescue ArgumentError, TypeError
+    nil
   end
 
   def auto_expand_radius?
@@ -359,10 +474,17 @@ class Autonomia::Prospecting::SearchRunner
 
   def scoring_metadata
     {
-      'score_mode' => metadata['score_mode'].presence || @setting.scoring_mode,
+      'score_mode' => search_score_mode,
       'scoring_profile_id' =>
         metadata['scoring_profile_id'].presence || @setting.scoring_profile_id
     }.compact
+  end
+
+  def search_score_mode
+    @search_score_mode ||= begin
+      value = metadata['score_mode'].presence || @setting.search_score_mode
+      %w[gbp general].include?(value.to_s) ? value.to_s : 'gbp'
+    end
   end
 
   def cached_result
@@ -415,7 +537,9 @@ class Autonomia::Prospecting::SearchRunner
         area_type,
         JSON.generate(area_config),
         JSON.generate(search_filters),
+        JSON.generate(advanced_filters),
         requested_limit,
+        search_score_mode,
         @setting.scoring_mode,
         @setting.scoring_profile_id,
         @setting.active_scoring_weights.sort.to_h

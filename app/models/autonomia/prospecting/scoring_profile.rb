@@ -2,12 +2,14 @@ class Autonomia::Prospecting::ScoringProfile < ApplicationRecord
   self.table_name = 'autonomia_prospecting_scoring_profiles'
 
   DEFAULT_WEIGHTS = {
-    'rating' => 25,
-    'reviews_count' => 20,
-    'website' => 15,
-    'phone' => 15,
-    'google_rank' => 15,
-    'query_relevance' => 10
+    'website' => 25,
+    'phone' => 10,
+    'rating' => 20,
+    'reviews_count' => 15,
+    'activity' => 10,
+    'photos' => 10,
+    'google_rank' => 5,
+    'query_relevance' => 5
   }.freeze
 
   belongs_to :created_by, class_name: 'User', optional: true

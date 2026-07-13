@@ -108,6 +108,9 @@
       "MAP_NO_COORDINATES": "Os leads desta busca ainda não possuem coordenadas para posicionar marcadores.",
       "MAP_API_KEY_MISSING": "Configure a chave browser do Google Maps para exibir o mapa.",
       "MAP_LOAD_ERROR": "Não foi possível carregar o mapa.",
+      "ADVANCED_FILTERS_HINT": "Os filtros abaixo são aplicados antes de salvar cada lead retornado pela busca.",
+      "SCORE_MODE_GBP_HINT": "Prioriza empresas com lacunas no Google Meu Negócio.",
+      "SCORE_MODE_GENERAL_HINT": "Prioriza empresas com dados e reputação mais fortes.",
       "AREA_RADIUS": "Raio",
       "AREA_RADIUS_HINT": "Busca empresas próximas ao centro selecionado, dentro do raio informado.",
       "AREA_VIEWPORT": "Área visível",
@@ -126,7 +129,15 @@
       "RADIUS_KM_VALUE": "{value} km",
       "CONTACT_DATA": "Contato",
       "REPUTATION": "Reputação",
+      "LATEST_REVIEWS_TITLE": "Últimas {count} avaliações",
       "COORDINATES": "Coordenadas",
+      "SCORE_EVALUATION_TITLE": "Avaliação do score",
+      "SCORE_EVALUATION_HINT": "Critérios usados para calcular a prioridade deste lead.",
+      "SCORE_VALUE": "Score {score}",
+      "SCORE_SIGNAL": "Sinal {value}/100",
+      "SCORE_WEIGHT": "Peso",
+      "SCORE_CONTRIBUTION": "Contribuição",
+      "NEGATIVE_FACTORS_TITLE": "Fatores de atenção",
       "ACTIVE_FILTERS": "{count} filtros",
       "VISIBLE_COUNT": "{count} leads visíveis",
       "TIME_NOW": "agora",
@@ -136,12 +147,35 @@
       "SECTIONS": {
         "WHERE": "Onde buscar",
         "DECIDER": "Decisor e quantidade",
-        "RUN": "Executar"
+        "RUN": "Executar",
+        "ADVANCED": "Avançada"
       },
       "FILTERS": {
         "ANY": "Todos",
         "YES": "Sim",
         "NO": "Não"
+      },
+      "SCORE_MODES": {
+        "GBP": "Google Meu Negócio",
+        "GENERAL": "Geral"
+      },
+      "SCORE_COMPONENTS": {
+        "RATING": "Avaliação Google",
+        "REVIEWS_COUNT": "Volume de avaliações",
+        "WEBSITE": "Presença de site",
+        "PHONE": "Presença de telefone",
+        "ACTIVITY": "Atividade recente",
+        "PHOTOS": "Fotos",
+        "GOOGLE_RANK": "Posição no Google",
+        "QUERY_RELEVANCE": "Relevância da busca"
+      },
+      "NEGATIVE_FACTORS": {
+        "MISSING_WEBSITE": "Sem site informado",
+        "MISSING_PHONE": "Sem telefone informado",
+        "LOW_RATING": "Avaliação abaixo do esperado",
+        "LOW_REVIEWS": "Poucas avaliações",
+        "MISSING_PHOTOS": "Sem fotos no perfil",
+        "INACTIVE_GBP": "Perfil com baixa atividade recente"
       },
       "SORT": {
         "PRIORITY_DESC": "Maior prioridade",
@@ -164,6 +198,7 @@
         "CRM_STAGE": "Etapa CRM",
         "CATEGORY": "Categoria",
         "PRIORITY": "Prioridade",
+        "SCORE_MODE": "Forma de pesquisa",
         "SORT": "Ordenar",
         "HAS_SITE": "Site",
         "HAS_PHONE": "Telefone",
@@ -276,6 +311,8 @@
       "ENRICHMENT_ENABLED_HINT": "Permite enriquecer manualmente cada lead a partir do site e da IA interna configurada na conta.",
       "SCORING_TITLE": "Score e priorização",
       "SCORING_HINT": "Escolha um perfil global definido pelo superadmin ou personalize os pesos desta conta.",
+      "SEARCH_SCORE_MODE_GBP_HINT": "Score alto indica lacunas no Google Meu Negócio: sem site, poucas avaliações, baixa atividade ou perfil incompleto.",
+      "SEARCH_SCORE_MODE_GENERAL_HINT": "Score alto indica lead mais estruturado: boa reputação, contato, site e sinais positivos.",
       "SCORING_PROFILE_GLOBAL": "Perfil global",
       "SCORING_PROFILE_CUSTOM": "Customizado",
       "SCORING_PROFILE_HINT": "Pesos definidos pelo perfil selecionado. Para alterar, escolha Customizado.",
@@ -298,11 +335,17 @@
         "PROFILE": "Usar perfil existente",
         "CUSTOM": "Personalizado da conta"
       },
+      "SEARCH_SCORE_MODES": {
+        "GBP": "Google Meu Negócio",
+        "GENERAL": "Geral"
+      },
       "SCORING_WEIGHTS": {
-        "rating": "Avaliação",
-        "reviews_count": "Quantidade de avaliações",
         "website": "Possui site",
         "phone": "Possui telefone",
+        "rating": "Avaliação",
+        "reviews_count": "Quantidade de avaliações",
+        "activity": "Atividade recente",
+        "photos": "Fotos",
         "google_rank": "Ranking Google",
         "query_relevance": "Relevância da busca"
       },
@@ -316,6 +359,7 @@
         "CRM_PIPELINE": "Funil CRM padrão",
         "CRM_STAGE": "Etapa CRM padrão",
         "SCORING_MODE": "Modo de score",
+        "SEARCH_SCORE_MODE": "Forma padrão de pesquisa",
         "SCORING_PROFILE": "Perfil de score",
         "DEFAULT_LIMIT": "Limite padrão",
         "MAX_RESULTS": "Limite por busca",

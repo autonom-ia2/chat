@@ -18,10 +18,12 @@ const scoringProfiles = ref([]);
 const activeSettingsTab = ref('general');
 const CUSTOM_SCORING_PROFILE_VALUE = 'custom';
 const scoringWeightKeys = [
-  'rating',
-  'reviews_count',
   'website',
   'phone',
+  'rating',
+  'reviews_count',
+  'activity',
+  'photos',
   'google_rank',
   'query_relevance',
 ];
@@ -37,15 +39,18 @@ const form = ref({
   clear_google_places_api_key: false,
   google_maps_browser_api_key: '',
   clear_google_maps_browser_api_key: false,
+  search_score_mode: 'gbp',
   scoring_profile_option: '',
   scoring_profile_id: '',
   custom_scoring_weights: {
-    rating: 25,
-    reviews_count: 20,
-    website: 15,
-    phone: 15,
-    google_rank: 15,
-    query_relevance: 10,
+    website: 25,
+    phone: 10,
+    rating: 20,
+    reviews_count: 15,
+    activity: 10,
+    photos: 10,
+    google_rank: 5,
+    query_relevance: 5,
   },
 });
 
@@ -90,6 +95,7 @@ const syncForm = payload => {
     clear_google_places_api_key: false,
     google_maps_browser_api_key: '',
     clear_google_maps_browser_api_key: false,
+    search_score_mode: payload.search_score_mode || 'gbp',
     scoring_profile_option:
       payload.scoring_mode === 'custom'
         ? CUSTOM_SCORING_PROFILE_VALUE
@@ -164,6 +170,7 @@ const saveSettings = async () => {
       enrichment_enabled: form.value.enrichment_enabled,
       default_crm_pipeline_id: form.value.default_crm_pipeline_id || null,
       default_crm_stage_id: form.value.default_crm_stage_id || null,
+      search_score_mode: form.value.search_score_mode || 'gbp',
       scoring_mode: isCustomScoringProfile.value ? 'custom' : 'profile',
       scoring_profile_id: isCustomScoringProfile.value
         ? null
@@ -505,6 +512,34 @@ onMounted(fetchSettings);
                     : t('PROSPECTING.SETTINGS.SCORING_PROFILE_GLOBAL')
                 }}
               </span>
+            </div>
+
+            <div class="mt-4 grid gap-3 md:grid-cols-2">
+              <label class="grid gap-1">
+                <span class="text-xs font-medium text-n-slate-11">
+                  {{ t('PROSPECTING.SETTINGS.FIELDS.SEARCH_SCORE_MODE') }}
+                </span>
+                <select
+                  v-model="form.search_score_mode"
+                  class="h-10 rounded-md border border-n-weak bg-n-solid-1 px-3 text-sm text-n-slate-12"
+                >
+                  <option value="gbp">
+                    {{ t('PROSPECTING.SETTINGS.SEARCH_SCORE_MODES.GBP') }}
+                  </option>
+                  <option value="general">
+                    {{ t('PROSPECTING.SETTINGS.SEARCH_SCORE_MODES.GENERAL') }}
+                  </option>
+                </select>
+              </label>
+              <div
+                class="rounded-md border border-n-weak bg-n-solid-1 px-3 py-2 text-xs leading-relaxed text-n-slate-10"
+              >
+                {{
+                  form.search_score_mode === 'gbp'
+                    ? t('PROSPECTING.SETTINGS.SEARCH_SCORE_MODE_GBP_HINT')
+                    : t('PROSPECTING.SETTINGS.SEARCH_SCORE_MODE_GENERAL_HINT')
+                }}
+              </div>
             </div>
 
             <label class="mt-4 grid gap-1">

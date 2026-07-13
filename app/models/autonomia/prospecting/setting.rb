@@ -54,6 +54,7 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
   validates :cache_ttl_seconds, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :scoring_mode, inclusion: { in: %w[profile custom] }
   validates :account_id, uniqueness: true
+  validate :search_score_mode_must_be_supported
   validate :custom_scoring_weights_must_be_supported_numbers
   validate :default_crm_records_must_belong_to_account
 
@@ -81,6 +82,14 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
     active_scoring_profile.weights_with_defaults
   end
 
+  def search_score_mode
+    metadata.to_h['search_score_mode'].presence || 'gbp'
+  end
+
+  def search_score_mode=(value)
+    self.metadata = metadata.to_h.merge('search_score_mode' => normalized_search_score_mode(value))
+  end
+
   private
 
   def normalize_scoring_configuration
@@ -102,6 +111,16 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
     normalized_custom_scoring_weights.each do |key, value|
       errors.add(:custom_scoring_weights, "#{key} must be between 0 and 100") unless value.to_i.between?(0, 100)
     end
+  end
+
+  def search_score_mode_must_be_supported
+    return if %w[gbp general].include?(search_score_mode)
+
+    errors.add(:metadata, 'search_score_mode must be gbp or general')
+  end
+
+  def normalized_search_score_mode(value)
+    %w[gbp general].include?(value.to_s) ? value.to_s : 'gbp'
   end
 
   def default_crm_records_must_belong_to_account

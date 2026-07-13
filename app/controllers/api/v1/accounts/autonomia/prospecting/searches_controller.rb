@@ -290,6 +290,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     ).merge(
       advanced_filter_payload(lead)
     ).merge(
+      reviews_payload(lead)
+    ).merge(
       whatsapp_payload(lead)
     )
   end

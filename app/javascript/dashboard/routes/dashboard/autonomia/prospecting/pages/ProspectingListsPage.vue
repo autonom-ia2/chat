@@ -24,7 +24,6 @@ const route = useRoute();
 const isLoading = ref(true);
 const isCreating = ref(false);
 const busyLeadId = ref(null);
-const convertingLeadId = ref(null);
 const convertingCrmLeadId = ref(null);
 const enrichingLeadId = ref(null);
 const verifyingWhatsAppLeadIds = ref([]);
@@ -474,21 +473,6 @@ const removeLead = async lead => {
     alertError(e, t('PROSPECTING.ERRORS.REMOVE_LEAD_FROM_LIST'));
   } finally {
     busyLeadId.value = null;
-  }
-};
-
-const createContact = async lead => {
-  if (!lead?.id || lead.contact_id || convertingLeadId.value) return;
-
-  convertingLeadId.value = lead.id;
-  try {
-    const { data } = await AutonomiaProspectingAPI.createLeadContact(lead.id);
-    replaceLead(data.payload?.lead);
-    useAlert(t('PROSPECTING.SEARCH.CONTACT_CREATED'));
-  } catch (e) {
-    alertError(e, t('PROSPECTING.ERRORS.CREATE_CONTACT'));
-  } finally {
-    convertingLeadId.value = null;
   }
 };
 
@@ -1192,19 +1176,6 @@ onMounted(loadPage);
                   >
                     {{ t('PROSPECTING.SEARCH.OPEN_CONTACT') }}
                   </a>
-                  <button
-                    v-else
-                    type="button"
-                    class="h-8 rounded-md bg-n-brand px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                    :disabled="convertingLeadId === lead.id"
-                    @click="createContact(lead)"
-                  >
-                    {{
-                      convertingLeadId === lead.id
-                        ? t('PROSPECTING.SEARCH.CREATING_CONTACT')
-                        : t('PROSPECTING.SEARCH.CREATE_CONTACT')
-                    }}
-                  </button>
                   <a
                     v-if="lead.crm_card_id"
                     :href="crmCardUrl(lead.crm_card_id)"
