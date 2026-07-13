@@ -669,23 +669,25 @@ onMounted(loadPage);
                 </div>
               </button>
               <div
-                class="flex items-center gap-1 border-t border-n-weak px-2 py-2"
+                class="flex flex-wrap items-center gap-2 border-t border-n-weak px-3 py-2.5"
               >
                 <button
                   type="button"
-                  class="flex size-8 items-center justify-center rounded-md text-n-slate-11 hover:bg-n-solid-3"
+                  class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-brand/30 bg-n-brand-2 px-2.5 text-xs font-semibold text-n-brand hover:bg-n-brand-3"
                   :title="t('PROSPECTING.LISTS.ADD_LEADS_TITLE')"
                   @click.stop="openAddLeadsModal(list)"
                 >
-                  <span class="i-lucide-user-plus size-4" />
+                  <span class="i-lucide-user-plus size-3.5" />
+                  {{ t('PROSPECTING.LISTS.ADD_LEADS_TITLE') }}
                 </button>
                 <button
                   type="button"
-                  class="flex size-8 items-center justify-center rounded-md text-n-slate-11 hover:bg-n-solid-3"
+                  class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-2.5 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2"
                   :title="t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_TITLE')"
                   @click.stop="openCampaignModal(list)"
                 >
-                  <span class="i-lucide-megaphone size-4" />
+                  <span class="i-lucide-megaphone size-3.5" />
+                  {{ t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_TITLE') }}
                 </button>
               </div>
             </article>
@@ -1078,7 +1080,7 @@ onMounted(loadPage);
                     :href="googleMapsLeadUrl(lead)"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex h-8 items-center gap-1 rounded-md border border-n-weak px-3 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-3 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2"
                   >
                     <span class="i-lucide-map-pin size-3.5" />
                     {{ t('PROSPECTING.SEARCH.OPEN_MAP') }}
@@ -1164,7 +1166,7 @@ onMounted(loadPage);
                   <a
                     v-if="leadPhoneUrl(lead)"
                     :href="leadPhoneUrl(lead)"
-                    class="inline-flex h-8 items-center gap-1 rounded-md border border-n-weak px-3 text-xs font-semibold text-n-slate-12 transition-colors hover:bg-n-solid-2"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-3 text-xs font-semibold text-n-slate-12 transition-colors hover:bg-n-solid-2"
                   >
                     <span class="i-lucide-phone size-3.5" />
                     {{ t('PROSPECTING.SEARCH.CALL') }}
@@ -1186,12 +1188,13 @@ onMounted(loadPage);
                   <button
                     v-else
                     type="button"
-                    class="h-8 rounded-md bg-n-brand px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="
                       convertingCrmLeadId === lead.id || !canCreateCrmCard
                     "
                     @click="createCrmCard(lead)"
                   >
+                    <span class="i-lucide-kanban-square size-3.5" />
                     {{
                       convertingCrmLeadId === lead.id
                         ? t('PROSPECTING.SEARCH.CREATING_CRM_CARD')
@@ -1200,12 +1203,13 @@ onMounted(loadPage);
                   </button>
                   <button
                     type="button"
-                    class="flex size-8 items-center justify-center rounded-md border border-n-weak text-n-slate-12 hover:bg-n-solid-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-md border border-red-100 bg-red-50 px-3 text-xs font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                     :title="t('PROSPECTING.LISTS.REMOVE_LEAD')"
                     :disabled="busyLeadId === lead.id"
                     @click="removeLead(lead)"
                   >
-                    <span class="i-lucide-trash-2 size-4" />
+                    <span class="i-lucide-trash-2 size-3.5" />
+                    {{ t('PROSPECTING.LISTS.REMOVE_LEAD') }}
                   </button>
                 </div>
               </article>
