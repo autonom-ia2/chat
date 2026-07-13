@@ -54,6 +54,17 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     }
   end
 
+  def reviews_payload(lead)
+    reviews = Array(
+      lead.metadata.to_h['reviews_snapshot'].presence ||
+        lead.raw_payload.to_h['reviews'].presence
+    ).first(5)
+
+    {
+      reviews_snapshot: reviews
+    }
+  end
+
   def normalized_lead_phone(lead)
     digits = lead.phone.to_s.gsub(/\D/, '')
     return if digits.blank?

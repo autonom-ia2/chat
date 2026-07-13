@@ -31,6 +31,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
       :default_crm_stage_id,
       :scoring_mode,
       :scoring_profile_id,
+      :search_score_mode,
       :google_places_api_key,
       :clear_google_places_api_key,
       :google_maps_browser_api_key,
@@ -48,6 +49,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
       attributes.delete(:google_maps_browser_api_key) if attributes[:google_maps_browser_api_key].blank?
       attributes[:scoring_profile_id] = nil if attributes[:scoring_mode] == 'custom'
       attributes.delete(:scoring_profile_id) if attributes[:scoring_mode] == 'profile' && attributes[:scoring_profile_id].blank?
+      attributes.delete(:search_score_mode) if attributes[:search_score_mode].blank?
     end
   end
 
@@ -73,6 +75,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
       has_google_places_api_key: current_setting.google_places_configured?,
       has_google_maps_browser_api_key: current_setting.google_maps_browser_configured?,
       google_maps_api_key: current_setting.google_maps_browser_api_key,
+      search_score_mode: current_setting.search_score_mode,
       scoring_profiles: scoring_profiles_payload,
       active_scoring_weights: current_setting.active_scoring_weights,
       usage: usage_payload(current_setting)
