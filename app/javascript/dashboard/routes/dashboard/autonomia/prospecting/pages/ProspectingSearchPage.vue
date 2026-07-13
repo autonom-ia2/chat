@@ -280,8 +280,12 @@ const negativeFactors = lead => {
   const factors = lead?.negative_factors;
   return Array.isArray(factors) ? factors : [];
 };
-const leadReviews = lead =>
-  Array(lead?.reviews_snapshot || []).slice(0, REVIEWS_MAX);
+const leadReviews = lead => {
+  const reviews =
+    lead?.reviews_snapshot || lead?.reviews || lead?.review_summary || [];
+
+  return Array.isArray(reviews) ? reviews.slice(0, REVIEWS_MAX) : [];
+};
 const reviewText = review => {
   const text = review?.text;
   if (typeof text === 'string') return text;
