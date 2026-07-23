@@ -1,3 +1,26 @@
+<!-- AUTONOMIA_AGENT_HARNESS_START -->
+@AGENTS.md
+
+## Autonom.ia Agent Harness
+
+Este projeto usa o Autonom.ia Agent Harness.
+
+Fonte oficial:
+`https://github.com/autonom-ia/agent-harness`
+
+Fonte local preferencial:
+`~/Documents/agent-harness`
+
+Project:
+`https://github.com/users/autonom-ia/projects/3`
+
+Regras:
+- Preservar regras específicas deste projeto.
+- Em caso de conflito entre regra local e harness, pedir decisão ao Rodrigo.
+- Operar pelas faixas de `.claude/rules/prod-approval.md`, com a regra local mais restritiva prevalecendo: merge, produção, escrita em banco de produção, secrets, auth, billing, infraestrutura e deploy exigem aprovação explícita do Rodrigo.
+- Não fazer merge sem aprovação explícita do Rodrigo.
+<!-- AUTONOMIA_AGENT_HARNESS_END -->
+
 # Chatwoot Development Guidelines
 
 ## Build / Test / Lint
@@ -111,3 +134,15 @@ Practical checklist for any change impacting core logic or public APIs
 ## Branding / White-labeling note
 
 - For user-facing strings that currently contain "Chatwoot" but should adapt to branded/self-hosted installs, prefer applying `replaceInstallationName` from `shared/composables/useBranding` in the UI layer (for example tooltip and suggestion labels) instead of adding hardcoded brand-specific copy.
+
+## Model Routing
+
+- Tarefas críticas ou adversariais não podem sofrer downgrade automático de modelo.
+- Se a classe de modelo exigida estiver indisponível, interrompa com `BLOCKED_MODEL_TIER` em vez de usar silenciosamente um modelo mais fraco.
+- Evals com provedores pagos ficam desativados por padrão e exigem execução explícita com orçamento definido.
+
+## Audit Trail
+
+- Registre decisões, comandos de validação, resultados e bloqueios em `docs/audit/`.
+- Nunca registre prompts completos, tokens, secrets, credenciais ou dados de clientes.
+- Merge, deploy, produção, banco de produção, secrets, auth, billing e infraestrutura exigem aprovação explícita do Rodrigo.
