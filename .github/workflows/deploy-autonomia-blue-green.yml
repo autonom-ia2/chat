@@ -1,9 +1,6 @@
 name: Deploy Autonomia Chatwoot Blue Green
 
 on:
-  pull_request:
-    types:
-      - closed
   workflow_dispatch:
     inputs:
       action:
@@ -19,6 +16,11 @@ on:
         required: false
         default: t3.small
         type: string
+      confirm_production:
+        description: Confirm that this operation may change production.
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
   group: deploy-autonomia-blue-green
@@ -48,20 +50,14 @@ env:
 jobs:
   deploy:
     name: Deploy Green
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') ||
-      (github.event_name == 'pull_request' &&
-        github.event.action == 'closed' &&
-        github.event.pull_request.merged == true &&
-        github.event.pull_request.base.ref == 'main')
+    if: github.ref == 'refs/heads/main' && inputs.confirm_production == true && inputs.action == 'deploy'
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    environment: production
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Log deployment trigger context
         run: |
@@ -613,9 +609,10 @@ jobs:
 
   rollback:
     name: Rollback To Previous Target Group
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback'
+    if: github.ref == 'refs/heads/main' && inputs.confirm_production == true && inputs.action == 'rollback'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: production
 
     steps:
       - name: Configure AWS credentials
