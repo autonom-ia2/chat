@@ -68,6 +68,11 @@ class Integrations::App
       account.feature_enabled?('crm_integration') && ::Crm::Config.enabled?
     when 'crm_kanban_ai'
       ::Crm::Config.enabled? && ::Crm::Ai::Config.enabled?
+    # OpenAI nativa: substituída pela CRM Kanban IA (chave própria por conta + modelo/effort por
+    # tarefa). Manter as duas lado a lado vira dois lugares para a mesma credencial. Fica OCULTA,
+    # EXCETO onde já houver hook — esconder um existente deixaria a credencial órfã, sem tela p/ ver
+    # ou remover.
+    when 'openai' then account.hooks.exists?(app_id: 'openai')
     when 'notion'
       notion_enabled?(account)
     else
