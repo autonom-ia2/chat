@@ -139,7 +139,7 @@ module Autonomia
         []
       end
 
-      # Roda o LLM (síncrono, schema, gpt-5.4) e devolve o hash parseado, ou nil em qualquer
+      # Roda o LLM (síncrono, schema, gpt-5.6-sol) e devolve o hash parseado, ou nil em qualquer
       # falha de IA (credencial vazia, erro do cliente, timeout, JSON inválido) -> handoff seguro.
       def generate(snippets)
         credential = Crm::Ai::CredentialResolver.new(account: @agent.account).resolve

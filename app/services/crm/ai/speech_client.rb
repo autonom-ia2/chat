@@ -1,6 +1,6 @@
 module Crm
   module Ai
-    # Text-to-speech via a OpenAI da conta (mesma credencial do whisper-1 / gpt-5.4). Espelha o
+    # Text-to-speech via a OpenAI da conta (mesma credencial do whisper-1 / gpt-5.6). Espelha o
     # TranscriptionClient: usa `Crm::Ai::ApiBaseGuard` no `api_base` (anti-SSRF) e NUNCA loga o texto.
     # Saída `opus` (formato de voz nativo do WhatsApp). Retorna os BYTES do áudio, ou nil.
     class SpeechClient
