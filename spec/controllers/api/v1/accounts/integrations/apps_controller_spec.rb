@@ -30,6 +30,27 @@ RSpec.describe 'Integration Apps API', type: :request do
         expect(apps['action']).to be_nil
       end
 
+      it 'hides the native openai app when the account has no openai hook' do
+        get api_v1_account_integrations_apps_url(account),
+            headers: admin.create_new_auth_token,
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        ids = response.parsed_body['payload'].map { |int_app| int_app['id'] }
+        expect(ids).not_to include('openai')
+      end
+
+      it 'still exposes the native openai app when a hook is already configured' do
+        create(:integrations_hook, :openai, account: account)
+        get api_v1_account_integrations_apps_url(account),
+            headers: admin.create_new_auth_token,
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        ids = response.parsed_body['payload'].map { |int_app| int_app['id'] }
+        expect(ids).to include('openai')
+      end
+
       it 'will not return sensitive information for openai app for agents' do
         openai = create(:integrations_hook, :openai, account: account)
         get api_v1_account_integrations_apps_url(account),
