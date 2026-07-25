@@ -154,11 +154,21 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     end
   end
 
+  # Economia LÍQUIDA do cache: desconto das LEITURAS menos a sobretaxa das ESCRITAS. Contar só a
+  # leitura inflava o número na família 5.6, que cobra 1,25x o input para gravar no cache — parte do
+  # que se economiza relendo já foi paga na gravação. Modelo sem `cache_write` na tabela cai no
+  # próprio input (sobretaxa zero), preservando o histórico 5.4. Pode ficar NEGATIVO (muita escrita,
+  # pouca releitura): é informação real, não erro, e sinaliza cache mal aproveitado.
   def cache_savings_usd
-    usage_scope.group(:model).sum(:cached_tokens).sum do |model, cached_tokens|
-      rate = Crm::Ai::Pricing.rate(model)
-      discounted = [rate[:input].to_d - rate[:cached].to_d, 0.to_d].max
-      (cached_tokens.to_i * discounted) / 1_000_000.to_d
+    cache_delta_usd(:cached_tokens) { |r| r[:input].to_d - r[:cached].to_d } -
+      cache_delta_usd(:cache_write_tokens) { |r| (r[:cache_write] || r[:input]).to_d - r[:input].to_d }
+  end
+
+  # Soma tokens de +column+ por modelo e aplica o delta de tarifa que o bloco calcula (nunca negativo).
+  def cache_delta_usd(column)
+    usage_scope.group(:model).sum(column).sum do |model, tokens|
+      delta = [yield(Crm::Ai::Pricing.rate(model)), 0.to_d].max
+      (tokens.to_i * delta) / 1_000_000.to_d
     end
   end
 

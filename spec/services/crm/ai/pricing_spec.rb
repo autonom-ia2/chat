@@ -104,6 +104,14 @@ RSpec.describe Crm::Ai::Pricing do
       expect(cost).to be_within(1e-9).of(0.0025)
     end
 
+    it 'clamps billable input when cached and cache write together exceed input' do
+      # input=1000 mas cached(600)+write(500)=1100 -> billable_input clampado a 0
+      # (0*1.0 + 600*0.1 + 500*1.25 + 0) / 1_000_000 = 685 / 1_000_000
+      cost = described_class.cost(model: 'gpt-5.6-luna', input_tokens: 1000, cached_tokens: 600,
+                                  cache_write_tokens: 500, output_tokens: 0)
+      expect(cost).to be_within(1e-9).of(0.000685)
+    end
+
     it 'keeps the previous cost unchanged when no cache write is reported' do
       cost = described_class.cost(model: 'gpt-5.6-luna', input_tokens: 1000, cached_tokens: 200, output_tokens: 500)
       # (800*1.0 + 200*0.1 + 500*6.0) / 1_000_000 = 3820 / 1_000_000
