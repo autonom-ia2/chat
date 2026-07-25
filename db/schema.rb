@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_10_000100) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_25_155227) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1244,6 +1244,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_10_000100) do
     t.decimal "cost_estimate", precision: 12, scale: 6, default: "0.0", null: false
     t.integer "latency_ms"
     t.datetime "created_at", null: false
+    t.integer "cache_write_tokens", default: 0, null: false
     t.index ["account_id", "created_at"], name: "idx_crm_ai_usage_account_created"
     t.index ["account_id", "feature", "created_at"], name: "idx_crm_ai_usage_account_feature_created"
   end

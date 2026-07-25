@@ -2,18 +2,19 @@
 #
 # Table name: crm_ai_usage_events
 #
-#  id               :bigint           not null, primary key
-#  cached_tokens    :integer          default(0), not null
-#  cost_estimate    :decimal(12, 6)   default(0.0), not null
-#  feature          :string           not null
-#  input_tokens     :integer          default(0), not null
-#  latency_ms       :integer
-#  model            :string           not null
-#  output_tokens    :integer          default(0), not null
-#  reasoning_effort :string
-#  created_at       :datetime         not null
-#  account_id       :bigint           not null
-#  pipeline_id      :bigint
+#  id                 :bigint           not null, primary key
+#  cache_write_tokens :integer          default(0), not null
+#  cached_tokens      :integer          default(0), not null
+#  cost_estimate      :decimal(12, 6)   default(0.0), not null
+#  feature            :string           not null
+#  input_tokens       :integer          default(0), not null
+#  latency_ms         :integer
+#  model              :string           not null
+#  output_tokens      :integer          default(0), not null
+#  reasoning_effort   :string
+#  created_at         :datetime         not null
+#  account_id         :bigint           not null
+#  pipeline_id        :bigint
 #
 # Indexes
 #

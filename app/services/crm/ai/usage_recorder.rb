@@ -16,11 +16,13 @@ module Crm
           reasoning_effort: reasoning_effort.presence&.to_s,
           input_tokens: tokens[:input],
           cached_tokens: tokens[:cached],
+          cache_write_tokens: tokens[:cache_write],
           output_tokens: tokens[:output],
           cost_estimate: Pricing.cost(
             model: model,
             input_tokens: tokens[:input],
             cached_tokens: tokens[:cached],
+            cache_write_tokens: tokens[:cache_write],
             output_tokens: tokens[:output]
           ),
           latency_ms: latency_ms,
@@ -37,15 +39,17 @@ module Crm
         value.respond_to?(:id) ? value.id : value
       end
 
-      # Aceita o usage da Responses API (input_tokens/output_tokens/input_tokens_details.cached_tokens)
-      # e o shape de chat (prompt_tokens/completion_tokens/prompt_tokens_details). String/symbol keys.
+      # Aceita o usage da Responses API (input_tokens/output_tokens/input_tokens_details.{cached_tokens,
+      # cache_write_tokens}) e o shape de chat (prompt_tokens/completion_tokens/prompt_tokens_details).
+      # String/symbol keys. `cache_write_tokens` só existe na família 5.6; ausente vira 0.
       def self.extract_tokens(usage)
         u = (usage || {}).to_h.transform_keys(&:to_s)
         details = (u['input_tokens_details'] || u['prompt_tokens_details'] || {}).to_h.transform_keys(&:to_s)
         {
           input: (u['input_tokens'] || u['prompt_tokens']).to_i,
           output: (u['output_tokens'] || u['completion_tokens']).to_i,
-          cached: details['cached_tokens'].to_i
+          cached: details['cached_tokens'].to_i,
+          cache_write: details['cache_write_tokens'].to_i
         }
       end
     end

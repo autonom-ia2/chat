@@ -34,6 +34,32 @@ RSpec.describe Crm::Reports::AiUsage do
     expect(result.dig(:totals, :cache_savings_pct)).to be_within(0.01).of(14.64)
   end
 
+  it 'reports cache savings net of the cache write premium on the 5.6 family' do
+    account = create(:account)
+    create(:crm_ai_usage_event, account: account, model: 'gpt-5.6-luna', input_tokens: 2000,
+                                cached_tokens: 1000, cache_write_tokens: 800, output_tokens: 100,
+                                cost_estimate: 0.01)
+
+    result = payload(account: account)
+
+    # leitura: 1000 * (1.0 - 0.1) = 900 ; escrita: 800 * (1.25 - 1.0) = 200
+    # líquido = (900 - 200) / 1_000_000 = 0.0007
+    expect(result.dig(:totals, :cache_savings, :cost_usd)).to be_within(0.000001).of(0.0007)
+  end
+
+  it 'keeps cache savings untouched for models without a cache write rate' do
+    account = create(:account)
+    create(:crm_ai_usage_event, account: account, model: 'gpt-5.4', input_tokens: 2000,
+                                cached_tokens: 500, cache_write_tokens: 900, output_tokens: 100,
+                                cost_estimate: 0.01)
+
+    result = payload(account: account)
+
+    # gpt-5.4 não cobra cache write -> sobretaxa zero, só o desconto de leitura
+    # 500 * (2.5 - 0.25) / 1_000_000 = 0.001125
+    expect(result.dig(:totals, :cache_savings, :cost_usd)).to be_within(0.000001).of(0.001125)
+  end
+
   it 'groups real feature strings into humanized resources and keeps unknown features as Outros' do
     account = create(:account)
     create(:crm_ai_usage_event, account: account, feature: 'resumo', cost_estimate: 0.01)
