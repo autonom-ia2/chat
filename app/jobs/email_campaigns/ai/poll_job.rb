@@ -8,7 +8,7 @@ module EmailCampaigns
       queue_as :medium
 
       POLL_INTERVAL = 8.seconds
-      # ~15 min de teto: a geração típica leva ~2-3 min, mas a fila da OpenAI (gpt-5.4 high em
+      # ~15 min de teto: a geração típica leva ~2-3 min, mas a fila da OpenAI (gpt-5.6-sol high em
       # background) pode passar de 10 min em picos — headroom evita timeout falso. Ticks são baratos.
       MAX_ATTEMPTS = 113
 

@@ -10,17 +10,17 @@ module Crm
       AUTO_MOVE_COOLDOWN_SECONDS = DEBOUNCE_SECONDS
       DEFAULT_STALE_HOURS = 48
 
-      MODEL_SUMMARY = 'gpt-5.4-mini'.freeze
-      MODEL_CLASSIFY = 'gpt-5.4-mini'.freeze
-      # auto-move usa o mini (custo) + effort high.
-      MODEL_AUTO_MOVE = 'gpt-5.4-mini'.freeze
-      MODEL_FOLLOWUP = 'gpt-5.4-mini'.freeze
+      MODEL_SUMMARY = 'gpt-5.6-luna'.freeze
+      MODEL_CLASSIFY = 'gpt-5.6-luna'.freeze
+      # auto-move usa o modelo leve (custo) + effort high.
+      MODEL_AUTO_MOVE = 'gpt-5.6-luna'.freeze
+      MODEL_FOLLOWUP = 'gpt-5.6-luna'.freeze
       # E-mail builder copilot (multimodal generate). Full model — sees images/PDFs and writes MJML.
-      MODEL_EMAIL = 'gpt-5.4'.freeze
+      MODEL_EMAIL = 'gpt-5.6-sol'.freeze
 
-      # REASONING EFFORT por tarefa (modelos seguem mini). Todas as features mini usam 'high':
-      # corte de custo (xhigh fatura muito mais token de raciocínio) sem trocar de modelo.
-      # Suportados no gpt-5.4-mini: none/low/medium/high/xhigh (validado por probe no endpoint).
+      # REASONING EFFORT por tarefa (modelos seguem o leve). Todas as features leves usam 'high':
+      # corte de custo (xhigh/max faturam muito mais token de raciocínio) sem trocar de modelo.
+      # Escala da família 5.6: none/low/medium/high/xhigh/max.
       CLASSIFY_REASONING_EFFORT = 'high'.freeze
       SUMMARY_REASONING_EFFORT = 'high'.freeze
       VISION_REASONING_EFFORT = 'high'.freeze
@@ -107,7 +107,7 @@ module Crm
       # wav, webm. O gpt-4o-mini-transcribe REJEITA oga/ogg ("Unsupported file format oga", HTTP 400),
       # então quebrava a transcrição de áudio de WhatsApp. Override por ENV p/ trocar sem deploy.
       TRANSCRIBE_MODEL = ENV.fetch('CRM_AI_TRANSCRIBE_MODEL', 'whisper-1').freeze
-      VISION_MODEL = 'gpt-5.4-mini'.freeze
+      VISION_MODEL = 'gpt-5.6-luna'.freeze
       TRANSCRIPTION_BYTE_LIMIT = 25_000_000
       IMAGE_BYTE_LIMIT = 18_000_000
       # TTS (espelhamento de áudio — Onda 2c): voz a partir do texto da resposta. Saída `opus` = formato

@@ -3,7 +3,7 @@ module Autonomia
     class Config
       BOOLEAN = ActiveModel::Type::Boolean.new
 
-      BUILDER_MODEL = Crm::Ai::Config::MODEL_EMAIL # gpt-5.4
+      BUILDER_MODEL = Crm::Ai::Config::MODEL_EMAIL # gpt-5.6-sol
       # Construtor é um CHAT: chamada SÍNCRONA (ResponsesClient#create). O reasoning é ESCOLHIDO POR
       # FASE (Builder#run! decide) para atacar a latência (~24s/turno na campanha real):
       #   - COLETA (turnos de entrevista): 'low'. São perguntas curtas, sem geração da instruction
@@ -25,14 +25,14 @@ module Autonomia
       # Revisor v2 — IA Revisora de Qualidade (structured output por fonte + agregação da base).
       # Chamada SÍNCRONA dentro do ProcessJob (após embed). 'low' basta: structured output objetivo
       # sobre trechos curtos; mantém a ingestão rápida.
-      REVIEWER_MODEL = Crm::Ai::Config::MODEL_EMAIL # gpt-5.4
+      REVIEWER_MODEL = Crm::Ai::Config::MODEL_EMAIL # gpt-5.6-sol
       # Fase 1 tuning: revisor sobe p/ 'medium' (julgamento de qualidade mais firme).
       REVIEWER_REASONING_EFFORT = 'medium'.freeze
 
       # #3 INSTRUÇÃO VIVA — Refresh automático da instrução quando a KB muda (add/remove). Reusa o
       # modelo do Construtor (redação de instrução, como o fechamento) com effort 'medium'. NÃO é
       # entrevista: só reescreve o bloco de escopo/conhecimento da instrução de agentes JÁ FECHADOS.
-      INSTRUCTION_REFRESH_MODEL = BUILDER_MODEL # gpt-5.4
+      INSTRUCTION_REFRESH_MODEL = BUILDER_MODEL # gpt-5.6-sol
       INSTRUCTION_REFRESH_REASONING_EFFORT = BUILDER_REASONING_EFFORT_FINAL # 'medium'
 
       # KILL-SWITCH do refresh automático da instrução (#3). Default LIGADO; desligar via ENV
@@ -106,10 +106,10 @@ module Autonomia
       DEFAULT_CHUNK_PROFILE = { max: CHUNK_MAX, overlap: CHUNK_OVERLAP, merge_floor: 45 }.freeze
 
       # KB-quality Bloco B / B2.3 — CLASSIFICADOR de documento (1 chamada LLM por FONTE, não por chunk).
-      # Reusa o modelo/effort do Revisor (gpt-5.4, structured output) p/ extrair topics/entities/style do
+      # Reusa o modelo/effort do Revisor (gpt-5.6-sol, structured output) p/ extrair topics/entities/style do
       # documento inteiro e carimbar em TODO chunk (metadata.doc) — mais recall por termo de negócio.
       # Best-effort: erro/credential ausente → classificação vazia, NUNCA derruba a ingestão.
-      DOCUMENT_CLASSIFIER_MODEL = REVIEWER_MODEL # gpt-5.4
+      DOCUMENT_CLASSIFIER_MODEL = REVIEWER_MODEL # gpt-5.6-sol
       DOCUMENT_CLASSIFIER_REASONING_EFFORT = 'medium'.freeze
       # Teto do texto enviado ao classificador (custo/latência): amostra o começo do documento; o
       # objetivo é rotular o material, não lê-lo inteiro (o Revisor já faz amostra estratificada).
@@ -131,9 +131,9 @@ module Autonomia
       MAX_AUDIO_PER_MESSAGE = 2
 
       # Fase B — motor de resposta (RAG + portão de confiança / Testar / Copiloto)
-      # Modelo fixado em gpt-5.4 (desacoplado de MODEL_AUTO_MOVE, que foi p/ mini na Fase 1 — o
+      # Modelo fixado em gpt-5.6-sol (desacoplado de MODEL_AUTO_MOVE, que foi p/ mini na Fase 1 — o
       # Answerer fala com o cliente e mantém o modelo forte).
-      ANSWERER_MODEL = 'gpt-5.4'.freeze
+      ANSWERER_MODEL = 'gpt-5.6-sol'.freeze
       # Fase 1 tuning: answerer sobe p/ 'medium' (resposta ao cliente com mais raciocínio).
       ANSWERER_REASONING_EFFORT = 'medium'.freeze
       DEFAULT_CONFIDENCE_THRESHOLD = 0.55
@@ -168,7 +168,7 @@ module Autonomia
       MAX_QUERY_CHARS = 6_000
       MAX_COMPOSED_QUERY_CHARS = 16_000
       MAX_HISTORY_ITEM_CHARS = 4_000
-      MAX_HISTORY_TOTAL_CHARS = 40_000 # Bloco A: 24k→40k (gpt-5.4 tem 128k; conversa longa preserva mais contexto)
+      MAX_HISTORY_TOTAL_CHARS = 40_000 # Bloco A: 24k→40k (gpt-5.6-sol tem 128k; conversa longa preserva mais contexto)
       TRUNCATION_SUFFIX = '…'.freeze
 
       # Truncamento CENTRAL: mantém o COMEÇO da string (o fim é descartado) e sinaliza o corte com o

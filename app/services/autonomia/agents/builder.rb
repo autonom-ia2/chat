@@ -1,6 +1,6 @@
 module Autonomia
   module Agents
-    # Meta-agente conversacional ("o Construtor"). Roda em gpt-5.4 SÍNCRONO (entrevista + geração num
+    # Meta-agente conversacional ("o Construtor"). Roda em gpt-5.6-sol SÍNCRONO (entrevista + geração num
     # cérebro só) e devolve structured output que vira a config do Agente. A INSTRUÇÃO gerada e o
     # ANDAIME são IP OCULTO — este serviço só os produz; o jbuilder/serializer NUNCA os expõe.
     #

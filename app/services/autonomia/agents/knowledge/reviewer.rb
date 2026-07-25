@@ -1,7 +1,7 @@
 module Autonomia
   module Agents
     module Knowledge
-      # IA Revisora de Qualidade do Conhecimento (gpt-5.4, structured output via ResponsesClient).
+      # IA Revisora de Qualidade do Conhecimento (gpt-5.6-sol, structured output via ResponsesClient).
       # Avalia UMA fonte recém-ingerida: nota (0–100) + confiança + rótulo + recomendação
       # (aceitar/reenviar) + RESUMO. Depois, recompute_overall! agrega as fontes aceitas num MAPA DE
       # TEMAS + confiança geral que alimentam o Construtor.
@@ -372,7 +372,7 @@ module Autonomia
         # Chama o modelo para revisar a fonte. nil em qualquer falha de IA (credencial vazia, erro do
         # cliente, timeout, JSON inválido) → o chamador aplica o fallback conservador.
         # DETERMINISMO: este é um caminho Responses API de raciocínio (reasoning: { effort }); NÃO há
-        # parâmetro `temperature` (o gpt-5.4 o rejeita). A estabilidade da nota vem da RUBRICA explícita
+        # parâmetro `temperature` (o gpt-5.6-sol o rejeita). A estabilidade da nota vem da RUBRICA explícita
         # por eixo + tie-breaker (§4 da REVIEWER_INSTRUCTION) e do effort 'low', não de um knob.
         def request_review
           result = client.create(
