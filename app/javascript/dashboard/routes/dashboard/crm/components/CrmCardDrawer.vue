@@ -997,28 +997,51 @@ const stageTransitionKey = activity => {
   return from && to ? `${from}->${to}` : null;
 };
 
-const isDuplicateOfAiMove = (activity, aiMoves) => {
-  if (activity.event_type !== 'move') return false;
-  const key = stageTransitionKey(activity);
-  if (!key) return false;
-  const movedAt = new Date(activity.created_at).getTime();
-  return aiMoves.some(
-    aiMove =>
-      stageTransitionKey(aiMove) === key &&
-      Math.abs(new Date(aiMove.created_at).getTime() - movedAt) <=
-        AI_MOVE_DEDUP_WINDOW_MS
-  );
-};
+const activityTime = activity => new Date(activity.created_at).getTime();
 
-const visibleActivities = computed(() => {
+// Só o 'move' escrito PELA IA é candidato: o Mover recebe actor nil no caminho
+// do SuggestionApplier (-> actor_type 'system'), enquanto movimento humano leva
+// Current.user (-> actor_type 'user'). Sem esse filtro, um humano refazendo a
+// mesma transição logo depois do auto-move sumiria da timeline.
+const isCollapsibleMove = activity =>
+  activity.event_type === 'move' &&
+  activity.actor_type === 'system' &&
+  stageTransitionKey(activity) !== null;
+
+const matchesAiMove = (move, aiMove) =>
+  stageTransitionKey(move) === stageTransitionKey(aiMove) &&
+  Math.abs(activityTime(aiMove) - activityTime(move)) <=
+    AI_MOVE_DEDUP_WINDOW_MS;
+
+// Pareamento 1:1: cada ai_auto_moved consome no máximo um 'move', o mais
+// próximo no tempo. Dois auto-moves da mesma transição na janela nunca escondem
+// três linhas.
+const collapsedMoveIds = computed(() => {
   const aiMoves = activities.value.filter(
     activity => activity.event_type === 'ai_auto_moved'
   );
-  if (aiMoves.length === 0) return activities.value;
-  return activities.value.filter(
-    activity => !isDuplicateOfAiMove(activity, aiMoves)
-  );
+  if (aiMoves.length === 0) return new Set();
+
+  const candidates = activities.value.filter(isCollapsibleMove);
+  return aiMoves.reduce((collapsed, aiMove) => {
+    const [nearest] = candidates
+      .filter(move => !collapsed.has(move.id) && matchesAiMove(move, aiMove))
+      .sort(
+        (a, b) =>
+          Math.abs(activityTime(a) - activityTime(aiMove)) -
+          Math.abs(activityTime(b) - activityTime(aiMove))
+      );
+    return nearest ? new Set([...collapsed, nearest.id]) : collapsed;
+  }, new Set());
 });
+
+const visibleActivities = computed(() =>
+  collapsedMoveIds.value.size === 0
+    ? activities.value
+    : activities.value.filter(
+        activity => !collapsedMoveIds.value.has(activity.id)
+      )
+);
 
 const timelineEntries = computed(() =>
   visibleActivities.value.map(activity => ({
