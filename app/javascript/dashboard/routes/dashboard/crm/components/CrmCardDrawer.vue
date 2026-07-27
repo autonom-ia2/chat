@@ -1014,6 +1014,10 @@ const isCollapsibleMove = activity =>
 // segundo —, logo empates de distância são esperados e o desempate é por id.
 const matchesAiMove = (move, aiMove) => {
   if (stageTransitionKey(move) !== stageTransitionKey(aiMove)) return false;
+  // O 'move' é sempre a linha inserida DEPOIS, então o id também tem que ser
+  // maior. Isso desempata dois ciclos de IA da mesma transição no mesmo segundo,
+  // que o timestamp truncado sozinho não distingue.
+  if (Number(move.id) <= Number(aiMove.id)) return false;
   const delta = activityTime(move) - activityTime(aiMove);
   return delta >= 0 && delta <= AI_MOVE_DEDUP_WINDOW_MS;
 };
