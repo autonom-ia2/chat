@@ -1008,14 +1008,19 @@ const isCollapsibleMove = activity =>
   activity.actor_type === 'system' &&
   stageTransitionKey(activity) !== null;
 
-const matchesAiMove = (move, aiMove) =>
-  stageTransitionKey(move) === stageTransitionKey(aiMove) &&
-  Math.abs(activityTime(aiMove) - activityTime(move)) <=
-    AI_MOVE_DEDUP_WINDOW_MS;
+// Janela DIRECIONAL: o 'move' da IA é sempre gravado DEPOIS do ai_auto_moved
+// (o SuggestionRecorder roda antes do SuggestionApplier), então movimento
+// anterior nunca é par. created_at chega serializado com .iso8601 — precisão de
+// segundo —, logo empates de distância são esperados e o desempate é por id.
+const matchesAiMove = (move, aiMove) => {
+  if (stageTransitionKey(move) !== stageTransitionKey(aiMove)) return false;
+  const delta = activityTime(move) - activityTime(aiMove);
+  return delta >= 0 && delta <= AI_MOVE_DEDUP_WINDOW_MS;
+};
 
-// Pareamento 1:1: cada ai_auto_moved consome no máximo um 'move', o mais
-// próximo no tempo. Dois auto-moves da mesma transição na janela nunca escondem
-// três linhas.
+// Pareamento 1:1: cada ai_auto_moved consome no máximo um 'move' — o mais
+// próximo no tempo e, no empate, o de menor id. Dois auto-moves da mesma
+// transição na janela nunca escondem três linhas.
 const collapsedMoveIds = computed(() => {
   const aiMoves = activities.value.filter(
     activity => activity.event_type === 'ai_auto_moved'
@@ -1028,8 +1033,7 @@ const collapsedMoveIds = computed(() => {
       .filter(move => !collapsed.has(move.id) && matchesAiMove(move, aiMove))
       .sort(
         (a, b) =>
-          Math.abs(activityTime(a) - activityTime(aiMove)) -
-          Math.abs(activityTime(b) - activityTime(aiMove))
+          activityTime(a) - activityTime(b) || Number(a.id) - Number(b.id)
       );
     return nearest ? new Set([...collapsed, nearest.id]) : collapsed;
   }, new Set());
