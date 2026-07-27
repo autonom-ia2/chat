@@ -814,6 +814,41 @@ const ACTIVITY_META = {
     icon: 'i-lucide-user-round-check',
     tone: 'info',
   },
+  ai_followup_planned: {
+    key: 'ACTIVITY_AI_FOLLOWUP_PLANNED',
+    icon: 'i-lucide-calendar-clock',
+    tone: 'info',
+  },
+  ai_followup_reset: {
+    key: 'ACTIVITY_AI_FOLLOWUP_RESET',
+    icon: 'i-lucide-rotate-ccw',
+    tone: 'neutral',
+  },
+  ai_followup_stopped: {
+    key: 'ACTIVITY_AI_FOLLOWUP_STOPPED',
+    icon: 'i-lucide-circle-stop',
+    tone: 'muted',
+  },
+  ai_handoff_invite: {
+    key: 'ACTIVITY_AI_HANDOFF_INVITE',
+    icon: 'i-lucide-user-round-plus',
+    tone: 'info',
+  },
+  ai_handoff_pickup: {
+    key: 'ACTIVITY_AI_HANDOFF_PICKUP',
+    icon: 'i-lucide-user-round-check',
+    tone: 'positive',
+  },
+  ai_handoff_escalation: {
+    key: 'ACTIVITY_AI_HANDOFF_ESCALATION',
+    icon: 'i-lucide-triangle-alert',
+    tone: 'negative',
+  },
+  ai_handoff_renotify: {
+    key: 'ACTIVITY_AI_HANDOFF_RENOTIFY',
+    icon: 'i-lucide-bell-ring',
+    tone: 'neutral',
+  },
 };
 
 const FALLBACK_META = { icon: 'i-lucide-history', tone: 'neutral' };
@@ -948,8 +983,76 @@ const describeActivity = activity => {
   };
 };
 
+// Um auto-move da IA grava DUAS atividades para um único movimento físico:
+// 'ai_auto_moved' (auditoria da decisão do modelo) e 'move' (evento canônico do
+// Crm::Cards::Mover). As duas TÊM que continuar existindo no banco — só 'move'
+// está na allowlist de webhooks do Crm::Webhooks::Emitter e alimenta o sync de
+// conversão Meta CAPI. Aqui a timeline colapsa o par em uma linha só, mantendo
+// a da IA (mais informativa). Nada muda no backend.
+const AI_MOVE_DEDUP_WINDOW_MS = 60 * 1000;
+
+const stageTransitionKey = activity => {
+  const from = activity.payload?.from_stage_id;
+  const to = activity.payload?.to_stage_id;
+  return from && to ? `${from}->${to}` : null;
+};
+
+const activityTime = activity => new Date(activity.created_at).getTime();
+
+// Só o 'move' escrito PELA IA é candidato: o Mover recebe actor nil no caminho
+// do SuggestionApplier (-> actor_type 'system'), enquanto movimento humano leva
+// Current.user (-> actor_type 'user'). Sem esse filtro, um humano refazendo a
+// mesma transição logo depois do auto-move sumiria da timeline.
+const isCollapsibleMove = activity =>
+  activity.event_type === 'move' &&
+  activity.actor_type === 'system' &&
+  stageTransitionKey(activity) !== null;
+
+// Janela DIRECIONAL: o 'move' da IA é sempre gravado DEPOIS do ai_auto_moved
+// (o SuggestionRecorder roda antes do SuggestionApplier), então movimento
+// anterior nunca é par. created_at chega serializado com .iso8601 — precisão de
+// segundo —, logo empates de distância são esperados e o desempate é por id.
+const matchesAiMove = (move, aiMove) => {
+  if (stageTransitionKey(move) !== stageTransitionKey(aiMove)) return false;
+  // O 'move' é sempre a linha inserida DEPOIS, então o id também tem que ser
+  // maior. Isso desempata dois ciclos de IA da mesma transição no mesmo segundo,
+  // que o timestamp truncado sozinho não distingue.
+  if (Number(move.id) <= Number(aiMove.id)) return false;
+  const delta = activityTime(move) - activityTime(aiMove);
+  return delta >= 0 && delta <= AI_MOVE_DEDUP_WINDOW_MS;
+};
+
+// Pareamento 1:1: cada ai_auto_moved consome no máximo um 'move' — o mais
+// próximo no tempo e, no empate, o de menor id. Dois auto-moves da mesma
+// transição na janela nunca escondem três linhas.
+const collapsedMoveIds = computed(() => {
+  const aiMoves = activities.value.filter(
+    activity => activity.event_type === 'ai_auto_moved'
+  );
+  if (aiMoves.length === 0) return new Set();
+
+  const candidates = activities.value.filter(isCollapsibleMove);
+  return aiMoves.reduce((collapsed, aiMove) => {
+    const [nearest] = candidates
+      .filter(move => !collapsed.has(move.id) && matchesAiMove(move, aiMove))
+      .sort(
+        (a, b) =>
+          activityTime(a) - activityTime(b) || Number(a.id) - Number(b.id)
+      );
+    return nearest ? new Set([...collapsed, nearest.id]) : collapsed;
+  }, new Set());
+});
+
+const visibleActivities = computed(() =>
+  collapsedMoveIds.value.size === 0
+    ? activities.value
+    : activities.value.filter(
+        activity => !collapsedMoveIds.value.has(activity.id)
+      )
+);
+
 const timelineEntries = computed(() =>
-  activities.value.map(activity => ({
+  visibleActivities.value.map(activity => ({
     id: activity.id,
     ...describeActivity(activity),
   }))
