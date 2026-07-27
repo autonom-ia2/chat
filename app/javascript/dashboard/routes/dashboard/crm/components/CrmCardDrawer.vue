@@ -814,6 +814,41 @@ const ACTIVITY_META = {
     icon: 'i-lucide-user-round-check',
     tone: 'info',
   },
+  ai_followup_planned: {
+    key: 'ACTIVITY_AI_FOLLOWUP_PLANNED',
+    icon: 'i-lucide-calendar-clock',
+    tone: 'info',
+  },
+  ai_followup_reset: {
+    key: 'ACTIVITY_AI_FOLLOWUP_RESET',
+    icon: 'i-lucide-rotate-ccw',
+    tone: 'neutral',
+  },
+  ai_followup_stopped: {
+    key: 'ACTIVITY_AI_FOLLOWUP_STOPPED',
+    icon: 'i-lucide-circle-stop',
+    tone: 'muted',
+  },
+  ai_handoff_invite: {
+    key: 'ACTIVITY_AI_HANDOFF_INVITE',
+    icon: 'i-lucide-user-round-plus',
+    tone: 'info',
+  },
+  ai_handoff_pickup: {
+    key: 'ACTIVITY_AI_HANDOFF_PICKUP',
+    icon: 'i-lucide-user-round-check',
+    tone: 'positive',
+  },
+  ai_handoff_escalation: {
+    key: 'ACTIVITY_AI_HANDOFF_ESCALATION',
+    icon: 'i-lucide-triangle-alert',
+    tone: 'negative',
+  },
+  ai_handoff_renotify: {
+    key: 'ACTIVITY_AI_HANDOFF_RENOTIFY',
+    icon: 'i-lucide-bell-ring',
+    tone: 'neutral',
+  },
 };
 
 const FALLBACK_META = { icon: 'i-lucide-history', tone: 'neutral' };
@@ -948,8 +983,45 @@ const describeActivity = activity => {
   };
 };
 
+// Um auto-move da IA grava DUAS atividades para um único movimento físico:
+// 'ai_auto_moved' (auditoria da decisão do modelo) e 'move' (evento canônico do
+// Crm::Cards::Mover). As duas TÊM que continuar existindo no banco — só 'move'
+// está na allowlist de webhooks do Crm::Webhooks::Emitter e alimenta o sync de
+// conversão Meta CAPI. Aqui a timeline colapsa o par em uma linha só, mantendo
+// a da IA (mais informativa). Nada muda no backend.
+const AI_MOVE_DEDUP_WINDOW_MS = 60 * 1000;
+
+const stageTransitionKey = activity => {
+  const from = activity.payload?.from_stage_id;
+  const to = activity.payload?.to_stage_id;
+  return from && to ? `${from}->${to}` : null;
+};
+
+const isDuplicateOfAiMove = (activity, aiMoves) => {
+  if (activity.event_type !== 'move') return false;
+  const key = stageTransitionKey(activity);
+  if (!key) return false;
+  const movedAt = new Date(activity.created_at).getTime();
+  return aiMoves.some(
+    aiMove =>
+      stageTransitionKey(aiMove) === key &&
+      Math.abs(new Date(aiMove.created_at).getTime() - movedAt) <=
+        AI_MOVE_DEDUP_WINDOW_MS
+  );
+};
+
+const visibleActivities = computed(() => {
+  const aiMoves = activities.value.filter(
+    activity => activity.event_type === 'ai_auto_moved'
+  );
+  if (aiMoves.length === 0) return activities.value;
+  return activities.value.filter(
+    activity => !isDuplicateOfAiMove(activity, aiMoves)
+  );
+});
+
 const timelineEntries = computed(() =>
-  activities.value.map(activity => ({
+  visibleActivities.value.map(activity => ({
     id: activity.id,
     ...describeActivity(activity),
   }))
