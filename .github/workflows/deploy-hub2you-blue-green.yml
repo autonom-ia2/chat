@@ -1,6 +1,9 @@
 name: Deploy Hub2You Chatwoot Blue Green
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       action:
@@ -50,7 +53,7 @@ env:
 jobs:
   deploy:
     name: Deploy Green
-    if: github.ref == 'refs/heads/main' && inputs.confirm_production == true && inputs.action == 'deploy'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (inputs.confirm_production == true && inputs.action == 'deploy'))
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment: production
@@ -607,7 +610,7 @@ jobs:
 
   rollback:
     name: Rollback To Previous Target Group
-    if: github.ref == 'refs/heads/main' && inputs.confirm_production == true && inputs.action == 'rollback'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'rollback'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
