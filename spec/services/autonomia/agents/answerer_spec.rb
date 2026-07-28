@@ -13,7 +13,7 @@ RSpec.describe Autonomia::Agents::Answerer do
   before do
     resolver = instance_double(Crm::Ai::CredentialResolver, resolve: 'ai-credential')
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
-    client = instance_double(Crm::Ai::ResponsesClient, create: { text: model_reply })
+    client = instance_double(Crm::Ai::ResponsesClient, create_with_tool_executor: { text: model_reply })
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
   end
 
@@ -114,7 +114,7 @@ RSpec.describe Autonomia::Agents::Answerer do
     end
 
     def stub_model(reply_hash)
-      client = instance_double(Crm::Ai::ResponsesClient, create: { text: reply_hash.to_json })
+      client = instance_double(Crm::Ai::ResponsesClient, create_with_tool_executor: { text: reply_hash.to_json })
       allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     end
 

@@ -149,18 +149,47 @@ module Autonomia
                                images: @images, audience: @audience)
         raw = Crm::Ai::ResponsesClient.new(
           credential: credential, feature: 'agente_resposta', account: @agent.account
-        ).create(
+        ).create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
           instructions: pb.instructions,
           input: pb.input,
           schema: PromptBuilder::ANSWER_SCHEMA,
           reasoning_effort: Config::ANSWERER_REASONING_EFFORT,
-          tools: @allow_web_search ? Crm::Ai::WebSearch.tools : nil
-        )
+          tools: answer_tools
+        ) { |calls| execute_tool_calls(calls) }
         parsed = JSON.parse(raw[:text])
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError
         nil # NÃO logar e.message (pode ecoar o prompt). error code curto fica no AnswerResult.
+      end
+
+      def answer_tools
+        tools = []
+        tools.concat(Array(Crm::Ai::WebSearch.tools)) if @allow_web_search
+        tools.concat(enabled_agent_tools.map(&:openai_schema))
+        tools.presence
+      end
+
+      def enabled_agent_tools
+        @enabled_agent_tools ||= @agent.tools.enabled.order(:id).to_a
+      end
+
+      def execute_tool_calls(calls)
+        tools_by_slug = enabled_agent_tools.index_by(&:slug)
+        Array(calls).map do |call|
+          tool = tools_by_slug[call['name'].to_s]
+          output = tool.present? ? execute_single_tool(tool, call) : { error: 'tool_not_available' }.to_json
+          { type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(8_000) }
+        end
+      end
+
+      def execute_single_tool(tool, call)
+        args = JSON.parse(call['arguments'].presence || '{}')
+        Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: args).call
+      rescue JSON::ParserError
+        { error: 'invalid_tool_arguments' }.to_json
+      rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
+        { error: e.message }.to_json
       end
 
       def build_result(parsed, snippets)

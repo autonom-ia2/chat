@@ -48,6 +48,28 @@ class AutonomiaAgentsAPI extends ApiClient {
       `${this.url}/${agentId}/instruction_versions/${versionId}/restore`
     );
   }
+
+  getTools(agentId) {
+    return axios.get(`${this.url}/${agentId}/tools`);
+  }
+
+  createTool(agentId, tool) {
+    return axios.post(`${this.url}/${agentId}/tools`, { tool });
+  }
+
+  updateTool(agentId, toolId, tool) {
+    return axios.patch(`${this.url}/${agentId}/tools/${toolId}`, { tool });
+  }
+
+  deleteTool(agentId, toolId) {
+    return axios.delete(`${this.url}/${agentId}/tools/${toolId}`);
+  }
+
+  testTool(agentId, toolId, params = {}) {
+    return axios.post(`${this.url}/${agentId}/tools/${toolId}/test`, {
+      params,
+    });
+  }
 }
 
 export default new AutonomiaAgentsAPI();

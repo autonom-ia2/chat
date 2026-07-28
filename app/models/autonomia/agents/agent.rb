@@ -29,6 +29,9 @@ module Autonomia
       has_many :instruction_versions, class_name: 'Autonomia::Agents::InstructionVersion',
                                       foreign_key: :autonomia_agent_id, inverse_of: :agent,
                                       dependent: :delete_all
+      has_many :tools, class_name: 'Autonomia::Agents::Tool',
+                       foreign_key: :autonomia_agent_id, inverse_of: :agent,
+                       dependent: :destroy
 
       enum status: { draft: 0, active: 1, paused: 2 }
       enum mode:   { guided: 0, manual: 1 }

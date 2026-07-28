@@ -386,6 +386,27 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_25_155227) do
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_sources_on_autonomia_agent_id"
   end
 
+  create_table "autonomia_agent_tools", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "autonomia_agent_id", null: false
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.text "description"
+    t.boolean "enabled", default: true, null: false
+    t.string "http_method", default: "POST", null: false
+    t.text "endpoint_url", null: false
+    t.jsonb "headers_config", default: [], null: false
+    t.text "request_body_template"
+    t.jsonb "param_schema", default: [], null: false
+    t.jsonb "response_mapping", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "enabled"], name: "index_autonomia_agent_tools_on_account_id_and_enabled"
+    t.index ["account_id"], name: "index_autonomia_agent_tools_on_account_id"
+    t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_tools_agent_slug", unique: true
+    t.index ["autonomia_agent_id"], name: "index_autonomia_agent_tools_on_autonomia_agent_id"
+  end
+
   create_table "autonomia_agents", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -2518,6 +2539,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_25_155227) do
   add_foreign_key "autonomia_agent_knowledge", "autonomia_agents"
   add_foreign_key "autonomia_agent_sources", "accounts"
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
+  add_foreign_key "autonomia_agent_tools", "accounts"
+  add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
   add_foreign_key "autonomia_prospecting_leads", "accounts", on_delete: :cascade
