@@ -92,8 +92,26 @@ module Crm
       # sem esperar o cooldown. Ciclos abertos/cancelados/expirados/escalados
       # mantêm o cooldown (anti-spam de convite).
       def resolved_handoff_cycle?
+        return true if picked_up_cycle?
+        return false if invite_mode?
+
+        released_after_direct_handoff?
+      end
+
+      def picked_up_cycle?
         pointer = (@card.metadata || {}).dig('ai', 'handoff')
         pointer.is_a?(Hash) && pointer['picked_up_at'].present?
+      end
+
+      # r2_direct nao grava ciclo (append_invite_cycle so roda no convite), entao a regra do
+      # picked_up_at nunca valia no modo direto e o cooldown de 6h prendia: o operador
+      # devolvia a conversa ao bot, o gatilho acontecia de novo e nada era transferido.
+      # Uma atribuicao anterior (last_handoff_at) somada a conversa AGORA sem responsavel e a
+      # mesma assinatura de "humano assumiu e devolveu" — libera novo handoff.
+      # O anti-spam continua na guarda already_assigned: enquanto houver responsavel nao
+      # redispara; so volta a valer se alguem desatribuir de proposito.
+      def released_after_direct_handoff?
+        (@card.metadata || {}).dig('ai', 'last_handoff_at').present? && @conversation&.assignee_id.blank?
       end
 
       # Seleção de membro delegada ao Crm::Ai::HandoffMemberSelector (lógica
