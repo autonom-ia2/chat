@@ -29,8 +29,12 @@ export const initializeFacebook = (appId, apiVersion) => {
   });
 };
 
+// `waba_id` is the only identifier Meta guarantees across every completion
+// event. FINISH_ONLY_WABA in particular arrives without a phone number, and
+// `business_id` is absent in some Coexistence payloads — requiring either of
+// them rejected valid signups as "Invalid business data".
 export const isValidBusinessData = businessData => {
-  return businessData && businessData.business_id && businessData.waba_id;
+  return Boolean(businessData && businessData.waba_id);
 };
 
 export const createMessageHandler = onEmbeddedSignupData => {
@@ -74,7 +78,11 @@ export const initWhatsAppEmbeddedSignup = configId => {
         override_default_response_type: true,
         extras: {
           setup: {},
-          featureType: 'whatsapp_business_app_onboarding',
+          // `featureType` used to pin every signup to the Coexistence flow
+          // (whatsapp_business_app_onboarding), even for customers on plain
+          // Cloud API. Meta's current implementation snippet passes no
+          // featureType at all, and no channel in production is Coexistence,
+          // so the flow is left to Meta's default.
           sessionInfoVersion: '3',
         },
       }

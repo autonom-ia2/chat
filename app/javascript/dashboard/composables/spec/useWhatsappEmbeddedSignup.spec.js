@@ -11,9 +11,7 @@ vi.mock(
     setupFacebookSdk: vi.fn(),
     initWhatsAppEmbeddedSignup: vi.fn(),
     createMessageHandler: vi.fn(),
-    isValidBusinessData: vi.fn(data =>
-      Boolean(data && data.business_id && data.waba_id)
-    ),
+    isValidBusinessData: vi.fn(data => Boolean(data && data.waba_id)),
   })
 );
 
@@ -119,6 +117,41 @@ describe('useWhatsappEmbeddedSignup', () => {
     });
 
     await expect(result).resolves.toMatchObject({ phone_number_id: '' });
+  });
+
+  // Regression: this event was unhandled, so the promise stayed pending
+  // forever and the UI spun with no error — the Royalty Seguros symptom.
+  it('resolves on FINISH_ONLY_WABA, which carries no phone number', async () => {
+    initWhatsAppEmbeddedSignup.mockResolvedValue('auth-code');
+
+    const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
+    const result = runEmbeddedSignup();
+
+    await flushPromises();
+    emit({ event: 'FINISH_ONLY_WABA', data: { waba_id: 'waba-1' } });
+
+    await expect(result).resolves.toEqual({
+      code: 'auth-code',
+      business_id: undefined,
+      waba_id: 'waba-1',
+      phone_number_id: '',
+    });
+  });
+
+  it('rejects instead of hanging when Meta never sends the business data', async () => {
+    vi.useFakeTimers();
+    initWhatsAppEmbeddedSignup.mockResolvedValue('auth-code');
+
+    const { runEmbeddedSignup, isAuthenticating } = useWhatsappEmbeddedSignup();
+    const result = runEmbeddedSignup();
+    const assertion = expect(result).rejects.toThrow(/timed out/);
+
+    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await assertion;
+    // The composable must unlock, otherwise a retry is impossible.
+    expect(isAuthenticating.value).toBe(false);
+
+    vi.useRealTimers();
   });
 
   it('resolves null when FB.login is cancelled', async () => {
