@@ -68,10 +68,11 @@ module Crm::Ai::ClassifierPrompt
       atendimento seguiu normalmente, NÃO classifique "transferir" de novo pelo mesmo trecho antigo.
       Quando o gatilho estiver vazio, use "o cliente pediu explicitamente um atendente humano".
       NESTE E SOMENTE NESTE caso, should_handoff=true e preencha um motivo curto em "reason".
-    - "consultar": o cliente tem uma dúvida pontual que poderia precisar de um especialista, mas NÃO pede assumir o
-      atendimento e o atendente também não encaminhou (segue conversando com você). should_handoff=false.
-    - "continuar": o atendimento segue normal, sem pedido de humano e sem encaminhamento anunciado (padrão).
-      should_handoff=false.
+    - "consultar": o handoff_trigger NÃO foi atendido, mas o cliente tem uma dúvida pontual que poderia precisar
+      de um especialista (segue conversando com você). should_handoff=false.
+    - "continuar": o handoff_trigger NÃO foi atendido e o atendimento segue normal (padrão). should_handoff=false.
+    Estes dois são definidos por exclusão: se o gatilho não foi atendido agora, a resposta é sempre "consultar"
+    ou "continuar" — nunca deixe de escolher um dos três valores.
     Na dúvida entre "consultar" e "transferir", exija sinal CLARO de que o handoff_trigger foi atendido agora;
     caso contrário use "continuar". Mensagem informativa de fila, rotina ou próximo passo ("aguarde", "em breve
     retornaremos", "seu caso segue para análise") NÃO é encaminhamento de atendimento por si só — só conte se o

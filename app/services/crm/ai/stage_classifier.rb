@@ -38,8 +38,9 @@ module Crm
                 intent: {
                   type: 'string',
                   enum: %w[continuar transferir consultar],
-                  description: 'Intenção do cliente quanto a falar com humano: "transferir" (quer assumir com atendente agora), ' \
-                               '"consultar" (dúvida pontual p/ especialista, sem assumir o atendimento) ou "continuar" (segue no atendimento normal).'
+                  description: 'Necessidade de humano AGORA, conforme o gatilho informado: "transferir" (o gatilho foi atendido — ' \
+                               'por pedido do cliente ou por encaminhamento que o atendente declarou, conforme o gatilho descrever), ' \
+                               '"consultar" (gatilho não atendido; dúvida pontual p/ especialista) ou "continuar" (gatilho não atendido; atendimento normal).'
                 },
                 should_handoff: { type: 'boolean', description: 'true SOMENTE quando intent="transferir"; senão false.' },
                 reason: { type: 'string', maxLength: 300, description: 'Motivo curto do handoff.' },
