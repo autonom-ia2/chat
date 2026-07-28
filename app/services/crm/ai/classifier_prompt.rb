@@ -58,22 +58,24 @@ module Crm::Ai::ClassifierPrompt
     (eligible_agents) estão nos DADOS DE ENTRADA.
     Se handoff_enabled for false, retorne "handoff": null.
     Se handoff_enabled for true, classifique no campo "intent" se a conversa precisa de um humano AGORA:
-    - "transferir": a conversa atende o handoff_trigger. Isso vale por QUALQUER destes dois caminhos:
-      (a) o CLIENTE quer/precisa que um atendente humano ASSUMA o atendimento agora; ou
-      (b) o ATENDENTE (humano ou automático) DECLAROU na conversa que vai encaminhar/transferir/passar o
-          atendimento para a equipe, para um humano ou para outro setor — mesmo que o cliente não tenha pedido.
-      Em (b) considere apenas encaminhamento JÁ AFIRMADO; oferta ou condicional NÃO conta
-      ("posso encaminhar se quiser" NÃO conta; "encaminhei para a equipe" conta).
-      Quando o gatilho estiver vazio, use "o cliente pediu explicitamente um atendente humano OU o atendente
-      informou que encaminhou o atendimento".
+    - "transferir": a conversa atende o handoff_trigger AGORA. O gatilho MANDA: quem decide o que conta é o
+      texto do handoff_trigger, e ele pode ser satisfeito tanto por algo que o CLIENTE disse quanto por algo
+      que o ATENDENTE (humano ou automático) declarou — siga o que o gatilho descrever, não presuma.
+      Se o gatilho descrever uma ação do atendente (ex.: "quando o atendente informar que vai encaminhar"),
+      considere-o atendido apenas quando essa declaração JÁ tiver sido feita na conversa; oferta ou
+      condicional NÃO conta ("posso encaminhar se quiser" NÃO conta; "encaminhei para a equipe" conta).
+      Avalie somente a evidência MAIS RECENTE: se o gatilho já foi atendido antes e depois disso o
+      atendimento seguiu normalmente, NÃO classifique "transferir" de novo pelo mesmo trecho antigo.
+      Quando o gatilho estiver vazio, use "o cliente pediu explicitamente um atendente humano".
       NESTE E SOMENTE NESTE caso, should_handoff=true e preencha um motivo curto em "reason".
     - "consultar": o cliente tem uma dúvida pontual que poderia precisar de um especialista, mas NÃO pede assumir o
       atendimento e o atendente também não encaminhou (segue conversando com você). should_handoff=false.
     - "continuar": o atendimento segue normal, sem pedido de humano e sem encaminhamento anunciado (padrão).
       should_handoff=false.
-    Na dúvida entre "consultar" e "transferir", exija sinal CLARO por um dos dois caminhos — pedido do cliente (a)
-    ou encaminhamento já afirmado pelo atendente (b); caso contrário use "continuar". Um encaminhamento explícito
-    do atendente já é sinal claro por si só. Se nada indicar handoff, retorne "handoff": null.
+    Na dúvida entre "consultar" e "transferir", exija sinal CLARO de que o handoff_trigger foi atendido agora;
+    caso contrário use "continuar". Mensagem informativa de fila, rotina ou próximo passo ("aguarde", "em breve
+    retornaremos", "seu caso segue para análise") NÃO é encaminhamento de atendimento por si só — só conte se o
+    gatilho descrever justamente isso. Se nada indicar handoff, retorne "handoff": null.
     Se o cliente citar/pedir um agente presente em eligible_agents, coloque o nome em "suggested_agent"; senão
     suggested_agent=null. Não invente nomes fora da lista.
   HANDOFF
