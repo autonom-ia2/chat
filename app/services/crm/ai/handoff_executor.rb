@@ -111,7 +111,14 @@ module Crm
       # O anti-spam continua na guarda already_assigned: enquanto houver responsavel nao
       # redispara; so volta a valer se alguem desatribuir de proposito.
       def released_after_direct_handoff?
-        (@card.metadata || {}).dig('ai', 'last_handoff_at').present? && @conversation&.assignee_id.blank?
+        ai_meta = (@card.metadata || {}).fetch('ai', {}).to_h
+        return false if ai_meta['last_handoff_at'].blank?
+        # Carimbo de CONVITE nunca libera por aqui: um convite pendente (ninguem aceitou) com a
+        # etapa trocada depois para r2_direct nao e "humano assumiu e devolveu". Ausencia do
+        # marcador = card anterior a este campo, que so existia no caminho direto.
+        return false if ai_meta['last_handoff_mode'] == 'invite'
+
+        @conversation&.assignee_id.blank?
       end
 
       # Seleção de membro delegada ao Crm::Ai::HandoffMemberSelector (lógica
@@ -198,7 +205,10 @@ module Crm
       def stamp_handoff_metadata!(invited: false, invited_agent: nil)
         metadata = (@card.metadata || {}).deep_dup
         now = Time.current.iso8601
-        ai = (metadata['ai'] || {}).merge('last_handoff_at' => now)
+        # `last_handoff_mode` diz de qual caminho veio o carimbo: released_after_direct_handoff?
+        # usa isso para nao dispensar cooldown em cima de um convite pendente.
+        ai = (metadata['ai'] || {}).merge('last_handoff_at' => now,
+                                          'last_handoff_mode' => invited ? 'invite' : 'direct')
         ai.delete('handoff_hold')
         ai = append_invite_cycle(ai, now, invited_agent) if invited
         metadata['ai'] = ai

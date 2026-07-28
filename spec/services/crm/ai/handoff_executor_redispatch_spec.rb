@@ -50,4 +50,23 @@ RSpec.describe Crm::Ai::HandoffExecutor do
 
     expect(perform(card).error).to eq('cooldown')
   end
+
+  # Convite pendente + etapa trocada depois para r2_direct nao e "humano assumiu e devolveu":
+  # ninguem chegou a ser responsavel, entao o cooldown do convite tem de continuar valendo.
+  it 'nao dispensa o cooldown quando o carimbo anterior veio de um convite' do
+    card = build_card(
+      handoff_mode: 'r2_direct',
+      ai_meta: { 'last_handoff_at' => 10.minutes.ago.iso8601, 'last_handoff_mode' => 'invite' }
+    )
+
+    expect(perform(card).error).to eq('cooldown')
+  end
+
+  it 'grava o modo do handoff junto do carimbo' do
+    card = build_card(handoff_mode: 'r2_direct', ai_meta: {})
+
+    perform(card)
+
+    expect(card.reload.metadata.dig('ai', 'last_handoff_mode')).to eq('direct')
+  end
 end
