@@ -33,6 +33,11 @@ describe('Autonomia API clients', () => {
       expect(agents).toHaveProperty('delete');
       expect(agents).toHaveProperty('test');
       expect(agents).toHaveProperty('suggest');
+      expect(agents).toHaveProperty('getTools');
+      expect(agents).toHaveProperty('createTool');
+      expect(agents).toHaveProperty('updateTool');
+      expect(agents).toHaveProperty('deleteTool');
+      expect(agents).toHaveProperty('testTool');
     });
 
     it('lists, shows, creates, updates and deletes agents with account scope', () => {
@@ -75,6 +80,36 @@ describe('Autonomia API clients', () => {
       expect(axiosMock.post).toHaveBeenCalledWith(
         '/api/v1/accounts/85/autonomia/agents/7/suggest',
         { message: 'oi', history: [] }
+      );
+    });
+
+    it('manages tools under the per-agent endpoint', () => {
+      agents.getTools(7);
+      expect(axiosMock.get).toHaveBeenCalledWith(
+        '/api/v1/accounts/85/autonomia/agents/7/tools'
+      );
+
+      agents.createTool(7, { name: 'Consulta' });
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        '/api/v1/accounts/85/autonomia/agents/7/tools',
+        { tool: { name: 'Consulta' } }
+      );
+
+      agents.updateTool(7, 2, { enabled: false });
+      expect(axiosMock.patch).toHaveBeenCalledWith(
+        '/api/v1/accounts/85/autonomia/agents/7/tools/2',
+        { tool: { enabled: false } }
+      );
+
+      agents.testTool(7, 2, { q: 'freio' });
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        '/api/v1/accounts/85/autonomia/agents/7/tools/2/test',
+        { params: { q: 'freio' } }
+      );
+
+      agents.deleteTool(7, 2);
+      expect(axiosMock.delete).toHaveBeenCalledWith(
+        '/api/v1/accounts/85/autonomia/agents/7/tools/2'
       );
     });
   });

@@ -278,6 +278,10 @@ Rails.application.routes.draw do
               end
               resources :channels, only: [:index, :create, :destroy],
                                    controller: 'agents/channels', param: :inbox_id
+              resources :tools, only: [:index, :show, :create, :update, :destroy],
+                                controller: 'agents/tools' do
+                post :test, on: :member
+              end
               # G2 — histórico de versões da instrução + rollback atômico.
               resources :instruction_versions, only: [:index], controller: 'agents/instruction_versions'
               post 'instruction_versions/:version_id/restore',

@@ -1,0 +1,15 @@
+json.id tool.id
+json.account_id tool.account_id
+json.autonomia_agent_id tool.autonomia_agent_id
+json.name tool.name
+json.slug tool.slug
+json.description tool.description
+json.enabled tool.enabled
+json.http_method tool.http_method
+json.endpoint_url tool.endpoint_url
+json.headers_config tool.masked_headers_config
+json.request_body_template tool.request_body_template
+json.param_schema tool.param_schema
+json.response_mapping tool.response_mapping
+json.created_at tool.created_at
+json.updated_at tool.updated_at

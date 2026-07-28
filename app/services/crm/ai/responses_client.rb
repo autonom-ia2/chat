@@ -28,6 +28,41 @@ module Crm
         parse_response(response, model: model, requested_tools: tools, started_at: started_at, reasoning_effort: reasoning_effort)
       end
 
+      # Single-step custom tool loop for Autonom.ia agents. The first response may request one
+      # or more `function_call` items; the caller executes them server-side and returns compact
+      # outputs. We then ask the model for the final structured answer without offering another
+      # custom-tool round, keeping the MVP bounded and predictable.
+      def create_with_tool_executor(model:, instructions:, input:, schema:, reasoning_effort: 'low', tools: nil,
+                                    timeout: 120)
+        return create(model: model, instructions: instructions, input: input, schema: schema,
+                      reasoning_effort: reasoning_effort, tools: tools, timeout: timeout) unless block_given? && tools.present?
+
+        first_started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        first_body = base_body(model, instructions, input, schema, reasoning_effort, tools).merge(store: false)
+        first_response = post_responses(first_body, timeout: timeout, operation: 'responses.create',
+                                                    started_at: first_started_at)
+        first_payload = parse_raw(first_response, operation: 'responses.create', model: model,
+                                                  started_at: first_started_at)
+        first_used = tools_used(first_payload)
+        log_call(model, tools, first_used, first_started_at)
+        record_usage(first_payload['usage'], model, reasoning_effort, first_started_at)
+
+        calls = function_calls(first_payload)
+        return parse_response_payload(first_payload, model: model, requested_tools: tools, started_at: first_started_at,
+                                                     reasoning_effort: reasoning_effort) if calls.empty?
+
+        tool_outputs = yield(calls)
+        second_input = normalize_input(input) + Array(first_payload['output']) + Array(tool_outputs)
+        second_started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        second_body = base_body(model, instructions, second_input, schema, reasoning_effort, nil).merge(store: false)
+        second_response = post_responses(second_body, timeout: timeout, operation: 'responses.create.tool_result',
+                                                      started_at: second_started_at)
+        result = parse_response(second_response, model: model, requested_tools: tools,
+                                                 started_at: second_started_at, reasoning_effort: reasoning_effort)
+        result[:tools_used] = (Array(result[:tools_used]) + first_used).uniq
+        result
+      end
+
       # Background mode: a OpenAI aceita o pedido e processa do lado dela; retorna na hora um
       # response_id que buscamos depois com retrieve. EXIGE store:true (a resposta fica retida
       # p/ ser recuperada). Usado pela geração de e-mail (operação de vários minutos).
@@ -166,7 +201,11 @@ module Crm
           raise Error, extract_error_message(response)
         end
 
-        payload = response.parsed_response
+        parse_response_payload(response.parsed_response, model: model, requested_tools: requested_tools,
+                                                        started_at: started_at, reasoning_effort: reasoning_effort)
+      end
+
+      def parse_response_payload(payload, model: nil, requested_tools: nil, started_at: nil, reasoning_effort: nil)
         text = payload['output_text'].presence || extract_output_text(payload)
         if text.blank?
           log_failure(
@@ -189,6 +228,10 @@ module Crm
           response_id: payload['id'],
           tools_used: used
         }
+      end
+
+      def function_calls(payload)
+        Array(payload['output']).select { |item| item['type'] == 'function_call' }
       end
 
       # Telemetria de consumo (Gestão IA). Só dispara quando o cliente foi construído com

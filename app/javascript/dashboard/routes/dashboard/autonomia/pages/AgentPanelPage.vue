@@ -14,6 +14,7 @@ import PanelChannels from '../components/panel/PanelChannels.vue';
 import PanelPerformance from '../components/panel/PanelPerformance.vue';
 import PanelTune from '../components/panel/PanelTune.vue';
 import PanelPublish from '../components/panel/PanelPublish.vue';
+import PanelTools from '../components/panel/PanelTools.vue';
 
 const props = defineProps({
   agentId: {
@@ -46,13 +47,14 @@ const TAB_ICONS = {
   test: 'i-lucide-flask-conical',
   knowledge: 'i-lucide-book-open',
   channels: 'i-lucide-radio',
+  tools: 'i-lucide-wrench',
   performance: 'i-lucide-bar-chart-3',
   tune: 'i-lucide-sliders-horizontal',
 };
 
 // The first four sit in the segmented group; "Ajustar" (tune) is pulled out to
 // the right of a divider because it edits the agent rather than inspecting it.
-const MAIN_TAB_KEYS = ['test', 'knowledge', 'channels', 'performance'];
+const MAIN_TAB_KEYS = ['test', 'knowledge', 'tools', 'channels', 'performance'];
 
 const buildTab = key => ({
   key,
@@ -86,6 +88,8 @@ const activeComponent = computed(() => {
       return PanelKnowledge;
     case 'channels':
       return PanelChannels;
+    case 'tools':
+      return PanelTools;
     case 'performance':
       return PanelPerformance;
     case 'tune':
