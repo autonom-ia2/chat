@@ -32,6 +32,7 @@ const store = useStore();
 const router = useRouter();
 
 const uiFlags = useMapGetter('autonomiaAgents/getUIFlags');
+const currentUser = useMapGetter('getCurrentUser');
 
 const agent = computed(() =>
   store.getters['autonomiaAgents/getRecord'](Number(props.agentId))
@@ -65,12 +66,19 @@ const buildTab = key => ({
 // V2.2 — an internal agent has no channels by design, so the "Canais" tab is
 // hidden for it. external/both keep it. `both` is still connectable.
 const isInternal = computed(() => agent.value?.actuation === 'internal');
+const isSuperAdmin = computed(() => currentUser.value?.type === 'SuperAdmin');
 
-const visibleTabKeys = computed(() =>
-  isInternal.value
+const visibleTabKeys = computed(() => {
+  let keys = isInternal.value
     ? MAIN_TAB_KEYS.filter(key => key !== 'channels')
-    : MAIN_TAB_KEYS
-);
+    : MAIN_TAB_KEYS;
+
+  if (!isSuperAdmin.value) {
+    keys = keys.filter(key => key !== 'tools');
+  }
+
+  return keys;
+});
 
 const mainTabs = computed(() => visibleTabKeys.value.map(buildTab));
 const tuneTab = computed(() => buildTab('tune'));
@@ -89,7 +97,7 @@ const activeComponent = computed(() => {
     case 'channels':
       return PanelChannels;
     case 'tools':
-      return PanelTools;
+      return isSuperAdmin.value ? PanelTools : PanelTest;
     case 'performance':
       return PanelPerformance;
     case 'tune':
@@ -156,9 +164,9 @@ const toggleStatus = async () => {
 // render PanelChannels with no tab to return to. Bounce it back to the default
 // tab once the agent record is known.
 watch(
-  [isInternal, () => props.tab],
-  ([internal, tab]) => {
-    if (internal && tab === 'channels') {
+  [isInternal, isSuperAdmin, () => props.tab],
+  ([internal, superAdmin, tab]) => {
+    if ((internal && tab === 'channels') || (!superAdmin && tab === 'tools')) {
       router.replace({
         name: 'autonomia_agent_panel',
         params: { agentId: props.agentId, tab: 'test' },

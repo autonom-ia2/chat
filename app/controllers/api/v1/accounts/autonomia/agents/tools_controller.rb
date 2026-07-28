@@ -1,4 +1,5 @@
 class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts::Autonomia::BaseController
+  before_action :ensure_super_admin
   before_action :fetch_agent
   before_action :fetch_tool, only: %i[show update destroy test]
 
@@ -38,6 +39,10 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
   end
 
   private
+
+  def ensure_super_admin
+    raise Pundit::NotAuthorizedError unless Current.user.is_a?(SuperAdmin)
+  end
 
   def fetch_agent
     @agent = agents_scope.find(params[:agent_id])
