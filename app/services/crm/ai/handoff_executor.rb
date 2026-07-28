@@ -160,7 +160,11 @@ module Crm
           # seta assignee + zera assignee_agent_bot (cala o bot) num só ponto.
           # NÃO é o motor round-robin nativo (auto_assignment v2) — quem decide o
           # agente continua sendo o HandoffMemberSelector do CRM.
-          assigned = Conversations::AssignmentService.new(conversation: @conversation, assignee_id: agent.id).perform.present?
+          # `::` obrigatorio: existe Crm::Conversations (card_syncer, visibility...), entao daqui de
+          # dentro de Crm::Ai o Ruby resolvia Conversations::AssignmentService como
+          # Crm::Conversations::AssignmentService e levantava NameError — engolido pelo rescue do
+          # Evaluator, deixando o handoff preso sem atribuir e sem erro visivel.
+          assigned = ::Conversations::AssignmentService.new(conversation: @conversation, assignee_id: agent.id).perform.present?
           raise ActiveRecord::Rollback unless assigned
 
           stamp_handoff_metadata!
