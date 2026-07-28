@@ -78,11 +78,12 @@ export const initWhatsAppEmbeddedSignup = configId => {
         override_default_response_type: true,
         extras: {
           setup: {},
-          // `featureType` used to pin every signup to the Coexistence flow
-          // (whatsapp_business_app_onboarding), even for customers on plain
-          // Cloud API. Meta's current implementation snippet passes no
-          // featureType at all, and no channel in production is Coexistence,
-          // so the flow is left to Meta's default.
+          // Do NOT drop `featureType`: it selects Meta's Coexistence flow,
+          // which is what makes the WhatsApp Business app's message history
+          // importable. Whatsapp::EmbeddedSignupService fires
+          // HistorySyncService right after the channel is created, and Meta
+          // only honours that within a 24h window opened by this flow.
+          featureType: 'whatsapp_business_app_onboarding',
           sessionInfoVersion: '3',
         },
       }
