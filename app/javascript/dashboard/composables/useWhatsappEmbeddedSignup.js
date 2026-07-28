@@ -29,6 +29,13 @@ const COMPLETION_EVENTS = [
   'FINISH_GRANT_ONLY_API_ACCESS', // grant-only API access
 ];
 
+// Meta emits ERROR (uppercase, like every other event it sends) when it
+// refuses the signup — e.g. the customer switches to an ineligible account
+// while confirming. The handler compared against lowercase 'error', so the
+// rejection never matched any branch and the promise stayed pending: the
+// customer saw a spinner instead of Meta's reason.
+const ERROR_EVENTS = ['ERROR', 'error'];
+
 // Meta closes its popup without any event in some failure modes. Without a
 // deadline the caller spins indefinitely with no way to tell the user why.
 const SIGNUP_TIMEOUT_MS = 5 * 60 * 1000;
@@ -98,8 +105,12 @@ export function useWhatsappEmbeddedSignup() {
           resolveIfReady();
         } else if (data.event === 'CANCEL') {
           settle(resolve, null);
-        } else if (data.event === 'error') {
-          settle(reject, new Error(data.error_message || 'Signup error'));
+        } else if (ERROR_EVENTS.includes(data.event)) {
+          // Meta puts the reason in data.data.error_message; the top-level
+          // read below is a fallback for older payload shapes.
+          const reason =
+            data.data?.error_message || data.error_message || 'Signup error';
+          settle(reject, new Error(reason));
         }
       });
 

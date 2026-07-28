@@ -154,6 +154,35 @@ describe('useWhatsappEmbeddedSignup', () => {
     vi.useRealTimers();
   });
 
+  // Root cause of the Royalty Seguros incident (27/07): Meta refused the
+  // signup after the customer switched accounts while confirming. It emits
+  // ERROR uppercase with the reason in data.data.error_message; the handler
+  // compared against lowercase 'error', so nothing settled the promise.
+  it('rejects with Meta reason on an uppercase ERROR event', async () => {
+    initWhatsAppEmbeddedSignup.mockReturnValue(createDeferred().promise);
+
+    const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
+    const result = runEmbeddedSignup();
+
+    emit({
+      event: 'ERROR',
+      data: { error_message: 'Unable to connect this account' },
+    });
+
+    await expect(result).rejects.toThrow('Unable to connect this account');
+  });
+
+  it('still handles the legacy lowercase error payload shape', async () => {
+    initWhatsAppEmbeddedSignup.mockReturnValue(createDeferred().promise);
+
+    const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
+    const result = runEmbeddedSignup();
+
+    emit({ event: 'error', error_message: 'legacy shape' });
+
+    await expect(result).rejects.toThrow('legacy shape');
+  });
+
   it('resolves null when FB.login is cancelled', async () => {
     initWhatsAppEmbeddedSignup.mockRejectedValue(new Error('Login cancelled'));
 
