@@ -18,6 +18,7 @@ const isLoading = ref(false);
 const isSaving = ref(false);
 const editingId = ref(null);
 const testResult = ref('');
+const showFormModal = ref(false);
 
 const emptyForm = () => ({
   name: '',
@@ -52,6 +53,16 @@ const resetForm = () => {
   testResult.value = '';
 };
 
+const openNewToolModal = () => {
+  resetForm();
+  showFormModal.value = true;
+};
+
+const closeFormModal = () => {
+  showFormModal.value = false;
+  resetForm();
+};
+
 const applyStockTemplate = () => {
   Object.assign(form, emptyForm(), {
     name: 'Consulta de estoque',
@@ -61,6 +72,7 @@ const applyStockTemplate = () => {
     endpoint_url:
       'https://giraautopecas.api-autonomia.com/clients/gira-autopecas/stock/search',
   });
+  showFormModal.value = true;
 };
 
 const loadTools = async () => {
@@ -92,6 +104,7 @@ const editTool = tool => {
     response_mapping: tool.response_mapping || {},
   });
   testResult.value = '';
+  showFormModal.value = true;
 };
 
 const addHeader = () => {
@@ -137,7 +150,7 @@ const saveTool = async () => {
       await AutonomiaAgentsAPI.createTool(props.agentId, payload());
     }
     useAlert(t('AGENTS.TOOLS.SAVE_SUCCESS'));
-    resetForm();
+    closeFormModal();
     await loadTools();
   } catch (error) {
     useAlert(error?.message || t('AGENTS.TOOLS.SAVE_ERROR'));
@@ -188,17 +201,27 @@ onMounted(loadTools);
           {{ t('AGENTS.TOOLS.DESCRIPTION') }}
         </p>
       </div>
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-n-brand text-white hover:brightness-110"
-        @click="applyStockTemplate"
-      >
-        <i class="i-lucide-package-search size-4" />
-        {{ t('AGENTS.TOOLS.STOCK_TEMPLATE') }}
-      </button>
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-n-weak text-n-slate-12 hover:bg-n-alpha-2"
+          @click="applyStockTemplate"
+        >
+          <i class="i-lucide-package-search size-4" />
+          {{ t('AGENTS.TOOLS.STOCK_TEMPLATE') }}
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-n-brand text-white hover:brightness-110"
+          @click="openNewToolModal"
+        >
+          <i class="i-lucide-plus size-4" />
+          {{ t('AGENTS.TOOLS.CREATE_TITLE') }}
+        </button>
+      </div>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+    <div class="space-y-3">
       <div class="space-y-3">
         <div
           v-if="isLoading"
@@ -275,12 +298,20 @@ onMounted(loadTools);
           class="p-3 overflow-auto text-xs border rounded-lg max-h-52 border-n-weak bg-n-alpha-1 text-n-slate-11"
         >{{ testResult }}</pre>
       </div>
+    </div>
 
+    <div
+      v-if="showFormModal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-n-slate-12/40"
+      @click.self="closeFormModal"
+    >
       <form
-        class="p-4 space-y-4 border rounded-lg border-n-weak bg-n-solid-1"
+        class="flex flex-col w-full max-w-3xl max-h-[calc(100vh-2rem)] overflow-hidden border rounded-lg shadow-xl border-n-weak bg-n-solid-1"
         @submit.prevent="saveTool"
       >
-        <div class="flex items-center justify-between gap-3">
+        <div
+          class="flex items-center justify-between flex-shrink-0 gap-3 px-5 py-4 border-b border-n-weak"
+        >
           <h3 class="font-medium text-n-slate-12">
             {{
               isEditing
@@ -288,164 +319,204 @@ onMounted(loadTools);
                 : t('AGENTS.TOOLS.CREATE_TITLE')
             }}
           </h3>
-          <button
-            v-if="isEditing"
-            type="button"
-            class="text-sm text-n-brand"
-            @click="resetForm"
-          >
-            {{ t('AGENTS.TOOLS.NEW') }}
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              v-if="isEditing"
+              type="button"
+              class="text-sm text-n-brand"
+              @click="resetForm"
+            >
+              {{ t('AGENTS.TOOLS.NEW') }}
+            </button>
+            <button
+              type="button"
+              class="p-2 rounded-md text-n-slate-11 hover:bg-n-alpha-2"
+              @click="closeFormModal"
+            >
+              <i class="i-lucide-x size-4" />
+            </button>
+          </div>
         </div>
 
-        <label class="block space-y-1 text-sm">
-          <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.NAME') }}</span>
-          <input
-            v-model="form.name"
-            class="w-full min-h-10 px-3 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-            required
-          />
-        </label>
-        <label class="block space-y-1 text-sm">
-          <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.SLUG') }}</span>
-          <input
-            v-model="form.slug"
-            class="w-full min-h-10 px-3 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-            required
-          />
-        </label>
-        <label class="block space-y-1 text-sm">
-          <span class="text-n-slate-11">{{
-            t('AGENTS.TOOLS.DESCRIPTION_LABEL')
-          }}</span>
-          <textarea
-            v-model="form.description"
-            rows="3"
-            class="w-full px-3 py-2 text-sm border rounded-lg outline-none resize-y border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-            required
-          />
-        </label>
-        <div class="grid grid-cols-[110px_1fr] gap-3">
-          <label class="block space-y-1 text-sm">
-            <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.METHOD') }}</span>
-            <select v-model="form.http_method" class="w-full min-h-10 px-3 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand">
-              <option>GET</option>
-              <option>POST</option>
-            </select>
-          </label>
-          <label class="block space-y-1 text-sm">
-            <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.URL') }}</span>
+        <div class="flex-1 min-h-0 px-5 py-4 space-y-4 overflow-y-auto">
+          <label class="block min-w-0 space-y-1 text-sm">
+            <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.NAME') }}</span>
             <input
-              v-model="form.endpoint_url"
+              v-model="form.name"
               class="w-full min-h-10 px-3 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
               required
             />
           </label>
-        </div>
-        <label class="block space-y-1 text-sm">
-          <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.BODY') }}</span>
-          <textarea
-            v-model="form.request_body_template"
-            rows="4"
-            class="w-full px-3 py-2 font-mono text-xs border rounded-lg outline-none resize-y border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-          />
-        </label>
-
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-n-slate-11">{{
-              t('AGENTS.TOOLS.HEADERS')
+          <label class="block min-w-0 space-y-1 text-sm">
+            <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.SLUG') }}</span>
+            <input
+              v-model="form.slug"
+              class="w-full min-h-10 px-3 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+              required
+            />
+          </label>
+          <label class="block min-w-0 space-y-1 text-sm">
+            <span class="text-n-slate-11">{{
+              t('AGENTS.TOOLS.DESCRIPTION_LABEL')
             }}</span>
-            <button type="button" class="text-sm text-n-brand" @click="addHeader">
-              {{ t('AGENTS.TOOLS.ADD') }}
-            </button>
-          </div>
-          <div
-            v-for="(header, index) in form.headers_config"
-            :key="`header-${index}`"
-            class="grid grid-cols-[1fr_1fr_auto_auto] gap-2"
-          >
-            <input
-              v-model="header.key"
-              class="min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-              placeholder="x-api-key"
+            <textarea
+              v-model="form.description"
+              rows="3"
+              class="w-full px-3 py-2 text-sm border rounded-lg outline-none resize-y border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+              required
             />
-            <input
-              v-model="header.value"
-              class="min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-              placeholder="valor"
-            />
-            <label class="inline-flex items-center gap-1 text-xs text-n-slate-11">
-              <input v-model="header.secret" type="checkbox" />
-              {{ t('AGENTS.TOOLS.SECRET') }}
+          </label>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-[120px_minmax(0,1fr)]">
+            <label class="block min-w-0 space-y-1 text-sm">
+              <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.METHOD') }}</span>
+              <select
+                v-model="form.http_method"
+                class="w-full min-h-10 px-3 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+              >
+                <option>GET</option>
+                <option>POST</option>
+              </select>
             </label>
-            <button
-              type="button"
-              class="p-2 text-n-slate-10"
-              @click="removeHeader(index)"
-            >
-              <i class="i-lucide-x size-4" />
-            </button>
+            <label class="block min-w-0 space-y-1 text-sm">
+              <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.URL') }}</span>
+              <input
+                v-model="form.endpoint_url"
+                class="w-full min-h-10 px-3 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+                required
+              />
+            </label>
           </div>
+          <label class="block min-w-0 space-y-1 text-sm">
+            <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.BODY') }}</span>
+            <textarea
+              v-model="form.request_body_template"
+              rows="4"
+              class="w-full px-3 py-2 font-mono text-xs border rounded-lg outline-none resize-y border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+            />
+          </label>
+
+          <div class="min-w-0 space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm text-n-slate-11">{{
+                t('AGENTS.TOOLS.HEADERS')
+              }}</span>
+              <button
+                type="button"
+                class="text-sm text-n-brand"
+                @click="addHeader"
+              >
+                {{ t('AGENTS.TOOLS.ADD') }}
+              </button>
+            </div>
+            <div
+              v-for="(header, index) in form.headers_config"
+              :key="`header-${index}`"
+              class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]"
+            >
+              <input
+                v-model="header.key"
+                class="min-w-0 min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+                placeholder="x-api-key"
+              />
+              <input
+                v-model="header.value"
+                class="min-w-0 min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+                placeholder="valor"
+              />
+              <label
+                class="inline-flex items-center min-h-9 gap-1 text-xs text-n-slate-11"
+              >
+                <input v-model="header.secret" type="checkbox" />
+                {{ t('AGENTS.TOOLS.SECRET') }}
+              </label>
+              <button
+                type="button"
+                class="inline-flex items-center justify-center min-h-9 p-2 text-n-slate-10"
+                @click="removeHeader(index)"
+              >
+                <i class="i-lucide-x size-4" />
+              </button>
+            </div>
+          </div>
+
+          <div class="min-w-0 space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm text-n-slate-11">{{
+                t('AGENTS.TOOLS.PARAMS')
+              }}</span>
+              <button
+                type="button"
+                class="text-sm text-n-brand"
+                @click="addParam"
+              >
+                {{ t('AGENTS.TOOLS.ADD') }}
+              </button>
+            </div>
+            <div
+              v-for="(param, index) in form.param_schema"
+              :key="`param-${index}`"
+              class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_120px_auto_auto]"
+            >
+              <input
+                v-model="param.name"
+                class="min-w-0 min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+                placeholder="q"
+              />
+              <select
+                v-model="param.type"
+                class="min-w-0 min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+              >
+                <option>string</option>
+                <option>number</option>
+                <option>integer</option>
+                <option>boolean</option>
+              </select>
+              <label
+                class="inline-flex items-center min-h-9 gap-1 text-xs text-n-slate-11"
+              >
+                <input v-model="param.required" type="checkbox" />
+                {{ t('AGENTS.TOOLS.REQUIRED') }}
+              </label>
+              <button
+                type="button"
+                class="inline-flex items-center justify-center min-h-9 p-2 text-n-slate-10"
+                @click="removeParam(index)"
+              >
+                <i class="i-lucide-x size-4" />
+              </button>
+              <input
+                v-model="param.description"
+                class="min-w-0 min-h-9 px-2 text-sm border rounded-lg outline-none sm:col-span-4 border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
+                :placeholder="t('AGENTS.TOOLS.PARAM_DESCRIPTION')"
+              />
+            </div>
+          </div>
+
+          <label class="inline-flex items-center gap-2 text-sm text-n-slate-11">
+            <input v-model="form.enabled" type="checkbox" />
+            {{ t('AGENTS.TOOLS.ACTIVE') }}
+          </label>
         </div>
 
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-n-slate-11">{{
-              t('AGENTS.TOOLS.PARAMS')
-            }}</span>
-            <button type="button" class="text-sm text-n-brand" @click="addParam">
-              {{ t('AGENTS.TOOLS.ADD') }}
-            </button>
-          </div>
-          <div
-            v-for="(param, index) in form.param_schema"
-            :key="`param-${index}`"
-            class="grid grid-cols-[1fr_100px_auto_auto] gap-2"
-          >
-            <input
-              v-model="param.name"
-              class="min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-              placeholder="q"
-            />
-            <select v-model="param.type" class="min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand">
-              <option>string</option>
-              <option>number</option>
-              <option>integer</option>
-              <option>boolean</option>
-            </select>
-            <label class="inline-flex items-center gap-1 text-xs text-n-slate-11">
-              <input v-model="param.required" type="checkbox" />
-              {{ t('AGENTS.TOOLS.REQUIRED') }}
-            </label>
-            <button
-              type="button"
-              class="p-2 text-n-slate-10"
-              @click="removeParam(index)"
-            >
-              <i class="i-lucide-x size-4" />
-            </button>
-            <input
-              v-model="param.description"
-              class="col-span-4 min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-              :placeholder="t('AGENTS.TOOLS.PARAM_DESCRIPTION')"
-            />
-          </div>
-        </div>
-
-        <label class="inline-flex items-center gap-2 text-sm text-n-slate-11">
-          <input v-model="form.enabled" type="checkbox" />
-          {{ t('AGENTS.TOOLS.ACTIVE') }}
-        </label>
-
-        <button
-          type="submit"
-          :disabled="isSaving"
-          class="inline-flex items-center justify-center w-full gap-2 px-3 py-2 text-sm font-medium text-white rounded-lg bg-n-brand hover:brightness-110 disabled:opacity-50"
+        <div
+          class="flex flex-shrink-0 items-center justify-end gap-2 px-5 py-4 border-t border-n-weak"
         >
-          <i class="i-lucide-save size-4" />
-          {{ t('AGENTS.TOOLS.SAVE') }}
-        </button>
+          <button
+            type="button"
+            class="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium border rounded-lg border-n-weak text-n-slate-12 hover:bg-n-alpha-2"
+            @click="closeFormModal"
+          >
+            {{ t('AGENTS.TOOLS.CANCEL') }}
+          </button>
+          <button
+            type="submit"
+            :disabled="isSaving"
+            class="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white rounded-lg bg-n-brand hover:brightness-110 disabled:opacity-50"
+          >
+            <i class="i-lucide-save size-4" />
+            {{ t('AGENTS.TOOLS.SAVE') }}
+          </button>
+        </div>
       </form>
     </div>
   </section>

@@ -222,6 +222,7 @@
       "PARAM_DESCRIPTION": "Descrição para a IA",
       "ACTIVE": "Ferramenta ativa",
       "ADD": "Adicionar",
+      "CANCEL": "Cancelar",
       "SAVE": "Salvar ferramenta",
       "SAVE_SUCCESS": "Ferramenta salva.",
       "SAVE_ERROR": "Não foi possível salvar a ferramenta.",

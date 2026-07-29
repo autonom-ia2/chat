@@ -229,6 +229,7 @@
       "PARAM_DESCRIPTION": "Description for the AI",
       "ACTIVE": "Tool enabled",
       "ADD": "Add",
+      "CANCEL": "Cancel",
       "SAVE": "Save tool",
       "SAVE_SUCCESS": "Tool saved.",
       "SAVE_ERROR": "We couldn't save this tool.",
