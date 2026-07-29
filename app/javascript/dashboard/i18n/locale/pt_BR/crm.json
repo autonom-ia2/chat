@@ -1178,7 +1178,7 @@
       "ENABLED": "IA habilitada neste funil",
       "AUTO_MOVE": "Mover automaticamente",
       "ATTRIBUTE_EXTRACTION": "Atualizar campos customizados pela conversa",
-      "ATTRIBUTE_EXTRACTION_HELP": "Extrai dados como cidade, segmento, valor da conta e decisor, e grava nos campos customizados com prefixo sw_.",
+      "ATTRIBUTE_EXTRACTION_HELP": "Extrai dados da conversa (cidade, segmento, valor, decisor e afins) e preenche qualquer campo customizado vazio do contato ou da conversa. Campo já preenchido nunca é sobrescrito.",
       "CALLBACK": "Criar lembrete quando o cliente pedir um retorno",
       "CALLBACK_HELP": "Quando o cliente pede para ser contatado numa data (\"me liga terça que vem\"), um lembrete é criado automaticamente no calendário.",
       "CALLBACK_MODE": "Quando chegar a data",
