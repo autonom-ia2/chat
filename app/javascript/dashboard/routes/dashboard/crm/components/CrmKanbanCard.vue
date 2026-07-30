@@ -95,10 +95,68 @@ const valueLabel = computed(() => {
   }).format(cents / 100);
 });
 
-const scoreLabel = computed(() => {
-  const score = Number(props.card.score || 0);
-  if (!score || score <= 0) return null;
-  return score;
+// Faixas do score. Ícone por faixa (não só cor) para a leitura não depender de percepção de cor.
+const SCORE_TIERS = [
+  {
+    max: 29,
+    key: 'COLD',
+    icon: 'i-lucide-snowflake',
+    filled: 'bg-n-alpha-2 text-n-slate-11',
+    outlined: 'text-n-slate-11 ring-1 ring-inset ring-n-slate-8',
+  },
+  {
+    max: 59,
+    key: 'WARM',
+    icon: 'i-lucide-thermometer',
+    filled: 'bg-n-blue-3 text-n-blue-11',
+    outlined: 'text-n-blue-11 ring-1 ring-inset ring-n-blue-8',
+  },
+  {
+    max: 84,
+    key: 'HOT',
+    icon: 'i-lucide-flame',
+    filled: 'bg-n-amber-3 text-n-amber-11',
+    outlined: 'text-n-amber-11 ring-1 ring-inset ring-n-amber-8',
+  },
+  {
+    max: 100,
+    key: 'URGENT',
+    icon: 'i-lucide-zap',
+    // Único tom sólido: em fundo claro, ruby-3 lia mais fraco que o âmbar da faixa de baixo e
+    // invertia a hierarquia. A faixa mais crítica é a única coisa no card que pode gritar.
+    filled: 'bg-n-ruby-9 text-white',
+    outlined: 'text-n-ruby-11 ring-1 ring-inset ring-n-ruby-8',
+  },
+];
+
+// Nota escrita à mão aparece vazada (contorno) em vez de preenchida: dá para ver de relance quais
+// scores são humanos sem abrir o card. Ela entra na ordenação igual, só a origem muda.
+const scoreView = computed(() => {
+  const value = Number(props.card.score || 0);
+  if (!value || value <= 0) return null;
+
+  const meta = props.card.metadata?.ai?.score || {};
+  const tier = SCORE_TIERS.find(item => value <= item.max);
+  const isManual = meta.source === 'manual';
+  // Chaves literais: o projeto proíbe chave de i18n montada dinamicamente.
+  const tierLabel = {
+    COLD: t('CRM_KANBAN.CARD.SCORE_TIER.COLD'),
+    WARM: t('CRM_KANBAN.CARD.SCORE_TIER.WARM'),
+    HOT: t('CRM_KANBAN.CARD.SCORE_TIER.HOT'),
+    URGENT: t('CRM_KANBAN.CARD.SCORE_TIER.URGENT'),
+  }[tier.key];
+
+  return {
+    value,
+    reason: meta.reason || '',
+    icon: isManual ? 'i-lucide-hand' : tier.icon,
+    toneClasses: isManual ? tier.outlined : tier.filled,
+    ariaLabel: t('CRM_KANBAN.CARD.SCORE_ARIA', {
+      score: value,
+      tier: tierLabel,
+      reason: meta.reason || tierLabel,
+    }),
+  };
 });
 
 const aiSuggestionLabel = computed(() => {
@@ -260,11 +318,31 @@ const canOpenConversation = computed(
             <p class="mb-0 truncate text-sm font-medium text-n-slate-12">
               {{ card.title }}
             </p>
-            <CardPriorityIcon
-              v-if="showPriorityGlyph"
-              :priority="card.priority"
-              class="mt-0.5 shrink-0"
-            />
+            <div class="flex shrink-0 items-center gap-1.5">
+              <CardPriorityIcon
+                v-if="showPriorityGlyph"
+                :priority="card.priority"
+                class="mt-0.5 shrink-0"
+              />
+              <button
+                v-if="scoreView"
+                v-tooltip.top="
+                  scoreView.reason
+                    ? {
+                        content: scoreView.reason,
+                        delay: { show: 300, hide: 0 },
+                      }
+                    : null
+                "
+                type="button"
+                :aria-label="scoreView.ariaLabel"
+                class="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 tabular-nums"
+                :class="scoreView.toneClasses"
+              >
+                <span :class="scoreView.icon" class="size-3 shrink-0" />
+                {{ scoreView.value }}
+              </button>
+            </div>
           </div>
           <p
             v-if="showContactLine"
@@ -349,10 +427,6 @@ const canOpenConversation = computed(
           tone="blue"
         >
           {{ aiSuggestionLabel }}
-        </CrmCardPill>
-
-        <CrmCardPill v-if="scoreLabel" icon="i-lucide-flame" tone="default">
-          {{ t('CRM_KANBAN.CARD.SCORE', { score: scoreLabel }) }}
         </CrmCardPill>
       </div>
 
