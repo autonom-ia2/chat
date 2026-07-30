@@ -2,10 +2,13 @@
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength, sameAs } from '@vuelidate/validators';
 import { useAlert } from 'dashboard/composables';
+import { isValidPassword } from 'shared/helpers/Validators';
 import FormInput from '../../../components/Form/Input.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
 const DEFAULT_AUTH_API_BASE_URL = 'https://auth.api-autonomia.com';
+const MIN_PASSWORD_LENGTH = 8;
+const SPECIAL_CHAR_REGEX = /[!@#$%^&*()_+\-=[\]{}|'"/\\.,`<>:;?~]/;
 
 export default {
   components: {
@@ -41,7 +44,8 @@ export default {
       credentials: {
         password: {
           required,
-          minLength: minLength(8),
+          isValidPassword,
+          minLength: minLength(MIN_PASSWORD_LENGTH),
         },
         confirmPassword: {
           required,
@@ -77,6 +81,38 @@ export default {
         return this.$t('ACCEPT_INVITATION.ERRORS.EXPIRED');
       }
       return this.$t('ACCEPT_INVITATION.ERRORS.INVALID_LINK');
+    },
+    passwordRequirements() {
+      const password = this.credentials.password || '';
+      return [
+        {
+          id: 'length',
+          met: password.length >= MIN_PASSWORD_LENGTH,
+          label: this.$t('ACCEPT_INVITATION.PASSWORD.REQUIREMENTS.LENGTH', {
+            min: MIN_PASSWORD_LENGTH,
+          }),
+        },
+        {
+          id: 'uppercase',
+          met: /[A-Z]/.test(password),
+          label: this.$t('ACCEPT_INVITATION.PASSWORD.REQUIREMENTS.UPPERCASE'),
+        },
+        {
+          id: 'lowercase',
+          met: /[a-z]/.test(password),
+          label: this.$t('ACCEPT_INVITATION.PASSWORD.REQUIREMENTS.LOWERCASE'),
+        },
+        {
+          id: 'number',
+          met: /[0-9]/.test(password),
+          label: this.$t('ACCEPT_INVITATION.PASSWORD.REQUIREMENTS.NUMBER'),
+        },
+        {
+          id: 'special',
+          met: SPECIAL_CHAR_REGEX.test(password),
+          label: this.$t('ACCEPT_INVITATION.PASSWORD.REQUIREMENTS.SPECIAL'),
+        },
+      ];
     },
   },
   mounted() {
@@ -171,7 +207,7 @@ export default {
 
       if (this.v$.credentials.password.$invalid) {
         this.submitApi.hasErrored = true;
-        this.showAlert(this.$t('ACCEPT_INVITATION.ERRORS.PASSWORD_LENGTH'));
+        this.showAlert(this.$t('ACCEPT_INVITATION.ERRORS.PASSWORD_RULES'));
         return;
       }
 
@@ -263,8 +299,41 @@ export default {
             :has-error="v$.credentials.password.$error"
             :error-message="$t('ACCEPT_INVITATION.PASSWORD.ERROR')"
             autocomplete="new-password"
+            @input="v$.credentials.password.$touch"
             @blur="v$.credentials.password.$touch"
           />
+          <div
+            class="p-4 text-sm border rounded-lg bg-n-slate-2 border-n-weak text-n-slate-11"
+          >
+            <p class="mb-3 font-medium text-n-slate-12">
+              {{ $t('ACCEPT_INVITATION.PASSWORD.REQUIREMENTS.TITLE') }}
+            </p>
+            <ul class="grid gap-2">
+              <li
+                v-for="requirement in passwordRequirements"
+                :key="requirement.id"
+                class="flex items-start gap-2"
+              >
+                <span
+                  class="flex items-center justify-center flex-none w-4 h-4 mt-0.5 text-[10px] rounded-full border"
+                  :class="
+                    requirement.met
+                      ? 'border-n-teal-8 bg-n-teal-3 text-n-teal-11'
+                      : 'border-n-slate-7 bg-n-slate-3 text-n-slate-10'
+                  "
+                >
+                  {{ requirement.met ? '✓' : '•' }}
+                </span>
+                <span
+                  :class="
+                    requirement.met ? 'text-n-slate-11' : 'text-n-slate-10'
+                  "
+                >
+                  {{ requirement.label }}
+                </span>
+              </li>
+            </ul>
+          </div>
           <FormInput
             v-model="credentials.confirmPassword"
             name="confirm_password"
@@ -274,6 +343,7 @@ export default {
             :has-error="v$.credentials.confirmPassword.$error"
             :error-message="$t('ACCEPT_INVITATION.CONFIRM_PASSWORD.ERROR')"
             autocomplete="new-password"
+            @input="v$.credentials.confirmPassword.$touch"
             @blur="v$.credentials.confirmPassword.$touch"
           />
           <NextButton
