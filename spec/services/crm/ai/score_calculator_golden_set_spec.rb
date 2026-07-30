@@ -240,7 +240,8 @@ RSpec.describe Crm::Ai::ScoreCalculator do
   it 'promessa nossa em aberto vence o silencio, em qualquer conta' do
     expect(lilian_aceitou_e_ficou_no_vacuo.tier).to eq('urgente')
     expect(cliente_pediu_reemissao_e_ficou_no_vacuo.tier).to eq('urgente')
-    expect(encaminhado_ao_comercial_e_esquecido.tier).to eq('quente')
+    # Regra de produto (piso 85): promessa nossa esquecida é urgente mesmo vinda de bot.
+    expect(encaminhado_ao_comercial_e_esquecido.tier).to eq('urgente')
   end
 
   it 'proposta na mesa hoje e pedido de cotacao ativo sao quentes' do
@@ -302,6 +303,25 @@ RSpec.describe Crm::Ai::ScoreCalculator do
             fora_de_escopo, ghosting_com_followup]
 
     expect(fila.map(&:value)).to eq(fila.map(&:value).sort.reverse)
+  end
+
+  # Casos de conflito apontados pelo review adversarial (codex): as combinações não existiam no corpus.
+  it 'recusa explicita cancela o piso da promessa' do
+    result = score({ next_stage_readiness: 'nenhuma', intent: 'baixa', urgency: 'nenhuma', decision_maker: 'sim',
+                     blocker: 'forte', last_turn_owner: 'cliente', unfulfilled_promise: true }, idle_days: 1)
+    expect(result.tier).to eq('frio')
+  end
+
+  it 'ilegivel limita ate promessa: teto de confianca vem por ultimo' do
+    result = score({ next_stage_readiness: 'nenhuma', intent: 'baixa', urgency: 'nenhuma', decision_maker: 'desconhecido',
+                     blocker: 'nenhum', last_turn_owner: 'humano', unfulfilled_promise: true, unreadable: true }, idle_days: 1)
+    expect(result.value).to eq(described_class::UNREADABLE_CAP)
+  end
+
+  it 'sem teto de decaimento, ate a base mais alta chega a frio com silencio longo' do
+    result = score({ next_stage_readiness: 'pronta', intent: 'alta', urgency: 'imediata', decision_maker: 'sim',
+                     blocker: 'nenhum', last_turn_owner: 'humano', buying_signal: true }, idle_days: 60)
+    expect(result.tier).to eq('frio')
   end
 
   it 'distingue os dois urgentes entre si em vez de saturar ambos em 100' do

@@ -25,9 +25,10 @@ class Crm::Ai::ScoreCalculator
 
   # Decaimento: silêncio derruba a nota sozinho, sem chamar IA. Contado da ÚLTIMA MENSAGEM, nunca
   # da entrada no estágio — card pode mudar de estágio semanas depois da conversa morrer.
+  # SEM teto (achado do review): com teto, card de base alta ficava preso em morno para sempre —
+  # lead zumbi. Sem teto, base 100 chega a frio em ~42 dias de silêncio, que é o comportamento certo.
   DECAY_GRACE_DAYS = 2
   DECAY_PER_DAY = 2
-  MAX_DECAY = 40
 
   # Conversa ilegível (áudio sem transcrição, mensagens vazias): a IA não tem base para julgar,
   # então o score fica limitado em vez de inventado.
@@ -35,7 +36,16 @@ class Crm::Ai::ScoreCalculator
 
   # Mantidos em sincronia com SCORE_TIERS do CrmKanbanCard.vue. O teto do "sem promessa" fica em
   # ~92 para o topo não saturar: só promessa não cumprida encosta em 100.
-  TIERS = [[24, 'frio'], [54, 'morno'], [84, 'quente'], [100, 'urgente']].freeze
+  TIERS = [[19, 'frio'], [54, 'morno'], [83, 'quente'], [100, 'urgente']].freeze
+
+  # Regra de produto: promessa NOSSA em aberto é sempre urgente — a dívida é nossa e não esfria.
+  # Piso, não bônus: sem ele os rótulos oscilavam entre quente e urgente conforme os outros sinais.
+  UNFULFILLED_PROMISE_FLOOR = 85
+
+  # Conversa que respirou nas últimas 72h com o CLIENTE aguardando resposta nunca é frio: alguém
+  # precisa ao menos responder. Não vale para recusa explícita (blocker forte).
+  AWAITING_REPLY_FLOOR = 20
+  AWAITING_REPLY_MAX_IDLE_DAYS = 3
 
   # Contrato de saída do modelo. Fica aqui, não no StageClassifier: quem define o vocabulário dos
   # sinais é quem sabe pesá-los. O classifier apenas consome.
@@ -103,12 +113,29 @@ class Crm::Ai::ScoreCalculator
     return terminal_result if @terminal
 
     value = clamp(raw_points + decay_points)
+    value = [value, UNFULFILLED_PROMISE_FLOOR].max if promise_floor?
+    value = [value, AWAITING_REPLY_FLOOR].max if awaiting_reply?
+    # Teto de ilegível por ÚLTIMO (achado do review): é teto de confiança — sem conversa legível,
+    # nenhum piso se sustenta, inclusive o de promessa.
     value = [value, UNREADABLE_CAP].min if flag(:unreadable)
 
     Result.new(value: value, tier: tier_for(value), reason: reason_text, breakdown: breakdown)
   end
 
   private
+
+  # Recusa explícita cancela o piso da promessa (achado do review): se o cliente disse "fechei com
+  # outro", a promessa não entregue virou irrelevante — não há ação comercial válida.
+  def promise_floor?
+    flag(:unfulfilled_promise) && text(:blocker) != 'forte'
+  end
+
+  def awaiting_reply?
+    return false if @last_message_at.blank? || text(:blocker) == 'forte'
+    return false unless text(:last_turn_owner) == 'cliente'
+
+    @now - @last_message_at <= AWAITING_REPLY_MAX_IDLE_DAYS.days
+  end
 
   def terminal_result
     Result.new(value: 0, tier: 'frio', reason: 'Card encerrado.', breakdown: { terminal: true })
@@ -127,7 +154,7 @@ class Crm::Ai::ScoreCalculator
       blocker: BLOCKER.fetch(text(:blocker), 0),
       last_turn_owner: LAST_TURN_OWNER.fetch(text(:last_turn_owner), 0),
       buying_signal: flag(:buying_signal) ? BUYING_SIGNAL_BONUS : 0,
-      unfulfilled_promise: flag(:unfulfilled_promise) ? UNFULFILLED_PROMISE_BONUS : 0
+      unfulfilled_promise: promise_floor? ? UNFULFILLED_PROMISE_BONUS : 0
     }
   end
 
@@ -139,7 +166,7 @@ class Crm::Ai::ScoreCalculator
     idle_days = ((@now - @last_message_at) / 1.day).floor - DECAY_GRACE_DAYS
     return 0 if idle_days <= 0
 
-    -[idle_days * DECAY_PER_DAY, MAX_DECAY].min
+    -(idle_days * DECAY_PER_DAY)
   end
 
   def tier_for(value)
