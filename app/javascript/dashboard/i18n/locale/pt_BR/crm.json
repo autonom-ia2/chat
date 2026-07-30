@@ -1186,6 +1186,8 @@
       "AUTO_MOVE": "Mover automaticamente",
       "ATTRIBUTE_EXTRACTION": "Atualizar campos customizados pela conversa",
       "ATTRIBUTE_EXTRACTION_HELP": "Extrai dados da conversa (cidade, segmento, valor, decisor e afins) e preenche qualquer campo customizado vazio do contato ou da conversa. Campo já preenchido nunca é sobrescrito.",
+      "SCORE_ENABLED": "Score de IA nos cards",
+      "SCORE_ENABLED_HELP": "A IA lê cada conversa e grava no card uma nota de 0 a 100 de prioridade de atenção: promessa nossa em aberto e cliente pronto para fechar sobem ao topo; silêncio esfria o card sozinho.",
       "CALLBACK": "Criar lembrete quando o cliente pedir um retorno",
       "CALLBACK_HELP": "Quando o cliente pede para ser contatado numa data (\"me liga terça que vem\"), um lembrete é criado automaticamente no calendário.",
       "CALLBACK_MODE": "Quando chegar a data",

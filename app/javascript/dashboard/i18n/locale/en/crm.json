@@ -1187,6 +1187,8 @@
       "AUTO_MOVE": "Auto-move cards",
       "ATTRIBUTE_EXTRACTION": "Update custom fields from the conversation",
       "ATTRIBUTE_EXTRACTION_HELP": "Extracts data such as city, segment, bill value, and decision maker, then fills any empty custom field of the contact or conversation.",
+      "SCORE_ENABLED": "AI score on cards",
+      "SCORE_ENABLED_HELP": "The AI reads each conversation and writes a 0-100 attention score on the card: broken promises and ready-to-close clients rise to the top, silence cools the card down on its own.",
       "CALLBACK": "Create a reminder when the customer asks for a callback",
       "CALLBACK_HELP": "When a customer asks to be contacted on a date (\"call me next Tuesday\"), a reminder is created automatically on the calendar.",
       "CALLBACK_MODE": "When the date arrives",
