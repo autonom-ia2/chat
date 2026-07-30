@@ -80,7 +80,9 @@ RSpec.describe Crm::Ai::ScoreCalculator do
     )
 
     expect(result.value).to eq(described_class::UNREADABLE_CAP)
-    expect(result.tier).to eq('frio')
+    # Ilegível RECENTE fica morno, não frio: tem mídia que alguém precisa abrir. Com o decaimento,
+    # ilegível antigo continua caindo para frio.
+    expect(result.tier).to eq('morno')
   end
 
   it 'zeroes a terminal card regardless of the signals' do

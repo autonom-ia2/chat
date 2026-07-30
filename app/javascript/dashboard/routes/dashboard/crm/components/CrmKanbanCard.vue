@@ -95,11 +95,11 @@ const valueLabel = computed(() => {
   }).format(cents / 100);
 });
 
-// Faixas do score, em sincronia com Crm::Ai::ScoreCalculator::TIERS (24/54/84/100).
+// Faixas do score, em sincronia com Crm::Ai::ScoreCalculator::TIERS (19/54/83/100).
 // Ícone por faixa (não só cor) para a leitura não depender de percepção de cor.
 const SCORE_TIERS = [
   {
-    max: 24,
+    max: 19,
     key: 'COLD',
     icon: 'i-lucide-snowflake',
     filled: 'bg-n-alpha-2 text-n-slate-11',
@@ -113,7 +113,7 @@ const SCORE_TIERS = [
     outlined: 'text-n-blue-11 ring-1 ring-inset ring-n-blue-8',
   },
   {
-    max: 84,
+    max: 83,
     key: 'HOT',
     icon: 'i-lucide-flame',
     filled: 'bg-n-amber-3 text-n-amber-11',
