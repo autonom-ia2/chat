@@ -99,7 +99,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     strip_ai_metadata!(attributes)
     if attributes.present?
       mark_value_source_human!(attributes) if attributes.key?(:value_cents)
-      mark_score_source_manual!(attributes) if attributes.key?(:score)
+      mark_score_source_manual!(attributes) if score_changed_by_hand?(attributes)
       @card.update!(attributes)
       ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
@@ -271,6 +271,15 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     metadata = (attributes[:metadata].presence || @card.metadata || {}).deep_dup
     metadata['ai'] = (metadata['ai'] || {}).merge('value_source' => 'human')
     attributes[:metadata] = metadata
+  end
+
+  # O drawer envia `score` em TODA edição, inclusive quando o usuário só mexeu no título. Marcar
+  # manual pela presença da chave congelava a nota da IA sem ninguém ter tocado nela. Só conta como
+  # intervenção humana quando o valor realmente muda.
+  def score_changed_by_hand?(attributes)
+    return false unless attributes.key?(:score)
+
+    attributes[:score].to_i != @card.score.to_i
   end
 
   # Score editado na mão trava a IA neste estágio: ela volta a assumir quando o card se mover, senão

@@ -44,12 +44,14 @@ class Crm::Cards::FilterQuery
   #
   # O desempate é updated_at (o default histórico) de propósito: em conta sem score, todos os cards
   # empatam em 0 e a ordem fica IDÊNTICA à de antes desta mudança. Ranquear é aditivo, não regressão.
+  # O desempate final por id é o que torna a paginação estável: sem ele, cards com mesmo score e
+  # mesmo updated_at trocam de posição entre consultas e somem ou duplicam entre páginas.
   def apply_sort(cards)
-    return cards.order(score: :desc, updated_at: :desc) if @params[:sort].blank?
+    return cards.order(score: :desc, updated_at: :desc, id: :desc) if @params[:sort].blank?
 
     column = SORTABLE[@params[:sort].to_s] || :updated_at
     direction = @params[:direction].to_s == 'asc' ? :asc : :desc
-    cards.order(column => direction).order(updated_at: :desc)
+    cards.order(column => direction).order(updated_at: :desc, id: :desc)
   end
 
   def base_scope
