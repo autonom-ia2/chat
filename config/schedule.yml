@@ -93,6 +93,13 @@ crm_ai_stale_cards_job:
   class: 'Crm::Ai::StaleCardsJob'
   queue: scheduled_jobs
 
+# executed every 3 hours; recalcula o decaimento do score a partir dos sinais já gravados,
+# sem chamar o modelo. Sem ele, card pontuado alto nunca esfria enquanto não houver mensagem nova.
+crm_ai_score_decay_job:
+  cron: '30 */3 * * *'
+  class: 'Crm::Ai::ScoreDecayJob'
+  queue: scheduled_jobs
+
 # executed every 2 minutes; assigns R2 held cards once an agent comes online
 crm_ai_handoff_drain_job:
   cron: '*/2 * * * *'

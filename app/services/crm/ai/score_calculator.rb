@@ -67,8 +67,10 @@ class Crm::Ai::ScoreCalculator
       },
       buying_signal: {
         type: 'boolean',
-        description: 'true quando o cliente pediu algo concreto para fechar: preço, valor total, parcelamento, prazo, ' \
-                     'link de pagamento ou envio de documento. "Vou pensar" depois disso NÃO anula o sinal.'
+        description: 'true quando o cliente pediu algo concreto para fechar (preço, valor total, parcelamento, prazo, ' \
+                     'link de pagamento, envio de documento) E esse pedido segue de pé. Hesitação depois do pedido ' \
+                     '("vou pensar", "depois te falo") MANTÉM o sinal. Recuo explícito ("não quero mais", "desisti", ' \
+                     '"fechei com outro", "não é para mim") ZERA o sinal — use blocker=forte nesse caso.'
       },
       unfulfilled_promise: {
         type: 'boolean',
@@ -150,8 +152,10 @@ class Crm::Ai::ScoreCalculator
     @signals[key].to_s.strip.downcase
   end
 
+  # Aceita true, "true" e 1: gateway compatível com a API do modelo às vezes devolve o booleano
+  # como string, e comparar com == true silenciosamente perdia o sinal.
   def flag(key)
-    @signals[key] == true
+    ActiveModel::Type::Boolean.new.cast(@signals[key]) == true
   end
 
   def clamp(value)

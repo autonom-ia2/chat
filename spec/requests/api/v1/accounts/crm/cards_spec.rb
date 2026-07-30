@@ -144,6 +144,42 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(card.activities.where(event_type: 'move')).to be_blank
   end
 
+  # O drawer envia `score` em toda edição. Marcar manual pela presença da chave congelava a nota da
+  # IA quando o vendedor só corrigia o título — o score parava de atualizar sem ninguém tocar nele.
+  it 'does not freeze the AI score when only other fields change' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(
+      pipeline: pipeline, stage: stage, title: 'Antigo', score: 82,
+      metadata: { 'ai' => { 'score' => { 'value' => 82, 'source' => 'ai' } } }
+    )
+
+    patch "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}",
+          params: { card: { title: 'Novo título', score: 82 } },
+          headers: auth_headers(user)
+
+    expect(response).to have_http_status(:ok)
+    expect(card.reload.metadata.dig('ai', 'score', 'source')).to eq('ai')
+  end
+
+  it 'marks the score as manual when the value actually changes' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(
+      pipeline: pipeline, stage: stage, title: 'Lead', score: 82,
+      metadata: { 'ai' => { 'score' => { 'value' => 82, 'source' => 'ai' } } }
+    )
+
+    patch "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}",
+          params: { card: { score: 30 } },
+          headers: auth_headers(user)
+
+    expect(response).to have_http_status(:ok)
+    card.reload
+    expect(card.score).to eq(30)
+    expect(card.metadata.dig('ai', 'score')).to include('source' => 'manual', 'stage_id' => stage.id)
+  end
+
   it 'keeps move idempotent when the target stage is already current' do
     account, user = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: user)
