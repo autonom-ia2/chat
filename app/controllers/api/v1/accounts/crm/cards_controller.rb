@@ -99,6 +99,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     strip_ai_metadata!(attributes)
     if attributes.present?
       mark_value_source_human!(attributes) if attributes.key?(:value_cents)
+      mark_score_source_manual!(attributes) if attributes.key?(:score)
       @card.update!(attributes)
       ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
@@ -269,6 +270,21 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def mark_value_source_human!(attributes)
     metadata = (attributes[:metadata].presence || @card.metadata || {}).deep_dup
     metadata['ai'] = (metadata['ai'] || {}).merge('value_source' => 'human')
+    attributes[:metadata] = metadata
+  end
+
+  # Score editado na mão trava a IA neste estágio: ela volta a assumir quando o card se mover, senão
+  # a nota manual envelhece e vira mentira.
+  def mark_score_source_manual!(attributes)
+    metadata = (attributes[:metadata].presence || @card.metadata || {}).deep_dup
+    ai = metadata['ai'] || {}
+    ai['score'] = (ai['score'] || {}).merge(
+      'value' => attributes[:score].to_i,
+      'source' => 'manual',
+      'stage_id' => @card.stage_id,
+      'calculated_at' => Time.current.iso8601
+    )
+    metadata['ai'] = ai
     attributes[:metadata] = metadata
   end
 
