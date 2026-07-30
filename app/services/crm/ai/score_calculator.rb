@@ -102,6 +102,12 @@ class Crm::Ai::ScoreCalculator
 
   Result = Struct.new(:value, :tier, :reason, :breakdown, keyword_init: true)
 
+  # Exposto como método de classe: o ScoreDecayJob precisa rotular um valor recalculado por
+  # decaimento puro (cards antigos, sem sinais gravados) sem instanciar o cálculo inteiro.
+  def self.tier_for(value)
+    TIERS.find { |ceiling, _| value <= ceiling }.last
+  end
+
   def initialize(signals:, last_message_at:, terminal: false, now: Time.current)
     @signals = signals.respond_to?(:with_indifferent_access) ? signals.with_indifferent_access : {}
     @last_message_at = last_message_at
@@ -170,7 +176,7 @@ class Crm::Ai::ScoreCalculator
   end
 
   def tier_for(value)
-    TIERS.find { |ceiling, _| value <= ceiling }.last
+    self.class.tier_for(value)
   end
 
   def reason_text

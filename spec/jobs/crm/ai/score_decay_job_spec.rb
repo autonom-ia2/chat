@@ -54,6 +54,30 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     expect(card.reload.score).to eq(70)
   end
 
+  # Achados do review adversarial (codex): o job era o unico escritor sem lock, a ancora de tempo
+  # se auto-renovava e cards da versao anterior (sem `signals`) nunca decaiam.
+  it 'decays cards scored by the previous version, which have no stored signals' do
+    card = account.crm_cards.create!(
+      pipeline: pipeline, stage: stage, title: 'Legado', currency: 'BRL', score: 60,
+      metadata: { 'ai' => { 'score' => { 'value' => 60, 'source' => 'ai',
+                                         'calculated_at' => Time.current.iso8601 } } }
+    )
+
+    travel_to(20.days.from_now) { described_class.perform_now }
+
+    expect(card.reload.score).to be < 60
+  end
+
+  it 'keeps decaying across runs instead of resetting its own clock' do
+    card = create_card(score: 50)
+
+    travel_to(10.days.from_now) { described_class.perform_now }
+    after_first = card.reload.score
+    travel_to(20.days.from_now) { described_class.perform_now }
+
+    expect(card.reload.score).to be < after_first
+  end
+
   it 'skips funnels with the score turned off' do
     metadata = pipeline.metadata.deep_dup
     metadata['ai']['score_enabled'] = false
