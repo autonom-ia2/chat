@@ -93,6 +93,13 @@ RSpec.describe Autonomia::Sso::Provisioner do
       expect(provisioner.send(:identity_organization_metadata)).not_to include('fallback' => true)
     end
 
+    it 'creates new accounts in Portuguese without forcing Chatwoot onboarding' do
+      account = described_class.new(context: context).send(:create_account)
+
+      expect(account.locale).to eq('pt_BR')
+      expect(account.custom_attributes).not_to include('onboarding_step')
+    end
+
     context 'when the account link uses a fallback organization' do
       let!(:invited_account) { nil }
       let(:identity_email) { 'roberto.martins@hub2you.ai' }

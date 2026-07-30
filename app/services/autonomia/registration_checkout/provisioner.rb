@@ -4,6 +4,7 @@ class Autonomia::RegistrationCheckout::Provisioner
   class InvalidCallback < StandardError; end
 
   ACCEPTED_STATUSES = %w[provisioned active completed paid success trialing].freeze
+  DEFAULT_ACCOUNT_LOCALE = 'pt_BR'
 
   Result = Struct.new(:user, :account, keyword_init: true)
 
@@ -57,9 +58,8 @@ class Autonomia::RegistrationCheckout::Provisioner
   def create_account
     Account.create!(
       name: company_name.presence || full_name.presence || email.split('@').last,
-      locale: I18n.locale,
+      locale: DEFAULT_ACCOUNT_LOCALE,
       custom_attributes: {
-        'onboarding_step' => 'account_details',
         'autonomia_registration_checkout' => checkout_metadata
       }
     )

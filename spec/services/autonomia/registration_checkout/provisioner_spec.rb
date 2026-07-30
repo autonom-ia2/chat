@@ -100,6 +100,14 @@ RSpec.describe Autonomia::RegistrationCheckout::Provisioner do
       expect(provisioner.send(:company_name)).to eq('Hub2You Seguros')
     end
 
+    it 'creates new accounts in Portuguese without forcing Chatwoot onboarding' do
+      account = described_class.new(params: params).send(:create_account)
+
+      expect(account.locale).to eq('pt_BR')
+      expect(account.custom_attributes).not_to include('onboarding_step')
+      expect(account.custom_attributes).to include('autonomia_registration_checkout')
+    end
+
     it 'accepts nested active organization name from Auth callbacks' do
       provisioner = described_class.new(
         params: params.except(:company_name).merge(

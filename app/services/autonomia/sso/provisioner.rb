@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Autonomia::Sso::Provisioner
+  DEFAULT_ACCOUNT_LOCALE = 'pt_BR'
+
   pattr_initialize [:context!, { token: nil }]
 
   attr_reader :post_login_redirect_path
@@ -50,8 +52,8 @@ class Autonomia::Sso::Provisioner
   def create_account
     Account.create!(
       name: organization_name.presence || identity_email.split('@').last,
-      locale: I18n.locale,
-      custom_attributes: { 'onboarding_step' => 'account_details' }
+      locale: DEFAULT_ACCOUNT_LOCALE,
+      custom_attributes: {}
     )
   end
 
