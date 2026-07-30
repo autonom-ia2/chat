@@ -14,6 +14,7 @@ class Crm::Cards::FilterQuery
   # ordering (`updated_at desc`), keeping the SQL byte-identical to the board's
   # historical default when no sort is requested.
   SORTABLE = {
+    'score' => :score,
     'value_cents' => :value_cents,
     'next_follow_up_at' => :next_follow_up_at,
     'last_activity_at' => :last_activity_at,
@@ -37,10 +38,16 @@ class Crm::Cards::FilterQuery
 
   private
 
+  # Sem sort explícito, a coluna ranqueia por score: quem precisa de atenção primeiro fica no topo.
+  # O desempate por last_activity_at é o que faz a ordenação servir de verdade — numa coluna com 47
+  # cards e muita nota entre 60 e 80, empate sem critério sai em ordem arbitrária do banco.
+  # Conta sem score (tudo 0) cai no desempate e mantém a ordem por atividade, como antes.
   def apply_sort(cards)
+    return cards.order(score: :desc, last_activity_at: :desc) if @params[:sort].blank?
+
     column = SORTABLE[@params[:sort].to_s] || :updated_at
     direction = @params[:direction].to_s == 'asc' ? :asc : :desc
-    cards.order(column => direction)
+    cards.order(column => direction).order(last_activity_at: :desc)
   end
 
   def base_scope
