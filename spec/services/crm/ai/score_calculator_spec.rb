@@ -44,8 +44,33 @@ RSpec.describe Crm::Ai::ScoreCalculator do
     signals = { next_stage_readiness: 'inicial', intent: 'media', urgency: 'nenhuma',
                 decision_maker: 'desconhecido', blocker: 'nenhum', last_turn_owner: 'humano' }
 
-    expect(score(signals, last_message_at: now - 1.day).value).to eq(13)
-    expect(score(signals, last_message_at: now - 10.days).value).to eq(0)
+    expect(score(signals, last_message_at: now - 1.day).value).to eq(18)
+    expect(score(signals, last_message_at: now - 10.days).value).to eq(2)
+    expect(score(signals, last_message_at: now - 60.days).value).to eq(0)
+  end
+
+  # Regressão do caso real (card 1126, conta 18, 30/07): a cliente viu o preço, perguntou o valor
+  # total e o parcelamento, e disse "vou estudar". A primeira calibragem devolveu 5 (frio) — um
+  # vendedor ligaria para ela no mesmo dia. Pedido de parcelamento não pode virar lead frio.
+  it 'keeps a client who asked about installments out of the cold tier' do
+    result = score(
+      { next_stage_readiness: 'inicial', intent: 'alta', urgency: 'nenhuma',
+        decision_maker: 'desconhecido', blocker: 'leve', last_turn_owner: 'humano',
+        buying_signal: true, unfulfilled_promise: false },
+      last_message_at: now - 1.day
+    )
+
+    expect(result.value).to eq(48)
+    expect(result.tier).to eq('morno')
+  end
+
+  it 'does not punish the card for a human having answered last' do
+    base = { next_stage_readiness: 'parcial', intent: 'media', urgency: 'nenhuma',
+             decision_maker: 'desconhecido', blocker: 'nenhum' }
+
+    expect(score(base.merge(last_turn_owner: 'humano')).value).to eq(
+      score(base.merge(last_turn_owner: 'agente_plataforma')).value
+    )
   end
 
   it 'caps the score when the conversation is unreadable' do
@@ -72,6 +97,6 @@ RSpec.describe Crm::Ai::ScoreCalculator do
     client_waiting = score(base.merge(last_turn_owner: 'cliente'))
     we_replied = score(base.merge(last_turn_owner: 'humano'))
 
-    expect(client_waiting.value - we_replied.value).to eq(15)
+    expect(client_waiting.value - we_replied.value).to eq(10)
   end
 end
