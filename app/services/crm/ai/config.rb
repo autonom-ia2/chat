@@ -83,8 +83,10 @@ module Crm
         BOOLEAN.cast(pipeline_ai_settings(pipeline)[:attribute_extraction_enabled])
       end
 
+      # Sem prefixo por padrão: a IA enxerga e preenche QUALQUER campo customizado da conta. Um funil
+      # pode restringir gravando `attribute_prefix` no metadata (ex.: 'sw_' p/ o comportamento antigo).
       def self.attribute_extraction_prefix(pipeline)
-        pipeline_ai_settings(pipeline)[:attribute_prefix].presence || 'sw_'
+        pipeline_ai_settings(pipeline)[:attribute_prefix].to_s
       end
 
       def self.attribute_extraction_min_confidence(pipeline)

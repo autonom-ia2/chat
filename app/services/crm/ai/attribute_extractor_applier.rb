@@ -67,7 +67,8 @@ module Crm
 
       def rejection_reason(item, definition, current)
         return 'unknown_key' if definition.blank?
-        return 'not_whitelisted' unless item[:key].start_with?(@prefix)
+        # Prefixo vazio (default) = qualquer campo customizado cadastrado é elegível.
+        return 'not_whitelisted' if @prefix.present? && !item[:key].start_with?(@prefix)
         return 'low_confidence' if item[:confidence] < @min_confidence
         return 'already_filled' if filled?(current[item[:key]])
 

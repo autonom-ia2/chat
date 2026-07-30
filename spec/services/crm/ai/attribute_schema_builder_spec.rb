@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe Crm::Ai::AttributeSchemaBuilder do
   let(:account) { create(:account) }
 
-  def create_attribute(key:, model:, type:, label: nil, values: nil)
+  def create_attribute(key:, model:, type:, label: nil, values: nil, description: nil)
     create(
       :custom_attribute_definition,
       account: account,
@@ -11,7 +11,31 @@ RSpec.describe Crm::Ai::AttributeSchemaBuilder do
       attribute_display_name: label || key.humanize,
       attribute_model: model,
       attribute_display_type: type,
+      attribute_description: description,
       attribute_values: values
+    )
+  end
+
+  it 'sends the field description to the model as the classification rule' do
+    create_attribute(
+      key: 'tempo_de_conducao',
+      model: 'contact_attribute',
+      type: 'text',
+      label: 'Tempo de condução',
+      description: 'Há quantos anos o cliente tem CNH. Só preencher se ele disser o ano ou a quantidade.'
+    )
+    create_attribute(key: 'cpf', model: 'contact_attribute', type: 'text', label: 'CPF')
+
+    schema = described_class.new(account: account, prefix: '').perform
+
+    expect(schema[:contact]).to contain_exactly(
+      {
+        key: 'tempo_de_conducao',
+        label: 'Tempo de condução',
+        type: 'text',
+        description: 'Há quantos anos o cliente tem CNH. Só preencher se ele disser o ano ou a quantidade.'
+      },
+      { key: 'cpf', label: 'CPF', type: 'text' }
     )
   end
 
@@ -39,5 +63,20 @@ RSpec.describe Crm::Ai::AttributeSchemaBuilder do
       { key: 'sw_dor_principal', label: 'Dor principal', type: 'text' },
       { key: 'sw_agenda_confirmada', label: 'Agenda confirmada', type: 'checkbox' }
     )
+  end
+
+  it 'includes every contact and conversation attribute when no prefix is configured' do
+    create_attribute(key: 'cpf', model: 'contact_attribute', type: 'text', label: 'CPF')
+    create_attribute(key: 'sw_cidade', model: 'contact_attribute', type: 'text', label: 'Cidade')
+    create_attribute(key: 'motivo_contato', model: 'conversation_attribute', type: 'text', label: 'Motivo do contato')
+    create_attribute(key: 'empresa', model: 'company_attribute', type: 'text', label: 'Empresa')
+
+    schema = described_class.new(account: account, prefix: '').perform
+
+    expect(schema[:contact]).to contain_exactly(
+      { key: 'cpf', label: 'CPF', type: 'text' },
+      { key: 'sw_cidade', label: 'Cidade', type: 'text' }
+    )
+    expect(schema[:conversation]).to contain_exactly({ key: 'motivo_contato', label: 'Motivo do contato', type: 'text' })
   end
 end

@@ -112,6 +112,30 @@ RSpec.describe Crm::Ai::AttributeExtractorApplier do
     )
   end
 
+  it 'fills attributes without any prefix when the pipeline configures no prefix' do
+    create_attribute(key: 'cpf', model: 'contact_attribute', type: 'text')
+    create_attribute(key: 'tempo_de_conducao', model: 'contact_attribute', type: 'text')
+
+    result = described_class.new(
+      card: card,
+      prefix: '',
+      extracted_attributes: {
+        contact: [
+          { key: 'cpf', value: '123.456.789-00', confidence: 0.9, evidence: 'meu CPF é 123.456.789-00' },
+          { key: 'tempo_de_conducao', value: 'desde 2009', confidence: 0.9, evidence: 'habilitado desde 2009' },
+          { key: 'inexistente', value: 'x', confidence: 0.9, evidence: 'x' }
+        ],
+        conversation: []
+      }
+    ).perform
+
+    expect(contact.reload.custom_attributes).to include(
+      'cpf' => '123.456.789-00',
+      'tempo_de_conducao' => 'desde 2009'
+    )
+    expect(result.rejected).to contain_exactly(hash_including(key: 'inexistente', reason: 'unknown_key'))
+  end
+
   it 'rejects a key sent in the wrong contact/conversation group' do
     create_attribute(key: 'sw_cidade', model: 'contact_attribute', type: 'text')
 

@@ -23,10 +23,13 @@ module Crm
 
       private
 
+      # Prefixo vazio (default) = todos os campos customizados de contato/conversa entram no schema.
       def definitions
-        @definitions ||= @account.custom_attribute_definitions
-                               .where(attribute_model: %i[contact_attribute conversation_attribute])
-                               .select { |definition| definition.attribute_key.to_s.start_with?(@prefix) }
+        @definitions ||= begin
+          scope = @account.custom_attribute_definitions
+                          .where(attribute_model: %i[contact_attribute conversation_attribute]).to_a
+          @prefix.present? ? scope.select { |definition| definition.attribute_key.to_s.start_with?(@prefix) } : scope
+        end
       end
 
       def payload_for(attribute_model)
@@ -40,6 +43,10 @@ module Crm
           label: definition.attribute_display_name,
           type: TYPE_MAP.fetch(definition.attribute_display_type, 'text')
         }
+        # A descrição do campo é a REGRA de classificação escrita pelo operador ("o que colocar aqui e
+        # quando"). Sem ela a IA adivinha pelo nome da chave. É o insumo mais forte da extração.
+        description = definition.attribute_description.to_s.strip
+        payload[:description] = description if description.present?
         payload[:options] = Array(definition.attribute_values).compact if definition.list?
         payload
       end
