@@ -90,9 +90,11 @@ class Crm::Ai::ScoreCalculator
       unfulfilled_promise: {
         type: 'boolean',
         description: 'true SOMENTE quando NÓS prometemos uma ação concreta (enviar link/proposta, retornar, verificar) e ela ' \
-                     'segue NÃO ENTREGUE até a última mensagem. Se a promessa foi cumprida depois na própria conversa ' \
-                     '("vou gerar agora" seguido da cotação enviada), é false. Aguardar resposta DO CLIENTE a algo já ' \
-                     'entregue NUNCA é promessa nossa. Em dúvida, false.'
+                     'segue NÃO ENTREGUE até a última mensagem. É false quando: a promessa foi cumprida depois na própria ' \
+                     'conversa ("vou gerar agora" seguido da cotação enviada); a continuação depende de dado que o CLIENTE ' \
+                     'ainda não mandou (idades, documentos, CNPJ — a pendência é dele); ou a pergunta do cliente foi ' \
+                     'respondida, mesmo que negativamente. Aguardar resposta DO CLIENTE a algo já entregue NUNCA é ' \
+                     'promessa nossa. Em dúvida, false.'
       },
       unreadable: { type: 'boolean', description: 'true quando não há conteúdo legível (áudio sem transcrição, mensagens vazias).' },
       reason: { type: 'string', maxLength: 140, description: 'Motivo em uma linha, exibido no card. Concreto, sem adjetivo vazio.' },
