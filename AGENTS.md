@@ -1,26 +1,3 @@
-<!-- AUTONOMIA_AGENT_HARNESS_START -->
-@AGENTS.md
-
-## Autonom.ia Agent Harness
-
-Este projeto usa o Autonom.ia Agent Harness.
-
-Fonte oficial:
-`https://github.com/autonom-ia/agent-harness`
-
-Fonte local preferencial:
-`~/Documents/agent-harness`
-
-Project:
-`https://github.com/users/autonom-ia/projects/3`
-
-Regras:
-- Preservar regras específicas deste projeto.
-- Em caso de conflito entre regra local e harness, pedir decisão ao Rodrigo.
-- Operar pelas faixas de `.claude/rules/prod-approval.md`, com a regra local mais restritiva prevalecendo: merge, produção, escrita em banco de produção, secrets, auth, billing, infraestrutura e deploy exigem aprovação explícita do Rodrigo.
-- Não fazer merge sem aprovação explícita do Rodrigo.
-<!-- AUTONOMIA_AGENT_HARNESS_END -->
-
 # Chatwoot Development Guidelines
 
 ## Build / Test / Lint
