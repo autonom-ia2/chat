@@ -30,6 +30,7 @@ module Crm
             default: false
           )
         end
+        ai['score_enabled'] = cast_boolean(@params[:score_enabled], default: false) if @params.key?(:score_enabled)
         ai['callback_enabled'] = cast_boolean(@params[:callback_enabled], default: true) if @params.key?(:callback_enabled)
         ai['callback_mode'] = normalize_callback_mode(@params[:callback_mode]) if @params.key?(:callback_mode)
         ai['stale_hours'] = (@params[:stale_hours].presence || Config::DEFAULT_STALE_HOURS).to_i if @params.key?(:stale_hours)
