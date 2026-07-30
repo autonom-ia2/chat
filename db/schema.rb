@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_25_155227) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_30_160000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1352,6 +1352,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_25_155227) do
     t.index ["account_id", "pipeline_id", "stage_id", "status", "priority", "id"], name: "idx_crm_cards_board_priority"
     t.index ["account_id", "pipeline_id", "stage_id", "status", "team_id", "id"], name: "idx_crm_cards_board_team"
     t.index ["account_id", "pipeline_id", "status", "closed_at"], name: "idx_crm_cards_account_pipeline_status_closed"
+    t.index ["account_id", "score", "updated_at"], name: "index_crm_cards_on_account_score_updated"
     t.index ["account_id", "status", "created_at"], name: "idx_crm_cards_status_created"
     t.index ["account_id", "updated_at", "id"], name: "idx_crm_cards_account_updated"
     t.index ["account_id"], name: "index_crm_cards_on_account_id"
@@ -1360,6 +1361,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_25_155227) do
     t.index ["conversation_id"], name: "index_crm_cards_on_conversation_id"
     t.index ["inbox_id"], name: "index_crm_cards_on_inbox_id"
     t.index ["owner_id"], name: "index_crm_cards_on_owner_id"
+    t.index ["pipeline_id", "status", "score"], name: "index_crm_cards_on_pipeline_status_score"
     t.index ["pipeline_id"], name: "index_crm_cards_on_pipeline_id"
     t.index ["stage_id"], name: "index_crm_cards_on_stage_id"
     t.index ["team_id"], name: "index_crm_cards_on_team_id"

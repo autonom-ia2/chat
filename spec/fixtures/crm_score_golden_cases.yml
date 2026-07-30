@@ -1,0 +1,2273 @@
+---
+- ref: a18_c366
+  resumo: Link de pagamento prometido 8x e nunca enviado; emissao travada ha 20 dias
+  idle_days: 20
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a18_c982
+  resumo: Cliente queria seguro de carro, fora de escopo, despediu-se educadamente
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c981
+  resumo: Cliente pediu RCP médicos, fora do escopo de seguro viagem
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c572
+  resumo: So midia sem texto; humano pediu destino e datas e cliente sumiu por 20
+    dias
+  idle_days: 20
+  expected_tier: frio
+  signals:
+    next_stage_readiness: inicial
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: true
+- ref: a18_c1148
+  resumo: Cliente achou caro, humano baixou opção e aguarda escolha entre mais barata
+    ou equilibrada
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c1115
+  resumo: Cliente explica que incidente já ocorrido não seria coberto, desiste educadamente
+  idle_days: 1
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: forte
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c993
+  resumo: So 'Oi' e a saudacao de volta; nenhum dado de viagem, 6 dias parado
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c752
+  resumo: Lead de formulario perguntou sobre a empresa; sem viagem definida, 14 dias
+    parado
+  idle_days: 14
+  expected_tier: frio
+  signals:
+    next_stage_readiness: inicial
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c573
+  resumo: Cliente aceitou o preço mas 20 dias sem retorno após instabilidade no sistema
+  idle_days: 20
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a18_c952
+  resumo: Cliente agradeceu mas fechou com a Porto Seguro (concorrente)
+  idle_days: 5
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c987
+  resumo: Cliente pediu RC Médico, fora do escopo de seguro viagem
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c1023
+  resumo: Cliente deu destino, datas e idades; nosso lado trava repetindo pedido de
+    datas
+  idle_days: 3
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c1141
+  resumo: Guia comparativo entregue agora, aguardando escolha do cliente
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c973
+  resumo: Cliente adiou decisão explicitamente após tirar dúvidas sobre cobertura
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c990
+  resumo: So 'Boa tarde' e a saudacao; nenhum dado de cotacao, 6 dias parado
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c430
+  resumo: So midia ilegivel; cliente mandou 5 midias e ficou 24 dias sem retorno
+  idle_days: 24
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: true
+- ref: a18_c1052
+  resumo: Proposta de ~R$230 na mesa, humano cobrando confirmação para emitir
+  idle_days: 2
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c955
+  resumo: Cliente desistiu explicitamente no meio da coleta de dados
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c980
+  resumo: Pedido fora do escopo (acidentes pessoais), atendente recusou
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c1004
+  resumo: Falha técnica na cotação; cliente pediu nova cotação p/ 74 anos e aguarda
+  idle_days: 4
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a18_c1025
+  resumo: Achou a proposta cara e esta orcando em outros lugares, sem fechar com concorrente
+  idle_days: 2
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c977
+  resumo: Viagem cancelada pelo próprio cliente, cotação perde o sentido
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c974
+  resumo: Só "Oi" e saudação padrão; nenhum dado, 6 dias parado
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c1013
+  resumo: Lead novo pediu opções e valores; humano perguntou destino, sem resposta
+    há 5d
+  idle_days: 5
+  expected_tier: morno
+  nota: pediu opcoes e valores = buying implicito
+  signals:
+    next_stage_readiness: nenhuma
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c1024
+  resumo: Cotação para 7 pessoas pronta; cliente vai levar ao grupo e sumiu 3d
+  idle_days: 3
+  expected_tier: morno
+  nota: 'cliente vai levar ao grupo: aguardando terceiro'
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c951
+  resumo: Cliente disse que não precisa de seguro viagem hoje
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: nao
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c954
+  resumo: Só "Olá" e saudação padrão; zero conteúdo, 6 dias parado
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c961
+  resumo: Cliente pediu para encerrar o atendimento sobre seguro para a China
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c999
+  resumo: Santiago 02/08 (3 dias); cotação vencida, aguarda confirmação do cliente
+  idle_days: 3
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c839
+  resumo: Cliente recusou contratação por achar preço 30% mais caro que concorrentes
+  idle_days: 9
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c720
+  resumo: Mensagem do cliente ilegível ('This message is unavailable'), sem reenvio
+    há 15d
+  idle_days: 15
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: true
+- ref: a18_c966
+  resumo: Dados do passageiro confirmados, só falta 'ok' do cliente para emitir a
+    proposta
+  idle_days: 6
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c1022
+  resumo: Negociação de cobertura em euros para Schengen, alto valor, cliente engajado
+  idle_days: 3
+  expected_tier: morno
+  nota: negociacao pausada aguardando cliente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c744
+  resumo: Cliente achou todas as opções caras e disse que vai ver outras
+  idle_days: 14
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c989
+  resumo: Gaza escalado a especialista com retorno prometido em 24/07; 6 dias sem
+    retorno
+  idle_days: 6
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a18_c991
+  resumo: Guia da Itália na mesa; embarque em 2 dias; cliente pergunta suporte pós-venda
+  idle_days: 5
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c984
+  resumo: Cliente queria seguro auto, fora de escopo do agente
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c971
+  resumo: Proposta R$284,83; cliente quer match de concorrente; 2 follow-ups sem resposta
+  idle_days: 5
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c972
+  resumo: 'Recálculo para 3 viajantes travado: falta idade do 3º; 6 dias sem resposta'
+  idle_days: 6
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c970
+  resumo: Cliente pediu para retomar contato mais perto da viagem
+  idle_days: 6
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: futura
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c957
+  resumo: Cotação Espanha travada por falta das idades; embarque 07/08
+  idle_days: 6
+  expected_tier: morno
+  nota: travada por falta de dados ha 6d
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c979
+  resumo: Proposta de Corrientes na mesa; cliente só agradeceu e o embarque é em 11
+    dias
+  idle_days: 6
+  expected_tier: morno
+  nota: so agradeceu; sem pergunta pendente
+  signals:
+    next_stage_readiness: inicial
+    intent: baixa
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c947
+  resumo: 'Cotação Madri parada: falta datas da viagem, cliente sumiu há 6 dias'
+  idle_days: 6
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c960
+  resumo: Embarque para NY é hoje e a proposta segue sem resposta do cliente
+  idle_days: 6
+  expected_tier: quente
+  nota: pediu proposta = intent alta; 6d mudo com embarque hoje, quente e o teto util
+  signals:
+    next_stage_readiness: inicial
+    intent: alta
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c1154
+  resumo: Cotação de R$2.132 recém-enviada hoje, cliente confirmando critérios
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c924
+  resumo: Médico inbound qualificado ignorou a pergunta de residência na cotação
+  idle_days: 6
+  expected_tier: frio
+  nota: 1pt da borda; consistente com o set curado (frio)
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c429
+  resumo: Cliente recusou explicitamente e encerrou a conversa
+  idle_days: 20
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: forte
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c477
+  resumo: Pergunta genérica de anúncio com mídia; sem conteúdo legível, 23 dias parado
+  idle_days: 23
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: true
+- ref: a18_c367
+  resumo: Cotação RCP com IS e retroatividade definidas travou na pergunta de sinistros
+  idle_days: 27
+  expected_tier: frio
+  nota: 27 dias mudo esfria mesmo lead antes quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c814
+  resumo: Emissão travou por falha nossa; cliente já deu CPF e nunca foi retomado
+  idle_days: 9
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a18_c474
+  resumo: Troca 100% em mídia sem nenhum texto; 23 dias parada e sem sinal algum
+  idle_days: 23
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: true
+- ref: a18_c645
+  resumo: Cotação Akad apresentada (R$4.904,37); cliente disse 'no momento não'.
+  idle_days: 17
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c596
+  resumo: Cliente pede 'mais informações' genérico; atendimento repete o menu e cliente
+    some
+  idle_days: 19
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c369
+  resumo: Cliente só enviou link do Instagram; thread termina em mensagem hostil e
+    some 27 dias
+  idle_days: 27
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a18_c620
+  resumo: Lead médico de formulário quer entender a empresa e as coberturas antes
+    de cotar
+  idle_days: 19
+  expected_tier: frio
+  nota: 19 dias parado sem pedido concreto
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1103
+  resumo: Cliente mantém interesse, mas aguarda cotações de concorrentes para decidir
+  idle_days: 1
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1164
+  resumo: Cliente sem seguro agora, respondendo ativamente dados para cotação de RCTR-C.
+  idle_days: 0
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c996
+  resumo: Cotações enviadas e explicadas por telefone; humano aguarda o retorno do
+    cliente hoje
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1117
+  resumo: Lead novo mandou só 'Oi' e segue sem nenhuma resposta do atendimento
+  idle_days: 1
+  expected_tier: morno
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1134
+  resumo: Card perdido reagiu hoje após vários follow-ups, mas só com mídia sem transcrição
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: true
+- ref: a6_c358
+  resumo: Cliente informou que já fechou o seguro; humano perguntou com qual seguradora
+  idle_days: 2
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1029
+  resumo: Aguardando CNPJ do cliente para montar proposta básica
+  idle_days: 1
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1157
+  resumo: Cotação ativa hoje por áudio; cliente respondeu volume, regiões e ticket
+    médio
+  idle_days: 0
+  expected_tier: quente
+  nota: caminhoneiro autonomo decide o proprio seguro; consistente com qualificacao_ativa
+    do set curado
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1153
+  resumo: Preço de R$350 aceito e PDF da apólice enviado hoje
+  idle_days: 0
+  expected_tier: quente
+  nota: 'preco aceito aguardando assinatura DO CLIENTE: divida dele, nao nossa'
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1092
+  resumo: Cliente nunca respondeu em quase um mês de follow-ups
+  idle_days: 2
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c293
+  resumo: Prometemos retorno de outra seguradora em 03/07 e nunca voltamos
+  idle_days: 21
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a6_c1131
+  resumo: Negócio fechado, mas cliente está lendo e vai trazer dúvidas hoje
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: media
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: leve
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1094
+  resumo: Interesse real, mas quem decide o seguro é a esposa; reunião não marcada
+  idle_days: 1
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: nao
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1098
+  resumo: Dados básicos da cotação não vieram após três pedidos
+  idle_days: 1
+  expected_tier: frio
+  nota: 3 pedidos de dados ignorados; consistente com set curado
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: true
+- ref: a6_c1121
+  resumo: Cliente pediu recálculo do cenário de cobertura; negociação ativa hoje
+  idle_days: 0
+  expected_tier: quente
+  nota: unreadable falso positivo
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c373
+  resumo: Cliente empurrou a fiscalização para a empresa e sumiu há duas semanas
+  idle_days: 2
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: nao
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c349
+  resumo: Proposta e link ZapSign enviados; cliente sumiu há 26 dias
+  idle_days: 26
+  expected_tier: frio
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1056
+  resumo: Avulso para mudanças em análise; falta cliente informar tipos de carga
+  idle_days: 1
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1162
+  resumo: Pedido de seguro de caminhão aberto hoje; pedidos já feitos à seguradora
+  idle_days: 0
+  expected_tier: morno
+  nota: pedido aberto hoje mas com pendencia de dados
+  signals:
+    next_stage_readiness: inicial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1150
+  resumo: Cotação enviada há semanas; cliente volta com link de reunião Teams
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c575
+  resumo: Cliente sumiu após pedir prazo para verificar dado; marcado Perdido
+  idle_days: 10
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1065
+  resumo: CNPJ entregue e preço em negociação; cotação prometida e não enviada
+  idle_days: 0
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: leve
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a6_c1159
+  resumo: Carga detalhada; cliente pediu reunião hoje à tarde, horário não confirmado
+  idle_days: 0
+  expected_tier: quente
+  nota: reuniao marcada aparece na agenda; na fila e quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1035
+  resumo: Cotações na mesa; cliente apontou falta de RCP e segue analisando
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1073
+  resumo: Cadastro de oficina parceira; orientações enviadas e cliente encerrou
+  idle_days: 1
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1140
+  resumo: Cotação apresentada, cliente achou caro e vai decidir
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1156
+  resumo: Cliente pediu continuidade explícita na contratação, deu dados
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1142
+  resumo: Seguro avulso de transporte; cliente enviando dados, falta último item
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1108
+  resumo: Cliente recusou e disse que vai procurar outra corretora
+  idle_days: 1
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1109
+  resumo: Cliente ativo ontem detalhando volume de carga; bola conosco para cotar
+  idle_days: 0
+  expected_tier: morno
+  nota: detalhando volume, sem pedido concreto ainda
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1086
+  resumo: Aguardando cliente confirmar registro ANTT p/ cotação
+  idle_days: 1
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1030
+  resumo: Preços passados, cliente comparando cotações concorrentes
+  idle_days: 0
+  expected_tier: quente
+  nota: a pendencia e do cliente (comparando concorrentes), nao promessa nossa
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c251
+  resumo: Perdido ha 28 dias; retomada dependia do primo do cliente procurar
+  idle_days: 28
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: nao
+    blocker: leve
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1049
+  resumo: Cotação RCDC/RCTR-C/RCV enviada hoje, aguardando resposta
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1083
+  resumo: Aguardando cliente informar o que transporta hoje
+  idle_days: 1
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c936
+  resumo: Pediu melhor preco, cotacao enviada, 2 follow-ups sem resposta
+  idle_days: 1
+  expected_tier: quente
+  nota: 'pediu melhor preco ontem, cotacao na mesa: engajamento comercial ativo'
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c512
+  resumo: Promessa nossa de contato em 29/07 venceu; negociacao ja com condicao aceita
+  idle_days: 8
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a6_c1071
+  resumo: Cliente engajado tentando usar site de averbação hoje
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c810
+  resumo: Cotacao completa enviada em 23/07; 3 follow-ups sem qualquer resposta
+  idle_days: 1
+  expected_tier: morno
+  signals:
+    next_stage_readiness: pronta
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c543
+  resumo: Prometemos a cotacao em 08/07 e nunca enviamos; lead de alto valor
+  idle_days: 21
+  expected_tier: urgente
+  nota: 'regra de produto: promessa nossa em aberto e sempre urgente'
+  signals:
+    next_stage_readiness: pronta
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a6_c1151
+  resumo: Cliente lendo o material hoje e prometeu voltar com duvidas
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c925
+  resumo: Cliente aguarda outras cotações para comparar antes de decidir
+  idle_days: 1
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1095
+  resumo: Cliente cobra cotação prometida e não entregue ainda
+  idle_days: 0
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a6_c1054
+  resumo: Proposta ANTT enviada a pedido do cliente; 3 follow-ups nossos sem resposta
+    ha 9 dias
+  idle_days: 2
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c747
+  resumo: Lead inbound do site (Seguro ANTT) nunca contatado, 14 dias parado
+  idle_days: 14
+  expected_tier: frio
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c791
+  resumo: 'Auto-resposta de ausencia de e-mail (16-17/07), sem conteudo comercial:
+    card e ruido'
+  idle_days: 12
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: agente_externo
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c902
+  resumo: E-mail de changelog/marketing do Resend, fora de escopo comercial
+  idle_days: 7
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c836
+  resumo: Lead inbound do site (Seguro ANTT) nunca contatado, 9 dias parado
+  idle_days: 9
+  expected_tier: frio
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c1119
+  resumo: Convite de administração do Google Workspace, não é conversa de venda
+  idle_days: 1
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c736
+  resumo: E-mail sobre atualização de subprocessadores do Resend
+  idle_days: 14
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c733
+  resumo: Lead inbound do site (Seguro ANTT) nunca contatado, 14 dias parado
+  idle_days: 14
+  expected_tier: frio
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a6_c593
+  resumo: Lead novo site (ANTT) sem qualquer resposta, parado 20 dias
+  idle_days: 20
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a16_c421
+  resumo: Candidatura de socio-proprietario de corretora sem nenhuma triagem, 25 dias
+  idle_days: 25
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a16_c879
+  resumo: Candidatura de CEO de corretora (MLIFE), 8 dias sem qualquer triagem
+  idle_days: 8
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a16_c707
+  resumo: Candidatura de CEO Big Seguros, 15 dias parada, apenas o formulario no card
+  idle_days: 15
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a16_c424
+  resumo: Candidatura Chat2You de sócio de corretora, 25 dias sem nenhuma resposta
+    nossa
+  idle_days: 25
+  expected_tier: frio
+  signals:
+    next_stage_readiness: inicial
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a16_c694
+  resumo: Bot prometeu encaminhar ao time comercial; cliente aguarda há 15 dias
+  idle_days: 15
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: agente_plataforma
+    buying_signal: false
+    unfulfilled_promise: true
+    unreadable: false
+- ref: a16_c455
+  resumo: Corretor quer agente como SDR; parou de responder pergunta do bot há 23
+    dias
+  idle_days: 23
+  expected_tier: frio
+  nota: 23 dias mudo; consistente com set curado
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: agente_plataforma
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a16_c440
+  resumo: Interesse genérico no Chat2You; bot explicando, cliente sumiu há 24 dias
+  idle_days: 24
+  expected_tier: frio
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: agente_plataforma
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c458
+  resumo: Cotação Chile enviada com 3 opções, aguardando cliente escolher hoje
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c62
+  resumo: Pedido de cotação retomado hoje; humano coletando dados da viagem
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: inicial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c66
+  resumo: Dúvida de cobertura em seguro já cotado (R$1.378) respondida hoje
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1163
+  resumo: Cotação com 2 opções apresentada; cliente dispensou validação extra, falta
+    escolher plano
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1158
+  resumo: Cotação Europa enviada com pergunta direta de qual plano seguir p/ emissão
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1161
+  resumo: Cliente pediu cotação refinada com 3 opções, recebida; falta decisão de
+    plano
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c675
+  resumo: Cliente perguntou forma de pagamento e parcelas; link ainda não enviado
+  idle_days: 0
+  expected_tier: quente
+  nota: 'borderline: pediu parcelas hoje, quente alto'
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: cliente
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1160
+  resumo: So midia sem transcricao dos dois lados; nada legivel na janela
+  idle_days: 0
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: true
+- ref: a3_c1015
+  resumo: Cliente pediu reenvio do PDF da cotacao NACIONAL 30k/60k; dados de emissao
+    pendentes
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c648
+  resumo: So explicacao tecnica de sinistro pelo atendente; cliente nao aparece na
+    janela
+  idle_days: 0
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c340
+  resumo: Atendente entrega script de preco EUA x Chile; cliente so confirma 'sim'
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c31
+  resumo: Preço confirmado, cliente pediu cotação completa em PDF após aceitar produto
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c103
+  resumo: Cliente valida cobertura de acompanhante em hospitalizacao sobre cotacao
+    de R$1.351
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1149
+  resumo: Cliente detalha coberturas de esporte e traslado no FULL AL EM TRIPLO ja
+    escolhido
+  idle_days: 0
+  expected_tier: quente
+  nota: 'detalhando coberturas agora: engajamento ativo'
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1155
+  resumo: Cliente concordou em emitir EURO MAX EM DOBRO, pediu um momento p/ enviar
+    dados
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c900
+  resumo: Cliente volta apos 8 dias e pergunta regra do plano Cruzeiro; escolha de
+    plano em aberto
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1152
+  resumo: Cotacao com 3 opcoes entregue, humano aguarda escolha do plano
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c516
+  resumo: Cliente pergunta se cabe seguro de 1 dia Brasil-EUA; atendente pediu dados
+    para cotar
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c83
+  resumo: Cotacao Australia com 3 opcoes entregue, aguardando escolha de plano
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1009
+  resumo: Duvida de cobertura Plus Reason p/ familia; respondida, sem cotacao em aberto
+  idle_days: 0
+  expected_tier: frio
+  nota: duvida respondida, nada pendente
+  signals:
+    next_stage_readiness: inicial
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c63
+  resumo: Duvidas operacionais de faturamento e destino correto para seguro de Cuba
+  idle_days: 0
+  expected_tier: frio
+  nota: duvida operacional respondida
+  signals:
+    next_stage_readiness: inicial
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1147
+  resumo: Cotacao com 3 opcoes entregue, humano aguarda escolha do plano
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c34
+  resumo: Cotacao EUA (casal 73/70) com PDF entregue, aguardando escolha do plano
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c826
+  resumo: Cliente questiona valor para 2 pessoas apos cotacao; humano confirma
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c175
+  resumo: Cliente escolheu Nacional 6.000; humano pede dados para emitir
+  idle_days: 0
+  expected_tier: urgente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: sim
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1132
+  resumo: Cotacao Aruba pronta; cliente pede desconto a vista, emissao aguardando
+    sim
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c79
+  resumo: Cotacao Brasil (2 passageiros) entregue, aguardando escolha do plano
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: proxima
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c866
+  resumo: Agente pede texto de argumentacao GTA x seguro do cartao p/ o cliente final
+  idle_days: 0
+  expected_tier: frio
+  nota: pedido de material atendido
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: nao
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1146
+  resumo: Cotação com 3 opções enviada, aguardando escolha para emitir viagem em 3
+    dias
+  idle_days: 0
+  expected_tier: urgente
+  nota: embarque proximo e escolha pendente hoje
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1145
+  resumo: Dúvida educativa sobre diferença entre Assistência Pet e cobertura DMH
+  idle_days: 0
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c84
+  resumo: Cliente pediu plano Nacional 100.000, cotação/PDF entregues com preço final
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1144
+  resumo: Cotação Nacional 100.000 enviada, humano pronto para emitir se confirmado
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c53
+  resumo: Atraso de voo explicado; pergunta sobre vacina recusada por fora de escopo
+  idle_days: 0
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1143
+  resumo: 'Suporte pos-venda: acesso a faturas no portal e prazo de pagamento'
+  idle_days: 0
+  expected_tier: frio
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c701
+  resumo: Bug no portal impede abrir demonstrativo; escalonamento ao TI foi negado
+  idle_days: 0
+  expected_tier: frio
+  nota: zero sinal acionavel; conversa operacional sem pendencia
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: forte
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c678
+  resumo: Cotacao enviada ao cliente final; agente aguarda aprovacao, humano pede
+    retorno
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: nao
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1006
+  resumo: Cliente bloqueado por erro ao gerar link de pagamento durante emissão
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: imediata
+    decision_maker: desconhecido
+    blocker: leve
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1136
+  resumo: Cliente escolheu Nacional 6.000; humano pede dados p/ emissão
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1135
+  resumo: Humano explica adicional de cancelamento (teto US$1.000) e pergunta se esclareceu
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: parcial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c831
+  resumo: Cliente pede plano Bronze AL para America do Sul; humano detalha coberturas
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: parcial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1133
+  resumo: Cliente diz SIM a orientacao; humano pede roteiro e datas do cruzeiro
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: alta
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c72
+  resumo: Cliente pergunta sobre retorno antecipado; humano explica regras e documentos
+  idle_days: 0
+  expected_tier: morno
+  signals:
+    next_stage_readiness: inicial
+    intent: media
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c1044
+  resumo: Cotação Canadá pronta aguardando escolha de plano; cliente também quer Argentina
+  idle_days: 0
+  expected_tier: quente
+  signals:
+    next_stage_readiness: pronta
+    intent: alta
+    urgency: futura
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: true
+    unfulfilled_promise: false
+    unreadable: false
+- ref: a3_c622
+  resumo: Parceiro pergunta se mala danificada por receptivo tem cobertura; humano
+    pede o plano
+  idle_days: 0
+  expected_tier: frio
+  nota: zero sinal acionavel; conversa operacional sem pendencia
+  signals:
+    next_stage_readiness: nenhuma
+    intent: baixa
+    urgency: nenhuma
+    decision_maker: desconhecido
+    blocker: nenhum
+    last_turn_owner: humano
+    buying_signal: false
+    unfulfilled_promise: false
+    unreadable: false

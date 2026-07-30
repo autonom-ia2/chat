@@ -3,10 +3,12 @@ class Crm::Ai::ScoreCalculator
   # do próximo estágio e 18 à intenção: a Filomena, que perguntou valor total e parcelamento, saiu
   # com 5 (frio) porque disse "vou estudar" — um vendedor ligaria para ela no mesmo dia. Intenção e
   # sinal de compra passam a pesar mais que posição no funil.
-  READINESS = { 'nenhuma' => 0, 'inicial' => 6, 'parcial' => 15, 'pronta' => 25 }.freeze
-  INTENT = { 'baixa' => 0, 'media' => 12, 'alta' => 30 }.freeze
-  URGENCY = { 'nenhuma' => 0, 'futura' => 3, 'proxima' => 10, 'imediata' => 18 }.freeze
-  DECISION_MAKER = { 'sim' => 8, 'nao' => 0, 'desconhecido' => 0 }.freeze
+  # v3, travada pelo golden set (spec/services/crm/ai/score_golden_set_spec.rb): 11 cenários reais
+  # das contas 18 e 6 mais sintéticos de suporte/agendamento. Recalibrar = golden set inteiro verde.
+  READINESS = { 'nenhuma' => 0, 'inicial' => 6, 'parcial' => 14, 'pronta' => 20 }.freeze
+  INTENT = { 'baixa' => 0, 'media' => 15, 'alta' => 30 }.freeze
+  URGENCY = { 'nenhuma' => 0, 'futura' => 3, 'proxima' => 8, 'imediata' => 20 }.freeze
+  DECISION_MAKER = { 'sim' => 6, 'nao' => 0, 'desconhecido' => 0 }.freeze
   BLOCKER = { 'nenhum' => 0, 'leve' => -8, 'forte' => -20 }.freeze
 
   # Pedido concreto de preço, prazo, parcelamento, link ou documento. Estava diluído em INTENT e é
@@ -15,7 +17,7 @@ class Crm::Ai::ScoreCalculator
 
   # Quem falou por último decide de quem é a dívida: cliente falou = nós devemos resposta. Humano ter
   # respondido vale 0, não penalidade: atender bem não pode derrubar a nota do card.
-  LAST_TURN_OWNER = { 'cliente' => 10, 'humano' => 0, 'agente_plataforma' => 0, 'agente_externo' => 0 }.freeze
+  LAST_TURN_OWNER = { 'cliente' => 8, 'humano' => 0, 'agente_plataforma' => 0, 'agente_externo' => 0 }.freeze
 
   # Promessa nossa não cumprida ("já envio o link") é o sinal mais forte que existe: o silêncio
   # deixa de ser desinteresse do cliente e passa a ser falha nossa. Também anula o decaimento.
@@ -23,15 +25,27 @@ class Crm::Ai::ScoreCalculator
 
   # Decaimento: silêncio derruba a nota sozinho, sem chamar IA. Contado da ÚLTIMA MENSAGEM, nunca
   # da entrada no estágio — card pode mudar de estágio semanas depois da conversa morrer.
+  # SEM teto (achado do review): com teto, card de base alta ficava preso em morno para sempre —
+  # lead zumbi. Sem teto, base 100 chega a frio em ~42 dias de silêncio, que é o comportamento certo.
   DECAY_GRACE_DAYS = 2
   DECAY_PER_DAY = 2
-  MAX_DECAY = 40
 
   # Conversa ilegível (áudio sem transcrição, mensagens vazias): a IA não tem base para julgar,
   # então o score fica limitado em vez de inventado.
   UNREADABLE_CAP = 20
 
-  TIERS = [[29, 'frio'], [59, 'morno'], [84, 'quente'], [100, 'urgente']].freeze
+  # Mantidos em sincronia com SCORE_TIERS do CrmKanbanCard.vue. O teto do "sem promessa" fica em
+  # ~92 para o topo não saturar: só promessa não cumprida encosta em 100.
+  TIERS = [[19, 'frio'], [54, 'morno'], [83, 'quente'], [100, 'urgente']].freeze
+
+  # Regra de produto: promessa NOSSA em aberto é sempre urgente — a dívida é nossa e não esfria.
+  # Piso, não bônus: sem ele os rótulos oscilavam entre quente e urgente conforme os outros sinais.
+  UNFULFILLED_PROMISE_FLOOR = 85
+
+  # Conversa que respirou nas últimas 72h com o CLIENTE aguardando resposta nunca é frio: alguém
+  # precisa ao menos responder. Não vale para recusa explícita (blocker forte).
+  AWAITING_REPLY_FLOOR = 20
+  AWAITING_REPLY_MAX_IDLE_DAYS = 3
 
   # Contrato de saída do modelo. Fica aqui, não no StageClassifier: quem define o vocabulário dos
   # sinais é quem sabe pesá-los. O classifier apenas consome.
@@ -68,7 +82,8 @@ class Crm::Ai::ScoreCalculator
       buying_signal: {
         type: 'boolean',
         description: 'true quando o cliente pediu algo concreto para fechar (preço, valor total, parcelamento, prazo, ' \
-                     'link de pagamento, envio de documento) E esse pedido segue de pé. Hesitação depois do pedido ' \
+                     'link de pagamento, envio de documento) E esse pedido segue de pé. Vale também quando está IMPLÍCITO: ' \
+                     'cliente recebeu preço/proposta e seguiu conversando — reclamar do valor é negociação, não desistência. ' \
                      '("vou pensar", "depois te falo") MANTÉM o sinal. Recuo explícito ("não quero mais", "desisti", ' \
                      '"fechei com outro", "não é para mim") ZERA o sinal — use blocker=forte nesse caso.'
       },
@@ -87,6 +102,12 @@ class Crm::Ai::ScoreCalculator
 
   Result = Struct.new(:value, :tier, :reason, :breakdown, keyword_init: true)
 
+  # Exposto como método de classe: o ScoreDecayJob precisa rotular um valor recalculado por
+  # decaimento puro (cards antigos, sem sinais gravados) sem instanciar o cálculo inteiro.
+  def self.tier_for(value)
+    TIERS.find { |ceiling, _| value <= ceiling }.last
+  end
+
   def initialize(signals:, last_message_at:, terminal: false, now: Time.current)
     @signals = signals.respond_to?(:with_indifferent_access) ? signals.with_indifferent_access : {}
     @last_message_at = last_message_at
@@ -98,12 +119,29 @@ class Crm::Ai::ScoreCalculator
     return terminal_result if @terminal
 
     value = clamp(raw_points + decay_points)
+    value = [value, UNFULFILLED_PROMISE_FLOOR].max if promise_floor?
+    value = [value, AWAITING_REPLY_FLOOR].max if awaiting_reply?
+    # Teto de ilegível por ÚLTIMO (achado do review): é teto de confiança — sem conversa legível,
+    # nenhum piso se sustenta, inclusive o de promessa.
     value = [value, UNREADABLE_CAP].min if flag(:unreadable)
 
     Result.new(value: value, tier: tier_for(value), reason: reason_text, breakdown: breakdown)
   end
 
   private
+
+  # Recusa explícita cancela o piso da promessa (achado do review): se o cliente disse "fechei com
+  # outro", a promessa não entregue virou irrelevante — não há ação comercial válida.
+  def promise_floor?
+    flag(:unfulfilled_promise) && text(:blocker) != 'forte'
+  end
+
+  def awaiting_reply?
+    return false if @last_message_at.blank? || text(:blocker) == 'forte'
+    return false unless text(:last_turn_owner) == 'cliente'
+
+    @now - @last_message_at <= AWAITING_REPLY_MAX_IDLE_DAYS.days
+  end
 
   def terminal_result
     Result.new(value: 0, tier: 'frio', reason: 'Card encerrado.', breakdown: { terminal: true })
@@ -122,7 +160,7 @@ class Crm::Ai::ScoreCalculator
       blocker: BLOCKER.fetch(text(:blocker), 0),
       last_turn_owner: LAST_TURN_OWNER.fetch(text(:last_turn_owner), 0),
       buying_signal: flag(:buying_signal) ? BUYING_SIGNAL_BONUS : 0,
-      unfulfilled_promise: flag(:unfulfilled_promise) ? UNFULFILLED_PROMISE_BONUS : 0
+      unfulfilled_promise: promise_floor? ? UNFULFILLED_PROMISE_BONUS : 0
     }
   end
 
@@ -134,11 +172,11 @@ class Crm::Ai::ScoreCalculator
     idle_days = ((@now - @last_message_at) / 1.day).floor - DECAY_GRACE_DAYS
     return 0 if idle_days <= 0
 
-    -[idle_days * DECAY_PER_DAY, MAX_DECAY].min
+    -(idle_days * DECAY_PER_DAY)
   end
 
   def tier_for(value)
-    TIERS.find { |ceiling, _| value <= ceiling }.last
+    self.class.tier_for(value)
   end
 
   def reason_text

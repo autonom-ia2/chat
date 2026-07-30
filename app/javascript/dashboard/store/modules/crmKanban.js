@@ -168,16 +168,21 @@ export const getters = {
     return $state.board;
   },
   getStages($state) {
-    // Colunas ordenadas pela conversa mais recente (last_message_at desc,
-    // epoch do payload; empate por id desc). Feito no getter, imutável, para
-    // valer tanto na carga inicial quanto nos upserts realtime — o backend
-    // segue paginando por id e o board reordena aqui.
+    // Colunas ordenadas por SCORE desc (quem precisa de atenção primeiro), depois pela conversa
+    // mais recente (last_message_at desc, epoch do payload) e por fim id desc. Feito no getter,
+    // imutável, para valer tanto na carga inicial quanto nos upserts realtime — o backend segue
+    // paginando por id e o board reordena aqui.
+    //
+    // Conta sem score: todos os cards ficam em 0, o empate cai no critério de atividade e a ordem
+    // é idêntica à de antes — ranquear é aditivo.
     return ($state.board.stages || []).map(stage => ({
       ...stage,
       cards: [...(stage.cards || [])].sort((a, b) => {
+        const bScore = Number(b.score) || 0;
+        const aScore = Number(a.score) || 0;
         const bEpoch = Number(b.last_message_at) || 0;
         const aEpoch = Number(a.last_message_at) || 0;
-        return bEpoch - aEpoch || (b.id || 0) - (a.id || 0);
+        return bScore - aScore || bEpoch - aEpoch || (b.id || 0) - (a.id || 0);
       }),
     }));
   },
