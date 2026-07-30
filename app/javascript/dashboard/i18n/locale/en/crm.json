@@ -806,6 +806,13 @@
       "FOLLOW_UP_DUE": "Follow-up {time}",
       "LAST_MESSAGE": "Last message {time}",
       "SCORE": "Score {score}",
+      "SCORE_ARIA": "Score {score}, {tier}. {reason}",
+      "SCORE_TIER": {
+        "COLD": "cold",
+        "WARM": "warm",
+        "HOT": "hot",
+        "URGENT": "urgent"
+      },
       "FOLLOW_UP_AI": "Automatic follow-up (AI)",
       "FOLLOW_UP_MANUAL": "Manual reminder",
       "HANDOFF_INVITE_PENDING": "Handoff invite pending: pickup due at the time shown",

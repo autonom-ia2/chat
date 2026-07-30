@@ -83,6 +83,62 @@ describe('CrmKanbanCard bubble shortcut', () => {
     expect(wrapper.emitted('openConversation')).toBeUndefined();
   });
 
+  const scoreChip = wrapper =>
+    wrapper.find('button[aria-label^="CRM_KANBAN.CARD.SCORE_ARIA"]');
+
+  it('renders no score chip when the card has no score', () => {
+    expect(scoreChip(mountCard(CONVERSATION_CARD)).exists()).toBe(false);
+  });
+
+  it('renders the urgent tier filled, with the reason in the aria label', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      score: 95,
+      metadata: {
+        ai: {
+          score: { source: 'ai', reason: 'Link prometido e nunca enviado' },
+        },
+      },
+    });
+    const chip = scoreChip(wrapper);
+
+    expect(chip.text()).toContain('95');
+    expect(chip.classes()).toContain('bg-n-ruby-9');
+    expect(chip.attributes('aria-label')).toContain(
+      'Link prometido e nunca enviado'
+    );
+  });
+
+  it('picks the tier by value: 12 cold, 45 warm, 62 hot', () => {
+    const tierClass = score =>
+      scoreChip(mountCard({ ...CONVERSATION_CARD, score })).classes();
+
+    expect(tierClass(12)).toContain('bg-n-alpha-2');
+    expect(tierClass(45)).toContain('bg-n-blue-3');
+    expect(tierClass(62)).toContain('bg-n-amber-3');
+  });
+
+  it('opens the card exactly once when the score chip is clicked', async () => {
+    const wrapper = mountCard({ ...CONVERSATION_CARD, score: 95 });
+
+    await scoreChip(wrapper).trigger('click');
+
+    expect(wrapper.emitted('open')).toHaveLength(1);
+    expect(wrapper.emitted('openConversation')).toBeUndefined();
+  });
+
+  it('outlines the chip when the score was set by a human', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      score: 40,
+      metadata: { ai: { score: { source: 'manual' } } },
+    });
+    const chip = scoreChip(wrapper);
+
+    expect(chip.classes()).toContain('ring-n-blue-8');
+    expect(chip.classes()).not.toContain('bg-n-blue-3');
+  });
+
   it('keeps the bubble as a plain label (no shortcut) when the card has no conversation', async () => {
     const wrapper = mountCard(NO_CONVERSATION_CARD);
 

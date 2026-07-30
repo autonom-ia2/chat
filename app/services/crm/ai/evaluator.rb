@@ -21,6 +21,7 @@ module Crm
         run_handoff(classification)
         run_callback(classification)
         run_attribute_extraction(classification)
+        ScoreApplier.new(card: @card, signals: classification[:score_signals]).perform
         result
       rescue ResponsesClient::Error => e
         Result.new(status: :failed, error: e.message)

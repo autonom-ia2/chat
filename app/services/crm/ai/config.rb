@@ -79,6 +79,12 @@ module Crm
         enabled? && (raw.blank? || BOOLEAN.cast(raw))
       end
 
+      # Score por funil, DESLIGADO por padrão: a IA passa a escrever em crm_cards.score de todos os
+      # cards do funil, então a adoção é conta por conta, não por deploy.
+      def self.pipeline_score_enabled?(pipeline)
+        BOOLEAN.cast(pipeline_ai_settings(pipeline)[:score_enabled])
+      end
+
       def self.pipeline_attribute_extraction_enabled?(pipeline)
         BOOLEAN.cast(pipeline_ai_settings(pipeline)[:attribute_extraction_enabled])
       end
