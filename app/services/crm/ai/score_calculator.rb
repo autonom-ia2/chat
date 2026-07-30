@@ -3,10 +3,12 @@ class Crm::Ai::ScoreCalculator
   # do próximo estágio e 18 à intenção: a Filomena, que perguntou valor total e parcelamento, saiu
   # com 5 (frio) porque disse "vou estudar" — um vendedor ligaria para ela no mesmo dia. Intenção e
   # sinal de compra passam a pesar mais que posição no funil.
-  READINESS = { 'nenhuma' => 0, 'inicial' => 6, 'parcial' => 15, 'pronta' => 25 }.freeze
-  INTENT = { 'baixa' => 0, 'media' => 12, 'alta' => 30 }.freeze
-  URGENCY = { 'nenhuma' => 0, 'futura' => 3, 'proxima' => 10, 'imediata' => 18 }.freeze
-  DECISION_MAKER = { 'sim' => 8, 'nao' => 0, 'desconhecido' => 0 }.freeze
+  # v3, travada pelo golden set (spec/services/crm/ai/score_golden_set_spec.rb): 11 cenários reais
+  # das contas 18 e 6 mais sintéticos de suporte/agendamento. Recalibrar = golden set inteiro verde.
+  READINESS = { 'nenhuma' => 0, 'inicial' => 6, 'parcial' => 14, 'pronta' => 20 }.freeze
+  INTENT = { 'baixa' => 0, 'media' => 15, 'alta' => 30 }.freeze
+  URGENCY = { 'nenhuma' => 0, 'futura' => 3, 'proxima' => 8, 'imediata' => 20 }.freeze
+  DECISION_MAKER = { 'sim' => 6, 'nao' => 0, 'desconhecido' => 0 }.freeze
   BLOCKER = { 'nenhum' => 0, 'leve' => -8, 'forte' => -20 }.freeze
 
   # Pedido concreto de preço, prazo, parcelamento, link ou documento. Estava diluído em INTENT e é
@@ -15,7 +17,7 @@ class Crm::Ai::ScoreCalculator
 
   # Quem falou por último decide de quem é a dívida: cliente falou = nós devemos resposta. Humano ter
   # respondido vale 0, não penalidade: atender bem não pode derrubar a nota do card.
-  LAST_TURN_OWNER = { 'cliente' => 10, 'humano' => 0, 'agente_plataforma' => 0, 'agente_externo' => 0 }.freeze
+  LAST_TURN_OWNER = { 'cliente' => 8, 'humano' => 0, 'agente_plataforma' => 0, 'agente_externo' => 0 }.freeze
 
   # Promessa nossa não cumprida ("já envio o link") é o sinal mais forte que existe: o silêncio
   # deixa de ser desinteresse do cliente e passa a ser falha nossa. Também anula o decaimento.
@@ -31,7 +33,9 @@ class Crm::Ai::ScoreCalculator
   # então o score fica limitado em vez de inventado.
   UNREADABLE_CAP = 20
 
-  TIERS = [[29, 'frio'], [59, 'morno'], [84, 'quente'], [100, 'urgente']].freeze
+  # Mantidos em sincronia com SCORE_TIERS do CrmKanbanCard.vue. O teto do "sem promessa" fica em
+  # ~92 para o topo não saturar: só promessa não cumprida encosta em 100.
+  TIERS = [[24, 'frio'], [54, 'morno'], [84, 'quente'], [100, 'urgente']].freeze
 
   # Contrato de saída do modelo. Fica aqui, não no StageClassifier: quem define o vocabulário dos
   # sinais é quem sabe pesá-los. O classifier apenas consome.
@@ -68,7 +72,8 @@ class Crm::Ai::ScoreCalculator
       buying_signal: {
         type: 'boolean',
         description: 'true quando o cliente pediu algo concreto para fechar (preço, valor total, parcelamento, prazo, ' \
-                     'link de pagamento, envio de documento) E esse pedido segue de pé. Hesitação depois do pedido ' \
+                     'link de pagamento, envio de documento) E esse pedido segue de pé. Vale também quando está IMPLÍCITO: ' \
+                     'cliente recebeu preço/proposta e seguiu conversando — reclamar do valor é negociação, não desistência. ' \
                      '("vou pensar", "depois te falo") MANTÉM o sinal. Recuo explícito ("não quero mais", "desisti", ' \
                      '"fechei com outro", "não é para mim") ZERA o sinal — use blocker=forte nesse caso.'
       },

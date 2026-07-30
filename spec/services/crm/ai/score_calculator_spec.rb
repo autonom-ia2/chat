@@ -19,7 +19,7 @@ RSpec.describe Crm::Ai::ScoreCalculator do
       last_message_at: now - 20.days
     )
 
-    expect(result.value).to eq(98)
+    expect(result.value).to eq(93)
     expect(result.tier).to eq('urgente')
     expect(result.reason).to eq('Link de pagamento prometido e nunca enviado.')
   end
@@ -44,8 +44,8 @@ RSpec.describe Crm::Ai::ScoreCalculator do
     signals = { next_stage_readiness: 'inicial', intent: 'media', urgency: 'nenhuma',
                 decision_maker: 'desconhecido', blocker: 'nenhum', last_turn_owner: 'humano' }
 
-    expect(score(signals, last_message_at: now - 1.day).value).to eq(18)
-    expect(score(signals, last_message_at: now - 10.days).value).to eq(2)
+    expect(score(signals, last_message_at: now - 1.day).value).to eq(21)
+    expect(score(signals, last_message_at: now - 10.days).value).to eq(5)
     expect(score(signals, last_message_at: now - 60.days).value).to eq(0)
   end
 
@@ -97,6 +97,6 @@ RSpec.describe Crm::Ai::ScoreCalculator do
     client_waiting = score(base.merge(last_turn_owner: 'cliente'))
     we_replied = score(base.merge(last_turn_owner: 'humano'))
 
-    expect(client_waiting.value - we_replied.value).to eq(10)
+    expect(client_waiting.value - we_replied.value).to eq(8)
   end
 end

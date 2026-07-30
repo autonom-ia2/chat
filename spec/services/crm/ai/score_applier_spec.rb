@@ -38,7 +38,7 @@ RSpec.describe Crm::Ai::ScoreApplier do
 
     expect(card.score).to be > 0
     expect(card.metadata.dig('ai', 'score')).to include(
-      'tier' => 'urgente',
+      'tier' => 'quente',
       'reason' => 'Pediu link de pagamento',
       'source' => 'ai',
       'stage_id' => stage.id
