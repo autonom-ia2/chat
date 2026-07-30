@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'base64'
+
 class Autonomia::Sso::TokenStore
   TOKEN_PURPOSE = :autonomia_identity_authorization_token
   REFRESH_TOKEN_PURPOSE = :autonomia_identity_refresh_token
@@ -27,10 +29,11 @@ class Autonomia::Sso::TokenStore
   end
 
   def write!(token)
-    return if token.context_token.blank?
+    authorization_token = token_authorization_token(token)
+    return if authorization_token.blank?
 
     metadata = (@user_link.metadata || {}).merge(
-      'identity_authorization_token' => encryptor.encrypt_and_sign(token.context_token, purpose: TOKEN_PURPOSE),
+      'identity_authorization_token' => encryptor.encrypt_and_sign(authorization_token, purpose: TOKEN_PURPOSE),
       'identity_authorization_token_expires_at' => expires_at(token).iso8601
     )
     refresh_token = token_refresh_token(token)
@@ -43,15 +46,23 @@ class Autonomia::Sso::TokenStore
   def authorization_token
     return refresh_authorization_token if token_expired?
 
-    encrypted_token = @user_link.metadata&.fetch('identity_authorization_token', nil)
-    return if encrypted_token.blank?
+    token = stored_authorization_token
+    return if token.blank?
+    return refresh_authorization_token if identity_token?(token)
 
-    encryptor.decrypt_and_verify(encrypted_token, purpose: TOKEN_PURPOSE)
+    token
   rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::MessageVerifier::InvalidSignature
     nil
   end
 
   private
+
+  def stored_authorization_token
+    encrypted_token = @user_link.metadata&.fetch('identity_authorization_token', nil)
+    return if encrypted_token.blank?
+
+    encryptor.decrypt_and_verify(encrypted_token, purpose: TOKEN_PURPOSE)
+  end
 
   def refresh_authorization_token
     refresh_token = stored_refresh_token
@@ -59,7 +70,7 @@ class Autonomia::Sso::TokenStore
 
     token = Autonomia::Sso::Client.new.refresh_token!(refresh_token: refresh_token)
     write!(token)
-    token.context_token
+    token_authorization_token(token)
   rescue StandardError => e
     Rails.logger.warn(
       "[Autonomia SSO] Failed to refresh stored Auth token for user_link=#{@user_link.id}: #{e.class}: #{e.message}"
@@ -94,6 +105,32 @@ class Autonomia::Sso::TokenStore
     return unless token.respond_to?(:refresh_token)
 
     token.refresh_token
+  end
+
+  def token_authorization_token(token)
+    return token.authorization_token if token.respond_to?(:authorization_token)
+    return token.access_token if token.respond_to?(:access_token)
+
+    token.context_token if token.respond_to?(:context_token)
+  end
+
+  def identity_token?(token)
+    payload = jwt_payload(token)
+    payload.is_a?(Hash) && payload['token_use'] == 'id'
+  end
+
+  def jwt_payload(token)
+    _header, payload, _signature = token.to_s.split('.', 3)
+    return if payload.blank?
+
+    JSON.parse(Base64.urlsafe_decode64(pad_base64(payload)))
+  rescue JSON::ParserError, ArgumentError
+    nil
+  end
+
+  def pad_base64(value)
+    padding = (4 - value.length % 4) % 4
+    value + ('=' * padding)
   end
 
   def encryptor

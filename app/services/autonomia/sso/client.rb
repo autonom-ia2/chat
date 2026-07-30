@@ -8,6 +8,10 @@ class Autonomia::Sso::Client
     def context_token
       id_token.presence || access_token
     end
+
+    def authorization_token
+      access_token
+    end
   end
 
   def exchange_code!(code:, redirect_uri:, code_verifier:)

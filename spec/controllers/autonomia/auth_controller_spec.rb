@@ -77,6 +77,8 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
         redirect_uri: callback_url,
         code_verifier: be_present
       )
+      expect(client).to have_received(:fetch_context!).with('identity-id-token')
+      expect(Autonomia::Sso::Provisioner).to have_received(:new).with(context: {}, token: token)
       redirect = URI.parse(response.location)
       params = Rack::Utils.parse_query(redirect.query)
       expect(redirect.to_s).to start_with("#{frontend_url}/app/login?")
