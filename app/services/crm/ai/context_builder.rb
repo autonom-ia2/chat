@@ -61,19 +61,27 @@ module Crm
 
       # TODAS as conversas do card (primária + vinculadas), não só a primária: um card pode acumular
       # conversas e o score/estágio precisa ler o histórico inteiro, não um pedaço dele.
+      # Janela POR CONVERSA, não global: com um único LIMIT, uma conversa movimentada consumia a cota
+      # inteira e a vinculada — que pode conter a promessa não cumprida — não chegava ao modelo.
       def recent_messages
         ids = conversation_ids
         return [] if ids.empty?
 
-        # reorder (not order) to override Message's default_scope(created_at: :asc),
-        # and by id (arrival order) so just-arrived messages/media are always in the
-        # recent window even if provider timestamps are skewed/out-of-order.
-        Message.where(conversation_id: ids, private: false)
+        ids.flat_map { |conversation_id| latest_for(conversation_id) }
+           .sort_by(&:id)
+           .last(MAX_MESSAGES_CAP)
+           .map { |message| format_message(message) }
+      end
+
+      # reorder (not order) to override Message's default_scope(created_at: :asc), and by id (arrival
+      # order) so just-arrived messages/media are always in the recent window even if provider
+      # timestamps are skewed/out-of-order. includes(:attachments) evita N+1 no message_content.
+      def latest_for(conversation_id)
+        Message.where(conversation_id: conversation_id, private: false)
                .where.not(message_type: :activity)
+               .includes(:attachments)
                .reorder(id: :desc)
-               .limit(window_size(ids.size))
-               .reverse
-               .map { |message| format_message(message) }
+               .limit(MAX_RECENT_MESSAGES)
       end
 
       def conversation_ids
@@ -105,7 +113,9 @@ module Crm
         case message.sender_type
         when 'User' then 'human_agent'
         when 'AgentBot' then platform_bot_ids.include?(message.sender_id) ? 'platform_agent' : 'external_agent'
-        else 'agent'
+        # Saída sem sender (automação, API) cai em external_agent e não num quinto papel: o enum de
+        # last_turn_owner só conhece quatro, e um valor fora dele fazia o modelo adivinhar.
+        else 'external_agent'
         end
       end
 

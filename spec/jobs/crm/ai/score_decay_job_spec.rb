@@ -1,0 +1,67 @@
+require 'rails_helper'
+
+RSpec.describe Crm::Ai::ScoreDecayJob do
+  let(:account) { create(:account) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:pipeline) { create_crm_pipeline(account: account, user: admin).first }
+  let(:stage) { pipeline.stages.first }
+
+  let(:signals) do
+    { 'next_stage_readiness' => 'parcial', 'intent' => 'alta', 'urgency' => 'nenhuma',
+      'decision_maker' => 'desconhecido', 'blocker' => 'nenhum', 'last_turn_owner' => 'humano' }
+  end
+
+  def enable_score!
+    metadata = pipeline.metadata.deep_dup
+    metadata['ai'] = (metadata['ai'] || {}).merge('score_enabled' => true)
+    pipeline.update!(metadata: metadata)
+  end
+
+  def create_card(score:, source: 'ai', status: :open)
+    account.crm_cards.create!(
+      pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL', status: status, score: score,
+      metadata: { 'ai' => { 'score' => { 'value' => score, 'source' => source, 'signals' => signals,
+                                         'calculated_at' => Time.current.iso8601 } } }
+    )
+  end
+
+  before { enable_score! }
+
+  # O bug que motivou o job: o decaimento só era aplicado quando havia nova avaliação, e o
+  # StaleCardsJob não reavalia card sem atividade nova. Card pontuado alto ficava alto para sempre.
+  it 'cools down a silent card without calling the model' do
+    card = create_card(score: 45)
+    expect(Crm::Ai::EvaluateCardJob).not_to receive(:perform_later)
+
+    travel_to(30.days.from_now) { described_class.perform_now }
+
+    expect(card.reload.score).to be < 45
+  end
+
+  it 'zeroes the score of a card that is no longer open' do
+    card = create_card(score: 90, status: :won)
+
+    described_class.perform_now
+
+    expect(card.reload.score).to eq(0)
+  end
+
+  it 'never touches a score written by hand' do
+    card = create_card(score: 70, source: 'manual')
+
+    travel_to(30.days.from_now) { described_class.perform_now }
+
+    expect(card.reload.score).to eq(70)
+  end
+
+  it 'skips funnels with the score turned off' do
+    metadata = pipeline.metadata.deep_dup
+    metadata['ai']['score_enabled'] = false
+    pipeline.update!(metadata: metadata)
+    card = create_card(score: 45)
+
+    travel_to(30.days.from_now) { described_class.perform_now }
+
+    expect(card.reload.score).to eq(45)
+  end
+end

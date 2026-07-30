@@ -1,12 +1,21 @@
 class Crm::Ai::ScoreCalculator
-  READINESS = { 'nenhuma' => 0, 'inicial' => 10, 'parcial' => 25, 'pronta' => 40 }.freeze
-  INTENT = { 'baixa' => 0, 'media' => 8, 'alta' => 18 }.freeze
-  URGENCY = { 'nenhuma' => 0, 'futura' => 3, 'proxima' => 12, 'imediata' => 22 }.freeze
+  # Pesos calibrados contra 5 cards reais da conta 18 (30/07). A primeira versão dava 40 à distância
+  # do próximo estágio e 18 à intenção: a Filomena, que perguntou valor total e parcelamento, saiu
+  # com 5 (frio) porque disse "vou estudar" — um vendedor ligaria para ela no mesmo dia. Intenção e
+  # sinal de compra passam a pesar mais que posição no funil.
+  READINESS = { 'nenhuma' => 0, 'inicial' => 6, 'parcial' => 15, 'pronta' => 25 }.freeze
+  INTENT = { 'baixa' => 0, 'media' => 12, 'alta' => 30 }.freeze
+  URGENCY = { 'nenhuma' => 0, 'futura' => 3, 'proxima' => 10, 'imediata' => 18 }.freeze
   DECISION_MAKER = { 'sim' => 8, 'nao' => 0, 'desconhecido' => 0 }.freeze
   BLOCKER = { 'nenhum' => 0, 'leve' => -8, 'forte' => -20 }.freeze
 
-  # Quem falou por último decide de quem é a dívida: cliente falou = nós devemos resposta.
-  LAST_TURN_OWNER = { 'cliente' => 10, 'humano' => -5, 'agente_plataforma' => 0, 'agente_externo' => 0 }.freeze
+  # Pedido concreto de preço, prazo, parcelamento, link ou documento. Estava diluído em INTENT e é
+  # forte demais para isso: é o momento em que o cliente sai de curioso e vira comprador.
+  BUYING_SIGNAL_BONUS = 20
+
+  # Quem falou por último decide de quem é a dívida: cliente falou = nós devemos resposta. Humano ter
+  # respondido vale 0, não penalidade: atender bem não pode derrubar a nota do card.
+  LAST_TURN_OWNER = { 'cliente' => 10, 'humano' => 0, 'agente_plataforma' => 0, 'agente_externo' => 0 }.freeze
 
   # Promessa nossa não cumprida ("já envio o link") é o sinal mais forte que existe: o silêncio
   # deixa de ser desinteresse do cliente e passa a ser falha nossa. Também anula o decaimento.
@@ -56,6 +65,13 @@ class Crm::Ai::ScoreCalculator
         enum: %w[cliente humano agente_plataforma agente_externo],
         description: 'Quem enviou a ÚLTIMA mensagem. Use os papéis de recent_messages.'
       },
+      buying_signal: {
+        type: 'boolean',
+        description: 'true quando o cliente pediu algo concreto para fechar (preço, valor total, parcelamento, prazo, ' \
+                     'link de pagamento, envio de documento) E esse pedido segue de pé. Hesitação depois do pedido ' \
+                     '("vou pensar", "depois te falo") MANTÉM o sinal. Recuo explícito ("não quero mais", "desisti", ' \
+                     '"fechei com outro", "não é para mim") ZERA o sinal — use blocker=forte nesse caso.'
+      },
       unfulfilled_promise: {
         type: 'boolean',
         description: 'true quando NÓS prometemos uma ação concreta (enviar link, retornar, verificar) e ela não foi entregue depois.'
@@ -64,7 +80,8 @@ class Crm::Ai::ScoreCalculator
       reason: { type: 'string', maxLength: 140, description: 'Motivo em uma linha, exibido no card. Concreto, sem adjetivo vazio.' },
       evidence: { type: 'string', maxLength: 300, description: 'Trecho curto da conversa que sustenta os sinais.' }
     },
-    required: %w[next_stage_readiness intent urgency decision_maker blocker last_turn_owner unfulfilled_promise unreadable reason evidence],
+    required: %w[next_stage_readiness intent urgency decision_maker blocker last_turn_owner buying_signal
+                 unfulfilled_promise unreadable reason evidence],
     additionalProperties: false
   }.freeze
 
@@ -104,6 +121,7 @@ class Crm::Ai::ScoreCalculator
       decision_maker: DECISION_MAKER.fetch(text(:decision_maker), 0),
       blocker: BLOCKER.fetch(text(:blocker), 0),
       last_turn_owner: LAST_TURN_OWNER.fetch(text(:last_turn_owner), 0),
+      buying_signal: flag(:buying_signal) ? BUYING_SIGNAL_BONUS : 0,
       unfulfilled_promise: flag(:unfulfilled_promise) ? UNFULFILLED_PROMISE_BONUS : 0
     }
   end
@@ -134,8 +152,10 @@ class Crm::Ai::ScoreCalculator
     @signals[key].to_s.strip.downcase
   end
 
+  # Aceita true, "true" e 1: gateway compatível com a API do modelo às vezes devolve o booleano
+  # como string, e comparar com == true silenciosamente perdia o sinal.
   def flag(key)
-    @signals[key] == true
+    ActiveModel::Type::Boolean.new.cast(@signals[key]) == true
   end
 
   def clamp(value)
