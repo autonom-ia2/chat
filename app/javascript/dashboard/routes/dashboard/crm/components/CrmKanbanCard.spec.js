@@ -118,6 +118,15 @@ describe('CrmKanbanCard bubble shortcut', () => {
     expect(tierClass(62)).toContain('bg-n-amber-3');
   });
 
+  it('opens the card exactly once when the score chip is clicked', async () => {
+    const wrapper = mountCard({ ...CONVERSATION_CARD, score: 95 });
+
+    await scoreChip(wrapper).trigger('click');
+
+    expect(wrapper.emitted('open')).toHaveLength(1);
+    expect(wrapper.emitted('openConversation')).toBeUndefined();
+  });
+
   it('outlines the chip when the score was set by a human', () => {
     const wrapper = mountCard({
       ...CONVERSATION_CARD,
