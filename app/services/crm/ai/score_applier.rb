@@ -6,9 +6,10 @@ class Crm::Ai::ScoreApplier
 
   # Best-effort: falha de score nunca derruba a avaliação do card.
   def perform
+    return unless ::Crm::Ai::Config.pipeline_score_enabled?(@card.pipeline)
     return if manual_locked?
 
-    result = ScoreCalculator.new(
+    result = ::Crm::Ai::ScoreCalculator.new(
       signals: @signals,
       last_message_at: last_message_at,
       terminal: !@card.open?
