@@ -51,13 +51,16 @@ module Crm::Ai::ClassifierPrompt
   VALUE = <<~VALUE.strip
     VALOR DO NEGÓCIO:
     "value" é o preço da oferta que NÓS estamos vendendo nesta conversa, pelo total do negócio.
-    Qualquer outra cifra é contexto e NÃO entra: valor do bem, carga, imóvel, veículo, patrimônio ou
-    operação do cliente; limite, teto, cobertura, franquia ou capacidade contratada; faturamento,
-    orçamento, custo atual ou o que ele já paga a outro fornecedor.
+    Nenhuma outra cifra entra NESTE campo (as demais regras deste prompt seguem valendo normalmente):
+    valor do bem, carga, imóvel, veículo, patrimônio ou operação do cliente; limite, teto, cobertura,
+    franquia ou capacidade contratada; faturamento, orçamento, custo atual ou o que ele já paga a
+    outro fornecedor.
     Total, não parcela: "10 vezes de R$ 100" => 100000 (mil reais). Some ou multiplique somente
-    dentro da NOSSA oferta: parcelas x valor da parcela, quantidade contratada x preço unitário,
-    itens cotados juntos ("RCDC R$ 300 + RCTR-C R$ 300 + RCV R$ 350" => 95000). NUNCA faça conta com
-    números do cliente — nem quando ele mesmo fez a conta na conversa; o resultado dela continua não
+    dentro da NOSSA oferta: parcelas x valor da parcela, quantidade que ele vai CONTRATAR de nós x
+    preço unitário, itens cotados juntos ("RCDC R$ 300 + RCTR-C R$ 300 + RCV R$ 350" => 95000).
+    Quem disse o número não importa: "preciso de 20 licenças" a R$ 50 cada => 100000, porque as 20
+    licenças são a nossa venda. O que NUNCA entra na conta é o que o cliente possui, transporta,
+    fatura ou movimenta — nem quando ele mesmo fez a conta na conversa; o resultado dela continua não
     sendo preço.
     Sem a quantidade dita, não há total: "R$ 100 por mês", sem prazo definido, fica 10000.
     Entre duas cifras vale o PAPEL, não a data: preço dito antes ganha de cifra recente que não seja
