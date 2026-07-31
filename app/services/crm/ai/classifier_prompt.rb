@@ -62,6 +62,10 @@ module Crm::Ai::ClassifierPrompt
     licenças são a nossa venda. O que NUNCA entra na conta é o que o cliente possui, transporta,
     fatura ou movimenta — nem quando ele mesmo fez a conta na conversa; o resultado dela continua não
     sendo preço.
+    Some apenas valores no MESMO período. Se a cotação misturar regimes ("RCV R$ 4.509,96 ao ano,
+    RCDC R$ 500/mês, RCTR-C R$ 500/mês"), escolha um período e use só os valores dele — aqui, o mensal
+    => 145000 com o RCV de R$ 450/mês. NUNCA converta de um período para outro por conta própria, e
+    nunca some um valor anual com um mensal: o resultado não é preço de nada.
     Sem a quantidade dita, não há total: "R$ 100 por mês", sem prazo definido, fica 10000.
     Entre duas cifras vale o PAPEL, não a data: preço dito antes ganha de cifra recente que não seja
     preço.
