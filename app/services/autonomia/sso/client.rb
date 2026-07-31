@@ -4,7 +4,7 @@ require 'net/http'
 require 'uri'
 
 class Autonomia::Sso::Client
-  Token = Struct.new(:access_token, :id_token, :refresh_token, :expires_in, keyword_init: true) do
+  Token = Struct.new(:access_token, :id_token, :refresh_token, :expires_in, :organization_id, keyword_init: true) do
     def context_token
       id_token.presence || access_token
     end
@@ -22,7 +22,8 @@ class Autonomia::Sso::Client
       access_token: response.fetch('access_token'),
       id_token: response['id_token'],
       refresh_token: response['refresh_token'],
-      expires_in: response['expires_in']
+      expires_in: response['expires_in'],
+      organization_id: response['organization_id']
     )
   end
 
@@ -40,8 +41,8 @@ class Autonomia::Sso::Client
     )
   end
 
-  def fetch_context!(access_token)
-    get_json(context_endpoint, access_token)
+  def fetch_context!(access_token, organization_id: nil)
+    get_json(context_endpoint, access_token, organization_id: organization_id)
   end
 
   private
@@ -54,10 +55,11 @@ class Autonomia::Sso::Client
     parse_response(uri, request)
   end
 
-  def get_json(url, access_token)
+  def get_json(url, access_token, organization_id: nil)
     uri = URI.parse(url)
     request = Net::HTTP::Get.new(uri)
     request['Authorization'] = "Bearer #{access_token}"
+    request['X-Organization-Id'] = organization_id if organization_id.present?
     parse_response(uri, request)
   end
 

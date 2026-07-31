@@ -40,7 +40,6 @@ RSpec.describe Autonomia::Sso::Provisioner do
     end
 
     it 'uses the pending product invitation account before creating a new account' do
-      skip 'QUARANTINE: pre-existing legacy failure, harness-restore PR; real fix tracked for follow-up PR2'
       provisioned_user = nil
 
       expect do
@@ -93,11 +92,17 @@ RSpec.describe Autonomia::Sso::Provisioner do
       expect(provisioner.send(:identity_organization_metadata)).not_to include('fallback' => true)
     end
 
-    it 'creates new accounts in Portuguese without forcing Chatwoot onboarding' do
-      account = described_class.new(context: context).send(:create_account)
+    it 'does not create a user or account without an authorized origin' do
+      invited_account.destroy!
+      isolated_context = context.deep_dup
+      isolated_context['activeOrganization']['id'] = 'unlinked-organization'
 
-      expect(account.locale).to eq('pt_BR')
-      expect(account.custom_attributes).not_to include('onboarding_step')
+      account_count = Account.count
+      user_count = User.count
+      expect { described_class.new(context: isolated_context).perform }
+        .to raise_error(described_class::AccessDenied)
+      expect(Account.count).to eq(account_count)
+      expect(User.count).to eq(user_count)
     end
 
     context 'when the account link uses a fallback organization' do
@@ -129,12 +134,11 @@ RSpec.describe Autonomia::Sso::Provisioner do
         }
       end
 
-      it 'does not overwrite the account name from user companyName' do
-        provisioned_user = described_class.new(context: context).perform
-
+      it 'does not create an administrator relationship from a link alone' do
+        expect { described_class.new(context: context).perform }.to raise_error(described_class::AccessDenied)
         expect(fallback_account_link.reload.account).to eq(linked_account)
         expect(linked_account.reload.name).to eq('GTA')
-        expect(AccountUser.find_by!(account: linked_account, user: provisioned_user).role).to eq('administrator')
+        expect(AccountUser.where(account: linked_account)).to be_empty
       end
     end
 
@@ -169,6 +173,11 @@ RSpec.describe Autonomia::Sso::Provisioner do
           identity_organization_id: identity_email,
           metadata: { 'identity_organization' => { 'id' => identity_email, 'fallback' => true } }
         )
+      end
+      let!(:registration_user) { create(:user, email: identity_email) }
+      let!(:registration_account_user) { create(:account_user, account: registration_account, user: registration_user, role: :administrator) }
+      let!(:registration_user_link) do
+        Autonomia::UserLink.create!(user: registration_user, identity_user_id: identity_user_id, email: identity_email, metadata: {})
       end
       let(:context) do
         {
