@@ -43,12 +43,34 @@ module Crm::Ai::ClassifierPrompt
       sustentou a decisão. Não repita os critérios; aponte o fato. Respeite o limite do schema.
   CONF
 
+  # "value" é o preço da NOSSA oferta, não "qualquer cifra da conversa". A regra anterior mandava usar
+  # "o valor mais recente e mais concreto citado" — e era ela que produzia o erro: no card 1067 a
+  # cliente calculou em voz alta o valor da carga que transporta ("5,3 multiplica por 25 mil litros
+  # então daria 133 mil reais") e a IA gravou isso como valor do negócio, num funil de mediana R$ 950.
+  # Recência e concretude não dizem QUE PAPEL a cifra cumpre na conversa; a definição abaixo diz.
   VALUE = <<~VALUE.strip
     VALOR DO NEGÓCIO:
-    - Se a conversa mencionar explicitamente um valor de negócio/proposta/contrato, preencha "value"
-      com amount_cents (centavos) e currency (ISO, ex.: BRL). Ex.: "R$ 1.500,00" => 150000 / "BRL".
-    - Use o valor mais recente e mais concreto citado. Não some valores soltos nem estime faixas.
-    - Se nenhum valor for citado, retorne "value": null. NUNCA invente nem deduza valores.
+    "value" é o preço da oferta que NÓS estamos vendendo nesta conversa, pelo total do negócio.
+    Qualquer outra cifra é contexto e NÃO entra: valor do bem, carga, imóvel, veículo, patrimônio ou
+    operação do cliente; limite, teto, cobertura, franquia ou capacidade contratada; faturamento,
+    orçamento, custo atual ou o que ele já paga a outro fornecedor.
+    Total, não parcela: "10 vezes de R$ 100" => 100000 (mil reais). Some ou multiplique somente
+    dentro da NOSSA oferta: parcelas x valor da parcela, quantidade contratada x preço unitário,
+    itens cotados juntos ("RCDC R$ 300 + RCTR-C R$ 300 + RCV R$ 350" => 95000). NUNCA faça conta com
+    números do cliente — nem quando ele mesmo fez a conta na conversa; o resultado dela continua não
+    sendo preço.
+    Sem a quantidade dita, não há total: "R$ 100 por mês", sem prazo definido, fica 10000.
+    Entre duas cifras vale o PAPEL, não a data: preço dito antes ganha de cifra recente que não seja
+    preço.
+    Uma oferta só, cobrada de formas diferentes (à vista x parcelado, com x sem desconto), NÃO é
+    opção em aberto: é a mesma venda, use o preço à vista.
+    Alternativas concorrentes de verdade — planos, pacotes ou coberturas diferentes entre os quais o
+    cliente ainda vai escolher — não têm valor definido: retorne null até ele escolher uma. Não pegue
+    a mais cara, a mais barata nem a última citada.
+    Preencha amount_cents em centavos ("R$ 1.500,00" => 150000) e currency com o código ISO da moeda
+    citada (BRL quando a conversa estiver em reais).
+    SE NÃO FOR O PREÇO DA NOSSA OFERTA, NÃO PREENCHA: retorne "value": null. Campo vazio é aceitável,
+    valor errado não. Na dúvida sobre o papel da cifra, null. NUNCA invente nem deduza valores.
   VALUE
 
   # Estático (prefix-stable): status/gatilho/agentes de handoff NÃO são interpolados — vão nos
@@ -142,7 +164,7 @@ module Crm::Ai::ClassifierPrompt
     - Sem nenhuma evidência nova relevante desde a última interação: mantenha o estágio atual com
       confiança baixa; não invente progresso.
     - Cliente diz explicitamente que fechou negócio e há um estágio de conclusão/ganho: mover para ele
-      com confiança alta e preencher "value" se um valor foi citado.
+      com confiança alta e preencher "value" apenas se o preço da NOSSA oferta foi citado.
     - Cliente diz que desistiu/escolheu concorrente e há um estágio de perda: mover para ele com
       confiança alta. Sem declaração explícita, NÃO trate atraso ou silêncio como perda.
   EX
