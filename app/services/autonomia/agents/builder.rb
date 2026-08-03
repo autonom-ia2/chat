@@ -222,6 +222,12 @@ module Autonomia
           next_question vazio, TODOS os campos preenchidos: escopo ancorado em fatos (§7.1), blindagens (§7.6) embutidas,
           mapa de conhecimento e flag de confiabilidade do Revisor (§7.5) propagados. Se houver pendência (material que ficou
           de fora), AVISE em 1 frase no `human_card`, NÃO bloqueie.
+        - FECHOU COM LACUNA → DECLARE no `human_card`. Se você fechar com uma pergunta ESSENCIAL sem resposta (ex.: quais
+          dados o agente deve coletar antes de encaminhar), sem base de conhecimento confirmada, ou com material que ficou
+          de fora, escreva a lacuna em 1 frase simples no `human_card`: "fechei sem definir [o quê]; até você definir, ele
+          usa um padrão genérico nesse ponto". O dono SÓ enxerga o `human_card`: o que não estiver ali, ele não sabe que
+          ficou em branco. NUNCA descreva como definido aquilo que você preencheu com o padrão do tipo. Isto é AVISO, não
+          bloqueio: feche assim mesmo.
         - SE NÃO HOUVER material de conhecimento: só feche depois de confirmar com o usuário que pode criar sem base de
           conhecimento (ou ele pedir explicitamente para fechar). Não feche por conta própria um agente sem KB sem essa
           confirmação. O bloco "STATUS DOS MATERIAIS" no contexto interno diz o que já foi subido e se falta confirmar.
@@ -1126,7 +1132,11 @@ module Autonomia
         #   - interview_budget_exhausted?: teto de perguntas atingido.
         # NÃO atropela o reorder: sem nenhum destes gatilhos, um needs_more_info=true segue como está e
         # o force_materials_gate! preserva o bloqueio quando há material genuinamente pendente.
-        parsed['needs_more_info'] = false if parsed['needs_more_info'] == true && force_close?
+        # `@forced_close` registra que ESTE turno foi fechado POR CIMA de um needs_more_info=true. É o
+        # sinal mais preciso de "fechou com pergunta pendente" (o modelo, com a conversa inteira à
+        # frente, ainda queria perguntar) e é consumido por declare_gaps! na hora de avisar o dono.
+        @forced_close = parsed['needs_more_info'] == true && force_close?
+        parsed['needs_more_info'] = false if @forced_close
 
         # Portão DURO de materiais (§12 da instrução-mãe + spec): se o modelo quis fechar mas há fontes
         # ainda não revisadas e o usuário não declarou estar sem material, força mais uma rodada de
@@ -1163,6 +1173,7 @@ module Autonomia
           # agente, derive um default pelo tipo em vez de deixar o agente vazio/"Novo agente" (T13).
           # Só no ramo final (needs_more_info=false); na entrevista o nome pode ficar em branco.
           parsed['name'] = default_agent_name(parsed) if parsed['name'].to_s.strip.blank?
+          declare_gaps!(parsed)
           apply_to_agent(token, parsed)
         end
       end
@@ -1220,6 +1231,64 @@ module Autonomia
         parsed['needs_more_info'] = true
         parsed['next_question'] = parsed['next_question'].to_s.presence ||
                                   'Preciso de um pouco mais de contexto para finalizar a configuração do agente. Pode detalhar melhor?'
+      end
+
+      # TRANSPARÊNCIA NO FECHAMENTO (defesa em profundidade, mesmo padrão de force_materials_gate! e
+      # reopen_if_incomplete_final!): fechar é DIREITO do dono e NÃO é bloqueado aqui — o que não pode é
+      # fechar em SILÊNCIO. Num agente real o portão §5.4 foi pulado: a pergunta "quais dados a agente
+      # deve coletar antes de encaminhar" ficou sem resposta, o buraco foi preenchido com a coleta
+      # genérica do tipo ("nome, cidade, melhor forma de contato") e o dono operou DIAS achando que tinha
+      # configurado a coleta. O `human_card` é o ÚNICO texto que ele vê sobre a config, então a lacuna é
+      # escrita ali AQUI, em código — sem depender de o modelo obedecer ao §12.
+      def declare_gaps!(parsed)
+        notes = [unanswered_question_note(parsed), no_knowledge_note].compact_blank
+        return if notes.empty?
+
+        parsed['human_card'] = [parsed['human_card'].to_s.strip, *notes].compact_blank.join(' ')
+      end
+
+      # LACUNA (a) — pergunta ESSENCIAL que ficou sem resposta. Cita a própria pergunta: é o que o dono
+      # precisa para saber o que reabrir, e o texto já é dele/do Construtor (não é IP oculto).
+      def unanswered_question_note(parsed)
+        question = unanswered_question(parsed)
+        return '' if question.blank?
+
+        "Fechei com esta pergunta ainda em aberto: \"#{question}\" Enquanto ela não for respondida em um " \
+          'ajuste, o agente usa um padrão genérico nesse ponto.'
+      end
+
+      # A pergunta pendente no fechamento, por dois caminhos DETERMINÍSTICOS:
+      #   - o modelo ainda queria perguntar neste turno e o gate sobrescreveu (@forced_close);
+      #   - havia pergunta aberta na virada do turno E a fala do usuário foi uma ORDEM de fechar
+      #     ("pode fechar"/"finaliza") ou o clique de avançar para a Revisão — nenhum dos dois RESPONDE
+      #     a pergunta, então ela segue em aberto.
+      # Fechamento natural do modelo (sem esses gatilhos) não declara nada: ali a pergunta foi respondida.
+      def unanswered_question(parsed)
+        live = @forced_close ? parsed['next_question'].to_s.strip : ''
+        return live if live.present?
+        return '' unless @forced_close || close_intent? || force_close_declared?
+
+        state = @thread.state.to_h
+        state['needs_more_info'] == true ? state['next_question'].to_s.strip : ''
+      end
+
+      # LACUNA (b) — §5.4: fechou SEM base de conhecimento e SEM a confirmação de que podia. Mesmas
+      # condições da cobrança "pergunte UMA vez" (materials_status_context): se o dono escolheu "sem
+      # base" na abertura ou declarou não ter material, a decisão foi DELE e não há lacuna nenhuma.
+      def no_knowledge_note
+        return '' unless no_knowledge_gap?
+
+        'Fechei sem base de conhecimento: quando faltar informação, o agente encaminha para uma pessoa. ' \
+          'Você pode adicionar materiais depois em um ajuste.'
+      end
+
+      # AJUSTE fica de fora: o agente já existe e a decisão de base já passou na criação (é a mesma
+      # regressão que knowledge_intent_context e materials_status_context evitam pelas outras pontas).
+      def no_knowledge_gap?
+        return false if adjust_mode? || no_materials_declared? || !with_knowledge?
+
+        agent = @thread.agent
+        agent.blank? || !agent.sources.knowledge_sources.exists?
       end
 
       # E1 — anexa a pergunta do Construtor como mensagem `assistant` persistida, para o build_input

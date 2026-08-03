@@ -156,6 +156,65 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
+  # O portão §5.4 foi PULADO num agente real: o dono mandou "pode finalizar" com a pergunta "quais dados
+  # a agente deve coletar" ainda aberta, o buraco foi preenchido com a coleta genérica do tipo e ele
+  # operou dias sem saber. Fechar continua liberado; fechar EM SILÊNCIO, não.
+  describe 'gap disclosure on close' do
+    def close_payload(overrides = {})
+      {
+        'name' => 'Ana', 'agent_type' => 'sdr', 'instruction' => 'Instrução completa da Ana.',
+        'scaffold' => 'andaime', 'human_card' => 'A Ana faz a pré-venda e encaminha o lead.',
+        'greeting' => 'Oi!', 'fallback_message' => 'Vou verificar.', 'handoff_rule' => 'Passa para humano.',
+        'starter_questions' => [], 'tone' => 'cordial', 'guardrails' => [], 'voice' => 'feminina',
+        'needs_more_info' => false, 'next_question' => ''
+      }.merge(overrides)
+    end
+
+    it 'records the unanswered question in the human_card without blocking the close' do
+      # Arrange — pergunta viva na virada do turno e o dono responde com uma ordem de fechar.
+      question = 'Quais dados mínimos a Ana deve coletar antes de encaminhar o lead?'
+      thread.append_message!('assistant', question)
+      thread.update!(state: thread.state.to_h.merge('needs_more_info' => true, 'next_question' => question))
+      thread.append_message!('user', 'Terminei, você pode finalizar o agente.')
+      stub_model_output(close_payload)
+
+      # Act
+      builder.run!(thread.begin_build!)
+
+      # Assert
+      agent = thread.reload.agent
+      expect(agent.human_card).to include(question)
+      expect(agent.human_card).to include('padrão genérico')
+      expect(agent.instruction).to eq('Instrução completa da Ana.')
+    end
+
+    it 'records the missing knowledge base when the ask-once confirmation never happened' do
+      # Arrange — sem material, sem opt-out na abertura e sem a confirmação do §5.4.
+      thread.append_message!('user', 'pode fechar')
+      stub_model_output(close_payload)
+
+      # Act
+      builder.run!(thread.begin_build!)
+
+      # Assert
+      expect(thread.reload.agent.human_card).to include('sem base de conhecimento')
+    end
+
+    it 'keeps the human_card clean when nothing was left open' do
+      # Arrange — base dispensada na abertura (decisão do dono) e nenhuma pergunta pendente.
+      thread.persist_start_options!(type: 'sdr', with_knowledge: false)
+      thread.save!
+      thread.append_message!('user', 'A Ana coleta nome, cidade e tipo de seguro.')
+      stub_model_output(close_payload)
+
+      # Act
+      builder.run!(thread.begin_build!)
+
+      # Assert
+      expect(thread.reload.agent.human_card).to eq('A Ana faz a pré-venda e encaminha o lead.')
+    end
+  end
+
   # O ApplicationRecord valida o tamanho de TODA coluna string (255) e text (20.000). Sem teto, o
   # `tone` gerado estourava e o save! derrubava o apply inteiro (RecordInvalid) — o dono perdia o
   # ajuste em silêncio. Truncar é sempre melhor que perder o pedido.
