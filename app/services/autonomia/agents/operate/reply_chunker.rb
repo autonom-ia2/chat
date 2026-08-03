@@ -30,6 +30,11 @@ module Autonomia
         # Abreviações cujo ponto NÃO encerra frase. Casadas com o ponto e protegidas como token.
         ABBREVIATION_RE = /\b(?:Dr|Dra|Sr|Sra|Srta|etc|vs|aprox|obs|Ref|Ex)\./i
 
+        # Item de lista: marcador (•, -, *) ou numeração (1. / 1)) seguido de espaço. Espelha o
+        # mesmo formato que `text_delay` já reconhece para a pausa de bullet.
+        # `*negrito*` do WhatsApp NÃO casa (exige espaço depois do marcador).
+        LIST_ITEM_RE = /\A\s*(?:[-*•]\s+|\d+[.)]\s+)/
+
         # SENTINELAS de área privada Unicode (U+E000/E001) que envolvem o índice do token protegido.
         # Nunca aparecem em texto real, não casam pontuação de frase e sobrevivem ao split → colisão-proof.
         # (O esquema antigo " N " colidia com números soltos do texto: "3 parcelas" virava lixo no restore.)
@@ -86,10 +91,39 @@ module Autonomia
           t.match?(URL_REGEX) && t.sub(URL_REGEX, '').strip.empty?
         end
 
-        # Empacota um bloco PRESERVANDO as quebras de linha entre linhas curtas (bullets, heading +
-        # itens) — junta linhas com "\n" até soft_max; uma linha de PROSA longa (> soft_max) é
-        # quebrada em sentenças e empacotada por espaço. Mantém a estrutura visual no WhatsApp.
+        # Empacota um bloco separando LISTAS (átomos) de PROSA (empacotada normalmente).
+        # Defeito de produção (lista de 6 documentos entregue picotada em 4 mensagens): uma lista
+        # partida no meio chega quebrada ao cliente. Uma corrida de 2+ linhas de item sai INTEIRA
+        # num único pedaço — sem soft_max, sem hard_max, sem split_long.
         def pack_block(block)
+          lines = block.split("\n").map(&:rstrip).reject { |line| line.strip.empty? }
+          return [] if lines.empty?
+
+          segments(lines).flat_map do |list, group|
+            list ? [group.join("\n")] : pack_lines(group)
+          end
+        end
+
+        # Fatia as linhas em segmentos [lista?, linhas]. Só uma corrida de 2+ itens conta como lista;
+        # um bullet solto segue no segmento de prosa (mesmo empacotamento de sempre, zero regressão).
+        def segments(lines)
+          flags = list_run_flags(lines)
+          lines.zip(flags)
+               .slice_when { |(_, a), (_, b)| a != b }
+               .map { |pairs| [pairs.first.last, pairs.map(&:first)] }
+        end
+
+        def list_run_flags(lines)
+          marks = lines.map { |line| line.match?(LIST_ITEM_RE) }
+          marks.each_with_index.map do |mark, i|
+            neighbor = (i.positive? && marks[i - 1]) || marks[i + 1] == true
+            mark && neighbor
+          end
+        end
+
+        # PROSA: preserva as quebras de linha entre linhas curtas — junta linhas com "\n" até
+        # soft_max; uma linha longa (> soft_max) é quebrada em sentenças e empacotada por espaço.
+        def pack_lines(lines)
           chunks = []
           current = +''
           flush = lambda do
@@ -97,10 +131,7 @@ module Autonomia
             current = +''
           end
 
-          block.split("\n").each do |raw_line|
-            line = raw_line.rstrip
-            next if line.strip.empty?
-
+          lines.each do |line|
             if line.length > H[:soft_max_chunk_chars]
               flush.call
               pack_sentences(split_sentences(line)).each { |c| chunks << c }
@@ -263,8 +294,10 @@ module Autonomia
           best.nil? ? 0 : best
         end
 
+        # Cola com "\n" quando o pedaço da direita abre uma LISTA — colar com espaço grudaria o
+        # preâmbulo no 1º item e destruiria a formatação que o átomo de lista acabou de preservar.
         def merge_two(a, b)
-          joiner = a[:text].end_with?("\n") || b[:text].start_with?('-') ? "\n" : ' '
+          joiner = a[:text].end_with?("\n") || b[:text].start_with?('-') || b[:text].match?(LIST_ITEM_RE) ? "\n" : ' '
           { text: "#{a[:text]}#{joiner}#{b[:text]}".gsub(/[ \t]{2,}/, ' ').strip,
             type: a[:type] == 'url' || b[:type] == 'url' ? 'text' : a[:type] }
         end
