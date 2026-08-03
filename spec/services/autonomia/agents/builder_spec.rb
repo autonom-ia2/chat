@@ -114,4 +114,110 @@ RSpec.describe Autonomia::Agents::Builder do
       end
     end
   end
+
+  # A guarda de knowledge_intent_context estava INVERTIDA para o caso de ajuste: em modo AJUSTE o bloco
+  # que PROÍBE perguntar sobre base de conhecimento era justamente o suprimido, então todo ajuste voltava
+  # a perguntar "posso criar sem base?" num agente que já existe e está rodando.
+  describe 'knowledge question suppression in adjust mode' do
+    let(:agent) do
+      Autonomia::Agents::Agent.create!(
+        account: account, name: 'Agente vivo', agent_type: 'support', mode: :guided,
+        status: :active, enabled: true, instruction: 'Instrução fechada do agente.'
+      )
+    end
+
+    before { thread.update!(agent: agent) }
+
+    it 'tells the model to NEVER ask about the knowledge base, because the agent already exists' do
+      # Act
+      context = builder.send(:knowledge_intent_context)
+
+      # Assert
+      expect(context).to include('NUNCA pergunte se pode criar/ajustar o agente sem base de conhecimento')
+      expect(context).to include('NÃO peça documentos')
+    end
+
+    it 'drops the ask-once material confirmation from the materials status block' do
+      # Act — agente sem nenhuma fonte de conhecimento: era exatamente o caso que reabria a pergunta
+      context = builder.send(:materials_status_context)
+
+      # Assert
+      expect(context).not_to include('pergunte UMA vez')
+    end
+
+    it 'does not let a close-intent phrase discard a clarifying question raised during the adjust' do
+      # Arrange — pedido NOVO que casa CLOSE_INTENT_PATTERNS ("pode criar") sem responder a pergunta
+      # pendente: antes isso virava ordem de fechar e a pergunta era descartada.
+      thread.append_message!('user', 'pode criar uma saudação nova também')
+
+      # Act / Assert
+      expect(builder.send(:close_intent?)).to be(true)
+      expect(builder.send(:force_close?)).to be(false)
+    end
+  end
+
+  # O ApplicationRecord valida o tamanho de TODA coluna string (255) e text (20.000). Sem teto, o
+  # `tone` gerado estourava e o save! derrubava o apply inteiro (RecordInvalid) — o dono perdia o
+  # ajuste em silêncio. Truncar é sempre melhor que perder o pedido.
+  describe '.map_attributes character budget' do
+    let(:tone_limit) { described_class.write_limit_for(:tone) }
+
+    def parsed_with(overrides)
+      {
+        'name' => 'Agente', 'agent_type' => 'support', 'instruction' => 'i', 'scaffold' => 's',
+        'human_card' => 'h', 'greeting' => 'g', 'fallback_message' => 'f', 'handoff_rule' => 'r',
+        'starter_questions' => [], 'tone' => 'cordial', 'guardrails' => [], 'voice' => 'feminina'
+      }.merge(overrides)
+    end
+
+    it 'truncates an oversized tone to the write limit instead of raising on save' do
+      # Arrange
+      long_tone = (['palavra'] * 400).join(' ')
+
+      # Act
+      attrs = described_class.map_attributes(parsed_with('tone' => long_tone))
+
+      # Assert
+      expect(long_tone.length).to be > tone_limit
+      expect(attrs[:tone].length).to be <= tone_limit
+      expect(Autonomia::Agents::Agent.new(account: account, name: 'x', agent_type: 'support', tone: attrs[:tone]))
+        .to be_valid
+    end
+
+    it 'cuts on a word boundary and adds no ellipsis' do
+      # Act
+      attrs = described_class.map_attributes(parsed_with('tone' => (['palavra'] * 400).join(' ')))
+
+      # Assert
+      expect(attrs[:tone]).not_to end_with('...')
+      expect(attrs[:tone]).to end_with('palavra')
+    end
+
+    it 'reports which fields were truncated, without echoing their content' do
+      # Arrange
+      truncated = []
+
+      # Act
+      described_class.map_attributes(
+        parsed_with('tone' => 'a' * (tone_limit + 1),
+                    'greeting' => 'b' * (described_class.write_limit_for(:greeting) + 1)),
+        truncated: truncated
+      )
+
+      # Assert
+      expect(truncated).to contain_exactly('greeting', 'tone')
+    end
+
+    it 'leaves fields within the budget untouched' do
+      # Arrange
+      truncated = []
+
+      # Act
+      attrs = described_class.map_attributes(parsed_with('tone' => 'cordial e direto'), truncated: truncated)
+
+      # Assert
+      expect(attrs[:tone]).to eq('cordial e direto')
+      expect(truncated).to be_empty
+    end
+  end
 end
