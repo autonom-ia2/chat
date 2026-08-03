@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_30_160000) do
+ActiveRecord::Schema[7.1].define(version: 2026_08_03_190000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -420,7 +420,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_30_160000) do
     t.text "fallback_message"
     t.text "handoff_rule"
     t.jsonb "starter_questions", default: [], null: false
-    t.string "tone"
+    t.text "tone"
     t.jsonb "config", default: {}, null: false
     t.boolean "enabled", default: false, null: false
     t.bigint "created_by_id"
