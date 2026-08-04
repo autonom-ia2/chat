@@ -40,8 +40,20 @@ module Autonomia
       enum actuation: { external: 0, internal: 1, both: 2 }, _prefix: :actuation
 
       AGENT_TYPES = %w[support sdr reception onboarding scheduler reactivation custom].freeze
+
+      # Tetos PRÓPRIOS de `tone` e `instruction`. O ApplicationRecord aplica um teto genérico
+      # anti-DOS a toda coluna de texto (255 para string, 20.000 para text) e só sai da frente
+      # quando o model declara a sua própria validação de tamanho. Declarar aqui evita mexer na
+      # constante global, que protege a aplicação inteira.
+      # O `instruction` é o PLAYBOOK do agente e cresce a cada ajuste do dono; 20.000 apertava um
+      # agente com cenários de verdade (o primeiro caso real chegou a 77% do teto antigo).
+      MAX_TONE_LENGTH = 1_000
+      MAX_INSTRUCTION_LENGTH = 50_000
+
       validates :name, presence: true
       validates :agent_type, inclusion: { in: AGENT_TYPES }
+      validates :tone, length: { maximum: MAX_TONE_LENGTH }, allow_nil: true
+      validates :instruction, length: { maximum: MAX_INSTRUCTION_LENGTH }, allow_nil: true
 
       store_accessor :config, :model, :temperature, :business_hours, :max_turns, :guardrails
       # V2.1 — hint de construção: o dono declarou que o agente terá (ou não) base de conhecimento.
