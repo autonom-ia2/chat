@@ -82,6 +82,18 @@
       "YOU": "You",
       "INTRO": "Tell us what this agent should do — describe your business and how it should help. We'll ask a few questions and build it for you.",
       "FAILED": "Something went wrong while building your agent. Send another message to try again.",
+      "APPLY_FAILED": "Nothing was applied to your agent: the generated configuration was rejected when saving, so your request was not recorded. Ask for the change again in a shorter, more objective way.",
+      "APPLY_FAILED_FIELDS": "Nothing was applied to your agent: {fields} exceeded the maximum allowed size, so your request was not recorded. Ask for the change again in a shorter, more objective way.",
+      "ERROR_FIELDS": {
+        "TONE": "the tone",
+        "INSTRUCTION": "the instruction",
+        "NAME": "the name",
+        "GREETING": "the greeting",
+        "HUMAN_CARD": "the summary",
+        "FALLBACK_MESSAGE": "the fallback message",
+        "HANDOFF_RULE": "the handoff rule",
+        "SCAFFOLD": "the internal configuration"
+      },
       "TIMEOUT": "This is taking longer than expected. Please send your message again.",
       "PLACEHOLDER": "Type your answer…",
       "SEND": "Send",

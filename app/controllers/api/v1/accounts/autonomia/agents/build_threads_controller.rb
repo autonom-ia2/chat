@@ -14,6 +14,9 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     @thread.created_by = Current.user
     @thread.persist_start_options!(type: params[:type], actuation: params[:actuation], with_knowledge: params[:with_knowledge])
     @thread.save!
+    # A pendência não pode morrer com a sessão: abrindo uma thread de AJUSTE (agente já vinculado),
+    # herda a pergunta que ficou sem resposta na thread anterior daquele agente.
+    @thread.inherit_pending_question!
     append_user_message! if params[:message].present?
     persist_no_materials_flag
     persist_force_close_flag

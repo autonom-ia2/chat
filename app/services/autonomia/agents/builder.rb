@@ -8,6 +8,14 @@ module Autonomia
     # segundos), faz o parse do JSON estruturado e, no MESMO job, ou guarda a próxima pergunta da
     # entrevista (needs_more_info) ou cria/edita o Agent e marca a thread `ready`. Sem PollJob.
     class Builder
+      # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
+      # O Construtor não conhecia teto nenhum e a saída estourava as validações globais do
+      # ApplicationRecord (255 em coluna string, 20.000 em text), derrubando o apply inteiro com
+      # RecordInvalid — o dono perdia o ajuste em silêncio. Estes números são o ALVO pedido ao modelo;
+      # a ENFORCEMENT (truncamento) usa o teto real de gravação, resolvido em write_limit_for.
+      TONE_BUDGET_CHARS = 1_000
+      INSTRUCTION_BUDGET_CHARS = 50_000
+
       # Schema de saída estruturada (JSON Schema strict — todas as chaves required, sem props extras).
       # Mesma forma usada por Generator::GENERATE_SCHEMA; consumido por ResponsesClient#create.
       BUILDER_SCHEMA = {
@@ -18,14 +26,19 @@ module Autonomia
             name:              { type: 'string' },
             agent_type:        { type: 'string',
                                  enum: %w[support sdr reception onboarding scheduler reactivation custom] },
-            instruction:       { type: 'string' },
+            instruction:       { type: 'string',
+                                 description: 'Instrucao completa do agente. Teto rigido de ' \
+                                              "#{INSTRUCTION_BUDGET_CHARS} caracteres: o excedente e TRUNCADO e PERDIDO." },
             scaffold:          { type: 'string' },
             human_card:        { type: 'string' },
             greeting:          { type: 'string' },
             fallback_message:  { type: 'string' },
             handoff_rule:      { type: 'string' },
             starter_questions: { type: 'array', items: { type: 'string' } },
-            tone:              { type: 'string' },
+            tone:              { type: 'string',
+                                 description: 'UMA frase curta descrevendo o tom de voz (ex.: "cordial, direto e ' \
+                                              "objetivo\"). Teto rigido de #{TONE_BUDGET_CHARS} caracteres: o " \
+                                              'excedente e TRUNCADO e PERDIDO. Nao escreva paragrafos aqui.' },
             guardrails:        { type: 'array', items: { type: 'string' } },
             voice:             { type: 'string', enum: %w[feminina masculina] },
             needs_more_info:   { type: 'boolean' },
@@ -73,6 +86,10 @@ module Autonomia
         - PROIBIDO o travessão "—": use vírgula, dois-pontos ou ponto. Sem emojis (salvo se o usuário usar primeiro).
         - ABSORVER: se o usuário responder algo DIFERENTE do que você perguntou, registre essa informação e SIGA para a
           próxima lacuna. NUNCA re-pergunte o que já foi respondido, mesmo fora de ordem.
+        - PEDIDOS ACUMULAM (não substituem): se o usuário mandar um pedido NOVO sem responder a sua pergunta que ficou
+          aberta, isso NÃO é ordem de fechar e NÃO cancela a pergunta. APLIQUE o pedido novo E REPITA a pergunta pendente
+          em next_question (needs_more_info=true). Nenhum pedido pode ser descartado por ter chegado fora de ordem, e
+          nenhuma pergunta pendente pode sumir só porque veio outro assunto no meio.
         - FECHAR: se o usuário disser "pode fechar", "monte assim mesmo", "pode criar", "assim mesmo" ou "sem material",
           PARE de perguntar e FECHE (needs_more_info=false) com o melhor rascunho. Não insista em revisar.
         - Responda na língua do usuário.
@@ -165,6 +182,12 @@ module Autonomia
         - `guardrails`: lista curta, SEM repetir as regras já escritas em §7 (uma fonte da verdade por regra).
         - `voice`: gênero da VOZ do agente para responder em áudio quando o cliente manda áudio. Deduza da persona/nome:
           "feminina" ou "masculina". Na dúvida, use "feminina". (É só a voz do TTS; não muda o texto.)
+        - ORÇAMENTO DE CARACTERES (teto RÍGIDO da plataforma; o que exceder é TRUNCADO e PERDIDO, não "guardado"):
+          `tone` é UMA frase curta (mire ~100 caracteres, teto #{TONE_BUDGET_CHARS}) — NUNCA escreva parágrafo, lista
+          ou playbook no `tone`, isso é lugar da `instruction`. `instruction` deve caber em #{INSTRUCTION_BUDGET_CHARS}
+          caracteres. Os demais campos de texto (`scaffold`, `human_card`, `greeting`, `fallback_message`,
+          `handoff_rule`) também têm teto: seja conciso. Se o conteúdo não couber, CORTE o menos importante você mesmo,
+          em vez de deixar a plataforma cortar no meio de uma frase.
 
         ## 9. QUALIDADE E VERACIDADE
         Nunca invente fatos do negócio (use só o que o usuário disse + resumo dos materiais). Não copie a instrução crua
@@ -199,6 +222,12 @@ module Autonomia
           next_question vazio, TODOS os campos preenchidos: escopo ancorado em fatos (§7.1), blindagens (§7.6) embutidas,
           mapa de conhecimento e flag de confiabilidade do Revisor (§7.5) propagados. Se houver pendência (material que ficou
           de fora), AVISE em 1 frase no `human_card`, NÃO bloqueie.
+        - FECHOU COM LACUNA → DECLARE no `human_card`. Se você fechar com uma pergunta ESSENCIAL sem resposta (ex.: quais
+          dados o agente deve coletar antes de encaminhar), sem base de conhecimento confirmada, ou com material que ficou
+          de fora, escreva a lacuna em 1 frase simples no `human_card`: "fechei sem definir [o quê]; até você definir, ele
+          usa um padrão genérico nesse ponto". O dono SÓ enxerga o `human_card`: o que não estiver ali, ele não sabe que
+          ficou em branco. NUNCA descreva como definido aquilo que você preencheu com o padrão do tipo. Isto é AVISO, não
+          bloqueio: feche assim mesmo.
         - SE NÃO HOUVER material de conhecimento: só feche depois de confirmar com o usuário que pode criar sem base de
           conhecimento (ou ele pedir explicitamente para fechar). Não feche por conta própria um agente sem KB sem essa
           confirmação. O bloco "STATUS DOS MATERIAIS" no contexto interno diz o que já foi subido e se falta confirmar.
@@ -772,7 +801,39 @@ module Autonomia
       # trabalho do Construtor (nunca fala do usuário). Omite os que não se aplicam.
       def context_blocks
         [actuation_context, knowledge_intent_context, skeleton_context, opening_context, knowledge_context,
-         send_media_context, materials_status_context, turn_budget_context, adjust_context].compact_blank
+         send_media_context, materials_status_context, turn_budget_context, pending_request_context,
+         adjust_context].compact_blank
+      end
+
+      # PEDIDOS ACUMULAM (§4). Duas pendências morriam em silêncio:
+      #   (a) na MESMA sessão de AJUSTE: o dono manda um pedido NOVO sem responder a pergunta aberta e a
+      #       pergunta some (o gate determinístico de force_close? já não a atropela mais, mas o modelo
+      #       ainda precisa ser lembrado de que os dois pedidos valem);
+      #   (b) entre SESSÕES: cada abertura do Construtor cria uma thread NOVA, então a pergunta que ficou
+      #       sem resposta na sessão anterior era perdida. Ela agora é herdada em `pending_question`
+      #       (BuildThread#inherit_pending_question!) e reaparece aqui.
+      # Só o TEXTO da pergunta entra no bloco (não é IP). Vazio quando não há pendência.
+      def pending_request_context
+        question = pending_question
+        return '' if question.blank?
+
+        'CONTEXTO INTERNO (não é fala do usuário). PERGUNTA PENDENTE, ainda sem resposta: ' \
+          "\"#{question}\". Pedidos ACUMULAM: se a última fala do usuário trouxe um pedido NOVO sem " \
+          'responder esta pergunta, isso NÃO é ordem de fechar. APLIQUE o pedido novo E REPITA esta ' \
+          'pergunta em next_question (needs_more_info=true). Se a fala respondeu a pergunta, siga normal ' \
+          'e não a repita.'
+      end
+
+      # A pendência a repetir: primeiro a HERDADA da sessão anterior; senão, a pergunta viva desta thread
+      # — e esta só em AJUSTE. Na entrevista de CRIAÇÃO uma pergunta aberta por turno é o fluxo normal, e
+      # reinjetá-la a cada turno viraria loop (o oposto do teto de perguntas).
+      def pending_question
+        state = @thread.state.to_h
+        inherited = state['pending_question'].to_s.strip
+        return inherited if inherited.present?
+        return '' unless adjust_mode? && state['needs_more_info'] == true
+
+        state['next_question'].to_s.strip
       end
 
       # V2.1 — ATUAÇÃO (primeiro bloco: qualifica todos os seguintes). DADO de contexto, não fala do
@@ -864,13 +925,30 @@ module Autonomia
       # entrevista normal (nome, objetivo, escopo, limites) e feche quando tiver o essencial, assumindo
       # handoff a humano quando faltar informação. Vazio quando há base (fluxo atual) ou em AJUSTE.
       def knowledge_intent_context
-        return '' if adjust_mode? || with_knowledge?
+        # AJUSTE: a guarda estava INVERTIDA — suprimia justamente o bloco que PROÍBE perguntar sobre base
+        # de conhecimento, então TODO ajuste voltava a perguntar "posso criar sem base?" num agente que já
+        # existe e está rodando (travou as threads 24 e 28 em produção). O agente já foi criado: a decisão
+        # de base já aconteceu e não se pergunta de novo.
+        return adjust_knowledge_context if adjust_mode?
+        return '' if with_knowledge?
 
         'CONTEXTO INTERNO (não é fala do usuário). BASE DE CONHECIMENTO: o dono escolheu criar SEM base. ' \
           'NÃO peça documentos, FAQs ou materiais em nenhum momento. Conduza a entrevista normal (nome, ' \
           'objetivo, escopo, limites) e feche quando tiver o essencial; assuma que, faltando informação, ' \
           'o agente encaminha para um humano. NÃO pergunte se pode criar sem base de conhecimento: ' \
           'essa escolha já foi feita na abertura e o fechamento está autorizado sem essa confirmação.'
+      end
+
+      # MODO AJUSTE — bloco que APAGA de vez a pergunta de base de conhecimento. Em ajuste o agente já
+      # existe, já está em operação e já tem (ou não) base: reabrir esse assunto transforma um pedido de
+      # ajuste de 1 turno num interrogatório e trava a thread. Vale para as duas pontas do fluxo (aqui e
+      # no materials_status_context, que também emitia a cobrança "pergunte UMA vez").
+      def adjust_knowledge_context
+        'CONTEXTO INTERNO (não é fala do usuário). BASE DE CONHECIMENTO EM AJUSTE: o agente JÁ EXISTE e ' \
+          'já está em operação. NUNCA pergunte se pode criar/ajustar o agente sem base de conhecimento, ' \
+          'NÃO peça confirmação sobre base e NÃO peça documentos, FAQs ou materiais: essa etapa já passou ' \
+          'na criação. Aplique o ajuste pedido; se faltar algum detalhe, pergunte SOMENTE sobre o próprio ' \
+          'pedido de ajuste.'
       end
 
       # V2.1 — atuação escolhida na ABERTURA (state) tem prioridade: o agente-rascunho é criado no meio
@@ -922,21 +1000,60 @@ module Autonomia
 
       # Mapeia o JSON estruturado do Builder p/ colunas do Agent. instruction/scaffold ficam aqui
       # (ocultos) — o jbuilder é quem os filtra na fronteira da API.
-      def self.map_attributes(parsed)
+      #
+      # ORÇAMENTO DE CARACTERES: todo campo de texto passa por truncate_field ANTES de virar atributo.
+      # O ApplicationRecord valida o tamanho de TODA coluna string/text; sem isso, um `tone` de 400
+      # caracteres derrubava o apply inteiro com RecordInvalid e o dono perdia o AJUSTE em silêncio.
+      # Perder o excedente de um campo é muito melhor que perder o pedido inteiro. `truncated` (opcional)
+      # recebe os nomes dos campos que de fato foram cortados — nomes, NUNCA conteúdo.
+      def self.map_attributes(parsed, truncated: nil)
         {
-          name: parsed['name'].to_s.strip,
+          name: truncate_field(parsed['name'].to_s.strip, :name, truncated),
           agent_type: agent_type_for(parsed['agent_type']),
-          instruction: sanitize_citations(parsed['instruction'].to_s),
-          scaffold: parsed['scaffold'].to_s,
-          human_card: sanitize_citations(parsed['human_card'].to_s),
-          greeting: parsed['greeting'].to_s,
-          fallback_message: parsed['fallback_message'].to_s,
-          handoff_rule: parsed['handoff_rule'].to_s,
+          instruction: truncate_field(sanitize_citations(parsed['instruction'].to_s), :instruction, truncated),
+          scaffold: truncate_field(parsed['scaffold'].to_s, :scaffold, truncated),
+          human_card: truncate_field(sanitize_citations(parsed['human_card'].to_s), :human_card, truncated),
+          greeting: truncate_field(parsed['greeting'].to_s, :greeting, truncated),
+          fallback_message: truncate_field(parsed['fallback_message'].to_s, :fallback_message, truncated),
+          handoff_rule: truncate_field(parsed['handoff_rule'].to_s, :handoff_rule, truncated),
           starter_questions: Array(parsed['starter_questions']).map(&:to_s),
-          tone: parsed['tone'].to_s,
+          tone: truncate_field(parsed['tone'].to_s, :tone, truncated),
           config: { 'guardrails' => Array(parsed['guardrails']).map(&:to_s),
                     'voice' => (%w[feminina masculina].include?(parsed['voice'].to_s) ? parsed['voice'].to_s : 'feminina') }
         }
+      end
+
+      # Corta no LIMITE DE PALAVRA (sem reticências: o valor é usado como está pelo agente) quando o
+      # campo estoura o teto de gravação. Sem espaço na janela, cai no corte duro. Registra o nome do
+      # campo em `truncated` para o log/telemetria — o conteúdo NUNCA sai daqui.
+      def self.truncate_field(text, field, truncated = nil)
+        limit = write_limit_for(field)
+        return text if text.length <= limit
+
+        truncated << field.to_s if truncated
+        text.truncate(limit, separator: ' ', omission: '')
+      end
+
+      # Teto REAL de gravação por campo — o que o banco + ApplicationRecord de fato aceitam hoje.
+      # Resolvido em TEMPO DE CHAMADA (nunca no corpo da classe) para não amarrar ordem de autoload.
+      # `tone` é varchar (255) e o resto é text (20.000); quando fix/agent-field-limits estiver no ar,
+      # o model passa a declarar MAX_TONE_LENGTH/MAX_INSTRUCTION_LENGTH e estes tetos sobem sozinhos —
+      # sem esse merge, subir o teto aqui só trocaria o RecordInvalid de lugar.
+      def self.write_limit_for(field)
+        case field
+        when :tone        then agent_length_limit(:MAX_TONE_LENGTH) || ::ApplicationRecord::MAX_STRING_COLUMN_LENGTH
+        when :instruction then agent_length_limit(:MAX_INSTRUCTION_LENGTH) || ::ApplicationRecord::MAX_TEXT_COLUMN_LENGTH
+        when :name        then ::ApplicationRecord::MAX_STRING_COLUMN_LENGTH
+        else                   ::ApplicationRecord::MAX_TEXT_COLUMN_LENGTH
+        end
+      end
+
+      # Teto explícito declarado pelo model (fix/agent-field-limits), quando existir. nil = ainda não
+      # existe e vale o teto genérico do ApplicationRecord.
+      def self.agent_length_limit(const_name)
+        return nil unless Autonomia::Agents::Agent.const_defined?(const_name, false)
+
+        Autonomia::Agents::Agent.const_get(const_name, false)
       end
 
       # P2.4b — SANITIZA citações de busca web gravadas na instrução/human_card. Quando o web_search é
@@ -962,6 +1079,17 @@ module Autonomia
         {
           'needs_more_info' => parsed['needs_more_info'] == true,
           'next_question' => parsed['next_question'].to_s,
+          # Uma geração bem-sucedida LIMPA o resíduo da falha anterior (mark_ready! faz merge, não
+          # substitui). `applied` e `truncated_fields` nascem no piso conservador — só apply_to_agent,
+          # que de fato grava no agente, os sobrescreve.
+          'error' => nil,
+          'error_fields' => [],
+          'applied' => false,
+          'truncated_fields' => [],
+          # PENDÊNCIA HERDADA já foi entregue ao modelo neste turno (pending_request_context): zera para
+          # não repetir a mesma pergunta de sessões atrás para sempre. A pendência viva desta thread
+          # continua em `next_question`.
+          'pending_question' => '',
           'draft_config' => {
             'name' => parsed['name'].to_s,
             'agent_type' => agent_type_for(parsed['agent_type']),
@@ -1004,7 +1132,11 @@ module Autonomia
         #   - interview_budget_exhausted?: teto de perguntas atingido.
         # NÃO atropela o reorder: sem nenhum destes gatilhos, um needs_more_info=true segue como está e
         # o force_materials_gate! preserva o bloqueio quando há material genuinamente pendente.
-        parsed['needs_more_info'] = false if parsed['needs_more_info'] == true && force_close?
+        # `@forced_close` registra que ESTE turno foi fechado POR CIMA de um needs_more_info=true. É o
+        # sinal mais preciso de "fechou com pergunta pendente" (o modelo, com a conversa inteira à
+        # frente, ainda queria perguntar) e é consumido por declare_gaps! na hora de avisar o dono.
+        @forced_close = parsed['needs_more_info'] == true && force_close?
+        parsed['needs_more_info'] = false if @forced_close
 
         # Portão DURO de materiais (§12 da instrução-mãe + spec): se o modelo quis fechar mas há fontes
         # ainda não revisadas e o usuário não declarou estar sem material, força mais uma rodada de
@@ -1041,6 +1173,7 @@ module Autonomia
           # agente, derive um default pelo tipo em vez de deixar o agente vazio/"Novo agente" (T13).
           # Só no ramo final (needs_more_info=false); na entrevista o nome pode ficar em branco.
           parsed['name'] = default_agent_name(parsed) if parsed['name'].to_s.strip.blank?
+          declare_gaps!(parsed)
           apply_to_agent(token, parsed)
         end
       end
@@ -1072,8 +1205,18 @@ module Autonomia
       # GATE (P0): sinais determinísticos que FORÇAM o fechamento mesmo com o LLM devolvendo
       # needs_more_info=true. Reúne os três gatilhos de fechamento já usados por closing_phase? (que só
       # escolhe o reasoning_effort): intenção explícita do usuário, ramo SEM MATERIAL declarado e teto
-      # de perguntas. AJUSTE não entra aqui (não é entrevista — nunca está em needs_more_info=true).
+      # de perguntas.
+      #
+      # AJUSTE NUNCA entra aqui. O comentário antigo assumia que ajuste "nunca está em
+      # needs_more_info=true" — falso: o Construtor PODE (e deve) fazer uma pergunta de esclarecimento
+      # durante um ajuste. Quando isso acontecia, um pedido novo como "pode criar uma saudação nova"
+      # casava CLOSE_INTENT_PATTERNS (`pode criar`) — ou o teto de perguntas já estava estourado numa
+      # thread de ajuste longa — e o `true` do modelo virava `false`: a pergunta pendente era DESCARTADA
+      # e o pedido emendado se perdia. Em ajuste não há entrevista para destravar, então nenhum destes
+      # gatilhos faz sentido; a intenção real de fechar já é o caminho normal (needs_more_info=false).
       def force_close?
+        return false if adjust_mode?
+
         force_close_declared? || close_intent? || no_materials_declared? || interview_budget_exhausted?
       end
 
@@ -1088,6 +1231,64 @@ module Autonomia
         parsed['needs_more_info'] = true
         parsed['next_question'] = parsed['next_question'].to_s.presence ||
                                   'Preciso de um pouco mais de contexto para finalizar a configuração do agente. Pode detalhar melhor?'
+      end
+
+      # TRANSPARÊNCIA NO FECHAMENTO (defesa em profundidade, mesmo padrão de force_materials_gate! e
+      # reopen_if_incomplete_final!): fechar é DIREITO do dono e NÃO é bloqueado aqui — o que não pode é
+      # fechar em SILÊNCIO. Num agente real o portão §5.4 foi pulado: a pergunta "quais dados a agente
+      # deve coletar antes de encaminhar" ficou sem resposta, o buraco foi preenchido com a coleta
+      # genérica do tipo ("nome, cidade, melhor forma de contato") e o dono operou DIAS achando que tinha
+      # configurado a coleta. O `human_card` é o ÚNICO texto que ele vê sobre a config, então a lacuna é
+      # escrita ali AQUI, em código — sem depender de o modelo obedecer ao §12.
+      def declare_gaps!(parsed)
+        notes = [unanswered_question_note(parsed), no_knowledge_note].compact_blank
+        return if notes.empty?
+
+        parsed['human_card'] = [parsed['human_card'].to_s.strip, *notes].compact_blank.join(' ')
+      end
+
+      # LACUNA (a) — pergunta ESSENCIAL que ficou sem resposta. Cita a própria pergunta: é o que o dono
+      # precisa para saber o que reabrir, e o texto já é dele/do Construtor (não é IP oculto).
+      def unanswered_question_note(parsed)
+        question = unanswered_question(parsed)
+        return '' if question.blank?
+
+        "Fechei com esta pergunta ainda em aberto: \"#{question}\" Enquanto ela não for respondida em um " \
+          'ajuste, o agente usa um padrão genérico nesse ponto.'
+      end
+
+      # A pergunta pendente no fechamento, por dois caminhos DETERMINÍSTICOS:
+      #   - o modelo ainda queria perguntar neste turno e o gate sobrescreveu (@forced_close);
+      #   - havia pergunta aberta na virada do turno E a fala do usuário foi uma ORDEM de fechar
+      #     ("pode fechar"/"finaliza") ou o clique de avançar para a Revisão — nenhum dos dois RESPONDE
+      #     a pergunta, então ela segue em aberto.
+      # Fechamento natural do modelo (sem esses gatilhos) não declara nada: ali a pergunta foi respondida.
+      def unanswered_question(parsed)
+        live = @forced_close ? parsed['next_question'].to_s.strip : ''
+        return live if live.present?
+        return '' unless @forced_close || close_intent? || force_close_declared?
+
+        state = @thread.state.to_h
+        state['needs_more_info'] == true ? state['next_question'].to_s.strip : ''
+      end
+
+      # LACUNA (b) — §5.4: fechou SEM base de conhecimento e SEM a confirmação de que podia. Mesmas
+      # condições da cobrança "pergunte UMA vez" (materials_status_context): se o dono escolheu "sem
+      # base" na abertura ou declarou não ter material, a decisão foi DELE e não há lacuna nenhuma.
+      def no_knowledge_note
+        return '' unless no_knowledge_gap?
+
+        'Fechei sem base de conhecimento: quando faltar informação, o agente encaminha para uma pessoa. ' \
+          'Você pode adicionar materiais depois em um ajuste.'
+      end
+
+      # AJUSTE fica de fora: o agente já existe e a decisão de base já passou na criação (é a mesma
+      # regressão que knowledge_intent_context e materials_status_context evitam pelas outras pontas).
+      def no_knowledge_gap?
+        return false if adjust_mode? || no_materials_declared? || !with_knowledge?
+
+        agent = @thread.agent
+        agent.blank? || !agent.sources.knowledge_sources.exists?
       end
 
       # E1 — anexa a pergunta do Construtor como mensagem `assistant` persistida, para o build_input
@@ -1129,23 +1330,41 @@ module Autonomia
         agent = ensure_agent(token)
         return if agent.nil? # geração substituída (token perdido) ao garantir o agente: no-op
 
-        agent.apply_builder_config!(token, build_attributes(parsed))
+        attrs = build_attributes(parsed)
+        log_truncation
+        agent.apply_builder_config!(token, attrs)
         # #18 — marca ready INCONDICIONALMENTE: se a escrita não venceu por SUPERSEDE (existe um ajuste
         # mais NOVO do agente), o token DESTA thread ainda é válido → mark_ready! tira a thread de
         # `processing` (senão o front pollaria até timeout — regressão do supersede). Se não venceu por
         # TOKEN PERDIDO (uma geração mais nova DESTA thread assumiu), o guard de token do mark_ready!
         # reprova e isto vira no-op — a geração nova é quem marca ready. Idempotente nos dois casos.
-        @thread.mark_ready!(token, state: self.class.state_for(parsed))
+        @thread.mark_ready!(
+          token,
+          state: self.class.state_for(parsed).merge('applied' => true, 'truncated_fields' => @truncated_fields.to_a)
+        )
       end
 
       # V2.1 — mescla as escolhas da abertura (instance-level: precisam do @thread) sobre o mapa puro
       # do schema. actuation vira coluna; with_knowledge reflete no jsonb config (merge preserva o resto).
       # Sem escolhas → external + with_knowledge=true ⇒ atributos idênticos ao comportamento atual.
+      # `@truncated_fields` recolhe os campos que estouraram o teto de gravação neste apply.
       def build_attributes(parsed)
-        attrs = self.class.map_attributes(parsed)
+        @truncated_fields = []
+        attrs = self.class.map_attributes(parsed, truncated: @truncated_fields)
         attrs[:actuation] = builder_actuation
         attrs[:config] = (attrs[:config] || {}).merge('with_knowledge' => effective_with_knowledge)
         attrs
+      end
+
+      # Truncamento é PERDA de conteúdo gerado: precisa aparecer no log (e no state, via apply_to_agent)
+      # em vez de sumir. Só os NOMES dos campos — nunca o conteúdo (IP oculto/dado do cliente).
+      def log_truncation
+        return if @truncated_fields.blank?
+
+        Rails.logger.warn(
+          "[Autonomia::Agents::Builder] truncated_fields thread=#{@thread.id} " \
+          "agent=#{@thread.autonomia_agent_id} fields=#{@truncated_fields.join(',')}"
+        )
       end
 
       # #19 — evita DRIFT do with_knowledge em AJUSTE. Em ajuste (agente já tem instrução), se a thread
@@ -1279,7 +1498,10 @@ module Autonomia
           lines << 'Só feche a instrução (needs_more_info=false) quando os materiais estiverem revisados OU o usuário ' \
                    'declarou/confirmou não ter material.'
         end
-        if knowledge.empty? && !no_materials_declared? && with_knowledge?
+        # A cobrança "pergunte UMA vez se pode criar SEM base" é de CRIAÇÃO. Em AJUSTE o agente já existe
+        # (a decisão de base já foi tomada) e emiti-la fazia o Construtor reabrir a pergunta em todo
+        # ajuste de agente sem KB — a mesma regressão de knowledge_intent_context, pela outra ponta.
+        if knowledge.empty? && !no_materials_declared? && with_knowledge? && !adjust_mode?
           lines << 'NÃO há material de conhecimento. ANTES de fechar, pergunte UMA vez se pode criar o agente SEM base ' \
                    'de conhecimento (ela encaminha para um humano quando faltar informação) e só feche depois que o ' \
                    'usuário confirmar OU pedir explicitamente para fechar.'

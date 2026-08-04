@@ -64,6 +64,34 @@ module Autonomia
         self.state = merged
       end
 
+      # PENDÊNCIA QUE SOBREVIVE À SESSÃO. Cada abertura do Construtor cria uma thread NOVA (o painel de
+      # ajuste faz RESET do store e chama `start`), então a pergunta que ficou sem resposta na sessão
+      # anterior morria com a thread e o pedido do dono se perdia — ele reabria o Construtor e ninguém
+      # lembrava do assunto. Ao abrir uma thread já vinculada a um agente (AJUSTE), herdamos a pergunta
+      # aberta da última thread daquele agente como `pending_question`; o Builder a reinjeta via
+      # pending_request_context e a limpa no primeiro turno bem-sucedido (Builder.state_for).
+      # Só o TEXTO da pergunta é copiado — nada de draft_config/instruction (IP oculto).
+      #
+      # TODO: isto é a metade barata do problema. A retomada COMPLETA (reabrir a thread anterior, com
+      # histórico, em vez de abrir uma nova) exige endpoint de "thread aberta por agente" + mudança no
+      # store/FE, e está fora do escopo deste PR. Issue sugerida: "Construtor: retomar a thread de ajuste
+      # aberta em vez de criar uma nova a cada sessão".
+      def inherit_pending_question!
+        return if autonomia_agent_id.blank?
+
+        previous = self.class.where(account_id: account_id, autonomia_agent_id: autonomia_agent_id)
+                       .where.not(id: id).order(id: :desc).first
+        return if previous.blank?
+
+        previous_state = previous.state.to_h
+        return unless previous_state['needs_more_info'] == true
+
+        question = previous_state['next_question'].to_s.strip
+        return if question.blank?
+
+        update!(state: state.to_h.merge('pending_question' => question))
+      end
+
       # E3 — janela de "geração presa": o SubmitJob é síncrono e leva segundos; se a thread ficou
       # `processing` por mais tempo que isto, o job morreu/perdeu-se sem mark_failed! (o token-guard
       # impede qualquer escrita posterior). Passada a janela, reenvio/retry pode reassumir com um
@@ -113,8 +141,16 @@ module Autonomia
         guarded_update(token, status: self.class.statuses[:ready], state: new_state)
       end
 
-      def mark_failed!(token, message)
-        new_state = (self.state || {}).merge('error' => message.to_s.truncate(500))
+      # FALHA NUNCA SILENCIOSA: além do código do erro, guardamos QUAIS campos reprovaram na validação
+      # (`fields`) e `applied=false` — nada foi gravado no agente. O jbuilder expõe os três ao front, que
+      # troca o genérico "envie outra mensagem" por uma orientação real. `fields` são nomes de coluna,
+      # nunca conteúdo.
+      def mark_failed!(token, message, fields: [])
+        new_state = (self.state || {}).merge(
+          'error' => message.to_s.truncate(500),
+          'error_fields' => Array(fields).map(&:to_s).uniq,
+          'applied' => false
+        )
         guarded_update(token, status: self.class.statuses[:failed], state: new_state)
       end
 

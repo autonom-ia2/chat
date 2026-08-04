@@ -82,6 +82,18 @@
       "YOU": "Você",
       "INTRO": "Conte o que este agente deve fazer — descreva seu negócio e como ele deve ajudar. Vamos fazer algumas perguntas e montar para você.",
       "FAILED": "Algo deu errado ao montar seu agente. Envie outra mensagem para tentar de novo.",
+      "APPLY_FAILED": "NADA foi aplicado ao seu agente: a configuração gerada foi recusada na gravação, então seu pedido não ficou registrado. Peça o ajuste de novo, de forma mais curta e objetiva.",
+      "APPLY_FAILED_FIELDS": "NADA foi aplicado ao seu agente: {fields} passou do tamanho máximo permitido, então seu pedido não ficou registrado. Peça o ajuste de novo, de forma mais curta e objetiva.",
+      "ERROR_FIELDS": {
+        "TONE": "o tom de voz",
+        "INSTRUCTION": "a instrução",
+        "NAME": "o nome",
+        "GREETING": "a saudação",
+        "HUMAN_CARD": "o resumo",
+        "FALLBACK_MESSAGE": "a mensagem de fallback",
+        "HANDOFF_RULE": "a regra de passagem para humano",
+        "SCAFFOLD": "a configuração interna"
+      },
       "TIMEOUT": "Isto está demorando mais do que o esperado. Envie sua mensagem novamente.",
       "PLACEHOLDER": "Digite sua resposta…",
       "SEND": "Enviar",

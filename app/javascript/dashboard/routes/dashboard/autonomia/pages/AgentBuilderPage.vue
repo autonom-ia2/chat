@@ -53,6 +53,7 @@ const messages = useMapGetter('autonomiaBuildThreads/getMessages');
 const status = useMapGetter('autonomiaBuildThreads/getStatus');
 const phase = useMapGetter('autonomiaBuildThreads/getPhase');
 const buildError = useMapGetter('autonomiaBuildThreads/getError');
+const threadState = useMapGetter('autonomiaBuildThreads/getThreadState');
 const generatedAgent = useMapGetter('autonomiaBuildThreads/getAgent');
 const uiFlags = useMapGetter('autonomiaBuildThreads/getUIFlags');
 
@@ -102,13 +103,29 @@ const isSending = computed(
   () => uiFlags.value?.sending || uiFlags.value?.creating || isProcessing.value
 );
 
+// Human label for a field the backend rejected; falls back to the raw column name
+// when there is no translation for it.
+const fieldLabel = field => {
+  const key = `AGENTS.BUILDER.ERROR_FIELDS.${String(field).toUpperCase()}`;
+  const label = t(key);
+  return label === key ? field : label;
+};
+
 const errorMessage = computed(() => {
   if (buildError.value === 'timeout') return t('AGENTS.BUILDER.TIMEOUT');
   if (buildError.value === 'send') return t('AGENTS.BUILDER.SEND_ERROR');
-  if (buildError.value || status.value === 'failed') {
-    return t('AGENTS.BUILDER.FAILED');
+  if (!buildError.value && status.value !== 'failed') return null;
+  // The build reached the database and the write was REJECTED: nothing was applied
+  // and resending the same message would fail the same way. Say exactly that, and
+  // which field blew the limit — the generic "send another message" was the wrong
+  // instruction for a deterministic failure and cost owners days of silent loss.
+  if (threadState.value?.error === 'apply_failed') {
+    const fields = (threadState.value?.error_fields || []).map(fieldLabel);
+    return fields.length
+      ? t('AGENTS.BUILDER.APPLY_FAILED_FIELDS', { fields: fields.join(', ') })
+      : t('AGENTS.BUILDER.APPLY_FAILED');
   }
-  return null;
+  return t('AGENTS.BUILDER.FAILED');
 });
 
 // The composer clip stays available for the whole conversation (like any
