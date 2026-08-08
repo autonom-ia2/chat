@@ -63,4 +63,43 @@ RSpec.describe Crm::Ai::ContextBuilder do
     expect(messages.map { |m| m[:content] }).to contain_exactly('primeira conversa', 'segunda conversa')
     expect(messages.map { |m| m[:conversation_id] }).to contain_exactly(conversation.id, other.id)
   end
+
+  # Sem isto o follow-up anterior da IA volta como 'human_agent' (ele é entregue em nome do
+  # responsável) e o cérebro entende que uma pessoa do time perguntou algo e ficou sem resposta.
+  it 'labels a previous auto follow-up as the platform agent, not as a human' do
+    sent = add_message(content: 'conseguiu acessar o questionário?', type: :outgoing, sender: admin)
+    sent.update!(content_attributes: { 'crm_follow_up_id' => 1 })
+    add_message(content: 'resposta humana de verdade', type: :outgoing, sender: admin)
+
+    roles = described_class.new(card: card).perform[:recent_messages].map { |m| m[:role] }
+
+    expect(roles).to eq(%w[platform_agent human_agent])
+  end
+
+  it 'exposes who is handling the conversation now' do
+    conversation.update!(assignee: admin, status: :open)
+    add_message(content: 'vou aguardar', type: :incoming, sender: contact)
+    human_message = add_message(content: 'te retorno com o orcamento', type: :outgoing, sender: admin)
+    add_message(content: 'mensagem de bot', type: :outgoing, sender: create(:agent_bot, account: account))
+
+    state = described_class.new(card: card).perform[:conversation_state]
+
+    expect(state[:status]).to eq('open')
+    expect(state[:assigned_to_human]).to be(true)
+    expect(state[:last_human_agent_at]).to eq(human_message.created_at.iso8601)
+  end
+
+  # O follow-up sai com sender_type 'User'. Se ele contasse como fala humana, cada toque da IA
+  # renovaria o relógio e a conversa pareceria estar sendo conduzida por uma pessoa.
+  it 'ignores its own follow-up and private notes when timing the last human reply' do
+    conversation.update!(assignee: admin)
+    human_message = add_message(content: 'te retorno com o orcamento', type: :outgoing, sender: admin)
+    add_message(content: 'nota interna', type: :outgoing, sender: admin).update!(private: true)
+    add_message(content: 'follow-up automatico', type: :outgoing, sender: admin)
+      .update!(content_attributes: { 'crm_follow_up_id' => 1 })
+
+    state = described_class.new(card: card).perform[:conversation_state]
+
+    expect(state[:last_human_agent_at]).to eq(human_message.created_at.iso8601)
+  end
 end

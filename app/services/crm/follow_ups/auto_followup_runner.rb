@@ -70,6 +70,8 @@ module Crm
       # After this many CONSECUTIVE failures the cadence is finalized rather than
       # retried forever.
       MAX_RETRIES = 3
+      # Citação curta demais não prova nada ("ok", "sim") e casaria com quase qualquer conversa.
+      MIN_QUOTE_LENGTH = 15
 
       def initialize(follow_up:, now: Time.current)
         @follow_up = follow_up
@@ -88,7 +90,9 @@ module Crm
         # Single gate. Closure/satisfaction => stop the whole cadence; everything
         # else that fails the gate is a skip-safe no-send (still terminal => spent).
         return stop_closure if closure?(composition)
-        return skip(skip_reason(composition)) unless composable?(composition)
+
+        no_send = no_send_reason(composition)
+        return skip(no_send) if no_send.present?
 
         prepare_send_metadata(composition)
         return reschedule_for_cap if capped?
@@ -153,7 +157,7 @@ module Crm
         )
         context = Crm::Ai::ContextBuilder.new(card: @card).perform
 
-        Crm::Ai::FollowUpComposer.new(
+        composition = Crm::Ai::FollowUpComposer.new(
           card: @card,
           client: client,
           context: context,
@@ -161,6 +165,37 @@ module Crm
           candidates: @candidates,
           tone_instructions: config['tone_instructions'].to_s
         ).perform
+
+        verify_quote!(composition, context)
+        composition
+      end
+
+      # A regra anti-invenção do prompt manda a IA copiar um trecho LITERAL da conversa em
+      # open_loop_source. Até aqui ninguém conferia — o campo nem era lido pelo runner. Regra sem
+      # conferência não é regra: foi assim que "enviei o questionário para a análise da seguradora"
+      # virou "conseguiu acessar o questionário" na mensagem enviada ao cliente.
+      #
+      # Citação que não bate é tratada como falha de composição, não como decisão de não enviar:
+      # cai no retry limitado do fail_touch (o modelo pode acertar na próxima) em vez de virar
+      # mensagem para o cliente ou queimar o toque.
+      def verify_quote!(composition, context)
+        return unless Crm::Ai::Config::BOOLEAN.cast(composition['should_send'])
+        return if quoted_from_transcript?(composition, context)
+
+        raise Crm::Ai::ResponsesClient::Error, 'unverified_quote'
+      end
+
+      def quoted_from_transcript?(composition, context)
+        quote = normalize_for_quote(composition['open_loop_source'])
+        return false if quote.length < MIN_QUOTE_LENGTH
+
+        Array(context[:recent_messages]).any? { |message| normalize_for_quote(message[:content]).include?(quote) }
+      end
+
+      # Acento, caixa e espaçamento variam entre o que o modelo devolve e o que está gravado.
+      # Comparar cru reprovaria citação honesta.
+      def normalize_for_quote(text)
+        I18n.transliterate(text.to_s).downcase.gsub(/\s+/, ' ').strip
       end
 
       # The approved-template candidate set for this conversation inbox (native
@@ -189,6 +224,25 @@ module Crm
         true
       end
 
+      # Reúne os motivos de não-envio num lugar só, para o perform continuar linear.
+      def no_send_reason(composition)
+        return skip_reason(composition) unless composable?(composition)
+        return 'status_notice_already_sent' if repeated_status_notice?(composition)
+
+        nil
+      end
+
+      # Quando a próxima ação é NOSSA (ou de um terceiro que já acionamos), a mensagem não cobra o
+      # cliente: avisa o andamento. Esse aviso vale uma vez. Repetir "ainda estou aguardando" a cada
+      # toque é ruído, e o modelo não tem como lembrar que já avisou — quem lembra é o card.
+      def status_notice?(composition)
+        composition['message_kind'].to_s == 'aviso_andamento'
+      end
+
+      def repeated_status_notice?(composition)
+        status_notice?(composition) && Crm::Ai::Config::BOOLEAN.cast(state['status_notice_sent'])
+      end
+
       # Distinguishes the terminal skip reason for the drawer/timeline. closure is
       # handled separately (stop_closure); here we only reach a non-closure skip.
       def skip_reason(composition)
@@ -202,8 +256,20 @@ module Crm
       # Writes follow_up.metadata so the EXISTING MessageSender takes the branch we
       # already decided in @send_mode (it independently re-checks the window at send
       # time, and our mode mirrors that same MessagingWindow check).
+      # Auditoria da decisão: sem isto não dá para responder depois "por que essa mensagem saiu?".
+      # O que ficava gravado era só o texto enviado e o resultado do envio — nada do raciocínio.
+      def decision_audit(composition)
+        {
+          'next_action_owner' => composition['next_action_owner'].to_s,
+          'message_kind' => composition['message_kind'].to_s,
+          'open_loop' => composition['open_loop'].to_s,
+          'open_loop_source' => composition['open_loop_source'].to_s,
+          'confidence' => composition['confidence'].to_f
+        }
+      end
+
       def prepare_send_metadata(composition)
-        metadata = base_metadata
+        metadata = base_metadata.merge(decision_audit(composition))
         if @send_mode == :free_form
           metadata['message_body'] = composition['message_body'].to_s.strip
           metadata.delete('whatsapp_api_message_template_id')
@@ -338,6 +404,8 @@ module Crm
         # (contact-scoped query is authoritative; this covers follow-ups with no
         # contact_id). Utility/free_form sends are uncapped.
         updates['last_marketing_template_sent_at'] = now_iso if marketing_template_send?
+        # Marca só depois de a mensagem sair de fato: um aviso que falhou no envio não gasta a cota.
+        updates['status_notice_sent'] = true if base_metadata['message_kind'].to_s == 'aviso_andamento'
         merge_state!(updates)
         record_touch!('sent')
         # A successful send clears any prior consecutive-failure streak so a later
@@ -361,11 +429,15 @@ module Crm
       # tell DueProcessor to mark the follow_up done so the planner can re-evaluate.
       def fail_touch(error)
         attempts = increment_retries!
+        # Citação não conferida esgota o mesmo orçamento de tentativas de uma falha de rede, mas não
+        # pode ser registrada como se fosse: quem investigar depois precisa distinguir "a IA não
+        # provou o que afirmou" de "o WhatsApp caiu".
+        reason = error.to_s == 'unverified_quote' ? 'unverified_quote' : 'send_failed'
 
         if attempts >= MAX_RETRIES
           cancel_pending_siblings
-          merge_state!('active' => false, 'spent' => true, 'stopped_reason' => 'send_failed', 'next_due_at' => nil)
-          record_touch!('skipped', 'send_failed')
+          merge_state!('active' => false, 'spent' => true, 'stopped_reason' => reason, 'next_due_at' => nil)
+          record_touch!('skipped', reason)
           log_activity('ai_followup_failed', touch: touch, error: error.to_s, attempts: attempts, final: true)
           Result.failed_final(@follow_up, error)
         else

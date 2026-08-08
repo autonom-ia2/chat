@@ -4,6 +4,13 @@ module Crm
       MAX_RECENT_MESSAGES = 12
       MAX_MESSAGES_CAP = 40
 
+      # A legenda dos papéis mora junto de quem os produz (#role_for). Todo prompt que lê
+      # recent_messages descreve os papéis a partir daqui: foi a cópia divergente que fez o
+      # follow-up receber "human_agent" e ler uma instrução que só falava de "customer" e "agent".
+      ROLES_LEGEND = 'Cada mensagem tem um "role": "customer" (o cliente), "human_agent" (uma pessoa do time), ' \
+                     '"platform_agent" (agente de IA da plataforma, incluindo os follow-ups automáticos anteriores) ' \
+                     'ou "external_agent" (bot ou automação externa).'.freeze
+
       def initialize(card:)
         @card = card
       end
@@ -17,6 +24,7 @@ module Crm
             name: @card.stage&.name
           },
           known_attributes: known_attributes,
+          conversation_state: conversation_state,
           temporal: temporal_context
         }
       end
@@ -40,6 +48,44 @@ module Crm
         # compact_blank descartaria `false` (false.blank? == true), mas checkbox salvo como
         # false é valor real. Removemos só nil/""/coleções vazias, preservando false e 0.
         attributes.reject { |_key, value| value != false && value.blank? }
+      end
+
+      # Estado atual do atendimento. Os papéis por mensagem dizem QUEM falou; isto diz quem está com a
+      # conversa AGORA: resolvida por gente, atribuída a uma pessoa, e há quanto tempo um humano falou.
+      # Sem isso a IA decide retomar uma conversa que uma pessoa do time está conduzindo neste momento.
+      def conversation_state
+        conversation = latest_conversation
+        return {} if conversation.blank?
+
+        {
+          status: conversation.status,
+          assigned_to_human: conversation.assignee_id.present?,
+          last_human_agent_at: last_human_agent_at&.iso8601
+        }
+      end
+
+      # A conversa "corrente" do card quando há várias: a de atividade mais recente.
+      # account_id explícito nas duas queries abaixo: hoje só a validação de modelo impede um card de
+      # apontar para conversa de outra conta, e validação de aplicação não é barreira suficiente para
+      # vazamento entre clientes.
+      def latest_conversation
+        @latest_conversation ||= Conversation.where(id: conversation_ids, account_id: @card.account_id)
+                                             .reorder(last_activity_at: :desc).first
+      end
+
+      # Mesmos filtros do #role_for e do #latest_for, e pelo mesmo motivo: o follow-up automático sai
+      # com sender_type 'User', então sem excluí-lo cada toque da IA "renovava" o horário da última
+      # fala humana e a conversa parecia estar sendo conduzida por uma pessoa. Nota privada também
+      # fica de fora: ela nunca chega ao modelo em recent_messages, e contá-la aqui criaria um
+      # contexto que se contradiz.
+      def last_human_agent_at
+        Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
+                      sender_type: 'User', private: false)
+               .where.not(message_type: :activity)
+               .where("COALESCE(content_attributes ->> 'crm_follow_up_id', '') = ''")
+               .reorder(id: :desc)
+               .limit(1)
+               .pick(:created_at)
       end
 
       # Âncora temporal para a IA resolver datas relativas ("amanhã", "terça que vem") em data real.
@@ -109,6 +155,13 @@ module Crm
       # há 5 minutos" não é — e com role='agent' para todo mundo a IA não conseguia distinguir.
       def role_for(message)
         return 'customer' if message.incoming?
+        # O follow-up automático é entregue em nome do humano responsável (MessageSender usa
+        # created_by/assignee), então sem esta checagem a própria IA reaparece no transcript como
+        # "pessoa do time" e o cérebro conclui que houve pergunta humana sem resposta — foi o que
+        # fez a IA cobrar o mesmo cliente duas vezes pelo mesmo questionário.
+        # Continua sendo platform_agent, e não um quinto papel, porque o enum last_turn_owner do
+        # ScoreCalculator conhece só quatro.
+        return 'platform_agent' if message.content_attributes.to_h['crm_follow_up_id'].present?
 
         case message.sender_type
         when 'User' then 'human_agent'

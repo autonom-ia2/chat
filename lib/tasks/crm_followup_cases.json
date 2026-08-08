@@ -1,0 +1,251 @@
+[
+  {
+    "nome": "cliente disse que vai aguardar",
+    "agora": "2026-08-06T14:16",
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": [
+        "empresa",
+        "terceiro"
+      ],
+      "message_kind": "aviso_andamento"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Bom dia Marcos, desconsidere as mensagens anteriores, foram automaticas. Seu caso precisa de calculo por subscricao.",
+        "created_at": "2026-08-06T08:11:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Enviei um questionario para a analise da seguradora, e te retorno com um orcamento.",
+        "created_at": "2026-08-06T08:12:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Ok",
+        "created_at": "2026-08-06T08:12:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Vou aguardar",
+        "created_at": "2026-08-06T08:12:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Maravilha.",
+        "created_at": "2026-08-06T08:22:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "follow-up anterior da IA no historico",
+    "agora": "2026-08-07T11:00",
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": [
+        "empresa",
+        "terceiro"
+      ],
+      "message_kind": "aviso_andamento"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Ok",
+        "created_at": "2026-08-06T11:12:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Vou aguardar",
+        "created_at": "2026-08-06T11:12:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Maravilha.",
+        "created_at": "2026-08-06T11:22:00-03:00"
+      },
+      {
+        "role": "platform_agent",
+        "content": "Marcos, dando continuidade ao atendimento: conseguiu acessar o questionario enviado para a analise da seguradora?",
+        "created_at": "2026-08-06T17:16:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Boa tarde!",
+        "created_at": "2026-08-06T17:17:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Onde foi enviado?",
+        "created_at": "2026-08-06T17:18:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Boa tarde, peco desculpas, foi mensagem automatica.",
+        "created_at": "2026-08-06T17:21:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Estou aguardando o retorno",
+        "created_at": "2026-08-06T17:21:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "pedimos dado e o cliente sumiu",
+    "agora": "2026-08-06T15:30",
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Quero cotar um seguro para meu carro, um sedan 2022",
+        "created_at": "2026-08-06T09:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Perfeito! Me confirma o CEP onde o carro dorme e se tem garagem?",
+        "created_at": "2026-08-06T09:05:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Vou ver aqui",
+        "created_at": "2026-08-06T09:06:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Fico no aguardo do CEP para fechar a cotacao.",
+        "created_at": "2026-08-06T09:30:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "cliente perguntou e ninguem respondeu",
+    "agora": "2026-08-06T16:00",
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "empresa"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Segue a proposta em anexo, qualquer duvida me chama.",
+        "created_at": "2026-08-06T09:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "A franquia de 5 mil vale tambem para vidros?",
+        "created_at": "2026-08-06T09:40:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "?",
+        "created_at": "2026-08-06T11:00:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "encerrada e cliente satisfeito",
+    "agora": "2026-08-06T16:00",
+    "esperado": {
+      "should_send": "false",
+      "closure_detected": "true"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Apolice emitida e enviada para o seu e-mail. Qualquer coisa e so chamar!",
+        "created_at": "2026-08-06T10:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Recebi sim, muito obrigado pelo atendimento",
+        "created_at": "2026-08-06T10:02:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Ja indiquei voces pro meu irmao",
+        "created_at": "2026-08-06T10:03:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "cliente sem interesse",
+    "agora": "2026-08-06T16:00",
+    "esperado": {
+      "should_send": "false",
+      "closure_detected": "true"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Consegui uma condicao melhor, posso te enviar?",
+        "created_at": "2026-08-06T10:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Obrigado mas ja fechei em outro lugar",
+        "created_at": "2026-08-06T10:05:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Nao tenho mais interesse",
+        "created_at": "2026-08-06T10:05:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "depende de terceiro, prazo vencido",
+    "agora": "2026-08-06T17:00",
+    "esperado": {
+      "should_send": "true",
+      "message_kind": "aviso_andamento"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Consegue me passar o valor hoje?",
+        "created_at": "2026-08-06T08:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Consigo sim, mandei para a analise da seguradora e te retorno ainda hoje de manha.",
+        "created_at": "2026-08-06T08:05:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Combinado",
+        "created_at": "2026-08-06T08:06:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "bot respondeu, humano nao entrou",
+    "agora": "2026-08-06T18:00",
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "empresa"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Preciso de seguro para frota, sao 12 caminhoes",
+        "created_at": "2026-08-06T09:00:00-03:00"
+      },
+      {
+        "role": "platform_agent",
+        "content": "Ola! Que bom ter voce por aqui. Ja vou te ajudar.",
+        "created_at": "2026-08-06T09:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Alguem consegue falar comigo?",
+        "created_at": "2026-08-06T10:30:00-03:00"
+      }
+    ]
+  }
+]
