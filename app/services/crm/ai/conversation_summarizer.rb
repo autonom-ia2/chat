@@ -101,8 +101,7 @@ module Crm
         <<~PROMPT.strip
           Você resume conversas de atendimento/vendas em português do Brasil para um card de CRM.
           Produza um resumo objetivo (3 a 5 frases) com o contexto, o que o cliente quer, decisões e próximos passos.
-          #{ContextBuilder::ROLES_LEGEND} Deixe claro o que foi tratado por uma pessoa do time e o que foi
-          resposta automática: um resumo que trata bot e humano como a mesma coisa engana quem lê o card depois.
+          #{ContextBuilder::ROLES_LEGEND}
           Não invente informações. Responda apenas com JSON válido no schema solicitado.
         PROMPT
       end
