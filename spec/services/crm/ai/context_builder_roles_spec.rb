@@ -63,4 +63,17 @@ RSpec.describe Crm::Ai::ContextBuilder do
     expect(messages.map { |m| m[:content] }).to contain_exactly('primeira conversa', 'segunda conversa')
     expect(messages.map { |m| m[:conversation_id] }).to contain_exactly(conversation.id, other.id)
   end
+
+  it 'exposes who is handling the conversation now' do
+    conversation.update!(assignee: admin, status: :open)
+    add_message(content: 'vou aguardar', type: :incoming, sender: contact)
+    human_message = add_message(content: 'te retorno com o orcamento', type: :outgoing, sender: admin)
+    add_message(content: 'mensagem de bot', type: :outgoing, sender: create(:agent_bot, account: account))
+
+    state = described_class.new(card: card).perform[:conversation_state]
+
+    expect(state[:status]).to eq('open')
+    expect(state[:assigned_to_human]).to be(true)
+    expect(state[:last_human_agent_at]).to eq(human_message.created_at.iso8601)
+  end
 end

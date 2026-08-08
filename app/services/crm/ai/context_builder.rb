@@ -17,6 +17,7 @@ module Crm
             name: @card.stage&.name
           },
           known_attributes: known_attributes,
+          conversation_state: conversation_state,
           temporal: temporal_context
         }
       end
@@ -40,6 +41,33 @@ module Crm
         # compact_blank descartaria `false` (false.blank? == true), mas checkbox salvo como
         # false é valor real. Removemos só nil/""/coleções vazias, preservando false e 0.
         attributes.reject { |_key, value| value != false && value.blank? }
+      end
+
+      # Estado atual do atendimento. Os papéis por mensagem dizem QUEM falou; isto diz quem está com a
+      # conversa AGORA: resolvida por gente, atribuída a uma pessoa, e há quanto tempo um humano falou.
+      # Sem isso a IA decide retomar uma conversa que uma pessoa do time está conduzindo neste momento.
+      def conversation_state
+        conversation = latest_conversation
+        return {} if conversation.blank?
+
+        {
+          status: conversation.status,
+          assigned_to_human: conversation.assignee_id.present?,
+          last_human_agent_at: last_human_agent_at&.iso8601
+        }
+      end
+
+      # A conversa "corrente" do card quando há várias: a de atividade mais recente.
+      def latest_conversation
+        @latest_conversation ||= Conversation.where(id: conversation_ids).reorder(last_activity_at: :desc).first
+      end
+
+      def last_human_agent_at
+        Message.where(conversation_id: conversation_ids, sender_type: 'User')
+               .where.not(message_type: :activity)
+               .reorder(id: :desc)
+               .limit(1)
+               .pick(:created_at)
       end
 
       # Âncora temporal para a IA resolver datas relativas ("amanhã", "terça que vem") em data real.
