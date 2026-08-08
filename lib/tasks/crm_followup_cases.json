@@ -4,7 +4,10 @@
     "agora": "2026-08-06T14:16",
     "esperado": {
       "should_send": "true",
-      "next_action_owner": "empresa",
+      "next_action_owner": [
+        "empresa",
+        "terceiro"
+      ],
       "message_kind": "aviso_andamento"
     },
     "messages": [
@@ -40,7 +43,10 @@
     "agora": "2026-08-07T11:00",
     "esperado": {
       "should_send": "true",
-      "next_action_owner": "empresa",
+      "next_action_owner": [
+        "empresa",
+        "terceiro"
+      ],
       "message_kind": "aviso_andamento"
     },
     "messages": [

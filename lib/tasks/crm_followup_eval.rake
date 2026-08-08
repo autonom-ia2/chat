@@ -63,10 +63,15 @@ class FollowUpEvalCase
   end
 
   # Campo ausente no esperado significa "tanto faz" — só o que foi declarado é cobrado.
+  # O valor pode ser uma lista quando mais de uma resposta é igualmente aceitável: "empresa" e
+  # "terceiro" caem no MESMO caminho da matriz de decisão, e o modelo alterna entre os dois no mesmo
+  # caso. Cobrar um só transformaria a régua em alarme falso.
   def matches?(out)
     expected = @kase['esperado'].to_h
     %w[should_send closure_detected next_action_owner message_kind].all? do |field|
-      !expected.key?(field) || out[field].to_s == expected[field].to_s
+      next true unless expected.key?(field)
+
+      Array(expected[field]).map(&:to_s).include?(out[field].to_s)
     end
   end
 end
