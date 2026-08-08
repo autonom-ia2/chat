@@ -64,6 +64,18 @@ RSpec.describe Crm::Ai::ContextBuilder do
     expect(messages.map { |m| m[:conversation_id] }).to contain_exactly(conversation.id, other.id)
   end
 
+  # Sem isto o follow-up anterior da IA volta como 'human_agent' (ele é entregue em nome do
+  # responsável) e o cérebro entende que uma pessoa do time perguntou algo e ficou sem resposta.
+  it 'labels a previous auto follow-up as the platform agent, not as a human' do
+    sent = add_message(content: 'conseguiu acessar o questionário?', type: :outgoing, sender: admin)
+    sent.update!(content_attributes: { 'crm_follow_up_id' => 1 })
+    add_message(content: 'resposta humana de verdade', type: :outgoing, sender: admin)
+
+    roles = described_class.new(card: card).perform[:recent_messages].map { |m| m[:role] }
+
+    expect(roles).to eq(%w[platform_agent human_agent])
+  end
+
   it 'exposes who is handling the conversation now' do
     conversation.update!(assignee: admin, status: :open)
     add_message(content: 'vou aguardar', type: :incoming, sender: contact)

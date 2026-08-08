@@ -8,7 +8,8 @@ module Crm
       # recent_messages descreve os papéis a partir daqui: foi a cópia divergente que fez o
       # follow-up receber "human_agent" e ler uma instrução que só falava de "customer" e "agent".
       ROLES_LEGEND = 'Cada mensagem tem um "role": "customer" (o cliente), "human_agent" (uma pessoa do time), ' \
-                     '"platform_agent" (agente de IA da plataforma) ou "external_agent" (bot ou automação externa).'.freeze
+                     '"platform_agent" (agente de IA da plataforma, incluindo os follow-ups automáticos anteriores) ' \
+                     'ou "external_agent" (bot ou automação externa).'.freeze
 
       def initialize(card:)
         @card = card
@@ -143,6 +144,13 @@ module Crm
       # há 5 minutos" não é — e com role='agent' para todo mundo a IA não conseguia distinguir.
       def role_for(message)
         return 'customer' if message.incoming?
+        # O follow-up automático é entregue em nome do humano responsável (MessageSender usa
+        # created_by/assignee), então sem esta checagem a própria IA reaparece no transcript como
+        # "pessoa do time" e o cérebro conclui que houve pergunta humana sem resposta — foi o que
+        # fez a IA cobrar o mesmo cliente duas vezes pelo mesmo questionário.
+        # Continua sendo platform_agent, e não um quinto papel, porque o enum last_turn_owner do
+        # ScoreCalculator conhece só quatro.
+        return 'platform_agent' if message.content_attributes.to_h['crm_follow_up_id'].present?
 
         case message.sender_type
         when 'User' then 'human_agent'
