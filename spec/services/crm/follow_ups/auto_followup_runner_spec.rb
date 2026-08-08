@@ -157,6 +157,22 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     expect(follow_up.reload.metadata['retries']).to eq(1)
   end
 
+  # Citação não conferida gasta o mesmo orçamento de tentativas de uma falha de rede, mas precisa
+  # ficar registrada com o próprio nome — senão vira "send_failed" e ninguém investiga o certo.
+  it 'finalizes with its own reason when the quote never checks out' do
+    account, user = create_account_and_user
+    follow_up = setup_followup(account: account, user: user)
+    seed_transcript_line(follow_up)
+    follow_up.update!(metadata: follow_up.metadata.merge('retries' => 2))
+    stub_credential
+    stub_composition(status_notice.merge('open_loop_source' => 'frase que nunca foi dita nesta conversa'))
+
+    result = described_class.new(follow_up: follow_up, now: Time.current).perform
+
+    expect(result.status).to eq(:failed_final)
+    expect(follow_up.card.reload.metadata['ai']['auto_followup_state']['stopped_reason']).to eq('unverified_quote')
+  end
+
   it 'stays quiet on a second status notice for the same card' do
     account, user = create_account_and_user
     follow_up = setup_followup(account: account, user: user)

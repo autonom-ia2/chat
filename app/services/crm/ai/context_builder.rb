@@ -65,13 +65,24 @@ module Crm
       end
 
       # A conversa "corrente" do card quando há várias: a de atividade mais recente.
+      # account_id explícito nas duas queries abaixo: hoje só a validação de modelo impede um card de
+      # apontar para conversa de outra conta, e validação de aplicação não é barreira suficiente para
+      # vazamento entre clientes.
       def latest_conversation
-        @latest_conversation ||= Conversation.where(id: conversation_ids).reorder(last_activity_at: :desc).first
+        @latest_conversation ||= Conversation.where(id: conversation_ids, account_id: @card.account_id)
+                                             .reorder(last_activity_at: :desc).first
       end
 
+      # Mesmos filtros do #role_for e do #latest_for, e pelo mesmo motivo: o follow-up automático sai
+      # com sender_type 'User', então sem excluí-lo cada toque da IA "renovava" o horário da última
+      # fala humana e a conversa parecia estar sendo conduzida por uma pessoa. Nota privada também
+      # fica de fora: ela nunca chega ao modelo em recent_messages, e contá-la aqui criaria um
+      # contexto que se contradiz.
       def last_human_agent_at
-        Message.where(conversation_id: conversation_ids, sender_type: 'User')
+        Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
+                      sender_type: 'User', private: false)
                .where.not(message_type: :activity)
+               .where("COALESCE(content_attributes ->> 'crm_follow_up_id', '') = ''")
                .reorder(id: :desc)
                .limit(1)
                .pick(:created_at)

@@ -176,7 +176,7 @@ module Crm
           - Se não houver loop aberto real citável, defina should_send=false.
 
           ANTI-ALUCINAÇÃO (regra dura):
-          - O loop aberto DEVE estar comprovado por um trecho LITERAL copiado de uma mensagem da conversa em "open_loop_source".
+          - O loop aberto DEVE estar comprovado por um trecho LITERAL copiado de uma mensagem da conversa em "open_loop_source". Copie a frase inteira, não um pedaço solto: trecho curto ("ok", "pode mandar") não prova nada e é recusado.
           - Nunca invente fatos, nomes, valores, prazos ou contexto que não estejam na conversa.
           - Se should_send=false, deixe message_body curto/genérico e confidence baixa.
 

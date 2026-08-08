@@ -88,4 +88,18 @@ RSpec.describe Crm::Ai::ContextBuilder do
     expect(state[:assigned_to_human]).to be(true)
     expect(state[:last_human_agent_at]).to eq(human_message.created_at.iso8601)
   end
+
+  # O follow-up sai com sender_type 'User'. Se ele contasse como fala humana, cada toque da IA
+  # renovaria o relógio e a conversa pareceria estar sendo conduzida por uma pessoa.
+  it 'ignores its own follow-up and private notes when timing the last human reply' do
+    conversation.update!(assignee: admin)
+    human_message = add_message(content: 'te retorno com o orcamento', type: :outgoing, sender: admin)
+    add_message(content: 'nota interna', type: :outgoing, sender: admin).update!(private: true)
+    add_message(content: 'follow-up automatico', type: :outgoing, sender: admin)
+      .update!(content_attributes: { 'crm_follow_up_id' => 1 })
+
+    state = described_class.new(card: card).perform[:conversation_state]
+
+    expect(state[:last_human_agent_at]).to eq(human_message.created_at.iso8601)
+  end
 end

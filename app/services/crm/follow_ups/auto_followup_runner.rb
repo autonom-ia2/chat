@@ -429,11 +429,15 @@ module Crm
       # tell DueProcessor to mark the follow_up done so the planner can re-evaluate.
       def fail_touch(error)
         attempts = increment_retries!
+        # Citação não conferida esgota o mesmo orçamento de tentativas de uma falha de rede, mas não
+        # pode ser registrada como se fosse: quem investigar depois precisa distinguir "a IA não
+        # provou o que afirmou" de "o WhatsApp caiu".
+        reason = error.to_s == 'unverified_quote' ? 'unverified_quote' : 'send_failed'
 
         if attempts >= MAX_RETRIES
           cancel_pending_siblings
-          merge_state!('active' => false, 'spent' => true, 'stopped_reason' => 'send_failed', 'next_due_at' => nil)
-          record_touch!('skipped', 'send_failed')
+          merge_state!('active' => false, 'spent' => true, 'stopped_reason' => reason, 'next_due_at' => nil)
+          record_touch!('skipped', reason)
           log_activity('ai_followup_failed', touch: touch, error: error.to_s, attempts: attempts, final: true)
           Result.failed_final(@follow_up, error)
         else
