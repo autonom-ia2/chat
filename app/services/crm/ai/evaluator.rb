@@ -18,6 +18,8 @@ module Crm
 
         classification = classify_stage
         result = apply_classification(classification)
+        refresh_post_classification_context!
+        classification = refresh_handoff_classification_if_needed(classification, result)
         run_handoff(classification)
         run_callback(classification)
         run_attribute_extraction(classification)
@@ -49,8 +51,8 @@ module Crm
         false
       end
 
-      def classify_stage
-        MediaEnricher.new(card: @card).perform if Config.media_enabled?
+      def classify_stage(enrich_media: true)
+        MediaEnricher.new(card: @card).perform if enrich_media && Config.media_enabled?
         # cache_key_scope: :feature — o prefixo do classify é conta-agnóstico (StageClassifier#instructions),
         # então roteamos por feature só (sem account) p/ consolidar o hit-rate de cache entre contas.
         client = ResponsesClient.new(
@@ -78,6 +80,31 @@ module Crm
 
       def handoff_config
         @handoff_config ||= Config.handoff_settings(@card.stage, @card.pipeline)
+      end
+
+      def refresh_post_classification_context!
+        @card.reload
+        @handoff_config = nil
+      end
+
+      def refresh_handoff_classification_if_needed(classification, result)
+        return classification unless result.status == :auto_moved
+        return classification if handoff_requested?(classification[:handoff])
+        return classification unless handoff_config[:enabled]
+
+        handoff_classification = classify_stage(enrich_media: false)
+        classification.merge(handoff: handoff_classification[:handoff])
+      end
+
+      def handoff_requested?(handoff)
+        return false if handoff.blank?
+
+        data = handoff.respond_to?(:with_indifferent_access) ? handoff.with_indifferent_access : handoff.to_h
+        intent = data[:intent].to_s
+        return true if intent == 'transferir'
+        return false if %w[continuar consultar].include?(intent)
+
+        ActiveModel::Type::Boolean.new.cast(data[:should_handoff])
       end
 
       def eligible_agent_names
