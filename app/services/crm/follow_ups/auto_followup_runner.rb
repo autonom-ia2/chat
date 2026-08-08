@@ -88,7 +88,9 @@ module Crm
         # Single gate. Closure/satisfaction => stop the whole cadence; everything
         # else that fails the gate is a skip-safe no-send (still terminal => spent).
         return stop_closure if closure?(composition)
-        return skip(skip_reason(composition)) unless composable?(composition)
+
+        no_send = no_send_reason(composition)
+        return skip(no_send) if no_send.present?
 
         prepare_send_metadata(composition)
         return reschedule_for_cap if capped?
@@ -189,6 +191,25 @@ module Crm
         true
       end
 
+      # Reúne os motivos de não-envio num lugar só, para o perform continuar linear.
+      def no_send_reason(composition)
+        return skip_reason(composition) unless composable?(composition)
+        return 'status_notice_already_sent' if repeated_status_notice?(composition)
+
+        nil
+      end
+
+      # Quando a próxima ação é NOSSA (ou de um terceiro que já acionamos), a mensagem não cobra o
+      # cliente: avisa o andamento. Esse aviso vale uma vez. Repetir "ainda estou aguardando" a cada
+      # toque é ruído, e o modelo não tem como lembrar que já avisou — quem lembra é o card.
+      def status_notice?(composition)
+        composition['message_kind'].to_s == 'aviso_andamento'
+      end
+
+      def repeated_status_notice?(composition)
+        status_notice?(composition) && Crm::Ai::Config::BOOLEAN.cast(state['status_notice_sent'])
+      end
+
       # Distinguishes the terminal skip reason for the drawer/timeline. closure is
       # handled separately (stop_closure); here we only reach a non-closure skip.
       def skip_reason(composition)
@@ -204,6 +225,8 @@ module Crm
       # time, and our mode mirrors that same MessagingWindow check).
       def prepare_send_metadata(composition)
         metadata = base_metadata
+        metadata['next_action_owner'] = composition['next_action_owner'].to_s
+        metadata['message_kind'] = composition['message_kind'].to_s
         if @send_mode == :free_form
           metadata['message_body'] = composition['message_body'].to_s.strip
           metadata.delete('whatsapp_api_message_template_id')
@@ -338,6 +361,8 @@ module Crm
         # (contact-scoped query is authoritative; this covers follow-ups with no
         # contact_id). Utility/free_form sends are uncapped.
         updates['last_marketing_template_sent_at'] = now_iso if marketing_template_send?
+        # Marca só depois de a mensagem sair de fato: um aviso que falhou no envio não gasta a cota.
+        updates['status_notice_sent'] = true if base_metadata['message_kind'].to_s == 'aviso_andamento'
         merge_state!(updates)
         record_touch!('sent')
         # A successful send clears any prior consecutive-failure streak so a later

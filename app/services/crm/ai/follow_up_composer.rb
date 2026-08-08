@@ -82,11 +82,22 @@ module Crm
                 additionalProperties: false
               }
             },
+            next_action_owner: {
+              type: 'string',
+              enum: %w[cliente empresa terceiro],
+              description: 'De quem é a PRÓXIMA ação combinada na conversa. "empresa" na dúvida.'
+            },
+            message_kind: {
+              type: 'string',
+              enum: %w[cobranca aviso_andamento],
+              description: 'cobranca = retoma pedindo algo ao cliente. aviso_andamento = informa que seguimos ' \
+                           'aguardando, sem pedir nada.'
+            },
             tone: { type: 'string', enum: %w[friendly neutral helpful] },
             confidence: { type: 'number', minimum: 0, maximum: 1 }
           },
           required: %w[should_send closure_detected open_loop open_loop_source message_body chosen_template
-                       template_variables tone confidence],
+                       template_variables next_action_owner message_kind tone confidence],
           additionalProperties: false
         }
       }.freeze
@@ -154,6 +165,8 @@ module Crm
           Você é o cérebro de follow-up em português do Brasil para retomar conversas de vendas/atendimento que ficaram paradas, "de onde a conversa parou".
           Responda apenas com JSON válido no schema solicitado.
 
+          #{turn_owner_rules}
+
           PORTÃO ÚNICO — decida should_send (vale a pena dar follow agora?):
           - Encontre UM único loop aberto real na conversa: o cliente perguntou/pediu e não foi respondido; prometemos algo e não enviamos; havia uma decisão pendente e o cliente sumiu depois que perguntamos.
           - #{ContextBuilder::ROLES_LEGEND} "last_message_role" repete o papel da última mensagem. Quem falou por último NÃO define, sozinho, de quem é a pendência — leia a conversa.
@@ -197,9 +210,35 @@ module Crm
 
           #{mode_instructions}
 
+          Este modo é um retorno que o cliente pediu, não um follow-up por silêncio: preencha
+          next_action_owner="empresa" (o retorno é nosso) e message_kind="cobranca". O CallbackRunner não lê
+          esses dois campos — eles existem só porque o schema é compartilhado com o follow-up.
+
           "tone" friendly/neutral/helpful. "confidence" (0.0 a 1.0) reflete o quão adequado é retomar agora.
           #{tone_instructions_line}
         PROMPT
+      end
+
+      # "Tem assunto em aberto?" não basta: no caso que originou esta regra o assunto estava aberto e
+      # a pendência era NOSSA — o cliente tinha respondido "vou aguardar". Por isso a vez vem antes do
+      # portão, e a dúvida cai para "empresa": errar para o lado de avisar é bem menos pior que cobrar
+      # o cliente por algo que ele não deve.
+      def turn_owner_rules
+        <<~RULES.strip
+          PRIMEIRA PERGUNTA — de quem é a vez (next_action_owner):
+          - "cliente": nós perguntamos ou pedimos algo e ele não respondeu.
+          - "empresa": nós prometemos algo e não entregamos, ou o cliente perguntou e não foi respondido.
+          - "terceiro": o que falta depende de alguém fora da conversa (seguradora, banco, fornecedor) e nós já acionamos.
+          - Confirmação passiva do cliente ("ok", "beleza", "combinado", "vou aguardar", "fico no aguardo") logo depois de uma promessa nossa significa "empresa". Isso NÃO é o cliente sumindo.
+          - Na dúvida, escolha "empresa". Nunca cobre o cliente por algo que pode ser nosso.
+
+          SEGUNDA PERGUNTA — o que escrever (message_kind):
+          - Se a vez é do "cliente": message_kind="cobranca". Escreva o follow-up retomando o ponto que ficou em aberto.
+          - Se a vez é da "empresa" ou de "terceiro": NÃO cobre e NÃO peça nada.
+            · Prazo que prometemos ainda não venceu → should_send=false.
+            · Prazo já venceu → message_kind="aviso_andamento" e escreva um aviso curto de andamento, sem novidade inventada e sem pedido (ex.: "ainda estou com a seguradora; assim que retornar eu te trago o orçamento").
+          - PRAZO: se a conversa disser o prazo ("te retorno hoje", "até amanhã", "na segunda"), use o que foi dito. Se não disser, considere vencido quando a última mensagem do cliente já estiver mais antiga que o intervalo entre os toques.
+        RULES
       end
 
       def mode_instructions

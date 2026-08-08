@@ -15,6 +15,15 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     }
   end
 
+  # A vez é nossa (ou de um terceiro): a IA avisa o andamento em vez de cobrar.
+  let(:status_notice) do
+    {
+      'should_send' => true, 'closure_detected' => false, 'confidence' => 0.9,
+      'next_action_owner' => 'terceiro', 'message_kind' => 'aviso_andamento',
+      'message_body' => 'Ainda estou com a seguradora; assim que retornar eu te trago o orçamento.'
+    }
+  end
+
   def native_candidate(category)
     { kind: 'native', name: "tpl_#{category}", id: nil, language: 'pt_BR',
       body: 'Oi {{1}}', variables: ['1'], category: category }
@@ -89,6 +98,50 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     expect(result.status).not_to eq(:rescheduled)
     expect(result.status).to eq(:skipped)
     expect(follow_up.reload.metadata['template_category']).to eq('utility')
+  end
+
+  def stub_credential
+    allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(
+      instance_double(Crm::Ai::CredentialResolver,
+                      resolve: { api_key: 'sk-test', api_base: 'https://api.openai.com', source: :system })
+    )
+  end
+
+  def stub_composition(payload)
+    allow(Crm::Ai::FollowUpComposer).to receive(:new)
+      .and_return(instance_double(Crm::Ai::FollowUpComposer, perform: payload))
+  end
+
+  it 'sends the status notice once and records it on the card' do
+    account, user = create_account_and_user
+    follow_up = setup_followup(account: account, user: user)
+    stub_credential
+    stub_composition(status_notice)
+    allow(Crm::FollowUps::MessageSender).to receive(:new).and_return(
+      instance_double(Crm::FollowUps::MessageSender, perform: Crm::FollowUps::MessageSender::Result.sent(nil))
+    )
+
+    result = described_class.new(follow_up: follow_up, now: Time.current).perform
+
+    expect(result.status).to eq(:sent)
+    expect(follow_up.reload.metadata['message_kind']).to eq('aviso_andamento')
+    expect(follow_up.card.reload.metadata['ai']['auto_followup_state']['status_notice_sent']).to be(true)
+  end
+
+  it 'stays quiet on a second status notice for the same card' do
+    account, user = create_account_and_user
+    follow_up = setup_followup(account: account, user: user)
+    card = follow_up.card
+    card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'status_notice_sent' => true } } })
+    stub_credential
+    stub_composition(status_notice)
+
+    result = nil
+    expect { result = described_class.new(follow_up: follow_up, now: Time.current).perform }
+      .not_to change(Message, :count)
+
+    expect(result.status).to eq(:skipped)
+    expect(card.reload.metadata['ai']['auto_followup_state']['stopped_reason']).to eq('status_notice_already_sent')
   end
 
   def setup_followup(account:, user:)
