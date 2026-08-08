@@ -4,6 +4,12 @@ module Crm
       MAX_RECENT_MESSAGES = 12
       MAX_MESSAGES_CAP = 40
 
+      # A legenda dos papéis mora junto de quem os produz (#role_for). Todo prompt que lê
+      # recent_messages descreve os papéis a partir daqui: foi a cópia divergente que fez o
+      # follow-up receber "human_agent" e ler uma instrução que só falava de "customer" e "agent".
+      ROLES_LEGEND = 'Cada mensagem tem um "role": "customer" (o cliente), "human_agent" (uma pessoa do time), ' \
+                     '"platform_agent" (agente de IA da plataforma) ou "external_agent" (bot ou automação externa).'.freeze
+
       def initialize(card:)
         @card = card
       end

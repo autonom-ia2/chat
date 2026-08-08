@@ -20,6 +20,10 @@ module Crm::Ai::ClassifierPrompt
     COMO CLASSIFICAR:
     - Leia o conjunto: o resumo (visão histórica) e as mensagens recentes (sinal mais atual).
       Em conflito, dê mais peso ao sinal mais recente, pois reflete o momento real do negócio.
+    - #{Crm::Ai::ContextBuilder::ROLES_LEGEND}
+      Resposta automática não é evidência de avanço no funil: saudação ou confirmação enviada por
+      "platform_agent"/"external_agent" não move o card. Exija evidência vinda do cliente ou de uma
+      pessoa do time.
     - Para cada estágio fornecido, compare os "criteria" com as evidências da conversa e escolha
       o estágio cujos critérios são satisfeitos pelas evidências mais fortes e mais recentes.
     - Classifique o card no estágio em que ele REALMENTE está pela conversa, não onde "deveria".
