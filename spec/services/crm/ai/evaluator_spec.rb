@@ -131,6 +131,155 @@ RSpec.describe Crm::Ai::Evaluator do
     expect(contact.reload.custom_attributes).to include('sw_cidade' => 'Guarapuava')
   end
 
+  it 'uses the destination stage handoff settings after an automatic move' do
+    account, admin = create_account_and_user
+    agent = create(:user, account: account)
+    inbox = create_crm_inbox(account: account, members: [agent])
+    contact = create(:contact, account: account)
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
+    pipeline, source_stage = create_crm_pipeline(account: account, user: admin)
+    pipeline.update!(
+      metadata: {
+        'ai' => {
+          'enabled' => true,
+          'auto_move_enabled' => true,
+          'handoff' => { 'enabled' => false }
+        }
+      }
+    )
+    target_stage = create_crm_stage(account: account, pipeline: pipeline, name: 'Em atendimento', position: 1)
+    target_stage.update!(
+      metadata: {
+        'ai_criteria' => 'Cliente precisa de atendimento humano',
+        'ai_handoff' => {
+          'enabled' => true,
+          'handoff_mode' => 'r2_direct',
+          'pool_type' => 'user',
+          'pool_id' => agent.id,
+          'prefer_online' => false
+        }
+      }
+    )
+    card = account.crm_cards.create!(
+      pipeline: pipeline,
+      stage: source_stage,
+      title: 'Lead',
+      contact: contact,
+      inbox: inbox,
+      primary_conversation: conversation,
+      currency: 'BRL'
+    )
+
+    stub_crm_ai_credential
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    first_classifier = instance_double(
+      Crm::Ai::StageClassifier,
+      perform: classification_for(target_stage, handoff: nil, reasoning: 'Move para atendimento')
+    )
+    handoff_classifier = instance_double(
+      Crm::Ai::StageClassifier,
+      perform: classification_for(
+        target_stage,
+        handoff: { intent: 'transferir', should_handoff: true, reason: 'Gatilho da etapa atendido', suggested_agent: nil },
+        reasoning: 'Transferir para humano'
+      )
+    )
+
+    expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(handoff_enabled: false)).ordered
+                                                      .and_return(first_classifier)
+    expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(handoff_enabled: true)).ordered
+                                                      .and_return(handoff_classifier)
+
+    result = described_class.new(card: card).perform
+
+    expect(result.status).to eq(:auto_moved)
+    expect(card.reload.stage_id).to eq(target_stage.id)
+    expect(conversation.reload.assignee_id).to eq(agent.id)
+  end
+
+  it 'does not assign after an automatic move to a stage without handoff enabled' do
+    account, admin = create_account_and_user
+    agent = create(:user, account: account)
+    inbox = create_crm_inbox(account: account, members: [agent])
+    contact = create(:contact, account: account)
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
+    pipeline, source_stage = create_crm_pipeline(account: account, user: admin)
+    pipeline.update!(metadata: { 'ai' => { 'enabled' => true, 'auto_move_enabled' => true, 'handoff' => { 'enabled' => false } } })
+    target_stage = create_crm_stage(account: account, pipeline: pipeline, name: 'Em atendimento', position: 1)
+    target_stage.update!(metadata: { 'ai_criteria' => 'Cliente precisa de atendimento humano' })
+    card = account.crm_cards.create!(
+      pipeline: pipeline,
+      stage: source_stage,
+      title: 'Lead',
+      contact: contact,
+      inbox: inbox,
+      primary_conversation: conversation,
+      currency: 'BRL'
+    )
+
+    stub_crm_ai_credential
+    classifier = instance_double(
+      Crm::Ai::StageClassifier,
+      perform: classification_for(target_stage, handoff: nil, reasoning: 'Move para atendimento')
+    )
+    expect(Crm::Ai::StageClassifier).to receive(:new).once.and_return(classifier)
+
+    result = described_class.new(card: card).perform
+
+    expect(result.status).to eq(:auto_moved)
+    expect(card.reload.stage_id).to eq(target_stage.id)
+    expect(conversation.reload.assignee_id).to be_nil
+  end
+
+  it 'keeps handoff behavior when the card stays in the current stage' do
+    account, admin = create_account_and_user
+    agent = create(:user, account: account)
+    inbox = create_crm_inbox(account: account, members: [agent])
+    contact = create(:contact, account: account)
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    pipeline.update!(metadata: { 'ai' => { 'enabled' => true, 'auto_move_enabled' => true } })
+    stage.update!(
+      metadata: {
+        'ai_criteria' => 'Atendimento humano',
+        'ai_handoff' => {
+          'enabled' => true,
+          'handoff_mode' => 'r2_direct',
+          'pool_type' => 'user',
+          'pool_id' => agent.id,
+          'prefer_online' => false
+        }
+      }
+    )
+    card = account.crm_cards.create!(
+      pipeline: pipeline,
+      stage: stage,
+      title: 'Lead',
+      contact: contact,
+      inbox: inbox,
+      primary_conversation: conversation,
+      currency: 'BRL'
+    )
+
+    stub_crm_ai_credential
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    classifier = instance_double(
+      Crm::Ai::StageClassifier,
+      perform: classification_for(
+        stage,
+        handoff: { intent: 'transferir', should_handoff: true, reason: 'Gatilho atendido', suggested_agent: nil },
+        reasoning: 'Permanece em atendimento'
+      )
+    )
+    expect(Crm::Ai::StageClassifier).to receive(:new).once.with(hash_including(handoff_enabled: true)).and_return(classifier)
+
+    result = described_class.new(card: card).perform
+
+    expect(result.status).to eq(:skipped)
+    expect(result.error).to eq('same_stage')
+    expect(conversation.reload.assignee_id).to eq(agent.id)
+  end
+
   it 'passes an empty attribute schema and does not call the applier when the gate is disabled' do
     ENV['CRM_AI_ATTR_EXTRACTION'] = 'false'
     account, admin = create_account_and_user
@@ -168,5 +317,25 @@ RSpec.describe Crm::Ai::Evaluator do
     expect(Crm::Ai::AttributeExtractorApplier).not_to receive(:new)
 
     described_class.new(card: card).perform
+  end
+
+  def stub_crm_ai_credential
+    allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(
+      instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'test', api_base: 'https://api.openai.com' })
+    )
+  end
+
+  def classification_for(stage, handoff:, reasoning:)
+    {
+      suggested_stage_id: stage.id,
+      confidence: 0.95,
+      reasoning: reasoning,
+      value: nil,
+      handoff: handoff,
+      callback_request: nil,
+      extracted_attributes: { contact: [], conversation: [] },
+      score_signals: {},
+      model_used: 'gpt-5.4-mini'
+    }
   end
 end
