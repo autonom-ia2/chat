@@ -29,7 +29,6 @@ const form = reactive({
   stageCriteria: {},
   autoFollowup: {
     enabled: false,
-    triggerIdleHours: 6,
     maxTouches: 3,
     intervalsHours: [20, 72, 168],
     quietHours: { start: 8, end: 20, tz: 'contact' },
@@ -84,7 +83,6 @@ const loadSettings = async () => {
       : [20, 72, 168];
     form.autoFollowup = {
       enabled: followup.enabled === true,
-      triggerIdleHours: Number(followup.trigger_idle_hours ?? 6),
       maxTouches: Number(followup.max_touches ?? 3),
       intervalsHours: intervals,
       quietHours: {
@@ -121,7 +119,6 @@ const saveSettings = async ({ silent = false } = {}) => {
         stale_hours: form.staleHours,
         auto_followup: {
           enabled: form.autoFollowup.enabled,
-          trigger_idle_hours: form.autoFollowup.triggerIdleHours,
           max_touches: form.autoFollowup.maxTouches,
           intervals_hours: form.autoFollowup.intervalsHours,
           quiet_hours: {

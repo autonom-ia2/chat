@@ -38,7 +38,6 @@ module Crm
 
       DEFAULT_AUTO_FOLLOWUP = {
         'enabled' => false,
-        'trigger_idle_hours' => 6,
         'max_touches' => 3,
         'intervals_hours' => [20, 72, 168],
         'quiet_hours' => { 'start' => 8, 'end' => 20, 'tz' => 'contact' },

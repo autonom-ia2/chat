@@ -55,7 +55,7 @@ module Crm
         # agente de IA no comando NÃO bloqueia mais a cadência — a guarda `native_agent_active?` foi
         # removida (contas só-IA, como a 6, PRECISAM de follow-up).
         return false unless Crm::FollowUps::MessagingWindow.new(conversation, at: @now).whatsapp_capable?
-        return false if cadence_active?(card) || cadence_spent?(card)
+        return false if cadence_active?(card) || cadence_spent?(card) || opted_out?(card)
         return false if pending_callback?(card)
         return false unless sufficient_two_way_exchange?(conversation)
 
@@ -101,6 +101,18 @@ module Crm
       # manual RESET (which clears spent) re-arms a new cycle.
       def cadence_spent?(card)
         card.metadata.to_h.dig('ai', 'auto_followup_state', 'spent') == true
+      end
+
+      # Pedido de opt-out é revogação permanente, não pausa de um ciclo: sem esta guarda o cliente
+      # respondia SAIR, a cadência morria, e a varredura seguinte re-armava tudo do zero — inclusive
+      # zerando a própria marca de opt-out em #write_state. Quem quiser voltar a acionar o card usa o
+      # RESET manual do drawer (cards_controller#reset_auto_followup), que limpa a marca de propósito.
+      # BOOLEAN.cast e não `== true`: o valor vem de jsonb e o runner (auto_followup_runner) já lê o
+      # mesmo campo de forma permissiva. Com igualdade estrita, um "true" string vindo de backfill ou
+      # de round-trip externo faria a guarda de LGPD falhar ABERTA — silenciosamente re-armando quem
+      # pediu para sair. Numa guarda de consentimento, a falha tem que ser para o lado fechado.
+      def opted_out?(card)
+        Crm::Ai::Config::BOOLEAN.cast(card.metadata.to_h.dig('ai', 'auto_followup_state', 'opted_out'))
       end
 
       def create_first_touch(card, last_inbound)

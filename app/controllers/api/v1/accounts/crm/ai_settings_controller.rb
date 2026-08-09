@@ -30,7 +30,7 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
       :enabled, :auto_move_enabled, :attribute_extraction_enabled, :score_enabled, :callback_enabled, :callback_mode,
       :stale_hours,
       auto_followup: [
-        :enabled, :trigger_idle_hours, :max_touches, :tone_instructions,
+        :enabled, :max_touches, :tone_instructions,
         { intervals_hours: [], quiet_hours: [:start, :end, :tz] }
       ],
       handoff: [

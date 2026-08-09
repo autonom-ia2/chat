@@ -44,7 +44,6 @@ module Crm
         cfg = params.to_h.with_indifferent_access
         {
           'enabled' => cast_boolean(cfg[:enabled], default: false),
-          'trigger_idle_hours' => cfg[:trigger_idle_hours].to_i,
           'max_touches' => cfg[:max_touches].to_i,
           'intervals_hours' => Array(cfg[:intervals_hours]).map(&:to_i),
           'quiet_hours' => normalize_quiet_hours(cfg[:quiet_hours]),

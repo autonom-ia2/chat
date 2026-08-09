@@ -247,5 +247,164 @@
         "created_at": "2026-08-06T10:30:00-03:00"
       }
     ]
+  },
+  {
+    "nome": "cliente pediu para nao ser mais contatado",
+    "agora": "2026-08-06T15:00",
+    "esperado": {
+      "should_send": "false",
+      "closure_detected": "true"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Oi Renata, consegui uma condicao melhor para o seguro do seu carro. Posso te mandar?",
+        "created_at": "2026-08-04T10:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Nao quero mais receber essas mensagens, por favor",
+        "created_at": "2026-08-04T10:20:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "prazo prometido ainda nao venceu",
+    "agora": "2026-08-06T11:00",
+    "esperado": {
+      "should_send": "false"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Consegue me passar o valor da renovacao?",
+        "created_at": "2026-08-06T09:30:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Consigo sim. Vou levantar aqui e te retorno ainda hoje a tarde com o valor.",
+        "created_at": "2026-08-06T09:40:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Combinado, obrigado",
+        "created_at": "2026-08-06T09:41:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "cliente pediu retorno para semana que vem",
+    "agora": "2026-08-06T14:00",
+    "esperado": {
+      "should_send": "false"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Posso te ligar hoje para fechar a proposta?",
+        "created_at": "2026-08-05T16:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Essa semana estou viajando. Me chama na semana que vem que a gente resolve",
+        "created_at": "2026-08-05T16:30:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Perfeito, te procuro na semana que vem entao",
+        "created_at": "2026-08-05T16:35:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "cliente prometeu enviar documento e sumiu",
+    "agora": "2026-08-06T14:00",
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Para emitir a apolice preciso da foto do documento do veiculo",
+        "created_at": "2026-08-03T09:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Beleza, te mando ainda hoje",
+        "created_at": "2026-08-03T09:05:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Fico no aguardo",
+        "created_at": "2026-08-03T09:06:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "cliente perguntou preco e so o bot respondeu generico",
+    "agora": "2026-08-06T14:00",
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "empresa"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Boa tarde, quanto fica o seguro para um Onix 2022?",
+        "created_at": "2026-08-05T14:00:00-03:00"
+      },
+      {
+        "role": "external_agent",
+        "content": "Ola! Recebemos sua mensagem. Em breve um consultor vai te atender.",
+        "created_at": "2026-08-05T14:00:30-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "cliente sumiu dez dias depois de pergunta nossa",
+    "agora": "2026-08-06T14:00",
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Recebi a proposta, vou analisar",
+        "created_at": "2026-07-26T11:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Otimo. Ficou alguma duvida sobre a cobertura de terceiros?",
+        "created_at": "2026-07-27T09:00:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "so saudacao automatica, sem assunto real",
+    "agora": "2026-08-06T14:00",
+    "esperado": {
+      "should_send": "false"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "oi",
+        "created_at": "2026-08-04T18:00:00-03:00"
+      },
+      {
+        "role": "external_agent",
+        "content": "Ola! Sou o assistente virtual. Como posso ajudar?",
+        "created_at": "2026-08-04T18:00:10-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "nada nao",
+        "created_at": "2026-08-04T18:02:00-03:00"
+      }
+    ]
   }
 ]

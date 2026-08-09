@@ -101,6 +101,12 @@ class Crm::FollowUps::MessageSender
   end
 
   def create_native_template_message(conversation, sender)
+    # O JSON schema do Message exige a CHAVE 'name', mas string vazia passa. E o AutoSendValidator
+    # pula a checagem de template para follow-up de IA (no create-time o template ainda não foi
+    # escolhido). Sem esta barreira, um nome vazio viraria chamada inválida na API da Meta em vez de
+    # erro nosso. Vira Result.failed pelo rescue do #perform, com motivo legível.
+    raise 'template_name_required' if metadata['template_name'].to_s.strip.blank?
+
     Messages::MessageBuilder.new(
       sender,
       conversation,
@@ -126,13 +132,20 @@ class Crm::FollowUps::MessageSender
     template
   end
 
+  # A chave `namespace` é OMITIDA quando não há valor, em vez de ir como nil. O TEMPLATE_PARAMS_SCHEMA
+  # do Message declara namespace como 'string' e exige só 'name'; mandar nil reprova a validação com
+  # "Template params/namespace must be of type string" e derruba o envio inteiro. Namespace só existe
+  # na API on-premise do WhatsApp — nada no follow-up preenche `template_namespace`, então ele nunca
+  # era string e TODO envio por template morria aqui (104 falhas numa conta de produção entre 07 e
+  # 08/2026, com o template certo já escolhido pela IA).
   def native_template_params
-    {
+    params = {
       name: metadata['template_name'].to_s.strip,
-      namespace: metadata['template_namespace'].to_s.strip.presence,
       language: metadata['template_language'].to_s.strip,
       processed_params: template_variables
     }
+    namespace = metadata['template_namespace'].to_s.strip
+    namespace.present? ? params.merge(namespace: namespace) : params
   end
 
   # Slot values composed by the AI follow-up composer (keys "1", "2", …). On the
