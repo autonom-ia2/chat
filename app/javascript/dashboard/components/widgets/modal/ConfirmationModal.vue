@@ -24,6 +24,10 @@ export default {
       type: String,
       default: 'No',
     },
+    confirmDisabled: {
+      type: Boolean,
+      default: false,
+    },
   },
   data: () => ({
     show: false,
@@ -56,9 +60,19 @@ export default {
   <Modal v-model:show="show" :on-close="cancel">
     <div class="h-auto overflow-auto flex flex-col">
       <woot-modal-header :header-title="title" :header-content="description" />
+      <!-- Optional extra body content (e.g. the stage-delete target picker). Empty for every
+           other confirm dialog using this shared modal, so it renders nothing by default. -->
+      <div v-if="$slots.default" class="px-6 pb-4">
+        <slot />
+      </div>
       <div class="flex flex-row justify-end gap-2 py-4 px-6 w-full">
         <NextButton faded type="reset" :label="cancelLabel" @click="cancel" />
-        <NextButton type="submit" :label="confirmLabel" @click="confirm" />
+        <NextButton
+          type="submit"
+          :label="confirmLabel"
+          :disabled="confirmDisabled"
+          @click="confirm"
+        />
       </div>
     </div>
   </Modal>

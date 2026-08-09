@@ -750,10 +750,10 @@ export const actions = {
     }
   },
 
-  deleteStage: async ({ commit }, stageId) => {
+  deleteStage: async ({ commit }, { stageId, targetStageId = null } = {}) => {
     commit(types.SET_CRM_KANBAN_UI_FLAG, { isDeletingStage: true });
     try {
-      await CrmKanbanAPI.deleteStage(stageId);
+      await CrmKanbanAPI.deleteStage(stageId, targetStageId);
       commit(types.REMOVE_CRM_KANBAN_STAGE, stageId);
     } finally {
       commit(types.SET_CRM_KANBAN_UI_FLAG, { isDeletingStage: false });

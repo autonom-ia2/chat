@@ -772,7 +772,9 @@
       "INBOX_SETTINGS_LOAD_ERROR": "Could not load inbox settings.",
       "INBOX_SETTINGS_SAVE_ERROR": "Could not save inbox settings.",
       "STAGE_DELETED": "Stage removed.",
-      "STAGE_DELETE_ERROR": "Could not remove the stage. Stages with cards cannot be deleted.",
+      "STAGE_DELETE_ERROR": "Could not remove the stage.",
+      "STAGE_DELETE_ERROR_HAS_CARDS": "This stage still has cards linked to it — move them to another stage first.",
+      "STAGE_DELETE_ERROR_LAST_STAGE": "Could not remove the stage — a pipeline needs at least one stage.",
       "CARD_CREATED": "Card created.",
       "CARD_UPDATED": "Card updated.",
       "CARD_LOAD_ERROR": "Could not load card details.",
@@ -1314,6 +1316,9 @@
       "ARCHIVE_PIPELINE_CONFIRM": "Archive",
       "DELETE_STAGE_TITLE": "Delete stage?",
       "DELETE_STAGE_DESCRIPTION": "The {stage} stage will be removed if it has no cards.",
+      "DELETE_STAGE_DESCRIPTION_WITH_CARDS": "{stage} has {count} card(s) linked to it (they don't show on the Kanban because they're won, lost, or archived). Choose a stage to move them to before deleting.",
+      "DELETE_STAGE_TARGET_LABEL": "Move cards to",
+      "DELETE_STAGE_TARGET_PLACEHOLDER": "Select a stage",
       "DELETE_STAGE_CONFIRM": "Delete"
     },
     "PROVIDERS": {

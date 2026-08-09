@@ -8,6 +8,9 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     authorize ::Crm::PipelineStage
     @stages = @pipeline.stages.order(:position, :id)
     @stages_count = @stages.count
+    # One grouped query instead of N — the funnel-edit drawer needs the real (all-status)
+    # count per stage to warn before a delete that the backend would otherwise reject.
+    @cards_count_by_stage = Crm::Card.where(stage_id: @stages.map(&:id)).group(:stage_id).count
   end
 
   def create
@@ -29,7 +32,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
   end
 
   def destroy
-    case Crm::PipelineStages::Destroyer.new(stage: @stage).perform
+    case Crm::PipelineStages::Destroyer.new(stage: @stage, target_stage_id: params[:target_stage_id]).perform
     when Crm::PipelineStages::Destroyer::HAS_CARDS
       render_unprocessable('crm.stage_has_cards')
     when Crm::PipelineStages::Destroyer::LAST_STAGE

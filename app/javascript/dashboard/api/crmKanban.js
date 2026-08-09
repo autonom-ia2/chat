@@ -100,8 +100,10 @@ class CrmKanbanAPI extends ApiClient {
     return axios.patch(`${this.url}/stages/${stageId}`, { stage: payload });
   }
 
-  deleteStage(stageId) {
-    return axios.delete(`${this.url}/stages/${stageId}`);
+  deleteStage(stageId, targetStageId = null) {
+    return axios.delete(`${this.url}/stages/${stageId}`, {
+      params: targetStageId ? { target_stage_id: targetStageId } : {},
+    });
   }
 
   reorderStages(stageIds) {

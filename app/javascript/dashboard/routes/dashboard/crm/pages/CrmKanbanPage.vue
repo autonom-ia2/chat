@@ -107,6 +107,10 @@ const confirmConfig = ref({
   description: '',
   confirmLabel: '',
 });
+// Set only while the delete-stage confirm is open, so the shared confirm modal knows to
+// render the target-stage picker (other askConfirmation callers leave this null).
+const stageToDelete = ref(null);
+const deleteStageTargetId = ref('');
 
 const isLoading = computed(
   () => uiFlags.value.isFetchingPipelines || uiFlags.value.isFetchingBoard
@@ -789,22 +793,62 @@ const archivePipeline = async () => {
   }
 };
 
+const deleteStageOptions = computed(() =>
+  stages.value.filter(
+    candidate => Number(candidate.id) !== Number(stageToDelete.value?.id)
+  )
+);
+const deleteStageHasCards = computed(() =>
+  Boolean(stageToDelete.value?.total_cards_count > 0)
+);
+
+// Backend error codes from stages_controller#destroy — mapped to a specific message
+// instead of one generic toast that used to hide whether it was "has cards" (now paired
+// with a target picker so this shouldn't fire from a stale board) or "last stage".
+const STAGE_DELETE_ERROR_KEYS = {
+  'crm.stage_has_cards': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_HAS_CARDS',
+  'crm.stage_is_last': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_LAST_STAGE',
+};
+
+const deleteStageErrorMessage = error => {
+  const code = error?.response?.data?.error;
+  return t(
+    STAGE_DELETE_ERROR_KEYS[code] || 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR'
+  );
+};
+
 const deleteStage = async stage => {
+  stageToDelete.value = stage;
+  deleteStageTargetId.value = '';
+
   const confirmed = await askConfirmation({
     title: t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TITLE'),
-    description: t('CRM_KANBAN.CONFIRM.DELETE_STAGE_DESCRIPTION', {
-      stage: stage.name,
-    }),
+    description: stage.total_cards_count
+      ? t('CRM_KANBAN.CONFIRM.DELETE_STAGE_DESCRIPTION_WITH_CARDS', {
+          stage: stage.name,
+          count: stage.total_cards_count,
+        })
+      : t('CRM_KANBAN.CONFIRM.DELETE_STAGE_DESCRIPTION', {
+          stage: stage.name,
+        }),
     confirmLabel: t('CRM_KANBAN.CONFIRM.DELETE_STAGE_CONFIRM'),
   });
-  if (!confirmed) return;
+  if (!confirmed) {
+    stageToDelete.value = null;
+    return;
+  }
 
   try {
-    await store.dispatch('crmKanban/deleteStage', stage.id);
+    await store.dispatch('crmKanban/deleteStage', {
+      stageId: stage.id,
+      targetStageId: deleteStageTargetId.value || null,
+    });
     useAlert(t('CRM_KANBAN.ALERTS.STAGE_DELETED'));
     await loadCurrentBoard(true);
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR'));
+  } catch (error) {
+    useAlert(deleteStageErrorMessage(error));
+  } finally {
+    stageToDelete.value = null;
   }
 };
 
@@ -2455,6 +2499,28 @@ onMounted(async () => {
       :description="confirmConfig.description"
       :confirm-label="confirmConfig.confirmLabel"
       :cancel-label="t('CRM_KANBAN.CONFIRM.CANCEL')"
-    />
+      :confirm-disabled="deleteStageHasCards && !deleteStageTargetId"
+    >
+      <div v-if="stageToDelete && deleteStageHasCards" class="grid gap-1">
+        <span class="text-xs font-medium text-n-slate-11">
+          {{ t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_LABEL') }}
+        </span>
+        <select
+          v-model="deleteStageTargetId"
+          class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+        >
+          <option value="" disabled>
+            {{ t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_PLACEHOLDER') }}
+          </option>
+          <option
+            v-for="option in deleteStageOptions"
+            :key="option.id"
+            :value="option.id"
+          >
+            {{ option.name }}
+          </option>
+        </select>
+      </div>
+    </ConfirmModal>
   </main>
 </template>
