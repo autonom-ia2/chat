@@ -1209,7 +1209,6 @@
         "TITLE": "Automatic follow-up",
         "HELP": "When a conversation stalls, AI composes a follow-up from where it stopped. Off by default; turning it on auto-sends.",
         "ENABLED": "Enable automatic follow-up in this pipeline",
-        "TRIGGER_IDLE_HOURS": "Trigger after the conversation is idle for (hours)",
         "MAX_TOUCHES": "Number of follow-ups",
         "TOUCH_OFFSET_LABEL": "Send each follow-up this many hours after the customer's last message",
         "INTERVAL_FIRST": "1st after",
