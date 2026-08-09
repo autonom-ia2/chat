@@ -671,11 +671,14 @@ const openEditPipelineDrawer = async () => {
   pipelineDrawerMode.value = 'edit';
   pipelineInboxes.value = [];
   pipelineDrawerStages.value = [];
+  // Stages must resolve BEFORE the drawer opens: CrmPipelineDrawer's form-reset watcher
+  // fires immediately on props.show and seeds form.stages from props.stages at that instant
+  // — it never backfills stages that arrive later (its ongoing watcher only prunes
+  // deletions). Opening the drawer first would initialize the form with an empty stage
+  // list. Inboxes aren't read by that same immediate reset, so they can still load after.
+  await loadPipelineDrawerStages(selectedPipeline.value.id);
   showPipelineDrawer.value = true;
-  await Promise.all([
-    loadPipelineInboxes(selectedPipeline.value.id),
-    loadPipelineDrawerStages(selectedPipeline.value.id),
-  ]);
+  loadPipelineInboxes(selectedPipeline.value.id);
 };
 
 const closePipelineDrawer = () => {
