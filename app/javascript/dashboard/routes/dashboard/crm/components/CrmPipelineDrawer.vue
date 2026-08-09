@@ -184,6 +184,9 @@ const cloneStage = (stage, index) => ({
   // inside metadata. Read both so opening the drawer never wipes the mapping.
   funnel_stage_type:
     stage.funnel_stage_type || stage.metadata?.funnel_stage_type || '',
+  // All-status count (open + won + lost + archived) — the Kanban badge only ever shows
+  // open cards, so this is what tells the delete flow a "0 cards" stage isn't really empty.
+  total_cards_count: stage.total_cards_count ?? 0,
 });
 
 const resetNewPipelineInbox = () => {

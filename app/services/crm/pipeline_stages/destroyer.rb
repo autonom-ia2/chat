@@ -3,8 +3,9 @@ class Crm::PipelineStages::Destroyer
   HAS_CARDS = :has_cards
   LAST_STAGE = :last_stage
 
-  def initialize(stage:)
+  def initialize(stage:, target_stage_id: nil)
     @stage = stage
+    @target_stage_id = target_stage_id
   end
 
   # An EMPTY stage (no cards of any status) is deletable from the UI. Two things that used to block it
@@ -12,24 +13,55 @@ class Crm::PipelineStages::Destroyer
   #   - AI suggestion history cascades away (see Crm::PipelineStage associations).
   #   - If the stage is an inbox's default landing stage, the default is reassigned to a surviving
   #     stage so new conversations keep a valid home.
-  # Cards (any status) still block: a card must always point at a real stage.
+  # Cards (any status) still block: a card must always point at a real stage. When the caller
+  # passes target_stage_id (the delete-stage picker), cards move there first — status untouched,
+  # only stage_id changes — so a stage holding only won/lost/archived cards becomes deletable
+  # without silently discarding them.
   def perform
-    return HAS_CARDS if @stage.cards.exists?
-    return LAST_STAGE if fallback_stage.blank?
-
+    result = nil
     ActiveRecord::Base.transaction do
+      # Moving cards and destroying the stage must commit or roll back together — if move
+      # succeeded but destroy! then failed (e.g. a race re-attached a card), a card left
+      # pointing at the target while the source stage survives would be a silent, permanent
+      # side effect of a failed delete.
+      move_cards_to_target! if @target_stage_id.present?
+
+      if @stage.cards.exists?
+        result = HAS_CARDS
+        raise ActiveRecord::Rollback
+      end
+
+      if fallback_stage.blank?
+        result = LAST_STAGE
+        raise ActiveRecord::Rollback
+      end
+
       reassign_default_stage!
       @stage.destroy!
+      result = SUCCESS
     end
-    SUCCESS
+    result
   rescue ActiveRecord::InvalidForeignKey, ActiveRecord::RecordNotDestroyed
     # Race: a card was attached to the stage between the cards.exists? check and destroy!.
     # The cards restrict_with_error callback raises RecordNotDestroyed; a concurrent FK insert
-    # raises InvalidForeignKey. Either way the stage still owns a card — report it as such.
+    # raises InvalidForeignKey. Either way the whole transaction rolls back (including any
+    # move_cards_to_target!) and the stage still owns a card — report it as such.
     HAS_CARDS
   end
 
   private
+
+  # Scoped to the same pipeline (tenant-safety, same pattern as fallback_stage) and excludes
+  # the stage itself. A blank/foreign/invalid id is silently a no-op — the exists? check right
+  # after this call still catches it and reports HAS_CARDS instead of failing open.
+  def move_cards_to_target!
+    target = @stage.pipeline.stages.where.not(id: @stage.id).find_by(id: @target_stage_id)
+    return if target.blank?
+
+    # rubocop:disable Rails/SkipsModelValidations
+    @stage.cards.update_all(stage_id: target.id)
+    # rubocop:enable Rails/SkipsModelValidations
+  end
 
   def fallback_stage
     @fallback_stage ||= @stage.pipeline.stages.where.not(id: @stage.id).order(:position, :id).first

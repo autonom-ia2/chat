@@ -100,8 +100,12 @@ class CrmKanbanAPI extends ApiClient {
     return axios.patch(`${this.url}/stages/${stageId}`, { stage: payload });
   }
 
-  deleteStage(stageId) {
-    return axios.delete(`${this.url}/stages/${stageId}`);
+  deleteStage(stageId, targetStageId = null) {
+    const url = `${this.url}/stages/${stageId}`;
+    // No-target call keeps the exact single-arg signature callers/tests already expect.
+    return targetStageId
+      ? axios.delete(url, { params: { target_stage_id: targetStageId } })
+      : axios.delete(url);
   }
 
   reorderStages(stageIds) {

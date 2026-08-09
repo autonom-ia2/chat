@@ -95,6 +95,13 @@ const openedRouteCardId = ref(null);
 const pipelineDrawerMode = ref('create');
 const showPipelineDrawer = ref(false);
 const pipelineInboxes = ref([]);
+// Authoritative, unfiltered stage list (with real total_cards_count) for the funnel-edit
+// drawer and the delete-stage target picker. Deliberately NOT the board's `stages` getter:
+// that one is scoped to whatever stage filter/pagination the Kanban view currently has
+// active, and its cards_count/total_cards_count are only populated when the board fetch
+// that produced it happened to pass include_counts (e.g. right after creating a card it
+// doesn't), which let a stale/absent count silently bypass the "has cards" picker.
+const pipelineDrawerStages = ref([]);
 const showInboxSettingsDrawer = ref(false);
 const showBookingProfilesDrawer = ref(false);
 const inboxSettings = ref([]);
@@ -107,6 +114,10 @@ const confirmConfig = ref({
   description: '',
   confirmLabel: '',
 });
+// Set only while the delete-stage confirm is open, so the shared confirm modal knows to
+// render the target-stage picker (other askConfirmation callers leave this null).
+const stageToDelete = ref(null);
+const deleteStageTargetId = ref('');
 
 const isLoading = computed(
   () => uiFlags.value.isFetchingPipelines || uiFlags.value.isFetchingBoard
@@ -629,9 +640,29 @@ const loadPipelineInboxes = async pipelineId => {
   }
 };
 
+const loadPipelineDrawerStages = async pipelineId => {
+  if (!pipelineId) {
+    pipelineDrawerStages.value = [];
+    return [];
+  }
+
+  try {
+    const stagesData = await store.dispatch(
+      'crmKanban/fetchPipelineStages',
+      pipelineId
+    );
+    pipelineDrawerStages.value = stagesData;
+    return stagesData;
+  } catch {
+    pipelineDrawerStages.value = [];
+    return [];
+  }
+};
+
 const openCreatePipelineDrawer = () => {
   pipelineDrawerMode.value = 'create';
   pipelineInboxes.value = [];
+  pipelineDrawerStages.value = [];
   showPipelineDrawer.value = true;
 };
 
@@ -639,8 +670,15 @@ const openEditPipelineDrawer = async () => {
   if (!selectedPipeline.value) return;
   pipelineDrawerMode.value = 'edit';
   pipelineInboxes.value = [];
+  pipelineDrawerStages.value = [];
+  // Stages must resolve BEFORE the drawer opens: CrmPipelineDrawer's form-reset watcher
+  // fires immediately on props.show and seeds form.stages from props.stages at that instant
+  // — it never backfills stages that arrive later (its ongoing watcher only prunes
+  // deletions). Opening the drawer first would initialize the form with an empty stage
+  // list. Inboxes aren't read by that same immediate reset, so they can still load after.
+  await loadPipelineDrawerStages(selectedPipeline.value.id);
   showPipelineDrawer.value = true;
-  await loadPipelineInboxes(selectedPipeline.value.id);
+  loadPipelineInboxes(selectedPipeline.value.id);
 };
 
 const closePipelineDrawer = () => {
@@ -789,22 +827,68 @@ const archivePipeline = async () => {
   }
 };
 
+const deleteStageOptions = computed(() =>
+  pipelineDrawerStages.value.filter(
+    candidate => Number(candidate.id) !== Number(stageToDelete.value?.id)
+  )
+);
+const deleteStageHasCards = computed(() =>
+  Boolean(stageToDelete.value?.total_cards_count > 0)
+);
+
+// Backend error codes from stages_controller#destroy — mapped to a specific message
+// instead of one generic toast that used to hide whether it was "has cards" (now paired
+// with a target picker so this shouldn't fire from a stale board) or "last stage".
+const STAGE_DELETE_ERROR_KEYS = {
+  'crm.stage_has_cards': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_HAS_CARDS',
+  'crm.stage_is_last': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_LAST_STAGE',
+};
+
+const deleteStageErrorMessage = error => {
+  const code = error?.response?.data?.error;
+  return t(
+    STAGE_DELETE_ERROR_KEYS[code] || 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR'
+  );
+};
+
 const deleteStage = async stage => {
+  stageToDelete.value = stage;
+  deleteStageTargetId.value = '';
+
   const confirmed = await askConfirmation({
     title: t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TITLE'),
-    description: t('CRM_KANBAN.CONFIRM.DELETE_STAGE_DESCRIPTION', {
-      stage: stage.name,
-    }),
+    description: stage.total_cards_count
+      ? t('CRM_KANBAN.CONFIRM.DELETE_STAGE_DESCRIPTION_WITH_CARDS', {
+          stage: stage.name,
+          count: stage.total_cards_count,
+        })
+      : t('CRM_KANBAN.CONFIRM.DELETE_STAGE_DESCRIPTION', {
+          stage: stage.name,
+        }),
     confirmLabel: t('CRM_KANBAN.CONFIRM.DELETE_STAGE_CONFIRM'),
   });
-  if (!confirmed) return;
+  if (!confirmed) {
+    stageToDelete.value = null;
+    return;
+  }
 
   try {
-    await store.dispatch('crmKanban/deleteStage', stage.id);
+    await store.dispatch('crmKanban/deleteStage', {
+      stageId: stage.id,
+      targetStageId: deleteStageTargetId.value || null,
+    });
     useAlert(t('CRM_KANBAN.ALERTS.STAGE_DELETED'));
-    await loadCurrentBoard(true);
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR'));
+    await Promise.all([
+      loadCurrentBoard(true),
+      // Re-sync the drawer's own stage list so a second delete in the same drawer
+      // session sees accurate total_cards_count (incl. cards just moved here) and
+      // no longer offers the just-deleted stage as a target.
+      loadPipelineDrawerStages(selectedPipeline.value?.id),
+    ]);
+  } catch (error) {
+    useAlert(deleteStageErrorMessage(error));
+  } finally {
+    stageToDelete.value = null;
   }
 };
 
@@ -2409,7 +2493,7 @@ onMounted(async () => {
       :show="showPipelineDrawer"
       :mode="pipelineDrawerMode"
       :pipeline="pipelineDrawerMode === 'edit' ? selectedPipeline : null"
-      :stages="pipelineDrawerMode === 'edit' ? stages : []"
+      :stages="pipelineDrawerMode === 'edit' ? pipelineDrawerStages : []"
       :inboxes="inboxes"
       :pipeline-inboxes="pipelineInboxes"
       :is-saving="uiFlags.isSavingPipeline"
@@ -2455,6 +2539,28 @@ onMounted(async () => {
       :description="confirmConfig.description"
       :confirm-label="confirmConfig.confirmLabel"
       :cancel-label="t('CRM_KANBAN.CONFIRM.CANCEL')"
-    />
+      :confirm-disabled="deleteStageHasCards && !deleteStageTargetId"
+    >
+      <div v-if="stageToDelete && deleteStageHasCards" class="grid gap-1">
+        <span class="text-xs font-medium text-n-slate-11">
+          {{ t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_LABEL') }}
+        </span>
+        <select
+          v-model="deleteStageTargetId"
+          class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+        >
+          <option value="" disabled>
+            {{ t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_PLACEHOLDER') }}
+          </option>
+          <option
+            v-for="option in deleteStageOptions"
+            :key="option.id"
+            :value="option.id"
+          >
+            {{ option.name }}
+          </option>
+        </select>
+      </div>
+    </ConfirmModal>
   </main>
 </template>
