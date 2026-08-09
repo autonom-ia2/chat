@@ -1,7 +1,14 @@
 # PRD — Follow-up Automático com IA "de onde parou" (por funil)
 
-> **Status:** proposta para análise (não iniciada). Documento de produto + UX + arquitetura técnica.
-> **Fork** Chatwoot v4.14.1 EE em `/root/docker-stacks/build/chatwoot-campaign-v4.14.1`. Produção atual: `conn12`. Conta de teste: **6** (Seguro Viagem, pipeline 9). Âncora do roadmap: [[crm_roadmap_status]].
+> **Status:** implementado e em produção desde 2026-06 (não é mais proposta). O corpo abaixo é o
+> documento ORIGINAL de planejamento, anterior à implementação — mantido como registro de decisão,
+> não como espelho do código atual. Onde o texto conflitar com o comportamento real, o código e o
+> `docs/audit/2026-08-09-crm-followup-fase6.md` valem, não este PRD. Mudanças relevantes desde
+> então: o relógio da cadência conta da última mensagem da conversa (não só do cliente); o portão
+> reconhece "entregamos o que o cliente pediu e ele sumiu" como assunto em aberto; a IA recebe a
+> categoria de cada template e prefere UTILITY a MARKETING; o retorno agendado confere a citação
+> antes de enviar; opt-out passou a ser permanente até reset manual do card.
+> **Fork** Chatwoot v4.14.1 EE em `/root/docker-stacks/build/chatwoot-campaign-v4.14.1`. Produção atual: `conn12`. Conta de teste original: **6** (à época "Seguro Viagem, pipeline 9" — hoje é "Onze onze Seguros", pipeline "Comercial WA"). Âncora do roadmap: [[crm_roadmap_status]].
 > **Pesquisa que embasa este PRD:** melhores práticas de cadência de follow-up + composição por IA + **regras do WhatsApp Business Platform 2024–2026** (janela 24h, templates de Marketing, pricing por-mensagem, throttle por-usuário, opt-in), cruzadas com o mapeamento real do código existente.
 
 ---

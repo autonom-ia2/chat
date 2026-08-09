@@ -82,12 +82,28 @@ ou maior, acerto muito melhor"), mas exige aceite explícito antes de subir.
 - `send_mode`: deve aparecer `template` (hoje só existe `session` e nulo);
 - volume de toques entregues por dia, comparado com a semana anterior.
 
-## Aberto, fora do escopo desta branch
+## Atualização — PRs seguintes (#260, #261, #262)
 
-- A linha da matriz de decisão da Fase 2 "humano atendendo agora → adia o toque, não cancela" nunca
-  entrou no prompt do `FollowUpComposer`. Os dados existem no payload (`conversation_state`), mas
-  não há regra de decisão usando-os.
-- O `CallbackRunner` usa o mesmo schema do follow-up, incluindo `open_loop_source`, mas não faz a
-  verificação de citação que o `AutoFollowupRunner` faz desde a Fase 3.
-- A régua de 15 casos (`rake crm:followup_eval`) roda fora do CI por ser chamada paga de IA. Nada
-  força que ela seja executada antes de mudar o prompt.
+Este documento registrou a Fase 6 no dia em que foi escrito. As três PRs que fecharam a issue #257
+inteira já estão mergeadas e no ar; ver `docs/crm_ai_followup_prd.md` para o estado atual do
+sistema. Dois dos três pontos abaixo, deixados como "aberto" nesta investigação, já foram
+resolvidos:
+
+- ~~A linha da matriz "humano atendendo agora → adia o toque, não cancela" nunca entrou no
+  prompt.~~ **Resolvido na PR #262** por um caminho diferente do proposto na Fase 2: em vez de uma
+  regra explícita de "humano atendendo = adiar", o relógio da cadência (`CadenceAnchor`) passou a
+  contar da última mensagem da conversa, de quem for — não mais só da última fala do cliente. Um
+  atendente conversando com o cliente agora empurra o próximo toque sozinho, sem precisar de uma
+  regra dedicada no prompt.
+- ~~O `CallbackRunner` não confere a citação como o `AutoFollowupRunner`.~~ **Resolvido na PR
+  #262**: a verificação foi extraída para `Crm::Ai::QuoteVerifier` e passou a ser usada pelos dois
+  runners.
+- **A régua de casos (`rake crm:followup_eval`) segue fora do CI**, por ser chamada paga de IA. Já
+  cresceu de 15 para 25 casos nas PRs seguintes, mas nada força que alguém a rode antes de mexer no
+  prompt. Continua sendo o maior risco de regressão silenciosa do sistema.
+
+Achado adicional na PR #261, fora do escopo original desta investigação: um filtro SQL em
+`Crm::Ai::ContextBuilder#last_human_agent_at` nunca excluía os próprios follow-ups automáticos do
+cálculo de "última fala humana" — `content_attributes` é coluna `json` com `store ... coder: JSON`,
+e o operador `->>` do Postgres não enxerga uma string JSON aninhada. Ver o corpo da PR #261 para o
+detalhe completo.
