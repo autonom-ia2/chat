@@ -3,6 +3,9 @@ module Crm
     class ContextBuilder
       MAX_RECENT_MESSAGES = 12
       MAX_MESSAGES_CAP = 40
+      # Quantas mensagens recentes olhar para trás procurando a última fala humana que NÃO seja um
+      # toque da própria IA. Ver #last_human_agent_at.
+      FOLLOW_UP_SCAN_LIMIT = 20
 
       # A legenda dos papéis mora junto de quem os produz (#role_for). Todo prompt que lê
       # recent_messages descreve os papéis a partir daqui: foi a cópia divergente que fez o
@@ -78,14 +81,20 @@ module Crm
       # fala humana e a conversa parecia estar sendo conduzida por uma pessoa. Nota privada também
       # fica de fora: ela nunca chega ao modelo em recent_messages, e contá-la aqui criaria um
       # contexto que se contradiz.
+      #
+      # O descarte é feito em RUBY, não em SQL. `content_attributes` é coluna json com
+      # `store ... coder: JSON` no Message, então o Rails grava o hash como STRING JSON dentro do
+      # json ("{\"crm_follow_up_id\":1}") e `content_attributes ->> 'chave'` devolve sempre NULL.
+      # O filtro SQL que estava aqui não excluía nada — falha silenciosa, que é o pior tipo.
+      # A varredura é limitada porque a cadência tem no máximo um punhado de toques seguidos.
       def last_human_agent_at
         Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
                       sender_type: 'User', private: false)
                .where.not(message_type: :activity)
-               .where("COALESCE(content_attributes ->> 'crm_follow_up_id', '') = ''")
                .reorder(id: :desc)
-               .limit(1)
-               .pick(:created_at)
+               .limit(FOLLOW_UP_SCAN_LIMIT)
+               .find { |message| message.content_attributes.to_h['crm_follow_up_id'].blank? }
+               &.created_at
       end
 
       # Âncora temporal para a IA resolver datas relativas ("amanhã", "terça que vem") em data real.

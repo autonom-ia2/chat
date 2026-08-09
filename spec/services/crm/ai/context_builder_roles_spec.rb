@@ -91,15 +91,21 @@ RSpec.describe Crm::Ai::ContextBuilder do
 
   # O follow-up sai com sender_type 'User'. Se ele contasse como fala humana, cada toque da IA
   # renovaria o relógio e a conversa pareceria estar sendo conduzida por uma pessoa.
+  #
+  # Horários DISTINTOS de propósito: com tudo nascendo no mesmo segundo, o iso8601 da fala humana e
+  # o do toque da IA ficam iguais e este teste passa mesmo com o descarte quebrado — foi assim que
+  # um filtro SQL que nunca excluiu nada chegou a produção.
   it 'ignores its own follow-up and private notes when timing the last human reply' do
     conversation.update!(assignee: admin)
     human_message = add_message(content: 'te retorno com o orcamento', type: :outgoing, sender: admin)
-    add_message(content: 'nota interna', type: :outgoing, sender: admin).update!(private: true)
+    human_message.update!(created_at: 3.hours.ago)
+    add_message(content: 'nota interna', type: :outgoing, sender: admin)
+      .update!(private: true, created_at: 2.hours.ago)
     add_message(content: 'follow-up automatico', type: :outgoing, sender: admin)
-      .update!(content_attributes: { 'crm_follow_up_id' => 1 })
+      .update!(content_attributes: { 'crm_follow_up_id' => 1 }, created_at: 1.hour.ago)
 
     state = described_class.new(card: card).perform[:conversation_state]
 
-    expect(state[:last_human_agent_at]).to eq(human_message.created_at.iso8601)
+    expect(state[:last_human_agent_at]).to eq(human_message.reload.created_at.iso8601)
   end
 end
