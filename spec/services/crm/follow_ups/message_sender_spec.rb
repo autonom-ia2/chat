@@ -1,6 +1,18 @@
 require 'rails_helper'
 
 RSpec.describe Crm::FollowUps::MessageSender do
+  # Channel::Whatsapp valida source_id como número puro, então o helper genérico
+  # (create_crm_conversation, que usa "crm-<hex>") não serve para o canal nativo.
+  def whatsapp_conversation(account:, inbox:, contact:, assignee:)
+    contact_inbox = ContactInboxBuilder.new(
+      contact: contact, inbox: inbox, source_id: contact.phone_number.delete('+')
+    ).perform
+    ConversationBuilder.new(
+      params: ActionController::Parameters.new(status: 'open', assignee_id: assignee.id),
+      contact_inbox: contact_inbox
+    ).perform
+  end
+
   it 'creates a session message without template metadata when inside the messaging window' do
     account, user = create_account_and_user
     inbox = create_crm_whatsapp_api_inbox(account: account, members: [user])
@@ -224,5 +236,66 @@ RSpec.describe Crm::FollowUps::MessageSender do
       result = described_class.new(follow_up: follow_up).perform
       expect(result.status).to eq(:skipped)
     end.not_to change(Message, :count)
+  end
+
+  # O bug que zerou o envio por template em produção: `namespace` ia como nil quando o follow-up
+  # não tinha `template_namespace` (nada nunca preenche esse campo), e o TEMPLATE_PARAMS_SCHEMA do
+  # Message exige string. Toda tentativa morria em "Template params/namespace must be of type
+  # string" — 104 falhas na conta 6, com o template já escolhido pela IA. Canal nativo
+  # (Channel::Whatsapp) porque só ele passa por native_template_params.
+  it 'envia por template nativo sem namespace, omitindo a chave em vez de mandar nil' do
+    account, user = create_account_and_user
+    channel = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)
+    inbox = channel.inbox
+    inbox.add_members([user.id])
+    contact = account.contacts.create!(name: 'Lead', phone_number: '+5511987654321')
+    conversation = whatsapp_conversation(account: account, inbox: inbox, contact: contact, assignee: user)
+    create_incoming_message(conversation: conversation)
+    conversation.messages.incoming.last.update!(created_at: 30.hours.ago)
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, inbox: inbox, contact: contact,
+                                     primary_conversation: conversation, title: 'Lead')
+    follow_up = account.crm_follow_ups.create!(
+      card: card, conversation: conversation, title: 'Retornar', due_at: 10.minutes.ago, timezone: 'UTC',
+      automation_mode: :auto_send_message, created_by: user,
+      metadata: { message_body: 'Olá', template_name: 'continuidade_atendimento',
+                  template_language: 'pt_BR', template_processed_params: { '1' => 'Lead' } }
+    )
+
+    result = described_class.new(follow_up: follow_up).perform
+
+    expect(result.error).to be_nil
+    expect(result.status).to eq(:sent)
+    template_params = result.message.additional_attributes['template_params']
+    expect(template_params).not_to have_key('namespace')
+    expect(template_params['name']).to eq('continuidade_atendimento')
+    expect(follow_up.reload.metadata['send_mode']).to eq('template')
+  end
+
+  # Quando o namespace EXISTE (API on-premise da Meta) ele continua indo: a correção remove só a
+  # chave vazia, não o suporte ao campo.
+  it 'mantém o namespace no payload quando o follow-up traz um' do
+    account, user = create_account_and_user
+    channel = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)
+    inbox = channel.inbox
+    inbox.add_members([user.id])
+    contact = account.contacts.create!(name: 'Lead', phone_number: '+5511987654322')
+    conversation = whatsapp_conversation(account: account, inbox: inbox, contact: contact, assignee: user)
+    create_incoming_message(conversation: conversation)
+    conversation.messages.incoming.last.update!(created_at: 30.hours.ago)
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, inbox: inbox, contact: contact,
+                                     primary_conversation: conversation, title: 'Lead')
+    follow_up = account.crm_follow_ups.create!(
+      card: card, conversation: conversation, title: 'Retornar', due_at: 10.minutes.ago, timezone: 'UTC',
+      automation_mode: :auto_send_message, created_by: user,
+      metadata: { message_body: 'Olá', template_name: 'continuidade_atendimento',
+                  template_language: 'pt_BR', template_namespace: 'ns_abc_123' }
+    )
+
+    result = described_class.new(follow_up: follow_up).perform
+
+    expect(result.status).to eq(:sent)
+    expect(result.message.additional_attributes['template_params']['namespace']).to eq('ns_abc_123')
   end
 end

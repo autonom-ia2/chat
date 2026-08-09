@@ -126,13 +126,20 @@ class Crm::FollowUps::MessageSender
     template
   end
 
+  # A chave `namespace` é OMITIDA quando não há valor, em vez de ir como nil. O TEMPLATE_PARAMS_SCHEMA
+  # do Message declara namespace como 'string' e exige só 'name'; mandar nil reprova a validação com
+  # "Template params/namespace must be of type string" e derruba o envio inteiro. Namespace só existe
+  # na API on-premise do WhatsApp — nada no follow-up preenche `template_namespace`, então ele nunca
+  # era string e TODO envio por template morria aqui (104 falhas na conta 6 entre 07 e 08/2026, com o
+  # template certo já escolhido pela IA).
   def native_template_params
-    {
+    params = {
       name: metadata['template_name'].to_s.strip,
-      namespace: metadata['template_namespace'].to_s.strip.presence,
       language: metadata['template_language'].to_s.strip,
       processed_params: template_variables
     }
+    namespace = metadata['template_namespace'].to_s.strip
+    namespace.present? ? params.merge(namespace: namespace) : params
   end
 
   # Slot values composed by the AI follow-up composer (keys "1", "2", …). On the
