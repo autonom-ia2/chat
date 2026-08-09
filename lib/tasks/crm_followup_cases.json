@@ -539,5 +539,115 @@
         "created_at": "2026-08-05T16:10:00-03:00"
       }
     ]
+  },
+  {
+    "nome": "orcamento enviado, cliente calado ha 2 dias",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Quanto fica o seguro do meu Corolla 2021?",
+        "created_at": "2026-08-04T09:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Fica R$ 2.340 no anual, com cobertura completa e assistencia 24h.",
+        "created_at": "2026-08-04T09:30:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "simulacao enviada sem pergunta nenhuma",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Manda a simulacao do seguro de vida por favor",
+        "created_at": "2026-08-03T14:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Simulacao anexada. Qualquer duvida estou aqui.",
+        "created_at": "2026-08-03T14:20:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "link de pagamento enviado e sem retorno",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Fechado, pode mandar o link para eu pagar",
+        "created_at": "2026-08-04T11:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Segue o link da primeira parcela. Assim que confirmar eu emito a apolice.",
+        "created_at": "2026-08-04T11:05:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "opcoes de horario enviadas e cliente sumiu",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Podemos marcar uma call essa semana?",
+        "created_at": "2026-08-04T16:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Claro. Tenho quinta 10h ou sexta 15h. Qual fica melhor?",
+        "created_at": "2026-08-04T16:10:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "documento enviado pelo bot e cliente calado",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Preciso da apolice do ano passado para o financiamento",
+        "created_at": "2026-08-04T08:00:00-03:00"
+      },
+      {
+        "role": "external_agent",
+        "content": "Segue a apolice 2025 em PDF. Precisa de mais alguma coisa?",
+        "created_at": "2026-08-04T08:02:00-03:00"
+      }
+    ]
   }
 ]

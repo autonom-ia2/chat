@@ -988,6 +988,7 @@
         "TITLE": "Follow-up automático",
         "STATUS_ACTIVE": "{n} de {total} usados",
         "STATUS_DONE": "Concluído - {total} de {total}",
+        "STATUS_OPT_OUT": "Parado a pedido do cliente",
         "STATUS_REPLIED": "Parado: cliente respondeu",
         "STATUS_CLOSED": "Não enviado: conversa encerrada",
         "STATUS_NO_LOOP": "Nada a enviar",
@@ -997,7 +998,12 @@
         "TIMELINE_TOUCH_FREE": "Toque {n} - IA livre",
         "TIMELINE_TOUCH_TEMPLATE": "Toque {n} - template {name}",
         "TIMELINE_TOUCH_SKIPPED": "Toque {n} - não enviado",
+        "OPT_OUT_HINT": "O cliente pediu para não receber mais mensagens automáticas. Novos toques não serão criados até alguém reativar.",
         "RESET": "Atualizar - reiniciar ciclo",
+        "REACTIVATE": "Reativar follow-up",
+        "REACTIVATE_CONFIRM_TITLE": "Reativar mesmo com pedido de parada?",
+        "REACTIVATE_CONFIRM_BODY": "Este contato pediu para não receber mais mensagens automáticas. Reativar volta a enviar follow-up para ele. A ação fica registrada com seu nome.",
+        "REACTIVATE_CONFIRM_OK": "Reativar mesmo assim",
         "RESET_SUCCESS": "Ciclo reiniciado.",
         "RESET_ERROR": "Não foi possível reiniciar."
       }

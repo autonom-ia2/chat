@@ -988,6 +988,7 @@
         "TITLE": "Automatic follow-up",
         "STATUS_ACTIVE": "{n} of {total} used",
         "STATUS_DONE": "Completed - {total} of {total}",
+        "STATUS_OPT_OUT": "Stopped at the customer's request",
         "STATUS_REPLIED": "Stopped: the customer replied",
         "STATUS_CLOSED": "Not sent: conversation closed",
         "STATUS_NO_LOOP": "Nothing to send",
@@ -997,7 +998,12 @@
         "TIMELINE_TOUCH_FREE": "Touch {n} - free-form AI",
         "TIMELINE_TOUCH_TEMPLATE": "Touch {n} - template {name}",
         "TIMELINE_TOUCH_SKIPPED": "Touch {n} - not sent",
+        "OPT_OUT_HINT": "The customer asked to stop receiving automated messages. No new touches will be created until someone reactivates.",
         "RESET": "Refresh - restart cycle",
+        "REACTIVATE": "Reactivate follow-up",
+        "REACTIVATE_CONFIRM_TITLE": "Reactivate despite the opt-out request?",
+        "REACTIVATE_CONFIRM_BODY": "This contact asked to stop receiving automated messages. Reactivating resumes follow-ups for them. The action is recorded under your name.",
+        "REACTIVATE_CONFIRM_OK": "Reactivate anyway",
         "RESET_SUCCESS": "Cycle restarted.",
         "RESET_ERROR": "Could not restart."
       }

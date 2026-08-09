@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 
 const props = defineProps({
@@ -14,6 +15,7 @@ const emit = defineEmits(['reset']);
 const { t } = useI18n();
 
 const isResetting = ref(false);
+const reactivateDialogRef = ref(null);
 
 const cardId = computed(() => props.card?.id || null);
 const state = computed(
@@ -39,11 +41,14 @@ const usedTouches = computed(() => {
 });
 const isSpent = computed(() => state.value?.spent === true);
 const stoppedReason = computed(() => state.value?.stopped_reason || null);
+const isOptedOut = computed(() => stoppedReason.value === 'opt_out');
 
 const statusText = computed(() => {
   if (!hasState.value)
     return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_NOT_STARTED');
   const reason = stoppedReason.value;
+  if (reason === 'opt_out')
+    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_OPT_OUT');
   if (reason === 'replied')
     return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_REPLIED');
   if (reason === 'conversation_closed')
@@ -95,18 +100,33 @@ const timelineEntries = computed(() =>
   })
 );
 
+const resetButtonLabel = computed(() =>
+  isOptedOut.value
+    ? t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE')
+    : t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET')
+);
+
 const resetCycle = async () => {
   if (!cardId.value || isResetting.value) return;
   isResetting.value = true;
   try {
     await CrmKanbanAPI.resetAutoFollowup(cardId.value);
     useAlert(t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_SUCCESS'));
+    reactivateDialogRef.value?.close();
     emit('reset');
   } catch {
     useAlert(t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_ERROR'));
   } finally {
     isResetting.value = false;
   }
+};
+
+const onResetClick = () => {
+  if (isOptedOut.value) {
+    reactivateDialogRef.value?.open();
+    return;
+  }
+  resetCycle();
 };
 </script>
 
@@ -119,7 +139,14 @@ const resetCycle = async () => {
           {{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.TITLE') }}
         </p>
       </div>
-      <span class="shrink-0 text-xs font-medium text-n-slate-11">
+      <span
+        class="shrink-0 text-xs font-medium"
+        :class="
+          isOptedOut
+            ? 'rounded-full bg-n-amber-3 px-2 py-0.5 text-n-amber-11'
+            : 'text-n-slate-11'
+        "
+      >
         {{ statusText }}
       </span>
     </div>
@@ -135,16 +162,39 @@ const resetCycle = async () => {
       </li>
     </ul>
 
-    <div v-if="isSpent" class="flex justify-end">
+    <p
+      v-if="isOptedOut"
+      class="mb-0 flex items-center gap-1.5 text-xs text-n-slate-11"
+    >
+      <span class="i-lucide-hand size-3.5 shrink-0" />
+      <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.OPT_OUT_HINT') }}</span>
+    </p>
+
+    <div v-if="isSpent || isOptedOut" class="flex justify-end">
       <Button
-        :label="t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET')"
+        :label="resetButtonLabel"
         icon="i-lucide-rotate-ccw"
         slate
         faded
         sm
         :is-loading="isResetting"
-        @click="resetCycle"
+        @click="onResetClick"
       />
     </div>
+
+    <Dialog
+      ref="reactivateDialogRef"
+      type="alert"
+      :title="t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE_CONFIRM_TITLE')"
+      :description="
+        t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE_CONFIRM_BODY')
+      "
+      :confirm-button-label="
+        t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE_CONFIRM_OK')
+      "
+      :is-loading="isResetting"
+      :disable-confirm-button="isResetting"
+      @confirm="resetCycle"
+    />
   </div>
 </template>

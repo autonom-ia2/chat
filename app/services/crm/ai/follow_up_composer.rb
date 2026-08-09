@@ -173,7 +173,8 @@ module Crm
           #{turn_owner_rules}
 
           PORTÃO ÚNICO — decida should_send (vale a pena dar follow agora?):
-          - Encontre UM único loop aberto real na conversa: o cliente perguntou/pediu e não foi respondido; prometemos algo e não enviamos; havia uma decisão pendente e o cliente sumiu depois que perguntamos.
+          - Encontre UM único loop aberto real na conversa: o cliente perguntou/pediu e não foi respondido; prometemos algo e não enviamos; havia uma decisão pendente e o cliente sumiu depois que perguntamos; ou ENTREGAMOS o que ele pediu (proposta, orçamento, valor, simulação, documento, link, opção de horário) e ele não voltou com a resposta.
+          - Entrega sem pergunta explícita TAMBÉM é loop aberto: "segue a proposta, qualquer dúvida me chama" deixa a decisão com o cliente. Não exija que tenhamos feito uma pergunta em forma de pergunta.
           - #{ContextBuilder::ROLES_LEGEND} "last_message_role" repete o papel da última mensagem. Quem falou por último NÃO define, sozinho, de quem é a pendência — leia a conversa.
           - Use "temporal.now_local" (data e hora de agora, no fuso do contato) junto com o "created_at" de cada mensagem para saber há quanto tempo cada coisa aconteceu.
           - Use "conversation_state": "status" da conversa, "assigned_to_human" (há uma pessoa do time responsável) e "last_human_agent_at" (quando um humano falou por último).
@@ -231,7 +232,7 @@ module Crm
       def turn_owner_rules
         <<~RULES.strip
           PRIMEIRA PERGUNTA — de quem é a vez (next_action_owner):
-          - "cliente": nós perguntamos ou pedimos algo e ele não respondeu.
+          - "cliente": nós perguntamos ou pedimos algo e ele não respondeu, OU já entregamos o que ele pediu (proposta, orçamento, valor, simulação, documento) e a decisão agora é dele. Entregamos e ele sumiu = vez do cliente, mesmo sem pergunta nossa.
           - "empresa": nós prometemos algo e não entregamos, ou o cliente perguntou e não foi respondido.
           - "terceiro": o que falta depende de alguém fora da conversa (seguradora, banco, fornecedor) e nós já acionamos.
           - Confirmação passiva do cliente ("ok", "beleza", "combinado", "vou aguardar", "fico no aguardo") logo depois de uma promessa nossa significa "empresa". Isso NÃO é o cliente sumindo.

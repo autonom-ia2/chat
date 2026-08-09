@@ -440,7 +440,7 @@ module Crm
         if touch < max_touches
           next_touch = touch + 1
           timezone = resolved_timezone
-          due_at = compute_due(last_inbound_at + interval_hours(next_touch).hours, timezone)
+          due_at = compute_due(cadence_anchor_at + interval_hours(next_touch).hours, timezone)
           Crm::FollowUps::AutoFollowupTouchBuilder.new(card: @card, touch: next_touch, due_at: due_at, timezone: timezone).perform
           merge_state!('active' => true, 'touch' => next_touch, 'next_due_at' => due_at.iso8601)
         else
@@ -609,10 +609,10 @@ module Crm
         ).name_or_default
       end
 
-      def last_inbound_at
-        conversation = @follow_up.conversation
-        last_incoming = conversation&.messages&.incoming&.reorder(id: :desc)&.first
-        last_incoming&.created_at || @follow_up.created_at
+      # Ver Crm::FollowUps::CadenceAnchor: o relógio da cadência conta da última mensagem REAL da
+      # conversa (cliente, humano ou bot), nunca dos toques da própria IA.
+      def cadence_anchor_at
+        Crm::FollowUps::CadenceAnchor.new(@follow_up.conversation).at || @follow_up.created_at
       end
 
       def parse_time(value)

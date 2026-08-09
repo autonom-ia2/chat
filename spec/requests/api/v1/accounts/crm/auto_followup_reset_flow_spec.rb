@@ -30,7 +30,10 @@ RSpec.describe 'CRM auto follow-up opt-out + manual reset regression flow', type
     conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: user)
     2.times { create_incoming_message(conversation: conversation) }
     2.times { conversation.messages.create!(account_id: account.id, inbox_id: inbox.id, message_type: :outgoing, content: 'Oi') }
-    conversation.messages.incoming.last.update!(created_at: 21.hours.ago)
+    # A âncora da cadência é a ÚLTIMA mensagem da conversa (CadenceAnchor), de quem quer que seja:
+    # envelhecer só a última do cliente deixaria a saída do time em "agora" e o card nunca ficaria
+    # elegível.
+    conversation.messages.each { |message| message.update!(created_at: 21.hours.ago) }
     card = account.crm_cards.create!(
       pipeline: pipeline, stage: stage, inbox: inbox, contact: contact,
       primary_conversation: conversation, title: 'Lead'
