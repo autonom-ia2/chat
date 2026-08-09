@@ -82,7 +82,6 @@ A pesquisa confirma as regras (cruzadas em múltiplas fontes BSP; reconferir nú
 ```jsonc
 pipeline.metadata.ai.auto_followup = {
   "enabled": false,                  // OFF por padrão — o usuário LIGA por funil (decisão #3)
-  "trigger_idle_hours": 6,           // detecta "parou" após N h de silêncio (curto, p/ o 1º toque cair dentro da janela 24h)
   "max_touches": 3,                  // quantos follow-ups (decisão #5)
   "intervals_hours": [20, 72, 168],  // offset de CADA toque a partir do último inbound: ~20h (dentro da janela), 3d, 7d (decisões #4 e #5; editável)
   "quiet_hours": { "start": 8, "end": 20, "tz": "contact" }, // janela permitida de envio
@@ -94,7 +93,7 @@ Persistido via `SettingsUpdater` (estendido) → `AiSettingsController` (params 
 **Sempre AUTO-ENVIO quando ligado** (sem modo rascunho no MVP — decisão #3). **Opt-in assumido** (sem gate de consentimento — decisão #2). **Canal: WhatsApp oficial + não-oficial apenas** (decisão #7).
 
 ### 4.2 Detecção de "parou" + "onde parou"
-- **Parou (stall):** um job varre por funil (reusa o padrão `StaleCardsJob`) cards com conversa cujo **último inbound** foi há ≥ `trigger_idle_hours` E que não estão ganhos/perdidos/arquivados E sem cadência ativa. Identifica também o **tipo de parada** (última msg é do cliente vs nossa) via `message_type`.
+- **Parou (stall):** um job varre por funil (reusa o padrão `StaleCardsJob`) cards com conversa cujo **último inbound** foi há ≥ `intervals_hours[0]` E que não estão ganhos/perdidos/arquivados E sem cadência ativa. Identifica também o **tipo de parada** (última msg é do cliente vs nossa) via `message_type`.
 - **Onde parou (open loop):** a IA, com a transcrição (`ContextBuilder`), detecta o **ponto em aberto**: pergunta não respondida, info prometida, decisão pendente. Se **não houver** ponto claro → cai em template/mensagem genérica aprovada (não inventa).
 
 ### 4.3 Compositor de IA — **`Crm::Ai::FollowUpComposer`** (NOVO)
@@ -152,7 +151,7 @@ Padrão **um toque por vez** (não pré-compõe tudo):
 ## 6. Fluxo ponta a ponta (exemplo real)
 > Cliente perguntou "qual o valor do seguro pra Europa 15 dias?" às 14h. Ninguém respondeu.
 
-1. **+24h (trigger_idle_hours):** job detecta stall no funil Seguro Viagem (auto_followup on). Cria toque #1 com `due_at` = agora+4h (intervalo[0]), dentro do horário comercial.
+1. **+`intervals_hours[0]`:** job detecta stall no funil Seguro Viagem (auto_followup on). Cria toque #1 com `due_at` = agora+4h (intervalo[0]), dentro do horário comercial.
 2. **Toque #1 vence (ainda <24h da última msg do cliente?**: não — já passou 28h). Janela fechada → **template**. Re-checa: cliente não respondeu, negócio aberto, opt-in ok. IA compõe `open_loop="valor seguro Europa 15d"`, preenche template marketing `reengajamento_v1` → envia. Audita. Agenda toque #2 em +3d.
 3. **Cliente responde** "ah sim, quanto fica?" → evento inbound → **auto-stop**: cancela toque #2, marca `stopped_reason=replied`, devolve a conversa ao fluxo normal (e a janela de 24h reabre — IA poderia até responder, mas isso é o fluxo de atendimento, fora desta PR).
 4. *(Se não respondesse: toque #2 em +3d, toque #3 em +7d, depois encerra.)*

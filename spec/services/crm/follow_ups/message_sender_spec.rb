@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe Crm::FollowUps::MessageSender do
   # Channel::Whatsapp valida source_id como número puro, então o helper genérico
   # (create_crm_conversation, que usa "crm-<hex>") não serve para o canal nativo.
-  def whatsapp_conversation(account:, inbox:, contact:, assignee:)
+  def whatsapp_conversation(inbox:, contact:, assignee:)
     contact_inbox = ContactInboxBuilder.new(
       contact: contact, inbox: inbox, source_id: contact.phone_number.delete('+')
     ).perform
@@ -241,7 +241,7 @@ RSpec.describe Crm::FollowUps::MessageSender do
   # O bug que zerou o envio por template em produção: `namespace` ia como nil quando o follow-up
   # não tinha `template_namespace` (nada nunca preenche esse campo), e o TEMPLATE_PARAMS_SCHEMA do
   # Message exige string. Toda tentativa morria em "Template params/namespace must be of type
-  # string" — 104 falhas na conta 6, com o template já escolhido pela IA. Canal nativo
+  # string" — 104 falhas numa conta de produção, com o template já escolhido pela IA. Canal nativo
   # (Channel::Whatsapp) porque só ele passa por native_template_params.
   it 'envia por template nativo sem namespace, omitindo a chave em vez de mandar nil' do
     account, user = create_account_and_user
@@ -249,7 +249,7 @@ RSpec.describe Crm::FollowUps::MessageSender do
     inbox = channel.inbox
     inbox.add_members([user.id])
     contact = account.contacts.create!(name: 'Lead', phone_number: '+5511987654321')
-    conversation = whatsapp_conversation(account: account, inbox: inbox, contact: contact, assignee: user)
+    conversation = whatsapp_conversation(inbox: inbox, contact: contact, assignee: user)
     create_incoming_message(conversation: conversation)
     conversation.messages.incoming.last.update!(created_at: 30.hours.ago)
     pipeline, stage = create_crm_pipeline(account: account, user: user)
@@ -280,7 +280,7 @@ RSpec.describe Crm::FollowUps::MessageSender do
     inbox = channel.inbox
     inbox.add_members([user.id])
     contact = account.contacts.create!(name: 'Lead', phone_number: '+5511987654322')
-    conversation = whatsapp_conversation(account: account, inbox: inbox, contact: contact, assignee: user)
+    conversation = whatsapp_conversation(inbox: inbox, contact: contact, assignee: user)
     create_incoming_message(conversation: conversation)
     conversation.messages.incoming.last.update!(created_at: 30.hours.ago)
     pipeline, stage = create_crm_pipeline(account: account, user: user)

@@ -130,8 +130,8 @@ class Crm::FollowUps::MessageSender
   # do Message declara namespace como 'string' e exige só 'name'; mandar nil reprova a validação com
   # "Template params/namespace must be of type string" e derruba o envio inteiro. Namespace só existe
   # na API on-premise do WhatsApp — nada no follow-up preenche `template_namespace`, então ele nunca
-  # era string e TODO envio por template morria aqui (104 falhas na conta 6 entre 07 e 08/2026, com o
-  # template certo já escolhido pela IA).
+  # era string e TODO envio por template morria aqui (104 falhas numa conta de produção entre 07 e
+  # 08/2026, com o template certo já escolhido pela IA).
   def native_template_params
     params = {
       name: metadata['template_name'].to_s.strip,

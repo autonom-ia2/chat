@@ -28,10 +28,12 @@ module Crm
         'para de mandar', 'pare de mandar', 'parar de mandar',
         'para de me mandar', 'pare de me mandar', 'parar de me mandar',
         'para de enviar', 'pare de enviar', 'parar de enviar',
+        'nao me envie mais', 'nao me envia mais', 'nao me manda mais', 'nao me mande mais',
         'parar de receber', 'cancelar o recebimento',
-        'nao quero mais receber', 'nao quero receber mais', 'nao quero mais essas mensagens',
-        'nao me manda mais', 'nao me mande mais',
+        'nao quero mais receber', 'nao quero receber mais', 'nao quero receber mensagens',
+        'nao quero mais mensagens', 'nao quero mais essas mensagens',
         'me tira da lista', 'me tire da lista', 'me remove da lista', 'me remova da lista',
+        'remova meu numero', 'remove meu numero', 'tira meu numero', 'tire meu numero',
         'sair da lista', 'descadastrar'
       ].freeze
 

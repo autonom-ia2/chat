@@ -104,6 +104,21 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
     expect(card.reload.follow_ups.count).to eq(0)
   end
 
+  # LGPD: quem pediu para parar não pode ser re-armado pela varredura seguinte. Sem esta guarda o
+  # cancelador marcava opted_out, a cadência morria, e o planner criava um ciclo novo do zero —
+  # zerando a própria marca de opt-out. Só o RESET manual do drawer re-arma.
+  it 'card com opted_out=true NUNCA re-arma pela varredura' do
+    account, user = create_account_and_user
+    pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+    card, = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'active' => false, 'spent' => false,
+                                                                  'opted_out' => true } } })
+
+    expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+    expect(card.reload.follow_ups.count).to eq(0)
+    expect(card.metadata['ai']['auto_followup_state']['opted_out']).to be(true)
+  end
+
   # Guarda de produto: o cliente já disse QUANDO volta (ai_callback com due_at futuro) — não
   # perturbar com a cadência genérica antes desse retorno agendado disparar.
   it 'card com ai_callback ativo e due_at futuro NÃO cria o toque' do

@@ -174,6 +174,24 @@ RSpec.describe Crm::FollowUps::AutoFollowupCanceler do
     end
   end
 
+  # Formas comuns de recusa em português que o match exato deixava passar direto. Cada uma delas
+  # significa "não me mande mais" e precisa virar opt-out registrado, não só cadência cancelada.
+  it 'reconhece as formas escritas por extenso de pedido para parar' do
+    account, user = create_account_and_user
+    ['Não me envie mais mensagens', 'por favor, remova meu número da lista',
+     'não quero receber mensagens de vocês'].each do |texto|
+      card, conversation = build_card(account: account, user: user, active: true)
+      build_follow_up(account: account, card: card, conversation: conversation, source: 'ai_followup')
+      message = create_incoming_message(conversation: conversation, content: texto)
+
+      described_class.new(card: card, message: message).maybe_cancel
+
+      state = card.reload.metadata['ai']['auto_followup_state']
+      expect(state['stopped_reason']).to eq('opt_out'), "esperava opt_out para: #{texto}"
+      expect(state['opted_out']).to be(true)
+    end
+  end
+
   it 'registra a atividade ai_followup_stopped com o motivo do cancelamento' do
     account, user = create_account_and_user
     card, conversation = build_card(account: account, user: user, active: true)

@@ -1208,6 +1208,7 @@
         "TITLE": "Follow-up automático",
         "HELP": "Quando uma conversa fica parada, a IA monta um follow-up de onde parou. Desligado por padrão; ligar envia automaticamente.",
         "ENABLED": "Ativar follow-up automático neste funil",
+        "TRIGGER_IDLE_HOURS": "Disparar após a conversa ficar parada por (horas)",
         "MAX_TOUCHES": "Número de follow-ups",
         "TOUCH_OFFSET_LABEL": "Enviar cada follow-up estas horas após a última mensagem do cliente",
         "INTERVAL_FIRST": "1º após",
