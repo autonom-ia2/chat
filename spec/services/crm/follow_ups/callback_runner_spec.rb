@@ -1,6 +1,14 @@
 require 'rails_helper'
 
 RSpec.describe Crm::FollowUps::CallbackRunner do
+  # Frase gravada na conversa; a citação da IA precisa sair daqui (mesmo padrão do
+  # spec do AutoFollowupRunner).
+  let(:transcript_line) { 'Você disse que ia decidir com a esposa até sexta e nos retornar.' }
+
+  def seed_transcript_line(conversation)
+    conversation.messages.incoming.last.update!(content: transcript_line)
+  end
+
   # waha: true => WAHA (sem janela de 24h) => send_mode free_form.
   # waha: false + last_inbound_ago fora da janela de 24h => send_mode choose_template.
   def setup_card(account:, user:, waha: true, last_inbound_ago: nil)
@@ -88,13 +96,17 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
     expect(result.status).to eq(:fallback)
   end
 
+  # Citação literal presente na conversa: passa pela verificação e envia normalmente. (A citação
+  # virou obrigatória com Crm::Ai::QuoteVerifier — sem open_loop_source válido isso pararia em :failed.)
   it 'caminho feliz free_form grava message_body no metadata e devolve :sent' do
     account, user = create_account_and_user
     card, conversation = setup_card(account: account, user: user)
+    seed_transcript_line(conversation)
     follow_up = build_callback_follow_up(account: account, card: card, conversation: conversation)
     stub_credential
     stub_composition('should_send' => true, 'closure_detected' => false, 'confidence' => 0.9,
-                     'message_body' => 'Olá! Passando para retomar nosso papo.')
+                     'message_body' => 'Olá! Passando para retomar nosso papo.',
+                     'open_loop_source' => transcript_line)
     allow(Crm::FollowUps::MessageSender).to receive(:new).and_return(
       instance_double(Crm::FollowUps::MessageSender, perform: Crm::FollowUps::MessageSender::Result.sent(nil))
     )
@@ -189,5 +201,67 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
 
     expect(result.status).to eq(:fallback)
     expect(result.error).to eq('no_template')
+  end
+
+  # --- Trava anti-invenção (Crm::Ai::QuoteVerifier), mesmo risco que o AutoFollowupRunner já cobre --
+
+  it 'citação inventada (não está em nenhuma mensagem) não cria mensagem, vira :failed com retry_at e incrementa callback_retries' do
+    account, user = create_account_and_user
+    card, conversation = setup_card(account: account, user: user)
+    seed_transcript_line(conversation)
+    follow_up = build_callback_follow_up(account: account, card: card, conversation: conversation)
+    stub_credential
+    stub_composition('should_send' => true, 'closure_detected' => false, 'confidence' => 0.9,
+                     'message_body' => 'Oi', 'open_loop_source' => 'frase que nunca foi dita nesta conversa')
+    expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+
+    result = nil
+    expect { result = described_class.new(follow_up: follow_up, now: Time.current).perform }
+      .not_to change(Message, :count)
+
+    expect(result.status).to eq(:failed)
+    expect(result.retry_at).to be_present
+    expect(follow_up.reload.metadata['callback_retries']).to eq(1)
+  end
+
+  # Citação não conferida esgota o mesmo orçamento de tentativas de uma falha de rede, mas precisa
+  # ficar registrada com o próprio nome — senão vira "send_failed" e ninguém investiga o certo.
+  it 'citação inventada com o budget de tentativas já estourado vira :fallback com motivo de citação não conferida' do
+    account, user = create_account_and_user
+    card, conversation = setup_card(account: account, user: user)
+    seed_transcript_line(conversation)
+    follow_up = build_callback_follow_up(account: account, card: card, conversation: conversation,
+                                         retries: described_class::MAX_RETRIES - 1)
+    stub_credential
+    stub_composition('should_send' => true, 'closure_detected' => false, 'confidence' => 0.9,
+                     'message_body' => 'Oi', 'open_loop_source' => 'frase que nunca foi dita nesta conversa')
+    expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+
+    result = described_class.new(follow_up: follow_up, now: Time.current).perform
+
+    expect(result.status).to eq(:fallback)
+    expect(result.error).to eq("unverified_quote_#{described_class::MAX_RETRIES}")
+    expect(follow_up.reload.metadata['callback_retries']).to eq(described_class::MAX_RETRIES)
+  end
+
+  # Trecho curto demais não prova nada, mesmo sendo um substring literal da conversa: precisa
+  # reprovar pelo tamanho antes mesmo de comparar com as mensagens.
+  it 'trecho curto demais (abaixo de MIN_QUOTE_LENGTH) não conta como prova' do
+    account, user = create_account_and_user
+    card, conversation = setup_card(account: account, user: user)
+    seed_transcript_line(conversation)
+    follow_up = build_callback_follow_up(account: account, card: card, conversation: conversation)
+    stub_credential
+    short_quote = transcript_line[0, Crm::Ai::QuoteVerifier::MIN_QUOTE_LENGTH - 1]
+    stub_composition('should_send' => true, 'closure_detected' => false, 'confidence' => 0.9,
+                     'message_body' => 'Oi', 'open_loop_source' => short_quote)
+    expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+
+    result = nil
+    expect { result = described_class.new(follow_up: follow_up, now: Time.current).perform }
+      .not_to change(Message, :count)
+
+    expect(result.status).to eq(:failed)
+    expect(result.retry_at).to be_present
   end
 end
