@@ -272,6 +272,36 @@ RSpec.describe Crm::FollowUps::MessageSender do
     expect(follow_up.reload.metadata['send_mode']).to eq('template')
   end
 
+  # --- Ataque: shapes adversariais de metadata do template nativo -------------------------
+
+  # O AutoSendValidator pula a checagem de template para follow-up de IA (no create-time o template
+  # ainda não foi escolhido) e o schema do Message aceita string vazia em 'name'. Sem a barreira do
+  # MessageSender, um composer bugado mandaria chamada com nome de template vazio para a Meta.
+  it 'ai_followup com template_name vazio falha cedo, com motivo legível, sem criar mensagem' do
+    account, user = create_account_and_user
+    channel = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)
+    inbox = channel.inbox
+    inbox.add_members([user.id])
+    contact = account.contacts.create!(name: 'Lead', phone_number: '+5511987654323')
+    conversation = whatsapp_conversation(inbox: inbox, contact: contact, assignee: user)
+    create_incoming_message(conversation: conversation)
+    conversation.messages.incoming.last.update!(created_at: 30.hours.ago)
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, inbox: inbox, contact: contact,
+                                     primary_conversation: conversation, title: 'Lead')
+    follow_up = account.crm_follow_ups.create!(
+      card: card, conversation: conversation, title: 'Retornar', due_at: 10.minutes.ago, timezone: 'UTC',
+      automation_mode: :auto_send_message, created_by: user,
+      metadata: { source: 'ai_followup', message_body: 'Olá', template_name: '', template_language: 'pt_BR' }
+    )
+
+    result = nil
+    expect { result = described_class.new(follow_up: follow_up).perform }.not_to change(Message, :count)
+
+    expect(result.status).to eq(:failed)
+    expect(result.error.to_s).to eq('template_name_required')
+  end
+
   # Quando o namespace EXISTE (API on-premise da Meta) ele continua indo: a correção remove só a
   # chave vazia, não o suporte ao campo.
   it 'mantém o namespace no payload quando o follow-up traz um' do

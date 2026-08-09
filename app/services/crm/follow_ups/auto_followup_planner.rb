@@ -107,8 +107,12 @@ module Crm
       # respondia SAIR, a cadência morria, e a varredura seguinte re-armava tudo do zero — inclusive
       # zerando a própria marca de opt-out em #write_state. Quem quiser voltar a acionar o card usa o
       # RESET manual do drawer (cards_controller#reset_auto_followup), que limpa a marca de propósito.
+      # BOOLEAN.cast e não `== true`: o valor vem de jsonb e o runner (auto_followup_runner) já lê o
+      # mesmo campo de forma permissiva. Com igualdade estrita, um "true" string vindo de backfill ou
+      # de round-trip externo faria a guarda de LGPD falhar ABERTA — silenciosamente re-armando quem
+      # pediu para sair. Numa guarda de consentimento, a falha tem que ser para o lado fechado.
       def opted_out?(card)
-        card.metadata.to_h.dig('ai', 'auto_followup_state', 'opted_out') == true
+        Crm::Ai::Config::BOOLEAN.cast(card.metadata.to_h.dig('ai', 'auto_followup_state', 'opted_out'))
       end
 
       def create_first_touch(card, last_inbound)

@@ -101,6 +101,12 @@ class Crm::FollowUps::MessageSender
   end
 
   def create_native_template_message(conversation, sender)
+    # O JSON schema do Message exige a CHAVE 'name', mas string vazia passa. E o AutoSendValidator
+    # pula a checagem de template para follow-up de IA (no create-time o template ainda não foi
+    # escolhido). Sem esta barreira, um nome vazio viraria chamada inválida na API da Meta em vez de
+    # erro nosso. Vira Result.failed pelo rescue do #perform, com motivo legível.
+    raise 'template_name_required' if metadata['template_name'].to_s.strip.blank?
+
     Messages::MessageBuilder.new(
       sender,
       conversation,

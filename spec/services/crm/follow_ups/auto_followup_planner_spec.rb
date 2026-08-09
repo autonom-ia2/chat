@@ -134,6 +134,52 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
     expect(card.reload.follow_ups.none? { |fu| fu.metadata['source'] == 'ai_followup' }).to be(true)
   end
 
+  # --- Ataque: shapes adversariais de metadata ---------------------------------------------
+
+  it 'card sem auto_followup_state (metadata["ai"] ausente) é elegível normalmente' do
+    account, user = create_account_and_user
+    pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+    card, = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card.update!(metadata: {})
+
+    expect(described_class.new(pipeline: pipeline).perform).to eq(1)
+    expect(card.reload.follow_ups.count).to eq(1)
+  end
+
+  # O valor vem de jsonb: um "true" string (backfill, round-trip externo) precisa contar igual ao
+  # booleano. Guarda de consentimento falha para o lado FECHADO — com igualdade estrita ela
+  # re-armava em silêncio quem pediu para sair.
+  it 'opted_out gravado como STRING "true" também bloqueia o re-armamento' do
+    account, user = create_account_and_user
+    pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+    card, = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'active' => false, 'spent' => false,
+                                                                  'opted_out' => 'true' } } })
+
+    expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+    expect(card.reload.follow_ups.count).to eq(0)
+  end
+
+  # Multi-tenant: um pipeline pertence a UMA conta (FK); o model enforça isso via
+  # linked_records_must_belong_to_account. Prova que a varredura não corre risco de vazamento
+  # cross-tenant porque a própria persistência recusa o card antes de chegar ao planner.
+  it 'card de OUTRA conta não pode ser anexado ao pipeline de outra conta (guarda no model, não no planner)' do
+    account_a, user_a = create_account_and_user
+    account_b, user_b = create_account_and_user
+    pipeline_a, stage_a = setup_pipeline(account: account_a, user: user_a, config: eligible_config)
+    inbox_b = create_crm_whatsapp_api_inbox(account: account_b, members: [user_b])
+    contact_b = account_b.contacts.create!(name: 'Lead B', phone_number: '+5511900000000')
+    conversation_b = create_crm_conversation(account: account_b, inbox: inbox_b, contact: contact_b, assignee: user_b)
+
+    card = account_b.crm_cards.new(
+      pipeline: pipeline_a, stage: stage_a, inbox: inbox_b, contact: contact_b,
+      primary_conversation: conversation_b, title: 'Vazamento'
+    )
+
+    expect(card).not_to be_valid
+    expect(card.errors[:pipeline]).to include('must belong to the same account')
+  end
+
   it 'due_at que cairia fora da janela de quiet_hours é empurrado para dentro dela' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user,

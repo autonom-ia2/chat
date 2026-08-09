@@ -205,4 +205,108 @@ RSpec.describe Crm::FollowUps::AutoFollowupCanceler do
     expect(activity.payload['reason']).to eq('replied')
     expect(activity.payload['trigger']).to eq('inbound_reply')
   end
+
+  # --- Ataque: casos adversariais de conteúdo de mensagem -----------------------------------
+
+  it 'mensagem incoming sem conteúdo (nil) cancela a cadência como reply comum, sem estourar erro' do
+    account, user = create_account_and_user
+    card, conversation = build_card(account: account, user: user, active: true)
+    touch = build_follow_up(account: account, card: card, conversation: conversation, source: 'ai_followup')
+    message = conversation.messages.create!(
+      account_id: conversation.account_id, inbox_id: conversation.inbox_id,
+      message_type: :incoming, content: nil, sender: conversation.contact
+    )
+
+    expect { described_class.new(card: card, message: message).maybe_cancel }.not_to raise_error
+
+    expect(touch.reload.status).to eq('canceled')
+    state = card.reload.metadata['ai']['auto_followup_state']
+    expect(state['stopped_reason']).to eq('replied')
+    expect(state['opted_out']).to be(false)
+  end
+
+  it 'mensagem só com espaços/pontuação (sem texto real) conta como reply comum, não opt-out' do
+    account, user = create_account_and_user
+    card, conversation = build_card(account: account, user: user, active: true)
+    touch = build_follow_up(account: account, card: card, conversation: conversation, source: 'ai_followup')
+    message = create_incoming_message(conversation: conversation, content: '   !!!   ')
+
+    described_class.new(card: card, message: message).maybe_cancel
+
+    expect(touch.reload.status).to eq('canceled')
+    state = card.reload.metadata['ai']['auto_followup_state']
+    expect(state['stopped_reason']).to eq('replied')
+    expect(state['opted_out']).to be(false)
+  end
+
+  it 'mensagem só com emoji não é reconhecida como opt-out (fora das listas)' do
+    account, user = create_account_and_user
+    card, conversation = build_card(account: account, user: user, active: true)
+    touch = build_follow_up(account: account, card: card, conversation: conversation, source: 'ai_followup')
+    message = create_incoming_message(conversation: conversation, content: '👍👍👍')
+
+    expect { described_class.new(card: card, message: message).maybe_cancel }.not_to raise_error
+
+    expect(touch.reload.status).to eq('canceled')
+    state = card.reload.metadata['ai']['auto_followup_state']
+    expect(state['stopped_reason']).to eq('replied')
+    expect(state['opted_out']).to be(false)
+  end
+
+  it 'MAIÚSCULAS + acento + pontuação múltipla ("NÃO QUERO MAIS RECEBER!!!") ainda aciona opt_out' do
+    account, user = create_account_and_user
+    card, conversation = build_card(account: account, user: user, active: true)
+    touch = build_follow_up(account: account, card: card, conversation: conversation, source: 'ai_followup')
+    message = create_incoming_message(conversation: conversation, content: 'NÃO QUERO MAIS RECEBER!!!')
+
+    described_class.new(card: card, message: message).maybe_cancel
+
+    expect(touch.reload.status).to eq('canceled')
+    state = card.reload.metadata['ai']['auto_followup_state']
+    expect(state['stopped_reason']).to eq('opt_out')
+    expect(state['opted_out']).to be(true)
+  end
+
+  it 'frase de opt-out escondida no MEIO de uma mensagem longa ainda aciona opt_out' do
+    account, user = create_account_and_user
+    card, conversation = build_card(account: account, user: user, active: true)
+    touch = build_follow_up(account: account, card: card, conversation: conversation, source: 'ai_followup')
+    texto = 'Bom dia! Tudo bem por aí? Olha, pare de mandar essas mensagens, por favor, valeu, um abraço'
+    message = create_incoming_message(conversation: conversation, content: texto)
+
+    described_class.new(card: card, message: message).maybe_cancel
+
+    expect(touch.reload.status).to eq('canceled')
+    state = card.reload.metadata['ai']['auto_followup_state']
+    expect(state['stopped_reason']).to eq('opt_out')
+    expect(state['opted_out']).to be(true)
+  end
+
+  it 'palavra-alvo isolada mas cercada de quebras de linha ainda casa como palavra EXATA' do
+    account, user = create_account_and_user
+    card, conversation = build_card(account: account, user: user, active: true)
+    touch = build_follow_up(account: account, card: card, conversation: conversation, source: 'ai_followup')
+    message = create_incoming_message(conversation: conversation, content: "\n  SAIR  \n")
+
+    described_class.new(card: card, message: message).maybe_cancel
+
+    expect(touch.reload.status).to eq('canceled')
+    state = card.reload.metadata['ai']['auto_followup_state']
+    expect(state['stopped_reason']).to eq('opt_out')
+    expect(state['opted_out']).to be(true)
+  end
+
+  it 'quebras de linha NO MEIO do texto não impedem o match de palavra EXATA' do
+    account, user = create_account_and_user
+    card, conversation = build_card(account: account, user: user, active: true)
+    build_follow_up(account: account, card: card, conversation: conversation, source: 'ai_followup')
+    # "sair" sozinho span múltiplas linhas antes/depois — mas SEM outro texto: continua sendo a
+    # mensagem inteira depois de colapsar \s+ (que inclui \n) em espaço único.
+    message = create_incoming_message(conversation: conversation, content: "sair\n\n")
+
+    described_class.new(card: card, message: message).maybe_cancel
+
+    state = card.reload.metadata['ai']['auto_followup_state']
+    expect(state['stopped_reason']).to eq('opt_out')
+  end
 end

@@ -137,6 +137,43 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
     expect(follow_up.reload.metadata['callback_retries']).to eq(described_class::MAX_RETRIES)
   end
 
+  # --- Ataque: shapes adversariais da composição da IA -------------------------------------
+
+  # composition nil (composer não devolveu nada, ex.: resposta vazia/parse falhou de um jeito que
+  # não estourou exceção): closure?(nil) e composable?(nil) precisam tratar isso como "não compõe",
+  # não como NoMethodError em composition['closure_detected'].
+  it 'composition nil vira :fallback sem estourar exceção' do
+    account, user = create_account_and_user
+    card, conversation = setup_card(account: account, user: user)
+    follow_up = build_callback_follow_up(account: account, card: card, conversation: conversation)
+    stub_credential
+    stub_composition(nil)
+    expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+
+    result = nil
+    expect { result = described_class.new(follow_up: follow_up, now: Time.current).perform }.not_to raise_error
+
+    expect(result.status).to eq(:fallback)
+    expect(result.error).to eq('not_composable')
+  end
+
+  # confidence AUSENTE do payload (não é 0.0 explícito, a chave simplesmente não existe):
+  # composition['confidence'] é nil, .to_f vira 0.0, cai abaixo do piso mínimo -> fecha em
+  # :fallback igual a confidence explicitamente baixa. Fail-closed correto, sem exceção.
+  it 'confidence AUSENTE do payload (chave não existe) vira :fallback, não NoMethodError' do
+    account, user = create_account_and_user
+    card, conversation = setup_card(account: account, user: user)
+    follow_up = build_callback_follow_up(account: account, card: card, conversation: conversation)
+    stub_credential
+    stub_composition('should_send' => true, 'closure_detected' => false, 'message_body' => 'Oi')
+    expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+
+    result = nil
+    expect { result = described_class.new(follow_up: follow_up, now: Time.current).perform }.not_to raise_error
+
+    expect(result.status).to eq(:fallback)
+  end
+
   # Fora da janela de 24h o runner entra em :choose_template; sem candidato válido (index -1, a IA
   # não achou template adequado) precisa virar lembrete, não um envio quebrado.
   it 'modo choose_template sem candidato válido (index -1) vira :fallback("no_template")' do
