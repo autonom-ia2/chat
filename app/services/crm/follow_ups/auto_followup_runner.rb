@@ -70,8 +70,6 @@ module Crm
       # After this many CONSECUTIVE failures the cadence is finalized rather than
       # retried forever.
       MAX_RETRIES = 3
-      # Citação curta demais não prova nada ("ok", "sim") e casaria com quase qualquer conversa.
-      MIN_QUOTE_LENGTH = 15
 
       def initialize(follow_up:, now: Time.current)
         @follow_up = follow_up
@@ -163,6 +161,10 @@ module Crm
           context: context,
           mode: @send_mode,
           candidates: @candidates,
+          # A régua de PRAZO do prompt manda comparar a idade da última fala do cliente com o
+          # intervalo entre os toques. O intervalo mora aqui, no config do funil, e nunca era
+          # enviado: o modelo tinha que adivinhar se o prazo já havia vencido.
+          cadence: { interval_hours: interval_hours(touch), touch: touch, max_touches: max_touches },
           tone_instructions: config['tone_instructions'].to_s
         ).perform
 
@@ -180,22 +182,9 @@ module Crm
       # mensagem para o cliente ou queimar o toque.
       def verify_quote!(composition, context)
         return unless Crm::Ai::Config::BOOLEAN.cast(composition['should_send'])
-        return if quoted_from_transcript?(composition, context)
+        return if Crm::Ai::QuoteVerifier.new(quote: composition['open_loop_source'], messages: context[:recent_messages]).verified?
 
         raise Crm::Ai::ResponsesClient::Error, 'unverified_quote'
-      end
-
-      def quoted_from_transcript?(composition, context)
-        quote = normalize_for_quote(composition['open_loop_source'])
-        return false if quote.length < MIN_QUOTE_LENGTH
-
-        Array(context[:recent_messages]).any? { |message| normalize_for_quote(message[:content]).include?(quote) }
-      end
-
-      # Acento, caixa e espaçamento variam entre o que o modelo devolve e o que está gravado.
-      # Comparar cru reprovaria citação honesta.
-      def normalize_for_quote(text)
-        I18n.transliterate(text.to_s).downcase.gsub(/\s+/, ' ').strip
       end
 
       # The approved-template candidate set for this conversation inbox (native
@@ -451,7 +440,7 @@ module Crm
         if touch < max_touches
           next_touch = touch + 1
           timezone = resolved_timezone
-          due_at = compute_due(last_inbound_at + interval_hours(next_touch).hours, timezone)
+          due_at = compute_due(cadence_anchor_at + interval_hours(next_touch).hours, timezone)
           Crm::FollowUps::AutoFollowupTouchBuilder.new(card: @card, touch: next_touch, due_at: due_at, timezone: timezone).perform
           merge_state!('active' => true, 'touch' => next_touch, 'next_due_at' => due_at.iso8601)
         else
@@ -620,10 +609,10 @@ module Crm
         ).name_or_default
       end
 
-      def last_inbound_at
-        conversation = @follow_up.conversation
-        last_incoming = conversation&.messages&.incoming&.reorder(id: :desc)&.first
-        last_incoming&.created_at || @follow_up.created_at
+      # Ver Crm::FollowUps::CadenceAnchor: o relógio da cadência conta da última mensagem REAL da
+      # conversa (cliente, humano ou bot), nunca dos toques da própria IA.
+      def cadence_anchor_at
+        Crm::FollowUps::CadenceAnchor.new(@follow_up.conversation).at || @follow_up.created_at
       end
 
       def parse_time(value)

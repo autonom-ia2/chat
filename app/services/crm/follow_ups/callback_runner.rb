@@ -52,6 +52,12 @@ module Crm
         return Result.fallback('closure') if closure?(composition)
         return Result.fallback(skip_reason) unless composable?(composition)
 
+        # Só chega aqui quando a composição REALMENTE vai virar mensagem (should_send, confiança e,
+        # em choose_template, candidato resolvido já passaram em composable?) — closure e no-send não
+        # precisam de prova de citação. Mesma trava anti-alucinação do AutoFollowupRunner: uma citação
+        # que não bate é falha de composição, cai no mesmo retry limitado de fail_or_fallback.
+        verify_quote!(composition)
+
         prepare_send_metadata(composition)
         # Meta's 131049 MARKETING cap is per-recipient/24h. Defer (don't burn retry
         # budget) so the next due sweep re-runs the callback once the window clears.
@@ -80,9 +86,18 @@ module Crm
         attempts = meta['callback_retries'].to_i + 1
         meta['callback_retries'] = attempts
         @follow_up.update!(metadata: meta)
-        return Result.fallback("send_failed_#{attempts}") if attempts >= MAX_RETRIES
+        return Result.fallback(fallback_reason(error, attempts)) if attempts >= MAX_RETRIES
 
         Result.failed(error, @now + RETRY_BACKOFF)
+      end
+
+      # Citação não conferida esgota o mesmo orçamento de tentativas de uma falha de rede, mas não
+      # pode virar "send_failed" genérico: quem investigar depois precisa distinguir "a IA não provou
+      # o que afirmou" de "a API caiu" (mesma distinção que Crm::FollowUps::AutoFollowupRunner faz).
+      def fallback_reason(error, attempts)
+        return "unverified_quote_#{attempts}" if error.to_s == 'unverified_quote'
+
+        "send_failed_#{attempts}"
       end
 
       def compose
@@ -90,12 +105,12 @@ module Crm
           credential: resolved_credential,
           feature: 'follow_up', account: @card.account, pipeline: @card.pipeline
         )
-        context = Crm::Ai::ContextBuilder.new(card: @card).perform
+        @context = Crm::Ai::ContextBuilder.new(card: @card).perform
 
         Crm::Ai::FollowUpComposer.new(
           card: @card,
           client: client,
-          context: context,
+          context: @context,
           mode: @send_mode,
           candidates: @candidates,
           purpose: :callback,
@@ -105,6 +120,15 @@ module Crm
           },
           reasoning_effort: Crm::Ai::Config::CALLBACK_REASONING_EFFORT
         ).perform
+      end
+
+      # Mesma trava anti-invenção do AutoFollowupRunner (Crm::Ai::QuoteVerifier): open_loop_source
+      # precisa existir literalmente em @context[:recent_messages]. @context é o mesmo montado em
+      # #compose para a chamada à IA — reaproveitado aqui, sem nova consulta.
+      def verify_quote!(composition)
+        return if Crm::Ai::QuoteVerifier.new(quote: composition['open_loop_source'], messages: @context[:recent_messages]).verified?
+
+        raise Crm::Ai::ResponsesClient::Error, 'unverified_quote'
       end
 
       # Fail closed: sem credencial vira transitório rescued (fail_or_fallback) e não

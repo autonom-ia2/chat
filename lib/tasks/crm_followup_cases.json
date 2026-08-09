@@ -36,7 +36,8 @@
         "content": "Maravilha.",
         "created_at": "2026-08-06T08:22:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "follow-up anterior da IA no historico",
@@ -90,7 +91,8 @@
         "content": "Estou aguardando o retorno",
         "created_at": "2026-08-06T17:21:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "pedimos dado e o cliente sumiu",
@@ -121,11 +123,12 @@
         "content": "Fico no aguardo do CEP para fechar a cotacao.",
         "created_at": "2026-08-06T09:30:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "cliente perguntou e ninguem respondeu",
-    "agora": "2026-08-06T16:00",
+    "agora": "2026-08-06T17:30",
     "esperado": {
       "should_send": "true",
       "next_action_owner": "empresa"
@@ -146,7 +149,8 @@
         "content": "?",
         "created_at": "2026-08-06T11:00:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "encerrada e cliente satisfeito",
@@ -171,7 +175,8 @@
         "content": "Ja indiquei voces pro meu irmao",
         "created_at": "2026-08-06T10:03:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "cliente sem interesse",
@@ -196,7 +201,8 @@
         "content": "Nao tenho mais interesse",
         "created_at": "2026-08-06T10:05:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "depende de terceiro, prazo vencido",
@@ -221,7 +227,8 @@
         "content": "Combinado",
         "created_at": "2026-08-06T08:06:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "bot respondeu, humano nao entrou",
@@ -246,7 +253,8 @@
         "content": "Alguem consegue falar comigo?",
         "created_at": "2026-08-06T10:30:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "cliente pediu para nao ser mais contatado",
@@ -266,7 +274,8 @@
         "content": "Nao quero mais receber essas mensagens, por favor",
         "created_at": "2026-08-04T10:20:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "prazo prometido ainda nao venceu",
@@ -290,7 +299,8 @@
         "content": "Combinado, obrigado",
         "created_at": "2026-08-06T09:41:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "cliente pediu retorno para semana que vem",
@@ -314,7 +324,8 @@
         "content": "Perfeito, te procuro na semana que vem entao",
         "created_at": "2026-08-05T16:35:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "cliente prometeu enviar documento e sumiu",
@@ -340,7 +351,8 @@
         "content": "Fico no aguardo",
         "created_at": "2026-08-03T09:06:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "cliente perguntou preco e so o bot respondeu generico",
@@ -360,7 +372,8 @@
         "content": "Ola! Recebemos sua mensagem. Em breve um consultor vai te atender.",
         "created_at": "2026-08-05T14:00:30-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "cliente sumiu dez dias depois de pergunta nossa",
@@ -381,7 +394,8 @@
         "content": "Otimo. Ficou alguma duvida sobre a cobertura de terceiros?",
         "created_at": "2026-07-27T09:00:00-03:00"
       }
-    ]
+    ],
+    "intervalo_horas": 6
   },
   {
     "nome": "so saudacao automatica, sem assunto real",
@@ -404,6 +418,235 @@
         "role": "customer",
         "content": "nada nao",
         "created_at": "2026-08-04T18:02:00-03:00"
+      }
+    ],
+    "intervalo_horas": 6
+  },
+  {
+    "nome": "vou aguardar ha dez dias, sem prazo dito",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": [
+        "empresa",
+        "terceiro"
+      ],
+      "message_kind": "aviso_andamento"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Mandei seu caso para a subscricao da seguradora e te retorno com o orcamento.",
+        "created_at": "2026-07-27T09:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Ok, vou aguardar",
+        "created_at": "2026-07-27T09:05:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "cliente confirmou ha uma hora, intervalo de seis",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "false"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Vou levantar o valor da renovacao e te trago aqui.",
+        "created_at": "2026-08-06T12:55:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Combinado",
+        "created_at": "2026-08-06T13:00:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "prometemos para ontem e nao entregamos",
+    "agora": "2026-08-06T10:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": [
+        "empresa",
+        "terceiro"
+      ],
+      "message_kind": "aviso_andamento"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Consegue me mandar a proposta revisada?",
+        "created_at": "2026-08-04T15:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Consigo. Te mando amanha ate o meio da tarde.",
+        "created_at": "2026-08-04T15:10:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Perfeito",
+        "created_at": "2026-08-04T15:12:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "mandamos a proposta e o cliente sumiu ha tres dias",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Pode mandar a proposta do seguro empresarial",
+        "created_at": "2026-08-03T10:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Segue a proposta com as tres coberturas. Qualquer duvida me chama.",
+        "created_at": "2026-08-03T10:30:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "venda fechada e cliente agradeceu",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "false",
+      "closure_detected": "true"
+    },
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Apolice emitida e enviada para o seu email. Qualquer coisa e so chamar.",
+        "created_at": "2026-08-05T16:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Perfeito, muito obrigado pelo atendimento!",
+        "created_at": "2026-08-05T16:10:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "orcamento enviado, cliente calado ha 2 dias",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Quanto fica o seguro do meu Corolla 2021?",
+        "created_at": "2026-08-04T09:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Fica R$ 2.340 no anual, com cobertura completa e assistencia 24h.",
+        "created_at": "2026-08-04T09:30:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "simulacao enviada sem pergunta nenhuma",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Manda a simulacao do seguro de vida por favor",
+        "created_at": "2026-08-03T14:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Simulacao anexada. Qualquer duvida estou aqui.",
+        "created_at": "2026-08-03T14:20:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "link de pagamento enviado e sem retorno",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Fechado, pode mandar o link para eu pagar",
+        "created_at": "2026-08-04T11:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Segue o link da primeira parcela. Assim que confirmar eu emito a apolice.",
+        "created_at": "2026-08-04T11:05:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "opcoes de horario enviadas e cliente sumiu",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Podemos marcar uma call essa semana?",
+        "created_at": "2026-08-04T16:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Claro. Tenho quinta 10h ou sexta 15h. Qual fica melhor?",
+        "created_at": "2026-08-04T16:10:00-03:00"
+      }
+    ]
+  },
+  {
+    "nome": "documento enviado pelo bot e cliente calado",
+    "agora": "2026-08-06T14:00",
+    "intervalo_horas": 6,
+    "esperado": {
+      "should_send": "true",
+      "next_action_owner": "cliente",
+      "message_kind": "cobranca"
+    },
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Preciso da apolice do ano passado para o financiamento",
+        "created_at": "2026-08-04T08:00:00-03:00"
+      },
+      {
+        "role": "external_agent",
+        "content": "Segue a apolice 2025 em PDF. Precisa de mais alguma coisa?",
+        "created_at": "2026-08-04T08:02:00-03:00"
       }
     ]
   }

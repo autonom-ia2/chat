@@ -11,12 +11,12 @@ module Crm
     #     active Crm::FollowUp with metadata.source == 'ai_followup')
     #   * TWO-WAY conversation: >= 2 inbound (contact) messages AND >= 2 outbound
     #     (agent/AI, non-private) messages — don't chase a barely-started thread
-    #   * last inbound message >= the FIRST configured send interval ago
+    #   * last real message (CadenceAnchor) >= the FIRST configured send interval ago
     #
     # The "radar" (eligibility threshold) is DERIVED from the user's first send
     # interval (intervals_hours[0]) — never a fixed value — so a short cadence
     # (e.g. 1h/2h/3h) is picked up in time instead of waiting on a hardcoded
-    # idle gate. Touch #1 due_at = last_inbound + intervals_hours[0], clamped
+    # idle gate. Touch #1 due_at = CadenceAnchor + intervals_hours[0], clamped
     # into quiet hours (already inside the 24h window when that interval < 24h).
     class AutoFollowupPlanner
       # Conversa precisa ter tido troca REAL dos dois lados antes de iniciar o follow-up.
@@ -59,11 +59,11 @@ module Crm
         return false if pending_callback?(card)
         return false unless sufficient_two_way_exchange?(conversation)
 
-        last_inbound = last_inbound_message(conversation)
-        return false if last_inbound.blank?
-        return false if last_inbound.created_at > cutoff
+        anchor_at = Crm::FollowUps::CadenceAnchor.new(conversation).at
+        return false if anchor_at.blank?
+        return false if anchor_at > cutoff
 
-        create_first_touch(card, last_inbound).present?
+        create_first_touch(card, anchor_at).present?
       end
 
       # Só inicia se a conversa principal teve mão dupla real: >= 2 mensagens do cliente E >= 2 do
@@ -115,9 +115,9 @@ module Crm
         Crm::Ai::Config::BOOLEAN.cast(card.metadata.to_h.dig('ai', 'auto_followup_state', 'opted_out'))
       end
 
-      def create_first_touch(card, last_inbound)
+      def create_first_touch(card, anchor_at)
         timezone = resolved_timezone(card)
-        due_at = compute_first_due(last_inbound.created_at, timezone)
+        due_at = compute_first_due(anchor_at, timezone)
 
         follow_up = Crm::FollowUps::AutoFollowupTouchBuilder.new(
           card: card,
@@ -128,15 +128,15 @@ module Crm
 
         write_state(card, due_at)
         Crm::FollowUps::CardNextDueUpdater.update(card)
-        log_planned(card, follow_up, last_inbound)
+        log_planned(card, follow_up, anchor_at)
         follow_up
       end
 
-      # Touch #1 fires intervals_hours[0] after the last inbound — the SAME value
+      # Touch #1 fires intervals_hours[0] after the cadence anchor — the SAME value
       # that gates eligibility — so once a card is picked up the send time is
       # "now or just past" and fires on the next quiet-hours slot, never late.
-      def compute_first_due(last_inbound_at, timezone)
-        target = last_inbound_at + first_interval_hours.hours
+      def compute_first_due(anchor_at, timezone)
+        target = anchor_at + first_interval_hours.hours
         target = @now if target < @now
         clamp_into_quiet_hours(target, timezone)
       end
@@ -188,7 +188,7 @@ module Crm
         card.update!(metadata: metadata)
       end
 
-      def log_planned(card, follow_up, last_inbound)
+      def log_planned(card, follow_up, anchor_at)
         Crm::ActivityLogger.new(
           card: card,
           actor: nil,
@@ -199,13 +199,9 @@ module Crm
             touch: 1,
             due_at: follow_up.due_at&.utc&.iso8601,
             last_message_role: last_message_role(card.primary_conversation),
-            last_inbound_at: last_inbound.created_at.utc.iso8601
+            anchor_at: anchor_at.utc.iso8601
           }
         ).perform
-      end
-
-      def last_inbound_message(conversation)
-        conversation.messages.incoming.reorder(id: :desc).first
       end
 
       # 'customer' when the conversation's most recent non-activity message is

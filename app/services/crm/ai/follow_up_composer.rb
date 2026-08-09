@@ -105,14 +105,19 @@ module Crm
       # purpose: :followup (padrão — retomar conversa parada, gate de "loop aberto") OU :callback
       # (cliente PEDIU um retorno numa data; a "tarefa" é retomar o contato como combinado, NÃO caçar
       # silêncio). callback_context: { requested_at_text:, requested_at: } usado só no :callback.
+      # cadence: { interval_hours:, touch:, max_touches: } — a régua de tempo da cadência. A regra de
+      # PRAZO manda comparar a idade da última fala do cliente com "o intervalo entre os toques", e
+      # esse número nunca era enviado: o modelo tinha que adivinhar se o prazo venceu. Vazio no modo
+      # callback, que não tem cadência.
       def initialize(card:, client:, context:, mode: :free_form, candidates: [], tone_instructions: '',
-                     purpose: :followup, callback_context: {},
+                     purpose: :followup, callback_context: {}, cadence: {},
                      model: Config::MODEL_FOLLOWUP, reasoning_effort: Config::FOLLOWUP_REASONING_EFFORT)
         @card = card
         @client = client
         @context = context
         @mode = mode.to_sym
         @candidates = Array(candidates)
+        @cadence = (cadence || {}).to_h
         @tone_instructions = tone_instructions.to_s.strip
         @purpose = purpose.to_sym
         @callback_context = (callback_context || {}).to_h
@@ -168,7 +173,8 @@ module Crm
           #{turn_owner_rules}
 
           PORTÃO ÚNICO — decida should_send (vale a pena dar follow agora?):
-          - Encontre UM único loop aberto real na conversa: o cliente perguntou/pediu e não foi respondido; prometemos algo e não enviamos; havia uma decisão pendente e o cliente sumiu depois que perguntamos.
+          - Encontre UM único loop aberto real na conversa: o cliente perguntou/pediu e não foi respondido; prometemos algo e não enviamos; havia uma decisão pendente e o cliente sumiu depois que perguntamos; ou ENTREGAMOS o que ele pediu (proposta, orçamento, valor, simulação, documento, link, opção de horário) e ele não voltou com a resposta.
+          - Entrega sem pergunta explícita TAMBÉM é loop aberto: "segue a proposta, qualquer dúvida me chama" deixa a decisão com o cliente. Não exija que tenhamos feito uma pergunta em forma de pergunta.
           - #{ContextBuilder::ROLES_LEGEND} "last_message_role" repete o papel da última mensagem. Quem falou por último NÃO define, sozinho, de quem é a pendência — leia a conversa.
           - Use "temporal.now_local" (data e hora de agora, no fuso do contato) junto com o "created_at" de cada mensagem para saber há quanto tempo cada coisa aconteceu.
           - Use "conversation_state": "status" da conversa, "assigned_to_human" (há uma pessoa do time responsável) e "last_human_agent_at" (quando um humano falou por último).
@@ -226,7 +232,7 @@ module Crm
       def turn_owner_rules
         <<~RULES.strip
           PRIMEIRA PERGUNTA — de quem é a vez (next_action_owner):
-          - "cliente": nós perguntamos ou pedimos algo e ele não respondeu.
+          - "cliente": nós perguntamos ou pedimos algo e ele não respondeu, OU já entregamos o que ele pediu (proposta, orçamento, valor, simulação, documento) e a decisão agora é dele. Entregamos e ele sumiu = vez do cliente, mesmo sem pergunta nossa.
           - "empresa": nós prometemos algo e não entregamos, ou o cliente perguntou e não foi respondido.
           - "terceiro": o que falta depende de alguém fora da conversa (seguradora, banco, fornecedor) e nós já acionamos.
           - Confirmação passiva do cliente ("ok", "beleza", "combinado", "vou aguardar", "fico no aguardo") logo depois de uma promessa nossa significa "empresa". Isso NÃO é o cliente sumindo.
@@ -237,7 +243,7 @@ module Crm
           - Se a vez é da "empresa" ou de "terceiro": NÃO cobre e NÃO peça nada.
             · Prazo que prometemos ainda não venceu → should_send=false.
             · Prazo já venceu → message_kind="aviso_andamento" e escreva um aviso curto de andamento, sem novidade inventada e sem pedido (ex.: "ainda estou com a seguradora; assim que retornar eu te trago o orçamento").
-          - PRAZO: se a conversa disser o prazo ("te retorno hoje", "até amanhã", "na segunda"), use o que foi dito. Se não disser, considere vencido quando a última mensagem do cliente já estiver mais antiga que o intervalo entre os toques.
+          - PRAZO: se a conversa disser o prazo ("te retorno hoje", "até amanhã", "na segunda"), use o que foi dito. Se não disser, considere vencido quando a última mensagem do cliente já estiver mais antiga que o intervalo entre os toques. O intervalo vem em "cadence.interval_hours" (horas); "cadence.touch" e "cadence.max_touches" dizem qual toque é este e quantos existem no total.
         RULES
       end
 
@@ -245,7 +251,8 @@ module Crm
         if choose_template_mode?
           <<~MODE.strip
             MODO choose_template (a conversa está FORA da janela de 24h):
-            - Você recebe candidates: uma lista de templates APROVADOS do inbox, cada um com index, kind, name, language, body e variables.
+            - Você recebe candidates: uma lista de templates APROVADOS do inbox, cada um com index, kind, name, language, body, variables e category.
+            - "category" é "utility", "marketing" ou nulo (inbox sem categoria da Meta). Quando mais de um candidato servir igualmente bem, prefira "utility": template "marketing" tem teto de 1 envio por contato a cada 24h, e escolher marketing sem necessidade faz o toque ser adiado.
             - Se should_send=true, escolha o MELHOR candidato para reabrir o loop e preencha chosen_template.index com o índice (base 0) dele. Copie também kind/name/id/language do candidato escolhido (o runner usa o index como autoridade).
             - Preencha template_variables com os valores posicionais ("1","2",...) que o body do template usa (ex.: "1" = primeiro nome do contato, "2" = assunto curto do loop). Apenas valores reais, nunca texto livre de template.
             - Se NENHUM candidato for adequado ao loop aberto, defina should_send=false e chosen_template.index=-1.
@@ -281,6 +288,7 @@ module Crm
           last_message_role: last_message_role,
           tone_instructions: @tone_instructions
         }
+        payload[:cadence] = @cadence if @cadence.present?
         payload[:candidates] = candidates_for_input if choose_template_mode?
         payload.to_json
       end
@@ -293,7 +301,8 @@ module Crm
             name: candidate[:name],
             language: candidate[:language],
             body: candidate[:body],
-            variables: candidate[:variables]
+            variables: candidate[:variables],
+            category: candidate[:category]
           }
         end
       end

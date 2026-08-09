@@ -12,7 +12,9 @@
 
 # Um caso do banco: monta o contexto, chama o cérebro e compara com o esperado.
 class FollowUpEvalCase
-  LINHA = '%-32<nome>s %-6<veredito>s %-9<owner>s %-16<kind>s %<detalhe>s'.freeze
+  # send/closure aparecem na linha porque, sem eles, uma falha só dizia "FALHA" sem dizer se o
+  # desacordo foi na decisão de enviar ou na leitura da vez.
+  LINHA = '%-32<nome>s %-6<veredito>s %-6<send>s %-6<closure>s %-9<owner>s %-16<kind>s %<detalhe>s'.freeze
 
   def initialize(kase, card, credential)
     @kase = kase
@@ -25,11 +27,12 @@ class FollowUpEvalCase
     ok = matches?(out)
     { ok: ok,
       linha: format(LINHA, nome: nome, veredito: ok ? 'ok' : 'FALHA',
+                           send: out['should_send'].to_s, closure: out['closure_detected'].to_s,
                            owner: out['next_action_owner'].to_s, kind: out['message_kind'].to_s,
                            detalhe: out['message_body'].to_s.truncate(70)) }
   rescue StandardError => e
     { ok: false,
-      linha: format(LINHA, nome: nome, veredito: 'ERRO', owner: '-', kind: '-',
+      linha: format(LINHA, nome: nome, veredito: 'ERRO', send: '-', closure: '-', owner: '-', kind: '-',
                            detalhe: "#{e.class}: #{e.message.to_s.truncate(60)}") }
   end
 
@@ -45,8 +48,15 @@ class FollowUpEvalCase
       client: Crm::Ai::ResponsesClient.new(credential: @credential, feature: 'follow_up'),
       context: context,
       mode: :free_form,
+      cadence: cadence,
       tone_instructions: @kase['tone_instructions'].to_s
     ).perform
+  end
+
+  # Mesma régua de tempo que o runner manda em produção. Sem ela o modelo não tem como saber se o
+  # prazo venceu, e a decisão no caso limite ("vou aguardar") oscila entre enviar e não enviar.
+  def cadence
+    { interval_hours: (@kase['intervalo_horas'] || 6).to_i, touch: 1, max_touches: 2 }
   end
 
   def context
@@ -85,8 +95,8 @@ namespace :crm do
 
     results = JSON.parse(File.read(path)).map { |kase| FollowUpEvalCase.new(kase, card, credential).run }
 
-    puts format(FollowUpEvalCase::LINHA, nome: 'CASO', veredito: 'VERD', owner: 'VEZ', kind: 'TIPO',
-                                         detalhe: 'MENSAGEM')
+    puts format(FollowUpEvalCase::LINHA, nome: 'CASO', veredito: 'VERD', send: 'SEND', closure: 'FIM',
+                                         owner: 'VEZ', kind: 'TIPO', detalhe: 'MENSAGEM')
     results.each { |r| puts r[:linha] }
     aprovados = results.count { |r| r[:ok] }
     puts "\n#{aprovados}/#{results.size} de acordo com o esperado"

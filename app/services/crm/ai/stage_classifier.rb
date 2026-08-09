@@ -122,6 +122,10 @@ module Crm
           stages: @stages.map { |stage| stage_payload(stage) },
           conversation_summary: @context[:summary],
           recent_messages: @context[:recent_messages],
+          # Quem está com a conversa AGORA. Os papéis por mensagem dizem quem falou; isto diz se a
+          # conversa está aberta, se há uma pessoa do time responsável e quando um humano falou por
+          # último — sem isso o estágio sai só do texto, sem saber se alguém já assumiu.
+          conversation_state: @context[:conversation_state],
           handoff_enabled: @handoff_enabled,
           handoff_trigger: @handoff_trigger,
           eligible_agents: @eligible_agents,

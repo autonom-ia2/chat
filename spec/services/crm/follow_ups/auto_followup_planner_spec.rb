@@ -10,7 +10,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   # Conversa WhatsApp-capaz (WAHA, sem janela de 24h) com o número de mensagens de cada lado que o
   # teste precisar, para exercitar a exigência de mão dupla real. account/user/pipeline saem do
   # próprio stage para caber no limite de parâmetros (Metrics/ParameterLists).
-  def build_card_with_exchange(stage:, last_inbound_at:, inbound_count: 2, outbound_count: 2, contact_tz: nil)
+  def build_card_with_exchange(stage:, anchor_at:, inbound_count: 2, outbound_count: 2, contact_tz: nil)
     pipeline = stage.pipeline
     account = pipeline.account
     user = pipeline.created_by
@@ -22,7 +22,9 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
     outbound_count.times do
       conversation.messages.create!(account_id: account.id, inbox_id: inbox.id, message_type: :outgoing, content: 'Oi')
     end
-    conversation.messages.incoming.last&.update!(created_at: last_inbound_at)
+    # A âncora da cadência é a ÚLTIMA mensagem real da conversa (CadenceAnchor), não a última do
+    # cliente: por isso o fixture envelhece a mensagem mais recente, seja ela de quem for.
+    conversation.messages.reorder(id: :desc).first&.update!(created_at: anchor_at)
     card = account.crm_cards.create!(
       pipeline: pipeline, stage: stage, inbox: inbox, contact: contact,
       primary_conversation: conversation, title: 'Lead'
@@ -40,7 +42,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   it 'funil com auto_followup.enabled false retorna 0 e não cria nada' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: { 'enabled' => false })
-    build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
 
     result = described_class.new(pipeline: pipeline).perform
 
@@ -51,7 +53,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   it 'card elegível cria o toque 1 (touch=1, source=ai_followup) e o result soma 1' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
-    card, = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
 
     result = described_class.new(pipeline: pipeline).perform
 
@@ -64,7 +66,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   it 'card elegível grava o state completo do card com active=true' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
-    card, = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
 
     described_class.new(pipeline: pipeline).perform
 
@@ -79,16 +81,43 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   it 'conversa com troca insuficiente (1 inbound) NÃO cria o toque' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
-    build_card_with_exchange(stage: stage, inbound_count: 1, outbound_count: 2, last_inbound_at: 21.hours.ago)
+    build_card_with_exchange(stage: stage, inbound_count: 1, outbound_count: 2, anchor_at: 21.hours.ago)
 
     expect(described_class.new(pipeline: pipeline).perform).to eq(0)
     expect(Crm::FollowUp.count).to eq(0)
   end
 
-  it 'última inbound recente demais (dentro do primeiro intervalo) NÃO cria o toque' do
+  # O motivo da mudança de âncora: o relógio conta da ÚLTIMA MENSAGEM da conversa, não da última
+  # fala do cliente. Sem isto, o time podia estar conversando com o cliente agora e o toque saía
+  # por cima, porque o relógio tinha começado a correr horas antes.
+  it 'mensagem recente do time adia o toque, mesmo com o cliente calado há muito tempo' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
-    build_card_with_exchange(stage: stage, last_inbound_at: 1.hour.ago)
+    _card, conversation = build_card_with_exchange(stage: stage, anchor_at: 30.hours.ago)
+    conversation.messages.create!(account_id: account.id, inbox_id: conversation.inbox_id,
+                                  message_type: :outgoing, content: 'Estou verificando aqui, já te falo')
+
+    expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+  end
+
+  # Mas o toque da própria IA NÃO é conversa: se contasse, cada toque viraria a âncora do seguinte
+  # e o espaçamento configurado pelo usuário mudaria sozinho.
+  it 'follow-up automático anterior não conta como âncora' do
+    account, user = create_account_and_user
+    pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+    card, conversation = build_card_with_exchange(stage: stage, anchor_at: 30.hours.ago)
+    conversation.messages.create!(account_id: account.id, inbox_id: conversation.inbox_id,
+                                  message_type: :outgoing, content: 'Toque automático anterior')
+                .update!(content_attributes: { 'crm_follow_up_id' => 999 })
+
+    expect(described_class.new(pipeline: pipeline).perform).to eq(1)
+    expect(card.reload.follow_ups.count).to eq(1)
+  end
+
+  it 'última mensagem recente demais (dentro do primeiro intervalo) NÃO cria o toque' do
+    account, user = create_account_and_user
+    pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+    build_card_with_exchange(stage: stage, anchor_at: 1.hour.ago)
 
     expect(described_class.new(pipeline: pipeline).perform).to eq(0)
     expect(Crm::FollowUp.count).to eq(0)
@@ -97,7 +126,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   it 'card com state.spent=true NUNCA re-arma, mesmo com exigências de elegibilidade satisfeitas' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
-    card, = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
     card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'spent' => true } } })
 
     expect(described_class.new(pipeline: pipeline).perform).to eq(0)
@@ -110,7 +139,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   it 'card com opted_out=true NUNCA re-arma pela varredura' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
-    card, = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
     card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'active' => false, 'spent' => false,
                                                                   'opted_out' => true } } })
 
@@ -124,7 +153,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   it 'card com ai_callback ativo e due_at futuro NÃO cria o toque' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
-    card, conversation = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card, conversation = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
     account.crm_follow_ups.create!(
       card: card, conversation: conversation, title: 'Retorno agendado', due_at: 3.days.from_now,
       timezone: 'UTC', automation_mode: :reminder_only, metadata: { 'source' => 'ai_callback' }
@@ -139,7 +168,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   it 'card sem auto_followup_state (metadata["ai"] ausente) é elegível normalmente' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
-    card, = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
     card.update!(metadata: {})
 
     expect(described_class.new(pipeline: pipeline).perform).to eq(1)
@@ -152,7 +181,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
   it 'opted_out gravado como STRING "true" também bloqueia o re-armamento' do
     account, user = create_account_and_user
     pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
-    card, = build_card_with_exchange(stage: stage, last_inbound_at: 21.hours.ago)
+    card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
     card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'active' => false, 'spent' => false,
                                                                   'opted_out' => 'true' } } })
 
@@ -188,7 +217,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
     now = Time.utc(2026, 8, 10, 5, 0, 0)
     # last_inbound 21h antes de `now`: toque 1 cairia às 4h UTC (1h local em America/Sao_Paulo,
     # UTC-3) — dentro da janela silenciosa [0h,8h) — então precisa ser empurrado para 8h local.
-    card, = build_card_with_exchange(stage: stage, last_inbound_at: now - 21.hours, contact_tz: 'America/Sao_Paulo')
+    card, = build_card_with_exchange(stage: stage, anchor_at: now - 21.hours, contact_tz: 'America/Sao_Paulo')
 
     described_class.new(pipeline: pipeline, now: now).perform
 
