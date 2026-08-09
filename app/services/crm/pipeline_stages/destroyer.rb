@@ -18,19 +18,34 @@ class Crm::PipelineStages::Destroyer
   # only stage_id changes — so a stage holding only won/lost/archived cards becomes deletable
   # without silently discarding them.
   def perform
-    move_cards_to_target! if @target_stage_id.present?
-    return HAS_CARDS if @stage.cards.exists?
-    return LAST_STAGE if fallback_stage.blank?
-
+    result = nil
     ActiveRecord::Base.transaction do
+      # Moving cards and destroying the stage must commit or roll back together — if move
+      # succeeded but destroy! then failed (e.g. a race re-attached a card), a card left
+      # pointing at the target while the source stage survives would be a silent, permanent
+      # side effect of a failed delete.
+      move_cards_to_target! if @target_stage_id.present?
+
+      if @stage.cards.exists?
+        result = HAS_CARDS
+        raise ActiveRecord::Rollback
+      end
+
+      if fallback_stage.blank?
+        result = LAST_STAGE
+        raise ActiveRecord::Rollback
+      end
+
       reassign_default_stage!
       @stage.destroy!
+      result = SUCCESS
     end
-    SUCCESS
+    result
   rescue ActiveRecord::InvalidForeignKey, ActiveRecord::RecordNotDestroyed
     # Race: a card was attached to the stage between the cards.exists? check and destroy!.
     # The cards restrict_with_error callback raises RecordNotDestroyed; a concurrent FK insert
-    # raises InvalidForeignKey. Either way the stage still owns a card — report it as such.
+    # raises InvalidForeignKey. Either way the whole transaction rolls back (including any
+    # move_cards_to_target!) and the stage still owns a card — report it as such.
     HAS_CARDS
   end
 

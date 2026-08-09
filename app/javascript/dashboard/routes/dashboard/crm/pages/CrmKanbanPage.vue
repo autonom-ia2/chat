@@ -95,6 +95,13 @@ const openedRouteCardId = ref(null);
 const pipelineDrawerMode = ref('create');
 const showPipelineDrawer = ref(false);
 const pipelineInboxes = ref([]);
+// Authoritative, unfiltered stage list (with real total_cards_count) for the funnel-edit
+// drawer and the delete-stage target picker. Deliberately NOT the board's `stages` getter:
+// that one is scoped to whatever stage filter/pagination the Kanban view currently has
+// active, and its cards_count/total_cards_count are only populated when the board fetch
+// that produced it happened to pass include_counts (e.g. right after creating a card it
+// doesn't), which let a stale/absent count silently bypass the "has cards" picker.
+const pipelineDrawerStages = ref([]);
 const showInboxSettingsDrawer = ref(false);
 const showBookingProfilesDrawer = ref(false);
 const inboxSettings = ref([]);
@@ -633,9 +640,29 @@ const loadPipelineInboxes = async pipelineId => {
   }
 };
 
+const loadPipelineDrawerStages = async pipelineId => {
+  if (!pipelineId) {
+    pipelineDrawerStages.value = [];
+    return [];
+  }
+
+  try {
+    const stagesData = await store.dispatch(
+      'crmKanban/fetchPipelineStages',
+      pipelineId
+    );
+    pipelineDrawerStages.value = stagesData;
+    return stagesData;
+  } catch {
+    pipelineDrawerStages.value = [];
+    return [];
+  }
+};
+
 const openCreatePipelineDrawer = () => {
   pipelineDrawerMode.value = 'create';
   pipelineInboxes.value = [];
+  pipelineDrawerStages.value = [];
   showPipelineDrawer.value = true;
 };
 
@@ -643,8 +670,12 @@ const openEditPipelineDrawer = async () => {
   if (!selectedPipeline.value) return;
   pipelineDrawerMode.value = 'edit';
   pipelineInboxes.value = [];
+  pipelineDrawerStages.value = [];
   showPipelineDrawer.value = true;
-  await loadPipelineInboxes(selectedPipeline.value.id);
+  await Promise.all([
+    loadPipelineInboxes(selectedPipeline.value.id),
+    loadPipelineDrawerStages(selectedPipeline.value.id),
+  ]);
 };
 
 const closePipelineDrawer = () => {
@@ -794,7 +825,7 @@ const archivePipeline = async () => {
 };
 
 const deleteStageOptions = computed(() =>
-  stages.value.filter(
+  pipelineDrawerStages.value.filter(
     candidate => Number(candidate.id) !== Number(stageToDelete.value?.id)
   )
 );
@@ -844,7 +875,13 @@ const deleteStage = async stage => {
       targetStageId: deleteStageTargetId.value || null,
     });
     useAlert(t('CRM_KANBAN.ALERTS.STAGE_DELETED'));
-    await loadCurrentBoard(true);
+    await Promise.all([
+      loadCurrentBoard(true),
+      // Re-sync the drawer's own stage list so a second delete in the same drawer
+      // session sees accurate total_cards_count (incl. cards just moved here) and
+      // no longer offers the just-deleted stage as a target.
+      loadPipelineDrawerStages(selectedPipeline.value?.id),
+    ]);
   } catch (error) {
     useAlert(deleteStageErrorMessage(error));
   } finally {
@@ -2453,7 +2490,7 @@ onMounted(async () => {
       :show="showPipelineDrawer"
       :mode="pipelineDrawerMode"
       :pipeline="pipelineDrawerMode === 'edit' ? selectedPipeline : null"
-      :stages="pipelineDrawerMode === 'edit' ? stages : []"
+      :stages="pipelineDrawerMode === 'edit' ? pipelineDrawerStages : []"
       :inboxes="inboxes"
       :pipeline-inboxes="pipelineInboxes"
       :is-saving="uiFlags.isSavingPipeline"
