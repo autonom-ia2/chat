@@ -772,7 +772,9 @@
       "INBOX_SETTINGS_LOAD_ERROR": "Não foi possível carregar as configurações das inboxes.",
       "INBOX_SETTINGS_SAVE_ERROR": "Não foi possível salvar a configuração da inbox.",
       "STAGE_DELETED": "Etapa removida.",
-      "STAGE_DELETE_ERROR": "Não foi possível remover a etapa. Etapas com cards não podem ser excluídas.",
+      "STAGE_DELETE_ERROR": "Não foi possível remover a etapa.",
+      "STAGE_DELETE_ERROR_HAS_CARDS": "Esta etapa ainda tem cards vinculados a ela — mova-os para outra etapa antes.",
+      "STAGE_DELETE_ERROR_LAST_STAGE": "Não foi possível remover a etapa — um funil precisa de pelo menos uma etapa.",
       "CARD_CREATED": "Card criado.",
       "CARD_UPDATED": "Card atualizado.",
       "CARD_LOAD_ERROR": "Não foi possível carregar os detalhes do card.",
@@ -1314,6 +1316,9 @@
       "ARCHIVE_PIPELINE_CONFIRM": "Arquivar",
       "DELETE_STAGE_TITLE": "Excluir etapa?",
       "DELETE_STAGE_DESCRIPTION": "A etapa {stage} será removida se não tiver cards.",
+      "DELETE_STAGE_DESCRIPTION_WITH_CARDS": "{stage} tem {count} card(s) vinculado(s) a ela (eles não aparecem no Kanban porque estão ganhos, perdidos ou arquivados). Escolha uma etapa para movê-los antes de excluir.",
+      "DELETE_STAGE_TARGET_LABEL": "Mover cards para",
+      "DELETE_STAGE_TARGET_PLACEHOLDER": "Selecione uma etapa",
       "DELETE_STAGE_CONFIRM": "Excluir"
     },
     "PROVIDERS": {
