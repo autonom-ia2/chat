@@ -65,7 +65,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
 
       allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
       allow(client).to receive(:exchange_code!).and_return(token)
-      allow(client).to receive(:fetch_context!).with('identity-id-token').and_return({})
+      allow(client).to receive(:fetch_context!).with('identity-id-token', organization_id: nil).and_return({})
       allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(provisioner)
 
       with_modified_env sso_env do
@@ -99,7 +99,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
       allow(client).to receive(:exchange_code!).and_return(
         Autonomia::Sso::Client::Token.new(access_token: 'identity-access-token')
       )
-      allow(client).to receive(:fetch_context!).with('identity-access-token').and_return({})
+      allow(client).to receive(:fetch_context!).with('identity-access-token', organization_id: nil).and_return({})
       allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(provisioner)
 
       with_modified_env sso_env do
@@ -109,6 +109,28 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
       params = Rack::Utils.parse_query(URI.parse(response.location).query)
       expect(params['email']).to eq(user.email)
       expect(params['sso_auth_token']).to be_present
+    end
+
+    it 'uses the organization selected by Auth when loading the context' do
+      with_modified_env sso_env do
+        get '/auth/autonomia'
+      end
+      state = Rack::Utils.parse_query(URI.parse(response.location).query).fetch('state')
+      organization_token = Autonomia::Sso::Client::Token.new(
+        access_token: 'identity-access-token',
+        id_token: 'identity-id-token',
+        organization_id: 'organization-123'
+      )
+      allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
+      allow(client).to receive(:exchange_code!).and_return(organization_token)
+      allow(client).to receive(:fetch_context!).with('identity-id-token', organization_id: 'organization-123').and_return({})
+      allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(provisioner)
+
+      with_modified_env sso_env do
+        get '/auth/autonomia/callback', params: { code: code, state: state }
+      end
+
+      expect(client).to have_received(:fetch_context!).with('identity-id-token', organization_id: 'organization-123')
     end
 
     it 'rejects an invalid state before exchanging the code' do
