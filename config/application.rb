@@ -7,6 +7,7 @@ require 'rails/all'
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
+require_relative '../lib/vigia/request_middleware'
 
 ## Load the specific APM agent
 # We rely on DOTENV to load the environment variables
@@ -63,6 +64,7 @@ module Chatwoot
 
     # Custom chatwoot configurations
     config.x = config_for(:app).with_indifferent_access
+    config.middleware.use Vigia::RequestMiddleware
 
     # https://stackoverflow.com/questions/72970170/upgrading-to-rails-6-1-6-1-causes-psychdisallowedclass-tried-to-load-unspecif
     # https://discuss.rubyonrails.org/t/cve-2022-32224-possible-rce-escalation-bug-with-serialized-columns-in-active-record/81017
