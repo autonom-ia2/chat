@@ -46,6 +46,15 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     expect(card.reload.score).to eq(0)
   end
 
+  it 'zeroes closed cards even when legacy metadata no longer passes model validation' do
+    card = create_card(score: 90, status: :won)
+    card.update_columns(metadata: card.metadata.merge('legacy_note' => 'x' * 1601))
+
+    expect { described_class.perform_now }.not_to raise_error
+
+    expect(card.reload.score).to eq(0)
+  end
+
   it 'never touches a score written by hand' do
     card = create_card(score: 70, source: 'manual')
 
@@ -64,6 +73,17 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     )
 
     travel_to(20.days.from_now) { described_class.perform_now }
+
+    expect(card.reload.score).to be < 60
+  end
+
+  it 'decays open cards even when unrelated legacy metadata no longer passes model validation' do
+    card = create_card(score: 60)
+    card.update_columns(metadata: card.metadata.merge('legacy_note' => 'x' * 1601))
+
+    expect do
+      travel_to(20.days.from_now) { described_class.perform_now }
+    end.not_to raise_error
 
     expect(card.reload.score).to be < 60
   end
