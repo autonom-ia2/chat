@@ -32,20 +32,31 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
     @processed >= MAX_CARDS_PER_RUN
   end
 
+  def remaining_budget
+    MAX_CARDS_PER_RUN - @processed
+  end
+
   def decay_open_cards(pipeline)
     pipeline.cards.open.where('score > 0').find_in_batches(batch_size: BATCH_SIZE) do |batch|
       break if budget_over?
 
-      last_messages = last_message_map(batch)
-      batch.each { |card| apply(card, last_messages[card.id]) }
-      @processed += batch.size
+      cards = batch.first(remaining_budget)
+      last_messages = last_message_map(cards)
+      cards.each { |card| apply(card, last_messages[card.id]) }
+      @processed += cards.size
     end
   end
 
   # Card ganho, perdido ou arquivado mantinha a nota e continuava ranqueando como urgente em
   # qualquer consulta que inclua cards fechados. O Evaluator nunca chega neles (só avalia abertos).
   def zero_closed_cards(pipeline)
-    pipeline.cards.where.not(status: :open).where('score > 0').find_each { |card| card.update!(score: 0) }
+    pipeline.cards.where.not(status: Crm::Card.statuses[:open]).where('score > 0').in_batches(of: BATCH_SIZE) do |relation|
+      break if budget_over?
+
+      ids = relation.limit(remaining_budget).pluck(:id)
+      Crm::Card.where(id: ids).update_all(score: 0, updated_at: Time.current) if ids.present?
+      @processed += ids.size
+    end
   end
 
   # Uma consulta agregada para o lote inteiro, em vez de uma por conversa por card (era N+1: até
@@ -73,15 +84,14 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
       # Releitura dentro do lock: o ScoreApplier ou uma edição humana podem ter gravado entre a
       # leitura do lote e agora. Sem isso, o job sobrescreveria a versão mais nova.
       score_meta = card.metadata.to_h.dig('ai', 'score').to_h
-      next if score_meta['source'] == 'manual' || card.score.to_i <= 0
+      unless score_meta['source'] == 'manual' || card.score.to_i <= 0
+        anchor = decay_anchor(score_meta, last_message_at)
 
-      anchor = decay_anchor(score_meta, last_message_at)
-      next if anchor.blank?
-
-      result = recalculate(score_meta, anchor)
-      next if result[:value] == card.score
-
-      persist!(card, score_meta, result, anchor)
+        if anchor.present?
+          result = recalculate(score_meta, anchor)
+          persist!(card, score_meta, result, anchor) unless result[:value] == card.score
+        end
+      end
     end
   end
 
@@ -127,7 +137,7 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
       'decay_anchor_at' => anchor.iso8601,
       'calculated_at' => Time.current.iso8601
     )
-    card.update!(score: result[:value], metadata: metadata)
+    card.update_columns(score: result[:value], metadata: metadata, updated_at: Time.current)
   end
 
   def parse_time(value)
