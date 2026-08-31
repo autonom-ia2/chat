@@ -37,7 +37,7 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
   end
 
   def decay_open_cards(pipeline)
-    pipeline.cards.open.where('score > 0').find_in_batches(batch_size: BATCH_SIZE) do |batch|
+    scored_cards_for(pipeline).open.find_in_batches(batch_size: BATCH_SIZE) do |batch|
       break if budget_over?
 
       cards = batch.first(remaining_budget)
@@ -50,13 +50,18 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
   # Card ganho, perdido ou arquivado mantinha a nota e continuava ranqueando como urgente em
   # qualquer consulta que inclua cards fechados. O Evaluator nunca chega neles (só avalia abertos).
   def zero_closed_cards(pipeline)
-    pipeline.cards.where.not(status: Crm::Card.statuses[:open]).where('score > 0').in_batches(of: BATCH_SIZE) do |relation|
+    scored_cards_for(pipeline).where.not(status: Crm::Card.statuses[:open]).in_batches(of: BATCH_SIZE) do |relation|
       break if budget_over?
 
       ids = relation.limit(remaining_budget).pluck(:id)
       Crm::Card.where(id: ids).update_all(score: 0, updated_at: Time.current) if ids.present?
       @processed += ids.size
     end
+  end
+
+  def scored_cards_for(pipeline)
+    Crm::Card.where(account_id: pipeline.account_id, pipeline_id: pipeline.id)
+             .where(Crm::Card.arel_table[:score].gt(0))
   end
 
   # Uma consulta agregada para o lote inteiro, em vez de uma por conversa por card (era N+1: até
@@ -71,7 +76,7 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
   end
 
   def conversation_ids_by_card(cards)
-    by_card = Crm::CardConversation.where(card_id: cards.map(&:id))
+    by_card = Crm::CardConversation.where(account_id: cards.map(&:account_id).uniq, card_id: cards.map(&:id))
                                    .pluck(:card_id, :conversation_id)
                                    .group_by(&:first)
                                    .transform_values { |rows| rows.map(&:last) }

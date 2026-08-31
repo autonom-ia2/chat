@@ -88,6 +88,19 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     expect(card.reload.score).to be < 60
   end
 
+  it 'scopes linked conversation lookup to the card account' do
+    card = create_card(score: 60)
+
+    expect(Crm::CardConversation)
+      .to receive(:where)
+      .with(account_id: [account.id], card_id: [card.id])
+      .and_call_original
+
+    travel_to(20.days.from_now) { described_class.perform_now }
+
+    expect(card.reload.score).to be < 60
+  end
+
   it 'keeps decaying across runs instead of resetting its own clock' do
     card = create_card(score: 50)
 
