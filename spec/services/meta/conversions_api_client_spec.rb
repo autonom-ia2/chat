@@ -11,14 +11,16 @@ RSpec.describe Meta::ConversionsApiClient do
   let(:event) { { 'event_name' => 'Purchase', 'event_time' => 123, 'ctwa_clid' => 'CLID1' } }
 
   describe '#post_events' do
-    it 'posts the events wrapped in a data array and returns an ok result on success' do
+    it 'posts the events wrapped in a data array with the token only in the Authorization header' do
       stub = stub_request(:post, endpoint)
-             .with(query: hash_including('access_token' => token), body: { data: [event] }.to_json)
+             .with(headers: { 'Authorization' => "Bearer #{token}", 'Content-Type' => 'application/json' }, body: { data: [event] }.to_json)
              .to_return(status: 200, body: '{"events_received":1}', headers: { 'Content-Type' => 'application/json' })
 
       result = client.post_events([event])
 
       expect(stub).to have_been_requested
+      # The token must never travel in the query string (leaks via access logs/proxies).
+      expect(a_request(:post, endpoint).with(query: hash_including('access_token' => token))).not_to have_been_made
       expect(result.ok).to be(true)
       expect(result.http_code).to eq(200)
       expect(result.error).to be_nil
