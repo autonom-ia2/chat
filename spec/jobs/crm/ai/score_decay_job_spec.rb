@@ -101,6 +101,34 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     expect(card.reload.score).to be < 60
   end
 
+  it 'uses the cached card last_message_at when there are no linked conversations' do
+    card = create_card(score: 60)
+    card.update_columns(last_message_at: 20.days.ago)
+
+    expect(Message).not_to receive(:chat)
+
+    described_class.perform_now
+
+    expect(card.reload.score).to be < 60
+  end
+
+  it 'keeps processing the batch when one card raises a database error' do
+    broken_card = create_card(score: 60)
+    healthy_card = create_card(score: 60)
+    healthy_card.update_columns(last_message_at: 20.days.ago)
+
+    job = described_class.new
+    allow(Rails.logger).to receive(:warn)
+    allow(job).to receive(:apply).and_call_original
+    allow(job).to receive(:apply).with(broken_card, anything)
+                               .and_raise(ActiveRecord::StatementInvalid.new('database error'))
+
+    expect { job.perform }.not_to raise_error
+
+    expect(healthy_card.reload.score).to be < 60
+    expect(Rails.logger).to have_received(:warn).with(/ScoreDecayJob.*card_id=#{broken_card.id}.*StatementInvalid/)
+  end
+
   it 'keeps decaying across runs instead of resetting its own clock' do
     card = create_card(score: 50)
 

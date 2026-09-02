@@ -42,7 +42,7 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
 
       cards = batch.first(remaining_budget)
       last_messages = last_message_map(cards)
-      cards.each { |card| apply(card, last_messages[card.id]) }
+      cards.each { |card| safely_apply(card, last_messages[card.id]) }
       @processed += cards.size
     end
   end
@@ -67,12 +67,15 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
   # Uma consulta agregada para o lote inteiro, em vez de uma por conversa por card (era N+1: até
   # duas queries por card a cada 3 horas).
   def last_message_map(cards)
+    fallback_by_card = cards.index_with(&:last_message_at).compact
     by_card = conversation_ids_by_card(cards)
     all_ids = by_card.values.flatten.compact.uniq
-    return {} if all_ids.empty?
+    return fallback_by_card if all_ids.empty?
 
     per_conversation = Message.chat.where(conversation_id: all_ids).group(:conversation_id).maximum(:created_at)
-    by_card.transform_values { |ids| ids.filter_map { |id| per_conversation[id] }.max }
+    by_card.each_with_object(fallback_by_card) do |(card_id, ids), result|
+      result[card_id] = [result[card_id], ids.filter_map { |id| per_conversation[id] }.max].compact.max
+    end
   end
 
   def conversation_ids_by_card(cards)
@@ -82,6 +85,15 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
                                    .transform_values { |rows| rows.map(&:last) }
     cards.each { |card| (by_card[card.id] ||= []) << card.conversation_id if card.conversation_id }
     by_card
+  end
+
+  def safely_apply(card, last_message_at)
+    apply(card, last_message_at)
+  rescue ActiveRecord::ActiveRecordError, ArgumentError, TypeError => e
+    Rails.logger.warn(
+      "[Crm::Ai::ScoreDecayJob] skipped card_id=#{card.id} account_id=#{card.account_id} " \
+      "pipeline_id=#{card.pipeline_id} error_class=#{e.class.name}"
+    )
   end
 
   def apply(card, last_message_at)
