@@ -94,7 +94,9 @@ const hasMultipleInboxes = computed(
   () => store.getters['inboxes/getInboxes'].length > 1
 );
 
-const hasSlaPolicyId = computed(() => props.chat?.sla_policy_id);
+const hasSlaPolicyId = computed(
+  () => props.chat?.applied_sla?.id && !currentContact.value?.blocked
+);
 
 const copyConversationId = async () => {
   try {
@@ -117,7 +119,7 @@ const copyConversationId = async () => {
       <BackButton
         v-if="showBackButton"
         :back-url="backButtonUrl"
-        class="ltr:mr-2 rtl:ml-2"
+        class="me-2"
       />
       <Avatar
         :name="currentContact.name"
@@ -126,9 +128,7 @@ const copyConversationId = async () => {
         :status="currentContact.availability_status"
         hide-offline-status
       />
-      <div
-        class="flex flex-col items-start min-w-0 ml-2 overflow-hidden rtl:ml-0 rtl:mr-2"
-      >
+      <div class="flex flex-col items-start min-w-0 ms-2 overflow-hidden">
         <div class="flex flex-row items-center max-w-full gap-1 p-0 m-0">
           <span
             class="text-sm font-medium truncate leading-tight text-n-slate-12"

@@ -16,6 +16,8 @@ module Enterprise::Account::PlanUsageAndLimits
   end
 
   def increment_response_usage
+    return unless ChatwootApp.chatwoot_cloud?
+
     increment_custom_attribute(CAPTAIN_RESPONSES_USAGE)
   end
 

@@ -4,6 +4,8 @@ import { shouldBeUrl } from 'shared/helpers/Validators';
 import { useAlert } from 'dashboard/composables';
 import { useVuelidate } from '@vuelidate/core';
 import Avatar from 'next/avatar/Avatar.vue';
+import Banner from 'dashboard/components-next/banner/Banner.vue';
+import Icon from 'dashboard/components-next/icon/Icon.vue';
 import SettingIntroBanner from 'dashboard/components/widgets/SettingIntroBanner.vue';
 import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsToggleSection.vue';
 import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFieldSection.vue';
@@ -28,6 +30,8 @@ import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vu
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import AccountHealth from './components/AccountHealth.vue';
+import WhatsappManualMigrationDialog from './components/WhatsappManualMigrationDialog.vue';
+import WhatsappManualMigrationBanner from './components/WhatsappManualMigrationBanner.vue';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import SenderNameExamplePreview from './components/SenderNameExamplePreview.vue';
 import LockToSingleConversationPreview from './components/LockToSingleConversationPreview.vue';
@@ -43,9 +47,11 @@ import SelectInput from 'dashboard/components-next/select/Select.vue';
 import Widget from 'dashboard/modules/widget-preview/components/Widget.vue';
 import AccessToken from 'dashboard/routes/dashboard/settings/profile/AccessToken.vue';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import { META_RESTRICTION_STATUS_URL } from 'dashboard/constants/globals';
 
 export default {
   components: {
+    Banner,
     BotConfiguration,
     CollaboratorsPage,
     ConfigurationPage,
@@ -76,8 +82,11 @@ export default {
     ColorPicker,
     SelectInput,
     AccountHealth,
+    WhatsappManualMigrationDialog,
+    WhatsappManualMigrationBanner,
     Widget,
     AccessToken,
+    Icon,
   },
   mixins: [inboxMixin],
   setup() {
@@ -109,6 +118,7 @@ export default {
       isLoadingHealth: false,
       healthError: null,
       isRegisteringWebhook: false,
+      isTransferringWhatsAppToManual: false,
       widgetBubblePosition: 'right',
       widgetBubbleType: 'standard',
       widgetBubbleLauncherTitle: '',
@@ -119,6 +129,7 @@ export default {
       accountId: 'getCurrentAccountId',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       isOnChatwootCloud: 'globalConfig/isOnChatwootCloud',
+      isMetaMessageSendingDisabled: 'globalConfig/isMetaMessageSendingDisabled',
       uiFlags: 'inboxes/getUIFlags',
       portals: 'portals/allPortals',
     }),
@@ -288,8 +299,12 @@ export default {
       return this.$store.getters['inboxes/getInbox'](this.currentInboxId);
     },
     inboxIcon() {
-      const { medium, channel_type: type } = this.inbox;
-      return getInboxIconByType(type, medium, 'line');
+      const {
+        medium,
+        channel_type: type,
+        voice_enabled: voiceEnabled,
+      } = this.inbox;
+      return getInboxIconByType(type, medium, 'line', voiceEnabled);
     },
     bannerMaxWidth() {
       const narrowTabs = ['collaborators', 'bot-configuration'];
@@ -350,6 +365,12 @@ export default {
     instagramUnauthorized() {
       return this.isAnInstagramChannel && this.inbox.reauthorization_required;
     },
+    showInstagramRestrictionSettingsBanner() {
+      return this.isMetaMessageSendingDisabled && this.isAnInstagramChannel;
+    },
+    metaRestrictionStatusUrl() {
+      return META_RESTRICTION_STATUS_URL;
+    },
     tiktokUnauthorized() {
       return this.isATiktokChannel && this.inbox.reauthorization_required;
     },
@@ -386,6 +407,11 @@ export default {
       return (
         this.isAWhatsAppCloudChannel &&
         this.isEmbeddedSignupWhatsApp &&
+        (!this.isOnChatwootCloud ||
+          this.isFeatureEnabledonAccount(
+            this.accountId,
+            FEATURE_FLAGS.WHATSAPP_EMBEDDED_SIGNUP_FLOW
+          )) &&
         this.inbox.reauthorization_required
       );
     },
@@ -403,6 +429,18 @@ export default {
         this.healthData.throughput?.level === 'NOT_APPLICABLE'
       );
     },
+    showWhatsAppManualMigration() {
+      return (
+        this.isAWhatsAppCloudChannel &&
+        this.isEmbeddedSignupWhatsApp &&
+        this.healthData?.is_on_biz_app === false &&
+        this.healthError?.type !== 'authorization' &&
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.WHATSAPP_MANUAL_TRANSFER
+        )
+      );
+    },
     widgetBuilderStorageKey() {
       return `${LOCAL_STORAGE_KEYS.WIDGET_BUILDER}${this.inbox.id}`;
     },
@@ -414,6 +452,7 @@ export default {
         if (inboxChanged) {
           this.syncInboxData();
           this.setTabFromRouteParam();
+          this.openWhatsAppManualMigrationIfRequested();
         }
       }
     },
@@ -424,6 +463,7 @@ export default {
           this.fetchHealthData();
           this.$nextTick(() => {
             this.setTabFromRouteParam();
+            this.openWhatsAppManualMigrationIfRequested();
           });
         } else {
           this.selectedFeatureFlags = newInbox?.selected_feature_flags || [];
@@ -434,8 +474,52 @@ export default {
   },
   mounted() {
     this.fetchSharedData();
+    this.openWhatsAppManualMigrationIfRequested();
   },
   methods: {
+    openWhatsAppManualMigrationDialog() {
+      this.$refs.whatsappManualMigrationDialog?.open();
+    },
+    openWhatsAppManualMigrationIfRequested() {
+      if (
+        this.showWhatsAppManualMigration &&
+        this.$route.query.migration === 'whatsapp_manual'
+      ) {
+        this.$nextTick(() => {
+          this.openWhatsAppManualMigrationDialog();
+        });
+      }
+    },
+    async transferWhatsAppToManualSetup(form) {
+      this.isTransferringWhatsAppToManual = true;
+      try {
+        const providerConfig = { ...(this.inbox.provider_config || {}) };
+        delete providerConfig.source;
+        const payload = {
+          id: this.inbox.id,
+          formData: false,
+          channel: {
+            provider_config: {
+              ...providerConfig,
+              phone_number_id: form.phoneNumberId,
+              business_account_id: form.wabaId,
+              api_key: form.accessToken,
+            },
+          },
+        };
+        await this.$store.dispatch('inboxes/updateInbox', payload);
+        useAlert(
+          this.$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_MANUAL_TRANSFER_SUCCESS')
+        );
+        this.$refs.whatsappManualMigrationDialog?.close();
+      } catch (error) {
+        useAlert(
+          this.$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_MANUAL_TRANSFER_ERROR')
+        );
+      } finally {
+        this.isTransferringWhatsAppToManual = false;
+      }
+    },
     async copyWebhookSecret(value) {
       await copyTextToClipboard(value);
       useAlert(
@@ -520,9 +604,24 @@ export default {
         const response = await InboxHealthAPI.getHealthStatus(this.inbox.id);
         this.healthData = response.data;
       } catch (error) {
-        this.healthError = error.message || 'Failed to fetch health data';
+        const apiError = error.response?.data?.error;
+        this.healthError =
+          typeof apiError === 'object'
+            ? apiError
+            : {
+                type: 'generic',
+                message: apiError || error.message,
+              };
       } finally {
         this.isLoadingHealth = false;
+      }
+    },
+    goToWhatsAppConfiguration() {
+      const configurationTabIndex = this.tabs.findIndex(
+        tab => tab.key === 'configuration'
+      );
+      if (configurationTabIndex !== -1) {
+        this.onTabChange(configurationTabIndex);
       }
     },
     async registerWebhook() {
@@ -535,7 +634,8 @@ export default {
         await this.fetchHealthData();
       } catch (error) {
         useAlert(
-          error.message ||
+          error.response?.data?.error ||
+            error.message ||
             this.$t('INBOX_MGMT.ACCOUNT_HEALTH.WEBHOOK.REGISTER_ERROR')
         );
       } finally {
@@ -748,6 +848,35 @@ export default {
           :content="$t('INBOX_MGMT.ADD.INSTAGRAM.DUPLICATE_INBOX_BANNER')"
           class="mx-6 mb-4"
           :class="bannerMaxWidth"
+        />
+        <Banner
+          v-if="showInstagramRestrictionSettingsBanner"
+          color="amber"
+          class="mx-6 mb-4 max-w-4xl"
+        >
+          <div class="flex items-start gap-3 text-start">
+            <Icon
+              icon="i-lucide-triangle-alert"
+              class="flex-shrink-0 size-4 mt-0.5"
+            />
+            <span>
+              {{ $t('INBOX_MGMT.ADD.INSTAGRAM.SETTINGS_RESTRICTED_WARNING') }}
+              <a
+                :href="metaRestrictionStatusUrl"
+                class="link underline"
+                rel="noopener noreferrer nofollow"
+                target="_blank"
+              >
+                {{ $t('INBOX_MGMT.ADD.INSTAGRAM.STATUS_LINK') }}
+              </a>
+            </span>
+          </div>
+        </Banner>
+        <WhatsappManualMigrationBanner
+          v-if="showWhatsAppManualMigration"
+          class="mx-6 mb-6"
+          :class="bannerMaxWidth"
+          @start="openWhatsAppManualMigrationDialog"
         />
 
         <div
@@ -1316,10 +1445,20 @@ export default {
         <div v-if="selectedTabKey === 'whatsapp-health'">
           <AccountHealth
             :health-data="healthData"
+            :health-error="healthError"
+            :is-embedded-signup="isEmbeddedSignupWhatsApp"
             :is-registering-webhook="isRegisteringWebhook"
             @register-webhook="registerWebhook"
+            @go-to-configuration="goToWhatsAppConfiguration"
           />
         </div>
+        <WhatsappManualMigrationDialog
+          v-if="showWhatsAppManualMigration"
+          ref="whatsappManualMigrationDialog"
+          :inbox="inbox"
+          :is-loading="isTransferringWhatsAppToManual"
+          @reconnect="transferWhatsAppToManualSetup"
+        />
       </div>
     </section>
   </div>

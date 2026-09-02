@@ -29,7 +29,8 @@ rescue ActiveRecord::PendingMigrationError => e
 end
 
 RSpec.configure do |config|
-  config.fixture_path = Rails.root.join('spec/fixtures').to_s
+  # Rails 7.2: `fixture_path` was removed in favour of `fixture_paths`.
+  config.fixture_paths = [Rails.root.join('spec/fixtures')]
   config.use_transactional_fixtures = true
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!

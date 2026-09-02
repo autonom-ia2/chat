@@ -1,9 +1,9 @@
 class Whatsapp::ReauthorizationService
-  def initialize(account:, inbox_id:, phone_number_id:, business_id:)
+  def initialize(account:, inbox_id:, phone_number_id:, waba_id:)
     @account = account
     @inbox_id = inbox_id
     @phone_number_id = phone_number_id
-    @business_id = business_id
+    @waba_id = waba_id
   end
 
   def perform(access_token, phone_info)
@@ -27,13 +27,18 @@ class Whatsapp::ReauthorizationService
 
   def update_channel_config(channel, access_token, phone_info)
     current_config = channel.provider_config || {}
-    # Preserve business_account_id (the WABA id, set at channel creation): @business_id is
-    # the Meta Business Portfolio id, a distinct value. Overwriting business_account_id with
-    # it was drift — keep the portfolio id under its own key so business_account_id stays the WABA id.
+    # Legacy clients may omit phone_number_id; fall back to the value just fetched from Meta.
+    resolved_phone_number_id = @phone_number_id.presence || phone_info[:phone_number_id]
+    channel.business_management_token = nil if current_config['business_account_id'] != @waba_id
+
+    # Fork note (4.17.1 merge): upstream now receives the real WABA id (waba_id:) instead of the
+    # Business Portfolio id, so business_account_id stays the WABA id by construction. The fork's
+    # earlier 'business_portfolio_id' write was a workaround for that drift and was dropped; nothing
+    # reads provider_config['business_portfolio_id'] (HealthService gets it from the Graph API).
     channel.provider_config = current_config.merge(
       'api_key' => access_token,
-      'phone_number_id' => @phone_number_id,
-      'business_portfolio_id' => @business_id,
+      'phone_number_id' => resolved_phone_number_id,
+      'business_account_id' => @waba_id,
       'source' => 'embedded_signup'
     )
     channel.save!

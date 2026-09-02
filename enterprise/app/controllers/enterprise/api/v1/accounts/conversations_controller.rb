@@ -16,8 +16,8 @@ module Enterprise::Api::V1::Accounts::ConversationsController
   end
 
   def permitted_update_params
-    # sla_policy_id só é aceito quando a conta tem a feature `sla`; sem ela, nem a coluna FK inerte
-    # pode ser setada via API direta (gate consistente com controllers/jobs/callback de SLA).
+    # SLA is a premium feature; only accept sla_policy_id assignment when it is enabled for the account
+    # (gate consistente com controllers/jobs/callback de SLA: nem a coluna FK inerte pode ser setada).
     return super unless Current.account.feature_enabled?('sla')
 
     super.merge(params.permit(:sla_policy_id))

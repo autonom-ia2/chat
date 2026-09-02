@@ -22,4 +22,5 @@ export const BUS_EVENTS = {
   // (responsible=bot/none, AI-pending) is active and the card cannot be
   // classified client-side; the board page refetches the active view.
   CRM_BOARD_REFETCH: 'CRM_BOARD_REFETCH',
+  MFA_STATE_CHANGED: 'MFA_STATE_CHANGED',
 };

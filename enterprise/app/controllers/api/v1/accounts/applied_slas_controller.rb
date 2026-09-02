@@ -4,7 +4,7 @@ class Api::V1::Accounts::AppliedSlasController < Api::V1::Accounts::EnterpriseAc
 
   RESULTS_PER_PAGE = 25
 
-  before_action :ensure_sla_feature
+  before_action :ensure_sla_feature_enabled
   before_action :set_applied_slas, only: [:index, :metrics, :download]
   before_action :set_current_page, only: [:index]
   before_action :check_admin_authorization?
@@ -31,9 +31,9 @@ class Api::V1::Accounts::AppliedSlasController < Api::V1::Accounts::EnterpriseAc
 
   private
 
-  # Gate da feature `sla`: a API some (404) quando a conta não tem a feature, alinhado à UI.
-  def ensure_sla_feature
-    render json: { error: 'sla.disabled' }, status: :not_found unless Current.account.feature_enabled?('sla')
+  # Gate da feature `sla` (upstream 4.17): sem a feature a API responde como não autorizada.
+  def ensure_sla_feature_enabled
+    raise Pundit::NotAuthorizedError unless Current.account.feature_enabled?('sla')
   end
 
   def total_applied_slas
@@ -53,7 +53,7 @@ class Api::V1::Accounts::AppliedSlasController < Api::V1::Accounts::EnterpriseAc
   end
 
   def set_applied_slas
-    initial_query = Current.account.applied_slas.includes(:conversation)
+    initial_query = Current.account.applied_slas.with_sla_applicable_conversation.includes(:conversation)
     @applied_slas = apply_filters(initial_query)
   end
 

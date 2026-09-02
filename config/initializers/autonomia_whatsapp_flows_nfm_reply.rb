@@ -2,6 +2,14 @@
 
 # Preserve WhatsApp Flows responses (interactive.nfm_reply) in incoming Chatwoot
 # messages so downstream webhooks can process the submitted form payload.
+#
+# Since Chatwoot 4.17 the core also handles nfm_reply natively: it sets the message
+# content to I18n `conversations.messages.whatsapp.flow_response` and stores
+# `content_attributes['whatsapp_flow_response']` ({ name, body, response_json }) for the
+# dashboard bubble. This patch stays because external webhooks (n8n) depend on the
+# `content_attributes['flow_response']` contract below, which carries `flow_token` and
+# the raw interactive payload that the core does not persist. The placeholder is only
+# applied when the core leaves the content blank.
 module Autonomia
   module WhatsappFlowsNfmReplyPatch
     FLOW_PLACEHOLDER = '[Flow] Formulário recebido'

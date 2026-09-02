@@ -1,7 +1,12 @@
 import { mount } from '@vue/test-utils';
 import { describe, it, expect } from 'vitest';
+import { withFullI18n } from 'test-i18n';
 
 import BuilderReview from './BuilderReview.vue';
+
+// The global setup registers an empty i18n instance; the CTA labels asserted
+// below are translated copy, so load the real messages (see vitest.setup.js).
+withFullI18n();
 
 // Local NextButton stub renders the `label` prop (the global stub only renders
 // the slot, and NextButton is label-driven here) so we can assert the CTA order
