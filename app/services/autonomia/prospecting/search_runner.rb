@@ -3,6 +3,7 @@ require 'json'
 
 class Autonomia::Prospecting::SearchRunner
   AREA_TYPES = %w[radius viewport].freeze
+  LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
 
   Result = Struct.new(:search, :leads, keyword_init: true)
 
@@ -376,7 +377,16 @@ class Autonomia::Prospecting::SearchRunner
       raw_metadata = @params[:metadata].presence || {}
       raw_metadata = raw_metadata.to_unsafe_h if raw_metadata.respond_to?(:to_unsafe_h)
       raw_metadata = raw_metadata.to_h if raw_metadata.respond_to?(:to_h)
-      raw_metadata.deep_stringify_keys
+      normalize_location_coordinates(raw_metadata.deep_stringify_keys)
+    end
+  end
+
+  # Coordinates arrive as Float from JSON clients and as String from form-encoded
+  # clients; persist them as numbers so the stored metadata (and the API payload
+  # built from it) does not depend on the request transport.
+  def normalize_location_coordinates(hash)
+    LOCATION_COORDINATE_KEYS.each_with_object(hash.dup) do |key, normalized|
+      normalized[key] = numeric_value(hash[key]) if hash.key?(key)
     end
   end
 

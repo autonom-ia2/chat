@@ -85,7 +85,7 @@ RSpec.describe 'Autonomia prospecting lists API', type: :request do
 
   it 'creates a campaign segment from leads ready for campaign' do
     list = create_list
-    lead.update!(status: :ready_for_campaign, phone: '+5531999990001')
+    mark_ready_for_campaign(lead, phone: '+5531999990001')
     second_lead.update!(status: :qualified, phone: '+5531999990002')
     list.list_leads.create!(account: account, lead: lead)
     list.list_leads.create!(account: account, lead: second_lead)
@@ -109,7 +109,7 @@ RSpec.describe 'Autonomia prospecting lists API', type: :request do
 
   it 'attaches the segment label to an existing campaign without sending it' do
     list = create_list
-    lead.update!(status: :ready_for_campaign, phone: '+5531999990001')
+    mark_ready_for_campaign(lead, phone: '+5531999990001')
     list.list_leads.create!(account: account, lead: lead)
     campaign = create_sms_campaign
 
@@ -140,6 +140,18 @@ RSpec.describe 'Autonomia prospecting lists API', type: :request do
 
   def create_list
     Autonomia::Prospecting::List.create!(account: account, user: admin, name: 'Lista teste')
+  end
+
+  # CampaignSegmentBuilder only treats a lead as eligible when it is ready_for_campaign
+  # AND its phone was verified on WhatsApp (see Autonomia::Prospecting::WhatsappVerifier).
+  def mark_ready_for_campaign(prospect_lead, phone:)
+    prospect_lead.update!(
+      status: :ready_for_campaign,
+      phone: phone,
+      metadata: prospect_lead.metadata.to_h.merge(
+        'whatsapp_verification' => { 'status' => 'verified', 'phone' => phone }
+      )
+    )
   end
 
   def create_sms_campaign
