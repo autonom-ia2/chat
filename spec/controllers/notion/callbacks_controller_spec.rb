@@ -102,10 +102,10 @@ RSpec.describe Notion::CallbacksController, type: :request do
           )
       end
 
-      it 'redirects to home page on error' do
+      it 'redirects to the inbox settings page with an error code' do
         get '/notion/callback', params: { code: oauth_code, state: state }
 
-        expect(response).to redirect_to('/')
+        expect(response).to redirect_to("/app/accounts/#{account.id}/settings/inboxes/new?oauth_error=token_exchange_failed")
       end
     end
   end

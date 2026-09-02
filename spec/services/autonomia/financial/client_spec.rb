@@ -4,23 +4,20 @@ require 'rails_helper'
 
 RSpec.describe Autonomia::Financial::Client do
   describe '#fetch!' do
+    let(:base_url) { 'https://financial.example.test' }
+
     it 'sends the supplied authorization token as a bearer token' do
       token = 'identity-access-token'
-      http = instance_double(Net::HTTP)
-      response = Net::HTTPOK.new('1.1', '200', 'OK')
-      captured_request = nil
-      response.body = { ok: true }.to_json
+      stub = stub_request(:get, "#{base_url}/financial/me/subscription")
+             .with(headers: { 'Authorization' => "Bearer #{token}", 'Accept' => 'application/json' })
+             .to_return(status: 200, body: { ok: true }.to_json, headers: { 'Content-Type' => 'application/json' })
 
-      allow(Net::HTTP).to receive(:start).and_yield(http)
-      allow(http).to receive(:request) do |request|
-        captured_request = request
-        response
+      payload = with_modified_env(AUTONOMIA_FINANCIAL_API_BASE_URL: base_url) do
+        described_class.new(authorization_token: token).fetch!(:subscription)
       end
 
-      described_class.new(authorization_token: token).fetch!(:subscription)
-
-      expect(captured_request['Authorization']).to eq("Bearer #{token}")
-      expect(captured_request['Accept']).to eq('application/json')
+      expect(stub).to have_been_requested
+      expect(payload).to eq('ok' => true)
     end
   end
 end

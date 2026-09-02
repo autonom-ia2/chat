@@ -10,25 +10,27 @@ RSpec.describe 'Public Google conversions feed', type: :request do
   end
 
   it 'renders the official scheduled click import columns with ready events from the last 90 days' do
-    ready = create(:crm_google_conversion_event, account: account, gclid: 'GCLID-READY', conversion_name: 'Venda WhatsApp',
-                                                 conversion_time: Time.zone.parse('2026-07-09 12:34:56 UTC'), value_cents: 12_345,
-                                                 currency: 'BRL')
-    create(:crm_google_conversion_event, account: account, status: 'skipped', gclid: nil, skip_reason: 'missing_gclid')
-    create(:crm_google_conversion_event, account: account, gclid: 'GCLID-OLD', conversion_time: 91.days.ago)
-
+    # The 90-day window is computed against Time.current inside the request, so the fixtures
+    # must be built under the same frozen clock or `91.days.ago` drifts back into the window.
     travel_to(Time.zone.parse('2026-07-10 12:00:00 UTC')) do
-      get '/google_conversions/strong-feed-token.csv'
-    end
+      ready = create(:crm_google_conversion_event, account: account, gclid: 'GCLID-READY', conversion_name: 'Venda WhatsApp',
+                                                   conversion_time: Time.zone.parse('2026-07-09 12:34:56 UTC'), value_cents: 12_345,
+                                                   currency: 'BRL')
+      create(:crm_google_conversion_event, account: account, status: 'skipped', gclid: nil, skip_reason: 'missing_gclid')
+      create(:crm_google_conversion_event, account: account, gclid: 'GCLID-OLD', conversion_time: 91.days.ago)
 
-    rows = CSV.parse(response.body)
-    expect(response).to have_http_status(:ok)
-    expect(response.media_type).to eq('text/csv')
-    expect(response.headers['Cache-Control']).to include('no-store')
-    expect(rows).to eq([
-                         ['Parameters:TimeZone=+0000'],
-                         ['Google Click ID', 'Conversion Name', 'Conversion Time', 'Conversion Value', 'Conversion Currency'],
-                         [ready.gclid, ready.conversion_name, '2026-07-09 12:34:56+0000', '123.45', 'BRL']
-                       ])
+      get '/google_conversions/strong-feed-token.csv'
+
+      rows = CSV.parse(response.body)
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq('text/csv')
+      expect(response.headers['Cache-Control']).to include('no-store')
+      expect(rows).to eq([
+                           ['Parameters:TimeZone=+0000'],
+                           ['Google Click ID', 'Conversion Name', 'Conversion Time', 'Conversion Value', 'Conversion Currency'],
+                           [ready.gclid, ready.conversion_name, '2026-07-09 12:34:56+0000', '123.45', 'BRL']
+                         ])
+    end
   end
 
   it 'leaves optional value and currency columns empty for non-revenue conversions' do

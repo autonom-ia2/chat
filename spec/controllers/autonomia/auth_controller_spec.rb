@@ -49,7 +49,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
     let(:user) { create(:user, email: 'maria+vip@example.com') }
     let(:token) { Autonomia::Sso::Client::Token.new(access_token: 'identity-access-token', id_token: 'identity-id-token') }
     let(:client) { instance_double(Autonomia::Sso::Client) }
-    let(:provisioner) { instance_double(Autonomia::Sso::Provisioner, perform: user) }
+    let(:provisioner) { instance_double(Autonomia::Sso::Provisioner, perform: user, post_login_redirect_path: nil) }
 
     # In production the SSO callback and the frontend share a host, so the
     # redirect to login_page_url is same-host. Drive the request from the
@@ -86,6 +86,32 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
       # addresses containing '+' or other reserved characters.
       expect(params['email']).to eq(user.email)
       expect(params['sso_auth_token']).to be_present
+      expect(params).not_to have_key('redirect_to')
+    end
+
+    it 'forwards the provisioner post-login redirect path to the login page' do
+      with_modified_env sso_env do
+        get '/auth/autonomia'
+      end
+
+      state = Rack::Utils.parse_query(URI.parse(response.location).query).fetch('state')
+      redirecting_provisioner = instance_double(
+        Autonomia::Sso::Provisioner,
+        perform: user,
+        post_login_redirect_path: '/app/accounts/1/settings/inboxes/new'
+      )
+
+      allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
+      allow(client).to receive(:exchange_code!).and_return(token)
+      allow(client).to receive(:fetch_context!).with('identity-id-token').and_return({})
+      allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(redirecting_provisioner)
+
+      with_modified_env sso_env do
+        get '/auth/autonomia/callback', params: { code: code, state: state }
+      end
+
+      params = Rack::Utils.parse_query(URI.parse(response.location).query)
+      expect(params['redirect_to']).to eq('/app/accounts/1/settings/inboxes/new')
     end
 
     it 'falls back to the access token when Identity does not return an ID token' do

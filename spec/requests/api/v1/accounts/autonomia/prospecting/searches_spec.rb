@@ -80,7 +80,7 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
     payload = response.parsed_body['payload']
     expect(payload['crm_pipeline_id']).to eq(pipeline.id)
     expect(payload['crm_stage_id']).to eq(stage.id)
-    expect(search.reload.metadata['crm_pipeline_id']).to eq(pipeline.id.to_s)
+    expect(search.reload.metadata['crm_pipeline_id']).to eq(pipeline.id)
   end
 
   it 'returns Google location suggestions without exposing the API key' do

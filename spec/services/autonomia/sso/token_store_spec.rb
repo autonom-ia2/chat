@@ -3,14 +3,8 @@
 require 'rails_helper'
 
 RSpec.describe Autonomia::Sso::TokenStore do
-  Token = Struct.new(:access_token, :id_token, :refresh_token, :expires_in, keyword_init: true) do
-    def context_token
-      id_token.presence || access_token
-    end
-
-    def authorization_token
-      access_token
-    end
+  def build_token(**attributes)
+    Autonomia::Sso::Client::Token.new(**attributes)
   end
 
   def fake_jwt(payload)
@@ -35,7 +29,7 @@ RSpec.describe Autonomia::Sso::TokenStore do
 
       described_class.write!(
         valid_link,
-        Token.new(
+        build_token(
           access_token: access_token,
           id_token: id_token,
           refresh_token: 'stored-refresh-token',
@@ -70,11 +64,14 @@ RSpec.describe Autonomia::Sso::TokenStore do
         }
       )
 
-      described_class.write!(valid_link, Token.new(access_token: 'valid-access-token', expires_in: 3600))
+      described_class.write!(valid_link, build_token(access_token: 'valid-access-token', expires_in: 3600))
 
       expect(described_class.authorization_token_for(user)).to eq('valid-access-token')
     end
 
+    # The store only honours a positive expires_in (anything else falls back to
+    # DEFAULT_TTL), so expiry is simulated by writing a real TTL and moving the
+    # clock past it instead of passing a negative expires_in.
     it 'skips expired tokens without refresh tokens' do
       user = create(:user)
       expired_link = Autonomia::UserLink.create!(
@@ -83,9 +80,11 @@ RSpec.describe Autonomia::Sso::TokenStore do
         email: user.email
       )
 
-      described_class.write!(expired_link, Token.new(access_token: 'expired-access-token', expires_in: -1))
+      described_class.write!(expired_link, build_token(access_token: 'expired-access-token', expires_in: 3600))
 
-      expect(described_class.authorization_token_for(user)).to be_nil
+      travel_to(2.hours.from_now) do
+        expect(described_class.authorization_token_for(user)).to be_nil
+      end
     end
 
     it 'refreshes expired tokens and returns the new access token' do
@@ -101,16 +100,16 @@ RSpec.describe Autonomia::Sso::TokenStore do
 
       described_class.write!(
         expired_link,
-        Token.new(
+        build_token(
           access_token: 'expired-access-token',
           refresh_token: 'stored-refresh-token',
-          expires_in: -1
+          expires_in: 3600
         )
       )
 
       allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
       allow(client).to receive(:refresh_token!).with(refresh_token: 'stored-refresh-token').and_return(
-        Token.new(
+        build_token(
           access_token: refreshed_access_token,
           id_token: refreshed_id_token,
           refresh_token: 'rotated-refresh-token',
@@ -118,9 +117,11 @@ RSpec.describe Autonomia::Sso::TokenStore do
         )
       )
 
-      expect(described_class.authorization_token_for(user)).to eq(refreshed_access_token)
-      expect(client).to have_received(:refresh_token!).with(refresh_token: 'stored-refresh-token')
-      expect(described_class.authorization_token_for(user)).to eq(refreshed_access_token)
+      travel_to(2.hours.from_now) do
+        expect(described_class.authorization_token_for(user)).to eq(refreshed_access_token)
+        expect(client).to have_received(:refresh_token!).with(refresh_token: 'stored-refresh-token').once
+        expect(described_class.authorization_token_for(user)).to eq(refreshed_access_token)
+      end
     end
 
     it 'refreshes a valid legacy ID token immediately when a refresh token is available' do
@@ -136,7 +137,7 @@ RSpec.describe Autonomia::Sso::TokenStore do
 
       described_class.write!(
         legacy_link,
-        Token.new(
+        build_token(
           access_token: legacy_id_token,
           refresh_token: 'stored-refresh-token',
           expires_in: 3600
@@ -145,7 +146,7 @@ RSpec.describe Autonomia::Sso::TokenStore do
 
       allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
       allow(client).to receive(:refresh_token!).with(refresh_token: 'stored-refresh-token').and_return(
-        Token.new(
+        build_token(
           access_token: refreshed_access_token,
           refresh_token: 'rotated-refresh-token',
           expires_in: 3600
@@ -166,7 +167,7 @@ RSpec.describe Autonomia::Sso::TokenStore do
 
       described_class.write!(
         legacy_link,
-        Token.new(
+        build_token(
           access_token: legacy_id_token,
           expires_in: 3600
         )
@@ -183,7 +184,7 @@ RSpec.describe Autonomia::Sso::TokenStore do
         email: user.email
       )
 
-      described_class.write!(valid_link, Token.new(access_token: 'opaque-access-token', expires_in: 3600))
+      described_class.write!(valid_link, build_token(access_token: 'opaque-access-token', expires_in: 3600))
 
       expect(described_class.authorization_token_for(user)).to eq('opaque-access-token')
     end
@@ -199,23 +200,25 @@ RSpec.describe Autonomia::Sso::TokenStore do
 
       described_class.write!(
         expired_link,
-        Token.new(
+        build_token(
           access_token: 'expired-access-token',
           refresh_token: 'stored-refresh-token',
-          expires_in: -1
+          expires_in: 3600
         )
       )
 
       allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
       allow(client).to receive(:refresh_token!).and_return(
-        Token.new(
+        build_token(
           access_token: 'refreshed-access-token',
           refresh_token: 'rotated-refresh-token',
           expires_in: 3600
         )
       )
 
-      described_class.authorization_token_for(user)
+      travel_to(2.hours.from_now) do
+        described_class.authorization_token_for(user)
+      end
 
       expect(described_class.new(expired_link.reload).send(:stored_refresh_token)).to eq('rotated-refresh-token')
     end
