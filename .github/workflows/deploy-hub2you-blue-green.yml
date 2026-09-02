@@ -1,9 +1,10 @@
 name: Deploy Hub2You Chatwoot Blue Green
 
 on:
-  push:
-    branches:
-      - main
+  # Deploy exclusivamente manual durante o upgrade Chatwoot 4.17.1 (Refs #274):
+  # merge na main nao pode virar deploy sem decisao operacional, porque o
+  # rollback blue/green tem um degrau so (a instancia N-2 e terminada 5 min
+  # apos cada deploy). Politica documentada em docs/production-deploy-gates.md.
   workflow_dispatch:
     inputs:
       action:
@@ -53,7 +54,7 @@ env:
 jobs:
   deploy:
     name: Deploy Green
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (inputs.confirm_production == true && inputs.action == 'deploy'))
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'deploy'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment: production
