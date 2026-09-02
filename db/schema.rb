@@ -277,6 +277,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_08_03_190000) do
     t.index ["account_id"], name: "index_automation_rules_on_account_id"
   end
 
+  create_table "autonomia_account_links", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "identity_organization_id", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_autonomia_account_links_on_account_id"
+    t.index ["identity_organization_id"], name: "idx_autonomia_account_links_identity_org", unique: true
+  end
+
   create_table "autonomia_agent_build_threads", force: :cascade do |t|
     t.bigint "autonomia_agent_id"
     t.bigint "account_id", null: false
@@ -588,6 +598,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_08_03_190000) do
     t.index ["default_crm_pipeline_id"], name: "idx_autonomia_prospecting_settings_default_pipeline"
     t.index ["default_crm_stage_id"], name: "idx_autonomia_prospecting_settings_default_stage"
     t.index ["scoring_profile_id"], name: "idx_autonomia_prospecting_settings_scoring_profile"
+  end
+
+  create_table "autonomia_user_links", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "identity_user_id", null: false
+    t.string "email", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_autonomia_user_links_on_email"
+    t.index ["identity_user_id"], name: "index_autonomia_user_links_on_identity_user_id", unique: true
+    t.index ["user_id"], name: "index_autonomia_user_links_on_user_id"
   end
 
   create_table "calls", force: :cascade do |t|
@@ -2525,6 +2547,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_08_03_190000) do
   add_foreign_key "account_email_oauth_apps", "accounts"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "autonomia_account_links", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_agent_build_threads", "accounts"
   add_foreign_key "autonomia_agent_build_threads", "autonomia_agents"
   add_foreign_key "autonomia_agent_build_threads", "users", column: "created_by_id"
@@ -2562,6 +2585,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_08_03_190000) do
   add_foreign_key "autonomia_prospecting_settings", "autonomia_prospecting_scoring_profiles", column: "scoring_profile_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_settings", "crm_pipeline_stages", column: "default_crm_stage_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_settings", "crm_pipelines", column: "default_crm_pipeline_id", on_delete: :nullify
+  add_foreign_key "autonomia_user_links", "users", on_delete: :cascade
   add_foreign_key "crm_activities", "accounts"
   add_foreign_key "crm_activities", "conversations", on_delete: :cascade
   add_foreign_key "crm_activities", "crm_cards", column: "card_id", on_delete: :cascade
