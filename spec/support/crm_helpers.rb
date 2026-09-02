@@ -31,10 +31,16 @@ module CrmHelpers
     inbox = account.inboxes.find(inbox.id)
     contact = account.contacts.find(contact.id)
     contact_inbox = ContactInboxBuilder.new(contact: contact, inbox: inbox, source_id: "crm-#{SecureRandom.hex(4)}").perform
-    ConversationBuilder.new(
+    conversation = ConversationBuilder.new(
       params: ActionController::Parameters.new(status: 'open', assignee_id: assignee&.id, team_id: team&.id),
       contact_inbox: contact_inbox
     ).perform
+    # O after_create_commit load_attributes_created_by_db_triggers copia o display_id (trigger do banco)
+    # para o objeto em memoria e o deixa com mudanca NAO persistida. Rails 7.2 recusa `with_lock` nesse
+    # estado (7.1 so avisava), entao qualquer caminho que trave a conversa (AssignmentService, jobs de
+    # handoff) explodiria com o objeto cru do builder. Em producao a conversa chega recarregada do banco;
+    # o reload devolve ao spec o mesmo estado — mesma tecnica do upstream em Ctwa::CampaignBuilder.
+    conversation.reload
   end
 
   def auth_headers(user)

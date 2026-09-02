@@ -67,6 +67,10 @@ RSpec.describe Voice::CallTranscriptionService, type: :service do
     it 'reindexes before broadcasting so a retry after a reindex failure does not resend the update event' do
       call.update!(transcript: 'Existing transcript')
       allow(ChatwootApp).to receive(:advanced_search_allowed?).and_return(true)
+      # Message so ganha #reindex do searchkick quando advanced_search_allowed? e true no boot
+      # (OPENSEARCH_URL); sem isso o stub verificado abaixo falha. Define o metodo so nesta
+      # instancia para o cenario "reindex explode" continuar sendo exercitado sem searchkick.
+      message.define_singleton_method(:reindex) { |*| nil } unless message.respond_to?(:reindex)
       allow(message).to receive(:reindex).and_raise(StandardError, 'reindex boom')
 
       expect(message).not_to receive(:send_update_event)

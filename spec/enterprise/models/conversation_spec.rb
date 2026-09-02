@@ -113,6 +113,10 @@ RSpec.describe Conversation, type: :model do
       end
 
       it 'allows assigning sla after contact is unblocked' do
+        # O fork so cria applied_sla com a feature `sla` ligada na conta (gate em
+        # Enterprise::Concerns::Conversation#ensure_applied_sla_is_created); liga para a
+        # assercao do upstream valer contra o gate, sem remove-lo.
+        account.enable_features!('sla')
         conversation.contact.update!(blocked: true)
         conversation.contact.update!(blocked: false)
         conversation.sla_policy = sla_policy
