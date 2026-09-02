@@ -1,0 +1,191 @@
+name: Testes do fork
+
+# CI de testes do chat2you (fork enterprise do Chatwoot). Baseado no
+# run_foss_spec.yml do upstream, com duas diferencas deliberadas:
+#   - NAO remove a pasta enterprise/: o fork roda em modo Enterprise em producao,
+#     entao spec/enterprise faz parte do gate.
+#   - matriz de 8 nos em vez de 16: a suite tem ~930 arquivos de spec e o repo e
+#     publico (minutos do Actions sem custo), mas 8 nos ja mantem cada job curto.
+# Refs #274 (epico upgrade Chatwoot 4.17.1) — este workflow e pre-requisito do
+# PR de merge para termos gate de regressao.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: testes-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint-backend:
+    name: Rubocop
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Rubocop
+        # Informativo por enquanto: a main de 2026-09-02 tem 220 ofensas pre-existentes
+        # (81 autocorrigiveis) em codigo do fork. Limpeza em issue propria; depois vira gate.
+        continue-on-error: true
+        run: bundle exec rubocop --parallel
+
+  security-scan:
+    name: Brakeman e bundle-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Brakeman
+        # Nao bloqueia ainda: o upstream tambem mantem Brakeman informativo
+        # (35 achados pre-existentes sem triagem). Vira gate depois da triagem.
+        continue-on-error: true
+        run: bundle exec brakeman -q --no-pager
+      - name: bundle-audit
+        # Informativo ate o merge da 4.17.1: o Gemfile.lock atual (4.15.1) carrega
+        # CVEs que o upstream ja corrigiu (ex.: crass 1.0.7). Vira gate no PR de merge.
+        continue-on-error: true
+        run: |
+          bundle exec bundle-audit update
+          bundle exec bundle-audit check
+
+  lint-frontend:
+    name: ESLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      - name: ESLint
+        run: pnpm run eslint
+
+  frontend-tests:
+    name: Vitest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      - name: Vitest
+        run: pnpm run test
+
+  backend-tests:
+    name: RSpec (${{ matrix.ci_node_index }}/${{ matrix.ci_node_total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        ci_node_total: [8]
+        ci_node_index: [0, 1, 2, 3, 4, 5, 6, 7]
+
+    services:
+      postgres:
+        # pgvector: o schema do fork habilita a extensao vector (base de conhecimento dos agentes).
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ''
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --mount type=tmpfs,destination=/var/lib/postgresql/data
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: --entrypoint redis-server
+
+    env:
+      RAILS_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_USERNAME: postgres
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias JS
+        run: pnpm install --frozen-lockfile
+
+      - name: Criar banco e carregar schema
+        run: |
+          bundle exec rake db:create
+          bundle exec rake db:schema:load
+
+      - name: RSpec (fatiado por no)
+        run: |
+          # Distribui os arquivos em round-robin para equilibrar specs lentos entre os nos.
+          SPEC_FILES=($(find spec -name '*_spec.rb' | sort))
+          TESTS=""
+
+          for i in "${!SPEC_FILES[@]}"; do
+            if [ $(( i % ${{ matrix.ci_node_total }} )) -eq ${{ matrix.ci_node_index }} ]; then
+              TESTS="$TESTS ${SPEC_FILES[$i]}"
+            fi
+          done
+
+          if [ -n "$TESTS" ]; then
+            bundle exec rspec --profile=10 --format progress --format json --out tmp/rspec_results.json $TESTS
+          fi
+
+      - name: Publicar resultado do RSpec
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rspec-results-${{ matrix.ci_node_index }}
+          path: tmp/rspec_results.json
+
+      - name: Publicar log do Rails em falha
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rails-log-${{ matrix.ci_node_index }}
+          path: log
