@@ -118,7 +118,21 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     permitted << :instruction if manual_mode?
     attrs = params.require(:agent).permit(*permitted, starter_questions: [], config: {})
     attrs[:config] = sanitized_config(attrs[:config]) if attrs[:config].present?
+    permit_audience_config(attrs)
     attrs
+  end
+
+  # #284 (Entrega 2a) — o público-alvo é uma árvore recursiva (grupos com arrays de hashes) que o
+  # `permit(config: {})` não enxerga por forma; passa cru (mesmo desenho do Captain) e a validade fica
+  # a cargo de Autonomia::Agents::AudienceValidator no model. `null` limpa (= todo mundo).
+  # As chaves ESCALARES da porta (`response_window`, `audience_unknown_contact`) não precisam disto:
+  # `permit(config: {})` já as aceita e merge_config! as mescla; a inclusão é validada no model.
+  def permit_audience_config(attrs)
+    config = params[:agent][:config]
+    return unless config.respond_to?(:key?) && config.key?(:audience)
+
+    audience = config[:audience]
+    attrs[:config] = (attrs[:config] || {}).merge('audience' => (audience.respond_to?(:permit!) ? audience.permit!.to_h : audience))
   end
 
   # Strip every system-managed config key the user must never set: the reserved keys AND any

@@ -14,6 +14,8 @@ import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import BuilderChat from '../builder/BuilderChat.vue';
+import AgentAudienceForm from './AgentAudienceForm.vue';
+import AgentScheduleForm from './AgentScheduleForm.vue';
 
 const props = defineProps({
   agent: {
@@ -141,6 +143,22 @@ const saveSettings = async (extra = {}) => {
     useAlert(error?.message || t('AGENTS.TUNE.SAVE_ERROR'));
   }
 };
+
+// #284 (Entrega 2a) — engagement gate settings. Each form saves only its own keys
+// under `config` (the backend merges config keys); `audience: null` = everyone.
+// The audience form also carries what to do with a conversation without a contact.
+const saveAudience = ({ audience, audienceUnknownContact }) =>
+  saveSettings({
+    config: {
+      ...buildPayload().config,
+      audience,
+      audience_unknown_contact: audienceUnknownContact,
+    },
+  });
+const saveResponseWindow = responseWindow =>
+  saveSettings({
+    config: { ...buildPayload().config, response_window: responseWindow },
+  });
 
 const onAvatarUpload = async ({ file, url }) => {
   // isSaving = updatingItem: também um write do agente (UPSERT). Bail se restore/
@@ -524,6 +542,40 @@ onMounted(loadHistory);
         :disabled="isSaving"
         class="w-fit"
         @click="saveSettings()"
+      />
+    </section>
+
+    <!-- #284 (Entrega 2a): who the agent talks to. -->
+    <section class="flex flex-col gap-4 pt-2 border-t border-n-weak">
+      <div class="flex flex-col">
+        <h3 class="text-sm font-medium text-n-slate-12">
+          {{ t('AGENTS.AUDIENCE.TITLE') }}
+        </h3>
+        <p class="m-0 text-xs text-n-slate-10">
+          {{ t('AGENTS.AUDIENCE.DESCRIPTION') }}
+        </p>
+      </div>
+      <AgentAudienceForm
+        :agent="agent"
+        :is-saving="isSaving"
+        @submit="saveAudience"
+      />
+    </section>
+
+    <!-- #284 (Entrega 2a): when the agent talks. -->
+    <section class="flex flex-col gap-4 pt-2 border-t border-n-weak">
+      <div class="flex flex-col">
+        <h3 class="text-sm font-medium text-n-slate-12">
+          {{ t('AGENTS.SCHEDULE.TITLE') }}
+        </h3>
+        <p class="m-0 text-xs text-n-slate-10">
+          {{ t('AGENTS.SCHEDULE.DESCRIPTION') }}
+        </p>
+      </div>
+      <AgentScheduleForm
+        :agent="agent"
+        :is-saving="isSaving"
+        @submit="saveResponseWindow"
       />
     </section>
 

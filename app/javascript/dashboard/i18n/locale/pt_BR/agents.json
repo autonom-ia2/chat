@@ -421,6 +421,8 @@
           "human_requested": "Humano solicitado",
           "missing_knowledge": "Conhecimento faltando",
           "policy": "Política",
+          "audience": "Fora do público-alvo",
+          "schedule": "Fora do horário de atuação",
           "other": "Outro / não especificado"
         }
       },
@@ -448,6 +450,59 @@
       "EMPTY": "Seu agente está pronto — as métricas aparecem aqui após as primeiras conversas. Enquanto isso, experimente na aba Testar.",
       "ERROR": "Não foi possível carregar os dados de desempenho.",
       "RETRY": "Tentar novamente"
+    },
+    "AUDIENCE": {
+      "TITLE": "Público-alvo",
+      "DESCRIPTION": "Escolha se o agente atende todo mundo ou só clientes que atendem a algumas condições. Os demais vão direto para a sua equipe.",
+      "EVERYONE": {
+        "LABEL": "Todo mundo",
+        "DESC": "O agente responde a todas as conversas das caixas conectadas."
+      },
+      "SPECIFIC": {
+        "LABEL": "Público específico",
+        "DESC": "O agente responde só a clientes que atendem às condições abaixo; os demais são passados para a equipe sem resposta."
+      },
+      "ADD_CONDITION": "Adicionar condição",
+      "ADD_GROUP": "Adicionar grupo de condições",
+      "EMPTY_TITLE": "Nenhuma condição ainda",
+      "EMPTY_BODY": "Adicione uma condição para escolher clientes específicos, ou um grupo para combinar condições com e/ou.",
+      "EMPTY_ERROR": "Adicione pelo menos uma condição para um público específico.",
+      "MATCH_PREFIX": "Atender",
+      "MATCH_SUFFIX": "das condições a seguir",
+      "MATCH_ALL": "todas",
+      "MATCH_ANY": "qualquer uma",
+      "GROUP_CONTACT": "Atributos do contato",
+      "GROUP_CONVERSATION": "Conversa",
+      "GROUP_CUSTOM": "Atributos personalizados",
+      "BROWSER_LANGUAGE": "Idioma do navegador",
+      "LOGGED_IN": "Usuário identificado",
+      "LOGGED_IN_TRUE": "Sim",
+      "LOGGED_IN_FALSE": "Não",
+      "UNKNOWN_CONTACT": {
+        "LABEL": "Conversa sem contato identificado",
+        "HINT": "Alguns canais abrem a conversa antes de o contato existir, então as condições acima não podem ser verificadas. Escolha o que o agente faz nesse caso.",
+        "RESPOND": "Atender normalmente",
+        "HANDOFF": "Passar para humano"
+      },
+      "SAVE": "Salvar público-alvo"
+    },
+    "SCHEDULE": {
+      "TITLE": "Horário de atuação",
+      "DESCRIPTION": "Escolha quando o agente responde. Fora dessa janela, as conversas vão direto para a sua equipe.",
+      "ALWAYS": {
+        "LABEL": "Sempre",
+        "DESC": "O agente responde a todas as conversas, em qualquer horário."
+      },
+      "BUSINESS_HOURS": {
+        "LABEL": "Dentro do horário comercial",
+        "DESC": "O agente responde só dentro do horário comercial da caixa."
+      },
+      "OUTSIDE_BUSINESS_HOURS": {
+        "LABEL": "Fora do horário comercial",
+        "DESC": "O agente responde só quando a caixa está fechada."
+      },
+      "HINT": "Usa a agenda de atendimento da caixa (CRM) quando existir; senão, o horário comercial da caixa. Caixas sem nenhum dos dois são sempre atendidas.",
+      "SAVE": "Salvar horário"
     },
     "FEEDBACK": {
       "LABEL": "Resposta errada",

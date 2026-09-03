@@ -140,4 +140,102 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(Autonomia::Agents::AgentEvent.handed_off.count).to eq(0)
     end
   end
+
+  # #284 (Entrega 2a) — porta de engajamento ANTES da IA: público-alvo + horário de atuação.
+  describe 'engagement gate' do
+    let(:contact) { create(:contact, account: account, additional_attributes: { 'country_code' => 'BR' }) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact, assignee: nil) }
+    let(:brazil) { { 'attribute_key' => 'country_code', 'filter_operator' => 'equal_to', 'values' => ['BR'] } }
+    let(:usa) { { 'attribute_key' => 'country_code', 'filter_operator' => 'equal_to', 'values' => ['US'] } }
+
+    def stub_plain_answer
+      answer = Autonomia::Agents::AnswerResult.new(reply: 'Olá!', confidence: 0.9, handoff: { should: false, reason: nil },
+                                                   used_knowledge: [], answered_from_knowledge: false)
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_return(instance_double(Autonomia::Agents::Answerer, answer: answer))
+    end
+
+    around do |example|
+      with_modified_env AI_HUMANIZE_DELIVERY: 'false', AI_AGENT_MEDIA: 'false' do
+        example.run
+      end
+    end
+
+    before do
+      conversation.update!(assignee_agent_bot_id: agent_bot.id)
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'oi')
+    end
+
+    it 'behaves exactly as before when no audience or schedule is configured' do
+      stub_plain_answer
+
+      result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      expect(result.status).to eq(:replied)
+      expect(conversation.reload.assignee_agent_bot_id).to eq(agent_bot.id)
+      expect(Autonomia::Agents::AgentEvent.pluck(:event_type)).to eq(['replied'])
+    end
+
+    it 'replies normally when the contact is inside the audience' do
+      agent.update!(config: { 'audience' => brazil })
+      stub_plain_answer
+
+      result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      expect(result.status).to eq(:replied)
+      expect(Autonomia::Agents::AgentEvent.skipped_audience.count).to eq(0)
+    end
+
+    it 'never calls the LLM, releases the mirror bot and logs skipped_audience when outside the audience' do
+      agent.update!(config: { 'audience' => usa })
+      expect(Autonomia::Agents::Answerer).not_to receive(:new)
+
+      result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      expect(result.status).to eq(:skipped)
+      expect(result.error).to eq('audience')
+      expect(conversation.reload).to have_attributes(status: 'open', assignee_agent_bot_id: nil)
+      expect(conversation.messages.outgoing.count).to eq(0)
+      event = Autonomia::Agents::AgentEvent.skipped_audience.last
+      expect(event).to have_attributes(conversation_id: conversation.id, handoff_reason: 'audience')
+    end
+
+    it 'skips with skipped_schedule when outside the response window' do
+      agent.update!(config: { 'response_window' => 'business_hours' })
+      inbox.update!(working_hours_enabled: true)
+      # still_eligible? recarrega a conversa (e a caixa) antes da porta: o stub precisa valer para
+      # qualquer instância de Inbox.
+      allow_any_instance_of(Inbox).to receive(:out_of_office?).and_return(true) # rubocop:disable RSpec/AnyInstance
+      expect(Autonomia::Agents::Answerer).not_to receive(:new)
+
+      result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      expect(result.status).to eq(:skipped)
+      expect(conversation.reload.assignee_agent_bot_id).to be_nil
+      expect(Autonomia::Agents::AgentEvent.skipped_schedule.count).to eq(1)
+    end
+
+    it 'does not duplicate the handoff or the event when a concurrent caller released the mirror bot first' do
+      agent.update!(config: { 'audience' => usa })
+      allow(conversation).to receive(:with_lock).and_wrap_original do |original, &block|
+        # rubocop:disable Rails/SkipsModelValidations -- escrita "por fora" (outra conexão) é o ponto do teste
+        Conversation.where(id: conversation.id).update_all(assignee_agent_bot_id: nil, status: Conversation.statuses[:open])
+        # rubocop:enable Rails/SkipsModelValidations
+        original.call(&block)
+      end
+
+      result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      expect(result.status).to eq(:skipped)
+      expect(Autonomia::Agents::AgentEvent.count).to eq(0)
+    end
+
+    it 'stays silent on later messages once the conversation was already released' do
+      agent.update!(config: { 'audience' => usa })
+      conversation.update!(assignee_agent_bot_id: nil, status: :open)
+
+      described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      expect(Autonomia::Agents::AgentEvent.count).to eq(0)
+    end
+  end
 end

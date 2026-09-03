@@ -88,6 +88,25 @@ RSpec.describe Autonomia::Agents::Analytics do
       expect(outcomes[:resolved_without_human]).to eq(0)
     end
 
+    # #284 (Entrega 2a) — passadas DIRETO para humano pela porta de engajamento contam como handoff.
+    it 'counts conversations skipped by audience or schedule as handed off' do
+      by_audience = conversation
+      Autonomia::Agents::AgentEvent.create!(agent: agent, account: account, conversation_id: by_audience.id,
+                                            event_type: :skipped_audience, handoff_reason: 'audience')
+      by_schedule = conversation
+      Autonomia::Agents::AgentEvent.create!(agent: agent, account: account, conversation_id: by_schedule.id,
+                                            event_type: :skipped_schedule, handoff_reason: 'schedule')
+
+      analytics = described_class.new(agent: agent, range: '7d')
+      payload = analytics.call
+
+      expect(payload[:outcomes]).to include(handled: 2, handed_off: 2, resolved_without_human: 0)
+      expect(analytics.outcome_scope('handed_off').pluck(:id)).to contain_exactly(by_audience.id, by_schedule.id)
+      expect(payload[:handoff_count]).to eq(2)
+      expect(payload[:top_handoff_reasons]).to contain_exactly({ reason: 'audience', count: 1 }, { reason: 'schedule', count: 1 })
+      expect(payload[:timeline].sum { |point| point[:handoffs] }).to eq(2)
+    end
+
     it 'never mixes agents or accounts' do
       other_agent = Autonomia::Agents::Agent.create!(account: account, name: 'Bia', agent_type: 'custom', instruction: 'x')
       conv = conversation

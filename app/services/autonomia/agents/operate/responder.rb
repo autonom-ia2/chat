@@ -31,6 +31,12 @@ module Autonomia
           def self.silenced
             new(status: :silenced)
           end
+
+          # Porta de engajamento bloqueou (#284): não postou e passou direto para humanos.
+          # `error` carrega o motivo (audience | schedule).
+          def self.skipped(reason)
+            new(status: :skipped, error: reason)
+          end
         end
 
         def initialize(conversation:, agent_inbox:, reply_to_message_id: nil)
@@ -47,6 +53,11 @@ module Autonomia
           # desligado/movido de caixa) — sem esta guarda o custo da geração já teria sido pago à toa.
           # O recheck autoritativo pós-IA (dentro do lock, em classic_deliver/deliver_*) PERMANECE.
           return Result.silenced unless still_eligible?
+
+          # PORTA DE ENGAJAMENTO (#284 · Entrega 2a): público-alvo + horário de atuação, avaliada ANTES
+          # da chamada cara de IA. Config vazia -> nil -> segue exatamente como antes.
+          blocked = ::Autonomia::Agents::Operate::EngagementGate.new(agent: @agent, conversation: @conversation).blocked_reason
+          return skip_for_humans(blocked) if blocked
 
           # A chamada à IA (lenta) roda FORA do lock para não segurar a linha da conversa.
           result = answer
@@ -110,6 +121,25 @@ module Autonomia
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] handoff_signal_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
           nil
+        end
+
+        # A porta bloqueou (fora do público-alvo / fora do horário): o agente NÃO responde e passa a
+        # conversa DIRETO para humanos — mesmo caminho do handoff sinalizado (bot_handoff! sob lock, guarda
+        # rechecada com estado fresco para que duas respostas concorrentes não dupliquem) + evento
+        # skipped_<motivo>, uma vez por episódio. Depois de liberada, o sinal repetido é silêncio.
+        def skip_for_humans(reason)
+          released = false
+          @conversation.with_lock do
+            if bot_still_in_command?
+              @conversation.bot_handoff!
+              released = true
+            end
+          end
+          ::Autonomia::Agents::Operate::EventLogger.skipped(agent: @agent, conversation: @conversation, reason: reason) if released
+          Result.skipped(reason)
+        rescue StandardError => e
+          Rails.logger.warn("[autonomia][operate] engagement_skip_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
+          Result.skipped(reason)
         end
 
         # Espelho DESTE vínculo ainda é o ai_assignee (ou a conversa ainda está pending). Chamar só com

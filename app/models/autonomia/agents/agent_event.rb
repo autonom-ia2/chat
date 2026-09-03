@@ -9,9 +9,15 @@ module Autonomia
       belongs_to :agent, class_name: 'Autonomia::Agents::Agent', foreign_key: :autonomia_agent_id
       belongs_to :account
 
-      enum event_type: { replied: 0, handed_off: 1 }
+      # skipped_* (#284 · Entrega 2a): a porta de engajamento passou a conversa direto para humanos
+      # sem responder (fora do público-alvo / fora do horário). Contam como handoff na aba Desempenho.
+      enum event_type: { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3 }
+
+      HANDOFF_TYPES = %w[handed_off skipped_audience skipped_schedule].freeze
 
       scope :in_range, ->(from, to) { where(created_at: from..to) }
+      # Tudo que tirou a conversa do agente: handoff sinalizado/CRM + passadas direto pela porta.
+      scope :handoffs, -> { where(event_type: HANDOFF_TYPES) }
     end
   end
 end
