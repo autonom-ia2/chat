@@ -98,7 +98,7 @@ No `EvaluateAppliedSlaService`, para cada prazo configurado:
 1. **Grupo?** se a conversa é grupo e a política exclui grupos → **encerra** (não avalia / não cria).
 2. **Calendário aplicável** = agente atribuído (se tem schedule ativo) → senão caixa → senão 24/7.
 3. **Tempo útil decorrido** entre o marco (criação / waiting_since / first_reply) e agora, **contando só dentro dos blocos** do calendário (no fuso dele). Se `only_during_business_hours` desligado → tempo de relógio (24/7).
-4. **Ainda dentro do prazo?** se sim, não faz nada.
+4. **Ainda dentro do prazo?** se sim, não faz nada. *Relógio único (#283):* o prazo é `AppliedSla#calculate_due_at` → `Sla::DueAtCalculator` (calendário do fork via `BusinessTimeCalculator#deadline`; sem calendário usável → `Sla::BusinessHoursService` upstream; 24/7 → relógio de parede). O cartão, o Kanban e a quebra leem o **mesmo** valor: a quebra é registrada em `now >= due_at`, e a primeira resposta está no prazo se `first_reply_created_at <= frt_due_at`.
 5. **Estourou?** antes de marcar quebra, se a política usa IA → **`AiBreachGuard`**: se "cliente não está esperando" → **suprime** (cacheia). Senão → cria `SlaEvent` + `active_with_misses` + notifica.
 6. Ao **resolver**: `hit` (sem quebras) ou `missed` (com quebras).
 

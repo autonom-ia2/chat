@@ -31,15 +31,18 @@ class Sla::EvaluateAppliedSlaService
 
   def check_first_response_time_threshold(applied_sla, conversation, sla_policy)
     return if skip_group_thresholds?(conversation, sla_policy)
-    return if first_reply_was_within_threshold?(conversation, sla_policy)
-    return unless threshold_breached?(conversation.created_at, sla_policy.first_response_time_threshold, sla_policy)
+    return if first_reply_was_within_threshold?(conversation)
+    return unless due_at_reached?(due_at_values[:frt])
 
     handle_missed_sla(applied_sla, 'frt')
   end
 
-  def first_reply_was_within_threshold?(conversation, sla_policy)
-    conversation.first_reply_created_at.present? &&
-      elapsed_seconds(conversation.created_at, conversation.first_reply_created_at, sla_policy) <= sla_policy.first_response_time_threshold.to_i
+  # Same clock as the card (issue #283): a first reply at or before frt_due_at is on time.
+  def first_reply_was_within_threshold?(conversation)
+    return false if conversation.first_reply_created_at.blank?
+
+    due_at = due_at_values[:frt]
+    due_at.nil? || conversation.first_reply_created_at.to_i <= due_at
   end
 
   def check_next_response_time_threshold(applied_sla, conversation, sla_policy)
@@ -48,7 +51,7 @@ class Sla::EvaluateAppliedSlaService
     return if conversation.first_reply_created_at.blank?
     # Waiting on customer response, no need to check next response time threshold
     return if conversation.waiting_since.blank?
-    return unless threshold_breached?(conversation.waiting_since, sla_policy.next_response_time_threshold, sla_policy)
+    return unless due_at_reached?(due_at_values[:nrt])
 
     handle_missed_sla(applied_sla, 'nrt')
   end
@@ -65,34 +68,21 @@ class Sla::EvaluateAppliedSlaService
   def check_resolution_time_threshold(applied_sla, conversation, sla_policy)
     return if skip_group_thresholds?(conversation, sla_policy)
     return if conversation.resolved?
-    return unless threshold_breached?(conversation.created_at, sla_policy.resolution_time_threshold, sla_policy)
+    return unless due_at_reached?(due_at_values[:rt])
 
     handle_missed_sla(applied_sla, 'rt')
   end
 
-  # Wall-clock path is arithmetically identical to the legacy epoch compare
-  # (now >= start + threshold), so behavior with only_during_business_hours=false
-  # or with no usable schedule is byte-identical to native.
-  def threshold_breached?(started_at, threshold_seconds, sla_policy)
-    elapsed_seconds(started_at, Time.zone.now, sla_policy, limit: threshold_seconds.to_i) >= threshold_seconds.to_i
+  # The deadline is the one the card shows (AppliedSla#calculate_due_at via Sla::DueAtCalculator),
+  # so the breach is recorded at the very instant the card says the SLA is due. A nil deadline
+  # (not reachable within the calculator horizon) never breaches.
+  def due_at_reached?(due_at)
+    due_at.present? && Time.zone.now.to_i >= due_at
   end
 
-  def elapsed_seconds(from, to, sla_policy, limit: nil)
-    return to.to_i - from.to_i unless business_time?(sla_policy)
-
-    Sla::BusinessTimeCalculator.new(schedule: resolved_schedule).elapsed_seconds(from, to, limit: limit)
-  end
-
-  def business_time?(sla_policy)
-    sla_policy.only_during_business_hours? && resolved_schedule.present?
-  end
-
-  # Memoized per perform run (nil is a valid resolution — hence defined? guard).
-  # only_during_business_hours? short-circuits in business_time? so the resolver
-  # never runs a query for 24/7 policies.
-  def resolved_schedule
-    @resolved_schedule = Sla::ScheduleResolver.for_conversation(applied_sla.conversation) unless defined?(@resolved_schedule)
-    @resolved_schedule
+  # Memoized per perform run: the three thresholds share one calendar lookup.
+  def due_at_values
+    @due_at_values ||= applied_sla.due_at_values
   end
 
   # Defensive Wave-2 skip: group conversations stop accruing breaches but the
