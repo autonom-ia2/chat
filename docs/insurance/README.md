@@ -21,6 +21,22 @@ Este README registra o que foi **decidido** e o que **diverge do PRD** depois de
 
 A instrução da **Ana Maciel / GTA** (seguro viagem, B2B, n8n) é inspiração de estrutura — escopo antes de evidência, matriz de ferramentas, lista negativa de "proibido chamar cotação se…", validação do retorno campo a campo, classificação sucesso / falha de negócio / falha técnica, `conversation_closed_for_now` — não texto a copiar.
 
+## Arquitetura do conector: máquina de adapters (decidido 03/09, noite)
+
+O conector **não** é n8n nem os Lambdas antigos (`insurance-quoting-service`): ambos serviram só de mapa de endpoints. O conector é a **máquina de aprendizado de interfaces** no repo [`autonom-ia2/autonomia-adapters`](https://github.com/autonom-ia2/autonomia-adapters) (TypeScript, CLI `autonomia`):
+
+```
+autonomia <plataforma> <recurso> <ação>
+  degrau 1  adapter determinístico   (AGGER: HTTP puro — sem browser)
+  degrau 2  seletores de fallback     (Playwright versionado)
+  degrau 3  fallback semântico        (Stagehand)
+  degrau 4  Recovery Agent            (OpenAI gpt-5.4 high, chave de sistema) → adapter candidate → testes → canary
+```
+
+Nenhuma descida de degrau é silenciosa; só erro de formato (`protocol`) autoriza descer. Exit codes sysexits (77 auth, 75 timeout, 76 protocolo). O chat2you chama o CLI/API do connector como **ferramenta** do agente — por isso a Onda 2 (tool-calling) continua pré-requisito.
+
+**Validado ao vivo em 03/09/2026** com a conta de teste: login + `pdocs` OK; `cfg/cobertura` devolve 10 ramos (auto confirmado; residencial, condomínio, empresarial, fiança, AP, vida, vida em grupo inferidos; 100 e 711 não identificados); `cfg/seguradora/config` devolve 23 seguradoras com `credenciaisValidas` (→ ready/auth_required) e comissão por ramo. `seguradorasMulti` (fonte de março) passou a responder 403 SigV4 — primeiro "portal mudou" real. Detalhe em autonom-ia2/chat#292.
+
 ## O que o PRD assume e não existe no fork
 
 Verificado em `main` `a1b74f5d53`:
@@ -49,7 +65,7 @@ Conta liga/desliga no SuperAdmin (`toggle_insurance`), marca em `accounts.intern
 | 0 | Discovery AGGER com a conta de teste — **há endpoints JSON internos?** (decide browser × HTTP), login, sessão, ramos, PDF, 2 cotações paralelas | #292 |
 | 1 | Fundação chat2you com AGGER mockado: gate, SuperAdmin, menu Cotação, `Insurance::Connection` + Secrets, UI Conexões, `agent_type` | #293 #294 #295 #296 |
 | 2 | Tool-calling no Answerer, mensagem por evento, handoff de sistema, tool SUSEP | #297 |
-| 3 | Connector (browser ou HTTP conforme Onda 0) | — |
+| 3 | Máquina de adapters (`autonomia-adapters`): degraus 2-4, canary, Recovery Agent | — |
 | 4 | Adapters por ramo | — |
 | 5 | Agente de Cotação | — |
 | 6 | Piloto hub2you → autonomia | — |
