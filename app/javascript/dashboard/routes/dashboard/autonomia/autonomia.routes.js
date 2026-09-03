@@ -12,6 +12,7 @@ const ProspectingSearchPage = () =>
 const ProspectingListsPage = () =>
   import('./prospecting/pages/ProspectingListsPage.vue');
 const InviteConnectionPage = () => import('./pages/InviteConnectionPage.vue');
+const InsurancePage = () => import('./insurance/pages/InsurancePage.vue');
 
 // Admin-only: every Autonomia backend endpoint enforces
 // `ensure_account_administrator`, so non-admins would 403 on each call.
@@ -45,6 +46,23 @@ const ensureProspectingEnabled = (to, _from, next) => {
   const account = store.getters['accounts/getAccount'](accountId);
 
   if (account?.autonomia_prospecting_enabled === true) {
+    next();
+    return;
+  }
+  next({ name: 'home', params: to.params });
+};
+
+// Módulo Cotação (Insurance): ENV master INSURANCE_QUOTING_ENABLED (kill-switch global,
+// window.globalConfig) E conta marcada pelo SuperAdmin (`autonomia_insurance_enabled` no
+// payload da conta -> Autonomia::Insurance::Config.enabled?). Mesmo contrato do backend.
+const ensureInsuranceEnabled = (to, _from, next) => {
+  const masterEnabled =
+    window.globalConfig?.INSURANCE_QUOTING_ENABLED === 'true';
+  const accountId = Number(to.params.accountId);
+  const account = store.getters['accounts/getAccount'](accountId);
+  const accountEnabled = account?.autonomia_insurance_enabled === true;
+
+  if (masterEnabled && accountEnabled) {
     next();
     return;
   }
@@ -110,6 +128,32 @@ export const routes = [
       name: 'settings_prospecting_index',
       params: to.params,
     }),
+  },
+  {
+    path: frontendURL('accounts/:accountId/autonomia/insurance'),
+    name: 'autonomia_insurance',
+    meta,
+    beforeEnter: ensureInsuranceEnabled,
+    redirect: to => ({
+      name: 'autonomia_insurance_connections',
+      params: to.params,
+    }),
+  },
+  {
+    path: frontendURL('accounts/:accountId/autonomia/insurance/connections'),
+    name: 'autonomia_insurance_connections',
+    meta,
+    beforeEnter: ensureInsuranceEnabled,
+    component: InsurancePage,
+    props: { tab: 'connections' },
+  },
+  {
+    path: frontendURL('accounts/:accountId/autonomia/insurance/agent'),
+    name: 'autonomia_insurance_agent',
+    meta,
+    beforeEnter: ensureInsuranceEnabled,
+    component: InsurancePage,
+    props: { tab: 'agent' },
   },
 ];
 

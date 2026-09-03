@@ -75,12 +75,25 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
       Autonomia::Prospecting::Config.disable_for!(requested_resource)
     end
 
-    # rubocop:disable Rails/I18nLocaleTexts
     redirect_back(
       fallback_location: [namespace, requested_resource],
       notice: "Autonomia Prospecting #{enabled ? 'enabled' : 'disabled'}"
     )
-    # rubocop:enable Rails/I18nLocaleTexts
+  end
+
+  def toggle_insurance
+    enabled = ActiveModel::Type::Boolean.new.cast(params[:enabled])
+
+    if enabled
+      Autonomia::Insurance::Config.enable_for!(requested_resource)
+    else
+      Autonomia::Insurance::Config.disable_for!(requested_resource)
+    end
+
+    redirect_back(
+      fallback_location: [namespace, requested_resource],
+      notice: "Autonomia Insurance #{enabled ? 'enabled' : 'disabled'}"
+    )
   end
 
   def destroy

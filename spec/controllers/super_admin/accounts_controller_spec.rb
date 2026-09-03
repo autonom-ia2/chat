@@ -216,6 +216,38 @@ RSpec.describe 'Super Admin accounts API', type: :request do
     end
   end
 
+  describe 'POST /super_admin/accounts/{account_id}/toggle_insurance' do
+    context 'when it is an unauthenticated user' do
+      it 'returns unauthorized' do
+        post "/super_admin/accounts/#{account.id}/toggle_insurance", params: { enabled: true }
+        expect(response).to have_http_status(:redirect)
+        expect(Autonomia::Insurance::Config.account_enabled?(account.reload)).to be false
+      end
+    end
+
+    context 'when it is an authenticated user' do
+      before { sign_in(super_admin, scope: :super_admin) }
+
+      it 'enables insurance for the account' do
+        post "/super_admin/accounts/#{account.id}/toggle_insurance", params: { enabled: true }
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:notice]).to eq('Autonomia Insurance enabled')
+        expect(Autonomia::Insurance::Config.account_enabled?(account.reload)).to be true
+      end
+
+      it 'disables insurance for the account' do
+        Autonomia::Insurance::Config.enable_for!(account)
+
+        post "/super_admin/accounts/#{account.id}/toggle_insurance", params: { enabled: false }
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:notice]).to eq('Autonomia Insurance disabled')
+        expect(Autonomia::Insurance::Config.account_enabled?(account.reload)).to be false
+      end
+    end
+  end
+
   describe 'POST /super_admin/accounts/{account_id}/toggle_prospecting' do
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do

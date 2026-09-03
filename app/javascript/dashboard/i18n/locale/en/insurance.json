@@ -1,0 +1,80 @@
+{
+  "INSURANCE": {
+    "TITLE": "Cotação",
+    "SUBTITLE": "Conecte a conta AGGER da corretora e ligue o Agente de Cotação às suas caixas de entrada.",
+    "TABS": {
+      "CONNECTIONS": "Conexões",
+      "AGENT": "Agente"
+    },
+    "CONNECTION": {
+      "MOCK_NOTICE": "Prévia do módulo: os estados e as ações abaixo já são os definitivos, mas a conexão real com o AGGER ainda não está ativa nesta versão.",
+      "PROVIDER_AGGER": "AGGER · Aggilizador",
+      "PROVIDER_AGGER_SUBTITLE": "Multicálculo de seguros da corretora",
+      "NEVER": "nunca",
+      "JUST_NOW": "agora",
+      "MINUTES_AGO": "há {count} min",
+      "SESSION_AUTHENTICATED": "Autenticada",
+      "SESSION_PENDING": "Aguardando autenticação",
+      "STATES": {
+        "NOT_CONFIGURED": "Não configurado",
+        "PROVISIONING": "Preparando",
+        "AUTHENTICATING": "Autenticando",
+        "DISCOVERING": "Descobrindo produtos",
+        "READY": "Conectado",
+        "DEGRADED": "Conectado com alertas",
+        "HUMAN_REQUIRED": "Precisa de atenção",
+        "OFFLINE": "Desconectado"
+      },
+      "FIELDS": {
+        "ACCOUNT": "Conta",
+        "SESSION": "Sessão",
+        "LAST_HEALTHCHECK": "Última verificação",
+        "LAST_SCAN": "Última descoberta"
+      },
+      "FORM": {
+        "INTRO": "Informe o acesso da corretora ao AGGER. A senha é guardada de forma segura e usada só para manter a sessão de cotação.",
+        "USERNAME": "Usuário AGGER",
+        "USERNAME_PLACEHOLDER": "corretora@exemplo.com.br",
+        "PASSWORD": "Senha",
+        "PASSWORD_PLACEHOLDER": "••••••••",
+        "REQUIRED": "Preencha usuário e senha para conectar.",
+        "SECURITY_NOTE": "A senha nunca é exibida de novo nem enviada para o agente de IA."
+      },
+      "ACTIONS": {
+        "CONNECT": "Conectar AGGER",
+        "RECONNECT": "Reconectar",
+        "RESCAN": "Atualizar configuração",
+        "DISCONNECT": "Desconectar"
+      }
+    },
+    "CAPABILITIES": {
+      "TITLE": "Produtos e seguradoras",
+      "SUBTITLE": "O que esta conta consegue cotar hoje, conforme descoberto no AGGER.",
+      "INSURERS_COUNT": "{count} seguradoras disponíveis",
+      "NOT_ENABLED": "não habilitado nesta conta"
+    },
+    "PRODUCTS": {
+      "AUTO": "Automóvel",
+      "RESIDENCIAL": "Residencial",
+      "RC_PROFISSIONAL": "RC Profissional",
+      "EMPRESARIAL": "Empresarial",
+      "VIDA": "Vida",
+      "VIAGEM": "Viagem"
+    },
+    "AGENT": {
+      "TITLE": "Agente de Cotação",
+      "DESCRIPTION": "Um agente Autonom.ia especializado, já treinado em seguros, que conversa com o cliente, coleta o que falta, cota nas seguradoras disponíveis da sua conta AGGER e envia a proposta. Você personaliza só a identidade, o tom e o conhecimento da corretora.",
+      "PILLARS": {
+        "COLLECT": "Identifica o ramo e coleta somente os dados necessários",
+        "QUOTE": "Executa a cotação pelo AGGER e devolve o resultado estruturado",
+        "EXPLAIN": "Explica apenas o que a cotação retornou, sem inventar coberturas",
+        "CRM": "Cria e movimenta a oportunidade no CRM automaticamente"
+      },
+      "LOCKED_NOTE": "A lógica de cotação, os formulários do AGGER e as regras de segurança são mantidos pela Autonom.ia e não podem ser alterados pela corretora.",
+      "ACTIONS": {
+        "CREATE": "Criar Agente de Cotação",
+        "OPEN_AGENTS": "Ver meus agentes"
+      }
+    }
+  }
+}

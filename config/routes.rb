@@ -1015,6 +1015,7 @@ Rails.application.routes.draw do
         post :seed, on: :member
         post :reset_cache, on: :member
         post :toggle_prospecting, on: :member
+        post :toggle_insurance, on: :member
       end
       resources :prospecting_scoring_profiles, except: [:show]
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do

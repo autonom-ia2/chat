@@ -33,6 +33,7 @@ json.support_email @account.support_email
 json.status @account.status
 json.autonomia_agents_enabled Autonomia::Agents::Config.enabled?(@account)
 json.autonomia_prospecting_enabled Autonomia::Prospecting::Config.enabled?(@account)
+json.autonomia_insurance_enabled Autonomia::Insurance::Config.enabled?(@account)
 # Guia da Plataforma: gate EXATO do backend (Config.enabled? + credencial de IA resolvível) — o widget
 # do guia só aparece quando o /autonomia/guide/chat de fato responderia. Best-effort: nunca quebra o
 # payload da conta.
