@@ -88,20 +88,34 @@ module Autonomia
 
         # A instrução sinalizou "passar para humano" (should_handoff) -> fecha o ciclo do ai_assignee:
         # bot_handoff! (solta o AgentBot-espelho, abre a conversa, dispara CONVERSATION_BOT_HANDOFF) +
-        # evento handed_off. Só enquanto o espelho ainda está no comando (ai_assignee presente ou
+        # evento handed_off. Só enquanto o espelho ainda está no comando (ai_assignee = espelho ou
         # pending) — depois disso a conversa já foi entregue e o sinal repetido é ignorado (1 evento
-        # por episódio). Best-effort: nunca derruba a resposta já postada.
+        # por episódio). A guarda é rechecada DENTRO do lock (with_lock recarrega sob FOR UPDATE):
+        # duas respostas concorrentes não duplicam o handoff nem o evento — a segunda encontra a
+        # conversa já liberada. Sem return/break dentro do with_lock (dispararia ROLLBACK).
+        # Best-effort: nunca derruba a resposta já postada.
         def handoff_if_signaled(result)
           return unless result&.handoff&.dig(:should)
 
-          conversation = @conversation.reload
-          return unless conversation.assignee_agent_bot_id.present? || conversation.pending?
+          released = false
+          @conversation.with_lock do
+            if bot_still_in_command?
+              @conversation.bot_handoff!
+              released = true
+            end
+          end
+          return unless released
 
-          conversation.bot_handoff!
-          ::Autonomia::Agents::Operate::EventLogger.handed_off(agent: @agent, conversation: conversation, result: result)
+          ::Autonomia::Agents::Operate::EventLogger.handed_off(agent: @agent, conversation: @conversation, result: result)
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] handoff_signal_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
           nil
+        end
+
+        # Espelho DESTE vínculo ainda é o ai_assignee (ou a conversa ainda está pending). Chamar só com
+        # estado fresco (dentro do with_lock).
+        def bot_still_in_command?
+          @conversation.assignee_agent_bot_id == @agent_inbox.agent_bot_id || @conversation.pending?
         end
 
         # Escolhe o caminho de entrega (extraído do perform p/ legibilidade; mesma ordem de sempre):

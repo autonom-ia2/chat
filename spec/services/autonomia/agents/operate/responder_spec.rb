@@ -108,6 +108,26 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(Autonomia::Agents::AgentEvent.handed_off.last.handoff_reason).to eq('human_requested')
     end
 
+    it 'does not hand off again when a concurrent caller released the mirror bot before the lock' do
+      # Arrange — simula o 2º chamador: quem venceu o lock já soltou o espelho (assignee_agent_bot_id nil,
+      # open) por outra conexão; este chamador só vê isso ao recarregar DENTRO do with_lock.
+      stub_answer(handoff: { should: true, reason: 'human_requested' })
+      allow(conversation).to receive(:with_lock).and_wrap_original do |original, &block|
+        # rubocop:disable Rails/SkipsModelValidations -- escrita "por fora" (outra conexão) é o ponto do teste
+        Conversation.where(id: conversation.id).update_all(assignee_agent_bot_id: nil, status: Conversation.statuses[:open])
+        # rubocop:enable Rails/SkipsModelValidations
+        original.call(&block)
+      end
+
+      # Act
+      result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      # Assert — a resposta ainda é postada (elegibilidade só olha assignee humano); handoff/evento NÃO duplicam.
+      expect(result.status).to eq(:replied)
+      expect(conversation.reload.assignee_agent_bot_id).to be_nil
+      expect(Autonomia::Agents::AgentEvent.handed_off.count).to eq(0)
+    end
+
     it 'does not log handoff twice once the mirror bot was already released' do
       # Arrange — ciclo já fechado (sem ai_assignee, open).
       conversation.update!(assignee_agent_bot_id: nil, status: :open)
