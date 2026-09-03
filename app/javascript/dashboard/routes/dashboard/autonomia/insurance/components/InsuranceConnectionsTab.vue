@@ -263,6 +263,13 @@ onMounted(load);
           </dl>
 
           <p
+            v-if="status === CONNECTION_STATES.AUTH_REQUIRED"
+            class="text-xs text-n-amber-11"
+          >
+            {{ t('INSURANCE.CONNECTION.AUTH_REQUIRED_HINT') }}
+          </p>
+
+          <p
             v-if="connection.last_error"
             class="text-xs text-n-ruby-11 font-mono break-all"
           >

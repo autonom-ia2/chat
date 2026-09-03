@@ -32,7 +32,11 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   self.table_name = 'autonomia_insurance_connections'
 
   PROVIDERS = %w[agger].freeze
-  STATUSES = %w[not_configured provisioning authenticating discovering ready degraded auth_required offline].freeze
+  # Estados do PRD §9.2. `auth_required` = o portal recusou a credencial da corretora;
+  # `human_required` = precisa de alguém (reservado para MFA/CAPTCHA e falha que o adapter não resolve).
+  # A tela e os textos precisam cobrir exatamente esta lista — insuranceStates.spec.js falha se divergir.
+  STATUSES = %w[not_configured provisioning authenticating discovering ready degraded auth_required
+                human_required offline].freeze
 
   belongs_to :account
 
