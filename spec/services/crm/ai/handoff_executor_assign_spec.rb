@@ -42,4 +42,18 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     # Sem o stamp o cooldown nao segura um segundo disparo.
     expect(card.reload.metadata.dig('ai', 'last_handoff_at')).to be_present
   end
+
+  # #284 — caixa com agente Autonom.ia: o handoff do CRM entra no histórico do agente (aba Desempenho).
+  it 'logs a handed_off event for the Autonomia agent linked to the inbox' do
+    card = build_card
+    autonomia_agent = Autonomia::Agents::Agent.create!(account: account, name: 'Ana', agent_type: 'custom', status: :active,
+                                                       enabled: true, instruction: 'Atenda.')
+    mirror = AgentBot.create!(account: account, name: 'Ana', bot_type: :webhook, outgoing_url: nil)
+    Autonomia::Agents::AgentInbox.create!(agent: autonomia_agent, inbox: inbox, account: account, agent_bot: mirror)
+
+    described_class.new(card: card, handoff: { intent: 'transferir', reason: 'cliente pediu humano' }).perform
+
+    event = Autonomia::Agents::AgentEvent.handed_off.find_by(conversation_id: conversation.id)
+    expect(event).to have_attributes(autonomia_agent_id: autonomia_agent.id, handoff_reason: 'human_requested')
+  end
 end

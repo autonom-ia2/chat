@@ -52,4 +52,72 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(result.status).to eq(:silenced)
     end
   end
+
+  # #284 — fontes por resposta + sinal de handoff da instrução. Caminho clássico (humanização OFF).
+  describe 'reply sources and handoff signal' do
+    let(:knowledge) { [{ id: 7, content: 'Entregamos em 2 dias.', source: 'faq' }] }
+
+    def stub_answer(handoff:)
+      answer = Autonomia::Agents::AnswerResult.new(
+        reply: 'Entregamos em 2 dias.', confidence: 0.9, handoff: handoff,
+        used_knowledge: knowledge, answered_from_knowledge: true
+      )
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_return(instance_double(Autonomia::Agents::Answerer, answer: answer))
+    end
+
+    around do |example|
+      with_modified_env AI_HUMANIZE_DELIVERY: 'false', AI_AGENT_MEDIA: 'false' do
+        example.run
+      end
+    end
+
+    before do
+      conversation.update!(assignee_agent_bot_id: agent_bot.id)
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'prazo?')
+    end
+
+    it 'links the replied event to the posted message with the knowledge entry ids' do
+      # Arrange
+      stub_answer(handoff: { should: false, reason: nil })
+
+      # Act
+      result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      # Assert
+      event = Autonomia::Agents::AgentEvent.replied.last
+      expect(result.status).to eq(:replied)
+      expect(event.message_id).to eq(result.message.id)
+      expect(event.used_entry_ids).to eq([7])
+      expect(event.model).to eq(Autonomia::Agents::Config::ANSWERER_MODEL)
+      # Sem sinal de handoff: o espelho continua no comando e nada muda no ciclo.
+      expect(conversation.reload.assignee_agent_bot_id).to eq(agent_bot.id)
+      expect(Autonomia::Agents::AgentEvent.handed_off.count).to eq(0)
+    end
+
+    it 'posts the same reply, releases the mirror bot and logs handed_off when the instruction signals handoff' do
+      # Arrange
+      stub_answer(handoff: { should: true, reason: 'human_requested' })
+
+      # Act
+      result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      # Assert — a resposta ao cliente é a mesma; o que muda é o ciclo do ai_assignee.
+      expect(result.status).to eq(:replied)
+      expect(result.message.content).to eq('Entregamos em 2 dias.')
+      expect(conversation.reload).to have_attributes(status: 'open', assignee_agent_bot_id: nil)
+      expect(Autonomia::Agents::AgentEvent.handed_off.last.handoff_reason).to eq('human_requested')
+    end
+
+    it 'does not log handoff twice once the mirror bot was already released' do
+      # Arrange — ciclo já fechado (sem ai_assignee, open).
+      conversation.update!(assignee_agent_bot_id: nil, status: :open)
+      stub_answer(handoff: { should: true, reason: 'human_requested' })
+
+      # Act
+      described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+
+      # Assert
+      expect(Autonomia::Agents::AgentEvent.handed_off.count).to eq(0)
+    end
+  end
 end

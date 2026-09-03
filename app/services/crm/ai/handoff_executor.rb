@@ -199,6 +199,8 @@ module Crm
 
         # Stop the AgentBot: transitions pending->open and signals handoff.
         @conversation.bot_handoff!
+        # Agente Autonom.ia na caixa? Registra o handoff no histórico dele (aba Desempenho). Best-effort.
+        ::Autonomia::Agents::Operate::EventLogger.handed_off_by_inbox(conversation: @conversation, reason: 'human_requested')
         true
       end
 
