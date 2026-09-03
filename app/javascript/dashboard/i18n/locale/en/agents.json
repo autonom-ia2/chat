@@ -448,6 +448,8 @@
           "human_requested": "Human requested",
           "missing_knowledge": "Missing knowledge",
           "policy": "Policy",
+          "audience": "Outside the target audience",
+          "schedule": "Outside the schedule",
           "other": "Other / unspecified"
         }
       },
@@ -475,6 +477,53 @@
       "EMPTY": "Your agent is ready — metrics will appear here after its first conversations. Meanwhile, try it out in the Test tab.",
       "ERROR": "We couldn't load performance data.",
       "RETRY": "Try again"
+    },
+    "AUDIENCE": {
+      "TITLE": "Target audience",
+      "DESCRIPTION": "Choose whether the agent talks to everyone or only to customers who match some conditions. Others go straight to your team.",
+      "EVERYONE": {
+        "LABEL": "Everyone",
+        "DESC": "The agent answers every conversation in its connected inboxes."
+      },
+      "SPECIFIC": {
+        "LABEL": "Specific audience",
+        "DESC": "The agent answers only customers who match the conditions below; the rest are handed to your team without a reply."
+      },
+      "ADD_CONDITION": "Add condition",
+      "ADD_GROUP": "Add condition group",
+      "EMPTY_TITLE": "No conditions yet",
+      "EMPTY_BODY": "Add a condition to target specific customers, or a group to combine conditions with and/or logic.",
+      "EMPTY_ERROR": "Add at least one condition for a specific audience.",
+      "MATCH_PREFIX": "Match",
+      "MATCH_SUFFIX": "of the following",
+      "MATCH_ALL": "all",
+      "MATCH_ANY": "any",
+      "GROUP_CONTACT": "Contact attributes",
+      "GROUP_CONVERSATION": "Conversation",
+      "GROUP_CUSTOM": "Custom attributes",
+      "BROWSER_LANGUAGE": "Browser language",
+      "LOGGED_IN": "Logged-in user",
+      "LOGGED_IN_TRUE": "Yes",
+      "LOGGED_IN_FALSE": "No",
+      "SAVE": "Save audience"
+    },
+    "SCHEDULE": {
+      "TITLE": "Working hours",
+      "DESCRIPTION": "Choose when the agent replies. Outside this window, conversations go straight to your team.",
+      "ALWAYS": {
+        "LABEL": "Anytime",
+        "DESC": "The agent replies to every conversation, regardless of time."
+      },
+      "BUSINESS_HOURS": {
+        "LABEL": "During business hours",
+        "DESC": "The agent replies only within the inbox's business hours."
+      },
+      "OUTSIDE_BUSINESS_HOURS": {
+        "LABEL": "Outside business hours",
+        "DESC": "The agent replies only when the inbox is closed."
+      },
+      "HINT": "Uses the inbox's service schedule (CRM) when there is one, otherwise the inbox's business hours. Inboxes without either are always covered.",
+      "SAVE": "Save working hours"
     },
     "FEEDBACK": {
       "LABEL": "Wrong reply",
