@@ -9,6 +9,8 @@ export const CONNECTION_STATES = Object.freeze({
   DISCOVERING: 'discovering',
   READY: 'ready',
   DEGRADED: 'degraded',
+  // O portal recusou a credencial da corretora (senha trocada, acesso revogado).
+  AUTH_REQUIRED: 'auth_required',
   HUMAN_REQUIRED: 'human_required',
   OFFLINE: 'offline',
 });
@@ -21,6 +23,7 @@ export const STATE_TONE = Object.freeze({
   [CONNECTION_STATES.DISCOVERING]: 'info',
   [CONNECTION_STATES.READY]: 'success',
   [CONNECTION_STATES.DEGRADED]: 'warning',
+  [CONNECTION_STATES.AUTH_REQUIRED]: 'warning',
   [CONNECTION_STATES.HUMAN_REQUIRED]: 'warning',
   [CONNECTION_STATES.OFFLINE]: 'danger',
 });
