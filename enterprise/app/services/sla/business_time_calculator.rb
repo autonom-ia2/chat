@@ -21,8 +21,8 @@ class Sla::BusinessTimeCalculator
     MAX_DAYS.times do
       break if day_start > to
 
-      @schedule.blocks_for(day_start.wday).each do |start_minute, end_minute|
-        overlap = [to, day_start + end_minute.minutes].min - [from, day_start + start_minute.minutes].max
+      block_ranges(day_start).each do |block_start, block_end|
+        overlap = [to, block_end].min - [from, block_start].max
         total += overlap if overlap.positive?
       end
       return total.round if limit.present? && total >= limit
@@ -31,5 +31,43 @@ class Sla::BusinessTimeCalculator
     end
 
     total.round
+  end
+
+  # Inverse of +elapsed_seconds+: the first instant at which +threshold_seconds+ of
+  # business time have elapsed since +start_time+. Walks the same blocks forward with
+  # the same per-day anchoring, so elapsed_seconds(start, deadline(start, t)) == t.
+  # Returns nil when the threshold is not reachable within MAX_DAYS.
+  def deadline(start_time, threshold_seconds)
+    return nil if start_time.blank? || threshold_seconds.nil?
+
+    start_time = start_time.in_time_zone(@timezone)
+    remaining = threshold_seconds.to_i
+    return start_time unless remaining.positive?
+
+    day_start = start_time.beginning_of_day
+
+    MAX_DAYS.times do
+      block_ranges(day_start).each do |block_start, block_end|
+        counted_from = [start_time, block_start].max
+        available = block_end - counted_from
+        next unless available.positive?
+        return counted_from + remaining.seconds if remaining <= available
+
+        remaining -= available
+      end
+
+      day_start = (day_start + 1.day).beginning_of_day
+    end
+
+    nil
+  end
+
+  private
+
+  # Absolute [start, end] pairs of the schedule blocks for the day beginning at +day_start+.
+  def block_ranges(day_start)
+    @schedule.blocks_for(day_start.wday).map do |start_minute, end_minute|
+      [day_start + start_minute.minutes, day_start + end_minute.minutes]
+    end
   end
 end

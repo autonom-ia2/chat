@@ -167,5 +167,84 @@ RSpec.describe AppliedSla, type: :model do
       expect(Sla::BusinessHoursService).not_to receive(:new)
       applied_sla.frt_due_at
     end
+
+    # Issue #283: the fork calendar (Crm::ServiceSchedule, agent > inbox) is the clock used to record
+    # breaches, so the card must show deadlines computed by the same engine.
+    context 'with fork service schedules' do
+      let(:account) { create(:account) }
+      let(:agent) { create(:user, account: account) }
+      let(:inbox) { create(:inbox, account: account, working_hours_enabled: true, timezone: 'America/Sao_Paulo') }
+      let(:sla_policy) do
+        create(:sla_policy, account: account, first_response_time_threshold: 30.minutes, next_response_time_threshold: 30.minutes,
+                            resolution_time_threshold: 4.hours, only_during_business_hours: true)
+      end
+      let(:created_at) { brt('2026-09-02 13:00') } # Wednesday
+      let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: agent, created_at: created_at) }
+      let(:applied_sla) { create(:applied_sla, account: account, conversation: conversation, sla_policy: sla_policy) }
+
+      def brt(text)
+        ActiveSupport::TimeZone['America/Sao_Paulo'].parse(text)
+      end
+
+      before do
+        create(:crm_service_schedule, account: account, owner: inbox, weekdays: [1, 2, 3, 4, 5], hours: [['08:00', '18:00']])
+      end
+
+      it 'uses the inbox schedule instead of the upstream working hours' do
+        expect(Sla::BusinessHoursService).not_to receive(:new)
+
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 13:30').to_i)
+        expect(applied_sla.rt_due_at).to eq(brt('2026-09-02 17:00').to_i)
+      end
+
+      it 'lets the assigned agent schedule override the inbox schedule (corretor 14h-18h)' do
+        create(:crm_service_schedule, account: account, owner: agent, weekdays: [3], hours: [['14:00', '18:00']])
+
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 14:30').to_i)
+        expect(applied_sla.rt_due_at).to eq(brt('2026-09-02 18:00').to_i)
+      end
+
+      it 'walks several blocks in the same day' do
+        blocks = attributes_for(:crm_service_schedule, weekdays: [3], hours: [['09:00', '12:00'], ['14:00', '18:00']])[:blocks]
+        Crm::ServiceSchedule.find_by!(account: account, owner: inbox).update!(blocks: blocks)
+        conversation.update!(waiting_since: brt('2026-09-02 11:45'))
+
+        expect(applied_sla.nrt_due_at).to eq(brt('2026-09-02 14:15').to_i)
+      end
+
+      it 'falls back to BusinessHoursService when no schedule is usable' do
+        Crm::ServiceSchedule.find_by!(account: account, owner: inbox).update!(enabled: false)
+        upstream_deadline = Sla::BusinessHoursService.new(inbox: inbox, start_time: created_at, threshold_seconds: 1800).deadline.to_i
+
+        expect(Sla::BusinessHoursService).to receive(:new).once.and_call_original
+
+        expect(applied_sla.frt_due_at).to eq(upstream_deadline)
+      end
+
+      it 'ignores every schedule for a 24/7 policy' do
+        sla_policy.update!(only_during_business_hours: false)
+        create(:crm_service_schedule, account: account, owner: agent, weekdays: [3], hours: [['14:00', '18:00']])
+
+        expect(Sla::ScheduleResolver).not_to receive(:for_conversation)
+
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 13:30').to_i)
+      end
+
+      it 'returns nil when the deadline is not reachable within the calculator horizon' do
+        blocks = attributes_for(:crm_service_schedule, weekdays: [3], hours: [['09:00', '09:01']])[:blocks]
+        Crm::ServiceSchedule.find_by!(account: account, owner: inbox).update!(blocks: blocks)
+        sla_policy.update!(resolution_time_threshold: 30.days)
+
+        expect(applied_sla.rt_due_at).to be_nil
+      end
+
+      it 'resolves the schedule once while serializing all due times' do
+        allow(Sla::ScheduleResolver).to receive(:for_conversation).and_call_original
+
+        applied_sla.due_at_values
+
+        expect(Sla::ScheduleResolver).to have_received(:for_conversation).once
+      end
+    end
   end
 end

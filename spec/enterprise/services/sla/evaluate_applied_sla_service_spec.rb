@@ -1,10 +1,10 @@
 require 'rails_helper'
 
-RSpec.describe Sla::EvaluateAppliedSlaService,
-               skip: 'QUARANTINE: pre-existing legacy failure, harness-restore PR; real fix tracked for follow-up PR2' do
-  let!(:account) { create(:account) }
+RSpec.describe Sla::EvaluateAppliedSlaService do
+  # The service (and the applied_sla creation hook) are no-ops without the `sla` feature (fork choke point),
+  # so the feature must be on before the let! records below are created.
+  let!(:account) { create(:account).tap { |created| created.enable_features!('sla') } }
   let!(:user_1) { create(:user, account: account) }
-
   let!(:sla_policy) do
     create(:sla_policy,
            account: account,
@@ -309,6 +309,200 @@ RSpec.describe Sla::EvaluateAppliedSlaService,
       expect(SlaEvent.where(applied_sla: applied_sla, event_type: 'frt').count).to eq(0)
       expect(SlaEvent.where(applied_sla: applied_sla, event_type: 'nrt').count).to eq(2)
       expect(SlaEvent.where(applied_sla: applied_sla, event_type: 'rt').count).to eq(1)
+    end
+  end
+
+  # Issue #283: the deadline shown on the card/Kanban (AppliedSla#calculate_due_at) and the instant a
+  # breach is recorded must be the same number, under the fork calendar rules (agent > inbox > 24/7,
+  # several blocks per day, exclude_groups, AiBreachGuard, blocked-contact and resolution freezes).
+  describe 'one clock: card deadline == breach instant' do
+    # America/Sao_Paulo (UTC-3, no DST). 2026-09-02 is a Wednesday.
+    def brt(text)
+      ActiveSupport::TimeZone['America/Sao_Paulo'].parse(text)
+    end
+
+    def events(applied_sla, type)
+      SlaEvent.where(applied_sla: applied_sla, event_type: type)
+    end
+
+    def perform_at(applied_sla, time)
+      travel_to(time) { described_class.new(applied_sla: applied_sla).perform }
+    end
+
+    # Evaluates one second before the card deadline (nothing may be recorded) and at the deadline
+    # (the breach must be recorded), proving both clocks agree.
+    def expect_breach_exactly_at_due_at(applied_sla, type, due_at)
+      perform_at(applied_sla, Time.zone.at(due_at) - 1.second)
+      expect(events(applied_sla, type)).not_to exist
+
+      perform_at(applied_sla, Time.zone.at(due_at))
+      expect(events(applied_sla, type).count).to eq(1)
+      expect(applied_sla.reload.sla_status).to eq('active_with_misses')
+    end
+
+    # NOTE: the file-level let!(:conversation)/let!(:applied_sla) evaluate the innermost definitions
+    # before any nested `before`, so per-context variations go through `let` overrides, not updates.
+    let(:inbox) { create(:inbox, account: account, timezone: 'America/Sao_Paulo') }
+    let(:only_during_business_hours) { true }
+    let(:business_hours_policy) do
+      create(:sla_policy, account: account, only_during_business_hours: only_during_business_hours, exclude_groups: true,
+                          first_response_time_threshold: 30.minutes, next_response_time_threshold: 30.minutes,
+                          resolution_time_threshold: 4.hours)
+    end
+    let(:conversation_created_at) { brt('2026-09-02 13:00') }
+    let(:conversation) do
+      create(:conversation, account: account, inbox: inbox, assignee: user_1, sla_policy: business_hours_policy,
+                            created_at: conversation_created_at, last_activity_at: conversation_created_at)
+    end
+    let(:applied_sla) { conversation.applied_sla }
+
+    before do
+      # Inbox calendar: Mon-Fri 08:00-18:00. The agent calendar (when present) overrides it.
+      create(:crm_service_schedule, account: account, owner: inbox, weekdays: [1, 2, 3, 4, 5], hours: [['08:00', '18:00']])
+    end
+
+    context 'when the agent calendar differs from the inbox calendar (corretor 14h-18h, cliente escreve 13h)' do
+      before { create(:crm_service_schedule, account: account, owner: user_1, weekdays: [3], hours: [['14:00', '18:00']]) }
+
+      it 'shows 14:30 on the card and records the FRT breach at 14:30, not at 13:30' do
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 14:30').to_i)
+
+        expect_breach_exactly_at_due_at(applied_sla, 'frt', applied_sla.frt_due_at)
+      end
+
+      it 'records the NRT breach exactly at nrt_due_at computed from waiting_since' do
+        conversation.update!(first_reply_created_at: brt('2026-09-02 14:05'), waiting_since: brt('2026-09-02 17:50'))
+
+        # The agent calendar wins as a whole (it only opens on Wednesdays): 10 min Wed + 20 min next Wed.
+        expect(applied_sla.nrt_due_at).to eq(brt('2026-09-09 14:20').to_i)
+
+        expect_breach_exactly_at_due_at(applied_sla, 'nrt', applied_sla.nrt_due_at)
+      end
+
+      it 'records the RT breach exactly at rt_due_at (4h: Wed 14-18)' do
+        conversation.update!(first_reply_created_at: brt('2026-09-02 14:05'), waiting_since: nil)
+
+        expect(applied_sla.rt_due_at).to eq(brt('2026-09-02 18:00').to_i)
+
+        expect_breach_exactly_at_due_at(applied_sla, 'rt', applied_sla.rt_due_at)
+      end
+
+      it 'treats a first reply on or before frt_due_at as within threshold even outside wall-clock time' do
+        conversation.update!(first_reply_created_at: brt('2026-09-02 14:30'), waiting_since: nil)
+
+        travel_to(brt('2026-09-02 15:00')) { described_class.new(applied_sla: applied_sla).perform }
+
+        expect(events(applied_sla, 'frt')).not_to exist
+        expect(applied_sla.reload.sla_status).to eq('active')
+      end
+
+      it 'records the FRT breach when the first reply came after frt_due_at' do
+        conversation.update!(first_reply_created_at: brt('2026-09-02 14:31'), waiting_since: nil)
+
+        travel_to(brt('2026-09-02 15:00')) { described_class.new(applied_sla: applied_sla).perform }
+
+        expect(events(applied_sla, 'frt').count).to eq(1)
+      end
+    end
+
+    context 'when the inbox calendar has several blocks in a day (09-12, 14-18)' do
+      let(:conversation_created_at) { brt('2026-09-02 11:45') }
+
+      before do
+        blocks = attributes_for(:crm_service_schedule, weekdays: [3], hours: [['09:00', '12:00'], ['14:00', '18:00']])[:blocks]
+        Crm::ServiceSchedule.find_by!(account: account, owner: inbox).update!(blocks: blocks)
+      end
+
+      it 'jumps the lunch gap on the card and on the breach (11:45 + 30min = 14:15)' do
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 14:15').to_i)
+
+        expect_breach_exactly_at_due_at(applied_sla, 'frt', applied_sla.frt_due_at)
+      end
+    end
+
+    context 'when no fork calendar is usable' do
+      before { Crm::ServiceSchedule.where(account: account).update_all(enabled: false) } # rubocop:disable Rails/SkipsModelValidations
+
+      it 'falls back to the upstream inbox working hours for both the card and the breach' do
+        inbox.update!(working_hours_enabled: true)
+        inbox.working_hours.find_each { |wh| wh.update!(open_hour: 15, open_minutes: 0, close_hour: 19, close_minutes: 0, closed_all_day: false) }
+
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 15:30').to_i)
+
+        expect_breach_exactly_at_due_at(applied_sla, 'frt', applied_sla.frt_due_at)
+      end
+    end
+
+    context 'when the policy is 24/7 (only_during_business_hours = false)' do
+      let(:only_during_business_hours) { false }
+
+      before { create(:crm_service_schedule, account: account, owner: user_1, weekdays: [3], hours: [['14:00', '18:00']]) }
+
+      it 'ignores every calendar: card and breach at created_at + threshold' do
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 13:30').to_i)
+
+        expect_breach_exactly_at_due_at(applied_sla, 'frt', applied_sla.frt_due_at)
+      end
+    end
+
+    context 'when the conversation is a WhatsApp group and the policy excludes groups' do
+      let(:inbox) { create(:inbox, account: account, timezone: 'America/Sao_Paulo', channel: create(:channel_api, account: account)) }
+      let(:conversation) do
+        contact = create(:contact, account: account)
+        contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: '120363000000000000@g.us')
+        create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox, assignee: user_1,
+                              sla_policy: business_hours_policy, created_at: conversation_created_at, last_activity_at: conversation_created_at)
+      end
+
+      it 'still shows a deadline but never records a breach' do
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 13:30').to_i)
+
+        travel_to(Time.zone.at(applied_sla.frt_due_at) + 1.day) { described_class.new(applied_sla: applied_sla).perform }
+
+        expect(SlaEvent.where(applied_sla: applied_sla)).not_to exist
+        expect(applied_sla.reload.sla_status).to eq('active')
+      end
+    end
+
+    context 'when the AI breach guard decides the customer is not waiting' do
+      before do
+        allow(Sla::AiBreachGuard).to receive(:new).and_return(instance_double(Sla::AiBreachGuard, skip_breach?: true))
+      end
+
+      it 'holds the breach at the deadline and asks the guard only at that instant' do
+        travel_to(Time.zone.at(applied_sla.frt_due_at) - 1.second) { described_class.new(applied_sla: applied_sla).perform }
+        expect(Sla::AiBreachGuard).not_to have_received(:new)
+
+        travel_to(Time.zone.at(applied_sla.frt_due_at)) { described_class.new(applied_sla: applied_sla).perform }
+
+        expect(Sla::AiBreachGuard).to have_received(:new).with(applied_sla: applied_sla, breach_type: 'frt')
+        expect(events(applied_sla, 'frt')).not_to exist
+        expect(applied_sla.reload.sla_status).to eq('active')
+      end
+    end
+
+    context 'when the contact is blocked' do
+      before { conversation.contact.update!(blocked: true) }
+
+      it 'freezes: no breach at or after the deadline' do
+        travel_to(Time.zone.at(applied_sla.frt_due_at) + 1.hour) { described_class.new(applied_sla: applied_sla).perform }
+
+        expect(SlaEvent.where(applied_sla: applied_sla)).not_to exist
+        expect(applied_sla.reload.sla_status).to eq('active')
+      end
+    end
+
+    context 'when the conversation is resolved before the resolution deadline' do
+      it 'freezes: RT is not breached afterwards and the SLA is marked hit with completed_at' do
+        conversation.update!(first_reply_created_at: brt('2026-09-02 13:10'))
+        travel_to(brt('2026-09-02 15:00')) { conversation.resolved! }
+
+        travel_to(Time.zone.at(applied_sla.rt_due_at) + 1.day) { described_class.new(applied_sla: applied_sla).perform }
+
+        expect(events(applied_sla, 'rt')).not_to exist
+        expect(applied_sla.reload.sla_status).to eq('hit')
+        expect(applied_sla.completed_at).to eq(brt('2026-09-02 15:00'))
+      end
     end
   end
 end

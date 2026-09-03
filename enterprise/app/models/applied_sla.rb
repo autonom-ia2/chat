@@ -67,56 +67,44 @@ class AppliedSla < ApplicationRecord
     }
   end
 
+  # One calculator for the three deadlines so the calendar lookups run once per serialization.
   def due_at_values
-    working_hours_by_day_cache = conversation.inbox.working_hours.index_by(&:day_of_week) if sla_policy.only_during_business_hours?
+    calculator = due_at_calculator
 
     {
-      frt: frt_due_at(working_hours_by_day_cache: working_hours_by_day_cache),
-      nrt: nrt_due_at(working_hours_by_day_cache: working_hours_by_day_cache),
-      rt: rt_due_at(working_hours_by_day_cache: working_hours_by_day_cache)
+      frt: frt_due_at(calculator: calculator),
+      nrt: nrt_due_at(calculator: calculator),
+      rt: rt_due_at(calculator: calculator)
     }
   end
 
-  def frt_due_at(working_hours_by_day_cache: nil)
+  def frt_due_at(calculator: due_at_calculator)
     return nil if sla_policy.first_response_time_threshold.blank?
 
-    calculate_due_at(
-      conversation.created_at,
-      sla_policy.first_response_time_threshold,
-      working_hours_by_day_cache: working_hours_by_day_cache
-    )
+    calculate_due_at(conversation.created_at, sla_policy.first_response_time_threshold, calculator: calculator)
   end
 
-  def nrt_due_at(working_hours_by_day_cache: nil)
+  def nrt_due_at(calculator: due_at_calculator)
     return nil if sla_policy.next_response_time_threshold.blank?
     return nil if conversation.waiting_since.blank?
 
-    calculate_due_at(
-      conversation.waiting_since,
-      sla_policy.next_response_time_threshold,
-      working_hours_by_day_cache: working_hours_by_day_cache
-    )
+    calculate_due_at(conversation.waiting_since, sla_policy.next_response_time_threshold, calculator: calculator)
   end
 
-  def rt_due_at(working_hours_by_day_cache: nil)
+  def rt_due_at(calculator: due_at_calculator)
     return nil if sla_policy.resolution_time_threshold.blank?
 
-    calculate_due_at(
-      conversation.created_at,
-      sla_policy.resolution_time_threshold,
-      working_hours_by_day_cache: working_hours_by_day_cache
-    )
+    calculate_due_at(conversation.created_at, sla_policy.resolution_time_threshold, calculator: calculator)
   end
 
-  def calculate_due_at(start_time, threshold_seconds, working_hours_by_day_cache: nil)
-    return (start_time + threshold_seconds.to_i.seconds).to_i unless sla_policy.only_during_business_hours?
+  # Single SLA clock (issue #283): the same value Sla::EvaluateAppliedSlaService breaches on.
+  # Fork calendar (agent > inbox) when usable, else upstream inbox working hours, else wall clock.
+  def calculate_due_at(start_time, threshold_seconds, calculator: due_at_calculator)
+    calculator.deadline(start_time, threshold_seconds)
+  end
 
-    Sla::BusinessHoursService.new(
-      inbox: conversation.inbox,
-      start_time: start_time,
-      threshold_seconds: threshold_seconds,
-      working_hours_by_day_cache: working_hours_by_day_cache
-    ).deadline.to_i
+  def due_at_calculator
+    Sla::DueAtCalculator.new(conversation: conversation, sla_policy: sla_policy)
   end
 
   private
