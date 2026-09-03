@@ -670,6 +670,10 @@ pt_BR:
       no_subscriptions_to_delete: 'Selecione pelo menos uma assinatura para excluir.'
       subscriptions_deleted: "Excluída(s) %{count} inscrição(ões). O(s) dispositivo(s) do usuário será(ão) registrado(s) novamente na próxima inicialização do aplicativo."
   autonomia:
+    faq:
+      not_pending: 'Esta sugestão já foi revisada.'
+      embedding_failed: 'Não foi possível adicionar esta FAQ à base: a credencial de IA está ausente ou falhou. Tente de novo.'
+      resync_not_allowed: 'As FAQ aprovadas entram uma a uma pela lista de sugestões; não há o que sincronizar.'
     build_thread:
       message_blank: 'Escreva uma mensagem para falar com o construtor de agentes.'
       build_in_progress: 'O construtor ainda está processando sua mensagem anterior. Aguarde um instante e tente de novo.'

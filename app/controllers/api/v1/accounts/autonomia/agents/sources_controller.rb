@@ -44,6 +44,9 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   # Re-sincroniza a fonte: novo IngestJob gera novo sync_token que supersede qualquer ingestão em
   # andamento (jobs velhos viram no-op pelo token-guard do model).
   def resync
+    # #284 (2b) — a fonte sintética "FAQ aprovadas" não tem arquivo para reprocessar.
+    return render_unprocessable(I18n.t('autonomia.faq.resync_not_allowed')) if Autonomia::Agents::Faq::KnowledgeWriter.faq_source?(@source)
+
     Autonomia::Agents::Knowledge::IngestJob.perform_later(@source.id)
     render :show, status: :accepted
   end
