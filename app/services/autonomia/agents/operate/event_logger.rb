@@ -8,7 +8,18 @@ module Autonomia
         # IP oculto: NUNCA persistimos o motivo LIVRE do LLM (pode ecoar PII do cliente,
         # conhecimento recuperado ou pedaços de instruction/prompt). Só gravamos um CÓDIGO
         # de uma allowlist fechada; qualquer outra coisa (texto livre, legado, vazio) -> 'other'.
-        ALLOWED_REASONS = %w[low_confidence ai_unavailable human_requested missing_knowledge policy other].freeze
+        # `audience`/`schedule` (#284 · Entrega 2a) são os motivos das passadas diretas pela porta de
+        # engajamento (eventos skipped_*), para aparecerem em "Principais motivos" da aba Desempenho.
+        ALLOWED_REASONS = %w[low_confidence ai_unavailable human_requested missing_knowledge policy audience schedule other].freeze
+
+        # Porta de engajamento (#284 · Entrega 2a): a conversa foi passada DIRETO para humanos sem
+        # resposta. `reason` ∈ audience | schedule -> event_type skipped_audience | skipped_schedule.
+        def self.skipped(agent:, conversation:, reason:)
+          create!(
+            agent: agent, conversation: conversation, event_type: :"skipped_#{reason}",
+            handoff_reason: curate_code(reason)
+          )
+        end
 
         # `message` = a Message outgoing postada (liga o evento ao feedback do atendente).
         # Fontes por resposta (#284): só os IDs dos knowledge_entries citados + o modelo — nunca o
