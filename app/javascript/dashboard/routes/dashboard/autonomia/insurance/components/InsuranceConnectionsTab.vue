@@ -34,7 +34,17 @@ const showForm = computed(
 const encryptionUnavailable = computed(
   () => connection.value.encryption_available !== true
 );
-const products = computed(() => connection.value.capabilities?.products ?? []);
+// Só o que a corretora consegue cotar. O portal devolve ramos que ela não tem habilitados (e às
+// vezes sem nome, como `ramo_100`), que não ajudam ninguém na tela. Ficam no `capabilities` gravado,
+// para diagnóstico e para o dia em que forem habilitados.
+const products = computed(() =>
+  (connection.value.capabilities?.products ?? []).filter(item => item.enabled)
+);
+const hiddenProductCount = computed(
+  () =>
+    (connection.value.capabilities?.products ?? []).length -
+    products.value.length
+);
 
 const apply = payload => {
   connection.value = { ...buildConnection(), ...payload };
@@ -343,27 +353,32 @@ onMounted(load);
               </span>
             </div>
             <span class="text-xs text-n-slate-11 shrink-0">
-              <template v-if="item.enabled">
+              {{
+                t('INSURANCE.CAPABILITIES.INSURERS_COUNT', {
+                  count: insurerSummary(item).ready,
+                })
+              }}
+              <span v-if="insurerSummary(item).pending">
+                ·
                 {{
-                  t('INSURANCE.CAPABILITIES.INSURERS_COUNT', {
-                    count: insurerSummary(item).ready,
+                  t('INSURANCE.CAPABILITIES.PENDING_AUTH', {
+                    count: insurerSummary(item).pending,
                   })
                 }}
-                <span v-if="insurerSummary(item).pending">
-                  ·
-                  {{
-                    t('INSURANCE.CAPABILITIES.PENDING_AUTH', {
-                      count: insurerSummary(item).pending,
-                    })
-                  }}
-                </span>
-              </template>
-              <template v-else>
-                {{ t('INSURANCE.CAPABILITIES.NOT_ENABLED') }}
-              </template>
+              </span>
             </span>
           </li>
         </ul>
+        <p
+          v-if="hiddenProductCount"
+          class="px-5 py-3 text-xs text-n-slate-11 border-t border-n-weak"
+        >
+          {{
+            t('INSURANCE.CAPABILITIES.HIDDEN_PRODUCTS', {
+              count: hiddenProductCount,
+            })
+          }}
+        </p>
       </section>
     </template>
   </div>

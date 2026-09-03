@@ -64,9 +64,9 @@
       "TITLE": "Produtos e seguradoras",
       "SUBTITLE": "O que esta conta consegue cotar hoje, conforme descoberto no AGGER.",
       "INSURERS_COUNT": "{count} seguradoras disponíveis",
-      "NOT_ENABLED": "não habilitado nesta conta",
       "PENDING_AUTH": "{count} aguardando credencial",
-      "INFERRED_HINT": "Nome deduzido das coberturas; ainda não confirmado no portal."
+      "INFERRED_HINT": "Nome deduzido das coberturas; ainda não confirmado no portal.",
+      "HIDDEN_PRODUCTS": "{count} ramo(s) que esta conta ainda não tem habilitado no AGGER não aparecem aqui."
     },
     "PRODUCTS": {
       "AUTO": "Automóvel",

@@ -153,6 +153,16 @@ describe('InsuranceConnectionsTab (API)', () => {
     ).toBeDefined();
   });
 
+  it('esconde os ramos que a corretora nao tem habilitados e conta quantos ficaram de fora', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: ready } });
+    const wrapper = await mountTab();
+
+    // `ready` traz auto (habilitado) e vida (nao habilitado)
+    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.INSURERS_COUNT');
+    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.HIDDEN_PRODUCTS');
+    expect(wrapper.findAll('li')).toHaveLength(1);
+  });
+
   it('disconnect returns to not_configured', async () => {
     api.getConnection.mockResolvedValue({ data: { payload: ready } });
     api.removeConnection.mockResolvedValue({ data: { payload: blank } });
