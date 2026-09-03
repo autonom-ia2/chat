@@ -60,7 +60,8 @@ Conta liga/desliga no SuperAdmin (`toggle_insurance`), marca em `accounts.intern
 
 ## Conexão (PR 2)
 
-- Tabela `autonomia_insurance_connections` (uma por conta e provider). `username`/`password` cifrados com ActiveRecord::Encryption — **sem `ACTIVE_RECORD_ENCRYPTION_*` o model recusa gravar credencial** (a tela mostra o aviso e desabilita Conectar). Hoje nem hub2you nem autonomia têm as chaves em produção: ligar é pré-requisito para conectar de verdade.
+- Tabela `autonomia_insurance_connections` (uma por conta e provider). `username`/`password` cifrados com ActiveRecord::Encryption — **sem `ACTIVE_RECORD_ENCRYPTION_*` o model recusa gravar credencial** (a tela mostra o aviso e desabilita Conectar).
+- **Cofre ligado em produção nas duas stacks em 03/09/2026** (chaves distintas por stack, geradas com `rails db:encryption:init`). Seguro para o que já existia porque o fork configura `support_unencrypted_data: true` + `extend_queries: true`: dado antigo em texto puro segue legível e só as gravações novas saem cifradas. Verificado ao vivo na conta 16 — `username`/`password` gravados como envelope `{"p":…}`.
 - API (admin, gate ENV+conta): `GET|POST|DELETE /api/v1/accounts/:id/autonomia/insurance/connection`, `POST …/connection/reconnect`, `POST …/connection/scan`. A senha entra no POST e nunca volta (só `username_hint`).
 - `Autonomia::Insurance::Connector.client` escolhe o transporte por `INSURANCE_CONNECTOR_MODE` (`mock` = contrato com o formato do CLI `autonomia agger`, sem AGGER). O transporte HTTP para o serviço do `autonomia-adapters` chega na Onda 3.
 - `Connections::Sync` traduz erro do connector em `status` + `last_error` (`auth_required`/`offline`/`degraded`), nunca em 500.

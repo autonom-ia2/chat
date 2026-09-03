@@ -140,6 +140,8 @@ jobs:
               # no painel Meta).
               "WHATSAPP_HISTORY_SYNC_ENABLED": "true",
               "SIDEBAR_BACKGROUND_COLOR": "#0b1e3f",
+              # Modulo Cotacao (Insurance): ligado so na hub2you por enquanto (piloto conta 16).
+              "INSURANCE_QUOTING_ENABLED": "true",
           }
 
           lines = path.read_text().splitlines()

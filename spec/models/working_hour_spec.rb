@@ -92,8 +92,14 @@ RSpec.describe WorkingHour do
   context 'when on monday 9am in Sydney timezone' do
     let(:inbox) { create(:inbox) }
 
+    # `Time.zone =` vaza para todo o processo e derrubava specs de outro arquivo no mesmo shard
+    # (ex.: crm/ai/exchange_rate e crm/reports/ai_usage viam +10:00 em vez de UTC). `use_zone`
+    # restaura o fuso ao fim do exemplo, inclusive quando ele falha.
+    around do |example|
+      Time.use_zone('Australia/Sydney') { example.run }
+    end
+
     before do
-      Time.zone = 'Australia/Sydney'
       inbox.update(timezone: 'Australia/Sydney')
       travel_to '10.10.2022 9:00 AEDT'
     end
