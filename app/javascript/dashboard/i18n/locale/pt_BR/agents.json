@@ -430,9 +430,43 @@
         "BODY": "Considere adicionar conhecimento sobre os tópicos abaixo para que o agente resolva mais sozinho:",
         "BODY_GENERIC": "Considere adicionar mais conhecimento para que o agente resolva mais conversas sozinho."
       },
+      "OUTCOMES": {
+        "TITLE": "Resultados por conversa",
+        "HINT": "Clique em um número para abrir as conversas.",
+        "HANDLED": "Conversas atendidas",
+        "RESOLVED_WITHOUT_HUMAN": "Resolvidas sem humano",
+        "HANDED_OFF": "Passadas para humano",
+        "REOPENED": "Reabertas após resolução",
+        "WRONG_REPLIES": "Respostas marcadas como erradas"
+      },
+      "DRILLDOWN": {
+        "SUBTITLE": "{count} conversa | {count} conversas",
+        "LIMIT_NOTE": "mostrando as {limit} mais recentes",
+        "EMPTY": "Nenhuma conversa com este resultado no período.",
+        "ERROR": "Não foi possível carregar as conversas. Tente novamente."
+      },
       "EMPTY": "Seu agente está pronto — as métricas aparecem aqui após as primeiras conversas. Enquanto isso, experimente na aba Testar.",
       "ERROR": "Não foi possível carregar os dados de desempenho.",
       "RETRY": "Tentar novamente"
+    },
+    "FEEDBACK": {
+      "LABEL": "Resposta errada",
+      "TITLE": "Marcar esta resposta como errada",
+      "DESCRIPTION": "Conte o que saiu errado. O registro é interno — ajuda quem gerencia o agente a corrigir o conhecimento e as instruções.",
+      "PROBLEM_TYPE": "Problema",
+      "PROBLEM_TYPE_PLACEHOLDER": "Selecione o problema",
+      "DESCRIPTION_LABEL": "Detalhes (opcional)",
+      "DESCRIPTION_PLACEHOLDER": "Qual deveria ter sido a resposta?",
+      "SUBMIT": "Marcar como errada",
+      "SUCCESS": "Obrigado — a resposta foi marcada como errada.",
+      "ERROR": "Não foi possível marcar esta resposta. Tente novamente.",
+      "REASONS": {
+        "incorrect_information": "Informação incorreta",
+        "inappropriate_response": "Resposta inadequada",
+        "incomplete_response": "Resposta incompleta",
+        "outdated_information": "Informação desatualizada",
+        "other": "Outro"
+      }
     },
     "CARD": {
       "ACTUATION_EXTERNAL": "Externo",

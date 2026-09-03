@@ -38,6 +38,14 @@ class AutonomiaAgentsAPI extends ApiClient {
     return axios.get(`${this.url}/${agentId}/analytics`, { params: { range } });
   }
 
+  // #284 — conversations behind one Performance outcome (handled, handed_off, ...).
+  // Same `{ meta, payload }` envelope as the reports drilldown.
+  analyticsConversations(agentId, { range = '7d', metric } = {}) {
+    return axios.get(`${this.url}/${agentId}/analytics/conversations`, {
+      params: { range, metric },
+    });
+  }
+
   // G2 — instruction version history (metadata always; instruction text only for manual agents).
   getInstructionVersions(agentId) {
     return axios.get(`${this.url}/${agentId}/instruction_versions`);

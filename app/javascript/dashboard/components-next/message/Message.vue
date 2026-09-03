@@ -157,6 +157,14 @@ const isCaptainMessage = computed(() => {
   return senderType === SENDER_TYPES.CAPTAIN_ASSISTANT;
 });
 
+// #284 — outgoing message posted by an Autonomia agent (the fork stamps every
+// reply of the mirror AgentBot with `autonomia_agent_id`). Enables "wrong reply".
+const isAutonomiaAgentMessage = computed(
+  () =>
+    props.messageType === MESSAGE_TYPES.OUTGOING &&
+    !!props.contentAttributes?.autonomiaAgentId
+);
+
 /**
  * Computes the message variant based on props
  * @type {import('vue').ComputedRef<'user'|'agent'|'activity'|'private'|'bot'|'template'>}
@@ -412,6 +420,7 @@ const contextMenuEnabledOptions = computed(() => {
       isOnChatwootCloud.value &&
       isCaptainMessage.value &&
       !isMessageDeleted.value,
+    reportAgent: isAutonomiaAgentMessage.value && !isMessageDeleted.value,
   };
 });
 
