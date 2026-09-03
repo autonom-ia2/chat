@@ -1,13 +1,16 @@
 <script setup>
-import { ref, watch, useTemplateRef } from 'vue';
+import { ref, computed, watch, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import RadioCard from 'dashboard/components-next/radioCard/RadioCard.vue';
+import Select from 'dashboard/components-next/select/Select.vue';
 import AgentAudienceGroup from './audience/AgentAudienceGroup.vue';
 import { useAgentAudienceFilterTypes } from './audience/useAgentAudienceFilterTypes.js';
 
 // #284 (Entrega 2a) — "Público-alvo": everyone (audience null) or a condition tree.
-// Emits the serialized tree (or null); the host saves it under config.audience.
+// Emits `{ audience, audienceUnknownContact }`: the serialized tree (or null) plus
+// what to do with a conversation that has no contact yet (respond | handoff). The
+// host saves both under `config` (audience / audience_unknown_contact).
 const props = defineProps({
   agent: { type: Object, default: () => ({}) },
   isSaving: { type: Boolean, default: false },
@@ -19,6 +22,14 @@ const { t } = useI18n();
 const { filterTypes } = useAgentAudienceFilterTypes();
 
 const MODE = { EVERYONE: 'everyone', SPECIFIC: 'specific' };
+const UNKNOWN_CONTACT = { RESPOND: 'respond', HANDOFF: 'handoff' };
+
+const UNKNOWN_CONTACT_OPTIONS = computed(() =>
+  Object.values(UNKNOWN_CONTACT).map(value => ({
+    value,
+    label: t(`AGENTS.AUDIENCE.UNKNOWN_CONTACT.${value.toUpperCase()}`),
+  }))
+);
 
 let uid = 0;
 const nextId = () => {
@@ -33,7 +44,14 @@ const defaultRoot = () => ({ id: nextId(), operator: 'and', conditions: [] });
 
 const root = ref(defaultRoot());
 const mode = ref(MODE.EVERYONE);
+const unknownContact = ref(UNKNOWN_CONTACT.RESPOND);
 const showEmptyAudienceError = ref(false);
+
+// The policy only matters once there is a condition the gate can't check
+// without a contact; hide it otherwise so "everyone" stays a single choice.
+const showUnknownContact = computed(
+  () => mode.value === MODE.SPECIFIC && root.value.conditions.length > 0
+);
 
 const findOption = (filterType, value) =>
   filterType?.options?.find(option => String(option.id) === String(value));
@@ -114,7 +132,10 @@ const handleSubmit = () => {
   showEmptyAudienceError.value = false;
   if (isSpecific && groupRef.value && !groupRef.value.validate()) return;
 
-  emit('submit', isSpecific ? serializeNode(root.value) : null);
+  emit('submit', {
+    audience: isSpecific ? serializeNode(root.value) : null,
+    audienceUnknownContact: unknownContact.value,
+  });
 };
 
 watch(
@@ -124,6 +145,8 @@ watch(
     const audience = agent.config?.audience;
     root.value = hydrateRoot(audience);
     mode.value = audience ? MODE.SPECIFIC : MODE.EVERYONE;
+    unknownContact.value =
+      agent.config?.audience_unknown_contact || UNKNOWN_CONTACT.RESPOND;
   },
   { immediate: true }
 );
@@ -165,6 +188,19 @@ watch(
           {{ t('AGENTS.AUDIENCE.EMPTY_ERROR') }}
         </p>
       </RadioCard>
+    </div>
+    <div v-if="showUnknownContact" class="flex flex-col gap-1">
+      <label class="text-sm font-medium text-n-slate-12">
+        {{ t('AGENTS.AUDIENCE.UNKNOWN_CONTACT.LABEL') }}
+      </label>
+      <Select
+        v-model="unknownContact"
+        :options="UNKNOWN_CONTACT_OPTIONS"
+        class="w-full"
+      />
+      <p class="m-0 text-xs text-n-slate-10">
+        {{ t('AGENTS.AUDIENCE.UNKNOWN_CONTACT.HINT') }}
+      </p>
     </div>
     <NextButton
       solid

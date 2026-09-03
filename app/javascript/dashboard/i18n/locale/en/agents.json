@@ -505,6 +505,12 @@
       "LOGGED_IN": "Logged-in user",
       "LOGGED_IN_TRUE": "Yes",
       "LOGGED_IN_FALSE": "No",
+      "UNKNOWN_CONTACT": {
+        "LABEL": "Conversation without an identified contact",
+        "HINT": "Some channels open the conversation before the contact exists, so the conditions above can't be checked. Choose what the agent does then.",
+        "RESPOND": "Reply as usual",
+        "HANDOFF": "Hand over to a human"
+      },
       "SAVE": "Save audience"
     },
     "SCHEDULE": {

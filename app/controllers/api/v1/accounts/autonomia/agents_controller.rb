@@ -125,6 +125,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # #284 (Entrega 2a) — o público-alvo é uma árvore recursiva (grupos com arrays de hashes) que o
   # `permit(config: {})` não enxerga por forma; passa cru (mesmo desenho do Captain) e a validade fica
   # a cargo de Autonomia::Agents::AudienceValidator no model. `null` limpa (= todo mundo).
+  # As chaves ESCALARES da porta (`response_window`, `audience_unknown_contact`) não precisam disto:
+  # `permit(config: {})` já as aceita e merge_config! as mescla; a inclusão é validada no model.
   def permit_audience_config(attrs)
     config = params[:agent][:config]
     return unless config.respond_to?(:key?) && config.key?(:audience)

@@ -36,6 +36,24 @@ RSpec.describe 'Autonomia agent engagement settings', type: :request do
                                            'handoff_strategy' => 'none')
   end
 
+  it 'saves and exposes what to do with a conversation without a contact' do
+    patch url, params: { agent: { config: { audience: audience, audience_unknown_contact: 'handoff' } } },
+               headers: administrator.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:success)
+    expect(response.parsed_body.dig('config', 'audience_unknown_contact')).to eq('handoff')
+    expect(agent.reload.config).to include('audience' => audience, 'audience_unknown_contact' => 'handoff',
+                                           'handoff_strategy' => 'none')
+  end
+
+  it 'rejects an unknown policy for a conversation without a contact' do
+    patch url, params: { agent: { config: { audience_unknown_contact: 'ignore' } } },
+               headers: administrator.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(agent.reload.config).not_to have_key('audience_unknown_contact')
+  end
+
   it 'clears the audience with null (everyone)' do
     agent.update!(config: agent.config.merge('audience' => audience))
 

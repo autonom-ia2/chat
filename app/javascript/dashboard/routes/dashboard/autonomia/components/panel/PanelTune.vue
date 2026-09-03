@@ -144,10 +144,17 @@ const saveSettings = async (extra = {}) => {
   }
 };
 
-// #284 (Entrega 2a) — engagement gate settings. Each form saves only its own key
+// #284 (Entrega 2a) — engagement gate settings. Each form saves only its own keys
 // under `config` (the backend merges config keys); `audience: null` = everyone.
-const saveAudience = audience =>
-  saveSettings({ config: { ...buildPayload().config, audience } });
+// The audience form also carries what to do with a conversation without a contact.
+const saveAudience = ({ audience, audienceUnknownContact }) =>
+  saveSettings({
+    config: {
+      ...buildPayload().config,
+      audience,
+      audience_unknown_contact: audienceUnknownContact,
+    },
+  });
 const saveResponseWindow = responseWindow =>
   saveSettings({
     config: { ...buildPayload().config, response_window: responseWindow },

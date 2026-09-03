@@ -478,6 +478,12 @@
       "LOGGED_IN": "Usuário identificado",
       "LOGGED_IN_TRUE": "Sim",
       "LOGGED_IN_FALSE": "Não",
+      "UNKNOWN_CONTACT": {
+        "LABEL": "Conversa sem contato identificado",
+        "HINT": "Alguns canais abrem a conversa antes de o contato existir, então as condições acima não podem ser verificadas. Escolha o que o agente faz nesse caso.",
+        "RESPOND": "Atender normalmente",
+        "HANDOFF": "Passar para humano"
+      },
       "SAVE": "Salvar público-alvo"
     },
     "SCHEDULE": {

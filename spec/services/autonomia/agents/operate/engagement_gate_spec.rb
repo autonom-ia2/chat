@@ -32,6 +32,24 @@ RSpec.describe Autonomia::Agents::Operate::EngagementGate do
       expect(reason_for('audience' => brazil)).to be_nil
       expect(reason_for('audience' => usa)).to eq('audience')
     end
+
+    context 'when the conversation has no contact yet' do
+      before { allow(conversation).to receive(:contact).and_return(nil) }
+
+      it 'responds by default and when the policy is respond' do
+        expect(reason_for('audience' => brazil)).to be_nil
+        expect(reason_for('audience' => brazil, 'audience_unknown_contact' => 'respond')).to be_nil
+      end
+
+      it 'blocks as audience when the policy is handoff' do
+        expect(reason_for('audience' => brazil, 'audience_unknown_contact' => 'handoff')).to eq('audience')
+      end
+
+      it 'ignores the policy when there is no audience' do
+        expect(reason_for('audience_unknown_contact' => 'handoff')).to be_nil
+        expect(reason_for('audience' => nil, 'audience_unknown_contact' => 'handoff')).to be_nil
+      end
+    end
   end
 
   describe 'response window with a Crm::ServiceSchedule on the inbox' do

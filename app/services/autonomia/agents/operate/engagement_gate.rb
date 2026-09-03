@@ -6,8 +6,12 @@
 # Fonte do horário: Crm::ServiceSchedule da CAIXA (owner Inbox) quando usável; senão o horário
 # comercial da própria caixa (working_hours). Sem nenhuma fonte configurada, a caixa conta como
 # "sempre aberta" (mesmo contrato do Captain#available_now?).
+# Conversa SEM contato (alguns canais abrem a conversa antes de o contato existir): o público-alvo
+# não tem o que checar, então o dono escolhe em config['audience_unknown_contact'] —
+# 'respond' (padrão: atende) | 'handoff' (bloqueia como 'audience'). Só vale com público preenchido.
 class Autonomia::Agents::Operate::EngagementGate
   RESPONSE_WINDOWS = %w[always business_hours outside_business_hours].freeze
+  UNKNOWN_CONTACT_POLICIES = %w[respond handoff].freeze
 
   def initialize(agent:, conversation:)
     @agent = agent
@@ -27,7 +31,7 @@ class Autonomia::Agents::Operate::EngagementGate
     return true if audience.blank?
 
     contact = @conversation.contact
-    return true if contact.blank?
+    return unknown_contact_allowed? if contact.blank?
 
     ::Autonomia::Agents::AudienceMatcher.new(audience).matches?(contact, @conversation)
   end
@@ -43,6 +47,11 @@ class Autonomia::Agents::Operate::EngagementGate
   end
 
   private
+
+  # Sem contato: só 'handoff' explícito bloqueia; vazio/'respond' atende (comportamento histórico).
+  def unknown_contact_allowed?
+    @agent.config.to_h['audience_unknown_contact'].to_s != 'handoff'
+  end
 
   # true/false quando há fonte de horário; nil quando não há nenhuma.
   def business_open_now

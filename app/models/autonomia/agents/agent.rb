@@ -76,10 +76,15 @@ module Autonomia
       store_accessor :config, :knowledge_refresh_token
       # #284 (Entrega 2a) — porta de engajamento: público-alvo (árvore de condições) e horário de
       # atuação. Ambos no jsonb `config` (sem migração); vazios = o agente atende como sempre.
-      store_accessor :config, :audience, :response_window
+      # `audience_unknown_contact`: o que fazer com conversa SEM contato quando há público-alvo —
+      # 'respond' (padrão; nil = respond) | 'handoff'. Ignorada com público vazio.
+      store_accessor :config, :audience, :response_window, :audience_unknown_contact
       validates_with ::Autonomia::Agents::AudienceValidator
       validates :response_window, inclusion: { in: ::Autonomia::Agents::Operate::EngagementGate::RESPONSE_WINDOWS },
                                   allow_blank: true
+      validates :audience_unknown_contact,
+                inclusion: { in: ::Autonomia::Agents::Operate::EngagementGate::UNKNOWN_CONTACT_POLICIES },
+                allow_blank: true
 
       # C3 (custo): agente declarado SEM base de conhecimento. ATENÇÃO ao default histórico: a
       # AUSÊNCIA da chave `with_knowledge` significa COM base (true) — só o `false` explícito
