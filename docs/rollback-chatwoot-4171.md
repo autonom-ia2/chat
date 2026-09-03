@@ -1,5 +1,36 @@
 # Rollback do upgrade Chatwoot 4.17.1 (deploy de 2026-09-03)
 
+## Atualização 2026-09-03 (release `7c65a521eb`: #282 + #285 + #286)
+
+O deploy automático de `7c65a521eb` (flags de Embedded Signup, convergência do
+SLA, aba Desempenho do agente) rodou nas duas stacks e **terminou as instâncias
+4.15.1** (`i-0c56f8fe53cfb8d12` e `i-0ce6dda908ebf857c`). A Opção A abaixo
+passa a valer para voltar ao 4.17.1 puro (`776d7eeec4`), não mais ao 4.15.1.
+Voltar ao 4.15.1 só pela Opção B (imagem `rollback-pre-4171-*`) ou C (snapshot
+`…-pre-deploy-4171-20260903`).
+
+| | hub2you | autonomia |
+|---|---|---|
+| Green `7c65a521eb` (no ar) | `i-0d6903a05c9517efe` · TG `cw-hub2-green-246/79af6cbf3613d55b` | `i-07800dbe51780788a` · TG `cw-auto-green-238/5f262123fd191d8e` |
+| Blue `776d7eeec4` (4.17.1 puro, parado, rollback) | `i-0d2831943aff7891b` · TG `cw-hub2-green-245/a860cf4ba6ce04a5` | `i-07ada012b4efa52c9` · TG `cw-auto-green-237/e6e4e41e42eba796` |
+| Imagem ECR 4.17.1 puro | tag `rollback-4171-776d7eeec4` | tag `rollback-4171-776d7eeec4` |
+| Snapshot RDS pré-release | `chatwoot-autonomia-prod-pre-release-20260903-sla-desempenho` | `chatwoot-autonomia-prod-pre-release-20260903-sla-desempenho` |
+
+Migrations aplicadas neste release (todas aditivas, sem drop): `20260903120000`
+(flags), `20260903140000` (colunas `message_id`, `used_entry_ids`, `model` em
+`autonomia_agent_events`), `20260903140100` (índices concorrentes). Voltar o
+tráfego para o blue `776d7eeec4` não exige reverter o banco: as colunas e
+índices extras são ignorados pelo código antigo, e as flags só ligam recursos
+que o fork já tinha.
+
+Para rollback do tráfego use a Opção A trocando os IDs pelos desta tabela
+(instância blue `i-0d2831943aff7891b` / `i-07ada012b4efa52c9`, TG 245 / 237,
+parar o worker no green 246 / 238).
+
+---
+
+Texto original do runbook (estado do dia do upgrade):
+
 Válido enquanto as instâncias 4.15.1 existirem (elas são terminadas 5 minutos
 após o **próximo** deploy bem-sucedido de cada stack). Snapshots e imagens
 taggeadas `rollback-` não expiram.
