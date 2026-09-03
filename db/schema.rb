@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_03_140100) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_03_150100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -378,6 +378,25 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_03_140100) do
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_events_on_autonomia_agent_id"
     t.index ["message_id"], name: "idx_autonomia_events_message"
     t.index ["used_entry_ids"], name: "idx_autonomia_events_used_entry_ids", using: :gin
+  end
+
+  create_table "autonomia_agent_faq_suggestions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "autonomia_agent_id", null: false
+    t.bigint "conversation_id"
+    t.text "question", null: false
+    t.text "answer", null: false
+    t.integer "status", default: 0, null: false
+    t.bigint "reviewed_by_id"
+    t.datetime "reviewed_at"
+    t.jsonb "source_message_ids", default: [], null: false
+    t.string "question_hash", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "idx_autonomia_faq_suggestions_account"
+    t.index ["autonomia_agent_id", "question_hash"], name: "idx_autonomia_faq_suggestions_agent_hash"
+    t.index ["autonomia_agent_id", "status"], name: "idx_autonomia_faq_suggestions_agent_status"
+    t.index ["conversation_id"], name: "idx_autonomia_faq_suggestions_conversation"
   end
 
   create_table "autonomia_agent_inboxes", force: :cascade do |t|
@@ -2805,6 +2824,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_03_140100) do
   add_foreign_key "autonomia_agent_build_threads", "users", column: "created_by_id"
   add_foreign_key "autonomia_agent_events", "accounts"
   add_foreign_key "autonomia_agent_events", "autonomia_agents"
+  add_foreign_key "autonomia_agent_faq_suggestions", "accounts"
+  add_foreign_key "autonomia_agent_faq_suggestions", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agent_inboxes", "accounts"
   add_foreign_key "autonomia_agent_inboxes", "agent_bots"
   add_foreign_key "autonomia_agent_inboxes", "autonomia_agents"

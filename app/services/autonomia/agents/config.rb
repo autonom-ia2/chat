@@ -134,6 +134,11 @@ module Autonomia
       # Modelo fixado em gpt-5.6-sol (desacoplado de MODEL_AUTO_MOVE, que foi p/ mini na Fase 1 — o
       # Answerer fala com o cliente e mantém o modelo forte).
       ANSWERER_MODEL = 'gpt-5.6-sol'.freeze
+      # #284 (2b) — extração de FAQ de conversas resolvidas: MESMO modelo/credencial que o agente usa
+      # para responder (nenhuma chave nova); esforço baixo porque é sumarização, não raciocínio.
+      FAQ_MODEL = ANSWERER_MODEL
+      FAQ_REASONING_EFFORT = 'low'.freeze
+      FAQ_FEATURE = 'agente_faq'.freeze
       # Fase 1 tuning: answerer sobe p/ 'medium' (resposta ao cliente com mais raciocínio).
       ANSWERER_REASONING_EFFORT = 'medium'.freeze
       DEFAULT_CONFIDENCE_THRESHOLD = 0.55

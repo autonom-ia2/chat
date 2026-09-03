@@ -32,6 +32,10 @@ module Autonomia
       has_many :tools, class_name: 'Autonomia::Agents::Tool',
                        foreign_key: :autonomia_agent_id, inverse_of: :agent,
                        dependent: :destroy
+      # #284 (2b) — sugestões de FAQ extraídas de conversas resolvidas. delete_all: o banco já cascateia.
+      has_many :faq_suggestions, class_name: 'Autonomia::Agents::FaqSuggestion',
+                                 foreign_key: :autonomia_agent_id, inverse_of: :agent,
+                                 dependent: :delete_all
 
       enum status: { draft: 0, active: 1, paused: 2 }
       enum mode:   { guided: 0, manual: 1 }
@@ -74,6 +78,13 @@ module Autonomia
       # roda — os anteriores viram no-op. Vive no jsonb `config` (sem migração); NÃO é exposto pelo
       # jbuilder (não está na lista de campos seguros do serializer) e nunca vaza a instrução.
       store_accessor :config, :knowledge_refresh_token
+      # #284 (2b) — geração de sugestões de FAQ ao resolver conversas (config['faq_suggestions']; SEM
+      # store_accessor — o nome colidiria com a associação has_many :faq_suggestions). DESLIGADA por
+      # padrão: só o `true` explícito (boolean ou a string 'true' do jsonb) liga; ausente/false = zero
+      # mudança e zero custo.
+      def faq_suggestions_enabled?
+        ActiveModel::Type::Boolean.new.cast(config.to_h['faq_suggestions']) == true
+      end
 
       # C3 (custo): agente declarado SEM base de conhecimento. ATENÇÃO ao default histórico: a
       # AUSÊNCIA da chave `with_knowledge` significa COM base (true) — só o `false` explícito
