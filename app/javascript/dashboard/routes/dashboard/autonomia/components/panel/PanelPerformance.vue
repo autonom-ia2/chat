@@ -6,6 +6,8 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import PerformanceOutcomes from './PerformanceOutcomes.vue';
+import PerformanceConversationsPanel from './PerformanceConversationsPanel.vue';
 
 const props = defineProps({
   agent: {
@@ -175,6 +177,15 @@ const rangeOptions = computed(() => [
   { value: '7d', label: t('AGENTS.PERFORMANCE.RANGE.7D') },
   { value: '30d', label: t('AGENTS.PERFORMANCE.RANGE.30D') },
 ]);
+
+// #284 — clicking an outcome number opens the conversation list for that metric.
+const drilldownMetric = ref(null);
+const openDrilldown = metric => {
+  drilldownMetric.value = metric;
+};
+const closeDrilldown = () => {
+  drilldownMetric.value = null;
+};
 </script>
 
 <template>
@@ -247,6 +258,11 @@ const rangeOptions = computed(() => [
           <span class="text-xs text-n-slate-10">{{ stat.label }}</span>
         </div>
       </div>
+
+      <PerformanceOutcomes
+        :outcomes="data.outcomes || {}"
+        @select="openDrilldown"
+      />
 
       <div
         class="flex flex-col gap-4 px-4 py-4 border rounded-xl border-n-weak bg-n-solid-1"
@@ -356,5 +372,12 @@ const rangeOptions = computed(() => [
         </div>
       </div>
     </template>
+
+    <PerformanceConversationsPanel
+      :agent-id="agent.id"
+      :range="range"
+      :metric="drilldownMetric"
+      @close="closeDrilldown"
+    />
   </div>
 </template>

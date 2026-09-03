@@ -47,8 +47,8 @@ module Autonomia
           # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado.
           return unless posted
 
-          # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato.
-          log_replied(agent_inbox.agent, conversation, meta) if index.zero?
+          # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
+          log_replied(agent_inbox.agent, conversation, meta, posted) if index.zero?
 
           schedule_next(conversation, agent_inbox, reply_to_message_id, chunks, index, meta, typing)
         end
@@ -70,8 +70,9 @@ module Autonomia
 
         # Posta UM pedaço como outgoing do AgentBot-espelho. Idempotente por token composto, dentro do
         # lock (NÃO usar return no bloco — dispararia rollback e descartaria a mensagem postada).
+        # -> a Message postada, ou nil quando não postou.
         def post_chunk!(conversation, agent_inbox, reply_to_message_id, index, text)
-          posted = false
+          posted = nil
           conversation.with_lock do
             # Revalidação AUTORITATIVA com estado fresco DENTRO do lock (fecha a corrida entre o check
             # do deliver e o post): turno ainda atual + contrato inteiro (sem responsável, agente
@@ -79,8 +80,7 @@ module Autonomia
             if current_turn?(conversation, reply_to_message_id) &&
                bot_in_command?(conversation, agent_inbox) &&
                !chunk_posted?(conversation, reply_to_message_id, index)
-              build_message!(conversation, agent_inbox, reply_to_message_id, index, text)
-              posted = true
+              posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, text)
             end
           end
           posted
@@ -131,10 +131,13 @@ module Autonomia
           fresh.present? && fresh.id == agent_inbox&.id
         end
 
-        def log_replied(agent, conversation, meta)
+        def log_replied(agent, conversation, meta, message)
           ::Autonomia::Agents::Operate::EventLogger.create!(
             agent: agent, conversation: conversation, event_type: :replied,
-            confidence: meta['confidence'], answered_from_knowledge: meta['answered_from_knowledge'] || false
+            confidence: meta['confidence'], answered_from_knowledge: meta['answered_from_knowledge'] || false,
+            message_id: message.respond_to?(:id) ? message.id : nil,
+            used_entry_ids: Array(meta['used_entry_ids']).select { |id| id.is_a?(Integer) },
+            model: ::Autonomia::Agents::Config::ANSWERER_MODEL
           )
         end
       end

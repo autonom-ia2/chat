@@ -289,11 +289,17 @@ Rails.application.routes.draw do
             end
           end
           namespace :autonomia do
+            # #284 — feedback do ATENDENTE ("resposta errada") numa mensagem do agente. Aberto a qualquer
+            # membro da conta (não é admin-only como o resto de agents/). Declarado ANTES de resources
+            # :agents para nunca casar com agents/:id.
+            post 'agents/message_reports', to: 'agents/message_reports#create'
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'
                 post :suggest, to: 'agents/playground#suggest'
                 get  :analytics, to: 'agents/analytics#index'   # Fase F
+                # #284 — lista de conversas por resultado (clique no número da aba Desempenho).
+                get 'analytics/conversations', to: 'agents/analytics#conversations'
                 patch :avatar
                 delete :avatar
               end

@@ -16,6 +16,7 @@ import MenuItem from '../../../components/widgets/conversation/contextMenu/menuI
 import { useTrack } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import ReportCaptainMessageDialog from './ReportCaptainMessageDialog.vue';
+import ReportAgentMessageDialog from './ReportAgentMessageDialog.vue';
 
 export default {
   components: {
@@ -24,6 +25,7 @@ export default {
     ContextMenu,
     NextButton,
     ReportCaptainMessageDialog,
+    ReportAgentMessageDialog,
   },
   props: {
     message: {
@@ -163,6 +165,11 @@ export default {
       this.handleClose();
       this.$refs.reportDialog?.open();
     },
+    // #284 — "wrong reply" on a message posted by an Autonomia agent.
+    openReportAgentDialog() {
+      this.handleClose();
+      this.$refs.reportAgentDialog?.open();
+    },
   },
 };
 </script>
@@ -264,6 +271,16 @@ export default {
           variant="icon"
           @click.stop="openReportDialog"
         />
+        <hr v-if="enabledOptions['reportAgent']" />
+        <MenuItem
+          v-if="enabledOptions['reportAgent']"
+          :option="{
+            icon: 'warning',
+            label: $t('AGENTS.FEEDBACK.LABEL'),
+          }"
+          variant="icon"
+          @click.stop="openReportAgentDialog"
+        />
         <hr v-if="enabledOptions['delete']" />
         <MenuItem
           v-if="enabledOptions['delete']"
@@ -279,6 +296,11 @@ export default {
     <ReportCaptainMessageDialog
       v-if="enabledOptions['report']"
       ref="reportDialog"
+      :message-id="messageId"
+    />
+    <ReportAgentMessageDialog
+      v-if="enabledOptions['reportAgent']"
+      ref="reportAgentDialog"
       :message-id="messageId"
     />
   </div>

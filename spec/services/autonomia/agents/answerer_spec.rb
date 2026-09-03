@@ -73,6 +73,23 @@ RSpec.describe Autonomia::Agents::Answerer do
     end
   end
 
+  # #284 — o modo instrução-dirigido só REPASSA o sinal should_handoff do modelo (a resposta não muda).
+  describe 'trust_instruction handoff signal' do
+    let(:model_reply) do
+      { reply: 'Vou te passar para um atendente.', confidence: 0.7, should_handoff: true,
+        handoff_reason: 'human_requested', used_snippet_ids: [], answered_from_knowledge: false }.to_json
+    end
+
+    it 'passes the instruction handoff signal through untouched' do
+      agent = create_agent('with_knowledge' => false)
+
+      result = described_class.new(agent: agent, query: 'quero falar com humano', trust_instruction: true).answer
+
+      expect(result.reply).to eq('Vou te passar para um atendente.')
+      expect(result.handoff).to eq({ should: true, reason: 'human_requested' })
+    end
+  end
+
   describe 'retrieval_query override' do
     it 'retrieves with the bare question when the composed query embeds context first' do
       # Arrange — copiloto chat: query composta = transcrição antes do pedido real

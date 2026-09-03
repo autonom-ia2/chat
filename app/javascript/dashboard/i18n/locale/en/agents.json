@@ -457,9 +457,43 @@
         "BODY": "Consider adding knowledge about the topics below to let the agent resolve more on its own:",
         "BODY_GENERIC": "Consider adding more knowledge so the agent can resolve more conversations on its own."
       },
+      "OUTCOMES": {
+        "TITLE": "Results by conversation",
+        "HINT": "Click a number to open the conversations behind it.",
+        "HANDLED": "Conversations handled",
+        "RESOLVED_WITHOUT_HUMAN": "Resolved without a human",
+        "HANDED_OFF": "Handed off to a human",
+        "REOPENED": "Reopened after resolution",
+        "WRONG_REPLIES": "Replies marked as wrong"
+      },
+      "DRILLDOWN": {
+        "SUBTITLE": "{count} conversation | {count} conversations",
+        "LIMIT_NOTE": "showing the {limit} most recent",
+        "EMPTY": "No conversations for this result in the period.",
+        "ERROR": "We couldn't load the conversations. Please try again."
+      },
       "EMPTY": "Your agent is ready — metrics will appear here after its first conversations. Meanwhile, try it out in the Test tab.",
       "ERROR": "We couldn't load performance data.",
       "RETRY": "Try again"
+    },
+    "FEEDBACK": {
+      "LABEL": "Wrong reply",
+      "TITLE": "Mark this reply as wrong",
+      "DESCRIPTION": "Tell us what went wrong. The report is internal — it helps the agent's manager fix its knowledge and instructions.",
+      "PROBLEM_TYPE": "Problem",
+      "PROBLEM_TYPE_PLACEHOLDER": "Select the problem",
+      "DESCRIPTION_LABEL": "Details (optional)",
+      "DESCRIPTION_PLACEHOLDER": "What should the reply have been?",
+      "SUBMIT": "Mark as wrong",
+      "SUCCESS": "Thanks — this reply was marked as wrong.",
+      "ERROR": "We couldn't mark this reply. Please try again.",
+      "REASONS": {
+        "incorrect_information": "Incorrect information",
+        "inappropriate_response": "Inappropriate response",
+        "incomplete_response": "Incomplete response",
+        "outdated_information": "Outdated information",
+        "other": "Other"
+      }
     },
     "CARD": {
       "ACTUATION_EXTERNAL": "External",

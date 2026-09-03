@@ -102,6 +102,8 @@ module Autonomia
       # Operate: a resposta do modelo passa direto (a instrução decide tudo, inclusive escalar e o sinal
       # de silêncio `conversation_closed_for_now`). NUNCA aplica portão/handoff de sistema. Falha de IA
       # (parsed nil) -> reply nil -> o Responder fica em SILÊNCIO (sem fallback de sistema).
+      # `handoff` só REPASSA o sinal da instrução (should_handoff) — não altera a resposta; o Responder
+      # o usa para fechar o ciclo do ai_assignee (#284).
       def trust_instruction_result(parsed, snippets)
         return AnswerResult.new(reply: nil, confidence: 0.0, handoff: { should: false, reason: nil },
                                 used_knowledge: [], answered_from_knowledge: false, raw_reply: nil,
@@ -109,7 +111,7 @@ module Autonomia
 
         AnswerResult.new(
           reply: parsed['reply'], confidence: clamp(parsed['confidence'].to_f),
-          handoff: { should: false, reason: nil },
+          handoff: { should: parsed['should_handoff'] == true, reason: parsed['handoff_reason'].presence },
           used_knowledge: used_knowledge(parsed['used_snippet_ids'], snippets, parsed),
           answered_from_knowledge: parsed['answered_from_knowledge'] == true,
           raw_reply: parsed['reply']

@@ -10,8 +10,9 @@ module Autonomia
       #   - caso contrário -> posta a resposta OUTGOING pelo caminho canônico (Messages::MessageBuilder
       #     com sender AgentBot espelho), igual ao Crm::FollowUps::MessageSender.
       #
-      # SEM HANDOFF DE SISTEMA: "passar para humano" é só TEXTO da instrução. O handoff real é
-      # operacional (humano assume a conversa, ou o CRM move de caixa). Não há bot_handoff! aqui.
+      # SEM HANDOFF DE SISTEMA NA RESPOSTA: "passar para humano" é TEXTO da instrução e a resposta
+      # postada não muda. O que o sinal `should_handoff` da instrução faz (#284) é fechar o ciclo do
+      # ai_assignee: `conversation.bot_handoff!` (solta o espelho, abre a conversa) + evento handed_off.
       #
       # ANTI-LOOP: a mensagem postada é OUTGOING (sender AgentBot), logo NUNCA é incoming e o
       # MessageListener a ignora. SEGURANÇA/IP: só o texto destinado ao cliente é postado; nunca
@@ -54,7 +55,9 @@ module Autonomia
           # Sem texto utilizável (falha de IA / resposta vazia) -> SILÊNCIO, sem fallback de sistema.
           return Result.silenced if result.nil? || result.reply.to_s.strip.blank?
 
-          deliver(result)
+          outcome = deliver(result)
+          handoff_if_signaled(result)
+          outcome
         rescue StandardError => e
           # Falha inesperada ao postar -> SILÊNCIO (sem texto de sistema). Loga p/ diagnóstico.
           Rails.logger.warn("[autonomia][operate] responder_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
@@ -82,6 +85,38 @@ module Autonomia
         end
 
         private
+
+        # A instrução sinalizou "passar para humano" (should_handoff) -> fecha o ciclo do ai_assignee:
+        # bot_handoff! (solta o AgentBot-espelho, abre a conversa, dispara CONVERSATION_BOT_HANDOFF) +
+        # evento handed_off. Só enquanto o espelho ainda está no comando (ai_assignee = espelho ou
+        # pending) — depois disso a conversa já foi entregue e o sinal repetido é ignorado (1 evento
+        # por episódio). A guarda é rechecada DENTRO do lock (with_lock recarrega sob FOR UPDATE):
+        # duas respostas concorrentes não duplicam o handoff nem o evento — a segunda encontra a
+        # conversa já liberada. Sem return/break dentro do with_lock (dispararia ROLLBACK).
+        # Best-effort: nunca derruba a resposta já postada.
+        def handoff_if_signaled(result)
+          return unless result&.handoff&.dig(:should)
+
+          released = false
+          @conversation.with_lock do
+            if bot_still_in_command?
+              @conversation.bot_handoff!
+              released = true
+            end
+          end
+          return unless released
+
+          ::Autonomia::Agents::Operate::EventLogger.handed_off(agent: @agent, conversation: @conversation, result: result)
+        rescue StandardError => e
+          Rails.logger.warn("[autonomia][operate] handoff_signal_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
+          nil
+        end
+
+        # Espelho DESTE vínculo ainda é o ai_assignee (ou a conversa ainda está pending). Chamar só com
+        # estado fresco (dentro do with_lock).
+        def bot_still_in_command?
+          @conversation.assignee_agent_bot_id == @agent_inbox.agent_bot_id || @conversation.pending?
+        end
 
         # Escolhe o caminho de entrega (extraído do perform p/ legibilidade; mesma ordem de sempre):
         #   1) ESPELHAMENTO DE ÁUDIO (Onda 2c, gated): cliente mandou áudio neste turno + recurso
@@ -119,7 +154,7 @@ module Autonomia
           # o caso still_eligible?==false, que virou handoff). EventLogger nunca levanta.
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(
-              agent: @agent, conversation: @conversation, result: result
+              agent: @agent, conversation: @conversation, result: result, message: outcome.message
             )
           end
           outcome
@@ -147,7 +182,8 @@ module Autonomia
             end
           end
           if outcome.status == :replied && outcome.message.present?
-            ::Autonomia::Agents::Operate::EventLogger.replied(agent: @agent, conversation: @conversation, result: result)
+            ::Autonomia::Agents::Operate::EventLogger.replied(agent: @agent, conversation: @conversation, result: result,
+                                                              message: outcome.message)
           end
           outcome
         end
@@ -204,7 +240,11 @@ module Autonomia
           # nunca engole a resposta silenciosamente.
           return classic_deliver(result) if chunks.empty?
 
-          meta = { 'confidence' => result.confidence, 'answered_from_knowledge' => result.answered_from_knowledge }
+          # `used_entry_ids` viaja no meta (só ids) para o job registrar as fontes no evento replied.
+          meta = {
+            'confidence' => result.confidence, 'answered_from_knowledge' => result.answered_from_knowledge,
+            'used_entry_ids' => ::Autonomia::Agents::Operate::EventLogger.used_entry_ids(result)
+          }
           ::Autonomia::Agents::Operate::TypingIndicator.new(conversation: @conversation, agent_inbox: @agent_inbox).on
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
             .set(wait: (chunks.first['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0).seconds)
