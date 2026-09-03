@@ -1,10 +1,17 @@
 # Namespace do transporte chat2you -> máquina de adapters (repo autonomia-adapters).
-# `client` escolhe a implementação pela ENV; hoje só `mock` (contrato sem AGGER).
+# `http`: fala com o serviço real, que fala com o AGGER. `mock`: contrato sem sair da rede.
+# Default é `mock` de propósito — só vira `http` no ambiente que tem INSURANCE_CONNECTOR_URL.
 module Autonomia::Insurance::Connector
-  def self.client
-    mode = ENV.fetch('INSURANCE_CONNECTOR_MODE', 'mock')
-    return Mock.new if mode == 'mock'
+  MODES = %w[mock http].freeze
 
-    raise ::Autonomia::Insurance::Connector::Error.new(:validation, "INSURANCE_CONNECTOR_MODE=#{mode} não suportado")
+  def self.client
+    case ENV.fetch('INSURANCE_CONNECTOR_MODE', 'mock')
+    when 'http' then Http.new
+    when 'mock' then Mock.new
+    else
+      raise ::Autonomia::Insurance::Connector::Error.new(
+        :config, "INSURANCE_CONNECTOR_MODE inválido (use: #{MODES.join(', ')})"
+      )
+    end
   end
 end
