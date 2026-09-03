@@ -1,6 +1,6 @@
-# Um único caminho para "falar com o portal e gravar o que voltou": usado por Conectar,
-# Reconectar e Atualizar configuração. Nunca levanta erro do connector para fora — traduz em
-# status + last_error na própria conexão, que é o que a tela Conexões exibe.
+# Um único caminho para "falar com o portal e gravar o que voltou": usado por Conectar, Reconectar e
+# Atualizar configuração. Contrato: NUNCA levanta erro para fora — falha do connector, formato
+# inesperado ou bug viram `status` + `last_error` na conexão, que é o que a tela Conexões exibe.
 class Autonomia::Insurance::Connections::Sync
   STATUS_BY_ERROR = {
     auth_required: 'auth_required',
@@ -10,6 +10,10 @@ class Autonomia::Insurance::Connections::Sync
     validation: 'degraded'
   }.freeze
 
+  # `last_error` vai para a tela: sem e-mail (login da corretora) e sem token do portal.
+  EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/
+  LONG_TOKEN = /[A-Za-z0-9_\-.]{32,}/
+
   def initialize(connection, connector: ::Autonomia::Insurance::Connector.client, scan_capabilities: true)
     @connection = connection
     @connector = connector
@@ -17,45 +21,62 @@ class Autonomia::Insurance::Connections::Sync
   end
 
   def call
-    unless @connection.credentials_present?
-      @connection.update!(status: 'not_configured', last_error: nil)
-      return @connection
-    end
+    return mark!(status: 'not_configured') unless @connection.credentials_present?
 
-    @connection.update!(status: 'authenticating', last_error: nil)
-    status = @connector.connection_status(**credentials)
-    @connection.assign_attributes(
-      status: status['status'],
-      external_account_label: status['account_label'],
-      session_expires_at: status['session_expires_at'],
-      last_authenticated_at: Time.current,
-      last_healthcheck_at: Time.current,
-      last_error: nil
-    )
-    @connection.save!
-
+    mark!(status: 'authenticating')
+    apply_status!(@connector.connection_status(**credentials))
     scan! if @scan_capabilities && @connection.ready?
     @connection
   rescue ::Autonomia::Insurance::Connector::Error => e
-    @connection.update!(
-      status: STATUS_BY_ERROR.fetch(e.kind, 'degraded'),
-      last_error: "#{e.kind}: #{e.message}".truncate(200),
-      last_healthcheck_at: Time.current
-    )
-    @connection
+    mark!(status: STATUS_BY_ERROR.fetch(e.kind, 'degraded'), error: "#{e.kind}: #{e.message}")
+  rescue StandardError => e
+    # Formato inesperado, validação do model ou bug: registra a CLASSE, nunca a mensagem (que pode
+    # carregar payload do portal), e deixa a conexão num estado consultável em vez de estourar 500.
+    mark!(status: 'degraded', error: "unexpected: #{e.class.name}")
   end
 
   private
 
+  def apply_status!(payload)
+    raise ::Autonomia::Insurance::Connector::Error.new(:protocol, 'status payload is not a hash') unless payload.is_a?(Hash)
+
+    status = payload['status'].to_s
+    unless ::Autonomia::Insurance::Connection::STATUSES.include?(status)
+      raise ::Autonomia::Insurance::Connector::Error.new(:protocol, "unknown status #{status.truncate(30)}")
+    end
+
+    @connection.update!(
+      status: status,
+      external_account_label: payload['account_label'].to_s.truncate(120).presence,
+      session_expires_at: payload['session_expires_at'],
+      last_authenticated_at: Time.current,
+      last_healthcheck_at: Time.current,
+      last_error: nil
+    )
+  end
+
   def scan!
-    @connection.update!(status: 'discovering')
+    mark!(status: 'discovering')
     map = @connector.capabilities(**credentials)
+    raise ::Autonomia::Insurance::Connector::Error.new(:protocol, 'capabilities payload is not a hash') unless map.is_a?(Hash)
+
     @connection.update!(
       status: 'ready',
       capabilities: map,
       capabilities_version: map['scanned_at'],
       last_capability_scan_at: Time.current
     )
+  end
+
+  def mark!(status:, error: nil)
+    @connection.update!(status: status, last_error: sanitize(error), last_healthcheck_at: Time.current)
+    @connection
+  end
+
+  def sanitize(message)
+    return nil if message.blank?
+
+    message.to_s.gsub(EMAIL, '<email>').gsub(LONG_TOKEN, '<redacted>').truncate(160)
   end
 
   def credentials

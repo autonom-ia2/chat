@@ -1,6 +1,8 @@
 # Liga o cofre do ActiveRecord::Encryption com chaves de TESTE dentro de um exemplo. O CI não tem
 # ACTIVE_RECORD_ENCRYPTION_*; sem isto o model Autonomia::Insurance::Connection recusa credenciais
 # (comportamento correto em produção sem cofre, e testado à parte).
+# Nota: ActiveRecord::Encryption.configure é global ao processo; com `support_unencrypted_data: true`
+# os demais specs seguem lendo dado não cifrado sem efeito colateral.
 module InsuranceEncryptionHelper
   TEST_KEYS = {
     primary_key: 'insurance-spec-primary-key-0123456789ab',

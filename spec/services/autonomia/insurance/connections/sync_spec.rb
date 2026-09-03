@@ -41,6 +41,46 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
     expect(described_class.new(record, connector: stub.new(:protocol)).call.status).to eq('degraded')
   end
 
+  it 'never raises: unknown status, non-hash payload and unexpected errors all become degraded' do
+    weird = Class.new(Autonomia::Insurance::Connector::Client) do
+      def initialize(payload)
+        super()
+        @payload = payload
+      end
+
+      def connection_status(**)
+        raise 'boom' if @payload == :raise
+
+        @payload
+      end
+    end
+    record = connection
+
+    expect(described_class.new(record, connector: weird.new({ 'status' => 'weird' })).call.status).to eq('degraded')
+    expect(record.last_error).to include('unknown status')
+    expect(described_class.new(record, connector: weird.new('nope')).call.status).to eq('degraded')
+    expect(described_class.new(record, connector: weird.new(:raise)).call.status).to eq('degraded')
+    expect(record.last_error).to eq('unexpected: RuntimeError')
+  end
+
+  it 'keeps e-mails and tokens out of last_error' do
+    leaky = Class.new(Autonomia::Insurance::Connector::Client) do
+      def connection_status(**)
+        raise Autonomia::Insurance::Connector::Error.new(
+          :auth_required,
+          'auth failed for corretora@exemplo.com.br token eyJhbGciOiJIUzI1NiJ9abcdefghijklmnopqrstuvwxyz'
+        )
+      end
+    end
+
+    result = described_class.new(connection, connector: leaky.new).call
+
+    expect(result.status).to eq('auth_required')
+    expect(result.last_error).to start_with('auth_required')
+    expect(result.last_error).not_to include('corretora@exemplo.com.br')
+    expect(result.last_error).not_to include('eyJ')
+  end
+
   it 'skips the connector entirely without credentials' do
     empty = Autonomia::Insurance::Connection.create!(account: account)
     expect(described_class.new(empty, connector: nil).call.status).to eq('not_configured')

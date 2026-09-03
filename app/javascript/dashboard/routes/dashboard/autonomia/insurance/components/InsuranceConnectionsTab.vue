@@ -32,7 +32,7 @@ const showForm = computed(
   () => status.value === CONNECTION_STATES.NOT_CONFIGURED
 );
 const encryptionUnavailable = computed(
-  () => connection.value.encryption_available === false
+  () => connection.value.encryption_available !== true
 );
 const products = computed(() => connection.value.capabilities?.products ?? []);
 
