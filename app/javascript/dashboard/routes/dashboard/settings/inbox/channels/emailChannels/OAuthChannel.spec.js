@@ -29,6 +29,11 @@ vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
 import EmailOauthAppAPI from 'dashboard/api/channel/emailOauthApp';
 import OAuthChannel from './OAuthChannel.vue';
+import { withFullI18n } from 'test-i18n';
+
+// The global setup registers an empty i18n instance; this spec asserts on
+// translated guide copy, so load the real messages (see vitest.setup.js).
+withFullI18n();
 
 const stubs = { SettingsSubPageHeader: true, NextButton: true };
 

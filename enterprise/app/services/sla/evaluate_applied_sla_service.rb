@@ -6,6 +6,9 @@ class Sla::EvaluateAppliedSlaService
     # a feature `sla` (cobre o job folha ProcessAppliedSlaJob e qualquer invocação direta, mesmo que o
     # applied_sla tenha sido criado quando a flag ainda estava ligada).
     return unless applied_sla.account.feature_enabled?('sla')
+    # Upstream 4.17 (orthogonal to the fork engine): conversations of blocked contacts freeze —
+    # no breaches accrue and the resolved hit/missed path is not evaluated.
+    return unless applied_sla.conversation.sla_applicable?
 
     check_sla_thresholds
 

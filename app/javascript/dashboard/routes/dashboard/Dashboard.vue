@@ -11,6 +11,7 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { useWindowSize } from '@vueuse/core';
 
 import wootConstants from 'dashboard/constants/globals';
+import { isUpgradePageBypassRoute } from 'dashboard/helper/routeHelpers';
 
 const CommandBar = defineAsyncComponent(
   () => import('./commands/commandbar.vue')
@@ -88,13 +89,11 @@ export default {
     showUpgradePage() {
       return this.upgradePageRef?.shouldShowUpgradePage;
     },
+    isAccountPaywalled() {
+      return this.upgradePageRef?.isAccountPaywalled;
+    },
     bypassUpgradePage() {
-      return [
-        'billing_settings_index',
-        'settings_inbox_list',
-        'general_settings_index',
-        'agent_list',
-      ].includes(this.$route.name);
+      return isUpgradePageBypassRoute(this.$route.name);
     },
     previouslyUsedDisplayType() {
       const {
@@ -173,7 +172,6 @@ export default {
       </UpgradePage>
       <template v-if="!showUpgradePage">
         <router-view />
-        <CommandBar />
         <AutonomiaGuideLauncher />
         <MobileSidebarLauncher
           :is-mobile-sidebar-open="isMobileSidebarOpen"
@@ -187,6 +185,7 @@ export default {
         <CrmFollowUpReminderModal />
         <EmailCampaignAiToast />
       </template>
+      <CommandBar :is-paywalled="isAccountPaywalled" />
       <AddAccountModal
         :show="showCreateAccountModal"
         @close-account-create-modal="closeCreateAccountModal"

@@ -1,7 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import CrmAiUsageAPI from 'dashboard/api/crmAiUsage';
+import { withFullI18n } from 'test-i18n';
 import CrmAiUsagePage from './CrmAiUsagePage.vue';
+
+// The global setup registers an empty i18n instance; this spec asserts on
+// translated copy, so load the real messages (see vitest.setup.js).
+withFullI18n();
 
 const emitterHandlers = {};
 

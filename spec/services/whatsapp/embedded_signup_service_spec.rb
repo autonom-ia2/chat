@@ -176,7 +176,7 @@ describe Whatsapp::EmbeddedSignupService do
           account: account,
           inbox_id: inbox_id,
           phone_number_id: params[:phone_number_id],
-          business_id: params[:business_id]
+          waba_id: params[:waba_id]
         ).and_return(reauth_service)
         allow(reauth_service).to receive(:perform).with(access_token, phone_info).and_return(channel)
 
@@ -230,7 +230,7 @@ describe Whatsapp::EmbeddedSignupService do
             account: account,
             inbox_id: inbox.id,
             phone_number_id: params[:phone_number_id],
-            business_id: params[:business_id]
+            waba_id: params[:waba_id]
           ).and_return(reauth_service)
 
           allow(reauth_service).to receive(:perform) do

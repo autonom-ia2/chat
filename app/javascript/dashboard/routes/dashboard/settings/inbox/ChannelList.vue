@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -16,7 +16,7 @@ const { accountId, currentAccount } = useAccount();
 
 const globalConfig = useMapGetter('globalConfig/get');
 
-const enabledFeatures = ref({});
+const enabledFeatures = computed(() => currentAccount.value?.features || {});
 
 const hasTiktokConfigured = computed(() => {
   return window.chatwootConfig?.tiktokAppId;
@@ -113,10 +113,6 @@ const channelList = computed(() => {
   return channels;
 });
 
-const initializeEnabledFeatures = async () => {
-  enabledFeatures.value = currentAccount.value.features;
-};
-
 const initChannelAuth = channel => {
   const params = {
     sub_page: channel,
@@ -139,7 +135,6 @@ const notifyOauthError = () => {
 };
 
 onMounted(() => {
-  initializeEnabledFeatures();
   notifyOauthError();
 });
 </script>

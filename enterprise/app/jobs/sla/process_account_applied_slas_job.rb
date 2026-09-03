@@ -3,9 +3,11 @@ class Sla::ProcessAccountAppliedSlasJob < ApplicationJob
 
   def perform(account)
     # Guarda autoritativa (além do filtro no Trigger): conta sem a feature `sla` não processa SLA.
+    # (This job can already be queued when a plan is downgraded.)
     return unless account.feature_enabled?('sla')
 
-    account.applied_slas.where(sla_status: %w[active active_with_misses]).find_each do |applied_sla|
+    # Upstream 4.17: applied SLAs whose contact is blocked are frozen and never re-evaluated.
+    account.applied_slas.with_sla_applicable_conversation.where(sla_status: %w[active active_with_misses]).find_each do |applied_sla|
       Sla::ProcessAppliedSlaJob.perform_later(applied_sla)
     end
   end
