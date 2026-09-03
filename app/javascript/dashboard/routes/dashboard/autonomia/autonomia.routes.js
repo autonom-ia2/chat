@@ -55,11 +55,21 @@ const ensureProspectingEnabled = (to, _from, next) => {
 // Módulo Cotação (Insurance): ENV master INSURANCE_QUOTING_ENABLED (kill-switch global,
 // window.globalConfig) E conta marcada pelo SuperAdmin (`autonomia_insurance_enabled` no
 // payload da conta -> Autonomia::Insurance::Config.enabled?). Mesmo contrato do backend.
-const ensureInsuranceEnabled = (to, _from, next) => {
+// Deep link / F5: o guard roda antes da store ter a conta e o getter volta vazio; sem este await a
+// rota mandava para home mesmo com tudo ligado (visto em produção em 03/09). Carrega a conta antes.
+const ensureInsuranceEnabled = async (to, _from, next) => {
   const masterEnabled =
     window.globalConfig?.INSURANCE_QUOTING_ENABLED === 'true';
   const accountId = Number(to.params.accountId);
-  const account = store.getters['accounts/getAccount'](accountId);
+  let account = store.getters['accounts/getAccount'](accountId);
+  if (!account?.id && masterEnabled) {
+    try {
+      await store.dispatch('accounts/get');
+    } catch {
+      // sem conta carregável, cai no redirect abaixo
+    }
+    account = store.getters['accounts/getAccount'](accountId);
+  }
   const accountEnabled = account?.autonomia_insurance_enabled === true;
 
   if (masterEnabled && accountEnabled) {

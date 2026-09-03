@@ -34,7 +34,7 @@
       "FORM": {
         "INTRO": "Informe o acesso da corretora ao AGGER. A senha é guardada de forma segura e usada só para manter a sessão de cotação.",
         "USERNAME": "Usuário AGGER",
-        "USERNAME_PLACEHOLDER": "corretora@exemplo.com.br",
+        "USERNAME_PLACEHOLDER": "corretora{'@'}exemplo.com.br",
         "PASSWORD": "Senha",
         "PASSWORD_PLACEHOLDER": "••••••••",
         "REQUIRED": "Preencha usuário e senha para conectar.",
