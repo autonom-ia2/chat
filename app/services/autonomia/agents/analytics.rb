@@ -86,8 +86,9 @@ module Autonomia
         counts_by_type['replied'].to_i
       end
 
+      # Inclui as passadas diretas pela porta de engajamento (skipped_audience/skipped_schedule, #284).
       def handoff_count
-        counts_by_type['handed_off'].to_i
+        ::Autonomia::Agents::AgentEvent::HANDOFF_TYPES.sum { |type| counts_by_type[type].to_i }
       end
 
       # Conversas distintas tocadas pelo bot na janela (replied OU handed_off).
@@ -120,7 +121,7 @@ module Autonomia
       # (dado legado) não virem duas linhas distintas e para nunca vazar texto livre legado
       # pelo endpoint (defesa em profundidade, além do EventLogger no caminho de escrita).
       def top_handoff_reasons
-        events.handed_off.group(:handoff_reason).count
+        events.handoffs.group(:handoff_reason).count
               .each_with_object(Hash.new(0)) { |(reason, count), acc| acc[curate_reason(reason)] += count }
               .map { |reason, count| { reason: reason, count: count } }
               .sort_by { |row| -row[:count] }
@@ -135,7 +136,7 @@ module Autonomia
       # [{ date: 'YYYY-MM-DD', replies:, handoffs: }] por dia do range (zeros incluídos).
       def timeline
         replied_by_day = day_buckets(events.replied)
-        handed_by_day  = day_buckets(events.handed_off)
+        handed_by_day  = day_buckets(events.handoffs)
         (0...@days).map do |offset|
           date = (@to.to_date - (@days - 1 - offset))
           key  = date.iso8601
@@ -166,10 +167,11 @@ module Autonomia
                                        .where.not(conversation_id: nil).select(:conversation_id)
       end
 
-      # Passadas para humano na janela: handoff sinalizado pela instrução/CRM (evento handed_off) OU
-      # CONVERSATION_BOT_HANDOFF do core (humano assumiu / desconexão), pelo reporting_event.
+      # Passadas para humano na janela: handoff sinalizado pela instrução/CRM (evento handed_off), passada
+      # DIRETA pela porta de engajamento (skipped_*, #284 Entrega 2a) OU CONVERSATION_BOT_HANDOFF do core
+      # (humano assumiu / desconexão), pelo reporting_event.
       def handed_off_conversations
-        handled_conversations.where(id: events.handed_off.select(:conversation_id))
+        handled_conversations.where(id: events.handoffs.select(:conversation_id))
                              .or(handled_conversations.where(id: reporting_events('conversation_bot_handoff').select(:conversation_id)))
       end
 
@@ -184,7 +186,7 @@ module Autonomia
 
       def all_time_handoff_ids
         from_events = ::Autonomia::Agents::AgentEvent.where(autonomia_agent_id: @agent.id, account_id: @agent.account_id)
-                                                     .handed_off.where.not(conversation_id: nil).select(:conversation_id)
+                                                     .handoffs.where.not(conversation_id: nil).select(:conversation_id)
         from_core = ::ReportingEvent.where(account_id: @agent.account_id, name: 'conversation_bot_handoff',
                                            conversation_id: all_time_handled_ids).select(:conversation_id)
         ::Conversation.where(id: from_events).or(::Conversation.where(id: from_core)).select(:id)
