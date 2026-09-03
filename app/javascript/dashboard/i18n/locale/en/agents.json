@@ -279,6 +279,29 @@
         "FAILED": "Failed"
       }
     },
+    "FAQ": {
+      "TITLE": "FAQ suggestions",
+      "DESCRIPTION": "When a conversation the agent handled is resolved, the questions your team answered become suggestions here. Approve them to add to the knowledge base.",
+      "TOGGLE": "Generate suggestions",
+      "ENABLED_ALERT": "FAQ suggestions on. New resolved conversations will be reviewed.",
+      "DISABLED_ALERT": "FAQ suggestions off.",
+      "TOGGLE_ERROR": "We couldn't save that setting. Please try again.",
+      "EMPTY": "No pending suggestions. They show up here after conversations with a human reply are resolved.",
+      "EMPTY_DISABLED": "Turn on generation to get FAQ suggestions from resolved conversations.",
+      "ERROR": "We couldn't load the suggestions. Please try again.",
+      "QUESTION": "Question",
+      "ANSWER": "Answer",
+      "APPROVE": "Approve",
+      "EDIT_AND_APPROVE": "Edit and approve",
+      "SAVE_AND_APPROVE": "Save and approve",
+      "CANCEL": "Cancel",
+      "IGNORE": "Ignore",
+      "OPEN_CONVERSATION": "Conversation #{id}",
+      "APPROVE_SUCCESS": "Added to the knowledge base.",
+      "APPROVE_ERROR": "We couldn't approve this suggestion. Please try again.",
+      "IGNORE_SUCCESS": "Suggestion ignored.",
+      "IGNORE_ERROR": "We couldn't ignore this suggestion. Please try again."
+    },
     "MATERIALS": {
       "TITLE": "Materials",
       "SUBTITLE": "Add what your agent needs to know and what it can send to customers. We review every file and give it a quality score.",

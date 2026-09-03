@@ -268,6 +268,29 @@
         "FAILED": "Falhou"
       }
     },
+    "FAQ": {
+      "TITLE": "Sugestões de FAQ",
+      "DESCRIPTION": "Quando uma conversa atendida pelo agente é resolvida, as perguntas que a sua equipe respondeu viram sugestões aqui. Aprove para adicionar à base de conhecimento.",
+      "TOGGLE": "Gerar sugestões",
+      "ENABLED_ALERT": "Sugestões de FAQ ligadas. As próximas conversas resolvidas serão analisadas.",
+      "DISABLED_ALERT": "Sugestões de FAQ desligadas.",
+      "TOGGLE_ERROR": "Não foi possível salvar essa configuração. Tente novamente.",
+      "EMPTY": "Nenhuma sugestão pendente. Elas aparecem aqui depois que conversas com resposta humana são resolvidas.",
+      "EMPTY_DISABLED": "Ligue a geração para receber sugestões de FAQ a partir das conversas resolvidas.",
+      "ERROR": "Não foi possível carregar as sugestões. Tente novamente.",
+      "QUESTION": "Pergunta",
+      "ANSWER": "Resposta",
+      "APPROVE": "Aprovar",
+      "EDIT_AND_APPROVE": "Editar e aprovar",
+      "SAVE_AND_APPROVE": "Salvar e aprovar",
+      "CANCEL": "Cancelar",
+      "IGNORE": "Ignorar",
+      "OPEN_CONVERSATION": "Conversa #{id}",
+      "APPROVE_SUCCESS": "Adicionada à base de conhecimento.",
+      "APPROVE_ERROR": "Não foi possível aprovar esta sugestão. Tente novamente.",
+      "IGNORE_SUCCESS": "Sugestão ignorada.",
+      "IGNORE_ERROR": "Não foi possível ignorar esta sugestão. Tente novamente."
+    },
     "MATERIALS": {
       "TITLE": "Materiais",
       "SUBTITLE": "Envie o que sua agente precisa saber e o que ela pode enviar aos clientes. Nós revisamos cada arquivo e damos uma nota de qualidade.",
