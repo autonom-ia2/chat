@@ -58,6 +58,13 @@ INSURANCE_QUOTING_ENABLED=true + conta ON  → disponível (admin-only)
 
 Conta liga/desliga no SuperAdmin (`toggle_insurance`), marca em `accounts.internal_attributes['autonomia_insurance_enabled']`. Frontend lê `globalConfig.insuranceQuotingEnabled` + `account.autonomia_insurance_enabled`; backend aplica o mesmo gate nos controllers (`Autonomia::Insurance::Config.enabled?`).
 
+## Conexão (PR 2)
+
+- Tabela `autonomia_insurance_connections` (uma por conta e provider). `username`/`password` cifrados com ActiveRecord::Encryption — **sem `ACTIVE_RECORD_ENCRYPTION_*` o model recusa gravar credencial** (a tela mostra o aviso e desabilita Conectar). Hoje nem hub2you nem autonomia têm as chaves em produção: ligar é pré-requisito para conectar de verdade.
+- API (admin, gate ENV+conta): `GET|POST|DELETE /api/v1/accounts/:id/autonomia/insurance/connection`, `POST …/connection/reconnect`, `POST …/connection/scan`. A senha entra no POST e nunca volta (só `username_hint`).
+- `Autonomia::Insurance::Connector.client` escolhe o transporte por `INSURANCE_CONNECTOR_MODE` (`mock` = contrato com o formato do CLI `autonomia agger`, sem AGGER). O transporte HTTP para o serviço do `autonomia-adapters` chega na Onda 3.
+- `Connections::Sync` traduz erro do connector em `status` + `last_error` (`auth_required`/`offline`/`degraded`), nunca em 500.
+
 ## Ondas
 
 | Onda | Escopo | Issues |

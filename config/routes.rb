@@ -352,6 +352,13 @@ Rails.application.routes.draw do
               get :invoices
               get :payments
             end
+            # Módulo Cotação (Insurance): gate ENV+conta + administrador em todo endpoint.
+            namespace :insurance do
+              resource :connection, only: [:show, :create, :destroy], controller: :connection do
+                post :reconnect
+                post :scan
+              end
+            end
             namespace :prospecting do
               resources :searches, only: [:index, :show, :create, :update, :destroy] do
                 get :location_suggestions, on: :collection

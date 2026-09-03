@@ -7,7 +7,6 @@
       "AGENT": "Agente"
     },
     "CONNECTION": {
-      "MOCK_NOTICE": "Prévia do módulo: os estados e as ações abaixo já são os definitivos, mas a conexão real com o AGGER ainda não está ativa nesta versão.",
       "PROVIDER_AGGER": "AGGER · Aggilizador",
       "PROVIDER_AGGER_SUBTITLE": "Multicálculo de seguros da corretora",
       "NEVER": "nunca",
@@ -44,14 +43,28 @@
         "CONNECT": "Conectar AGGER",
         "RECONNECT": "Reconectar",
         "RESCAN": "Atualizar configuração",
-        "DISCONNECT": "Desconectar"
+        "DISCONNECT": "Desconectar",
+        "RETRY": "Tentar de novo"
+      },
+      "ENCRYPTION_UNAVAILABLE": "Esta instalação ainda não tem o cofre de credenciais configurado. A senha do AGGER não pode ser guardada até o time da Autonom.ia ativar a criptografia.",
+      "ERRORS": {
+        "LOAD": "Não foi possível carregar o estado da conexão.",
+        "GENERIC": "Não foi possível concluir a ação. Tente novamente."
+      },
+      "ALERTS": {
+        "CONNECTED": "Conexão com o AGGER atualizada.",
+        "RECONNECTED": "Sessão renovada.",
+        "RESCANNED": "Produtos e seguradoras atualizados.",
+        "DISCONNECTED": "Conexão removida."
       }
     },
     "CAPABILITIES": {
       "TITLE": "Produtos e seguradoras",
       "SUBTITLE": "O que esta conta consegue cotar hoje, conforme descoberto no AGGER.",
       "INSURERS_COUNT": "{count} seguradoras disponíveis",
-      "NOT_ENABLED": "não habilitado nesta conta"
+      "NOT_ENABLED": "não habilitado nesta conta",
+      "PENDING_AUTH": "{count} aguardando credencial",
+      "INFERRED_HINT": "Nome deduzido das coberturas; ainda não confirmado no portal."
     },
     "PRODUCTS": {
       "AUTO": "Automóvel",
@@ -59,7 +72,11 @@
       "RC_PROFISSIONAL": "RC Profissional",
       "EMPRESARIAL": "Empresarial",
       "VIDA": "Vida",
-      "VIAGEM": "Viagem"
+      "VIAGEM": "Viagem",
+      "CONDOMINIO": "Condomínio",
+      "FIANCA_LOCATICIA": "Fiança locatícia",
+      "ACIDENTES_PESSOAIS": "Acidentes pessoais",
+      "VIDA_GLOBAL": "Vida em grupo"
     },
     "AGENT": {
       "TITLE": "Agente de Cotação",

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_03_150100) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_03_210000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -522,6 +522,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_03_150100) do
     t.index ["account_id", "status"], name: "index_autonomia_agents_on_account_id_and_status"
     t.index ["account_id"], name: "index_autonomia_agents_on_account_id"
     t.index ["created_by_id"], name: "index_autonomia_agents_on_created_by_id"
+  end
+
+  create_table "autonomia_insurance_connections", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "provider", default: "agger", null: false
+    t.string "status", default: "not_configured", null: false
+    t.text "username"
+    t.text "password"
+    t.string "username_hint"
+    t.string "external_account_label"
+    t.jsonb "capabilities", default: {}, null: false
+    t.string "capabilities_version"
+    t.string "last_error"
+    t.datetime "last_authenticated_at"
+    t.datetime "last_healthcheck_at"
+    t.datetime "last_capability_scan_at"
+    t.datetime "session_expires_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "provider"], name: "idx_autonomia_insurance_connections_account_provider", unique: true
   end
 
   create_table "autonomia_prospecting_leads", force: :cascade do |t|
@@ -2841,6 +2862,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_03_150100) do
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
+  add_foreign_key "autonomia_insurance_connections", "accounts"
   add_foreign_key "autonomia_prospecting_leads", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_searches", column: "prospect_search_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_leads", "contacts", on_delete: :nullify
