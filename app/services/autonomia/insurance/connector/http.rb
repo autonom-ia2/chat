@@ -1,18 +1,20 @@
 # Transporte real: chama o serviço da máquina de adapters (repo autonom-ia2/autonomia-adapters),
 # que é quem sabe falar com o AGGER. O chat2you não conhece endpoint, campo nem formato do portal.
 #
-# Autenticação: a Function URL do Lambda exige AWS_IAM, então cada requisição é assinada (SigV4) com
-# a credencial da própria instância — não existe endpoint público. `x-service-token` vai junto como
-# segunda camada (defesa em profundidade).
+# Caminho: API de invocação do Lambda (`lambda.<region>.amazonaws.com`), assinada com SigV4 pela
+# credencial da própria instância. NÃO existe Function URL nem endpoint público — a política da
+# organização bloqueia URL pública, e manter assim é o desenho correto: a única forma de chamar o
+# serviço é ser a máquina do chat2you. `x-service-token` viaja dentro do evento como segunda camada.
 class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::Client
   OPEN_TIMEOUT = 5
-  READ_TIMEOUT = 45 # login no AGGER ~3 s; descoberta de produtos ~8 s
+  READ_TIMEOUT = 60 # login no AGGER ~3 s; descoberta de produtos ~8 s; folga para cold start
 
   KIND_BY_STATUS = {
     400 => :protocol,
     401 => :auth_required,
     403 => :auth_required,
     404 => :protocol,
+    405 => :protocol,
     422 => :validation,
     500 => :protocol,
     501 => :not_implemented,
@@ -22,31 +24,41 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   }.freeze
 
   def connection_status(provider:, username:, password:)
-    post("/v1/#{provider}/connection", username: username, password: password)
+    invoke("/v1/#{provider}/connection", username: username, password: password)
   end
 
   def capabilities(provider:, username:, password:)
-    post("/v1/#{provider}/capabilities", username: username, password: password)
+    invoke("/v1/#{provider}/capabilities", username: username, password: password)
   end
 
   private
 
-  def post(path, username:, password:)
-    raise error(:config, 'INSURANCE_CONNECTOR_URL ausente') if base_url.blank?
+  def invoke(path, username:, password:)
+    raise error(:config, 'INSURANCE_CONNECTOR_FUNCTION ausente') if function_name.blank?
 
-    uri = URI.join(base_url, path.delete_prefix('/'))
-    body = { username: username, password: password }.to_json
-    parse(perform(uri, body), uri)
+    response = perform(build_event(path, username, password))
+    parse(response, path)
   rescue Autonomia::Insurance::Connector::Error
     raise
   rescue Net::OpenTimeout, Net::ReadTimeout
     raise error(:timeout, "connector timeout em #{path}")
   rescue StandardError => e
-    # Nunca repassar a mensagem: pode conter a URL assinada (credencial temporária).
+    # Nunca repassar a mensagem: pode conter a requisição assinada (credencial temporária).
     raise error(:unavailable, "connector indisponível (#{e.class.name})")
   end
 
-  def perform(uri, body)
+  # Evento no formato Function URL (payload v2) — o mesmo handler serve os dois caminhos.
+  def build_event(path, username, password)
+    {
+      rawPath: path,
+      requestContext: { http: { method: 'POST', path: path } },
+      headers: { 'x-service-token' => service_token }.compact,
+      body: { username: username, password: password }.to_json
+    }.to_json
+  end
+
+  def perform(event)
+    uri = invoke_uri
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
     http.open_timeout = OPEN_TIMEOUT
@@ -54,54 +66,81 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
 
     request = Net::HTTP::Post.new(uri)
     request['content-type'] = 'application/json'
-    request['x-service-token'] = service_token if service_token.present?
-    signed_headers(uri, body).each { |key, value| request[key] = value }
-    request.body = body
+    signed_headers(uri, event).each { |key, value| request[key] = value }
+    request.body = event
 
     http.request(request)
   end
 
-  # SigV4 com a credencial da instância (ou do ambiente, em dev). Sem isso a Function URL devolve 403.
   def signed_headers(uri, body)
-    signature = Aws::Sigv4::Signer.new(
+    Aws::Sigv4::Signer.new(
       service: 'lambda',
-      region: ENV.fetch('AWS_REGION', 'us-east-1'),
+      region: region,
       credentials_provider: credentials_provider
     ).sign_request(
       http_method: 'POST',
       url: uri.to_s,
       headers: { 'content-type' => 'application/json' },
       body: body
-    )
-    signature.headers
+    ).headers
   end
 
   def credentials_provider
     @credentials_provider ||= Aws::InstanceProfileCredentials.new
   end
 
-  def parse(response, uri)
+  # A invocação devolve 200 com o retorno do handler no corpo; o status de negócio está em
+  # `statusCode`. Erro de infraestrutura (permissão, função ausente) vem no HTTP externo.
+  def parse(response, path)
+    outer = unwrap_invocation(response)
+    inner_code = outer['statusCode'].to_i
+    payload = json_or_nil(outer['body'])
+
+    return payload if inner_code == 200 && payload.is_a?(Hash)
+    raise error(:protocol, "resposta inesperada do connector em #{path}") if inner_code == 200
+
+    raise error(KIND_BY_STATUS.fetch(inner_code, :unavailable),
+                business_message(payload) || "connector HTTP #{inner_code}")
+  end
+
+  # Camada de infraestrutura: a chamada foi aceita e o handler chegou a rodar?
+  def unwrap_invocation(response)
     code = response.code.to_i
-    payload = begin
-      JSON.parse(response.body.to_s)
-    rescue JSON::ParserError
-      nil
-    end
+    raise error(KIND_BY_STATUS.fetch(code, :unavailable), "connector invoke HTTP #{code}") unless code == 200
 
-    return payload if code == 200 && payload.is_a?(Hash)
-    raise error(:protocol, "resposta não-JSON do connector em #{uri.path}") if code == 200
+    outer = json_or_nil(response.body)
+    raise error(:unavailable, 'connector sem resposta') unless outer.is_a?(Hash)
+    raise error(:unavailable, "connector falhou (#{outer['errorType']})") if outer['errorType'].present?
 
-    message = payload.is_a?(Hash) ? (payload['message'].presence || payload['error'].presence) : nil
-    raise error(KIND_BY_STATUS.fetch(code, :unavailable),
-                message.to_s.truncate(160).presence || "connector HTTP #{code}")
+    outer
+  end
+
+  def business_message(payload)
+    return nil unless payload.is_a?(Hash)
+
+    (payload['message'].presence || payload['error'].presence).to_s.truncate(160).presence
+  end
+
+  def json_or_nil(raw)
+    JSON.parse(raw.to_s)
+  rescue JSON::ParserError
+    nil
   end
 
   def error(kind, message)
     Autonomia::Insurance::Connector::Error.new(kind, message)
   end
 
-  def base_url
-    @base_url ||= ENV.fetch('INSURANCE_CONNECTOR_URL', nil)
+  def invoke_uri
+    URI("https://lambda.#{region}.amazonaws.com/2015-03-31/functions/#{function_name}/invocations")
+  end
+
+  def region
+    @region ||= ENV.fetch('AWS_REGION', 'us-east-1')
+  end
+
+  def function_name
+    @function_name ||= ENV.fetch('INSURANCE_CONNECTOR_FUNCTION', nil)
   end
 
   def service_token

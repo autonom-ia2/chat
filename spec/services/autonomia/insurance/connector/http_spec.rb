@@ -1,63 +1,70 @@
 require 'rails_helper'
 
 RSpec.describe Autonomia::Insurance::Connector::Http do
-  let(:base) { 'https://exemplo.lambda-url.us-east-1.on.aws/' }
+  let(:invoke_url) { 'https://lambda.us-east-1.amazonaws.com/2015-03-31/functions/adapters-test/invocations' }
   let(:credentials) { { provider: 'agger', username: 'c@x.com', password: 'segredo' } }
 
   before do
-    stub_const('ENV', ENV.to_h.merge('INSURANCE_CONNECTOR_URL' => base, 'AWS_REGION' => 'us-east-1'))
+    stub_const('ENV', ENV.to_h.merge('INSURANCE_CONNECTOR_FUNCTION' => 'adapters-test', 'AWS_REGION' => 'us-east-1'))
     # A assinatura SigV4 usa a credencial da instância; no teste basta uma credencial estática.
     allow(Aws::InstanceProfileCredentials).to receive(:new)
       .and_return(Aws::Credentials.new('AKIAEXEMPLO', 'segredo-de-assinatura'))
   end
 
-  def stub_connector(status:, body:)
-    stub_request(:post, "#{base}v1/agger/connection")
-      .to_return(status: status, body: body, headers: { 'Content-Type' => 'application/json' })
+  # A invocação sempre devolve 200; o status de negócio vem em `statusCode` dentro do corpo.
+  def stub_invoke(inner_status:, inner_body:, outer_status: 200, outer_body: nil)
+    body = outer_body || { 'statusCode' => inner_status, 'body' => inner_body }.to_json
+    stub_request(:post, invoke_url)
+      .to_return(status: outer_status, body: body, headers: { 'Content-Type' => 'application/json' })
   end
 
-  it 'signs the request, sends the credentials and returns the connector payload' do
-    stub_connector(status: 200, body: { 'status' => 'ready', 'account_label' => 'CORRETORA X' }.to_json)
+  it 'signs the invocation, wraps the credentials in the event and returns the payload' do
+    stub_invoke(inner_status: 200, inner_body: { 'status' => 'ready', 'account_label' => 'CORRETORA X' }.to_json)
 
     expect(described_class.new.connection_status(**credentials)).to include('status' => 'ready')
     expect(
-      a_request(:post, "#{base}v1/agger/connection")
-        .with(headers: { 'Authorization' => %r{AWS4-HMAC-SHA256 Credential=AKIAEXEMPLO/.*lambda/aws4_request} },
-              body: { username: 'c@x.com', password: 'segredo' }.to_json)
+      a_request(:post, invoke_url).with(
+        headers: { 'Authorization' => %r{AWS4-HMAC-SHA256 Credential=AKIAEXEMPLO/.*lambda/aws4_request} }
+      ) do |request|
+        event = JSON.parse(request.body)
+        event['rawPath'] == '/v1/agger/connection' &&
+          JSON.parse(event['body']) == { 'username' => 'c@x.com', 'password' => 'segredo' }
+      end
     ).to have_been_made
   end
 
-  it 'maps HTTP status to the connector error kind' do
-    {
-      401 => :auth_required,
-      422 => :validation,
-      502 => :unavailable,
-      504 => :timeout,
-      500 => :protocol
-    }.each do |code, kind|
-      stub_connector(status: code, body: { 'error' => 'x' }.to_json)
-      expect { described_class.new.connection_status(**credentials) }
-        .to raise_error(an_object_having_attributes(kind: kind))
-    end
+  it 'maps the inner status to the connector error kind' do
+    { 401 => :auth_required, 422 => :validation, 502 => :unavailable, 504 => :timeout, 500 => :protocol }
+      .each do |code, kind|
+        stub_invoke(inner_status: code, inner_body: { 'error' => 'x' }.to_json)
+        expect { described_class.new.connection_status(**credentials) }
+          .to raise_error(an_object_having_attributes(kind: kind))
+      end
   end
 
-  it 'treats a non-JSON 200 as protocol so the ladder can step down' do
-    stub_connector(status: 200, body: '<html>manutencao</html>')
+  it 'treats a lambda runtime failure as unavailable' do
+    stub_invoke(inner_status: 200, inner_body: '{}', outer_body: { 'errorType' => 'Runtime.ExitError' }.to_json)
+
+    expect { described_class.new.connection_status(**credentials) }
+      .to raise_error(an_object_having_attributes(kind: :unavailable))
+  end
+
+  it 'treats a non-JSON success body as protocol so the ladder can step down' do
+    stub_invoke(inner_status: 200, inner_body: '<html>manutencao</html>')
 
     expect { described_class.new.connection_status(**credentials) }
       .to raise_error(an_object_having_attributes(kind: :protocol))
   end
 
-  it 'fails as config when the connector URL is missing' do
-    stub_const('ENV', ENV.to_h.except('INSURANCE_CONNECTOR_URL'))
+  it 'fails as config when the function name is missing' do
+    stub_const('ENV', ENV.to_h.except('INSURANCE_CONNECTOR_FUNCTION'))
 
     expect { described_class.new.connection_status(**credentials) }
       .to raise_error(an_object_having_attributes(kind: :config))
   end
 
-  it 'never leaks the signed URL or the password in the error message' do
-    stub_request(:post, "#{base}v1/agger/connection")
-      .to_raise(SocketError.new("falhou em #{base}?X-Amz-Signature=abc"))
+  it 'never leaks the signed request or the password in the error message' do
+    stub_request(:post, invoke_url).to_raise(SocketError.new('falhou com X-Amz-Signature=abc e senha segredo'))
 
     expect { described_class.new.connection_status(**credentials) }
       .to raise_error(an_object_having_attributes(kind: :unavailable)) do |error|
