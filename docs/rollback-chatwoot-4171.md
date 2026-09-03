@@ -1,5 +1,25 @@
 # Rollback do upgrade Chatwoot 4.17.1 (deploy de 2026-09-03)
 
+## Atualização 2026-09-03, segundo release (`bbb09a91ac`: #288 + #289)
+
+Deploy automático de `bbb09a91ac` (público-alvo + horário de atuação do agente,
+sugestões de FAQ) nas duas stacks. **Terminou as instâncias `776d7eeec4`**
+(`i-0d2831943aff7891b` e `i-07ada012b4efa52c9`); o rollback rápido agora volta
+para `7c65a521eb` (release anterior, já validado em produção).
+
+| | hub2you | autonomia |
+|---|---|---|
+| Green `bbb09a91ac` (no ar) | `i-055e291b2531f18a6` · TG `cw-hub2-green-247/2a46f986e2daccf4` | `i-0f16484ac6e8da74b` · TG `cw-auto-green-239/11cae466e7fda93b` |
+| Blue `7c65a521eb` (parado, rollback) | `i-0d6903a05c9517efe` · TG `cw-hub2-green-246/79af6cbf3613d55b` | `i-07800dbe51780788a` · TG `cw-auto-green-238/5f262123fd191d8e` |
+| Imagem ECR do blue | tag `rollback-0903-7c65a521eb` | tag `rollback-0903-7c65a521eb` |
+| Snapshot RDS pré-release | `chatwoot-autonomia-prod-pre-release-20260903-entrega2` | `chatwoot-autonomia-prod-pre-release-20260903-entrega2` |
+
+Migrations deste release (aditivas): `20260903150000` (tabela
+`autonomia_agent_faq_suggestions`) e `20260903150100` (índices concorrentes).
+Voltar o tráfego para o blue não exige reverter o banco: o código anterior
+ignora a tabela nova. Imagens 4.17.1 puro (`rollback-4171-776d7eeec4`) e 4.15.1
+(`rollback-pre-4171-*`) continuam disponíveis para a Opção B.
+
 ## Atualização 2026-09-03 (release `7c65a521eb`: #282 + #285 + #286)
 
 O deploy automático de `7c65a521eb` (flags de Embedded Signup, convergência do
