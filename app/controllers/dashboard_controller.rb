@@ -90,6 +90,7 @@ class DashboardController < ActionController::Base
       CRM_CALENDAR_MEETINGS_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('CRM_CALENDAR_MEETINGS_ENABLED', false)).to_s,
       CRM_AI_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('CRM_AI_ENABLED', false)).to_s,
       AUTONOMIA_AGENTS_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('AUTONOMIA_AGENTS_ENABLED', false)).to_s,
+      INSURANCE_QUOTING_ENABLED: Autonomia::Insurance::Config.master_enabled?.to_s,
       EMAIL_CAMPAIGN_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('EMAIL_CAMPAIGN_ENABLED', false)).to_s,
       SIDEBAR_BACKGROUND_COLOR: ENV['SIDEBAR_BACKGROUND_COLOR'].presence ||
         GlobalConfigService.load('SIDEBAR_BACKGROUND_COLOR', ''),

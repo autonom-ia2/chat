@@ -148,6 +148,15 @@ const autonomiaProspectingEnabled = computed(
     currentAccount.value(accountId.value)?.autonomia_prospecting_enabled ===
       true
 );
+// Módulo Cotação (Insurance): ENV master (kill-switch global, via globalConfig) E conta
+// marcada pelo SuperAdmin (`autonomia_insurance_enabled` no payload da conta). Admin-only,
+// como todo endpoint Autonom.ia.
+const autonomiaInsuranceEnabled = computed(
+  () =>
+    globalConfig.value?.insuranceQuotingEnabled === true &&
+    currentRole.value === 'administrator' &&
+    currentAccount.value(accountId.value)?.autonomia_insurance_enabled === true
+);
 
 // LOCKED DECISION: administrators and plain (non-custom-role) agents keep full
 // CRM access; custom-role seats need crm_view (crm_admin implies it).
@@ -758,6 +767,33 @@ const menuItems = computed(() => {
                 label: t('SIDEBAR.PROSPECTING_LISTS'),
                 to: accountScopedRoute('autonomia_prospecting_lists'),
                 activeOn: ['autonomia_prospecting_lists'],
+              },
+            ],
+          },
+        ]
+      : []),
+    ...(autonomiaInsuranceEnabled.value
+      ? [
+          {
+            name: 'Insurance',
+            label: t('SIDEBAR.INSURANCE'),
+            icon: 'i-lucide-shield-check',
+            activeOn: [
+              'autonomia_insurance_connections',
+              'autonomia_insurance_agent',
+            ],
+            children: [
+              {
+                name: 'Insurance Connections',
+                label: t('SIDEBAR.INSURANCE_CONNECTIONS'),
+                to: accountScopedRoute('autonomia_insurance_connections'),
+                activeOn: ['autonomia_insurance_connections'],
+              },
+              {
+                name: 'Insurance Agent',
+                label: t('SIDEBAR.INSURANCE_AGENT'),
+                to: accountScopedRoute('autonomia_insurance_agent'),
+                activeOn: ['autonomia_insurance_agent'],
               },
             ],
           },

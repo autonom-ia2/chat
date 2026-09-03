@@ -1,0 +1,21 @@
+<section class="main-content__body">
+  <hr/>
+  <% enabled = Autonomia::Insurance::Config.account_enabled?(page.resource) %>
+  <% master = Autonomia::Insurance::Config.master_enabled? %>
+  <%= form_for([:toggle_insurance, namespace, page.resource], method: :post, html: { class: "form" }) do |f| %>
+    <div class="form-actions">
+      <div class="pb-3">
+        <p class="font-medium">Autonomia Insurance / Cotação</p>
+        <p>
+          Controls whether the Cotação menu and account-scoped insurance endpoints are enabled for this account.
+        </p>
+        <p>Current status: <strong><%= enabled ? 'Enabled' : 'Disabled' %></strong></p>
+        <% unless master %>
+          <p>Global kill-switch <code>INSURANCE_QUOTING_ENABLED</code> is <strong>OFF</strong>: the module stays hidden for every account until it is turned on.</p>
+        <% end %>
+      </div>
+      <%= hidden_field_tag :enabled, (!enabled).to_s %>
+      <%= f.submit(enabled ? 'Disable Autonomia Insurance' : 'Enable Autonomia Insurance') %>
+    </div>
+  <% end %>
+</section>
