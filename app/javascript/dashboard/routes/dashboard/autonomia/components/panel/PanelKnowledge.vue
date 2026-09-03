@@ -11,6 +11,7 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import MaterialCard from '../builder/MaterialCard.vue';
 import MaterialDropzone from '../builder/MaterialDropzone.vue';
 import SourceAddDialog from './SourceAddDialog.vue';
+import FaqSuggestionsSection from './FaqSuggestionsSection.vue';
 
 // CONHECIMENTO tab: manage what the agent knows over time — include and remove
 // materials at any moment, with the SAME quality verdict (nota/rótulo/resumo +
@@ -246,6 +247,10 @@ onBeforeUnmount(() => {
         />
       </li>
     </ul>
+
+    <!-- #284 (2b): FAQ suggestions from resolved conversations. Approving adds a
+         knowledge entry under the "FAQ aprovadas" source, so refresh the list. -->
+    <FaqSuggestionsSection :agent="agent" @approved="onSourceAdded" />
 
     <SourceAddDialog
       ref="addDialogRef"

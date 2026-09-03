@@ -19,9 +19,11 @@ json.tone agent.tone
 # system_key, guide_*, test_allowlist_phones, topic_map bruto...) NUNCA saem por aqui.
 # `audience`/`response_window` (#284 · Entrega 2a): público-alvo e horário de atuação (PanelTune).
 # `audience_unknown_contact`: o que fazer com conversa sem contato quando há público-alvo.
+# `faq_suggestions` (#284 · 2b): toggle da geração de sugestões de FAQ (aba Conhecimento).
 json.config agent.config.to_h.slice('handoff_strategy', 'handoff_target_id', 'confidence_threshold',
                                     'with_knowledge', 'knowledge_confidence', 'knowledge_summary',
-                                    'audience', 'response_window', 'audience_unknown_contact')
+                                    'audience', 'response_window', 'audience_unknown_contact',
+                                    'faq_suggestions')
 # Revisor v2: MAPA DE TEMAS + confiança geral + resumo da base (UI de Conhecimento). Seguros de
 # expor (vêm do jsonb `config`, NUNCA de instruction/scaffold). Já estão dentro de `config`; expô-los
 # no topo dá chaves estáveis ao FE.

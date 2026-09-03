@@ -12,6 +12,7 @@ class AsyncDispatcher < BaseDispatcher
     [
       AutomationRuleListener.instance,
       Autonomia::Agents::Operate::MessageListener.instance,
+      Autonomia::Agents::Faq::ConversationListener.instance,
       CampaignListener.instance,
       Crm::ConversationObserverListener.instance,
       CsatSurveyListener.instance,

@@ -312,6 +312,13 @@ Rails.application.routes.draw do
                                 controller: 'agents/tools' do
                 post :test, on: :member
               end
+              # #284 (2b) — sugestões de FAQ extraídas de conversas resolvidas (revisão pelo admin).
+              resources :faq_suggestions, only: [:index], controller: 'agents/faq_suggestions' do
+                member do
+                  post :approve
+                  post :ignore
+                end
+              end
               # G2 — histórico de versões da instrução + rollback atômico.
               resources :instruction_versions, only: [:index], controller: 'agents/instruction_versions'
               post 'instruction_versions/:version_id/restore',

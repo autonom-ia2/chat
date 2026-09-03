@@ -451,6 +451,10 @@ en:
       message_blank: 'A message is required to talk to the agent builder.'
       build_in_progress: 'The builder is still working on your previous message. Wait a moment and try again.'
       retry_unavailable: 'This build cannot be retried right now.'
+    faq:
+      not_pending: 'This suggestion was already reviewed.'
+      embedding_failed: 'Could not add this FAQ to the knowledge base: the AI credential is missing or failed. Try again.'
+      resync_not_allowed: 'Approved FAQs are added one by one from the suggestions list; there is nothing to resync.'
     source:
       invalid_kind: 'Invalid material kind. Use "knowledge" or "media".'
       limit_reached: 'This agent already has the maximum of %{limit} knowledge materials. Remove one before adding another.'
