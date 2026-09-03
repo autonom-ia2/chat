@@ -10,18 +10,24 @@ class Api::V1::Accounts::Autonomia::Agents::AnalyticsController < Api::V1::Accou
 
   # #284 — conversas por resultado (metric = handled | resolved_without_human | handed_off | reopened |
   # wrong_replies). Mesmo envelope { meta, payload } e serializer do drilldown dos relatórios, para a UI
-  # reusar o card de conversa.
+  # reusar o card de conversa. O escopo (pesado: subqueries em eventos/reporting_events) é avaliado UMA
+  # vez: busca N+1 linhas e deriva `has_more` — sem um COUNT separado sem limit.
   def conversations
     metric = params[:metric].to_s
     return render_unprocessable('unknown metric') unless ::Autonomia::Agents::Analytics::OUTCOME_METRICS.include?(metric)
 
     analytics = ::Autonomia::Agents::Analytics.new(agent: @agent, range: params[:range])
-    scope = analytics.outcome_scope(metric)
-    records = scope.includes(:assignee, :contact, :inbox).order(last_activity_at: :desc).limit(DRILLDOWN_LIMIT).to_a
+    fetched = analytics.outcome_scope(metric)
+                       .includes(:assignee, :contact, :inbox)
+                       .order(last_activity_at: :desc)
+                       .limit(DRILLDOWN_LIMIT + 1)
+                       .to_a
+    records = fetched.first(DRILLDOWN_LIMIT)
     serializer = ::V2::Reports::DrilldownRecordSerializer.new(Current.account, metric, false, records)
 
     render json: {
-      meta: { metric: metric, range: analytics.range, total_count: scope.count, limit: DRILLDOWN_LIMIT },
+      meta: { metric: metric, range: analytics.range, limit: DRILLDOWN_LIMIT, count: records.size,
+              has_more: fetched.size > DRILLDOWN_LIMIT },
       payload: records.map { |record| serializer.serialize(record) }
     }
   end

@@ -40,10 +40,37 @@ RSpec.describe 'Autonomia agent analytics', type: :request do
 
       expect(response).to have_http_status(:success)
       body = response.parsed_body
-      expect(body['meta']).to include('metric' => 'handled', 'range' => '7d', 'total_count' => 1)
+      expect(body['meta']).to include('metric' => 'handled', 'range' => '7d', 'count' => 1, 'has_more' => false)
       expect(body['payload'].size).to eq(1)
       expect(body['payload'].first['record_type']).to eq('conversation')
       expect(body['payload'].first['conversation']['display_id']).to eq(conversation.display_id)
+    end
+
+    it 'evaluates the heavy conversation scope only once (no separate count)' do
+      conversation_queries = []
+      subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') do |_name, _start, _finish, _id, payload|
+        conversation_queries << payload[:sql] if payload[:sql].include?('FROM "conversations"')
+      end
+
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/analytics/conversations",
+          params: { range: '7d', metric: 'handled' }, headers: administrator.create_new_auth_token, as: :json
+
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+      expect(response).to have_http_status(:success)
+      expect(conversation_queries.size).to eq(1)
+      expect(conversation_queries.first).to include('LIMIT')
+    end
+
+    it 'flags has_more when the result exceeds the drilldown limit' do
+      stub_const('Api::V1::Accounts::Autonomia::Agents::AnalyticsController::DRILLDOWN_LIMIT', 1)
+      other = create(:conversation, account: account, inbox: inbox)
+      Autonomia::Agents::AgentEvent.create!(agent: agent, account: account, conversation_id: other.id, event_type: :replied)
+
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/analytics/conversations",
+          params: { range: '7d', metric: 'handled' }, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['meta']).to include('count' => 1, 'has_more' => true, 'limit' => 1)
+      expect(response.parsed_body['payload'].size).to eq(1)
     end
 
     it 'rejects an unknown metric' do

@@ -30,16 +30,15 @@ const title = computed(() =>
     : ''
 );
 
+// The API returns only the most recent `limit` records plus a `has_more` flag
+// (no separate total count); the tile already shows the total.
 const subtitle = computed(() => {
-  const count = meta.value.total_count;
+  const { count, has_more: hasMore, limit } = meta.value;
   if (count === undefined) return '';
-  const parts = [t('AGENTS.PERFORMANCE.DRILLDOWN.SUBTITLE', { count })];
-  if (meta.value.limit && count > meta.value.limit) {
-    parts.push(
-      t('AGENTS.PERFORMANCE.DRILLDOWN.LIMIT_NOTE', { limit: meta.value.limit })
-    );
+  if (hasMore) {
+    return t('AGENTS.PERFORMANCE.DRILLDOWN.LIMIT_NOTE', { limit });
   }
-  return parts.join(' ⋅ ');
+  return t('AGENTS.PERFORMANCE.DRILLDOWN.SUBTITLE', { count });
 });
 
 const fetchRecords = async () => {
