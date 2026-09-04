@@ -15,6 +15,11 @@
 class Autonomia::Insurance::GeneralConditions::Client
   class Error < StandardError; end
 
+  # A base não conhece essa seguradora (HTTP 404 `insurer_not_found`). É LACUNA DE COBERTURA, não
+  # falha de infra, e o agente precisa dizer coisas diferentes: "não tenho o contrato dessa
+  # seguradora" ≠ "a consulta caiu". Medido em 04/09/2026 com um nome inventado.
+  class InsurerNotFound < Error; end
+
   DEFAULT_BASE_URL = 'https://agent.autonomia.site'.freeze
   # Medido em 04/09/2026: `/query` restrito a uma seguradora levou 10,1s; a memória do projeto
   # registra até 12s. 45s dá folga para a cauda sem prender o turno, que tem 120s no total.
@@ -64,6 +69,7 @@ class Autonomia::Insurance::GeneralConditions::Client
   def post(path, body)
     response = HTTParty.post("#{@base_url}#{path}", body: body.to_json, headers: headers,
                                                     timeout: TIMEOUT_SECONDS)
+    raise InsurerNotFound, 'insurer_not_found' if insurer_not_found?(response)
     raise Error, "http_#{response.code}" unless response.code == 200
 
     parsed = response.parsed_response
@@ -72,6 +78,16 @@ class Autonomia::Insurance::GeneralConditions::Client
     parsed
   rescue HTTParty::Error, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, SocketError => e
     raise Error, e.class.name
+  end
+
+  # Corpo real observado: {"error":{"code":"insurer_not_found","message":"..."}}. Só o código é
+  # lido — a mensagem repete o nome que o cliente digitou e não acrescenta nada ao agente.
+  def insurer_not_found?(response)
+    return false unless response.code == 404
+
+    response.parsed_response.to_h.dig('error', 'code') == 'insurer_not_found'
+  rescue StandardError
+    false
   end
 
   def headers

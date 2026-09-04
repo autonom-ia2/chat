@@ -105,6 +105,37 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceGeneralConditions do
       .with { |req| JSON.parse(req.body)['include_evidence'] == false })
   end
 
+  it 'bounds what the clause is good for, because grounded does not mean relevant' do
+    # Arrange — caso REAL de 04/09/2026: perguntei a cor preferida do presidente e a busca voltou
+    # `answered` + `grounded: true` com o nome de um executivo, tirado da saudação do manual.
+    # A condição geral é um PDF inteiro: tem organograma, endereço, texto institucional.
+    stub_answer(status: 'answered', grounded: true,
+                text: 'O presidente do Grupo HDI é Fulano de Tal.')
+
+    # Act
+    out = tool.call
+
+    # Assert — a ferramenta entrega, mas manda o agente não repassar o que não é do contrato
+    expect(out).to match(/SÓ se a pergunta for sobre cobertura/i)
+    expect(out).to match(/NÃO repasse/i)
+    expect(out).not_to include('Segundo as condições gerais')
+  end
+
+  it 'separates "we do not have this insurer" from "the query failed"' do
+    # Arrange — corpo real do 404: {"error":{"code":"insurer_not_found", ...}}
+    stub_request(:post, url).to_return(
+      status: 404, headers: { 'Content-Type' => 'application/json' },
+      body: { error: { code: 'insurer_not_found', message: 'Insurer not found' } }.to_json
+    )
+
+    # Act
+    out = described_class.new(agent: agent, params: params.merge('seguradora' => 'XPTO')).call
+
+    # Assert — lacuna da base, não queda; o agente diz outra coisa ao cliente
+    expect(out).to match(/não tenho as condições gerais da XPTO/i)
+    expect(out).not_to match(/não respondeu agora/i)
+  end
+
   it 'tells the agent to escalate when the API itself is down' do
     # Arrange
     stub_request(:post, url).to_return(status: 502, body: '')

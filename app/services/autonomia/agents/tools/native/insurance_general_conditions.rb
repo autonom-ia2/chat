@@ -55,6 +55,11 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
     return 'Informe a dúvida do cliente para eu consultar.' if question.blank?
 
     describe(client.query(question: question, insurer: insurer, product: product))
+  rescue Autonomia::Insurance::GeneralConditions::Client::InsurerNotFound
+    # Lacuna de cobertura da base, não falha. O agente precisa dizer outra coisa ao cliente: a
+    # seguradora existe no mundo, só não temos o contrato dela aqui.
+    "Não tenho as condições gerais da #{insurer} na base. Confirme o nome com o cliente; se " \
+    'estiver certo, diga que vai checar com um especialista.'
   rescue Autonomia::Insurance::GeneralConditions::Client::Error => e
     # NUNCA ecoar a mensagem crua ao cliente: o modelo lê o código e escala.
     Rails.logger.warn("[autonomia][native_tool] general_conditions failed account=#{account.id} #{e.message}")
@@ -66,11 +71,20 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
 
   # A resposta carrega SEMPRE de qual seguradora é a regra. Sem isso o agente cita a cláusula de uma
   # e o cliente entende que vale para todas as opções do comparativo.
+  #
+  # E carrega o LIMITE do que ela é. Medido em 04/09/2026: perguntei a cor preferida do presidente
+  # da seguradora e a busca voltou `answered` + `grounded: true`, com o nome de um executivo tirado
+  # da mensagem de boas-vindas do manual. `grounded` diz que o texto veio do documento — NÃO diz
+  # que a pergunta era sobre o contrato. A condição geral é um PDF inteiro: tem organograma,
+  # endereço, saudação. Sem este limite o agente carimba qualquer trecho como regra contratual.
   def describe(answer)
     return unresolved(answer) unless answer.usable?
 
-    "Segundo as condições gerais da #{answer.insurer}: #{answer.text}\n\n" \
-      'Diga ao cliente de qual seguradora é esta regra. Não estenda para as outras do comparativo.'
+    "Trecho das condições gerais da #{answer.insurer}: #{answer.text}\n\n" \
+      'Use isto SÓ se a pergunta for sobre cobertura, exclusão, franquia, prazo ou assistência. ' \
+      'Se o trecho responde outra coisa (nome de executivo, endereço, texto institucional), NÃO ' \
+      'repasse: diga que não é assunto da apólice. Ao usar, diga de qual seguradora é a regra e ' \
+      'não estenda para as outras do comparativo.'
   end
 
   # Duas causas MUITO diferentes chegam pelo mesmo caminho, e confundi-las mente para o cliente:
