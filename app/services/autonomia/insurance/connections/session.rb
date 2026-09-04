@@ -40,8 +40,13 @@ class Autonomia::Insurance::Connections::Session
 
   private
 
-  # Sem `return`/`break` dentro do `with_lock`: dispararia ROLLBACK e descartaria a sessão recém
-  # gravada. O recheck dentro do lock é o que faz duas chamadas concorrentes gerarem UM login.
+  # O RECHECK dentro do lock é o que faz duas chamadas concorrentes gerarem UM login: a segunda
+  # entra, encontra a sessão que a primeira acabou de gravar, e não abre outra.
+  #
+  # (Correção de 04/09/2026: este comentário afirmava que `return` dentro do `with_lock` dispararia
+  # ROLLBACK e descartaria a sessão. Medido no Rails 7.2.3.1 desta aplicação — não dispara, o dado
+  # persiste. Era regra de Rails antigo repetida sem conferir. O estilo sem `return` aqui é
+  # preferência de leitura, não requisito de correção.)
   def open_under_lock!
     @connection.with_lock do
       open! unless @connection.session_live?
