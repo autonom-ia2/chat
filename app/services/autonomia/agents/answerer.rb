@@ -62,8 +62,8 @@ module Autonomia
         /\bcusta\s+R?\$?\s?\d/i
       ].freeze
 
-      def initialize(agent:, query:, history: [], images: [], allow_web_search: true, trust_instruction: false,
-                     audience: :customer, retrieval_query: nil, delivery: nil)
+      def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
+                     trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil)
         @agent = agent
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
@@ -72,6 +72,8 @@ module Autonomia
         @retrieval_query = retrieval_query.to_s.presence || @query
         @history = history
         @images = Array(images)
+        # Texto dos PDFs que o cliente anexou NESTE turno (#319). Na renovação é a apólice.
+        @documents = Array(documents)
         # AUDIÊNCIA (Onda 1 v2): :customer (operate/cliente) | :attendant (copiloto) | :system (Guia).
         # A superfície decide; repassado ao PromptBuilder (que força :system p/ agente com system_key).
         @audience = audience
@@ -152,7 +154,7 @@ module Autonomia
         return nil if credential.blank?
 
         pb = PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets,
-                               images: @images, audience: @audience)
+                               images: @images, documents: @documents, audience: @audience)
         raw = Crm::Ai::ResponsesClient.new(
           credential: credential, feature: 'agente_resposta', account: @agent.account
         ).create_with_tool_executor(
