@@ -12,6 +12,21 @@ module Autonomia
           OCR_MIN_CHARS = 20
           OCR_LANGUAGE = 'por'.freeze
 
+          # OCR é OPCIONAL porque o custo dele não tem teto: rasteriza página por página a 300 DPI e
+          # passa cada uma pelo tesseract. Num PDF escaneado de poucos MB isso são dezenas de páginas
+          # e centenas de segundos.
+          #
+          # Na INGESTÃO da base de conhecimento vale (default `true`): roda em job, ninguém espera, e
+          # um manual escaneado sem OCR não vira conhecimento nenhum.
+          #
+          # No ATENDIMENTO não vale: o cliente está do outro lado e o turno tem teto de 120s. Lá o
+          # chamador passa `ocr: false`, e um PDF sem camada de texto simplesmente não é lido — o
+          # agente pede os dados, que é o comportamento que já existia antes de haver leitura de PDF.
+          def initialize(source, ocr: true)
+            super(source)
+            @ocr = ocr
+          end
+
           def extract
             ensure_gem!
             text = +''
@@ -20,7 +35,9 @@ module Autonomia
               reader.pages.each { |page| text << page.text << "\n" }
             end
             text = text.force_encoding('UTF-8').scrub('')
-            text.strip.length < OCR_MIN_CHARS ? ocr_fallback(text) : text
+            return text unless text.strip.length < OCR_MIN_CHARS
+
+            @ocr ? ocr_fallback(text) : text
           rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError => e
             raise ExtractionError, "pdf_parse_failed: #{e.message}"
           end
