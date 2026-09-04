@@ -120,8 +120,19 @@ ARG RAILS_ENV=production
 ENV RAILS_ENV ${RAILS_ENV}
 ENV BUNDLE_PATH="/gems"
 
+# `ca-certificates` é declarado de propósito, apesar de a imagem base já trazê-lo. A aplicação fala
+# HTTPS com serviços externos a partir daqui — a base de condições gerais da SUSEP, entre outros —
+# e depender de um pacote que veio junto por acaso é depender de decisão de terceiro. Declarado,
+# uma troca de imagem base não leva o armazenamento de CA embora em silêncio.
+#
+# NÃO é conserto de nada: em 04/09/2026 a cadeia daquela API passou a encadear por `Root YR`, e eu
+# achei que fosse raiz desconhecida. Não é — `Root YR` é cross-signed por `ISRG Root X1`, de 2015,
+# e a cadeia valida contra qualquer armazenamento que a tenha (conferido com `openssl verify`).
+# O que falhava era o LibreSSL 3.3.6 do macOS numa máquina de desenvolvimento; a imagem usa
+# OpenSSL e não tem esse comportamento.
 RUN apk update && apk add --no-cache \
   build-base \
+  ca-certificates \
   openssl \
   tzdata \
   postgresql-client \

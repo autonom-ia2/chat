@@ -302,6 +302,7 @@ module Autonomia
             query: query,
             history: history,
             images: media.images,
+            documents: media.documents,
             trust_instruction: true,
             delivery: delivery
           ).answer
