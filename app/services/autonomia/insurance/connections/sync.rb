@@ -45,13 +45,21 @@ class Autonomia::Insurance::Connections::Sync
       raise ::Autonomia::Insurance::Connector::Error.new(:protocol, "unknown status #{status.truncate(30)}")
     end
 
+    # `last_error` só é limpo quando a conexão está REALMENTE boa. Antes ele era zerado sempre que o
+    # payload fosse um Hash válido — e um Hash válido dizendo `degraded` é exatamente o caso em que
+    # o motivo importa. Em 04/09/2026 uma conexão real caiu aqui: status `degraded`, `last_error`
+    # nulo, e a tela mostrando "conectado com alertas" sem dizer qual alerta.
+    #
+    # `reason` vem do adapter e já chega redatado. O fallback existe para adapter antigo, que não
+    # manda o campo: melhor "status degraded" do que nada.
+    ok = status == 'ready'
     @connection.update!(
       status: status,
       external_account_label: payload['account_label'].to_s.truncate(120).presence,
       session_expires_at: payload['session_expires_at'],
       last_authenticated_at: Time.current,
       last_healthcheck_at: Time.current,
-      last_error: nil
+      last_error: ok ? nil : sanitize(payload['reason'].presence || "status #{status}")
     )
   end
 

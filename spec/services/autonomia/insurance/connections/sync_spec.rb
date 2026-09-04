@@ -19,6 +19,47 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
     expect(result.last_error).to be_nil
   end
 
+  # Aconteceu em produção em 04/09/2026: o connector devolveu um payload VÁLIDO dizendo `degraded`,
+  # o código tratou como sucesso e zerou `last_error`. A tela mostrou "conectado com alertas" sem
+  # dizer qual alerta, o banco não guardou nada, e não houve como diagnosticar depois.
+  # Payload bem-formado com status ruim NÃO é sucesso.
+  it 'keeps the reason when the portal answers with a degraded status' do
+    # Arrange
+    connector = instance_double(Autonomia::Insurance::Connector::Mock)
+    allow(connector).to receive(:connection_status)
+      .and_return({ 'status' => 'degraded', 'reason' => 'protocol: unexpected login payload' })
+
+    # Act
+    result = described_class.new(connection, connector: connector).call
+
+    # Assert
+    expect(result.status).to eq('degraded')
+    expect(result.last_error).to include('unexpected login payload')
+    expect(result.last_capability_scan_at).to be_nil # não descobre capacidades de conexão ruim
+  end
+
+  it 'records something even when the adapter sends no reason' do
+    # Arrange — adapter antigo, sem o campo. "status degraded" ainda é pista; vazio não é.
+    connector = instance_double(Autonomia::Insurance::Connector::Mock)
+    allow(connector).to receive(:connection_status).and_return({ 'status' => 'degraded' })
+
+    # Act / Assert
+    expect(described_class.new(connection, connector: connector).call.last_error).to include('degraded')
+  end
+
+  it 'clears the reason once the connection is healthy again' do
+    # Arrange — conexão que já falhou antes; o erro velho não pode ficar na tela para sempre
+    stale = connection
+    stale.update!(last_error: 'protocol: erro antigo')
+
+    # Act
+    result = described_class.new(stale, connector: Autonomia::Insurance::Connector::Mock.new).call
+
+    # Assert
+    expect(result.status).to eq('ready')
+    expect(result.last_error).to be_nil
+  end
+
   it 'translates connector errors into status + last_error without raising' do
     result = described_class.new(connection(password: 'invalid'), connector: Autonomia::Insurance::Connector::Mock.new).call
 
