@@ -28,8 +28,12 @@ class Ctwa::TrackedLinkAttributor
   # link novo tem de ser atribuido igual. Reenvio do mesmo marcador e no-op: o CampaignBuilder
   # deduplica por source_id e so entao incrementamos o contador do link.
   def attribute_code!(conversation, code)
-    link = Ctwa::TrackedLink.for_account(conversation.account).find_by(code: code)
+    # O codigo tem de pertencer a inbox em que a mensagem chegou: colar o marcador de um link
+    # de outra inbox da mesma conta nao pode atribuir a conversa a ele.
+    link = Ctwa::TrackedLink.for_account(conversation.account).find_by(code: code, inbox_id: conversation.inbox_id)
     return if link.blank?
+
+    already_counted = conversation_already_on_link?(conversation, link)
 
     # CampaignBuilder derives `source` as meta_organic without ctwa_clid. For MVP the
     # canonical discriminator for trackable links is `source_type: tracked_link`.
@@ -41,7 +45,7 @@ class Ctwa::TrackedLinkAttributor
     )
     return unless attributed
 
-    link.increment!(:conversations_count) # rubocop:disable Rails/SkipsModelValidations
+    link.increment!(:conversations_count) unless already_counted # rubocop:disable Rails/SkipsModelValidations
   end
 
   def attribute_click_token!(conversation, token)
@@ -79,6 +83,8 @@ class Ctwa::TrackedLinkAttributor
     link = click.tracked_link
     return if link.blank?
 
+    already_counted = conversation_already_on_link?(conversation, link, except_click_id: click.id)
+
     referral = click.params.to_h.merge(
       source_id: "click:#{click.token}",
       source_type: 'bridge',
@@ -92,7 +98,19 @@ class Ctwa::TrackedLinkAttributor
     )
     return unless attributed
 
-    link.increment!(:conversations_count) # rubocop:disable Rails/SkipsModelValidations
+    link.increment!(:conversations_count) unless already_counted # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # conversations_count conta CONVERSAS, nao toques. Um segundo clique no mesmo link, na mesma
+  # conversa, gera outro source_id e seria contado de novo — o que antes nao acontecia so porque
+  # o portao de primeira mensagem barrava o segundo toque.
+  def conversation_already_on_link?(conversation, link, except_click_id: nil)
+    touches = Ctwa::CampaignBuilder.existing_touches(conversation)
+    return true if touches.any? { |touch| touch['source_id'] == "link:#{link.code}" }
+
+    scope = Ctwa::TrackedLinkClick.where(tracked_link_id: link.id, conversation_id: conversation.id)
+    scope = scope.where.not(id: except_click_id) if except_click_id
+    scope.exists?
   end
 
   def inferred_click_scope(conversation)

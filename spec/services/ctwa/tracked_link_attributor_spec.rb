@@ -226,5 +226,41 @@ RSpec.describe Ctwa::TrackedLinkAttributor do
       expect(Ctwa::TrackedLinkClick.where(conversation_id: conversation.id)).to be_empty
       expect(tracked_link.reload.conversations_count).to eq(0)
     end
+
+    # conversations_count conta CONVERSAS. Dois cliques no mesmo link geram source_ids
+    # diferentes (click:TOKEN1 e click:TOKEN2) e antes inflavam o contador do link.
+    it 'counts the conversation once when the same link is clicked twice' do
+      second_click = create(:ctwa_tracked_link_click, account: account, tracked_link: tracked_link, token: 'WXYZ6789',
+                                                      params: { 'gclid' => 'gclid-456' })
+      create(:message, conversation: conversation, account: account, inbox: inbox, content: "Oi ##{click.token}")
+
+      described_class.attribute!(conversation, "Oi ##{click.token}")
+      described_class.attribute!(conversation, "Oi ##{second_click.token}")
+
+      expect(conversation.reload.additional_attributes['campaign_touches'].length).to eq(2)
+      expect(tracked_link.reload.conversations_count).to eq(1)
+    end
+
+    it 'counts the conversation once when the code follows a click on the same link' do
+      create(:message, conversation: conversation, account: account, inbox: inbox, content: "Oi ##{click.token}")
+
+      described_class.attribute!(conversation, "Oi ##{click.token}")
+      described_class.attribute!(conversation, 'Oi #ABC234')
+
+      expect(tracked_link.reload.conversations_count).to eq(1)
+    end
+
+    # O marcador de um link de OUTRA inbox da mesma conta nao pode capturar esta conversa.
+    it 'ignores a code that belongs to a link of another inbox' do
+      other_channel = create(:channel_whatsapp, account: account, phone_number: '+15559998888', provider: 'whatsapp_cloud',
+                                                validate_provider_config: false, sync_templates: false)
+      other_conversation = create(:conversation, account: account, inbox: other_channel.inbox)
+      create(:message, conversation: other_conversation, account: account, inbox: other_channel.inbox, content: 'Oi #ABC234')
+
+      described_class.attribute!(other_conversation, 'Oi #ABC234')
+
+      expect(other_conversation.reload.additional_attributes).to be_blank
+      expect(tracked_link.reload.conversations_count).to eq(0)
+    end
   end
 end

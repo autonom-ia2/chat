@@ -36,11 +36,15 @@ module EmailCampaigns
       # Merged into the existing policy (never replaced) so the topic keeps its owner statement.
       def allow_ses_publish(topic_arn)
         policy = current_policy(topic_arn)
-        statements = Array(policy['Statement'])
-        return if statements.any? { |statement| statement['Sid'] == PUBLISH_SID }
+        # A linguagem de policy da AWS aceita Statement como objeto unico; Array() sobre um Hash
+        # devolveria pares chave/valor. Comparar o statement inteiro (e nao so o Sid) faz um
+        # AllowSESPublish antigo ou errado ser substituido em vez de aceito como suficiente.
+        statements = Array.wrap(policy['Statement'])
+        desired = publish_statement(topic_arn)
+        return if statements.include?(desired)
 
         policy['Version'] ||= '2012-10-17'
-        policy['Statement'] = statements + [publish_statement(topic_arn)]
+        policy['Statement'] = statements.reject { |statement| statement.is_a?(Hash) && statement['Sid'] == PUBLISH_SID } + [desired]
         sns.set_topic_attributes(topic_arn: topic_arn, attribute_name: 'Policy', attribute_value: policy.to_json)
       end
 

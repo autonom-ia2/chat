@@ -23,6 +23,15 @@ RSpec.describe EmailCampaigns::Ses::EventDestinationEnsurer do
     { 'Version' => '2012-10-17', 'Statement' => [{ 'Sid' => 'owner' }] }.to_json
   end
 
+  def desired_statement
+    {
+      'Sid' => 'AllowSESPublish', 'Effect' => 'Allow',
+      'Principal' => { 'Service' => 'ses.amazonaws.com' }, 'Action' => 'sns:Publish',
+      'Resource' => topic_arn,
+      'Condition' => { 'StringEquals' => { 'AWS:SourceAccount' => '354307071110' } }
+    }
+  end
+
   def stub_policy(policy)
     allow(sns).to receive(:get_topic_attributes).and_return(
       instance_double(Aws::SNS::Types::GetTopicAttributesResponse, attributes: { 'Policy' => policy })
@@ -60,7 +69,7 @@ RSpec.describe EmailCampaigns::Ses::EventDestinationEnsurer do
   end
 
   it 'does not rewrite the policy when SES is already allowed' do
-    stub_policy({ 'Version' => '2012-10-17', 'Statement' => [{ 'Sid' => 'AllowSESPublish' }] }.to_json)
+    stub_policy({ 'Version' => '2012-10-17', 'Statement' => [desired_statement] }.to_json)
 
     described_class.new.perform
 
@@ -79,6 +88,7 @@ RSpec.describe EmailCampaigns::Ses::EventDestinationEnsurer do
       hash_including(sns_topic_arn: topic_arn, event_types: %w[DELIVERY BOUNCE COMPLAINT])
     )
   end
+
   # Uma leitura ilegivel nao pode virar "policy vazia": escrever so o nosso statement apagaria
   # o statement default do dono do topico.
   it 'refuses to overwrite the policy when it cannot be read' do
@@ -86,5 +96,30 @@ RSpec.describe EmailCampaigns::Ses::EventDestinationEnsurer do
 
     expect { described_class.new.perform }.to raise_error(EmailCampaigns::Ses::Error, /unreadable policy/)
     expect(sns).not_to have_received(:set_topic_attributes)
+  end
+
+  # A linguagem de policy da AWS aceita Statement como objeto unico. Array() sobre um Hash
+  # devolveria pares chave/valor e o merge quebraria com TypeError.
+  it 'handles a policy whose Statement is a single object' do
+    stub_policy({ 'Version' => '2012-10-17', 'Statement' => { 'Sid' => 'owner' } }.to_json)
+
+    described_class.new.perform
+
+    expect(published_policy['Statement'].map { |item| item['Sid'] }).to eq(%w[owner AllowSESPublish])
+  end
+
+  # Um statement com o nosso Sid mas com Principal/Resource errado deixaria o SES sem publicar.
+  it 'replaces an AllowSESPublish statement that grants the wrong principal' do
+    stub_policy({
+      'Version' => '2012-10-17',
+      'Statement' => [{ 'Sid' => 'AllowSESPublish', 'Effect' => 'Allow',
+                        'Principal' => { 'Service' => 'sqs.amazonaws.com' }, 'Action' => 'sns:Publish' }]
+    }.to_json)
+
+    described_class.new.perform
+
+    statement = published_policy['Statement'].find { |item| item['Sid'] == 'AllowSESPublish' }
+    expect(statement['Principal']).to eq('Service' => 'ses.amazonaws.com')
+    expect(published_policy['Statement'].count { |item| item['Sid'] == 'AllowSESPublish' }).to eq(1)
   end
 end
