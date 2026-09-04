@@ -86,19 +86,10 @@ class Autonomia::Agents::Specialists::Runner
     by_slug = specialist_tools.index_by(&:slug)
     Array(calls).map do |call|
       tool = by_slug[call['name'].to_s]
-      output = tool.present? ? execute_single_tool(tool, call) : { error: 'tool_not_available' }.to_json
+      output = tool.present? ? tool.execute(call) : { error: 'tool_not_available' }.to_json
       { type: 'function_call_output', call_id: call['call_id'],
         output: output.to_s.truncate(MAX_TOOL_OUTPUT_CHARS) }
     end
-  end
-
-  def execute_single_tool(tool, call)
-    args = JSON.parse(call['arguments'].presence || '{}')
-    Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: args).call
-  rescue JSON::ParserError
-    { error: 'invalid_tool_arguments' }.to_json
-  rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
-    { error: e.message }.to_json
   end
 
   # Junta resposta e pendências numa string só — o principal recebe texto, não estrutura.

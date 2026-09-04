@@ -106,6 +106,9 @@ module Autonomia
       # V2.1 — hint de construção: o dono declarou que o agente terá (ou não) base de conhecimento.
       # Reflexo no jsonb `config` (sem migração); o Construtor já lê via with_knowledge?.
       store_accessor :config, :with_knowledge
+      # #312 — ferramentas NATIVAS ligadas neste agente (slugs do Tools::Registry). A nativa é
+      # declarada em código; aqui só se escolhe quais ligar. Vazio = nenhuma.
+      store_accessor :config, :native_tool_slugs
       store_accessor :config, :confidence_threshold # Fase B: portão de confiança (lido no Answerer)
       # Fase D: handoff real configurável por agente (jsonb `config`, sem migração).
       # handoff_strategy ∈ Operate::HANDOFF_STRATEGIES; default conservador = 'none'
