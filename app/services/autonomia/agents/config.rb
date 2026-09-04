@@ -130,6 +130,25 @@ module Autonomia
       # Onda 2 / Track B: teto de áudios transcritos por turno (limita custo/latência da transcrição).
       MAX_AUDIO_PER_MESSAGE = 2
 
+      # DOCUMENTO ANEXADO (#319): PDF que o cliente manda na conversa — na prática, a apólice numa
+      # renovação. Vira TEXTO pelo mesmo `Knowledge::Processors::Pdf` que já ingere material da base
+      # (pdf-reader + OCR de escaneado); não vai como `input_file` ao modelo.
+      #
+      # Medido em 04/09/2026 numa apólice de auto real (HDI, 4 páginas, 17 KB): a extração recuperou
+      # os 17 campos que a cotação precisa — classe de bônus, sinistros, seguradora anterior, e a
+      # tabela de coberturas com L.M.I. e franquia coluna a coluna — mais Código FIPE, Renavam e os
+      # CEPs de pernoite e circulação separados. Zero caractere corrompido. Por isso texto basta.
+      DOCUMENT_CONTENT_TYPES = %w[application/pdf].freeze
+      # 5 MB, mesmo teto das imagens. É generoso para o caso real (a apólice medida tem 17 KB) e
+      # limita o pior caso, que é PDF ESCANEADO: sem camada de texto, o processor cai em OCR e
+      # rasteriza página por página a 300 DPI. O tempo cresce com o número de páginas, e o corte de
+      # caracteres só age DEPOIS da extração — o teto de bytes é o que segura antes.
+      MAX_DOCUMENT_BYTES = 5.megabytes
+      MAX_DOCUMENTS_PER_MESSAGE = 2
+      # Teto de texto POR documento no prompt. Uma apólice de auto dá ~13 mil chars; o teto acomoda
+      # apólice longa sem deixar um manual de 300 páginas inflar o turno.
+      MAX_DOCUMENT_CHARS = 40_000
+
       # Fase B — motor de resposta (RAG + portão de confiança / Testar / Copiloto)
       # Modelo fixado em gpt-5.6-sol (desacoplado de MODEL_AUTO_MOVE, que foi p/ mini na Fase 1 — o
       # Answerer fala com o cliente e mantém o modelo forte).

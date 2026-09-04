@@ -40,10 +40,17 @@
 class Autonomia::Agents::Specialist < ApplicationRecord
   self.table_name = 'autonomia_agent_specialists'
 
-  # Teto por agente: cada especialista habilitado ocupa um slot de função no prompt do principal,
-  # e função demais degrada a escolha do modelo. O fluxo de referência que carrega 22 ferramentas
-  # num contexto só é justamente o que estamos deixando de copiar.
-  MAX_PER_AGENT = 8
+  # Teto por agente. Era 8, escolhido por precaução e sem medição — e 8 não cabe o produto: o
+  # catálogo do AGGER tem 65 produtos, 26 ativos, e o desenho é um especialista por ramo.
+  #
+  # O que o teto protege NÃO é a escolha do modelo: o `Answerer` expõe apenas os especialistas
+  # HABILITADOS naquela conta, e uma corretora habilita os ramos que vende (a conta que medimos
+  # tem 10). O que ele protege é o prompt de cada turno, que carrega o schema de toda função
+  # declarada. 30 é folga para o catálogo inteiro e ainda barra configuração absurda.
+  #
+  # Se um dia uma conta habilitar dezenas de ramos e o roteamento começar a errar, o conserto não é
+  # subir este número: é uma função de cotação só, recebendo o ramo como parâmetro.
+  MAX_PER_AGENT = 30
   # A OpenAI limita nome de função a 64 chars; `consultar_` come 10.
   FUNCTION_PREFIX = 'consultar_'.freeze
   MAX_SLUG_LENGTH = 54

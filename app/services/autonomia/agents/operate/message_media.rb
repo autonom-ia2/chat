@@ -12,25 +12,32 @@ module Autonomia
       # Fail-safe: erro em um anexo é engolido (o turno segue com o que deu certo). NUNCA loga base64 nem
       # o texto transcrito. Stickers do WhatsApp chegam como file_type:image (webp) -> cobertos pelo path de imagem.
       class MessageMedia
-        Result = Struct.new(:images, :transcripts, keyword_init: true) do
+        Result = Struct.new(:images, :transcripts, :documents, keyword_init: true) do
           def empty?
-            images.empty? && transcripts.empty?
+            images.empty? && transcripts.empty? && documents.empty?
           end
         end
 
-        EMPTY = Result.new(images: [], transcripts: []).freeze
+        EMPTY = Result.new(images: [], transcripts: [], documents: []).freeze
+
+        # O `Knowledge::Processors::Pdf` espera uma FONTE da base de conhecimento (`file`,
+        # `reference`, `source_type`). Um anexo de conversa tem o blob mas não o resto. Este
+        # adaptador dá ao processor a forma que ele pede, sem tocar no caminho de ingestão — que é
+        # o mesmo código, exercitado todo dia pelo outro consumidor.
+        SourceLike = Struct.new(:file, :reference, :source_type)
 
         def initialize(messages:, agent:)
           @messages = Array(messages)
           @agent = agent
         end
 
-        # -> Result (images: [data-url], transcripts: [String])
+        # -> Result (images: [data-url], transcripts: [String], documents: [{name:, text:}])
         def extract
           attachments = @messages.flat_map { |message| message.attachments.to_a }
           return EMPTY if attachments.empty?
 
-          Result.new(images: collect_images(attachments), transcripts: collect_transcripts(attachments))
+          Result.new(images: collect_images(attachments), transcripts: collect_transcripts(attachments),
+                     documents: collect_documents(attachments))
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] media_extract_failed agent=#{@agent.id} #{e.class}")
           EMPTY
@@ -61,6 +68,46 @@ module Autonomia
           "data:#{content_type};base64,#{Base64.strict_encode64(data)}"
         rescue StandardError
           nil # anexo ilegível -> descarta a imagem, mantém o turno. NUNCA loga o conteúdo.
+        end
+
+        # PDF anexado -> texto. Na renovação é a apólice, e é ela que traz classe de bônus,
+        # sinistros, seguradora anterior e as coberturas contratadas — o que faz a cotação sair sem
+        # interrogatório. Capa ANTES de baixar, como nas imagens.
+        def collect_documents(attachments)
+          attachments
+            .select { |attachment| document?(attachment) }
+            .first(Config::MAX_DOCUMENTS_PER_MESSAGE)
+            .filter_map { |attachment| document_text(attachment) }
+        end
+
+        # `file_type` do Chatwoot para PDF é `:file` — genérico. Quem decide é o content-type do
+        # blob, contra a allowlist; sem isso, qualquer anexo entraria no extrator de PDF.
+        def document?(attachment)
+          return false unless attachment.file_type.to_s == 'file'
+
+          blob = attachment.file&.blob
+          return false if blob.blank?
+
+          content_type = blob.content_type.to_s.downcase.split(';').first
+          Config::DOCUMENT_CONTENT_TYPES.include?(content_type) && blob.byte_size <= Config::MAX_DOCUMENT_BYTES
+        end
+
+        # -> { name:, text: } ou nil. Reusa o processor da base de conhecimento (pdf-reader, com
+        # OCR quando o PDF é escaneado). NFC porque o texto sai decomposto: o `ô` de "bônus" vem
+        # como `o` + acento, e uma busca por "bônus" não casa — medido na apólice real de 04/09.
+        def document_text(attachment)
+          blob = attachment.file.blob
+          source = SourceLike.new(attachment.file, blob.filename.to_s, 'pdf')
+          text = ::Autonomia::Agents::Knowledge::Processors::Pdf.new(source).extract.to_s
+          text = text.unicode_normalize(:nfc).strip
+          return if text.blank?
+
+          { name: blob.filename.to_s, text: Config.truncate_text(text, Config::MAX_DOCUMENT_CHARS) }
+        rescue StandardError => e
+          # Documento ilegível não derruba o turno: o agente segue e pergunta os dados. NUNCA loga
+          # o conteúdo — é a apólice de uma pessoa.
+          Rails.logger.warn("[autonomia][operate] document_extract_failed agent=#{@agent.id} #{e.class}")
+          nil
         end
 
         def collect_transcripts(attachments)
