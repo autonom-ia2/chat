@@ -23,7 +23,13 @@ module Autonomia::Agents::Tools::AsyncConfig
 
   # Teto de tempo de PAREDE. É ele que encerra a execução, não a contagem de tentativas: contagem
   # não sobrevive a um re-enfileiramento perdido, relógio sobrevive.
-  DEFAULT_DEADLINE_SECONDS = 180
+  #
+  # 420s vem de MEDIÇÃO, não de palpite: numa cotação real de auto em 04/09/2026, 3 de 6 seguradoras
+  # devolveram preço em ~35s, mas o portal só assentou a cotação aos 392s e ainda não tinha
+  # terminado aos 435s. O valor anterior (180s) teria encerrado a execução com as retardatárias
+  # ainda vivas. O cliente não espera por isso: a entrega parcial já mandou os preços aos ~35s — o
+  # prazo só decide quando desistimos de quem ficou para trás.
+  DEFAULT_DEADLINE_SECONDS = 420
   MIN_DEADLINE_SECONDS = 30
   MAX_DEADLINE_SECONDS = 600
 
