@@ -6,7 +6,8 @@
 module Autonomia::Agents::Tools::Registry
   # Ordem estável: entra no prompt nesta ordem quando o agente liga várias.
   TOOLS = [
-    Autonomia::Agents::Tools::Native::InsuranceCapabilities
+    Autonomia::Agents::Tools::Native::InsuranceCapabilities,
+    Autonomia::Agents::Tools::Native::InsuranceGeneralConditions
   ].freeze
 
   module_function
