@@ -179,7 +179,7 @@ module Autonomia
       def enabled_agent_tools
         @enabled_agent_tools ||= begin
           reserved = enabled_specialists.flat_map(&:tool_slugs).map(&:to_s).to_set
-          @agent.tools.enabled.order(:id).reject { |tool| reserved.include?(tool.slug.to_s) }
+          Tools::Bound.for_agent(@agent).reject { |tool| reserved.include?(tool.slug) }
         end
       end
 
@@ -202,7 +202,7 @@ module Autonomia
         return run_specialist(specialist, call) if specialist.present?
 
         tool = tools_by_slug[name]
-        return execute_single_tool(tool, call) if tool.present?
+        return tool.execute(call) if tool.present?
 
         { error: 'tool_not_available' }.to_json
       end
@@ -214,15 +214,6 @@ module Autonomia
         Specialists::Runner.new(specialist: specialist, request: args[Specialist::REQUEST_PARAM]).call
       rescue JSON::ParserError
         { error: 'invalid_tool_arguments' }.to_json
-      end
-
-      def execute_single_tool(tool, call)
-        args = JSON.parse(call['arguments'].presence || '{}')
-        Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: args).call
-      rescue JSON::ParserError
-        { error: 'invalid_tool_arguments' }.to_json
-      rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
-        { error: e.message }.to_json
       end
 
       def build_result(parsed, snippets)
