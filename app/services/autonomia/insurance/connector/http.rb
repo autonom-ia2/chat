@@ -46,8 +46,10 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     invoke("/v1/#{provider}/quote/result", { session: session, quoteId: quote_id })
   end
 
-  def quote_proposal(provider:, session:, quote_id:)
-    invoke("/v1/#{provider}/quote/proposal", { session: session, quoteId: quote_id })
+  def quote_proposal(provider:, session:, quote_id:, insurer_code: nil)
+    payload = { session: session, quoteId: quote_id }
+    payload[:insurerCode] = insurer_code if insurer_code.present?
+    invoke("/v1/#{provider}/quote/proposal", payload)
   end
 
   private

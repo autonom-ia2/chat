@@ -57,10 +57,11 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     { 'quote_id' => quote_id, 'product' => 'auto', 'status' => status, 'offers' => offers }
   end
 
-  def quote_proposal(provider:, session:, quote_id:)
+  def quote_proposal(provider:, session:, quote_id:, insurer_code: nil)
     require_provider!(provider)
     require_session!(session)
-    { 'quote_id' => quote_id, 'url' => 'https://exemplo.test/proposta-mock.pdf' }
+    nome = insurer_code.present? ? "proposta-#{insurer_code}" : 'comparativo'
+    { 'quote_id' => quote_id, 'url' => "https://exemplo.test/#{nome}-mock.pdf" }
   end
 
   private

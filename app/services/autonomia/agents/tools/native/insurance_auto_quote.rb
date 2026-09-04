@@ -20,6 +20,8 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
   # "chegaram mais opções" em vez de repetir as que o cliente já leu.
   DELIVERED_KEY = 'entregues'.freeze
   DEFAULT_COMMISSION = 10.0
+  # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial.
+  PDF_SENT_KEY = 'comparativo_enviado'.freeze
 
   class << self
     def slug
@@ -99,11 +101,36 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| insurer_code(offer) })
     deliveries = fresh.any? ? [describe(fresh, first: already.empty?)] : []
 
-    if %w[completed failed].include?(result['status'])
-      progress_class.done(deliveries: deliveries, handle: next_handle)
-    else
-      progress_class.running(deliveries: deliveries, handle: next_handle)
+    return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
+
+    # O comparativo em PDF fecha a conversa, e sai UMA vez. É o que o portal entrega e o que o
+    # cliente guarda — a lista de preços no chat serve para decidir, o PDF serve para levar adiante.
+    # Individual só quando ele escolher uma seguradora; aí é outro pedido.
+    pdf = comparison_pdf(next_handle)
+    if pdf
+      deliveries += [pdf]
+      next_handle = next_handle.merge(PDF_SENT_KEY => true)
     end
+    progress_class.done(deliveries: deliveries, handle: next_handle)
+  end
+
+  def finished?(result)
+    %w[completed failed].include?(result['status'])
+  end
+
+  # nil quando não há o que imprimir, quando já foi enviado, ou quando a geração falha. Nunca
+  # derruba a cotação: os preços já chegaram, e um PDF que não sai não pode apagá-los.
+  def comparison_pdf(handle)
+    return if handle[PDF_SENT_KEY]
+    return if Array(handle[DELIVERED_KEY]).empty?
+
+    proposal = connector.quote_proposal(provider: connection.provider, session: session,
+                                        quote_id: handle['quote_id'])
+    url = proposal.to_h['url'].presence
+    url && "Comparativo com todas as opções:\n#{url}"
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] comparativo falhou account=#{account.id} #{e.class}")
+    nil
   end
 
   # SÓ quem cotou. `declined` e `auth_required` não viram texto ao cliente — ver o cabeçalho.

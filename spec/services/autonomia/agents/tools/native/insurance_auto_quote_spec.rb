@@ -82,6 +82,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
     before do
       ready_connection
       allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      allow(connector).to receive(:quote_proposal)
+        .and_return({ 'url' => 'https://exemplo.test/comparativo.pdf' })
     end
 
     def result(status, offers)
@@ -176,6 +178,68 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
       # Assert
       expect(progress.deliveries.first.lines.size).to eq(described_class::MAX_OFFERS + 1)
       expect(progress.deliveries.first).not_to include('D:')
+    end
+
+    it 'closes with the comparison PDF, one per quote, like the portal does' do
+      # Arrange
+      allow(connector).to receive(:quote_result).and_return(
+        result('completed', [offer('43', 'Ezze', 'quoted', 2050.40)])
+      )
+
+      # Act
+      progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
+
+      # Assert — a lista serve para decidir; o PDF é o que o cliente leva adiante
+      expect(progress.deliveries.last).to include('Comparativo com todas as opções')
+      expect(progress.deliveries.last).to include('https://exemplo.test/comparativo.pdf')
+      expect(progress.handle[described_class::PDF_SENT_KEY]).to be(true)
+      expect(connector).to have_received(:quote_proposal).with(hash_excluding(:insurer_code))
+    end
+
+    it 'never sends the PDF twice' do
+      # Arrange
+      allow(connector).to receive(:quote_result).and_return(
+        result('completed', [offer('43', 'Ezze', 'quoted', 2050.40)])
+      )
+      handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'],
+                 described_class::PDF_SENT_KEY => true }
+
+      # Act
+      progress = tool.poll(handle: handle, attempt: 6)
+
+      # Assert
+      expect(progress.deliveries).to be_empty
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    it 'does not print a comparison when nobody quoted' do
+      # Arrange — sem preço não há o que comparar
+      allow(connector).to receive(:quote_result).and_return(
+        result('failed', [offer('47', 'Justos', 'declined')])
+      )
+
+      # Act
+      progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
+
+      # Assert
+      expect(progress.deliveries).to be_empty
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    it 'keeps the prices when the PDF fails to generate' do
+      # Arrange — um PDF que não sai não pode apagar preços que já chegaram
+      allow(connector).to receive(:quote_result).and_return(
+        result('completed', [offer('43', 'Ezze', 'quoted', 2050.40)])
+      )
+      allow(connector).to receive(:quote_proposal).and_raise(StandardError, 'print fora do ar')
+
+      # Act
+      progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
+
+      # Assert
+      expect(progress).to be_done
+      expect(progress.deliveries.join).to include('Ezze')
+      expect(progress.deliveries.join).not_to include('Comparativo')
     end
 
     it 'fails loudly when the handle lost the quote id' do

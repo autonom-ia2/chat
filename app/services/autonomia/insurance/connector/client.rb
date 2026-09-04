@@ -39,7 +39,9 @@ class Autonomia::Insurance::Connector::Client
     raise NotImplementedError
   end
 
-  def quote_proposal(provider:, session:, quote_id:)
+  # Sem `insurer_code` é o COMPARATIVO, com todas as seguradoras que cotaram — é o que o cliente
+  # recebe por padrão, um PDF só. Com `insurer_code`, a proposta daquela seguradora.
+  def quote_proposal(provider:, session:, quote_id:, insurer_code: nil)
     raise NotImplementedError
   end
 end
