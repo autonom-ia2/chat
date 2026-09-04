@@ -92,7 +92,8 @@ RSpec.describe Autonomia::Agents::Answerer do
 
     # Assert
     expect(Autonomia::Agents::Specialists::Runner).to have_received(:new)
-      .with(specialist: instance_of(Autonomia::Agents::Specialist), request: 'cotar para o CPF X')
+      .with(specialist: instance_of(Autonomia::Agents::Specialist), request: 'cotar para o CPF X',
+            delivery: nil)
     expect(captured[:outputs]).to eq(
       [{ type: 'function_call_output', call_id: 'call_1', output: 'Melhor opção: Porto, R$ 1.200.' }]
     )

@@ -31,9 +31,13 @@ class Autonomia::Agents::Specialists::Runner
   MAX_TOOL_OUTPUT_CHARS = 8_000
   FEATURE = 'agente_especialista'.freeze
 
-  def initialize(specialist:, request:)
+  def initialize(specialist:, request:, delivery: nil)
     @specialist = specialist
     @request = request.to_s.strip
+    # CONTEXTO DE ENTREGA (#313), repassado do principal. É por aqui que a ferramenta ASSÍNCRONA
+    # funciona no caminho que importa: o `Answerer` REMOVE do principal todo slug reservado por um
+    # especialista habilitado, então a cotação só é alcançável a partir daqui.
+    @delivery = delivery
   end
 
   # -> String (sempre). Nunca nil, nunca exceção.
@@ -86,7 +90,7 @@ class Autonomia::Agents::Specialists::Runner
     by_slug = specialist_tools.index_by(&:slug)
     Array(calls).map do |call|
       tool = by_slug[call['name'].to_s]
-      output = tool.present? ? tool.execute(call) : { error: 'tool_not_available' }.to_json
+      output = tool.present? ? tool.execute(call, delivery: @delivery) : { error: 'tool_not_available' }.to_json
       { type: 'function_call_output', call_id: call['call_id'],
         output: output.to_s.truncate(MAX_TOOL_OUTPUT_CHARS) }
     end

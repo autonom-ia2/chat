@@ -184,3 +184,10 @@ autonomia_reap_stale_drafts_job:
   cron: '0 */6 * * *'
   class: 'Autonomia::Agents::ReapStaleDraftsJob'
   queue: scheduled_jobs
+
+# executed every 10 minutes; closes async tool runs whose job chain broke (worker killed mid-deploy,
+# enqueue lost). Never resumes the run — it would re-quote at the insurer.
+autonomia_reap_stale_tool_runs_job:
+  cron: '*/10 * * * *'
+  class: 'Autonomia::Agents::Tools::ReapStaleRunsJob'
+  queue: scheduled_jobs
