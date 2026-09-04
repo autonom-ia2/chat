@@ -25,6 +25,10 @@
 #
 #  idx_autonomia_insurance_connections_account_provider  (account_id,provider) UNIQUE
 #
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#
 # Conexão da corretora com um provider de cotação (AGGER primeiro). Uma por conta e provider.
 # A senha do portal só existe cifrada: sem ACTIVE_RECORD_ENCRYPTION_* configurado o model recusa
 # gravar credencial — nunca texto puro no banco (PRD §14, regra 6 do Rodrigo).

@@ -1,3 +1,31 @@
+# == Schema Information
+#
+# Table name: autonomia_agent_build_threads
+#
+#  id                 :bigint           not null, primary key
+#  build_token        :string
+#  messages           :jsonb            not null
+#  state              :jsonb            not null
+#  status             :integer          default("open"), not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  autonomia_agent_id :bigint
+#  created_by_id      :bigint
+#
+# Indexes
+#
+#  index_autonomia_agent_build_threads_on_account_id             (account_id)
+#  index_autonomia_agent_build_threads_on_account_id_and_status  (account_id,status)
+#  index_autonomia_agent_build_threads_on_autonomia_agent_id     (autonomia_agent_id)
+#  index_autonomia_agent_build_threads_on_created_by_id          (created_by_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (autonomia_agent_id => autonomia_agents.id)
+#  fk_rails_...  (created_by_id => users.id)
+#
 module Autonomia
   module Agents
     class BuildThread < ApplicationRecord

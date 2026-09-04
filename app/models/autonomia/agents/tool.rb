@@ -1,3 +1,35 @@
+# == Schema Information
+#
+# Table name: autonomia_agent_tools
+#
+#  id                    :bigint           not null, primary key
+#  description           :text
+#  enabled               :boolean          default(TRUE), not null
+#  endpoint_url          :text             not null
+#  headers_config        :jsonb            not null
+#  http_method           :string           default("POST"), not null
+#  name                  :string           not null
+#  param_schema          :jsonb            not null
+#  request_body_template :text
+#  response_mapping      :jsonb            not null
+#  slug                  :string           not null
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  account_id            :bigint           not null
+#  autonomia_agent_id    :bigint           not null
+#
+# Indexes
+#
+#  idx_autonomia_agent_tools_agent_slug                   (autonomia_agent_id,slug) UNIQUE
+#  index_autonomia_agent_tools_on_account_id              (account_id)
+#  index_autonomia_agent_tools_on_account_id_and_enabled  (account_id,enabled)
+#  index_autonomia_agent_tools_on_autonomia_agent_id      (autonomia_agent_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (autonomia_agent_id => autonomia_agents.id) ON DELETE => cascade
+#
 module Autonomia
   module Agents
     class Tool < ApplicationRecord

@@ -1,3 +1,36 @@
+# == Schema Information
+#
+# Table name: crm_ai_stage_suggestions
+#
+#  id            :bigint           not null, primary key
+#  confidence    :decimal(5, 4)    not null
+#  metadata      :jsonb            not null
+#  model_used    :string           not null
+#  reasoning     :string(500)
+#  status        :integer          default("pending"), not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  account_id    :bigint           not null
+#  card_id       :bigint           not null
+#  from_stage_id :bigint           not null
+#  to_stage_id   :bigint           not null
+#
+# Indexes
+#
+#  idx_crm_ai_suggestions_account_status_created    (account_id,status,created_at)
+#  idx_crm_ai_suggestions_card_status_created       (card_id,status,created_at)
+#  index_crm_ai_stage_suggestions_on_account_id     (account_id)
+#  index_crm_ai_stage_suggestions_on_card_id        (card_id)
+#  index_crm_ai_stage_suggestions_on_from_stage_id  (from_stage_id)
+#  index_crm_ai_stage_suggestions_on_to_stage_id    (to_stage_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (card_id => crm_cards.id) ON DELETE => cascade
+#  fk_rails_...  (from_stage_id => crm_pipeline_stages.id)
+#  fk_rails_...  (to_stage_id => crm_pipeline_stages.id)
+#
 class Crm::AiStageSuggestion < ApplicationRecord
   self.table_name = 'crm_ai_stage_suggestions'
 

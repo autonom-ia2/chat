@@ -20,6 +20,13 @@
 #  index_crm_integration_tokens_on_created_by_id    (created_by_id)
 #  index_crm_integration_tokens_on_custom_role_id   (custom_role_id)
 #
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (account_user_id => account_users.id) ON DELETE => nullify
+#  fk_rails_...  (created_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (custom_role_id => custom_roles.id) ON DELETE => nullify
+#
 
 # Per-account, scoped, revocable CRM integration token (plan §3.2, D1 — HubSpot
 # Private App style). Modeled like AgentBot: account-scoped owner of an

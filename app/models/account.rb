@@ -8,6 +8,7 @@
 #  domain                :string(100)
 #  feature_flags         :bigint           default(0), not null
 #  feature_flags_ext_1   :bigint           default(0), not null
+#  flags                 :bigint           default(0), not null
 #  internal_attributes   :jsonb            not null
 #  limits                :jsonb
 #  locale                :integer          default("en")

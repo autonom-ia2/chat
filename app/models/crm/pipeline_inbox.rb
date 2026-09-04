@@ -1,3 +1,35 @@
+# == Schema Information
+#
+# Table name: crm_pipeline_inboxes
+#
+#  id               :bigint           not null, primary key
+#  auto_create_card :boolean          default(FALSE), not null
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  account_id       :bigint           not null
+#  created_by_id    :bigint
+#  default_stage_id :bigint
+#  inbox_id         :bigint
+#  pipeline_id      :bigint           not null
+#
+# Indexes
+#
+#  idx_crm_pipeline_inboxes_unique                        (account_id,pipeline_id,inbox_id) UNIQUE
+#  index_crm_pipeline_inboxes_on_account_id               (account_id)
+#  index_crm_pipeline_inboxes_on_account_id_and_inbox_id  (account_id,inbox_id)
+#  index_crm_pipeline_inboxes_on_created_by_id            (created_by_id)
+#  index_crm_pipeline_inboxes_on_default_stage_id         (default_stage_id)
+#  index_crm_pipeline_inboxes_on_inbox_id                 (inbox_id)
+#  index_crm_pipeline_inboxes_on_pipeline_id              (pipeline_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (created_by_id => users.id)
+#  fk_rails_...  (default_stage_id => crm_pipeline_stages.id)
+#  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
+#  fk_rails_...  (pipeline_id => crm_pipelines.id)
+#
 class Crm::PipelineInbox < ApplicationRecord
   self.table_name = 'crm_pipeline_inboxes'
 

@@ -1,3 +1,35 @@
+# == Schema Information
+#
+# Table name: whatsapp_api_message_templates
+#
+#  id            :bigint           not null, primary key
+#  archived_at   :datetime
+#  body          :text             not null
+#  name          :string           not null
+#  variables     :jsonb            not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  account_id    :bigint           not null
+#  created_by_id :bigint           not null
+#  inbox_id      :bigint
+#  updated_by_id :bigint
+#
+# Indexes
+#
+#  idx_whatsapp_api_templates_active_name                 (account_id,inbox_id,name) UNIQUE WHERE (archived_at IS NULL)
+#  idx_whatsapp_api_templates_inbox                       (account_id,inbox_id,archived_at)
+#  index_whatsapp_api_message_templates_on_account_id     (account_id)
+#  index_whatsapp_api_message_templates_on_created_by_id  (created_by_id)
+#  index_whatsapp_api_message_templates_on_inbox_id       (inbox_id)
+#  index_whatsapp_api_message_templates_on_updated_by_id  (updated_by_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (created_by_id => users.id)
+#  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
+#  fk_rails_...  (updated_by_id => users.id)
+#
 class WhatsappApiMessageTemplate < ApplicationRecord
   belongs_to :account
   belongs_to :inbox

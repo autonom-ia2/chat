@@ -1,3 +1,39 @@
+# == Schema Information
+#
+# Table name: autonomia_prospecting_searches
+#
+#  id                 :bigint           not null, primary key
+#  area_config        :jsonb            not null
+#  area_type          :string           default("radius"), not null
+#  cache_expires_at   :datetime
+#  cache_fingerprint  :string
+#  categories         :jsonb            not null
+#  consumed_api_units :integer          default(0), not null
+#  location           :string
+#  metadata           :jsonb            not null
+#  provider           :string           default("mock"), not null
+#  query              :string           not null
+#  radius             :integer
+#  requested_limit    :integer          default(20), not null
+#  status             :integer          default("pending"), not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  user_id            :bigint
+#
+# Indexes
+#
+#  idx_autonomia_prospecting_searches_acc_area         (account_id,area_type)
+#  idx_autonomia_prospecting_searches_acc_cache_fp     (account_id,cache_fingerprint)
+#  idx_autonomia_prospecting_searches_acc_created      (account_id,created_at)
+#  index_autonomia_prospecting_searches_on_account_id  (account_id)
+#  index_autonomia_prospecting_searches_on_user_id     (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id) ON DELETE => cascade
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
+#
 class Autonomia::Prospecting::Search < ApplicationRecord
   self.table_name = 'autonomia_prospecting_searches'
 

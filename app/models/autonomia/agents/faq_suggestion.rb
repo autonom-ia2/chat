@@ -2,6 +2,36 @@
 # Fica pendente até um administrador aprovar (vira KnowledgeEntry), editar-e-aprovar ou ignorar.
 # `question_hash` = SHA256 da pergunta normalizada: dedupe barato entre sugestões e contra o
 # conhecimento já aprovado (o KnowledgeEntry criado carrega o mesmo hash no metadata).
+# == Schema Information
+#
+# Table name: autonomia_agent_faq_suggestions
+#
+#  id                 :bigint           not null, primary key
+#  answer             :text             not null
+#  question           :text             not null
+#  question_hash      :string           not null
+#  reviewed_at        :datetime
+#  source_message_ids :jsonb            not null
+#  status             :integer          default("pending"), not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  autonomia_agent_id :bigint           not null
+#  conversation_id    :bigint
+#  reviewed_by_id     :bigint
+#
+# Indexes
+#
+#  idx_autonomia_faq_suggestions_account       (account_id)
+#  idx_autonomia_faq_suggestions_agent_hash    (autonomia_agent_id,question_hash)
+#  idx_autonomia_faq_suggestions_agent_status  (autonomia_agent_id,status)
+#  idx_autonomia_faq_suggestions_conversation  (conversation_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (autonomia_agent_id => autonomia_agents.id) ON DELETE => cascade
+#
 class Autonomia::Agents::FaqSuggestion < ApplicationRecord
   self.table_name = 'autonomia_agent_faq_suggestions'
 

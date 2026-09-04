@@ -1,3 +1,32 @@
+# == Schema Information
+#
+# Table name: email_campaign_recipients
+#
+#  id                :bigint           not null, primary key
+#  attempts          :integer          default(0), not null
+#  custom_data       :jsonb            not null
+#  email             :string           not null
+#  last_error        :text
+#  last_event_at     :datetime
+#  name              :string
+#  sent_at           :datetime
+#  status            :integer          default("pending"), not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  email_campaign_id :bigint           not null
+#  ses_message_id    :string
+#
+# Indexes
+#
+#  idx_email_campaign_recipients_campaign_email          (email_campaign_id, lower((email)::text)) UNIQUE
+#  idx_email_campaign_recipients_campaign_status         (email_campaign_id,status)
+#  index_email_campaign_recipients_on_email_campaign_id  (email_campaign_id)
+#  index_email_campaign_recipients_on_ses_message_id     (ses_message_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (email_campaign_id => email_campaigns.id)
+#
 class EmailCampaignRecipient < ApplicationRecord
   belongs_to :email_campaign
 

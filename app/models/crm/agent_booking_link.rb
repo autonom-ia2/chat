@@ -5,6 +5,37 @@
 # never change which seller a booking is attributed to. A booking through this link
 # is owned/hosted by `agent` and lands on `inbox`'s calendar, with availability
 # computed for `agent` (see Crm::Meetings::AvailabilityService).
+# == Schema Information
+#
+# Table name: crm_agent_booking_links
+#
+#  id                 :bigint           not null, primary key
+#  enabled            :boolean          default(TRUE), not null
+#  metadata           :jsonb            not null
+#  slug               :string           not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  agent_id           :bigint           not null
+#  booking_profile_id :bigint           not null
+#  inbox_id           :bigint
+#
+# Indexes
+#
+#  idx_crm_booking_links_profile_agent                  (booking_profile_id,agent_id) UNIQUE
+#  index_crm_agent_booking_links_on_account_id          (account_id)
+#  index_crm_agent_booking_links_on_agent_id            (agent_id)
+#  index_crm_agent_booking_links_on_booking_profile_id  (booking_profile_id)
+#  index_crm_agent_booking_links_on_inbox_id            (inbox_id)
+#  index_crm_agent_booking_links_on_slug                (slug) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (agent_id => users.id)
+#  fk_rails_...  (booking_profile_id => crm_agent_booking_profiles.id)
+#  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
+#
 class Crm::AgentBookingLink < ApplicationRecord
   self.table_name = 'crm_agent_booking_links'
 

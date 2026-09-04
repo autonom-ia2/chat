@@ -1,3 +1,35 @@
+# == Schema Information
+#
+# Table name: autonomia_agent_events
+#
+#  id                      :bigint           not null, primary key
+#  answered_from_knowledge :boolean          default(FALSE), not null
+#  confidence              :float
+#  event_type              :integer          not null
+#  handoff_reason          :string
+#  metadata                :jsonb            not null
+#  model                   :string
+#  used_entry_ids          :jsonb            not null
+#  created_at              :datetime         not null
+#  account_id              :bigint           not null
+#  autonomia_agent_id      :bigint           not null
+#  conversation_id         :bigint
+#  message_id              :bigint
+#
+# Indexes
+#
+#  idx_autonomia_events_agent_created                  (autonomia_agent_id,created_at)
+#  idx_autonomia_events_agent_type                     (autonomia_agent_id,event_type)
+#  idx_autonomia_events_message                        (message_id)
+#  idx_autonomia_events_used_entry_ids                 (used_entry_ids) USING gin
+#  index_autonomia_agent_events_on_account_id          (account_id)
+#  index_autonomia_agent_events_on_autonomia_agent_id  (autonomia_agent_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (autonomia_agent_id => autonomia_agents.id)
+#
 module Autonomia
   module Agents
     # Fase F — evento ADITIVO de operação (replied/handed_off). Imutável (só created_at).

@@ -1,3 +1,29 @@
+# == Schema Information
+#
+# Table name: autonomia_agent_inboxes
+#
+#  id                 :bigint           not null, primary key
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  agent_bot_id       :bigint           not null
+#  autonomia_agent_id :bigint           not null
+#  inbox_id           :bigint
+#
+# Indexes
+#
+#  idx_autonomia_agent_inboxes_on_inbox_uniq            (inbox_id) UNIQUE
+#  index_autonomia_agent_inboxes_on_account_id          (account_id)
+#  index_autonomia_agent_inboxes_on_agent_bot_id        (agent_bot_id)
+#  index_autonomia_agent_inboxes_on_autonomia_agent_id  (autonomia_agent_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (agent_bot_id => agent_bots.id)
+#  fk_rails_...  (autonomia_agent_id => autonomia_agents.id)
+#  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
+#
 module Autonomia
   module Agents
     # Vínculo agente nativo ↔ inbox (Fase C). UNIQUE em inbox_id garante 1 bot por inbox.

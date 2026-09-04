@@ -2,35 +2,66 @@
 #
 # Table name: autonomia_prospecting_leads
 #
-#  id                 :bigint           not null, primary key
-#  address            :string
-#  category           :string
-#  city               :string
-#  country            :string
-#  dedupe_key         :string           not null
-#  discard_reason     :string
-#  latitude           :decimal(10, 6)
-#  longitude          :decimal(10, 6)
-#  metadata           :jsonb            not null
-#  name               :string           not null
-#  phone              :string
-#  provider           :string           default("mock"), not null
-#  rating             :decimal(3, 2)
-#  raw_payload        :jsonb            not null
-#  reviews_count      :integer
-#  state              :string
-#  status             :integer          default("new_lead"), not null
-#  website            :string
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  account_id         :bigint           not null
-#  contact_id         :bigint
-#  crm_card_id        :bigint
-#  prospect_search_id :bigint
-#  provider_place_id  :string
+#  id                      :bigint           not null, primary key
+#  address                 :string
+#  category                :string
+#  city                    :string
+#  country                 :string
+#  decision_confidence     :decimal(3, 2)
+#  decision_instagram      :string
+#  decision_linkedin       :string
+#  decision_name           :string
+#  decision_role           :string
+#  decision_source_url     :string
+#  dedupe_key              :string           not null
+#  discard_reason          :string
+#  enriched_cnpj           :string
+#  enriched_data           :jsonb            not null
+#  enriched_email          :string
+#  enriched_facebook       :string
+#  enriched_instagram      :string
+#  enriched_linkedin       :string
+#  enriched_whatsapp       :string
+#  enrichment_completed_at :datetime
+#  enrichment_error        :string
+#  enrichment_requested_at :datetime
+#  enrichment_source       :string
+#  enrichment_status       :string           default("pending"), not null
+#  enrichment_summary      :text
+#  human_insight           :string
+#  latitude                :decimal(10, 6)
+#  longitude               :decimal(10, 6)
+#  metadata                :jsonb            not null
+#  name                    :string           not null
+#  negative_factors        :jsonb            not null
+#  phone                   :string
+#  priority_position       :integer
+#  priority_score          :decimal(5, 2)
+#  provider                :string           default("mock"), not null
+#  rating                  :decimal(3, 2)
+#  raw_payload             :jsonb            not null
+#  reviews_count           :integer
+#  score                   :decimal(5, 2)
+#  score_breakdown         :jsonb            not null
+#  search_rank             :integer
+#  state                   :string
+#  status                  :integer          default("new_lead"), not null
+#  website                 :string
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  account_id              :bigint           not null
+#  contact_id              :bigint
+#  crm_card_id             :bigint
+#  prospect_search_id      :bigint
+#  provider_place_id       :string
 #
 # Indexes
 #
+#  idx_autonomia_prospecting_leads_account_enriched_at             (account_id,enrichment_completed_at)
+#  idx_autonomia_prospecting_leads_account_enrichment              (account_id,enrichment_status)
+#  idx_autonomia_prospecting_leads_account_priority                (account_id,priority_score)
+#  idx_autonomia_prospecting_leads_account_score                   (account_id,score)
+#  idx_autonomia_prospecting_leads_account_search_rank             (account_id,search_rank)
 #  idx_autonomia_prospecting_leads_provider_place                  (account_id,provider,provider_place_id) UNIQUE WHERE (provider_place_id IS NOT NULL)
 #  index_autonomia_prospecting_leads_on_account_id                 (account_id)
 #  index_autonomia_prospecting_leads_on_account_id_and_dedupe_key  (account_id,dedupe_key) UNIQUE
