@@ -98,7 +98,11 @@ module Autonomia
         def document_text(attachment)
           blob = attachment.file.blob
           source = SourceLike.new(attachment.file, blob.filename.to_s, 'pdf')
-          text = ::Autonomia::Agents::Knowledge::Processors::Pdf.new(source).extract.to_s
+          # `ocr: false` é o que separa este caminho do da base de conhecimento. O OCR rasteriza
+          # página por página a 300 DPI: um escaneado de 5 MB são dezenas de páginas e centenas de
+          # segundos, dentro de um turno que tem 120s de teto e um cliente esperando. Sem camada de
+          # texto, o documento não é lido e o agente pede os dados — que é o que ele já fazia.
+          text = ::Autonomia::Agents::Knowledge::Processors::Pdf.new(source, ocr: false).extract.to_s
           text = text.unicode_normalize(:nfc).strip
           return if text.blank?
 

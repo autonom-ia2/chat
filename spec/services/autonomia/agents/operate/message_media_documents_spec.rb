@@ -101,6 +101,32 @@ RSpec.describe Autonomia::Agents::Operate::MessageMedia do
     expect(text).not_to eq(decomposto)
   end
 
+  # O OCR não tem teto de custo: rasteriza página por página a 300 DPI. Num turno com cliente
+  # esperando e 120s de limite, um escaneado de poucos MB trava o atendimento. A base de
+  # conhecimento continua com OCR — lá roda em job e ninguém espera.
+  it 'never runs OCR in a live conversation' do
+    # Arrange
+    espiao = instance_double(processor, extract: 'texto')
+    allow(processor).to receive(:new).and_return(espiao)
+    message = message_with(file_type: :file)
+
+    # Act
+    extract_for(message)
+
+    # Assert
+    expect(processor).to have_received(:new).with(anything, ocr: false)
+  end
+
+  it 'gives up on a scanned PDF instead of holding the turn' do
+    # Arrange — sem camada de texto e sem OCR, a extração volta vazia. O agente pede os dados,
+    # que é exatamente o que ele fazia antes de existir leitura de PDF: zero regressão.
+    allow(processor).to receive(:new).and_return(instance_double(processor, extract: '   '))
+    message = message_with(file_type: :file)
+
+    # Act / Assert
+    expect(extract_for(message).documents).to be_empty
+  end
+
   it 'caps how many documents one turn carries' do
     # Arrange
     message = create(:message, account: account, conversation: conversation, inbox: inbox)
