@@ -61,14 +61,14 @@ RSpec.describe Ctwa::TrackedLinkAttributor do
       expect(tracked_link.reload.conversations_count).to eq(1)
     end
 
-    it 'does not attribute a tracked link code in a non-first inbound message' do
+    it 'attributes a tracked link code in an existing conversation' do
       create(:message, conversation: conversation, account: account, inbox: inbox, content: 'Mensagem anterior')
       create(:message, conversation: conversation, account: account, inbox: inbox, content: 'Oi #ABC234')
 
       described_class.attribute!(conversation, 'Oi #ABC234')
 
-      expect(conversation.reload.additional_attributes).to be_blank
-      expect(tracked_link.reload.conversations_count).to eq(0)
+      expect(conversation.reload.additional_attributes['campaign']).to include('source_id' => 'link:ABC234')
+      expect(tracked_link.reload.conversations_count).to eq(1)
     end
 
     it 'is a no-op when the message has no code' do
@@ -123,15 +123,15 @@ RSpec.describe Ctwa::TrackedLinkAttributor do
       expect(other_link.reload.conversations_count).to eq(0)
     end
 
-    it 'does not attribute a click token in a non-first inbound message' do
+    it 'attributes a click token in an existing conversation' do
       create(:message, conversation: conversation, account: account, inbox: inbox, content: 'Mensagem anterior')
       create(:message, conversation: conversation, account: account, inbox: inbox, content: "Oi ##{click.token}")
 
       described_class.attribute!(conversation, "Oi ##{click.token}")
 
-      expect(conversation.reload.additional_attributes).to be_blank
-      expect(click.reload.conversation_id).to be_nil
-      expect(tracked_link.reload.conversations_count).to eq(0)
+      expect(conversation.reload.additional_attributes['campaign']).to include('gclid' => 'gclid-123')
+      expect(click.reload.conversation_id).to eq(conversation.id)
+      expect(tracked_link.reload.conversations_count).to eq(1)
     end
 
     it 'does not increment the counter when a claimed click is deduped' do

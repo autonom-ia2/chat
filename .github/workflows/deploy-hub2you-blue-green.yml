@@ -142,6 +142,10 @@ jobs:
               "SIDEBAR_BACKGROUND_COLOR": "#0b1e3f",
               # Modulo Cotacao (Insurance): ligado so na hub2you por enquanto (piloto conta 16).
               "INSURANCE_QUOTING_ENABLED": "true",
+              # Reunioes do CRM (agendador com Meet/Teams + pagina publica de agendamento).
+              # A flag existia so na VPS legada e nao veio na migracao para a AWS: sem ela a
+              # agenda perde o "+ Novo > Reuniao" e o botao "Pagina de agendamento".
+              "CRM_CALENDAR_MEETINGS_ENABLED": "true",
           }
 
           lines = path.read_text().splitlines()

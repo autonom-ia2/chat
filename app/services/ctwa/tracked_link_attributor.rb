@@ -23,9 +23,11 @@ class Ctwa::TrackedLinkAttributor
 
   private
 
+  # O marcador (#CODIGO ou #TOKEN) e intencao explicita: veio do texto pre-preenchido do link.
+  # Nao exigimos que seja a primeira mensagem da conversa — contato recorrente que clica num
+  # link novo tem de ser atribuido igual. Reenvio do mesmo marcador e no-op: o CampaignBuilder
+  # deduplica por source_id e so entao incrementamos o contador do link.
   def attribute_code!(conversation, code)
-    return unless first_inbound_message?(conversation)
-
     link = Ctwa::TrackedLink.for_account(conversation.account).find_by(code: code)
     return if link.blank?
 
@@ -43,8 +45,6 @@ class Ctwa::TrackedLinkAttributor
   end
 
   def attribute_click_token!(conversation, token)
-    return unless first_inbound_message?(conversation)
-
     click = Ctwa::TrackedLinkClick.active
                                   .joins(:tracked_link)
                                   .includes(:tracked_link)
@@ -113,9 +113,5 @@ class Ctwa::TrackedLinkAttributor
     return false if conversation.created_at < INFERRED_CLICK_WINDOW.ago
 
     true
-  end
-
-  def first_inbound_message?(conversation)
-    conversation.messages.incoming.count == 1
   end
 end

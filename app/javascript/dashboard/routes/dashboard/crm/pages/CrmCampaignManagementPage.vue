@@ -370,11 +370,13 @@ const copyTrackedLink = async link => {
   }
 };
 
+// O QR aponta para o link curto (/l/CODIGO), nao direto para o wa.me: e o redirecionamento
+// que conta o clique e captura gclid/utm. QR apontando para o wa.me nunca contabiliza.
 const downloadTrackedLinkQr = async link => {
-  if (!link.wa_link) return;
+  if (!link.short_url) return;
 
   try {
-    const qrDataUrl = await QRCode.toDataURL(link.wa_link, { width: 512 });
+    const qrDataUrl = await QRCode.toDataURL(link.short_url, { width: 512 });
     const anchor = document.createElement('a');
     anchor.href = qrDataUrl;
     anchor.download = `${link.code || 'ctwa-link'}-qr.png`;
@@ -617,7 +619,7 @@ onMounted(() => {
                       outline
                       sm
                       type="button"
-                      :disabled="!link.wa_link"
+                      :disabled="!link.short_url"
                       @click="downloadTrackedLinkQr(link)"
                     />
                     <Button

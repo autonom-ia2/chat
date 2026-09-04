@@ -6,10 +6,12 @@ module EmailCampaigns
     class EventDestinationEnsurer
       DESTINATION_NAME = 'autonomia-sns-events'.freeze
       EVENT_TYPES = %w[DELIVERY BOUNCE COMPLAINT].freeze
+      PUBLISH_SID = 'AllowSESPublish'.freeze
 
       def perform
         EmailCampaigns::Ses::ConfigurationSetEnsurer.new.perform
         topic_arn = ensure_topic
+        allow_ses_publish(topic_arn)
         subscribe_webhook(topic_arn)
         put_event_destination(topic_arn)
         topic_arn
@@ -27,6 +29,37 @@ module EmailCampaigns
 
       def ensure_topic
         sns.create_topic(name: EmailCampaigns::Sns::Config.topic_name).topic_arn
+      end
+
+      # Without this statement SES is denied on Publish and every Delivery/Bounce/Complaint is
+      # dropped silently — the topic exists, the destination exists, and no event ever arrives.
+      # Merged into the existing policy (never replaced) so the topic keeps its owner statement.
+      def allow_ses_publish(topic_arn)
+        policy = current_policy(topic_arn)
+        statements = Array(policy['Statement'])
+        return if statements.any? { |statement| statement['Sid'] == PUBLISH_SID }
+
+        policy['Version'] ||= '2012-10-17'
+        policy['Statement'] = statements + [publish_statement(topic_arn)]
+        sns.set_topic_attributes(topic_arn: topic_arn, attribute_name: 'Policy', attribute_value: policy.to_json)
+      end
+
+      def current_policy(topic_arn)
+        raw = sns.get_topic_attributes(topic_arn: topic_arn).attributes['Policy']
+        JSON.parse(raw.to_s)
+      rescue JSON::ParserError
+        {}
+      end
+
+      def publish_statement(topic_arn)
+        {
+          'Sid' => PUBLISH_SID,
+          'Effect' => 'Allow',
+          'Principal' => { 'Service' => 'ses.amazonaws.com' },
+          'Action' => 'sns:Publish',
+          'Resource' => topic_arn,
+          'Condition' => { 'StringEquals' => { 'AWS:SourceAccount' => topic_arn.split(':')[4] } }
+        }
       end
 
       def subscribe_webhook(topic_arn)
