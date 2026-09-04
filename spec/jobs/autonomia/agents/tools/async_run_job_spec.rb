@@ -124,7 +124,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(bot_contents).to eq(%w[parcial final])
-      expect(async_attribute('autonomia_async_token')).to eq([run.delivery_token(0), run.delivery_token(1)])
+      expect(async_attribute('autonomia_async_token'))
+        .to eq([run.delivery_token('parcial'), run.delivery_token('final')])
       expect(async_attribute('autonomia_async_sequence')).to eq([0, 1])
       expect(run.reload).to have_attributes(status: 'done', sequence: 2)
     end
@@ -140,6 +141,51 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Assert
       expect(bot_contents).to eq(['não consegui concluir a consulta'])
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'portal_indisponivel')
+    end
+  end
+
+  # As três guardas que a revisão adversarial trouxe (#313). Cada uma entrega mensagem errada ou
+  # custo real ao cliente quando falta.
+  describe 'outcome guards' do
+    it 'does not contradict a delivered quote with the failure text' do
+      # Arrange — a consulta entrega o resultado E fecha na mesma passada
+      register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: ['3 opções: R$ 1.200'])))
+      run = submitted_run
+
+      # Act
+      described_class.new.perform(run.id, 1)
+
+      # Assert — só a cotação; nada de "não consegui concluir" ao lado dela
+      expect(bot_contents).to eq(['3 opções: R$ 1.200'])
+      expect(run.reload).to have_attributes(status: 'done', delivered_count: 1)
+    end
+
+    it 'closes with an honest message when the waiting notice was the only thing sent' do
+      # Arrange — avisou o cliente e terminou sem nenhuma entrega
+      register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: [])))
+      run = submitted_run(notify_customer: true)
+
+      # Act
+      described_class.new.perform(run.id, 1)
+
+      # Assert — o aviso avançou a sequência, mas não conta como entrega: o desfecho tem de sair
+      expect(bot_contents).to eq(['estou consultando agora', 'não consegui concluir a consulta'])
+      expect(run.reload).to have_attributes(status: 'done', delivered_count: 0)
+    end
+
+    it 'stops calling the portal when the operator turns the agent off mid-flight' do
+      # Arrange — execução viva, agente desligado depois do disparo
+      register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: ['tarde demais'])))
+      run = submitted_run
+      agent.update!(enabled: false)
+
+      # Act
+      described_class.new.perform(run.id, 1)
+
+      # Assert — nada publicado, nada consultado, execução barrada
+      expect(bot_contents).to be_empty
+      expect(run.reload).to have_attributes(status: 'blocked', failure_code: 'nao_autorizado')
+      expect(described_class).not_to have_been_enqueued
     end
   end
 

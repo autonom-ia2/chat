@@ -36,14 +36,11 @@ class Autonomia::Agents::Tools::AsyncPublisher
     body = text.to_s.strip
     return Result.new(status: :skipped) if body.blank?
 
-    conversation = @run.conversation
+    conversation = authorized_conversation
     return Result.new(status: :blocked) if conversation.blank?
-
-    agent_inbox = ::Autonomia::Agents::Operate.authorized_agent_inbox(conversation.reload)
-    return Result.new(status: :blocked) unless same_binding?(agent_inbox)
     return Result.new(status: :deferred) if wait_for_chain && humanized_chain_open?(conversation)
 
-    post(conversation, agent_inbox, body)
+    post(conversation, authorized_inbox(conversation), body)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] publish failed run=#{@run.id} #{e.class}")
     Result.new(status: :blocked)
@@ -57,6 +54,27 @@ class Autonomia::Agents::Tools::AsyncPublisher
   end
 
   private
+
+  # A conversa em que esta execução AINDA pode publicar, ou nil.
+  #
+  # Execução morta (supersedida por um pedido novo, descartada com o turno, ou barrada pelo gate da
+  # conta) não publica: uma entrega adiada de uma cotação que o cliente já corrigiu sairia até 90s
+  # depois, e ele receberia dois preços conflitantes. NÃO basta exigir `running?` — a entrega final
+  # legítima é publicada e a linha fechada logo em seguida, então uma republicação adiada
+  # encontraria a linha já `done`.
+  def authorized_conversation
+    return if @run.reload.dead?
+
+    conversation = @run.conversation
+    return if conversation.blank?
+    return unless same_binding?(authorized_inbox(conversation))
+
+    conversation
+  end
+
+  def authorized_inbox(conversation)
+    @authorized_inbox ||= ::Autonomia::Agents::Operate.authorized_agent_inbox(conversation.reload)
+  end
 
   # O vínculo autorizado agora é o MESMO que aceitou a execução? A conversa pode ter mudado de caixa
   # (ou o vínculo ter sido recriado) entre o disparo e a entrega — nesse caso a cotação não é mais
@@ -72,7 +90,9 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # apareceu, ela não terminou.
   def humanized_chain_open?(conversation)
     expected = @run.expected_chunks.to_i
-    return false if expected < 2 || @run.origin_message_id.blank?
+    # `expected == 1` TAMBÉM espera: um pedaço único não foi postado, está agendado com atraso de até
+    # 15s. Só `0` (caminho clássico e de voz, que postam de forma síncrona antes do despacho) dispensa.
+    return false if expected < 1 || @run.origin_message_id.blank?
 
     !chunk_posted?(conversation, expected - 1)
   end
@@ -84,25 +104,34 @@ class Autonomia::Agents::Tools::AsyncPublisher
                 .any? { |message| message.content_attributes.to_h['autonomia_chunk_token'].to_s == token }
   end
 
-  # Publica sob lock da conversa, com idempotência pelo token da entrega — retry do Sidekiq encontra
-  # a mensagem já postada e não duplica. Sem `return` dentro do bloco (dispararia ROLLBACK e
-  # descartaria a mensagem recém-criada), como no resto do operate.
+  # Publica sob lock da conversa, com idempotência pelo CONTEÚDO da entrega — retry do Sidekiq, ou
+  # consulta que reemite a mesma lista, encontra a mensagem já postada e não duplica. Sem `return`
+  # dentro do bloco (dispararia ROLLBACK e descartaria a mensagem recém-criada), como no operate.
+  #
+  # A leitura da sequência e o avanço ficam DENTRO do lock: dois
+  # publicadores concorrentes (duas entregas parciais adiadas com o mesmo atraso, duas threads da
+  # fila) liam o mesmo número, e o segundo via a posição ocupada, descartava o texto e ainda
+  # devolvia sucesso — a segunda cotação sumia sem ninguém notar.
   def post(conversation, agent_inbox, body)
-    sequence = @run.sequence
     posted = nil
     conversation.with_lock do
-      posted = if delivery_posted?(conversation, sequence)
-                 :duplicate
-               else
-                 build_message!(conversation, agent_inbox, sequence, body)
-               end
+      @run.reload
+      sequence = @run.sequence
+      if delivery_posted?(conversation, body)
+        posted = :duplicate
+      else
+        posted = build_message!(conversation, agent_inbox, sequence, body)
+        # Só avança quando uma mensagem NOVA entrou: como a idempotência é pelo conteúdo, o
+        # duplicado não ocupa posição nenhuma, e avançar nele faria o contador mentir sobre
+        # quantas mensagens a execução publicou.
+        @run.advance_sequence!(sequence)
+      end
     end
-    @run.advance_sequence!(sequence)
     Result.new(status: :published, message: (posted unless posted == :duplicate))
   end
 
-  def delivery_posted?(conversation, sequence)
-    token = @run.delivery_token(sequence)
+  def delivery_posted?(conversation, body)
+    token = @run.delivery_token(body)
     conversation.messages.where(sender_type: 'AgentBot')
                 .where('content_attributes::text LIKE ?', "%#{token}%")
                 .any? { |message| message.content_attributes.to_h['autonomia_async_token'].to_s == token }
@@ -119,7 +148,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
         sender_id: agent_inbox.agent_bot_id, private: conversation.assignee_id.present?,
         content_attributes: {
           autonomia_agent_id: agent_inbox.agent.id,
-          autonomia_async_token: @run.delivery_token(sequence),
+          autonomia_async_token: @run.delivery_token(body),
           autonomia_async_slug: @run.slug,
           autonomia_async_sequence: sequence
         }

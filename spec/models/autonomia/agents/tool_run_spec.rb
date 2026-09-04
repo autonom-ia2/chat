@@ -192,16 +192,49 @@ RSpec.describe Autonomia::Agents::ToolRun do
     end
   end
 
+  # O token vem do CONTEÚDO, não da posição: uma consulta que reemita a mesma entrega tem de bater
+  # com a mensagem já publicada, mesmo que a sequência tenha andado.
   describe '#delivery_token' do
-    it 'stamps the current sequence and accepts an explicit index' do
+    it 'derives the token from the text and ignores the sequence' do
+      # Arrange
+      run = promote(open_run)
+      token = run.delivery_token('Encontrei 3 opções')
+
+      # Act
+      run.advance_sequence!(0)
+
+      # Assert
+      expect(token).to start_with("#{run.execution_key}:")
+      expect(run.delivery_token('Encontrei 3 opções')).to eq(token)
+      expect(run.delivery_token('outro texto')).not_to eq(token)
+    end
+  end
+
+  describe '#record_delivery!' do
+    it 'counts only tool deliveries, so the outcome knows whether the customer got a result' do
       # Arrange
       run = promote(open_run)
 
+      # Act
+      run.record_delivery!
+      run.advance_sequence!(run.sequence)
+
+      # Assert — a mensagem publicada moveu a sequência, mas só a ENTREGA move o contador
+      expect(run.reload).to have_attributes(delivered_count: 1, sequence: 1)
+    end
+  end
+
+  describe '#dead?' do
+    it 'is true only for statuses that must never publish again' do
+      # Arrange
+      run = open_run
+
       # Act / Assert
-      expect(run.delivery_token).to eq("#{run.execution_key}:0")
-      run.advance_sequence!(0)
-      expect(run.delivery_token).to eq("#{run.execution_key}:1")
-      expect(run.delivery_token(7)).to eq("#{run.execution_key}:7")
+      expect(run).not_to be_dead
+      run.update!(status: 'superseded')
+      expect(run).to be_dead
+      run.update!(status: 'done')
+      expect(run).not_to be_dead
     end
   end
 end

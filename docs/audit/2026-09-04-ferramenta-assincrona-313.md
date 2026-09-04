@@ -25,6 +25,7 @@ Peças:
 | Publicação na conversa | `app/services/autonomia/agents/tools/async_publisher.rb` |
 | Motor (submete, consulta, publica) | `app/jobs/autonomia/agents/tools/async_run_job.rb` |
 | Republicação adiada | `app/jobs/autonomia/agents/tools/async_publish_job.rb` |
+| Varredor de execução abandonada | `app/jobs/autonomia/agents/tools/reap_stale_runs_job.rb` |
 | Autorização sem posse do turno | `app/services/autonomia/agents/operate.rb` |
 
 ## Divergências do desenho publicado na issue, e por quê
@@ -56,6 +57,40 @@ Peças:
 - Quando o turno fica em silêncio, **o código publica o aviso de espera** — o aviso não depende de o
   modelo lembrar de dar.
 - Uma chamada nova **descarta** a anterior para a mesma ferramenta na mesma conversa.
+
+## Correções vindas da revisão adversarial (4 lentes + fase de refutação)
+
+Nenhuma era incidente hoje — não há ferramenta declarando `async?` ainda. Todas explodiriam na Onda 2.
+
+1. **Desfecho contraditório.** `finish_done` usava `sequence.zero?` como "não entreguei nada", mas o
+   aviso de espera já tinha avançado o contador e uma entrega ADIADA ainda não. O cliente receberia
+   a cotação e "não consegui concluir" lado a lado — ou, do outro lado, ficaria sem desfecho nenhum.
+   Coluna `delivered_count`, que só conta entrega da ferramenta.
+2. **Entrega supersedida publicada.** O `AsyncPublishJob` só checava se a linha existia. Uma entrega
+   adiada de uma cotação já corrigida pelo cliente saía até 90s depois. Guarda por `dead?` dentro do
+   publicador — e NÃO por `running?`, que derrubaria a entrega final legítima (a linha é fechada
+   logo depois de publicar).
+3. **Kill-switch não parava o portal.** O job validava prazo e ferramenta, nunca o gate da conta.
+   Desligar o agente no meio do voo não parava as chamadas — até 60 tentativas, cada uma uma
+   cotação real. Agora `Operate.authorized_agent_inbox` é checado antes de cada passo.
+4. **`expected_chunks == 1` ultrapassava a resposta do turno.** Um pedaço único não foi postado:
+   está agendado com atraso de até 15s. A espera passou a valer para `>= 1`.
+5. **Token de entrega era posicional.** `execution_key:sequence` identifica ONDE a mensagem entrou,
+   não O QUE ela diz — uma consulta que reemitisse a mesma lista republicaria o texto noutro índice.
+   Agora é `execution_key:sha256(texto)[0,16]`.
+6. **Corrida entre publicadores.** A sequência era lida fora do lock e avançada depois dele: dois
+   publicadores concorrentes liam o mesmo número e o segundo descartava o texto devolvendo sucesso.
+   Leitura e avanço foram para dentro do lock.
+7. **`pending` órfã matava o retry do turno.** Worker morto entre o aceite e o despacho (um deploy
+   basta) deixava a linha parada, e ela bloqueava a nova tentativa — a cotação nunca aconteceria.
+   `opened_for_turn?` passou a ignorar `pending`/`discarded`/`blocked`.
+8. **Despacho parcial deixava execução presa.** Rescue por execução no dispatcher + varredor
+   (`ReapStaleRunsJob`, a cada 10 min) que fecha o que passou do prazo e avisa o cliente uma vez.
+   O varredor NÃO retoma a execução: retomar significaria cotar de novo no portal.
+
+Refutado e não alterado: o texto da entrega no payload do Sidekiq. É a prática que já está na `main`
+(`ChunkedDeliveryJob` carrega a resposta inteira ao cliente pelo Redis) — melhoria legítima, mas não
+é exposição nova desta PR. Os ARGUMENTOS, esses, ficam na linha.
 
 ## Limites conhecidos
 

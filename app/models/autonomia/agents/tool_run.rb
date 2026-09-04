@@ -5,6 +5,7 @@
 #  id                 :bigint           not null, primary key
 #  arguments          :jsonb            not null
 #  attempts           :integer          default(0), not null
+#  delivered_count    :integer          default(0), not null
 #  expected_chunks    :integer          default(0), not null
 #  expires_at         :datetime
 #  failure_code       :string
@@ -98,7 +99,11 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   def self.opened_for_turn?(conversation_id, slug, origin_message_id)
     return false if origin_message_id.blank?
 
-    for_conversation(conversation_id).exists?(slug: slug, origin_message_id: origin_message_id)
+    # `pending` órfã NÃO conta: se o worker morreu entre o aceite e o despacho (um deploy basta —
+    # o Sidekiq desta instalação tem `:timeout: 25`), a linha ficou parada e ninguém vai executá-la.
+    # Contá-la faria o retry do turno recusar a ferramenta e a cotação nunca aconteceria.
+    for_conversation(conversation_id).where.not(status: %w[pending discarded blocked])
+                                     .exists?(slug: slug, origin_message_id: origin_message_id)
   end
 
   def active?
@@ -113,10 +118,15 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     expires_at.present? && Time.current > expires_at
   end
 
-  # Token que carimba a mensagem publicada. É por ele que a publicação é idempotente: um retry do
-  # Sidekiq encontra a mensagem com o mesmo token e não posta de novo.
-  def delivery_token(index = sequence)
-    "#{execution_key}:#{index}"
+  # Token que carimba a mensagem publicada, derivado do CONTEÚDO. É por ele que a publicação é
+  # idempotente: um retry do Sidekiq, ou uma consulta que reemite a mesma entrega, encontra a
+  # mensagem já postada e não posta de novo.
+  #
+  # Por conteúdo e não por posição: `sequence` identifica ONDE a mensagem entrou, não O QUE ela diz.
+  # Uma nova consulta que devolva a mesma lista (o contrato de `Progress` não exige que as entregas
+  # sejam incrementais) republicaria o mesmo texto num índice diferente.
+  def delivery_token(text)
+    "#{execution_key}:#{Digest::SHA256.hexdigest(text.to_s)[0, 16]}"
   end
 
   # pending -> running. Guardado pelo status para que um despacho repetido (retry do turno) não
@@ -141,7 +151,21 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     guarded_update('running', **attrs)
   end
 
-  # Avança o contador de entregas. Otimista no valor atual: se dois publicadores correrem, só um
+  # Registra que uma ENTREGA DA FERRAMENTA foi aceita para publicação (publicada ou adiada). O aviso
+  # de espera e a frase de falha NÃO passam por aqui — é o que permite saber, no fim, se o cliente
+  # recebeu algum resultado de verdade.
+  def record_delivery!
+    self.class.where(id: id).update_all('delivered_count = delivered_count + 1, updated_at = NOW()') # rubocop:disable Rails/SkipsModelValidations
+    reload
+  end
+
+  # Já morreu: supersedida por um pedido novo, descartada com o turno, ou barrada pelo gate da conta.
+  # Publicar a partir de uma destas entregaria ao cliente o resultado de um pedido que ele corrigiu.
+  def dead?
+    %w[superseded discarded blocked].include?(status)
+  end
+
+  # Avança o contador de mensagens. Otimista no valor atual: se dois publicadores correrem, só um
   # avança e o outro relê — evita duas mensagens com o mesmo número de sequência.
   def advance_sequence!(from)
     updated = self.class.where(id: id, sequence: from)

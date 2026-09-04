@@ -63,11 +63,48 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     end
   end
 
+  # Guardas que a revisão adversarial trouxe (#313).
+  describe 'when the run is no longer the live one' do
+    it 'refuses to publish a superseded run, so the customer never gets the corrected quote twice' do
+      # Arrange — o cliente corrigiu o pedido e a execução antiga foi substituída
+      promote
+      run.update!(status: 'superseded')
+
+      # Act
+      result = described_class.new(run: run).publish('cotação do carro ERRADO: R$ 1.200')
+
+      # Assert
+      expect(result).to be_blocked
+      expect(bot_messages).to be_empty
+    end
+  end
+
+  # Um pedaço ÚNICO também não foi postado: está agendado com atraso de até 15s. Publicar sem esperar
+  # entregaria a cotação antes da frase que a promete.
+  describe 'ordering against a single-chunk humanized reply' do
+    it 'waits for the only chunk of the turn before publishing' do
+      # Arrange
+      promote(origin_message_id: 4242, expected_chunks: 1)
+
+      # Act
+      before_chunk = described_class.new(run: run).publish('cotação pronta')
+      create(:message, account: account, conversation: conversation, message_type: :outgoing,
+                       sender: agent_bot, content: 'deixa eu consultar aqui',
+                       content_attributes: { 'autonomia_chunk_token' => '4242:0' })
+      after_chunk = described_class.new(run: run).publish('cotação pronta')
+
+      # Assert
+      expect(before_chunk).to be_deferred
+      expect(after_chunk).to be_published
+      expect(bot_messages.order(:id).last.content).to eq('cotação pronta')
+    end
+  end
+
   describe 'publishing the delivery' do
     it 'posts an outgoing AgentBot message stamped with the delivery token and advances the sequence' do
       # Arrange
       promote
-      token = run.delivery_token(0)
+      token = run.delivery_token('encontrei 3 opções de cotação')
 
       # Act
       result = described_class.new(run: run).publish('encontrei 3 opções de cotação')

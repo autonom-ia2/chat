@@ -504,6 +504,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_160000) do
     t.jsonb "arguments", default: {}, null: false
     t.jsonb "handle", default: {}, null: false
     t.integer "sequence", default: 0, null: false
+    t.integer "delivered_count", default: 0, null: false
     t.integer "attempts", default: 0, null: false
     t.bigint "origin_message_id"
     t.integer "expected_chunks", default: 0, null: false

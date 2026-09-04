@@ -31,21 +31,29 @@ class CreateAutonomiaAgentToolRuns < ActiveRecord::Migration[7.2]
       # O que a ferramenta devolveu do `start` (ex.: id da cotação no portal). Nunca credencial —
       # a ferramenta resolve a conexão sozinha a cada consulta.
       t.jsonb :handle, null: false, default: {}
-      # Quantas entregas já foram publicadas. Também é o índice da próxima.
-      t.integer :sequence, null: false, default: 0
-      t.integer :attempts, null: false, default: 0
-      # Mensagem incoming que originou o turno + quantos pedaços a resposta daquele turno vai
-      # entregar. Serve para a entrega assíncrona NÃO se intercalar no meio da cadeia humanizada.
-      t.bigint :origin_message_id
-      t.integer :expected_chunks, null: false, default: 0
-      # O turno ficou em silêncio (sinal de silêncio, falha de IA, porta de engajamento)? Então quem
-      # avisa o cliente de que a consulta começou é o job, não o modelo.
-      t.boolean :notify_customer, null: false, default: false
-      # Teto de tempo de parede. É o que sobrevive a re-enfileiramento perdido, diferente da contagem.
-      t.datetime :expires_at
-      t.string :failure_code
+      progress_columns(t)
       t.timestamps
     end
+  end
+
+  def progress_columns(table)
+    # Quantas mensagens esta execução já publicou. Só ordena/numera.
+    table.integer :sequence, null: false, default: 0
+    # Quantas ENTREGAS DA FERRAMENTA já saíram (nem o aviso de espera nem a frase de falha contam).
+    # É por isto que "terminou sem entregar nada" não pode ser lido do `sequence`: o aviso de espera
+    # já teria avançado o contador, e uma entrega ADIADA ainda não o avançou.
+    table.integer :delivered_count, null: false, default: 0
+    table.integer :attempts, null: false, default: 0
+    # Mensagem incoming que originou o turno + quantos pedaços a resposta daquele turno vai entregar.
+    # Serve para a entrega assíncrona NÃO se intercalar no meio da cadeia humanizada.
+    table.bigint :origin_message_id
+    table.integer :expected_chunks, null: false, default: 0
+    # O turno ficou em silêncio (sinal de silêncio, falha de IA, porta de engajamento)? Então quem
+    # avisa o cliente de que a consulta começou é o job, não o modelo.
+    table.boolean :notify_customer, null: false, default: false
+    # Teto de tempo de parede. É o que sobrevive a re-enfileiramento perdido, diferente da contagem.
+    table.datetime :expires_at
+    table.string :failure_code
   end
 
   def add_indexes

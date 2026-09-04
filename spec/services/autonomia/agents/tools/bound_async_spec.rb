@@ -31,13 +31,14 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
   # Retry do turno x pedido novo (#313). O settle do ReplyJob pode reexecutar e refazer a chamada ao
   # modelo; sem a chave da mensagem de origem, a segunda passada abriria OUTRA cotação no portal.
   describe '#execute across turns' do
-    it 'refuses a second run for the same origin message, so a turn retry does not re-quote' do
-      # Arrange
+    it 'refuses a second run for the same origin message once the first one is really running' do
+      # Arrange — a execução do turno original foi DESPACHADA (é a que está falando com o portal)
       turn = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox,
                                                     origin_message_id: 77)
       bound.execute(call, delivery: turn)
+      turn.runs.first.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
 
-      # Act — mesmo turno, mesma mensagem de origem
+      # Act — o settle do ReplyJob reexecutou e o modelo pediu a mesma ferramenta de novo
       retry_turn = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox,
                                                           origin_message_id: 77)
       output = bound.execute(call, delivery: retry_turn)
@@ -46,6 +47,25 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(JSON.parse(output)).to eq('error' => 'execucao_ja_aberta_neste_turno')
       expect(runs.where(conversation_id: conversation.id).count).to eq(1)
       expect(retry_turn.runs).to be_empty
+    end
+
+    # A `pending` órfã é o rastro de um turno cujo worker morreu antes de despachar (um deploy basta).
+    # Se ela bloqueasse o retry, a cotação nunca aconteceria — o cliente esperaria para sempre.
+    it 'lets the turn retry through when the first run was never dispatched' do
+      # Arrange — aceita e NÃO promove: exatamente o que sobra de um worker morto no meio
+      turn = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox,
+                                                    origin_message_id: 77)
+      bound.execute(call, delivery: turn)
+
+      # Act
+      retry_turn = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox,
+                                                          origin_message_id: 77)
+      output = bound.execute(call, delivery: retry_turn)
+
+      # Assert — a órfã é supersedida e a nova assume; continua UMA execução viva
+      expect(output).to eq(tool.accepted_message)
+      expect(turn.runs.first.reload.status).to eq('superseded')
+      expect(runs.where(conversation_id: conversation.id).active.count).to eq(1)
     end
 
     it 'supersedes the live run when a new customer message asks again' do

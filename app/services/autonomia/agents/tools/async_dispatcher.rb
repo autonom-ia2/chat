@@ -28,15 +28,22 @@ class Autonomia::Agents::Tools::AsyncDispatcher
     return 0 if runs.empty?
 
     deadline = AsyncConfig.deadline_seconds_for(@agent).from_now
-    runs.count do |run|
-      promoted = run.promote!(expected_chunks: expected_chunks, notify_customer: !replied,
-                              expires_at: deadline)
-      ::Autonomia::Agents::Tools::AsyncRunJob.perform_later(run.id, 0) if promoted
-      promoted
-    end
+    runs.count { |run| promote_and_enqueue(run, replied, expected_chunks, deadline) }
+  end
+
+  # Rescue POR EXECUÇÃO: uma falha ao enfileirar (Redis fora) não pode deixar as demais paradas em
+  # `pending` para sempre. A que falhou é fechada aqui mesmo — uma linha `running` sem job é uma
+  # cotação que o cliente espera e ninguém vai fazer.
+  def promote_and_enqueue(run, replied, expected_chunks, deadline)
+    return false unless run.promote!(expected_chunks: expected_chunks, notify_customer: !replied,
+                                     expires_at: deadline)
+
+    ::Autonomia::Agents::Tools::AsyncRunJob.perform_later(run.id, 0)
+    true
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][tool][async] dispatch failed agent=#{@agent&.id} #{e.class}")
-    0
+    Rails.logger.warn("[autonomia][tool][async] enqueue failed run=#{run.id} #{e.class}")
+    run.finish!('failed', failure_code: 'dispatch_failed')
+    false
   end
 
   # O turno morreu antes de entregar qualquer coisa: descarta o que foi aceito, sem chamar o portal.
