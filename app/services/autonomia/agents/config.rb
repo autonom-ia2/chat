@@ -139,7 +139,11 @@ module Autonomia
       # tabela de coberturas com L.M.I. e franquia coluna a coluna — mais Código FIPE, Renavam e os
       # CEPs de pernoite e circulação separados. Zero caractere corrompido. Por isso texto basta.
       DOCUMENT_CONTENT_TYPES = %w[application/pdf].freeze
-      MAX_DOCUMENT_BYTES = 10.megabytes
+      # 5 MB, mesmo teto das imagens. É generoso para o caso real (a apólice medida tem 17 KB) e
+      # limita o pior caso, que é PDF ESCANEADO: sem camada de texto, o processor cai em OCR e
+      # rasteriza página por página a 300 DPI. O tempo cresce com o número de páginas, e o corte de
+      # caracteres só age DEPOIS da extração — o teto de bytes é o que segura antes.
+      MAX_DOCUMENT_BYTES = 5.megabytes
       MAX_DOCUMENTS_PER_MESSAGE = 2
       # Teto de texto POR documento no prompt. Uma apólice de auto dá ~13 mil chars; o teto acomoda
       # apólice longa sem deixar um manual de 300 páginas inflar o turno.
