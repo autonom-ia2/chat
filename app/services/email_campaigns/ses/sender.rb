@@ -14,12 +14,19 @@ module EmailCampaigns
         response = @client.send_email(
           from: resolve_from(from_email), to: to, subject: subject,
           html_body: html_body, text_body: text_body, reply_to: reply_to,
-          configuration_set: @identity.ses_configuration_set, headers: headers
+          configuration_set: configuration_set_name, headers: headers
         )
         response['MessageId']
       end
 
       private
+
+      # Identities provisionadas antes do campo existir ficaram com ses_configuration_set nulo e
+      # passaram a enviar SEM configuration set — o SES entao nao publica Delivery/Bounce/
+      # Complaint para lugar nenhum. O campo e um override; o default do sistema e a fonte.
+      def configuration_set_name
+        @identity.ses_configuration_set.presence || EmailCampaigns::Config.configuration_set_name
+      end
 
       def resolve_from(from_email)
         from_email.presence || @identity.from_email.presence || "no-reply@#{@identity.domain}"
