@@ -34,7 +34,7 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
         @kind = kind
       end
 
-      def connection_status(**) = raise(Autonomia::Insurance::Connector::Error.new(@kind, 'boom'))
+      def open_session(**) = raise(Autonomia::Insurance::Connector::Error.new(@kind, 'boom'))
     end
     record = connection
     expect(described_class.new(record, connector: stub.new(:timeout)).call.status).to eq('offline')
@@ -46,6 +46,11 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
       def initialize(payload)
         super()
         @payload = payload
+      end
+
+      # A sessão abre normalmente; o payload esquisito vem do status, que é onde o Sync valida.
+      def open_session(**)
+        { 'platform' => 'agger', 'data' => { 'token' => 'x' }, 'expires_at' => 3.hours.from_now.utc.iso8601 }
       end
 
       def connection_status(**)
@@ -65,7 +70,7 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
 
   it 'keeps e-mails and tokens out of last_error' do
     leaky = Class.new(Autonomia::Insurance::Connector::Client) do
-      def connection_status(**)
+      def open_session(**)
         raise Autonomia::Insurance::Connector::Error.new(
           :auth_required,
           'auth failed for corretora@exemplo.com.br token eyJhbGciOiJIUzI1NiJ9abcdefghijklmnopqrstuvwxyz'

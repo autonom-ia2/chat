@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_04_160000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -584,6 +584,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_160000) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "session_payload"
     t.index ["account_id", "provider"], name: "idx_autonomia_insurance_connections_account_provider", unique: true
   end
 

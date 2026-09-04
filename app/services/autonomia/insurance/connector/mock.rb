@@ -3,10 +3,22 @@
 # para o fluxo de erro ser testável de ponta a ponta na UI.
 # Superclasse qualificada: na forma compacta o escopo léxico é o topo e `Base` seria o módulo global ::Base.
 class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::Client
-  def connection_status(provider:, username:, password:)
+  # Única operação que consome credencial, igual ao adapter real.
+  def open_session(provider:, username:, password:)
     raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'credentials missing') if username.blank? || password.blank?
     raise ::Autonomia::Insurance::Connector::Error.new(:auth_required, 'invalid credentials') if password == 'invalid'
 
+    {
+      'platform' => provider,
+      'data' => { 'aggregatorToken' => 'mock-aggregator-token', 'multicalculoToken' => 'mock-multicalculo-token' },
+      'expires_at' => 3.hours.from_now.utc.iso8601,
+      'account_label' => 'CORRETORA DE TESTE (mock)',
+      'dropped_previous_session' => false
+    }
+  end
+
+  def connection_status(provider:, session:)
+    require_session!(session)
     {
       'platform' => provider,
       'status' => 'ready',
@@ -16,12 +28,19 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     }
   end
 
-  def capabilities(provider:, username:, password:)
-    connection_status(provider: provider, username: username, password: password)
+  def capabilities(provider:, session:)
+    require_session!(session)
     { 'platform' => provider, 'scanned_at' => Time.current.utc.iso8601, 'products' => products }
   end
 
   private
+
+  # Espelha o adapter real: operação sem sessão é recusada em vez de abrir uma por conta própria.
+  def require_session!(session)
+    return if session.is_a?(Hash) && session.present?
+
+    raise ::Autonomia::Insurance::Connector::Error.new(:auth_required, 'session missing')
+  end
 
   def products
     [

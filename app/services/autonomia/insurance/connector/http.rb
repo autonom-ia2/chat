@@ -23,20 +23,27 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     504 => :timeout
   }.freeze
 
-  def connection_status(provider:, username:, password:)
-    invoke("/v1/#{provider}/connection", username: username, password: password)
+  # ÚNICA operação que leva credencial. As demais viajam com a sessão que ela devolve — o portal
+  # aceita uma sessão viva por login, e abrir outra invalida a anterior, inclusive a de uma cotação
+  # em andamento.
+  def open_session(provider:, username:, password:)
+    invoke("/v1/#{provider}/session", { username: username, password: password })
   end
 
-  def capabilities(provider:, username:, password:)
-    invoke("/v1/#{provider}/capabilities", username: username, password: password)
+  def connection_status(provider:, session:)
+    invoke("/v1/#{provider}/connection", { session: session })
+  end
+
+  def capabilities(provider:, session:)
+    invoke("/v1/#{provider}/capabilities", { session: session })
   end
 
   private
 
-  def invoke(path, username:, password:)
+  def invoke(path, payload)
     raise error(:config, 'INSURANCE_CONNECTOR_FUNCTION ausente') if function_name.blank?
 
-    response = perform(build_event(path, username, password))
+    response = perform(build_event(path, payload))
     parse(response, path)
   rescue Autonomia::Insurance::Connector::Error
     raise
@@ -48,12 +55,12 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   end
 
   # Evento no formato Function URL (payload v2) — o mesmo handler serve os dois caminhos.
-  def build_event(path, username, password)
+  def build_event(path, payload)
     {
       rawPath: path,
       requestContext: { http: { method: 'POST', path: path } },
       headers: { 'x-service-token' => service_token }.compact,
-      body: { username: username, password: password }.to_json
+      body: payload.to_json
     }.to_json
   end
 
