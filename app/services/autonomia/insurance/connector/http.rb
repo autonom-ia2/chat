@@ -38,6 +38,18 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     invoke("/v1/#{provider}/capabilities", { session: session })
   end
 
+  def quote_start(provider:, session:, product:, input:)
+    invoke("/v1/#{provider}/quote/start", { session: session, product: product, input: input })
+  end
+
+  def quote_result(provider:, session:, quote_id:)
+    invoke("/v1/#{provider}/quote/result", { session: session, quoteId: quote_id })
+  end
+
+  def quote_proposal(provider:, session:, quote_id:)
+    invoke("/v1/#{provider}/quote/proposal", { session: session, quoteId: quote_id })
+  end
+
   private
 
   def invoke(path, payload)
