@@ -44,11 +44,21 @@ module EmailCampaigns
         sns.set_topic_attributes(topic_arn: topic_arn, attribute_name: 'Policy', attribute_value: policy.to_json)
       end
 
+      # Uma policy ilegivel nao pode ser tratada como policy vazia: sobrescrever o topico com
+      # apenas o nosso statement apagaria o statement default do dono, que e o que permite a
+      # propria conta publicar e assinar. Sem leitura confiavel, aborta e deixa o topico intacto.
       def current_policy(topic_arn)
         raw = sns.get_topic_attributes(topic_arn: topic_arn).attributes['Policy']
-        JSON.parse(raw.to_s)
+        policy = JSON.parse(raw.to_s)
+        raise unreadable_policy(topic_arn) unless policy.is_a?(Hash) && policy.key?('Statement')
+
+        policy
       rescue JSON::ParserError
-        {}
+        raise unreadable_policy(topic_arn)
+      end
+
+      def unreadable_policy(topic_arn)
+        Error.new("SNS topic #{topic_arn} returned an unreadable policy; refusing to overwrite it")
       end
 
       def publish_statement(topic_arn)
