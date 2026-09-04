@@ -63,7 +63,7 @@ module Autonomia
       ].freeze
 
       def initialize(agent:, query:, history: [], images: [], allow_web_search: true, trust_instruction: false,
-                     audience: :customer, retrieval_query: nil)
+                     audience: :customer, retrieval_query: nil, delivery: nil)
         @agent = agent
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
@@ -82,6 +82,10 @@ module Autonomia
         # VEIO, sem portão de confiança / handoff de sistema / sanitização / anti-improviso — a
         # INSTRUÇÃO manda (decisão do PO). Default false preserva o Guia e o copiloto, que mantêm o portão.
         @trust_instruction = trust_instruction
+        # CONTEXTO DE ENTREGA (#313): presente só no atendimento (Operate). É o que permite uma
+        # ferramenta ASSÍNCRONA ser aceita — sem ele a ferramenta continua no catálogo (o Testar
+        # precisa mostrar o mesmo agente da produção) mas recusa o disparo com erro nomeado.
+        @delivery = delivery
       end
 
       # -> Autonomia::Agents::AnswerResult
@@ -202,7 +206,7 @@ module Autonomia
         return run_specialist(specialist, call) if specialist.present?
 
         tool = tools_by_slug[name]
-        return tool.execute(call) if tool.present?
+        return tool.execute(call, delivery: @delivery) if tool.present?
 
         { error: 'tool_not_available' }.to_json
       end
@@ -211,7 +215,8 @@ module Autonomia
       # da função, para o principal parafrasear.
       def run_specialist(specialist, call)
         args = JSON.parse(call['arguments'].presence || '{}')
-        Specialists::Runner.new(specialist: specialist, request: args[Specialist::REQUEST_PARAM]).call
+        Specialists::Runner.new(specialist: specialist, request: args[Specialist::REQUEST_PARAM],
+                                delivery: @delivery).call
       rescue JSON::ParserError
         { error: 'invalid_tool_arguments' }.to_json
       end

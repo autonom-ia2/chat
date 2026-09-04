@@ -13,6 +13,21 @@ module Autonomia
       # conversa movida de caixa). Devolve o AgentInbox ou nil.
       def self.eligible_agent_inbox(conversation)
         return if conversation.blank? || conversation.assignee_id.present?
+
+        authorized_agent_inbox(conversation)
+      end
+
+      # AUTORIZAÇÃO, sem a POSSE DO TURNO (#313). É o contrato inteiro do `eligible_agent_inbox`
+      # MENOS a exigência de a conversa estar sem responsável: feature ligada na conta + tenancy
+      # fail-closed + agente ligado/ativo/não-interno/não-sistema + allowlist de teste.
+      #
+      # Existe porque a entrega ASSÍNCRONA não é uma resposta a uma mensagem: é o resultado de algo
+      # que o cliente pediu e está esperando. Ter um humano na conversa não pode fazer a cotação
+      # sumir — mas TAMBÉM não pode fazer o kill-switch da conta, o desligamento do agente ou a
+      # allowlist de piloto sumirem junto. Por isso o assíncrono relaxa UM predicado nomeado, em vez
+      # de abandonar o contrato.
+      def self.authorized_agent_inbox(conversation)
+        return if conversation.blank?
         return unless ::Autonomia::Agents::Config.enabled?(conversation.account)
 
         # TENANCY FAIL-CLOSED na LEITURA (par do validate do AgentInbox, que só protege a ESCRITA):

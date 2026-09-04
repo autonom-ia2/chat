@@ -62,16 +62,22 @@ module Autonomia
           # A chamada à IA (lenta) roda FORA do lock para não segurar a linha da conversa.
           result = answer
           # SINAL DE SILÊNCIO da instrução -> não posta nada (IF-node "parar"). Anti-loop / automações.
-          return Result.silenced if silence_signal?(result)
+          # O turno ficou mudo, mas a ferramenta assíncrona JÁ FOI ACEITA dentro dele: despacha assim
+          # mesmo, com `replied: false`, para que o próprio job avise o cliente de que a consulta
+          # começou. Descartar aqui deixaria o cliente sem cotação e sem explicação.
           # Sem texto utilizável (falha de IA / resposta vazia) -> SILÊNCIO, sem fallback de sistema.
-          return Result.silenced if result.nil? || result.reply.to_s.strip.blank?
+          return silence_with_async(result) if no_usable_reply?(result)
 
           outcome = deliver(result)
+          dispatch_async(replied: outcome.status == :replied)
           handoff_if_signaled(result)
           outcome
         rescue StandardError => e
           # Falha inesperada ao postar -> SILÊNCIO (sem texto de sistema). Loga p/ diagnóstico.
           Rails.logger.warn("[autonomia][operate] responder_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
+          # Falha inesperada no turno: a execução aceita nunca chega a falar com o portal. Melhor não
+          # cotar do que cotar e não ter como entregar.
+          ::Autonomia::Agents::Tools::AsyncDispatcher.new(delivery: @delivery, agent: @agent).discard!
           Result.silenced
         end
 
@@ -266,6 +272,10 @@ module Autonomia
           return Result.silenced unless still_eligible?       # humano assumiu durante a IA -> não posta
 
           chunks = ::Autonomia::Agents::Operate::ReplyChunker.call(result.reply)
+          # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
+          # antes de publicar, para não se intercalar no meio da frase que o agente ainda está
+          # "digitando" (a cadeia pode durar até 90s).
+          @expected_chunks = chunks.length
           # Nada a quebrar (ex.: resposta só com invisíveis) -> caminho clássico (paridade com OFF),
           # nunca engole a resposta silenciosamente.
           return classic_deliver(result) if chunks.empty?
@@ -292,8 +302,39 @@ module Autonomia
             query: query,
             history: history,
             images: media.images,
-            trust_instruction: true
+            trust_instruction: true,
+            delivery: delivery
           ).answer
+        end
+
+        # O turno não vai falar: sinal de silêncio da instrução, falha de IA, ou resposta vazia.
+        def no_usable_reply?(result)
+          silence_signal?(result) || result.nil? || result.reply.to_s.strip.blank?
+        end
+
+        # Silêncio, mas SEM abandonar o que a ferramenta assíncrona já aceitou dentro do turno: o
+        # cliente pediu a consulta e vai receber o aviso e o resultado pelo job.
+        def silence_with_async(_result)
+          dispatch_async(replied: false)
+          Result.silenced
+        end
+
+        # CONTEXTO DE ENTREGA (#313). Só existe no atendimento — é o que autoriza uma ferramenta
+        # ASSÍNCRONA a ser aceita, e é o coletor das execuções aceitas neste turno.
+        def delivery
+          @delivery ||= ::Autonomia::Agents::Tools::Delivery.new(conversation: @conversation,
+                                                                 agent_inbox: @agent_inbox,
+                                                                 origin_message_id: @reply_to_message_id)
+        end
+
+        # Promove as execuções aceitas no turno e as enfileira. `replied` diz se o turno vai entregar
+        # texto ao cliente: quando não vai, o job assume o aviso de espera.
+        def dispatch_async(replied:)
+          return unless @delivery&.any_runs?
+
+          ::Autonomia::Agents::Tools::AsyncDispatcher
+            .new(delivery: @delivery, agent: @agent)
+            .dispatch!(replied: replied, expected_chunks: @expected_chunks.to_i)
         end
 
         # Mídia do turno atual (imagens/figurinhas inline + transcrições de áudio), gateada por flag

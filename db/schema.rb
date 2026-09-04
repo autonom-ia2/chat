@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_04_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_04_160000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -492,6 +492,30 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_120000) do
     t.index ["account_id", "enabled"], name: "idx_autonomia_agent_specialists_account_enabled"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_specialists_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_specialists_on_autonomia_agent_id"
+  end
+  create_table "autonomia_agent_tool_runs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "autonomia_agent_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "agent_inbox_id"
+    t.string "slug", null: false
+    t.string "status", default: "pending", null: false
+    t.string "execution_key", null: false
+    t.jsonb "arguments", default: {}, null: false
+    t.jsonb "handle", default: {}, null: false
+    t.integer "sequence", default: 0, null: false
+    t.integer "attempts", default: 0, null: false
+    t.bigint "origin_message_id"
+    t.integer "expected_chunks", default: 0, null: false
+    t.boolean "notify_customer", default: false, null: false
+    t.datetime "expires_at"
+    t.string "failure_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
+    t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
+    t.index ["conversation_id", "slug"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying])::text[]))"
+    t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true
   end
   create_table "autonomia_agent_tools", force: :cascade do |t|
     t.bigint "account_id", null: false
@@ -2876,7 +2900,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_120000) do
   add_foreign_key "autonomia_agent_sources", "accounts"
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
   add_foreign_key "autonomia_agent_specialists", "accounts"
-  add_foreign_key "autonomia_agent_tools", "accounts"
+  add_foreign_key "autonomia_agent_tool_runs", "accounts"
+add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
