@@ -1,3 +1,53 @@
+# == Schema Information
+#
+# Table name: crm_follow_ups
+#
+#  id              :bigint           not null, primary key
+#  automation_mode :integer          default("reminder_only"), not null
+#  canceled_at     :datetime
+#  completed_at    :datetime
+#  description     :text
+#  due_at          :datetime         not null
+#  follow_up_type  :integer          default("task"), not null
+#  metadata        :jsonb            not null
+#  status          :integer          default("pending"), not null
+#  timezone        :string           default("UTC"), not null
+#  title           :string           not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  account_id      :bigint           not null
+#  assignee_id     :bigint
+#  card_id         :bigint           not null
+#  contact_id      :bigint
+#  conversation_id :bigint
+#  created_by_id   :bigint
+#  inbox_id        :bigint
+#
+# Indexes
+#
+#  idx_crm_followups_assignee_due           (account_id,assignee_id,due_at,status)
+#  idx_crm_followups_card                   (account_id,card_id)
+#  idx_crm_followups_conversation           (account_id,conversation_id)
+#  idx_crm_followups_due_processor          (status,due_at,id)
+#  idx_crm_followups_status_due             (account_id,status,due_at)
+#  index_crm_follow_ups_on_account_id       (account_id)
+#  index_crm_follow_ups_on_assignee_id      (assignee_id)
+#  index_crm_follow_ups_on_card_id          (card_id)
+#  index_crm_follow_ups_on_contact_id       (contact_id)
+#  index_crm_follow_ups_on_conversation_id  (conversation_id)
+#  index_crm_follow_ups_on_created_by_id    (created_by_id)
+#  index_crm_follow_ups_on_inbox_id         (inbox_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (assignee_id => users.id)
+#  fk_rails_...  (card_id => crm_cards.id) ON DELETE => cascade
+#  fk_rails_...  (contact_id => contacts.id) ON DELETE => cascade
+#  fk_rails_...  (conversation_id => conversations.id) ON DELETE => cascade
+#  fk_rails_...  (created_by_id => users.id)
+#  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
+#
 class Crm::FollowUp < ApplicationRecord
   self.table_name = 'crm_follow_ups'
 

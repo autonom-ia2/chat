@@ -1,3 +1,41 @@
+# == Schema Information
+#
+# Table name: autonomia_agents
+#
+#  id                :bigint           not null, primary key
+#  actuation         :integer          default("external"), not null
+#  agent_type        :string           default("support"), not null
+#  config            :jsonb            not null
+#  enabled           :boolean          default(FALSE), not null
+#  fallback_message  :text
+#  greeting          :text
+#  handoff_rule      :text
+#  human_card        :text
+#  instruction       :text
+#  mode              :integer          default("guided"), not null
+#  name              :string           not null
+#  scaffold          :text
+#  starter_questions :jsonb            not null
+#  status            :integer          default("draft"), not null
+#  tone              :text
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  account_id        :bigint           not null
+#  created_by_id     :bigint
+#
+# Indexes
+#
+#  idx_autonomia_agents_account_actuation               (account_id,actuation)
+#  index_autonomia_agents_on_account_id                 (account_id)
+#  index_autonomia_agents_on_account_id_and_agent_type  (account_id,agent_type)
+#  index_autonomia_agents_on_account_id_and_status      (account_id,status)
+#  index_autonomia_agents_on_created_by_id              (created_by_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (created_by_id => users.id)
+#
 module Autonomia
   module Agents
     class Agent < ApplicationRecord
@@ -32,6 +70,11 @@ module Autonomia
       has_many :tools, class_name: 'Autonomia::Agents::Tool',
                        foreign_key: :autonomia_agent_id, inverse_of: :agent,
                        dependent: :destroy
+      # #311 — subagentes especializados. Delegação ENTRE AGENTES; o handoff para pessoa continua
+      # sendo o do CRM (Crm::Ai::HandoffExecutor), acionado pela instrução.
+      has_many :specialists, class_name: 'Autonomia::Agents::Specialist',
+                             foreign_key: :autonomia_agent_id, inverse_of: :agent,
+                             dependent: :destroy
       # #284 (2b) — sugestões de FAQ extraídas de conversas resolvidas. delete_all: o banco já cascateia.
       has_many :faq_suggestions, class_name: 'Autonomia::Agents::FaqSuggestion',
                                  foreign_key: :autonomia_agent_id, inverse_of: :agent,

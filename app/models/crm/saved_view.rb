@@ -1,3 +1,33 @@
+# == Schema Information
+#
+# Table name: crm_saved_views
+#
+#  id          :bigint           not null, primary key
+#  config      :jsonb            not null
+#  name        :string           not null
+#  position    :integer          default(0), not null
+#  visibility  :integer          default("private_view"), not null
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  account_id  :bigint           not null
+#  pipeline_id :bigint
+#  user_id     :bigint           not null
+#
+# Indexes
+#
+#  idx_crm_saved_views_account_pipeline    (account_id,pipeline_id)
+#  idx_crm_saved_views_account_user        (account_id,user_id)
+#  idx_crm_saved_views_account_visibility  (account_id,visibility)
+#  index_crm_saved_views_on_account_id     (account_id)
+#  index_crm_saved_views_on_pipeline_id    (pipeline_id)
+#  index_crm_saved_views_on_user_id        (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (pipeline_id => crm_pipelines.id)
+#  fk_rails_...  (user_id => users.id)
+#
 class Crm::SavedView < ApplicationRecord
   self.table_name = 'crm_saved_views'
 

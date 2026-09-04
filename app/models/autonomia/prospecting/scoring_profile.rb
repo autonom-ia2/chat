@@ -1,3 +1,27 @@
+# == Schema Information
+#
+# Table name: autonomia_prospecting_scoring_profiles
+#
+#  id            :bigint           not null, primary key
+#  default       :boolean          default(FALSE), not null
+#  name          :string           default("Padrão"), not null
+#  weights       :jsonb            not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  created_by_id :bigint
+#  updated_by_id :bigint
+#
+# Indexes
+#
+#  idx_autonomia_prospecting_scoring_profiles_default             (default) UNIQUE WHERE ("default" = true)
+#  index_autonomia_prospecting_scoring_profiles_on_created_by_id  (created_by_id)
+#  index_autonomia_prospecting_scoring_profiles_on_updated_by_id  (updated_by_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (created_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (updated_by_id => users.id) ON DELETE => nullify
+#
 class Autonomia::Prospecting::ScoringProfile < ApplicationRecord
   self.table_name = 'autonomia_prospecting_scoring_profiles'
 

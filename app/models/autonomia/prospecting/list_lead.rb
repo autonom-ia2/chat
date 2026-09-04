@@ -1,3 +1,27 @@
+# == Schema Information
+#
+# Table name: autonomia_prospecting_list_leads
+#
+#  id               :bigint           not null, primary key
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  account_id       :bigint           not null
+#  prospect_lead_id :bigint           not null
+#  prospect_list_id :bigint           not null
+#
+# Indexes
+#
+#  idx_autonomia_prospecting_list_leads_lead_id          (prospect_lead_id)
+#  idx_autonomia_prospecting_list_leads_list_id          (prospect_list_id)
+#  idx_autonomia_prospecting_list_leads_unique           (prospect_list_id,prospect_lead_id) UNIQUE
+#  index_autonomia_prospecting_list_leads_on_account_id  (account_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id) ON DELETE => cascade
+#  fk_rails_...  (prospect_lead_id => autonomia_prospecting_leads.id) ON DELETE => cascade
+#  fk_rails_...  (prospect_list_id => autonomia_prospecting_lists.id) ON DELETE => cascade
+#
 class Autonomia::Prospecting::ListLead < ApplicationRecord
   self.table_name = 'autonomia_prospecting_list_leads'
 

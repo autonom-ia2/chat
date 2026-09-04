@@ -3,8 +3,9 @@
 # Table name: applied_slas
 #
 #  id              :bigint           not null, primary key
-#  sla_status      :integer          default("active")
 #  completed_at    :datetime
+#  metadata        :jsonb            not null
+#  sla_status      :integer          default("active")
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  account_id      :bigint           not null

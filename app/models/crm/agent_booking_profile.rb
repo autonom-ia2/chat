@@ -3,6 +3,41 @@
 # public visitor presents — no account_id is ever trusted from the URL. A disabled
 # profile (or unknown slug) is treated as not-found so there is no enumeration and
 # no PII leak.
+# == Schema Information
+#
+# Table name: crm_agent_booking_profiles
+#
+#  id                  :bigint           not null, primary key
+#  assignment_mode     :integer          default("fixed"), not null
+#  booking_window_days :integer          default(14), not null
+#  buffer_minutes      :integer          default(0), not null
+#  description         :text
+#  duration_minutes    :integer          default(30), not null
+#  enabled             :boolean          default(TRUE), not null
+#  metadata            :jsonb            not null
+#  slug                :string           not null
+#  timezone            :string
+#  title               :string
+#  working_hours       :jsonb            not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  account_id          :bigint           not null
+#  default_assignee_id :bigint
+#  default_pipeline_id :bigint
+#  default_stage_id    :bigint
+#  inbox_id            :bigint
+#
+# Indexes
+#
+#  index_crm_agent_booking_profiles_on_account_id  (account_id)
+#  index_crm_agent_booking_profiles_on_inbox_id    (inbox_id)
+#  index_crm_agent_booking_profiles_on_slug        (slug) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
+#
 class Crm::AgentBookingProfile < ApplicationRecord
   self.table_name = 'crm_agent_booking_profiles'
 

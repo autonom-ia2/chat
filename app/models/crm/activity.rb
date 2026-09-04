@@ -1,3 +1,31 @@
+# == Schema Information
+#
+# Table name: crm_activities
+#
+#  id              :bigint           not null, primary key
+#  actor_type      :string
+#  event_type      :string           not null
+#  payload         :jsonb            not null
+#  created_at      :datetime         not null
+#  account_id      :bigint           not null
+#  actor_id        :bigint
+#  card_id         :bigint           not null
+#  conversation_id :bigint
+#
+# Indexes
+#
+#  idx_crm_activities_card_time             (account_id,card_id,created_at)
+#  idx_crm_activities_event_time            (account_id,event_type,created_at)
+#  index_crm_activities_on_account_id       (account_id)
+#  index_crm_activities_on_card_id          (card_id)
+#  index_crm_activities_on_conversation_id  (conversation_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (card_id => crm_cards.id) ON DELETE => cascade
+#  fk_rails_...  (conversation_id => conversations.id) ON DELETE => cascade
+#
 class Crm::Activity < ApplicationRecord
   self.table_name = 'crm_activities'
 

@@ -1,3 +1,58 @@
+# == Schema Information
+#
+# Table name: email_campaigns
+#
+#  id                      :bigint           not null, primary key
+#  ai_completed_at         :datetime
+#  ai_error                :string
+#  ai_generation_token     :string
+#  ai_requested_at         :datetime
+#  ai_status               :integer          default("idle"), not null
+#  ai_subject_variants     :jsonb            not null
+#  body_html               :text
+#  body_mjml               :text
+#  bounced_count           :integer          default(0), not null
+#  clicked_count           :integer          default(0), not null
+#  complained_count        :integer          default(0), not null
+#  delivered_count         :integer          default(0), not null
+#  delivery_mode           :integer          default("ses"), not null
+#  failed_count            :integer          default(0), not null
+#  from_email              :string
+#  from_name               :string
+#  last_error              :text
+#  name                    :string           not null
+#  opened_count            :integer          default(0), not null
+#  preheader               :string
+#  recipients_count        :integer          default(0), not null
+#  reply_to                :string
+#  scheduled_at            :datetime
+#  sent_at                 :datetime
+#  sent_count              :integer          default(0), not null
+#  ses_configuration_set   :string
+#  status                  :integer          default("draft"), not null
+#  subject                 :string
+#  suppressed_count        :integer          default(0), not null
+#  unsubscribed_count      :integer          default(0), not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  account_id              :bigint           not null
+#  ai_provider_response_id :string
+#  sender_identity_id      :bigint
+#  sender_inbox_id         :bigint
+#
+# Indexes
+#
+#  idx_email_campaigns_account_status_scheduled  (account_id,status,scheduled_at)
+#  index_email_campaigns_on_account_id           (account_id)
+#  index_email_campaigns_on_sender_identity_id   (sender_identity_id)
+#  index_email_campaigns_on_sender_inbox_id      (sender_inbox_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (sender_identity_id => email_sender_identities.id)
+#  fk_rails_...  (sender_inbox_id => inboxes.id) ON DELETE => nullify
+#
 class EmailCampaign < ApplicationRecord
   belongs_to :account
   # Modo SES: domínio verificado. Modo direct_inbox: envio direto pela caixa webmail conectada.

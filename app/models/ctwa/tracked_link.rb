@@ -1,3 +1,30 @@
+# == Schema Information
+#
+# Table name: ctwa_tracked_links
+#
+#  id                  :bigint           not null, primary key
+#  clicks_count        :integer          default(0), not null
+#  code                :string           not null
+#  conversations_count :integer          default(0), not null
+#  name                :string           not null
+#  prefilled_text      :string           default("")
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  account_id          :bigint           not null
+#  created_by_id       :bigint
+#  inbox_id            :bigint           not null
+#
+# Indexes
+#
+#  idx_ctwa_tracked_links_account  (account_id)
+#  idx_ctwa_tracked_links_code     (code) UNIQUE
+#  idx_ctwa_tracked_links_inbox    (inbox_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id) ON DELETE => cascade
+#  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => cascade
+#
 require 'cgi'
 
 class Ctwa::TrackedLink < ApplicationRecord

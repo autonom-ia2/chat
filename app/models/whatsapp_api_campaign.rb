@@ -1,3 +1,48 @@
+# == Schema Information
+#
+# Table name: whatsapp_api_campaigns
+#
+#  id                               :bigint           not null, primary key
+#  audience                         :jsonb            not null
+#  cancelled_at                     :datetime
+#  cancelled_count                  :integer          default(0), not null
+#  completed_at                     :datetime
+#  failed_count                     :integer          default(0), not null
+#  last_error_message               :text
+#  media_snapshot                   :jsonb            not null
+#  message_body                     :text
+#  paused_at                        :datetime
+#  recipients_count                 :integer          default(0), not null
+#  resumed_at                       :datetime
+#  scheduled_at                     :datetime
+#  sent_count                       :integer          default(0), not null
+#  started_at                       :datetime
+#  status                           :integer          default("scheduled"), not null
+#  template_snapshot                :jsonb            not null
+#  title                            :string           not null
+#  created_at                       :datetime         not null
+#  updated_at                       :datetime         not null
+#  account_id                       :bigint           not null
+#  created_by_id                    :bigint           not null
+#  inbox_id                         :bigint
+#  whatsapp_api_message_template_id :bigint
+#
+# Indexes
+#
+#  idx_whatsapp_api_campaigns_account_status      (account_id,status,scheduled_at)
+#  idx_whatsapp_api_campaigns_inbox_status        (inbox_id,status,scheduled_at)
+#  idx_whatsapp_api_campaigns_template_id         (whatsapp_api_message_template_id)
+#  index_whatsapp_api_campaigns_on_account_id     (account_id)
+#  index_whatsapp_api_campaigns_on_created_by_id  (created_by_id)
+#  index_whatsapp_api_campaigns_on_inbox_id       (inbox_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (created_by_id => users.id)
+#  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
+#  fk_rails_...  (whatsapp_api_message_template_id => whatsapp_api_message_templates.id)
+#
 class WhatsappApiCampaign < ApplicationRecord
   attr_accessor :media_file_pending
 

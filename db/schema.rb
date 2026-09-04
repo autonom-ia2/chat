@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_03_210000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_04_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -476,6 +476,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_03_210000) do
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_sources_on_autonomia_agent_id"
   end
 
+  create_table "autonomia_agent_specialists", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "autonomia_agent_id", null: false
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.text "description", null: false
+    t.text "instruction", null: false
+    t.text "custom_instruction"
+    t.boolean "enabled", default: true, null: false
+    t.jsonb "tool_slugs", default: [], null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "enabled"], name: "idx_autonomia_agent_specialists_account_enabled"
+    t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_specialists_agent_slug", unique: true
+    t.index ["autonomia_agent_id"], name: "index_autonomia_agent_specialists_on_autonomia_agent_id"
+  end
   create_table "autonomia_agent_tools", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "autonomia_agent_id", null: false
@@ -2858,6 +2875,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_03_210000) do
   add_foreign_key "autonomia_agent_knowledge", "autonomia_agents"
   add_foreign_key "autonomia_agent_sources", "accounts"
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
+  add_foreign_key "autonomia_agent_specialists", "accounts"
   add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"

@@ -169,20 +169,51 @@ module Autonomia
         tools = []
         tools.concat(Array(Crm::Ai::WebSearch.tools)) if @allow_web_search
         tools.concat(enabled_agent_tools.map(&:openai_schema))
+        tools.concat(enabled_specialists.map(&:openai_schema))
         tools.presence
       end
 
+      # Ferramentas visíveis ao PRINCIPAL: as do agente MENOS as reservadas por um especialista
+      # habilitado (#311). É isso que mantém o contexto do principal limpo — ele não precisa conhecer
+      # a ferramenta de cotação, só saber que existe um especialista para o assunto.
       def enabled_agent_tools
-        @enabled_agent_tools ||= @agent.tools.enabled.order(:id).to_a
+        @enabled_agent_tools ||= begin
+          reserved = enabled_specialists.flat_map(&:tool_slugs).map(&:to_s).to_set
+          @agent.tools.enabled.order(:id).reject { |tool| reserved.include?(tool.slug.to_s) }
+        end
+      end
+
+      def enabled_specialists
+        @enabled_specialists ||= @agent.specialists.enabled.order(:id).to_a
       end
 
       def execute_tool_calls(calls)
         tools_by_slug = enabled_agent_tools.index_by(&:slug)
+        specialists_by_function = enabled_specialists.index_by(&:function_name)
         Array(calls).map do |call|
-          tool = tools_by_slug[call['name'].to_s]
-          output = tool.present? ? execute_single_tool(tool, call) : { error: 'tool_not_available' }.to_json
+          output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
           { type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(8_000) }
         end
+      end
+
+      def dispatch_tool_call(call, tools_by_slug, specialists_by_function)
+        name = call['name'].to_s
+        specialist = specialists_by_function[name]
+        return run_specialist(specialist, call) if specialist.present?
+
+        tool = tools_by_slug[name]
+        return execute_single_tool(tool, call) if tool.present?
+
+        { error: 'tool_not_available' }.to_json
+      end
+
+      # O especialista devolve TEXTO (nunca levanta — ver Specialists::Runner). Vai direto como saída
+      # da função, para o principal parafrasear.
+      def run_specialist(specialist, call)
+        args = JSON.parse(call['arguments'].presence || '{}')
+        Specialists::Runner.new(specialist: specialist, request: args[Specialist::REQUEST_PARAM]).call
+      rescue JSON::ParserError
+        { error: 'invalid_tool_arguments' }.to_json
       end
 
       def execute_single_tool(tool, call)
