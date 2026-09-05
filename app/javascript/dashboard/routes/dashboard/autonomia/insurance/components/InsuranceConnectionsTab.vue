@@ -279,13 +279,6 @@ onMounted(load);
             {{ t('INSURANCE.CONNECTION.AUTH_REQUIRED_HINT') }}
           </p>
 
-          <p
-            v-if="connection.last_error"
-            class="text-xs text-n-ruby-11 font-mono break-all"
-          >
-            {{ connection.last_error }}
-          </p>
-
           <div class="flex flex-wrap items-center gap-2">
             <NextButton
               faded
