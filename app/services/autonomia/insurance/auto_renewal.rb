@@ -17,6 +17,32 @@
 class Autonomia::Insurance::AutoRenewal
   # Exatamente as faixas de `quote-input.ts`. As duas, porque o defeito é da classe e não do campo:
   # a primeira versão guardava só o bônus, e `sinistros: -1` derrubava a cotação do mesmo jeito.
+  # A DESCRIÇÃO QUE O AGENTE LÊ. Mora aqui, e não na ferramenta, porque é a mesma regra que esta
+  # classe aplica: quem ensina e quem valida não podem divergir.
+  #
+  # A descrição de um parâmetro é ONDE SE ENSINA A REGRA DE NEGÓCIO ao agente, e não onde se manda
+  # ele desistir. O cliente quase nunca sabe dizer "classe 5" — ele conta a história ("tenho seguro
+  # há três anos e nunca bati"), e o dado está ali inteiro. Traduzir isso é o trabalho do agente.
+  #
+  # A tabela abaixo é do Rodrigo (PO), ditada em 05/09/2026. Antes disso o código carregava uma
+  # tabela parecida sem fonte nenhuma, e com um exemplo INVENTADO e errado ("6 anos, um sinistro ->
+  # classe 1"; pela regra é 6 menos 1, classe 5).
+  BONUS_DESC = 'Classe de bônus da apólice atual, de 0 a 10. Só em renovação. REGRA: a classe é o ' \
+               'número de anos de seguro sem sinistro, e cai 1 a cada sinistro ocorrido na ' \
+               'vigência atual. Acima de 10 anos, continua 10. Seguro novo é 0. Cada classe vale ' \
+               'um desconto: 0=0%, 1=10%, 2=15%, 3=20%, 4=25%, 5 a 10=30%. ' \
+               'DEDUZA da conversa, sem exigir o termo técnico: "tenho seguro há 3 anos e nunca ' \
+               'bati" é classe 3; "renovo há 6 anos e bati uma vez este ano" é classe 5; se ele ' \
+               'souber só o desconto, use a tabela ao contrário. ZERO é resposta válida: quem teve ' \
+               'sinistro na primeira vigência volta para 0. Só deixe em branco quando não houver ' \
+               'NADA na conversa de onde deduzir; aí a cotação sai sem bônus e o cliente é avisado ' \
+               'de que dá para melhorar.'.freeze
+
+  SINISTROS_DESC = 'Quantos sinistros o cliente teve na vigência atual — é o que derruba a classe ' \
+                   'de bônus, 1 por sinistro. Só em renovação. Deduza da conversa: "nunca bati", ' \
+                   '"nunca usei o seguro" e "sem ocorrência" são 0. Zero é resposta comum, e não ' \
+                   'é o mesmo que não saber.'.freeze
+
   BONUS_RANGE = (0..10)
   SINISTROS_RANGE = (0..99)
 

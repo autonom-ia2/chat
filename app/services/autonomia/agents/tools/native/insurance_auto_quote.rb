@@ -72,14 +72,9 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
         { 'name' => 'renovacao', 'type' => 'boolean', 'required' => false,
           'description' => 'true quando o cliente JÁ TEM seguro e está renovando. Só marque com ' \
                            'confirmação dele; na dúvida, deixe em branco.' },
-        { 'name' => 'bonus', 'type' => 'integer', 'required' => false,
-          'description' => 'Classe de bônus que consta na apólice atual, de 0 a 10. Só em ' \
-                           'renovação. ZERO é resposta válida: quem teve sinistro volta para a ' \
-                           'classe 0. Se o cliente NÃO SOUBER, deixe em branco — não converta ' \
-                           'percentual em classe e não chute. A cotação sai assim mesmo.' },
+        { 'name' => 'bonus', 'type' => 'integer', 'required' => false, 'description' => ::Autonomia::Insurance::AutoRenewal::BONUS_DESC },
         { 'name' => 'sinistros', 'type' => 'integer', 'required' => false,
-          'description' => 'Quantos sinistros o cliente teve na vigência atual. Só em renovação. ' \
-                           'Zero é resposta válida e comum; não confunda com "não sei".' }
+          'description' => ::Autonomia::Insurance::AutoRenewal::SINISTROS_DESC }
       ]
     end
 
