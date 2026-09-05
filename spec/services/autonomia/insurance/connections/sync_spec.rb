@@ -282,4 +282,34 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
       expect(result.last_evidence['check']).to eq('login')
     end
   end
+
+  # Achado da segunda revisao. Status e diagnostico gravados em transacoes separadas abrem uma
+  # janela em que a tela le `ready` com o `failure` anterior — e e o `failure` que decide se ela
+  # pede a senha de volta. Seria a mesma contradicao do incidente: conectado e "confira sua senha"
+  # lado a lado.
+  #
+  # A janela nao da para observar de fora sem thread; o que da para afirmar e o invariante que a
+  # fecha: `apply_status!` grava a linha UMA vez.
+  it 'grava status e diagnostico numa transacao so' do
+    # Arrange
+    conexao = connection
+    conexao.store_session!({ 'token' => 'x' }, expires_at: 3.hours.from_now)
+    conexao.merge_metadata!('last_failure' => { 'cause' => 'session_lost', 'actor' => 'nobody' })
+    connector = connector_answering({ 'status' => 'ready', 'account_label' => 'X',
+                                      'layers' => { 'runtime' => 'ok' } })
+    updates = 0
+    assinatura = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, dados|
+      sql = dados[:sql].to_s
+      updates += 1 if sql.start_with?('UPDATE') && sql.include?('autonomia_insurance_connections')
+    end
+
+    # Act
+    described_class.new(conexao, connector: connector, scan_capabilities: false).call
+
+    # Assert — `mark!(authenticating)` e uma; `apply_status!` tem que ser a outra, e so
+    ActiveSupport::Notifications.unsubscribe(assinatura)
+    expect(updates).to eq(2)
+    expect(conexao.reload.status).to eq('ready')
+    expect(conexao.last_failure).to be_nil
+  end
 end

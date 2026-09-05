@@ -94,16 +94,23 @@ class Autonomia::Insurance::Connections::Sync
     # `reason` vem do adapter e já chega redatado. O fallback existe para adapter antigo, que não
     # manda o campo: melhor "status degraded" do que nada.
     ok = status == 'ready'
-    @connection.update!(
-      status: status,
-      external_account_label: payload['account_label'].to_s.truncate(120).presence,
-      session_expires_at: payload['session_expires_at'],
-      last_authenticated_at: Time.current,
-      last_healthcheck_at: Time.current,
-      last_error: ok ? nil : sanitize(payload['reason'].presence || "status #{status}")
-    )
-    # Sob lock e em escrita própria: `metadata` é jsonb compartilhado com o polling de cotação.
-    @connection.merge_metadata!(diagnostico(payload, ok))
+    # UMA escrita, dentro do lock. Separar status e diagnóstico em duas transações abre uma janela
+    # em que a tela lê `ready` com o `failure` anterior ainda gravado — e é o `failure`, não o
+    # status, que decide se ela pede a senha de volta. Seria a mesma classe de defeito do incidente:
+    # badge de conectado ao lado de "confira sua senha".
+    #
+    # O lock também é o que protege da corrida com o polling de cotação, que escreve no mesmo jsonb.
+    @connection.with_lock do
+      @connection.update!(
+        status: status,
+        external_account_label: payload['account_label'].to_s.truncate(120).presence,
+        session_expires_at: payload['session_expires_at'],
+        last_authenticated_at: Time.current,
+        last_healthcheck_at: Time.current,
+        last_error: ok ? nil : sanitize(payload['reason'].presence || "status #{status}"),
+        metadata: @connection.metadata.to_h.merge(diagnostico(payload, ok))
+      )
+    end
   end
 
   # O diagnostico estruturado que a tela usa (criterios 1.1, 1.2 e 1.6). Vai em `metadata` porque e
