@@ -38,6 +38,27 @@ class Autonomia::Insurance::Connections::Session
     resolve!
   end
 
+  # Roda o bloco com a sessão da conexão e, se o PORTAL recusar essa sessão, esquece, abre outra e
+  # tenta UMA vez. -> o que o bloco devolver.
+  #
+  # `session_live?` só sabe do prazo que nós gravamos. Ele não sabe que alguém entrou no portal pelo
+  # navegador e derrubou a nossa — o AGGER aceita uma sessão por login. Nesse caso a linha fica com
+  # uma sessão que parece viva, e toda chamada morre em 403 até o prazo vencer.
+  #
+  # Foi o que aconteceu em 05/09/2026, horas depois de a sessão única entrar no ar: o corretor abriu
+  # o portal, a nossa sessão caiu, e a tela passou a dizer "credencial recusada" com a credencial
+  # perfeitamente válida. `renew!` já existia para exatamente isto e não era chamado por ninguém.
+  #
+  # UMA tentativa, não um laço: se o login novo também for recusado, o problema é a credencial, e
+  # insistir só multiplica login no portal.
+  def with_fresh_session
+    yield resolve!
+  rescue ::Autonomia::Insurance::Connector::Error => e
+    raise unless e.kind == :auth_required && @connection.session.present?
+
+    yield renew!
+  end
+
   private
 
   # O RECHECK dentro do lock é o que faz duas chamadas concorrentes gerarem UM login: a segunda
