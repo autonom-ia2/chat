@@ -3,10 +3,22 @@
 # para o fluxo de erro ser testável de ponta a ponta na UI.
 # Superclasse qualificada: na forma compacta o escopo léxico é o topo e `Base` seria o módulo global ::Base.
 class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::Client
-  def connection_status(provider:, username:, password:)
+  # Única operação que consome credencial, igual ao adapter real.
+  def open_session(provider:, username:, password:)
     raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'credentials missing') if username.blank? || password.blank?
     raise ::Autonomia::Insurance::Connector::Error.new(:auth_required, 'invalid credentials') if password == 'invalid'
 
+    {
+      'platform' => provider,
+      'data' => { 'aggregatorToken' => 'mock-aggregator-token', 'multicalculoToken' => 'mock-multicalculo-token' },
+      'expires_at' => 3.hours.from_now.utc.iso8601,
+      'account_label' => 'CORRETORA DE TESTE (mock)',
+      'dropped_previous_session' => false
+    }
+  end
+
+  def connection_status(provider:, session:)
+    require_session!(session)
     {
       'platform' => provider,
       'status' => 'ready',
@@ -16,12 +28,72 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     }
   end
 
-  def capabilities(provider:, username:, password:)
-    connection_status(provider: provider, username: username, password: password)
+  def capabilities(provider:, session:)
+    require_session!(session)
     { 'platform' => provider, 'scanned_at' => Time.current.utc.iso8601, 'products' => products }
   end
 
+  # A cotação do mock imita o que importa do portal: ela DEMORA e chega em pedaços. O id carrega o
+  # instante da submissão, e é só com o relógio que o mock decide o que já respondeu — assim o
+  # caminho assíncrono inteiro (aceite no turno, polling, entrega parcial, entrega final) é
+  # testável de ponta a ponta sem uma linha de rede.
+  PARTIAL_AFTER = 5.seconds
+  COMPLETE_AFTER = 20.seconds
+
+  def quote_start(provider:, session:, product:, input:)
+    require_provider!(provider)
+    require_session!(session)
+    raise ::Autonomia::Insurance::Connector::Error.new(:not_implemented, "sem adapter para #{product}") if product.to_s != 'auto'
+    raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'placa ausente') if input.to_h['placa'].blank?
+
+    { 'quote_id' => "mock-#{Time.current.to_i}:1", 'status' => 'queued' }
+  end
+
+  def quote_result(provider:, session:, quote_id:)
+    require_provider!(provider)
+    require_session!(session)
+    elapsed = Time.current.to_i - quote_id.to_s.split(':').first.to_s.delete_prefix('mock-').to_i
+    status, offers = mock_progress(elapsed)
+    { 'quote_id' => quote_id, 'product' => 'auto', 'status' => status, 'offers' => offers }
+  end
+
+  def quote_proposal(provider:, session:, quote_id:, insurer_code: nil)
+    require_provider!(provider)
+    require_session!(session)
+    nome = insurer_code.present? ? "proposta-#{insurer_code}" : 'comparativo'
+    { 'quote_id' => quote_id, 'url' => "https://exemplo.test/#{nome}-mock.pdf" }
+  end
+
   private
+
+  # Duas seguradoras respondem cedo, a terceira demora. É o formato que a entrega parcial existe
+  # para atender: mandar as duas primeiras em vez de segurar tudo pela mais lenta.
+  def mock_progress(elapsed)
+    return ['running', []] if elapsed < PARTIAL_AFTER
+    return ['partial', [offer('8', 'Porto Seguro', 1200.5), offer('3', 'Mapfre', 1340.0)]] if elapsed < COMPLETE_AFTER
+
+    ['completed', [offer('8', 'Porto Seguro', 1200.5), offer('3', 'Mapfre', 1340.0), offer('47', 'Justos', 1098.9)]]
+  end
+
+  def offer(code, name, amount)
+    { 'insurer' => { 'code' => code, 'name' => name, 'enabled' => true, 'integrationStatus' => 'ready' },
+      'status' => 'quoted', 'premium' => { 'amount' => amount, 'currency' => 'BRL' } }
+  end
+
+  # O serviço real devolve 404 para plataforma desconhecida; o mock recusa pelo mesmo motivo — só
+  # sabe falar AGGER, e fingir que sabe outra coisa esconderia um erro de configuração.
+  def require_provider!(provider)
+    return if ::Autonomia::Insurance::Connection::PROVIDERS.include?(provider.to_s)
+
+    raise ::Autonomia::Insurance::Connector::Error.new(:not_implemented, "sem adapter para #{provider}")
+  end
+
+  # Espelha o adapter real: operação sem sessão é recusada em vez de abrir uma por conta própria.
+  def require_session!(session)
+    return if session.is_a?(Hash) && session.present?
+
+    raise ::Autonomia::Insurance::Connector::Error.new(:auth_required, 'session missing')
+  end
 
   def products
     [

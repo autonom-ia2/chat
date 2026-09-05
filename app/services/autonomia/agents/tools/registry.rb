@@ -6,7 +6,9 @@
 module Autonomia::Agents::Tools::Registry
   # Ordem estável: entra no prompt nesta ordem quando o agente liga várias.
   TOOLS = [
+    # Ordem é a da jornada: o que a corretora cota, cotar, e o que o contrato diz.
     Autonomia::Agents::Tools::Native::InsuranceCapabilities,
+    Autonomia::Agents::Tools::Native::InsuranceAutoQuote,
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions
   ].freeze
 

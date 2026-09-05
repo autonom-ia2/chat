@@ -14,6 +14,7 @@
 #  password                :text
 #  provider                :string           default("agger"), not null
 #  session_expires_at      :datetime
+#  session_payload         :text
 #  status                  :string           default("not_configured"), not null
 #  username                :text
 #  username_hint           :string
@@ -36,6 +37,9 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   self.table_name = 'autonomia_insurance_connections'
 
   PROVIDERS = %w[agger].freeze
+  # Margem antes do vencimento em que a sessão já é considerada velha. Uma cotação leva até ~90s;
+  # renovar com folga evita a sessão morrer no meio de um polling em andamento.
+  SESSION_MARGIN = 5.minutes
   # Estados do PRD §9.2. `auth_required` = o portal recusou a credencial da corretora;
   # `human_required` = precisa de alguém (reservado para MFA/CAPTCHA e falha que o adapter não resolve).
   # A tela e os textos precisam cobrir exatamente esta lista — insuranceStates.spec.js falha se divergir.
@@ -48,6 +52,9 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   # qualquer escrita, então nunca existe linha em texto puro para o `encrypts` tropeçar.
   encrypts :username
   encrypts :password
+  # A sessão aberta no portal. Cifrada pelo mesmo motivo da senha: não é a credencial da corretora,
+  # mas é um portador que dá acesso ao portal enquanto vale.
+  encrypts :session_payload
 
   validates :provider, inclusion: { in: PROVIDERS }
   validates :status, inclusion: { in: STATUSES }
@@ -64,6 +71,33 @@ class Autonomia::Insurance::Connection < ApplicationRecord
 
   def credentials_present?
     username.present? && password.present?
+  end
+
+  # A sessão guardada, como o adapter a devolveu. Blob OPACO: guardamos e devolvemos, nunca
+  # interpretamos — quem sabe o que tem dentro é o adapter.
+  def session
+    return if session_payload.blank?
+
+    parsed = JSON.parse(session_payload)
+    parsed.is_a?(Hash) ? parsed : nil
+  rescue JSON::ParserError
+    nil
+  end
+
+  # Vale a pena reusar? Precisa existir E ter prazo com folga. Sem prazo informado pelo portal a
+  # sessão NÃO é reusada: é melhor um login a mais do que uma cotação que morre no meio.
+  def session_live?(now = Time.current)
+    session.present? && session_expires_at.present? && session_expires_at > now + SESSION_MARGIN
+  end
+
+  def store_session!(payload, expires_at:, account_label: nil)
+    update!(session_payload: payload.to_json, session_expires_at: expires_at,
+            external_account_label: account_label.presence || external_account_label)
+  end
+
+  # Esquece a sessão. Usado quando o portal recusa o que guardamos — a próxima operação abre outra.
+  def forget_session!
+    update!(session_payload: nil, session_expires_at: nil)
   end
 
   def ready?
@@ -92,7 +126,7 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   private
 
   def credentials_require_encryption
-    return if password.blank? && username.blank?
+    return if password.blank? && username.blank? && session_payload.blank?
     return if self.class.encryption_available?
 
     errors.add(:base, I18n.t('autonomia.insurance.errors.encryption_unavailable'))

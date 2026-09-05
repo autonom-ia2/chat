@@ -18,16 +18,24 @@ class Autonomia::Insurance::Connections::Sync
     @connection = connection
     @connector = connector
     @scan_capabilities = scan_capabilities
+    @sessions = ::Autonomia::Insurance::Connections::Session.new(connection, connector: connector)
   end
 
+  # Abre (ou reusa) A sessão da conexão e consulta o portal com ELA. Antes, este método fazia dois
+  # logins por sincronização — um no status, outro nas capacidades — e cada um invalidava a sessão
+  # anterior, inclusive a de uma cotação em andamento.
   def call
     return mark!(status: 'not_configured') unless @connection.credentials_present?
 
     mark!(status: 'authenticating')
-    apply_status!(@connector.connection_status(**credentials))
-    scan! if @scan_capabilities && @connection.ready?
+    session = @sessions.resolve!
+    apply_status!(@connector.connection_status(provider: @connection.provider, session: session))
+    scan!(session) if @scan_capabilities && @connection.ready?
     @connection
   rescue ::Autonomia::Insurance::Connector::Error => e
+    # Credencial recusada invalida também o que estava guardado: manter a sessão faria a próxima
+    # operação tentar de novo com um portador que o portal já não aceita.
+    @connection.forget_session! if e.kind == :auth_required
     mark!(status: STATUS_BY_ERROR.fetch(e.kind, 'degraded'), error: "#{e.kind}: #{e.message}")
   rescue StandardError => e
     # Formato inesperado, validação do model ou bug: registra a CLASSE, nunca a mensagem (que pode
@@ -63,9 +71,9 @@ class Autonomia::Insurance::Connections::Sync
     )
   end
 
-  def scan!
+  def scan!(session)
     mark!(status: 'discovering')
-    map = @connector.capabilities(**credentials)
+    map = @connector.capabilities(provider: @connection.provider, session: session)
     raise ::Autonomia::Insurance::Connector::Error.new(:protocol, 'capabilities payload is not a hash') unless map.is_a?(Hash)
 
     @connection.update!(
@@ -85,9 +93,5 @@ class Autonomia::Insurance::Connections::Sync
     return nil if message.blank?
 
     message.to_s.gsub(EMAIL, '<email>').gsub(LONG_TOKEN, '<redacted>').truncate(160)
-  end
-
-  def credentials
-    { provider: @connection.provider, username: @connection.username, password: @connection.password }
   end
 end

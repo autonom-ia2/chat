@@ -65,6 +65,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
 
   # Submete (primeira passada) ou consulta (demais). A ferramenta é instanciada a cada
   # execução: ela resolve conexão e credencial sozinha, e nada disso trafega pelo Redis.
+  #
+  # JANELA CONHECIDA (#337): entre `tool.start` e `record_attempt!` não há atomicidade. Se o worker
+  # morrer aí — um deploy no meio, por exemplo —, a cotação FOI feita no portal e não ficou
+  # registrada; o Sidekiq reexecuta e cota de novo na seguradora.
+  #
+  # Um lock em volta do `submitted?` NÃO resolve isto: o problema não é duas execuções concorrentes,
+  # é o efeito externo já ter acontecido sem registro. A correção é inverter a ordem — marcar a
+  # intenção antes de submeter e decidir o que fazer quando existir marca sem handle —, e isso é
+  # mudança de desenho, não de linha. Deixada para a issue própria em vez de improvisada aqui.
   def advance(run, native, attempt)
     tool = native.new(agent: run.agent, params: run.arguments)
     unless submitted?(run)
