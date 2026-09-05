@@ -138,4 +138,104 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
     empty = Autonomia::Insurance::Connection.create!(account: account)
     expect(described_class.new(empty, connector: nil).call.status).to eq('not_configured')
   end
+
+  # CRITÉRIO 1.1 — a falha que não é do corretor não vira pedido de senha.
+  #
+  # O caminho que faltava: sessão perdida chega como PAYLOAD DE SUCESSO (HTTP 200 com o motivo
+  # dentro), e não como exceção. O `with_fresh_session` só reage a exceção, então este caso passava
+  # direto e gravava `auth_required` — o estado que a tela traduz em "confira o usuário e a senha".
+  # Em 05/09/2026 isso custou duas trocas de senha que estavam corretas.
+  describe 'sessão perdida (1.1)' do
+    def connector_que_perde_a_sessao(depois:)
+      respostas = [
+        { 'status' => 'degraded',
+          'failure' => { 'cause' => 'session_lost', 'actor' => 'nobody', 'retryable' => true },
+          'reason' => 'session_lost: GET /cfg/corretora -> 403' },
+        depois
+      ]
+      instance_double(Autonomia::Insurance::Connector::Mock,
+                      open_session: { 'platform' => 'agger', 'data' => { 'token' => 'x' },
+                                      'expires_at' => 3.hours.from_now.utc.iso8601 },
+                      capabilities: { 'products' => [], 'scanned_at' => Time.current.iso8601 })
+        .tap { |dobro| allow(dobro).to receive(:connection_status) { respostas.shift } }
+    end
+
+    it 'renova a sessão e usa o resultado da segunda tentativa' do
+      # Arrange
+      connector = connector_que_perde_a_sessao(
+        depois: { 'status' => 'ready', 'account_label' => 'CORRETORA X' }
+      )
+
+      # Act
+      result = described_class.new(connection, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(result.status).to eq('ready')
+      expect(result.last_error).to be_nil
+    end
+
+    it 'nunca grava auth_required por causa de sessão perdida' do
+      # Arrange — a segunda tentativa também não vai bem, mas ainda assim não é culpa da credencial
+      connector = connector_que_perde_a_sessao(
+        depois: { 'status' => 'degraded',
+                  'failure' => { 'cause' => 'session_lost', 'actor' => 'nobody' },
+                  'reason' => 'session_lost: de novo' }
+      )
+
+      # Act
+      result = described_class.new(connection, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(result.status).not_to eq('auth_required')
+      expect(result.last_failure['actor']).to eq('nobody')
+    end
+
+    it 'tenta UMA vez: insistir só multiplica login no portal' do
+      # Arrange
+      connector = connector_que_perde_a_sessao(
+        depois: { 'status' => 'degraded', 'failure' => { 'cause' => 'session_lost', 'actor' => 'nobody' } }
+      )
+
+      # Act
+      described_class.new(connection, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(connector).to have_received(:connection_status).twice
+    end
+  end
+
+  # CRITÉRIOS 1.2 e 1.6 — o diagnóstico estruturado sobrevive até a tela.
+  describe 'diagnóstico gravado' do
+    it 'guarda camadas e evidência, e limpa a falha quando volta a ficar boa' do
+      # Arrange
+      camadas = { 'runtime' => 'ok', 'platform_auth' => 'ok', 'insurer_auth' => 'unknown',
+                  'product_support' => 'unknown', 'risk' => 'unknown' }
+      evidencia = { 'check' => 'session_probe', 'at' => '2026-09-05T17:02:00.000Z',
+                    'outcome' => 'ok', 'detail' => 'GET /cfg/corretora' }
+      connector = connector_answering({ 'status' => 'ready', 'account_label' => 'CORRETORA X',
+                                        'layers' => camadas, 'evidence' => evidencia })
+
+      # Act
+      result = described_class.new(connection, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(result.layers).to eq(camadas)
+      expect(result.last_evidence['detail']).to eq('GET /cfg/corretora')
+      expect(result.last_failure).to be_nil
+    end
+
+    it 'não apaga o resto de metadata ao gravar o diagnóstico' do
+      # Arrange — a comissão da corretora mora no mesmo jsonb
+      conexao = connection
+      conexao.update!(metadata: { 'commission_percent' => 12.5 })
+      connector = connector_answering({ 'status' => 'ready', 'account_label' => 'X',
+                                        'layers' => { 'runtime' => 'ok' } })
+
+      # Act
+      described_class.new(conexao, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(conexao.reload.metadata['commission_percent']).to eq(12.5)
+    end
+  end
 end

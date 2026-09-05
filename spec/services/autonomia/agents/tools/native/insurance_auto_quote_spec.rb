@@ -28,7 +28,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
 
   def offer(code, name, status, amount = nil)
     base = { 'insurer' => { 'code' => code, 'name' => name }, 'status' => status }
-    amount ? base.merge('premium' => { 'amount' => amount, 'currency' => 'BRL' }) : base
+    # `basis` acompanha todo prêmio que o adapter devolve hoje (critério 5.5): sem ele o valor é um
+    # número sem unidade. O caso `unknown` tem exemplos próprios mais abaixo.
+    return base unless amount
+
+    base.merge('premium' => { 'amount' => amount, 'currency' => 'BRL', 'basis' => 'total' })
   end
 
   it 'is asynchronous, because a quote takes minutes and the turn cannot wait' do
@@ -318,7 +322,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
 
       # Assert
       expect(progress.deliveries.first)
-        .to eq("Primeiros preços que chegaram:\nEzze: R$ 2050,40\nMapfre: R$ 2582,76")
+        .to eq("Primeiros preços que chegaram:\nEzze: R$ 2050,40 no total\nMapfre: R$ 2582,76 no total")
       expect(progress.handle[described_class::DELIVERED_KEY]).to eq(%w[43 3])
     end
 
@@ -335,7 +339,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
 
       # Assert
       expect(progress).to be_done
-      expect(progress.deliveries.first).to eq("Chegaram mais opções:\nDarwin: R$ 3407,87")
+      expect(progress.deliveries.first).to eq("Chegaram mais opções:\nDarwin: R$ 3407,87 no total")
       expect(progress.deliveries.first).not_to include('Ezze')
     end
 
@@ -461,6 +465,110 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
       expect(described_class.available_for?(agent)).to be(false)
       ready_connection
       expect(described_class.available_for?(agent)).to be(true)
+    end
+  end
+
+  # CRITÉRIO 4.5 — problema de credencial de seguradora nunca chega ao cliente final; vai para a
+  # tela de Conexões.
+  describe 'credencial de seguradora (4.5)' do
+    def polling_com(offers)
+      conexao = ready_connection
+      connector = instance_double(
+        Autonomia::Insurance::Connector::Mock,
+        quote_result: { 'status' => 'running', 'offers' => offers }
+      )
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      [conexao, tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)]
+    end
+
+    it 'registra na conexão a seguradora que recusou o login da corretora' do
+      # Arrange / Act
+      conexao, = polling_com([offer('5', 'Allianz', 'auth_required'),
+                              offer('8', 'Porto', 'quoted', 1200.0)])
+
+      # Assert
+      pendentes = conexao.reload.insurers_pending_auth
+      expect(pendentes['codes']).to eq(['5'])
+      expect(pendentes['names']).to eq(['Allianz'])
+      expect(pendentes['observed_at']).to be_present
+    end
+
+    it 'nunca conta a seguradora com credencial recusada ao cliente' do
+      # Arrange / Act — o cliente não tem o que fazer com isso, e não é recusa de risco
+      _, progresso = polling_com([offer('5', 'Allianz', 'auth_required'),
+                                  offer('8', 'Porto', 'quoted', 1200.0)])
+
+      # Assert
+      texto = progresso.deliveries.join("\n")
+      expect(texto).to include('Porto')
+      expect(texto).not_to include('Allianz')
+      expect(texto.downcase).not_to include('credencial')
+    end
+
+    it 'limpa o registro quando as seguradoras voltam a cotar' do
+      # Arrange
+      conexao = ready_connection
+      conexao.record_insurers_pending_auth!(['5'], nomes: ['Allianz'])
+      connector = instance_double(
+        Autonomia::Insurance::Connector::Mock,
+        quote_result: { 'status' => 'running', 'offers' => [offer('5', 'Allianz', 'quoted', 900.0)] }
+      )
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+
+      # Act
+      tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)
+
+      # Assert
+      expect(conexao.reload.insurers_pending_auth).to be_nil
+    end
+  end
+
+  # CRITÉRIO 5.5 — valor com tipo, unidade e moeda exatos, distinguindo o total da parcela.
+  #
+  # "Porto Seguro: R$ 2.167,00" não diz se é o ano ou o mês, e o cliente lê pelo que lhe convém.
+  # Errar isso para baixo é o lado que fecha venda e depois vira reclamação.
+  describe 'o preço diz o que ele é (5.5)' do
+    def texto_para(premium)
+      ready_connection
+      connector = instance_double(
+        Autonomia::Insurance::Connector::Mock,
+        quote_result: { 'status' => 'running',
+                        'offers' => [{ 'insurer' => { 'code' => '8', 'name' => 'Porto' },
+                                       'status' => 'quoted', 'premium' => premium }] }
+      )
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1).deliveries.join("\n")
+    end
+
+    it 'diz o total e o parcelamento quando o portal informou os dois' do
+      # Arrange / Act
+      texto = texto_para({ 'amount' => 2167.0, 'currency' => 'BRL', 'basis' => 'total',
+                           'installments' => { 'count' => 10, 'amount' => 216.7 } })
+
+      # Assert
+      expect(texto).to include('R$ 2167,00 no total')
+      expect(texto).to include('10x de R$ 216,70')
+    end
+
+    it 'diz apenas o total quando não há parcelamento' do
+      # Arrange / Act
+      texto = texto_para({ 'amount' => 980.0, 'currency' => 'BRL', 'basis' => 'total' })
+
+      # Assert
+      expect(texto).to include('R$ 980,00 no total')
+    end
+
+    it 'NÃO inventa período quando o portal não deu como derivar' do
+      # Arrange / Act
+      texto = texto_para({ 'amount' => 2167.0, 'currency' => 'BRL', 'basis' => 'unknown' })
+
+      # Assert
+      expect(texto).to include('Porto: R$ 2167,00')
+      expect(texto).not_to include('R$ 2167,00 no total')
+      expect(texto.downcase).not_to include('por mês')
+      expect(texto.downcase).not_to include('ao ano')
+      # A ressalva sai UMA vez, no fim, e não colada em cada linha.
+      expect(texto.scan('não o formato de pagamento').size).to eq(1)
     end
   end
 end

@@ -24,7 +24,26 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
       'status' => 'ready',
       'account_label' => 'CORRETORA DE TESTE (mock)',
       'session_expires_at' => 3.hours.from_now.utc.iso8601,
-      'checked_at' => Time.current.utc.iso8601
+      'checked_at' => Time.current.utc.iso8601,
+      # O mock TEM que carregar os campos novos. Em 04/09/2026 ele foi escrito em snake_case
+      # enquanto o adapter emitia camelCase, e a suíte inteira passou a validar a suposição contra
+      # ela mesma: `session_expires_at` chegava nulo em produção e a sessão única nunca reusava
+      # nada. Mock que não reflete o formato real é um teste que se aprova sozinho.
+      'evidence' => {
+        'check' => 'session_probe',
+        'at' => Time.current.utc.iso8601,
+        'outcome' => 'ok',
+        'detail' => 'GET /cfg/corretora'
+      },
+      # Só a camada que ESTA chamada verifica fica `ok`. As outras seguem `unknown` — é o critério
+      # 1.2, e o mock precisa ensinar a mesma regra que a produção segue.
+      'layers' => {
+        'runtime' => 'ok',
+        'platform_auth' => 'ok',
+        'insurer_auth' => 'unknown',
+        'product_support' => 'unknown',
+        'risk' => 'unknown'
+      }
     }
   end
 

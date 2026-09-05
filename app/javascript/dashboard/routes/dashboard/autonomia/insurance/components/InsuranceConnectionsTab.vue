@@ -9,9 +9,13 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import InsuranceStatusBadge from './InsuranceStatusBadge.vue';
 import {
   CONNECTION_STATES,
+  asksBrokerAction,
   buildConnection,
+  failureMessageKey,
+  formatVerifiedAt,
   isConnectedState,
   isTransientState,
+  layerRows,
 } from '../insuranceContract';
 
 // Aba Conexões (PRD §9) ligada à API real: GET/POST/DELETE /autonomia/insurance/connection.
@@ -109,12 +113,43 @@ const onDisconnect = () =>
     'INSURANCE.CONNECTION.ALERTS.DISCONNECTED'
   );
 
-const formatRelative = iso => {
-  if (!iso) return t('INSURANCE.CONNECTION.NEVER');
-  const diffMin = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
-  if (diffMin < 1) return t('INSURANCE.CONNECTION.JUST_NOW');
-  return t('INSURANCE.CONNECTION.MINUTES_AGO', { count: diffMin });
+// CRITÉRIO 1.6 — a verificação diz QUANDO e COM QUE evidência.
+//
+// Isto era `formatRelative`, que mostrava "há 3 minutos". Dois defeitos: o corretor não consegue
+// cruzar um tempo relativo com o que ele mesmo viu no portal, e o número cresce sozinho na tela sem
+// que nada tenha sido reverificado — a tela envelhece a informação e continua afirmando.
+const verifiedLabel = (iso, evidence) => {
+  const at = formatVerifiedAt(iso);
+  if (!at) return t('INSURANCE.CONNECTION.NOT_VERIFIED');
+  const check = String(evidence?.check ?? 'none').toUpperCase();
+  return t('INSURANCE.CONNECTION.VERIFIED_AT', {
+    at,
+    check: t(`INSURANCE.CONNECTION.EVIDENCE.${check}`, ''),
+  });
 };
+
+const failure = computed(() => connection.value.failure ?? null);
+// Só a causa `credential_rejected` chega aqui com `actor: 'broker'`. É a única que pode virar
+// pedido de senha — ver o comentário em insuranceContract.js.
+const needsBrokerAction = computed(() => asksBrokerAction(failure.value));
+// Estados em que a tela DEVE explicar o que houve. `ready` sem falha não explica nada, e estado
+// transitório também não — dizer "não identificado" enquanto ainda está autenticando seria alarme
+// falso. Uma linha gravada por uma versão anterior chega sem `failure`, e cai no texto genérico:
+// nunca no pedido de senha, porque naquela versão `auth_required` também significava sessão morta.
+const UNHEALTHY_STATES = [
+  CONNECTION_STATES.DEGRADED,
+  CONNECTION_STATES.AUTH_REQUIRED,
+  CONNECTION_STATES.HUMAN_REQUIRED,
+  CONNECTION_STATES.OFFLINE,
+];
+const failureText = computed(() => {
+  if (!failure.value && !UNHEALTHY_STATES.includes(status.value)) return '';
+  return t(failureMessageKey(failure.value));
+});
+const layers = computed(() => layerRows(connection.value.layers));
+const pendingInsurers = computed(
+  () => connection.value.insurers_pending_auth ?? null
+);
 
 const productLabel = item =>
   t(`INSURANCE.PRODUCTS.${String(item.product).toUpperCase()}`, item.product);
@@ -259,7 +294,12 @@ onMounted(load);
                 {{ t('INSURANCE.CONNECTION.FIELDS.LAST_HEALTHCHECK') }}
               </dt>
               <dd class="text-n-slate-12">
-                {{ formatRelative(connection.last_healthcheck_at) }}
+                {{
+                  verifiedLabel(
+                    connection.evidence?.at || connection.last_healthcheck_at,
+                    connection.evidence
+                  )
+                }}
               </dd>
             </div>
             <div class="flex flex-col gap-0.5">
@@ -267,17 +307,32 @@ onMounted(load);
                 {{ t('INSURANCE.CONNECTION.FIELDS.LAST_SCAN') }}
               </dt>
               <dd class="text-n-slate-12">
-                {{ formatRelative(connection.last_capability_scan_at) }}
+                {{
+                  verifiedLabel(connection.last_capability_scan_at, {
+                    check: 'capability_scan',
+                  })
+                }}
               </dd>
             </div>
           </dl>
 
-          <p
-            v-if="status === CONNECTION_STATES.AUTH_REQUIRED"
-            class="text-xs text-n-amber-11"
+          <div
+            v-if="failureText"
+            class="flex items-start gap-2 px-3 py-2 rounded-lg text-xs"
+            :class="
+              needsBrokerAction
+                ? 'bg-n-amber-2 text-n-amber-12'
+                : 'bg-n-alpha-2 text-n-slate-12'
+            "
           >
-            {{ t('INSURANCE.CONNECTION.AUTH_REQUIRED_HINT') }}
-          </p>
+            <span
+              class="size-4 mt-0.5 shrink-0"
+              :class="
+                needsBrokerAction ? 'i-lucide-key-round' : 'i-lucide-info'
+              "
+            />
+            <p>{{ failureText }}</p>
+          </div>
 
           <div class="flex flex-wrap items-center gap-2">
             <NextButton
@@ -309,6 +364,71 @@ onMounted(load);
             />
           </div>
         </div>
+      </section>
+
+      <!-- CRITÉRIO 4.5: o problema de credencial de seguradora aparece AQUI, e nunca na conversa
+           com o cliente. -->
+      <section
+        v-if="pendingInsurers"
+        class="flex items-start gap-3 px-4 py-3 rounded-lg bg-n-amber-2 text-n-amber-12 text-sm"
+      >
+        <span class="i-lucide-key-round size-4 mt-0.5 shrink-0" />
+        <div class="flex flex-col gap-1">
+          <p class="font-medium">
+            {{ t('INSURANCE.CONNECTION.INSURERS_PENDING.TITLE') }}
+          </p>
+          <p class="text-xs">
+            {{
+              t('INSURANCE.CONNECTION.INSURERS_PENDING.BODY', {
+                count: pendingInsurers.codes?.length ?? 0,
+                at: formatVerifiedAt(pendingInsurers.observed_at),
+              })
+            }}
+          </p>
+          <p v-if="pendingInsurers.names?.length" class="text-xs font-mono">
+            {{ pendingInsurers.names.join(', ') }}
+          </p>
+        </div>
+      </section>
+
+      <!-- CRITÉRIO 1.2: as cinco camadas separadas. `não verificado` é uma resposta, não um vazio. -->
+      <section
+        v-if="connection.layers"
+        class="rounded-xl border border-n-weak bg-n-solid-1 overflow-hidden"
+      >
+        <header class="px-5 py-4 border-b border-n-weak">
+          <h2 class="text-sm font-medium text-n-slate-12">
+            {{ t('INSURANCE.CONNECTION.LAYERS.TITLE') }}
+          </h2>
+          <p class="text-xs text-n-slate-11">
+            {{ t('INSURANCE.CONNECTION.LAYERS.SUBTITLE') }}
+          </p>
+        </header>
+        <ul class="divide-y divide-n-weak">
+          <li
+            v-for="row in layers"
+            :key="row.key"
+            class="flex items-center justify-between gap-4 px-5 py-2.5 text-sm"
+          >
+            <span class="text-n-slate-12">
+              {{ t(`INSURANCE.CONNECTION.LAYERS.${row.key.toUpperCase()}`) }}
+            </span>
+            <span
+              class="text-xs shrink-0"
+              :class="{
+                'text-n-teal-11': row.state === 'ok',
+                'text-n-ruby-11': row.state === 'failed',
+                'text-n-slate-11': row.state === 'unknown',
+              }"
+            >
+              {{
+                t(
+                  `INSURANCE.CONNECTION.LAYERS.STATE.${row.state.toUpperCase()}`
+                )
+              }}
+            </span>
+          </li>
+        </ul>
       </section>
 
       <section

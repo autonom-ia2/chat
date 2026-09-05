@@ -112,13 +112,24 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(wrapper.find('#insurance-agger-password').exists()).toBe(false);
   });
 
-  it('shows the human hint on auth_required, never the server response', async () => {
+  // CRITÉRIO 1.1 — a tela não atribui ao corretor uma falha que não é dele.
+  //
+  // Este exemplo exigia `AUTH_REQUIRED_HINT` sempre que o status fosse `auth_required`, e esse hint
+  // manda conferir usuário e senha. Como QUALQUER 403 virava `auth_required`, uma sessão derrubada
+  // por login no navegador pedia troca de senha — aconteceu duas vezes em 05/09/2026, com a
+  // credencial certa nas duas. Agora quem decide a mensagem é a CAUSA, não o status.
+  it('pede a senha de volta quando o portal recusou a credencial', async () => {
     api.getConnection.mockResolvedValue({
       data: {
         payload: {
           ...blank,
           status: 'auth_required',
-          last_error: 'auth_required: invalid credentials',
+          last_error: 'credential_rejected: invalid credentials',
+          failure: {
+            cause: 'credential_rejected',
+            actor: 'broker',
+            retryable: false,
+          },
           username_hint: 'x***@y.com',
         },
       },
@@ -128,10 +139,14 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(wrapper.text()).toContain(
       'INSURANCE.CONNECTION.STATES.AUTH_REQUIRED'
     );
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.FAILURES.CREDENTIAL_REJECTED'
+    );
     // O corretor lê a frase que diz o que FAZER. O motivo técnico continua gravado em `last_error`
     // e no log; na tela ele só expunha a URL interna do portal e não ajudava ninguém.
-    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.AUTH_REQUIRED_HINT');
-    expect(wrapper.text()).not.toContain('auth_required: invalid credentials');
+    expect(wrapper.text()).not.toContain(
+      'credential_rejected: invalid credentials'
+    );
 
     await wrapper
       .find('button[label="INSURANCE.CONNECTION.ACTIONS.RECONNECT"]')
@@ -176,5 +191,126 @@ describe('InsuranceConnectionsTab (API)', () => {
     await flushPromises();
     expect(api.removeConnection).toHaveBeenCalledTimes(1);
     expect(wrapper.find('#insurance-agger-username').exists()).toBe(true);
+  });
+
+  // O CASO DE 05/09: sessão derrubada por login no navegador. Mesmo 403, mesma tela, causa oposta.
+  it('não pede senha quando o que caiu foi a sessão, e não a credencial (1.1)', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...blank,
+          status: 'degraded',
+          failure: { cause: 'session_lost', actor: 'nobody', retryable: true },
+          username_hint: 'x***@y.com',
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.FAILURES.SESSION_LOST'
+    );
+    expect(wrapper.text()).not.toContain(
+      'INSURANCE.CONNECTION.FAILURES.CREDENTIAL_REJECTED'
+    );
+  });
+
+  it('portal fora e integração desatualizada têm mensagens distintas entre si (1.1)', async () => {
+    const textoPara = async (status, cause, actor) => {
+      api.getConnection.mockResolvedValue({
+        data: {
+          payload: {
+            ...blank,
+            status,
+            failure: { cause, actor },
+            username_hint: 'x***@y.com',
+          },
+        },
+      });
+      return (await mountTab()).text();
+    };
+
+    const foraDoAr = await textoPara('offline', 'portal_unavailable', 'nobody');
+    const desatualizada = await textoPara(
+      'degraded',
+      'integration_outdated',
+      'autonomia'
+    );
+
+    expect(foraDoAr).toContain(
+      'INSURANCE.CONNECTION.FAILURES.PORTAL_UNAVAILABLE'
+    );
+    expect(desatualizada).toContain(
+      'INSURANCE.CONNECTION.FAILURES.INTEGRATION_OUTDATED'
+    );
+    expect(foraDoAr).not.toContain(
+      'INSURANCE.CONNECTION.FAILURES.INTEGRATION_OUTDATED'
+    );
+  });
+
+  // CRITÉRIO 1.2 — o que ninguém olhou aparece como não verificado, e não como vazio nem como ok.
+  it('mostra as cinco camadas, com as não verificadas ditas por extenso', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          layers: {
+            runtime: 'ok',
+            platform_auth: 'ok',
+            insurer_auth: 'unknown',
+            product_support: 'unknown',
+            risk: 'unknown',
+          },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH'
+    );
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.LAYERS.RISK');
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.LAYERS.STATE.UNKNOWN'
+    );
+  });
+
+  // CRITÉRIO 1.6 — instante absoluto e o que foi feito, nunca "há 3 minutos".
+  it('diz quando verificou e com qual evidência', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          evidence: {
+            check: 'session_probe',
+            at: '2026-09-05T17:02:00.000Z',
+            outcome: 'ok',
+            detail: 'GET /cfg/corretora',
+          },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERIFIED_AT');
+    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.MINUTES_AGO');
+  });
+
+  // CRITÉRIO 4.5 — credencial de seguradora aparece na tela de Conexões, e só nela.
+  it('mostra as seguradoras que recusaram a credencial da corretora', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          insurers_pending_auth: {
+            codes: ['5', '9'],
+            names: ['Allianz', 'Icatu'],
+            observed_at: '2026-09-05T17:02:00.000Z',
+          },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.INSURERS_PENDING.TITLE'
+    );
+    expect(wrapper.text()).toContain('Allianz, Icatu');
   });
 });

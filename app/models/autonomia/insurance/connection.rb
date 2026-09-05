@@ -119,8 +119,48 @@ class Autonomia::Insurance::Connection < ApplicationRecord
       last_capability_scan_at: last_capability_scan_at,
       session_expires_at: session_expires_at,
       encryption_available: self.class.encryption_available?,
-      updated_at: updated_at
+      updated_at: updated_at,
+      # Diagnostico estruturado (criterios 1.1, 1.2, 1.6 e 4.5). `last_error` continua sendo o texto
+      # para humano; estes tres sao o que a tela DECIDE em cima -- que mensagem mostrar, se pede
+      # acao do corretor, e o que ainda nao foi verificado.
+      failure: last_failure,
+      evidence: last_evidence,
+      layers: layers,
+      insurers_pending_auth: insurers_pending_auth
     }
+  end
+
+  # De quem e a acao nesta falha. Sem isso a tela so tem o `status`, e `auth_required` acabava
+  # virando "confira sua senha" para qualquer 403 -- inclusive o de uma sessao que morreu.
+  def last_failure
+    metadata.to_h['last_failure'].presence
+  end
+
+  # O que foi verificado, quando e com que resultado (1.6).
+  def last_evidence
+    metadata.to_h['last_evidence'].presence
+  end
+
+  # As cinco camadas do 1.2. Ausente e diferente de `unknown`: ausente quer dizer que a conexao
+  # nunca foi verificada por uma versao que sabe separa-las.
+  def layers
+    metadata.to_h['layers'].presence
+  end
+
+  # Seguradoras que recusaram a credencial que a corretora guardou NO PORTAL. Descoberto durante a
+  # cotacao e trazido para ca porque e aqui que tem conserto -- nunca para o cliente final (4.5).
+  def insurers_pending_auth
+    metadata.to_h['insurers_pending_auth'].presence
+  end
+
+  # Registra o achado da cotacao SEM sobrescrever o resto de `metadata` (a comissao mora la).
+  # Escreve so quando o conjunto muda: o polling passa aqui de poucos em poucos segundos.
+  def record_insurers_pending_auth!(codigos, nomes:, observed_at: Time.current)
+    atual = insurers_pending_auth
+    novo = { 'codes' => codigos.sort, 'names' => nomes, 'observed_at' => observed_at.iso8601 }
+    return if atual.is_a?(Hash) && atual['codes'] == novo['codes']
+
+    update!(metadata: metadata.to_h.merge('insurers_pending_auth' => codigos.empty? ? nil : novo))
   end
 
   private

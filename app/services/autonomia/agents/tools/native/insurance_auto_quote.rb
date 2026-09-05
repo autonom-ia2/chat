@@ -129,6 +129,7 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
   private
 
   def build_progress(result, handle, _attempt)
+    registrar_credencial_de_seguradora(result)
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
     fresh = quoted_offers(result).reject { |offer| already.include?(insurer_code(offer)) }
     next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| insurer_code(offer) })
@@ -180,6 +181,26 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     nil
   end
 
+  # CRITÉRIO 4.5 — problema de credencial de seguradora nunca chega ao cliente final; vai para a
+  # tela de Conexões.
+  #
+  # A metade fácil já era feita: `quoted_offers` filtra e o cliente nunca vê. A metade que faltava é
+  # que ninguém via. Uma seguradora que recusa a credencial que a corretora cadastrou NO PORTAL
+  # simplesmente sumia da lista, e a corretora seguia achando que aquela seguradora "não cotou este
+  # risco" — quando o que havia era um login para arrumar. `cfg/seguradora/config` não denuncia:
+  # ele responde `credenciaisValidas: true` até para seguradora com login inválido. A cotação real é
+  # a única testemunha, e é aqui que ela passa.
+  def registrar_credencial_de_seguradora(result)
+    pendentes = Array(result['offers']).select { |offer| offer['status'] == 'auth_required' }
+    connection.record_insurers_pending_auth!(
+      pendentes.map { |offer| insurer_code(offer) },
+      nomes: pendentes.filter_map { |offer| offer.dig('insurer', 'name') }.uniq
+    )
+  rescue StandardError => e
+    # Diagnóstico não derruba cotação: os preços do cliente valem mais que o nosso registro.
+    Rails.logger.warn("[autonomia][insurance] registro de credencial de seguradora falhou #{e.class}")
+  end
+
   # SÓ quem cotou. `declined` e `auth_required` não viram texto ao cliente — ver o cabeçalho.
   def quoted_offers(result)
     Array(result['offers'])
@@ -196,15 +217,16 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
   # parece uma cotação nova e o cliente não sabe qual vale.
   def describe(offers, first:, sem_bonus: false)
     linhas = offers.map do |offer|
-      "#{offer.dig('insurer', 'name')}: #{money(offer.dig('premium', 'amount'))}"
+      "#{offer.dig('insurer', 'name')}: #{::Autonomia::Insurance::PremiumText.new(offer['premium'])}"
     end
     abertura = first ? 'Primeiros preços que chegaram:' : 'Chegaram mais opções:'
     corpo = "#{abertura}\n#{linhas.join("\n")}"
+    corpo = "#{corpo}\n\n#{::Autonomia::Insurance::PremiumText::SEM_SIGNIFICADO}" if algum_indefinido?(offers)
     sem_bonus ? "#{corpo}\n\n#{AVISO_SEM_BONUS}" : corpo
   end
 
-  def money(amount)
-    "R$ #{format('%.2f', amount.to_f).tr('.', ',')}"
+  def algum_indefinido?(offers)
+    offers.any? { |offer| ::Autonomia::Insurance::PremiumText.new(offer['premium']).indefinido? }
   end
 
   def quote_input
