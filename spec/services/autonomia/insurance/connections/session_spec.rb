@@ -8,6 +8,74 @@ RSpec.describe Autonomia::Insurance::Connections::Session do
 
   before { enable_test_encryption! }
 
+  # REGRESSÃO REAL, 05/09/2026, horas depois de a sessão única entrar no ar. O corretor abriu o
+  # portal do AGGER pelo navegador; o AGGER aceita uma sessão por login e derrubou a nossa. A linha
+  # continuou com uma sessão que PARECIA viva (`session_live?` só olha o prazo que nós gravamos), e
+  # toda chamada morreu em `GET /cfg/corretora -> 403`. A tela passou a dizer "credencial recusada"
+  # com a credencial perfeitamente válida.
+  #
+  # `renew!` já existia, documentado para exatamente este caso — e ninguém o chamava.
+  describe '#with_fresh_session' do
+    let(:renew_account) { create(:account) }
+    let(:renew_connection) do
+      record = Autonomia::Insurance::Connection.create!(account: renew_account, username: 'c@x.com',
+                                                        password: 'segredo')
+      record.store_session!({ 'multicalculoToken' => 'morta' }, expires_at: 3.hours.from_now)
+      record
+    end
+    let(:renew_connector) do
+      instance_double(Autonomia::Insurance::Connector::Mock,
+                      open_session: { 'platform' => 'agger', 'data' => { 'token' => 'nova' },
+                                      'expires_at' => 3.hours.from_now.utc.iso8601 })
+    end
+
+    it 'opens another session when the portal refuses the stored one' do
+      # Arrange — o portal recusa a sessão guardada; o login seguinte funciona
+      tentativas = 0
+
+      # Act
+      resultado = described_class.new(renew_connection, connector: renew_connector).with_fresh_session do |session|
+        tentativas += 1
+        raise Autonomia::Insurance::Connector::Error.new(:auth_required, 'GET /cfg/corretora -> 403') if tentativas == 1
+
+        session
+      end
+
+      # Assert — a segunda passada recebe a sessão NOVA, não a que o portal recusou.
+      # O que fica guardado é o `data` do payload, não o envelope.
+      expect(tentativas).to eq(2)
+      expect(resultado.to_h).to eq({ 'token' => 'nova' })
+    end
+
+    it 'gives up after one renewal, because insisting only piles up logins' do
+      # Arrange — credencial de fato inválida: renovar não resolve
+      tentativas = 0
+
+      # Act / Assert
+      expect do
+        described_class.new(renew_connection, connector: renew_connector).with_fresh_session do
+          tentativas += 1
+          raise Autonomia::Insurance::Connector::Error.new(:auth_required, 'recusado')
+        end
+      end.to raise_error(Autonomia::Insurance::Connector::Error)
+      expect(tentativas).to eq(2)
+    end
+
+    it 'does not renew for an error that has nothing to do with the session' do
+      # Arrange — portal fora do ar não vira login novo
+      tentativas = 0
+
+      # Act / Assert
+      expect do
+        described_class.new(renew_connection, connector: renew_connector).with_fresh_session do
+          tentativas += 1
+          raise Autonomia::Insurance::Connector::Error.new(:unavailable, 'portal fora')
+        end
+      end.to raise_error(Autonomia::Insurance::Connector::Error)
+      expect(tentativas).to eq(1)
+    end
+  end
+
   def connection
     Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
   end

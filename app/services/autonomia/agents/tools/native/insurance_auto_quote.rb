@@ -77,10 +77,16 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
   end
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
+  #
+  # `with_fresh_session` porque uma cotação dura minutos e consulta de poucos em poucos segundos:
+  # é o caminho com MAIS chance de a sessão morrer no meio — basta alguém abrir o portal no
+  # navegador, e o AGGER derruba a nossa. Sem renovar, a cotação inteira morre em 403.
   def start
-    handle = connector.quote_start(provider: connection.provider, session: session, product: PRODUCT,
-                                   input: quote_input)
-    { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [] }
+    sessions.with_fresh_session do |open_session|
+      handle = connector.quote_start(provider: connection.provider, session: open_session,
+                                     product: PRODUCT, input: quote_input)
+      { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [] }
+    end
   end
 
   # -> Tools::Progress. Uma consulta. Só entrega quem AINDA NÃO foi entregue.
@@ -88,8 +94,9 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     quote_id = handle['quote_id']
     return progress_class.failed('sem_id_de_cotacao') if quote_id.blank?
 
-    result = connector.quote_result(provider: connection.provider, session: session,
-                                    quote_id: quote_id)
+    result = sessions.with_fresh_session do |open_session|
+      connector.quote_result(provider: connection.provider, session: open_session, quote_id: quote_id)
+    end
     build_progress(result, handle, attempt)
   end
 
@@ -124,8 +131,10 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     return if handle[PDF_SENT_KEY]
     return if Array(handle[DELIVERED_KEY]).empty?
 
-    proposal = connector.quote_proposal(provider: connection.provider, session: session,
-                                        quote_id: handle['quote_id'])
+    proposal = sessions.with_fresh_session do |open_session|
+      connector.quote_proposal(provider: connection.provider, session: open_session,
+                               quote_id: handle['quote_id'])
+    end
     url = proposal.to_h['url'].presence
     url && "Comparativo com todas as opções:\n#{url}"
   rescue StandardError => e
@@ -178,9 +187,8 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
 
   # A sessão é ÚNICA por conexão (#330): reusada, nunca aberta por chamada. É o que permite duas
   # cotações simultâneas da mesma corretora sem uma atrapalhar a outra.
-  def session
-    @session ||= ::Autonomia::Insurance::Connections::Session.new(connection, connector: connector)
-                                                             .resolve!
+  def sessions
+    @sessions ||= ::Autonomia::Insurance::Connections::Session.new(connection, connector: connector)
   end
 
   def connection

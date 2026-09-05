@@ -28,9 +28,13 @@ class Autonomia::Insurance::Connections::Sync
     return mark!(status: 'not_configured') unless @connection.credentials_present?
 
     mark!(status: 'authenticating')
-    session = @sessions.resolve!
-    apply_status!(@connector.connection_status(provider: @connection.provider, session: session))
-    scan!(session) if @scan_capabilities && @connection.ready?
+    # `with_fresh_session` e não `resolve!`: a sessão guardada pode ter sido derrubada por um login
+    # feito no portal pelo navegador, e só descobrimos isso quando o portal recusa. Sem a renovação,
+    # a conexão fica "credencial recusada" com a credencial válida até o prazo vencer.
+    @sessions.with_fresh_session do |session|
+      apply_status!(@connector.connection_status(provider: @connection.provider, session: session))
+      scan!(session) if @scan_capabilities && @connection.ready?
+    end
     @connection
   rescue ::Autonomia::Insurance::Connector::Error => e
     # Credencial recusada invalida também o que estava guardado: manter a sessão faria a próxima
