@@ -20,6 +20,76 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
       .to_return(status: outer_status, body: body, headers: { 'Content-Type' => 'application/json' })
   end
 
+  # O TESTE QUE FALTAVA. O adapter é TypeScript e devolve camelCase; o Rails inteiro lê snake_case.
+  # Ninguém exercitava essa fronteira: o `Mock` já nasce em snake_case (ele SUBSTITUI o Http, não
+  # passa por ele), então toda a suíte passava verde validando a minha suposição do formato contra
+  # ela mesma. O formato REAL do Lambda nunca era exercido em teste nenhum.
+  #
+  # O preço disso: `expiresAt` chegava, `payload['expires_at']` lia nil, `session_live?` era sempre
+  # falso, e a sessão única nunca reusou nada em produção.
+  describe 'camelCase do adapter na fronteira' do
+    it 'traduz o prazo da sessão, que é o campo que decide se ela vale' do
+      # Arrange — payload EXATO do adapter (core/adapter.ts: OpenSession)
+      prazo = 3.hours.from_now.utc.iso8601
+      stub_invoke(inner_status: 200, inner_body: {
+        'platform' => 'agger',
+        'data' => { 'aggregatorToken' => 'agg', 'multicalculoToken' => 'multi' },
+        'expiresAt' => prazo,
+        'accountLabel' => 'CORRETORA X',
+        'droppedPreviousSession' => false
+      }.to_json)
+
+      # Act
+      payload = described_class.new.open_session(**credentials)
+
+      # Assert
+      expect(payload['expires_at']).to eq(prazo)
+      expect(payload['account_label']).to eq('CORRETORA X')
+      expect(payload['dropped_previous_session']).to be(false)
+      expect(payload.keys).not_to include('expiresAt', 'accountLabel', 'droppedPreviousSession')
+    end
+
+    it 'traduz o prazo que vem no status da conexão' do
+      # Arrange — ConnectionState usa OUTRO nome para o mesmo conceito
+      prazo = 2.hours.from_now.utc.iso8601
+      stub_invoke(inner_status: 200, inner_body: {
+        'platform' => 'agger', 'status' => 'ready',
+        'sessionExpiresAt' => prazo, 'accountLabel' => 'CORRETORA X',
+        'checkedAt' => Time.current.utc.iso8601
+      }.to_json)
+
+      # Act
+      payload = described_class.new.connection_status(**with_session)
+
+      # Assert
+      expect(payload['session_expires_at']).to eq(prazo)
+      expect(payload['checked_at']).to be_present
+    end
+
+    it 'não mexe em `data`, que é a sessão opaca do portal' do
+      # Arrange — as chaves de dentro de `data` são do adapter; traduzi-las quebraria o token
+      stub_invoke(inner_status: 200, inner_body: {
+        'platform' => 'agger',
+        'data' => { 'aggregatorToken' => 'agg', 'multicalculoToken' => 'multi' },
+        'expiresAt' => 1.hour.from_now.utc.iso8601
+      }.to_json)
+
+      # Act / Assert
+      expect(described_class.new.open_session(**credentials)['data'])
+        .to eq({ 'aggregatorToken' => 'agg', 'multicalculoToken' => 'multi' })
+    end
+
+    it 'deixa passar o payload que já vem em snake_case' do
+      # Arrange — retrocompatibilidade: adapter antigo, ou o dia em que ele passar a mandar assim
+      prazo = 1.hour.from_now.utc.iso8601
+      stub_invoke(inner_status: 200,
+                  inner_body: { 'platform' => 'agger', 'expires_at' => prazo }.to_json)
+
+      # Act / Assert
+      expect(described_class.new.open_session(**credentials)['expires_at']).to eq(prazo)
+    end
+  end
+
   it 'signs the invocation, sends the open session in the event and returns the payload' do
     stub_invoke(inner_status: 200, inner_body: { 'status' => 'ready', 'account_label' => 'CORRETORA X' }.to_json)
 
