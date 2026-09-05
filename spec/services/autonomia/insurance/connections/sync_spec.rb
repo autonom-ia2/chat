@@ -23,11 +23,19 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
   # o código tratou como sucesso e zerou `last_error`. A tela mostrou "conectado com alertas" sem
   # dizer qual alerta, o banco não guardou nada, e não houve como diagnosticar depois.
   # Payload bem-formado com status ruim NÃO é sucesso.
+  # O `Sync` abre (ou reusa) a sessão ANTES de perguntar o status — mudou na #331. Um double que só
+  # conhece `connection_status` estoura em `open_session`, então o helper cobre as duas pontas.
+  def connector_answering(status_payload)
+    instance_double(Autonomia::Insurance::Connector::Mock,
+                    open_session: { 'platform' => 'agger', 'data' => { 'token' => 'x' },
+                                    'expires_at' => 3.hours.from_now.utc.iso8601 },
+                    connection_status: status_payload)
+  end
+
   it 'keeps the reason when the portal answers with a degraded status' do
     # Arrange
-    connector = instance_double(Autonomia::Insurance::Connector::Mock)
-    allow(connector).to receive(:connection_status)
-      .and_return({ 'status' => 'degraded', 'reason' => 'protocol: unexpected login payload' })
+    connector = connector_answering({ 'status' => 'degraded',
+                                      'reason' => 'protocol: unexpected login payload' })
 
     # Act
     result = described_class.new(connection, connector: connector).call
@@ -40,8 +48,7 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
 
   it 'records something even when the adapter sends no reason' do
     # Arrange — adapter antigo, sem o campo. "status degraded" ainda é pista; vazio não é.
-    connector = instance_double(Autonomia::Insurance::Connector::Mock)
-    allow(connector).to receive(:connection_status).and_return({ 'status' => 'degraded' })
+    connector = connector_answering({ 'status' => 'degraded' })
 
     # Act / Assert
     expect(described_class.new(connection, connector: connector).call.last_error).to include('degraded')
