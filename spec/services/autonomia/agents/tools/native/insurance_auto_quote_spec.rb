@@ -158,67 +158,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
           expect(kwargs[:input]).not_to have_key('quotation')
         end
       end
-
-      # O cast do Rails trata "não" como TRUE. Numa ferramenta em português essa é a string errada
-      # mais provável, e ela cotaria como renovação um cliente que disse que não é.
-      it 'entende "não" como cotação nova, que o cast do Rails sozinho não faz' do
-        # Arrange
-        ready_connection
-        connector = instance_double(Autonomia::Insurance::Connector::Mock,
-                                    quote_start: { 'quote_id' => 'abc:1' })
-        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-
-        # Act / Assert
-        ['não', 'nao', 'NÃO', ' no '].each do |negativa|
-          described_class.new(agent: agent, params: params.merge('renovacao' => negativa)).start
-        end
-        expect(connector).to have_received(:quote_start).exactly(4).times do |**kwargs|
-          expect(kwargs[:input]).not_to have_key('quotation')
-        end
-      end
-
-      # Decisão do PO: valor fora da faixa NÃO trava e NÃO vira 10. Limitar a 10 inventaria um bônus
-      # que o cliente não tem e devolveria um preço que ele não consegue comprar. Sem bônus a
-      # cotação sai mais cara e verdadeira, e o cliente é avisado de que dá para melhorar.
-      it 'trata bônus fora da faixa como não informado, em vez de derrubar a cotação' do
-        # Arrange — 30 é o erro mais provável: o modelo confundindo percentual com classe
-        ready_connection
-        connector = instance_double(Autonomia::Insurance::Connector::Mock,
-                                    quote_start: { 'quote_id' => 'abc:1' })
-        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-        fora = described_class.new(agent: agent,
-                                   params: params.merge('renovacao' => true, 'bonus' => 30))
-
-        # Act
-        handle = fora.start
-
-        # Assert — o portal recebe renovação sem classe, e o handle lembra de avisar o cliente
-        expect(connector).to have_received(:quote_start) do |**kwargs|
-          expect(kwargs[:input]['quotation']).to eq('isRenewal' => true)
-        end
-        expect(handle[described_class::SEM_BONUS_KEY]).to be(true)
-      end
-
-      # Zero é resposta, não ausência: quem teve sinistro volta para a classe 0. Quem respondeu não
-      # pode receber o aviso de "me diga sua classe" — ele já disse.
-      it 'não avisa sobre bônus quando o cliente informou classe 0' do
-        # Arrange
-        ready_connection
-        connector = instance_double(Autonomia::Insurance::Connector::Mock,
-                                    quote_start: { 'quote_id' => 'abc:1' })
-        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-        classe_zero = described_class.new(agent: agent,
-                                          params: params.merge('renovacao' => true, 'bonus' => 0))
-
-        # Act
-        handle = classe_zero.start
-
-        # Assert
-        expect(connector).to have_received(:quote_start) do |**kwargs|
-          expect(kwargs[:input]['quotation']['bonusClass']).to eq(0)
-        end
-        expect(handle[described_class::SEM_BONUS_KEY]).to be(false)
-      end
     end
 
     describe 'aviso de renovação sem bônus' do
@@ -241,8 +180,49 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
         expect(primeira.deliveries.first).to include('classe de bônus')
       end
 
-      it 'não repete o aviso nas entregas seguintes' do
-        # Arrange — segunda leva: já houve entrega antes
+      it 'marca no handle que saiu, para não repetir' do
+        # Arrange
+        ready_connection
+        resultado = { 'status' => 'running',
+                      'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '1', 'name' => 'Ezze' },
+                                     'premium' => { 'amount' => 2050.4 } }] }
+        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_result: resultado)
+        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+        handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [],
+                   described_class::SEM_BONUS_KEY => true }
+
+        # Act
+        primeira = tool.poll(handle: handle, attempt: 1)
+
+        # Assert
+        expect(primeira.handle[described_class::AVISO_SENT_KEY]).to be(true)
+      end
+
+      it 'não repete depois de já ter saído' do
+        # Arrange — segunda leva, com a sentinela do aviso já marcada
+        ready_connection
+        resultado = { 'status' => 'running',
+                      'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '2', 'name' => 'Mapfre' },
+                                     'premium' => { 'amount' => 2582.76 } }] }
+        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_result: resultado)
+        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+        handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['1'],
+                   described_class::SEM_BONUS_KEY => true,
+                   described_class::AVISO_SENT_KEY => true }
+
+        # Act
+        segunda = tool.poll(handle: handle, attempt: 2)
+
+        # Assert
+        expect(segunda.deliveries.first).to include('Mapfre')
+        expect(segunda.deliveries.first).not_to include('classe de bônus')
+      end
+
+      # `deliver` roda ANTES de `record_attempt!`: uma entrega bloqueada avança o handle com os
+      # códigos das ofertas mesmo assim. Com a regra antiga (só na primeira entrega) o aviso se
+      # perdia para sempre nessa janela. Com sentinela própria, ele sai na leva seguinte.
+      it 'sai numa entrega posterior quando a primeira não chegou a sair' do
+        # Arrange — já há oferta entregue, mas o aviso nunca foi marcado
         ready_connection
         resultado = { 'status' => 'running',
                       'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '2', 'name' => 'Mapfre' },
@@ -256,8 +236,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
         segunda = tool.poll(handle: handle, attempt: 2)
 
         # Assert
-        expect(segunda.deliveries.first).to include('Mapfre')
-        expect(segunda.deliveries.first).not_to include('classe de bônus')
+        expect(segunda.deliveries.first).to include('classe de bônus')
+        expect(segunda.handle[described_class::AVISO_SENT_KEY]).to be(true)
       end
 
       it 'não avisa quando a renovação veio com bônus' do

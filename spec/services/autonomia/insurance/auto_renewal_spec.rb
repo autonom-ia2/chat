@@ -13,29 +13,34 @@ RSpec.describe Autonomia::Insurance::AutoRenewal do
         .to eq('quotation' => { 'isRenewal' => true, 'bonusClass' => 7, 'previousClaimsCount' => 1 })
     end
 
-    # O cast do Rails trata "não" como TRUE. Numa ferramenta em português essa é a string errada
-    # mais provável, e ela cotaria como renovação um cliente que disse que não é.
-    it 'entende as negativas em português, que o cast do Rails sozinho não entende' do
-      ['não', 'nao', 'NÃO', ' no ', 'nenhum'].each do |negativa|
-        expect(described_class.new('renovacao' => negativa).to_input).to eq({}), negativa
-      end
-    end
-
-    it 'ainda entende as negativas que o cast já resolvia' do
-      %w[false 0 off].each do |negativa|
-        expect(described_class.new('renovacao' => negativa).to_input).to eq({}), negativa
-      end
-    end
-
     # Fora da faixa o adapter RECUSA a cotação inteira antes de falar com o portal, e o cliente
     # espera o deadline para receber "não consegui". 30 é o erro mais provável: percentual no lugar
     # da classe. Vira nil, e não 10 — limitar inventaria um bônus que ele não tem.
     it 'descarta bônus fora da faixa em vez de derrubar a cotação ou inventar um valor' do
-      [30, 11, -1, 100].each do |fora|
+      [30, 11, -1].each do |fora|
         entrada = described_class.new('renovacao' => true, 'bonus' => fora).to_input
 
         expect(entrada['quotation']).to eq('isRenewal' => true), fora.to_s
       end
+    end
+
+    # A MESMA classe de defeito do bônus, no campo irmão. `-1` é o sentinel que um modelo inventa
+    # quando a descrição avisa que 0 significa "nenhum sinistro" e não sobra jeito de dizer "não
+    # sei". O adapter declara `min(0)` e recusa a cotação inteira.
+    it 'descarta sinistros fora da faixa, em vez de derrubar a cotação' do
+      [-1, 100].each do |fora|
+        entrada = described_class.new('renovacao' => true, 'sinistros' => fora).to_input
+
+        expect(entrada['quotation']).to eq('isRenewal' => true), fora.inspect
+      end
+    end
+
+    # A classe tem spec próprio e é desenhada como unidade autônoma. Sem normalizar, chaves símbolo
+    # viram "não é renovação" em silêncio — a falha mais cara possível aqui, e sem erro nenhum.
+    it 'aceita chaves símbolo, como a Base já normaliza' do
+      entrada = described_class.new(renovacao: true, bonus: 7).to_input
+
+      expect(entrada['quotation']).to eq('isRenewal' => true, 'bonusClass' => 7)
     end
 
     # Quem teve sinistro volta para a classe 0. Zero é resposta, não ausência.

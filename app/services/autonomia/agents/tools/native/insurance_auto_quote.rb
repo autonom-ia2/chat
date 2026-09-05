@@ -33,6 +33,11 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
   # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
   # quem precisa contar ao cliente é a primeira entrega de preços, minutos depois.
   SEM_BONUS_KEY = 'renovacao_sem_bonus'.freeze
+  # O aviso JÁ SAIU. Sentinela própria, no mesmo molde do `PDF_SENT_KEY`, e não inferência a partir
+  # de `already.empty?`: `deliver` roda ANTES de `record_attempt!`, então uma entrega bloqueada
+  # (conversa encerrada, erro transitório do publisher) avançava o handle com os códigos das ofertas
+  # mesmo assim — e o aviso, que vale por sair UMA vez, não sairia nunca mais.
+  AVISO_SENT_KEY = 'aviso_sem_bonus_enviado'.freeze
 
   class << self
     def slug
@@ -132,11 +137,7 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
     fresh = quoted_offers(result).reject { |offer| already.include?(insurer_code(offer)) }
     next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| insurer_code(offer) })
-    deliveries = if fresh.any?
-                   [describe(fresh, first: already.empty?, sem_bonus: handle[SEM_BONUS_KEY])]
-                 else
-                   []
-                 end
+    deliveries, next_handle = precos(fresh, already, next_handle)
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
 
@@ -149,6 +150,18 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
       next_handle = next_handle.merge(PDF_SENT_KEY => true)
     end
     progress_class.done(deliveries: deliveries, handle: next_handle)
+  end
+
+  # -> [deliveries, handle]. O aviso de renovação sem bônus tem SENTINELA própria, no mesmo molde do
+  # PDF, e não é inferido de "esta é a primeira entrega": `deliver` roda antes de `record_attempt!`,
+  # então uma entrega bloqueada avançaria o handle e o aviso — que vale por sair uma vez — não sairia
+  # nunca mais.
+  def precos(fresh, already, handle)
+    return [[], handle] if fresh.empty?
+
+    avisar = handle[SEM_BONUS_KEY].present? && handle[AVISO_SENT_KEY].blank?
+    texto = describe(fresh, first: already.empty?, sem_bonus: avisar)
+    [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
   end
 
   def finished?(result)
@@ -192,7 +205,7 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     end
     abertura = first ? 'Primeiros preços que chegaram:' : 'Chegaram mais opções:'
     corpo = "#{abertura}\n#{linhas.join("\n")}"
-    first && sem_bonus ? "#{corpo}\n\n#{AVISO_SEM_BONUS}" : corpo
+    sem_bonus ? "#{corpo}\n\n#{AVISO_SEM_BONUS}" : corpo
   end
 
   def money(amount)
