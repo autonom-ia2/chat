@@ -144,19 +144,22 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   # exceção, e ela é do desenho, não um caso especial.
   OPACO = 'data'.freeze
 
-  def normalize_keys(payload)
-    return payload.map { |item| normalize_keys(item) } if payload.is_a?(Array)
+  def normalize_keys(payload, raiz: true)
+    return payload.map { |item| normalize_keys(item, raiz: false) } if payload.is_a?(Array)
     return payload unless payload.is_a?(Hash)
 
-    payload.each_with_object({}) { |(key, value), out| put_normalized(out, key, value) }
+    payload.each_with_object({}) { |(key, value), out| put_normalized(out, key, value, raiz: raiz) }
   end
 
-  def put_normalized(out, key, value)
+  def put_normalized(out, key, value, raiz:)
     snake = CAMEL_TO_SNAKE[key] || key
     # A chave em snake_case tem precedência: se o adapter um dia mandar as duas, a nossa vence.
     return if out[snake].present?
 
-    out[snake] = key == OPACO ? value : normalize_keys(value)
+    # `data` é opaco SÓ na raiz, onde ele é a sessão do portal. Mais fundo, `data` é um nome comum
+    # de campo, e tratar qualquer um deles como opaco pararia a tradução de um ramo inteiro sem
+    # ninguém perceber.
+    out[snake] = raiz && key == OPACO ? value : normalize_keys(value, raiz: false)
   end
 
   # A invocação devolve 200 com o retorno do handler no corpo; o status de negócio está em

@@ -73,7 +73,7 @@
         "REQUEST_INVALID": "A consulta que enviamos ao AGGER estava incorreta. É problema nosso e já foi registrado.",
         "NOT_SUPPORTED": "Esta operação ainda não é suportada pela integração.",
         "MISCONFIGURED": "A integração está sem uma configuração obrigatória. O time da Autonom.ia precisa ajustar.",
-        "UNKNOWN": "A conexão não está saudável e o motivo não foi identificado."
+        "UNKNOWN": "A conexão não está saudável e o motivo não foi registrado — provavelmente ela foi verificada por uma versão anterior. Clique em Reconectar para que o motivo seja identificado."
       },
       "LAYERS": {
         "TITLE": "O que foi verificado",

@@ -571,4 +571,24 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
       expect(texto.scan('não o formato de pagamento').size).to eq(1)
     end
   end
+
+  # Achado do revisor: a guarda comparava `atual.is_a?(Hash)`, e `nil.is_a?(Hash)` e falso — entao o
+  # caminho feliz (nunca houve pendencia e continua nao havendo) gravava nil sobre nil a cada
+  # consulta. Sao 20 a 25 consultas por cotacao.
+  it 'nao escreve no banco quando nao ha nem passou a haver seguradora pendente' do
+    # Arrange
+    conexao = ready_connection
+    connector = instance_double(
+      Autonomia::Insurance::Connector::Mock,
+      quote_result: { 'status' => 'running', 'offers' => [offer('8', 'Porto', 'quoted', 1200.0)] }
+    )
+    allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+    antes = conexao.reload.updated_at
+
+    # Act — tres consultas seguidas, como o polling faz
+    3.times { tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1) }
+
+    # Assert
+    expect(conexao.reload.updated_at).to eq(antes)
+  end
 end

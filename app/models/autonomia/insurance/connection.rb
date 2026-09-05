@@ -153,14 +153,39 @@ class Autonomia::Insurance::Connection < ApplicationRecord
     metadata.to_h['insurers_pending_auth'].presence
   end
 
-  # Registra o achado da cotacao SEM sobrescrever o resto de `metadata` (a comissao mora la).
-  # Escreve so quando o conjunto muda: o polling passa aqui de poucos em poucos segundos.
+  # Registra o achado da cotação SEM sobrescrever o resto de `metadata` (a comissão mora lá).
+  #
+  # Escreve só quando o conjunto MUDA. A primeira versão comparava `atual.is_a?(Hash) && ...`, e
+  # `nil.is_a?(Hash)` é falso — então o caminho feliz (nunca houve pendência, e continua não
+  # havendo) caía direto no `update!` e gravava nil sobre nil. Como o polling passa aqui a cada 3 a
+  # 21 segundos por até 7 minutos, era um UPDATE por consulta numa cotação sem problema nenhum.
   def record_insurers_pending_auth!(codigos, nomes:, observed_at: Time.current)
-    atual = insurers_pending_auth
-    novo = { 'codes' => codigos.sort, 'names' => nomes, 'observed_at' => observed_at.iso8601 }
-    return if atual.is_a?(Hash) && atual['codes'] == novo['codes']
+    novo = pendencia(codigos, nomes, observed_at)
+    # Leitura sem lock primeiro: o caso comum é "nada mudou", e ele não pode custar um lock de linha.
+    return if insurers_pending_auth.to_h['codes'] == novo.to_h['codes']
 
-    update!(metadata: metadata.to_h.merge('insurers_pending_auth' => codigos.empty? ? nil : novo))
+    merge_metadata!('insurers_pending_auth' => novo)
+  end
+
+  def pendencia(codigos, nomes, observed_at)
+    return nil if codigos.empty?
+
+    { 'codes' => codigos.sort, 'names' => nomes, 'observed_at' => observed_at.iso8601 }
+  end
+
+  # MERGE de `metadata` sob lock de linha, relendo dentro dele.
+  #
+  # `metadata` é jsonb compartilhado — comissão, diagnóstico da conexão e seguradoras pendentes
+  # moram no mesmo campo — e agora tem dois escritores concorrentes de verdade: o healthcheck, que
+  # varre todas as conexões de 30 em 30 minutos com uma chamada HTTP de até 60 s, e o polling de
+  # cotação, que passa aqui a cada poucos segundos. Sem lock, os dois fazem ler-alterar-gravar sobre
+  # o campo INTEIRO: quem termina por último grava um retrato velho e apaga em silêncio o que o
+  # outro acabou de registrar.
+  #
+  # `with_lock` recarrega a linha travada, então o `metadata` lido aqui dentro é o do banco, não o
+  # que estava em memória desde antes da chamada HTTP.
+  def merge_metadata!(fields)
+    with_lock { update!(metadata: metadata.to_h.merge(fields)) }
   end
 
   private

@@ -238,4 +238,48 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
       expect(conexao.reload.metadata['commission_percent']).to eq(12.5)
     end
   end
+
+  # Achados do revisor em 05/09/2026. Os tres sao regressoes possiveis, nao hipoteses.
+  describe 'escrita concorrente e redacao' do
+    it 'nao apaga o que o polling de cotacao acabou de gravar no mesmo metadata' do
+      # Arrange — a conexao ja tem sessao VIVA. Sem isso o Sync abre uma sob `with_lock`, e esse
+      # lock recarrega a linha por tabela, mascarando a corrida que este exemplo existe para pegar.
+      conexao = connection
+      conexao.store_session!({ 'token' => 'x' }, expires_at: 3.hours.from_now)
+      conexao.update!(metadata: { 'commission_percent' => 12.5 })
+      velha = Autonomia::Insurance::Connection.find(conexao.id) # retrato de antes
+      connector = connector_answering({ 'status' => 'ready', 'account_label' => 'X',
+                                        'layers' => { 'runtime' => 'ok' } })
+
+      # Act — a cotacao registra a pendencia; so entao o healthcheck, que carregou antes, termina
+      conexao.record_insurers_pending_auth!(['5'], nomes: ['Allianz'])
+      described_class.new(velha, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      recarregada = conexao.reload
+      expect(recarregada.insurers_pending_auth&.dig('codes')).to eq(['5'])
+      expect(recarregada.layers).to eq({ 'runtime' => 'ok' })
+      expect(recarregada.metadata['commission_percent']).to eq(12.5)
+    end
+
+    it 'redige e-mail e token tambem nos campos estruturados, e nao so no last_error' do
+      # Arrange — o adapter ja redige, mas a regua nao pode depender disso: e a mesma resposta que
+      # motivou o `sanitize` do `last_error`, e vai para a mesma tela.
+      connector = connector_answering(
+        { 'status' => 'degraded',
+          'failure' => { 'cause' => 'integration_outdated',
+                         'detalhe' => 'recusado para corretora@exemplo.com.br' },
+          'evidence' => { 'check' => 'login', 'outcome' => 'failed',
+                          'detail' => 'token abcdefghijklmnopqrstuvwxyz0123456789' } }
+      )
+
+      # Act
+      result = described_class.new(connection, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(result.last_failure.to_s).not_to include('corretora@exemplo.com.br')
+      expect(result.last_evidence.to_s).not_to include('abcdefghijklmnopqrstuvwxyz0123456789')
+      expect(result.last_evidence['check']).to eq('login')
+    end
+  end
 end

@@ -21,6 +21,7 @@ class Autonomia::Insurance::Connections::Sync
   def initialize(connection, connector: ::Autonomia::Insurance::Connector.client, scan_capabilities: true)
     @connection = connection
     @connector = connector
+    @renovou = false
     @scan_capabilities = scan_capabilities
     @sessions = ::Autonomia::Insurance::Connections::Session.new(connection, connector: connector)
   end
@@ -64,8 +65,12 @@ class Autonomia::Insurance::Connections::Sync
   # multiplica login no portal.
   def consultar_status(session)
     payload = @connector.connection_status(provider: @connection.provider, session: session)
-    return payload unless sessao_perdida?(payload)
+    return payload unless sessao_perdida?(payload) && !@renovou
 
+    # UMA renovação por sincronização, contada aqui e não no fluxo. `with_fresh_session` também
+    # renova, mas só quando o adapter LEVANTA — se as duas renovações puderem correr no mesmo
+    # `call`, o portal leva três logins onde a regra diz um.
+    @renovou = true
     @connector.connection_status(provider: @connection.provider, session: @sessions.renew!)
   end
 
@@ -95,9 +100,10 @@ class Autonomia::Insurance::Connections::Sync
       session_expires_at: payload['session_expires_at'],
       last_authenticated_at: Time.current,
       last_healthcheck_at: Time.current,
-      last_error: ok ? nil : sanitize(payload['reason'].presence || "status #{status}"),
-      metadata: @connection.metadata.to_h.merge(diagnostico(payload, ok))
+      last_error: ok ? nil : sanitize(payload['reason'].presence || "status #{status}")
     )
+    # Sob lock e em escrita própria: `metadata` é jsonb compartilhado com o polling de cotação.
+    @connection.merge_metadata!(diagnostico(payload, ok))
   end
 
   # O diagnostico estruturado que a tela usa (criterios 1.1, 1.2 e 1.6). Vai em `metadata` porque e
@@ -108,11 +114,24 @@ class Autonomia::Insurance::Connections::Sync
   # `evidence` responde o que foi verificado e quando, para a tela parar de dizer "ha 3 minutos".
   # `layers` responde o que NAO foi verificado, que e a metade que o 1.2 protege.
   def diagnostico(payload, saudavel)
+    # Sanitizado como o `last_error`, e pelo mesmo motivo: vem da mesma resposta do adapter e vai
+    # para a mesma tela. Aplicar a régua só no campo de texto e deixar os estruturados crus é
+    # confiar que o adapter nunca vai ficar mais verboso — e `detail` e `reason` são exatamente os
+    # campos que crescem quando alguém precisa depurar.
     {
-      'last_failure' => saudavel ? nil : payload['failure'],
-      'last_evidence' => payload['evidence'],
-      'layers' => payload['layers']
+      'last_failure' => saudavel ? nil : sanitize_deep(payload['failure']),
+      'last_evidence' => sanitize_deep(payload['evidence']),
+      'layers' => sanitize_deep(payload['layers'])
     }
+  end
+
+  def sanitize_deep(value)
+    case value
+    when Hash then value.transform_values { |inner| sanitize_deep(inner) }
+    when Array then value.map { |inner| sanitize_deep(inner) }
+    when String then sanitize(value)
+    else value
+    end
   end
 
   def scan!(session)
