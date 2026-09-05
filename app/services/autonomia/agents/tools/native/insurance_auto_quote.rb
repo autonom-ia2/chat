@@ -49,7 +49,20 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
         { 'name' => 'placa', 'type' => 'string', 'description' => 'Placa do veículo (7 caracteres).' },
         { 'name' => 'cep', 'type' => 'string', 'description' => 'CEP onde o carro dorme.' },
         { 'name' => 'numero', 'type' => 'string', 'required' => false,
-          'description' => 'Número do endereço, se o cliente informou.' }
+          'description' => 'Número do endereço, se o cliente informou.' },
+        # RENOVAÇÃO. O portal cobra menos de quem já tem seguro, e a conta é feita com estes três
+        # campos — sem eles a renovação sai cotada como se fosse a primeira apólice do cliente, mais
+        # cara, e o comparativo perde para o preço que ele já paga hoje.
+        { 'name' => 'renovacao', 'type' => 'boolean', 'required' => false,
+          'description' => 'true quando o cliente JÁ TEM seguro e está renovando. Só marque com ' \
+                           'confirmação dele; na dúvida, deixe em branco.' },
+        { 'name' => 'bonus', 'type' => 'integer', 'required' => false,
+          'description' => 'Classe de bônus da apólice atual, de 0 a 10. Só em renovação. Se o ' \
+                           'cliente souber só o percentual: 10%=1, 15%=2, 20%=3, 25%=4, 30%=5 a 10 ' \
+                           '(nesse caso pergunte qual classe consta na apólice).' },
+        { 'name' => 'sinistros', 'type' => 'integer', 'required' => false,
+          'description' => 'Quantos sinistros o cliente teve na vigência atual. Só em renovação. ' \
+                           'Zero é resposta válida e comum; não confunda com "não sei".' }
       ]
     end
 
@@ -176,7 +189,29 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
       'address' => address,
       'vehicle' => { 'plate' => params['placa'].to_s },
       'commissionPercent' => commission_percent
-    }
+    }.merge(quotation)
+  end
+
+  # `quotation` só entra no payload quando é renovação. Omitir é diferente de mandar zerado: o
+  # adapter tem defaults (`isRenewal: false`, `bonusClass: 0`, `previousClaimsCount: 0`) e mandar
+  # o bloco vazio numa cotação nova não muda nada — mas mandar `bonusClass: 0` numa RENOVAÇÃO
+  # afirma ao portal que o cliente não tem bônus nenhum, que é uma informação errada e mais cara.
+  #
+  # Por isso `bonus` e `sinistros` só viajam quando o modelo os preencheu de fato.
+  #
+  # `blank?` e não `nil?`: o modelo manda string, e string vazia é ausência. Zero sobrevive aos dois
+  # testes — `0.blank?` é FALSE em Ruby, zero não é blank — e zero importa, porque "não tive
+  # sinistro" é a resposta mais comum de quem renova. (Medido por mutação: trocar um pelo outro não
+  # muda o zero; uma versão anterior deste comentário afirmava que mudava, e estava errada. O que
+  # muda de fato é a string vazia, que com `nil?` viraria `0` e afirmaria ao portal um dado que o
+  # cliente não deu.)
+  def quotation
+    return {} unless ActiveModel::Type::Boolean.new.cast(params['renovacao'])
+
+    dados = { 'isRenewal' => true }
+    dados['bonusClass'] = params['bonus'].to_i if params['bonus'].present?
+    dados['previousClaimsCount'] = params['sinistros'].to_i if params['sinistros'].present?
+    { 'quotation' => dados }
   end
 
   # Comissão da conexão; sem valor definido, o padrão combinado com o PO.

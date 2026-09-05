@@ -56,6 +56,108 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceAutoQuote do
       )
     end
 
+    # RENOVAÇÃO. O portal cobra menos de quem já tem seguro, e a conta sai destes três campos. Sem
+    # eles a renovação era cotada como primeira apólice — mais cara, e o comparativo perdia para o
+    # preço que o cliente já paga.
+    context 'when o cliente está renovando' do
+      it 'não manda `quotation` numa cotação nova, para o adapter usar os próprios padrões' do
+        # Arrange
+        ready_connection
+        connector = instance_double(Autonomia::Insurance::Connector::Mock,
+                                    quote_start: { 'quote_id' => 'abc:1' })
+        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+
+        # Act
+        tool.start
+
+        # Assert
+        expect(connector).to have_received(:quote_start) do |**kwargs|
+          expect(kwargs[:input]).not_to have_key('quotation')
+        end
+      end
+
+      it 'manda bônus e sinistros quando o cliente está renovando' do
+        # Arrange
+        ready_connection
+        connector = instance_double(Autonomia::Insurance::Connector::Mock,
+                                    quote_start: { 'quote_id' => 'abc:1' })
+        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+        renovacao = described_class.new(agent: agent,
+                                        params: params.merge('renovacao' => true, 'bonus' => 7,
+                                                             'sinistros' => 1))
+
+        # Act
+        renovacao.start
+
+        # Assert
+        expect(connector).to have_received(:quote_start) do |**kwargs|
+          expect(kwargs[:input]['quotation'])
+            .to eq('isRenewal' => true, 'bonusClass' => 7, 'previousClaimsCount' => 1)
+        end
+      end
+
+      # Zero sinistro é a resposta MAIS COMUM numa renovação, e é diferente de "não sei". Com
+      # `blank?` no lugar de `nil?` o zero informado viraria omissão silenciosa.
+      it 'preserva zero sinistros, que é resposta e não ausência' do
+        # Arrange
+        ready_connection
+        connector = instance_double(Autonomia::Insurance::Connector::Mock,
+                                    quote_start: { 'quote_id' => 'abc:1' })
+        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+        sem_sinistro = described_class.new(agent: agent,
+                                           params: params.merge('renovacao' => true, 'bonus' => 5,
+                                                                'sinistros' => 0))
+
+        # Act
+        sem_sinistro.start
+
+        # Assert
+        expect(connector).to have_received(:quote_start) do |**kwargs|
+          expect(kwargs[:input]['quotation']['previousClaimsCount']).to eq(0)
+        end
+      end
+
+      # String vazia é o modelo dizendo "não sei", não "zero". Sem esta distinção o portal receberia
+      # `previousClaimsCount: 0` como se o cliente tivesse afirmado que não teve sinistro.
+      it 'omite sinistros quando vem string vazia, que é ausência e não zero' do
+        # Arrange
+        ready_connection
+        connector = instance_double(Autonomia::Insurance::Connector::Mock,
+                                    quote_start: { 'quote_id' => 'abc:1' })
+        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+        sem_resposta = described_class.new(agent: agent,
+                                           params: params.merge('renovacao' => true,
+                                                                'sinistros' => ''))
+
+        # Act
+        sem_resposta.start
+
+        # Assert
+        expect(connector).to have_received(:quote_start) do |**kwargs|
+          expect(kwargs[:input]['quotation']).to eq('isRenewal' => true)
+        end
+      end
+
+      # O modelo manda o que o cliente disse, e o cliente diz "sim". Sem o cast, a string "true"
+      # seria só um valor verdadeiro qualquer — e `false` como string entraria como renovação.
+      it 'trata "false" como cotação nova, não como qualquer string verdadeira' do
+        # Arrange
+        ready_connection
+        connector = instance_double(Autonomia::Insurance::Connector::Mock,
+                                    quote_start: { 'quote_id' => 'abc:1' })
+        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+        nova = described_class.new(agent: agent, params: params.merge('renovacao' => 'false'))
+
+        # Act
+        nova.start
+
+        # Assert
+        expect(connector).to have_received(:quote_start) do |**kwargs|
+          expect(kwargs[:input]).not_to have_key('quotation')
+        end
+      end
+    end
+
     it 'strips the formatting the customer typed, because the portal wants digits' do
       # Arrange
       ready_connection
