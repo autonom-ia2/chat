@@ -20,8 +20,19 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
   # "chegaram mais opções" em vez de repetir as que o cliente já leu.
   DELIVERED_KEY = 'entregues'.freeze
   DEFAULT_COMMISSION = 10.0
+  # Sai UMA vez, junto do primeiro preço, e só em renovação sem classe de bônus. Não promete
+  # desconto nem percentual: o quanto o bônus abate é decisão de cada seguradora, e prometer número
+  # aqui vira preço que a emissão desmente. Diz o que é verdade — existe preço melhor, e ele depende
+  # de um dado que está na apólice do cliente.
+  AVISO_SEM_BONUS = 'Importante: cotei sem a classe de bônus da sua apólice atual, então estes ' \
+                    'preços são os de quem está fazendo o primeiro seguro. Se você conferir a ' \
+                    'classe de bônus na apólice (é um número de 0 a 10) e me disser, eu refaço a ' \
+                    'cotação — com bônus costuma sair melhor.'.freeze
   # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial.
   PDF_SENT_KEY = 'comparativo_enviado'.freeze
+  # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
+  # quem precisa contar ao cliente é a primeira entrega de preços, minutos depois.
+  SEM_BONUS_KEY = 'renovacao_sem_bonus'.freeze
 
   class << self
     def slug
@@ -57,9 +68,10 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
           'description' => 'true quando o cliente JÁ TEM seguro e está renovando. Só marque com ' \
                            'confirmação dele; na dúvida, deixe em branco.' },
         { 'name' => 'bonus', 'type' => 'integer', 'required' => false,
-          'description' => 'Classe de bônus da apólice atual, de 0 a 10. Só em renovação. Se o ' \
-                           'cliente souber só o percentual: 10%=1, 15%=2, 20%=3, 25%=4, 30%=5 a 10 ' \
-                           '(nesse caso pergunte qual classe consta na apólice).' },
+          'description' => 'Classe de bônus que consta na apólice atual, de 0 a 10. Só em ' \
+                           'renovação. ZERO é resposta válida: quem teve sinistro volta para a ' \
+                           'classe 0. Se o cliente NÃO SOUBER, deixe em branco — não converta ' \
+                           'percentual em classe e não chute. A cotação sai assim mesmo.' },
         { 'name' => 'sinistros', 'type' => 'integer', 'required' => false,
           'description' => 'Quantos sinistros o cliente teve na vigência atual. Só em renovação. ' \
                            'Zero é resposta válida e comum; não confunda com "não sei".' }
@@ -98,7 +110,8 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     sessions.with_fresh_session do |open_session|
       handle = connector.quote_start(provider: connection.provider, session: open_session,
                                      product: PRODUCT, input: quote_input)
-      { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [] }
+      { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [],
+        SEM_BONUS_KEY => renewal.sem_bonus? }
     end
   end
 
@@ -119,7 +132,11 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
     fresh = quoted_offers(result).reject { |offer| already.include?(insurer_code(offer)) }
     next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| insurer_code(offer) })
-    deliveries = fresh.any? ? [describe(fresh, first: already.empty?)] : []
+    deliveries = if fresh.any?
+                   [describe(fresh, first: already.empty?, sem_bonus: handle[SEM_BONUS_KEY])]
+                 else
+                   []
+                 end
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
 
@@ -169,12 +186,13 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
 
   # Texto pronto para o cliente. A segunda mensagem se anuncia como complemento — sem isso ela
   # parece uma cotação nova e o cliente não sabe qual vale.
-  def describe(offers, first:)
+  def describe(offers, first:, sem_bonus: false)
     linhas = offers.map do |offer|
       "#{offer.dig('insurer', 'name')}: #{money(offer.dig('premium', 'amount'))}"
     end
     abertura = first ? 'Primeiros preços que chegaram:' : 'Chegaram mais opções:'
-    "#{abertura}\n#{linhas.join("\n")}"
+    corpo = "#{abertura}\n#{linhas.join("\n")}"
+    first && sem_bonus ? "#{corpo}\n\n#{AVISO_SEM_BONUS}" : corpo
   end
 
   def money(amount)
@@ -189,29 +207,12 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
       'address' => address,
       'vehicle' => { 'plate' => params['placa'].to_s },
       'commissionPercent' => commission_percent
-    }.merge(quotation)
+    }.merge(renewal.to_input)
   end
 
-  # `quotation` só entra no payload quando é renovação. Omitir é diferente de mandar zerado: o
-  # adapter tem defaults (`isRenewal: false`, `bonusClass: 0`, `previousClaimsCount: 0`) e mandar
-  # o bloco vazio numa cotação nova não muda nada — mas mandar `bonusClass: 0` numa RENOVAÇÃO
-  # afirma ao portal que o cliente não tem bônus nenhum, que é uma informação errada e mais cara.
-  #
-  # Por isso `bonus` e `sinistros` só viajam quando o modelo os preencheu de fato.
-  #
-  # `blank?` e não `nil?`: o modelo manda string, e string vazia é ausência. Zero sobrevive aos dois
-  # testes — `0.blank?` é FALSE em Ruby, zero não é blank — e zero importa, porque "não tive
-  # sinistro" é a resposta mais comum de quem renova. (Medido por mutação: trocar um pelo outro não
-  # muda o zero; uma versão anterior deste comentário afirmava que mudava, e estava errada. O que
-  # muda de fato é a string vazia, que com `nil?` viraria `0` e afirmaria ao portal um dado que o
-  # cliente não deu.)
-  def quotation
-    return {} unless ActiveModel::Type::Boolean.new.cast(params['renovacao'])
-
-    dados = { 'isRenewal' => true }
-    dados['bonusClass'] = params['bonus'].to_i if params['bonus'].present?
-    dados['previousClaimsCount'] = params['sinistros'].to_i if params['sinistros'].present?
-    { 'quotation' => dados }
+  # Tudo o que muda quando o cliente já tem seguro mora aqui — inclusive as armadilhas do bônus.
+  def renewal
+    @renewal ||= ::Autonomia::Insurance::AutoRenewal.new(params)
   end
 
   # Comissão da conexão; sem valor definido, o padrão combinado com o PO.
