@@ -110,6 +110,37 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     @credentials_provider ||= Aws::InstanceProfileCredentials.new
   end
 
+  # FRONTEIRA ENTRE DOIS MUNDOS. O adapter é TypeScript e exporta camelCase — é a convenção de lá,
+  # está no contrato (`core/adapter.ts`) e o CLI dele consome direto. Aqui é Ruby, e todo o resto do
+  # namespace lê snake_case. A tradução mora nesta linha e em nenhum outro lugar.
+  #
+  # Isto NÃO era feito, e custou caro: `expiresAt` chegava e `payload['expires_at']` lia nil. Com
+  # `session_expires_at` nulo, `session_live?` era SEMPRE falso — a sessão única nunca reusava nada,
+  # cada chamada abria um login, e como o AGGER derruba a sessão anterior a cada login, a sessão que
+  # acabáramos de mandar já estava morta quando o portal a recebia. O sintoma foi
+  # `GET /cfg/corretora -> 403` e uma tela dizendo "credencial recusada" com a credencial válida.
+  #
+  # SÓ o primeiro nível é traduzido. `data` é a sessão opaca do portal — quem entende o que tem lá
+  # dentro é o adapter, e mexer nas chaves dela quebraria o token na volta.
+  CAMEL_TO_SNAKE = {
+    'expiresAt' => 'expires_at',
+    'sessionExpiresAt' => 'session_expires_at',
+    'accountLabel' => 'account_label',
+    'checkedAt' => 'checked_at',
+    'scannedAt' => 'scanned_at',
+    'droppedPreviousSession' => 'dropped_previous_session'
+  }.freeze
+
+  def normalize_keys(payload)
+    CAMEL_TO_SNAKE.each_with_object(payload.dup) do |(camel, snake), out|
+      next unless out.key?(camel)
+
+      # A chave em snake_case tem precedência: se o adapter um dia mandar as duas, a nossa vence.
+      out[snake] = out.delete(camel) if out[snake].blank?
+      out.delete(camel)
+    end
+  end
+
   # A invocação devolve 200 com o retorno do handler no corpo; o status de negócio está em
   # `statusCode`. Erro de infraestrutura (permissão, função ausente) vem no HTTP externo.
   def parse(response, path)
@@ -117,7 +148,7 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     inner_code = outer['statusCode'].to_i
     payload = json_or_nil(outer['body'])
 
-    return payload if inner_code == 200 && payload.is_a?(Hash)
+    return normalize_keys(payload) if inner_code == 200 && payload.is_a?(Hash)
     raise error(:protocol, "resposta inesperada do connector em #{path}") if inner_code == 200
 
     raise error(KIND_BY_STATUS.fetch(inner_code, :unavailable),

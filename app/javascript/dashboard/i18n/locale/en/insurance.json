@@ -58,7 +58,7 @@
         "RESCANNED": "Produtos e seguradoras atualizados.",
         "DISCONNECTED": "Conexão removida."
       },
-      "AUTH_REQUIRED_HINT": "O AGGER recusou este acesso. Confira o usuário e a senha da corretora no portal e conecte de novo — a senha pode ter sido trocada ou o acesso revogado."
+      "AUTH_REQUIRED_HINT": "O AGGER recusou este acesso. Confira o usuário e a senha da corretora no portal e conecte de novo. A senha pode ter sido trocada ou o acesso revogado."
     },
     "CAPABILITIES": {
       "TITLE": "Produtos e seguradoras",

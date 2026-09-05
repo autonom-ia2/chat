@@ -112,7 +112,7 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(wrapper.find('#insurance-agger-password').exists()).toBe(false);
   });
 
-  it('shows auth_required with the last error and lets the user reconnect', async () => {
+  it('shows the human hint on auth_required, never the server response', async () => {
     api.getConnection.mockResolvedValue({
       data: {
         payload: {
@@ -128,7 +128,10 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(wrapper.text()).toContain(
       'INSURANCE.CONNECTION.STATES.AUTH_REQUIRED'
     );
-    expect(wrapper.text()).toContain('auth_required: invalid credentials');
+    // O corretor lê a frase que diz o que FAZER. O motivo técnico continua gravado em `last_error`
+    // e no log; na tela ele só expunha a URL interna do portal e não ajudava ninguém.
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.AUTH_REQUIRED_HINT');
+    expect(wrapper.text()).not.toContain('auth_required: invalid credentials');
 
     await wrapper
       .find('button[label="INSURANCE.CONNECTION.ACTIONS.RECONNECT"]')

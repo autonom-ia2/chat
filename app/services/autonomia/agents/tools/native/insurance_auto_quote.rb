@@ -63,7 +63,7 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
 
     def accepted_message
       'Cotação enviada às seguradoras. Avise o cliente que está consultando e que manda os preços ' \
-        'aqui assim que chegarem — os primeiros costumam levar menos de um minuto. Não invente ' \
+        'aqui assim que chegarem. Os primeiros costumam levar menos de um minuto. Não invente ' \
         'valores, prazos nem nomes de seguradora.'
     end
 
