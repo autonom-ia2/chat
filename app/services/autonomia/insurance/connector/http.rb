@@ -128,17 +128,38 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     'accountLabel' => 'account_label',
     'checkedAt' => 'checked_at',
     'scannedAt' => 'scanned_at',
-    'droppedPreviousSession' => 'dropped_previous_session'
+    'droppedPreviousSession' => 'dropped_previous_session',
+    # Camadas do critério 1.2. Chegam ANINHADAS em `layers`, e é por isso que a tradução deixou de
+    # ser só do primeiro nível: uma camada lida como nil vira "não sei" quando na verdade era
+    # "falhou", e o 1.2 existe exatamente para não confundir esses dois.
+    'platformAuth' => 'platform_auth',
+    'insurerAuth' => 'insurer_auth',
+    'productSupport' => 'product_support',
+    # Prêmio do critério 5.5: sem estas, o significado do valor se perde na fronteira e o Rails
+    # volta a ter um número sem unidade.
+    'basisEvidence' => 'basis_evidence'
   }.freeze
 
-  def normalize_keys(payload)
-    CAMEL_TO_SNAKE.each_with_object(payload.dup) do |(camel, snake), out|
-      next unless out.key?(camel)
+  # `data` é a sessão OPACA do portal: renomear chave lá dentro quebra o token na volta. É a única
+  # exceção, e ela é do desenho, não um caso especial.
+  OPACO = 'data'.freeze
 
-      # A chave em snake_case tem precedência: se o adapter um dia mandar as duas, a nossa vence.
-      out[snake] = out.delete(camel) if out[snake].blank?
-      out.delete(camel)
-    end
+  def normalize_keys(payload, raiz: true)
+    return payload.map { |item| normalize_keys(item, raiz: false) } if payload.is_a?(Array)
+    return payload unless payload.is_a?(Hash)
+
+    payload.each_with_object({}) { |(key, value), out| put_normalized(out, key, value, raiz: raiz) }
+  end
+
+  def put_normalized(out, key, value, raiz:)
+    snake = CAMEL_TO_SNAKE[key] || key
+    # A chave em snake_case tem precedência: se o adapter um dia mandar as duas, a nossa vence.
+    return if out[snake].present?
+
+    # `data` é opaco SÓ na raiz, onde ele é a sessão do portal. Mais fundo, `data` é um nome comum
+    # de campo, e tratar qualquer um deles como opaco pararia a tradução de um ramo inteiro sem
+    # ninguém perceber.
+    out[snake] = raiz && key == OPACO ? value : normalize_keys(value, raiz: false)
   end
 
   # A invocação devolve 200 com o retorno do handler no corpo; o status de negócio está em

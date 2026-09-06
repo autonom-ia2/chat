@@ -119,8 +119,73 @@ class Autonomia::Insurance::Connection < ApplicationRecord
       last_capability_scan_at: last_capability_scan_at,
       session_expires_at: session_expires_at,
       encryption_available: self.class.encryption_available?,
-      updated_at: updated_at
+      updated_at: updated_at,
+      # Diagnostico estruturado (criterios 1.1, 1.2, 1.6 e 4.5). `last_error` continua sendo o texto
+      # para humano; estes tres sao o que a tela DECIDE em cima -- que mensagem mostrar, se pede
+      # acao do corretor, e o que ainda nao foi verificado.
+      failure: last_failure,
+      evidence: last_evidence,
+      layers: layers,
+      insurers_pending_auth: insurers_pending_auth
     }
+  end
+
+  # De quem e a acao nesta falha. Sem isso a tela so tem o `status`, e `auth_required` acabava
+  # virando "confira sua senha" para qualquer 403 -- inclusive o de uma sessao que morreu.
+  def last_failure
+    metadata.to_h['last_failure'].presence
+  end
+
+  # O que foi verificado, quando e com que resultado (1.6).
+  def last_evidence
+    metadata.to_h['last_evidence'].presence
+  end
+
+  # As cinco camadas do 1.2. Ausente e diferente de `unknown`: ausente quer dizer que a conexao
+  # nunca foi verificada por uma versao que sabe separa-las.
+  def layers
+    metadata.to_h['layers'].presence
+  end
+
+  # Seguradoras que recusaram a credencial que a corretora guardou NO PORTAL. Descoberto durante a
+  # cotacao e trazido para ca porque e aqui que tem conserto -- nunca para o cliente final (4.5).
+  def insurers_pending_auth
+    metadata.to_h['insurers_pending_auth'].presence
+  end
+
+  # Registra o achado da cotação SEM sobrescrever o resto de `metadata` (a comissão mora lá).
+  #
+  # Escreve só quando o conjunto MUDA. A primeira versão comparava `atual.is_a?(Hash) && ...`, e
+  # `nil.is_a?(Hash)` é falso — então o caminho feliz (nunca houve pendência, e continua não
+  # havendo) caía direto no `update!` e gravava nil sobre nil. Como o polling passa aqui a cada 3 a
+  # 21 segundos por até 7 minutos, era um UPDATE por consulta numa cotação sem problema nenhum.
+  def record_insurers_pending_auth!(codigos, nomes:, observed_at: Time.current)
+    novo = pendencia(codigos, nomes, observed_at)
+    # Leitura sem lock primeiro: o caso comum é "nada mudou", e ele não pode custar um lock de linha.
+    return if insurers_pending_auth.to_h['codes'] == novo.to_h['codes']
+
+    merge_metadata!('insurers_pending_auth' => novo)
+  end
+
+  def pendencia(codigos, nomes, observed_at)
+    return nil if codigos.empty?
+
+    { 'codes' => codigos.sort, 'names' => nomes, 'observed_at' => observed_at.iso8601 }
+  end
+
+  # MERGE de `metadata` sob lock de linha, relendo dentro dele.
+  #
+  # `metadata` é jsonb compartilhado — comissão, diagnóstico da conexão e seguradoras pendentes
+  # moram no mesmo campo — e agora tem dois escritores concorrentes de verdade: o healthcheck, que
+  # varre todas as conexões de 30 em 30 minutos com uma chamada HTTP de até 60 s, e o polling de
+  # cotação, que passa aqui a cada poucos segundos. Sem lock, os dois fazem ler-alterar-gravar sobre
+  # o campo INTEIRO: quem termina por último grava um retrato velho e apaga em silêncio o que o
+  # outro acabou de registrar.
+  #
+  # `with_lock` recarrega a linha travada, então o `metadata` lido aqui dentro é o do banco, não o
+  # que estava em memória desde antes da chamada HTTP.
+  def merge_metadata!(fields)
+    with_lock { update!(metadata: metadata.to_h.merge(fields)) }
   end
 
   private

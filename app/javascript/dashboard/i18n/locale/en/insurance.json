@@ -10,8 +10,6 @@
       "PROVIDER_AGGER": "AGGER · Aggilizador",
       "PROVIDER_AGGER_SUBTITLE": "Multicálculo de seguros da corretora",
       "NEVER": "nunca",
-      "JUST_NOW": "agora",
-      "MINUTES_AGO": "há {count} min",
       "SESSION_AUTHENTICATED": "Autenticada",
       "SESSION_PENDING": "Aguardando autenticação",
       "STATES": {
@@ -58,7 +56,43 @@
         "RESCANNED": "Produtos e seguradoras atualizados.",
         "DISCONNECTED": "Conexão removida."
       },
-      "AUTH_REQUIRED_HINT": "O AGGER recusou este acesso. Confira o usuário e a senha da corretora no portal e conecte de novo. A senha pode ter sido trocada ou o acesso revogado."
+      "VERIFIED_AT": "às {at}, {check}",
+      "NOT_VERIFIED": "ainda não verificado",
+      "EVIDENCE": {
+        "LOGIN": "entrando no portal",
+        "SESSION_PROBE": "consultando o cadastro da corretora",
+        "CAPABILITY_SCAN": "listando produtos e seguradoras",
+        "NONE": "sem consulta ao portal"
+      },
+      "FAILURES": {
+        "CREDENTIAL_REJECTED": "O AGGER recusou este acesso. Confira o usuário e a senha da corretora no portal e conecte de novo — a senha pode ter sido trocada ou o acesso revogado.",
+        "SESSION_LOST": "A sessão no AGGER caiu e estamos abrindo outra. Sua senha está certa e não precisa ser trocada.",
+        "PORTAL_UNAVAILABLE": "O AGGER não respondeu. É indisponibilidade do portal, não do seu acesso; voltamos a tentar sozinhos.",
+        "PORTAL_TIMEOUT": "O AGGER demorou demais para responder. Não é problema do seu acesso; voltamos a tentar sozinhos.",
+        "INTEGRATION_OUTDATED": "O AGGER mudou algo que a nossa integração ainda não acompanha. O time da Autonom.ia já foi avisado — não há nada a fazer do seu lado.",
+        "REQUEST_INVALID": "A consulta que enviamos ao AGGER estava incorreta. É problema nosso e já foi registrado.",
+        "NOT_SUPPORTED": "Esta operação ainda não é suportada pela integração.",
+        "MISCONFIGURED": "A integração está sem uma configuração obrigatória. O time da Autonom.ia precisa ajustar.",
+        "UNKNOWN": "A conexão não está saudável e o motivo não foi registrado — provavelmente ela foi verificada por uma versão anterior. Clique em Reconectar para que o motivo seja identificado."
+      },
+      "LAYERS": {
+        "TITLE": "O que foi verificado",
+        "SUBTITLE": "Cada camada tem prova própria. O que ninguém olhou aparece como não verificado.",
+        "RUNTIME": "Serviço da Autonom.ia",
+        "PLATFORM_AUTH": "Acesso ao AGGER",
+        "INSURER_AUTH": "Credenciais das seguradoras",
+        "PRODUCT_SUPPORT": "Ramo suportado pela integração",
+        "RISK": "Risco aceito pela seguradora",
+        "STATE": {
+          "OK": "verificado",
+          "FAILED": "falhou",
+          "UNKNOWN": "não verificado"
+        }
+      },
+      "INSURERS_PENDING": {
+        "TITLE": "Seguradoras com credencial pendente",
+        "BODY": "{count} seguradora(s) recusaram o login que a corretora cadastrou no AGGER, vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente."
+      }
     },
     "CAPABILITIES": {
       "TITLE": "Produtos e seguradoras",

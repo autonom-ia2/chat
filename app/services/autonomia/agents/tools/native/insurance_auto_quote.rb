@@ -20,8 +20,24 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
   # "chegaram mais opções" em vez de repetir as que o cliente já leu.
   DELIVERED_KEY = 'entregues'.freeze
   DEFAULT_COMMISSION = 10.0
+  # Sai UMA vez, junto do primeiro preço, e só em renovação sem classe de bônus. Não promete
+  # desconto nem percentual: o quanto o bônus abate é decisão de cada seguradora, e prometer número
+  # aqui vira preço que a emissão desmente. Diz o que é verdade — existe preço melhor, e ele depende
+  # de um dado que está na apólice do cliente.
+  AVISO_SEM_BONUS = 'Importante: cotei sem a classe de bônus da sua apólice atual, então estes ' \
+                    'preços são os de quem está fazendo o primeiro seguro. Se você conferir a ' \
+                    'classe de bônus na apólice (é um número de 0 a 10) e me disser, eu refaço a ' \
+                    'cotação — com bônus costuma sair melhor.'.freeze
   # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial.
   PDF_SENT_KEY = 'comparativo_enviado'.freeze
+  # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
+  # quem precisa contar ao cliente é a primeira entrega de preços, minutos depois.
+  SEM_BONUS_KEY = 'renovacao_sem_bonus'.freeze
+  # O aviso JÁ SAIU. Sentinela própria, no mesmo molde do `PDF_SENT_KEY`, e não inferência a partir
+  # de `already.empty?`: `deliver` roda ANTES de `record_attempt!`, então uma entrega bloqueada
+  # (conversa encerrada, erro transitório do publisher) avançava o handle com os códigos das ofertas
+  # mesmo assim — e o aviso, que vale por sair UMA vez, não sairia nunca mais.
+  AVISO_SENT_KEY = 'aviso_sem_bonus_enviado'.freeze
 
   class << self
     def slug
@@ -49,7 +65,16 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
         { 'name' => 'placa', 'type' => 'string', 'description' => 'Placa do veículo (7 caracteres).' },
         { 'name' => 'cep', 'type' => 'string', 'description' => 'CEP onde o carro dorme.' },
         { 'name' => 'numero', 'type' => 'string', 'required' => false,
-          'description' => 'Número do endereço, se o cliente informou.' }
+          'description' => 'Número do endereço, se o cliente informou.' },
+        # RENOVAÇÃO. O portal cobra menos de quem já tem seguro, e a conta é feita com estes três
+        # campos — sem eles a renovação sai cotada como se fosse a primeira apólice do cliente, mais
+        # cara, e o comparativo perde para o preço que ele já paga hoje.
+        { 'name' => 'renovacao', 'type' => 'boolean', 'required' => false,
+          'description' => 'true quando o cliente JÁ TEM seguro e está renovando. Só marque com ' \
+                           'confirmação dele; na dúvida, deixe em branco.' },
+        { 'name' => 'bonus', 'type' => 'integer', 'required' => false, 'description' => ::Autonomia::Insurance::AutoRenewal::BONUS_DESC },
+        { 'name' => 'sinistros', 'type' => 'integer', 'required' => false,
+          'description' => ::Autonomia::Insurance::AutoRenewal::SINISTROS_DESC }
       ]
     end
 
@@ -85,7 +110,8 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     sessions.with_fresh_session do |open_session|
       handle = connector.quote_start(provider: connection.provider, session: open_session,
                                      product: PRODUCT, input: quote_input)
-      { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [] }
+      { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [],
+        SEM_BONUS_KEY => renewal.sem_bonus? }
     end
   end
 
@@ -103,10 +129,11 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
   private
 
   def build_progress(result, handle, _attempt)
+    registrar_credencial_de_seguradora(result)
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
     fresh = quoted_offers(result).reject { |offer| already.include?(insurer_code(offer)) }
     next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| insurer_code(offer) })
-    deliveries = fresh.any? ? [describe(fresh, first: already.empty?)] : []
+    deliveries, next_handle = precos(fresh, already, next_handle)
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
 
@@ -119,6 +146,18 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
       next_handle = next_handle.merge(PDF_SENT_KEY => true)
     end
     progress_class.done(deliveries: deliveries, handle: next_handle)
+  end
+
+  # -> [deliveries, handle]. O aviso de renovação sem bônus tem SENTINELA própria, no mesmo molde do
+  # PDF, e não é inferido de "esta é a primeira entrega": `deliver` roda antes de `record_attempt!`,
+  # então uma entrega bloqueada avançaria o handle e o aviso — que vale por sair uma vez — não sairia
+  # nunca mais.
+  def precos(fresh, already, handle)
+    return [[], handle] if fresh.empty?
+
+    avisar = handle[SEM_BONUS_KEY].present? && handle[AVISO_SENT_KEY].blank?
+    texto = describe(fresh, first: already.empty?, sem_bonus: avisar)
+    [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
   end
 
   def finished?(result)
@@ -142,6 +181,26 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     nil
   end
 
+  # CRITÉRIO 4.5 — problema de credencial de seguradora nunca chega ao cliente final; vai para a
+  # tela de Conexões.
+  #
+  # A metade fácil já era feita: `quoted_offers` filtra e o cliente nunca vê. A metade que faltava é
+  # que ninguém via. Uma seguradora que recusa a credencial que a corretora cadastrou NO PORTAL
+  # simplesmente sumia da lista, e a corretora seguia achando que aquela seguradora "não cotou este
+  # risco" — quando o que havia era um login para arrumar. `cfg/seguradora/config` não denuncia:
+  # ele responde `credenciaisValidas: true` até para seguradora com login inválido. A cotação real é
+  # a única testemunha, e é aqui que ela passa.
+  def registrar_credencial_de_seguradora(result)
+    pendentes = Array(result['offers']).select { |offer| offer['status'] == 'auth_required' }
+    connection.record_insurers_pending_auth!(
+      pendentes.map { |offer| insurer_code(offer) },
+      nomes: pendentes.filter_map { |offer| offer.dig('insurer', 'name') }.uniq
+    )
+  rescue StandardError => e
+    # Diagnóstico não derruba cotação: os preços do cliente valem mais que o nosso registro.
+    Rails.logger.warn("[autonomia][insurance] registro de credencial de seguradora falhou #{e.class}")
+  end
+
   # SÓ quem cotou. `declined` e `auth_required` não viram texto ao cliente — ver o cabeçalho.
   def quoted_offers(result)
     Array(result['offers'])
@@ -156,16 +215,18 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
 
   # Texto pronto para o cliente. A segunda mensagem se anuncia como complemento — sem isso ela
   # parece uma cotação nova e o cliente não sabe qual vale.
-  def describe(offers, first:)
+  def describe(offers, first:, sem_bonus: false)
     linhas = offers.map do |offer|
-      "#{offer.dig('insurer', 'name')}: #{money(offer.dig('premium', 'amount'))}"
+      "#{offer.dig('insurer', 'name')}: #{::Autonomia::Insurance::PremiumText.new(offer['premium'])}"
     end
     abertura = first ? 'Primeiros preços que chegaram:' : 'Chegaram mais opções:'
-    "#{abertura}\n#{linhas.join("\n")}"
+    corpo = "#{abertura}\n#{linhas.join("\n")}"
+    corpo = "#{corpo}\n\n#{::Autonomia::Insurance::PremiumText::SEM_SIGNIFICADO}" if algum_indefinido?(offers)
+    sem_bonus ? "#{corpo}\n\n#{AVISO_SEM_BONUS}" : corpo
   end
 
-  def money(amount)
-    "R$ #{format('%.2f', amount.to_f).tr('.', ',')}"
+  def algum_indefinido?(offers)
+    offers.any? { |offer| ::Autonomia::Insurance::PremiumText.new(offer['premium']).indefinido? }
   end
 
   def quote_input
@@ -176,7 +237,12 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
       'address' => address,
       'vehicle' => { 'plate' => params['placa'].to_s },
       'commissionPercent' => commission_percent
-    }
+    }.merge(renewal.to_input)
+  end
+
+  # Tudo o que muda quando o cliente já tem seguro mora aqui — inclusive as armadilhas do bônus.
+  def renewal
+    @renewal ||= ::Autonomia::Insurance::AutoRenewal.new(params)
   end
 
   # Comissão da conexão; sem valor definido, o padrão combinado com o PO.

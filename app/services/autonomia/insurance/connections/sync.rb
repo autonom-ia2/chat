@@ -10,6 +10,10 @@ class Autonomia::Insurance::Connections::Sync
     validation: 'degraded'
   }.freeze
 
+  # A causa que o adapter classifica quando o portal recusa uma SESSAO GUARDADA (e nao a credencial).
+  # Ela nao e falha do corretor e nao pede nada dele: pede que a gente abra outra sessao.
+  SESSAO_PERDIDA = 'session_lost'.freeze
+
   # `last_error` vai para a tela: sem e-mail (login da corretora) e sem token do portal.
   EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/
   LONG_TOKEN = /[A-Za-z0-9_\-.]{32,}/
@@ -17,6 +21,7 @@ class Autonomia::Insurance::Connections::Sync
   def initialize(connection, connector: ::Autonomia::Insurance::Connector.client, scan_capabilities: true)
     @connection = connection
     @connector = connector
+    @renovou = false
     @scan_capabilities = scan_capabilities
     @sessions = ::Autonomia::Insurance::Connections::Session.new(connection, connector: connector)
   end
@@ -32,8 +37,8 @@ class Autonomia::Insurance::Connections::Sync
     # feito no portal pelo navegador, e só descobrimos isso quando o portal recusa. Sem a renovação,
     # a conexão fica "credencial recusada" com a credencial válida até o prazo vencer.
     @sessions.with_fresh_session do |session|
-      apply_status!(@connector.connection_status(provider: @connection.provider, session: session))
-      scan!(session) if @scan_capabilities && @connection.ready?
+      apply_status!(consultar_status(session))
+      scan!(@connection.session || session) if @scan_capabilities && @connection.ready?
     end
     @connection
   rescue ::Autonomia::Insurance::Connector::Error => e
@@ -48,6 +53,30 @@ class Autonomia::Insurance::Connections::Sync
   end
 
   private
+
+  # Uma consulta de status, e UMA renovacao quando o portal recusa a sessao que guardavamos.
+  #
+  # Sessao perdida chega como PAYLOAD de sucesso, nao como excecao: o adapter responde 200 dizendo
+  # "nao deu, e o motivo e este". Por isso o `with_fresh_session`, que so reage a excecao, nunca via
+  # este caso -- e ele e o caso mais comum. Em 05/09/2026 a tela ficou dizendo "credencial recusada"
+  # com a credencial certa exatamente por aqui: a renovacao existia e este caminho nao a chamava.
+  #
+  # UMA tentativa. Se a sessao nova tambem for recusada, o problema nao e a sessao, e insistir so
+  # multiplica login no portal.
+  def consultar_status(session)
+    payload = @connector.connection_status(provider: @connection.provider, session: session)
+    return payload unless sessao_perdida?(payload) && !@renovou
+
+    # UMA renovação por sincronização, contada aqui e não no fluxo. `with_fresh_session` também
+    # renova, mas só quando o adapter LEVANTA — se as duas renovações puderem correr no mesmo
+    # `call`, o portal leva três logins onde a regra diz um.
+    @renovou = true
+    @connector.connection_status(provider: @connection.provider, session: @sessions.renew!)
+  end
+
+  def sessao_perdida?(payload)
+    payload.is_a?(Hash) && payload.dig('failure', 'cause') == SESSAO_PERDIDA
+  end
 
   def apply_status!(payload)
     raise ::Autonomia::Insurance::Connector::Error.new(:protocol, 'status payload is not a hash') unless payload.is_a?(Hash)
@@ -65,14 +94,51 @@ class Autonomia::Insurance::Connections::Sync
     # `reason` vem do adapter e já chega redatado. O fallback existe para adapter antigo, que não
     # manda o campo: melhor "status degraded" do que nada.
     ok = status == 'ready'
-    @connection.update!(
-      status: status,
-      external_account_label: payload['account_label'].to_s.truncate(120).presence,
-      session_expires_at: payload['session_expires_at'],
-      last_authenticated_at: Time.current,
-      last_healthcheck_at: Time.current,
-      last_error: ok ? nil : sanitize(payload['reason'].presence || "status #{status}")
-    )
+    # UMA escrita, dentro do lock. Separar status e diagnóstico em duas transações abre uma janela
+    # em que a tela lê `ready` com o `failure` anterior ainda gravado — e é o `failure`, não o
+    # status, que decide se ela pede a senha de volta. Seria a mesma classe de defeito do incidente:
+    # badge de conectado ao lado de "confira sua senha".
+    #
+    # O lock também é o que protege da corrida com o polling de cotação, que escreve no mesmo jsonb.
+    @connection.with_lock do
+      @connection.update!(
+        status: status,
+        external_account_label: payload['account_label'].to_s.truncate(120).presence,
+        session_expires_at: payload['session_expires_at'],
+        last_authenticated_at: Time.current,
+        last_healthcheck_at: Time.current,
+        last_error: ok ? nil : sanitize(payload['reason'].presence || "status #{status}"),
+        metadata: @connection.metadata.to_h.merge(diagnostico(payload, ok))
+      )
+    end
+  end
+
+  # O diagnostico estruturado que a tela usa (criterios 1.1, 1.2 e 1.6). Vai em `metadata` porque e
+  # jsonb e ja existe: criar coluna para cada campo novo de diagnostico transformaria toda melhoria
+  # de mensagem numa migration em producao.
+  #
+  # `failure` responde de QUEM e a acao -- e so isso autoriza a tela a pedir a senha de volta.
+  # `evidence` responde o que foi verificado e quando, para a tela parar de dizer "ha 3 minutos".
+  # `layers` responde o que NAO foi verificado, que e a metade que o 1.2 protege.
+  def diagnostico(payload, saudavel)
+    # Sanitizado como o `last_error`, e pelo mesmo motivo: vem da mesma resposta do adapter e vai
+    # para a mesma tela. Aplicar a régua só no campo de texto e deixar os estruturados crus é
+    # confiar que o adapter nunca vai ficar mais verboso — e `detail` e `reason` são exatamente os
+    # campos que crescem quando alguém precisa depurar.
+    {
+      'last_failure' => saudavel ? nil : sanitize_deep(payload['failure']),
+      'last_evidence' => sanitize_deep(payload['evidence']),
+      'layers' => sanitize_deep(payload['layers'])
+    }
+  end
+
+  def sanitize_deep(value)
+    case value
+    when Hash then value.transform_values { |inner| sanitize_deep(inner) }
+    when Array then value.map { |inner| sanitize_deep(inner) }
+    when String then sanitize(value)
+    else value
+    end
   end
 
   def scan!(session)
