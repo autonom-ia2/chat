@@ -125,9 +125,14 @@ class Autonomia::Insurance::Connection < ApplicationRecord
       session_expires_at: session_expires_at,
       encryption_available: self.class.encryption_available?,
       updated_at: updated_at,
-      # Diagnostico estruturado (criterios 1.1, 1.2, 1.6 e 4.5). `last_error` continua sendo o texto
-      # para humano; estes tres sao o que a tela DECIDE em cima -- que mensagem mostrar, se pede
-      # acao do corretor, e o que ainda nao foi verificado.
+      **diagnostico_publico
+    }
+  end
+
+  # O diagnostico estruturado (criterios 1.1, 1.2, 1.5, 1.6 e 4.5). Separado do resto porque ele
+  # cresce a cada criterio novo, e `public_payload` nao pode virar uma lista de trinta linhas.
+  def diagnostico_publico
+    {
       failure: last_failure,
       evidence: last_evidence,
       layers: layers,
