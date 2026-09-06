@@ -90,8 +90,7 @@ RSpec.describe Autonomia::Insurance::Connections::HealthcheckJob, type: :job do
   describe 'conexao presa em estado de passagem' do
     it 'recupera a que esta parada ha tempo demais' do
       # Arrange
-      record = connection(status: 'discovering')
-      record.update_column(:updated_at, 30.minutes.ago)
+      record = travel_to(30.minutes.ago) { connection(status: 'discovering') }
 
       # Act
       described_class.perform_now
@@ -102,8 +101,7 @@ RSpec.describe Autonomia::Insurance::Connections::HealthcheckJob, type: :job do
 
     it 'NAO mexe na que acabou de comecar, que so precisa de tempo' do
       # Arrange — a descoberta completa leva ~25 s; a margem e de dez minutos
-      record = connection(status: 'discovering')
-      record.update_column(:updated_at, 1.minute.ago)
+      record = travel_to(1.minute.ago) { connection(status: 'discovering') }
 
       # Act
       described_class.perform_now
