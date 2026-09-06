@@ -45,6 +45,11 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   # A tela e os textos precisam cobrir exatamente esta lista — insuranceStates.spec.js falha se divergir.
   STATUSES = %w[not_configured provisioning authenticating discovering ready degraded auth_required
                 human_required offline].freeze
+  # Estados de PASSAGEM: duram segundos e a tela desabilita os botões enquanto eles valem. Se um
+  # processo morre no meio, a conexão fica presa e o corretor não consegue nem tentar de novo — por
+  # isso o healthcheck tem uma rede de segurança para eles. A tela conhece a mesma lista
+  # (`insuranceContract.js`), e `insuranceStates.spec.js` falha se as duas divergirem.
+  TRANSIENT_STATUSES = %w[provisioning authenticating discovering].freeze
 
   belongs_to :account
 

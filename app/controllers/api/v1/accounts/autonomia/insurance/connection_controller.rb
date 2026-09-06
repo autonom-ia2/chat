@@ -24,11 +24,16 @@ class Api::V1::Accounts::Autonomia::Insurance::ConnectionController < Api::V1::A
   end
 
   # POST /connection/scan — reautentica e refaz a descoberta de produtos/seguradoras.
+  # A descoberta leva perto de 25 s e o proxy corta antes. Rodando aqui dentro, o corretor recebia
+  # 500 e a conexão ficava parada em `discovering`, com os botões da tela desabilitados. Agora ela
+  # sai como trabalho de fundo: a resposta volta na hora com o estado transitório, e a tela
+  # acompanha até assentar.
   def scan
     return render_not_configured unless connection.persisted? && connection.credentials_present?
 
-    ::Autonomia::Insurance::Connections::Sync.new(connection).call
-    render json: { payload: connection.public_payload }
+    connection.update!(status: 'discovering')
+    ::Autonomia::Insurance::Connections::ScanJob.perform_later(connection.id)
+    render json: { payload: connection.public_payload }, status: :accepted
   end
 
   # DELETE /connection — apaga credenciais e estado da conexão desta conta.
