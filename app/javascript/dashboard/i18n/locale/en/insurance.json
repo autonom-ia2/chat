@@ -53,7 +53,7 @@
       "ALERTS": {
         "CONNECTED": "Conexão com o AGGER atualizada.",
         "RECONNECTED": "Sessão renovada.",
-        "RESCANNED": "Produtos e seguradoras atualizados.",
+        "RESCANNED": "Buscando os produtos e seguradoras no AGGER. Leva cerca de meio minuto e a tela atualiza sozinha.",
         "DISCONNECTED": "Conexão removida."
       },
       "VERIFIED_AT": "às {at}, {check}",

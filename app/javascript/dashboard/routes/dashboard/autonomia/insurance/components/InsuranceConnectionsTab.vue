@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaInsuranceAPI from 'dashboard/api/autonomiaInsurance';
@@ -54,12 +54,48 @@ const apply = payload => {
   connection.value = { ...buildConnection(), ...payload };
 };
 
+// ACOMPANHA ATÉ ASSENTAR.
+//
+// A descoberta virou trabalho de fundo porque levava ~25 s e o proxy cortava a requisição. Só que
+// sem acompanhar, a tela mostraria "Descobrindo produtos" e ficaria parada nisso até o corretor
+// recarregar a página sozinho — trocaríamos um erro visível por um travamento silencioso, que é
+// pior.
+//
+// Consulta de 3 em 3 segundos enquanto o estado for de passagem, com teto. O teto existe porque um
+// laço sem fim numa aba esquecida bate no servidor a noite toda; passado ele, a rede de segurança
+// do healthcheck é quem resolve.
+const INTERVALO_MS = 3000;
+const MAXIMO_DE_CONSULTAS = 20;
+let acompanhamento = null;
+
+const pararAcompanhamento = () => {
+  if (acompanhamento) clearTimeout(acompanhamento);
+  acompanhamento = null;
+};
+
+const acompanharAteAssentar = (restantes = MAXIMO_DE_CONSULTAS) => {
+  pararAcompanhamento();
+  if (restantes <= 0 || !isTransientState(connection.value.status)) return;
+  acompanhamento = setTimeout(async () => {
+    try {
+      const { data } = await AutonomiaInsuranceAPI.getConnection();
+      apply(data.payload);
+    } catch (error) {
+      return; // falha de rede não pode virar laço; a próxima ação do corretor reconsulta
+    }
+    acompanharAteAssentar(restantes - 1);
+  }, INTERVALO_MS);
+};
+
 const load = async () => {
   isLoading.value = true;
   hasLoadError.value = false;
   try {
     const { data } = await AutonomiaInsuranceAPI.getConnection();
     apply(data.payload);
+    // Uma conexão pode estar em estado de passagem quando a tela abre — descoberta disparada de
+    // outra aba, ou por alguém do time.
+    acompanharAteAssentar();
   } catch (error) {
     hasLoadError.value = true;
   } finally {
@@ -72,6 +108,7 @@ const run = async (request, successKey) => {
   try {
     const { data } = await request();
     apply(data.payload);
+    acompanharAteAssentar();
     if (successKey) useAlert(t(successKey));
   } catch (error) {
     const message =
@@ -162,6 +199,7 @@ const insurerSummary = item => {
 };
 
 onMounted(load);
+onUnmounted(pararAcompanhamento);
 </script>
 
 <template>

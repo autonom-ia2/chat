@@ -20,10 +20,28 @@ class Autonomia::Insurance::Connections::HealthcheckJob < ApplicationJob
   CHECKABLE = %w[ready degraded offline].freeze
   BATCH_SIZE = 100
 
+  # REDE DE SEGURANÇA. Estado transitório é para durar segundos: um processo que morre no meio
+  # (proxy cortando, deploy trocando a instância, job perdido) deixa a conexão parada nele para
+  # sempre — e a tela desabilita os botões justamente nesses estados, então o corretor fica sem
+  # conseguir nem tentar de novo. Aconteceu em 06/09/2026 com a conta 16.
+  #
+  # Nada aqui adivinha o que houve: a conexão só é RE-SINCRONIZADA, e o resultado dessa
+  # sincronização é que decide o estado. Se estiver tudo bem, volta a `ready` sozinha.
+  STUCK_AFTER = 10.minutes
+
   def perform
     ::Autonomia::Insurance::Connection.where(status: CHECKABLE).find_each(batch_size: BATCH_SIZE) do |connection|
       check(connection)
     end
+    presas.find_each(batch_size: BATCH_SIZE) { |connection| check(connection) }
+  end
+
+  # Transitória e parada há tempo demais. A margem é generosa de propósito: a descoberta completa
+  # leva ~25 s, e qualquer transitório legítimo termina muito antes de dez minutos.
+  def presas
+    ::Autonomia::Insurance::Connection
+      .where(status: ::Autonomia::Insurance::Connection::TRANSIENT_STATUSES)
+      .where(updated_at: ...STUCK_AFTER.ago)
   end
 
   private
