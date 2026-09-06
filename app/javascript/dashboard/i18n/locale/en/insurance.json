@@ -92,7 +92,8 @@
       "INSURERS_PENDING": {
         "TITLE": "Seguradoras com credencial pendente",
         "BODY": "{count} seguradora(s) recusaram o login que a corretora cadastrou no AGGER, vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente."
-      }
+      },
+      "ALREADY_ACTIVE": "Esta conta AGGER já estava em uso quando conectamos (desde {at}). Pode ser você em outra aba, ou outro ambiente cotando pela mesma conta — nesse caso, as cotações aparecem misturadas no portal."
     },
     "CAPABILITIES": {
       "TITLE": "Produtos e seguradoras",
@@ -112,7 +113,11 @@
       "CONDOMINIO": "Condomínio",
       "FIANCA_LOCATICIA": "Fiança locatícia",
       "ACIDENTES_PESSOAIS": "Acidentes pessoais",
-      "VIDA_GLOBAL": "Vida em grupo"
+      "VIDA_GLOBAL": "Vida em grupo",
+      "CELULAR": "Celular",
+      "BIKE": "Bike",
+      "MOTO": "Motocicleta",
+      "CAMINHAO": "Caminhão"
     },
     "AGENT": {
       "TITLE": "Agente de Cotação",

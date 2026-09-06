@@ -131,7 +131,8 @@ class Autonomia::Insurance::Connection < ApplicationRecord
       failure: last_failure,
       evidence: last_evidence,
       layers: layers,
-      insurers_pending_auth: insurers_pending_auth
+      insurers_pending_auth: insurers_pending_auth,
+      account_already_active: account_already_active
     }
   end
 
@@ -156,6 +157,12 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   # cotacao e trazido para ca porque e aqui que tem conserto -- nunca para o cliente final (4.5).
   def insurers_pending_auth
     metadata.to_h['insurers_pending_auth'].presence
+  end
+
+  # A conta AGGER ja estava em uso quando conectamos (criterio 1.5). `nil` = nao estava, ou o
+  # adapter nao informou — a tela distingue os dois pela ausencia da chave.
+  def account_already_active
+    metadata.to_h['account_already_active'].presence
   end
 
   # Registra o achado da cotação SEM sobrescrever o resto de `metadata` (a comissão mora lá).

@@ -129,6 +129,10 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     'checkedAt' => 'checked_at',
     'scannedAt' => 'scanned_at',
     'droppedPreviousSession' => 'dropped_previous_session',
+    # Criterio 1.5: o portal avisa que a conta ja estava em uso, e o aviso vem no mesmo 201 do
+    # login bem-sucedido. Sem estas duas chaves ele morre na fronteira.
+    'alreadyActive' => 'already_active',
+    'sessionStartedAt' => 'session_started_at',
     # Camadas do critério 1.2. Chegam ANINHADAS em `layers`, e é por isso que a tradução deixou de
     # ser só do primeiro nível: uma camada lida como nil vira "não sei" quando na verdade era
     # "falhou", e o 1.2 existe exatamente para não confundir esses dois.

@@ -313,4 +313,35 @@ describe('InsuranceConnectionsTab (API)', () => {
     );
     expect(wrapper.text()).toContain('Allianz, Icatu');
   });
+
+  // CRITÉRIO 1.5 — decisão do Rodrigo: avisar, não bloquear. O caso real: a conta da SENA ligada no
+  // Hub2You e na Autonomia ao mesmo tempo faz cotação de teste e cotação de cliente aparecerem
+  // misturadas no portal da corretora, sem como distinguir.
+  it('avisa quando a conta AGGER já estava em uso, e não bloqueia nada', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          account_already_active: {
+            observed_at: '2026-09-06T14:05:00.000Z',
+            session_started_at: '2026-09-06T14:02:00.000Z',
+          },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
+    // Avisar não é impedir: os botões seguem disponíveis.
+    expect(
+      wrapper
+        .find('button[label="INSURANCE.CONNECTION.ACTIONS.RECONNECT"]')
+        .attributes('disabled')
+    ).toBeUndefined();
+  });
+
+  it('conta livre não gera aviso nenhum', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: { ...ready } } });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
+  });
 });

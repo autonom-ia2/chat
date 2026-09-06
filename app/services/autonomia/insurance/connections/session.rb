@@ -85,5 +85,31 @@ class Autonomia::Insurance::Connections::Session
 
     @connection.store_session!(payload['data'], expires_at: payload['expires_at'],
                                                 account_label: payload['account_label'].to_s.truncate(120).presence)
+    registrar_conta_em_uso(payload)
+  end
+
+  # CRITERIO 1.5 — a mesma conta AGGER usada em dois lugares ao mesmo tempo.
+  #
+  # Decisao do Rodrigo em 06/09/2026: AVISAR, nao bloquear. Bloquear tiraria a capacidade de testar
+  # com a conta real, e o dano hoje e confusao — dois logins nossos convivem sem se derrubar, isso
+  # foi medido. O que confunde e o corretor abrir o portal e ver cotacao de teste misturada com a
+  # do cliente, sem saber qual e qual.
+  #
+  # O aviso nao foi inventado: o portal o da, no mesmo 201 do login bem-sucedido. Era descartado
+  # porque o login tinha dado certo, e sucesso ninguem olha duas vezes.
+  #
+  # `nil` quando o adapter nao informa — sessao aberta por versao anterior. Ausente e "nao sei",
+  # que e diferente de "nao havia ninguem".
+  def registrar_conta_em_uso(payload)
+    return unless payload.key?('already_active')
+
+    @connection.merge_metadata!(
+      'account_already_active' => if payload['already_active']
+                                    {
+                                      'observed_at' => Time.current.iso8601,
+                                      'session_started_at' => payload['session_started_at']
+                                    }
+                                  end
+    )
   end
 end

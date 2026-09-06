@@ -62,6 +62,9 @@ export const buildConnection = (overrides = {}) => ({
   evidence: null,
   layers: null,
   insurers_pending_auth: null,
+  // Critério 1.5: `null` = a conta não estava em uso, OU o adapter não informou (sessão de versão
+  // anterior). A tela não afirma "estava livre" — só deixa de avisar.
+  account_already_active: null,
   ...overrides,
 });
 
