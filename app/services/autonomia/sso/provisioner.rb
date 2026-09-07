@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Autonomia::Sso::Provisioner
-  DEFAULT_ACCOUNT_LOCALE = 'pt_BR'
+  class AccessDenied < StandardError; end
 
   pattr_initialize [:context!, { token: nil }]
 
@@ -13,8 +13,10 @@ class Autonomia::Sso::Provisioner
     account = nil
 
     ActiveRecord::Base.transaction do
+      account = find_eligible_account
+      raise AccessDenied, 'No authorized Chatwoot account was found for this product access.' if account.blank?
+
       user = find_or_create_user
-      account = find_or_create_account
       pending_invitation = pending_agent_invitation(account)
       sync_account_name(account)
       link_user(user)
@@ -33,8 +35,8 @@ class Autonomia::Sso::Provisioner
     linked_user || User.from_email(identity_email) || create_user
   end
 
-  def find_or_create_account
-    pending_agent_invitation_account || registration_checkout_account || linked_account || create_account
+  def find_eligible_account
+    pending_agent_invitation_account || registration_checkout_account || linked_account
   end
 
   def create_user
@@ -47,14 +49,6 @@ class Autonomia::Sso::Provisioner
     user.skip_confirmation!
     user.save!
     user
-  end
-
-  def create_account
-    Account.create!(
-      name: organization_name.presence || identity_email.split('@').last,
-      locale: DEFAULT_ACCOUNT_LOCALE,
-      custom_attributes: {}
-    )
   end
 
   def sync_account_name(account)
@@ -86,7 +80,12 @@ class Autonomia::Sso::Provisioner
 
   def ensure_account_user(user, account, pending_invitation)
     AccountUser.find_or_initialize_by(user: user, account: account).tap do |account_user|
-      account_user.role = pending_invitation&.fetch('role', nil).presence || 'administrator'
+      if account_user.new_record?
+        authorized_role = pending_invitation&.fetch('role', nil).presence
+        raise AccessDenied, 'No authorized Chatwoot role was found for this product access.' if authorized_role.blank?
+
+        account_user.role = authorized_role
+      end
       account_user.custom_role_id = pending_invitation['custom_role_id'] if pending_invitation&.fetch('custom_role_id', nil).present?
       account_user.inviter_id ||= pending_invitation['invited_by_user_id'] if pending_invitation.present?
       account_user.save!
