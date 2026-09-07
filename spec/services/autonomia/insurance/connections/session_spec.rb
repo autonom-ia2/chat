@@ -221,4 +221,54 @@ RSpec.describe Autonomia::Insurance::Connections::Session do
       .to raise_error(an_object_having_attributes(kind: :protocol))
     expect(record.reload.session).to be_nil
   end
+
+  # CRITERIO 1.5 — a mesma conta AGGER usada em dois lugares ao mesmo tempo.
+  #
+  # Decisao do Rodrigo em 06/09/2026: avisar, nao bloquear. O caso real: a conta da SENA ligada no
+  # Hub2You e na Autonomia faz cotacao de teste e cotacao de cliente aparecerem misturadas no portal
+  # da corretora, sem como distinguir uma da outra.
+  describe 'conta ja em uso (1.5)' do
+    def conector_que_avisa(already)
+      payload = { 'platform' => 'agger', 'data' => { 'token' => 'x' },
+                  'expires_at' => 3.hours.from_now.utc.iso8601,
+                  'session_started_at' => '2026-09-06T14:02:00Z' }
+      payload['already_active'] = already unless already.nil?
+      instance_double(Autonomia::Insurance::Connector::Mock, open_session: payload)
+    end
+
+    it 'registra o aviso quando o portal diz que a conta ja estava em uso' do
+      # Arrange
+      conexao = connection
+      described_class.new(conexao, connector: conector_que_avisa(true)).resolve!
+
+      # Assert — avisa, e a sessao abre do mesmo jeito
+      expect(conexao.reload.account_already_active).to be_present
+      expect(conexao.account_already_active['session_started_at']).to eq('2026-09-06T14:02:00Z')
+      expect(conexao.session).to be_present
+    end
+
+    it 'limpa o aviso quando a conta esta livre' do
+      # Arrange
+      conexao = connection
+      conexao.merge_metadata!('account_already_active' => { 'observed_at' => '2026-09-05T10:00:00Z' })
+
+      # Act
+      described_class.new(conexao, connector: conector_que_avisa(false)).resolve!
+
+      # Assert
+      expect(conexao.reload.account_already_active).to be_nil
+    end
+
+    it 'nao afirma nada quando o adapter nao informa' do
+      # Arrange — adapter de versao anterior nao manda o campo. Ausente e "nao sei".
+      conexao = connection
+      conexao.merge_metadata!('account_already_active' => { 'observed_at' => '2026-09-05T10:00:00Z' })
+
+      # Act
+      described_class.new(conexao, connector: conector_que_avisa(nil)).resolve!
+
+      # Assert — o que estava gravado NAO e apagado por falta de informacao
+      expect(conexao.reload.account_already_active).to be_present
+    end
+  end
 end

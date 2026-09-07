@@ -39,7 +39,8 @@ const encryptionUnavailable = computed(
   () => connection.value.encryption_available !== true
 );
 // Só o que a corretora consegue cotar. O portal devolve ramos que ela não tem habilitados (e às
-// vezes sem nome, como `ramo_100`), que não ajudam ninguém na tela. Ficam no `capabilities` gravado,
+// vezes sem nome — até 06/09/2026 o ramo 100 chegava como `ramo_100`, e a descoberta leu no portal
+// que é Celular), que não ajudam ninguém na tela. Ficam no `capabilities` gravado,
 // para diagnóstico e para o dia em que forem habilitados.
 const products = computed(() =>
   (connection.value.capabilities?.products ?? []).filter(item => item.enabled)
@@ -187,8 +188,21 @@ const layers = computed(() => layerRows(connection.value.layers));
 const pendingInsurers = computed(
   () => connection.value.insurers_pending_auth ?? null
 );
+// CRITÉRIO 1.5 — avisar, não bloquear. Quem sabe distinguir "sou eu de outra aba" de "tem cotação
+// de teste rodando na minha conta" é o corretor, não nós.
+const accountInUse = computed(
+  () => connection.value.account_already_active ?? null
+);
 
+// O NOME QUE O PORTAL USA vence o nosso mapa. O ramo 46 provou por quê: o portal o chama de
+// "Aluguel", o nosso slug diz `fianca_locaticia`, e fiança locatícia é OUTRO produto (id 23) — o
+// corretor lia na tela um produto que não era o que ia cotar. O slug já viajou para o banco e não
+// muda; o rótulo passa a vir do adapter, que lê o portal.
+//
+// O i18n continua como rede para conexão gravada por versão anterior do adapter, que não manda
+// `label`. Sem ela, produto antigo apareceria como slug cru.
 const productLabel = item =>
+  item.label ||
   t(`INSURANCE.PRODUCTS.${String(item.product).toUpperCase()}`, item.product);
 const insurerSummary = item => {
   const ready = item.insurers.filter(i => i.enabled).length;
@@ -402,6 +416,21 @@ onUnmounted(pararAcompanhamento);
             />
           </div>
         </div>
+      </section>
+
+      <!-- CRITÉRIO 1.5: a conta já estava em uso quando conectamos. Aviso, nunca bloqueio. -->
+      <section
+        v-if="accountInUse"
+        class="flex items-start gap-3 px-4 py-3 rounded-lg bg-n-alpha-2 text-n-slate-12 text-sm"
+      >
+        <span class="i-lucide-users size-4 mt-0.5 shrink-0" />
+        <p class="text-xs">
+          {{
+            t('INSURANCE.CONNECTION.ALREADY_ACTIVE', {
+              at: formatVerifiedAt(accountInUse.session_started_at) || '—',
+            })
+          }}
+        </p>
       </section>
 
       <!-- CRITÉRIO 4.5: o problema de credencial de seguradora aparece AQUI, e nunca na conversa

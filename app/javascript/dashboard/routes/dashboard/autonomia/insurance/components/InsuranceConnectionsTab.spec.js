@@ -313,4 +313,73 @@ describe('InsuranceConnectionsTab (API)', () => {
     );
     expect(wrapper.text()).toContain('Allianz, Icatu');
   });
+
+  // CRITÉRIO 1.5 — decisão do Rodrigo: avisar, não bloquear. O caso real: a conta da SENA ligada no
+  // Hub2You e na Autonomia ao mesmo tempo faz cotação de teste e cotação de cliente aparecerem
+  // misturadas no portal da corretora, sem como distinguir.
+  it('avisa quando a conta AGGER já estava em uso, e não bloqueia nada', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          account_already_active: {
+            observed_at: '2026-09-06T14:05:00.000Z',
+            session_started_at: '2026-09-06T14:02:00.000Z',
+          },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
+    // Avisar não é impedir: os botões seguem disponíveis.
+    expect(
+      wrapper
+        .find('button[label="INSURANCE.CONNECTION.ACTIONS.RECONNECT"]')
+        .attributes('disabled')
+    ).toBeUndefined();
+  });
+
+  it('conta livre não gera aviso nenhum', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: { ...ready } } });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
+  });
+
+  // O NOME DO PORTAL VENCE O NOSSO MAPA. O ramo 46 é o caso real: o adapter manda
+  // `label: 'Aluguel'` porque é assim que o AGGER o chama, e o nosso slug diz
+  // `fianca_locaticia` — que é OUTRO produto no portal (id 23). Sem isto, o corretor lê na
+  // tela um produto diferente do que vai cotar, e o slug não pode mudar porque já viajou
+  // para o banco.
+  it('mostra o rótulo que o portal usa, e não a tradução do slug', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          capabilities: {
+            products: [
+              {
+                product: 'fianca_locaticia',
+                label: 'Aluguel',
+                platformRef: '46',
+                labelConfidence: 'confirmed',
+                enabled: true,
+                coveragePackages: [],
+                insurers: [
+                  {
+                    code: '1',
+                    name: 'Porto',
+                    enabled: true,
+                    integrationStatus: 'ready',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('Aluguel');
+    expect(wrapper.text()).not.toContain('INSURANCE.PRODUCTS.FIANCA_LOCATICIA');
+  });
 });
