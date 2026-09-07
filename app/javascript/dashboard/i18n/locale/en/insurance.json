@@ -54,7 +54,8 @@
         "RESCANNED": "Buscando os produtos e seguradoras no AGGER. Leva cerca de meio minuto e a tela atualiza sozinha.",
         "DISCONNECTED": "Conexão removida."
       },
-      "VERIFIED_AT": "às {at}, {check}",
+      "VERIFIED_AT": "em {at}, {check}",
+      "VERIFIED_AT_PLAIN": "em {at}",
       "NOT_VERIFIED": "ainda não verificado",
       "EVIDENCE": {
         "LOGIN": "entrando no portal",
@@ -86,17 +87,18 @@
         "STATE": {
           "OK": "verificado",
           "FAILED": "falhou",
+          "PENDING": "aguardando credencial",
           "UNKNOWN": "não verificado"
         },
         "DISCLOSURE": "Como isto foi verificado",
-        "INSURER_AUTH_OK": "a única foi conferida no portal e passou | as {total} foram conferidas uma a uma no portal e passaram",
-        "INSURER_AUTH_FAILED": "{names} recusou o login da corretora.",
+        "INSURER_AUTH_OK": "A única foi conferida no portal e passou. | As {total} foram conferidas uma a uma no portal e passaram.",
+        "INSURER_AUTH_FAILED": "{names} recusou o login da corretora. | {names} recusaram o login da corretora.",
         "INSURER_AUTH_REST": "Nenhuma outra seguradora da conta passou. | A outra seguradora da conta passou. | As outras {count} seguradoras da conta passaram.",
         "FROM_SCAN": "conferido na descoberta de {at}"
       },
       "INSURERS_PENDING": {
         "TITLE": "Seguradoras com credencial pendente",
-        "BODY": "{count} seguradora(s) recusaram o login que a corretora cadastrou no AGGER, vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente."
+        "BODY": "{count} seguradora recusou o login que a corretora cadastrou no AGGER, vista na cotação de {at}. Ela não cota até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente. | {count} seguradoras recusaram o login que a corretora cadastrou no AGGER, vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente."
       },
       "ALREADY_ACTIVE": "Esta conta AGGER já estava em uso quando conectamos (desde {at}). Pode ser você em outra aba, ou outro ambiente cotando pela mesma conta — nesse caso, as cotações aparecem misturadas no portal.",
       "VERDICT": {
@@ -111,10 +113,11 @@
       "SUBTITLE": "Lido do AGGER em {at}. Cada produto mostra quantas seguradoras respondem por ele.",
       "SUBTITLE_NO_SCAN": "Cada produto mostra quantas seguradoras respondem por ele.",
       "INFERRED_HINT": "Nome deduzido das coberturas; ainda não confirmado no portal.",
-      "HIDDEN_PRODUCTS": "{count} ramo(s) que esta conta ainda não tem habilitado no AGGER não aparecem aqui.",
+      "HIDDEN_PRODUCTS": "{count} ramo que esta conta ainda não tem habilitado no AGGER não aparece aqui. | {count} ramos que esta conta ainda não tem habilitados no AGGER não aparecem aqui.",
       "INSURERS_OF_TOTAL": "{ready} de {total} seguradora | {ready} de {total} seguradoras",
       "INSURERS_ALL": "{total} seguradora | {total} seguradoras",
-      "MONEY_LEFT": "{names} está fora por credencial recusada — uma seguradora a menos em cada cotação de {product}.",
+      "MONEY_LEFT": "{names} está fora por credencial recusada — uma seguradora a menos em cada cotação de {product}. | {names} estão fora por credencial recusada — {count} seguradoras a menos em cada cotação de {product}.",
+      "NO_INSURERS": "Nenhuma seguradora responde por este produto hoje.",
       "LEGEND_QUOTING": "cotando",
       "LEGEND_PENDING": "alguma seguradora aguardando credencial",
       "FOOTER": "Produto que a corretora não tem habilitado no AGGER não aparece aqui. Para habilitar, fale com a AGGER — a Autonom.ia lê o que a sua conta já pode vender."

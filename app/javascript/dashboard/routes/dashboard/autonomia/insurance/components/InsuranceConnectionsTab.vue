@@ -21,7 +21,9 @@ import {
 // Aba Conexões (PRD §9) ligada à API real: GET/POST/DELETE /autonomia/insurance/connection.
 // A senha sai deste componente uma única vez (no POST) e é zerada na sequência; o backend nunca a
 // devolve — a tela só conhece `username_hint`.
-const { t } = useI18n();
+// `te` = "translation exists". Necessário porque o segundo argumento de `t()` não funciona como
+// valor padrão: com a chave ausente, o vue-i18n devolve a própria chave.
+const { t, te } = useI18n();
 
 const connection = ref(buildConnection());
 const isLoading = ref(true);
@@ -159,11 +161,16 @@ const onDisconnect = () =>
 const verifiedLabel = (iso, evidence) => {
   const at = formatVerifiedAt(iso);
   if (!at) return t('INSURANCE.CONNECTION.NOT_VERIFIED');
-  const check = String(evidence?.check ?? 'none').toUpperCase();
-  return t('INSURANCE.CONNECTION.VERIFIED_AT', {
-    at,
-    check: t(`INSURANCE.CONNECTION.EVIDENCE.${check}`, ''),
-  });
+  // `check` vem do adapter e chega SEM normalização (`connections/sync.rb`). Um valor novo do lado
+  // de lá não pode virar `INSURANCE.CONNECTION.EVIDENCE.ALGUMA_COISA` na cara do corretor — e o
+  // segundo argumento de `t()` NÃO serve de default aqui: string vazia faz o vue-i18n devolver a
+  // própria chave. Sem tradução conhecida, a tela diz só quando foi verificado.
+  const check = `INSURANCE.CONNECTION.EVIDENCE.${String(
+    evidence?.check ?? 'none'
+  ).toUpperCase()}`;
+  return te(check)
+    ? t('INSURANCE.CONNECTION.VERIFIED_AT', { at, check: t(check) })
+    : t('INSURANCE.CONNECTION.VERIFIED_AT_PLAIN', { at });
 };
 
 const failure = computed(() => connection.value.failure ?? null);
@@ -223,19 +230,27 @@ const refusedInsurers = item =>
 // Antes o topo dizia só "Conectado", e conectado não é a pergunta do corretor — ele quer saber se
 // dá para cotar, e quanto. Estado de passagem não afirma nem nega: durante a descoberta a contagem
 // é do scan anterior, e apresentá-la como atual seria a tela envelhecendo o dado sozinha.
+// COTAR EXIGE SEGURADORA. Produto habilitado no AGGER com ZERO seguradoras respondendo não cota
+// nada, e contá-lo no veredito fazia a tela dizer "Pronta para cotar 1 produto" logo acima de
+// "0 de 1 seguradora". A lista continua mostrando o produto — ele existe e o corretor precisa ver
+// que está parado — mas o veredito conta só o que produz preço.
+const quotableProducts = computed(() =>
+  products.value.filter(item => item.insurers.some(i => i.enabled))
+);
+
 const verdict = computed(() => {
   if (isTransientState(status.value)) {
     return { key: 'INSURANCE.CONNECTION.VERDICT.WORKING', tone: 'working' };
   }
-  if (!isConnected.value || !products.value.length) {
+  if (!isConnected.value || !quotableProducts.value.length) {
     return { key: 'INSURANCE.CONNECTION.VERDICT.NOT_READY', tone: 'stopped' };
   }
   return {
     key:
-      products.value.length === 1
+      quotableProducts.value.length === 1
         ? 'INSURANCE.CONNECTION.VERDICT.READY_ONE'
         : 'INSURANCE.CONNECTION.VERDICT.READY',
-    count: products.value.length,
+    count: quotableProducts.value.length,
     tone: 'ready',
   };
 });
@@ -308,9 +323,11 @@ const layers = computed(() => {
               )
             : null,
           detail: refused.length
-            ? `${t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED', {
-                names: refused.join(', '),
-              })} ${t(
+            ? `${t(
+                'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED',
+                { names: refused.join(', ') },
+                refused.length
+              )} ${t(
                 'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_REST',
                 { count: rest },
                 rest
@@ -409,7 +426,15 @@ onUnmounted(pararAcompanhamento);
               </p>
             </div>
           </div>
-          <InsuranceStatusBadge :state="status" />
+          <!-- O badge some SÓ quando o veredito já deu a resposta inteira: conectada e cotando.
+               Ali "Conectado" ao lado de "Pronta para cotar 11 produtos" é a mesma informação duas
+               vezes, e o mockup não tem badge por isso.
+               Em qualquer outro estado ele fica: `auth_required`, `degraded` e `offline` têm nome
+               próprio, e "Não está cotando" diz que parou sem dizer o que houve. -->
+          <InsuranceStatusBadge
+            v-if="verdict.tone !== 'ready'"
+            :state="status"
+          />
         </header>
 
         <div v-if="showForm" class="flex flex-col gap-4 px-5 py-5">
@@ -607,10 +632,14 @@ onUnmounted(pararAcompanhamento);
           </p>
           <p class="text-xs">
             {{
-              t('INSURANCE.CONNECTION.INSURERS_PENDING.BODY', {
-                count: pendingInsurers.codes?.length ?? 0,
-                at: formatVerifiedAt(pendingInsurers.observed_at),
-              })
+              t(
+                'INSURANCE.CONNECTION.INSURERS_PENDING.BODY',
+                {
+                  count: pendingInsurers.codes?.length ?? 0,
+                  at: formatVerifiedAt(pendingInsurers.observed_at),
+                },
+                pendingInsurers.codes?.length ?? 0
+              )
             }}
           </p>
           <p v-if="pendingInsurers.names?.length" class="text-xs font-mono">
@@ -693,9 +722,7 @@ onUnmounted(pararAcompanhamento);
             >
               {{
                 t(
-                  `INSURANCE.CONNECTION.LAYERS.STATE.${
-                    row.state === 'pending' ? 'FAILED' : row.state.toUpperCase()
-                  }`
+                  `INSURANCE.CONNECTION.LAYERS.STATE.${row.state.toUpperCase()}`
                 )
               }}
             </span>
@@ -729,13 +756,20 @@ onUnmounted(pararAcompanhamento);
           >
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-3 min-w-0">
+                <!-- VERDE SÓ PARA QUEM COTA. Produto habilitado com zero seguradoras ativas
+                     recebia verde, e a legenda define verde como "cotando" — a tela afirmava o
+                     contrário da própria linha, que dizia "0 de 1 seguradora". -->
                 <span
                   class="rounded-full size-2 shrink-0"
-                  :class="
-                    refusedInsurers(item).length
-                      ? 'bg-n-amber-9'
-                      : 'bg-n-teal-9'
-                  "
+                  :class="{
+                    'bg-n-slate-7': !insurerSummary(item).ready,
+                    'bg-n-amber-9':
+                      insurerSummary(item).ready &&
+                      refusedInsurers(item).length,
+                    'bg-n-teal-9':
+                      insurerSummary(item).ready &&
+                      !refusedInsurers(item).length,
+                  }"
                 />
                 <span class="truncate text-n-slate-12">
                   {{ productLabel(item) }}
@@ -787,6 +821,18 @@ onUnmounted(pararAcompanhamento);
                  handoff ausente do botão principal (ver comentário nas ações acima): mandar o
                  corretor para o portal sem sessão o faria digitar a senha de novo, que é
                  exatamente o atrito que o handoff existe para remover. -->
+            <!-- Habilitado no AGGER e sem NENHUMA seguradora respondendo. A linha existe (o
+                 corretor precisa ver que o produto está parado) mas não conta no veredito, e o
+                 ponto fica cinza. Dizer isso em palavras evita que "0 de 1" pareça erro de tela. -->
+            <div
+              v-if="!insurerSummary(item).ready"
+              class="flex flex-wrap items-center gap-2 px-3 py-2 text-xs rounded-lg bg-n-alpha-2 text-n-slate-11"
+            >
+              <span class="i-lucide-info size-4 shrink-0" />
+              <span class="min-w-0">
+                {{ t('INSURANCE.CAPABILITIES.NO_INSURERS') }}
+              </span>
+            </div>
             <div
               v-if="refusedInsurers(item).length"
               class="flex flex-wrap items-center gap-2 px-3 py-2 text-xs rounded-lg bg-n-amber-2 text-n-amber-12"
@@ -794,10 +840,15 @@ onUnmounted(pararAcompanhamento);
               <span class="i-lucide-key-round size-4 shrink-0" />
               <span class="min-w-0">
                 {{
-                  t('INSURANCE.CAPABILITIES.MONEY_LEFT', {
-                    names: refusedInsurers(item).join(', '),
-                    product: productLabel(item),
-                  })
+                  t(
+                    'INSURANCE.CAPABILITIES.MONEY_LEFT',
+                    {
+                      names: refusedInsurers(item).join(', '),
+                      product: productLabel(item),
+                      count: refusedInsurers(item).length,
+                    },
+                    refusedInsurers(item).length
+                  )
                 }}
               </span>
             </div>
@@ -820,9 +871,11 @@ onUnmounted(pararAcompanhamento);
           class="px-5 py-3 text-xs border-t text-n-slate-11 border-n-weak"
         >
           {{
-            t('INSURANCE.CAPABILITIES.HIDDEN_PRODUCTS', {
-              count: hiddenProductCount,
-            })
+            t(
+              'INSURANCE.CAPABILITIES.HIDDEN_PRODUCTS',
+              { count: hiddenProductCount },
+              hiddenProductCount
+            )
           }}
         </p>
         <p class="px-5 py-3 text-xs border-t text-n-slate-11 border-n-weak">

@@ -187,8 +187,11 @@ describe('o texto que a aba Conexões escreve', () => {
         },
       ])
     );
+    // Frase inteira: maiúscula e ponto final, como as outras duas camadas. Ela veio do mockup
+    // como segunda metade de "A Azul recusou… As outras 17 foram conferidas…", e usada sozinha
+    // ficava em minúscula e sem ponto ao lado de vizinhas pontuadas.
     expect(wrapper.text()).toContain(
-      'as 2 foram conferidas uma a uma no portal e passaram'
+      'As 2 foram conferidas uma a uma no portal e passaram.'
     );
   });
 
@@ -221,6 +224,88 @@ describe('o texto que a aba Conexões escreve', () => {
       ])
     );
     expect(dois.text()).toContain('Pronta para cotar 2 produtos');
+  });
+
+  // O VEREDITO NÃO PODE CONTRADIZER A LISTA. Produto habilitado no AGGER com zero seguradoras
+  // respondendo não cota nada; contá-lo fazia a tela dizer "Pronta para cotar 2 produtos" tendo
+  // "Bike 0 seguradoras" logo abaixo, com ponto verde que a legenda define como "cotando".
+  it('nao conta como pronto o produto sem seguradora nenhuma', async () => {
+    const wrapper = await montar(
+      conexao([
+        {
+          product: 'auto',
+          label: 'Automóvel',
+          insurers: [seguradora('1', 'Porto')],
+        },
+        { product: 'bike', label: 'Bike', insurers: [] },
+      ])
+    );
+    const texto = wrapper.text();
+    expect(texto).toContain('Pronta para cotar 1 produto');
+    expect(texto).not.toContain('Pronta para cotar 2 produtos');
+    // A linha continua na tela — o corretor precisa ver que está parada — e diz por quê.
+    expect(texto).toContain('Bike');
+    expect(texto).toContain(
+      'Nenhuma seguradora responde por este produto hoje.'
+    );
+  });
+
+  // Com 2+ recusadas, "uma seguradora a menos" mentia: eram três.
+  it('o aviso de dinheiro concorda com quantas recusaram', async () => {
+    const wrapper = await montar(
+      conexao([
+        {
+          product: 'auto',
+          label: 'Automóvel',
+          insurers: [
+            seguradora('1', 'Porto'),
+            seguradora('10', 'Azul', true),
+            seguradora('13', 'Mitsui', true),
+            seguradora('14', 'Sompo', true),
+          ],
+        },
+      ])
+    );
+    const texto = wrapper.text();
+    expect(texto).toContain('1 de 4 seguradoras');
+    expect(texto).toContain('3 seguradoras a menos');
+    expect(texto).not.toContain('uma seguradora a menos');
+    // Concordância verbal com lista de nomes.
+    expect(texto).toContain('Azul, Mitsui, Sompo estão fora');
+    expect(texto).toContain('Azul, Mitsui, Sompo recusaram o login');
+  });
+
+  // `check` vem do adapter sem normalização: valor novo do lado de lá não pode virar chave crua.
+  it('evidencia desconhecida nao vira chave de i18n na tela', async () => {
+    const base = conexao([
+      { product: 'auto', label: 'Automóvel', insurers: [seguradora('1', 'P')] },
+    ]);
+    const wrapper = await montar({
+      ...base,
+      evidence: {
+        check: 'sonda_que_ainda_nao_existe',
+        at: base.last_healthcheck_at,
+      },
+    });
+    const texto = wrapper.text();
+    expect(texto).not.toContain('EVIDENCE');
+    expect(texto).toContain('em 07/09');
+  });
+
+  // O cabeçalho da lista e o rótulo do `<details>` são texto do desenho aprovado, e sumiram sem
+  // quebrar teste nenhum na prova de mutação do QA.
+  it('mostra o cabecalho da lista e o rotulo do bloco de verificacao', async () => {
+    const wrapper = await montar(
+      conexao([
+        {
+          product: 'auto',
+          label: 'Automóvel',
+          insurers: [seguradora('1', 'P')],
+        },
+      ])
+    );
+    expect(wrapper.text()).toContain('O que esta conta cota hoje');
+    expect(wrapper.text()).toContain('Como isto foi verificado');
   });
 
   // Nenhuma chave crua pode vazar para a tela: se uma faltar no JSON, o corretor lê

@@ -102,7 +102,10 @@ describe('InsuranceConnectionsTab (API)', () => {
       password: 'segredo',
     });
     expect(wrapper.html()).not.toContain('segredo');
-    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.STATES.READY');
+    // Conectada e cotando: quem responde é o VEREDITO, e o badge de estado sai de cena para não
+    // dizer "Conectado" ao lado de "Pronta para cotar 1 produto".
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERDICT.READY_ONE');
+    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.STATES.READY');
     expect(wrapper.text()).toContain('co*******@exemplo.com.br');
     expect(wrapper.text()).toContain('CORRETORA X');
     // t(chave, fallback): sem mensagens no teste, o rótulo do produto cai no slug — é o comportamento
@@ -159,7 +162,8 @@ describe('InsuranceConnectionsTab (API)', () => {
       .trigger('click');
     await flushPromises();
     expect(api.reconnect).toHaveBeenCalledTimes(1);
-    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.STATES.READY');
+    // Reconectou e voltou a cotar: o veredito é quem diz isso agora.
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERDICT.READY_ONE');
   });
 
   it('blocks connecting when the encryption vault is unavailable', async () => {
