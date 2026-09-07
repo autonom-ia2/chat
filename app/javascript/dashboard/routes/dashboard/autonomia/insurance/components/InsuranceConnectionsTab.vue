@@ -309,6 +309,11 @@ const layers = computed(() => {
   const total = new Set(
     products.value.flatMap(item => item.insurers.map(i => i.code))
   ).size;
+  // SEM SEGURADORA NENHUMA NÃO HÁ O QUE VERIFICAR, e a camada precisa dizer isso em vez de
+  // promover o vazio a aprovação. Sem esta guarda a tela escrevia "As 0 foram conferidas uma a uma
+  // no portal e passaram", em verde e rotulada "verificado", ao lado de "Não está cotando" — que é
+  // exatamente o que o critério 1.2 proíbe: confundir "não havia o que olhar" com "olhei e passou".
+  if (!total) return rows;
   const rest = total - refused.length;
   return rows.map(row =>
     row.key === 'insurer_auth' && row.state === 'unknown'
@@ -341,6 +346,46 @@ const layers = computed(() => {
         }
       : row
   );
+});
+
+// O PONTO DA LINHA DO PRODUTO — três causas, três cores, cada uma com entrada na legenda.
+//
+// A ordem das perguntas importa e já errou duas vezes:
+//
+// 1. Alguma seguradora recusou? Então ÂMBAR, mesmo que a recusa derrube o produto inteiro. A
+//    versão anterior perguntava "cota?" primeiro e dava CINZA ao produto de seguradora única
+//    recusada — com a caixa âmbar "Azul está fora por credencial recusada" logo abaixo, na mesma
+//    linha. O ponto contradizia o aviso que ele deveria resumir.
+// 2. Cota alguma coisa? Então VERDE.
+// 3. Sobrou: habilitado no AGGER e sem nenhuma seguradora cadastrada. CINZA, e a linha explica em
+//    palavras — antes isto era VERDE, que a legenda define como "cotando".
+//
+// Devolve a chave da legenda junto da cor: é o que impede as duas de divergirem de novo. Cor sem
+// entrada de legenda é cor que o corretor não sabe ler.
+const productDot = item => {
+  if (refusedInsurers(item).length) {
+    return { cor: 'bg-n-amber-9', legenda: 'LEGEND_PENDING' };
+  }
+  if (insurerSummary(item).ready) {
+    return { cor: 'bg-n-teal-9', legenda: 'LEGEND_QUOTING' };
+  }
+  return { cor: 'bg-n-slate-7', legenda: 'LEGEND_NONE' };
+};
+
+// A legenda lista as cores que ESTÃO na tela, e não uma lista fixa. Assim ela não descreve cor
+// ausente nem deixa cor órfã — o defeito era exatamente esse: três cores, duas entradas.
+const LEGEND_ORDER = ['LEGEND_QUOTING', 'LEGEND_PENDING', 'LEGEND_NONE'];
+const DOT_BY_LEGEND = {
+  LEGEND_QUOTING: 'bg-n-teal-9',
+  LEGEND_PENDING: 'bg-n-amber-9',
+  LEGEND_NONE: 'bg-n-slate-7',
+};
+const legend = computed(() => {
+  const usadas = new Set(products.value.map(item => productDot(item).legenda));
+  return LEGEND_ORDER.filter(key => usadas.has(key)).map(key => ({
+    key,
+    cor: DOT_BY_LEGEND[key],
+  }));
 });
 
 // Mais seguradoras primeiro: é o que o corretor cota mais, e o que ele confere primeiro. A ordem
@@ -417,8 +462,11 @@ onUnmounted(pararAcompanhamento);
                 {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }}
               </h2>
               <!-- QUEM é esta conta, junto do veredito. Corretora com mais de uma conta AGGER
-                   precisa saber de qual a tela está falando antes de agir sobre ela. -->
-              <p class="text-xs text-n-slate-11 truncate">
+                   precisa saber de qual a tela está falando antes de agir sobre ela.
+                   Só aparece quando o veredito ocupa o `h2`: no formulário o próprio `h2` já é o
+                   nome do provedor, e repeti-lo aqui rendia "AGGER · AggilizadorAGGER ·
+                   Aggilizador" na primeira tela que o corretor vê. -->
+              <p v-if="!showForm" class="text-xs truncate text-n-slate-11">
                 {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }}
                 <template v-if="connection.external_account_label">
                   — {{ connection.external_account_label }}
@@ -426,13 +474,15 @@ onUnmounted(pararAcompanhamento);
               </p>
             </div>
           </div>
-          <!-- O badge some SÓ quando o veredito já deu a resposta inteira: conectada e cotando.
-               Ali "Conectado" ao lado de "Pronta para cotar 11 produtos" é a mesma informação duas
-               vezes, e o mockup não tem badge por isso.
-               Em qualquer outro estado ele fica: `auth_required`, `degraded` e `offline` têm nome
-               próprio, e "Não está cotando" diz que parou sem dizer o que houve. -->
+          <!-- O badge existe para NOMEAR UM PROBLEMA que o veredito não nomeia: `auth_required`,
+               `degraded`, `offline`, `not_configured`, e os de passagem.
+               Com `status: ready` ele nunca aparece — nem quando a conta não está cotando. Ali o
+               veredito já diz "Pronta para cotar 11 produtos" (e o badge repetiria), ou diz "Não
+               está cotando", e um badge VERDE escrito "Conectado" ao lado disso lê como
+               tranquilização: o corretor vê verde e para de procurar. A causa real aparece na
+               linha de falha e na camada, que é onde ela cabe. -->
           <InsuranceStatusBadge
-            v-if="verdict.tone !== 'ready'"
+            v-if="status !== CONNECTION_STATES.READY"
             :state="status"
           />
         </header>
@@ -731,8 +781,8 @@ onUnmounted(pararAcompanhamento);
       </details>
 
       <section
-        v-if="isConnected && products.length"
-        class="rounded-xl border border-n-weak bg-n-solid-1 overflow-hidden"
+        v-if="isConnected"
+        class="overflow-hidden border rounded-xl border-n-weak bg-n-solid-1"
       >
         <header class="px-5 py-4 border-b border-n-weak">
           <h2 class="text-sm font-medium text-n-slate-12">
@@ -748,7 +798,13 @@ onUnmounted(pararAcompanhamento);
             }}
           </p>
         </header>
-        <ul class="divide-y divide-n-weak">
+        <!-- CONTA SEM PRODUTO NENHUM. O card inteiro sumia aqui, e com ele a linha dos ramos
+             ocultos e o rodapé que responde "cadê meu produto" — que é a pergunta do corretor
+             exatamente nesta tela. Some a lista, fica a explicação. -->
+        <p v-if="!products.length" class="px-5 py-4 text-sm text-n-slate-11">
+          {{ t('INSURANCE.CAPABILITIES.EMPTY') }}
+        </p>
+        <ul v-else class="divide-y divide-n-weak">
           <li
             v-for="item in sortedProducts"
             :key="item.product"
@@ -756,20 +812,9 @@ onUnmounted(pararAcompanhamento);
           >
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-3 min-w-0">
-                <!-- VERDE SÓ PARA QUEM COTA. Produto habilitado com zero seguradoras ativas
-                     recebia verde, e a legenda define verde como "cotando" — a tela afirmava o
-                     contrário da própria linha, que dizia "0 de 1 seguradora". -->
                 <span
                   class="rounded-full size-2 shrink-0"
-                  :class="{
-                    'bg-n-slate-7': !insurerSummary(item).ready,
-                    'bg-n-amber-9':
-                      insurerSummary(item).ready &&
-                      refusedInsurers(item).length,
-                    'bg-n-teal-9':
-                      insurerSummary(item).ready &&
-                      !refusedInsurers(item).length,
-                  }"
+                  :class="productDot(item).cor"
                 />
                 <span class="truncate text-n-slate-12">
                   {{ productLabel(item) }}
@@ -854,16 +899,18 @@ onUnmounted(pararAcompanhamento);
             </div>
           </li>
         </ul>
+        <!-- Sem produto não há ponto na tela, e legenda de cor que ninguém vê é ruído. -->
         <div
+          v-if="legend.length"
           class="flex flex-wrap gap-4 px-5 py-2.5 text-xs border-t text-n-slate-11 border-n-weak"
         >
-          <span class="flex items-center gap-1.5">
-            <span class="rounded-full size-2 bg-n-teal-9" />
-            {{ t('INSURANCE.CAPABILITIES.LEGEND_QUOTING') }}
-          </span>
-          <span class="flex items-center gap-1.5">
-            <span class="rounded-full size-2 bg-n-amber-9" />
-            {{ t('INSURANCE.CAPABILITIES.LEGEND_PENDING') }}
+          <span
+            v-for="entry in legend"
+            :key="entry.key"
+            class="flex items-center gap-1.5"
+          >
+            <span class="rounded-full size-2" :class="entry.cor" />
+            {{ t(`INSURANCE.CAPABILITIES.${entry.key}`) }}
           </span>
         </div>
         <p

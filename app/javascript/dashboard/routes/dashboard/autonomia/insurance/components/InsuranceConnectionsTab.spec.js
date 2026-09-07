@@ -206,10 +206,13 @@ describe('InsuranceConnectionsTab (API)', () => {
   // Estes quatro nasceram de uma prova de mutação que saiu VERDE com o código removido: legenda,
   // rodapé, código do ramo e ordenação estavam na tela e não estavam em teste nenhum. Item que só
   // o olho humano defende volta a sumir na próxima refatoração.
+  //
+  // A CÓPIA em si é julgada em `InsuranceConnectionsTab.copy.spec.js`, com i18n real: aqui a
+  // asserção é sobre a chave, e trocar o texto por outro não derrubaria este exemplo.
   it('mostra legenda das cores e o rodape que explica produto ausente', async () => {
     api.getConnection.mockResolvedValue({ data: { payload: ready } });
     const wrapper = await mountTab();
-    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.LEGEND_QUOTING');
+    // `ready` tem auto com uma seguradora recusada: a legenda mostra a entrada âmbar.
     expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.LEGEND_PENDING');
     expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.FOOTER');
   });

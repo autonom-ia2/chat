@@ -308,6 +308,160 @@ describe('o texto que a aba Conexões escreve', () => {
     expect(wrapper.text()).toContain('Como isto foi verificado');
   });
 
+  // AS FRASES DO DESENHO APROVADO, TODAS, NUMA LISTA SÓ.
+  //
+  // Três rodadas de QA acharam defeito novo a cada vez, e a explicação é sempre a mesma: eu
+  // consertava o CASO e não a CLASSE. A prova de mutação da última rodada trocou seis frases do
+  // desenho por "XXX" — legenda, rodapé, subtítulo da lista, nome de camada, detalhe do login — e
+  // a suíte ficou verde nas seis.
+  //
+  // Esta lista é a guarda de classe. Toda frase que o corretor lê numa tela saudável entra aqui;
+  // trocar qualquer uma por outra coisa derruba este exemplo. Frase nova do desenho entra na
+  // lista, não num `it` próprio.
+  it('escreve todas as frases do desenho aprovado', async () => {
+    const wrapper = await montar(
+      conexao([
+        {
+          product: 'auto',
+          label: 'Automóvel',
+          insurers: [seguradora('1', 'Porto'), seguradora('10', 'Azul', true)],
+        },
+        // Um produto de cada cor, para que as três entradas da legenda apareçam.
+        {
+          product: 'residencial',
+          label: 'Residencial',
+          insurers: [seguradora('2', 'Zurich')],
+        },
+        { product: 'bike', label: 'Bike', insurers: [] },
+      ])
+    );
+    const texto = wrapper.text();
+    [
+      // Veredito e identificação
+      'Pronta para cotar 2 produtos',
+      'AGGER · Aggilizador',
+      'CORRETORA X',
+      // Bloco de verificação
+      'Como isto foi verificado',
+      'Cada camada tem prova própria',
+      'O serviço da Autonom.ia responde',
+      'Verificado agora, junto com a sessão.',
+      'A conta abre sessão no AGGER',
+      'Verificamos a cada 30 minutos.',
+      'Credenciais nas seguradoras',
+      // Lista de produtos
+      'O que esta conta cota hoje',
+      'Cada produto mostra quantas seguradoras respondem por ele.',
+      'Automóvel',
+      'Bike',
+      // Legenda: as três cores que esta tela mostra
+      'cotando',
+      'alguma seguradora aguardando credencial',
+      'sem seguradora respondendo',
+      // Rodapé
+      'Produto que a corretora não tem habilitado no AGGER não aparece aqui.',
+      'a Autonom.ia lê o que a sua conta já pode vender',
+    ].forEach(frase => expect(texto).toContain(frase));
+  });
+
+  // A LEGENDA DESCREVE AS CORES QUE ESTÃO NA TELA — nem a mais, nem a menos.
+  //
+  // O defeito: três cores de ponto e duas entradas de legenda, e a cor que faltava era a do
+  // produto cuja única seguradora foi recusada — ponto cinza ao lado de uma caixa âmbar dizendo
+  // "credencial recusada", na mesma linha.
+  // Lê a legenda do DOM, e não do texto corrido: "Não está cotando" CONTÉM "cotando", e uma
+  // asserção por substring solta dava falso negativo — o teste precisa comparar conjuntos, que é
+  // o que a regra realmente diz.
+  const coresEmTela = async produtos => {
+    const wrapper = await montar(conexao(produtos));
+    // `section ul li` e não `li`: as camadas do `<details>` também são `li` com ponto de cor, e
+    // pegá-las junto misturava dois vocabulários de cor diferentes na mesma asserção.
+    const daLinha = wrapper
+      .findAll('section ul li span.size-2')
+      .map(n => n.classes().find(c => c.startsWith('bg-')));
+    const daLegenda = wrapper
+      .findAll('div.flex-wrap > span.items-center span.size-2')
+      .map(n => n.classes().find(c => c.startsWith('bg-')));
+    return {
+      daLinha: [...new Set(daLinha)].sort(),
+      daLegenda: daLegenda.sort(),
+    };
+  };
+
+  it('cada cor de ponto na tela tem entrada na legenda, e vice-versa', async () => {
+    // Só cotando.
+    expect(
+      await coresEmTela([
+        {
+          product: 'auto',
+          label: 'Automóvel',
+          insurers: [seguradora('1', 'P')],
+        },
+      ])
+    ).toEqual({ daLinha: ['bg-n-teal-9'], daLegenda: ['bg-n-teal-9'] });
+
+    // ÚNICA SEGURADORA RECUSADA: âmbar, nunca cinza. Cinza aqui punha o ponto em desacordo com a
+    // caixa âmbar "credencial recusada" que aparece na mesma linha.
+    expect(
+      await coresEmTela([
+        {
+          product: 'auto',
+          label: 'Automóvel',
+          insurers: [seguradora('10', 'Azul', true)],
+        },
+      ])
+    ).toEqual({ daLinha: ['bg-n-amber-9'], daLegenda: ['bg-n-amber-9'] });
+
+    // Sem seguradora nenhuma: cinza, e a legenda ganha a terceira entrada.
+    expect(
+      await coresEmTela([{ product: 'bike', label: 'Bike', insurers: [] }])
+    ).toEqual({ daLinha: ['bg-n-slate-7'], daLegenda: ['bg-n-slate-7'] });
+
+    // As três juntas, na ordem da legenda.
+    expect(
+      await coresEmTela([
+        {
+          product: 'auto',
+          label: 'Automóvel',
+          insurers: [seguradora('1', 'P')],
+        },
+        {
+          product: 'residencial',
+          label: 'Residencial',
+          insurers: [seguradora('2', 'Z'), seguradora('10', 'Azul', true)],
+        },
+        { product: 'bike', label: 'Bike', insurers: [] },
+      ])
+    ).toEqual({
+      daLinha: ['bg-n-amber-9', 'bg-n-slate-7', 'bg-n-teal-9'],
+      daLegenda: ['bg-n-teal-9', 'bg-n-amber-9', 'bg-n-slate-7'].sort(),
+    });
+  });
+
+  // A camada não pode promover "não havia o que verificar" a "verificado e passou".
+  it('sem seguradora nenhuma, a camada continua nao verificada', async () => {
+    const wrapper = await montar(
+      conexao([{ product: 'bike', label: 'Bike', insurers: [] }])
+    );
+    const texto = wrapper.text();
+    expect(texto).not.toContain('As 0 foram conferidas');
+    expect(texto).not.toContain('foram conferidas uma a uma');
+    expect(texto).toContain('não verificado');
+  });
+
+  // Conta conectada sem produto nenhum: some a lista, fica a explicação.
+  it('sem produto, explica em vez de sumir com o card', async () => {
+    const wrapper = await montar(conexao([]));
+    const texto = wrapper.text();
+    expect(texto).toContain('O que esta conta cota hoje');
+    expect(texto).toContain(
+      'Esta conta não tem nenhum produto habilitado no AGGER.'
+    );
+    expect(texto).toContain(
+      'Produto que a corretora não tem habilitado no AGGER não aparece aqui.'
+    );
+  });
+
   // Nenhuma chave crua pode vazar para a tela: se uma faltar no JSON, o corretor lê
   // "INSURANCE.ALGUMA.COISA" no lugar da frase.
   it('nao vaza chave de i18n para a tela', async () => {

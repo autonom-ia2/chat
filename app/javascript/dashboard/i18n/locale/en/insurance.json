@@ -118,8 +118,10 @@
       "INSURERS_ALL": "{total} seguradora | {total} seguradoras",
       "MONEY_LEFT": "{names} está fora por credencial recusada — uma seguradora a menos em cada cotação de {product}. | {names} estão fora por credencial recusada — {count} seguradoras a menos em cada cotação de {product}.",
       "NO_INSURERS": "Nenhuma seguradora responde por este produto hoje.",
+      "EMPTY": "Esta conta não tem nenhum produto habilitado no AGGER.",
       "LEGEND_QUOTING": "cotando",
       "LEGEND_PENDING": "alguma seguradora aguardando credencial",
+      "LEGEND_NONE": "sem seguradora respondendo",
       "FOOTER": "Produto que a corretora não tem habilitado no AGGER não aparece aqui. Para habilitar, fale com a AGGER — a Autonom.ia lê o que a sua conta já pode vender."
     },
     "PRODUCTS": {
