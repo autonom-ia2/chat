@@ -119,6 +119,7 @@
       "MONEY_LEFT": "{names} está fora por credencial recusada — uma seguradora a menos em cada cotação de {product}. | {names} estão fora por credencial recusada — {count} seguradoras a menos em cada cotação de {product}.",
       "NO_INSURERS": "Nenhuma seguradora responde por este produto hoje.",
       "EMPTY": "Esta conta não tem nenhum produto habilitado no AGGER.",
+      "UNNAMED_BRANCH": "Ramo {ramo}",
       "LEGEND_QUOTING": "cotando",
       "LEGEND_PENDING": "alguma seguradora aguardando credencial",
       "LEGEND_NONE": "sem seguradora respondendo",

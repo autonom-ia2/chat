@@ -364,9 +364,21 @@ describe('o texto que a aba Conexões escreve', () => {
   Object.entries(CENARIOS_DO_SNAPSHOT).forEach(([nome, produtos]) => {
     it(`texto da tela — ${nome}`, async () => {
       const wrapper = await montar(conexao(produtos));
+      // OS RÓTULOS DE BOTÃO NÃO ESTÃO EM `text()`. `vitest.setup.js` stuba `NextButton` como
+      // `<button><slot/></button>` e descarta o prop `label` — os quatro botões do desenho
+      // (Reconectar, Atualizar produtos, Desconectar, Conectar AGGER) ficavam invisíveis para o
+      // snapshot, e um QA independente trocou os quatro por outra coisa com a suíte verde.
+      // Aqui eles entram pelo atributo, que é onde o stub os deixa.
+      const botoes = wrapper
+        .findAll('button')
+        .map(b => b.attributes('label') || b.text())
+        .filter(Boolean);
       // Espaços normalizados: `text()` do vue-test-utils preserva a indentação do template, e o
       // snapshot passaria a acusar reformatação em vez de mudança de cópia.
-      expect(wrapper.text().split(/\s+/).join(' ').trim()).toMatchSnapshot();
+      expect({
+        texto: wrapper.text().split(/\s+/).join(' ').trim(),
+        botoes,
+      }).toMatchSnapshot();
     });
   });
 

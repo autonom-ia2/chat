@@ -44,8 +44,38 @@ const encryptionUnavailable = computed(
 // vezes sem nome — até 06/09/2026 o ramo 100 chegava como `ramo_100`, e a descoberta leu no portal
 // que é Celular), que não ajudam ninguém na tela. Ficam no `capabilities` gravado,
 // para diagnóstico e para o dia em que forem habilitados.
+// `capabilities` É O QUARTO CAMINHO CRU, e o menos protegido dos quatro: `connections/sync.rb`
+// grava o mapa como veio, sem passar nem pelo `sanitize_deep` que trata `failure`, `evidence` e
+// `layers`. Tudo o que a lista de produtos lê vem daí.
+//
+// Três coisas que o dado cru já causou ou causaria, e que esta normalização fecha de uma vez:
+//   1. produto sem `insurers` derrubava a ABA INTEIRA (`insurers.some` em `undefined`) — uma chave
+//      ausente no adapter apagava a tela do corretor;
+//   2. `enabled` e `integrationStatus` podiam discordar, e o denominador contava por um enquanto o
+//      aviso nomeava pelo outro: "2 seguradoras" acima de "uma seguradora a menos";
+//   3. slug sem `label` escrevia `ramo_100` na tela — o caso real de 06/09.
+//
+// A regra é a mesma das outras três portas: normalizar na entrada, uma vez, e o resto do
+// componente trabalhar com dado que já obedece ao contrato.
+const normalizarSeguradora = seg => ({
+  ...seg,
+  // `enabled` manda. `integrationStatus` só qualifica POR QUE está fora, e não pode desmentir.
+  enabled: seg?.enabled === true,
+  integrationStatus: seg?.integrationStatus ?? 'unknown',
+  name: seg?.name || seg?.code || '—',
+});
+
+const normalizarProduto = item => ({
+  ...item,
+  insurers: (Array.isArray(item?.insurers) ? item.insurers : []).map(
+    normalizarSeguradora
+  ),
+});
+
 const products = computed(() =>
-  (connection.value.capabilities?.products ?? []).filter(item => item.enabled)
+  (connection.value.capabilities?.products ?? [])
+    .filter(item => item?.enabled)
+    .map(normalizarProduto)
 );
 const hiddenProductCount = computed(
   () =>
@@ -165,8 +195,19 @@ const verifiedLabel = (iso, evidence) => {
   // de lá não pode virar `INSURANCE.CONNECTION.EVIDENCE.ALGUMA_COISA` na cara do corretor — e o
   // segundo argumento de `t()` NÃO serve de default aqui: string vazia faz o vue-i18n devolver a
   // própria chave. Sem tradução conhecida, a tela diz só quando foi verificado.
+  // SEM `evidence` NÃO SE AFIRMA NADA sobre o que foi consultado. O `?? 'none'` daqui virava
+  // "sem consulta ao portal" — uma AFIRMAÇÃO — e `evidence` é nulo em toda conexão cujo adapter
+  // não emite o campo (`connection.rb`, `metadata['last_evidence'].presence`). A tela dizia "em
+  // 07/09 10:00, sem consulta ao portal" e, três linhas abaixo, "Login aceito pelo portal em 07/09
+  // 10:00": o mesmo minuto, duas afirmações contrárias, e a segunda é a verdadeira.
+  //
+  // Campo ausente e campo com valor desconhecido caem no mesmo lugar: dizer só quando, sem inventar
+  // o quê.
+  if (!evidence?.check) {
+    return t('INSURANCE.CONNECTION.VERIFIED_AT_PLAIN', { at });
+  }
   const check = `INSURANCE.CONNECTION.EVIDENCE.${String(
-    evidence?.check ?? 'none'
+    evidence.check
   ).toUpperCase()}`;
   return te(check)
     ? t('INSURANCE.CONNECTION.VERIFIED_AT', { at, check: t(check) })
@@ -207,9 +248,19 @@ const accountInUse = computed(
 //
 // O i18n continua como rede para conexão gravada por versão anterior do adapter, que não manda
 // `label`. Sem ela, produto antigo apareceria como slug cru.
-const productLabel = item =>
-  item.label ||
-  t(`INSURANCE.PRODUCTS.${String(item.product).toUpperCase()}`, item.product);
+const productLabel = item => {
+  if (item.label) return item.label;
+  const chave = `INSURANCE.PRODUCTS.${String(item.product).toUpperCase()}`;
+  if (te(chave)) return t(chave);
+  // Último recurso: slug sem `label` e sem tradução. Escrever `ramo_100` na tela foi o defeito real
+  // de 06/09 — o corretor lia um identificador nosso onde esperava o nome do produto. "Ramo 100"
+  // ao menos se lê como o que é: um ramo que ainda não sabemos nomear. O código já aparece no chip
+  // ao lado, então o número não é novidade para quem olha a linha.
+  const ramo = String(item.product ?? '');
+  return ramo.startsWith('ramo_')
+    ? t('INSURANCE.CAPABILITIES.UNNAMED_BRANCH', { ramo: ramo.slice(5) })
+    : ramo;
+};
 // QUEM COTA É QUEM ESTÁ `enabled`, E QUEM NÃO COTA É TODO O RESTO.
 //
 // `pending` era `integrationStatus === 'auth_required'` — o CASO, não a classe. Seguradora com
