@@ -694,9 +694,17 @@ onUnmounted(pararAcompanhamento);
                está no adapter (`src/platforms/agger/portal/handoff.ts`), testado, e sem comando de
                CLI nem rota HTTP que o invoque; aqui também não há rota. Precisa de backend nos dois
                lados antes de virar botão.
-               QUANDO ENTRAR, entra junto o aviso de que o endereço aberto VALE COMO A SENHA da
-               conta — o token da URL é o corpo do login cifrado, não expira, e sobrevive em
-               histórico e print. Botão sem esse aviso não pode ir para produção. -->
+               COMO ENTRA, decidido pelo Rodrigo em 07/09/2026 (autonom-ia2/chat#345):
+               aponta para a ÚLTIMA COTAÇÃO da conta. A rota do portal
+               (`/cotacao/:ramo/resultados/:id/:versao/:token`) abre uma cotação específica e não a
+               home, e cair na tela da última cotação foi aceito como custo.
+               SEM AVISO AO CORRETOR, também por decisão dele. Uma versão anterior deste comentário
+               dizia que o botão não podia subir sem avisar que o endereço vale como a senha da
+               conta — o token é o corpo do login cifrado, não expira, e sobrevive em histórico e
+               print. A decisão foi tomada com isso à vista; fica registrado aqui porque quem ler
+               este arquivo depois merece saber que foi escolha, e não esquecimento.
+               O que continua valendo, e é de implementação: gerar o link no clique, nunca antes e
+               nunca em lote, e nunca gravar a URL montada em log, telemetria, banco ou mensagem. -->
           <div class="flex flex-wrap items-center gap-2">
             <NextButton
               faded
