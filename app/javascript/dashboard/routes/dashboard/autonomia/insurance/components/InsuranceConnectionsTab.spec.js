@@ -107,8 +107,14 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(wrapper.text()).toContain('CORRETORA X');
     // t(chave, fallback): sem mensagens no teste, o rótulo do produto cai no slug — é o comportamento
     // desejado para ramos ainda sem nome (ramo_100). O que importa é o mapa renderizado.
-    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.INSURERS_COUNT');
-    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.PENDING_AUTH');
+    //
+    // A contagem mostra o DENOMINADOR quando há seguradora pendente: `auto` no fixture tem Justos
+    // pronta e Mitsui recusada, e "1 seguradora disponível" esconderia que são 2 no total.
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CAPABILITIES.INSURERS_OF_TOTAL'
+    );
+    // E a recusada aparece PELO NOME, não como contagem anônima.
+    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.MONEY_LEFT');
     expect(wrapper.find('#insurance-agger-password').exists()).toBe(false);
   });
 
@@ -176,9 +182,74 @@ describe('InsuranceConnectionsTab (API)', () => {
     const wrapper = await mountTab();
 
     // `ready` traz auto (habilitado) e vida (nao habilitado)
-    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.INSURERS_COUNT');
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CAPABILITIES.INSURERS_OF_TOTAL'
+    );
     expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.HIDDEN_PRODUCTS');
+    // Só o produto habilitado vira linha. As camadas viraram <details> e não entram na conta de
+    // <li> desta seção — por isso a asserção continua valendo 1.
     expect(wrapper.findAll('li')).toHaveLength(1);
+  });
+
+  // O VEREDITO. Antes o topo dizia só "Conectado", e conectado não é a pergunta do corretor.
+  it('responde quantos produtos dao para cotar, antes de qualquer detalhe', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: ready } });
+    const wrapper = await mountTab();
+    // `ready` tem um produto habilitado (auto) e um não habilitado (vida).
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERDICT.READY_ONE');
+  });
+
+  // Conexão sem produto nenhum não pode dizer "pronta para cotar 0 produtos": isso lê como se
+  // estivesse tudo bem e o número fosse detalhe.
+  it('sem produto habilitado, o veredito diz que nao esta cotando', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: { ...ready, capabilities: { products: [] } },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERDICT.NOT_READY');
+    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.VERDICT.READY');
+  });
+
+  // A CAMADA DE CREDENCIAIS SABIA E DIZIA "não verificado". O veredito vem do scan, e carimbado
+  // com a data DELE — usar a do healthcheck faria a tela afirmar que verificou agora o que
+  // verificou antes.
+  it('a camada de credenciais responde pelo scan, e nomeia quem recusou', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          layers: { runtime: 'ok', insurer_auth: 'unknown' },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED'
+    );
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.LAYERS.FROM_SCAN');
+  });
+
+  // Sem scan não há o que derivar, e a camada tem de continuar dizendo "não sei" — o critério 1.2
+  // existe para não confundir "não verificado" com "verificado e passou".
+  it('sem scan, a camada de credenciais continua nao verificada', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          last_capability_scan_at: null,
+          layers: { runtime: 'ok', insurer_auth: 'unknown' },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).not.toContain(
+      'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED'
+    );
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.LAYERS.STATE.UNKNOWN'
+    );
   });
 
   it('disconnect returns to not_configured', async () => {

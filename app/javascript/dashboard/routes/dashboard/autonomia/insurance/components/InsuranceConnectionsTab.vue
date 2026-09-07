@@ -184,7 +184,6 @@ const failureText = computed(() => {
   if (!failure.value && !UNHEALTHY_STATES.includes(status.value)) return '';
   return t(failureMessageKey(failure.value));
 });
-const layers = computed(() => layerRows(connection.value.layers));
 const pendingInsurers = computed(
   () => connection.value.insurers_pending_auth ?? null
 );
@@ -211,6 +210,68 @@ const insurerSummary = item => {
   ).length;
   return { ready, pending, total: item.insurers.length };
 };
+// Quem recusou, pelo nome. O adapter sempre soube — `integrationStatus: 'auth_required'` vem por
+// seguradora desde o primeiro scan — e a tela só dizia "1 aguardando credencial". Um número não
+// diz ao corretor em qual portal ele precisa entrar.
+const refusedInsurers = item =>
+  item.insurers
+    .filter(i => i.integrationStatus === 'auth_required')
+    .map(i => i.name);
+
+// O VEREDITO: a primeira coisa que a tela responde, antes de qualquer detalhe.
+//
+// Antes o topo dizia só "Conectado", e conectado não é a pergunta do corretor — ele quer saber se
+// dá para cotar, e quanto. Estado de passagem não afirma nem nega: durante a descoberta a contagem
+// é do scan anterior, e apresentá-la como atual seria a tela envelhecendo o dado sozinha.
+const verdict = computed(() => {
+  if (isTransientState(status.value)) {
+    return { key: 'INSURANCE.CONNECTION.VERDICT.WORKING', tone: 'working' };
+  }
+  if (!isConnected.value || !products.value.length) {
+    return { key: 'INSURANCE.CONNECTION.VERDICT.NOT_READY', tone: 'stopped' };
+  }
+  return {
+    key:
+      products.value.length === 1
+        ? 'INSURANCE.CONNECTION.VERDICT.READY_ONE'
+        : 'INSURANCE.CONNECTION.VERDICT.READY',
+    count: products.value.length,
+    tone: 'ready',
+  };
+});
+
+// A CAMADA DE CREDENCIAIS SABIA, E DIZIA "não verificado".
+//
+// `layers.insurer_auth` vem do HEALTHCHECK, que de fato não verifica credencial de seguradora —
+// tecnicamente correto. Só que o SCAN verifica, uma seguradora por vez, e o resultado está em
+// `capabilities`. A tela mostrava "não verificado" e, três linhas abaixo, "1 aguardando
+// credencial": o dado existia e a camada o ignorava.
+//
+// Aqui a camada passa a responder pelo scan QUANDO há scan, e carimbada com a data DELE — nunca a
+// do healthcheck. O critério 1.2 existe para não confundir "não sei" com "falhou", e usar a data
+// errada faria a tela afirmar que verificou agora o que verificou ontem.
+const layers = computed(() => {
+  const rows = layerRows(connection.value.layers);
+  const scanAt = formatVerifiedAt(connection.value.last_capability_scan_at);
+  if (!products.value.length || !scanAt) return rows;
+  const refused = [
+    ...new Set(products.value.flatMap(item => refusedInsurers(item))),
+  ];
+  return rows.map(row =>
+    row.key === 'insurer_auth' && row.state === 'unknown'
+      ? {
+          ...row,
+          state: refused.length ? 'failed' : 'ok',
+          detail: refused.length
+            ? t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED', {
+                names: refused.join(', '),
+              })
+            : t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_OK'),
+          source: t('INSURANCE.CONNECTION.LAYERS.FROM_SCAN', { at: scanAt }),
+        }
+      : row
+  );
+});
 
 onMounted(load);
 onUnmounted(pararAcompanhamento);
@@ -261,10 +322,26 @@ onUnmounted(pararAcompanhamento);
               <span class="i-lucide-building-2 size-5" />
             </span>
             <div class="flex flex-col min-w-0">
-              <h2 class="text-sm font-medium text-n-slate-12">
+              <!-- O VEREDITO PRIMEIRO. "Conectado" não é a pergunta do corretor: ele quer saber
+                   se dá para cotar, e quanto. O nome do provedor vira a linha de apoio. -->
+              <h2
+                v-if="!showForm"
+                class="text-base font-semibold truncate"
+                :class="
+                  verdict.tone === 'ready'
+                    ? 'text-n-teal-11'
+                    : verdict.tone === 'stopped'
+                      ? 'text-n-amber-11'
+                      : 'text-n-slate-12'
+                "
+              >
+                {{ t(verdict.key, { count: verdict.count }) }}
+              </h2>
+              <h2 v-else class="text-sm font-medium text-n-slate-12">
                 {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }}
               </h2>
               <p class="text-xs text-n-slate-11 truncate">
+                {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }} ·
                 {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER_SUBTITLE') }}
               </p>
             </div>
@@ -458,28 +535,39 @@ onUnmounted(pararAcompanhamento);
         </div>
       </section>
 
-      <!-- CRITÉRIO 1.2: as cinco camadas separadas. `não verificado` é uma resposta, não um vazio. -->
-      <section
+      <!-- CRITÉRIO 1.2: as cinco camadas separadas. `não verificado` é uma resposta, não um vazio.
+           FECHADO por padrão: elas respondem "como você sabe disso?", que é pergunta de segunda
+           ordem. Abertas, ocupavam um terço da tela antes de o corretor chegar nos produtos. -->
+      <details
         v-if="connection.layers"
-        class="rounded-xl border border-n-weak bg-n-solid-1 overflow-hidden"
+        class="rounded-xl border border-n-weak bg-n-solid-1 overflow-hidden group"
       >
-        <header class="px-5 py-4 border-b border-n-weak">
-          <h2 class="text-sm font-medium text-n-slate-12">
-            {{ t('INSURANCE.CONNECTION.LAYERS.TITLE') }}
-          </h2>
-          <p class="text-xs text-n-slate-11">
-            {{ t('INSURANCE.CONNECTION.LAYERS.SUBTITLE') }}
-          </p>
-        </header>
-        <ul class="divide-y divide-n-weak">
+        <summary
+          class="flex items-center gap-2 px-5 py-3.5 cursor-pointer text-sm text-n-slate-11 hover:text-n-slate-12 list-none"
+        >
+          <span
+            class="i-lucide-chevron-right size-4 shrink-0 transition-transform group-open:rotate-90"
+          />
+          {{ t('INSURANCE.CONNECTION.LAYERS.DISCLOSURE') }}
+        </summary>
+        <p class="px-5 pb-2 text-xs text-n-slate-11">
+          {{ t('INSURANCE.CONNECTION.LAYERS.SUBTITLE') }}
+        </p>
+        <ul class="border-t divide-y divide-n-weak border-n-weak">
           <li
             v-for="row in layers"
             :key="row.key"
-            class="flex items-center justify-between gap-4 px-5 py-2.5 text-sm"
+            class="flex items-start justify-between gap-4 px-5 py-2.5 text-sm"
           >
-            <span class="text-n-slate-12">
-              {{ t(`INSURANCE.CONNECTION.LAYERS.${row.key.toUpperCase()}`) }}
-            </span>
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-n-slate-12">
+                {{ t(`INSURANCE.CONNECTION.LAYERS.${row.key.toUpperCase()}`) }}
+              </span>
+              <span v-if="row.detail" class="text-xs text-n-slate-11">
+                {{ row.detail }}
+                <span v-if="row.source"> · {{ row.source }}</span>
+              </span>
+            </div>
             <span
               class="text-xs shrink-0"
               :class="{
@@ -496,7 +584,7 @@ onUnmounted(pararAcompanhamento);
             </span>
           </li>
         </ul>
-      </section>
+      </details>
 
       <section
         v-if="isConnected && products.length"
@@ -514,50 +602,93 @@ onUnmounted(pararAcompanhamento);
           <li
             v-for="item in products"
             :key="item.product"
-            class="flex items-center justify-between gap-4 px-5 py-3 text-sm"
+            class="flex flex-col gap-2 px-5 py-3 text-sm"
           >
-            <div class="flex items-center gap-3 min-w-0">
-              <span
-                class="size-2 rounded-full shrink-0"
-                :class="item.enabled ? 'bg-n-teal-9' : 'bg-n-slate-7'"
-              />
-              <span class="text-n-slate-12 truncate">
-                {{ productLabel(item) }}
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3 min-w-0">
                 <span
-                  v-if="item.labelConfidence === 'inferred'"
-                  class="ml-1 text-xs text-n-slate-11"
-                  :title="t('INSURANCE.CAPABILITIES.INFERRED_HINT')"
-                >
-                  *
+                  class="rounded-full size-2 shrink-0"
+                  :class="
+                    refusedInsurers(item).length
+                      ? 'bg-n-amber-9'
+                      : 'bg-n-teal-9'
+                  "
+                />
+                <span class="truncate text-n-slate-12">
+                  {{ productLabel(item) }}
+                  <span
+                    v-if="item.labelConfidence === 'inferred'"
+                    class="ml-1 text-xs text-n-slate-11"
+                    :title="t('INSURANCE.CAPABILITIES.INFERRED_HINT')"
+                  >
+                    *
+                  </span>
                 </span>
+                <!-- O código do ramo no portal. É por ele que o corretor acha o produto do outro
+                     lado, e é o que ele lê ao telefone com o suporte da AGGER. -->
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-mono rounded shrink-0 bg-n-alpha-2 text-n-slate-11"
+                >
+                  {{ item.platformRef }}
+                </span>
+              </div>
+              <!-- COM DENOMINADOR. "17 seguradoras disponíveis" esconde que são 18 no total; o
+                   corretor precisa ver o que está faltando, não só o que tem. -->
+              <span class="text-xs text-n-slate-11 shrink-0">
+                {{
+                  insurerSummary(item).pending
+                    ? t('INSURANCE.CAPABILITIES.INSURERS_OF_TOTAL', {
+                        ready: insurerSummary(item).ready,
+                        total: insurerSummary(item).total,
+                      })
+                    : t('INSURANCE.CAPABILITIES.INSURERS_ALL', {
+                        total: insurerSummary(item).total,
+                      })
+                }}
               </span>
             </div>
-            <span class="text-xs text-n-slate-11 shrink-0">
-              {{
-                t('INSURANCE.CAPABILITIES.INSURERS_COUNT', {
-                  count: insurerSummary(item).ready,
-                })
-              }}
-              <span v-if="insurerSummary(item).pending">
-                ·
+            <!-- DINHEIRO PARADO, com nome. O adapter sempre soube qual seguradora recusou; a tela
+                 dizia "1 aguardando credencial" e o corretor não tinha como saber onde entrar. -->
+            <div
+              v-if="refusedInsurers(item).length"
+              class="flex flex-wrap items-center gap-2 px-3 py-2 text-xs rounded-lg bg-n-amber-2 text-n-amber-12"
+            >
+              <span class="i-lucide-key-round size-4 shrink-0" />
+              <span class="min-w-0">
                 {{
-                  t('INSURANCE.CAPABILITIES.PENDING_AUTH', {
-                    count: insurerSummary(item).pending,
+                  t('INSURANCE.CAPABILITIES.MONEY_LEFT', {
+                    names: refusedInsurers(item).join(', '),
+                    product: productLabel(item),
                   })
                 }}
               </span>
-            </span>
+            </div>
           </li>
         </ul>
+        <div
+          class="flex flex-wrap gap-4 px-5 py-2.5 text-xs border-t text-n-slate-11 border-n-weak"
+        >
+          <span class="flex items-center gap-1.5">
+            <span class="rounded-full size-2 bg-n-teal-9" />
+            {{ t('INSURANCE.CAPABILITIES.LEGEND_QUOTING') }}
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="rounded-full size-2 bg-n-amber-9" />
+            {{ t('INSURANCE.CAPABILITIES.LEGEND_PENDING') }}
+          </span>
+        </div>
         <p
           v-if="hiddenProductCount"
-          class="px-5 py-3 text-xs text-n-slate-11 border-t border-n-weak"
+          class="px-5 py-3 text-xs border-t text-n-slate-11 border-n-weak"
         >
           {{
             t('INSURANCE.CAPABILITIES.HIDDEN_PRODUCTS', {
               count: hiddenProductCount,
             })
           }}
+        </p>
+        <p class="px-5 py-3 text-xs border-t text-n-slate-11 border-n-weak">
+          {{ t('INSURANCE.CAPABILITIES.FOOTER') }}
         </p>
       </section>
     </template>

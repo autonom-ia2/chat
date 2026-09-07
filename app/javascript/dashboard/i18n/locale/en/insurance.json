@@ -86,14 +86,25 @@
         "STATE": {
           "OK": "verificado",
           "FAILED": "falhou",
-          "UNKNOWN": "não verificado"
-        }
+          "UNKNOWN": "não verificado",
+          "UNKNOWN_HINT": "nada foi verificado nesta camada ainda"
+        },
+        "DISCLOSURE": "Como isto foi verificado",
+        "INSURER_AUTH_OK": "todas aceitaram o login da corretora",
+        "INSURER_AUTH_FAILED": "{names} recusou o login da corretora",
+        "FROM_SCAN": "conferido na descoberta de {at}"
       },
       "INSURERS_PENDING": {
         "TITLE": "Seguradoras com credencial pendente",
         "BODY": "{count} seguradora(s) recusaram o login que a corretora cadastrou no AGGER, vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente."
       },
-      "ALREADY_ACTIVE": "Esta conta AGGER já estava em uso quando conectamos (desde {at}). Pode ser você em outra aba, ou outro ambiente cotando pela mesma conta — nesse caso, as cotações aparecem misturadas no portal."
+      "ALREADY_ACTIVE": "Esta conta AGGER já estava em uso quando conectamos (desde {at}). Pode ser você em outra aba, ou outro ambiente cotando pela mesma conta — nesse caso, as cotações aparecem misturadas no portal.",
+      "VERDICT": {
+        "READY": "Pronta para cotar {count} produtos",
+        "READY_ONE": "Pronta para cotar 1 produto",
+        "NOT_READY": "Não está cotando",
+        "WORKING": "Verificando com o AGGER…"
+      }
     },
     "CAPABILITIES": {
       "TITLE": "Produtos e seguradoras",
@@ -101,7 +112,14 @@
       "INSURERS_COUNT": "{count} seguradoras disponíveis",
       "PENDING_AUTH": "{count} aguardando credencial",
       "INFERRED_HINT": "Nome deduzido das coberturas; ainda não confirmado no portal.",
-      "HIDDEN_PRODUCTS": "{count} ramo(s) que esta conta ainda não tem habilitado no AGGER não aparecem aqui."
+      "HIDDEN_PRODUCTS": "{count} ramo(s) que esta conta ainda não tem habilitado no AGGER não aparecem aqui.",
+      "INSURERS_OF_TOTAL": "{ready} de {total} seguradoras",
+      "INSURERS_ALL": "{total} seguradoras",
+      "MONEY_LEFT": "{names} está fora por credencial recusada — uma seguradora a menos em cada cotação de {product}.",
+      "MONEY_LEFT_ACTION": "Rever no AGGER",
+      "LEGEND_QUOTING": "cotando",
+      "LEGEND_PENDING": "alguma seguradora aguardando credencial",
+      "FOOTER": "Produto que a corretora não tem habilitado no AGGER não aparece aqui. Para habilitar, fale com a AGGER — a Autonom.ia lê o que a sua conta já pode vender."
     },
     "PRODUCTS": {
       "AUTO": "Automóvel",
