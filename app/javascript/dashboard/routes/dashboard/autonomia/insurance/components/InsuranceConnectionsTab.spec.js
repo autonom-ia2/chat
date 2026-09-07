@@ -344,4 +344,42 @@ describe('InsuranceConnectionsTab (API)', () => {
     const wrapper = await mountTab();
     expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
   });
+
+  // O NOME DO PORTAL VENCE O NOSSO MAPA. O ramo 46 é o caso real: o adapter manda
+  // `label: 'Aluguel'` porque é assim que o AGGER o chama, e o nosso slug diz
+  // `fianca_locaticia` — que é OUTRO produto no portal (id 23). Sem isto, o corretor lê na
+  // tela um produto diferente do que vai cotar, e o slug não pode mudar porque já viajou
+  // para o banco.
+  it('mostra o rótulo que o portal usa, e não a tradução do slug', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          capabilities: {
+            products: [
+              {
+                product: 'fianca_locaticia',
+                label: 'Aluguel',
+                platformRef: '46',
+                labelConfidence: 'confirmed',
+                enabled: true,
+                coveragePackages: [],
+                insurers: [
+                  {
+                    code: '1',
+                    name: 'Porto',
+                    enabled: true,
+                    integrationStatus: 'ready',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('Aluguel');
+    expect(wrapper.text()).not.toContain('INSURANCE.PRODUCTS.FIANCA_LOCATICIA');
+  });
 });

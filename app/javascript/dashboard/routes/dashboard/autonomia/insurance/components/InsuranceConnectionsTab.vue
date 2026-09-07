@@ -194,7 +194,15 @@ const accountInUse = computed(
   () => connection.value.account_already_active ?? null
 );
 
+// O NOME QUE O PORTAL USA vence o nosso mapa. O ramo 46 provou por quê: o portal o chama de
+// "Aluguel", o nosso slug diz `fianca_locaticia`, e fiança locatícia é OUTRO produto (id 23) — o
+// corretor lia na tela um produto que não era o que ia cotar. O slug já viajou para o banco e não
+// muda; o rótulo passa a vir do adapter, que lê o portal.
+//
+// O i18n continua como rede para conexão gravada por versão anterior do adapter, que não manda
+// `label`. Sem ela, produto antigo apareceria como slug cru.
 const productLabel = item =>
+  item.label ||
   t(`INSURANCE.PRODUCTS.${String(item.product).toUpperCase()}`, item.product);
 const insurerSummary = item => {
   const ready = item.insurers.filter(i => i.enabled).length;

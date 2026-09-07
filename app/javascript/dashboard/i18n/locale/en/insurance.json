@@ -115,9 +115,7 @@
       "ACIDENTES_PESSOAIS": "Acidentes pessoais",
       "VIDA_GLOBAL": "Vida em grupo",
       "CELULAR": "Celular",
-      "BIKE": "Bike",
-      "MOTO": "Motocicleta",
-      "CAMINHAO": "Caminhão"
+      "BIKE": "Bike"
     },
     "AGENT": {
       "TITLE": "Agente de Cotação",
