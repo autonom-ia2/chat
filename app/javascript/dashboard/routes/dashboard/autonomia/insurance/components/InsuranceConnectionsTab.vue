@@ -281,28 +281,45 @@ const layers = computed(() => {
     });
   });
   const refused = [...refusedBy.keys()];
+  // O UNIVERSO DA CONTAGEM É A CONTA, e a frase precisa dizer isso.
+  //
+  // A credencial é da INTEGRAÇÃO com a seguradora, não do ramo: uma Azul recusada está recusada
+  // para tudo que ela cota. Contar as seguradoras distintas da conta é o número certo — mas a
+  // versão anterior o colava numa frase que nomeava um produto ("recusou em Automóvel. As outras
+  // 22 passaram"), enquanto a linha do produto logo abaixo dizia "17 de 18". Dois números sobre o
+  // mesmo evento, na mesma tela, e nenhum errado isoladamente.
+  //
+  // Agora a camada fala só da conta, e o produto afetado aparece onde ele importa: no aviso de
+  // dinheiro parado, dentro da própria linha do produto.
   const total = new Set(
     products.value.flatMap(item => item.insurers.map(i => i.code))
   ).size;
+  const rest = total - refused.length;
   return rows.map(row =>
     row.key === 'insurer_auth' && row.state === 'unknown'
       ? {
           ...row,
           state: refused.length ? 'pending' : 'ok',
           label: refused.length
-            ? t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_COUNT', {
-                count: refused.length,
-              })
+            ? t(
+                'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_COUNT',
+                { count: refused.length },
+                refused.length
+              )
             : null,
           detail: refused.length
-            ? t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED', {
+            ? `${t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED', {
                 names: refused.join(', '),
-                products: [...new Set([...refusedBy.values()].flat())].join(
-                  ', '
-                ),
-                rest: total - refused.length,
-              })
-            : t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_OK', { total }),
+              })} ${t(
+                'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_REST',
+                { count: rest },
+                rest
+              )}`
+            : t(
+                'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_OK',
+                { total },
+                total
+              ),
           source: t('INSURANCE.CONNECTION.LAYERS.FROM_SCAN', { at: scanAt }),
         }
       : row
@@ -435,28 +452,38 @@ onUnmounted(pararAcompanhamento);
         </div>
 
         <div v-else class="flex flex-col gap-5 px-5 py-5">
-          <dl class="grid gap-4 sm:grid-cols-2 text-sm">
+          <!-- FRESCOR. O desenho aprovado trazia isto como uma linha só, com um ponto de saúde e
+               duas datas. Ficou em grade porque são QUATRO informações e não duas — conta, sessão,
+               última verificação e última descoberta — e espremer quatro numa linha obriga a
+               abreviar justamente os rótulos que dizem o que cada data significa.
+               O ponto de saúde do desenho está mantido, na primeira coluna: ele responde "isto
+               está de pé?" sem obrigar a ler data nenhuma. -->
+          <dl class="grid gap-4 text-sm sm:grid-cols-2">
             <div class="flex flex-col gap-0.5">
               <dt class="text-xs text-n-slate-11">
                 {{ t('INSURANCE.CONNECTION.FIELDS.ACCOUNT') }}
               </dt>
-              <dd class="text-n-slate-12 text-xs">
+              <!-- Só o e-mail aqui. O nome da corretora já identifica a conta lá em cima, junto do
+                   veredito; repetir os dois faz o leitor procurar a diferença entre eles. -->
+              <dd class="text-xs text-n-slate-12">
                 <span class="font-mono">{{
                   connection.username_hint || '—'
                 }}</span>
-                <span
-                  v-if="connection.external_account_label"
-                  class="block truncate"
-                >
-                  {{ connection.external_account_label }}
-                </span>
               </dd>
             </div>
             <div class="flex flex-col gap-0.5">
               <dt class="text-xs text-n-slate-11">
                 {{ t('INSURANCE.CONNECTION.FIELDS.SESSION') }}
               </dt>
-              <dd class="text-n-slate-12">
+              <dd class="flex items-center gap-2 text-n-slate-12">
+                <span
+                  class="rounded-full size-2 shrink-0"
+                  :class="
+                    connection.last_authenticated_at
+                      ? 'bg-n-teal-9'
+                      : 'bg-n-slate-7'
+                  "
+                />
                 {{
                   connection.last_authenticated_at
                     ? t('INSURANCE.CONNECTION.SESSION_AUTHENTICATED')
@@ -594,7 +621,17 @@ onUnmounted(pararAcompanhamento);
 
       <!-- CRITÉRIO 1.2: as cinco camadas separadas. `não verificado` é uma resposta, não um vazio.
            FECHADO por padrão: elas respondem "como você sabe disso?", que é pergunta de segunda
-           ordem. Abertas, ocupavam um terço da tela antes de o corretor chegar nos produtos. -->
+           ordem. Abertas, ocupavam um terço da tela antes de o corretor chegar nos produtos.
+
+           SÃO CINCO, e o desenho aprovado mostrava três. As duas a mais — "ramo suportado pela
+           integração" e "risco aceito pela seguradora" — existem porque o 1.2 as separa de
+           propósito: cada uma pode reprovar uma cotação por motivo diferente, e juntá-las faria a
+           tela dizer "falhou" sem dizer onde. O desenho mostrava três porque nesta conta só três
+           tinham veredito; suprimir as outras faria "não verificado" virar invisível, que é
+           exatamente o que o critério proíbe.
+
+           Card PRÓPRIO, e não dentro do card do veredito: fechado, ele é uma linha só, e uma linha
+           clicável dentro do bloco que carrega as ações principais compete com elas. -->
       <details
         v-if="connection.layers"
         class="rounded-xl border border-n-weak bg-n-solid-1 overflow-hidden group"
@@ -720,13 +757,22 @@ onUnmounted(pararAcompanhamento);
               </div>
               <!-- COM DENOMINADOR. "17 seguradoras disponíveis" esconde que são 18 no total; o
                    corretor precisa ver o que está faltando, não só o que tem. -->
-              <span class="text-xs text-n-slate-11 shrink-0">
+              <!-- `font-medium` + tabular: os números ficam legíveis na varredura vertical e as
+                   colunas de dígitos alinham entre as linhas, que é o que faz a lista ser
+                   comparável de cima a baixo. -->
+              <span
+                class="text-xs shrink-0 text-n-slate-12 font-medium tabular-nums"
+              >
                 {{
                   insurerSummary(item).pending
-                    ? t('INSURANCE.CAPABILITIES.INSURERS_OF_TOTAL', {
-                        ready: insurerSummary(item).ready,
-                        total: insurerSummary(item).total,
-                      })
+                    ? t(
+                        'INSURANCE.CAPABILITIES.INSURERS_OF_TOTAL',
+                        {
+                          ready: insurerSummary(item).ready,
+                          total: insurerSummary(item).total,
+                        },
+                        insurerSummary(item).total
+                      )
                     : t(
                         'INSURANCE.CAPABILITIES.INSURERS_ALL',
                         { total: insurerSummary(item).total },

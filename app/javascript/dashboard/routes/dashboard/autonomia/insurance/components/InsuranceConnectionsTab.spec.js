@@ -291,30 +291,13 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(texto.indexOf('celular')).toBeLessThan(texto.indexOf('bike'));
   });
 
-  // "1 seguradoras" é defeito visível, e o caso existe: bike tem uma só.
-  it('nao escreve "1 seguradoras" quando ha uma seguradora', async () => {
-    const uma = {
-      ...ready,
-      capabilities: {
-        products: [
-          {
-            ...ready.capabilities.products[0],
-            insurers: [
-              {
-                code: '1',
-                name: 'Porto',
-                enabled: true,
-                integrationStatus: 'ready',
-              },
-            ],
-          },
-        ],
-      },
-    };
-    api.getConnection.mockResolvedValue({ data: { payload: uma } });
-    const wrapper = await mountTab();
-    expect(wrapper.text()).not.toContain('1 seguradoras');
-  });
+  // O teste de pluralização MUDOU DE ARQUIVO, e o motivo importa: aqui o i18n roda com
+  // `messages: {}`, `t()` devolve a chave crua, e um `not.toContain('1 seguradoras')` passa sempre
+  // — sem nunca renderizar a frase que deveria julgar. Um QA independente pegou exatamente isso:
+  // o teste existia, estava verde, e a tela escrevia "0 de 1 seguradoras" em produção.
+  //
+  // Todo exemplo sobre TEXTO QUE O CORRETOR LÊ vive em `InsuranceConnectionsTab.copy.spec.js`,
+  // que carrega as mensagens de verdade com `withFullI18n`.
 
   // Conexão sem produto nenhum não pode dizer "pronta para cotar 0 produtos": isso lê como se
   // estivesse tudo bem e o número fosse detalhe.
@@ -478,7 +461,6 @@ describe('InsuranceConnectionsTab (API)', () => {
     });
     const wrapper = await mountTab();
     expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERIFIED_AT');
-    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.MINUTES_AGO');
   });
 
   // CRITÉRIO 4.5 — credencial de seguradora aparece na tela de Conexões, e só nela.

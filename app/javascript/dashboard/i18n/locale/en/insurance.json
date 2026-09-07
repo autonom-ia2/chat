@@ -8,8 +8,6 @@
     },
     "CONNECTION": {
       "PROVIDER_AGGER": "AGGER · Aggilizador",
-      "PROVIDER_AGGER_SUBTITLE": "Multicálculo de seguros da corretora",
-      "NEVER": "nunca",
       "SESSION_AUTHENTICATED": "Autenticada",
       "SESSION_PENDING": "Aguardando autenticação",
       "STATES": {
@@ -91,8 +89,9 @@
           "UNKNOWN": "não verificado"
         },
         "DISCLOSURE": "Como isto foi verificado",
-        "INSURER_AUTH_OK": "as {total} foram conferidas uma a uma no portal e passaram",
-        "INSURER_AUTH_FAILED": "{names} recusou o login da corretora em {products}. As outras {rest} passaram.",
+        "INSURER_AUTH_OK": "a única foi conferida no portal e passou | as {total} foram conferidas uma a uma no portal e passaram",
+        "INSURER_AUTH_FAILED": "{names} recusou o login da corretora.",
+        "INSURER_AUTH_REST": "Nenhuma outra seguradora da conta passou. | A outra seguradora da conta passou. | As outras {count} seguradoras da conta passaram.",
         "FROM_SCAN": "conferido na descoberta de {at}"
       },
       "INSURERS_PENDING": {
@@ -113,7 +112,7 @@
       "SUBTITLE_NO_SCAN": "Cada produto mostra quantas seguradoras respondem por ele.",
       "INFERRED_HINT": "Nome deduzido das coberturas; ainda não confirmado no portal.",
       "HIDDEN_PRODUCTS": "{count} ramo(s) que esta conta ainda não tem habilitado no AGGER não aparecem aqui.",
-      "INSURERS_OF_TOTAL": "{ready} de {total} seguradoras",
+      "INSURERS_OF_TOTAL": "{ready} de {total} seguradora | {ready} de {total} seguradoras",
       "INSURERS_ALL": "{total} seguradora | {total} seguradoras",
       "MONEY_LEFT": "{names} está fora por credencial recusada — uma seguradora a menos em cada cotação de {product}.",
       "LEGEND_QUOTING": "cotando",
