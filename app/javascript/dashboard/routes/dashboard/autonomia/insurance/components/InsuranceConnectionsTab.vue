@@ -210,12 +210,23 @@ const accountInUse = computed(
 const productLabel = item =>
   item.label ||
   t(`INSURANCE.PRODUCTS.${String(item.product).toUpperCase()}`, item.product);
+// QUEM COTA É QUEM ESTÁ `enabled`, E QUEM NÃO COTA É TODO O RESTO.
+//
+// `pending` era `integrationStatus === 'auth_required'` — o CASO, não a classe. Seguradora com
+// qualquer outro motivo de estar fora (`enabled: false` com status novo do adapter) sumia do
+// denominador: a linha dizia "2 seguradoras" em vez de "1 de 2", o ponto ficava verde e a camada
+// escrevia "As 2 foram conferidas uma a uma no portal e passaram" sobre uma que o dado marca como
+// fora. `enabled` é a classe, e é o único campo que decide se cota.
+//
+// `auth_required` continua importando, mas só para NOMEAR quem o corretor consegue destravar
+// sozinho (`refusedInsurers`) — não para contar.
 const insurerSummary = item => {
   const ready = item.insurers.filter(i => i.enabled).length;
-  const pending = item.insurers.filter(
-    i => i.integrationStatus === 'auth_required'
-  ).length;
-  return { ready, pending, total: item.insurers.length };
+  return {
+    ready,
+    pending: item.insurers.length - ready,
+    total: item.insurers.length,
+  };
 };
 // Quem recusou, pelo nome. O adapter sempre soube — `integrationStatus: 'auth_required'` vem por
 // seguradora desde o primeiro scan — e a tela só dizia "1 aguardando credencial". Um número não
@@ -306,13 +317,26 @@ const layers = computed(() => {
   //
   // Agora a camada fala só da conta, e o produto afetado aparece onde ele importa: no aviso de
   // dinheiro parado, dentro da própria linha do produto.
-  const total = new Set(
-    products.value.flatMap(item => item.insurers.map(i => i.code))
-  ).size;
-  // SEM SEGURADORA NENHUMA NÃO HÁ O QUE VERIFICAR, e a camada precisa dizer isso em vez de
-  // promover o vazio a aprovação. Sem esta guarda a tela escrevia "As 0 foram conferidas uma a uma
-  // no portal e passaram", em verde e rotulada "verificado", ao lado de "Não está cotando" — que é
-  // exatamente o que o critério 1.2 proíbe: confundir "não havia o que olhar" com "olhei e passou".
+  // ESTA CAMADA SÓ FALA DO QUE FOI CONFERIDO NO PORTAL, e conferir credencial é o que produz
+  // `ready` ou `auth_required`. Seguradora fora por qualquer outro motivo não passou nem recusou:
+  // ela não entra na conta, porque dizer "conferidas uma a uma e passaram" sobre ela seria
+  // afirmar uma verificação que não houve.
+  const conferidas = new Map();
+  products.value.forEach(item =>
+    item.insurers.forEach(i => {
+      if (
+        i.integrationStatus === 'ready' ||
+        i.integrationStatus === 'auth_required'
+      ) {
+        conferidas.set(i.code, i.integrationStatus);
+      }
+    })
+  );
+  const total = conferidas.size;
+  // SEM NADA CONFERIDO NÃO HÁ O QUE AFIRMAR, e a camada precisa dizer isso em vez de promover o
+  // vazio a aprovação. Sem esta guarda a tela escrevia "As 0 foram conferidas uma a uma no portal e
+  // passaram", em verde e rotulada "verificado", ao lado de "Não está cotando" — que é exatamente o
+  // que o critério 1.2 proíbe: confundir "não havia o que olhar" com "olhei e passou".
   if (!total) return rows;
   const rest = total - refused.length;
   return rows.map(row =>
@@ -531,8 +555,8 @@ onUnmounted(pararAcompanhamento);
                duas datas. Ficou em grade porque são QUATRO informações e não duas — conta, sessão,
                última verificação e última descoberta — e espremer quatro numa linha obriga a
                abreviar justamente os rótulos que dizem o que cada data significa.
-               O ponto de saúde do desenho está mantido, na primeira coluna: ele responde "isto
-               está de pé?" sem obrigar a ler data nenhuma. -->
+               O ponto de saúde do desenho está mantido no campo Sessão, que é o que ele resumia:
+               responde "isto está de pé?" sem obrigar a ler data nenhuma. -->
           <dl class="grid gap-4 text-sm sm:grid-cols-2">
             <div class="flex flex-col gap-0.5">
               <dt class="text-xs text-n-slate-11">
@@ -869,8 +893,13 @@ onUnmounted(pararAcompanhamento);
             <!-- Habilitado no AGGER e sem NENHUMA seguradora respondendo. A linha existe (o
                  corretor precisa ver que o produto está parado) mas não conta no veredito, e o
                  ponto fica cinza. Dizer isso em palavras evita que "0 de 1" pareça erro de tela. -->
+            <!-- Só quando NÃO há recusa a explicar: com seguradora recusada, o aviso âmbar abaixo
+                 já diz quem é e o que fazer, e empilhar as duas caixas na mesma linha faz o
+                 corretor ler duas vezes a mesma parada. -->
             <div
-              v-if="!insurerSummary(item).ready"
+              v-if="
+                !insurerSummary(item).ready && !refusedInsurers(item).length
+              "
               class="flex flex-wrap items-center gap-2 px-3 py-2 text-xs rounded-lg bg-n-alpha-2 text-n-slate-11"
             >
               <span class="i-lucide-info size-4 shrink-0" />

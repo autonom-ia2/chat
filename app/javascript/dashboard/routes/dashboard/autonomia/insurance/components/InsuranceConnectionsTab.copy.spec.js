@@ -308,6 +308,68 @@ describe('o texto que a aba Conexões escreve', () => {
     expect(wrapper.text()).toContain('Como isto foi verificado');
   });
 
+  // A GUARDA DERIVADA: o texto inteiro da tela, congelado.
+  //
+  // A versão anterior desta guarda era uma LISTA ESCRITA À MÃO de 19 frases, e um QA independente
+  // passou nove mudanças visíveis por ela — inclusive a perda das duas datas do desenho e uma
+  // quebra de concordância. Lista à mão cobre o que quem escreveu lembrou; é cobertura por caso
+  // com outro nome.
+  //
+  // Aqui o snapshot é derivado do que a tela RENDERIZA. Qualquer frase que mude, suma, apareça,
+  // troque de ordem ou perca plural quebra o exemplo — sem ninguém precisar prever qual. Mudança
+  // de cópia deixa de ser silenciosa e passa a exigir `-u` e revisão do diff, que é exatamente o
+  // portão que faltava.
+  //
+  // As asserções específicas abaixo continuam: elas dizem POR QUE cada frase é o que é, e o
+  // snapshot sozinho não ensina isso a quem vier depois.
+  const CENARIOS_DO_SNAPSHOT = {
+    'conta saudavel, tres cores de ponto': [
+      {
+        product: 'auto',
+        label: 'Automóvel',
+        insurers: [seguradora('1', 'Porto'), seguradora('10', 'Azul', true)],
+      },
+      {
+        product: 'residencial',
+        label: 'Residencial',
+        insurers: [seguradora('2', 'Zurich')],
+      },
+      { product: 'bike', label: 'Bike', insurers: [] },
+    ],
+    'produto unico, uma seguradora': [
+      { product: 'bike', label: 'Bike', insurers: [seguradora('1', 'Porto')] },
+    ],
+    'unica seguradora recusada': [
+      {
+        product: 'bike',
+        label: 'Bike',
+        insurers: [seguradora('10', 'Azul', true)],
+      },
+    ],
+    'tres recusadas no mesmo produto': [
+      {
+        product: 'auto',
+        label: 'Automóvel',
+        insurers: [
+          seguradora('1', 'Porto'),
+          seguradora('10', 'Azul', true),
+          seguradora('13', 'Mitsui', true),
+          seguradora('14', 'Sompo', true),
+        ],
+      },
+    ],
+    'conta sem produto nenhum': [],
+  };
+
+  Object.entries(CENARIOS_DO_SNAPSHOT).forEach(([nome, produtos]) => {
+    it(`texto da tela — ${nome}`, async () => {
+      const wrapper = await montar(conexao(produtos));
+      // Espaços normalizados: `text()` do vue-test-utils preserva a indentação do template, e o
+      // snapshot passaria a acusar reformatação em vez de mudança de cópia.
+      expect(wrapper.text().split(/\s+/).join(' ').trim()).toMatchSnapshot();
+    });
+  });
+
   // AS FRASES DO DESENHO APROVADO, TODAS, NUMA LISTA SÓ.
   //
   // Três rodadas de QA acharam defeito novo a cada vez, e a explicação é sempre a mesma: eu
