@@ -199,6 +199,123 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERDICT.READY_ONE');
   });
 
+  // Estes quatro nasceram de uma prova de mutação que saiu VERDE com o código removido: legenda,
+  // rodapé, código do ramo e ordenação estavam na tela e não estavam em teste nenhum. Item que só
+  // o olho humano defende volta a sumir na próxima refatoração.
+  it('mostra legenda das cores e o rodape que explica produto ausente', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: ready } });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.LEGEND_QUOTING');
+    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.LEGEND_PENDING');
+    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.FOOTER');
+  });
+
+  // O código do ramo é o que o corretor lê ao telefone com o suporte da AGGER.
+  it('mostra o codigo do ramo ao lado do produto', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: ready } });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('31');
+  });
+
+  // Mais seguradoras primeiro. A ordem crua do adapter é por código de ramo, que não diz nada a
+  // quem lê — e "2" viria antes de "31".
+  it('lista os produtos com mais seguradoras primeiro', async () => {
+    const trio = {
+      ...ready,
+      capabilities: {
+        products: [
+          {
+            ...ready.capabilities.products[0],
+            product: 'bike',
+            platformRef: '711',
+            insurers: [
+              {
+                code: '1',
+                name: 'Porto',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+            ],
+          },
+          {
+            ...ready.capabilities.products[0],
+            product: 'residencial',
+            platformRef: '2',
+            insurers: [
+              {
+                code: '1',
+                name: 'Porto',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+              {
+                code: '2',
+                name: 'Zurich',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+              {
+                code: '3',
+                name: 'HDI',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+            ],
+          },
+          {
+            ...ready.capabilities.products[0],
+            product: 'celular',
+            platformRef: '100',
+            insurers: [
+              {
+                code: '1',
+                name: 'Porto',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+              {
+                code: '2',
+                name: 'Zurich',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+            ],
+          },
+        ],
+      },
+    };
+    api.getConnection.mockResolvedValue({ data: { payload: trio } });
+    const wrapper = await mountTab();
+    const texto = wrapper.text();
+    expect(texto.indexOf('residencial')).toBeLessThan(texto.indexOf('celular'));
+    expect(texto.indexOf('celular')).toBeLessThan(texto.indexOf('bike'));
+  });
+
+  // "1 seguradoras" é defeito visível, e o caso existe: bike tem uma só.
+  it('nao escreve "1 seguradoras" quando ha uma seguradora', async () => {
+    const uma = {
+      ...ready,
+      capabilities: {
+        products: [
+          {
+            ...ready.capabilities.products[0],
+            insurers: [
+              {
+                code: '1',
+                name: 'Porto',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+            ],
+          },
+        ],
+      },
+    };
+    api.getConnection.mockResolvedValue({ data: { payload: uma } });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).not.toContain('1 seguradoras');
+  });
+
   // Conexão sem produto nenhum não pode dizer "pronta para cotar 0 produtos": isso lê como se
   // estivesse tudo bem e o número fosse detalhe.
   it('sem produto habilitado, o veredito diz que nao esta cotando', async () => {

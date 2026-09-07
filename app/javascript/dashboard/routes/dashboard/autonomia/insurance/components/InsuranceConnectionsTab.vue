@@ -250,28 +250,70 @@ const verdict = computed(() => {
 // Aqui a camada passa a responder pelo scan QUANDO há scan, e carimbada com a data DELE — nunca a
 // do healthcheck. O critério 1.2 existe para não confundir "não sei" com "falhou", e usar a data
 // errada faria a tela afirmar que verificou agora o que verificou ontem.
+// O detalhe de cada camada: a frase que diz COMO aquela linha foi verificada. Só para camada que
+// passou — dizer "login aceito às 13h" numa linha que falhou seria a tela se contradizendo.
+const layerDetail = row => {
+  if (row.state !== 'ok') return null;
+  if (row.key === 'runtime') {
+    return t('INSURANCE.CONNECTION.LAYERS.RUNTIME_DETAIL');
+  }
+  if (row.key === 'platform_auth' && connection.value.last_authenticated_at) {
+    return t('INSURANCE.CONNECTION.LAYERS.PLATFORM_AUTH_DETAIL', {
+      at: formatVerifiedAt(connection.value.last_authenticated_at),
+    });
+  }
+  return null;
+};
+
 const layers = computed(() => {
-  const rows = layerRows(connection.value.layers);
+  const rows = layerRows(connection.value.layers).map(row => {
+    const detail = layerDetail(row);
+    return detail ? { ...row, detail } : row;
+  });
   const scanAt = formatVerifiedAt(connection.value.last_capability_scan_at);
   if (!products.value.length || !scanAt) return rows;
-  const refused = [
-    ...new Set(products.value.flatMap(item => refusedInsurers(item))),
-  ];
+  // Quem recusou, e EM QUE PRODUTO. A credencial é da integração, não do ramo, mas o corretor
+  // procura pelo produto que parou de cotar — é assim que ele percebe o problema.
+  const refusedBy = new Map();
+  products.value.forEach(item => {
+    refusedInsurers(item).forEach(name => {
+      refusedBy.set(name, [...(refusedBy.get(name) ?? []), productLabel(item)]);
+    });
+  });
+  const refused = [...refusedBy.keys()];
+  const total = new Set(
+    products.value.flatMap(item => item.insurers.map(i => i.code))
+  ).size;
   return rows.map(row =>
     row.key === 'insurer_auth' && row.state === 'unknown'
       ? {
           ...row,
-          state: refused.length ? 'failed' : 'ok',
+          state: refused.length ? 'pending' : 'ok',
+          label: refused.length
+            ? t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_COUNT', {
+                count: refused.length,
+              })
+            : null,
           detail: refused.length
             ? t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED', {
                 names: refused.join(', '),
+                products: [...new Set([...refusedBy.values()].flat())].join(
+                  ', '
+                ),
+                rest: total - refused.length,
               })
-            : t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_OK'),
+            : t('INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_OK', { total }),
           source: t('INSURANCE.CONNECTION.LAYERS.FROM_SCAN', { at: scanAt }),
         }
       : row
   );
 });
+
+// Mais seguradoras primeiro: é o que o corretor cota mais, e o que ele confere primeiro. A ordem
+// crua do adapter é por código de ramo, que não significa nada para quem lê.
+const sortedProducts = computed(() =>
+  [...products.value].sort((a, b) => b.insurers.length - a.insurers.length)
+);
 
 onMounted(load);
 onUnmounted(pararAcompanhamento);
@@ -340,9 +382,13 @@ onUnmounted(pararAcompanhamento);
               <h2 v-else class="text-sm font-medium text-n-slate-12">
                 {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }}
               </h2>
+              <!-- QUEM é esta conta, junto do veredito. Corretora com mais de uma conta AGGER
+                   precisa saber de qual a tela está falando antes de agir sobre ela. -->
               <p class="text-xs text-n-slate-11 truncate">
-                {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }} ·
-                {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER_SUBTITLE') }}
+                {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }}
+                <template v-if="connection.external_account_label">
+                  — {{ connection.external_account_label }}
+                </template>
               </p>
             </div>
           </div>
@@ -463,6 +509,17 @@ onUnmounted(pararAcompanhamento);
             <p>{{ failureText }}</p>
           </div>
 
+          <!-- FALTA AQUI, DE PROPÓSITO E COM DATA: o botão "Abrir o AGGER logado".
+               Ele é a ação principal do desenho aprovado em 07/09/2026 — abre o portal já
+               autenticado, para o corretor cotar ao lado do agente sem derrubar a sessão dele
+               (medido: não derruba).
+               NÃO ENTROU porque não existe porta de entrada para o handoff: `montarLinkDeAba()`
+               está no adapter (`src/platforms/agger/portal/handoff.ts`), testado, e sem comando de
+               CLI nem rota HTTP que o invoque; aqui também não há rota. Precisa de backend nos dois
+               lados antes de virar botão.
+               QUANDO ENTRAR, entra junto o aviso de que o endereço aberto VALE COMO A SENHA da
+               conta — o token da URL é o corpo do login cifrado, não expira, e sobrevive em
+               histórico e print. Botão sem esse aviso não pode ir para produção. -->
           <div class="flex flex-wrap items-center gap-2">
             <NextButton
               faded
@@ -559,26 +616,49 @@ onUnmounted(pararAcompanhamento);
             :key="row.key"
             class="flex items-start justify-between gap-4 px-5 py-2.5 text-sm"
           >
-            <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-n-slate-12">
-                {{ t(`INSURANCE.CONNECTION.LAYERS.${row.key.toUpperCase()}`) }}
-              </span>
-              <span v-if="row.detail" class="text-xs text-n-slate-11">
-                {{ row.detail }}
-                <span v-if="row.source"> · {{ row.source }}</span>
-              </span>
+            <div class="flex items-start gap-2.5 min-w-0">
+              <!-- O marcador de cor repete o veredito da linha em forma, e não só em palavra:
+                   quem varre a lista de cima a baixo acha a camada travada sem ler. -->
+              <span
+                class="rounded-full size-2 mt-1.5 shrink-0"
+                :class="{
+                  'bg-n-teal-9': row.state === 'ok',
+                  'bg-n-amber-9': row.state === 'pending',
+                  'bg-n-ruby-9': row.state === 'failed',
+                  'bg-n-slate-7': row.state === 'unknown',
+                }"
+              />
+              <div class="flex flex-col gap-0.5 min-w-0">
+                <span class="text-n-slate-12">
+                  {{
+                    row.label ||
+                    t(`INSURANCE.CONNECTION.LAYERS.${row.key.toUpperCase()}`)
+                  }}
+                </span>
+                <span v-if="row.detail" class="text-xs text-n-slate-11">
+                  {{ row.detail }}
+                  <span v-if="row.source"> · {{ row.source }}</span>
+                </span>
+              </div>
             </div>
+            <!-- `pending` é âmbar, e não vermelho: credencial que a seguradora recusou é dinheiro
+                 parado esperando ação do corretor, não uma falha da integração. A MESMA condição
+                 já é âmbar na lista de produtos, e a tela precisa dizer a mesma coisa nos dois
+                 lugares. -->
             <span
               class="text-xs shrink-0"
               :class="{
                 'text-n-teal-11': row.state === 'ok',
+                'text-n-amber-11': row.state === 'pending',
                 'text-n-ruby-11': row.state === 'failed',
                 'text-n-slate-11': row.state === 'unknown',
               }"
             >
               {{
                 t(
-                  `INSURANCE.CONNECTION.LAYERS.STATE.${row.state.toUpperCase()}`
+                  `INSURANCE.CONNECTION.LAYERS.STATE.${
+                    row.state === 'pending' ? 'FAILED' : row.state.toUpperCase()
+                  }`
                 )
               }}
             </span>
@@ -595,12 +675,18 @@ onUnmounted(pararAcompanhamento);
             {{ t('INSURANCE.CAPABILITIES.TITLE') }}
           </h2>
           <p class="text-xs text-n-slate-11">
-            {{ t('INSURANCE.CAPABILITIES.SUBTITLE') }}
+            {{
+              connection.last_capability_scan_at
+                ? t('INSURANCE.CAPABILITIES.SUBTITLE', {
+                    at: formatVerifiedAt(connection.last_capability_scan_at),
+                  })
+                : t('INSURANCE.CAPABILITIES.SUBTITLE_NO_SCAN')
+            }}
           </p>
         </header>
         <ul class="divide-y divide-n-weak">
           <li
-            v-for="item in products"
+            v-for="item in sortedProducts"
             :key="item.product"
             class="flex flex-col gap-2 px-5 py-3 text-sm"
           >
@@ -641,14 +727,20 @@ onUnmounted(pararAcompanhamento);
                         ready: insurerSummary(item).ready,
                         total: insurerSummary(item).total,
                       })
-                    : t('INSURANCE.CAPABILITIES.INSURERS_ALL', {
-                        total: insurerSummary(item).total,
-                      })
+                    : t(
+                        'INSURANCE.CAPABILITIES.INSURERS_ALL',
+                        { total: insurerSummary(item).total },
+                        insurerSummary(item).total
+                      )
                 }}
               </span>
             </div>
             <!-- DINHEIRO PARADO, com nome. O adapter sempre soube qual seguradora recusou; a tela
-                 dizia "1 aguardando credencial" e o corretor não tinha como saber onde entrar. -->
+                 dizia "1 aguardando credencial" e o corretor não tinha como saber onde entrar.
+                 O desenho aprovado tinha aqui um botão "Rever no AGGER". Ele depende do mesmo
+                 handoff ausente do botão principal (ver comentário nas ações acima): mandar o
+                 corretor para o portal sem sessão o faria digitar a senha de novo, que é
+                 exatamente o atrito que o handoff existe para remover. -->
             <div
               v-if="refusedInsurers(item).length"
               class="flex flex-wrap items-center gap-2 px-3 py-2 text-xs rounded-lg bg-n-amber-2 text-n-amber-12"
