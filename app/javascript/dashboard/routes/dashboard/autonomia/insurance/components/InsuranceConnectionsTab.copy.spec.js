@@ -66,6 +66,25 @@ describe('o texto que a aba Conexões escreve', () => {
     Object.values(api).forEach(fn => fn.mockReset());
   });
 
+  // O FORMATO DA DATA, que o snapshot mascara para não congelar o fuso de quem o gravou.
+  //
+  // O critério 1.6 pede instante ABSOLUTO — "dia/mês, hora:minuto" — e não tempo relativo. Aqui a
+  // asserção é sobre a FORMA, com a data derivada do mesmo fixture: independente do fuso, é dia e
+  // mês com dois dígitos, vírgula, hora e minuto.
+  it('escreve a verificacao como instante absoluto, e nao relativo', async () => {
+    const wrapper = await montar(
+      conexao([
+        { product: 'bike', label: 'Bike', insurers: [seguradora('1', 'P')] },
+      ])
+    );
+    const texto = wrapper.text();
+    expect(texto).toMatch(/Última verificação\s*em \d{2}\/\d{2}, \d{2}:\d{2}/);
+    expect(texto).toMatch(/Última descoberta\s*em \d{2}\/\d{2}, \d{2}:\d{2}/);
+    // O que o critério 1.6 removeu de propósito, e não pode voltar.
+    expect(texto).not.toContain('há ');
+    expect(texto).not.toContain('atrás');
+  });
+
   // AS TRÊS GUARDAS DO DADO CRU DE `capabilities`.
   //
   // Elas existem e fazem a coisa certa, mas o QA da rodada final registrou que as três mutações
@@ -438,12 +457,23 @@ describe('o texto que a aba Conexões escreve', () => {
         .findAll('button')
         .map(b => b.attributes('label') || b.text())
         .filter(Boolean);
-      // Espaços normalizados: `text()` do vue-test-utils preserva a indentação do template, e o
-      // snapshot passaria a acusar reformatação em vez de mudança de cópia.
-      expect({
-        texto: wrapper.text().split(/\s+/).join(' ').trim(),
-        botoes,
-      }).toMatchSnapshot();
+      // DUAS NORMALIZAÇÕES, E A SEGUNDA CUSTOU UM CI VERMELHO:
+      //
+      // 1. Espaços: `text()` preserva a indentação do template, e o snapshot passaria a acusar
+      //    reformatação em vez de mudança de cópia.
+      // 2. Datas: `formatVerifiedAt` usa `toLocaleString('pt-BR')`, que depende do fuso do
+      //    ambiente. Esta suíte passava aqui (UTC−3, "07/09, 10:00") e quebrava no CI (UTC,
+      //    "07/09, 13:00") — o snapshot congelava o fuso de quem o gravou.
+      //
+      // O FORMATO da data continua coberto, no exemplo logo abaixo deste bloco: aqui interessa a
+      // cópia ao redor dela, e mascarar é o que mantém o snapshot falando de uma coisa só.
+      const semData = wrapper
+        .text()
+        .split(/\s+/)
+        .join(' ')
+        .trim()
+        .replace(/\d{2}\/\d{2}, \d{2}:\d{2}/g, '<data>');
+      expect({ texto: semData, botoes }).toMatchSnapshot();
     });
   });
 
