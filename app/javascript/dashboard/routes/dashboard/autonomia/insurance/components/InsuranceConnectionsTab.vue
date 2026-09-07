@@ -21,7 +21,9 @@ import {
 // Aba Conexões (PRD §9) ligada à API real: GET/POST/DELETE /autonomia/insurance/connection.
 // A senha sai deste componente uma única vez (no POST) e é zerada na sequência; o backend nunca a
 // devolve — a tela só conhece `username_hint`.
-const { t } = useI18n();
+// `te` = "translation exists". Necessário porque o segundo argumento de `t()` não funciona como
+// valor padrão: com a chave ausente, o vue-i18n devolve a própria chave.
+const { t, te } = useI18n();
 
 const connection = ref(buildConnection());
 const isLoading = ref(true);
@@ -42,8 +44,38 @@ const encryptionUnavailable = computed(
 // vezes sem nome — até 06/09/2026 o ramo 100 chegava como `ramo_100`, e a descoberta leu no portal
 // que é Celular), que não ajudam ninguém na tela. Ficam no `capabilities` gravado,
 // para diagnóstico e para o dia em que forem habilitados.
+// `capabilities` É O QUARTO CAMINHO CRU, e o menos protegido dos quatro: `connections/sync.rb`
+// grava o mapa como veio, sem passar nem pelo `sanitize_deep` que trata `failure`, `evidence` e
+// `layers`. Tudo o que a lista de produtos lê vem daí.
+//
+// Três coisas que o dado cru já causou ou causaria, e que esta normalização fecha de uma vez:
+//   1. produto sem `insurers` derrubava a ABA INTEIRA (`insurers.some` em `undefined`) — uma chave
+//      ausente no adapter apagava a tela do corretor;
+//   2. `enabled` e `integrationStatus` podiam discordar, e o denominador contava por um enquanto o
+//      aviso nomeava pelo outro: "2 seguradoras" acima de "uma seguradora a menos";
+//   3. slug sem `label` escrevia `ramo_100` na tela — o caso real de 06/09.
+//
+// A regra é a mesma das outras três portas: normalizar na entrada, uma vez, e o resto do
+// componente trabalhar com dado que já obedece ao contrato.
+const normalizarSeguradora = seg => ({
+  ...seg,
+  // `enabled` manda. `integrationStatus` só qualifica POR QUE está fora, e não pode desmentir.
+  enabled: seg?.enabled === true,
+  integrationStatus: seg?.integrationStatus ?? 'unknown',
+  name: seg?.name || seg?.code || '—',
+});
+
+const normalizarProduto = item => ({
+  ...item,
+  insurers: (Array.isArray(item?.insurers) ? item.insurers : []).map(
+    normalizarSeguradora
+  ),
+});
+
 const products = computed(() =>
-  (connection.value.capabilities?.products ?? []).filter(item => item.enabled)
+  (connection.value.capabilities?.products ?? [])
+    .filter(item => item?.enabled)
+    .map(normalizarProduto)
 );
 const hiddenProductCount = computed(
   () =>
@@ -159,11 +191,27 @@ const onDisconnect = () =>
 const verifiedLabel = (iso, evidence) => {
   const at = formatVerifiedAt(iso);
   if (!at) return t('INSURANCE.CONNECTION.NOT_VERIFIED');
-  const check = String(evidence?.check ?? 'none').toUpperCase();
-  return t('INSURANCE.CONNECTION.VERIFIED_AT', {
-    at,
-    check: t(`INSURANCE.CONNECTION.EVIDENCE.${check}`, ''),
-  });
+  // `check` vem do adapter e chega SEM normalização (`connections/sync.rb`). Um valor novo do lado
+  // de lá não pode virar `INSURANCE.CONNECTION.EVIDENCE.ALGUMA_COISA` na cara do corretor — e o
+  // segundo argumento de `t()` NÃO serve de default aqui: string vazia faz o vue-i18n devolver a
+  // própria chave. Sem tradução conhecida, a tela diz só quando foi verificado.
+  // SEM `evidence` NÃO SE AFIRMA NADA sobre o que foi consultado. O `?? 'none'` daqui virava
+  // "sem consulta ao portal" — uma AFIRMAÇÃO — e `evidence` é nulo em toda conexão cujo adapter
+  // não emite o campo (`connection.rb`, `metadata['last_evidence'].presence`). A tela dizia "em
+  // 07/09 10:00, sem consulta ao portal" e, três linhas abaixo, "Login aceito pelo portal em 07/09
+  // 10:00": o mesmo minuto, duas afirmações contrárias, e a segunda é a verdadeira.
+  //
+  // Campo ausente e campo com valor desconhecido caem no mesmo lugar: dizer só quando, sem inventar
+  // o quê.
+  if (!evidence?.check) {
+    return t('INSURANCE.CONNECTION.VERIFIED_AT_PLAIN', { at });
+  }
+  const check = `INSURANCE.CONNECTION.EVIDENCE.${String(
+    evidence.check
+  ).toUpperCase()}`;
+  return te(check)
+    ? t('INSURANCE.CONNECTION.VERIFIED_AT', { at, check: t(check) })
+    : t('INSURANCE.CONNECTION.VERIFIED_AT_PLAIN', { at });
 };
 
 const failure = computed(() => connection.value.failure ?? null);
@@ -184,7 +232,6 @@ const failureText = computed(() => {
   if (!failure.value && !UNHEALTHY_STATES.includes(status.value)) return '';
   return t(failureMessageKey(failure.value));
 });
-const layers = computed(() => layerRows(connection.value.layers));
 const pendingInsurers = computed(
   () => connection.value.insurers_pending_auth ?? null
 );
@@ -201,16 +248,226 @@ const accountInUse = computed(
 //
 // O i18n continua como rede para conexão gravada por versão anterior do adapter, que não manda
 // `label`. Sem ela, produto antigo apareceria como slug cru.
-const productLabel = item =>
-  item.label ||
-  t(`INSURANCE.PRODUCTS.${String(item.product).toUpperCase()}`, item.product);
+const productLabel = item => {
+  if (item.label) return item.label;
+  const chave = `INSURANCE.PRODUCTS.${String(item.product).toUpperCase()}`;
+  if (te(chave)) return t(chave);
+  // Último recurso: slug sem `label` e sem tradução. Escrever `ramo_100` na tela foi o defeito real
+  // de 06/09 — o corretor lia um identificador nosso onde esperava o nome do produto. "Ramo 100"
+  // ao menos se lê como o que é: um ramo que ainda não sabemos nomear. O código já aparece no chip
+  // ao lado, então o número não é novidade para quem olha a linha.
+  const ramo = String(item.product ?? '');
+  return ramo.startsWith('ramo_')
+    ? t('INSURANCE.CAPABILITIES.UNNAMED_BRANCH', { ramo: ramo.slice(5) })
+    : ramo;
+};
+// QUEM COTA É QUEM ESTÁ `enabled`, E QUEM NÃO COTA É TODO O RESTO.
+//
+// `pending` era `integrationStatus === 'auth_required'` — o CASO, não a classe. Seguradora com
+// qualquer outro motivo de estar fora (`enabled: false` com status novo do adapter) sumia do
+// denominador: a linha dizia "2 seguradoras" em vez de "1 de 2", o ponto ficava verde e a camada
+// escrevia "As 2 foram conferidas uma a uma no portal e passaram" sobre uma que o dado marca como
+// fora. `enabled` é a classe, e é o único campo que decide se cota.
+//
+// `auth_required` continua importando, mas só para NOMEAR quem o corretor consegue destravar
+// sozinho (`refusedInsurers`) — não para contar.
 const insurerSummary = item => {
   const ready = item.insurers.filter(i => i.enabled).length;
-  const pending = item.insurers.filter(
-    i => i.integrationStatus === 'auth_required'
-  ).length;
-  return { ready, pending, total: item.insurers.length };
+  return {
+    ready,
+    pending: item.insurers.length - ready,
+    total: item.insurers.length,
+  };
 };
+// Quem recusou, pelo nome. O adapter sempre soube — `integrationStatus: 'auth_required'` vem por
+// seguradora desde o primeiro scan — e a tela só dizia "1 aguardando credencial". Um número não
+// diz ao corretor em qual portal ele precisa entrar.
+const refusedInsurers = item =>
+  item.insurers
+    .filter(i => i.integrationStatus === 'auth_required')
+    .map(i => i.name);
+
+// O VEREDITO: a primeira coisa que a tela responde, antes de qualquer detalhe.
+//
+// Antes o topo dizia só "Conectado", e conectado não é a pergunta do corretor — ele quer saber se
+// dá para cotar, e quanto. Estado de passagem não afirma nem nega: durante a descoberta a contagem
+// é do scan anterior, e apresentá-la como atual seria a tela envelhecendo o dado sozinha.
+// COTAR EXIGE SEGURADORA. Produto habilitado no AGGER com ZERO seguradoras respondendo não cota
+// nada, e contá-lo no veredito fazia a tela dizer "Pronta para cotar 1 produto" logo acima de
+// "0 de 1 seguradora". A lista continua mostrando o produto — ele existe e o corretor precisa ver
+// que está parado — mas o veredito conta só o que produz preço.
+const quotableProducts = computed(() =>
+  products.value.filter(item => item.insurers.some(i => i.enabled))
+);
+
+const verdict = computed(() => {
+  if (isTransientState(status.value)) {
+    return { key: 'INSURANCE.CONNECTION.VERDICT.WORKING', tone: 'working' };
+  }
+  if (!isConnected.value || !quotableProducts.value.length) {
+    return { key: 'INSURANCE.CONNECTION.VERDICT.NOT_READY', tone: 'stopped' };
+  }
+  return {
+    key:
+      quotableProducts.value.length === 1
+        ? 'INSURANCE.CONNECTION.VERDICT.READY_ONE'
+        : 'INSURANCE.CONNECTION.VERDICT.READY',
+    count: quotableProducts.value.length,
+    tone: 'ready',
+  };
+});
+
+// A CAMADA DE CREDENCIAIS SABIA, E DIZIA "não verificado".
+//
+// `layers.insurer_auth` vem do HEALTHCHECK, que de fato não verifica credencial de seguradora —
+// tecnicamente correto. Só que o SCAN verifica, uma seguradora por vez, e o resultado está em
+// `capabilities`. A tela mostrava "não verificado" e, três linhas abaixo, "1 aguardando
+// credencial": o dado existia e a camada o ignorava.
+//
+// Aqui a camada passa a responder pelo scan QUANDO há scan, e carimbada com a data DELE — nunca a
+// do healthcheck. O critério 1.2 existe para não confundir "não sei" com "falhou", e usar a data
+// errada faria a tela afirmar que verificou agora o que verificou ontem.
+// O detalhe de cada camada: a frase que diz COMO aquela linha foi verificada. Só para camada que
+// passou — dizer "login aceito às 13h" numa linha que falhou seria a tela se contradizendo.
+const layerDetail = row => {
+  if (row.state !== 'ok') return null;
+  if (row.key === 'runtime') {
+    return t('INSURANCE.CONNECTION.LAYERS.RUNTIME_DETAIL');
+  }
+  if (row.key === 'platform_auth' && connection.value.last_authenticated_at) {
+    return t('INSURANCE.CONNECTION.LAYERS.PLATFORM_AUTH_DETAIL', {
+      at: formatVerifiedAt(connection.value.last_authenticated_at),
+    });
+  }
+  return null;
+};
+
+const layers = computed(() => {
+  const rows = layerRows(connection.value.layers).map(row => {
+    const detail = layerDetail(row);
+    return detail ? { ...row, detail } : row;
+  });
+  const scanAt = formatVerifiedAt(connection.value.last_capability_scan_at);
+  if (!products.value.length || !scanAt) return rows;
+  // Quem recusou, e EM QUE PRODUTO. A credencial é da integração, não do ramo, mas o corretor
+  // procura pelo produto que parou de cotar — é assim que ele percebe o problema.
+  const refusedBy = new Map();
+  products.value.forEach(item => {
+    refusedInsurers(item).forEach(name => {
+      refusedBy.set(name, [...(refusedBy.get(name) ?? []), productLabel(item)]);
+    });
+  });
+  const refused = [...refusedBy.keys()];
+  // O UNIVERSO DA CONTAGEM É A CONTA, e a frase precisa dizer isso.
+  //
+  // A credencial é da INTEGRAÇÃO com a seguradora, não do ramo: uma Azul recusada está recusada
+  // para tudo que ela cota. Contar as seguradoras distintas da conta é o número certo — mas a
+  // versão anterior o colava numa frase que nomeava um produto ("recusou em Automóvel. As outras
+  // 22 passaram"), enquanto a linha do produto logo abaixo dizia "17 de 18". Dois números sobre o
+  // mesmo evento, na mesma tela, e nenhum errado isoladamente.
+  //
+  // Agora a camada fala só da conta, e o produto afetado aparece onde ele importa: no aviso de
+  // dinheiro parado, dentro da própria linha do produto.
+  // ESTA CAMADA SÓ FALA DO QUE FOI CONFERIDO NO PORTAL, e conferir credencial é o que produz
+  // `ready` ou `auth_required`. Seguradora fora por qualquer outro motivo não passou nem recusou:
+  // ela não entra na conta, porque dizer "conferidas uma a uma e passaram" sobre ela seria
+  // afirmar uma verificação que não houve.
+  const conferidas = new Map();
+  products.value.forEach(item =>
+    item.insurers.forEach(i => {
+      if (
+        i.integrationStatus === 'ready' ||
+        i.integrationStatus === 'auth_required'
+      ) {
+        conferidas.set(i.code, i.integrationStatus);
+      }
+    })
+  );
+  const total = conferidas.size;
+  // SEM NADA CONFERIDO NÃO HÁ O QUE AFIRMAR, e a camada precisa dizer isso em vez de promover o
+  // vazio a aprovação. Sem esta guarda a tela escrevia "As 0 foram conferidas uma a uma no portal e
+  // passaram", em verde e rotulada "verificado", ao lado de "Não está cotando" — que é exatamente o
+  // que o critério 1.2 proíbe: confundir "não havia o que olhar" com "olhei e passou".
+  if (!total) return rows;
+  const rest = total - refused.length;
+  return rows.map(row =>
+    row.key === 'insurer_auth' && row.state === 'unknown'
+      ? {
+          ...row,
+          state: refused.length ? 'pending' : 'ok',
+          label: refused.length
+            ? t(
+                'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_COUNT',
+                { count: refused.length },
+                refused.length
+              )
+            : null,
+          detail: refused.length
+            ? `${t(
+                'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED',
+                { names: refused.join(', ') },
+                refused.length
+              )} ${t(
+                'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_REST',
+                { count: rest },
+                rest
+              )}`
+            : t(
+                'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_OK',
+                { total },
+                total
+              ),
+          source: t('INSURANCE.CONNECTION.LAYERS.FROM_SCAN', { at: scanAt }),
+        }
+      : row
+  );
+});
+
+// O PONTO DA LINHA DO PRODUTO — três causas, três cores, cada uma com entrada na legenda.
+//
+// A ordem das perguntas importa e já errou duas vezes:
+//
+// 1. Alguma seguradora recusou? Então ÂMBAR, mesmo que a recusa derrube o produto inteiro. A
+//    versão anterior perguntava "cota?" primeiro e dava CINZA ao produto de seguradora única
+//    recusada — com a caixa âmbar "Azul está fora por credencial recusada" logo abaixo, na mesma
+//    linha. O ponto contradizia o aviso que ele deveria resumir.
+// 2. Cota alguma coisa? Então VERDE.
+// 3. Sobrou: habilitado no AGGER e sem nenhuma seguradora cadastrada. CINZA, e a linha explica em
+//    palavras — antes isto era VERDE, que a legenda define como "cotando".
+//
+// Devolve a chave da legenda junto da cor: é o que impede as duas de divergirem de novo. Cor sem
+// entrada de legenda é cor que o corretor não sabe ler.
+const productDot = item => {
+  if (refusedInsurers(item).length) {
+    return { cor: 'bg-n-amber-9', legenda: 'LEGEND_PENDING' };
+  }
+  if (insurerSummary(item).ready) {
+    return { cor: 'bg-n-teal-9', legenda: 'LEGEND_QUOTING' };
+  }
+  return { cor: 'bg-n-slate-7', legenda: 'LEGEND_NONE' };
+};
+
+// A legenda lista as cores que ESTÃO na tela, e não uma lista fixa. Assim ela não descreve cor
+// ausente nem deixa cor órfã — o defeito era exatamente esse: três cores, duas entradas.
+const LEGEND_ORDER = ['LEGEND_QUOTING', 'LEGEND_PENDING', 'LEGEND_NONE'];
+const DOT_BY_LEGEND = {
+  LEGEND_QUOTING: 'bg-n-teal-9',
+  LEGEND_PENDING: 'bg-n-amber-9',
+  LEGEND_NONE: 'bg-n-slate-7',
+};
+const legend = computed(() => {
+  const usadas = new Set(products.value.map(item => productDot(item).legenda));
+  return LEGEND_ORDER.filter(key => usadas.has(key)).map(key => ({
+    key,
+    cor: DOT_BY_LEGEND[key],
+  }));
+});
+
+// Mais seguradoras primeiro: é o que o corretor cota mais, e o que ele confere primeiro. A ordem
+// crua do adapter é por código de ramo, que não significa nada para quem lê.
+const sortedProducts = computed(() =>
+  [...products.value].sort((a, b) => b.insurers.length - a.insurers.length)
+);
 
 onMounted(load);
 onUnmounted(pararAcompanhamento);
@@ -261,15 +518,48 @@ onUnmounted(pararAcompanhamento);
               <span class="i-lucide-building-2 size-5" />
             </span>
             <div class="flex flex-col min-w-0">
-              <h2 class="text-sm font-medium text-n-slate-12">
+              <!-- O VEREDITO PRIMEIRO. "Conectado" não é a pergunta do corretor: ele quer saber
+                   se dá para cotar, e quanto. O nome do provedor vira a linha de apoio. -->
+              <h2
+                v-if="!showForm"
+                class="text-base font-semibold truncate"
+                :class="
+                  verdict.tone === 'ready'
+                    ? 'text-n-teal-11'
+                    : verdict.tone === 'stopped'
+                      ? 'text-n-amber-11'
+                      : 'text-n-slate-12'
+                "
+              >
+                {{ t(verdict.key, { count: verdict.count }) }}
+              </h2>
+              <h2 v-else class="text-sm font-medium text-n-slate-12">
                 {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }}
               </h2>
-              <p class="text-xs text-n-slate-11 truncate">
-                {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER_SUBTITLE') }}
+              <!-- QUEM é esta conta, junto do veredito. Corretora com mais de uma conta AGGER
+                   precisa saber de qual a tela está falando antes de agir sobre ela.
+                   Só aparece quando o veredito ocupa o `h2`: no formulário o próprio `h2` já é o
+                   nome do provedor, e repeti-lo aqui rendia "AGGER · AggilizadorAGGER ·
+                   Aggilizador" na primeira tela que o corretor vê. -->
+              <p v-if="!showForm" class="text-xs truncate text-n-slate-11">
+                {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }}
+                <template v-if="connection.external_account_label">
+                  — {{ connection.external_account_label }}
+                </template>
               </p>
             </div>
           </div>
-          <InsuranceStatusBadge :state="status" />
+          <!-- O badge existe para NOMEAR UM PROBLEMA que o veredito não nomeia: `auth_required`,
+               `degraded`, `offline`, `not_configured`, e os de passagem.
+               Com `status: ready` ele nunca aparece — nem quando a conta não está cotando. Ali o
+               veredito já diz "Pronta para cotar 11 produtos" (e o badge repetiria), ou diz "Não
+               está cotando", e um badge VERDE escrito "Conectado" ao lado disso lê como
+               tranquilização: o corretor vê verde e para de procurar. A causa real aparece na
+               linha de falha e na camada, que é onde ela cabe. -->
+          <InsuranceStatusBadge
+            v-if="status !== CONNECTION_STATES.READY"
+            :state="status"
+          />
         </header>
 
         <div v-if="showForm" class="flex flex-col gap-4 px-5 py-5">
@@ -312,28 +602,38 @@ onUnmounted(pararAcompanhamento);
         </div>
 
         <div v-else class="flex flex-col gap-5 px-5 py-5">
-          <dl class="grid gap-4 sm:grid-cols-2 text-sm">
+          <!-- FRESCOR. O desenho aprovado trazia isto como uma linha só, com um ponto de saúde e
+               duas datas. Ficou em grade porque são QUATRO informações e não duas — conta, sessão,
+               última verificação e última descoberta — e espremer quatro numa linha obriga a
+               abreviar justamente os rótulos que dizem o que cada data significa.
+               O ponto de saúde do desenho está mantido no campo Sessão, que é o que ele resumia:
+               responde "isto está de pé?" sem obrigar a ler data nenhuma. -->
+          <dl class="grid gap-4 text-sm sm:grid-cols-2">
             <div class="flex flex-col gap-0.5">
               <dt class="text-xs text-n-slate-11">
                 {{ t('INSURANCE.CONNECTION.FIELDS.ACCOUNT') }}
               </dt>
-              <dd class="text-n-slate-12 text-xs">
+              <!-- Só o e-mail aqui. O nome da corretora já identifica a conta lá em cima, junto do
+                   veredito; repetir os dois faz o leitor procurar a diferença entre eles. -->
+              <dd class="text-xs text-n-slate-12">
                 <span class="font-mono">{{
                   connection.username_hint || '—'
                 }}</span>
-                <span
-                  v-if="connection.external_account_label"
-                  class="block truncate"
-                >
-                  {{ connection.external_account_label }}
-                </span>
               </dd>
             </div>
             <div class="flex flex-col gap-0.5">
               <dt class="text-xs text-n-slate-11">
                 {{ t('INSURANCE.CONNECTION.FIELDS.SESSION') }}
               </dt>
-              <dd class="text-n-slate-12">
+              <dd class="flex items-center gap-2 text-n-slate-12">
+                <span
+                  class="rounded-full size-2 shrink-0"
+                  :class="
+                    connection.last_authenticated_at
+                      ? 'bg-n-teal-9'
+                      : 'bg-n-slate-7'
+                  "
+                />
                 {{
                   connection.last_authenticated_at
                     ? t('INSURANCE.CONNECTION.SESSION_AUTHENTICATED')
@@ -386,6 +686,17 @@ onUnmounted(pararAcompanhamento);
             <p>{{ failureText }}</p>
           </div>
 
+          <!-- FALTA AQUI, DE PROPÓSITO E COM DATA: o botão "Abrir o AGGER logado".
+               Ele é a ação principal do desenho aprovado em 07/09/2026 — abre o portal já
+               autenticado, para o corretor cotar ao lado do agente sem derrubar a sessão dele
+               (medido: não derruba).
+               NÃO ENTROU porque não existe porta de entrada para o handoff: `montarLinkDeAba()`
+               está no adapter (`src/platforms/agger/portal/handoff.ts`), testado, e sem comando de
+               CLI nem rota HTTP que o invoque; aqui também não há rota. Precisa de backend nos dois
+               lados antes de virar botão.
+               QUANDO ENTRAR, entra junto o aviso de que o endereço aberto VALE COMO A SENHA da
+               conta — o token da URL é o corpo do login cifrado, não expira, e sobrevive em
+               histórico e print. Botão sem esse aviso não pode ir para produção. -->
           <div class="flex flex-wrap items-center gap-2">
             <NextButton
               faded
@@ -446,10 +757,14 @@ onUnmounted(pararAcompanhamento);
           </p>
           <p class="text-xs">
             {{
-              t('INSURANCE.CONNECTION.INSURERS_PENDING.BODY', {
-                count: pendingInsurers.codes?.length ?? 0,
-                at: formatVerifiedAt(pendingInsurers.observed_at),
-              })
+              t(
+                'INSURANCE.CONNECTION.INSURERS_PENDING.BODY',
+                {
+                  count: pendingInsurers.codes?.length ?? 0,
+                  at: formatVerifiedAt(pendingInsurers.observed_at),
+                },
+                pendingInsurers.codes?.length ?? 0
+              )
             }}
           </p>
           <p v-if="pendingInsurers.names?.length" class="text-xs font-mono">
@@ -458,32 +773,74 @@ onUnmounted(pararAcompanhamento);
         </div>
       </section>
 
-      <!-- CRITÉRIO 1.2: as cinco camadas separadas. `não verificado` é uma resposta, não um vazio. -->
-      <section
+      <!-- CRITÉRIO 1.2: as cinco camadas separadas. `não verificado` é uma resposta, não um vazio.
+           FECHADO por padrão: elas respondem "como você sabe disso?", que é pergunta de segunda
+           ordem. Abertas, ocupavam um terço da tela antes de o corretor chegar nos produtos.
+
+           SÃO CINCO, e o desenho aprovado mostrava três. As duas a mais — "ramo suportado pela
+           integração" e "risco aceito pela seguradora" — existem porque o 1.2 as separa de
+           propósito: cada uma pode reprovar uma cotação por motivo diferente, e juntá-las faria a
+           tela dizer "falhou" sem dizer onde. O desenho mostrava três porque nesta conta só três
+           tinham veredito; suprimir as outras faria "não verificado" virar invisível, que é
+           exatamente o que o critério proíbe.
+
+           Card PRÓPRIO, e não dentro do card do veredito: fechado, ele é uma linha só, e uma linha
+           clicável dentro do bloco que carrega as ações principais compete com elas. -->
+      <details
         v-if="connection.layers"
-        class="rounded-xl border border-n-weak bg-n-solid-1 overflow-hidden"
+        class="rounded-xl border border-n-weak bg-n-solid-1 overflow-hidden group"
       >
-        <header class="px-5 py-4 border-b border-n-weak">
-          <h2 class="text-sm font-medium text-n-slate-12">
-            {{ t('INSURANCE.CONNECTION.LAYERS.TITLE') }}
-          </h2>
-          <p class="text-xs text-n-slate-11">
-            {{ t('INSURANCE.CONNECTION.LAYERS.SUBTITLE') }}
-          </p>
-        </header>
-        <ul class="divide-y divide-n-weak">
+        <summary
+          class="flex items-center gap-2 px-5 py-3.5 cursor-pointer text-sm text-n-slate-11 hover:text-n-slate-12 list-none"
+        >
+          <span
+            class="i-lucide-chevron-right size-4 shrink-0 transition-transform group-open:rotate-90"
+          />
+          {{ t('INSURANCE.CONNECTION.LAYERS.DISCLOSURE') }}
+        </summary>
+        <p class="px-5 pb-2 text-xs text-n-slate-11">
+          {{ t('INSURANCE.CONNECTION.LAYERS.SUBTITLE') }}
+        </p>
+        <ul class="border-t divide-y divide-n-weak border-n-weak">
           <li
             v-for="row in layers"
             :key="row.key"
-            class="flex items-center justify-between gap-4 px-5 py-2.5 text-sm"
+            class="flex items-start justify-between gap-4 px-5 py-2.5 text-sm"
           >
-            <span class="text-n-slate-12">
-              {{ t(`INSURANCE.CONNECTION.LAYERS.${row.key.toUpperCase()}`) }}
-            </span>
+            <div class="flex items-start gap-2.5 min-w-0">
+              <!-- O marcador de cor repete o veredito da linha em forma, e não só em palavra:
+                   quem varre a lista de cima a baixo acha a camada travada sem ler. -->
+              <span
+                class="rounded-full size-2 mt-1.5 shrink-0"
+                :class="{
+                  'bg-n-teal-9': row.state === 'ok',
+                  'bg-n-amber-9': row.state === 'pending',
+                  'bg-n-ruby-9': row.state === 'failed',
+                  'bg-n-slate-7': row.state === 'unknown',
+                }"
+              />
+              <div class="flex flex-col gap-0.5 min-w-0">
+                <span class="text-n-slate-12">
+                  {{
+                    row.label ||
+                    t(`INSURANCE.CONNECTION.LAYERS.${row.key.toUpperCase()}`)
+                  }}
+                </span>
+                <span v-if="row.detail" class="text-xs text-n-slate-11">
+                  {{ row.detail }}
+                  <span v-if="row.source"> · {{ row.source }}</span>
+                </span>
+              </div>
+            </div>
+            <!-- `pending` é âmbar, e não vermelho: credencial que a seguradora recusou é dinheiro
+                 parado esperando ação do corretor, não uma falha da integração. A MESMA condição
+                 já é âmbar na lista de produtos, e a tela precisa dizer a mesma coisa nos dois
+                 lugares. -->
             <span
               class="text-xs shrink-0"
               :class="{
                 'text-n-teal-11': row.state === 'ok',
+                'text-n-amber-11': row.state === 'pending',
                 'text-n-ruby-11': row.state === 'failed',
                 'text-n-slate-11': row.state === 'unknown',
               }"
@@ -496,68 +853,160 @@ onUnmounted(pararAcompanhamento);
             </span>
           </li>
         </ul>
-      </section>
+      </details>
 
       <section
-        v-if="isConnected && products.length"
-        class="rounded-xl border border-n-weak bg-n-solid-1 overflow-hidden"
+        v-if="isConnected"
+        class="overflow-hidden border rounded-xl border-n-weak bg-n-solid-1"
       >
         <header class="px-5 py-4 border-b border-n-weak">
           <h2 class="text-sm font-medium text-n-slate-12">
             {{ t('INSURANCE.CAPABILITIES.TITLE') }}
           </h2>
           <p class="text-xs text-n-slate-11">
-            {{ t('INSURANCE.CAPABILITIES.SUBTITLE') }}
+            {{
+              connection.last_capability_scan_at
+                ? t('INSURANCE.CAPABILITIES.SUBTITLE', {
+                    at: formatVerifiedAt(connection.last_capability_scan_at),
+                  })
+                : t('INSURANCE.CAPABILITIES.SUBTITLE_NO_SCAN')
+            }}
           </p>
         </header>
-        <ul class="divide-y divide-n-weak">
+        <!-- CONTA SEM PRODUTO NENHUM. O card inteiro sumia aqui, e com ele a linha dos ramos
+             ocultos e o rodapé que responde "cadê meu produto" — que é a pergunta do corretor
+             exatamente nesta tela. Some a lista, fica a explicação. -->
+        <p v-if="!products.length" class="px-5 py-4 text-sm text-n-slate-11">
+          {{ t('INSURANCE.CAPABILITIES.EMPTY') }}
+        </p>
+        <ul v-else class="divide-y divide-n-weak">
           <li
-            v-for="item in products"
+            v-for="item in sortedProducts"
             :key="item.product"
-            class="flex items-center justify-between gap-4 px-5 py-3 text-sm"
+            class="flex flex-col gap-2 px-5 py-3 text-sm"
           >
-            <div class="flex items-center gap-3 min-w-0">
-              <span
-                class="size-2 rounded-full shrink-0"
-                :class="item.enabled ? 'bg-n-teal-9' : 'bg-n-slate-7'"
-              />
-              <span class="text-n-slate-12 truncate">
-                {{ productLabel(item) }}
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3 min-w-0">
                 <span
-                  v-if="item.labelConfidence === 'inferred'"
-                  class="ml-1 text-xs text-n-slate-11"
-                  :title="t('INSURANCE.CAPABILITIES.INFERRED_HINT')"
-                >
-                  *
+                  class="rounded-full size-2 shrink-0"
+                  :class="productDot(item).cor"
+                />
+                <span class="truncate text-n-slate-12">
+                  {{ productLabel(item) }}
+                  <span
+                    v-if="item.labelConfidence === 'inferred'"
+                    class="ml-1 text-xs text-n-slate-11"
+                    :title="t('INSURANCE.CAPABILITIES.INFERRED_HINT')"
+                  >
+                    *
+                  </span>
                 </span>
-              </span>
-            </div>
-            <span class="text-xs text-n-slate-11 shrink-0">
-              {{
-                t('INSURANCE.CAPABILITIES.INSURERS_COUNT', {
-                  count: insurerSummary(item).ready,
-                })
-              }}
-              <span v-if="insurerSummary(item).pending">
-                ·
+                <!-- O código do ramo no portal. É por ele que o corretor acha o produto do outro
+                     lado, e é o que ele lê ao telefone com o suporte da AGGER. -->
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-mono rounded shrink-0 bg-n-alpha-2 text-n-slate-11"
+                >
+                  {{ item.platformRef }}
+                </span>
+              </div>
+              <!-- COM DENOMINADOR. "17 seguradoras disponíveis" esconde que são 18 no total; o
+                   corretor precisa ver o que está faltando, não só o que tem. -->
+              <!-- `font-medium` + tabular: os números ficam legíveis na varredura vertical e as
+                   colunas de dígitos alinham entre as linhas, que é o que faz a lista ser
+                   comparável de cima a baixo. -->
+              <span
+                class="text-xs shrink-0 text-n-slate-12 font-medium tabular-nums"
+              >
                 {{
-                  t('INSURANCE.CAPABILITIES.PENDING_AUTH', {
-                    count: insurerSummary(item).pending,
-                  })
+                  insurerSummary(item).pending
+                    ? t(
+                        'INSURANCE.CAPABILITIES.INSURERS_OF_TOTAL',
+                        {
+                          ready: insurerSummary(item).ready,
+                          total: insurerSummary(item).total,
+                        },
+                        insurerSummary(item).total
+                      )
+                    : t(
+                        'INSURANCE.CAPABILITIES.INSURERS_ALL',
+                        { total: insurerSummary(item).total },
+                        insurerSummary(item).total
+                      )
                 }}
               </span>
-            </span>
+            </div>
+            <!-- DINHEIRO PARADO, com nome. O adapter sempre soube qual seguradora recusou; a tela
+                 dizia "1 aguardando credencial" e o corretor não tinha como saber onde entrar.
+                 O desenho aprovado tinha aqui um botão "Rever no AGGER". Ele depende do mesmo
+                 handoff ausente do botão principal (ver comentário nas ações acima): mandar o
+                 corretor para o portal sem sessão o faria digitar a senha de novo, que é
+                 exatamente o atrito que o handoff existe para remover. -->
+            <!-- Habilitado no AGGER e sem NENHUMA seguradora respondendo. A linha existe (o
+                 corretor precisa ver que o produto está parado) mas não conta no veredito, e o
+                 ponto fica cinza. Dizer isso em palavras evita que "0 de 1" pareça erro de tela. -->
+            <!-- Só quando NÃO há recusa a explicar: com seguradora recusada, o aviso âmbar abaixo
+                 já diz quem é e o que fazer, e empilhar as duas caixas na mesma linha faz o
+                 corretor ler duas vezes a mesma parada. -->
+            <div
+              v-if="
+                !insurerSummary(item).ready && !refusedInsurers(item).length
+              "
+              class="flex flex-wrap items-center gap-2 px-3 py-2 text-xs rounded-lg bg-n-alpha-2 text-n-slate-11"
+            >
+              <span class="i-lucide-info size-4 shrink-0" />
+              <span class="min-w-0">
+                {{ t('INSURANCE.CAPABILITIES.NO_INSURERS') }}
+              </span>
+            </div>
+            <div
+              v-if="refusedInsurers(item).length"
+              class="flex flex-wrap items-center gap-2 px-3 py-2 text-xs rounded-lg bg-n-amber-2 text-n-amber-12"
+            >
+              <span class="i-lucide-key-round size-4 shrink-0" />
+              <span class="min-w-0">
+                {{
+                  t(
+                    'INSURANCE.CAPABILITIES.MONEY_LEFT',
+                    {
+                      names: refusedInsurers(item).join(', '),
+                      product: productLabel(item),
+                      count: refusedInsurers(item).length,
+                    },
+                    refusedInsurers(item).length
+                  )
+                }}
+              </span>
+            </div>
           </li>
         </ul>
+        <!-- Sem produto não há ponto na tela, e legenda de cor que ninguém vê é ruído. -->
+        <div
+          v-if="legend.length"
+          class="flex flex-wrap gap-4 px-5 py-2.5 text-xs border-t text-n-slate-11 border-n-weak"
+        >
+          <span
+            v-for="entry in legend"
+            :key="entry.key"
+            class="flex items-center gap-1.5"
+          >
+            <span class="rounded-full size-2" :class="entry.cor" />
+            {{ t(`INSURANCE.CAPABILITIES.${entry.key}`) }}
+          </span>
+        </div>
         <p
           v-if="hiddenProductCount"
-          class="px-5 py-3 text-xs text-n-slate-11 border-t border-n-weak"
+          class="px-5 py-3 text-xs border-t text-n-slate-11 border-n-weak"
         >
           {{
-            t('INSURANCE.CAPABILITIES.HIDDEN_PRODUCTS', {
-              count: hiddenProductCount,
-            })
+            t(
+              'INSURANCE.CAPABILITIES.HIDDEN_PRODUCTS',
+              { count: hiddenProductCount },
+              hiddenProductCount
+            )
           }}
+        </p>
+        <p class="px-5 py-3 text-xs border-t text-n-slate-11 border-n-weak">
+          {{ t('INSURANCE.CAPABILITIES.FOOTER') }}
         </p>
       </section>
     </template>

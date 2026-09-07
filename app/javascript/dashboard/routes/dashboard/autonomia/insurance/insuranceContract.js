@@ -107,9 +107,22 @@ export const FAILURE_CAUSES = Object.freeze({
 export const asksBrokerAction = failure => failure?.actor === 'broker';
 
 // Chave de mensagem por causa. Cada causa tem texto próprio; sem causa, texto genérico.
+//
+// CAUSA DESCONHECIDA CAI NO GENÉRICO, e não vira chave crua na tela. O Rails grava `failure` cru
+// (`connections/sync.rb`), então uma causa nova do adapter chegava aqui e a tela escrevia
+// `INSURANCE.CONNECTION.FAILURES.QUOTA_EXCEEDED` no lugar da frase.
+//
+// A allowlist é `FAILURE_CAUSES`, que já existia e é a mesma lista que o resto do módulo usa —
+// não uma segunda cópia mantida à mão. Vale para as três entradas que passam pelo mesmo
+// `sanitize_deep` do Rails: esta, `evidence.check` (guardada com `te()` no componente) e
+// `layers.*` (guardada por `LAYER_STATES` acima).
+const CAUSAS_CONHECIDAS = new Set(Object.values(FAILURE_CAUSES));
+
 export const failureMessageKey = failure => {
   const cause = failure?.cause;
-  if (!cause) return 'INSURANCE.CONNECTION.FAILURES.UNKNOWN';
+  if (!cause || !CAUSAS_CONHECIDAS.has(String(cause))) {
+    return 'INSURANCE.CONNECTION.FAILURES.UNKNOWN';
+  }
   return `INSURANCE.CONNECTION.FAILURES.${String(cause).toUpperCase()}`;
 };
 
@@ -122,8 +135,17 @@ export const LAYER_ORDER = Object.freeze([
   'risk',
 ]);
 
+// Estados que a tela sabe desenhar. Um valor fora desta lista chega do adapter (o Rails grava
+// `layers` cru em `connections/sync.rb`) e, sem esta guarda, virava
+// `INSURANCE.CONNECTION.LAYERS.STATE.SEJA_LA_O_QUE_FOR` na tela, com o marcador de cor sem classe
+// nenhuma. Desconhecido é `unknown`: "não sei" é a resposta honesta para estado que não sabemos ler.
+export const LAYER_STATES = ['ok', 'failed', 'pending', 'unknown'];
+
 export const layerRows = layers =>
-  LAYER_ORDER.map(key => ({ key, state: layers?.[key] ?? 'unknown' }));
+  LAYER_ORDER.map(key => {
+    const state = layers?.[key] ?? 'unknown';
+    return { key, state: LAYER_STATES.includes(state) ? state : 'unknown' };
+  });
 
 // EVIDÊNCIA (critério 1.6). Instante ABSOLUTO e o que foi feito — "às 14h02, consultando o cadastro
 // da corretora". "Há 3 minutos" não é conferível contra o que o corretor viu no portal, e envelhece

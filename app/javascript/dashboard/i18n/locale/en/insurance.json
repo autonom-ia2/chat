@@ -8,8 +8,6 @@
     },
     "CONNECTION": {
       "PROVIDER_AGGER": "AGGER · Aggilizador",
-      "PROVIDER_AGGER_SUBTITLE": "Multicálculo de seguros da corretora",
-      "NEVER": "nunca",
       "SESSION_AUTHENTICATED": "Autenticada",
       "SESSION_PENDING": "Aguardando autenticação",
       "STATES": {
@@ -41,7 +39,7 @@
       "ACTIONS": {
         "CONNECT": "Conectar AGGER",
         "RECONNECT": "Reconectar",
-        "RESCAN": "Atualizar configuração",
+        "RESCAN": "Atualizar produtos",
         "DISCONNECT": "Desconectar",
         "RETRY": "Tentar de novo"
       },
@@ -56,7 +54,8 @@
         "RESCANNED": "Buscando os produtos e seguradoras no AGGER. Leva cerca de meio minuto e a tela atualiza sozinha.",
         "DISCONNECTED": "Conexão removida."
       },
-      "VERIFIED_AT": "às {at}, {check}",
+      "VERIFIED_AT": "em {at}, {check}",
+      "VERIFIED_AT_PLAIN": "em {at}",
       "NOT_VERIFIED": "ainda não verificado",
       "EVIDENCE": {
         "LOGIN": "entrando no portal",
@@ -76,32 +75,55 @@
         "UNKNOWN": "A conexão não está saudável e o motivo não foi registrado — provavelmente ela foi verificada por uma versão anterior. Clique em Reconectar para que o motivo seja identificado."
       },
       "LAYERS": {
-        "TITLE": "O que foi verificado",
         "SUBTITLE": "Cada camada tem prova própria. O que ninguém olhou aparece como não verificado.",
-        "RUNTIME": "Serviço da Autonom.ia",
-        "PLATFORM_AUTH": "Acesso ao AGGER",
-        "INSURER_AUTH": "Credenciais das seguradoras",
+        "RUNTIME": "O serviço da Autonom.ia responde",
+        "RUNTIME_DETAIL": "Verificado agora, junto com a sessão.",
+        "PLATFORM_AUTH": "A conta abre sessão no AGGER",
+        "PLATFORM_AUTH_DETAIL": "Login aceito pelo portal em {at}. Verificamos a cada 30 minutos.",
+        "INSURER_AUTH": "Credenciais nas seguradoras",
+        "INSURER_AUTH_COUNT": "Credenciais nas seguradoras — {count} recusada | Credenciais nas seguradoras — {count} recusadas",
         "PRODUCT_SUPPORT": "Ramo suportado pela integração",
         "RISK": "Risco aceito pela seguradora",
         "STATE": {
           "OK": "verificado",
           "FAILED": "falhou",
+          "PENDING": "aguardando credencial",
           "UNKNOWN": "não verificado"
-        }
+        },
+        "DISCLOSURE": "Como isto foi verificado",
+        "INSURER_AUTH_OK": "A única foi conferida no portal e passou. | As {total} foram conferidas uma a uma no portal e passaram.",
+        "INSURER_AUTH_FAILED": "{names} recusou o login da corretora. | {names} recusaram o login da corretora.",
+        "INSURER_AUTH_REST": "Nenhuma outra seguradora da conta passou. | A outra seguradora da conta passou. | As outras {count} seguradoras da conta passaram.",
+        "FROM_SCAN": "conferido na descoberta de {at}"
       },
       "INSURERS_PENDING": {
         "TITLE": "Seguradoras com credencial pendente",
-        "BODY": "{count} seguradora(s) recusaram o login que a corretora cadastrou no AGGER, vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente."
+        "BODY": "{count} seguradora recusou o login que a corretora cadastrou no AGGER, vista na cotação de {at}. Ela não cota até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente. | {count} seguradoras recusaram o login que a corretora cadastrou no AGGER, vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente."
       },
-      "ALREADY_ACTIVE": "Esta conta AGGER já estava em uso quando conectamos (desde {at}). Pode ser você em outra aba, ou outro ambiente cotando pela mesma conta — nesse caso, as cotações aparecem misturadas no portal."
+      "ALREADY_ACTIVE": "Esta conta AGGER já estava em uso quando conectamos (desde {at}). Pode ser você em outra aba, ou outro ambiente cotando pela mesma conta — nesse caso, as cotações aparecem misturadas no portal.",
+      "VERDICT": {
+        "READY": "Pronta para cotar {count} produtos",
+        "READY_ONE": "Pronta para cotar 1 produto",
+        "NOT_READY": "Não está cotando",
+        "WORKING": "Verificando com o AGGER…"
+      }
     },
     "CAPABILITIES": {
-      "TITLE": "Produtos e seguradoras",
-      "SUBTITLE": "O que esta conta consegue cotar hoje, conforme descoberto no AGGER.",
-      "INSURERS_COUNT": "{count} seguradoras disponíveis",
-      "PENDING_AUTH": "{count} aguardando credencial",
+      "TITLE": "O que esta conta cota hoje",
+      "SUBTITLE": "Lido do AGGER em {at}. Cada produto mostra quantas seguradoras respondem por ele.",
+      "SUBTITLE_NO_SCAN": "Cada produto mostra quantas seguradoras respondem por ele.",
       "INFERRED_HINT": "Nome deduzido das coberturas; ainda não confirmado no portal.",
-      "HIDDEN_PRODUCTS": "{count} ramo(s) que esta conta ainda não tem habilitado no AGGER não aparecem aqui."
+      "HIDDEN_PRODUCTS": "{count} ramo que esta conta ainda não tem habilitado no AGGER não aparece aqui. | {count} ramos que esta conta ainda não tem habilitados no AGGER não aparecem aqui.",
+      "INSURERS_OF_TOTAL": "{ready} de {total} seguradora | {ready} de {total} seguradoras",
+      "INSURERS_ALL": "{total} seguradora | {total} seguradoras",
+      "MONEY_LEFT": "{names} está fora por credencial recusada — uma seguradora a menos em cada cotação de {product}. | {names} estão fora por credencial recusada — {count} seguradoras a menos em cada cotação de {product}.",
+      "NO_INSURERS": "Nenhuma seguradora responde por este produto hoje.",
+      "EMPTY": "Esta conta não tem nenhum produto habilitado no AGGER.",
+      "UNNAMED_BRANCH": "Ramo {ramo}",
+      "LEGEND_QUOTING": "cotando",
+      "LEGEND_PENDING": "alguma seguradora aguardando credencial",
+      "LEGEND_NONE": "sem seguradora respondendo",
+      "FOOTER": "Produto que a corretora não tem habilitado no AGGER não aparece aqui. Para habilitar, fale com a AGGER — a Autonom.ia lê o que a sua conta já pode vender."
     },
     "PRODUCTS": {
       "AUTO": "Automóvel",
@@ -111,7 +133,7 @@
       "VIDA": "Vida",
       "VIAGEM": "Viagem",
       "CONDOMINIO": "Condomínio",
-      "FIANCA_LOCATICIA": "Fiança locatícia",
+      "FIANCA_LOCATICIA": "Aluguel",
       "ACIDENTES_PESSOAIS": "Acidentes pessoais",
       "VIDA_GLOBAL": "Vida em grupo",
       "CELULAR": "Celular",

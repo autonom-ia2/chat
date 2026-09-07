@@ -102,13 +102,22 @@ describe('InsuranceConnectionsTab (API)', () => {
       password: 'segredo',
     });
     expect(wrapper.html()).not.toContain('segredo');
-    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.STATES.READY');
+    // Conectada e cotando: quem responde é o VEREDITO, e o badge de estado sai de cena para não
+    // dizer "Conectado" ao lado de "Pronta para cotar 1 produto".
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERDICT.READY_ONE');
+    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.STATES.READY');
     expect(wrapper.text()).toContain('co*******@exemplo.com.br');
     expect(wrapper.text()).toContain('CORRETORA X');
     // t(chave, fallback): sem mensagens no teste, o rótulo do produto cai no slug — é o comportamento
     // desejado para ramos ainda sem nome (ramo_100). O que importa é o mapa renderizado.
-    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.INSURERS_COUNT');
-    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.PENDING_AUTH');
+    //
+    // A contagem mostra o DENOMINADOR quando há seguradora pendente: `auto` no fixture tem Justos
+    // pronta e Mitsui recusada, e "1 seguradora disponível" esconderia que são 2 no total.
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CAPABILITIES.INSURERS_OF_TOTAL'
+    );
+    // E a recusada aparece PELO NOME, não como contagem anônima.
+    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.MONEY_LEFT');
     expect(wrapper.find('#insurance-agger-password').exists()).toBe(false);
   });
 
@@ -153,7 +162,8 @@ describe('InsuranceConnectionsTab (API)', () => {
       .trigger('click');
     await flushPromises();
     expect(api.reconnect).toHaveBeenCalledTimes(1);
-    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.STATES.READY');
+    // Reconectou e voltou a cotar: o veredito é quem diz isso agora.
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERDICT.READY_ONE');
   });
 
   it('blocks connecting when the encryption vault is unavailable', async () => {
@@ -176,9 +186,177 @@ describe('InsuranceConnectionsTab (API)', () => {
     const wrapper = await mountTab();
 
     // `ready` traz auto (habilitado) e vida (nao habilitado)
-    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.INSURERS_COUNT');
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CAPABILITIES.INSURERS_OF_TOTAL'
+    );
     expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.HIDDEN_PRODUCTS');
+    // Só o produto habilitado vira linha. As camadas viraram <details> e não entram na conta de
+    // <li> desta seção — por isso a asserção continua valendo 1.
     expect(wrapper.findAll('li')).toHaveLength(1);
+  });
+
+  // O VEREDITO. Antes o topo dizia só "Conectado", e conectado não é a pergunta do corretor.
+  it('responde quantos produtos dao para cotar, antes de qualquer detalhe', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: ready } });
+    const wrapper = await mountTab();
+    // `ready` tem um produto habilitado (auto) e um não habilitado (vida).
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERDICT.READY_ONE');
+  });
+
+  // Estes quatro nasceram de uma prova de mutação que saiu VERDE com o código removido: legenda,
+  // rodapé, código do ramo e ordenação estavam na tela e não estavam em teste nenhum. Item que só
+  // o olho humano defende volta a sumir na próxima refatoração.
+  //
+  // A CÓPIA em si é julgada em `InsuranceConnectionsTab.copy.spec.js`, com i18n real: aqui a
+  // asserção é sobre a chave, e trocar o texto por outro não derrubaria este exemplo.
+  it('mostra legenda das cores e o rodape que explica produto ausente', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: ready } });
+    const wrapper = await mountTab();
+    // `ready` tem auto com uma seguradora recusada: a legenda mostra a entrada âmbar.
+    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.LEGEND_PENDING');
+    expect(wrapper.text()).toContain('INSURANCE.CAPABILITIES.FOOTER');
+  });
+
+  // O código do ramo é o que o corretor lê ao telefone com o suporte da AGGER.
+  it('mostra o codigo do ramo ao lado do produto', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: ready } });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('31');
+  });
+
+  // Mais seguradoras primeiro. A ordem crua do adapter é por código de ramo, que não diz nada a
+  // quem lê — e "2" viria antes de "31".
+  it('lista os produtos com mais seguradoras primeiro', async () => {
+    const trio = {
+      ...ready,
+      capabilities: {
+        products: [
+          {
+            ...ready.capabilities.products[0],
+            product: 'bike',
+            platformRef: '711',
+            insurers: [
+              {
+                code: '1',
+                name: 'Porto',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+            ],
+          },
+          {
+            ...ready.capabilities.products[0],
+            product: 'residencial',
+            platformRef: '2',
+            insurers: [
+              {
+                code: '1',
+                name: 'Porto',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+              {
+                code: '2',
+                name: 'Zurich',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+              {
+                code: '3',
+                name: 'HDI',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+            ],
+          },
+          {
+            ...ready.capabilities.products[0],
+            product: 'celular',
+            platformRef: '100',
+            insurers: [
+              {
+                code: '1',
+                name: 'Porto',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+              {
+                code: '2',
+                name: 'Zurich',
+                enabled: true,
+                integrationStatus: 'ready',
+              },
+            ],
+          },
+        ],
+      },
+    };
+    api.getConnection.mockResolvedValue({ data: { payload: trio } });
+    const wrapper = await mountTab();
+    const texto = wrapper.text();
+    expect(texto.indexOf('residencial')).toBeLessThan(texto.indexOf('celular'));
+    expect(texto.indexOf('celular')).toBeLessThan(texto.indexOf('bike'));
+  });
+
+  // O teste de pluralização MUDOU DE ARQUIVO, e o motivo importa: aqui o i18n roda com
+  // `messages: {}`, `t()` devolve a chave crua, e um `not.toContain('1 seguradoras')` passa sempre
+  // — sem nunca renderizar a frase que deveria julgar. Um QA independente pegou exatamente isso:
+  // o teste existia, estava verde, e a tela escrevia "0 de 1 seguradoras" em produção.
+  //
+  // Todo exemplo sobre TEXTO QUE O CORRETOR LÊ vive em `InsuranceConnectionsTab.copy.spec.js`,
+  // que carrega as mensagens de verdade com `withFullI18n`.
+
+  // Conexão sem produto nenhum não pode dizer "pronta para cotar 0 produtos": isso lê como se
+  // estivesse tudo bem e o número fosse detalhe.
+  it('sem produto habilitado, o veredito diz que nao esta cotando', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: { ...ready, capabilities: { products: [] } },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERDICT.NOT_READY');
+    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.VERDICT.READY');
+  });
+
+  // A CAMADA DE CREDENCIAIS SABIA E DIZIA "não verificado". O veredito vem do scan, e carimbado
+  // com a data DELE — usar a do healthcheck faria a tela afirmar que verificou agora o que
+  // verificou antes.
+  it('a camada de credenciais responde pelo scan, e nomeia quem recusou', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          layers: { runtime: 'ok', insurer_auth: 'unknown' },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED'
+    );
+    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.LAYERS.FROM_SCAN');
+  });
+
+  // Sem scan não há o que derivar, e a camada tem de continuar dizendo "não sei" — o critério 1.2
+  // existe para não confundir "não verificado" com "verificado e passou".
+  it('sem scan, a camada de credenciais continua nao verificada', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...ready,
+          last_capability_scan_at: null,
+          layers: { runtime: 'ok', insurer_auth: 'unknown' },
+        },
+      },
+    });
+    const wrapper = await mountTab();
+    expect(wrapper.text()).not.toContain(
+      'INSURANCE.CONNECTION.LAYERS.INSURER_AUTH_FAILED'
+    );
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.LAYERS.STATE.UNKNOWN'
+    );
   });
 
   it('disconnect returns to not_configured', async () => {
@@ -290,7 +468,6 @@ describe('InsuranceConnectionsTab (API)', () => {
     });
     const wrapper = await mountTab();
     expect(wrapper.text()).toContain('INSURANCE.CONNECTION.VERIFIED_AT');
-    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.MINUTES_AGO');
   });
 
   // CRITÉRIO 4.5 — credencial de seguradora aparece na tela de Conexões, e só nela.
