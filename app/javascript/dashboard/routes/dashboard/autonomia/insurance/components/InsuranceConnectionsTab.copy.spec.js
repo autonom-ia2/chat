@@ -66,6 +66,71 @@ describe('o texto que a aba Conexões escreve', () => {
     Object.values(api).forEach(fn => fn.mockReset());
   });
 
+  // AS TRÊS GUARDAS DO DADO CRU DE `capabilities`.
+  //
+  // Elas existem e fazem a coisa certa, mas o QA da rodada final registrou que as três mutações
+  // que as revertem SOBREVIVIAM: comportamento correto sem teste que o trave é a mesma dívida que
+  // já reprovou esta branch duas vezes. `capabilities` é o único dos quatro caminhos crus que nem
+  // passa pelo `sanitize_deep` do Rails, então é o que menos pode depender de disciplina.
+  it('produto sem a chave `insurers` nao derruba a aba', async () => {
+    const wrapper = await montar(
+      conexao([{ product: 'auto', label: 'Automóvel' }])
+    );
+    const texto = wrapper.text();
+    // A aba renderiza: sem a guarda, `insurers.some` estoura em `undefined` e a tela fica branca.
+    expect(texto).toContain('Automóvel');
+    expect(texto).toContain('0 seguradoras');
+    expect(texto).toContain(
+      'Nenhuma seguradora responde por este produto hoje.'
+    );
+  });
+
+  // `enabled` é quem decide se cota. `integrationStatus` só qualifica POR QUE está fora, e não
+  // pode desmentir — quando desmentia, o denominador contava por um e o aviso nomeava pelo outro.
+  it('enabled manda sobre integrationStatus na contagem', async () => {
+    const wrapper = await montar(
+      conexao([
+        {
+          product: 'auto',
+          label: 'Automóvel',
+          insurers: [
+            {
+              code: '1',
+              name: 'Porto',
+              enabled: true,
+              integrationStatus: 'ready',
+            },
+            // O dado se contradiz: diz `ready` e diz que não está habilitada.
+            {
+              code: '2',
+              name: 'Zurich',
+              enabled: false,
+              integrationStatus: 'ready',
+            },
+          ],
+        },
+      ])
+    );
+    expect(wrapper.text()).toContain('1 de 2 seguradoras');
+  });
+
+  // Slug sem `label` e sem tradução escrevia `ramo_100` na tela — o corretor lendo um
+  // identificador nosso onde esperava o nome do produto.
+  it('slug sem label vira "Ramo N", e nunca o slug cru', async () => {
+    const wrapper = await montar(
+      conexao([
+        {
+          product: 'ramo_100',
+          platformRef: '100',
+          insurers: [seguradora('1', 'Porto')],
+        },
+      ])
+    );
+    const texto = wrapper.text();
+    expect(texto).toContain('Ramo 100');
+    expect(texto).not.toContain('ramo_100');
+  });
+
   // O caso está no próprio desenho aprovado: Bike, uma seguradora.
   it('escreve "1 seguradora" no singular, nunca "1 seguradoras"', async () => {
     const wrapper = await montar(
