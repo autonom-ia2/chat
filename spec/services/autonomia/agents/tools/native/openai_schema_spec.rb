@@ -8,7 +8,7 @@ require 'rails_helper'
 #
 # Em `strict: true` não existe campo fora de `required`. Uma ferramenta com UM parâmetro opcional
 # derrubava a chamada INTEIRA — não a ferramenta, o turno todo —, e o agente ficava em silêncio.
-RSpec.describe 'Native tools: contrato do openai_schema' do
+RSpec.describe Autonomia::Agents::Tools::Native::Base do
   # Toda ferramenta nativa passa por aqui. Uma nova com parâmetro opcional falha neste exemplo antes
   # de chegar a uma conversa de verdade.
   Autonomia::Agents::Tools::Registry.all.each do |tool|
