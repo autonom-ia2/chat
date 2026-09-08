@@ -245,6 +245,57 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
     end
 
+    # ACABAR SEM FECHAR TAMBÉM É UM DESFECHO. Em 08/09/2026 uma cotação entregou cinco preços,
+    # estourou o prazo, e a conversa PAROU: o comparativo em PDF só era gerado no caminho feliz, e
+    # `fail_run` não publicava nada porque já havia entrega. O cliente ficou com preços soltos, sem
+    # comparativo e sem uma palavra.
+    it 'entrega o que ainda vale e fecha a conversa quando ja houve entrega' do
+      # Arrange
+      register_async_tool(
+        build_async_tool(poll: progress.running(deliveries: ['primeiros precos']),
+                         closing: ['Comparativo: https://portal.exemplo.test/c.pdf'])
+      )
+      run = submitted_run
+      described_class.new.perform(run.id, 0)
+
+      # Act — a passada seguinte estoura o teto
+      described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
+
+      # Assert
+      expect(bot_contents.last(2))
+        .to eq(['Comparativo: https://portal.exemplo.test/c.pdf',
+                'Algumas consultas não responderam a tempo. O que chegou está aqui em cima.'])
+      expect(bot_contents).not_to include('não consegui concluir a consulta')
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+    end
+
+    # Dizer "não consegui" a quem acabou de receber preço desmente o que ele está lendo.
+    it 'nao usa o texto de falha quando algo ja foi entregue' do
+      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['um preco'])))
+      run = submitted_run
+      described_class.new.perform(run.id, 0)
+
+      described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
+
+      expect(bot_contents).not_to include('não consegui concluir a consulta')
+      expect(bot_contents.last).to include('não responderam a tempo')
+    end
+
+    # Encerramento é cortesia sobre um caminho que já deu errado: falhar aqui apagaria o registro
+    # do desfecho.
+    it 'registra o desfecho mesmo se o encerramento quebrar' do
+      register_async_tool(
+        build_async_tool(poll: progress.running(deliveries: ['um preco']),
+                         closing: -> { raise 'comparativo fora do ar' })
+      )
+      run = submitted_run
+      described_class.new.perform(run.id, 0)
+
+      described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
+
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+    end
+
     it 'fails without publishing anything when the tool is gone from the catalog' do
       # Arrange — a nativa saiu do Registry entre o disparo e a execução.
       allow(Autonomia::Agents::Tools::Registry).to receive(:find).and_return(nil)

@@ -69,6 +69,18 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     submeter
   end
 
+  # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele era gerado só no ramo `done`,
+  # quando o portal marcava a cotação como `completed` — e em 08/09/2026 a execução entregou cinco
+  # preços e estourou o prazo na 22ª consulta, então o PDF nunca saiu. O comparativo é o que o
+  # cliente leva para decidir; os preços soltos no chat são o resumo dele.
+  def closing_deliveries(handle)
+    [comparison_pdf(handle.to_h)].compact
+  end
+
+  def partial_message
+    'Algumas seguradoras não responderam a tempo. Os preços acima são os que chegaram.'
+  end
+
   # A MESMA CONFERÊNCIA DO `start`, só que a tempo de servir para alguma coisa. Roda dentro do turno
   # e devolve texto ao modelo, que pede o dado que falta em vez de anunciar uma cotação que a
   # validação vai recusar cinco segundos depois — foi o que aconteceu em 08/09/2026.

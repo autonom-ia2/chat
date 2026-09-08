@@ -422,6 +422,24 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(connector).to have_received(:quote_proposal).with(hash_excluding(:insurer_code))
     end
 
+    # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele saía só no ramo `done`, quando
+    # o portal fechava a cotação — e em 08/09/2026 a execução entregou cinco preços e estourou o
+    # prazo na 22ª consulta, então o PDF nunca saiu. O `AsyncRunJob` chama isto ao desistir.
+    it 'entrega o comparativo tambem quando a cotacao acaba sem fechar' do
+      # Act — nenhum `done`: é o encerramento por prazo, com preços já entregues
+      entregas = tool.closing_deliveries('quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'])
+
+      # Assert
+      expect(entregas.first).to include('https://exemplo.test/comparativo.pdf')
+    end
+
+    it 'nao repete o comparativo no encerramento se ele ja tinha saido' do
+      entregas = tool.closing_deliveries('quote_id' => 'abc:1', described_class::PDF_SENT_KEY => true,
+                                         described_class::DELIVERED_KEY => ['43'])
+
+      expect(entregas).to be_empty
+    end
+
     it 'never sends the PDF twice' do
       # Arrange
       allow(connector).to receive(:quote_result).and_return(

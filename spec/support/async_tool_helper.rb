@@ -7,10 +7,10 @@ module AsyncToolHelper
   # é assim que se testa "parcial no 1º, final no 2º".
   # `precheck` aceita texto (o que o modelo recebe no lugar do aceite) ou um callable — que pode
   # levantar, para exercitar "conferência caiu, aceita mesmo assim".
-  # rubocop:disable Metrics/ParameterLists -- é um construtor de dublê: cada parâmetro é um
-  # comportamento que algum exemplo precisa ligar isoladamente.
+  # rubocop:disable Metrics/ParameterLists, Metrics/MethodLength -- é um construtor de dublê:
+  # cada parâmetro é um comportamento que algum exemplo precisa ligar isoladamente.
   def build_async_tool(slug: 'consultar_cotacao', handle: { 'id' => 'cot-1' }, poll: nil,
-                       start_error: nil, poll_error: nil, precheck: nil)
+                       start_error: nil, poll_error: nil, precheck: nil, closing: nil)
     Class.new(::Autonomia::Agents::Tools::Native::Base) do
       define_singleton_method(:slug) { slug }
       define_singleton_method(:description) { 'Ferramenta assíncrona de teste.' }
@@ -21,6 +21,11 @@ module AsyncToolHelper
 
       # A conferência do turno: devolve texto ao modelo (e nenhuma execução é aberta) ou nil.
       define_method(:precheck) { precheck.respond_to?(:call) ? precheck.call : precheck }
+
+      # O que ainda vale entregar quando a execução acaba sem fechar (o comparativo, na cotação).
+      define_method(:closing_deliveries) do |_handle|
+        closing.respond_to?(:call) ? closing.call : Array(closing)
+      end
 
       define_method(:start) do
         raise start_error if start_error
@@ -35,7 +40,7 @@ module AsyncToolHelper
       end
     end
   end
-  # rubocop:enable Metrics/ParameterLists
+  # rubocop:enable Metrics/ParameterLists, Metrics/MethodLength
 
   # Faz o catálogo devolver esta ferramenta para o slug dela (e nada para os outros).
   def register_async_tool(tool)

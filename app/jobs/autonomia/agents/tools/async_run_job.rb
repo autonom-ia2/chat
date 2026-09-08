@@ -119,9 +119,30 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.finish!('done')
   end
 
+  # ACABAR SEM FECHAR TAMBÉM É UM DESFECHO. A guarda `delivered_count.zero?` está certa no que ela
+  # evita — dizer "não consegui" a quem acabou de receber preço desmente o que ele está lendo —, mas
+  # o efeito era o cliente ficar sem NADA: em 08/09/2026 uma cotação entregou cinco preços, estourou
+  # o prazo, e a conversa simplesmente parou, sem comparativo e sem uma palavra.
+  #
+  # Agora, quando já houve entrega, a ferramenta ganha a chance de entregar o que ainda vale (o
+  # comparativo em PDF) e o cliente recebe um fecho que não desmente os preços.
   def fail_run(run, native, code)
-    publish(run, native.failure_message) if native.present? && run.delivered_count.zero?
+    if native.present?
+      run.delivered_count.zero? ? publish(run, native.failure_message) : encerrar(run, native)
+    end
     run.finish!('failed', failure_code: code.presence || 'tool_failed')
+  end
+
+  # NUNCA levanta: o encerramento é cortesia sobre um caminho que já deu errado, e falhar aqui
+  # apagaria o `finish!` que registra o desfecho.
+  def encerrar(run, native)
+    return publish(run, native.partial_message) if run.agent.blank?
+
+    tool = native.new(agent: run.agent, params: run.arguments)
+    Array(tool.closing_deliveries(run.handle)).each { |texto| publish(run, texto) }
+    publish(run, native.partial_message)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{run.slug} #{e.class}")
   end
 
   # Parada por decisão do operador: sem mensagem ao cliente. Publicar aqui seria furar exatamente o
