@@ -6,24 +6,13 @@
 # O significado NÃO é decidido aqui: quem deriva é o adapter, olhando o parcelamento que o portal
 # devolveu, e manda em `basis`. Aqui só se traduz o que veio — e quando não veio, não se inventa.
 class Autonomia::Insurance::PremiumText
-  # Sai UMA vez por bloco de preços, quando algum veio sem como saber se é total ou parcela.
-  # Repetida em cada linha ela vira ruído, e ruído é o que faz o cliente parar de ler o aviso.
-  SEM_SIGNIFICADO = 'Sobre os valores: a seguradora informou o preço mas não o formato de ' \
-                    'pagamento. O total e as parcelas saem na proposta.'.freeze
-  # A mesma coisa, colada no item a que pertence. Curta de propósito: é uma linha secundária
-  # debaixo de um preço, não um parágrafo.
+  # Colada no item a que pertence, e curta de propósito: é uma linha secundária debaixo de um
+  # preço. Era um parágrafo no fim do bloco, que aparecia mesmo valendo para UMA oferta e ficava
+  # maior que os próprios preços.
   SEM_BASE = 'a seguradora não informou se é o total ou uma parcela'.freeze
 
   def initialize(premium)
     @premium = premium.to_h
-  end
-
-  # -> String. Nunca afirma período que o portal não informou.
-  def to_s
-    return "#{valor} no total (em até #{parcelas['count']}x de #{money(parcelas['amount'])})" if parcelas.present?
-    return "#{valor} no total" if @premium['basis'] == 'total'
-
-    valor
   end
 
   # A PRIMEIRA LINHA DO ITEM: só o valor e o que se sabe dele. O parcelamento e a ressalva descem

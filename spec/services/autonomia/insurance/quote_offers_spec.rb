@@ -43,7 +43,8 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
       indice = linhas.index { |linha| linha.include?('Bp Assinatura') }
 
       expect(linhas[indice + 1]).to include('não informou')
-      expect(texto).not_to include(Autonomia::Insurance::PremiumText::SEM_SIGNIFICADO)
+      # E aparece UMA vez: como parágrafo do bloco ela valia para ofertas que tinham base.
+      expect(texto.scan('não informou').size).to eq(1)
     end
 
     it 'nao repete a ressalva quando todas as ofertas tem base' do
@@ -58,6 +59,19 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
 
       expect(texto).not_to include('chegaram')
       expect(texto).not_to include('Chegaram')
+    end
+
+    it 'abre o primeiro lote sem prometer que virao outros' do
+      texto = described_class.describe([offer('Suhai', 4147.70)], first: true)
+
+      expect(texto).to start_with('Primeiros preços:')
+    end
+
+    # Nome vindo do portal, interpolado dentro do negrito: um `*` fecharia o negrito cedo.
+    it 'nao deixa o nome da seguradora quebrar o negrito' do
+      texto = described_class.describe([offer("Se*gu\nradora", 100.0)], first: true)
+
+      expect(texto).to start_with("Primeiros preços:\n\n• *Se gu radora* —")
     end
 
     it 'concorda em numero com as ofertas do lote' do

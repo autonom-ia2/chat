@@ -52,9 +52,16 @@ class Autonomia::Insurance::QuoteOffers
   # Um item por oferta: nome e valor na primeira linha, o que qualifica aquele valor na segunda.
   def self.item(offer)
     premium = ::Autonomia::Insurance::PremiumText.new(offer['premium'])
-    linha = "• *#{offer.dig('insurer', 'name')}* — #{premium.resumo}"
+    linha = "• *#{nome(offer)}* — #{premium.resumo}"
     detalhe = premium.detalhe
     detalhe ? "#{linha}\n  #{detalhe}" : linha
+  end
+
+  # O NOME VEM DO PORTAL e é interpolado dentro do negrito. Um `*` no meio fecha o negrito cedo e o
+  # resto do nome vaza com asterisco à mostra; uma quebra de linha desmonta o marcador. Nenhuma das
+  # duas apareceu ainda — e nenhuma das duas é nossa para garantir que não apareça.
+  def self.nome(offer)
+    offer.dig('insurer', 'name').to_s.tr("*\n\r", ' ').squeeze(' ').strip
   end
 
   # Sem telegrafar o mecanismo. "Primeiros preços que chegaram" e "Chegaram mais opções" descrevem
