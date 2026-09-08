@@ -7,7 +7,14 @@ require 'rails_helper'
 RSpec.describe 'Autonomia::Insurance::Connector quote' do
   let(:session) { { 'multicalculoToken' => 'multi' } }
   let(:mock) { Autonomia::Insurance::Connector::Mock.new }
-  let(:input) { { 'placa' => 'ABC1D23', 'cpf' => '000.000.000-00' } }
+  # O FORMATO QUE O ADAPTER RECEBE, e não o que o mock aceitava por engano. Este exemplo montava
+  # `placa` no topo do objeto — chave que nenhuma cotação real levou: a entrada de auto tem
+  # `vehicle.plate` desde sempre, e a de qualquer outro ramo nem tem veículo. O mock olhava a chave
+  # errada, ninguém o exercitava com o payload de verdade, e as duas pontas concordavam num contrato
+  # que o portal desconhece.
+  let(:input) do
+    { 'insured' => { 'document' => '00000000000' }, 'vehicle' => { 'plate' => 'ABC1D23' } }
+  end
 
   def start
     mock.quote_start(provider: 'agger', session: session, product: 'auto', input: input)
