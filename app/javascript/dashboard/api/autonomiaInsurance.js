@@ -30,6 +30,22 @@ class AutonomiaInsuranceAPI extends ApiClient {
   removeConnection(provider = 'agger') {
     return axios.delete(`${this.url}/connection`, { params: { provider } });
   }
+
+  // O Agente de Cotação da conta. `payload` nulo = ainda não existe.
+  getQuoteAgent() {
+    return axios.get(`${this.url}/quote_agent`);
+  }
+
+  createQuoteAgent({ name, brokerName, businessHours, behavior }) {
+    return axios.post(`${this.url}/quote_agent`, {
+      quote_agent: {
+        name,
+        broker_name: brokerName,
+        business_hours: businessHours,
+        behavior,
+      },
+    });
+  }
 }
 
 export default new AutonomiaInsuranceAPI();

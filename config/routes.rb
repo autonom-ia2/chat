@@ -358,6 +358,9 @@ Rails.application.routes.draw do
                 post :reconnect
                 post :scan
               end
+              # O Agente de Cotação da conta. `show` responde se já existe (a tela decide entre
+              # criar e abrir); `create` o monta pronto, com o especialista e as instruções.
+              resource :quote_agent, only: [:show, :create], controller: :quote_agent
             end
             namespace :prospecting do
               resources :searches, only: [:index, :show, :create, :update, :destroy] do
