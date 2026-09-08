@@ -183,6 +183,41 @@ const onDisconnect = () =>
     'INSURANCE.CONNECTION.ALERTS.DISCONNECTED'
   );
 
+// ABRIR O PORTAL JÁ LOGADO.
+//
+// Fora do `run` de propósito: `run` aplica o payload da resposta sobre `connection`, e o que volta
+// daqui não é uma conexão — é a URL. Passar por ele apagaria o estado da tela.
+//
+// A URL vive o tempo de uma variável local. Não entra em `ref`, não vai para o estado do
+// componente, e não é registrada em log: ela É a credencial da corretora, cifrada, e o que a
+// protege é não existir em lugar nenhum depois que a aba abre.
+//
+// `window.open` ANTES do await falharia por bloqueio de pop-up? Não: o clique do corretor é a
+// interação que autoriza, e a aba é aberta na volta da chamada, dentro do mesmo gesto. Se um
+// bloqueador ainda assim barrar, o `catch` avisa em vez de deixar o botão parecendo morto.
+const isOpeningPortal = ref(false);
+const onOpenPortal = async () => {
+  isOpeningPortal.value = true;
+  try {
+    const { data } = await AutonomiaInsuranceAPI.portalLink();
+    const aberta = window.open(
+      data.payload.url,
+      '_blank',
+      'noopener,noreferrer'
+    );
+    if (!aberta) useAlert(t('INSURANCE.CONNECTION.ERRORS.POPUP_BLOCKED'));
+  } catch (error) {
+    const chave = error?.response?.data?.error;
+    useAlert(
+      chave === 'autonomia.insurance.connection.no_quote_yet'
+        ? t('INSURANCE.CONNECTION.ERRORS.NO_QUOTE_YET')
+        : t('INSURANCE.CONNECTION.ERRORS.PORTAL_LINK')
+    );
+  } finally {
+    isOpeningPortal.value = false;
+  }
+};
+
 // CRITÉRIO 1.6 — a verificação diz QUANDO e COM QUE evidência.
 //
 // Isto era `formatRelative`, que mostrava "há 3 minutos". Dois defeitos: o corretor não consegue
@@ -686,18 +721,28 @@ onUnmounted(pararAcompanhamento);
             <p>{{ failureText }}</p>
           </div>
 
-          <!-- FALTA AQUI, DE PROPÓSITO E COM DATA: o botão "Abrir o AGGER logado".
-               Ele é a ação principal do desenho aprovado em 07/09/2026 — abre o portal já
-               autenticado, para o corretor cotar ao lado do agente sem derrubar a sessão dele
-               (medido: não derruba).
-               NÃO ENTROU porque não existe porta de entrada para o handoff: `montarLinkDeAba()`
-               está no adapter (`src/platforms/agger/portal/handoff.ts`), testado, e sem comando de
-               CLI nem rota HTTP que o invoque; aqui também não há rota. Precisa de backend nos dois
-               lados antes de virar botão.
-               QUANDO ENTRAR, entra junto o aviso de que o endereço aberto VALE COMO A SENHA da
-               conta — o token da URL é o corpo do login cifrado, não expira, e sobrevive em
-               histórico e print. Botão sem esse aviso não pode ir para produção. -->
+          <!-- "ABRIR O AGGER LOGADO" — a ação principal do desenho aprovado em 07/09/2026.
+               Abre o portal já autenticado, para o corretor cotar ao lado do agente. Não derruba a
+               sessão do agente: medido no portal real, duas vezes.
+
+               APONTA PARA A ÚLTIMA COTAÇÃO da conta, e não para a home — decisão do Rodrigo
+               (caminho B), porque a rota de handoff do portal abre UMA cotação. Sem cotação nenhuma
+               o botão não aparece: oferecer um atalho que não vai a lugar nenhum é pior do que não
+               oferecer.
+
+               A URL é gerada NO CLIQUE e não fica guardada em lugar nenhum do front. -->
           <div class="flex flex-wrap items-center gap-2">
+            <NextButton
+              v-if="connection.last_quote"
+              solid
+              blue
+              sm
+              icon="i-lucide-external-link"
+              :label="t('INSURANCE.CONNECTION.ACTIONS.OPEN_PORTAL')"
+              :disabled="isBusy || !isConnected"
+              :is-loading="isOpeningPortal"
+              @click="onOpenPortal"
+            />
             <NextButton
               faded
               slate

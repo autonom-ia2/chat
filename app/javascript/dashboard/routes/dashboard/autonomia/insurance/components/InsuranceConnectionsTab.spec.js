@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   reconnect: vi.fn(),
   rescan: vi.fn(),
   removeConnection: vi.fn(),
+  portalLink: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: api }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -193,6 +194,68 @@ describe('InsuranceConnectionsTab (API)', () => {
     // Só o produto habilitado vira linha. As camadas viraram <details> e não entram na conta de
     // <li> desta seção — por isso a asserção continua valendo 1.
     expect(wrapper.findAll('li')).toHaveLength(1);
+  });
+
+  // O BOTÃO QUE ABRE O PORTAL JÁ LOGADO.
+  //
+  // A URL que ele recebe É a credencial da corretora, cifrada. Estes exemplos guardam as três
+  // propriedades que a mantêm segura: ela é pedida NO CLIQUE (nunca antes, nunca em lote), abre a
+  // aba com `noopener`, e não sobra em lugar nenhum do componente depois.
+  const comCotacao = {
+    ...ready,
+    last_quote: {
+      quote_id: 'q-42',
+      branch: 'auto',
+      version: 1,
+      at: new Date().toISOString(),
+    },
+  };
+  const botaoPortal = wrapper =>
+    wrapper.find('button[label="INSURANCE.CONNECTION.ACTIONS.OPEN_PORTAL"]');
+
+  it('so pede a URL quando o corretor clica, e abre com noopener', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: comCotacao } });
+    const wrapper = await mountTab();
+    // Carregar a tela NÃO pode gerar link: geração em lote transforma uma credencial de uso único
+    // em várias espalhadas por aí.
+    expect(api.portalLink).not.toHaveBeenCalled();
+
+    api.portalLink.mockResolvedValue({
+      data: { payload: { url: 'https://portal/x' } },
+    });
+    const abrir = vi.fn(() => ({}));
+    vi.stubGlobal('open', abrir);
+    await botaoPortal(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(api.portalLink).toHaveBeenCalledTimes(1);
+    expect(abrir).toHaveBeenCalledWith(
+      'https://portal/x',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    // E a URL não sobra no componente: nada no HTML renderizado a contém.
+    expect(wrapper.html()).not.toContain('https://portal/x');
+    vi.unstubAllGlobals();
+  });
+
+  // Sem cotação não há destino: a rota do portal abre UMA cotação, e não a home.
+  it('sem cotacao, o botao nao aparece', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: ready } });
+    const wrapper = await mountTab();
+    expect(botaoPortal(wrapper).exists()).toBe(false);
+  });
+
+  // Falha ao gerar não pode deixar o botão girando para sempre.
+  it('erro ao gerar o link solta o botao', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: comCotacao } });
+    api.portalLink.mockRejectedValue({
+      response: { data: { error: 'seja-o-que-for' } },
+    });
+    const wrapper = await mountTab();
+    await botaoPortal(wrapper).trigger('click');
+    await flushPromises();
+    expect(botaoPortal(wrapper).attributes('disabled')).toBeUndefined();
   });
 
   // O VEREDITO. Antes o topo dizia só "Conectado", e conectado não é a pergunta do corretor.

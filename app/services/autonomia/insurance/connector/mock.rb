@@ -78,6 +78,20 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     { 'quote_id' => quote_id, 'url' => "https://exemplo.test/#{nome}-mock.pdf" }
   end
 
+  # Sem `require_session!`: como no `open_session`, o que autentica aqui é a CREDENCIAL. O link
+  # carrega um login novo, e não a sessão em curso.
+  def portal_link(provider:, username:, password:, quote_id:, branch: 'auto', version: 1)
+    require_provider!(provider)
+    if username.blank? || password.blank?
+      raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'credentials missing')
+    end
+    if quote_id.blank?
+      raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'quote_id missing')
+    end
+
+    { 'url' => "https://exemplo.test/cotacao/#{branch}/resultados/#{quote_id}/#{version}/token-mock" }
+  end
+
   private
 
   # Duas seguradoras respondem cedo, a terceira demora. É o formato que a entrega parcial existe

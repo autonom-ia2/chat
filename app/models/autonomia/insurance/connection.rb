@@ -137,7 +137,8 @@ class Autonomia::Insurance::Connection < ApplicationRecord
       evidence: last_evidence,
       layers: layers,
       insurers_pending_auth: insurers_pending_auth,
-      account_already_active: account_already_active
+      account_already_active: account_already_active,
+      last_quote: last_quote
     }
   end
 
@@ -176,6 +177,29 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   # `nil.is_a?(Hash)` é falso — então o caminho feliz (nunca houve pendência, e continua não
   # havendo) caía direto no `update!` e gravava nil sobre nil. Como o polling passa aqui a cada 3 a
   # 21 segundos por até 7 minutos, era um UPDATE por consulta numa cotação sem problema nenhum.
+  # A ÚLTIMA COTAÇÃO DESTA CONTA — o destino do botão "Abrir o AGGER logado".
+  #
+  # Existe porque a rota de handoff do portal abre UMA cotação
+  # (`/cotacao/:ramo/resultados/:id/:versao/:token`) e não a home: sem um id, não há link. O
+  # chat2you não guardava cotação nenhuma — o `quote_id` nascia na ferramenta do agente, era usado
+  # para buscar o resultado e morria ali.
+  #
+  # Guarda só o ENDEREÇO da cotação, nunca o conteúdo dela: id, ramo, versão e quando. É o mínimo
+  # para montar a URL, e nada que sirva a outra finalidade.
+  def record_last_quote!(quote_id, branch: 'auto', version: 1, at: Time.current)
+    return if quote_id.blank?
+
+    merge_metadata!(
+      'last_quote' => {
+        'quote_id' => quote_id, 'branch' => branch, 'version' => version, 'at' => at.iso8601
+      }
+    )
+  end
+
+  def last_quote
+    metadata.to_h['last_quote'].presence
+  end
+
   def record_insurers_pending_auth!(codigos, nomes:, observed_at: Time.current)
     novo = pendencia(codigos, nomes, observed_at)
     # Leitura sem lock primeiro: o caso comum é "nada mudou", e ele não pode custar um lock de linha.
