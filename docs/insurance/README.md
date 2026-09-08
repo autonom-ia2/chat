@@ -66,6 +66,54 @@ Conta liga/desliga no SuperAdmin (`toggle_insurance`), marca em `accounts.intern
 - `Autonomia::Insurance::Connector.client` escolhe o transporte por `INSURANCE_CONNECTOR_MODE` (`mock` = contrato com o formato do CLI `autonomia agger`, sem AGGER). O transporte HTTP para o serviço do `autonomia-adapters` chega na Onda 3.
 - `Connections::Sync` traduz erro do connector em `status` + `last_error` (`auth_required`/`offline`/`degraded`), nunca em 500.
 
+## Aba Conexões — estado em 08/09/2026
+
+Em produção. A tela responde, no topo, **quantos produtos a conta cota** — antes ela dizia só
+"Conectado", que não é a pergunta do corretor.
+
+O que foi **medido** em 08/09: a stack hub2you roda a imagem `5787ed1bbeca…` (= `5787ed1`, o revert do
+#348), lida do `docker ps` da instância `i-08e99d6608864590b`. A stack autonomia **não foi verificada**
+daqui: ela vive na conta AWS 140023375763 e esta máquina só tem credencial da 354307071110 — nenhum
+alvo `cw-auto-*` responde por este perfil. Quem conferir lá, confirme o mesmo SHA antes de tratar as
+duas como iguais.
+
+- **Produto com o nome do PORTAL**, não com o nosso slug. O ramo 46 é o caso: slug `fianca_locaticia`,
+  portal "Aluguel". Fiança locatícia é outro produto no catálogo da AGGER (id 23, anotado em
+  `capabilities.ts`) — o corretor lia na tela um produto diferente do que ia cotar. O slug não muda,
+  porque já viajou para o banco; o rótulo passou a viajar junto.
+- **Seguradora recusada aparece pelo nome**, com o custo dito. A string (`CAPABILITIES.MONEY_LEFT`)
+  tem plural próprio: "Azul está fora por credencial recusada — uma seguradora a menos em cada
+  cotação de Automóvel".
+- **Contagem com denominador** ("N de M seguradoras", nunca só "N"), código do ramo ao lado do nome, e as cinco camadas de
+  verificação num `<details>` fechado.
+- A camada de credenciais responde **pelo scan**, carimbada com a data dele — antes dizia "não
+  verificado" tendo o veredito três linhas abaixo.
+
+### Handoff ("Abrir o AGGER logado") — ENCERRADO
+
+O botão foi a produção em 08/09 e **saiu no mesmo dia** (#347, revertido em #348). Decisão do Rodrigo:
+**não seguimos com isto no projeto.**
+
+| | |
+|---|---|
+| Abre uma cotação existente já autenticada | **sim** |
+| Derruba a sessão do agente | **não** — medido três vezes |
+| Permite cotar do zero | **não** |
+
+A terceira linha é a que encerra. A autenticação do link vale só para o componente de resultados:
+recarregar a home leva a `/login`, e **clicar em "Cotações"** — navegação interna, sem reload — leva a
+`/login` também.
+
+**O portal não persiste sessão.** Sete gravações em `localStorage`, nenhuma de token ou credencial; o
+mesmo no login normal. Isso elimina tanto "achar a rota que persiste" quanto "injetar a sessão": não há
+chave onde escrever. Medição completa em `autonom-ia2/autonomia-adapters` →
+`docs/agger/sessao-e-handoff.md` §5.
+
+Saiu daqui tudo que só existia para o botão: rota, ação, `portal_link` nos connectors,
+`record_last_quote!`, client JS e i18n. O comentário no ponto onde ele estava guarda o porquê.
+
+**Não reabrir sem** SSO da AGGER, ou medição que contrarie a de 08/09.
+
 ## Ondas
 
 | Onda | Escopo | Issues |
