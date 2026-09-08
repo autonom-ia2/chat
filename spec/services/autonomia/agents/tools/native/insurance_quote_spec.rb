@@ -311,7 +311,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       progresso = tool('produto' => 'bike', 'dados' => '{}')
                   .poll(handle: { 'quote_id' => 'q1', 'entregues' => ['3'] }, attempt: 1)
 
-      expect(progresso.deliveries.first).to include('Chegaram mais opções')
+      # Continua se anunciando como complemento — sem telegrafar a nossa fila de entrega.
+      expect(progresso.deliveries.first).to start_with('Mais uma opção:')
       expect(progresso.deliveries.first).not_to include('Mapfre')
       expect(progresso.status).to eq(:running)
     end

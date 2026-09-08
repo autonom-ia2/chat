@@ -333,8 +333,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
                            attempt: 1)
 
       # Assert
-      expect(progress.deliveries.first)
-        .to eq("Primeiros preços que chegaram:\nEzze: R$ 2050,40 no total\nMapfre: R$ 2582,76 no total")
+      # A ORDEM É O QUE ESTE EXEMPLO GUARDA — mais barata primeiro. O texto exato mudou de forma em
+      # 08/09/2026 (marcador, negrito do WhatsApp, milhar) e a asserção passou a olhar a ordem, não
+      # a redação: prender o texto inteiro aqui é o que faz melhorar o layout parecer regressão.
+      texto = progress.deliveries.first
+      expect(texto.index('Ezze')).to be < texto.index('Mapfre')
+      expect(texto).to include('*Ezze* — R$ 2.050,40 no total')
       expect(progress.handle[described_class::DELIVERED_KEY]).to eq(%w[43 3])
     end
 
@@ -351,7 +355,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       # Assert
       expect(progress).to be_done
-      expect(progress.deliveries.first).to eq("Chegaram mais opções:\nDarwin: R$ 3407,87 no total")
+      expect(progress.deliveries.first).to start_with('Mais uma opção:')
+      expect(progress.deliveries.first).to include('*Darwin* — R$ 3.407,87 no total')
       expect(progress.deliveries.first).not_to include('Ezze')
     end
 
@@ -395,8 +400,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
       # Assert
-      expect(progress.deliveries.first.lines.size).to eq(Autonomia::Insurance::QuoteOffers::MAX_OFFERS + 1)
-      expect(progress.deliveries.first).not_to include('D:')
+      # Conta MARCADOR, e não linha: cada oferta passou a ocupar duas linhas mais o espaço entre
+      # elas, e contar linha mediria a formatação em vez do teto de opções.
+      expect(progress.deliveries.first.scan('• ').size).to eq(Autonomia::Insurance::QuoteOffers::MAX_OFFERS)
+      expect(progress.deliveries.first).not_to include('*D*')
     end
 
     it 'closes with the comparison PDF, one per quote, like the portal does' do
@@ -558,7 +565,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
                            'installments' => { 'count' => 10, 'amount' => 216.7 } })
 
       # Assert
-      expect(texto).to include('R$ 2167,00 no total')
+      expect(texto).to include('R$ 2.167,00 no total')
       expect(texto).to include('10x de R$ 216,70')
     end
 
@@ -575,12 +582,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       texto = texto_para({ 'amount' => 2167.0, 'currency' => 'BRL', 'basis' => 'unknown' })
 
       # Assert
-      expect(texto).to include('Porto: R$ 2167,00')
-      expect(texto).not_to include('R$ 2167,00 no total')
+      expect(texto).to include('*Porto* — R$ 2.167,00')
+      expect(texto).not_to include('R$ 2.167,00 no total')
       expect(texto.downcase).not_to include('por mês')
       expect(texto.downcase).not_to include('ao ano')
-      # A ressalva sai UMA vez, no fim, e não colada em cada linha.
-      expect(texto.scan('não o formato de pagamento').size).to eq(1)
+      # A ressalva agora cola NA OFERTA a que pertence, em vez de virar parágrafo do bloco — mas
+      # continua saindo uma vez só para esta oferta.
+      expect(texto.scan('não informou se é o total').size).to eq(1)
     end
   end
 
