@@ -76,8 +76,12 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # inspirava nelas — recitava. A Lia mandou ao cliente "Para a placa QNX9533, qual é o CEP onde o
     # carro dorme?", que é a linha do arquivo com a placa trocada. Frase pronta na instrução sai
     # idêntica para todo cliente, e quem lê percebe que está falando com um formulário.
+    #
+    # `\s*` NÃO É ENFEITE. Ancorado só em `\A>`, este exemplo passava verde com duas frases
+    # roteirizadas ainda vivas na §9 — citação aninhada sob item de lista vem indentada, e a guarda
+    # não a enxergava. Guarda que não cobre o formato real do documento é intenção, não guarda.
     it 'nao ensina frase pronta para o cliente' do
-      roteiro = arquivos_de_instrucao.flat_map { |arquivo| arquivo.read.lines.grep(/\A> "/) }
+      roteiro = arquivos_de_instrucao.flat_map { |arquivo| arquivo.read.lines.grep(/\A\s*> "/) }
 
       expect(roteiro).to be_empty
     end
