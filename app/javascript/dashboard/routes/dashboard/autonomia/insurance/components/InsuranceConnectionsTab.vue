@@ -57,16 +57,29 @@ const encryptionUnavailable = computed(
 //
 // A regra é a mesma das outras três portas: normalizar na entrada, uma vez, e o resto do
 // componente trabalhar com dado que já obedece ao contrato.
+// O PAYLOAD ERA MISTO, e passou a ser snake_case inteiro. A tradução do adapter no Rails era uma
+// tabela de 13 chaves: o que estava nela chegava em snake_case, o que faltava passava batido em
+// camelCase — e este componente foi escrito contra a mistura, lendo `integrationStatus` aqui e
+// `insurer_auth` mais abaixo.
+//
+// AS DUAS FORMAS SÃO ACEITAS PORQUE `capabilities` FICA GRAVADO em jsonb: conexão sincronizada
+// antes desta mudança tem a forma antiga no banco até o próximo scan. Ler só a nova apagaria da
+// tela o que já está guardado.
 const normalizarSeguradora = seg => ({
   ...seg,
   // `enabled` manda. `integrationStatus` só qualifica POR QUE está fora, e não pode desmentir.
   enabled: seg?.enabled === true,
-  integrationStatus: seg?.integrationStatus ?? 'unknown',
+  integrationStatus:
+    seg?.integration_status ?? seg?.integrationStatus ?? 'unknown',
   name: seg?.name || seg?.code || '—',
 });
 
 const normalizarProduto = item => ({
   ...item,
+  // Estes dois vinham direto do payload no template — o asterisco de rótulo inferido e o código do
+  // ramo que o corretor lê para o suporte. Passam pela mesma porta que o resto.
+  labelConfidence: item?.label_confidence ?? item?.labelConfidence,
+  platformRef: item?.platform_ref ?? item?.platformRef,
   insurers: (Array.isArray(item?.insurers) ? item.insurers : []).map(
     normalizarSeguradora
   ),
