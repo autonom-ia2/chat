@@ -163,12 +163,30 @@ module Autonomia
         errors.add(:headers_config, 'possui cabeçalhos inválidos')
       end
 
+      # MESMA REGRA DAS FERRAMENTAS NATIVAS, e pelo mesmo motivo: em `strict: true` a OpenAI exige
+      # que TODA chave de `properties` esteja em `required`, e recusa a chamada inteira quando falta
+      # uma — deixando o agente mudo, sem erro na tela. Opcional se diz pelo TIPO, aceitando `null`.
+      #
+      # Documentação da OpenAI: "You can denote optional fields by adding `null` as a `type` option"
+      # e "All fields in `properties` must be marked as `required`".
+      #
+      # Aqui o schema vem do que a corretora cadastrou, e não de código nosso — o que torna o
+      # defeito mais fácil de acontecer e mais difícil de ver: basta alguém marcar um parâmetro como
+      # não-obrigatório na tela de ferramentas para o agente parar de responder.
       def param_properties
-        param_schema.to_h { |param| [param['name'], param.slice('type', 'description')] }
+        param_schema.to_h { |param| [param['name'], param_property(param)] }
       end
 
+      def param_property(param)
+        base = param.slice('type', 'description')
+        return base unless param['required'] == false
+
+        base.merge('type' => [param['type'], 'null'])
+      end
+
+      # Todos, sem exceção. O que separa obrigatório de opcional é o tipo aceitar `null`.
       def required_param_names
-        param_schema.select { |param| param['required'] != false }.map { |param| param['name'] }
+        param_schema.pluck('name')
       end
     end
   end

@@ -9,6 +9,12 @@ require 'rails_helper'
 # Em `strict: true` não existe campo fora de `required`. Uma ferramenta com UM parâmetro opcional
 # derrubava a chamada INTEIRA — não a ferramenta, o turno todo —, e o agente ficava em silêncio.
 RSpec.describe Autonomia::Agents::Tools::Native::Base do
+  # O loop abaixo roda na CARGA do arquivo. Se o Registry ficasse vazio, o arquivo passaria verde
+  # sem exercitar ferramenta nenhuma — e o defeito que ele existe para pegar voltaria em silêncio.
+  it 'tem ferramentas para exercitar' do
+    expect(Autonomia::Agents::Tools::Registry.all).not_to be_empty
+  end
+
   # Toda ferramenta nativa passa por aqui. Uma nova com parâmetro opcional falha neste exemplo antes
   # de chegar a uma conversa de verdade.
   Autonomia::Agents::Tools::Registry.all.each do |tool|
@@ -45,12 +51,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
       schema = Autonomia::Agents::Tools::Native::InsuranceGeneralConditions.openai_schema
 
       expect(schema[:parameters][:required]).to include('ramo')
-      expect(schema[:parameters][:properties]['ramo']['type']).to eq(%w[string null])
+      # A ordem dentro do array não importa para a OpenAI; o que importa é `null` estar lá.
+      expect(schema[:parameters][:properties]['ramo']['type']).to match_array(%w[string null])
     end
   end
 
-  # A de cotação tem NOVE opcionais: ela quebraria do mesmo jeito assim que o especialista fosse
-  # chamado. Não quebrou antes porque a chamada já falhava no schema do agente principal.
+  # A de cotação tem NOVE opcionais — quebraria pelo mesmo motivo. Ela é reservada pelo especialista,
+  # que só roda quando o principal o chama; o log de 08/09 mostra a chamada do principal falhando
+  # antes disso, então esta ferramenta nunca chegou a ser exercitada em produção.
   describe 'cotar_seguro' do
     it 'declara os nove opcionais aceitando null' do
       schema = Autonomia::Agents::Tools::Native::InsuranceQuote.openai_schema
