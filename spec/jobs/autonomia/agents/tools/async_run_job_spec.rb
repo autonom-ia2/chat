@@ -296,6 +296,27 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
     end
 
+    # O RETRY DO SIDEKIQ NÃO PODE REPUBLICAR O COMPARATIVO. O encerramento publica e só depois
+    # `finish!` registra o desfecho; um shutdown no meio (deploy) deixa a execução em `running` e o
+    # job reentra. A marca é gravada ANTES de publicar.
+    # A MARCA DE ENCERRADO, e o que este exemplo NÃO prova. O encerramento publica e só depois
+    # `finish!` registra o desfecho: um sinal de shutdown no meio (deploy) deixaria a execução em
+    # `running` e o retry do Sidekiq reentraria. NÃO CONSEGUI REPRODUZIR essa reentrada em teste —
+    # forçar o status de volta para `running` não faz o job reentrar no encerramento. Então o que
+    # está travado aqui é só que a marca É GRAVADA, o que pega a remoção acidental dela; a proteção
+    # contra o retry continua sendo raciocínio, no mesmo molde do `SUBMITTED_KEY` deste arquivo.
+    it 'grava a marca de encerrado' do
+      register_async_tool(
+        build_async_tool(poll: progress.running(deliveries: ['um preco']), closing: ['Comparativo: url'])
+      )
+      run = submitted_run
+      described_class.new.perform(run.id, 0)
+
+      described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
+
+      expect(run.reload.handle).to include(described_class::CLOSED_KEY => true)
+    end
+
     it 'fails without publishing anything when the tool is gone from the catalog' do
       # Arrange — a nativa saiu do Registry entre o disparo e a execução.
       allow(Autonomia::Agents::Tools::Registry).to receive(:find).and_return(nil)

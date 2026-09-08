@@ -19,6 +19,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # submeti" — não o conteúdo do handle. Sem isso, uma ferramenta que devolvesse nil ou {} faria a
   # passada seguinte chamar `start` DE NOVO, até 60 vezes: 60 cotações reais no portal.
   SUBMITTED_KEY = 'autonomia_submitted'.freeze
+  # MESMA IDEIA DO `SUBMITTED_KEY`, para o outro extremo da execução. O encerramento publica e só
+  # DEPOIS `finish!` registra o desfecho: um sinal de shutdown no meio (deploy) deixaria a execução
+  # em `running`, e o retry do Sidekiq reentraria. A marca é gravada ANTES de publicar.
+  #
+  # HONESTIDADE SOBRE O QUE ESTÁ PROVADO: não consegui reproduzir essa reentrada em teste — forçar
+  # o status de volta para `running` não faz o job reentrar no encerramento. O spec trava que a
+  # marca é gravada (pega a remoção acidental); a proteção contra o retry é raciocínio, como era a
+  # do `SUBMITTED_KEY` quando ele nasceu.
+  CLOSED_KEY = 'autonomia_closed'.freeze
 
   def perform(run_id, attempt = 0)
     run = ::Autonomia::Agents::ToolRun.find_by(id: run_id)
@@ -136,13 +145,23 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # NUNCA levanta: o encerramento é cortesia sobre um caminho que já deu errado, e falhar aqui
   # apagaria o `finish!` que registra o desfecho.
   def encerrar(run, native)
-    return publish(run, native.partial_message) if run.agent.blank?
+    return if run.handle.to_h[CLOSED_KEY].present?
 
-    tool = native.new(agent: run.agent, params: run.arguments)
-    Array(tool.closing_deliveries(run.handle)).each { |texto| publish(run, texto) }
-    publish(run, native.partial_message)
+    run.record_attempt!(handle: run.handle.to_h.merge(CLOSED_KEY => true))
+    fechamento(run, native).each { |texto| publish(run, texto) }
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{run.slug} #{e.class}")
+  end
+
+  # O que sai na despedida: o que a ferramenta ainda tem para entregar, e o fecho.
+  #
+  # SEM AGENTE NÃO SE MONTA A FERRAMENTA — e isto não é defesa sobrando: `agente_indisponivel` é um
+  # dos caminhos que chegam aqui, alcançado JUSTAMENTE porque o agente sumiu.
+  def fechamento(run, native)
+    return [native.partial_message] if run.agent.blank?
+
+    tool = native.new(agent: run.agent, params: run.arguments)
+    Array(tool.closing_deliveries(run.handle)) + [native.partial_message]
   end
 
   # Parada por decisão do operador: sem mensagem ao cliente. Publicar aqui seria furar exatamente o
