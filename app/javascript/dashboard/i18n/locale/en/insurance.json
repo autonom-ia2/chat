@@ -41,12 +41,16 @@
         "RECONNECT": "Reconectar",
         "RESCAN": "Atualizar produtos",
         "DISCONNECT": "Desconectar",
-        "RETRY": "Tentar de novo"
+        "RETRY": "Tentar de novo",
+        "OPEN_PORTAL": "Abrir o AGGER logado"
       },
       "ENCRYPTION_UNAVAILABLE": "Esta instalação ainda não tem o cofre de credenciais configurado. A senha do AGGER não pode ser guardada até o time da Autonom.ia ativar a criptografia.",
       "ERRORS": {
         "LOAD": "Não foi possível carregar o estado da conexão.",
-        "GENERIC": "Não foi possível concluir a ação. Tente novamente."
+        "GENERIC": "Não foi possível concluir a ação. Tente novamente.",
+        "PORTAL_LINK": "Não foi possível abrir o AGGER agora. Tente de novo em instantes.",
+        "NO_QUOTE_YET": "Esta conta ainda não tem cotação no AGGER. O atalho abre a última cotação feita pelo agente — faça uma cotação e ele aparece.",
+        "POPUP_BLOCKED": "O navegador bloqueou a nova aba. Libere pop-ups para este site e clique de novo."
       },
       "ALERTS": {
         "CONNECTED": "Conexão com o AGGER atualizada.",

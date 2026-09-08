@@ -357,6 +357,9 @@ Rails.application.routes.draw do
               resource :connection, only: [:show, :create, :destroy], controller: :connection do
                 post :reconnect
                 post :scan
+                # POST, e não GET, porque a resposta É a credencial: GET entra em histórico de
+                # navegador, em log de proxy e na barra de endereço.
+                post :portal_link
               end
             end
             namespace :prospecting do

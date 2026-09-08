@@ -30,6 +30,14 @@ class AutonomiaInsuranceAPI extends ApiClient {
   removeConnection(provider = 'agger') {
     return axios.delete(`${this.url}/connection`, { params: { provider } });
   }
+
+  // A URL que abre o AGGER já autenticado. POST porque a RESPOSTA é a credencial: num GET ela
+  // entraria em histórico de navegador, log de proxy e barra de endereço.
+  //
+  // A URL não é guardada em lugar nenhum do front — chega, abre a aba, e sai de cena.
+  portalLink(provider = 'agger') {
+    return axios.post(`${this.url}/connection/portal_link`, { provider });
+  }
 }
 
 export default new AutonomiaInsuranceAPI();
