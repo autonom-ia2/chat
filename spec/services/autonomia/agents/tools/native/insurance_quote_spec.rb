@@ -66,6 +66,39 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(resultado['pedido']).to include('nome do titular')
     end
 
+    # A CONFERÊNCIA DENTRO DO TURNO. É ela que faz a diferença entre pedir o CPF e anunciar uma
+    # cotação que a validação recusa cinco segundos depois: o modelo espera o retorno da ferramenta
+    # (`create_with_tool_executor` alimenta a segunda chamada com ele), então o texto chega a tempo.
+    it 'devolve ao modelo o que falta, ainda no turno' do
+      # Arrange
+      ready_connection
+
+      # Act
+      texto = tool('produto' => 'auto', 'placa' => 'ABC1D23').precheck
+
+      # Assert
+      expect(texto).to include('CPF do titular')
+    end
+
+    it 'nao interrompe quando a entrada esta completa' do
+      ready_connection
+
+      texto = tool('produto' => 'auto', 'placa' => 'ABC1D23', 'cpf' => '04297912678',
+                   'cep' => '31110-210').precheck
+
+      expect(texto).to be_nil
+    end
+
+    # Conferência é conferência, não portão: se ela cair, a cotação segue.
+    it 'deixa passar quando a conferencia cai' do
+      ready_connection
+      connector = Autonomia::Insurance::Connector.client
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      allow(connector).to receive(:quote_validate).and_raise(StandardError)
+
+      expect(tool('produto' => 'auto', 'placa' => 'ABC1D23').precheck).to be_nil
+    end
+
     # Campo que a própria ferramenta coleta tem rótulo, e o cliente lê o nome que ele reconhece.
     it 'pede o dado pelo nome que o cliente reconhece' do
       # Arrange

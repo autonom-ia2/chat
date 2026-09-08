@@ -5,8 +5,12 @@
 module AsyncToolHelper
   # `poll` aceita um Progress fixo ou um lambda que recebe (attempt) e devolve um Progress —
   # é assim que se testa "parcial no 1º, final no 2º".
+  # `precheck` aceita texto (o que o modelo recebe no lugar do aceite) ou um callable — que pode
+  # levantar, para exercitar "conferência caiu, aceita mesmo assim".
+  # rubocop:disable Metrics/ParameterLists -- é um construtor de dublê: cada parâmetro é um
+  # comportamento que algum exemplo precisa ligar isoladamente.
   def build_async_tool(slug: 'consultar_cotacao', handle: { 'id' => 'cot-1' }, poll: nil,
-                       start_error: nil, poll_error: nil)
+                       start_error: nil, poll_error: nil, precheck: nil)
     Class.new(::Autonomia::Agents::Tools::Native::Base) do
       define_singleton_method(:slug) { slug }
       define_singleton_method(:description) { 'Ferramenta assíncrona de teste.' }
@@ -14,6 +18,9 @@ module AsyncToolHelper
       define_singleton_method(:accepted_message) { 'aceito: consulta iniciada' }
       define_singleton_method(:waiting_message) { 'estou consultando agora' }
       define_singleton_method(:failure_message) { 'não consegui concluir a consulta' }
+
+      # A conferência do turno: devolve texto ao modelo (e nenhuma execução é aberta) ou nil.
+      define_method(:precheck) { precheck.respond_to?(:call) ? precheck.call : precheck }
 
       define_method(:start) do
         raise start_error if start_error
@@ -28,6 +35,7 @@ module AsyncToolHelper
       end
     end
   end
+  # rubocop:enable Metrics/ParameterLists
 
   # Faz o catálogo devolver esta ferramenta para o slug dela (e nada para os outros).
   def register_async_tool(tool)

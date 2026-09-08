@@ -74,6 +74,9 @@ class Autonomia::Agents::Tools::Bound
     refusal = async_refusal(delivery)
     return { error: refusal }.to_json if refusal
 
+    antecipado = precheck_native(args)
+    return antecipado if antecipado
+
     run = ::Autonomia::Agents::ToolRun.open!(
       agent: @agent, slug: slug, arguments: args,
       scope: { conversation_id: delivery.conversation.id, agent_inbox_id: delivery.agent_inbox&.id,
@@ -86,6 +89,19 @@ class Autonomia::Agents::Tools::Bound
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] async accept failed slug=#{slug} #{e.class}")
     { error: 'tool_execution_error' }.to_json
+  end
+
+  # A conferência da própria ferramenta, ainda no turno. INSTANCIA a nativa — e o invariante que
+  # `bound_async_spec` guarda continua valendo onde ele importa: o que não pode segurar o turno é o
+  # TRABALHO (`start`, com o teto de 60 s do conector), não uma conferência que não toca no portal e
+  # tem teto de 10 s. Falha aqui é nil: aceita e segue.
+  def precheck_native(args)
+    return nil unless native?
+
+    @native.new(agent: @agent, params: args).precheck.presence
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] precheck falhou slug=#{slug} #{e.class}")
+    nil
   end
 
   # Por que a ferramenta assíncrona NÃO pode ser aceita agora, ou nil. Códigos curtos: o modelo lê,
