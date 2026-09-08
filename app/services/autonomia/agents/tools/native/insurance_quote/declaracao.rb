@@ -51,9 +51,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
               'CEP de pernoite. Nos outros ramos, informe o que o cliente já deu; se faltar algo, ' \
               'a ferramenta responde exatamente o que perguntar, sem consumir cotação.'.freeze
 
-  ACEITA = 'Cotação enviada às seguradoras. Avise o cliente que está consultando e que manda os ' \
-           'preços aqui assim que chegarem. Os primeiros costumam levar menos de um minuto. Não ' \
-           'invente valores, prazos nem nomes de seguradora.'.freeze
+  # NÃO PROMETA O QUE AINDA NÃO ACONTECEU. Este texto volta ao modelo em `Bound#accept_async`, que
+  # roda ANTES de qualquer conferência: nada foi enviado a seguradora nenhuma ainda, e o pedido pode
+  # ser recusado logo em seguida por falta de dado, por conexão fora do ar ou por prazo. Quando ele
+  # dizia "Cotação enviada às seguradoras", o agente anunciava sucesso e cinco segundos depois se
+  # desmentia na frente do cliente — em 08/09/2026, com estas duas mensagens seguidas.
+  ACEITA = 'Pedido de cotação recebido e em conferência. Avise o cliente que você está cuidando ' \
+           'disso e que volta aqui com notícia. NÃO afirme que já foi enviada às seguradoras, e ' \
+           'não invente valores, prazos nem nomes de seguradora.'.freeze
 
   ESPERANDO = 'Estou consultando as seguradoras agora. Assim que os primeiros preços chegarem, ' \
               'mando aqui.'.freeze

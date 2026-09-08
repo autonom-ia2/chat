@@ -120,13 +120,34 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     { 'pedido' => texto, 'motivo' => motivo }
   end
 
-  # Nomes de campo crus de propósito: quem traduz para o cliente é o especialista, que conhece o
-  # vocabulário do ramo — inventar rótulo em português aqui seria adivinhar o que o portal chama de
-  # quê.
+  # ESTE TEXTO É LIDO PELO CLIENTE, e não pelo modelo. O comentário anterior aqui dizia o oposto —
+  # "nomes de campo crus de propósito: quem traduz é o especialista" — e descrevia um tradutor que
+  # não existe neste caminho: a recusa vira `deliveries`, e `Progress` afirma que deliveries são
+  # "textos DESTINADOS AO CLIENTE". Em 08/09/2026 um cliente leu `insured.document` no WhatsApp,
+  # junto com "chame a ferramenta de novo", que é instrução para o modelo.
+  #
+  # Traduzimos SÓ o que a própria ferramenta coleta — os caminhos que `QuoteInput` monta a partir
+  # dos parâmetros dela. Para o resto (campo de ramo que veio dentro de `dados`) NÃO inventamos
+  # rótulo: dizer "valorMercado" seria vazar de novo, e chutar um nome em português seria adivinhar
+  # o que o portal chama de quê. Aí a frase fica genérica, e quem pergunta é o modelo no turno
+  # seguinte — ele lê esta entrega como turno `assistant` no histórico.
+  # Rótulo SEM artigo: ele entra numa lista, e "preciso de o CPF" é o que sai quando o artigo vem
+  # colado no rótulo.
+  ROTULOS = {
+    'insured.document' => 'CPF do titular', 'segurado.cpfCnpj' => 'CPF do titular',
+    'insured.name' => 'nome do titular', 'segurado.nome' => 'nome do titular',
+    'address.zipCode' => 'CEP', 'segurado.cep' => 'CEP',
+    'address.number' => 'número do endereço', 'segurado.numero' => 'número do endereço',
+    'vehicle.plate' => 'placa do veículo'
+  }.freeze
+  FALTA_ALGO = 'Ainda preciso de mais uma informação para fechar a cotação.'.freeze
+  LISTA = { two_words_connector: ' e ', last_word_connector: ' e ' }.freeze
+
   def pedido_do_que_falta(faltantes)
-    "Para cotar #{produto} ainda faltam estes dados: #{faltantes.pluck('campo').join(', ')}. " \
-      'Pergunte ao cliente e chame a ferramenta de novo com eles preenchidos. Nenhuma cotação foi ' \
-      'consumida.'
+    rotulos = faltantes.pluck('campo').filter_map { |campo| ROTULOS[campo.to_s] }.uniq
+    return FALTA_ALGO if rotulos.empty?
+
+    "Para seguir com a cotação, ainda preciso destes dados: #{rotulos.to_sentence(**LISTA)}."
   end
 
   def build_progress(result, handle, _attempt)

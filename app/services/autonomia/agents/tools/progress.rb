@@ -50,10 +50,30 @@ class Autonomia::Agents::Tools::Progress
 
   # Corta o que não é texto útil e limita tamanho/quantidade. Não é sanitização de conteúdo (a
   # ferramenta é nossa e responde por ela), é o freio contra despejar um payload inteiro na conversa.
+  #
+  # E DESCARTA CAMINHO DE CAMPO. Em 08/09/2026 uma entrega levou `insured.document` ao WhatsApp de
+  # um cliente: a ferramenta pôs no canal do cliente um texto que era para o modelo. O contrato
+  # acima já dizia que isso não podia; faltava quem o fizesse valer. Descarta a ENTREGA, nunca
+  # derruba a execução — perder uma frase é ruim, perder a cotação inteira é pior.
   def sanitize(list)
     Array(list).filter_map { |text| text.to_s.strip.presence }
+               .reject { |text| caminho_de_campo?(text) }
                .first(MAX_DELIVERIES)
                .map { |text| ::Autonomia::Agents::Config.truncate_text(text, MAX_DELIVERY_CHARS) }
+  end
+
+  # `a.b` sem espaço entre dois identificadores é assinatura de caminho de campo; frase em português
+  # tem espaço depois do ponto. URL SAI ANTES DE OLHAR: o comparativo em PDF é uma entrega legítima
+  # e o host dela casaria com o padrão — guarda que come o comparativo troca um bug de texto por um
+  # entregável perdido.
+  CAMINHO_DE_CAMPO = /\b[a-z][a-z0-9]*\.[a-z][a-zA-Z0-9]*\b/
+  URL = %r{https?://\S+}
+
+  def caminho_de_campo?(text)
+    return false unless text.gsub(URL, ' ').match?(CAMINHO_DE_CAMPO)
+
+    Rails.logger.warn('[autonomia][tool] entrega descartada: caminho de campo em texto de cliente')
+    true
   end
 
   # Código curto e previsível (o mesmo cuidado de `Bound#http_error_code`): nunca deixa texto livre
