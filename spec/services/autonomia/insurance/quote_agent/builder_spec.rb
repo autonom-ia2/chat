@@ -17,6 +17,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
                                     .update!(status: 'ready')
   end
 
+  # Os dois arquivos que o Builder cola no agente: o do principal e o do especialista.
+  def arquivos_de_instrucao
+    described_class::INSTRUCOES.glob('*.md')
+  end
+
   def construir(**extra)
     described_class.new(
       account: account, nome_agente: 'Mia', nome_corretora: 'Corretora Exemplo', **extra
@@ -65,6 +70,26 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       stub_const("#{described_class}::TODAS_AS_TOOLS", %w[cotar_seguro slug_que_nao_existe])
 
       expect { construir }.to raise_error(described_class::SlugDesconhecido, /slug_que_nao_existe/)
+    end
+
+    # A INSTRUÇÃO NÃO É ROTEIRO. Ela tinha 15 frases prontas entre aspas, e o modelo não se
+    # inspirava nelas — recitava. A Lia mandou ao cliente "Para a placa QNX9533, qual é o CEP onde o
+    # carro dorme?", que é a linha do arquivo com a placa trocada. Frase pronta na instrução sai
+    # idêntica para todo cliente, e quem lê percebe que está falando com um formulário.
+    it 'nao ensina frase pronta para o cliente' do
+      roteiro = arquivos_de_instrucao.flat_map { |arquivo| arquivo.read.lines.grep(/\A> "/) }
+
+      expect(roteiro).to be_empty
+    end
+
+    # A instrução DOCUMENTA as ferramentas por slug, e o slug errado ali é tão mudo quanto na
+    # config: ela mandava usar `consultar_produtos_disponiveis`, que não existe.
+    it 'so cita ferramenta que existe no catalogo' do
+      citados = arquivos_de_instrucao.flat_map { |arquivo| arquivo.read.scan(/^### `([a-z_]+)`$/).flatten }
+      desconhecidos = citados - Autonomia::Agents::Tools::Registry.slugs
+
+      expect(citados).not_to be_empty
+      expect(desconhecidos).to be_empty
     end
 
     it 'carrega a instrucao da Autonom.ia, e nao um texto vazio' do
