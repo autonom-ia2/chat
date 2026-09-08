@@ -16,10 +16,13 @@ class Autonomia::Insurance::QuoteAgent::Builder
   COMPORTAMENTOS = %w[consultivo objetivo].freeze
   COMPORTAMENTO_PADRAO = 'consultivo'.freeze
   HORARIO_PADRAO = 'de segunda a sexta, das 09h às 18h'.freeze
-  # A ferramenta de cotação é do ESPECIALISTA, e some da visão do principal (Answerer#enabled_agent_
-  # _tools). O principal fica com as duas que valem para toda conversa.
-  TOOLS_DO_PRINCIPAL = %w[consultar_produtos_disponiveis consultar_condicoes_gerais].freeze
+  # `native_tool_slugs` NÃO É A LISTA DO PRINCIPAL: é o que o agente TEM. Quem esconde do principal
+  # o que pertence ao especialista é o `Answerer#enabled_agent_tools`, em runtime. Deixar a de
+  # cotação fora daqui não a reserva — APAGA: o catálogo do turno vem de `Tools::Bound.for_agent`,
+  # e o `Specialist#tools` filtra ESSE catálogo. Fora dele o especialista roda sem ferramenta.
+  TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais].freeze
   TOOLS_DO_ESPECIALISTA = %w[cotar_seguro].freeze
+  TODAS_AS_TOOLS = (TOOLS_DO_PRINCIPAL + TOOLS_DO_ESPECIALISTA).freeze
 
   # O primeiro (e por enquanto único) especialista. Cada ramo novo entra aqui com o seu arquivo de
   # instrução — e nada mais precisa mudar.
@@ -35,6 +38,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # com erro de validação que não explica nada a quem clicou.
   MAX_NOME = 120
 
+  class SlugDesconhecido < StandardError; end
   class ComportamentoInvalido < StandardError; end
   class NomeInvalido < StandardError; end
   class JaExiste < StandardError; end
@@ -52,6 +56,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
   def call
     raise ComportamentoInvalido, @comportamento unless COMPORTAMENTOS.include?(@comportamento)
 
+    validar_slugs!
     validar_nomes!
     # UM AGENTE DE COTAÇÃO POR CONTA. Dois seriam ligados às mesmas caixas de entrada e disputariam
     # a mesma conversa, cada um com o seu especialista e a sua sessão AGGER — e o corretor não teria
@@ -72,6 +77,19 @@ class Autonomia::Insurance::QuoteAgent::Builder
     ::Autonomia::Agents::Agent.find_by(account: @account, agent_type: 'insurance_quote')
   end
 
+  # SLUG QUE NÃO EXISTE É DESCARTADO EM SILÊNCIO por quem monta o turno: `Registry.for_agent` faz
+  # `filter_map` e `Specialist#tools` também. Esse silêncio está certo para configuração velha, mas
+  # transforma um erro de digitação AQUI num agente que nasce sem a ferramenta e nunca reclama —
+  # foi assim que a Lia coletou os dados do cliente e anunciou uma cotação que nunca saiu. O nome
+  # do slug entra no erro porque quem lê é quem vai corrigir a constante.
+  def validar_slugs!
+    catalogo = ::Autonomia::Agents::Tools::Registry.slugs
+    desconhecidos = TODAS_AS_TOOLS - catalogo
+    return if desconhecidos.empty?
+
+    raise SlugDesconhecido, "#{desconhecidos.join(', ')} (catálogo: #{catalogo.join(', ')})"
+  end
+
   def validar_nomes!
     { 'nome do agente' => @nome_agente, 'nome da corretora' => @nome_corretora }.each do |campo, valor|
       raise NomeInvalido, "#{campo} vazio" if valor.blank?
@@ -83,7 +101,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
     ::Autonomia::Agents::Agent.create!(
       account: @account, name: @nome_agente, agent_type: 'insurance_quote',
       status: :active, enabled: true, instruction: texto('principal.md'),
-      config: { 'native_tool_slugs' => TOOLS_DO_PRINCIPAL, 'with_knowledge' => true }
+      config: { 'native_tool_slugs' => TODAS_AS_TOOLS, 'with_knowledge' => true }
     )
   end
 

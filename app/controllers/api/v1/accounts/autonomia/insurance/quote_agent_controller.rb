@@ -24,6 +24,14 @@ class Api::V1::Accounts::Autonomia::Insurance::QuoteAgentController <
          ::Autonomia::Insurance::QuoteAgent::Builder::ComportamentoInvalido => e
     render json: { error: e.class.name.demodulize.underscore, detail: e.message },
            status: :unprocessable_entity
+  rescue ::Autonomia::Insurance::QuoteAgent::Builder::SlugDesconhecido => e
+    # NÃO É ERRO DE QUEM CLICOU, e por isso não é 422: é a nossa constante de ferramentas apontando
+    # para um slug que não existe no catálogo. Quem preencheu o formulário não tem como consertar, e
+    # devolver a mensagem crua entregaria o catálogo interno de ferramentas ao cliente da API. O
+    # detalhe fica no log, para quem vai corrigir a constante; o cliente recebe um código estável e
+    # a tela cai no erro genérico que ela já sabe mostrar.
+    Rails.logger.error("[autonomia][quote_agent] slug fora do catálogo: #{e.message}")
+    render json: { error: 'configuracao_invalida' }, status: :internal_server_error
   end
 
   private

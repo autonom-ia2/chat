@@ -9,6 +9,19 @@ require 'rails_helper'
 RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   let(:account) { create(:account) }
 
+  # A ferramenta de cotação só entra no catálogo com o módulo ligado e conexão pronta
+  # (`available_for?`) — sem isso o exemplo abaixo passaria por engano, medindo a ausência do
+  # portal em vez da ligação da ferramenta.
+  def conexao_pronta
+    Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
+                                    .update!(status: 'ready')
+  end
+
+  # Os dois arquivos que o Builder cola no agente: o do principal e o do especialista.
+  def arquivos_de_instrucao
+    described_class::INSTRUCOES.glob('*.md')
+  end
+
   def construir(**extra)
     described_class.new(
       account: account, nome_agente: 'Mia', nome_corretora: 'Corretora Exemplo', **extra
@@ -26,18 +39,61 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(agente.enabled).to be(true)
     end
 
-    it 'ja vem com as ferramentas que valem para toda conversa' do
+    # CONTRA O CATÁLOGO, NUNCA CONTRA A PRÓPRIA CONSTANTE. A versão anterior deste exemplo
+    # comparava a lista do Builder com as strings que o Builder escreve — as duas pontas falando a
+    # mesma língua errada. `consultar_produtos_disponiveis` não existe (o slug é
+    # `consultar_produtos_cotacao`) e passou verde até a Lia ir ao ar sem a ferramenta.
+    it 'so liga slug que existe no catalogo de nativas' do
+      desconhecidos = construir.native_tool_slugs - Autonomia::Agents::Tools::Registry.slugs
+
+      expect(desconhecidos).to be_empty
+    end
+
+    it 'liga as duas que valem para toda conversa' do
       slugs = construir.native_tool_slugs
 
-      expect(slugs).to include('consultar_produtos_disponiveis')
+      expect(slugs).to include('consultar_produtos_cotacao')
       expect(slugs).to include('consultar_condicoes_gerais')
     end
 
-    # A ferramenta de cotação é reservada pelo especialista, e o Answerer a REMOVE da visão do
-    # principal. Se ela também estivesse ligada nele, o principal cotaria por fora do especialista —
-    # sem a jornada do ramo, sem a ordem de coleta, sem o aviso de bônus.
-    it 'nao cota por conta propria' do
-      expect(construir.native_tool_slugs).not_to include('cotar_seguro')
+    # `native_tool_slugs` é o que o agente TEM; quem esconde do principal o que é do especialista é
+    # o `Answerer#enabled_agent_tools`, em runtime. Ligar a cotação aqui não faz o principal cotar
+    # por fora — deixá-la de fora é que APAGA a ferramenta, inclusive para o especialista.
+    it 'liga tambem a de cotacao, que o especialista reserva' do
+      agente = construir
+
+      expect(agente.native_tool_slugs).to include('cotar_seguro')
+      expect(agente.specialists.first.tool_slugs).to include('cotar_seguro')
+    end
+
+    it 'recusa nascer com slug fora do catalogo' do
+      stub_const("#{described_class}::TODAS_AS_TOOLS", %w[cotar_seguro slug_que_nao_existe])
+
+      expect { construir }.to raise_error(described_class::SlugDesconhecido, /slug_que_nao_existe/)
+    end
+
+    # A INSTRUÇÃO NÃO É ROTEIRO. Ela tinha 15 frases prontas entre aspas, e o modelo não se
+    # inspirava nelas — recitava. A Lia mandou ao cliente "Para a placa QNX9533, qual é o CEP onde o
+    # carro dorme?", que é a linha do arquivo com a placa trocada. Frase pronta na instrução sai
+    # idêntica para todo cliente, e quem lê percebe que está falando com um formulário.
+    #
+    # `\s*` NÃO É ENFEITE. Ancorado só em `\A>`, este exemplo passava verde com duas frases
+    # roteirizadas ainda vivas na §9 — citação aninhada sob item de lista vem indentada, e a guarda
+    # não a enxergava. Guarda que não cobre o formato real do documento é intenção, não guarda.
+    it 'nao ensina frase pronta para o cliente' do
+      roteiro = arquivos_de_instrucao.flat_map { |arquivo| arquivo.read.lines.grep(/\A\s*> "/) }
+
+      expect(roteiro).to be_empty
+    end
+
+    # A instrução DOCUMENTA as ferramentas por slug, e o slug errado ali é tão mudo quanto na
+    # config: ela mandava usar `consultar_produtos_disponiveis`, que não existe.
+    it 'so cita ferramenta que existe no catalogo' do
+      citados = arquivos_de_instrucao.flat_map { |arquivo| arquivo.read.scan(/^### `([a-z_]+)`$/).flatten }
+      desconhecidos = citados - Autonomia::Agents::Tools::Registry.slugs
+
+      expect(citados).not_to be_empty
+      expect(desconhecidos).to be_empty
     end
 
     it 'carrega a instrucao da Autonom.ia, e nao um texto vazio' do
@@ -59,6 +115,23 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(especialista).to be_present
       expect(especialista.enabled).to be(true)
       expect(especialista.tool_slugs).to eq(['cotar_seguro'])
+    end
+
+    # O EXEMPLO QUE FALTAVA. `tool_slugs` é só uma lista de strings: ela pode citar uma ferramenta
+    # que o agente não tem, e aí `Specialist#tools` devolve VAZIO — o especialista roda sem
+    # ferramenta nenhuma, não cota, e ainda assim responde ao principal em prosa. Foi o que a Lia
+    # fez em produção: coletou placa, CEP e CPF e anunciou uma cotação que nunca saiu. O que prova
+    # o produto não é a lista, é o que ela resolve.
+    it 'alcanca de verdade a ferramenta de cotacao' do
+      enable_test_encryption!
+
+      slugs = with_modified_env(INSURANCE_QUOTING_ENABLED: 'true') do
+        Autonomia::Insurance::Config.enable_for!(account)
+        conexao_pronta
+        construir.specialists.first.tools.map(&:slug)
+      end
+
+      expect(slugs).to include('cotar_seguro')
     end
 
     it 'carrega a jornada do ramo' do

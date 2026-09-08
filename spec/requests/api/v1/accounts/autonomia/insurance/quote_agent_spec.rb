@@ -107,6 +107,20 @@ RSpec.describe 'Autonomia Insurance Quote Agent API', type: :request do
       expect(response.parsed_body['error']).to eq('comportamento_invalido')
     end
 
+    # SLUG FORA DO CATÁLOGO NÃO É ERRO DE QUEM CLICOU. A constante de ferramentas apontar para um
+    # slug inexistente é bug nosso — quem preencheu o formulário não tem como consertar. Devolver
+    # 422 com a mensagem crua culparia o usuário e entregaria o catálogo interno de ferramentas.
+    it 'nao devolve o catalogo interno quando a constante aponta para slug inexistente' do
+      stub_const('Autonomia::Insurance::QuoteAgent::Builder::TODAS_AS_TOOLS',
+                 %w[cotar_seguro slug_que_nao_existe])
+
+      post base, params: dados, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:internal_server_error)
+      expect(response.parsed_body['error']).to eq('configuracao_invalida')
+      expect(response.body).not_to include('slug_que_nao_existe')
+    end
+
     # Uma conta não enxerga nem cria na outra.
     it 'nao cria na conta de outro' do
       outra = create(:account)
