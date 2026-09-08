@@ -8,6 +8,11 @@
 class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::Client
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 60 # login no AGGER ~3 s; descoberta de produtos ~8 s; folga para cold start
+  # A CONFERÊNCIA CORRE DENTRO DO TURNO e por isso não pode usar o teto de 60 s: ela é a única
+  # operação que o `Bound` chama enquanto o modelo espera, e `bound_async_spec` guarda exatamente
+  # esse invariante ("a 60s call cannot hold the turn"). O adapter responde `quote/schema` e
+  # `quote/validate` sem tocar no portal — o que sobra é o cold start do Lambda.
+  CONFERENCIA_TIMEOUT = 10
 
   KIND_BY_STATUS = {
     400 => :protocol,
@@ -45,11 +50,12 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   # Passar sessão aqui seria pior do que inútil: exigiria conexão pronta para responder o que um
   # ramo pede, e essa é justamente a pergunta que se faz antes de ter conta conectada.
   def quote_schema(provider:, product:)
-    invoke("/v1/#{provider}/quote/schema", { product: product })
+    invoke("/v1/#{provider}/quote/schema", { product: product }, read_timeout: CONFERENCIA_TIMEOUT)
   end
 
   def quote_validate(provider:, product:, input:)
-    invoke("/v1/#{provider}/quote/validate", { product: product, input: input })
+    invoke("/v1/#{provider}/quote/validate", { product: product, input: input },
+           read_timeout: CONFERENCIA_TIMEOUT)
   end
 
   def quote_start(provider:, session:, product:, input:)
@@ -68,10 +74,10 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
 
   private
 
-  def invoke(path, payload)
+  def invoke(path, payload, read_timeout: READ_TIMEOUT)
     raise error(:config, 'INSURANCE_CONNECTOR_FUNCTION ausente') if function_name.blank?
 
-    response = perform(build_event(path, payload))
+    response = perform(build_event(path, payload), read_timeout)
     parse(response, path)
   rescue Autonomia::Insurance::Connector::Error
     raise
@@ -92,12 +98,12 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     }.to_json
   end
 
-  def perform(event)
+  def perform(event, read_timeout = READ_TIMEOUT)
     uri = invoke_uri
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
     http.open_timeout = OPEN_TIMEOUT
-    http.read_timeout = READ_TIMEOUT
+    http.read_timeout = read_timeout
 
     request = Net::HTTP::Post.new(uri)
     request['content-type'] = 'application/json'

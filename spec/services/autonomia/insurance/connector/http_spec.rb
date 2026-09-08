@@ -20,6 +20,39 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
       .to_return(status: outer_status, body: body, headers: { 'Content-Type' => 'application/json' })
   end
 
+  # O TETO DE 60 s NÃO PODE VALER PARA A CONFERÊNCIA. `quote/schema` e `quote/validate` são as duas
+  # operações que correm DENTRO DO TURNO, enquanto o modelo espera o retorno da ferramenta — e é
+  # esse teto curto que sustenta o invariante de `bound_async_spec` ("a 60s call cannot hold the
+  # turn"). Sem este exemplo, alguém restaura `READ_TIMEOUT` aqui e o turno volta a poder pendurar.
+  describe 'teto de tempo por operação' do
+    it 'confere com teto curto, e trabalha com o teto longo' do
+      # Arrange
+      tempos = []
+      # O timeout é posto num `Net::HTTP` que o próprio conector cria; não há costura para injetar.
+      allow_any_instance_of(Net::HTTP).to receive(:read_timeout=) { |_, valor| tempos << valor } # rubocop:disable RSpec/AnyInstance
+      stub_invoke(inner_status: 200, inner_body: { 'valido' => true, 'problemas' => [] }.to_json)
+
+      # Act
+      described_class.new.quote_validate(provider: 'agger', product: 'auto', input: {})
+      described_class.new.quote_schema(provider: 'agger', product: 'auto')
+
+      # Assert
+      expect(tempos).to all(eq(described_class::CONFERENCIA_TIMEOUT))
+      expect(described_class::CONFERENCIA_TIMEOUT).to be < described_class::READ_TIMEOUT
+    end
+
+    it 'mantem o teto longo no que fala com o portal' do
+      tempos = []
+      # O timeout é posto num `Net::HTTP` que o próprio conector cria; não há costura para injetar.
+      allow_any_instance_of(Net::HTTP).to receive(:read_timeout=) { |_, valor| tempos << valor } # rubocop:disable RSpec/AnyInstance
+      stub_invoke(inner_status: 200, inner_body: { 'quote_id' => 'q1', 'status' => 'queued' }.to_json)
+
+      described_class.new.quote_start(provider: 'agger', session: { 'a' => 1 }, product: 'auto', input: {})
+
+      expect(tempos).to eq([described_class::READ_TIMEOUT])
+    end
+  end
+
   # O TESTE QUE FALTAVA. O adapter é TypeScript e devolve camelCase; o Rails inteiro lê snake_case.
   # Ninguém exercitava essa fronteira: o `Mock` já nasce em snake_case (ele SUBSTITUI o Http, não
   # passa por ele), então toda a suíte passava verde validando a minha suposição do formato contra

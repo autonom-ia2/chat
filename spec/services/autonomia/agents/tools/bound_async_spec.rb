@@ -96,18 +96,52 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(output).to eq(tool.accepted_message)
     end
 
-    it 'never instantiates the tool, so a 60s call cannot hold the turn' do
-      # Arrange
-      allow(tool).to receive(:new).and_call_original
-
+    # O INVARIANTE MUDOU DE FORMA, NÃO DE SENTIDO. Ele era "nunca instancia a ferramenta", com o
+    # motivo no próprio nome: uma chamada de 60 s não pode segurar o turno. O que não pode segurar
+    # é o TRABALHO. A conferência passou a rodar aqui (`Bound#precheck_native`) porque o modelo
+    # ESPERA o retorno da ferramenta, e devolver-lhe uma frase fixa é o que fazia o agente anunciar
+    # cotação e se desmentir depois. Ela não toca no portal e tem teto próprio de 10 s.
+    # A PROVA JÁ ESTAVA AQUI e não precisa de espião: o `start` desta ferramenta LEVANTA. Se o turno
+    # o executasse, a saída seria `tool_execution_error` em vez do aceite, e o handle não estaria
+    # vazio. Antes isto era afirmado com `not_to have_received(:new)` — o que também proibia a
+    # conferência, que hoje roda aqui de propósito.
+    it 'does not run the work, so a 60s call cannot hold the turn' do
       # Act
       output = bound.execute(call, delivery: delivery)
 
       # Assert
-      expect(tool).not_to have_received(:new)
       expect(output).to eq(tool.accepted_message)
       expect(runs.last.handle).to eq({})
       expect(runs.last.attempts).to be_zero
+    end
+
+    # A conferência é o novo caminho de volta ao modelo: quando ela sabe que o pedido não vai dar em
+    # nada, o modelo recebe o texto AINDA NO TURNO e nenhuma execução é aberta — nada de cotação
+    # anunciada e desmentida cinco segundos depois.
+    it 'answers the model with the precheck instead of opening a run' do
+      # Arrange
+      recusa = build_async_tool(precheck: 'Ainda preciso do CPF do titular.')
+      bound = described_class.new(agent: agent, native: recusa)
+
+      # Act
+      output = bound.execute({ 'name' => recusa.slug, 'arguments' => '{}', 'call_id' => 'c9' },
+                             delivery: delivery)
+
+      # Assert
+      expect(output).to eq('Ainda preciso do CPF do titular.')
+      expect(runs.count).to be_zero
+    end
+
+    # Conferência é conferência, não portão: se ela cair, o pedido segue.
+    it 'accepts anyway when the precheck blows up' do
+      quebrada = build_async_tool(precheck: -> { raise 'conferencia fora do ar' })
+      bound = described_class.new(agent: agent, native: quebrada)
+
+      output = bound.execute({ 'name' => quebrada.slug, 'arguments' => '{}', 'call_id' => 'c8' },
+                             delivery: delivery)
+
+      expect(output).to eq(quebrada.accepted_message)
+      expect(runs.count).to eq(1)
     end
 
     it 'records exactly one pending run carrying the arguments the model built' do

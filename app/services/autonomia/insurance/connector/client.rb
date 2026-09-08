@@ -27,6 +27,20 @@ class Autonomia::Insurance::Connector::Client
     raise NotImplementedError
   end
 
+  # AS DUAS SEM SESSÃO. São conhecimento do adapter sobre o produto, não tocam no portal, e por
+  # isso podem correr dentro do turno: é assim que o agente descobre o que perguntar e confere a
+  # entrada ANTES de gastar uma cotação, que no AGGER consome consulta paga. Estavam implementadas
+  # nas duas pontas (`Http` e `Mock`) e ausentes deste contrato desde que nasceram.
+  #   quote_schema   -> { product:, ramo:, campos: [{ campo:, tipo:, origem:, obrigatorio: }] }
+  #   quote_validate -> { valido:, problemas: [{ campo:, severidade:, motivo: }] }
+  def quote_schema(provider:, product:)
+    raise NotImplementedError
+  end
+
+  def quote_validate(provider:, product:, input:)
+    raise NotImplementedError
+  end
+
   # SUBMETE e volta rápido, com o id da cotação. Uma cotação leva até ~90s: quem espera é o job
   # assíncrono, consultando `quote_result` — nunca esta chamada.
   def quote_start(provider:, session:, product:, input:)

@@ -61,12 +61,29 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # NÃO COTA ANTES DE VALIDAR. Cada cotação no AGGER consome consulta paga, e conferir a entrada
   # custa uma chamada que não toca no portal.
   def start
-    return recusa('json_invalido', PEDIDO_DE_JSON) if dados.nil?
+    return recusa('json_invalido', FALTA_ALGO) if dados.nil?
 
     faltantes = validar
     return recusa('faltam_dados', pedido_do_que_falta(faltantes)) if faltantes.any?
 
     submeter
+  end
+
+  # A MESMA CONFERÊNCIA DO `start`, só que a tempo de servir para alguma coisa. Roda dentro do turno
+  # e devolve texto ao modelo, que pede o dado que falta em vez de anunciar uma cotação que a
+  # validação vai recusar cinco segundos depois — foi o que aconteceu em 08/09/2026.
+  #
+  # Não toca no portal e tem teto próprio de 10 s (`Connector::Http::CONFERENCIA_TIMEOUT`), então
+  # não segura o turno. Qualquer falha aqui devolve nil: conferência é conferência, não portão — a
+  # regra de `validar` continua sendo "não deixar de cotar por causa do conferente".
+  def precheck
+    return PEDIDO_DE_JSON if dados.nil?
+
+    faltantes = validar
+    faltantes.any? ? pedido_do_que_falta(faltantes) : nil
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] conferencia indisponivel account=#{account.id} #{e.class}")
+    nil
   end
 
   # -> Tools::Progress. Uma consulta. Só entrega quem AINDA NÃO foi entregue.

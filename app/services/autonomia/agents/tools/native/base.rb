@@ -64,6 +64,20 @@ class Autonomia::Agents::Tools::Native::Base
       false
     end
 
+    # CONFERÊNCIA ANTES DE ACEITAR, e ela existe porque O MODELO ESPERA O RETORNO DA FERRAMENTA:
+    # `ResponsesClient#create_with_tool_executor` alimenta a segunda chamada com a saída de cada
+    # função. O canal de volta ao modelo não falta — a assíncrona é que o preenchia com uma frase
+    # fixa e adiava o trabalho, então o modelo anunciava sucesso e só depois descobria a recusa.
+    #
+    # Quem consegue saber, ainda no turno, que o pedido não vai dar em nada, responde aqui: o texto
+    # volta pelo canal que o modelo já lê, e NENHUMA execução é aberta.
+    #
+    # -> String (o que o modelo recebe no lugar do aceite) ou nil (segue o fluxo normal).
+    # NUNCA levanta e nunca bloqueia: conferência indisponível deixa o pedido seguir.
+    def precheck
+      nil
+    end
+
     # O que o modelo lê ao aceitar o disparo. Curto e sem promessa de prazo — ele usa isto para
     # avisar o cliente na MESMA resposta (a rodada de ferramentas é única: a segunda chamada ao
     # modelo já vai sem `tools`, então não há segunda chance de falar).
