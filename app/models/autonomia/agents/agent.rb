@@ -86,7 +86,14 @@ module Autonomia
       # internal (copiloto da equipe, nunca fala com cliente) / both. Default external.
       enum actuation: { external: 0, internal: 1, both: 2 }, _prefix: :actuation
 
-      AGENT_TYPES = %w[support sdr reception onboarding scheduler reactivation custom].freeze
+      #  é o Agente de Cotação (PRD §18-19), e não nasce pelo construtor
+      # conversacional: a instrução dele é mantida pela Autonom.ia e a corretora não a edita.
+      # Ver .
+      # `insurance_quote` é o Agente de Cotação (PRD §18-19), e não nasce pelo construtor
+      # conversacional: a instrução dele é mantida pela Autonom.ia e a corretora não a edita — ela
+      # escolhe nome, horário e comportamento, e o resto vem de `Insurance::QuoteAgent::Builder`.
+      AGENT_TYPES = %w[support sdr reception onboarding scheduler reactivation custom
+                       insurance_quote].freeze
 
       # Tetos PRÓPRIOS de `tone` e `instruction`. O ApplicationRecord aplica um teto genérico
       # anti-DOS a toda coluna de texto (255 para string, 20.000 para text) e só sai da frente
