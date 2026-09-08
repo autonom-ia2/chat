@@ -123,11 +123,27 @@ class Autonomia::Agents::Specialist < ApplicationRecord
     # banco e monta o catálogo de nativas — não há motivo para refazer isso a cada chamada.
     @tools ||= begin
       by_slug = Autonomia::Agents::Tools::Bound.for_agent(agent).index_by(&:slug)
-      tool_slugs.filter_map { |slug| by_slug[slug.to_s] }
+      encontradas = tool_slugs.filter_map { |slug| by_slug[slug.to_s] }
+      avisar_descartadas(by_slug.keys, encontradas)
+      encontradas
     end
   end
 
   private
+
+  # O descarte silencioso acima esconde o caso em que o especialista fica SEM FERRAMENTA NENHUMA e
+  # ainda assim responde ao principal — que foi o defeito da Lia em 08/09/2026: ela pediu placa,
+  # CEP e CPF e anunciou uma cotação que nunca chegou ao portal. Continua não derrubando o turno,
+  # mas agora deixa rastro. Só slug e id: nada de credencial nem de prompt.
+  def avisar_descartadas(disponiveis, encontradas)
+    faltando = tool_slugs.map(&:to_s) - encontradas.map(&:slug)
+    return if faltando.empty?
+
+    Rails.logger.warn(
+      "[autonomia][specialist] tool_slug fora do catalogo specialist=#{id} " \
+      "faltando=#{faltando.join(',')} disponiveis=#{disponiveis.join(',')}"
+    )
+  end
 
   def normalize_tool_slugs
     self.tool_slugs = Array(tool_slugs).map { |slug| slug.to_s.strip }.reject(&:blank?).uniq
