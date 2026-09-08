@@ -56,8 +56,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       # Assert
       expect(resultado['motivo']).to eq('faltam_dados')
-      expect(resultado['pedido']).to include('configuracoes.valorMercado')
-      expect(resultado['pedido']).to include('Nenhuma cotação foi consumida')
+      # O `pedido` VAI PARA O CLIENTE (`Progress` chama deliveries de "textos destinados ao
+      # cliente"). Esta linha exigia `configuracoes.valorMercado` no texto — o teste consagrando o
+      # vazamento que levou `insured.document` a um WhatsApp em 08/09/2026. Campo de ramo não tem
+      # rótulo que dê para escrever sem adivinhar, então a frase fica genérica e quem pergunta é o
+      # modelo no turno seguinte.
+      expect(resultado['pedido']).not_to include('configuracoes.valorMercado')
+      expect(resultado['pedido']).not_to include('chame a ferramenta')
+      expect(resultado['pedido']).to include('nome do titular')
+    end
+
+    # Campo que a própria ferramenta coleta tem rótulo, e o cliente lê o nome que ele reconhece.
+    it 'pede o dado pelo nome que o cliente reconhece' do
+      # Arrange
+      ready_connection
+
+      # Act
+      resultado = tool('produto' => 'auto', 'placa' => 'ABC1D23').start
+
+      # Assert
+      expect(resultado['pedido']).to include('CPF do titular')
+      expect(resultado['pedido']).not_to include('insured.document')
     end
 
     it 'cota quando a entrada esta completa' do
