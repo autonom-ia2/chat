@@ -90,6 +90,43 @@ describe('rótulo do produto na tela de Conexões', () => {
     expect(wrapper.text()).not.toContain('auto ');
   });
 
+  // A FRONTEIRA MUDOU DE FORMA. A tradução do adapter no Rails era uma tabela de 13 chaves: o que
+  // faltava nela — `platformRef`, `labelConfidence`, `integrationStatus` — passava batido em
+  // camelCase, e este componente foi escrito contra isso. Com a tradução mecânica tudo chega em
+  // snake_case, e todos os fixtures deste arquivo continuam em camelCase: eles passariam verdes
+  // com a tela quebrada. Estes dois exemplos são a única prova do formato NOVO.
+  it('le o codigo do ramo em snake_case, como o Rails passou a mandar', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: conexaoCom({
+          product: 'ramo_777',
+          label: 'Drone',
+          platform_ref: '777',
+          label_confidence: 'confirmed',
+        }),
+      },
+    });
+    const wrapper = await montar();
+    expect(wrapper.text()).toContain('777');
+  });
+
+  // O asterisco avisa que o nome do ramo é chute do adapter. Lido pelo nome errado, ele some da
+  // tela e o corretor passa a confiar num rótulo que ninguém confirmou.
+  it('marca rotulo inferido vindo em snake_case', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: conexaoCom({
+          product: 'ramo_888',
+          label: 'Palpite',
+          platform_ref: '888',
+          label_confidence: 'inferred',
+        }),
+      },
+    });
+    const wrapper = await montar();
+    expect(wrapper.text()).toContain('*');
+  });
+
   // Produto que o adapter passou a cotar e o nosso i18n ainda não conhece. Antes desta mudança
   // ele aparecia como slug; agora o nome vem junto do dado.
   it('produto novo aparece com nome mesmo sem entrada no i18n', async () => {
