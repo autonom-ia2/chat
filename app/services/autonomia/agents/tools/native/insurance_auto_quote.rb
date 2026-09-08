@@ -110,11 +110,6 @@ class Autonomia::Agents::Tools::Native::InsuranceAutoQuote < Autonomia::Agents::
     sessions.with_fresh_session do |open_session|
       handle = connector.quote_start(provider: connection.provider, session: open_session,
                                      product: PRODUCT, input: quote_input)
-      # O ENDEREÇO da cotação fica guardado na conexão: é o destino do botão "Abrir o AGGER logado"
-      # da aba Conexões, que precisa de um id porque a rota de handoff do portal abre UMA cotação, e
-      # não a home. Antes disto o `quote_id` nascia aqui, servia ao `poll` e morria — e o botão não
-      # tinha para onde apontar. Guarda o endereço, nunca o conteúdo.
-      connection.record_last_quote!(handle['quote_id'], branch: PRODUCT)
       { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [],
         SEM_BONUS_KEY => renewal.sem_bonus? }
     end

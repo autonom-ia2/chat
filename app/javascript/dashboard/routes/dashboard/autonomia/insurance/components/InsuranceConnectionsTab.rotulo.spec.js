@@ -22,7 +22,6 @@ const api = vi.hoisted(() => ({
   reconnect: vi.fn(),
   rescan: vi.fn(),
   removeConnection: vi.fn(),
-  portalLink: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: api }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
