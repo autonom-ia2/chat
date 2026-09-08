@@ -144,14 +144,47 @@
       "DESCRIPTION": "Um agente Autonom.ia especializado, já treinado em seguros, que conversa com o cliente, coleta o que falta, cota nas seguradoras disponíveis da sua conta AGGER e envia a proposta. Você personaliza só a identidade, o tom e o conhecimento da corretora.",
       "PILLARS": {
         "COLLECT": "Identifica o ramo e coleta somente os dados necessários",
-        "QUOTE": "Executa a cotação pelo AGGER e devolve o resultado estruturado",
-        "EXPLAIN": "Explica apenas o que a cotação retornou, sem inventar coberturas",
-        "CRM": "Cria e movimenta a oportunidade no CRM automaticamente"
+        "QUOTE": "Cota nas seguradoras da sua conta AGGER e devolve os preços",
+        "EXPLAIN": "Responde cobertura consultando as condições gerais, nunca de memória",
+        "HANDOFF": "Passa para a sua equipe quando o cliente decide fechar"
       },
-      "LOCKED_NOTE": "A lógica de cotação, os formulários do AGGER e as regras de segurança são mantidos pela Autonom.ia e não podem ser alterados pela corretora.",
+      "LOCKED_NOTE": "A jornada de cotação, os formulários do AGGER e as regras de segurança são mantidos pela Autonom.ia. Você define a identidade, o horário e o comportamento — e acrescenta o que a sua corretora tem de próprio.",
       "ACTIONS": {
         "CREATE": "Criar Agente de Cotação",
-        "OPEN_AGENTS": "Ver meus agentes"
+        "OPEN_AGENTS": "Ver meus agentes",
+        "CONFIGURE": "Configurar e criar",
+        "OPEN_AGENT": "Abrir o agente",
+        "CANCEL": "Cancelar",
+        "SUBMIT": "Criar agente"
+      },
+      "FORM": {
+        "TITLE": "Como o seu agente se apresenta",
+        "SUBTITLE": "Quatro respostas. O resto já vem pronto.",
+        "NAME_LABEL": "Nome do agente",
+        "NAME_HINT": "É assim que ele se apresenta ao cliente.",
+        "NAME_PLACEHOLDER": "Mia",
+        "BROKER_LABEL": "Nome da corretora",
+        "BROKER_HINT": "A corretora que ele representa na conversa.",
+        "BROKER_PLACEHOLDER": "Corretora Exemplo",
+        "HOURS_LABEL": "Horário de atendimento",
+        "HOURS_HINT": "Quando a sua equipe assume. Fora disso, o agente avisa que retornam no próximo dia útil.",
+        "HOURS_PLACEHOLDER": "de segunda a sexta, das 09h às 18h",
+        "BEHAVIOR_LABEL": "Comportamento",
+        "BEHAVIOR_HINT": "Quando o agente explica cobertura. Nos dois casos ele nunca responde de memória.",
+        "BEHAVIOR_CONSULTIVO": "Consultivo",
+        "BEHAVIOR_CONSULTIVO_HINT": "Explica o que o cliente vai receber antes de cotar.",
+        "BEHAVIOR_OBJETIVO": "Objetivo",
+        "BEHAVIOR_OBJETIVO_HINT": "Cota primeiro. Explica se perguntarem."
+      },
+      "EXISTING": {
+        "TITLE": "O seu Agente de Cotação já existe",
+        "BRANCHES": "Cota: {ramos}",
+        "NOTE": "Um por conta. Para mudar o nome ou o comportamento, edite o agente."
+      },
+      "ERRORS": {
+        "NOME_INVALIDO": "Confira o nome do agente e o da corretora.",
+        "COMPORTAMENTO_INVALIDO": "Escolha um comportamento.",
+        "GENERIC": "Não consegui criar o agente agora. Tente de novo em instantes."
       }
     }
   }
