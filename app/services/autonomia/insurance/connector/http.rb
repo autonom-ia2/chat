@@ -142,31 +142,15 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   #
   # SÓ o primeiro nível é traduzido. `data` é a sessão opaca do portal — quem entende o que tem lá
   # dentro é o adapter, e mexer nas chaves dela quebraria o token na volta.
-  CAMEL_TO_SNAKE = {
-    'expiresAt' => 'expires_at',
-    'sessionExpiresAt' => 'session_expires_at',
-    'accountLabel' => 'account_label',
-    'checkedAt' => 'checked_at',
-    'scannedAt' => 'scanned_at',
-    'droppedPreviousSession' => 'dropped_previous_session',
-    # Criterio 1.5: o portal avisa que a conta ja estava em uso, e o aviso vem no mesmo 201 do
-    # login bem-sucedido. Sem estas duas chaves ele morre na fronteira.
-    'alreadyActive' => 'already_active',
-    'sessionStartedAt' => 'session_started_at',
-    # Camadas do critério 1.2. Chegam ANINHADAS em `layers`, e é por isso que a tradução deixou de
-    # ser só do primeiro nível: uma camada lida como nil vira "não sei" quando na verdade era
-    # "falhou", e o 1.2 existe exatamente para não confundir esses dois.
-    'platformAuth' => 'platform_auth',
-    'insurerAuth' => 'insurer_auth',
-    'productSupport' => 'product_support',
-    # Prêmio do critério 5.5: sem estas, o significado do valor se perde na fronteira e o Rails
-    # volta a ter um número sem unidade.
-    'basisEvidence' => 'basis_evidence',
-    # Contrato de ramo (`quote/schema` e `quote/validate`). Sem estas, `obrigatorio` chega e
-    # `condicional_a` some — e um campo exigido só quando o grupo existe passaria a ser cobrado
-    # sempre, ou nunca. É a mesma classe de defeito que `expiresAt` causou em 04/09.
-    'condicionalA' => 'condicional_a'
-  }.freeze
+  # TRADUÇÃO É MECÂNICA, NÃO É LISTA. Isto era uma tabela de 13 chaves escritas à mão, e o adapter
+  # tem 19 campos camelCase nos tipos de resposta: as 6 que ninguém lembrou de acrescentar liam nil
+  # em silêncio. `quoteId` era uma delas — em 08/09/2026 a cotação SUBIU ao portal, consumiu consulta
+  # paga, e `handle['quote_id']` veio nil; o `poll` desistiu com `sem_id_de_cotacao` e o cliente
+  # ouviu "não consegui". Campo novo do adapter não pode depender de alguém lembrar.
+  CAMEL = /([a-z\d])([A-Z])/
+  def snake_case(key)
+    key.is_a?(String) ? key.gsub(CAMEL, '\\1_\\2').downcase : key
+  end
 
   # `data` é a sessão OPACA do portal: renomear chave lá dentro quebra o token na volta. É a única
   # exceção, e ela é do desenho, não um caso especial.
@@ -180,7 +164,7 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   end
 
   def put_normalized(out, key, value, raiz:)
-    snake = CAMEL_TO_SNAKE[key] || key
+    snake = snake_case(key)
     # A chave em snake_case tem precedência: se o adapter um dia mandar as duas, a nossa vence.
     return if out[snake].present?
 
