@@ -177,6 +177,29 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(agente.instruction).not_to include('$nomeAgente')
     end
 
+    # A VARIÁVEL NÃO PODE ESTAR ENTRE CRASES no markdown. A substituição troca só o marcador, e as
+    # crases sobram no texto que vai para o modelo: a Lia criada em 08/09 dizia "Você é `Lia`, e atende
+    # pela corretora `Sena Negócios`" — o nome certo, com sujeira de formatação em volta. Não quebra,
+    # mas é ruído num texto que a Autonom.ia mantém, e ninguém veria sem ler o banco.
+    it 'nao deixa crase colada na variavel substituida' do
+      agente = construir(nome_agente: 'Lia', nome_corretora: 'Sena')
+
+      expect(agente.instruction).to include('Você é Lia, e atende pela corretora Sena')
+      expect(agente.instruction).not_to include('`Lia`')
+      expect(agente.instruction).not_to include('`Sena`')
+    end
+
+    # A guarda: as crases não voltam na próxima variável que alguém acrescentar.
+    it 'nenhuma variavel do arquivo esta entre crases' do
+      pasta = described_class::INSTRUCOES
+      described_class::VARIAVEIS.each_key do |marcador|
+        pasta.glob('*.md').each do |arquivo|
+          expect(arquivo.read).not_to include("`#{marcador}`"),
+                                      "#{arquivo.basename} tem #{marcador} entre crases"
+        end
+      end
+    end
+
     it 'nao deixa nenhuma variavel sem substituir' do
       instrucao = construir.instruction
 

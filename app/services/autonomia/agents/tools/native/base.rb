@@ -85,6 +85,17 @@ class Autonomia::Agents::Tools::Native::Base
       'Não consegui concluir a consulta agora. Um atendente vai retomar daqui.'
     end
 
+    # EM `strict: true` NÃO EXISTE CAMPO FORA DE `required`.
+    #
+    # A OpenAI recusa a chamada INTEIRA — não a ferramenta, a chamada — quando `required` não lista
+    # todas as chaves de `properties`. Medido em produção em 08/09/2026, com a Lia muda numa conversa
+    # de WhatsApp real: `Invalid schema for function 'consultar_condicoes_gerais': 'required' is
+    # required to be supplied and to be an array including every key in properties. Missing 'ramo'`.
+    # Uma ferramenta com um parâmetro opcional derrubava o turno todo, e o agente não respondia nada.
+    #
+    # O jeito de dizer "opcional" em strict mode é OUTRO: o campo entra em `required` e o tipo dele
+    # passa a aceitar `null`. O modelo então manda `null` quando não tem o valor, em vez de omitir a
+    # chave — e a ferramenta recebe nil, que é o que ela já esperava de um parâmetro ausente.
     def openai_schema
       {
         type: 'function',
@@ -92,12 +103,19 @@ class Autonomia::Agents::Tools::Native::Base
         description: description,
         parameters: {
           type: 'object',
-          properties: params.to_h { |param| [param['name'], param.slice('type', 'description')] },
-          required: params.reject { |param| param['required'] == false }.pluck('name'),
+          properties: params.to_h { |param| [param['name'], propriedade(param)] },
+          required: params.pluck('name'),
           additionalProperties: false
         },
         strict: true
       }
+    end
+
+    def propriedade(param)
+      base = param.slice('type', 'description')
+      return base unless param['required'] == false
+
+      base.merge('type' => [param['type'], 'null'])
     end
   end
 
