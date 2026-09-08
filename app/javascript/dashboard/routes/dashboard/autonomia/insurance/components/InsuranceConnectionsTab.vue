@@ -183,41 +183,6 @@ const onDisconnect = () =>
     'INSURANCE.CONNECTION.ALERTS.DISCONNECTED'
   );
 
-// ABRIR O PORTAL JÁ LOGADO.
-//
-// Fora do `run` de propósito: `run` aplica o payload da resposta sobre `connection`, e o que volta
-// daqui não é uma conexão — é a URL. Passar por ele apagaria o estado da tela.
-//
-// A URL vive o tempo de uma variável local. Não entra em `ref`, não vai para o estado do
-// componente, e não é registrada em log: ela É a credencial da corretora, cifrada, e o que a
-// protege é não existir em lugar nenhum depois que a aba abre.
-//
-// `window.open` ANTES do await falharia por bloqueio de pop-up? Não: o clique do corretor é a
-// interação que autoriza, e a aba é aberta na volta da chamada, dentro do mesmo gesto. Se um
-// bloqueador ainda assim barrar, o `catch` avisa em vez de deixar o botão parecendo morto.
-const isOpeningPortal = ref(false);
-const onOpenPortal = async () => {
-  isOpeningPortal.value = true;
-  try {
-    const { data } = await AutonomiaInsuranceAPI.portalLink();
-    const aberta = window.open(
-      data.payload.url,
-      '_blank',
-      'noopener,noreferrer'
-    );
-    if (!aberta) useAlert(t('INSURANCE.CONNECTION.ERRORS.POPUP_BLOCKED'));
-  } catch (error) {
-    const chave = error?.response?.data?.error;
-    useAlert(
-      chave === 'autonomia.insurance.connection.no_quote_yet'
-        ? t('INSURANCE.CONNECTION.ERRORS.NO_QUOTE_YET')
-        : t('INSURANCE.CONNECTION.ERRORS.PORTAL_LINK')
-    );
-  } finally {
-    isOpeningPortal.value = false;
-  }
-};
-
 // CRITÉRIO 1.6 — a verificação diz QUANDO e COM QUE evidência.
 //
 // Isto era `formatRelative`, que mostrava "há 3 minutos". Dois defeitos: o corretor não consegue
@@ -721,28 +686,38 @@ onUnmounted(pararAcompanhamento);
             <p>{{ failureText }}</p>
           </div>
 
-          <!-- "ABRIR O AGGER LOGADO" — a ação principal do desenho aprovado em 07/09/2026.
-               Abre o portal já autenticado, para o corretor cotar ao lado do agente. Não derruba a
-               sessão do agente: medido no portal real, duas vezes.
+          <!-- AQUI FICOU, POR ALGUMAS HORAS, O BOTÃO "Abrir o AGGER logado". Ele foi RETIRADO em
+               08/09/2026, e o motivo é do portal — não do nosso código. Está escrito aqui para
+               ninguém tentar de novo sem ler primeiro.
 
-               APONTA PARA A ÚLTIMA COTAÇÃO da conta, e não para a home — decisão do Rodrigo
-               (caminho B), porque a rota de handoff do portal abre UMA cotação. Sem cotação nenhuma
-               o botão não aparece: oferecer um atalho que não vai a lugar nenhum é pior do que não
-               oferecer.
+               O QUE FUNCIONA: o handoff (`/cotacao/:ramo/resultados/:id/:versao/:token`) abre uma
+               cotação existente já autenticada, e não derruba a sessão do agente. Medido três
+               vezes, inclusive com o botão real em produção.
 
-               A URL é gerada NO CLIQUE e não fica guardada em lugar nenhum do front. -->
+               O QUE NÃO FUNCIONA, E ERA O OBJETIVO: cotar do zero. A autenticação do handoff vale
+               SÓ para aquele componente. Medido em 08/09:
+                 - recarregar a home                                  -> /login
+                 - CLICAR em "Cotações" (navegação interna, sem reload) -> /login
+               O segundo é o que fecha a questão: nem a memória da SPA sobrevive à troca de rota.
+
+               POR QUÊ: o portal não persiste sessão em lugar nenhum. Varredura dos 4 MB de bundle
+               achou SETE gravações em localStorage — `bannerDueDate`, `modalIntroTimestamp`,
+               `notificacoesLidas`, `pathRefer`, `SIDEBAR_CLOSED_KEY` — e nenhuma de token, sessão
+               ou credencial. Nem `sessionStorage`, nem cookie próprio (os que existem são de
+               analytics). Vale também para o login normal pelo formulário.
+
+               ISSO ELIMINA DUAS SAÍDAS: não há rota que persista a sessão a partir do token, e não
+               há onde injetar sessão no navegador — não existe chave para escrever.
+
+               O QUE DESTRAVA: SSO de verdade, pedido à AGGER. Eles já têm o link autenticado;
+               falta ele deixar a sessão navegável em vez de válida para um componente só. Enquanto
+               isso não existe, o botão prometeria o que a plataforma não entrega, e a decisão do
+               Rodrigo foi não deixar meio-caminho na mão do corretor.
+
+               O mecanismo continua vivo e utilizável pelo adapter:
+               `agger portal link -q <cotacao> -o <arquivo>`. Ver autonom-ia2/chat#345 e
+               autonom-ia2/autonomia-adapters#42. -->
           <div class="flex flex-wrap items-center gap-2">
-            <NextButton
-              v-if="connection.last_quote"
-              solid
-              blue
-              sm
-              icon="i-lucide-external-link"
-              :label="t('INSURANCE.CONNECTION.ACTIONS.OPEN_PORTAL')"
-              :disabled="isBusy || !isConnected"
-              :is-loading="isOpeningPortal"
-              @click="onOpenPortal"
-            />
             <NextButton
               faded
               slate

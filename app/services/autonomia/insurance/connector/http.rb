@@ -52,19 +52,6 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     invoke("/v1/#{provider}/quote/proposal", payload)
   end
 
-  # O LINK QUE ABRE O PORTAL JÁ LOGADO.
-  #
-  # Leva CREDENCIAL, e não sessão — é a segunda operação da lista a fazer isso, pelo mesmo motivo da
-  # primeira: o que viaja na URL é um login NOVO, que o portal executa sozinho ao abrir. Medido em
-  # 07/09/2026 que esse login não derruba a sessão do agente, e sem isso o botão seria inviável.
-  #
-  # A resposta É A CREDENCIAL, cifrada. Quem chama não grava a URL em log, telemetria nem banco.
-  def portal_link(provider:, username:, password:, quote_id:, branch: 'auto', version: 1)
-    invoke("/v1/#{provider}/portal/link",
-           { username: username, password: password, quoteId: quote_id, branch: branch,
-             version: version })
-  end
-
   private
 
   def invoke(path, payload)
