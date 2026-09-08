@@ -133,4 +133,56 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(Autonomia::Agents::Agent.where(account: account)).to be_empty
     end
   end
+
+  # UM POR CONTA. Dois agentes de cotação seriam ligados às mesmas caixas de entrada e disputariam a
+  # mesma conversa — cada um com o seu especialista e a sua sessão no portal —, e o corretor não teria
+  # como saber qual respondeu.
+  describe 'chamado duas vezes' do
+    it 'recusa criar o segundo' do
+      primeiro = construir
+
+      expect { construir }.to raise_error(described_class::JaExiste, primeiro.id.to_s)
+      expect(Autonomia::Agents::Agent.where(account: account).count).to eq(1)
+    end
+
+    it 'deixa outra conta criar o seu' do
+      construir
+      outra = create(:account)
+
+      expect do
+        described_class.new(account: outra, nome_agente: 'Ana', nome_corretora: 'Outra').call
+      end.not_to raise_error
+    end
+  end
+
+  describe 'o que a corretora escreve' do
+    # `nome_agente` é limitado pela coluna (string, 255). `nome_corretora` NÃO vai para coluna
+    # nenhuma — só é colado dentro da instrução —, então sem teto aqui ele estouraria o limite de
+    # 50.000 do `instruction`, e o erro que chegaria a quem clicou não explicaria nada.
+    it 'recusa nome de corretora longo demais' do
+      expect { construir(nome_corretora: 'C' * 200) }
+        .to raise_error(described_class::NomeInvalido, /corretora/)
+    end
+
+    it 'recusa nome de agente vazio' do
+      expect { construir(nome_agente: '   ') }.to raise_error(described_class::NomeInvalido, /agente/)
+    end
+
+    # `gsub` com o valor como segundo argumento interpreta `\0` no texto de substituição. Um nome
+    # contendo essa sequência passaria a inserir o próprio marcador de volta na instrução.
+    it 'trata o nome como texto, e nao como padrao de substituicao' do
+      agente = construir(nome_agente: 'Mia \0 Bot')
+
+      expect(agente.instruction).to include('Mia \0 Bot')
+      expect(agente.instruction).not_to include('$nomeAgente')
+    end
+
+    it 'nao deixa nenhuma variavel sem substituir' do
+      instrucao = construir.instruction
+
+      described_class::VARIAVEIS.each_key do |marcador|
+        expect(instrucao).not_to include(marcador)
+      end
+    end
+  end
 end

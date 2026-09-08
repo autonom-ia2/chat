@@ -29,7 +29,15 @@ class Autonomia::Insurance::QuoteAgent::Builder
                  'cliente pedir preço de seguro de carro, moto ou caminhão.' }
   ].freeze
 
+  # Teto do que a corretora escreve. `nome_agente` já é limitado pela coluna (string, 255), mas
+  # `nome_corretora` NÃO VAI PARA COLUNA NENHUMA — ele só é colado dentro da instrução. Sem teto
+  # aqui, um valor grande o bastante estoura o limite de 50.000 do `instruction` e a criação falha
+  # com erro de validação que não explica nada a quem clicou.
+  MAX_NOME = 120
+
   class ComportamentoInvalido < StandardError; end
+  class NomeInvalido < StandardError; end
+  class JaExiste < StandardError; end
 
   def initialize(account:, nome_agente:, nome_corretora:, horario: nil, comportamento: nil)
     @account = account
@@ -44,6 +52,12 @@ class Autonomia::Insurance::QuoteAgent::Builder
   def call
     raise ComportamentoInvalido, @comportamento unless COMPORTAMENTOS.include?(@comportamento)
 
+    validar_nomes!
+    # UM AGENTE DE COTAÇÃO POR CONTA. Dois seriam ligados às mesmas caixas de entrada e disputariam
+    # a mesma conversa, cada um com o seu especialista e a sua sessão AGGER — e o corretor não teria
+    # como saber qual respondeu. Quem quer trocar o nome ou o comportamento edita o que existe.
+    raise JaExiste, existente.id.to_s if existente
+
     ::Autonomia::Agents::Agent.transaction do
       agente = criar_agente
       ESPECIALISTAS.each { |dados| criar_especialista(agente, dados) }
@@ -52,6 +66,18 @@ class Autonomia::Insurance::QuoteAgent::Builder
   end
 
   private
+
+  # O agente de cotação desta conta, se já houver.
+  def existente
+    ::Autonomia::Agents::Agent.find_by(account: @account, agent_type: 'insurance_quote')
+  end
+
+  def validar_nomes!
+    { 'nome do agente' => @nome_agente, 'nome da corretora' => @nome_corretora }.each do |campo, valor|
+      raise NomeInvalido, "#{campo} vazio" if valor.blank?
+      raise NomeInvalido, "#{campo} acima de #{MAX_NOME} caracteres" if valor.length > MAX_NOME
+    end
+  end
 
   def criar_agente
     ::Autonomia::Agents::Agent.create!(
@@ -71,11 +97,20 @@ class Autonomia::Insurance::QuoteAgent::Builder
 
   # As variáveis são substituídas AQUI, na criação, e não a cada turno: o que vai para o banco é o
   # texto final. Um agente cujo nome mudasse a cada leitura seria impossível de auditar depois.
+  # O BLOCO NO `gsub` NÃO É ESTILO. Com o valor como segundo argumento, o Ruby interpreta `\\0` no
+  # texto de substituição — um nome de corretora contendo essa sequência passaria a inserir o
+  # próprio marcador de volta. O bloco entrega a string literal, sem interpretar nada.
   def texto(arquivo)
-    bruto = INSTRUCOES.join(arquivo).read
-    bruto.gsub('$nomeAgente', @nome_agente)
-         .gsub('$nomeCorretora', @nome_corretora)
-         .gsub('$horarioAtendimento', @horario)
-         .gsub('$comportamento', @comportamento)
+    VARIAVEIS.reduce(INSTRUCOES.join(arquivo).read) do |texto, (marcador, campo)|
+      texto.gsub(marcador) { valores.fetch(campo) }
+    end
+  end
+
+  VARIAVEIS = { '$nomeAgente' => :nome_agente, '$nomeCorretora' => :nome_corretora,
+                '$horarioAtendimento' => :horario, '$comportamento' => :comportamento }.freeze
+
+  def valores
+    { nome_agente: @nome_agente, nome_corretora: @nome_corretora,
+      horario: @horario, comportamento: @comportamento }
   end
 end
