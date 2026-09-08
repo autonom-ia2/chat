@@ -56,9 +56,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
   # ser recusado logo em seguida por falta de dado, por conexão fora do ar ou por prazo. Quando ele
   # dizia "Cotação enviada às seguradoras", o agente anunciava sucesso e cinco segundos depois se
   # desmentia na frente do cliente — em 08/09/2026, com estas duas mensagens seguidas.
-  ACEITA = 'Pedido de cotação recebido e em conferência. Avise o cliente que você está cuidando ' \
-           'disso e que volta aqui com notícia. NÃO afirme que já foi enviada às seguradoras, e ' \
-           'não invente valores, prazos nem nomes de seguradora.'.freeze
+  # NÃO ENTREGUE AS PALAVRAS, SÓ O QUE TRANSMITIR. A versão anterior dizia "recebido e em
+  # conferência" — e o modelo devolveu ao cliente "a cotação está em conferência e não há preços
+  # disponíveis neste momento". Vocabulário de sistema posto na boca dele, que é exatamente o que a
+  # instrução do agente proíbe em §4. Ele obedeceu o exemplo, não a regra.
+  ACEITA = 'Você recebeu o pedido e já está cuidando dele. Diga isso ao cliente com as SUAS ' \
+           'palavras, e que você volta aqui assim que tiver notícia. NÃO afirme que já foi ' \
+           'enviada às seguradoras (ainda não foi), não use vocabulário de sistema — "em ' \
+           'conferência", "processando", "em análise", "não há dados disponíveis" — e não invente ' \
+           'valores, prazos nem nomes de seguradora.'.freeze
 
   ESPERANDO = 'Estou consultando as seguradoras agora. Assim que os primeiros preços chegarem, ' \
               'mando aqui.'.freeze

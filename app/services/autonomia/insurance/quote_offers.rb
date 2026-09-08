@@ -37,17 +37,38 @@ class Autonomia::Insurance::QuoteOffers
 
   # Texto pronto para o cliente. A segunda mensagem se anuncia como complemento — sem isso ela
   # parece uma cotação nova e o cliente não sabe qual vale.
+  # QUEM ESCREVE ESTE TEXTO É O CÓDIGO, e não o modelo — de propósito: preço redigido por modelo é
+  # preço que ele pode arredondar, trocar de seguradora ou inventar. O custo dessa escolha é que a
+  # instrução ("negrito no nome e no valor") não alcança aqui; a formatação tem que ser feita nesta
+  # linha. Até 08/09/2026 não era, e o cliente lia `Usebens: R$ 2837,70` numa lista corrida.
+  #
+  # NEGRITO DO WHATSAPP É ASTERISCO SIMPLES. Não há conversão de markdown na saída (a mensagem vai
+  # crua em `outgoing_content`), então `**nome**` chegaria com os asteriscos à mostra.
   def self.describe(offers, first:, aviso: nil)
-    linhas = offers.map do |offer|
-      "#{offer.dig('insurer', 'name')}: #{::Autonomia::Insurance::PremiumText.new(offer['premium'])}"
-    end
-    abertura = first ? 'Primeiros preços que chegaram:' : 'Chegaram mais opções:'
-    corpo = "#{abertura}\n#{linhas.join("\n")}"
-    corpo = "#{corpo}\n\n#{::Autonomia::Insurance::PremiumText::SEM_SIGNIFICADO}" if algum_indefinido?(offers)
+    corpo = "#{abertura(first, offers.size)}\n\n#{offers.map { |offer| item(offer) }.join("\n\n")}"
     aviso ? "#{corpo}\n\n#{aviso}" : corpo
   end
 
-  def self.algum_indefinido?(offers)
-    offers.any? { |offer| ::Autonomia::Insurance::PremiumText.new(offer['premium']).indefinido? }
+  # Um item por oferta: nome e valor na primeira linha, o que qualifica aquele valor na segunda.
+  def self.item(offer)
+    premium = ::Autonomia::Insurance::PremiumText.new(offer['premium'])
+    linha = "• *#{nome(offer)}* — #{premium.resumo}"
+    detalhe = premium.detalhe
+    detalhe ? "#{linha}\n  #{detalhe}" : linha
+  end
+
+  # O NOME VEM DO PORTAL e é interpolado dentro do negrito. Um `*` no meio fecha o negrito cedo e o
+  # resto do nome vaza com asterisco à mostra; uma quebra de linha desmonta o marcador. Nenhuma das
+  # duas apareceu ainda — e nenhuma das duas é nossa para garantir que não apareça.
+  def self.nome(offer)
+    offer.dig('insurer', 'name').to_s.tr("*\n\r", ' ').squeeze(' ').strip
+  end
+
+  # Sem telegrafar o mecanismo. "Primeiros preços que chegaram" e "Chegaram mais opções" descrevem
+  # a nossa fila de entrega, que não é assunto de quem está comprando seguro.
+  def self.abertura(first, quantas)
+    return first ? 'Primeiros preços:' : 'Mais uma opção:' if quantas == 1
+
+    first ? 'Primeiros preços:' : "Mais #{quantas} opções:"
   end
 end

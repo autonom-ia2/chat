@@ -86,6 +86,21 @@ class Autonomia::Agents::Tools::Native::Base
         'nesta conversa em instantes. Não invente valores nem prazos.'
     end
 
+    # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR. Em 08/09/2026 uma cotação
+    # entregou cinco preços e morreu no prazo: o comparativo em PDF só era gerado no caminho feliz,
+    # então não saiu — e `fail_run` não avisava nada porque já havia entrega. O cliente ficou com
+    # preços soltos, sem comparativo e sem uma palavra.
+    # -> Array de textos para o cliente. Vazio por padrão.
+    def closing_deliveries(_handle)
+      []
+    end
+
+    # O fecho quando acabou o prazo e ALGO já tinha sido entregue. Não é a mensagem de falha: dizer
+    # "não consegui" a quem acabou de receber preço é desmentir o que ele está lendo.
+    def partial_message
+      'Algumas consultas não responderam a tempo. O que chegou está aqui em cima.'
+    end
+
     # Texto que o CÓDIGO publica quando o turno não avisou o cliente (o modelo ficou em silêncio,
     # a IA falhou, a porta de engajamento fechou). O aviso não pode depender de o modelo lembrar.
     def waiting_message
