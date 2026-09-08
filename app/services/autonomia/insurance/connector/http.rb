@@ -38,6 +38,20 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     invoke("/v1/#{provider}/capabilities", { session: session })
   end
 
+  # AS DUAS QUE NÃO LEVAM SESSÃO. O adapter responde as duas sem tocar no portal — são conhecimento
+  # dele sobre o produto —, e é por isso que valem: o agente descobre o que perguntar e confere a
+  # entrada ANTES de gastar uma cotação, que no AGGER consome consulta paga.
+  #
+  # Passar sessão aqui seria pior do que inútil: exigiria conexão pronta para responder o que um
+  # ramo pede, e essa é justamente a pergunta que se faz antes de ter conta conectada.
+  def quote_schema(provider:, product:)
+    invoke("/v1/#{provider}/quote/schema", { product: product })
+  end
+
+  def quote_validate(provider:, product:, input:)
+    invoke("/v1/#{provider}/quote/validate", { product: product, input: input })
+  end
+
   def quote_start(provider:, session:, product:, input:)
     invoke("/v1/#{provider}/quote/start", { session: session, product: product, input: input })
   end
@@ -141,7 +155,11 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     'productSupport' => 'product_support',
     # Prêmio do critério 5.5: sem estas, o significado do valor se perde na fronteira e o Rails
     # volta a ter um número sem unidade.
-    'basisEvidence' => 'basis_evidence'
+    'basisEvidence' => 'basis_evidence',
+    # Contrato de ramo (`quote/schema` e `quote/validate`). Sem estas, `obrigatorio` chega e
+    # `condicional_a` some — e um campo exigido só quando o grupo existe passaria a ser cobrado
+    # sempre, ou nunca. É a mesma classe de defeito que `expiresAt` causou em 04/09.
+    'condicionalA' => 'condicional_a'
   }.freeze
 
   # `data` é a sessão OPACA do portal: renomear chave lá dentro quebra o token na volta. É a única
