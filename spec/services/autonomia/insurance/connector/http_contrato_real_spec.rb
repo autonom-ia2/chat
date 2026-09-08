@@ -64,6 +64,19 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
     expect(payload['label_confidence']).to eq('valor-labelConfidence')
   end
 
+  # A FRONTEIRA DE SIGLA. Uma regex ingênua (`([a-z\d])([A-Z])`) cola `ABCDef` em `abcdef` e perde
+  # o limite da palavra. `underscore` do ActiveSupport resolve, e este exemplo trava a escolha.
+  it 'respeita fronteira de sigla e nao mexe no que ja esta em snake_case' do
+    # Arrange
+    stub_lambda('{"httpURL":"u","quoteID":"q","address2":"a","already_snake":"s"}')
+
+    # Act
+    payload = described_class.new.capabilities(provider: 'agger', session: { 'a' => 1 })
+
+    # Assert
+    expect(payload.keys).to match_array(%w[http_url quote_id address2 already_snake])
+  end
+
   it 'traduz o payload que o Lambda de produção realmente devolveu' do
     # Arrange — resposta literal do adapter, com `checkedAt` em camelCase
     real = '{"platform":"agger","status":"auth_required","checkedAt":"2026-09-05T10:42:38.372Z",' \

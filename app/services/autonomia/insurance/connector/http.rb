@@ -147,9 +147,10 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   # em silêncio. `quoteId` era uma delas — em 08/09/2026 a cotação SUBIU ao portal, consumiu consulta
   # paga, e `handle['quote_id']` veio nil; o `poll` desistiu com `sem_id_de_cotacao` e o cliente
   # ouviu "não consegui". Campo novo do adapter não pode depender de alguém lembrar.
-  CAMEL = /([a-z\d])([A-Z])/
+  # `underscore` do ActiveSupport, e não uma regex própria: ele já resolve a fronteira de sigla
+  # (`httpURL` -> `http_url`, `ABCDef` -> `abc_def`), que a regex ingênua cola numa palavra só.
   def snake_case(key)
-    key.is_a?(String) ? key.gsub(CAMEL, '\\1_\\2').downcase : key
+    key.is_a?(String) ? key.underscore : key
   end
 
   # `data` é a sessão OPACA do portal: renomear chave lá dentro quebra o token na volta. É a única
