@@ -93,6 +93,67 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
   end
 
+  # O SEGURADO VEM DE DOIS LUGARES, e é onde um review adversarial achou o defeito: o JSON do
+  # modelo vencia o parâmetro explícito INCLUSIVE quando vinha vazio, apagando o CPF que o cliente
+  # já tinha dado. O portal recusaria uma cotação que tinha tudo.
+  describe 'quem esta sendo segurado' do
+    def entrada_montada(params)
+      connector = Autonomia::Insurance::Connector.client
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      capturada = nil
+      allow(connector).to receive(:quote_validate) do |args|
+        capturada = args[:input]
+        { 'valido' => true, 'problemas' => [] }
+      end
+      tool(params).start
+      capturada
+    end
+
+    it 'nao deixa o JSON vazio apagar o CPF que veio no parametro' do
+      # Arrange
+      ready_connection
+
+      # Act
+      entrada = entrada_montada('produto' => 'bike', 'cpf' => '042.979.126-78', 'nome' => 'Fulano',
+                                'dados' => '{"segurado":{"cpfCnpj":"","nome":""}}')
+
+      # Assert
+      expect(entrada['segurado']['cpfCnpj']).to eq('04297912678')
+      expect(entrada['segurado']['nome']).to eq('Fulano')
+    end
+
+    it 'deixa o JSON corrigir o parametro quando traz valor' do
+      ready_connection
+      entrada = entrada_montada('produto' => 'bike', 'cpf' => '042.979.126-78',
+                                'dados' => '{"segurado":{"cpfCnpj":"11122233344"}}')
+
+      expect(entrada['segurado']['cpfCnpj']).to eq('11122233344')
+    end
+
+    it 'limpa a pontuacao do CPF antes de mandar' do
+      ready_connection
+      entrada = entrada_montada('produto' => 'bike', 'cpf' => '042.979.126-78', 'dados' => '{}')
+
+      expect(entrada['segurado']['cpfCnpj']).to eq('04297912678')
+    end
+
+    it 'nao inventa segurado quando ninguem informou' do
+      ready_connection
+      entrada = entrada_montada('produto' => 'bike', 'dados' => '{"marca":"Caloi"}')
+
+      expect(entrada).not_to have_key('segurado')
+    end
+
+    # A comissão é da conexão, e não do modelo: um agente que a informasse mudaria o que a corretora
+    # ganha por cotação.
+    it 'manda a comissao da conexao, e nao a que o modelo escrever' do
+      ready_connection
+      entrada = entrada_montada('produto' => 'bike', 'dados' => '{"commissionPercent":99}')
+
+      expect(entrada['commissionPercent']).to eq(described_class::DEFAULT_COMMISSION)
+    end
+  end
+
   describe 'entrada que o modelo pode errar' do
     it 'pede o produto quando ele nao veio' do
       ready_connection
@@ -119,6 +180,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     it 'aceita dados vazios como primeira tentativa, e nao como erro' do
       ready_connection
       expect(tool('produto' => 'bike', 'dados' => '').start['motivo']).to eq('faltam_dados')
+    end
+
+    # `dados` é escrito por um modelo de linguagem: nem o formato nem o tamanho são garantidos. O
+    # ramo que mais pede é a bike, com dezessete campos — muito abaixo do teto.
+    it 'recusa sem parsear quando o JSON passa do teto' do
+      ready_connection
+      gigante = { lixo: 'x' * described_class::MAX_DADOS_BYTES }.to_json
+
+      expect(tool('produto' => 'bike', 'dados' => gigante).start['motivo']).to eq('json_invalido')
     end
 
     it 'recusa produto que o adapter nao conhece' do

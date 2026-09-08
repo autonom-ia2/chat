@@ -19,6 +19,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # mesmo pedido — o modelo escolheria por descrição, e a desta é necessariamente mais genérica.
   PRODUTO_COM_FERRAMENTA_PROPRIA = 'auto'.freeze
   MAX_OFFERS = 3
+  # Teto do JSON que o modelo escreve. O ramo que mais pede é a bike, com dezessete campos — alguns
+  # milhares de caracteres com folga. Um valor muito maior não é entrada legítima, e parsear antes
+  # de olhar o tamanho é trabalho que ninguém pediu.
+  MAX_DADOS_BYTES = 20_000
   DELIVERED_KEY = 'entregues'.freeze
   DEFAULT_COMMISSION = 10.0
 
@@ -201,6 +205,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     return @dados if defined?(@dados)
 
     bruto = params['dados'].to_s.strip
+    return @dados = nil if bruto.bytesize > MAX_DADOS_BYTES
+
     @dados = bruto.empty? ? {} : parse_json(bruto)
   end
 
@@ -213,12 +219,21 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
   # O segurado vem por parâmetro próprio porque é o único dado comum a TODOS os ramos, e pedi-lo
   # dentro do JSON faria o agente errar a grafia da chave a cada ramo.
+  #
+  # VAZIO NUNCA SOBRESCREVE. O JSON vence o parâmetro quando traz valor — é o mais específico, e o
+  # modelo o escreveu de propósito —, mas `{"segurado":{"cpfCnpj":""}}` apagaria o CPF que veio no
+  # parâmetro, e o portal recusaria uma cotação que tinha tudo. `compact_blank` é o que separa
+  # "informou outro valor" de "mandou a chave vazia".
   def entrada
-    segurado = { 'cpfCnpj' => params['cpf'].to_s.gsub(/\D/, '').presence,
-                 'nome' => params['nome'].to_s.presence }.compact
     base = dados.to_h
-    base = base.merge('segurado' => segurado.merge(base['segurado'].to_h)) if segurado.any?
+    informado = segurado_dos_parametros.merge(base['segurado'].to_h.compact_blank)
+    base = base.merge('segurado' => informado) if informado.any?
     base.merge('commissionPercent' => commission_percent)
+  end
+
+  def segurado_dos_parametros
+    { 'cpfCnpj' => params['cpf'].to_s.gsub(/\D/, '').presence,
+      'nome' => params['nome'].to_s.presence }.compact
   end
 
   def commission_percent
