@@ -56,14 +56,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       # Assert
       expect(resultado['motivo']).to eq('faltam_dados')
-      expect(resultado['pedido']).to include('valorMercado')
+      expect(resultado['pedido']).to include('configuracoes.valorMercado')
       expect(resultado['pedido']).to include('Nenhuma cotação foi consumida')
     end
 
     it 'cota quando a entrada esta completa' do
       # Arrange
       ready_connection
-      dados = { marca: 'Caloi', valorMercado: 8000, numeroSerie: 'SN-1' }.to_json
+      dados = { segurado: { nome: 'Fulano', cpfCnpj: '04297912678' },
+                configuracoes: { marca: 'Caloi', valorMercado: 8000, numeroSerie: 'SN-1' } }.to_json
 
       # Act
       resultado = tool('produto' => 'bike', 'dados' => dados).start
@@ -155,12 +156,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   describe 'entrada que o modelo pode errar' do
-    it 'pede o produto quando ele nao veio' do
+    # Sem produto, assume AUTO: é o ramo mais pedido, e era o único que a ferramenta anterior
+    # atendia — o modelo que aprendeu a chamar sem dizer o produto continua acertando.
+    it 'assume auto quando o produto nao veio' do
       ready_connection
-      resultado = tool('produto' => '', 'dados' => '{}').start
+      resultado = tool('produto' => '', 'cpf' => '04297912678', 'cep' => '31110210',
+                       'placa' => 'TYV8I74').start
 
-      expect(resultado['motivo']).to eq('produto_nao_informado')
-      expect(resultado['pedido']).to include('qual seguro cotar')
+      expect(resultado['produto']).to eq('auto')
+      expect(resultado['quote_id']).to be_present
     end
 
     # JSON quebrado não pode virar cotação vazia nem erro genérico: o agente precisa saber que o
@@ -273,11 +277,38 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
   end
 
+  # O ÚNICO COMPORTAMENTO QUE É SÓ DE AUTO. Classe de bônus existe em apólice de carro; falar dela
+  # numa cotação de bicicleta é o agente prometendo desconto que não existe naquele produto.
+  describe 'o bonus de renovacao nao vaza para os outros ramos' do
+    it 'nao marca renovacao sem bonus fora de auto' do
+      # Arrange — os mesmos parâmetros que em auto disparariam o aviso.
+      ready_connection
+      dados = { configuracoes: { marca: 'Caloi', valorMercado: 8000, numeroSerie: 'SN-1' } }.to_json
+
+      # Act
+      resultado = tool('produto' => 'bike', 'dados' => dados, 'cpf' => '04297912678',
+                       'nome' => 'Fulano', 'renovacao' => true).start
+
+      # Assert
+      expect(resultado[described_class::SEM_BONUS_KEY]).to be(false)
+    end
+
+    it 'marca em auto, que e onde a classe de bonus existe' do
+      ready_connection
+      resultado = tool('produto' => 'auto', 'cpf' => '04297912678', 'cep' => '31110210',
+                       'placa' => 'TYV8I74', 'renovacao' => true).start
+
+      expect(resultado[described_class::SEM_BONUS_KEY]).to be(true)
+    end
+  end
+
   describe 'contrato com o modelo' do
-    # Duas ferramentas competindo pelo mesmo pedido fazem o modelo escolher por descrição. A desta é
-    # necessariamente mais genérica, então ela precisa dizer por escrito que auto não é com ela.
-    it 'manda o pedido de auto para a ferramenta especifica' do
-      expect(described_class.description).to include('AUTOMÓVEL use a ferramenta específica')
+    # HAVIA DUAS ferramentas, e a separação custava caro: o comparativo em PDF e o registro da
+    # seguradora que recusou a credencial da corretora ficavam de fora dos outros dez ramos, e
+    # nenhum dos dois é de auto. Uma só, e auto é um ramo com um comportamento extra.
+    it 'cobre auto na mesma descricao dos outros ramos' do
+      expect(described_class.description).to include('AUTOMÓVEL')
+      expect(described_class.description).not_to include('ferramenta específica')
     end
 
     it 'nomeia os ramos que atende, para o modelo saber quando usar' do
@@ -286,10 +317,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       end
     end
 
-    it 'esta no catalogo depois da de auto' do
+    # UMA ferramenta de cotação no catálogo. Duas competindo pelo mesmo pedido fariam o modelo
+    # escolher por descrição, e a diferença entre elas não é do vocabulário do cliente.
+    it 'e a unica ferramenta de cotacao do catalogo' do
       slugs = Autonomia::Agents::Tools::Registry.slugs
       expect(slugs).to include('cotar_seguro')
-      expect(slugs.index('cotar_seguro')).to be > slugs.index('cotar_seguro_auto')
+      expect(slugs.grep(/cotar/)).to eq(['cotar_seguro'])
     end
 
     it 'so aparece para conta com conexao pronta' do

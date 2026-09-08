@@ -66,13 +66,18 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
           'condicional_a' => 'driver' }
       ]
     },
+    # O CAMINHO ONDE O VALOR É ESCRITO, e não o nome solto. O adapter lê os campos do ramo de
+    # `entrada.configuracoes`, e o segurado de `entrada.segurado`. Enquanto o mock declarava `marca`,
+    # ele aprovava uma entrada que o portal ignora e reprovava a que ele aceita.
     'bike' => {
       'ramo' => '711',
       'campos' => [
-        { 'campo' => 'marca', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => true, 'padrao' => '1' },
-        { 'campo' => 'valorMercado', 'tipo' => 'numero', 'origem' => 'cliente', 'obrigatorio' => true },
-        { 'campo' => 'numeroSerie', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => true },
-        { 'campo' => 'assist24hs', 'tipo' => 'numero', 'origem' => 'escolha', 'obrigatorio' => false, 'padrao' => 1 }
+        { 'campo' => 'segurado.nome', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => true },
+        { 'campo' => 'segurado.cpfCnpj', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => true },
+        { 'campo' => 'configuracoes.marca', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => true, 'padrao' => '1' },
+        { 'campo' => 'configuracoes.valorMercado', 'tipo' => 'numero', 'origem' => 'cliente', 'obrigatorio' => true },
+        { 'campo' => 'configuracoes.numeroSerie', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => true },
+        { 'campo' => 'configuracoes.assist24hs', 'tipo' => 'numero', 'origem' => 'escolha', 'obrigatorio' => false, 'padrao' => 1 }
       ]
     }
   }.freeze
@@ -92,7 +97,11 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
   # fingir que conhece os códigos do portal seria a mesma mentira que o snake_case de 04/09.
   def quote_validate(provider:, product:, input:)
     campos = quote_schema(provider: provider, product: product)['campos']
-    problemas = campos.select { |c| exigido_agora?(c, input) && sem_valor?(input, c['campo']) }
+    # SÓ O QUE O CLIENTE INFORMA. `origem` separa o que se pergunta do que o adapter busca: nome e
+    # nascimento são obrigatórios e o adapter os procura por CPF, e cobrá-los aqui mataria o caminho
+    # que o produto promete — "CPF e placa". O adapter real filtra pela mesma regra.
+    problemas = campos.select { |c| c['origem'] == 'cliente' }
+                      .select { |c| exigido_agora?(c, input) && sem_valor?(input, c['campo']) }
                       .map do |c|
       { 'campo' => c['campo'], 'severidade' => 'erro',
         'motivo' => 'obrigatório para cotar este ramo, e não veio na entrada.' }
@@ -120,7 +129,10 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     require_provider!(provider)
     require_session!(session)
     require_produto!(product)
-    raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'placa ausente') if product.to_s == 'auto' && input.to_h['placa'].blank?
+    # `vehicle.plate`, e não `placa` no topo. A checagem olhava a chave errada desde que existe, e
+    # nunca foi exercitada porque os exemplos da ferramenta de auto usavam dublê em vez do mock —
+    # ela recusaria toda cotação de auto de quem usasse o mock de verdade.
+    raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'placa ausente') if sem_placa?(product, input)
 
     { 'quote_id' => "mock-#{Time.current.to_i}:1", 'status' => 'queued' }
   end
@@ -157,6 +169,11 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
   def offer(code, name, amount)
     { 'insurer' => { 'code' => code, 'name' => name, 'enabled' => true, 'integrationStatus' => 'ready' },
       'status' => 'quoted', 'premium' => { 'amount' => amount, 'currency' => 'BRL' } }
+  end
+
+  # Auto sem placa não cota: o portal precisa dela ou do código FIPE para saber qual é o veículo.
+  def sem_placa?(product, input)
+    product.to_s == 'auto' && input.to_h.dig('vehicle', 'plate').blank?
   end
 
   # Os produtos que o mock sabe cotar: os que têm contrato de ramo declarado, mais auto, cujo

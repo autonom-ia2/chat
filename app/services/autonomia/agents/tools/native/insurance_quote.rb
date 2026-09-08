@@ -1,99 +1,66 @@
-# Cotação de seguro em QUALQUER ramo que a corretora atende — a tool que não precisa ser reescrita
-# a cada produto novo (#350, e o par autonom-ia2/autonomia-adapters#34 / #35).
+# Cotação de seguro em QUALQUER ramo que a corretora atende (#350).
 #
-# POR QUE ELA EXISTE. A cotação de auto tem uma tool própria com sete parâmetros digitados à mão em
-# Ruby, e ela é SÓ de auto. Um ramo novo era outro arquivo, com os campos daquele ramo digitados de
-# novo — dezessete para bike, onze para condomínio — e cada lista envelhecia sozinha. O
-# `previousInsurerCode` é o preço disso: o adapter monta o campo, ninguém o coletava, e em renovação
-# ele viajava nulo porque não havia parâmetro para ele.
+# UMA FERRAMENTA, ONZE RAMOS. Até 08/09/2026 havia uma ferramenta só de auto, com sete parâmetros
+# digitados à mão em Ruby, e nenhuma para os outros dez — que cotam com preço no adapter desde
+# 07/09. Um ramo novo era outro arquivo, com os campos daquele ramo digitados de novo, e cada lista
+# envelhecendo sozinha.
 #
-# COMO ELA FAZ DIFERENTE. Não sabe nada sobre ramo nenhum. Pergunta ao adapter o que o ramo pede
-# (`quote/schema`), confere a entrada antes de cotar (`quote/validate`), e quando falta algo devolve
-# ao agente A LISTA DO QUE FALTA em vez de cotar errado.
+# AUTO NÃO É UM CASO ESPECIAL: é um ramo com UM comportamento extra, o bônus de renovação. Manter
+# um arquivo paralelo para ele significava um `if produto == 'auto'` no meio do caminho — e, pior,
+# duas conquistas que NÃO são de auto ficavam fora dos outros dez: o comparativo em PDF e o registro
+# da seguradora que recusou a credencial da corretora (critério 4.5). Uma seguradora que recusa o
+# login numa cotação de bike sumia da lista, e a corretora seguia achando que ela "não cotou esse
+# risco" — quando havia um login para arrumar.
 #
-# NÃO SUBSTITUI A DE AUTO. `insurance_auto_quote` está em produção com entrega parcial, comparativo
-# em PDF e o aviso de renovação sem bônus — comportamento maduro que esta não tem. Auto continua
-# lá; esta atende os outros dez ramos, que hoje não têm ferramenta nenhuma.
+# O QUE ELA NÃO SABE, E É O PONTO: nada sobre ramo nenhum. Pergunta ao adapter o que o ramo pede
+# (`quote/schema`), confere a entrada antes de cotar (`quote/validate`) e, quando falta algo,
+# devolve ao agente A LISTA DO QUE FALTA. Cada cotação no AGGER consome consulta paga; a validação
+# não toca no portal.
+#
+# O QUE VAI PARA O CLIENTE, e o que não vai (decisão do PO):
+#   - preço de seguradora que cotou: vai;
+#   - seguradora que recusou o risco: NÃO vai por iniciativa nossa. O cliente pediu preço, não
+#     auditoria, e a recusa fala do bem e da região dele. Só se ele perguntar — e aí quem responde é
+#     a instrução do especialista, não esta ferramenta;
+#   - credencial da corretora inválida numa seguradora: NUNCA vai, nem se perguntado. É problema
+#     nosso, constrangedor e inútil para quem quer comprar. Vai para a tela de Conexões.
 class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tools::Native::Base
-  # O ramo com ferramenta própria. Fica de fora para não haver duas ferramentas competindo pelo
-  # mesmo pedido — o modelo escolheria por descrição, e a desta é necessariamente mais genérica.
-  PRODUTO_COM_FERRAMENTA_PROPRIA = 'auto'.freeze
-  MAX_OFFERS = 3
+  # O ramo do automóvel. O único com montagem de entrada própria — ele tem veículo, e o adapter
+  # resolve placa e FIPE antes de cotar.
+  AUTO = 'auto'.freeze
   # Teto do JSON que o modelo escreve. O ramo que mais pede é a bike, com dezessete campos — alguns
-  # milhares de caracteres com folga. Um valor muito maior não é entrada legítima, e parsear antes
-  # de olhar o tamanho é trabalho que ninguém pediu.
+  # milhares de caracteres com folga. Parsear antes de olhar o tamanho é trabalho que ninguém pediu.
   MAX_DADOS_BYTES = 20_000
-  DELIVERED_KEY = 'entregues'.freeze
   DEFAULT_COMMISSION = 10.0
+  # Chave nossa dentro do handle: quem já foi entregue. É o que faz a segunda mensagem ser
+  # "chegaram mais opções" em vez de repetir as que o cliente já leu.
+  DELIVERED_KEY = 'entregues'.freeze
+  # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial.
+  PDF_SENT_KEY = 'comparativo_enviado'.freeze
+  # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
+  # quem precisa contar ao cliente é a primeira entrega de preços, minutos depois.
+  SEM_BONUS_KEY = 'renovacao_sem_bonus'.freeze
+  # O aviso JÁ SAIU. Sentinela própria, no mesmo molde do `PDF_SENT_KEY`, e não inferência a partir
+  # de `already.empty?`: `deliver` roda ANTES de `record_attempt!`, então uma entrega bloqueada
+  # (conversa encerrada, erro transitório do publisher) avançava o handle com os códigos das ofertas
+  # mesmo assim — e o aviso, que vale por sair UMA vez, não sairia nunca mais.
+  AVISO_SENT_KEY = 'aviso_sem_bonus_enviado'.freeze
+  # Sai UMA vez, junto do primeiro preço, e só em renovação de auto sem classe de bônus. Não promete
+  # desconto nem percentual: o quanto o bônus abate é decisão de cada seguradora, e prometer número
+  # aqui vira preço que a emissão desmente. Diz o que é verdade — existe preço melhor, e ele depende
+  # de um dado que está na apólice do cliente.
+  AVISO_SEM_BONUS = 'Importante: cotei sem a classe de bônus da sua apólice atual, então estes ' \
+                    'preços são os de quem está fazendo o primeiro seguro. Se você conferir a ' \
+                    'classe de bônus na apólice (é um número de 0 a 10) e me disser, eu refaço a ' \
+                    'cotação — com bônus costuma sair melhor.'.freeze
 
-  class << self
-    def slug
-      'cotar_seguro'
-    end
+  include Declaracao
 
-    def tool_name
-      'Cotar seguro (qualquer ramo)'
-    end
-
-    def async?
-      true
-    end
-
-    def description
-      'Cota seguro de RESIDENCIAL, CONDOMÍNIO, EMPRESARIAL, ALUGUEL/FIANÇA, VIAGEM, ACIDENTES ' \
-        'PESSOAIS, VIDA, VIDA EM GRUPO, CELULAR ou BICICLETA nas seguradoras que esta corretora ' \
-        'atende. Para seguro de AUTOMÓVEL use a ferramenta específica de auto. Informe o produto e ' \
-        'os dados que o cliente já deu; se faltar algo, a ferramenta responde exatamente o que ' \
-        'perguntar, sem consumir cotação.'
-    end
-
-    # `dados` viaja como TEXTO JSON, e não como objeto. O schema de função exige `strict` com
-    # `additionalProperties: false`, e um objeto de forma livre não tem como ser declarado ali —
-    # cada ramo tem os seus campos, que é o ponto desta ferramenta. Texto é o único tipo que
-    # atravessa; a ferramenta parseia e diz com clareza quando o JSON não presta.
-    def params
-      [
-        { 'name' => 'produto', 'type' => 'string',
-          'description' => 'Ramo a cotar: residencial, condominio, empresarial, fianca_locaticia, ' \
-                           'viagem, acidentes_pessoais, vida, vida_global, celular ou bike.' },
-        { 'name' => 'dados', 'type' => 'string',
-          'description' => 'JSON com o que o cliente informou, usando os nomes de campo que a ' \
-                           'ferramenta pedir. Exemplo para bike: ' \
-                           '{"marca":"Caloi","modelo":"Elite","valorMercado":8000}. ' \
-                           'Mande {} na primeira vez para descobrir o que perguntar.' },
-        { 'name' => 'cpf', 'type' => 'string', 'required' => false,
-          'description' => 'CPF ou CNPJ do segurado, se o cliente já informou.' },
-        { 'name' => 'nome', 'type' => 'string', 'required' => false,
-          'description' => 'Nome do segurado, se o cliente já informou.' }
-      ]
-    end
-
-    def available_for?(agent)
-      return false unless ::Autonomia::Insurance::Config.enabled?(agent.account)
-
-      ::Autonomia::Insurance::Connection.for_account(agent.account).any?(&:ready?)
-    rescue StandardError
-      false
-    end
-
-    def accepted_message
-      'Cotação enviada às seguradoras. Avise o cliente que está consultando e que manda os preços ' \
-        'aqui assim que chegarem. Não invente valores, prazos nem nomes de seguradora.'
-    end
-
-    def waiting_message
-      'Estou consultando as seguradoras agora. Assim que os primeiros preços chegarem, mando aqui.'
-    end
-
-    def failure_message
-      'Não consegui concluir a cotação agora. Um atendente vai retomar daqui.'
-    end
-  end
-
-  # -> Hash serializável, ou o pedido do que falta. NÃO cota antes de validar: cada cotação no AGGER
-  # consome consulta paga, e a validação custa uma chamada sem sessão.
+  # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
+  #
+  # NÃO COTA ANTES DE VALIDAR. Cada cotação no AGGER consome consulta paga, e conferir a entrada
+  # custa uma chamada que não toca no portal.
   def start
-    return recusa('produto_nao_informado', PEDIDO_DE_PRODUTO) if produto.blank?
     return recusa('json_invalido', PEDIDO_DE_JSON) if dados.nil?
 
     faltantes = validar
@@ -102,7 +69,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     submeter
   end
 
-  # -> Tools::Progress. Uma consulta por vez; só entrega quem ainda não foi entregue.
+  # -> Tools::Progress. Uma consulta. Só entrega quem AINDA NÃO foi entregue.
   def poll(handle:, attempt:)
     return progress_class.done(deliveries: [handle['pedido']], handle: handle) if handle['pedido']
 
@@ -117,18 +84,23 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
   private
 
-  PEDIDO_DE_PRODUTO = 'Não entendi qual seguro cotar. Pergunte ao cliente qual é o produto ' \
-                      '(residencial, viagem, vida, celular, bicicleta…) e chame de novo.'.freeze
   PEDIDO_DE_JSON = 'O campo `dados` não era um JSON válido. Reenvie como objeto JSON, por ' \
-                   'exemplo {"marca":"Caloi"}.'.freeze
+                   'exemplo {"configuracoes":{"marca":"Caloi"}}.'.freeze
 
-  # O QUE FALTA, PERGUNTADO DE GRAÇA. Sem sessão e sem tocar no portal — é o que permite errar a
-  # entrada sem gastar cotação. Só `erro` vira pedido: `aviso` fala de tabela possivelmente velha do
-  # nosso lado, e mandar o agente perguntar por causa disso seria atrito sem causa.
+  # O QUE FALTA, PERGUNTADO DE GRAÇA. Só `erro` vira pedido: `aviso` fala de tabela possivelmente
+  # velha do nosso lado, e mandar o agente perguntar por causa disso seria atrito sem causa.
   def validar
     resultado = connector.quote_validate(provider: connection.provider, product: produto,
                                          input: entrada)
     Array(resultado['problemas']).select { |p| p['severidade'] == 'erro' }
+  rescue ::Autonomia::Insurance::Connector::Error => e
+    # PRODUTO DESCONHECIDO É ERRO DE VERDADE e sobe; qualquer outra falha da validação não pode
+    # impedir a cotação, porque ela é uma CONFERÊNCIA e não um portão. Ficar sem cotar por causa do
+    # conferente seria trocar um risco de dinheiro por uma certeza de atendimento perdido.
+    raise if e.kind == :not_implemented
+
+    Rails.logger.warn("[autonomia][insurance] validacao indisponivel account=#{account.id} #{e.kind}")
+    []
   end
 
   def submeter
@@ -136,7 +108,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
       connector.quote_start(provider: connection.provider, session: open_session,
                             product: produto, input: entrada)
     end
-    { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [], 'produto' => produto }
+    { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [], 'produto' => produto,
+      SEM_BONUS_KEY => quote_input.auto? && quote_input.renewal.sem_bonus? }
   end
 
   # A recusa VIRA ENTREGA, e não falha. O agente precisa receber o texto para perguntar ao cliente;
@@ -147,56 +120,102 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     { 'pedido' => texto, 'motivo' => motivo }
   end
 
-  # O texto que o agente lê para saber o que perguntar. Nomes de campo crus de propósito: quem
-  # traduz para o cliente é o especialista, que conhece o vocabulário do ramo — inventar rótulo em
-  # português aqui seria adivinhar o que o portal chama de quê.
+  # Nomes de campo crus de propósito: quem traduz para o cliente é o especialista, que conhece o
+  # vocabulário do ramo — inventar rótulo em português aqui seria adivinhar o que o portal chama de
+  # quê.
   def pedido_do_que_falta(faltantes)
-    campos = faltantes.pluck('campo').join(', ')
-    "Para cotar #{produto} ainda faltam estes dados: #{campos}. Pergunte ao cliente e chame a " \
-      'ferramenta de novo com eles preenchidos. Nenhuma cotação foi consumida.'
+    "Para cotar #{produto} ainda faltam estes dados: #{faltantes.pluck('campo').join(', ')}. " \
+      'Pergunte ao cliente e chame a ferramenta de novo com eles preenchidos. Nenhuma cotação foi ' \
+      'consumida.'
   end
 
   def build_progress(result, handle, _attempt)
+    registrar_credencial_de_seguradora(result)
+    ofertas = ::Autonomia::Insurance::QuoteOffers
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
-    fresh = quoted_offers(result).reject { |offer| already.include?(insurer_code(offer)) }
-    next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| insurer_code(offer) })
-    deliveries = fresh.empty? ? [] : [describe(fresh, first: already.empty?)]
+    fresh = ofertas.new(result).quoted.reject { |offer| already.include?(ofertas.code(offer)) }
+    next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| ofertas.code(offer) })
+    deliveries, next_handle = precos(fresh, already, next_handle)
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
 
+    # O comparativo em PDF fecha a conversa, e sai UMA vez. É o que o portal entrega e o que o
+    # cliente guarda — a lista de preços no chat serve para decidir, o PDF serve para levar adiante.
+    pdf = comparison_pdf(next_handle)
+    if pdf
+      deliveries += [pdf]
+      next_handle = next_handle.merge(PDF_SENT_KEY => true)
+    end
     progress_class.done(deliveries: deliveries, handle: next_handle)
+  end
+
+  # -> [deliveries, handle]. O aviso de renovação sem bônus tem SENTINELA própria, no mesmo molde do
+  # PDF, e não é inferido de "esta é a primeira entrega".
+  def precos(fresh, already, handle)
+    return [[], handle] if fresh.empty?
+
+    avisar = handle[SEM_BONUS_KEY].present? && handle[AVISO_SENT_KEY].blank?
+    texto = ::Autonomia::Insurance::QuoteOffers.describe(
+      fresh, first: already.empty?, aviso: avisar ? AVISO_SEM_BONUS : nil
+    )
+    [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
   end
 
   def finished?(result)
     %w[completed failed].include?(result['status'])
   end
 
-  # SÓ quem cotou, e no máximo três. Recusa de risco e problema de credencial não viram texto ao
-  # cliente — a primeira fala do bem dele, a segunda é problema nosso e vai para a tela de Conexões.
-  def quoted_offers(result)
-    Array(result['offers'])
-      .select { |offer| offer['status'] == 'quoted' && offer.dig('premium', 'amount').present? }
-      .sort_by { |offer| offer.dig('premium', 'amount').to_f }
-      .first(MAX_OFFERS)
-  end
+  # nil quando não há o que imprimir, quando já foi enviado, ou quando a geração falha. Nunca
+  # derruba a cotação: os preços já chegaram, e um PDF que não sai não pode apagá-los.
+  def comparison_pdf(handle)
+    return if handle[PDF_SENT_KEY]
+    return if Array(handle[DELIVERED_KEY]).empty?
 
-  def insurer_code(offer)
-    offer.dig('insurer', 'code').to_s
-  end
-
-  def describe(offers, first:)
-    linhas = offers.map do |offer|
-      "#{offer.dig('insurer', 'name')}: #{::Autonomia::Insurance::PremiumText.new(offer['premium'])}"
+    proposal = sessions.with_fresh_session do |open_session|
+      connector.quote_proposal(provider: connection.provider, session: open_session,
+                               quote_id: handle['quote_id'])
     end
-    abertura = first ? 'Primeiros preços que chegaram:' : 'Chegaram mais opções:'
-    corpo = "#{abertura}\n#{linhas.join("\n")}"
-    return corpo unless offers.any? { |o| ::Autonomia::Insurance::PremiumText.new(o['premium']).indefinido? }
-
-    "#{corpo}\n\n#{::Autonomia::Insurance::PremiumText::SEM_SIGNIFICADO}"
+    url = proposal.to_h['url'].presence
+    url && "Comparativo com todas as opções:\n#{url}"
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] comparativo falhou account=#{account.id} #{e.class}")
+    nil
   end
 
+  # CRITÉRIO 4.5 — problema de credencial de seguradora nunca chega ao cliente final; vai para a
+  # tela de Conexões. Vale para os ONZE ramos: uma seguradora que recusa o login da corretora numa
+  # cotação de bike sumia da lista, e a corretora seguia achando que ela não cotou aquele risco.
+  #
+  # `cfg/seguradora/config` não denuncia: ele responde `credenciaisValidas: true` até para
+  # seguradora com login inválido. A cotação real é a única testemunha, e é aqui que ela passa.
+  def registrar_credencial_de_seguradora(result)
+    pendentes = ::Autonomia::Insurance::QuoteOffers.new(result).credencial_pendente
+    connection.record_insurers_pending_auth!(
+      pendentes.map { |offer| ::Autonomia::Insurance::QuoteOffers.code(offer) },
+      nomes: pendentes.filter_map { |offer| offer.dig('insurer', 'name') }.uniq
+    )
+  rescue StandardError => e
+    # Diagnóstico não derruba cotação: os preços do cliente valem mais que o nosso registro.
+    Rails.logger.warn("[autonomia][insurance] registro de credencial de seguradora falhou #{e.class}")
+  end
+
+  # Auto é o padrão quando ninguém diz o produto: é o ramo mais pedido, e era o único que existia
+  # antes desta ferramenta — conta que já usava a de auto continua funcionando sem mudar nada.
   def produto
-    @produto ||= params['produto'].to_s.strip.presence
+    @produto ||= params['produto'].to_s.strip.presence || AUTO
+  end
+
+  # A montagem da entrada mora em `Insurance::QuoteInput`: traduzir o que o modelo escreveu para o
+  # formato do adapter é outro trabalho, e misturá-lo com o que decide o que vai para o cliente faz
+  # cada campo novo mexer no arquivo errado.
+  def quote_input
+    @quote_input ||= ::Autonomia::Insurance::QuoteInput.new(
+      produto: produto, params: params, dados: dados, commission_percent: commission_percent
+    )
+  end
+
+  def entrada
+    @entrada ||= quote_input.to_h
   end
 
   # `nil` quando o JSON não presta — diferente de `{}`, que é "o cliente ainda não disse nada" e é
@@ -217,30 +236,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     nil
   end
 
-  # O segurado vem por parâmetro próprio porque é o único dado comum a TODOS os ramos, e pedi-lo
-  # dentro do JSON faria o agente errar a grafia da chave a cada ramo.
-  #
-  # VAZIO NUNCA SOBRESCREVE. O JSON vence o parâmetro quando traz valor — é o mais específico, e o
-  # modelo o escreveu de propósito —, mas `{"segurado":{"cpfCnpj":""}}` apagaria o CPF que veio no
-  # parâmetro, e o portal recusaria uma cotação que tinha tudo. `compact_blank` é o que separa
-  # "informou outro valor" de "mandou a chave vazia".
-  def entrada
-    base = dados.to_h
-    informado = segurado_dos_parametros.merge(base['segurado'].to_h.compact_blank)
-    base = base.merge('segurado' => informado) if informado.any?
-    base.merge('commissionPercent' => commission_percent)
-  end
-
-  def segurado_dos_parametros
-    { 'cpfCnpj' => params['cpf'].to_s.gsub(/\D/, '').presence,
-      'nome' => params['nome'].to_s.presence }.compact
-  end
-
+  # Comissão da conexão; sem valor definido, o padrão combinado com o PO. Nunca vem do modelo: um
+  # agente que a informasse mudaria o que a corretora ganha por cotação.
   def commission_percent
     value = connection.metadata.to_h['commission_percent']
     value.present? ? value.to_f : DEFAULT_COMMISSION
   end
 
+  # A sessão é ÚNICA por conexão (#330): reusada, nunca aberta por chamada. É o que permite duas
+  # cotações simultâneas da mesma corretora sem uma atrapalhar a outra.
   def sessions
     @sessions ||= ::Autonomia::Insurance::Connections::Session.new(connection, connector: connector)
   end

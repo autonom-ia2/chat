@@ -8,10 +8,10 @@ module Autonomia::Agents::Tools::Registry
   TOOLS = [
     # Ordem é a da jornada: o que a corretora cota, cotar, e o que o contrato diz.
     Autonomia::Agents::Tools::Native::InsuranceCapabilities,
-    Autonomia::Agents::Tools::Native::InsuranceAutoQuote,
-    # Os outros dez ramos. Vem DEPOIS da de auto de proposito: quando as duas estao ligadas, o
-    # pedido de carro tem de cair na especifica, que sabe entrega parcial, comparativo em PDF e o
-    # aviso de renovacao sem bonus. A descricao desta exclui auto por escrito.
+    # UMA ferramenta para os onze ramos. Havia duas — uma só de auto, com os campos digitados à
+    # mão, e outra para o resto —, e a separação custava caro: o comparativo em PDF e o registro da
+    # seguradora que recusou a credencial da corretora ficavam de fora dos outros dez, e nenhum dos
+    # dois é de auto. Auto é um ramo com UM comportamento extra, o bônus de renovação.
     Autonomia::Agents::Tools::Native::InsuranceQuote,
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions
   ].freeze
