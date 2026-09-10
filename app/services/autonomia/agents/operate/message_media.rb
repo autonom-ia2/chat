@@ -43,6 +43,16 @@ module Autonomia
           EMPTY
         end
 
+        # SÓ OS DOCUMENTOS (entrega 1): o especialista lê os PDFs das mensagens anteriores do cliente
+        # sem pagar transcrição de áudio nem baixar imagem — nada disso serve ao formulário.
+        def documents
+          attachments = @messages.flat_map { |message| message.attachments.to_a }
+          attachments.empty? ? [] : collect_documents(attachments)
+        rescue StandardError => e
+          Rails.logger.warn("[autonomia][operate] media_extract_failed agent=#{@agent&.id} #{e.class}")
+          []
+        end
+
         private
 
         def collect_images(attachments)

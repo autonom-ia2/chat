@@ -93,10 +93,36 @@ RSpec.describe Autonomia::Agents::Answerer do
     # Assert
     expect(Autonomia::Agents::Specialists::Runner).to have_received(:new)
       .with(specialist: instance_of(Autonomia::Agents::Specialist), request: 'cotar para o CPF X',
-            delivery: nil)
+            delivery: nil, history: [], documents: [])
     expect(captured[:outputs]).to eq(
       [{ type: 'function_call_output', call_id: 'call_1', output: 'Melhor opção: Porto, R$ 1.200.' }]
     )
+  end
+
+  # ENTREGA 1, termo 2: o cliente informou o CPF ao principal; o principal NÃO o repetiu no pedido;
+  # o CPF chega ao especialista mesmo assim — pela conversa. Termo 4: cortando a passagem, some.
+  it 'passes the conversation to the specialist, so what the customer wrote reaches it without the note repeating it' do
+    # Arrange — o pedido do principal não traz o CPF; a conversa traz
+    create_specialist
+    entrada = nil
+    runner = instance_double(Autonomia::Agents::Specialists::Runner, call: 'ok')
+    allow(Autonomia::Agents::Specialists::Runner).to receive(:new) do |**kwargs|
+      entrada = kwargs
+      runner
+    end
+    pedido = { 'name' => 'consultar_auto', 'call_id' => 'c1', 'arguments' => { 'pedido' => 'cotar o carro, seguro novo' }.to_json }
+    historico = [{ role: 'user', content: 'meu CPF é 04297912678' }, { role: 'assistant', content: 'Obrigada!' }]
+    documentos = [{ name: 'apolice.pdf', text: 'Classe de bônus 5' }]
+    stub_main_agent(function_call: pedido)
+
+    # Act
+    described_class.new(agent: agent, query: 'pode cotar', history: historico, documents: documentos,
+                        trust_instruction: true).answer
+
+    # Assert — a mesma conversa e os mesmos documentos que o principal recebeu
+    expect(entrada[:request]).to eq('cotar o carro, seguro novo')
+    expect(entrada[:history]).to eq(historico)
+    expect(entrada[:documents]).to eq(documentos)
   end
 
   it 'reports invalid arguments instead of raising' do

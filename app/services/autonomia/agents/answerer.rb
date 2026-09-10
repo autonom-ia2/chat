@@ -216,10 +216,12 @@ module Autonomia
 
       # O especialista devolve TEXTO (nunca levanta — ver Specialists::Runner). Vai direto como saída
       # da função, para o principal parafrasear.
+      # O especialista recebe a MESMA conversa e os MESMOS documentos que o principal (entrega 1):
+      # o bilhete deixa de ser a única fonte do que o cliente disse.
       def run_specialist(specialist, call)
         args = JSON.parse(call['arguments'].presence || '{}')
         Specialists::Runner.new(specialist: specialist, request: args[Specialist::REQUEST_PARAM],
-                                delivery: @delivery).call
+                                delivery: @delivery, history: @history, documents: @documents).call
       rescue JSON::ParserError
         Tools::Recusa.para_modelo('invalid_tool_arguments', slug: call['name'], delivery: @delivery,
                                                             agente: @agent)

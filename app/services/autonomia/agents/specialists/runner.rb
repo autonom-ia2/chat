@@ -32,13 +32,19 @@ class Autonomia::Agents::Specialists::Runner
   FEATURE = 'agente_especialista'.freeze
   INDISPONIVEL = 'Especialista indisponível no momento.'.freeze
 
-  def initialize(specialist:, request:, delivery: nil)
+  # `history` e `documents` são o que o PRINCIPAL recebeu neste turno (entrega 1): a conversa
+  # pública e os PDFs anexados agora. O especialista os lê ANTES do bilhete — é o que faz o CPF que
+  # o cliente escreveu chegar ao formulário mesmo quando o principal não o repetiu no pedido, e a
+  # apólice em PDF alimentar a renovação sem ninguém digitar.
+  def initialize(specialist:, request:, delivery: nil, history: [], documents: [])
     @specialist = specialist
     @request = request.to_s.strip
     # CONTEXTO DE ENTREGA (#313), repassado do principal. É por aqui que a ferramenta ASSÍNCRONA
     # funciona no caminho que importa: o `Answerer` REMOVE do principal todo slug reservado por um
     # especialista habilitado, então a cotação só é alcançável a partir daqui.
     @delivery = delivery
+    @history = history
+    @documents = documents
   end
 
   # -> String (sempre). Nunca nil, nunca exceção.
@@ -70,7 +76,7 @@ class Autonomia::Agents::Specialists::Runner
     ).create_with_tool_executor(
       model: Autonomia::Agents::Config::ANSWERER_MODEL,
       instructions: @specialist.effective_instruction,
-      input: Autonomia::Agents::Config.truncate_text(@request, MAX_REQUEST_CHARS),
+      input: entrada,
       schema: RESULT_SCHEMA,
       reasoning_effort: Autonomia::Agents::Config::ANSWERER_REASONING_EFFORT,
       tools: tool_schemas
@@ -79,6 +85,15 @@ class Autonomia::Agents::Specialists::Runner
     parsed.is_a?(Hash) ? parsed : nil
   rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError
     nil
+  end
+
+  # A conversa e os documentos primeiro, o bilhete por último — o pedido do atendente continua
+  # sendo a última palavra sobre o que fazer; o resto é o que ele leu para pedir.
+  def entrada
+    materia = Autonomia::Agents::Specialists::Materia.new(delivery: @delivery, history: @history,
+                                                          documents: @documents, agent: @specialist.agent)
+    pedido = "PEDIDO DO ATENDENTE:\n#{Autonomia::Agents::Config.truncate_text(@request, MAX_REQUEST_CHARS)}"
+    materia.mensagens + [Autonomia::Agents::PromptParts::Mensagem.montar('user', pedido)]
   end
 
   def tool_schemas
