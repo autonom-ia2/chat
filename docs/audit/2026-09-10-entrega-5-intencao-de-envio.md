@@ -85,4 +85,19 @@ contador é o desenho.
   ("preço entregue enquanto ele varria fica sem 'não consegui'") e mutação. P3: esta auditoria
   antecipava a confirmação; corrigida.
 
-## Validação
+## Validação (SHA final `2c74408e6e`)
+
+- Suíte ampla (`spec/services/autonomia/agents`, `spec/jobs/autonomia/agents`,
+  `spec/models/autonomia/agents`, `spec/services/autonomia/insurance`): 699 exemplos, 0 falhas, 0 erros
+  de carga (exit 0). Arquivos tocados: 116 exemplos, 0 falhas. Rubocop: 0 ofensas nos 13 arquivos.
+- Mutações (18, cada uma reprova o exemplo que a nomeia; restauração em memória com `assert`):
+  teto 2 -> 60; frase de falha sempre, nunca a de incerteza; fail_run sem recarregar o objeto; supersede nao aborta (anotar sem raise); posse sem a condicao de numero ausente; escrita substitui em vez de mesclar; voltar 2->1 tira a marca; encerrar sem aquisicao no banco; finish! sem marcar no mesmo comando; anotar DEPOIS do start; varredor sem recarregar; rescue Exception em tentar_start; EnvioIncerto tratado como falha comum; posse sem intencao (CAS desligado); envio_incerto? sem a guarda do numero; a ferramenta escreve marcas (sem filtrar MARCAS); fechamento ve o handle cru; timeout como 'nao enviou'.
+- Interleavings entre dois processos da mesma execução reproduzidos com objetos independentes
+  (`ToolRun.find` de dentro do `start`, do `Registry.find` ou do `publish`): supersede entre
+  `perform` e `start`; B anota 2 durante o `start` de A; A registra antes da segunda anotação de B;
+  outro processo anotou durante um `start` que falhou; objeto velho no desfecho; intenção anotada
+  entre a marcação do desfecho e o `finish!`; dois encerramentos; entrega concorrente durante a
+  varredura; `Sidekiq::Shutdown` de dentro do `start`.
+- O que NÃO foi feito: matar um worker em produção no meio de uma cotação real (custa uma rodada
+  de cotação e uma reinicialização; pede autorização). O termo 5 ("dá para listar") é atendido por
+  `ToolRun.possivelmente_duplicadas` via psql; não há tela para o corretor (decisão de produto).
