@@ -45,10 +45,10 @@ module Autonomia::Agents::PromptParts
     end
 
     def normalizar(item)
-      text = (item[:content] || item['content']).to_s
+      text = item[:content].to_s
       return if text.blank?
 
-      role = (item[:role] || item['role']).to_s
+      role = item[:role].to_s
       role = 'user' unless %w[user assistant].include?(role)
       { role: role, content: ::Autonomia::Agents::Config.truncate_text(text, ::Autonomia::Agents::Config::MAX_HISTORY_ITEM_CHARS) }
     end

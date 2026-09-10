@@ -87,8 +87,9 @@ class Autonomia::Agents::Specialists::Runner
     nil
   end
 
-  # A conversa e os documentos primeiro, o bilhete por último — o pedido do atendente continua
-  # sendo a última palavra sobre o que fazer; o resto é o que ele leu para pedir.
+  # A conversa e os documentos primeiro, o bilhete por último. É a POSIÇÃO no prompt, não uma
+  # autorização: o que o especialista pode fazer é o catálogo dele que decide (`specialist_tools`),
+  # e o modelo é quem decide se faz — a conversa e os anexos entram como dado, cercados.
   def entrada
     materia = Autonomia::Agents::Specialists::Materia.new(delivery: @delivery, history: @history,
                                                           documents: @documents, agent: @specialist.agent)

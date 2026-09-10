@@ -26,14 +26,16 @@ module Autonomia
         # o mesmo código, exercitado todo dia pelo outro consumidor.
         SourceLike = Struct.new(:file, :reference, :source_type)
 
-        def initialize(messages:, agent:)
+        # `messages:` é o caminho do turno (os anexos das mensagens); `attachments:` é o do especialista,
+        # que já escolheu os anexos (entrega 1). Um ou outro.
+        def initialize(agent:, messages: [], attachments: nil)
           @messages = Array(messages)
+          @attachments = attachments
           @agent = agent
         end
 
-        # -> Result (images: [data-url], transcripts: [String], documents: [{name:, text:}])
+        # -> Result (images: [data-url], transcripts: [String], documents: [{name:, text:, checksum:}])
         def extract
-          attachments = @messages.flat_map { |message| message.attachments.to_a }
           return EMPTY if attachments.empty?
 
           Result.new(images: collect_images(attachments), transcripts: collect_transcripts(attachments),
@@ -43,17 +45,22 @@ module Autonomia
           EMPTY
         end
 
-        # SÓ OS DOCUMENTOS (entrega 1): o especialista lê os PDFs das mensagens anteriores do cliente
-        # sem pagar transcrição de áudio nem baixar imagem — nada disso serve ao formulário.
-        def documents
-          attachments = @messages.flat_map { |message| message.attachments.to_a }
-          attachments.empty? ? [] : collect_documents(attachments)
+        # SÓ OS DOCUMENTOS (entrega 1): até `limit` PDFs LEGÍVEIS, na ordem dada — um PDF sem camada de
+        # texto não ocupa vaga, porque quem procura é o especialista e a vaga é para uma apólice que se
+        # leia. Sem pagar transcrição de áudio nem baixar imagem: nada disso serve ao formulário. (O turno
+        # do principal continua em `extract`, com o teto por mensagem contado ANTES de extrair.)
+        def documents(limit: Config::MAX_DOCUMENTS_PER_MESSAGE)
+          attachments.lazy.select { |attachment| document?(attachment) }.filter_map { |attachment| document_text(attachment) }.first(limit)
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] media_extract_failed agent=#{@agent&.id} #{e.class}")
           []
         end
 
         private
+
+        def attachments
+          @attachments ||= @messages.flat_map { |message| message.attachments.to_a }
+        end
 
         def collect_images(attachments)
           attachments
@@ -102,9 +109,11 @@ module Autonomia
           Config::DOCUMENT_CONTENT_TYPES.include?(content_type) && blob.byte_size <= Config::MAX_DOCUMENT_BYTES
         end
 
-        # -> { name:, text: } ou nil. Reusa o processor da base de conhecimento (pdf-reader, com
-        # OCR quando o PDF é escaneado). NFC porque o texto sai decomposto: o `ô` de "bônus" vem
+        # -> { name:, text:, checksum: } ou nil. Reusa o processor da base de conhecimento (pdf-reader,
+        # com OCR quando o PDF é escaneado). NFC porque o texto sai decomposto: o `ô` de "bônus" vem
         # como `o` + acento, e uma busca por "bônus" não casa — medido na apólice real de 04/09.
+        # `checksum` é a identidade do CONTEÚDO (calculada no upload): quem lê depois — o especialista —
+        # sabe o que já entrou neste turno sem comparar nome de arquivo.
         def document_text(attachment)
           blob = attachment.file.blob
           source = SourceLike.new(attachment.file, blob.filename.to_s, 'pdf')
@@ -116,7 +125,7 @@ module Autonomia
           text = text.unicode_normalize(:nfc).strip
           return if text.blank?
 
-          { name: blob.filename.to_s, text: Config.truncate_text(text, Config::MAX_DOCUMENT_CHARS) }
+          { name: blob.filename.to_s, text: Config.truncate_text(text, Config::MAX_DOCUMENT_CHARS), checksum: blob.checksum }
         rescue StandardError => e
           # Documento ilegível não derruba o turno: o agente segue e pergunta os dados. NUNCA loga
           # o conteúdo — é a apólice de uma pessoa.

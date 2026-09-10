@@ -59,3 +59,64 @@ bônus.
 - Não feito: conversa real (termo 2 depende de o principal omitir o CPF no bilhete — não controlável;
   termo 3 exige apólice em PDF numa renovação real — rodada paga). Ambos ficam para prova ao vivo com
   autorização.
+
+## Codex — rodada 1 (REPROVADO) e o que mudou
+
+Achados de código, todos corrigidos no mesmo commit:
+
+- **P2 · portão de mídia ignorado.** `Materia#anteriores` extraía PDF com `operate_media` desligado
+  (ENV `AI_AGENT_MEDIA` ou `config['operate_media']`), enquanto o principal entregava documentos
+  vazios. Agora o especialista passa pelo MESMO `Config.operate_media_enabled?(agent)`; desligado, não
+  lê anexo anterior nenhum. Spec "mídia desligada"; mutação M12.
+- **P2 · identidade por nome de arquivo.** Dois `documento.pdf` diferentes viravam um; a mesma
+  apólice mandada duas vezes com nomes diferentes entrava duas. A identidade passou a ser o
+  CONTEÚDO: o `checksum` que o ActiveStorage calcula no upload, que agora viaja no documento
+  extraído (`{name:, text:, checksum:}`). O que o principal já extraiu neste turno (mesmo checksum)
+  não é lido de novo; entre os candidatos, o mesmo conteúdo entra uma vez. Spec "não lê de novo";
+  mutações M5, M9, M13.
+- **P2 · teto do extrator antes do dedupe.** `MessageMedia#documents` cortava nos 2 primeiros PDFs
+  antes de extrair e antes do `uniq`: dois PDFs do debounce (já lidos pelo principal) eram lidos de
+  novo e descartados, e uma apólice mais antiga não entrava embora sobrasse vaga; dois escaneados sem
+  texto bloqueavam uma legível. Agora `Materia#documentos` calcula as VAGAS que sobram dos deste
+  turno, exclui do candidatos o que já entrou, e `documents(limit:)` extrai preguiçosamente até
+  preencher as vagas com PDFs LEGÍVEIS (um sem camada de texto não ocupa vaga). O caminho do
+  principal (`extract`) não mudou. Specs "preenchem só as vagas", "não ocupa vaga"; mutações M10, M11.
+- **P3 · comentários prometendo mais que o código.** "Mesma janela do histórico" virou "mesmo número,
+  mas contado em anexos — um PDF pode ser mais antigo que a conversa que o especialista vê"; "o
+  bilhete é a última palavra" virou "é a posição no prompt, não autorização: o catálogo do
+  especialista decide o que ele pode fazer, e o modelo se faz".
+- **Principal idêntico.** `Historico.normalizar` aceitava chave string além de símbolo; o
+  `PromptBuilder` antigo só aceitava símbolo. Voltou a só símbolo — nenhum chamador de produção
+  passa string (`Responder#history`, `history_param` dos controllers, `sanitize_history`,
+  `sanitized_history` constroem símbolos), mas "idêntico" tem de ser literal.
+
+O que o Codex confirmou e fica registrado:
+
+- A mensagem que abriu o turno ESTÁ no histórico (`Responder#history` mapeia todos os
+  `recent_messages`, sem excluir a última incoming): um CPF escrito neste turno chega ao
+  especialista pela conversa, não só pelo bilhete. Ressalva: o corte por item é 4 mil caracteres; o
+  que vier depois disso numa mensagem gigante chega ao principal pela `query` mas não ao
+  especialista.
+- Termo 6, leitura registrada: entra o que o cliente VIU — as mensagens públicas da conversa,
+  inclusive as de um atendente humano, de outro agente ou um template público (`Message.chat` exclui
+  só privadas e atividades). O termo literal ("nada que o cliente não tenha escrito ou anexado")
+  seria falso sem a resposta do atendente: sem a pergunta, "04297912678" é só um número.
+- `origin_message_id` é o gatilho vencedor do debounce (normalmente a ÚLTIMA mensagem do turno); o
+  PDF mandado antes do texto no mesmo turno vem por `@documents` do principal e é excluído dos
+  anteriores pelo checksum.
+- Testar e Copiloto passam `delivery: nil`: não consultam anexos anteriores.
+- Custo: não há cache de extração; cada chamada do especialista relê até as vagas que sobram (no
+  pior caso, 3 PDFs de até 5 MB, pdf-reader sem OCR). Não medido em apólice real nesta entrega; o
+  turno é limitado pelo timeout HTTP por requisição (120 s), não por um prazo total. Fica como
+  observação para medir na rodada real.
+- Injeção: o aviso e o bilhete são mensagens `user`; a posição não dá autoridade. O que o
+  especialista PODE fazer é o catálogo dele (`specialist_tools`); o histórico e os PDFs entram como
+  dado, cercados — igual ao principal. Não há verificação de correspondência entre o pedido do
+  principal e a ferramenta chamada; isso é anterior a esta entrega.
+
+Validação da rodada 2: specs tocadas 87 exemplos, 0 falhas; mutações 13/13 reprovam o exemplo
+que as nomeia; suíte ampla 731 exemplos, 0 falhas; rubocop 0 ofensas.
+
+CI da PR em dc290b2a8f: 11/12 verdes; `RSpec (3/8)` falhou em `spec/models/conversation_spec.rb:1182`
+("expected 3602.0 to be within 1 of 1 hour") — spec do core do Chatwoot sobre tempo de resposta, fora
+deste diff; relógio do runner. Reavaliado no SHA seguinte.

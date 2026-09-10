@@ -37,6 +37,8 @@ RSpec.describe Autonomia::Agents::Operate::MessageMedia do
     expect(result.documents.size).to eq(1)
     expect(result.documents.first[:name]).to eq('sample.pdf')
     expect(result.documents.first[:text]).to be_present
+    # a identidade do conteúdo viaja com o texto: é por ela que o especialista sabe o que já entrou
+    expect(result.documents.first[:checksum]).to eq(message.attachments.first.file.blob.checksum)
   end
 
   it 'leaves images and audio alone — a PDF is a third channel, not a replacement' do
