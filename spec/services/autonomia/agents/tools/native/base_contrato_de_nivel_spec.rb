@@ -29,6 +29,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   end
   # O que o `Bound` e o job chamam NA INSTÂNCIA.
   let(:trabalho_de_instancia) { %i[precheck closing_deliveries call start poll] }
+  # Os quatro textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
+  let(:frases) { %i[accepted_message waiting_message failure_message partial_message] }
 
   Autonomia::Agents::Tools::Registry.all.each do |ferramenta|
     describe ferramenta.name do
@@ -40,9 +42,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
           expect(instancia).not_to respond_to(texto),
                                    "#{ferramenta}##{texto} de instância nunca é chamado: não vale"
         end
-        %i[accepted_message waiting_message failure_message partial_message].each do |texto|
-          expect(ferramenta.public_send(texto)).to be_a(String)
-        end
+        frases.each { |texto| expect(ferramenta.public_send(texto)).to be_a(String) }
       end
 
       it 'define a conferência e as entregas de fechamento como métodos de INSTÂNCIA, e nunca de classe' do
