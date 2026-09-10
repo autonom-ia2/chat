@@ -275,12 +275,25 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
                                                'faltando' => ['insured.document'] }))
         }
       },
-      # A ferramenta síncrona não conhece a conversa, de propósito: a linha sai com `conversa=-`.
-      'base.rb#error#1' => {
-        espera: { motivo: 'capabilities_unavailable', slug: 'consultar_produtos_cotacao', conversa: '-' },
+      # As ferramentas SÍNCRONAS de verdade: a de ramos, em JSON; a de condições gerais, em prosa.
+      'insurance_capabilities.rb#call#1' => {
+        espera: { motivo: 'capabilities_unavailable', slug: 'consultar_produtos_cotacao' },
         dispara: lambda {
           allow(Autonomia::Insurance::Connection).to receive(:for_account).and_raise('X-Amz-Signature=abc')
           bound_para(Autonomia::Agents::Tools::Native::InsuranceCapabilities).execute({ 'arguments' => '{}' }, delivery: delivery)
+        }
+      },
+      'insurance_general_conditions.rb#call#1' => {
+        espera: { motivo: 'condicoes_sem_seguradora', slug: 'consultar_condicoes_gerais' },
+        dispara: lambda {
+          bound_para(Autonomia::Agents::Tools::Native::InsuranceGeneralConditions).execute({ 'arguments' => '{}' }, delivery: delivery)
+        }
+      },
+      'insurance_general_conditions.rb#call#2' => {
+        espera: { motivo: 'condicoes_sem_pergunta', slug: 'consultar_condicoes_gerais' },
+        dispara: lambda {
+          bound_para(Autonomia::Agents::Tools::Native::InsuranceGeneralConditions)
+            .execute({ 'arguments' => { seguradora: 'Porto' }.to_json }, delivery: delivery)
         }
       }
     }

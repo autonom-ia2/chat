@@ -18,8 +18,9 @@ module VarreduraDeRecusas
   ].freeze
   PRODUTOR_UNICO = 'app/services/autonomia/agents/tools/recusa.rb'.freeze
   BOUND = 'app/services/autonomia/agents/tools/bound.rb'.freeze
-  # Chamadas cujo PRIMEIRO argumento é o código da recusa.
-  REGISTRADORES = %i[recusar registrar para_modelo recusa conferencia].freeze
+  # Chamadas cujo PRIMEIRO argumento é o código da recusa: sem receptor (o atalho da própria classe)
+  # ou sobre `Recusa`. `error` é o atalho de `Native::Base`; `Rails.logger.error` tem receptor e fica fora.
+  REGISTRADORES = %i[recusar registrar para_modelo recusa conferencia error].freeze
 
   # Uma SAÍDA: uma chamada ao registrador, ou um `return 'codigo'` no Bound. O id é estável
   # enquanto o método não mudar de nome: `bound.rb#accept_async#2`.
@@ -94,7 +95,7 @@ module VarreduraDeRecusas
   end
 
   def saida?(nodo, caminho, constantes)
-    return true if nodo.is_a?(Prism::CallNode) && REGISTRADORES.include?(nodo.name)
+    return true if Nos.registrador?(nodo)
     return false unless caminho == BOUND && nodo.is_a?(Prism::ReturnNode)
 
     Nos.primeiro_literal(nodo, constantes)&.match?(::Autonomia::Agents::Tools::Recusa::CODIGO) || false
@@ -123,8 +124,17 @@ module VarreduraDeRecusas::Nos
     nodo.is_a?(Prism::CallNode) && nodo.name == nome
   end
 
+  # `JSON`, `::JSON` ou `Tools::Recusa`: o último segmento do nome.
   def sobre_constante?(nodo, nome)
-    nodo.receiver.is_a?(Prism::ConstantReadNode) && nodo.receiver.name == nome
+    (nodo.receiver.is_a?(Prism::ConstantReadNode) || nodo.receiver.is_a?(Prism::ConstantPathNode)) && nodo.receiver.name == nome
+  end
+
+  # Com argumento: `error` sem argumento é o leitor de atributo de `AnswerResult`, não o atalho.
+  def registrador?(nodo)
+    return false unless nodo.is_a?(Prism::CallNode) && VarreduraDeRecusas::REGISTRADORES.include?(nodo.name)
+    return false if argumentos(nodo).empty?
+
+    nodo.receiver.nil? || sobre_constante?(nodo, :Recusa)
   end
 
   # `{ error: x }.to_json`, `JSON.generate(error: x)` ou `JSON.dump(error: x)` — as formas que vão
@@ -142,9 +152,14 @@ module VarreduraDeRecusas::Nos
       argumentos(nodo).any? { |arg| hash_com_error?(arg) }
   end
 
-  # `h['error'] = x`
+  # `h['error'] = x`, `h.store(:error, x)`
   def atribui_error?(nodo)
-    chamada?(nodo, :[]=) && error?(argumentos(nodo).first)
+    (chamada?(nodo, :[]=) || chamada?(nodo, :store)) && error?(argumentos(nodo).first)
+  end
+
+  # `{}.merge(error: x)`
+  def mescla_error?(nodo)
+    chamada?(nodo, :merge) && argumentos(nodo).any? { |arg| hash_com_error?(arg) }
   end
 
   # `Hash[error: x]` ou `Hash[:error, x]`
@@ -155,7 +170,7 @@ module VarreduraDeRecusas::Nos
   # O hash literal já conta por si; `.to_json` colado nele não conta de novo.
   def produtor_em_ferramenta?(nodo)
     (nodo.is_a?(Prism::HashNode) && hash_com_error?(nodo)) || gera_json_com_error?(nodo) ||
-      atribui_error?(nodo) || constroi_hash_com_error?(nodo)
+      atribui_error?(nodo) || constroi_hash_com_error?(nodo) || mescla_error?(nodo)
   end
 
   # O literal que o PRIMEIRO argumento carrega, mesmo escondido: `'x'`, `CONSTANTE` definida no

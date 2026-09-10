@@ -150,9 +150,12 @@ class Autonomia::Agents::Tools::Native::Base
     end
   end
 
-  def initialize(agent:, params: {})
+  # `delivery` é o contexto do turno (conversa), quando há um. A ferramenta continua sem saber de
+  # conversa para TRABALHAR; ela só o carrega para o registro de recusa dizer qual conversa foi.
+  def initialize(agent:, params: {}, delivery: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys
+    @delivery = delivery
   end
 
   # -> String. NUNCA levanta: quem chama é o executor de ferramentas do turno.
@@ -175,15 +178,22 @@ class Autonomia::Agents::Tools::Native::Base
 
   private
 
-  attr_reader :agent, :params
+  attr_reader :agent, :params, :delivery
 
   def account
     agent.account
   end
 
-  # Recusa nomeada da ferramenta SÍNCRONA. Passa pelo registro (entrega 6) como as demais; a
-  # ferramenta não conhece a conversa, de propósito, então a linha sai com `conversa=-`.
+  # Recusa nomeada da ferramenta SÍNCRONA, em JSON. Passa pelo registro (entrega 6) como as demais.
   def error(code)
-    ::Autonomia::Agents::Tools::Recusa.para_modelo(code, slug: self.class.slug, agente: agent)
+    ::Autonomia::Agents::Tools::Recusa.para_modelo(code, slug: self.class.slug, delivery: delivery, agente: agent)
+  end
+
+  # Recusa em PROSA da ferramenta síncrona (ela pediu um dado antes de trabalhar): registra e
+  # devolve o texto, que não muda.
+  def recusar(codigo, texto)
+    ::Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: self.class.slug, conversa: delivery&.conversation&.id,
+                                                         agente: agent)
+    texto
   end
 end

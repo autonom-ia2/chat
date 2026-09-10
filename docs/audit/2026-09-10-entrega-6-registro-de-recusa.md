@@ -18,7 +18,13 @@ Plano do Agente de Cotação (épico #291). Branch `feat/entrega-6-registro-de-r
   `app/services/autonomia/agents/**` e `app/jobs/autonomia/agents/**`: `{ error: }`, `h['error'] =`,
   `Hash[...]`, `JSON.generate/dump(error:)` fora do produtor único reprovam; código de recusa
   (literal, constante do arquivo ou lado direito de `||`) fora de `MOTIVOS` reprova; saída sem
-  gatilho em `recusa_registro_spec` reprova. 24 saídas, 24 gatilhos, 17 motivos.
+  gatilho em `recusa_registro_spec` reprova. 26 saídas, 26 gatilhos, 19 motivos.
+- Segunda rodada do Codex (ainda REPROVADO): a nativa síncrona passa a receber o `delivery` do
+  turno (a recusa de `capabilities_unavailable` sai com a conversa); as duas recusas antes de rodar
+  das condições gerais ("Informe a seguradora/dúvida") entram via `Native::Base#recusar`; a guarda
+  vê `::JSON.generate`, `merge(error:)`, `store(:error)` e conta cada `error('x')` de nativa como
+  saída própria. O nome que o modelo pediu em `tool_not_available` continua no registro, de
+  propósito: é o diagnóstico do caso #356, e é texto do modelo em forma de identificador.
 - Fora de escopo, documentado: prosa das ferramentas síncronas de KB; causa do erro HTTP (só a
   categoria e o status vão ao registro); desfechos do job ficam em `tool_runs`.
 
@@ -37,7 +43,8 @@ worker aparecem em `docker logs chatwoot-worker`.
 - Provas por mutação (cada uma restaurada e conferida byte a byte): `info`→`debug` no registrador
   derruba 30 de 38 exemplos; `{ error: 'x' }.to_json`, `h['error'] = 'x'`, `JSON.generate(error:)`,
   `recusar(CONSTANTE)` fora do catálogo, `return 'motivo_novo'`, saída dinâmica nova e gatilho
-  apagado — todos reprovam com arquivo e linha.
+  apagado, `::JSON.generate(error:)`, `{}.merge(error:)` e `error('codigo_novo')` numa nativa —
+  todos reprovam com arquivo e linha.
 - Revisões: Codex (REPROVADO no commit inicial; 6 achados, todos endereçados ou documentados) e
   revisor adversarial (REPROVADO no commit inicial; A1, B1, B3, C1, C2, D1–D5, E1, E2, E5, F1, F3,
   F4, F5, H1–H5 endereçados; E3 e E4 documentados como fora de escopo).

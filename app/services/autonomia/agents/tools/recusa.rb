@@ -10,8 +10,10 @@
 # frase em português) e quais informações faltavam. NUNCA dado do cliente e NUNCA texto da
 # conversa. A garantia real é a ORIGEM: código vem de literal no código (a guarda confere), slug vem
 # do catálogo ou do cadastro da conta, nome de campo vem da validação do adapter, detalhe é status
-# HTTP. Os filtros de forma abaixo são defesa em profundidade — o que não tem forma de identificador
-# vira `?` ou `-` —, não a garantia: um dado com forma de identificador passaria por eles.
+# HTTP. A exceção é `tool_not_available`: o slug ali é o NOME QUE O MODELO PEDIU, que é o próprio
+# diagnóstico (em 08/09 o especialista pediu `cotar_seguro` e não tinha) — texto do modelo, nunca do
+# cliente, e só passa em forma de identificador. Os filtros de forma abaixo são defesa em
+# profundidade — o que não tem forma de identificador vira `?` ou `-` —, não a garantia.
 #
 # O REGISTRO NUNCA LEVANTA. Ele é cortesia sobre um caminho que já deu errado; se o logger falhar,
 # a recusa continua chegando ao modelo do mesmo jeito, e o turno não morre por causa da nossa linha.
@@ -47,7 +49,9 @@ module Autonomia::Agents::Tools::Recusa
     'especialista_sem_credencial' => 'a conta não tem credencial de IA para o especialista',
     'especialista_sem_resposta' => 'o modelo do especialista falhou ou não devolveu o formato combinado',
     'especialista_falhou' => 'o especialista levantou uma exceção',
-    'especialista_nao_concluiu' => 'o especialista respondeu vazio, sem resposta e sem pendência'
+    'especialista_nao_concluiu' => 'o especialista respondeu vazio, sem resposta e sem pendência',
+    'condicoes_sem_seguradora' => 'a consulta às condições gerais veio sem o nome da seguradora',
+    'condicoes_sem_pergunta' => 'a consulta às condições gerais veio sem a dúvida do cliente'
   }.freeze
   SEM_DESCRICAO = 'motivo fora do catálogo: falta a frase em MOTIVOS'.freeze
 

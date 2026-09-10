@@ -51,8 +51,8 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
   end
 
   def call
-    return 'Informe a seguradora para eu consultar as condições gerais.' if insurer.blank?
-    return 'Informe a dúvida do cliente para eu consultar.' if question.blank?
+    return recusar('condicoes_sem_seguradora', 'Informe a seguradora para eu consultar as condições gerais.') if insurer.blank?
+    return recusar('condicoes_sem_pergunta', 'Informe a dúvida do cliente para eu consultar.') if question.blank?
 
     describe(client.query(question: question, insurer: insurer, product: product))
   rescue Autonomia::Insurance::GeneralConditions::Client::InsurerNotFound

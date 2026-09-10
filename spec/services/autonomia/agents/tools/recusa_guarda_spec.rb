@@ -16,10 +16,11 @@ require 'rails_helper'
 #      `recusa`, `conferencia`, ou um `return 'codigo'` em `bound.rb` — está em `MOTIVOS`: tem a
 #      frase em português e um gatilho em `recusa_registro_spec`.
 #
-# O QUE FICA DE FORA, de propósito: a prosa que uma ferramenta SÍNCRONA devolve depois de rodar
-# ("Informe a seguradora…", nas condições gerais) é resultado, não recusa de executar; e os
-# desfechos do job (`prazo_esgotado`, `tool_failed`…) ficam gravados na linha `tool_runs`, com
-# conversa, agente e código — outro canal, já existente.
+# O QUE FICA DE FORA, de propósito: o texto que uma ferramenta SÍNCRONA devolve DEPOIS de rodar
+# ("Não encontrei essa regra nas condições gerais…", "A corretora ainda não conectou…") é resultado,
+# não recusa de executar — a recusa ANTES de rodar ("Informe a seguradora…") entra, via
+# `Native::Base#recusar`; e os desfechos do job (`prazo_esgotado`, `tool_failed`…) ficam gravados na
+# linha `tool_runs`, com conversa, agente e código — outro canal, já existente.
 #   3. A varredura enxerga o que já existe. Um visitador quebrado devolveria lista vazia e o teste
 #      passaria elogiando o silêncio; aqui ele reprova.
 #
@@ -28,7 +29,7 @@ require 'rails_helper'
 # reprova a 2.
 RSpec.describe Autonomia::Agents::Tools::Recusa do
   let(:varredura) { VarreduraDeRecusas }
-  # Abaixo disto a varredura não está enxergando o código de 10/09/2026 (eram 24 saídas).
+  # Abaixo disto a varredura não está enxergando o código de 10/09/2026 (eram 26 saídas).
   let(:minimo_conhecido) { 22 }
 
   describe 'guarda estática (entrega 6)' do
@@ -55,7 +56,7 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
 
       expect(saidas.size).to be >= minimo_conhecido
       expect(saidas.map(&:id)).to include('bound.rb#execute#1', 'bound.rb#async_refusal#2', 'insurance_quote.rb#start#2',
-                                          'async_run_job.rb#registrar_recusa#1', 'base.rb#error#1')
+                                          'async_run_job.rb#registrar_recusa#1', 'insurance_capabilities.rb#call#1')
       expect(saidas.map(&:id).uniq.size).to eq(saidas.size)
     end
   end

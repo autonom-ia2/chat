@@ -74,7 +74,7 @@ class Autonomia::Agents::Tools::Bound
     refusal = async_refusal(delivery)
     return recusar(refusal, delivery) if refusal
 
-    antecipado = precheck_native(args)
+    antecipado = precheck_native(args, delivery)
     return recusar_pela_conferencia(antecipado, delivery) if antecipado
 
     run = ::Autonomia::Agents::ToolRun.open!(
@@ -117,10 +117,10 @@ class Autonomia::Agents::Tools::Bound
   # `bound_async_spec` guarda continua valendo onde ele importa: o que não pode segurar o turno é o
   # TRABALHO (`start`, com o teto de 60 s do conector), não uma conferência que não toca no portal e
   # tem teto de 10 s. Falha aqui é nil: aceita e segue.
-  def precheck_native(args)
+  def precheck_native(args, delivery)
     return nil unless native?
 
-    @native.new(agent: @agent, params: args).precheck.presence
+    @native.new(agent: @agent, params: args, delivery: delivery).precheck.presence
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] precheck falhou slug=#{slug} #{e.class}")
     nil
@@ -166,7 +166,7 @@ class Autonomia::Agents::Tools::Bound
   # A nativa carrega credencial e assinatura; a mensagem da exceção pode conter requisição assinada.
   # Por isso o rescue é largo e a saída é um código, nunca `e.message`.
   def run_native(args, delivery)
-    @native.new(agent: @agent, params: args).call
+    @native.new(agent: @agent, params: args, delivery: delivery).call
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] native failed slug=#{slug} #{e.class}")
     recusar('tool_execution_error', delivery)
