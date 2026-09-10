@@ -138,21 +138,10 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   end
 
   # A cotação PODE existir no portal sem registro nosso: o job decidiu submeter e o número nunca
-  # chegou — o processo morreu, ou o portal ficou mudo. É o estado que muda a frase ao cliente e que
-  # o desfecho marca para o corretor achar.
+  # chegou — o processo morreu, ou o portal ficou mudo. É o estado que muda a frase ao cliente; quem
+  # marca a linha para o corretor achar é o `finish!`, com a mesma condição em SQL.
   def envio_incerto?
     intencoes.positive? && handle.to_h[SUBMITTED_KEY].blank?
-  end
-
-  # Marca para a lista do corretor (`possivelmente_duplicadas`) a execução que acaba em envio
-  # incerto. A condição é avaliada NO BANCO, no mesmo comando que escreve: um processo com objeto
-  # velho ("intenção sem número") não marca — nem apaga — a execução que outro processo já numerou.
-  # Quando não marca, recarrega: quem decide a frase ao cliente precisa do estado atual, não da
-  # leitura velha. -> true quando marcou.
-  def marcar_envio_incerto!
-    marcou = mesclar(com_intencao_sem_numero, adicionar: { POSSIVELMENTE_DUPLICADA => true })
-    reload unless marcou
-    marcou
   end
 
   # Token que carimba a mensagem publicada, derivado do CONTEÚDO. É por ele que a publicação é
@@ -173,10 +162,12 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
                               notify_customer: notify_customer, expires_at: expires_at)
   end
 
-  # O desfecho MARCA o envio incerto no MESMO comando que muda o status: uma intenção anotada por
-  # outro processo entre a marcação do desfecho e este `finish!` (janela de milissegundos) não pode
-  # acabar em `failed` sem marca com uma cotação aberta no portal (Codex, rodada 4). Depois daqui,
-  # nenhuma escrita com posse passa: a anotação seguinte perde pelo status.
+  # O desfecho MARCA o envio incerto (`envio_incerto?` em SQL: intenção anotada, número ausente) no
+  # MESMO comando que muda o status: uma intenção anotada por outro processo pouco antes deste
+  # `finish!` (janela de milissegundos) não pode acabar em `failed` sem marca com uma cotação aberta
+  # no portal (Codex, rodada 4). Depois daqui, nenhuma escrita com posse passa: a anotação seguinte
+  # perde pelo status. A marca é o único caminho para `possivelmente_duplicadas` além de
+  # `anotar_intencao!` (segunda intenção) — e por isso não existe "marcar" avulso no modelo.
   def finish!(status, failure_code: nil)
     marca = 'CASE WHEN COALESCE((handle->>?)::int, 0) > 0 AND (handle->>?) IS NULL THEN ?::jsonb ELSE ?::jsonb END'
     updated = vivas.update_all(["status = ?, failure_code = ?, updated_at = ?, handle = handle || #{marca}", # rubocop:disable Rails/SkipsModelValidations
@@ -283,10 +274,5 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
   def sem_chave(scope, chave)
     scope.where('(handle->>?) IS NULL', chave)
-  end
-
-  # `envio_incerto?` em SQL: intenção anotada, número ausente.
-  def com_intencao_sem_numero
-    sem_numero(vivas).where('COALESCE((handle->>?)::int, 0) > 0', INTENCOES)
   end
 end

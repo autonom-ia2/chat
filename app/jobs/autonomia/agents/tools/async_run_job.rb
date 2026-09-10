@@ -236,11 +236,11 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   #
   # Quem acaba com intenção anotada e sem número (entrega 5) fica marcado para a lista do corretor,
   # seja qual for o código do desfecho: prazo esgotado ou terceira intenção, a cotação pode existir.
-  # A marcação aqui é para a FRASE (o cliente lê "não consegui confirmar"); a que protege o dinheiro
-  # é a do `finish!`, no mesmo comando que encerra — uma intenção anotada por outro processo entre
-  # as duas não escapa.
+  # Quem marca é o `finish!`, no mesmo comando que encerra — uma intenção anotada por outro processo
+  # no meio não escapa. Aqui só se RECARREGA: a frase ao cliente sai do estado do banco, não de uma
+  # leitura velha (um objeto que ainda diz "intenção sem número" quando outro processo já registrou).
   def fail_run(run, native, code)
-    run.marcar_envio_incerto!
+    run.reload
     if native.present?
       run.delivered_count.zero? ? publish(run, mensagem_de_falha(run, native)) : encerrar(run, native)
     end

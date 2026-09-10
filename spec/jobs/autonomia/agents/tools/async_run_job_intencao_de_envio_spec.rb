@@ -19,9 +19,9 @@ require 'rails_helper'
 # para"; anotar depois do `start` reprova "anota a intenção antes"; `rescue Exception` em
 # `tentar_start` reprova "no desligamento"; voltar a intenção atrás também no `EnvioIncerto` reprova
 # "envio incerto"; posse sem `intencao` reprova "a linha mudou de dono"; posse sem a condição de
-# número ausente reprova "registrou o número antes"; marcar sem a condição no banco reprova "objeto
-# velho no desfecho"; tirar a guarda do número em `envio_incerto?` reprova "não marca a abandonada
-# que tem número".
+# número ausente reprova "registrou o número antes"; o desfecho sem recarregar reprova "objeto velho
+# no desfecho"; o `finish!` sem marcar reprova "o desfecho marca mesmo assim"; tirar a guarda do
+# número em `envio_incerto?` reprova "não marca a abandonada que tem número".
 RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:inbox) { create(:inbox, account: account) }

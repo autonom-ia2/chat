@@ -153,37 +153,21 @@ RSpec.describe Autonomia::Agents::ToolRun do
     end
   end
 
-  # O ESTADO que muda a frase ao cliente e vai para a lista do corretor: intenção anotada, número
-  # nunca gravado. A marca é condicionada NO BANCO: a leitura velha não decide.
-  describe '#envio_incerto? e #marcar_envio_incerto!' do
+  # O ESTADO que muda a frase ao cliente: intenção anotada, número nunca gravado. Quem o grava na
+  # lista do corretor é o `finish!` (abaixo), com a mesma condição em SQL.
+  describe '#envio_incerto?' do
     let(:intencoes) { described_class::INTENCOES }
     let(:submetido) { described_class::SUBMITTED_KEY }
 
-    it 'e incerto com intencao e sem numero, e a marca vai para a lista' do
+    it 'e incerto com intencao e sem numero' do
       run = promote(open_run)
       expect(run.envio_incerto?).to be(false)
-      expect(run.marcar_envio_incerto!).to be(false)
 
       run.merge_handle!({ intencoes => 1 })
       expect(run.envio_incerto?).to be(true)
-      expect(run.marcar_envio_incerto!).to be(true)
-      expect(described_class.possivelmente_duplicadas).to eq([run])
 
       run.record_attempt!(handle: { submetido => true, 'id' => 'x' })
       expect(run.envio_incerto?).to be(false)
-    end
-
-    it 'com objeto velho: nao marca a execucao que outro processo ja numerou, e recarrega' do
-      run = promote(open_run)
-      run.merge_handle!({ intencoes => 1 })
-      velho = described_class.find(run.id)
-      run.record_attempt!(handle: { submetido => true, 'id' => 'x' })
-
-      expect(velho.envio_incerto?).to be(true)
-      expect(velho.marcar_envio_incerto!).to be(false)
-      expect(velho.envio_incerto?).to be(false)
-      expect(velho.handle).to eq(intencoes => 1, submetido => true, 'id' => 'x')
-      expect(described_class.possivelmente_duplicadas).to be_empty
     end
   end
 

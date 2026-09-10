@@ -39,11 +39,10 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   end
 
   # Se a execução morreu com a INTENÇÃO anotada e sem o número (entrega 5), a cotação pode existir
-  # no portal sem registro nosso: fica marcada como possivelmente duplicada, para o corretor achar,
-  # e o cliente lê que não há confirmação — não que "não consegui".
+  # no portal sem registro nosso: o `finish!` a marca como possivelmente duplicada, para o corretor
+  # achar, e o cliente lê que não há confirmação — não que "não consegui".
   def close(run)
     native = ::Autonomia::Agents::Tools::Registry.find(run.slug)
-    run.marcar_envio_incerto!
     tell_customer(run, native) if native.present? && run.delivered_count.zero?
     run.finish!('failed', failure_code: 'execucao_abandonada')
   rescue StandardError => e

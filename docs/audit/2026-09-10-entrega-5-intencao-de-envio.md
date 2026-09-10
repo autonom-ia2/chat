@@ -75,5 +75,10 @@ contador é o desenho.
   `failed` sem marca. Correção: `ToolRun#finish!` marca o envio incerto no MESMO `UPDATE` que muda o
   status (`handle || CASE WHEN intencoes > 0 AND submitted IS NULL THEN dup END`); depois dele
   nenhuma escrita com posse passa. Cadeia dupla de poll confirmada pré-existente (#370). P3 textos.
+- Codex (rodada 5, `a021f0d039`): **APROVADO** — matriz desfecho × anotação sem interleaving que
+  termine sem marca com cotação aberta. Depois disso a mutação "fail_run não marca" SOBREVIVEU (a
+  marca prévia ficou redundante com a do `finish!`): `marcar_envio_incerto!` foi removido;
+  `fail_run` e o varredor só recarregam o objeto (a frase sai do estado do banco), e o `finish!` é
+  o único a marcar. Codex rodada 6 confirma.
 
 ## Validação
