@@ -112,6 +112,81 @@ RSpec.describe Autonomia::Agents::ToolRun do
     end
   end
 
+  # AS ESCRITAS DO HANDLE SÃO MESCLADAS NO BANCO (entrega 5), nunca copiadas da memória, e `intencao:`
+  # exige a POSSE da passada: a linha ainda na intenção lida E sem número. É o que impede dois
+  # processos com a mesma execução de apagar um a marca (ou o número) do outro.
+  describe 'merge_handle! e record_attempt!' do
+    let(:intencoes) { described_class::INTENCOES }
+    let(:submetido) { described_class::SUBMITTED_KEY }
+
+    it 'mesclam no banco: um objeto velho nao apaga o que outro processo escreveu' do
+      run = promote(open_run)
+      velho = described_class.find(run.id)
+      run.merge_handle!({ intencoes => 2, 'dup' => true })
+
+      expect(velho.record_attempt!(handle: { 'id' => 'cot-A', submetido => true })).to be(true)
+      expect(velho.handle).to eq(intencoes => 2, 'dup' => true, 'id' => 'cot-A', submetido => true)
+      expect(velho.attempts).to eq(1)
+      expect(velho.merge_handle!({ intencoes => 1 }, remover: ['dup'])).to be(true)
+      expect(velho.reload.handle).to eq(intencoes => 1, 'id' => 'cot-A', submetido => true)
+    end
+
+    it 'com intencao: so escrevem se a linha esta na intencao lida E sem numero' do
+      run = promote(open_run)
+
+      expect(run.merge_handle!({ intencoes => 1 }, intencao: 1)).to be(false)
+      expect(run.merge_handle!({ intencoes => 1 }, intencao: 0)).to be(true)
+      expect(run.merge_handle!({ intencoes => 2 }, intencao: 0)).to be(false)
+      expect(run.record_attempt!(handle: { 'id' => 'x', submetido => true }, intencao: 1)).to be(true)
+      # com número registrado, nenhuma intenção é "a lida": a posse acabou
+      expect(run.merge_handle!({ intencoes => 2 }, intencao: 1)).to be(false)
+      expect(run.record_attempt!(handle: { 'id' => 'y' }, intencao: 1)).to be(false)
+      expect(run.reload).to have_attributes(handle: { intencoes => 1, 'id' => 'x', submetido => true }, attempts: 1)
+    end
+
+    it 'so escrevem em execucao viva' do
+      run = promote(open_run)
+      run.finish!('done')
+
+      expect(run.merge_handle!({ 'a' => 1 })).to be(false)
+      expect(run.record_attempt!(handle: { 'a' => 1 })).to be(false)
+    end
+  end
+
+  # O ESTADO que muda a frase ao cliente e vai para a lista do corretor: intenção anotada, número
+  # nunca gravado. A marca é condicionada NO BANCO: a leitura velha não decide.
+  describe '#envio_incerto? e #marcar_envio_incerto!' do
+    let(:intencoes) { described_class::INTENCOES }
+    let(:submetido) { described_class::SUBMITTED_KEY }
+
+    it 'e incerto com intencao e sem numero, e a marca vai para a lista' do
+      run = promote(open_run)
+      expect(run.envio_incerto?).to be(false)
+      expect(run.marcar_envio_incerto!).to be(false)
+
+      run.merge_handle!({ intencoes => 1 })
+      expect(run.envio_incerto?).to be(true)
+      expect(run.marcar_envio_incerto!).to be(true)
+      expect(described_class.possivelmente_duplicadas).to eq([run])
+
+      run.record_attempt!(handle: { submetido => true, 'id' => 'x' })
+      expect(run.envio_incerto?).to be(false)
+    end
+
+    it 'com objeto velho: nao marca a execucao que outro processo ja numerou, e recarrega' do
+      run = promote(open_run)
+      run.merge_handle!({ intencoes => 1 })
+      velho = described_class.find(run.id)
+      run.record_attempt!(handle: { submetido => true, 'id' => 'x' })
+
+      expect(velho.envio_incerto?).to be(true)
+      expect(velho.marcar_envio_incerto!).to be(false)
+      expect(velho.envio_incerto?).to be(false)
+      expect(velho.handle).to eq(intencoes => 1, submetido => true, 'id' => 'x')
+      expect(described_class.possivelmente_duplicadas).to be_empty
+    end
+  end
+
   describe '#discard!' do
     it 'discards a run that never ran' do
       # Arrange

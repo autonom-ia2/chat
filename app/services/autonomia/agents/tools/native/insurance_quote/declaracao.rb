@@ -77,6 +77,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
   # não responderam"). Rodrigo recebeu a frase genérica no WhatsApp em 09/09/2026.
   PARCIAL = 'Algumas seguradoras não responderam a tempo. Os preços acima são os que chegaram.'.freeze
 
+  # O desfecho de quem pode ter uma cotação aberta no portal sem que a gente saiba o número
+  # (entrega 5): o job decidiu submeter e o número nunca chegou. Não diz "não consegui" — a cotação
+  # pode estar pronta lá. Diz o que é verdade.
+  INCERTO = 'Não consegui confirmar se a cotação foi aberta nas seguradoras. Um atendente vai ' \
+            'conferir e retomar daqui.'.freeze
+
   # `module ClassMethods` em vez de `class_methods do`: mesmo efeito no concern, e um módulo não
   # tem o teto de linhas de bloco — o catálogo de textos cresce a cada ramo.
   module ClassMethods
@@ -125,6 +131,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
 
     def partial_message
       PARCIAL
+    end
+
+    def uncertain_message
+      INCERTO
     end
   end
 end

@@ -39,10 +39,11 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   end
 
   # Se a execução morreu com a INTENÇÃO anotada e sem o número (entrega 5), a cotação pode existir
-  # no portal sem registro nosso: fica marcada como possivelmente duplicada, para o corretor achar.
+  # no portal sem registro nosso: fica marcada como possivelmente duplicada, para o corretor achar,
+  # e o cliente lê que não há confirmação — não que "não consegui".
   def close(run)
     native = ::Autonomia::Agents::Tools::Registry.find(run.slug)
-    marcar_envio_incerto(run)
+    run.marcar_envio_incerto!
     tell_customer(run, native) if native.present? && run.delivered_count.zero?
     run.finish!('failed', failure_code: 'execucao_abandonada')
   rescue StandardError => e
@@ -50,17 +51,10 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
     nil
   end
 
-  def marcar_envio_incerto(run)
-    handle = run.handle.to_h
-    return if handle[::Autonomia::Agents::ToolRun::INTENCOES].blank? ||
-              handle[::Autonomia::Agents::Tools::AsyncRunJob::SUBMITTED_KEY].present?
-
-    run.record_handle!(handle.merge(::Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA => true))
-  end
-
   # Força a publicação: a cadeia de entrega humanizada daquele turno já morreu há muito, e esperar
   # por ela deixaria o cliente sem desfecho para sempre.
   def tell_customer(run, native)
-    ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(native.failure_message)
+    texto = run.envio_incerto? ? native.uncertain_message : native.failure_message
+    ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(texto)
   end
 end

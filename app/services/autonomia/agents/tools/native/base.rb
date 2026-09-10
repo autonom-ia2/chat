@@ -95,6 +95,13 @@ class Autonomia::Agents::Tools::Native::Base
       'Não consegui concluir a consulta agora. Um atendente vai retomar daqui.'
     end
 
+    # Texto que o CÓDIGO publica quando a execução acaba sem se saber se o trabalho foi feito
+    # (entrega 5): o job decidiu submeter e o número nunca chegou — o processo morreu, ou o portal
+    # ficou mudo. Não é a frase de falha: "não consegui" afirmaria o que não se sabe.
+    def uncertain_message
+      'Não consegui confirmar o resultado da consulta. Um atendente vai conferir e retomar daqui.'
+    end
+
     # EM `strict: true` NÃO EXISTE CAMPO FORA DE `required`.
     #
     # A OpenAI recusa a chamada INTEIRA — não a ferramenta, a chamada — quando `required` não lista

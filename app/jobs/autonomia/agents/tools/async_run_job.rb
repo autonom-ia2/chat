@@ -7,18 +7,22 @@
 # `:max_retries: 3` reexecutaria o job do zero — o que aqui significa cotar de novo na
 # seguradora, com custo e duplicidade no portal do corretor.
 #
-# NUNCA deixa exceção subir. Deixar o Sidekiq reexecutar refaria o `start`; aqui uma falha ou é
-# uma nova tentativa controlada (dentro do prazo) ou é o fim com mensagem honesta ao cliente.
-# Silêncio nunca é opção: o cliente está esperando.
+# NUNCA deixa exceção de TRABALHO subir (`StandardError`). Deixar o Sidekiq reexecutar refaria o
+# `start`; aqui uma falha ou é uma nova tentativa controlada (dentro do prazo) ou é o fim com
+# mensagem honesta ao cliente. Silêncio nunca é opção: o cliente está esperando. O sinal de
+# desligamento (`Sidekiq::Shutdown`, um `Interrupt`) passa, de propósito — ver `tentar_start`.
 class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   queue_as :medium
 
   AsyncConfig = ::Autonomia::Agents::Tools::AsyncConfig
+  ToolRun = ::Autonomia::Agents::ToolRun
 
   # Marca nossa, gravada no handle junto com o que a ferramenta devolveu. É ela que diz "já
   # submeti" — não o conteúdo do handle. Sem isso, uma ferramenta que devolvesse nil ou {} faria a
   # passada seguinte chamar `start` DE NOVO, até 60 vezes: 60 cotações reais no portal.
-  SUBMITTED_KEY = 'autonomia_submitted'.freeze
+  # O nome mora no modelo desde a entrega 5: o varredor e o desfecho leem a marca para saber se um
+  # envio ficou incerto.
+  SUBMITTED_KEY = ToolRun::SUBMITTED_KEY
   # MESMA IDEIA DO `SUBMITTED_KEY`, para o outro extremo da execução. O encerramento publica e só
   # DEPOIS `finish!` registra o desfecho: um sinal de shutdown no meio (deploy) deixaria a execução
   # em `running`, e o retry do Sidekiq reentraria. A marca é gravada ANTES de publicar.
@@ -29,8 +33,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # do `SUBMITTED_KEY` quando ele nasceu.
   CLOSED_KEY = 'autonomia_closed'.freeze
 
+  # A LINHA MUDOU DE DONO no meio da passada: um pedido novo a supersedeu, ou outro processo com a
+  # mesma execução (o Sidekiq re-enfileira o job no hard shutdown, e o antigo pode estar vivo noutro
+  # host por alguns milissegundos) anotou a intenção seguinte. Esta passada PARA — sem chamar o
+  # portal, sem gravar, sem se reagendar: quem tem a linha agora é quem decide. Levantada pelas
+  # escritas com compare-and-set de `submeter`.
+  MudouDeDono = Class.new(StandardError)
+
   def perform(run_id, attempt = 0)
-    run = ::Autonomia::Agents::ToolRun.find_by(id: run_id)
+    run = ToolRun.find_by(id: run_id)
     return if run.blank? || !run.running?
 
     native = ::Autonomia::Agents::Tools::Registry.find(run.slug)
@@ -79,6 +90,8 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     return submeter(run, native, tool, attempt) unless submitted?(run)
 
     apply(run, native, tool.poll(handle: tool_handle(run), attempt: attempt), attempt)
+  rescue MudouDeDono => e
+    Rails.logger.warn("[autonomia][tool][async] run=#{run.id} slug=#{run.slug} passada abandonada: #{e.message}")
   rescue StandardError => e
     # NUNCA ecoar e.message: a exceção pode carregar requisição assinada ou texto vindo do
     # portal. Só a classe vai ao log; ao cliente vai a NOSSA frase.
@@ -102,53 +115,85 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
 
   # A ORDEM QUE PROTEGE O DINHEIRO (entrega 5; era a janela #337). Entre `tool.start` e o registro do
   # número não há atomicidade: um deploy no meio (o Sidekiq desta instalação re-enfileira o job no
-  # shutdown gracioso) deixava a cotação feita no portal e não registrada, e a passada seguinte
-  # cotava de novo — até 60 vezes, sem ninguém saber.
+  # hard shutdown, depois dos 25 s de `:timeout`) deixava a cotação feita no portal e não registrada,
+  # e a passada seguinte cotava de novo — até 60 vezes, sem ninguém saber.
   #
   # Agora: anota a INTENÇÃO com contador, submete, anota o NÚMERO. Quem volta e encontra intenção sem
   # número sabe que PODE ter enviado — e tenta no máximo mais UMA vez, marcando a execução como
   # possivelmente duplicada (`ToolRun.possivelmente_duplicadas` lista). Na terceira intenção, para:
   # cotar duas vezes é bagunça no portal do corretor; três seria negligência.
   #
-  # Por que não inverter a ordem e parar ali: o login do portal falha sozinho de vez em quando (três
-  # vezes em 10/09/2026). Se `start` levanta, o portal DISSE que não fez — então a intenção é apagada
-  # e a execução segue podendo ser tentada; a anotação não pode virar sentença de "já foi" e travar a
-  # conversa. A intenção só permanece quando o processo morre sem dizer nada.
+  # O que `start` levanta decide o destino da intenção, e a fronteira é a CHAMADA PAGA
+  # (`tentar_start`): falha antes dela, ou com o portal dizendo que recusou, apaga a intenção — o
+  # login do portal falha sozinho de vez em quando, e a anotação não pode virar sentença de "já foi"
+  # e travar a conversa. Falha DEPOIS de a chamada sair, sem o portal dizer nada (timeout, 502,
+  # resposta ilegível), mantém a intenção: o portal pode ter cotado.
+  #
+  # As duas escritas são compare-and-set sobre a intenção que esta passada leu (`MudouDeDono`).
   MAXIMO_DE_INTENCOES = 2
 
   def submeter(run, native, tool, attempt)
-    intencoes = run.handle.to_h[::Autonomia::Agents::ToolRun::INTENCOES].to_i
-    return fail_run(run, native, 'envio_incerto') if intencoes >= MAXIMO_DE_INTENCOES
+    intencao = run.intencoes + 1
+    return fail_run(run, native, 'envio_incerto') if intencao > MAXIMO_DE_INTENCOES
 
-    anotar_intencao!(run, intencoes + 1)
-    handle = tentar_start(run, tool)
+    anotar_intencao!(run, atual: intencao - 1, para: intencao)
+    handle = tentar_start(run, tool, intencao)
     registrar_recusa(run, handle)
-    run.record_attempt!(handle: submitted_handle(run, handle))
+    registrar_numero!(run, handle, intencao)
     reschedule(run, attempt)
   end
 
-  def anotar_intencao!(run, numero)
-    marcas = { ::Autonomia::Agents::ToolRun::INTENCOES => numero }
-    if numero > 1
-      marcas[::Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA] = true
-      Rails.logger.warn("[autonomia][tool][async] possivelmente duplicada run=#{run.id} slug=#{run.slug} intencao=#{numero}")
-    end
-    run.record_handle!(run.handle.to_h.merge(marcas))
+  # Grava `para` no lugar de `atual` — só se a linha ainda estiver em `atual`. Serve para anotar
+  # (0→1, 1→2) e para voltar atrás (1→0, 2→1) quando o portal disse que não fez. A marca de duplicata
+  # é função do número e é recalculada junto: voltar de 2 para 1 a tira.
+  def anotar_intencao!(run, atual:, para:)
+    marcas = marcas_de_intencao(para)
+    gravou = run.merge_handle!(marcas, remover: MARCAS_DE_INTENCAO - marcas.keys, intencao: atual)
+    raise MudouDeDono, "intenção #{atual}→#{para} não gravou" unless gravou
+    return unless para > 1
+
+    Rails.logger.warn("[autonomia][tool][async] possivelmente duplicada run=#{run.id} slug=#{run.slug} intencao=#{para}")
   end
 
-  # `start` levantou: o portal respondeu que não fez (ou nem foi alcançado). A intenção volta atrás
-  # para a próxima passada não a ler como "pode ter enviado". A exceção segue para `advance`, que
-  # decide entre tentar de novo e desistir.
-  def tentar_start(run, tool)
+  def marcas_de_intencao(numero)
+    return {} if numero.zero?
+    return { ToolRun::INTENCOES => numero } if numero == 1
+
+    { ToolRun::INTENCOES => numero, ToolRun::POSSIVELMENTE_DUPLICADA => true }
+  end
+
+  # O que `start` levanta decide o destino da intenção:
+  #   - `Native::EnvioIncerto`: a ferramenta chamou o portal e ninguém disse se valeu. A intenção
+  #     FICA; a passada seguinte tenta no máximo mais uma vez, marcada.
+  #   - qualquer outro `StandardError`: a falha veio ANTES da chamada paga (login, conexão ausente,
+  #     validação) ou o portal DISSE que não fez. A intenção volta ao que era.
+  #   - `Sidekiq::Shutdown` é `Interrupt`, não `StandardError`: no desligamento nada aqui roda, e é
+  #     assim que a intenção sobrevive ao caso para o qual ela existe. Um `rescue Exception` a
+  #     apagaria exatamente ali; `intencao_de_envio_spec` reprova.
+  # Nos dois primeiros casos a exceção segue para `advance`, que decide entre tentar de novo e
+  # desistir.
+  def tentar_start(run, tool, intencao)
     tool.start
-  rescue StandardError
-    run.record_handle!(run.handle.to_h.except(::Autonomia::Agents::ToolRun::INTENCOES))
+  rescue ::Autonomia::Agents::Tools::Native::EnvioIncerto => e
+    Rails.logger.warn("[autonomia][tool][async] envio incerto run=#{run.id} slug=#{run.slug} intencao=#{intencao} motivo=#{e.motivo}")
     raise
+  rescue StandardError
+    anotar_intencao!(run, atual: intencao, para: intencao - 1)
+    raise
+  end
+
+  # O NÚMERO, guardado pela mesma intenção. Se não grava, outro processo passou na frente ou a
+  # execução morreu: a cotação que este `start` abriu fica sem registro nosso — e é por isso que a
+  # marca de duplicata é gravada por quem anota a SEGUNDA intenção, não por quem chega por último.
+  def registrar_numero!(run, handle, intencao)
+    return if run.record_attempt!(handle: submitted_handle(handle), intencao: intencao)
+
+    raise MudouDeDono, "número da intenção #{intencao} não gravou"
   end
 
   def apply(run, native, progress, attempt)
     Array(progress&.deliveries).each { |text| deliver(run, text) }
-    run.record_attempt!(handle: merged_handle(run, progress&.handle))
+    run.record_attempt!(handle: merged_handle(progress&.handle))
 
     if progress.nil? || progress.failed?
       fail_run(run, native, progress&.failure_code)
@@ -183,11 +228,21 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   #
   # Agora, quando já houve entrega, a ferramenta ganha a chance de entregar o que ainda vale (o
   # comparativo em PDF) e o cliente recebe um fecho que não desmente os preços.
+  #
+  # Quem acaba com intenção anotada e sem número (entrega 5) fica marcado para a lista do corretor,
+  # seja qual for o código do desfecho: prazo esgotado ou terceira intenção, a cotação pode existir.
   def fail_run(run, native, code)
+    run.marcar_envio_incerto!
     if native.present?
-      run.delivered_count.zero? ? publish(run, native.failure_message) : encerrar(run, native)
+      run.delivered_count.zero? ? publish(run, mensagem_de_falha(run, native)) : encerrar(run, native)
     end
     run.finish!('failed', failure_code: code.presence || 'tool_failed')
+  end
+
+  # Quem pode ter uma cotação correndo no portal sem registro nosso não lê "não consegui": lê que não
+  # há confirmação. A frase é da ferramenta, no nível de classe, como as outras que o job publica.
+  def mensagem_de_falha(run, native)
+    run.envio_incerto? ? native.uncertain_message : native.failure_message
   end
 
   # NUNCA levanta: o encerramento é cortesia sobre um caminho que já deu errado, e falhar aqui
@@ -195,7 +250,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   def encerrar(run, native)
     return if run.handle.to_h[CLOSED_KEY].present?
 
-    run.record_attempt!(handle: run.handle.to_h.merge(CLOSED_KEY => true))
+    run.merge_handle!({ CLOSED_KEY => true })
     fechamento(run, native).each { |texto| publish(run, texto) }
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{run.slug} #{e.class}")
@@ -209,7 +264,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     return [native.partial_message] if run.agent.blank?
 
     tool = native.new(agent: run.agent, params: run.arguments)
-    Array(tool.closing_deliveries(run.handle)) + [native.partial_message]
+    Array(tool.closing_deliveries(tool_handle(run))) + [native.partial_message]
   end
 
   # Parada por decisão do operador: sem mensagem ao cliente. Publicar aqui seria furar exatamente o
@@ -249,29 +304,33 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.handle.is_a?(Hash) && run.handle[SUBMITTED_KEY].present?
   end
 
-  # As marcas NOSSAS no handle: submetido, intenções, possivelmente duplicada, encerrado.
-  MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ::Autonomia::Agents::ToolRun::INTENCOES,
-            ::Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA].freeze
+  # As marcas NOSSAS no handle: submetido, intenções, possivelmente duplicada, encerrado. A ferramenta
+  # não as vê (`tool_handle`) e não as escreve (`parte_da_ferramenta`); elas só mudam por escritas
+  # mescladas no banco (`ToolRun#merge_handle!`, `#record_attempt!`), nunca por cópia da memória.
+  MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA].freeze
+  MARCAS_DE_INTENCAO = [ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA].freeze
 
-  # O handle da FERRAMENTA, sem as nossas marcas: ela não precisa conhecer o nosso controle.
+  # O handle da FERRAMENTA, sem as nossas marcas: ela não precisa conhecer o nosso controle — nem
+  # na consulta, nem no fechamento.
   def tool_handle(run)
     run.handle.to_h.except(*MARCAS)
   end
 
-  # O handle da ferramenta com as nossas marcas de volta, mais "submetido". As marcas vêm da LINHA
-  # (não do que a ferramenta devolveu): a ferramenta nunca as viu.
-  def submitted_handle(run, handle)
-    marcas(run).merge(SUBMITTED_KEY => true).merge(handle.is_a?(Hash) ? handle : {})
+  # O que vai ao banco depois do `start`: a parte da ferramenta mais "submetido", MESCLADA por cima
+  # do que está lá. As marcas da linha ficam onde estão; uma marca que a ferramenta tenha inventado
+  # não entra.
+  def submitted_handle(handle)
+    parte_da_ferramenta(handle).merge(SUBMITTED_KEY => true)
   end
 
-  # A consulta só atualiza o handle quando a ferramenta devolve um novo; as marcas são preservadas.
-  def merged_handle(run, handle)
+  # A consulta só atualiza o handle quando a ferramenta devolve um novo.
+  def merged_handle(handle)
     return nil unless handle.is_a?(Hash) && handle.present?
 
-    marcas(run).merge(SUBMITTED_KEY => true).merge(handle)
+    submitted_handle(handle)
   end
 
-  def marcas(run)
-    run.handle.to_h.slice(*MARCAS)
+  def parte_da_ferramenta(handle)
+    (handle.is_a?(Hash) ? handle : {}).except(*MARCAS)
   end
 end
