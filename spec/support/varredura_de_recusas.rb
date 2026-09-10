@@ -18,8 +18,10 @@ module VarreduraDeRecusas
   ].freeze
   PRODUTOR_UNICO = 'app/services/autonomia/agents/tools/recusa.rb'.freeze
   BOUND = 'app/services/autonomia/agents/tools/bound.rb'.freeze
-  # Chamadas cujo PRIMEIRO argumento é o código da recusa: sem receptor (o atalho da própria classe)
-  # ou sobre `Recusa`. `error` é o atalho de `Native::Base`; `Rails.logger.error` tem receptor e fica fora.
+  # Chamadas cujo PRIMEIRO argumento é o código da recusa: sem receptor (o atalho da própria classe),
+  # sobre `self`, ou sobre a constante `Recusa`. `error` é o atalho de `Native::Base`;
+  # `Rails.logger.error` tem outro receptor e fica fora. Um apelido local (`r = Recusa; r.para_modelo`)
+  # esconderia a saída da varredura — por isso os chamadores usam a constante por extenso.
   REGISTRADORES = %i[recusar registrar para_modelo recusa conferencia error].freeze
 
   # Uma SAÍDA: uma chamada ao registrador, ou um `return 'codigo'` no Bound. O id é estável
@@ -134,7 +136,7 @@ module VarreduraDeRecusas::Nos
     return false unless nodo.is_a?(Prism::CallNode) && VarreduraDeRecusas::REGISTRADORES.include?(nodo.name)
     return false if argumentos(nodo).empty?
 
-    nodo.receiver.nil? || sobre_constante?(nodo, :Recusa)
+    nodo.receiver.nil? || nodo.receiver.is_a?(Prism::SelfNode) || sobre_constante?(nodo, :Recusa)
   end
 
   # `{ error: x }.to_json`, `JSON.generate(error: x)` ou `JSON.dump(error: x)` — as formas que vão
@@ -157,9 +159,9 @@ module VarreduraDeRecusas::Nos
     (chamada?(nodo, :[]=) || chamada?(nodo, :store)) && error?(argumentos(nodo).first)
   end
 
-  # `{}.merge(error: x)`
+  # `{}.merge(error: x)`, `h.merge!(error: x)`, `h.update(error: x)`
   def mescla_error?(nodo)
-    chamada?(nodo, :merge) && argumentos(nodo).any? { |arg| hash_com_error?(arg) }
+    %i[merge merge! update].any? { |nome| chamada?(nodo, nome) } && argumentos(nodo).any? { |arg| hash_com_error?(arg) }
   end
 
   # `Hash[error: x]` ou `Hash[:error, x]`

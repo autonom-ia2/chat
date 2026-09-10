@@ -77,6 +77,26 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
     expect(linha).to include("motivo=motivo_novo faltando=- detalhe=- descricao=\"#{described_class::SEM_DESCRICAO}\"")
   end
 
+  # O nome que o modelo pediu é o diagnóstico quando a ferramenta existe (pediu `cotar_seguro` sem
+  # tê-la), e é texto livre — que pode repetir o cliente — quando não existe em lugar nenhum.
+  describe '.slug_conhecido' do
+    it 'mantem o nome de uma ferramenta que existe no catalogo, no cadastro ou entre os especialistas' do
+      Autonomia::Agents::Tool.create!(account: account, agent: agent, name: 'Estoque', slug: 'consultar_estoque',
+                                      endpoint_url: 'https://exemplo.test/estoque', param_schema: [])
+      Autonomia::Agents::Specialist.create!(agent: agent, name: 'Auto', slug: 'auto', description: 'auto',
+                                            instruction: 'Cote.')
+
+      expect(described_class.slug_conhecido('cotar_seguro', agent)).to eq('cotar_seguro')
+      expect(described_class.slug_conhecido('consultar_estoque', agent)).to eq('consultar_estoque')
+      expect(described_class.slug_conhecido('consultar_auto', agent)).to eq('consultar_auto')
+    end
+
+    it 'mascara o nome que nao existe em lugar nenhum, mesmo com forma de identificador' do
+      expect(described_class.slug_conhecido('cotar_seguro_cpf_04297912678', agent)).to eq('desconhecida')
+      expect(described_class.slug_conhecido('cotar_seguro_cpf_04297912678', nil)).to eq('desconhecida')
+    end
+  end
+
   describe '.para_modelo' do
     let(:conversation) { create(:conversation, account: account) }
     let(:delivery) { Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil) }

@@ -25,6 +25,10 @@ Plano do Agente de Cotação (épico #291). Branch `feat/entrega-6-registro-de-r
   vê `::JSON.generate`, `merge(error:)`, `store(:error)` e conta cada `error('x')` de nativa como
   saída própria. O nome que o modelo pediu em `tool_not_available` continua no registro, de
   propósito: é o diagnóstico do caso #356, e é texto do modelo em forma de identificador.
+- Terceira rodada do Codex (ainda REPROVADO): o nome que o modelo pediu só entra se EXISTIR em
+  algum catálogo (`Recusa.slug_conhecido`; senão `desconhecida`) — o modelo repete o que o cliente
+  escreve; a guarda vê `merge!`/`update` e `self.error`; as recusas das condições gerais levam
+  `faltando=seguradora|pergunta`.
 - Fora de escopo, documentado: prosa das ferramentas síncronas de KB; causa do erro HTTP (só a
   categoria e o status vão ao registro); desfechos do job ficam em `tool_runs`.
 

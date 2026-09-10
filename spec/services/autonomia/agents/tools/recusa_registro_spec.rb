@@ -206,7 +206,8 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       'answerer.rb#dispatch_tool_call#1' => {
-        espera: { motivo: 'tool_not_available', slug: 'ferramenta_que_nao_existe' },
+        # Nome que não existe em catálogo nenhum não vai ao registro: o modelo repete o que o cliente escreve.
+        espera: { motivo: 'tool_not_available', slug: 'desconhecida' },
         dispara: -> { rodar_principal('name' => 'ferramenta_que_nao_existe', 'call_id' => 'c1', 'arguments' => '{}') }
       },
       'answerer.rb#run_specialist#1' => {
@@ -284,13 +285,13 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       'insurance_general_conditions.rb#call#1' => {
-        espera: { motivo: 'condicoes_sem_seguradora', slug: 'consultar_condicoes_gerais' },
+        espera: { motivo: 'condicoes_sem_seguradora', slug: 'consultar_condicoes_gerais', faltando: 'seguradora' },
         dispara: lambda {
           bound_para(Autonomia::Agents::Tools::Native::InsuranceGeneralConditions).execute({ 'arguments' => '{}' }, delivery: delivery)
         }
       },
       'insurance_general_conditions.rb#call#2' => {
-        espera: { motivo: 'condicoes_sem_pergunta', slug: 'consultar_condicoes_gerais' },
+        espera: { motivo: 'condicoes_sem_pergunta', slug: 'consultar_condicoes_gerais', faltando: 'pergunta' },
         dispara: lambda {
           bound_para(Autonomia::Agents::Tools::Native::InsuranceGeneralConditions)
             .execute({ 'arguments' => { seguradora: 'Porto' }.to_json }, delivery: delivery)

@@ -104,9 +104,12 @@ class Autonomia::Agents::Specialists::Runner
   # Ferramenta que o especialista não tem: recusa nomeada E REGISTRADA (entrega 6). Foi exatamente
   # assim que a Lia ficou muda em 08/09/2026 — especialista nascido sem `cotar_seguro` —, e nada
   # dizia isso em lugar nenhum.
+  # Chamada pela constante, sem apelido local: a varredura reconhece a saída pelo receptor `Recusa`.
   def sem_ferramenta(call)
-    Autonomia::Agents::Tools::Recusa.para_modelo('tool_not_available', slug: call['name'],
-                                                                       delivery: @delivery, agente: @specialist.agent)
+    Autonomia::Agents::Tools::Recusa.para_modelo(
+      'tool_not_available', slug: Autonomia::Agents::Tools::Recusa.slug_conhecido(call['name'], @specialist.agent),
+                            delivery: @delivery, agente: @specialist.agent
+    )
   end
 
   # Recusa em PROSA ao principal, registrada com a conversa (o `delivery` desce do principal) e o

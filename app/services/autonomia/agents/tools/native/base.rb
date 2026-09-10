@@ -189,11 +189,11 @@ class Autonomia::Agents::Tools::Native::Base
     ::Autonomia::Agents::Tools::Recusa.para_modelo(code, slug: self.class.slug, delivery: delivery, agente: agent)
   end
 
-  # Recusa em PROSA da ferramenta síncrona (ela pediu um dado antes de trabalhar): registra e
-  # devolve o texto, que não muda.
-  def recusar(codigo, texto)
+  # Recusa em PROSA da ferramenta síncrona (ela pediu um dado antes de trabalhar): registra, com os
+  # NOMES dos parâmetros que faltaram, e devolve o texto, que não muda.
+  def recusar(codigo, texto, faltando: [])
     ::Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: self.class.slug, conversa: delivery&.conversation&.id,
-                                                         agente: agent)
+                                                         agente: agent, faltando: faltando)
     texto
   end
 end

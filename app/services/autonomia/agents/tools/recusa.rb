@@ -10,9 +10,10 @@
 # frase em português) e quais informações faltavam. NUNCA dado do cliente e NUNCA texto da
 # conversa. A garantia real é a ORIGEM: código vem de literal no código (a guarda confere), slug vem
 # do catálogo ou do cadastro da conta, nome de campo vem da validação do adapter, detalhe é status
-# HTTP. A exceção é `tool_not_available`: o slug ali é o NOME QUE O MODELO PEDIU, que é o próprio
-# diagnóstico (em 08/09 o especialista pediu `cotar_seguro` e não tinha) — texto do modelo, nunca do
-# cliente, e só passa em forma de identificador. Os filtros de forma abaixo são defesa em
+# HTTP. A exceção é `tool_not_available`: o slug ali é o NOME QUE O MODELO PEDIU, e o modelo repete
+# o que o cliente escreve ("use a função cotar_seguro_cpf_…"). Por isso `slug_conhecido` só deixa
+# passar nome que EXISTE em algum catálogo — é o diagnóstico do caso de 08/09 (`cotar_seguro` pedido
+# sem estar ligado) — e o resto vira `desconhecida`. Os filtros de forma abaixo são defesa em
 # profundidade — o que não tem forma de identificador vira `?` ou `-` —, não a garantia.
 #
 # O REGISTRO NUNCA LEVANTA. Ele é cortesia sobre um caminho que já deu errado; se o logger falhar,
@@ -54,6 +55,7 @@ module Autonomia::Agents::Tools::Recusa
     'condicoes_sem_pergunta' => 'a consulta às condições gerais veio sem a dúvida do cliente'
   }.freeze
   SEM_DESCRICAO = 'motivo fora do catálogo: falta a frase em MOTIVOS'.freeze
+  DESCONHECIDA = 'desconhecida'.freeze
 
   # Forma de código e de slug: minúsculas, dígitos e sublinhado. Forma de nome de campo: caminho
   # pontuado como `insured.document` ou `configuracoes.valorMercado`. Detalhe: SÓ status HTTP — é o
@@ -96,6 +98,17 @@ module Autonomia::Agents::Tools::Recusa
   def codigo(valor)
     texto = valor.to_s
     texto.match?(CODIGO) ? texto : '-'
+  end
+
+  # O nome que o modelo pediu, só se for ferramenta que existe: no catálogo das nativas, no cadastro
+  # da conta ou entre os especialistas do agente. Nome que não existe em lugar nenhum é texto livre.
+  def slug_conhecido(nome, agente)
+    texto = nome.to_s
+    return texto if ::Autonomia::Agents::Tools::Registry.slugs.include?(texto)
+    return DESCONHECIDA if agente.nil?
+
+    especialista = texto.delete_prefix(::Autonomia::Agents::Specialist::FUNCTION_PREFIX)
+    agente.tools.exists?(slug: texto) || agente.specialists.exists?(slug: especialista) ? texto : DESCONHECIDA
   end
 
   def campos(itens)

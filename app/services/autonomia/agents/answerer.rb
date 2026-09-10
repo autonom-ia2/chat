@@ -210,7 +210,8 @@ module Autonomia
         tool = tools_by_slug[name]
         return tool.execute(call, delivery: @delivery) if tool.present?
 
-        Tools::Recusa.para_modelo('tool_not_available', slug: name, delivery: @delivery, agente: @agent)
+        Tools::Recusa.para_modelo('tool_not_available', slug: Tools::Recusa.slug_conhecido(name, @agent),
+                                                        delivery: @delivery, agente: @agent)
       end
 
       # O especialista devolve TEXTO (nunca levanta — ver Specialists::Runner). Vai direto como saída
