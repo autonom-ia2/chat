@@ -81,6 +81,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(conferencia.to_s).to include('CPF do titular')
       expect(conferencia.motivo).to eq('faltam_dados')
       expect(conferencia.faltando).to include('insured.document')
+      expect(conferencia.faltando).to all(match(/\A[a-z]+\.[a-zA-Z]+\z/))
     end
 
     it 'nao interrompe quando a entrada esta completa' do

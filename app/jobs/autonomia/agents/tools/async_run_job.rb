@@ -105,6 +105,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # e é AQUI, não nela, que se sabe a conversa e o agente. Registrar nunca derruba a execução: a
   # entrega do pedido ao cliente vale mais que a nossa linha de log.
   def registrar_recusa(run, handle)
+    handle = handle.to_h.deep_stringify_keys if handle.is_a?(Hash)
     return unless handle.is_a?(Hash) && handle['pedido'].present?
 
     ::Autonomia::Agents::Tools::Recusa.registrar(handle['motivo'], slug: run.slug, conversa: run.conversation_id,

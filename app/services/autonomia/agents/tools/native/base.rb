@@ -181,7 +181,9 @@ class Autonomia::Agents::Tools::Native::Base
     agent.account
   end
 
+  # Recusa nomeada da ferramenta SÍNCRONA. Passa pelo registro (entrega 6) como as demais; a
+  # ferramenta não conhece a conversa, de propósito, então a linha sai com `conversa=-`.
   def error(code)
-    { error: code }.to_json
+    ::Autonomia::Agents::Tools::Recusa.para_modelo(code, slug: self.class.slug, agente: agent)
   end
 end

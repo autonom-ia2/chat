@@ -1,23 +1,27 @@
 require 'rails_helper'
 
-# UM EXEMPLO PARA CADA SAÍDA DE RECUSA (entrega 6, termo 3). A lista de motivos é o catálogo
-# `Tools::Recusa::MOTIVOS`, e os exemplos são GERADOS a partir dela: motivo novo no catálogo sem
-# gatilho aqui reprova a suíte — não dá para catalogar sem provar que dispara e registra.
+# UM EXEMPLO PARA CADA SAÍDA DE RECUSA (entrega 6, termo 3). As saídas vêm da VARREDURA
+# (`VarreduraDeRecusas.saidas`: toda chamada ao registrador e todo `return 'codigo'` do Bound, com o
+# método que a contém) e os exemplos são chaveados por SAÍDA — `bound.rb#accept_async#2` —, não por
+# motivo. Saída nova sem gatilho aqui reprova; gatilho para saída que não existe mais reprova; motivo
+# do catálogo que nenhum gatilho espera reprova.
 #
-# Cada gatilho percorre o caminho REAL — `Bound#execute`, o Runner do especialista, o
-# `AsyncRunJob` —, nunca chama o registrador direto. É a diferença entre provar que a recusa
-# registra e provar que o registrador funciona (isso é `recusa_spec`).
+# Cada gatilho percorre o caminho REAL: `Bound#execute`, o `Answerer`, o Runner do especialista, o
+# `AsyncRunJob`, e a ferramenta de cotação DE VERDADE (com o conector `mock`, que valida como o
+# adapter). Nunca chama o registrador direto — isso é `recusa_spec`.
 #
-# PROVA POR MUTAÇÃO, feita em 10/09/2026: comentar a linha `Rails.logger.info` em
-# `Recusa.registrar` derruba TODOS os exemplos deste arquivo.
+# PROVA POR MUTAÇÃO (10/09/2026): `Rails.logger.debug` no lugar de `info` no registrador derruba
+# todos os exemplos; apagar uma entrada da tabela reprova "saída sem gatilho".
 RSpec.describe Autonomia::Agents::Tools::Recusa do
-  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
+  let(:account) do
+    create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
+  end
   let(:inbox) { create(:inbox, account: account) }
   let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
   let(:agent_bot) { create(:agent_bot, account: account) }
   let(:agent) do
-    Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom',
-                                     status: :active, enabled: true, instruction: 'Atenda o cliente.')
+    Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom', status: :active,
+                                     enabled: true, instruction: 'Atenda o cliente.', config: { 'with_knowledge' => false })
   end
   let(:agent_inbox) do
     Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: agent_bot)
@@ -29,38 +33,42 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
   let(:tool) { build_async_tool(start_error: 'start nao roda no turno', poll_error: 'poll nao roda no turno') }
   let(:bound) { Autonomia::Agents::Tools::Bound.new(agent: agent, native: tool) }
   let(:call) { { 'name' => tool.slug, 'arguments' => '{"cpf":"000"}', 'call_id' => 'c1' } }
-  let(:recusa) { described_class }
-  let(:conferencia) { Autonomia::Agents::Tools::Native::Conferencia }
+  let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
   let(:linhas) { [] }
 
-  around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run } }
+  around do |example|
+    with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true', INSURANCE_QUOTING_ENABLED: 'true') { example.run }
+  end
 
   before do
+    enable_test_encryption!
     allow(Rails.logger).to receive(:info).and_call_original
-    allow(Rails.logger).to receive(:info).with(a_string_starting_with(recusa::PREFIXO)) { |texto| linhas << texto }
+    allow(Rails.logger).to receive(:info).with(a_string_starting_with(described_class::PREFIXO)) { |texto| linhas << texto }
   end
 
   # O que cada exemplo afirma: a linha saiu UMA vez, com o motivo, e com a conversa e o agente
-  # certos. `conversa` é `-` só quando a ausência dela é o próprio motivo.
-  def padrao(motivo, conversa: conversation.id, onde: 'turno', faltando: '-', detalhe: '-')
-    /\A#{Regexp.escape(recusa::PREFIXO)} slug=\S+ conversa=#{conversa} agente=#{agent.id} conta=#{account.id} \
-onde=#{onde} motivo=#{motivo} faltando=#{Regexp.escape(faltando)} detalhe=#{Regexp.escape(detalhe)} descricao="[^"]+"\z/
+  # certos. `conversa` é `-` só quando a ausência dela é o próprio motivo (ou a ferramenta síncrona
+  # não a conhece). `faltando` aceita Regexp para a ferramenta real, que devolve mais de um campo.
+  def padrao(motivo:, **diferencas)
+    e = { slug: 'consultar_cotacao', conversa: conversation.id, onde: 'turno', faltando: '-', detalhe: '-' }.merge(diferencas)
+    campos = e[:faltando].is_a?(Regexp) ? e[:faltando].source : Regexp.escape(e[:faltando])
+    /\A#{Regexp.escape(described_class::PREFIXO)} slug=#{e[:slug]} conversa=#{e[:conversa]} agente=#{agent.id} conta=#{account.id} \
+onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:detalhe])} descricao="[^"]+"\z/
   end
 
-  # O especialista chama uma ferramenta que não tem (foi assim que a Lia ficou muda em 08/09/2026).
-  def rodar_especialista_pedindo(nome)
-    specialist = Autonomia::Agents::Specialist.create!(agent: agent, name: 'Auto', slug: 'auto',
-                                                       description: 'cotação de automóvel',
-                                                       instruction: 'Você cota automóvel.')
-    resolver = instance_double(Crm::Ai::CredentialResolver, resolve: 'ai-credential')
-    allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
-    client = instance_double(Crm::Ai::ResponsesClient)
-    allow(client).to receive(:create_with_tool_executor) do |**_kwargs, &executor|
-      executor.call([{ 'name' => nome, 'call_id' => 'c1', 'arguments' => '{}' }])
-      { text: { resposta: 'ok', dados_faltando: [] }.to_json }
-    end
-    allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
-    Autonomia::Agents::Specialists::Runner.new(specialist: specialist, request: 'cotar', delivery: delivery).call
+  def ready_connection
+    record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
+    record.update!(status: 'ready')
+    record.store_session!({ 'multicalculoToken' => 'multi' }, expires_at: 3.hours.from_now)
+    record
+  end
+
+  def bound_para(native)
+    Autonomia::Agents::Tools::Bound.new(agent: agent, native: native)
+  end
+
+  def bound_com_conferencia(resposta)
+    bound_para(build_async_tool(precheck: resposta))
   end
 
   def bound_sincrono_que(&)
@@ -69,7 +77,7 @@ onde=#{onde} motivo=#{motivo} faltando=#{Regexp.escape(faltando)} detalhe=#{Rege
       def self.description = 'teste'
       define_method(:call, &)
     end
-    Autonomia::Agents::Tools::Bound.new(agent: agent, native: native)
+    bound_para(native)
   end
 
   def bound_http_que_falha_com(mensagem)
@@ -80,121 +88,231 @@ onde=#{onde} motivo=#{motivo} faltando=#{Regexp.escape(faltando)} detalhe=#{Rege
     Autonomia::Agents::Tools::Bound.new(agent: agent, record: record)
   end
 
-  def bound_com_conferencia(resposta)
-    Autonomia::Agents::Tools::Bound.new(agent: agent, native: build_async_tool(precheck: resposta))
+  def criar_especialista
+    Autonomia::Agents::Specialist.create!(agent: agent, name: 'Auto', slug: 'auto', description: 'cotação de automóvel',
+                                          instruction: 'Você cota automóvel.')
   end
 
-  # Gatilho por motivo, rodado com `instance_exec` no exemplo. Cada um DISPARA o caminho real e
-  # devolve o que a linha registrada tem de diferente do padrão (conversa `-`, `faltando`, `detalhe`);
-  # a expectativa fica no exemplo, uma só, para todos.
-  def gatilhos # rubocop:disable Metrics/MethodLength, Metrics/AbcSize -- a tabela é o ponto: um gatilho por motivo
+  # O modelo é um dublê que devolve a chamada de função pedida e depois uma resposta válida.
+  def modelo_que_chama(function_call, resposta)
+    resolver = instance_double(Crm::Ai::CredentialResolver, resolve: 'ai-credential')
+    allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
+    client = instance_double(Crm::Ai::ResponsesClient)
+    allow(client).to receive(:create_with_tool_executor) do |**_kwargs, &executor|
+      executor&.call([function_call])
+      { text: resposta.to_json }
+    end
+    allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+  end
+
+  # O PRINCIPAL (Answerer) recebe uma chamada de função do modelo e a roteia.
+  def rodar_principal(function_call)
+    modelo_que_chama(function_call, reply: 'ok', confidence: 0.9, should_handoff: false, handoff_reason: nil,
+                                    used_snippet_ids: [], answered_from_knowledge: false)
+    Autonomia::Agents::Answerer.new(agent: agent, query: 'quero cotar', trust_instruction: true, delivery: delivery).answer
+  end
+
+  # O ESPECIALISTA chama uma ferramenta que não tem (foi assim que a Lia ficou muda em 08/09/2026).
+  def rodar_especialista_pedindo(nome)
+    modelo_que_chama({ 'name' => nome, 'call_id' => 'c1', 'arguments' => '{}' }, resposta: 'ok', dados_faltando: [])
+    Autonomia::Agents::Specialists::Runner.new(specialist: criar_especialista, request: 'cotar', delivery: delivery).call
+  end
+
+  # O ESPECIALISTA que não chega a trabalhar: sem pedido, sem credencial, modelo fora do formato,
+  # exceção, ou resposta vazia.
+  def rodar_especialista(request: 'cotar', credencial: 'ai-credential', texto: nil, erro: nil)
+    resolver = instance_double(Crm::Ai::CredentialResolver, resolve: credencial)
+    allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
+    client = instance_double(Crm::Ai::ResponsesClient)
+    if erro
+      allow(client).to receive(:create_with_tool_executor).and_raise(erro)
+    else
+      allow(client).to receive(:create_with_tool_executor).and_return({ text: texto })
+    end
+    allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+    Autonomia::Agents::Specialists::Runner.new(specialist: criar_especialista, request: request, delivery: delivery).call
+  end
+
+  def run_promovida(ferramenta, arguments: { 'placa' => 'ABC1D23' })
+    run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: ferramenta.slug, arguments: arguments,
+                                           scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+    run
+  end
+
+  def rodar_job(ferramenta, arguments: { 'placa' => 'ABC1D23' })
+    Autonomia::Agents::Tools::AsyncRunJob.new.perform(run_promovida(register_async_tool(ferramenta), arguments: arguments).id, 0)
+  end
+
+  # Um gatilho por SAÍDA da varredura. `dispara` roda com `instance_exec` no exemplo; `espera` é o
+  # que a linha registrada tem de diferente do padrão.
+  def gatilhos # rubocop:disable Metrics/MethodLength, Metrics/AbcSize -- a tabela é o ponto: um gatilho por saída
     {
-      'invalid_tool_arguments' => lambda {
-        bound.execute(call.merge('arguments' => 'nao-e-json'), delivery: delivery)
-        {}
+      'bound.rb#execute#1' => {
+        espera: { motivo: 'invalid_tool_arguments' },
+        dispara: -> { bound.execute(call.merge('arguments' => 'nao-e-json'), delivery: delivery) }
       },
-      'tool_not_available' => lambda {
-        rodar_especialista_pedindo('cotar_seguro')
-        {}
+      # As três razões de `async_refusal` saem por esta chamada; cada `return` tem o seu gatilho abaixo.
+      'bound.rb#accept_async#1' => {
+        espera: { motivo: 'async_indisponivel_nesta_superficie', conversa: '-' },
+        dispara: -> { bound.execute(call) }
       },
-      'async_indisponivel_nesta_superficie' => lambda {
-        bound.execute(call)
-        { conversa: '-' }
+      # O caminho real: a segunda inserção perde para o índice único e `open!` resgata `RecordNotUnique`.
+      'bound.rb#accept_async#2' => {
+        espera: { motivo: 'execucao_ja_em_andamento' },
+        dispara: lambda {
+          allow(Autonomia::Agents::ToolRun).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique, 'idx_active')
+          bound.execute(call, delivery: delivery)
+        }
       },
-      'async_desligado' => lambda {
-        with_modified_env(AI_AGENT_ASYNC_TOOLS: 'false') { bound.execute(call, delivery: delivery) }
-        {}
-      },
-      'execucao_ja_aberta_neste_turno' => lambda {
-        bound.execute(call, delivery: delivery)
-        delivery.runs.first.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
-        retry_turn = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox,
-                                                            origin_message_id: 77)
-        bound.execute(call, delivery: retry_turn)
-        {}
-      },
-      'execucao_ja_em_andamento' => lambda {
-        allow(Autonomia::Agents::ToolRun).to receive(:open!).and_return(nil)
-        bound.execute(call, delivery: delivery)
-        {}
+      'bound.rb#accept_async#3' => {
+        espera: { motivo: 'tool_execution_error' },
+        dispara: lambda {
+          allow(Autonomia::Agents::ToolRun).to receive(:open!).and_raise('X-Amz-Signature=abc')
+          bound.execute(call, delivery: delivery)
+        }
       },
       # A ferramenta que só tem a frase: registra sem saber o que faltou.
-      'conferencia_recusou' => lambda {
-        bound_com_conferencia('Ainda preciso do CPF.').execute(call, delivery: delivery)
-        {}
+      'bound.rb#recusar_pela_conferencia#1' => {
+        espera: { motivo: 'conferencia_recusou' },
+        dispara: -> { bound_com_conferencia('Ainda preciso do CPF.').execute(call, delivery: delivery) }
       },
-      'faltam_dados' => lambda {
-        resposta = conferencia.new(texto: 'Ainda preciso do CPF e do CEP.', motivo: 'faltam_dados',
-                                   faltando: %w[insured.document address.zipCode])
-        bound_com_conferencia(resposta).execute(call, delivery: delivery)
-        { faltando: 'insured.document,address.zipCode' }
+      'bound.rb#run_http#1' => {
+        espera: { motivo: 'tool_http_error', slug: 'consultar_estoque', detalhe: '503' },
+        dispara: lambda {
+          bound_http_que_falha_com('tool_http_error: 503 Service Unavailable').execute({ 'arguments' => '{}' }, delivery: delivery)
+        }
       },
-      'json_invalido' => lambda {
-        resposta = conferencia.new(texto: 'O campo dados não era JSON.', motivo: 'json_invalido', faltando: ['dados'])
-        bound_com_conferencia(resposta).execute(call, delivery: delivery)
-        { faltando: 'dados' }
+      'bound.rb#run_native#1' => {
+        espera: { motivo: 'tool_execution_error', slug: 'ferramenta_de_teste' },
+        dispara: -> { bound_sincrono_que { raise 'X-Amz-Signature=abc' }.execute({ 'arguments' => '{}' }, delivery: delivery) }
       },
-      'tool_execution_error' => lambda {
-        bound_sincrono_que { raise 'X-Amz-Signature=abc' }.execute({ 'arguments' => '{}' }, delivery: delivery)
-        {}
+      'bound.rb#async_refusal#1' => {
+        espera: { motivo: 'async_indisponivel_nesta_superficie', conversa: '-' },
+        dispara: -> { bound.execute(call, delivery: Autonomia::Agents::Tools::Delivery.new(conversation: nil, agent_inbox: agent_inbox)) }
       },
-      'tool_http_error' => lambda {
-        bound_http_que_falha_com('tool_http_error: 503 Service Unavailable')
-          .execute({ 'arguments' => '{}' }, delivery: delivery)
-        { detalhe: '503' }
+      'bound.rb#async_refusal#2' => {
+        espera: { motivo: 'async_desligado' },
+        dispara: -> { with_modified_env(AI_AGENT_ASYNC_TOOLS: 'false') { bound.execute(call, delivery: delivery) } }
+      },
+      'bound.rb#async_refusal#3' => {
+        espera: { motivo: 'execucao_ja_aberta_neste_turno' },
+        dispara: lambda {
+          bound.execute(call, delivery: delivery)
+          delivery.runs.first.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+          retry_turn = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox,
+                                                              origin_message_id: 77)
+          bound.execute(call, delivery: retry_turn)
+        }
+      },
+      'answerer.rb#dispatch_tool_call#1' => {
+        espera: { motivo: 'tool_not_available', slug: 'ferramenta_que_nao_existe' },
+        dispara: -> { rodar_principal('name' => 'ferramenta_que_nao_existe', 'call_id' => 'c1', 'arguments' => '{}') }
+      },
+      'answerer.rb#run_specialist#1' => {
+        espera: { motivo: 'invalid_tool_arguments', slug: 'consultar_auto' },
+        dispara: -> { rodar_principal('name' => criar_especialista.function_name, 'call_id' => 'c1', 'arguments' => 'nao-e-json') }
+      },
+      'runner.rb#sem_ferramenta#1' => {
+        espera: { motivo: 'tool_not_available', slug: 'cotar_seguro' },
+        dispara: -> { rodar_especialista_pedindo('cotar_seguro') }
+      },
+      'runner.rb#call#1' => {
+        espera: { motivo: 'especialista_sem_pedido', slug: 'consultar_auto' },
+        dispara: -> { rodar_especialista(request: '   ') }
+      },
+      'runner.rb#call#2' => {
+        espera: { motivo: 'especialista_sem_credencial', slug: 'consultar_auto' },
+        dispara: -> { rodar_especialista(credencial: nil) }
+      },
+      'runner.rb#call#3' => {
+        espera: { motivo: 'especialista_sem_resposta', slug: 'consultar_auto' },
+        dispara: -> { rodar_especialista(texto: 'nao-e-json') }
+      },
+      'runner.rb#call#4' => {
+        espera: { motivo: 'especialista_falhou', slug: 'consultar_auto' },
+        dispara: -> { rodar_especialista(erro: RuntimeError.new('X-Amz-Signature=abc')) }
+      },
+      'runner.rb#format_result#1' => {
+        espera: { motivo: 'especialista_nao_concluiu', slug: 'consultar_auto' },
+        dispara: -> { rodar_especialista(texto: { resposta: '', dados_faltando: [] }.to_json) }
+      },
+      # A ferramenta de cotação DE VERDADE: no envio (o job registra) e no turno (o Bound registra).
+      'insurance_quote.rb#start#1' => {
+        espera: { motivo: 'json_invalido', slug: 'cotar_seguro', onde: 'envio', faltando: 'dados' },
+        dispara: lambda {
+          ready_connection
+          rodar_job(cotacao, arguments: { 'produto' => 'bike', 'dados' => '{marca: Caloi' })
+        }
+      },
+      'insurance_quote.rb#start#2' => {
+        espera: { motivo: 'faltam_dados', slug: 'cotar_seguro', onde: 'envio', faltando: /[a-zA-Z.,]*insured\.document[a-zA-Z.,]*/ },
+        dispara: lambda {
+          ready_connection
+          rodar_job(cotacao, arguments: { 'produto' => 'auto', 'placa' => 'ABC1D23' })
+        }
+      },
+      'insurance_quote.rb#precheck#1' => {
+        espera: { motivo: 'json_invalido', slug: 'cotar_seguro', faltando: 'dados' },
+        dispara: lambda {
+          ready_connection
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'bike', dados: '{marca: Caloi' }.to_json },
+                                      delivery: delivery)
+        }
+      },
+      'insurance_quote.rb#precheck#2' => {
+        espera: { motivo: 'faltam_dados', slug: 'cotar_seguro', faltando: /[a-zA-Z.,]*insured\.document[a-zA-Z.,]*/ },
+        dispara: lambda {
+          ready_connection
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'auto', placa: 'ABC1D23' }.to_json },
+                                      delivery: delivery)
+        }
+      },
+      'async_run_job.rb#registrar_recusa#1' => {
+        espera: { motivo: 'faltam_dados', onde: 'envio', faltando: 'insured.document' },
+        dispara: lambda {
+          rodar_job(build_async_tool(handle: { 'pedido' => 'Preciso do CPF do titular.', 'motivo' => 'faltam_dados',
+                                               'faltando' => ['insured.document'] }))
+        }
+      },
+      # A ferramenta síncrona não conhece a conversa, de propósito: a linha sai com `conversa=-`.
+      'base.rb#error#1' => {
+        espera: { motivo: 'capabilities_unavailable', slug: 'consultar_produtos_cotacao', conversa: '-' },
+        dispara: lambda {
+          allow(Autonomia::Insurance::Connection).to receive(:for_account).and_raise('X-Amz-Signature=abc')
+          bound_para(Autonomia::Agents::Tools::Native::InsuranceCapabilities).execute({ 'arguments' => '{}' }, delivery: delivery)
+        }
       }
     }
   end
 
-  Autonomia::Agents::Tools::Recusa::MOTIVOS.each_key do |motivo|
-    it "registra `#{motivo}` com conversa, agente e motivo" do
-      gatilho = gatilhos.fetch(motivo) do
-        raise "`#{motivo}` entrou em MOTIVOS sem gatilho aqui: catalogar sem provar que dispara não vale"
+  VarreduraDeRecusas.saidas.each do |saida|
+    it "registra a saída #{saida.id} (#{saida.arquivo}:#{saida.linha})" do
+      gatilho = gatilhos.fetch(saida.id) do
+        raise "saída nova sem gatilho: #{saida}. Uma saída de recusa só entra com o exemplo que prova o registro."
       end
 
-      diferente = instance_exec(&gatilho)
+      instance_exec(&gatilho[:dispara])
 
       expect(linhas.size).to eq(1), "esperava 1 linha de recusa, saiu #{linhas.size}: #{linhas.inspect}"
-      expect(linhas.first).to match(padrao(motivo, **diferente))
+      expect(linhas.first).to match(padrao(**gatilho[:espera]))
     end
   end
 
-  it 'nao tem gatilho para motivo que nao esta no catalogo' do
-    expect(gatilhos.keys - Autonomia::Agents::Tools::Recusa::MOTIVOS.keys).to be_empty
+  it 'nao tem gatilho para saida que nao existe mais' do
+    expect(gatilhos.keys - VarreduraDeRecusas.saidas.map(&:id)).to be_empty
   end
 
-  # A SEGUNDA PORTA: a conferência do turno passou (ou caiu) e a validação do `start` recusou.
-  # A ferramenta não conhece a conversa; quem registra é o job, com `onde=envio`.
-  describe 'no envio (AsyncRunJob)' do
-    def run_promovida(ferramenta)
-      run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: ferramenta.slug, arguments: { 'placa' => 'ABC1D23' },
-                                             scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
-      run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
-      run
-    end
+  it 'todo motivo do catalogo e esperado por algum gatilho' do
+    esperados = gatilhos.values.map { |gatilho| gatilho[:espera][:motivo] }.uniq
 
-    it 'registra a recusa do start com conversa, agente e o que faltou' do
-      # Arrange — o `start` devolve o handle de recusa que o `poll` reconhece
-      recusada = register_async_tool(build_async_tool(handle: { 'pedido' => 'Preciso do CPF do titular.',
-                                                                'motivo' => 'faltam_dados',
-                                                                'faltando' => ['insured.document'] }))
-      run = run_promovida(recusada)
+    expect(described_class::MOTIVOS.keys - esperados).to be_empty
+    expect(esperados - described_class::MOTIVOS.keys).to be_empty
+  end
 
-      # Act
-      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 0)
+  it 'nao registra quando o start submeteu de verdade' do
+    rodar_job(build_async_tool(handle: { 'quote_id' => 'cot-1' }))
 
-      # Assert — registrou, e a execução seguiu o caminho normal (o pedido chega ao cliente pelo poll)
-      expect(linhas.size).to eq(1)
-      expect(linhas.first).to match(padrao('faltam_dados', onde: 'envio', faltando: 'insured.document'))
-      expect(run.reload.handle).to include('pedido' => 'Preciso do CPF do titular.')
-    end
-
-    it 'nao registra quando o start submeteu de verdade' do
-      run = run_promovida(register_async_tool(build_async_tool(handle: { 'quote_id' => 'cot-1' })))
-
-      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 0)
-
-      expect(linhas).to be_empty
-    end
+    expect(linhas).to be_empty
   end
 end
