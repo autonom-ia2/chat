@@ -55,7 +55,8 @@ module Autonomia::Agents::Tools::Recusa
     'especialista_nao_concluiu' => 'o especialista respondeu vazio, sem resposta e sem pendência',
     'condicoes_sem_seguradora' => 'a consulta às condições gerais veio sem o nome da seguradora',
     'condicoes_sem_pergunta' => 'a consulta às condições gerais veio sem a dúvida do cliente',
-    'ramo_desconhecido' => 'o ramo pedido não existe no adapter; a cotação não foi aberta'
+    'ramo_desconhecido' => 'o ramo pedido não existe no adapter; a cotação não foi aberta',
+    'pedido_repetido' => 'o pedido tem os mesmos dados da última consulta desta conversa; nenhuma execução nova foi aberta'
   }.freeze
   SEM_DESCRICAO = 'motivo fora do catálogo: falta a frase em MOTIVOS'.freeze
   DESCONHECIDA = 'desconhecida'.freeze
@@ -74,7 +75,8 @@ module Autonomia::Agents::Tools::Recusa
   #
   # `conversa` (id) e `agente` podem faltar (Testar, Copiloto): a linha sai mesmo assim, com `-` no
   # lugar — a ausência da conversa É o motivo em `async_indisponivel_nesta_superficie`.
-  # `extra`: `faltando` (nomes de campo), `detalhe` (status HTTP) e `onde` (`turno` ou `envio`).
+  # `extra`: `faltando` (nomes de campo), `detalhe` (status HTTP) e `onde` (`turno`, `aceite` — pedido
+  # repetido, entrega 10 — ou `envio`).
   def registrar(codigo, slug:, conversa: nil, agente: nil, **extra)
     motivo = codigo(codigo)
     Rails.logger.info(

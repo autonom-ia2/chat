@@ -38,6 +38,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:intencoes) { Autonomia::Agents::ToolRun::INTENCOES }
   let(:duplicada) { Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA }
   let(:submetido) { described_class::SUBMITTED_KEY }
+  let(:encerrada) { Autonomia::Agents::ToolRun::ENCERRADA_EM }
   let(:incerto) { Autonomia::Agents::Tools::Native::EnvioIncerto }
   let(:progress) { Autonomia::Agents::Tools::Progress }
 
@@ -217,7 +218,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       expect(chamadas).to eq(2)
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'envio_incerto')
-      expect(run.handle).to eq(intencoes => 2, duplicada => true)
+      expect(run.handle.except(encerrada)).to eq(intencoes => 2, duplicada => true)
       expect(bot_contents).to eq(['não consegui confirmar o envio'])
     end
 
@@ -356,7 +357,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert — o `finish!` marca no mesmo comando que encerra; a anotação seguinte perde pelo status
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(run.handle).to eq(intencoes => 1, duplicada => true)
+      expect(run.handle.except(encerrada)).to eq(intencoes => 1, duplicada => true)
       expect(runs.possivelmente_duplicadas).to eq([run])
       expect(run.merge_handle!({ intencoes => 2 }, intencao: 1)).to be(false)
     end
@@ -378,7 +379,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert — o número fica, a marca não entra, e a frase é a de falha (o banco diz que há número)
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(run.handle).to eq(intencoes => 1, submetido => true, 'id' => 'cot-A')
+      expect(run.handle.except(encerrada)).to eq(intencoes => 1, submetido => true, 'id' => 'cot-A')
       expect(runs.possivelmente_duplicadas).to be_empty
       expect(bot_contents).to eq(['não consegui concluir a consulta'])
     end
@@ -398,7 +399,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
 
     it 'a ferramenta nunca ve as marcas: nem na consulta, nem no fechamento' do
-      run = execucao(handle: { submetido => true, 'id' => 'cot-2', intencoes => 2, duplicada => true })
+      run = execucao(handle: { submetido => true, 'id' => 'cot-2', intencoes => 2, duplicada => true,
+                               Autonomia::Agents::ToolRun::PEDIDO => 'abc' })
       visto = []
       tool = build_async_tool(poll: progress.running)
       tool.define_method(:poll) do |handle:, **|

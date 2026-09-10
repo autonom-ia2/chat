@@ -84,26 +84,100 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   SUBMITTED_KEY = 'autonomia_submitted'.freeze
   INTENCOES = 'autonomia_intencoes'.freeze
   POSSIVELMENTE_DUPLICADA = 'autonomia_possivelmente_duplicada'.freeze
+  # A IDENTIDADE DO PEDIDO (entrega 10): o digest da entrada normalizada pelo adapter, gravado na
+  # abertura. É o que diz se "e aí, saiu?" é o mesmo pedido da última consulta — e não o cru do modelo.
+  PEDIDO = 'autonomia_pedido'.freeze
+  # QUANDO a execução encerrou, gravado pelo `finish!` no mesmo comando que muda o status. Não é
+  # `updated_at`: uma publicação adiada que sai depois do fim (`advance_sequence!`) mexe nele, e a
+  # janela do pedido contaria da publicação, não do encerramento.
+  ENCERRADA_EM = 'autonomia_encerrada_em'.freeze
+
+  # Por quanto tempo uma consulta ENCERRADA com entrega ainda conta como "este pedido já foi feito".
+  # Depois disso, repetir os mesmos dados é um pedido novo (o preço muda; a cotação do portal vence).
+  # É decisão registrada, não medida: o plano fala em "última execução" sem prazo; sem prazo, dados
+  # idênticos ficariam barrados para sempre na conversa.
+  PEDIDO_VALE_POR = 24.hours
 
   # Abre uma execução para (conversa, ferramenta), substituindo a que estiver viva.
   #
   # `scope` = { conversation_id:, agent_inbox_id:, origin_message_id: }. A mensagem de origem entra
   # aqui, na criação, porque é a chave que separa um PEDIDO NOVO de um RETRY do mesmo turno.
+  # `pedido` é a identidade do pedido (entrega 10), gravada como marca do handle; nil quando a
+  # conferência não pôde dizer (o conferente não é portão).
   #
   # Duas escritas numa transação: supersede a anterior e insere a nova. O índice único parcial é
   # quem garante de verdade — duas chamadas concorrentes fazem a segunda estourar `RecordNotUnique`,
   # e aí devolvemos nil em vez de mentir para o modelo dizendo que aceitamos.
-  def self.open!(agent:, slug:, arguments:, scope:)
-    transaction do
+  def self.open!(agent:, slug:, arguments:, scope:, pedido: nil)
+    transaction(requires_new: true) do
       active.for_conversation(scope[:conversation_id]).where(slug: slug)
             .update_all(status: 'superseded', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       create!(account: agent.account, agent: agent, slug: slug, status: 'pending',
               conversation_id: scope[:conversation_id], agent_inbox_id: scope[:agent_inbox_id],
-              origin_message_id: scope[:origin_message_id],
+              origin_message_id: scope[:origin_message_id], handle: pedido ? { PEDIDO => pedido } : {},
               execution_key: SecureRandom.uuid, arguments: arguments.to_h.deep_stringify_keys)
     end
   rescue ActiveRecord::RecordNotUnique
     nil
+  end
+
+  # ABRE, OU DEVOLVE A EXECUÇÃO QUE JÁ É ESTE PEDIDO (entrega 10). Comparação e abertura na MESMA
+  # seção crítica por (conversa, ferramenta) — um lock consultivo de transação —, senão dois turnos
+  # simultâneos com o mesmo pedido comparam com nada, um abre, o outro supersede, e se o primeiro já
+  # foi promovido e submetido há duas cotações no portal. A conferência (HTTP) fica fora da seção.
+  # -> [execução aberta, nil] ou [nil, execução repetida]; [nil, nil] quando o índice único recusou.
+  def self.abrir_ou_repetida(agent:, slug:, arguments:, scope:, pedido: nil)
+    transaction do
+      travar!(scope[:conversation_id], slug)
+      repetida = pedido_repetido(scope[:conversation_id], slug, pedido)
+      next [nil, repetida] if repetida
+
+      [open!(agent: agent, slug: slug, arguments: arguments, scope: scope, pedido: pedido), nil]
+    end
+  end
+
+  # Lock consultivo, liberado no fim da transação. UMA chave de 64 bits derivada do par
+  # (conversa, ferramenta): a variante de dois argumentos exige `int4`, e o id da conversa é bigint.
+  def self.travar!(conversation_id, slug)
+    connection.execute(sanitize_sql_array(['SELECT pg_advisory_xact_lock(?)', chave_do_lock(conversation_id, slug)]))
+  end
+
+  def self.chave_do_lock(conversation_id, slug)
+    Digest::SHA256.digest("#{conversation_id.to_i}:#{slug}")[0, 8].unpack1('q>')
+  end
+
+  # A ÚLTIMA execução desta ferramenta na conversa, se ela AINDA CONTA como pedido feito e tem os
+  # mesmos dados (entrega 10). Conta: a que está rodando; e a que encerrou com algo entregue há menos
+  # de `PEDIDO_VALE_POR`. NÃO conta: supersedida, descartada, bloqueada, falhada sem entrega, nem
+  # `pending` — repetir depois delas é tentar de novo, não duplicar. `pending` de propósito: uma
+  # `pending` é uma aceitação que ainda não virou trabalho; quem chega depois com o mesmo pedido a
+  # SUPERSEDE (e a promoção dela perde pelo status, sob o mesmo lock), e o RETRY do turno cujo worker
+  # morreu entre o aceite e o despacho precisa reabrir — contá-la travaria a cotação por uma órfã.
+  # Isto vale mesmo com dois turnos da conversa vivos ao mesmo tempo (IA em andamento quando chega
+  # mensagem nova): o custo é uma linha supersedida, nunca duas cotações. -> a execução, ou nil.
+  def self.pedido_repetido(conversation_id, slug, pedido)
+    return nil if pedido.blank?
+
+    ultima = for_conversation(conversation_id).where(slug: slug).order(created_at: :desc).first
+    ultima if ultima&.conta_como_pedido? && ultima.pedido == pedido
+  end
+
+  def pedido
+    handle.to_h[PEDIDO]
+  end
+
+  def conta_como_pedido?
+    return true if running?
+
+    %w[done failed].include?(status) && delivered_count.positive? && encerrada_em > PEDIDO_VALE_POR.ago
+  end
+
+  # O instante do encerramento. Linhas anteriores a esta marca (encerradas antes da entrega 10) caem
+  # em `updated_at`: aproximação aceitável para uma janela de um dia.
+  def encerrada_em
+    Time.zone.parse(handle.to_h[ENCERRADA_EM].to_s) || updated_at
+  rescue ArgumentError
+    updated_at
   end
 
   # Este turno já abriu uma execução desta ferramenta? É o freio do RETRY: o `ReplyJob` pode
@@ -157,9 +231,17 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
   # pending -> running. Guardado pelo status para que um despacho repetido (retry do turno) não
   # reabra uma execução que já terminou. -> true quando ESTA chamada promoveu.
+  #
+  # SOB O MESMO LOCK de `abrir_ou_repetida` (entrega 10): um turno B que leu a `pending` de A (que
+  # não conta) não pode abrir enquanto A promove — ou A promove primeiro e B, ao entrar, encontra
+  # uma `running` e não abre; ou B abre primeiro (supersede) e a promoção de A perde pelo status.
+  # Sem isto, B supersedia uma execução já promovida e possivelmente submetida ao portal.
   def promote!(expected_chunks:, notify_customer:, expires_at:)
-    guarded_update('pending', status: 'running', expected_chunks: expected_chunks.to_i,
-                              notify_customer: notify_customer, expires_at: expires_at)
+    self.class.transaction do
+      self.class.travar!(conversation_id, slug)
+      guarded_update('pending', status: 'running', expected_chunks: expected_chunks.to_i,
+                                notify_customer: notify_customer, expires_at: expires_at)
+    end
   end
 
   # O desfecho MARCA o envio incerto (`envio_incerto?` em SQL: intenção anotada, número ausente) no
@@ -169,10 +251,11 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # perde pelo status. A marca é o único caminho para `possivelmente_duplicadas` além de
   # `anotar_intencao!` (segunda intenção) — e por isso não existe "marcar" avulso no modelo.
   def finish!(status, failure_code: nil)
+    agora = Time.current
     marca = 'CASE WHEN COALESCE((handle->>?)::int, 0) > 0 AND (handle->>?) IS NULL THEN ?::jsonb ELSE ?::jsonb END'
-    updated = vivas.update_all(["status = ?, failure_code = ?, updated_at = ?, handle = handle || #{marca}", # rubocop:disable Rails/SkipsModelValidations
-                                status, failure_code, Time.current, INTENCOES, SUBMITTED_KEY,
-                                { POSSIVELMENTE_DUPLICADA => true }.to_json, '{}'])
+    updated = vivas.update_all(["status = ?, failure_code = ?, updated_at = ?, handle = handle || #{marca} || ?::jsonb", # rubocop:disable Rails/SkipsModelValidations
+                                status, failure_code, agora, INTENCOES, SUBMITTED_KEY,
+                                { POSSIVELMENTE_DUPLICADA => true }.to_json, '{}', { ENCERRADA_EM => agora.iso8601(3) }.to_json])
     return false if updated.zero?
 
     reload

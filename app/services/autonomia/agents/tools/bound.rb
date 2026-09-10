@@ -74,14 +74,12 @@ class Autonomia::Agents::Tools::Bound
     refusal = async_refusal(delivery)
     return recusar(refusal, delivery) if refusal
 
-    antecipado = precheck_native(args, delivery)
+    ferramenta = @native.new(agent: @agent, params: args, delivery: delivery)
+    antecipado = precheck_native(ferramenta)
     return recusar_pela_conferencia(antecipado, delivery) if antecipado
 
-    run = ::Autonomia::Agents::ToolRun.open!(
-      agent: @agent, slug: slug, arguments: args,
-      scope: { conversation_id: delivery.conversation.id, agent_inbox_id: delivery.agent_inbox&.id,
-               origin_message_id: delivery.origin_message_id }
-    )
+    run, repetida = abrir(args, pedido_native(ferramenta), delivery)
+    return recusar_pela_repeticao(repetida, delivery) if repetida
     return recusar('execucao_ja_em_andamento', delivery) if run.blank?
 
     delivery.register(run)
@@ -113,16 +111,45 @@ class Autonomia::Agents::Tools::Bound
     conferencia.to_s
   end
 
-  # A conferência da própria ferramenta, ainda no turno. INSTANCIA a nativa — e o invariante que
-  # `bound_async_spec` guarda continua valendo onde ele importa: o que não pode segurar o turno é o
-  # TRABALHO (`start`, com o teto de 60 s do conector), não uma conferência que não toca no portal e
-  # tem teto de 10 s. Falha aqui é nil: aceita e segue.
-  def precheck_native(args, delivery)
-    return nil unless native?
+  # Compara com a última consulta e abre, na mesma seção crítica (entrega 10): -> [run, repetida].
+  def abrir(args, pedido, delivery)
+    ::Autonomia::Agents::ToolRun.abrir_ou_repetida(
+      agent: @agent, slug: slug, arguments: args, pedido: pedido,
+      scope: { conversation_id: delivery.conversation.id, agent_inbox_id: delivery.agent_inbox&.id,
+               origin_message_id: delivery.origin_message_id }
+    )
+  end
 
-    @native.new(agent: @agent, params: args, delivery: delivery).precheck.presence
+  # "E AÍ, SAIU?" NÃO ABRE COTAÇÃO NOVA (entrega 10). O pedido tem os mesmos dados da última consulta
+  # que ainda conta — rodando, ou encerrada com entrega há pouco —, então nenhuma execução é aberta:
+  # o modelo recebe o estado dela e responde ao cliente sobre o andamento. Registrado como recusa
+  # (entrega 6), com o motivo próprio. NENHUMA linha aqui lê a frase do cliente: quem distingue
+  # "e aí?" de "quero mudar a franquia" é o modelo; o código compara dados, e dado diferente abre.
+  def recusar_pela_repeticao(run, delivery)
+    ::Autonomia::Agents::Tools::Recusa.registrar(
+      ::Autonomia::Agents::Tools::PedidoRepetido::MOTIVO, slug: slug, agente: @agent, onde: 'aceite',
+                                                          conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(delivery)
+    )
+    ::Autonomia::Agents::Tools::PedidoRepetido.new(run).to_s
+  end
+
+  # A conferência da própria ferramenta, ainda no turno, na instância já montada — e o invariante
+  # que `bound_async_spec` guarda continua valendo onde ele importa: o que não pode segurar o turno é
+  # o TRABALHO (`start`, com o teto de 60 s do conector), não uma conferência que não toca no portal
+  # e tem teto de 10 s. Falha aqui é nil: aceita e segue.
+  def precheck_native(ferramenta)
+    ferramenta.precheck.presence
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] precheck falhou slug=#{slug} #{e.class}")
+    nil
+  end
+
+  # A identidade do pedido, da mesma instância (a conferência é uma só). Falha aqui é nil: sem
+  # identidade não se barra — o custo é a duplicata que já existia, nunca uma cotação a menos.
+  def pedido_native(ferramenta)
+    ferramenta.pedido.presence
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] pedido falhou slug=#{slug} #{e.class}")
     nil
   end
 

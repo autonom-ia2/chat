@@ -87,6 +87,16 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     [comparison_pdf(handle.to_h)].compact
   end
 
+  # A IDENTIDADE DO PEDIDO (entrega 10): digest da entrada como o ADAPTER a entende — transformações
+  # e padrões dele, devolvidos pelo `quote/validate` — mais o produto. É com isto que o `Bound` sabe
+  # que "e aí, saiu?" é o mesmo pedido. nil quando a conferência caiu, ou quando o adapter ainda
+  # não devolve a entrada: nil nunca barra, e o custo é a duplicata que já existia.
+  def pedido
+    ::Autonomia::Insurance::Pedido.digest(produto, validacao&.dig('entrada'))
+  rescue ::Autonomia::Insurance::Connector::Error
+    nil
+  end
+
   # A MESMA CONFERÊNCIA DO `start`, só que a tempo de servir para alguma coisa. Roda dentro do turno
   # e devolve texto ao modelo, que pede o dado que falta em vez de anunciar uma cotação que a
   # validação vai recusar cinco segundos depois — foi o que aconteceu em 08/09/2026.
@@ -133,9 +143,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # O QUE FALTA, PERGUNTADO DE GRAÇA. Só `erro` vira pedido: `aviso` fala de tabela possivelmente
   # velha do nosso lado, e mandar o agente perguntar por causa disso seria atrito sem causa.
   def validar
-    resultado = connector.quote_validate(provider: connection.provider, product: produto,
-                                         input: entrada)
-    Array(resultado['problemas']).select { |p| p['severidade'] == 'erro' }
+    Array(validacao&.dig('problemas')).select { |p| p['severidade'] == 'erro' }
+  end
+
+  # A conferência gratuita, UMA vez por instância: `precheck` lê os problemas e `pedido` lê a
+  # entrada normalizada do mesmo retorno. nil quando o conferente caiu.
+  def validacao
+    return @validacao if defined?(@validacao)
+
+    @validacao = connector.quote_validate(provider: connection.provider, product: produto, input: entrada)
   rescue ::Autonomia::Insurance::Connector::Error => e
     # PRODUTO DESCONHECIDO É ERRO DE VERDADE e sobe, para `start` e `precheck` traduzirem em recusa
     # nomeada; qualquer outra falha da validação não pode impedir a cotação, porque ela é uma
@@ -144,7 +160,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     raise if e.kind == :not_implemented
 
     Rails.logger.warn("[autonomia][insurance] validacao indisponivel account=#{account.id} #{e.kind}")
-    []
+    @validacao = nil
   end
 
   # A entrada é montada ANTES da chamada paga, fora da fronteira de incerteza (`Envio`): um erro

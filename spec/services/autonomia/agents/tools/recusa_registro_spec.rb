@@ -173,6 +173,20 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           bound.execute(call, delivery: delivery)
         }
       },
+      # "E aí, saiu?" (entrega 10): o mesmo pedido, noutra mensagem, com a consulta ainda rodando.
+      'bound.rb#recusar_pela_repeticao#1' => {
+        espera: { motivo: 'pedido_repetido', slug: 'cotar_seguro', onde: 'aceite' },
+        dispara: lambda {
+          ready_connection
+          chamada = { 'name' => 'cotar_seguro', 'call_id' => 'c2',
+                      'arguments' => '{"cpf":"04297912678","placa":"ABC1D23","cep":"30130000"}' }
+          bound_para(cotacao).execute(chamada, delivery: delivery)
+          delivery.runs.last.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+          outra = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox,
+                                                         origin_message_id: 78)
+          bound_para(cotacao).execute(chamada, delivery: outra)
+        }
+      },
       # A ferramenta que só tem a frase: registra sem saber o que faltou.
       'bound.rb#recusar_pela_conferencia#1' => {
         espera: { motivo: 'conferencia_recusou' },
