@@ -4,8 +4,8 @@ require 'rails_helper'
 #
 # O contrato tem métodos de CLASSE (os textos que o job publica sem instância: `accepted_message`,
 # `waiting_message`, `failure_message`, `partial_message`, `uncertain_message`) e métodos de
-# INSTÂNCIA (os que precisam de conexão e parâmetros: `precheck`, `closing_deliveries`, `call`,
-# `start`, `poll`). Definir um
+# INSTÂNCIA (os que precisam de conexão e parâmetros: `precheck`, `closing_deliveries`, `pedido`,
+# `call`, `start`, `poll`). Definir um
 # deles no nível errado não dá erro: dá uma frase que nunca sai, ou um default que ninguém chama.
 #
 # Foi assim que a frase de encerramento parcial da cotação — "algumas SEGURADORAS não responderam" —
@@ -29,7 +29,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
        accepted_message waiting_message failure_message partial_message uncertain_message]
   end
   # O que o `Bound` e o job chamam NA INSTÂNCIA.
-  let(:trabalho_de_instancia) { %i[precheck closing_deliveries call start poll] }
+  let(:trabalho_de_instancia) { %i[precheck closing_deliveries pedido call start poll] }
   # Os cinco textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
   let(:frases) { %i[accepted_message waiting_message failure_message partial_message uncertain_message] }
 

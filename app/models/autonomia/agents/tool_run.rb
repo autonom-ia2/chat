@@ -84,26 +84,58 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   SUBMITTED_KEY = 'autonomia_submitted'.freeze
   INTENCOES = 'autonomia_intencoes'.freeze
   POSSIVELMENTE_DUPLICADA = 'autonomia_possivelmente_duplicada'.freeze
+  # A IDENTIDADE DO PEDIDO (entrega 10): o digest da entrada normalizada pelo adapter, gravado na
+  # abertura. É o que diz se "e aí, saiu?" é o mesmo pedido da última consulta — e não o cru do modelo.
+  PEDIDO = 'autonomia_pedido'.freeze
+
+  # Por quanto tempo uma consulta ENCERRADA com entrega ainda conta como "este pedido já foi feito".
+  # Depois disso, repetir os mesmos dados é um pedido novo (o preço muda; a cotação do portal vence).
+  # É decisão registrada, não medida: o plano fala em "última execução" sem prazo; sem prazo, dados
+  # idênticos ficariam barrados para sempre na conversa.
+  PEDIDO_VALE_POR = 24.hours
 
   # Abre uma execução para (conversa, ferramenta), substituindo a que estiver viva.
   #
   # `scope` = { conversation_id:, agent_inbox_id:, origin_message_id: }. A mensagem de origem entra
   # aqui, na criação, porque é a chave que separa um PEDIDO NOVO de um RETRY do mesmo turno.
+  # `pedido` é a identidade do pedido (entrega 10), gravada como marca do handle; nil quando a
+  # conferência não pôde dizer (o conferente não é portão).
   #
   # Duas escritas numa transação: supersede a anterior e insere a nova. O índice único parcial é
   # quem garante de verdade — duas chamadas concorrentes fazem a segunda estourar `RecordNotUnique`,
   # e aí devolvemos nil em vez de mentir para o modelo dizendo que aceitamos.
-  def self.open!(agent:, slug:, arguments:, scope:)
+  def self.open!(agent:, slug:, arguments:, scope:, pedido: nil)
     transaction do
       active.for_conversation(scope[:conversation_id]).where(slug: slug)
             .update_all(status: 'superseded', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       create!(account: agent.account, agent: agent, slug: slug, status: 'pending',
               conversation_id: scope[:conversation_id], agent_inbox_id: scope[:agent_inbox_id],
-              origin_message_id: scope[:origin_message_id],
+              origin_message_id: scope[:origin_message_id], handle: pedido ? { PEDIDO => pedido } : {},
               execution_key: SecureRandom.uuid, arguments: arguments.to_h.deep_stringify_keys)
     end
   rescue ActiveRecord::RecordNotUnique
     nil
+  end
+
+  # A ÚLTIMA execução desta ferramenta na conversa, se ela AINDA CONTA como pedido feito e tem os
+  # mesmos dados (entrega 10). Conta: a que está rodando; e a que encerrou com algo entregue há menos
+  # de `PEDIDO_VALE_POR`. NÃO conta: supersedida, descartada, bloqueada, pendente órfã, ou falhada
+  # sem entrega — repetir depois delas é tentar de novo, não duplicar. -> a execução, ou nil.
+  def self.pedido_repetido(conversation_id, slug, pedido)
+    return nil if pedido.blank?
+
+    ultima = for_conversation(conversation_id).where(slug: slug).order(created_at: :desc).first
+    ultima if ultima&.conta_como_pedido? && ultima.pedido == pedido
+  end
+
+  def pedido
+    handle.to_h[PEDIDO]
+  end
+
+  def conta_como_pedido?
+    return true if running?
+
+    %w[done failed].include?(status) && delivered_count.positive? && updated_at > PEDIDO_VALE_POR.ago
   end
 
   # Este turno já abriu uma execução desta ferramenta? É o freio do RETRY: o `ReplyJob` pode

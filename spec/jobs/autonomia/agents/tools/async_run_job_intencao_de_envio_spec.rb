@@ -398,7 +398,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
 
     it 'a ferramenta nunca ve as marcas: nem na consulta, nem no fechamento' do
-      run = execucao(handle: { submetido => true, 'id' => 'cot-2', intencoes => 2, duplicada => true })
+      run = execucao(handle: { submetido => true, 'id' => 'cot-2', intencoes => 2, duplicada => true,
+                               Autonomia::Agents::ToolRun::PEDIDO => 'abc' })
       visto = []
       tool = build_async_tool(poll: progress.running)
       tool.define_method(:poll) do |handle:, **|

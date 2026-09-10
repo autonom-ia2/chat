@@ -106,7 +106,7 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
       { 'campo' => c['campo'], 'severidade' => 'erro',
         'motivo' => 'obrigatório para cotar este ramo, e não veio na entrada.' }
     end
-    { 'valido' => problemas.empty?, 'problemas' => problemas }
+    { 'valido' => problemas.empty?, 'problemas' => problemas, 'entrada' => Normalizacao.normalizada(campos, input) }
   end
 
   # A cotação do mock imita o que importa do portal: ela DEMORA e chega em pedaços. O id carrega o

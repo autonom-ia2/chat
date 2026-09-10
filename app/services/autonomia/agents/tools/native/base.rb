@@ -185,6 +185,14 @@ class Autonomia::Agents::Tools::Native::Base
     nil
   end
 
+  # A IDENTIDADE DO PEDIDO (entrega 10): o digest da entrada NORMALIZADA — pelo adapter, não por
+  # nós — que diz se dois pedidos são o mesmo pedido. O `Bound` a compara com a última execução da
+  # conversa antes de abrir outra: "e aí, saiu?" com os mesmos dados não abre cotação nova.
+  # -> String curta, ou nil quando não há como saber (conferência indisponível): nil nunca barra.
+  def pedido
+    nil
+  end
+
   # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR. Em 08/09/2026 uma cotação
   # entregou cinco preços e morreu no prazo: o comparativo em PDF só era gerado no caminho feliz,
   # então não saiu — e `fail_run` não avisava nada porque já havia entrega. O cliente ficou com
