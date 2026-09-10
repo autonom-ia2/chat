@@ -86,10 +86,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     [comparison_pdf(handle.to_h)].compact
   end
 
-  def partial_message
-    'Algumas seguradoras não responderam a tempo. Os preços acima são os que chegaram.'
-  end
-
   # A MESMA CONFERÊNCIA DO `start`, só que a tempo de servir para alguma coisa. Roda dentro do turno
   # e devolve texto ao modelo, que pede o dado que falta em vez de anunciar uma cotação que a
   # validação vai recusar cinco segundos depois — foi o que aconteceu em 08/09/2026.

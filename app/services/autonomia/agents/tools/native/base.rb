@@ -64,22 +64,6 @@ class Autonomia::Agents::Tools::Native::Base
       false
     end
 
-    # CONFERÊNCIA ANTES DE ACEITAR, e ela existe porque O MODELO ESPERA O RETORNO DA FERRAMENTA:
-    # `ResponsesClient#create_with_tool_executor` alimenta a segunda chamada com a saída de cada
-    # função. O canal de volta ao modelo não falta — a assíncrona é que o preenchia com uma frase
-    # fixa e adiava o trabalho, então o modelo anunciava sucesso e só depois descobria a recusa.
-    #
-    # Quem consegue saber, ainda no turno, que o pedido não vai dar em nada, responde aqui: o texto
-    # volta pelo canal que o modelo já lê, e NENHUMA execução é aberta.
-    #
-    # -> String (o que o modelo recebe no lugar do aceite), `Native::Conferencia` (o mesmo texto
-    # mais o motivo e os NOMES dos campos que faltaram, para o registro de recusa da entrega 6) ou
-    # nil (segue o fluxo normal).
-    # NUNCA levanta e nunca bloqueia: conferência indisponível deixa o pedido seguir.
-    def precheck
-      nil
-    end
-
     # O que o modelo lê ao aceitar o disparo. Curto e sem promessa de prazo — ele usa isto para
     # avisar o cliente na MESMA resposta (a rodada de ferramentas é única: a segunda chamada ao
     # modelo já vai sem `tools`, então não há segunda chance de falar).
@@ -88,17 +72,12 @@ class Autonomia::Agents::Tools::Native::Base
         'nesta conversa em instantes. Não invente valores nem prazos.'
     end
 
-    # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR. Em 08/09/2026 uma cotação
-    # entregou cinco preços e morreu no prazo: o comparativo em PDF só era gerado no caminho feliz,
-    # então não saiu — e `fail_run` não avisava nada porque já havia entrega. O cliente ficou com
-    # preços soltos, sem comparativo e sem uma palavra.
-    # -> Array de textos para o cliente. Vazio por padrão.
-    def closing_deliveries(_handle)
-      []
-    end
-
     # O fecho quando acabou o prazo e ALGO já tinha sido entregue. Não é a mensagem de falha: dizer
     # "não consegui" a quem acabou de receber preço é desmentir o que ele está lendo.
+    # DE CLASSE, como `accepted_message` (lido pelo `Bound`) e `waiting_message`/`failure_message`
+    # (publicados pelo job): o fecho sai mesmo quando o agente já não existe e não há instância. A ferramenta que o redefinir como
+    # método de INSTÂNCIA está escrevendo uma frase que nunca sai — foi o caso da cotação até
+    # 10/09/2026 (entrega 4), e `contrato_de_nivel_spec` reprova isso.
     def partial_message
       'Algumas consultas não responderam a tempo. O que chegou está aqui em cima.'
     end
@@ -174,6 +153,38 @@ class Autonomia::Agents::Tools::Native::Base
   # de esperar uma seguradora específica (prazo por seguradora, não só teto global). -> Tools::Progress.
   def poll(handle:, attempt:)
     raise NotImplementedError, "#{self.class} must implement #poll"
+  end
+
+  # OS DOIS ABAIXO SÃO DE INSTÂNCIA, e isso não é detalhe: o `Bound` chama `precheck` e o
+  # `AsyncRunJob` chama `closing_deliveries` numa instância (a ferramenta precisa da conexão e dos
+  # parâmetros para conferir e para gerar o comparativo). Até 10/09/2026 os defaults viviam em
+  # `class << self` — nível que ninguém chamava; uma ferramenta assíncrona sem a versão de instância
+  # (não havia nenhuma) teria levantado `NoMethodError`, engolido pelo `rescue` do chamador.
+  # `base_contrato_de_nivel_spec` guarda o nível de cada método deste contrato; foi o mesmo defeito,
+  # ao contrário, que fez a frase de encerramento parcial da cotação nunca rodar (entrega 4).
+  # CONFERÊNCIA ANTES DE ACEITAR, e ela existe porque O MODELO ESPERA O RETORNO DA FERRAMENTA:
+  # `ResponsesClient#create_with_tool_executor` alimenta a segunda chamada com a saída de cada
+  # função. O canal de volta ao modelo não falta — a assíncrona é que o preenchia com uma frase
+  # fixa e adiava o trabalho, então o modelo anunciava sucesso e só depois descobria a recusa.
+  #
+  # Quem consegue saber, ainda no turno, que o pedido não vai dar em nada, responde aqui: o texto
+  # volta pelo canal que o modelo já lê, e NENHUMA execução é aberta.
+  #
+  # -> String (o que o modelo recebe no lugar do aceite), `Native::Conferencia` (o mesmo texto
+  # mais o motivo e os NOMES dos campos que faltaram, para o registro de recusa da entrega 6) ou
+  # nil (segue o fluxo normal).
+  # NUNCA levanta e nunca bloqueia: conferência indisponível deixa o pedido seguir.
+  def precheck
+    nil
+  end
+
+  # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR. Em 08/09/2026 uma cotação
+  # entregou cinco preços e morreu no prazo: o comparativo em PDF só era gerado no caminho feliz,
+  # então não saiu — e `fail_run` não avisava nada porque já havia entrega. O cliente ficou com
+  # preços soltos, sem comparativo e sem uma palavra.
+  # -> Array de textos para o cliente. Vazio por padrão.
+  def closing_deliveries(_handle)
+    []
   end
 
   private
