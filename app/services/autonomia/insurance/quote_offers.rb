@@ -10,20 +10,31 @@
 #   - credencial da corretora inválida numa seguradora: NUNCA, nem se perguntado. É problema nosso,
 #     constrangedor e inútil para quem quer comprar. Vai para a tela de Conexões.
 class Autonomia::Insurance::QuoteOffers
-  # Quantas opções o cliente vê. O fluxo de referência mostra as 3 mais baratas; mais que isso vira
-  # tabela e para de ajudar a decidir.
-  MAX_OFFERS = 3
+  # NÃO EXISTE TETO DE OFERTAS, E ISSO É DECISÃO DE PRODUTO.
+  #
+  # Havia um: as 3 mais baratas. E não eram 3 por lote — era `.first(3)` sobre a lista inteira, então
+  # de 17 seguradoras que cotam, o cliente via 3 e as outras 14 nunca apareciam. A corretora paga
+  # pelas 17.
+  #
+  # Rodrigo removeu em 10/09/2026, pela mesma régua que tirou o teto de execuções: quem paga é a
+  # corretora, e esconder o que ela pagou é jogar fora valor que já foi comprado. Também tirava do
+  # cliente a opção de escolher pela marca que ele conhece, e não só pelo preço.
+  #
+  # A entrega em lotes continua fazendo o trabalho de não afogar ninguém: `build_progress` só manda
+  # o que CHEGOU desde a última vez, então o cliente recebe aos poucos, na ordem em que as
+  # seguradoras respondem, e não uma tabela de 17 linhas de uma vez.
+  #
+  # `quote_offers_spec` guarda a decisão: 17 ofertas entram, 17 saem.
 
   def initialize(result)
     @result = result.to_h
   end
 
-  # SÓ quem cotou, da mais barata para a mais cara, no máximo três.
+  # SÓ quem cotou, da mais barata para a mais cara. Todas.
   def quoted
     @quoted ||= Array(@result['offers'])
                 .select { |offer| offer['status'] == 'quoted' && offer.dig('premium', 'amount').present? }
                 .sort_by { |offer| offer.dig('premium', 'amount').to_f }
-                .first(MAX_OFFERS)
   end
 
   # Seguradoras que recusaram a credencial que a corretora cadastrou NO PORTAL (critério 4.5).

@@ -390,20 +390,42 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(progress.deliveries.join).not_to match(/senha|credencial|login/i)
     end
 
-    it 'shows at most three options, because more turns into a table and stops helping' do
+    # A GUARDA AO CONTRÁRIO: não se prova que um teto de ofertas funciona, prova-se que ele NÃO
+    # existe. Havia um — as 3 mais baratas, sobre a lista inteira —, e ele escondia do cliente 14
+    # das 17 seguradoras que a corretora tinha acabado de pagar. Removido em 10/09/2026 por decisão
+    # do Rodrigo. Sem este exemplo, alguém preocupado com "poluir a conversa" o traz de volta numa
+    # linha, e as opções somem sem ninguém notar.
+    it 'delivers every insurer that quoted — there is NO ceiling on options' do
       # Arrange
-      offers = [offer('1', 'A', 'quoted', 100), offer('2', 'B', 'quoted', 200),
-                offer('3', 'C', 'quoted', 300), offer('4', 'D', 'quoted', 400)]
+      offers = (1..17).map { |i| offer(i.to_s, "Seguradora#{i}", 'quoted', i * 100) }
       allow(connector).to receive(:quote_result).and_return(result('completed', offers))
 
       # Act
       progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
+      # Assert — conta MARCADOR, e não linha: cada oferta ocupa duas linhas mais o espaço entre
+      # elas, e contar linha mediria a formatação em vez do número de opções.
+      expect(progress.deliveries.first.scan('• ').size).to eq(17)
+      expect(progress.deliveries.first).to include('*Seguradora17*')
+    end
+
+    # O que impede afogar o cliente NÃO é teto: é a entrega em lotes. Cada volta manda só o que
+    # chegou desde a anterior, na ordem em que as seguradoras respondem.
+    it 'delivers only what arrived since the last batch' do
+      # Arrange
+      primeiro = [offer('1', 'A', 'quoted', 100), offer('2', 'B', 'quoted', 200)]
+      allow(connector).to receive(:quote_result).and_return(result('partial', primeiro))
+      parcial = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)
+
+      # Act — na volta seguinte chega uma terceira
+      allow(connector).to receive(:quote_result)
+        .and_return(result('completed', primeiro + [offer('3', 'C', 'quoted', 300)]))
+      segunda = tool.poll(handle: parcial.handle, attempt: 2)
+
       # Assert
-      # Conta MARCADOR, e não linha: cada oferta passou a ocupar duas linhas mais o espaço entre
-      # elas, e contar linha mediria a formatação em vez do teto de opções.
-      expect(progress.deliveries.first.scan('• ').size).to eq(Autonomia::Insurance::QuoteOffers::MAX_OFFERS)
-      expect(progress.deliveries.first).not_to include('*D*')
+      expect(parcial.deliveries.first.scan('• ').size).to eq(2)
+      expect(segunda.deliveries.first).to include('*C*')
+      expect(segunda.deliveries.first).not_to include('*A*')
     end
 
     it 'closes with the comparison PDF, one per quote, like the portal does' do
