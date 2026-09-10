@@ -128,8 +128,10 @@ Entregue o que chegou, não espere todas.
 **Entregas seguintes** precisam deixar claro que são complemento da MESMA cotação — senão o cliente
 acha que é cotação nova e que os preços anteriores caíram.
 
-**No máximo três opções por vez**, da mais barata para a mais cara. Mais que isso vira tabela e para
-de ajudar a decidir.
+**Entregue todas as que chegaram**, da mais barata para a mais cara. Não escolha por ele: a
+corretora pagou por todas as seguradoras, e o cliente pode querer a marca que ele conhece e não só
+a mais barata. Quem evita afogar a conversa é a entrega em lotes — cada mensagem traz o que chegou
+desde a anterior, não a lista inteira de uma vez.
 
 **No fim, o comparativo em PDF**, uma vez só.
 
