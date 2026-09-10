@@ -149,10 +149,12 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # A ÚLTIMA execução desta ferramenta na conversa, se ela AINDA CONTA como pedido feito e tem os
   # mesmos dados (entrega 10). Conta: a que está rodando; e a que encerrou com algo entregue há menos
   # de `PEDIDO_VALE_POR`. NÃO conta: supersedida, descartada, bloqueada, falhada sem entrega, nem
-  # `pending` — repetir depois delas é tentar de novo, não duplicar. `pending` de propósito: os turnos
-  # de uma conversa se supersedem (o turno velho é descartado quando chega mensagem nova), e o RETRY
-  # do turno cujo worker morreu entre o aceite e o despacho precisa reabrir — contá-la travaria a
-  # cotação por uma órfã. -> a execução, ou nil.
+  # `pending` — repetir depois delas é tentar de novo, não duplicar. `pending` de propósito: uma
+  # `pending` é uma aceitação que ainda não virou trabalho; quem chega depois com o mesmo pedido a
+  # SUPERSEDE (e a promoção dela perde pelo status, sob o mesmo lock), e o RETRY do turno cujo worker
+  # morreu entre o aceite e o despacho precisa reabrir — contá-la travaria a cotação por uma órfã.
+  # Isto vale mesmo com dois turnos da conversa vivos ao mesmo tempo (IA em andamento quando chega
+  # mensagem nova): o custo é uma linha supersedida, nunca duas cotações. -> a execução, ou nil.
   def self.pedido_repetido(conversation_id, slug, pedido)
     return nil if pedido.blank?
 
