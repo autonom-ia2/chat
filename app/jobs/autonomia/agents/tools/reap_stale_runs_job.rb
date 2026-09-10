@@ -41,8 +41,13 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   # Se a execução morreu com a INTENÇÃO anotada e sem o número (entrega 5), a cotação pode existir
   # no portal sem registro nosso: o `finish!` a marca como possivelmente duplicada, para o corretor
   # achar, e o cliente lê que não há confirmação — não que "não consegui".
+  #
+  # RECARREGA antes de decidir: o lote tem até 500 linhas processadas em sequência, e a que chega
+  # aqui pode ter recebido preço (ou número) desde a consulta. Decidir pela leitura velha publicaria
+  # "não consegui" ao lado do preço, ou "não consegui confirmar" de uma cotação já registrada.
   def close(run)
     native = ::Autonomia::Agents::Tools::Registry.find(run.slug)
+    run.reload
     tell_customer(run, native) if native.present? && run.delivered_count.zero?
     run.finish!('failed', failure_code: 'execucao_abandonada')
   rescue StandardError => e

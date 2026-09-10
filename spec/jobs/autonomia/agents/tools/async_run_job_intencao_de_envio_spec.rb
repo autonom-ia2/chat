@@ -477,6 +477,25 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(bot_contents).to eq(['não consegui concluir a consulta'])
     end
 
+    it 'recarrega antes de decidir: preco entregue enquanto ele varria fica sem "nao consegui"' do
+      # Arrange — a linha veio da consulta sem entrega; um poll entrega um preço antes de o varredor chegar nela
+      run = execucao(handle: { submetido => true, 'id' => 'cot-2', intencoes => 1 })
+      run.update!(expires_at: 10.minutes.ago)
+      linha = runs
+      tool = register_async_tool(build_async_tool)
+      allow(Autonomia::Agents::Tools::Registry).to receive(:find) do |slug|
+        linha.find(run.id).record_delivery!
+        slug.to_s == tool.slug ? tool : nil
+      end
+
+      # Act
+      Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+      # Assert
+      expect(run.reload).to have_attributes(status: 'failed', delivered_count: 1)
+      expect(bot_contents).to be_empty
+    end
+
     it 'nao marca a abandonada que tem numero: a cotacao esta registrada' do
       run = execucao(handle: { submetido => true, 'id' => 'cot-2', intencoes => 1 })
       run.update!(expires_at: 10.minutes.ago)

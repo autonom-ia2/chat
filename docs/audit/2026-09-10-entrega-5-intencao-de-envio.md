@@ -78,7 +78,11 @@ contador é o desenho.
 - Codex (rodada 5, `a021f0d039`): **APROVADO** — matriz desfecho × anotação sem interleaving que
   termine sem marca com cotação aberta. Depois disso a mutação "fail_run não marca" SOBREVIVEU (a
   marca prévia ficou redundante com a do `finish!`): `marcar_envio_incerto!` foi removido;
-  `fail_run` e o varredor só recarregam o objeto (a frase sai do estado do banco), e o `finish!` é
-  o único a marcar. Codex rodada 6 confirma.
+  `fail_run` recarrega o objeto (a frase sai do estado do banco), e o `finish!` é o único a marcar.
+- Codex (rodada 6, `eaea0cdafe`): REPROVADO — P2: ao remover `marcar_envio_incerto!` do varredor,
+  saiu também a recarga que ele fazia; o lote de 500 linhas é processado em sequência e a linha pode
+  ter recebido preço (ou número) desde a consulta. Correção: `run.reload` no `close`, com spec
+  ("preço entregue enquanto ele varria fica sem 'não consegui'") e mutação. P3: esta auditoria
+  antecipava a confirmação; corrigida.
 
 ## Validação
