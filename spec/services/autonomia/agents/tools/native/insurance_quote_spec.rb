@@ -74,10 +74,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       ready_connection
 
       # Act
-      texto = tool('produto' => 'auto', 'placa' => 'ABC1D23').precheck
+      conferencia = tool('produto' => 'auto', 'placa' => 'ABC1D23').precheck
 
-      # Assert
-      expect(texto).to include('CPF do titular')
+      # Assert — o texto é o que o modelo lê; o motivo e os NOMES dos campos vão para o registro de
+      # recusa (entrega 6), que precisa dizer QUAIS faltaram sem repetir o texto.
+      expect(conferencia.to_s).to include('CPF do titular')
+      expect(conferencia.motivo).to eq('faltam_dados')
+      expect(conferencia.faltando).to include('insured.document')
     end
 
     it 'nao interrompe quando a entrada esta completa' do
@@ -107,9 +110,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # Act
       resultado = tool('produto' => 'auto', 'placa' => 'ABC1D23').start
 
-      # Assert
+      # Assert — e o handle leva os NOMES dos campos para o job registrar a recusa (entrega 6)
       expect(resultado['pedido']).to include('CPF do titular')
       expect(resultado['pedido']).not_to include('insured.document')
+      expect(resultado['faltando']).to include('insured.document')
     end
 
     it 'cota quando a entrada esta completa' do

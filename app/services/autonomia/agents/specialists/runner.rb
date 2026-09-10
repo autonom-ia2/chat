@@ -90,10 +90,18 @@ class Autonomia::Agents::Specialists::Runner
     by_slug = specialist_tools.index_by(&:slug)
     Array(calls).map do |call|
       tool = by_slug[call['name'].to_s]
-      output = tool.present? ? tool.execute(call, delivery: @delivery) : { error: 'tool_not_available' }.to_json
+      output = tool.present? ? tool.execute(call, delivery: @delivery) : recusar(call)
       { type: 'function_call_output', call_id: call['call_id'],
         output: output.to_s.truncate(MAX_TOOL_OUTPUT_CHARS) }
     end
+  end
+
+  # Ferramenta que o especialista não tem: recusa nomeada E REGISTRADA (entrega 6). Foi exatamente
+  # assim que a Lia ficou muda em 08/09/2026 — especialista nascido sem `cotar_seguro` —, e nada
+  # dizia isso em lugar nenhum.
+  def recusar(call)
+    Autonomia::Agents::Tools::Recusa.para_modelo('tool_not_available', slug: call['name'],
+                                                                       delivery: @delivery, agente: @specialist.agent)
   end
 
   # Junta resposta e pendências numa string só — o principal recebe texto, não estrutura.

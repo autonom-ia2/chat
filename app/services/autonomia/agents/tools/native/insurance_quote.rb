@@ -61,10 +61,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # NÃO COTA ANTES DE VALIDAR. Cada cotação no AGGER consome consulta paga, e conferir a entrada
   # custa uma chamada que não toca no portal.
   def start
-    return recusa('json_invalido', FALTA_ALGO) if dados.nil?
+    return recusa('json_invalido', FALTA_ALGO, faltando: ['dados']) if dados.nil?
 
     faltantes = validar
-    return recusa('faltam_dados', pedido_do_que_falta(faltantes)) if faltantes.any?
+    return recusa('faltam_dados', pedido_do_que_falta(faltantes), faltando: campos(faltantes)) if faltantes.any?
 
     submeter
   end
@@ -88,11 +88,14 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # Não toca no portal e tem teto próprio de 10 s (`Connector::Http::CONFERENCIA_TIMEOUT`), então
   # não segura o turno. Qualquer falha aqui devolve nil: conferência é conferência, não portão — a
   # regra de `validar` continua sendo "não deixar de cotar por causa do conferente".
+  #
+  # Devolve a `Conferencia` inteira, não só a frase: o registro de recusa (entrega 6) precisa saber
+  # QUAIS campos faltaram, e a frase em português já traduziu os nomes.
   def precheck
-    return PEDIDO_DE_JSON if dados.nil?
+    return conferencia('json_invalido', PEDIDO_DE_JSON, ['dados']) if dados.nil?
 
     faltantes = validar
-    faltantes.any? ? pedido_do_que_falta(faltantes) : nil
+    faltantes.any? ? conferencia('faltam_dados', pedido_do_que_falta(faltantes), campos(faltantes)) : nil
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] conferencia indisponivel account=#{account.id} #{e.class}")
     nil
@@ -144,9 +147,20 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # A recusa VIRA ENTREGA, e não falha. O agente precisa receber o texto para perguntar ao cliente;
   # `failed` mandaria a mensagem genérica de erro e a conversa morreria sem ninguém saber o que
   # faltava. O `poll` reconhece o handle com `pedido` e entrega na primeira passada.
-  def recusa(motivo, texto)
-    Rails.logger.info("[autonomia][insurance] cotacao recusada antes do portal account=#{account.id} motivo=#{motivo}")
-    { 'pedido' => texto, 'motivo' => motivo }
+  #
+  # O REGISTRO (conversa, agente, o que faltou) é feito por quem chama o `start` — o `AsyncRunJob` —,
+  # porque esta ferramenta não conhece a conversa, de propósito. `faltando` viaja no handle para
+  # isso: só NOMES de campo, nunca valores.
+  def recusa(motivo, texto, faltando:)
+    { 'pedido' => texto, 'motivo' => motivo, 'faltando' => faltando }
+  end
+
+  def conferencia(motivo, texto, faltando)
+    ::Autonomia::Agents::Tools::Native::Conferencia.new(texto: texto, faltando: faltando, motivo: motivo)
+  end
+
+  def campos(faltantes)
+    faltantes.pluck('campo').map(&:to_s).uniq
   end
 
   # ESTE TEXTO É LIDO PELO CLIENTE, e não pelo modelo. O comentário anterior aqui dizia o oposto —

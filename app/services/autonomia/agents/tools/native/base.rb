@@ -72,7 +72,9 @@ class Autonomia::Agents::Tools::Native::Base
     # Quem consegue saber, ainda no turno, que o pedido não vai dar em nada, responde aqui: o texto
     # volta pelo canal que o modelo já lê, e NENHUMA execução é aberta.
     #
-    # -> String (o que o modelo recebe no lugar do aceite) ou nil (segue o fluxo normal).
+    # -> String (o que o modelo recebe no lugar do aceite), `Native::Conferencia` (o mesmo texto
+    # mais o motivo e os NOMES dos campos que faltaram, para o registro de recusa da entrega 6) ou
+    # nil (segue o fluxo normal).
     # NUNCA levanta e nunca bloqueia: conferência indisponível deixa o pedido seguir.
     def precheck
       nil

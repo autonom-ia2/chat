@@ -210,7 +210,7 @@ module Autonomia
         tool = tools_by_slug[name]
         return tool.execute(call, delivery: @delivery) if tool.present?
 
-        { error: 'tool_not_available' }.to_json
+        Tools::Recusa.para_modelo('tool_not_available', slug: name, delivery: @delivery, agente: @agent)
       end
 
       # O especialista devolve TEXTO (nunca levanta — ver Specialists::Runner). Vai direto como saída
@@ -220,7 +220,8 @@ module Autonomia
         Specialists::Runner.new(specialist: specialist, request: args[Specialist::REQUEST_PARAM],
                                 delivery: @delivery).call
       rescue JSON::ParserError
-        { error: 'invalid_tool_arguments' }.to_json
+        Tools::Recusa.para_modelo('invalid_tool_arguments', slug: call['name'], delivery: @delivery,
+                                                            agente: @agent)
       end
 
       def build_result(parsed, snippets)

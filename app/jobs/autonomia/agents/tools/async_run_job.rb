@@ -86,7 +86,9 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   def advance(run, native, attempt)
     tool = native.new(agent: run.agent, params: run.arguments)
     unless submitted?(run)
-      run.record_attempt!(handle: submitted_handle(tool.start))
+      handle = tool.start
+      registrar_recusa(run, handle)
+      run.record_attempt!(handle: submitted_handle(handle))
       return reschedule(run, attempt)
     end
 
@@ -96,6 +98,19 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     # portal. Só a classe vai ao log; ao cliente vai a NOSSA frase.
     Rails.logger.warn("[autonomia][tool][async] run=#{run.id} slug=#{run.slug} #{e.class}")
     retry_or_fail(run, native, attempt)
+  end
+
+  # A SEGUNDA PORTA DE RECUSA (entrega 6): a conferência do turno passou (ou caiu) e a validação do
+  # `start` recusou. A ferramenta devolve handle com `pedido` — o contrato que `poll` já reconhece —
+  # e é AQUI, não nela, que se sabe a conversa e o agente. Registrar nunca derruba a execução: a
+  # entrega do pedido ao cliente vale mais que a nossa linha de log.
+  def registrar_recusa(run, handle)
+    return unless handle.is_a?(Hash) && handle['pedido'].present?
+
+    ::Autonomia::Agents::Tools::Recusa.registrar(handle['motivo'], slug: run.slug, conversa: run.conversation_id,
+                                                                   agente: run.agent, faltando: handle['faltando'], onde: 'envio')
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool][async] registro de recusa falhou run=#{run.id} #{e.class}")
   end
 
   def apply(run, native, progress, attempt)
