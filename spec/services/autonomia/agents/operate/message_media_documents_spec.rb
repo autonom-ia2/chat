@@ -37,6 +37,8 @@ RSpec.describe Autonomia::Agents::Operate::MessageMedia do
     expect(result.documents.size).to eq(1)
     expect(result.documents.first[:name]).to eq('sample.pdf')
     expect(result.documents.first[:text]).to be_present
+    # a identidade do conteúdo viaja com o texto: é por ela que o especialista sabe o que já entrou
+    expect(result.documents.first[:checksum]).to eq(message.attachments.first.file.blob.checksum)
   end
 
   it 'leaves images and audio alone — a PDF is a third channel, not a replacement' do
@@ -125,6 +127,32 @@ RSpec.describe Autonomia::Agents::Operate::MessageMedia do
 
     # Act / Assert
     expect(extract_for(message).documents).to be_empty
+  end
+
+  # ENTREGA 1: o especialista lê os PDFs das mensagens anteriores por `documents`, e só por eles —
+  # sem transcrever áudio (custo por chamada) nem baixar imagem. `extract` continua fazendo os três.
+  it 'documents reads PDFs only: no audio transcription, no image download' do
+    # Arrange — um PDF, um áudio e uma imagem na mesma mensagem
+    message = message_with(file_type: :file)
+    audio = message.attachments.new(account_id: account.id, file_type: :audio)
+    audio.file.attach(io: StringIO.new('ogg'), filename: 'voz.ogg', content_type: 'audio/ogg')
+    audio.save!
+    imagem = message.attachments.new(account_id: account.id, file_type: :image)
+    imagem.file.attach(io: StringIO.new('png'), filename: 'foto.png', content_type: 'image/png')
+    imagem.save!
+    # Com credencial disponível, o caminho de áudio TRANSCREVERIA; a guarda é que ele nem é tentado.
+    resolver = instance_double(Crm::Ai::CredentialResolver, resolve: 'ai-credential')
+    allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
+    transcritor = instance_double(Crm::Ai::TranscriptionClient, transcribe: 'texto do áudio')
+    allow(Crm::Ai::TranscriptionClient).to receive(:new).and_return(transcritor)
+
+    # Act
+    docs = described_class.new(messages: [message], agent: agent).documents
+
+    # Assert
+    expect(docs.map { |doc| doc[:name] }).to eq(['sample.pdf'])
+    expect(Crm::Ai::TranscriptionClient).not_to have_received(:new)
+    expect(Crm::Ai::CredentialResolver).not_to have_received(:new)
   end
 
   it 'caps how many documents one turn carries' do

@@ -60,6 +60,44 @@ RSpec.describe Autonomia::Agents::Specialists::Runner do
     end
   end
 
+  # ENTREGA 1: o especialista lê a conversa e os documentos ANTES do bilhete. Cortar a passagem do
+  # histórico é o que reprova "a conversa chega": provado desligando, não afirmado.
+  describe 'a conversa e os documentos chegam ao especialista' do
+    let(:historico) { [{ role: 'user', content: 'Meu CPF é 04297912678' }, { role: 'assistant', content: 'Anotado.' }] }
+
+    def entrada_recebida(**extras)
+      client = stub_model(text: { resposta: 'ok', dados_faltando: [] }.to_json)
+      described_class.new(specialist: specialist, request: 'cotar o carro dele', **extras).call
+      entrada = nil
+      expect(client).to have_received(:create_with_tool_executor) { |**kwargs| entrada = kwargs[:input] }
+      entrada
+    end
+
+    it 'a conversa vem antes do bilhete, e o bilhete e a ultima palavra' do
+      entrada = entrada_recebida(history: historico)
+      textos = entrada.map { |m| m[:content].first[:text] }
+
+      expect(textos.first).to include('CONVERSA ATÉ AQUI')
+      expect(textos).to include('Meu CPF é 04297912678', 'Anotado.')
+      expect(textos.last).to eq("PEDIDO DO ATENDENTE:\ncotar o carro dele")
+    end
+
+    it 'os documentos deste turno chegam cercados' do
+      entrada = entrada_recebida(documents: [{ name: 'apolice.pdf', text: 'Bônus classe 5' }])
+      textos = entrada.map { |m| m[:content].first[:text] }
+
+      expect(textos[-2]).to include('DOCUMENTOS ANEXADOS PELO CLIENTE', '<documento nome="apolice.pdf">', 'Bônus classe 5')
+      expect(textos.last).to start_with('PEDIDO DO ATENDENTE:')
+    end
+
+    it 'sem conversa nem documento, so o bilhete' do
+      entrada = entrada_recebida
+
+      expect(entrada.size).to eq(1)
+      expect(entrada.first[:content].first[:text]).to eq("PEDIDO DO ATENDENTE:\ncotar o carro dele")
+    end
+  end
+
   it 'offers no tools when the specialist reserved none' do
     client = stub_model(text: { resposta: 'ok', dados_faltando: [] }.to_json)
 
