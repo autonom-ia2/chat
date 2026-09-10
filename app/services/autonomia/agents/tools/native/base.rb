@@ -74,8 +74,8 @@ class Autonomia::Agents::Tools::Native::Base
 
     # O fecho quando acabou o prazo e ALGO já tinha sido entregue. Não é a mensagem de falha: dizer
     # "não consegui" a quem acabou de receber preço é desmentir o que ele está lendo.
-    # DE CLASSE, como `accepted_message`/`waiting_message`/`failure_message`: o job publica o fecho
-    # mesmo quando o agente já não existe e não há instância. A ferramenta que o redefinir como
+    # DE CLASSE, como `accepted_message` (lido pelo `Bound`) e `waiting_message`/`failure_message`
+    # (publicados pelo job): o fecho sai mesmo quando o agente já não existe e não há instância. A ferramenta que o redefinir como
     # método de INSTÂNCIA está escrevendo uma frase que nunca sai — foi o caso da cotação até
     # 10/09/2026 (entrega 4), e `contrato_de_nivel_spec` reprova isso.
     def partial_message
@@ -158,10 +158,10 @@ class Autonomia::Agents::Tools::Native::Base
   # OS DOIS ABAIXO SÃO DE INSTÂNCIA, e isso não é detalhe: o `Bound` chama `precheck` e o
   # `AsyncRunJob` chama `closing_deliveries` numa instância (a ferramenta precisa da conexão e dos
   # parâmetros para conferir e para gerar o comparativo). Até 10/09/2026 os defaults viviam em
-  # `class << self` — nível que ninguém chamava —, e uma ferramenta sem a versão de instância só não
-  # quebrava porque o chamador engolia o `NoMethodError`. `contrato_de_nivel_spec` guarda o nível de
-  # cada método deste contrato; foi o mesmo defeito, ao contrário, que fez a frase de encerramento
-  # parcial da cotação nunca rodar (entrega 4).
+  # `class << self` — nível que ninguém chamava; uma ferramenta assíncrona sem a versão de instância
+  # (não havia nenhuma) teria levantado `NoMethodError`, engolido pelo `rescue` do chamador.
+  # `base_contrato_de_nivel_spec` guarda o nível de cada método deste contrato; foi o mesmo defeito,
+  # ao contrário, que fez a frase de encerramento parcial da cotação nunca rodar (entrega 4).
   # CONFERÊNCIA ANTES DE ACEITAR, e ela existe porque O MODELO ESPERA O RETORNO DA FERRAMENTA:
   # `ResponsesClient#create_with_tool_executor` alimenta a segunda chamada com a saída de cada
   # função. O canal de volta ao modelo não falta — a assíncrona é que o preenchia com uma frase

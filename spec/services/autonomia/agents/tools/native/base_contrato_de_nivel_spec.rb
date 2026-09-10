@@ -8,30 +8,40 @@ require 'rails_helper'
 # deles no nível errado não dá erro: dá uma frase que nunca sai, ou um default que ninguém chama.
 #
 # Foi assim que a frase de encerramento parcial da cotação — "algumas SEGURADORAS não responderam" —
-# ficou cinco dias sem rodar: escrita como método de instância, enquanto o `AsyncRunJob` publica o
-# fecho pela classe. O cliente lia o texto genérico do `Base` ("algumas consultas"). E, ao contrário,
-# `precheck` e `closing_deliveries` tinham default de classe que nenhum chamador alcançava.
+# ficou dois dias sem rodar (nasceu em 08/09/2026): escrita como método de instância, enquanto o
+# `AsyncRunJob` publica o fecho pela classe. O cliente lia o texto genérico do `Base` ("algumas
+# consultas"). E, ao contrário, `precheck` e `closing_deliveries` tinham default de classe que
+# nenhum chamador alcançava.
 #
-# Varre TODAS as nativas do catálogo, para o próximo ramo (residencial, vida…) não repetir o erro.
+# Varre TODAS as nativas do catálogo e o CONTRATO INTEIRO — não só os seis métodos do defeito —,
+# para o próximo ramo (residencial, vida…) não repetir o erro em outro método: um `async?` definido
+# na instância, por exemplo, passaria despercebido e viraria ferramenta síncrona segurando o turno.
 RSpec.describe Autonomia::Agents::Tools::Native::Base do
   let(:account) { create(:account) }
   let(:agent) do
     Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom',
                                      status: :active, enabled: true, instruction: 'Atenda.')
   end
-  let(:textos_de_classe) { %i[accepted_message waiting_message failure_message partial_message] }
-  let(:trabalho_de_instancia) { %i[precheck closing_deliveries] }
+  # O que o `Registry`, o `Bound` e o job leem NA CLASSE.
+  let(:textos_de_classe) do
+    %i[slug tool_name description params available_for? async? openai_schema
+       accepted_message waiting_message failure_message partial_message]
+  end
+  # O que o `Bound` e o job chamam NA INSTÂNCIA.
+  let(:trabalho_de_instancia) { %i[precheck closing_deliveries call start poll] }
 
   Autonomia::Agents::Tools::Registry.all.each do |ferramenta|
     describe ferramenta.name do
       let(:instancia) { ferramenta.new(agent: agent, params: {}) }
 
-      it 'define os textos que o job publica como métodos de CLASSE, e nunca de instância' do
+      it 'define o que o catálogo, o Bound e o job leem como métodos de CLASSE, e nunca de instância' do
         textos_de_classe.each do |texto|
           expect(ferramenta).to respond_to(texto), "#{ferramenta}.#{texto} precisa existir na classe"
-          expect(ferramenta.public_send(texto)).to be_a(String)
           expect(instancia).not_to respond_to(texto),
-                                   "#{ferramenta}##{texto} de instância nunca é chamado: a frase não sai"
+                                   "#{ferramenta}##{texto} de instância nunca é chamado: não vale"
+        end
+        %i[accepted_message waiting_message failure_message partial_message].each do |texto|
+          expect(ferramenta.public_send(texto)).to be_a(String)
         end
       end
 

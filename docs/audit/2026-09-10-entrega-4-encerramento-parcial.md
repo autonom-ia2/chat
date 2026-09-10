@@ -27,3 +27,15 @@ default em `class << self`, nível que nenhum chamador alcança.
 - Mutação: voltar `partial_message` para a instância reprova o exemplo do job E a guarda.
 - Termo 1 (conversa real com parte das seguradoras sem responder): só em produção, após deploy,
   numa cotação real em que o prazo estoure — depende de autorização de cotação.
+
+## Revisões
+
+Codex e adversarial: APROVADO COM RESSALVAS, todas aplicadas: guarda estendida ao contrato inteiro
+(16 métodos); conector `mock` fixado no exemplo; datas corrigidas (a frase nasceu em 08/09,
+`c7ae6997e1`, não 04/09); o exemplo afirma o comparativo e a frase, nesta ordem.
+
+## Fora de escopo, registrado
+
+- `ReapStaleRunsJob` fecha em silêncio uma execução abandonada que já tinha entregue preço (nem
+  comparativo nem fecho) — vizinho do termo 4, forma diferente. Issue própria.
+- `tool_name` no contrato da nativa não tem chamador: código morto em quatro lugares.

@@ -72,9 +72,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
   FALHOU = 'Não consegui concluir a cotação agora. Um atendente vai retomar daqui.'.freeze
 
   # O fecho de quem já recebeu preço e ficou sem o resto. Fala de SEGURADORAS, não de "consultas":
-  # esta frase existia desde 04/09 como método de instância e NUNCA rodou — o job publica o fecho
-  # pela classe, e o que saía era o texto genérico do `Base` ("algumas consultas não responderam").
-  # Rodrigo recebeu a frase genérica no WhatsApp em 09/09/2026.
+  # esta frase nasceu em 08/09/2026 (`c7ae6997e1`) como método de instância e NUNCA rodou — o job
+  # publica o fecho pela classe, e o que saía era o texto genérico do `Base` ("algumas consultas
+  # não responderam"). Rodrigo recebeu a frase genérica no WhatsApp em 09/09/2026.
   PARCIAL = 'Algumas seguradoras não responderam a tempo. Os preços acima são os que chegaram.'.freeze
 
   # `module ClassMethods` em vez de `class_methods do`: mesmo efeito no concern, e um módulo não
