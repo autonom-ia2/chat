@@ -63,6 +63,22 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
     expect(linha).not_to include('senha')
   end
 
+  # O registro é cortesia: sem logger a recusa continua chegando ao modelo, e o turno não morre.
+  it 'nao levanta quando o logger falha, e o JSON ao modelo sai igual' do
+    allow(Rails.logger).to receive(:info).and_raise(IOError, 'disco cheio')
+
+    expect { described_class.registrar('async_desligado', slug: 'cotar_seguro', agente: agent) }.not_to raise_error
+    expect(described_class.para_modelo('async_desligado', slug: 'cotar_seguro', agente: agent))
+      .to eq({ error: 'async_desligado' }.to_json)
+  end
+
+  # Um chamador que passe `delivery` de tipo errado não pode derrubar o turno por causa do registro.
+  it 'nao levanta com delivery de tipo inesperado' do
+    expect(described_class.para_modelo('async_desligado', slug: 'x', delivery: {}, agente: agent))
+      .to eq({ error: 'async_desligado' }.to_json)
+    expect(linha).to include('conversa=-')
+  end
+
   it 'sai mesmo sem conversa e sem agente, porque a ausencia deles pode ser o proprio motivo' do
     described_class.registrar('async_indisponivel_nesta_superficie', slug: 'cotar_seguro')
 

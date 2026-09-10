@@ -8,10 +8,12 @@
 #
 # UMA LINHA POR RECUSA, com quatro coisas: qual conversa, qual agente, o motivo (código curto e a
 # frase em português) e quais informações faltavam. NUNCA dado do cliente e NUNCA texto da
-# conversa. A garantia real é a ORIGEM: código vem de literal no código (a guarda confere), slug vem
-# do catálogo ou do cadastro da conta, nome de campo vem da validação do adapter, detalhe é status
-# HTTP. A exceção é `tool_not_available`: o slug ali é o NOME QUE O MODELO PEDIU, e o modelo repete
-# o que o cliente escreve ("use a função cotar_seguro_cpf_…"). Por isso `slug_conhecido` só deixa
+# conversa. A garantia real é a ORIGEM: código vem de literal no código (a guarda confere) ou de
+# duas fontes dinâmicas conhecidas — a categoria que o `HttpExecutor` emite e o `motivo` do handle
+# da cotação —, ambas filtradas por `CODIGO`; slug vem do catálogo ou do cadastro da conta; nome de
+# campo vem da validação do adapter ou de literal; detalhe é status HTTP. A exceção é
+# `tool_not_available`: o slug ali é o NOME QUE O MODELO PEDIU, e o modelo repete o que o cliente
+# escreve ("use a função cotar_seguro_cpf_…"). Por isso `slug_conhecido` só deixa
 # passar nome que EXISTE em algum catálogo — é o diagnóstico do caso de 08/09 (`cotar_seguro` pedido
 # sem estar ligado) — e o resto vira `desconhecida`. Os filtros de forma abaixo são defesa em
 # profundidade — o que não tem forma de identificador vira `?` ou `-` —, não a garantia.
@@ -52,7 +54,8 @@ module Autonomia::Agents::Tools::Recusa
     'especialista_falhou' => 'o especialista levantou uma exceção',
     'especialista_nao_concluiu' => 'o especialista respondeu vazio, sem resposta e sem pendência',
     'condicoes_sem_seguradora' => 'a consulta às condições gerais veio sem o nome da seguradora',
-    'condicoes_sem_pergunta' => 'a consulta às condições gerais veio sem a dúvida do cliente'
+    'condicoes_sem_pergunta' => 'a consulta às condições gerais veio sem a dúvida do cliente',
+    'ramo_desconhecido' => 'o ramo pedido não existe no adapter; a cotação não foi aberta'
   }.freeze
   SEM_DESCRICAO = 'motivo fora do catálogo: falta a frase em MOTIVOS'.freeze
   DESCONHECIDA = 'desconhecida'.freeze
@@ -91,8 +94,14 @@ module Autonomia::Agents::Tools::Recusa
   # código e o detalhe COMO VIERAM. O filtro de forma é só do registro: mudar o que o modelo lê
   # por causa de uma linha de log seria regressão.
   def para_modelo(codigo, slug:, delivery: nil, agente: nil, detalhe: nil)
-    registrar(codigo, slug: slug, conversa: delivery&.conversation&.id, agente: agente, detalhe: detalhe)
+    registrar(codigo, slug: slug, conversa: conversa_de(delivery), agente: agente, detalhe: detalhe)
     { error: [codigo.to_s, detalhe.presence].compact.join(': ') }.to_json
+  end
+
+  # O id da conversa do contexto de entrega, sem levantar: `delivery` nulo ou de tipo inesperado
+  # (um chamador errado) vira `-` no registro, e não uma exceção no turno.
+  def conversa_de(delivery)
+    delivery.try(:conversation).try(:id)
   end
 
   def codigo(valor)

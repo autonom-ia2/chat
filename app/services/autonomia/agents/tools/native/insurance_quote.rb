@@ -55,11 +55,16 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
                     'cotação — com bônus costuma sair melhor.'.freeze
 
   include Declaracao
+  include Recusas
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
   #
   # NÃO COTA ANTES DE VALIDAR. Cada cotação no AGGER consome consulta paga, e conferir a entrada
   # custa uma chamada que não toca no portal.
+  #
+  # RAMO QUE O ADAPTER NÃO TEM É RECUSA, NÃO FALHA. `produto` é escrito pelo modelo; antes, um ramo
+  # desconhecido levantava aqui a cada passada, o job tentava 60 vezes por 7 minutos e fechava em
+  # `tool_failed` — o cliente esperava tudo isso por "não consegui", e nada dizia o motivo.
   def start
     return recusa('json_invalido', FALTA_ALGO, faltando: ['dados']) if dados.nil?
 
@@ -67,6 +72,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     return recusa('faltam_dados', pedido_do_que_falta(faltantes), faltando: campos(faltantes)) if faltantes.any?
 
     submeter
+  rescue ::Autonomia::Insurance::Connector::Error => e
+    raise unless e.kind == :not_implemented
+
+    recusa('ramo_desconhecido', RAMO_DESCONHECIDO, faltando: ['produto'])
   end
 
   # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele era gerado só no ramo `done`,
@@ -96,6 +105,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
     faltantes = validar
     faltantes.any? ? conferencia('faltam_dados', pedido_do_que_falta(faltantes), campos(faltantes)) : nil
+  rescue ::Autonomia::Insurance::Connector::Error => e
+    # Ramo desconhecido é a única falha de validação que a conferência NÃO deixa passar: aceitar
+    # abriria uma execução que o `start` recusaria de qualquer jeito, minutos depois.
+    return conferencia('ramo_desconhecido', RAMO_DESCONHECIDO, ['produto']) if e.kind == :not_implemented
+
+    Rails.logger.warn("[autonomia][insurance] conferencia indisponivel account=#{account.id} #{e.kind}")
+    nil
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] conferencia indisponivel account=#{account.id} #{e.class}")
     nil
@@ -116,9 +132,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
   private
 
-  PEDIDO_DE_JSON = 'O campo `dados` não era um JSON válido. Reenvie como objeto JSON, por ' \
-                   'exemplo {"configuracoes":{"marca":"Caloi"}}.'.freeze
-
   # O QUE FALTA, PERGUNTADO DE GRAÇA. Só `erro` vira pedido: `aviso` fala de tabela possivelmente
   # velha do nosso lado, e mandar o agente perguntar por causa disso seria atrito sem causa.
   def validar
@@ -126,9 +139,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
                                          input: entrada)
     Array(resultado['problemas']).select { |p| p['severidade'] == 'erro' }
   rescue ::Autonomia::Insurance::Connector::Error => e
-    # PRODUTO DESCONHECIDO É ERRO DE VERDADE e sobe; qualquer outra falha da validação não pode
-    # impedir a cotação, porque ela é uma CONFERÊNCIA e não um portão. Ficar sem cotar por causa do
-    # conferente seria trocar um risco de dinheiro por uma certeza de atendimento perdido.
+    # PRODUTO DESCONHECIDO É ERRO DE VERDADE e sobe, para `start` e `precheck` traduzirem em recusa
+    # nomeada; qualquer outra falha da validação não pode impedir a cotação, porque ela é uma
+    # CONFERÊNCIA e não um portão. Ficar sem cotar por causa do conferente seria trocar um risco de
+    # dinheiro por uma certeza de atendimento perdido.
     raise if e.kind == :not_implemented
 
     Rails.logger.warn("[autonomia][insurance] validacao indisponivel account=#{account.id} #{e.kind}")
@@ -142,55 +156,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     end
     { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [], 'produto' => produto,
       SEM_BONUS_KEY => quote_input.auto? && quote_input.renewal.sem_bonus? }
-  end
-
-  # A recusa VIRA ENTREGA, e não falha. O agente precisa receber o texto para perguntar ao cliente;
-  # `failed` mandaria a mensagem genérica de erro e a conversa morreria sem ninguém saber o que
-  # faltava. O `poll` reconhece o handle com `pedido` e entrega na primeira passada.
-  #
-  # O REGISTRO (conversa, agente, o que faltou) é feito por quem chama o `start` — o `AsyncRunJob` —,
-  # porque esta ferramenta não conhece a conversa, de propósito. `faltando` viaja no handle para
-  # isso: só NOMES de campo, nunca valores.
-  def recusa(motivo, texto, faltando:)
-    { 'pedido' => texto, 'motivo' => motivo, 'faltando' => faltando }
-  end
-
-  def conferencia(motivo, texto, faltando)
-    ::Autonomia::Agents::Tools::Native::Conferencia.new(texto: texto, faltando: faltando, motivo: motivo)
-  end
-
-  def campos(faltantes)
-    faltantes.pluck('campo').map(&:to_s).uniq
-  end
-
-  # ESTE TEXTO É LIDO PELO CLIENTE, e não pelo modelo. O comentário anterior aqui dizia o oposto —
-  # "nomes de campo crus de propósito: quem traduz é o especialista" — e descrevia um tradutor que
-  # não existe neste caminho: a recusa vira `deliveries`, e `Progress` afirma que deliveries são
-  # "textos DESTINADOS AO CLIENTE". Em 08/09/2026 um cliente leu `insured.document` no WhatsApp,
-  # junto com "chame a ferramenta de novo", que é instrução para o modelo.
-  #
-  # Traduzimos SÓ o que a própria ferramenta coleta — os caminhos que `QuoteInput` monta a partir
-  # dos parâmetros dela. Para o resto (campo de ramo que veio dentro de `dados`) NÃO inventamos
-  # rótulo: dizer "valorMercado" seria vazar de novo, e chutar um nome em português seria adivinhar
-  # o que o portal chama de quê. Aí a frase fica genérica, e quem pergunta é o modelo no turno
-  # seguinte — ele lê esta entrega como turno `assistant` no histórico.
-  # Rótulo SEM artigo: ele entra numa lista, e "preciso de o CPF" é o que sai quando o artigo vem
-  # colado no rótulo.
-  ROTULOS = {
-    'insured.document' => 'CPF do titular', 'segurado.cpfCnpj' => 'CPF do titular',
-    'insured.name' => 'nome do titular', 'segurado.nome' => 'nome do titular',
-    'address.zipCode' => 'CEP', 'segurado.cep' => 'CEP',
-    'address.number' => 'número do endereço', 'segurado.numero' => 'número do endereço',
-    'vehicle.plate' => 'placa do veículo'
-  }.freeze
-  FALTA_ALGO = 'Ainda preciso de mais uma informação para fechar a cotação.'.freeze
-  LISTA = { two_words_connector: ' e ', last_word_connector: ' e ' }.freeze
-
-  def pedido_do_que_falta(faltantes)
-    rotulos = faltantes.pluck('campo').filter_map { |campo| ROTULOS[campo.to_s] }.uniq
-    return FALTA_ALGO if rotulos.empty?
-
-    "Para seguir com a cotação, ainda preciso destes dados: #{rotulos.to_sentence(**LISTA)}."
   end
 
   def build_progress(result, handle, _attempt)

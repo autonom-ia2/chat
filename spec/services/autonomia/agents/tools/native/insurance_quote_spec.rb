@@ -252,10 +252,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(tool('produto' => 'bike', 'dados' => gigante).start['motivo']).to eq('json_invalido')
     end
 
-    it 'recusa produto que o adapter nao conhece' do
+    # Antes levantava, o job tentava 60 vezes por 7 minutos e o cliente esperava tudo isso por um
+    # "não consegui" genérico. Ramo desconhecido é recusa nomeada, no envio e na conferência.
+    it 'recusa produto que o adapter nao conhece, sem levantar e sem abrir cotacao' do
       ready_connection
-      expect { tool('produto' => 'drone', 'dados' => '{}').start }
-        .to raise_error(Autonomia::Insurance::Connector::Error)
+
+      resultado = tool('produto' => 'drone', 'dados' => '{}').start
+
+      expect(resultado['motivo']).to eq('ramo_desconhecido')
+      expect(resultado['faltando']).to eq(['produto'])
+      expect(resultado['pedido']).to include('automóvel')
+      expect(tool('produto' => 'drone', 'dados' => '{}').precheck.motivo).to eq('ramo_desconhecido')
     end
   end
 

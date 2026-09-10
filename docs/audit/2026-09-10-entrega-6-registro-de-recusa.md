@@ -18,7 +18,7 @@ Plano do Agente de Cotação (épico #291). Branch `feat/entrega-6-registro-de-r
   `app/services/autonomia/agents/**` e `app/jobs/autonomia/agents/**`: `{ error: }`, `h['error'] =`,
   `Hash[...]`, `JSON.generate/dump(error:)` fora do produtor único reprovam; código de recusa
   (literal, constante do arquivo ou lado direito de `||`) fora de `MOTIVOS` reprova; saída sem
-  gatilho em `recusa_registro_spec` reprova. 26 saídas, 26 gatilhos, 19 motivos.
+  gatilho em `recusa_registro_spec` reprova. 28 saídas, 28 gatilhos, 20 motivos.
 - Segunda rodada do Codex (ainda REPROVADO): a nativa síncrona passa a receber o `delivery` do
   turno (a recusa de `capabilities_unavailable` sai com a conversa); as duas recusas antes de rodar
   das condições gerais ("Informe a seguradora/dúvida") entram via `Native::Base#recusar`; a guarda
@@ -29,6 +29,15 @@ Plano do Agente de Cotação (épico #291). Branch `feat/entrega-6-registro-de-r
   algum catálogo (`Recusa.slug_conhecido`; senão `desconhecida`) — o modelo repete o que o cliente
   escreve; a guarda vê `merge!`/`update` e `self.error`; as recusas das condições gerais levam
   `faltando=seguradora|pergunta`.
+- Quarta rodada do Codex: `slug_conhecido` nunca levanta. Veredito: APROVADO COM RESSALVAS.
+- Segunda rodada adversarial (APROVADO COM RESSALVAS, sobre `20a497828c`): o id da conversa passa a
+  ser lido por `Recusa.conversa_de` (`try`), para um `delivery` de tipo errado não derrubar o turno;
+  **ramo que o adapter não conhece** vira recusa nomeada (`ramo_desconhecido`) na conferência e no
+  envio — antes o job tentava 60 vezes por 7 minutos sem uma linha; os dois `rescue` do registro
+  ganharam teste; a frase em português é afirmada em cada gatilho; a guarda vê `pretty_generate`,
+  `fast_generate`, `encode` e a string pronta `'{"error":…}'`. O que ela não pega, documentado no
+  cabeçalho: recusa em PROSA nova numa nativa (convenção `Native::Base#recusar`).
+- `InsuranceQuote::Recusas` extraído (textos, rótulos, forma da recusa) — a classe passou do teto.
 - Fora de escopo, documentado: prosa das ferramentas síncronas de KB; causa do erro HTTP (só a
   categoria e o status vão ao registro); desfechos do job ficam em `tool_runs`.
 
@@ -40,9 +49,7 @@ worker aparecem em `docker logs chatwoot-worker`.
 
 ## Validação
 
-- `bundle exec rspec` recusa_spec + recusa_registro_spec + recusa_guarda_spec + runner_spec +
-  insurance_capabilities_spec + insurance_quote_spec: 87 exemplos, 0 falhas.
-- Suíte ampla (tools, specialists, answerer, jobs/tools, models/agents): 0 falhas (número no PR).
+- Suíte ampla (tools, specialists, answerer, jobs/tools, models/agents): 342 exemplos, 0 falhas.
 - `bundle exec rubocop` nos arquivos tocados: 0 ofensas.
 - Provas por mutação (cada uma restaurada e conferida byte a byte): `info`→`debug` no registrador
   derruba 30 de 38 exemplos; `{ error: 'x' }.to_json`, `h['error'] = 'x'`, `JSON.generate(error:)`,

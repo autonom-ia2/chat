@@ -52,8 +52,9 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
   def padrao(motivo:, **diferencas)
     e = { slug: 'consultar_cotacao', conversa: conversation.id, onde: 'turno', faltando: '-', detalhe: '-' }.merge(diferencas)
     campos = e[:faltando].is_a?(Regexp) ? e[:faltando].source : Regexp.escape(e[:faltando])
+    frase = Regexp.escape(described_class::MOTIVOS.fetch(motivo))
     /\A#{Regexp.escape(described_class::PREFIXO)} slug=#{e[:slug]} conversa=#{e[:conversa]} agente=#{agent.id} conta=#{account.id} \
-onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:detalhe])} descricao="[^"]+"\z/
+onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:detalhe])} descricao="#{frase}"\z/
   end
 
   def ready_connection
@@ -269,6 +270,23 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
                                       delivery: delivery)
         }
       },
+      # Ramo que o adapter não tem: recusa na conferência (nenhuma execução aberta) e no envio.
+      'insurance_quote.rb#precheck#3' => {
+        espera: { motivo: 'ramo_desconhecido', slug: 'cotar_seguro', faltando: 'produto' },
+        dispara: lambda {
+          ready_connection
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'drone', dados: '{}' }.to_json },
+                                      delivery: delivery)
+          expect(Autonomia::Agents::ToolRun.count).to be_zero
+        }
+      },
+      'insurance_quote.rb#start#3' => {
+        espera: { motivo: 'ramo_desconhecido', slug: 'cotar_seguro', onde: 'envio', faltando: 'produto' },
+        dispara: lambda {
+          ready_connection
+          rodar_job(cotacao, arguments: { 'produto' => 'drone', 'dados' => '{}' })
+        }
+      },
       'async_run_job.rb#registrar_recusa#1' => {
         espera: { motivo: 'faltam_dados', onde: 'envio', faltando: 'insured.document' },
         dispara: lambda {
@@ -328,5 +346,17 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     rodar_job(build_async_tool(handle: { 'quote_id' => 'cot-1' }))
 
     expect(linhas).to be_empty
+  end
+
+  # O registro é cortesia sobre um caminho que já deu errado: se ele falhar, o pedido ao cliente
+  # continua seguindo (o handle é gravado e o `poll` entrega).
+  it 'nao derruba a execucao quando o registro do envio falha' do
+    allow(described_class).to receive(:registrar).and_raise(IOError, 'disco cheio')
+    recusada = build_async_tool(handle: { 'pedido' => 'Preciso do CPF.', 'motivo' => 'faltam_dados', 'faltando' => ['x'] })
+
+    run = run_promovida(register_async_tool(recusada))
+    expect { Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 0) }.not_to raise_error
+
+    expect(run.reload.handle).to include('pedido' => 'Preciso do CPF.')
   end
 end

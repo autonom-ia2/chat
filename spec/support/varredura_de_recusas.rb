@@ -149,9 +149,17 @@ module VarreduraDeRecusas::Nos
     chamada?(nodo, :to_json) && nodo.receiver.is_a?(Prism::HashNode) && hash_com_error?(nodo.receiver)
   end
 
+  GERADORES_DE_JSON = %i[generate pretty_generate fast_generate dump encode].freeze
+
+  # `JSON.generate/pretty_generate/fast_generate/dump(error:)`, `ActiveSupport::JSON.encode(error:)`.
   def gera_json_com_error?(nodo)
-    (chamada?(nodo, :generate) || chamada?(nodo, :dump)) && sobre_constante?(nodo, :JSON) &&
+    GERADORES_DE_JSON.any? { |nome| chamada?(nodo, nome) } && sobre_constante?(nodo, :JSON) &&
       argumentos(nodo).any? { |arg| hash_com_error?(arg) }
+  end
+
+  # `'{"error":"x"}'` pronto, sem hash nenhum.
+  def texto_json_com_error?(nodo)
+    nodo.is_a?(Prism::StringNode) && nodo.unescaped.match?(/"error"\s*:/)
   end
 
   # `h['error'] = x`, `h.store(:error, x)`
@@ -171,7 +179,7 @@ module VarreduraDeRecusas::Nos
 
   # O hash literal já conta por si; `.to_json` colado nele não conta de novo.
   def produtor_em_ferramenta?(nodo)
-    (nodo.is_a?(Prism::HashNode) && hash_com_error?(nodo)) || gera_json_com_error?(nodo) ||
+    (nodo.is_a?(Prism::HashNode) && hash_com_error?(nodo)) || gera_json_com_error?(nodo) || texto_json_com_error?(nodo) ||
       atribui_error?(nodo) || constroi_hash_com_error?(nodo) || mescla_error?(nodo)
   end
 

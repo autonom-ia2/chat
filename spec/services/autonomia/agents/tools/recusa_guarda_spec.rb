@@ -16,6 +16,10 @@ require 'rails_helper'
 #      `recusa`, `conferencia`, ou um `return 'codigo'` em `bound.rb` — está em `MOTIVOS`: tem a
 #      frase em português e um gatilho em `recusa_registro_spec`.
 #
+# O QUE A GUARDA ESTÁTICA NÃO PEGA, e o revisor precisa: uma recusa em PROSA nova numa ferramenta
+# (`return 'Informe o ramo…' if …`) não tem forma que a AST reconheça. A convenção é
+# `Native::Base#recusar` / `Runner#recusar`; a guarda cobre a forma `{ error: }` e o catálogo.
+#
 # O QUE FICA DE FORA, de propósito: o texto que uma ferramenta SÍNCRONA devolve DEPOIS de rodar
 # ("Não encontrei essa regra nas condições gerais…", "A corretora ainda não conectou…") é resultado,
 # não recusa de executar — a recusa ANTES de rodar ("Informe a seguradora…") entra, via
@@ -29,8 +33,9 @@ require 'rails_helper'
 # reprova a 2.
 RSpec.describe Autonomia::Agents::Tools::Recusa do
   let(:varredura) { VarreduraDeRecusas }
-  # Abaixo disto a varredura não está enxergando o código de 10/09/2026 (eram 26 saídas).
-  let(:minimo_conhecido) { 22 }
+  # Abaixo disto a varredura não está enxergando o código de 10/09/2026 (eram 28 saídas; quem trava
+  # o número exato é `recusa_registro_spec`, com um gatilho por saída).
+  let(:minimo_conhecido) { 24 }
 
   describe 'guarda estática (entrega 6)' do
     it 'regra 1: nenhum { error: ... } montado fora do produtor unico' do

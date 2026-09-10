@@ -91,8 +91,8 @@ class Autonomia::Agents::Tools::Bound
     recusar('tool_execution_error', delivery)
   end
 
-  # TODA RECUSA EM JSON PASSA POR AQUI (entrega 6; a da conferência, que é texto, passa logo abaixo),
-  # e daqui vai para `Tools::Recusa`, que registra — qual
+  # TODA RECUSA EM JSON DESTE ARQUIVO PASSA POR AQUI (entrega 6; a da conferência, que é texto,
+  # passa logo abaixo), e daqui vai para `Tools::Recusa`, que registra — qual
   # conversa, qual agente, o motivo e o que faltava — e monta o JSON que o modelo lê. Não existe outro
   # `{ error: ... }` neste arquivo: `recusa_guarda_spec` reprova quem escrever um. Antes, o agente
   # recusava e não deixava rastro nenhum; em 08/09/2026 uma cotação não abriu e ninguém soube por quê.
@@ -107,8 +107,8 @@ class Autonomia::Agents::Tools::Bound
   # registro não diria QUAIS, e quais é o que se quer saber.
   def recusar_pela_conferencia(conferencia, delivery)
     ::Autonomia::Agents::Tools::Recusa.registrar(
-      conferencia.try(:motivo) || 'conferencia_recusou', slug: slug,
-                                                         conversa: delivery.conversation.id, agente: @agent, faltando: conferencia.try(:faltando)
+      conferencia.try(:motivo) || 'conferencia_recusou', slug: slug, agente: @agent, faltando: conferencia.try(:faltando),
+                                                         conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(delivery)
     )
     conferencia.to_s
   end

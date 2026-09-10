@@ -115,8 +115,8 @@ class Autonomia::Agents::Specialists::Runner
   # Recusa em PROSA ao principal, registrada com a conversa (o `delivery` desce do principal) e o
   # agente dono do especialista. O texto que o principal lê não muda.
   def recusar(codigo, texto)
-    Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: @specialist.function_name, conversa: @delivery&.conversation&.id,
-                                                       agente: @specialist.agent)
+    Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: @specialist.function_name, agente: @specialist.agent,
+                                                       conversa: Autonomia::Agents::Tools::Recusa.conversa_de(@delivery))
     texto
   end
 
