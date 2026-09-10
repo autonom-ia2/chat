@@ -30,26 +30,20 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
                        'primeira vez para descobrir o que perguntar.' }
   ].freeze
 
-  # SÓ AUTO TEM VEÍCULO E BÔNUS. Ficam como parâmetros próprios, e não dentro do JSON, porque auto é
-  # o ramo mais pedido e um campo dedicado é mais difícil de o modelo errar do que uma chave dentro
-  # de texto.
-  DE_AUTO = [
-    { 'name' => 'placa', 'type' => 'string', 'required' => false,
-      'description' => 'Placa do veículo (7 caracteres). Só em auto.' },
-    { 'name' => 'renovacao', 'type' => 'boolean', 'required' => false,
-      'description' => 'true quando o cliente JÁ TEM seguro e está renovando. Só marque com ' \
-                       'confirmação dele; na dúvida, deixe em branco. Só em auto.' },
-    { 'name' => 'bonus', 'type' => 'integer', 'required' => false,
-      'description' => ::Autonomia::Insurance::AutoRenewal::BONUS_DESC },
-    { 'name' => 'sinistros', 'type' => 'integer', 'required' => false,
-      'description' => ::Autonomia::Insurance::AutoRenewal::SINISTROS_DESC }
-  ].freeze
+  # AUTO NÃO TEM PARÂMETRO DIGITADO AQUI (entrega 2 do Agente de Cotação). Os ~90 campos de auto
+  # vêm do `quote/schema` do adapter, guardado na conexão da conta na sincronização, e entram
+  # aninhados por grupo (`vehicle: { plate }`) com a descrição em português que o adapter escreveu.
+  # Ver `Insurance::Parametros` e `params_for` abaixo. Até 10/09/2026 eram quatro campos à mão —
+  # placa, renovação, bônus, sinistros —, e a renovação saía sem a seguradora anterior porque não
+  # havia onde escrevê-la: 17 recusas, zero preço.
 
   DESCRICAO = 'Cota seguro de AUTOMÓVEL, RESIDENCIAL, CONDOMÍNIO, EMPRESARIAL, ALUGUEL/FIANÇA, ' \
               'VIAGEM, ACIDENTES PESSOAIS, VIDA, VIDA EM GRUPO, CELULAR ou BICICLETA nas ' \
               'seguradoras que esta corretora atende. Para auto, precisa do CPF, da placa e do ' \
-              'CEP de pernoite. Nos outros ramos, informe o que o cliente já deu; se faltar algo, ' \
-              'a ferramenta responde exatamente o que perguntar, sem consumir cotação.'.freeze
+              'CEP de pernoite; o resto do que o cliente contou vai nos blocos (vehicle, ' \
+              'coverage, quotation…), cada campo explicado nele. Consulte a placa antes. Nos ' \
+              'outros ramos, informe o que o cliente já deu em `dados`; se faltar algo, a ' \
+              'ferramenta responde exatamente o que perguntar, sem consumir cotação.'.freeze
 
   # NÃO PROMETA O QUE AINDA NÃO ACONTECEU. Este texto volta ao modelo em `Bound#accept_async`, que
   # roda ANTES de qualquer conferência: nada foi enviado a seguradora nenhuma ainda, e o pedido pode
@@ -104,7 +98,34 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
     end
 
     def params
-      COMUNS + DE_AUTO
+      COMUNS
+    end
+
+    # O FORMULÁRIO DE UMA CONTA: os campos comuns a todo ramo + os de auto, gerados do schema que o
+    # adapter entregou na sincronização da conexão (`Connection#quote_schema`). Sem conexão pronta
+    # ou sem agente (catálogo, specs) fica só o comum. Conexão sincronizada ANTES desta versão não
+    # tem o schema guardado: buscamos uma vez e guardamos, para o formulário não ficar sem auto até
+    # a próxima sincronização.
+    def params_for(agent)
+      COMUNS + ::Autonomia::Insurance::Parametros.de_auto(schema_de_auto(agent))
+    end
+
+    def schema_de_auto(agent)
+      return nil if agent.nil?
+
+      connection = ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:ready?)
+      return nil if connection.nil?
+
+      connection.quote_schema(self::AUTO) || buscar_e_guardar_schema(connection)
+    rescue StandardError => e
+      Rails.logger.warn("[autonomia][insurance] schema de auto indisponivel account=#{agent.account.id} #{e.class}")
+      nil
+    end
+
+    def buscar_e_guardar_schema(connection)
+      schema = ::Autonomia::Insurance::Connector.client.quote_schema(provider: connection.provider, product: self::AUTO)
+      connection.merge_metadata!('quote_schemas' => connection.metadata.to_h['quote_schemas'].to_h.merge(self::AUTO => schema))
+      schema
     end
 
     # Ferramenta que depende de recurso não configurado não deve nem aparecer no prompt: melhor não

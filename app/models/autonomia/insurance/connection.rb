@@ -201,6 +201,12 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   #
   # `with_lock` recarrega a linha travada, então o `metadata` lido aqui dentro é o do banco, não o
   # que estava em memória desde antes da chamada HTTP.
+  # O QUE O RAMO PEDE, como o adapter respondeu na última sincronização (entrega 2). É de onde a
+  # ferramenta de cotação monta o formulário do especialista, sem tocar no adapter a cada turno.
+  def quote_schema(product)
+    metadata.to_h.dig('quote_schemas', product.to_s)
+  end
+
   def merge_metadata!(fields)
     with_lock { update!(metadata: metadata.to_h.merge(fields)) }
   end

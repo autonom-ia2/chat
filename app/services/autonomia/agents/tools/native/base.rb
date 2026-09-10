@@ -113,26 +113,51 @@ class Autonomia::Agents::Tools::Native::Base
     # O jeito de dizer "opcional" em strict mode é OUTRO: o campo entra em `required` e o tipo dele
     # passa a aceitar `null`. O modelo então manda `null` quando não tem o valor, em vez de omitir a
     # chave — e a ferramenta recebe nil, que é o que ela já esperava de um parâmetro ausente.
-    def openai_schema
+    # `agent` é opcional: a ferramenta que monta o formulário a partir do que a CONTA conectou
+    # (entrega 2 do Agente de Cotação — os ~90 campos de auto vêm do adapter) precisa saber de quem é
+    # o formulário. As demais ignoram, e `params_for` cai na lista fixa da classe.
+    def openai_schema(agent = nil)
       {
         type: 'function',
         name: slug,
         description: description,
-        parameters: {
-          type: 'object',
-          properties: params.to_h { |param| [param['name'], propriedade(param)] },
-          required: params.pluck('name'),
-          additionalProperties: false
-        },
+        parameters: objeto(params_for(agent)),
         strict: true
       }
     end
 
+    # Os parâmetros DE UMA CONTA. O padrão é a lista fixa da classe.
+    def params_for(_agent)
+      params
+    end
+
+    # UM OBJETO EM STRICT MODE: todas as chaves em `required`, `additionalProperties: false`, e o
+    # opcional dito pelo tipo (`[tipo, 'null']`). Recursivo: um parâmetro `object` carrega
+    # `properties` (a mesma forma de lista), e é assim que o formulário de auto entra ANINHADO —
+    # `vehicle.plate` é `vehicle: { plate }`, como o adapter lê, e não um campo plano com ponto.
+    def objeto(lista)
+      {
+        type: 'object',
+        properties: lista.to_h { |param| [param['name'], propriedade(param)] },
+        required: lista.pluck('name'),
+        additionalProperties: false
+      }
+    end
+
     def propriedade(param)
-      base = param.slice('type', 'description')
+      base = case param['type']
+             when 'object'
+               objeto(Array(param['properties'])).merge(description: param['description']).compact
+             when 'array'
+               { 'type' => 'array', 'items' => { 'type' => param['items'] || 'string' },
+                 'description' => param['description'] }.compact
+             else
+               param.slice('type', 'description')
+             end
       return base unless param['required'] == false
 
-      base.merge('type' => [param['type'], 'null'])
+      chave = base.key?(:type) ? :type : 'type'
+      base.merge(chave => [base[chave], 'null'])
     end
   end
 

@@ -21,7 +21,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # cotação fora daqui não a reserva — APAGA: o catálogo do turno vem de `Tools::Bound.for_agent`,
   # e o `Specialist#tools` filtra ESSE catálogo. Fora dele o especialista roda sem ferramenta.
   TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais].freeze
-  TOOLS_DO_ESPECIALISTA = %w[cotar_seguro].freeze
+  TOOLS_DO_ESPECIALISTA = %w[consultar_placa cotar_seguro].freeze
   TODAS_AS_TOOLS = (TOOLS_DO_PRINCIPAL + TOOLS_DO_ESPECIALISTA).freeze
 
   # O primeiro (e por enquanto único) especialista. Cada ramo novo entra aqui com o seu arquivo de

@@ -34,6 +34,13 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
     'vehicle.plate' => 'placa do veículo'
   }.freeze
   FALTA_ALGO = 'Ainda preciso de mais uma informação para fechar a cotação.'.freeze
+  # SEM PLACA, CHASSI OU FIPE NÃO HÁ VEÍCULO PARA COTAR (entrega 2, termo 10). O texto para o
+  # MODELO diz o que fazer; o do CLIENTE só pede a placa — o resto é decisão do atendente.
+  SEM_VEICULO = 'Não dá para cotar sem identificar o veículo: peça a placa. Se for zero-quilômetro ' \
+                'ainda sem placa, o chassi serve; sem os dois, encaminhe para um atendente e diga ' \
+                'ao cliente o motivo. Não invente placa nem código FIPE.'.freeze
+  SEM_VEICULO_CLIENTE = 'Para cotar, preciso da placa do veículo (ou do chassi, se ele ainda não ' \
+                        'tem placa).'.freeze
   LISTA = { two_words_connector: ' e ', last_word_connector: ' e ' }.freeze
 
   def pedido_do_que_falta(faltantes)
@@ -41,6 +48,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
     return FALTA_ALGO if rotulos.empty?
 
     "Para seguir com a cotação, ainda preciso destes dados: #{rotulos.to_sentence(**LISTA)}."
+  end
+
+  # O QUE O MODELO LÊ NA CONFERÊNCIA (entrega 2): o campo e o motivo, como o adapter os escreveu —
+  # em português, com a regra ("renovação exige a seguradora anterior…"). É o modelo quem traduz
+  # para o cliente; dar a ele o nome do campo é o que o deixa preencher certo na volta. O texto
+  # para o CLIENTE (`pedido_do_que_falta`) continua sendo o do envio.
+  def conferencia_para_o_modelo(problemas)
+    itens = problemas.map { |p| "#{p['campo']} — #{p['motivo']}" }
+    "Antes de cotar, corrija ou complete: #{itens.join('; ')}"
   end
 
   private

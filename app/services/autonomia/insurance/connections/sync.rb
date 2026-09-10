@@ -150,8 +150,20 @@ class Autonomia::Insurance::Connections::Sync
       status: 'ready',
       capabilities: map,
       capabilities_version: map['scanned_at'],
-      last_capability_scan_at: Time.current
+      last_capability_scan_at: Time.current,
+      metadata: @connection.metadata.to_h.merge('quote_schemas' => quote_schemas)
     )
+  end
+
+  # O FORMULÁRIO DE AUTO vem junto da varredura (entrega 2): é o `quote/schema` do adapter, guardado
+  # na conexão para a ferramenta montar os parâmetros do especialista sem chamada por turno. Se o
+  # adapter não responder agora, fica o que já havia — um formulário velho é melhor que nenhum, e a
+  # próxima sincronização tenta de novo.
+  def quote_schemas
+    { 'auto' => @connector.quote_schema(provider: @connection.provider, product: 'auto') }
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] quote_schema indisponivel na sincronizacao connection=#{@connection.id} #{e.class}")
+    @connection.metadata.to_h['quote_schemas'].to_h
   end
 
   def mark!(status:, error: nil)

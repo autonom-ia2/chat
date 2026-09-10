@@ -32,6 +32,43 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
                     connection_status: status_payload)
   end
 
+  # ENTREGA 2: a varredura traz junto o `quote/schema` de auto e o guarda na conexão — é de onde a
+  # ferramenta de cotação monta o formulário do especialista sem chamar o adapter a cada turno.
+  describe 'o schema de auto na varredura' do
+    def connector_pronto(quote_schema:)
+      dobro = instance_double(Autonomia::Insurance::Connector::Mock,
+                              open_session: { 'platform' => 'agger', 'data' => { 'token' => 'x' },
+                                              'expires_at' => 3.hours.from_now.utc.iso8601 },
+                              connection_status: { 'status' => 'ready', 'account_label' => 'CORRETORA X' },
+                              capabilities: { 'products' => [], 'scanned_at' => Time.current.iso8601 })
+      allow(dobro).to receive(:quote_schema, &quote_schema)
+      dobro
+    end
+
+    it 'guarda o schema que o adapter respondeu, por produto' do
+      schema = { 'product' => 'auto', 'ramo' => '31', 'campos' => [{ 'campo' => 'vehicle.plate', 'tipo' => 'texto' }] }
+      connector = connector_pronto(quote_schema: ->(provider:, product:) { { 'provider' => provider, 'pedido' => product }.merge(schema) })
+
+      conexao = connection
+
+      described_class.new(conexao, connector: connector).call
+
+      expect(conexao.reload.quote_schema('auto')).to include('campos' => schema['campos'], 'pedido' => 'auto')
+      expect(connector).to have_received(:quote_schema).with(provider: 'agger', product: 'auto')
+    end
+
+    it 'adapter mudo na varredura não apaga o schema que já havia' do
+      conexao = connection
+      conexao.update!(metadata: { 'quote_schemas' => { 'auto' => { 'campos' => [{ 'campo' => 'antigo' }] } } })
+      connector = connector_pronto(quote_schema: ->(**) { raise Autonomia::Insurance::Connector::Error.new(:unavailable, 'mudo') })
+
+      described_class.new(conexao, connector: connector).call
+
+      expect(conexao.reload.status).to eq('ready')
+      expect(conexao.quote_schema('auto')).to eq('campos' => [{ 'campo' => 'antigo' }])
+    end
+  end
+
   it 'keeps the reason when the portal answers with a degraded status' do
     # Arrange
     connector = connector_answering({ 'status' => 'degraded',

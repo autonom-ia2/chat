@@ -1,0 +1,889 @@
+{
+  "product": "auto",
+  "ramo": "31",
+  "campos": [
+    {
+      "campo": "insured.name",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": true,
+      "descricao": "Nome completo do segurado. Em empresa, a razão social. Se o cliente não disse, deixe em branco — o sistema busca pelo documento."
+    },
+    {
+      "campo": "insured.document",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "descricao": "CPF do titular ou CNPJ da empresa. Só números."
+    },
+    {
+      "campo": "insured.birthDate",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": true,
+      "descricao": "Data de nascimento do segurado, AAAA-MM-DD. Não pergunte: o sistema busca pelo CPF."
+    },
+    {
+      "campo": "insured.gender",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": true,
+      "descricao": "Sexo do segurado. Não pergunte: o sistema busca pelo CPF. Valores: F=Feminino; M=Masculino.",
+      "valores": {
+        "F": "Feminino",
+        "M": "Masculino"
+      }
+    },
+    {
+      "campo": "insured.maritalStatus",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Estado civil do segurado. Só preencha se ele mencionou. Valores: 1=Solteiro(a); 2=Casado(a)/União Estável; 3=Separado(a); 4=Divorciado(a); 5=Viúvo(a).",
+      "valores": {
+        "1": "Solteiro(a)",
+        "2": "Casado(a)/União Estável",
+        "3": "Separado(a)",
+        "4": "Divorciado(a)",
+        "5": "Viúvo(a)"
+      }
+    },
+    {
+      "campo": "insured.email",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "E-mail, se informado."
+    },
+    {
+      "campo": "insured.phone",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Telefone, se informado."
+    },
+    {
+      "campo": "insured.firstLicenseDate",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Data da primeira habilitação do segurado, AAAA-MM-DD, se ele informou."
+    },
+    {
+      "campo": "insured.isPcd",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true se o segurado é pessoa com deficiência."
+    },
+    {
+      "campo": "address.zipCode",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "descricao": "CEP de residência do segurado, só números."
+    },
+    {
+      "campo": "address.number",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Número do endereço, se informado."
+    },
+    {
+      "campo": "address.complement",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Complemento do endereço, se informado."
+    },
+    {
+      "campo": "vehicle.plate",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Placa do veículo. Obrigatória em veículo usado — é por ela que o sistema descobre modelo, ano e tipo."
+    },
+    {
+      "campo": "vehicle.fipeCode",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "descricao": "Código FIPE. Use quando for zero-quilômetro e ainda não houver placa."
+    },
+    {
+      "campo": "vehicle.vehicleType",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "descricao": "Tipo do veículo: carro, moto ou caminhão. Com placa, consulte a placa antes e escreva aqui o tipo que a consulta devolveu — é ele que liga as regras de moto e de caminhão. Sem placa, informe. Valores: v=carro; m=moto; c=caminhão.",
+      "valores": {
+        "v": "carro",
+        "m": "moto",
+        "c": "caminhão"
+      }
+    },
+    {
+      "campo": "vehicle.modelYear",
+      "tipo": "numero",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "descricao": "Ano do modelo, se não houver placa."
+    },
+    {
+      "campo": "vehicle.overnightZipCode",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "CEP onde o veículo DORME, se for diferente do endereço do segurado."
+    },
+    {
+      "campo": "vehicle.annualMileage",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Quilometragem anual estimada."
+    },
+    {
+      "campo": "vehicle.usageType",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Uso do veículo. Particular é o normal. Uso comercial (app, táxi, transportadora) NÃO é cotado neste fluxo. Valores: 1=Particular; 3=Profissional; 5=Motorista de App; 7=Carga Própria; 12=Táxi; 13=Transportadora; 14=Outros.",
+      "valores": {
+        "1": "Particular",
+        "3": "Profissional",
+        "5": "Motorista de App",
+        "7": "Carga Própria",
+        "12": "Táxi",
+        "13": "Transportadora",
+        "14": "Outros"
+      }
+    },
+    {
+      "campo": "vehicle.isZeroKm",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true quando o veículo é ZERO-QUILÔMETRO. Se ninguém disser, ele é cotado como usado e o preço sai errado."
+    },
+    {
+      "campo": "vehicle.chassis",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "descricao": "Chassi. Alternativa à placa em zero-quilômetro."
+    },
+    {
+      "campo": "vehicle.referencedValuePercent",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Percentual da tabela FIPE em que o veículo é cotado. Sem pedido do cliente, a tabela cheia é o padrão. Valores: 75=75 %; 80=80 %; 85=85 %; 90=90 %; 95=95 %; 100=100 %; 105=105 %; 110=110 %.",
+      "valores": {
+        "75": "75 %",
+        "80": "80 %",
+        "85": "85 %",
+        "90": "90 %",
+        "95": "95 %",
+        "100": "100 %",
+        "105": "105 %",
+        "110": "110 %"
+      }
+    },
+    {
+      "campo": "vehicle.gasKitValue",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Quanto vale o kit gás, em reais."
+    },
+    {
+      "campo": "vehicle.axleCount",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Número de eixos. Só caminhão."
+    },
+    {
+      "campo": "vehicle.garageAtHome",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Garagem em CASA. O cliente diz 'dorme na rua', 'fica na garagem', 'tem portão eletrônico'. Valores: 1=Com portão eletrônico; 2=Com portão manual; 3=Não possui garagem.",
+      "valores": {
+        "1": "Com portão eletrônico",
+        "2": "Com portão manual",
+        "3": "Não possui garagem"
+      }
+    },
+    {
+      "campo": "vehicle.garageAtWork",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Garagem no TRABALHO, se ele mencionou. Valores: 0=Não utiliza para este fim; 1=Não; 2=Sim; 3=Não trabalha.",
+      "valores": {
+        "0": "Não utiliza para este fim",
+        "1": "Não",
+        "2": "Sim",
+        "3": "Não trabalha"
+      }
+    },
+    {
+      "campo": "vehicle.garageAtSchool",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Garagem na ESCOLA/faculdade, se ele mencionou. Valores: 0=Não utiliza para este fim; 1=Não; 2=Sim; 3=Não estuda.",
+      "valores": {
+        "0": "Não utiliza para este fim",
+        "1": "Não",
+        "2": "Sim",
+        "3": "Não estuda"
+      }
+    },
+    {
+      "campo": "vehicle.isArmored",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true se o veículo é blindado."
+    },
+    {
+      "campo": "vehicle.armorValue",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Quanto vale a blindagem, em reais. É o que a seguradora indeniza à parte."
+    },
+    {
+      "campo": "vehicle.monthlyMileageBand",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Faixa de quilometragem MENSAL. O cliente diz 'rodo pouco', 'uso só no fim de semana', 'faço 40 km por dia' — traduza para a faixa. Valores: 500=Até 500 km; 800=De 501 km até 800 km; 1500=De 801 km até 1.500 km; 1700=Mais de 1.500 km.",
+      "valores": {
+        "500": "Até 500 km",
+        "800": "De 501 km até 800 km",
+        "1500": "De 801 km até 1.500 km",
+        "1700": "Mais de 1.500 km"
+      }
+    },
+    {
+      "campo": "vehicle.taxExemption",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Isenção fiscal na compra do veículo. Típico de PCD. Valores: 0=Não Possui; 1=ICMS; 2=IPI; 3=IPI / ICMS.",
+      "valores": {
+        "0": "Não Possui",
+        "1": "ICMS",
+        "2": "IPI",
+        "3": "IPI / ICMS"
+      }
+    },
+    {
+      "campo": "vehicle.isAssociate",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Se o condutor é associado a entidade de classe. OBRIGATÓRIO EM MOTO."
+    },
+    {
+      "campo": "vehicle.usagePeriod",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Com que frequência o veículo é usado. OBRIGATÓRIO EM MOTO."
+    },
+    {
+      "campo": "vehicle.hasGasKit",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true se tem kit gás."
+    },
+    {
+      "campo": "vehicle.trackerCode",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "QUAL rastreador o veículo tem, pela MARCA. Se o cliente não disse a marca, marque que não possui — nunca chute uma marca. Valores: 0=Não Possui; 1=AutoTrac; 2=Car System; 3=Celtec; 4=Cielo; 5=Graber; 6=Ituran; 7=Tracker; 8=Omnilink; 9=Positron; 10=Sascar; 11=DAF-V; 12=CEABS; 13=OnStar; 14=Lo Jack; 15=Original de Fábrica; 16=SEGSAT; 17=SAT COMPANY.",
+      "valores": {
+        "0": "Não Possui",
+        "1": "AutoTrac",
+        "2": "Car System",
+        "3": "Celtec",
+        "4": "Cielo",
+        "5": "Graber",
+        "6": "Ituran",
+        "7": "Tracker",
+        "8": "Omnilink",
+        "9": "Positron",
+        "10": "Sascar",
+        "11": "DAF-V",
+        "12": "CEABS",
+        "13": "OnStar",
+        "14": "Lo Jack",
+        "15": "Original de Fábrica",
+        "16": "SEGSAT",
+        "17": "SAT COMPANY"
+      }
+    },
+    {
+      "campo": "vehicle.antiTheftCode",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "QUAL dispositivo antifurto. Se o cliente não disse a marca, marque que não possui. Valores: 0=Não possui; 1=Alarme; 2=Bloqueador de Ignição; 3=Trava Carneiro; 4=Trava Mul-T-Lock; 5=Outros.",
+      "valores": {
+        "0": "Não possui",
+        "1": "Alarme",
+        "2": "Bloqueador de Ignição",
+        "3": "Trava Carneiro",
+        "4": "Trava Mul-T-Lock",
+        "5": "Outros"
+      }
+    },
+    {
+      "campo": "vehicle.alienated",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true se o veículo está alienado/financiado."
+    },
+    {
+      "campo": "vehicle.fuelType",
+      "tipo": "numero",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "descricao": "Combustível. ATENÇÃO: FLEX e GASOLINA são opções diferentes e mudam o preço. Valores: 1=GASOLINA; 2=ALCOOL; 3=DIESEL; 5=ELÉTRICO; 6=FLEX; 10=TETRAFUEL; 11=HÍBRIDO.",
+      "valores": {
+        "1": "GASOLINA",
+        "2": "ALCOOL",
+        "3": "DIESEL",
+        "5": "ELÉTRICO",
+        "6": "FLEX",
+        "10": "TETRAFUEL",
+        "11": "HÍBRIDO"
+      }
+    },
+    {
+      "campo": "vehicle.youngDriver",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true quando um condutor jovem dirige o veículo. Se marcar true, informe TAMBÉM a idade e o sexo — sem os dois o portal recusa."
+    },
+    {
+      "campo": "vehicle.youngDriverAge",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Idade do condutor jovem. Obrigatório quando youngDriver é true. Valores: 17=17 anos; 18=18 anos; 19=19 anos; 20=20 anos; 21=21 anos; 22=22 anos; 23=23 anos; 24=24 anos; 25=25 anos.",
+      "valores": {
+        "17": "17 anos",
+        "18": "18 anos",
+        "19": "19 anos",
+        "20": "20 anos",
+        "21": "21 anos",
+        "22": "22 anos",
+        "23": "23 anos",
+        "24": "24 anos",
+        "25": "25 anos"
+      }
+    },
+    {
+      "campo": "vehicle.youngDriverGender",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Sexo do condutor jovem. Obrigatório quando youngDriver é true. Valores: A=Ambos; F=Feminino; M=Masculino.",
+      "valores": {
+        "A": "Ambos",
+        "F": "Feminino",
+        "M": "Masculino"
+      }
+    },
+    {
+      "campo": "driver.name",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "condicional_a": "driver",
+      "descricao": "Nome de quem DIRIGE, quando não é o segurado. OBRIGATÓRIO em cotação de empresa — a empresa não dirige."
+    },
+    {
+      "campo": "driver.document",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "condicional_a": "driver",
+      "descricao": "CPF de quem dirige. Em empresa nunca pode ser o CNPJ."
+    },
+    {
+      "campo": "driver.birthDate",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "condicional_a": "driver",
+      "descricao": "Data de nascimento do condutor, AAAA-MM-DD."
+    },
+    {
+      "campo": "driver.gender",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "condicional_a": "driver",
+      "descricao": "Sexo do condutor. Valores: F=Feminino; M=Masculino.",
+      "valores": {
+        "F": "Feminino",
+        "M": "Masculino"
+      }
+    },
+    {
+      "campo": "driver.maritalStatus",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Estado civil do condutor. Valores: 1=Solteiro(a); 2=Casado(a)/União Estável; 3=Separado(a); 4=Divorciado(a); 5=Viúvo(a).",
+      "valores": {
+        "1": "Solteiro(a)",
+        "2": "Casado(a)/União Estável",
+        "3": "Separado(a)",
+        "4": "Divorciado(a)",
+        "5": "Viúvo(a)"
+      }
+    },
+    {
+      "campo": "driver.firstLicenseDate",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Primeira habilitação do condutor, AAAA-MM-DD."
+    },
+    {
+      "campo": "driver.relationshipToInsured",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Vínculo do condutor com o segurado. Em cotação de EMPRESA nunca pode ser o próprio — carro de empresa costuma ser dirigido por empregado. Valores: 0=Sem perfil; 1=Próprio; 2=Cônjuge; 3=Filho(a); 4=Outros; 5=Empregado(a); 12=Pai/Mãe; 13=Irmão(a); 14=Proprietário.",
+      "valores": {
+        "0": "Sem perfil",
+        "1": "Próprio",
+        "2": "Cônjuge",
+        "3": "Filho(a)",
+        "4": "Outros",
+        "5": "Empregado(a)",
+        "12": "Pai/Mãe",
+        "13": "Irmão(a)",
+        "14": "Proprietário"
+      }
+    },
+    {
+      "campo": "driver.residenceType",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Tipo de residência do condutor."
+    },
+    {
+      "campo": "truck.predominantPeriod",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Período predominante de circulação do caminhão."
+    },
+    {
+      "campo": "truck.bodyType",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Tipo de carroceria do caminhão. Valores: 1=Aberta; 2=Baú; 3=Basculante; 4=Betoneira; 5=Cegonha; 6=Coletor de Lixo; 7=Graneleira; 8=Tanque; 9=Outros; 10=Baú Isotérmico; 11=Baú Frigorífico; 14=Guincho/Plataforma; 15=Nenhum.",
+      "valores": {
+        "1": "Aberta",
+        "2": "Baú",
+        "3": "Basculante",
+        "4": "Betoneira",
+        "5": "Cegonha",
+        "6": "Coletor de Lixo",
+        "7": "Graneleira",
+        "8": "Tanque",
+        "9": "Outros",
+        "10": "Baú Isotérmico",
+        "11": "Baú Frigorífico",
+        "14": "Guincho/Plataforma",
+        "15": "Nenhum"
+      }
+    },
+    {
+      "campo": "truck.equipment",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Equipamento do caminhão. Valores: 0=Não possui; 1=Compactador de Lixo; 2=Guindaste; 3=Munck; 4=Plataforma Elevatória; 5=Poliguindaste; 6=Outros; 7=Frigorífico; 8=Roll On / Roll Off.",
+      "valores": {
+        "0": "Não possui",
+        "1": "Compactador de Lixo",
+        "2": "Guindaste",
+        "3": "Munck",
+        "4": "Plataforma Elevatória",
+        "5": "Poliguindaste",
+        "6": "Outros",
+        "7": "Frigorífico",
+        "8": "Roll On / Roll Off"
+      }
+    },
+    {
+      "campo": "truck.riskManagement",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Gerenciamento de risco do caminhão. Valores: 0=Não; 1=Cadastro do Motorista; 2=Escolta de Cargas; 3=Direção Defensiva; 4=Direção Preventiva; 5=Inteligência Embarcada.",
+      "valores": {
+        "0": "Não",
+        "1": "Cadastro do Motorista",
+        "2": "Escolta de Cargas",
+        "3": "Direção Defensiva",
+        "4": "Direção Preventiva",
+        "5": "Inteligência Embarcada"
+      }
+    },
+    {
+      "campo": "truck.cargoType",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Tipo de carga transportada. Valores: 0=Outros; 1=Auto Peças; 2=Automóveis; 3=Bebidas; 4=Brinquedos; 5=Calçados; 6=Carga Mista; 7=Carga Viva; 8=Cigarros; 9=Combustíveis ou Inflamáveis; 10=Confecções; 11=Eletroeletrônicos; 12=Gases; 13=Genero Alimentício - Perecível; 14=Hortifrutigranjeiros; 15=Laticínios; 16=Lixo; 17=Madeira; 18=Material de Construção; 19=Medicamentos; 20=Móveis; 21=Mudanças; 22=Papéis; 23=Plásticos; 24=Pneu ou Câmara de ar; 25=Produto Perecível; 26=Produto Químico; 27=Suco; 28=Tecido; 29=Valores; 30=Vidros; 31=Flores; 32=Metais; 33=Ferro; 34=Genero Alimentício - Não Perecível; 35=Adubo; 36=Grãos.",
+      "valores": {
+        "0": "Outros",
+        "1": "Auto Peças",
+        "2": "Automóveis",
+        "3": "Bebidas",
+        "4": "Brinquedos",
+        "5": "Calçados",
+        "6": "Carga Mista",
+        "7": "Carga Viva",
+        "8": "Cigarros",
+        "9": "Combustíveis ou Inflamáveis",
+        "10": "Confecções",
+        "11": "Eletroeletrônicos",
+        "12": "Gases",
+        "13": "Genero Alimentício - Perecível",
+        "14": "Hortifrutigranjeiros",
+        "15": "Laticínios",
+        "16": "Lixo",
+        "17": "Madeira",
+        "18": "Material de Construção",
+        "19": "Medicamentos",
+        "20": "Móveis",
+        "21": "Mudanças",
+        "22": "Papéis",
+        "23": "Plásticos",
+        "24": "Pneu ou Câmara de ar",
+        "25": "Produto Perecível",
+        "26": "Produto Químico",
+        "27": "Suco",
+        "28": "Tecido",
+        "29": "Valores",
+        "30": "Vidros",
+        "31": "Flores",
+        "32": "Metais",
+        "33": "Ferro",
+        "34": "Genero Alimentício - Não Perecível",
+        "35": "Adubo",
+        "36": "Grãos"
+      }
+    },
+    {
+      "campo": "truck.cargoInsurance",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Seguro de carga. Valores: 0=Não; 2=Com outra seguradora; 3=Porto Seguro; 4=Sompo.",
+      "valores": {
+        "0": "Não",
+        "2": "Com outra seguradora",
+        "3": "Porto Seguro",
+        "4": "Sompo"
+      }
+    },
+    {
+      "campo": "truck.circulationArea",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Área de circulação do caminhão. Valores: 1=Município e Arredores; 2=Região Norte; 3=Região Nordeste; 4=Região Centro-Oeste; 5=Região Sul; 6=Região Sudeste; 7=Mercosul; 8=América do Sul; 9=Estado de São Paulo; 10=Estado do Rio de Janeiro; 11=Território Nacional.",
+      "valores": {
+        "1": "Município e Arredores",
+        "2": "Região Norte",
+        "3": "Região Nordeste",
+        "4": "Região Centro-Oeste",
+        "5": "Região Sul",
+        "6": "Região Sudeste",
+        "7": "Mercosul",
+        "8": "América do Sul",
+        "9": "Estado de São Paulo",
+        "10": "Estado do Rio de Janeiro",
+        "11": "Território Nacional"
+      }
+    },
+    {
+      "campo": "truck.staysInOwnState",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true se o caminhão circula só no estado do CEP."
+    },
+    {
+      "campo": "truck.garagedWhenIdle",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true se o caminhão fica em garagem quando parado."
+    },
+    {
+      "campo": "coverage.packageCode",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Pacote de cobertura pré-montado: quanto maior o número, mais completo. Sem escolha do cliente, o sistema usa o padrão. O que o cliente pedir campo a campo VENCE o pacote. Valores: 1=Prata; 2=Ouro; 3=Diamante.",
+      "valores": {
+        "1": "Prata",
+        "2": "Ouro",
+        "3": "Diamante"
+      }
+    },
+    {
+      "campo": "coverage.coverageType",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Tipo de cobertura contratada."
+    },
+    {
+      "campo": "coverage.deductibleType",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "FRANQUIA. O cliente diz 'franquia reduzida', 'franquia menor', 'franquia majorada' — traduza para o percentual. Valores: 1=50%; 2=100%; 3=200%; 4=25%; 5=75%; 6=150%.",
+      "valores": {
+        "1": "50%",
+        "2": "100%",
+        "3": "200%",
+        "4": "25%",
+        "5": "75%",
+        "6": "150%"
+      }
+    },
+    {
+      "campo": "coverage.propertyDamage",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "DANOS MATERIAIS a terceiros, em reais. O cliente diz 'DM', 'danos materiais', 'danos a terceiros'. Só preencha se ele pediu um valor."
+    },
+    {
+      "campo": "coverage.bodilyInjury",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "DANOS CORPORAIS a terceiros, em reais. O cliente diz 'DC', 'danos corporais', 'danos pessoais'. Só preencha se ele pediu."
+    },
+    {
+      "campo": "coverage.moralDamage",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "DANOS MORAIS a terceiros, em reais. Só preencha se ele pediu."
+    },
+    {
+      "campo": "coverage.deathAccident",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Morte por acidente (APP), em reais. Só preencha se ele pediu."
+    },
+    {
+      "campo": "coverage.disabilityAccident",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Invalidez por acidente (APP), em reais. Só preencha se ele pediu."
+    },
+    {
+      "campo": "coverage.newValueCoverage",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "VALOR DE NOVO: paga um carro novo em perda total, em vez do valor de mercado."
+    },
+    {
+      "campo": "coverage.extraExpensesCoverage",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Despesas extraordinárias."
+    },
+    {
+      "campo": "coverage.tireAndWheelProtection",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Proteção de pneus e rodas."
+    },
+    {
+      "campo": "coverage.quickRepair",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Reparo rápido (pequenos danos na funilaria)."
+    },
+    {
+      "campo": "coverage.rentalCarType",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "CARRO RESERVA. O cliente diz 'quero carro reserva', 'preciso de 30 dias'. Valores: 0=Não contratar; 1=Básico 7 dias; 2=Básico 15 dias; 3=Básico 30 dias.",
+      "valores": {
+        "0": "Não contratar",
+        "1": "Básico 7 dias",
+        "2": "Básico 15 dias",
+        "3": "Básico 30 dias"
+      }
+    },
+    {
+      "campo": "coverage.rentalCarHasAirConditioning",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Carro reserva com ar-condicionado."
+    },
+    {
+      "campo": "coverage.glassCoverage",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "VIDROS. O cliente diz 'cobertura de vidros', 'quero vidros completo' (inclui faróis e retrovisores). Valores: 0=Não; 1=Básico; 2=Completo.",
+      "valores": {
+        "0": "Não",
+        "1": "Básico",
+        "2": "Completo"
+      }
+    },
+    {
+      "campo": "coverage.assistance24h",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Assistência 24 horas: a faixa de quilometragem de reboque."
+    },
+    {
+      "campo": "quotation.startsAt",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Início da vigência, AAAA-MM-DD. Em branco, começa hoje."
+    },
+    {
+      "campo": "quotation.isRenewal",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true quando o cliente JÁ TEM seguro e está renovando. Se marcar true, a seguradora anterior é OBRIGATÓRIA (sem ela todas recusam); número e fim de vigência da apólice anterior, leia da apólice quando o cliente a mandou."
+    },
+    {
+      "campo": "quotation.isGuaranteedRenewal",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "true quando a apólice anterior previa renovação sem nova análise de risco. Só se o cliente mencionar."
+    },
+    {
+      "campo": "quotation.bonusClass",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Classe de bônus. Vem da apólice anterior. Não converta percentual de cabeça."
+    },
+    {
+      "campo": "quotation.previousClaimsCount",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Quantos sinistros o cliente teve na vigência anterior."
+    },
+    {
+      "campo": "quotation.previousInsurerCode",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Código da SEGURADORA ANTERIOR, da apólice que está sendo renovada. ATENÇÃO: o código de uma seguradora aqui é DIFERENTE do código dela para cotar. Nunca traduza de cabeça. Valores: 101=Sul America Seguros de Automóveis e Massificados S.A; 109=Suíça Seguradora; 112=Youse Seguradora SA; 148=Sompo Consumer; 154=BP Seguradora; 224=Justos Seguros S.A.; 295=Sancor Seguros do Brasil; 318=ITAU Seg. S.A.; 326=Pier; 364=EZZE; 367=Usebens Seguros S/A; 453=Darwin Seguros S.A; 495=Suhai Seguradora; 511=Sul America Cia Nac. de Seguros; 517=Allianz; 518=Yelum Seguradora; 527=Banestes Seguros; 531=Bradesco Auto/RE Cia de Seg.; 535=Azul Companhia de Seguros Gerais; 548=Santander Brasil Seguros; 549=Zurich - Minas Brasil; 563=Caixa Seguradora S/A; 581=Allseg; 584=Indiana Cia Seg. Gerais; 588=Porto Seguro Cia Seg. Gerais; 618=Brasil Veiculos Cia de Seguros; 619=Tokio Marine Seguradora S.A; 623=Mapfre Vera Cruz Seguradora S/A; 641=Sompo Seguros; 646=Alfa Seguros e Previdência S.A.; 657=HDI; 660=Mitsui Marine e Kyoei Fire Seguros S.A; 675=Seguro Sura S.A.; 680=Gente Seguradora.",
+      "valores": {
+        "101": "Sul America Seguros de Automóveis e Massificados S.A",
+        "109": "Suíça Seguradora",
+        "112": "Youse Seguradora SA",
+        "148": "Sompo Consumer",
+        "154": "BP Seguradora",
+        "224": "Justos Seguros S.A.",
+        "295": "Sancor Seguros do Brasil",
+        "318": "ITAU Seg. S.A.",
+        "326": "Pier",
+        "364": "EZZE",
+        "367": "Usebens Seguros S/A",
+        "453": "Darwin Seguros S.A",
+        "495": "Suhai Seguradora",
+        "511": "Sul America Cia Nac. de Seguros",
+        "517": "Allianz",
+        "518": "Yelum Seguradora",
+        "527": "Banestes Seguros",
+        "531": "Bradesco Auto/RE Cia de Seg.",
+        "535": "Azul Companhia de Seguros Gerais",
+        "548": "Santander Brasil Seguros",
+        "549": "Zurich - Minas Brasil",
+        "563": "Caixa Seguradora S/A",
+        "581": "Allseg",
+        "584": "Indiana Cia Seg. Gerais",
+        "588": "Porto Seguro Cia Seg. Gerais",
+        "618": "Brasil Veiculos Cia de Seguros",
+        "619": "Tokio Marine Seguradora S.A",
+        "623": "Mapfre Vera Cruz Seguradora S/A",
+        "641": "Sompo Seguros",
+        "646": "Alfa Seguros e Previdência S.A.",
+        "657": "HDI",
+        "660": "Mitsui Marine e Kyoei Fire Seguros S.A",
+        "675": "Seguro Sura S.A.",
+        "680": "Gente Seguradora"
+      }
+    },
+    {
+      "campo": "quotation.previousPolicyNumber",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Número da apólice anterior, como está no documento."
+    },
+    {
+      "campo": "quotation.previousPolicyEndDate",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Fim da vigência da apólice anterior, AAAA-MM-DD."
+    },
+    {
+      "campo": "insurerCodes",
+      "tipo": "lista",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "descricao": "Códigos das seguradoras a consultar. Vazio = todas as habilitadas. Só restrinja se o cliente pediu."
+    },
+    {
+      "campo": "commissionPercent",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Comissão da corretora em %. Obrigatória em seguradoras que não têm percentual padrão."
+    }
+  ]
+}

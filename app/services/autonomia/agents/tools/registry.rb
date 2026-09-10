@@ -13,6 +13,7 @@ module Autonomia::Agents::Tools::Registry
     # seguradora que recusou a credencial da corretora ficavam de fora dos outros dez, e nenhum dos
     # dois é de auto. Auto é um ramo com UM comportamento extra, o bônus de renovação.
     Autonomia::Agents::Tools::Native::InsuranceQuote,
+    Autonomia::Agents::Tools::Native::VehicleLookup,
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions
   ].freeze
 

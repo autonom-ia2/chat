@@ -35,12 +35,43 @@ class Autonomia::Insurance::QuoteInput
 
   private
 
+  # OS GRUPOS DO ADAPTER, na forma em que o adapter os lê. Entrega 2: o modelo escreve o bloco
+  # (`vehicle: { plate: ..., garageAtHome: ... }`) e o bloco vai como veio — sem tradução, sem lista
+  # de nomes que envelheça. `nil` e vazio saem (o modelo manda `null` no que não sabe; o adapter
+  # aplica os padrões dele); `false` e `0` ficam, porque são resposta.
+  #
+  # Os parâmetros comuns (`cpf`, `nome`, `cep`, `numero`) continuam valendo em auto como ATALHO —
+  # o modelo pode escrever o CPF em qualquer dos dois lugares — e o bloco aninhado vence quando os
+  # dois vêm.
+  GRUPOS_DE_AUTO = %w[insured address vehicle driver truck coverage quotation].freeze
+
   def de_auto
-    {
-      'insured' => { 'document' => digitos('cpf') }.merge(nome_do_segurado),
-      'address' => { 'zipCode' => digitos('cep'), 'number' => texto('numero') }.compact,
-      'vehicle' => { 'plate' => @params['placa'].to_s }
-    }.merge(renewal.to_input)
+    grupos = GRUPOS_DE_AUTO.index_with { |grupo| sem_vazios(@params[grupo]) }
+    grupos['insured'] = segurado_de_auto.merge(grupos['insured'])
+    grupos['address'] = endereco_de_auto.merge(grupos['address'])
+    grupos.reject { |_, valor| valor.blank? }
+  end
+
+  def segurado_de_auto
+    { 'document' => digitos('cpf').presence }.merge(nome_do_segurado).compact
+  end
+
+  def endereco_de_auto
+    { 'zipCode' => digitos('cep').presence, 'number' => texto('numero') }.compact
+  end
+
+  # Só o que o modelo informou: `nil` e `''` são "não sei"; `false` e `0` são resposta.
+  def sem_vazios(valor)
+    return {} unless valor.is_a?(Hash)
+
+    valor.each_with_object({}) do |(chave, item), saida|
+      limpo = item.is_a?(Hash) ? sem_vazios(item) : item
+      saida[chave.to_s] = limpo unless vazio?(limpo)
+    end
+  end
+
+  def vazio?(valor)
+    valor.nil? || valor == '' || (valor.is_a?(Hash) && valor.empty?)
   end
 
   # VAZIO NUNCA SOBRESCREVE. O JSON vence o parâmetro quando traz valor — é o mais específico, e o
