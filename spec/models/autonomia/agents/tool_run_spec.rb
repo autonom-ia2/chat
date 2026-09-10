@@ -197,16 +197,17 @@ RSpec.describe Autonomia::Agents::ToolRun do
     let(:intencoes) { described_class::INTENCOES }
     let(:duplicada) { described_class::POSSIVELMENTE_DUPLICADA }
     let(:submetido) { described_class::SUBMITTED_KEY }
+    let(:encerrada) { described_class::ENCERRADA_EM }
 
     it 'marca quando ha intencao sem numero, e nao marca nos outros casos' do
       sem_intencao = promote(open_run)
       expect(sem_intencao.finish!('failed', failure_code: 'x')).to be(true)
-      expect(sem_intencao.handle).to eq({})
+      expect(sem_intencao.handle.except(encerrada)).to eq({})
 
       incerta = promote(open_run(conversation_id: other_conversation.id))
       incerta.merge_handle!({ intencoes => 1 })
       expect(incerta.finish!('failed', failure_code: 'x')).to be(true)
-      expect(incerta.handle).to eq(intencoes => 1, duplicada => true)
+      expect(incerta.handle.except(encerrada)).to eq(intencoes => 1, duplicada => true)
       expect(described_class.possivelmente_duplicadas).to eq([incerta])
     end
 
@@ -215,7 +216,8 @@ RSpec.describe Autonomia::Agents::ToolRun do
       run.record_attempt!(handle: { intencoes => 1, submetido => true, 'id' => 'x' })
 
       expect(run.finish!('done')).to be(true)
-      expect(run.handle).to eq(intencoes => 1, submetido => true, 'id' => 'x')
+      expect(run.handle.except(encerrada)).to eq(intencoes => 1, submetido => true, 'id' => 'x')
+      expect(Time.zone.parse(run.handle[encerrada])).to be_within(5.seconds).of(Time.current)
     end
   end
 

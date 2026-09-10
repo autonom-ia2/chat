@@ -145,12 +145,47 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       run = consulta_existente(auto, entregues: 2, desfecho: 'done')
 
       saida = pedir(auto, turno: 2)
-      expect(saida).to include('já foi concluída nesta conversa', '2 mensagens entregues')
+      expect(saida).to include('já terminou nesta conversa', 'concluída', '2 resultados publicados')
       expect(runs.count).to eq(1)
 
-      run.update_columns(updated_at: (Autonomia::Agents::ToolRun::PEDIDO_VALE_POR + 1.hour).ago) # rubocop:disable Rails/SkipsModelValidations
+      # A janela conta do ENCERRAMENTO, não de `updated_at`: uma publicação adiada que sai depois do
+      # fim mexe em `updated_at` e não pode renovar o pedido.
+      encerrada_em = Autonomia::Agents::ToolRun::ENCERRADA_EM
+      antiga = run.handle.merge(encerrada_em => (Autonomia::Agents::ToolRun::PEDIDO_VALE_POR + 1.hour).ago.iso8601)
+      run.update_columns(handle: antiga, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       expect(pedir(auto, turno: 3)).to eq(cotacao.accepted_message)
       expect(runs.count).to eq(2)
+    end
+
+    it 'encerrada sem concluir, com preco parcial: o texto diz isso, nao "concluida"' do
+      consulta_existente(auto, entregues: 1, desfecho: 'failed')
+
+      saida = pedir(auto, turno: 2)
+
+      expect(saida).to include('encerrada sem concluir', '1 resultado publicado')
+      expect(saida).not_to include('concluída')
+      expect(runs.count).to eq(1)
+    end
+  end
+
+  # Dois turnos simultâneos com o mesmo pedido: a comparação e a abertura ficam na mesma seção
+  # crítica por (conversa, ferramenta) — o lock consultivo de transação. Sem ele, os dois comparam
+  # com nada, um abre, o outro supersede, e o primeiro pode já ter sido submetido ao portal.
+  describe 'comparacao e abertura na mesma secao critica' do
+    it 'toma o lock consultivo da conversa e da ferramenta antes de comparar, na transacao que abre' do
+      comandos = []
+      assinatura = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
+        comandos << payload[:sql] if payload[:sql].match?(/pg_advisory_xact_lock|INSERT INTO "autonomia_agent_tool_runs"/)
+      end
+
+      pedir(auto, turno: 1)
+
+      ActiveSupport::Notifications.unsubscribe(assinatura)
+      lock = comandos.index { |sql| sql.include?('pg_advisory_xact_lock') }
+      insercao = comandos.index { |sql| sql.include?('INSERT INTO "autonomia_agent_tool_runs"') }
+      expect(lock).not_to be_nil
+      expect(insercao).to be > lock
+      expect(comandos[lock]).to include(conversation.id.to_s)
     end
   end
 

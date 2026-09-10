@@ -87,6 +87,10 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # A IDENTIDADE DO PEDIDO (entrega 10): o digest da entrada normalizada pelo adapter, gravado na
   # abertura. É o que diz se "e aí, saiu?" é o mesmo pedido da última consulta — e não o cru do modelo.
   PEDIDO = 'autonomia_pedido'.freeze
+  # QUANDO a execução encerrou, gravado pelo `finish!` no mesmo comando que muda o status. Não é
+  # `updated_at`: uma publicação adiada que sai depois do fim (`advance_sequence!`) mexe nele, e a
+  # janela do pedido contaria da publicação, não do encerramento.
+  ENCERRADA_EM = 'autonomia_encerrada_em'.freeze
 
   # Por quanto tempo uma consulta ENCERRADA com entrega ainda conta como "este pedido já foi feito".
   # Depois disso, repetir os mesmos dados é um pedido novo (o preço muda; a cotação do portal vence).
@@ -117,10 +121,34 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     nil
   end
 
+  # ABRE, OU DEVOLVE A EXECUÇÃO QUE JÁ É ESTE PEDIDO (entrega 10). Comparação e abertura na MESMA
+  # seção crítica por (conversa, ferramenta) — um lock consultivo de transação —, senão dois turnos
+  # simultâneos com o mesmo pedido comparam com nada, um abre, o outro supersede, e se o primeiro já
+  # foi promovido e submetido há duas cotações no portal. A conferência (HTTP) fica fora da seção.
+  # -> [execução aberta, nil] ou [nil, execução repetida]; [nil, nil] quando o índice único recusou.
+  def self.abrir_ou_repetida(agent:, slug:, arguments:, scope:, pedido: nil)
+    transaction do
+      travar!(scope[:conversation_id], slug)
+      repetida = pedido_repetido(scope[:conversation_id], slug, pedido)
+      next [nil, repetida] if repetida
+
+      [open!(agent: agent, slug: slug, arguments: arguments, scope: scope, pedido: pedido), nil]
+    end
+  end
+
+  # Lock consultivo, liberado no fim da transação. Duas chaves de 32 bits: a conversa e a ferramenta.
+  def self.travar!(conversation_id, slug)
+    connection.execute(sanitize_sql_array(['SELECT pg_advisory_xact_lock(?, ?)', conversation_id.to_i,
+                                           Zlib.crc32(slug.to_s) & 0x7fffffff]))
+  end
+
   # A ÚLTIMA execução desta ferramenta na conversa, se ela AINDA CONTA como pedido feito e tem os
   # mesmos dados (entrega 10). Conta: a que está rodando; e a que encerrou com algo entregue há menos
-  # de `PEDIDO_VALE_POR`. NÃO conta: supersedida, descartada, bloqueada, pendente órfã, ou falhada
-  # sem entrega — repetir depois delas é tentar de novo, não duplicar. -> a execução, ou nil.
+  # de `PEDIDO_VALE_POR`. NÃO conta: supersedida, descartada, bloqueada, falhada sem entrega, nem
+  # `pending` — repetir depois delas é tentar de novo, não duplicar. `pending` de propósito: os turnos
+  # de uma conversa se supersedem (o turno velho é descartado quando chega mensagem nova), e o RETRY
+  # do turno cujo worker morreu entre o aceite e o despacho precisa reabrir — contá-la travaria a
+  # cotação por uma órfã. -> a execução, ou nil.
   def self.pedido_repetido(conversation_id, slug, pedido)
     return nil if pedido.blank?
 
@@ -135,7 +163,13 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   def conta_como_pedido?
     return true if running?
 
-    %w[done failed].include?(status) && delivered_count.positive? && updated_at > PEDIDO_VALE_POR.ago
+    %w[done failed].include?(status) && delivered_count.positive? && encerrada_em > PEDIDO_VALE_POR.ago
+  end
+
+  # O instante do encerramento. Linhas anteriores a esta marca (encerradas antes da entrega 10) caem
+  # em `updated_at`: aproximação aceitável para uma janela de um dia.
+  def encerrada_em
+    Time.zone.parse(handle.to_h[ENCERRADA_EM].to_s) || updated_at
   end
 
   # Este turno já abriu uma execução desta ferramenta? É o freio do RETRY: o `ReplyJob` pode
@@ -201,10 +235,11 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # perde pelo status. A marca é o único caminho para `possivelmente_duplicadas` além de
   # `anotar_intencao!` (segunda intenção) — e por isso não existe "marcar" avulso no modelo.
   def finish!(status, failure_code: nil)
+    agora = Time.current
     marca = 'CASE WHEN COALESCE((handle->>?)::int, 0) > 0 AND (handle->>?) IS NULL THEN ?::jsonb ELSE ?::jsonb END'
-    updated = vivas.update_all(["status = ?, failure_code = ?, updated_at = ?, handle = handle || #{marca}", # rubocop:disable Rails/SkipsModelValidations
-                                status, failure_code, Time.current, INTENCOES, SUBMITTED_KEY,
-                                { POSSIVELMENTE_DUPLICADA => true }.to_json, '{}'])
+    updated = vivas.update_all(["status = ?, failure_code = ?, updated_at = ?, handle = handle || #{marca} || ?::jsonb", # rubocop:disable Rails/SkipsModelValidations
+                                status, failure_code, agora, INTENCOES, SUBMITTED_KEY,
+                                { POSSIVELMENTE_DUPLICADA => true }.to_json, '{}', { ENCERRADA_EM => agora.iso8601(3) }.to_json])
     return false if updated.zero?
 
     reload

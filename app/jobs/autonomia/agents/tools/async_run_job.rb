@@ -315,7 +315,8 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # As marcas NOSSAS no handle: submetido, intenções, possivelmente duplicada, encerrado. A ferramenta
   # não as vê (`tool_handle`) e não as escreve (`parte_da_ferramenta`); elas só mudam por escritas
   # mescladas no banco (`ToolRun#merge_handle!`, `#record_attempt!`), nunca por cópia da memória.
-  MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA, ToolRun::PEDIDO].freeze
+  MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA, ToolRun::PEDIDO,
+            ToolRun::ENCERRADA_EM].freeze
   MARCAS_DE_INTENCAO = [ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA].freeze
 
   # O handle da FERRAMENTA, sem as nossas marcas: ela não precisa conhecer o nosso controle — nem

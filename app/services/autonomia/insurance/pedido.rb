@@ -20,10 +20,11 @@ module Autonomia::Insurance::Pedido
     Digest::SHA256.hexdigest(JSON.generate(canonico('produto' => produto.to_s, 'entrada' => entrada)))[0, TAMANHO]
   end
 
-  # Chaves em ordem, em todo nível; listas como vieram (o adapter já ordena as de códigos).
+  # Chaves em ordem, em todo nível; valores como vieram — `false`, `nil` e `''` são valores, e são
+  # distintos entre si (o adapter os manda como vieram).
   def self.canonico(valor)
     case valor
-    when Hash then valor.keys.map(&:to_s).sort.index_with { |chave| canonico(valor[chave] || valor[chave.to_sym]) }
+    when Hash then valor.keys.map(&:to_s).sort.index_with { |chave| canonico(valor.key?(chave) ? valor[chave] : valor[chave.to_sym]) }
     when Array then valor.map { |item| canonico(item) }
     else valor
     end

@@ -43,20 +43,44 @@ pergunta inocente da linha duplicada.
   que não veio; chaves em ordem), senão a prova do "e aí?" se aprovaria contra um adapter que não
   existe.
 
+## Revisões
+
+- Adapter (PR #50): Codex 3 rodadas. Rodada 1 REPROVADO — a canonicalização ia além do `start`
+  (`null`/`''` viravam padrão; trim e itens vazios igualavam aceito e recusado; listas ordenadas sem
+  contrato; `chave in campos` tomava `constructor` por campo). Rodada 2 REPROVADO — ancestral
+  malformado trocado por `{}`. Rodada 3 **APROVADO** em `a323b51`. Merge `c255d37cbe`; Lambda no ar
+  19:25Z (health OK).
+- chat2you (PR #372): Codex rodada 1 REPROVADO com 5 P2, todos tratados:
+  1. comparação e abertura em seções separadas → `ToolRun.abrir_ou_repetida` com lock consultivo
+     `pg_advisory_xact_lock(conversa, crc32(slug))` na transação que compara e abre (spec: o lock
+     precede o INSERT na mesma transação; mutação sem lock reprova);
+  2. `pending` legítima ignorada → decisão mantida e documentada: `pending` não conta porque os
+     turnos de uma conversa se supersedem e o retry do turno cujo worker morreu precisa reabrir;
+  3. `false` virava `nil` em `canonico` (`||`) → `key?`; spec "false, nil, vazio e ausente são
+     quatro pedidos" (consumidor e mock);
+  4. texto afirmava "N mensagens entregues ao cliente" e "concluída" para `failed` → "N resultados
+     publicados" e "encerrada sem concluir"/"concluída" pelo status;
+  5. `updated_at` renovado por publicação adiada estendia a janela → `autonomia_encerrada_em`
+     gravado pelo `finish!` no mesmo UPDATE; a janela conta dele.
+  Limite conhecido (Codex): em auto, `QuoteInput#de_auto` ignora `dados` e só repassa os sete
+  parâmetros da ferramenta — "dado diferente abre" vale para o que chega à `entrada` (entrega 2).
+
 ## Ordem de deploy
 
 Adapter primeiro (Lambda manual), consumidor depois. Se o consumidor subir antes, `entrada` vem
 ausente → `pedido` nil → nada é barrado (o comportamento de hoje). Rollback do adapter:
 `gh workflow run deploy-lambda.yml --ref 5ce943b -f confirm=deploy`.
 
-## Validação (chat2you, antes do Codex)
+## Validação (chat2you, após Codex rodada 1)
 
-- Arquivos tocados (9 specs): 160 exemplos, 0 falhas, 0 erros de carga. Suíte ampla (`agents`,
-  `jobs/agents`, `models/agents`, `insurance`): 708 exemplos, 0 falhas. Rubocop: 0 ofensas.
-- Mutações (7, restauração em memória com `assert`; cada uma reprova o exemplo que a nomeia):
+- Arquivos tocados (12 specs): 193 exemplos, 0 falhas, 0 erros de carga. Suíte ampla (`agents`,
+  `jobs/agents`, `models/agents`, `insurance`): 714 exemplos, 0 falhas. Rubocop: 0 ofensas.
+- Mutações (11, restauração em memória com `assert`; cada uma reprova o exemplo que a nomeia):
   comparação removida; compara o cru (`params`) e não a entrada normalizada; falha sem entrega conta
   como pedido; sem janela; a marca do pedido chega à ferramenta; `open!` não guarda a identidade;
-  recusa da repetição não registra.
+  recusa da repetição não registra; sem lock (comparação e abertura fora da seção crítica); `false`
+  vira `nil` no canônico; janela por `updated_at` e não pelo encerramento; `failed` com entrega
+  descrito como concluída.
 - Termos: 1 (não abre), 2 (dado diferente abre, inclusive o número do endereço), 3 (entrada
   normalizada: o padrão escrito por extenso é o mesmo pedido — bike), 4 (mutação), 5 (nenhum
   classificador — regra de desenho, sem regex, verificada em revisão), 6 (o modelo recebe o estado da

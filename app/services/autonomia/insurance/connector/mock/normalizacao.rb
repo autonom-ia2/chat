@@ -38,7 +38,7 @@ module Autonomia::Insurance::Connector::Mock::Normalizacao
 
   def canonica(valor)
     case valor
-    when Hash then valor.keys.map(&:to_s).sort.index_with { |chave| canonica(valor[chave] || valor[chave.to_sym]) }
+    when Hash then valor.keys.map(&:to_s).sort.index_with { |chave| canonica(valor.key?(chave) ? valor[chave] : valor[chave.to_sym]) }
     when Array then valor.map { |item| canonica(item) }
     else valor
     end

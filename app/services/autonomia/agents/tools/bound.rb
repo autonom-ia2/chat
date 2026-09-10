@@ -78,11 +78,8 @@ class Autonomia::Agents::Tools::Bound
     antecipado = precheck_native(ferramenta)
     return recusar_pela_conferencia(antecipado, delivery) if antecipado
 
-    pedido = pedido_native(ferramenta)
-    repetida = ::Autonomia::Agents::ToolRun.pedido_repetido(delivery.conversation.id, slug, pedido)
+    run, repetida = abrir(args, pedido_native(ferramenta), delivery)
     return recusar_pela_repeticao(repetida, delivery) if repetida
-
-    run = abrir(args, pedido, delivery)
     return recusar('execucao_ja_em_andamento', delivery) if run.blank?
 
     delivery.register(run)
@@ -114,8 +111,9 @@ class Autonomia::Agents::Tools::Bound
     conferencia.to_s
   end
 
+  # Compara com a última consulta e abre, na mesma seção crítica (entrega 10): -> [run, repetida].
   def abrir(args, pedido, delivery)
-    ::Autonomia::Agents::ToolRun.open!(
+    ::Autonomia::Agents::ToolRun.abrir_ou_repetida(
       agent: @agent, slug: slug, arguments: args, pedido: pedido,
       scope: { conversation_id: delivery.conversation.id, agent_inbox_id: delivery.agent_inbox&.id,
                origin_message_id: delivery.origin_message_id }

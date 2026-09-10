@@ -32,15 +32,22 @@ class Autonomia::Agents::Tools::PedidoRepetido
 
   private
 
+  # Só o que a linha prova: `delivered_count` conta resultados que a ferramenta mandou publicar
+  # (inclusive adiados, ou como nota privada quando há atendente) — não "o cliente leu". E `failed`
+  # com entrega é encerramento sem concluir, não conclusão.
   def estado
     return "já está em andamento nesta conversa (começou há #{tempo(@run.created_at)})" if @run.running?
 
-    "já foi concluída nesta conversa há #{tempo(@run.updated_at)}, com #{entregas} ao cliente"
+    "já terminou nesta conversa há #{tempo(@run.encerrada_em)} (#{desfecho}), com #{resultados}"
   end
 
-  def entregas
+  def desfecho
+    @run.status == 'done' ? 'concluída' : 'encerrada sem concluir'
+  end
+
+  def resultados
     n = @run.delivered_count.to_i
-    n == 1 ? '1 mensagem entregue' : "#{n} mensagens entregues"
+    n == 1 ? '1 resultado publicado' : "#{n} resultados publicados"
   end
 
   def tempo(instante)
