@@ -144,3 +144,16 @@ deste diff; relógio do runner. Reavaliado no SHA seguinte.
 
 Validação da rodada 3: specs tocadas 89 exemplos, 0 falhas; mutações 15/15 reprovam o exemplo
 que as nomeia; suíte ampla 733 exemplos, 0 falhas; rubocop 0 ofensas.
+
+## Codex — rodada 3: APROVADO (código) em `0ff75a221f`
+
+Sem P1/P2 novos, sem regressão no principal. Confirmado pelo revisor: a dedupe deste turno vem
+antes das vagas; o teto de tentativas materializa até 6 elegíveis e só então extrai até as vagas;
+a seleção não baixa arquivo (tipo, blob, MIME e tamanho vêm do preload); o principal segue em
+`extract` → `collect_documents`. Ressalvas registradas: checksum do ActiveStorage é MD5 (identidade
+prática, não prova criptográfica); o teto limita TRABALHO, não duração — até 6 PDFs de 5 MB por
+chamada, sem cache, latência real por medir.
+
+**O que esta aprovação NÃO é:** prova dos termos 2 e 3. CPF chegando ao formulário sem estar no
+bilhete e PDF de apólice preenchendo ≥4 campos da renovação exigem uma rodada real (paga), com
+autorização do Rodrigo, depois do deploy.
