@@ -109,7 +109,6 @@ class Autonomia::Agents::Tools::Bound
   def async_refusal(delivery)
     return 'async_indisponivel_nesta_superficie' if delivery&.conversation.blank?
     return 'async_desligado' unless AsyncConfig.enabled?(@agent)
-    return 'limite_de_execucoes_atingido' if runs_over_limit?(delivery)
     return 'execucao_ja_aberta_neste_turno' if turn_already_opened?(delivery)
 
     nil
@@ -121,16 +120,6 @@ class Autonomia::Agents::Tools::Bound
   def turn_already_opened?(delivery)
     ::Autonomia::Agents::ToolRun.opened_for_turn?(delivery.conversation.id, slug,
                                                   delivery.origin_message_id)
-  end
-
-  # Teto por conversa. Cada execução é uma cotação de verdade no portal: a dedup por (conversa,
-  # ferramenta) impede duas ao mesmo tempo, mas não impede a série ("cota 2021… agora 2022…"), que
-  # gera argumentos diferentes a cada turno e é dirigida pelo texto do cliente.
-  def runs_over_limit?(delivery)
-    ::Autonomia::Agents::ToolRun.for_conversation(delivery.conversation.id)
-                                .where(slug: slug)
-                                .where(created_at: AsyncConfig::RUNS_WINDOW.ago..)
-                                .count >= AsyncConfig::MAX_RUNS_PER_CONVERSATION
   end
 
   def run_http(args)
