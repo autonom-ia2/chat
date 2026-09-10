@@ -95,8 +95,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # validação vai recusar cinco segundos depois — foi o que aconteceu em 08/09/2026.
   #
   # Não toca no portal e tem teto próprio de 10 s (`Connector::Http::CONFERENCIA_TIMEOUT`), então
-  # não segura o turno. Qualquer falha aqui devolve nil: conferência é conferência, não portão — a
-  # regra de `validar` continua sendo "não deixar de cotar por causa do conferente".
+  # não segura o turno. Qualquer falha aqui devolve nil — menos ramo desconhecido, que é recusa
+  # nomeada —: conferência é conferência, não portão, e a regra de `validar` continua sendo "não
+  # deixar de cotar por causa do conferente".
   #
   # Devolve a `Conferencia` inteira, não só a frase: o registro de recusa (entrega 6) precisa saber
   # QUAIS campos faltaram, e a frase em português já traduziu os nomes.

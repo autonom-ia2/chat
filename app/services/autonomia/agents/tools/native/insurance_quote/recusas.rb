@@ -9,7 +9,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
   PEDIDO_DE_JSON = 'O campo `dados` não era um JSON válido. Reenvie como objeto JSON, por ' \
                    'exemplo {"configuracoes":{"marca":"Caloi"}}.'.freeze
   # Lido pelo modelo (na conferência) e pelo cliente (no envio): sem vocabulário de sistema.
-  RAMO_DESCONHECIDO = 'Ainda não consigo cotar esse tipo de seguro por aqui. O que eu cotó: ' \
+  RAMO_DESCONHECIDO = 'Ainda não consigo cotar esse tipo de seguro por aqui. O que eu coto: ' \
                       'automóvel, residencial, condomínio, empresarial, aluguel/fiança, viagem, ' \
                       'acidentes pessoais, vida, vida em grupo, celular e bicicleta.'.freeze
 
