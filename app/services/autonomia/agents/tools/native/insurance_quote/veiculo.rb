@@ -11,10 +11,13 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
 
   private
 
-  # A entrada COM O TIPO DO VEÍCULO (entrega 2, termo 5): com placa e sem tipo, a consulta de
-  # placa — gratuita — diz se é carro, moto ou caminhão, e é o tipo que liga as regras de moto e
-  # caminhão na conferência. Falha na consulta não barra: a entrada segue sem o tipo, e o que sobra
-  # é a conferência tardia do próprio envio.
+  # A entrada COM O QUE O PORTAL SABE DO VEÍCULO (entrega 2, termo 5): havendo placa, a consulta —
+  # gratuita — diz se é carro, moto ou caminhão e o ano do modelo, e É ELA QUE VALE. O tipo liga as
+  # regras de moto e caminhão na conferência; o que o modelo escreveu é palpite sobre o mesmo
+  # veículo que o portal conhece pela placa. A regra vale POR CONSTRUÇÃO — sempre que há placa —,
+  # não por obediência do modelo: "aceita qualquer tipo presente" não era garantia nenhuma (Codex,
+  # 10/09/2026). Falha ou ausência da consulta não barra: a entrada segue com o que o modelo
+  # escreveu, e o que sobra é a conferência tardia do próprio envio, que consulta de novo.
   def entrada
     @entrada ||= com_veiculo(quote_input.to_h)
   end
@@ -27,23 +30,47 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
     IDENTIFICADORES_DO_VEICULO.none? { |campo| veiculo[campo].present? }
   end
 
+  # AUTO SEM FORMULÁRIO NÃO É FALTA DE DADO DO CLIENTE. Os parâmetros de auto nascem do schema que
+  # a conexão guarda (`Declaracao.params_for`); sem ele, o modelo recebeu a ferramenta sem o bloco
+  # `vehicle` e não tinha onde escrever a placa. Recusar por `sem_veiculo` aqui mandaria pedir ao
+  # cliente o que a ferramenta é que não pôde receber. `schema_da_conexao` tenta buscar de novo
+  # antes de desistir: só é indisponível o que segue indisponível.
+  def sem_formulario?
+    quote_input.auto? && self.class.schema_da_conexao(connection).blank?
+  end
+
   def com_veiculo(dados)
     return dados unless quote_input.auto?
 
     veiculo = dados['vehicle'].to_h
-    return dados if veiculo['plate'].blank? || veiculo['vehicleType'].present?
+    return dados if veiculo['plate'].blank?
 
-    dados.merge('vehicle' => veiculo.merge(lido_da_placa(veiculo)))
+    dados.merge('vehicle' => veiculo.merge(lido_da_placa(veiculo['plate'])))
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] consulta de placa indisponivel account=#{account.id} #{e.class}")
     dados
   end
 
-  # O que a consulta acrescenta: o tipo, e o ano do modelo quando o modelo não o escreveu.
-  def lido_da_placa(veiculo)
-    consulta = sessions.with_fresh_session do |session|
-      connector.vehicle_lookup(provider: connection.provider, session: session, plate: veiculo['plate'])
-    end
-    { 'vehicleType' => consulta['vehicle_type'], 'modelYear' => veiculo['modelYear'] || consulta['model_year'] }.compact
+  # O que a consulta acrescenta, POR CIMA do que o modelo escreveu: tipo e ano do modelo. Vazio
+  # quando não houve consulta — no turno sem sessão viva.
+  def lido_da_placa(placa)
+    consulta = consultar_placa(placa)
+    return sem_sessao_viva if consulta.nil?
+
+    { 'vehicleType' => consulta['vehicle_type'], 'modelYear' => consulta['model_year'] }.compact
+  end
+
+  # ONDE ESTA INSTÂNCIA RODA decide com que sessão consultar. `delivery` é o contexto do turno
+  # (`Native::Base`): presente, é a conferência com o modelo esperando — só serve a sessão que já
+  # está viva, porque abrir uma é login com o teto de 60 s do conector. Ausente, é o job do envio,
+  # que tem tempo e renova a sessão como as demais operações dele.
+  def consultar_placa(placa)
+    consulta = ->(session) { connector.vehicle_lookup(provider: connection.provider, session: session, plate: placa) }
+    delivery.present? ? sessions.with_live_session(&consulta) : sessions.with_fresh_session(&consulta)
+  end
+
+  def sem_sessao_viva
+    Rails.logger.info("[autonomia][insurance] consulta de placa pulada no turno: sem sessao viva account=#{account.id}")
+    {}
   end
 end

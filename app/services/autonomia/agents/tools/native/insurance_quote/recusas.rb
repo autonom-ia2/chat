@@ -41,6 +41,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
                 'ao cliente o motivo. Não invente placa nem código FIPE.'.freeze
   SEM_VEICULO_CLIENTE = 'Para cotar, preciso da placa do veículo (ou do chassi, se ele ainda não ' \
                         'tem placa).'.freeze
+  # AUTO SEM FORMULÁRIO (entrega 2): a conexão não tem o schema do adapter e o modelo recebeu a
+  # ferramenta sem os blocos de auto. Não é o cliente que deve algo; é o atendente que retoma. No
+  # envio, o cliente lê `FALHOU`.
+  SEM_FORMULARIO = 'O formulário de auto desta conta não está disponível agora (a conexão da ' \
+                   'corretora não entregou os campos). Não peça mais dados ao cliente: diga que ' \
+                   'não consegue cotar neste momento e encaminhe para um atendente.'.freeze
   LISTA = { two_words_connector: ' e ', last_word_connector: ' e ' }.freeze
 
   def pedido_do_que_falta(faltantes)

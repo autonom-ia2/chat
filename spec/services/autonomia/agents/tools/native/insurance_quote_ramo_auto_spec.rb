@@ -42,10 +42,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
                                                            vehicle_lookup: consulta_de_placa, **respostas)
   end
 
+  # Com o schema de auto guardado, como a sincronização deixa: o conector daqui é um dublê e não
+  # responde `quote_schema` — sem o schema, a ferramenta recusaria auto por `formulario_indisponivel`.
   def ready_connection
     record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com',
                                                       password: 'segredo')
-    record.update!(status: 'ready')
+    record.update!(status: 'ready', metadata: { 'quote_schemas' => { 'auto' => Autonomia::Insurance::Connector::Mock::SCHEMA_AUTO } })
     record.store_session!({ 'multicalculoToken' => 'multi' }, expires_at: 3.hours.from_now)
     record
   end

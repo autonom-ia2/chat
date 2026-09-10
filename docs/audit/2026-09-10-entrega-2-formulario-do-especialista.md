@@ -51,17 +51,26 @@ Nada de auto é digitado no chat2you — nem nome de campo, nem código, nem pad
   travessia reprova se a entrada não o levar) e a lista curta do que não se expõe:
   `commissionPercent` (é da conexão da corretora) e `insurerCodes` (decisão do PO: todas).
 - `Connection#quote_schema(product)` + `Connections::Sync#scan!` guardando `quote_schemas.auto` na
-  sincronização (adapter mudo mantém o anterior). Conexão sincronizada antes desta versão: a
-  ferramenta busca uma vez e guarda.
+  sincronização — DENTRO do lock, com a linha recarregada, mesclado por produto (adapter mudo num
+  produto não apaga o outro, e a varredura não apaga o que o polling gravou enquanto ela esperava
+  o adapter). Conexão sincronizada antes desta versão: a ferramenta busca e guarda na primeira
+  montagem; sem schema mesmo assim, a ferramenta recusa auto por `formulario_indisponivel` (turno
+  e envio) — indisponibilidade nossa não vira "peça a placa ao cliente".
 - `QuoteInput#de_auto`: os sete grupos vão como vieram (`nil`/vazio saem; `false`/`0` ficam);
   `cpf`/`nome`/`cep`/`numero` continuam como atalho, e o bloco vence quando os dois vêm.
   `AutoRenewal` lê `quotation` (só para o aviso de renovação sem bônus).
-- `InsuranceQuote`: a entrada leva o tipo do veículo da consulta de placa antes da conferência
-  (`Veiculo#com_veiculo`; falha não barra); sem placa, chassi nem FIPE → recusa `sem_veiculo` no
-  turno (texto ao modelo: peça a placa; zero-km sem placa → chassi; sem os dois, encaminhe) e no
-  envio (texto ao cliente); a conferência fala ao modelo pelo campo e pelo motivo do adapter.
+- `InsuranceQuote`: a entrada leva o que o portal sabe do veículo SEMPRE que há placa
+  (`Veiculo#com_veiculo`): tipo e ano da consulta vencem o que o modelo escreveu — por construção,
+  não por obediência. No turno (conferência, `delivery` presente) a consulta só corre com a sessão
+  que já está viva (`Session#with_live_session`): login tem o teto de 60 s do conector e o turno não
+  espera; no job do envio, com a sessão fresca. Falha ou ausência da consulta não barra. Sem placa,
+  chassi nem FIPE → recusa `sem_veiculo` no turno (texto ao modelo) e no envio (texto ao cliente);
+  a conferência fala ao modelo pelo campo e pelo motivo do adapter.
 - `Native::VehicleLookup` (`consultar_placa`) para o especialista: modelo, ano e tipo com o rótulo
-  do schema; recusas `placa_invalida` e `consulta_de_placa_indisponivel` registradas (entrega 6).
+  do schema; só com sessão viva (nunca abre login no turno); recusas `placa_invalida` e
+  `consulta_de_placa_indisponivel` registradas (entrega 6). A descrição diz QUANDO: placa em mãos e
+  ainda faltando dado — com tudo em mãos, `cotar_seguro` direto, porque a rodada de ferramentas do
+  especialista é uma só (`ResponsesClient#create_with_tool_executor`) e a cotação consulta sozinha.
   `Builder::TOOLS_DO_ESPECIALISTA = %w[consultar_placa cotar_seguro]`.
 - Conector: `Http#vehicle_lookup`/`quote_read`; `Mock` com o schema de auto gerado pela CLI do
   adapter (`mock/schema_auto.json`, 84 campos; regenerar com `npx tsx src/cli/main.ts agger quote
@@ -75,7 +84,7 @@ Nada de auto é digitado no chat2you — nem nome de campo, nem código, nem pad
 | 2 | Verificação quebra se o adapter ganhar campo sem o formulário | O formulário É o schema guardado na sincronização; `parametros_spec` amarra o snapshot ↔ formulário; raiz nova reprova a travessia |
 | 3 | Descrição em português por campo, com sinônimos | 84 em `descricoes-auto.json`, chegam no schema e na ferramenta |
 | 4 | Todo campo declarado é enviado | `quote_input_travessia_spec` (cada folha do formulário chega ao envio) |
-| 5 | Consulta de placa obrigatória antes de cotar | `consultar_placa` (especialista) + `com_veiculo` na própria cotação (vale por construção) |
+| 5 | Consulta de placa obrigatória antes de cotar | `com_veiculo` na própria cotação, sempre que há placa, e o portal vence (por construção; spec + mutações M20/M21); `consultar_placa` para o especialista confirmar o veículo antes de pedir o resto |
 | 6 | Seguradoras anteriores na descrição do campo | 34 de auto, `657=HDI…` |
 | 7 | Cinco condicionais viram trava com mutação | Seis no adapter (M5–M9), cada uma com par viola/cumpre |
 | 8 | Cotação real com campo hoje impossível, lido de volta | **Pendente: rodada real (fatia D)** — `quote/read` pronto |
@@ -85,7 +94,36 @@ Nada de auto é digitado no chat2you — nem nome de campo, nem código, nem pad
 ### O que fica de fora desta PR, de propósito
 
 - A instrução v6 do especialista (entrega 3): "não aplicar antes das entregas 1 e 2" — próxima PR.
-- Em produção, o especialista do agente 24 precisa de `consultar_placa` em `tool_slugs` e a
-  conexão precisa sincronizar uma vez (ou a ferramenta busca o schema no primeiro turno).
+- Em produção, `consultar_placa` precisa entrar em DOIS lugares, na mesma transação, e nesta ordem:
+  `specialists.tool_slugs` do especialista do agente 24 (reserva: sem ela a ferramenta apareceria
+  no PRINCIPAL) e `agents.config->native_tool_slugs` do agente 24 (catálogo: `Registry.for_agent`
+  só liga o que está lá; só a reserva deixa a ferramenta em lugar nenhum). O `Builder` grava os
+  dois só na criação. A conexão da conta 16 precisa sincronizar uma vez (ou a ferramenta busca o
+  schema na primeira montagem e guarda).
 - `pctAjuste`/`tipoFranquia`: o domínio publicado é mais estreito que o Zod; os valores entram só
   na descrição, nunca como `enum` (observação do Codex, rodada 2 do adapter).
+
+## Codex — rodada 1 (`7ac1ac69`, REPROVADO, 4 P2) e o que mudou
+
+1. **`scan!` apagava escrita concorrente de `metadata`** — o `update!` gravava o jsonb inteiro do
+   retrato em memória, depois de segundos de HTTP. Agora: capacidades e schema buscados fora, a
+   escrita dentro de `with_lock` (linha recarregada), `quote_schemas` mesclado por produto. Spec de
+   corrida (outro escritor grava durante o `quote_schema`) + M19 (tirar o lock reprova).
+2. **A conferência podia esperar login de 60 s** — `with_fresh_session` na consulta de placa dentro
+   do turno. Agora: `Session#with_live_session` (só a sessão viva, nunca abre, nunca renova) no
+   turno; `with_fresh_session` só no job. Vale para `consultar_placa` também — mesma classe. Specs
+   "não abre login" nos dois + M21/M23/M24.
+3. **Schema indisponível virava "peça a placa"** — a ferramenta saía só com o comum e recusava por
+   `sem_veiculo`. Agora: `formulario_indisponivel` (motivo novo, registrado), antes de `sem_veiculo`,
+   no turno (texto ao modelo: encaminhe) e no envio (`FALHOU`); antes de recusar, tenta buscar o
+   schema e guardar. Spec + M22. Corrida "ausente na montagem, presente na chamada" fica: `sem_veiculo`
+   uma vez, e a montagem seguinte já tem o bloco.
+4. **Consultar e cotar não cabem na mesma rodada** — a descrição mandava consultar ANTES de cotar, e
+   `create_with_tool_executor` faz a segunda chamada sem ferramentas. Decisão: não abrir segunda
+   rodada (é o núcleo do turno, do principal também); a cotação consulta SEMPRE que há placa e o
+   portal vence (M20), e a descrição de `consultar_placa` passa a dizer quando usá-la (placa em mãos,
+   dado faltando) e quando não (tudo em mãos → cotar direto). A observação do Codex de que "tipo
+   já informado não consultava" era verdadeira — e caía junto.
+5. **Rollout**: a auditoria previa só `tool_slugs`; `Registry.for_agent` exige o slug também em
+   `native_tool_slugs` do agente. Seção "O que fica de fora" corrigida (dois lugares, uma transação,
+   reserva primeiro).

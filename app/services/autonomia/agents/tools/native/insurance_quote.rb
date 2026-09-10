@@ -69,6 +69,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # `tool_failed` — o cliente esperava tudo isso por "não consegui", e nada dizia o motivo.
   def start
     return recusa('json_invalido', FALTA_ALGO, faltando: ['dados']) if dados.nil?
+    return recusa('formulario_indisponivel', FALHOU, faltando: []) if sem_formulario?
     return recusa('sem_veiculo', SEM_VEICULO_CLIENTE, faltando: [PLACA]) if sem_veiculo?
 
     faltantes = validar
@@ -112,6 +113,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # QUAIS campos faltaram, e a frase em português já traduziu os nomes.
   def precheck
     return conferencia('json_invalido', PEDIDO_DE_JSON, ['dados']) if dados.nil?
+    return conferencia('formulario_indisponivel', SEM_FORMULARIO, []) if sem_formulario?
     return conferencia('sem_veiculo', SEM_VEICULO, [PLACA]) if sem_veiculo?
 
     faltantes = validar

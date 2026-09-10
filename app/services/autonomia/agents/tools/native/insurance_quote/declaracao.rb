@@ -41,7 +41,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
               'VIAGEM, ACIDENTES PESSOAIS, VIDA, VIDA EM GRUPO, CELULAR ou BICICLETA nas ' \
               'seguradoras que esta corretora atende. Para auto, precisa do CPF, da placa e do ' \
               'CEP de pernoite; o resto do que o cliente contou vai nos blocos (vehicle, ' \
-              'coverage, quotation…), cada campo explicado nele. Consulte a placa antes. Nos ' \
+              'coverage, quotation…), cada campo explicado nele; a ferramenta consulta a placa por ' \
+              'conta própria. Nos ' \
               'outros ramos, informe o que o cliente já deu em `dados`; se faltar algo, a ' \
               'ferramenta responde exatamente o que perguntar, sem consumir cotação.'.freeze
 
@@ -103,9 +104,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
 
     # O FORMULÁRIO DE UMA CONTA: os campos comuns a todo ramo + os de auto, gerados do schema que o
     # adapter entregou na sincronização da conexão (`Connection#quote_schema`). Sem conexão pronta
-    # ou sem agente (catálogo, specs) fica só o comum. Conexão sincronizada ANTES desta versão não
-    # tem o schema guardado: buscamos uma vez e guardamos, para o formulário não ficar sem auto até
-    # a próxima sincronização.
+    # ou sem agente (catálogo, specs) fica só o comum. Sem schema com conexão pronta (adapter mudo
+    # na sincronização e agora) TAMBÉM fica só o comum — e a própria ferramenta recusa auto com
+    # `formulario_indisponivel` (`Veiculo#sem_formulario?`), em vez de cobrar placa do cliente por
+    # um bloco que o modelo nunca recebeu.
     def params_for(agent)
       COMUNS + ::Autonomia::Insurance::Parametros.de_auto(schema_de_auto(agent))
     end
@@ -114,11 +116,17 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
       return nil if agent.nil?
 
       connection = ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:ready?)
-      return nil if connection.nil?
+      connection && schema_da_conexao(connection)
+    end
 
+    # O schema guardado na conexão ou, faltando, o que o adapter responder AGORA — e fica guardado.
+    # Conexão sincronizada antes desta versão não tem o schema: sem isto o formulário ficaria sem
+    # auto até a próxima sincronização. Adapter mudo é nil, e a próxima montagem tenta de novo: a
+    # busca custa o teto da conferência (10 s) e só acontece enquanto não há schema guardado.
+    def schema_da_conexao(connection)
       connection.quote_schema(self::AUTO) || buscar_e_guardar_schema(connection)
     rescue StandardError => e
-      Rails.logger.warn("[autonomia][insurance] schema de auto indisponivel account=#{agent.account.id} #{e.class}")
+      Rails.logger.warn("[autonomia][insurance] schema de auto indisponivel connection=#{connection.id} #{e.class}")
       nil
     end
 

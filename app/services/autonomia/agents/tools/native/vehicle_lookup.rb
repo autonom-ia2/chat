@@ -3,9 +3,14 @@
 # Gratuita no portal, responde em ~1 s e diz três coisas que a conversa não sabe: o nome do carro,
 # o ano do modelo e o TIPO (carro, moto, caminhão) — que decide o que a cotação exige. Até
 # 10/09/2026 ela rodava DENTRO do envio, depois do pedido montado: o especialista só descobria
-# que era moto depois da cotação paga. Agora ele consulta assim que a placa chega, e a cotação
-# (`InsuranceQuote#com_veiculo`) consulta de novo por conta própria se ele não consultou — a regra
-# vale por construção, não por obediência.
+# que era moto depois da cotação paga. Agora ele consulta quando a placa chega e AINDA FALTA DADO
+# para cotar — e a cotação (`InsuranceQuote::Veiculo`) consulta por conta própria SEMPRE que há
+# placa, valendo o que o portal diz: a regra é por construção, não por obediência. A rodada de
+# ferramentas do especialista é UMA (`ResponsesClient#create_with_tool_executor`): consultar aqui e
+# cotar na mesma resposta não cabe, e não precisa — com tudo em mãos, é cotar direto.
+#
+# Roda no turno, com o modelo esperando: só com a sessão que já está viva (`with_live_session`).
+# Abrir sessão é login com teto de 60 s, e o turno não espera isso.
 #
 # Devolve TEXTO ao modelo, com os rótulos que o próprio adapter publica no schema (nada
 # traduzido aqui). Nenhum dado da pessoa: o portal responde sobre o veículo.
@@ -28,9 +33,9 @@ class Autonomia::Agents::Tools::Native::VehicleLookup < Autonomia::Agents::Tools
 
     def description
       'Consulta gratuita da placa no portal da corretora: devolve o modelo, o ano e o TIPO do ' \
-        'veículo (carro, moto ou caminhão). Use assim que o cliente informar a placa, ANTES de ' \
-        'cotar: o tipo decide o que a cotação exige, e o nome do carro deixa a conversa menos ' \
-        'formulário.'
+        'veículo (carro, moto ou caminhão). Use quando o cliente informou a placa e AINDA FALTAM ' \
+        'dados para cotar: confirme o veículo com ele pelo nome e pergunte o resto já sabendo o ' \
+        'tipo. Com tudo em mãos, chame cotar_seguro direto — ela consulta a placa sozinha.'
     end
 
     def params
@@ -46,9 +51,11 @@ class Autonomia::Agents::Tools::Native::VehicleLookup < Autonomia::Agents::Tools
     placa = params['placa'].to_s.strip
     return recusar('placa_invalida', PLACA_INVALIDA) if placa.blank?
 
-    consulta = sessions.with_fresh_session do |session|
+    consulta = sessions.with_live_session do |session|
       connector.vehicle_lookup(provider: connection.provider, session: session, plate: placa)
     end
+    return recusar('consulta_de_placa_indisponivel', INDISPONIVEL) if consulta.nil?
+
     descrever(consulta)
   rescue ::Autonomia::Insurance::Connector::Error => e
     return recusar('placa_invalida', PLACA_INVALIDA) if e.kind == :validation

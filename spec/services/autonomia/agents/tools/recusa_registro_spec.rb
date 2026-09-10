@@ -69,6 +69,13 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     Autonomia::Agents::Tools::Bound.new(agent: agent, native: native)
   end
 
+  # O adapter não responde o schema de auto: a conexão fica sem formulário.
+  def adapter_sem_schema
+    connector = Autonomia::Insurance::Connector.client
+    allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+    allow(connector).to receive(:quote_schema).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, 'mudo'))
+  end
+
   def bound_com_conferencia(resposta)
     bound_para(build_async_tool(precheck: resposta))
   end
@@ -262,15 +269,24 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           rodar_job(cotacao, arguments: { 'produto' => 'bike', 'dados' => '{marca: Caloi' })
         }
       },
-      # Sem placa, chassi nem FIPE não há veículo (entrega 2, termo 10): no envio e no turno.
+      # Auto sem formulário (entrega 2): a conexão não tem o schema e o adapter não o dá agora.
       'insurance_quote.rb#start#2' => {
+        espera: { motivo: 'formulario_indisponivel', slug: 'cotar_seguro', onde: 'envio' },
+        dispara: lambda {
+          ready_connection
+          adapter_sem_schema
+          rodar_job(cotacao, arguments: { 'produto' => 'auto', 'cpf' => '04297912678' })
+        }
+      },
+      # Sem placa, chassi nem FIPE não há veículo (entrega 2, termo 10): no envio e no turno.
+      'insurance_quote.rb#start#3' => {
         espera: { motivo: 'sem_veiculo', slug: 'cotar_seguro', onde: 'envio', faltando: 'vehicle.plate' },
         dispara: lambda {
           ready_connection
           rodar_job(cotacao, arguments: { 'produto' => 'auto', 'cpf' => '04297912678' })
         }
       },
-      'insurance_quote.rb#start#3' => {
+      'insurance_quote.rb#start#4' => {
         espera: { motivo: 'faltam_dados', slug: 'cotar_seguro', onde: 'envio', faltando: /[a-zA-Z.,]*insured\.document[a-zA-Z.,]*/ },
         dispara: lambda {
           ready_connection
@@ -286,6 +302,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       'insurance_quote.rb#precheck#2' => {
+        espera: { motivo: 'formulario_indisponivel', slug: 'cotar_seguro' },
+        dispara: lambda {
+          ready_connection
+          adapter_sem_schema
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'auto', cpf: '04297912678' }.to_json },
+                                      delivery: delivery)
+          expect(Autonomia::Agents::ToolRun.count).to be_zero
+        }
+      },
+      'insurance_quote.rb#precheck#3' => {
         espera: { motivo: 'sem_veiculo', slug: 'cotar_seguro', faltando: 'vehicle.plate' },
         dispara: lambda {
           ready_connection
@@ -294,7 +320,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }
       },
-      'insurance_quote.rb#precheck#3' => {
+      'insurance_quote.rb#precheck#4' => {
         espera: { motivo: 'faltam_dados', slug: 'cotar_seguro', faltando: /[a-zA-Z.,]*insured\.document[a-zA-Z.,]*/ },
         dispara: lambda {
           ready_connection
@@ -303,7 +329,8 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
                                       delivery: delivery)
         }
       },
-      # A consulta de placa (entrega 2): placa vazia, placa fora do formato, portal mudo.
+      # A consulta de placa (entrega 2): placa vazia, sem sessão viva no turno, placa fora do
+      # formato, portal mudo.
       'vehicle_lookup.rb#call#1' => {
         espera: { motivo: 'placa_invalida', slug: 'consultar_placa' },
         dispara: lambda {
@@ -312,13 +339,20 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       'vehicle_lookup.rb#call#2' => {
+        espera: { motivo: 'consulta_de_placa_indisponivel', slug: 'consultar_placa' },
+        dispara: lambda {
+          ready_connection.forget_session!
+          bound_para(placa).execute({ 'name' => 'consultar_placa', 'arguments' => { placa: 'ABC1D23' }.to_json }, delivery: delivery)
+        }
+      },
+      'vehicle_lookup.rb#call#3' => {
         espera: { motivo: 'placa_invalida', slug: 'consultar_placa' },
         dispara: lambda {
           ready_connection
           bound_para(placa).execute({ 'name' => 'consultar_placa', 'arguments' => { placa: 'ABC' }.to_json }, delivery: delivery)
         }
       },
-      'vehicle_lookup.rb#call#3' => {
+      'vehicle_lookup.rb#call#4' => {
         espera: { motivo: 'consulta_de_placa_indisponivel', slug: 'consultar_placa' },
         dispara: lambda {
           ready_connection
@@ -329,7 +363,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       # Ramo que o adapter não tem: recusa na conferência (nenhuma execução aberta) e no envio.
-      'insurance_quote.rb#precheck#4' => {
+      'insurance_quote.rb#precheck#5' => {
         espera: { motivo: 'ramo_desconhecido', slug: 'cotar_seguro', faltando: 'produto' },
         dispara: lambda {
           ready_connection
@@ -338,7 +372,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }
       },
-      'insurance_quote.rb#start#4' => {
+      'insurance_quote.rb#start#5' => {
         espera: { motivo: 'ramo_desconhecido', slug: 'cotar_seguro', onde: 'envio', faltando: 'produto' },
         dispara: lambda {
           ready_connection

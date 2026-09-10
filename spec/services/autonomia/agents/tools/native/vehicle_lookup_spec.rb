@@ -64,6 +64,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::VehicleLookup do
     expect(connector).to have_received(:vehicle_lookup).once # só a fora do formato chega ao conector, que a recusa
   end
 
+  it 'sem sessao viva nao abre login no turno: diz que a cotacao consulta de novo' do
+    ready_connection.forget_session!
+    connector = Autonomia::Insurance::Connector.client
+    allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+    allow(connector).to receive(:open_session).and_call_original
+
+    expect(consultar('ABC1D23')).to eq(described_class::INDISPONIVEL)
+    expect(connector).not_to have_received(:open_session)
+  end
+
   it 'portal mudo nao derruba o turno: diz que a cotacao consulta de novo' do
     ready_connection
     connector = Autonomia::Insurance::Connector.client
