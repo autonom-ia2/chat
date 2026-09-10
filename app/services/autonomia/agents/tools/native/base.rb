@@ -72,7 +72,9 @@ class Autonomia::Agents::Tools::Native::Base
     # Quem consegue saber, ainda no turno, que o pedido não vai dar em nada, responde aqui: o texto
     # volta pelo canal que o modelo já lê, e NENHUMA execução é aberta.
     #
-    # -> String (o que o modelo recebe no lugar do aceite) ou nil (segue o fluxo normal).
+    # -> String (o que o modelo recebe no lugar do aceite), `Native::Conferencia` (o mesmo texto
+    # mais o motivo e os NOMES dos campos que faltaram, para o registro de recusa da entrega 6) ou
+    # nil (segue o fluxo normal).
     # NUNCA levanta e nunca bloqueia: conferência indisponível deixa o pedido seguir.
     def precheck
       nil
@@ -148,9 +150,12 @@ class Autonomia::Agents::Tools::Native::Base
     end
   end
 
-  def initialize(agent:, params: {})
+  # `delivery` é o contexto do turno (conversa), quando há um. A ferramenta continua sem saber de
+  # conversa para TRABALHAR; ela só o carrega para o registro de recusa dizer qual conversa foi.
+  def initialize(agent:, params: {}, delivery: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys
+    @delivery = delivery
   end
 
   # -> String. NUNCA levanta: quem chama é o executor de ferramentas do turno.
@@ -173,13 +178,22 @@ class Autonomia::Agents::Tools::Native::Base
 
   private
 
-  attr_reader :agent, :params
+  attr_reader :agent, :params, :delivery
 
   def account
     agent.account
   end
 
+  # Recusa nomeada da ferramenta SÍNCRONA, em JSON. Passa pelo registro (entrega 6) como as demais.
   def error(code)
-    { error: code }.to_json
+    ::Autonomia::Agents::Tools::Recusa.para_modelo(code, slug: self.class.slug, delivery: delivery, agente: agent)
+  end
+
+  # Recusa em PROSA da ferramenta síncrona (ela pediu um dado antes de trabalhar): registra, com os
+  # NOMES dos parâmetros que faltaram, e devolve o texto, que não muda.
+  def recusar(codigo, texto, faltando: [])
+    ::Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: self.class.slug, agente: agent, faltando: faltando,
+                                                         conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(delivery))
+    texto
   end
 end
