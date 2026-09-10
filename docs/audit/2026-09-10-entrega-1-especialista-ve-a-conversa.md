@@ -157,3 +157,42 @@ chamada, sem cache, latência real por medir.
 **O que esta aprovação NÃO é:** prova dos termos 2 e 3. CPF chegando ao formulário sem estar no
 bilhete e PDF de apólice preenchendo ≥4 campos da renovação exigem uma rodada real (paga), com
 autorização do Rodrigo, depois do deploy.
+
+## Prova real em produção — 10/09/2026, 21:49Z–22:05Z (VERDE; uma cotação paga, autorizada)
+
+Merge da PR #375 → main `c677e68326` (21:14Z); deploy Hub2You concluído 21:48Z (instância
+`i-06e3f3481f6cb8818` na imagem `c677e68326`). Conversa 5045 da conta 16 (Lia, agente 24), pelo
+WhatsApp do Rodrigo. Apólice real de teste (HDI, 4 páginas, texto extraível), com autorização.
+
+| Hora (Z) | Mensagem (id) | O que aconteceu |
+|---|---|---|
+| 21:49:56 | cliente, 298367: "Quero renovar o seguro do meu carro. Meu CPF é 04297912678." | Lia pede só o CEP (298368) — a placa QNX9533 estava na conversa de mais cedo |
+| 22:02:33 | cliente, 298395: PDF da apólice (anexo 3, `application/pdf`, 17 270 bytes) + "o endereço está nela" | Lia lê o PDF e pergunta (298396): "A apólice anexada está em outro CPF e identifica o veículo de placa HIK9383. A renovação é desse veículo?" — sem cotar, custo zero |
+| 22:04:31 | cliente, 298405: "Sim, é esse veículo mesmo. O seguro fica no meu CPF. Pode cotar a renovação." | **Execução 7 aberta às 22:04:52** (`running`, `origin_message_id` 298405); Lia (298411): "Vou seguir com a renovação do veículo de placa HIK9383, usando o endereço de pernoite da apólice atual." |
+
+`arguments` da execução 7 (lido por psql via SSM, read-only):
+
+```
+{"cep": "31110290", "cpf": "04297912678", "nome": null, "bonus": 9, "dados": "{}", "placa": "HIK9383",
+ "numero": null, "produto": "auto", "renovacao": true, "sinistros": 1}
+```
+
+Conferido contra o PDF (`pdftotext`): CEP Pernoite 31110-290; Placa/UF HIK9383; Qtde Sinistros 1;
+Classe de Bônus 09. Tudo bate.
+
+**Termo 2 (CPF que o cliente escreveu chega ao formulário):** o CPF foi dito UMA vez, duas mensagens
+antes do turno que abriu a cotação, e não aparece nem no texto desse turno nem no PDF (que está em
+outro CPF). Chegou em `arguments.cpf`. O que continua não observável é o bilhete do principal (não é
+persistido); a travessia pela conversa está provada por mutação (M1/M6) e aqui pelo dado.
+
+**Termo 3 (PDF alimenta ≥4 campos da renovação):** cinco campos vieram do PDF — `placa`, `cep`,
+`renovacao`, `bonus`, `sinistros` — com a ferramenta de 10 parâmetros de hoje (a de ~90 é a entrega 2).
+
+**A prova mais forte é a do caminho novo:** no turno que abriu a cotação (298405) o principal NÃO
+tinha o PDF — o anexo estava na mensagem anterior (298395), fora de `current_turn_incoming`, e o
+texto do PDF não vive no histórico. Bônus 9, sinistros 1 e CEP 31110290 só podiam chegar ao
+formulário pelo especialista lendo o anexo anterior do cliente (`Materia#anteriores`), que é
+exatamente o que esta entrega construiu. Antes dela, o especialista teria só o bilhete.
+
+Custo da rodada: uma cotação (execução 7). Latência do turno com leitura do PDF anterior: mensagem
+22:04:31 → execução 22:04:52 → resposta 22:05:07 (~36 s, dentro do normal dos turnos com cotação).
