@@ -60,7 +60,18 @@ worker aparecem em `docker logs chatwoot-worker`.
   revisor adversarial (REPROVADO no commit inicial; A1, B1, B3, C1, C2, D1–D5, E1, E2, E5, F1, F3,
   F4, F5, H1–H5 endereçados; E3 e E4 documentados como fora de escopo).
 
-## Bloqueios
+## Termo 5 — fechado em 10/09/2026 às 15:55Z
 
-- Termo 5 (recusa real em produção encontrada no registro) exige deploy — automático no merge da
-  main — e uma conversa real com a Lia.
+Merge (#364) às 14:36Z, deploy automático nas duas stacks (15:09Z/15:11Z). Quatro tentativas por
+conversa (sem CEP, insistindo, CEP de 7 dígitos, cobertura sem seguradora) não produziram recusa da
+ferramenta: a Lia filtra antes de chamar. Recusa real provocada com `async_tools=false` no `config`
+do agente 24 (backup, UPDATE, restauração idêntica ao backup): linha
+`[autonomia][tool][recusa] slug=cotar_seguro conversa=5045 agente=24 conta=16 onde=turno
+motivo=async_desligado` no worker. Nada foi ao portal.
+
+## Achado colateral — issue #365
+
+A conexão AGGER da conta 16 estava em `auth_required` desde 09/09 10:30 (login intermitente do
+portal classificado como credencial inválida; o healthcheck não revisita esse estado); sem conexão
+`ready` o `cotar_seguro` não era oferecido ao especialista — a Lia não cotava. Correção 1 entregue
+em autonom-ia2/autonomia-adapters#48 e publicada no Lambda em 10/09 16:29Z.
