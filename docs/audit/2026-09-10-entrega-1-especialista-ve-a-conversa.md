@@ -196,3 +196,27 @@ exatamente o que esta entrega construiu. Antes dela, o especialista teria só o 
 
 Custo da rodada: uma cotação (execução 7). Latência do turno com leitura do PDF anterior: mensagem
 22:04:31 → execução 22:04:52 → resposta 22:05:07 (~36 s, dentro do normal dos turnos com cotação).
+
+### Desfecho da execução 7: zero preço — causa-raiz (não é desta entrega)
+
+Às 22:09:03Z a execução 7 encerrou `done` com `entregues: []` e a Lia disse "Não consegui concluir a
+cotação agora. Um atendente vai retomar daqui." Lido no portal (poll read-only pelo adapter, conta de
+teste = mesma corretora): cotação `e39fb2c9…:1` com status `failed`, **17 seguradoras, todas
+`declined`**. Nenhuma linha de erro no worker (as de domínio não saem em produção) nem no Lambda (só
+START/END/REPORT; o `quote/start` levou 25,6 s, normal).
+
+**Causa:** o formulário foi com `renovacao: true` + `bonus: 9` + `sinistros: 1` e **sem a apólice
+anterior**. O adapter documenta e mediu isso em 05/09 (`quote-input.ts:299`, `field-contracts.json`
+`seguradoraAnteriorId` obrigatório quando `isRenewal`): a mesma pessoa e o mesmo veículo, cotação nova
+= 12 preços; marcada como renovação sem `previousInsurerCode`/`previousPolicyNumber`/
+`previousPolicyEndDate` = 17 `declined`. O chat2you nunca envia esses três: `AutoRenewal#to_input` só
+manda `isRenewal`, `bonusClass`, `previousClaimsCount`, e a ferramenta de hoje (10 parâmetros) não
+tem campo para a seguradora anterior — a apólice dizia "HDI", o especialista leu, e não tinha onde
+escrever.
+
+**Consequência, pré-existente a esta entrega:** hoje TODA renovação pela Lia (`renovacao: true`)
+termina em zero preço. A entrega 2 (ferramenta com os ~90 parâmetros, inclusive os 34 códigos de
+seguradora anterior já aprovados em 10/09) é o que resolve. Registrado em issue própria.
+
+**O que a entrega 1 provou mesmo assim:** o dado atravessou — CPF da conversa e cinco campos do PDF
+anterior chegaram ao formulário. O portal recusou por um campo que a ferramenta ainda não tem.
