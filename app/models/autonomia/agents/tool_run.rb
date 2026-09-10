@@ -109,7 +109,7 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # quem garante de verdade — duas chamadas concorrentes fazem a segunda estourar `RecordNotUnique`,
   # e aí devolvemos nil em vez de mentir para o modelo dizendo que aceitamos.
   def self.open!(agent:, slug:, arguments:, scope:, pedido: nil)
-    transaction do
+    transaction(requires_new: true) do
       active.for_conversation(scope[:conversation_id]).where(slug: slug)
             .update_all(status: 'superseded', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       create!(account: agent.account, agent: agent, slug: slug, status: 'pending',
@@ -136,10 +136,14 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     end
   end
 
-  # Lock consultivo, liberado no fim da transação. Duas chaves de 32 bits: a conversa e a ferramenta.
+  # Lock consultivo, liberado no fim da transação. UMA chave de 64 bits derivada do par
+  # (conversa, ferramenta): a variante de dois argumentos exige `int4`, e o id da conversa é bigint.
   def self.travar!(conversation_id, slug)
-    connection.execute(sanitize_sql_array(['SELECT pg_advisory_xact_lock(?, ?)', conversation_id.to_i,
-                                           Zlib.crc32(slug.to_s) & 0x7fffffff]))
+    connection.execute(sanitize_sql_array(['SELECT pg_advisory_xact_lock(?)', chave_do_lock(conversation_id, slug)]))
+  end
+
+  def self.chave_do_lock(conversation_id, slug)
+    Digest::SHA256.digest("#{conversation_id.to_i}:#{slug}")[0, 8].unpack1('q>')
   end
 
   # A ÚLTIMA execução desta ferramenta na conversa, se ela AINDA CONTA como pedido feito e tem os
@@ -170,6 +174,8 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # em `updated_at`: aproximação aceitável para uma janela de um dia.
   def encerrada_em
     Time.zone.parse(handle.to_h[ENCERRADA_EM].to_s) || updated_at
+  rescue ArgumentError
+    updated_at
   end
 
   # Este turno já abriu uma execução desta ferramenta? É o freio do RETRY: o `ReplyJob` pode
@@ -223,9 +229,17 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
   # pending -> running. Guardado pelo status para que um despacho repetido (retry do turno) não
   # reabra uma execução que já terminou. -> true quando ESTA chamada promoveu.
+  #
+  # SOB O MESMO LOCK de `abrir_ou_repetida` (entrega 10): um turno B que leu a `pending` de A (que
+  # não conta) não pode abrir enquanto A promove — ou A promove primeiro e B, ao entrar, encontra
+  # uma `running` e não abre; ou B abre primeiro (supersede) e a promoção de A perde pelo status.
+  # Sem isto, B supersedia uma execução já promovida e possivelmente submetida ao portal.
   def promote!(expected_chunks:, notify_customer:, expires_at:)
-    guarded_update('pending', status: 'running', expected_chunks: expected_chunks.to_i,
-                              notify_customer: notify_customer, expires_at: expires_at)
+    self.class.transaction do
+      self.class.travar!(conversation_id, slug)
+      guarded_update('pending', status: 'running', expected_chunks: expected_chunks.to_i,
+                                notify_customer: notify_customer, expires_at: expires_at)
+    end
   end
 
   # O desfecho MARCA o envio incerto (`envio_incerto?` em SQL: intenção anotada, número ausente) no

@@ -145,7 +145,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       run = consulta_existente(auto, entregues: 2, desfecho: 'done')
 
       saida = pedir(auto, turno: 2)
-      expect(saida).to include('já terminou nesta conversa', 'concluída', '2 resultados publicados')
+      expect(saida).to include('já terminou nesta conversa', 'concluída', '2 resultados encaminhados para publicação')
       expect(runs.count).to eq(1)
 
       # A janela conta do ENCERRAMENTO, não de `updated_at`: uma publicação adiada que sai depois do
@@ -162,30 +162,65 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
       saida = pedir(auto, turno: 2)
 
-      expect(saida).to include('encerrada sem concluir', '1 resultado publicado')
+      expect(saida).to include('encerrada sem concluir', '1 resultado encaminhado para publicação')
       expect(saida).not_to include('concluída')
       expect(runs.count).to eq(1)
     end
   end
 
-  # Dois turnos simultâneos com o mesmo pedido: a comparação e a abertura ficam na mesma seção
-  # crítica por (conversa, ferramenta) — o lock consultivo de transação. Sem ele, os dois comparam
-  # com nada, um abre, o outro supersede, e o primeiro pode já ter sido submetido ao portal.
-  describe 'comparacao e abertura na mesma secao critica' do
-    it 'toma o lock consultivo da conversa e da ferramenta antes de comparar, na transacao que abre' do
+  # Dois turnos simultâneos com o mesmo pedido: a comparação, a abertura E a promoção ficam na mesma
+  # seção crítica por (conversa, ferramenta) — o lock consultivo de transação, exclusivo entre sessões
+  # por semântica do Postgres. Sem ele, os dois comparam com nada, um abre, o outro supersede; ou B lê
+  # a `pending` de A (que não conta), A promove, e B supersede uma `running` já submetida ao portal.
+  #
+  # POR QUE A PROVA É POR RASTRO SQL, e não com duas conexões: a suíte roda com fixtures transacionais
+  # e o pool fixa a conexão na thread — uma segunda sessão real não enxerga as linhas do exemplo. O que
+  # se prova aqui é que os dois escritores tomam o MESMO lock, com a MESMA chave, dentro da transação
+  # que escreve; a exclusão entre sessões é do banco.
+  describe 'comparacao, abertura e promocao na mesma secao critica' do
+    let(:escritas) { /pg_advisory_xact_lock|INSERT INTO "autonomia_agent_tool_runs"|UPDATE "autonomia_agent_tool_runs"/ }
+    let(:chave) { Autonomia::Agents::ToolRun.chave_do_lock(conversation.id, 'cotar_seguro').to_s }
+
+    def comandos_de
       comandos = []
       assinatura = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
-        comandos << payload[:sql] if payload[:sql].match?(/pg_advisory_xact_lock|INSERT INTO "autonomia_agent_tool_runs"/)
+        comandos << payload[:sql] if payload[:sql].match?(escritas)
       end
-
-      pedir(auto, turno: 1)
-
+      yield
+      comandos
+    ensure
       ActiveSupport::Notifications.unsubscribe(assinatura)
+    end
+
+    it 'toma o lock da conversa e da ferramenta antes de comparar, na transacao que abre' do
+      comandos = comandos_de { pedir(auto, turno: 1) }
+
       lock = comandos.index { |sql| sql.include?('pg_advisory_xact_lock') }
       insercao = comandos.index { |sql| sql.include?('INSERT INTO "autonomia_agent_tool_runs"') }
       expect(lock).not_to be_nil
       expect(insercao).to be > lock
-      expect(comandos[lock]).to include(conversation.id.to_s)
+      expect(comandos[lock]).to include(chave)
+    end
+
+    it 'a promocao toma o mesmo lock, com a mesma chave, antes de escrever' do
+      pedir(auto, turno: 1)
+      run = runs.order(:id).last
+
+      comandos = comandos_de { run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now) }
+
+      lock = comandos.index { |sql| sql.include?('pg_advisory_xact_lock') }
+      escrita = comandos.index { |sql| sql.include?('UPDATE "autonomia_agent_tool_runs"') }
+      expect(lock).not_to be_nil
+      expect(escrita).to be > lock
+      expect(comandos[lock]).to include(chave)
+      expect(run.reload.status).to eq('running')
+    end
+
+    it 'a chave e de 64 bits e cabe em bigint mesmo para conversa alem de 2^31' do
+      chave_grande = Autonomia::Agents::ToolRun.chave_do_lock(2**40, 'cotar_seguro')
+      expect(chave_grande).to be_between(-(2**63), (2**63) - 1)
+      expect(chave_grande).not_to eq(Autonomia::Agents::ToolRun.chave_do_lock(2**40, 'outra'))
+      expect { Autonomia::Agents::ToolRun.travar!(2**40, 'cotar_seguro') }.not_to raise_error
     end
   end
 
