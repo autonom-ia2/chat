@@ -45,12 +45,15 @@ module Autonomia
           EMPTY
         end
 
-        # SÓ OS DOCUMENTOS (entrega 1): até `limit` PDFs LEGÍVEIS, na ordem dada — um PDF sem camada de
-        # texto não ocupa vaga, porque quem procura é o especialista e a vaga é para uma apólice que se
-        # leia. Sem pagar transcrição de áudio nem baixar imagem: nada disso serve ao formulário. (O turno
-        # do principal continua em `extract`, com o teto por mensagem contado ANTES de extrair.)
-        def documents(limit: Config::MAX_DOCUMENTS_PER_MESSAGE)
-          attachments.lazy.select { |attachment| document?(attachment) }.filter_map { |attachment| document_text(attachment) }.first(limit)
+        # SÓ OS DOCUMENTOS (entrega 1): até `limit` PDFs LEGÍVEIS, na ordem dada, em até `attempts`
+        # EXTRAÇÕES — um PDF sem camada de texto não ocupa vaga, porque quem procura é o especialista e a
+        # vaga é para uma apólice que se leia; mas cada tentativa baixa e lê um PDF, e é o orçamento de
+        # tentativas que limita a espera. Sem pagar transcrição de áudio nem baixar imagem: nada disso
+        # serve ao formulário. (O turno do principal continua em `extract`, com o teto por mensagem
+        # contado ANTES de extrair — `attempts` igual a `limit` é exatamente isso.)
+        def documents(limit: Config::MAX_DOCUMENTS_PER_MESSAGE, attempts: limit)
+          elegiveis = attachments.lazy.select { |attachment| document?(attachment) }.first(attempts)
+          elegiveis.lazy.filter_map { |attachment| document_text(attachment) }.first(limit)
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] media_extract_failed agent=#{@agent&.id} #{e.class}")
           []

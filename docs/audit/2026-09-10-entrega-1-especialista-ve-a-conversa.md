@@ -105,10 +105,11 @@ O que o Codex confirmou e fica registrado:
   PDF mandado antes do texto no mesmo turno vem por `@documents` do principal e é excluído dos
   anteriores pelo checksum.
 - Testar e Copiloto passam `delivery: nil`: não consultam anexos anteriores.
-- Custo: não há cache de extração; cada chamada do especialista relê até as vagas que sobram (no
-  pior caso, 3 PDFs de até 5 MB, pdf-reader sem OCR). Não medido em apólice real nesta entrega; o
-  turno é limitado pelo timeout HTTP por requisição (120 s), não por um prazo total. Fica como
-  observação para medir na rodada real.
+- Custo: não há cache de extração; cada chamada do especialista relê os anexos anteriores que
+  faltam. O teto de RESULTADOS (3) não limitava o trabalho: o Codex (rodada 2) mostrou 32 candidatos
+  escaneados sem texto = 32 downloads e 32 extrações para devolver zero. Por isso existe
+  `TENTATIVAS` (6 extrações por chamada, ver abaixo). Não medido em apólice real nesta entrega; o
+  turno é limitado pelo timeout HTTP por requisição (120 s), não por um prazo total.
 - Injeção: o aviso e o bilhete são mensagens `user`; a posição não dá autoridade. O que o
   especialista PODE fazer é o catálogo dele (`specialist_tools`); o histórico e os PDFs entram como
   dado, cercados — igual ao principal. Não há verificação de correspondência entre o pedido do
@@ -120,3 +121,26 @@ que as nomeia; suíte ampla 731 exemplos, 0 falhas; rubocop 0 ofensas.
 CI da PR em dc290b2a8f: 11/12 verdes; `RSpec (3/8)` falhou em `spec/models/conversation_spec.rb:1182`
 ("expected 3602.0 to be within 1 of 1 hour") — spec do core do Chatwoot sobre tempo de resposta, fora
 deste diff; relógio do runner. Reavaliado no SHA seguinte.
+
+## Codex — rodada 2 (REPROVADO) e o que mudou
+
+- **P2 · duplicata deste turno ocupa vaga.** O principal (`extract`) não deduplica: a mesma apólice
+  mandada duas vezes no debounce chegava em dobro e o especialista contava duas vagas — com CRLV e
+  CNH anteriores, um ficava de fora. `Materia#documentos` passa os deste turno por `distintos`
+  (checksum; sem checksum é sempre distinto) ANTES de calcular as vagas. Spec "conta uma vaga";
+  mutação M14.
+- **P2 · o teto de resultados não limitava a extração.** A cadeia preguiçosa seguia até achar
+  `limit` legíveis: 32 candidatos escaneados = 32 downloads (~160 MB) e 32 extrações síncronas para
+  devolver zero, por chamada. `MessageMedia#documents(limit:, attempts:)` separa RESULTADOS de
+  TENTATIVAS: elege até `attempts` PDFs e só então extrai até `limit` legíveis; `Materia::TENTATIVAS
+  = 6` (três legíveis mesmo com três escaneados no caminho). `attempts` igual a `limit` é o
+  comportamento do principal, que continua em `collect_documents`. Spec "tem teto"; mutação M15.
+- **P3 · helper da spec fora do caminho real.** `lidos_pelo_principal` chamava `documents`; o
+  Responder chama `extract`. Agora `extract.documents` — o que o principal produz de verdade,
+  inclusive a duplicata.
+- Ressalva do Codex, não corrigida (não há produtor conhecido do estado): o `uniq` por checksum em
+  `ineditos` vem antes da elegibilidade; dois anexos com o mesmo blob e metadados divergentes (um
+  `file_type` que o extrator recusa) poderiam esconder o elegível.
+
+Validação da rodada 3: specs tocadas 89 exemplos, 0 falhas; mutações 15/15 reprovam o exemplo
+que as nomeia; suíte ampla 733 exemplos, 0 falhas; rubocop 0 ofensas.

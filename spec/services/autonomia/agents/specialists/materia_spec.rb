@@ -8,7 +8,8 @@ require 'rails_helper'
 # capar pelo mais recente reprova "o que sai é o mais antigo"; incluir nota privada na busca de
 # anexos reprova "só mensagens públicas do cliente"; tirar a exclusão do que já entrou, ou o `uniq`
 # por conteúdo, reprova "não lê de novo"; ignorar as vagas reprova "preenchem só as vagas"; deixar
-# um PDF ilegível ocupar vaga reprova "não ocupa vaga"; tirar o portão reprova "mídia desligada".
+# um PDF ilegível ocupar vaga reprova "não ocupa vaga"; tirar o portão reprova "mídia desligada";
+# contar a duplicata deste turno reprova "conta uma vaga"; tirar o teto de tentativas reprova "tem teto".
 RSpec.describe Autonomia::Agents::Specialists::Materia do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
@@ -82,9 +83,9 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
       anexo
     end
 
-    # O que o principal extraiu neste turno, pelo mesmo caminho dele.
+    # O que o principal extraiu neste turno, pelo caminho dele (`Responder#media` -> `extract`).
     def lidos_pelo_principal(*anexos)
-      Autonomia::Agents::Operate::MessageMedia.new(messages: anexos.map(&:message), agent: agent).documents
+      Autonomia::Agents::Operate::MessageMedia.new(messages: anexos.map(&:message), agent: agent).extract.documents
     end
 
     def turno_aberto_por(message_id)
@@ -117,6 +118,30 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
       expect(docs.map { |d| d[:name] }).to eq(%w[apolice.pdf crlv-de-novo.pdf])
       # uma extração para o principal (apolice.pdf) e UMA para o especialista (crlv-de-novo.pdf)
       expect(processor).to have_received(:new).twice
+    end
+
+    it 'a mesma apolice mandada duas vezes no debounce conta uma vaga' do
+      anexar('cnh.pdf', variante: 'h')
+      anexar('crlv.pdf', variante: 'c')
+      primeira = anexar('apolice.pdf')
+      segunda = anexar('apolice (1).pdf') # o cliente mandou de novo, no mesmo turno
+      abriu = create(:message, conversation: conversation, account: account, inbox: inbox, message_type: :incoming, content: 'cota aí')
+      deste_turno = lidos_pelo_principal(primeira, segunda)
+      expect(deste_turno.size).to eq(2) # o principal não deduplica
+
+      docs = described_class.new(delivery: turno_aberto_por(abriu.id), documents: deste_turno, agent: agent).documentos
+
+      expect(docs.map { |d| d[:name] }).to eq(['apolice.pdf', 'crlv.pdf', 'cnh.pdf'])
+    end
+
+    it 'o numero de extracoes por chamada tem teto: a espera do cliente e limitada' do
+      anexar('apolice.pdf')
+      7.times { |i| anexar("vazio-#{i}.pdf", variante: "v#{i}") } # sete escaneados mais recentes que a apólice
+
+      docs = described_class.new(delivery: delivery, agent: agent).documentos
+
+      expect(docs).to eq([])
+      expect(processor).to have_received(:new).exactly(described_class::TENTATIVAS).times
     end
 
     it 'um PDF sem camada de texto nao ocupa vaga: o extrator segue ate achar um legivel' do
