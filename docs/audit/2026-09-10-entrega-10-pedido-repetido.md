@@ -62,6 +62,14 @@ pergunta inocente da linha duplicada.
      publicados" e "encerrada sem concluir"/"concluída" pelo status;
   5. `updated_at` renovado por publicação adiada estendia a janela → `autonomia_encerrada_em`
      gravado pelo `finish!` no mesmo UPDATE; a janela conta dele.
+  Codex rodada 2 REPROVADO com 3 P2, tratados: `promote!` fora do lock (B lia a `pending` de A,
+  A promovia, B supersedia uma `running`) → `promote!` toma o mesmo lock; chave `int4` do lock
+  estourava para conversa > 2³¹ → chave de 64 bits (SHA-256 do par) na variante de um argumento;
+  "publicado" afirmava o que `delivered_count` não prova (adiado) → "encaminhado para publicação".
+  `open!` em savepoint (`requires_new`) para `RecordNotUnique` não abortar a transação de fora.
+  POR QUE A PROVA DO LOCK É POR RASTRO SQL: fixtures transacionais fixam a conexão na thread; uma
+  segunda sessão real não enxerga as linhas do exemplo. Prova-se que os dois escritores tomam o
+  mesmo lock, com a mesma chave, antes de escrever; a exclusão entre sessões é do Postgres.
   Limite conhecido (Codex): em auto, `QuoteInput#de_auto` ignora `dados` e só repassa os sete
   parâmetros da ferramenta — "dado diferente abre" vale para o que chega à `entrada` (entrega 2).
 
@@ -73,14 +81,14 @@ ausente → `pedido` nil → nada é barrado (o comportamento de hoje). Rollback
 
 ## Validação (chat2you, após Codex rodada 1)
 
-- Arquivos tocados (12 specs): 193 exemplos, 0 falhas, 0 erros de carga. Suíte ampla (`agents`,
-  `jobs/agents`, `models/agents`, `insurance`): 714 exemplos, 0 falhas. Rubocop: 0 ofensas.
-- Mutações (11, restauração em memória com `assert`; cada uma reprova o exemplo que a nomeia):
+- Arquivos tocados (12 specs): 195 exemplos, 0 falhas, 0 erros de carga. Suíte ampla (`agents`,
+  `jobs/agents`, `models/agents`, `insurance`): 716 exemplos, 0 falhas. Rubocop: 0 ofensas.
+- Mutações (13, restauração em memória com `assert`; cada uma reprova o exemplo que a nomeia):
   comparação removida; compara o cru (`params`) e não a entrada normalizada; falha sem entrega conta
   como pedido; sem janela; a marca do pedido chega à ferramenta; `open!` não guarda a identidade;
   recusa da repetição não registra; sem lock (comparação e abertura fora da seção crítica); `false`
   vira `nil` no canônico; janela por `updated_at` e não pelo encerramento; `failed` com entrega
-  descrito como concluída.
+  descrito como concluída; `promote!` sem o lock; "publicado" em vez de "encaminhado".
 - Termos: 1 (não abre), 2 (dado diferente abre, inclusive o número do endereço), 3 (entrada
   normalizada: o padrão escrito por extenso é o mesmo pedido — bike), 4 (mutação), 5 (nenhum
   classificador — regra de desenho, sem regex, verificada em revisão), 6 (o modelo recebe o estado da
