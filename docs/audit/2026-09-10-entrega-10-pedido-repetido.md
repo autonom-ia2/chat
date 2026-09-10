@@ -94,5 +94,13 @@ ausente → `pedido` nil → nada é barrado (o comportamento de hoje). Rollback
   classificador — regra de desenho, sem regex, verificada em revisão), 6 (o modelo recebe o estado da
   consulta; sem `{"error"`), 7 (bike e auto). Adapter: autonom-ia2/autonomia-adapters#50 — 8
   mutações, cobertura 100%, Codex em revisão.
-- Não feito: conversa real com a Lia perguntando "e aí?" no meio de uma cotação (custa uma rodada;
-  fora do horário comercial, com autorização).
+- **Teste real em produção (10/09, rodada autorizada pelo Rodrigo), conversa 50 da conta 16 (id 5045),
+  código `68e7fccd3d` no ar:** 20:22:40Z pedido de cotação (auto, seguro novo, placa QNX9533, CEP
+  31110-210); 20:22:57Z execução 6 aberta com `autonomia_pedido=ff560cd6…`, promovida 20:23:05Z,
+  submetida (cotação `0dd95c9c…`); preços desde 20:23:31Z. 20:23:45Z "E aí, saiu? Cota de novo pra
+  mim se precisar: [mesmos dados]". 20:24:00Z worker: `[autonomia][tool][recusa] slug=cotar_seguro
+  conversa=5045 agente=24 conta=16 onde=aceite motivo=pedido_repetido`. 20:24:19Z Lia: "A cotação já
+  está em andamento e não precisa ser refeita. Ainda não chegaram novos preços…". Banco às 20:24:53Z:
+  UMA execução desde 20:20Z (a 6, `running`, 5 entregas); nenhuma segunda cotação no portal. Prova por
+  psql via SSM (read-only) e `docker logs` do worker. Observação: a frase "ainda não chegaram novos
+  preços" é do modelo (oito preços já tinham saído) — o texto da ferramenta só disse "em andamento".
