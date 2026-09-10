@@ -56,6 +56,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
   include Declaracao
   include Recusas
+  include Envio
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
   #
@@ -146,12 +147,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     []
   end
 
+  # A entrada é montada ANTES da chamada paga, fora da fronteira de incerteza (`Envio`): um erro
+  # aqui é falha comum, não "pode ter cotado". Na prática ela já está pronta — `validar` a usou —,
+  # mas a fronteira não pode depender disso.
   def submeter
-    handle = sessions.with_fresh_session do |open_session|
-      connector.quote_start(provider: connection.provider, session: open_session,
-                            product: produto, input: entrada)
-    end
-    { 'quote_id' => handle['quote_id'], DELIVERED_KEY => [], 'produto' => produto,
+    pedido = { provider: connection.provider, product: produto, input: entrada }
+    quote_id = sessions.with_fresh_session { |open_session| enviar(open_session, pedido) }
+    { 'quote_id' => quote_id, DELIVERED_KEY => [], 'produto' => produto,
       SEM_BONUS_KEY => quote_input.auto? && quote_input.renewal.sem_bonus? }
   end
 

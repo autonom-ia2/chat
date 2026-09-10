@@ -73,9 +73,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Assert — nada publicado ainda, handle gravado na linha, e o job volta agendado para depois:
       # a espera vive no AGENDADOR (`at` no futuro), nunca dentro do worker.
       expect(described_class).to have_been_enqueued.with(run.id, 1)
+      # `autonomia_intencoes` é a marca da entrega 5: anotada ANTES de submeter, fica no handle.
       expect(run.reload).to have_attributes(
         status: 'running',
-        handle: { described_class::SUBMITTED_KEY => true, 'id' => 'cot-1' }
+        handle: { described_class::SUBMITTED_KEY => true, 'id' => 'cot-1', Autonomia::Agents::ToolRun::INTENCOES => 1 }
       )
       expect(bot_messages).to be_empty
       scheduled = enqueued_jobs.find { |job| job[:job] == described_class }

@@ -70,6 +70,20 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
   scope :active, -> { where(status: ACTIVE_STATUSES) }
   scope :for_conversation, ->(conversation_id) { where(conversation_id: conversation_id) }
+  # As que podem ter cotado duas vezes no portal (entrega 5): o worker morreu entre o envio e o
+  # registro do número, e o job tentou de novo. É a lista que o corretor precisa quando vê duas
+  # cotações idênticas no portal e não sabe qual é a boa.
+  scope :possivelmente_duplicadas, -> { where('handle @> ?', { POSSIVELMENTE_DUPLICADA => true }.to_json) }
+
+  # Marcas NOSSAS dentro do handle, ao lado do que a ferramenta devolveu. `submitted` é a que diz
+  # "o retorno do `start` foi registrado" — um número, uma recusa com `pedido` (que nem chama o
+  # portal), ou nada (#313) — gravada pelo `AsyncRunJob`, lida também pelo varredor e pelo desfecho.
+  # `intencoes` conta quantas vezes o job decidiu submeter (entrega 5); `possivelmente_duplicada`
+  # fica quando ele decidiu uma segunda vez sem saber se a primeira chegou ao portal, ou quando a
+  # execução acabou nesse estado. Só sai na volta a zero: a única chamada feita falhou com certeza.
+  SUBMITTED_KEY = 'autonomia_submitted'.freeze
+  INTENCOES = 'autonomia_intencoes'.freeze
+  POSSIVELMENTE_DUPLICADA = 'autonomia_possivelmente_duplicada'.freeze
 
   # Abre uma execução para (conversa, ferramenta), substituindo a que estiver viva.
   #
@@ -118,6 +132,18 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     expires_at.present? && Time.current > expires_at
   end
 
+  # Quantas vezes o job decidiu submeter. Zero quando nunca decidiu.
+  def intencoes
+    handle.to_h[INTENCOES].to_i
+  end
+
+  # A cotação PODE existir no portal sem registro nosso: o job decidiu submeter e o número nunca
+  # chegou — o processo morreu, ou o portal ficou mudo. É o estado que muda a frase ao cliente; quem
+  # marca a linha para o corretor achar é o `finish!`, com a mesma condição em SQL.
+  def envio_incerto?
+    intencoes.positive? && handle.to_h[SUBMITTED_KEY].blank?
+  end
+
   # Token que carimba a mensagem publicada, derivado do CONTEÚDO. É por ele que a publicação é
   # idempotente: um retry do Sidekiq, ou uma consulta que reemite a mesma entrega, encontra a
   # mensagem já postada e não posta de novo.
@@ -136,8 +162,21 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
                               notify_customer: notify_customer, expires_at: expires_at)
   end
 
+  # O desfecho MARCA o envio incerto (`envio_incerto?` em SQL: intenção anotada, número ausente) no
+  # MESMO comando que muda o status: uma intenção anotada por outro processo pouco antes deste
+  # `finish!` (janela de milissegundos) não pode acabar em `failed` sem marca com uma cotação aberta
+  # no portal (Codex, rodada 4). Depois daqui, nenhuma escrita com posse passa: a anotação seguinte
+  # perde pelo status. A marca é o único caminho para `possivelmente_duplicadas` além de
+  # `anotar_intencao!` (segunda intenção) — e por isso não existe "marcar" avulso no modelo.
   def finish!(status, failure_code: nil)
-    guarded_update('running', status: status, failure_code: failure_code)
+    marca = 'CASE WHEN COALESCE((handle->>?)::int, 0) > 0 AND (handle->>?) IS NULL THEN ?::jsonb ELSE ?::jsonb END'
+    updated = vivas.update_all(["status = ?, failure_code = ?, updated_at = ?, handle = handle || #{marca}", # rubocop:disable Rails/SkipsModelValidations
+                                status, failure_code, Time.current, INTENCOES, SUBMITTED_KEY,
+                                { POSSIVELMENTE_DUPLICADA => true }.to_json, '{}'])
+    return false if updated.zero?
+
+    reload
+    true
   end
 
   # Descarta uma execução que nunca chegou a rodar (o turno morreu antes de despachar).
@@ -145,10 +184,22 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     guarded_update('pending', status: 'discarded')
   end
 
-  def record_attempt!(handle: nil)
-    attrs = { attempts: attempts + 1 }
-    attrs[:handle] = handle.to_h.deep_stringify_keys if handle.present?
-    guarded_update('running', **attrs)
+  # Conta uma tentativa e, se vier handle, MESCLA-O no banco (`handle || ?`): o que a ferramenta
+  # devolveu por cima do que estava, marcas preservadas. Nunca substitui o handle por uma cópia da
+  # memória — era o que um processo com objeto velho fazia com a marca gravada por outro (Codex,
+  # 10/09/2026). `intencao:` exige a POSSE da passada (ver `posse`).
+  def record_attempt!(handle: nil, intencao: nil)
+    mesclar(posse(intencao), adicionar: handle.to_h, contar: true)
+  end
+
+  # Escreve NAS marcas do handle sem tocar no resto: `(handle || adicionar) - remover`, no banco,
+  # sem contar tentativa. É a anotação da intenção de submeter (entrega 5), que precisa ficar no
+  # banco ANTES de o portal ser chamado — e a volta atrás dela. `ausente:` é aquisição: só escreve
+  # se a chave ainda não está lá (o `closed` do encerramento). -> true quando a escrita valeu.
+  def merge_handle!(adicionar, remover: [], intencao: nil, ausente: nil)
+    scope = posse(intencao)
+    scope = sem_chave(scope, ausente) if ausente
+    mesclar(scope, adicionar: adicionar, remover: remover)
   end
 
   # Registra que uma ENTREGA DA FERRAMENTA foi aceita para publicação (publicada ou adiada). O aviso
@@ -187,5 +238,41 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
     reload
     true
+  end
+
+  # A escrita do handle é uma MESCLA feita pelo banco, nunca uma substituição pelo objeto: dois
+  # processos com a mesma execução (o Sidekiq re-enfileira o job no hard shutdown, e o antigo pode
+  # estar vivo noutro host) não apagam um a marca do outro. Recarrega quando a escrita valeu.
+  def mesclar(scope, adicionar: {}, remover: [], contar: false)
+    sets = ['handle = (handle || ?::jsonb) - ?::text[]', 'updated_at = ?']
+    sets.unshift('attempts = attempts + 1') if contar
+    updated = scope.update_all([sets.join(', '), adicionar.to_h.deep_stringify_keys.to_json, # rubocop:disable Rails/SkipsModelValidations
+                                "{#{Array(remover).join(',')}}", Time.current])
+    return false if updated.zero?
+
+    reload
+    true
+  end
+
+  def vivas
+    self.class.where(id: id, status: 'running')
+  end
+
+  # A POSSE da passada (entrega 5): a linha ainda está na intenção que o processo leu E ninguém
+  # registrou número. O contador sozinho não basta — ele volta atrás (2→1) e não muda quando o
+  # número entra; era assim que um objeto velho passava no compare-and-set depois de outro
+  # processo registrar o número, e o apagava (Codex, 10/09/2026). Sem `intencao`, basta estar viva.
+  def posse(intencao)
+    return vivas if intencao.nil?
+
+    sem_numero(vivas).where('COALESCE((handle->>?)::int, 0) = ?', INTENCOES, intencao)
+  end
+
+  def sem_numero(scope)
+    sem_chave(scope, SUBMITTED_KEY)
+  end
+
+  def sem_chave(scope, chave)
+    scope.where('(handle->>?) IS NULL', chave)
   end
 end

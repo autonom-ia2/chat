@@ -266,6 +266,84 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
   end
 
+  # A FRONTEIRA DA CHAMADA PAGA (entrega 5). O que falha DEPOIS de `quote_start` sair sem o portal
+  # dizer "não fiz" é `EnvioIncerto`: o job mantém a intenção e repete no máximo uma vez, marcada.
+  # O que falha antes, ou com o portal dizendo que recusou, sobe como está: a intenção volta atrás.
+  # Em 10/09/2026 um timeout do connector depois de o portal criar a cotação era lido como "não fez".
+  describe 'a fronteira da chamada paga' do
+    let(:incerto) { Autonomia::Agents::Tools::Native::EnvioIncerto }
+    let(:erro) { Autonomia::Insurance::Connector::Error }
+    let(:dados) do
+      { segurado: { nome: 'Fulano', cpfCnpj: '04297912678' },
+        configuracoes: { marca: 'Caloi', valorMercado: 8000, numeroSerie: 'SN-1' } }.to_json
+    end
+
+    def connector_dublado
+      connector = Autonomia::Insurance::Connector.client
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      connector
+    end
+
+    def cotar
+      tool('produto' => 'bike', 'dados' => dados).start
+    end
+
+    it 'timeout, indisponivel e resposta ilegivel sao envio incerto, com o motivo e a causa' do
+      ready_connection
+      connector = connector_dublado
+
+      %i[timeout unavailable protocol].each do |kind|
+        allow(connector).to receive(:quote_start).and_raise(erro.new(kind, 'texto do portal'))
+
+        expect { cotar }.to raise_error(incerto) do |e|
+          expect(e.motivo).to eq(kind.to_s)
+          expect(e.cause).to be_a(erro)
+          expect(e.message).not_to include('texto do portal')
+        end
+      end
+    end
+
+    it 'erro que nao e do connector, depois da chamada sair, tambem e envio incerto' do
+      ready_connection
+      allow(connector_dublado).to receive(:quote_start).and_raise(NoMethodError, 'undefined method')
+
+      expect { cotar }.to raise_error(incerto) { |e| expect(e.motivo).to eq('NoMethodError') }
+    end
+
+    it 'resposta sem id de cotacao e envio incerto: o portal respondeu, e nao se sabe o que fez' do
+      ready_connection
+      allow(connector_dublado).to receive(:quote_start).and_return({ 'status' => 'ok' })
+
+      expect { cotar }.to raise_error(incerto) { |e| expect(e.motivo).to eq('resposta sem quote_id') }
+    end
+
+    it 'o portal dizendo que recusou (entrada, credencial) sobe como esta: nao cotou' do
+      ready_connection
+      connector = connector_dublado
+
+      allow(connector).to receive(:quote_start).and_raise(erro.new(:validation, 'campo x'))
+      expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:validation) }
+
+      # `auth_required` renova a sessão e chama de novo; recusada duas vezes, sobe como está
+      allow(connector).to receive(:quote_start).and_raise(erro.new(:auth_required, '401'))
+      expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:auth_required) }
+      expect(connector).to have_received(:quote_start).exactly(3).times
+    end
+
+    it 'falha ANTES da chamada paga (o login) sobe como esta, e o portal nao e chamado' do
+      # Arrange — conexão pronta sem sessão viva: o login roda antes do `quote_start`, e cai
+      record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
+      record.update!(status: 'ready')
+      connector = connector_dublado
+      allow(connector).to receive(:open_session).and_raise(erro.new(:unavailable, 'login caiu'))
+      allow(connector).to receive(:quote_start).and_call_original
+
+      # Act / Assert
+      expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:unavailable) }
+      expect(connector).not_to have_received(:quote_start)
+    end
+  end
+
   # A recusa vira ENTREGA, e não falha. `failed` mandaria a mensagem genérica de erro e a conversa
   # morreria sem ninguém saber o que faltava.
   describe '#poll' do

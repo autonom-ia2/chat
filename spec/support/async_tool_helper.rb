@@ -18,6 +18,7 @@ module AsyncToolHelper
       define_singleton_method(:accepted_message) { 'aceito: consulta iniciada' }
       define_singleton_method(:waiting_message) { 'estou consultando agora' }
       define_singleton_method(:failure_message) { 'não consegui concluir a consulta' }
+      define_singleton_method(:uncertain_message) { 'não consegui confirmar o envio' }
 
       # A conferência do turno: devolve texto ao modelo (e nenhuma execução é aberta) ou nil.
       define_method(:precheck) { precheck.respond_to?(:call) ? precheck.call : precheck }

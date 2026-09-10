@@ -112,6 +112,65 @@ RSpec.describe Autonomia::Agents::ToolRun do
     end
   end
 
+  # AS ESCRITAS DO HANDLE SÃO MESCLADAS NO BANCO (entrega 5), nunca copiadas da memória, e `intencao:`
+  # exige a POSSE da passada: a linha ainda na intenção lida E sem número. É o que impede dois
+  # processos com a mesma execução de apagar um a marca (ou o número) do outro.
+  describe 'merge_handle! e record_attempt!' do
+    let(:intencoes) { described_class::INTENCOES }
+    let(:submetido) { described_class::SUBMITTED_KEY }
+
+    it 'mesclam no banco: um objeto velho nao apaga o que outro processo escreveu' do
+      run = promote(open_run)
+      velho = described_class.find(run.id)
+      run.merge_handle!({ intencoes => 2, 'dup' => true })
+
+      expect(velho.record_attempt!(handle: { 'id' => 'cot-A', submetido => true })).to be(true)
+      expect(velho.handle).to eq(intencoes => 2, 'dup' => true, 'id' => 'cot-A', submetido => true)
+      expect(velho.attempts).to eq(1)
+      expect(velho.merge_handle!({ intencoes => 1 }, remover: ['dup'])).to be(true)
+      expect(velho.reload.handle).to eq(intencoes => 1, 'id' => 'cot-A', submetido => true)
+    end
+
+    it 'com intencao: so escrevem se a linha esta na intencao lida E sem numero' do
+      run = promote(open_run)
+
+      expect(run.merge_handle!({ intencoes => 1 }, intencao: 1)).to be(false)
+      expect(run.merge_handle!({ intencoes => 1 }, intencao: 0)).to be(true)
+      expect(run.merge_handle!({ intencoes => 2 }, intencao: 0)).to be(false)
+      expect(run.record_attempt!(handle: { 'id' => 'x', submetido => true }, intencao: 1)).to be(true)
+      # com número registrado, nenhuma intenção é "a lida": a posse acabou
+      expect(run.merge_handle!({ intencoes => 2 }, intencao: 1)).to be(false)
+      expect(run.record_attempt!(handle: { 'id' => 'y' }, intencao: 1)).to be(false)
+      expect(run.reload).to have_attributes(handle: { intencoes => 1, 'id' => 'x', submetido => true }, attempts: 1)
+    end
+
+    it 'so escrevem em execucao viva' do
+      run = promote(open_run)
+      run.finish!('done')
+
+      expect(run.merge_handle!({ 'a' => 1 })).to be(false)
+      expect(run.record_attempt!(handle: { 'a' => 1 })).to be(false)
+    end
+  end
+
+  # O ESTADO que muda a frase ao cliente: intenção anotada, número nunca gravado. Quem o grava na
+  # lista do corretor é o `finish!` (abaixo), com a mesma condição em SQL.
+  describe '#envio_incerto?' do
+    let(:intencoes) { described_class::INTENCOES }
+    let(:submetido) { described_class::SUBMITTED_KEY }
+
+    it 'e incerto com intencao e sem numero' do
+      run = promote(open_run)
+      expect(run.envio_incerto?).to be(false)
+
+      run.merge_handle!({ intencoes => 1 })
+      expect(run.envio_incerto?).to be(true)
+
+      run.record_attempt!(handle: { submetido => true, 'id' => 'x' })
+      expect(run.envio_incerto?).to be(false)
+    end
+  end
+
   describe '#discard!' do
     it 'discards a run that never ran' do
       # Arrange
@@ -129,6 +188,34 @@ RSpec.describe Autonomia::Agents::ToolRun do
       # Act / Assert
       expect(run.discard!).to be(false)
       expect(run.reload.status).to eq('running')
+    end
+  end
+
+  # O desfecho marca o envio incerto no MESMO comando que muda o status (entrega 5): a intenção que
+  # entrou entre a marcação do desfecho e o `finish!` não fica sem marca.
+  describe '#finish! e o envio incerto' do
+    let(:intencoes) { described_class::INTENCOES }
+    let(:duplicada) { described_class::POSSIVELMENTE_DUPLICADA }
+    let(:submetido) { described_class::SUBMITTED_KEY }
+
+    it 'marca quando ha intencao sem numero, e nao marca nos outros casos' do
+      sem_intencao = promote(open_run)
+      expect(sem_intencao.finish!('failed', failure_code: 'x')).to be(true)
+      expect(sem_intencao.handle).to eq({})
+
+      incerta = promote(open_run(conversation_id: other_conversation.id))
+      incerta.merge_handle!({ intencoes => 1 })
+      expect(incerta.finish!('failed', failure_code: 'x')).to be(true)
+      expect(incerta.handle).to eq(intencoes => 1, duplicada => true)
+      expect(described_class.possivelmente_duplicadas).to eq([incerta])
+    end
+
+    it 'nao marca quando o numero esta registrado' do
+      run = promote(open_run)
+      run.record_attempt!(handle: { intencoes => 1, submetido => true, 'id' => 'x' })
+
+      expect(run.finish!('done')).to be(true)
+      expect(run.handle).to eq(intencoes => 1, submetido => true, 'id' => 'x')
     end
   end
 
