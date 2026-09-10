@@ -335,6 +335,32 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(described_class).not_to have_been_enqueued
     end
 
+    it 'intencao anotada entre a marcacao do desfecho e o finish: o desfecho marca mesmo assim' do
+      # Arrange — A chega ao desfecho com intenção zero (nada a marcar); B anota 0→1 enquanto A publica
+      run = execucao
+      run.update!(expires_at: 1.minute.ago)
+      linha = runs
+      register_async_tool(build_async_tool)
+      publicador = Autonomia::Agents::Tools::AsyncPublisher
+      allow(publicador).to receive(:new).and_wrap_original do |original, **kwargs|
+        original.call(**kwargs).tap do |instancia|
+          allow(instancia).to receive(:publish).and_wrap_original do |publicar, *args|
+            linha.find(run.id).merge_handle!({ intencoes => 1 }, intencao: 0)
+            publicar.call(*args)
+          end
+        end
+      end
+
+      # Act
+      described_class.new.perform(run.id, 1)
+
+      # Assert — o `finish!` marca no mesmo comando que encerra; a anotação seguinte perde pelo status
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+      expect(run.handle).to eq(intencoes => 1, duplicada => true)
+      expect(runs.possivelmente_duplicadas).to eq([run])
+      expect(run.merge_handle!({ intencoes => 2 }, intencao: 1)).to be(false)
+    end
+
     it 'objeto velho no desfecho: nao marca nem apaga o numero que outro processo registrou' do
       # Arrange — B chega ao desfecho (prazo) com a leitura "intenção 1 sem número"; A registra antes
       run = execucao(handle: { intencoes => 1 })

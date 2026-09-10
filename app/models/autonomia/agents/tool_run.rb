@@ -76,11 +76,11 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   scope :possivelmente_duplicadas, -> { where('handle @> ?', { POSSIVELMENTE_DUPLICADA => true }.to_json) }
 
   # Marcas NOSSAS dentro do handle, ao lado do que a ferramenta devolveu. `submitted` é a que diz
-  # "o portal já foi chamado, e o que ele devolveu está aqui" — um número, uma recusa com `pedido`,
-  # ou nada (#313) — gravada pelo `AsyncRunJob`, lida também pelo varredor e pelo desfecho.
+  # "o retorno do `start` foi registrado" — um número, uma recusa com `pedido` (que nem chama o
+  # portal), ou nada (#313) — gravada pelo `AsyncRunJob`, lida também pelo varredor e pelo desfecho.
   # `intencoes` conta quantas vezes o job decidiu submeter (entrega 5); `possivelmente_duplicada`
   # fica quando ele decidiu uma segunda vez sem saber se a primeira chegou ao portal, ou quando a
-  # execução acabou nesse estado — e não sai enquanto a execução vive.
+  # execução acabou nesse estado. Só sai na volta a zero: a única chamada feita falhou com certeza.
   SUBMITTED_KEY = 'autonomia_submitted'.freeze
   INTENCOES = 'autonomia_intencoes'.freeze
   POSSIVELMENTE_DUPLICADA = 'autonomia_possivelmente_duplicada'.freeze
@@ -173,8 +173,19 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
                               notify_customer: notify_customer, expires_at: expires_at)
   end
 
+  # O desfecho MARCA o envio incerto no MESMO comando que muda o status: uma intenção anotada por
+  # outro processo entre a marcação do desfecho e este `finish!` (janela de milissegundos) não pode
+  # acabar em `failed` sem marca com uma cotação aberta no portal (Codex, rodada 4). Depois daqui,
+  # nenhuma escrita com posse passa: a anotação seguinte perde pelo status.
   def finish!(status, failure_code: nil)
-    guarded_update('running', status: status, failure_code: failure_code)
+    marca = 'CASE WHEN COALESCE((handle->>?)::int, 0) > 0 AND (handle->>?) IS NULL THEN ?::jsonb ELSE ?::jsonb END'
+    updated = vivas.update_all(["status = ?, failure_code = ?, updated_at = ?, handle = handle || #{marca}", # rubocop:disable Rails/SkipsModelValidations
+                                status, failure_code, Time.current, INTENCOES, SUBMITTED_KEY,
+                                { POSSIVELMENTE_DUPLICADA => true }.to_json, '{}'])
+    return false if updated.zero?
+
+    reload
+    true
   end
 
   # Descarta uma execução que nunca chegou a rodar (o turno morreu antes de despachar).

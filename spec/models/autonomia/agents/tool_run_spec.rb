@@ -207,6 +207,34 @@ RSpec.describe Autonomia::Agents::ToolRun do
     end
   end
 
+  # O desfecho marca o envio incerto no MESMO comando que muda o status (entrega 5): a intenção que
+  # entrou entre a marcação do desfecho e o `finish!` não fica sem marca.
+  describe '#finish! e o envio incerto' do
+    let(:intencoes) { described_class::INTENCOES }
+    let(:duplicada) { described_class::POSSIVELMENTE_DUPLICADA }
+    let(:submetido) { described_class::SUBMITTED_KEY }
+
+    it 'marca quando ha intencao sem numero, e nao marca nos outros casos' do
+      sem_intencao = promote(open_run)
+      expect(sem_intencao.finish!('failed', failure_code: 'x')).to be(true)
+      expect(sem_intencao.handle).to eq({})
+
+      incerta = promote(open_run(conversation_id: other_conversation.id))
+      incerta.merge_handle!({ intencoes => 1 })
+      expect(incerta.finish!('failed', failure_code: 'x')).to be(true)
+      expect(incerta.handle).to eq(intencoes => 1, duplicada => true)
+      expect(described_class.possivelmente_duplicadas).to eq([incerta])
+    end
+
+    it 'nao marca quando o numero esta registrado' do
+      run = promote(open_run)
+      run.record_attempt!(handle: { intencoes => 1, submetido => true, 'id' => 'x' })
+
+      expect(run.finish!('done')).to be(true)
+      expect(run.handle).to eq(intencoes => 1, submetido => true, 'id' => 'x')
+    end
+  end
+
   describe '#finish!' do
     it 'finishes a running run and stores the failure code' do
       # Arrange

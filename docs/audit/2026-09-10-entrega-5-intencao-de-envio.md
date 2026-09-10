@@ -70,5 +70,10 @@ contador é o desenho.
   banco (`merge_handle!(ausente:)`). P2 duas cadeias de poll na mesma execução (B recua 2→1 e
   reagenda; A registra e reagenda) — PRÉ-EXISTENTE, custo = preço repetido/progresso regredido em
   janela de ms; fica na issue #370 (nonce de cadeia no reagendamento). P3 comentários ajustados.
+- Codex (rodada 4, `947db6cc75`): REPROVADO — P1 variante: B anota 0→1 entre a marcação do
+  desfecho de A (intenção zero, nada a marcar) e o `finish!`; a cotação abre e a execução acaba
+  `failed` sem marca. Correção: `ToolRun#finish!` marca o envio incerto no MESMO `UPDATE` que muda o
+  status (`handle || CASE WHEN intencoes > 0 AND submitted IS NULL THEN dup END`); depois dele
+  nenhuma escrita com posse passa. Cadeia dupla de poll confirmada pré-existente (#370). P3 textos.
 
 ## Validação

@@ -7,11 +7,12 @@
 # `:max_retries: 3` reexecutaria o job do zero — o que aqui significa cotar de novo na
 # seguradora, com custo e duplicidade no portal do corretor.
 #
-# O TRABALHO DA PASSADA (`advance`) NUNCA DEIXA `StandardError` SUBIR. Deixar o Sidekiq reexecutar
-# refaria o `start`; aqui uma falha ou é uma nova tentativa controlada (dentro do prazo) ou é o fim
-# com mensagem honesta ao cliente. Silêncio nunca é opção: o cliente está esperando. O que está fora
-# do `advance` (as guardas de `stop?`, o aviso de espera, o próprio desfecho) não tem essa rede; e o
-# sinal de desligamento (`Sidekiq::Shutdown`, um `Interrupt`) passa, de propósito — ver `tentar_start`.
+# O `advance` CAPTURA o `StandardError` do trabalho e o encaminha para nova tentativa ou desfecho.
+# Deixar o Sidekiq reexecutar refaria o `start`; aqui uma falha ou é uma nova tentativa controlada
+# (dentro do prazo) ou é o fim com mensagem honesta ao cliente. Silêncio nunca é opção: o cliente
+# está esperando. O que está fora do `advance` (as guardas de `stop?`, o aviso de espera) e uma falha
+# dentro do próprio tratamento (`retry_or_fail`) podem propagar; e o sinal de desligamento
+# (`Sidekiq::Shutdown`, um `Interrupt`) passa, de propósito — ver `tentar_start`.
 class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   queue_as :medium
 
@@ -235,6 +236,9 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   #
   # Quem acaba com intenção anotada e sem número (entrega 5) fica marcado para a lista do corretor,
   # seja qual for o código do desfecho: prazo esgotado ou terceira intenção, a cotação pode existir.
+  # A marcação aqui é para a FRASE (o cliente lê "não consegui confirmar"); a que protege o dinheiro
+  # é a do `finish!`, no mesmo comando que encerra — uma intenção anotada por outro processo entre
+  # as duas não escapa.
   def fail_run(run, native, code)
     run.marcar_envio_incerto!
     if native.present?
