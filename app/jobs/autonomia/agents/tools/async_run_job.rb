@@ -74,23 +74,9 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
 
   # Submete (primeira passada) ou consulta (demais). A ferramenta é instanciada a cada
   # execução: ela resolve conexão e credencial sozinha, e nada disso trafega pelo Redis.
-  #
-  # JANELA CONHECIDA (#337): entre `tool.start` e `record_attempt!` não há atomicidade. Se o worker
-  # morrer aí — um deploy no meio, por exemplo —, a cotação FOI feita no portal e não ficou
-  # registrada; o Sidekiq reexecuta e cota de novo na seguradora.
-  #
-  # Um lock em volta do `submitted?` NÃO resolve isto: o problema não é duas execuções concorrentes,
-  # é o efeito externo já ter acontecido sem registro. A correção é inverter a ordem — marcar a
-  # intenção antes de submeter e decidir o que fazer quando existir marca sem handle —, e isso é
-  # mudança de desenho, não de linha. Deixada para a issue própria em vez de improvisada aqui.
   def advance(run, native, attempt)
     tool = native.new(agent: run.agent, params: run.arguments)
-    unless submitted?(run)
-      handle = tool.start
-      registrar_recusa(run, handle)
-      run.record_attempt!(handle: submitted_handle(handle))
-      return reschedule(run, attempt)
-    end
+    return submeter(run, native, tool, attempt) unless submitted?(run)
 
     apply(run, native, tool.poll(handle: tool_handle(run), attempt: attempt), attempt)
   rescue StandardError => e
@@ -114,9 +100,55 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     Rails.logger.warn("[autonomia][tool][async] registro de recusa falhou run=#{run.id} #{e.class}")
   end
 
+  # A ORDEM QUE PROTEGE O DINHEIRO (entrega 5; era a janela #337). Entre `tool.start` e o registro do
+  # número não há atomicidade: um deploy no meio (o Sidekiq desta instalação re-enfileira o job no
+  # shutdown gracioso) deixava a cotação feita no portal e não registrada, e a passada seguinte
+  # cotava de novo — até 60 vezes, sem ninguém saber.
+  #
+  # Agora: anota a INTENÇÃO com contador, submete, anota o NÚMERO. Quem volta e encontra intenção sem
+  # número sabe que PODE ter enviado — e tenta no máximo mais UMA vez, marcando a execução como
+  # possivelmente duplicada (`ToolRun.possivelmente_duplicadas` lista). Na terceira intenção, para:
+  # cotar duas vezes é bagunça no portal do corretor; três seria negligência.
+  #
+  # Por que não inverter a ordem e parar ali: o login do portal falha sozinho de vez em quando (três
+  # vezes em 10/09/2026). Se `start` levanta, o portal DISSE que não fez — então a intenção é apagada
+  # e a execução segue podendo ser tentada; a anotação não pode virar sentença de "já foi" e travar a
+  # conversa. A intenção só permanece quando o processo morre sem dizer nada.
+  MAXIMO_DE_INTENCOES = 2
+
+  def submeter(run, native, tool, attempt)
+    intencoes = run.handle.to_h[::Autonomia::Agents::ToolRun::INTENCOES].to_i
+    return fail_run(run, native, 'envio_incerto') if intencoes >= MAXIMO_DE_INTENCOES
+
+    anotar_intencao!(run, intencoes + 1)
+    handle = tentar_start(run, tool)
+    registrar_recusa(run, handle)
+    run.record_attempt!(handle: submitted_handle(run, handle))
+    reschedule(run, attempt)
+  end
+
+  def anotar_intencao!(run, numero)
+    marcas = { ::Autonomia::Agents::ToolRun::INTENCOES => numero }
+    if numero > 1
+      marcas[::Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA] = true
+      Rails.logger.warn("[autonomia][tool][async] possivelmente duplicada run=#{run.id} slug=#{run.slug} intencao=#{numero}")
+    end
+    run.record_handle!(run.handle.to_h.merge(marcas))
+  end
+
+  # `start` levantou: o portal respondeu que não fez (ou nem foi alcançado). A intenção volta atrás
+  # para a próxima passada não a ler como "pode ter enviado". A exceção segue para `advance`, que
+  # decide entre tentar de novo e desistir.
+  def tentar_start(run, tool)
+    tool.start
+  rescue StandardError
+    run.record_handle!(run.handle.to_h.except(::Autonomia::Agents::ToolRun::INTENCOES))
+    raise
+  end
+
   def apply(run, native, progress, attempt)
     Array(progress&.deliveries).each { |text| deliver(run, text) }
-    run.record_attempt!(handle: merged_handle(progress&.handle))
+    run.record_attempt!(handle: merged_handle(run, progress&.handle))
 
     if progress.nil? || progress.failed?
       fail_run(run, native, progress&.failure_code)
@@ -217,19 +249,29 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.handle.is_a?(Hash) && run.handle[SUBMITTED_KEY].present?
   end
 
-  # O handle da FERRAMENTA, sem a nossa marca: ela não precisa conhecer o nosso controle.
+  # As marcas NOSSAS no handle: submetido, intenções, possivelmente duplicada, encerrado.
+  MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ::Autonomia::Agents::ToolRun::INTENCOES,
+            ::Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA].freeze
+
+  # O handle da FERRAMENTA, sem as nossas marcas: ela não precisa conhecer o nosso controle.
   def tool_handle(run)
-    run.handle.to_h.except(SUBMITTED_KEY)
+    run.handle.to_h.except(*MARCAS)
   end
 
-  def submitted_handle(handle)
-    { SUBMITTED_KEY => true }.merge(handle.is_a?(Hash) ? handle : {})
+  # O handle da ferramenta com as nossas marcas de volta, mais "submetido". As marcas vêm da LINHA
+  # (não do que a ferramenta devolveu): a ferramenta nunca as viu.
+  def submitted_handle(run, handle)
+    marcas(run).merge(SUBMITTED_KEY => true).merge(handle.is_a?(Hash) ? handle : {})
   end
 
-  # A consulta só atualiza o handle quando a ferramenta devolve um novo; a marca é preservada.
-  def merged_handle(handle)
+  # A consulta só atualiza o handle quando a ferramenta devolve um novo; as marcas são preservadas.
+  def merged_handle(run, handle)
     return nil unless handle.is_a?(Hash) && handle.present?
 
-    { SUBMITTED_KEY => true }.merge(handle)
+    marcas(run).merge(SUBMITTED_KEY => true).merge(handle)
+  end
+
+  def marcas(run)
+    run.handle.to_h.slice(*MARCAS)
   end
 end

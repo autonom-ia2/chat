@@ -38,13 +38,24 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
                                 .limit(BATCH_LIMIT).each(&:discard!)
   end
 
+  # Se a execução morreu com a INTENÇÃO anotada e sem o número (entrega 5), a cotação pode existir
+  # no portal sem registro nosso: fica marcada como possivelmente duplicada, para o corretor achar.
   def close(run)
     native = ::Autonomia::Agents::Tools::Registry.find(run.slug)
+    marcar_envio_incerto(run)
     tell_customer(run, native) if native.present? && run.delivered_count.zero?
     run.finish!('failed', failure_code: 'execucao_abandonada')
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] reap failed run=#{run.id} #{e.class}")
     nil
+  end
+
+  def marcar_envio_incerto(run)
+    handle = run.handle.to_h
+    return if handle[::Autonomia::Agents::ToolRun::INTENCOES].blank? ||
+              handle[::Autonomia::Agents::Tools::AsyncRunJob::SUBMITTED_KEY].present?
+
+    run.record_handle!(handle.merge(::Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA => true))
   end
 
   # Força a publicação: a cadeia de entrega humanizada daquele turno já morreu há muito, e esperar

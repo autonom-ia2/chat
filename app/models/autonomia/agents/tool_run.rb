@@ -70,6 +70,16 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
   scope :active, -> { where(status: ACTIVE_STATUSES) }
   scope :for_conversation, ->(conversation_id) { where(conversation_id: conversation_id) }
+  # As que podem ter cotado duas vezes no portal (entrega 5): o worker morreu entre o envio e o
+  # registro do número, e o job tentou de novo. É a lista que o corretor precisa quando vê duas
+  # cotações idênticas no portal e não sabe qual é a boa.
+  scope :possivelmente_duplicadas, -> { where('handle @> ?', { POSSIVELMENTE_DUPLICADA => true }.to_json) }
+
+  # Marcas NOSSAS dentro do handle (entrega 5). `intencoes` conta quantas vezes o job decidiu
+  # submeter; `possivelmente_duplicada` fica quando ele decidiu uma segunda vez sem saber se a
+  # primeira chegou ao portal.
+  INTENCOES = 'autonomia_intencoes'.freeze
+  POSSIVELMENTE_DUPLICADA = 'autonomia_possivelmente_duplicada'.freeze
 
   # Abre uma execução para (conversa, ferramenta), substituindo a que estiver viva.
   #
@@ -149,6 +159,12 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     attrs = { attempts: attempts + 1 }
     attrs[:handle] = handle.to_h.deep_stringify_keys if handle.present?
     guarded_update('running', **attrs)
+  end
+
+  # Grava só o handle, SEM contar tentativa: é a anotação da intenção de submeter (entrega 5), que
+  # precisa ficar no banco ANTES de o portal ser chamado — e não é uma consulta.
+  def record_handle!(handle)
+    guarded_update('running', handle: handle.to_h.deep_stringify_keys)
   end
 
   # Registra que uma ENTREGA DA FERRAMENTA foi aceita para publicação (publicada ou adiada). O aviso
