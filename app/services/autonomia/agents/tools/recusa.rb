@@ -102,6 +102,7 @@ module Autonomia::Agents::Tools::Recusa
 
   # O nome que o modelo pediu, só se for ferramenta que existe: no catálogo das nativas, no cadastro
   # da conta ou entre os especialistas do agente. Nome que não existe em lugar nenhum é texto livre.
+  # Nunca levanta: a consulta ao banco é cortesia do registro, e o turno não morre por causa dela.
   def slug_conhecido(nome, agente)
     texto = nome.to_s
     return texto if ::Autonomia::Agents::Tools::Registry.slugs.include?(texto)
@@ -109,6 +110,8 @@ module Autonomia::Agents::Tools::Recusa
 
     especialista = texto.delete_prefix(::Autonomia::Agents::Specialist::FUNCTION_PREFIX)
     agente.tools.exists?(slug: texto) || agente.specialists.exists?(slug: especialista) ? texto : DESCONHECIDA
+  rescue StandardError
+    DESCONHECIDA
   end
 
   def campos(itens)

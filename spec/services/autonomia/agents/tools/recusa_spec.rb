@@ -95,6 +95,13 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
       expect(described_class.slug_conhecido('cotar_seguro_cpf_04297912678', agent)).to eq('desconhecida')
       expect(described_class.slug_conhecido('cotar_seguro_cpf_04297912678', nil)).to eq('desconhecida')
     end
+
+    # A consulta é cortesia do registro: se o banco falhar aqui, a recusa ao modelo continua saindo.
+    it 'nao levanta quando a consulta ao cadastro falha' do
+      allow(agent).to receive(:tools).and_raise(ActiveRecord::ConnectionTimeoutError)
+
+      expect(described_class.slug_conhecido('consultar_estoque', agent)).to eq('desconhecida')
+    end
   end
 
   describe '.para_modelo' do
