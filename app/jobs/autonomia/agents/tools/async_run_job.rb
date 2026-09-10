@@ -7,10 +7,11 @@
 # `:max_retries: 3` reexecutaria o job do zero — o que aqui significa cotar de novo na
 # seguradora, com custo e duplicidade no portal do corretor.
 #
-# NUNCA deixa exceção de TRABALHO subir (`StandardError`). Deixar o Sidekiq reexecutar refaria o
-# `start`; aqui uma falha ou é uma nova tentativa controlada (dentro do prazo) ou é o fim com
-# mensagem honesta ao cliente. Silêncio nunca é opção: o cliente está esperando. O sinal de
-# desligamento (`Sidekiq::Shutdown`, um `Interrupt`) passa, de propósito — ver `tentar_start`.
+# O TRABALHO DA PASSADA (`advance`) NUNCA DEIXA `StandardError` SUBIR. Deixar o Sidekiq reexecutar
+# refaria o `start`; aqui uma falha ou é uma nova tentativa controlada (dentro do prazo) ou é o fim
+# com mensagem honesta ao cliente. Silêncio nunca é opção: o cliente está esperando. O que está fora
+# do `advance` (as guardas de `stop?`, o aviso de espera, o próprio desfecho) não tem essa rede; e o
+# sinal de desligamento (`Sidekiq::Shutdown`, um `Interrupt`) passa, de propósito — ver `tentar_start`.
 class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   queue_as :medium
 
@@ -143,12 +144,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     reschedule(run, attempt)
   end
 
-  # Grava `para` no lugar de `atual` — só se a linha ainda estiver em `atual`. Serve para anotar
-  # (0→1, 1→2) e para voltar atrás (1→0, 2→1) quando o portal disse que não fez. A marca de duplicata
-  # é função do número e é recalculada junto: voltar de 2 para 1 a tira.
+  # Grava `para` no lugar de `atual` — só se a linha ainda estiver em `atual` e sem número (a posse).
+  # Serve para anotar (0→1, 1→2) e para voltar atrás quando o portal disse que não fez (1→0, 2→1).
+  # A marca de duplicata é MONOTÔNICA enquanto a execução vive: voltar de 2 para 1 a MANTÉM, porque a
+  # primeira chamada continua incerta (é por isso que a intenção 1 ficou) — tirá-la apagava a marca
+  # que um desfecho concorrente acabava de gravar (Codex, rodada 3). Só a volta a zero a tira: a
+  # única chamada feita falhou com certeza.
   def anotar_intencao!(run, atual:, para:)
-    marcas = marcas_de_intencao(para)
-    gravou = run.merge_handle!(marcas, remover: MARCAS_DE_INTENCAO - marcas.keys, intencao: atual)
+    gravou = run.merge_handle!(marcas_de_intencao(para), remover: para.zero? ? MARCAS_DE_INTENCAO : [],
+                                                         intencao: atual)
     raise MudouDeDono, "intenção #{atual}→#{para} não gravou" unless gravou
     return unless para > 1
 
@@ -245,12 +249,12 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.envio_incerto? ? native.uncertain_message : native.failure_message
   end
 
-  # NUNCA levanta: o encerramento é cortesia sobre um caminho que já deu errado, e falhar aqui
-  # apagaria o `finish!` que registra o desfecho.
+  # Não deixa `StandardError` subir: o encerramento é cortesia sobre um caminho que já deu errado, e
+  # falhar aqui apagaria o `finish!` que registra o desfecho. A marca `closed` é ADQUIRIDA no banco
+  # (`ausente:`): dois processos com a mesma execução e leitura velha não geram dois comparativos.
   def encerrar(run, native)
-    return if run.handle.to_h[CLOSED_KEY].present?
+    return unless run.merge_handle!({ CLOSED_KEY => true }, ausente: CLOSED_KEY)
 
-    run.merge_handle!({ CLOSED_KEY => true })
     fechamento(run, native).each { |texto| publish(run, texto) }
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{run.slug} #{e.class}")

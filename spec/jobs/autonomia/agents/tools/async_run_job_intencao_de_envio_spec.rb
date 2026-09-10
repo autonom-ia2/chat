@@ -150,14 +150,17 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(described_class).to have_been_enqueued.with(run.id, 1)
     end
 
-    it 'volta de 2 para 1 e tira a marca: a repeticao que nao aconteceu nao e duplicata' do
+    it 'volta de 2 para 1 e MANTEM a marca: a primeira chamada segue incerta' do
+      # Arrange — a primeira chamada ficou sem resposta; a segunda o portal recusou com certeza
       run = execucao(handle: { intencoes => 1 })
       register_async_tool(build_async_tool(start_error: 'credencial recusada'))
 
+      # Act
       described_class.new.perform(run.id, 0)
 
-      expect(run.reload.handle).to eq(intencoes => 1)
-      expect(runs.possivelmente_duplicadas).to be_empty
+      # Assert — a marca é monotônica: tirá-la apagaria a que um desfecho concorrente acabou de gravar
+      expect(run.reload.handle).to eq(intencoes => 1, duplicada => true)
+      expect(runs.possivelmente_duplicadas).to eq([run])
       expect(described_class).to have_been_enqueued.with(run.id, 1)
     end
 
@@ -388,6 +391,35 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, 2)
 
       expect(visto).to eq([{ 'id' => 'cot-2' }, { 'id' => 'cot-2' }])
+      expect(run.reload.status).to eq('failed')
+    end
+  end
+
+  describe 'o encerramento' do
+    it 'e adquirido no banco: dois processos com leitura velha nao geram dois comparativos' do
+      # Arrange — preço entregue, prazo vencido; outro processo fecha enquanto este ainda lê "aberto"
+      run = execucao(handle: { submetido => true, 'id' => 'cot-2', intencoes => 1 })
+      run.record_delivery!
+      run.update!(expires_at: 1.minute.ago)
+      fechamentos = 0
+      linha = runs
+      tool = build_async_tool
+      tool.define_method(:closing_deliveries) do |_handle|
+        fechamentos += 1
+        ['comparativo']
+      end
+      register_async_tool(tool)
+      allow(Autonomia::Agents::Tools::Registry).to receive(:find) do |slug|
+        linha.find(run.id).merge_handle!({ described_class::CLOSED_KEY => true })
+        slug.to_s == tool.slug ? tool : nil
+      end
+
+      # Act
+      described_class.new.perform(run.id, 1)
+
+      # Assert — quem perdeu a aquisição não gera comparativo nem publica
+      expect(fechamentos).to eq(0)
+      expect(bot_contents).to be_empty
       expect(run.reload.status).to eq('failed')
     end
   end

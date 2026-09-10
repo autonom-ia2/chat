@@ -63,5 +63,12 @@ contador é o desenho.
   passava depois de A registrar e apagava o número); P1 `marcar_envio_incerto!` substituía o handle
   por cópia velha; P3 comentários prometendo mais que o código. Correção: mescla no banco e posse
   com número ausente (acima); comentário "NUNCA deixa exceção subir" corrigido para `StandardError`.
+- Codex (rodada 3, `0510def2f7`): REPROVADO — P1 voltar 2→1 tirava a marca que um desfecho
+  concorrente (prazo/teto) acabava de gravar, e o `finish!` seguinte deixava a cotação sem marca.
+  Correção: marca MONOTÔNICA enquanto a execução vive (só 1→0 a tira — a única chamada falhou com
+  certeza). P2 `encerrar` não era idempotente entre objetos: corrigido com aquisição de `closed` no
+  banco (`merge_handle!(ausente:)`). P2 duas cadeias de poll na mesma execução (B recua 2→1 e
+  reagenda; A registra e reagenda) — PRÉ-EXISTENTE, custo = preço repetido/progresso regredido em
+  janela de ms; fica na issue #370 (nonce de cadeia no reagendamento). P3 comentários ajustados.
 
 ## Validação

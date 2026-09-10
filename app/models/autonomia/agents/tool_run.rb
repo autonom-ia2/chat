@@ -76,10 +76,11 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   scope :possivelmente_duplicadas, -> { where('handle @> ?', { POSSIVELMENTE_DUPLICADA => true }.to_json) }
 
   # Marcas NOSSAS dentro do handle, ao lado do que a ferramenta devolveu. `submitted` é a que diz
-  # "o portal já foi chamado e o número está aqui" (#313) — gravada pelo `AsyncRunJob`, lida também
-  # pelo varredor e pelo desfecho. `intencoes` conta quantas vezes o job decidiu submeter (entrega
-  # 5); `possivelmente_duplicada` fica quando ele decidiu uma segunda vez sem saber se a primeira
-  # chegou ao portal, ou quando a execução acabou nesse estado.
+  # "o portal já foi chamado, e o que ele devolveu está aqui" — um número, uma recusa com `pedido`,
+  # ou nada (#313) — gravada pelo `AsyncRunJob`, lida também pelo varredor e pelo desfecho.
+  # `intencoes` conta quantas vezes o job decidiu submeter (entrega 5); `possivelmente_duplicada`
+  # fica quando ele decidiu uma segunda vez sem saber se a primeira chegou ao portal, ou quando a
+  # execução acabou nesse estado — e não sai enquanto a execução vive.
   SUBMITTED_KEY = 'autonomia_submitted'.freeze
   INTENCOES = 'autonomia_intencoes'.freeze
   POSSIVELMENTE_DUPLICADA = 'autonomia_possivelmente_duplicada'.freeze
@@ -191,9 +192,12 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
   # Escreve NAS marcas do handle sem tocar no resto: `(handle || adicionar) - remover`, no banco,
   # sem contar tentativa. É a anotação da intenção de submeter (entrega 5), que precisa ficar no
-  # banco ANTES de o portal ser chamado — e a volta atrás dela. -> true quando a escrita valeu.
-  def merge_handle!(adicionar, remover: [], intencao: nil)
-    mesclar(posse(intencao), adicionar: adicionar, remover: remover)
+  # banco ANTES de o portal ser chamado — e a volta atrás dela. `ausente:` é aquisição: só escreve
+  # se a chave ainda não está lá (o `closed` do encerramento). -> true quando a escrita valeu.
+  def merge_handle!(adicionar, remover: [], intencao: nil, ausente: nil)
+    scope = posse(intencao)
+    scope = sem_chave(scope, ausente) if ausente
+    mesclar(scope, adicionar: adicionar, remover: remover)
   end
 
   # Registra que uma ENTREGA DA FERRAMENTA foi aceita para publicação (publicada ou adiada). O aviso
@@ -263,7 +267,11 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   end
 
   def sem_numero(scope)
-    scope.where('(handle->>?) IS NULL', SUBMITTED_KEY)
+    sem_chave(scope, SUBMITTED_KEY)
+  end
+
+  def sem_chave(scope, chave)
+    scope.where('(handle->>?) IS NULL', chave)
   end
 
   # `envio_incerto?` em SQL: intenção anotada, número ausente.
