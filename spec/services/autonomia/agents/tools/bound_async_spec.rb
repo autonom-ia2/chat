@@ -216,22 +216,18 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(runs.count).to be_zero
     end
 
-    it 'refuses above the per-conversation ceiling inside the window' do
-      # Arrange — linhas antigas em estado TERMINAL, para não colidir com o índice único de ativas
-      create_finished_runs(Autonomia::Agents::Tools::AsyncConfig::MAX_RUNS_PER_CONVERSATION)
-
-      # Act
-      output = bound.execute(call, delivery: delivery)
-
-      # Assert
-      expect(output).to eq({ error: 'limite_de_execucoes_atingido' }.to_json)
-      expect(runs.active.count).to be_zero
-    end
-
-    it 'accepts again once the old runs fall outside the window' do
+    # A GUARDA AO CONTRÁRIO: aqui não se prova que um teto funciona, prova-se que ele NÃO EXISTE.
+    #
+    # O teto anterior (8 por hora) entrou sem aprovação e estrangulava justamente a corretora que
+    # cota mais — que é a que paga mais e fecha mais negócio. Rodrigo o removeu em 10/09/2026 como
+    # decisão de produto. Sem este exemplo, a próxima pessoa preocupada com custo o reintroduz em
+    # uma linha, e ninguém percebe até um cliente grande reclamar que o agente parou de cotar.
+    #
+    # Vinte é bem acima de qualquer teto que alguém pensaria em pôr, e são criadas em estado
+    # TERMINAL para não colidir com o índice único de execuções ativas.
+    it 'accepts a new run no matter how many the conversation already had — there is NO ceiling' do
       # Arrange
-      create_finished_runs(Autonomia::Agents::Tools::AsyncConfig::MAX_RUNS_PER_CONVERSATION,
-                           created_at: (Autonomia::Agents::Tools::AsyncConfig::RUNS_WINDOW + 1.minute).ago)
+      create_finished_runs(20)
 
       # Act
       output = bound.execute(call, delivery: delivery)
@@ -240,6 +236,14 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(output).to eq(tool.accepted_message)
       expect(runs.active.count).to eq(1)
     end
+
+    # NÃO ESCREVI AQUI o exemplo de "o mesmo turno não abre duas execuções", e a ausência é
+    # deliberada. Tentei, e ele passou verde do jeito errado: `ToolRun.opened_for_turn?`
+    # (tool_run.rb:105) EXCLUI as execuções em `pending` de propósito — a proteção de retry só vale
+    # depois do despacho, não dentro do turno. Quem segura dentro do turno é outra coisa, e eu não
+    # a medi. Afirmar aqui o que eu não entendi seria fabricar a prova, que é o defeito que este
+    # arquivo inteiro existe para não cometer. Fica como pergunta aberta da entrega 10, que é quem
+    # vai comparar os DADOS do pedido e tornar essa dúvida irrelevante.
 
     it 'reports invalid arguments before opening any run' do
       # Arrange / Act

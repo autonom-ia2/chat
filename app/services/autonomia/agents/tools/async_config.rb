@@ -42,11 +42,26 @@ module Autonomia::Agents::Tools::AsyncConfig
   PUBLISH_DEFER_SECONDS = 3
   MAX_PUBLISH_DEFERRALS = 30
 
-  # Teto de custo por conversa: cada execução é uma cotação de verdade no portal da seguradora.
-  # A dedup por (conversa, ferramenta) já impede duas ao mesmo tempo; isto impede o abuso em série
-  # ("cota 2021… agora 2022… agora 2023…"), que gera chaves diferentes e escaparia da dedup.
-  MAX_RUNS_PER_CONVERSATION = 8
-  RUNS_WINDOW = 1.hour
+  # NÃO EXISTE TETO DE COTAÇÃO POR CONVERSA, E ISSO É DECISÃO DE PRODUTO.
+  #
+  # Havia um: 8 execuções por hora. Entrou sem aprovação e contava a unidade errada — uma execução
+  # aciona todas as seguradoras habilitadas (17 na conta de teste), então "8 por hora" eram até 136
+  # consultas, e o número 8 não dizia nada sobre dinheiro.
+  #
+  # Rodrigo removeu o teto em 10/09/2026, e o motivo não é técnico: **quem paga a cotação é a
+  # corretora**. Uma corretora grande cota mais, fecha mais negócio e tem retorno maior. Estrangular
+  # o cliente que paga mais é o oposto do produto. Medir para cobrar e mostrar retorno é a entrega
+  # 7; frear é outra coisa, e frear não é o que se quer aqui.
+  #
+  # O que continua impedindo desperdício NÃO é teto:
+  #   - `turn_already_opened?` (bound.rb) — o retry do mesmo turno não abre execução nova;
+  #   - a dedup por (conversa, ferramenta) — duas ao mesmo tempo não acontecem;
+  #   - e a entrega 10, que compara os DADOS do pedido: "e aí, saiu?" tem os mesmos dados e não
+  #     abre; qualquer campo diferente abre. Enquanto ela não existir, a impaciência do cliente
+  #     gera cotação duplicada no portal do corretor — que é sujeira, não prejuízo nosso.
+  #
+  # `sem_teto_de_execucoes_spec` guarda esta decisão: quem reintroduzir teto derruba o exemplo e é
+  # obrigado a encarar a decisão em vez de repetir o acidente.
 
   module_function
 
