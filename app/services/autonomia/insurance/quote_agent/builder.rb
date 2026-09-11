@@ -82,16 +82,17 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # PRESENTE e incompleta não cai em silêncio no arquivo cru nem na coluna: `EscolhasIncompletas`, com
   # o nome do campo — uma variável nunca pode chegar ao modelo como `$nomeAgente`.
   #
-  # É `nil?`, NÃO `blank?`: só a chave AUSENTE é o agente de antes de #380. A chave presente e vazia
-  # (`{}`, `false`, escrita fora do Builder) é o mesmo defeito da chave incompleta, e um `blank?` a
+  # É `key?`, NÃO `nil?` nem `blank?`: só a chave AUSENTE é o agente de antes de #380. A chave presente
+  # com `null`, `{}` ou `false` (escrita fora do Builder) é o mesmo defeito da chave incompleta, e um
+  # `nil?` (o jsonb guarda `{"agente_de_cotacao": null}` com a chave lá — rodada 6) ou um `blank?` a
   # devolveria em silêncio à coluna de nascimento — o texto velho, com crases — em vez de parar.
   def self.instrucao_do_principal(agent)
     return nil unless agent&.agent_type == 'insurance_quote'
 
-    escolhas = agent.config.to_h[ESCOLHAS_DA_CORRETORA]
-    return nil if escolhas.nil?
+    config = agent.config.to_h
+    return nil unless config.key?(ESCOLHAS_DA_CORRETORA)
 
-    substituir(texto_do_principal, escolhas)
+    substituir(texto_do_principal, conferir_escolhas!(config[ESCOLHAS_DA_CORRETORA]))
   end
 
   # Lido a cada montagem, e não fotografado no boot: é o que faz o deploy seguinte valer.
@@ -99,21 +100,30 @@ class Autonomia::Insurance::QuoteAgent::Builder
     INSTRUCOES.join(ARQUIVO_DO_PRINCIPAL).read
   end
 
-  # O BLOCO NO `gsub` NÃO É ESTILO. Com o valor como segundo argumento, o Ruby interpreta `\\0` no
-  # texto de substituição — um nome de corretora contendo essa sequência passaria a inserir o
-  # próprio marcador de volta. O bloco entrega a string literal, sem interpretar nada.
+  # UMA PASSADA SÓ: os quatro marcadores numa regex, e o bloco entrega a escolha do marcador que casou.
+  # O valor inserido nunca é relido — uma passada por marcador (`reduce`, até a rodada 6) relia o que
+  # a anterior tinha inserido, e `nome_corretora: '$horarioAtendimento'` virava o horário. O BLOCO
+  # também não é estilo: com o valor como segundo argumento, o Ruby interpreta `\\0` no texto de
+  # substituição — um nome de corretora contendo essa sequência inseriria o próprio marcador de
+  # volta. O bloco entrega a string literal, sem interpretar nada.
+  #
+  # `escolhas` chega conferida (`conferir_escolhas!` no runtime, `validar_escolhas!` na criação):
+  # sempre as quatro, nenhuma com marcador dentro.
   def self.substituir(texto, escolhas)
-    VARIAVEIS.reduce(texto) do |parcial, (marcador, campo)|
-      parcial.gsub(marcador) { escolha(escolhas, campo) }
-    end
+    texto.gsub(MARCADOR) { |marcador| escolhas.fetch(VARIAVEIS.fetch(marcador)).to_s }
   end
 
-  # Só o nome do campo na mensagem, nunca o valor de outra escolha: o erro vai para log.
-  def self.escolha(escolhas, campo)
-    valor = escolhas[campo] if escolhas.is_a?(Hash)
-    raise EscolhasIncompletas, campo if valor.blank?
-
-    valor.to_s
+  # As escolhas guardadas, conferidas ANTES de entrar no texto: as quatro presentes, nenhuma em branco
+  # e nenhuma com marcador reservado dentro — `nome_corretora: '$nomeAgente'` chegaria ao modelo como
+  # o marcador literal (termo 6). Só o nome do campo na mensagem, nunca o valor: o erro vai para log e
+  # para a API.
+  # -> as mesmas escolhas, quando passam.
+  def self.conferir_escolhas!(escolhas)
+    VARIAVEIS.each_value do |campo|
+      valor = escolhas[campo] if escolhas.is_a?(Hash)
+      raise EscolhasIncompletas, campo if valor.blank? || MARCADOR.match?(valor.to_s)
+    end
+    escolhas
   end
 
   # A chave do `config` onde as escolhas da corretora vivem: `nome_agente`, `nome_corretora`,
@@ -124,10 +134,15 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # Marcador no arquivo -> campo das escolhas.
   VARIAVEIS = { '$nomeAgente' => 'nome_agente', '$nomeCorretora' => 'nome_corretora',
                 '$horarioAtendimento' => 'horario', '$comportamento' => 'comportamento' }.freeze
+  # Os quatro marcadores numa regex só — a MESMA que substitui e que recusa marcador dentro de uma
+  # escolha, derivada de `VARIAVEIS` para não haver duas listas. A fronteira de palavra fecha o nome:
+  # `$nomeAgente,` casa; `$nomeAgentes` não é marcador.
+  MARCADOR = /(?:#{Regexp.union(VARIAVEIS.keys).source})\b/
 
   class SlugDesconhecido < StandardError; end
   class ComportamentoInvalido < StandardError; end
   class NomeInvalido < StandardError; end
+  class HorarioInvalido < StandardError; end
   class JaExiste < StandardError; end
   class EscolhasIncompletas < StandardError; end
 
@@ -145,7 +160,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
     raise ComportamentoInvalido, @comportamento unless COMPORTAMENTOS.include?(@comportamento)
 
     validar_slugs!
-    validar_nomes!
+    validar_escolhas!
     # UM AGENTE DE COTAÇÃO POR CONTA. Dois seriam ligados às mesmas caixas de entrada e disputariam
     # a mesma conversa, cada um com o seu especialista e a sua sessão AGGER — e o corretor não teria
     # como saber qual respondeu. Quem quer trocar o nome ou o comportamento edita o que existe.
@@ -178,11 +193,18 @@ class Autonomia::Insurance::QuoteAgent::Builder
     raise SlugDesconhecido, "#{desconhecidos.join(', ')} (catálogo: #{catalogo.join(', ')})"
   end
 
-  def validar_nomes!
+  # As três escolhas de texto livre (`comportamento` é um de dois valores fixos, conferido em `call`).
+  # Nome vazio ou longo demais, e — rodada 6 — qualquer uma delas contendo um marcador reservado:
+  # `nome_corretora: '$nomeAgente'` chegaria ao modelo como marcador literal (termo 6), e o
+  # `EscolhasIncompletas` que o runtime levantaria dentro da transação não é resgatado pela porta do
+  # agente de cotação (500 sem o campo). A mensagem nomeia o campo e o motivo, nunca o valor.
+  def validar_escolhas!
     { 'nome do agente' => @nome_agente, 'nome da corretora' => @nome_corretora }.each do |campo, valor|
       raise NomeInvalido, "#{campo} vazio" if valor.blank?
       raise NomeInvalido, "#{campo} acima de #{MAX_NOME} caracteres" if valor.length > MAX_NOME
+      raise NomeInvalido, "#{campo} contém um marcador reservado" if MARCADOR.match?(valor)
     end
+    raise HorarioInvalido, 'horário contém um marcador reservado' if MARCADOR.match?(@horario)
   end
 
   # A coluna recebe o texto de hoje (retrato do nascimento); o que roda lê o arquivo do deploy com as

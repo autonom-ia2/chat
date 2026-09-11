@@ -27,7 +27,8 @@ Duas partes, porque o principal tem o que o especialista não tinha — valores 
    `PromptBuilder#instructions` passa a ler `instrucao_do_sistema`. É o espelho de
    `Specialist#instrucao_do_sistema` (entrega 3).
 
-O que NÃO cai em silêncio: chave presente e incompleta (campo faltando ou em branco) para com
+O que NÃO cai em silêncio: chave presente e incompleta (campo faltando, em branco, ou — rodada 6 — com um
+marcador reservado dentro; e presente com `null`, `{}` ou `false`) para com
 `Builder::EscolhasIncompletas`, cuja mensagem é só o nome do campo. Variável nunca chega ao modelo como
 `$nomeAgente`, nem por arquivo cru nem por coluna escolhida às escondidas. Só um write fora do Builder
 produz esse estado: a API do agente protege a chave (`PROTECTED_CONFIG_KEYS`, que já mesclava sem
@@ -55,7 +56,7 @@ leu ATÉ o deploy desta PR, não depois.
 | 3 | Agente já criado recebe o texto novo sem ser recriado | fechado em código | spec: cria pelo Builder, envelhece a coluna (`update!(instruction: 'instrução velha…')`), o prompt efetivo é o do arquivo com os valores; em produção depende do rollout abaixo (pendente_producao) |
 | 4 | Auditabilidade mantida e documentada | fechado | seção acima; spec «auditabilidade (termo 4)» |
 | 5 | SQL de rollout do agente 24 + conferência | entregue, não executado (pendente_prova_real) | seção «Rollout» abaixo; passo 1 com o retrato completo (`mode`, andaime, BuildThreads) desde a rodada 3 |
-| 6 | Mutações: runtime lendo a coluna reprova; valores ausentes caindo no arquivo com placeholder reprova | fechado | M1 e M8 (coluna), M3 (arquivo cru), M4 (marcador sobrando), M6 (branco em silêncio); rodada 4: R4A (chave presente e vazia não volta à coluna); rodada 3: VG/VG2 fecham o flip de tipo que reabria «runtime lendo a coluna», VD prova a leitura a cada montagem, VF/VI provam a mensagem e o locale — tabelas abaixo |
+| 6 | Mutações: runtime lendo a coluna reprova; valores ausentes caindo no arquivo com placeholder reprova | fechado | M1 e M8 (coluna), M3 (arquivo cru), M4 (marcador sobrando), M6 (branco em silêncio); rodada 4: R4A (chave presente e vazia não volta à coluna); rodada 3: VG/VG2 fecham o flip de tipo que reabria «runtime lendo a coluna», VD prova a leitura a cada montagem, VF/VI provam a mensagem e o locale; rodada 6: R6A/R6A2 (passada única e fronteira do marcador), R6B/R6C/R6D/R6F (marcador dentro de uma escolha recusado no runtime, na criação e na porta), R6E/R6E2 (chave presente com `null` não volta à coluna) — tabelas abaixo |
 
 ## Mutações (`~/ops/agente-cotacao/issue-380/mutacoes_i380.rb`, 11/09/2026)
 
@@ -540,6 +541,125 @@ para provar que os dois sítios de "atendidas" seguem guardados depois da mudan�
 - `ruby ~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada5.rb` → 4/4.
 - Suíte ampla (`spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
   spec/requests/api/v1/accounts/autonomia` + a spec de locales) → 1.178 exemplos, 0 falhas, 3 pendentes
+  pré-existentes (`RegistrationCheckout::Provisioner`, `Sso::Provisioner`), 0 erros fora, exit 0.
+
+## Rodada 6 (dois P2 do Codex sobre 573a344b8e)
+
+Veredito anterior: APROVADO. Os dois achados são da mesma classe: a substituição e a guarda da chave
+tratavam a FORMA NORMAL das escolhas (quatro valores sem `$`; chave ausente ou hash) e deixavam passar as
+bordas — um valor de escolha que carrega um marcador, e a chave presente com `null`.
+
+### P2 — `substituir` relia o valor inserido (uma passada por marcador)
+
+**Achado.** `substituir` era um `reduce` sobre `VARIAVEIS`: um `gsub` por marcador, cada um sobre o texto
+que o anterior devolveu. Um valor de escolha que contivesse OUTRO marcador era relido pela passada seguinte
+— `nome_corretora: '$horarioAtendimento'` fazia a corretora virar o horário. E um valor com o PRÓPRIO
+marcador, ou com um já passado, chegava ao modelo literal: `nome_corretora: '$nomeAgente'` → «atende pela
+corretora $nomeAgente» (termo 6 violado). No runtime só escrita fora do Builder produz esse estado; mas a
+criação também aceitava — `POST` com `broker_name: '$nomeAgente'` nascia e gravava.
+
+**Decisão (orquestrador).** (a) substituição em UMA passada — uma regex de união dos marcadores, o bloco
+consulta a escolha, o valor inserido nunca é relido; (b) escolha que CONTENHA marcador reservado é recusada:
+no runtime com `EscolhasIncompletas` (nome do campo); na criação com a classe de erro já coerente.
+
+**Correção.**
+
+- `builder.rb`: `MARCADOR = /(?:#{Regexp.union(VARIAVEIS.keys).source})\b/` — os quatro marcadores numa
+  regex só, derivada de `VARIAVEIS` (uma lista, não duas); a fronteira de palavra fecha o nome
+  (`$nomeAgente,` casa; `$nomeAgentes` não é marcador). `substituir` é
+  `texto.gsub(MARCADOR) { |m| escolhas.fetch(VARIAVEIS.fetch(m)).to_s }`: uma passada, e `fetch` em vez
+  de `[]` para uma chave ausente falhar alto em vez de virar `''`.
+- `conferir_escolhas!(escolhas)` substitui o `escolha` por campo: as quatro presentes, nenhuma em branco,
+  nenhuma com `MARCADOR` dentro → `EscolhasIncompletas(campo)`; devolve as escolhas quando passam. Só o
+  nome do campo na mensagem (o Responder e o `BaseController` já a mandam para o log e para a API).
+- `validar_escolhas!` (era `validar_nomes!`): além de vazio/longo, `NomeInvalido «<campo> contém um
+  marcador reservado»` para o nome do agente e o da corretora, e `HorarioInvalido` para o horário.
+  `comportamento` é um de dois valores fixos (`COMPORTAMENTOS`), conferido em `call` antes — não pode
+  carregar marcador. **Escolha registrada:** `HorarioInvalido` é classe NOVA, ao lado de `NomeInvalido` e
+  `ComportamentoInvalido`, em vez de uma `EscolhaInvalida` genérica — a porta responde por classe
+  (`error: e.class.name.demodulize.underscore`) e a tela traduz por código; um código por campo mantém o
+  contrato que já existia. A mensagem nomeia o campo e o motivo, nunca o valor digitado.
+- Porta (`Insurance::QuoteAgentController#create`): `HorarioInvalido` entra no mesmo `rescue` → 422
+  `{ error: 'horario_invalido', detail: <motivo> }`. Sem a recusa na criação, o `EscolhasIncompletas`
+  nasceria em `texto(ARQUIVO_DO_PRINCIPAL)` dentro da transação, e este controller não herda o
+  `rescue_from` da área de agentes: 500 sem o nome do campo.
+- Tela (`InsuranceAgentTab.vue` + `en/insurance.json`): `horario_invalido` → `ERRORS.HORARIO_INVALIDO`
+  («Confira o horário de atendimento: escreva só os dias e as horas, sem marcador de variável»). Sem a
+  linha, o código novo caía em `GENERIC` — «tente de novo em instantes» para um erro que tentar de novo
+  não resolve.
+- Comentários que apontavam para `Builder.escolha` (`responder.rb`, `base_controller.rb`) passam a apontar
+  para `conferir_escolhas!`.
+
+**Guarda.** `builder_instrucao_do_principal_spec`: «escolha com um marcador dentro para com o nome do
+campo, em vez de virar a outra escolha», «escolha com o próprio marcador dentro para, em vez de mandar o
+marcador ao modelo», «horário com marcador dentro também para» (runtime, via `instrucao_do_sistema`); e o
+describe «a substituição é numa passada só»: «o valor inserido nunca é relido» mede `substituir` DIRETO,
+com um valor que a conferência recusaria — a regra da passada única é independente da recusa, são duas
+guardas —, e «um marcador só casa inteiro». `builder_spec` «o que a corretora escreve»: recusa nos três
+campos de texto livre, mensagem sem o valor, nada gravado. `quote_agent_spec` (request): 422
+`nome_invalido` / `horario_invalido`, `detail` com o campo, `body` sem o valor, `Agent.count` 0.
+`InsuranceAgentTab.spec.js`: «mostra a mensagem do produto quando o backend recusa o horario» (não cai em
+`GENERIC`, não ecoa o `detail`).
+
+### P2 — a chave presente com `null` voltava à coluna em silêncio
+
+**Achado.** `instrucao_do_principal` fazia `escolhas = config[chave]; return nil if escolhas.nil?`. O jsonb
+guarda `{"agente_de_cotacao": null}` COM a chave; o `nil?` não distingue «chave ausente» de «chave presente
+com null» e devolvia `nil` — `Agent#instrucao_do_sistema` caía na coluna de nascimento em silêncio (o texto
+velho, com crases): o default calado que o termo 6 proíbe. A rodada 4 tinha fechado `{}` e `false`; `null`
+passava.
+
+**Correção.** `config = agent.config.to_h; return nil unless config.key?(ESCOLHAS_DA_CORRETORA)`: só a chave
+AUSENTE é o agente de antes de #380. Chave presente com qualquer valor (`null`, `{}`, `false`, hash
+incompleto) passa por `conferir_escolhas!` e para com `EscolhasIncompletas('nome_agente')`.
+
+**Guarda.** «chave presente com null também para, em vez de voltar à coluna em silêncio» — confere
+`have_key(chave)` depois do `reload` (o jsonb guardou o `null` com a chave) e o erro com o primeiro campo.
+
+O rollout SQL do agente 24 (seção «Rollout») NÃO muda: as escolhas reais (Lia / Sena Negócios / «de segunda
+à sexta, de 09h as 18h» / consultivo) não contêm marcador, e o passo 2 grava as quatro preenchidas.
+
+### Mutações da rodada 6 (`~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada6.rb`, 11/09/2026)
+
+Alvo: `builder_instrucao_do_principal_spec`, `builder_spec`, `insurance/quote_agent_spec` (request). Cada
+uma: edita, roda, restaura, confere o md5. 8/8 reprovam; `verde depois de restaurar: true`.
+
+| Mutação | Reprova? | Exemplos que caem |
+|---|---|---|
+| R6A `substituir` volta ao `reduce` (uma passada por marcador) | sim | 2: «o valor inserido nunca é relido», «um marcador só casa inteiro» |
+| R6A2 `MARCADOR` sem `\b` | sim | 1: «um marcador só casa inteiro: `$nomeAgentes` não é `$nomeAgente`» |
+| R6B runtime sem a recusa de marcador (`conferir_escolhas!` só confere branco) | sim | 3: os três de «marcador dentro» via `instrucao_do_sistema` |
+| R6C criação sem a recusa de marcador nos nomes | sim | 3: «recusa nome de corretora…», «recusa nome de agente…», request «recusa nome com marcador…» |
+| R6D criação sem a recusa de marcador no horário | sim | 2: «recusa horário com marcador reservado», request «recusa horario com marcador…» |
+| R6E `key?` volta a `nil?` | sim | 1: «chave presente com null também para» |
+| R6E2 `key?` vira `present?` | sim | 3: «…null…», «chave presente e vazia…», «…não é hash (false)…» |
+| R6F porta sem `HorarioInvalido` no `rescue` | sim | 1: request «recusa horario com marcador reservado» (500 em vez de 422) |
+
+Front (mutação manual, `mutacao_front_r6.rb` no scratchpad da sessão): apagar a linha
+`if (code === 'horario_invalido') return 'HORARIO_INVALIDO'` do `InsuranceAgentTab.vue` derruba «mostra a
+mensagem do produto quando o backend recusa o horario» (cai em `GENERIC`); restaurado, md5 conferido.
+
+### Comandos da rodada 6
+
+- Estado herdado: a tentativa anterior desta rodada caiu no meio (limite de cota) e deixou edições não
+  commitadas em 6 arquivos (`builder.rb`, `responder.rb`, `quote_agent_controller.rb` e três specs). Foram
+  lidas linha a linha contra as decisões e aproveitadas — batiam com (a) e (b) e com o `key?`. O que
+  faltava entrou por cima: comentário do `BaseController`, código e tradução na tela, spec do front, o
+  script de mutação e esta seção.
+- Banco: `POSTGRES_DATABASE=chatwoot_test_i380r5` (o da rodada 5).
+- `bundle exec rubocop` nos 7 arquivos Ruby tocados → 0 ofensas.
+- Alvo: `builder_instrucao_do_principal_spec`, `builder_spec`, `insurance/quote_agent_spec`,
+  `responder_escolhas_incompletas_spec`, `external_agent_lifecycle_spec`, `agent_spec` → 101 exemplos,
+  0 falhas, 0 erros fora, exit 0.
+- `ruby ~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada6.rb` → 8/8.
+- Front: `vitest` em `InsuranceAgentTab.spec.js` → 10/10. O `node_modules` deste worktree é symlink para
+  outro worktree e o Vite recusa arquivo cuja realpath fica fora da raiz («Failed to load url …
+  fake-indexeddb/auto/index.mjs. Does the file exist?» — o arquivo existe); rodado com uma config local
+  temporária que só acrescenta `server.fs.allow` à `vitest.config.ts`, movida para fora do worktree depois,
+  não commitada. `eslint` nos dois arquivos → 0 erros (os avisos `@intlify/vue-i18n/*` são pré-existentes,
+  no arquivo inteiro); `prettier --check` OK.
+- Suíte ampla (`spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
+  spec/requests/api/v1/accounts/autonomia` + a spec de locales) → 1.189 exemplos, 0 falhas, 3 pendentes
   pré-existentes (`RegistrationCheckout::Provisioner`, `Sso::Provisioner`), 0 erros fora, exit 0.
 
 ## Fora desta PR (da mesma classe ou vizinhos)

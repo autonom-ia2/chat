@@ -18,7 +18,9 @@ require 'rails_helper'
 # `PromptBuilder` lendo a coluna, o Builder sem gravar as escolhas, o arquivo cru no lugar da coluna
 # quando faltam escolhas, a substituição pulando um campo, o tipo do agente ignorado, a escolha em
 # branco passando em silêncio, a chave desprotegida na API, `Agent#instrucao_do_sistema` devolvendo
-# só a coluna — cada uma reprova um exemplo daqui (ou da spec de jornada da API do agente).
+# só a coluna — cada uma reprova um exemplo daqui (ou da spec de jornada da API do agente). Rodada 6
+# (`mutacoes_i380_rodada6.rb`): a substituição voltando a uma passada por marcador, a recusa de marcador
+# dentro de uma escolha apagada, a chave presente com `null` voltando à coluna — idem.
 RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   let(:account) { create(:account) }
   let(:arquivo) { described_class::INSTRUCOES.join('principal.md').read }
@@ -169,12 +171,73 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(agente.instruction).not_to be_blank # a coluna está lá, e mesmo assim não é usada
     end
 
+    # A CHAVE PRESENTE COM `null` (rodada 6, P2 do Codex) é a borda que `nil?` deixava passar: o jsonb
+    # guarda `{"agente_de_cotacao": null}` com a chave lá, e `escolhas.nil?` a tratava como o agente de
+    # antes de #380 — de volta à coluna de nascimento, em silêncio. Só a chave AUSENTE (`key?`) é o
+    # agente antigo.
+    it 'chave presente com null também para, em vez de voltar à coluna em silêncio' do
+      agente = construir
+      agente.update!(instruction: 'instrução velha, gravada no nascimento',
+                     config: agente.config.merge(chave => nil))
+
+      expect(agente.reload.config).to have_key(chave) # o jsonb guardou o null com a chave
+      expect { agente.instrucao_do_sistema }
+        .to raise_error(described_class::EscolhasIncompletas, 'nome_agente')
+    end
+
     it 'o erro nomeia o campo e nunca carrega o valor de outra escolha' do
       agente = construir
       agente.update!(config: agente.config.merge(chave => escolhas.except('comportamento')))
 
       expect { agente.reload.instrucao_do_sistema }
         .to raise_error(described_class::EscolhasIncompletas) { |e| expect(e.message).not_to include('Clara') }
+    end
+
+    # UMA ESCOLHA QUE CONTÉM UM MARCADOR (rodada 6, P2 do Codex) é recusada com o nome do campo. Com uma
+    # passada por marcador, `nome_corretora: '$horarioAtendimento'` virava o horário (o valor inserido era
+    # relido pela passada seguinte); com a passada única, `'$nomeAgente'` chegaria ao modelo como o
+    # marcador literal. Nenhum dos dois: para. Só escrita fora do Builder produz este estado — a criação
+    # recusa o mesmo valor (`builder_spec` «o que a corretora escreve»).
+    it 'escolha com um marcador dentro para com o nome do campo, em vez de virar a outra escolha' do
+      agente = construir
+      agente.update!(config: agente.config.merge(chave => escolhas.merge('nome_corretora' => '$horarioAtendimento')))
+
+      expect { agente.reload.instrucao_do_sistema }
+        .to raise_error(described_class::EscolhasIncompletas, 'nome_corretora')
+    end
+
+    it 'escolha com o próprio marcador dentro para, em vez de mandar o marcador ao modelo' do
+      agente = construir
+      agente.update!(config: agente.config.merge(chave => escolhas.merge('nome_corretora' => '$nomeAgente')))
+
+      expect { agente.reload.instrucao_do_sistema }
+        .to raise_error(described_class::EscolhasIncompletas, 'nome_corretora')
+    end
+
+    it 'horário com marcador dentro também para' do
+      agente = construir
+      agente.update!(config: agente.config.merge(chave => escolhas.merge('horario' => 'das 09h às 18h ($comportamento)')))
+
+      expect { agente.reload.instrucao_do_sistema }
+        .to raise_error(described_class::EscolhasIncompletas, 'horario')
+    end
+  end
+
+  # A SUBSTITUIÇÃO É NUMA PASSADA SÓ (rodada 6): uma regex com os quatro marcadores, e o bloco consulta a
+  # escolha do que casou. É medida direto em `substituir`, com um valor que a conferência recusaria, porque
+  # a regra dela é outra: o valor inserido NUNCA é relido — a recusa de marcador é a segunda guarda, não a
+  # única. Uma passada por marcador (`reduce`) devolveria o horário no lugar da corretora.
+  describe 'a substituição é numa passada só (rodada 6)' do
+    let(:modelo) { 'Você é $nomeAgente, da $nomeCorretora, $horarioAtendimento ($comportamento).' }
+
+    it 'o valor inserido nunca é relido' do
+      texto = described_class.substituir(modelo, escolhas.merge('nome_corretora' => '$horarioAtendimento'))
+
+      expect(texto).to eq('Você é Clara, da $horarioAtendimento, todo dia, das 08h às 20h (objetivo).')
+    end
+
+    it 'um marcador só casa inteiro: `$nomeAgentes` não é `$nomeAgente`' do
+      expect(described_class.substituir('$nomeAgente e $nomeAgentes', escolhas)).to eq('Clara e $nomeAgentes')
     end
   end
 

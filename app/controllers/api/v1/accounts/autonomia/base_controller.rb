@@ -13,7 +13,7 @@ class Api::V1::Accounts::Autonomia::BaseController < Api::V1::Accounts::BaseCont
   # Builder produz isso) para a montagem do prompt com `EscolhasIncompletas`. O Responder registra o
   # evento; aqui, o Testar e o Copilot (os outros chamadores do mesmo `Answerer`) respondiam 500 sem o
   # nome do campo. A recusa é fechada nos dois lugares; agora também é explícita: 422 com código estável
-  # e o campo que falta — a mensagem do erro é só o nome do campo (`Builder.escolha`), nunca um valor.
+  # e o campo que falta — a mensagem do erro é só o nome do campo (`Builder.conferir_escolhas!`), nunca um valor.
   rescue_from ::Autonomia::Insurance::QuoteAgent::Builder::EscolhasIncompletas, with: :render_escolhas_incompletas
 
   private

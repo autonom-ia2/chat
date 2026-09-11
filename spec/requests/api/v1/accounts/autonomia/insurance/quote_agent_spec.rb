@@ -107,6 +107,31 @@ RSpec.describe 'Autonomia Insurance Quote Agent API', type: :request do
       expect(response.parsed_body['error']).to eq('comportamento_invalido')
     end
 
+    # MARCADOR RESERVADO DENTRO DE UMA ESCOLHA (rodada 6 de #380): a porta responde 422 com o campo e
+    # nunca ecoa o valor. Sem a recusa na criação, o horário com `$nomeAgente` levantaria
+    # `EscolhasIncompletas` dentro da transação — e este controller não herda o `rescue_from` da área de
+    # agentes: 500 sem o nome do campo.
+    it 'recusa nome com marcador reservado dizendo qual campo, sem ecoar o valor' do
+      post base, params: { quote_agent: dados[:quote_agent].merge(broker_name: '$horarioAtendimento') },
+                 headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('nome_invalido')
+      expect(response.parsed_body['detail']).to include('corretora')
+      expect(response.body).not_to include('$horarioAtendimento')
+      expect(Autonomia::Agents::Agent.count).to eq(0)
+    end
+
+    it 'recusa horario com marcador reservado, sem ecoar o valor' do
+      post base, params: { quote_agent: dados[:quote_agent].merge(business_hours: 'das 09h às 18h, $nomeAgente') },
+                 headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('horario_invalido')
+      expect(response.body).not_to include('$nomeAgente')
+      expect(Autonomia::Agents::Agent.count).to eq(0)
+    end
+
     # SLUG FORA DO CATÁLOGO NÃO É ERRO DE QUEM CLICOU. A constante de ferramentas apontar para um
     # slug inexistente é bug nosso — quem preencheu o formulário não tem como consertar. Devolver
     # 422 com a mensagem crua culparia o usuário e entregaria o catálogo interno de ferramentas.

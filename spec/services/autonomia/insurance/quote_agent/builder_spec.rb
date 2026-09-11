@@ -241,6 +241,29 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect { construir(nome_agente: '   ') }.to raise_error(described_class::NomeInvalido, /agente/)
     end
 
+    # UM MARCADOR RESERVADO DENTRO DE UMA ESCOLHA (rodada 6 de #380, P2 do Codex) não pode nascer: a
+    # substituição é numa passada só, então `$nomeAgente` dentro do nome da corretora chegaria ao modelo
+    # como o marcador literal (termo 6). A recusa diz o campo e o motivo — nunca o valor —, e nada é
+    # gravado. Vale para as três escolhas de texto livre; `comportamento` é um de dois valores fixos.
+    it 'recusa nome de corretora com marcador reservado dizendo o campo, nunca o valor' do
+      expect { construir(nome_corretora: '$nomeAgente') }
+        .to raise_error(described_class::NomeInvalido) do |erro|
+          expect(erro.message).to include('corretora')
+          expect(erro.message).not_to include('$nomeAgente')
+        end
+      expect(Autonomia::Agents::Agent.count).to eq(0)
+    end
+
+    it 'recusa nome de agente com marcador reservado' do
+      expect { construir(nome_agente: 'Mia $comportamento') }.to raise_error(described_class::NomeInvalido, /agente/)
+    end
+
+    it 'recusa horário com marcador reservado' do
+      expect { construir(horario: 'das 09h às 18h, $nomeAgente') }
+        .to raise_error(described_class::HorarioInvalido) { |erro| expect(erro.message).not_to include('$nomeAgente') }
+      expect(Autonomia::Agents::Agent.count).to eq(0)
+    end
+
     # `gsub` com o valor como segundo argumento interpreta `\0` no texto de substituição. Um nome
     # contendo essa sequência passaria a inserir o próprio marcador de volta na instrução.
     it 'trata o nome como texto, e nao como padrao de substituicao' do

@@ -116,7 +116,7 @@ module Autonomia
         end
 
         # Uma vez por conversa: a segunda mensagem do mesmo cliente não duplica o evento. A mensagem do
-        # erro é só o NOME do campo que falta (`Builder.escolha`), nunca o valor de outra escolha — por
+        # erro é só o NOME do campo que falta (`Builder.conferir_escolhas!`), nunca o valor de outra escolha — por
         # isso pode ir ao log. O EventLogger nunca levanta.
         def registrar_escolhas_incompletas(error)
           Rails.logger.warn("[autonomia][operate] escolhas_incompletas agent=#{@agent.id} conv=#{@conversation.id} campo=#{error.message}")
