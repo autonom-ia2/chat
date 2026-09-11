@@ -191,6 +191,29 @@ Comandos da rodada 3 (worktrees `~/dev/worktrees/{adapters,chat2you}/entrega-13-
   `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
   spec/requests/api/v1/accounts/autonomia` — **1.029 exemplos, 0 falhas, 0 erros fora de exemplos** (3 pendentes pré-existentes), exit 0, lido do JSON do rspec. O total subiu de 899 para 1.029 porque a rodada 3 inclui `spec/requests/api/v1/accounts/autonomia`, que as rodadas anteriores não rodavam.
 
+## Rodada de correção 4 (verificador cego, veredito anterior APROVADO, 2 achados P3)
+
+| # | Achado | Causa raiz | Correção | Guarda | Mutação |
+|---|---|---|---|---|---|
+| A1 | adapter `quote.ts:1012` — a passagem `typeof r.premioMensal === 'number' ? r.premioMensal : undefined` de `toOffer` a `derivePremium` não era exercitada por nenhum teste que passasse por `result()`; trocada por `undefined,`, 781/781 continuavam verdes. Se regredisse, o motivo por oferta (termo 1) diria "premioMensal ausente" para a Bp Assinatura com 29,30 no payload — registro falso em `handle->'preco_sem_periodo'` sem teste vermelho | a única guarda de `premioMensal=` vivia em `premio-com-significado.test.ts`, que chama `derivePremium` direto e não o fluxo | só teste (código correto): em `agger-quote-fluxo` "sem nenhum plano de período conhecido, sai o que o portal escolheu" passa a exigir `toContain('premioMensal=33.33 e premio/12')` — o `premioMensal` real do resultado escolhido no payload do teste (33,333333 × 12 fecha com 400) | a asserção acima, no teste que atravessa `result()` → `toOffer` → `derivePremium` | R4-M1: passagem trocada por `undefined,` → `npx vitest run test/unit/agger-quote-fluxo.test.ts` exit 1, **1 falha / 27 passam** (exatamente o teste da guarda); restaurado por `git checkout`, md5 conferido igual |
+| A2 | chat2you `quote_offers.rb:44` — dois critérios para "tem período" em dois lugares: `#quoted` particionava por `basis == 'total'`, `PremiumText#indefinido?` é `!total?`. Partição trocada por `basis != 'unknown'` sobrevivia às 4 specs alvo (73/73). Com `basis` nil (conector que não seja o Http do AGGER, payload sem `basis`) e valor baixo, a oferta abriria a lista entre os totais pelo número cru (termo 5) enquanto o texto sai com a ressalva e o handle a registra sem período | a regra "sem período não se ordena pelo número" estava escrita duas vezes, com predicados diferentes, e nada as prendia | UM predicado só: `QuoteOffers.sem_periodo?(offer)` delega a `PremiumText#indefinido?`; `#quoted` particiona por ele e `#sem_periodo` (o registro no handle) usa o mesmo — lista, texto e handle passam a discordar zero vezes por construção | `quote_offers_spec` `#quoted` "oferta sem `basis` vai para o fim, junto das sem periodo, mesmo com o numero menor": `[X 10.0 basis nil, Porto 1321.25]` → `%w[Porto X]` | R4-MC1: partição por `basis == 'unknown'` → `premium_text_spec` + `quote_offers_spec` exit 1, **1 falha / 25** (a spec nova); restaurado, md5 igual. R4-MC2: `indefinido?` vira `basis == 'unknown'` → exit 1, **3 falhas / 25** (a spec nova, `#sem_periodo` "registra o que veio" e `.describe` "cola a ressalva") — prova que ordem, handle e texto reprovam juntos quando o único predicado muda; restaurado por `git checkout`, md5 igual |
+
+`especialista_auto.md:191` continua **DEFERIDO** pelo orquestrador (prova real pendente do termo 5 na
+conversa).
+
+Comandos da rodada 4 (worktrees `~/dev/worktrees/{adapters,chat2you}/entrega-13-periodo-do-preco`):
+- Adapter: `npx prettier --write test/unit/agger-quote-fluxo.test.ts`; `pnpm verify` exit 0 — **769
+  unitários + 12 integração (781), cobertura 100/100/100/100**; mutação R4-M1 acima.
+- chat2you: `rubocop --format json` nos 2 arquivos tocados — 0 ofensas; `POSTGRES_DATABASE=chatwoot_test_e13
+  bundle exec rspec` nos 4 specs alvo `--format json` — **74 exemplos, 0 falhas, 0 erros fora de
+  exemplos**, exit 0 (73 → 74: a spec nova); mutações R4-MC1 e R4-MC2 acima; suíte ampla
+  `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia spec/requests/api/v1/accounts/autonomia`
+  — resultado abaixo, lido do JSON do rspec.
+
+Suíte ampla da rodada 4: **1.030 exemplos, 0 falhas, 0 erros fora de exemplos** (3 pendentes
+pré-existentes), exit 0, lido do JSON do rspec (1.029 → 1.030: a spec nova). Adapter da rodada:
+`6506720` (PR #54).
+
 ## O que fica para prova real / produção
 
 - A Lambda precisa ser publicada com o #54 antes desta PR fazer diferença ao cliente (o chat2you

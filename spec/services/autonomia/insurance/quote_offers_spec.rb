@@ -41,6 +41,18 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
       expect(ofertas.map { |o| o['insurer']['name'] }).to eq(%w[B A])
     end
 
+    # O critério de "tem período" é UM só, o de `PremiumText#indefinido?`. Com `basis` nil (payload
+    # sem `basis`), a partição por `basis == 'total'` a mandava para o fim, mas uma por
+    # `basis != 'unknown'` a poria ENTRE OS TOTAIS pelo número cru — abrindo a lista como a mais
+    # barata enquanto o texto da mesma oferta sai com a ressalva e o handle a registra sem período.
+    it 'oferta sem `basis` vai para o fim, junto das sem periodo, mesmo com o numero menor' do
+      ofertas = described_class.new(
+        'offers' => [offer('X', 10.0, nil, code: '1'), offer('Porto', 1321.25, code: '8')]
+      ).quoted
+
+      expect(ofertas.map { |o| o['insurer']['name'] }).to eq(%w[Porto X])
+    end
+
     it 'continua excluindo quem nao cotou e quem veio sem valor' do
       ofertas = described_class.new(
         'offers' => [offer('Porto', 900.0, code: '8').merge('status' => 'declined'),
