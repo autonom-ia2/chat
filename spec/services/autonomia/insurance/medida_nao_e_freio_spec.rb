@@ -46,6 +46,15 @@ RSpec.describe Autonomia::Insurance::Medida do
   # vermelho que se explica; deixar passar é o freio.
   let(:namespace_da_medida) { 'Autonomia::Insurance' }
 
+  # O nome da medida como CAMINHO: os dois últimos segmentos, em qualquer namespace que os escreva
+  # (`Insurance::Medida`, `::Autonomia::Insurance::Medida`). `Autonomia::Agents::Medida` é outra constante.
+  let(:sufixo_da_medida) { %w[Insurance Medida] }
+
+  # Marcadores de segmento que NENHUM nome de constante pode ser (constante começa em maiúscula): o caminho
+  # ancorado na raiz (`::X`, sem pai na árvore) e a base que não é constante (`self::X`, `algo::X`).
+  let(:raiz) { '(raiz)' }
+  let(:base_sem_nome) { '(base que não é constante)' }
+
   def relativos(caminhos)
     caminhos.map { |caminho| Pathname(caminho).relative_path_from(Rails.root).to_s }.sort
   end
@@ -59,7 +68,7 @@ RSpec.describe Autonomia::Insurance::Medida do
   # única superfície ERB desta entrega é a página do Super Admin, que é leitura declarada).
   def nomeiam_a_medida(caminhos)
     caminhos.select do |caminho|
-      caminho.end_with?('.erb') ? File.read(Rails.root.join(caminho)).include?('Insurance::Medida') : constante_em?(caminho)
+      caminho.end_with?('.erb') ? File.read(Rails.root.join(caminho)).include?(sufixo_da_medida.join('::')) : constante_em?(caminho)
     end
   end
 
@@ -69,6 +78,7 @@ RSpec.describe Autonomia::Insurance::Medida do
   # chamando `Medida.new(...).call` passava invisível pela guarda que só olhava o caminho (rodada 6,
   # P3 do Codex) — e é o lugar mais natural para um freio nascer, ao lado da medida. Fora do
   # namespace, `Medida` é outra constante e não é acusada: guarda que grita à toa acaba desligada.
+  # As duas formas lidas pelos NOMES que a árvore guarda (`segmentos_de`), nunca pelo texto do código.
   def constante_em?(caminho)
     achou = false
     cada_no_com_aninhamento(VarreduraDeRecusas.arvore(caminho)) do |nodo, aninhamento|
@@ -77,8 +87,10 @@ RSpec.describe Autonomia::Insurance::Medida do
     achou
   end
 
+  # Pelos NOMES dos segmentos, não pelo texto: `Insurance:: Medida` (espaço, que o Ruby aceita) é o mesmo
+  # caminho; `ReInsurance::Medida` não é — o texto (`slice.end_with?`) deixava o primeiro passar e acusava o segundo.
   def caminho_da_medida?(nodo)
-    nodo.is_a?(Prism::ConstantPathNode) && nodo.slice.end_with?('Insurance::Medida')
+    nodo.is_a?(Prism::ConstantPathNode) && segmentos_de(nodo).last(2) == sufixo_da_medida
   end
 
   def nome_simples_da_medida?(nodo, aninhamento)
@@ -125,13 +137,34 @@ RSpec.describe Autonomia::Insurance::Medida do
   # `Medida` passar invisível ali (rodada 8, Codex). Falso positivo aceito: um `Outro::Autonomia::Insurance`
   # de verdade com um `Medida` próprio seria acusado — não existe no repositório e, se surgir, entra em
   # `leitores` com o motivo escrito.
+  #
+  # E PELOS NOMES DOS SEGMENTOS (`segmentos_de`), nunca pelo texto: `module Autonomia:: Insurance` abre
+  # `Autonomia::Insurance`; o texto com o espaço não era igual a nada, e `Medida` ali passava invisível
+  # (rodada 9, Codex).
   def escopos_abertos_por(nodo, aninhamento)
-    caminho = nodo.constant_path.slice
-    return [caminho.delete_prefix('::')] if caminho.start_with?('::')
+    segmentos = segmentos_de(nodo.constant_path)
+    return [segmentos.drop(1).join('::')] if segmentos.first == raiz
+
+    caminho = segmentos.join('::')
     return [caminho] if aninhamento.empty?
 
     filhos_do_escopo_em_volta = aninhamento.last.map { |escopo| "#{escopo}::#{caminho}" }
-    caminho.include?('::') ? filhos_do_escopo_em_volta + [caminho] : filhos_do_escopo_em_volta
+    segmentos.size > 1 ? filhos_do_escopo_em_volta + [caminho] : filhos_do_escopo_em_volta
+  end
+
+  # Os segmentos de um caminho de constante pelos NOMES que a árvore guarda (`ConstantPathNode#parent`/`#name`,
+  # `ConstantReadNode#name`), do primeiro ao último — nunca fatiando o código-fonte. Para o Ruby,
+  # `::Autonomia::Insurance:: Medida` e `::Autonomia::Insurance::Medida` são o mesmo caminho; para o texto
+  # (`slice`) o espaço virava parte do nome, e a medida passava invisível nas duas pontas do detector — o
+  # caminho nomeado e o escopo aberto (rodada 9, Codex). Sem pai (`::X`), o primeiro segmento é `raiz`. Uma
+  # base que não é constante (`self::X`, `algo::X`) não tem nome para ler e fica fora, como `eval` e
+  # `const_get` (encerramento).
+  def segmentos_de(nodo)
+    case nodo
+    when Prism::ConstantReadNode then [nodo.name.to_s]
+    when Prism::ConstantPathNode then (nodo.parent.nil? ? [raiz] : segmentos_de(nodo.parent)) + [nodo.name.to_s]
+    else [base_sem_nome]
+    end
   end
 
   # Um arquivo que existe só durante o exemplo, na árvore DE VERDADE (`app/`, `enterprise/app`): a
@@ -181,12 +214,16 @@ RSpec.describe Autonomia::Insurance::Medida do
   # nomear a medida vira um arquivo real, nas duas árvores, e a guarda tem de acusá-lo — o nome simples
   # dentro do namespace era a forma que passava invisível (rodada 6); o namespace aberto por caminho
   # ABSOLUTO dentro de outro módulo, a seguinte (rodada 7); o caminho RELATIVO QUALIFICADO dentro de
-  # outro módulo, a última (rodada 8). E as formas que NÃO são a medida (`Medida` de outro namespace;
-  # módulos simples aninhados que só parecem o namespace) não podem ser acusadas, senão a guarda vira ruído.
+  # outro módulo, a seguinte (rodada 8); o ESPAÇO em volta do `::`, que o texto lia como outro nome, nas
+  # duas pontas do detector, a última (rodada 9). E as formas que NÃO são a medida (`Medida` de outro
+  # namespace; módulos simples aninhados que só parecem o namespace; `module ::Insurance` absoluto dentro
+  # de `Autonomia`; um caminho que termina em `Medida` sem `Insurance`) não podem ser acusadas, senão a
+  # guarda vira ruído.
   #
-  # ENCERRAMENTO: a guarda cobre a referência LÉXICA — o nome escrito no código, resolvido como o Ruby
-  # resolve o aninhamento. `eval`, `const_get`, `autoload` e alias de constante ficam fora por decisão:
-  # não há texto para ler, e o que resta é a revisão.
+  # ENCERRAMENTO: a guarda cobre a referência LÉXICA — o nome escrito no código, lido pelos nomes da
+  # árvore e resolvido como o Ruby resolve o aninhamento. `eval`, `const_get`, `autoload`, alias de
+  # constante e base que não é constante (`self::X`) ficam fora por decisão: não há nome para ler, e o
+  # que resta é a revisão.
   describe 'o detector' do
     let(:formas_de_nomear) do
       {
@@ -336,6 +373,52 @@ RSpec.describe Autonomia::Insurance::Medida do
               end
             end
           RUBY
+        ],
+        # O ESPAÇO em volta do `::`, que o Ruby aceita: `::Autonomia::Insurance:: Medida` É a medida, e
+        # `module Autonomia:: Insurance` abre `Autonomia::Insurance` (medido: `Module.nesting == [Autonomia::Insurance]`).
+        # Um detector que comparasse o TEXTO do caminho (`slice`) lia o espaço como parte do nome e não
+        # acusava nenhuma das duas pontas — nem o caminho, nem o escopo (rodada 9, Codex).
+        'o caminho completo com espaço depois do `::`, em app/' => [
+          'app/services/autonomia/agents/tools/freio_espacado.rb', <<~RUBY
+            module Autonomia::Agents::Tools
+              class FreioEspacado
+                def call
+                  ::Autonomia::Insurance:: Medida.new(inicio: nil, fim: nil, conta: nil).call
+                end
+              end
+            end
+          RUBY
+        ],
+        'o caminho relativo com espaço depois do `::`, em enterprise/app' => [
+          'enterprise/app/jobs/autonomia/agents/freio_espacado.rb', <<~RUBY
+            class Autonomia::Agents::FreioEspacado
+              def perform
+                Insurance:: Medida.new(inicio: nil, fim: nil, conta: nil).call
+              end
+            end
+          RUBY
+        ],
+        'o nome simples em `module Autonomia:: Insurance` com espaço depois do `::`, em app/' => [
+          'app/services/autonomia/insurance/freio_espacado.rb', <<~RUBY
+            module Autonomia:: Insurance
+              class FreioEspacado
+                def call
+                  Medida.new(inicio: nil, fim: nil).por_conta
+                end
+              end
+            end
+          RUBY
+        ],
+        'o nome simples em `module Autonomia:: Insurance` com espaço depois do `::`, em enterprise/app' => [
+          'enterprise/app/services/autonomia/insurance/freio_espacado.rb', <<~RUBY
+            module Autonomia:: Insurance
+              class FreioEspacado
+                def call
+                  Medida.new(inicio: nil, fim: nil).por_conta
+                end
+              end
+            end
+          RUBY
         ]
       }
     end
@@ -378,6 +461,46 @@ RSpec.describe Autonomia::Insurance::Medida do
                   Medida.new
                 end
               end
+            end
+          end
+        end
+      RUBY
+
+      com_arquivo_temporario('app/services/autonomia/agents/freio_de_prova.rb', conteudo) do
+        expect(nomeiam_a_medida(todos) - leitores).to be_empty
+      end
+    end
+
+    # O ABSOLUTO de nome simples (`module ::Insurance` dentro de `module Autonomia`) abre `::Insurance` na raiz,
+    # não `Autonomia::Insurance`: `Module.nesting` é `[Insurance, Autonomia]` e `Medida` dá `NameError` (medido).
+    # `Autonomia::Insurance` não está ESCRITO em lugar nenhum. É o que pina o marcador de raiz: um detector que o
+    # perdesse leria `Insurance` como filho de `Autonomia` e acusaria.
+    it 'nao acusa Medida em `module ::Insurance` absoluto aberto dentro de `module Autonomia`' do
+      conteudo = <<~RUBY
+        module Autonomia
+          module ::Insurance
+            class FreioDeProva
+              def call
+                Medida.new
+              end
+            end
+          end
+        end
+      RUBY
+
+      com_arquivo_temporario('app/services/autonomia/agents/freio_de_prova.rb', conteudo) do
+        expect(nomeiam_a_medida(todos) - leitores).to be_empty
+      end
+    end
+
+    # Um caminho que termina em `Medida` sem `Insurance` antes é outra constante (`Autonomia::Agents::Medida` dá
+    # `NameError`): a guarda acusa o SUFIXO `Insurance::Medida`, não o último nome. É o que pina os dois segmentos.
+    it 'nao acusa o caminho `Medida` de outro namespace' do
+      conteudo = <<~RUBY
+        module Autonomia::Agents
+          class FreioDeProva
+            def call
+              Autonomia::Agents::Medida.new
             end
           end
         end

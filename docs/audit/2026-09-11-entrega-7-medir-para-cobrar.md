@@ -431,6 +431,74 @@ forma que a mutação desliga). Confere o SHA-256 do arquivo restaurado contra o
 (`b68e71fe1145e244…` antes e depois; o da rodada 7 era `1e6fed0084aff421…`). Nenhum arquivo de prova
 sobrou em `app/` ou `enterprise/app` (`enterprise/app/services/autonomia/insurance` continua não existindo).
 
+## Rodada 9 — o texto do caminho, e os nomes da árvore (Codex)
+
+O Codex re-revisou `1e64f04190` e mostrou que o detector, apesar de andar pela AST, ainda decidia por
+TEXTO em dois pontos: `nodo.slice.end_with?('Insurance::Medida')` para reconhecer a medida, e
+`nodo.constant_path.slice` para saber o que um `module`/`class` abre. O Ruby aceita espaço em volta do `::`
+— `::Autonomia::Insurance:: Medida` É a medida, e `module Autonomia:: Insurance` abre `Autonomia::Insurance`
+— mas o texto fatiado carrega o espaço como parte do nome: `"::Autonomia::Insurance:: Medida"` não termina em
+`Insurance::Medida`, e `"Autonomia:: Insurance"` não é igual a `'Autonomia::Insurance'`. Duas formas léxicas
+válidas resolviam para a medida e a guarda devolvia falso — nas duas pontas, o caminho nomeado e o escopo aberto.
+
+Medido, não presumido (`ruby -e`, 3.4.4): a forma A resolve para `Autonomia::Insurance::Medida`; na forma B
+`Module.nesting == [Autonomia::Insurance]` e `Medida` é a medida. No Prism (1.9.0) os NOMES não carregam o
+espaço: `slice="::Autonomia::Insurance:: Medida"`, mas `name=:Medida`, `parent.name=:Insurance`, e o pai do
+primeiro segmento absoluto é `nil`. O `full_name_parts` do próprio Prism faz esse caminho, mas levanta exceção
+em base dinâmica (`self::X`, `foo::X`) — por isso o detector anda a árvore por conta própria e trata a base sem
+nome como um segmento que nenhuma constante pode ser.
+
+Reproduzido antes de corrigir (RED): as quatro formas com espaço (as duas do Codex, em `app/` e
+`enterprise/app`) como arquivos reais — a guarda não viu (9 exemplos, 1 falha: "a guarda não viu o caminho
+completo com espaço depois do `::`, em app/"). Depois da correção: 9 exemplos, 0 falhas.
+
+**Causa raiz, não caso — a classe do defeito é "comparar texto quando a árvore já tem o nome".** A correção
+troca as DUAS pontas por `segmentos_de`, que constrói o caminho pelos nomes dos segmentos
+(`ConstantPathNode#parent`/`#name`, `ConstantReadNode#name`), com marcador de raiz quando `parent` é `nil` e
+marcador de base sem nome quando o pai não é constante. `caminho_da_medida?` compara os dois últimos
+segmentos com `%w[Insurance Medida]`; `escopos_abertos_por` decide absoluto / simples / qualificado pela
+lista de segmentos (`first == raiz`, `size > 1`), não por `start_with?('::')` / `include?('::')`. Nenhuma
+fatia do código-fonte sobrou no detector. Um efeito que o texto tinha e os nomes não têm:
+`ReInsurance::Medida` era acusado pelo `end_with?` e deixa de ser.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **Codex** `medida_nao_e_freio_spec.rb:81` — `caminho_da_medida?` comparava `nodo.slice` (texto): `::Autonomia::Insurance:: Medida.new(...).call` não terminava em `Insurance::Medida` e passava invisível | `segmentos_de(nodo).last(2) == sufixo_da_medida` (`%w[Insurance Medida]`), pelos nomes | "acusa cada forma…" ganhou duas formas: o caminho completo com espaço em `app/` (tools) e o relativo com espaço em `enterprise/app` (jobs). Negativo novo "nao acusa o caminho `Medida` de outro namespace" (`Autonomia::Agents::Medida`, `NameError` medido) pina os DOIS segmentos | MC6 (texto de volta no caminho) reprova pela forma A em `app/`; MC6c (só o último nome) reprova pelo negativo do caminho |
+| **Codex** `medida_nao_e_freio_spec.rb:129` — `escopos_abertos_por` lia `nodo.constant_path.slice` (texto): `module Autonomia:: Insurance` virava um escopo `"Autonomia:: Insurance"` que não era o namespace, e `Medida` ali passava invisível | `segmentos_de(nodo.constant_path)`: absoluto pelo marcador `raiz`, qualificado por `size > 1`, caminho canônico por `join('::')` dos nomes | "acusa cada forma…" ganhou o nome simples em `module Autonomia:: Insurance` em `app/` E em `enterprise/app`. Negativo novo "nao acusa Medida em `module ::Insurance` absoluto aberto dentro de `module Autonomia`" (`Module.nesting == [Insurance, Autonomia]`, `Medida` dá `NameError`, medido) pina o marcador de raiz — sem ele, `Insurance` seria lido como filho de `Autonomia` | MC6b (texto de volta no escopo) reprova pela forma B em `app/`; MC4-r9 (marcador de raiz perdido) reprova pelo negativo do absoluto; MC5-r9, MC5b-r9, MC5c-r9, MC5d-r9, MC4b-r9, MC3-r9, MC3b-r9 (as das rodadas 6–8, reaplicadas ao texto novo) reprovam |
+
+### Ressalvas registradas (sem código)
+
+- A superfície `.erb` continua lida por texto (`include?('Insurance::Medida')`), como a spec declara desde a
+  rodada 3: a única ERB desta entrega é a página do Super Admin (leitura declarada) e nenhuma ERB entra em
+  `caminho_da_cotacao` — uma view não para cotação. Um `Insurance:: Medida` numa ERB nova escaparia da
+  primeira guarda; se surgir uma segunda ERB que nomeie a medida, a hora de trocar por Prism sobre o Ruby
+  extraído da ERB é essa, com o motivo escrito. Fora desta rodada por decisão do escopo (o achado é `.rb`).
+- Base que não é constante (`module self::Insurance`, `foo::Insurance::Medida`) fica fora, na mesma classe de
+  `eval` e `const_get` do encerramento da rodada 8: não há nome para ler. O detector não quebra nela — devolve
+  um segmento que nenhuma constante pode ser — e o comentário da spec diz onde.
+
+### Mutações da rodada 9 (11) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MC6 | `caminho_da_medida?` de volta ao TEXTO (`nodo.slice.end_with?('Insurance::Medida')`) — o detector da rodada 8 | `medida_nao_e_freio_spec.rb` | "acusa cada forma…" — "a guarda não viu o caminho completo com espaço depois do `::`, em app/" |
+| MC6b | `escopos_abertos_por` de volta ao TEXTO (`constant_path.slice` fatiado em `::`) | idem | "acusa cada forma…" — "a guarda não viu o nome simples em `module Autonomia:: Insurance` com espaço depois do `::`, em app/" |
+| MC6c | o caminho acusado só pelo ÚLTIMO nome (`Medida`), sem exigir `Insurance` antes | idem | "nao acusa o caminho `Medida` de outro namespace" |
+| MC4-r9 | marcador de raiz perdido (`::X` lido como relativo) — a mutação do absoluto, reaplicada aos nomes | idem | "nao acusa Medida em `module ::Insurance` absoluto aberto dentro de `module Autonomia`" |
+| MC5-r9 | qualificado registra SÓ a leitura relativa | idem | "acusa cada forma…" (relativo qualificado dentro de outro módulo, em `app/`) |
+| MC5b-r9 | qualificado registra SÓ a leitura pela raiz | idem | "acusa cada forma…" (`module Insurance::Freios` dentro de `module Autonomia`, em `enterprise/app`) |
+| MC5c-r9 | leitura pela raiz estendida ao `module` SIMPLES | idem | "nao acusa Medida em modulos simples aninhados que so parecem o namespace" |
+| MC5d-r9 | só a PRIMEIRA leitura de cada nível (`flatten` perdido) | idem | "acusa cada forma…" (relativo qualificado dentro de outro módulo, em `app/`) |
+| MC4b-r9 | só o nível mais interno decide | idem | "acusa cada forma…" (`module ::Outro` dentro de `Autonomia::Insurance`, em `app/`) |
+| MC3-r9 | detector sem o ramo `ConstantReadNode` | idem | "acusa cada forma…" (o nome simples em `module Autonomia::Insurance`, em `app/`) |
+| MC3b-r9 | acusa `Medida` em QUALQUER aninhamento (`true ||`) | idem | os TRÊS negativos de nome simples: outro namespace, módulos simples aninhados, `module ::Insurance` absoluto |
+
+O runner (`mutacoes_r9.py`) mantém a régua da rodada 8: caem EXATAMENTE os exemplos esperados, exit ≠ 0, a
+mensagem cita a FORMA esperada, SHA-256 do arquivo conferido antes e depois de cada mutação
+(`b807538e338a3a96…` antes e depois; o da rodada 8 era `b68e71fe1145e244…`). Nenhum arquivo de prova sobrou
+em `app/` ou `enterprise/app` (`enterprise/app/services/autonomia/insurance` e `enterprise/app/jobs/autonomia`
+continuam não existindo).
+
 ## Comandos rodados
 
 ```bash
@@ -490,6 +558,19 @@ bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autono
   spec/requests/api/v1/accounts/autonomia \
   spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
   --format json --out ampla8.json                                   # 1093 exemplos, 0 falhas, os mesmos 3 pendentes pré-existentes
+# rodada 9
+ruby -e '…'                                                         # evidência: `::Autonomia::Insurance:: Medida` resolve para a medida; `module Autonomia:: Insurance` tem nesting `[Autonomia::Insurance]`; `module Autonomia; module ::Insurance` tem nesting `[Insurance, Autonomia]` e `Medida` dá NameError; `Autonomia::Agents::Medida` dá NameError
+ruby -rprism -e '…'                                                 # evidência: `slice` carrega o espaço, `name`/`parent` não; `full_name_parts` levanta em base dinâmica
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r9_red.json                                   # RED antes do detector: 9 exemplos, 1 falha ("a guarda não viu o caminho completo com espaço depois do `::`, em app/")
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r9_green.json                                 # 9 exemplos, 0 falhas
+bundle exec rubocop --format json --out rubocop_r9.json spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb   # 0 ofensas
+bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  spec/requests/api/v1/accounts/autonomia \
+  spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
+  --format json --out ampla9.json                                   # 1095 exemplos, 0 falhas, os mesmos 3 pendentes pré-existentes
+uv run python3 mutacoes_r9.py                                       # MC6, MC6b, MC6c, MC4-r9, MC5-r9, MC5b-r9, MC5c-r9, MC5d-r9, MC4b-r9, MC3-r9, MC3b-r9 — todas reprovam exatamente nos exemplos e formas esperados e restauram por hash
 ```
 
 ## Arquivos
@@ -540,5 +621,12 @@ intocados.
 Rodada 8: só `medida_nao_e_freio_spec.rb` (cada nível do aninhamento é a lista de caminhos que o
 `module`/`class` pode abrir; o relativo qualificado registra as duas leituras; três formas de prova
 novas nas duas árvores e um exemplo negativo novo; encerramento do detector escrito no comentário).
+Nenhum arquivo de produção, instrução, `MOTIVOS`, schema de função ou adapter; controller e view do
+Super Admin intocados.
+
+Rodada 9: só `medida_nao_e_freio_spec.rb` (`segmentos_de` constrói os caminhos pelos nomes dos
+segmentos da árvore, com marcador de raiz e de base sem nome; `caminho_da_medida?` e
+`escopos_abertos_por` deixam de fatiar o código-fonte; quatro formas de prova com espaço nas duas
+árvores e dois exemplos negativos novos que pinam o marcador de raiz e o sufixo de dois segmentos).
 Nenhum arquivo de produção, instrução, `MOTIVOS`, schema de função ou adapter; controller e view do
 Super Admin intocados.
