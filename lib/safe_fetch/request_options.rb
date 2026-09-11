@@ -5,6 +5,8 @@ class SafeFetch::RequestOptions
     max_bytes: nil,
     open_timeout: SafeFetch::DEFAULT_OPEN_TIMEOUT,
     read_timeout: SafeFetch::DEFAULT_READ_TIMEOUT,
+    total_timeout: SafeFetch::DEFAULT_TOTAL_TIMEOUT,
+    max_redirects: SafeFetch::DEFAULT_MAX_REDIRECTS,
     headers: nil,
     sensitive_headers: [],
     resolver: SsrfFilter::DEFAULT_RESOLVER,
@@ -14,8 +16,8 @@ class SafeFetch::RequestOptions
     validate_content_type: true
   }.freeze
 
-  attr_reader :allowed_content_type_prefixes, :allowed_content_types, :body, :headers,
-              :http_basic_authentication, :method, :open_timeout, :read_timeout, :resolver, :sensitive_headers, :uri, :url
+  attr_reader :allowed_content_type_prefixes, :allowed_content_types, :body, :headers, :http_basic_authentication,
+              :max_redirects, :method, :open_timeout, :read_timeout, :resolver, :sensitive_headers, :total_timeout, :uri, :url
 
   def initialize(url:, **options)
     config = DEFAULTS.merge(options)
@@ -23,16 +25,12 @@ class SafeFetch::RequestOptions
     @uri = parse_and_validate_url!(url)
     @method = normalize_method(config[:method])
     @body = config[:body]
-    @max_bytes = config[:max_bytes]
-    @open_timeout = config[:open_timeout]
-    @read_timeout = config[:read_timeout]
     @headers = normalize_headers(config[:headers])
     @sensitive_headers = normalize_sensitive_headers(config[:sensitive_headers])
     @resolver = config[:resolver]
     @http_basic_authentication = config[:http_basic_authentication]
-    @allowed_content_type_prefixes = Array(config[:allowed_content_type_prefixes])
-    @allowed_content_types = Array(config[:allowed_content_types])
-    @validate_content_type = config[:validate_content_type]
+    apply_limits(config)
+    apply_content_type_rules(config)
   end
 
   def effective_max_bytes
@@ -50,7 +48,8 @@ class SafeFetch::RequestOptions
       request_proc: request_proc,
       resolver: resolver,
       sensitive_headers: sensitive_headers,
-      http_options: { open_timeout: open_timeout, read_timeout: read_timeout }
+      max_redirects: max_redirects,
+      http_options: { open_timeout: bounded_by_total(open_timeout), read_timeout: bounded_by_total(read_timeout) }
     }
   end
 
@@ -58,7 +57,48 @@ class SafeFetch::RequestOptions
     @validate_content_type
   end
 
+  def follow_redirects?
+    max_redirects.positive?
+  end
+
   private
+
+  def apply_limits(config)
+    @max_bytes = config[:max_bytes]
+    @open_timeout = config[:open_timeout]
+    @read_timeout = config[:read_timeout]
+    @total_timeout = normalize_total_timeout(config[:total_timeout])
+    @max_redirects = normalize_max_redirects(config[:max_redirects])
+  end
+
+  def apply_content_type_rules(config)
+    @allowed_content_type_prefixes = Array(config[:allowed_content_type_prefixes])
+    @allowed_content_types = Array(config[:allowed_content_types])
+    @validate_content_type = config[:validate_content_type]
+  end
+
+  # Um prazo (`total_timeout`) menor que os tetos por operação tem de valer já na conexão e na espera
+  # pelos cabeçalhos, que acontecem antes de o `Fetcher` receber a resposta e poder apertar o socket.
+  # Aqui ele vale como TETO POR OPERAÇÃO, não como saldo: cabeçalhos que gotejam abaixo dele evadem
+  # (ressalva registrada, ver `SafeFetch::Deadline`).
+  def bounded_by_total(timeout)
+    return timeout if total_timeout.nil?
+    return total_timeout if timeout.nil?
+
+    [timeout, total_timeout].min
+  end
+
+  def normalize_total_timeout(value)
+    return value if value.nil? || (value.is_a?(Numeric) && value.positive?)
+
+    raise ArgumentError, "total_timeout must be a positive number or nil, got #{value.inspect}"
+  end
+
+  def normalize_max_redirects(value)
+    return value if value.is_a?(Integer) && value >= 0
+
+    raise ArgumentError, "max_redirects must be a non-negative Integer, got #{value.inspect}"
+  end
 
   def default_max_bytes
     limit_mb = GlobalConfigService.load('MAXIMUM_FILE_UPLOAD_SIZE', SafeFetch::DEFAULT_MAX_BYTES_FALLBACK_MB).to_i

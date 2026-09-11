@@ -555,11 +555,165 @@ RSpec.describe SafeFetch do
     end
 
     context 'with non-2xx upstream responses' do
-      it 'raises HttpError on non-2xx responses' do
+      it 'raises HttpError on non-2xx responses, carrying the status as an integer' do
         stub_request(:get, url).to_return(status: 404, body: '', headers: {})
 
         expect { described_class.fetch(url) { nil } }.to raise_error do |error|
           expect(error.class.name).to eq('SafeFetch::HttpError')
+          expect(error.status).to eq(404)
+        end
+      end
+
+      # O Net::HTTP, depois de entregar a resposta ao bloco, lê o corpo INTEIRO em memória
+      # (`reading_body` → `body`) — a menos que o bloco levante. A recusa tem de vir de dentro do
+      # bloco, ou um 404 de tamanho arbitrário é materializado só para ser descartado.
+      it 'raises before the body of the non-2xx response is read' do
+        body_read = false
+        response = Net::HTTPNotFound.new('1.1', '404', 'Not Found')
+        allow(response).to receive(:body) { body_read = true }
+        allow(response).to receive(:read_body) { body_read = true }
+        allow(SsrfFilter).to receive(:get) do |*, &block|
+          block.call(response)
+          response.body
+          response
+        end
+
+        expect { described_class.fetch(url) { nil } }.to raise_error do |error|
+          expect(error.class.name).to eq('SafeFetch::HttpError')
+          expect(error.status).to eq(404)
+        end
+        expect(body_read).to be(false)
+      end
+    end
+
+    context 'with max_redirects: 0' do
+      it 'refuses the first redirect as HttpError with its status, without following it' do
+        destination = 'http://example.com/elsewhere.png'
+        stub_request(:get, url).to_return(status: 302, body: 'x' * 1000, headers: { 'Location' => destination })
+        stub_request(:get, destination).to_return(status: 200, body: 'y', headers: { 'Content-Type' => 'image/png' })
+
+        expect { described_class.fetch(url, max_redirects: 0) { nil } }.to raise_error do |error|
+          expect(error.class.name).to eq('SafeFetch::HttpError')
+          expect(error.status).to eq(302)
+        end
+        expect(a_request(:get, destination)).not_to have_been_made
+      end
+
+      it 'rejects a negative or non-integer max_redirects' do
+        expect { described_class.fetch(url, max_redirects: -1) { nil } }.to raise_error(ArgumentError, /max_redirects/)
+        expect { described_class.fetch(url, max_redirects: '2') { nil } }.to raise_error(ArgumentError, /max_redirects/)
+      end
+    end
+
+    context 'with an announced Content-Length above max_bytes' do
+      it 'raises FileTooLargeError before reading the body' do
+        stub_request(:get, url).to_return(status: 200, body: 'x', headers: { 'Content-Type' => 'image/png', 'Content-Length' => '3' })
+
+        expect { described_class.fetch(url, max_bytes: 2) { nil } }.to raise_error do |error|
+          expect(error.class.name).to eq('SafeFetch::FileTooLargeError')
+        end
+      end
+    end
+
+    context 'with total_timeout' do
+      it 'rejects a non-positive or non-numeric total_timeout' do
+        expect { described_class.fetch(url, total_timeout: 0) { nil } }.to raise_error(ArgumentError, /total_timeout/)
+        expect { described_class.fetch(url, total_timeout: '5') { nil } }.to raise_error(ArgumentError, /total_timeout/)
+      end
+
+      it 'bounds open_timeout and read_timeout by the total, so no single wait outlives it' do
+        options = SafeFetch::RequestOptions.new(url: url, open_timeout: 5, read_timeout: 30, total_timeout: 3)
+
+        expect(options.request_options[:http_options]).to eq(open_timeout: 3, read_timeout: 3)
+        expect(options.request_options[:max_redirects]).to eq(SsrfFilter::DEFAULT_MAX_REDIRECTS)
+      end
+
+      # O socket é a alavanca por leitura. Sem ele (WebMock; ou um Net::HTTP que deixe de expor o ivar),
+      # o prazo vale só entre pedaços — degradação REGISTRADA, uma vez por transferência, com código
+      # fechado; nunca em silêncio (rodada 7 da entrega 11).
+      it 'registers once, with a closed code, when there is no socket to tighten, and keeps the deadline between chunks' do
+        allow(Rails.logger).to receive(:warn).and_call_original
+        deadline = SafeFetch::Deadline.new(5)
+
+        deadline.enforce!(nil)
+        deadline.enforce!(nil)
+
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(/\[safe_fetch\] total_timeout degradado motivo=sem_socket/)).once
+        expect(deadline.binding?).to be(false)
+        expect(deadline.remaining).to be <= 5
+      end
+
+      it 'tightens the socket read_timeout to what is left, without registering anything' do
+        allow(Rails.logger).to receive(:warn).and_call_original
+        socket = Struct.new(:read_timeout).new(30)
+        deadline = SafeFetch::Deadline.new(5)
+
+        deadline.enforce!(socket)
+
+        expect(socket.read_timeout).to be_between(4, 5)
+        expect(deadline.binding?).to be(true)
+        expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(/safe_fetch/))
+      end
+    end
+
+    # O QUE O WEBMOCK NÃO EMULA: o socket. Um servidor real em 127.0.0.1, com o WebMock desligado (ele
+    # lê a conexão real inteira antes do bloco) e `SAFE_FETCH_ALLOW_PRIVATE_NETWORK` para falar com a
+    # máquina local — pelo mesmo `Fetcher` do caminho público.
+    context 'with a real connection' do
+      after { servidor.parar }
+
+      def on_the_local_network(&)
+        with_modified_env('SAFE_FETCH_ALLOW_PRIVATE_NETWORK' => 'true') { sem_webmock(&) }
+      end
+
+      context 'when a non-2xx response has a huge body' do
+        let(:total) { 32.megabytes }
+        let(:servidor) do
+          servidor_http_local do |s, cliente|
+            s.escrever(cliente, s.cabecalhos(404, 'application/xml', total))
+            loop { break if s.bytes_escritos >= total || !s.escrever(cliente, 'x' * 65_536) }
+          end
+        end
+
+        it 'closes the connection instead of reading the body' do
+          on_the_local_network do
+            expect { described_class.fetch(servidor.url('/missing'), validate_content_type: false) { nil } }.to raise_error do |error|
+              expect(error.class.name).to eq('SafeFetch::HttpError')
+              expect(error.status).to eq(404)
+            end
+          end
+          servidor.parar
+
+          expect(servidor.bytes_escritos).to be < total
+        end
+      end
+
+      # Pedaços com pausas crescentes nunca estouram um `read_timeout` por leitura; só o prazo do corpo
+      # (`total_timeout`, monotônico) segura isso — e cada leitura espera só o que resta dele: a recusa
+      # vem ao vencer (1 s), não quando o pedaço seguinte chega (2,1 s), nem quando uma leitura isolada
+      # estoura (1,9 s).
+      context 'when the body arrives slower than the total_timeout' do
+        let(:servidor) do
+          servidor_http_local do |s, cliente|
+            s.escrever(cliente, s.cabecalhos(200, 'application/octet-stream', 40) + ('a' * 10))
+            [0.3, 0.6, 1.2].each do |pausa|
+              sleep(pausa)
+              break unless s.escrever(cliente, 'a' * 10)
+            end
+          end
+        end
+
+        it 'raises TotalTimeoutError when the total is up, waiting on each read only what is left' do
+          opcoes = { validate_content_type: false, total_timeout: 1, read_timeout: 5 }
+          inicio = segundos_monotonicos
+
+          on_the_local_network do
+            expect { described_class.fetch(servidor.url('/slow'), **opcoes) { nil } }.to raise_error do |error|
+              expect(error.class.name).to eq('SafeFetch::TotalTimeoutError')
+            end
+          end
+
+          expect(segundos_monotonicos - inicio).to be < 1.6
         end
       end
     end

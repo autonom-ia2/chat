@@ -197,7 +197,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   def apply(run, native, progress, attempt)
-    Array(progress&.deliveries).each { |text| deliver(run, text) }
+    Array(progress&.deliveries).each { |entrega| deliver(run, entrega) }
     run.record_attempt!(handle: merged_handle(progress&.handle))
 
     if progress.nil? || progress.failed?
@@ -212,8 +212,9 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # Entrega da FERRAMENTA (não o aviso, não a frase de falha). Conta como entregue tanto a publicada
   # quanto a ADIADA — a adiada sai sozinha pelo `AsyncPublishJob`, e tratá-la como "nada entregue"
   # faria o desfecho publicar "não consegui concluir" ao lado da cotação que estava a caminho.
-  def deliver(run, text)
-    result = publish(run, text)
+  # `entrega` é texto ou a forma serializada de uma entrega de arquivo (o comparativo, entrega 11).
+  def deliver(run, entrega)
+    result = publish(run, entrega)
     run.record_delivery! if result.published? || result.deferred?
     result
   end
@@ -294,13 +295,14 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   # A publicação é ADIADA enquanto a entrega humanizada do turno ainda está em curso —
-  # publicar no meio dela entregaria a cotação antes da frase que a promete.
-  def publish(run, text)
-    result = ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(text)
+  # publicar no meio dela entregaria a cotação antes da frase que a promete. A entrega de arquivo
+  # viaja para o job adiado na forma serializada (Hash de texto), que é o que o Sidekiq carrega.
+  def publish(run, entrega)
+    result = ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(entrega)
     if result.deferred?
       ::Autonomia::Agents::Tools::AsyncPublishJob
         .set(wait: AsyncConfig::PUBLISH_DEFER_SECONDS.seconds)
-        .perform_later(run.id, text, 1)
+        .perform_later(run.id, entrega, 1)
     end
     result
   end

@@ -8,7 +8,7 @@ class SafeFetch::PrivateNetworkRequest
     original_url = url
     original_uri = URI(url)
 
-    (SsrfFilter::DEFAULT_MAX_REDIRECTS + 1).times do
+    (options.max_redirects + 1).times do
       uri = URI(url)
       validate_scheme!(uri)
 
@@ -18,7 +18,7 @@ class SafeFetch::PrivateNetworkRequest
       url = next_url
     end
 
-    raise SsrfFilter::TooManyRedirects, "Got #{SsrfFilter::DEFAULT_MAX_REDIRECTS} redirects fetching #{original_url}"
+    raise SsrfFilter::TooManyRedirects, "Got #{options.max_redirects} redirects fetching #{original_url}"
   end
 
   private
