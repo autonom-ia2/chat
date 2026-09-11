@@ -100,7 +100,6 @@
         "TITLE": "Seguradoras com credencial pendente",
         "BODY": "{count} seguradora recusou o login que a corretora cadastrou no AGGER, vista na cotação de {at}. Ela não cota até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente. | {count} seguradoras recusaram o login que a corretora cadastrou no AGGER, vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente."
       },
-      "ALREADY_ACTIVE": "Esta conta AGGER já estava em uso quando conectamos (desde {at}). Pode ser você em outra aba, ou outro ambiente cotando pela mesma conta — nesse caso, as cotações aparecem misturadas no portal.",
       "VERDICT": {
         "READY": "Pronta para cotar {count} produtos",
         "READY_ONE": "Pronta para cotar 1 produto",
@@ -183,6 +182,7 @@
       },
       "ERRORS": {
         "NOME_INVALIDO": "Confira o nome do agente e o da corretora.",
+        "HORARIO_INVALIDO": "Confira o horário de atendimento: escreva só os dias e as horas, sem marcador de variável.",
         "COMPORTAMENTO_INVALIDO": "Escolha um comportamento.",
         "GENERIC": "Não consegui criar o agente agora. Tente de novo em instantes."
       }

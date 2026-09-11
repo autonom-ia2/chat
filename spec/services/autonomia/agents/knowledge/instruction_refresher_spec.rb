@@ -43,6 +43,31 @@ RSpec.describe Autonomia::Agents::Knowledge::InstructionRefresher do
       end
     end
 
+    # #380 (rodada de correção) — o Agente de Cotação nasce guiado e com base de conhecimento; o
+    # refresh reescreveria uma coluna que ele não lê (o prompt é o arquivo do deploy). Sai antes de
+    # gastar modelo, com telemetria própria — não é o `skipped_manual`.
+    context 'when the agent is the quote agent, whose instruction is maintained by Autonom.ia' do
+      let(:mode) { :guided }
+      let(:agent) do
+        Autonomia::Agents::Agent.create!(
+          account: account, name: 'Lia', agent_type: 'insurance_quote', mode: :guided, instruction: original_instruction
+        )
+      end
+
+      it 'keeps the column intact and never calls the LLM' do
+        # Arrange
+        expect(Crm::Ai::ResponsesClient).not_to receive(:new)
+
+        # Act
+        result = described_class.call(agent, reason: :kb_changed)
+
+        # Assert
+        expect(result).to be_nil
+        expect(agent.reload.instruction).to eq(original_instruction)
+        expect(Rails.logger).to have_received(:info).with(/status=skipped_instrucao_mantida/)
+      end
+    end
+
     context 'when the agent is in guided mode' do
       let(:mode) { :guided }
 

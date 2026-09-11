@@ -50,8 +50,9 @@ module Autonomia::Agents::Tools::AsyncConfig
   #
   # Rodrigo removeu o teto em 10/09/2026, e o motivo não é técnico: **quem paga a cotação é a
   # corretora**. Uma corretora grande cota mais, fecha mais negócio e tem retorno maior. Estrangular
-  # o cliente que paga mais é o oposto do produto. Medir para cobrar e mostrar retorno é a entrega
-  # 7; frear é outra coisa, e frear não é o que se quer aqui.
+  # o cliente que paga mais é o oposto do produto. Medir para cobrar e mostrar retorno é a entrega 7
+  # (`Insurance::Medida`, entregue em 11/09/2026); frear é outra coisa, e frear não é o que se quer
+  # aqui — `medida_nao_e_freio_spec` reprova quem chamar a medida de dentro do caminho da cotação.
   #
   # O que continua impedindo desperdício NÃO é teto:
   #   - `turn_already_opened?` (bound.rb) — o retry do mesmo turno não abre execução nova;
@@ -60,8 +61,16 @@ module Autonomia::Agents::Tools::AsyncConfig
   #     abre; qualquer campo diferente abre. Enquanto ela não existir, a impaciência do cliente
   #     gera cotação duplicada no portal do corretor — que é sujeira, não prejuízo nosso.
   #
-  # `sem_teto_de_execucoes_spec` guarda esta decisão: quem reintroduzir teto derruba o exemplo e é
-  # obrigado a encarar a decisão em vez de repetir o acidente.
+  # TRÊS guardas seguram esta decisão, e quem reintroduzir teto derruba pelo menos uma — obrigado a
+  # encarar a decisão em vez de repetir o acidente. `async_config_sem_teto_de_execucoes_spec` pega o
+  # NOME (a constante copiada de volta de um diff antigo: MAX_RUNS, PER_HOUR, TETO/LIMITE por HORA…),
+  # e só o nome. O COMPORTAMENTO tem um exemplo por porta em que a contagem poderia entrar:
+  # `bound_async_spec` no aceite (vinte execuções na última hora, 340 seguradoras, e a vigésima
+  # primeira é aceita) e `async_run_job_spec` no job, onde a chamada paga acontece (com as mesmas
+  # vinte, a consulta e a submissão seguem, e o reagendamento sai NO MESMO INTERVALO de sempre — um
+  # teto por ATRASO, `interval_for` devolvendo uma hora acima de oito execuções, é freio tanto quanto
+  # uma recusa, e até a rodada 4 da entrega 7 passava). Até 11/09/2026 este comentário apontava para
+  # um arquivo que não existia; até a rodada 3 ele prometia cobertura do job que só o aceite tinha.
 
   module_function
 

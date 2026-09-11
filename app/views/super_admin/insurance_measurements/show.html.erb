@@ -1,0 +1,99 @@
+<%#
+  Medir para cobrar e para mostrar retorno (entrega 7). DOIS números por corretora: cotações e
+  SEGURADORAS ACIONADAS — uma cotação aciona todas as seguradoras habilitadas (dezessete nas três
+  cotações reais de 11/09/2026). Contar só cotações não diz nada sobre o que foi consumido.
+%>
+<div class="p-8">
+  <div>
+    <h1 class="text-2xl font-semibold text-slate-900">Quote Measurement</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      Cotações e seguradoras acionadas por corretora, no período. Uma cotação aciona todas as
+      seguradoras que a corretora habilitou. Leitura: nada aqui limita volume.
+    </p>
+  </div>
+
+  <%= form_with url: super_admin_insurance_measurement_path, method: :get, class: 'mt-6 flex items-end gap-3' do %>
+    <label class="flex flex-col text-xs uppercase text-slate-500">
+      De
+      <%= date_field_tag :from, params[:from], class: 'mt-1 rounded border border-slate-300 px-3 py-2 text-sm' %>
+    </label>
+    <label class="flex flex-col text-xs uppercase text-slate-500">
+      Até
+      <%= date_field_tag :to, params[:to], class: 'mt-1 rounded border border-slate-300 px-3 py-2 text-sm' %>
+    </label>
+    <button type="submit" class="rounded bg-woot-500 px-4 py-2 text-sm font-medium text-white hover:bg-woot-600">
+      Consultar
+    </button>
+    <span class="text-xs text-slate-500">
+      Sem "De": os <%= Autonomia::Insurance::Medida::DIAS_PADRAO %> dias que terminam em "Até"; sem os dois, os que terminam hoje.
+    </span>
+  <% end %>
+
+  <% if @erro.present? %>
+    <p class="mt-6 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      Período inválido — <%= @erro %>. Use o formato AAAA-MM-DD.
+    </p>
+  <% else %>
+    <%#
+      CADA CORRETORA É LIDA NO FUSO DELA (o `reporting_timezone` da conta; sem ele, o da instalação),
+      exatamente como o endpoint da conta faz — é o que faz a fatura e a tela da corretora baterem.
+      "Setembro" da corretora termina às 23h59 dela: a cotação das 23h de 30/09 em São Paulo é de
+      setembro aqui e lá. O fuso de cada linha está na coluna, para ninguém ter de adivinhar.
+    %>
+    <p class="mt-4 text-xs text-slate-500">
+      Período: <%= l(@medida.inicio.to_date, format: :long) %> até <%= l(@medida.fim.to_date, format: :long) %>,
+      lido no fuso de cada corretora (coluna <strong>Fuso</strong>): o dia começa e termina no relógio dela.
+    </p>
+
+    <div class="mt-4 overflow-hidden rounded border border-slate-200 bg-white">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-4 py-3">Corretora</th>
+            <th class="px-4 py-3">Fuso</th>
+            <th class="px-4 py-3 text-right">Cotações</th>
+            <th class="px-4 py-3 text-right">Seguradoras acionadas</th>
+            <th class="px-4 py-3 text-right">Com preço</th>
+            <%# Termo 3: COTAÇÕES que viraram proposta (uma cotação com duas propostas é uma). A soma dos códigos vem ao lado. %>
+            <th class="px-4 py-3 text-right">Cotações com proposta</th>
+            <th class="px-4 py-3 text-right">Propostas emitidas</th>
+            <%# O que NÃO se sabe fica numa coluna própria, nunca somado nos totais acima. %>
+            <th class="px-4 py-3 text-right">Sem medida</th>
+            <th class="px-4 py-3 text-right">Sem confirmação</th>
+            <th class="px-4 py-3 text-right">Possível duplicata</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @linhas.each do |linha| %>
+            <tr class="border-b border-slate-100">
+              <td class="px-4 py-3 font-medium text-slate-900">
+                <%= @contas[linha[:conta_id]]&.name || "conta #{linha[:conta_id]}" %>
+                <span class="text-slate-400">#<%= linha[:conta_id] %></span>
+              </td>
+              <td class="px-4 py-3 text-slate-500"><%= linha[:fuso] %></td>
+              <td class="px-4 py-3 text-right text-slate-700"><%= linha[:cotacoes] %></td>
+              <td class="px-4 py-3 text-right font-semibold text-slate-900"><%= linha[:seguradoras_acionadas] %></td>
+              <td class="px-4 py-3 text-right text-slate-700"><%= linha[:seguradoras_com_preco] %></td>
+              <td class="px-4 py-3 text-right text-slate-700"><%= linha[:cotacoes_com_proposta] %></td>
+              <td class="px-4 py-3 text-right text-slate-700"><%= linha[:propostas_emitidas] %></td>
+              <td class="px-4 py-3 text-right text-slate-500"><%= linha[:cotacoes_sem_medida] %></td>
+              <td class="px-4 py-3 text-right text-slate-500"><%= linha[:cotacoes_sem_confirmacao] %></td>
+              <td class="px-4 py-3 text-right text-slate-500"><%= linha[:cotacoes_possivelmente_duplicadas] %></td>
+            </tr>
+          <% end %>
+          <% if @linhas.empty? %>
+            <tr><td colspan="10" class="px-4 py-6 text-center text-slate-500">Nenhuma cotação no período.</td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="mt-4 text-xs text-slate-500">
+      <strong>Sem medida</strong>: a cotação existe no portal e o número de seguradoras nunca foi
+      lido (execução encerrada antes da primeira consulta, ou anterior a 11/09/2026).
+      <strong>Sem confirmação</strong>: o envio ao portal não foi confirmado — a cotação pode existir
+      lá sem o número aqui. <strong>Possível duplicata</strong>: pode haver uma a mais no portal do
+      que a contada. Nenhuma das três entra nos totais.
+    </p>
+  <% end %>
+</div>

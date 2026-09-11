@@ -27,15 +27,23 @@ class Autonomia::Insurance::Connections::Sync
   end
 
   # Abre (ou reusa) A sessão da conexão e consulta o portal com ELA. Antes, este método fazia dois
-  # logins por sincronização — um no status, outro nas capacidades — e cada um invalidava a sessão
-  # anterior, inclusive a de uma cotação em andamento.
+  # logins por sincronização — um no status, outro nas capacidades —, e cada um é uma chamada de até
+  # `Http::READ_TIMEOUT` segundos ao portal para receber de volta a sessão que já tínhamos.
+  #
+  # (Correção de 11/09/2026: a frase aqui era "e cada um invalidava a sessão anterior, inclusive a
+  # de uma cotação em andamento". Medido e falso — logins da mesma conta compartilham a sessão. O
+  # que se economiza é login, não sobrevivência de cotação. Ver `connections/session.rb`.)
   def call
     return mark!(status: 'not_configured') unless @connection.credentials_present?
 
     mark!(status: 'authenticating')
-    # `with_fresh_session` e não `resolve!`: a sessão guardada pode ter sido derrubada por um login
-    # feito no portal pelo navegador, e só descobrimos isso quando o portal recusa. Sem a renovação,
-    # a conexão fica "credencial recusada" com a credencial válida até o prazo vencer.
+    # `with_fresh_session` e não `resolve!`: `session_live?` só conhece o PRAZO QUE NÓS GRAVAMOS, e
+    # prazo gravado não é prova — a sessão pode ter acabado antes dele, e só descobrimos isso quando
+    # o portal recusa. Sem a renovação, a conexão fica "credencial recusada" com a credencial válida
+    # até o prazo vencer.
+    #
+    # (Correção de 11/09/2026: o motivo escrito aqui era "pode ter sido derrubada por um login feito
+    # no portal pelo navegador". Medido e falso: logins da mesma conta não derrubam nada.)
     @sessions.with_fresh_session do |session|
       apply_status!(consultar_status(session))
       scan!(@connection.session || session) if @scan_capabilities && @connection.ready?

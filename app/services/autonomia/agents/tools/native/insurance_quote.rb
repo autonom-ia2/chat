@@ -35,6 +35,18 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # Chave nossa dentro do handle: quem já foi entregue. É o que faz a segunda mensagem ser
   # "chegaram mais opções" em vez de repetir as que o cliente já leu.
   DELIVERED_KEY = 'entregues'.freeze
+  # QUANTAS SEGURADORAS ESTA COTAÇÃO ACIONOU (entrega 7). Os códigos de TODAS as que o portal pôs na
+  # cotação — cotou, recusou o risco ou recusou a nossa credencial —, que é a unidade que a corretora
+  # paga. `DELIVERED_KEY` não serve para isso: ele guarda quem COTOU, que é o que já foi para o
+  # cliente; na renovação real de 11/09/2026 eram onze de dezessete, e as outras seis não deixavam
+  # rastro nenhum. Sem esta chave, medir para cobrar seria contar execuções e chamá-las de consultas.
+  ACIONADAS_KEY = 'seguradoras_acionadas'.freeze
+  # A PROPOSTA INDIVIDUAL, quando ela existir (entrega 8): os códigos das seguradoras cuja proposta
+  # saiu nesta cotação. A ferramenta de proposta por seguradora ainda não existe — `quote/proposal`
+  # com `insurer_code` é o caminho, e `comparison_pdf` já usa o mesmo endpoint SEM código para o
+  # comparativo. O ponto de registro é este handle, na passada que gerar a proposta; a medida da
+  # entrega 7 já conta a lista (`Insurance::Medida`), e hoje conta zero porque ninguém a escreve.
+  PROPOSTAS_KEY = 'propostas'.freeze
   # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial. A
   # sentinela é gravada quando a ENTREGA sai da ferramenta, seja qual for a forma em que o
   # publicador a faça chegar (arquivo, ou o link de reserva quando o download falha).
@@ -47,6 +59,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # (conversa encerrada, erro transitório do publisher) avançava o handle com os códigos das ofertas
   # mesmo assim — e o aviso, que vale por sair UMA vez, não sairia nunca mais.
   AVISO_SENT_KEY = 'aviso_sem_bonus_enviado'.freeze
+  # Por seguradora, POR QUE o preço saiu sem período (entrega 13, termo 1): o motivo do adapter, que
+  # nomeia o campo do portal que faltou ou veio ambíguo. Fica no handle da execução, consultável
+  # depois em `autonomia_agent_tool_runs.handle->'preco_sem_periodo'`, sem reabrir a cotação.
+  SEM_PERIODO_KEY = 'preco_sem_periodo'.freeze
   # Sai UMA vez, junto do primeiro preço, e só em renovação de auto sem classe de bônus. Não promete
   # desconto nem percentual: o quanto o bônus abate é decisão de cada seguradora, e prometer número
   # aqui vira preço que a emissão desmente. Diz o que é verdade — existe preço melhor, e ele depende
@@ -186,9 +202,11 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   def build_progress(result, handle, _attempt)
     registrar_credencial_de_seguradora(result)
     ofertas = ::Autonomia::Insurance::QuoteOffers
+    leitura = ofertas.new(result)
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
-    fresh = ofertas.new(result).quoted.reject { |offer| already.include?(ofertas.code(offer)) }
-    next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| ofertas.code(offer) })
+    fresh = leitura.quoted.reject { |offer| already.include?(ofertas.code(offer)) }
+    next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| ofertas.code(offer) },
+                               ACIONADAS_KEY => acionadas(leitura, handle))
     deliveries, next_handle = precos(fresh, already, next_handle)
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
@@ -204,6 +222,14 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     progress_class.done(deliveries: deliveries, handle: next_handle)
   end
 
+  # A UNIÃO DAS CONSULTAS, não a foto da última (entrega 7). O portal responde em pedaços — medido em
+  # 04/09/2026: 3 de 6 seguradoras devolveram preço em ~35 s e o negócio só assentou aos 392 s —, e
+  # nada garante que uma consulta liste tudo o que a anterior listou. Gravar a foto apagaria
+  # seguradoras que a corretora já acionou e pagou. União é idempotente: reconsulta não muda nada.
+  def acionadas(leitura, handle)
+    (Array(handle[ACIONADAS_KEY]).map(&:to_s) | leitura.acionadas).sort
+  end
+
   # -> [deliveries, handle]. O aviso de renovação sem bônus tem SENTINELA própria, no mesmo molde do
   # PDF, e não é inferido de "esta é a primeira entrega".
   def precos(fresh, already, handle)
@@ -213,7 +239,17 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     texto = ::Autonomia::Insurance::QuoteOffers.describe(
       fresh, first: already.empty?, aviso: avisar ? AVISO_SEM_BONUS : nil
     )
+    handle = registrar_sem_periodo(fresh, handle)
     [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
+  end
+
+  # O registro ACUMULA entre lotes (o lote 2 não pode apagar o motivo do lote 1) e só escreve a
+  # chave quando há o que registrar. `fresh` já é a lista de quem cotou.
+  def registrar_sem_periodo(fresh, handle)
+    motivos = ::Autonomia::Insurance::QuoteOffers.new('offers' => fresh).sem_periodo
+    return handle if motivos.empty?
+
+    handle.merge(SEM_PERIODO_KEY => handle[SEM_PERIODO_KEY].to_h.merge(motivos))
   end
 
   def finished?(result)

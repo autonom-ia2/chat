@@ -459,6 +459,8 @@ en:
       invalid_kind: 'Invalid material kind. Use "knowledge" or "media".'
       limit_reached: 'This agent already has the maximum of %{limit} knowledge materials. Remove one before adding another.'
     agents:
+      instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
+      escolhas_incompletas: "The Quote Agent could not build its instruction: the choice '%{campo}' is missing from its record. This cannot be fixed here — contact Autonom.ia support."
       operate:
         handoff_default: "Thanks for reaching out! I'm connecting you with a member of our team who will continue from here."
         connect_errors:
@@ -468,6 +470,9 @@ en:
           inbox_has_webhook_bot: 'This inbox is already connected to another bot. Disconnect it first.'
           inbox_already_connected: 'This inbox is already connected to an agent.'
           not_connected: 'This inbox is not connected to the agent.'
+    insurance:
+      errors:
+        encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."
   captain:
     copilot_message_required: Message is required
     copilot_error: 'Please connect an assistant to this inbox to use Copilot'
@@ -726,7 +731,3 @@ en:
         button: 'Resend confirmation email'
         sent: 'Confirmation email sent.'
         already_confirmed: 'User is already confirmed.'
-  autonomia:
-    insurance:
-      errors:
-        encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

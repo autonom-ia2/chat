@@ -91,9 +91,11 @@ module Autonomia
         ::Autonomia::Agents::AgentEvent::HANDOFF_TYPES.sum { |type| counts_by_type[type].to_i }
       end
 
-      # Conversas distintas tocadas pelo bot na janela (replied OU handed_off).
+      # Conversas distintas tocadas pelo bot na janela (replied OU handed_off). `atendimentos` deixa de
+      # fora o evento em que o agente ficou MUDO (`skipped_escolhas_incompletas`, #380): ele existe para
+      # o corretor ver a causa, não para a conversa contar como atendida.
       def conversations_handled
-        events.where.not(conversation_id: nil).distinct.count(:conversation_id)
+        events.atendimentos.where.not(conversation_id: nil).distinct.count(:conversation_id)
       end
 
       # handoffs / (replies + handoffs). 0 quando não houve atividade.
@@ -152,16 +154,23 @@ module Autonomia
       # ---- Resultados por conversa (#284) ------------------------------------------------------
 
       # Conversas tocadas pelo agente (replied/handed_off) NA JANELA — o "universo" dos resultados.
+      # O MESMO universo de `conversations_handled`: o número do cartão e a lista que abre no clique
+      # têm de contar as mesmas conversas, por isso os dois passam por `atendimentos` (e SÓ os dois —
+      # ver `all_time_handled_ids`).
       def handled_conversations
         ::Conversation.where(account_id: @agent.account_id, id: handled_ids)
       end
 
       def handled_ids
-        events.where.not(conversation_id: nil).select(:conversation_id)
+        events.atendimentos.where.not(conversation_id: nil).select(:conversation_id)
       end
 
       # Todas as conversas que o agente já tocou (sem janela): usada para excluir handoffs antigos e
-      # para ligar reports de mensagens à conversa do agente.
+      # para ligar reports de mensagens à conversa do agente. Aqui NÃO passa por `atendimentos`, de
+      # propósito (#380, rodada 5): a entrega assíncrona num turno mudo posta como o espelho SEM gravar
+      # `replied` (só o Responder grava), e um report de atendente sobre essa mensagem é sobre algo que o
+      # bot de fato postou — tem de contar em "respostas erradas" mesmo que a conversa não conte como
+      # atendida. Filtrar aqui apagaria o report em silêncio.
       def all_time_handled_ids
         ::Autonomia::Agents::AgentEvent.where(autonomia_agent_id: @agent.id, account_id: @agent.account_id)
                                        .where.not(conversation_id: nil).select(:conversation_id)

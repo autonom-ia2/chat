@@ -72,13 +72,16 @@ module Autonomia
           dispatch_async(replied: outcome.status == :replied)
           handoff_if_signaled(result)
           outcome
+        rescue ::Autonomia::Insurance::QuoteAgent::Builder::EscolhasIncompletas => e
+          # ESCOLHAS INCOMPLETAS (#380): o Agente de Cotação não montou o prompt — a chave
+          # `agente_de_cotacao` do config está presente e incompleta (só escrita fora do Builder produz
+          # isso). A recusa é a certa (uma variável nunca chega ao modelo), mas cair só no resgate largo
+          # deixava o corretor vendo silêncio em TODA conversa sem a causa em lugar nenhum além do log.
+          # Registra o evento, uma vez por conversa, e segue pelo MESMO caminho de falha de sempre.
+          registrar_escolhas_incompletas(e)
+          falha_no_turno(e)
         rescue StandardError => e
-          # Falha inesperada ao postar -> SILÊNCIO (sem texto de sistema). Loga p/ diagnóstico.
-          Rails.logger.warn("[autonomia][operate] responder_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
-          # Falha inesperada no turno: a execução aceita nunca chega a falar com o portal. Melhor não
-          # cotar do que cotar e não ter como entregar.
-          ::Autonomia::Agents::Tools::AsyncDispatcher.new(delivery: @delivery, agent: @agent).discard!
-          Result.silenced
+          falha_no_turno(e)
         end
 
         # A resposta do agente é o sinal de silêncio? (compara o texto inteiro, normalizado, com o(s)
@@ -102,6 +105,26 @@ module Autonomia
         end
 
         private
+
+        # Falha inesperada no turno -> SILÊNCIO (sem texto de sistema). Loga a classe p/ diagnóstico, nunca
+        # a mensagem. A execução assíncrona aceita nunca chega a falar com o portal: melhor não cotar do
+        # que cotar e não ter como entregar.
+        def falha_no_turno(error)
+          Rails.logger.warn("[autonomia][operate] responder_failed agent=#{@agent.id} conv=#{@conversation.id} #{error.class}")
+          ::Autonomia::Agents::Tools::AsyncDispatcher.new(delivery: @delivery, agent: @agent).discard!
+          Result.silenced
+        end
+
+        # Uma vez por conversa: a segunda mensagem do mesmo cliente não duplica o evento. A mensagem do
+        # erro é só o NOME do campo que falta (`Builder.conferir_escolhas!`), nunca o valor de outra escolha — por
+        # isso pode ir ao log. O EventLogger nunca levanta.
+        def registrar_escolhas_incompletas(error)
+          Rails.logger.warn("[autonomia][operate] escolhas_incompletas agent=#{@agent.id} conv=#{@conversation.id} campo=#{error.message}")
+          return if @agent.events.skipped_escolhas_incompletas.exists?(conversation_id: @conversation.id)
+
+          ::Autonomia::Agents::Operate::EventLogger.skipped(agent: @agent, conversation: @conversation,
+                                                            reason: 'escolhas_incompletas')
+        end
 
         # A instrução sinalizou "passar para humano" (should_handoff) -> fecha o ciclo do ai_assignee:
         # bot_handoff! (solta o AgentBot-espelho, abre a conversa, dispara CONVERSATION_BOT_HANDOFF) +

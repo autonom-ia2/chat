@@ -190,6 +190,17 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
         .to raise_error(described_class::ComportamentoInvalido)
     end
 
+    # SÓ O NOME DO CAMPO, NUNCA O VALOR (rodada 7 de #380, P2 do Codex): até 8b9800791f a mensagem era o
+    # próprio `@comportamento`, e a porta a devolvia em `detail` — `behavior: '$nomeAgente'` voltava ao
+    # cliente da API tal como veio. As outras três recusas já nomeavam o campo; esta é a quarta.
+    it 'recusa comportamento fora das opcoes dizendo o campo, nunca o valor' do
+      expect { construir(comportamento: '$nomeAgente') }
+        .to raise_error(described_class::ComportamentoInvalido, 'comportamento') do |erro|
+          expect(erro.message).not_to include('$nomeAgente')
+        end
+      expect(Autonomia::Agents::Agent.count).to eq(0)
+    end
+
     it 'nao deixa agente meio-pronto quando o comportamento e invalido' do
       expect { construir(comportamento: 'agressivo') }.to raise_error(described_class::ComportamentoInvalido)
       expect(Autonomia::Agents::Agent.where(account: account)).to be_empty
@@ -239,6 +250,29 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'recusa nome de agente vazio' do
       expect { construir(nome_agente: '   ') }.to raise_error(described_class::NomeInvalido, /agente/)
+    end
+
+    # UM MARCADOR RESERVADO DENTRO DE UMA ESCOLHA (rodada 6 de #380, P2 do Codex) não pode nascer: a
+    # substituição é numa passada só, então `$nomeAgente` dentro do nome da corretora chegaria ao modelo
+    # como o marcador literal (termo 6). A recusa diz o campo e o motivo — nunca o valor —, e nada é
+    # gravado. Vale para as três escolhas de texto livre; `comportamento` é um de dois valores fixos.
+    it 'recusa nome de corretora com marcador reservado dizendo o campo, nunca o valor' do
+      expect { construir(nome_corretora: '$nomeAgente') }
+        .to raise_error(described_class::NomeInvalido) do |erro|
+          expect(erro.message).to include('corretora')
+          expect(erro.message).not_to include('$nomeAgente')
+        end
+      expect(Autonomia::Agents::Agent.count).to eq(0)
+    end
+
+    it 'recusa nome de agente com marcador reservado' do
+      expect { construir(nome_agente: 'Mia $comportamento') }.to raise_error(described_class::NomeInvalido, /agente/)
+    end
+
+    it 'recusa horário com marcador reservado' do
+      expect { construir(horario: 'das 09h às 18h, $nomeAgente') }
+        .to raise_error(described_class::HorarioInvalido) { |erro| expect(erro.message).not_to include('$nomeAgente') }
+      expect(Autonomia::Agents::Agent.count).to eq(0)
     end
 
     # `gsub` com o valor como segundo argumento interpreta `\0` no texto de substituição. Um nome

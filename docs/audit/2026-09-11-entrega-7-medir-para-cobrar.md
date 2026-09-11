@@ -1,0 +1,632 @@
+# Entrega 7 — medir para cobrar e para mostrar retorno
+
+Data: 11/09/2026. Plano: entrega 7 do Agente de Cotação (6 termos de aceite). Issue-mãe: #291.
+Depende das entregas 5 (intenção de envio) e 10 (pedido repetido), que são de onde saem as marcas do
+handle que a medida lê para dizer o que NÃO sabe.
+
+## O achado que define o desenho
+
+O número de seguradoras acionadas **sempre existiu** — vem no `quote/result` a cada consulta do poll —
+e **morria ali**. O handle guardava só `entregues`: quem COTOU, que é o que já foi para o cliente. Na
+renovação real de 11/09/2026 eram onze de dezessete; as outras seis (recusa de risco) não deixavam
+rastro nenhum, e a corretora pagou pelas dezessete.
+
+Medido no mesmo dia, lendo por `agger quote result` as três cotações reais da conta de teste (leitura,
+sem gastar cotação):
+
+| cotação | `quoted` | `declined` | `auth_required` | **ofertas** |
+|---|---|---|---|---|
+| renovação `b0220871-…:1` | 11 | 6 | 0 | **17** |
+| moto `91bef437-…:1` | 2 | 15 | 0 | **17** |
+| caminhão `4c278fcf-…:1` | 1 | 15 | 1 | **17** |
+
+Os mesmos dezessete códigos nas três (`1 3 4 5 7 8 11 12 19 20 26 44 46 47 48 50 55`). O caminhão é o
+caso que decide a regra: **contar só `quoted` + `declined` diria dezesseis** — uma seguradora a menos
+do que a corretora acionou, e justamente a que ela precisa ver (credencial recusada, critério 4.5).
+Por isso `QuoteOffers#acionadas` conta TODAS as ofertas, em qualquer status.
+
+## O desenho
+
+- **A matéria-prima fica no handle da execução.** `InsuranceQuote::ACIONADAS_KEY`
+  (`seguradoras_acionadas`) é gravada em `build_progress` — na primeira consulta e em todas as
+  seguintes — como **união**, nunca como foto: o portal responde em pedaços (medido em 04/09: 3 de 6
+  seguradoras em ~35 s, o negócio só assentou aos 392 s), e uma consulta que devolvesse menos do que a
+  anterior apagaria seguradoras já pagas. União é idempotente: reconsulta não muda nada. Nenhuma
+  chamada nova ao portal — o dado já vinha no `quote/result`.
+- **A consulta é `Autonomia::Insurance::Medida`**, uma agregação jsonb sobre
+  `autonomia_agent_tool_runs`, agrupada por `account_id` e filtrada por `slug` + `created_at`. O
+  índice `idx_autonomia_tool_runs_account_slug (account_id, slug, created_at)` já existia e é
+  exatamente o desta consulta — **sem migration**.
+- **Nomes de chave vêm das constantes**, nunca digitados na consulta: um rename silencioso faria a
+  medida devolver zero, e zero é o número que ninguém questiona (M11).
+- **O que a medida não sabe, ela diz.** Três colunas separadas, nunca somadas nos totais:
+  `cotacoes_sem_medida` (a cotação existe no portal e o número de seguradoras não foi lido — execução
+  morta antes da primeira consulta, ou linha anterior a esta entrega), `cotacoes_sem_confirmacao`
+  (intenção anotada sem número: PODE existir no portal) e `cotacoes_possivelmente_duplicadas` (pode
+  haver uma A MAIS no portal do que a contada).
+- **A janela é lida no fuso da CORRETORA** (`account.reporting_timezone`, o mesmo dos relatórios do
+  Chatwoot) quando ela configurou um; sem configuração, o da instalação. "Setembro" da corretora
+  termina às 23h59 dela: ler pelo nosso fuso jogaria para outubro toda cotação feita depois das 21h
+  de 30/09 em São Paulo — o nosso valor no lugar do dela, numa conta de dinheiro. O resultado sempre
+  devolve o fuso e os instantes exatos. A tela do Super Admin, que é cross-conta, lê **cada corretora
+  no fuso dela** (`Medida#por_conta` monta uma `Medida.new(conta:)` por corretora — o mesmo caminho
+  do endpoint da conta, desde a rodada 4) e mostra o fuso na coluna de cada linha; o relógio da
+  instalação só serve para ENUMERAR quem pode ter execução, nunca para aceitar ou recusar a janela de
+  alguém (rodada 6). "Trinta dias" são trinta DATAS contando a final (rodada 6).
+- **Duas superfícies, uma fonte.** Super Admin → *Quote Measurement* (`/super_admin/insurance_measurement`)
+  para a operação cobrar; `GET /api/v1/accounts/:id/autonomia/insurance/measurement` para a corretora
+  ver o retorno. As duas leem a MESMA `Medida` — dois números diferentes para o mesmo mês, um na
+  fatura e outro na tela do cliente, seriam pior do que número nenhum.
+
+### Por que a página do Super Admin, e não só o endpoint (termo 4)
+
+O termo é "não depende de engenheiro". Um endpoint da conta ainda exige token, `curl` e alguém que
+saiba montar a URL — é caminho de integração, não de operação. A página do Super Admin custa um
+controller (16 linhas), uma view ERB e uma rota, reusa o layout e o gate que já existem, e resolve o
+termo de verdade: abre, escolhe duas datas, lê a tabela. O endpoint fica porque a **corretora** não
+tem Super Admin e precisa do mesmo número que a fatura dela usa.
+
+### `quotes_with_proposal` é zero, e o contador é real (termo 3)
+
+A ferramenta de proposta por seguradora é a entrega 8. O contador já existe e conta de verdade
+(`InsuranceQuote::PROPOSTAS_KEY`, lido pela medida); hoje lê zero porque **ninguém escreve a chave**.
+Não é um `0` literal — a mutação M8 troca a coluna por `0` e um exemplo reprova.
+
+**São dois números, decididos na rodada 3 pelo texto do termo** ("quantas COTAÇÕES viraram proposta
+individual"): `cotacoes_com_proposta` (`quotes_with_proposal`) conta cotações cuja lista tem pelo
+menos um código — uma cotação com duas propostas é UMA, e esta é a linha da fatura; `propostas_emitidas`
+(`proposals_issued`) é a soma dos códigos, em separado. Até a rodada 3 a coluna `propostas` somava
+códigos e chamava isso de "cotações que viraram proposta": `%w[8 3]` dava 2 onde houve uma.
+
+**Ponto de registro da entrega 8:** o handle da execução, na passada que gerar a proposta. O caminho é
+`quote/proposal` com `insurer_code` (o conector já o tem; `comparison_pdf` usa o mesmo endpoint SEM
+código para o comparativo). Escrever ali a lista de códigos faz a medida contar sem mudar uma linha.
+
+## Termos (6)
+
+| # | Termo | Estado | Guarda / evidência |
+|---|---|---|---|
+| 1 | Consulta por corretora e por período devolve cotações E seguradoras acionadas | Fechado | `medida_spec` ("os dois números", "isolamento e janela", incluindo as DUAS bordas da janela e a recusa de medir conta que não se sabe qual é), `measurement_spec` (API, as duas bordas), `insurance_measurements_controller_spec` (Super Admin); M4, M7, M14, M16 |
+| 2 | O número bate com o caso conhecido: dezessete acionadas → dezessete | Fechado | `medida_spec` "conta dezessete seguradoras quando a execução acionou dezessete" (os 17 códigos reais); `insurance_quote_medida_spec` "grava as dezessete, em qualquer status" (1 quoted + 15 declined + 1 auth_required, o desenho do caminhão real) e "nao infla a lista quando o portal repete o mesmo resultado" (duas passadas, dezessete nas duas); M1, M2, M15 |
+| 3 | Quantas cotações viraram proposta individual; contador definido e zerado, ponto de registro documentado | Fechado | `medida_spec` "propostas individuais (entrega 8)" — `cotacoes_com_proposta` 1 e `propostas_emitidas` 2 para `%w[8 3]`, lista vazia não conta; `measurement_spec` e `insurance_measurements_controller_spec` (as duas colunas); M8, MV5; ponto de registro na seção acima e em `insurance_quote.rb` |
+| 4 | A consulta não depende de engenheiro | Fechado | Página do Super Admin + endpoint da conta, documentados em `docs/insurance/README.md`; `insurance_measurements_controller_spec`, `measurement_spec` (gate e permissão); M6 |
+| 5 | Nada aqui vira freio | Fechado | `medida_nao_e_freio_spec` (por AST, em `app/**` E `enterprise/app/**`: a medida só é nomeada pelas superfícies de leitura, não é alcançada do caminho da cotação, e não escreve); a medida REIMPLEMENTADA inline no aceite (sem nomear a classe) é pega por `bound_async_spec`, que tem 340 seguradoras na hora; M9, MV4, MV7 |
+| 6 | O teto de oito por hora não voltou | Fechado | Três guardas: `bound_async_spec` "there is NO ceiling" (vinte execuções na ÚLTIMA HORA, 340 seguradoras, a vigésima primeira é aceita); `async_run_job_spec` "segue consultando e submetendo com vinte execuções na última hora" (o JOB, onde a chamada paga acontece, submete e entrega em `done`); `async_config_sem_teto_de_execucoes_spec` (a constante pelo nome, agora também `TETO`/`LIMITE` por `HORA`); M10, MV3, MV6 |
+
+### O que fica para prova real / produção
+
+Nada de comportamento novo em conversa: a entrega não muda uma linha do que o cliente lê nem do que
+o modelo recebe. O que só a produção fecha é o **dado**: linhas anteriores a 11/09/2026 não têm
+`seguradoras_acionadas` e aparecem em `cotacoes_sem_medida` — inclusive as três cotações reais da
+conta 16, que foram lidas por CLI e não pelo poll desta versão. A medida passa a ser completa a
+partir da primeira cotação depois do deploy. **Não há backfill**: reprocessar exigiria chamar
+`quote/result` de cada cotação antiga, e o portal não garante a leitura de cotação encerrada.
+
+## Rodada de correção — duas regras que só existiam no comentário
+
+Revisão cega reprovou a primeira versão com dois achados, e os dois eram reais: reproduzi cada um
+antes de corrigir, e nos dois casos os 62 exemplos do trilho passaram COM a regra desligada.
+
+- **A janela só tinha a borda de baixo.** `created_at: inicio..fim` virava `created_at: inicio..` sem
+  nada ficar vermelho. Nenhum exemplo criava execução DEPOIS do `fim` — "respeita o periodo pedido"
+  só exercitava a linha de 40 dias atrás. O estrago é o pior tipo: a operação pede setembro, a
+  cotação de 01/10 entra na fatura de setembro, e a conta fica MAIOR. Número inflado em fatura
+  ninguém questiona.
+- **A união não era provada idempotente.** O comentário dizia "reconsulta não muda nada" e trocar
+  `|` por `+` passava em 62 exemplos do trilho E em 590 de `spec/services/autonomia/agents` +
+  `spec/jobs/autonomia`. O portal lista as dezessete desde a PRIMEIRA consulta e o poll consulta a
+  cada passada: com `+`, a segunda passada grava 34, a vigésima grava 340 — a medida cobraria
+  trezentas e quarenta seguradoras por UMA cotação. Os exemplos existentes não pegavam porque
+  "nao perde quem ja tinha aparecido" usa handle `%w[3 9]` contra resultado `['8']` (sem interseção)
+  e "nao repete a mesma seguradora" só cobre duplicata DENTRO de uma consulta.
+
+A classe do defeito é uma só — **regra escrita no comentário e não exercitada por nenhum exemplo** —,
+então varri as demais decisões da entrega em vez de corrigir só os dois casos. A varredura achou mais
+uma: `call` sem conta tem `raise ArgumentError` e nenhuma spec o sustentava; sem ele, `por_conta.first`
+devolve a linha da PRIMEIRA corretora com o nome desta, numa conta de dinheiro. Está guardada em M16.
+As demais (slug, escopo por conta, `jsonb_typeof`, `.sort`, `.uniq`, `.presence`, fuso, janela
+invertida, janela padrão) já tinham guarda — conferido mutação a mutação.
+
+## Mutações (16) — todas aplicadas, rodadas, restauradas e conferidas
+
+Cada uma desliga UMA regra e reprova o exemplo que a sustenta. Restauração conferida por comparação
+do conteúdo do arquivo com o original.
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| M1 | `acionadas` conta só `quoted` + `declined` | `quote_offers.rb` | "grava as dezessete, em qualquer status" (dá 16 — o caso do caminhão) |
+| M2 | `build_progress` não grava `ACIONADAS_KEY` | `insurance_quote.rb` | 8 exemplos de "seguradoras acionadas no handle" |
+| M3 | a lista vira a foto da última consulta (sem união) | `insurance_quote.rb` | "nao perde quem ja tinha aparecido numa consulta anterior" e "nao conta de novo quem o handle ja tinha" |
+| M4 | a medida conta execução em vez de cotação no portal | `medida.rb` | "nao conta execução que nunca virou cotação", "separa o envio sem confirmação" |
+| M5 | `cotacoes_sem_medida` vira `0` | `medida.rb` | 3 exemplos (serviço + API) |
+| M6 | data ilegível cai na janela padrão em silêncio | `medida.rb` | 3 exemplos (serviço + API + Super Admin) |
+| M7 | a medida deixa de escopar por conta | `medida.rb` | "nao mistura corretoras" (API) |
+| M8 | `propostas` vira zero escrito à mão | `medida.rb` | "conta as propostas registradas no handle" |
+| M9 | a medida entra no caminho da cotação (o freio pela porta dos fundos) | `insurance_quote.rb` | os 2 exemplos de alcance de `medida_nao_e_freio_spec` |
+| M10 | `MAX_RUNS_PER_CONVERSATION = 8` por hora de volta no `Bound` | `bound.rb` | a guarda pelo nome E o exemplo de comportamento |
+| M11 | a medida lê um slug digitado à mão | `medida.rb` | 12 exemplos, a começar por "le o slug da propria ferramenta" |
+| M12 | o job descarta a chave (`ACIONADAS_KEY` entra em `MARCAS`) | `async_run_job.rb` | "sobrevive ao job e fica no handle que a medida soma" |
+| M13 | a janela ignora o fuso da corretora | `medida.rb` | "le as datas no fuso de relatorio da corretora" |
+| M14 | a janela perde a borda de cima (`inicio..fim` → `inicio..`) | `medida.rb` | "nao conta cotação feita depois do fim da janela" (serviço + API) |
+| M15 | a união vira soma (`\|` → `+`) | `insurance_quote.rb` | "nao infla a lista quando o portal repete o mesmo resultado" e "nao conta de novo quem o handle ja tinha" |
+| M16 | a medida de uma conta aceita não saber qual é (sem o `raise`) | `medida.rb` | "recusa medir uma conta sem saber qual é" |
+
+M12 é a que mais importa: sem ela, uma chave que a ferramenta grava e o job descarta passaria em
+todos os exemplos de unidade e sumiria em produção. M14 e M15 são as duas que a primeira versão não
+tinha, e as duas inflavam o número de COBRANÇA — erro que ninguém contesta, porque quem paga a mais
+não reclama de um total que parece grande.
+
+## Rodada 3 — a regra escrita no comentário, de novo (verificador cego)
+
+A revisão da rodada 2 achou cinco pontos; os dois P2 são a MESMA classe da rodada anterior — regra
+escrita em prosa e não exercitada por exemplo nenhum — e eu tinha afirmado que a classe estava varrida.
+Não estava. Cada achado abaixo foi reproduzido com a mutação ANTES da correção (verde com a regra
+desligada), corrigido, e a mutação passou a reprovar.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P2** `medida.rb:38` — o comentário dizia que `autonomia_submitted` não serve porque a recusa também o recebe; nenhum exemplo tinha a marca. Com `COTACAO = quote_id OU submitted`, 67 exemplos verdes e a medida cobra a recusa | Fixture de "nao conta execução que nunca virou cotação" passou a ser a linha REAL que o job grava (`pedido`, `motivo`, `faltando`, `autonomia_intencoes: 1`, `autonomia_submitted: true`, sem `quote_id`), em `medida_spec` e `measurement_spec`; e um exemplo INTEGRADO em `insurance_quote_medida_spec` roda o `AsyncRunJob` de verdade com o `start` recusando (`dados` ilegível → `json_invalido`), confere a linha e lê `cotacoes: 0` | os três exemplos | MV1b — 3 exemplos reprovam |
+| **P2** `async_run_job.rb:70` — um teto literal em `stop?` (contar execuções da conta na última hora, falhar acima de oito) passava por 140 exemplos; a guarda por comportamento só existia no aceite e o comentário prometia cobertura do job | Exemplo em `async_run_job_spec` ("no ceiling (entrega 7, termo 6)"): vinte execuções encerradas da MESMA conta e ferramenta na última hora, cada uma com dezessete seguradoras, mais a vigésima primeira `running`; `perform` faz o `start` e depois o `poll`, e a execução termina em `done` sem frase de falha. Regex de `async_config_sem_teto_de_execucoes_spec` ampliado com `(TETO\|LIMITE)[A-Z_]*HORA`. Comentários de `async_config.rb` e `bound_async_spec` dizem o que cada guarda cobre de fato | `async_run_job_spec` + guarda pelo nome | MV3 — reprova no job (e a guarda pelo nome NÃO pega, como o verificador disse: por isso o exemplo); MV6 — a guarda pelo nome pega `TETO_POR_HORA` |
+| **P3** `bound_async_spec.rb:235` — as vinte execuções tinham handle vazio: um teto pela unidade certa (seguradoras) reimplementado inline no aceite passava; a varredura AST só olhava `app/**` | As vinte com `{quote_id, seguradoras_acionadas: dezessete}` (340 na hora); raízes da varredura de `medida_nao_e_freio_spec` = `app` e `enterprise/app` | `bound_async_spec` "there is NO ceiling"; `medida_nao_e_freio_spec` | MV4 — o freio inline (SUM de `jsonb_array_length` da conta na hora > 100 → recusa) reprova o aceite; MV7 — um override em `enterprise/app` que nomeia a medida reprova os 2 exemplos de alcance |
+| **P3** `medida.rb:131` — remover `slug:` do escopo passava: nenhum exemplo tinha execução de OUTRA ferramenta com `quote_id` | Exemplo "nao conta execução de outra ferramenta, mesmo com quote_id e seguradoras no handle" (slug `outra_ferramenta`, mesma conta → zero) | `medida_spec` | MV2 — reprova |
+| **P3** `medida.rb:55` — `propostas` somava códigos (uma cotação com `%w[8 3]` contava 2) e o termo 3 pergunta por COTAÇÕES | Decisão do orquestrador pelo texto do termo: `cotacoes_com_proposta` = `COUNT(*) FILTER (WHERE jsonb_typeof(...)='array' AND jsonb_array_length(...) > 0)`; a soma segue como `propostas_emitidas`. API (`quotes_with_proposal`, `proposals_issued`), página do Super Admin (duas colunas), README e specs refletem as duas | `medida_spec` (1 e 2; lista vazia = 0), `measurement_spec`, `insurance_measurements_controller_spec` | MV5 — a coluna do termo virando soma reprova 3 exemplos |
+
+Fica dito o que as mutações desta rodada mostraram sobre as guardas: **a guarda pelo nome não vê a
+contagem escrita do zero** (MV3 passou por ela e só o exemplo do job a pegou), e **a varredura AST não
+vê a medida reimplementada sem nomear a classe** (MV4 passou por `medida_nao_e_freio_spec` e só o
+exemplo de comportamento do aceite a pegou). Cada porta em que a contagem poderia entrar tem um
+exemplo de comportamento; é isso que segura o termo 6, não o regex.
+
+### Mutações da rodada 3 (7) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MV1b | `COTACAO` = `quote_id` OU `autonomia_submitted` | `medida.rb` | 3 (serviço, API, integrado pelo job) |
+| MV2 | escopo sem `slug:` | `medida.rb` | "nao conta execução de outra ferramenta…" |
+| MV3 | teto literal em `AsyncRunJob#stop?` (execuções da conta na hora > 8) | `async_run_job.rb` | "segue consultando e submetendo com vinte execuções na última hora" |
+| MV4 | freio inline em `Bound#accept_async` (seguradoras da conta na hora > 100) | `bound.rb` | "there is NO ceiling" |
+| MV5 | `cotacoes_com_proposta` vira soma de códigos | `medida.rb` | 3 (serviço, API, Super Admin) |
+| MV6 | `TETO_POR_HORA = 8` no `Bound` | `bound.rb` | a guarda pelo nome |
+| MV7 | `enterprise/app/services/autonomia/agents/tools/freio_mutacao.rb` nomeando a medida | (arquivo novo, removido) | os 2 exemplos de alcance |
+
+## Rodada 4 — o nosso fuso na tela que cobra, e três valores nossos na borda (verificador cego)
+
+Cinco achados, todos reais e reproduzidos antes de corrigir. O P2 é a mesma classe das rodadas 2 e 3
+lida pelo outro lado: a regra do fuso EXISTIA e tinha guarda (M13) — para `call`; `por_conta`, a lista
+que a página do Super Admin usa para FATURAR, era uma consulta única agrupada no fuso da instalação, e
+o próprio comentário do controller prometia que as duas superfícies não divergiriam. Divergiam em toda
+cotação entre 21h e 23h59 de São Paulo no último dia do mês.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P2** `insurance_measurements_controller.rb:11` — a página do Super Admin lia todas as corretoras no fuso da instalação; a cotação das 23h de 30/09 em SP (02h UTC de 01/10) caía em outubro na fatura e em setembro na tela da corretora | `Medida#por_conta` enumera as corretoras com execução numa janela alargada (`FOLGA_DE_FUSO`, 26 h: a meia-noite da mesma data entre UTC-12 e UTC+14) e monta cada linha com `Medida.new(conta:).linha_da_conta` — o MESMO caminho do endpoint da conta, acordo por construção; a linha diz o fuso e a página o mostra por corretora (nada de "o da instalação") | `insurance_measurements_controller_spec` "le cada corretora no fuso dela e bate com a API da conta" (lê a página E a API no mesmo exemplo, SP + cotação às 23h de 30/09 → 1 e 17 nas duas); `medida_spec` "#por_conta le cada corretora no fuso dela, igual a medida da conta" | MX1 — voltar à consulta agrupada no fuso da instalação reprova os 2; MX2 — folga zero na enumeração reprova os 2 |
+| **P3** `insurance_measurements_controller.rb:11` — `fim: nil` no controller passava por 6 exemplos (MX8 do verificador) | Exemplo com cotação em 15/09 e 01/10, `from=2026-09-01&to=2026-09-30` → células `1 17 0 0 0 0 0 0` | `insurance_measurements_controller_spec` "nao conta cotação feita depois do fim da janela" | MX8 — reprova (e o exemplo do fuso também, porque `to` nil lê até hoje) |
+| **P3** `async_config.rb:99` — um teto por ATRASO (`interval_for` devolvendo 1 h acima de oito execuções na hora) passava pelas três guardas do termo 6 (MX3 do verificador): o exemplo do job só afirmava QUE reagendava | O exemplo mede `interval_for(agent, 0)` ANTES das vinte, exige o mesmo valor depois, e confere o `at` do job reagendado contra ele | `async_run_job_spec` "segue consultando e submetendo com vinte execuções na última hora" | MX3 — reprova |
+| **P3** `medida.rb:102` — só `fim` pedido e a janela padrão ancorada em HOJE: `to=2026-06-30` voltava 422 culpando "a data inicial", que ninguém mandou | A janela padrão são os `DIAS_PADRAO` dias que TERMINAM em `fim` (`final - 30 dias`); com `fim` nil, `final = agora`, idêntico ao de antes | `medida_spec` "so fim: a janela padrao termina nele"; `measurement_spec` "so to: a janela padrao termina nele" | MX9 — reprova os 2 |
+| **P3** `medida.rb:113` — `Date.iso8601` aceitava data-hora e descartava a hora em silêncio | `Date.strptime` com `FORMATO_DA_DATA` **também ignora a sobra** (conferido em Ruby puro: `strptime('2026-09-01T10:00:00', '%Y-%m-%d')` devolve 01/09) — a sugestão do verificador não bastava. A guarda é a ida e volta: `dia.strftime(FORMATO) == texto`, senão `PeriodoInvalido` | `medida_spec` "recusa data com hora em vez de descartar a hora em silencio"; `measurement_spec` "recusa data com hora em vez de descartar a hora" | MX10 — sem a ida e volta, reprova os 2 |
+
+Varredura da classe na própria correção: `corretoras_com_execucao` ganhou `return [conta] if conta`
+(a lista de uma instância COM conta é só a linha dela) — regra nova, sem exemplo até eu escrever um:
+"#por_conta com a conta, so tem a linha dela" (MX11 reprova). E `first` numa relação agrupada
+acrescenta `ORDER BY id`, que o `GROUP BY` recusa — `linha_da_conta` usa `take`, e os 38 exemplos que
+quebraram na primeira tentativa são a prova de que a suíte vê isso.
+
+### Mutações da rodada 4 (7) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MX1 | `por_conta` volta à consulta única agrupada no fuso da instalação | `medida.rb` | 2 (Super Admin + serviço) |
+| MX2 | `FOLGA_DE_FUSO = 0` (enumeração sem folga) | `medida.rb` | 2 (Super Admin + serviço) |
+| MX8 | `fim: nil` no controller do Super Admin | `insurance_measurements_controller.rb` | 2 |
+| MX3 | teto por atraso em `interval_for` (1 h acima de oito execuções na hora) | `async_config.rb` | "segue consultando e submetendo com vinte execuções na última hora" |
+| MX9 | janela padrão ancorada em hoje em vez de no `fim` | `medida.rb` | 2 (serviço + API) |
+| MX10 | data-hora aceita e truncada (sem a ida e volta) | `medida.rb` | 2 (serviço + API) |
+| MX11 | `por_conta` com conta enumera todas as corretoras | `medida.rb` | "com a conta, so tem a linha dela" |
+
+## Rodada 5 — a última passada de P3 (verificador cego)
+
+Quatro achados, todos reais e reproduzidos antes de corrigir; nenhum P2. Três são a mesma classe das
+rodadas anteriores — regra escrita em prosa sem exemplo que a sustente (a folga tinha magnitude só
+no comentário; a página "por corretora" tinha oito exemplos com UMA corretora) — e um é a classe da
+rodada 3 por outra porta (`linha_da_conta` pública fazendo o que `call` sem conta já não podia).
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P3** `medida.rb:156` — `linha_da_conta` pública: `Medida.new(inicio: nil, fim: nil).linha_da_conta` devolvia a linha de uma corretora qualquer (escopo sem conta + `take`), a mesma classe de M16 por outra porta | `protected`: `por_conta` a chama numa instância da MESMA classe, e de fora não existe | `medida_spec` "nao entrega a linha de uma conta por fora de call" (`NoMethodError` de método protegido) | MR1 — voltar a `public` reprova |
+| **P3** `medida.rb:43` — `FOLGA_DE_FUSO = 3.hours` passava por 53 exemplos: só MX2 (zero) guardava a folga, e todos os fusos dos exemplos eram São Paulo (3 h). Com folga parcial, a corretora em UTC+14 com cotação na primeira hora do mês e a em UTC-12 na última somem da FATURA em silêncio enquanto a API delas responde 1/17 | Nenhuma mudança na constante (26 h continua sendo a distância entre UTC-12 e UTC+14). A guarda que faltava: exemplos nos dois extremos | `medida_spec` "#por_conta enumera a corretora em qualquer fuso, e a linha e a mesma da medida da conta" (Pacific/Kiritimati às 00:30 de 01/09; Etc/GMT+12 às 23:30 de 30/09; cada linha `eq` ao `call` da conta); `insurance_measurements_controller_spec` "le a corretora em qualquer fuso, e a linha e a medida da propria conta" (as 16 células da página = as de `call` de cada conta) | MR2 — `3.hours` reprova os 2 |
+| **P3** `medida.rb:117` — `from=hoje` sem `to` à 01h UTC, corretora em São Paulo: a instância da página validava a janela no fuso da instalação e aceitava; a `Medida.new(conta:)` de São Paulo recalculava abertura (03h UTC) > final (01h UTC, "agora") e levantava `PeriodoInvalido` — e a página inteira respondia "a data inicial é posterior à final", sem linha para NENHUMA corretora, culpando uma final que ninguém mandou | A inversão só existe entre DUAS datas pedidas (`recusar_inversao!` em `periodo`). Com o fim em aberto, início > "agora" é decidido por quem PEDIU: `call` e `por_conta` recusam com "a data inicial está no futuro" (`recusar_data_inicial_no_futuro!`); a corretora enumerada por `por_conta` cujo dia não começou lê a janela vazia (`created_at: inicio..fim` com início depois do fim não casa linha) e é pulada como qualquer corretora sem execução | `medida_spec` "#por_conta pula a corretora cujo dia ainda nao comecou, em vez de derrubar a lista inteira" (travel_to 01h UTC; SP pulada, UTC na lista; `call` de SP recusa com /futuro/) e "recusa data inicial no futuro dizendo que ela esta no futuro"; `measurement_spec` "recusa data inicial no futuro dizendo que ela esta no futuro" (422, `detail` exato); `insurance_measurements_controller_spec` "nao derruba a pagina quando o dia de uma corretora ainda nao comecou" e "avisa quando a data inicial pedida ainda nao chegou" (a PÁGINA pedindo `from` amanhã é recusa, com a frase nova) | MR3 — voltar a levantar na construção reprova 5; MR3b — `call` sem a recusa reprova 3; MR3c — `por_conta` sem a recusa reprova 1 |
+| **P3** `insurance_measurements_controller_spec.rb:43` — `@linhas = @medida.por_conta.first(1)` passava por 8/8: toda a superfície que FATURA tinha uma única corretora com execução; o termo 1 ("por corretora") só estava provado no serviço | Nenhuma mudança no controller. Exemplo com DUAS corretoras (dezessete e três), as duas linhas na ordem e as 16 células | `insurance_measurements_controller_spec` "mostra as duas corretoras, cada uma na sua linha" | MR4 — `.first(1)` reprova 2 (este e o dos fusos extremos) |
+
+A decisão de desenho do terceiro achado fica dita: a recusa da "data inicial no futuro" saiu da
+construção e foi para os dois pontos de entrada (`call`, `por_conta`) porque a MESMA janela é
+inválida para quem pediu e vazia para a corretora derivada — o que separa os dois casos é quem
+pergunta, não a data. `linha_da_conta` não tem retorno antecipado para a janela vazia: o intervalo
+com início depois do fim já não casa linha no banco, e uma segunda implementação da mesma regra
+seria linha que nenhuma mutação reprova.
+
+> **Superado na rodada 6 quanto a `por_conta`.** A recusa em `por_conta` era avaliada no fuso da
+> INSTALAÇÃO — e isso escondia da fatura a corretora cujo dia já tinha começado no fuso dela (P2 do
+> Codex). A recusa ficou só em `call`, no fuso da conta; MR3c abaixo está aposentada. Ver a rodada 6.
+
+### Mutações da rodada 5 (6) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MR1 | `linha_da_conta` volta a ser pública | `medida.rb` | "nao entrega a linha de uma conta por fora de call" |
+| MR2 | `FOLGA_DE_FUSO = 3.hours` (folga parcial) | `medida.rb` | 2 (serviço + Super Admin, fusos extremos) |
+| MR3 | `periodo` volta a levantar a inversão com o fim em aberto (a corretora derivada levanta em `por_conta`) | `medida.rb` | 5 (serviço 2, API 1, Super Admin 2) |
+| MR3b | `call` sem `recusar_data_inicial_no_futuro!` | `medida.rb` | 3 (serviço 2, API 1) |
+| MR3c | `por_conta` sem `recusar_data_inicial_no_futuro!` | `medida.rb` | "avisa quando a data inicial pedida ainda nao chegou" — **aposentada na rodada 6**: afirmava o comportamento errado; o inverso dela é MC1 |
+| MR4 | `@linhas = @medida.por_conta.first(1)` no controller | `insurance_measurements_controller.rb` | 2 |
+
+## Rodada 6 — o relógio da instalação, trinta e uma datas e o nome simples (Codex)
+
+Três achados do Codex sobre `fb574cbcb4`, todos reais e reproduzidos antes de corrigir, mais uma
+ressalva sem código. O P2 é a classe da rodada 4 lida pelo lado oposto: a rodada 5 tirou a recusa da
+construção para a página não cair, mas a deixou em `por_conta` — avaliada no fuso da INSTALAÇÃO, que
+é exatamente o relógio que a lista prometia não usar. A primeira tentativa desta rodada caiu no meio
+(cota) e deixou edições não commitadas; foram lidas linha a linha antes de qualquer coisa: `medida.rb`
+e os quatro specs estavam certos contra as decisões e foram aproveitados, e o spec do detector ganhou
+dois refinamentos (ditos abaixo).
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P2** `medida.rb:185` — `por_conta` recusava "a data inicial está no futuro" pelo relógio da instalação ANTES de olhar qualquer corretora. Instalação UTC ao meio-dia de 11/09; corretora em Pacific/Kiritimati (UTC+14, já 02h de 12/09) com cotação à 01h local; `from=2026-09-12` sem `to`: a API da conta respondia 1/17 e a página respondia "no futuro", sem tabela — a linha sumia da FATURA | Na consulta cross-conta NÃO existe recusa pelo relógio da instalação: `por_conta` só enumera (janela da instalação + `FOLGA_DE_FUSO`) e cada `Medida.new(conta:)` avalia a janela no fuso DELA; a corretora cujo início ainda é futuro lê janela vazia e é pulada; todas puladas → lista vazia → "Nenhuma cotação no período". A API de UMA conta (`call`) mantém o 422 "a data inicial está no futuro", avaliado no fuso da conta | `medida_spec` "#por_conta le a corretora cujo dia ja comecou no fuso dela, mesmo que ainda nao tenha comecado no da instalacao" (a linha `eq` ao `call` da conta) e "devolve lista vazia, sem recusar, quando o dia nao comecou para nenhuma corretora"; `insurance_measurements_controller_spec` "le a corretora cujo dia ja comecou no fuso dela, e bate com a API da conta" (página 1/17 e API 1/17 no MESMO instante) e "mostra nenhuma cotação, sem aviso de periodo, quando o dia nao comecou para nenhuma corretora". O exemplo da rodada 5 "avisa quando a data inicial pedida ainda nao chegou" foi substituído: afirmava o comportamento errado | MC1 — voltar a recusar em `por_conta` reprova 4 (serviço 2, Super Admin 2); MR3b-r6 — `call` sem a recusa reprova 3 (o 422 da conta continua guardado) |
+| **P3** `medida.rb:127` — só `fim`: `final - 30.days` dava 31/05 00h → 30/06 23h59, trinta e uma datas com o nome de trinta; a cotação das 23h de 31/05 (de maio) entrava na fatura de junho. Sem `fim`, o mesmo a partir de hoje | `inicio_padrao(final) = (final - (DIAS_PADRAO - 1).days).beginning_of_day`: trinta dias DE CALENDÁRIO contando a data final. Subtração de dias, não de horas — o horário de verão não encurta o mês | `medida_spec` "usa os ultimos trinta dias quando ninguem pede janela" (travel_to 11/09 12h; 12/08 23h fora, 13/08 00h30 dentro; início = 13/08 00h) e "so fim: a janela padrao termina nele" (31/05 23h fora, 01/06 00h30 dentro; início = 01/06 00h); `measurement_spec` "so to: a janela padrao termina nele" (`from` = 01/06, `quotes` = 1) | MC2 — `- DIAS_PADRAO.days` reprova 3 (serviço 2, API 1) |
+| **P3** `medida_nao_e_freio_spec.rb:56` — a guarda AST só via `ConstantPathNode` terminado em `Insurance::Medida`; um serviço em `module Autonomia::Insurance` chamando `Medida.new(...).call` (`ConstantReadNode`) passava invisível — e é o lugar mais natural para um freio nascer, ao lado da medida | O detector percorre a árvore com o namespace LEXICAL (pilha imutável dos `module`/`class` que envolvem cada nó) e acusa: o caminho `…Insurance::Medida` em qualquer namespace, e o nome simples `Medida` quando o nó está em `Autonomia::Insurance` ou abaixo — inclusive na forma compacta `class Autonomia::Insurance::X`, em que o Ruby não resolveria o nome simples: dentro do namespace, acusar a mais custa um vermelho que se explica, deixar passar é o freio. `Medida` fora do namespace NÃO é acusada: guarda que grita à toa acaba desligada | `medida_nao_e_freio_spec` "o detector": "acusa cada forma de nomear a medida, nas duas arvores" — quatro arquivos TEMPORÁRIOS criados na árvore real (`app/` e `enterprise/app`): o nome simples em `module Autonomia::Insurance`, o nome simples em módulos aninhados, `::Autonomia::Insurance::Medida` e `Insurance::Medida`; cada um tem de ser o ÚNICO acusado além dos leitores; "nao acusa Medida de outro namespace"; "nao deixa o arquivo de prova nem as pastas dele para tras" (o caminho `enterprise/app/services/autonomia/insurance/freios/` não existe na árvore e o exemplo exige que as pastas novas saiam, com precondição de que elas sejam novas) | MC3 — sem o ramo `ConstantReadNode` reprova "acusa cada forma…"; MC3b — sem a checagem lexical (acusar `Medida` em qualquer namespace) reprova "nao acusa Medida de outro namespace" |
+
+Os dois refinamentos sobre o que a tentativa anterior deixou: (1) o comentário do detector dizia que
+o nome simples "só é a medida" no namespace lexical — a forma compacta é a exceção em que o Ruby não
+resolve e a guarda acusa mesmo assim; agora está dito; (2) o exemplo de limpeza usava a forma cujas
+pastas já existem e só conferia o arquivo — passou a usar a forma que cria três pastas novas e a exigir
+que nenhuma sobre (se a árvore um dia tiver as pastas, o exemplo reprova e tem de trocar de forma, em
+vez de passar vazio).
+
+### Ressalvas registradas (sem código)
+
+- **Custo da consulta cross-conta.** `corretoras_com_execucao` filtra `slug` + `created_at` (janela
+  alargada pela folga) SEM `account_id`. Os índices reais de `autonomia_agent_tool_runs` são
+  `(account_id, slug, created_at)`, `(conversation_id, created_at)`, `(conversation_id, slug)` parcial
+  e `(execution_key)`: nenhum começa por `slug` ou `created_at`, então a enumeração não restringe a
+  primeira coluna de índice nenhum — hoje é varredura (`Seq Scan` da tabela, ou `Index Only Scan` do
+  índice inteiro com filtro) numa tabela pequena. Depois dela, `por_conta` faz UMA agregação por
+  corretora com execução (essa casa o índice inteiro) e o controller lê as contas: N corretoras = N+2
+  consultas. Como observar quando houver volume: `EXPLAIN (ANALYZE, BUFFERS)` da consulta de
+  enumeração em produção e o tempo da página do Super Admin; se passar de segundos, o remédio é um
+  índice `(slug, created_at)` — a tabela cresce com TODA execução de ferramenta assíncrona, não só
+  cotação. Não é problema desta entrega, e índice não se cria sem medir.
+- **A linha "Período" da página no caso de borda.** Com `from` amanhã para a instalação e hoje para
+  uma corretora em UTC+14, a página mostra as linhas certas e, acima delas, "Período: 12 de setembro
+  até 11 de setembro" — os instantes da instância da instalação, que servem à enumeração e não à
+  leitura. Não é número errado (a coluna Fuso diz de quem é cada linha), mas é texto que confunde
+  nesse instante. Fica para decisão: mostrar as datas PEDIDAS (`from`/`to`, "até hoje" quando em
+  aberto) em vez das calculadas. View e controller do Super Admin não foram tocados nesta rodada.
+
+### Mutações da rodada 6 (5) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MC1 | `por_conta` volta a chamar `recusar_data_inicial_no_futuro!` (relógio da instalação) | `medida.rb` | 4 (serviço 2, Super Admin 2) |
+| MC2 | `inicio_padrao` com `- DIAS_PADRAO.days` (31 datas) | `medida.rb` | 3 (serviço 2, API 1) |
+| MC3 | detector sem o ramo `ConstantReadNode` | `medida_nao_e_freio_spec.rb` | "acusa cada forma de nomear a medida, nas duas arvores" |
+| MC3b | detector sem a checagem lexical (`Medida` em qualquer namespace) | `medida_nao_e_freio_spec.rb` | "nao acusa Medida de outro namespace" |
+| MR3b-r6 | `call` sem `recusar_data_inicial_no_futuro!` | `medida.rb` | 3 (serviço 2, API 1) — o 422 da conta continua guardado |
+
+MR3c da rodada 5 (`por_conta` sem a recusa) está **aposentada**: era a afirmação do comportamento
+errado. O inverso dela é MC1.
+
+## Rodada 7 — o caminho absoluto no aninhamento lexical (Codex)
+
+O Codex re-revisou `457d80657b`: os quatro achados da rodada 6 estão fechados; sobrou um P3 e uma
+ressalva sem código. O P3 é da mesma classe do P3 da rodada 6 — o detector da guarda "a medida não é
+freio" — um passo adiante: a rodada 6 ensinou o detector a ver o nome simples `Medida` pelo namespace
+lexical, mas modelava esse namespace como UMA string, a pilha dos `module`/`class` concatenada com o
+`::` inicial apagado. Um caminho absoluto aninhado escapava.
+
+Reproduzido antes de corrigir (RED): a forma `module Outro; module ::Autonomia::Insurance; Medida.new(...)`
+como arquivo real em `app/` — a guarda não viu (1 falha em 6). E medido no Ruby, não presumido:
+`Module.nesting` ali é `[Autonomia::Insurance, Outro]` e `Medida` resolve para `Autonomia::Insurance::Medida`.
+No INVERSO (`module Autonomia::Insurance; module ::Outro; Medida`) o nesting é `[Outro, Autonomia::Insurance]`
+e `Medida` TAMBÉM resolve para a medida — o absoluto abre `Outro` na raiz, mas não apaga o que está em
+volta, porque o Ruby procura o nome em cada escopo da lista. Na forma compacta absoluta
+(`class ::Autonomia::Insurance::X`) o Ruby dá `NameError`, e a guarda acusa mesmo assim, pela decisão da
+rodada 6 (dentro do namespace escrito, acusar a mais custa um vermelho que se explica).
+
+Por isso a correção não é o "reinício de pilha" literal: um detector que reiniciasse a pilha em `X::Y`
+e olhasse só o escopo mais interno fecharia o P3 e abriria o inverso — o mesmo buraco pelo outro lado
+(MC4b abaixo prova). A causa raiz é o modelo, string única em vez da lista de escopos do Ruby, e é o
+modelo que muda.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P3** `medida_nao_e_freio_spec.rb:96` — `cada_no_com_namespace` concatenava a pilha e apagava o `::`: `module Outro; module ::Autonomia::Insurance; Medida.new(...).call; end; end` era lido como `Outro::Autonomia::Insurance`; o Ruby resolve `Medida` como a medida e a guarda não acusava | O detector entrega a cada nó o ANINHAMENTO lexical como lista (`cada_no_com_aninhamento`, o `Module.nesting`): cada `module`/`class` entra com o caminho completo que ABRE — relativo é filho do escopo em volta; absoluto (`::X::Y`) abre na raiz, sem o que está em volta no nome (`escopo_aberto_por`). O nome simples `Medida` é a medida quando QUALQUER escopo da lista é `Autonomia::Insurance` ou filho (`dentro_do_namespace_da_medida?` com `any?`) | "acusa cada forma de nomear a medida, nas duas arvores" ganhou quatro arquivos temporários: `module Outro; module ::Autonomia::Insurance; … Medida` em `app/` E em `enterprise/app`; a forma compacta absoluta `module Outro; class ::Autonomia::Insurance::X; … Medida::PeriodoInvalido` em `enterprise/app`; e o inverso `module Autonomia::Insurance; module ::Outro; … Medida` em `app/`. Cada um tem de ser o ÚNICO acusado além dos leitores, e sai com as pastas que criou; "nao acusa Medida de outro namespace" segue | MC4 (ignorar o `::` inicial — o detector da rodada 6) reprova pela forma absoluta em `app/`; MC4b (só o escopo mais interno, o "reinício de pilha") reprova pelo inverso; MC4c (guardar o `::` no nome) reprova; MC3-r7 e MC3b-r7 (as da rodada 6, reaplicadas ao texto novo) reprovam |
+
+### Ressalva registrada (sem código, decisão do orquestrador)
+
+- **A linha "Período" da página no fuso da instalação** (`show.html.erb:44`; a mesma ressalva da
+  rodada 6, mantida pelo Codex). `@medida.inicio`/`@medida.fim` são instantes da instância da
+  INSTALAÇÃO, que servem à enumeração; os números de cada linha são por corretora, no fuso dela. No caso
+  de borda (instalação em UTC ao meio-dia de 11/09, corretora em UTC+14 já em 12/09, `from=2026-09-12`),
+  a página mostra "Período: 12 de setembro até 11 de setembro" acima de linhas corretas. Não é número
+  errado — a coluna Fuso diz de quem é cada linha — mas é texto que confunde. Fica para decisão de
+  produto: mostrar o período POR LINHA, no fuso da corretora (ou as datas PEDIDAS, `from`/`to`). View e
+  controller do Super Admin não foram tocados nesta rodada.
+
+### Mutações da rodada 7 (5) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MC4 | `escopo_aberto_por` ignora o `::` inicial: o absoluto é empilhado em cima do que está em volta (o detector da rodada 6) | `medida_nao_e_freio_spec.rb` | "acusa cada forma…" — "a guarda não viu o nome simples em `module ::Autonomia::Insurance` absoluto aberto dentro de outro modulo, em app/" |
+| MC4b | `dentro_do_namespace_da_medida?` olha só `aninhamento.last` (o "reinício de pilha" literal) | idem | "acusa cada forma…" — "a guarda não viu o nome simples em `module ::Outro` absoluto aberto dentro de `module Autonomia::Insurance`, em app/" |
+| MC4c | o absoluto abre na raiz mas guarda o `::` no nome (`::Autonomia::Insurance`) | idem | "acusa cada forma…" (a forma absoluta em `app/`) |
+| MC3-r7 | detector sem o ramo `ConstantReadNode` | idem | "acusa cada forma…" (o nome simples em `module Autonomia::Insurance`) |
+| MC3b-r7 | detector acusa `Medida` em QUALQUER aninhamento (`true ||`) | idem | "nao acusa Medida de outro namespace" |
+
+O runner (`mutacoes_r7.py`) exige que caiam EXATAMENTE os exemplos esperados — nem a menos, nem a
+mais — com exit ≠ 0, e confere o SHA-256 do arquivo restaurado contra o original (`1e6fed0084aff421…`
+antes e depois). Nenhum arquivo de prova sobrou em `app/` ou `enterprise/app`.
+
+## Rodada 8 — o caminho relativo qualificado, e o encerramento do detector (Codex)
+
+O Codex re-revisou `492726e40f` e achou mais uma forma que escapa: o caminho RELATIVO QUALIFICADO
+aberto dentro de outro escopo — `module Outro; module Autonomia::Insurance; Medida.new(...).call`.
+A rodada 7 ensinou o detector que o absoluto (`::X::Y`) abre na raiz; o relativo continuava sendo lido
+como filho do escopo em volta, sempre. Mas o Ruby não lê assim: num `module A::B`, ele procura o PRIMEIRO
+segmento (`A`) no escopo em volta e, se não o encontra, na raiz. Como `Outro::Autonomia` não existe e
+`::Autonomia::Insurance` existe, o que se abre é `Autonomia::Insurance` — e `Medida` ali é a medida. O
+detector concatenava `Outro::Autonomia::Insurance` e não acusava.
+
+Medido, não presumido (`ruby -e`, 3.4.4): no caso do Codex `Module.nesting` é `[Autonomia::Insurance, Outro]`
+e `Medida` resolve para `Autonomia::Insurance::Medida`. Nos módulos SIMPLES aninhados
+(`module Outro; module Autonomia; module Insurance`) o nesting é `[Outro::Autonomia::Insurance, Outro::Autonomia, Outro]`
+e `Medida` dá `NameError` — o `module` de nome simples define no escopo corrente sem procurar fora. E na
+outra leitura do caminho qualificado (`module Autonomia; module Insurance::Freios`) o nesting é
+`[Autonomia::Insurance::Freios, Autonomia]`: `Medida` também dá `NameError`, porque o qualificado põe só o
+caminho inteiro no aninhamento, não os pais.
+
+Reproduzido antes de corrigir (RED): a forma do Codex como arquivo real em `app/` — a guarda não viu
+(1 falha em 7). Depois da correção, 7 exemplos, 0 falhas.
+
+**Decisão do orquestrador — o lado seguro de uma guarda é ACUSAR.** A guarda lê texto; só o programa
+rodando sabe se `Outro::Autonomia` existe. Então, ao abrir um escopo com caminho qualificado (2+ segmentos,
+sem `::` inicial), o detector registra AS DUAS leituras — filho do escopo em volta (`Outro::Autonomia::Insurance`)
+E ancorada na raiz (`Autonomia::Insurance`) — e `Medida` é a medida se QUALQUER escopo registrado for
+`Autonomia::Insurance` ou filho. Falso positivo aceito e documentado: um `module Outro::Autonomia::Insurance`
+de verdade, com um `Medida` próprio, seria acusado — não existe no repositório e, se surgir, a lista
+`leitores` da própria spec é o lugar de declará-lo, com o motivo escrito. O `module` de nome simples
+NÃO ganha a leitura pela raiz (o Ruby também não a faz): estendê-la acusaria qualquer `Insurance` de
+qualquer corretora, e a mutação MC5c prova que o exemplo negativo novo segura isso.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **Codex** `medida_nao_e_freio_spec.rb:113` — `escopo_aberto_por` lia todo caminho relativo como filho do escopo em volta: `module Outro; module Autonomia::Insurance; Medida.new(...).call; end; end` virava `Outro::Autonomia::Insurance`; o Ruby resolve `Medida` como a medida e a guarda não acusava | Cada nível do aninhamento passa a ser a LISTA dos caminhos que o `module`/`class` pode ter aberto (`escopos_abertos_por`): absoluto → `[raiz]`; simples → filhos do escopo em volta; relativo qualificado → filhos do escopo em volta **+ o próprio caminho na raiz**. `dentro_do_namespace_da_medida?` olha `aninhamento.flatten` | "acusa cada forma de nomear a medida, nas duas arvores" ganhou três arquivos temporários: a forma do Codex em `app/` E em `enterprise/app`; e a outra leitura do qualificado, `module Autonomia; module Insurance::Freios; … Medida::PeriodoInvalido` em `enterprise/app` (o Ruby não acha `Medida` ali; a guarda acusa pela decisão da forma compacta, e é o que pina a leitura relativa). Exemplo negativo novo: "nao acusa Medida em modulos simples aninhados que so parecem o namespace" (`module Outro; module Autonomia; module Insurance; … Medida.new`, em `app/`). Cada arquivo de prova sai com as pastas que criou | MC5 (só a leitura relativa — o detector da rodada 7) reprova pela forma do Codex em `app/`; MC5b (só a leitura pela raiz) reprova pela outra leitura em `enterprise/app`; MC5c (leitura pela raiz no `module` simples) reprova pelo negativo novo; MC5d (`flatten` perdido) reprova pela forma do Codex; MC4-r8, MC4b-r8, MC3-r8, MC3b-r8 (as das rodadas 6 e 7, reaplicadas ao texto novo) reprovam |
+
+### Encerramento do detector (decisão do orquestrador)
+
+Esta é a ÚLTIMA rodada sobre o detector. A guarda cobre a **referência léxica** — o nome escrito no
+código (`Insurance::Medida`, `::Autonomia::Insurance::Medida`, ou `Medida` simples), resolvido como o
+Ruby resolve o aninhamento de `module`/`class`, nas duas árvores (`app/`, `enterprise/app`). As formas
+exóticas restantes — `eval`, `const_get`/`constantize`, `autoload`, alias de constante (`X = Medida`
+fora do namespace e uso de `X`) — ficam FORA da guarda por decisão: não há texto para ler que as
+distinga de código legítimo sem transformar a spec num interpretador. O que resta é revisão: uma
+chamada dinâmica à medida no caminho da cotação é o tipo de coisa que o revisor humano-equivalente
+procura, e o comentário da spec diz isso onde quem escreve o freio vai ler.
+
+### Mutações da rodada 8 (8) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MC5 | caminho qualificado registra SÓ a leitura relativa, filho do escopo em volta (o detector da rodada 7) | `medida_nao_e_freio_spec.rb` | "acusa cada forma…" — "a guarda não viu o nome simples em `module Autonomia::Insurance` relativo qualificado aberto dentro de outro modulo, em app/" |
+| MC5b | caminho qualificado registra SÓ a leitura pela raiz (descarta o filho do escopo em volta) | idem | "acusa cada forma…" — "a guarda não viu o nome simples em `module Insurance::Freios` relativo qualificado aberto dentro de `module Autonomia`, em enterprise/app" |
+| MC5c | a leitura pela raiz estendida ao `module` SIMPLES (todo `module Insurance` vira candidato a `Autonomia::Insurance`) | idem | "nao acusa Medida em modulos simples aninhados que so parecem o namespace" |
+| MC5d | `dentro_do_namespace_da_medida?` olha só a PRIMEIRA leitura de cada nível (o `flatten` perdido) | idem | "acusa cada forma…" (a forma do Codex em `app/`) |
+| MC4-r8 | ignorar o `::` inicial (o absoluto empilhado em cima do que está em volta) | idem | "acusa cada forma…" (a forma absoluta em `app/`) |
+| MC4b-r8 | só o nível mais interno decide (o "reinício de pilha") | idem | "acusa cada forma…" (o inverso, `module ::Outro` dentro de `Autonomia::Insurance`) |
+| MC3-r8 | detector sem o ramo `ConstantReadNode` | idem | "acusa cada forma…" (o nome simples em `module Autonomia::Insurance`) |
+| MC3b-r8 | detector acusa `Medida` em QUALQUER aninhamento (`true ||`) | idem | os DOIS negativos: "nao acusa Medida de outro namespace" e "nao acusa Medida em modulos simples aninhados…" |
+
+O runner (`mutacoes_r8.py`) exige que caiam EXATAMENTE os exemplos esperados — nem a menos, nem a
+mais — com exit ≠ 0, e que a mensagem cite a FORMA esperada (não basta o exemplo cair; tem de cair pela
+forma que a mutação desliga). Confere o SHA-256 do arquivo restaurado contra o original
+(`b68e71fe1145e244…` antes e depois; o da rodada 7 era `1e6fed0084aff421…`). Nenhum arquivo de prova
+sobrou em `app/` ou `enterprise/app` (`enterprise/app/services/autonomia/insurance` continua não existindo).
+
+## Rodada 9 — o texto do caminho, e os nomes da árvore (Codex)
+
+O Codex re-revisou `1e64f04190` e mostrou que o detector, apesar de andar pela AST, ainda decidia por
+TEXTO em dois pontos: `nodo.slice.end_with?('Insurance::Medida')` para reconhecer a medida, e
+`nodo.constant_path.slice` para saber o que um `module`/`class` abre. O Ruby aceita espaço em volta do `::`
+— `::Autonomia::Insurance:: Medida` É a medida, e `module Autonomia:: Insurance` abre `Autonomia::Insurance`
+— mas o texto fatiado carrega o espaço como parte do nome: `"::Autonomia::Insurance:: Medida"` não termina em
+`Insurance::Medida`, e `"Autonomia:: Insurance"` não é igual a `'Autonomia::Insurance'`. Duas formas léxicas
+válidas resolviam para a medida e a guarda devolvia falso — nas duas pontas, o caminho nomeado e o escopo aberto.
+
+Medido, não presumido (`ruby -e`, 3.4.4): a forma A resolve para `Autonomia::Insurance::Medida`; na forma B
+`Module.nesting == [Autonomia::Insurance]` e `Medida` é a medida. No Prism (1.9.0) os NOMES não carregam o
+espaço: `slice="::Autonomia::Insurance:: Medida"`, mas `name=:Medida`, `parent.name=:Insurance`, e o pai do
+primeiro segmento absoluto é `nil`. O `full_name_parts` do próprio Prism faz esse caminho, mas levanta exceção
+em base dinâmica (`self::X`, `foo::X`) — por isso o detector anda a árvore por conta própria e trata a base sem
+nome como um segmento que nenhuma constante pode ser.
+
+Reproduzido antes de corrigir (RED): as quatro formas com espaço (as duas do Codex, em `app/` e
+`enterprise/app`) como arquivos reais — a guarda não viu (9 exemplos, 1 falha: "a guarda não viu o caminho
+completo com espaço depois do `::`, em app/"). Depois da correção: 9 exemplos, 0 falhas.
+
+**Causa raiz, não caso — a classe do defeito é "comparar texto quando a árvore já tem o nome".** A correção
+troca as DUAS pontas por `segmentos_de`, que constrói o caminho pelos nomes dos segmentos
+(`ConstantPathNode#parent`/`#name`, `ConstantReadNode#name`), com marcador de raiz quando `parent` é `nil` e
+marcador de base sem nome quando o pai não é constante. `caminho_da_medida?` compara os dois últimos
+segmentos com `%w[Insurance Medida]`; `escopos_abertos_por` decide absoluto / simples / qualificado pela
+lista de segmentos (`first == raiz`, `size > 1`), não por `start_with?('::')` / `include?('::')`. Nenhuma
+fatia do código-fonte sobrou no detector. Um efeito que o texto tinha e os nomes não têm:
+`ReInsurance::Medida` era acusado pelo `end_with?` e deixa de ser.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **Codex** `medida_nao_e_freio_spec.rb:81` — `caminho_da_medida?` comparava `nodo.slice` (texto): `::Autonomia::Insurance:: Medida.new(...).call` não terminava em `Insurance::Medida` e passava invisível | `segmentos_de(nodo).last(2) == sufixo_da_medida` (`%w[Insurance Medida]`), pelos nomes | "acusa cada forma…" ganhou duas formas: o caminho completo com espaço em `app/` (tools) e o relativo com espaço em `enterprise/app` (jobs). Negativo novo "nao acusa o caminho `Medida` de outro namespace" (`Autonomia::Agents::Medida`, `NameError` medido) pina os DOIS segmentos | MC6 (texto de volta no caminho) reprova pela forma A em `app/`; MC6c (só o último nome) reprova pelo negativo do caminho |
+| **Codex** `medida_nao_e_freio_spec.rb:129` — `escopos_abertos_por` lia `nodo.constant_path.slice` (texto): `module Autonomia:: Insurance` virava um escopo `"Autonomia:: Insurance"` que não era o namespace, e `Medida` ali passava invisível | `segmentos_de(nodo.constant_path)`: absoluto pelo marcador `raiz`, qualificado por `size > 1`, caminho canônico por `join('::')` dos nomes | "acusa cada forma…" ganhou o nome simples em `module Autonomia:: Insurance` em `app/` E em `enterprise/app`. Negativo novo "nao acusa Medida em `module ::Insurance` absoluto aberto dentro de `module Autonomia`" (`Module.nesting == [Insurance, Autonomia]`, `Medida` dá `NameError`, medido) pina o marcador de raiz — sem ele, `Insurance` seria lido como filho de `Autonomia` | MC6b (texto de volta no escopo) reprova pela forma B em `app/`; MC4-r9 (marcador de raiz perdido) reprova pelo negativo do absoluto; MC5-r9, MC5b-r9, MC5c-r9, MC5d-r9, MC4b-r9, MC3-r9, MC3b-r9 (as das rodadas 6–8, reaplicadas ao texto novo) reprovam |
+
+### Ressalvas registradas (sem código)
+
+- A superfície `.erb` continua lida por texto (`include?('Insurance::Medida')`), como a spec declara desde a
+  rodada 3: a única ERB desta entrega é a página do Super Admin (leitura declarada) e nenhuma ERB entra em
+  `caminho_da_cotacao` — uma view não para cotação. Um `Insurance:: Medida` numa ERB nova escaparia da
+  primeira guarda; se surgir uma segunda ERB que nomeie a medida, a hora de trocar por Prism sobre o Ruby
+  extraído da ERB é essa, com o motivo escrito. Fora desta rodada por decisão do escopo (o achado é `.rb`).
+- Base que não é constante (`module self::Insurance`, `foo::Insurance::Medida`) fica fora, na mesma classe de
+  `eval` e `const_get` do encerramento da rodada 8: não há nome para ler. O detector não quebra nela — devolve
+  um segmento que nenhuma constante pode ser — e o comentário da spec diz onde.
+
+### Mutações da rodada 9 (11) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MC6 | `caminho_da_medida?` de volta ao TEXTO (`nodo.slice.end_with?('Insurance::Medida')`) — o detector da rodada 8 | `medida_nao_e_freio_spec.rb` | "acusa cada forma…" — "a guarda não viu o caminho completo com espaço depois do `::`, em app/" |
+| MC6b | `escopos_abertos_por` de volta ao TEXTO (`constant_path.slice` fatiado em `::`) | idem | "acusa cada forma…" — "a guarda não viu o nome simples em `module Autonomia:: Insurance` com espaço depois do `::`, em app/" |
+| MC6c | o caminho acusado só pelo ÚLTIMO nome (`Medida`), sem exigir `Insurance` antes | idem | "nao acusa o caminho `Medida` de outro namespace" |
+| MC4-r9 | marcador de raiz perdido (`::X` lido como relativo) — a mutação do absoluto, reaplicada aos nomes | idem | "nao acusa Medida em `module ::Insurance` absoluto aberto dentro de `module Autonomia`" |
+| MC5-r9 | qualificado registra SÓ a leitura relativa | idem | "acusa cada forma…" (relativo qualificado dentro de outro módulo, em `app/`) |
+| MC5b-r9 | qualificado registra SÓ a leitura pela raiz | idem | "acusa cada forma…" (`module Insurance::Freios` dentro de `module Autonomia`, em `enterprise/app`) |
+| MC5c-r9 | leitura pela raiz estendida ao `module` SIMPLES | idem | "nao acusa Medida em modulos simples aninhados que so parecem o namespace" |
+| MC5d-r9 | só a PRIMEIRA leitura de cada nível (`flatten` perdido) | idem | "acusa cada forma…" (relativo qualificado dentro de outro módulo, em `app/`) |
+| MC4b-r9 | só o nível mais interno decide | idem | "acusa cada forma…" (`module ::Outro` dentro de `Autonomia::Insurance`, em `app/`) |
+| MC3-r9 | detector sem o ramo `ConstantReadNode` | idem | "acusa cada forma…" (o nome simples em `module Autonomia::Insurance`, em `app/`) |
+| MC3b-r9 | acusa `Medida` em QUALQUER aninhamento (`true ||`) | idem | os TRÊS negativos de nome simples: outro namespace, módulos simples aninhados, `module ::Insurance` absoluto |
+
+O runner (`mutacoes_r9.py`) mantém a régua da rodada 8: caem EXATAMENTE os exemplos esperados, exit ≠ 0, a
+mensagem cita a FORMA esperada, SHA-256 do arquivo conferido antes e depois de cada mutação
+(`b807538e338a3a96…` antes e depois; o da rodada 8 era `b68e71fe1145e244…`). Nenhum arquivo de prova sobrou
+em `app/` ou `enterprise/app` (`enterprise/app/services/autonomia/insurance` e `enterprise/app/jobs/autonomia`
+continuam não existindo).
+
+## Comandos rodados
+
+```bash
+# leitura real, sem gastar cotação (conta de teste)
+set -a; . ~/dev/projetos.noindex/agger_full/env.local; set +a
+export AGGER_TEST_EMAIL=$LOGIN_AGGER_TESTE AGGER_TEST_PASSWORD=$SENHA_AGGER_TESTE
+npx tsx src/cli/main.ts agger quote result 'b0220871-e7da-4a84-adb7-bcff2641eb1e:1'   # 17 ofertas
+npx tsx src/cli/main.ts agger quote result '91bef437-e764-41c9-b6e8-bcfcf8e62d15:1'   # 17
+npx tsx src/cli/main.ts agger quote result '4c278fcf-a456-447a-a06e-e49f7a93baa8:1'   # 17
+
+# chat2you (banco de teste próprio do trilho)
+eval "$(rbenv init -)"; export POSTGRES_DATABASE=chatwoot_test_e7
+RAILS_ENV=test bundle exec rails db:create db:schema:load
+bundle exec rspec <specs do trilho> --format json --out r.json      # 67 exemplos, 0 falhas
+bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  --format json --out ampla.json                                    # suíte ampla
+bundle exec rubocop --format json --out rubocop.json <arquivos tocados>   # 0 ofensas
+uv run python3 mutacoes.py                                          # M1–M16 (919 na suíte ampla)
+# rodada 3
+bundle exec rspec <8 specs do trilho> --format json --out alvo.json # 97 exemplos, 0 falhas
+uv run python3 mutacoes_r3.py                                       # MV1b–MV7, todas reprovam e restauram
+# rodada 4
+bundle exec rspec <6 specs do trilho> --format json --out alvo.json # 78 exemplos, 0 falhas
+uv run python3 mutacoes_r4.py                                       # MX1–MX11 (7), todas reprovam e restauram
+# rodada 5
+bundle exec rspec <4 specs do trilho> --format json --out alvo.json # 62 exemplos, 0 falhas
+uv run python3 mutacoes_r5.py                                       # MR1–MR4 (6), todas reprovam e restauram
+# rodada 6
+bundle exec rspec <4 specs do trilho> --format json --out alvo.json # 68 exemplos, 0 falhas
+bundle exec rubocop --format json --out rubocop.json <5 arquivos tocados>   # 0 ofensas
+uv run python3 mutacoes_r6.py                                       # MC1, MC2, MC3, MC3b, MR3b-r6 — todas reprovam e restauram por hash
+bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  spec/requests/api/v1/accounts/autonomia \
+  spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
+  --format json --out ampla.json                                    # 1092 exemplos, 0 falhas, 3 pendentes pré-existentes (Provisioner de registro/SSO, fora do trilho)
+# rodada 7
+ruby -e '…Module.nesting…'                                          # evidência: `module Outro; module ::Autonomia::Insurance` e o inverso resolvem `Medida` para a medida; a compacta absoluta dá NameError
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r7_red.json                                   # RED antes do detector: 6 exemplos, 1 falha ("a guarda não viu … absoluto … em app/")
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r7_green.json                                 # 6 exemplos, 0 falhas
+bundle exec rubocop --format json --out rubocop_r7.json spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb   # 0 ofensas
+uv run python3 mutacoes_r7.py                                       # MC4, MC4b, MC4c, MC3-r7, MC3b-r7 — todas reprovam exatamente nos exemplos esperados e restauram por hash
+bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  spec/requests/api/v1/accounts/autonomia \
+  spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
+  --format json --out ampla7.json                                   # 1092 exemplos, 0 falhas, os mesmos 3 pendentes pré-existentes
+# rodada 8
+ruby -e '…Module.nesting…'                                          # evidência: `module Outro; module Autonomia::Insurance` resolve `Medida` para a medida; módulos simples aninhados e `module Autonomia; module Insurance::Freios` dão NameError
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r8_red.json                                   # RED antes do detector: 7 exemplos, 1 falha ("a guarda não viu … relativo qualificado … em app/")
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r8_green.json                                 # 7 exemplos, 0 falhas
+bundle exec rubocop --format json --out rubocop_r8.json spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb   # 0 ofensas
+uv run python3 mutacoes_r8.py                                       # MC5, MC5b, MC5c, MC5d, MC4-r8, MC4b-r8, MC3-r8, MC3b-r8 — todas reprovam exatamente nos exemplos e formas esperados e restauram por hash
+bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  spec/requests/api/v1/accounts/autonomia \
+  spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
+  --format json --out ampla8.json                                   # 1093 exemplos, 0 falhas, os mesmos 3 pendentes pré-existentes
+# rodada 9
+ruby -e '…'                                                         # evidência: `::Autonomia::Insurance:: Medida` resolve para a medida; `module Autonomia:: Insurance` tem nesting `[Autonomia::Insurance]`; `module Autonomia; module ::Insurance` tem nesting `[Insurance, Autonomia]` e `Medida` dá NameError; `Autonomia::Agents::Medida` dá NameError
+ruby -rprism -e '…'                                                 # evidência: `slice` carrega o espaço, `name`/`parent` não; `full_name_parts` levanta em base dinâmica
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r9_red.json                                   # RED antes do detector: 9 exemplos, 1 falha ("a guarda não viu o caminho completo com espaço depois do `::`, em app/")
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r9_green.json                                 # 9 exemplos, 0 falhas
+bundle exec rubocop --format json --out rubocop_r9.json spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb   # 0 ofensas
+bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  spec/requests/api/v1/accounts/autonomia \
+  spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
+  --format json --out ampla9.json                                   # 1095 exemplos, 0 falhas, os mesmos 3 pendentes pré-existentes
+uv run python3 mutacoes_r9.py                                       # MC6, MC6b, MC6c, MC4-r9, MC5-r9, MC5b-r9, MC5c-r9, MC5d-r9, MC4b-r9, MC3-r9, MC3b-r9 — todas reprovam exatamente nos exemplos e formas esperados e restauram por hash
+```
+
+## Arquivos
+
+Novos: `app/services/autonomia/insurance/medida.rb`,
+`app/controllers/api/v1/accounts/autonomia/insurance/measurement_controller.rb`,
+`app/views/api/v1/accounts/autonomia/insurance/measurement/show.json.jbuilder`,
+`app/controllers/super_admin/insurance_measurements_controller.rb`,
+`app/views/super_admin/insurance_measurements/show.html.erb`, e cinco specs.
+
+Tocados: `quote_offers.rb` (`#acionadas`), `insurance_quote.rb` (as duas chaves e a união),
+`async_config.rb` (o comentário apontava para uma spec que não existia — agora existe),
+`_navigation.html.erb`, `config/routes.rb`, `docs/insurance/README.md`, `bound_async_spec.rb`
+(a hora explícita no exemplo do teto).
+
+Rodada 3: `medida.rb` (as duas colunas de proposta, comentários), `show.json.jbuilder` e
+`show.html.erb` (as duas colunas), `async_config.rb` (o que cada guarda cobre), `async_run_job_spec.rb`
+(o exemplo do job), `async_config_sem_teto_de_execucoes_spec.rb` (regex), `bound_async_spec.rb`
+(340 seguradoras), `medida_nao_e_freio_spec.rb` (`enterprise/app`), `medida_spec.rb`,
+`measurement_spec.rb`, `insurance_quote_medida_spec.rb`, `insurance_measurements_controller_spec.rb`,
+`docs/insurance/README.md`. Nenhum arquivo de instrução, `MOTIVOS` ou schema de função.
+
+Rodada 4: `medida.rb` (`linha_da_conta`, `por_conta` por corretora no fuso dela, `FOLGA_DE_FUSO`,
+`FORMATO_DA_DATA`, janela padrão que termina no `fim`, ida e volta da data),
+`insurance_measurements_controller.rb` (comentário), `show.html.erb` (coluna Fuso; período em datas),
+`async_config.rb` (comentário: o teto por atraso), `insurance_measurements_controller_spec.rb`,
+`medida_spec.rb`, `measurement_spec.rb`, `async_run_job_spec.rb`, `docs/insurance/README.md`. Nenhum
+arquivo de instrução, `MOTIVOS`, schema de função ou adapter.
+
+Rodada 5: `medida.rb` (`linha_da_conta` protegida, `recusar_inversao!`, `recusar_data_inicial_no_futuro!`
+em `call` e `por_conta`), `insurance_measurements_controller_spec.rb` (duas corretoras, fusos extremos,
+dia que não começou, data inicial no futuro), `medida_spec.rb`, `measurement_spec.rb`,
+`docs/insurance/README.md`. Nenhum arquivo de instrução, `MOTIVOS`, schema de função ou adapter;
+controller e view do Super Admin intocados.
+
+Rodada 6: `medida.rb` (`inicio_padrao`, `por_conta` sem a recusa pelo relógio da instalação,
+comentários), `medida_nao_e_freio_spec.rb` (detector com namespace lexical, arquivos de prova nas
+duas árvores), `medida_spec.rb`, `measurement_spec.rb`, `insurance_measurements_controller_spec.rb`,
+`docs/insurance/README.md` (a página não recusa pelo relógio da instalação; trinta datas). Nenhum
+arquivo de instrução, `MOTIVOS`, schema de função ou adapter; controller e view do Super Admin
+intocados.
+
+Rodada 7: só `medida_nao_e_freio_spec.rb` (detector com o aninhamento lexical como lista de escopos,
+caminho absoluto abre na raiz; quatro formas de prova novas nas duas árvores). Nenhum arquivo de
+produção, instrução, `MOTIVOS`, schema de função ou adapter; controller e view do Super Admin
+intocados.
+
+Rodada 8: só `medida_nao_e_freio_spec.rb` (cada nível do aninhamento é a lista de caminhos que o
+`module`/`class` pode abrir; o relativo qualificado registra as duas leituras; três formas de prova
+novas nas duas árvores e um exemplo negativo novo; encerramento do detector escrito no comentário).
+Nenhum arquivo de produção, instrução, `MOTIVOS`, schema de função ou adapter; controller e view do
+Super Admin intocados.
+
+Rodada 9: só `medida_nao_e_freio_spec.rb` (`segmentos_de` constrói os caminhos pelos nomes dos
+segmentos da árvore, com marcador de raiz e de base sem nome; `caminho_da_medida?` e
+`escopos_abertos_por` deixam de fatiar o código-fonte; quatro formas de prova com espaço nas duas
+árvores e dois exemplos negativos novos que pinam o marcador de raiz e o sufixo de dois segmentos).
+Nenhum arquivo de produção, instrução, `MOTIVOS`, schema de função ou adapter; controller e view do
+Super Admin intocados.

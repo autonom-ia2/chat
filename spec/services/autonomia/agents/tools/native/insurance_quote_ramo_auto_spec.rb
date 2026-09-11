@@ -599,16 +599,28 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   # "Porto Seguro: R$ 2.167,00" não diz se é o ano ou o mês, e o cliente lê pelo que lhe convém.
   # Errar isso para baixo é o lado que fecha venda e depois vira reclamação.
   describe 'o preço diz o que ele é (5.5)' do
-    def texto_para(premium)
+    def progresso_para(*ofertas)
       ready_connection
       connector = instance_double(
         Autonomia::Insurance::Connector::Mock,
-        quote_result: { 'status' => 'running',
-                        'offers' => [{ 'insurer' => { 'code' => '8', 'name' => 'Porto' },
-                                       'status' => 'quoted', 'premium' => premium }] }
+        quote_result: { 'status' => 'running', 'offers' => ofertas }
       )
       allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-      tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1).deliveries.join("\n")
+      tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)
+    end
+
+    def oferta(code, name, premium)
+      { 'insurer' => { 'code' => code, 'name' => name }, 'status' => 'quoted', 'premium' => premium }
+    end
+
+    def texto_para(premium)
+      progresso_para(oferta('8', 'Porto', premium)).deliveries.join("\n")
+    end
+
+    # O motivo da Bp Assinatura na renovação real de 11/09/2026, como o adapter o escreve.
+    def motivo_bp
+      'parcelamentos=[] (vazio): o portal nao ofereceu plano de pagamento; ' \
+        'premioMensal=29.30 e premio/12 (derivado pelo portal, nao distingue periodo)'
     end
 
     it 'diz o total e o parcelamento quando o portal informou os dois' do
@@ -641,6 +653,57 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # A ressalva agora cola NA OFERTA a que pertence, em vez de virar parágrafo do bloco — mas
       # continua saindo uma vez só para esta oferta.
       expect(texto.scan('não informou se é o total').size).to eq(1)
+    end
+
+    # ENTREGA 13, termo 1 — o motivo fica REGISTRADO na execução, por seguradora, e é o que o
+    # adapter escreveu (qual campo do portal faltou ou veio ambíguo). Consulta:
+    # `autonomia_agent_tool_runs.handle->'preco_sem_periodo'`.
+    it 'registra no handle, por seguradora, o motivo do adapter para o preço sem período' do
+      # Arrange / Act
+      progresso = progresso_para(
+        oferta('55', 'Bp Assinatura', { 'amount' => 351.59, 'currency' => 'BRL', 'basis' => 'unknown',
+                                        'basis_evidence' => motivo_bp }),
+        oferta('8', 'Porto', { 'amount' => 1321.25, 'currency' => 'BRL', 'basis' => 'total',
+                               'basis_evidence' => 'parcelas=10 x premioDemaisParc=132.12' })
+      )
+
+      # Assert
+      expect(progresso.handle['preco_sem_periodo']).to eq('55' => motivo_bp)
+      expect(progresso.handle['entregues']).to contain_exactly('55', '8')
+    end
+
+    it 'nao escreve a chave do registro quando toda oferta tem periodo' do
+      progresso = progresso_para(oferta('8', 'Porto', { 'amount' => 980.0, 'currency' => 'BRL', 'basis' => 'total' }))
+
+      expect(progresso.handle).not_to have_key('preco_sem_periodo')
+    end
+
+    it 'acumula o registro entre lotes, sem apagar o do lote anterior' do
+      ready_connection
+      connector = instance_double(
+        Autonomia::Insurance::Connector::Mock,
+        quote_result: { 'status' => 'running',
+                        'offers' => [oferta('47', 'Justos', { 'amount' => 134.5, 'basis' => 'unknown',
+                                                              'basis_evidence' => 'parcelamentos=[] (vazio)' })] }
+      )
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+
+      progresso = tool.poll(handle: { 'quote_id' => 'abc:1', 'entregues' => ['55'],
+                                      'preco_sem_periodo' => { '55' => motivo_bp } }, attempt: 2)
+
+      expect(progresso.handle['preco_sem_periodo']).to eq('55' => motivo_bp, '47' => 'parcelamentos=[] (vazio)')
+    end
+
+    # ENTREGA 13, termo 5 — no texto de um lote, o preço sem período nunca aparece na frente de um
+    # total pelo número cru: 351,59 sem período não é "mais barato" que 1.321,25 no total.
+    it 'no lote, o preço sem período vem depois dos totais, mesmo com número menor' do
+      texto = progresso_para(
+        oferta('55', 'Bp Assinatura', { 'amount' => 351.59, 'currency' => 'BRL', 'basis' => 'unknown',
+                                        'basis_evidence' => motivo_bp }),
+        oferta('8', 'Porto', { 'amount' => 1321.25, 'currency' => 'BRL', 'basis' => 'total' })
+      ).deliveries.join("\n")
+
+      expect(texto.index('Porto')).to be < texto.index('Bp Assinatura')
     end
   end
 

@@ -61,10 +61,14 @@ const openForm = () => {
 };
 
 // O erro vira mensagem por CÓDIGO, não pelo texto que o backend mandou: o `detail` diz qual campo
-// está errado e serve no log, mas a tela fala a língua do produto.
+// está errado e serve no log, mas a tela fala a língua do produto. Cada código que o backend
+// responde tem a sua linha aqui: um que caísse em GENERIC diria «tente de novo em instantes» para
+// um erro que tentar de novo não resolve (o `horario_invalido` de #380 é o horário com um marcador
+// reservado dentro, `$nomeAgente` — o corretor precisa mudar o texto, não esperar).
 const messageFor = error => {
   const code = error?.response?.data?.error;
   if (code === 'nome_invalido') return 'NOME_INVALIDO';
+  if (code === 'horario_invalido') return 'HORARIO_INVALIDO';
   if (code === 'comportamento_invalido') return 'COMPORTAMENTO_INVALIDO';
   return 'GENERIC';
 };
