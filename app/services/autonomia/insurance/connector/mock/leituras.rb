@@ -9,7 +9,9 @@ module Autonomia::Insurance::Connector::Mock::Leituras
     'ABC1D23' => { 'model' => 'Gol 1.0', 'model_year' => 2016, 'vehicle_type' => 'v', 'fipe_code' => '0050001' },
     'HIK9383' => { 'model' => 'Vectra Elegance 2.0', 'model_year' => 2008, 'vehicle_type' => 'v', 'fipe_code' => '0043249' },
     'NCD3080' => { 'model' => 'CG 150 Titan', 'model_year' => 2004, 'vehicle_type' => 'm', 'fipe_code' => '8110101' },
-    'IDX3056' => { 'model' => 'LS-1935', 'model_year' => 1995, 'vehicle_type' => 'c', 'fipe_code' => '0000005' }
+    'IDX3056' => { 'model' => 'LS-1935', 'model_year' => 1995, 'vehicle_type' => 'c', 'fipe_code' => '0000005' },
+    # Modelo do ano corrente: é a placa que deixa o zero-quilômetro ambíguo (entrega 3).
+    'ZER0K26' => { 'model' => 'Onix 1.0', 'model_year' => Date.current.year, 'vehicle_type' => 'v', 'fipe_code' => '0040001' }
   }.freeze
   TAMANHO_DA_PLACA = 7
 

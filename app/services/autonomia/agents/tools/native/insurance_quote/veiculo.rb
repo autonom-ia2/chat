@@ -7,6 +7,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
   extend ActiveSupport::Concern
 
   PLACA = 'vehicle.plate'.freeze
+  ZERO_KM = 'vehicle.isZeroKm'.freeze
   IDENTIFICADORES_DO_VEICULO = %w[plate chassis fipeCode].freeze
 
   private
@@ -37,6 +38,29 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
   # antes de desistir: só é indisponível o que segue indisponível.
   def sem_formulario?
     quote_input.auto? && self.class.schema_da_conexao(connection).blank?
+  end
+
+  # ZERO-QUILÔMETRO AMBÍGUO É DADO FALTANDO (entrega 3, Codex): o manual manda cotar direto com o
+  # mínimo em mãos, e a consulta de placa diz o ano do modelo — mas não diz se o carro é zero. Ano do
+  # modelo anterior ao atual é usado, e ninguém pergunta. Ano atual ou seguinte sem `isZeroKm`
+  # escrito é ambíguo: cotado assim sai como usado (o schema do adapter documenta), com preço errado
+  # de cara certa. Entra na conferência como um problema a mais, no formato do adapter
+  # (`campo`/`severidade`/`motivo`): o código compara o ano com o calendário; quem pergunta é o modelo.
+  # -> lista de problemas, vazia quando não há.
+  def problemas_locais
+    [problema_de_zero_km].compact
+  end
+
+  def problema_de_zero_km
+    return unless quote_input.auto?
+
+    veiculo = entrada['vehicle'].to_h
+    return unless veiculo['isZeroKm'].nil? && veiculo['modelYear'].to_i >= Date.current.year
+
+    { 'campo' => ZERO_KM, 'severidade' => 'erro',
+      'motivo' => "o ano do modelo (#{veiculo['modelYear']}) é o atual ou o seguinte e ninguém disse se o veículo é " \
+                  'zero-quilômetro; cotado assim sai como usado, com preço errado. Pergunte ao cliente, com o nome ' \
+                  'do carro, se é zero ou se já está rodando com ele, e reenvie.' }
   end
 
   def com_veiculo(dados)

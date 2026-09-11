@@ -28,8 +28,8 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # instrução — e nada mais precisa mudar.
   ESPECIALISTAS = [
     { slug: 'cotacao_auto', nome: 'Cotação de automóvel', arquivo: 'especialista_auto.md',
-      descricao: 'Cota seguro de automóvel, moto e caminhão para pessoa física. Use quando o ' \
-                 'cliente pedir preço de seguro de carro, moto ou caminhão.' }
+      descricao: 'Cota seguro de automóvel, moto e caminhão, para pessoa física e para empresa. Use ' \
+                 'quando o cliente pedir preço de seguro de carro, moto ou caminhão.' }
   ].freeze
 
   # Teto do que a corretora escreve. `nome_agente` já é limitado pela coluna (string, 255), mas
@@ -49,10 +49,21 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # não tem variável para substituir.
   # -> texto do arquivo, ou nil quando não é um especialista mantido.
   def self.instrucao_mantida(specialist)
+    dados = mantido(specialist)
+    dados && INSTRUCOES.join(dados[:arquivo]).read
+  end
+
+  # A DESCRIÇÃO também: é o que o principal lê para decidir chamar o especialista (`openai_schema`),
+  # e a gravada no nascimento dizia "para pessoa física" enquanto o manual passou a cotar empresa.
+  def self.descricao_mantida(specialist)
+    mantido(specialist)&.dig(:descricao)
+  end
+
+  # A entrada de `ESPECIALISTAS` deste especialista, quando é um que a Autonom.ia mantém.
+  def self.mantido(specialist)
     return nil unless specialist.agent&.agent_type == 'insurance_quote'
 
-    dados = ESPECIALISTAS.find { |e| e[:slug] == specialist.slug }
-    dados && INSTRUCOES.join(dados[:arquivo]).read
+    ESPECIALISTAS.find { |e| e[:slug] == specialist.slug }
   end
 
   class SlugDesconhecido < StandardError; end

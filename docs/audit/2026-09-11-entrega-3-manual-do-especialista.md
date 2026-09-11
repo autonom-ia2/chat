@@ -19,9 +19,18 @@ arquivo desatualizaria de novo.
 - **O manual que vale é o do deploy.** `Builder.instrucao_mantida(specialist)` devolve o texto do
   arquivo para os especialistas que a Autonom.ia mantém (agente `insurance_quote`, slug em
   `ESPECIALISTAS`); `Specialist#effective_instruction` passa a ler daí (`instrucao_do_sistema`), e a
-  coluna `instruction` fica como retrato do nascimento. Especialista que a corretora criou com
-  instrução própria (agente `custom`) continua lendo a coluna. O arquivo é lido cru: a spec garante
-  que não há variável nele.
+  coluna `instruction` fica como retrato do nascimento. O mesmo para a DESCRIÇÃO que o principal lê
+  na função (`descricao_do_sistema` ← `Builder.descricao_mantida`): a gravada dizia "para pessoa
+  física" e o manual passou a cotar empresa. Especialista que a corretora criou com instrução própria
+  (agente `custom`) continua lendo as colunas. O arquivo é lido cru: a spec garante que não há
+  variável nele.
+- **Zero-quilômetro ambíguo é conferência no código.** O ajuste "com os quatro em mãos, cote direto"
+  deixaria um modelo do ano (ano atual ou seguinte, pela consulta de placa) ser cotado como usado — o
+  schema documenta que `isZeroKm` omitido é usado. `Veiculo#problema_de_zero_km` compara o ano do
+  modelo com o calendário e entra na conferência como um problema a mais, no formato do adapter
+  (`vehicle.isZeroKm — motivo`, `faltam_dados`): no turno o modelo lê e pergunta com o nome do carro;
+  no envio o cliente lê "se o veículo é zero-quilômetro" (`ROTULOS`). Código compara dados; quem
+  pergunta é o modelo. Sem motivo novo, sem gatilho novo.
 - **O texto aprovado (v6)** entra em `especialista_auto.md`, com TRÊS ajustes que o Codex e o código
   impuseram depois da aprovação — para decisão do Rodrigo, listados abaixo.
 - **A guarda** (`builder_instrucao_do_especialista_spec`): cada promessa do texto, pela FRASE EXATA,
@@ -55,17 +64,35 @@ Rodrigo decidir.
 | 1 | Texto aprovado aplicado | `especialista_auto.md` = v6 + 3 ajustes acima (md5 no fim desta auditoria) |
 | 2 | Verificação cruza toda ferramenta citada com as que existem | 24 promessas ancoradas por frase + "não cita ferramenta que não é dele" |
 | 3 | Nenhum valor de cobertura no texto | guardas `R$` e nome de pacote (lido do schema) |
-| 4 | Promessa falsa reintroduzida quebra a verificação | mutações M3–M9 (`mutacoes_e3.py`) |
+| 4 | Promessa falsa reintroduzida quebra a verificação | md5 do texto assinado na spec (mudou uma letra, reprova, e quem assina revisa `PROMESSAS`) + campo só conta se EXPOSTO ao modelo + mutações M3–M16 (`mutacoes_e3.py`) |
 | 5 | Agentes já criados recebem o texto novo; produção lida e idêntica | runtime lê o arquivo (spec + M1/M2); coluna do agente 24 atualizada no rollout; md5 conferido em produção — **pendente até o deploy** |
 | 6 | Agente criado do zero nasce com o mesmo texto | spec (Builder → coluna = arquivo = runtime) |
 
-## Rollout (depois do deploy)
+## Rollout (depois do deploy) — `~/ops/agente-cotacao/entrega-3/rollout-instrucao.sh`
 
-1. Conferir a coluna em produção (read-only): `md5(instruction)` do especialista 1.
-2. UPDATE da coluna para o texto do deploy (backup antes; rollback = texto anterior guardado no
-   backup). Não é o que faz o runtime ler o texto novo — isso o deploy já faz —; é o que faz a
-   leitura do banco ser idêntica ao aprovado (termo 5, "comparação exata").
-3. `md5(instruction)` em produção == md5 do arquivo do repositório no SHA deployado.
+1. `backup`: texto (base64, `-At`, uma linha) + descrição + leitura, em `/tmp/chat2you_instrucao_especialista_<ts>.txt`.
+2. `aplicar <arquivo.md> "<descricao>"`: o texto sobe em pedaços de base64 (teto do parâmetro do SSM),
+   vira arquivo no container e entra como variável do psql num UPDATE PLANO (dentro de `DO $$` a
+   variável não é interpolada — achado do Codex), com precondição `md5(left(:'texto',-1)) = md5 do
+   arquivo` e abort se não houver `UPDATE 1`; `description` junto. Não é o que faz o runtime ler o
+   texto novo — isso o deploy já faz —; é o que faz a leitura do banco ser idêntica (termo 5).
+3. `conferir <arquivo.md>`: `md5(instruction)` em produção == `md5 -q` do arquivo no SHA deployado.
+4. `rollback <backup>`: o mesmo caminho, com o texto e a descrição do backup.
+
+## Codex — rodada 1 (`57f8353848`, REPROVADO: 1 P1, 4 P2)
+
+1. **P1 rollout:** `:'texto'` dentro de `DO $$…$$` não é interpolado pelo psql; `; rm -f` mascarava o
+   exit; `sleep` fixo em vez de estado terminal do SSM. Reescrito (acima).
+2. **P2 guarda:** promessa nova em prosa passava ("emita a apólice"); campo escondido em
+   `NAO_EXPOSTOS` continuava "cumprido". Agora: md5 do texto assinado na spec (toda mudança exige
+   revisão de `PROMESSAS`) e `campo()` só aceita o que o formulário expõe (M11, M12).
+3. **P2 zero-km:** "cote direto" cotaria modelo do ano como usado → problema local na conferência
+   (`vehicle.isZeroKm`, M15, M16). A primeira forma (recusa nomeada em `start`/`precheck`) estourou a
+   complexidade do rubocop — e era a forma errada: é dado faltando, não motivo novo.
+4. **P2 descrição:** `ESPECIALISTAS[:descricao]` dizia "pessoa física" e é o que o principal lê →
+   alinhada e lida do deploy (`descricao_do_sistema`, M14); o rollout atualiza a coluna também.
+5. **P2 rollback:** `tr -d ' +\n'` apagava `+` do base64 → backup em `-At`, uma linha, sem `tr` de `+`.
+6. P3 comissão: fica como texto aprovado, anotado acima. (i) M13: Builder gravando outro texto reprova.
 
 ## Da mesma classe, fora desta entrega
 

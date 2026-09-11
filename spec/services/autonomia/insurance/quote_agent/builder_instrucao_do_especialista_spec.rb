@@ -23,7 +23,15 @@ module ManualDoEspecialistaDeAuto
     @campos ||= SCHEMA['campos'].index_by { |c| c['campo'] }
   end
 
+  # Só conta o que o MODELO RECEBE: campo presente no schema mas fora do formulário (`NAO_EXPOSTOS`)
+  # é promessa sem capacidade do mesmo jeito.
+  def expostos
+    @expostos ||= Autonomia::Insurance::Parametros.new(SCHEMA).caminhos
+  end
+
   def campo(nome)
+    raise "o formulário do especialista não expõe #{nome}" unless expostos.include?(nome)
+
     campos.fetch(nome) { raise "o schema do adapter não tem #{nome}" }
   end
 
@@ -133,6 +141,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     expect(texto.scan(/\$[a-zA-Z]+/)).to be_empty
   end
 
+  # PROSA NÃO SE VERIFICA POR MÁQUINA: uma promessa nova escrita com outras palavras ("emita a apólice")
+  # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
+  # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
+  it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('3eba319bca1e6159e950def73a2f91ab')
+  end
+
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do
     it 'o agente já criado recebe o texto novo sem ser recriado' do
       especialista = especialista_de_auto
@@ -153,6 +168,14 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       especialista.update!(custom_instruction: 'Fale como a Seguros do Vale.')
 
       expect(especialista.effective_instruction).to eq("#{texto}\n\nFale como a Seguros do Vale.")
+    end
+
+    it 'a descrição que o principal lê na função também é a do deploy' do
+      especialista = especialista_de_auto
+      especialista.update!(description: 'só pessoa física')
+
+      expect(especialista.reload.openai_schema[:description]).to include('para empresa')
+      expect(especialista.descricao_do_sistema).to eq(described_class::ESPECIALISTAS.first[:descricao])
     end
 
     it 'especialista que a corretora criou, fora do agente de cotação, continua lendo a própria instrução' do

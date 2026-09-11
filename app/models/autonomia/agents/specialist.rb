@@ -90,7 +90,7 @@ class Autonomia::Agents::Specialist < ApplicationRecord
     {
       type: 'function',
       name: function_name,
-      description: description,
+      description: descricao_do_sistema,
       parameters: {
         type: 'object',
         properties: {
@@ -118,6 +118,11 @@ class Autonomia::Agents::Specialist < ApplicationRecord
   # agente já criado receber o manual novo sem ser recriado (entrega 3, termo 5).
   def instrucao_do_sistema
     ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_mantida(self) || instruction
+  end
+
+  # Idem para a descrição que o principal lê na função (`openai_schema`).
+  def descricao_do_sistema
+    ::Autonomia::Insurance::QuoteAgent::Builder.descricao_mantida(self) || description
   end
 
   # Ferramentas reservadas a este especialista, na ordem declarada. Slug que não existe (ou foi
