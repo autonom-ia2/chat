@@ -38,10 +38,11 @@ RSpec.describe Autonomia::Insurance::Medida do
                     .flat_map { |raiz, pasta| Dir[Rails.root.join("#{raiz}/#{pasta}/**/*.rb").to_s] })
   end
 
-  # Onde a constante MORA. O nome simples `Medida` é a medida quando o código está, lexicalmente,
-  # dentro deste módulo ou de um filho dele — é ali que `Medida.new` resolve para ela. A guarda acusa
-  # pelo namespace ESCRITO em volta, inclusive na forma compacta (`class Autonomia::Insurance::X`), em
-  # que o Ruby não resolveria o nome simples: dentro deste namespace, acusar a mais custa um exemplo
+  # Onde a constante MORA. O nome simples `Medida` é a medida quando ALGUM dos `module`/`class` que
+  # envolvem o código, lexicalmente, é este módulo ou um filho dele — o Ruby procura o nome em cada
+  # escopo do aninhamento (`Module.nesting`), e é assim que `Medida.new` resolve para ela. A guarda
+  # acusa pelo namespace ESCRITO em volta, inclusive na forma compacta (`class Autonomia::Insurance::X`),
+  # em que o Ruby não resolveria o nome simples: dentro deste namespace, acusar a mais custa um exemplo
   # vermelho que se explica; deixar passar é o freio.
   let(:namespace_da_medida) { 'Autonomia::Insurance' }
 
@@ -70,8 +71,8 @@ RSpec.describe Autonomia::Insurance::Medida do
   # namespace, `Medida` é outra constante e não é acusada: guarda que grita à toa acaba desligada.
   def constante_em?(caminho)
     achou = false
-    cada_no_com_namespace(VarreduraDeRecusas.arvore(caminho)) do |nodo, namespace|
-      achou ||= caminho_da_medida?(nodo) || nome_simples_da_medida?(nodo, namespace)
+    cada_no_com_aninhamento(VarreduraDeRecusas.arvore(caminho)) do |nodo, aninhamento|
+      achou ||= caminho_da_medida?(nodo) || nome_simples_da_medida?(nodo, aninhamento)
     end
     achou
   end
@@ -80,22 +81,40 @@ RSpec.describe Autonomia::Insurance::Medida do
     nodo.is_a?(Prism::ConstantPathNode) && nodo.slice.end_with?('Insurance::Medida')
   end
 
-  def nome_simples_da_medida?(nodo, namespace)
-    nodo.is_a?(Prism::ConstantReadNode) && nodo.name == :Medida && dentro_do_namespace_da_medida?(namespace)
+  def nome_simples_da_medida?(nodo, aninhamento)
+    nodo.is_a?(Prism::ConstantReadNode) && nodo.name == :Medida && dentro_do_namespace_da_medida?(aninhamento)
   end
 
-  def dentro_do_namespace_da_medida?(namespace)
-    namespace == namespace_da_medida || namespace.start_with?("#{namespace_da_medida}::")
+  # QUALQUER escopo do aninhamento, não só o mais interno: um `module ::Outro` aberto dentro de
+  # `Autonomia::Insurance` não apaga o que está em volta — o Ruby ainda acha `Medida` lá.
+  def dentro_do_namespace_da_medida?(aninhamento)
+    aninhamento.any? { |escopo| escopo == namespace_da_medida || escopo.start_with?("#{namespace_da_medida}::") }
   end
 
-  # Percorre a árvore entregando cada nó e o namespace LEXICAL em que ele está — os `module`/`class`
-  # que o envolvem, com o caminho escrito em cada um. É o que decide o que um nome simples significa.
-  def cada_no_com_namespace(nodo, pilha = [], &)
+  # Percorre a árvore entregando cada nó e o ANINHAMENTO lexical em que ele está — a lista dos
+  # `module`/`class` que o envolvem, do mais externo ao mais interno, cada um com o caminho completo
+  # que ABRE (o `Module.nesting` do Ruby). É o que decide o que um nome simples significa.
+  def cada_no_com_aninhamento(nodo, aninhamento = [], &)
     return if nodo.nil?
 
-    pilha += [nodo.constant_path.slice.delete_prefix('::')] if nodo.is_a?(Prism::ModuleNode) || nodo.is_a?(Prism::ClassNode)
-    yield(nodo, pilha.join('::'))
-    nodo.compact_child_nodes.each { |filho| cada_no_com_namespace(filho, pilha, &) }
+    aninhamento += [escopo_aberto_por(nodo, aninhamento.last)] if abre_escopo?(nodo)
+    yield(nodo, aninhamento)
+    nodo.compact_child_nodes.each { |filho| cada_no_com_aninhamento(filho, aninhamento, &) }
+  end
+
+  def abre_escopo?(nodo)
+    nodo.is_a?(Prism::ModuleNode) || nodo.is_a?(Prism::ClassNode)
+  end
+
+  # O caminho que um `module`/`class` abre. RELATIVO (`module Insurance`) é filho do escopo em volta;
+  # ABSOLUTO (`module ::Autonomia::Insurance`) abre na raiz, e o que está em volta não entra no nome.
+  # Concatenar a pilha e apagar o `::` lia `module Outro; module ::Autonomia::Insurance` como
+  # `Outro::Autonomia::Insurance`, e `Medida` ali passava invisível (rodada 7, P3 do Codex).
+  def escopo_aberto_por(nodo, escopo_em_volta)
+    caminho = nodo.constant_path.slice
+    return caminho.delete_prefix('::') if caminho.start_with?('::')
+
+    [escopo_em_volta, caminho].compact.join('::')
   end
 
   # Um arquivo que existe só durante o exemplo, na árvore DE VERDADE (`app/`, `enterprise/app`): a
@@ -143,8 +162,9 @@ RSpec.describe Autonomia::Insurance::Medida do
 
   # A GUARDA PROVADA CONTRA O FREIO ESCRITO, não só contra o código que existe hoje. Cada forma de
   # nomear a medida vira um arquivo real, nas duas árvores, e a guarda tem de acusá-lo — o nome simples
-  # dentro do namespace era a forma que passava invisível (rodada 6). E a forma que NÃO é a medida
-  # (`Medida` de outro namespace) não pode ser acusada, senão a guarda vira ruído.
+  # dentro do namespace era a forma que passava invisível (rodada 6); o namespace aberto por caminho
+  # ABSOLUTO dentro de outro módulo, a seguinte (rodada 7). E a forma que NÃO é a medida (`Medida` de
+  # outro namespace) não pode ser acusada, senão a guarda vira ruído.
   describe 'o detector' do
     let(:formas_de_nomear) do
       {
@@ -190,6 +210,61 @@ RSpec.describe Autonomia::Insurance::Medida do
             class Autonomia::Agents::FreioDeProva
               def perform
                 Insurance::Medida.new(inicio: nil, fim: nil, conta: nil).call
+              end
+            end
+          RUBY
+        ],
+        # O caminho ABSOLUTO abre `Autonomia::Insurance` na raiz, não `Outro::Autonomia::Insurance`: o Ruby
+        # acha `Medida` aqui. Concatenar a pilha e apagar o `::` lia o nome errado (rodada 7, P3 do Codex).
+        'o nome simples em `module ::Autonomia::Insurance` absoluto aberto dentro de outro modulo, em app/' => [
+          'app/services/autonomia/insurance/freio_absoluto.rb', <<~RUBY
+            module Outro
+              module ::Autonomia::Insurance
+                class FreioAbsoluto
+                  def call
+                    Medida.new(inicio: nil, fim: nil).por_conta
+                  end
+                end
+              end
+            end
+          RUBY
+        ],
+        'o nome simples em `module ::Autonomia::Insurance` absoluto aberto dentro de outro modulo, em enterprise/app' => [
+          'enterprise/app/services/autonomia/insurance/freio_absoluto.rb', <<~RUBY
+            module Outro
+              module ::Autonomia::Insurance
+                class FreioAbsoluto
+                  def call
+                    Medida.new(inicio: nil, fim: nil).por_conta
+                  end
+                end
+              end
+            end
+          RUBY
+        ],
+        'a forma compacta `class ::Autonomia::Insurance::X` absoluta dentro de outro modulo, em enterprise/app' => [
+          'enterprise/app/jobs/autonomia/agents/freio_absoluto_compacto.rb', <<~RUBY
+            module Outro
+              class ::Autonomia::Insurance::FreioAbsolutoCompacto
+                def perform
+                  Medida::PeriodoInvalido
+                end
+              end
+            end
+          RUBY
+        ],
+        # O inverso: o absoluto abre `Outro` na raiz, mas NÃO apaga o que está em volta — `Module.nesting`
+        # é `[Outro, Autonomia::Insurance]` e o Ruby acha `Medida` no segundo. Um detector que
+        # "reiniciasse a pilha" no caminho absoluto perderia esta forma.
+        'o nome simples em `module ::Outro` absoluto aberto dentro de `module Autonomia::Insurance`, em app/' => [
+          'app/services/autonomia/insurance/freio_absoluto_invertido.rb', <<~RUBY
+            module Autonomia::Insurance
+              module ::Outro
+                class FreioAbsolutoInvertido
+                  def call
+                    Medida.new(inicio: nil, fim: nil).por_conta
+                  end
+                end
               end
             end
           RUBY

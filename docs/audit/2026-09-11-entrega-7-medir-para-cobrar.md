@@ -315,6 +315,57 @@ vez de passar vazio).
 MR3c da rodada 5 (`por_conta` sem a recusa) está **aposentada**: era a afirmação do comportamento
 errado. O inverso dela é MC1.
 
+## Rodada 7 — o caminho absoluto no aninhamento lexical (Codex)
+
+O Codex re-revisou `457d80657b`: os quatro achados da rodada 6 estão fechados; sobrou um P3 e uma
+ressalva sem código. O P3 é da mesma classe do P3 da rodada 6 — o detector da guarda "a medida não é
+freio" — um passo adiante: a rodada 6 ensinou o detector a ver o nome simples `Medida` pelo namespace
+lexical, mas modelava esse namespace como UMA string, a pilha dos `module`/`class` concatenada com o
+`::` inicial apagado. Um caminho absoluto aninhado escapava.
+
+Reproduzido antes de corrigir (RED): a forma `module Outro; module ::Autonomia::Insurance; Medida.new(...)`
+como arquivo real em `app/` — a guarda não viu (1 falha em 6). E medido no Ruby, não presumido:
+`Module.nesting` ali é `[Autonomia::Insurance, Outro]` e `Medida` resolve para `Autonomia::Insurance::Medida`.
+No INVERSO (`module Autonomia::Insurance; module ::Outro; Medida`) o nesting é `[Outro, Autonomia::Insurance]`
+e `Medida` TAMBÉM resolve para a medida — o absoluto abre `Outro` na raiz, mas não apaga o que está em
+volta, porque o Ruby procura o nome em cada escopo da lista. Na forma compacta absoluta
+(`class ::Autonomia::Insurance::X`) o Ruby dá `NameError`, e a guarda acusa mesmo assim, pela decisão da
+rodada 6 (dentro do namespace escrito, acusar a mais custa um vermelho que se explica).
+
+Por isso a correção não é o "reinício de pilha" literal: um detector que reiniciasse a pilha em `X::Y`
+e olhasse só o escopo mais interno fecharia o P3 e abriria o inverso — o mesmo buraco pelo outro lado
+(MC4b abaixo prova). A causa raiz é o modelo, string única em vez da lista de escopos do Ruby, e é o
+modelo que muda.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P3** `medida_nao_e_freio_spec.rb:96` — `cada_no_com_namespace` concatenava a pilha e apagava o `::`: `module Outro; module ::Autonomia::Insurance; Medida.new(...).call; end; end` era lido como `Outro::Autonomia::Insurance`; o Ruby resolve `Medida` como a medida e a guarda não acusava | O detector entrega a cada nó o ANINHAMENTO lexical como lista (`cada_no_com_aninhamento`, o `Module.nesting`): cada `module`/`class` entra com o caminho completo que ABRE — relativo é filho do escopo em volta; absoluto (`::X::Y`) abre na raiz, sem o que está em volta no nome (`escopo_aberto_por`). O nome simples `Medida` é a medida quando QUALQUER escopo da lista é `Autonomia::Insurance` ou filho (`dentro_do_namespace_da_medida?` com `any?`) | "acusa cada forma de nomear a medida, nas duas arvores" ganhou quatro arquivos temporários: `module Outro; module ::Autonomia::Insurance; … Medida` em `app/` E em `enterprise/app`; a forma compacta absoluta `module Outro; class ::Autonomia::Insurance::X; … Medida::PeriodoInvalido` em `enterprise/app`; e o inverso `module Autonomia::Insurance; module ::Outro; … Medida` em `app/`. Cada um tem de ser o ÚNICO acusado além dos leitores, e sai com as pastas que criou; "nao acusa Medida de outro namespace" segue | MC4 (ignorar o `::` inicial — o detector da rodada 6) reprova pela forma absoluta em `app/`; MC4b (só o escopo mais interno, o "reinício de pilha") reprova pelo inverso; MC4c (guardar o `::` no nome) reprova; MC3-r7 e MC3b-r7 (as da rodada 6, reaplicadas ao texto novo) reprovam |
+
+### Ressalva registrada (sem código, decisão do orquestrador)
+
+- **A linha "Período" da página no fuso da instalação** (`show.html.erb:44`; a mesma ressalva da
+  rodada 6, mantida pelo Codex). `@medida.inicio`/`@medida.fim` são instantes da instância da
+  INSTALAÇÃO, que servem à enumeração; os números de cada linha são por corretora, no fuso dela. No caso
+  de borda (instalação em UTC ao meio-dia de 11/09, corretora em UTC+14 já em 12/09, `from=2026-09-12`),
+  a página mostra "Período: 12 de setembro até 11 de setembro" acima de linhas corretas. Não é número
+  errado — a coluna Fuso diz de quem é cada linha — mas é texto que confunde. Fica para decisão de
+  produto: mostrar o período POR LINHA, no fuso da corretora (ou as datas PEDIDAS, `from`/`to`). View e
+  controller do Super Admin não foram tocados nesta rodada.
+
+### Mutações da rodada 7 (5) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MC4 | `escopo_aberto_por` ignora o `::` inicial: o absoluto é empilhado em cima do que está em volta (o detector da rodada 6) | `medida_nao_e_freio_spec.rb` | "acusa cada forma…" — "a guarda não viu o nome simples em `module ::Autonomia::Insurance` absoluto aberto dentro de outro modulo, em app/" |
+| MC4b | `dentro_do_namespace_da_medida?` olha só `aninhamento.last` (o "reinício de pilha" literal) | idem | "acusa cada forma…" — "a guarda não viu o nome simples em `module ::Outro` absoluto aberto dentro de `module Autonomia::Insurance`, em app/" |
+| MC4c | o absoluto abre na raiz mas guarda o `::` no nome (`::Autonomia::Insurance`) | idem | "acusa cada forma…" (a forma absoluta em `app/`) |
+| MC3-r7 | detector sem o ramo `ConstantReadNode` | idem | "acusa cada forma…" (o nome simples em `module Autonomia::Insurance`) |
+| MC3b-r7 | detector acusa `Medida` em QUALQUER aninhamento (`true ||`) | idem | "nao acusa Medida de outro namespace" |
+
+O runner (`mutacoes_r7.py`) exige que caiam EXATAMENTE os exemplos esperados — nem a menos, nem a
+mais — com exit ≠ 0, e confere o SHA-256 do arquivo restaurado contra o original (`1e6fed0084aff421…`
+antes e depois). Nenhum arquivo de prova sobrou em `app/` ou `enterprise/app`.
+
 ## Comandos rodados
 
 ```bash
@@ -350,6 +401,18 @@ bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autono
   spec/requests/api/v1/accounts/autonomia \
   spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
   --format json --out ampla.json                                    # 1092 exemplos, 0 falhas, 3 pendentes pré-existentes (Provisioner de registro/SSO, fora do trilho)
+# rodada 7
+ruby -e '…Module.nesting…'                                          # evidência: `module Outro; module ::Autonomia::Insurance` e o inverso resolvem `Medida` para a medida; a compacta absoluta dá NameError
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r7_red.json                                   # RED antes do detector: 6 exemplos, 1 falha ("a guarda não viu … absoluto … em app/")
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r7_green.json                                 # 6 exemplos, 0 falhas
+bundle exec rubocop --format json --out rubocop_r7.json spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb   # 0 ofensas
+uv run python3 mutacoes_r7.py                                       # MC4, MC4b, MC4c, MC3-r7, MC3b-r7 — todas reprovam exatamente nos exemplos esperados e restauram por hash
+bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  spec/requests/api/v1/accounts/autonomia \
+  spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
+  --format json --out ampla7.json                                   # 1092 exemplos, 0 falhas, os mesmos 3 pendentes pré-existentes
 ```
 
 ## Arquivos
@@ -390,4 +453,9 @@ comentários), `medida_nao_e_freio_spec.rb` (detector com namespace lexical, arq
 duas árvores), `medida_spec.rb`, `measurement_spec.rb`, `insurance_measurements_controller_spec.rb`,
 `docs/insurance/README.md` (a página não recusa pelo relógio da instalação; trinta datas). Nenhum
 arquivo de instrução, `MOTIVOS`, schema de função ou adapter; controller e view do Super Admin
+intocados.
+
+Rodada 7: só `medida_nao_e_freio_spec.rb` (detector com o aninhamento lexical como lista de escopos,
+caminho absoluto abre na raiz; quatro formas de prova novas nas duas árvores). Nenhum arquivo de
+produção, instrução, `MOTIVOS`, schema de função ou adapter; controller e view do Super Admin
 intocados.
