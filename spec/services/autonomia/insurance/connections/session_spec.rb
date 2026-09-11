@@ -4,8 +4,14 @@ require 'rails_helper'
 #
 # (Correção de 11/09/2026: aqui se lia "o portal aceita UMA sessão viva por login: abrir outra
 # invalida a anterior". Medido e falso — ver o cabeçalho de `connections/session.rb`.) Estes testes
-# travam o contrato que faz várias cotações da mesma corretora conviverem com UM login, e que impede
-# o healthcheck da tela de Conexões de encerrar a sessão de uma cotação em andamento.
+# travam o contrato que faz várias cotações da mesma corretora conviverem com UM login, e que faz o
+# healthcheck e o polling REUSAREM esse login em vez de abrir um por passada.
+#
+# (Correção de 11/09/2026, segunda: a frase aqui era "e que impede o healthcheck da tela de Conexões
+# de encerrar a sessão de uma cotação em andamento". Ela sobrevivia à correção de cima porque estava
+# em paráfrase: sob a medição, o login do healthcheck não encerra sessão nenhuma — o portal
+# compartilha. O que o reuso evita é CUSTO, e a contagem de logins destes exemplos é exatamente
+# isso.)
 RSpec.describe Autonomia::Insurance::Connections::Session do
   let(:account) { create(:account) }
 
