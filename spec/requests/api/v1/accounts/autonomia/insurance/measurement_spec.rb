@@ -82,6 +82,25 @@ RSpec.describe 'Autonomia Insurance Measurement API', type: :request do
       expect(response.parsed_body['payload']['quotes']).to be_zero
     end
 
+    # A JANELA TEM DUAS BORDAS. A operação pede setembro (`from=2026-09-01&to=2026-09-30`) e a
+    # cotação de 01/10 é da fatura de outubro: um `to` ignorado não deixa a conta vazia, deixa ela
+    # MAIOR — e número inflado em fatura ninguém questiona.
+    it 'nao conta cotação feita depois do fim da janela' do
+      # Arrange
+      cotacao!(handle: { 'quote_id' => 'setembro', 'seguradoras_acionadas' => dezessete },
+               criada_em: Time.zone.parse('2026-09-15 10:00'))
+      cotacao!(handle: { 'quote_id' => 'outubro', 'seguradoras_acionadas' => dezessete },
+               criada_em: Time.zone.parse('2026-10-01 09:00'))
+
+      # Act
+      get "#{base}?from=2026-09-01&to=2026-09-30", headers: admin.create_new_auth_token, as: :json
+
+      # Assert
+      payload = response.parsed_body['payload']
+      expect(payload['quotes']).to eq(1)
+      expect(payload['insurers_called']).to eq(17)
+    end
+
     # NENHUM VALOR NOSSO NO LUGAR DO VALOR DE QUEM PERGUNTA: data ilegível vira recusa dita, com
     # código estável, e nunca "então são os últimos 30 dias" em silêncio.
     it 'recusa data ilegivel em vez de escolher a janela sozinho' do

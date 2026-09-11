@@ -92,6 +92,24 @@ RSpec.describe Autonomia::Insurance::Medida do
       expect(medida(inicio: 60.days.ago.to_date.to_s, fim: Time.zone.today.to_s)[:cotacoes]).to eq(2)
     end
 
+    # A JANELA TEM DUAS BORDAS, e a de cima é a que vira dinheiro cobrado a mais. Setembro que a
+    # operação pede termina em 30/09: a cotação de 01/10 é da fatura de outubro. Um `fim` ignorado
+    # não deixa a conta vazia — ela fica MAIOR, e um número inflado numa fatura ninguém questiona.
+    it 'nao conta cotação feita depois do fim da janela' do
+      # Arrange — uma dentro de setembro, uma no primeiro dia de outubro.
+      run!(handle: { 'quote_id' => 'setembro', 'seguradoras_acionadas' => dezessete },
+           criada_em: Time.zone.parse('2026-09-15 10:00'))
+      run!(handle: { 'quote_id' => 'outubro', 'seguradoras_acionadas' => dezessete },
+           criada_em: Time.zone.parse('2026-10-01 09:00'))
+
+      # Act
+      resultado = medida(inicio: '2026-09-01', fim: '2026-09-30')
+
+      # Assert — a de outubro ficou de fora: uma cotação, dezessete seguradoras.
+      expect(resultado[:cotacoes]).to eq(1)
+      expect(resultado[:seguradoras_acionadas]).to eq(17)
+    end
+
     # O PERÍODO QUE A CONSULTA USOU VOLTA NA RESPOSTA. Sem isso, quem cobra não sabe de que janela é
     # o número que está lendo — e "os últimos 30 dias" muda de significado a cada dia.
     it 'devolve os instantes exatos da janela' do
@@ -232,6 +250,15 @@ RSpec.describe Autonomia::Insurance::Medida do
   it 'devolve zeros para a conta sem nenhuma execução' do
     expect(medida[:cotacoes]).to be_zero
     expect(medida[:conta_id]).to eq(account.id)
+  end
+
+  # A MEDIDA DE UMA CORRETORA EXIGE A CORRETORA. Sem a guarda, `call` sem conta devolve a PRIMEIRA
+  # linha de `por_conta` — o número de outra corretora com o nome desta, numa conta de dinheiro.
+  # Recusa dita, nunca a linha de quem passou na frente.
+  it 'recusa medir uma conta sem saber qual é' do
+    run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete }, conta: outra_conta)
+
+    expect { described_class.new(inicio: nil, fim: nil).call }.to raise_error(ArgumentError)
   end
 
   # A medida lê a ferramenta pelo SLUG DELA. Digitá-lo aqui faria a consulta devolver zero em

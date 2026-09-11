@@ -14,15 +14,23 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
                                      status: :active, enabled: true, instruction: 'Atenda.')
   end
 
+  # As dezessete seguradoras que o portal acionou nas TRÊS cotações reais da conta de teste, lidas em
+  # 11/09/2026 por `agger quote result`: os mesmos códigos na renovação, na moto e no caminhão.
+  let(:dezessete) { %w[1 3 4 5 7 8 11 12 19 20 26 44 46 47 48 50 55] }
+
   before { enable_test_encryption! }
 
   around { |example| with_modified_env(INSURANCE_QUOTING_ENABLED: 'true') { example.run } }
 
+  # UMA conexão por corretora (`provider` é único no escopo da conta), como em produção: duas
+  # passadas do poll no mesmo exemplo reusam a mesma, e não criam uma segunda que o banco recusa.
   def ready_connection
-    record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
-    record.update!(status: 'ready')
-    record.store_session!({ 'multicalculoToken' => 'multi' }, expires_at: 3.hours.from_now)
-    record
+    @ready_connection ||= begin
+      record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
+      record.update!(status: 'ready')
+      record.store_session!({ 'multicalculoToken' => 'multi' }, expires_at: 3.hours.from_now)
+      record
+    end
   end
 
   def offer(code, status, amount = nil)
@@ -71,6 +79,33 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       progresso = poll_com([offer('8', 'quoted', 900.0), offer('8', 'declined')])
 
       expect(progresso.handle[described_class::ACIONADAS_KEY]).to eq(['8'])
+    end
+
+    # UNIÃO É IDEMPOTENTE: RECONSULTAR NÃO MUDA NADA. O portal lista as dezessete desde a PRIMEIRA
+    # consulta, e o poll consulta de novo a cada passada até o negócio assentar (medido em 04/09:
+    # 392 s). Somar em vez de unir daria 34 na segunda passada e 340 na vigésima — e a medida
+    # cobraria trezentas e quarenta seguradoras por UMA cotação, sem nada ficar vermelho.
+    it 'nao infla a lista quando o portal repete o mesmo resultado' do
+      # Arrange — o resultado que o portal devolve igual a cada consulta.
+      offers = dezessete.map { |codigo| offer(codigo, 'declined') }
+
+      # Act — duas passadas do poll sobre a MESMA cotação.
+      primeira = poll_com(offers)
+      segunda = poll_com(offers, handle: primeira.handle)
+
+      # Assert — as mesmas dezessete nas duas, sem uma repetição sequer.
+      expect(primeira.handle[described_class::ACIONADAS_KEY]).to eq(dezessete.sort)
+      expect(segunda.handle[described_class::ACIONADAS_KEY]).to eq(dezessete.sort)
+    end
+
+    # A mesma regra no menor caso possível: um código que o handle JÁ TINHA e o resultado repete
+    # entra uma vez só. É a interseção que os exemplos acima não tinham — e por isso `+` passava.
+    it 'nao conta de novo quem o handle ja tinha' do
+      progresso = poll_com([offer('8', 'quoted', 900.0)],
+                           handle: { 'quote_id' => 'q1', 'entregues' => ['8'],
+                                     described_class::ACIONADAS_KEY => %w[3 8] })
+
+      expect(progresso.handle[described_class::ACIONADAS_KEY]).to eq(%w[3 8])
     end
 
     # Cotação em que o portal ainda não listou ninguém é MEDIDA COM ZERO, e não "sem medida": a

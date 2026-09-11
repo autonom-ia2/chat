@@ -77,8 +77,8 @@ código para o comparativo). Escrever ali a lista de códigos faz a medida conta
 
 | # | Termo | Estado | Guarda / evidência |
 |---|---|---|---|
-| 1 | Consulta por corretora e por período devolve cotações E seguradoras acionadas | Fechado | `medida_spec` ("os dois números", "isolamento e janela"), `measurement_spec` (API), `insurance_measurements_controller_spec` (Super Admin); M4, M7 |
-| 2 | O número bate com o caso conhecido: dezessete acionadas → dezessete | Fechado | `medida_spec` "conta dezessete seguradoras quando a execução acionou dezessete" (os 17 códigos reais); `insurance_quote_medida_spec` "grava as dezessete, em qualquer status" (1 quoted + 15 declined + 1 auth_required, o desenho do caminhão real); M1, M2 |
+| 1 | Consulta por corretora e por período devolve cotações E seguradoras acionadas | Fechado | `medida_spec` ("os dois números", "isolamento e janela", incluindo as DUAS bordas da janela e a recusa de medir conta que não se sabe qual é), `measurement_spec` (API, as duas bordas), `insurance_measurements_controller_spec` (Super Admin); M4, M7, M14, M16 |
+| 2 | O número bate com o caso conhecido: dezessete acionadas → dezessete | Fechado | `medida_spec` "conta dezessete seguradoras quando a execução acionou dezessete" (os 17 códigos reais); `insurance_quote_medida_spec` "grava as dezessete, em qualquer status" (1 quoted + 15 declined + 1 auth_required, o desenho do caminhão real) e "nao infla a lista quando o portal repete o mesmo resultado" (duas passadas, dezessete nas duas); M1, M2, M15 |
 | 3 | Quantas cotações viraram proposta individual; contador definido e zerado, ponto de registro documentado | Fechado | `medida_spec` "propostas individuais (entrega 8)" (zero hoje; conta de verdade quando a chave existe); M8; ponto de registro na seção acima e em `insurance_quote.rb` |
 | 4 | A consulta não depende de engenheiro | Fechado | Página do Super Admin + endpoint da conta, documentados em `docs/insurance/README.md`; `insurance_measurements_controller_spec`, `measurement_spec` (gate e permissão); M6 |
 | 5 | Nada aqui vira freio | Fechado | `medida_nao_e_freio_spec` (por AST: a medida só é nomeada pelas superfícies de leitura, não é alcançada do caminho da cotação, e não escreve); M9 |
@@ -93,7 +93,32 @@ conta 16, que foram lidas por CLI e não pelo poll desta versão. A medida passa
 partir da primeira cotação depois do deploy. **Não há backfill**: reprocessar exigiria chamar
 `quote/result` de cada cotação antiga, e o portal não garante a leitura de cotação encerrada.
 
-## Mutações (13) — todas aplicadas, rodadas, restauradas e conferidas
+## Rodada de correção — duas regras que só existiam no comentário
+
+Revisão cega reprovou a primeira versão com dois achados, e os dois eram reais: reproduzi cada um
+antes de corrigir, e nos dois casos os 62 exemplos do trilho passaram COM a regra desligada.
+
+- **A janela só tinha a borda de baixo.** `created_at: inicio..fim` virava `created_at: inicio..` sem
+  nada ficar vermelho. Nenhum exemplo criava execução DEPOIS do `fim` — "respeita o periodo pedido"
+  só exercitava a linha de 40 dias atrás. O estrago é o pior tipo: a operação pede setembro, a
+  cotação de 01/10 entra na fatura de setembro, e a conta fica MAIOR. Número inflado em fatura
+  ninguém questiona.
+- **A união não era provada idempotente.** O comentário dizia "reconsulta não muda nada" e trocar
+  `|` por `+` passava em 62 exemplos do trilho E em 590 de `spec/services/autonomia/agents` +
+  `spec/jobs/autonomia`. O portal lista as dezessete desde a PRIMEIRA consulta e o poll consulta a
+  cada passada: com `+`, a segunda passada grava 34, a vigésima grava 340 — a medida cobraria
+  trezentas e quarenta seguradoras por UMA cotação. Os exemplos existentes não pegavam porque
+  "nao perde quem ja tinha aparecido" usa handle `%w[3 9]` contra resultado `['8']` (sem interseção)
+  e "nao repete a mesma seguradora" só cobre duplicata DENTRO de uma consulta.
+
+A classe do defeito é uma só — **regra escrita no comentário e não exercitada por nenhum exemplo** —,
+então varri as demais decisões da entrega em vez de corrigir só os dois casos. A varredura achou mais
+uma: `call` sem conta tem `raise ArgumentError` e nenhuma spec o sustentava; sem ele, `por_conta.first`
+devolve a linha da PRIMEIRA corretora com o nome desta, numa conta de dinheiro. Está guardada em M16.
+As demais (slug, escopo por conta, `jsonb_typeof`, `.sort`, `.uniq`, `.presence`, fuso, janela
+invertida, janela padrão) já tinham guarda — conferido mutação a mutação.
+
+## Mutações (16) — todas aplicadas, rodadas, restauradas e conferidas
 
 Cada uma desliga UMA regra e reprova o exemplo que a sustenta. Restauração conferida por comparação
 do conteúdo do arquivo com o original.
@@ -101,8 +126,8 @@ do conteúdo do arquivo com o original.
 | # | Mutação | Arquivo | Reprova |
 |---|---|---|---|
 | M1 | `acionadas` conta só `quoted` + `declined` | `quote_offers.rb` | "grava as dezessete, em qualquer status" (dá 16 — o caso do caminhão) |
-| M2 | `build_progress` não grava `ACIONADAS_KEY` | `insurance_quote.rb` | 6 exemplos de "seguradoras acionadas no handle" |
-| M3 | a lista vira a foto da última consulta (sem união) | `insurance_quote.rb` | "nao perde quem ja tinha aparecido numa consulta anterior" |
+| M2 | `build_progress` não grava `ACIONADAS_KEY` | `insurance_quote.rb` | 8 exemplos de "seguradoras acionadas no handle" |
+| M3 | a lista vira a foto da última consulta (sem união) | `insurance_quote.rb` | "nao perde quem ja tinha aparecido numa consulta anterior" e "nao conta de novo quem o handle ja tinha" |
 | M4 | a medida conta execução em vez de cotação no portal | `medida.rb` | "nao conta execução que nunca virou cotação", "separa o envio sem confirmação" |
 | M5 | `cotacoes_sem_medida` vira `0` | `medida.rb` | 3 exemplos (serviço + API) |
 | M6 | data ilegível cai na janela padrão em silêncio | `medida.rb` | 3 exemplos (serviço + API + Super Admin) |
@@ -110,12 +135,17 @@ do conteúdo do arquivo com o original.
 | M8 | `propostas` vira zero escrito à mão | `medida.rb` | "conta as propostas registradas no handle" |
 | M9 | a medida entra no caminho da cotação (o freio pela porta dos fundos) | `insurance_quote.rb` | os 2 exemplos de alcance de `medida_nao_e_freio_spec` |
 | M10 | `MAX_RUNS_PER_CONVERSATION = 8` por hora de volta no `Bound` | `bound.rb` | a guarda pelo nome E o exemplo de comportamento |
-| M11 | a medida lê um slug digitado à mão | `medida.rb` | 11 exemplos, a começar por "le o slug da propria ferramenta" |
+| M11 | a medida lê um slug digitado à mão | `medida.rb` | 12 exemplos, a começar por "le o slug da propria ferramenta" |
 | M12 | o job descarta a chave (`ACIONADAS_KEY` entra em `MARCAS`) | `async_run_job.rb` | "sobrevive ao job e fica no handle que a medida soma" |
 | M13 | a janela ignora o fuso da corretora | `medida.rb` | "le as datas no fuso de relatorio da corretora" |
+| M14 | a janela perde a borda de cima (`inicio..fim` → `inicio..`) | `medida.rb` | "nao conta cotação feita depois do fim da janela" (serviço + API) |
+| M15 | a união vira soma (`\|` → `+`) | `insurance_quote.rb` | "nao infla a lista quando o portal repete o mesmo resultado" e "nao conta de novo quem o handle ja tinha" |
+| M16 | a medida de uma conta aceita não saber qual é (sem o `raise`) | `medida.rb` | "recusa medir uma conta sem saber qual é" |
 
 M12 é a que mais importa: sem ela, uma chave que a ferramenta grava e o job descarta passaria em
-todos os exemplos de unidade e sumiria em produção.
+todos os exemplos de unidade e sumiria em produção. M14 e M15 são as duas que a primeira versão não
+tinha, e as duas inflavam o número de COBRANÇA — erro que ninguém contesta, porque quem paga a mais
+não reclama de um total que parece grande.
 
 ## Comandos rodados
 
@@ -130,11 +160,11 @@ npx tsx src/cli/main.ts agger quote result '4c278fcf-a456-447a-a06e-e49f7a93baa8
 # chat2you (banco de teste próprio do trilho)
 eval "$(rbenv init -)"; export POSTGRES_DATABASE=chatwoot_test_e7
 RAILS_ENV=test bundle exec rails db:create db:schema:load
-bundle exec rspec <specs do trilho> --format json --out r.json      # 60 exemplos, 0 falhas
+bundle exec rspec <specs do trilho> --format json --out r.json      # 67 exemplos, 0 falhas
 bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
   --format json --out ampla.json                                    # suíte ampla
 bundle exec rubocop --format json --out rubocop.json <arquivos tocados>   # 0 ofensas
-uv run python3 mutacoes.py                                          # M1–M12
+uv run python3 mutacoes.py                                          # M1–M16 (919 na suíte ampla)
 ```
 
 ## Arquivos
