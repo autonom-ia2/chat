@@ -149,3 +149,36 @@ CEP em mãos → cotar direto).
   `quote/read` — resolve #378) e termo 9 (moto NCD3080, caminhão IDX3056). Plano das rodadas em
   `~/ops/agente-cotacao/entrega-2/rodadas-reais.md`. Nenhum turno de teste na conversa 5045 sem
   autorização: o histórico tem CPF e CEP, e o manual manda cotar sem pedir licença.
+
+## Rodadas reais (11/09/2026, autorizadas pelo Rodrigo: "Tem meu ok em tudo")
+
+**Rodada A — renovação com a apólice do William: VERDE.** PDF + pedido numa mensagem (06:47Z).
+Execução 8, cotação `b0220871-…:1`. O especialista escreveu `quotation.isRenewal=true`,
+`previousInsurerCode="657"` (HDI, código de apólice anterior), `bonusClass=9`, `previousClaimsCount=1`,
+número e fim de vigência da apólice, chassi, FIPE, FLEX, coberturas lidas do PDF. Schema guardado na
+conexão 10 na primeira montagem (84 campos). **11 seguradoras cotaram** (Usebens, Mapfre, Suhai,
+Tokio, Justos, Porto, HDI, Pier, Allianz, Bp Assinatura, Ituran), 6 recusaram — na execução 7 eram 17
+recusas. `quote read`: `renovacao=true, seguradoraAnteriorId="657", bonusAnterior=9,
+sinistrosAnterior=1`. Prazo estourou de verdade (19 consultas, 7,5 min): PDF + fecho parcial saíram
+(entrega 4, termo 1). **Fecha #378 e os termos 6 e 8.** Prova: `~/ops/agente-cotacao/entrega-2/rodada-A.md`.
+
+**Rodada B — moto NCD3080: VERDE, com defeito real encontrado e corrigido no caminho.** Primeira
+mensagem (06:58Z): a conferência recusou por `vehicle.isAssociate, vehicle.usagePeriod` sem gastar e a
+Lia perguntou. Na resposta, a conferência recusou de novo só por `usagePeriod` e o especialista
+ESCALOU: o schema publicava o campo **sem `valores`** (o Zod aceitava 0/1/2, o modelo não sabia que
+"todos os dias" é 0) — furo do termo 3 neste campo, e o mesmo no caminhão (`predominantPeriod`, que
+ainda ia "3" em silêncio e cujo domínio do cálculo é 1/2/3, não o 0/1/2 da lista da tela).
+Correção: autonomia-adapters#53 (listas curtas de `Auto/Data` capturadas inteiras em
+`listas-auto.json`; `usagePeriod` lê `PeriodoUso`; caminhão com rótulos ao lado do Zod e trava
+`caminhaoSemPeriodo`; guarda: todo campo restrito a literais publica valores). Codex 2 rodadas →
+APROVADO. Lambda versão 21 publicada por CLI (o GitHub Actions ficou ~30 min sem criar runs; os dois
+jobs do CI foram reproduzidos localmente; a branch precisou de rebase por ter nascido do commit
+pré-squash do #52). `quote_schemas` da conexão 10 apagado (backup) e rebuscado com os valores. Retomada
+(07:56Z): execução 9, `vehicleType=m`, `isAssociate=false`, `usagePeriod=0`; 2 preços (Suhai R$ 291,35,
+Porto R$ 430,75), 15 recusas; `quote read`: `tipo=m, associado=false, periodoUso="0"`. **Termo 9
+(moto) fechado.** Issue chat#383: o schema guardado nunca se renova sozinho. Prova: `rodada-B.md`.
+
+**Rodada C — caminhão IDX3056: PENDENTE por indisponibilidade da OpenAI.** Três tentativas
+(08:05Z, 08:14Z, 08:24Z) morreram em `503 server_is_overloaded` antes de qualquer resposta — quatro
+503 em 18 min, "Partial System Degradation" no status da OpenAI. Nenhuma cotação gasta. Issue
+chat#384: o turno morre em silêncio, sem retry/backoff nem aviso ao cliente. Prova: `rodada-C.md`.
