@@ -3,8 +3,10 @@
 # "Porto Seguro: R$ 2.167,00" não diz se são R$ 2.167 no período inteiro ou por mês, e o cliente lê
 # pelo que lhe convém. Errar isso para baixo é o lado que fecha venda e vira reclamação depois.
 #
-# O significado NÃO é decidido aqui: quem deriva é o adapter, olhando o parcelamento que o portal
-# devolveu, e manda em `basis`. Aqui só se traduz o que veio — e quando não veio, não se inventa.
+# O significado NÃO é decidido aqui: quem deriva é o adapter, olhando o que o portal devolveu — o
+# parcelamento, que prova `total`; o marcador `packageType=1`, que marca assinatura mensal
+# (`monthly`) —, e manda em `basis`, com o campo do portal nomeado em `basis_evidence`. Aqui só se
+# traduz o que veio — e quando não veio, não se inventa.
 class Autonomia::Insurance::PremiumText
   # Colada no item a que pertence, e curta de propósito: é uma linha secundária debaixo de um
   # preço. Era um parágrafo no fim do bloco, que aparecia mesmo valendo para UMA oferta e ficava
@@ -19,12 +21,19 @@ class Autonomia::Insurance::PremiumText
   # para a linha de baixo, porque tudo na mesma linha é o que fazia o preço competir com a
   # explicação — e quem lê no celular perde os dois.
   #
-  # "NO TOTAL" SÓ QUANDO O ADAPTER DISSE `total`. Até a entrega 13 o parcelamento sozinho também
-  # dizia "no total" — uma segunda derivação, aqui, por cima da do adapter. Com o contrato real do
-  # parcelamento lido lá (11/09/2026), parcelamento só vem junto de `total`; e se um dia vier sem,
-  # é o adapter que tem de explicar, não este texto que tem de adivinhar.
+  # "NO TOTAL" SÓ QUANDO O ADAPTER DISSE `total`; "POR MÊS" SÓ QUANDO DISSE `monthly`. Até a entrega
+  # 13 o parcelamento sozinho também dizia "no total" — uma segunda derivação, aqui, por cima da do
+  # adapter. O `monthly` entrou na noite de 11/09/2026: o PDF do comparativo do próprio portal,
+  # anexado na mesma conversa, imprimia "R$ 298,43 por mês" para a Bp Assinatura enquanto o cliente
+  # lia aqui a ressalva de valor sem período. O marcador é `packageType=1` do portal, lido pelo
+  # adapter e nomeado em `basis_evidence`; a assinatura não tem parcelamento (`parcelamentos=[]`).
+  # Qualquer outro `basis` sai só com o valor: é o adapter que tem de explicar, não este texto que
+  # tem de adivinhar.
   def resumo
-    total? ? "#{valor} no total" : valor
+    return "#{valor} no total" if total?
+    return "#{valor} por mês" if mensal?
+
+    valor
   end
 
   # -> String ou nil. O que vale para ESTE preço, e não para o bloco: parcelamento quando o portal
@@ -35,17 +44,25 @@ class Autonomia::Insurance::PremiumText
   # A RESSALVA VEM ANTES DO PARCELAMENTO. Sem período, o parcelamento não tem o que parcelar: "R$
   # 351,59 / ou 2x de R$ 175,80" sem a ressalva diz ao cliente, por omissão, que 351,59 é o total —
   # exatamente o que `basis: 'unknown'` nega. O adapter hoje só manda `installments` junto de
-  # `total`; se um dia mandar sem, o cliente ouve a ressalva, e o motivo registrado no handle
-  # (entrega 13, termo 1) é que explica o parcelamento que ficou de fora.
+  # `total` (a assinatura mensal vem com `parcelamentos=[]`, sem linha de parcelamento); se um dia
+  # mandar sem período, o cliente ouve a ressalva, e o motivo registrado no handle (entrega 13,
+  # termo 1) é que explica o parcelamento que ficou de fora.
   def detalhe
     return SEM_BASE if indefinido?
 
     "ou #{parcelas['count']}x de #{money(parcelas['amount'])}" if parcelas.present?
   end
 
-  # true quando o preço saiu sem unidade — é o que dispara a ressalva colada na oferta.
+  # true quando o preço saiu sem unidade — nem `total` nem `monthly`. É o ÚNICO predicado de "tem
+  # período": dispara a ressalva colada na oferta, o registro no handle e a ordem no lote.
   def indefinido?
-    !total?
+    !(total? || mensal?)
+  end
+
+  # true quando o adapter disse `monthly` (assinatura mensal, marcada pelo portal em `packageType=1`).
+  # Público porque a ordem no lote precisa separar mensais de totais sem reler `basis` por conta própria.
+  def mensal?
+    @premium['basis'] == 'monthly'
   end
 
   # POR QUE o período não saiu: o `basis_evidence` do adapter, que nomeia o campo do portal que

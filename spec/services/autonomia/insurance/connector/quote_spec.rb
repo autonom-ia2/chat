@@ -70,12 +70,16 @@ RSpec.describe 'Autonomia::Insurance::Connector quote' do
 
       # Assert
       expect(result['status']).to eq('completed')
-      expect(result['offers'].size).to eq(3)
-      # UMA oferta do mock sai sem período, com o motivo real da Bp Assinatura (11/09/2026): é o que
-      # deixa o caminho da ressalva e da ordenação visível em desenvolvimento.
+      expect(result['offers'].size).to eq(4)
+      # A Bp Assinatura sai `monthly`, como na vida real (`packageType=1`, 11/09/2026), e a oferta
+      # sem período é uma seguradora fictícia: juntas deixam visíveis em desenvolvimento o "por mês",
+      # a ressalva e a ordem dos três blocos.
+      mensal = result['offers'].select { |o| o['premium']['basis'] == 'monthly' }
+      expect(mensal.map { |o| o['insurer']['name'] }).to eq(['Bp Assinatura'])
+      expect(mensal.first['premium']['basis_evidence']).to include('packageType=1')
       sem_periodo = result['offers'].select { |o| o['premium']['basis'] == 'unknown' }
-      expect(sem_periodo.map { |o| o['insurer']['name'] }).to eq(['Bp Assinatura'])
-      expect(sem_periodo.first['premium']['basis_evidence']).to include('parcelamentos=[]')
+      expect(sem_periodo.map { |o| o['insurer']['name'] }).to eq(['Seguradora Exemplo'])
+      expect(sem_periodo.first['premium']['basis_evidence']).to include('fecha com premio')
     end
 
     it 'hands back a proposal url' do
