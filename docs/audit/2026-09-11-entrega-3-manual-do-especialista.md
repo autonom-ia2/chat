@@ -100,3 +100,10 @@ Rodrigo decidir.
 substituídas (`$nomeAgente`, `$nomeCorretora`, …). Não entra aqui: o plano da entrega 3 é o manual
 do especialista, e o principal tem variáveis, que exigem outro desenho (substituir na leitura, com
 os valores gravados). Issue a abrir.
+
+Rodada 2 (`eddff00a66`): código aprovado nos achados anteriores; REPROVADO pelo script de rollout —
+P1 `for i` em `ssm()` clobberava o `i` de `subir()` (escopo dinâmico do zsh; o upload em pedaços nunca
+terminava) → índice local; P2 `ssm | tee` sem `pipefail` escondia falha remota → saída capturada,
+status do `ssm` exigido E `UPDATE 1`, `set -o pipefail`. P3: a spec do zero-km usava a instância do
+job na conferência → `tool_no_turno`. E o motivo pedia "o nome do carro" que a consulta interna não
+entregava → `@modelo_lido` entra no texto ao modelo ("o veículo (Onix 1.0)").

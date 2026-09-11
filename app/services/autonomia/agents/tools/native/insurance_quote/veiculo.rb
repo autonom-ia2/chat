@@ -58,9 +58,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
     return unless veiculo['isZeroKm'].nil? && veiculo['modelYear'].to_i >= Date.current.year
 
     { 'campo' => ZERO_KM, 'severidade' => 'erro',
-      'motivo' => "o ano do modelo (#{veiculo['modelYear']}) é o atual ou o seguinte e ninguém disse se o veículo é " \
-                  'zero-quilômetro; cotado assim sai como usado, com preço errado. Pergunte ao cliente, com o nome ' \
-                  'do carro, se é zero ou se já está rodando com ele, e reenvie.' }
+      'motivo' => "o ano do modelo (#{veiculo['modelYear']}) é o atual ou o seguinte e ninguém disse se o veículo " \
+                  "(#{@modelo_lido || 'modelo não informado pelo portal'}) é zero-quilômetro; cotado assim sai como " \
+                  'usado, com preço errado. Pergunte ao cliente, pelo nome do carro, se é zero ou se já está rodando ' \
+                  'com ele, e reenvie.' }
   end
 
   def com_veiculo(dados)
@@ -77,10 +78,13 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
 
   # O que a consulta acrescenta, POR CIMA do que o modelo escreveu: tipo e ano do modelo. Vazio
   # quando não houve consulta — no turno sem sessão viva.
+  # O nome do carro fica guardado para o texto do zero-km — não vai na entrada (o adapter não tem
+  # esse campo; o nome ele mesmo resolve pela placa).
   def lido_da_placa(placa)
     consulta = consultar_placa(placa)
     return sem_sessao_viva if consulta.nil?
 
+    @modelo_lido = consulta['model'].presence
     { 'vehicleType' => consulta['vehicle_type'], 'modelYear' => consulta['model_year'] }.compact
   end
 

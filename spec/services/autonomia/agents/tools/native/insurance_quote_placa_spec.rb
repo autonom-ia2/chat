@@ -151,13 +151,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     ready_connection
     base = { 'produto' => 'auto', 'cpf' => '04297912678', 'cep' => '31110210' }
 
-    conferencia = tool(base.merge('vehicle' => { 'plate' => 'ZER0K26' })).precheck
+    conferencia = tool_no_turno(base.merge('vehicle' => { 'plate' => 'ZER0K26' })).precheck
     envio = tool(base.merge('vehicle' => { 'plate' => 'ZER0K26' })).start
-    resolvido = tool(base.merge('vehicle' => { 'plate' => 'ZER0K26', 'isZeroKm' => false })).precheck
-    usado = tool(base.merge('vehicle' => { 'plate' => 'HIK9383' })).precheck
+    resolvido = tool_no_turno(base.merge('vehicle' => { 'plate' => 'ZER0K26', 'isZeroKm' => false })).precheck
+    usado = tool_no_turno(base.merge('vehicle' => { 'plate' => 'HIK9383' })).precheck
 
     expect(conferencia.motivo).to eq('faltam_dados')
-    expect(conferencia.to_s).to include(Date.current.year.to_s, 'zero-quilômetro', 'vehicle.isZeroKm —')
+    expect(conferencia.to_s).to include(Date.current.year.to_s, 'Onix 1.0', 'zero-quilômetro', 'vehicle.isZeroKm —')
     expect(conferencia.faltando).to eq(['vehicle.isZeroKm'])
     expect(envio['motivo']).to eq('faltam_dados')
     expect(envio['pedido']).to include('se o veículo é zero-quilômetro')
