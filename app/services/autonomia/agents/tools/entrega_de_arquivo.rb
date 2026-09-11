@@ -6,14 +6,20 @@
 #
 # O QUE VIAJA é a forma serializada (`to_h`, chaves de texto): a entrega atravessa o `Progress`, o
 # handle e os argumentos do `AsyncPublishJob` (Sidekiq), e bytes não cabem ali. Os bytes só existem
-# no momento da publicação (`#baixar`), dentro do job, com três guardas — teto de tamanho, teto de
-# tempo e assinatura de PDF — porque a URL vem de fora (o blob do portal do AGGER) e o que ela
-# responde não é promessa nossa: em 11/09/2026 três comparativos reais responderam 404 com um XML de
-# `BlobNotFound`. Sem a assinatura, esse XML chegaria ao cliente com nome de PDF.
+# no momento da publicação (`#gravar`), dentro do job, com três guardas no download — teto de
+# tamanho, teto de tempo e assinatura de PDF — porque a URL vem de fora (o blob do portal do AGGER)
+# e o que ela responde não é promessa nossa: um 404 do armazenamento do portal vem como XML de
+# `BlobNotFound`, e sem a assinatura esse XML chegaria ao cliente com nome de PDF.
 #
-# A RESERVA é o texto com o link, o mesmo de antes: quando o download falha, o cliente recebe o link
-# como recebia — os preços que já saíram não voltam, e a falha do arquivo não pode apagar a entrega.
-# O publicador decide isso; este objeto só carrega os dois caminhos.
+# O ARQUIVO É GRAVADO NO ARMAZENAMENTO AQUI (`#gravar`), antes de existir mensagem: o ActiveStorage
+# sobe o arquivo no `after_commit` da mensagem, e uma subida que falhasse ali deixaria a mensagem
+# no ar com a legenda e um anexo sem bytes — o cliente sem arquivo e sem link, e o token já
+# publicado fazendo qualquer retry virar duplicado (rodada 3 de revisão, 11/09/2026). Gravando
+# antes, a falha do armazenamento é `Indisponivel` como a do download, e cai na mesma reserva.
+#
+# A RESERVA é o texto com o link, o mesmo de antes: quando o download ou a gravação falham, o
+# cliente recebe o link como recebia — os preços que já saíram não voltam, e a falha do arquivo não
+# pode apagar a entrega. O publicador decide isso; este objeto só carrega os dois caminhos.
 class Autonomia::Agents::Tools::EntregaDeArquivo
   CHAVE = 'arquivo'.freeze
   # Um comparativo de auto tem dezenas de KB; o teto é folga de cem vezes, não medida. Existe para o
@@ -23,7 +29,10 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # download não pode deixar a publicação pela metade.
   ABERTURA_SEGUNDOS = 5
   LEITURA_SEGUNDOS = 15
-  REDIRECIONAMENTOS = 2
+  # NENHUM redirecionamento: o blob do portal é servido direto, e "só https" (URL_SEGURA) valeria
+  # só para o primeiro salto — um 302 para http levaria o download para o transporte sem proteção
+  # que a forma recusou.
+  REDIRECIONAMENTOS = 0
   ASSINATURA_PDF = '%PDF-'.freeze
   TIPO_PDF = 'application/pdf'.freeze
   # O que um servidor pode declarar sem desmentir um PDF: o tipo certo, ou "bytes" (é assim que o
@@ -34,13 +43,16 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   URL_SEGURA = %r{\Ahttps://\S+\z}i
   NOME_DE_PDF = %r{\A[^/\\]+\.pdf\z}i
 
-  # O download não pôde entregar um PDF. `motivo` é um código curto (nunca o texto da resposta nem
-  # da exceção): vai para o log, e o publicador cai para a reserva.
+  # O download ou a gravação não puderam entregar um PDF. `motivo` é um código curto (nunca o
+  # texto da resposta nem da exceção): vai para o log, e o publicador cai para a reserva. `causa` é
+  # o NOME DA CLASSE da exceção de origem, quando há uma — o armazenamento falha de muitos jeitos
+  # (rede, credencial, integridade) e o log precisa dizer qual, sem a mensagem.
   class Indisponivel < StandardError
-    attr_reader :motivo
+    attr_reader :motivo, :causa
 
-    def initialize(motivo)
+    def initialize(motivo, causa: nil)
       @motivo = motivo
+      @causa = causa
       super("arquivo indisponivel: #{motivo}")
     end
   end
@@ -92,20 +104,42 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     "arquivo:#{url}"
   end
 
-  # -> `ActionDispatch::Http::UploadedFile` com o PDF, no formato que `Messages::MessageBuilder`
-  # anexa. Levanta `Indisponivel` em qualquer falha: resposta que não é 200, tamanho acima do teto
-  # (anunciado ou medido durante o download), tempo, tipo declarado que desmente, bytes sem a
-  # assinatura de PDF. Quem chama fecha o arquivo temporário.
+  # -> `ActiveStorage::Blob` gravado (arquivo já no armazenamento, linha salva), pronto para ser
+  # anexado pelo `signed_id`. Levanta `Indisponivel` na falha do download (`#baixar`) e na do
+  # armazenamento (motivo `armazenamento`, com a classe da exceção em `causa`). O arquivo
+  # temporário é fechado sempre — publicado ou não.
+  #
+  # `create_and_upload!` salva a linha ANTES de subir o arquivo (é assim que o Rails evita a
+  # colisão de chave); a transação em volta é o que faz a subida que falha não deixar uma linha
+  # de blob sem arquivo no banco. `identify: false` porque o tipo já foi conferido pelos bytes.
+  def gravar
+    tempfile = baixar
+    begin
+      ActiveStorage::Blob.transaction do
+        ActiveStorage::Blob.create_and_upload!(io: tempfile, filename: nome, content_type: TIPO_PDF, identify: false)
+      end
+    rescue StandardError => e
+      raise Indisponivel.new('armazenamento', causa: e.class.name)
+    end
+  ensure
+    tempfile&.close!
+  end
+
+  # -> o `Tempfile` com o PDF (o que o `Down` baixou), aberto e rebobinado. Levanta `Indisponivel`
+  # em qualquer falha: resposta que não é 200, redirecionamento, tamanho acima do teto (anunciado
+  # ou medido durante o download), tempo, tipo declarado que desmente, bytes sem a assinatura de
+  # PDF — e, na recusa, o arquivo temporário já baixado é fechado aqui, porque quem chama não o
+  # recebe. Quem recebe o `Tempfile` é quem o fecha.
   def baixar
     tempfile = Down.download(url, max_size: TETO_BYTES, open_timeout: ABERTURA_SEGUNDOS,
                                   read_timeout: LEITURA_SEGUNDOS, max_redirects: REDIRECIONAMENTOS)
-    conferir_tipo!(tempfile.content_type)
-    conferir_assinatura!(tempfile)
-    ActionDispatch::Http::UploadedFile.new(tempfile: tempfile, filename: nome, type: TIPO_PDF)
+    conferir(tempfile)
   rescue Down::TooLarge
     raise Indisponivel, 'tamanho'
   rescue Down::TimeoutError
     raise Indisponivel, 'tempo'
+  rescue Down::TooManyRedirects
+    raise Indisponivel, 'redirecionamento'
   rescue Down::ResponseError => e
     raise Indisponivel, "http_#{e.response&.code.to_s.gsub(/[^0-9]/, '').presence || 'erro'}"
   rescue Down::Error => e
@@ -113,6 +147,17 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   end
 
   private
+
+  # As duas conferências sobre o que já foi baixado. O `Tempfile` fica em disco até o GC se a
+  # recusa sair sem fechá-lo: são até 10 MB por comparativo recusado, no worker.
+  def conferir(tempfile)
+    conferir_tipo!(tempfile.content_type)
+    conferir_assinatura!(tempfile)
+    tempfile
+  rescue Indisponivel
+    tempfile.close!
+    raise
+  end
 
   def conferir_tipo!(tipo)
     declarado = tipo.to_s.split(';').first.to_s.strip.downcase

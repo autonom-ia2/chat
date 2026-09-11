@@ -62,8 +62,11 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
     expect(entrega.identidade).to eq("arquivo:#{url}")
   end
 
+  # O QUE SAI DO DOWNLOAD é o `Tempfile` conferido; o que vai ao publicador é o BLOB já gravado
+  # (`#gravar`). O tempfile é fechado nos dois destinos — gravado ou recusado —, porque quem baixa
+  # até 10 MB por comparativo no worker não pode deixar isso em disco até o GC.
   describe '#baixar' do
-    it 'devolve o PDF como arquivo enviado, com o nome que vai ao cliente' do
+    it 'devolve o PDF baixado, aberto e rebobinado' do
       # Arrange
       stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
 
@@ -71,10 +74,9 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       arquivo = entrega.baixar
 
       # Assert
-      expect(arquivo).to be_a(ActionDispatch::Http::UploadedFile)
-      expect(arquivo.original_filename).to eq('Comparativo de seguro — placa ABC1D23.pdf')
-      expect(arquivo.content_type).to eq('application/pdf')
+      expect(arquivo).to be_a(Tempfile)
       expect(arquivo.read).to eq(pdf)
+      arquivo.close!
     end
 
     # O blob do portal do AGGER responde `application/octet-stream`: o que decide é a assinatura
@@ -82,7 +84,10 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
     it 'aceita o tipo generico de bytes quando os bytes sao de PDF' do
       stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/octet-stream' })
 
-      expect(entrega.baixar.content_type).to eq('application/pdf')
+      arquivo = entrega.baixar
+
+      expect(arquivo.read).to eq(pdf)
+      arquivo.close!
     end
 
     it 'recusa o que nao e PDF, mesmo com o tipo certo no cabecalho' do
@@ -97,13 +102,27 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       expect { entrega.baixar }.to raise_error(described_class::Indisponivel) { |e| expect(e.motivo).to eq('tipo_text_html') }
     end
 
-    # O 404 real de 11/09/2026: o portal devolve a URL do comparativo e o blob não existe
-    # (`BlobNotFound`, XML). Sem esta guarda o cliente receberia um "PDF" de 215 bytes de XML.
+    # O 404 do armazenamento do portal (Azure Blob) vem como XML de `BlobNotFound`. Sem esta
+    # guarda o cliente receberia um "PDF" de 215 bytes de XML.
     it 'recusa a URL que nao responde o arquivo' do
       stub_request(:get, url).to_return(status: 404, body: '<?xml version="1.0"?><Error><Code>BlobNotFound</Code></Error>',
                                         headers: { 'Content-Type' => 'application/xml' })
 
       expect { entrega.baixar }.to raise_error(described_class::Indisponivel) { |e| expect(e.motivo).to eq('http_404') }
+    end
+
+    # "Só https" valeria só para o primeiro salto: um 302 para http levaria o download ao transporte
+    # sem proteção que a forma recusou. O blob do portal é servido direto, então NENHUM
+    # redirecionamento é seguido (rodada 3, 11/09/2026).
+    it 'recusa o redirecionamento, sem seguir para onde ele aponta' do
+      # Arrange
+      destino = 'http://inseguro.test/comparativo-9.pdf'
+      stub_request(:get, url).to_return(status: 302, headers: { 'Location' => destino })
+      stub_request(:get, destino).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+
+      # Act / Assert
+      expect { entrega.baixar }.to raise_error(described_class::Indisponivel) { |e| expect(e.motivo).to eq('redirecionamento') }
+      expect(a_request(:get, destino)).not_to have_been_made
     end
 
     it 'recusa o arquivo maior que o teto ANTES de baixar, pelo tamanho anunciado' do
@@ -127,15 +146,108 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       expect { entrega.baixar }.to raise_error(described_class::Indisponivel) { |e| expect(e.motivo).to eq('tempo') }
     end
 
-    it 'baixa com teto de tempo de conexao e de leitura, nao com o padrao de 30 s do Down' do
+    it 'baixa com teto de tempo, de tamanho e sem redirecionamento, nao com os padroes do Down' do
       stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
       allow(Down).to receive(:download).and_call_original
 
-      entrega.baixar
+      entrega.baixar.close!
 
       tetos = { max_size: described_class::TETO_BYTES, open_timeout: described_class::ABERTURA_SEGUNDOS,
-                read_timeout: described_class::LEITURA_SEGUNDOS }
+                read_timeout: described_class::LEITURA_SEGUNDOS, max_redirects: 0 }
       expect(Down).to have_received(:download).with(url, hash_including(tetos))
+    end
+
+    # O tempfile recusado não tem quem o feche: `baixar` não o devolve. Sem isto, cada comparativo
+    # recusado deixava até 10 MB em disco no worker até o GC (rodada 3, 11/09/2026).
+    it 'fecha e apaga o arquivo temporario quando recusa o que baixou' do
+      # Arrange
+      stub_request(:get, url).to_return(status: 200, body: '<html>não achei</html>', headers: { 'Content-Type' => 'application/pdf' })
+      baixado = nil
+      allow(Down).to receive(:download).and_wrap_original do |original, *args, **opcoes|
+        baixado = original.call(*args, **opcoes)
+      end
+
+      # Act
+      expect { entrega.baixar }.to raise_error(described_class::Indisponivel)
+
+      # Assert
+      expect(baixado).to be_a(Tempfile)
+      expect(baixado.path).to be_nil
+    end
+  end
+
+  # O ARQUIVO É GRAVADO NO ARMAZENAMENTO ANTES DE EXISTIR MENSAGEM: o ActiveStorage subiria o
+  # arquivo só no `after_commit` da mensagem, e uma subida que falhasse ali deixaria a legenda no ar
+  # com um anexo sem bytes e o token já publicado (rodada 3, 11/09/2026). Gravando aqui, a falha do
+  # armazenamento é `Indisponivel` como a do download, e o publicador cai para a mesma reserva.
+  describe '#gravar' do
+    it 'devolve o blob gravado, com o nome que vai ao cliente, o tipo e os bytes do PDF' do
+      # Arrange
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/octet-stream' })
+
+      # Act
+      blob = entrega.gravar
+
+      # Assert
+      expect(blob).to be_persisted
+      expect(blob.filename.to_s).to eq('Comparativo de seguro — placa ABC1D23.pdf')
+      expect(blob.content_type).to eq('application/pdf')
+      expect(blob.download).to eq(pdf)
+      expect(ActiveStorage::Blob.find_signed!(blob.signed_id)).to eq(blob)
+    end
+
+    it 'fecha e apaga o arquivo temporario depois de gravar' do
+      # Arrange
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      baixado = nil
+      allow(Down).to receive(:download).and_wrap_original do |original, *args, **opcoes|
+        baixado = original.call(*args, **opcoes)
+      end
+
+      # Act
+      entrega.gravar
+
+      # Assert
+      expect(baixado).to be_a(Tempfile)
+      expect(baixado.path).to be_nil
+    end
+
+    it 'recusa com o motivo do armazenamento e a classe da causa quando a subida falha, sem deixar blob sem arquivo' do
+      # Arrange — o serviço de armazenamento indisponível (S3/IAM fora), depois de um download bom
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      allow(ActiveStorage::Blob.service).to receive(:upload).and_raise(Errno::ECONNREFUSED)
+      blobs_antes = ActiveStorage::Blob.count
+
+      # Act / Assert
+      expect { entrega.gravar }.to raise_error(described_class::Indisponivel) do |e|
+        expect(e.motivo).to eq('armazenamento')
+        expect(e.causa).to eq('Errno::ECONNREFUSED')
+      end
+      expect(ActiveStorage::Blob.count).to eq(blobs_antes)
+    end
+
+    it 'fecha e apaga o arquivo temporario tambem quando a subida falha' do
+      # Arrange
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      allow(ActiveStorage::Blob.service).to receive(:upload).and_raise(Errno::ECONNREFUSED)
+      baixado = nil
+      allow(Down).to receive(:download).and_wrap_original do |original, *args, **opcoes|
+        baixado = original.call(*args, **opcoes)
+      end
+
+      # Act
+      expect { entrega.gravar }.to raise_error(described_class::Indisponivel)
+
+      # Assert
+      expect(baixado.path).to be_nil
+    end
+
+    it 'nao grava nada quando o download ja recusou' do
+      stub_request(:get, url).to_return(status: 404, body: 'x')
+      blobs_antes = ActiveStorage::Blob.count
+
+      expect { entrega.gravar }.to raise_error(described_class::Indisponivel) { |e| expect(e.motivo).to eq('http_404') }
+      expect(ActiveStorage::Blob.count).to eq(blobs_antes)
     end
   end
 end

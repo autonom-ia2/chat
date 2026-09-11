@@ -20,12 +20,13 @@
 #    ainda quebra a janela de mídia do turno seguinte (um outgoing entre duas incoming muda o que
 #    `current_turn_incoming` considera turno atual).
 #
-# 4. A ENTREGA DE ARQUIVO (entrega 11) é publicada como ANEXO: o publicador baixa a URL na hora de
-#    publicar (`EntregaDeArquivo#baixar`, com teto de tamanho, de tempo e assinatura de PDF), FORA do
-#    lock da conversa, e anexa pelo `Messages::MessageBuilder` — o mesmo caminho do agente humano que
-#    manda um arquivo. Quando o download falha, sai o texto de reserva com o link, como saía antes,
-#    com o motivo no log: a falha do arquivo não apaga a entrega, e nunca é silenciosa. A identidade
-#    é a mesma nos dois caminhos, então um retry não publica o arquivo por cima do link.
+# 4. A ENTREGA DE ARQUIVO (entrega 11) é publicada como ANEXO: o publicador baixa a URL e GRAVA o
+#    arquivo no armazenamento na hora de publicar (`EntregaDeArquivo#gravar`, com teto de tamanho,
+#    de tempo e assinatura de PDF), FORA do lock da conversa, e anexa o blob gravado (pelo
+#    `signed_id`) pelo `Messages::MessageBuilder` — o mesmo caminho do agente humano que manda um
+#    arquivo. Quando o download OU a gravação falham, sai o texto de reserva com o link, como saía
+#    antes, com o motivo no log: a falha do arquivo não apaga a entrega, e nunca é silenciosa. A
+#    identidade é a mesma nos dois caminhos, então um retry não publica o arquivo por cima do link.
 class Autonomia::Agents::Tools::AsyncPublisher
   # Motivos de não-publicação, devolvidos a quem chamou (o job decide se re-agenda ou encerra).
   Result = Struct.new(:status, :message, keyword_init: true) do
@@ -36,7 +37,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
   end
 
   # O que vira UMA mensagem na conversa: o texto, o token de idempotência (a identidade da entrega)
-  # e, na entrega de arquivo, o anexo já baixado.
+  # e, na entrega de arquivo, o anexo — o `signed_id` do blob já gravado no armazenamento.
   Corpo = Struct.new(:texto, :token, :anexo, keyword_init: true)
 
   def initialize(run:)
@@ -172,18 +173,29 @@ class Autonomia::Agents::Tools::AsyncPublisher
     post(conversation, agent_inbox, Corpo.new(texto: texto, token: @run.delivery_token(texto)))
   end
 
-  # O ARQUIVO BAIXA FORA DO LOCK da conversa: é rede, com tetos próprios, e a conversa não pode
-  # ficar travada por ele. Quando o download não entrega um PDF, vai a reserva (o texto com o link)
-  # com o mesmo token — e o motivo no log, com o código curto, nunca o texto da resposta.
+  # O ARQUIVO BAIXA E É GRAVADO FORA DO LOCK da conversa: é rede, com tetos próprios, e a conversa
+  # não pode ficar travada por ele. Gravar ANTES da mensagem é o que põe a falha do armazenamento
+  # dentro da mesma fronteira de reserva que a do download: o ActiveStorage subiria o arquivo só no
+  # `after_commit` da mensagem, e uma subida que falhasse ali deixaria a legenda no ar com um anexo
+  # sem bytes e o token já publicado (rodada 3, 11/09/2026). Quando o download ou a gravação não
+  # entregam um PDF, vai a reserva (o texto com o link) com o mesmo token — e o motivo no log, com
+  # o código curto e a classe da causa, nunca o texto da resposta nem da exceção.
+  #
+  # O blob que NÃO virou anexo (o retry que encontrou a mensagem no ar, ou a publicação que não
+  # concluiu) é apagado: gravado antes da mensagem, ele não tem dono até ela existir.
   def post_arquivo(conversation, agent_inbox, arquivo)
     token = @run.delivery_token(arquivo.identidade)
-    pdf = arquivo.baixar
-    post(conversation, agent_inbox, Corpo.new(texto: arquivo.legenda, token: token, anexo: pdf))
+    blob = arquivo.gravar
+    anexado = false
+    resultado = post(conversation, agent_inbox, Corpo.new(texto: arquivo.legenda, token: token, anexo: blob.signed_id))
+    anexado = resultado.message.present?
+    resultado
   rescue ::Autonomia::Agents::Tools::EntregaDeArquivo::Indisponivel => e
-    Rails.logger.warn("[autonomia][tool][async] arquivo indisponivel run=#{@run.id} motivo=#{e.motivo}; vai como link")
+    Rails.logger.warn("[autonomia][tool][async] arquivo indisponivel run=#{@run.id} motivo=#{e.motivo}" \
+                      "#{" causa=#{e.causa}" if e.causa}; vai como link")
     post(conversation, agent_inbox, Corpo.new(texto: arquivo.reserva, token: token))
   ensure
-    pdf&.tempfile&.close!
+    blob.purge if blob && !anexado
   end
 
   def delivery_posted?(conversation, token)

@@ -79,7 +79,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(run.reload.status).to eq('failed')
   end
 
-  # O 404 real de 11/09/2026 (o blob do portal não existe). O link vai como ia antes, o preço que
+  # O 404 do armazenamento do portal (XML de `BlobNotFound`). O link vai como ia antes, o preço que
   # já saiu fica, e o fecho sai do mesmo jeito.
   it 'cai para o link quando o download falha, sem apagar o preco que ja saiu' do
     # Arrange
@@ -135,5 +135,35 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}", cotacao::PARCIAL])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
+  end
+
+  # A FALHA DO ANEXO DEPOIS DE UM DOWNLOAD BOM, pelo caminho da consulta (rodada 3, P2). Antes, o
+  # ActiveStorage subia o arquivo no `after_commit` da mensagem: com o armazenamento fora, a
+  # legenda ia ao ar com um anexo sem bytes, a sentinela do comparativo gravada e nenhum link — o
+  # cliente sem nada, e a execução dizendo "comparativo enviado". Agora o arquivo é gravado antes
+  # da mensagem, e a falha cai na mesma reserva do download: o link em texto, e a entrega conta.
+  it 'entrega o link em texto pela consulta quando o armazenamento falha depois do download' do
+    # Arrange — cotação completa no mock (`mock-0:1`), todos os preços já entregues, prazo vivo
+    run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug,
+                                           arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } },
+                                           scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-0:1',
+                                  cotacao::DELIVERED_KEY => %w[8 3 47], 'produto' => 'auto' })
+    Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
+    run.record_delivery!
+    stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+    allow(ActiveStorage::Blob.service).to receive(:upload).and_raise(Errno::ECONNREFUSED)
+
+    # Act
+    described_class.new.perform(run.id, 1)
+
+    # Assert — o preço fica, o link sai em texto, nada de anexo nem blob sem dono, a entrega conta
+    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}"])
+    expect(bot_messages.flat_map(&:attachments)).to be_empty
+    expect(ActiveStorage::Blob.count).to eq(0)
+    expect(run.reload.handle[cotacao::PDF_SENT_KEY]).to be(true)
+    expect(run.delivered_count).to eq(2)
+    expect(run.status).to eq('done')
   end
 end

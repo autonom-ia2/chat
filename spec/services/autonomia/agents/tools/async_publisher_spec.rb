@@ -312,7 +312,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     end
 
     it 'cai para o texto com o link quando o download falha, e registra o motivo' do
-      # Arrange — o 404 real de 11/09/2026 (blob do portal inexistente)
+      # Arrange — o 404 do armazenamento do portal (XML de `BlobNotFound`)
       promote
       stub_request(:get, url).to_return(status: 404, body: '<Error><Code>BlobNotFound</Code></Error>',
                                         headers: { 'Content-Type' => 'application/xml' })
@@ -339,10 +339,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       # Act
       result = publisher.publish(arquivo.to_h)
 
-      # Assert
+      # Assert — e o blob que o retry gravou antes de ver a mensagem no ar não fica sem dono
       expect(result).to be_published
       expect(bot_messages.count).to eq(1)
       expect(run.reload.sequence).to eq(1)
+      expect(ActiveStorage::Blob.count).to eq(0)
     end
 
     # O QUE NÃO É TEXTO NEM ARQUIVO NÃO VIRA MENSAGEM. O encerramento (`closing_deliveries`) não passa
@@ -377,6 +378,61 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       # Assert
       expect(result).to be_deferred
       expect(a_request(:get, url)).not_to have_been_made
+    end
+
+    # A FALHA DO ANEXO, DEPOIS DE UM DOWNLOAD BOM (rodada 3, P2). O ActiveStorage subia o arquivo
+    # no `after_commit` da mensagem: com o armazenamento fora, a mensagem já estava no ar com a
+    # legenda, um anexo sem bytes e o token publicado — o cliente sem arquivo e sem link, e o retry
+    # virando duplicado. Agora a gravação acontece ANTES da mensagem, dentro da mesma fronteira de
+    # reserva do download: o link vai como ia antes, registrado.
+    it 'cai para o texto com o link quando o armazenamento falha depois do download, sem anexo orfao' do
+      # Arrange
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      allow(ActiveStorage::Blob.service).to receive(:upload).and_raise(Errno::ECONNREFUSED)
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert
+      expect(result).to be_published
+      mensagem = bot_messages.sole
+      expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
+      expect(mensagem.attachments).to be_empty
+      expect(ActiveStorage::Blob.count).to eq(0)
+      expect(mensagem.content_attributes['autonomia_async_token']).to eq(run.delivery_token(arquivo.identidade))
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=armazenamento causa=Errno::ECONNREFUSED; vai como link/))
+    end
+
+    # O DOWNLOAD E A GRAVAÇÃO ACONTECEM FORA DO LOCK DA CONVERSA: são rede, com até 20 s de tetos, e
+    # a conversa não pode ficar travada por isso. O que se observa é o SQL: nenhum `FOR UPDATE`
+    # pode ter saído antes de o download começar (rodada 3, 11/09/2026).
+    it 'baixa e grava o arquivo antes de travar a conversa' do
+      # Arrange
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      travas = []
+      travas_antes_do_download = nil
+      assinatura = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
+        travas << payload[:sql] if payload[:sql].to_s.include?('FOR UPDATE')
+      end
+      allow(Down).to receive(:download).and_wrap_original do |original, *args, **opcoes|
+        travas_antes_do_download = travas.dup
+        original.call(*args, **opcoes)
+      end
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert — o download aconteceu, sem trava antes dele; a trava veio depois, na publicação
+      expect(result).to be_published
+      expect(bot_messages.sole.attachments.sole.file.download).to eq(pdf)
+      expect(travas_antes_do_download).to eq([])
+      expect(travas).not_to be_empty
+    ensure
+      ActiveSupport::Notifications.unsubscribe(assinatura) if assinatura
     end
   end
 end
