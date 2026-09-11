@@ -225,9 +225,14 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     #
     # Vinte é bem acima de qualquer teto que alguém pensaria em pôr, e são criadas em estado
     # TERMINAL para não colidir com o índice único de execuções ativas.
+    #
+    # E TODAS DENTRO DA ÚLTIMA HORA, de propósito (entrega 7, termo 6): o teto que existiu era por
+    # HORA, e vinte execuções espalhadas no tempo passariam por ele sem provar nada.
+    # `async_config_sem_teto_de_execucoes_spec` é a outra metade da guarda — pega a constante pelo
+    # nome; esta pega qualquer forma de contagem, porque olha o comportamento.
     it 'accepts a new run no matter how many the conversation already had — there is NO ceiling' do
       # Arrange
-      create_finished_runs(20)
+      create_finished_runs(20, created_at: 30.minutes.ago)
 
       # Act
       output = bound.execute(call, delivery: delivery)

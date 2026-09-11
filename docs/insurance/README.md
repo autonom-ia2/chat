@@ -114,6 +114,83 @@ Saiu daqui tudo que só existia para o botão: rota, ação, `portal_link` nos c
 
 **Não reabrir sem** SSO da AGGER, ou medição que contrarie a de 08/09.
 
+## Medir para cobrar e para mostrar retorno (entrega 7, 11/09/2026)
+
+**Dois números, nunca um.** Uma cotação aciona TODAS as seguradoras que a corretora habilitou — nas
+três cotações reais da conta de teste lidas em 11/09/2026 (`agger quote result`) foram **dezessete**
+em cada uma: renovação 11 cotaram + 6 recusaram; moto 2 + 15; caminhão 1 + 15 + 1 credencial
+recusada. Contar execuções e chamá-las de consultas foi o erro do teto de "8 por hora" removido em
+10/09 (8 execuções eram até 136 consultas).
+
+**De onde sai o número.** Da linha da execução (`autonomia_agent_tool_runs`), que já registra o
+número da cotação no portal e quem cotou. Desde esta entrega o handle guarda também
+`seguradoras_acionadas` — os códigos de TODAS as seguradoras que o portal pôs na cotação, gravados a
+cada consulta como UNIÃO (o portal responde em pedaços; a foto da última consulta apagaria
+seguradoras já pagas). Nada de novo é consultado no portal: o dado já vinha no `quote/result`.
+
+### Quem roda, e como
+
+| Quem | Onde | O quê |
+|---|---|---|
+| Operação Autonom.ia (cobrar) | Super Admin → **Quote Measurement** (`/super_admin/insurance_measurement`) | todas as corretoras, uma linha cada, no período escolhido |
+| Corretora / nós, pela conta (mostrar retorno) | `GET /api/v1/accounts/:id/autonomia/insurance/measurement` | a própria conta |
+
+A página do Super Admin é o caminho **sem engenheiro**: abre, escolhe as duas datas, lê a tabela.
+Sem token, sem `curl`, sem console. O endpoint da conta existe para a corretora ver o mesmo número
+que a fatura dela usa — as duas superfícies leem a MESMA `Autonomia::Insurance::Medida`, porque dois
+números diferentes para o mesmo mês, um na fatura e outro na tela do cliente, seriam pior do que
+número nenhum.
+
+```bash
+# Setembro inteiro de uma conta. Sem `from`/`to`, os últimos 30 dias.
+curl -s -H "api_access_token: $TOKEN" \
+  "https://<host>/api/v1/accounts/16/autonomia/insurance/measurement?from=2026-09-01&to=2026-09-30"
+```
+
+```jsonc
+{"payload": {
+  "account_id": 16,
+  "from": "2026-09-01T00:00:00-03:00", "to": "2026-09-30T23:59:59-03:00",  // a janela usada, de volta
+  "timezone": "America/Sao_Paulo",  // em que fuso as datas foram lidas
+  "quotes": 3,                  // cotações que EXISTEM no portal (o número voltou)
+  "insurers_called": 51,        // 3 x 17 — a unidade que a corretora paga
+  "insurers_with_price": 14,    // das acionadas, quantas devolveram preço
+  "proposals": 0,               // proposta individual: entrega 8 (ver abaixo)
+  "unknown": {                  // o que a medida NÃO sabe, nunca somado nos totais
+    "quotes_without_measure": 0,      // cotação aberta cujo nº de seguradoras não foi lido
+    "quotes_without_confirmation": 0, // envio sem confirmação: pode existir no portal sem o nº aqui
+    "quotes_possibly_duplicated": 0   // pode haver uma a mais no portal do que a contada
+  }
+}}
+```
+
+Gate: feature ligada + conta marcada + **administrador**, como todo endpoint do módulo. Data
+ilegível responde `422 periodo_invalido` — nunca "então são os últimos 30 dias" em silêncio: um
+número de cobrança de uma janela que ninguém pediu é pior do que erro nenhum.
+
+**Fuso.** As datas são lidas no `reporting_timezone` da conta (o mesmo dos relatórios do Chatwoot)
+quando ela tem um; sem ele, no fuso da instalação. "Setembro" da corretora termina às 23h59 dela — ler
+pelo nosso fuso jogaria para outubro toda cotação feita depois das 21h de 30/09 em São Paulo. A
+resposta devolve `timezone` e os instantes exatos. A tela do Super Admin é cross-conta e usa o fuso da
+instalação; ela diz isso na própria linha da janela.
+
+### `proposals` é zero, e o contador é real
+
+A ferramenta de **proposta por seguradora** é a entrega 8; ela ainda não existe, então nada escreve
+o contador e ele lê zero em dado real. O contador em si está ligado: a medida conta
+`InsuranceQuote::PROPOSTAS_KEY` (`propostas` no handle, os códigos das seguradoras cuja proposta
+saiu). **Ponto de registro da entrega 8:** o handle da execução, na passada que gerar a proposta —
+`quote/proposal` com `insurer_code` é o caminho, e `comparison_pdf` já usa o mesmo endpoint SEM
+código para o comparativo. Escrever a lista lá faz a medida contar sem mudar uma linha.
+
+### Isto não é freio
+
+A medida informa; quem decide volume é a corretora que paga. Nenhum caminho de cotação a consulta, e
+`medida_nao_e_freio_spec` reprova (por AST) qualquer referência à medida fora das superfícies de
+leitura. O teto de execuções continua não existindo: `async_config_sem_teto_de_execucoes_spec` pega a constante
+pelo nome e `bound_async_spec` pega o comportamento (vinte execuções na última hora, a vigésima
+primeira é aceita).
+
 ## Ondas
 
 | Onda | Escopo | Issues |
