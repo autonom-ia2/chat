@@ -43,7 +43,11 @@ module Autonomia
 
       # skipped_* (#284 · Entrega 2a): a porta de engajamento passou a conversa direto para humanos
       # sem responder (fora do público-alvo / fora do horário). Contam como handoff na aba Desempenho.
-      enum event_type: { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3 }
+      # skipped_escolhas_incompletas (#380): o Agente de Cotação não montou o prompt porque a chave
+      # `agente_de_cotacao` do config está presente e incompleta (escrita fora do Builder); o turno ficou
+      # mudo e a conversa NÃO foi passada a humanos — por isso não entra em HANDOFF_TYPES.
+      enum event_type: { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3,
+                         skipped_escolhas_incompletas: 4 }
 
       HANDOFF_TYPES = %w[handed_off skipped_audience skipped_schedule].freeze
 

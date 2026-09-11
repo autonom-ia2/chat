@@ -89,12 +89,19 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(agente.instrucao_do_sistema).to eq(esperado)
     end
 
-    # O ARQUIVO É LIDO A CADA MONTAGEM, não fotografado no boot: é o que faz o deploy seguinte valer.
+    # O ARQUIVO É LIDO A CADA MONTAGEM, não fotografado no boot nem memoizado: é o que faz o deploy
+    # seguinte valer. A prova dubla a LEITURA DO ARQUIVO (`Pathname#read` passa por `File.read`), não o
+    # método do Builder: duas leituras sucessivas devolvem dois textos, e duas montagens do MESMO agente
+    # têm de refletir cada uma o seu. Um `||=` na leitura devolveria o primeiro texto nas duas.
     it 'lê o arquivo de novo a cada montagem, com as escolhas guardadas' do
       agente = construir
-      allow(described_class).to receive(:texto_do_principal).and_return('Você é $nomeAgente ($comportamento).')
+      caminho = described_class::INSTRUCOES.join(described_class::ARQUIVO_DO_PRINCIPAL)
+      allow(File).to receive(:read).and_call_original
+      allow(File).to receive(:read).with(caminho.to_s)
+                                   .and_return('Você é $nomeAgente ($comportamento).', 'Agora sou $nomeAgente, da $nomeCorretora.')
 
       expect(agente.instrucao_do_sistema).to eq('Você é Clara (objetivo).')
+      expect(agente.instrucao_do_sistema).to eq('Agora sou Clara, da Seguros do Vale.')
     end
 
     it 'o agente criado antes de as escolhas serem guardadas continua lendo a coluna, sem quebrar' do

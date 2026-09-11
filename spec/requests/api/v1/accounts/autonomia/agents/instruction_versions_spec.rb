@@ -119,7 +119,7 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
 
       # Assert
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.instrucao_mantida'))
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.instrucao_mantida', raise: true))
       expect(lia.reload.instruction).to eq('coluna envelhecida')
       expect(lia.instruction_versions.where(reason: 'rollback')).not_to exist
       expect(nascimento).to include('Você é Lia')

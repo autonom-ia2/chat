@@ -78,6 +78,42 @@ RSpec.describe Autonomia::Agents::Agent do
         .to raise_error(described_class::InstrucaoMantida)
       expect(lia.reload.instruction).to eq('retrato do nascimento')
     end
+
+    # O TIPO É O INSUMO DA REGRA: `instrucao_mantida?` é o tipo. Se o tipo mudasse depois do nascimento,
+    # toda guarda acima se desmontava (a coluna velha voltava ao prompt, o especialista ao manual gravado,
+    # `JaExiste` deixava passar um segundo agente de cotação). Fecha no model, para valer em todo
+    # escritor — PATCH, Construtor, `update!` de qualquer caminho —, não só na porta.
+    describe 'o tipo do agente de cotação é fixo' do
+      it 'o agente de cotação não vira outro tipo' do
+        # Act
+        lia.agent_type = 'custom'
+        lia.validate
+
+        # Assert
+        expect(lia.errors[:agent_type]).to be_present
+        expect { lia.update!(agent_type: 'custom') }.to raise_error(ActiveRecord::RecordInvalid)
+        expect(lia.reload.agent_type).to eq('insurance_quote')
+      end
+
+      it 'um agente comum não vira o agente de cotação' do
+        # Arrange
+        comum = described_class.create!(account: account, name: 'Bot', agent_type: 'custom')
+
+        # Act
+        comum.agent_type = 'insurance_quote'
+        comum.validate
+
+        # Assert
+        expect(comum.errors[:agent_type]).to be_present
+      end
+
+      it 'os outros tipos seguem livres, e o nascimento pelo Builder também' do
+        comum = described_class.create!(account: account, name: 'Bot', agent_type: 'custom')
+        comum.agent_type = 'sdr'
+        expect(comum).to be_valid
+        expect(build_agent(agent_type: 'insurance_quote')).to be_valid
+      end
+    end
   end
 
   describe 'instruction length' do

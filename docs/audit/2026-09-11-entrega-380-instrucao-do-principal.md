@@ -54,8 +54,8 @@ leu ATÉ o deploy desta PR, não depois.
 | 2 | Quem monta o prompt lê o arquivo e substitui; agente sem os valores continua na coluna | fechado | «o agente já criado recebe o texto novo» (mede `PromptBuilder#instructions`), «lê o arquivo de novo a cada montagem», «criado antes … continua lendo a coluna, sem quebrar», «agente que não é de cotação continua lendo a própria instrução»; M1, M3, M5, M8 |
 | 3 | Agente já criado recebe o texto novo sem ser recriado | fechado em código | spec: cria pelo Builder, envelhece a coluna (`update!(instruction: 'instrução velha…')`), o prompt efetivo é o do arquivo com os valores; em produção depende do rollout abaixo (pendente_producao) |
 | 4 | Auditabilidade mantida e documentada | fechado | seção acima; spec «auditabilidade (termo 4)» |
-| 5 | SQL de rollout do agente 24 + conferência | entregue, não executado | seção «Rollout» abaixo |
-| 6 | Mutações: runtime lendo a coluna reprova; valores ausentes caindo no arquivo com placeholder reprova | fechado | M1 e M8 (coluna), M3 (arquivo cru), M4 (marcador sobrando), M6 (branco em silêncio) — tabela abaixo |
+| 5 | SQL de rollout do agente 24 + conferência | entregue, não executado (pendente_prova_real) | seção «Rollout» abaixo; passo 1 com o retrato completo (`mode`, andaime, BuildThreads) desde a rodada 3 |
+| 6 | Mutações: runtime lendo a coluna reprova; valores ausentes caindo no arquivo com placeholder reprova | fechado | M1 e M8 (coluna), M3 (arquivo cru), M4 (marcador sobrando), M6 (branco em silêncio); rodada 3: VG/VG2 fecham o flip de tipo que reabria «runtime lendo a coluna», VD prova a leitura a cada montagem, VF/VI provam a mensagem e o locale — tabelas abaixo |
 
 ## Mutações (`~/ops/agente-cotacao/issue-380/mutacoes_i380.rb`, 11/09/2026)
 
@@ -88,22 +88,32 @@ expressões aceitam as duas formas que o arquivo já teve: com crases (`13492bb5
 como «Dentro de X:» (08/09) ou «Dentro do horário de atendimento (X):» (atual). `psql` na conexão de
 produção, um passo por vez.
 
-Passo 1 — só leitura: de onde os valores vão sair.
+Passo 1 — só leitura: de onde os valores vão sair, e o RETRATO COMPLETO do estado (rodada 3). Se alguém
+usou «Ajustar com IA» na Lia entre 08/09 e o deploy, `apply_builder_config!` gravou `scaffold` e
+reescreveu `instruction`/`config`: as expressões abaixo podem devolver NULL (aí para) ou casar por acaso.
+Por isso o passo 1 também mostra `mode` (0 = guided), se há andaime, e quantas BuildThreads apontam para o
+agente.
 
 ```sql
-SELECT id, name, agent_type, md5(instruction) AS md5_da_coluna, length(instruction) AS tamanho,
-       config ? 'agente_de_cotacao' AS ja_tem_escolhas,
-       (regexp_match(instruction, 'Você é `?([^`,\n]+)`?, e atende pela corretora'))[1]            AS nome_agente,
-       (regexp_match(instruction, 'e atende pela corretora `?([^`\n]+)`?\.'))[1]                   AS nome_corretora,
-       COALESCE((regexp_match(instruction, '\*\*Dentro do horário de atendimento \(([^)\n]+)\):\*\*'))[1],
-                (regexp_match(instruction, '\*\*Dentro de `?([^`\n]+)`?:\*\*'))[1])                AS horario,
-       (regexp_match(instruction, '### 4\.1 O seu comportamento — `?(consultivo|objetivo)`?'))[1] AS comportamento
-FROM autonomia_agents
-WHERE id = 24 AND account_id = 16 AND agent_type = 'insurance_quote';
+SELECT a.id, a.name, a.agent_type, a.mode, a.scaffold IS NULL AS sem_andaime,
+       (SELECT count(*) FROM autonomia_agent_build_threads t WHERE t.autonomia_agent_id = a.id) AS build_threads,
+       md5(a.instruction) AS md5_da_coluna, length(a.instruction) AS tamanho,
+       a.config ? 'agente_de_cotacao' AS ja_tem_escolhas,
+       (regexp_match(a.instruction, 'Você é `?([^`,\n]+)`?, e atende pela corretora'))[1]            AS nome_agente,
+       (regexp_match(a.instruction, 'e atende pela corretora `?([^`\n]+)`?\.'))[1]                   AS nome_corretora,
+       COALESCE((regexp_match(a.instruction, '\*\*Dentro do horário de atendimento \(([^)\n]+)\):\*\*'))[1],
+                (regexp_match(a.instruction, '\*\*Dentro de `?([^`\n]+)`?:\*\*'))[1])                AS horario,
+       (regexp_match(a.instruction, '### 4\.1 O seu comportamento — `?(consultivo|objetivo)`?'))[1] AS comportamento
+FROM autonomia_agents a
+WHERE a.id = 24 AND a.account_id = 16 AND a.agent_type = 'insurance_quote';
 ```
 
-Esperado: 1 linha, `ja_tem_escolhas = f`, `nome_agente = Lia`, os outros três preenchidos e
-`comportamento` em (`consultivo`, `objetivo`). Qualquer NULL: parar e ler a coluna à mão — não chutar.
+Esperado: 1 linha, `mode = 0`, `sem_andaime = t`, `build_threads = 0`, `ja_tem_escolhas = f`,
+`nome_agente = Lia`, os outros três preenchidos e `comportamento` em (`consultivo`, `objetivo`).
+Qualquer coisa diferente disso — `mode` ≠ 0, andaime presente, uma BuildThread que seja, um NULL —:
+PARAR e ler a coluna (e a thread) à mão antes do passo 2 — não chutar. O passo 2 repete `mode = 0` e
+`scaffold IS NULL` como precondição (falha fechada); a contagem de threads é só do passo 1, porque uma
+thread por si não muda o texto de onde os valores saem — o andaime e o modo mudam.
 
 Passo 2 — a escrita (mesma extração, com as precondições dentro do comando; `RETURNING` mostra o gravado):
 
@@ -119,6 +129,7 @@ WITH lidas AS (
   FROM autonomia_agents
   WHERE id = 24 AND account_id = 16 AND agent_type = 'insurance_quote'
     AND NOT (config ? 'agente_de_cotacao')
+    AND mode = 0 AND scaffold IS NULL
 )
 UPDATE autonomia_agents a
 SET config = COALESCE(a.config, '{}'::jsonb) || jsonb_build_object(
@@ -244,6 +255,136 @@ restaurar: true` nas duas rodadas.
 - `bundle exec rubocop` nos dez arquivos Ruby tocados → 0 ofensas (a guarda repetida em três escritores
   estourou ABC/ciclomática de `apply_builder_config!`; virou `recusar_se_instrucao_mantida!`, um método só).
 - `ruby ~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada2.rb` → 10/10; `mutacoes_i380.rb` → 8/8.
+
+## Rodada 3 (achados do verificador cego sobre 02d785a9a1)
+
+Sete achados; nenhum deferido. Cada um: o achado → o que mudou → a guarda → a mutação que a prova.
+
+### P2 — a chave nova morria no `en.yml` (dois blocos `autonomia:`)
+
+**Achado.** `config/locales/en.yml` tinha DOIS blocos top-level `autonomia:` (L446 e L730). O YAML não
+avisa: a última chave vence e a primeira some inteira. O segundo bloco entrou em 05ad7fe9d7 (03/09, #300)
+com `insurance.errors.encryption_unavailable`, e desde então `en.autonomia.build_thread.*`, `faq.*`,
+`source.*`, `image_*` respondiam "Translation missing" em inglês — e a chave nova de #380,
+`agents.instrucao_mantida`, foi posta no bloco morto. As cinco request specs que "provavam" a mensagem
+faziam `eq(I18n.t(...))`: os dois lados viravam o marcador e passavam vazias.
+
+**Correção (causa raiz).** Um bloco só: `insurance:` mudou para dentro do primeiro `autonomia:`; o segundo
+foi apagado. As chaves mortas desde 03/09 voltam a resolver em inglês — é o mesmo defeito, entra aqui.
+
+**Guarda.** `spec/config/locales_sem_chave_duplicada_spec.rb`: percorre os NÓS de cada YAML de
+`config/locales` (`Psych.parse_stream`; o hash carregado já perdeu a duplicata) e reprova chave repetida no
+mesmo nível — um exemplo por arquivo (116). O detector é provado contra uma amostra com duplicata (para ele
+mesmo não ficar cego), e um exemplo confere que as chaves de `autonomia` resolvem com `raise: true` em en
+e pt_BR. Nas request specs, a mensagem agora vem de `I18n.t(..., raise: true)`: a chave sumindo derruba.
+
+### P2 — o tipo era editável pelo mesmo PATCH que a guarda protegia
+
+**Achado.** `instrucao_mantida?` é o tipo, e `agent_type` estava em `agent_params`. Dois requests de
+admin desmontavam a regra: `PATCH {agent_type:'custom'}` → 200, a Lia deixa de ser mantida, o prompt volta
+à coluna velha; depois `PATCH {mode:'manual', instruction:'minha'}` → 200. Efeitos colaterais do mesmo
+flip: o especialista volta ao manual gravado (`Builder.mantido` olha o tipo), `QuoteAgentController#show`
+deixa de achar a Lia, `JaExiste` deixa nascer um segundo agente de cotação.
+
+**Correção.** No MODEL (`validate :tipo_do_agente_de_cotacao_e_fixo`): agente persistido não entra nem sai
+de `insurance_quote` — por PATCH, Construtor ou `update!` de qualquer caminho. O nascimento fica livre (é
+o Builder quem cria; a API genérica já recusava na porta). E na PORTA (`rejeitar_edicao_da_instrucao_mantida`):
+`agent_type` diferente no PATCH da Lia levanta `InstrucaoMantida` (a resposta é a mesma mensagem, não
+`RecordInvalid`); e um agente comum pedindo `insurance_quote` também é recusado.
+
+**Guarda.** `agent_spec` «o tipo do agente de cotação é fixo» (3 exemplos); `external_agent_lifecycle_spec`
+«refuses to change the quote agent type, and the second request of the bypass fails too» (a sonda inteira:
+os dois PATCHes, coluna intacta, prompt segue o arquivo) e «refuses to turn an ordinary agent into the
+quote agent».
+
+### P3 — `messages`/`retry` de uma thread já vinculada gastavam modelo
+
+**Achado.** A guarda do Construtor só existia em `thread_params` (`create`). Uma thread vinculada à Lia
+ANTES do deploy seguia aceitando `POST .../messages` e `POST .../retry` (202, job enfileirado); o modelo
+rodava e só `apply_builder_config!` levantava → `build_error` genérico, sem a mensagem.
+
+**Correção.** `fetch_thread` (usado por `show`, `messages`, `retry_build`) levanta `InstrucaoMantida`
+quando `@thread.agent&.instrucao_mantida?`. Mesma resposta 422, antes de gastar modelo.
+
+**Guarda.** `builder_thread_spec` «a builder thread already bound to the quote agent»: `messages` em
+thread `ready` e `retry` em thread `failed` → 422, `not_to have_enqueued_job(SubmitJob)`, thread intacta.
+
+### P3 — o ramo `mode` da guarda da porta não tinha spec
+
+**Correção.** Nenhuma no código. **Guarda.** `external_agent_lifecycle_spec` «refuses switching the quote
+agent to manual mode even without an instruction»: `PATCH {mode:'manual'}` sozinho → 422 com `error` = a
+mensagem (sem o ramo, o model ainda recusaria, mas via `RecordInvalid`, corpo `message`), modo segue guided.
+
+### P3 — "lido a cada montagem" era afirmação sem prova
+
+**Achado.** A spec dublava o próprio `texto_do_principal`, então um `||=` na leitura passava.
+
+**Correção.** Nenhuma no código (a leitura já não memoizava). **Guarda.** A spec «lê o arquivo de novo a
+cada montagem» agora dubla a LEITURA DO ARQUIVO (`File.read` com o caminho de `principal.md` —
+`Pathname#read` passa por ali com a string do caminho) devolvendo dois textos em chamadas sucessivas, e
+mede duas montagens do MESMO agente: cada uma tem de refletir a sua leitura.
+
+### P3 — rollout: passo 1 sem `scaffold`/`mode`/BuildThreads
+
+**Correção.** Passo 1 mostra `mode`, `scaffold IS NULL AS sem_andaime` e a contagem de
+`autonomia_agent_build_threads` do agente 24; qualquer coisa diferente de 0/t/0 → parar e ler à mão. Passo 2
+repete `mode = 0 AND scaffold IS NULL` como precondição (falha fechada). Não executado.
+
+### P3 — `EscolhasIncompletas` emudecia a Lia só com `warn` no log
+
+**Achado.** Chave `agente_de_cotacao` presente e incompleta (só por escrita fora do Builder) → `Answerer`
+levanta `Builder::EscolhasIncompletas` na montagem do prompt → `Responder#perform` resgatava no
+`rescue StandardError`: turno mudo para TODO cliente, e a causa só num `warn`.
+
+**Correção.** Resgate específico ANTES do largo: registra `skipped_escolhas_incompletas` no EventLogger
+(tipo novo em `AgentEvent`, motivo `escolhas_incompletas` na allowlist — NÃO entra em `HANDOFF_TYPES`: a
+conversa não é passada a humanos), uma vez por conversa, com `warn` que nomeia o campo (a mensagem do erro
+é só o nome do campo, nunca um valor); depois segue pelo MESMO caminho de falha de sempre
+(`falha_no_turno`: warn + descarte do assíncrono + silêncio). Nada novo é engolido.
+
+**Guarda.** `responder_escolhas_incompletas_spec` (Answerer real, credencial dublada, cliente de IA nunca
+chamado): evento com conversa/agente/motivo; uma vez por conversa; outra conversa ganha o seu; não conta
+como handoff.
+
+### Mutações da rodada 3 (`~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada3.rb`, 11/09/2026)
+
+Alvo: `locales_sem_chave_duplicada_spec`, `agent_spec`, `instruction_versions_spec`, `builder_thread_spec`,
+`external_agent_lifecycle_spec`, `builder_instrucao_do_principal_spec`, `responder_escolhas_incompletas_spec`.
+Cada uma: edita, roda, restaura, confere o md5. 11/11 reprovam; `verde depois de restaurar: true`.
+
+| Mutação | Reprova? | Exemplos que caem |
+|---|---|---|
+| VF chave `instrucao_mantida` renomeada no `en.yml` | sim | 11: os dez exemplos de request que exibem a mensagem (`raise: true`) + «as chaves de autonomia resolvem» |
+| VI segundo bloco top-level `autonomia:` de volta no `en.yml` | sim | 12: «config/locales/en.yml não tem chave duplicada», «as chaves de autonomia resolvem» + os dez da mensagem |
+| VG model: `tipo_do_agente_de_cotacao_e_fixo` apagada | sim | «o agente de cotação não vira outro tipo», «um agente comum não vira o agente de cotação» |
+| VG2 porta: `troca_o_tipo?` sempre falso | sim | «refuses to change the quote agent type, and the second request of the bypass fails too» (o model ainda recusa, mas via `RecordInvalid`, corpo `message`) |
+| VG3 porta: `pede_o_tipo_mantido?` sempre falso | sim | «refuses to turn an ordinary agent into the quote agent» |
+| VC porta: ramo `mode` apagado | sim | «refuses switching the quote agent to manual mode even without an instruction» |
+| VH `fetch_thread` sem guarda | sim | «refuses a new message before spending the model», «refuses the retry of a failed build before spending the model» |
+| VD `texto_do_principal` com `||=` | sim | «lê o arquivo de novo a cada montagem, com as escolhas guardadas» |
+| VE Responder sem o resgate específico | sim | 3: «records skipped_escolhas_incompletas with the field name», «once per conversation», «in another conversation» |
+| VE2 sem o «uma vez por conversa» | sim | «records the event once per conversation, not once per message» |
+| VJ `escolhas_incompletas` fora de `ALLOWED_REASONS` | sim | «records skipped_escolhas_incompletas with the field name» (motivo colapsa em `other`) |
+
+### Comandos da rodada 3
+
+- Banco próprio: `POSTGRES_DATABASE=chatwoot_test_i380r3` (`db:create db:schema:load`).
+- RED antes da implementação: 183 exemplos, 10 falhas (8 reproduzem os achados — 200 aceito no flip de
+  tipo, job enfileirado em `messages`/`retry`, tipo livre no model, evento inexistente —; 2 eram defeitos
+  das specs novas: `Pathname#read` chama `File.read` com a STRING do caminho, e `ResponsesClient.new` é
+  avaliado antes dos argumentos onde o erro nasce — corrigidas para dublar o que é real).
+- Alvo depois: as sete specs acima + `responder_spec`, `responder_async_spec`, `event_logger_spec`,
+  `analytics_spec`, `insurance/quote_agent_spec`, `services/autonomia/insurance/quote_agent` →
+  285 exemplos, 0 falhas, 0 erros fora, exit 0.
+- `bundle exec rubocop` nos 13 arquivos tocados → 0 ofensas.
+- `ruby ~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada3.rb` → 11/11.
+- Suíte ampla (`spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
+  spec/requests/api/v1/accounts/autonomia` + a spec de locales) → 1.169 exemplos, 0 falhas, 3 pendentes
+  pré-existentes, 0 erros fora, exit 0.
+- As mutações das rodadas 1 e 2 rodadas DE NOVO sobre o código desta rodada (`mutacoes_i380_r3.rb`,
+  `mutacoes_i380_rodada2_r3.rb`: os mesmos scripts, banco por env): 8/8 e 10/10 seguem reprovando; M9
+  (porta sem a guarda) agora derruba 5 exemplos e M17 (predicado apagado) 16. `verde depois de restaurar:
+  true` nas duas.
 
 ## Fora desta PR (da mesma classe ou vizinhos)
 

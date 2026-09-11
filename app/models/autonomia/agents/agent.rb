@@ -109,6 +109,7 @@ module Autonomia
       validates :name, presence: true
       validates :agent_type, inclusion: { in: AGENT_TYPES }
       validate :instrucao_mantida_fica_guiada
+      validate :tipo_do_agente_de_cotacao_e_fixo
       validates :tone, length: { maximum: MAX_TONE_LENGTH }, allow_nil: true
       validates :instruction, length: { maximum: MAX_INSTRUCTION_LENGTH }, allow_nil: true
 
@@ -298,6 +299,19 @@ module Autonomia
         return unless instrucao_mantida? && manual?
 
         errors.add(:mode, I18n.t('autonomia.agents.instrucao_mantida'))
+      end
+
+      # O TIPO É O INSUMO DA REGRA (#380, rodada 3). `instrucao_mantida?` é o tipo; se o tipo pudesse
+      # mudar depois do nascimento, toda guarda acima se desmontava em dois passos (`agent_type: 'custom'`
+      # e depois a instrução própria), e com ele iam a leitura do manual do especialista, a unicidade de
+      # `JaExiste` e o `show` da aba Cotação. Depois de persistido, ninguém entra nem sai de
+      # `insurance_quote` — por PATCH, Construtor ou `update!` de qualquer caminho. O NASCIMENTO fica
+      # livre: é o Builder quem cria (a API genérica recusa na porta, `AgentsController#create`).
+      def tipo_do_agente_de_cotacao_e_fixo
+        return unless persisted? && agent_type_changed?
+        return unless [agent_type_was, agent_type].include?('insurance_quote')
+
+        errors.add(:agent_type, I18n.t('autonomia.agents.instrucao_mantida'))
       end
 
       # Cria a linha de versão (sem dedup — o dedup é responsabilidade do chamador público).

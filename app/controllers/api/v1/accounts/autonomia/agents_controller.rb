@@ -102,16 +102,30 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # #380 — a instrução do Agente de Cotação é mantida pela Autonom.ia; o hub abre a Lia na mesma tela
   # dos outros agentes, com o modo avançado. Antes desta guarda o PATCH com `instruction` era aceito,
   # exibido e ignorado em silêncio (o prompt já era o arquivo do deploy). Recusa ANTES de qualquer
-  # assign: `instruction` presente, ou `mode` pedindo outra coisa que não guiado. O `mode: 'guided'` que
-  # o PanelTune carimba em todo save passa — é o que ele já é.
+  # assign: `instruction` presente, `mode` pedindo outra coisa que não guiado, ou `agent_type` diferente
+  # — o tipo é o insumo da regra, e trocá-lo era o desvio de dois requests (o model também fecha isso,
+  # `tipo_do_agente_de_cotacao_e_fixo`; aqui é para a resposta ser a mesma mensagem, não `RecordInvalid`).
+  # O `mode: 'guided'` que o PanelTune carimba em todo save passa — é o que ele já é. E o sentido
+  # contrário: um agente comum não VIRA o de cotação por PATCH (nasceria mantido sem as escolhas).
   def rejeitar_edicao_da_instrucao_mantida
-    return unless @agent.instrucao_mantida?
-
     agente = params[:agent]
     return unless agente.respond_to?(:key?)
 
+    raise ::Autonomia::Agents::Agent::InstrucaoMantida if @agent.instrucao_mantida? && edita_o_que_e_mantido?(agente)
+    raise ::Autonomia::Agents::Agent::InstrucaoMantida if !@agent.instrucao_mantida? && pede_o_tipo_mantido?(agente)
+  end
+
+  def edita_o_que_e_mantido?(agente)
     modo = agente[:mode].to_s
-    raise ::Autonomia::Agents::Agent::InstrucaoMantida if agente.key?(:instruction) || (modo.present? && modo != 'guided')
+    agente.key?(:instruction) || (modo.present? && modo != 'guided') || troca_o_tipo?(agente)
+  end
+
+  def troca_o_tipo?(agente)
+    agente.key?(:agent_type) && agente[:agent_type].to_s != @agent.agent_type
+  end
+
+  def pede_o_tipo_mantido?(agente)
+    agente.key?(:agent_type) && instrucao_mantida_pelo_tipo?(agente[:agent_type])
   end
 
   # O tipo pedido no create, antes de existir um agente para perguntar `instrucao_mantida?`.

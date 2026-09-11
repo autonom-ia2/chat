@@ -93,8 +93,13 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     Array(params[:image_signed_ids]).map(&:to_s).compact_blank.first(Autonomia::Agents::Config::MAX_IMAGES_PER_MESSAGE)
   end
 
+  # #380 — thread criada ANTES da guarda do `create` (alguém usou "Ajustar com IA" na Lia antes do
+  # deploy) ainda existe; `messages` e `retry` passam por aqui, não por `thread_params`. Sem isto o
+  # SubmitJob rodava o modelo e só falhava no `apply_builder_config!`, com `build_error` genérico.
+  # Mesma recusa, mesma mensagem, antes de gastar modelo.
   def fetch_thread
     @thread = build_threads_scope.find(params[:id])
+    raise ::Autonomia::Agents::Agent::InstrucaoMantida if @thread.agent&.instrucao_mantida?
   end
 
   # E3 — 409 Conflict com código estável (`build_in_progress`): o front distingue do erro genérico

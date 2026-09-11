@@ -10,7 +10,10 @@ module Autonomia
         # de uma allowlist fechada; qualquer outra coisa (texto livre, legado, vazio) -> 'other'.
         # `audience`/`schedule` (#284 · Entrega 2a) são os motivos das passadas diretas pela porta de
         # engajamento (eventos skipped_*), para aparecerem em "Principais motivos" da aba Desempenho.
-        ALLOWED_REASONS = %w[low_confidence ai_unavailable human_requested missing_knowledge policy audience schedule other].freeze
+        # `escolhas_incompletas` (#380): o Agente de Cotação emudeceu porque as escolhas da corretora no
+        # config estão incompletas — o motivo fica no evento com o próprio nome, não colapsado em `other`.
+        ALLOWED_REASONS = %w[low_confidence ai_unavailable human_requested missing_knowledge policy audience schedule
+                             escolhas_incompletas other].freeze
 
         # Porta de engajamento (#284 · Entrega 2a): a conversa foi passada DIRETO para humanos sem
         # resposta. `reason` ∈ audience | schedule -> event_type skipped_audience | skipped_schedule.
