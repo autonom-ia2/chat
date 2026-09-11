@@ -63,11 +63,17 @@ controller (16 linhas), uma view ERB e uma rota, reusa o layout e o gate que já
 termo de verdade: abre, escolhe duas datas, lê a tabela. O endpoint fica porque a **corretora** não
 tem Super Admin e precisa do mesmo número que a fatura dela usa.
 
-### `proposals` é zero, e o contador é real (termo 3)
+### `quotes_with_proposal` é zero, e o contador é real (termo 3)
 
 A ferramenta de proposta por seguradora é a entrega 8. O contador já existe e conta de verdade
 (`InsuranceQuote::PROPOSTAS_KEY`, lido pela medida); hoje lê zero porque **ninguém escreve a chave**.
 Não é um `0` literal — a mutação M8 troca a coluna por `0` e um exemplo reprova.
+
+**São dois números, decididos na rodada 3 pelo texto do termo** ("quantas COTAÇÕES viraram proposta
+individual"): `cotacoes_com_proposta` (`quotes_with_proposal`) conta cotações cuja lista tem pelo
+menos um código — uma cotação com duas propostas é UMA, e esta é a linha da fatura; `propostas_emitidas`
+(`proposals_issued`) é a soma dos códigos, em separado. Até a rodada 3 a coluna `propostas` somava
+códigos e chamava isso de "cotações que viraram proposta": `%w[8 3]` dava 2 onde houve uma.
 
 **Ponto de registro da entrega 8:** o handle da execução, na passada que gerar a proposta. O caminho é
 `quote/proposal` com `insurer_code` (o conector já o tem; `comparison_pdf` usa o mesmo endpoint SEM
@@ -79,10 +85,10 @@ código para o comparativo). Escrever ali a lista de códigos faz a medida conta
 |---|---|---|---|
 | 1 | Consulta por corretora e por período devolve cotações E seguradoras acionadas | Fechado | `medida_spec` ("os dois números", "isolamento e janela", incluindo as DUAS bordas da janela e a recusa de medir conta que não se sabe qual é), `measurement_spec` (API, as duas bordas), `insurance_measurements_controller_spec` (Super Admin); M4, M7, M14, M16 |
 | 2 | O número bate com o caso conhecido: dezessete acionadas → dezessete | Fechado | `medida_spec` "conta dezessete seguradoras quando a execução acionou dezessete" (os 17 códigos reais); `insurance_quote_medida_spec` "grava as dezessete, em qualquer status" (1 quoted + 15 declined + 1 auth_required, o desenho do caminhão real) e "nao infla a lista quando o portal repete o mesmo resultado" (duas passadas, dezessete nas duas); M1, M2, M15 |
-| 3 | Quantas cotações viraram proposta individual; contador definido e zerado, ponto de registro documentado | Fechado | `medida_spec` "propostas individuais (entrega 8)" (zero hoje; conta de verdade quando a chave existe); M8; ponto de registro na seção acima e em `insurance_quote.rb` |
+| 3 | Quantas cotações viraram proposta individual; contador definido e zerado, ponto de registro documentado | Fechado | `medida_spec` "propostas individuais (entrega 8)" — `cotacoes_com_proposta` 1 e `propostas_emitidas` 2 para `%w[8 3]`, lista vazia não conta; `measurement_spec` e `insurance_measurements_controller_spec` (as duas colunas); M8, MV5; ponto de registro na seção acima e em `insurance_quote.rb` |
 | 4 | A consulta não depende de engenheiro | Fechado | Página do Super Admin + endpoint da conta, documentados em `docs/insurance/README.md`; `insurance_measurements_controller_spec`, `measurement_spec` (gate e permissão); M6 |
-| 5 | Nada aqui vira freio | Fechado | `medida_nao_e_freio_spec` (por AST: a medida só é nomeada pelas superfícies de leitura, não é alcançada do caminho da cotação, e não escreve); M9 |
-| 6 | O teto de oito por hora não voltou | Fechado | `bound_async_spec` "there is NO ceiling" (vinte execuções na ÚLTIMA HORA, a vigésima primeira é aceita) + `async_config_sem_teto_de_execucoes_spec` (a constante pelo nome); M10 |
+| 5 | Nada aqui vira freio | Fechado | `medida_nao_e_freio_spec` (por AST, em `app/**` E `enterprise/app/**`: a medida só é nomeada pelas superfícies de leitura, não é alcançada do caminho da cotação, e não escreve); a medida REIMPLEMENTADA inline no aceite (sem nomear a classe) é pega por `bound_async_spec`, que tem 340 seguradoras na hora; M9, MV4, MV7 |
+| 6 | O teto de oito por hora não voltou | Fechado | Três guardas: `bound_async_spec` "there is NO ceiling" (vinte execuções na ÚLTIMA HORA, 340 seguradoras, a vigésima primeira é aceita); `async_run_job_spec` "segue consultando e submetendo com vinte execuções na última hora" (o JOB, onde a chamada paga acontece, submete e entrega em `done`); `async_config_sem_teto_de_execucoes_spec` (a constante pelo nome, agora também `TETO`/`LIMITE` por `HORA`); M10, MV3, MV6 |
 
 ### O que fica para prova real / produção
 
@@ -147,6 +153,39 @@ todos os exemplos de unidade e sumiria em produção. M14 e M15 são as duas que
 tinha, e as duas inflavam o número de COBRANÇA — erro que ninguém contesta, porque quem paga a mais
 não reclama de um total que parece grande.
 
+## Rodada 3 — a regra escrita no comentário, de novo (verificador cego)
+
+A revisão da rodada 2 achou cinco pontos; os dois P2 são a MESMA classe da rodada anterior — regra
+escrita em prosa e não exercitada por exemplo nenhum — e eu tinha afirmado que a classe estava varrida.
+Não estava. Cada achado abaixo foi reproduzido com a mutação ANTES da correção (verde com a regra
+desligada), corrigido, e a mutação passou a reprovar.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P2** `medida.rb:38` — o comentário dizia que `autonomia_submitted` não serve porque a recusa também o recebe; nenhum exemplo tinha a marca. Com `COTACAO = quote_id OU submitted`, 67 exemplos verdes e a medida cobra a recusa | Fixture de "nao conta execução que nunca virou cotação" passou a ser a linha REAL que o job grava (`pedido`, `motivo`, `faltando`, `autonomia_intencoes: 1`, `autonomia_submitted: true`, sem `quote_id`), em `medida_spec` e `measurement_spec`; e um exemplo INTEGRADO em `insurance_quote_medida_spec` roda o `AsyncRunJob` de verdade com o `start` recusando (`dados` ilegível → `json_invalido`), confere a linha e lê `cotacoes: 0` | os três exemplos | MV1b — 3 exemplos reprovam |
+| **P2** `async_run_job.rb:70` — um teto literal em `stop?` (contar execuções da conta na última hora, falhar acima de oito) passava por 140 exemplos; a guarda por comportamento só existia no aceite e o comentário prometia cobertura do job | Exemplo em `async_run_job_spec` ("no ceiling (entrega 7, termo 6)"): vinte execuções encerradas da MESMA conta e ferramenta na última hora, cada uma com dezessete seguradoras, mais a vigésima primeira `running`; `perform` faz o `start` e depois o `poll`, e a execução termina em `done` sem frase de falha. Regex de `async_config_sem_teto_de_execucoes_spec` ampliado com `(TETO\|LIMITE)[A-Z_]*HORA`. Comentários de `async_config.rb` e `bound_async_spec` dizem o que cada guarda cobre de fato | `async_run_job_spec` + guarda pelo nome | MV3 — reprova no job (e a guarda pelo nome NÃO pega, como o verificador disse: por isso o exemplo); MV6 — a guarda pelo nome pega `TETO_POR_HORA` |
+| **P3** `bound_async_spec.rb:235` — as vinte execuções tinham handle vazio: um teto pela unidade certa (seguradoras) reimplementado inline no aceite passava; a varredura AST só olhava `app/**` | As vinte com `{quote_id, seguradoras_acionadas: dezessete}` (340 na hora); raízes da varredura de `medida_nao_e_freio_spec` = `app` e `enterprise/app` | `bound_async_spec` "there is NO ceiling"; `medida_nao_e_freio_spec` | MV4 — o freio inline (SUM de `jsonb_array_length` da conta na hora > 100 → recusa) reprova o aceite; MV7 — um override em `enterprise/app` que nomeia a medida reprova os 2 exemplos de alcance |
+| **P3** `medida.rb:131` — remover `slug:` do escopo passava: nenhum exemplo tinha execução de OUTRA ferramenta com `quote_id` | Exemplo "nao conta execução de outra ferramenta, mesmo com quote_id e seguradoras no handle" (slug `outra_ferramenta`, mesma conta → zero) | `medida_spec` | MV2 — reprova |
+| **P3** `medida.rb:55` — `propostas` somava códigos (uma cotação com `%w[8 3]` contava 2) e o termo 3 pergunta por COTAÇÕES | Decisão do orquestrador pelo texto do termo: `cotacoes_com_proposta` = `COUNT(*) FILTER (WHERE jsonb_typeof(...)='array' AND jsonb_array_length(...) > 0)`; a soma segue como `propostas_emitidas`. API (`quotes_with_proposal`, `proposals_issued`), página do Super Admin (duas colunas), README e specs refletem as duas | `medida_spec` (1 e 2; lista vazia = 0), `measurement_spec`, `insurance_measurements_controller_spec` | MV5 — a coluna do termo virando soma reprova 3 exemplos |
+
+Fica dito o que as mutações desta rodada mostraram sobre as guardas: **a guarda pelo nome não vê a
+contagem escrita do zero** (MV3 passou por ela e só o exemplo do job a pegou), e **a varredura AST não
+vê a medida reimplementada sem nomear a classe** (MV4 passou por `medida_nao_e_freio_spec` e só o
+exemplo de comportamento do aceite a pegou). Cada porta em que a contagem poderia entrar tem um
+exemplo de comportamento; é isso que segura o termo 6, não o regex.
+
+### Mutações da rodada 3 (7) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MV1b | `COTACAO` = `quote_id` OU `autonomia_submitted` | `medida.rb` | 3 (serviço, API, integrado pelo job) |
+| MV2 | escopo sem `slug:` | `medida.rb` | "nao conta execução de outra ferramenta…" |
+| MV3 | teto literal em `AsyncRunJob#stop?` (execuções da conta na hora > 8) | `async_run_job.rb` | "segue consultando e submetendo com vinte execuções na última hora" |
+| MV4 | freio inline em `Bound#accept_async` (seguradoras da conta na hora > 100) | `bound.rb` | "there is NO ceiling" |
+| MV5 | `cotacoes_com_proposta` vira soma de códigos | `medida.rb` | 3 (serviço, API, Super Admin) |
+| MV6 | `TETO_POR_HORA = 8` no `Bound` | `bound.rb` | a guarda pelo nome |
+| MV7 | `enterprise/app/services/autonomia/agents/tools/freio_mutacao.rb` nomeando a medida | (arquivo novo, removido) | os 2 exemplos de alcance |
+
 ## Comandos rodados
 
 ```bash
@@ -165,6 +204,9 @@ bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autono
   --format json --out ampla.json                                    # suíte ampla
 bundle exec rubocop --format json --out rubocop.json <arquivos tocados>   # 0 ofensas
 uv run python3 mutacoes.py                                          # M1–M16 (919 na suíte ampla)
+# rodada 3
+bundle exec rspec <8 specs do trilho> --format json --out alvo.json # 97 exemplos, 0 falhas
+uv run python3 mutacoes_r3.py                                       # MV1b–MV7, todas reprovam e restauram
 ```
 
 ## Arquivos
@@ -179,3 +221,10 @@ Tocados: `quote_offers.rb` (`#acionadas`), `insurance_quote.rb` (as duas chaves 
 `async_config.rb` (o comentário apontava para uma spec que não existia — agora existe),
 `_navigation.html.erb`, `config/routes.rb`, `docs/insurance/README.md`, `bound_async_spec.rb`
 (a hora explícita no exemplo do teto).
+
+Rodada 3: `medida.rb` (as duas colunas de proposta, comentários), `show.json.jbuilder` e
+`show.html.erb` (as duas colunas), `async_config.rb` (o que cada guarda cobre), `async_run_job_spec.rb`
+(o exemplo do job), `async_config_sem_teto_de_execucoes_spec.rb` (regex), `bound_async_spec.rb`
+(340 seguradoras), `medida_nao_e_freio_spec.rb` (`enterprise/app`), `medida_spec.rb`,
+`measurement_spec.rb`, `insurance_quote_medida_spec.rb`, `insurance_measurements_controller_spec.rb`,
+`docs/insurance/README.md`. Nenhum arquivo de instrução, `MOTIVOS` ou schema de função.
