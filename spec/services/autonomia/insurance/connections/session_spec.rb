@@ -1,8 +1,11 @@
 require 'rails_helper'
 
-# O portal aceita UMA sessão viva por login: abrir outra invalida a anterior. Estes testes travam o
-# contrato que faz várias cotações da mesma corretora conviverem — e que impede o healthcheck da
-# tela de Conexões de encerrar a sessão de uma cotação em andamento.
+# A sessão mora na CONEXÃO para ser compartilhada — não porque o portal proíba ter duas.
+#
+# (Correção de 11/09/2026: aqui se lia "o portal aceita UMA sessão viva por login: abrir outra
+# invalida a anterior". Medido e falso — ver o cabeçalho de `connections/session.rb`.) Estes testes
+# travam o contrato que faz várias cotações da mesma corretora conviverem com UM login, e que impede
+# o healthcheck da tela de Conexões de encerrar a sessão de uma cotação em andamento.
 RSpec.describe Autonomia::Insurance::Connections::Session do
   let(:account) { create(:account) }
 
@@ -263,12 +266,20 @@ RSpec.describe Autonomia::Insurance::Connections::Session do
     expect(record.reload.session).to be_nil
   end
 
-  # CRITERIO 1.5 — a mesma conta AGGER usada em dois lugares ao mesmo tempo.
+  # O AVISO DE "CONTA EM USO" QUE MENTIA (entrega 16, termo 5).
   #
-  # Decisao do Rodrigo em 06/09/2026: avisar, nao bloquear. O caso real: a conta da SENA ligada no
-  # Hub2You e na Autonomia faz cotacao de teste e cotacao de cliente aparecerem misturadas no portal
-  # da corretora, sem como distinguir uma da outra.
-  describe 'conta ja em uso (1.5)' do
+  # O portal devolve "Ja existe uma sessao ativa com esse usuario" no MESMO 201 do login bem-sucedido,
+  # em TODO login: 6 de 6 nos logins SIMULTANEOS medidos em 10/09/2026, e tambem nos sete logins em
+  # sequencia de 05/09. E aviso de REUSO da sessao que ja existe — o portal compartilha uma sessao por
+  # login —, nunca prova de que outra pessoa esteja na conta.
+  #
+  # Nos gravavamos isso em `account_already_active` e a tela de Conexoes afirmava ao corretor que a
+  # conta estava em uso em outro lugar. Depois do primeiro login da conta o alerta ficava ligado para
+  # sempre, e a "outra pessoa" era, quase sempre, a nossa propria sessao anterior (healthcheck de 30
+  # em 30 minutos, polling de cotacao de poucos em poucos segundos).
+  #
+  # NADA NO PAYLOAD DISCRIMINA quem abriu a sessao, entao o aviso morre em vez de ser refinado.
+  describe 'o aviso de conta em uso nao e gravado (termo 5 da entrega 16)' do
     def conector_que_avisa(already)
       payload = { 'platform' => 'agger', 'data' => { 'token' => 'x' },
                   'expires_at' => 3.hours.from_now.utc.iso8601,
@@ -277,39 +288,43 @@ RSpec.describe Autonomia::Insurance::Connections::Session do
       instance_double(Autonomia::Insurance::Connector::Mock, open_session: payload)
     end
 
-    it 'registra o aviso quando o portal diz que a conta ja estava em uso' do
+    it 'nao grava aviso nenhum quando o portal diz que ja havia sessao ativa, porque ele diz isso em todo login' do
       # Arrange
       conexao = connection
+
+      # Act
       described_class.new(conexao, connector: conector_que_avisa(true)).resolve!
 
-      # Assert — avisa, e a sessao abre do mesmo jeito
-      expect(conexao.reload.account_already_active).to be_present
-      expect(conexao.account_already_active['session_started_at']).to eq('2026-09-06T14:02:00Z')
+      # Assert — a sessao abre, e nada e afirmado sobre quem mais estaria na conta
+      expect(conexao.reload.metadata.to_h).not_to have_key('account_already_active')
       expect(conexao.session).to be_present
     end
 
-    it 'limpa o aviso quando a conta esta livre' do
-      # Arrange
+    it 'apaga o aviso que uma versao anterior gravou, em vez de deixar a afirmacao falsa no banco' do
+      # Arrange — linha que passou por uma versao que ainda gravava o aviso
       conexao = connection
       conexao.merge_metadata!('account_already_active' => { 'observed_at' => '2026-09-05T10:00:00Z' })
 
       # Act
-      described_class.new(conexao, connector: conector_que_avisa(false)).resolve!
+      described_class.new(conexao, connector: conector_que_avisa(true)).resolve!
 
       # Assert
-      expect(conexao.reload.account_already_active).to be_nil
+      expect(conexao.reload.metadata.to_h).not_to have_key('account_already_active')
     end
 
-    it 'nao afirma nada quando o adapter nao informa' do
-      # Arrange — adapter de versao anterior nao manda o campo. Ausente e "nao sei".
+    it 'apaga so o aviso: o resto de metadata continua inteiro' do
+      # Arrange — `metadata` e jsonb compartilhado: a comissao da corretora mora no mesmo campo, e
+      # apagar de mais aqui custaria dinheiro do cliente.
       conexao = connection
-      conexao.merge_metadata!('account_already_active' => { 'observed_at' => '2026-09-05T10:00:00Z' })
+      conexao.merge_metadata!('account_already_active' => { 'observed_at' => '2026-09-05T10:00:00Z' },
+                              'comissao' => { 'auto' => 12 })
 
       # Act
-      described_class.new(conexao, connector: conector_que_avisa(nil)).resolve!
+      described_class.new(conexao, connector: conector_que_avisa(true)).resolve!
 
-      # Assert — o que estava gravado NAO e apagado por falta de informacao
-      expect(conexao.reload.account_already_active).to be_present
+      # Assert
+      expect(conexao.reload.metadata.to_h['comissao']).to eq('auto' => 12)
+      expect(conexao.metadata.to_h).not_to have_key('account_already_active')
     end
   end
 end

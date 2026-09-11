@@ -248,11 +248,12 @@ const failureText = computed(() => {
 const pendingInsurers = computed(
   () => connection.value.insurers_pending_auth ?? null
 );
-// CRITÉRIO 1.5 — avisar, não bloquear. Quem sabe distinguir "sou eu de outra aba" de "tem cotação
-// de teste rodando na minha conta" é o corretor, não nós.
-const accountInUse = computed(
-  () => connection.value.account_already_active ?? null
-);
+// (Aqui morava `accountInUse`, do critério 1.5: "esta conta AGGER já estava em uso quando
+// conectamos". Removido em 11/09/2026 porque o aviso era permanente e falso — o portal responde
+// "já existe uma sessão ativa" a TODO login, 6 de 6 nos logins simultâneos medidos, e a sessão que
+// "já existia" era, quase sempre, a nossa. Nada no payload distingue quem a abriu: o instante que
+// vinha junto é o da sessão compartilhada, igual para todos os logins. Ver o comentário em
+// `connections/session.rb`.)
 
 // O NOME QUE O PORTAL USA vence o nosso mapa. O ramo 46 provou por quê: o portal o chama de
 // "Aluguel", o nosso slug diz `fianca_locaticia`, e fiança locatícia é OUTRO produto (id 23) — o
@@ -760,21 +761,6 @@ onUnmounted(pararAcompanhamento);
             />
           </div>
         </div>
-      </section>
-
-      <!-- CRITÉRIO 1.5: a conta já estava em uso quando conectamos. Aviso, nunca bloqueio. -->
-      <section
-        v-if="accountInUse"
-        class="flex items-start gap-3 px-4 py-3 rounded-lg bg-n-alpha-2 text-n-slate-12 text-sm"
-      >
-        <span class="i-lucide-users size-4 mt-0.5 shrink-0" />
-        <p class="text-xs">
-          {{
-            t('INSURANCE.CONNECTION.ALREADY_ACTIVE', {
-              at: formatVerifiedAt(accountInUse.session_started_at) || '—',
-            })
-          }}
-        </p>
       </section>
 
       <!-- CRITÉRIO 4.5: o problema de credencial de seguradora aparece AQUI, e nunca na conversa

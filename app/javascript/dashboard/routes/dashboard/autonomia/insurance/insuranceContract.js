@@ -62,9 +62,9 @@ export const buildConnection = (overrides = {}) => ({
   evidence: null,
   layers: null,
   insurers_pending_auth: null,
-  // Critério 1.5: `null` = a conta não estava em uso, OU o adapter não informou (sessão de versão
-  // anterior). A tela não afirma "estava livre" — só deixa de avisar.
-  account_already_active: null,
+  // (Havia aqui um `account_already_active`, do critério 1.5. Removido em 11/09/2026: o portal manda
+  // "já existe uma sessão ativa" em TODO login — 6 de 6 nos logins simultâneos medidos — e nada no
+  // payload diz quem abriu a sessão. O aviso afirmava ao corretor uma coisa que o dado não sustenta.)
   ...overrides,
 });
 

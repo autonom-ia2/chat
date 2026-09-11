@@ -1,18 +1,33 @@
-# A SESSÃO ÚNICA da conexão com o portal.
+# A SESSÃO COMPARTILHADA da conexão com o portal.
 #
-# O AGGER aceita uma sessão viva por login: abrir outra invalida a anterior. Isso torna a sessão um
-# recurso compartilhado da CONEXÃO (conta + provider), não de quem chama — e é por isso que ela mora
-# na linha da conexão, e não no chamador.
+# CORREÇÃO DE 11/09/2026 — este cabeçalho dizia "o AGGER aceita uma sessão viva por login: abrir
+# outra invalida a anterior". É FALSO, e foi medido duas vezes contra o portal real:
+#   - 05/09: sete logins EM SEQUÊNCIA devolveram o MESMO id de sessão, e o token do primeiro
+#     continuou respondendo 200 depois de todos os outros. Virou canário vivo em
+#     `autonomia-adapters/test/contract/agger.sessao-unica.live.test.ts`;
+#   - 10/09, agora sob CORRIDA: seis logins SIMULTÂNEOS coexistiram (um id de sessão para os seis,
+#     zero precisaram derrubar a anterior), e doze sessões da mesma conta fizeram 1.202 chamadas
+#     autenticadas em 30 s sem uma falha, com mediana de latência IGUAL à de seis sessões — não há
+#     disputa (`autonomia-adapters/scripts/discovery/provar-sessoes-paralelas.ts`).
 #
-# Sem isto, três coisas quebravam ao mesmo tempo:
-#   - uma cotação consulta o resultado de poucos em poucos segundos; cada consulta abria uma sessão
-#     nova e invalidava a que a própria cotação estava usando;
-#   - duas cotações simultâneas da mesma corretora brigavam pela sessão única;
-#   - o healthcheck da tela de Conexões invalidava a sessão de uma cotação em andamento.
+# A frase antiga importa porque é ela que faria o próximo engenheiro serializar cotação por
+# corretora — e essa fila nos tornaria o gargalo que o portal não é. Uma corretora tem vários
+# clientes cotando ao mesmo tempo; cotar em paralelo é requisito de produto, não conveniência.
+#
+# ENTÃO POR QUE A SESSÃO CONTINUA MORANDO NA CONEXÃO (conta + provider), e não em quem chama? Por
+# economia e clareza, não por exclusividade:
+#   - o portal avisa "já existe uma sessão ativa" em TODO login e devolve a MESMA sessão. Abrir uma
+#     por chamador seria pagar um login de até 60 s (`Http::READ_TIMEOUT`) dezenas de vezes por
+#     cotação para receber de volta o que já tínhamos;
+#   - uma cotação consulta o resultado de poucos em poucos segundos por até 7 minutos, e o
+#     healthcheck varre todas as conexões de 30 em 30 minutos: sem compartilhar, cada passada dessas
+#     seria um login;
+#   - guardar a sessão em UM lugar é o que faz `session_expires_at` significar alguma coisa.
 #
 # CONCORRÊNCIA: o caminho feliz não pega lock (a sessão viva é lida direto). Só quem precisa ABRIR
 # entra no `with_lock` e RECHECA lá dentro — duas cotações que começam juntas fazem um login só, e a
-# segunda encontra a sessão que a primeira acabou de gravar. Mesmo idioma do resto do namespace.
+# segunda encontra a sessão que a primeira acabou de gravar. Isso é economia de login, e NÃO
+# serialização de cotação: quem já tem sessão viva não passa por lock nenhum.
 class Autonomia::Insurance::Connections::Session
   def initialize(connection, connector: ::Autonomia::Insurance::Connector.client)
     @connection = connection
@@ -41,13 +56,16 @@ class Autonomia::Insurance::Connections::Session
   # Roda o bloco com a sessão da conexão e, se o PORTAL recusar essa sessão, esquece, abre outra e
   # tenta UMA vez. -> o que o bloco devolver.
   #
-  # `session_live?` só sabe do prazo que nós gravamos. Ele não sabe que alguém entrou no portal pelo
-  # navegador e derrubou a nossa — o AGGER aceita uma sessão por login. Nesse caso a linha fica com
-  # uma sessão que parece viva, e toda chamada morre em 403 até o prazo vencer.
+  # `session_live?` só sabe do PRAZO QUE NÓS GRAVAMOS, e prazo gravado não é prova: a sessão pode ter
+  # morrido antes dele (o portal encurtar a validade, a limpeza noturna — janelas longas nunca foram
+  # observadas, e a medição de 10/09 durou minutos). Quando isso acontece, a linha fica com uma
+  # sessão que PARECE viva e toda chamada morre em 403 até o prazo vencer.
   #
-  # Foi o que aconteceu em 05/09/2026, horas depois de a sessão única entrar no ar: o corretor abriu
-  # o portal, a nossa sessão caiu, e a tela passou a dizer "credencial recusada" com a credencial
-  # perfeitamente válida. `renew!` já existia para exatamente isto e não era chamado por ninguém.
+  # (Correção de 11/09/2026: aqui se lia "alguém entrou no portal pelo navegador e derrubou a nossa —
+  # o AGGER aceita uma sessão por login". Medido e falso: logins da mesma conta compartilham a
+  # sessão, e nenhum token anterior foi invalidado. A causa PROVADA do incidente de 05/09 também era
+  # outra, e já está corrigida — o handler redigia o token e mandava a palavra `<REDACTED>` como
+  # `Authorization`. O motivo honesto é o do parágrafo acima, e ele basta para a renovação existir.)
   #
   # UMA tentativa, não um laço: se o login novo também for recusado, o problema é a credencial, e
   # insistir só multiplica login no portal.
@@ -97,31 +115,32 @@ class Autonomia::Insurance::Connections::Session
 
     @connection.store_session!(payload['data'], expires_at: payload['expires_at'],
                                                 account_label: payload['account_label'].to_s.truncate(120).presence)
-    registrar_conta_em_uso(payload)
+    esquecer_aviso_de_conta_em_uso!
   end
 
-  # CRITERIO 1.5 — a mesma conta AGGER usada em dois lugares ao mesmo tempo.
+  # O AVISO DE "CONTA EM USO" QUE MENTIA — o que sobrou do critério 1.5.
   #
-  # Decisao do Rodrigo em 06/09/2026: AVISAR, nao bloquear. Bloquear tiraria a capacidade de testar
-  # com a conta real, e o dano hoje e confusao — dois logins nossos convivem sem se derrubar, isso
-  # foi medido. O que confunde e o corretor abrir o portal e ver cotacao de teste misturada com a
-  # do cliente, sem saber qual e qual.
+  # O portal devolve "Já existe uma sessão ativa com esse usuário" no MESMO 201 do login
+  # bem-sucedido, em TODO login: 6 de 6 nos logins simultâneos de 10/09/2026, e também nos sete
+  # logins em sequência de 05/09. É aviso de REUSO da sessão que ele compartilha, não notícia de que
+  # outra pessoa esteja na conta. Nós gravávamos isso em `account_already_active` e a tela de
+  # Conexões AFIRMAVA ao corretor que a conta estava sendo usada em outro lugar — depois do primeiro
+  # login da conta, para sempre, e quase sempre a "outra pessoa" era a nossa própria sessão anterior
+  # (healthcheck de 30 em 30 minutos, polling de cotação de poucos em poucos segundos).
   #
-  # O aviso nao foi inventado: o portal o da, no mesmo 201 do login bem-sucedido. Era descartado
-  # porque o login tinha dado certo, e sucesso ninguem olha duas vezes.
+  # NADA NO PAYLOAD DISCRIMINA, e é por isso que o aviso morre em vez de ser refinado:
+  #   - `already_active` é a presença do texto na mensagem, e a mensagem vem sempre;
+  #   - `session_started_at` é o `createdAt` da sessão COMPARTILHADA — foi o mesmo valor para os seis
+  #     logins simultâneos. Diz quando a sessão começou, nunca quem a abriu;
+  #   - comparar esse instante com o nosso último login também não serve: nós abrimos sessão o tempo
+  #     todo, e a conta é quase sempre a nossa. Seria a mesma afirmação, agora com aritmética por
+  #     cima.
+  # Alarme que não discrimina é alarme falso, e alarme falso permanente treina o corretor a ignorar
+  # a tela inteira.
   #
-  # `nil` quando o adapter nao informa — sessao aberta por versao anterior. Ausente e "nao sei",
-  # que e diferente de "nao havia ninguem".
-  def registrar_conta_em_uso(payload)
-    return unless payload.key?('already_active')
-
-    @connection.merge_metadata!(
-      'account_already_active' => if payload['already_active']
-                                    {
-                                      'observed_at' => Time.current.iso8601,
-                                      'session_started_at' => payload['session_started_at']
-                                    }
-                                  end
-    )
+  # Aqui só se APAGA o que uma versão anterior gravou. Não é limpeza cosmética: enquanto a chave
+  # existir no banco, ela é uma afirmação falsa esperando o próximo leitor.
+  def esquecer_aviso_de_conta_em_uso!
+    @connection.forget_metadata!('account_already_active')
   end
 end

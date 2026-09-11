@@ -136,8 +136,7 @@ class Autonomia::Insurance::Connection < ApplicationRecord
       failure: last_failure,
       evidence: last_evidence,
       layers: layers,
-      insurers_pending_auth: insurers_pending_auth,
-      account_already_active: account_already_active
+      insurers_pending_auth: insurers_pending_auth
     }
   end
 
@@ -162,12 +161,6 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   # cotacao e trazido para ca porque e aqui que tem conserto -- nunca para o cliente final (4.5).
   def insurers_pending_auth
     metadata.to_h['insurers_pending_auth'].presence
-  end
-
-  # A conta AGGER ja estava em uso quando conectamos (criterio 1.5). `nil` = nao estava, ou o
-  # adapter nao informou — a tela distingue os dois pela ausencia da chave.
-  def account_already_active
-    metadata.to_h['account_already_active'].presence
   end
 
   # Registra o achado da cotação SEM sobrescrever o resto de `metadata` (a comissão mora lá).
@@ -209,6 +202,20 @@ class Autonomia::Insurance::Connection < ApplicationRecord
 
   def merge_metadata!(fields)
     with_lock { update!(metadata: metadata.to_h.merge(fields)) }
+  end
+
+  # APAGA uma chave de `metadata`, sob o mesmo lock de linha do `merge_metadata!`.
+  #
+  # `merge` não apaga: gravar `nil` deixaria a chave lá, com `null` dentro — e chave que existe é
+  # chave que alguém volta a ler. Serve para retirar do banco um retrato que uma versão anterior
+  # gravou e que hoje se sabe falso (o aviso de "conta em uso", entrega 16).
+  #
+  # Leitura sem lock primeiro, mesmo idioma do `record_insurers_pending_auth!`: o caso comum é a
+  # chave não existir, e esse caso não pode custar um lock de linha a cada login.
+  def forget_metadata!(key)
+    return unless metadata.to_h.key?(key)
+
+    with_lock { update!(metadata: metadata.to_h.except(key)) }
   end
 
   private

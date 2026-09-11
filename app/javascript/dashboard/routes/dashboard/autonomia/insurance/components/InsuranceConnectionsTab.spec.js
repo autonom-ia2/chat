@@ -491,10 +491,17 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(wrapper.text()).toContain('Allianz, Icatu');
   });
 
-  // CRITÉRIO 1.5 — decisão do Rodrigo: avisar, não bloquear. O caso real: a conta da SENA ligada no
-  // Hub2You e na Autonomia ao mesmo tempo faz cotação de teste e cotação de cliente aparecerem
-  // misturadas no portal da corretora, sem como distinguir.
-  it('avisa quando a conta AGGER já estava em uso, e não bloqueia nada', async () => {
+  // TERMO 5 DA ENTREGA 16 — o aviso de "conta em uso" morreu, e não volta.
+  //
+  // O portal devolve "já existe uma sessão ativa com esse usuário" junto do token, em TODO login: 6
+  // de 6 nos logins simultâneos medidos em 10/09/2026. É aviso de reuso da sessão compartilhada, e
+  // nada no payload diz QUEM a abriu. A tela dizia ao corretor que a conta estava em uso em outro
+  // lugar quando, quase sempre, a outra sessão era a nossa.
+  //
+  // O backend parou de gravar e de publicar a chave; este exemplo guarda a TELA, com a chave chegando
+  // do jeito que chegava: quem reintroduzir a seção derruba o exemplo e é obrigado a encarar a
+  // medição em vez de repetir o alarme falso.
+  it('não avisa "conta em uso" nem quando a chave ainda chega no payload', async () => {
     api.getConnection.mockResolvedValue({
       data: {
         payload: {
@@ -506,18 +513,6 @@ describe('InsuranceConnectionsTab (API)', () => {
         },
       },
     });
-    const wrapper = await mountTab();
-    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
-    // Avisar não é impedir: os botões seguem disponíveis.
-    expect(
-      wrapper
-        .find('button[label="INSURANCE.CONNECTION.ACTIONS.RECONNECT"]')
-        .attributes('disabled')
-    ).toBeUndefined();
-  });
-
-  it('conta livre não gera aviso nenhum', async () => {
-    api.getConnection.mockResolvedValue({ data: { payload: { ...ready } } });
     const wrapper = await mountTab();
     expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
   });
