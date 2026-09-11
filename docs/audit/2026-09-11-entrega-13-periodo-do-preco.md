@@ -214,6 +214,39 @@ Suíte ampla da rodada 4: **1.030 exemplos, 0 falhas, 0 erros fora de exemplos**
 pré-existentes), exit 0, lido do JSON do rspec (1.029 → 1.030: a spec nova). Adapter da rodada:
 `6506720` (PR #54).
 
+## Rodada de correção 5 (verificador cego, veredito anterior APROVADO, 3 achados P3 — última passada)
+
+| # | Achado | Causa raiz | Correção | Guarda | Mutação |
+|---|---|---|---|---|---|
+| A1 | adapter `quote.ts` — o contrato `Parcelamento` exige `parcelas: z.number().int().positive()` e nenhum teste exercitava a restrição: com `z.number()` a suíte seguia 769/769 verde, e `parcelas: 1.5` com `{490, 980}` fechava a soma e saía `total` com `installments {1.5, 980}` ("1.5x de R$ 980,00" para o cliente); `0` e `-1` fechavam pela primeira parcela e o motivo anunciava "parcelas=0". Nunca observado no portal (sempre inteiro ≥ 1) — regra nova sem teste vermelho | regra sem guarda: o contrato estava escrito, mas nada o prendia | só teste (código correto) | `premio-com-significado` "parcelas que não é inteiro positivo é plano fora do contrato, nunca total": os três casos (1.5 / 0 / −1, com somas que FECHAM com 980 de propósito) exigem `unknown`, `installments` undefined e "1 parcelamento(s) fora do contrato" | R5-M1: `.int().positive()` removido → `npx vitest run test/unit/premio-com-significado.test.ts` exit 1, **1 falha / 17**; restaurado, md5 igual |
+| A2 | adapter `quote.ts` `toOffer` — o portal manda `false` como "ainda não" (`notYet` no schema) em `parcelamentos` e `premioMensal`; com `premio` já numérico ao lado, `toOffer` colapsava `false` em `[]`/`undefined` e o motivo por oferta (termo 1) dizia "parcelamentos=[] (vazio): o portal nao ofereceu plano" e "premioMensal ausente" para um plano que o portal ainda ia mandar. É o motivo que o chat2you grava em `handle->'preco_sem_periodo'` e nunca reescreve (a oferta entra em `entregues` nesse instante). Hipotético: em 04/09 os três campos vieram boolean JUNTOS, e nas três cotações reais de 11/09 não há `premio` numérico com `parcelamentos` false | a tradução da forma acontecia ANTES do registro: `Array.isArray(...) ? ... : []` e `typeof === 'number' ? ... : undefined` apagavam a diferença entre "ainda não", "não veio" e "vazio" | as formas passam inteiras: `derivePremium(amount, parcelamentos: unknown[] \| boolean \| undefined, premioMensal?: number \| boolean \| null \| undefined)` e cada uma é nomeada como veio — `parcelamentos=false: o portal ainda nao respondeu o plano de pagamento`, `parcelamentos ausente: o portal nao mandou o campo`, `premioMensal=false (ainda nao respondido)`, `premioMensal=null`, `premioMensal ausente`. A oferta continua `quoted`/`unknown` | `agger-quote-fluxo` "premio numérico com parcelamentos e premioMensal ainda `false`" atravessa `result()` → `toOffer` → `derivePremium` e fixa os dois textos, exigindo `not.toContain('vazio')`, `not.toContain('parcelamentos ausente')`, `not.toContain('premioMensal ausente')` (o único "ausente" admitido é o do `premio` do CÁLCULO, que também ainda não veio); `premio-com-significado` "a forma do payload vai ao motivo como veio" cobre `false`/`false`, `undefined`/`null` na unidade | R5-M2 (`toOffer` volta a colapsar `parcelamentos` em `[]`) → fluxo exit 1, **1 falha / 29**; R5-M3 (`toOffer` volta a colapsar `premioMensal` em `undefined`) → fluxo exit 1, **1 falha / 29**; R5-M4 (`derivePremium` chama "ainda não" de "vazio") → unidade exit 1, **1 falha / 17**; R5-M5 (`derivePremium` chama `null` de "ausente") → unidade exit 1, **1 falha / 17**; todos restaurados, md5 igual |
+| A3 | chat2you `quote_offers.rb:64` — `#sem_periodo` parte de `quoted` (só quem cotou com valor), mas partir de `Array(@result['offers'])` sobrevivia às 4 specs alvo (74/74). Com a mutação, uma oferta `declined` ou `quoted` com `premium: {}` registraria `'basis=nil sem basis_evidence'` no handle para uma seguradora que o cliente nunca ouviu. Hoje inalcançável (o único chamador, `InsuranceQuote#registrar_sem_periodo`, passa `fresh` já filtrado); `credencial_pendente` e `quoted` são chamados com o `result` cru no mesmo arquivo, e nada impedia o próximo chamador | regra sem guarda na unidade: o filtro só era provado pelo chamador | só teste (código correto) | `quote_offers_spec` `#sem_periodo` "ignora quem nao cotou e quem veio sem valor": `[Porto 900 unknown declined, Azul quoted premium {}, Bp 351,59 unknown]` → `{'55' => motivo_bp}` | R5-MC1: `quoted.select` → `Array(@result['offers']).select` → `POSTGRES_DATABASE=chatwoot_test_e13 bundle exec rspec spec/services/autonomia/insurance/quote_offers_spec.rb` exit 1, **1 falha / 20** (exatamente a spec nova); restaurado, md5 igual |
+
+**Decisão registrada (produto, não código):** com `premio` numérico e `parcelamentos` ainda `false`,
+a oferta continua sendo entregue como `quoted`/`unknown` com a ressalva — e, como o código de
+seguradora entra em `entregues`, ela NÃO é reentregue quando o parcelamento chegar. Segurar a entrega
+até o `parcelamentos` deixar de ser `false` seria decisão do Rodrigo (custo: o cliente espera; ganho:
+"no total" em vez da ressalva). Até lá, o que o código garante é que o motivo gravado no handle diga a
+forma real ("ainda nao respondeu"), e não "vazio"/"ausente".
+
+`especialista_auto.md:191` continua **DEFERIDO** pelo orquestrador (prova real pendente do termo 5 na
+conversa).
+
+Comandos da rodada 5 (worktrees `~/dev/worktrees/{adapters,chat2you}/entrega-13-periodo-do-preco`):
+- Adapter: `npx prettier --write` nos 3 tocados; `npx tsc --noEmit` exit 0; `pnpm verify` exit 0 —
+  **773 unitários + 12 integração (785), cobertura 100/100/100/100**; mutações R5-M1..M5 por script
+  no scratchpad (`e13_r5_mut_adapter.py`: edita, roda `vitest --reporter=json`, restaura, confere
+  md5). Adapter da rodada: `3514e0f` (PR #54).
+- chat2you: `rubocop --format json` na spec tocada — 0 ofensas; `POSTGRES_DATABASE=chatwoot_test_e13
+  bundle exec rspec` nos 4 specs alvo `--format json` — **75 exemplos, 0 falhas, 0 erros fora de
+  exemplos**, exit 0 (74 → 75: a spec nova); mutação R5-MC1 acima; suíte ampla
+  `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia spec/requests/api/v1/accounts/autonomia`
+  — resultado abaixo, lido do JSON do rspec.
+
+Suíte ampla da rodada 5: **1.031 exemplos, 0 falhas, 0 erros fora de exemplos** (3 pendentes
+pré-existentes), exit 0, lido do JSON do rspec (1.030 → 1.031: a spec nova). Adapter da rodada:
+`3514e0f` (PR #54), empurrado.
+
 ## O que fica para prova real / produção
 
 - A Lambda precisa ser publicada com o #54 antes desta PR fazer diferença ao cliente (o chat2you

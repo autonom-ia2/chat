@@ -85,6 +85,20 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
     it 'e vazio quando toda oferta tem periodo' do
       expect(described_class.new('offers' => [offer('Porto', 1321.25, code: '8')]).sem_periodo).to eq({})
     end
+
+    # O filtro é o de `#quoted` (só quem cotou com valor). Partindo de `offers` cru, o registro no
+    # handle ganharia 'basis=nil sem basis_evidence' para quem nem cotou ou veio sem valor — motivo
+    # de uma seguradora que o cliente nunca ouviu. Hoje o único chamador já passa `fresh` filtrado;
+    # a unidade não pode depender de quem a chama.
+    it 'ignora quem nao cotou e quem veio sem valor' do
+      ofertas = described_class.new(
+        'offers' => [offer('Porto', 900.0, 'unknown', code: '8', motivo: 'motivo da Porto').merge('status' => 'declined'),
+                     { 'insurer' => { 'name' => 'Azul', 'code' => '9' }, 'status' => 'quoted', 'premium' => {} },
+                     offer('Bp Assinatura', 351.59, 'unknown', code: '55', motivo: motivo_bp)]
+      )
+
+      expect(ofertas.sem_periodo).to eq('55' => motivo_bp)
+    end
   end
 
   describe '.describe' do
