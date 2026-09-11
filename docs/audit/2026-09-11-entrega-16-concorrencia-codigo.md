@@ -245,6 +245,21 @@ bundle exec rubocop <arquivos tocados> --format json
 npx eslint <arquivos tocados>
 ```
 
+Resultado, lido do JSON (nunca do resumo do terminal) e com o exit code conferido:
+
+| o que | resultado |
+|---|---|
+| alvo, ANTES de implementar | 4 falhas — as guardas novas reprovando, como têm de reprovar |
+| alvo, depois | 21 exemplos, **0 falhas**, `errors_outside_of_examples_count: 0` |
+| frente (pasta `insurance`) | 233 testes, **0 falhas** |
+| suíte ampla (`spec/services/autonomia spec/jobs/autonomia spec/models/autonomia`) | **883 exemplos, 0 falhas**, 3 pendentes (pré-existentes), exit 0 |
+| rubocop nos 4 arquivos Ruby tocados | 0 ofensas |
+| eslint nos 3 arquivos de frente | 0 erros (os avisos de i18n são pré-existentes: 51 na versão de `origin/main`, 50 aqui — a diferença é exatamente a chave removida) |
+| prettier | todos os arquivos tocados já no formato |
+
+No adapter, `pnpm verify` inteiro: typecheck, prettier, honestidade da suíte, portão de ferramentas,
+**769 testes, 0 falhas**, cobertura **100%** em statements, branches, functions e lines.
+
 ## O que NÃO foi feito, de propósito
 
 - **Não se conclui que funciona porque as sessões coexistem.** Coexistência de sessão foi medida sob
