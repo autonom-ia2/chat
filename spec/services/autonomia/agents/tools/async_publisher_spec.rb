@@ -345,6 +345,27 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(run.reload.sequence).to eq(1)
     end
 
+    # O QUE NÃO É TEXTO NEM ARQUIVO NÃO VIRA MENSAGEM. O encerramento (`closing_deliveries`) não passa
+    # pelo `Progress`, então a guarda tem de existir onde a mensagem é criada: um Hash inválido
+    # chegava ao cliente como `{"arquivo" => {...}}` literal (rodada 2, P2).
+    it 'descarta, registrado e sem mensagem, um Hash que nao e entrega de arquivo' do
+      # Arrange
+      promote
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      qualquer = described_class.new(run: run).publish({ 'quote_id' => 'abc:1' })
+      forma_invalida = described_class.new(run: run).publish(arquivo.to_h.deep_merge('arquivo' => { 'url' => 'http://inseguro.test/x.pdf' }))
+
+      # Assert
+      expect(qualquer).to be_skipped
+      expect(forma_invalida).to be_skipped
+      expect(bot_messages.count).to eq(0)
+      expect(run.reload.sequence).to eq(0)
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/entrega descartada run=#{run.id}: não é texto nem arquivo \(Hash\)/)).twice
+    end
+
     it 'espera a cadeia humanizada como qualquer entrega, sem baixar nada antes da hora' do
       # Arrange
       promote(origin_message_id: 77, expected_chunks: 1)

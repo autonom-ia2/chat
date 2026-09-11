@@ -21,7 +21,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
 
   # nil quando não há o que imprimir, quando já foi enviado, ou quando a geração falha. Nunca
   # derruba a cotação: os preços já chegaram, e um PDF que não sai não pode apagá-los.
-  # -> a entrega de arquivo na forma serializada (é ela que atravessa o handle e o job).
+  # -> a entrega de arquivo na forma serializada (é ela que atravessa o handle e o job), ou o TEXTO
+  # com o link quando a URL do portal não cabe na forma (ver `entrega_do_comparativo`).
   def comparison_pdf(handle)
     return if handle[self.class::PDF_SENT_KEY]
     return if Array(handle[self.class::DELIVERED_KEY]).empty?
@@ -31,11 +32,25 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
                                quote_id: handle['quote_id'])
     end
     url = proposal.to_h['url'].presence
-    url && ::Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: nome_do_comparativo, legenda: LEGENDA,
-                                                            reserva: "#{RESERVA}\n#{url}").to_h
+    url && entrega_do_comparativo(url)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] comparativo falhou account=#{account.id} #{e.class}")
     nil
+  end
+
+  # A URL VEM DE FORA e a forma da entrega de arquivo pode recusá-la (o adapter só garante que é uma
+  # URL; https não é promessa dele). A recusa da forma NÃO pode apagar a entrega: quem chama grava a
+  # sentinela do comparativo assim que algo sai daqui, e um Hash inválido seria descartado adiante
+  # (`Progress`, publicador) com o cliente sem arquivo e sem link. Então o que sai é a reserva — o
+  # texto com o link, o de antes — e o defeito da forma vai ao log, pelo nome do campo.
+  def entrega_do_comparativo(url)
+    entrega = ::Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: nome_do_comparativo, legenda: LEGENDA,
+                                                               reserva: "#{RESERVA}\n#{url}")
+    return entrega.to_h if entrega.valida?
+
+    Rails.logger.warn("[autonomia][insurance] comparativo sem forma de arquivo account=#{account.id} " \
+                      "defeito=#{entrega.defeito}; vai como link")
+    entrega.reserva
   end
 
   # O NOME DIZ O QUE O ARQUIVO É, para o cliente achá-lo depois (termo 5): "Comparativo de seguro —

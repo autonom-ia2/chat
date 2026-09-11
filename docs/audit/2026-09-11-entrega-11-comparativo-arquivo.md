@@ -46,16 +46,36 @@ gravada quando a ENTREGA sai da ferramenta, seja qual for a forma em que o publi
 - `async_run_job.rb`, `async_publish_job.rb`: o argumento passa a chamar-se `entrega` (texto ou
   forma serializada); nenhuma lógica nova — a forma já era serializável.
 
+### Rodada 2 (revisão cega, achado P2): a forma que a entrega recusa
+
+O adapter só garante que o comparativo vem numa URL (`z.string().url()`, `http/quote.ts`); https
+não é promessa dele. `comparison_pdf` montava a `EntregaDeArquivo` e serializava SEM conferir
+`valida?`, e o Hash inválido morria adiante com dois sintomas: no caminho da consulta (`apply`) o
+`Progress` o descartava com a sentinela `PDF_SENT_KEY` já gravada — o cliente sem arquivo e sem
+link, e a execução dizendo "comparativo enviado"; no encerramento (`closing_deliveries`, que NÃO
+passa pelo `Progress`) o publicador só descartava texto em branco, e o `to_s` do Hash chegava ao
+cliente como mensagem literal. Duas guardas, na causa raiz:
+
+- `Comparativo#entrega_do_comparativo`: monta a entrega; se `valida?` reprova, devolve a RESERVA
+  (o texto com o link, o de antes) e registra `comparativo sem forma de arquivo … defeito=<campo>;
+  vai como link`. A falha da forma não apaga a entrega.
+- `AsyncPublisher#nada_a_publicar`: o que não é texto nem entrega de arquivo reconhecida
+  (`EntregaDeArquivo.de` → nil) é `Result(:skipped)` com `entrega descartada run=… não é texto nem
+  arquivo (<Classe>)` — nunca `to_s` para a conversa. A guarda passa a existir onde a mensagem é
+  criada, e não só no `Progress`.
+- `EntregaDeArquivo#defeito`: o campo que reprovou a forma (`url`, `nome`, `legenda`, `reserva`),
+  para o log dizer o quê sem a URL nem o texto; `valida?` = `defeito.nil?`. `Result#skipped?`.
+
 ### Termos (5)
 
 | # | Termo | Guarda / evidência |
 |---|---|---|
 | 1 | A comparação chega como ARQUIVO na conversa | `async_run_job_comparativo_arquivo_spec` ("entrega o comparativo como anexo, nomeado pela placa, e depois o fecho": job real + ferramenta real + conector mock + WebMock 200 → `Message` com `Attachment` `file`, `application/pdf`, bytes iguais, legenda sem URL); `async_publisher_spec` "publica o PDF como anexo" |
-| 2 | Falha no download não apaga os preços; o link vai como hoje | job spec "cai para o link quando o download falha, sem apagar o preco que ja saiu" (preço publicado ANTES pelo publicador real fica; `delivered_count` igual; texto = `RESERVA + "\n" + url`, o de antes); M1 |
+| 2 | Falha no download não apaga os preços; o link vai como hoje | job spec "cai para o link quando o download falha, sem apagar o preco que ja saiu" (preço publicado ANTES pelo publicador real fica; `delivered_count` igual; texto = `RESERVA + "\n" + url`, o de antes); M1. Rodada 2: URL que a forma recusa → job spec "entrega o link em texto pela consulta…" (caminho `apply`: link em texto, `PDF_SENT_KEY` true, `delivered_count` 2, `done`) e comparativo spec "quando a URL do portal nao tem a forma segura"; M7 |
 | 3 | Exemplo automatizado do caminho de falha | os dois exemplos de falha do job spec (404 e HTML) + `async_publisher_spec` "cai para o texto com o link… e registra o motivo" (log `arquivo indisponivel run=… motivo=http_404`) + 7 exemplos de recusa em `entrega_de_arquivo_spec` |
 | 4 | O arquivo abre no WhatsApp de verdade | **pendente_prova_real** (orquestrador; ver "Produção") |
 | 5 | O nome diz o que ele é, sem dado pessoal além do que o cliente já vê | `insurance_quote_comparativo_arquivo_spec` (placa `hik-9383` → "Comparativo de seguro — placa HIK9383.pdf"; sem CPF/CEP no nome; sem placa → ramo); M2 |
-| NÃO | Anexo que só funciona quando tudo dá certo | o caminho de falha é exemplo (termo 3) e a reserva é a mesma identidade (M5) |
+| NÃO | Anexo que só funciona quando tudo dá certo | o caminho de falha é exemplo (termo 3) e a reserva é a mesma identidade (M5); Hash que não é entrega nunca vira mensagem (`async_publisher_spec` "descarta, registrado e sem mensagem…", M8) |
 
 ### Mutações (11/09/2026, `mutacoes.py` no scratchpad: edita → roda → restaura → md5 conferido)
 
@@ -67,6 +87,15 @@ gravada quando a ENTREGA sai da ferramenta, seja qual for a forma em que o publi
 | M4 | Assinatura de PDF não conferida | 1 exemplo (HTML com `Content-Type: application/pdf`) |
 | M5 | Identidade do arquivo trocada pelo texto (token do link ≠ token do arquivo) | 1 exemplo (token = `delivery_token(identidade)`) |
 | M6 | `Progress` aceita qualquer Hash como entrega | 1 exemplo (Hash que não é arquivo é descartado) |
+
+Rodada 2 (`mutacoes_e11_r2.py`: M1–M6 repetidas depois do refactor de `publish`, mais M7 e M8;
+todas reprovam, md5 conferido antes/depois; `mutacoes_r2.json`):
+
+| # | Mutação | Reprova |
+|---|---|---|
+| M1–M6 | as mesmas da rodada 1 | 3, 4, 3, 1, 1, 3 exemplos — nada afrouxou |
+| M7 | Comparativo sem a guarda de forma (`return entrega.to_h` sem `if entrega.valida?`) | 2 exemplos (comparativo spec "…registra o defeito da forma"; job spec "entrega o link em texto pela consulta…") |
+| M8 | Publicador sem a guarda (volta ao `entrega.to_s.strip.blank?` de antes: o Hash vira mensagem) | 1 exemplo (publisher "descarta, registrado e sem mensagem, um Hash que nao e entrega de arquivo") |
 
 ### Recusa
 
@@ -84,6 +113,12 @@ curto do motivo — nunca o corpo da resposta nem a mensagem da exceção.
 - Suíte ampla `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia`: 912 exemplos,
   0 falhas, 0 erros fora de exemplo, 3 pendentes (anteriores a esta PR; `ampla.json`).
 - Banco de teste próprio: `chatwoot_test_e11`.
+- Rodada 2: RED confirmado antes de implementar (4 novos falhando, 39 antigos passando; o do job
+  reproduz a sonda P4 do revisor: só o preço chega). Depois: 11 arquivos de spec alvo (inclusive
+  `recusa_registro_spec`, `recusa_guarda_spec`, `progress_spec`, `async_run_job_spec`,
+  `reap_stale_runs_job_spec`) = 161 exemplos, 0 falhas, 0 erros fora (`green.json`); rubocop nos 7
+  arquivos tocados: 0 ofensas (`publish` foi desmembrado para caber na complexidade); suíte ampla:
+  916 exemplos, 0 falhas, 0 erros fora de exemplo, 3 pendentes anteriores (`ampla_r2.json`).
 
 ## O ACHADO que o orquestrador precisa saber antes da prova real
 
@@ -126,6 +161,7 @@ export POSTGRES_DATABASE=chatwoot_test_e11; RAILS_ENV=test bundle exec rails db:
 bundle exec rspec <specs tocados> --format json --out r7.json          # 112 ex, 0 falhas
 bundle exec rubocop --format json <14 arquivos tocados>                 # 0 ofensas
 uv run python3 mutacoes.py                                              # M1–M6, todas reprovam, md5 restaurado
+uv run python3 mutacoes_e11_r2.py                                       # rodada 2: M1–M8, todas reprovam, md5 restaurado
 bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia --format json --out ampla.json
 npx tsx src/cli/main.ts agger quote proposal <id>  (×3, só print; nenhum quote start) + curl -I na URL → 404 BlobNotFound
 ```

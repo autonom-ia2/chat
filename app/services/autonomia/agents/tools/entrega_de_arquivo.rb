@@ -68,7 +68,18 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   end
 
   def valida?
-    url.match?(URL_SEGURA) && nome.match?(NOME_DE_PDF) && legenda.present? && reserva.present?
+    defeito.nil?
+  end
+
+  # O CAMPO que reprova a forma, como código curto ('url', 'nome', 'legenda', 'reserva'), ou nil
+  # quando a forma é válida. É o que vai ao log de quem cai para o link (a ferramenta) ou descarta
+  # (o publicador): o nome do campo, nunca o valor — a URL e os textos são dados de fora.
+  def defeito
+    return 'url' unless url.match?(URL_SEGURA)
+    return 'nome' unless nome.match?(NOME_DE_PDF)
+    return 'legenda' if legenda.blank?
+
+    'reserva' if reserva.blank?
   end
 
   def to_h

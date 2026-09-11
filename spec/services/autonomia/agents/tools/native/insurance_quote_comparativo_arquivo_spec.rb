@@ -61,6 +61,28 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     expect(comparativo(bike).nome).to eq('Comparativo de seguro — bike.pdf')
   end
 
+  # A URL VEM DE FORA e a forma da entrega de arquivo pode recusá-la (o adapter só garante que é uma
+  # URL; https não é promessa). A falha da forma não pode apagar a entrega: sai o texto com o link,
+  # o de antes, e o motivo curto no log. Sem esta guarda o Hash inválido era descartado pelo
+  # `Progress` com a sentinela do comparativo já gravada — nem arquivo, nem link (rodada 2, P2).
+  describe 'quando a URL do portal nao tem a forma segura' do
+    let(:url_http) { 'http://arquivos.exemplo.test/comparativo-9.pdf' }
+
+    before do
+      connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_proposal: { 'url' => url_http })
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      allow(Rails.logger).to receive(:warn).and_call_original
+    end
+
+    it 'entrega o texto com o link, como antes, e registra o defeito da forma' do
+      entrega = tool.closing_deliveries('quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43']).first
+
+      expect(entrega).to eq("Comparativo com todas as opções:\n#{url_http}")
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/comparativo sem forma de arquivo account=#{account.id} defeito=url; vai como link/))
+    end
+  end
+
   it 'nomeia pelo ramo com espaco, nunca pelo sublinhado do codigo' do
     fianca = described_class.new(agent: agent, params: { 'produto' => 'fianca_locaticia', 'dados' => '{}' })
 

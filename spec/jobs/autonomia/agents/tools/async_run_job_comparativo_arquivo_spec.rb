@@ -98,6 +98,35 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(run.status).to eq('failed')
   end
 
+  # O CAMINHO DA CONSULTA (`apply`, poll `done`), com a URL que a forma recusa: o cliente recebe o
+  # link em texto e a sentinela do comparativo é gravada — antes, o `Progress` descartava o Hash
+  # inválido e a execução dizia "comparativo enviado" com o cliente sem nada (rodada 2, P2).
+  it 'entrega o link em texto pela consulta quando a URL do portal nao tem a forma segura' do
+    # Arrange — cotação completa no mock (`mock-0:1`), todos os preços já entregues, prazo vivo
+    url_http = 'http://exemplo.test/comparativo-mock.pdf'
+    mock = Autonomia::Insurance::Connector::Mock.new
+    allow(mock).to receive(:quote_proposal).and_return('quote_id' => 'mock-0:1', 'url' => url_http)
+    allow(Autonomia::Insurance::Connector).to receive(:client).and_return(mock)
+    run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug,
+                                           arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } },
+                                           scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-0:1',
+                                  cotacao::DELIVERED_KEY => %w[8 3 47], 'produto' => 'auto' })
+    Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
+    run.record_delivery!
+
+    # Act
+    described_class.new.perform(run.id, 1)
+
+    # Assert — o preço fica, o link sai em texto, a sentinela marca o comparativo como saído
+    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url_http}"])
+    expect(bot_messages.flat_map(&:attachments)).to be_empty
+    expect(run.reload.handle[cotacao::PDF_SENT_KEY]).to be(true)
+    expect(run.delivered_count).to eq(2)
+    expect(run.status).to eq('done')
+  end
+
   it 'cai para o link tambem quando a URL responde algo que nao e PDF' do
     run = cotacao_com_preco_publicado_e_prazo_vencido
     stub_request(:get, url).to_return(status: 200, body: '<html>manutenção</html>', headers: { 'Content-Type' => 'text/html' })

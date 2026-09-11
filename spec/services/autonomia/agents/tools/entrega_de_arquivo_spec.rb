@@ -38,6 +38,20 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
     end
   end
 
+  # O DEFEITO DA FORMA tem nome curto, para o log de quem cai para o link (a ferramenta) ou descarta
+  # (o publicador) dizer O QUE reprovou — sem a URL nem o texto, que são dados de fora.
+  describe '#defeito' do
+    it 'e nil na forma valida, e o campo que reprovou nas outras' do
+      expect(entrega.defeito).to be_nil
+      expect(described_class.new(url: 'http://inseguro.test/x.pdf', nome: entrega.nome, legenda: entrega.legenda,
+                                 reserva: entrega.reserva).defeito).to eq('url')
+      expect(described_class.new(url: url, nome: 'comparativo.exe', legenda: entrega.legenda,
+                                 reserva: entrega.reserva).defeito).to eq('nome')
+      expect(described_class.new(url: url, nome: entrega.nome, legenda: ' ', reserva: entrega.reserva).defeito).to eq('legenda')
+      expect(described_class.new(url: url, nome: entrega.nome, legenda: entrega.legenda, reserva: nil).defeito).to eq('reserva')
+    end
+  end
+
   it 'serializa com chaves de texto, porque atravessa os argumentos de um job' do
     expect(entrega.to_h).to eq(described_class::CHAVE => { 'url' => url, 'nome' => entrega.nome,
                                                            'legenda' => entrega.legenda, 'reserva' => entrega.reserva })

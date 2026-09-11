@@ -32,6 +32,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
     def published? = status == :published
     def deferred? = status == :deferred
     def blocked? = status == :blocked
+    def skipped? = status == :skipped
   end
 
   # O que vira UMA mensagem na conversa: o texto, o token de idempotência (a identidade da entrega)
@@ -44,10 +45,14 @@ class Autonomia::Agents::Tools::AsyncPublisher
 
   # -> Result. NUNCA levanta: falhar em publicar não pode derrubar a execução inteira.
   # `entrega` é um texto ou uma entrega de arquivo (o objeto, ou a forma serializada que atravessa o
-  # job); a autorização e a espera pela cadeia são as mesmas para as duas.
+  # job); a autorização e a espera pela cadeia são as mesmas para as duas. O QUE NÃO É NENHUMA DAS
+  # DUAS (um Hash de outra forma, uma forma de arquivo que a validação recusa) é descartado AQUI,
+  # registrado: o encerramento (`closing_deliveries`) não passa pelo `Progress`, e sem esta guarda
+  # o `to_s` do Hash chegava ao cliente como mensagem, literal (rodada 2 de revisão, 11/09/2026).
   def publish(entrega, wait_for_chain: true)
     arquivo = ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega)
-    return Result.new(status: :skipped) if arquivo.nil? && entrega.to_s.strip.blank?
+    sem_conteudo = nada_a_publicar(entrega, arquivo)
+    return sem_conteudo if sem_conteudo
 
     conversation = authorized_conversation
     return Result.new(status: :blocked) if conversation.blank?
@@ -67,6 +72,22 @@ class Autonomia::Agents::Tools::AsyncPublisher
   end
 
   private
+
+  # -> Result quando não há o que publicar, nil quando há. Texto em branco sai calado (é o mesmo
+  # `skipped` de sempre); o que não é texto nem arquivo sai REGISTRADO — é uma entrega que alguém
+  # montou errado, e o silêncio esconderia isso.
+  def nada_a_publicar(entrega, arquivo)
+    return if arquivo
+    return descartar(entrega) unless entrega.is_a?(String)
+
+    Result.new(status: :skipped) if entrega.strip.blank?
+  end
+
+  # Só a CLASSE vai ao log: o conteúdo de uma entrega que não é entrega pode ser qualquer coisa.
+  def descartar(entrega)
+    Rails.logger.warn("[autonomia][tool][async] entrega descartada run=#{@run.id}: não é texto nem arquivo (#{entrega.class.name})")
+    Result.new(status: :skipped)
+  end
 
   # A conversa em que esta execução AINDA pode publicar, ou nil.
   #
