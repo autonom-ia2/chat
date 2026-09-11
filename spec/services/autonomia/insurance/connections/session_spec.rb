@@ -138,8 +138,13 @@ RSpec.describe Autonomia::Insurance::Connections::Session do
     Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
   end
 
-  # Connector que CONTA quantas vezes abriu sessão. É o número que importa: cada login a mais é uma
-  # sessão a menos para quem estava usando a anterior.
+  # Connector que CONTA quantas vezes abriu sessão. É o número que importa, e o que ele mede é CUSTO:
+  # cada login a mais é uma chamada de até `Http::READ_TIMEOUT` segundos ao portal para receber de
+  # volta a sessão que já tínhamos.
+  #
+  # (Correção de 11/09/2026: aqui se lia "cada login a mais é uma sessão a menos para quem estava
+  # usando a anterior". Medido e falso — logins da mesma conta compartilham a sessão. Esta paráfrase
+  # atravessou a guarda de palavra da rodada 4 sem ser acusada, e é por isso que a guarda saiu.)
   def counting_connector(expires_in: 3.hours)
     Class.new(Autonomia::Insurance::Connector::Client) do
       attr_reader :logins

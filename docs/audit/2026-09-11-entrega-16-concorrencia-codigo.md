@@ -62,7 +62,8 @@ cabeçalho de `session_spec.rb`; a 2 achou a frase viva no ponto de ENTRADA do c
 paráfrases dela dentro dos arquivos que a 2 já tinha corrigido; a 4 achou mais nove pontos — de novo
 dentro de arquivos corrigidos, incluindo o arquivo de CONTRATO de causas de falha do adapter. Não
 dizer "estes são todos os pontos" é o que esta seção aprendeu: a lista abaixo é a lista do que foi
-corrigido, e quem garante que não voltou é a guarda da subseção seguinte, não esta tabela.
+corrigido. Quem garante o FATO é o canário vivo; a prosa depende de revisão, pelo motivo da
+subseção seguinte.
 
 | rodada | repositório | arquivo | a frase, citada para poder ser refutada |
 |---|---|---|---|
@@ -96,6 +97,10 @@ corrigido, e quem garante que não voltou é a guarda da subseção seguinte, n�
 | **4** | chat2you | `spec/…/connections/session_spec.rb` (cabeçalho) | falso: "impede o healthcheck de encerrar a sessão de uma cotação em andamento" |
 | **4** | chat2you | `spec/…/connector/http_spec.rb` | falso: "abriria uma sessão nova a cada chamada e invalidaria a que está cotando" |
 | **4** | chat2you | `spec/…/connector/http_contrato_real_spec.rb` | falso: atribuía o 403 de "credencial recusada" ao defeito do camelCase |
+| **5** | adapter | `core/failure.ts` (doc de `session_lost`) | inexato: "acabou ANTES do prazo que o portal informou" — o classificador só recebe `auth_required` + `usedStoredSession`, e nunca compara validade nem horário |
+| **5** | adapter | `scripts/probe-session-reuse.ts`, `scripts/probe-double-login.ts`, `scripts/discovery/provar-sessoes-paralelas.ts` | falso: os rótulos de saída liam `droppedPreviousSession` como EFEITO ("derrubou sessão anterior", "precisou derrubar a anterior"); o campo registra o PARÂMETRO enviado |
+| **5** | adapter | `scripts/probe-o-que-e-sessao.ts`, `scripts/probe-login-classificacao.ts` | mesma classe, achada varrendo por ela e não pelo caso: rótulos `pos-derruba` e `1-sem-derruba` para logins que só mandaram (ou deixaram de mandar) `derrubaSessao` |
+| **5** | chat2you | `spec/…/connections/session_spec.rb` (o connector que conta logins) | falso: "cada login a mais é uma sessão a menos para quem estava usando a anterior" |
 
 Onde a frase antiga está CITADA (`"aqui se lia …"`), ela fica: apagar a frase errada apagaria também
 o registro de por que a correção existe.
@@ -111,33 +116,44 @@ e, sobre o resultado, uma allowlist de NEGAÇÃO/CITAÇÃO: `medido`, `falso`, `
 `correção de`, `corrigido`, `canário`, `reconciliado`, `não derruba`, `não é invalidado`, `coexist`.
 Um minuto de execução, nove pontos vivos — contra três rodadas de leitura humana.
 
-### A guarda textual que a rodada 3 declarou impossível
+### A guarda textual: criada na rodada 4, removida na rodada 5
 
-Esta auditoria dizia, na rodada 3: *"não há guarda textual contra a volta da frase… toda correção
-cita a frase falsa para poder refutá-la, e um varredor de prosa não distingue a afirmação da
-citação"*. **O argumento estava errado, e a rodada 4 é a prova**: o grep acima distinguiu as duas
-coisas em um minuto, com uma allowlist de dez palavras.
+A rodada 3 escreveu aqui que *"não há guarda textual contra a volta da frase… toda correção cita a
+frase falsa para poder refutá-la, e um varredor de prosa não distingue a afirmação da citação"*. A
+rodada 4 julgou o argumento errado e transformou o grep em teste nos dois repositórios
+(`test/unit/premissa-de-sessao-nao-volta.test.ts` e
+`spec/services/autonomia/insurance/premissa_de_sessao_spec.rb`), com a regra "a frase nunca aparece
+longe da sua refutação": palavras de QUEDA mais palavras de SESSÃO na mesma frase, liberadas por uma
+allowlist de refutação numa janela de doze linhas.
 
-O que desfaz o argumento é a forma da própria correção: **quem refuta escreve a refutação por
-perto**. Então a regra não é "a frase não aparece" — é **a frase nunca aparece longe da sua
-refutação**. Isso é mecanicamente verificável, e agora é verificado:
+**A rodada 5 removeu as duas.** O verificador cego não pediu ajuste — reproduziu contraexemplos que
+derrubam a ideia:
 
-- adapter: `test/unit/premissa-de-sessao-nao-volta.test.ts`, sobre `src/`, `scripts/`, `test/` e
-  `docs/` (`.ts` e `.md`);
-- chat2you: `spec/services/autonomia/insurance/premissa_de_sessao_spec.rb`, sobre o namespace de
-  seguros (`app`, `spec`, a aba em `app/javascript`) e `docs/audit` (`.rb`, `.js`, `.vue`, `.md`).
+| entrada | o que a guarda fazia | o que deveria ser |
+|---|---|---|
+| `# Abrir outro login jamais derruba a sessao anterior.` | **acusa** | é a verdade medida, tratada como reincidência |
+| `# Foi medido: abrir outro login derruba a sessao anterior.` | **passa** | é a premissa FALSA, liberada porque a palavra `medid` está na mesma linha |
+| afirmação falsa seguida de `# O tempo de resposta e medido em segundos.` | **passa** | a "refutação" era de outro assunto: proximidade de palavra não é proximidade de sentido |
+| `// O AGGER aceita uma sessao viva por login.` | **passa** | exclusividade afirmada, só que sem verbo de queda |
+| o cabeçalho ANTIGO de `src/browser/session-host.ts` (adapter) | **zero achados** | era um dos textos que a rodada 4 existiu para corrigir |
 
-As duas leem PROSA (comentário, título de exemplo e markdown), casam "algo caindo" + "uma sessão" na
-mesma frase — inclusive quebrada em duas linhas —, e reprovam quando não há refutação em até doze
-linhas. Cada uma tem um exemplo de CONTRAPROVA com amostra sintética, porque varredor que não pega o
-que promete passa elogiando o próprio silêncio.
+A conclusão fecha o assunto: **prosa não é regra**. Um varredor de prosa com allowlist por janela de
+linhas não distingue afirmação de citação nem refutação de reincidência, e uma guarda que PASSA com a
+premissa falsa é pior do que nenhuma — ela dá licença, e ainda acusa quem escreve a verdade. O
+argumento da rodada 3 estava certo; foi a rodada 4 que se enganou, e o preço foram ~400 linhas de
+varredor com aparência de portão. (Os títulos de `it(…)` do Vitest também escapavam da versão Ruby,
+mas isso é detalhe: o defeito é a ideia, não a cobertura dela.)
 
-**O que elas não prometem** (2.3 — nunca dizer "100% mapeado"): afirmação escrita dentro de uma
-string de código escapa; paráfrase sem nenhuma das palavras da lista passa (por exemplo "um navegador
-a mais é um segundo login", que aliás é verdade); e o prefixo cru `invalid` foi trocado por formas
-verbais depois de acusar "corpo inválido" numa sonda — guarda que acusa o inocente é guarda que
-alguém desliga. Elas fecham a reincidência MEDIDA, não a criatividade. Quem guarda o FATO continua
-sendo o canário vivo `agger.sessao-unica.live.test.ts`.
+O que sobra, e é o que sempre guardou de verdade:
+
+- o **FATO** tem guarda executável — o canário vivo `agger.sessao-unica.live.test.ts` no adapter, e a
+  medição de 10/09 (seis logins simultâneos, doze sessões, 1.202 chamadas, zero falhas). Se o portal
+  mudar e passar a derrubar, é ele que fica vermelho, que é o que importa;
+- a **PROSA** tem revisão. O grep acima continua registrado e é manual de propósito: quem lê o
+  resultado julga cada ocorrência, uma a uma. Foi assim que a rodada 5 achou
+  `spec/…/connections/session_spec.rb:141` — "cada login a mais é uma sessão a menos para quem estava
+  usando a anterior", uma paráfrase que a guarda de palavra deixava passar porque não usa nenhuma
+  palavra da lista.
 
 ## Termo 5 — o alerta falso morreu
 
@@ -194,8 +210,15 @@ tela inteira.
 **Correção de um relato inexato das rodadas anteriores**, que dizia que "o primeiro login de cada
 conexão depois do deploy limpa a linha, e o healthcheck de 30 em 30 minutos cobre todas sozinho". O
 healthcheck **não faz login quando a sessão guardada está viva**: `Connections::Sync` chama
-`with_fresh_session`, que só reabre quando `session_live?` é falso, e a sessão vale horas. A chave
-velha pode portanto ficar no `metadata` até a sessão vencer, ou até alguém clicar em **Reconectar**.
+`with_fresh_session`, que só reabre quando `session_live?` é falso, e a sessão vale horas.
+
+**E clicar em Reconectar também não limpa** — correção da rodada 5, de outro relato inexato que
+estava exatamente nesta linha. Reconectar entra no MESMO `Connections::Sync`, que chama
+`with_fresh_session`: com a sessão guardada válida, `open!` não roda, e
+`esquecer_aviso_de_conta_em_uso!` só é chamado no fim de `open!`, depois de um `store_session!`
+bem-sucedido. A chave velha some na próxima ABERTURA EFETIVA E BEM-SUCEDIDA da sessão — quando a
+guardada vence, quando o portal recusa a guardada (`renew!`) ou quando a credencial muda —, não no
+clique.
 
 Isso é inofensivo, e é por isso que não há migration: **nada mais lê a chave** — ela saiu de
 `diagnostico_publico`, do contrato do frontend e da aba —, e `connection_spec.rb` guarda exatamente
@@ -303,10 +326,11 @@ corrigiu as paráfrases e deixou passar mais nove pontos, entre eles o arquivo d
 de falha do adapter — o primeiro que alguém lê para tratar um 403. Três rodadas de leitura humana,
 três listas que se declararam completas e não eram.
 
-A lição só vale escrita em código, e agora está: **a varredura virou teste** nos dois repositórios
-(subseção "a guarda textual que a rodada 3 declarou impossível", no termo 4), com a regra "a frase
-nunca aparece longe da sua refutação" e contraprova própria. A quarta rodada é a última em que essa
-lista dependeu de alguém prestar atenção. Junto foi consertado um teste que só passava no clone com nome de pasta
+A rodada 4 tentou escrever a lição em código — **a varredura virou teste** nos dois repositórios — e
+a rodada 5 desfez isso, porque o varredor passava com a premissa FALSA e acusava a refutação dela
+(subseção "a guarda textual: criada na rodada 4, removida na rodada 5", no termo 4). Então esta lista
+continua sendo o registro do que foi corrigido, e não a garantia: quem garante o FATO é o canário
+vivo; a prosa depende de revisão, com o grep acima como ferramenta de quem revisa. Junto foi consertado um teste que só passava no clone com nome de pasta
 `autonomia-adapters` (`test/unit/destino-seguro.test.ts`): em worktree ele ficava vermelho sem que
 nada estivesse errado, e portão que depende do nome do diretório não é portão.
 
@@ -315,7 +339,7 @@ nada estivesse errado, e portão que depende do nome do diretório não é port�
 | termo | guarda | evidência |
 |---|---|---|
 | 3 · issue #8 reescrita ou fechada | não é código: a issue foi fechada com a evidência | comentário + fechamento em `autonom-ia2/autonomia-adapters#8` |
-| 4 · o texto de `session.rb` corrigido | **guarda textual executável nos dois repositórios** (`premissa-de-sessao-nao-volta.test.ts` e `premissa_de_sessao_spec.rb`); o FATO tem canário vivo | os 30 pontos da tabela do termo 4; mutações MA1–MA3 e MC1–MC3; canário `agger.sessao-unica.live.test.ts` |
+| 4 · o texto de `session.rb` corrigido | **não tem guarda executável, e não vai ter** — prosa não é regra (rodada 5). O FATO tem canário vivo; a prosa tem revisão, com o grep registrado no termo 4 | os 34 pontos da tabela do termo 4; canário `agger.sessao-unica.live.test.ts`; medição de 10/09 |
 | 5 · o alerta para de mentir | `session_spec.rb` (3 exemplos) + `connection_spec.rb` (3, sendo 2 novos) + `InsuranceConnectionsTab.spec.js` (1, por EFEITO) | mutações M1–M8 abaixo |
 | 6 · concorrência medida e registrada | a seção acima, com origem de cada número no código | `sidekiq.yml`, `async_run_job.rb:17`, `async_config.rb`, workflow de deploy |
 | 7 · medição versionada | este arquivo + a PR do adapter | — |
@@ -342,6 +366,11 @@ checksum (sha256 antes = sha256 depois em todas).
 | MA2 | a guarda do adapter deixa de ler a frase quebrada em duas linhas | 1 falha — a contraprova |
 | MA3 | a guarda do adapter deixa de exigir a refutação por perto | 2 falhas |
 
+**MA1–MA3 e MC1–MC3 morreram junto com a guarda, na rodada 5.** Elas só reprovavam porque o varredor
+de prosa existia; sem ele, mutar um comentário não derruba teste nenhum — e é essa a verdade que a
+linha "4 · o texto de `session.rb` corrigido" da tabela acima passou a dizer, em vez de prometer
+portão. As mutações M1–M8 continuam valendo, porque desligam CÓDIGO.
+
 ## Comandos rodados
 
 ```
@@ -350,7 +379,6 @@ POSTGRES_DATABASE=chatwoot_test_e16 RAILS_ENV=test bundle exec rails db:create d
 
 # alvo (vermelho antes, verde depois)
 POSTGRES_DATABASE=chatwoot_test_e16 bundle exec rspec \
-  spec/services/autonomia/insurance/premissa_de_sessao_spec.rb \
   spec/services/autonomia/insurance/connections/session_spec.rb \
   spec/services/autonomia/insurance/connector/http_spec.rb \
   spec/services/autonomia/insurance/connector/http_contrato_real_spec.rb \
@@ -380,14 +408,20 @@ Resultado, lido do JSON (nunca do resumo do terminal) e com o exit code conferid
 | frente (pasta `insurance`) | 233 testes, **0 falhas**, exit 0 — nenhum arquivo de frente foi tocado na rodada 4 |
 | suíte ampla (rodada 3) | 1.014 exemplos, 0 falhas, 3 pendentes (pré-existentes), exit 0 |
 | suíte ampla (rodada 4) | **1.016 exemplos, 0 falhas**, 3 pendentes (pré-existentes), `errors_outside_of_examples_count: 0`, exit 0 |
-| rubocop nos arquivos Ruby tocados (7 na rodada 3, 4 na rodada 4) | 0 ofensas |
+| alvo, depois da rodada 5 (os mesmos 4 arquivos; a guarda textual saiu) | **40 exemplos, 0 falhas**, `errors_outside_of_examples_count: 0`, exit 0 |
+| `spec/services/autonomia/insurance` inteiro (rodada 5) | **164 exemplos, 0 falhas**, 0 pendentes, exit 0 |
+| `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia` (rodada 5) | **885 exemplos, 0 falhas**, 3 pendentes (pré-existentes), exit 0 |
+| suíte ampla, com `spec/requests/…/autonomia` (rodada 5) | **1.014 exemplos, 0 falhas**, 3 pendentes (pré-existentes), `errors_outside_of_examples_count: 0`, exit 0 |
+| rubocop nos arquivos Ruby tocados (7 na rodada 3, 4 na rodada 4, 1 na rodada 5) | 0 ofensas |
 | eslint nos 2 arquivos de frente tocados | 0 erros, 0 avisos |
 | prettier | todos os arquivos tocados já no formato |
 
 No adapter, `pnpm verify` inteiro (typecheck, prettier, honestidade da suíte, portão de ferramentas,
-unitários, integração e cobertura): na rodada 3, 769 testes; na rodada 4, **771 testes (759 unitários
-+ 12 de integração), 0 falhas**, cobertura **100%** em statements, branches, functions e lines, exit
-0. Os dois testes a mais são a guarda textual nova e a contraprova dela.
+unitários, integração e cobertura): na rodada 3, 769 testes; na rodada 4, 771 (os dois a mais eram a
+guarda textual e a contraprova dela); na rodada 5, **769 testes (757 unitários + 12 de integração), 0
+falhas**, cobertura **100%** em statements, branches, functions e lines, exit 0. A queda de dois é
+exatamente a guarda removida — nenhuma cobertura de `src/` dependia dela, porque ela lia arquivos do
+disco em vez de exercitar código.
 
 ## Rodada de correção 3 — o que um verificador cego achou, e o que foi feito
 
@@ -395,7 +429,7 @@ Seis achados, todos P3, nenhum de comportamento em runtime. Achado → correçã
 
 | # | achado | correção | guarda | mutação |
 |---|---|---|---|---|
-| 1 | a frase falsa sobrevivia no PONTO DE ENTRADA do conector (`connector/http.rb:31-33`, `connector/client.rb:13-15`): quem lê o conector antes do `session.rb` saía com a premissa falsa | comentários reescritos no padrão do cabeçalho novo (motivo = economia de login; frase medida e falsa em 05/09 e 10/09; canário nomeado). Junto, `connections/sync.rb`, que dizia o mesmo em dois pontos | o FATO tem o canário `agger.sessao-unica.live.test.ts` | — (comentário; ver "por que não há guarda textual", no termo 4) |
+| 1 | a frase falsa sobrevivia no PONTO DE ENTRADA do conector (`connector/http.rb:31-33`, `connector/client.rb:13-15`): quem lê o conector antes do `session.rb` saía com a premissa falsa | comentários reescritos no padrão do cabeçalho novo (motivo = economia de login; frase medida e falsa em 05/09 e 10/09; canário nomeado). Junto, `connections/sync.rb`, que dizia o mesmo em dois pontos | o FATO tem o canário `agger.sessao-unica.live.test.ts` | — (comentário; ver "a guarda textual: criada na rodada 4, removida na rodada 5", no termo 4) |
 | 2 | `session_spec.rb:14-16` afirmava a premissa falsa três linhas depois de o cabeçalho do MESMO arquivo declará-la falsa | reescrito com a causa PROVADA do 403 de 05/09 (o handler do adapter redigia o corpo e o token viajava como a palavra `<REDACTED>` em `Authorization`, `autonomia-adapters` c9b88bd) e o motivo honesto de `with_fresh_session` existir | os três exemplos do `describe` não mudaram | — |
 | 3 | no adapter, cinco trechos contradiziam os blocos que a própria PR tinha corrigido, dentro dos mesmos arquivos | alinhados; e a varredura achou um SEXTO que ninguém tinha listado — `core/adapter.ts`, o campo `alreadyActive` do contrato `OpenSession`, que ainda mandava "a tela contar ao corretor" | `pnpm verify`: 769 testes, 0 falhas, cobertura 100 % | — |
 | 4 | a justificativa de remover o aviso dizia "não guardamos o início de cada uma" — inexato: `openSession` devolve o `AggerSession` inteiro em `data` e `session_payload` guarda o blob como veio, então o instante ESTÁ gravado | trocado pelo fato certo, dito como DECISÃO e não como impossibilidade: o instante está dentro do blob opaco, usá-lo exigiria interpretar o blob (contra o contrato) e assumir que `createdAt` só muda quando a sessão expira — expiração nunca foi observada. Corrigido na auditoria e em `session.rb:135-137` | — (é texto; importa porque é sobre ele que se decide se o critério 1.5 volta com outra fonte) | — |
@@ -412,17 +446,70 @@ repositórios. Achado → correção → guarda → mutação:
 
 | # | achado | correção | guarda | mutação |
 |---|---|---|---|---|
-| 1 | `adapter/src/core/failure.ts:8-11` e `:20` — o arquivo de CONTRATO de causas de falha ainda atribuía o 403 de 05/09 a "alguém entrou no portal pelo navegador, o AGGER derrubou a nossa sessão (ele aceita uma por login)", e documentava `session_lost` como "login em outro lugar". É o primeiro arquivo que alguém lê para tratar um 403 | reescrito no padrão "aqui se lia … medido e falso", com a causa PROVADA (token redatado pelo handler, c9b88bd) e o canário nomeado; `session_lost` passa a ser "acabou ANTES do prazo que o portal informou" | `premissa-de-sessao-nao-volta.test.ts` | **MA1** — antes da rodada 4 não havia teste a reprovar |
+| 1 | `adapter/src/core/failure.ts:8-11` e `:20` — o arquivo de CONTRATO de causas de falha ainda atribuía o 403 de 05/09 a "alguém entrou no portal pelo navegador, o AGGER derrubou a nossa sessão (ele aceita uma por login)", e documentava `session_lost` como "login em outro lugar". É o primeiro arquivo que alguém lê para tratar um 403 | reescrito no padrão "aqui se lia … medido e falso", com a causa PROVADA (token redatado pelo handler, c9b88bd) e o canário nomeado; `session_lost` passa a ser "acabou ANTES do prazo que o portal informou" — **corrigido de novo na rodada 5**, porque isso também não se comprova | a guarda citada aqui foi removida na rodada 5 | **MA1** — sem valor depois da rodada 5 |
 | 2 | contradição DENTRO de arquivos que a rodada 3 tinha corrigido: `falha-nao-culpa-o-corretor.test.ts:10-12` e `service.test.ts:123` | alinhados ao texto medido; e a varredura achou os demais da tabela do termo 4 (`agger-session-reuse.test.ts` foi achado pela guarda, não por pessoa) | idem | **MA2** (frase quebrada em duas linhas) |
 | 3 | cinco trechos afirmando a premissa sem citação (`test/integration/session-host.test.ts:14-15` e o título da 124, `guardas-fecho.test.ts:344`, `cobertura-ultima.test.ts:27`, `cobertura-final.test.ts:42`) e `docs/implementation-gap-report.md:236`, fora do alcance da nota posta na §6 | corrigidos; o relatório datado ganhou nota na §7 (linha 5 da tabela) e na §8, em vez de ser reescrito; a auditoria trocou "estes são todos os pontos" pela lista real e pelo grep usado | idem + o grep registrado no termo 4 | **MA3** (a exigência de refutação por perto) |
-| 4 | `chat2you spec/…/connections/session_spec.rb:3-8` — o cabeçalho reescrito pela própria PR terminava dizendo que o contrato "impede o healthcheck de encerrar a sessão de uma cotação em andamento": a premissa refutada, em paráfrase, três linhas abaixo da correção | trocado por custo — healthcheck e polling REUSAM um login em vez de abrir um por passada —, com a segunda correção datada ao lado. Junto, `http_spec.rb` ("invalidaria a que está cotando") e `http_contrato_real_spec.rb` (atribuía o 403 ao defeito do camelCase) | `premissa_de_sessao_spec.rb` | **MC1**, **MC2**, **MC3** |
+| 4 | `chat2you spec/…/connections/session_spec.rb:3-8` — o cabeçalho reescrito pela própria PR terminava dizendo que o contrato "impede o healthcheck de encerrar a sessão de uma cotação em andamento": a premissa refutada, em paráfrase, três linhas abaixo da correção | trocado por custo — healthcheck e polling REUSAM um login em vez de abrir um por passada —, com a segunda correção datada ao lado. Junto, `http_spec.rb` ("invalidaria a que está cotando") e `http_contrato_real_spec.rb` (atribuía o 403 ao defeito do camelCase) | a guarda citada aqui foi removida na rodada 5 | **MC1**–**MC3** — sem valor depois da rodada 5 |
 
 Cada mutação foi aplicada de verdade, com o teste rodado e o arquivo restaurado com conferência de
 `sha256` (antes = depois nas sete, incluindo a re-execução de **M1**).
 
-**O que esta rodada mudou de método**: a lista de pontos deixou de ser a garantia. Ela é o registro
-do que foi corrigido; quem garante que não volta é a guarda executável, e ela achou sozinha um ponto
-(`agger-session-reuse.test.ts`) que nem o verificador cego tinha listado.
+**O que esta rodada mudou de método, e o que a rodada 5 desfez**: a lista de pontos deixou de ser a
+garantia — isso continua valendo. O que não vale é a segunda metade da frase que estava aqui ("quem
+garante que não volta é a guarda executável"): a guarda foi removida na rodada 5 por passar com a
+premissa falsa. O achado de `agger-session-reuse.test.ts` foi real e ficou corrigido; o varredor que o
+achou, não ficou.
+
+## Rodada de correção 5 — a guarda de prosa cai, e os rótulos passam a dizer o fato
+
+Sete achados do verificador cego — **cinco P2 e dois P3**, nenhum de comportamento em runtime —,
+consolidados nas linhas 1-4, 6 e 7 abaixo. A linha 5 não é dele: é o que a varredura por CLASSE desta
+rodada achou por cima do achado 4, porque achado de review é classe, não caso. A decisão de fundo é
+uma só e vale para os dois repositórios: **prosa não é regra**.
+
+| # | achado | decisão / correção | guarda |
+|---|---|---|---|
+| 1 | `premissa_de_sessao_spec.rb:120` — a guarda textual ACUSA a refutação (`"jamais derruba a sessao anterior"`) e PASSA com a premissa falsa (`"Foi medido: abrir outro login derruba a sessao anterior."`), e passa também quando a "refutação" por perto é de outro assunto (`"O tempo de resposta e medido em segundos."`) | **guarda removida** (`git rm`). Palavras numa janela de linhas não estabelecem refutação; guarda que passa com a premissa falsa dá licença | nenhuma, por decisão: o FATO tem o canário `agger.sessao-unica.live.test.ts`; a prosa tem revisão |
+| 2 | `premissa_de_sessao_spec.rb:76` — títulos de Vitest (`it('…', () => {})`) escapavam da versão Ruby | sem correção: o arquivo saiu inteiro | — |
+| 3 | `test/unit/premissa-de-sessao-nao-volta.test.ts:61-73,163` — com o cabeçalho ANTIGO de `src/browser/session-host.ts` o detector dá ZERO achados, e `"// O AGGER aceita uma sessao viva por login."` passa (exclusividade sem verbo de queda) | **guarda gêmea removida** (`git rm`), pelo mesmo motivo. Nada no `pnpm verify`/`vitest.config.ts` a referenciava, e a cobertura de `src/` não dependia dela | idem |
+| 4 | `scripts/probe-session-reuse.ts:37`, `scripts/probe-double-login.ts:16,21`, `scripts/discovery/provar-sessoes-paralelas.ts:116` — os rótulos de saída ("derrubou sessão anterior", "precisou derrubar a anterior") leem `droppedPreviousSession` como efeito comprovado; o campo registra a REPETIÇÃO DO LOGIN com o parâmetro | rótulos trocados por `repetiu login com derrubaSessao=<valor>`. Sem mudar lógica | — (texto de sonda manual) |
+| 5 | a mesma classe, achada varrendo por ela: `scripts/probe-o-que-e-sessao.ts:66,69` (`A pos-derruba`) e `scripts/probe-login-classificacao.ts:29-31` (`1-sem-derruba`) | `apos login com derrubaSessao` e `1-sem-derrubaSessao`. Achado de review é classe, não caso | — |
+| 6 | `src/core/failure.ts:29` — a doc de `session_lost` dizia "acabou ANTES do prazo que o portal informou", mas o classificador só recebe `auth_required` + `usedStoredSession` e nunca compara validade nem horário | texto novo: *"A autenticação com a sessão guardada foi recusada; isso não comprova expiração nem invalidação por outro login (medido: outro login não derruba). O que se sabe é só que o portal não aceitou o portador guardado."* Mais o registro de que o NOME mente um pouco e fica, porque renomear muda o contrato com o chat2you | os testes de `classifyFailure` não mudam: o comportamento é o mesmo |
+| 7 | esta auditoria, linha ~198 — prometia que clicar em **Reconectar** limpa a chave `account_already_active` | corrigido: Reconectar entra no mesmo `Connections::Sync` → `with_fresh_session`, e com sessão válida `open!` não roda. A chave só some na próxima ABERTURA EFETIVA E BEM-SUCEDIDA da sessão | `connection_spec.rb` continua guardando o que importa: com e sem a chave, o payload publicado é idêntico |
+
+### O grep manual da rodada 5, e o veredito de cada ocorrência
+
+```
+grep -rniE 'derrub|uma por login|invalida a anterior|segundo login|login a mais|sessao unica|sessão única' \
+  <src|scripts|test|docs do adapter> <app/…/insurance, spec/…/insurance, docs/audit do chat2you>
+```
+
+Contagem depois desta rodada: **115 ocorrências no adapter** e **87 no chat2you** (destas, 57 estão
+neste próprio arquivo de auditoria, que cita a frase falsa para poder refutá-la). Tirando as linhas
+que só carregam `derrubaSessao`, `droppedPreviousSession`, `dropped_previous_session`,
+`provar-link-nao-derruba` ou o nome do canário, sobram 70 e 76.
+
+O grep é **manual** de propósito: o que vale é o julgamento de quem leu, ocorrência por ocorrência.
+
+| veredito | exemplos |
+|---|---|
+| citação já refutada por perto ("aqui se lia … medido e falso") — o grosso das duas listas | `connections/session.rb:4,67`, `sync.rb:45,46`, `insuranceContract.js:94`, `core/failure.ts:13`, `test/integration/session-host.test.ts:17` |
+| fato verdadeiro sobre OUTRO assunto (nada a ver com sessão do portal) | "sem derrubar a varredura de ramos", "`process.exit` derrubaria o processo do teste", "o bônus é que derruba o preço", "produto sem `insurers` derrubava a aba" |
+| nome de parâmetro ou de campo, sem afirmar efeito (45 no adapter, 11 no chat2you) | `http/session.ts`, `provar-sessoes-paralelas.ts`, `connection.rb` |
+| **logout explícito** (`/usuario/deslogaSessao`) — esse derruba mesmo, e é outro assunto | `scripts/discovery/sondagem-lista.ts:106`, `src/platforms/agger/knowledge/endpoint-probe.json:320` |
+| efeito realmente OBSERVADO, impresso só quando acontece | `scripts/discovery/provar-sessoes-paralelas.ts:227` — a linha só sai se uma chamada falhou de verdade durante o cenário `intruso` |
+| **afirmação viva — 1, e só 1** | `spec/…/connections/session_spec.rb:141` — "cada login a mais é uma sessão a menos para quem estava usando a anterior" |
+
+Esse único ponto foi corrigido: o que o contador de logins mede é **custo** (uma chamada de até
+`Http::READ_TIMEOUT` segundos ao portal para receber de volta a sessão que já tínhamos), não sessão
+alheia perdida. Ele é também a prova prática do achado 1: a guarda de palavra da rodada 4 rodou sobre
+este arquivo e passou, porque a paráfrase não usa nenhuma palavra da lista.
+
+Dois pontos ficaram registrados como ambíguos e NÃO foram tocados, para não inventar correção:
+`scripts/probe-session-reuse.ts:1,53` ("o que a sessão única prometeu", "VEREDITO: sessão única
+funciona") fala do NOSSO desenho de uma sessão por conexão (#330), não de exclusividade do portal; e
+`src/core/failure.ts:98` ("uma sessão que morreu no meio de uma cotação") é exemplo hipotético sobre
+atribuição de camada, não afirmação sobre o portal.
 
 ## O que NÃO foi feito, de propósito
 
