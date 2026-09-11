@@ -339,11 +339,64 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       # Act
       result = publisher.publish(arquivo.to_h)
 
-      # Assert — e o blob que o retry gravou antes de ver a mensagem no ar não fica sem dono
+      # Assert — e o blob que o retry gravou antes de ver a mensagem no ar não fica sem dono: a
+      # limpeza é em segundo plano (rodada 4), então o que se afirma é que ela foi AGENDADA e que,
+      # feita, não sobra blob nenhum
       expect(result).to be_published
       expect(bot_messages.count).to eq(1)
       expect(run.reload.sequence).to eq(1)
+      expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+      perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
       expect(ActiveStorage::Blob.count).to eq(0)
+    end
+
+    # A LIMPEZA DO BLOB SEM DONO NÃO FALA COM O RESULTADO (rodada 4, P3). Apagar o blob do retry na
+    # hora era falar com o armazenamento de novo, dentro do `ensure`: um `delete` que falha (rede)
+    # saía do `ensure` por cima do resultado — a entrega que JÁ estava no ar virava `blocked` e
+    # "publish failed" no log, e a linha do blob, destruída antes do `delete`, deixava o arquivo
+    # órfão no armazenamento. A limpeza agora é um job: o resultado da publicação é o da publicação.
+    it 'mantem a entrega publicada quando o armazenamento falha ao apagar o blob do retry' do
+      # Arrange — a primeira publicação saiu como anexo; o retry grava um segundo blob e acha a
+      # mensagem no ar, e o armazenamento não responde ao apagar
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      publisher = described_class.new(run: run)
+      publisher.publish(arquivo.to_h)
+      allow(ActiveStorage::Blob.service).to receive(:delete).and_raise(Errno::ECONNREFUSED)
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = publisher.publish(arquivo.to_h)
+
+      # Assert — publicado, uma mensagem só, nada de "publish failed"; a limpeza ficou agendada e
+      # a linha do blob do retry continua inteira (nada foi destruído pela metade)
+      expect(result).to be_published
+      expect(bot_messages.count).to eq(1)
+      expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(/publish failed/))
+      expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+      expect(ActiveStorage::Blob.count).to eq(2)
+    end
+
+    # E quando a PUBLICAÇÃO levanta, o log tem de dizer a causa DELA: com a limpeza síncrona, um
+    # `delete` que falhasse no `ensure` trocava a exceção original pela do purge, e o log passava a
+    # apontar para o armazenamento em vez de para o que derrubou a mensagem (rodada 4, P3).
+    it 'registra a causa da publicacao que levantou, e nao a da limpeza do blob' do
+      # Arrange — download bom, mensagem que não nasce, armazenamento que não apaga
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      allow(Messages::MessageBuilder).to receive(:new).and_raise(ActiveRecord::ConnectionTimeoutError)
+      allow(ActiveStorage::Blob.service).to receive(:delete).and_raise(Errno::ECONNREFUSED)
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert
+      expect(result).to be_blocked
+      expect(bot_messages.count).to eq(0)
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/publish failed run=#{run.id} ActiveRecord::ConnectionTimeoutError/))
+      expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
     end
 
     # O QUE NÃO É TEXTO NEM ARQUIVO NÃO VIRA MENSAGEM. O encerramento (`closing_deliveries`) não passa

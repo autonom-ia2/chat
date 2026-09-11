@@ -131,6 +131,44 @@ nome do arquivo no portal carrega o nome do segurado — dado pessoal na URL do 
 nosso controle —, e o NOSSO nome de arquivo continua sendo só a placa (termo 5). Os comentários
 de código e de spec que afirmavam "404 real" foram corrigidos.
 
+### Rodada 4 (revisão cega, veredito APROVADO com 1 P3): a limpeza do blob sem dono
+
+**P3 — o `purge` do `ensure` era síncrono e podia levantar.** `ActiveStorage::Blob#purge`
+(7.2.3.1) faz `destroy` (apaga a linha) e depois `delete` (apaga o arquivo no serviço), e o
+`delete` do S3 não engole erro de rede. Sonda do revisor (S2): a primeira publicação sai como
+anexo; o retry grava um segundo blob, encontra a mensagem no ar (`:duplicate`) e, no `ensure`, o
+`delete` acha o armazenamento fora → a exceção sai do `ensure` por cima do resultado → `publish`
+rescue → `Result(:blocked)` e "publish failed" no log para uma entrega que JÁ está no ar (1
+mensagem, sequência 1), com o arquivo do retry órfão (a linha foi destruída antes do `delete`). No
+caminho em que `post` levantou (S1), um purge que falhe TROCA a exceção original: o log passa a
+apontar a classe do erro do purge, não a causa da publicação. Sem impacto no cliente, mas era
+regra sem guarda: nenhum spec cobria o purge que levanta. Causa raiz: a limpeza falava com o
+armazenamento na hora, dentro do `ensure`, no mesmo fluxo cujo resultado ela não pode alterar.
+Correção (decisão do orquestrador): `blob.purge_later` — o caminho que o próprio Rails documenta
+para "transaction, callback or any other real-time scenario". O `ActiveStorage::PurgeJob` vai
+para a fila `active_storage_purge` (já consumida pelo Sidekiq, `config/sidekiq.yml`) e o Sidekiq
+retenta o job que falhar. Registro honesto do limite: se o `delete` falhar DEPOIS do `destroy`
+dentro do job, o retry seguinte encontra `RecordNotFound` (o `PurgeJob` descarta) e o arquivo fica
+órfão no armazenamento — é a mesma limitação do `Blob#purge` de sempre, agora sem custar uma
+mensagem nem um log com a causa errada.
+
+Guardas (`async_publisher_spec`, "entrega de arquivo"):
+- "mantem a entrega publicada quando o armazenamento falha ao apagar o blob do retry" (S2 do
+  revisor: primeira publicação como anexo; `ActiveStorage::Blob.service.delete` levantando
+  `Errno::ECONNREFUSED`; retry → `published`, 1 mensagem, nenhum "publish failed" no log,
+  `PurgeJob` enfileirado uma vez, e a linha do blob do retry inteira — `Blob.count == 2` — nada
+  destruído pela metade);
+- "registra a causa da publicacao que levantou, e nao a da limpeza do blob" (S1:
+  `Messages::MessageBuilder.new` levantando `ActiveRecord::ConnectionTimeoutError` e o `delete`
+  levantando → `blocked`, 0 mensagens, log `publish failed run=<id>
+  ActiveRecord::ConnectionTimeoutError`, `PurgeJob` enfileirado uma vez);
+- "nao publica de novo o que ja saiu…" ajustado: afirma `PurgeJob` enfileirado uma vez e
+  `Blob.count == 0` DEPOIS de `perform_enqueued_jobs(only: ActiveStorage::PurgeJob)`.
+
+RED confirmado antes da implementação: os 3 exemplos falhando pelos motivos certos (0 jobs
+enfileirados; `blocked` em vez de `published`; log com `Errno::ECONNREFUSED`), 20 antigos
+passando (`e11r4/red.json`). Nada mais mudou nesta rodada.
+
 ### Termos (5)
 
 | # | Termo | Guarda / evidência |
@@ -184,6 +222,31 @@ texto reajustado ao código atual — nada afrouxou. Cada linha: exemplos que re
 | M7 | comparativo sem a guarda de forma (Hash invalido sai mesmo assim) | 2 de 11 |
 | M8 | publicador sem a guarda (o to_s do Hash vira mensagem, como antes) | 1 de 21 |
 
+Rodada 4 (`e11r4/mutacoes_e11_r4.py` no scratchpad: edita → roda → restaura → md5 conferido
+antes/depois nos 4 arquivos de código; `mutacoes_r4.json`). Q1 e Q2 são as regras novas; R1–R7 e
+M1–M8 repetidas (R6 com o texto reajustado ao `purge_later`) — nada afrouxou. Cada linha:
+exemplos que reprovam / rodados.
+
+| # | Mutação | Reprova |
+|---|---|---|
+| Q1 | (P3) volta ao purge síncrono cru (`blob.purge` no `ensure`) | 3 de 23 (os dois novos + "nao publica de novo…") |
+| Q2 | purge síncrono engolido em `rescue` no `ensure` (some o agendamento; o blob sem dono fica) | 3 de 23 |
+| R1 | rescue do armazenamento removido | 4 de 49 |
+| R2 | redirecionamento seguido de novo | 2 de 21 |
+| R3 | tempfile não fechado na recusa | 1 de 21 |
+| R4 | tempfile não fechado depois de gravar | 2 de 21 |
+| R5 | download e gravação dentro do lock | 1 de 23 |
+| R6 | blob sem dono não apagado (`purge_later` removido) | 3 de 23 |
+| R7 | transação do `create_and_upload!` removida | 1 de 21 |
+| M1 | fallback removido (sem `rescue Indisponivel`) | 6 de 28 |
+| M2 | nome genérico do arquivo | 4 de 11 |
+| M3 | teto de tamanho removido | 3 de 21 |
+| M4 | assinatura de PDF não conferida | 2 de 21 |
+| M5 | identidade do arquivo trocada pela legenda | 2 de 23 |
+| M6 | Progress aceita qualquer Hash | 3 de 10 |
+| M7 | comparativo sem a guarda de forma | 2 de 11 |
+| M8 | publicador sem a guarda | 1 de 23 |
+
 ### Recusa
 
 Nenhum motivo novo em `MOTIVOS`: cair para o link não é recusa ao modelo (a ferramenta fez o que
@@ -214,6 +277,14 @@ curto do motivo — nunca o corpo da resposta nem a mensagem da exceção.
   `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
   spec/requests/api/v1/accounts/autonomia`: 1055 exemplos, 0 falhas, 0 erros fora de exemplo,
   3 pendentes anteriores a esta PR (`e11r3/ampla_r3.json`, exit 0).
+
+- Rodada 4: `async_publisher_spec` 23 (era 21); specs alvo (publisher, entrega_de_arquivo, job do
+  comparativo, encerramento parcial, async_run_job, reap_stale_runs, progress, comparativo): 93
+  exemplos, 0 falhas, 0 erros fora (`e11r4/green.json`, exit 0); rubocop nos 2 arquivos tocados:
+  0 ofensas (`e11r4/rubocop.json`); 17 mutações, todas reprovam e restauram (`e11r4/mutacoes_r4.json`);
+  suíte ampla `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
+  spec/requests/api/v1/accounts/autonomia`: 1057 exemplos, 0 falhas, 0 erros fora de exemplo,
+  3 pendentes anteriores a esta PR (`e11r4/ampla_r4.json`, exit 0).
 
 ## O ACHADO que o orquestrador precisa saber antes da prova real — SUPERADO na rodada 3
 
@@ -267,6 +338,7 @@ bundle exec rubocop --format json <14 arquivos tocados>                 # 0 ofen
 uv run python3 mutacoes.py                                              # M1–M6, todas reprovam, md5 restaurado
 uv run python3 mutacoes_e11_r2.py                                       # rodada 2: M1–M8, todas reprovam, md5 restaurado
 uv run python3 e11r3/mutacoes_e11_r3.py                                 # rodada 3: R1–R7 + M1–M8, todas reprovam, md5 restaurado
+uv run python3 e11r4/mutacoes_e11_r4.py                                 # rodada 4: Q1–Q2 + R1–R7 + M1–M8, todas reprovam, md5 restaurado
 bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia --format json --out ampla.json
 npx tsx src/cli/main.ts agger quote proposal <id>  (×3, só print; nenhum quote start) + curl -I na URL → 404 BlobNotFound
 ```

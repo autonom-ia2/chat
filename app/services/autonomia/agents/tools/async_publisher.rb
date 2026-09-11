@@ -182,7 +182,14 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # o código curto e a classe da causa, nunca o texto da resposta nem da exceção.
   #
   # O blob que NÃO virou anexo (o retry que encontrou a mensagem no ar, ou a publicação que não
-  # concluiu) é apagado: gravado antes da mensagem, ele não tem dono até ela existir.
+  # concluiu) é apagado EM SEGUNDO PLANO (`purge_later`): gravado antes da mensagem, ele não tem
+  # dono até ela existir. Apagá-lo aqui, na hora, era falar com o armazenamento de novo dentro do
+  # `ensure`, e um `delete` que falha (rede) saía do `ensure` por cima do resultado: a entrega que
+  # JÁ estava no ar virava `blocked` e "publish failed" no log, e a exceção de uma publicação que
+  # levantou era trocada pela do purge (rodada 4, 11/09/2026). Com o job, o resultado da
+  # publicação é o da publicação; a limpeza tem a fila do Sidekiq (`active_storage_purge`) para
+  # tentar de novo, e uma que ainda assim falhe deixa no máximo um arquivo órfão no armazenamento
+  # — nunca uma mensagem a menos nem um log que aponta para a causa errada.
   def post_arquivo(conversation, agent_inbox, arquivo)
     token = @run.delivery_token(arquivo.identidade)
     blob = arquivo.gravar
@@ -195,7 +202,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
                       "#{" causa=#{e.causa}" if e.causa}; vai como link")
     post(conversation, agent_inbox, Corpo.new(texto: arquivo.reserva, token: token))
   ensure
-    blob.purge if blob && !anexado
+    blob.purge_later if blob && !anexado
   end
 
   def delivery_posted?(conversation, token)
