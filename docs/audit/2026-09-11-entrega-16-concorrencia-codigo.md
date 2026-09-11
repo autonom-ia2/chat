@@ -53,11 +53,42 @@ por até 7 minutos) e a cada varredura do healthcheck, para receber de volta exa
 tínhamos. Guardar a sessão em um lugar só é também o que faz `session_expires_at` significar alguma
 coisa.
 
-Dois outros trechos afirmavam o mesmo e foram corrigidos junto: o comentário de `with_fresh_session`
-(dizia que "alguém entrou pelo navegador e derrubou a nossa") e o cabeçalho de `session_spec.rb`.
 `with_fresh_session` **continua existindo e continua chamado**, agora com o motivo honesto:
 `session_live?` só conhece o prazo que nós gravamos, e prazo gravado não é prova — o portal pode
 encerrar antes (validade encurtada, limpeza noturna, janelas que a medição não cobriu).
+
+**A varredura não foi por arquivo, foi por frase — e precisou de duas passadas para ficar completa.**
+A primeira rodada corrigiu o `session.rb` e o cabeçalho de `session_spec.rb`; um verificador cego
+achou a mesma frase viva no ponto de ENTRADA do conector (quem lê o conector antes do `session.rb`
+saía com a premissa falsa), e uma rodada de correção fechou o resto. Estes são todos os pontos, nos
+dois repositórios:
+
+| repositório | arquivo | o que dizia |
+|---|---|---|
+| chat2you | `connections/session.rb` (cabeçalho, `renew!`, `with_fresh_session`) | "abrir outra invalida a anterior" |
+| chat2you | `connector/http.rb` (`open_session`, e o parágrafo do defeito de `session_expires_at`) | "o portal aceita uma sessão viva por login…" |
+| chat2you | `connector/client.rb` (cabeçalho) | idem |
+| chat2you | `connections/sync.rb` (dois comentários) | "cada um invalidava a sessão anterior" · "derrubada por um login feito no portal pelo navegador" |
+| chat2you | `spec/…/connections/session_spec.rb` (cabeçalho e o relato da regressão) | "o AGGER aceita uma sessão por login e derrubou a nossa" |
+| chat2you | `insuranceContract.js`, `InsuranceConnectionsTab.spec.js` | "uma sessão derrubada por login no navegador" |
+| adapter | `platforms/agger/http/session.ts` (schema `message`, schema `createdAt`, nota de `postLogin`) | "o portal avisando que a conta já está em uso" · "quem a abriu foi outro" · "o caso real (a conta em uso em outro lugar)" |
+| adapter | `platforms/agger/index.ts` (`openSession`) | "Sobe até a tela: quem sabe distinguir… é o corretor" (a tela foi removida) |
+| adapter | `service/handler.ts` (`dispatch`) | "convivem sem uma derrubar a outra" |
+| adapter | `core/adapter.ts` (campo `alreadyActive` de `OpenSession`) | "por outro ambiente nosso ou por uma pessoa no navegador… serve para a tela contar ao corretor" |
+| adapter | `test/unit/falha-nao-culpa-o-corretor.test.ts` (título e cabeçalho do bloco 1.5) | "a conta em uso em outro lugar" |
+| adapter | `scripts/discovery/provar-link-nao-derruba.ts` | afirmava haver "duas leituras contraditórias no repositório" — já não há |
+
+Onde a frase antiga está CITADA (`"aqui se lia …"`), ela fica: apagar a frase errada apagaria também
+o registro de por que a correção existe. O mesmo critério que `docs-nao-afirmam-preco-orfao.test.ts`
+usa no adapter para números refutados.
+
+**Por que não há guarda textual contra a volta da frase.** Seria a guarda óbvia — um teste que varre
+o repositório atrás da premissa —, e ela não foi escrita de propósito: toda correção deste tipo cita
+a frase falsa para poder refutá-la, e um varredor de prosa não distingue a afirmação da citação. É
+exatamente a limitação que a guarda de preço do adapter declara no próprio cabeçalho ("a regra é só
+sobre tabela; prosa que cita um número removido é registro de refutação"). O que guarda o FATO é o
+canário vivo `agger.sessao-unica.live.test.ts`: se o portal passar a invalidar a sessão anterior, ele
+reprova, e é aí que estes comentários voltam a ser reescritos.
 
 ## Termo 5 — o alerta falso morreu
 
@@ -81,9 +112,13 @@ O termo permitia manter o aviso *"com evidência que discrimine"*. Nada no paylo
 - `already_active` é a presença do texto na mensagem, e a mensagem vem sempre;
 - `session_started_at` é o `createdAt` da sessão **compartilhada** — nos seis logins simultâneos foi
   **um único valor para os seis**. Diz quando a sessão começou, nunca quem a abriu;
-- comparar esse instante com o nosso último login foi considerado e descartado: nós abrimos sessão o
-  tempo todo e não guardamos o início de cada uma, então a comparação produziria a mesma afirmação
-  sem prova, agora com aritmética por cima;
+- comparar esse instante com o nosso último login foi considerado e **descartado por decisão, não
+  por falta do dado**: o instante fica dentro do blob **opaco** da sessão — `openSession` devolve o
+  `AggerSession` inteiro em `data`, e `session_payload` guarda o blob como veio, de modo que ele
+  está gravado em toda conexão. Usá-lo exigiria interpretar o blob (contra o contrato, que diz que
+  quem entende o que há lá dentro é o adapter) e ainda assumir que `createdAt` só muda quando a
+  sessão do portal expira — e expiração nunca foi observada. Sem essa segunda suposição a comparação
+  seria a mesma afirmação sem prova, agora com aritmética por cima;
 - o portal não expõe (no catálogo que conhecemos) nenhuma listagem de sessões por dispositivo, IP ou
   usuário. Os testes de 05/09 com `device=desktop`, `device=mobile` e User-Agent de Chrome
   devolveram o mesmo id de sessão.
@@ -100,7 +135,10 @@ tela inteira.
 - `Connection#account_already_active` e a chave em `diagnostico_publico` saíram: a API não publica
   mais o campo;
 - a aba Conexões perdeu o computed e a seção; `insuranceContract.js` perdeu o campo; a chave
-  `INSURANCE.CONNECTION.ALREADY_ACTIVE` saiu do `en/insurance.json`.
+  `INSURANCE.CONNECTION.ALREADY_ACTIVE` saiu do `en/insurance.json`;
+- no adapter nada mudou de comportamento: `alreadyActive` e `sessionStartedAt` continuam
+  atravessando a fronteira como o portal os deu. O que mudou foi o texto que os descrevia — eles são
+  dado para quem MEDE concorrência, nunca afirmação para uma pessoa.
 
 ### Consequência de produto, que não é minha para decidir
 
@@ -193,9 +231,16 @@ canário `agger.sessao-unica.live.test.ts`) já estavam versionados lá.
 
 A varredura no adapter foi por CLASSE, não por caso: a mesma frase aparecia em `src/core/adapter.ts`,
 `src/service/handler.ts`, `src/browser/session-host.ts`, `src/cli/program.ts`, quatro arquivos de
-teste e duas docs. Todas corrigidas; o relatório datado (`implementation-gap-report.md`) ficou como
-estava, com uma nota de rodapé — reescrever um retrato do passado seria apagar o erro em vez de
-registrá-lo. Junto foi consertado um teste que só passava no clone com nome de pasta
+teste e duas docs. O relatório datado (`implementation-gap-report.md`) ficou como estava, com uma
+nota de rodapé — reescrever um retrato do passado seria apagar o erro em vez de registrá-lo.
+
+**E "por classe" não bastou na primeira passada, o que é o achado mais útil desta entrega.** A
+varredura procurou a frase inteira e deixou passar as PARÁFRASES dela dentro dos mesmos arquivos já
+tocados: "o portal avisando que a conta já está em uso", "quem a abriu foi outro", "convivem sem uma
+derrubar a outra", "serve para a tela contar ao corretor". Seis trechos no adapter e quatro arquivos
+no chat2you, achados por um verificador cego e pela varredura da rodada 3 (tabela completa no termo
+4). A lição, registrada para a próxima: varrer pela AFIRMAÇÃO, não pela frase — e varrer os dois
+repositórios, porque a premissa atravessa a fronteira. Junto foi consertado um teste que só passava no clone com nome de pasta
 `autonomia-adapters` (`test/unit/destino-seguro.test.ts`): em worktree ele ficava vermelho sem que
 nada estivesse errado, e portão que depende do nome do diretório não é portão.
 
@@ -204,8 +249,8 @@ nada estivesse errado, e portão que depende do nome do diretório não é port�
 | termo | guarda | evidência |
 |---|---|---|
 | 3 · issue #8 reescrita ou fechada | não é código: a issue foi fechada com a evidência | comentário + fechamento em `autonom-ia2/autonomia-adapters#8` |
-| 4 · o texto de `session.rb` corrigido | comentário; o FATO tem canário vivo | `connections/session.rb` (cabeçalho, `with_fresh_session`), `session_spec.rb` (cabeçalho); canário `agger.sessao-unica.live.test.ts` |
-| 5 · o alerta para de mentir | `session_spec.rb` (3 exemplos) + `connection_spec.rb` (1) + `InsuranceConnectionsTab.spec.js` (1) | mutações M1–M5 abaixo |
+| 4 · o texto de `session.rb` corrigido | comentário; o FATO tem canário vivo | os doze pontos da tabela do termo 4, nos dois repositórios; canário `agger.sessao-unica.live.test.ts` |
+| 5 · o alerta para de mentir | `session_spec.rb` (3 exemplos) + `connection_spec.rb` (3, sendo 2 novos) + `InsuranceConnectionsTab.spec.js` (1, por EFEITO) | mutações M1–M8 abaixo |
 | 6 · concorrência medida e registrada | a seção acima, com origem de cada número no código | `sidekiq.yml`, `async_run_job.rb:17`, `async_config.rb`, workflow de deploy |
 | 7 · medição versionada | este arquivo + a PR do adapter | — |
 
@@ -218,9 +263,12 @@ checksum (sha256 antes = sha256 depois em todas).
 |---|---|---|
 | M1 | `open!` volta a GRAVAR `account_already_active` | 3 falhas em `session_spec.rb` (não grava / apaga / apaga só o aviso) |
 | M2 | tira a chamada de `esquecer_aviso_de_conta_em_uso!` de `open!` | 2 falhas em `session_spec.rb` (apaga / apaga só o aviso) |
-| M3 | `diagnostico_publico` volta a publicar `account_already_active` | 1 falha em `connection_spec.rb` |
+| M3 | `diagnostico_publico` volta a publicar `account_already_active` | 1 falha em `connection_spec.rb` (rodada de novo na rodada 3, contra a guarda nova: continua reprovando) |
 | M4 | `forget_metadata!` grava `nil` em vez de usar `except` | 2 falhas em `session_spec.rb` — a chave sobrevive com `null` |
 | M5 | reintroduz a seção do aviso no `InsuranceConnectionsTab.vue` | 1 falha em `InsuranceConnectionsTab.spec.js` |
+| M6 | `diagnostico_publico` republica o MESMO retrato com OUTRO nome (`conta_em_uso: metadata['account_already_active']`) | 1 falha em `connection_spec.rb` — "publica o mesmo payload com e sem o aviso". Antes da rodada 3 esta mutação passava |
+| M7 | `forget_metadata!` sem a leitura antes do lock (tira o `return unless metadata.to_h.key?(key)`) | 1 falha em `connection_spec.rb` — "não pega lock de linha quando não existe a chave". Antes da rodada 3 esta mutação passava |
+| M8 | a seção do aviso volta ao `InsuranceConnectionsTab.vue` sob OUTRA chave i18n (`CONTA_EM_USO`), lendo o mesmo `account_already_active` | 1 falha em `InsuranceConnectionsTab.spec.js` — "renderiza exatamente a mesma tela com e sem o aviso". Antes da rodada 3 esta mutação passava |
 
 ## Comandos rodados
 
@@ -238,7 +286,8 @@ TZ=UTC npx vitest run --no-coverage app/javascript/dashboard/routes/dashboard/au
 
 # suíte ampla
 POSTGRES_DATABASE=chatwoot_test_e16 bundle exec rspec \
-  spec/services/autonomia spec/jobs/autonomia spec/models/autonomia --format json
+  spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  spec/requests/api/v1/accounts/autonomia --format json
 
 # lint
 bundle exec rubocop <arquivos tocados> --format json
@@ -250,15 +299,33 @@ Resultado, lido do JSON (nunca do resumo do terminal) e com o exit code conferid
 | o que | resultado |
 |---|---|
 | alvo, ANTES de implementar | 4 falhas — as guardas novas reprovando, como têm de reprovar |
-| alvo, depois | 21 exemplos, **0 falhas**, `errors_outside_of_examples_count: 0` |
-| frente (pasta `insurance`) | 233 testes, **0 falhas** |
-| suíte ampla (`spec/services/autonomia spec/jobs/autonomia spec/models/autonomia`) | **883 exemplos, 0 falhas**, 3 pendentes (pré-existentes), exit 0 |
-| rubocop nos 4 arquivos Ruby tocados | 0 ofensas |
-| eslint nos 3 arquivos de frente | 0 erros (os avisos de i18n são pré-existentes: 51 na versão de `origin/main`, 50 aqui — a diferença é exatamente a chave removida) |
+| alvo, depois da rodada 1 | 21 exemplos, **0 falhas**, `errors_outside_of_examples_count: 0` |
+| alvo, depois da rodada 3 | 23 exemplos, **0 falhas**, `errors_outside_of_examples_count: 0`, exit 0 |
+| frente (pasta `insurance`) | 233 testes, **0 falhas**, exit 0 |
+| suíte ampla (rodada 3, com `spec/requests/api/v1/accounts/autonomia`) | **1.014 exemplos, 0 falhas**, 3 pendentes (pré-existentes), exit 0 |
+| rubocop nos 7 arquivos Ruby tocados | 0 ofensas |
+| eslint nos 2 arquivos de frente tocados | 0 erros, 0 avisos |
 | prettier | todos os arquivos tocados já no formato |
 
-No adapter, `pnpm verify` inteiro: typecheck, prettier, honestidade da suíte, portão de ferramentas,
-**769 testes, 0 falhas**, cobertura **100%** em statements, branches, functions e lines.
+No adapter, `pnpm verify` inteiro (typecheck, prettier, honestidade da suíte, portão de ferramentas,
+unitários, integração e cobertura): **769 testes, 0 falhas**, cobertura **100%** em statements,
+branches, functions e lines, exit 0 — rodado de novo depois das correções da rodada 3.
+
+## Rodada de correção 3 — o que um verificador cego achou, e o que foi feito
+
+Seis achados, todos P3, nenhum de comportamento em runtime. Achado → correção → guarda → mutação:
+
+| # | achado | correção | guarda | mutação |
+|---|---|---|---|---|
+| 1 | a frase falsa sobrevivia no PONTO DE ENTRADA do conector (`connector/http.rb:31-33`, `connector/client.rb:13-15`): quem lê o conector antes do `session.rb` saía com a premissa falsa | comentários reescritos no padrão do cabeçalho novo (motivo = economia de login; frase medida e falsa em 05/09 e 10/09; canário nomeado). Junto, `connections/sync.rb`, que dizia o mesmo em dois pontos | o FATO tem o canário `agger.sessao-unica.live.test.ts` | — (comentário; ver "por que não há guarda textual", no termo 4) |
+| 2 | `session_spec.rb:14-16` afirmava a premissa falsa três linhas depois de o cabeçalho do MESMO arquivo declará-la falsa | reescrito com a causa PROVADA do 403 de 05/09 (o handler do adapter redigia o corpo e o token viajava como a palavra `<REDACTED>` em `Authorization`, `autonomia-adapters` c9b88bd) e o motivo honesto de `with_fresh_session` existir | os três exemplos do `describe` não mudaram | — |
+| 3 | no adapter, cinco trechos contradiziam os blocos que a própria PR tinha corrigido, dentro dos mesmos arquivos | alinhados; e a varredura achou um SEXTO que ninguém tinha listado — `core/adapter.ts`, o campo `alreadyActive` do contrato `OpenSession`, que ainda mandava "a tela contar ao corretor" | `pnpm verify`: 769 testes, 0 falhas, cobertura 100 % | — |
+| 4 | a justificativa de remover o aviso dizia "não guardamos o início de cada uma" — inexato: `openSession` devolve o `AggerSession` inteiro em `data` e `session_payload` guarda o blob como veio, então o instante ESTÁ gravado | trocado pelo fato certo, dito como DECISÃO e não como impossibilidade: o instante está dentro do blob opaco, usá-lo exigiria interpretar o blob (contra o contrato) e assumir que `createdAt` só muda quando a sessão expira — expiração nunca foi observada. Corrigido na auditoria e em `session.rb:135-137` | — (é texto; importa porque é sobre ele que se decide se o critério 1.5 volta com outra fonte) | — |
+| 5 | as guardas do termo 5 estavam presas ao NOME: republicar o mesmo retrato como `conta_em_uso` passava em `connection_spec.rb`, e a seção voltar à tela sob outra chave i18n passava em `InsuranceConnectionsTab.spec.js` (que só conferia a ausência de uma chave que já não existe em lugar nenhum — quase tautológico) | as duas guardas passaram a olhar o EFEITO: `public_payload` tem de ser IDÊNTICO com e sem a chave em `metadata` (exceto `updated_at`, que é a própria escrita); a aba é montada DUAS vezes e o `html()` tem de sair igual caractere a caractere | `connection_spec.rb` "publica o mesmo payload com e sem o aviso"; `InsuranceConnectionsTab.spec.js` "renderiza exatamente a mesma tela com e sem o aviso" | **M6** e **M8** — as duas passavam antes desta rodada |
+| 6 | `forget_metadata!` declarava no comentário a regra "leitura sem lock primeiro, porque o caso comum é a chave não existir e esse caso não pode custar um lock de linha a cada login", e a regra não tinha guarda — este é o caminho que roda em TODO login | dois exemplos: sem a chave, `not_to receive(:with_lock)`; com a chave, `receive(:with_lock).once.and_call_original`, e o resto do `metadata` intacto | `connection_spec.rb`, os dois exemplos de lock | **M7** — passava antes desta rodada |
+
+Cada mutação foi aplicada de verdade, com o teste rodado e o arquivo restaurado com conferência de
+`sha256` (antes = depois nas três).
 
 ## O que NÃO foi feito, de propósito
 
