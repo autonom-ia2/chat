@@ -10,8 +10,10 @@ module SafeFetch
   # Redirecionamentos seguidos por padrão: os do ssrf_filter, que revalida o endereço a cada salto.
   # `max_redirects: 0` recusa o primeiro 3xx como `HttpError` — sem ler o corpo dele e sem ir aonde aponta.
   DEFAULT_MAX_REDIRECTS = SsrfFilter::DEFAULT_MAX_REDIRECTS
-  # Sem prazo total por padrão: `open_timeout` e `read_timeout` valem por operação, como sempre. Quem passa
-  # `total_timeout:` ganha um prazo monotônico para a transferência inteira (ver `SafeFetch::Deadline`).
+  # Sem prazo por padrão: `open_timeout` e `read_timeout` valem por operação, como sempre. Quem passa
+  # `total_timeout:` ganha um prazo monotônico para o CORPO, com teto por leitura, que também limita a
+  # conexão e a espera pelos cabeçalhos como teto por operação — o que ele NÃO cobre (DNS, cabeçalhos
+  # que gotejam, linhas de controle do chunked) está em `SafeFetch::Deadline`.
   DEFAULT_TOTAL_TIMEOUT = nil
 
   Result = Data.define(:tempfile, :filename, :content_type) do
@@ -39,7 +41,7 @@ module SafeFetch
   class FileTooLargeError < Error; end
   class UnsupportedContentTypeError < Error; end
   class UnsupportedMethodError < Error; end
-  # O prazo total (`total_timeout:`) venceu antes de a transferência acabar. É um `FetchError`, para quem já
+  # O prazo (`total_timeout:`) venceu antes de a transferência acabar. É um `FetchError`, para quem já
   # trata falha de rede não precisar aprender uma classe nova.
   class TotalTimeoutError < FetchError; end
 

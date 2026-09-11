@@ -587,34 +587,195 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
     end
 
-    # A EXCEÇÃO DEPOIS DO COMMIT (rodada 6, P3): um callback `after_commit` da mensagem — o evento que
-    # vai ao Redis — levanta com a mensagem e o anexo JÁ no ar. Sem reconciliar pelo token, a reserva
-    # sairia por cima (duplicando a entrega) ou o blob anexado iria para a limpeza (a mensagem no ar
-    # sem arquivo). A publicação é `published` sem mensagem nova, e o anexo fica.
-    it 'mantem a mensagem com o anexo, sem reserva e sem limpeza, quando a publicacao levanta depois do commit' do
-      # Arrange — o Redis cai no despacho do evento de criação da mensagem com anexo
-      promote
-      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
-      allow(Rails.configuration.dispatcher).to receive(:dispatch).and_wrap_original do |original, evento, *resto|
-        dados = resto[1]
-        raise Redis::CannotConnectError, 'redis fora' if evento == Events::Types::MESSAGE_CREATED && dados[:message].attachments.any?
+    # A EXCEÇÃO DEPOIS DO COMMIT (rodada 6, P3; rodada 7, P2): um callback `after_commit` da mensagem
+    # levanta com a mensagem e o anexo JÁ no banco. A mensagem no banco NÃO é entrega: o cliente só
+    # recebe quando o `send_reply` da `Message` enfileira o `SendReplyJob` — e ele vem DEPOIS do
+    # despacho de eventos, que fala com o Redis. Quando o despacho levanta, o envio não foi disparado:
+    # o publicador o dispara ele mesmo, uma vez, e só então a entrega é `published` — sem reserva por
+    # cima (duplicaria) e sem mandar o blob anexado para a limpeza (a mensagem no ar sem arquivo).
+    describe 'quando a publicacao levanta depois do commit' do
+      def redis_cai_no_despacho_da_mensagem_com_anexo
+        allow(Rails.configuration.dispatcher).to receive(:dispatch).and_wrap_original do |original, evento, *resto|
+          dados = resto[1]
+          raise Redis::CannotConnectError, 'redis fora' if evento == Events::Types::MESSAGE_CREATED && dados[:message].attachments.any?
 
-        original.call(evento, *resto)
+          original.call(evento, *resto)
+        end
       end
-      allow(Rails.logger).to receive(:warn).and_call_original
 
-      # Act
-      result = described_class.new(run: run).publish(arquivo.to_h)
+      it 'mantem a mensagem com o anexo e dispara o envio que o despacho impediu, uma vez' do
+        # Arrange — o Redis cai no despacho do evento de criação: o `send_reply` nunca roda
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        redis_cai_no_despacho_da_mensagem_com_anexo
+        allow(Rails.logger).to receive(:warn).and_call_original
 
-      # Assert
-      expect(result).to be_published
-      expect(result.message).to be_nil
-      mensagem = bot_messages.sole
-      expect(mensagem.content).to eq('Comparativo com todas as opções.')
-      expect(mensagem.attachments.sole.file.download).to eq(pdf)
-      expect(run.reload.sequence).to eq(1)
-      expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
-      expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(/publish failed|anexo falhou/))
+        # Act
+        result = described_class.new(run: run).publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_published
+        expect(result.message).to be_nil
+        mensagem = bot_messages.sole
+        expect(mensagem.attachments.sole.file.download).to eq(pdf)
+        expect(SendReplyJob).to have_been_enqueued.with(mensagem.id).once
+        expect(run.reload.sequence).to eq(1)
+        expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(/envio reenfileirado run=#{run.id} message=#{mensagem.id}/))
+      end
+
+      # A exceção pode vir DEPOIS do `send_reply` (um callback posterior): aí o job já está na fila, e
+      # disparar de novo seria correr contra ele — o `SendReplyJob` só é idempotente para mensagem JÁ
+      # enviada (`source_id`), não para uma a caminho. O que decide é o vigia: o envio entrou na fila.
+      it 'nao dispara um segundo envio quando o send_reply ja enfileirou antes da excecao' do
+        # Arrange — o gancho de templates (depois do `send_reply`) levanta
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        allow(MessageTemplates::HookExecutionService).to receive(:new).and_raise(Redis::CannotConnectError, 'redis fora')
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        # Act
+        result = described_class.new(run: run).publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_published
+        mensagem = bot_messages.sole
+        expect(mensagem.attachments.sole.file.download).to eq(pdf)
+        expect(SendReplyJob).to have_been_enqueued.with(mensagem.id).once
+        expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
+        expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(/envio reenfileirado|publish failed|anexo falhou/))
+      end
+
+      # A nota privada não vai ao canal (o `SendReplyJob` a ignora): não há envio a disparar.
+      it 'nao dispara envio para a nota privada, que nao vai ao canal' do
+        # Arrange
+        promote
+        conversation.update!(assignee: create(:user, account: account, role: :agent))
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        redis_cai_no_despacho_da_mensagem_com_anexo
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        # Act
+        result = described_class.new(run: run).publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_published
+        expect(bot_messages.sole.private).to be(true)
+        expect(SendReplyJob).not_to have_been_enqueued
+        expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(/envio reenfileirado/))
+      end
+
+      # "PUBLICADO" NO PAPEL É PROIBIDO: se nem o envio de recuperação entra na fila (o Redis continua
+      # fora), a mensagem está no banco com o anexo e o cliente sem arquivo e sem link — a falha é
+      # explícita (`blocked`, código fechado), o blob anexado fica, e ninguém conta a entrega.
+      it 'e explicita, com codigo fechado, quando nem o envio de recuperacao entra na fila' do
+        # Arrange — o Redis recusa o `SendReplyJob` (do `send_reply` e o da recuperação); o resto entra
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        fila = ActiveJob::Base.queue_adapter
+        %i[enqueue enqueue_at].each do |metodo|
+          allow(fila).to receive(metodo).and_wrap_original do |original, job, *resto|
+            raise Redis::CannotConnectError, 'redis fora' if job.is_a?(SendReplyJob)
+
+            original.call(job, *resto)
+          end
+        end
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        # Act
+        result = described_class.new(run: run).publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_blocked
+        mensagem = bot_messages.sole
+        expect(mensagem.attachments.sole.file.download).to eq(pdf)
+        expect(SendReplyJob).not_to have_been_enqueued
+        expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
+        incompleta = /publicacao incompleta run=#{run.id} message=#{mensagem.id} motivo=mensagem_sem_envio causa=Redis::CannotConnectError/
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(incompleta))
+      end
+
+      # Só a mensagem que ESTA publicação criou e que FICOU no banco é reconciliada: quando o COMMIT
+      # falha depois de criá-la (o `before_commit` da mensagem levanta e a transação volta), ela não
+      # está no banco — `persisted?` volta a ser falso no rollback —, não há envio a reconciliar, e a
+      # exceção segue o caminho de sempre: a reserva com o mesmo token, e o blob sem dono na limpeza.
+      it 'cai para o texto com o link quando o commit da mensagem com anexo falha depois de cria-la' do
+        # Arrange — a mensagem com anexo levanta no `before_commit`; a reserva (sem anexo) passa
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        allow(Messages::MessageBuilder).to receive(:new).and_wrap_original do |original, *args|
+          original.call(*args).tap do |construtor|
+            allow(construtor).to receive(:perform).and_wrap_original do |perform|
+              perform.call.tap do |mensagem|
+                allow(mensagem).to receive(:before_committed!).and_raise(ActiveRecord::StatementInvalid, 'commit falhou') if mensagem.attachments.any?
+              end
+            end
+          end
+        end
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        # Act
+        result = described_class.new(run: run).publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_published
+        mensagem = bot_messages.sole
+        expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
+        expect(mensagem.attachments).to be_empty
+        expect(SendReplyJob).to have_been_enqueued.with(mensagem.id).once
+        expect(Rails.logger).to have_received(:warn)
+          .with(a_string_matching(/anexo falhou run=#{run.id} causa=ActiveRecord::StatementInvalid; vai como link/))
+        expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+      end
+    end
+
+    # A AUTORIZAÇÃO É RECONFERIDA SOB O LOCK, sem cache, imediatamente antes de criar a mensagem
+    # (rodada 7, P1): entre a conferência do começo e a mensagem há um download e uma gravação, e nesse
+    # intervalo a execução pode ser supersedida, o agente desligado, a allowlist mudar. Publicar com a
+    # conferência velha é falar com cliente real a partir de um agente que já foi desligado.
+    describe 'quando a autorizacao cai durante a transferencia' do
+      def durante_a_gravacao
+        allow(ActiveStorage::Blob.service).to receive(:upload).and_wrap_original do |original, *args, **opcoes|
+          yield
+          original.call(*args, **opcoes)
+        end
+      end
+
+      it 'nao publica o arquivo da execucao supersedida no meio do download, e manda o blob para a limpeza' do
+        # Arrange — outro processo supersede a execução (o cliente corrigiu o pedido) durante a gravação
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        durante_a_gravacao { Autonomia::Agents::ToolRun.where(id: run.id).update_all(status: 'superseded') } # rubocop:disable Rails/SkipsModelValidations
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        # Act
+        result = described_class.new(run: run).publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_blocked
+        expect(bot_messages).to be_empty
+        expect(run.reload.sequence).to eq(0)
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(/publicacao recusada run=#{run.id} motivo=execucao_morta/))
+        expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+      end
+
+      it 'nao publica o arquivo do agente desligado no meio do download, e manda o blob para a limpeza' do
+        # Arrange — o operador desliga o agente durante a gravação
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        durante_a_gravacao { agent.update!(enabled: false) }
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        # Act
+        result = described_class.new(run: run).publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_blocked
+        expect(bot_messages).to be_empty
+        expect(run.reload.sequence).to eq(0)
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(/publicacao recusada run=#{run.id} motivo=vinculo_mudou/))
+        expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+      end
     end
 
     # O DOWNLOAD E A GRAVAÇÃO ACONTECEM FORA DO LOCK DA CONVERSA: são rede e armazenamento, com prazo

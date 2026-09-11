@@ -77,8 +77,10 @@ class SafeFetch::RequestOptions
     @validate_content_type = config[:validate_content_type]
   end
 
-  # Um prazo total menor que os tetos por operação tem de valer já na conexão e na espera pelos
-  # cabeçalhos, que acontecem antes de o `Fetcher` receber a resposta e poder apertar o socket.
+  # Um prazo (`total_timeout`) menor que os tetos por operação tem de valer já na conexão e na espera
+  # pelos cabeçalhos, que acontecem antes de o `Fetcher` receber a resposta e poder apertar o socket.
+  # Aqui ele vale como TETO POR OPERAÇÃO, não como saldo: cabeçalhos que gotejam abaixo dele evadem
+  # (ressalva registrada, ver `SafeFetch::Deadline`).
   def bounded_by_total(timeout)
     return timeout if total_timeout.nil?
     return total_timeout if timeout.nil?

@@ -627,6 +627,33 @@ RSpec.describe SafeFetch do
         expect(options.request_options[:http_options]).to eq(open_timeout: 3, read_timeout: 3)
         expect(options.request_options[:max_redirects]).to eq(SsrfFilter::DEFAULT_MAX_REDIRECTS)
       end
+
+      # O socket é a alavanca por leitura. Sem ele (WebMock; ou um Net::HTTP que deixe de expor o ivar),
+      # o prazo vale só entre pedaços — degradação REGISTRADA, uma vez por transferência, com código
+      # fechado; nunca em silêncio (rodada 7 da entrega 11).
+      it 'registers once, with a closed code, when there is no socket to tighten, and keeps the deadline between chunks' do
+        allow(Rails.logger).to receive(:warn).and_call_original
+        deadline = SafeFetch::Deadline.new(5)
+
+        deadline.enforce!(nil)
+        deadline.enforce!(nil)
+
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(/\[safe_fetch\] total_timeout degradado motivo=sem_socket/)).once
+        expect(deadline.binding?).to be(false)
+        expect(deadline.remaining).to be <= 5
+      end
+
+      it 'tightens the socket read_timeout to what is left, without registering anything' do
+        allow(Rails.logger).to receive(:warn).and_call_original
+        socket = Struct.new(:read_timeout).new(30)
+        deadline = SafeFetch::Deadline.new(5)
+
+        deadline.enforce!(socket)
+
+        expect(socket.read_timeout).to be_between(4, 5)
+        expect(deadline.binding?).to be(true)
+        expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(/safe_fetch/))
+      end
     end
 
     # O QUE O WEBMOCK NÃO EMULA: o socket. Um servidor real em 127.0.0.1, com o WebMock desligado (ele
@@ -661,9 +688,10 @@ RSpec.describe SafeFetch do
         end
       end
 
-      # Pedaços com pausas crescentes nunca estouram um `read_timeout` por leitura; só o prazo total
-      # segura isso — e cada leitura espera só o que resta dele: a recusa vem ao vencer (1 s), não
-      # quando o pedaço seguinte chega (2,1 s), nem quando uma leitura isolada estoura (1,9 s).
+      # Pedaços com pausas crescentes nunca estouram um `read_timeout` por leitura; só o prazo do corpo
+      # (`total_timeout`, monotônico) segura isso — e cada leitura espera só o que resta dele: a recusa
+      # vem ao vencer (1 s), não quando o pedaço seguinte chega (2,1 s), nem quando uma leitura isolada
+      # estoura (1,9 s).
       context 'when the body arrives slower than the total_timeout' do
         let(:servidor) do
           servidor_http_local do |s, cliente|

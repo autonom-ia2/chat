@@ -6,7 +6,7 @@ require 'rails_helper'
 # arquivo na conversa. O que estes exemplos travam é o contrato do objeto que viaja da ferramenta
 # ao publicador: a forma (serializável, porque atravessa o Sidekiq), a validação da forma, e o
 # DOWNLOAD com as suas guardas — o endereço efetivamente conectado (nada de rede privada), o status
-# lido antes do corpo, teto de tamanho, prazo total e "é PDF de verdade" — cada uma provada por
+# lido antes do corpo, teto de tamanho, prazo do corpo com teto por leitura e "é PDF de verdade" — cada uma provada por
 # mutação em 11/09/2026 (ver `docs/audit/2026-09-11-entrega-11-comparativo-arquivo.md`).
 RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
   let(:url) { 'https://arquivos.exemplo.test/comparativo-9.pdf' }
@@ -87,7 +87,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         stub_request(:get, url).to_return(status: 200, body: pdf, headers: cabecalho_pdf)
 
         # Act
-        blob = entrega.gravar
+        blob = entrega.gravar(run_id: 42)
 
         # Assert
         expect(blob).to be_persisted
@@ -95,6 +95,9 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         expect(blob.content_type).to eq('application/pdf')
         expect(blob.download).to eq(pdf)
         expect(ActiveStorage::Blob.find_signed!(blob.signed_id)).to eq(blob)
+        # A MARCA da execução e da finalidade (rodada 7): é por ela que o varredor reconhece o blob que
+        # ficou sem dono (o processo morreu entre a linha e o anexo) e o apaga — sem tocar em nenhum outro.
+        expect(blob.metadata).to include('autonomia_tool_run_id' => 42, 'autonomia_finalidade' => 'entrega_de_arquivo')
       end
 
       # O blob do portal do AGGER responde `application/octet-stream`: o que decide é a assinatura
@@ -102,13 +105,13 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       it 'aceita o tipo generico de bytes quando os bytes sao de PDF' do
         stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/octet-stream' })
 
-        expect(entrega.gravar.download).to eq(pdf)
+        expect(entrega.gravar(run_id: 42).download).to eq(pdf)
       end
 
       it 'recusa o que nao e PDF, mesmo com o tipo certo no cabecalho' do
         stub_request(:get, url).to_return(status: 200, body: '<html>não achei</html>', headers: cabecalho_pdf)
 
-        expect { entrega.gravar }.to recusa('nao_e_pdf')
+        expect { entrega.gravar(run_id: 42) }.to recusa('nao_e_pdf')
         expect(ActiveStorage::Blob.count).to eq(0)
       end
 
@@ -117,7 +120,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       it 'recusa o tipo que desmente o PDF, com motivo fechado e sem o cabecalho dentro dele' do
         stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'text/html; charset=utf-8' })
 
-        expect { entrega.gravar }.to raise_error(described_class::Indisponivel) do |e|
+        expect { entrega.gravar(run_id: 42) }.to raise_error(described_class::Indisponivel) do |e|
           expect(e.motivo).to eq('tipo_invalido')
           expect(e.message).not_to include('html', 'charset')
         end
@@ -130,7 +133,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
                                           body: '<?xml version="1.0"?><Error><Code>BlobNotFound</Code></Error>',
                                           headers: { 'Content-Type' => 'application/xml' })
 
-        expect { entrega.gravar }.to raise_error(described_class::Indisponivel) do |e|
+        expect { entrega.gravar(run_id: 42) }.to raise_error(described_class::Indisponivel) do |e|
           expect(e.motivo).to eq('http_404')
           expect(e.message).not_to include('blob')
         end
@@ -147,7 +150,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         stub_request(:get, destino).to_return(status: 200, body: pdf, headers: cabecalho_pdf)
 
         # Act / Assert
-        expect { entrega.gravar }.to recusa('redirecionamento')
+        expect { entrega.gravar(run_id: 42) }.to recusa('redirecionamento')
         expect(a_request(:get, destino)).not_to have_been_made
       end
 
@@ -155,20 +158,20 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         stub_request(:get, url).to_return(status: 200, body: pdf,
                                           headers: cabecalho_pdf.merge('Content-Length' => (described_class::TETO_BYTES + 1).to_s))
 
-        expect { entrega.gravar }.to recusa('tamanho')
+        expect { entrega.gravar(run_id: 42) }.to recusa('tamanho')
       end
 
       it 'recusa o arquivo maior que o teto DURANTE o download, quando o tamanho nao foi anunciado' do
         grande = pdf + ('x' * described_class::TETO_BYTES)
         stub_request(:get, url).to_return(status: 200, body: grande, headers: cabecalho_pdf)
 
-        expect { entrega.gravar }.to recusa('tamanho')
+        expect { entrega.gravar(run_id: 42) }.to recusa('tamanho')
       end
 
       it 'recusa quando a conexao nao responde no tempo' do
         stub_request(:get, url).to_timeout
 
-        expect { entrega.gravar }.to recusa('tempo')
+        expect { entrega.gravar(run_id: 42) }.to recusa('tempo')
       end
 
       # O `SafeFetch` embrulha a rede caída num `FetchError`; o que separa "tempo" de "rede" é a
@@ -176,7 +179,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       it 'recusa com motivo `download` e a classe da causa quando a rede cai' do
         stub_request(:get, url).to_raise(Errno::ECONNREFUSED)
 
-        expect { entrega.gravar }.to recusa('download', causa: 'Errno::ECONNREFUSED')
+        expect { entrega.gravar(run_id: 42) }.to recusa('download', causa: 'Errno::ECONNREFUSED')
       end
 
       # O contrato deste método é "levanta `Indisponivel` em qualquer falha": uma resposta HTTP
@@ -185,17 +188,17 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       it 'recusa com motivo `download` e a classe da causa quando a camada HTTP levanta o que ninguem classifica' do
         stub_request(:get, url).to_raise(Net::HTTPBadResponse)
 
-        expect { entrega.gravar }.to recusa('download', causa: 'Net::HTTPBadResponse')
+        expect { entrega.gravar(run_id: 42) }.to recusa('download', causa: 'Net::HTTPBadResponse')
       end
 
-      it 'baixa pelo SafeFetch com os tetos, o prazo total e zero redirecionamentos, nao com os padroes dele' do
+      it 'baixa pelo SafeFetch com os tetos, o prazo e zero redirecionamentos, nao com os padroes dele' do
         stub_request(:get, url).to_return(status: 200, body: pdf, headers: cabecalho_pdf)
         allow(SafeFetch).to receive(:fetch).and_call_original
 
-        entrega.gravar
+        entrega.gravar(run_id: 42)
 
         tetos = { max_bytes: described_class::TETO_BYTES, open_timeout: described_class::ABERTURA_SEGUNDOS,
-                  total_timeout: described_class::PRAZO_TOTAL_SEGUNDOS, max_redirects: 0 }
+                  total_timeout: described_class::PRAZO_SEGUNDOS, max_redirects: 0 }
         expect(SafeFetch).to have_received(:fetch).with(url, hash_including(tetos))
       end
 
@@ -208,7 +211,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
                                         legenda: entrega.legenda, reserva: entrega.reserva)
           stub_request(:get, privada.url).to_return(status: 200, body: pdf, headers: cabecalho_pdf)
 
-          expect { privada.gravar }.to recusa('url_insegura')
+          expect { privada.gravar(run_id: 42) }.to recusa('url_insegura')
           expect(a_request(:get, privada.url)).not_to have_been_made
         end
 
@@ -217,7 +220,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
                                         legenda: entrega.legenda, reserva: entrega.reserva)
           stub_request(:get, privada.url).to_return(status: 200, body: pdf, headers: cabecalho_pdf)
 
-          expect { privada.gravar }.to recusa('url_insegura')
+          expect { privada.gravar(run_id: 42) }.to recusa('url_insegura')
           expect(a_request(:get, privada.url)).not_to have_been_made
         end
 
@@ -225,7 +228,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
           allow(Resolv).to receive(:getaddresses).with('arquivos.exemplo.test').and_return(['10.0.0.7'])
           stub_request(:get, url).to_return(status: 200, body: pdf, headers: cabecalho_pdf)
 
-          expect { entrega.gravar }.to recusa('url_insegura')
+          expect { entrega.gravar(run_id: 42) }.to recusa('url_insegura')
           expect(a_request(:get, url)).not_to have_been_made
         end
       end
@@ -257,16 +260,18 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         end
 
         it 'e recusada pelo status, e a conexao e fechada sem materializar o corpo' do
-          na_rede_local { expect { local.gravar }.to recusa('http_404') }
+          na_rede_local { expect { local.gravar(run_id: 42) }.to recusa('http_404') }
           servidor.parar
 
           expect(servidor.bytes_escritos).to be < total
         end
       end
 
-      # O PRAZO É TOTAL: um servidor que entrega pedaços com pausas crescentes nunca estoura um teto
-      # por leitura, e seguraria o worker além dos 25 s de shutdown do Sidekiq. Cada leitura espera
-      # só o que resta do prazo: a recusa vem ao vencer (1 s), não no pedaço seguinte (2,1 s).
+      # O PRAZO DO CORPO É MONOTÔNICO, com teto por leitura: um servidor que entrega pedaços com pausas
+      # crescentes nunca estoura um teto por leitura sozinho, e seguraria o worker além dos 25 s de
+      # shutdown do Sidekiq. Cada leitura espera só o que resta do prazo: a recusa vem ao vencer (1 s),
+      # não no pedaço seguinte (2,1 s). O que o prazo NÃO cobre (DNS, cabeçalhos que gotejam abaixo do
+      # saldo) está registrado em `EntregaDeArquivo::PRAZO_SEGUNDOS` (rodada 7).
       describe 'a resposta que chega devagar demais' do
         let(:servidor) do
           servidor_http_local do |s, cliente|
@@ -278,11 +283,11 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
           end
         end
 
-        it 'e recusada por tempo ao vencer o prazo total, esperando em cada leitura so o que resta' do
-          stub_const("#{described_class}::PRAZO_TOTAL_SEGUNDOS", 1)
+        it 'e recusada por tempo ao vencer o prazo, esperando em cada leitura so o que resta' do
+          stub_const("#{described_class}::PRAZO_SEGUNDOS", 1)
           inicio = segundos_monotonicos
 
-          na_rede_local { expect { local.gravar }.to recusa('tempo') }
+          na_rede_local { expect { local.gravar(run_id: 42) }.to recusa('tempo') }
 
           expect(segundos_monotonicos - inicio).to be < 1.6
           expect(ActiveStorage::Blob.count).to eq(0)
@@ -306,7 +311,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         abertas_antes = ActiveRecord::Base.connection.open_transactions
 
         # Act
-        blob = entrega.gravar
+        blob = entrega.gravar(run_id: 42)
 
         # Assert — nenhuma transação além das que o exemplo já tinha (a do fixture)
         expect(blob).to be_persisted
@@ -319,7 +324,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         allow(ActiveStorage::Blob.service).to receive(:upload).and_raise(Errno::ECONNREFUSED)
 
         # Act / Assert
-        expect { entrega.gravar }.to recusa('armazenamento', causa: 'Errno::ECONNREFUSED')
+        expect { entrega.gravar(run_id: 42) }.to recusa('armazenamento', causa: 'Errno::ECONNREFUSED')
         expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
         perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
         expect(ActiveStorage::Blob.count).to eq(0)
@@ -333,7 +338,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         allow(ActiveStorage::PurgeJob).to receive(:perform_later).and_raise(Redis::CannotConnectError)
         allow(Rails.logger).to receive(:warn).and_call_original
 
-        expect { entrega.gravar }.to recusa('armazenamento', causa: 'Errno::ECONNREFUSED')
+        expect { entrega.gravar(run_id: 42) }.to recusa('armazenamento', causa: 'Errno::ECONNREFUSED')
         expect(Rails.logger).to have_received(:warn)
           .with(a_string_matching(/blob sem dono nao agendado gravacao blob=\d+ causa=Redis::CannotConnectError/))
       end
@@ -341,7 +346,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       it 'nao grava nada quando o download ja recusou' do
         stub_request(:get, url).to_return(status: 404, body: 'x')
 
-        expect { entrega.gravar }.to recusa('http_404')
+        expect { entrega.gravar(run_id: 42) }.to recusa('http_404')
         expect(ActiveStorage::Blob.count).to eq(0)
         expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
       end
@@ -358,8 +363,8 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
                                           { status: 200, body: '<html>não achei</html>', headers: cabecalho_pdf })
 
         # Act
-        entrega.gravar
-        expect { entrega.gravar }.to recusa('nao_e_pdf')
+        entrega.gravar(run_id: 42)
+        expect { entrega.gravar(run_id: 42) }.to recusa('nao_e_pdf')
 
         # Assert
         expect(temporarios.size).to eq(2)

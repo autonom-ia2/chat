@@ -9,9 +9,9 @@
 # no momento da publicação (`#gravar`), dentro do job, e o download é do `SafeFetch` (o cliente HTTP
 # da casa, sobre o `ssrf_filter`): a URL vem de fora (o blob do portal do AGGER) e o que ela responde
 # não é promessa nossa — o endereço efetivamente conectado é conferido (nada de rede privada, nem
-# por DNS), o status é lido antes do corpo, o corpo é lido em fluxo com teto de bytes e prazo total,
-# e os bytes têm de começar com a assinatura de PDF: um 404 do armazenamento do portal vem como XML
-# de `BlobNotFound`, e sem a assinatura esse XML chegaria ao cliente com nome de PDF.
+# por DNS), o status é lido antes do corpo, o corpo é lido em fluxo com teto de bytes e prazo do corpo
+# com teto por leitura, e os bytes têm de começar com a assinatura de PDF: um 404 do armazenamento do
+# portal vem como XML de `BlobNotFound`, e sem a assinatura esse XML chegaria ao cliente com nome de PDF.
 #
 # O ARQUIVO É GRAVADO NO ARMAZENAMENTO AQUI (`#gravar`), antes de existir mensagem: o ActiveStorage
 # sobe o arquivo no `after_commit` da mensagem, e uma subida que falhasse ali deixaria a mensagem
@@ -29,14 +29,22 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # byte, e o corpo é lido em fluxo e interrompido ao passar do teto — o arquivo é baixado ANTES do
   # lock da conversa.
   TETO_BYTES = 10.megabytes
-  # PRAZO TOTAL da transferência (conexão, cabeçalhos e corpo), monotônico, abaixo dos 25 s de
-  # shutdown do Sidekiq desta instalação: um deploy no meio do download não pode deixar a publicação
-  # pela metade. É TOTAL porque teto por leitura sozinho não segura um servidor que entrega um byte
-  # por segundo — ele nunca estoura a leitura e prende o worker pelo tempo que quiser (rodada 6,
-  # 11/09/2026); cada leitura do corpo espera no máximo o que resta do prazo. O que o prazo não
-  # cobre é a resolução de DNS, feita antes da conexão pelo resolvedor do sistema.
-  PRAZO_TOTAL_SEGUNDOS = 20
-  # Teto da conexão (TCP + TLS), dentro do prazo total.
+  # PRAZO DO CORPO COM TETO POR LEITURA (`total_timeout:` do `SafeFetch`), monotônico, abaixo dos 25 s
+  # de shutdown do Sidekiq desta instalação: um deploy no meio do download não pode deixar a
+  # publicação pela metade. Teto por leitura sozinho não segura um servidor que entrega um byte por
+  # segundo — ele nunca estoura a leitura e prende o worker pelo tempo que quiser (rodada 6,
+  # 11/09/2026); com o prazo, cada leitura do corpo espera no máximo o que resta dele, e a conexão e
+  # a espera pelos cabeçalhos ficam limitadas a ele como teto por operação.
+  #
+  # O QUE O PRAZO NÃO COBRE (ressalva registrada na rodada 7, decisão de não implementar um orçamento
+  # cancelável — uma thread vigia fechando o socket é risco maior que o benefício aqui): a resolução
+  # de DNS (antes da conexão, no `Resolv` do sistema), cabeçalhos que gotejam abaixo do teto por
+  # leitura, e as linhas de controle do chunked entre dois pedaços. Modelo de ameaça: a URL vem do
+  # nosso adapter (o blob do portal, https, sem redirecionamento), a abertura tem 5 s, cada leitura
+  # é limitada pelo saldo; só um gotejamento de cabeçalhos abaixo do saldo evade — e o shutdown do
+  # Sidekiq (25 s) encerra o job de qualquer forma.
+  PRAZO_SEGUNDOS = 20
+  # Teto da conexão (TCP + TLS), dentro do prazo.
   ABERTURA_SEGUNDOS = 5
   # NENHUM redirecionamento: o blob do portal é servido direto, e "só https" (URL_SEGURA) valeria
   # só para o primeiro salto — um 302 para http levaria o download para o transporte sem proteção
@@ -56,6 +64,15 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # As classes de tempo que o `SafeFetch` embrulha em `FetchError` (a causa, não a mensagem, é o que
   # separa "tempo" de "rede caída").
   CAUSAS_DE_TEMPO = [Net::OpenTimeout, Net::ReadTimeout].freeze
+  # A MARCA do blob (rodada 7, 11/09/2026): a execução que o gravou e a finalidade, no `metadata` do
+  # `ActiveStorage::Blob`. A linha do blob é salva ANTES da mensagem, e o processo pode morrer entre
+  # uma e a outra — sem a marca, a linha (com ou sem arquivo) ficava sem dono e sem ninguém que a
+  # reconhecesse. É por ela que o `ReapStaleRunsJob` acha e apaga o que ficou (`blobs_sem_dono`).
+  EXECUCAO_CHAVE = 'autonomia_tool_run_id'.freeze
+  FINALIDADE_CHAVE = 'autonomia_finalidade'.freeze
+  # A finalidade nomeia QUEM GRAVA (esta classe), não o produto: se outra ferramenta entregar arquivo
+  # por aqui, o varredor continua reconhecendo o blob dela.
+  FINALIDADE = 'entrega_de_arquivo'.freeze
 
   # O download ou a gravação não puderam entregar um PDF. `motivo` é um código curto FECHADO (nunca o
   # texto da resposta, um cabeçalho, nem a mensagem da exceção): vai para o log, e o publicador cai
@@ -89,12 +106,37 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # A LIMPEZA DE UM BLOB SEM DONO É CORTESIA: `purge_later` fala com o Redis, e o Redis fora não pode
   # trocar o resultado nem a causa de quem chamou (rodadas 4 e 5, 11/09/2026). Registra com o id do
   # blob (para a limpeza manual) e a classe da causa, e não levanta. `contexto` diz de onde veio o
-  # pedido (`run=<id>` no publicador; `gravacao` aqui). O `PurgeJob` vai para a fila `default` do
-  # Sidekiq (`ActiveStorage.queues[:purge]` não está configurado nesta instalação), que retenta.
+  # pedido (`run=<id>` no publicador; `gravacao` aqui; `varredor` no `ReapStaleRunsJob`). O `PurgeJob`
+  # vai para a fila `default` do Sidekiq (`ActiveStorage.queues[:purge]` não está configurado nesta
+  # instalação), que retenta.
   def self.agendar_limpeza(blob, contexto:)
     blob.purge_later
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] blob sem dono nao agendado #{contexto} blob=#{blob.id} causa=#{e.class}")
+  end
+
+  # O `metadata` que marca o blob de uma execução (ver `EXECUCAO_CHAVE`).
+  def self.marca(run_id:)
+    { EXECUCAO_CHAVE => run_id, FINALIDADE_CHAVE => FINALIDADE }
+  end
+
+  # -> os blobs COM A MARCA desta classe, SEM ANEXO e criados antes de `antes_de` — os que ficaram sem
+  # dono porque o processo morreu entre a linha e o anexo. Os três filtros são a guarda: sem a marca,
+  # apagaríamos blobs alheios; sem a idade, um upload em andamento (a linha existe antes do anexo);
+  # sem "sem anexo", o PDF de uma mensagem entregue. A marca é procurada no `metadata` (texto JSON,
+  # escrito pelo coder do Rails) pelo par `"chave":"valor"` tal como ele o grava — o mesmo padrão dos
+  # tokens da mensagem. É uma varredura sequencial da tabela de blobs (não há índice para isto); roda a
+  # cada 10 min com `limite`, e o custo está registrado na auditoria da rodada 7.
+  def self.blobs_sem_dono(antes_de:, limite:)
+    ActiveStorage::Blob.unattached
+                       .where(created_at: ...antes_de)
+                       .where('metadata LIKE ?', "%#{marca_no_texto}%")
+                       .order(:created_at).limit(limite)
+  end
+
+  # `"autonomia_finalidade":"entrega_de_arquivo"`, como o coder JSON do `metadata` escreve (sem espaços).
+  def self.marca_no_texto
+    ActiveSupport::JSON.encode(FINALIDADE_CHAVE => FINALIDADE)[1..-2]
   end
 
   def initialize(url:, nome:, legenda:, reserva:)
@@ -129,12 +171,13 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     "arquivo:#{url}"
   end
 
-  # -> `ActiveStorage::Blob` gravado (arquivo já no armazenamento, linha salva), pronto para ser
-  # anexado pelo `signed_id`. Levanta `Indisponivel` na falha do download (`#baixar`) e na do
-  # armazenamento (motivo `armazenamento`, com a classe da exceção em `causa`). O arquivo temporário
-  # do download vive só dentro do bloco e é fechado sempre — gravado ou não.
-  def gravar
-    baixar { |pdf| gravar_blob(pdf) }
+  # -> `ActiveStorage::Blob` gravado (arquivo já no armazenamento, linha salva, com a MARCA da
+  # execução `run_id`), pronto para ser anexado pelo `signed_id`. Levanta `Indisponivel` na falha do
+  # download (`#baixar`) e na do armazenamento (motivo `armazenamento`, com a classe da exceção em
+  # `causa`). O arquivo temporário do download vive só dentro do bloco e é fechado sempre — gravado
+  # ou não.
+  def gravar(run_id:)
+    baixar { |pdf| gravar_blob(pdf, run_id) }
   end
 
   private
@@ -144,14 +187,14 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # do bloco, em qualquer caminho. Levanta `Indisponivel` em QUALQUER falha, com motivo fechado:
   # `url_insegura` (endereço privado, DNS que resolve para dentro, esquema), `redirecionamento`,
   # `http_<status>` (lido ANTES do corpo — o corpo de um 404 nunca é materializado), `tamanho`
-  # (anunciado ou medido), `tempo` (o prazo total, ou uma conexão/leitura que estourou), `download`
-  # com a classe da causa (o resto da rede, e o que o `SafeFetch` não classifica), `tipo_invalido`
-  # e `nao_e_pdf` (as conferências). O bloco tem de falhar como `Indisponivel` (é o que `gravar_blob`
+  # (anunciado ou medido), `tempo` (o prazo, ou uma conexão/leitura que estourou), `download` com a
+  # classe da causa (o resto da rede, e o que o `SafeFetch` não classifica), `tipo_invalido` e
+  # `nao_e_pdf` (as conferências). O bloco tem de falhar como `Indisponivel` (é o que `gravar_blob`
   # faz): o último `rescue` não distingue a falha dele da da transferência.
   def baixar
     SafeFetch.fetch(url, validate_content_type: false, max_bytes: TETO_BYTES, max_redirects: REDIRECIONAMENTOS,
-                         open_timeout: ABERTURA_SEGUNDOS, read_timeout: PRAZO_TOTAL_SEGUNDOS,
-                         total_timeout: PRAZO_TOTAL_SEGUNDOS) do |resposta|
+                         open_timeout: ABERTURA_SEGUNDOS, read_timeout: PRAZO_SEGUNDOS,
+                         total_timeout: PRAZO_SEGUNDOS) do |resposta|
       conferir(resposta)
       yield resposta.tempfile
     end
@@ -176,7 +219,7 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     "http_#{status.to_i}"
   end
 
-  # -> a `Indisponivel` da falha de rede que o `SafeFetch` embrulhou: `tempo` para o prazo total e para a
+  # -> a `Indisponivel` da falha de rede que o `SafeFetch` embrulhou: `tempo` para o prazo e para a
   # conexão ou leitura que estourou (pela CAUSA, `e.cause` — o que o Ruby guarda ao relançar; a mensagem
   # não entra), `download` com a classe da causa para o resto.
   def indisponivel_da_rede(erro)
@@ -191,11 +234,13 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # transação segurava a conexão do banco durante a subida ao S3 — e os timeouts do cliente S3 são
   # os padrões do aws-sdk (rodada 6, 11/09/2026). A subida que falha deixa uma linha sem arquivo:
   # ela vai para a limpeza em segundo plano (`agendar_limpeza`, o mesmo caminho do blob sem dono do
-  # publicador), e a recusa é `armazenamento` com a classe da causa. `identify: false` porque o tipo
-  # já foi conferido pelos bytes. `build_after_unfurling`/`upload_without_unfurling` são as duas
-  # metades de `create_and_upload!` (activestorage 7.2.3.1).
-  def gravar_blob(pdf)
-    blob = ActiveStorage::Blob.build_after_unfurling(io: pdf, filename: nome, content_type: TIPO_PDF, identify: false)
+  # publicador), e a recusa é `armazenamento` com a classe da causa. Se o processo morrer entre a
+  # linha e o anexo, a MARCA (`metadata`) é o que permite ao varredor apagá-la depois (rodada 7).
+  # `identify: false` porque o tipo já foi conferido pelos bytes. `build_after_unfurling`/
+  # `upload_without_unfurling` são as duas metades de `create_and_upload!` (activestorage 7.2.3.1).
+  def gravar_blob(pdf, run_id)
+    blob = ActiveStorage::Blob.build_after_unfurling(io: pdf, filename: nome, content_type: TIPO_PDF, identify: false,
+                                                     metadata: self.class.marca(run_id: run_id))
     blob.save!
     blob.upload_without_unfurling(pdf)
     blob

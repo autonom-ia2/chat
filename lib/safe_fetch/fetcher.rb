@@ -80,7 +80,10 @@ class SafeFetch::Fetcher
   # O socket da resposta é o `Net::BufferedIO` da conexão enquanto o corpo é lido: é onde vive o
   # `read_timeout` que cada espera consulta. O Net::HTTP (net-http 0.9.1) não o expõe, e apertá-lo é a
   # única alavanca por leitura que existe sem trocar o cliente HTTP; a guarda é o spec com servidor
-  # real ("waiting only what is left of the total"), que reprova se este acoplamento deixar de valer.
+  # real ("waiting only what is left of the total"), que reprova se este acoplamento deixar de valer —
+  # e, em produção, o `Deadline` registra (`sem_socket`) se um dia o ivar vier nil. O prazo daqui é o
+  # do CORPO com teto por leitura: entre dois `enforce!` o `read_body` pode fazer mais de uma leitura
+  # (as linhas de controle do chunked), cada uma com o teto do saldo (ressalva, `SafeFetch::Deadline`).
   def write_response_body(response, tempfile, bytes_written)
     socket = response.instance_variable_get(:@socket)
     deadline.enforce!(socket)

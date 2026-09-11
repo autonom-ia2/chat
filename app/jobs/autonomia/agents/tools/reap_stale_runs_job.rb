@@ -17,13 +17,29 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   GRACE = 5.minutes
   # Uma execução `pending` que nunca foi promovida não tem `expires_at`. Cai por idade.
   PENDING_MAX_AGE = 1.hour
+  # O blob da entrega de arquivo (entrega 11) é gravado ANTES da mensagem; a idade é a margem que
+  # protege um upload em andamento (a linha existe antes do anexo) — a transferência inteira cabe em
+  # segundos, e uma hora é folga, não medida.
+  BLOB_SEM_DONO_IDADE = 1.hour
 
   def perform
     reap_running
     reap_pending
+    recolher_blobs_sem_dono
   end
 
   private
+
+  # O BLOB QUE FICOU SEM DONO (rodada 7 da entrega 11): o publicador grava o blob, e só depois cria a
+  # mensagem que o anexa; se o processo morre entre uma coisa e a outra, nem o `ensure` do publicador
+  # roda, e a linha (com o arquivo já no armazenamento, ou sem ele) fica para sempre. Este é o único
+  # ponto periódico que existe para reconhecê-la — pela MARCA que a entrega põe no `metadata` — e
+  # apagá-la em segundo plano, como qualquer blob sem dono do publicador. Nada sem a marca é tocado.
+  def recolher_blobs_sem_dono
+    ::Autonomia::Agents::Tools::EntregaDeArquivo
+      .blobs_sem_dono(antes_de: BLOB_SEM_DONO_IDADE.ago, limite: BATCH_LIMIT)
+      .each { |blob| ::Autonomia::Agents::Tools::EntregaDeArquivo.agendar_limpeza(blob, contexto: 'varredor') }
+  end
 
   def reap_running
     ::Autonomia::Agents::ToolRun.where(status: 'running')
