@@ -59,6 +59,18 @@ class Autonomia::Insurance::Connections::Session
     yield renew!
   end
 
+  # A SESSÃO QUE JÁ ESTÁ VIVA, e nenhuma outra — para quem roda DENTRO DO TURNO, com o modelo
+  # esperando (a consulta de placa da conferência e a ferramenta `consultar_placa`, entrega 2).
+  # Abrir sessão é login no portal com o teto de 60 s do conector (`Http::READ_TIMEOUT`), e o turno
+  # não pode esperar isso: `bound_async_spec` guarda que "a 60s call cannot hold the turn". Sem
+  # sessão viva o bloco não roda e o retorno é nil; se o portal recusar a que parecia viva, o erro
+  # sobe SEM renovação — quem abre e renova é o healthcheck e o job do envio, fora do turno.
+  def with_live_session
+    return nil unless @connection.session_live?
+
+    yield @connection.session
+  end
+
   private
 
   # O RECHECK dentro do lock é o que faz duas chamadas concorrentes gerarem UM login: a segunda

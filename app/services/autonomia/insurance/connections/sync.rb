@@ -146,12 +146,38 @@ class Autonomia::Insurance::Connections::Sync
     map = @connector.capabilities(provider: @connection.provider, session: session)
     raise ::Autonomia::Insurance::Connector::Error.new(:protocol, 'capabilities payload is not a hash') unless map.is_a?(Hash)
 
-    @connection.update!(
-      status: 'ready',
-      capabilities: map,
-      capabilities_version: map['scanned_at'],
-      last_capability_scan_at: Time.current
-    )
+    schemas = quote_schemas
+
+    # DENTRO DO LOCK, com a linha recarregada: as duas chamadas acima levam segundos, e nesse tempo
+    # o polling de cotação escreve `insurers_pending_auth` no mesmo jsonb (`merge_metadata!`).
+    # Gravar o retrato de antes apagaria isso em silêncio — a classe de defeito que o lock de
+    # `apply_status!` já evita, e que esta escrita repetia (Codex, 10/09/2026).
+    @connection.with_lock do
+      @connection.update!(
+        status: 'ready',
+        capabilities: map,
+        capabilities_version: map['scanned_at'],
+        last_capability_scan_at: Time.current,
+        metadata: com_schemas(@connection.metadata.to_h, schemas)
+      )
+    end
+  end
+
+  # O FORMULÁRIO DE AUTO vem junto da varredura (entrega 2): é o `quote/schema` do adapter, guardado
+  # na conexão para a ferramenta montar os parâmetros do especialista sem chamada por turno.
+  # -> { produto => schema } do que o adapter respondeu AGORA; vazio quando não respondeu — e aí
+  # fica o que a linha já tinha (mesclado por produto em `com_schemas`): um formulário velho é
+  # melhor que nenhum, e a próxima sincronização tenta de novo.
+  def quote_schemas
+    { 'auto' => @connector.quote_schema(provider: @connection.provider, product: 'auto') }
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] quote_schema indisponivel na sincronizacao connection=#{@connection.id} #{e.class}")
+    {}
+  end
+
+  # Mesclado POR PRODUTO sobre o que a linha tem agora: adapter mudo num produto não apaga o outro.
+  def com_schemas(metadata, schemas)
+    metadata.merge('quote_schemas' => metadata['quote_schemas'].to_h.merge(schemas))
   end
 
   def mark!(status:, error: nil)

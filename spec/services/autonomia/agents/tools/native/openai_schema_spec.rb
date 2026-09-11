@@ -60,12 +60,56 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   # que só roda quando o principal o chama; o log de 08/09 mostra a chamada do principal falhando
   # antes disso, então esta ferramenta nunca chegou a ser exercitada em produção.
   describe 'cotar_seguro' do
-    it 'declara os nove opcionais aceitando null' do
+    it 'declara os opcionais comuns aceitando null' do
       schema = Autonomia::Agents::Tools::Native::InsuranceQuote.openai_schema
       opcionais = schema[:parameters][:properties].select { |_, v| v['type'].is_a?(Array) }
 
-      expect(opcionais.keys).to match_array(%w[cpf nome cep numero dados placa renovacao bonus sinistros])
+      expect(opcionais.keys).to match_array(%w[cpf nome cep numero dados])
       expect(schema[:parameters][:required]).to include(*opcionais.keys)
+    end
+
+    # ENTREGA 2: os campos de auto vêm do schema do adapter guardado na conexão da conta, ANINHADOS
+    # por grupo — e em strict mode cada grupo é um objeto anulável com todas as folhas em
+    # `required`, cada folha anulável. Um grupo ou uma folha fora de `required` derrubaria a
+    # chamada inteira, como em 08/09.
+    it 'com a conta conectada, declara os grupos de auto aninhados, todos anulaveis e em required' do
+      account = create(:account)
+      agent = Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom',
+                                               status: :active, enabled: true, instruction: 'Atenda.')
+      enable_test_encryption!
+      record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
+      record.update!(status: 'ready', metadata: { 'quote_schemas' => { 'auto' => Autonomia::Insurance::Connector::Mock::SCHEMA_AUTO } })
+
+      schema = with_modified_env(INSURANCE_QUOTING_ENABLED: 'true') do
+        Autonomia::Agents::Tools::Native::InsuranceQuote.openai_schema(agent)
+      end
+      props = schema[:parameters][:properties]
+
+      expect(props.keys).to include('produto', 'cpf', 'vehicle', 'quotation', 'coverage')
+      expect(schema[:parameters][:required]).to match_array(props.keys)
+      veiculo = props['vehicle']
+      expect(veiculo[:type]).to match_array(%w[object null])
+      expect(veiculo[:additionalProperties]).to be(false)
+      expect(veiculo[:required]).to match_array(veiculo[:properties].keys)
+    end
+
+    it 'com a conta conectada, cada folha e anulavel e leva a descricao do adapter com os valores' do
+      account = create(:account)
+      agent = Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom',
+                                               status: :active, enabled: true, instruction: 'Atenda.')
+      enable_test_encryption!
+      record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
+      record.update!(status: 'ready', metadata: { 'quote_schemas' => { 'auto' => Autonomia::Insurance::Connector::Mock::SCHEMA_AUTO } })
+
+      schema = with_modified_env(INSURANCE_QUOTING_ENABLED: 'true') do
+        Autonomia::Agents::Tools::Native::InsuranceQuote.openai_schema(agent)
+      end
+      veiculo = schema[:parameters][:properties]['vehicle']
+
+      expect(veiculo[:properties]['plate']['type']).to match_array(%w[string null])
+      expect(veiculo[:properties]['youngDriver']['type']).to match_array(%w[boolean null])
+      expect(veiculo[:properties]['trackerCode']['description']).to include('Valores:')
+      expect(schema[:parameters][:properties]['quotation'][:properties]['previousInsurerCode']['description']).to include('657=')
     end
 
     it 'mantem produto obrigatorio' do

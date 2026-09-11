@@ -32,6 +32,70 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
                     connection_status: status_payload)
   end
 
+  # ENTREGA 2: a varredura traz junto o `quote/schema` de auto e o guarda na conexão — é de onde a
+  # ferramenta de cotação monta o formulário do especialista sem chamar o adapter a cada turno.
+  describe 'o schema de auto na varredura' do
+    def connector_pronto(quote_schema:)
+      dobro = instance_double(Autonomia::Insurance::Connector::Mock,
+                              open_session: { 'platform' => 'agger', 'data' => { 'token' => 'x' },
+                                              'expires_at' => 3.hours.from_now.utc.iso8601 },
+                              connection_status: { 'status' => 'ready', 'account_label' => 'CORRETORA X' },
+                              capabilities: { 'products' => [], 'scanned_at' => Time.current.iso8601 })
+      allow(dobro).to receive(:quote_schema, &quote_schema)
+      dobro
+    end
+
+    it 'guarda o schema que o adapter respondeu, por produto' do
+      schema = { 'product' => 'auto', 'ramo' => '31', 'campos' => [{ 'campo' => 'vehicle.plate', 'tipo' => 'texto' }] }
+      connector = connector_pronto(quote_schema: ->(provider:, product:) { { 'provider' => provider, 'pedido' => product }.merge(schema) })
+
+      conexao = connection
+
+      described_class.new(conexao, connector: connector).call
+
+      expect(conexao.reload.quote_schema('auto')).to include('campos' => schema['campos'], 'pedido' => 'auto')
+      expect(connector).to have_received(:quote_schema).with(provider: 'agger', product: 'auto')
+    end
+
+    it 'adapter mudo na varredura não apaga o schema que já havia' do
+      conexao = connection
+      conexao.update!(metadata: { 'quote_schemas' => { 'auto' => { 'campos' => [{ 'campo' => 'antigo' }] } } })
+      connector = connector_pronto(quote_schema: ->(**) { raise Autonomia::Insurance::Connector::Error.new(:unavailable, 'mudo') })
+
+      described_class.new(conexao, connector: connector).call
+
+      expect(conexao.reload.status).to eq('ready')
+      expect(conexao.quote_schema('auto')).to eq('campos' => [{ 'campo' => 'antigo' }])
+    end
+
+    it 'adapter mudo em auto não apaga o schema de outro produto' do
+      conexao = connection
+      conexao.update!(metadata: { 'quote_schemas' => { 'vida' => { 'campos' => [{ 'campo' => 'segurado.nome' }] } } })
+      connector = connector_pronto(quote_schema: ->(**) { raise Autonomia::Insurance::Connector::Error.new(:unavailable, 'mudo') })
+
+      described_class.new(conexao, connector: connector).call
+
+      expect(conexao.reload.quote_schema('vida')).to eq('campos' => [{ 'campo' => 'segurado.nome' }])
+    end
+
+    # A varredura leva segundos (capacidades + schema), e nesse tempo o polling de cotação escreve
+    # no mesmo jsonb por outra instância da linha. A escrita da varredura tem de partir do que está
+    # no banco NAQUELE momento — dentro do lock —, não do retrato de antes das chamadas.
+    it 'grava o schema sem apagar o que outro escritor gravou enquanto o adapter respondia' do
+      conexao = connection
+      connector = connector_pronto(quote_schema: lambda { |**|
+        Autonomia::Insurance::Connection.find(conexao.id).merge_metadata!('insurers_pending_auth' => { '4' => 'HDI' })
+        { 'campos' => [{ 'campo' => 'vehicle.plate' }] }
+      })
+
+      described_class.new(conexao, connector: connector).call
+
+      metadata = conexao.reload.metadata
+      expect(metadata['insurers_pending_auth']).to eq('4' => 'HDI')
+      expect(metadata.dig('quote_schemas', 'auto')).to eq('campos' => [{ 'campo' => 'vehicle.plate' }])
+    end
+  end
+
   it 'keeps the reason when the portal answers with a degraded status' do
     # Arrange
     connector = connector_answering({ 'status' => 'degraded',

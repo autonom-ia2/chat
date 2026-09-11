@@ -114,7 +114,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       especialista = agente.specialists.find_by(slug: 'cotacao_auto')
       expect(especialista).to be_present
       expect(especialista.enabled).to be(true)
-      expect(especialista.tool_slugs).to eq(['cotar_seguro'])
+      expect(especialista.tool_slugs).to eq(%w[consultar_placa cotar_seguro])
     end
 
     # O EXEMPLO QUE FALTAVA. `tool_slugs` é só uma lista de strings: ela pode citar uma ferramenta

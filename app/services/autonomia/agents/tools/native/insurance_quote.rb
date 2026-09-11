@@ -57,6 +57,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   include Declaracao
   include Recusas
   include Envio
+  include Veiculo
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
   #
@@ -68,6 +69,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # `tool_failed` — o cliente esperava tudo isso por "não consegui", e nada dizia o motivo.
   def start
     return recusa('json_invalido', FALTA_ALGO, faltando: ['dados']) if dados.nil?
+    return recusa('formulario_indisponivel', FALHOU, faltando: []) if sem_formulario?
+    return recusa('sem_veiculo', SEM_VEICULO_CLIENTE, faltando: [PLACA]) if sem_veiculo?
 
     faltantes = validar
     return recusa('faltam_dados', pedido_do_que_falta(faltantes), faltando: campos(faltantes)) if faltantes.any?
@@ -110,9 +113,11 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # QUAIS campos faltaram, e a frase em português já traduziu os nomes.
   def precheck
     return conferencia('json_invalido', PEDIDO_DE_JSON, ['dados']) if dados.nil?
+    return conferencia('formulario_indisponivel', SEM_FORMULARIO, []) if sem_formulario?
+    return conferencia('sem_veiculo', SEM_VEICULO, [PLACA]) if sem_veiculo?
 
     faltantes = validar
-    faltantes.any? ? conferencia('faltam_dados', pedido_do_que_falta(faltantes), campos(faltantes)) : nil
+    faltantes.any? ? conferencia('faltam_dados', conferencia_para_o_modelo(faltantes), campos(faltantes)) : nil
   rescue ::Autonomia::Insurance::Connector::Error => e
     # Ramo desconhecido é a única falha de validação que a conferência NÃO deixa passar: aceitar
     # abriria uma execução que o `start` recusaria de qualquer jeito, minutos depois.
@@ -256,10 +261,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     @quote_input ||= ::Autonomia::Insurance::QuoteInput.new(
       produto: produto, params: params, dados: dados, commission_percent: commission_percent
     )
-  end
-
-  def entrada
-    @entrada ||= quote_input.to_h
   end
 
   # `nil` quando o JSON não presta — diferente de `{}`, que é "o cliente ainda não disse nada" e é

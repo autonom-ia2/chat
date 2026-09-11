@@ -33,7 +33,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
   let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
   let(:bound) { described_class.new(agent: agent, native: cotacao) }
   let(:runs) { Autonomia::Agents::ToolRun.for_conversation(conversation.id) }
-  let(:auto) { { 'cpf' => '04297912678', 'placa' => 'ABC1D23', 'cep' => '30130000' } }
+  let(:auto) { { 'cpf' => '04297912678', 'vehicle' => { 'plate' => 'ABC1D23' }, 'cep' => '30130000' } }
   let(:bike_dados) do
     { 'segurado' => { 'nome' => 'Fulano', 'cpfCnpj' => '04297912678' },
       'configuracoes' => { 'marca' => 'Caloi', 'valorMercado' => 8000, 'numeroSerie' => 'SN-1' } }

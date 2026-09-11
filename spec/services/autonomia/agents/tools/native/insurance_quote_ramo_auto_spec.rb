@@ -13,7 +13,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom',
                                      status: :active, enabled: true, instruction: 'Atenda.')
   end
-  let(:params) { { 'cpf' => '042.979.126-78', 'placa' => 'TYV8I74', 'cep' => '31110-210' } }
+  # A placa vai no bloco `vehicle`, como o adapter lê (entrega 2); CPF e CEP pelos atalhos comuns.
+  let(:params) { { 'cpf' => '042.979.126-78', 'cep' => '31110-210', 'vehicle' => { 'plate' => 'TYV8I74' } } }
   let(:tool) { described_class.new(agent: agent, params: params) }
 
   # A ferramenta CONFERE a entrada antes de submeter, e a conferência não toca no portal. Os dublês
@@ -30,10 +31,23 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     { 'valido' => true, 'problemas' => [] }
   end
 
+  # A consulta de placa que a cotação faz antes de conferir (entrega 2): o tipo liga as regras.
+  def consulta_de_placa
+    { 'plate' => 'TYV8I74', 'model' => 'Gol', 'model_year' => 2016, 'vehicle_type' => 'v' }
+  end
+
+  # O conector que confere sem problema e responde a placa; o resto cada exemplo diz.
+  def conector_pronto(**respostas)
+    instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema,
+                                                           vehicle_lookup: consulta_de_placa, **respostas)
+  end
+
+  # Com o schema de auto guardado, como a sincronização deixa: o conector daqui é um dublê e não
+  # responde `quote_schema` — sem o schema, a ferramenta recusaria auto por `formulario_indisponivel`.
   def ready_connection
     record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com',
                                                       password: 'segredo')
-    record.update!(status: 'ready')
+    record.update!(status: 'ready', metadata: { 'quote_schemas' => { 'auto' => Autonomia::Insurance::Connector::Mock::SCHEMA_AUTO } })
     record.store_session!({ 'multicalculoToken' => 'multi' }, expires_at: 3.hours.from_now)
     record
   end
@@ -55,8 +69,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     it 'submits and keeps the quote id for the polling that follows' do
       # Arrange
       ready_connection
-      connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema,
-                                                                         quote_start: { 'quote_id' => 'abc:1', 'status' => 'queued' })
+      connector = conector_pronto(quote_start: { 'quote_id' => 'abc:1', 'status' => 'queued' })
       allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
 
       # Act
@@ -68,7 +81,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(connector).to have_received(:quote_start).with(
         hash_including(product: 'auto',
                        input: hash_including('insured' => { 'document' => '04297912678' },
-                                             'vehicle' => { 'plate' => 'TYV8I74' }))
+                                             # o tipo vem da consulta de placa, antes de enviar (entrega 2, termo 5)
+                                             'vehicle' => hash_including('plate' => 'TYV8I74', 'vehicleType' => 'v')))
       )
     end
 
@@ -79,8 +93,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       it 'não manda `quotation` numa cotação nova, para o adapter usar os próprios padrões' do
         # Arrange
         ready_connection
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema,
-                                                                           quote_start: { 'quote_id' => 'abc:1' })
+        connector = conector_pronto(quote_start: { 'quote_id' => 'abc:1' })
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
 
         # Act
@@ -95,12 +108,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       it 'manda bônus e sinistros quando o cliente está renovando' do
         # Arrange
         ready_connection
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema,
-                                                                           quote_start: { 'quote_id' => 'abc:1' })
+        connector = conector_pronto(quote_start: { 'quote_id' => 'abc:1' })
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
         renovacao = described_class.new(agent: agent,
-                                        params: params.merge('renovacao' => true, 'bonus' => 7,
-                                                             'sinistros' => 1))
+                                        params: params.merge('quotation' => { 'isRenewal' => true, 'bonusClass' => 7,
+                                                                              'previousClaimsCount' => 1 }))
 
         # Act
         renovacao.start
@@ -117,12 +129,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       it 'preserva zero sinistros, que é resposta e não ausência' do
         # Arrange
         ready_connection
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema,
-                                                                           quote_start: { 'quote_id' => 'abc:1' })
+        connector = conector_pronto(quote_start: { 'quote_id' => 'abc:1' })
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
         sem_sinistro = described_class.new(agent: agent,
-                                           params: params.merge('renovacao' => true, 'bonus' => 5,
-                                                                'sinistros' => 0))
+                                           params: params.merge('quotation' => { 'isRenewal' => true, 'bonusClass' => 5,
+                                                                                 'previousClaimsCount' => 0 }))
 
         # Act
         sem_sinistro.start
@@ -140,12 +151,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       it 'omite sinistros quando vem string vazia, que é ausência e não zero' do
         # Arrange
         ready_connection
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema,
-                                                                           quote_start: { 'quote_id' => 'abc:1' })
+        connector = conector_pronto(quote_start: { 'quote_id' => 'abc:1' })
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
         sem_resposta = described_class.new(agent: agent,
-                                           params: params.merge('renovacao' => true,
-                                                                'sinistros' => ''))
+                                           params: params.merge('quotation' => { 'isRenewal' => true,
+                                                                                 'previousClaimsCount' => '' }))
 
         # Act
         sem_resposta.start
@@ -156,22 +166,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         end
       end
 
-      # O modelo manda o que o cliente disse, e o cliente diz "sim". Sem o cast, a string "true"
-      # seria só um valor verdadeiro qualquer — e `false` como string entraria como renovação.
-      it 'trata "false" como cotação nova, não como qualquer string verdadeira' do
+      # `false` é resposta ("não estou renovando"), e vai como veio: o bloco chega ao adapter, que
+      # aplica os padrões dele. O tipo é booleano no schema da função — o modelo não manda "false".
+      it 'leva isRenewal false como resposta, e não como ausência' do
         # Arrange
         ready_connection
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema,
-                                                                           quote_start: { 'quote_id' => 'abc:1' })
+        connector = conector_pronto(quote_start: { 'quote_id' => 'abc:1' })
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-        nova = described_class.new(agent: agent, params: params.merge('renovacao' => 'false'))
+        nova = described_class.new(agent: agent, params: params.merge('quotation' => { 'isRenewal' => false }))
 
         # Act
         nova.start
 
         # Assert
         expect(connector).to have_received(:quote_start) do |**kwargs|
-          expect(kwargs[:input]).not_to have_key('quotation')
+          expect(kwargs[:input]['quotation']).to eq('isRenewal' => false)
         end
       end
     end
@@ -183,7 +192,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         resultado = { 'status' => 'running',
                       'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '1', 'name' => 'Ezze' },
                                      'premium' => { 'amount' => 2050.4 } }] }
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema, quote_result: resultado)
+        connector = conector_pronto(quote_result: resultado)
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
         handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [],
                    described_class::SEM_BONUS_KEY => true }
@@ -202,7 +211,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         resultado = { 'status' => 'running',
                       'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '1', 'name' => 'Ezze' },
                                      'premium' => { 'amount' => 2050.4 } }] }
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema, quote_result: resultado)
+        connector = conector_pronto(quote_result: resultado)
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
         handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [],
                    described_class::SEM_BONUS_KEY => true }
@@ -220,7 +229,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         resultado = { 'status' => 'running',
                       'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '2', 'name' => 'Mapfre' },
                                      'premium' => { 'amount' => 2582.76 } }] }
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema, quote_result: resultado)
+        connector = conector_pronto(quote_result: resultado)
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
         handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['1'],
                    described_class::SEM_BONUS_KEY => true,
@@ -243,7 +252,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         resultado = { 'status' => 'running',
                       'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '2', 'name' => 'Mapfre' },
                                      'premium' => { 'amount' => 2582.76 } }] }
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema, quote_result: resultado)
+        connector = conector_pronto(quote_result: resultado)
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
         handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['1'],
                    described_class::SEM_BONUS_KEY => true }
@@ -262,7 +271,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         resultado = { 'status' => 'running',
                       'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '1', 'name' => 'Ezze' },
                                      'premium' => { 'amount' => 1800.0 } }] }
-        connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema, quote_result: resultado)
+        connector = conector_pronto(quote_result: resultado)
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
         handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [],
                    described_class::SEM_BONUS_KEY => false }
@@ -279,7 +288,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # Arrange
       ready_connection
       captured = nil
-      connector = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema)
+      connector = conector_pronto
       allow(connector).to receive(:quote_start) do |**kwargs|
         captured = kwargs[:input]
         { 'quote_id' => 'a:1' }
@@ -296,7 +305,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   describe '#poll' do
-    let(:connector) { instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: sem_problema) }
+    let(:connector) { conector_pronto }
 
     before do
       ready_connection

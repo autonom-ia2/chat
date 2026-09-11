@@ -74,11 +74,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       ready_connection
 
       # Act
-      conferencia = tool('produto' => 'auto', 'placa' => 'ABC1D23').precheck
+      conferencia = tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }).precheck
 
       # Assert — o texto é o que o modelo lê; o motivo e os NOMES dos campos vão para o registro de
       # recusa (entrega 6), que precisa dizer QUAIS faltaram sem repetir o texto.
-      expect(conferencia.to_s).to include('CPF do titular')
+      # O modelo lê o CAMPO e o motivo do adapter (entrega 2): é assim que ele preenche certo na volta.
+      expect(conferencia.to_s).to include('insured.document')
       expect(conferencia.motivo).to eq('faltam_dados')
       expect(conferencia.faltando).to include('insured.document')
       expect(conferencia.faltando).to all(match(/\A[a-z]+\.[a-zA-Z]+\z/))
@@ -87,7 +88,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     it 'nao interrompe quando a entrada esta completa' do
       ready_connection
 
-      texto = tool('produto' => 'auto', 'placa' => 'ABC1D23', 'cpf' => '04297912678',
+      texto = tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }, 'cpf' => '04297912678',
                    'cep' => '31110-210').precheck
 
       expect(texto).to be_nil
@@ -100,7 +101,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
       allow(connector).to receive(:quote_validate).and_raise(StandardError)
 
-      expect(tool('produto' => 'auto', 'placa' => 'ABC1D23').precheck).to be_nil
+      expect(tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }).precheck).to be_nil
     end
 
     # Campo que a própria ferramenta coleta tem rótulo, e o cliente lê o nome que ele reconhece.
@@ -109,7 +110,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       ready_connection
 
       # Act
-      resultado = tool('produto' => 'auto', 'placa' => 'ABC1D23').start
+      resultado = tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }).start
 
       # Assert — e o handle leva os NOMES dos campos para o job registrar a recusa (entrega 6)
       expect(resultado['pedido']).to include('CPF do titular')
@@ -218,7 +219,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     it 'assume auto quando o produto nao veio' do
       ready_connection
       resultado = tool('produto' => '', 'cpf' => '04297912678', 'cep' => '31110210',
-                       'placa' => 'TYV8I74').start
+                       'vehicle' => { 'plate' => 'TYV8I74' }).start
 
       expect(resultado['produto']).to eq('auto')
       expect(resultado['quote_id']).to be_present
@@ -430,7 +431,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       # Act
       resultado = tool('produto' => 'bike', 'dados' => dados, 'cpf' => '04297912678',
-                       'nome' => 'Fulano', 'renovacao' => true).start
+                       'nome' => 'Fulano', 'quotation' => { 'isRenewal' => true }).start
 
       # Assert
       expect(resultado[described_class::SEM_BONUS_KEY]).to be(false)
@@ -439,7 +440,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     it 'marca em auto, que e onde a classe de bonus existe' do
       ready_connection
       resultado = tool('produto' => 'auto', 'cpf' => '04297912678', 'cep' => '31110210',
-                       'placa' => 'TYV8I74', 'renovacao' => true).start
+                       'vehicle' => { 'plate' => 'TYV8I74' }, 'quotation' => { 'isRenewal' => true }).start
 
       expect(resultado[described_class::SEM_BONUS_KEY]).to be(true)
     end

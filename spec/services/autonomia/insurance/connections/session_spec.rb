@@ -76,6 +76,47 @@ RSpec.describe Autonomia::Insurance::Connections::Session do
     end
   end
 
+  # A CONSULTA DE PLACA RODA NO TURNO (entrega 2), e o turno não espera login: aqui só serve a
+  # sessão que já está viva. Sem ela o bloco não roda; recusada pelo portal, o erro sobe sem
+  # renovação — quem abre e renova é o healthcheck e o job, fora do turno.
+  describe '#with_live_session' do
+    it 'hands over the live session without touching the portal' do
+      record = connection
+      record.store_session!({ 'multicalculoToken' => 'viva' }, expires_at: 3.hours.from_now)
+      connector = counting_connector
+
+      resultado = described_class.new(record, connector: connector).with_live_session { |s| s['multicalculoToken'] }
+
+      expect(resultado).to eq('viva')
+      expect(connector.logins).to eq(0)
+    end
+
+    it 'does not open a session when none is alive: the block does not run' do
+      record = connection
+      connector = counting_connector
+      rodou = false
+
+      resultado = described_class.new(record, connector: connector).with_live_session { rodou = true }
+
+      expect(resultado).to be_nil
+      expect(rodou).to be(false)
+      expect(connector.logins).to eq(0)
+    end
+
+    it 'does not renew when the portal refuses the stored session: the error goes up' do
+      record = connection
+      record.store_session!({ 'multicalculoToken' => 'morta' }, expires_at: 3.hours.from_now)
+      connector = counting_connector
+
+      expect do
+        described_class.new(record, connector: connector).with_live_session do
+          raise Autonomia::Insurance::Connector::Error.new(:auth_required, '403')
+        end
+      end.to raise_error(Autonomia::Insurance::Connector::Error)
+      expect(connector.logins).to eq(0)
+    end
+  end
+
   def connection
     Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
   end

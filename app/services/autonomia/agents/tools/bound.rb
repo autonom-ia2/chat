@@ -30,8 +30,9 @@ class Autonomia::Agents::Tools::Bound
     (@record&.slug || @native&.slug).to_s
   end
 
+  # A nativa recebe o agente: o formulário de cotação é montado a partir do que a conta conectou.
   def openai_schema
-    (@record || @native).openai_schema
+    @record ? @record.openai_schema : @native.openai_schema(@agent)
   end
 
   def native?

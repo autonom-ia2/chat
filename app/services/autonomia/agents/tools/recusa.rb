@@ -56,7 +56,12 @@ module Autonomia::Agents::Tools::Recusa
     'condicoes_sem_seguradora' => 'a consulta às condições gerais veio sem o nome da seguradora',
     'condicoes_sem_pergunta' => 'a consulta às condições gerais veio sem a dúvida do cliente',
     'ramo_desconhecido' => 'o ramo pedido não existe no adapter; a cotação não foi aberta',
-    'pedido_repetido' => 'o pedido tem os mesmos dados da última consulta desta conversa; nenhuma execução nova foi aberta'
+    'pedido_repetido' => 'o pedido tem os mesmos dados da última consulta desta conversa; nenhuma execução nova foi aberta',
+    # Entrega 2: sem veículo não há o que cotar; a consulta de placa tem as duas saídas dela.
+    'sem_veiculo' => 'auto sem placa, chassi nem código FIPE: não há veículo para cotar',
+    'formulario_indisponivel' => 'auto sem formulário: a conexão não tem o schema do adapter, e a ferramenta não tinha onde receber o veículo',
+    'placa_invalida' => 'a placa informada não tem o formato de uma placa',
+    'consulta_de_placa_indisponivel' => 'o portal não respondeu à consulta de placa'
   }.freeze
   SEM_DESCRICAO = 'motivo fora do catálogo: falta a frase em MOTIVOS'.freeze
   DESCONHECIDA = 'desconhecida'.freeze

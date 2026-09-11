@@ -529,6 +529,7 @@ RSpec/MultipleExpectations:
 RSpec/SpecFilePathFormat:
   Exclude:
     - 'spec/services/campaign_imports/deletable_spec.rb'
+    - 'spec/services/autonomia/agents/tools/native/openai_schema_spec.rb'
 
 # Offense count: 1
 # This cop supports safe autocorrection (--autocorrect).

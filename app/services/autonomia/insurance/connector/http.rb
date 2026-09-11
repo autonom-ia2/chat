@@ -58,6 +58,18 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
            read_timeout: CONFERENCIA_TIMEOUT)
   end
 
+  # A CONSULTA DE PLACA, gratuita (entrega 2, termo 5): modelo, ano e o TIPO do veículo, que decide
+  # o que a cotação exige. Com sessão, e com o teto curto da conferência — ela roda dentro do turno.
+  def vehicle_lookup(provider:, session:, plate:)
+    invoke("/v1/#{provider}/vehicle/lookup", { session: session, plate: plate }, read_timeout: CONFERENCIA_TIMEOUT)
+  end
+
+  # A COTAÇÃO COMO O PORTAL A GRAVOU (entrega 2, termo 8): a leitura de volta que prova que um campo
+  # atravessou. Nomes do portal, sem dado da pessoa.
+  def quote_read(provider:, session:, quote_id:)
+    invoke("/v1/#{provider}/quote/read", { session: session, quoteId: quote_id }, read_timeout: CONFERENCIA_TIMEOUT)
+  end
+
   def quote_start(provider:, session:, product:, input:)
     invoke("/v1/#{provider}/quote/start", { session: session, product: product, input: input })
   end

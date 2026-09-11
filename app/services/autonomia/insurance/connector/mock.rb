@@ -3,6 +3,8 @@
 # para o fluxo de erro ser testável de ponta a ponta na UI.
 # Superclasse qualificada: na forma compacta o escopo léxico é o topo e `Base` seria o módulo global ::Base.
 class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::Client
+  include Leituras
+
   # Única operação que consome credencial, igual ao adapter real.
   def open_session(provider:, username:, password:)
     raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'credentials missing') if username.blank? || password.blank?
@@ -54,18 +56,16 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
   # Só o essencial de dois ramos: o mock não é catálogo, é contrato. O que ele precisa ensinar é a
   # FORMA — `origem` separando o que se pergunta do que se busca, e `obrigatorio` dizendo o que o
   # ramo exige.
+  # O SCHEMA DE AUTO É O DO ADAPTER, gerado — não digitado (entrega 2, termo 1). O arquivo ao lado
+  # é a saída de `agger quote schema auto` da CLI do adapter, com as chaves no formato que o
+  # `Http` entrega (`condicional_a`). Regenerar quando o adapter mudar:
+  #   (no autonomia-adapters) npx tsx src/cli/main.ts agger quote schema auto
+  # A spec `parametros_spec` compara este arquivo com o formulário montado; o contrato real
+  # (`http_contrato_real_spec`) é quem o compara com o adapter vivo.
+  SCHEMA_AUTO = JSON.parse(File.read(File.expand_path('mock/schema_auto.json', __dir__))).freeze
+
   SCHEMAS = {
-    'auto' => {
-      'ramo' => '31',
-      'campos' => [
-        { 'campo' => 'insured.document', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => true },
-        { 'campo' => 'insured.name', 'tipo' => 'texto', 'origem' => 'derivado', 'obrigatorio' => true },
-        { 'campo' => 'address.zipCode', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => true },
-        { 'campo' => 'vehicle.plate', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => false },
-        { 'campo' => 'driver.name', 'tipo' => 'texto', 'origem' => 'cliente', 'obrigatorio' => false,
-          'condicional_a' => 'driver' }
-      ]
-    },
+    'auto' => SCHEMA_AUTO.slice('ramo', 'campos'),
     # O CAMINHO ONDE O VALOR É ESCRITO, e não o nome solto. O adapter lê os campos do ramo de
     # `entrada.configuracoes`, e o segurado de `entrada.segurado`. Enquanto o mock declarava `marca`,
     # ele aprovava uma entrada que o portal ignora e reprovava a que ele aceita.
@@ -134,7 +134,9 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     # ela recusaria toda cotação de auto de quem usasse o mock de verdade.
     raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'placa ausente') if sem_placa?(product, input)
 
-    { 'quote_id' => "mock-#{Time.current.to_i}:1", 'status' => 'queued' }
+    quote_id = "mock-#{Time.current.to_i}:1"
+    Leituras.entradas[quote_id] = input.to_h.deep_stringify_keys
+    { 'quote_id' => quote_id, 'status' => 'queued' }
   end
 
   def quote_result(provider:, session:, quote_id:)
