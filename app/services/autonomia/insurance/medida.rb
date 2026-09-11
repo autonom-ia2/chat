@@ -33,6 +33,15 @@ class Autonomia::Insurance::Medida
 
   DIAS_PADRAO = 30
 
+  # A data vem SÓ neste formato, e o texto tem de ser exatamente ele: "qualquer ISO 8601" aceitaria
+  # data-hora e a truncaria em silêncio.
+  FORMATO_DA_DATA = '%Y-%m-%d'.freeze
+
+  # Os fusos vão de UTC-12 a UTC+14: a meia-noite de uma mesma data em dois fusos quaisquer dista no
+  # máximo 26 horas. É a folga com que a lista do Super Admin enumera as corretoras antes de ler cada
+  # uma no fuso dela — folga a mais só custa uma leitura vazia; a menos, esconde corretora da fatura.
+  FOLGA_DE_FUSO = 26.hours
+
   # A cotação EXISTE NO PORTAL quando o número dela voltou. `autonomia_submitted` não serve: ele
   # marca "o retorno do start foi registrado", e uma recusa do `start` também o recebe — a linha da
   # recusa fica `{pedido, motivo, faltando, autonomia_intencoes: 1, autonomia_submitted: true}`, sem
@@ -96,27 +105,41 @@ class Autonomia::Insurance::Medida
 
   # -> [início, fim]. `inicio`/`fim` são datas (`2026-09-01`); nil vira a janela padrão. Fora disso,
   # recusa dita: `PeriodoInvalido`, com o que estava errado.
+  #
+  # A JANELA PADRÃO É A QUE TERMINA NO `fim` PEDIDO: sem `inicio`, os `DIAS_PADRAO` dias que acabam em
+  # `fim` (e, sem os dois, os que acabam hoje). Ancorar o início em HOJE quando o operador só pediu o
+  # fim (rodada 4) fazia `fim=2026-06-30` ser recusado como "data inicial posterior à final" — a
+  # recusa culpava um dado que ele não escreveu, e o valor no lugar do dele era nosso.
   def self.periodo(inicio:, fim:, fuso:)
     zona = ActiveSupport::TimeZone[fuso.to_s] || Time.zone
     final = data(zona, fim, 'fim')&.end_of_day || zona.now
-    abertura = data(zona, inicio, 'inicio')&.beginning_of_day || (zona.now - DIAS_PADRAO.days).beginning_of_day
+    abertura = data(zona, inicio, 'inicio')&.beginning_of_day || (final - DIAS_PADRAO.days).beginning_of_day
     raise PeriodoInvalido, 'a data inicial é posterior à final' if abertura > final
 
     [abertura, final]
   end
 
+  # SÓ DATA, E SÓ A DATA. `Date.iso8601` aceitava `2026-09-01T10:00:00` e descartava a hora: quem
+  # pediu "a partir das 10h" recebia a partir da meia-noite sem aviso (rodada 4). `Date.strptime`
+  # com formato fechado faz o MESMO — lê o que casa e ignora a sobra (conferido em Ruby puro) —, por
+  # isso a guarda é a ida e volta: o texto tem de ser exatamente a data que foi lida, ou é pedido
+  # que a consulta não atende, e a recusa é dita como a da data ilegível.
   # `Date::Error` é subclasse de `ArgumentError`: um `rescue` com as duas sombrearia a primeira.
   def self.data(zona, valor, nome)
     texto = valor.to_s.strip
     return nil if texto.empty?
 
-    zona.parse(Date.iso8601(texto).to_s)
+    dia = Date.strptime(texto, FORMATO_DA_DATA)
+    raise ArgumentError, 'sobra no texto da data' unless dia.strftime(FORMATO_DA_DATA) == texto
+
+    zona.parse(dia.to_s)
   rescue ArgumentError
     raise PeriodoInvalido, "#{nome}: informe uma data no formato AAAA-MM-DD"
   end
 
   def initialize(inicio:, fim:, conta: nil)
     @conta = conta
+    @pedido = { inicio: inicio, fim: fim }
     @fuso = self.class.fuso_de(conta)
     @inicio, @fim = self.class.periodo(inicio: inicio, fim: fim, fuso: @fuso)
   end
@@ -125,25 +148,53 @@ class Autonomia::Insurance::Medida
   def call
     raise ArgumentError, 'a medida de uma conta exige a conta' if conta.nil?
 
-    por_conta.first || zerada(conta.id)
+    linha_da_conta || zerada(conta.id)
+  end
+
+  # A linha DESTA corretora, lida na janela do fuso DELA — ou nil, quando ela não teve execução nessa
+  # janela. É a única leitura que toca o banco; `call` e `por_conta` passam por aqui.
+  def linha_da_conta
+    # `take`, não `first`: `first` numa relação agrupada acrescenta `ORDER BY id`, que o GROUP BY recusa.
+    registro = escopo.group(:account_id).select(COLUNAS).take
+    registro && linha_de(registro)
   end
 
   # Uma linha por corretora que teve execução no período, da que mais acionou para a que menos.
   # Corretora sem execução não aparece: inventar linha zerada para toda conta da instalação faria a
   # tela do Super Admin falar de quem nunca cotou.
+  #
+  # CADA LINHA É LIDA NO FUSO DA PRÓPRIA CORRETORA — a mesma `Medida.new(conta:)` que a API da conta
+  # usa, e por isso os dois números batem por construção. Até a rodada 4 esta lista era UMA consulta
+  # agrupada no fuso da instalação: a cotação das 23h de 30/09 em São Paulo (02h de 01/10 em UTC)
+  # caía na fatura de outubro na tela que COBRA e em setembro na tela da corretora — dois números
+  # para o mesmo mês, que é exatamente o que a página do Super Admin promete não fazer.
   def por_conta
-    @por_conta ||= escopo.group(:account_id).select(COLUNAS)
-                         .map { |linha| linha_de(linha) }
-                         .sort_by { |linha| [-linha[:seguradoras_acionadas], -linha[:cotacoes], linha[:conta_id]] }
+    @por_conta ||= corretoras_com_execucao
+                   .filter_map { |corretora| self.class.new(conta: corretora, **pedido).linha_da_conta }
+                   .sort_by { |linha| [-linha[:seguradoras_acionadas], -linha[:cotacoes], linha[:conta_id]] }
   end
 
   private
+
+  attr_reader :pedido
 
   # POR FERRAMENTA, não por conta inteira: a linha de outra ferramenta assíncrona com um `quote_id` no
   # handle não é cotação de seguro, e somá-la cobraria a corretora por outra coisa.
   def escopo
     linhas = Run.where(slug: self.class.slug, created_at: inicio..fim)
     conta ? linhas.where(account_id: conta.id) : linhas
+  end
+
+  # QUEM PODE ter execução no período, em qualquer fuso. A janela desta instância está no fuso da
+  # instalação; a de cada corretora pode começar até `FOLGA_DE_FUSO` antes ou terminar até isso
+  # depois. Alargar dos dois lados garante que nenhuma corretora fique de fora da enumeração; quem
+  # entrou a mais é lido na janela DELA em `linha_da_conta` e cai fora se não tiver nada lá.
+  def corretoras_com_execucao
+    return [conta] if conta
+
+    ids = Run.where(slug: self.class.slug, created_at: (inicio - FOLGA_DE_FUSO)..(fim + FOLGA_DE_FUSO))
+             .distinct.pluck(:account_id)
+    Account.where(id: ids).order(:id)
   end
 
   def linha_de(registro)

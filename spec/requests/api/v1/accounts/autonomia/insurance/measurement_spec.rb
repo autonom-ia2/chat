@@ -140,6 +140,26 @@ RSpec.describe 'Autonomia Insurance Measurement API', type: :request do
       expect(response.parsed_body['error']).to eq('periodo_invalido')
     end
 
+    # Data-hora não é "data com precisão a mais": é pedido que a consulta não atende, e dizer isso
+    # vale mais do que descartar a hora em silêncio (rodada 4).
+    it 'recusa data com hora em vez de descartar a hora' do
+      get "#{base}?from=2026-09-01T10:00:00&to=2026-09-30", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('periodo_invalido')
+    end
+
+    # SÓ `to`: a janela padrão termina nele. Até a rodada 4 o início padrão era ancorado em HOJE e um
+    # `to` no passado voltava 422 culpando "a data inicial" — que ninguém tinha mandado.
+    it 'so to: a janela padrao termina nele' do
+      get "#{base}?to=2026-06-30", headers: admin.create_new_auth_token, as: :json
+
+      payload = response.parsed_body['payload']
+      expect(response).to have_http_status(:ok)
+      expect(payload['to']).to eq(Time.zone.parse('2026-06-30').end_of_day.iso8601)
+      expect(payload['from']).to eq(Time.zone.parse('2026-05-31').beginning_of_day.iso8601)
+    end
+
     # Isolamento de conta: a cotação da corretora vizinha não entra no número desta.
     it 'nao mistura corretoras' do
       outra = create(:account)

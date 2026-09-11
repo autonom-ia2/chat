@@ -67,8 +67,10 @@ module Autonomia::Agents::Tools::AsyncConfig
   # e só o nome. O COMPORTAMENTO tem um exemplo por porta em que a contagem poderia entrar:
   # `bound_async_spec` no aceite (vinte execuções na última hora, 340 seguradoras, e a vigésima
   # primeira é aceita) e `async_run_job_spec` no job, onde a chamada paga acontece (com as mesmas
-  # vinte, a consulta e a submissão seguem). Até 11/09/2026 este comentário apontava para um arquivo
-  # que não existia; até a rodada 3 da entrega 7 ele prometia cobertura do job que só o aceite tinha.
+  # vinte, a consulta e a submissão seguem, e o reagendamento sai NO MESMO INTERVALO de sempre — um
+  # teto por ATRASO, `interval_for` devolvendo uma hora acima de oito execuções, é freio tanto quanto
+  # uma recusa, e até a rodada 4 da entrega 7 passava). Até 11/09/2026 este comentário apontava para
+  # um arquivo que não existia; até a rodada 3 ele prometia cobertura do job que só o aceite tinha.
 
   module_function
 

@@ -186,6 +186,40 @@ exemplo de comportamento; é isso que segura o termo 6, não o regex.
 | MV6 | `TETO_POR_HORA = 8` no `Bound` | `bound.rb` | a guarda pelo nome |
 | MV7 | `enterprise/app/services/autonomia/agents/tools/freio_mutacao.rb` nomeando a medida | (arquivo novo, removido) | os 2 exemplos de alcance |
 
+## Rodada 4 — o nosso fuso na tela que cobra, e três valores nossos na borda (verificador cego)
+
+Cinco achados, todos reais e reproduzidos antes de corrigir. O P2 é a mesma classe das rodadas 2 e 3
+lida pelo outro lado: a regra do fuso EXISTIA e tinha guarda (M13) — para `call`; `por_conta`, a lista
+que a página do Super Admin usa para FATURAR, era uma consulta única agrupada no fuso da instalação, e
+o próprio comentário do controller prometia que as duas superfícies não divergiriam. Divergiam em toda
+cotação entre 21h e 23h59 de São Paulo no último dia do mês.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P2** `insurance_measurements_controller.rb:11` — a página do Super Admin lia todas as corretoras no fuso da instalação; a cotação das 23h de 30/09 em SP (02h UTC de 01/10) caía em outubro na fatura e em setembro na tela da corretora | `Medida#por_conta` enumera as corretoras com execução numa janela alargada (`FOLGA_DE_FUSO`, 26 h: a meia-noite da mesma data entre UTC-12 e UTC+14) e monta cada linha com `Medida.new(conta:).linha_da_conta` — o MESMO caminho do endpoint da conta, acordo por construção; a linha diz o fuso e a página o mostra por corretora (nada de "o da instalação") | `insurance_measurements_controller_spec` "le cada corretora no fuso dela e bate com a API da conta" (lê a página E a API no mesmo exemplo, SP + cotação às 23h de 30/09 → 1 e 17 nas duas); `medida_spec` "#por_conta le cada corretora no fuso dela, igual a medida da conta" | MX1 — voltar à consulta agrupada no fuso da instalação reprova os 2; MX2 — folga zero na enumeração reprova os 2 |
+| **P3** `insurance_measurements_controller.rb:11` — `fim: nil` no controller passava por 6 exemplos (MX8 do verificador) | Exemplo com cotação em 15/09 e 01/10, `from=2026-09-01&to=2026-09-30` → células `1 17 0 0 0 0 0 0` | `insurance_measurements_controller_spec` "nao conta cotação feita depois do fim da janela" | MX8 — reprova (e o exemplo do fuso também, porque `to` nil lê até hoje) |
+| **P3** `async_config.rb:99` — um teto por ATRASO (`interval_for` devolvendo 1 h acima de oito execuções na hora) passava pelas três guardas do termo 6 (MX3 do verificador): o exemplo do job só afirmava QUE reagendava | O exemplo mede `interval_for(agent, 0)` ANTES das vinte, exige o mesmo valor depois, e confere o `at` do job reagendado contra ele | `async_run_job_spec` "segue consultando e submetendo com vinte execuções na última hora" | MX3 — reprova |
+| **P3** `medida.rb:102` — só `fim` pedido e a janela padrão ancorada em HOJE: `to=2026-06-30` voltava 422 culpando "a data inicial", que ninguém mandou | A janela padrão são os `DIAS_PADRAO` dias que TERMINAM em `fim` (`final - 30 dias`); com `fim` nil, `final = agora`, idêntico ao de antes | `medida_spec` "so fim: a janela padrao termina nele"; `measurement_spec` "so to: a janela padrao termina nele" | MX9 — reprova os 2 |
+| **P3** `medida.rb:113` — `Date.iso8601` aceitava data-hora e descartava a hora em silêncio | `Date.strptime` com `FORMATO_DA_DATA` **também ignora a sobra** (conferido em Ruby puro: `strptime('2026-09-01T10:00:00', '%Y-%m-%d')` devolve 01/09) — a sugestão do verificador não bastava. A guarda é a ida e volta: `dia.strftime(FORMATO) == texto`, senão `PeriodoInvalido` | `medida_spec` "recusa data com hora em vez de descartar a hora em silencio"; `measurement_spec` "recusa data com hora em vez de descartar a hora" | MX10 — sem a ida e volta, reprova os 2 |
+
+Varredura da classe na própria correção: `corretoras_com_execucao` ganhou `return [conta] if conta`
+(a lista de uma instância COM conta é só a linha dela) — regra nova, sem exemplo até eu escrever um:
+"#por_conta com a conta, so tem a linha dela" (MX11 reprova). E `first` numa relação agrupada
+acrescenta `ORDER BY id`, que o `GROUP BY` recusa — `linha_da_conta` usa `take`, e os 38 exemplos que
+quebraram na primeira tentativa são a prova de que a suíte vê isso.
+
+### Mutações da rodada 4 (7) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MX1 | `por_conta` volta à consulta única agrupada no fuso da instalação | `medida.rb` | 2 (Super Admin + serviço) |
+| MX2 | `FOLGA_DE_FUSO = 0` (enumeração sem folga) | `medida.rb` | 2 (Super Admin + serviço) |
+| MX8 | `fim: nil` no controller do Super Admin | `insurance_measurements_controller.rb` | 2 |
+| MX3 | teto por atraso em `interval_for` (1 h acima de oito execuções na hora) | `async_config.rb` | "segue consultando e submetendo com vinte execuções na última hora" |
+| MX9 | janela padrão ancorada em hoje em vez de no `fim` | `medida.rb` | 2 (serviço + API) |
+| MX10 | data-hora aceita e truncada (sem a ida e volta) | `medida.rb` | 2 (serviço + API) |
+| MX11 | `por_conta` com conta enumera todas as corretoras | `medida.rb` | "com a conta, so tem a linha dela" |
+
 ## Comandos rodados
 
 ```bash
@@ -207,6 +241,9 @@ uv run python3 mutacoes.py                                          # M1–M16 (
 # rodada 3
 bundle exec rspec <8 specs do trilho> --format json --out alvo.json # 97 exemplos, 0 falhas
 uv run python3 mutacoes_r3.py                                       # MV1b–MV7, todas reprovam e restauram
+# rodada 4
+bundle exec rspec <6 specs do trilho> --format json --out alvo.json # 78 exemplos, 0 falhas
+uv run python3 mutacoes_r4.py                                       # MX1–MX11 (7), todas reprovam e restauram
 ```
 
 ## Arquivos
@@ -228,3 +265,10 @@ Rodada 3: `medida.rb` (as duas colunas de proposta, comentários), `show.json.jb
 (340 seguradoras), `medida_nao_e_freio_spec.rb` (`enterprise/app`), `medida_spec.rb`,
 `measurement_spec.rb`, `insurance_quote_medida_spec.rb`, `insurance_measurements_controller_spec.rb`,
 `docs/insurance/README.md`. Nenhum arquivo de instrução, `MOTIVOS` ou schema de função.
+
+Rodada 4: `medida.rb` (`linha_da_conta`, `por_conta` por corretora no fuso dela, `FOLGA_DE_FUSO`,
+`FORMATO_DA_DATA`, janela padrão que termina no `fim`, ida e volta da data),
+`insurance_measurements_controller.rb` (comentário), `show.html.erb` (coluna Fuso; período em datas),
+`async_config.rb` (comentário: o teto por atraso), `insurance_measurements_controller_spec.rb`,
+`medida_spec.rb`, `measurement_spec.rb`, `async_run_job_spec.rb`, `docs/insurance/README.md`. Nenhum
+arquivo de instrução, `MOTIVOS`, schema de função ou adapter.

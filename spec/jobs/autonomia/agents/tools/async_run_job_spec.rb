@@ -436,8 +436,15 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       end
     end
 
+    # UM TETO POR ATRASO É FREIO TAMBÉM. Recusar a nona execução da hora ou fazê-la esperar uma hora
+    # entre passadas dá no mesmo para o cliente: ele lê "estou consultando" e a cotação chega quando a
+    # corretora já perdeu a venda. Até a rodada 4 este exemplo só afirmava QUE o job se reagendava,
+    # não QUANDO — e `interval_for` devolvendo 1 hora acima de oito execuções na hora passava verde
+    # (MX3). O intervalo é medido ANTES das vinte e exigido igual depois, e o `at` do agendamento é
+    # conferido contra ele.
     it 'segue consultando e submetendo com vinte execuções na última hora' do
       # Arrange — a vigésima primeira, já aceita e promovida, como o Responder a deixa.
+      intervalo_sem_as_vinte = async_config.interval_for(agent, 0)
       vinte_execucoes_encerradas_na_ultima_hora
       register_async_tool(build_async_tool(handle: { 'id' => 'cot-21' }, poll: progress.done(deliveries: ['final'])))
       run = create_run
@@ -445,13 +452,17 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Act — a passada de submissão (a chamada paga) e a de consulta.
       described_class.new.perform(run.id, 0)
       submetida = run.reload.attributes.slice('status', 'failure_code', 'handle')
+      reagendada = enqueued_jobs.find { |job| job[:job] == described_class }
       described_class.new.perform(run.id, 1)
 
-      # Assert — submetida sem desfecho, reagendada, e depois entregue e encerrada em `done`: nenhum
-      # `failed`, nenhuma frase de falha ao cliente por causa do que a conta já cotou.
+      # Assert — submetida sem desfecho, reagendada NO MESMO INTERVALO de sempre, e depois entregue e
+      # encerrada em `done`: nenhum `failed`, nenhuma espera a mais, nenhuma frase de falha ao cliente
+      # por causa do que a conta já cotou.
       expect(submetida).to include('status' => 'running', 'failure_code' => nil)
       expect(submetida['handle']).to include(described_class::SUBMITTED_KEY => true, 'id' => 'cot-21')
+      expect(async_config.interval_for(agent, 0)).to eq(intervalo_sem_as_vinte)
       expect(described_class).to have_been_enqueued.with(run.id, 1)
+      expect(reagendada[:at]).to be_within(2).of(intervalo_sem_as_vinte.from_now.to_f)
       expect(run.reload).to have_attributes(status: 'done', failure_code: nil)
       expect(bot_contents).to eq(['final'])
     end

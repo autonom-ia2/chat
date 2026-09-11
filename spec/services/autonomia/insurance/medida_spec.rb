@@ -178,6 +178,24 @@ RSpec.describe Autonomia::Insurance::Medida do
       expect(resultado[:fim]).to be_within(1.minute).of(Time.current)
       expect(resultado[:inicio]).to be_within(1.minute).of(described_class::DIAS_PADRAO.days.ago.beginning_of_day)
     end
+
+    # SÓ O FIM: a janela padrão TERMINA nele. Ancorar o início em hoje quando só o fim foi pedido
+    # (rodada 4) recusava `fim=2026-06-30` como "data inicial posterior à final" — culpando um dado
+    # que o operador não escreveu, com o nosso valor no lugar do dele.
+    it 'so fim: a janela padrao termina nele' do
+      resultado = medida(fim: '2026-06-30')
+
+      expect(resultado[:fim]).to eq(Time.zone.parse('2026-06-30').end_of_day)
+      expect(resultado[:inicio]).to eq(Time.zone.parse('2026-06-30').end_of_day.advance(days: -described_class::DIAS_PADRAO)
+                                                                       .beginning_of_day)
+    end
+
+    # SÓ DATA. `Date.iso8601` aceitava data-hora e descartava a hora: quem pedia "a partir das 10h"
+    # recebia a partir da meia-noite sem aviso (rodada 4). Precisão a mais é recusada como a data
+    # ilegível — dita, nunca truncada em silêncio.
+    it 'recusa data com hora em vez de descartar a hora em silencio' do
+      expect { medida(inicio: '2026-09-01T10:00:00', fim: '2026-09-30') }.to raise_error(described_class::PeriodoInvalido)
+    end
   end
 
   describe 'o que a medida NAO sabe, ela diz' do
@@ -264,6 +282,28 @@ RSpec.describe Autonomia::Insurance::Medida do
   end
 
   describe '#por_conta' do
+    # CADA CORRETORA NO FUSO DELA. A cotação das 23h de 30/09 em São Paulo é 02h de 01/10 em UTC (o
+    # fuso da instalação): a lista cross-conta lida no nosso fuso a jogava para outubro, enquanto
+    # `call` da mesma conta a mantinha em setembro (rodada 4, P2). As duas superfícies leem a mesma
+    # linha, ou a fatura e a tela da corretora divergem no último dia de todo mês.
+    it 'le cada corretora no fuso dela, igual a medida da conta' do
+      # Arrange — São Paulo com a cotação das 23h; a outra conta, sem fuso, com uma às 02h UTC de 01/10.
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+      run!(handle: { 'quote_id' => 'sp', 'seguradoras_acionadas' => dezessete },
+           criada_em: ActiveSupport::TimeZone['America/Sao_Paulo'].parse('2026-09-30 23:00'))
+      run!(handle: { 'quote_id' => 'utc', 'seguradoras_acionadas' => dezessete }, conta: outra_conta,
+           criada_em: Time.zone.parse('2026-10-01 02:00'))
+
+      # Act
+      linhas = described_class.new(inicio: '2026-09-01', fim: '2026-09-30').por_conta
+
+      # Assert — só São Paulo aparece em setembro, com o fuso dela e o mesmo número de `call`.
+      expect(linhas.map { |linha| linha.values_at(:conta_id, :fuso, :cotacoes, :seguradoras_acionadas) })
+        .to eq([[account.id, 'America/Sao_Paulo', 1, 17]])
+      expect(linhas.first.slice(:cotacoes, :seguradoras_acionadas, :inicio, :fim))
+        .to eq(medida(inicio: '2026-09-01', fim: '2026-09-30').slice(:cotacoes, :seguradoras_acionadas, :inicio, :fim))
+    end
+
     it 'devolve uma linha por corretora, da que mais acionou para a que menos' do
       # Arrange
       run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete.first(3) })
@@ -279,6 +319,15 @@ RSpec.describe Autonomia::Insurance::Medida do
 
     it 'nao inventa linha para corretora sem execução' do
       expect(described_class.new(inicio: nil, fim: nil).por_conta).to be_empty
+    end
+
+    # Com a conta, a lista é só a linha DELA: a enumeração de corretoras não vaza para fora do escopo
+    # que a instância recebeu.
+    it 'com a conta, so tem a linha dela' do
+      run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete })
+      run!(handle: { 'quote_id' => 'q2', 'seguradoras_acionadas' => dezessete }, conta: outra_conta)
+
+      expect(described_class.new(conta: account, inicio: nil, fim: nil).por_conta.map { |l| l[:conta_id] }).to eq([account.id])
     end
   end
 

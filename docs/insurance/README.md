@@ -142,7 +142,7 @@ números diferentes para o mesmo mês, um na fatura e outro na tela do cliente, 
 número nenhum.
 
 ```bash
-# Setembro inteiro de uma conta. Sem `from`/`to`, os últimos 30 dias.
+# Setembro inteiro de uma conta. Sem `from`, os 30 dias que terminam em `to`; sem os dois, os que terminam hoje.
 curl -s -H "api_access_token: $TOKEN" \
   "https://<host>/api/v1/accounts/16/autonomia/insurance/measurement?from=2026-09-01&to=2026-09-30"
 ```
@@ -167,13 +167,16 @@ curl -s -H "api_access_token: $TOKEN" \
 
 Gate: feature ligada + conta marcada + **administrador**, como todo endpoint do módulo. Data
 ilegível responde `422 periodo_invalido` — nunca "então são os últimos 30 dias" em silêncio: um
-número de cobrança de uma janela que ninguém pediu é pior do que erro nenhum.
+número de cobrança de uma janela que ninguém pediu é pior do que erro nenhum. O formato é SÓ
+`AAAA-MM-DD`, e o texto inteiro: `2026-09-01T10:00:00` também é 422, e não "01/09 a partir da
+meia-noite" com a hora descartada em silêncio.
 
 **Fuso.** As datas são lidas no `reporting_timezone` da conta (o mesmo dos relatórios do Chatwoot)
 quando ela tem um; sem ele, no fuso da instalação. "Setembro" da corretora termina às 23h59 dela — ler
 pelo nosso fuso jogaria para outubro toda cotação feita depois das 21h de 30/09 em São Paulo. A
-resposta devolve `timezone` e os instantes exatos. A tela do Super Admin é cross-conta e usa o fuso da
-instalação; ela diz isso na própria linha da janela.
+resposta devolve `timezone` e os instantes exatos. A tela do Super Admin lê **cada corretora no fuso
+dela** pelo mesmo caminho (`Medida#por_conta` monta uma `Medida.new(conta:)` por corretora) e mostra o
+fuso na coluna de cada linha: é o que faz a fatura e a tela da corretora baterem no último dia do mês.
 
 ### `quotes_with_proposal` é zero, e o contador é real
 

@@ -2,8 +2,11 @@
 # sozinho, sem engenheiro, sem token e sem `curl` — abre a página, escolhe o mês, lê os números.
 #
 # É a nossa ponta da medida (cobrar); a ponta da corretora (mostrar retorno) é o endpoint da conta,
-# `…/autonomia/insurance/measurement`. As duas leem a MESMA `Insurance::Medida` — dois números para o
-# mesmo mês que não batessem entre a fatura e a tela do cliente seriam pior do que número nenhum.
+# `…/autonomia/insurance/measurement`. As duas leem a MESMA `Insurance::Medida`, e cada linha desta
+# página é lida no fuso da PRÓPRIA corretora (`Medida#por_conta` monta uma `Medida.new(conta:)` por
+# corretora — o mesmo caminho do endpoint). Dois números para o mesmo mês que não batessem entre a
+# fatura e a tela do cliente seriam pior do que número nenhum; até a rodada 4 era o que acontecia com
+# toda cotação entre 21h e 23h59 de São Paulo no último dia do mês.
 #
 # Ler não é frear: a página não liga, desliga nem limita nada.
 class SuperAdmin::InsuranceMeasurementsController < SuperAdmin::ApplicationController
