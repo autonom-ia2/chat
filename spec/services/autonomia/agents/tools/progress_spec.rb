@@ -52,4 +52,42 @@ RSpec.describe Autonomia::Agents::Tools::Progress do
 
     expect(progress.deliveries).to eq([texto])
   end
+
+  # A ENTREGA DE ARQUIVO (entrega 11): o comparativo em PDF viaja como forma serializada, ao lado
+  # dos textos. Ela passa pela mesma peneira — a legenda e a reserva são texto de cliente — e o que
+  # não tem a forma de uma entrega de arquivo não passa: um Hash qualquer não é texto nem arquivo.
+  describe 'entrega de arquivo' do
+    let(:arquivo) do
+      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: 'https://portal.exemplo.test/cotacao/9.pdf',
+                                                     nome: 'Comparativo de seguro — placa ABC1D23.pdf',
+                                                     legenda: 'Comparativo com todas as opções.',
+                                                     reserva: "Comparativo com todas as opções:\nhttps://portal.exemplo.test/cotacao/9.pdf")
+    end
+
+    it 'entrega o arquivo, na forma serializada, ao lado dos textos' do
+      progress = described_class.done(deliveries: ['**Ezze** R$ 2.050,40', arquivo])
+
+      expect(progress.deliveries).to eq(['**Ezze** R$ 2.050,40', arquivo.to_h])
+    end
+
+    it 'aceita a forma serializada, que e como ela volta do handle' do
+      progress = described_class.done(deliveries: [arquivo.to_h])
+
+      expect(Autonomia::Agents::Tools::EntregaDeArquivo.de(progress.deliveries.first)).to have_attributes(url: arquivo.url)
+    end
+
+    it 'descarta um Hash que nao e entrega de arquivo, sem derrubar a execucao' do
+      progress = described_class.done(deliveries: [{ 'quote_id' => 'abc:1' }, 'texto bom'])
+
+      expect(progress.deliveries).to eq(['texto bom'])
+      expect(progress.done?).to be(true)
+    end
+
+    it 'descarta o arquivo cuja legenda levaria caminho de campo ao cliente' do
+      suja = Autonomia::Agents::Tools::EntregaDeArquivo.new(url: arquivo.url, nome: arquivo.nome,
+                                                            legenda: 'Faltou insured.document', reserva: arquivo.reserva)
+
+      expect(described_class.done(deliveries: [suja]).deliveries).to be_empty
+    end
+  end
 end

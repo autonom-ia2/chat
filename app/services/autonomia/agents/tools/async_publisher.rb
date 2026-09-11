@@ -19,6 +19,13 @@
 #    mensagens; publicar no meio dela entrega "encontrei 3 opções" antes de "deixa eu consultar", e
 #    ainda quebra a janela de mídia do turno seguinte (um outgoing entre duas incoming muda o que
 #    `current_turn_incoming` considera turno atual).
+#
+# 4. A ENTREGA DE ARQUIVO (entrega 11) é publicada como ANEXO: o publicador baixa a URL na hora de
+#    publicar (`EntregaDeArquivo#baixar`, com teto de tamanho, de tempo e assinatura de PDF), FORA do
+#    lock da conversa, e anexa pelo `Messages::MessageBuilder` — o mesmo caminho do agente humano que
+#    manda um arquivo. Quando o download falha, sai o texto de reserva com o link, como saía antes,
+#    com o motivo no log: a falha do arquivo não apaga a entrega, e nunca é silenciosa. A identidade
+#    é a mesma nos dois caminhos, então um retry não publica o arquivo por cima do link.
 class Autonomia::Agents::Tools::AsyncPublisher
   # Motivos de não-publicação, devolvidos a quem chamou (o job decide se re-agenda ou encerra).
   Result = Struct.new(:status, :message, keyword_init: true) do
@@ -27,20 +34,26 @@ class Autonomia::Agents::Tools::AsyncPublisher
     def blocked? = status == :blocked
   end
 
+  # O que vira UMA mensagem na conversa: o texto, o token de idempotência (a identidade da entrega)
+  # e, na entrega de arquivo, o anexo já baixado.
+  Corpo = Struct.new(:texto, :token, :anexo, keyword_init: true)
+
   def initialize(run:)
     @run = run
   end
 
   # -> Result. NUNCA levanta: falhar em publicar não pode derrubar a execução inteira.
-  def publish(text, wait_for_chain: true)
-    body = text.to_s.strip
-    return Result.new(status: :skipped) if body.blank?
+  # `entrega` é um texto ou uma entrega de arquivo (o objeto, ou a forma serializada que atravessa o
+  # job); a autorização e a espera pela cadeia são as mesmas para as duas.
+  def publish(entrega, wait_for_chain: true)
+    arquivo = ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega)
+    return Result.new(status: :skipped) if arquivo.nil? && entrega.to_s.strip.blank?
 
     conversation = authorized_conversation
     return Result.new(status: :blocked) if conversation.blank?
     return Result.new(status: :deferred) if wait_for_chain && humanized_chain_open?(conversation)
 
-    post(conversation, authorized_inbox(conversation), body)
+    entregar(conversation, authorized_inbox(conversation), arquivo, entrega.to_s.strip)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] publish failed run=#{@run.id} #{e.class}")
     Result.new(status: :blocked)
@@ -49,8 +62,8 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # Publica SEM esperar a cadeia de chunks drenar. Último recurso, usado quando o teto de adiamentos
   # estourou: mensagem fora de ordem é ruim, mensagem que nunca chega é pior — e uma cadeia que não
   # termina (o cliente escreveu no meio e ela foi abortada) travaria a entrega para sempre.
-  def publish!(text)
-    publish(text, wait_for_chain: false)
+  def publish!(entrega)
+    publish(entrega, wait_for_chain: false)
   end
 
   private
@@ -112,15 +125,17 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # publicadores concorrentes (duas entregas parciais adiadas com o mesmo atraso, duas threads da
   # fila) liam o mesmo número, e o segundo via a posição ocupada, descartava o texto e ainda
   # devolvia sucesso — a segunda cotação sumia sem ninguém notar.
-  def post(conversation, agent_inbox, body)
+  #
+  # `corpo.token` é a identidade da entrega (o texto, por padrão; a URL, na entrega de arquivo).
+  def post(conversation, agent_inbox, corpo)
     posted = nil
     conversation.with_lock do
       @run.reload
       sequence = @run.sequence
-      if delivery_posted?(conversation, body)
+      if delivery_posted?(conversation, corpo.token)
         posted = :duplicate
       else
-        posted = build_message!(conversation, agent_inbox, sequence, body)
+        posted = build_message!(conversation, agent_inbox, sequence, corpo)
         # Só avança quando uma mensagem NOVA entrou: como a idempotência é pelo conteúdo, o
         # duplicado não ocupa posição nenhuma, e avançar nele faria o contador mentir sobre
         # quantas mensagens a execução publicou.
@@ -130,25 +145,45 @@ class Autonomia::Agents::Tools::AsyncPublisher
     Result.new(status: :published, message: (posted unless posted == :duplicate))
   end
 
-  def delivery_posted?(conversation, body)
-    token = @run.delivery_token(body)
+  def entregar(conversation, agent_inbox, arquivo, texto)
+    return post_arquivo(conversation, agent_inbox, arquivo) if arquivo
+
+    post(conversation, agent_inbox, Corpo.new(texto: texto, token: @run.delivery_token(texto)))
+  end
+
+  # O ARQUIVO BAIXA FORA DO LOCK da conversa: é rede, com tetos próprios, e a conversa não pode
+  # ficar travada por ele. Quando o download não entrega um PDF, vai a reserva (o texto com o link)
+  # com o mesmo token — e o motivo no log, com o código curto, nunca o texto da resposta.
+  def post_arquivo(conversation, agent_inbox, arquivo)
+    token = @run.delivery_token(arquivo.identidade)
+    pdf = arquivo.baixar
+    post(conversation, agent_inbox, Corpo.new(texto: arquivo.legenda, token: token, anexo: pdf))
+  rescue ::Autonomia::Agents::Tools::EntregaDeArquivo::Indisponivel => e
+    Rails.logger.warn("[autonomia][tool][async] arquivo indisponivel run=#{@run.id} motivo=#{e.motivo}; vai como link")
+    post(conversation, agent_inbox, Corpo.new(texto: arquivo.reserva, token: token))
+  ensure
+    pdf&.tempfile&.close!
+  end
+
+  def delivery_posted?(conversation, token)
     conversation.messages.where(sender_type: 'AgentBot')
                 .where('content_attributes::text LIKE ?', "%#{token}%")
                 .any? { |message| message.content_attributes.to_h['autonomia_async_token'].to_s == token }
   end
 
-  def build_message!(conversation, agent_inbox, sequence, body)
+  def build_message!(conversation, agent_inbox, sequence, corpo)
     Messages::MessageBuilder.new(
       nil, conversation,
       ActionController::Parameters.new(
-        content: body,
+        content: corpo.texto,
+        attachments: [corpo.anexo].compact.presence,
         # Com responsável na conversa a entrega vira NOTA PRIVADA: quem fala com o cliente é a
         # pessoa que assumiu, e ela precisa do dado — não do robô por cima dela.
         message_type: 'outgoing', sender_type: 'AgentBot',
         sender_id: agent_inbox.agent_bot_id, private: conversation.assignee_id.present?,
         content_attributes: {
           autonomia_agent_id: agent_inbox.agent.id,
-          autonomia_async_token: @run.delivery_token(body),
+          autonomia_async_token: corpo.token,
           autonomia_async_slug: @run.slug,
           autonomia_async_sequence: sequence
         }

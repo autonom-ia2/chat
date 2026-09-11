@@ -13,15 +13,17 @@ class Autonomia::Agents::Tools::AsyncPublishJob < ApplicationJob
 
   AsyncConfig = ::Autonomia::Agents::Tools::AsyncConfig
 
-  def perform(run_id, text, deferrals = 0)
+  # `entrega` é o texto ou a forma serializada de uma entrega de arquivo (entrega 11): o publicador
+  # reconhece as duas, e a forma atravessa os argumentos do job sem perder nada.
+  def perform(run_id, entrega, deferrals = 0)
     run = ::Autonomia::Agents::ToolRun.find_by(id: run_id)
     return if run.blank?
 
     publisher = ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run)
-    result = deferrals.to_i >= AsyncConfig::MAX_PUBLISH_DEFERRALS ? publisher.publish!(text) : publisher.publish(text)
+    result = deferrals.to_i >= AsyncConfig::MAX_PUBLISH_DEFERRALS ? publisher.publish!(entrega) : publisher.publish(entrega)
     return unless result.deferred?
 
     self.class.set(wait: AsyncConfig::PUBLISH_DEFER_SECONDS.seconds)
-        .perform_later(run_id, text, deferrals.to_i + 1)
+        .perform_later(run_id, entrega, deferrals.to_i + 1)
   end
 end

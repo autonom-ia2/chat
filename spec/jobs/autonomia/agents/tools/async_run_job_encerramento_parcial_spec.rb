@@ -60,15 +60,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   end
 
   it 'publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue' do
-    # Arrange
+    # Arrange — o comparativo do conector `mock` responde como PDF (entrega 11: sai como arquivo)
     run = cotacao_com_preco_entregue_e_prazo_vencido
+    stub_request(:get, 'https://exemplo.test/comparativo-mock.pdf')
+      .to_return(status: 200, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
 
     # Act
     described_class.new.perform(run.id, 5)
 
     # Assert — primeiro o comparativo (o que ainda vale entregar), depois o fecho DA COTAÇÃO
-    expect(bot_contents).to eq(["Comparativo com todas as opções:\nhttps://exemplo.test/comparativo-mock.pdf",
-                                cotacao::PARCIAL])
+    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
     expect(bot_contents.last).to include('seguradoras')
     expect(bot_contents.join(' ')).not_to include('consultas')
     expect(run.reload.status).to eq('failed')

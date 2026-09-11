@@ -265,4 +265,97 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(run.reload.sequence).to eq(1)
     end
   end
+
+  # A ENTREGA DE ARQUIVO (entrega 11): o comparativo em PDF vai como ANEXO da mensagem, com o nome
+  # que o cliente vai procurar depois. Quando o download falha, vai o texto de reserva com o link —
+  # o mesmo de antes —, registrado, e nunca em silêncio. A identidade é uma só nos dois caminhos.
+  describe 'entrega de arquivo' do
+    let(:url) { 'https://arquivos.exemplo.test/comparativo-9.pdf' }
+    let(:arquivo) do
+      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: 'Comparativo de seguro — placa ABC1D23.pdf',
+                                                     legenda: 'Comparativo com todas as opções.',
+                                                     reserva: "Comparativo com todas as opções:\n#{url}")
+    end
+    let(:pdf) { "%PDF-1.4\n%%EOF\n" }
+
+    it 'publica o PDF como anexo, com o nome do arquivo' do
+      # Arrange
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert
+      expect(result).to be_published
+      anexo = bot_messages.sole.attachments.sole
+      expect(anexo.file_type).to eq('file')
+      expect(anexo.file.filename.to_s).to eq('Comparativo de seguro — placa ABC1D23.pdf')
+      expect(anexo.file.content_type).to eq('application/pdf')
+      expect(anexo.file.download).to eq(pdf)
+    end
+
+    it 'poe a legenda sem link na mensagem, com o token da identidade do arquivo' do
+      # Arrange
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+
+      # Act
+      described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert
+      mensagem = bot_messages.sole
+      expect(mensagem.content).to eq('Comparativo com todas as opções.')
+      expect(mensagem.content).not_to include('http')
+      expect(mensagem.content_attributes['autonomia_async_token']).to eq(run.delivery_token(arquivo.identidade))
+      expect(run.reload.sequence).to eq(1)
+    end
+
+    it 'cai para o texto com o link quando o download falha, e registra o motivo' do
+      # Arrange — o 404 real de 11/09/2026 (blob do portal inexistente)
+      promote
+      stub_request(:get, url).to_return(status: 404, body: '<Error><Code>BlobNotFound</Code></Error>',
+                                        headers: { 'Content-Type' => 'application/xml' })
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert
+      expect(result).to be_published
+      mensagem = bot_messages.sole
+      expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
+      expect(mensagem.attachments).to be_empty
+      expect(Rails.logger).to have_received(:warn).with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=http_404/))
+    end
+
+    it 'nao publica de novo o que ja saiu, nem como arquivo por cima do link' do
+      # Arrange — a primeira publicação saiu como link; o retry encontra o arquivo no ar
+      promote
+      stub_request(:get, url).to_return({ status: 404, body: 'x' }, { status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' } })
+      publisher = described_class.new(run: run)
+      publisher.publish(arquivo.to_h)
+
+      # Act
+      result = publisher.publish(arquivo.to_h)
+
+      # Assert
+      expect(result).to be_published
+      expect(bot_messages.count).to eq(1)
+      expect(run.reload.sequence).to eq(1)
+    end
+
+    it 'espera a cadeia humanizada como qualquer entrega, sem baixar nada antes da hora' do
+      # Arrange
+      promote(origin_message_id: 77, expected_chunks: 1)
+      stub_request(:get, url).to_return(status: 200, body: pdf)
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert
+      expect(result).to be_deferred
+      expect(a_request(:get, url)).not_to have_been_made
+    end
+  end
 end

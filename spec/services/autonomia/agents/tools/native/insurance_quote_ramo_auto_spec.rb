@@ -446,9 +446,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # Act
       progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
-      # Assert — a lista serve para decidir; o PDF é o que o cliente leva adiante
-      expect(progress.deliveries.last).to include('Comparativo com todas as opções')
-      expect(progress.deliveries.last).to include('https://exemplo.test/comparativo.pdf')
+      # Assert — a lista serve para decidir; o PDF é o que o cliente leva adiante. Desde a entrega
+      # 11 ele sai como ARQUIVO (a forma serializada de `EntregaDeArquivo`), com o link de reserva.
+      comparativo = Autonomia::Agents::Tools::EntregaDeArquivo.de(progress.deliveries.last)
+      expect(comparativo.legenda).to include('Comparativo com todas as opções')
+      expect(comparativo.url).to eq('https://exemplo.test/comparativo.pdf')
+      expect(comparativo.reserva).to include('https://exemplo.test/comparativo.pdf')
       expect(progress.handle[described_class::PDF_SENT_KEY]).to be(true)
       expect(connector).to have_received(:quote_proposal).with(hash_excluding(:insurer_code))
     end
@@ -461,7 +464,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       entregas = tool.closing_deliveries('quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'])
 
       # Assert
-      expect(entregas.first).to include('https://exemplo.test/comparativo.pdf')
+      expect(Autonomia::Agents::Tools::EntregaDeArquivo.de(entregas.first).url).to eq('https://exemplo.test/comparativo.pdf')
     end
 
     it 'nao repete o comparativo no encerramento se ele ja tinha saido' do

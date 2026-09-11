@@ -35,7 +35,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # Chave nossa dentro do handle: quem já foi entregue. É o que faz a segunda mensagem ser
   # "chegaram mais opções" em vez de repetir as que o cliente já leu.
   DELIVERED_KEY = 'entregues'.freeze
-  # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial.
+  # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial. A
+  # sentinela é gravada quando a ENTREGA sai da ferramenta, seja qual for a forma em que o
+  # publicador a faça chegar (arquivo, ou o link de reserva quando o download falha).
   PDF_SENT_KEY = 'comparativo_enviado'.freeze
   # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
   # quem precisa contar ao cliente é a primeira entrega de preços, minutos depois.
@@ -58,6 +60,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   include Recusas
   include Envio
   include Veiculo
+  include Comparativo
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
   #
@@ -192,6 +195,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
     # O comparativo em PDF fecha a conversa, e sai UMA vez. É o que o portal entrega e o que o
     # cliente guarda — a lista de preços no chat serve para decidir, o PDF serve para levar adiante.
+    # Desde a entrega 11 ele é uma entrega de ARQUIVO (`Comparativo`), não um texto com link.
     pdf = comparison_pdf(next_handle)
     if pdf
       deliveries += [pdf]
@@ -214,23 +218,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
   def finished?(result)
     %w[completed failed].include?(result['status'])
-  end
-
-  # nil quando não há o que imprimir, quando já foi enviado, ou quando a geração falha. Nunca
-  # derruba a cotação: os preços já chegaram, e um PDF que não sai não pode apagá-los.
-  def comparison_pdf(handle)
-    return if handle[PDF_SENT_KEY]
-    return if Array(handle[DELIVERED_KEY]).empty?
-
-    proposal = sessions.with_fresh_session do |open_session|
-      connector.quote_proposal(provider: connection.provider, session: open_session,
-                               quote_id: handle['quote_id'])
-    end
-    url = proposal.to_h['url'].presence
-    url && "Comparativo com todas as opções:\n#{url}"
-  rescue StandardError => e
-    Rails.logger.warn("[autonomia][insurance] comparativo falhou account=#{account.id} #{e.class}")
-    nil
   end
 
   # CRITÉRIO 4.5 — problema de credencial de seguradora nunca chega ao cliente final; vai para a

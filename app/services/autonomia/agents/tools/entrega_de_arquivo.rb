@@ -1,0 +1,119 @@
+# A ENTREGA QUE É UM ARQUIVO, e não um texto (entrega 11 do Agente de Cotação).
+#
+# Até 11/09/2026 toda entrega de uma ferramenta assíncrona era uma String, e o comparativo em PDF
+# chegava ao cliente como "Comparativo com todas as opções:\n<url>". Quem está no WhatsApp espera o
+# arquivo na conversa — um link é uma aba do navegador, um arquivo é o que ele guarda e reencaminha.
+#
+# O QUE VIAJA é a forma serializada (`to_h`, chaves de texto): a entrega atravessa o `Progress`, o
+# handle e os argumentos do `AsyncPublishJob` (Sidekiq), e bytes não cabem ali. Os bytes só existem
+# no momento da publicação (`#baixar`), dentro do job, com três guardas — teto de tamanho, teto de
+# tempo e assinatura de PDF — porque a URL vem de fora (o blob do portal do AGGER) e o que ela
+# responde não é promessa nossa: em 11/09/2026 três comparativos reais responderam 404 com um XML de
+# `BlobNotFound`. Sem a assinatura, esse XML chegaria ao cliente com nome de PDF.
+#
+# A RESERVA é o texto com o link, o mesmo de antes: quando o download falha, o cliente recebe o link
+# como recebia — os preços que já saíram não voltam, e a falha do arquivo não pode apagar a entrega.
+# O publicador decide isso; este objeto só carrega os dois caminhos.
+class Autonomia::Agents::Tools::EntregaDeArquivo
+  CHAVE = 'arquivo'.freeze
+  # Um comparativo de auto tem dezenas de KB; o teto é folga de cem vezes, não medida. Existe para o
+  # worker não engolir o que quer que a URL responda — o arquivo é baixado ANTES do lock da conversa.
+  TETO_BYTES = 10.megabytes
+  # Tetos de rede abaixo dos 25 s de shutdown do Sidekiq desta instalação: um deploy no meio do
+  # download não pode deixar a publicação pela metade.
+  ABERTURA_SEGUNDOS = 5
+  LEITURA_SEGUNDOS = 15
+  REDIRECIONAMENTOS = 2
+  ASSINATURA_PDF = '%PDF-'.freeze
+  TIPO_PDF = 'application/pdf'.freeze
+  # O que um servidor pode declarar sem desmentir um PDF: o tipo certo, ou "bytes" (é assim que o
+  # armazenamento do portal responde). Qualquer outro tipo é recusa, mesmo com os bytes certos.
+  TIPOS_ACEITOS = [TIPO_PDF, 'application/octet-stream', 'binary/octet-stream'].freeze
+  # Só https: o arquivo vai para a conversa de um cliente com o nosso nome; a URL sem transporte
+  # protegido pode ser trocada no caminho.
+  URL_SEGURA = %r{\Ahttps://\S+\z}i
+  NOME_DE_PDF = %r{\A[^/\\]+\.pdf\z}i
+
+  # O download não pôde entregar um PDF. `motivo` é um código curto (nunca o texto da resposta nem
+  # da exceção): vai para o log, e o publicador cai para a reserva.
+  class Indisponivel < StandardError
+    attr_reader :motivo
+
+    def initialize(motivo)
+      @motivo = motivo
+      super("arquivo indisponivel: #{motivo}")
+    end
+  end
+
+  attr_reader :url, :nome, :legenda, :reserva
+
+  # -> a entrega, quando `valor` é uma (o objeto ou a forma serializada dele, válida); nil para
+  # qualquer outra coisa — texto comum, Hash de outra forma, forma incompleta.
+  def self.de(valor)
+    return valor if valor.is_a?(self)
+    return nil unless valor.is_a?(Hash)
+
+    forma = valor.deep_stringify_keys[CHAVE]
+    return nil unless forma.is_a?(Hash)
+
+    entrega = new(url: forma['url'], nome: forma['nome'], legenda: forma['legenda'], reserva: forma['reserva'])
+    entrega.valida? ? entrega : nil
+  end
+
+  def initialize(url:, nome:, legenda:, reserva:)
+    @url = url.to_s.strip
+    @nome = nome.to_s.strip
+    @legenda = legenda.to_s.strip
+    @reserva = reserva.to_s.strip
+  end
+
+  def valida?
+    url.match?(URL_SEGURA) && nome.match?(NOME_DE_PDF) && legenda.present? && reserva.present?
+  end
+
+  def to_h
+    { CHAVE => { 'url' => url, 'nome' => nome, 'legenda' => legenda, 'reserva' => reserva } }
+  end
+
+  # A identidade da entrega, para o token de publicação: a MESMA como arquivo e como reserva. Um
+  # retry que encontra o link já publicado não publica o arquivo por cima, e vice-versa.
+  def identidade
+    "arquivo:#{url}"
+  end
+
+  # -> `ActionDispatch::Http::UploadedFile` com o PDF, no formato que `Messages::MessageBuilder`
+  # anexa. Levanta `Indisponivel` em qualquer falha: resposta que não é 200, tamanho acima do teto
+  # (anunciado ou medido durante o download), tempo, tipo declarado que desmente, bytes sem a
+  # assinatura de PDF. Quem chama fecha o arquivo temporário.
+  def baixar
+    tempfile = Down.download(url, max_size: TETO_BYTES, open_timeout: ABERTURA_SEGUNDOS,
+                                  read_timeout: LEITURA_SEGUNDOS, max_redirects: REDIRECIONAMENTOS)
+    conferir_tipo!(tempfile.content_type)
+    conferir_assinatura!(tempfile)
+    ActionDispatch::Http::UploadedFile.new(tempfile: tempfile, filename: nome, type: TIPO_PDF)
+  rescue Down::TooLarge
+    raise Indisponivel, 'tamanho'
+  rescue Down::TimeoutError
+    raise Indisponivel, 'tempo'
+  rescue Down::ResponseError => e
+    raise Indisponivel, "http_#{e.response&.code.to_s.gsub(/[^0-9]/, '').presence || 'erro'}"
+  rescue Down::Error => e
+    raise Indisponivel, e.class.name.demodulize.underscore
+  end
+
+  private
+
+  def conferir_tipo!(tipo)
+    declarado = tipo.to_s.split(';').first.to_s.strip.downcase
+    return if declarado.blank? || TIPOS_ACEITOS.include?(declarado)
+
+    raise Indisponivel, "tipo_#{declarado.gsub(/[^a-z0-9]+/, '_')[0, 40]}"
+  end
+
+  def conferir_assinatura!(tempfile)
+    tempfile.rewind
+    inicio = tempfile.read(ASSINATURA_PDF.bytesize).to_s
+    tempfile.rewind
+    raise Indisponivel, 'nao_e_pdf' unless inicio == ASSINATURA_PDF
+  end
+end
