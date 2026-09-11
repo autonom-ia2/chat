@@ -8,6 +8,10 @@
 # Este job é o único ponto que enxerga isso. Ele NÃO retoma a execução: retomar significaria cotar
 # de novo no portal, e não há como saber o que já aconteceu lá. Ele fecha a linha e avisa o cliente
 # uma vez, com a frase da própria ferramenta — melhor uma resposta honesta do que silêncio.
+#
+# E é também o único ponto periódico que existe para duas pontas soltas da entrega de arquivo
+# (entrega 11): o blob que ficou sem dono (`recolher_blobs_sem_dono`, rodada 7) e a mensagem publicada
+# cujo envio ao canal nunca entrou na fila (`retomar_envios_pendentes`, rodada 9).
 class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   queue_as :scheduled_jobs
 
@@ -21,14 +25,43 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   # protege um upload em andamento (a linha existe antes do anexo) — a transferência inteira cabe em
   # segundos, e uma hora é folga, não medida.
   BLOB_SEM_DONO_IDADE = 1.hour
+  # A pendência de envio (rodada 9) é procurada nas mensagens dos últimos dois dias: a marca nasce
+  # segundos depois da mensagem, e o varredor passa a cada 10 min — dois dias é folga para um Redis
+  # que ficou fora um fim de semana, e é o que mantém a leitura pelo índice de `created_at` curta.
+  ENVIO_PENDENTE_JANELA = 2.days
+  ENVIO_PENDENTE_LIMITE = 200
 
   def perform
     reap_running
     reap_pending
     recolher_blobs_sem_dono
+    retomar_envios_pendentes
   end
 
   private
+
+  # A MENSAGEM COM ENVIO PENDENTE (rodada 9 da entrega 11, P2 do Codex): o publicador a deixou no banco
+  # com a marca porque o `SendReplyJob` não entrou na fila, e ninguém a reemite — o `AsyncRunJob`
+  # encerra, `comparativo_enviado` impede nova emissão do PDF, o Redis voltar não dispara nada. Este é
+  # o recuperador DURÁVEL: para cada marcada, a `RetomadaDeEnvio` da execução que a publicou trava a
+  # conversa, relê a mensagem, reconfere a autorização e reenfileira (ou abandona, com motivo). A marca
+  # sem execução (ou de execução apagada) é abandonada aqui: não há autorização que a valide.
+  def retomar_envios_pendentes
+    ::Autonomia::Agents::Tools::PendenciaDeEnvio
+      .marcadas(desde: ENVIO_PENDENTE_JANELA.ago, limite: ENVIO_PENDENTE_LIMITE)
+      .each { |mensagem| retomar_envio(mensagem) }
+  end
+
+  def retomar_envio(mensagem)
+    pendencia = ::Autonomia::Agents::Tools::PendenciaDeEnvio
+    run = ::Autonomia::Agents::ToolRun.find_by(id: pendencia.execucao_id(mensagem))
+    return pendencia.abandonar(mensagem, motivo: 'sem_execucao', contexto: 'varredor') if run.nil?
+
+    ::Autonomia::Agents::Tools::RetomadaDeEnvio.new(run: run).recuperar(mensagem)
+  rescue StandardError => e
+    # Uma mensagem não derruba as outras: registrada, e o varredor segue; a marca fica para a próxima.
+    Rails.logger.warn("[autonomia][tool][async] retomada de envio falhou varredor message=#{mensagem.id} #{e.class}")
+  end
 
   # O BLOB QUE FICOU SEM DONO (rodada 7 da entrega 11): o publicador grava o blob, e só depois cria a
   # mensagem que o anexa; se o processo morre entre uma coisa e a outra, nem o `ensure` do publicador

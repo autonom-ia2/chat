@@ -118,7 +118,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-0:1',
-                                  cotacao::DELIVERED_KEY => %w[8 3 47], 'produto' => 'auto' })
+                                  cotacao::DELIVERED_KEY => %w[8 3 55], 'produto' => 'auto' })
     Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
     run.record_delivery!
 
@@ -155,7 +155,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-0:1',
-                                  cotacao::DELIVERED_KEY => %w[8 3 47], 'produto' => 'auto' })
+                                  cotacao::DELIVERED_KEY => %w[8 3 55], 'produto' => 'auto' })
     Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
     run.record_delivery!
     stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })

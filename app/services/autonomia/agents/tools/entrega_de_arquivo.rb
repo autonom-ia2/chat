@@ -136,14 +136,17 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # sem "sem anexo", o PDF de uma mensagem entregue. A marca é lida como JSON, NO NÍVEL SUPERIOR do
   # `metadata`, e exige as DUAS chaves (rodada 8, P2 do Codex): o `LIKE` sobre o texto tratava `_`
   # como curinga (`entrega_de_arquivo` casava `entregaXdeXarquivo`), casava a marca aninhada em outro
-  # objeto e não exigia o id da execução — três jeitos de escolher um blob alheio ainda sem anexo. O
-  # `?` da consulta é o operador "tem a chave" do jsonb (os binds são NOMEADOS, para o ActiveRecord não
-  # o tomar por posição). É uma varredura sequencial da tabela de blobs (não há índice para isto); roda
-  # a cada 10 min com `limite`, e o custo está registrado na auditoria da rodada 7.
+  # objeto e não exigia o id da execução — três jeitos de escolher um blob alheio ainda sem anexo. O id
+  # da execução tem de ser um NÚMERO (rodada 9, ressalva do Codex): o `?` do jsonb só perguntava se a
+  # chave existia, e `{"autonomia_tool_run_id": null}` passava — `jsonb_typeof(... -> chave) = 'number'`
+  # é o que `marca` grava (`run_id` inteiro). Os binds são NOMEADOS, para o ActiveRecord não tomar o
+  # `->` e o `->>` por posição. É uma varredura sequencial da tabela de blobs (não há índice para isto);
+  # roda a cada 10 min com `limite`, e o custo está registrado na auditoria da rodada 7.
   def self.blobs_sem_dono(antes_de:, limite:)
     ActiveStorage::Blob.unattached
                        .where(created_at: ...antes_de)
-                       .where("#{METADATA_JSON_SQL} ->> :finalidade_chave = :finalidade AND #{METADATA_JSON_SQL} ? :execucao_chave",
+                       .where("#{METADATA_JSON_SQL} ->> :finalidade_chave = :finalidade " \
+                              "AND jsonb_typeof(#{METADATA_JSON_SQL} -> :execucao_chave) = 'number'",
                               finalidade_chave: FINALIDADE_CHAVE, finalidade: FINALIDADE, execucao_chave: EXECUCAO_CHAVE)
                        .order(:created_at).limit(limite)
   end

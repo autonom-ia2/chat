@@ -6,7 +6,7 @@
 # — quem publica sem checar kill-switch da conta, estado do agente e allowlist de piloto acaba
 # falando com cliente real a partir de um agente que já foi desligado.
 #
-# SETE decisões que este arquivo carrega:
+# OITO decisões que este arquivo carrega:
 #
 # 1. NUNCA carimba `autonomia_reply_to_message_id`. O `already_replied?` do Responder é um regex
 #    sobre QUALQUER outgoing do bot com aquele id: uma entrega assíncrona que o herdasse faria o
@@ -46,12 +46,22 @@
 #
 # 7. A PENDÊNCIA DE ENVIO FICA GRAVADA NA PRÓPRIA MENSAGEM (rodada 8, 11/09/2026):
 #    `content_attributes['autonomia_envio_pendente'] = true` (`PendenciaDeEnvio`, uma escrita atômica),
-#    quando nem a recuperação pôs o `SendReplyJob` na fila. Sem a marca, a tentativa seguinte achava o
-#    token e dizia `published` sem olhar a mensagem — o cliente sem arquivo e sem link, contado como
-#    entregue. Token encontrado só quer dizer entregue quando a mensagem não carrega pendência
-#    conhecida: com a marca (sem `source_id`, e não privada) a tentativa seguinte reenfileira, e a marca
-#    só sai quando o job ENTRA.
+#    com a execução que a publicou, quando nem a recuperação pôs o `SendReplyJob` na fila. Sem a marca,
+#    a tentativa seguinte achava o token e dizia `published` sem olhar a mensagem — o cliente sem
+#    arquivo e sem link, contado como entregue. Token encontrado só quer dizer entregue quando a
+#    mensagem não carrega pendência conhecida: com a marca (sem `source_id`, e não privada) a tentativa
+#    seguinte reenfileira, e a marca só sai quando o job ENTRA.
+#
+# 8. A RETOMADA DA PENDÊNCIA ACONTECE INTEIRA SOB O LOCK DA CONVERSA, e tem um recuperador durável
+#    (rodada 9, 11/09/2026; `RetomadaDeEnvio`). Reler a mensagem, decidir, enfileirar e limpar a marca
+#    dentro do `with_lock`: duas tentativas concorrentes que achavam a mesma pendência e retomavam FORA
+#    do lock enfileiravam dois `SendReplyJob` — o documento duas vezes. E a marca que ninguém reemitia
+#    (o job encerra, `comparativo_enviado` impede nova emissão, o Redis voltar não dispara nada) ficava
+#    para sempre: o `ReapStaleRunsJob` a acha a cada 10 min e a resolve pelo mesmo caminho, com a
+#    mesma autorização (`AutorizacaoDaExecucao`) reconferida sob o lock.
 class Autonomia::Agents::Tools::AsyncPublisher
+  include ::Autonomia::Agents::Tools::AutorizacaoDaExecucao
+
   # Motivos de não-publicação, devolvidos a quem chamou (o job decide se re-agenda ou encerra).
   Result = Struct.new(:status, :message, keyword_init: true) do
     def published? = status == :published
@@ -63,14 +73,6 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # O que vira UMA mensagem na conversa: o texto, o token de idempotência (a identidade da entrega)
   # e, na entrega de arquivo, o anexo — o `signed_id` do blob já gravado no armazenamento.
   Corpo = Struct.new(:texto, :token, :anexo, keyword_init: true)
-
-  # O que a publicação sob o lock pode dizer além de "criei esta mensagem": a mensagem já estava lá
-  # (retry, ou consulta que reemite a mesma lista) — carregando a mensagem achada, porque token
-  # encontrado só quer dizer entregue quando ela não tem pendência de envio (decisão 7) —, ou a
-  # autorização caiu no caminho (os dois motivos fechados que vão ao log).
-  Duplicada = Struct.new(:mensagem)
-  RECUSAS = %i[execucao_morta vinculo_mudou].freeze
-  Pendencia = ::Autonomia::Agents::Tools::PendenciaDeEnvio
 
   def initialize(run:)
     @run = run
@@ -132,28 +134,11 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # legítima é publicada e a linha fechada logo em seguida, então uma republicação adiada
   # encontraria a linha já `done`.
   def authorized_conversation
-    return if @run.reload.dead?
-
     conversation = @run.conversation
     return if conversation.blank?
-    return unless same_binding?(vinculo_autorizado(conversation.reload))
+    return if recusada?(autorizacao(conversation.reload))
 
     conversation
-  end
-
-  # O vínculo autorizado AGORA, lido do banco a cada chamada — nunca memoizado: quem memoizava
-  # publicava, depois de segundos de download, com a autorização de antes dele (Codex, rodada 7).
-  def vinculo_autorizado(conversation)
-    ::Autonomia::Agents::Operate.authorized_agent_inbox(conversation)
-  end
-
-  # O vínculo autorizado agora é o MESMO que aceitou a execução? A conversa pode ter mudado de caixa
-  # (ou o vínculo ter sido recriado) entre o disparo e a entrega — nesse caso a cotação não é mais
-  # deste agente. Execução antiga sem `agent_inbox_id` gravado aceita qualquer vínculo autorizado.
-  def same_binding?(agent_inbox)
-    return false if agent_inbox.blank?
-
-    @run.agent_inbox_id.blank? || @run.agent_inbox_id == agent_inbox.id
   end
 
   # Há uma cadeia de entrega humanizada em curso para o turno que originou esta execução? A cadeia
@@ -191,7 +176,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # desfeita (`persisted?` volta a ser falso no rollback), sobe para quem chamou decidir — a reserva,
   # na entrega de arquivo; `blocked`, no fim. Só a mensagem desta chamada é reconciliada: uma mensagem
   # achada pelo token poderia ser de outro publicador, com um envio dele a caminho — a menos que ela
-  # carregue a PENDÊNCIA que quem a criou gravou (`retomar`, decisão 7).
+  # carregue a PENDÊNCIA que quem a criou gravou, e essa é retomada AINDA SOB O LOCK (decisões 7 e 8).
   def post(conversation, corpo)
     vigia = ::Autonomia::Agents::Tools::VigiaDeEnvio.new
     publicado = nil
@@ -203,19 +188,18 @@ class Autonomia::Agents::Tools::AsyncPublisher
     reconciliar(publicado, vigia, e)
   end
 
-  # -> a mensagem criada, `DUPLICADA`, ou o motivo da recusa. A AUTORIZAÇÃO É RECONFERIDA AQUI, sob o
-  # lock e sem cache: `dead?` relido do banco e o vínculo recalculado (`authorized_agent_inbox` sobre a
-  # conversa que o lock acabou de recarregar — conta habilitada, agente ligado e ativo, allowlist,
-  # mesma caixa). É esta conferência, não a da entrada, que autoriza a mensagem.
+  # -> a mensagem criada, o `Result` da entrega que JÁ estava lá (retry, ou consulta que reemite a
+  # mesma lista — retomada aqui mesmo, sob o lock, decisão 8), ou o motivo da recusa. A AUTORIZAÇÃO É
+  # RECONFERIDA AQUI, sob o lock e sem cache (`AutorizacaoDaExecucao`): `dead?` relido do banco e o
+  # vínculo recalculado sobre a conversa que o lock acabou de recarregar — conta habilitada, agente
+  # ligado e ativo, allowlist, mesma caixa. É esta conferência, não a da entrada, que autoriza a mensagem.
   def publicar_sob_lock(conversation, corpo)
-    return :execucao_morta if @run.reload.dead?
-
-    agent_inbox = vinculo_autorizado(conversation)
-    return :vinculo_mudou unless same_binding?(agent_inbox)
+    agent_inbox = autorizacao(conversation)
+    return agent_inbox if recusada?(agent_inbox)
 
     sequence = @run.sequence
     existente = entrega_publicada(conversation, corpo.token)
-    return Duplicada.new(existente) if existente
+    return retomar(existente) if existente
 
     mensagem = build_message!(conversation, agent_inbox, sequence, corpo)
     # Só avança quando uma mensagem NOVA entrou: como a idempotência é pelo conteúdo, o duplicado
@@ -227,20 +211,17 @@ class Autonomia::Agents::Tools::AsyncPublisher
 
   def resultado(publicado)
     return Result.new(status: :published, message: publicado) if publicado.is_a?(Message)
-    return retomar(publicado.mensagem) if publicado.is_a?(Duplicada)
+    return publicado if publicado.is_a?(Result)
 
     Rails.logger.warn("[autonomia][tool][async] publicacao recusada run=#{@run.id} motivo=#{publicado}")
     Result.new(status: :blocked)
   end
 
   # A mensagem que o token achou É a entrega — a menos que carregue a PENDÊNCIA de envio (decisão 7):
-  # aí o que faltou foi o `SendReplyJob`, e é ele que se tenta de novo. A pendência só vale sem
-  # `source_id` (o canal já confirmou → entregue, marca ou não) e fora da nota privada (não vai ao canal).
+  # aí o que faltou foi o `SendReplyJob`, e é ele que se tenta de novo, AQUI, sob o lock (decisão 8).
+  # `published` sem `message`: nenhuma mensagem nova nasceu.
   def retomar(mensagem)
-    return Result.new(status: :published) unless Pendencia.pendente?(mensagem)
-
-    Rails.logger.warn("[autonomia][tool][async] envio pendente encontrado run=#{@run.id} message=#{mensagem.id}")
-    reenviar(mensagem)
+    Result.new(status: retomada.retomar(mensagem) ? :published : :blocked)
   end
 
   # A mensagem está no banco e a exceção veio de um `after_commit` dela. O que decide o resultado é se
@@ -251,54 +232,18 @@ class Autonomia::Agents::Tools::AsyncPublisher
     Rails.logger.warn("[autonomia][tool][async] publicacao levantou depois do commit run=#{@run.id} message=#{mensagem.id} causa=#{erro.class}")
     return Result.new(status: :published) if envio_disparado?(mensagem, vigia)
 
-    reenviar(mensagem)
+    Result.new(status: retomada.reenviar(mensagem) ? :published : :blocked)
   end
 
   def envio_disparado?(mensagem, vigia)
     mensagem.private? || mensagem.source_id.present? || vigia.enfileirou?(mensagem.id)
   end
 
-  # RECUPERAÇÃO idempotente e durável: o `SendReplyJob` é no-op para mensagem já enviada
-  # (`Base::SendOnChannelService#invalid_message?` → `source_id.present?`) e para nota privada; e o
-  # que garante que não há OUTRO job desta mensagem a caminho é o vigia — o `send_reply` não chegou
-  # a enfileirar. Se nem isto entra na fila (o Redis continua fora, ou `perform_later` devolve `false`
-  # sem exceção — um callback de enqueue barrou, ou o adapter levantou `EnqueueError`), a falha é
-  # explícita: código fechado no log, `blocked` para quem chamou (ninguém conta a entrega), a mensagem
-  # e o anexo ficam, e a PENDÊNCIA fica gravada na mensagem para a tentativa seguinte (`retomar`). A
-  # marca só é limpa quando o job ENTRA.
-  #
-  # RESSALVA (Codex, rodada 8; registrada na auditoria, não corrigida aqui): se o Redis ACEITA o
-  # enfileiramento e perde a resposta na mesma chamada, o adapter levanta, o vigia não anota o job que
-  # entrou, e este reenvio põe um SEGUNDO `SendReplyJob` na fila. O `SendReplyJob` não serializa o
-  # envio da mesma mensagem (nem lock, nem `source_id` relido antes de falar com o canal): com as
-  # threads da fila, os dois podem enviar antes de qualquer um gravar `source_id`, e o cliente recebe o
-  # documento duas vezes. É o custo escolhido conscientemente contra a alternativa — o cliente sem
-  # arquivo e sem link. Serializar o envio por mensagem é do núcleo do Chatwoot, fora desta entrega
-  # (issue aberta no repositório, Part of #291).
-  def reenviar(mensagem)
-    causa = enfileirar_envio(mensagem)
-    return envio_pendente!(mensagem, causa) if causa
-
-    Pendencia.limpar(mensagem, contexto: "run=#{@run.id}") if Pendencia.marcada?(mensagem)
-    Rails.logger.warn("[autonomia][tool][async] envio reenfileirado run=#{@run.id} message=#{mensagem.id}")
-    Result.new(status: :published)
-  end
-
-  # -> nil quando o `SendReplyJob` ENTROU na fila; a causa quando não: a classe da exceção, ou o código
-  # `enqueue_recusado` para o `false` sem exceção de `perform_later`.
-  def enfileirar_envio(mensagem)
-    ::SendReplyJob.perform_later(mensagem.id) ? nil : 'enqueue_recusado'
-  rescue StandardError => e
-    e.class.name
-  end
-
-  # A pendência fica gravada na mensagem (`PendenciaDeEnvio`: a escrita é atômica e a forma da coluna
-  # está documentada lá); a falha da própria marca não troca este resultado — é registrada por ela.
-  def envio_pendente!(mensagem, causa)
-    Pendencia.marcar(mensagem, contexto: "run=#{@run.id}")
-    Rails.logger.warn("[autonomia][tool][async] publicacao incompleta run=#{@run.id} message=#{mensagem.id} " \
-                      "motivo=mensagem_sem_envio causa=#{causa}")
-    Result.new(status: :blocked)
+  # A mecânica do reenvio e da marca mora em `RetomadaDeEnvio` (rodada 9): é a mesma que o varredor usa,
+  # com a mesma autorização. `blocked` quando nem o envio de recuperação entra na fila — ninguém conta
+  # a entrega, a mensagem e o anexo ficam, e a pendência fica gravada para o varredor.
+  def retomada
+    @retomada ||= ::Autonomia::Agents::Tools::RetomadaDeEnvio.new(run: @run)
   end
 
   def entregar(conversation, arquivo, texto)

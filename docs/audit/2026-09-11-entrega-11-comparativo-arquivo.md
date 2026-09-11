@@ -63,6 +63,17 @@ gravada quando a ENTREGA sai da ferramenta, seja qual for a forma em que o publi
   `PRAZO_TOTAL_SEGUNDOS` → `PRAZO_SEGUNDOS`); `reap_stale_runs_job.rb` (`recolher_blobs_sem_dono`,
   `BLOB_SEM_DONO_IDADE = 1.hour`); `lib/safe_fetch/deadline.rb` (degradação `sem_socket` registrada
   uma vez por transferência) e comentários do `SafeFetch` sobre o que o prazo cobre.
+- Rodada 8: `tools/pendencia_de_envio.rb` (novo: a marca `autonomia_envio_pendente` na mensagem, escrita
+  atômica na forma do coder); `async_publisher.rb` (`retomar`, `enfileirar_envio` com o `false`);
+  `entrega_de_arquivo.rb` (`blobs_sem_dono` por JSON com cast protegido).
+- Rodada 9: `tools/retomada_de_envio.rb` (novo: `retomar`/`reenviar` — a mecânica que saiu do
+  publicador — e `recuperar`, a retomada pelo varredor sob o lock da conversa);
+  `tools/autorizacao_da_execucao.rb` (novo módulo: `autorizacao`, `recusada?`, `vinculo_autorizado`,
+  `mesmo_vinculo?`, incluído por publicador e retomada); `pendencia_de_envio.rb` (`NULLIF`; a execução
+  na marca; `marcadas` com cast protegido; `abandonar`; `execucao_id`); `async_publisher.rb`
+  (`publicar_sob_lock` retoma sob o lock; `Duplicada`/`RECUSAS` removidos; 140 linhas de código);
+  `reap_stale_runs_job.rb` (`retomar_envios_pendentes`, janela 2 dias, limite 200);
+  `entrega_de_arquivo.rb` (`jsonb_typeof … = 'number'`); `spec/support/fila_de_envio_helper.rb` (novo).
 
 ### Rodada 2 (revisão cega, achado P2): a forma que a entrega recusa
 
@@ -642,16 +653,144 @@ continua sem sinal (inalcançável hoje, ver acima); e o duplo envio da ressalva
 marcada e nunca reemitida (a execução fechou sem outra passada) continua no banco sem envio, com o
 log `mensagem_sem_envio` e a marca — recuperação operacional pelo id (`SendReplyJob.perform_later(<id>)`).
 
+### Rodada 9 (revisão do Codex sobre `a0e502edb5`: 2 P2 + 1 P3 + 1 ressalva; o P2 do LIKE fechado, #393 aceito como escopo) + merge da main: a retomada sob o lock, o recuperador durável, a string vazia, o id do blob
+
+Antes da rodada, a PR estava DIRTY: a main recebeu chat#390 (entrega 13: `quote_offers.rb`,
+`premium_text.rb`, `registrar_sem_periodo`/`SEM_PERIODO_KEY` em `insurance_quote.rb`), chat#391
+(entrega 7: `build_progress` grava `seguradoras_acionadas`) e chat#387 (#380). `git merge origin/main`
+(sem rebase) → merge commit `4829d669bf`. UM conflito, em `insurance_quote.rb`, nas constantes: a main
+acrescentou `ACIONADAS_KEY` e `PROPOSTAS_KEY` logo antes de `PDF_SENT_KEY`, cuja explicação esta
+branch tinha estendido — resolvido preservando os dois lados (as duas constantes novas E o comentário
+estendido). `insurance_quote_ramo_auto_spec.rb` mesclou sozinho (a main acrescentou exemplos da entrega
+13 no mesmo `describe` onde esta branch mexeu no helper). A suíte ampla pós-merge achou 2 falhas reais
+em `async_run_job_comparativo_arquivo_spec` — os dois exemplos "cotação completa, todos os preços já
+entregues" gravavam `DELIVERED_KEY => %w[8 3 47]`, e o `Mock` da main (chat#390) trocou a Justos (47)
+pela `OFERTA_SEM_PERIODO` da Bp Assinatura (55): o poll entregava "Mais uma opção" antes do link. É
+o dado do mock que mudou, não a regra: `%w[8 3 55]`.
+
+Decisões do orquestrador, obrigatórias; cada correção com spec e mutação (edita → roda → restaura →
+md5). Onde este texto se afasta da letra da decisão, diz onde e por quê.
+
+**P2 — dois retries recuperavam a MESMA pendência ao mesmo tempo.** `publicar_sob_lock` achava a
+mensagem pelo token sob o lock e devolvia `Duplicada`; `retomar`/`reenviar` corriam FORA do lock, em
+`resultado`. Duas tentativas concorrentes (o retry do Sidekiq e a reemissão pelo poll; `AsyncPublishJob`
+adiado ×2) liam a marca uma depois da outra, cada uma sob o seu lock, e as duas reenfileiravam — dois
+`SendReplyJob`, o documento duas vezes. Correção: a retomada INTEIRA (reler, decidir, enfileirar,
+limpar a marca) acontece dentro do `with_lock` — `publicar_sob_lock` devolve `retomar(existente)`
+(um `Result`) para a mensagem achada; `resultado` só repassa. A mecânica do reenvio saiu do publicador
+(que estava em 168/175 linhas de código) para o colaborador novo `tools/retomada_de_envio.rb`
+(`retomar`, `reenviar`, `recuperar`), e a autorização reconferida sob o lock (rodada 7) virou o módulo
+`tools/autorizacao_da_execucao.rb` (`autorizacao` → vínculo ou `execucao_morta`/`vinculo_mudou`;
+`recusada?`; `vinculo_autorizado`; `mesmo_vinculo?`), incluído pelo publicador E pela retomada — a
+MESMA pergunta nos dois lugares. `Duplicada` e `RECUSAS` (no publicador) deixaram de existir; a
+publicação recusada continua `blocked` com o mesmo log. FATO LIDO que sustenta o desenho: o
+enfileiramento dentro do lock é IMEDIATO — `ActiveJob::Base.enqueue_after_transaction_commit` tem
+default `:never` (`activejob 7.2.3.1`, `enqueuing.rb:54`), o app está em `load_defaults 7.0` sem a
+chave em `config/`, e só em `:default` o `raw_enqueue` adiaria para depois do commit marcando
+`successfully_enqueued = true` ANTES de enfileirar (`enqueue_after_transaction_commit.rb`; o adapter do
+Sidekiq 7.3.10 responde `true`). Se um dia esse default mudar, `reenviar` diria "entrou" sem ter
+entrado — por isso há uma GUARDA de comportamento, não só o comentário. Guardas (`async_publisher_spec`,
+"retomada da pendencia sob o lock da conversa" — o concorrente é simulado no ponto exato do lock,
+embrulhando o `with_lock` da conversa que o publicador recebe): (1) o concorrente resolve a pendência
+um instante ANTES de o lock ser adquirido → a mensagem é RELIDA sob o lock, UM `SendReplyJob` (o
+dele), marca limpa, `published`; (2) o concorrente entra logo DEPOIS de o lock ser solto → não acha
+pendência, UM `SendReplyJob` (o nosso); (3) o job está na fila AINDA dentro do lock, antes do commit
+(`enqueued_jobs` contado no fim do bloco). Um teste com duas threads reais não é possível aqui: os
+specs são transacionais (`use_transactional_fixtures`), e a segunda conexão não veria a conversa. A
+`RetomadaDeEnvio` tem spec próprio para o que o job não mostra: `FOR UPDATE` ANTES do `enqueue.active_job`
+do `SendReplyJob` (ordem observada por `ActiveSupport::Notifications`) e o objeto VELHO com a marca não
+reenvia o que o banco já não tem. Mutações L1 (retomada fora do lock: 2 exemplos), L2 (mensagem lida
+antes do lock e usada dentro dele), L3 (recuperar sem o lock), L4 (decidir pelo objeto da varredura,
+sem reler); X1–X3 e Y1–Y6 da rodada 7 reajustadas ao módulo e ao colaborador.
+
+**P2 — a marca era persistida, e NENHUM recuperador a consumia.** `AsyncRunJob#apply` publica e
+encerra; `comparativo_enviado` impede nova emissão do PDF; `AsyncPublishJob` para em `blocked`; o
+Redis voltar não dispara nada. A pendência dependia de uma reemissão que não existe. Correção:
+recuperação DURÁVEL no `ReapStaleRunsJob` (`*/10`), `retomar_envios_pendentes`: `PendenciaDeEnvio.marcadas`
+varre as mensagens de `AgentBot` criadas nos últimos 2 dias (`index_messages_on_created_at`), `LIMIT
+200`, com o predicado SQL da marca — e o CAST PROTEGIDO como em `blobs_sem_dono`: `CASE WHEN
+(content_attributes #>> '{}') IS JSON OBJECT THEN (content_attributes #>> '{}')::jsonb END ? :chave`
+(binds nomeados). Na escrita uma linha que não é JSON falha sozinha e registrada; na varredura ela
+derrubaria a passada inteira. Para cada marcada, o varredor resolve a execução pela própria marca —
+`marcar` passou a gravar `autonomia_tool_run_id` ao lado de `autonomia_envio_pendente` (o MESMO nome
+da marca do blob, de propósito: é o mesmo conceito em dois lugares) — e chama
+`RetomadaDeEnvio.new(run:).recuperar(mensagem)`: trava a conversa da mensagem, RELÊ a mensagem sob o
+lock (`Message.find_by`), e decide: sem a marca (outro resolveu) → nada; `source_id` presente →
+abandona `canal_confirmou`; nota privada → `nota_privada`; autorização caiu (`autorizacao`, a mesma do
+publicador) → abandona `execucao_morta`/`vinculo_mudou`; senão o MESMO `retomar` da tentativa seguinte
+(`envio pendente encontrado` → `SendReplyJob.perform_later` → `limpar` → `envio reenfileirado`; ou
+`mensagem_sem_envio` de novo, marca mantida). "Abandonar" (`PendenciaDeEnvio.abandonar`) limpa a marca
+E a execução e registra `envio pendente abandonado <contexto> message=<id> motivo=<código fechado>`
+(`execucao_morta`, `vinculo_mudou`, `canal_confirmou`, `nota_privada`, `sem_conversa`, `sem_execucao`);
+a marca sem execução (ou de execução apagada) é abandonada pelo próprio varredor (`contexto=varredor`).
+Uma retomada que levanta é registrada (`retomada de envio falhou varredor message=<id> <classe>`) e não
+derruba as outras; a marca fica para a próxima passada. Uma execução `done`/`failed` NÃO é morta
+(`dead?` é `superseded|discarded|blocked`): a mensagem pendente de uma cotação já encerrada É enviada
+pelo varredor — é o caso comum (o Redis caiu na última entrega). Guardas pelo JOB inteiro
+(`reap_stale_runs_job_spec`, "envios pendentes"; a mensagem é criada pelo publicador de verdade com a
+fila recusando o envio, como em produção): fila volta → exatamente UM `SendReplyJob` com o id dela,
+marca e execução saem, token fica, logs `encontrado`/`reenfileirado`; execução `superseded` → nada
+enviado, marca limpa, `motivo=execucao_morta`; agente desligado → `vinculo_mudou`, e a marca que não
+aponta para execução → `varredor … motivo=sem_execucao`; `source_id` presente → `canal_confirmou`; a
+fila continua fora → marca fica, `mensagem_sem_envio`; marcada há 3 dias → fora da janela, intocada.
+`pendencia_de_envio_spec` (`.marcadas`): só as do bot com a marca, dentro da janela, as mais antigas
+primeiro, até o limite; NULL, `""`, `"nao e json"` não derrubam, e o objeto direto é lido; `abandonar`
+limpa e registra. Mutações L5 (sem revalidar), L6 (varredura sem o predicado da marca), L7 (abandonar
+sem limpar), L8 (sem registrar), L9 (varredura removida do `perform`), L11 (cast desprotegido), L12
+(sem a janela), L13 (sem exigir mensagem do bot), L14 (`canal_confirmou` não abandona), L15 (marca sem
+a execução), L16 (marca sem execução não abandonada), L17 (rescue do varredor removido).
+
+**P3 — a string JSON vazia quebrava o cast da marca.** `OBJETO_SQL` era `COALESCE((content_attributes
+#>> '{}')::jsonb, '{}')`: com a coluna em `""` (string JSON vazia — o coder nunca a escreve, o banco
+aceita), `#>> '{}'` dá `''`, e `''::jsonb` recusa — `marca_nao_gravada` no log e a tentativa seguinte
+cega. Correção, na letra da decisão: `COALESCE(NULLIF(content_attributes #>> '{}', ''), '{}')::jsonb`.
+Guarda: a MATRIZ das quatro formas (string com objeto, NULL, objeto direto, string vazia) — a marca
+entra nas quatro, `json_typeof` volta `'string'`, a `Message` lê de volta, e nada de
+`marca_nao_gravada` no log. Mutação L10.
+
+**Ressalva — a chave `autonomia_tool_run_id` no filtro de blobs só precisava existir.** O `?` do jsonb
+aceitava `{"autonomia_tool_run_id": null}`. Correção (`blobs_sem_dono`): `jsonb_typeof(metadata::jsonb
+-> 'autonomia_tool_run_id') = 'number'` — é o que `marca(run_id:)` grava (inteiro). Guarda: o quinto
+impostor (`execucao_nula`) em "nao apaga o que so PARECE marcado". Mutação L18 (volta ao `?`); Q1–Q3
+e Z2–Z4 reajustadas ao SQL novo.
+
+**A corrida "B lê antes de A gravar a pendência e devolve `published`" — registrada como pedido.** A
+sequência: A cria a mensagem (commit), o despacho levanta (Redis fora), A reconcilia, `reenviar` falha
+e A grava a marca FORA do lock (o lock já acabou — a exceção veio depois do commit); B entra no lock
+entre o commit de A e a marca de A, acha a mensagem pelo token SEM marca, devolve `published`, e o job
+conta a entrega (`record_delivery!`). A marca de A fica, e antes desta rodada ninguém voltava. ESTÁ
+FECHADA, mas não por prevenção — por CONVERGÊNCIA: a retomada sob o lock fecha o duplo envio entre
+concorrentes que ACHAM a marca; o varredor fecha o "ninguém volta": em até 10 min ele acha a marca de
+A, trava a conversa, relê, reconfere a autorização (a execução `done` não é morta) e envia. O que resta,
+dito com todas as letras: (a) o cliente recebe até 10 min depois, e o `delivered_count` já contava a
+entrega — o desfecho ao cliente não muda de forma; (b) `marca_nao_gravada` (o banco falha na escrita
+da marca logo depois de commitar a mensagem) continua invisível para o varredor — o log é o único
+sinal; (c) o commit do lock que falha DEPOIS de `reenviar` ter enfileirado (a conexão cai no `COMMIT`)
+desfaz a limpeza da marca com o job já na fila → o varredor reenfileira → é a classe do #393 (o
+`SendReplyJob` é no-op se o primeiro já gravou `source_id`; só a corrida entre os dois envia em dobro);
+(d) `marca_nao_limpa` pela mesma razão do (c), com a mesma convergência (`canal_confirmou` quando o
+envio já saiu). Nenhum dos quatro é silencioso.
+
+**Desvios da letra da decisão, ditos:** (1) "extraia um método compartilhado" virou um MÓDULO
+(`AutorizacaoDaExecucao`) incluído por duas classes, porque o publicador estava a 7 linhas do
+`Metrics/ClassLength` e a retomada precisou de classe própria (`RetomadaDeEnvio`) — o método é um só,
+o lugar é um módulo. (2) A retomada pelo varredor abandona também a marcada com `source_id` e a nota
+privada (motivos `canal_confirmou`/`nota_privada`), que a decisão não nomeava: sem isso a marca velha
+seria achada a cada 10 min para sempre. (3) A marca ganhou a execução (`autonomia_tool_run_id`) em vez
+de o varredor derivar a execução do token (`execution_key:digest`): é o dado direto, e some com a marca.
+(4) Os helpers da fila (`fila_recusa_o_envio`/`fila_volta`) foram para `spec/support/fila_de_envio_helper.rb`:
+três specs precisavam da mesma pré-condição.
+
 ### Termos (5)
 
 | # | Termo | Guarda / evidência |
 |---|---|---|
 | 1 | A comparação chega como ARQUIVO na conversa | `async_run_job_comparativo_arquivo_spec` ("entrega o comparativo como anexo, nomeado pela placa, e depois o fecho": job real + ferramenta real + conector mock + WebMock 200 → `Message` com `Attachment` `file`, `application/pdf`, bytes iguais, legenda sem URL); `async_publisher_spec` "publica o PDF como anexo" |
 | 2 | Falha no download não apaga os preços; o link vai como hoje | job spec "cai para o link quando o download falha, sem apagar o preco que ja saiu" (preço publicado ANTES pelo publicador real fica; `delivered_count` igual; texto = `RESERVA + "\n" + url`, o de antes); M1. Rodada 2: URL que a forma recusa → job spec "entrega o link em texto pela consulta…" (caminho `apply`: link em texto, `PDF_SENT_KEY` true, `delivered_count` 2, `done`) e comparativo spec "quando a URL do portal nao tem a forma segura"; M7. Rodada 3: falha do ANEXO (armazenamento) → job spec "…quando o armazenamento falha depois do download" e publisher spec "…sem anexo orfao"; R1 |
-| 3 | Exemplo automatizado do caminho de falha | os três exemplos de falha do job spec (404, HTML, armazenamento) + `async_publisher_spec` "cai para o texto com o link… e registra o motivo" (log `motivo=http_404`), "…quando o armazenamento falha…" (log `motivo=armazenamento causa=…`), "…quando o tipo declarado desmente o PDF…" (`tipo_invalido`) e "…quando o anexo nao pode ser publicado…" (`anexo falhou`) + 15 exemplos de recusa em `entrega_de_arquivo_spec` (inclusive 302, IP privado, DNS para dentro, 404 de 32 MB em socket real, prazo do corpo em socket real e armazenamento). Rodada 7: a exceção depois do commit com o envio não disparado → `envio reenfileirado` ou `publicacao incompleta … mensagem_sem_envio` (`blocked`); a autorização que cai durante a transferência → `publicacao recusada … execucao_morta|vinculo_mudou`. Rodada 8: a tentativa seguinte com a pendência gravada → `envio pendente encontrado` + `envio reenfileirado` (ou `mensagem_sem_envio` de novo); a marca que o banco não grava → `pendencia de envio nao gravada … marca_nao_gravada` |
+| 3 | Exemplo automatizado do caminho de falha | os três exemplos de falha do job spec (404, HTML, armazenamento) + `async_publisher_spec` "cai para o texto com o link… e registra o motivo" (log `motivo=http_404`), "…quando o armazenamento falha…" (log `motivo=armazenamento causa=…`), "…quando o tipo declarado desmente o PDF…" (`tipo_invalido`) e "…quando o anexo nao pode ser publicado…" (`anexo falhou`) + 15 exemplos de recusa em `entrega_de_arquivo_spec` (inclusive 302, IP privado, DNS para dentro, 404 de 32 MB em socket real, prazo do corpo em socket real e armazenamento). Rodada 7: a exceção depois do commit com o envio não disparado → `envio reenfileirado` ou `publicacao incompleta … mensagem_sem_envio` (`blocked`); a autorização que cai durante a transferência → `publicacao recusada … execucao_morta|vinculo_mudou`. Rodada 8: a tentativa seguinte com a pendência gravada → `envio pendente encontrado` + `envio reenfileirado` (ou `mensagem_sem_envio` de novo); a marca que o banco não grava → `pendencia de envio nao gravada … marca_nao_gravada`. Rodada 9: o varredor → os mesmos dois logs, ou `envio pendente abandonado … motivo=<execucao_morta|vinculo_mudou|canal_confirmou|nota_privada|sem_conversa|sem_execucao>`, ou `retomada de envio falhou varredor …` |
 | 4 | O arquivo abre no WhatsApp de verdade | **pendente_prova_real** (orquestrador; ver "Produção") |
 | 5 | O nome diz o que ele é, sem dado pessoal além do que o cliente já vê | `insurance_quote_comparativo_arquivo_spec` (placa `hik-9383` → "Comparativo de seguro — placa HIK9383.pdf"; sem CPF/CEP no nome; sem placa → ramo); M2 |
-| NÃO | Anexo que só funciona quando tudo dá certo | o caminho de falha é exemplo (termo 3) e a reserva é a mesma identidade (M5); Hash que não é entrega nunca vira mensagem (`async_publisher_spec` "descarta, registrado e sem mensagem…", M8); a falha do ARMAZENAMENTO cai na mesma reserva que a do download (R1), sem mensagem com anexo órfão; a falha ao ANEXAR sem mensagem no banco cai na reserva (Y5, M1), e a exceção depois do commit não duplica nem apaga (rodada 6) — e só é `published` com o ENVIO disparado (Y1–Y6, rodada 7); a autorização é reconferida sob o lock (X1–X3, rodada 7); o blob sem dono tem marca e varredor (Z1–Z5, rodada 7); a pendência de envio fica na mensagem e a tentativa seguinte reenvia — token encontrado não é entrega com pendência conhecida (P1–P11, rodada 8); a marca do blob é lida como JSON no nível superior, com as duas chaves e o cast protegido (Q1–Q3, rodada 8) |
+| NÃO | Anexo que só funciona quando tudo dá certo | o caminho de falha é exemplo (termo 3) e a reserva é a mesma identidade (M5); Hash que não é entrega nunca vira mensagem (`async_publisher_spec` "descarta, registrado e sem mensagem…", M8); a falha do ARMAZENAMENTO cai na mesma reserva que a do download (R1), sem mensagem com anexo órfão; a falha ao ANEXAR sem mensagem no banco cai na reserva (Y5, M1), e a exceção depois do commit não duplica nem apaga (rodada 6) — e só é `published` com o ENVIO disparado (Y1–Y6, rodada 7); a autorização é reconferida sob o lock (X1–X3, rodada 7); o blob sem dono tem marca e varredor (Z1–Z5, rodada 7); a pendência de envio fica na mensagem e a tentativa seguinte reenvia — token encontrado não é entrega com pendência conhecida (P1–P11, rodada 8); a marca do blob é lida como JSON no nível superior, com as duas chaves e o cast protegido (Q1–Q3, rodada 8); a retomada acontece INTEIRA sob o lock (um job, nunca dois) e o varredor é o recuperador durável da marca que ninguém reemite, com a mesma autorização reconferida (L1–L17, rodada 9); o id da execução no blob tem de ser número (L18) |
 
 ### Mutações (11/09/2026, `mutacoes.py` no scratchpad: edita → roda → restaura → md5 conferido)
 
@@ -856,6 +995,100 @@ spec olhava só a existência dos blobs) — e as duas specs foram trocadas pela
 | M7 | comparativo sem a guarda de forma (Hash invalido sai mesmo assim) | 2 de 11 |
 | M8 | publicador sem a guarda (o to_s do Hash vira mensagem, como antes) | 1 de 35 |
 
+Rodada 9 (`e11r9/mutacoes_e11_r9.py` no scratchpad: edita → roda → restaura → md5 conferido
+antes/depois nos 12 arquivos de código, inclusive `retomada_de_envio.rb` e `autorizacao_da_execucao.rb`;
+`mutacoes_r9.json`). L1–L18 são as regras novas desta rodada (18; L1 e L2 têm DUAS edições cada, para
+reproduzir a retomada fora do lock e a leitura antes dele). Na PRIMEIRA passada L17 SOBREVIVEU (o
+`rescue` que isola uma retomada que levanta não era exercitado por exemplo nenhum) — regra sem guarda é
+intenção: ganhou "registra a retomada que levanta e segue para as outras" no `reap_stale_runs_job_spec`
+e foi reexecutada sozinha (`--so=L17`, `mutacoes_r9_so.json`). P1–P11, Q1–Q3, X1–X3, Y1–Y6, Z1–Z5, W1–W2,
+S1–S8, R5, N1, N2, N2b, V2, V2b, V5, Q1x, Q2x, R1, R2, T1 e M1–M8 repetidas com o texto reajustado
+(P1/P3/P4/P5/Y3 à `RetomadaDeEnvio`; P2 ao `return retomar(existente)`; X1/X2 ao módulo
+`AutorizacaoDaExecucao`; X3 à `autorizacao`/`recusada?`; Q1/Q3/Z2–Z4 ao `jsonb_typeof`; Z5 ao `perform`
+com a varredura nova). 79 de 79 reprovam e restauram. Cada linha: exemplos que reprovam / rodados.
+
+| # | Mutação | Reprova |
+|---|---|---|
+| L1 | (P2) retomada FORA do lock: a mensagem achada sob o lock e retomada depois de solta-lo (dois SendReplyJob) | 2 de 43 |
+| L2 | (P2) mensagem lida ANTES do lock e usada dentro dele (sem releitura: o concorrente que resolveu um instante antes nao e visto) | 1 de 43 |
+| L3 | (P2) varredor: recuperar SEM o lock da conversa | 1 de 2 |
+| L4 | (P2) varredor: decide pelo objeto que veio da varredura, sem reler sob o lock | 1 de 2 |
+| L5 | (P2) varredor: sem revalidar a autorizacao (execucao morta / agente desligado reenviam) | 2 de 13 |
+| L6 | (P2) varredura sem o predicado da marca (toda mensagem do bot entra) | 2 de 8 |
+| L7 | (P2) abandonar sem limpar a marca (o varredor a acharia a cada 10 min) | 4 de 21 |
+| L8 | abandonar sem registrar o motivo | 4 de 21 |
+| L9 | (P2) varredura dos envios pendentes removida do perform | 5 de 13 |
+| L10 | (P3) OBJETO_SQL sem NULLIF (a string JSON vazia derruba a marca) | 1 de 8 |
+| L11 | varredura com cast desprotegido (a linha que nao e JSON derruba a passada) | 1 de 8 |
+| L12 | varredura sem a janela de dois dias | 2 de 21 |
+| L13 | varredura sem exigir mensagem do bot | 1 de 8 |
+| L14 | varredor: a marcada que o canal ja confirmou fica marcada (sem abandonar) | 1 de 13 |
+| L15 | (P2) a marca sem a execucao que publicou (o varredor nao tem autorizacao para reconferir) | 6 de 13 |
+| L16 | varredor: a marca sem execucao nao e abandonada (RetomadaDeEnvio com run nil levanta, e a marca fica) | 1 de 13 |
+| L17 | varredor: uma retomada que levanta derruba as outras (rescue removido) | 1 de 14 |
+| L18 | (ressalva) blob: o id da execucao so precisa existir (null passa) | 1 de 13 |
+| P1 | (P2) retomar ignora a pendencia: token encontrado e sempre published (falso sucesso no retry) | 6 de 56 |
+| P2 | (P2) a mensagem achada pelo token e devolvida como published sem passar por retomar | 4 de 43 |
+| P3 | (P2) pendencia nao gravada quando a recuperacao falha | 9 de 43 |
+| P4 | pendencia nao limpa quando o reenvio entra (marca velha reenvia de novo) | 3 de 43 |
+| P5 | (ressalva) false de perform_later tratado como sucesso | 1 de 43 |
+| P6 | pendencia sem exigir source_id vazio (reenvia o que o canal ja confirmou) | 2 de 51 |
+| P7 | pendencia sem excluir a nota privada | 1 de 8 |
+| P8 | marca gravada por substituicao (perde token e sequencia) | 10 de 51 |
+| P9 | marca gravada como objeto JSON, nao como a string que o coder da Message le | 12 de 51 |
+| P10 | falha da escrita da marca sobe (rescue removido) | 1 de 8 |
+| P11 | falha da escrita da marca engolida sem registro | 1 de 8 |
+| Q1 | (P2) varredor de blobs de volta ao LIKE sobre o texto (curinga, aninhado, sem run id) | 1 de 13 |
+| Q2 | (P2) cast para jsonb sem a guarda IS JSON (linha nao-JSON derruba a varredura) | 1 de 13 |
+| Q3 | (P2) id da execucao nao exigido na marca do blob | 1 de 13 |
+| X1 | (P1) dead? nao reconferido sob o lock (a execucao supersedida durante o download publica) | 2 de 43 |
+| X2 | (P1) vinculo memoizado: a conferencia sob o lock reutiliza a da entrada (agente desligado durante o download publica) | 1 de 43 |
+| X3 | (P1) revalidacao sob o lock removida inteira | 2 de 43 |
+| Y1 | (P2) mensagem persistida tratada como entregue sem conferir o envio (published no papel) | 10 de 43 |
+| Y2 | (P2) vigia ignorado: reenfileira mesmo com o send_reply ja na fila (dois envios) | 1 de 43 |
+| Y3 | (P2) falha da recuperacao devolve sucesso (o cliente sem arquivo e sem link, contado como entrega) | 9 de 43 |
+| Y4 | (P2) vigia conta o enfileiramento que FALHOU (ignora successfully_enqueued?) | 8 de 43 |
+| Y5 | post sem reconciliacao (a excecao depois do commit sobe: reserva por cima da mensagem no ar) | 11 de 43 |
+| Y6 | reconciliacao sem exigir persisted? (a mensagem da transacao desfeita e reconciliada) | 1 de 43 |
+| Z1 | (P2) blob gravado sem a marca da execucao | 1 de 27 |
+| Z2 | (P2) varredor sem o filtro da marca (apaga blob alheio) | 2 de 13 |
+| Z3 | (P2) varredor sem o filtro de idade (apaga upload em andamento) | 1 de 13 |
+| Z4 | (P2) varredor sem "sem anexo" (apaga o PDF de mensagem entregue) | 1 de 13 |
+| Z5 | (P2) varredura dos blobs removida do perform | 3 de 13 |
+| W1 | (ressalva) degradacao sem socket em silencio (registro removido) | 1 de 51 |
+| W2 | (ressalva) degradacao registrada a cada leitura, nao uma vez por transferencia | 1 de 51 |
+| S1 | (P1 SSRF) download de volta ao Down, so com URL_SEGURA: IP privado e DNS para dentro passam | 14 de 27 |
+| S2 | (P1) status nao conferido dentro do bloco: o corpo do 404/302 e lido inteiro antes da recusa | 5 de 78 |
+| S2b | tamanho anunciado nao conferido antes do corpo | 2 de 78 |
+| S3 | (P2) prazo removido da entrega (so tetos por operacao) | 2 de 27 |
+| S3f | (P2) prazo nao aplicado no Fetcher (enforce! removido) | 2 de 78 |
+| S3b | (P2) cada leitura NAO usa o tempo restante (socket nao apertado; prazo so entre pedacos) | 3 de 78 |
+| S3c | tetos por operacao nao limitados pelo prazo | 1 de 51 |
+| S5 | (P2) subida do arquivo dentro de transacao | 3 de 27 |
+| S5b | (P2) volta ao create_and_upload! em transacao (linha sem arquivo nao vai para a limpeza) | 5 de 75 |
+| S6 | (P2) cabecalho externo dentro do motivo (tipo_text_html) | 2 de 70 |
+| S8 | so a gravacao (upload) movida para dentro do lock da conversa | 1 de 43 |
+| R5 | download e gravacao movidos para dentro do lock da conversa | 1 de 43 |
+| N1 | rescue do que ninguem classifica removido: a excecao crua sobe (publish -> blocked) | 2 de 70 |
+| N2 | rescue do agendamento da limpeza removido: o Redis fora sobrescreve o resultado / a causa | 4 de 83 |
+| N2b | agendamento engolido sem registro (rescue sem warn) | 4 de 83 |
+| V2 | o blob ANEXADO tambem vai para a limpeza (sem && !anexado) | 7 de 48 |
+| V2b | o blob da mensagem reconciliada (sem mensagem nova) e tratado como sem dono | 4 de 43 |
+| V5 | a reserva da entrega de arquivo nao passa pela peneira de texto de cliente | 1 de 11 |
+| Q1x | volta ao purge sincrono cru no ensure (a falha do delete sobrescreve o resultado do post) | 10 de 43 |
+| Q2x | purge sincrono engolido em rescue no ensure (some o agendamento; o blob sem dono fica) | 10 de 43 |
+| R1 | rescue do armazenamento removido: a falha do upload sobe crua (publish -> blocked) | 4 de 75 |
+| R2 | redirecionamento seguido de novo (max_redirects 2) | 2 de 27 |
+| T1 | temporario do download nao fechado (ensure do with_tempfile removido) | 3 de 78 |
+| M1 | fallback removido: post_arquivo sem o rescue Indisponivel | 8 de 48 |
+| M2 | nome generico do arquivo | 4 de 11 |
+| M3 | teto de tamanho removido (sem max_bytes: o padrao de 40 MB do SafeFetch) | 3 de 27 |
+| M4 | assinatura de PDF nao conferida | 2 de 27 |
+| M5 | identidade do arquivo trocada pela legenda | 5 de 43 |
+| M6 | Progress aceita qualquer Hash como entrega | 4 de 11 |
+| M7 | comparativo sem a guarda de forma (Hash invalido sai mesmo assim) | 2 de 11 |
+| M8 | publicador sem a guarda (o to_s do Hash vira mensagem, como antes) | 1 de 43 |
+
 ### Recusa
 
 Nenhum motivo novo em `MOTIVOS`: cair para o link não é recusa ao modelo (a ferramenta fez o que
@@ -963,6 +1196,29 @@ curto do motivo — nunca o corpo da resposta nem a mensagem da exceção.
   exemplos, 0 falhas, 3 pendentes anteriores a esta PR (`RegistrationCheckout::Provisioner` ×2,
   `Sso::Provisioner`), 0 erros fora de exemplo, exit 0 (`e11r8/ampla_r8.json`).
 
+- Rodada 9 (depois do merge da main, `4829d669bf`): `async_publisher_spec` 43 (era 40: +3 "retomada
+  da pendencia sob o lock da conversa"), `retomada_de_envio_spec` 2 (novo), `pendencia_de_envio_spec`
+  8 (era 4: a matriz das quatro formas, `abandonar`, e `.marcadas` ×2), `reap_stale_runs_job_spec` 14
+  (era 7: +7 "envios pendentes", e o quinto impostor do blob), `entrega_de_arquivo_spec` 27,
+  `async_run_job_comparativo_arquivo_spec` 5 (os dois exemplos da cotação completa com `%w[8 3 55]`,
+  o que o mock da main passou a devolver): 98 exemplos, 0 falhas, 0 erros fora
+  (`e11r9/alvo4.json`, exit 0; `alvo5.json`: o varredor com o exemplo de L17, 14, 0 falhas). A primeira passada (`alvo1.json`) achou 1 falha real — o caminho do
+  varredor ia direto a `reenviar` e não registrava `envio pendente encontrado`; `decidir` passou a
+  terminar no MESMO `retomar` da tentativa seguinte, e o log conta a mesma história dos dois lados. A
+  terceira (`alvo3.json`) achou outra — `lock!` recusa registro com mudança não persistida
+  (`display_id` do `let`); o spec passou a ler a mensagem do banco, como o varredor lê. rubocop nos 16
+  arquivos tocados (código, specs, `spec/support/fila_de_envio_helper.rb`): 0 ofensas
+  (`e11r9/rubocop1.json`, `rubocop2.json`, `rubocop3.json`, `rubocop4.json`). 79 mutações, todas reprovam e restauram,
+  md5 idêntico antes/depois nos 12 arquivos de código (`e11r9/mutacoes_r9.json`, `md5_antes.txt` =
+  `md5_depois.txt`). Suíte ampla `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
+  spec/requests/api/v1/accounts/autonomia spec/lib/safe_fetch_spec.rb spec/lib/webhooks/trigger_spec.rb
+  spec/jobs/avatar/avatar_from_url_job_spec.rb
+  spec/enterprise/services/voice/provider/twilio/recording_attachment_service_spec.rb
+  spec/controllers/super_admin/insurance_measurements_controller_spec.rb`: 1364 exemplos,
+  0 falhas, 3 pendentes anteriores a esta PR, 0 erros fora de exemplo,
+  exit 0 (`e11r9/ampla_r9.json`). Pós-merge, antes da rodada (`suite_pos_merge.json`): 1348 exemplos,
+  2 falhas — as duas do mock (acima).
+
 ## O ACHADO que o orquestrador precisa saber antes da prova real — SUPERADO na rodada 3
 
 > Registro histórico. O fato novo do orquestrador (acima, rodada 3) mostra que o 404 veio de
@@ -1029,6 +1285,17 @@ logo como a SPA manda (o `print` não gasta cotação) e ler o blob de volta.
    pelo id. `causa=enqueue_recusado` é o `perform_later` devolvendo `false` sem exceção (não deve
    aparecer com o Sidekiq). O varredor de blobs passou a exigir Postgres 16+ (`IS JSON`; produção é
    18): um `PG::SyntaxError` em `recolher_blobs_sem_dono` seria um Postgres anterior — não é o caso.
+   Rodada 9: depois de um `publicacao incompleta … mensagem_sem_envio`, em até 10 min o varredor mostra
+   `envio pendente encontrado run=<id> message=<id>` + `envio reenfileirado …` (o cliente recebe, sem
+   depender de reemissão) — ou `envio pendente abandonado run=<id> message=<id> motivo=<execucao_morta|
+   vinculo_mudou|canal_confirmou|nota_privada|sem_conversa>` (a marca sai, nada é enviado; `canal_confirmou`
+   é a marca velha de um envio que já saiu), ou `envio pendente abandonado varredor message=<id>
+   motivo=sem_execucao` (marca sem execução — não deve aparecer com mensagens desta versão). `retomada
+   de envio falhou varredor message=<id> <classe>` é uma retomada que levantou (a marca fica para a
+   próxima passada). A varredura das marcadas (`marcadas`) também exige Postgres 16+ (`IS JSON`).
+   Dois `SendReplyJob` para a mesma mensagem só pela classe do #393 (o Redis aceita e perde a resposta;
+   ou o `COMMIT` do lock cai depois do enfileiramento) — o segundo é no-op se o primeiro já gravou
+   `source_id`.
 3. Rollback: reverter o deploy; não há dado novo no banco (o handle não mudou de forma; a marca do
    blob é `metadata` de linhas novas, ignorada por quem não a conhece).
 
@@ -1047,6 +1314,8 @@ uv run python3 e11r5/mutacoes_e11_r5.py                                 # rodada
 uv run python3 e11r6/mutacoes_e11_r6.py                                 # rodada 6: S1–S8 (13 novas) + N1, N2, N2b, V2, V5, Q1, Q2, R1, R2, R5, T1, M1–M8 (32), todas reprovam, md5 restaurado
 uv run --no-project python3 e11r7/mutacoes_e11_r7.py                    # rodada 7: X1–X3, Y1–Y6, Z1–Z5, W1–W2, V2b (17 novas) + 30 anteriores reajustadas (47), todas reprovam, md5 restaurado
 uv run --no-project python3 e11r8/mutacoes_e11_r8.py                    # rodada 8: P1–P11, Q1–Q3 (14 novas) + 47 anteriores reajustadas (61), todas reprovam, md5 restaurado
+git fetch origin main && git merge origin/main                          # rodada 9: 1 conflito (insurance_quote.rb, constantes), os dois lados preservados → 4829d669bf
+uv run --no-project python3 e11r9/mutacoes_e11_r9.py                    # rodada 9: L1–L18 (18 novas) + 61 anteriores reajustadas (79), todas reprovam, md5 restaurado
 gh issue create --repo autonom-ia2/chat --title "Envio da mesma mensagem não é serializado no SendReplyJob" --body-file e11r8/issue_sendreply.md   # → #393
 bundle exec rspec spec/lib/safe_fetch_spec.rb spec/jobs/avatar/avatar_from_url_job_spec.rb spec/services/autonomia/agents/tools/http_executor_spec.rb spec/services/twilio/media_download_service_spec.rb spec/services/website_branding_service_spec.rb spec/lib/webhooks/trigger_spec.rb spec/controllers/api/v1/upload_controller_spec.rb   # consumidores do SafeFetch, antes e depois: 109 ex, 0 falhas
 bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia --format json --out ampla.json

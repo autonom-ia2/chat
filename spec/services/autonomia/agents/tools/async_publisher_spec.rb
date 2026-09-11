@@ -41,6 +41,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     conversation.reload.messages.where(sender_type: 'AgentBot')
   end
 
+  # A fila que recusa o `SendReplyJob` (`fila_recusa_o_envio`/`fila_volta`) mora em `spec/support/fila_de_envio_helper.rb`.
+  def marca_de_pendencia(mensagem)
+    mensagem.reload.content_attributes['autonomia_envio_pendente']
+  end
+
   # A conversa pode mudar de CAIXA entre o disparo e a entrega (o AgentInbox é resolvido pelo inbox
   # atual). Nesse caso a cotação já não é deste vínculo e não pode ser publicada por ele.
   describe 'when the binding changed after the run started' do
@@ -263,6 +268,102 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(result).to be_published
       expect(bot_messages.count).to eq(1)
       expect(run.reload.sequence).to eq(1)
+    end
+  end
+
+  # A RETOMADA DA PENDÊNCIA ACONTECE SOB O LOCK (rodada 9, P2 do Codex). Até a rodada 8 a tentativa
+  # seguinte lia a marca sob o lock, SOLTAVA o lock e reenfileirava fora dele: duas tentativas
+  # concorrentes (o retry do Sidekiq e a reemissão pelo poll) liam a marca uma depois da outra, cada uma
+  # sob o seu lock, e as duas reenfileiravam — dois `SendReplyJob`, o documento duas vezes. O que estes
+  # exemplos provam é a ORDEM: a mensagem é RELIDA sob o lock (um concorrente que resolveu a pendência
+  # um instante antes do lock é visto), e a retomada TERMINA antes de o lock ser solto (um concorrente
+  # que entra logo depois não acha pendência). O concorrente é simulado no ponto exato do lock — é o
+  # lock que impede duas threads no mesmo instante, e é a ordem em torno dele que o exemplo exercita.
+  describe 'retomada da pendencia sob o lock da conversa' do
+    # A conversa que o publicador vai travar, com um "outro processo" agindo no instante em que o lock
+    # é adquirido (`ao_entrar`), quando o bloco termina mas antes do commit (`ao_sair`) e logo depois
+    # de o lock ser solto (`depois`). Só o objeto que o publicador recebe é embrulhado.
+    def conversa_com_concorrente(ao_entrar: nil, ao_sair: nil, depois: nil)
+      conversa = Conversation.find(conversation.id)
+      allow(run).to receive(:conversation).and_return(conversa)
+      allow(conversa).to receive(:with_lock).and_wrap_original do |original, *args, &bloco|
+        resultado = original.call(*args) do
+          ao_entrar&.call
+          bloco.call.tap { ao_sair&.call }
+        end
+        depois&.call
+        resultado
+      end
+    end
+
+    # O que a OUTRA tentativa faz quando acha a pendência: reenfileira e limpa, como o publicador.
+    def outra_tentativa_resolve(mensagem)
+      lambda do
+        atual = Message.find(mensagem.id)
+        next unless Autonomia::Agents::Tools::PendenciaDeEnvio.pendente?(atual)
+
+        SendReplyJob.perform_later(atual.id)
+        Autonomia::Agents::Tools::PendenciaDeEnvio.limpar(atual, contexto: 'concorrente')
+      end
+    end
+
+    # -> a mensagem marcada, deixada por uma primeira tentativa com a fila recusando o envio.
+    def mensagem_pendente(publisher)
+      fila_recusa_o_envio
+      expect(publisher.publish('cotação pronta')).to be_blocked
+      fila_volta
+      bot_messages.sole.tap { |mensagem| expect(marca_de_pendencia(mensagem)).to be(true) }
+    end
+
+    it 'rele a mensagem sob o lock: a pendencia que outro resolveu um instante antes nao e reenviada' do
+      # Arrange
+      promote
+      publisher = described_class.new(run: run)
+      mensagem = mensagem_pendente(publisher)
+      conversa_com_concorrente(ao_entrar: outra_tentativa_resolve(mensagem))
+
+      # Act
+      result = publisher.publish('cotação pronta')
+
+      # Assert — UM job (o do concorrente), a marca limpa, e a entrega dada como publicada
+      expect(result).to be_published
+      expect(SendReplyJob).to have_been_enqueued.with(mensagem.id).once
+      expect(mensagem.reload.content_attributes).not_to have_key('autonomia_envio_pendente')
+      expect(bot_messages.count).to eq(1)
+    end
+
+    it 'termina a retomada antes de soltar o lock: quem entra logo depois nao acha pendencia' do
+      # Arrange
+      promote
+      publisher = described_class.new(run: run)
+      mensagem = mensagem_pendente(publisher)
+      conversa_com_concorrente(depois: outra_tentativa_resolve(mensagem))
+
+      # Act
+      result = publisher.publish('cotação pronta')
+
+      # Assert — UM job (o desta tentativa), a marca limpa
+      expect(result).to be_published
+      expect(SendReplyJob).to have_been_enqueued.with(mensagem.id).once
+      expect(mensagem.reload.content_attributes).not_to have_key('autonomia_envio_pendente')
+    end
+
+    # O enfileiramento dentro do lock é IMEDIATO (`ActiveJob::Base.enqueue_after_transaction_commit` é
+    # `:never` nesta instalação): o job está na fila ainda dentro da transação do lock. Se um dia for
+    # adiado para o commit, `reenviar` diria "entrou" antes de entrar — e este exemplo reprova.
+    it 'poe o reenvio na fila ainda dentro do lock, antes do commit' do
+      # Arrange
+      promote
+      publisher = described_class.new(run: run)
+      mensagem_pendente(publisher)
+      na_fila_ao_sair = nil
+      conversa_com_concorrente(ao_sair: -> { na_fila_ao_sair = enqueued_jobs.count { |job| job[:job] == SendReplyJob } })
+
+      # Act
+      publisher.publish('cotação pronta')
+
+      # Assert
+      expect(na_fila_ao_sair).to eq(1)
     end
   end
 
@@ -603,27 +704,6 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
 
           original.call(evento, *resto)
         end
-      end
-
-      # A fila recusa o `SendReplyJob` (o do `send_reply` E o da recuperação); o resto entra.
-      def fila_recusa_o_envio
-        fila = ActiveJob::Base.queue_adapter
-        %i[enqueue enqueue_at].each do |metodo|
-          allow(fila).to receive(metodo).and_wrap_original do |original, job, *resto|
-            raise Redis::CannotConnectError, 'redis fora' if job.is_a?(SendReplyJob)
-
-            original.call(job, *resto)
-          end
-        end
-      end
-
-      def fila_volta
-        fila = ActiveJob::Base.queue_adapter
-        %i[enqueue enqueue_at].each { |metodo| allow(fila).to receive(metodo).and_call_original }
-      end
-
-      def marca_de_pendencia(mensagem)
-        mensagem.reload.content_attributes['autonomia_envio_pendente']
       end
 
       # A PRIMEIRA tentativa, com a fila recusando o envio: `blocked`, a mensagem no banco com o anexo
