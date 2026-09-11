@@ -186,10 +186,13 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # dono até ela existir. Apagá-lo aqui, na hora, era falar com o armazenamento de novo dentro do
   # `ensure`, e um `delete` que falha (rede) saía do `ensure` por cima do resultado: a entrega que
   # JÁ estava no ar virava `blocked` e "publish failed" no log, e a exceção de uma publicação que
-  # levantou era trocada pela do purge (rodada 4, 11/09/2026). Com o job, o resultado da
-  # publicação é o da publicação; a limpeza tem a fila do Sidekiq (`active_storage_purge`) para
-  # tentar de novo, e uma que ainda assim falhe deixa no máximo um arquivo órfão no armazenamento
-  # — nunca uma mensagem a menos nem um log que aponta para a causa errada.
+  # levantou era trocada pela do purge (rodada 4, 11/09/2026). O `PurgeJob` vai para a fila
+  # `default` do Sidekiq (`ActiveStorage.queues[:purge]` não está configurado nesta instalação),
+  # que retenta o job que falhar; uma limpeza que ainda assim falhe deixa no máximo um arquivo
+  # órfão no armazenamento. E o AGENDAMENTO também fala com o Redis, dentro do mesmo `ensure`:
+  # quando ele falha, `agendar_limpeza` registra e não levanta (rodada 5). Só assim o resultado
+  # da publicação é o da publicação — nunca uma mensagem a menos nem um log que aponta para a
+  # causa errada.
   def post_arquivo(conversation, agent_inbox, arquivo)
     token = @run.delivery_token(arquivo.identidade)
     blob = arquivo.gravar
@@ -202,7 +205,17 @@ class Autonomia::Agents::Tools::AsyncPublisher
                       "#{" causa=#{e.causa}" if e.causa}; vai como link")
     post(conversation, agent_inbox, Corpo.new(texto: arquivo.reserva, token: token))
   ensure
-    blob.purge_later if blob && !anexado
+    agendar_limpeza(blob) if blob && !anexado
+  end
+
+  # A limpeza do blob sem dono é CORTESIA: registrada com o id do blob (para a limpeza manual),
+  # nunca no resultado — enfileirar fala com o Redis, e o Redis fora no meio do job não pode
+  # transformar uma entrega já no ar em `blocked`, nem trocar a causa de uma publicação que
+  # levantou. Só a classe da causa vai ao log.
+  def agendar_limpeza(blob)
+    blob.purge_later
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool][async] blob sem dono nao agendado run=#{@run.id} blob=#{blob.id} causa=#{e.class}")
   end
 
   def delivery_posted?(conversation, token)

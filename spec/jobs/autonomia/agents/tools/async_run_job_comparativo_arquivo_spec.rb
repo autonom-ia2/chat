@@ -73,10 +73,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     anexo = bot_messages.second.attachments.sole
     expect(anexo.file_type).to eq('file')
     expect(anexo.file.filename.to_s).to eq('Comparativo de seguro — placa ABC1D23.pdf')
-    expect(anexo.file.content_type).to eq('application/pdf')
-    expect(anexo.file.download).to eq(pdf)
+    expect(anexo.file).to have_attributes(content_type: 'application/pdf', download: pdf)
     expect(bot_messages.map(&:content).join).not_to include(url)
     expect(run.reload.status).to eq('failed')
+    # O blob anexado nunca vai para a limpeza (rodada 5): o `download` acima ainda funcionaria com
+    # o `PurgeJob` só enfileirado, então a afirmação é sobre a fila.
+    expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
   end
 
   # O 404 do armazenamento do portal (XML de `BlobNotFound`). O link vai como ia antes, o preço que

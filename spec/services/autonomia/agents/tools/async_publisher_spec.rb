@@ -293,6 +293,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(anexo.file.filename.to_s).to eq('Comparativo de seguro — placa ABC1D23.pdf')
       expect(anexo.file.content_type).to eq('application/pdf')
       expect(anexo.file.download).to eq(pdf)
+      # O blob ANEXADO nunca vai para a limpeza: `download` ainda funcionaria com o `PurgeJob`
+      # só enfileirado, então a afirmação é sobre a fila (rodada 5, 11/09/2026).
+      expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
     end
 
     it 'poe a legenda sem link na mensagem, com o token da identidade do arquivo' do
@@ -327,6 +330,27 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
       expect(mensagem.attachments).to be_empty
       expect(Rails.logger).to have_received(:warn).with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=http_404/))
+    end
+
+    # O que o Down NÃO classifica (uma resposta HTTP malformada do servidor do blob) subia cru:
+    # `blocked`, nem arquivo nem link, com a sentinela do comparativo já gravada no caminho da
+    # consulta — o "anexo que só funciona quando tudo dá certo" por uma fresta (rodada 5, P3).
+    it 'cai para o texto com o link quando a camada HTTP levanta o que o Down nao classifica' do
+      # Arrange
+      promote
+      stub_request(:get, url).to_raise(Net::HTTPBadResponse)
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert
+      expect(result).to be_published
+      mensagem = bot_messages.sole
+      expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
+      expect(mensagem.attachments).to be_empty
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=download causa=Net::HTTPBadResponse; vai como link/))
     end
 
     it 'nao publica de novo o que ja saiu, nem como arquivo por cima do link' do
@@ -397,6 +421,53 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(Rails.logger).to have_received(:warn)
         .with(a_string_matching(/publish failed run=#{run.id} ActiveRecord::ConnectionTimeoutError/))
       expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+    end
+
+    # O AGENDAMENTO DA LIMPEZA TAMBÉM FALA COM O REDIS, dentro do mesmo `ensure` (rodada 5, P3): com o
+    # Redis fora no meio do job, o `perform_later` levantava por cima do resultado — a entrega que
+    # JÁ estava no ar virava `blocked` e "publish failed" — e, na publicação que levantou, trocava a
+    # causa dela pela do enfileiramento. A limpeza é cortesia: registrada, nunca no resultado.
+    it 'mantem a entrega publicada quando a fila nao aceita a limpeza do blob do retry' do
+      # Arrange — a primeira publicação saiu como anexo; o retry grava um segundo blob, acha a
+      # mensagem no ar, e o Redis não aceita o job de limpeza
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      publisher = described_class.new(run: run)
+      publisher.publish(arquivo.to_h)
+      allow(ActiveStorage::PurgeJob).to receive(:perform_later).and_raise(Errno::ECONNREFUSED)
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = publisher.publish(arquivo.to_h)
+
+      # Assert — publicado, uma mensagem só, nada de "publish failed"; o blob sem dono fica
+      # registrado (com o id, para a limpeza manual) em vez de custar a entrega
+      expect(result).to be_published
+      expect(bot_messages.count).to eq(1)
+      expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(/publish failed/))
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/blob sem dono nao agendado run=#{run.id} blob=\d+ causa=Errno::ECONNREFUSED/))
+      expect(ActiveStorage::Blob.count).to eq(2)
+    end
+
+    it 'registra a causa da publicacao que levantou tambem quando a fila nao aceita a limpeza' do
+      # Arrange — download bom, mensagem que não nasce, Redis que não aceita o job de limpeza
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      allow(Messages::MessageBuilder).to receive(:new).and_raise(ActiveRecord::ConnectionTimeoutError)
+      allow(ActiveStorage::PurgeJob).to receive(:perform_later).and_raise(Errno::ECONNREFUSED)
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert — a causa no log é a da publicação, e a do agendamento tem a linha dela
+      expect(result).to be_blocked
+      expect(bot_messages.count).to eq(0)
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/publish failed run=#{run.id} ActiveRecord::ConnectionTimeoutError/))
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/blob sem dono nao agendado run=#{run.id} blob=\d+ causa=Errno::ECONNREFUSED/))
     end
 
     # O QUE NÃO É TEXTO NEM ARQUIVO NÃO VIRA MENSAGEM. O encerramento (`closing_deliveries`) não passa

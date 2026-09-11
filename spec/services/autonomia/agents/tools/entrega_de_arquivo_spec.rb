@@ -146,6 +146,20 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       expect { entrega.baixar }.to raise_error(described_class::Indisponivel) { |e| expect(e.motivo).to eq('tempo') }
     end
 
+    # O DOWN NÃO CLASSIFICA TUDO (5.4.0, `request_error!`): tempo, `SystemCallError`, `EOFError`/
+    # `IOError`/`SocketError` e SSL ganham classe do Down; uma resposta HTTP malformada
+    # (`Net::HTTPBadResponse`), `Net::WriteTimeout` ou erro de `Zlib` sobem CRUS. O contrato deste
+    # método é "levanta `Indisponivel` em qualquer falha" — sem esta guarda a exceção crua saía do
+    # publicador como `blocked`, e o cliente ficava sem arquivo NEM link (rodada 5, 11/09/2026).
+    it 'recusa com motivo `download` e a classe da causa quando a camada HTTP levanta o que o Down nao classifica' do
+      stub_request(:get, url).to_raise(Net::HTTPBadResponse)
+
+      expect { entrega.baixar }.to raise_error(described_class::Indisponivel) do |e|
+        expect(e.motivo).to eq('download')
+        expect(e.causa).to eq('Net::HTTPBadResponse')
+      end
+    end
+
     it 'baixa com teto de tempo, de tamanho e sem redirecionamento, nao com os padroes do Down' do
       stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
       allow(Down).to receive(:download).and_call_original

@@ -146,8 +146,10 @@ regra sem guarda: nenhum spec cobria o purge que levanta. Causa raiz: a limpeza 
 armazenamento na hora, dentro do `ensure`, no mesmo fluxo cujo resultado ela não pode alterar.
 Correção (decisão do orquestrador): `blob.purge_later` — o caminho que o próprio Rails documenta
 para "transaction, callback or any other real-time scenario". O `ActiveStorage::PurgeJob` vai
-para a fila `active_storage_purge` (já consumida pelo Sidekiq, `config/sidekiq.yml`) e o Sidekiq
-retenta o job que falhar. Registro honesto do limite: se o `delete` falhar DEPOIS do `destroy`
+para a fila `default` do Sidekiq — `queue_as { ActiveStorage.queues[:purge] }`, e
+`config.active_storage.queues.purge` não está configurado nesta instalação (a fila
+`active_storage_purge` existe em `config/sidekiq.yml`, mas nada a usa; a rodada 4 escreveu o nome
+errado, corrigido na rodada 5) — e o Sidekiq retenta o job que falhar. Registro honesto do limite: se o `delete` falhar DEPOIS do `destroy`
 dentro do job, o retry seguinte encontra `RecordNotFound` (o `PurgeJob` descarta) e o arquivo fica
 órfão no armazenamento — é a mesma limitação do `Blob#purge` de sempre, agora sem custar uma
 mensagem nem um log com a causa errada.
@@ -168,6 +170,65 @@ Guardas (`async_publisher_spec`, "entrega de arquivo"):
 RED confirmado antes da implementação: os 3 exemplos falhando pelos motivos certos (0 jobs
 enfileirados; `blocked` em vez de `published`; log com `Errno::ECONNREFUSED`), 20 antigos
 passando (`e11r4/red.json`). Nada mais mudou nesta rodada.
+
+### Rodada 5 (revisão cega, veredito APROVADO com 5 P3 — última passada): as frestas do "só quando tudo dá certo"
+
+**P3 — o Down não classifica tudo, e `baixar` prometia "qualquer falha".** `request_error!`
+(Down 5.4.0) só dá classe do Down a tempo, `SystemCallError`, `EOFError`/`IOError`/`SocketError`
+e SSL; uma resposta HTTP malformada (`Net::HTTPBadResponse`), `Net::WriteTimeout` ou erro de
+`Zlib` sobem crus. Sonda do revisor (P5, WebMock `to_raise(Net::HTTPBadResponse)`): `publish` →
+`blocked`, 0 mensagens — nem arquivo nem link, com `PDF_SENT_KEY` já gravada no caminho `apply`.
+Era o "NÃO" do termo por uma fresta estreita. Causa raiz: o contrato do método cobria a lista do
+Down, não "qualquer falha". Correção: a transferência (`#transferir`, privado) separada da
+conferência (`#baixar` = `conferir(transferir)`), porque os rescues da transferência não podem
+alcançar `conferir` (que levanta `Indisponivel` com o motivo dela — um `rescue StandardError` no
+mesmo corpo reembrulharia `nao_e_pdf` como `download`); em `transferir`, depois dos rescues
+específicos, `rescue StandardError => e → Indisponivel.new('download', causa: e.class.name)` — o
+mesmo padrão de `gravar` para o armazenamento. Guardas: `entrega_de_arquivo_spec` "recusa com
+motivo `download` e a classe da causa quando a camada HTTP levanta o que o Down nao classifica";
+`async_publisher_spec` "cai para o texto com o link quando a camada HTTP levanta o que o Down nao
+classifica" (`published`, mensagem = reserva, sem anexo, log `motivo=download
+causa=Net::HTTPBadResponse; vai como link`). Mutação N1.
+
+**P3 — o AGENDAMENTO da limpeza também fala com o Redis, dentro do `ensure`.** A rodada 4 tirou o
+`delete` síncrono do `ensure`, mas `purge_later` enfileira o `PurgeJob` — e o Redis fora no meio
+do job Sidekiq (sondas P2/P2b do revisor: `PurgeJob.perform_later` levantando `Errno::ECONNREFUSED`)
+reproduzia a MESMA classe do P3 fechado: retry devolvendo `blocked` para uma entrega já no ar, e
+a causa da publicação trocada pela do enfileiramento. Correção: `agendar_limpeza(blob)` —
+`purge_later` com `rescue StandardError` que REGISTRA (`blob sem dono nao agendado run=… blob=<id>
+causa=<classe>`) e não levanta: a limpeza é cortesia e não pode alterar o resultado; o id do
+blob no log é o que permite a limpeza manual. Guardas (`async_publisher_spec`): "mantem a entrega
+publicada quando a fila nao aceita a limpeza do blob do retry" (`published`, 1 mensagem, nenhum
+"publish failed", log do blob sem dono, `Blob.count == 2`); "registra a causa da publicacao que
+levantou tambem quando a fila nao aceita a limpeza" (`blocked`, log `publish failed …
+ActiveRecord::ConnectionTimeoutError` E a linha do blob sem dono). Mutações N2 (rescue removido)
+e N2b (rescue sem registro).
+
+**P3 — a fila do `PurgeJob` é `default`, não `active_storage_purge`.** Sonda P1 do revisor no
+ambiente real: `ActiveStorage::PurgeJob.new(blob).queue_name == "default"`; não existe
+`config.active_storage.queues.purge` em `config/` nem `lib/`. Sem defeito funcional (a fila
+`default` é consumida pelo Sidekiq); era prosa apontando o operador para a fila errada. Corrigidos
+o comentário de `post_arquivo` e o registro da rodada 4 acima. A alternativa maior
+(`config.active_storage.queues.purge = :active_storage_purge` em `config/application.rb`) muda o
+roteamento de TODO purge da app e fica fora desta PR, como decidiu o orquestrador.
+
+**P3 — a reserva passava pela peneira só como intenção.** A mutação V5 do revisor
+(`reserva = entrega.reserva`, sem `texto()`, em `Progress#arquivo`) sobrevivia a 79 exemplos:
+só a legenda tinha spec. Guarda: `progress_spec` "descarta o arquivo cuja reserva levaria caminho
+de campo ao cliente" (reserva `"Faltou insured.document\n<url>"` — a URL sai antes de olhar, e o
+caminho de campo que sobra reprova). Mutação V5.
+
+**P3 — "o blob ANEXADO nunca é apagado" tinha guarda só indireta.** A mutação V2 do revisor
+(`purge_later if blob`, sem `&& !anexado` — em produção apagaria o PDF de toda mensagem entregue
+minutos depois) reprovava 1 de 28, e não o exemplo que fala do anexo: com o `PurgeJob` só
+enfileirado, `anexo.file.download` ainda funciona. Guarda direta: `expect(ActiveStorage::PurgeJob)
+.not_to have_been_enqueued` em "publica o PDF como anexo" (publisher) e "entrega o comparativo como
+anexo…" (job). Mutação V2.
+
+RED confirmado antes da implementação (`e11r5/red.json`): 4 exemplos falhando pelos motivos
+certos (`Net::HTTPBadResponse` cru; `blocked` ×2; log sem a causa da publicação), 60 antigos
+passando; os dois specs-guarda (anexo sem `PurgeJob`; reserva com caminho de campo) já passavam
+no código atual — o que eles provam é pela mutação. Nada além dos cinco achados mudou.
 
 ### Termos (5)
 
@@ -247,6 +308,36 @@ exemplos que reprovam / rodados.
 | M7 | comparativo sem a guarda de forma | 2 de 11 |
 | M8 | publicador sem a guarda | 1 de 23 |
 
+Rodada 5 (`e11r5/mutacoes_e11_r5.py` no scratchpad: edita → roda → restaura → md5 conferido
+antes/depois nos 4 arquivos de código; `mutacoes_r5.json`). N1, N2, N2b, V2 e V5 são as regras
+novas; Q1–Q2, R1–R7 e M1–M8 repetidas (R6, Q1 e Q2 com o texto reajustado ao `agendar_limpeza`;
+M3 ao `transferir`) — nada afrouxou. Cada linha: exemplos que reprovam / rodados.
+
+| # | Mutação | Reprova |
+|---|---|---|
+| N1 | rescue do que o Down nao classifica removido: a excecao crua sobe (publish -> blocked, nem arquivo nem link) | 2 de 48 |
+| N2 | rescue do agendamento da limpeza removido: o Redis fora sobrescreve o resultado / a causa | 2 de 26 |
+| N2b | agendamento engolido sem registro (rescue sem warn) | 2 de 26 |
+| V2 | o blob ANEXADO tambem vai para a limpeza (sem && !anexado): em producao apagaria o PDF de toda mensagem entregue | 3 de 31 |
+| V5 | a reserva da entrega de arquivo nao passa pela peneira de texto de cliente | 1 de 11 |
+| Q1 | volta ao purge sincrono cru (a falha do delete sobrescreve o resultado do post) | 5 de 26 |
+| Q2 | purge sincrono engolido em rescue no ensure (some o agendamento; o blob sem dono fica) | 5 de 26 |
+| R1 | rescue do armazenamento removido: a falha do upload sobe crua (publish -> blocked) | 4 de 53 |
+| R2 | redirecionamento seguido de novo (max_redirects 2) | 2 de 22 |
+| R3 | tempfile nao fechado na recusa (rescue de conferir removido) | 1 de 22 |
+| R4 | tempfile nao fechado depois de gravar (ensure removido) | 2 de 22 |
+| R5 | download e gravacao movidos para dentro do lock da conversa | 1 de 26 |
+| R6 | blob sem dono nao apagado (agendamento removido) | 5 de 26 |
+| R7 | transacao em volta do create_and_upload! removida (linha de blob sem arquivo sobrevive) | 1 de 22 |
+| M1 | fallback removido: post_arquivo sem o rescue Indisponivel | 7 de 31 |
+| M2 | nome generico do arquivo | 4 de 11 |
+| M3 | teto de tamanho removido | 3 de 22 |
+| M4 | assinatura de PDF nao conferida | 2 de 22 |
+| M5 | identidade do arquivo trocada pela legenda | 2 de 26 |
+| M6 | Progress aceita qualquer Hash como entrega | 4 de 11 |
+| M7 | comparativo sem a guarda de forma (Hash invalido sai mesmo assim) | 2 de 11 |
+| M8 | publicador sem a guarda (o to_s do Hash vira mensagem, como antes) | 1 de 26 |
+
 ### Recusa
 
 Nenhum motivo novo em `MOTIVOS`: cair para o link não é recusa ao modelo (a ferramenta fez o que
@@ -286,6 +377,15 @@ curto do motivo — nunca o corpo da resposta nem a mensagem da exceção.
   spec/requests/api/v1/accounts/autonomia`: 1057 exemplos, 0 falhas, 0 erros fora de exemplo,
   3 pendentes anteriores a esta PR (`e11r4/ampla_r4.json`, exit 0).
 
+- Rodada 5: `entrega_de_arquivo_spec` 22 (era 21), `async_publisher_spec` 26 (era 23),
+  `progress_spec` 11 (era 10), `async_run_job_comparativo_arquivo_spec` 5 (guarda nova no
+  exemplo do anexo); specs alvo (publisher, entrega_de_arquivo, job do comparativo, progress,
+  encerramento parcial, async_run_job, reap_stale_runs, comparativo): 98 exemplos, 0 falhas,
+  0 erros fora (`e11r5/green.json`, exit 0); rubocop nos 6 arquivos tocados: 0 ofensas
+  (`e11r5/rubocop.json`); 22 mutações, todas reprovam e restauram (`e11r5/mutacoes_r5.json`);
+  suíte ampla `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
+  spec/requests/api/v1/accounts/autonomia`: 1062 exemplos, 0 falhas, 3 pendentes anteriores a esta PR, 0 erros fora de exemplo, exit 0 (`e11r5/ampla_r5.json`).
+
 ## O ACHADO que o orquestrador precisa saber antes da prova real — SUPERADO na rodada 3
 
 > Registro histórico. O fato novo do orquestrador (acima, rodada 3) mostra que o 404 veio de
@@ -322,7 +422,10 @@ logo como a SPA manda (o `print` não gasta cotação) e ler o blob de volta.
    WAHA (conversa 5045) o envio é do app externo, a partir do `data_url` do webhook.
 2. Se o download ou a gravação falharem (portal 404, armazenamento fora), o cliente recebe o
    texto com o link (como hoje) e o log do worker mostra `[autonomia][tool][async] arquivo
-   indisponivel run=<id> motivo=<http_404|armazenamento causa=…|…>; vai como link`. Nenhum
+   indisponivel run=<id> motivo=<http_404|armazenamento causa=…|download causa=…|…>; vai como
+   link`. O blob do retry que não virou anexo é apagado pelo `ActiveStorage::PurgeJob` na fila
+   `default` do Sidekiq; se o Redis recusar o agendamento, o log mostra `blob sem dono nao agendado
+   run=<id> blob=<id> causa=<classe>` (limpeza manual pelo id) e a entrega não é afetada. Nenhum
    rollout, nenhuma migração, nenhuma variável nova. Pré-requisito que já vale hoje para o agente
    humano: o serviço do ActiveStorage do worker (`ACTIVE_STORAGE_SERVICE`) grava — é nele que o
    PDF entra, antes da mensagem.
@@ -339,6 +442,7 @@ uv run python3 mutacoes.py                                              # M1–M
 uv run python3 mutacoes_e11_r2.py                                       # rodada 2: M1–M8, todas reprovam, md5 restaurado
 uv run python3 e11r3/mutacoes_e11_r3.py                                 # rodada 3: R1–R7 + M1–M8, todas reprovam, md5 restaurado
 uv run python3 e11r4/mutacoes_e11_r4.py                                 # rodada 4: Q1–Q2 + R1–R7 + M1–M8, todas reprovam, md5 restaurado
+uv run python3 e11r5/mutacoes_e11_r5.py                                 # rodada 5: N1, N2, N2b, V2, V5 + as 17 anteriores, todas reprovam, md5 restaurado
 bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia --format json --out ampla.json
 npx tsx src/cli/main.ts agger quote proposal <id>  (×3, só print; nenhum quote start) + curl -I na URL → 404 BlobNotFound
 ```

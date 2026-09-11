@@ -127,13 +127,28 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
 
   # -> o `Tempfile` com o PDF (o que o `Down` baixou), aberto e rebobinado. Levanta `Indisponivel`
   # em qualquer falha: resposta que não é 200, redirecionamento, tamanho acima do teto (anunciado
-  # ou medido durante o download), tempo, tipo declarado que desmente, bytes sem a assinatura de
-  # PDF — e, na recusa, o arquivo temporário já baixado é fechado aqui, porque quem chama não o
-  # recebe. Quem recebe o `Tempfile` é quem o fecha.
+  # ou medido durante o download), tempo, o que a camada HTTP levantar, tipo declarado que
+  # desmente, bytes sem a assinatura de PDF — e, na recusa, o arquivo temporário já baixado é
+  # fechado aqui, porque quem chama não o recebe. Quem recebe o `Tempfile` é quem o fecha.
+  #
+  # A transferência e a conferência são dois métodos porque os rescues da transferência não podem
+  # alcançar a conferência: `conferir` levanta `Indisponivel` com o motivo dela (`nao_e_pdf`,
+  # `tipo_…`), e um `rescue StandardError` no mesmo corpo a reembrulharia como `download`.
   def baixar
-    tempfile = Down.download(url, max_size: TETO_BYTES, open_timeout: ABERTURA_SEGUNDOS,
-                                  read_timeout: LEITURA_SEGUNDOS, max_redirects: REDIRECIONAMENTOS)
-    conferir(tempfile)
+    conferir(transferir)
+  end
+
+  private
+
+  # -> o `Tempfile` cru, como o `Down` o baixou. O Down (5.4.0, `request_error!`) só dá classe sua
+  # a tempo, `SystemCallError`, `EOFError`/`IOError`/`SocketError` e SSL; o resto — uma resposta
+  # HTTP malformada (`Net::HTTPBadResponse`), `Net::WriteTimeout`, erro de `Zlib` — sobe cru. O
+  # contrato de `baixar` é "`Indisponivel` em qualquer falha", e sem o último rescue a exceção crua
+  # saía do publicador como `blocked`: o cliente sem arquivo NEM link (rodada 5, 11/09/2026). O
+  # motivo é `download` com a classe da causa — o mesmo padrão de `gravar` para o armazenamento.
+  def transferir
+    Down.download(url, max_size: TETO_BYTES, open_timeout: ABERTURA_SEGUNDOS,
+                       read_timeout: LEITURA_SEGUNDOS, max_redirects: REDIRECIONAMENTOS)
   rescue Down::TooLarge
     raise Indisponivel, 'tamanho'
   rescue Down::TimeoutError
@@ -144,9 +159,9 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     raise Indisponivel, "http_#{e.response&.code.to_s.gsub(/[^0-9]/, '').presence || 'erro'}"
   rescue Down::Error => e
     raise Indisponivel, e.class.name.demodulize.underscore
+  rescue StandardError => e
+    raise Indisponivel.new('download', causa: e.class.name)
   end
-
-  private
 
   # As duas conferências sobre o que já foi baixado. O `Tempfile` fica em disco até o GC se a
   # recusa sair sem fechá-lo: são até 10 MB por comparativo recusado, no worker.

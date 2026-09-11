@@ -89,5 +89,16 @@ RSpec.describe Autonomia::Agents::Tools::Progress do
 
       expect(described_class.done(deliveries: [suja]).deliveries).to be_empty
     end
+
+    # A RESERVA é texto de cliente tanto quanto a legenda: é o que ele lê quando o arquivo falha. A
+    # URL sai antes de olhar (a reserva legítima a carrega), e o caminho de campo que sobra reprova
+    # (rodada 5, 11/09/2026 — a regra existia; faltava a guarda sobre a reserva).
+    it 'descarta o arquivo cuja reserva levaria caminho de campo ao cliente' do
+      suja = Autonomia::Agents::Tools::EntregaDeArquivo.new(url: arquivo.url, nome: arquivo.nome,
+                                                            legenda: arquivo.legenda,
+                                                            reserva: "Faltou insured.document\n#{arquivo.url}")
+
+      expect(described_class.done(deliveries: [suja]).deliveries).to be_empty
+    end
   end
 end
