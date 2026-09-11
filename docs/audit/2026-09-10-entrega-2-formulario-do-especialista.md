@@ -134,3 +134,18 @@ Rodada 2 (`f0746414f2`): **APROVADO**, 2 P3 incorporados aqui e nos comentários
 de leitura POR TENTATIVA (até duas por atendimento sem schema), não do turno; e a exceção
 transitória acima. Frase de `consultar_placa` reescrita na forma que o Codex sugeriu (placa, CPF e
 CEP em mãos → cotar direto).
+
+## Produção (11/09/2026)
+
+- chat#379 squash `b25abe4424`; deploy blue-green concluído nas duas stacks às 00:46Z (Autonomia: alvo
+  `i-025e227311cbd56b3`, imagem `b25abe4424`, healthz 200).
+- Rollout de `consultar_placa` às 00:47Z (`~/ops/agente-cotacao/entrega-2/rollout-consultar-placa.sh`,
+  uma transação, abort por contagem; backup `/tmp/chat2you_tool_slugs_20260911T002637Z.txt`): especialista 1
+  `["consultar_placa","cotar_seguro"]`; agente 24 `["consultar_produtos_cotacao","consultar_condicoes_gerais",
+  "cotar_seguro","consultar_placa"]`. Healthz 200 depois.
+- Conexão 10 (conta 16): sem `quote_schemas` até a primeira montagem do formulário (a ferramenta busca e
+  guarda); conferir por psql depois do primeiro turno do especialista.
+- **Pendente (fatia D, autorização por rodada):** termo 8 (renovação com a apólice HDI, lida de volta por
+  `quote/read` — resolve #378) e termo 9 (moto NCD3080, caminhão IDX3056). Plano das rodadas em
+  `~/ops/agente-cotacao/entrega-2/rodadas-reais.md`. Nenhum turno de teste na conversa 5045 sem
+  autorização: o histórico tem CPF e CEP, e o manual manda cotar sem pedir licença.

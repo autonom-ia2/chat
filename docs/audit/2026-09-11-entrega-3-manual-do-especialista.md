@@ -65,7 +65,7 @@ Rodrigo decidir.
 | 2 | Verificação cruza toda ferramenta citada com as que existem | 24 promessas ancoradas por frase + "não cita ferramenta que não é dele" |
 | 3 | Nenhum valor de cobertura no texto | guardas `R$` e nome de pacote (lido do schema) |
 | 4 | Promessa falsa reintroduzida quebra a verificação | md5 do texto assinado na spec (mudou uma letra, reprova, e quem assina revisa `PROMESSAS`) + campo só conta se EXPOSTO ao modelo + mutações M3–M16 (`mutacoes_e3.py`) |
-| 5 | Agentes já criados recebem o texto novo; produção lida e idêntica | runtime lê o arquivo (spec + M1/M2); coluna do agente 24 atualizada no rollout; md5 conferido em produção — **pendente até o deploy** |
+| 5 | Agentes já criados recebem o texto novo; produção lida e idêntica | runtime lê o arquivo (spec + M1/M2); coluna do especialista 1 atualizada às 01:17Z; **produção lida: md5 `3eba319bca1e6159e950def73a2f91ab` = md5 do arquivo em `7260e4e317`** |
 | 6 | Agente criado do zero nasce com o mesmo texto | spec (Builder → coluna = arquivo = runtime) |
 
 ## Rollout (depois do deploy) — `~/ops/agente-cotacao/entrega-3/rollout-instrucao.sh`
@@ -107,3 +107,18 @@ terminava) → índice local; P2 `ssm | tee` sem `pipefail` escondia falha remot
 status do `ssm` exigido E `UPDATE 1`, `set -o pipefail`. P3: a spec do zero-km usava a instância do
 job na conferência → `tool_no_turno`. E o motivo pedia "o nome do carro" que a consulta interna não
 entregava → `@modelo_lido` entra no texto ao modelo ("o veículo (Onix 1.0)").
+
+Rodada 3 (`ccde424d21`): código APROVADO; P2 no backup do script (`psql | tr` remoto mascarava falha do
+psql — backup vazio passaria por válido) → status do psql remoto preservado, texto vazio aborta, rollback
+exige bytes > 0 e descrição. Rodada 4: **APROVADO**.
+
+## Produção (11/09/2026)
+
+- chat#381 squash `7260e4e317`; deploy concluído nas duas stacks às 01:16Z (Autonomia: alvo
+  `i-03e542d5c66949213`, imagem `7260e4e317`, healthz 200).
+- Rollout às 01:17Z (`rollout-instrucao.sh aplicar` com o arquivo extraído do blob de `7260e4e317`,
+  md5 `3eba319bca1e6159e950def73a2f91ab`, 17.511 bytes / 16.823 caracteres): `UPDATE 1`, `COMMIT`;
+  `conferir`: `md5(instruction) = 3eba319bca1e6159e950def73a2f91ab`, `description` = a do `Builder`. Backup
+  anterior `/tmp/chat2you_instrucao_especialista_20260911T00*.txt` (md5 `c5d6711f…`, 10.627 bytes) — rollback
+  = `rollout-instrucao.sh rollback <backup>`. Healthz 200 depois.
+- Termo 5 fechado pela comparação exata. Os 3 ajustes ao texto aprovado seguem para decisão do Rodrigo.
