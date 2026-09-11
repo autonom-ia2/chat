@@ -113,10 +113,10 @@ class Autonomia::Insurance::Medida
   #
   # A INVERSÃO SÓ EXISTE ENTRE DUAS DATAS PEDIDAS. Com o fim em aberto, o fim é "agora", e uma
   # abertura depois dele quer dizer que a data inicial ainda não chegou NESTE fuso — o que é recusa
-  # para quem pediu (`call`, `por_conta`) e janela vazia para a corretora cujo dia não começou
-  # (rodada 5). Levantar aqui, na construção, fazia a página do Super Admin cair inteira por causa de
-  # uma corretora em fuso atrás do da instalação, nas primeiras horas UTC do dia, culpando uma
-  # "final" que ninguém mandou.
+  # para quem pediu a medida de UMA conta (`call`, no fuso dela) e janela vazia para a corretora que
+  # `por_conta` enumera e cujo dia não começou (rodadas 5 e 6). Levantar aqui, na construção, fazia a
+  # página do Super Admin cair inteira por causa de uma corretora em fuso atrás do da instalação, nas
+  # primeiras horas UTC do dia, culpando uma "final" que ninguém mandou.
   def self.periodo(inicio:, fim:, fuso:)
     zona = ActiveSupport::TimeZone[fuso.to_s] || Time.zone
     final = data(zona, fim, 'fim')&.end_of_day
@@ -124,7 +124,15 @@ class Autonomia::Insurance::Medida
     recusar_inversao!(abertura, final)
 
     final ||= zona.now
-    [abertura || (final - DIAS_PADRAO.days).beginning_of_day, final]
+    [abertura || inicio_padrao(final), final]
+  end
+
+  # Os `DIAS_PADRAO` dias DE CALENDÁRIO que terminam em `final`, contando o dia dele: o início é
+  # `DIAS_PADRAO - 1` dias antes, à meia-noite. `final - DIAS_PADRAO.days` (rodadas 4 e 5) dava
+  # 31/05 para `fim=30/06` — trinta e uma datas com o nome de trinta, numa janela que vira fatura
+  # (rodada 6). Subtração de dias, não de horas: a troca de horário de verão não encurta o mês.
+  def self.inicio_padrao(final)
+    (final - (DIAS_PADRAO - 1).days).beginning_of_day
   end
 
   # Duas datas PEDIDAS, a primeira depois da segunda. Com qualquer uma em aberto não há inversão.
@@ -177,12 +185,16 @@ class Autonomia::Insurance::Medida
   # caía na fatura de outubro na tela que COBRA e em setembro na tela da corretora — dois números
   # para o mesmo mês, que é exatamente o que a página do Super Admin promete não fazer.
   #
-  # A data inicial no futuro é recusada AQUI, no fuso de quem pediu a lista — e só aqui. A corretora
-  # cujo dia ainda não começou (fuso atrás do da instalação, `from=hoje` sem `to` nas primeiras horas
-  # UTC) não é pedido inválido: é janela vazia para ela, e a linha dela é pulada como a de qualquer
-  # corretora sem execução no período (rodada 5).
+  # NADA AQUI É DECIDIDO PELO RELÓGIO DA INSTALAÇÃO. A janela desta instância (no fuso da instalação)
+  # serve só para ENUMERAR quem pode ter execução; "a data inicial ainda não chegou" é pergunta que só
+  # tem resposta no fuso de cada corretora, e é a `Medida.new(conta:)` dela quem responde. Para a
+  # corretora em UTC+14 o dia 12 já começou quando em UTC ainda é meio-dia do dia 11, e a cotação da
+  # 01h dela é dela: a API da conta responde 1/17 e esta lista tem de responder o mesmo. Recusar aqui
+  # pelo nosso relógio (rodada 5) escondia essa linha da fatura atrás de "a data inicial está no
+  # futuro" — o nosso valor no lugar do dela (rodada 6). A corretora cujo dia ainda não começou (fuso
+  # atrás do da instalação, `from=hoje` sem `to` nas primeiras horas UTC) lê janela vazia e é pulada
+  # como qualquer corretora sem execução; se forem todas, a lista é vazia, e é isso que a página diz.
   def por_conta
-    recusar_data_inicial_no_futuro!
     @por_conta ||= corretoras_com_execucao
                    .filter_map { |corretora| self.class.new(conta: corretora, **pedido).linha_da_conta }
                    .sort_by { |linha| [-linha[:seguradoras_acionadas], -linha[:cotacoes], linha[:conta_id]] }
@@ -207,10 +219,11 @@ class Autonomia::Insurance::Medida
   attr_reader :pedido
 
   # A JANELA COMEÇA DEPOIS DE TERMINAR só com `inicio` pedido e `fim` em aberto (o fim é "agora"): a
-  # data inicial ainda não chegou neste fuso. Para quem PEDIU a medida é recusa dita — e a frase culpa
-  # a data que foi escrita, não uma "final" que ninguém mandou. Para a corretora enumerada por
-  # `por_conta`, a mesma janela é só vazia: `created_at: inicio..fim` com o início depois do fim não
-  # casa linha nenhuma, e ela é pulada.
+  # data inicial ainda não chegou neste fuso. Para quem PEDIU a medida de UMA conta (`call`) é recusa
+  # dita, no fuso dessa conta — e a frase culpa a data que foi escrita, não uma "final" que ninguém
+  # mandou. Para a corretora enumerada por `por_conta`, a mesma janela é só vazia: `created_at:
+  # inicio..fim` com o início depois do fim não casa linha nenhuma, e ela é pulada. `por_conta` não
+  # chama isto: o relógio da instalação não decide o dia de ninguém (rodada 6).
   def recusar_data_inicial_no_futuro!
     raise PeriodoInvalido, 'a data inicial está no futuro' if inicio > fim
   end

@@ -48,8 +48,11 @@ Por isso `QuoteOffers#acionadas` conta TODAS as ofertas, em qualquer status.
   Chatwoot) quando ela configurou um; sem configuração, o da instalação. "Setembro" da corretora
   termina às 23h59 dela: ler pelo nosso fuso jogaria para outubro toda cotação feita depois das 21h
   de 30/09 em São Paulo — o nosso valor no lugar do dela, numa conta de dinheiro. O resultado sempre
-  devolve o fuso e os instantes exatos (a tela do Super Admin, que é cross-conta, usa o da instalação
-  e diz isso).
+  devolve o fuso e os instantes exatos. A tela do Super Admin, que é cross-conta, lê **cada corretora
+  no fuso dela** (`Medida#por_conta` monta uma `Medida.new(conta:)` por corretora — o mesmo caminho
+  do endpoint da conta, desde a rodada 4) e mostra o fuso na coluna de cada linha; o relógio da
+  instalação só serve para ENUMERAR quem pode ter execução, nunca para aceitar ou recusar a janela de
+  alguém (rodada 6). "Trinta dias" são trinta DATAS contando a final (rodada 6).
 - **Duas superfícies, uma fonte.** Super Admin → *Quote Measurement* (`/super_admin/insurance_measurement`)
   para a operação cobrar; `GET /api/v1/accounts/:id/autonomia/insurance/measurement` para a corretora
   ver o retorno. As duas leem a MESMA `Medida` — dois números diferentes para o mesmo mês, um na
@@ -241,6 +244,10 @@ pergunta, não a data. `linha_da_conta` não tem retorno antecipado para a janel
 com início depois do fim já não casa linha no banco, e uma segunda implementação da mesma regra
 seria linha que nenhuma mutação reprova.
 
+> **Superado na rodada 6 quanto a `por_conta`.** A recusa em `por_conta` era avaliada no fuso da
+> INSTALAÇÃO — e isso escondia da fatura a corretora cujo dia já tinha começado no fuso dela (P2 do
+> Codex). A recusa ficou só em `call`, no fuso da conta; MR3c abaixo está aposentada. Ver a rodada 6.
+
 ### Mutações da rodada 5 (6) — aplicadas, rodadas, restauradas e conferidas por hash
 
 | # | Mutação | Arquivo | Reprova |
@@ -249,8 +256,64 @@ seria linha que nenhuma mutação reprova.
 | MR2 | `FOLGA_DE_FUSO = 3.hours` (folga parcial) | `medida.rb` | 2 (serviço + Super Admin, fusos extremos) |
 | MR3 | `periodo` volta a levantar a inversão com o fim em aberto (a corretora derivada levanta em `por_conta`) | `medida.rb` | 5 (serviço 2, API 1, Super Admin 2) |
 | MR3b | `call` sem `recusar_data_inicial_no_futuro!` | `medida.rb` | 3 (serviço 2, API 1) |
-| MR3c | `por_conta` sem `recusar_data_inicial_no_futuro!` | `medida.rb` | "avisa quando a data inicial pedida ainda nao chegou" |
+| MR3c | `por_conta` sem `recusar_data_inicial_no_futuro!` | `medida.rb` | "avisa quando a data inicial pedida ainda nao chegou" — **aposentada na rodada 6**: afirmava o comportamento errado; o inverso dela é MC1 |
 | MR4 | `@linhas = @medida.por_conta.first(1)` no controller | `insurance_measurements_controller.rb` | 2 |
+
+## Rodada 6 — o relógio da instalação, trinta e uma datas e o nome simples (Codex)
+
+Três achados do Codex sobre `fb574cbcb4`, todos reais e reproduzidos antes de corrigir, mais uma
+ressalva sem código. O P2 é a classe da rodada 4 lida pelo lado oposto: a rodada 5 tirou a recusa da
+construção para a página não cair, mas a deixou em `por_conta` — avaliada no fuso da INSTALAÇÃO, que
+é exatamente o relógio que a lista prometia não usar. A primeira tentativa desta rodada caiu no meio
+(cota) e deixou edições não commitadas; foram lidas linha a linha antes de qualquer coisa: `medida.rb`
+e os quatro specs estavam certos contra as decisões e foram aproveitados, e o spec do detector ganhou
+dois refinamentos (ditos abaixo).
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P2** `medida.rb:185` — `por_conta` recusava "a data inicial está no futuro" pelo relógio da instalação ANTES de olhar qualquer corretora. Instalação UTC ao meio-dia de 11/09; corretora em Pacific/Kiritimati (UTC+14, já 02h de 12/09) com cotação à 01h local; `from=2026-09-12` sem `to`: a API da conta respondia 1/17 e a página respondia "no futuro", sem tabela — a linha sumia da FATURA | Na consulta cross-conta NÃO existe recusa pelo relógio da instalação: `por_conta` só enumera (janela da instalação + `FOLGA_DE_FUSO`) e cada `Medida.new(conta:)` avalia a janela no fuso DELA; a corretora cujo início ainda é futuro lê janela vazia e é pulada; todas puladas → lista vazia → "Nenhuma cotação no período". A API de UMA conta (`call`) mantém o 422 "a data inicial está no futuro", avaliado no fuso da conta | `medida_spec` "#por_conta le a corretora cujo dia ja comecou no fuso dela, mesmo que ainda nao tenha comecado no da instalacao" (a linha `eq` ao `call` da conta) e "devolve lista vazia, sem recusar, quando o dia nao comecou para nenhuma corretora"; `insurance_measurements_controller_spec` "le a corretora cujo dia ja comecou no fuso dela, e bate com a API da conta" (página 1/17 e API 1/17 no MESMO instante) e "mostra nenhuma cotação, sem aviso de periodo, quando o dia nao comecou para nenhuma corretora". O exemplo da rodada 5 "avisa quando a data inicial pedida ainda nao chegou" foi substituído: afirmava o comportamento errado | MC1 — voltar a recusar em `por_conta` reprova 4 (serviço 2, Super Admin 2); MR3b-r6 — `call` sem a recusa reprova 3 (o 422 da conta continua guardado) |
+| **P3** `medida.rb:127` — só `fim`: `final - 30.days` dava 31/05 00h → 30/06 23h59, trinta e uma datas com o nome de trinta; a cotação das 23h de 31/05 (de maio) entrava na fatura de junho. Sem `fim`, o mesmo a partir de hoje | `inicio_padrao(final) = (final - (DIAS_PADRAO - 1).days).beginning_of_day`: trinta dias DE CALENDÁRIO contando a data final. Subtração de dias, não de horas — o horário de verão não encurta o mês | `medida_spec` "usa os ultimos trinta dias quando ninguem pede janela" (travel_to 11/09 12h; 12/08 23h fora, 13/08 00h30 dentro; início = 13/08 00h) e "so fim: a janela padrao termina nele" (31/05 23h fora, 01/06 00h30 dentro; início = 01/06 00h); `measurement_spec` "so to: a janela padrao termina nele" (`from` = 01/06, `quotes` = 1) | MC2 — `- DIAS_PADRAO.days` reprova 3 (serviço 2, API 1) |
+| **P3** `medida_nao_e_freio_spec.rb:56` — a guarda AST só via `ConstantPathNode` terminado em `Insurance::Medida`; um serviço em `module Autonomia::Insurance` chamando `Medida.new(...).call` (`ConstantReadNode`) passava invisível — e é o lugar mais natural para um freio nascer, ao lado da medida | O detector percorre a árvore com o namespace LEXICAL (pilha imutável dos `module`/`class` que envolvem cada nó) e acusa: o caminho `…Insurance::Medida` em qualquer namespace, e o nome simples `Medida` quando o nó está em `Autonomia::Insurance` ou abaixo — inclusive na forma compacta `class Autonomia::Insurance::X`, em que o Ruby não resolveria o nome simples: dentro do namespace, acusar a mais custa um vermelho que se explica, deixar passar é o freio. `Medida` fora do namespace NÃO é acusada: guarda que grita à toa acaba desligada | `medida_nao_e_freio_spec` "o detector": "acusa cada forma de nomear a medida, nas duas arvores" — quatro arquivos TEMPORÁRIOS criados na árvore real (`app/` e `enterprise/app`): o nome simples em `module Autonomia::Insurance`, o nome simples em módulos aninhados, `::Autonomia::Insurance::Medida` e `Insurance::Medida`; cada um tem de ser o ÚNICO acusado além dos leitores; "nao acusa Medida de outro namespace"; "nao deixa o arquivo de prova nem as pastas dele para tras" (o caminho `enterprise/app/services/autonomia/insurance/freios/` não existe na árvore e o exemplo exige que as pastas novas saiam, com precondição de que elas sejam novas) | MC3 — sem o ramo `ConstantReadNode` reprova "acusa cada forma…"; MC3b — sem a checagem lexical (acusar `Medida` em qualquer namespace) reprova "nao acusa Medida de outro namespace" |
+
+Os dois refinamentos sobre o que a tentativa anterior deixou: (1) o comentário do detector dizia que
+o nome simples "só é a medida" no namespace lexical — a forma compacta é a exceção em que o Ruby não
+resolve e a guarda acusa mesmo assim; agora está dito; (2) o exemplo de limpeza usava a forma cujas
+pastas já existem e só conferia o arquivo — passou a usar a forma que cria três pastas novas e a exigir
+que nenhuma sobre (se a árvore um dia tiver as pastas, o exemplo reprova e tem de trocar de forma, em
+vez de passar vazio).
+
+### Ressalvas registradas (sem código)
+
+- **Custo da consulta cross-conta.** `corretoras_com_execucao` filtra `slug` + `created_at` (janela
+  alargada pela folga) SEM `account_id`. Os índices reais de `autonomia_agent_tool_runs` são
+  `(account_id, slug, created_at)`, `(conversation_id, created_at)`, `(conversation_id, slug)` parcial
+  e `(execution_key)`: nenhum começa por `slug` ou `created_at`, então a enumeração não restringe a
+  primeira coluna de índice nenhum — hoje é varredura (`Seq Scan` da tabela, ou `Index Only Scan` do
+  índice inteiro com filtro) numa tabela pequena. Depois dela, `por_conta` faz UMA agregação por
+  corretora com execução (essa casa o índice inteiro) e o controller lê as contas: N corretoras = N+2
+  consultas. Como observar quando houver volume: `EXPLAIN (ANALYZE, BUFFERS)` da consulta de
+  enumeração em produção e o tempo da página do Super Admin; se passar de segundos, o remédio é um
+  índice `(slug, created_at)` — a tabela cresce com TODA execução de ferramenta assíncrona, não só
+  cotação. Não é problema desta entrega, e índice não se cria sem medir.
+- **A linha "Período" da página no caso de borda.** Com `from` amanhã para a instalação e hoje para
+  uma corretora em UTC+14, a página mostra as linhas certas e, acima delas, "Período: 12 de setembro
+  até 11 de setembro" — os instantes da instância da instalação, que servem à enumeração e não à
+  leitura. Não é número errado (a coluna Fuso diz de quem é cada linha), mas é texto que confunde
+  nesse instante. Fica para decisão: mostrar as datas PEDIDAS (`from`/`to`, "até hoje" quando em
+  aberto) em vez das calculadas. View e controller do Super Admin não foram tocados nesta rodada.
+
+### Mutações da rodada 6 (5) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MC1 | `por_conta` volta a chamar `recusar_data_inicial_no_futuro!` (relógio da instalação) | `medida.rb` | 4 (serviço 2, Super Admin 2) |
+| MC2 | `inicio_padrao` com `- DIAS_PADRAO.days` (31 datas) | `medida.rb` | 3 (serviço 2, API 1) |
+| MC3 | detector sem o ramo `ConstantReadNode` | `medida_nao_e_freio_spec.rb` | "acusa cada forma de nomear a medida, nas duas arvores" |
+| MC3b | detector sem a checagem lexical (`Medida` em qualquer namespace) | `medida_nao_e_freio_spec.rb` | "nao acusa Medida de outro namespace" |
+| MR3b-r6 | `call` sem `recusar_data_inicial_no_futuro!` | `medida.rb` | 3 (serviço 2, API 1) — o 422 da conta continua guardado |
+
+MR3c da rodada 5 (`por_conta` sem a recusa) está **aposentada**: era a afirmação do comportamento
+errado. O inverso dela é MC1.
 
 ## Comandos rodados
 
@@ -279,6 +342,14 @@ uv run python3 mutacoes_r4.py                                       # MX1–MX11
 # rodada 5
 bundle exec rspec <4 specs do trilho> --format json --out alvo.json # 62 exemplos, 0 falhas
 uv run python3 mutacoes_r5.py                                       # MR1–MR4 (6), todas reprovam e restauram
+# rodada 6
+bundle exec rspec <4 specs do trilho> --format json --out alvo.json # 68 exemplos, 0 falhas
+bundle exec rubocop --format json --out rubocop.json <5 arquivos tocados>   # 0 ofensas
+uv run python3 mutacoes_r6.py                                       # MC1, MC2, MC3, MC3b, MR3b-r6 — todas reprovam e restauram por hash
+bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  spec/requests/api/v1/accounts/autonomia \
+  spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
+  --format json --out ampla.json                                    # 1092 exemplos, 0 falhas, 3 pendentes pré-existentes (Provisioner de registro/SSO, fora do trilho)
 ```
 
 ## Arquivos
@@ -313,3 +384,10 @@ em `call` e `por_conta`), `insurance_measurements_controller_spec.rb` (duas corr
 dia que não começou, data inicial no futuro), `medida_spec.rb`, `measurement_spec.rb`,
 `docs/insurance/README.md`. Nenhum arquivo de instrução, `MOTIVOS`, schema de função ou adapter;
 controller e view do Super Admin intocados.
+
+Rodada 6: `medida.rb` (`inicio_padrao`, `por_conta` sem a recusa pelo relógio da instalação,
+comentários), `medida_nao_e_freio_spec.rb` (detector com namespace lexical, arquivos de prova nas
+duas árvores), `medida_spec.rb`, `measurement_spec.rb`, `insurance_measurements_controller_spec.rb`,
+`docs/insurance/README.md` (a página não recusa pelo relógio da instalação; trinta datas). Nenhum
+arquivo de instrução, `MOTIVOS`, schema de função ou adapter; controller e view do Super Admin
+intocados.

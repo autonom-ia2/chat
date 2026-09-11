@@ -182,7 +182,12 @@ dela** pelo mesmo caminho (`Medida#por_conta` monta uma `Medida.new(conta:)` por
 fuso na coluna de cada linha: é o que faz a fatura e a tela da corretora baterem no último dia do mês.
 A corretora cujo dia ainda não começou no fuso dela (só `from`, nas primeiras horas UTC, fuso atrás
 do da instalação) simplesmente não aparece na página nesse instante — é "nenhuma execução" para ela,
-não erro da página inteira.
+não erro da página inteira. E o relógio da instalação não decide o dia de ninguém nessa tela:
+`from=amanhã` para a instalação já é hoje para a corretora em UTC+14, e a cotação dela aparece na
+página com o mesmo 1/17 que a API da conta responde; se o dia não começou para nenhuma corretora, a
+página diz "nenhuma cotação no período", não "período inválido". Só a API de UMA conta recusa data
+inicial no futuro — no fuso dessa conta. Sem `from`, "30 dias" são trinta DATAS contando a final:
+`to=2026-06-30` começa em 01/06, e a cotação das 23h de 31/05 é de maio.
 
 ### `quotes_with_proposal` é zero, e o contador é real
 

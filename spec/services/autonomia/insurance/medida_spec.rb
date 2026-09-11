@@ -179,22 +179,47 @@ RSpec.describe Autonomia::Insurance::Medida do
         .to raise_error(described_class::PeriodoInvalido, /futuro/)
     end
 
+    # "OS ÚLTIMOS TRINTA DIAS" SÃO TRINTA DATAS, contando hoje: de 13/08 a 11/09. `agora - 30 dias`
+    # (rodadas 4 e 5) começava em 12/08 — trinta e uma datas com o nome de trinta, numa janela que
+    # vira fatura (rodada 6). A cotação das 23h de 12/08 fica de fora; a das 00h30 de 13/08 entra.
     it 'usa os ultimos trinta dias quando ninguem pede janela' do
-      resultado = medida
+      # Arrange
+      travel_to Time.zone.parse('2026-09-11 12:00') do
+        run!(handle: { 'quote_id' => 'vespera', 'seguradoras_acionadas' => dezessete },
+             criada_em: Time.zone.parse('2026-08-12 23:00'))
+        run!(handle: { 'quote_id' => 'primeiro-dia', 'seguradoras_acionadas' => dezessete },
+             criada_em: Time.zone.parse('2026-08-13 00:30'))
 
-      expect(resultado[:fim]).to be_within(1.minute).of(Time.current)
-      expect(resultado[:inicio]).to be_within(1.minute).of(described_class::DIAS_PADRAO.days.ago.beginning_of_day)
+        # Act
+        resultado = medida
+
+        # Assert — a janela começa à meia-noite de 13/08 e termina agora; só a de 13/08 entra.
+        expect(resultado[:fim]).to eq(Time.current)
+        expect(resultado[:inicio]).to eq(Time.zone.parse('2026-08-13').beginning_of_day)
+        expect(resultado[:cotacoes]).to eq(1)
+      end
     end
 
     # SÓ O FIM: a janela padrão TERMINA nele. Ancorar o início em hoje quando só o fim foi pedido
     # (rodada 4) recusava `fim=2026-06-30` como "data inicial posterior à final" — culpando um dado
     # que o operador não escreveu, com o nosso valor no lugar do dele.
+    #
+    # E SÃO TRINTA DATAS CONTANDO O FIM: `fim=30/06` começa em 01/06. `fim - 30 dias` (rodadas 4 e 5)
+    # começava em 31/05 — e a cotação das 23h de 31/05, que é de maio, entrava na fatura de junho.
     it 'so fim: a janela padrao termina nele' do
+      # Arrange — uma às 23h de 31/05 (fora), uma às 00h30 de 01/06 (dentro).
+      run!(handle: { 'quote_id' => 'maio', 'seguradoras_acionadas' => dezessete },
+           criada_em: Time.zone.parse('2026-05-31 23:00'))
+      run!(handle: { 'quote_id' => 'junho', 'seguradoras_acionadas' => dezessete },
+           criada_em: Time.zone.parse('2026-06-01 00:30'))
+
+      # Act
       resultado = medida(fim: '2026-06-30')
 
+      # Assert
       expect(resultado[:fim]).to eq(Time.zone.parse('2026-06-30').end_of_day)
-      expect(resultado[:inicio]).to eq(Time.zone.parse('2026-06-30').end_of_day.advance(days: -described_class::DIAS_PADRAO)
-                                                                       .beginning_of_day)
+      expect(resultado[:inicio]).to eq(Time.zone.parse('2026-06-01').beginning_of_day)
+      expect(resultado[:cotacoes]).to eq(1)
     end
 
     # SÓ DATA. `Date.iso8601` aceitava data-hora e descartava a hora: quem pedia "a partir das 10h"
@@ -358,6 +383,42 @@ RSpec.describe Autonomia::Insurance::Medida do
           .to eq([[outra_conta.id, 1, 17]])
         expect { medida(conta: account, inicio: '2026-09-11', fim: nil) }
           .to raise_error(described_class::PeriodoInvalido, /futuro/)
+      end
+    end
+
+    # O RELÓGIO DA INSTALAÇÃO NÃO DECIDE O DIA DE NINGUÉM. Meio-dia UTC de 11/09; em Kiritimati
+    # (UTC+14) já são 02h de 12/09, e a corretora de lá cotou à 01h. `from=2026-09-12` sem `to`: a
+    # API da conta dela responde 1/17. Até a rodada 5 a lista recusava ANTES de olhar qualquer
+    # corretora, porque para o nosso relógio 12/09 "ainda não chegou" — e a fatura escondia a linha
+    # dela atrás de "a data inicial está no futuro" (rodada 6, P2 do Codex).
+    it 'le a corretora cujo dia ja comecou no fuso dela, mesmo que ainda nao tenha comecado no da instalacao' do
+      # Arrange
+      account.update!(reporting_timezone: 'Pacific/Kiritimati')
+      travel_to Time.utc(2026, 9, 11, 12, 0) do
+        run!(handle: { 'quote_id' => 'kiritimati', 'seguradoras_acionadas' => dezessete },
+             criada_em: ActiveSupport::TimeZone['Pacific/Kiritimati'].parse('2026-09-12 01:00'))
+        janela = { inicio: '2026-09-12', fim: nil }
+
+        # Act
+        linhas = described_class.new(**janela).por_conta
+
+        # Assert — a linha dela está na lista, e é a medida da própria conta.
+        expect(linhas.map { |linha| linha.values_at(:conta_id, :fuso, :cotacoes, :seguradoras_acionadas) })
+          .to eq([[account.id, 'Pacific/Kiritimati', 1, 17]])
+        expect(linhas).to eq([medida(conta: account, **janela)])
+      end
+    end
+
+    # Quando o dia não começou para NENHUMA corretora, a lista é vazia — não é recusa. "Nenhuma
+    # cotação no período" é a verdade; "a data inicial está no futuro" seria o nosso relógio falando
+    # por todas.
+    it 'devolve lista vazia, sem recusar, quando o dia nao comecou para nenhuma corretora' do
+      account.update!(reporting_timezone: 'Pacific/Kiritimati')
+      travel_to Time.utc(2026, 9, 11, 12, 0) do
+        run!(handle: { 'quote_id' => 'kiritimati', 'seguradoras_acionadas' => dezessete },
+             criada_em: ActiveSupport::TimeZone['Pacific/Kiritimati'].parse('2026-09-12 01:00'))
+
+        expect(described_class.new(inicio: '2026-09-13', fim: nil).por_conta).to be_empty
       end
     end
 

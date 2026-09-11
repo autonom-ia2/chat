@@ -166,13 +166,25 @@ RSpec.describe 'Autonomia Insurance Measurement API', type: :request do
 
     # SÓ `to`: a janela padrão termina nele. Até a rodada 4 o início padrão era ancorado em HOJE e um
     # `to` no passado voltava 422 culpando "a data inicial" — que ninguém tinha mandado.
+    #
+    # E SÃO TRINTA DATAS CONTANDO O `to`: `to=30/06` começa em 01/06. `to - 30 dias` (rodadas 4 e 5)
+    # começava em 31/05, e a cotação das 23h de 31/05 — de maio — entrava no número de junho (rodada 6).
     it 'so to: a janela padrao termina nele' do
+      # Arrange — uma às 23h de 31/05 (fora), uma às 00h30 de 01/06 (dentro).
+      cotacao!(handle: { 'quote_id' => 'maio', 'seguradoras_acionadas' => dezessete },
+               criada_em: Time.zone.parse('2026-05-31 23:00'))
+      cotacao!(handle: { 'quote_id' => 'junho', 'seguradoras_acionadas' => dezessete },
+               criada_em: Time.zone.parse('2026-06-01 00:30'))
+
+      # Act
       get "#{base}?to=2026-06-30", headers: admin.create_new_auth_token, as: :json
 
+      # Assert
       payload = response.parsed_body['payload']
       expect(response).to have_http_status(:ok)
       expect(payload['to']).to eq(Time.zone.parse('2026-06-30').end_of_day.iso8601)
-      expect(payload['from']).to eq(Time.zone.parse('2026-05-31').beginning_of_day.iso8601)
+      expect(payload['from']).to eq(Time.zone.parse('2026-06-01').beginning_of_day.iso8601)
+      expect(payload['quotes']).to eq(1)
     end
 
     # Isolamento de conta: a cotação da corretora vizinha não entra no número desta.

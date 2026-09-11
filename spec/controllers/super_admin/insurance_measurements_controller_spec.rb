@@ -208,17 +208,52 @@ RSpec.describe 'Super Admin Insurance Measurement', type: :request do
       end
     end
 
-    # Quando é a PÁGINA que pede uma data inicial que ainda não chegou (no fuso da instalação), aí sim
-    # é recusa — e a frase culpa a data escrita, não uma final que ninguém mandou.
-    it 'avisa quando a data inicial pedida ainda nao chegou' do
-      cotacao!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete })
+    # O RELÓGIO DA INSTALAÇÃO NÃO DECIDE O DIA DE NINGUÉM. Meio-dia UTC de 11/09; em Kiritimati
+    # (UTC+14) já são 02h de 12/09, e a corretora de lá cotou à 01h. `from=2026-09-12` sem `to`: a
+    # API da conta dela responde 1/17, e a página que FATURA tem de responder o mesmo. Até a rodada 5
+    # a página recusava antes de olhar qualquer corretora — "a data inicial está no futuro", pelo
+    # nosso relógio — e a linha dela sumia da fatura (rodada 6, P2 do Codex). O exemplo lê as DUAS
+    # superfícies e exige que batam.
+    it 'le a corretora cujo dia ja comecou no fuso dela, e bate com a API da conta' do
+      # Arrange
+      account.update!(reporting_timezone: 'Pacific/Kiritimati')
+      travel_to Time.utc(2026, 9, 11, 12, 0) do
+        cotacao!(handle: { 'quote_id' => 'kiritimati', 'seguradoras_acionadas' => dezessete },
+                 criada_em: ActiveSupport::TimeZone['Pacific/Kiritimati'].parse('2026-09-12 01:00'))
+        janela = { from: '2026-09-12' }
 
-      travel_to Time.utc(2026, 9, 11, 1, 0) do
-        get '/super_admin/insurance_measurement', params: { from: '2026-09-12' }
+        # Act — a página que cobra e, no mesmo instante, a porta da corretora.
+        get '/super_admin/insurance_measurement', params: janela
+        expect(response.body).not_to include('Período inválido')
+        expect(response.body).to include('Pacific/Kiritimati')
+        pagina = celulas_numericas.first(2)
+
+        enable_feature!
+        get "/api/v1/accounts/#{account.id}/autonomia/insurance/measurement", params: janela,
+                                                                              headers: admin.create_new_auth_token, as: :json
+        payload = response.parsed_body['payload']
+
+        # Assert — o dia 12 dela já começou nas duas: uma cotação, dezessete seguradoras.
+        expect(pagina).to eq(%w[1 17])
+        expect(payload.values_at('quotes', 'insurers_called')).to eq([1, 17])
       end
+    end
 
-      expect(response.body).to include('Período inválido — a data inicial está no futuro')
-      expect(response.body).not_to include('>17<')
+    # Quando o dia não começou para NENHUMA corretora, a página diz "nenhuma cotação no período" —
+    # que é a verdade — e não "período inválido" pelo nosso relógio.
+    it 'mostra nenhuma cotação, sem aviso de periodo, quando o dia nao comecou para nenhuma corretora' do
+      account.update!(reporting_timezone: 'Pacific/Kiritimati')
+      travel_to Time.utc(2026, 9, 11, 12, 0) do
+        cotacao!(handle: { 'quote_id' => 'kiritimati', 'seguradoras_acionadas' => dezessete },
+                 criada_em: ActiveSupport::TimeZone['Pacific/Kiritimati'].parse('2026-09-12 01:00'))
+
+        get '/super_admin/insurance_measurement', params: { from: '2026-09-13' }
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).not_to include('Período inválido')
+        expect(response.body).to include('Nenhuma cotação no período')
+        expect(response.body).not_to include('>17<')
+      end
     end
 
     it 'nao inventa linha para corretora sem cotação' do
