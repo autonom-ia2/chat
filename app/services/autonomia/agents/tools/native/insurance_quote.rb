@@ -45,6 +45,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # (conversa encerrada, erro transitório do publisher) avançava o handle com os códigos das ofertas
   # mesmo assim — e o aviso, que vale por sair UMA vez, não sairia nunca mais.
   AVISO_SENT_KEY = 'aviso_sem_bonus_enviado'.freeze
+  # Por seguradora, POR QUE o preço saiu sem período (entrega 13, termo 1): o motivo do adapter, que
+  # nomeia o campo do portal que faltou ou veio ambíguo. Fica no handle da execução, consultável
+  # depois em `autonomia_agent_tool_runs.handle->'preco_sem_periodo'`, sem reabrir a cotação.
+  SEM_PERIODO_KEY = 'preco_sem_periodo'.freeze
   # Sai UMA vez, junto do primeiro preço, e só em renovação de auto sem classe de bônus. Não promete
   # desconto nem percentual: o quanto o bônus abate é decisão de cada seguradora, e prometer número
   # aqui vira preço que a emissão desmente. Diz o que é verdade — existe preço melhor, e ele depende
@@ -209,7 +213,17 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     texto = ::Autonomia::Insurance::QuoteOffers.describe(
       fresh, first: already.empty?, aviso: avisar ? AVISO_SEM_BONUS : nil
     )
+    handle = registrar_sem_periodo(fresh, handle)
     [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
+  end
+
+  # O registro ACUMULA entre lotes (o lote 2 não pode apagar o motivo do lote 1) e só escreve a
+  # chave quando há o que registrar. `fresh` já é a lista de quem cotou.
+  def registrar_sem_periodo(fresh, handle)
+    motivos = ::Autonomia::Insurance::QuoteOffers.new('offers' => fresh).sem_periodo
+    return handle if motivos.empty?
+
+    handle.merge(SEM_PERIODO_KEY => handle[SEM_PERIODO_KEY].to_h.merge(motivos))
   end
 
   def finished?(result)

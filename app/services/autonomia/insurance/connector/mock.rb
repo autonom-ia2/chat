@@ -165,13 +165,30 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     return ['running', []] if elapsed < PARTIAL_AFTER
     return ['partial', [offer('8', 'Porto Seguro', 1200.5), offer('3', 'Mapfre', 1340.0)]] if elapsed < COMPLETE_AFTER
 
-    ['completed', [offer('8', 'Porto Seguro', 1200.5), offer('3', 'Mapfre', 1340.0), offer('47', 'Justos', 1098.9)]]
+    ['completed', [offer('8', 'Porto Seguro', 1200.5), offer('3', 'Mapfre', 1340.0), OFERTA_SEM_PERIODO]]
   end
 
+  # O prêmio sai como o adapter o devolve (critério 5.5): `basis` e `basis_evidence` já em
+  # snake_case, como o `Http` entrega depois de traduzir as chaves. Sem eles o mock fazia toda
+  # oferta sair com a ressalva de valor sem período.
   def offer(code, name, amount)
     { 'insurer' => { 'code' => code, 'name' => name, 'enabled' => true, 'integrationStatus' => 'ready' },
-      'status' => 'quoted', 'premium' => { 'amount' => amount, 'currency' => 'BRL' } }
+      'status' => 'quoted',
+      'premium' => { 'amount' => amount, 'currency' => 'BRL', 'basis' => 'total',
+                     'basis_evidence' => "mock: parcelas=1 x premioDemaisParc=#{amount} fecha com premio=#{amount}" } }
   end
+
+  # A oferta sem período, COMO ELA É NA VIDA REAL: a Bp Assinatura da renovação de 11/09/2026 veio
+  # com `parcelamentos: []` e `premioMensal` = premio/12, e o adapter não tem como dizer o período.
+  # É a que deixa visível, em desenvolvimento, a ressalva colada na oferta e a ordem no lote
+  # (entrega 13).
+  OFERTA_SEM_PERIODO = {
+    'insurer' => { 'code' => '55', 'name' => 'Bp Assinatura', 'enabled' => true, 'integrationStatus' => 'ready' },
+    'status' => 'quoted',
+    'premium' => { 'amount' => 351.59, 'currency' => 'BRL', 'basis' => 'unknown',
+                   'basis_evidence' => 'parcelamentos=[] (vazio): o portal nao ofereceu plano de pagamento; ' \
+                                       'premioMensal=29.30 e premio/12 (derivado pelo portal, nao distingue periodo)' }
+  }.freeze
 
   # Auto sem placa não cota: o portal precisa dela ou do código FIPE para saber qual é o veículo.
   def sem_placa?(product, input)

@@ -54,7 +54,9 @@ RSpec.describe 'Autonomia::Insurance::Connector quote' do
       # Assert
       expect(result['status']).to eq('partial')
       expect(result['offers'].map { |offer| offer['insurer']['name'] }).to eq(['Porto Seguro', 'Mapfre'])
-      expect(result['offers'].first['premium']).to eq('amount' => 1200.5, 'currency' => 'BRL')
+      # O mock devolve o que o adapter devolve (critério 5.5): base e motivo, nunca só o número.
+      expect(result['offers'].first['premium']).to include('amount' => 1200.5, 'currency' => 'BRL', 'basis' => 'total')
+      expect(result['offers'].first['premium']['basis_evidence']).to be_present
     end
 
     it 'completes with every insurer once the slow one lands' do
@@ -69,6 +71,11 @@ RSpec.describe 'Autonomia::Insurance::Connector quote' do
       # Assert
       expect(result['status']).to eq('completed')
       expect(result['offers'].size).to eq(3)
+      # UMA oferta do mock sai sem período, com o motivo real da Bp Assinatura (11/09/2026): é o que
+      # deixa o caminho da ressalva e da ordenação visível em desenvolvimento.
+      sem_periodo = result['offers'].select { |o| o['premium']['basis'] == 'unknown' }
+      expect(sem_periodo.map { |o| o['insurer']['name'] }).to eq(['Bp Assinatura'])
+      expect(sem_periodo.first['premium']['basis_evidence']).to include('parcelamentos=[]')
     end
 
     it 'hands back a proposal url' do

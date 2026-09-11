@@ -30,11 +30,40 @@ class Autonomia::Insurance::QuoteOffers
     @result = result.to_h
   end
 
-  # SÓ quem cotou, da mais barata para a mais cara. Todas.
+  # SÓ quem cotou. Todas. Da mais barata para a mais cara ENTRE AS QUE TÊM PERÍODO; as sem período
+  # vêm depois, na ordem em que o portal as devolveu.
+  #
+  # ENTREGA 13, termo 5: preço de período desconhecido não se ordena pelo número cru. A Bp Assinatura
+  # (351,59, sem parcelamento no payload) abria a lista na frente da Porto (1.321,25 no total) como
+  # se fosse a mais barata — e se 351,59 for mensalidade, é a mais cara. Não há como normalizar o que
+  # não tem período; então ele não entra na comparação, e a ressalva colada na oferta diz por quê.
+  #
+  # UM PREDICADO SÓ para "tem período": o mesmo `PremiumText#indefinido?` que dispara a ressalva no
+  # texto e o registro no handle. Havia dois critérios em dois lugares (`basis == 'total'` aqui,
+  # `!total?` lá) sem nada que os prendesse; bastava um `basis` nil (conector que não seja o Http do
+  # AGGER, payload sem `basis`) e a oferta era ordenada entre os totais pelo número cru enquanto o
+  # cliente lia a ressalva e o handle a registrava como sem período — a lista e a frase discordando
+  # sobre a mesma oferta.
   def quoted
-    @quoted ||= Array(@result['offers'])
+    @quoted ||= begin
+      cotadas = Array(@result['offers'])
                 .select { |offer| offer['status'] == 'quoted' && offer.dig('premium', 'amount').present? }
-                .sort_by { |offer| offer.dig('premium', 'amount').to_f }
+      sem_periodo, com_periodo = cotadas.partition { |offer| self.class.sem_periodo?(offer) }
+      com_periodo.sort_by { |offer| offer.dig('premium', 'amount').to_f } + sem_periodo
+    end
+  end
+
+  def self.sem_periodo?(offer)
+    ::Autonomia::Insurance::PremiumText.new(offer['premium']).indefinido?
+  end
+
+  # -> { codigo da seguradora => motivo }. ENTREGA 13, termo 1: quando não sabemos o período, o
+  # motivo fica registrado por oferta e diz qual campo do portal faltou ou veio ambíguo. É o
+  # `basis_evidence` do adapter, sem tradução — traduzir seria pôr palavra nossa no lugar do dado.
+  def sem_periodo
+    quoted.select { |offer| self.class.sem_periodo?(offer) }.each_with_object({}) do |offer, motivos|
+      motivos[self.class.code(offer)] = ::Autonomia::Insurance::PremiumText.new(offer['premium']).motivo
+    end
   end
 
   # Seguradoras que recusaram a credencial que a corretora cadastrou NO PORTAL (critério 4.5).
