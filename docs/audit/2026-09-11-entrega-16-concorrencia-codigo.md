@@ -217,8 +217,9 @@ estava exatamente nesta linha. Reconectar entra no MESMO `Connections::Sync`, qu
 `with_fresh_session`: com a sessão guardada válida, `open!` não roda, e
 `esquecer_aviso_de_conta_em_uso!` só é chamado no fim de `open!`, depois de um `store_session!`
 bem-sucedido. A chave velha some na próxima ABERTURA EFETIVA E BEM-SUCEDIDA da sessão — quando a
-guardada vence, quando o portal recusa a guardada (`renew!`) ou quando a credencial muda —, não no
-clique.
+guardada vence ou quando o portal recusa a guardada (`renew!`) —, não no clique. Trocar a
+credencial pela tela também não limpa por si: o `create` entra no mesmo `Sync`, que reutiliza a
+sessão válida sem passar por `open!` (Codex, rodada 6).
 
 Isso é inofensivo, e é por isso que não há migration: **nada mais lê a chave** — ela saiu de
 `diagnostico_publico`, do contrato do frontend e da aba —, e `connection_spec.rb` guarda exatamente
