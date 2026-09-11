@@ -178,7 +178,11 @@ pré-squash do #52). `quote_schemas` da conexão 10 apagado (backup) e rebuscado
 Porto R$ 430,75), 15 recusas; `quote read`: `tipo=m, associado=false, periodoUso="0"`. **Termo 9
 (moto) fechado.** Issue chat#383: o schema guardado nunca se renova sozinho. Prova: `rodada-B.md`.
 
-**Rodada C — caminhão IDX3056: PENDENTE por indisponibilidade da OpenAI.** Três tentativas
-(08:05Z, 08:14Z, 08:24Z) morreram em `503 server_is_overloaded` antes de qualquer resposta — quatro
-503 em 18 min, "Partial System Degradation" no status da OpenAI. Nenhuma cotação gasta. Issue
-chat#384: o turno morre em silêncio, sem retry/backoff nem aviso ao cliente. Prova: `rodada-C.md`.
+**Rodada C — caminhão IDX3056: VERDE, depois de três turnos mudos por 503 da OpenAI** (08:05Z,
+08:14Z, 08:24Z: `503 server_is_overloaded` antes de qualquer resposta — nenhuma cotação gasta; issue
+chat#384: o turno morre em silêncio, sem retry/backoff nem aviso). Na quarta tentativa (08:39Z) **a
+trava nova agiu em produção**: a conferência recusou `faltam_dados: truck.predominantPeriod` sem gastar
+e a Lia perguntou os dados do caminhão; com "baú, carga mista, município e arredores, roda de dia",
+execução 10 com `vehicleType=c`, `usageType=7`, `truck.bodyType=2`, `cargoType=6`, `circulationArea=1`,
+`predominantPeriod=1`; cotação `4c278fcf-…:1`; Suhai R$ 1.933,45; PDF + fecho parcial no prazo.
+**Termo 9 (caminhão) fechado — entrega 2 com 10/10 termos.** Prova: `rodada-C.md`.
