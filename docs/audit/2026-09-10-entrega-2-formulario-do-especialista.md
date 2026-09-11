@@ -55,7 +55,9 @@ Nada de auto é digitado no chat2you — nem nome de campo, nem código, nem pad
   produto não apaga o outro, e a varredura não apaga o que o polling gravou enquanto ela esperava
   o adapter). Conexão sincronizada antes desta versão: a ferramenta busca e guarda na primeira
   montagem; sem schema mesmo assim, a ferramenta recusa auto por `formulario_indisponivel` (turno
-  e envio) — indisponibilidade nossa não vira "peça a placa ao cliente".
+  e envio) — indisponibilidade nossa não vira "peça a placa ao cliente". Exceção transitória: schema
+  ausente na montagem e presente na conferência (recuperado entre as duas) → `sem_veiculo` uma vez,
+  porque os argumentos vieram sem o bloco; a montagem seguinte já o tem.
 - `QuoteInput#de_auto`: os sete grupos vão como vieram (`nil`/vazio saem; `false`/`0` ficam);
   `cpf`/`nome`/`cep`/`numero` continuam como atalho, e o bloco vence quando os dois vêm.
   `AutoRenewal` lê `quotation` (só para o aviso de renovação sem bônus).
@@ -127,3 +129,8 @@ Nada de auto é digitado no chat2you — nem nome de campo, nem código, nem pad
 5. **Rollout**: a auditoria previa só `tool_slugs`; `Registry.for_agent` exige o slug também em
    `native_tool_slugs` do agente. Seção "O que fica de fora" corrigida (dois lugares, uma transação,
    reserva primeiro).
+
+Rodada 2 (`f0746414f2`): **APROVADO**, 2 P3 incorporados aqui e nos comentários — o teto de 10 s é
+de leitura POR TENTATIVA (até duas por atendimento sem schema), não do turno; e a exceção
+transitória acima. Frase de `consultar_placa` reescrita na forma que o Codex sugeriu (placa, CPF e
+CEP em mãos → cotar direto).

@@ -121,8 +121,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
 
     # O schema guardado na conexão ou, faltando, o que o adapter responder AGORA — e fica guardado.
     # Conexão sincronizada antes desta versão não tem o schema: sem isto o formulário ficaria sem
-    # auto até a próxima sincronização. Adapter mudo é nil, e a próxima montagem tenta de novo: a
-    # busca custa o teto da conferência (10 s) e só acontece enquanto não há schema guardado.
+    # auto até a próxima sincronização. Adapter mudo é nil, e a próxima montagem tenta de novo. O
+    # custo é de 10 s de LEITURA por tentativa (`CONFERENCIA_TIMEOUT`, sem contar conexão e lock), e
+    # num mesmo atendimento sem schema há até duas: na montagem do formulário e na conferência
+    # (`Veiculo#sem_formulario?`). Só enquanto não há schema guardado.
     def schema_da_conexao(connection)
       connection.quote_schema(self::AUTO) || buscar_e_guardar_schema(connection)
     rescue StandardError => e

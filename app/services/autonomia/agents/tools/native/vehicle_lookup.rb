@@ -33,9 +33,10 @@ class Autonomia::Agents::Tools::Native::VehicleLookup < Autonomia::Agents::Tools
 
     def description
       'Consulta gratuita da placa no portal da corretora: devolve o modelo, o ano e o TIPO do ' \
-        'veículo (carro, moto ou caminhão). Use quando o cliente informou a placa e AINDA FALTAM ' \
-        'dados para cotar: confirme o veículo com ele pelo nome e pergunte o resto já sabendo o ' \
-        'tipo. Com tudo em mãos, chame cotar_seguro direto — ela consulta a placa sozinha.'
+        'veículo (carro, moto ou caminhão). Use enquanto ainda está coletando os dados da ' \
+        'cotação: confirme o veículo com o cliente pelo nome e pergunte o resto já sabendo o ' \
+        'tipo. Se já tem placa, CPF e CEP, chame cotar_seguro direto com o que sabe — ela ' \
+        'consulta a placa sozinha e devolve o que ainda faltar.'
     end
 
     def params
