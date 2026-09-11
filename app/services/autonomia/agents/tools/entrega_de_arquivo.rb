@@ -30,19 +30,22 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # lock da conversa.
   TETO_BYTES = 10.megabytes
   # PRAZO DO CORPO COM TETO POR LEITURA (`total_timeout:` do `SafeFetch`), monotônico, abaixo dos 25 s
-  # de shutdown do Sidekiq desta instalação: um deploy no meio do download não pode deixar a
-  # publicação pela metade. Teto por leitura sozinho não segura um servidor que entrega um byte por
-  # segundo — ele nunca estoura a leitura e prende o worker pelo tempo que quiser (rodada 6,
-  # 11/09/2026); com o prazo, cada leitura do corpo espera no máximo o que resta dele, e a conexão e
-  # a espera pelos cabeçalhos ficam limitadas a ele como teto por operação.
+  # que o Sidekiq desta instalação dá ao job num SHUTDOWN (`:timeout: 25`): um deploy no meio de um
+  # download normal ainda o deixa terminar, em vez de matar a publicação pela metade. Teto por leitura
+  # sozinho não segura um servidor que entrega um byte por segundo — ele nunca estoura a leitura e
+  # prende o worker pelo tempo que quiser (rodada 6, 11/09/2026); com o prazo, cada leitura do corpo
+  # espera no máximo o que resta dele, e a conexão e a espera pelos cabeçalhos ficam limitadas a ele
+  # como teto por operação.
   #
   # O QUE O PRAZO NÃO COBRE (ressalva registrada na rodada 7, decisão de não implementar um orçamento
   # cancelável — uma thread vigia fechando o socket é risco maior que o benefício aqui): a resolução
   # de DNS (antes da conexão, no `Resolv` do sistema), cabeçalhos que gotejam abaixo do teto por
   # leitura, e as linhas de controle do chunked entre dois pedaços. Modelo de ameaça: a URL vem do
   # nosso adapter (o blob do portal, https, sem redirecionamento), a abertura tem 5 s, cada leitura
-  # é limitada pelo saldo; só um gotejamento de cabeçalhos abaixo do saldo evade — e o shutdown do
-  # Sidekiq (25 s) encerra o job de qualquer forma.
+  # é limitada pelo saldo; só um gotejamento de cabeçalhos abaixo do saldo evade. E o que evade NÃO
+  # tem teto de execução: os 25 s do Sidekiq só valem num shutdown — sem deploy, a thread fica ocupada
+  # enquanto o servidor gotejar (rodada 8: o texto anterior dizia que o shutdown "encerra o job de
+  # qualquer forma", e não é assim). O sinal, em produção, é o tempo do job fora da casa dos segundos.
   PRAZO_SEGUNDOS = 20
   # Teto da conexão (TCP + TLS), dentro do prazo.
   ABERTURA_SEGUNDOS = 5
@@ -120,23 +123,29 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     { EXECUCAO_CHAVE => run_id, FINALIDADE_CHAVE => FINALIDADE }
   end
 
+  # O `metadata` do blob lido COMO JSON — e só quando ele É um objeto JSON. A coluna é `text` (escrita
+  # pelo coder JSON do Rails, o único escritor nesta base), e um `::jsonb` sobre uma linha que não
+  # fosse JSON derrubaria a varredura inteira. O `CASE` é a única construção em que o Postgres garante
+  # não avaliar o ramo (o cast) quando a condição falha — num `AND` a ordem é do planejador. `IS JSON`
+  # pede Postgres 16+ (CI e local: 16; produção: 18).
+  METADATA_JSON_SQL = 'CASE WHEN metadata IS JSON OBJECT THEN metadata::jsonb END'.freeze
+
   # -> os blobs COM A MARCA desta classe, SEM ANEXO e criados antes de `antes_de` — os que ficaram sem
   # dono porque o processo morreu entre a linha e o anexo. Os três filtros são a guarda: sem a marca,
   # apagaríamos blobs alheios; sem a idade, um upload em andamento (a linha existe antes do anexo);
-  # sem "sem anexo", o PDF de uma mensagem entregue. A marca é procurada no `metadata` (texto JSON,
-  # escrito pelo coder do Rails) pelo par `"chave":"valor"` tal como ele o grava — o mesmo padrão dos
-  # tokens da mensagem. É uma varredura sequencial da tabela de blobs (não há índice para isto); roda a
-  # cada 10 min com `limite`, e o custo está registrado na auditoria da rodada 7.
+  # sem "sem anexo", o PDF de uma mensagem entregue. A marca é lida como JSON, NO NÍVEL SUPERIOR do
+  # `metadata`, e exige as DUAS chaves (rodada 8, P2 do Codex): o `LIKE` sobre o texto tratava `_`
+  # como curinga (`entrega_de_arquivo` casava `entregaXdeXarquivo`), casava a marca aninhada em outro
+  # objeto e não exigia o id da execução — três jeitos de escolher um blob alheio ainda sem anexo. O
+  # `?` da consulta é o operador "tem a chave" do jsonb (os binds são NOMEADOS, para o ActiveRecord não
+  # o tomar por posição). É uma varredura sequencial da tabela de blobs (não há índice para isto); roda
+  # a cada 10 min com `limite`, e o custo está registrado na auditoria da rodada 7.
   def self.blobs_sem_dono(antes_de:, limite:)
     ActiveStorage::Blob.unattached
                        .where(created_at: ...antes_de)
-                       .where('metadata LIKE ?', "%#{marca_no_texto}%")
+                       .where("#{METADATA_JSON_SQL} ->> :finalidade_chave = :finalidade AND #{METADATA_JSON_SQL} ? :execucao_chave",
+                              finalidade_chave: FINALIDADE_CHAVE, finalidade: FINALIDADE, execucao_chave: EXECUCAO_CHAVE)
                        .order(:created_at).limit(limite)
-  end
-
-  # `"autonomia_finalidade":"entrega_de_arquivo"`, como o coder JSON do `metadata` escreve (sem espaços).
-  def self.marca_no_texto
-    ActiveSupport::JSON.encode(FINALIDADE_CHAVE => FINALIDADE)[1..-2]
   end
 
   def initialize(url:, nome:, legenda:, reserva:)

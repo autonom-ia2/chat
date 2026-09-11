@@ -6,7 +6,7 @@
 # — quem publica sem checar kill-switch da conta, estado do agente e allowlist de piloto acaba
 # falando com cliente real a partir de um agente que já foi desligado.
 #
-# SEIS decisões que este arquivo carrega:
+# SETE decisões que este arquivo carrega:
 #
 # 1. NUNCA carimba `autonomia_reply_to_message_id`. O `already_replied?` do Responder é um regex
 #    sobre QUALQUER outgoing do bot com aquele id: uma entrega assíncrona que o herdasse faria o
@@ -43,6 +43,14 @@
 #    no-op para mensagem já enviada) ou, se nem isso entra na fila, devolve `blocked` com código
 #    fechado. `published` no papel, com o cliente sem arquivo e sem link, é o que este arquivo nunca
 #    pode dizer.
+#
+# 7. A PENDÊNCIA DE ENVIO FICA GRAVADA NA PRÓPRIA MENSAGEM (rodada 8, 11/09/2026):
+#    `content_attributes['autonomia_envio_pendente'] = true` (`PendenciaDeEnvio`, uma escrita atômica),
+#    quando nem a recuperação pôs o `SendReplyJob` na fila. Sem a marca, a tentativa seguinte achava o
+#    token e dizia `published` sem olhar a mensagem — o cliente sem arquivo e sem link, contado como
+#    entregue. Token encontrado só quer dizer entregue quando a mensagem não carrega pendência
+#    conhecida: com a marca (sem `source_id`, e não privada) a tentativa seguinte reenfileira, e a marca
+#    só sai quando o job ENTRA.
 class Autonomia::Agents::Tools::AsyncPublisher
   # Motivos de não-publicação, devolvidos a quem chamou (o job decide se re-agenda ou encerra).
   Result = Struct.new(:status, :message, keyword_init: true) do
@@ -57,9 +65,12 @@ class Autonomia::Agents::Tools::AsyncPublisher
   Corpo = Struct.new(:texto, :token, :anexo, keyword_init: true)
 
   # O que a publicação sob o lock pode dizer além de "criei esta mensagem": a mensagem já estava lá
-  # (retry), ou a autorização caiu no caminho (os dois motivos fechados que vão ao log).
-  DUPLICADA = :duplicate
+  # (retry, ou consulta que reemite a mesma lista) — carregando a mensagem achada, porque token
+  # encontrado só quer dizer entregue quando ela não tem pendência de envio (decisão 7) —, ou a
+  # autorização caiu no caminho (os dois motivos fechados que vão ao log).
+  Duplicada = Struct.new(:mensagem)
   RECUSAS = %i[execucao_morta vinculo_mudou].freeze
+  Pendencia = ::Autonomia::Agents::Tools::PendenciaDeEnvio
 
   def initialize(run:)
     @run = run
@@ -179,7 +190,8 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # no banco) é reconciliado pelo envio (`reconciliar`); o que levanta antes, ou com a transação
   # desfeita (`persisted?` volta a ser falso no rollback), sobe para quem chamou decidir — a reserva,
   # na entrega de arquivo; `blocked`, no fim. Só a mensagem desta chamada é reconciliada: uma mensagem
-  # achada pelo token poderia ser de outro publicador, com um envio dele a caminho.
+  # achada pelo token poderia ser de outro publicador, com um envio dele a caminho — a menos que ela
+  # carregue a PENDÊNCIA que quem a criou gravou (`retomar`, decisão 7).
   def post(conversation, corpo)
     vigia = ::Autonomia::Agents::Tools::VigiaDeEnvio.new
     publicado = nil
@@ -202,7 +214,8 @@ class Autonomia::Agents::Tools::AsyncPublisher
     return :vinculo_mudou unless same_binding?(agent_inbox)
 
     sequence = @run.sequence
-    return DUPLICADA if delivery_posted?(conversation, corpo.token)
+    existente = entrega_publicada(conversation, corpo.token)
+    return Duplicada.new(existente) if existente
 
     mensagem = build_message!(conversation, agent_inbox, sequence, corpo)
     # Só avança quando uma mensagem NOVA entrou: como a idempotência é pelo conteúdo, o duplicado
@@ -214,10 +227,20 @@ class Autonomia::Agents::Tools::AsyncPublisher
 
   def resultado(publicado)
     return Result.new(status: :published, message: publicado) if publicado.is_a?(Message)
-    return Result.new(status: :published) if publicado == DUPLICADA
+    return retomar(publicado.mensagem) if publicado.is_a?(Duplicada)
 
     Rails.logger.warn("[autonomia][tool][async] publicacao recusada run=#{@run.id} motivo=#{publicado}")
     Result.new(status: :blocked)
+  end
+
+  # A mensagem que o token achou É a entrega — a menos que carregue a PENDÊNCIA de envio (decisão 7):
+  # aí o que faltou foi o `SendReplyJob`, e é ele que se tenta de novo. A pendência só vale sem
+  # `source_id` (o canal já confirmou → entregue, marca ou não) e fora da nota privada (não vai ao canal).
+  def retomar(mensagem)
+    return Result.new(status: :published) unless Pendencia.pendente?(mensagem)
+
+    Rails.logger.warn("[autonomia][tool][async] envio pendente encontrado run=#{@run.id} message=#{mensagem.id}")
+    reenviar(mensagem)
   end
 
   # A mensagem está no banco e a exceção veio de um `after_commit` dela. O que decide o resultado é se
@@ -238,15 +261,43 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # RECUPERAÇÃO idempotente e durável: o `SendReplyJob` é no-op para mensagem já enviada
   # (`Base::SendOnChannelService#invalid_message?` → `source_id.present?`) e para nota privada; e o
   # que garante que não há OUTRO job desta mensagem a caminho é o vigia — o `send_reply` não chegou
-  # a enfileirar. Se nem isto entra na fila (o Redis continua fora), a falha é explícita: código
-  # fechado no log, `blocked` para quem chamou (ninguém conta a entrega), a mensagem e o anexo ficam.
+  # a enfileirar. Se nem isto entra na fila (o Redis continua fora, ou `perform_later` devolve `false`
+  # sem exceção — um callback de enqueue barrou, ou o adapter levantou `EnqueueError`), a falha é
+  # explícita: código fechado no log, `blocked` para quem chamou (ninguém conta a entrega), a mensagem
+  # e o anexo ficam, e a PENDÊNCIA fica gravada na mensagem para a tentativa seguinte (`retomar`). A
+  # marca só é limpa quando o job ENTRA.
+  #
+  # RESSALVA (Codex, rodada 8; registrada na auditoria, não corrigida aqui): se o Redis ACEITA o
+  # enfileiramento e perde a resposta na mesma chamada, o adapter levanta, o vigia não anota o job que
+  # entrou, e este reenvio põe um SEGUNDO `SendReplyJob` na fila. O `SendReplyJob` não serializa o
+  # envio da mesma mensagem (nem lock, nem `source_id` relido antes de falar com o canal): com as
+  # threads da fila, os dois podem enviar antes de qualquer um gravar `source_id`, e o cliente recebe o
+  # documento duas vezes. É o custo escolhido conscientemente contra a alternativa — o cliente sem
+  # arquivo e sem link. Serializar o envio por mensagem é do núcleo do Chatwoot, fora desta entrega
+  # (issue aberta no repositório, Part of #291).
   def reenviar(mensagem)
-    ::SendReplyJob.perform_later(mensagem.id)
+    causa = enfileirar_envio(mensagem)
+    return envio_pendente!(mensagem, causa) if causa
+
+    Pendencia.limpar(mensagem, contexto: "run=#{@run.id}") if Pendencia.marcada?(mensagem)
     Rails.logger.warn("[autonomia][tool][async] envio reenfileirado run=#{@run.id} message=#{mensagem.id}")
     Result.new(status: :published)
+  end
+
+  # -> nil quando o `SendReplyJob` ENTROU na fila; a causa quando não: a classe da exceção, ou o código
+  # `enqueue_recusado` para o `false` sem exceção de `perform_later`.
+  def enfileirar_envio(mensagem)
+    ::SendReplyJob.perform_later(mensagem.id) ? nil : 'enqueue_recusado'
   rescue StandardError => e
+    e.class.name
+  end
+
+  # A pendência fica gravada na mensagem (`PendenciaDeEnvio`: a escrita é atômica e a forma da coluna
+  # está documentada lá); a falha da própria marca não troca este resultado — é registrada por ela.
+  def envio_pendente!(mensagem, causa)
+    Pendencia.marcar(mensagem, contexto: "run=#{@run.id}")
     Rails.logger.warn("[autonomia][tool][async] publicacao incompleta run=#{@run.id} message=#{mensagem.id} " \
-                      "motivo=mensagem_sem_envio causa=#{e.class}")
+                      "motivo=mensagem_sem_envio causa=#{causa}")
     Result.new(status: :blocked)
   end
 
@@ -306,10 +357,12 @@ class Autonomia::Agents::Tools::AsyncPublisher
     [post(conversation, Corpo.new(texto: arquivo.reserva, token: token)), false]
   end
 
-  def delivery_posted?(conversation, token)
+  # -> a mensagem desta conversa que já carrega o token (a entrega publicada), ou nil. O `LIKE` é só a
+  # peneira barata; quem decide é a comparação exata do atributo.
+  def entrega_publicada(conversation, token)
     conversation.messages.where(sender_type: 'AgentBot')
                 .where('content_attributes::text LIKE ?', "%#{token}%")
-                .any? { |message| message.content_attributes.to_h['autonomia_async_token'].to_s == token }
+                .detect { |message| message.content_attributes.to_h['autonomia_async_token'].to_s == token }
   end
 
   def build_message!(conversation, agent_inbox, sequence, corpo)

@@ -372,10 +372,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
 
       # Assert — e o blob que o retry gravou antes de ver a mensagem no ar não fica sem dono: a
       # limpeza é em segundo plano (rodada 4), então o que se afirma é que ela foi AGENDADA e que,
-      # feita, não sobra blob nenhum
+      # feita, não sobra blob nenhum. A mensagem achada sem pendência de envio não é reenviada: o
+      # único `SendReplyJob` é o do `send_reply` dela (rodada 8).
       expect(result).to be_published
       expect(bot_messages.count).to eq(1)
       expect(run.reload.sequence).to eq(1)
+      expect(SendReplyJob).to have_been_enqueued.once
       expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
       perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
       expect(ActiveStorage::Blob.count).to eq(0)
@@ -603,6 +605,35 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
         end
       end
 
+      # A fila recusa o `SendReplyJob` (o do `send_reply` E o da recuperação); o resto entra.
+      def fila_recusa_o_envio
+        fila = ActiveJob::Base.queue_adapter
+        %i[enqueue enqueue_at].each do |metodo|
+          allow(fila).to receive(metodo).and_wrap_original do |original, job, *resto|
+            raise Redis::CannotConnectError, 'redis fora' if job.is_a?(SendReplyJob)
+
+            original.call(job, *resto)
+          end
+        end
+      end
+
+      def fila_volta
+        fila = ActiveJob::Base.queue_adapter
+        %i[enqueue enqueue_at].each { |metodo| allow(fila).to receive(metodo).and_call_original }
+      end
+
+      def marca_de_pendencia(mensagem)
+        mensagem.reload.content_attributes['autonomia_envio_pendente']
+      end
+
+      # A PRIMEIRA tentativa, com a fila recusando o envio: `blocked`, a mensagem no banco com o anexo
+      # e a pendência gravada. -> a mensagem. (Pré-condição dos exemplos da tentativa seguinte.)
+      def tentativa_bloqueada(publisher)
+        fila_recusa_o_envio
+        expect(publisher.publish(arquivo.to_h)).to be_blocked
+        bot_messages.sole.tap { |mensagem| expect(marca_de_pendencia(mensagem)).to be(true) }
+      end
+
       it 'mantem a mensagem com o anexo e dispara o envio que o despacho impediu, uma vez' do
         # Arrange — o Redis cai no despacho do evento de criação: o `send_reply` nunca roda
         promote
@@ -667,19 +698,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
 
       # "PUBLICADO" NO PAPEL É PROIBIDO: se nem o envio de recuperação entra na fila (o Redis continua
       # fora), a mensagem está no banco com o anexo e o cliente sem arquivo e sem link — a falha é
-      # explícita (`blocked`, código fechado), o blob anexado fica, e ninguém conta a entrega.
+      # explícita (`blocked`, código fechado), o blob anexado fica, ninguém conta a entrega, e a
+      # PENDÊNCIA fica gravada na mensagem para a tentativa seguinte (rodada 8).
       it 'e explicita, com codigo fechado, quando nem o envio de recuperacao entra na fila' do
         # Arrange — o Redis recusa o `SendReplyJob` (do `send_reply` e o da recuperação); o resto entra
         promote
         stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
-        fila = ActiveJob::Base.queue_adapter
-        %i[enqueue enqueue_at].each do |metodo|
-          allow(fila).to receive(metodo).and_wrap_original do |original, job, *resto|
-            raise Redis::CannotConnectError, 'redis fora' if job.is_a?(SendReplyJob)
-
-            original.call(job, *resto)
-          end
-        end
+        fila_recusa_o_envio
         allow(Rails.logger).to receive(:warn).and_call_original
 
         # Act
@@ -691,8 +716,121 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
         expect(mensagem.attachments.sole.file.download).to eq(pdf)
         expect(SendReplyJob).not_to have_been_enqueued
         expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
+        expect(marca_de_pendencia(mensagem)).to be(true)
+        expect(mensagem.content_attributes['autonomia_async_token']).to eq(run.delivery_token(arquivo.identidade))
         incompleta = /publicacao incompleta run=#{run.id} message=#{mensagem.id} motivo=mensagem_sem_envio causa=Redis::CannotConnectError/
         expect(Rails.logger).to have_received(:warn).with(a_string_matching(incompleta))
+      end
+
+      # A PENDÊNCIA FICA NA MENSAGEM (rodada 8, P2 do Codex): sem ela, a tentativa seguinte achava o
+      # token, dizia `published` e ninguém mais olhava — o cliente sem arquivo e sem link, contado como
+      # entregue. Com a marca, a tentativa seguinte reenfileira o envio UMA vez e só então limpa a marca.
+      it 'reenvia na tentativa seguinte o envio que ficou pendente, uma vez, e limpa a marca' do
+        # Arrange — primeira tentativa com a fila recusando o envio; depois o Redis volta
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        publisher = described_class.new(run: run)
+        mensagem = tentativa_bloqueada(publisher)
+        fila_volta
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        # Act
+        result = publisher.publish(arquivo.to_h)
+
+        # Assert — uma mensagem, um envio, marca limpa; o blob que a tentativa gravou antes de achar a
+        # mensagem vai para a limpeza (o anexado fica: uma mensagem só, com o arquivo)
+        expect(result).to be_published
+        expect(bot_messages.count).to eq(1)
+        expect(SendReplyJob).to have_been_enqueued.with(mensagem.id).once
+        expect(mensagem.reload.content_attributes).not_to have_key('autonomia_envio_pendente')
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(/envio pendente encontrado run=#{run.id} message=#{mensagem.id}/))
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(/envio reenfileirado run=#{run.id} message=#{mensagem.id}/))
+        expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+      end
+
+      # Marcar e limpar MESCLAM: o resto do `content_attributes` (o token, a sequência) e o anexo
+      # sobrevivem às duas escritas — sem isso o token sumiria e a reemissão publicaria de novo.
+      it 'preserva o token, a sequencia e o anexo ao marcar e ao limpar a pendencia' do
+        # Arrange
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        publisher = described_class.new(run: run)
+        mensagem = tentativa_bloqueada(publisher)
+        token = run.delivery_token(arquivo.identidade)
+        expect(mensagem.content_attributes['autonomia_async_token']).to eq(token)
+        fila_volta
+
+        # Act
+        publisher.publish(arquivo.to_h)
+
+        # Assert
+        mensagem.reload
+        expect(mensagem.content_attributes).to include('autonomia_async_token' => token, 'autonomia_async_sequence' => 0)
+        expect(mensagem.content_attributes).not_to have_key('autonomia_envio_pendente')
+        expect(mensagem.attachments.sole.file.download).to eq(pdf)
+      end
+
+      it 'mantem a pendencia e devolve blocked de novo quando a fila continua fora na tentativa seguinte' do
+        # Arrange
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        publisher = described_class.new(run: run)
+        mensagem = tentativa_bloqueada(publisher)
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        # Act
+        result = publisher.publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_blocked
+        expect(bot_messages.count).to eq(1)
+        expect(SendReplyJob).not_to have_been_enqueued
+        expect(marca_de_pendencia(mensagem)).to be(true)
+        incompleta = /publicacao incompleta run=#{run.id} message=#{mensagem.id} motivo=mensagem_sem_envio causa=Redis::CannotConnectError/
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(incompleta))
+      end
+
+      # `perform_later` devolve `false`, SEM exceção, quando um callback de enqueue barra ou o adapter
+      # levanta `EnqueueError`: é falha como qualquer outra, com código fechado (ressalva do Codex,
+      # rodada 8). Só a chamada direta é simulada: o `send_reply` da mensagem usa `set(wait:)`.
+      it 'trata o enfileiramento recusado sem excecao como falha, com a pendencia gravada' do
+        # Arrange — o despacho levanta (o `send_reply` não roda) e a recuperação recebe `false`
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        redis_cai_no_despacho_da_mensagem_com_anexo
+        allow(SendReplyJob).to receive(:perform_later).and_return(false)
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        # Act
+        result = described_class.new(run: run).publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_blocked
+        mensagem = bot_messages.sole
+        expect(SendReplyJob).not_to have_been_enqueued
+        expect(marca_de_pendencia(mensagem)).to be(true)
+        incompleta = /publicacao incompleta run=#{run.id} message=#{mensagem.id} motivo=mensagem_sem_envio causa=enqueue_recusado/
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(incompleta))
+      end
+
+      # A marca sem `source_id` vazio não é pendência: o canal já confirmou (a recuperação operacional
+      # pelo id, por exemplo) e reenviar seria o documento duas vezes.
+      it 'nao reenvia a mensagem marcada que o canal ja confirmou' do
+        # Arrange
+        promote
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+        publisher = described_class.new(run: run)
+        mensagem = tentativa_bloqueada(publisher)
+        mensagem.update!(source_id: 'wamid.confirmado')
+        fila_volta
+
+        # Act
+        result = publisher.publish(arquivo.to_h)
+
+        # Assert
+        expect(result).to be_published
+        expect(bot_messages.count).to eq(1)
+        expect(SendReplyJob).not_to have_been_enqueued
       end
 
       # Só a mensagem que ESTA publicação criou e que FICOU no banco é reconciliada: quando o COMMIT

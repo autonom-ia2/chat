@@ -484,7 +484,9 @@ portal, https, sem redirecionamento), `open_timeout` 5 s, cada leitura do corpo 
 (`Deadline#tighten!`), conexão e espera pelos cabeçalhos limitadas ao prazo como TETO POR OPERAÇÃO
 (`RequestOptions#bounded_by_total`); o que evade é um gotejamento de cabeçalhos abaixo do saldo, ou
 linhas de controle do chunked entre dois `enforce!` (cada uma uma leitura com o teto do saldo) — e o
-shutdown do Sidekiq (25 s) encerra o job de qualquer forma. A resolução de DNS já estava registrada
+shutdown do Sidekiq (25 s) encerra o job de qualquer forma [NOTA da rodada 8: não é assim — os 25 s
+são a folga de um SHUTDOWN, não um teto de execução; sem deploy, a thread fica ocupada enquanto o
+servidor gotejar; ver rodada 8, "Texto"]. A resolução de DNS já estava registrada
 como fora do prazo. O que mudou de prosa e nome: `PRAZO_TOTAL_SEGUNDOS` → `PRAZO_SEGUNDOS` (uma
 constante chamada "total" que não é total é a mentira que este projeto não aceita); os comentários de
 `entrega_de_arquivo.rb`, `async_publisher.rb`, `lib/safe_fetch.rb`, `deadline.rb`,
@@ -508,11 +510,137 @@ verdadeiro, nenhum `warn`. Mutações W1 (registro removido), W2 (registrado a c
 
 **O que continua em aberto, dito com todas as letras:** com o Redis fora no despacho E no
 enfileiramento, a mensagem com o anexo fica no banco (visível na conversa do painel) sem envio ao
-canal, `blocked` e o log `mensagem_sem_envio`. Ninguém a reenvia sozinho — um reconciliador
-periódico de "mensagem outgoing nossa sem `source_id`" reenviaria também as que FALHARAM no canal
+canal, `blocked` e o log `mensagem_sem_envio`. Ninguém a reenvia sozinho [SUPERADO na rodada 8: a
+pendência fica gravada na mensagem e a tentativa seguinte — a reemissão da mesma entrega — reenvia] —
+um reconciliador periódico de "mensagem outgoing nossa sem `source_id`" reenviaria também as que
+FALHARAM no canal
 (`status: failed`, fora da janela) e as dos canais que nunca gravam `source_id` (WebWidget/API), e
 correria contra um `SendReplyJob` atrasado na fila. É a falha explícita que a decisão pediu; a
 recuperação, se necessária, é operacional, pelo id da mensagem no log.
+
+### Rodada 8 (revisão do Codex sobre `4c81cf5c26`: 3 P2 + 1 texto + 1 ressalva; o P1 fechado): a pendência de envio na mensagem, a marca do blob como JSON, o que o shutdown não faz
+
+Decisões do orquestrador, obrigatórias; cada correção com spec e mutação (edita → roda → restaura →
+md5). Onde este texto se afasta da letra da decisão, diz onde e por quê.
+
+**P2 — a recuperação malsucedida virava falso sucesso no retry.** Mensagem commitada, o envio original
+E o reenfileiramento falham (Redis fora) → `blocked` preservando mensagem e token; na tentativa
+seguinte (a reemissão da mesma entrega pelo poll da ferramenta — `AsyncRunJob#apply` publica
+`progress.deliveries` a cada passada, idempotente pelo token — ou o encerramento), `DUPLICADA`
+devolvia `published` sem conferir nem recuperar o envio: o cliente sem arquivo e sem link, contado
+como entregue. Correção (decisão 7 do `async_publisher.rb`; `pendencia_de_envio.rb`, arquivo novo):
+quando a recuperação falha, `PendenciaDeEnvio.marcar` grava `content_attributes['autonomia_envio_pendente']
+= true` na própria mensagem — UMA escrita, atômica (`||` sobre o JSON dentro do UPDATE, sem
+lê-modifica-escreve e sem callbacks da `Message`: o `after_update_commit` fala com o Redis, que é
+justamente quem está fora); o log `publicacao incompleta … motivo=mensagem_sem_envio
+causa=<classe|enqueue_recusado>` e o `blocked` continuam. `publicar_sob_lock` devolve
+`Duplicada(mensagem)` (a mensagem achada pelo token, lida sob o lock; `entrega_publicada` no lugar de
+`delivery_posted?`) em vez do símbolo; `resultado` → `retomar`: sem pendência → `published`, como
+antes; com a marca E `source_id` vazio E não privada → log `envio pendente encontrado run= message=`
+e `reenviar` de novo — entrou → `PendenciaDeEnvio.limpar` (a escrita atômica inversa, `-` sobre o
+JSON) → `envio reenfileirado` → `published`; não entrou → `mensagem_sem_envio` de novo, `blocked`, a
+marca fica. Token encontrado só significa entregue quando não há pendência conhecida.
+
+Desvios da letra da decisão, ditos: (1) "uma escrita, sob o mesmo lock" — a escrita é uma e atômica,
+mas NÃO toma o lock da conversa: o lock não fecharia a janela entre quem lê a marca (sob o lock, na
+tentativa seguinte) e quem a grava (depois do lock, na tentativa que falhou) — a leitura anterior à
+escrita diz `published`, a escrita diz `blocked`, e a reemissão seguinte acha a marca; um statement
+atômico é o que basta, sem abrir transação para um UPDATE. (2) A FORMA NO BANCO: `content_attributes`
+é coluna `json`, mas o `store :content_attributes, coder: JSON` da `Message` codifica DUAS vezes — a
+coluna guarda uma STRING JSON com o objeto dentro. Provado na rodada 8 com uma sonda (apagada antes
+do commit): `json_typeof(content_attributes)` = `'string'`, bruto `"{\"autonomia_async_token\":…}"`,
+numa mensagem criada pela factory. Um `||` direto sobre o escalar produzia um ARRAY, e a `Message`
+deixava de conseguir ler `content_attributes` (`TypeError: no implicit conversion of Array into
+String`, visto na primeira passada dos specs). A escrita extrai o objeto com `#>> '{}'`, mescla como
+jsonb e regrava com `to_json(text)` (`PendenciaDeEnvio::OBJETO_SQL`, `MARCAR_SQL`, `LIMPAR_SQL`).
+(3) A falha da PRÓPRIA escrita da marca (banco) é registrada (`pendencia de envio nao gravada run=
+message= motivo=<marca_nao_gravada|marca_nao_limpa> causa=<classe>`) e não levanta nem troca o
+resultado: `marca_nao_gravada` é o caso raro em que a tentativa seguinte fica cega (o banco falhando
+logo depois de commitar a mensagem); `marca_nao_limpa` deixa uma marca velha, que a tentativa
+seguinte reenvia uma vez (no-op se o canal já confirmou).
+
+Guardas (`async_publisher_spec`, "quando a publicacao levanta depois do commit"): a fila recusa o
+envio → `blocked`, marca `true`, token intacto; a fila volta → tentativa seguinte `published`, 1
+mensagem, `SendReplyJob` com o id dela UMA vez, marca limpa, logs `envio pendente encontrado` e
+`envio reenfileirado`, `PurgeJob` uma vez (o blob da tentativa seguinte); marcar e limpar preservam
+token, sequência e anexo; a fila continua fora → `blocked` de novo, marca fica, `SendReplyJob`
+nenhum; a mensagem marcada com `source_id` (o canal confirmou) → `published` sem reenviar; a mensagem
+achada sem pendência (o retry do link) → UM `SendReplyJob`, o do `send_reply`.
+`pendencia_de_envio_spec` (novo, 4): marca mesclando na forma que a `Message` lê (`json_typeof` =
+`'string'`); limpa só a chave; não é pendência com `source_id`, privada, ou sem marca; a falha do
+banco registra e não levanta. Mutações P1 (`retomar` ignora a pendência), P2 (`Duplicada` devolvida
+como `published` sem `retomar`), P3 (pendência não gravada), P4 (pendência não limpa), P6 (sem exigir
+`source_id` vazio), P7 (sem excluir a nota privada), P8 (marca por substituição: perde token e
+sequência), P9 (marca gravada como objeto, não como a string do coder), P10 (falha da escrita sobe),
+P11 (falha engolida sem registro).
+
+**Ressalva do Codex — `reenviar` ignorava o retorno de `perform_later`.** `ActiveJob::Enqueuing#enqueue`
+devolve `false`, SEM exceção, quando `raw_enqueue` levanta `EnqueueError` ou um callback de enqueue
+barra (`activejob 7.2.3.1`, lido). Correção: `enfileirar_envio` trata `false` como falha, código
+`enqueue_recusado`, mesmo caminho de `mensagem_sem_envio`. Fatos lidos: nesta instalação NADA
+levanta `EnqueueError` (`activejob 7.2.3.1` só a define; `sidekiq 7.3.10` não a usa) e
+`SendReplyJob` não tem callbacks de enqueue — é contrato da API, não caminho alcançável hoje; pelo
+mesmo motivo o `send_reply` da própria `Message` (que também ignora o `false`) não é tocado (núcleo
+do Chatwoot; registrado abaixo como aberto). Guarda: `redis_cai_no_despacho` +
+`SendReplyJob.perform_later` devolvendo `false` → `blocked`, marca, log `causa=enqueue_recusado`.
+Mutação P5.
+
+**P2 — Redis aceita o enfileiramento e perde a resposta: dois envios.** DECISÃO: NÃO alterar o
+`SendReplyJob`/serviço de canal (núcleo do Chatwoot, fora do escopo). RESSALVA explícita, no
+comentário de `reenviar`, no cabeçalho do `VigiaDeEnvio` e aqui: o caso exige o Redis ACEITAR o job
+e PERDER a resposta na mesma chamada; aí o adapter levanta, `successfully_enqueued?` fica falso, o
+vigia não anota o job que entrou, e a recuperação põe um segundo. O `SendReplyJob` só se protege por
+`source_id` lido no começo (`Base::SendOnChannelService#invalid_message?`), gravado DEPOIS de o canal
+responder: com as threads da fila, os dois podem enviar antes de qualquer um gravar. O custo é UM
+DOCUMENTO DUPLICADO ao cliente, escolhido conscientemente contra a alternativa (cliente sem arquivo
+e sem link). Issue aberta: autonom-ia2/chat#393 "Envio da mesma mensagem não é serializado no
+SendReplyJob" (Part of #291) — serializar por mensagem com lock e `source_id` relido sob ele.
+
+**P2 — `blobs_sem_dono` usava `metadata LIKE` com `_`.** `_` é curinga do `LIKE`
+(`entrega_de_arquivo` casava `entregaXdeXarquivo`; `autonomia_finalidade`, `autonomiaXfinalidade`),
+a marca aninhada em outro objeto casava, e o id da execução não era exigido — três jeitos de
+selecionar um blob alheio ainda sem anexo. Correção (`entrega_de_arquivo.rb`): seleção por JSON no
+NÍVEL SUPERIOR, com as DUAS chaves — `metadata::jsonb ->> 'autonomia_finalidade' =
+'entrega_de_arquivo' AND metadata::jsonb ? 'autonomia_tool_run_id'` (binds NOMEADOS, para o `?` do
+jsonb não ser tomado como bind posicional; o ActiveRecord pula `::jsonb` nos binds nomeados —
+`replace_named_bind_variables`, "skip PostgreSQL casts", lido no `activerecord 7.2.3.1`), sobre
+`unattached`, `created_at < 1.hour.ago`, `LIMIT 500`. O CAST É PROTEGIDO: a coluna é `text`, e o
+único escritor é o coder JSON do `ActiveStorage::Blob` (`store :metadata, coder:
+ActiveRecord::Coders::JSON`; nenhum SQL cru sobre `active_storage_blobs` em `app/`, `lib/`,
+`db/migrate/`, `config/`) — mas uma linha que não fosse JSON derrubaria a varredura inteira, então
+`METADATA_JSON_SQL = CASE WHEN metadata IS JSON OBJECT THEN metadata::jsonb END`: o `CASE` é a única
+construção em que o Postgres garante não avaliar o ramo quando a condição falha (num `AND` a ordem é
+do planejador). `IS JSON` pede Postgres 16+: CI `pgvector/pgvector:pg16`
+(`.github/workflows/testes.yml`), local 16.13, produção 18.3 (RDS, memória de 02/09). `marca_no_texto`
+deixou de existir. Guardas (`reap_stale_runs_job_spec`, "nao apaga o que so PARECE marcado"): curinga
+(`autonomiaXfinalidade`/`entregaXdeXarquivo`, com run id), marca aninhada (`{"origem": {marca}}`),
+marca sem run id, e `metadata = 'nao e json'` (escrito por SQL cru — `update_all` com Hash passaria
+pelo coder e viraria a string JSON `"nao e json"`, válida) — um `PurgeJob` só, os quatro impostores
+ficam, a varredura não levanta. Mutações Q1 (volta ao `LIKE`), Q2 (cast sem a guarda `IS JSON` →
+`PG::InvalidTextRepresentation` derruba a varredura), Q3 (run id não exigido); Z2–Z4 reajustadas ao
+SQL novo.
+
+**Texto — "25 s de shutdown do Sidekiq" NÃO é teto de execução do job.** O `:timeout: 25` do Sidekiq
+é a folga que um SHUTDOWN dá ao job antes de matá-lo; sem deploy, o worker fica ocupado enquanto o
+servidor gotejar. Corrigido no comentário do `PRAZO_SEGUNDOS` (`entrega_de_arquivo.rb`): o que limita
+é o teto por leitura com o saldo do prazo; o gotejamento de cabeçalhos abaixo do saldo evade e NÃO tem
+teto de execução; o sinal em produção é o tempo do job (`AsyncRunJob`/`AsyncPublishJob`) fora da casa
+dos segundos. O `20 < 25` continua sendo a razão do valor (um download NORMAL termina dentro da folga
+de um shutdown). A rodada 7 desta auditoria recebeu a nota; o comentário do `ReapStaleRunsJob` já
+usava os 25 s no sentido certo (worker morto num deploy).
+
+**Rubocop obrigou um desmembramento honesto:** `Metrics/ClassLength` (184/175) no publicador → a
+pendência virou colaborador (`PendenciaDeEnvio`: `pendente?`, `marcada?`, `marcar`, `limpar`, com a
+forma da coluna documentada lá); `RSpec/MultipleExpectations` (13/7) → o exemplo grande virou dois,
+com a primeira tentativa bloqueada num helper (`tentativa_bloqueada`).
+
+**O que continua em aberto, dito com todas as letras:** `marca_nao_gravada` (o banco falha na escrita
+da marca logo depois de commitar a mensagem) deixa a tentativa seguinte cega, e ela diz `published`
+— o log é o único sinal; a janela entre a leitura da marca sob o lock e a escrita fora dele converge
+pela reemissão seguinte (documentado no colaborador); o `false` do `send_reply` da própria `Message`
+continua sem sinal (inalcançável hoje, ver acima); e o duplo envio da ressalva (#393). A mensagem
+marcada e nunca reemitida (a execução fechou sem outra passada) continua no banco sem envio, com o
+log `mensagem_sem_envio` e a marca — recuperação operacional pelo id (`SendReplyJob.perform_later(<id>)`).
 
 ### Termos (5)
 
@@ -520,10 +648,10 @@ recuperação, se necessária, é operacional, pelo id da mensagem no log.
 |---|---|---|
 | 1 | A comparação chega como ARQUIVO na conversa | `async_run_job_comparativo_arquivo_spec` ("entrega o comparativo como anexo, nomeado pela placa, e depois o fecho": job real + ferramenta real + conector mock + WebMock 200 → `Message` com `Attachment` `file`, `application/pdf`, bytes iguais, legenda sem URL); `async_publisher_spec` "publica o PDF como anexo" |
 | 2 | Falha no download não apaga os preços; o link vai como hoje | job spec "cai para o link quando o download falha, sem apagar o preco que ja saiu" (preço publicado ANTES pelo publicador real fica; `delivered_count` igual; texto = `RESERVA + "\n" + url`, o de antes); M1. Rodada 2: URL que a forma recusa → job spec "entrega o link em texto pela consulta…" (caminho `apply`: link em texto, `PDF_SENT_KEY` true, `delivered_count` 2, `done`) e comparativo spec "quando a URL do portal nao tem a forma segura"; M7. Rodada 3: falha do ANEXO (armazenamento) → job spec "…quando o armazenamento falha depois do download" e publisher spec "…sem anexo orfao"; R1 |
-| 3 | Exemplo automatizado do caminho de falha | os três exemplos de falha do job spec (404, HTML, armazenamento) + `async_publisher_spec` "cai para o texto com o link… e registra o motivo" (log `motivo=http_404`), "…quando o armazenamento falha…" (log `motivo=armazenamento causa=…`), "…quando o tipo declarado desmente o PDF…" (`tipo_invalido`) e "…quando o anexo nao pode ser publicado…" (`anexo falhou`) + 15 exemplos de recusa em `entrega_de_arquivo_spec` (inclusive 302, IP privado, DNS para dentro, 404 de 32 MB em socket real, prazo do corpo em socket real e armazenamento). Rodada 7: a exceção depois do commit com o envio não disparado → `envio reenfileirado` ou `publicacao incompleta … mensagem_sem_envio` (`blocked`); a autorização que cai durante a transferência → `publicacao recusada … execucao_morta|vinculo_mudou` |
+| 3 | Exemplo automatizado do caminho de falha | os três exemplos de falha do job spec (404, HTML, armazenamento) + `async_publisher_spec` "cai para o texto com o link… e registra o motivo" (log `motivo=http_404`), "…quando o armazenamento falha…" (log `motivo=armazenamento causa=…`), "…quando o tipo declarado desmente o PDF…" (`tipo_invalido`) e "…quando o anexo nao pode ser publicado…" (`anexo falhou`) + 15 exemplos de recusa em `entrega_de_arquivo_spec` (inclusive 302, IP privado, DNS para dentro, 404 de 32 MB em socket real, prazo do corpo em socket real e armazenamento). Rodada 7: a exceção depois do commit com o envio não disparado → `envio reenfileirado` ou `publicacao incompleta … mensagem_sem_envio` (`blocked`); a autorização que cai durante a transferência → `publicacao recusada … execucao_morta|vinculo_mudou`. Rodada 8: a tentativa seguinte com a pendência gravada → `envio pendente encontrado` + `envio reenfileirado` (ou `mensagem_sem_envio` de novo); a marca que o banco não grava → `pendencia de envio nao gravada … marca_nao_gravada` |
 | 4 | O arquivo abre no WhatsApp de verdade | **pendente_prova_real** (orquestrador; ver "Produção") |
 | 5 | O nome diz o que ele é, sem dado pessoal além do que o cliente já vê | `insurance_quote_comparativo_arquivo_spec` (placa `hik-9383` → "Comparativo de seguro — placa HIK9383.pdf"; sem CPF/CEP no nome; sem placa → ramo); M2 |
-| NÃO | Anexo que só funciona quando tudo dá certo | o caminho de falha é exemplo (termo 3) e a reserva é a mesma identidade (M5); Hash que não é entrega nunca vira mensagem (`async_publisher_spec` "descarta, registrado e sem mensagem…", M8); a falha do ARMAZENAMENTO cai na mesma reserva que a do download (R1), sem mensagem com anexo órfão; a falha ao ANEXAR sem mensagem no banco cai na reserva (Y5, M1), e a exceção depois do commit não duplica nem apaga (rodada 6) — e só é `published` com o ENVIO disparado (Y1–Y6, rodada 7); a autorização é reconferida sob o lock (X1–X3, rodada 7); o blob sem dono tem marca e varredor (Z1–Z5, rodada 7) |
+| NÃO | Anexo que só funciona quando tudo dá certo | o caminho de falha é exemplo (termo 3) e a reserva é a mesma identidade (M5); Hash que não é entrega nunca vira mensagem (`async_publisher_spec` "descarta, registrado e sem mensagem…", M8); a falha do ARMAZENAMENTO cai na mesma reserva que a do download (R1), sem mensagem com anexo órfão; a falha ao ANEXAR sem mensagem no banco cai na reserva (Y5, M1), e a exceção depois do commit não duplica nem apaga (rodada 6) — e só é `published` com o ENVIO disparado (Y1–Y6, rodada 7); a autorização é reconferida sob o lock (X1–X3, rodada 7); o blob sem dono tem marca e varredor (Z1–Z5, rodada 7); a pendência de envio fica na mensagem e a tentativa seguinte reenvia — token encontrado não é entrega com pendência conhecida (P1–P11, rodada 8); a marca do blob é lida como JSON no nível superior, com as duas chaves e o cast protegido (Q1–Q3, rodada 8) |
 
 ### Mutações (11/09/2026, `mutacoes.py` no scratchpad: edita → roda → restaura → md5 conferido)
 
@@ -811,6 +939,30 @@ curto do motivo — nunca o corpo da resposta nem a mensagem da exceção.
   download com `total_timeout` agora registra `total_timeout degradado motivo=sem_socket` no log de
   teste — é o registro da degradação, esperado ali (não há socket) e inexistente em produção.
 
+- Rodada 8: `async_publisher_spec` 40 (era 35: +5 em "quando a publicacao levanta depois do commit" —
+  a tentativa seguinte reenvia e limpa a marca; preserva token/sequência/anexo; a fila continua fora;
+  `false` de `perform_later`; a mensagem marcada que o canal confirmou; e o retry do link passou a
+  exigir UM `SendReplyJob`), `pendencia_de_envio_spec` 4 (novo), `entrega_de_arquivo_spec` 27,
+  `reap_stale_runs_job_spec` 7 (era 6: os impostores da marca e o `metadata` que não é JSON): 78
+  exemplos, 0 falhas, 0 erros fora (`e11r8/alvo4.json`, exit 0); consumidores do publicador
+  (`async_run_job_comparativo_arquivo_spec`, `async_run_job_encerramento_parcial_spec`,
+  `async_run_job_spec`, `progress_spec`, `insurance_quote_comparativo_arquivo_spec`): 46 exemplos, 0
+  falhas (`e11r8/alvo3.json`, exit 0). A primeira passada dos specs novos (`e11r8/alvo1.json`) achou 5
+  falhas reais — o UPDATE com `||` direto sobre o `content_attributes` virava ARRAY (a coluna guarda
+  uma STRING JSON): sonda no banco (`e11r8/sonda.txt`: `json_typeof` = `string`), SQL corrigido
+  (`#>> '{}'` + `to_json`), verde em `alvo2.json`. rubocop nos 7 arquivos tocados (+
+  `pendencia_de_envio.rb` e o spec dele): 0 ofensas (`e11r8/rubocop2.json` + `rubocop3.json`; as
+  duas ofensas da passada anterior — `ClassLength` 184/175 e `MultipleExpectations` 13/7 — viraram o
+  colaborador e o exemplo dividido; as duas linhas longas do spec novo foram quebradas). 61
+  mutações (14 novas — P1–P11, Q1–Q3 — e as 47 da rodada 7 reajustadas: Y3 ao `causa`, Z2–Z4 ao SQL
+  novo), todas reprovam e restauram, md5 idêntico antes/depois nos 10 arquivos de código
+  (`e11r8/mutacoes_r8.json`). Suíte ampla `spec/services/autonomia spec/jobs/autonomia
+  spec/models/autonomia spec/requests/api/v1/accounts/autonomia spec/lib/safe_fetch_spec.rb
+  spec/lib/webhooks/trigger_spec.rb spec/jobs/avatar/avatar_from_url_job_spec.rb
+  spec/enterprise/services/voice/provider/twilio/recording_attachment_service_spec.rb`: 1180
+  exemplos, 0 falhas, 3 pendentes anteriores a esta PR (`RegistrationCheckout::Provisioner` ×2,
+  `Sso::Provisioner`), 0 erros fora de exemplo, exit 0 (`e11r8/ampla_r8.json`).
+
 ## O ACHADO que o orquestrador precisa saber antes da prova real — SUPERADO na rodada 3
 
 > Registro histórico. O fato novo do orquestrador (acima, rodada 3) mostra que o 404 veio de
@@ -868,6 +1020,15 @@ logo como a SPA manda (o `print` não gasta cotação) e ler o blob de volta.
    1 h; `blob sem dono nao agendado varredor blob=<id>` é o Redis recusando esse agendamento.
    `[safe_fetch] total_timeout degradado motivo=sem_socket` em produção significa o acoplamento com
    o net-http rompido (sem teto por leitura; o prazo vale só entre pedaços) — não deve aparecer.
+   Rodada 8: depois de um `publicacao incompleta … mensagem_sem_envio`, a mensagem carrega
+   `content_attributes.autonomia_envio_pendente = true`; a reemissão seguinte da mesma entrega mostra
+   `envio pendente encontrado run=<id> message=<id>` seguido de `envio reenfileirado …` (o cliente
+   recebe; a marca sai) ou de outro `mensagem_sem_envio` (a marca fica). `pendencia de envio nao
+   gravada … motivo=<marca_nao_gravada|marca_nao_limpa>` é o banco falhando na marca — com
+   `marca_nao_gravada`, a reemissão seguinte dirá `published` sem reenviar: recuperação operacional
+   pelo id. `causa=enqueue_recusado` é o `perform_later` devolvendo `false` sem exceção (não deve
+   aparecer com o Sidekiq). O varredor de blobs passou a exigir Postgres 16+ (`IS JSON`; produção é
+   18): um `PG::SyntaxError` em `recolher_blobs_sem_dono` seria um Postgres anterior — não é o caso.
 3. Rollback: reverter o deploy; não há dado novo no banco (o handle não mudou de forma; a marca do
    blob é `metadata` de linhas novas, ignorada por quem não a conhece).
 
@@ -885,6 +1046,8 @@ uv run python3 e11r4/mutacoes_e11_r4.py                                 # rodada
 uv run python3 e11r5/mutacoes_e11_r5.py                                 # rodada 5: N1, N2, N2b, V2, V5 + as 17 anteriores, todas reprovam, md5 restaurado
 uv run python3 e11r6/mutacoes_e11_r6.py                                 # rodada 6: S1–S8 (13 novas) + N1, N2, N2b, V2, V5, Q1, Q2, R1, R2, R5, T1, M1–M8 (32), todas reprovam, md5 restaurado
 uv run --no-project python3 e11r7/mutacoes_e11_r7.py                    # rodada 7: X1–X3, Y1–Y6, Z1–Z5, W1–W2, V2b (17 novas) + 30 anteriores reajustadas (47), todas reprovam, md5 restaurado
+uv run --no-project python3 e11r8/mutacoes_e11_r8.py                    # rodada 8: P1–P11, Q1–Q3 (14 novas) + 47 anteriores reajustadas (61), todas reprovam, md5 restaurado
+gh issue create --repo autonom-ia2/chat --title "Envio da mesma mensagem não é serializado no SendReplyJob" --body-file e11r8/issue_sendreply.md   # → #393
 bundle exec rspec spec/lib/safe_fetch_spec.rb spec/jobs/avatar/avatar_from_url_job_spec.rb spec/services/autonomia/agents/tools/http_executor_spec.rb spec/services/twilio/media_download_service_spec.rb spec/services/website_branding_service_spec.rb spec/lib/webhooks/trigger_spec.rb spec/controllers/api/v1/upload_controller_spec.rb   # consumidores do SafeFetch, antes e depois: 109 ex, 0 falhas
 bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia --format json --out ampla.json
 npx tsx src/cli/main.ts agger quote proposal <id>  (×3, só print; nenhum quote start) + curl -I na URL → 404 BlobNotFound

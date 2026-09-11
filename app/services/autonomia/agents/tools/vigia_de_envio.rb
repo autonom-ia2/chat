@@ -14,6 +14,10 @@
 # A assinatura é do processo (todas as threads), pelo tempo do bloco; o que outras threads do Sidekiq
 # enfileiram cai na mesma lista e é inofensivo: a pergunta é sempre por UMA mensagem, a desta
 # publicação. Anotar é escrita sob mutex, porque essas threads enfileiram ao mesmo tempo.
+#
+# RESSALVA (rodada 8): o vigia anota o que ENTROU segundo o adapter. Se o Redis aceita o job e perde a
+# resposta na mesma chamada, o adapter levanta, `successfully_enqueued?` fica falso e o job que entrou
+# não é anotado — e a recuperação do publicador põe um segundo (ver `AsyncPublisher#reenviar`).
 class Autonomia::Agents::Tools::VigiaDeEnvio
   EVENTOS = /\A(enqueue|enqueue_at)\.active_job\z/
 

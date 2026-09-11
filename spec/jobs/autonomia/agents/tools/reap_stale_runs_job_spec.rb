@@ -90,8 +90,7 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
   # sem anexo e é velho o bastante para não ser um upload em andamento. Nada fora disso é tocado: os
   # blobs dos outros caminhos do Chatwoot não são nossos para apagar.
   describe 'blobs sem dono da entrega de arquivo' do
-    def blob(criado_ha:, marcado: true)
-      metadata = marcado ? Autonomia::Agents::Tools::EntregaDeArquivo.marca(run_id: 7) : {}
+    def blob(criado_ha:, metadata: Autonomia::Agents::Tools::EntregaDeArquivo.marca(run_id: 7))
       ActiveStorage::Blob.create_and_upload!(io: StringIO.new("%PDF-1.4\n"), filename: 'comparativo.pdf',
                                              content_type: 'application/pdf', identify: false, metadata: metadata)
                          .tap { |b| b.update!(created_at: criado_ha.ago) }
@@ -106,7 +105,7 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
       # Arrange
       sem_dono = blob(criado_ha: 2.hours)
       recente = blob(criado_ha: 10.minutes)
-      de_outro_caminho = blob(criado_ha: 2.hours, marcado: false)
+      de_outro_caminho = blob(criado_ha: 2.hours, metadata: {})
       anexado = blob(criado_ha: 2.hours)
       anexar(anexado)
 
@@ -119,6 +118,30 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
       perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
       expect(ActiveStorage::Blob.where(id: sem_dono.id)).not_to exist
       expect(ActiveStorage::Blob.where(id: [recente.id, de_outro_caminho.id, anexado.id]).count).to eq(3)
+    end
+
+    # A MARCA É LIDA COMO JSON, NO NÍVEL SUPERIOR, COM AS DUAS CHAVES (rodada 8, P2 do Codex): o `LIKE`
+    # sobre o texto tratava `_` como curinga (`entrega_de_arquivo` casava `entregaXdeXarquivo`), casava
+    # a marca ANINHADA em outro objeto, e não exigia o id da execução — três jeitos de escolher um blob
+    # alheio ainda sem anexo. E `metadata` é `text`: uma linha que não seja JSON não pode derrubar a
+    # varredura (o cast só acontece para o que É objeto JSON).
+    it 'nao apaga o que so PARECE marcado: curinga do LIKE, marca aninhada, marca sem execucao, texto que nao e JSON' do
+      # Arrange — um blob nosso e quatro impostores, todos velhos e sem anexo
+      sem_dono = blob(criado_ha: 2.hours)
+      curinga = blob(criado_ha: 2.hours, metadata: { 'autonomiaXfinalidade' => 'entregaXdeXarquivo', 'autonomia_tool_run_id' => 7 })
+      aninhada = blob(criado_ha: 2.hours, metadata: { 'origem' => Autonomia::Agents::Tools::EntregaDeArquivo.marca(run_id: 7) })
+      sem_execucao = blob(criado_ha: 2.hours, metadata: { 'autonomia_finalidade' => 'entrega_de_arquivo' })
+      nao_json = blob(criado_ha: 2.hours)
+      ActiveStorage::Blob.where(id: nao_json.id).update_all("metadata = 'nao e json'") # rubocop:disable Rails/SkipsModelValidations
+
+      # Act
+      described_class.new.perform
+
+      # Assert
+      expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+      perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
+      expect(ActiveStorage::Blob.where(id: sem_dono.id)).not_to exist
+      expect(ActiveStorage::Blob.where(id: [curinga.id, aninhada.id, sem_execucao.id, nao_json.id]).count).to eq(4)
     end
 
     # A limpeza é cortesia (rodadas 4 e 5): o Redis fora no agendamento fica registrado, com o id do
