@@ -129,8 +129,12 @@ class Autonomia::Insurance::Connection < ApplicationRecord
     }
   end
 
-  # O diagnostico estruturado (criterios 1.1, 1.2, 1.5, 1.6 e 4.5). Separado do resto porque ele
-  # cresce a cada criterio novo, e `public_payload` nao pode virar uma lista de trinta linhas.
+  # O diagnostico estruturado (criterios 1.1, 1.2, 1.6 e 4.5). Separado do resto porque ele cresce a
+  # cada criterio novo, e `public_payload` nao pode virar uma lista de trinta linhas.
+  #
+  # O 1.5 ("a mesma conta AGGER usada em dois lugares") saiu em 11/09/2026: o unico sinal que ele
+  # tinha era o aviso de sessao ativa do portal, que vem em TODO login e nao diz quem abriu a sessao.
+  # Publicar era afirmar o que o dado nao sustenta. Ver `connections/session.rb`.
   def diagnostico_publico
     {
       failure: last_failure,
