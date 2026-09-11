@@ -278,6 +278,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     end
     let(:pdf) { "%PDF-1.4\n%%EOF\n" }
 
+    # O `SafeFetch` resolve o nome antes de conectar (é assim que ele confere o endereço): o host de
+    # teste ganha um endereço público, e o WebMock responde a chamada.
+    before do
+      allow(Resolv).to receive(:getaddresses).and_call_original
+      allow(Resolv).to receive(:getaddresses).with('arquivos.exemplo.test').and_return(['93.184.216.34'])
+    end
+
     it 'publica o PDF como anexo, com o nome do arquivo' do
       # Arrange
       promote
@@ -332,10 +339,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(Rails.logger).to have_received(:warn).with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=http_404/))
     end
 
-    # O que o Down NÃO classifica (uma resposta HTTP malformada do servidor do blob) subia cru:
-    # `blocked`, nem arquivo nem link, com a sentinela do comparativo já gravada no caminho da
+    # O que ninguém no caminho classifica (uma resposta HTTP malformada do servidor do blob) subia
+    # cru: `blocked`, nem arquivo nem link, com a sentinela do comparativo já gravada no caminho da
     # consulta — o "anexo que só funciona quando tudo dá certo" por uma fresta (rodada 5, P3).
-    it 'cai para o texto com o link quando a camada HTTP levanta o que o Down nao classifica' do
+    it 'cai para o texto com o link quando a camada HTTP levanta o que ninguem classifica' do
       # Arrange
       promote
       stub_request(:get, url).to_raise(Net::HTTPBadResponse)
@@ -519,42 +526,124 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       # Act
       result = described_class.new(run: run).publish(arquivo.to_h)
 
+      # Assert — a linha do blob sem arquivo (salva antes da subida, rodada 6) vai para a limpeza
+      expect(result).to be_published
+      mensagem = bot_messages.sole
+      expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
+      expect(mensagem.attachments).to be_empty
+      expect(mensagem.content_attributes['autonomia_async_token']).to eq(run.delivery_token(arquivo.identidade))
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=armazenamento causa=Errno::ECONNREFUSED; vai como link/))
+      expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+      perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
+      expect(ActiveStorage::Blob.count).to eq(0)
+    end
+
+    # O MOTIVO É FECHADO: o cabeçalho que desmente o PDF é do servidor, e nada dele vai ao log —
+    # antes saía `tipo_text_html`, com o valor externo dentro do código (rodada 6, 11/09/2026).
+    it 'cai para o texto com o link quando o tipo declarado desmente o PDF, sem o cabecalho no log' do
+      # Arrange
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'text/html; charset=utf-8' })
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert
+      expect(result).to be_published
+      expect(bot_messages.sole.content).to eq("Comparativo com todas as opções:\n#{url}")
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=tipo_invalido; vai como link/))
+      expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(%r{text/html|text_html|charset}))
+    end
+
+    # A FALHA AO ANEXAR, depois de um download e uma gravação bons (rodada 6, 11/09/2026): a mensagem
+    # com o anexo não nasce (a transação volta) e, sem esta guarda, a exceção saía do publicador como
+    # `blocked` — nem arquivo nem link. Agora a reserva vai com o MESMO token, registrada com a classe
+    # da causa, e o blob que ficou sem dono vai para a limpeza.
+    it 'cai para o texto com o link quando o anexo nao pode ser publicado, com um so token e o blob na limpeza' do
+      # Arrange — a mensagem com anexo é inválida; a sem anexo (a reserva) nasce normalmente
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      allow(Messages::MessageBuilder).to receive(:new).and_wrap_original do |original, *args|
+        raise ActiveRecord::RecordInvalid if args.last[:attachments].present?
+
+        original.call(*args)
+      end
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
       # Assert
       expect(result).to be_published
       mensagem = bot_messages.sole
       expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
       expect(mensagem.attachments).to be_empty
-      expect(ActiveStorage::Blob.count).to eq(0)
       expect(mensagem.content_attributes['autonomia_async_token']).to eq(run.delivery_token(arquivo.identidade))
       expect(Rails.logger).to have_received(:warn)
-        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=armazenamento causa=Errno::ECONNREFUSED; vai como link/))
+        .with(a_string_matching(/anexo falhou run=#{run.id} causa=ActiveRecord::RecordInvalid; vai como link/))
+      expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
     end
 
-    # O DOWNLOAD E A GRAVAÇÃO ACONTECEM FORA DO LOCK DA CONVERSA: são rede, com até 20 s de tetos, e
-    # a conversa não pode ficar travada por isso. O que se observa é o SQL: nenhum `FOR UPDATE`
-    # pode ter saído antes de o download começar (rodada 3, 11/09/2026).
+    # A EXCEÇÃO DEPOIS DO COMMIT (rodada 6, P3): um callback `after_commit` da mensagem — o evento que
+    # vai ao Redis — levanta com a mensagem e o anexo JÁ no ar. Sem reconciliar pelo token, a reserva
+    # sairia por cima (duplicando a entrega) ou o blob anexado iria para a limpeza (a mensagem no ar
+    # sem arquivo). A publicação é `published` sem mensagem nova, e o anexo fica.
+    it 'mantem a mensagem com o anexo, sem reserva e sem limpeza, quando a publicacao levanta depois do commit' do
+      # Arrange — o Redis cai no despacho do evento de criação da mensagem com anexo
+      promote
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      allow(Rails.configuration.dispatcher).to receive(:dispatch).and_wrap_original do |original, evento, *resto|
+        dados = resto[1]
+        raise Redis::CannotConnectError, 'redis fora' if evento == Events::Types::MESSAGE_CREATED && dados[:message].attachments.any?
+
+        original.call(evento, *resto)
+      end
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      # Assert
+      expect(result).to be_published
+      expect(result.message).to be_nil
+      mensagem = bot_messages.sole
+      expect(mensagem.content).to eq('Comparativo com todas as opções.')
+      expect(mensagem.attachments.sole.file.download).to eq(pdf)
+      expect(run.reload.sequence).to eq(1)
+      expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
+      expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(/publish failed|anexo falhou/))
+    end
+
+    # O DOWNLOAD E A GRAVAÇÃO ACONTECEM FORA DO LOCK DA CONVERSA: são rede e armazenamento, com prazo
+    # total de 20 s, e a conversa não pode ficar travada por isso. O que se observa é a ORDEM: o
+    # download começa, o arquivo sobe, e só então sai o `FOR UPDATE` da publicação (rodadas 3 e 6).
     it 'baixa e grava o arquivo antes de travar a conversa' do
       # Arrange
       promote
       stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
-      travas = []
-      travas_antes_do_download = nil
+      eventos = []
       assinatura = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
-        travas << payload[:sql] if payload[:sql].to_s.include?('FOR UPDATE')
+        eventos << :trava if payload[:sql].to_s.include?('FOR UPDATE')
       end
-      allow(Down).to receive(:download).and_wrap_original do |original, *args, **opcoes|
-        travas_antes_do_download = travas.dup
+      allow(SafeFetch).to receive(:fetch).and_wrap_original do |original, *args, **opcoes, &bloco|
+        eventos << :download
+        original.call(*args, **opcoes, &bloco)
+      end
+      allow(ActiveStorage::Blob.service).to receive(:upload).and_wrap_original do |original, *args, **opcoes|
+        eventos << :gravacao
         original.call(*args, **opcoes)
       end
 
       # Act
       result = described_class.new(run: run).publish(arquivo.to_h)
 
-      # Assert — o download aconteceu, sem trava antes dele; a trava veio depois, na publicação
+      # Assert — download, gravação, e só então a trava
       expect(result).to be_published
       expect(bot_messages.sole.attachments.sole.file.download).to eq(pdf)
-      expect(travas_antes_do_download).to eq([])
-      expect(travas).not_to be_empty
+      expect(eventos.first(3)).to eq(%i[download gravacao trava])
     ensure
       ActiveSupport::Notifications.unsubscribe(assinatura) if assinatura
     end

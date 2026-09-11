@@ -40,6 +40,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     record.update!(status: 'ready')
     record.store_session!({ 'multicalculoToken' => 'multi' }, expires_at: 3.hours.from_now)
     register_async_tool(cotacao)
+    # O `SafeFetch` resolve o nome antes de conectar (é assim que ele confere o endereço): o host de
+    # teste ganha um endereço público, e o WebMock responde a chamada.
+    allow(Resolv).to receive(:getaddresses).and_call_original
+    allow(Resolv).to receive(:getaddresses).with('exemplo.test').and_return(['93.184.216.34'])
   end
 
   def bot_messages
@@ -160,9 +164,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     described_class.new.perform(run.id, 1)
 
-    # Assert — o preço fica, o link sai em texto, nada de anexo nem blob sem dono, a entrega conta
+    # Assert — o preço fica, o link sai em texto, nada de anexo, a entrega conta; a linha do blob sem
+    # arquivo (a subida falhou depois de a linha ser salva, rodada 6) vai para a limpeza em segundo plano
     expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}"])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
+    expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+    perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
     expect(ActiveStorage::Blob.count).to eq(0)
     expect(run.reload.handle[cotacao::PDF_SENT_KEY]).to be(true)
     expect(run.delivered_count).to eq(2)

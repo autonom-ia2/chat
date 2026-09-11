@@ -40,6 +40,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     record.update!(status: 'ready')
     record.store_session!({ 'multicalculoToken' => 'multi' }, expires_at: 3.hours.from_now)
     register_async_tool(cotacao)
+    # O `SafeFetch` resolve o nome antes de conectar (é assim que ele confere o endereço): o host de
+    # teste do comparativo ganha um endereço público, e o WebMock responde a chamada.
+    allow(Resolv).to receive(:getaddresses).and_call_original
+    allow(Resolv).to receive(:getaddresses).with('exemplo.test').and_return(['93.184.216.34'])
   end
 
   def bot_contents

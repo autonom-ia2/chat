@@ -21,12 +21,14 @@
 #    `current_turn_incoming` considera turno atual).
 #
 # 4. A ENTREGA DE ARQUIVO (entrega 11) é publicada como ANEXO: o publicador baixa a URL e GRAVA o
-#    arquivo no armazenamento na hora de publicar (`EntregaDeArquivo#gravar`, com teto de tamanho,
-#    de tempo e assinatura de PDF), FORA do lock da conversa, e anexa o blob gravado (pelo
-#    `signed_id`) pelo `Messages::MessageBuilder` — o mesmo caminho do agente humano que manda um
-#    arquivo. Quando o download OU a gravação falham, sai o texto de reserva com o link, como saía
-#    antes, com o motivo no log: a falha do arquivo não apaga a entrega, e nunca é silenciosa. A
-#    identidade é a mesma nos dois caminhos, então um retry não publica o arquivo por cima do link.
+#    arquivo no armazenamento na hora de publicar (`EntregaDeArquivo#gravar`, pelo `SafeFetch`: o
+#    endereço conectado conferido, teto de tamanho, prazo total e assinatura de PDF), FORA do lock
+#    da conversa, e anexa o blob gravado (pelo `signed_id`) pelo `Messages::MessageBuilder` — o
+#    mesmo caminho do agente humano que manda um arquivo. Quando o download OU a gravação falham,
+#    sai o texto de reserva com o link, como saía antes, com o motivo no log: a falha do arquivo não
+#    apaga a entrega, e nunca é silenciosa. A identidade é a mesma nos dois caminhos, então um retry
+#    não publica o arquivo por cima do link — e a falha ao ANEXAR é reconciliada pelo token antes
+#    de cair para o link (rodada 6).
 class Autonomia::Agents::Tools::AsyncPublisher
   # Motivos de não-publicação, devolvidos a quem chamou (o job decide se re-agenda ou encerra).
   Result = Struct.new(:status, :message, keyword_init: true) do
@@ -182,40 +184,45 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # o código curto e a classe da causa, nunca o texto da resposta nem da exceção.
   #
   # O blob que NÃO virou anexo (o retry que encontrou a mensagem no ar, ou a publicação que não
-  # concluiu) é apagado EM SEGUNDO PLANO (`purge_later`): gravado antes da mensagem, ele não tem
-  # dono até ela existir. Apagá-lo aqui, na hora, era falar com o armazenamento de novo dentro do
-  # `ensure`, e um `delete` que falha (rede) saía do `ensure` por cima do resultado: a entrega que
-  # JÁ estava no ar virava `blocked` e "publish failed" no log, e a exceção de uma publicação que
-  # levantou era trocada pela do purge (rodada 4, 11/09/2026). O `PurgeJob` vai para a fila
-  # `default` do Sidekiq (`ActiveStorage.queues[:purge]` não está configurado nesta instalação),
-  # que retenta o job que falhar; uma limpeza que ainda assim falhe deixa no máximo um arquivo
-  # órfão no armazenamento. E o AGENDAMENTO também fala com o Redis, dentro do mesmo `ensure`:
-  # quando ele falha, `agendar_limpeza` registra e não levanta (rodada 5). Só assim o resultado
-  # da publicação é o da publicação — nunca uma mensagem a menos nem um log que aponta para a
-  # causa errada.
+  # concluiu) é apagado EM SEGUNDO PLANO (`EntregaDeArquivo.agendar_limpeza` → `purge_later`):
+  # gravado antes da mensagem, ele não tem dono até ela existir. Apagá-lo aqui, na hora, era falar
+  # com o armazenamento de novo dentro do `ensure`, e um `delete` que falha (rede) saía do `ensure`
+  # por cima do resultado: a entrega que JÁ estava no ar virava `blocked` e "publish failed" no
+  # log, e a exceção de uma publicação que levantou era trocada pela do purge (rodada 4,
+  # 11/09/2026). E o AGENDAMENTO também fala com o Redis, dentro do mesmo `ensure`: quando ele
+  # falha, `agendar_limpeza` registra e não levanta (rodada 5). Só assim o resultado da publicação
+  # é o da publicação — nunca uma mensagem a menos nem um log que aponta para a causa errada.
   def post_arquivo(conversation, agent_inbox, arquivo)
     token = @run.delivery_token(arquivo.identidade)
     blob = arquivo.gravar
     anexado = false
-    resultado = post(conversation, agent_inbox, Corpo.new(texto: arquivo.legenda, token: token, anexo: blob.signed_id))
-    anexado = resultado.message.present?
+    resultado, anexado = publicar_anexo(conversation, agent_inbox, arquivo, token, blob)
     resultado
   rescue ::Autonomia::Agents::Tools::EntregaDeArquivo::Indisponivel => e
     Rails.logger.warn("[autonomia][tool][async] arquivo indisponivel run=#{@run.id} motivo=#{e.motivo}" \
                       "#{" causa=#{e.causa}" if e.causa}; vai como link")
     post(conversation, agent_inbox, Corpo.new(texto: arquivo.reserva, token: token))
   ensure
-    agendar_limpeza(blob) if blob && !anexado
+    ::Autonomia::Agents::Tools::EntregaDeArquivo.agendar_limpeza(blob, contexto: "run=#{@run.id}") if blob && !anexado
   end
 
-  # A limpeza do blob sem dono é CORTESIA: registrada com o id do blob (para a limpeza manual),
-  # nunca no resultado — enfileirar fala com o Redis, e o Redis fora no meio do job não pode
-  # transformar uma entrega já no ar em `blocked`, nem trocar a causa de uma publicação que
-  # levantou. Só a classe da causa vai ao log.
-  def agendar_limpeza(blob)
-    blob.purge_later
+  # -> [Result, o blob ficou com dono?]. A FALHA AO ANEXAR, depois de um download e uma gravação bons,
+  # é RECONCILIADA pelo token antes de qualquer decisão (rodada 6, 11/09/2026): o `post` pode levantar
+  # DEPOIS do commit — um callback `after_commit` da mensagem, o evento que vai ao Redis — e aí a
+  # mensagem com o anexo JÁ está no ar: publicar a reserva duplicaria a entrega, e apagar o blob
+  # deixaria a mensagem sem arquivo. Se a mensagem com este token existe → `published` sem mensagem
+  # nova, e o blob tem dono se está anexado a ela (o retry concorrente que perdeu a corrida fica sem
+  # dono e vai para a limpeza). Se não existe (a transação voltou: anexo inválido, banco), a reserva
+  # vai com o MESMO token, registrada com a classe da causa — nunca a mensagem da exceção. Se a
+  # reserva também levantar, sobe para o `publish`, que devolve `blocked`, como sempre.
+  def publicar_anexo(conversation, agent_inbox, arquivo, token, blob)
+    resultado = post(conversation, agent_inbox, Corpo.new(texto: arquivo.legenda, token: token, anexo: blob.signed_id))
+    [resultado, resultado.message.present?]
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][tool][async] blob sem dono nao agendado run=#{@run.id} blob=#{blob.id} causa=#{e.class}")
+    return [Result.new(status: :published), blob.attachments.exists?] if delivery_posted?(conversation, token)
+
+    Rails.logger.warn("[autonomia][tool][async] anexo falhou run=#{@run.id} causa=#{e.class}; vai como link")
+    [post(conversation, agent_inbox, Corpo.new(texto: arquivo.reserva, token: token)), false]
   end
 
   def delivery_posted?(conversation, token)

@@ -11,11 +11,14 @@ A ferramenta continua sem conhecer conversa nem mensagem: ela entrega, no lugar 
 forma serializada que atravessa o `Progress`, o handle e os argumentos do `AsyncPublishJob`): a URL
 que o portal gerou, o NOME do arquivo ("Comparativo de seguro — placa HIK9383.pdf"), a legenda e a
 RESERVA (o texto com o link, palavra por palavra o de antes). Quem baixa é o publicador
-(`AsyncPublisher`), na hora de publicar, FORA do lock da conversa, com três guardas — teto de
-tamanho (10 MB, anunciado e medido), tetos de tempo (5 s de conexão, 15 s de leitura, abaixo dos
-25 s de shutdown do Sidekiq) e assinatura de PDF (`%PDF-`, mais o tipo declarado que não pode
-desmentir) —, sem seguir redirecionamento, GRAVA o blob no armazenamento ainda fora do lock
-(`EntregaDeArquivo#gravar`, rodada 3) e anexa o blob gravado (pelo `signed_id`) pelo
+(`AsyncPublisher`), na hora de publicar, FORA do lock da conversa, pelo `SafeFetch` (o cliente
+HTTP da casa sobre o `ssrf_filter`, rodada 6), com as guardas — o endereço efetivamente conectado
+(nada de rede privada, nem por DNS), o status lido ANTES do corpo, teto de tamanho (10 MB,
+anunciado e medido em fluxo), PRAZO TOTAL de 20 s (conexão de até 5 s dentro dele; cada leitura
+espera só o que resta; abaixo dos 25 s de shutdown do Sidekiq) e assinatura de PDF (`%PDF-`, mais
+o tipo declarado que não pode desmentir) —, sem seguir redirecionamento, GRAVA o blob no
+armazenamento ainda fora do lock e fora de transação (`EntregaDeArquivo#gravar`, rodadas 3 e 6) e
+anexa o blob gravado (pelo `signed_id`) pelo
 `Messages::MessageBuilder`, o mesmo caminho do agente humano que manda um arquivo. Quando o
 download ou a gravação não entregam um PDF, sai a reserva com o mesmo token de idempotência, e o
 motivo (código curto) vai ao log: a falha do arquivo não apaga os preços que já saíram, e nunca é
@@ -34,9 +37,10 @@ gravada quando a ENTREGA sai da ferramenta, seja qual for a forma em que o publi
 
 - `app/services/autonomia/agents/tools/entrega_de_arquivo.rb` (novo): forma serializada
   (`to_h`/`.de`), validação da forma (https, nome `.pdf` sem separador, legenda e reserva
-  presentes), identidade (`arquivo:<url>`) e `#baixar` (Down com `max_size`, `open_timeout`,
-  `read_timeout`, `max_redirects`; `Indisponivel` com motivo curto: `tamanho`, `tempo`,
-  `http_404`, `tipo_text_html`, `nao_e_pdf`…).
+  presentes), identidade (`arquivo:<url>`) e `#gravar` (download pelo `SafeFetch` desde a rodada 6
+  — antes `Down` — com `max_bytes`, `open_timeout`, `total_timeout`, `max_redirects: 0`;
+  `Indisponivel` com motivo curto FECHADO: `url_insegura`, `redirecionamento`, `http_<status>`,
+  `tamanho`, `tempo`, `download`, `tipo_invalido`, `nao_e_pdf`, `armazenamento`).
 - `tools/progress.rb`: a peneira aceita a entrega de arquivo (legenda e reserva passam pela mesma
   regra de texto de cliente; Hash que não é entrega de arquivo é descartado com log).
 - `tools/async_publisher.rb`: `publish` reconhece texto ou arquivo; `Corpo` (texto, token, anexo);
@@ -230,16 +234,144 @@ certos (`Net::HTTPBadResponse` cru; `blocked` ×2; log sem a causa da publicaç�
 passando; os dois specs-guarda (anexo sem `PurgeJob`; reserva com caminho de campo) já passavam
 no código atual — o que eles provam é pela mutação. Nada além dos cinco achados mudou.
 
+### Rodada 6 (revisão do Codex sobre `67bdc99454`: 2 P1 + 4 P2 + 1 P3 + 1 ressalva): a rede, o corpo, o tempo, o anexo
+
+O que as cinco rodadas anteriores tinham deixado como INTENÇÃO no download, o Codex apontou como
+regra sem guarda — e duas delas eram de segurança. Todas as decisões abaixo são do orquestrador;
+cada correção veio com spec e mutação. O que se corrigiu de prosa: os comentários e esta auditoria
+prometiam "tetos de tempo (5 s + 15 s)" e "termina em 20 s" quando o teto era POR LEITURA — um
+servidor que entrega um byte por segundo nunca o estourava.
+
+**P1 — SSRF: `URL_SEGURA` só conferia o esquema.** `Down.download` não bloqueia IP privado nem um
+nome que resolve para dentro (DNS rebinding): a URL vem do portal, e um `https://10.0.0.7/x.pdf`
+ou um `https://nome-que-resolve-para-169.254.169.254/x.pdf` levaria o worker a ler o que não deve
+e a anexar a resposta com nome de PDF. Causa raiz: a forma protegia o transporte, não o destino.
+Correção: o download passa a ser `SafeFetch.fetch` (lib da casa sobre `ssrf_filter` 1.5.0, a
+mesma do upload por URL, do avatar e dos webhooks), que resolve o nome ANTES de conectar, recusa
+endereço privado (v4, v6, mapeados, NAT64, metadata da nuvem) e conecta no IP validado
+(`ipaddr:`), sem TOCTOU de DNS. As nossas conferências continuam (tipo declarado, assinatura
+`%PDF-`, teto de bytes). Motivo fechado `url_insegura` (também para esquema inválido). Guardas
+(`entrega_de_arquivo_spec`, "o endereco"): IPv4 privado, IPv6 privado (`[fd00::1]`) e nome que
+resolve para `10.0.0.7` → `url_insegura` e NENHUM pedido feito ao destino (`a_request … not_to
+have_been_made`). Mutação S1 (voltar ao `Down`/`URL_SEGURA`).
+
+**P1 — o teto de bytes não valia para o corpo de um 404/302.** O open-uri (por baixo do Down) lê o
+corpo INTEIRO antes de o Down levantar `NotFound`/`TooManyRedirects`: um 404 de 1 GB do portal
+seria materializado em memória só para ser recusado. E o `SafeFetch` de antes tinha a MESMA fresta,
+por outro caminho: o bloco do `Net::HTTP` fazia `next unless Net::HTTPSuccess`, e depois do bloco
+o Net::HTTP lê o corpo inteiro (`HTTPResponse#reading_body` → `body`) — a menos que o bloco
+LEVANTE. Correção no `SafeFetch::Fetcher` (retrocompatível: mesma classe e mesma mensagem de erro,
+só mais cedo): a resposta que não é 2xx — e não é um 3xx que o ssrf_filter vai seguir — é recusada
+DENTRO do bloco (`HttpError`, agora com `#status` inteiro), o que fecha a conexão sem consumir o
+corpo; o `Content-Length` acima do teto reprova antes do primeiro byte; o corpo é lido em fluxo,
+pedaço a pedaço, para o `Tempfile` do `SafeFetch` (fechado em `ensure` em TODO caminho — o
+temporário deixou de ser da entrega), e interrompido ao passar de `max_bytes`. Guardas:
+`safe_fetch_spec` "raises before the body of the non-2xx response is read" (uma resposta 404 cujo
+`body` marca se foi lido, com o `SsrfFilter.get` emulando o `reading_body` do Net::HTTP: bloco,
+depois `body`) e, em SOCKET REAL, "closes the connection instead of reading the body" (servidor
+local respondendo 404 com `Content-Length` de 32 MB: o cliente recusa e o servidor conta quantos
+bytes conseguiu escrever antes de a conexão cair — tem de ser menos que o total);
+`entrega_de_arquivo_spec` "e recusada pelo status, e a conexao e fechada sem materializar o
+corpo" (o mesmo servidor, pela entrega: `http_404`). Mutações S2 (voltar ao `next unless`) e S2b
+(tamanho anunciado não conferido).
+
+**P2 — sem prazo total.** `open_timeout` + `read_timeout` são por OPERAÇÃO; uma resposta que
+chega em pedaços com pausas menores que o `read_timeout` segura o worker além dos 25 s de shutdown
+do Sidekiq, e o comentário dizia "termina em 20 s". Correção: `SafeFetch` ganha `total_timeout:`
+(`SafeFetch::Deadline`, monotônico), e a entrega passa `PRAZO_TOTAL_SEGUNDOS = 20` (constante
+nomeada; `LEITURA_SEGUNDOS` deixou de existir — o prazo total é o teto de qualquer leitura). Cada
+leitura do corpo espera SÓ O QUE RESTA: o Net::HTTP guarda o `read_timeout` no `Net::BufferedIO`
+da conexão e o consulta a cada espera (`rbuf_fill`), então o `Fetcher` aperta o `read_timeout`
+desse socket entre um pedaço e o próximo (`response.instance_variable_get(:@socket)` — o Net::HTTP
+0.9.1 não expõe o socket da resposta, e esta é a única alavanca por leitura que existe sem trocar
+o cliente HTTP; o acoplamento está registrado no código e a guarda é o spec de socket real). Os
+tetos por operação são limitados pelo total já na conexão e na espera pelos cabeçalhos
+(`RequestOptions#bounded_by_total`). Estourou → `TotalTimeoutError` (um `FetchError`, para quem já
+trata rede) → motivo `tempo`. O que o prazo NÃO cobre, registrado: a resolução de DNS (antes da
+conexão, no `Resolv` do sistema). Guardas em socket real (servidor local que manda 10 bytes, e
+mais 10 depois de 0,3 s, 0,6 s e 1,2 s; prazo de 1 s): `safe_fetch_spec` "raises TotalTimeoutError
+when the total is up, waiting on each read only what is left" e `entrega_de_arquivo_spec` "e
+recusada por tempo ao vencer o prazo total, esperando em cada leitura so o que resta" — as duas
+afirmam `motivo == tempo` E tempo decorrido < 1,6 s: com o prazo conferido só entre pedaços a
+recusa viria aos 2,1 s (o pedaço seguinte), e sem prazo o download terminaria. Mutações S3 (prazo
+removido da entrega), S3f (`enforce!` removido do `Fetcher`), S3b (socket não apertado), S3c
+(tetos por operação não limitados pelo total).
+
+**P2 — falha ao ANEXAR sem reserva.** Download e gravação bons, e o `post` do anexo levanta: a
+exceção saía de `post_arquivo` sem passar pelo `rescue Indisponivel` → `publish` → `blocked`,
+nem arquivo nem link. Correção: `publicar_anexo` — qualquer `StandardError` no `post` do anexo é
+seguido de RECONCILIAÇÃO pelo token: se `delivery_posted?` → a mensagem existe (a exceção veio
+DEPOIS do commit: um `after_commit` da mensagem, o evento que vai ao Redis) → `published` sem
+mensagem nova, e o blob tem dono se está anexado a ela (`blob.attachments.exists?` — o retry
+concorrente que perdeu a corrida fica sem dono e vai para a limpeza); senão → log `anexo falhou
+run=<id> causa=<classe>; vai como link` e a RESERVA com o mesmo token. Se a reserva também
+levanta, `publish` devolve `blocked` como sempre. Guardas (`async_publisher_spec`): "cai para o
+texto com o link quando o anexo nao pode ser publicado, com um so token e o blob na limpeza"
+(`MessageBuilder` levantando `RecordInvalid` só quando há anexo → 1 mensagem = reserva, mesmo
+token, `PurgeJob` uma vez) e "mantem a mensagem com o anexo, sem reserva e sem limpeza, quando a
+publicacao levanta depois do commit" (o `dispatcher` levantando `Redis::CannotConnectError` no
+`message.created` da mensagem com anexo → `published` sem mensagem nova, 1 mensagem com o PDF,
+sequência 1, `PurgeJob` NÃO enfileirado, nenhum "publish failed"/"anexo falhou"). O P3 do Codex
+(exceção após o commit) é este segundo exemplo. Mutações S4a (sem reconciliação nem reserva) e S4b
+(reserva sem reconciliar).
+
+**P2 — upload ao S3 dentro da transação, e blob órfão.** `create_and_upload!` dentro de
+`Blob.transaction` segurava a conexão do banco durante a subida ao S3 (os timeouts do cliente S3
+são os padrões do aws-sdk — ressalva registrada). Correção: duas fases — `build_after_unfurling`
++ `blob.save!` (um INSERT, na transação curta dele) e `upload_without_unfurling(io)` FORA de
+transação; a subida que levanta manda a linha sem arquivo para a limpeza em segundo plano
+(`EntregaDeArquivo.agendar_limpeza(blob, contexto: 'gravacao')` — o `agendar_limpeza` do
+publicador virou este método de classe, com `contexto: "run=<id>"`, para não duplicar o rescue do
+Redis) e recusa `armazenamento` com a classe da causa. Guardas (`entrega_de_arquivo_spec`, "a
+gravacao"): "sobe o arquivo fora de transacao" (`open_transactions` durante o `upload` igual ao de
+antes de `gravar` — só a do fixture), "recusa … e manda a linha sem arquivo para a limpeza"
+(`PurgeJob` uma vez; depois de `perform_enqueued_jobs`, nenhum blob), "mantem o motivo do
+armazenamento quando a fila nao aceita a limpeza". Os specs do publicador e do job que afirmavam
+`Blob.count == 0` na falha do armazenamento passaram a afirmar `PurgeJob` enfileirado e zero
+blobs depois de executá-lo. Mutações S5 (subida dentro de transação) e S5b (volta ao
+`create_and_upload!` em transação).
+
+**P2 — cabeçalho externo no log.** `tipo_text_html` levava o valor do `Content-Type` do servidor
+para dentro do código do motivo. Correção: motivo fechado `tipo_invalido`. Guardas: o spec da
+entrega afirma o motivo e que a mensagem da exceção não carrega `html`/`charset`; o do publicador
+afirma que nenhum `warn` contém `text/html`, `text_html` ou `charset`. Mutação S6.
+
+**Ressalva — "baixa e grava antes de travar" só observava o INÍCIO do download.** Correção: o spec
+observa a ORDEM de três eventos (`SafeFetch.fetch` começa, `Blob.service.upload` acontece, o
+primeiro `FOR UPDATE` sai) e exige `[download, gravacao, trava]`. Mutações S8 (só a gravação
+dentro do lock) e R5 (download e gravação dentro do lock).
+
+**O que mudou no `SafeFetch` (lib da casa, retrocompatível; specs próprios em `safe_fetch_spec`):**
+opções novas `max_redirects:` (padrão o do ssrf_filter, 10; validado inteiro ≥ 0) e
+`total_timeout:` (padrão nil; validado > 0); `HttpError#status`; `TotalTimeoutError < FetchError`;
+`SafeFetch::Deadline` (novo arquivo); recusa do não-2xx dentro do bloco; `Content-Length` acima do
+teto reprova antes do corpo; `PrivateNetworkRequest` honra `max_redirects`. Os 7 consumidores
+existentes (upload por URL, avatar, executor HTTP das ferramentas, processador de link da base de
+conhecimento, mídia do Twilio, branding de site, webhooks/CRM) não mudam de comportamento: 109
+exemplos deles rodados antes e depois, 0 falhas.
+
+**Como os specs de socket real funcionam (e o seu limite):** `spec/support/servidor_http_local.rb`
+sobe um `TCPServer` em 127.0.0.1 que atende UMA conexão e executa um roteiro (cabeçalhos, pedaços,
+pausas), contando os bytes que conseguiu escrever. O WebMock, mesmo para a conexão real permitida
+em localhost, lê a resposta INTEIRA antes de entregá-la ao bloco do Net::HTTP (`super(request,
+nil, &nil)` no adapter) — nem o tempo nem o fechamento do socket seriam observáveis —, então
+esses exemplos o desligam (`WebMock.disable!`/`enable!`) e usam `SAFE_FETCH_ALLOW_PRIVATE_NETWORK`
+para o `SafeFetch` aceitar 127.0.0.1: é o caminho `PrivateNetworkRequest`, e não o `SsrfFilter.get`
+de produção, mas o `Fetcher` (bloco, prazo, teto, tempfile) é o mesmo nos dois; o caminho do
+`SsrfFilter.get` é o exercitado por todos os outros exemplos, via WebMock. A forma da entrega exige
+https e o servidor local só fala http: esses exemplos constroem a entrega direto (sem `.de`) e
+provam o download, não a forma.
+
 ### Termos (5)
 
 | # | Termo | Guarda / evidência |
 |---|---|---|
 | 1 | A comparação chega como ARQUIVO na conversa | `async_run_job_comparativo_arquivo_spec` ("entrega o comparativo como anexo, nomeado pela placa, e depois o fecho": job real + ferramenta real + conector mock + WebMock 200 → `Message` com `Attachment` `file`, `application/pdf`, bytes iguais, legenda sem URL); `async_publisher_spec` "publica o PDF como anexo" |
 | 2 | Falha no download não apaga os preços; o link vai como hoje | job spec "cai para o link quando o download falha, sem apagar o preco que ja saiu" (preço publicado ANTES pelo publicador real fica; `delivered_count` igual; texto = `RESERVA + "\n" + url`, o de antes); M1. Rodada 2: URL que a forma recusa → job spec "entrega o link em texto pela consulta…" (caminho `apply`: link em texto, `PDF_SENT_KEY` true, `delivered_count` 2, `done`) e comparativo spec "quando a URL do portal nao tem a forma segura"; M7. Rodada 3: falha do ANEXO (armazenamento) → job spec "…quando o armazenamento falha depois do download" e publisher spec "…sem anexo orfao"; R1 |
-| 3 | Exemplo automatizado do caminho de falha | os três exemplos de falha do job spec (404, HTML, armazenamento) + `async_publisher_spec` "cai para o texto com o link… e registra o motivo" (log `motivo=http_404`) e "…quando o armazenamento falha…" (log `motivo=armazenamento causa=…`) + 8 exemplos de recusa em `entrega_de_arquivo_spec` (inclusive 302 e armazenamento) |
+| 3 | Exemplo automatizado do caminho de falha | os três exemplos de falha do job spec (404, HTML, armazenamento) + `async_publisher_spec` "cai para o texto com o link… e registra o motivo" (log `motivo=http_404`), "…quando o armazenamento falha…" (log `motivo=armazenamento causa=…`), "…quando o tipo declarado desmente o PDF…" (`tipo_invalido`) e "…quando o anexo nao pode ser publicado…" (`anexo falhou`) + 15 exemplos de recusa em `entrega_de_arquivo_spec` (inclusive 302, IP privado, DNS para dentro, 404 de 32 MB em socket real, prazo total em socket real e armazenamento) |
 | 4 | O arquivo abre no WhatsApp de verdade | **pendente_prova_real** (orquestrador; ver "Produção") |
 | 5 | O nome diz o que ele é, sem dado pessoal além do que o cliente já vê | `insurance_quote_comparativo_arquivo_spec` (placa `hik-9383` → "Comparativo de seguro — placa HIK9383.pdf"; sem CPF/CEP no nome; sem placa → ramo); M2 |
-| NÃO | Anexo que só funciona quando tudo dá certo | o caminho de falha é exemplo (termo 3) e a reserva é a mesma identidade (M5); Hash que não é entrega nunca vira mensagem (`async_publisher_spec` "descarta, registrado e sem mensagem…", M8); a falha do ANEXO cai na mesma reserva que a do download (R1), sem mensagem com anexo órfão |
+| NÃO | Anexo que só funciona quando tudo dá certo | o caminho de falha é exemplo (termo 3) e a reserva é a mesma identidade (M5); Hash que não é entrega nunca vira mensagem (`async_publisher_spec` "descarta, registrado e sem mensagem…", M8); a falha do ARMAZENAMENTO cai na mesma reserva que a do download (R1), sem mensagem com anexo órfão; a falha ao ANEXAR é reconciliada pelo token e cai na reserva (S4a/S4b), e a exceção depois do commit não duplica nem apaga (rodada 6) |
 
 ### Mutações (11/09/2026, `mutacoes.py` no scratchpad: edita → roda → restaura → md5 conferido)
 
@@ -338,6 +470,49 @@ M3 ao `transferir`) — nada afrouxou. Cada linha: exemplos que reprovam / rodad
 | M7 | comparativo sem a guarda de forma (Hash invalido sai mesmo assim) | 2 de 11 |
 | M8 | publicador sem a guarda (o to_s do Hash vira mensagem, como antes) | 1 de 26 |
 
+Rodada 6 (`e11r6/mutacoes_e11_r6.py` no scratchpad: edita → roda → restaura → md5 conferido
+antes/depois nos 7 arquivos de código, inclusive os 3 do `SafeFetch`; `mutacoes_r6.json`). S1–S8
+são as regras novas desta rodada (13 mutações); N1, N2, N2b, V2, V5, Q1, Q2, R1, R2, R5 e M1–M8
+repetidas com o texto reajustado ao código atual (N2/N2b agora em `EntregaDeArquivo.agendar_limpeza`;
+M3 ao `SafeFetch.fetch`; M4 a `conferir`). R3/R4 (tempfile da entrega) e R6/R7 (purge no publicador
+e transação do `create_and_upload!`) deixaram de existir como código e foram substituídas por T1
+(o `ensure` do tempfile do `SafeFetch`), S5 e S5b. Cada linha: exemplos que reprovam / rodados.
+
+| # | Mutação | Reprova |
+|---|---|---|
+| S1 | (P1 SSRF) download de volta ao Down, so com URL_SEGURA: IP privado e DNS para dentro passam | 14 de 27 |
+| S2 | (P1) status nao conferido dentro do bloco: o corpo do 404/302 e lido inteiro antes da recusa | 5 de 76 |
+| S2b | tamanho anunciado nao conferido antes do corpo | 2 de 76 |
+| S3 | (P2) prazo total removido da entrega (so tetos por operacao) | 2 de 27 |
+| S3f | (P2) prazo total nao aplicado no Fetcher (enforce! removido) | 2 de 76 |
+| S3b | (P2) cada leitura NAO usa o tempo restante (socket nao apertado; prazo so entre pedacos) | 2 de 76 |
+| S3c | tetos por operacao nao limitados pelo prazo total | 1 de 49 |
+| S4a | (P2) falha ao anexar sem reconciliacao nem reserva: a excecao sobe (publish -> blocked) | 2 de 29 |
+| S4b | (P3) reserva sem reconciliar pelo token: a excecao depois do commit manda o blob anexado para a limpeza | 1 de 29 |
+| S5 | (P2) subida do arquivo dentro de transacao | 3 de 27 |
+| S5b | (P2) volta ao create_and_upload! em transacao (linha sem arquivo nao vai para a limpeza) | 5 de 61 |
+| S6 | (P2) cabecalho externo dentro do motivo (tipo_text_html) | 2 de 56 |
+| S8 | so a gravacao (upload) movida para dentro do lock da conversa | 1 de 29 |
+| R5 | download e gravacao movidos para dentro do lock da conversa | 1 de 29 |
+| N1 | rescue do que ninguem classifica removido: a excecao crua sobe (publish -> blocked) | 2 de 56 |
+| N2 | rescue do agendamento da limpeza removido: o Redis fora sobrescreve o resultado / a causa | 3 de 56 |
+| N2b | agendamento engolido sem registro (rescue sem warn) | 3 de 56 |
+| V2 | o blob ANEXADO tambem vai para a limpeza (sem && !anexado) | 4 de 34 |
+| V5 | a reserva da entrega de arquivo nao passa pela peneira de texto de cliente | 1 de 11 |
+| Q1 | volta ao purge sincrono cru no ensure (a falha do delete sobrescreve o resultado do post) | 6 de 29 |
+| Q2 | purge sincrono engolido em rescue no ensure (some o agendamento; o blob sem dono fica) | 6 de 29 |
+| R1 | rescue do armazenamento removido: a falha do upload sobe crua (publish -> blocked) | 4 de 61 |
+| R2 | redirecionamento seguido de novo (max_redirects 2) | 2 de 27 |
+| T1 | temporario do download nao fechado (ensure do with_tempfile removido) | 3 de 76 |
+| M1 | fallback removido: post_arquivo sem o rescue Indisponivel | 8 de 34 |
+| M2 | nome generico do arquivo | 4 de 11 |
+| M3 | teto de tamanho removido (sem max_bytes: o padrao de 40 MB do SafeFetch) | 3 de 27 |
+| M4 | assinatura de PDF nao conferida | 2 de 27 |
+| M5 | identidade do arquivo trocada pela legenda | 3 de 29 |
+| M6 | Progress aceita qualquer Hash como entrega | 4 de 11 |
+| M7 | comparativo sem a guarda de forma (Hash invalido sai mesmo assim) | 2 de 11 |
+| M8 | publicador sem a guarda (o to_s do Hash vira mensagem, como antes) | 1 de 29 |
+
 ### Recusa
 
 Nenhum motivo novo em `MOTIVOS`: cair para o link não é recusa ao modelo (a ferramenta fez o que
@@ -386,6 +561,22 @@ curto do motivo — nunca o corpo da resposta nem a mensagem da exceção.
   suíte ampla `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
   spec/requests/api/v1/accounts/autonomia`: 1062 exemplos, 0 falhas, 3 pendentes anteriores a esta PR, 0 erros fora de exemplo, exit 0 (`e11r5/ampla_r5.json`).
 
+- Rodada 6: `entrega_de_arquivo_spec` 27 (era 22), `async_publisher_spec` 29 (era 26),
+  `safe_fetch_spec` 49 (era 41), `async_run_job_comparativo_arquivo_spec` 5, `progress_spec` 11,
+  `insurance_quote_comparativo_arquivo_spec` 6: 127 exemplos, 0 falhas,
+  0 erros fora (`e11r6/green.json`, exit 0); rubocop nos 12 arquivos
+  tocados (+ `async_run_job_encerramento_parcial_spec`): 0 ofensas (`e11r6/rubocop.json`,
+  `e11r6/rubocop_enc.json`); 32 mutações, todas reprovam e restauram, md5 idêntico antes/depois
+  nos 7 arquivos (`e11r6/mutacoes_r6.json`); consumidores do `SafeFetch` (upload por URL, avatar,
+  executor HTTP, Twilio, branding, webhooks): 109 exemplos, 0 falhas, antes e depois da mudança
+  (`e11r6/consumidores_antes.json`); a primeira passada da suíte ampla achou 1 falha real —
+  `async_run_job_encerramento_parcial_spec` exercita o download do comparativo e não stubava o DNS de
+  `exemplo.test`, que o `SafeFetch` passou a resolver antes de conectar (stub adicionado, como nos
+  outros três specs); suíte ampla final `spec/services/autonomia spec/jobs/autonomia
+  spec/models/autonomia spec/requests/api/v1/accounts/autonomia` + `safe_fetch_spec` + specs dos
+  consumidores: 1185 exemplos, 0 falhas, 3 pendentes anteriores a esta PR,
+  0 erros fora de exemplo, exit 0 (`e11r6/ampla_r6_final.json`).
+
 ## O ACHADO que o orquestrador precisa saber antes da prova real — SUPERADO na rodada 3
 
 > Registro histórico. O fato novo do orquestrador (acima, rodada 3) mostra que o 404 veio de
@@ -422,8 +613,11 @@ logo como a SPA manda (o `print` não gasta cotação) e ler o blob de volta.
    WAHA (conversa 5045) o envio é do app externo, a partir do `data_url` do webhook.
 2. Se o download ou a gravação falharem (portal 404, armazenamento fora), o cliente recebe o
    texto com o link (como hoje) e o log do worker mostra `[autonomia][tool][async] arquivo
-   indisponivel run=<id> motivo=<http_404|armazenamento causa=…|download causa=…|…>; vai como
-   link`. O blob do retry que não virou anexo é apagado pelo `ActiveStorage::PurgeJob` na fila
+   indisponivel run=<id> motivo=<url_insegura|redirecionamento|http_<status>|tamanho|tempo|download
+   causa=…|tipo_invalido|nao_e_pdf|armazenamento causa=…>; vai como link` — ou, na falha ao
+   anexar depois de gravar, `anexo falhou run=<id> causa=<classe>; vai como link`. Uma linha do
+   blob sem arquivo (subida que falhou) também vai ao `PurgeJob`, com `contexto=gravacao` no log
+   se o Redis recusar o agendamento. O blob do retry que não virou anexo é apagado pelo `ActiveStorage::PurgeJob` na fila
    `default` do Sidekiq; se o Redis recusar o agendamento, o log mostra `blob sem dono nao agendado
    run=<id> blob=<id> causa=<classe>` (limpeza manual pelo id) e a entrega não é afetada. Nenhum
    rollout, nenhuma migração, nenhuma variável nova. Pré-requisito que já vale hoje para o agente
@@ -443,6 +637,8 @@ uv run python3 mutacoes_e11_r2.py                                       # rodada
 uv run python3 e11r3/mutacoes_e11_r3.py                                 # rodada 3: R1–R7 + M1–M8, todas reprovam, md5 restaurado
 uv run python3 e11r4/mutacoes_e11_r4.py                                 # rodada 4: Q1–Q2 + R1–R7 + M1–M8, todas reprovam, md5 restaurado
 uv run python3 e11r5/mutacoes_e11_r5.py                                 # rodada 5: N1, N2, N2b, V2, V5 + as 17 anteriores, todas reprovam, md5 restaurado
+uv run python3 e11r6/mutacoes_e11_r6.py                                 # rodada 6: S1–S8 (13 novas) + N1, N2, N2b, V2, V5, Q1, Q2, R1, R2, R5, T1, M1–M8 (32), todas reprovam, md5 restaurado
+bundle exec rspec spec/lib/safe_fetch_spec.rb spec/jobs/avatar/avatar_from_url_job_spec.rb spec/services/autonomia/agents/tools/http_executor_spec.rb spec/services/twilio/media_download_service_spec.rb spec/services/website_branding_service_spec.rb spec/lib/webhooks/trigger_spec.rb spec/controllers/api/v1/upload_controller_spec.rb   # consumidores do SafeFetch, antes e depois: 109 ex, 0 falhas
 bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia --format json --out ampla.json
 npx tsx src/cli/main.ts agger quote proposal <id>  (×3, só print; nenhum quote start) + curl -I na URL → 404 BlobNotFound
 ```
