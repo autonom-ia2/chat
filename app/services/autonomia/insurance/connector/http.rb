@@ -28,9 +28,17 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     504 => :timeout
   }.freeze
 
-  # ÚNICA operação que leva credencial. As demais viajam com a sessão que ela devolve — o portal
-  # aceita uma sessão viva por login, e abrir outra invalida a anterior, inclusive a de uma cotação
-  # em andamento.
+  # ÚNICA operação que leva credencial. As demais viajam com a sessão que ela devolve.
+  #
+  # (Correção de 11/09/2026: aqui se lia "o portal aceita uma sessão viva por login, e abrir outra
+  # invalida a anterior, inclusive a de uma cotação em andamento". Medido duas vezes contra o portal
+  # real e FALSO: sete logins EM SEQUÊNCIA em 05/09 e seis SIMULTÂNEOS em 10/09 receberam a MESMA
+  # sessão, e nenhum token anterior foi invalidado. O motivo de reusar é CUSTO — cada login é uma
+  # chamada de até `READ_TIMEOUT` segundos para receber de volta o que já tínhamos —, nunca
+  # exclusividade imposta pelo portal. A frase antiga é a que faria o próximo engenheiro serializar
+  # cotação por corretora, e essa fila nos tornaria o gargalo que o portal não é. Ver o cabeçalho de
+  # `connections/session.rb`; o fato tem canário vivo em
+  # `autonomia-adapters/test/contract/agger.sessao-unica.live.test.ts`.)
   def open_session(provider:, username:, password:)
     invoke("/v1/#{provider}/session", { username: username, password: password })
   end
@@ -147,10 +155,16 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   # namespace lê snake_case. A tradução mora nesta linha e em nenhum outro lugar.
   #
   # Isto NÃO era feito, e custou caro: `expiresAt` chegava e `payload['expires_at']` lia nil. Com
-  # `session_expires_at` nulo, `session_live?` era SEMPRE falso — a sessão única nunca reusava nada,
-  # cada chamada abria um login, e como o AGGER derruba a sessão anterior a cada login, a sessão que
-  # acabáramos de mandar já estava morta quando o portal a recebia. O sintoma foi
-  # `GET /cfg/corretora -> 403` e uma tela dizendo "credencial recusada" com a credencial válida.
+  # `session_expires_at` nulo, `session_live?` era SEMPRE falso — a sessão compartilhada nunca
+  # reusava nada, e cada chamada abria um login no portal.
+  #
+  # (Correção de 11/09/2026: este parágrafo continuava "e como o AGGER derruba a sessão anterior a
+  # cada login, a sessão que acabáramos de mandar já estava morta quando o portal a recebia". Medido
+  # e falso — logins da mesma conta compartilham a MESMA sessão. O estrago do defeito é CUSTO, um
+  # login por chamada, e não sessão morta. O sintoma `GET /cfg/corretora -> 403` com a credencial
+  # válida tem causa PROVADA e outra: o handler do adapter redigia o corpo da resposta, o token vinha
+  # como a palavra `<REDACTED>` e era isso que viajava em `Authorization` — `autonomia-adapters`
+  # c9b88bd, medido invocando o Lambda de produção.)
   #
   # SÓ o primeiro nível é traduzido. `data` é a sessão opaca do portal — quem entende o que tem lá
   # dentro é o adapter, e mexer nas chaves dela quebraria o token na volta.

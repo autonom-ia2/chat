@@ -11,13 +11,21 @@ RSpec.describe Autonomia::Insurance::Connections::Session do
 
   before { enable_test_encryption! }
 
-  # REGRESSÃO REAL, 05/09/2026, horas depois de a sessão única entrar no ar. O corretor abriu o
-  # portal do AGGER pelo navegador; o AGGER aceita uma sessão por login e derrubou a nossa. A linha
-  # continuou com uma sessão que PARECIA viva (`session_live?` só olha o prazo que nós gravamos), e
-  # toda chamada morreu em `GET /cfg/corretora -> 403`. A tela passou a dizer "credencial recusada"
-  # com a credencial perfeitamente válida.
+  # REGRESSÃO REAL, 05/09/2026: toda chamada morrendo em `GET /cfg/corretora -> 403`, e a tela
+  # dizendo "credencial recusada" com a credencial perfeitamente válida. `renew!` já existia e
+  # ninguém o chamava.
   #
-  # `renew!` já existia, documentado para exatamente este caso — e ninguém o chamava.
+  # (Correção de 11/09/2026: este parágrafo atribuía a regressão a "o corretor abriu o portal do
+  # AGGER pelo navegador; o AGGER aceita uma sessão por login e derrubou a nossa" — a mesma frase
+  # que o cabeçalho deste arquivo declara falsa três linhas acima. A CAUSA PROVADA do 403 é outra e
+  # já está corrigida: o handler do adapter redigia o corpo da resposta, o `aggregatorToken` chegava
+  # como a palavra `<REDACTED>` e era ISSO que viajava em `Authorization` — medido invocando o
+  # Lambda de produção, `autonomia-adapters` c9b88bd.)
+  #
+  # O MOTIVO HONESTO de `with_fresh_session` não depende daquela causa, e é o que estes exemplos
+  # travam: `session_live?` só conhece o PRAZO QUE NÓS GRAVAMOS, e prazo gravado não é prova. Se a
+  # sessão acabar antes dele, a linha fica com uma sessão que PARECE viva e toda chamada morre em
+  # 403 até o prazo vencer — com ou sem terceiro na conta.
   describe '#with_fresh_session' do
     let(:renew_account) { create(:account) }
     let(:renew_connection) do

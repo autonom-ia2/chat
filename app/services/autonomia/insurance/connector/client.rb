@@ -10,9 +10,16 @@
 #   quote_result      -> { quote_id:, product:, status: running|partial|completed|failed, offers: [...] }
 #   quote_proposal    -> { quote_id:, url: }
 #
-# CREDENCIAL SÓ EM `open_session`. As demais operações viajam com a sessão que ela devolveu: o portal
-# aceita uma sessão viva por login, e abrir outra invalida a anterior — inclusive a de uma cotação
-# em andamento. `data` é OPACO para nós: guardamos e devolvemos, quem interpreta é o adapter.
+# CREDENCIAL SÓ EM `open_session`. As demais operações viajam com a sessão que ela devolveu, porque
+# cada login novo é uma chamada cara ao portal para receber de volta exatamente a mesma sessão.
+#
+# (Correção de 11/09/2026: aqui se lia "o portal aceita uma sessão viva por login, e abrir outra
+# invalida a anterior — inclusive a de uma cotação em andamento". Medido e falso: sete logins em
+# sequência em 05/09 e seis simultâneos em 10/09 compartilharam a MESMA sessão, sem invalidar token
+# nenhum. Reusar é economia de login, não exclusividade do portal — e quem serializar cotação por
+# corretora com base naquela frase vira o gargalo que o portal não é. Ver `connections/session.rb`.)
+#
+# `data` é OPACO para nós: guardamos e devolvemos, quem interpreta é o adapter.
 # Erros viram Connector::Error (connector/error.rb) com `kind` estável.
 class Autonomia::Insurance::Connector::Client
   def open_session(provider:, username:, password:)

@@ -88,8 +88,15 @@ export const MOCK_CAPABILITIES = Object.freeze([
 // é a ação. São coisas diferentes e a tela precisa das duas.
 //
 // O defeito que isto corrige: `auth_required` era o destino de qualquer 403, e a tela traduzia
-// `auth_required` em "Confira o usuário e a senha da corretora". Em 05/09/2026 uma sessão derrubada
-// por login no navegador pediu duas trocas de senha que estavam certas.
+// `auth_required` em "Confira o usuário e a senha da corretora". Em 05/09/2026 um 403 que NÃO era
+// credencial recusada pediu duas trocas de senha que estavam certas.
+//
+// (Correção de 11/09/2026: dizia-se aqui "uma sessão derrubada por login no navegador". Medido e
+// falso — login da mesma conta não derruba sessão nenhuma no AGGER, ver `connections/session.rb`
+// no backend. A causa PROVADA daquele 403 é outra: o handler do adapter redigia o corpo da
+// resposta e o token viajava como a palavra `<REDACTED>` em `Authorization`, `autonomia-adapters`
+// c9b88bd. O critério 1.1 não muda por isso: continua sendo o mesmo 403 com a credencial certa, e
+// continua não sendo culpa do corretor.)
 export const FAILURE_CAUSES = Object.freeze({
   CREDENTIAL_REJECTED: 'credential_rejected',
   SESSION_LOST: 'session_lost',

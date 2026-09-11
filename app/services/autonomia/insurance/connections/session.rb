@@ -46,8 +46,11 @@ class Autonomia::Insurance::Connections::Session
     session
   end
 
-  # O portal recusou o que guardamos (sessão encerrada antes do prazo, ou substituída por um login
-  # feito fora daqui). Esquece e abre outra. -> Hash da nova sessão.
+  # O portal recusou o que guardamos — a sessão acabou antes do prazo que gravamos. Esquece e abre
+  # outra. -> Hash da nova sessão.
+  #
+  # (Correção de 11/09/2026: aqui se lia também "ou substituída por um login feito fora daqui".
+  # Medido e falso: login da mesma conta não substitui nem invalida a sessão anterior.)
   def renew!
     @connection.forget_session!
     resolve!
@@ -132,9 +135,13 @@ class Autonomia::Insurance::Connections::Session
   #   - `already_active` é a presença do texto na mensagem, e a mensagem vem sempre;
   #   - `session_started_at` é o `createdAt` da sessão COMPARTILHADA — foi o mesmo valor para os seis
   #     logins simultâneos. Diz quando a sessão começou, nunca quem a abriu;
-  #   - comparar esse instante com o nosso último login também não serve: nós abrimos sessão o tempo
-  #     todo, e a conta é quase sempre a nossa. Seria a mesma afirmação, agora com aritmética por
-  #     cima.
+  #   - comparar esse instante com o nosso último login foi CONSIDERADO E DESCARTADO, e o motivo não
+  #     é falta do dado: o instante fica dentro do blob OPACO da sessão (`openSession` devolve o
+  #     `AggerSession` inteiro em `data`, e `session_payload` guarda o blob como veio). Usá-lo
+  #     exigiria interpretar o blob — contra o contrato, que diz que só o adapter sabe o que tem lá
+  #     dentro — e ainda assumir que `createdAt` só muda quando a sessão do portal expira, e
+  #     expiração nunca foi observada. Sem essa segunda suposição a comparação seria a mesma
+  #     afirmação de antes, agora com aritmética por cima.
   # Alarme que não discrimina é alarme falso, e alarme falso permanente treina o corretor a ignorar
   # a tela inteira.
   #
