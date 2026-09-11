@@ -139,7 +139,11 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
   end
 
   # A credencial só existe no caminho que ABRE a sessão. Se ela vazasse para as demais operações, o
-  # adapter abriria uma sessão nova a cada chamada e invalidaria a que está cotando.
+  # adapter faria um login a cada chamada — de até `READ_TIMEOUT` segundos cada — para receber de
+  # volta exatamente a mesma sessão que já tínhamos.
+  #
+  # (Correção de 11/09/2026: aqui se lia "e invalidaria a que está cotando". Medido e falso: logins
+  # da mesma conta compartilham a sessão. O motivo é custo, e a regra não muda.)
   it 'sends the credentials only when opening a session' do
     stub_invoke(inner_status: 200, inner_body: { 'platform' => 'agger', 'data' => { 'token' => 'x' } }.to_json)
 

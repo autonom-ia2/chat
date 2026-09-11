@@ -6,8 +6,14 @@ require 'rails_helper'
 # Essa distinção não é acadêmica. O `Connector::Mock`, o `counting_connector` do spec de sessão e o
 # `connector_answering` do spec de sync foram TODOS escritos reproduzindo a suposição de que o
 # adapter devolvia snake_case. Três lugares verdes, nenhum tocando o formato real — e o resultado
-# foi a sessão única nunca reusar nada em produção, com a tela acusando "credencial recusada" de
-# uma credencial válida.
+# foi a sessão nunca ser reusada em produção: um login por chamada, cada um de até `READ_TIMEOUT`
+# segundos, para receber de volta o que já tínhamos.
+#
+# (Correção de 11/09/2026: este parágrafo terminava em "com a tela acusando 'credencial recusada' de
+# uma credencial válida", como se o defeito do formato tivesse causado o 403 de 05/09. Não causou —
+# a causa PROVADA daquele 403 é outra e está no adapter: o handler redigia o corpo da resposta e o
+# token viajava como a palavra `<REDACTED>` em `Authorization`, `autonomia-adapters` c9b88bd. O
+# estrago deste defeito aqui é custo, e ele basta para o arquivo existir.)
 #
 # Quando o contrato do adapter mudar, é para este arquivo que se volta: trocar o payload por outro
 # capturado de verdade, e ver o que quebra.

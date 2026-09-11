@@ -124,9 +124,14 @@ describe('InsuranceConnectionsTab (API)', () => {
   // CRITÉRIO 1.1 — a tela não atribui ao corretor uma falha que não é dele.
   //
   // Este exemplo exigia `AUTH_REQUIRED_HINT` sempre que o status fosse `auth_required`, e esse hint
-  // manda conferir usuário e senha. Como QUALQUER 403 virava `auth_required`, uma sessão derrubada
-  // por login no navegador pedia troca de senha — aconteceu duas vezes em 05/09/2026, com a
-  // credencial certa nas duas. Agora quem decide a mensagem é a CAUSA, não o status.
+  // manda conferir usuário e senha. Como QUALQUER 403 virava `auth_required`, um 403 que não era
+  // credencial recusada pedia troca de senha — aconteceu duas vezes em 05/09/2026, com a credencial
+  // certa nas duas. Agora quem decide a mensagem é a CAUSA, não o status.
+  //
+  // (Correção de 11/09/2026: dizia-se "uma sessão derrubada por login no navegador". Medido e
+  // falso; a causa provada daquele 403 é o token redatado pelo handler do adapter — `<REDACTED>` em
+  // `Authorization`, `autonomia-adapters` c9b88bd. O critério continua igual: o 403 não era do
+  // corretor.)
   it('pede a senha de volta quando o portal recusou a credencial', async () => {
     api.getConnection.mockResolvedValue({
       data: {
@@ -371,7 +376,9 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(wrapper.find('#insurance-agger-username').exists()).toBe(true);
   });
 
-  // O CASO DE 05/09: sessão derrubada por login no navegador. Mesmo 403, mesma tela, causa oposta.
+  // O CASO DE 05/09: a sessão morreu sem ser a credencial (o token chegava redatado do adapter, e o
+  // portal recusava corretamente). Mesmo 403, mesma tela, causa oposta — e é a CAUSA, não o status,
+  // que decide se a tela pede a senha de volta.
   it('não pede senha quando o que caiu foi a sessão, e não a credencial (1.1)', async () => {
     api.getConnection.mockResolvedValue({
       data: {
@@ -491,10 +498,28 @@ describe('InsuranceConnectionsTab (API)', () => {
     expect(wrapper.text()).toContain('Allianz, Icatu');
   });
 
-  // CRITÉRIO 1.5 — decisão do Rodrigo: avisar, não bloquear. O caso real: a conta da SENA ligada no
-  // Hub2You e na Autonomia ao mesmo tempo faz cotação de teste e cotação de cliente aparecerem
-  // misturadas no portal da corretora, sem como distinguir.
-  it('avisa quando a conta AGGER já estava em uso, e não bloqueia nada', async () => {
+  // TERMO 5 DA ENTREGA 16 — o aviso de "conta em uso" morreu, e não volta.
+  //
+  // O portal devolve "já existe uma sessão ativa com esse usuário" junto do token, em TODO login: 6
+  // de 6 nos logins simultâneos medidos em 10/09/2026. É aviso de reuso da sessão compartilhada, e
+  // nada no payload diz QUEM a abriu. A tela dizia ao corretor que a conta estava em uso em outro
+  // lugar quando, quase sempre, a outra sessão era a nossa.
+  //
+  // O backend parou de gravar e de publicar a chave; este exemplo guarda a TELA, com a chave chegando
+  // do jeito que chegava: quem reintroduzir a seção derruba o exemplo e é obrigado a encarar a
+  // medição em vez de repetir o alarme falso.
+  //
+  // A GUARDA OLHA O EFEITO, NÃO O NOME. A primeira versão só exigia que o texto
+  // `INSURANCE.CONNECTION.ALREADY_ACTIVE` não aparecesse — uma chave i18n que não existe mais em
+  // lugar nenhum, de modo que o exemplo passaria com a seção de volta sob qualquer outro nome. Aqui a
+  // aba é montada DUAS vezes, com e sem `account_already_active` no payload, e o HTML tem de sair
+  // idêntico: qualquer pedaço de tela que volte a depender desse campo, com o texto que for, derruba
+  // o exemplo. (`ready` guarda instantes fixos e a tela os formata em hora absoluta, então as duas
+  // montagens são comparáveis caractere a caractere.)
+  it('renderiza exatamente a mesma tela com e sem o aviso de conta em uso no payload', async () => {
+    api.getConnection.mockResolvedValue({ data: { payload: { ...ready } } });
+    const semAviso = (await mountTab()).html();
+
     api.getConnection.mockResolvedValue({
       data: {
         payload: {
@@ -506,20 +531,10 @@ describe('InsuranceConnectionsTab (API)', () => {
         },
       },
     });
-    const wrapper = await mountTab();
-    expect(wrapper.text()).toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
-    // Avisar não é impedir: os botões seguem disponíveis.
-    expect(
-      wrapper
-        .find('button[label="INSURANCE.CONNECTION.ACTIONS.RECONNECT"]')
-        .attributes('disabled')
-    ).toBeUndefined();
-  });
+    const comAviso = (await mountTab()).html();
 
-  it('conta livre não gera aviso nenhum', async () => {
-    api.getConnection.mockResolvedValue({ data: { payload: { ...ready } } });
-    const wrapper = await mountTab();
-    expect(wrapper.text()).not.toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
+    expect(comAviso).toBe(semAviso);
+    expect(comAviso).not.toContain('INSURANCE.CONNECTION.ALREADY_ACTIVE');
   });
 
   // O NOME DO PORTAL VENCE O NOSSO MAPA. O ramo 46 é o caso real: o adapter manda
