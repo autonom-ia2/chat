@@ -43,13 +43,24 @@ module Autonomia
 
       # skipped_* (#284 · Entrega 2a): a porta de engajamento passou a conversa direto para humanos
       # sem responder (fora do público-alvo / fora do horário). Contam como handoff na aba Desempenho.
-      enum event_type: { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3 }
+      # skipped_escolhas_incompletas (#380): o Agente de Cotação não montou o prompt porque a chave
+      # `agente_de_cotacao` do config está presente e incompleta (escrita fora do Builder); o turno ficou
+      # mudo e a conversa NÃO foi passada a humanos — por isso não entra em HANDOFF_TYPES.
+      enum event_type: { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3,
+                         skipped_escolhas_incompletas: 4 }
 
       HANDOFF_TYPES = %w[handed_off skipped_audience skipped_schedule].freeze
+      # O que NÃO é atendimento: o agente nem respondeu nem passou a conversa a humanos. Um evento
+      # desses existe para o corretor ver a causa do silêncio, não para a conversa contar como atendida.
+      NAO_ATENDIMENTO_TYPES = %w[skipped_escolhas_incompletas].freeze
 
       scope :in_range, ->(from, to) { where(created_at: from..to) }
       # Tudo que tirou a conversa do agente: handoff sinalizado/CRM + passadas direto pela porta.
       scope :handoffs, -> { where(event_type: HANDOFF_TYPES) }
+      # As conversas que o agente de fato tocou (respondeu ou passou a humanos) — o universo de
+      # "atendidas" na aba Desempenho. Sem isto, a Lia muda por escolhas incompletas apareceria como
+      # "Conversas atendidas: N" para o corretor, e o número mentiria (#380, rodada 4).
+      scope :atendimentos, -> { where.not(event_type: NAO_ATENDIMENTO_TYPES) }
     end
   end
 end

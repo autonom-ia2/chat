@@ -17,7 +17,11 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
 
   def show; end
 
+  # O agente de instrução mantida nasce só pela aba Cotação (`Insurance::QuoteAgentController#create`),
+  # que guarda as escolhas da corretora; por aqui nasceria sem elas, lendo uma coluna que ninguém mantém.
   def create
+    raise ::Autonomia::Agents::Agent::InstrucaoMantida if instrucao_mantida_pelo_tipo?(params.dig(:agent, :agent_type))
+
     @agent = agents_scope.new(agent_params)
     @agent.created_by = Current.user
     apply_manual_scaffold
@@ -28,12 +32,16 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # Onda 6 (P2) — chaves COMPUTADAS do jsonb `config` que o usuário NÃO define pela API: são geradas
   # pelo Revisor/Construtor. `assign_attributes(config:)` substituía o blob inteiro e as apagava (perda
   # silenciosa de topic_map/knowledge_* num save do PanelTune). O update agora MESCLA (preserva o resto).
-  PROTECTED_CONFIG_KEYS = %w[
+  # `agente_de_cotacao` (#380): as escolhas da corretora que o Agente de Cotação lê a cada turno
+  # (`QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA`) — só o Builder as escreve, sempre as quatro; uma
+  # escrita parcial por aqui pararia o agente com `EscolhasIncompletas`.
+  PROTECTED_CONFIG_KEYS = (%w[
     topic_map knowledge_confidence knowledge_summary knowledge_refresh_token
     with_knowledge system_key builder_active_thread_id
-  ].freeze
+  ] + [::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).freeze
 
   def update
+    rejeitar_edicao_da_instrucao_mantida
     discard_generated_instruction_on_manual_switch
     instruction_before = @agent.instruction
     attrs = agent_params
@@ -89,6 +97,40 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     # Best-effort: o histórico é auditoria — falhar aqui NÃO pode derrubar o update do agente que
     # já foi persistido (mesmo padrão do InstructionRefresher). Loga a classe, nunca o texto.
     Rails.logger.error("[autonomia][agents] manual instruction version record failed agent=#{@agent.id}: #{e.class.name}")
+  end
+
+  # #380 — a instrução do Agente de Cotação é mantida pela Autonom.ia; o hub abre a Lia na mesma tela
+  # dos outros agentes, com o modo avançado. Antes desta guarda o PATCH com `instruction` era aceito,
+  # exibido e ignorado em silêncio (o prompt já era o arquivo do deploy). Recusa ANTES de qualquer
+  # assign: `instruction` presente, `mode` pedindo outra coisa que não guiado, ou `agent_type` diferente
+  # — o tipo é o insumo da regra, e trocá-lo era o desvio de dois requests (o model também fecha isso,
+  # `tipo_do_agente_de_cotacao_e_fixo`; aqui é para a resposta ser a mesma mensagem, não `RecordInvalid`).
+  # O `mode: 'guided'` que o PanelTune carimba em todo save passa — é o que ele já é. E o sentido
+  # contrário: um agente comum não VIRA o de cotação por PATCH (nasceria mantido sem as escolhas).
+  def rejeitar_edicao_da_instrucao_mantida
+    agente = params[:agent]
+    return unless agente.respond_to?(:key?)
+
+    raise ::Autonomia::Agents::Agent::InstrucaoMantida if @agent.instrucao_mantida? && edita_o_que_e_mantido?(agente)
+    raise ::Autonomia::Agents::Agent::InstrucaoMantida if !@agent.instrucao_mantida? && pede_o_tipo_mantido?(agente)
+  end
+
+  def edita_o_que_e_mantido?(agente)
+    modo = agente[:mode].to_s
+    agente.key?(:instruction) || (modo.present? && modo != 'guided') || troca_o_tipo?(agente)
+  end
+
+  def troca_o_tipo?(agente)
+    agente.key?(:agent_type) && agente[:agent_type].to_s != @agent.agent_type
+  end
+
+  def pede_o_tipo_mantido?(agente)
+    agente.key?(:agent_type) && instrucao_mantida_pelo_tipo?(agente[:agent_type])
+  end
+
+  # O tipo pedido no create, antes de existir um agente para perguntar `instrucao_mantida?`.
+  def instrucao_mantida_pelo_tipo?(agent_type)
+    ::Autonomia::Agents::Agent.new(agent_type: agent_type.to_s).instrucao_mantida?
   end
 
   # Em modo manual o `scaffold` é SEMPRE setado pelo backend (andaime oculto), nunca pelo params.

@@ -26,6 +26,65 @@ RSpec.describe 'Autonomia journeys - builder threads', type: :request do
          headers: administrator.create_new_auth_token, as: :json
   end
 
+  # #380 (rodada de correção) — o "Ajustar com IA" do PanelTune abre uma thread do Construtor para o
+  # agente e, no fechamento, `apply_builder_config!` reescreve instruction/scaffold/config. A instrução
+  # do Agente de Cotação é mantida pela Autonom.ia: a porta recusa antes de gastar modelo.
+  it 'refuses to open a builder thread for the quote agent, whose instruction is maintained' do
+    # Arrange
+    lia = Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Sena').call
+
+    # Act
+    expect do
+      post "/api/v1/accounts/#{account.id}/autonomia/build_threads",
+           params: { autonomia_agent_id: lia.id, message: 'Ajusta o tom' },
+           headers: administrator.create_new_auth_token, as: :json
+    end.not_to change(Autonomia::Agents::BuildThread, :count)
+
+    # Assert
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.instrucao_mantida', raise: true))
+  end
+
+  # THREAD CRIADA ANTES DA GUARDA. O `create` recusa, mas uma thread vinculada à Lia antes do deploy
+  # (alguém usou "Ajustar com IA" entre 08/09 e a subida) segue no banco; `messages` e `retry` não
+  # passam por `thread_params`. Sem esta guarda o job rodava o modelo e só falhava no
+  # `apply_builder_config!` — gasto de modelo e `build_error` genérico, sem a mensagem.
+  describe 'a builder thread already bound to the quote agent' do
+    let(:lia) { Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Sena').call }
+
+    it 'refuses a new message before spending the model' do
+      # Arrange
+      thread = Autonomia::Agents::BuildThread.create!(account: account, agent: lia, status: :ready)
+
+      # Act
+      expect { post_message(thread.id, message: 'Ajusta o tom') }
+        .not_to have_enqueued_job(Autonomia::Agents::Builder::SubmitJob)
+
+      # Assert
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.instrucao_mantida', raise: true))
+      thread.reload
+      expect(thread.messages).to be_blank
+      expect(thread.status).to eq('ready')
+    end
+
+    it 'refuses the retry of a failed build before spending the model' do
+      # Arrange
+      thread = Autonomia::Agents::BuildThread.create!(account: account, agent: lia, status: :failed)
+
+      # Act
+      expect do
+        post "/api/v1/accounts/#{account.id}/autonomia/build_threads/#{thread.id}/retry",
+             headers: administrator.create_new_auth_token, as: :json
+      end.not_to have_enqueued_job(Autonomia::Agents::Builder::SubmitJob)
+
+      # Assert
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.instrucao_mantida', raise: true))
+      expect(thread.reload.status).to eq('failed')
+    end
+  end
+
   it 'returns 404 when posting a message to a nonexistent thread' do
     # Act
     post_message(999_999)

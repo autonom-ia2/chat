@@ -95,12 +95,14 @@ module Autonomia
                     end
       end
 
-      # System (string OCULTA): scaffold + instruction + persona/tom + guardrails + handoff +
+      # System (string OCULTA): scaffold + instrução + persona/tom + guardrails + handoff +
       # orientação de fallback + formato. Omite blocos em branco. NÃO é exposto por nenhum endpoint.
+      # A instrução vem de `Agent#instrucao_do_sistema`, não da coluna: para o Agente de Cotação é o
+      # arquivo do deploy com as escolhas da corretora (#380); para os demais é a própria coluna.
       def instructions
         [
           @agent.scaffold,
-          @agent.instruction,
+          @agent.instrucao_do_sistema,
           persona_block,
           guardrails_block,
           handoff_block,

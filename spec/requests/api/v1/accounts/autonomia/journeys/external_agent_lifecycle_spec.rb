@@ -186,6 +186,180 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
       expect(agent.config['topic_map']).to eq([{ 'topic' => 'frete' }])
       expect(agent.config['temperature']).to eq(0.7)
     end
+
+    # #380 — as escolhas da corretora (`agente_de_cotacao`) são lidas a cada turno pelo Agente de
+    # Cotação e só o Builder as escreve, sempre as quatro. Uma escrita parcial pela API pararia o
+    # agente com `EscolhasIncompletas`; uma completa trocaria o nome dele por fora do fluxo.
+    it 'preserves the quote agent choices when updating config via API' do
+      # Arrange
+      chave = Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA
+      escolhas = { 'nome_agente' => 'Lia', 'nome_corretora' => 'Sena', 'horario' => 'seg a sex', 'comportamento' => 'consultivo' }
+      agent = create_external_agent(agent_type: 'insurance_quote', config: { chave => escolhas })
+
+      # Act — tenta trocar só o nome, por fora do Builder.
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+            params: { agent: { config: { chave => { 'nome_agente' => 'Outra' }, 'temperature' => 0.7 } } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert — as escolhas ficam como o Builder gravou; a chave livre muda.
+      expect(response).to have_http_status(:success)
+      agent.reload
+      expect(agent.config[chave]).to eq(escolhas)
+      expect(agent.config['temperature']).to eq(0.7)
+    end
+  end
+
+  # #380 (rodada de correção) — a instrução do Agente de Cotação é mantida pela Autonom.ia: o prompt é o
+  # arquivo do deploy com as escolhas da corretora, e a coluna é retrato do nascimento. O hub abre a Lia
+  # na mesma tela dos outros agentes (PanelTune), com o modo avançado; antes desta guarda o PATCH era
+  # aceito, exibido e ignorado em silêncio. Agora recusa com 422 e diz o porquê. O save comum do
+  # PanelTune (que sempre carimba `mode: 'guided'`) continua passando.
+  describe 'quote agent instruction is maintained by Autonom.ia' do
+    # `raise: true`: a chave sumindo do locale reprova aqui, em vez de os dois lados virarem
+    # 'Translation missing' e passarem (foi assim que o en.yml duplicado passou despercebido).
+    let(:mensagem) { I18n.t('autonomia.agents.instrucao_mantida', raise: true) }
+    let(:lia) do
+      Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Sena').call
+    end
+
+    def prompt_de(agente)
+      Autonomia::Agents::PromptBuilder.new(agent: agente, query: 'oi').instructions
+    end
+
+    it 'refuses the advanced-mode edit with a clear message and keeps the deploy instruction' do
+      # Arrange
+      nascimento = lia.instruction
+
+      # Act — o admin liga o modo avançado no hub e salva a instrução dele.
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
+            params: { agent: { mode: 'manual', instruction: 'Minha instrução própria da corretora.' } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert — 422 com a mensagem; nada gravado; o prompt segue sendo o arquivo com as escolhas.
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+      lia.reload
+      expect(lia.mode).to eq('guided')
+      expect(lia.instruction).to eq(nascimento)
+      expect(lia.instruction_versions).not_to exist
+      expect(prompt_de(lia)).to include('Você é Lia, e atende pela corretora Sena.')
+      expect(prompt_de(lia)).not_to include('Minha instrução própria')
+    end
+
+    # O ramo `mode` da guarda, sozinho: sem `instruction` no request. Sem este exemplo, uma guarda só
+    # por presença de `instruction` passaria em silêncio (o model ainda recusaria, mas por outro caminho
+    # e com outro corpo — `message`, não `error`).
+    it 'refuses switching the quote agent to manual mode even without an instruction' do
+      # Arrange
+      nascimento = lia.instruction
+
+      # Act
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
+            params: { agent: { mode: 'manual' } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+      lia.reload
+      expect(lia.mode).to eq('guided')
+      expect(lia.instruction).to eq(nascimento)
+    end
+
+    # O TIPO É O INSUMO DA REGRA (`instrucao_mantida?` = tipo). Se o mesmo PATCH pudesse trocá-lo, a
+    # guarda inteira se desmontava em dois requests: `agent_type: 'custom'` → a Lia deixa de ser mantida,
+    # o prompt volta a ser a coluna velha, o especialista volta ao manual gravado, `JaExiste` deixa
+    # passar um segundo agente de cotação; depois `mode: 'manual'` + instrução própria → gravada.
+    # `aggregate_failures`: são dois requests encadeados (o segundo só faz sentido depois do primeiro),
+    # e todo desvio tem de aparecer de uma vez, não um por rodada.
+    it 'refuses to change the quote agent type, and the second request of the bypass fails too', :aggregate_failures do
+      # Arrange
+      lia.update!(instruction: 'coluna velha, gravada no nascimento')
+
+      # Act 1 — o flip do tipo.
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
+            params: { agent: { agent_type: 'custom' } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert 1 — 422 com a mensagem; tipo e coluna intactos; o prompt segue sendo o arquivo.
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+      lia.reload
+      expect(lia.agent_type).to eq('insurance_quote')
+      expect(lia.instruction).to eq('coluna velha, gravada no nascimento')
+      expect(prompt_de(lia)).to include('Você é Lia, e atende pela corretora Sena.')
+      expect(prompt_de(lia)).not_to include('coluna velha')
+
+      # Act 2 — o segundo passo do desvio, como se o primeiro tivesse passado.
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
+            params: { agent: { mode: 'manual', instruction: 'minha própria' } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert 2
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+      lia.reload
+      expect(lia.mode).to eq('guided')
+      expect(lia.instruction).to eq('coluna velha, gravada no nascimento')
+    end
+
+    # O sentido contrário também: um agente comum não VIRA o de cotação por PATCH — nasceria mantido sem
+    # escolhas, lendo uma coluna que ninguém mantém, e furaria a unicidade de `JaExiste`.
+    it 'refuses to turn an ordinary agent into the quote agent' do
+      # Arrange
+      agent = create_external_agent(instruction: 'Atenda.')
+
+      # Act
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+            params: { agent: { agent_type: 'insurance_quote' } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+      expect(agent.reload.agent_type).to eq('support')
+    end
+
+    it 'refuses an instruction sent without switching mode, instead of ignoring it in silence' do
+      # Act
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
+            params: { agent: { instruction: 'Minha instrução própria da corretora.' } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+    end
+
+    it 'still accepts the ordinary PanelTune save, which always stamps mode guided' do
+      # Act — o payload do PanelTune: campos simples + `mode: 'guided'` + config das virtuais.
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
+            params: { agent: { greeting: 'Olá! Sou a Lia.', tone: 'cordial', mode: 'guided',
+                               config: { handoff_strategy: 'none', confidence_threshold: 0.5 } } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response).to have_http_status(:success)
+      lia.reload
+      expect(lia.greeting).to eq('Olá! Sou a Lia.')
+      expect(lia.config['handoff_strategy']).to eq('none')
+      expect(lia.config[Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).to include('nome_agente' => 'Lia')
+    end
+
+    # Pela API genérica nasceria uma Lia sem escolhas, lendo uma coluna que ninguém mantém. O agente
+    # de cotação nasce só pela aba Cotação (`Insurance::QuoteAgentController#create`).
+    it 'refuses to create a quote agent through the generic agents API' do
+      # Act
+      expect do
+        post "/api/v1/accounts/#{account.id}/autonomia/agents",
+             params: { agent: { name: 'Lia', agent_type: 'insurance_quote' } },
+             headers: administrator.create_new_auth_token, as: :json
+      end.not_to change(Autonomia::Agents::Agent, :count)
+
+      # Assert
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+    end
   end
 
   describe 'invalid input' do

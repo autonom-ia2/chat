@@ -21,7 +21,10 @@ class Api::V1::Accounts::Autonomia::Insurance::QuoteAgentController <
     @agent = agente_existente
     render :show, status: :conflict
   rescue ::Autonomia::Insurance::QuoteAgent::Builder::NomeInvalido,
+         ::Autonomia::Insurance::QuoteAgent::Builder::HorarioInvalido,
          ::Autonomia::Insurance::QuoteAgent::Builder::ComportamentoInvalido => e
+    # As quatro escolhas da corretora: `error` é a classe (o campo), `detail` o motivo — ou só o nome do
+    # campo, no comportamento — e nunca o valor digitado (a tela traduz pelo código; o `detail` serve ao log).
     render json: { error: e.class.name.demodulize.underscore, detail: e.message },
            status: :unprocessable_entity
   rescue ::Autonomia::Insurance::QuoteAgent::Builder::SlugDesconhecido => e

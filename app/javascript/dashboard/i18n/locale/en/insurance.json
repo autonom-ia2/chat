@@ -182,6 +182,7 @@
       },
       "ERRORS": {
         "NOME_INVALIDO": "Confira o nome do agente e o da corretora.",
+        "HORARIO_INVALIDO": "Confira o horário de atendimento: escreva só os dias e as horas, sem marcador de variável.",
         "COMPORTAMENTO_INVALIDO": "Escolha um comportamento.",
         "GENERIC": "Não consegui criar o agente agora. Tente de novo em instantes."
       }

@@ -66,6 +66,14 @@ module Autonomia
           @agent&.reload # lê instrução/config frescos (anti-corrida com AJUSTE manual concorrente)
           return if @agent.blank? || @agent.instruction.blank? # só agentes FECHADOS; ignora rascunhos
 
+          # #380 — a instrução do Agente de Cotação é mantida pela Autonom.ia (o prompt é o arquivo do
+          # deploy; a coluna é retrato do nascimento). Reescrevê-la seria gasto de modelo sem efeito.
+          # `Agent#refresh_instruction!` também recusa, mas só depois da chamada: sai aqui, antes dela.
+          if @agent.instrucao_mantida?
+            telemetry(:skipped_instrucao_mantida)
+            return
+          end
+
           # MODO MANUAL (avançado): a instrução foi escrita À MÃO pelo usuário — é dele, não do
           # Construtor. O refresh automático JAMAIS pode reescrevê-la quando a base muda (destruiria
           # o trabalho do cliente sem aviso). Só agentes `guided` recebem a instrução viva.

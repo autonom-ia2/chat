@@ -169,6 +169,29 @@ describe('InsuranceAgentTab', () => {
     expect(wrapper.text()).not.toContain('nome do agente vazio');
   });
 
+  // #380 (rodada 6): o horário com um marcador reservado dentro (`$nomeAgente`) é recusado pelo backend
+  // com `horario_invalido`. Sem a linha própria ele cairia em GENERIC — «tente de novo em instantes»
+  // para um erro que tentar de novo não resolve.
+  it('mostra a mensagem do produto quando o backend recusa o horario', async () => {
+    api.createQuoteAgent.mockRejectedValue({
+      response: {
+        status: 422,
+        data: {
+          error: 'horario_invalido',
+          detail: 'horário contém um marcador reservado',
+        },
+      },
+    });
+    const wrapper = await montar();
+    await preencher(wrapper);
+    await botao(wrapper, 'ACTIONS.SUBMIT').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('ERRORS.HORARIO_INVALIDO');
+    expect(wrapper.text()).not.toContain('ERRORS.GENERIC');
+    expect(wrapper.text()).not.toContain('marcador reservado');
+  });
+
   it('cai na mensagem geral quando o erro nao tem codigo conhecido', async () => {
     api.createQuoteAgent.mockRejectedValue({
       response: { status: 500, data: {} },
