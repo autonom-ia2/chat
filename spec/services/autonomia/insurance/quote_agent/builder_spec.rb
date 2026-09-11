@@ -138,7 +138,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       especialista = construir.specialists.find_by(slug: 'cotacao_auto')
 
       expect(especialista.instruction).to include('placa')
-      expect(especialista.instruction).to include('Prata')
+      expect(especialista.instruction).to include('apólice anterior')
       # A armadilha que custou cotação para descobrir precisa sobreviver à criação.
       expect(especialista.instruction).to include('FLEX')
     end

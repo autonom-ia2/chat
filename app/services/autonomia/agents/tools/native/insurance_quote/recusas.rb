@@ -31,7 +31,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
     'insured.name' => 'nome do titular', 'segurado.nome' => 'nome do titular',
     'address.zipCode' => 'CEP', 'segurado.cep' => 'CEP',
     'address.number' => 'número do endereço', 'segurado.numero' => 'número do endereço',
-    'vehicle.plate' => 'placa do veículo'
+    'vehicle.plate' => 'placa do veículo',
+    # O único problema que o chat2you levanta sozinho (`Veiculo#problema_de_zero_km`).
+    'vehicle.isZeroKm' => 'se o veículo é zero-quilômetro'
   }.freeze
   FALTA_ALGO = 'Ainda preciso de mais uma informação para fechar a cotação.'.freeze
   # SEM PLACA, CHASSI OU FIPE NÃO HÁ VEÍCULO PARA COTAR (entrega 2, termo 10). O texto para o

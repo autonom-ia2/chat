@@ -90,7 +90,7 @@ class Autonomia::Agents::Specialist < ApplicationRecord
     {
       type: 'function',
       name: function_name,
-      description: description,
+      description: descricao_do_sistema,
       parameters: {
         type: 'object',
         properties: {
@@ -110,7 +110,19 @@ class Autonomia::Agents::Specialist < ApplicationRecord
   # o bloco do sistema estabelece escopo e regras duras; o do cliente ajusta tom e detalhe da
   # corretora, sem revogar o que está acima. A UI (#321) só deixa editar `custom_instruction`.
   def effective_instruction
-    [instruction, custom_instruction.presence].compact.join("\n\n")
+    [instrucao_do_sistema, custom_instruction.presence].compact.join("\n\n")
+  end
+
+  # A mantida pela Autonom.ia — o arquivo do deploy — quando este é um especialista do agente de
+  # cotação; a gravada, para os demais. Ver `QuoteAgent::Builder.instrucao_mantida`: é o que faz um
+  # agente já criado receber o manual novo sem ser recriado (entrega 3, termo 5).
+  def instrucao_do_sistema
+    ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_mantida(self) || instruction
+  end
+
+  # Idem para a descrição que o principal lê na função (`openai_schema`).
+  def descricao_do_sistema
+    ::Autonomia::Insurance::QuoteAgent::Builder.descricao_mantida(self) || description
   end
 
   # Ferramentas reservadas a este especialista, na ordem declarada. Slug que não existe (ou foi

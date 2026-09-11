@@ -146,9 +146,11 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   private
 
   # O QUE FALTA, PERGUNTADO DE GRAÇA. Só `erro` vira pedido: `aviso` fala de tabela possivelmente
-  # velha do nosso lado, e mandar o agente perguntar por causa disso seria atrito sem causa.
+  # velha do nosso lado, e mandar o agente perguntar por causa disso seria atrito sem causa. Os
+  # problemas que só o chat2you enxerga (`Veiculo#problemas_locais`) entram na mesma lista, no mesmo
+  # formato: o modelo lê `campo — motivo` de um jeito só.
   def validar
-    Array(validacao&.dig('problemas')).select { |p| p['severidade'] == 'erro' }
+    Array(validacao&.dig('problemas')).select { |p| p['severidade'] == 'erro' } + problemas_locais
   end
 
   # A conferência gratuita, UMA vez por instância: `precheck` lê os problemas e `pedido` lê a

@@ -28,8 +28,8 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # instrução — e nada mais precisa mudar.
   ESPECIALISTAS = [
     { slug: 'cotacao_auto', nome: 'Cotação de automóvel', arquivo: 'especialista_auto.md',
-      descricao: 'Cota seguro de automóvel, moto e caminhão para pessoa física. Use quando o ' \
-                 'cliente pedir preço de seguro de carro, moto ou caminhão.' }
+      descricao: 'Cota seguro de automóvel, moto e caminhão, para pessoa física e para empresa. Use ' \
+                 'quando o cliente pedir preço de seguro de carro, moto ou caminhão.' }
   ].freeze
 
   # Teto do que a corretora escreve. `nome_agente` já é limitado pela coluna (string, 255), mas
@@ -37,6 +37,34 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # aqui, um valor grande o bastante estoura o limite de 50.000 do `instruction` e a criação falha
   # com erro de validação que não explica nada a quem clicou.
   MAX_NOME = 120
+
+  # O MANUAL QUE VALE É O DO DEPLOY, não a cópia gravada no nascimento (entrega 3, termo 5). Até
+  # 11/09/2026 a instrução do especialista era copiada para a linha na criação e nunca mais lida do
+  # arquivo: o agente 24 rodou três dias com um manual que o repositório já não tinha (a versão com
+  # teto de três ofertas, retirada em #362, seguia em produção — medido pelo md5 da coluna).
+  # Corrigir o modelo não corrigia quem já existia. Agora quem roda (`Specialist#effective_instruction`)
+  # lê daqui; a coluna fica como retrato do nascimento. Só para os especialistas que a Autonom.ia
+  # mantém — os do agente de cotação —: um especialista que a corretora criou com instrução própria
+  # continua lendo a dele. O arquivo é lido cru: `builder_instrucao_do_especialista_spec` garante que ele
+  # não tem variável para substituir.
+  # -> texto do arquivo, ou nil quando não é um especialista mantido.
+  def self.instrucao_mantida(specialist)
+    dados = mantido(specialist)
+    dados && INSTRUCOES.join(dados[:arquivo]).read
+  end
+
+  # A DESCRIÇÃO também: é o que o principal lê para decidir chamar o especialista (`openai_schema`),
+  # e a gravada no nascimento dizia "para pessoa física" enquanto o manual passou a cotar empresa.
+  def self.descricao_mantida(specialist)
+    mantido(specialist)&.dig(:descricao)
+  end
+
+  # A entrada de `ESPECIALISTAS` deste especialista, quando é um que a Autonom.ia mantém.
+  def self.mantido(specialist)
+    return nil unless specialist.agent&.agent_type == 'insurance_quote'
+
+    ESPECIALISTAS.find { |e| e[:slug] == specialist.slug }
+  end
 
   class SlugDesconhecido < StandardError; end
   class ComportamentoInvalido < StandardError; end

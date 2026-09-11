@@ -144,6 +144,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     expect(record.reload.quote_schema('auto')).to include('campos')
   end
 
+  # ZERO-QUILÔMETRO AMBÍGUO (entrega 3): modelo do ano sem `isZeroKm` não cota — cotado assim sairia
+  # como usado. Modelo de ano anterior é usado e ninguém pergunta; `isZeroKm` escrito (true ou false)
+  # resolve.
+  it 'modelo do ano sem dizer se é zero-quilômetro: pergunta antes de cotar, no turno e no envio' do
+    ready_connection
+    base = { 'produto' => 'auto', 'cpf' => '04297912678', 'cep' => '31110210' }
+
+    conferencia = tool_no_turno(base.merge('vehicle' => { 'plate' => 'ZER0K26' })).precheck
+    envio = tool(base.merge('vehicle' => { 'plate' => 'ZER0K26' })).start
+    resolvido = tool_no_turno(base.merge('vehicle' => { 'plate' => 'ZER0K26', 'isZeroKm' => false })).precheck
+    usado = tool_no_turno(base.merge('vehicle' => { 'plate' => 'HIK9383' })).precheck
+
+    expect(conferencia.motivo).to eq('faltam_dados')
+    expect(conferencia.to_s).to include(Date.current.year.to_s, 'Onix 1.0', 'zero-quilômetro', 'vehicle.isZeroKm —')
+    expect(conferencia.faltando).to eq(['vehicle.isZeroKm'])
+    expect(envio['motivo']).to eq('faltam_dados')
+    expect(envio['pedido']).to include('se o veículo é zero-quilômetro')
+    expect(resolvido).to be_nil
+    expect(usado).to be_nil
+  end
+
   it 'chassi ou FIPE identificam o veículo tanto quanto a placa' do
     ready_connection
 
