@@ -86,14 +86,16 @@ module Autonomia
       # internal (copiloto da equipe, nunca fala com cliente) / both. Default external.
       enum actuation: { external: 0, internal: 1, both: 2 }, _prefix: :actuation
 
-      #  é o Agente de Cotação (PRD §18-19), e não nasce pelo construtor
-      # conversacional: a instrução dele é mantida pela Autonom.ia e a corretora não a edita.
-      # Ver .
       # `insurance_quote` é o Agente de Cotação (PRD §18-19), e não nasce pelo construtor
       # conversacional: a instrução dele é mantida pela Autonom.ia e a corretora não a edita — ela
       # escolhe nome, horário e comportamento, e o resto vem de `Insurance::QuoteAgent::Builder`.
+      # A regra tem nome (`instrucao_mantida?`) e guarda em cada escritor da coluna, abaixo.
       AGENT_TYPES = %w[support sdr reception onboarding scheduler reactivation custom
                        insurance_quote].freeze
+
+      # Levantado por qualquer caminho que tente escrever a instrução de um agente cuja instrução é
+      # mantida pela Autonom.ia. A API devolve 422 com `autonomia.agents.instrucao_mantida`.
+      class InstrucaoMantida < StandardError; end
 
       # Tetos PRÓPRIOS de `tone` e `instruction`. O ApplicationRecord aplica um teto genérico
       # anti-DOS a toda coluna de texto (255 para string, 20.000 para text) e só sai da frente
@@ -106,6 +108,7 @@ module Autonomia
 
       validates :name, presence: true
       validates :agent_type, inclusion: { in: AGENT_TYPES }
+      validate :instrucao_mantida_fica_guiada
       validates :tone, length: { maximum: MAX_TONE_LENGTH }, allow_nil: true
       validates :instruction, length: { maximum: MAX_INSTRUCTION_LENGTH }, allow_nil: true
 
@@ -160,6 +163,23 @@ module Autonomia
         [false, 'false'].include?(config.to_h['with_knowledge'])
       end
 
+      # A INSTRUÇÃO É MANTIDA PELA AUTONOM.IA (#380). Depois de #380 o prompt do Agente de Cotação é o
+      # arquivo do deploy com as escolhas da corretora; a coluna `instruction` virou retrato do
+      # nascimento. Todo caminho que ainda escrevia a coluna depois do nascimento — edição manual pelo
+      # hub, rollback G2, refresh de conhecimento, "Ajustar com IA" — passaria a gravar um texto que o
+      # agente não lê, e o cartão mentiria "salvo". A regra mora aqui, num predicado só; quem escreve
+      # a coluna (abaixo e nos controllers) consulta este predicado, nunca o tipo direto.
+      def instrucao_mantida?
+        agent_type == 'insurance_quote'
+      end
+
+      # A guarda que cada escritor da coluna chama na primeira linha (`apply_builder_config!`,
+      # `refresh_instruction!`, `restore_instruction!`). Um lugar só: quem ganhar um escritor novo
+      # chama isto, e a mutação que a remove de um deles reprova a spec daquele caminho.
+      def recusar_se_instrucao_mantida!
+        raise InstrucaoMantida if instrucao_mantida?
+      end
+
       # A INSTRUÇÃO QUE VAI AO MODELO (#380). Para o Agente de Cotação é o arquivo do deploy com as
       # escolhas da corretora guardadas em `config` (`QuoteAgent::Builder.instrucao_do_principal`):
       # um agente já criado recebe o texto novo sem ser recriado, como o especialista desde a
@@ -176,6 +196,7 @@ module Autonomia
       # do schema do Builder para colunas (incluindo instruction/scaffold ocultos). Retorna true se
       # esta geração ganhou a escrita.
       def apply_builder_config!(build_token, attrs)
+        recusar_se_instrucao_mantida!
         return false if build_token.blank?
 
         transaction do
@@ -211,6 +232,7 @@ module Autonomia
       # omissão). Não dispara recompute_overall! de volta (não mexe em config/sources): sem loop.
       # Agent não tem callbacks → update_all é seguro. Retorna true se ganhou a escrita.
       def refresh_instruction!(new_instruction, expected_instruction:)
+        recusar_se_instrucao_mantida!
         rows = self.class.where(id: id, mode: self.class.modes[:guided], instruction: expected_instruction)
                    .update_all(instruction: new_instruction, updated_at: Time.current)
         reload if rows.positive?
@@ -253,6 +275,7 @@ module Autonomia
       # SEM o dedup por hash: restaurar para um texto igual ao head atual ainda é um evento de
       # auditoria distinto (o usuário pediu o rollback). Retorna truthy no sucesso.
       def restore_instruction!(version, created_by: nil)
+        recusar_se_instrucao_mantida!
         return false if version.blank? || version.autonomia_agent_id != id
 
         # Atômico: restaurar a instrução e gravar o snapshot 'rollback' vivem na MESMA transação —
@@ -268,6 +291,14 @@ module Autonomia
       end
 
       private
+
+      # O modo manual é o que expõe a coluna no jbuilder e a aceita pela API; um agente de instrução
+      # mantida nunca entra nele — por qualquer caminho de escrita, não só pelo controller.
+      def instrucao_mantida_fica_guiada
+        return unless instrucao_mantida? && manual?
+
+        errors.add(:mode, I18n.t('autonomia.agents.instrucao_mantida'))
+      end
 
       # Cria a linha de versão (sem dedup — o dedup é responsabilidade do chamador público).
       def write_instruction_version!(text, digest, reason, created_by)

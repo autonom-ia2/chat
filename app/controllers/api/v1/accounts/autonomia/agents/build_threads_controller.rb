@@ -138,6 +138,11 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     agent_id = params.dig(:build_thread, :autonomia_agent_id).presence || params[:autonomia_agent_id].presence
     return {} if agent_id.blank?
 
-    { agent: agents_scope.find(agent_id) }
+    agent = agents_scope.find(agent_id)
+    # #380 — o fechamento desta thread reescreveria instruction/scaffold/config (`apply_builder_config!`)
+    # de um agente cuja instrução é mantida pela Autonom.ia. Recusa na porta, antes de gastar modelo.
+    raise ::Autonomia::Agents::Agent::InstrucaoMantida if agent.instrucao_mantida?
+
+    { agent: agent }
   end
 end

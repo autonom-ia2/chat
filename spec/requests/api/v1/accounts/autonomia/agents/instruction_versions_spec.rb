@@ -103,6 +103,28 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
       expect(manual_agent.instruction_versions.where(reason: 'rollback').count).to eq(1)
     end
 
+    # #380 (rodada de correção) — a instrução do Agente de Cotação é mantida pela Autonom.ia; o
+    # rollback escreveria uma coluna que ela não lê e o histórico mentiria "restaurado".
+    it 'refuses to roll back the quote agent instruction, which is maintained by Autonom.ia' do
+      # Arrange
+      lia = Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Sena').call
+      nascimento = lia.instruction
+      versao = lia.record_instruction_version!(reason: 'kb_refresh')
+      lia.update!(instruction: 'coluna envelhecida')
+
+      # Act
+      post "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}" \
+           "/instruction_versions/#{versao.id}/restore",
+           headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.instrucao_mantida'))
+      expect(lia.reload.instruction).to eq('coluna envelhecida')
+      expect(lia.instruction_versions.where(reason: 'rollback')).not_to exist
+      expect(nascimento).to include('Você é Lia')
+    end
+
     it '404s a version that belongs to another agent' do
       # Arrange
       foreign = guided_agent.record_instruction_version!(reason: 'kb_refresh')

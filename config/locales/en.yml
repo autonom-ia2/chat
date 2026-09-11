@@ -459,6 +459,7 @@ en:
       invalid_kind: 'Invalid material kind. Use "knowledge" or "media".'
       limit_reached: 'This agent already has the maximum of %{limit} knowledge materials. Remove one before adding another.'
     agents:
+      instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
       operate:
         handoff_default: "Thanks for reaching out! I'm connecting you with a member of our team who will continue from here."
         connect_errors:

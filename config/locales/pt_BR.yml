@@ -679,6 +679,7 @@ pt_BR:
       build_in_progress: 'O construtor ainda está processando sua mensagem anterior. Aguarde um instante e tente de novo.'
       retry_unavailable: 'Não é possível reexecutar esta geração agora.'
     agents:
+      instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       operate:
         handoff_default: 'Não quero te passar uma informação imprecisa. Vou encaminhar seu atendimento para alguém do nosso time continuar com você.'
         handoff_defaults:

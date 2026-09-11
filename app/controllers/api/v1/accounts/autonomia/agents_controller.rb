@@ -17,7 +17,11 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
 
   def show; end
 
+  # O agente de instrução mantida nasce só pela aba Cotação (`Insurance::QuoteAgentController#create`),
+  # que guarda as escolhas da corretora; por aqui nasceria sem elas, lendo uma coluna que ninguém mantém.
   def create
+    raise ::Autonomia::Agents::Agent::InstrucaoMantida if instrucao_mantida_pelo_tipo?(params.dig(:agent, :agent_type))
+
     @agent = agents_scope.new(agent_params)
     @agent.created_by = Current.user
     apply_manual_scaffold
@@ -37,6 +41,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   ] + [::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).freeze
 
   def update
+    rejeitar_edicao_da_instrucao_mantida
     discard_generated_instruction_on_manual_switch
     instruction_before = @agent.instruction
     attrs = agent_params
@@ -92,6 +97,26 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     # Best-effort: o histórico é auditoria — falhar aqui NÃO pode derrubar o update do agente que
     # já foi persistido (mesmo padrão do InstructionRefresher). Loga a classe, nunca o texto.
     Rails.logger.error("[autonomia][agents] manual instruction version record failed agent=#{@agent.id}: #{e.class.name}")
+  end
+
+  # #380 — a instrução do Agente de Cotação é mantida pela Autonom.ia; o hub abre a Lia na mesma tela
+  # dos outros agentes, com o modo avançado. Antes desta guarda o PATCH com `instruction` era aceito,
+  # exibido e ignorado em silêncio (o prompt já era o arquivo do deploy). Recusa ANTES de qualquer
+  # assign: `instruction` presente, ou `mode` pedindo outra coisa que não guiado. O `mode: 'guided'` que
+  # o PanelTune carimba em todo save passa — é o que ele já é.
+  def rejeitar_edicao_da_instrucao_mantida
+    return unless @agent.instrucao_mantida?
+
+    agente = params[:agent]
+    return unless agente.respond_to?(:key?)
+
+    modo = agente[:mode].to_s
+    raise ::Autonomia::Agents::Agent::InstrucaoMantida if agente.key?(:instruction) || (modo.present? && modo != 'guided')
+  end
+
+  # O tipo pedido no create, antes de existir um agente para perguntar `instrucao_mantida?`.
+  def instrucao_mantida_pelo_tipo?(agent_type)
+    ::Autonomia::Agents::Agent.new(agent_type: agent_type.to_s).instrucao_mantida?
   end
 
   # Em modo manual o `scaffold` é SEMPRE setado pelo backend (andaime oculto), nunca pelo params.

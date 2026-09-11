@@ -26,6 +26,25 @@ RSpec.describe 'Autonomia journeys - builder threads', type: :request do
          headers: administrator.create_new_auth_token, as: :json
   end
 
+  # #380 (rodada de correção) — o "Ajustar com IA" do PanelTune abre uma thread do Construtor para o
+  # agente e, no fechamento, `apply_builder_config!` reescreve instruction/scaffold/config. A instrução
+  # do Agente de Cotação é mantida pela Autonom.ia: a porta recusa antes de gastar modelo.
+  it 'refuses to open a builder thread for the quote agent, whose instruction is maintained' do
+    # Arrange
+    lia = Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Sena').call
+
+    # Act
+    expect do
+      post "/api/v1/accounts/#{account.id}/autonomia/build_threads",
+           params: { autonomia_agent_id: lia.id, message: 'Ajusta o tom' },
+           headers: administrator.create_new_auth_token, as: :json
+    end.not_to change(Autonomia::Agents::BuildThread, :count)
+
+    # Assert
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.instrucao_mantida'))
+  end
+
   it 'returns 404 when posting a message to a nonexistent thread' do
     # Act
     post_message(999_999)

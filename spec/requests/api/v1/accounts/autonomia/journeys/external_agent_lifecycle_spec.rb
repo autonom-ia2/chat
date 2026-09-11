@@ -209,6 +209,83 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
     end
   end
 
+  # #380 (rodada de correção) — a instrução do Agente de Cotação é mantida pela Autonom.ia: o prompt é o
+  # arquivo do deploy com as escolhas da corretora, e a coluna é retrato do nascimento. O hub abre a Lia
+  # na mesma tela dos outros agentes (PanelTune), com o modo avançado; antes desta guarda o PATCH era
+  # aceito, exibido e ignorado em silêncio. Agora recusa com 422 e diz o porquê. O save comum do
+  # PanelTune (que sempre carimba `mode: 'guided'`) continua passando.
+  describe 'quote agent instruction is maintained by Autonom.ia' do
+    let(:mensagem) { I18n.t('autonomia.agents.instrucao_mantida') }
+    let(:lia) do
+      Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Sena').call
+    end
+
+    def prompt_de(agente)
+      Autonomia::Agents::PromptBuilder.new(agent: agente, query: 'oi').instructions
+    end
+
+    it 'refuses the advanced-mode edit with a clear message and keeps the deploy instruction' do
+      # Arrange
+      nascimento = lia.instruction
+
+      # Act — o admin liga o modo avançado no hub e salva a instrução dele.
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
+            params: { agent: { mode: 'manual', instruction: 'Minha instrução própria da corretora.' } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert — 422 com a mensagem; nada gravado; o prompt segue sendo o arquivo com as escolhas.
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+      lia.reload
+      expect(lia.mode).to eq('guided')
+      expect(lia.instruction).to eq(nascimento)
+      expect(lia.instruction_versions).not_to exist
+      expect(prompt_de(lia)).to include('Você é Lia, e atende pela corretora Sena.')
+      expect(prompt_de(lia)).not_to include('Minha instrução própria')
+    end
+
+    it 'refuses an instruction sent without switching mode, instead of ignoring it in silence' do
+      # Act
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
+            params: { agent: { instruction: 'Minha instrução própria da corretora.' } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+    end
+
+    it 'still accepts the ordinary PanelTune save, which always stamps mode guided' do
+      # Act — o payload do PanelTune: campos simples + `mode: 'guided'` + config das virtuais.
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
+            params: { agent: { greeting: 'Olá! Sou a Lia.', tone: 'cordial', mode: 'guided',
+                               config: { handoff_strategy: 'none', confidence_threshold: 0.5 } } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response).to have_http_status(:success)
+      lia.reload
+      expect(lia.greeting).to eq('Olá! Sou a Lia.')
+      expect(lia.config['handoff_strategy']).to eq('none')
+      expect(lia.config[Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).to include('nome_agente' => 'Lia')
+    end
+
+    # Pela API genérica nasceria uma Lia sem escolhas, lendo uma coluna que ninguém mantém. O agente
+    # de cotação nasce só pela aba Cotação (`Insurance::QuoteAgentController#create`).
+    it 'refuses to create a quote agent through the generic agents API' do
+      # Act
+      expect do
+        post "/api/v1/accounts/#{account.id}/autonomia/agents",
+             params: { agent: { name: 'Lia', agent_type: 'insurance_quote' } },
+             headers: administrator.create_new_auth_token, as: :json
+      end.not_to change(Autonomia::Agents::Agent, :count)
+
+      # Assert
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(mensagem)
+    end
+  end
+
   describe 'invalid input' do
     it 'returns 422 for an unknown actuation enum value instead of a 500' do
       # Arrange
