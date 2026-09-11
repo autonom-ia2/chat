@@ -225,9 +225,21 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     #
     # Vinte é bem acima de qualquer teto que alguém pensaria em pôr, e são criadas em estado
     # TERMINAL para não colidir com o índice único de execuções ativas.
+    #
+    # E TODAS DENTRO DA ÚLTIMA HORA, de propósito (entrega 7, termo 6): o teto que existiu era por
+    # HORA, e vinte execuções espalhadas no tempo passariam por ele sem provar nada. E CADA UMA COM
+    # DEZESSETE SEGURADORAS no handle (340 na hora): um teto pela unidade certa — seguradoras, não
+    # execuções — também tem de ser reprovado aqui, e vinte handles vazios somavam zero seguradoras.
+    #
+    # O QUE ESTE EXEMPLO COBRE: contagem de qualquer forma NO ACEITE (`Bound#accept_async`). A
+    # contagem no JOB, onde a chamada paga acontece, tem o seu próprio exemplo em
+    # `async_run_job_spec` ("segue consultando e submetendo com vinte execuções na última hora");
+    # `async_config_sem_teto_de_execucoes_spec` pega a constante pelo nome, nos dois lugares.
     it 'accepts a new run no matter how many the conversation already had — there is NO ceiling' do
       # Arrange
-      create_finished_runs(20)
+      dezessete = %w[1 3 4 5 7 8 11 12 19 20 26 44 46 47 48 50 55]
+      create_finished_runs(20, created_at: 30.minutes.ago,
+                               handle: { 'quote_id' => 'q', 'seguradoras_acionadas' => dezessete })
 
       # Act
       output = bound.execute(call, delivery: delivery)
@@ -279,11 +291,11 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     end
   end
 
-  def create_finished_runs(total, created_at: Time.current)
+  def create_finished_runs(total, created_at: Time.current, handle: {})
     total.times do
       runs.create!(account: account, agent: agent, conversation_id: conversation.id,
                    agent_inbox_id: agent_inbox.id, slug: tool.slug, status: 'done',
-                   execution_key: SecureRandom.uuid, created_at: created_at)
+                   execution_key: SecureRandom.uuid, created_at: created_at, handle: handle)
     end
   end
 end

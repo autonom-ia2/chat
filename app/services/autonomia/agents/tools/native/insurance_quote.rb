@@ -35,6 +35,18 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # Chave nossa dentro do handle: quem já foi entregue. É o que faz a segunda mensagem ser
   # "chegaram mais opções" em vez de repetir as que o cliente já leu.
   DELIVERED_KEY = 'entregues'.freeze
+  # QUANTAS SEGURADORAS ESTA COTAÇÃO ACIONOU (entrega 7). Os códigos de TODAS as que o portal pôs na
+  # cotação — cotou, recusou o risco ou recusou a nossa credencial —, que é a unidade que a corretora
+  # paga. `DELIVERED_KEY` não serve para isso: ele guarda quem COTOU, que é o que já foi para o
+  # cliente; na renovação real de 11/09/2026 eram onze de dezessete, e as outras seis não deixavam
+  # rastro nenhum. Sem esta chave, medir para cobrar seria contar execuções e chamá-las de consultas.
+  ACIONADAS_KEY = 'seguradoras_acionadas'.freeze
+  # A PROPOSTA INDIVIDUAL, quando ela existir (entrega 8): os códigos das seguradoras cuja proposta
+  # saiu nesta cotação. A ferramenta de proposta por seguradora ainda não existe — `quote/proposal`
+  # com `insurer_code` é o caminho, e `comparison_pdf` já usa o mesmo endpoint SEM código para o
+  # comparativo. O ponto de registro é este handle, na passada que gerar a proposta; a medida da
+  # entrega 7 já conta a lista (`Insurance::Medida`), e hoje conta zero porque ninguém a escreve.
+  PROPOSTAS_KEY = 'propostas'.freeze
   # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial.
   PDF_SENT_KEY = 'comparativo_enviado'.freeze
   # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
@@ -187,9 +199,11 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   def build_progress(result, handle, _attempt)
     registrar_credencial_de_seguradora(result)
     ofertas = ::Autonomia::Insurance::QuoteOffers
+    leitura = ofertas.new(result)
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
-    fresh = ofertas.new(result).quoted.reject { |offer| already.include?(ofertas.code(offer)) }
-    next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| ofertas.code(offer) })
+    fresh = leitura.quoted.reject { |offer| already.include?(ofertas.code(offer)) }
+    next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| ofertas.code(offer) },
+                               ACIONADAS_KEY => acionadas(leitura, handle))
     deliveries, next_handle = precos(fresh, already, next_handle)
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
@@ -202,6 +216,14 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
       next_handle = next_handle.merge(PDF_SENT_KEY => true)
     end
     progress_class.done(deliveries: deliveries, handle: next_handle)
+  end
+
+  # A UNIÃO DAS CONSULTAS, não a foto da última (entrega 7). O portal responde em pedaços — medido em
+  # 04/09/2026: 3 de 6 seguradoras devolveram preço em ~35 s e o negócio só assentou aos 392 s —, e
+  # nada garante que uma consulta liste tudo o que a anterior listou. Gravar a foto apagaria
+  # seguradoras que a corretora já acionou e pagou. União é idempotente: reconsulta não muda nada.
+  def acionadas(leitura, handle)
+    (Array(handle[ACIONADAS_KEY]).map(&:to_s) | leitura.acionadas).sort
   end
 
   # -> [deliveries, handle]. O aviso de renovação sem bônus tem SENTINELA própria, no mesmo molde do

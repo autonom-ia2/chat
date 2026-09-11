@@ -361,6 +361,9 @@ Rails.application.routes.draw do
               # O Agente de Cotação da conta. `show` responde se já existe (a tela decide entre
               # criar e abrir); `create` o monta pronto, com o especialista e as instruções.
               resource :quote_agent, only: [:show, :create], controller: :quote_agent
+              # A MEDIDA (entrega 7): quantas cotações e quantas SEGURADORAS foram acionadas no
+              # período. Leitura, nunca freio — quem decide volume é a corretora que paga.
+              resource :measurement, only: [:show], controller: :measurement
             end
             namespace :prospecting do
               resources :searches, only: [:index, :show, :create, :update, :destroy] do
@@ -1019,6 +1022,9 @@ Rails.application.routes.draw do
       resource :push_diagnostics, only: [:show, :create] do
         post :destroy_subscriptions, on: :collection
       end
+      # Medir para cobrar e para mostrar retorno (entrega 7): cotações e SEGURADORAS ACIONADAS por
+      # corretora e por período. Leitura — nada aqui limita volume.
+      resource :insurance_measurement, only: [:show]
 
       # order of resources affect the order of sidebar navigation in super admin
       resources :accounts, only: [:index, :new, :create, :show, :edit, :update, :destroy] do

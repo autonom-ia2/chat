@@ -66,6 +66,21 @@ class Autonomia::Insurance::QuoteOffers
     end
   end
 
+  # TODAS as seguradoras que o portal pôs nesta cotação, por código, sem repetir. É a unidade que a
+  # corretora paga — "uma cotação" não diz nada sobre dinheiro, e o teto de "8 por hora" que saiu em
+  # 10/09/2026 contava justamente a unidade errada (8 execuções eram até 136 consultas).
+  #
+  # QUALQUER STATUS CONTA, e isso foi MEDIDO, não escolhido. Em 11/09/2026, lendo por `agger quote
+  # result` as três cotações reais da conta de teste: renovação 11 `quoted` + 6 `declined` = 17; moto
+  # 2 + 15 = 17; caminhão 1 `quoted` + 15 `declined` + 1 `auth_required` = 17. Somar só
+  # `quoted` + `declined` diria dezesseis no caminhão — uma seguradora a menos do que a corretora
+  # acionou, e justamente a que ela precisa ver (credencial recusada, critério 4.5).
+  #
+  # Código vazio não entra: uma string vazia contaria como seguradora a mais na conta de quem paga.
+  def acionadas
+    Array(@result['offers']).filter_map { |offer| self.class.code(offer).presence }.uniq
+  end
+
   # Seguradoras que recusaram a credencial que a corretora cadastrou NO PORTAL (critério 4.5).
   def credencial_pendente
     Array(@result['offers']).select { |offer| offer['status'] == 'auth_required' }

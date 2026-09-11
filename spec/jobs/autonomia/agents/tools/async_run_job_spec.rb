@@ -411,6 +411,63 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
   end
 
+  # TERMO 6 DA ENTREGA 7, PROVADO NO JOB — o teto de oito por hora não voltou. É AQUI que a chamada
+  # paga acontece (`start`), e é aqui que um teto "de volta" faria mais estrago: a execução já foi
+  # aceita, o cliente já leu "estou consultando", e o job a encerraria em `failed` por causa das
+  # execuções ANTERIORES da conta. `bound_async_spec` prova o mesmo no aceite; até a rodada 3 da
+  # entrega 7 um teto literal em `stop?` (contar as execuções da conta na última hora e falhar acima
+  # de oito) passava por 140 exemplos verdes, porque nenhum deles criava vinte execuções encerradas
+  # da MESMA conta antes de chamar o job. `async_config_sem_teto_de_execucoes_spec` pega a constante
+  # pelo nome; a contagem escrita do zero, sem nome, só este exemplo pega.
+  #
+  # Vinte execuções na ÚLTIMA HORA (não espalhadas no tempo, que um teto por hora deixaria passar),
+  # da mesma conta e da mesma ferramenta, cada uma com dezessete seguradoras no handle (340 na hora):
+  # um teto pela unidade certa — seguradoras, não execuções — também tem de ser reprovado aqui.
+  describe 'no ceiling (entrega 7, termo 6)' do
+    let(:dezessete) { %w[1 3 4 5 7 8 11 12 19 20 26 44 46 47 48 50 55] }
+
+    def vinte_execucoes_encerradas_na_ultima_hora
+      20.times do
+        Autonomia::Agents::ToolRun.create!(account: account, agent: agent, conversation_id: conversation.id,
+                                           agent_inbox_id: agent_inbox.id, slug: 'consultar_cotacao', status: 'done',
+                                           execution_key: SecureRandom.uuid, created_at: 30.minutes.ago,
+                                           handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'q',
+                                                     'seguradoras_acionadas' => dezessete })
+      end
+    end
+
+    # UM TETO POR ATRASO É FREIO TAMBÉM. Recusar a nona execução da hora ou fazê-la esperar uma hora
+    # entre passadas dá no mesmo para o cliente: ele lê "estou consultando" e a cotação chega quando a
+    # corretora já perdeu a venda. Até a rodada 4 este exemplo só afirmava QUE o job se reagendava,
+    # não QUANDO — e `interval_for` devolvendo 1 hora acima de oito execuções na hora passava verde
+    # (MX3). O intervalo é medido ANTES das vinte e exigido igual depois, e o `at` do agendamento é
+    # conferido contra ele.
+    it 'segue consultando e submetendo com vinte execuções na última hora' do
+      # Arrange — a vigésima primeira, já aceita e promovida, como o Responder a deixa.
+      intervalo_sem_as_vinte = async_config.interval_for(agent, 0)
+      vinte_execucoes_encerradas_na_ultima_hora
+      register_async_tool(build_async_tool(handle: { 'id' => 'cot-21' }, poll: progress.done(deliveries: ['final'])))
+      run = create_run
+
+      # Act — a passada de submissão (a chamada paga) e a de consulta.
+      described_class.new.perform(run.id, 0)
+      submetida = run.reload.attributes.slice('status', 'failure_code', 'handle')
+      reagendada = enqueued_jobs.find { |job| job[:job] == described_class }
+      described_class.new.perform(run.id, 1)
+
+      # Assert — submetida sem desfecho, reagendada NO MESMO INTERVALO de sempre, e depois entregue e
+      # encerrada em `done`: nenhum `failed`, nenhuma espera a mais, nenhuma frase de falha ao cliente
+      # por causa do que a conta já cotou.
+      expect(submetida).to include('status' => 'running', 'failure_code' => nil)
+      expect(submetida['handle']).to include(described_class::SUBMITTED_KEY => true, 'id' => 'cot-21')
+      expect(async_config.interval_for(agent, 0)).to eq(intervalo_sem_as_vinte)
+      expect(described_class).to have_been_enqueued.with(run.id, 1)
+      expect(reagendada[:at]).to be_within(2).of(intervalo_sem_as_vinte.from_now.to_f)
+      expect(run.reload).to have_attributes(status: 'done', failure_code: nil)
+      expect(bot_contents).to eq(['final'])
+    end
+  end
+
   # O critério da issue, ponta a ponta: uma ferramenta que só conclui depois de 60 SEGUNDOS de
   # relógio é atendida por várias execuções curtas, cada uma devolvendo o worker na hora. O tempo
   # todo passa entre as execuções (no agendador), nunca dentro de uma delas.
