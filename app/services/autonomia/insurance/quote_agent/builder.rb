@@ -38,6 +38,23 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # com erro de validação que não explica nada a quem clicou.
   MAX_NOME = 120
 
+  # O MANUAL QUE VALE É O DO DEPLOY, não a cópia gravada no nascimento (entrega 3, termo 5). Até
+  # 11/09/2026 a instrução do especialista era copiada para a linha na criação e nunca mais lida do
+  # arquivo: o agente 24 rodou três dias com um manual que o repositório já não tinha (a versão com
+  # teto de três ofertas, retirada em #362, seguia em produção — medido pelo md5 da coluna).
+  # Corrigir o modelo não corrigia quem já existia. Agora quem roda (`Specialist#effective_instruction`)
+  # lê daqui; a coluna fica como retrato do nascimento. Só para os especialistas que a Autonom.ia
+  # mantém — os do agente de cotação —: um especialista que a corretora criou com instrução própria
+  # continua lendo a dele. O arquivo é lido cru: `builder_instrucao_do_especialista_spec` garante que ele
+  # não tem variável para substituir.
+  # -> texto do arquivo, ou nil quando não é um especialista mantido.
+  def self.instrucao_mantida(specialist)
+    return nil unless specialist.agent&.agent_type == 'insurance_quote'
+
+    dados = ESPECIALISTAS.find { |e| e[:slug] == specialist.slug }
+    dados && INSTRUCOES.join(dados[:arquivo]).read
+  end
+
   class SlugDesconhecido < StandardError; end
   class ComportamentoInvalido < StandardError; end
   class NomeInvalido < StandardError; end
