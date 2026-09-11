@@ -417,10 +417,12 @@ humanos, e a lista do clique as abria. O número mentia para o corretor.
 
 **Correção.** Em `AgentEvent`: `NAO_ATENDIMENTO_TYPES = %w[skipped_escolhas_incompletas]` e
 `scope :atendimentos` (`where.not(event_type: NAO_ATENDIMENTO_TYPES)`) — o universo de "atendidas" tem
-UM nome, ao lado de `handoffs`. `Analytics` passa por ele em `conversations_handled`, `handled_ids` (cartão
-e lista do clique contam as mesmas conversas) e `all_time_handled_ids` (o mesmo universo sem janela, que
-liga reports e handoffs do core à conversa do agente). Timeline, `handoff_count` e `top_handoff_reasons`
-já não somavam o tipo (só `replied`/`handoffs`).
+UM nome, ao lado de `handoffs`. `Analytics` passa por ele nos DOIS sítios de "atendidas":
+`conversations_handled` e `handled_ids` (cartão e lista do clique contam as mesmas conversas). Nesta
+rodada o scope foi aplicado também a `all_time_handled_ids` (o universo sem janela que liga reports e
+handoffs do core à conversa do agente) sem spec que decidisse o comportamento — a rodada 5 desfez essa
+escolha extra (ver abaixo): um report sobre mensagem que o bot de fato postou é um report real. Timeline,
+`handoff_count` e `top_handoff_reasons` já não somavam o tipo (só `replied`/`handoffs`).
 
 **Guarda.** `analytics_spec` «does not count a conversation where the agent stayed silent for incomplete
 choices as handled»: o evento sozinho (com um `conversation_resolved` do core, para provar que ele também
@@ -480,7 +482,74 @@ Alvo: `builder_instrucao_do_principal_spec`, `analytics_spec`, `playground_escol
   spec/requests/api/v1/accounts/autonomia` + a spec de locales) → 1.177 exemplos, 0 falhas, 3 pendentes
   pré-existentes (`RegistrationCheckout::Provisioner`, `Sso::Provisioner`), 0 erros fora, exit 0.
 
+## Rodada 5 (um P3 do verificador cego sobre 3603d3e811 — última passada)
+
+Veredito anterior: APROVADO. O achado é da classe «regra sem guarda»: dos três sítios que a rodada 4
+passou por `atendimentos`, só dois tinham mutação; o terceiro era observável e nenhuma spec decidia o que
+ele devia fazer.
+
+### P3 — `analytics.rb`: `all_time_handled_ids` apagava um report real em silêncio
+
+**Achado.** `all_time_handled_ids` é o universo sem janela que liga `Captain::MessageReport` (respostas
+marcadas como erradas) à conversa do agente. Com `.atendimentos` ali, uma conversa cujo ÚNICO evento é
+`skipped_escolhas_incompletas` saía do universo — mas o bot pode ter postado nela: a entrega assíncrona
+num turno mudo (`silence_with_async` despacha a cotação; o `AsyncRunJob` posta como o espelho) não grava
+`replied` (só o Responder chama `EventLogger.replied`). Um atendente reportando essa mensagem via
+`Captain::MessageReport` era um report real sobre uma mensagem real, e `outcomes[:wrong_replies]` caía
+de 1 para 0 sem nenhuma spec reprovar: a mutação «remover `.atendimentos` só de `all_time_handled_ids`»
+passava 49/49. A auditoria dizia que os três sítios eram «o mesmo universo», mas só dois tinham guarda.
+
+**Decisão (orquestrador, opção a).** `all_time_handled_ids` volta ao que era em dcc2cc769a (sem
+`.atendimentos`). O universo de "atendidas" (cartão e lista do clique) segue excluindo a conversa muda; o
+universo de "o bot tocou esta conversa" (reports e handoffs do core) não exclui, porque o bot pode ter
+postado sem `replied`.
+
+**Correção.** `analytics.rb`: `.atendimentos` removido de `all_time_handled_ids`, com o porquê no
+comentário (a entrega assíncrona no turno mudo posta sem `replied`; filtrar ali apagaria o report); o
+comentário de `handled_conversations` passa a dizer que SÓ os dois sítios de "atendidas" filtram.
+`agent_event.rb` não muda: o scope continua tendo um nome e dois chamadores.
+
+**Guarda.** `analytics_spec` «counts a report on a mirror message as a wrong reply even when the agent
+only stayed silent there»: evento `skipped_escolhas_incompletas` sozinho + mensagem outgoing do
+AgentBot-espelho na mesma conversa + `Captain::MessageReport` → `outcomes` inclui `handled: 0,
+wrong_replies: 1`, `outcome_scope('wrong_replies')` é exatamente a conversa, `conversations_handled` 0 e
+`outcome_scope('handled')` vazio (os dois sítios de "atendidas" seguem excluindo). Mutação R5A (pôr
+`.atendimentos` de volta em `all_time_handled_ids`, o código da rodada 4) derruba o exemplo com
+`wrong_replies => 0`.
+
+### Mutações da rodada 5 (`~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada5.rb`, 11/09/2026)
+
+Alvo: `analytics_spec` (service) e `analytics_spec` (request). Cada uma: edita, roda, restaura, confere o
+md5. 4/4 reprovam; `verde depois de restaurar: true`. As três da rodada 4 sobre analytics rodam de novo
+para provar que os dois sítios de "atendidas" seguem guardados depois da mudança.
+
+| Mutação | Reprova? | Exemplos que caem |
+|---|---|---|
+| R5A `all_time_handled_ids` COM `atendimentos` (código da rodada 4) | sim | 1: «counts a report on a mirror message as a wrong reply even when the agent only stayed silent there» (`wrong_replies => 0`) |
+| R4B `conversations_handled` sem `atendimentos` | sim | 2: «does not count a conversation where the agent stayed silent…», «counts a report on a mirror message…» (`handled` 1) |
+| R4B2 `handled_ids` sem `atendimentos` | sim | 2: os mesmos |
+| R4B3 scope `atendimentos` = `all` | sim | 2: os mesmos |
+
+### Comandos da rodada 5
+
+- Banco próprio: `POSTGRES_DATABASE=chatwoot_test_i380r5` (`db:create db:schema:load`).
+- RED: é a mutação R5A — o exemplo novo contra o código da rodada 4 cai com `wrong_replies => 0`.
+- `bundle exec rubocop` nos 2 arquivos tocados → 0 ofensas.
+- Alvo: `analytics_spec` (service) → 8 exemplos, 0 falhas, 0 erros fora, exit 0; com a request spec no
+  script de mutação → 14 exemplos.
+- `ruby ~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada5.rb` → 4/4.
+- Suíte ampla (`spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
+  spec/requests/api/v1/accounts/autonomia` + a spec de locales) → 1.178 exemplos, 0 falhas, 3 pendentes
+  pré-existentes (`RegistrationCheckout::Provisioner`, `Sso::Provisioner`), 0 erros fora, exit 0.
+
 ## Fora desta PR (da mesma classe ou vizinhos)
+
+- **Lacuna do `EventLogger` (registrada na rodada 5, não corrigida aqui):** a entrega assíncrona num
+  turno mudo (`silence_with_async` → `AsyncRunJob` → `deliveries`) posta mensagens como o AgentBot-espelho
+  SEM gravar `replied` — os únicos chamadores de `EventLogger.replied` são `responder.rb` (215/244). Para
+  a aba Desempenho, essa conversa não conta como atendida nem como resposta enviada, embora o bot tenha
+  postado; a rodada 5 só garante que um report sobre essa mensagem não some. O conserto (o job gravar o
+  evento de resposta ao entregar) é de outra PR.
 
 - Não existe endpoint para a corretora MUDAR nome/horário/comportamento depois de criar o agente
   (`Insurance::QuoteAgentController` só tem `show` e `create`). Com as escolhas no `config`, o endpoint

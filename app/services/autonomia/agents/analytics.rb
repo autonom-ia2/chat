@@ -155,7 +155,8 @@ module Autonomia
 
       # Conversas tocadas pelo agente (replied/handed_off) NA JANELA — o "universo" dos resultados.
       # O MESMO universo de `conversations_handled`: o número do cartão e a lista que abre no clique
-      # têm de contar as mesmas conversas, por isso os dois passam por `atendimentos`.
+      # têm de contar as mesmas conversas, por isso os dois passam por `atendimentos` (e SÓ os dois —
+      # ver `all_time_handled_ids`).
       def handled_conversations
         ::Conversation.where(account_id: @agent.account_id, id: handled_ids)
       end
@@ -165,10 +166,14 @@ module Autonomia
       end
 
       # Todas as conversas que o agente já tocou (sem janela): usada para excluir handoffs antigos e
-      # para ligar reports de mensagens à conversa do agente. Mesmo universo, sem a janela.
+      # para ligar reports de mensagens à conversa do agente. Aqui NÃO passa por `atendimentos`, de
+      # propósito (#380, rodada 5): a entrega assíncrona num turno mudo posta como o espelho SEM gravar
+      # `replied` (só o Responder grava), e um report de atendente sobre essa mensagem é sobre algo que o
+      # bot de fato postou — tem de contar em "respostas erradas" mesmo que a conversa não conte como
+      # atendida. Filtrar aqui apagaria o report em silêncio.
       def all_time_handled_ids
         ::Autonomia::Agents::AgentEvent.where(autonomia_agent_id: @agent.id, account_id: @agent.account_id)
-                                       .atendimentos.where.not(conversation_id: nil).select(:conversation_id)
+                                       .where.not(conversation_id: nil).select(:conversation_id)
       end
 
       # Passadas para humano na janela: handoff sinalizado pela instrução/CRM (evento handed_off), passada

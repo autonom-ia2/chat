@@ -137,6 +137,26 @@ RSpec.describe Autonomia::Agents::Analytics do
       expect(analytics.outcome_scope('handled').pluck(:id)).to eq([conv.id])
     end
 
+    # #380 (rodada 5) — a entrega assíncrona num turno mudo posta como o espelho SEM gravar `replied`
+    # (só o Responder grava). Um report de atendente sobre essa mensagem é sobre algo que o bot DE FATO
+    # postou: conta em "respostas erradas" e a lista do clique abre a conversa, mesmo que ela não conte
+    # como atendida (os dois sítios de "atendidas" seguem deixando a conversa de fora).
+    it 'counts a report on a mirror message as a wrong reply even when the agent only stayed silent there' do
+      muted = conversation
+      Autonomia::Agents::AgentEvent.create!(agent: agent, account: account, conversation_id: muted.id,
+                                            event_type: :skipped_escolhas_incompletas, handoff_reason: 'escolhas_incompletas')
+      message = create(:message, account: account, conversation: muted, message_type: :outgoing, sender: mirror)
+      Captain::MessageReport.create!(message: message, user: create(:user, account: account), report_reason: 'other')
+
+      analytics = described_class.new(agent: agent, range: '7d')
+      payload = analytics.call
+
+      expect(payload[:outcomes]).to include(handled: 0, wrong_replies: 1)
+      expect(analytics.outcome_scope('wrong_replies').pluck(:id)).to eq([muted.id])
+      expect(payload[:conversations_handled]).to eq(0)
+      expect(analytics.outcome_scope('handled')).to be_empty
+    end
+
     it 'never mixes agents or accounts' do
       other_agent = Autonomia::Agents::Agent.create!(account: account, name: 'Bia', agent_type: 'custom', instruction: 'x')
       conv = conversation
