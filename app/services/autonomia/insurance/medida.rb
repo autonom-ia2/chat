@@ -110,13 +110,28 @@ class Autonomia::Insurance::Medida
   # `fim` (e, sem os dois, os que acabam hoje). Ancorar o início em HOJE quando o operador só pediu o
   # fim (rodada 4) fazia `fim=2026-06-30` ser recusado como "data inicial posterior à final" — a
   # recusa culpava um dado que ele não escreveu, e o valor no lugar do dele era nosso.
+  #
+  # A INVERSÃO SÓ EXISTE ENTRE DUAS DATAS PEDIDAS. Com o fim em aberto, o fim é "agora", e uma
+  # abertura depois dele quer dizer que a data inicial ainda não chegou NESTE fuso — o que é recusa
+  # para quem pediu (`call`, `por_conta`) e janela vazia para a corretora cujo dia não começou
+  # (rodada 5). Levantar aqui, na construção, fazia a página do Super Admin cair inteira por causa de
+  # uma corretora em fuso atrás do da instalação, nas primeiras horas UTC do dia, culpando uma
+  # "final" que ninguém mandou.
   def self.periodo(inicio:, fim:, fuso:)
     zona = ActiveSupport::TimeZone[fuso.to_s] || Time.zone
-    final = data(zona, fim, 'fim')&.end_of_day || zona.now
-    abertura = data(zona, inicio, 'inicio')&.beginning_of_day || (final - DIAS_PADRAO.days).beginning_of_day
-    raise PeriodoInvalido, 'a data inicial é posterior à final' if abertura > final
+    final = data(zona, fim, 'fim')&.end_of_day
+    abertura = data(zona, inicio, 'inicio')&.beginning_of_day
+    recusar_inversao!(abertura, final)
 
-    [abertura, final]
+    final ||= zona.now
+    [abertura || (final - DIAS_PADRAO.days).beginning_of_day, final]
+  end
+
+  # Duas datas PEDIDAS, a primeira depois da segunda. Com qualquer uma em aberto não há inversão.
+  def self.recusar_inversao!(abertura, final)
+    return unless abertura && final && abertura > final
+
+    raise PeriodoInvalido, 'a data inicial é posterior à final'
   end
 
   # SÓ DATA, E SÓ A DATA. `Date.iso8601` aceitava `2026-09-01T10:00:00` e descartava a hora: quem
@@ -148,15 +163,8 @@ class Autonomia::Insurance::Medida
   def call
     raise ArgumentError, 'a medida de uma conta exige a conta' if conta.nil?
 
+    recusar_data_inicial_no_futuro!
     linha_da_conta || zerada(conta.id)
-  end
-
-  # A linha DESTA corretora, lida na janela do fuso DELA — ou nil, quando ela não teve execução nessa
-  # janela. É a única leitura que toca o banco; `call` e `por_conta` passam por aqui.
-  def linha_da_conta
-    # `take`, não `first`: `first` numa relação agrupada acrescenta `ORDER BY id`, que o GROUP BY recusa.
-    registro = escopo.group(:account_id).select(COLUNAS).take
-    registro && linha_de(registro)
   end
 
   # Uma linha por corretora que teve execução no período, da que mais acionou para a que menos.
@@ -168,15 +176,44 @@ class Autonomia::Insurance::Medida
   # agrupada no fuso da instalação: a cotação das 23h de 30/09 em São Paulo (02h de 01/10 em UTC)
   # caía na fatura de outubro na tela que COBRA e em setembro na tela da corretora — dois números
   # para o mesmo mês, que é exatamente o que a página do Super Admin promete não fazer.
+  #
+  # A data inicial no futuro é recusada AQUI, no fuso de quem pediu a lista — e só aqui. A corretora
+  # cujo dia ainda não começou (fuso atrás do da instalação, `from=hoje` sem `to` nas primeiras horas
+  # UTC) não é pedido inválido: é janela vazia para ela, e a linha dela é pulada como a de qualquer
+  # corretora sem execução no período (rodada 5).
   def por_conta
+    recusar_data_inicial_no_futuro!
     @por_conta ||= corretoras_com_execucao
                    .filter_map { |corretora| self.class.new(conta: corretora, **pedido).linha_da_conta }
                    .sort_by { |linha| [-linha[:seguradoras_acionadas], -linha[:cotacoes], linha[:conta_id]] }
   end
 
+  protected
+
+  # A linha DESTA corretora, lida na janela do fuso DELA — ou nil, quando ela não teve execução nessa
+  # janela. É a única leitura que toca o banco; `call` e `por_conta` passam por aqui.
+  #
+  # PROTEGIDA, não pública: sem conta, o escopo é a instalação inteira e `take` devolveria a linha de
+  # uma corretora qualquer com o nome de nenhuma — numa consulta de dinheiro (rodada 5). `por_conta`
+  # a chama numa instância da MESMA classe, e é o único lugar de fora desta instância que precisa.
+  def linha_da_conta
+    # `take`, não `first`: `first` numa relação agrupada acrescenta `ORDER BY id`, que o GROUP BY recusa.
+    registro = escopo.group(:account_id).select(COLUNAS).take
+    registro && linha_de(registro)
+  end
+
   private
 
   attr_reader :pedido
+
+  # A JANELA COMEÇA DEPOIS DE TERMINAR só com `inicio` pedido e `fim` em aberto (o fim é "agora"): a
+  # data inicial ainda não chegou neste fuso. Para quem PEDIU a medida é recusa dita — e a frase culpa
+  # a data que foi escrita, não uma "final" que ninguém mandou. Para a corretora enumerada por
+  # `por_conta`, a mesma janela é só vazia: `created_at: inicio..fim` com o início depois do fim não
+  # casa linha nenhuma, e ela é pulada.
+  def recusar_data_inicial_no_futuro!
+    raise PeriodoInvalido, 'a data inicial está no futuro' if inicio > fim
+  end
 
   # POR FERRAMENTA, não por conta inteira: a linha de outra ferramenta assíncrona com um `quote_id` no
   # handle não é cotação de seguro, e somá-la cobraria a corretora por outra coisa.

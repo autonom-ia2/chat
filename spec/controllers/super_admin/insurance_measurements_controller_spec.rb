@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe 'Super Admin Insurance Measurement', type: :request do
   let(:super_admin) { create(:super_admin) }
   let(:account) { create(:account) }
+  let(:outra) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:dezessete) { %w[1 3 4 5 7 8 11 12 19 20 26 44 46 47 48 50 55] }
 
@@ -14,6 +15,13 @@ RSpec.describe 'Super Admin Insurance Measurement', type: :request do
     response.body.scan(%r{<td[^>]*>(\d+)</td>}).flatten
   end
 
+  # As oito células que a medida da PRÓPRIA conta daria, na ordem das colunas — para exigir que a
+  # linha da página seja essa, e não uma parecida.
+  def celulas_da_medida(conta, janela)
+    medida = Autonomia::Insurance::Medida.new(conta: conta, inicio: janela[:from], fim: janela[:to]).call
+    medida.values_at(*Autonomia::Insurance::Medida::NUMEROS).map(&:to_s)
+  end
+
   # O gate do endpoint da conta, para o exemplo que compara as duas superfícies.
   def enable_feature!
     allow(ENV).to receive(:fetch).and_call_original
@@ -21,11 +29,11 @@ RSpec.describe 'Super Admin Insurance Measurement', type: :request do
     Autonomia::Insurance::Config.enable_for!(account)
   end
 
-  def cotacao!(handle:, criada_em: Time.current)
-    agente = Autonomia::Agents::Agent.create!(account: account, name: 'Mia', agent_type: 'insurance_quote',
+  def cotacao!(handle:, criada_em: Time.current, conta: account)
+    agente = Autonomia::Agents::Agent.create!(account: conta, name: "Mia #{conta.id}", agent_type: 'insurance_quote',
                                               status: :active, enabled: true, instruction: 'Cote.')
-    conversa = create(:conversation, account: account, inbox: create(:inbox, account: account))
-    Autonomia::Agents::ToolRun.create!(account: account, agent: agente, conversation_id: conversa.id,
+    conversa = create(:conversation, account: conta, inbox: create(:inbox, account: conta))
+    Autonomia::Agents::ToolRun.create!(account: conta, agent: agente, conversation_id: conversa.id,
                                        slug: Autonomia::Agents::Tools::Native::InsuranceQuote.slug,
                                        status: 'done', execution_key: SecureRandom.uuid,
                                        handle: handle, created_at: criada_em)
@@ -129,6 +137,88 @@ RSpec.describe 'Super Admin Insurance Measurement', type: :request do
       # Assert — setembro tem a cotação nas duas: uma cotação, dezessete seguradoras.
       expect(pagina).to eq(%w[1 17])
       expect(payload.values_at('quotes', 'insurers_called')).to eq([1, 17])
+    end
+
+    # POR CORRETORA, NA TELA QUE COBRA. Os exemplos acima têm UMA conta com execução: um wiring que
+    # mostrasse só a primeira corretora (`por_conta.first(1)`) passava por todos eles, e o termo 1
+    # ficava provado só no serviço (rodada 5). Aqui são duas, dezessete e três, cada uma na sua linha
+    # e na ordem da que mais acionou para a que menos.
+    it 'mostra as duas corretoras, cada uma na sua linha' do
+      # Arrange
+      cotacao!(handle: { 'quote_id' => 'a', 'seguradoras_acionadas' => dezessete })
+      cotacao!(handle: { 'quote_id' => 'b', 'seguradoras_acionadas' => dezessete.first(3) }, conta: outra)
+
+      # Act
+      get '/super_admin/insurance_measurement'
+
+      # Assert — as duas linhas, dezessete antes de três.
+      expect(response.body).to include("##{account.id}<", "##{outra.id}<")
+      expect(response.body.index("##{account.id}<")).to be < response.body.index("##{outra.id}<")
+      expect(celulas_numericas).to eq(%w[1 17 0 0 0 0 0 0 1 3 0 0 0 0 0 0])
+    end
+
+    # A FOLGA DA ENUMERAÇÃO TEM MAGNITUDE. A lista enumera as corretoras no fuso da instalação com uma
+    # folga (`FOLGA_DE_FUSO`) antes de ler cada uma no fuso dela; folga zero já reprovava, mas 3 h
+    # passava por 53 exemplos — todos em São Paulo. Com folga menor do que a distância entre os fusos
+    # extremos, a corretora em UTC+14 com cotação na primeira hora do mês (ainda 31/08 em UTC) e a em
+    # UTC-12 com cotação na última (já 01/10 em UTC) somem da FATURA em silêncio, enquanto a API de
+    # cada uma responde 1/17 (rodada 5). A linha da página tem de ser a medida da própria conta.
+    it 'le a corretora em qualquer fuso, e a linha e a medida da propria conta' do
+      # Arrange — Kiritimati (UTC+14) às 00:30 de 01/09; Etc/GMT+12 (UTC-12) às 23:30 de 30/09.
+      account.update!(reporting_timezone: 'Pacific/Kiritimati')
+      outra.update!(reporting_timezone: 'Etc/GMT+12')
+      cotacao!(handle: { 'quote_id' => 'leste', 'seguradoras_acionadas' => dezessete },
+               criada_em: ActiveSupport::TimeZone['Pacific/Kiritimati'].parse('2026-09-01 00:30'))
+      cotacao!(handle: { 'quote_id' => 'oeste', 'seguradoras_acionadas' => dezessete }, conta: outra,
+               criada_em: ActiveSupport::TimeZone['Etc/GMT+12'].parse('2026-09-30 23:30'))
+      janela = { from: '2026-09-01', to: '2026-09-30' }
+
+      # Act
+      get '/super_admin/insurance_measurement', params: janela
+
+      # Assert — as duas na página, com o fuso de cada uma, e as células são as da medida da conta.
+      expect(response.body).to include('Pacific/Kiritimati', 'Etc/GMT+12')
+      expect(celulas_da_medida(account, janela).first(2)).to eq(%w[1 17])
+      expect(celulas_numericas).to eq(celulas_da_medida(account, janela) + celulas_da_medida(outra, janela))
+    end
+
+    # O DIA DE UMA CORRETORA AINDA NÃO COMEÇOU, E A PÁGINA NÃO CAI. `from=hoje` sem `to` à 01h UTC:
+    # para a instalação (UTC) a data é válida; para São Paulo (UTC-3) ainda são 22h de ontem. Até a
+    # rodada 4, a `Medida.new(conta:)` de São Paulo levantava `PeriodoInvalido` e a página inteira
+    # respondia "a data inicial é posterior à final" — culpando uma final que ninguém mandou — sem
+    # linha para NENHUMA corretora (rodada 5). A resposta certa para ela é nenhuma execução; a outra
+    # corretora, cujo dia começou, continua na fatura.
+    it 'nao derruba a pagina quando o dia de uma corretora ainda nao comecou' do
+      # Arrange — São Paulo com cotação às 23h UTC de ontem; a outra (UTC) com uma às 00h30 de hoje.
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+      travel_to Time.utc(2026, 9, 11, 1, 0) do
+        cotacao!(handle: { 'quote_id' => 'sp', 'seguradoras_acionadas' => dezessete }, criada_em: Time.utc(2026, 9, 10, 23, 0))
+        cotacao!(handle: { 'quote_id' => 'utc', 'seguradoras_acionadas' => dezessete }, conta: outra,
+                 criada_em: Time.utc(2026, 9, 11, 0, 30))
+
+        # Act
+        get '/super_admin/insurance_measurement', params: { from: '2026-09-11' }
+
+        # Assert — sem aviso de período; só a corretora cujo dia começou.
+        expect(response).to have_http_status(:success)
+        expect(response.body).not_to include('Período inválido')
+        expect(response.body).to include("##{outra.id}<")
+        expect(response.body).not_to include("##{account.id}<")
+        expect(celulas_numericas).to eq(%w[1 17 0 0 0 0 0 0])
+      end
+    end
+
+    # Quando é a PÁGINA que pede uma data inicial que ainda não chegou (no fuso da instalação), aí sim
+    # é recusa — e a frase culpa a data escrita, não uma final que ninguém mandou.
+    it 'avisa quando a data inicial pedida ainda nao chegou' do
+      cotacao!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete })
+
+      travel_to Time.utc(2026, 9, 11, 1, 0) do
+        get '/super_admin/insurance_measurement', params: { from: '2026-09-12' }
+      end
+
+      expect(response.body).to include('Período inválido — a data inicial está no futuro')
+      expect(response.body).not_to include('>17<')
     end
 
     it 'nao inventa linha para corretora sem cotação' do

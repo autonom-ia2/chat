@@ -172,6 +172,13 @@ RSpec.describe Autonomia::Insurance::Medida do
       expect { medida(inicio: '2026-09-30', fim: '2026-09-01') }.to raise_error(described_class::PeriodoInvalido)
     end
 
+    # SÓ O INÍCIO, E NO FUTURO: a recusa culpa a data que foi escrita. "A data inicial é posterior à
+    # final" (rodada 4) acusava uma final que ninguém mandou — o fim em aberto é "agora".
+    it 'recusa data inicial no futuro dizendo que ela esta no futuro' do
+      expect { medida(inicio: (Time.zone.today + 1).to_s, fim: nil) }
+        .to raise_error(described_class::PeriodoInvalido, /futuro/)
+    end
+
     it 'usa os ultimos trinta dias quando ninguem pede janela' do
       resultado = medida
 
@@ -304,6 +311,56 @@ RSpec.describe Autonomia::Insurance::Medida do
         .to eq(medida(inicio: '2026-09-01', fim: '2026-09-30').slice(:cotacoes, :seguradoras_acionadas, :inicio, :fim))
     end
 
+    # A FOLGA DA ENUMERAÇÃO TEM MAGNITUDE, não só existência. `FOLGA_DE_FUSO = 0` já reprovava (MX2);
+    # `3.hours` passava por 53 exemplos, porque todos usavam São Paulo (3 h de UTC). Com folga menor
+    # do que a distância entre os fusos extremos, a corretora em UTC+14 com cotação na primeira hora
+    # do mês (ainda 31/08 em UTC) e a em UTC-12 com cotação na última (já 01/10 em UTC) somem da
+    # FATURA em silêncio, enquanto a API de cada uma responde 1/17 — a divergência que o P2 da rodada 4
+    # fechou, reaberta por um "ajuste" da constante (rodada 5).
+    it 'enumera a corretora em qualquer fuso, e a linha e a mesma da medida da conta' do
+      # Arrange — Kiritimati (UTC+14) às 00:30 de 01/09; Etc/GMT+12 (UTC-12) às 23:30 de 30/09.
+      account.update!(reporting_timezone: 'Pacific/Kiritimati')
+      outra_conta.update!(reporting_timezone: 'Etc/GMT+12')
+      run!(handle: { 'quote_id' => 'leste', 'seguradoras_acionadas' => dezessete },
+           criada_em: ActiveSupport::TimeZone['Pacific/Kiritimati'].parse('2026-09-01 00:30'))
+      run!(handle: { 'quote_id' => 'oeste', 'seguradoras_acionadas' => dezessete }, conta: outra_conta,
+           criada_em: ActiveSupport::TimeZone['Etc/GMT+12'].parse('2026-09-30 23:30'))
+      janela = { inicio: '2026-09-01', fim: '2026-09-30' }
+
+      # Act
+      linhas = described_class.new(**janela).por_conta
+
+      # Assert — as duas na lista, cada uma igual à medida da própria conta: uma cotação, dezessete.
+      expect(linhas.map { |linha| linha.values_at(:conta_id, :fuso, :cotacoes, :seguradoras_acionadas) })
+        .to eq([[account.id, 'Pacific/Kiritimati', 1, 17], [outra_conta.id, 'Etc/GMT+12', 1, 17]])
+      expect(linhas).to eq([medida(conta: account, **janela), medida(conta: outra_conta, **janela)])
+    end
+
+    # A CORRETORA CUJO DIA AINDA NÃO COMEÇOU É PULADA, não derruba a lista. `from=hoje` sem `to` à
+    # 01h UTC: para a instalação (UTC) o dia começou; para São Paulo (UTC-3) ainda são 22h de ontem e
+    # a janela dela começa depois de terminar. Isso não é pedido inválido — é "nenhuma execução" para
+    # ela. Até a rodada 4, a `Medida.new(conta:)` dela levantava `PeriodoInvalido` e a página inteira
+    # respondia "a data inicial é posterior à final", sem linha para NENHUMA corretora (rodada 5).
+    it 'pula a corretora cujo dia ainda nao comecou, em vez de derrubar a lista inteira' do
+      # Arrange — São Paulo com cotação às 23h UTC de ontem; a outra conta (UTC) com uma às 00h30 de hoje.
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+      travel_to Time.utc(2026, 9, 11, 1, 0) do
+        run!(handle: { 'quote_id' => 'sp', 'seguradoras_acionadas' => dezessete }, criada_em: Time.utc(2026, 9, 10, 23, 0))
+        run!(handle: { 'quote_id' => 'utc', 'seguradoras_acionadas' => dezessete }, conta: outra_conta,
+             criada_em: Time.utc(2026, 9, 11, 0, 30))
+
+        # Act
+        linhas = described_class.new(inicio: '2026-09-11', fim: nil).por_conta
+
+        # Assert — só a corretora cujo dia começou; e a medida da conta de São Paulo, pedida
+        # diretamente, recusa dizendo o que é: a data inicial ainda não chegou no fuso dela.
+        expect(linhas.map { |linha| linha.values_at(:conta_id, :cotacoes, :seguradoras_acionadas) })
+          .to eq([[outra_conta.id, 1, 17]])
+        expect { medida(conta: account, inicio: '2026-09-11', fim: nil) }
+          .to raise_error(described_class::PeriodoInvalido, /futuro/)
+      end
+    end
+
     it 'devolve uma linha por corretora, da que mais acionou para a que menos' do
       # Arrange
       run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete.first(3) })
@@ -344,6 +401,17 @@ RSpec.describe Autonomia::Insurance::Medida do
     run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete }, conta: outra_conta)
 
     expect { described_class.new(inicio: nil, fim: nil).call }.to raise_error(ArgumentError)
+  end
+
+  # A LINHA DE UMA CONTA NÃO SE PEDE POR FORA DE `call`. `linha_da_conta` ficou pública na rodada 4
+  # para `por_conta` chamá-la em outra instância; sem conta, o escopo é a instalação inteira e `take`
+  # devolvia a linha de uma corretora qualquer — a mesma classe do achado acima, por outra porta
+  # (rodada 5). Protegida, `por_conta` continua a chamá-la (instância da MESMA classe) e de fora não
+  # existe.
+  it 'nao entrega a linha de uma conta por fora de call' do
+    run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete }, conta: outra_conta)
+
+    expect { described_class.new(inicio: nil, fim: nil).linha_da_conta }.to raise_error(NoMethodError, /protected/)
   end
 
   # A medida lê a ferramenta pelo SLUG DELA. Digitá-lo aqui faria a consulta devolver zero em

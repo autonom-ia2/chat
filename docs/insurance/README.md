@@ -169,7 +169,10 @@ Gate: feature ligada + conta marcada + **administrador**, como todo endpoint do 
 ilegível responde `422 periodo_invalido` — nunca "então são os últimos 30 dias" em silêncio: um
 número de cobrança de uma janela que ninguém pediu é pior do que erro nenhum. O formato é SÓ
 `AAAA-MM-DD`, e o texto inteiro: `2026-09-01T10:00:00` também é 422, e não "01/09 a partir da
-meia-noite" com a hora descartada em silêncio.
+meia-noite" com a hora descartada em silêncio. Duas datas invertidas respondem "a data inicial é
+posterior à final"; só `from`, e ainda no futuro no fuso da conta (`from=hoje` à 01h UTC para uma
+corretora em São Paulo, onde ainda são 22h de ontem), responde "a data inicial está no futuro" — a
+frase culpa a data que foi escrita, não uma final que ninguém mandou.
 
 **Fuso.** As datas são lidas no `reporting_timezone` da conta (o mesmo dos relatórios do Chatwoot)
 quando ela tem um; sem ele, no fuso da instalação. "Setembro" da corretora termina às 23h59 dela — ler
@@ -177,6 +180,9 @@ pelo nosso fuso jogaria para outubro toda cotação feita depois das 21h de 30/0
 resposta devolve `timezone` e os instantes exatos. A tela do Super Admin lê **cada corretora no fuso
 dela** pelo mesmo caminho (`Medida#por_conta` monta uma `Medida.new(conta:)` por corretora) e mostra o
 fuso na coluna de cada linha: é o que faz a fatura e a tela da corretora baterem no último dia do mês.
+A corretora cujo dia ainda não começou no fuso dela (só `from`, nas primeiras horas UTC, fuso atrás
+do da instalação) simplesmente não aparece na página nesse instante — é "nenhuma execução" para ela,
+não erro da página inteira.
 
 ### `quotes_with_proposal` é zero, e o contador é real
 

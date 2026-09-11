@@ -149,6 +149,21 @@ RSpec.describe 'Autonomia Insurance Measurement API', type: :request do
       expect(response.parsed_body['error']).to eq('periodo_invalido')
     end
 
+    # SÓ `from`, E O DIA AINDA NÃO COMEÇOU NO FUSO DA CONTA: `from=2026-09-11` à 01h UTC, corretora em
+    # São Paulo (ainda 22h de 10/09). Pela porta da conta é 422 — a data inicial dela está no futuro —
+    # e a frase diz isso, em vez de acusar uma "final" que ninguém mandou (rodada 5).
+    it 'recusa data inicial no futuro dizendo que ela esta no futuro' do
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+
+      travel_to Time.utc(2026, 9, 11, 1, 0) do
+        get "#{base}?from=2026-09-11", headers: admin.create_new_auth_token, as: :json
+      end
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('periodo_invalido')
+      expect(response.parsed_body['detail']).to eq('a data inicial está no futuro')
+    end
+
     # SÓ `to`: a janela padrão termina nele. Até a rodada 4 o início padrão era ancorado em HOJE e um
     # `to` no passado voltava 422 culpando "a data inicial" — que ninguém tinha mandado.
     it 'so to: a janela padrao termina nele' do

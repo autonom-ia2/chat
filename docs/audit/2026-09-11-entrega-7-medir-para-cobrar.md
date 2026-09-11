@@ -220,6 +220,38 @@ quebraram na primeira tentativa são a prova de que a suíte vê isso.
 | MX10 | data-hora aceita e truncada (sem a ida e volta) | `medida.rb` | 2 (serviço + API) |
 | MX11 | `por_conta` com conta enumera todas as corretoras | `medida.rb` | "com a conta, so tem a linha dela" |
 
+## Rodada 5 — a última passada de P3 (verificador cego)
+
+Quatro achados, todos reais e reproduzidos antes de corrigir; nenhum P2. Três são a mesma classe das
+rodadas anteriores — regra escrita em prosa sem exemplo que a sustente (a folga tinha magnitude só
+no comentário; a página "por corretora" tinha oito exemplos com UMA corretora) — e um é a classe da
+rodada 3 por outra porta (`linha_da_conta` pública fazendo o que `call` sem conta já não podia).
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **P3** `medida.rb:156` — `linha_da_conta` pública: `Medida.new(inicio: nil, fim: nil).linha_da_conta` devolvia a linha de uma corretora qualquer (escopo sem conta + `take`), a mesma classe de M16 por outra porta | `protected`: `por_conta` a chama numa instância da MESMA classe, e de fora não existe | `medida_spec` "nao entrega a linha de uma conta por fora de call" (`NoMethodError` de método protegido) | MR1 — voltar a `public` reprova |
+| **P3** `medida.rb:43` — `FOLGA_DE_FUSO = 3.hours` passava por 53 exemplos: só MX2 (zero) guardava a folga, e todos os fusos dos exemplos eram São Paulo (3 h). Com folga parcial, a corretora em UTC+14 com cotação na primeira hora do mês e a em UTC-12 na última somem da FATURA em silêncio enquanto a API delas responde 1/17 | Nenhuma mudança na constante (26 h continua sendo a distância entre UTC-12 e UTC+14). A guarda que faltava: exemplos nos dois extremos | `medida_spec` "#por_conta enumera a corretora em qualquer fuso, e a linha e a mesma da medida da conta" (Pacific/Kiritimati às 00:30 de 01/09; Etc/GMT+12 às 23:30 de 30/09; cada linha `eq` ao `call` da conta); `insurance_measurements_controller_spec` "le a corretora em qualquer fuso, e a linha e a medida da propria conta" (as 16 células da página = as de `call` de cada conta) | MR2 — `3.hours` reprova os 2 |
+| **P3** `medida.rb:117` — `from=hoje` sem `to` à 01h UTC, corretora em São Paulo: a instância da página validava a janela no fuso da instalação e aceitava; a `Medida.new(conta:)` de São Paulo recalculava abertura (03h UTC) > final (01h UTC, "agora") e levantava `PeriodoInvalido` — e a página inteira respondia "a data inicial é posterior à final", sem linha para NENHUMA corretora, culpando uma final que ninguém mandou | A inversão só existe entre DUAS datas pedidas (`recusar_inversao!` em `periodo`). Com o fim em aberto, início > "agora" é decidido por quem PEDIU: `call` e `por_conta` recusam com "a data inicial está no futuro" (`recusar_data_inicial_no_futuro!`); a corretora enumerada por `por_conta` cujo dia não começou lê a janela vazia (`created_at: inicio..fim` com início depois do fim não casa linha) e é pulada como qualquer corretora sem execução | `medida_spec` "#por_conta pula a corretora cujo dia ainda nao comecou, em vez de derrubar a lista inteira" (travel_to 01h UTC; SP pulada, UTC na lista; `call` de SP recusa com /futuro/) e "recusa data inicial no futuro dizendo que ela esta no futuro"; `measurement_spec` "recusa data inicial no futuro dizendo que ela esta no futuro" (422, `detail` exato); `insurance_measurements_controller_spec` "nao derruba a pagina quando o dia de uma corretora ainda nao comecou" e "avisa quando a data inicial pedida ainda nao chegou" (a PÁGINA pedindo `from` amanhã é recusa, com a frase nova) | MR3 — voltar a levantar na construção reprova 5; MR3b — `call` sem a recusa reprova 3; MR3c — `por_conta` sem a recusa reprova 1 |
+| **P3** `insurance_measurements_controller_spec.rb:43` — `@linhas = @medida.por_conta.first(1)` passava por 8/8: toda a superfície que FATURA tinha uma única corretora com execução; o termo 1 ("por corretora") só estava provado no serviço | Nenhuma mudança no controller. Exemplo com DUAS corretoras (dezessete e três), as duas linhas na ordem e as 16 células | `insurance_measurements_controller_spec` "mostra as duas corretoras, cada uma na sua linha" | MR4 — `.first(1)` reprova 2 (este e o dos fusos extremos) |
+
+A decisão de desenho do terceiro achado fica dita: a recusa da "data inicial no futuro" saiu da
+construção e foi para os dois pontos de entrada (`call`, `por_conta`) porque a MESMA janela é
+inválida para quem pediu e vazia para a corretora derivada — o que separa os dois casos é quem
+pergunta, não a data. `linha_da_conta` não tem retorno antecipado para a janela vazia: o intervalo
+com início depois do fim já não casa linha no banco, e uma segunda implementação da mesma regra
+seria linha que nenhuma mutação reprova.
+
+### Mutações da rodada 5 (6) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MR1 | `linha_da_conta` volta a ser pública | `medida.rb` | "nao entrega a linha de uma conta por fora de call" |
+| MR2 | `FOLGA_DE_FUSO = 3.hours` (folga parcial) | `medida.rb` | 2 (serviço + Super Admin, fusos extremos) |
+| MR3 | `periodo` volta a levantar a inversão com o fim em aberto (a corretora derivada levanta em `por_conta`) | `medida.rb` | 5 (serviço 2, API 1, Super Admin 2) |
+| MR3b | `call` sem `recusar_data_inicial_no_futuro!` | `medida.rb` | 3 (serviço 2, API 1) |
+| MR3c | `por_conta` sem `recusar_data_inicial_no_futuro!` | `medida.rb` | "avisa quando a data inicial pedida ainda nao chegou" |
+| MR4 | `@linhas = @medida.por_conta.first(1)` no controller | `insurance_measurements_controller.rb` | 2 |
+
 ## Comandos rodados
 
 ```bash
@@ -244,6 +276,9 @@ uv run python3 mutacoes_r3.py                                       # MV1b–MV7
 # rodada 4
 bundle exec rspec <6 specs do trilho> --format json --out alvo.json # 78 exemplos, 0 falhas
 uv run python3 mutacoes_r4.py                                       # MX1–MX11 (7), todas reprovam e restauram
+# rodada 5
+bundle exec rspec <4 specs do trilho> --format json --out alvo.json # 62 exemplos, 0 falhas
+uv run python3 mutacoes_r5.py                                       # MR1–MR4 (6), todas reprovam e restauram
 ```
 
 ## Arquivos
@@ -272,3 +307,9 @@ Rodada 4: `medida.rb` (`linha_da_conta`, `por_conta` por corretora no fuso dela,
 `async_config.rb` (comentário: o teto por atraso), `insurance_measurements_controller_spec.rb`,
 `medida_spec.rb`, `measurement_spec.rb`, `async_run_job_spec.rb`, `docs/insurance/README.md`. Nenhum
 arquivo de instrução, `MOTIVOS`, schema de função ou adapter.
+
+Rodada 5: `medida.rb` (`linha_da_conta` protegida, `recusar_inversao!`, `recusar_data_inicial_no_futuro!`
+em `call` e `por_conta`), `insurance_measurements_controller_spec.rb` (duas corretoras, fusos extremos,
+dia que não começou, data inicial no futuro), `medida_spec.rb`, `measurement_spec.rb`,
+`docs/insurance/README.md`. Nenhum arquivo de instrução, `MOTIVOS`, schema de função ou adapter;
+controller e view do Super Admin intocados.
