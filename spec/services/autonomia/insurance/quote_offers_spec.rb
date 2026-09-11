@@ -6,9 +6,73 @@ require 'rails_helper'
 # `Usebens: R$ 2837,70` numa lista corrida, sem negrito, sem milhar, com a mesma ressalva repetida
 # por extenso em toda mensagem.
 RSpec.describe Autonomia::Insurance::QuoteOffers do
-  def offer(name, amount, basis = 'total', installments = nil)
-    { 'insurer' => { 'name' => name },
-      'premium' => { 'amount' => amount, 'basis' => basis, 'installments' => installments } }
+  # `extra`: `code:` (a seguradora) e `motivo:` (o `basis_evidence` do adapter).
+  def offer(name, amount, basis = 'total', installments = nil, **extra)
+    { 'insurer' => { 'name' => name, 'code' => extra[:code] }, 'status' => 'quoted',
+      'premium' => { 'amount' => amount, 'basis' => basis, 'installments' => installments,
+                     'basis_evidence' => extra[:motivo] } }
+  end
+
+  # O motivo que o adapter escreve quando o período não sai — o da Bp Assinatura na renovação real
+  # de 11/09/2026, com os campos do portal pelo nome.
+  def motivo_bp
+    'parcelamentos=[] (vazio): o portal nao ofereceu plano de pagamento; ' \
+      'premioMensal=29.30 e premio/12 (derivado pelo portal, nao distingue periodo)'
+  end
+
+  # ENTREGA 13, termo 5 — preço de período desconhecido nunca é ordenado pelo número cru. A Bp
+  # Assinatura (351,59, sem período) aparecia na frente da Porto (1.321,25 no total) como se fosse
+  # a mais barata; se 351,59 for mensalidade, é a mais cara da lista.
+  describe '#quoted' do
+    it 'poe o preco sem periodo DEPOIS dos totais, mesmo com o numero menor' do
+      ofertas = described_class.new(
+        'offers' => [offer('Bp Assinatura', 351.59, 'unknown', code: '55', motivo: motivo_bp),
+                     offer('Suhai', 1818.48, code: '20'), offer('Porto', 1321.25, code: '8')]
+      ).quoted
+
+      expect(ofertas.map { |o| o['insurer']['name'] }).to eq(['Porto', 'Suhai', 'Bp Assinatura'])
+    end
+
+    it 'entre os sem periodo, mantem a ordem em que o portal os devolveu, sem comparar numeros' do
+      ofertas = described_class.new(
+        'offers' => [offer('B', 400.0, 'unknown', code: '2'), offer('A', 300.0, 'unknown', code: '1')]
+      ).quoted
+
+      expect(ofertas.map { |o| o['insurer']['name'] }).to eq(%w[B A])
+    end
+
+    it 'continua excluindo quem nao cotou e quem veio sem valor' do
+      ofertas = described_class.new(
+        'offers' => [offer('Porto', 900.0, code: '8').merge('status' => 'declined'),
+                     { 'insurer' => { 'name' => 'Azul', 'code' => '9' }, 'status' => 'quoted', 'premium' => {} },
+                     offer('Mapfre', 700.0, code: '3')]
+      ).quoted
+
+      expect(ofertas.map { |o| o['insurer']['name'] }).to eq(['Mapfre'])
+    end
+  end
+
+  # ENTREGA 13, termo 1 — quando não sabemos o período, o MOTIVO fica registrado por oferta e diz
+  # qual campo do portal faltou ou veio ambíguo. É o `basis_evidence` do adapter, sem tradução.
+  describe '#sem_periodo' do
+    it 'devolve, por codigo de seguradora, o motivo que o adapter escreveu' do
+      ofertas = described_class.new(
+        'offers' => [offer('Bp Assinatura', 351.59, 'unknown', code: '55', motivo: motivo_bp),
+                     offer('Porto', 1321.25, code: '8', motivo: 'parcelas=10 x premioDemaisParc=132.12')]
+      )
+
+      expect(ofertas.sem_periodo).to eq('55' => motivo_bp)
+    end
+
+    it 'sem motivo do adapter, registra o que veio — nunca um texto nosso no lugar' do
+      ofertas = described_class.new('offers' => [offer('X', 10.0, nil, code: '1')])
+
+      expect(ofertas.sem_periodo).to eq('1' => 'basis=nil sem basis_evidence')
+    end
+
+    it 'e vazio quando toda oferta tem periodo' do
+      expect(described_class.new('offers' => [offer('Porto', 1321.25, code: '8')]).sem_periodo).to eq({})
+    end
   end
 
   describe '.describe' do
@@ -80,6 +144,29 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
 
       expect(uma).to start_with('Mais uma opção:')
       expect(duas).to start_with('Mais 2 opções:')
+    end
+
+    # ENTREGA 13, termo 4 — período genuinamente desconhecido: o preço sai SEM afirmar período
+    # nenhum. "no total" só quando o adapter disse `total`; parcelamento sozinho não prova nada aqui,
+    # porque quem deriva é o adapter, e este texto só traduz o que veio.
+    it 'nao afirma periodo quando o adapter nao soube, nem com parcelamento no payload' do
+      texto = described_class.describe(
+        [offer('Bp Assinatura', 351.59, 'unknown', { 'count' => 2, 'amount' => 175.8 })], first: true
+      )
+
+      expect(texto).to include('*Bp Assinatura* — R$ 351,59')
+      expect(texto).not_to include('no total')
+      expect(texto.downcase).not_to include('por mês')
+      expect(texto.downcase).not_to include('ao ano')
+    end
+
+    it 'diz "no total" e o parcelamento quando o adapter derivou os dois' do
+      texto = described_class.describe(
+        [offer('Tokio', 1901.97, 'total', { 'count' => 12, 'amount' => 158.39 })], first: true
+      )
+
+      expect(texto).to include('R$ 1.901,97 no total')
+      expect(texto).to include('ou 12x de R$ 158,39')
     end
 
     it 'mantem o aviso de bonus quando ele vem' do

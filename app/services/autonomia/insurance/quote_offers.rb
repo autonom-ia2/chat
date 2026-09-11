@@ -30,11 +30,30 @@ class Autonomia::Insurance::QuoteOffers
     @result = result.to_h
   end
 
-  # SÓ quem cotou, da mais barata para a mais cara. Todas.
+  # SÓ quem cotou. Todas. Da mais barata para a mais cara ENTRE AS QUE TÊM PERÍODO; as sem período
+  # vêm depois, na ordem em que o portal as devolveu.
+  #
+  # ENTREGA 13, termo 5: preço de período desconhecido não se ordena pelo número cru. A Bp Assinatura
+  # (351,59, sem parcelamento no payload) abria a lista na frente da Porto (1.321,25 no total) como
+  # se fosse a mais barata — e se 351,59 for mensalidade, é a mais cara. Não há como normalizar o que
+  # não tem período; então ele não entra na comparação, e a ressalva colada na oferta diz por quê.
   def quoted
-    @quoted ||= Array(@result['offers'])
+    @quoted ||= begin
+      cotadas = Array(@result['offers'])
                 .select { |offer| offer['status'] == 'quoted' && offer.dig('premium', 'amount').present? }
-                .sort_by { |offer| offer.dig('premium', 'amount').to_f }
+      com_periodo, sem_periodo = cotadas.partition { |offer| offer.dig('premium', 'basis') == 'total' }
+      com_periodo.sort_by { |offer| offer.dig('premium', 'amount').to_f } + sem_periodo
+    end
+  end
+
+  # -> { codigo da seguradora => motivo }. ENTREGA 13, termo 1: quando não sabemos o período, o
+  # motivo fica registrado por oferta e diz qual campo do portal faltou ou veio ambíguo. É o
+  # `basis_evidence` do adapter, sem tradução — traduzir seria pôr palavra nossa no lugar do dado.
+  def sem_periodo
+    quoted.each_with_object({}) do |offer, motivos|
+      premium = ::Autonomia::Insurance::PremiumText.new(offer['premium'])
+      motivos[self.class.code(offer)] = premium.motivo if premium.indefinido?
+    end
   end
 
   # Seguradoras que recusaram a credencial que a corretora cadastrou NO PORTAL (critério 4.5).
