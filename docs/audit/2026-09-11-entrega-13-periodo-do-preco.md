@@ -61,11 +61,19 @@ com o motivo nomeando o campo, por oferta, para a próxima cotação real confir
   `N parcelamento(s) fora do contrato (sem parcelas/premioPrimeiraParc/premioDemaisParc)`, o plano
   mais próximo (`parcelas=1 soma=1398.12`), e se `premioMensal` é premio/12 (derivado, não distingue)
   ou veio diferente disso (sinal novo, nomeado, sem virar detector).
-- `toOffer` → `escolherPremium`: entre resultados selecionados da mesma seguradora, o de período
-  conhecido mais barato vence; só sem nenhum conhecido sai o menor desconhecido. O que ficou de lado
-  vai para o motivo: `posto de lado: premio=134.5 (parcelamentos=[] …)`.
+- `toOffer` → `escolherPremium(premios, premioDoCalculo)`: entre resultados selecionados da mesma
+  seguradora, o de período conhecido mais barato vence. Sem NENHUM conhecido, o número não decide
+  (rodada de correção, abaixo): sai o que o portal escolheu — `premio` do cálculo casa com um dos
+  resultados, com tolerância de um centavo (Hdi: 2.581,007156 no resultado, 2.581,01 no cálculo) —
+  ou, se nada casar, o primeiro na ordem do portal; o motivo diz qual dos dois foi
+  (`escolhido pelo portal (premio do calculo=351.59)` / `primeiro na ordem do portal (…)`). Em
+  qualquer ramo, o que ficou de lado vai para o motivo: `posto de lado: premio=134.5
+  (parcelamentos=[] …)`.
 - Fixture `test/fixtures/agger/parcelamentos-reais-2026-09-11.sanitized.json` (só números de preço e
-  parcelamento; nenhum dado pessoal). Guarda: toda oferta real com plano de pagamento sai `total`.
+  parcelamento; nenhum dado pessoal). Desde a rodada de correção carrega também DUAS seguradoras
+  recusadas no formato bruto (Darwin na renovação, 15 chaves com `premioMensal: null`; Usebens na
+  moto, 6 chaves sem `selected`). Guardas: toda oferta real com plano de pagamento sai `total`; toda
+  seguradora real da fixture passa por `result()` (recusada → `declined`, cotada → `quoted`).
 - `pnpm verify` verde (765 unitários + 12 integração; cobertura 100/100/100/100). Nove mutações,
   todas reprovam o alvo (arquivo restaurado, md5 conferido): M1 `parcelas: 1` volta a não provar;
   M2 tolerância relativa desligada; M3 escolha pelo menor número cru; M4 plano posto de lado some
@@ -98,7 +106,39 @@ com o motivo nomeando o campo, por oferta, para a próxima cotação real confir
 | 2 | Cliente para de ouvir a ressalva quando a informação estava no payload | Tokio → `total` (M1, M2); Justos → 1.539,24 `total` em 10x (M3); guarda "toda oferta real com plano de pagamento sai total" sobre a fixture | fechado em código; **pendente_prova_real**: cotação nova em produção depois do deploy da Lambda |
 | 3 | Decisão de detecção com cotação real com plano mensal na mão | tabela acima, com os campos reais; decisão: sem detector (`describe 'não há detector de mensalidade'`, M9) | fechado |
 | 4 | Período desconhecido → preço sem afirmar período | `PremiumText#resumo` só com `total` (`premium_text_spec`, MC2/MC7); `ramo_auto_spec` "NÃO inventa período" | fechado |
-| 5 | Períodos diferentes nunca ordenados pelo número cru | adapter: `escolherPremium` (M3); chat2you: `QuoteOffers#quoted` particiona (MC1; `ramo_auto_spec` "no lote, o preço sem período vem depois") | fechado |
+| 5 | Períodos diferentes nunca ordenados pelo número cru | adapter: `escolherPremium` (M3 da rodada 1; rodada de correção R-M2/R-M3/R-M4/R-M5: sem período conhecido, escolha do portal ou ordem dele, nunca o menor número, e os demais sempre no motivo); chat2you: `QuoteOffers#quoted` particiona (MC1; `ramo_auto_spec` "no lote, o preço sem período vem depois") | fechado |
+
+## Rodada de correção (verificador cego, 11/09/2026)
+
+Dois achados na PR autonomia-adapters#54, os dois corrigidos na causa raiz, na mesma branch.
+
+| # | Achado | Causa raiz | Correção | Guarda |
+|---|---|---|---|---|
+| P1 | `premioMensal: null` (toda seguradora recusada: Darwin, Sancor, Zurich, Bradesco, Liberty, Bp…) reprovava o schema; `result()`, `read()` e `proposal()` lançavam `protocol` e o cliente ficava sem preço NENHUM. Reproduzido: `quote result b0220871…:1` → exit 76 no c7c9165 | a fixture saneada filtrava `selected && premio numérico` e apagou a forma que não é preço; nenhum teste tinha seguradora recusada no bruto | `premioMensal: z.union([z.number(), notYet, z.null()])`; fixture ganha Darwin (15 chaves) e Usebens (6 chaves) no bruto | `agger-quote-fluxo`: "seguradora recusada com premioMensal: null ao lado de uma que cotou: declined + quoted, sem protocolo" e "toda seguradora real da fixture passa por result()" (R-M1) |
+| P2 | `escolherPremium` sem período conhecido escolhia o menor número cru e os demais sumiam do motivo — a mesma classe do defeito da Justos, com guarda invertida (`not.toContain('posto de lado')`) | a regra "período desconhecido não se compara pelo número" tinha exceção no próprio ramo em que ela mais importa | escolha do PORTAL (`calc.premio` casa com um resultado, ±0,01) ou o primeiro na ordem dele; `posto de lado` SEMPRE anexado | `agger-quote-fluxo`: três testes novos (portal escolhe 400 sobre 351,59; Hdi com tolerância; sem escolha → primeiro, ausente e não-casa) (R-M2…R-M5); `quote-guardas` "a mais barata" reescrito com planos de período conhecido |
+
+Mutações da rodada (arquivo restaurado, md5 conferido igual ao original no fim; `mutacoes_r2.cjs`):
+
+| Mutação | Reprova o alvo |
+|---|---|
+| R-M1 schema volta a recusar `premioMensal: null` | sim (2 testes) |
+| R-M2 sem período conhecido volta a `maisBarato` | sim (3 testes) |
+| R-M3 sem período conhecido, os demais não vão ao motivo | sim (3 testes) |
+| R-M4 sem escolha do portal, sai o último em vez do primeiro | sim (1 teste) |
+| R-M5 escolha do portal exige igualdade exata (sem o centavo) | sim (1 teste) |
+
+Prova ao vivo (leitura, `quote result` nas três cotações reais, conta de teste): exit 76 no
+c7c9165 → exit 0 com a correção, 17 ofertas em cada; renovação: Tokio 1.901,97 total 12x, Justos
+1.539,24 total 10x com `posto de lado: premio=134.5`, Bp Assinatura 351,59 `unknown` com
+`escolhido pelo portal (premio do calculo=351.59)`, Hdi 2.581,007156 total 12x; moto: Suhai e Porto
+total; caminhão: Suhai total, Pier `auth_required`, o resto `declined`.
+
+Também nesta rodada: `test/unit/destino-seguro.test.ts` presumia que a pasta do checkout se chama
+`autonomia-adapters` (reprovava em qualquer worktree; a rodada 1 contornou com symlink de nome).
+Corrigido na premissa do teste (`basename(RAIZ)`), uma linha — sem isso `pnpm verify` não é um
+portão em worktree.
+
+`pnpm verify` verde: 769 unitários + 12 integração, cobertura 100/100/100/100.
 
 ### Mutações do chat2you (8/8 reprovam o alvo; restaurado com md5 conferido)
 
@@ -135,3 +175,15 @@ como base · MC8 mock: oferta sem período vira total.
 
 Suíte ampla: **899 exemplos, 0 falhas, 0 erros fora de exemplos** (3 pendentes pré-existentes, não
 desta entrega), lido do JSON do rspec, exit 0.
+
+Rodada de correção (só o adapter mudou de código; no chat2you esta auditoria):
+- Bruto das três cotações: `npx tsx <scratchpad>/e13/bruto-versoes.mts` (login + `GET
+  cotacao/versoes`, salvo fora do repo). Reprodução do P1: `npx tsx src/cli/main.ts agger quote result
+  b0220871-…:1` → exit 76 antes, exit 0 depois (idem moto e caminhão).
+- `pnpm verify` (exit 0) no worktree, sem symlink de nome. Mutações: `node <scratchpad>/e13/mutacoes_r2.cjs`
+  (5/5 reprovam, md5 restaurado).
+- chat2you: specs alvo repetidos por sanidade com `POSTGRES_DATABASE=chatwoot_test_e13` (código Ruby
+  idêntico ao da rodada 1; resultado abaixo).
+
+Specs alvo na rodada de correção: **72 exemplos, 0 falhas, 0 erros fora de exemplos**, exit 0 (lido do
+JSON do rspec). Adapter da rodada: `a6309b9`.
