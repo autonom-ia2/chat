@@ -186,6 +186,27 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
       expect(agent.config['topic_map']).to eq([{ 'topic' => 'frete' }])
       expect(agent.config['temperature']).to eq(0.7)
     end
+
+    # #380 — as escolhas da corretora (`agente_de_cotacao`) são lidas a cada turno pelo Agente de
+    # Cotação e só o Builder as escreve, sempre as quatro. Uma escrita parcial pela API pararia o
+    # agente com `EscolhasIncompletas`; uma completa trocaria o nome dele por fora do fluxo.
+    it 'preserves the quote agent choices when updating config via API' do
+      # Arrange
+      chave = Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA
+      escolhas = { 'nome_agente' => 'Lia', 'nome_corretora' => 'Sena', 'horario' => 'seg a sex', 'comportamento' => 'consultivo' }
+      agent = create_external_agent(agent_type: 'insurance_quote', config: { chave => escolhas })
+
+      # Act — tenta trocar só o nome, por fora do Builder.
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+            params: { agent: { config: { chave => { 'nome_agente' => 'Outra' }, 'temperature' => 0.7 } } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert — as escolhas ficam como o Builder gravou; a chave livre muda.
+      expect(response).to have_http_status(:success)
+      agent.reload
+      expect(agent.config[chave]).to eq(escolhas)
+      expect(agent.config['temperature']).to eq(0.7)
+    end
   end
 
   describe 'invalid input' do

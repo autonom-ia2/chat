@@ -160,6 +160,16 @@ module Autonomia
         [false, 'false'].include?(config.to_h['with_knowledge'])
       end
 
+      # A INSTRUÇÃO QUE VAI AO MODELO (#380). Para o Agente de Cotação é o arquivo do deploy com as
+      # escolhas da corretora guardadas em `config` (`QuoteAgent::Builder.instrucao_do_principal`):
+      # um agente já criado recebe o texto novo sem ser recriado, como o especialista desde a
+      # entrega 3 (`Specialist#instrucao_do_sistema`). Para os demais — e para o de cotação criado
+      # antes de as escolhas serem guardadas — a coluna, como sempre. Quem monta o prompt
+      # (`PromptBuilder#instructions`) lê daqui, nunca de `instruction` direto.
+      def instrucao_do_sistema
+        ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_do_principal(self) || instruction
+      end
+
       # Aplica config gerada pelo Construtor (token-guarded — análogo a ai_guarded_update do
       # EmailCampaign). `build_token` é o token ativo do BuildThread; a escrita só vence se este
       # ainda for o token da geração corrente (idempotência anti-supersede). `attrs` já vem mapeado

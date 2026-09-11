@@ -28,10 +28,13 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # Onda 6 (P2) — chaves COMPUTADAS do jsonb `config` que o usuário NÃO define pela API: são geradas
   # pelo Revisor/Construtor. `assign_attributes(config:)` substituía o blob inteiro e as apagava (perda
   # silenciosa de topic_map/knowledge_* num save do PanelTune). O update agora MESCLA (preserva o resto).
-  PROTECTED_CONFIG_KEYS = %w[
+  # `agente_de_cotacao` (#380): as escolhas da corretora que o Agente de Cotação lê a cada turno
+  # (`QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA`) — só o Builder as escreve, sempre as quatro; uma
+  # escrita parcial por aqui pararia o agente com `EscolhasIncompletas`.
+  PROTECTED_CONFIG_KEYS = (%w[
     topic_map knowledge_confidence knowledge_summary knowledge_refresh_token
     with_knowledge system_key builder_active_thread_id
-  ].freeze
+  ] + [::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).freeze
 
   def update
     discard_generated_instruction_on_manual_switch

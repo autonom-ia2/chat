@@ -66,10 +66,66 @@ class Autonomia::Insurance::QuoteAgent::Builder
     ESPECIALISTAS.find { |e| e[:slug] == specialist.slug }
   end
 
+  # O PRINCIPAL TAMBÉM LÊ O ARQUIVO DO DEPLOY (#380). A instrução da Lia (`principal.md`) tinha o mesmo
+  # defeito do manual do especialista: copiada para `autonomia_agents.instruction` no nascimento, com as
+  # variáveis substituídas, e nunca relida — toda edição do texto só valia para agente criado depois.
+  # O que o principal tem a mais são as quatro escolhas da corretora, que até aqui só existiam DENTRO
+  # do texto gravado. Agora elas ficam no `config` do agente, na chave `ESCOLHAS_DA_CORRETORA`, e quem
+  # monta o prompt (`Agent#instrucao_do_sistema` <- `PromptBuilder#instructions`) lê o arquivo e
+  # substitui com elas a cada montagem. A coluna fica como retrato do nascimento.
+  #
+  # AUDITABILIDADE: o que foi ao modelo é função de duas coisas só — o arquivo no SHA deployado e as
+  # escolhas guardadas. Com os dois, este método devolve o mesmo texto; nada mais entra na conta.
+  #
+  # -> texto do arquivo com as escolhas, ou nil quando não é o agente de cotação ou quando ele nasceu
+  # antes de as escolhas serem guardadas (aí a coluna é a única fonte, e quem chama a usa). A chave
+  # PRESENTE e incompleta não cai em silêncio no arquivo cru nem na coluna: `EscolhasIncompletas`, com
+  # o nome do campo — uma variável nunca pode chegar ao modelo como `$nomeAgente`.
+  def self.instrucao_do_principal(agent)
+    return nil unless agent&.agent_type == 'insurance_quote'
+
+    escolhas = agent.config.to_h[ESCOLHAS_DA_CORRETORA]
+    return nil if escolhas.nil?
+
+    substituir(texto_do_principal, escolhas)
+  end
+
+  # Lido a cada montagem, e não fotografado no boot: é o que faz o deploy seguinte valer.
+  def self.texto_do_principal
+    INSTRUCOES.join(ARQUIVO_DO_PRINCIPAL).read
+  end
+
+  # O BLOCO NO `gsub` NÃO É ESTILO. Com o valor como segundo argumento, o Ruby interpreta `\\0` no
+  # texto de substituição — um nome de corretora contendo essa sequência passaria a inserir o
+  # próprio marcador de volta. O bloco entrega a string literal, sem interpretar nada.
+  def self.substituir(texto, escolhas)
+    VARIAVEIS.reduce(texto) do |parcial, (marcador, campo)|
+      parcial.gsub(marcador) { escolha(escolhas, campo) }
+    end
+  end
+
+  # Só o nome do campo na mensagem, nunca o valor de outra escolha: o erro vai para log.
+  def self.escolha(escolhas, campo)
+    valor = escolhas[campo] if escolhas.is_a?(Hash)
+    raise EscolhasIncompletas, campo if valor.blank?
+
+    valor.to_s
+  end
+
+  # A chave do `config` onde as escolhas da corretora vivem: `nome_agente`, `nome_corretora`,
+  # `horario` e `comportamento`, sempre as quatro, escritas só por `criar_agente` (a API do agente a
+  # protege em `PROTECTED_CONFIG_KEYS`). O rollout de #380 preenche a dos agentes criados antes.
+  ESCOLHAS_DA_CORRETORA = 'agente_de_cotacao'.freeze
+  ARQUIVO_DO_PRINCIPAL = 'principal.md'.freeze
+  # Marcador no arquivo -> campo das escolhas.
+  VARIAVEIS = { '$nomeAgente' => 'nome_agente', '$nomeCorretora' => 'nome_corretora',
+                '$horarioAtendimento' => 'horario', '$comportamento' => 'comportamento' }.freeze
+
   class SlugDesconhecido < StandardError; end
   class ComportamentoInvalido < StandardError; end
   class NomeInvalido < StandardError; end
   class JaExiste < StandardError; end
+  class EscolhasIncompletas < StandardError; end
 
   def initialize(account:, nome_agente:, nome_corretora:, horario: nil, comportamento: nil)
     @account = account
@@ -125,11 +181,13 @@ class Autonomia::Insurance::QuoteAgent::Builder
     end
   end
 
+  # A coluna recebe o texto de hoje (retrato do nascimento); o que roda lê o arquivo do deploy com as
+  # escolhas guardadas em `config` (ver `instrucao_do_principal`).
   def criar_agente
     ::Autonomia::Agents::Agent.create!(
       account: @account, name: @nome_agente, agent_type: 'insurance_quote',
-      status: :active, enabled: true, instruction: texto('principal.md'),
-      config: { 'native_tool_slugs' => TODAS_AS_TOOLS, 'with_knowledge' => true }
+      status: :active, enabled: true, instruction: texto(ARQUIVO_DO_PRINCIPAL),
+      config: { 'native_tool_slugs' => TODAS_AS_TOOLS, 'with_knowledge' => true, ESCOLHAS_DA_CORRETORA => escolhas }
     )
   end
 
@@ -141,22 +199,17 @@ class Autonomia::Insurance::QuoteAgent::Builder
     )
   end
 
-  # As variáveis são substituídas AQUI, na criação, e não a cada turno: o que vai para o banco é o
-  # texto final. Um agente cujo nome mudasse a cada leitura seria impossível de auditar depois.
-  # O BLOCO NO `gsub` NÃO É ESTILO. Com o valor como segundo argumento, o Ruby interpreta `\\0` no
-  # texto de substituição — um nome de corretora contendo essa sequência passaria a inserir o
-  # próprio marcador de volta. O bloco entrega a string literal, sem interpretar nada.
+  # A MESMA substituição do runtime (`substituir`): o que a coluna guarda no nascimento é, no dia da
+  # criação, exatamente o que o modelo recebe. A auditoria não depende disso — depende das escolhas
+  # guardadas e do arquivo no deploy —, mas o retrato de nascimento fica fiel.
   def texto(arquivo)
-    VARIAVEIS.reduce(INSTRUCOES.join(arquivo).read) do |texto, (marcador, campo)|
-      texto.gsub(marcador) { valores.fetch(campo) }
-    end
+    self.class.substituir(INSTRUCOES.join(arquivo).read, escolhas)
   end
 
-  VARIAVEIS = { '$nomeAgente' => :nome_agente, '$nomeCorretora' => :nome_corretora,
-                '$horarioAtendimento' => :horario, '$comportamento' => :comportamento }.freeze
-
-  def valores
-    { nome_agente: @nome_agente, nome_corretora: @nome_corretora,
-      horario: @horario, comportamento: @comportamento }
+  # As quatro escolhas, com as chaves que o jsonb devolve (string), para o Builder e o runtime lerem
+  # o mesmo formato.
+  def escolhas
+    { 'nome_agente' => @nome_agente, 'nome_corretora' => @nome_corretora,
+      'horario' => @horario, 'comportamento' => @comportamento }
   end
 end
