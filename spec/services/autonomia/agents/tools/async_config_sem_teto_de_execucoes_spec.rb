@@ -7,10 +7,13 @@ require 'rails_helper'
 # "8 por hora" eram até 136 consultas, e o número 8 não dizia nada sobre dinheiro. Rodrigo o removeu
 # em 10/09/2026: quem paga é a corretora, e estrangular quem paga mais é o oposto do produto.
 #
-# ESTE ARQUIVO É A GUARDA PELO NOME, e o `async_config.rb` aponta para ele. O que pega qualquer
-# forma de teto é o exemplo de COMPORTAMENTO, em `bound_async_spec`: vinte execuções na última hora
-# e a vigésima primeira é aceita ("there is NO ceiling"). Os dois juntos cobrem os dois jeitos de o
-# acidente voltar — a constante copiada de volta de um diff antigo, e a contagem escrita do zero.
+# ESTE ARQUIVO É A GUARDA PELO NOME, e o `async_config.rb` aponta para ele. Ela só pega os nomes
+# que lista — é o que uma guarda por nome consegue. A contagem escrita do zero, sem constante, é
+# pega pelos exemplos de COMPORTAMENTO, um por porta: no ACEITE, `bound_async_spec` ("there is NO
+# ceiling": vinte execuções na última hora, 340 seguradoras, e a vigésima primeira é aceita); no
+# JOB, onde a chamada paga acontece, `async_run_job_spec` ("segue consultando e submetendo com vinte
+# execuções na última hora"). Até a rodada 3 desta entrega só o aceite tinha exemplo, e um teto
+# literal em `AsyncRunJob#stop?` passava por 140 exemplos verdes.
 #
 # O que continua impedindo desperdício NÃO é teto: `opened_for_turn?` (o retry do mesmo turno não
 # abre execução nova), a dedup por (conversa, ferramenta), e o pedido repetido da entrega 10, que
@@ -23,10 +26,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncConfig do
       .flat_map { |raiz| raiz.end_with?('.rb') ? [Rails.root.join(raiz).to_s] : Dir[Rails.root.join("#{raiz}/**/*.rb").to_s] }
   end
 
-  # Os nomes que o acidente teve e os que ele teria. Comentário não conta: estes arquivos EXPLICAM a
-  # decisão em prosa, e uma varredura que reprovasse a explicação apagaria o motivo junto com a regra.
+  # Os nomes que o acidente teve e os que ele teria — em inglês e em português, por execução ou por
+  # hora. Comentário não conta: estes arquivos EXPLICAM a decisão em prosa, e uma varredura que
+  # reprovasse a explicação apagaria o motivo junto com a regra.
   let(:nomes_de_teto) do
-    /^\s*(?!#)[^#\n]*\b(MAX_RUNS[A-Z_]*|RUNS_PER_[A-Z_]+|[A-Z_]*PER_HOUR|TETO_DE_EXECUCOES|MAX_EXECUCOES)\b/
+    /^\s*(?!#)[^#\n]*\b(MAX_RUNS[A-Z_]*|RUNS_PER_[A-Z_]+|[A-Z_]*PER_HOUR|TETO_DE_EXECUCOES|MAX_EXECUCOES|(TETO|LIMITE)[A-Z_]*HORA[A-Z_]*)\b/
   end
 
   it 'nenhum teto de execuções foi reintroduzido no caminho da cotação' do

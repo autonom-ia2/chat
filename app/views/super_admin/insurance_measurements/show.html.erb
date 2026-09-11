@@ -48,7 +48,9 @@
             <th class="px-4 py-3 text-right">Cotações</th>
             <th class="px-4 py-3 text-right">Seguradoras acionadas</th>
             <th class="px-4 py-3 text-right">Com preço</th>
-            <th class="px-4 py-3 text-right">Propostas</th>
+            <%# Termo 3: COTAÇÕES que viraram proposta (uma cotação com duas propostas é uma). A soma dos códigos vem ao lado. %>
+            <th class="px-4 py-3 text-right">Cotações com proposta</th>
+            <th class="px-4 py-3 text-right">Propostas emitidas</th>
             <%# O que NÃO se sabe fica numa coluna própria, nunca somado nos totais acima. %>
             <th class="px-4 py-3 text-right">Sem medida</th>
             <th class="px-4 py-3 text-right">Sem confirmação</th>
@@ -65,14 +67,15 @@
               <td class="px-4 py-3 text-right text-slate-700"><%= linha[:cotacoes] %></td>
               <td class="px-4 py-3 text-right font-semibold text-slate-900"><%= linha[:seguradoras_acionadas] %></td>
               <td class="px-4 py-3 text-right text-slate-700"><%= linha[:seguradoras_com_preco] %></td>
-              <td class="px-4 py-3 text-right text-slate-700"><%= linha[:propostas] %></td>
+              <td class="px-4 py-3 text-right text-slate-700"><%= linha[:cotacoes_com_proposta] %></td>
+              <td class="px-4 py-3 text-right text-slate-700"><%= linha[:propostas_emitidas] %></td>
               <td class="px-4 py-3 text-right text-slate-500"><%= linha[:cotacoes_sem_medida] %></td>
               <td class="px-4 py-3 text-right text-slate-500"><%= linha[:cotacoes_sem_confirmacao] %></td>
               <td class="px-4 py-3 text-right text-slate-500"><%= linha[:cotacoes_possivelmente_duplicadas] %></td>
             </tr>
           <% end %>
           <% if @linhas.empty? %>
-            <tr><td colspan="8" class="px-4 py-6 text-center text-slate-500">Nenhuma cotação no período.</td></tr>
+            <tr><td colspan="9" class="px-4 py-6 text-center text-slate-500">Nenhuma cotação no período.</td></tr>
           <% end %>
         </tbody>
       </table>

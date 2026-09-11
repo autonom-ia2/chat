@@ -13,8 +13,11 @@ json.payload do
   json.quotes @medida[:cotacoes]
   json.insurers_called @medida[:seguradoras_acionadas]
   json.insurers_with_price @medida[:seguradoras_com_preco]
-  # Entrega 8: a ferramenta de proposta por seguradora ainda não existe, e o contador já conta.
-  json.proposals @medida[:propostas]
+  # TERMO 3: quantas COTAÇÕES viraram proposta individual — uma cotação com duas propostas é UMA.
+  # A soma dos códigos (`proposals_issued`) fica em separado e não é a linha da fatura. Entrega 8: a
+  # ferramenta de proposta por seguradora ainda não existe, e os dois contadores já contam.
+  json.quotes_with_proposal @medida[:cotacoes_com_proposta]
+  json.proposals_issued @medida[:propostas_emitidas]
 
   # O QUE A MEDIDA NÃO SABE, DITO EM SEPARADO — nunca somado no total.
   json.unknown do

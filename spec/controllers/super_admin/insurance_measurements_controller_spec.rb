@@ -41,6 +41,19 @@ RSpec.describe 'Super Admin Insurance Measurement', type: :request do
       expect(response.body).to include('>17<')
     end
 
+    # TERMO 3 na tela: COTAÇÕES que viraram proposta e a soma dos códigos são DUAS colunas. Uma
+    # cotação com duas propostas é uma cotação — a coluna da fatura não pode dobrar por causa da soma.
+    it 'mostra cotações com proposta e propostas emitidas em colunas separadas' do
+      cotacao!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete,
+                         Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY => %w[8 3] })
+
+      get '/super_admin/insurance_measurement'
+
+      expect(response.body).to include('Cotações com proposta', 'Propostas emitidas')
+      celulas = response.body.scan(%r{<td[^>]*>(\d+)</td>}).flatten
+      expect(celulas).to eq(%w[1 17 0 1 2 0 0 0])
+    end
+
     it 'aceita a janela pedida' do
       cotacao!(handle: { 'quote_id' => 'velha', 'seguradoras_acionadas' => dezessete }, criada_em: 40.days.ago)
 

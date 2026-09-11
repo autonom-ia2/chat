@@ -27,10 +27,15 @@ RSpec.describe Autonomia::Insurance::Medida do
     %w[update update! update_all create create! destroy destroy_all save save! delete_all insert]
   end
 
+  # AS DUAS ÁRVORES: o código aberto e o overlay `enterprise/app`, que sobrescreve serviços, jobs e
+  # controllers por `prepend_mod_with`. Uma varredura só de `app/**` deixaria o freio entrar pelo
+  # override — o mesmo arquivo, noutra pasta.
+  let(:raizes) { %w[app enterprise/app] }
+
   # Tudo que roda no caminho da cotação: a ferramenta, o aceite, o job, o especialista.
   let(:caminho_da_cotacao) do
-    relativos(%w[app/services/autonomia/agents app/jobs/autonomia/agents app/services/autonomia/insurance]
-                .flat_map { |raiz| Dir[Rails.root.join("#{raiz}/**/*.rb").to_s] })
+    relativos(raizes.product(%w[services/autonomia/agents jobs/autonomia/agents services/autonomia/insurance])
+                    .flat_map { |raiz, pasta| Dir[Rails.root.join("#{raiz}/#{pasta}/**/*.rb").to_s] })
   end
 
   def relativos(caminhos)
@@ -55,7 +60,7 @@ RSpec.describe Autonomia::Insurance::Medida do
 
   it 'so e nomeada pelas superficies de leitura' do
     # Arrange
-    todos = relativos(Dir[Rails.root.join('app/**/*.rb').to_s] + Dir[Rails.root.join('app/**/*.erb').to_s])
+    todos = relativos(raizes.flat_map { |raiz| Dir[Rails.root.join("#{raiz}/**/*.{rb,erb}").to_s] })
 
     # Act
     citam = nomeiam_a_medida(todos)

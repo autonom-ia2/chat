@@ -63,10 +63,32 @@ RSpec.describe Autonomia::Insurance::Medida do
       expect(resultado[:seguradoras_acionadas]).to eq(34)
     end
 
-    # A execução que o modelo abriu e a conferência recusou NÃO é cotação: não existe no portal e
-    # ninguém paga por ela. Contá-la seria cobrar por trabalho que não houve.
+    # A execução que o modelo abriu e o `start` recusou NÃO é cotação: não existe no portal e ninguém
+    # paga por ela. Contá-la seria cobrar por trabalho que não houve.
+    #
+    # A LINHA É A REAL, a que o job grava depois da recusa: intenção anotada E `autonomia_submitted`
+    # (o retorno do `start` foi registrado), sem `quote_id`. Um fixture sem a marca passava com
+    # "cotação = quote_id OU submitted" — e essa versão cobra a recusa (rodada 3, MV1b).
     it 'nao conta execução que nunca virou cotação no portal' do
-      run!(handle: { 'pedido' => 'faltam dados', 'motivo' => 'faltam_dados' })
+      run!(handle: { 'pedido' => 'faltam dados', 'motivo' => 'faltam_dados', 'faltando' => ['vehicle.plate'],
+                     Autonomia::Agents::ToolRun::SUBMITTED_KEY => true, Autonomia::Agents::ToolRun::INTENCOES => 1 })
+
+      resultado = medida
+
+      expect(resultado[:cotacoes]).to be_zero
+      expect(resultado[:seguradoras_acionadas]).to be_zero
+      expect(resultado[:cotacoes_sem_confirmacao]).to be_zero
+    end
+
+    # POR FERRAMENTA. Outra ferramenta assíncrona da mesma conta pode gravar `quote_id` e até uma lista
+    # com o mesmo nome no handle dela: não é cotação de seguro, e somá-la cobraria a corretora por
+    # outra coisa. O escopo lê o slug da ferramenta, e sem ele esta linha entraria na fatura.
+    it 'nao conta execução de outra ferramenta, mesmo com quote_id e seguradoras no handle' do
+      Autonomia::Agents::ToolRun.create!(
+        account: account, agent: agent, conversation_id: conversa_de(account).id, slug: 'outra_ferramenta',
+        status: 'done', execution_key: SecureRandom.uuid,
+        handle: { 'quote_id' => 'x', 'seguradoras_acionadas' => dezessete }
+      )
 
       resultado = medida
 
@@ -207,23 +229,37 @@ RSpec.describe Autonomia::Insurance::Medida do
     end
   end
 
-  # TERMO 3 — quantas cotações viraram PROPOSTA individual. A ferramenta é a entrega 8; o contador já
-  # existe, lê o handle e conta de verdade. Hoje ele é zero porque ninguém escreve a chave.
+  # TERMO 3 — quantas COTAÇÕES viraram proposta individual. A ferramenta é a entrega 8; os contadores
+  # já existem, leem o handle e contam de verdade. Hoje são zero porque ninguém escreve a chave.
   describe 'propostas individuais (entrega 8)' do
     it 'conta zero enquanto nenhuma execução registra proposta' do
       run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete })
 
-      expect(medida[:propostas]).to be_zero
+      expect(medida[:cotacoes_com_proposta]).to be_zero
+      expect(medida[:propostas_emitidas]).to be_zero
     end
 
-    # O CONTADOR ESTÁ LIGADO, e não é um zero escrito à mão: quando a entrega 8 gravar a chave no
+    # OS CONTADORES ESTÃO LIGADOS, e não são zero escrito à mão: quando a entrega 8 gravar a chave no
     # handle (`InsuranceQuote::PROPOSTAS_KEY`, os códigos das seguradoras cuja proposta saiu), a
     # medida já conta sem mudar uma linha.
-    it 'conta as propostas registradas no handle' do
+    #
+    # A LINHA DA FATURA É `cotacoes_com_proposta` (o termo diz COTAÇÕES): uma cotação com duas
+    # propostas é UMA cotação que virou proposta. A soma dos códigos vem em separado — somá-los na
+    # coluna do termo diria "duas cotações viraram proposta" onde houve uma (rodada 3).
+    it 'conta uma cotação com proposta, e duas propostas emitidas, quando saíram duas' do
       run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete,
                      Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY => %w[8 3] })
 
-      expect(medida[:propostas]).to eq(2)
+      expect(medida[:cotacoes_com_proposta]).to eq(1)
+      expect(medida[:propostas_emitidas]).to eq(2)
+    end
+
+    # Lista vazia é "ainda nenhuma proposta", não "virou proposta".
+    it 'nao conta cotação com lista de propostas vazia' do
+      run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete,
+                     Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY => [] })
+
+      expect(medida[:cotacoes_com_proposta]).to be_zero
     end
   end
 

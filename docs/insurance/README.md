@@ -155,7 +155,8 @@ curl -s -H "api_access_token: $TOKEN" \
   "quotes": 3,                  // cotações que EXISTEM no portal (o número voltou)
   "insurers_called": 51,        // 3 x 17 — a unidade que a corretora paga
   "insurers_with_price": 14,    // das acionadas, quantas devolveram preço
-  "proposals": 0,               // proposta individual: entrega 8 (ver abaixo)
+  "quotes_with_proposal": 0,    // COTAÇÕES que viraram proposta individual (termo 3): entrega 8 (ver abaixo)
+  "proposals_issued": 0,        // soma dos códigos de seguradora com proposta — NÃO é a linha da fatura
   "unknown": {                  // o que a medida NÃO sabe, nunca somado nos totais
     "quotes_without_measure": 0,      // cotação aberta cujo nº de seguradoras não foi lido
     "quotes_without_confirmation": 0, // envio sem confirmação: pode existir no portal sem o nº aqui
@@ -174,22 +175,31 @@ pelo nosso fuso jogaria para outubro toda cotação feita depois das 21h de 30/0
 resposta devolve `timezone` e os instantes exatos. A tela do Super Admin é cross-conta e usa o fuso da
 instalação; ela diz isso na própria linha da janela.
 
-### `proposals` é zero, e o contador é real
+### `quotes_with_proposal` é zero, e o contador é real
 
 A ferramenta de **proposta por seguradora** é a entrega 8; ela ainda não existe, então nada escreve
-o contador e ele lê zero em dado real. O contador em si está ligado: a medida conta
+o contador e ele lê zero em dado real. O contador em si está ligado: a medida lê
 `InsuranceQuote::PROPOSTAS_KEY` (`propostas` no handle, os códigos das seguradoras cuja proposta
-saiu). **Ponto de registro da entrega 8:** o handle da execução, na passada que gerar a proposta —
+saiu) e devolve DOIS números, porque o termo 3 pergunta "quantas **cotações** viraram proposta
+individual" e a soma dos códigos responde outra pergunta:
+
+- `quotes_with_proposal` (`cotacoes_com_proposta`) — cotações cuja lista tem pelo menos um código.
+  Uma cotação com duas propostas é UMA. **É a linha da fatura.**
+- `proposals_issued` (`propostas_emitidas`) — a soma dos códigos. A mesma cotação conta dois.
+
+**Ponto de registro da entrega 8:** o handle da execução, na passada que gerar a proposta —
 `quote/proposal` com `insurer_code` é o caminho, e `comparison_pdf` já usa o mesmo endpoint SEM
-código para o comparativo. Escrever a lista lá faz a medida contar sem mudar uma linha.
+código para o comparativo. Escrever a lista lá faz os dois contadores contarem sem mudar uma linha.
 
 ### Isto não é freio
 
 A medida informa; quem decide volume é a corretora que paga. Nenhum caminho de cotação a consulta, e
-`medida_nao_e_freio_spec` reprova (por AST) qualquer referência à medida fora das superfícies de
-leitura. O teto de execuções continua não existindo: `async_config_sem_teto_de_execucoes_spec` pega a constante
-pelo nome e `bound_async_spec` pega o comportamento (vinte execuções na última hora, a vigésima
-primeira é aceita).
+`medida_nao_e_freio_spec` reprova (por AST, em `app/**` e no overlay `enterprise/app/**`) qualquer
+referência à medida fora das superfícies de leitura. O teto de execuções continua não existindo, e a
+guarda tem três partes: `async_config_sem_teto_de_execucoes_spec` pega a constante pelo nome;
+`bound_async_spec` pega o comportamento no ACEITE (vinte execuções na última hora, 340 seguradoras, e
+a vigésima primeira é aceita); `async_run_job_spec` pega o comportamento no JOB, onde a chamada paga
+acontece (com as mesmas vinte, a submissão e a consulta seguem e a execução termina em `done`).
 
 ## Ondas
 

@@ -34,8 +34,19 @@ class Autonomia::Insurance::Medida
   DIAS_PADRAO = 30
 
   # A cotação EXISTE NO PORTAL quando o número dela voltou. `autonomia_submitted` não serve: ele
-  # marca "o retorno do start foi registrado", e uma recusa de conferência também o recebe.
+  # marca "o retorno do start foi registrado", e uma recusa do `start` também o recebe — a linha da
+  # recusa fica `{pedido, motivo, faltando, autonomia_intencoes: 1, autonomia_submitted: true}`, sem
+  # `quote_id`, e cobrá-la seria cobrar por trabalho que não houve. Os exemplos usam essa linha REAL
+  # (a que o job grava), não uma inventada sem a marca.
   COTACAO = "handle->>'quote_id' IS NOT NULL".freeze
+
+  # A COTAÇÃO VIROU PROPOSTA quando a lista de propostas dela tem pelo menos um código. Conta
+  # COTAÇÕES (termo 3: "quantas cotações viraram proposta individual"), não códigos: uma cotação com
+  # duas propostas é UMA cotação que virou proposta. A soma dos códigos existe em separado
+  # (`propostas_emitidas`) e não é a linha da fatura.
+  def self.com_proposta
+    "jsonb_typeof(handle->'#{Quote::PROPOSTAS_KEY}') = 'array' AND jsonb_array_length(handle->'#{Quote::PROPOSTAS_KEY}') > 0"
+  end
 
   # Quantos itens a lista daquela chave tem, por linha. `jsonb` é livre: chave ausente ou de outra
   # forma vale zero em vez de derrubar a consulta — quem conta a linha de forma inesperada como
@@ -52,7 +63,8 @@ class Autonomia::Insurance::Medida
     COUNT(*) FILTER (WHERE #{COTACAO}) AS cotacoes,
     COALESCE(SUM(#{tamanho_da_lista(Quote::ACIONADAS_KEY)}), 0) AS seguradoras_acionadas,
     COALESCE(SUM(#{tamanho_da_lista(Quote::DELIVERED_KEY)}), 0) AS seguradoras_com_preco,
-    COALESCE(SUM(#{tamanho_da_lista(Quote::PROPOSTAS_KEY)}), 0) AS propostas,
+    COUNT(*) FILTER (WHERE #{com_proposta}) AS cotacoes_com_proposta,
+    COALESCE(SUM(#{tamanho_da_lista(Quote::PROPOSTAS_KEY)}), 0) AS propostas_emitidas,
     COUNT(*) FILTER (
       WHERE #{COTACAO} AND jsonb_typeof(handle->'#{Quote::ACIONADAS_KEY}') IS DISTINCT FROM 'array'
     ) AS cotacoes_sem_medida,
@@ -62,8 +74,8 @@ class Autonomia::Insurance::Medida
     COUNT(*) FILTER (WHERE handle->>'#{Run::POSSIVELMENTE_DUPLICADA}' IS NOT NULL) AS cotacoes_possivelmente_duplicadas
   SQL
 
-  NUMEROS = %i[cotacoes seguradoras_acionadas seguradoras_com_preco propostas cotacoes_sem_medida
-               cotacoes_sem_confirmacao cotacoes_possivelmente_duplicadas].freeze
+  NUMEROS = %i[cotacoes seguradoras_acionadas seguradoras_com_preco cotacoes_com_proposta propostas_emitidas
+               cotacoes_sem_medida cotacoes_sem_confirmacao cotacoes_possivelmente_duplicadas].freeze
 
   attr_reader :conta, :inicio, :fim, :fuso
 
@@ -127,6 +139,8 @@ class Autonomia::Insurance::Medida
 
   private
 
+  # POR FERRAMENTA, não por conta inteira: a linha de outra ferramenta assíncrona com um `quote_id` no
+  # handle não é cotação de seguro, e somá-la cobraria a corretora por outra coisa.
   def escopo
     linhas = Run.where(slug: self.class.slug, created_at: inicio..fim)
     conta ? linhas.where(account_id: conta.id) : linhas

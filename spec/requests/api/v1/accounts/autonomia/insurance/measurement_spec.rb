@@ -62,7 +62,37 @@ RSpec.describe 'Autonomia Insurance Measurement API', type: :request do
       expect(payload['quotes']).to eq(1)
       expect(payload['insurers_called']).to eq(17)
       expect(payload['insurers_with_price']).to eq(11)
-      expect(payload['proposals']).to be_zero
+      expect(payload['quotes_with_proposal']).to be_zero
+      expect(payload['proposals_issued']).to be_zero
+    end
+
+    # TERMO 3 pela API: COTAÇÕES que viraram proposta, e a soma dos códigos em separado. Uma cotação
+    # com duas propostas é uma cotação — o número da fatura não pode dobrar por causa da soma.
+    it 'responde cotações com proposta e propostas emitidas como dois numeros' do
+      cotacao!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete,
+                         Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY => %w[8 3] })
+
+      get base, headers: admin.create_new_auth_token, as: :json
+
+      payload = response.parsed_body['payload']
+      expect(payload['quotes_with_proposal']).to eq(1)
+      expect(payload['proposals_issued']).to eq(2)
+    end
+
+    # A RECUSA DO `start` NÃO É COTAÇÃO, e a linha aqui é a que o job grava de verdade: `pedido`,
+    # intenção anotada e `autonomia_submitted`, sem `quote_id`. Contá-la seria cobrar por trabalho
+    # que não houve; e ela também não é "sem confirmação" — o `start` respondeu, dizendo que não fez.
+    it 'nao conta como cotação a recusa que o job registrou' do
+      cotacao!(handle: { 'pedido' => 'Para cotar, preciso da placa.', 'motivo' => 'faltam_dados',
+                         'faltando' => ['vehicle.plate'],
+                         Autonomia::Agents::ToolRun::SUBMITTED_KEY => true, Autonomia::Agents::ToolRun::INTENCOES => 1 })
+
+      get base, headers: admin.create_new_auth_token, as: :json
+
+      payload = response.parsed_body['payload']
+      expect(payload['quotes']).to be_zero
+      expect(payload['insurers_called']).to be_zero
+      expect(payload['unknown']['quotes_without_confirmation']).to be_zero
     end
 
     it 'responde a janela que usou' do

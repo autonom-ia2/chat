@@ -61,11 +61,14 @@ module Autonomia::Agents::Tools::AsyncConfig
   #     abre; qualquer campo diferente abre. Enquanto ela não existir, a impaciência do cliente
   #     gera cotação duplicada no portal do corretor — que é sujeira, não prejuízo nosso.
   #
-  # DUAS guardas seguram esta decisão, e quem reintroduzir teto derruba as duas — obrigado a encarar
-  # a decisão em vez de repetir o acidente: `async_config_sem_teto_de_execucoes_spec` pega o nome (a constante
-  # copiada de volta de um diff antigo) e `bound_async_spec` pega o comportamento (vinte execuções na
-  # última hora, e a vigésima primeira é aceita). Até 11/09/2026 este comentário apontava para um
-  # arquivo que não existia: a regra estava escrita e a guarda, não.
+  # TRÊS guardas seguram esta decisão, e quem reintroduzir teto derruba pelo menos uma — obrigado a
+  # encarar a decisão em vez de repetir o acidente. `async_config_sem_teto_de_execucoes_spec` pega o
+  # NOME (a constante copiada de volta de um diff antigo: MAX_RUNS, PER_HOUR, TETO/LIMITE por HORA…),
+  # e só o nome. O COMPORTAMENTO tem um exemplo por porta em que a contagem poderia entrar:
+  # `bound_async_spec` no aceite (vinte execuções na última hora, 340 seguradoras, e a vigésima
+  # primeira é aceita) e `async_run_job_spec` no job, onde a chamada paga acontece (com as mesmas
+  # vinte, a consulta e a submissão seguem). Até 11/09/2026 este comentário apontava para um arquivo
+  # que não existia; até a rodada 3 da entrega 7 ele prometia cobertura do job que só o aceite tinha.
 
   module_function
 

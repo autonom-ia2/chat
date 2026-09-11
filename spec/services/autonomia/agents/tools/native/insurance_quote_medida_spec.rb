@@ -182,10 +182,38 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(Autonomia::Insurance::Medida.new(conta: account, inicio: nil, fim: nil).call)
         .to include(cotacoes: 1, seguradoras_acionadas: 3, seguradoras_com_preco: 1, cotacoes_sem_medida: 0)
     end
+
+    # A RECUSA DO `start` PASSA PELO JOB E GANHA A MARCA `autonomia_submitted` — o retorno do `start`
+    # foi registrado, mesmo sendo "não fiz". A linha fica `{pedido, motivo, faltando, intenção 1,
+    # submitted}` sem `quote_id`, e a medida tem de ler ZERO cotações dela: contar seria cobrar por
+    # trabalho que não houve. Aqui a recusa é REAL (`dados` ilegível), sem dublê e sem portal.
+    it 'nao conta como cotação a recusa do start, que o job grava com a marca de submetido' do
+      # Arrange — execução promovida, com `dados` que não é JSON: o `start` recusa antes do portal.
+      account.update!(internal_attributes: account.internal_attributes.merge('autonomia_agents_enabled' => true))
+      run = Autonomia::Agents::ToolRun.open!(agent: agente_de_cotacao, slug: described_class.slug,
+                                             arguments: { 'produto' => 'auto', 'dados' => 'nao-e-json' },
+                                             scope: { conversation_id: conversation.id,
+                                                      agent_inbox_id: agent_inbox.id })
+      run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+
+      # Act — a passada de submissão e a de consulta, que entrega o pedido e encerra.
+      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 0)
+      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 1)
+
+      # Assert — a linha real da recusa: marca de submetido, intenção anotada, nenhum número.
+      handle = run.reload.handle
+      expect(handle).to include(Autonomia::Agents::Tools::AsyncRunJob::SUBMITTED_KEY => true,
+                                Autonomia::Agents::ToolRun::INTENCOES => 1, 'motivo' => 'json_invalido')
+      expect(handle).not_to have_key('quote_id')
+      expect(run.status).to eq('done')
+      expect(Autonomia::Insurance::Medida.new(conta: account, inicio: nil, fim: nil).call)
+        .to include(cotacoes: 0, seguradoras_acionadas: 0, cotacoes_sem_confirmacao: 0, cotacoes_sem_medida: 0)
+    end
   end
 
-  # A chave que a entrega 8 vai escrever. Ela já tem nome e já é lida pela medida; o que falta é a
-  # ferramenta de proposta por seguradora, e o ponto de registro é o handle desta execução.
+  # A chave que a entrega 8 vai escrever. Ela já tem nome e já é lida pela medida (COTAÇÕES com
+  # proposta, e a soma dos códigos em separado); o que falta é a ferramenta de proposta por
+  # seguradora, e o ponto de registro é o handle desta execução.
   it 'declara onde a proposta individual sera registrada (entrega 8)' do
     expect(described_class::PROPOSTAS_KEY).to eq('propostas')
   end
