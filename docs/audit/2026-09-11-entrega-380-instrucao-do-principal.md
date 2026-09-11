@@ -55,7 +55,7 @@ leu ATÉ o deploy desta PR, não depois.
 | 3 | Agente já criado recebe o texto novo sem ser recriado | fechado em código | spec: cria pelo Builder, envelhece a coluna (`update!(instruction: 'instrução velha…')`), o prompt efetivo é o do arquivo com os valores; em produção depende do rollout abaixo (pendente_producao) |
 | 4 | Auditabilidade mantida e documentada | fechado | seção acima; spec «auditabilidade (termo 4)» |
 | 5 | SQL de rollout do agente 24 + conferência | entregue, não executado (pendente_prova_real) | seção «Rollout» abaixo; passo 1 com o retrato completo (`mode`, andaime, BuildThreads) desde a rodada 3 |
-| 6 | Mutações: runtime lendo a coluna reprova; valores ausentes caindo no arquivo com placeholder reprova | fechado | M1 e M8 (coluna), M3 (arquivo cru), M4 (marcador sobrando), M6 (branco em silêncio); rodada 3: VG/VG2 fecham o flip de tipo que reabria «runtime lendo a coluna», VD prova a leitura a cada montagem, VF/VI provam a mensagem e o locale — tabelas abaixo |
+| 6 | Mutações: runtime lendo a coluna reprova; valores ausentes caindo no arquivo com placeholder reprova | fechado | M1 e M8 (coluna), M3 (arquivo cru), M4 (marcador sobrando), M6 (branco em silêncio); rodada 4: R4A (chave presente e vazia não volta à coluna); rodada 3: VG/VG2 fecham o flip de tipo que reabria «runtime lendo a coluna», VD prova a leitura a cada montagem, VF/VI provam a mensagem e o locale — tabelas abaixo |
 
 ## Mutações (`~/ops/agente-cotacao/issue-380/mutacoes_i380.rb`, 11/09/2026)
 
@@ -386,6 +386,100 @@ Cada uma: edita, roda, restaura, confere o md5. 11/11 reprovam; `verde depois de
   (porta sem a guarda) agora derruba 5 exemplos e M17 (predicado apagado) 16. `verde depois de restaurar:
   true` nas duas.
 
+## Rodada 4 (três P3 do verificador cego sobre dcc2cc769a)
+
+Veredito anterior: APROVADO. Os três achados são da mesma classe — a recusa por `EscolhasIncompletas`
+estava certa no Responder, mas as bordas ao redor dela (a guarda da chave vazia, o número da aba
+Desempenho, os outros chamadores do `Answerer`) não tinham spec ou não tinham a mesma recusa explícita.
+
+### P3 — `builder.rb`: a chave presente e VAZIA não tinha spec
+
+**Achado.** `instrucao_do_principal` faz `return nil if escolhas.nil?`. Com a chave `agente_de_cotacao`
+presente e vazia (`{}`, `false`, escrita fora do Builder) o código já levantava `EscolhasIncompletas`
+(`escolha` recebe algo que não tem `nome_agente`), mas nenhum exemplo cobria essa borda: a mutação
+`.nil?` → `.blank?` passava 38/38, e com ela o agente voltaria em silêncio à coluna de nascimento — o
+texto velho, com crases — em vez de parar com o nome do campo (o default calado que o termo 6 proíbe).
+
+**Correção.** Nenhuma no código (a guarda já era `nil?`); comentário no método dizendo POR QUE é `nil?`
+e não `blank?`. A guarda que faltava era a spec.
+
+**Guarda.** `builder_instrucao_do_principal_spec` «chave presente e vazia também para, em vez de voltar à
+coluna em silêncio» (`chave => {}`, coluna envelhecida de propósito → `EscolhasIncompletas('nome_agente')`)
+e «chave presente com um valor que não é hash (false) também para». Mutação R4A (`.nil?` → `.blank?`)
+derruba os dois.
+
+### P3 — `analytics.rb`: a Lia MUDA contava como "conversa atendida"
+
+**Achado.** `conversations_handled` e `handled_ids` (o universo de `outcome_scope('handled')`) contavam
+qualquer evento com `conversation_id`; o tipo novo `skipped_escolhas_incompletas` entrava. A aba
+Desempenho mostrava "Conversas atendidas: N" para conversas em que a Lia não respondeu nem passou a
+humanos, e a lista do clique as abria. O número mentia para o corretor.
+
+**Correção.** Em `AgentEvent`: `NAO_ATENDIMENTO_TYPES = %w[skipped_escolhas_incompletas]` e
+`scope :atendimentos` (`where.not(event_type: NAO_ATENDIMENTO_TYPES)`) — o universo de "atendidas" tem
+UM nome, ao lado de `handoffs`. `Analytics` passa por ele em `conversations_handled`, `handled_ids` (cartão
+e lista do clique contam as mesmas conversas) e `all_time_handled_ids` (o mesmo universo sem janela, que
+liga reports e handoffs do core à conversa do agente). Timeline, `handoff_count` e `top_handoff_reasons`
+já não somavam o tipo (só `replied`/`handoffs`).
+
+**Guarda.** `analytics_spec` «does not count a conversation where the agent stayed silent for incomplete
+choices as handled»: o evento sozinho (com um `conversation_resolved` do core, para provar que ele também
+não vira "resolvida sem humano") → `conversations_handled` 0, `outcomes` todos 0, `outcome_scope('handled')`
+vazio, timeline zerada; e «counts the conversation once when the agent stayed silent and later replied in
+it» (a conversa que depois foi atendida conta uma vez). Mutações R4B (cartão sem o scope), R4B2 (lista
+sem o scope) e R4B3 (scope sem o `where.not`) derrubam o primeiro exemplo.
+
+### P3 — `playground_controller.rb`: Testar e Copilot respondiam 500
+
+**Achado.** `PlaygroundController` → `Answerer` → `PromptBuilder#instructions` → `Agent#instrucao_do_sistema`
+é o mesmo caminho do Responder; com a chave incompleta, `EscolhasIncompletas` subia até o Rails: 500
+genérico, sem o nome do campo e sem registro além do erro. O Responder ganhou o tratamento na rodada 3; o
+outro chamador (e o Copilot, `suggest`, que passa pelo mesmo `Answerer`) não.
+
+**Correção.** `Autonomia::BaseController` ganha `rescue_from Builder::EscolhasIncompletas` ao lado do de
+`InstrucaoMantida` — uma resposta para a regra em toda a API de agentes: 422 com
+`{ error: <mensagem pt_BR/en>, code: 'escolhas_incompletas', campo: <nome do campo> }` e `warn` com o
+campo (a mensagem do erro é só o nome do campo, `Builder.escolha`, nunca um valor). Chave nova
+`autonomia.agents.escolhas_incompletas` em `en.yml` e `pt_BR.yml`, com `%{campo}`; a spec de locales passa
+a exigi-la nos dois. Detalhe de implementação: o handler usa `current_account` (ivar memoizado), não
+`Current.account` — o `ensure` de `handle_with_exception` (around_action do core) já fez `Current.reset`
+quando o `rescue_from` roda.
+
+**Guarda.** `playground_escolhas_incompletas_spec` (Answerer real, credencial dublada): `test` e `suggest`
+→ 422 com `code`/`campo`/mensagem resolvida, cliente de IA nunca chamado, `warn` com o campo; a resposta
+nunca ecoa o valor de outra escolha; com as quatro escolhas a porta não recusa e o modelo é chamado.
+Mutação R4C (rescue apagado) derruba os dois de 422 e o «never echoes».
+
+### Mutações da rodada 4 (`~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada4.rb`, 11/09/2026)
+
+Alvo: `builder_instrucao_do_principal_spec`, `analytics_spec`, `playground_escolhas_incompletas_spec`,
+`responder_escolhas_incompletas_spec`. Cada uma: edita, roda, restaura, confere o md5. 5/5 reprovam;
+`verde depois de restaurar: true`.
+
+| Mutação | Reprova? | Exemplos que caem |
+|---|---|---|
+| R4A builder `.nil?` → `.blank?` | sim | 2: «chave presente e vazia também para», «chave presente com um valor que não é hash (false)» |
+| R4B `conversations_handled` sem `atendimentos` | sim | 1: «does not count a conversation where the agent stayed silent…» |
+| R4B2 `handled_ids` sem `atendimentos` | sim | 1: o mesmo (via `outcomes.handled` e `outcome_scope('handled')`) |
+| R4B3 scope `atendimentos` = `all` | sim | 1: o mesmo |
+| R4C `rescue_from EscolhasIncompletas` apagado | sim | 3: «answers 422 … on test», «… on suggest», «never echoes another choice in the body» |
+
+### Comandos da rodada 4
+
+- Banco próprio: `POSTGRES_DATABASE=chatwoot_test_i380r4` (`db:create db:schema:load`).
+- RED: a primeira versão do handler lia `Current.account` e respondia 500 (`NoMethodError` sobre nil,
+  causa `EscolhasIncompletas`) nos quatro exemplos do Playground — foi assim que apareceu o `Current.reset`
+  do around_action; o RED "sem o rescue" é a mutação R4C. Os dois exemplos do Builder passam desde o
+  primeiro run — a guarda já existia; a prova de que valem é a mutação R4A. A spec de analytics caiu no
+  primeiro run só na mutação R4B (o código já vinha corrigido junto).
+- `bundle exec rubocop` nos 8 arquivos tocados → 0 ofensas (depois de um `RSpec/IncludeExamples`).
+- Alvo: as quatro specs acima + `locales_sem_chave_duplicada_spec`, `analytics_spec` (request),
+  `spec/models/autonomia`, `event_logger_spec` → 247 exemplos, 0 falhas, 0 erros fora, exit 0.
+- `ruby ~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada4.rb` → 5/5.
+- Suíte ampla (`spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
+  spec/requests/api/v1/accounts/autonomia` + a spec de locales) → 1.177 exemplos, 0 falhas, 3 pendentes
+  pré-existentes (`RegistrationCheckout::Provisioner`, `Sso::Provisioner`), 0 erros fora, exit 0.
+
 ## Fora desta PR (da mesma classe ou vizinhos)
 
 - Não existe endpoint para a corretora MUDAR nome/horário/comportamento depois de criar o agente
@@ -395,6 +489,12 @@ Cada uma: edita, roda, restaura, confere o md5. 11/11 reprovam; `verde depois de
   os três com a mesma mensagem. Esconder por tipo é trabalho de front.
 - Especialista e principal têm cada um o seu `instrucao_do_sistema`; um `Instrucoes::Mantidas` comum
   seria o próximo passo se um terceiro leitor aparecer (hoje são dois).
+- As views do Testar/Copilot (`playground/test.json.jbuilder`, `suggest.json.jbuilder`) chamam
+  `json.should`, que no ambiente de teste colide com o `should` do RSpec (`undefined method 'matches?'
+  for true`): nenhuma request spec consegue medir o 200 dessas views — por isso o exemplo positivo de
+  `playground_escolhas_incompletas_spec` mede "não recusa e chama o modelo", não o 200. Pré-existente
+  (vem de antes de #380); o conserto é renomear a chave ou usar `json.set!('should', …)` na view e
+  confirmar que o front lê `handoff.should` do mesmo jeito.
 
 ## Comandos rodados
 

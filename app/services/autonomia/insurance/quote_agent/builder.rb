@@ -81,6 +81,10 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # antes de as escolhas serem guardadas (aí a coluna é a única fonte, e quem chama a usa). A chave
   # PRESENTE e incompleta não cai em silêncio no arquivo cru nem na coluna: `EscolhasIncompletas`, com
   # o nome do campo — uma variável nunca pode chegar ao modelo como `$nomeAgente`.
+  #
+  # É `nil?`, NÃO `blank?`: só a chave AUSENTE é o agente de antes de #380. A chave presente e vazia
+  # (`{}`, `false`, escrita fora do Builder) é o mesmo defeito da chave incompleta, e um `blank?` a
+  # devolveria em silêncio à coluna de nascimento — o texto velho, com crases — em vez de parar.
   def self.instrucao_do_principal(agent)
     return nil unless agent&.agent_type == 'insurance_quote'
 

@@ -91,9 +91,11 @@ module Autonomia
         ::Autonomia::Agents::AgentEvent::HANDOFF_TYPES.sum { |type| counts_by_type[type].to_i }
       end
 
-      # Conversas distintas tocadas pelo bot na janela (replied OU handed_off).
+      # Conversas distintas tocadas pelo bot na janela (replied OU handed_off). `atendimentos` deixa de
+      # fora o evento em que o agente ficou MUDO (`skipped_escolhas_incompletas`, #380): ele existe para
+      # o corretor ver a causa, não para a conversa contar como atendida.
       def conversations_handled
-        events.where.not(conversation_id: nil).distinct.count(:conversation_id)
+        events.atendimentos.where.not(conversation_id: nil).distinct.count(:conversation_id)
       end
 
       # handoffs / (replies + handoffs). 0 quando não houve atividade.
@@ -152,19 +154,21 @@ module Autonomia
       # ---- Resultados por conversa (#284) ------------------------------------------------------
 
       # Conversas tocadas pelo agente (replied/handed_off) NA JANELA — o "universo" dos resultados.
+      # O MESMO universo de `conversations_handled`: o número do cartão e a lista que abre no clique
+      # têm de contar as mesmas conversas, por isso os dois passam por `atendimentos`.
       def handled_conversations
         ::Conversation.where(account_id: @agent.account_id, id: handled_ids)
       end
 
       def handled_ids
-        events.where.not(conversation_id: nil).select(:conversation_id)
+        events.atendimentos.where.not(conversation_id: nil).select(:conversation_id)
       end
 
       # Todas as conversas que o agente já tocou (sem janela): usada para excluir handoffs antigos e
-      # para ligar reports de mensagens à conversa do agente.
+      # para ligar reports de mensagens à conversa do agente. Mesmo universo, sem a janela.
       def all_time_handled_ids
         ::Autonomia::Agents::AgentEvent.where(autonomia_agent_id: @agent.id, account_id: @agent.account_id)
-                                       .where.not(conversation_id: nil).select(:conversation_id)
+                                       .atendimentos.where.not(conversation_id: nil).select(:conversation_id)
       end
 
       # Passadas para humano na janela: handoff sinalizado pela instrução/CRM (evento handed_off), passada

@@ -680,6 +680,7 @@ pt_BR:
       retry_unavailable: 'Não é possível reexecutar esta geração agora.'
     agents:
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
+      escolhas_incompletas: "O Agente de Cotação não conseguiu montar a instrução: a escolha '%{campo}' está faltando no cadastro dele. Isso não se corrige por aqui — acione o suporte da Autonom.ia."
       operate:
         handoff_default: 'Não quero te passar uma informação imprecisa. Vou encaminhar seu atendimento para alguém do nosso time continuar com você.'
         handoff_defaults:

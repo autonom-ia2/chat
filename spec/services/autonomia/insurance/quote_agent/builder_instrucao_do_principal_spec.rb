@@ -147,6 +147,28 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect { agente.reload.instrucao_do_sistema }.to raise_error(described_class::EscolhasIncompletas, 'horario')
     end
 
+    # A CHAVE PRESENTE E VAZIA NÃO É O AGENTE DE ANTES DE #380 (rodada 4). Só a chave AUSENTE devolve a
+    # coluna; `{}` ou `false` (escrita fora do Builder) é a mesma classe da chave incompleta e para com o
+    # primeiro campo. Um `blank?` no lugar do `nil?` da guarda mandaria o agente de volta à coluna de
+    # nascimento em silêncio — o texto velho, com crases —, que é o default calado que o termo 6 proíbe.
+    it 'chave presente e vazia também para, em vez de voltar à coluna em silêncio' do
+      agente = construir
+      agente.update!(instruction: 'instrução velha, gravada no nascimento',
+                     config: agente.config.merge(chave => {}))
+
+      expect { agente.reload.instrucao_do_sistema }
+        .to raise_error(described_class::EscolhasIncompletas, 'nome_agente')
+    end
+
+    it 'chave presente com um valor que não é hash (false) também para' do
+      agente = construir
+      agente.update!(config: agente.config.merge(chave => false))
+
+      expect { agente.reload.instrucao_do_sistema }
+        .to raise_error(described_class::EscolhasIncompletas, 'nome_agente')
+      expect(agente.instruction).not_to be_blank # a coluna está lá, e mesmo assim não é usada
+    end
+
     it 'o erro nomeia o campo e nunca carrega o valor de outra escolha' do
       agente = construir
       agente.update!(config: agente.config.merge(chave => escolhas.except('comportamento')))

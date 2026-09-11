@@ -72,9 +72,10 @@ RSpec.describe 'config/locales sem chave duplicada' do
   # (Em pt_BR só as que o arquivo tem; `image_*`, `source.*` e `insurance.*` nunca foram traduzidas.)
   it 'as chaves de autonomia resolvem sem cair no marcador de tradução faltando' do
     em_ingles = %w[autonomia.build_thread.message_blank autonomia.faq.not_pending autonomia.source.invalid_kind
-                   autonomia.image_required autonomia.agents.instrucao_mantida
+                   autonomia.image_required autonomia.agents.instrucao_mantida autonomia.agents.escolhas_incompletas
                    autonomia.insurance.errors.encryption_unavailable]
-    em_portugues = %w[autonomia.build_thread.message_blank autonomia.faq.not_pending autonomia.agents.instrucao_mantida]
+    em_portugues = %w[autonomia.build_thread.message_blank autonomia.faq.not_pending autonomia.agents.instrucao_mantida
+                      autonomia.agents.escolhas_incompletas]
 
     { en: em_ingles, pt_BR: em_portugues }.each do |locale, chaves|
       chaves.each do |chave|
