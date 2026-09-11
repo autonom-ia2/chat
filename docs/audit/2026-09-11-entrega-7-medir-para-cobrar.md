@@ -366,6 +366,71 @@ O runner (`mutacoes_r7.py`) exige que caiam EXATAMENTE os exemplos esperados —
 mais — com exit ≠ 0, e confere o SHA-256 do arquivo restaurado contra o original (`1e6fed0084aff421…`
 antes e depois). Nenhum arquivo de prova sobrou em `app/` ou `enterprise/app`.
 
+## Rodada 8 — o caminho relativo qualificado, e o encerramento do detector (Codex)
+
+O Codex re-revisou `492726e40f` e achou mais uma forma que escapa: o caminho RELATIVO QUALIFICADO
+aberto dentro de outro escopo — `module Outro; module Autonomia::Insurance; Medida.new(...).call`.
+A rodada 7 ensinou o detector que o absoluto (`::X::Y`) abre na raiz; o relativo continuava sendo lido
+como filho do escopo em volta, sempre. Mas o Ruby não lê assim: num `module A::B`, ele procura o PRIMEIRO
+segmento (`A`) no escopo em volta e, se não o encontra, na raiz. Como `Outro::Autonomia` não existe e
+`::Autonomia::Insurance` existe, o que se abre é `Autonomia::Insurance` — e `Medida` ali é a medida. O
+detector concatenava `Outro::Autonomia::Insurance` e não acusava.
+
+Medido, não presumido (`ruby -e`, 3.4.4): no caso do Codex `Module.nesting` é `[Autonomia::Insurance, Outro]`
+e `Medida` resolve para `Autonomia::Insurance::Medida`. Nos módulos SIMPLES aninhados
+(`module Outro; module Autonomia; module Insurance`) o nesting é `[Outro::Autonomia::Insurance, Outro::Autonomia, Outro]`
+e `Medida` dá `NameError` — o `module` de nome simples define no escopo corrente sem procurar fora. E na
+outra leitura do caminho qualificado (`module Autonomia; module Insurance::Freios`) o nesting é
+`[Autonomia::Insurance::Freios, Autonomia]`: `Medida` também dá `NameError`, porque o qualificado põe só o
+caminho inteiro no aninhamento, não os pais.
+
+Reproduzido antes de corrigir (RED): a forma do Codex como arquivo real em `app/` — a guarda não viu
+(1 falha em 7). Depois da correção, 7 exemplos, 0 falhas.
+
+**Decisão do orquestrador — o lado seguro de uma guarda é ACUSAR.** A guarda lê texto; só o programa
+rodando sabe se `Outro::Autonomia` existe. Então, ao abrir um escopo com caminho qualificado (2+ segmentos,
+sem `::` inicial), o detector registra AS DUAS leituras — filho do escopo em volta (`Outro::Autonomia::Insurance`)
+E ancorada na raiz (`Autonomia::Insurance`) — e `Medida` é a medida se QUALQUER escopo registrado for
+`Autonomia::Insurance` ou filho. Falso positivo aceito e documentado: um `module Outro::Autonomia::Insurance`
+de verdade, com um `Medida` próprio, seria acusado — não existe no repositório e, se surgir, a lista
+`leitores` da própria spec é o lugar de declará-lo, com o motivo escrito. O `module` de nome simples
+NÃO ganha a leitura pela raiz (o Ruby também não a faz): estendê-la acusaria qualquer `Insurance` de
+qualquer corretora, e a mutação MC5c prova que o exemplo negativo novo segura isso.
+
+| Achado | Correção | Guarda | Mutação (reprova) |
+|---|---|---|---|
+| **Codex** `medida_nao_e_freio_spec.rb:113` — `escopo_aberto_por` lia todo caminho relativo como filho do escopo em volta: `module Outro; module Autonomia::Insurance; Medida.new(...).call; end; end` virava `Outro::Autonomia::Insurance`; o Ruby resolve `Medida` como a medida e a guarda não acusava | Cada nível do aninhamento passa a ser a LISTA dos caminhos que o `module`/`class` pode ter aberto (`escopos_abertos_por`): absoluto → `[raiz]`; simples → filhos do escopo em volta; relativo qualificado → filhos do escopo em volta **+ o próprio caminho na raiz**. `dentro_do_namespace_da_medida?` olha `aninhamento.flatten` | "acusa cada forma de nomear a medida, nas duas arvores" ganhou três arquivos temporários: a forma do Codex em `app/` E em `enterprise/app`; e a outra leitura do qualificado, `module Autonomia; module Insurance::Freios; … Medida::PeriodoInvalido` em `enterprise/app` (o Ruby não acha `Medida` ali; a guarda acusa pela decisão da forma compacta, e é o que pina a leitura relativa). Exemplo negativo novo: "nao acusa Medida em modulos simples aninhados que so parecem o namespace" (`module Outro; module Autonomia; module Insurance; … Medida.new`, em `app/`). Cada arquivo de prova sai com as pastas que criou | MC5 (só a leitura relativa — o detector da rodada 7) reprova pela forma do Codex em `app/`; MC5b (só a leitura pela raiz) reprova pela outra leitura em `enterprise/app`; MC5c (leitura pela raiz no `module` simples) reprova pelo negativo novo; MC5d (`flatten` perdido) reprova pela forma do Codex; MC4-r8, MC4b-r8, MC3-r8, MC3b-r8 (as das rodadas 6 e 7, reaplicadas ao texto novo) reprovam |
+
+### Encerramento do detector (decisão do orquestrador)
+
+Esta é a ÚLTIMA rodada sobre o detector. A guarda cobre a **referência léxica** — o nome escrito no
+código (`Insurance::Medida`, `::Autonomia::Insurance::Medida`, ou `Medida` simples), resolvido como o
+Ruby resolve o aninhamento de `module`/`class`, nas duas árvores (`app/`, `enterprise/app`). As formas
+exóticas restantes — `eval`, `const_get`/`constantize`, `autoload`, alias de constante (`X = Medida`
+fora do namespace e uso de `X`) — ficam FORA da guarda por decisão: não há texto para ler que as
+distinga de código legítimo sem transformar a spec num interpretador. O que resta é revisão: uma
+chamada dinâmica à medida no caminho da cotação é o tipo de coisa que o revisor humano-equivalente
+procura, e o comentário da spec diz isso onde quem escreve o freio vai ler.
+
+### Mutações da rodada 8 (8) — aplicadas, rodadas, restauradas e conferidas por hash
+
+| # | Mutação | Arquivo | Reprova |
+|---|---|---|---|
+| MC5 | caminho qualificado registra SÓ a leitura relativa, filho do escopo em volta (o detector da rodada 7) | `medida_nao_e_freio_spec.rb` | "acusa cada forma…" — "a guarda não viu o nome simples em `module Autonomia::Insurance` relativo qualificado aberto dentro de outro modulo, em app/" |
+| MC5b | caminho qualificado registra SÓ a leitura pela raiz (descarta o filho do escopo em volta) | idem | "acusa cada forma…" — "a guarda não viu o nome simples em `module Insurance::Freios` relativo qualificado aberto dentro de `module Autonomia`, em enterprise/app" |
+| MC5c | a leitura pela raiz estendida ao `module` SIMPLES (todo `module Insurance` vira candidato a `Autonomia::Insurance`) | idem | "nao acusa Medida em modulos simples aninhados que so parecem o namespace" |
+| MC5d | `dentro_do_namespace_da_medida?` olha só a PRIMEIRA leitura de cada nível (o `flatten` perdido) | idem | "acusa cada forma…" (a forma do Codex em `app/`) |
+| MC4-r8 | ignorar o `::` inicial (o absoluto empilhado em cima do que está em volta) | idem | "acusa cada forma…" (a forma absoluta em `app/`) |
+| MC4b-r8 | só o nível mais interno decide (o "reinício de pilha") | idem | "acusa cada forma…" (o inverso, `module ::Outro` dentro de `Autonomia::Insurance`) |
+| MC3-r8 | detector sem o ramo `ConstantReadNode` | idem | "acusa cada forma…" (o nome simples em `module Autonomia::Insurance`) |
+| MC3b-r8 | detector acusa `Medida` em QUALQUER aninhamento (`true ||`) | idem | os DOIS negativos: "nao acusa Medida de outro namespace" e "nao acusa Medida em modulos simples aninhados…" |
+
+O runner (`mutacoes_r8.py`) exige que caiam EXATAMENTE os exemplos esperados — nem a menos, nem a
+mais — com exit ≠ 0, e que a mensagem cite a FORMA esperada (não basta o exemplo cair; tem de cair pela
+forma que a mutação desliga). Confere o SHA-256 do arquivo restaurado contra o original
+(`b68e71fe1145e244…` antes e depois; o da rodada 7 era `1e6fed0084aff421…`). Nenhum arquivo de prova
+sobrou em `app/` ou `enterprise/app` (`enterprise/app/services/autonomia/insurance` continua não existindo).
+
 ## Comandos rodados
 
 ```bash
@@ -413,6 +478,18 @@ bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autono
   spec/requests/api/v1/accounts/autonomia \
   spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
   --format json --out ampla7.json                                   # 1092 exemplos, 0 falhas, os mesmos 3 pendentes pré-existentes
+# rodada 8
+ruby -e '…Module.nesting…'                                          # evidência: `module Outro; module Autonomia::Insurance` resolve `Medida` para a medida; módulos simples aninhados e `module Autonomia; module Insurance::Freios` dão NameError
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r8_red.json                                   # RED antes do detector: 7 exemplos, 1 falha ("a guarda não viu … relativo qualificado … em app/")
+bundle exec rspec spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb \
+  --format json --out r8_green.json                                 # 7 exemplos, 0 falhas
+bundle exec rubocop --format json --out rubocop_r8.json spec/services/autonomia/insurance/medida_nao_e_freio_spec.rb   # 0 ofensas
+uv run python3 mutacoes_r8.py                                       # MC5, MC5b, MC5c, MC5d, MC4-r8, MC4b-r8, MC3-r8, MC3b-r8 — todas reprovam exatamente nos exemplos e formas esperados e restauram por hash
+bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia \
+  spec/requests/api/v1/accounts/autonomia \
+  spec/controllers/super_admin/insurance_measurements_controller_spec.rb \
+  --format json --out ampla8.json                                   # 1093 exemplos, 0 falhas, os mesmos 3 pendentes pré-existentes
 ```
 
 ## Arquivos
@@ -459,3 +536,9 @@ Rodada 7: só `medida_nao_e_freio_spec.rb` (detector com o aninhamento lexical c
 caminho absoluto abre na raiz; quatro formas de prova novas nas duas árvores). Nenhum arquivo de
 produção, instrução, `MOTIVOS`, schema de função ou adapter; controller e view do Super Admin
 intocados.
+
+Rodada 8: só `medida_nao_e_freio_spec.rb` (cada nível do aninhamento é a lista de caminhos que o
+`module`/`class` pode abrir; o relativo qualificado registra as duas leituras; três formas de prova
+novas nas duas árvores e um exemplo negativo novo; encerramento do detector escrito no comentário).
+Nenhum arquivo de produção, instrução, `MOTIVOS`, schema de função ou adapter; controller e view do
+Super Admin intocados.

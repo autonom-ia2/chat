@@ -39,7 +39,7 @@ RSpec.describe Autonomia::Insurance::Medida do
   end
 
   # Onde a constante MORA. O nome simples `Medida` é a medida quando ALGUM dos `module`/`class` que
-  # envolvem o código, lexicalmente, é este módulo ou um filho dele — o Ruby procura o nome em cada
+  # envolvem o código, lexicalmente, PODE ser este módulo ou um filho dele — o Ruby procura o nome em cada
   # escopo do aninhamento (`Module.nesting`), e é assim que `Medida.new` resolve para ela. A guarda
   # acusa pelo namespace ESCRITO em volta, inclusive na forma compacta (`class Autonomia::Insurance::X`),
   # em que o Ruby não resolveria o nome simples: dentro deste namespace, acusar a mais custa um exemplo
@@ -86,18 +86,21 @@ RSpec.describe Autonomia::Insurance::Medida do
   end
 
   # QUALQUER escopo do aninhamento, não só o mais interno: um `module ::Outro` aberto dentro de
-  # `Autonomia::Insurance` não apaga o que está em volta — o Ruby ainda acha `Medida` lá.
+  # `Autonomia::Insurance` não apaga o que está em volta — o Ruby ainda acha `Medida` lá. E QUALQUER
+  # leitura de cada escopo: o lado seguro de uma guarda é acusar.
   def dentro_do_namespace_da_medida?(aninhamento)
-    aninhamento.any? { |escopo| escopo == namespace_da_medida || escopo.start_with?("#{namespace_da_medida}::") }
+    aninhamento.flatten.any? { |escopo| escopo == namespace_da_medida || escopo.start_with?("#{namespace_da_medida}::") }
   end
 
   # Percorre a árvore entregando cada nó e o ANINHAMENTO lexical em que ele está — a lista dos
-  # `module`/`class` que o envolvem, do mais externo ao mais interno, cada um com o caminho completo
-  # que ABRE (o `Module.nesting` do Ruby). É o que decide o que um nome simples significa.
+  # `module`/`class` que o envolvem, do mais externo ao mais interno (o `Module.nesting` do Ruby). Cada
+  # nível é a LISTA dos caminhos que aquele `module`/`class` pode ter aberto: um só na maior parte dos
+  # casos; dois quando o caminho é relativo qualificado e a guarda não tem como saber, sem rodar o
+  # programa, qual dos dois o Ruby escolheria. É o que decide o que um nome simples significa.
   def cada_no_com_aninhamento(nodo, aninhamento = [], &)
     return if nodo.nil?
 
-    aninhamento += [escopo_aberto_por(nodo, aninhamento.last)] if abre_escopo?(nodo)
+    aninhamento += [escopos_abertos_por(nodo, aninhamento)] if abre_escopo?(nodo)
     yield(nodo, aninhamento)
     nodo.compact_child_nodes.each { |filho| cada_no_com_aninhamento(filho, aninhamento, &) }
   end
@@ -106,15 +109,29 @@ RSpec.describe Autonomia::Insurance::Medida do
     nodo.is_a?(Prism::ModuleNode) || nodo.is_a?(Prism::ClassNode)
   end
 
-  # O caminho que um `module`/`class` abre. RELATIVO (`module Insurance`) é filho do escopo em volta;
-  # ABSOLUTO (`module ::Autonomia::Insurance`) abre na raiz, e o que está em volta não entra no nome.
+  # Os caminhos que um `module`/`class` pode abrir — como o Ruby os lê, não como estão escritos:
+  #
+  # ABSOLUTO (`module ::Autonomia::Insurance`): abre na raiz; o que está em volta não entra no nome.
   # Concatenar a pilha e apagar o `::` lia `module Outro; module ::Autonomia::Insurance` como
   # `Outro::Autonomia::Insurance`, e `Medida` ali passava invisível (rodada 7, P3 do Codex).
-  def escopo_aberto_por(nodo, escopo_em_volta)
+  #
+  # SIMPLES (`module Insurance`): filho do escopo em volta, e só isso — o Ruby define o nome no escopo
+  # corrente sem procurar fora dele.
+  #
+  # RELATIVO QUALIFICADO (`module Autonomia::Insurance` dentro de `module Outro`): o Ruby procura o
+  # PRIMEIRO segmento no escopo em volta e, se não o encontra, na raiz — abre `Outro::Autonomia::Insurance`
+  # se `Outro::Autonomia` existir, e `Autonomia::Insurance` se não. Só o programa rodando sabe qual; a
+  # guarda registra AS DUAS leituras e acusa se qualquer uma for a medida. Registrar só a primeira deixava
+  # `Medida` passar invisível ali (rodada 8, Codex). Falso positivo aceito: um `Outro::Autonomia::Insurance`
+  # de verdade com um `Medida` próprio seria acusado — não existe no repositório e, se surgir, entra em
+  # `leitores` com o motivo escrito.
+  def escopos_abertos_por(nodo, aninhamento)
     caminho = nodo.constant_path.slice
-    return caminho.delete_prefix('::') if caminho.start_with?('::')
+    return [caminho.delete_prefix('::')] if caminho.start_with?('::')
+    return [caminho] if aninhamento.empty?
 
-    [escopo_em_volta, caminho].compact.join('::')
+    filhos_do_escopo_em_volta = aninhamento.last.map { |escopo| "#{escopo}::#{caminho}" }
+    caminho.include?('::') ? filhos_do_escopo_em_volta + [caminho] : filhos_do_escopo_em_volta
   end
 
   # Um arquivo que existe só durante o exemplo, na árvore DE VERDADE (`app/`, `enterprise/app`): a
@@ -163,8 +180,13 @@ RSpec.describe Autonomia::Insurance::Medida do
   # A GUARDA PROVADA CONTRA O FREIO ESCRITO, não só contra o código que existe hoje. Cada forma de
   # nomear a medida vira um arquivo real, nas duas árvores, e a guarda tem de acusá-lo — o nome simples
   # dentro do namespace era a forma que passava invisível (rodada 6); o namespace aberto por caminho
-  # ABSOLUTO dentro de outro módulo, a seguinte (rodada 7). E a forma que NÃO é a medida (`Medida` de
-  # outro namespace) não pode ser acusada, senão a guarda vira ruído.
+  # ABSOLUTO dentro de outro módulo, a seguinte (rodada 7); o caminho RELATIVO QUALIFICADO dentro de
+  # outro módulo, a última (rodada 8). E as formas que NÃO são a medida (`Medida` de outro namespace;
+  # módulos simples aninhados que só parecem o namespace) não podem ser acusadas, senão a guarda vira ruído.
+  #
+  # ENCERRAMENTO: a guarda cobre a referência LÉXICA — o nome escrito no código, resolvido como o Ruby
+  # resolve o aninhamento. `eval`, `const_get`, `autoload` e alias de constante ficam fora por decisão:
+  # não há texto para ler, e o que resta é a revisão.
   describe 'o detector' do
     let(:formas_de_nomear) do
       {
@@ -268,6 +290,52 @@ RSpec.describe Autonomia::Insurance::Medida do
               end
             end
           RUBY
+        ],
+        # O caminho RELATIVO QUALIFICADO dentro de outro escopo: sem `Outro::Autonomia`, o Ruby procura
+        # `Autonomia` na raiz e abre `Autonomia::Insurance` — `Module.nesting` é `[Autonomia::Insurance, Outro]`
+        # e `Medida` é a medida. Concatenar `Outro::Autonomia::Insurance` lia o nome errado (rodada 8, Codex).
+        'o nome simples em `module Autonomia::Insurance` relativo qualificado aberto dentro de outro modulo, em app/' => [
+          'app/services/autonomia/insurance/freio_qualificado.rb', <<~RUBY
+            module Outro
+              module Autonomia::Insurance
+                class FreioQualificado
+                  def call
+                    Medida.new(inicio: nil, fim: nil).por_conta
+                  end
+                end
+              end
+            end
+          RUBY
+        ],
+        'o nome simples em `module Autonomia::Insurance` relativo qualificado aberto dentro de outro modulo, em enterprise/app' => [
+          'enterprise/app/services/autonomia/insurance/freio_qualificado.rb', <<~RUBY
+            module Outro
+              module Autonomia::Insurance
+                class FreioQualificado
+                  def call
+                    Medida.new(inicio: nil, fim: nil).por_conta
+                  end
+                end
+              end
+            end
+          RUBY
+        ],
+        # A OUTRA leitura do mesmo caminho qualificado: filho do escopo em volta. Aqui o Ruby NÃO acha `Medida`
+        # (o aninhamento é `[Autonomia::Insurance::Freios, Autonomia]`, e `Autonomia::Insurance` não está nele),
+        # mas a guarda acusa pela mesma decisão da forma compacta: dentro do namespace ESCRITO, acusar a mais
+        # custa um vermelho que se explica. É o que impede o detector de registrar só a leitura pela raiz.
+        'o nome simples em `module Insurance::Freios` relativo qualificado aberto dentro de `module Autonomia`, em enterprise/app' => [
+          'enterprise/app/services/autonomia/insurance/freios/qualificado.rb', <<~RUBY
+            module Autonomia
+              module Insurance::Freios
+                class Qualificado
+                  def call
+                    Medida::PeriodoInvalido
+                  end
+                end
+              end
+            end
+          RUBY
         ]
       }
     end
@@ -286,6 +354,30 @@ RSpec.describe Autonomia::Insurance::Medida do
           class FreioDeProva
             def call
               Medida.new
+            end
+          end
+        end
+      RUBY
+
+      com_arquivo_temporario('app/services/autonomia/agents/freio_de_prova.rb', conteudo) do
+        expect(nomeiam_a_medida(todos) - leitores).to be_empty
+      end
+    end
+
+    # Módulos SIMPLES aninhados só parecem o namespace: `module Insurance` dentro de `Outro::Autonomia` define
+    # `Outro::Autonomia::Insurance` sem procurar fora (o Ruby não procura o nome simples de um `module` na
+    # raiz), e `Medida` ali dá `NameError`. A leitura pela raiz vale para o caminho QUALIFICADO, não para este —
+    # estendê-la a todo `module` acusaria qualquer `Insurance` de qualquer corretora.
+    it 'nao acusa Medida em modulos simples aninhados que so parecem o namespace' do
+      conteudo = <<~RUBY
+        module Outro
+          module Autonomia
+            module Insurance
+              class FreioDeProva
+                def call
+                  Medida.new
+                end
+              end
             end
           end
         end
