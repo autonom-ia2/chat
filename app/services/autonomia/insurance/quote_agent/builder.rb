@@ -157,7 +157,9 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # -> Agent criado, com o especialista e as ferramentas já ligados. Tudo ou nada: um especialista
   # que falha não pode deixar um agente meio-pronto no banco, que responderia sem saber cotar.
   def call
-    raise ComportamentoInvalido, @comportamento unless COMPORTAMENTOS.include?(@comportamento)
+    # SÓ O NOME DO CAMPO, como nas outras três recusas: a porta devolve a mensagem em `detail`, e até a
+    # rodada 7 de #380 ela era o próprio valor — `behavior: '$nomeAgente'` voltava ao cliente da API.
+    raise ComportamentoInvalido, 'comportamento' unless COMPORTAMENTOS.include?(@comportamento)
 
     validar_slugs!
     validar_escolhas!

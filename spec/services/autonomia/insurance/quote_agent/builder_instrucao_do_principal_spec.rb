@@ -241,6 +241,20 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
   end
 
+  # A SUBSTITUIÇÃO NÃO INVENTA VALOR (rodada 7, P3 do Codex). `escolhas` chega conferida, mas o `fetch` é a
+  # segunda guarda: um marcador conhecido sem escolha correspondente para alto (`KeyError`), em vez de virar
+  # string vazia — com `[]`, `nil.to_s` é `''` e o modelo receberia «Você é Clara, da .» sem ninguém perceber.
+  # A mensagem do `KeyError` carrega só o nome do campo, nunca o valor de outra escolha.
+  describe 'a substituição não inventa valor (rodada 7)' do
+    it 'marcador conhecido sem escolha correspondente para alto, em vez de virar string vazia' do
+      expect { described_class.substituir('Você é $nomeAgente, da $nomeCorretora.', escolhas.except('nome_corretora')) }
+        .to raise_error(KeyError) do |erro|
+          expect(erro.message).to include('nome_corretora')
+          expect(erro.message).not_to include('Clara')
+        end
+    end
+  end
+
   # O QUE FOI AO MODELO É RECONSTRUÍVEL (termo 4): o texto é função só do arquivo no SHA deployado e das
   # escolhas guardadas. Com os dois, `Builder.instrucao_do_principal` devolve o mesmo texto.
   describe 'auditabilidade (termo 4)' do

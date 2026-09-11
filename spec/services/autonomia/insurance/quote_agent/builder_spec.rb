@@ -190,6 +190,17 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
         .to raise_error(described_class::ComportamentoInvalido)
     end
 
+    # SÓ O NOME DO CAMPO, NUNCA O VALOR (rodada 7 de #380, P2 do Codex): até 8b9800791f a mensagem era o
+    # próprio `@comportamento`, e a porta a devolvia em `detail` — `behavior: '$nomeAgente'` voltava ao
+    # cliente da API tal como veio. As outras três recusas já nomeavam o campo; esta é a quarta.
+    it 'recusa comportamento fora das opcoes dizendo o campo, nunca o valor' do
+      expect { construir(comportamento: '$nomeAgente') }
+        .to raise_error(described_class::ComportamentoInvalido, 'comportamento') do |erro|
+          expect(erro.message).not_to include('$nomeAgente')
+        end
+      expect(Autonomia::Agents::Agent.count).to eq(0)
+    end
+
     it 'nao deixa agente meio-pronto quando o comportamento e invalido' do
       expect { construir(comportamento: 'agressivo') }.to raise_error(described_class::ComportamentoInvalido)
       expect(Autonomia::Agents::Agent.where(account: account)).to be_empty

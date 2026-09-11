@@ -99,12 +99,18 @@ RSpec.describe 'Autonomia Insurance Quote Agent API', type: :request do
       expect(response.parsed_body['detail']).to include('agente')
     end
 
-    it 'recusa comportamento que nao existe' do
-      post base, params: { quote_agent: dados[:quote_agent].merge(behavior: 'agressivo') },
+    # O `detail` É O NOME DO CAMPO, NUNCA O VALOR (rodada 7 de #380, P2 do Codex): até 8b9800791f a porta
+    # devolvia `detail: '$nomeAgente'` — o que o cliente mandou, de volta para ele. A tela traduz pelo
+    # código (`comportamento_invalido`) e não mostra o `detail`; ele serve ao log.
+    it 'recusa comportamento que nao existe dizendo o campo, sem ecoar o valor' do
+      post base, params: { quote_agent: dados[:quote_agent].merge(behavior: '$nomeAgente') },
                  headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('comportamento_invalido')
+      expect(response.parsed_body['detail']).to eq('comportamento')
+      expect(response.body).not_to include('$nomeAgente')
+      expect(Autonomia::Agents::Agent.count).to eq(0)
     end
 
     # MARCADOR RESERVADO DENTRO DE UMA ESCOLHA (rodada 6 de #380): a porta responde 422 com o campo e

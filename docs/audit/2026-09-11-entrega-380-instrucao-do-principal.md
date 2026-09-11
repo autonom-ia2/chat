@@ -56,7 +56,7 @@ leu ATÉ o deploy desta PR, não depois.
 | 3 | Agente já criado recebe o texto novo sem ser recriado | fechado em código | spec: cria pelo Builder, envelhece a coluna (`update!(instruction: 'instrução velha…')`), o prompt efetivo é o do arquivo com os valores; em produção depende do rollout abaixo (pendente_producao) |
 | 4 | Auditabilidade mantida e documentada | fechado | seção acima; spec «auditabilidade (termo 4)» |
 | 5 | SQL de rollout do agente 24 + conferência | entregue, não executado (pendente_prova_real) | seção «Rollout» abaixo; passo 1 com o retrato completo (`mode`, andaime, BuildThreads) desde a rodada 3 |
-| 6 | Mutações: runtime lendo a coluna reprova; valores ausentes caindo no arquivo com placeholder reprova | fechado | M1 e M8 (coluna), M3 (arquivo cru), M4 (marcador sobrando), M6 (branco em silêncio); rodada 4: R4A (chave presente e vazia não volta à coluna); rodada 3: VG/VG2 fecham o flip de tipo que reabria «runtime lendo a coluna», VD prova a leitura a cada montagem, VF/VI provam a mensagem e o locale; rodada 6: R6A/R6A2 (passada única e fronteira do marcador), R6B/R6C/R6D/R6F (marcador dentro de uma escolha recusado no runtime, na criação e na porta), R6E/R6E2 (chave presente com `null` não volta à coluna) — tabelas abaixo |
+| 6 | Mutações: runtime lendo a coluna reprova; valores ausentes caindo no arquivo com placeholder reprova | fechado | M1 e M8 (coluna), M3 (arquivo cru), M4 (marcador sobrando), M6 (branco em silêncio); rodada 4: R4A (chave presente e vazia não volta à coluna); rodada 3: VG/VG2 fecham o flip de tipo que reabria «runtime lendo a coluna», VD prova a leitura a cada montagem, VF/VI provam a mensagem e o locale; rodada 6: R6A/R6A2 (passada única e fronteira do marcador), R6B/R6C/R6D/R6F (marcador dentro de uma escolha recusado no runtime, na criação e na porta), R6E/R6E2 (chave presente com `null` não volta à coluna); rodada 7: R7A (o valor do comportamento nunca volta na mensagem nem no `detail`), R7B (`fetch` na substituição: escolha ausente para alto) — tabelas abaixo |
 
 ## Mutações (`~/ops/agente-cotacao/issue-380/mutacoes_i380.rb`, 11/09/2026)
 
@@ -661,6 +661,82 @@ mensagem do produto quando o backend recusa o horario» (cai em `GENERIC`); rest
 - Suíte ampla (`spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
   spec/requests/api/v1/accounts/autonomia` + a spec de locales) → 1.189 exemplos, 0 falhas, 3 pendentes
   pré-existentes (`RegistrationCheckout::Provisioner`, `Sso::Provisioner`), 0 erros fora, exit 0.
+
+## Rodada 7 (um P2 e um P3 do Codex sobre 8b9800791f)
+
+Veredito anterior: os dois achados da rodada 6 FECHADOS. Os dois desta rodada são da classe «regra sem
+guarda»: uma recusa que nomeava o VALOR em vez do campo (as outras três já nomeavam o campo — a quarta ficou
+de fora), e uma garantia de código (`fetch`) que a auditoria da rodada 6 descrevia e nenhum exemplo exercitava.
+
+### P2 — `ComportamentoInvalido` carregava o valor digitado, e a porta o devolvia em `detail`
+
+**Achado.** `Builder#call` fazia `raise ComportamentoInvalido, @comportamento`. `NomeInvalido`,
+`HorarioInvalido` e `EscolhasIncompletas` nomeiam o campo (e o motivo); esta era a única das quatro recusas
+cuja mensagem era o valor. A porta (`Insurance::QuoteAgentController#create`) responde `detail: e.message`
+para as três classes no mesmo `rescue`: `POST` com `behavior: '$nomeAgente'` era recusado (422,
+`comportamento_invalido`), mas a resposta trazia `detail: '$nomeAgente'` — o que o cliente mandou, de volta
+para ele — e a mensagem da exceção (que vai para log) idem. A regra da casa é só o NOME do campo em erro e
+log, nunca o valor; a request spec «recusa comportamento que nao existe» conferia só o status e o `error`, e
+o `detail` ficou sem guarda.
+
+**Decisão (orquestrador).** `raise ComportamentoInvalido, 'comportamento'` — só o nome do campo, como nas
+outras três. A porta não muda: código `comportamento_invalido` e `detail` = nome do campo; a tela já traduz
+pelo código e não mostra o `detail`.
+
+**Correção.** `builder.rb`: a mensagem passa a ser `'comportamento'`, com o porquê no comentário.
+`quote_agent_controller.rb`: só o comentário do `rescue` («quatro escolhas»; `detail` é o motivo, ou só o
+nome do campo, nunca o valor). Front conferido por leitura, sem mudança: `InsuranceAgentTab.vue` mapeia
+`comportamento_invalido` → `COMPORTAMENTO_INVALIDO` por código (`messageFor`), o template renderiza só
+`t('INSURANCE.AGENT.ERRORS.<chave>')`, e `detail` não aparece em lugar nenhum além de um comentário; a chave
+existe em `en/insurance.json`.
+
+**Guarda.** `builder_spec` «recusa comportamento fora das opcoes dizendo o campo, nunca o valor»
+(`comportamento: '$nomeAgente'` → `ComportamentoInvalido` com mensagem exatamente `'comportamento'`, sem o
+valor, nada gravado). `quote_agent_spec` (request): «recusa comportamento que nao existe dizendo o campo, sem
+ecoar o valor» substitui o exemplo antigo — `behavior: '$nomeAgente'` → 422, `error` `comportamento_invalido`,
+`detail` == `'comportamento'`, `body` sem `$nomeAgente`, `Agent.count` 0. RED medido antes da correção: os
+dois caem com `got: "$nomeAgente"`. Mutação R7A (voltar a ecoar o valor) derruba os dois.
+
+### P3 — a garantia do `fetch` em `substituir` não tinha spec direta
+
+**Achado.** A rodada 6 escreveu `escolhas.fetch(VARIAVEIS.fetch(marcador))` «para uma chave ausente falhar
+alto em vez de virar `''`», e a auditoria registrou isso como regra — mas nenhum exemplo chamava `substituir`
+com um marcador conhecido e um hash sem a chave. No runtime `conferir_escolhas!` barra antes; a garantia do
+`fetch` é a segunda guarda, e uma segunda guarda sem spec é intenção: a mutação `fetch` → `[]` passava
+66/66 (com `[]`, `nil.to_s` é `''` e o modelo receberia «Você é Clara, da .» em silêncio).
+
+**Correção.** Nenhuma no código. A guarda que faltava era a spec.
+
+**Guarda.** `builder_instrucao_do_principal_spec`, describe «a substituição não inventa valor (rodada 7)»:
+«marcador conhecido sem escolha correspondente para alto, em vez de virar string vazia» —
+`substituir('Você é $nomeAgente, da $nomeCorretora.', escolhas.except('nome_corretora'))` → `KeyError` cuja
+mensagem carrega `nome_corretora` e não carrega `Clara` (o valor de outra escolha). Mutação R7B (`fetch` →
+`[]`) derruba o exemplo.
+
+### Mutações da rodada 7 (`~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada7.rb`, 11/09/2026)
+
+Alvo: `builder_instrucao_do_principal_spec`, `builder_spec`, `insurance/quote_agent_spec` (request) — 67
+exemplos. Cada uma: edita, roda, restaura, confere o md5. 2/2 reprovam; `verde depois de restaurar: true`.
+
+| Mutação | Reprova? | Exemplos que caem |
+|---|---|---|
+| R7A builder: `raise ComportamentoInvalido, @comportamento` (o valor volta à mensagem e ao `detail`) | sim | 2: builder «recusa comportamento fora das opcoes dizendo o campo, nunca o valor» (`got: ComportamentoInvalido: $nomeAgente`), request «recusa comportamento que nao existe dizendo o campo, sem ecoar o valor» (`detail` `got: "$nomeAgente"`) |
+| R7B builder: `escolhas[...]` no lugar de `escolhas.fetch(...)` em `substituir` | sim | 1: «marcador conhecido sem escolha correspondente para alto, em vez de virar string vazia» |
+
+As oito da rodada 6 (`mutacoes_i380_rodada6.rb`) rodadas DE NOVO sobre o código desta rodada: 8/8 seguem reprovando, `verde depois de restaurar: true` (nenhuma das mutações da rodada 6 toca as linhas alteradas nesta rodada, e o script aplicou sem ajuste).
+
+### Comandos da rodada 7
+
+- Banco: `POSTGRES_DATABASE=chatwoot_test_i380r5` (o da rodada 5).
+- RED: os três alvos contra 8b9800791f com as specs novas → 67 exemplos, 2 falhas (as duas do P2,
+  `got: "$nomeAgente"`), 0 erros fora, exit 1. O exemplo do P3 passa desde o primeiro run — a guarda já
+  existia; a prova de que vale é a mutação R7B.
+- GREEN: os mesmos três alvos → 67 exemplos, 0 falhas, 0 erros fora, exit 0.
+- `bundle exec rubocop` nos 5 arquivos tocados → 0 ofensas.
+- `ruby ~/ops/agente-cotacao/issue-380/mutacoes_i380_rodada7.rb` → 2/2; `mutacoes_i380_rodada6.rb` → 8/8.
+- Front: sem mudança (conferência por leitura, acima); vitest não rodado.
+- Suíte ampla (`spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
+  spec/requests/api/v1/accounts/autonomia` + a spec de locales) → 1.191 exemplos, 0 falhas, 3 pendentes pré-existentes (`RegistrationCheckout::Provisioner`, `Sso::Provisioner`), 0 erros fora, exit 0.
 
 ## Fora desta PR (da mesma classe ou vizinhos)
 
