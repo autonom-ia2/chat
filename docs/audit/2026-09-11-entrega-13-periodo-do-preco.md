@@ -42,6 +42,20 @@ Conclusões, com os campos reais:
    objeto) recusava o plano 1x = 1.901,97, e os planos de 2x a 12x desviam mais de um centavo por
    parcela (−0,11 em 2x; −1,29 em 12x), acima da tolerância de 1 centavo/parcela.
 
+Os campos de TEXTO e de VIGÊNCIA do bruto (rodada 3, a pedido do verificador — são os que um
+leitor perguntaria se foram olhados), lidos do mesmo `cotacao/versoes` salvo fora do repo:
+
+| Campo | Nível | Bp Assinatura (351,59) | Justos res 0 (134,50) / res 1 (1.539,24) | Tokio (1.901,97) | Porto moto 430,75 / 671,73 | Distingue período? |
+|---|---|---|---|---|---|---|
+| `observacoes` (lista de strings) | resultado | 1 string com dois ajustes de limite: "O valor da cobertura Danos Corporais foi ajustado para o limite mínimo permitido. (R$ 100.000,00)" + o mesmo para Danos Materiais | o MESMO texto nos dois resultados: "9% desconto pagando à vista: R$ 1.398,12 e 5% desconto parcelando em 2 a 4x: R$ 1.469,04" (fala da apólice anual e aparece igual no 134,50) | `null` | `null` / "Cobertura de custos de defesa contratada automaticamente no valor de R$20 mil…" | não |
+| `alertas` (lista de strings) | resultado | os mesmos dois ajustes, um por item | o mesmo texto de desconto, 1 item, nos dois | `[]` | `[]` / o mesmo texto dos custos de defesa | não |
+| `coberturas.tipo` | resultado | "Compreensiva" | "Compreensiva" nos DOIS | "Compreensiva" | "Incêndio, Roubo/Furto" / "Compreensiva" | não — distingue PACOTE de cobertura, não período |
+| `vigenciaIni` / `vigenciaFim` | versão (não há por resultado nem por cálculo) | 2026-09-11 → 2027-09-11 (a versão inteira, anual; a assinatura da Justos e a Bp estão dentro dela) | idem | idem | 2026-09-11 → 2027-09-11 | não |
+| `calc.alertas` | cálculo | `[]` | `[]` | `[]` | `[]` | não |
+
+Nenhuma chave de resultado ou de `coberturas` contém "vig", "period" ou "mens" além de `premioMensal`
+(que é `premio/12`, conclusão 1). Inspecionados; não distinguem período.
+
 **Decisão (termo 3): NÃO existe detector de mensalidade.** `parcelamentos: []` em duas amostras não é
 contrato — e assumir "vazio = mensal" seria inventar o detector sem evidência. O honesto é `unknown`
 com o motivo nomeando o campo, por oferta, para a próxima cotação real confirmar ou desmentir.
@@ -146,6 +160,36 @@ MC1 `quoted` ordena pelo número cru · MC2 `resumo` volta a deduzir total do pa
 `sem_periodo` devolve vazio · MC4 registro no handle desligado · MC5 registro sobrescreve em vez de
 acumular · MC6 `motivo` ignora o `basis_evidence` · MC7 `indefinido?` volta a aceitar parcelamento
 como base · MC8 mock: oferta sem período vira total.
+
+## Rodada de correção 3 (verificador cego, veredito anterior APROVADO, 4 achados P3)
+
+| # | Achado | Causa raiz | Correção | Guarda | Mutação |
+|---|---|---|---|---|---|
+| A1 | adapter `quote.ts` `escolherPremium`, ramo com período conhecido: só os planos NÃO-`total` iam ao motivo; outro `total` posto de lado sumia do `basisEvidence`. Porto moto real: sai 430,75 ("Incêndio, Roubo/Furto") e o 671,73 ("Compreensiva", a escolha do portal em `calc.premio`) não aparecia em lugar nenhum — o comentário prometia "em qualquer caso, o que ficou de lado vai ao motivo" e o código não cumpria; a guarda `not.toContain('posto de lado')` FIXAVA o defeito | o filtro do ramo conhecido era `basis !== 'total'` (o que ficou de fora do critério) em vez de "todo plano que não foi o escolhido" | `premios.filter((p) => p !== escolhido)`; comentário reescrito com o caso da Porto e a decisão de produto pendente | `agger-quote-fluxo` "com todos os planos de período conhecido, sai o mais barato e o outro total vai ao motivo": `toContain('posto de lado: premio=671.73')` (números reais da Porto moto) | R3-M1: filtro volta a `basis !== 'total'` → 1 teste reprova (`Tests 1 failed / 27 passed`); restaurado, md5 conferido igual |
+| A2 | esta auditoria dizia que o payload não tem "observação de texto"; tem `observacoes`, `alertas`, `coberturas.tipo` (por resultado) e `vigenciaIni/vigenciaFim` (por versão) | a tabela do termo 3 só listava os campos numéricos | tabela dos campos de texto/vigência acima, com o conteúdo observado na Bp Assinatura, na Justos, na Tokio e na Porto moto; nenhum distingue período — a decisão "sem detector" se sustenta | só documentação | — |
+| A3 | chat2you `PremiumText#detalhe` devolvia a linha de parcelamento ANTES de checar `indefinido?`: premium `{351.59, unknown, installments 2x 175,80}` → "R$ 351,59 / ou 2x de R$ 175,80" SEM a ressalva, com o handle dizendo "sem período" para uma frase que o cliente não ouviu. Hoje inalcançável (o adapter só manda `installments` junto de `total`), mas a spec que cobria o caso exigia "não diz no total" e não exigia a ressalva | a ordem das duas linhas em `detalhe` tratava o parcelamento como mais forte que a falta de período | `return SEM_BASE if indefinido?` antes da linha de parcelamento (sem período, o parcelamento não tem o que parcelar; o motivo no handle é que explica o que ficou de fora) | `premium_text_spec` "sem periodo, a ressalva vem antes do parcelamento" (`detalhe == SEM_BASE`); `quote_offers_spec` "nem com parcelamento no payload" passa a exigir `include(SEM_BASE)` e `not_to include('2x de')` | R3-MC1: ordem original restaurada → 2 testes reprovam (24 exemplos, 2 falhas); restaurado, md5 conferido igual |
+| A4 | `especialista_auto.md:191` diz "da mais barata para a mais cara" e nada diz ao especialista que preço sem período não se compara pelo número (termo 5 na camada conversacional, "qual a mais barata?") | — | **DEFERIDO pelo orquestrador**: o arquivo de instrução não é tocado nesta rodada (md5 assinado no builder spec). A frase "as sem período vêm no fim e não se comparam pelo número; se perguntarem a mais barata, compare só as que dizem no total" fica como **prova real pendente do termo 5** na conversa | — | — |
+
+Decisão de produto para o Rodrigo (fora desta rodada; registrada aqui e no comentário de
+`escolherPremium`): no ramo com período conhecido, a régua hoje é "o mais barato entre os `total`";
+a alternativa é a régua única "escolha do portal (`calc.premio`) quando casa; senão o mais barato de
+período conhecido". O caso real é a Porto na moto: 430,75 "Incêndio, Roubo/Furto" (sem DM/DC) contra
+671,73 "Compreensiva" (a escolha do portal) — 56% abaixo, o lado que fecha venda, e é PACOTE de
+cobertura, não período. Com A1, o 671,73 ao menos fica no motivo; qual dos dois o cliente deve ler
+primeiro é decisão de negócio, não de código. Issue própria a abrir.
+
+Comandos da rodada 3 (worktrees `~/dev/worktrees/{adapters,chat2you}/entrega-13-periodo-do-preco`):
+- Bruto: `uv run python3 <scratchpad>/e13/inspecionar_r3.py` sobre `renovacao-versoes.json` e
+  `moto-versoes.json` salvos na rodada 2 (fora do repo; nenhum `quote start`).
+- Adapter: `npx prettier --write` nos 2 tocados; `pnpm verify` exit 0 — **769 unitários + 12
+  integração (781), cobertura 100/100/100/100**; mutação R3-M1 por `npx vitest run
+  test/unit/agger-quote-fluxo.test.ts` (exit 1, 1 falha), arquivo restaurado e md5 conferido.
+- chat2you: `POSTGRES_DATABASE=chatwoot_test_e13 bundle exec rspec` nos 4 specs alvo (`premium_text`,
+  `quote_offers`, `insurance_quote_ramo_auto`, `connector/quote`) `--format json` — **73 exemplos, 0
+  falhas, 0 erros fora de exemplos**, exit 0; `rubocop --format json` nos 3 arquivos Ruby tocados — 0
+  ofensas; mutação R3-MC1 (exit 1, 2 falhas em 24), restaurado e md5 conferido; suíte ampla
+  `spec/services/autonomia spec/jobs/autonomia spec/models/autonomia
+  spec/requests/api/v1/accounts/autonomia` — **1.029 exemplos, 0 falhas, 0 erros fora de exemplos** (3 pendentes pré-existentes), exit 0, lido do JSON do rspec. O total subiu de 899 para 1.029 porque a rodada 3 inclui `spec/requests/api/v1/accounts/autonomia`, que as rodadas anteriores não rodavam.
 
 ## O que fica para prova real / produção
 

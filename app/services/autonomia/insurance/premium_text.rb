@@ -31,10 +31,16 @@ class Autonomia::Insurance::PremiumText
   # informou, e a ressalva quando ele mandou o número sem dizer do que se trata. Como parágrafo
   # solto no fim, a ressalva aparecia mesmo quando valia para uma opção só, e ficava maior que os
   # preços.
+  #
+  # A RESSALVA VEM ANTES DO PARCELAMENTO. Sem período, o parcelamento não tem o que parcelar: "R$
+  # 351,59 / ou 2x de R$ 175,80" sem a ressalva diz ao cliente, por omissão, que 351,59 é o total —
+  # exatamente o que `basis: 'unknown'` nega. O adapter hoje só manda `installments` junto de
+  # `total`; se um dia mandar sem, o cliente ouve a ressalva, e o motivo registrado no handle
+  # (entrega 13, termo 1) é que explica o parcelamento que ficou de fora.
   def detalhe
-    return "ou #{parcelas['count']}x de #{money(parcelas['amount'])}" if parcelas.present?
+    return SEM_BASE if indefinido?
 
-    SEM_BASE if indefinido?
+    "ou #{parcelas['count']}x de #{money(parcelas['amount'])}" if parcelas.present?
   end
 
   # true quando o preço saiu sem unidade — é o que dispara a ressalva colada na oferta.

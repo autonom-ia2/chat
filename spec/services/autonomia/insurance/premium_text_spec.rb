@@ -17,6 +17,16 @@ RSpec.describe Autonomia::Insurance::PremiumText do
     expect(texto.indefinido?).to be(true)
   end
 
+  # Sem período, o detalhe e a RESSALVA, nao o parcelamento: "ou 2x de R$ 490,00" sozinho diria por
+  # omissao que 980 e o total, e o registro no handle ficaria dizendo "sem periodo" para uma frase
+  # que o cliente nunca ouviu.
+  it 'sem periodo, a ressalva vem antes do parcelamento' do
+    texto = described_class.new('amount' => 980.0, 'basis' => 'unknown',
+                                'installments' => { 'count' => 2, 'amount' => 490.0 })
+
+    expect(texto.detalhe).to eq(described_class::SEM_BASE)
+  end
+
   it 'poe o parcelamento na linha de baixo quando o adapter o derivou' do
     texto = described_class.new('amount' => 1901.97, 'basis' => 'total',
                                 'installments' => { 'count' => 12, 'amount' => 158.39 })

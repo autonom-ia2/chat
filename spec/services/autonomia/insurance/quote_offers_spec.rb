@@ -158,6 +158,10 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
       expect(texto).not_to include('no total')
       expect(texto.downcase).not_to include('por mês')
       expect(texto.downcase).not_to include('ao ano')
+      # A ressalva sai mesmo com parcelamento no payload: sem período, o parcelamento não prova o
+      # total, e um "ou 2x de R$ 175,80" sozinho afirmaria por omissão o que o adapter negou.
+      expect(texto).to include(Autonomia::Insurance::PremiumText::SEM_BASE)
+      expect(texto).not_to include('2x de')
     end
 
     it 'diz "no total" e o parcelamento quando o adapter derivou os dois' do
