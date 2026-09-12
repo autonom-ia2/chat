@@ -173,10 +173,21 @@ module Autonomia
 
       def answer_tools
         tools = []
-        tools.concat(Array(Crm::Ai::WebSearch.tools)) if @allow_web_search
+        tools.concat(Array(Crm::Ai::WebSearch.tools)) if web_search_permitida?
         tools.concat(enabled_agent_tools.map(&:openai_schema))
         tools.concat(enabled_specialists.map(&:openai_schema))
         tools.presence
+      end
+
+      # BUSCA WEB FORA DO AGENTE DE COTAÇÃO (#397). A instrução dele proíbe responder cobertura,
+      # franquia, carência ou exclusão DE MEMÓRIA: a resposta vem da cláusula que
+      # `consultar_condicoes_gerais` devolve, com o nome da seguradora, ou não vem. Com `web_search`
+      # no catálogo o modelo tem uma TERCEIRA fonte para a mesma pergunta — texto de internet, sem
+      # cláusula e sem seguradora — e a regra deixa de ter como ser cumprida. A guarda mora aqui, e
+      # não no Responder, para valer em TODO caminho (atendimento, Testar, copiloto): o Testar
+      # precisa mostrar o mesmo agente da produção. Os demais tipos de agente seguem com a busca.
+      def web_search_permitida?
+        @allow_web_search && @agent.agent_type != 'insurance_quote'
       end
 
       # Ferramentas visíveis ao PRINCIPAL: as do agente MENOS as reservadas por um especialista
