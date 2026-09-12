@@ -640,3 +640,121 @@ Cada mutação aborta se a âncora não existir e confere que o arquivo REALMENT
 - **Prova real** (termo "Prova"): continua pendente de deploy + rollout na conta 16.
 - **C8** (URL do portal no handle) e **`pedido` da entrega 10 na proposta** (D10): seguem
   registrados, sem mudança.
+
+
+## Rodada 5 (12/09/2026) — PR #399, os sete pontos do Codex confirmados pelo revisor final
+
+Base: `c165edf9bb`, árvore limpa. Suíte-base antes de qualquer edição: **1215 exemplos, 0 falhas, exit 0**.
+Commit da rodada: `d50dbe15a6`. A rodada 4 teve CI verde e passou pelo verificador cego, mas o Codex a
+REPROVOU e o revisor final confirmou os achados lendo o código: dois P1, dois P2 e três P3.
+
+**A ARMADILHA DO `bundle`, medida de novo e registrada.** Neste worktree `bundle` resolve para
+`/usr/bin/bundle` e FALHA com `Could not find 'bundler' (2.5.16)`: rspec e rubocop "rodam" sem executar
+nada e o resumo do wrapper `rtk` mostra sucesso. Toda validação desta rodada foi feita com
+`PATH="$HOME/.rbenv/shims:$PATH"` (ruby 3.4.4, bundler 2.5.16) e com o **exit code conferido** — em zsh,
+`${pipestatus[1]}` quando há pipe. Sem isso, nenhum número abaixo valeria.
+
+### Achados e o que mudou
+
+| # | Achado | Correção | Guarda |
+|---|---|---|---|
+| P1-1 | **`blocked` não é sinônimo de "nunca trabalhou"** (`origem.rb:41`). A lista `SEM_TRABALHO` veio copiada de `ToolRun.opened_for_turn?`, que responde outra pergunta — lá é "ainda não virou trabalho NESTE turno", aqui é "NUNCA trabalhou". Quem escreve `blocked` é `AsyncRunJob#block_run` (freio do operador), e ele desce DEPOIS de a cotação rodar, às vezes depois de ela já ter entregado preço: a cotação nova sumia da conta, a antiga voltava a ser "a última", e a proposta do risco velho publicava depois de uma recotação real — o P1 da rodada 3 reaberto por outra transição | "Nunca trabalhou" virou pergunta por ESTADO, não lista de status: `discarded` sempre fora; `blocked` fora só sem número no portal E sem nada entregue (`Origem#cotacoes_que_contam`) | `insurance_proposal_spec` «a recotacao barrada pelo operador DEPOIS de entregar preco continua sendo a ultima» (M1) e «a cotacao barrada pelo gate antes de trabalhar nao barra a proposta» |
+| P1-2 | **Janela entre a conferência e a publicação.** O publicador roda sob `conversation.with_lock` e `ToolRun#promote!` sob `pg_advisory_xact_lock(conversa+slug)`: mecanismos disjuntos. A causa-raiz não é "faltou lock" — é a AMBIGUIDADE do `pending`: a mesma lista tratava como órfã tanto a aceitação que vai promover em milissegundos quanto a que ficou parada porque o worker morreu | Separadas por IDADE (`PROMOCAO_ATE = 2.minutes`, o teto de 120 s de HTTP do turno que aceitou). Caminho (b), não (a) — ver decisão T1 | `insurance_proposal_spec` «a cotacao aceita agora, ainda por promover, barra a proposta da lista antiga» (M2) e, provando que o I2 não volta, «a cotacao aceita e nunca promovida, velha demais para promover, nao barra a proposta» |
+| P2-1 | **O varredor perdia PDF pronto** (`reap_stale_runs_job.rb:100`): `close` publicava a frase de falha e `finish!('failed')` sem oferecer `closing_deliveries`. O MESMO defeito P2 da rodada 3 na outra porta de encerramento — fora do alcance daquela correção porque o varredor não passa por `fail_run` | O encerramento inteiro passou a morar em `Tools::Encerramento`, usado pelas DUAS portas: adquire a marca `closed`, oferece as entregas, deixa a ferramenta anotar, publica o fecho. Quem publica é quem chama (o motor espera a cadeia; o varredor força) | `reap_stale_runs_job_spec` «entrega o que a ferramenta ainda tinha antes de publicar o fecho» e, pelo caminho REAL, `insurance_proposal_spec` «o varredor entrega a proposta ja gerada antes de fechar a linha abandonada» (M3) |
+| P2-2 | **A recotação que morre sem preço trancava a proposta para sempre** (`origem.rb:97`): A entregou preços, o cliente mandou refazer, B morreu `failed` sem preço — e o cliente, com os preços de A na tela, lia "quando os preços novos chegarem, é só me pedir de novo". Preços que nunca chegam | Muda a FRASE, não a regra (decisão do revisor final, mantida): `recotacao_sem_preco` diz que a recotação não trouxe preços e oferece cotar de novo. `SEM_TRABALHO` NÃO foi tocado para isto — incluir `failed`-sem-preço lá reabriria o R7 | `insurance_proposal_spec` «a recotacao que morreu sem preco barra a origem antiga, e a frase oferece cotar de novo» (M4), «a recotacao ainda viva mantem a frase de esperar pelos precos novos»; `recusa_registro_spec` `recusa_da_substituicao#1` e `recusar_substituicao#1` |
+| P3-1 | **`entrega_do_token` não tem `rescue` e o comentário afirmava que tinha** (`autorizacao_da_execucao.rb:45-47`): verdade só para `publicavel?` | A INVARIANTE ESCRITA foi corrigida, e o hook continua sem `rescue` — de propósito (T4). O que ele levanta sobe até o `rescue` de quem chamou, e o efeito é o mesmo dos dois lados: o que não se consegue conferir NÃO SAI | `retomada_de_envio_spec` «o hook que levanta nao reenvia a proposta: nada vai ao cliente, e a marca fica» (M5) |
+| P3-2 | **A proposta entregue NO encerramento não era anotada na medida** (`insurance_proposal.rb:164-171`): `confirmar` roda antes e anota só o que já virou mensagem; a entrega devolvida em seguida é publicada pelo job e nada mais roda. O teste da rodada 4 publicava ANTES de chamar `closing_deliveries`, então cobria só a passada anterior | Hook novo no contrato (`Native::Base#confirmar_publicadas`), chamado pelo `Encerramento` DEPOIS de publicar. A pergunta continua sendo a MENSAGEM publicada, nunca o handle — anotar aqui não fatura o que o cliente não recebeu | `insurance_proposal_spec` «anota na cotacao a proposta que o PROPRIO encerramento entregou» (M6), com a `Insurance::Medida` conferida |
+| P3-3 | **`PARCIAL` mentia sobre a segunda proposta**: `closing_deliveries` usa `first(1)` e `aviso_de` só cobria `NAO_SAIU`/`PENDENTES`, então a segunda proposta GERADA era descartada em silêncio e o cliente lia "não consegui gerar todas as propostas a tempo" | O descarte fica (trade-off dos 25 s de shutdown); a frase é que muda: a gerada que não coube é dita pelo nome (`Recusas#nao_enviada`) e `PARCIAL` passou a dizer "enviar", que é verdade nos dois casos | `insurance_proposal_spec` «anuncia a segunda proposta GERADA como pronta, nunca como "nao consegui gerar"» (M7) |
+
+### Decisões onde o desenho não fechou sozinho
+
+**T1 — o P1-2 foi fechado por IDADE, não por lock (caminho b).** O caminho (a) — `ultima_cotacao?` pegando o
+advisory lock do slug — teria de adquiri-lo JÁ SEGURANDO o lock da conversa, porque `publicavel?` roda dentro
+de `conversation.with_lock`. Isso cria uma ordem de aquisição (conversa → advisory) que não aparece em nenhum
+dos dois arquivos: hoje ninguém faz o contrário, e no dia em que alguém fizer o deadlock é em produção, no
+caminho do dinheiro. Pior: no turno (`precheck`) não há transação, e `pg_advisory_xact_lock` ali é adquirido e
+solto na mesma instrução — não serializa nada. A idade ataca a ambiguidade real ("esta `pending` ainda pode
+virar `running`?"), é legível no ponto de uso e não cria invariante invisível. O custo é conhecido e
+auto-resolvido: uma órfã recém-criada segura a proposta por até 2 min, e o pedido seguinte funciona.
+
+**T2 — o silêncio do varredor não era opcional de manter; a correção do P2-1 o mata.** O gate
+`if native.present? && run.delivered_count.zero?` é INCOMPATÍVEL com oferecer `closing_deliveries`: com ele,
+entregar o PDF pronto continuaria sendo seguido de "não consegui gerar a proposta" (o próprio defeito), e no
+caso `delivered_count > 0` o cliente receberia um arquivo sem nenhuma palavra de fecho. Então o varredor passou
+a usar a regra do motor (parcial se algo chegou, falha/incerteza se nada chegou). **Mudança de comportamento
+registrada:** a execução abandonada que JÁ tinha entregado algo passa a ler o fecho parcial onde antes havia
+silêncio — que é a decisão da entrega 4 ("acabar sem fechar também é um desfecho") aplicada à porta que ficara
+de fora. Dois exemplos que documentavam o silêncio foram reescritos, com o porquê no comentário.
+
+**T3 — motivo NOVO (`recotacao_sem_preco`), não um segundo texto sob o motivo antigo.** A regra é uma só, mas o
+que o cliente pode FAZER é diferente ("espere" × "peça outra cotação"), e o registro de recusa é a única janela
+do operador para saber por que uma proposta não saiu: fundir os dois esconderia justamente o caso em que o
+cliente fica preso. Custo pago: o catálogo `MOTIVOS` ganhou uma frase e `recusa_registro_spec` ganhou dois
+gatilhos. A escolha do texto ficou em métodos próprios (`recusa_da_substituicao`, `recusar_substituicao`) para
+que o código continue sendo LITERAL no ponto de chamada — a guarda estática só confere o que é literal.
+
+**T4 — no P3-1, corrigir a INVARIANTE ESCRITA, e não "tratar".** Um `rescue` devolvendo nil em
+`entrega_do_token` seria o contrário da decisão do dinheiro: nil significa "não reconheço esta entrega" e NÃO
+barra nada — o `SendReplyJob` seria reenfileirado e o arquivo de uma cotação possivelmente refeita chegaria ao
+cliente. Sem `rescue`, a exceção sobe e vira `blocked`/marca mantida: o arquivo não sai, que é o que se quer.
+O comentário passou a dizer isso, distinguindo os dois hooks.
+
+**T5 — a MUTAÇÃO REPROVOU O MEU PRÓPRIO TESTE, e é o achado de método desta rodada.** A primeira versão do
+exemplo do P3-1 substituía `entrega_do_token` por uma subclasse que levantava. Ele passava — e passava
+IGUALMENTE com a mutação M5 (`rescue StandardError; nil` no hook de verdade) aplicada: **5 exemplos, 0 falhas**.
+O dublê provava o dublê. Reescrito para quebrar algo DENTRO do hook real (`delivery_token`, que ele chama para
+montar o token de cada proposta gerada), M5 passou a reprovar. Sem a passada de mutação, esta correção teria
+ido para a PR com uma guarda de mentira.
+
+**T6 — `CLOSED_KEY` mudou de dono; `MARCAS` não.** A marca do encerramento passou a ser definida em
+`Tools::Encerramento` (dono do conceito) e `AsyncRunJob::CLOSED_KEY` virou apelido, para não quebrar quem já a
+referencia. `MARCAS` ficou no motor, que é quem as escreve; o `Encerramento` a lê de lá. É uma seta de serviço
+para job, feia e explícita, preferida a mover as marcas do motor nesta rodada.
+
+### Validação (números)
+
+Banco `chatwoot_test_e8` (o mesmo das rodadas anteriores; `schema_migrations` = `20260904180000`, igual a
+`db/schema.rb`). Sempre com o PATH do rbenv e exit code conferido.
+
+| Rodada | Alvo | Exemplos | Falhas | Exit |
+|---|---|---|---|---|
+| Base (`c165edf9bb`, antes de editar) | `spec/services/autonomia/insurance` + `agents` + `spec/jobs/autonomia` + `spec/models/autonomia` | 1215 | 0 | **0** |
+| Final (`d50dbe15a6`) | os mesmos 4 diretórios | **1226** (+11) | **0** | **0** (57,5 s) |
+
+Por spec tocada (final): `insurance_proposal_spec` **94** (era 87: +7) · `recusa_registro_spec` **54** (era 52:
++2 gatilhos) · `retomada_de_envio_spec` **5** (era 4) · `reap_stale_runs_job_spec` **15** (era 14) ·
+`async_run_job_intencao_de_envio_spec` 24 · `base_contrato_de_nivel_spec` 11 (`confirmar_publicadas` entrou na
+varredura de nível).
+
+`bundle exec rubocop` nos **15 `.rb`** da rodada (9 de `app`, 6 de `spec`): **0 ofensas, exit 0**. O cop
+`Rails/WhereNotWithMultipleConditions` reprovou a primeira forma da regra do `pending` (`where.not` com duas
+condições) e ela virou SQL explícito.
+
+### Mutações (editar -> conferir que o arquivo mudou -> rodar alvo -> `git checkout --` -> md5 igual)
+
+Árvore commitada em `d50dbe15a6` ANTES das mutações — `git checkout --` restaura o commit, não apaga trabalho.
+Cada mutação aborta se a âncora não existir exatamente uma vez.
+
+| # | Mutação (desfaz a correção) | Specs alvo | Ex. | Falhas | md5 | Resultado |
+|---|---|---|---|---|---|---|
+| M1 | `blocked` volta a sair sempre (`where.not(status: BLOQUEADA)`) | proposta | 94 | 1 | igual | **reprova** |
+| M2 | `pending` volta a sair sempre, sem idade | proposta | 94 | 1 | igual | **reprova** |
+| M3 | o varredor volta a publicar só a frase de falha, sem `closing_deliveries` | varredor + proposta + intenção | 133 | 5 | igual | **reprova** |
+| M4 | `recotacao_sem_preco?` sempre falso (a frase volta a ser uma só) | proposta + `recusa_registro` | 148 | 3 | igual | **reprova** |
+| M5 | `rescue StandardError; nil` em `entrega_do_token` | `retomada_de_envio` | 5 | 1 | igual | **reprova** (ver T5: com o teste anterior, 0 falhas) |
+| M6 | `Encerramento` sem `confirmar_publicadas` | proposta | 94 | 2 | igual | **reprova** |
+| M7 | `closing_deliveries` sem `aviso_da_gerada` | proposta | 94 | 1 | igual | **reprova** |
+
+Árvore limpa depois das sete (`git status --porcelain` vazio).
+
+### O que NÃO foi feito nesta rodada, e por quê
+
+- **A entrega ADIADA no encerramento continua sem anotação.** `confirmar_publicadas` pergunta pela mensagem
+  publicada; quando a publicação do fecho é adiada (cadeia humanizada aberta), a mensagem nasce ~90 s depois,
+  e já não há ninguém para confirmá-la. É o mesmo limite de origem (a verdade é a mensagem, não o handle),
+  agora estreitado ao caso adiado em vez de valer para todo encerramento.
+- **O segundo arquivo do encerramento continua descartado** — trade-off dos 25 s de shutdown do Sidekiq,
+  mantido de propósito (P3-3 pedia a frase, não o segundo download).
+- **Issue [#402]** (`deferred` reemite e infla `delivered_count`) e **C8**/**D10**: sem mudança.
+- **Prova real** (termo "Prova"): continua pendente de deploy + rollout na conta 16.
+- **Merge e deploy**: não feitos — dependem de aprovação explícita do Rodrigo.

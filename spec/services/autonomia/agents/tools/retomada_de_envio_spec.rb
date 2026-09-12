@@ -140,14 +140,13 @@ RSpec.describe Autonomia::Agents::Tools::RetomadaDeEnvio do
     # significa "não reconheço esta entrega", e não barraria nada.
     it 'o hook que levanta nao reenvia a proposta: nada vai ao cliente, e a marca fica' do
       # Arrange — a proposta virou mensagem, o envio ficou pendente, e a conferência do token quebra
+      # A conferência quebra DENTRO do hook de verdade — é ele que monta o token de cada proposta
+      # gerada. Um dublê que substituísse `entrega_do_token` provaria só o dublê: um `rescue`
+      # engolindo a exceção lá dentro passaria despercebido, que é exatamente o risco desta correção
+      # (medido por mutação: com o dublê, pôr o `rescue` no hook não derrubava nada).
       execucao = proposta_gerada_da_cotacao
       mensagem = mensagem_pendente(execucao, reserva)
-      quebrada = Class.new(proposta) do
-        def entrega_do_token(_run, _token)
-          raise ActiveRecord::StatementInvalid, 'banco fora'
-        end
-      end
-      allow(Autonomia::Agents::Tools::Registry).to receive(:find).and_return(quebrada)
+      allow(execucao).to receive(:delivery_token).and_raise(ActiveRecord::StatementInvalid, 'banco fora')
 
       # Act / Assert — sobe para quem chamou (o varredor registra e segue), e nada é reenviado
       expect { described_class.new(run: execucao).recuperar(mensagem) }.to raise_error(ActiveRecord::StatementInvalid)
