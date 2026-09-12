@@ -13,11 +13,12 @@
 # saber se AQUELA frase já está na conversa antes de escolher outra.
 #
 # Duas perguntas, uma identidade só. `token_de` é a IDENTIDADE que uma entrega TERÁ como mensagem, e
-# mora aqui porque quem pergunta "já chegou?" precisa montá-la ANTES de a mensagem existir: a
-# ferramenta a grava no handle na passada que emite a entrega, e o fecho a procura na conversa
-# depois. Duas definições da mesma identidade — uma no publicador, outra em quem pergunta — seriam
-# duas que divergem no dia em que a forma da entrega mudar, e a pergunta passaria a ser sobre uma
-# mensagem que nunca existiu.
+# mora aqui porque quem pergunta precisa montá-la ANTES de a mensagem existir: a ferramenta a grava
+# no handle na passada que EMITE a entrega, o publicador a carimba na mensagem quando ela nasce, e o
+# registro do ACEITE (`Tools::EntregaAceita`) guarda a das entregas que o publicador assumiu. Duas
+# definições da mesma identidade — uma no publicador, outra em quem pergunta — seriam duas que
+# divergem no dia em que a forma da entrega mudar, e a pergunta passaria a ser sobre uma mensagem
+# que nunca existiu.
 #
 # O `LIKE` é só a peneira barata (não há índice para a chave dentro do JSON); quem decide é a
 # comparação exata do atributo.

@@ -52,8 +52,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # publicador a faça chegar (arquivo, ou o link de reserva quando o download falha).
   #
   # EMITIDO NÃO É ENTREGUE, e esta chave nunca soube a diferença: ela é gravada quando a entrega sai
-  # daqui, antes de o publicador dizer se a mensagem entrou. Quem precisa saber se o cliente TEM o
-  # comparativo pergunta pelo `COMPARATIVO_KEY`, que é a identidade da mensagem, à conversa.
+  # daqui, antes de o publicador dizer se assume a publicação. Quem precisa saber se o comparativo
+  # foi assumido cruza o `COMPARATIVO_KEY` (a identidade da entrega) com a lista do ACEITE.
   PDF_SENT_KEY = 'comparativo_enviado'.freeze
   # O QUE ESTA EXECUÇÃO EMITIU, PELA IDENTIDADE DE CADA ENTREGA (entrega 8a). É a TABELA DE
   # CONSULTA do fecho, não a prova: emitir não é entregar — `deliver` roda ANTES de
