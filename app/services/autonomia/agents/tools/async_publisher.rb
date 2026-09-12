@@ -319,11 +319,16 @@ class Autonomia::Agents::Tools::AsyncPublisher
         # pessoa que assumiu, e ela precisa do dado — não do robô por cima dela.
         message_type: 'outgoing', sender_type: 'AgentBot',
         sender_id: agent_inbox.agent_bot_id, private: conversation.assignee_id.present?,
+        # A CHAVE DO TOKEN VEM DA CONSTANTE, como o valor já vinha (`token_de`). Escrever o literal
+        # aqui e ler pela constante em `EntregaPublicada` são DUAS definições da mesma identidade —
+        # a classe de defeito que esta entrega corrigiu para o valor, intacta na chave: renomear a
+        # constante faria o leitor procurar uma chave que o escritor nunca grava, e a pergunta "já
+        # chegou?" passaria a responder "não" para toda entrega.
         content_attributes: {
-          autonomia_agent_id: agent_inbox.agent.id,
-          autonomia_async_token: corpo.token,
-          autonomia_async_slug: @run.slug,
-          autonomia_async_sequence: sequence
+          'autonomia_agent_id' => agent_inbox.agent.id,
+          ::Autonomia::Agents::Tools::EntregaPublicada::CHAVE => corpo.token,
+          'autonomia_async_slug' => @run.slug,
+          'autonomia_async_sequence' => sequence
         }
       )
     ).perform
