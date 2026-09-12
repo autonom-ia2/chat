@@ -271,8 +271,13 @@ lista de nomes: é código -> categoria do conector; o nome vem do mapa da orige
   (entrega 5); o job re-enfileirado entra na intenção 2, marcada `possivelmente_duplicada`, e refaz
   o `start` — que aqui é gerar o MESMO PDF de novo (a proposta não consome cotação; a marca é ruído
   aceitável para o corretor, registrado). Um segundo deploy no meio -> intenção 3 -> `envio_incerto`
-  e a frase `INCERTO`. Deploy no meio de um `poll`: a passada é refeita e o handle já gravado impede
-  refazer o que saiu (`pendentes`/`enviadas`); a publicação é idempotente pelo conteúdo.
+  e a frase `INCERTO`. Deploy no meio de um `poll`: a passada é refeita DO ZERO — se o shutdown cai
+  entre o `deliver` e o `record_attempt!`, o handle daquela passada NÃO chegou ao banco (nem
+  `pendentes`, nem `enviadas`), e o retry baixa o PDF de novo. Quem impede a duplicata no cliente é
+  o TOKEN por conteúdo, que encontra a mensagem já publicada. *[Frase corrigida na rodada 3 (M6 do
+  verificador cego): a anterior dizia que "o handle já gravado impede refazer o que saiu", e nesse
+  instante ele não foi gravado. Desde a rodada 3 quem decide o que falta entregar é a própria
+  mensagem publicada, o que torna o caso inócuo.]*
 
 ### Decisões onde o desenho da rodada não fechava
 
@@ -370,9 +375,140 @@ por `origem_no_handle`.
 
 - **Prova real** (termo "Prova"): continua pendente de deploy + rollout na conta 16.
 - **`poll` conferindo "em andamento"** (R3): não pedido; registrado com a janela e o trade-off.
+  *[FEITO na rodada 3 — ver abaixo: era o residual do P1, e a janela não era "de segundos".]*
 - **`pedido` (entrega 10) na proposta** (D10): fora do escopo da rodada.
 - **C8** (URL do portal no handle): registrado, não tratado — mesmo escopo da revisão de dados
   pessoais.
 - **Marca `possivelmente_duplicada` numa proposta refeita por deploy**: é o mecanismo genérico do
   job (entrega 5); a proposta não consome cotação, e separar "duplicada de cotação" de "duplicada de
   proposta" na lista do corretor é decisão de produto, não desta rodada.
+
+---
+
+## Rodada 3 (12/09/2026) — PR #399, três lacunas do Codex e duas do verificador cego
+
+Base: `8588a95e96`, árvore limpa (a rodada 2 já com o merge da entrega 9). Suíte-base antes de
+qualquer edição: **1188 exemplos, 0 falhas, 0 erros fora**. Commit da rodada: `956416ae2b`.
+
+O fio comum dos cinco achados é o mesmo: **a proposta é um arquivo que sai de uma COTAÇÃO, e entre o
+pedido e a mensagem há minutos em que essa cotação pode deixar de valer** — e o código conferia isso
+em um lugar só (o `start`), decidindo o resto por marcas no handle em vez de pelo que existe no banco.
+
+### Achados e o que mudou
+
+| # | Achado | Correção | Guarda |
+|---|---|---|---|
+| 1 | **Codex P1 / verificador I1** — a validade da origem só era conferida no `start` e, no `poll`, só por `dead?`. Duas janelas ficavam abertas: (a) origem `done` + cotação nova correndo sem preço — `done` NUNCA vira `superseded` (`open!` só supersede a viva), então a proposta da lista velha saía; (b) a publicação ADIADA pela cadeia humanizada (até 90 s) ou RETOMADA não passa de novo pelo `poll` | (a) O `poll` confere também `cotacao_em_andamento?`, com recusa nomeada (`recusar(onde: 'envio')`). (b) Hook novo `Native::Base#publicavel?(run, entrega)` (padrão `true`), consultado pelo publicador dentro da MESMA conferência sob o lock (`AutorizacaoDaExecucao#autorizacao(conversation, entrega:)`, motivo fechado `ferramenta_recusou`, terceiro de `RECUSAS`). `InsuranceProposal#publicavel?` devolve falso quando a origem está morta OU há cotação mais nova correndo — e SÓ para as propostas (ver R1) | `insurance_proposal_spec` «a cotacao nova em andamento entre o start e o poll barra a entrega» (MA), «#publicavel?» ×5, «a entrega adiada nao vira mensagem quando a cotacao e refeita antes da publicacao» (caminho real, pelo publicador); `async_publisher_spec` «a ferramenta autoriza a propria entrega» ×3 (MH), inclusive a não-regressão da cotação; `recusa_registro_spec` gatilho `poll#2` |
+| 2 | **Codex P2** — enquanto havia pendente, nenhuma gerada era entregue: com a 2ª seguradora em tempo esgotado, a execução gastava as passadas nela, o prazo estourava e a proposta pronta nunca saía | O `poll` entrega as GERADAS antes de pedir a próxima pendente, uma por passada. E `closing_deliveries` (que a cotação já usava para o comparativo) passa a existir na proposta: entrega o que o portal gerou e não chegou ao cliente, mais o aviso de quem ficou pelo caminho — pendente no fim é, para quem espera, o mesmo que não gerada | `insurance_proposal_spec` «entrega a proposta pronta antes de pedir a pendente ao portal» (MG), «#closing_deliveries» ×3 (MC), e o caminho real «com o prazo curto e a segunda seguradora por pedir, a Porto sai e o aviso da Suhai tambem» |
+| 3 | **Codex P2** — `enviadas` avançava ANTES de publicar: `AsyncPublisher#publish` devolve `blocked` em falha transitória e o job grava o handle assim mesmo → arquivo marcado como enviado sem mensagem, e `anotar_propostas!` faturando uma proposta que o cliente não recebeu | A fonte de verdade passou a ser a MENSAGEM: `Tools::EntregaPublicada` (extraído do publicador, que agora o usa) procura pelo token da entrega (`ToolRun#delivery_token`, `execution_key` + digest do conteúdo). `nao_publicadas` pergunta ao banco; `confirmar` anota na cotação só o que já virou mensagem; `ENVIADAS` deixou de decidir e ficou como CACHE do que já foi anotado. Para montar o token a ferramenta precisa da linha: `Native::Base` ganhou `run:` (o `AsyncRunJob#ferramenta` passa) | `insurance_proposal_spec` «reentrega o arquivo cuja publicacao nao virou mensagem, e so anota depois que ela existe» (ME), «entrega um arquivo por passada e so encerra depois de o ultimo virar mensagem», «o link de reserva publicado encerra a entrega daquela proposta»; `medida_spec` adaptada ao caminho novo |
+| 4 | **Verificador I2** — `cotacao_em_andamento?` usava `ultima.active?`, e uma `pending` órfã (worker morto entre o aceite e o despacho — um deploy basta) contava como "em andamento" por até uma hora, travando a proposta | `running?`, a mesma convenção de `ToolRun.opened_for_turn?` e pelo mesmo motivo | `insurance_proposal_spec` «a cotacao aceita e nunca promovida nao barra a proposta» (MI) |
+| 5 | **Menores M1/M2/M4** — escopo de conversa em `cotacao_fixada` sem guarda; a gravação de `argumentos` só testada por ferramenta anônima; execução `pending` anterior ao deploy, sem `ORIGEM`, lia "não encontrei cotação" (texto enganoso: a conversa PODE ter cotação — o que se perdeu foi a escolha do turno) | Specs de escopo e de aceite pelo caminho real (`Bound#execute`, lendo `run.arguments[ORIGEM]`); recusa própria `proposta_sem_origem`, com texto honesto ("Não consegui localizar a cotação desta conversa… me peça de novo"), antes de `proposta_sem_cotacao`. `recusar_entrada` foi dividido (`recusar_origem`) por complexidade — as saídas mudaram de nome na varredura | `insurance_proposal_spec` «a cotacao de OUTRA conversa nao conta, mesmo fixada pelo id» (MS), «o aceite grava a origem nos argumentos da execucao, pelo caminho do Bound» (MB), «sem a origem fixada nos argumentos…»; `recusa_registro_spec` gatilhos `recusar_origem#1..#4` |
+| 6 | **Menores M6/M7** — a auditoria dizia que o handle gravado impedia refazer uma passada interrompida (não impedia: naquele instante ele não foi gravado); a §5 do `principal.md` ensinava o modelo a tratar "a cotação foi refeita", que ele NUNCA lê no turno (a origem é escolhida entre as não mortas) | Frase do "Prazo do worker" corrigida acima; §5 passa a falar só de "há uma cotação nova em andamento", com a âncora da spec ajustada | `builder_instrucao_da_proposta_spec` «há uma cotação nova em andamento» |
+
+Também: a recusa da ENTRADA do publicador (`authorized_conversation`) passou a REGISTRAR o motivo,
+com a mesma linha da recusa sob o lock. Era silenciosa desde a entrega 11 — `blocked` sem uma palavra
+no log, justamente no caso em que se quer saber por quê. `Recusa::MOTIVOS` +1 (`proposta_sem_origem`).
+
+### Como uma execução passou a correr
+
+| Passada | Uma seguradora | Duas seguradoras |
+|---|---|---|
+| 0 | `start`: pede a 1ª ao portal | idem |
+| 1 | `poll`: entrega o arquivo | entrega o arquivo da 1ª |
+| 2 | `poll`: confirma a mensagem, anota na cotação, encerra | pede a 2ª ao portal |
+| 3 | — | entrega o arquivo da 2ª |
+| 4 | — | confirma, anota, encerra |
+
+Uma passada é OU uma chamada ao portal (até 60 s) OU um download (20 s) OU uma confirmação (duas
+consultas ao banco) — nunca duas coisas. O custo da correção é UMA passada a mais por execução
+(3–5 s de intervalo do `AsyncConfig`), contra os 420 s de prazo.
+
+### Decisões onde o desenho da rodada não fechava
+
+**R1 — o hook recebe a ENTREGA, não só a execução.** O pedido dizia `publicavel?(run)`. Assim ele
+barraria TUDO o que aquela execução publica — inclusive a frase que EXPLICA o que houve ("a cotação
+foi refeita…", que o próprio `poll` produz quando a origem morre) e o fecho do job. O cliente ficaria
+em silêncio depois de "já estou buscando", que é o defeito oposto ao que se está corrigindo. Com a
+entrega em mãos, a ferramenta barra só o que saiu da origem — comparação de dado nosso contra dado
+nosso (a URL que o handle gravou), como arquivo ou como o texto de reserva que termina na mesma URL.
+
+**R2 — a confirmação custa uma passada a mais.** Anotar na cotação só depois de a mensagem existir
+implica que a ÚLTIMA entrega precisa de uma passada seguinte para ser confirmada; por isso a execução
+encerra em 3 (uma seguradora) ou 5 passadas (duas), e não em 2 ou 4. A alternativa — anotar
+otimista na última — é exatamente o defeito 3.
+
+**R3 — `deferred` e `blocked` são indistinguíveis para a ferramenta.** Ela vê "não há mensagem" nos
+dois casos e reentrega na passada seguinte. Para o `blocked` isso é a correção; para o `deferred`
+(cadeia humanizada aberta) é uma reentrega desnecessária, que o publicador resolve sozinho pelo token
+(acha a mensagem, ou o adiamento já a caminho) — sem duplicar nada para o cliente. O volume por
+passada não muda: continua UMA entrega. Medido nas specs do caminho real.
+
+**R4 — o encerramento por prazo continua condicionado a `delivered_count > 0`** (`AsyncRunJob#fail_run`,
+comportamento genérico, o mesmo da cotação). Resíduo conhecido: se o prazo estourar ANTES da primeira
+entrega, o arquivo gerado não sai e o cliente lê a frase de falha. Com as geradas saindo primeiro
+(achado 2) essa janela ficou estreita — a entrega acontece na primeira passada depois do `start` —,
+e mudar `fail_run` mexeria no fecho de todas as ferramentas assíncronas, fora do escopo desta rodada.
+
+**R5 — `Native::Base` ganhou `run:`, e não um `poll(run:)`.** A ferramenta precisa do `execution_key`
+para montar o token; o contrato de `poll` é compartilhado por todas as nativas. `run:` entra como o
+`conversation:` entrou na rodada 1 — opcional, nil fora do job, com o porquê no comentário.
+
+**R6 — `publicavel?` NÃO é consultado na retomada de envio pendente** (`RetomadaDeEnvio`): ali não há
+entrega em mãos e a mensagem JÁ EXISTE — bloquear o reenvio deixaria uma mensagem no painel que nunca
+sai para o cliente. O que vale lá é o que já valia: execução morta, vínculo, canal, nota privada.
+
+**R7 — cotação mais nova ENCERRADA sem preço não barra a proposta (M3): decisão de PRODUTO pendente,
+sem mudança nesta rodada.** Cenário: o cliente manda refazer, a cotação nova falha sem entregar preço
+nenhum, e ele então pede "me manda a da Porto". Hoje a proposta sai da lista antiga — que é a única
+lista que existe, e a que ele leu. Barrar seria não ter o que oferecer. Registrado para o PO; o dado
+para decidir (com que frequência uma recotação morre sem preço) está em `autonomia_agent_tool_runs`.
+
+### Validação (números)
+
+Banco `chatwoot_test_e8`. `bundle exec rspec … --format json`, exit 0 = verde.
+
+| Rodada | Arquivos | Exemplos | Falhas | Erros fora |
+|---|---|---|---|---|
+| Base (`8588a95e96`, antes de editar) | os 4 diretórios | 1188 | 0 | 0 |
+| Ferramenta | `insurance_proposal_spec` | 79 | 0 (5 na 1ª rodada: a ordem nova das passadas) | 0 |
+| Guardas | `recusa_registro_spec`, `recusa_guarda_spec`, `async_publisher_spec`, `medida_spec`, `base_contrato_de_nivel_spec`, `bound_async_spec`, `tool_run_spec`, `insurance_quote_medida_spec`, `spec/jobs/autonomia` | 300 | 0 (2 na 1ª rodada: âncora do `.md` quebrada pela quebra de linha, e a recusa de entrada que não registrava) | 0 |
+| Instrução | `spec/services/autonomia/insurance/quote_agent/` | 120 | 0 | 0 |
+| **Final** | `spec/services/autonomia/insurance` + `spec/services/autonomia/agents` + `spec/jobs/autonomia` + `spec/models/autonomia` | **1206** (+18) | **0** | **0** (51 s) |
+
+Por spec (final): `insurance_proposal_spec` 79 (era 66) · `recusa_registro_spec` 54 (+2: `poll#2` e
+`recusar_origem#4`) · `async_publisher_spec` 46 (+3) · `builder_instrucao_da_proposta_spec` 15 ·
+`base_contrato_de_nivel_spec` 11 (`publicavel?` entrou na varredura de nível) · `medida_spec` 36 ·
+`tool_run_spec` 29 · `bound_async_spec` 17 · `insurance_quote_medida_spec` 14 · `recusa_guarda_spec` 4.
+
+`bundle exec rubocop` nos 17 `.rb` tocados: **0 ofensas**. Seis apareceram no caminho e foram
+resolvidas: `Metrics/CyclomaticComplexity` em `recusar_entrada` (extraído `recusar_origem`),
+`Metrics/ClassLength` 178/175 em `insurance_proposal.rb` (o fecho voltou para dentro de `entregar` e
+`publicadas` saiu), `Layout/LineLength` no catálogo de motivos, `RSpec/MultipleMemoizedHelpers` ×3
+(três `let` viraram método) e `RSpec/MultipleExpectations` no exemplo das passadas.
+
+### Mutações (editar -> rodar alvo -> `git checkout --` -> md5 igual; árvore commitada em `956416ae2b`)
+
+| # | Mutação | Specs alvo | Ex. | Falhas | md5 | Resultado |
+|---|---|---|---|---|---|---|
+| MA | `poll` sem a conferência de "cotação em andamento" | proposta + `recusa_registro` | 132 | 2 | igual | **reprova** |
+| MH | o publicador ignora `publicavel?` | `async_publisher` + proposta | 125 | 2 | igual | **reprova** |
+| MG | pendentes antes das geradas | proposta | 79 | 5 | igual | **reprova** |
+| MC | `closing_deliveries` sem as geradas | proposta | 79 | 1 | igual | **reprova** |
+| ME | `enviadas` avança na entrega e volta a decidir (o handle no lugar da mensagem) | proposta + `medida` | 115 | 3 | igual | **reprova** |
+| MI | `active?` de volta em `cotacao_em_andamento?` | proposta | 79 | 1 | igual | **reprova** |
+| MS | `unscope` da conversa em `cotacao_fixada` | proposta + `recusa_registro` | 133 | 2 | igual | **reprova** |
+| MB | o aceite grava `args` em vez de `ferramenta.argumentos` | proposta + `bound_async` | 96 | 2 | igual | **reprova** |
+
+Cada mutação aborta se a âncora não existir e confere que o arquivo REALMENTE mudou antes de rodar
+(mutação que não muta passa e mente). Árvore limpa depois das oito (`git status --short` vazio).
+
+### O que NÃO foi feito nesta rodada, e por quê
+
+- **Prova real** (termo "Prova"): continua pendente de deploy + rollout na conta 16. Nada foi
+  executado em produção; o script `rollout-proposta.sh` só ganhou um COMENTÁRIO sobre as execuções
+  abertas antes do deploy (não há passo de dados para elas: a janela é o prazo de uma execução).
+- **M3 / R7** (cotação mais nova encerrada sem preço): decisão de produto, registrada acima.
+- **`fail_run` com `delivered_count` zero** (R4): mexe no fecho de todas as assíncronas.
+- **C8** (URL do portal no handle) e **`pedido` da entrega 10 na proposta** (D10): sem mudança, como
+  nas rodadas anteriores.
+- **Reentrega desnecessária no caso `deferred`** (R3): custo aceito, medido, documentado.
