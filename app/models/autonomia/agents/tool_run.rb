@@ -47,13 +47,20 @@
 # ("na verdade é 2019") não pode acabar com duas cotações concorrentes e dois preços conflitantes.
 # É o mesmo last-writer-wins que o namespace já usa no debounce, no sync_token e no build_token.
 class Autonomia::Agents::ToolRun < ApplicationRecord
+  # QUANDO UMA ACEITAÇÃO VIRA TRABALHO — e quando ela já não pode mais (`ToolRunPromocao`).
+  include ::Autonomia::Agents::ToolRunPromocao
+
   self.table_name = 'autonomia_agent_tool_runs'
 
   # `pending` é o estado em que a ferramenta foi ACEITA dentro do turno mas o turno ainda não
   # terminou. Só o Responder promove para `running` — se o turno morrer (falha de IA na segunda
   # chamada, sinal de silêncio), a execução é descartada e nunca chega a falar com o portal.
   ACTIVE_STATUSES = %w[pending running].freeze
-  TERMINAL_STATUSES = %w[done failed superseded discarded blocked].freeze
+  # Já MORREU: supersedida por um pedido novo, descartada com o turno, ou barrada pelo gate da conta
+  # (`dead?`). É o conjunto que a proposta individual (entrega 8) consulta para NÃO sair de uma
+  # cotação que o cliente corrigiu — por isso ele tem nome, e não só o predicado.
+  DEAD_STATUSES = %w[superseded discarded blocked].freeze
+  TERMINAL_STATUSES = (%w[done failed] + DEAD_STATUSES).freeze
   STATUSES = (ACTIVE_STATUSES + TERMINAL_STATUSES).freeze
 
   belongs_to :account
@@ -229,21 +236,6 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     "#{execution_key}:#{Digest::SHA256.hexdigest(text.to_s)[0, 16]}"
   end
 
-  # pending -> running. Guardado pelo status para que um despacho repetido (retry do turno) não
-  # reabra uma execução que já terminou. -> true quando ESTA chamada promoveu.
-  #
-  # SOB O MESMO LOCK de `abrir_ou_repetida` (entrega 10): um turno B que leu a `pending` de A (que
-  # não conta) não pode abrir enquanto A promove — ou A promove primeiro e B, ao entrar, encontra
-  # uma `running` e não abre; ou B abre primeiro (supersede) e a promoção de A perde pelo status.
-  # Sem isto, B supersedia uma execução já promovida e possivelmente submetida ao portal.
-  def promote!(expected_chunks:, notify_customer:, expires_at:)
-    self.class.transaction do
-      self.class.travar!(conversation_id, slug)
-      guarded_update('pending', status: 'running', expected_chunks: expected_chunks.to_i,
-                                notify_customer: notify_customer, expires_at: expires_at)
-    end
-  end
-
   # O desfecho MARCA o envio incerto (`envio_incerto?` em SQL: intenção anotada, número ausente) no
   # MESMO comando que muda o status: uma intenção anotada por outro processo pouco antes deste
   # `finish!` (janela de milissegundos) não pode acabar em `failed` sem marca com uma cotação aberta
@@ -260,11 +252,6 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
     reload
     true
-  end
-
-  # Descarta uma execução que nunca chegou a rodar (o turno morreu antes de despachar).
-  def discard!
-    guarded_update('pending', status: 'discarded')
   end
 
   # Conta uma tentativa e, se vier handle, MESCLA-O no banco (`handle || ?`): o que a ferramenta
@@ -285,6 +272,32 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     mesclar(scope, adicionar: adicionar, remover: remover)
   end
 
+  # A PROPOSTA INDIVIDUAL FICA NA LINHA DA COTAÇÃO (entrega 8): os códigos das seguradoras cuja
+  # proposta saiu entram em `InsuranceQuote::PROPOSTAS_KEY` como UNIÃO feita pelo banco, sem repetir
+  # — é a lista que `Insurance::Medida` conta (cotações que viraram proposta, e a soma dos códigos).
+  #
+  # NÃO PASSA POR `merge_handle!`, E É DE PROPÓSITO. Aquela escrita só aceita linha VIVA (`vivas`,
+  # status `running`) porque protege a POSSE de uma passada do job sobre a própria execução. Aqui não
+  # há passada nem posse: quem escreve é OUTRA execução (a da ferramenta de proposta), sobre uma
+  # cotação que já encerrou — o cliente escolhe a seguradora DEPOIS de ler os preços, e a cotação já
+  # está `done`. Escrever "só se viva" faria a medida contar zero propostas para sempre. O alcance é
+  # só esta chave: nenhuma marca, status ou contador muda por aqui. -> true quando escreveu.
+  def anotar_propostas!(codigos)
+    lista = Array(codigos).map(&:to_s).reject(&:blank?).uniq
+    return false if lista.empty?
+
+    chave = ::Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY
+    uniao = "SELECT COALESCE(jsonb_agg(DISTINCT codigo ORDER BY codigo), '[]'::jsonb) FROM jsonb_array_elements_text(" \
+            "CASE WHEN jsonb_typeof(handle->?) = 'array' THEN handle->? ELSE '[]'::jsonb END || ?::jsonb) AS t(codigo)"
+    updated = self.class.where(id: id)
+                  .update_all(["handle = jsonb_set(handle, ?::text[], (#{uniao}), true), updated_at = ?", # rubocop:disable Rails/SkipsModelValidations
+                               "{#{chave}}", chave, chave, lista.to_json, Time.current])
+    return false if updated.zero?
+
+    reload
+    true
+  end
+
   # Registra que uma ENTREGA DA FERRAMENTA foi aceita para publicação (publicada ou adiada). O aviso
   # de espera e a frase de falha NÃO passam por aqui — é o que permite saber, no fim, se o cliente
   # recebeu algum resultado de verdade.
@@ -296,7 +309,7 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # Já morreu: supersedida por um pedido novo, descartada com o turno, ou barrada pelo gate da conta.
   # Publicar a partir de uma destas entregaria ao cliente o resultado de um pedido que ele corrigiu.
   def dead?
-    %w[superseded discarded blocked].include?(status)
+    DEAD_STATUSES.include?(status)
   end
 
   # Avança o contador de mensagens. Otimista no valor atual: se dois publicadores correrem, só um

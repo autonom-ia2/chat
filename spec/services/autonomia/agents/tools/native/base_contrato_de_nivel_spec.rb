@@ -28,8 +28,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     %i[slug tool_name description params available_for? async? openai_schema
        accepted_message waiting_message failure_message partial_message uncertain_message]
   end
-  # O que o `Bound` e o job chamam NA INSTÂNCIA.
-  let(:trabalho_de_instancia) { %i[precheck closing_deliveries pedido call start poll] }
+  # O que o `Bound`, o job e o PUBLICADOR chamam NA INSTÂNCIA (`argumentos` é o que o aceite grava e
+  # `publicavel?` é a última palavra da ferramenta antes de a mensagem existir: a proposta individual
+  # fixa na primeira a cotação de origem e reconfere na segunda — entrega 8, rodadas de correção).
+  let(:trabalho_de_instancia) do
+    %i[precheck closing_deliveries confirmar_publicadas resultado_entregue? resta_entregar? pedido argumentos
+       publicavel? entrega_do_token call start poll]
+  end
   # Os cinco textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
   let(:frases) { %i[accepted_message waiting_message failure_message partial_message uncertain_message] }
 
@@ -65,5 +70,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
 
     expect(crua.new(agent: agent, params: {}).precheck).to be_nil
     expect(crua.new(agent: agent, params: {}).closing_deliveries({})).to eq([])
+  end
+
+  # AS DUAS PERGUNTAS DO FECHO PARCIAL SÃO CONSERVADORAS POR PADRÃO (rodada 6 da entrega 8, P1-B):
+  # quem não sabe dizer se entregou resultado, e se sobrou algo, não faz o fecho AFIRMAR nenhuma das
+  # duas. Um default `true` aqui seria a frase inventada de volta, agora no contrato.
+  it 'a ferramenta que nao redefine nao afirma que entregou resultado nem que sobrou algo' do
+    crua = Class.new(described_class) do
+      def self.slug = 'crua'
+      def self.description = 'teste'
+    end
+
+    expect(crua.new(agent: agent, params: {}).resultado_entregue?({})).to be(false)
+    expect(crua.new(agent: agent, params: {}).resta_entregar?({})).to be(false)
   end
 end

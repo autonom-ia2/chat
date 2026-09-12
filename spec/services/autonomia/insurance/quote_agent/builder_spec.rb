@@ -49,11 +49,22 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(desconhecidos).to be_empty
     end
 
-    it 'liga as duas que valem para toda conversa' do
+    it 'liga as tres que valem para toda conversa' do
       slugs = construir.native_tool_slugs
 
       expect(slugs).to include('consultar_produtos_cotacao')
       expect(slugs).to include('consultar_condicoes_gerais')
+      expect(slugs).to include('proposta_da_seguradora')
+    end
+
+    # A PROPOSTA INDIVIDUAL É DO PRINCIPAL (entrega 8): quem a pede é o cliente que já leu os preços, e
+    # o principal é quem está na conversa. Reservada ao especialista (`tool_slugs`), o `Answerer` a
+    # esconderia do principal — e ela ficaria em lugar nenhum.
+    it 'nao reserva a proposta individual ao especialista, para o principal alcanca-la' do
+      agente = construir
+
+      expect(described_class::TOOLS_DO_PRINCIPAL).to include('proposta_da_seguradora')
+      expect(agente.specialists.flat_map(&:tool_slugs)).not_to include('proposta_da_seguradora')
     end
 
     # `native_tool_slugs` é o que o agente TEM; quem esconde do principal o que é do especialista é

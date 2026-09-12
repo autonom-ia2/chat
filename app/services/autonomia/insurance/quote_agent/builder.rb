@@ -20,7 +20,10 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # o que pertence ao especialista é o `Answerer#enabled_agent_tools`, em runtime. Deixar a de
   # cotação fora daqui não a reserva — APAGA: o catálogo do turno vem de `Tools::Bound.for_agent`,
   # e o `Specialist#tools` filtra ESSE catálogo. Fora dele o especialista roda sem ferramenta.
-  TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais].freeze
+  # A proposta individual (entrega 8) é do PRINCIPAL, não do especialista: quem a pede é o cliente
+  # que já leu os preços, e o principal é quem está na conversa nesse momento. Reservá-la ao
+  # especialista a esconderia do principal (`Answerer#enabled_agent_tools`) — e ficaria em lugar nenhum.
+  TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais proposta_da_seguradora].freeze
   TOOLS_DO_ESPECIALISTA = %w[consultar_placa cotar_seguro].freeze
   TODAS_AS_TOOLS = (TOOLS_DO_PRINCIPAL + TOOLS_DO_ESPECIALISTA).freeze
 

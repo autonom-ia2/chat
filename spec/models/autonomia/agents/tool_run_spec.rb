@@ -110,6 +110,45 @@ RSpec.describe Autonomia::Agents::ToolRun do
                                             expected_chunks: 3, notify_customer: true)
       expect(run.expires_at).to be_within(1.second).of(deadline)
     end
+
+    # O TETO DA PROMOÇÃO VALE NA ESCRITA (rodada 6 da entrega 8, P1-C). Até a rodada 5 ele existia só
+    # na LEITURA que decide se uma `pending` ainda conta como recotação (`InsuranceProposal::Origem`);
+    # aqui a guarda era só o status, então a aceitação de dez minutos — a órfã cujo worker morreu
+    # entre o aceite e o despacho — ainda virava `running` e abria no portal uma cotação que a
+    # conversa já tinha deixado para trás. Leitura e escrita discordando é a janela continuar aberta.
+    #
+    # E ELA NÃO FICA EM `pending`: uma linha que ninguém vai executar e que ainda diz "aceita" engana
+    # quem a lê até o varredor passar, uma hora depois.
+    it 'recusa a aceitacao velha demais para ainda virar trabalho, e a descarta' do
+      # Arrange
+      run = open_run
+      run.update!(created_at: described_class::PROMOCAO_ATE.ago - 1.second)
+
+      # Act
+      promovida = run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+
+      # Assert
+      expect(promovida).to be(false)
+      expect(run.reload).to have_attributes(status: 'discarded', expires_at: nil)
+    end
+
+    # UM TETO SÓ, PARA OS DOIS LADOS (rodada 6, P1-C). O defeito não era o valor: era a LEITURA
+    # (`InsuranceProposal::Origem`) e a ESCRITA (aqui) responderem coisas diferentes sobre a mesma
+    # linha. Duas constantes com o mesmo nome em dois arquivos é como isso volta — então a da
+    # leitura é uma referência a esta, e é isto que este exemplo trava.
+    it 'a leitura da proposta usa exatamente o teto da escrita' do
+      expect(Autonomia::Agents::Tools::Native::InsuranceProposal::PROMOCAO_ATE).to equal(described_class::PROMOCAO_ATE)
+    end
+
+    # A FRONTEIRA DO OUTRO LADO, sem a qual a guarda poderia ser "nenhuma promoção acontece": dentro
+    # do teto ela promove como sempre.
+    it 'promove a aceitacao que ainda esta dentro do teto' do
+      run = open_run
+      run.update!(created_at: described_class::PROMOCAO_ATE.ago + 5.seconds)
+
+      expect(run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)).to be(true)
+      expect(run.reload.status).to eq('running')
+    end
   end
 
   # AS ESCRITAS DO HANDLE SÃO MESCLADAS NO BANCO (entrega 5), nunca copiadas da memória, e `intencao:`
@@ -310,6 +349,89 @@ RSpec.describe Autonomia::Agents::ToolRun do
 
       # Assert — a mensagem publicada moveu a sequência, mas só a ENTREGA move o contador
       expect(run.reload).to have_attributes(delivered_count: 1, sequence: 1)
+    end
+  end
+
+  # A PROPOSTA INDIVIDUAL FICA NA LINHA DA COTAÇÃO (entrega 8), que já ENCERROU quando o cliente
+  # escolhe. `merge_handle!` só aceita linha viva — protege a posse de uma passada sobre a própria
+  # execução —, e por isso esta escrita é outra: sem status, só esta chave, união sem repetir.
+  describe '#anotar_propostas!' do
+    let(:chave) { Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY }
+
+    def cotacao_encerrada
+      run = promote(open_run(slug: 'cotar_seguro'))
+      run.record_attempt!(handle: { 'quote_id' => 'q1', 'entregues' => %w[8 20] })
+      run.finish!('done')
+      run
+    end
+
+    it 'escreve na linha ja encerrada, sem tocar no status nem nas marcas' do
+      # Arrange
+      run = cotacao_encerrada
+      antes = run.handle.except(chave)
+
+      # Act / Assert
+      expect(run.anotar_propostas!(['8'])).to be(true)
+      expect(run.status).to eq('done')
+      expect(run.handle[chave]).to eq(['8'])
+      expect(run.handle.except(chave)).to eq(antes)
+    end
+
+    it 'une sem repetir, no banco, quando o cliente pede outra depois' do
+      run = cotacao_encerrada
+
+      run.anotar_propostas!(['8'])
+      run.anotar_propostas!(%w[20 8])
+
+      expect(run.reload.handle[chave]).to eq(%w[20 8])
+    end
+
+    it 'nao escreve nada quando nao ha codigo' do
+      run = cotacao_encerrada
+
+      expect(run.anotar_propostas!([])).to be(false)
+      expect(run.anotar_propostas!(['', nil])).to be(false)
+      expect(run.reload.handle).not_to have_key(chave)
+    end
+
+    # `merge_handle!` recusa a linha encerrada — é a razão de esta escrita existir.
+    it 'chega onde merge_handle! nao chega: a linha encerrada' do
+      run = cotacao_encerrada
+
+      expect(run.merge_handle!({ chave => ['8'] })).to be(false)
+      expect(run.anotar_propostas!(['8'])).to be(true)
+    end
+
+    # A ESCRITA NÃO OLHA O STATUS (mutação M2 da rodada de correção da entrega 8): o cliente escolhe
+    # na lista PARCIAL, com a cotação ainda `running`, e escolhe também depois de uma cotação que
+    # estourou o prazo com preço entregue (`failed`). Quem barra a linha MORTA é a ferramenta de
+    # proposta, antes de anotar — a origem supersedida nem chega aqui.
+    it 'escreve na cotacao ainda viva e na encerrada por prazo, nao so na done' do
+      viva = promote(open_run(slug: 'cotar_seguro'))
+      viva.record_attempt!(handle: { 'quote_id' => 'q1', 'entregues' => ['8'] })
+      vencida = promote(open_run(slug: 'cotar_seguro', conversation_id: other_conversation.id))
+      vencida.record_attempt!(handle: { 'quote_id' => 'q2', 'entregues' => ['8'] })
+      vencida.finish!('failed', failure_code: 'prazo_esgotado')
+
+      expect(viva.anotar_propostas!(['8'])).to be(true)
+      expect(vencida.anotar_propostas!(['8'])).to be(true)
+      expect(viva.reload).to have_attributes(status: 'running', handle: hash_including(chave => ['8']))
+      expect(vencida.reload).to have_attributes(status: 'failed', handle: hash_including(chave => ['8']))
+    end
+
+    # A MESCLA PRESERVA A CHAVE AUSENTE (Codex, P2): a consulta da cotação não devolve `propostas`, e
+    # é isso que faz a anotação de outro processo sobreviver ao `record_attempt!` dela. Com a chave
+    # no payload, a cópia velha venceria — por isso a consulta a tira do handle antes de devolver.
+    it 'record_attempt! sem a chave no payload preserva a anotacao do banco; com a chave, a substitui' do
+      run = promote(open_run(slug: 'cotar_seguro'))
+      run.record_attempt!(handle: { 'quote_id' => 'q1' })
+      run.anotar_propostas!(%w[8 20])
+
+      run.record_attempt!(handle: { 'entregues' => ['8'] })
+      expect(run.reload.handle).to include(chave => %w[20 8], 'entregues' => ['8'])
+
+      run.record_attempt!(handle: { chave => ['8'] })
+      expect(run.reload.handle[chave]).to eq(['8'])
     end
   end
 

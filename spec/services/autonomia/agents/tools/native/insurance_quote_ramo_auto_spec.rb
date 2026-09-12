@@ -351,6 +351,34 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(progress.handle[described_class::DELIVERED_KEY]).to eq(%w[43 3])
     end
 
+    # ENTREGA 8 — o NOME de quem cotou fica no handle, por código: é o mapa que a proposta individual
+    # (`proposta_da_seguradora`) usa para traduzir "me manda a da Porto" no código que o portal exige.
+    # Só quem cotou: a recusa de risco nunca vai ao cliente, e um nome que ele não leu não é escolha.
+    it 'grava o nome de quem cotou, por codigo, para a proposta individual achar a seguradora' do
+      # Arrange
+      allow(connector).to receive(:quote_result).and_return(
+        result('running', [offer('3', 'Mapfre', 'quoted', 2582.76), offer('43', 'Ezze', 'quoted', 2050.40),
+                           offer('47', 'Justos', 'declined')])
+      )
+
+      # Act
+      progress = tool.poll(handle: { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [] }, attempt: 1)
+
+      # Assert
+      expect(progress.handle[described_class::NOMES_KEY]).to eq('3' => 'Mapfre', '43' => 'Ezze')
+    end
+
+    # Acumulado como `entregues`: o portal responde em pedaços, e o nome do lote 1 não pode sumir
+    # quando o lote 2 chega — o cliente vai pedir a proposta pelo nome que leu primeiro.
+    it 'acumula os nomes entre lotes, sem perder o lote anterior' do
+      allow(connector).to receive(:quote_result).and_return(result('completed', [offer('9', 'Darwin', 'quoted', 3407.87)]))
+
+      progress = tool.poll(handle: { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'],
+                                     described_class::NOMES_KEY => { '43' => 'Ezze' } }, attempt: 5)
+
+      expect(progress.handle[described_class::NOMES_KEY]).to eq('43' => 'Ezze', '9' => 'Darwin')
+    end
+
     it 'announces the late ones as a follow-up, never repeating what the customer already read' do
       # Arrange — é o que impede a segunda mensagem de parecer uma cotação nova
       allow(connector).to receive(:quote_result).and_return(
@@ -461,17 +489,44 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     # prazo na 22ª consulta, então o PDF nunca saiu. O `AsyncRunJob` chama isto ao desistir.
     it 'entrega o comparativo tambem quando a cotacao acaba sem fechar' do
       # Act — nenhum `done`: é o encerramento por prazo, com preços já entregues
-      entregas = tool.closing_deliveries('quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'])
+      # As CHAVES importam: `closing_deliveries` recebe um keyword desde a rodada 6, e um hash sem
+      # chaves na chamada vira keyword em vez de argumento posicional.
+      entregas = tool.closing_deliveries({ 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'] })
 
       # Assert
       expect(Autonomia::Agents::Tools::EntregaDeArquivo.de(entregas.first).url).to eq('https://exemplo.test/comparativo.pdf')
     end
 
     it 'nao repete o comparativo no encerramento se ele ja tinha saido' do
-      entregas = tool.closing_deliveries('quote_id' => 'abc:1', described_class::PDF_SENT_KEY => true,
-                                         described_class::DELIVERED_KEY => ['43'])
+      entregas = tool.closing_deliveries({ 'quote_id' => 'abc:1', described_class::PDF_SENT_KEY => true,
+                                           described_class::DELIVERED_KEY => ['43'] })
 
       expect(entregas).to be_empty
+    end
+
+    # O COMPARATIVO É TRABALHO NOVO NO PORTAL (rodada 6, P2-E): login mais uma chamada de até 60 s,
+    # e depois o download. No caminho do varredor — até 500 linhas em sequência num cron, com 25 s
+    # de shutdown do Sidekiq — ele não sai: quem é morto no meio deixa a linha em curso com a marca
+    # `closed` e sem fecho, para sempre. O PDF continua no portal; o cliente fica com os preços que
+    # já leu e com um fecho honesto sobre o que ele tem.
+    it 'nao gera o comparativo quando a passada nao pode comecar trabalho novo' do
+      entregas = tool.closing_deliveries({ 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'] },
+                                         trabalho_novo: false)
+
+      expect(entregas).to be_empty
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    # AS DUAS PERGUNTAS DO FECHO (rodada 6, P1-B). Resultado da cotação é PREÇO PUBLICADO, e nunca a
+    # pergunta pelo dado que falta: `poll` devolve `handle['pedido']` como entrega e `delivered_count`
+    # a conta, então uma cotação que só perguntou dados fechava dizendo "o que chegou está aqui em
+    # cima" — sem nada em cima. Sobra sempre existe aqui: o encerramento só acontece quando a cotação
+    # NÃO fechou no portal (a que fecha vai por `finish_done`).
+    it 'so afirma resultado quando ha preco entregue — a pergunta por dados nao conta' do
+      expect(tool.resultado_entregue?(described_class::DELIVERED_KEY => ['43'])).to be(true)
+      expect(tool.resultado_entregue?('pedido' => 'Me diga a placa, por favor.')).to be(false)
+      expect(tool.resultado_entregue?(described_class::DELIVERED_KEY => [])).to be(false)
+      expect(tool.resta_entregar?('quote_id' => 'abc:1')).to be(true)
     end
 
     it 'never sends the PDF twice' do
@@ -629,8 +684,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     # comparativo anexado na mesma conversa imprimia "R$ 298,43 por mês".
     def motivo_mensal(mensal = '24.87')
       # A string é a do adapter (autonomia-adapters#57), verbatim; `mensal` é premio/12 daquele valor.
-    'packageType=1 (assinatura mensal: o relatorio do portal imprime "por mes"); ' \
-      "parcelamentos=[] (assinatura nao parcela); premioMensal=#{mensal} e premio/12 (derivado pelo portal, nao distingue periodo)"
+      'packageType=1 (assinatura mensal: o relatorio do portal imprime "por mes"); ' \
+        "parcelamentos=[] (assinatura nao parcela); premioMensal=#{mensal} e premio/12 (derivado pelo portal, nao distingue periodo)"
     end
 
     it 'diz o total e o parcelamento quando o portal informou os dois' do

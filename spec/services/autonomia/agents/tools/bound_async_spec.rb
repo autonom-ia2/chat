@@ -159,6 +159,21 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(run.account_id).to eq(account.id)
     end
 
+    # O QUE A EXECUÇÃO GUARDA SÃO OS ARGUMENTOS DA FERRAMENTA (`Native::Base#argumentos`): o que o
+    # modelo escreveu MAIS o que ela fixa no aceite — a proposta individual grava a cotação de
+    # origem, para o job não a escolher de novo (rodada de correção da entrega 8, P1 do Codex).
+    it 'records the arguments the tool fixes at accept time, not only what the model wrote' do
+      # Arrange — uma ferramenta que fixa algo no aceite
+      fixa = Class.new(tool) { define_method(:argumentos) { params.merge('origem' => 42) } }
+      bound = described_class.new(agent: agent, native: fixa)
+
+      # Act
+      bound.execute(call, delivery: delivery)
+
+      # Assert
+      expect(runs.last.arguments).to eq({ 'cpf' => '000', 'origem' => 42 })
+    end
+
     it 'hands the accepted run back to the turn through the delivery' do
       # Arrange / Act
       bound.execute(call, delivery: delivery)

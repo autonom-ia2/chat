@@ -86,6 +86,9 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     invoke("/v1/#{provider}/quote/result", { session: session, quoteId: quote_id })
   end
 
+  # SEM código é o comparativo de todas; COM `insurer_code` é a proposta de UMA seguradora (entrega 8
+  # — o adapter aceita o filtro em `quote.ts` `proposal(session, quoteId, insurerCode?)`). Até
+  # 12/09/2026 nenhum chamador passava o código, e nenhum exemplo provava que ele viajava.
   def quote_proposal(provider:, session:, quote_id:, insurer_code: nil)
     payload = { session: session, quoteId: quote_id }
     payload[:insurerCode] = insurer_code if insurer_code.present?

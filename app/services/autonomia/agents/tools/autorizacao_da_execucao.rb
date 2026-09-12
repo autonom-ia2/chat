@@ -10,20 +10,59 @@
 # conta) não publica nem reenvia: o cliente receberia o resultado de um pedido que já corrigiu. NÃO
 # basta exigir `running?` — a entrega final legítima é publicada e a linha fechada logo em seguida,
 # então uma republicação adiada (ou uma retomada) encontra a linha já `done`, e isso é legítimo.
+#
+# A LINHA VIVA NÃO É A ÚNICA PERGUNTA (rodada 3 da entrega 8, P1 do Codex). A execução da proposta
+# individual continua viva enquanto a COTAÇÃO de que ela saiu é refeita — e o arquivo dela passa a
+# ser o do risco errado. Quem sabe disso é a ferramenta, não este módulo: por isso a terceira
+# pergunta é para ela (`Native::Base#publicavel?`).
+#
+# E ELA VALE TAMBÉM NA RETOMADA (rodada 4, P1 do Codex). Ali não há entrega em mãos — há a MENSAGEM
+# pendente, e dela o token. A mensagem existir no painel NÃO é ter chegado ao cliente: reenfileirar o
+# `SendReplyJob` dela é entregar o arquivo agora. Então a retomada passa o TOKEN, a ferramenta o
+# resolve na própria entrega (`Native::Base#entrega_do_token`) e a pergunta é a mesma. Token que a
+# ferramenta não reconhece (uma frase, o comparativo, outra ferramenta) não recusa nada.
 module Autonomia::Agents::Tools::AutorizacaoDaExecucao
-  # Os dois motivos FECHADOS de recusa, como saem no log.
-  RECUSAS = %i[execucao_morta vinculo_mudou].freeze
+  # Os três motivos FECHADOS de recusa, como saem no log.
+  RECUSAS = %i[execucao_morta vinculo_mudou ferramenta_recusou].freeze
 
   private
 
   # -> o vínculo autorizado AGORA (`AgentInbox`), ou o motivo da recusa (um símbolo de `RECUSAS`).
-  def autorizacao(conversation)
+  def autorizacao(conversation, entrega: nil, token: nil)
     return :execucao_morta if @run.reload.dead?
+    return :ferramenta_recusou unless ferramenta_publicaria?(entrega, token)
 
     agent_inbox = vinculo_autorizado(conversation)
     return :vinculo_mudou unless mesmo_vinculo?(agent_inbox)
 
     agent_inbox
+  end
+
+  # A PRÓPRIA FERRAMENTA AINDA PUBLICARIA ISTO? A ferramenta é montada aqui, do zero, com o que a
+  # linha guarda (argumentos e conversa) — nunca memoizada, pelo mesmo motivo do vínculo: entre a
+  # conferência de entrada e a mensagem há um download, e é a leitura de AGORA que autoriza.
+  # Ferramenta fora do catálogo ou agente apagado não recusam nada: quem barra esses casos é o job.
+  # Sem entrega e sem token não há o que perguntar.
+  #
+  # OS DOIS HOOKS TÊM DESTINOS DIFERENTES PARA O QUE LEVANTAM, e até a rodada 5 este comentário
+  # afirmava uma invariante que só valia para metade deles:
+  #   - `publicavel?` (da proposta individual) trata as exceções DELA dentro do próprio hook — log e
+  #     `false` explícito —, e de fato não chega aqui;
+  #   - `entrega_do_token` NÃO trata: ele lê o handle e monta a entrega, e o que levantar sobe por
+  #     aqui até o `rescue` de quem chamou — o publicador devolve `blocked`, e o varredor registra e
+  #     deixa a marca para a passada seguinte.
+  # O efeito é o mesmo dos dois lados, e é o que se quer: o que não se consegue conferir NÃO SAI. Um
+  # `rescue` devolvendo nil aqui seria o contrário da decisão do dinheiro — nil significa "não
+  # reconheço esta entrega", e não barraria nada.
+  def ferramenta_publicaria?(entrega, token)
+    return true if entrega.nil? && token.blank?
+
+    native = ::Autonomia::Agents::Tools::Registry.find(@run.slug)
+    return true if native.blank? || @run.agent.blank?
+
+    tool = native.new(agent: @run.agent, params: @run.arguments, conversation: @run.conversation, run: @run)
+    alvo = entrega || tool.entrega_do_token(@run, token)
+    alvo.nil? || tool.publicavel?(@run, alvo)
   end
 
   def recusada?(autorizacao)

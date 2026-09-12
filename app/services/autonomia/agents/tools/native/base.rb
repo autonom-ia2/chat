@@ -163,10 +163,27 @@ class Autonomia::Agents::Tools::Native::Base
 
   # `delivery` é o contexto do turno (conversa), quando há um. A ferramenta continua sem saber de
   # conversa para TRABALHAR; ela só o carrega para o registro de recusa dizer qual conversa foi.
-  def initialize(agent:, params: {}, delivery: nil)
+  #
+  # `conversation` é a conversa SEM o turno (entrega 8): o `AsyncRunJob` monta a ferramenta para
+  # `start`, `poll` e `closing_deliveries` fora do turno e, de propósito, sem `delivery` — a
+  # presença dele é o que diz "estou dentro do turno, com o modelo esperando" (é por ela que
+  # `InsuranceQuote::Veiculo#consultar_placa` escolhe a sessão). Uma ferramenta que trabalha sobre o
+  # que a CONVERSA já tem (a proposta individual lê a última cotação dela) precisa da conversa nos
+  # dois contextos, e é `#conversation` que a entrega: pelo `delivery` no turno, por aqui no job.
+  #
+  # `run` é a LINHA DA EXECUÇÃO (rodada 3 da entrega 8), e serve para uma coisa só: a ferramenta
+  # perguntar o que JÁ FOI PUBLICADO. A identidade de uma entrega publicada é o
+  # `ToolRun#delivery_token` — `execution_key` mais o digest do conteúdo —, e sem a linha não há
+  # como montá-lo. É o que permite à proposta individual decidir o que falta entregar pela MENSAGEM
+  # no banco, e não pelo handle (o handle avançava mesmo quando a publicação voltava `blocked`, e o
+  # arquivo ficava contado como enviado sem existir; Codex, rodada 2, P2). nil no turno e nas
+  # superfícies sem execução.
+  def initialize(agent:, params: {}, delivery: nil, conversation: nil, run: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys
     @delivery = delivery
+    @conversation = conversation
+    @run = run
   end
 
   # -> String. NUNCA levanta: quem chama é o executor de ferramentas do turno.
@@ -218,21 +235,105 @@ class Autonomia::Agents::Tools::Native::Base
     nil
   end
 
+  # O QUE A EXECUÇÃO GUARDA COMO ARGUMENTOS quando o aceite a abre (`Bound#accept_async`, rodada de
+  # correção da entrega 8): o que o modelo escreveu e, se a ferramenta precisar FIXAR algo no
+  # aceite, o que ela acrescenta. A proposta individual grava aqui a cotação de origem — escolhida
+  # UMA vez, no turno, com o modelo e o cliente olhando para a mesma lista de preços — para `start`
+  # e `poll` usarem só ela: escolher de novo no job, minutos depois, era como a proposta da cotação
+  # A saía enquanto o cliente já corria a cotação B (Codex, P1). Lido pelo `AsyncRunJob` como
+  # `params` nas passadas seguintes. -> Hash serializável. O padrão é o que o modelo escreveu.
+  def argumentos
+    params
+  end
+
   # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR. Em 08/09/2026 uma cotação
   # entregou cinco preços e morreu no prazo: o comparativo em PDF só era gerado no caminho feliz,
   # então não saiu — e `fail_run` não avisava nada porque já havia entrega. O cliente ficou com
   # preços soltos, sem comparativo e sem uma palavra.
+  #
+  # `trabalho_novo` DIZ SE ESTA PASSADA PODE INICIAR TRABALHO NOVO no portal para produzir a entrega
+  # (rodada 6 da entrega 8, P2-E). Verdadeiro no motor; FALSO no varredor, que varre até 500 linhas
+  # em sequência dentro de um cron enquanto o Sidekiq desta instalação dá 25 s de shutdown — morto no
+  # meio, a linha em curso já tem a marca `closed` e nunca mais recebe fecho. Quem precisa de uma
+  # chamada nova devolve [] ali, e o fecho reflete o que o cliente realmente tem. O que JÁ está
+  # pronto (um arquivo que o portal gerou e está no handle) sai pelos dois caminhos.
   # -> Array de textos para o cliente. Vazio por padrão.
-  def closing_deliveries(_handle)
+  def closing_deliveries(_handle, trabalho_novo: true) # rubocop:disable Lint/UnusedMethodArgument
     []
+  end
+
+  # O CLIENTE JÁ TEM RESULTADO DESTA EXECUÇÃO? (rodada 6 da entrega 8, P1-B.)
+  #
+  # `ToolRun#delivered_count` não responde isso: ele conta QUALQUER item aceito para publicação,
+  # inclusive um aviso e inclusive a pergunta pelo dado que falta (a cotação devolve `handle['pedido']`
+  # como entrega). Quem sabe distinguir resultado de recado é a ferramenta, não o motor — e é por esta
+  # pergunta que o fecho decide entre a frase parcial e o silêncio.
+  # -> false por padrão: quem não sabe responder não afirma que entregou.
+  def resultado_entregue?(_handle)
+    false
+  end
+
+  # E SOBROU ALGO POR ENTREGAR? (rodada 6 da entrega 8, P1-B.) Perguntado DEPOIS das entregas do
+  # encerramento: a frase parcial diz que algo ficou pelo caminho, e dizê-la a quem recebeu tudo o
+  # que pediu é mentir — foi o que aconteceu com o cliente que pediu UMA proposta, recebeu essa uma e
+  # leu "não consegui enviar todas as propostas a tempo".
+  # -> false por padrão: sem sobra conhecida, o fecho parcial não sai.
+  def resta_entregar?(_handle)
+    false
+  end
+
+  # O QUE VIROU MENSAGEM NO PRÓPRIO ENCERRAMENTO (rodada 5 da entrega 8). `closing_deliveries` monta o
+  # que ainda vale entregar ANTES de a mensagem existir, e quem publica é o encerramento, logo depois
+  # — não há passada seguinte, então o que sai ali ficava fora de qualquer registro que a ferramenta
+  # faça PELA MENSAGEM publicada (a proposta individual anota na cotação o que virou proposta, e é o
+  # que a medida da entrega 7 lê). O encerramento chama isto DEPOIS de publicar, e a pergunta que a
+  # ferramenta faz continua sendo a mesma de sempre: existe a mensagem com o token? Nunca o handle.
+  # -> nada. Padrão: nada.
+  def confirmar_publicadas(_handle)
+    nil
+  end
+
+  # ESTA ENTREGA AINDA PODE SER PUBLICADA? (rodada 3 da entrega 8, P1 do Codex.)
+  #
+  # A publicação nem sempre acontece logo depois do `poll`: ela é ADIADA enquanto a cadeia de
+  # entrega humanizada do turno não drena (até 90 s, `AsyncPublishJob`) e pode ser RETOMADA depois.
+  # Nesse intervalo o mundo muda, e há ferramenta cujo resultado deixa de valer — a proposta
+  # individual sai de uma COTAÇÃO, e uma cotação refeita no meio torna o arquivo o do risco errado
+  # com cara de certo. O publicador pergunta isto imediatamente antes de criar a mensagem, sob o
+  # lock (`AutorizacaoDaExecucao`), e o `false` é recusa da mesma classe da execução morta:
+  # registrada, sem mensagem ao cliente.
+  #
+  # Recebe a ENTREGA além da execução porque a mesma execução publica coisas de naturezas
+  # diferentes: o arquivo que saiu do trabalho e as frases que EXPLICAM o que houve (a recusa
+  # "a cotação foi refeita", o fecho do job). Barrar tudo deixaria o cliente em silêncio depois de
+  # "já estou buscando" — que é o defeito oposto. -> true por padrão.
+  def publicavel?(_run, _entrega)
+    true
+  end
+
+  # A ENTREGA QUE UMA MENSAGEM JÁ PUBLICADA POR ESTA EXECUÇÃO CARREGA (rodada 4 da entrega 8, P1 do
+  # Codex). A retomada de um envio pendente (`RetomadaDeEnvio`, e o varredor que a chama) não tem
+  # entrega em mãos: tem a MENSAGEM, e dela o token (`ToolRun#delivery_token`, o digest do conteúdo).
+  # Sem a entrega não há como fazer a pergunta acima, e o reenvio entregava ao cliente o arquivo de
+  # uma cotação que já tinha sido refeita — existir no painel não é ter chegado ao cliente. Quem sabe
+  # reconhecer o próprio conteúdo pelo token é a ferramenta.
+  # -> a entrega, ou nil. O padrão é nil: quem não reconhece nada não barra nada.
+  def entrega_do_token(_run, _token)
+    nil
   end
 
   private
 
-  attr_reader :agent, :params, :delivery
+  attr_reader :agent, :params, :delivery, :run
 
   def account
     agent.account
+  end
+
+  # A conversa em que a ferramenta trabalha, no turno (via `delivery`) e no job (via a execução).
+  # nil nas superfícies sem conversa (Testar, Copiloto, playground).
+  def conversation
+    @conversation || delivery.try(:conversation)
   end
 
   # Recusa nomeada da ferramenta SÍNCRONA, em JSON. Passa pelo registro (entrega 6) como as demais.
@@ -240,11 +341,14 @@ class Autonomia::Agents::Tools::Native::Base
     ::Autonomia::Agents::Tools::Recusa.para_modelo(code, slug: self.class.slug, delivery: delivery, agente: agent)
   end
 
-  # Recusa em PROSA da ferramenta síncrona (ela pediu um dado antes de trabalhar): registra, com os
-  # NOMES dos parâmetros que faltaram, e devolve o texto, que não muda.
-  def recusar(codigo, texto, faltando: [])
-    ::Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: self.class.slug, agente: agent, faltando: faltando,
-                                                         conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(delivery))
+  # Recusa em PROSA: registra, com os NOMES dos parâmetros que faltaram e ONDE aconteceu, e devolve o
+  # texto, que não muda. `turno` é a ferramenta síncrona pedindo um dado antes de trabalhar; `envio`
+  # é a assíncrona recusando na entrega (a proposta individual, quando a cotação de origem morreu
+  # entre o `start` e o `poll`). A conversa vem de `#conversation` — pelo `delivery` no turno, pela
+  # execução no job —, e é por isso que a recusa do job sai com a conversa, e não com `-`.
+  def recusar(codigo, texto, faltando: [], onde: 'turno')
+    ::Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: self.class.slug, agente: agent, faltando: faltando, onde: onde,
+                                                         conversa: conversation&.id)
     texto
   end
 end

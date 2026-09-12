@@ -35,6 +35,7 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
   let(:call) { { 'name' => tool.slug, 'arguments' => '{"cpf":"000"}', 'call_id' => 'c1' } }
   let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
   let(:placa) { Autonomia::Agents::Tools::Native::VehicleLookup }
+  let(:proposta) { Autonomia::Agents::Tools::Native::InsuranceProposal }
   let(:linhas) { [] }
 
   around do |example|
@@ -142,6 +143,37 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     Autonomia::Agents::Specialists::Runner.new(specialist: criar_especialista, request: request, delivery: delivery).call
   end
 
+  # A cotação que a proposta individual lê (entrega 8): com preço entregue e o mapa código -> nome,
+  # com os nomes REAIS do portal (48 "Bp" e 55 "Bp Assinatura" são homônimas). `done` por padrão;
+  # `running` é a lista parcial, `superseded` a que um pedido novo refez.
+  def cotacao_com_precos(status: 'done', conversa: conversation, mapa: { '8' => 'Porto', '48' => 'Bp', '55' => 'Bp Assinatura' })
+    Autonomia::Agents::ToolRun.create!(account: account, agent: agent, conversation_id: conversa.id, slug: cotacao.slug,
+                                       status: status, execution_key: SecureRandom.uuid,
+                                       arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } },
+                                       handle: { 'quote_id' => 'q1', 'produto' => 'auto', cotacao::DELIVERED_KEY => mapa.keys,
+                                                 cotacao::NOMES_KEY => mapa })
+  end
+
+  # Os argumentos da proposta como o ACEITE os grava: os nomes e a cotação de origem FIXADA.
+  def pedido_de_proposta(*seguradoras, origem:)
+    { 'seguradoras' => seguradoras, proposta::ORIGEM => origem&.id }
+  end
+
+  # Uma cotação NOVA aberta pelo caminho real: supersede a viva e ainda não tem preço.
+  def cotacao_nova_em_andamento
+    run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug, arguments: { 'produto' => 'auto' },
+                                           scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+    run
+  end
+
+  # O portal diz 422 para a proposta de quem cotou, contra o nosso mapa.
+  def portal_que_recusa_a_proposta
+    connector = Autonomia::Insurance::Connector.client
+    allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+    allow(connector).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:validation, 'nao cotou'))
+  end
+
   def run_promovida(ferramenta, arguments: { 'placa' => 'ABC1D23' })
     run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: ferramenta.slug, arguments: arguments,
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
@@ -151,6 +183,11 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
 
   def rodar_job(ferramenta, arguments: { 'placa' => 'ABC1D23' })
     Autonomia::Agents::Tools::AsyncRunJob.new.perform(run_promovida(register_async_tool(ferramenta), arguments: arguments).id, 0)
+  end
+
+  # As passadas seguintes do motor, na mesma execução (a proposta faz uma chamada por passada).
+  def rodar_passadas(run, desde:, ate:)
+    (desde..ate).each { |passada| Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, passada) }
   end
 
   # Um gatilho por SAÍDA da varredura. `dispara` roda com `instance_exec` no exemplo; `espera` é o
@@ -377,6 +414,111 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           ready_connection
           rodar_job(cotacao, arguments: { 'produto' => 'drone', 'dados' => '{}' })
+        }
+      },
+      # A PROPOSTA DE UMA SEGURADORA SÓ (entrega 8). No turno, a conferência responde ao modelo sem
+      # abrir execução (uma saída, com o motivo que a avaliação devolveu); no envio, cada recusa tem a
+      # sua saída, e o job registra.
+      'insurance_proposal.rb#precheck#1' => {
+        espera: { motivo: 'proposta_sem_cotacao', slug: 'proposta_da_seguradora' },
+        dispara: lambda {
+          ready_connection
+          bound_para(proposta).execute({ 'name' => 'proposta_da_seguradora', 'arguments' => { seguradoras: ['Porto'] }.to_json },
+                                       delivery: delivery)
+          expect(Autonomia::Agents::ToolRun.count).to be_zero
+        }
+      },
+      'insurance_proposal.rb#recusar_entrada#1' => {
+        espera: { motivo: 'proposta_sem_seguradora', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
+        dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta(origem: cotacao_com_precos)) }
+      },
+      'insurance_proposal.rb#recusar_entrada#2' => {
+        espera: { motivo: 'proposta_acima_do_teto', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
+        dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Porto', 'Bp', 'Suhai', origem: cotacao_com_precos)) }
+      },
+      # A origem FIXADA no aceite já não serve: morta antes do `start`, ou — desde a rodada 4 — já
+      # não sendo a última cotação da conversa (P1 do Codex). A REGRA é uma só; o TEXTO é que depende
+      # da recotação (rodada 5), e por isso a escolha tem método e saída próprios.
+      'insurance_proposal.rb#recusa_da_substituicao#2' => {
+        espera: { motivo: 'cotacao_substituida', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos(status: 'superseded'))) }
+      },
+      # A RECOTAÇÃO ENCERROU SEM PREÇO NENHUM (rodada 5): a origem antiga continua barrada, mas
+      # esperar pelos preços novos é esperar para sempre — o texto oferece cotar de novo.
+      'insurance_proposal.rb#recusa_da_substituicao#1' => {
+        espera: { motivo: 'recotacao_sem_preco', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: lambda {
+          origem = cotacao_com_precos
+          cotacao_nova_em_andamento.update!(status: 'failed')
+          rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: origem))
+        }
+      },
+      # Execução aberta ANTES do deploy que passou a fixar a origem no aceite (rodada 3, M4).
+      'insurance_proposal.rb#recusar_origem#1' => {
+        espera: { motivo: 'proposta_sem_origem', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: nil)) }
+      },
+      # A origem fixada é de OUTRA conversa da mesma conta: não é cotação DESTA conversa, e
+      # `cotacao_fixada` não a acha (rodada 3, M1 — a mutação que tira o escopo da conversa reprova).
+      'insurance_proposal.rb#recusar_origem#2' => {
+        espera: { motivo: 'proposta_sem_cotacao', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: lambda {
+          alheia = cotacao_com_precos(conversa: create(:conversation, account: account, inbox: inbox, assignee: nil))
+          rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: alheia))
+        }
+      },
+      # "B" é prefixo de Bp e de Bp Assinatura, sem ser igual a nenhuma: ambígua. ("Bp" é a 48: o exato vence.)
+      'insurance_proposal.rb#recusar_escolha#1' => {
+        espera: { motivo: 'seguradora_ambigua', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
+        dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('B', origem: cotacao_com_precos)) }
+      },
+      'insurance_proposal.rb#recusar_escolha#2' => {
+        espera: { motivo: 'seguradora_nao_cotou', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
+        dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Zurich', origem: cotacao_com_precos)) }
+      },
+      # O portal dizendo 422 para quem ESTÁ no mapa é "não consegui gerar", nunca "não cotou" (B1):
+      # no `start`, quando a única pedida é recusada; no `poll`, quando as duas foram, uma por passada.
+      'geracao.rb#iniciar#1' => {
+        espera: { motivo: 'proposta_nao_gerada', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: lambda {
+          ready_connection
+          portal_que_recusa_a_proposta
+          rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos))
+        }
+      },
+      'insurance_proposal.rb#sem_nenhuma#1' => {
+        espera: { motivo: 'proposta_nao_gerada', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: lambda {
+          ready_connection
+          portal_que_recusa_a_proposta
+          run = run_promovida(register_async_tool(proposta), arguments: pedido_de_proposta('Porto', 'Bp', origem: cotacao_com_precos))
+          rodar_passadas(run, desde: 0, ate: 2)
+        }
+      },
+      # A origem deixou de valer ENTRE o `start` e o `poll` (aqui pela cotação nova que a supersedeu):
+      # o arquivo já gerado não sai, e a ferramenta registra daqui — o job só registra a recusa do
+      # `start`. Desde a rodada 4 é uma saída só: a origem `done` com uma cotação nova aberta depois
+      # cai no MESMO motivo, porque a pergunta passou a ser "ela ainda é a última?".
+      'insurance_proposal.rb#recusar_substituicao#2' => {
+        espera: { motivo: 'cotacao_substituida', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: lambda {
+          ready_connection
+          run = run_promovida(register_async_tool(proposta), arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos(status: 'running')))
+          rodar_passadas(run, desde: 0, ate: 0)
+          cotacao_nova_em_andamento
+          rodar_passadas(run, desde: 1, ate: 1)
+        }
+      },
+      # A MESMA escolha no envio, com a recotação morta sem preço: o arquivo já gerado não sai, e o
+      # cliente lê que não há preço novo a caminho (rodada 5).
+      'insurance_proposal.rb#recusar_substituicao#1' => {
+        espera: { motivo: 'recotacao_sem_preco', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: lambda {
+          ready_connection
+          run = run_promovida(register_async_tool(proposta), arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos(status: 'running')))
+          rodar_passadas(run, desde: 0, ate: 0)
+          cotacao_nova_em_andamento.update!(status: 'failed')
+          rodar_passadas(run, desde: 1, ate: 1)
         }
       },
       'async_run_job.rb#registrar_recusa#1' => {

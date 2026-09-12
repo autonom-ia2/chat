@@ -14,6 +14,9 @@ module Autonomia::Agents::Tools::Registry
     # dois é de auto. Auto é um ramo com UM comportamento extra, o bônus de renovação.
     Autonomia::Agents::Tools::Native::InsuranceQuote,
     Autonomia::Agents::Tools::Native::VehicleLookup,
+    # Depois de cotar, a proposta da seguradora que o cliente escolheu (entrega 8): lê a cotação da
+    # conversa, não cota de novo.
+    Autonomia::Agents::Tools::Native::InsuranceProposal,
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions
   ].freeze
 

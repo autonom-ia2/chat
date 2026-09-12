@@ -1027,4 +1027,66 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       ActiveSupport::Notifications.unsubscribe(assinatura) if assinatura
     end
   end
+
+  # A PRÓPRIA FERRAMENTA É A TERCEIRA AUTORIZAÇÃO (decisão 9, rodada 3 da entrega 8). O `dead?` da
+  # linha não cobre o mundo que muda entre o `poll` e a mensagem: a proposta individual sai de uma
+  # COTAÇÃO, e uma cotação refeita nesse intervalo (a publicação pode ser adiada por até 90 s)
+  # tornaria o arquivo o do risco errado. Aqui só o CONTRATO — quem recusa é a ferramenta, com a
+  # entrega em mãos; quem não redefine o hook publica como sempre.
+  describe 'a ferramenta autoriza a propria entrega (publicavel?)' do
+    def ferramenta_que(publica:)
+      Class.new(Autonomia::Agents::Tools::Native::Base) do
+        define_singleton_method(:slug) { 'consultar_cotacao' }
+        define_singleton_method(:description) { 'ferramenta de teste' }
+        define_method(:publicavel?) { |_run, _entrega| publica }
+      end
+    end
+
+    it 'nao publica o que a ferramenta recusa, e registra o motivo' do
+      # Arrange
+      promote
+      register_async_tool(ferramenta_que(publica: false))
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      # Act
+      result = described_class.new(run: run).publish('cotação pronta')
+
+      # Assert
+      expect(result).to be_blocked
+      expect(bot_messages).to be_empty
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/publicacao recusada run=#{run.id} motivo=ferramenta_recusou/))
+    end
+
+    it 'publica o que a ferramenta autoriza' do
+      # Arrange
+      promote
+      register_async_tool(ferramenta_que(publica: true))
+
+      # Act
+      result = described_class.new(run: run).publish('cotação pronta')
+
+      # Assert
+      expect(result).to be_published
+      expect(bot_messages.sole.content).to eq('cotação pronta')
+    end
+
+    # NÃO-REGRESSÃO, pelo catálogo de verdade: a cotação não redefine o hook, e a entrega dela sai
+    # como saía antes desta rodada.
+    it 'publica a entrega da cotacao, que nao redefine o hook' do
+      # Arrange
+      cotacao = Autonomia::Agents::ToolRun.open!(
+        agent: agent, slug: Autonomia::Agents::Tools::Native::InsuranceQuote.slug, arguments: { 'produto' => 'auto' },
+        scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id }
+      )
+      cotacao.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+
+      # Act
+      result = described_class.new(run: cotacao).publish('encontrei 3 opções')
+
+      # Assert
+      expect(result).to be_published
+      expect(bot_messages.sole.content).to eq('encontrei 3 opções')
+    end
+  end
 end
