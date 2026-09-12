@@ -44,13 +44,15 @@ class Autonomia::Insurance::PremiumText
   # A RESSALVA VEM ANTES DO PARCELAMENTO. Sem período, o parcelamento não tem o que parcelar: "R$
   # 351,59 / ou 2x de R$ 175,80" sem a ressalva diz ao cliente, por omissão, que 351,59 é o total —
   # exatamente o que `basis: 'unknown'` nega. O adapter hoje só manda `installments` junto de
-  # `total` (a assinatura mensal vem com `parcelamentos=[]`, sem linha de parcelamento); se um dia
-  # mandar sem período, o cliente ouve a ressalva, e o motivo registrado no handle (entrega 13,
-  # termo 1) é que explica o parcelamento que ficou de fora.
+  # `total` (a assinatura mensal vem com `parcelamentos=[]`); se um dia mandar sem período, o
+  # cliente ouve a ressalva, e o motivo registrado no handle (entrega 13, termo 1) é que explica o
+  # parcelamento que ficou de fora. E SÓ O TOTAL PARCELA: "R$ 298,43 por mês / ou 10x de R$ 29,84"
+  # seria parcelar uma mensalidade — se o adapter mandar `installments` com `monthly`, a linha não
+  # sai; o motivo no `basis_evidence` é que registra o que veio.
   def detalhe
     return SEM_BASE if indefinido?
 
-    "ou #{parcelas['count']}x de #{money(parcelas['amount'])}" if parcelas.present?
+    "ou #{parcelas['count']}x de #{money(parcelas['amount'])}" if total? && parcelas.present?
   end
 
   # true quando o preço saiu sem unidade — nem `total` nem `monthly`. É o ÚNICO predicado de "tem

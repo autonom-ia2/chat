@@ -187,8 +187,9 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     'insurer' => { 'code' => '55', 'name' => 'Bp Assinatura', 'enabled' => true, 'integrationStatus' => 'ready' },
     'status' => 'quoted',
     'premium' => { 'amount' => 351.59, 'currency' => 'BRL', 'basis' => 'monthly',
-                   'basis_evidence' => "packageType=1 (assinatura mensal: o relatorio do portal imprime 'por mes'); " \
-                                       'parcelamentos=[]' }
+                   'basis_evidence' => 'packageType=1 (assinatura mensal: o relatorio do portal imprime "por mes"); ' \
+                                       'parcelamentos=[] (assinatura nao parcela); ' \
+                                       'premioMensal=29.30 e premio/12 (derivado pelo portal, nao distingue periodo)' }
   }.freeze
 
   # A oferta sem período, com seguradora FICTÍCIA de propósito: as duas reais que saíam `unknown` (a

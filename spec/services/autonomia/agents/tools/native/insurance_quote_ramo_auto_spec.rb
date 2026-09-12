@@ -627,8 +627,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
     # O motivo da assinatura mensal desde a noite de 11/09/2026: o marcador é do portal, e o PDF do
     # comparativo anexado na mesma conversa imprimia "R$ 298,43 por mês".
-    def motivo_mensal
-      "packageType=1 (assinatura mensal: o relatorio do portal imprime 'por mes'); parcelamentos=[]"
+    def motivo_mensal(mensal = '24.87')
+      # A string é a do adapter (autonomia-adapters#57), verbatim; `mensal` é premio/12 daquele valor.
+    'packageType=1 (assinatura mensal: o relatorio do portal imprime "por mes"); ' \
+      "parcelamentos=[] (assinatura nao parcela); premioMensal=#{mensal} e premio/12 (derivado pelo portal, nao distingue periodo)"
     end
 
     it 'diz o total e o parcelamento quando o portal informou os dois' do

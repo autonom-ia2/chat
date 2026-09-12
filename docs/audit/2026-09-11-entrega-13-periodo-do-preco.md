@@ -32,6 +32,7 @@ Conclusões, com os campos reais:
    NÃO trazem: `parcelamentos` vem `[]` (lista vazia, e não `false`, que é o "ainda não respondeu").
    `identificacao` é "Principal" como nas outras; `packageType: 1` é índice do resultado dentro da
    resposta da seguradora (a Suhai tem 0..3 para os quatro pacotes), não marcador de periodicidade.
+   **→ FALSO, corrigido em «Correção 11/09 (noite)» abaixo: a Suhai tem 0 nos quatro no carro; `packageType: 1` é a marca de assinatura.**
    Não há campo de periodicidade, tipo de plano, vigência por resultado, nem observação de texto.
 3. **A Justos devolve DOIS resultados selecionados no mesmo cálculo**: a assinatura (134,50, sem
    parcelamento) e a apólice anual (1.539,24 em até 10x). `calc.premio` do portal é 1.539,24 — o
@@ -56,7 +57,7 @@ leitor perguntaria se foram olhados), lidos do mesmo `cotacao/versoes` salvo for
 Nenhuma chave de resultado ou de `coberturas` contém "vig", "period" ou "mens" além de `premioMensal`
 (que é `premio/12`, conclusão 1). Inspecionados; não distinguem período.
 
-**Decisão (termo 3): NÃO existe detector de mensalidade.** `parcelamentos: []` em duas amostras não é
+**Decisão (termo 3): NÃO existe detector de mensalidade.** *(→ superada na noite de 11/09; ver «Correção 11/09 (noite)»)* `parcelamentos: []` em duas amostras não é
 contrato — e assumir "vazio = mensal" seria inventar o detector sem evidência. O honesto é `unknown`
 com o motivo nomeando o campo, por oferta, para a próxima cotação real confirmar ou desmentir.
 
@@ -118,7 +119,7 @@ com o motivo nomeando o campo, por oferta, para a próxima cotação real confir
 |---|---|---|---|
 | 1 | Motivo registrado e consultável por oferta (campo que faltou/veio ambíguo) | adapter: `basisEvidence` nomeia `parcelamentos=[]`, `premioMensal` derivado, plano fora do contrato, plano posto de lado (`premio-com-significado.test.ts`, M6/M8/M4); chat2you: `QuoteOffers#sem_periodo` + handle `preco_sem_periodo` (`quote_offers_spec`, `ramo_auto_spec` "registra no handle", MC3/MC4/MC5/MC6); consulta por `quote result <id>` na CLI ou pelo handle da execução | fechado em código; **pendente_prova_real**: ler o handle de uma execução em produção |
 | 2 | Cliente para de ouvir a ressalva quando a informação estava no payload | Tokio → `total` (M1, M2); Justos → 1.539,24 `total` em 10x (M3); guarda "toda oferta real com plano de pagamento sai total" sobre a fixture | fechado em código; **pendente_prova_real**: cotação nova em produção depois do deploy da Lambda |
-| 3 | Decisão de detecção com cotação real com plano mensal na mão | tabela acima, com os campos reais; decisão: sem detector (`describe 'não há detector de mensalidade'`, M9) | fechado |
+| 3 | Decisão de detecção com cotação real com plano mensal na mão | tabela acima, com os campos reais; decisão: sem detector (`describe 'não há detector de mensalidade'`, M9) | fechado → refeito na «Correção 11/09 (noite)» |
 | 4 | Período desconhecido → preço sem afirmar período | `PremiumText#resumo` só com `total` (`premium_text_spec`, MC2/MC7); `ramo_auto_spec` "NÃO inventa período" | fechado |
 | 5 | Períodos diferentes nunca ordenados pelo número cru | adapter: `escolherPremium` (M3 da rodada 1; rodada de correção R-M2/R-M3/R-M4/R-M5: sem período conhecido, escolha do portal ou ordem dele, nunca o menor número, e os demais sempre no motivo); chat2you: `QuoteOffers#quoted` particiona (MC1; `ramo_auto_spec` "no lote, o preço sem período vem depois") | fechado |
 
@@ -290,7 +291,7 @@ JSON do rspec). Adapter da rodada: `a6309b9`.
 
 ## Correção 11/09 (noite) — assinatura mensal
 
-Issue: autonom-ia2/chat#394 (Part of #291); adapter: autonom-ia2/autonomia-adapters#56 (em
+Issue: autonom-ia2/chat#394 (Part of #291); adapter: autonom-ia2/autonomia-adapters issue #56, PR #57 (em
 andamento, por outra pessoa). Branch `fix/entrega-13-assinatura-mensal`, de `92f44c38d4`.
 
 ### O achado
@@ -312,7 +313,7 @@ mensalidade" partiu desse dado errado.
 
 ### O que mudou
 
-- **adapter** (#56): `premium.basis: 'monthly'` quando `packageType=1`, com `basisEvidence` nomeando
+- **adapter** (issue #56, PR #57): `premium.basis: 'monthly'` quando `packageType=1`, com `basisEvidence` nomeando
   `packageType=1`. O chat2you recebe `basis` e `basis_evidence` em snake_case pelo `Connector::Http`,
   como antes.
 - **chat2you** (#394):
@@ -328,7 +329,8 @@ mensalidade" partiu desse dado errado.
     `#sem_periodo` continua só com as `indefinido?`: a mensal fica FORA do handle
     `preco_sem_periodo`.
   - `Connector::Mock`: a Bp Assinatura vira `OFERTA_MENSAL` (`monthly`, evidência `packageType=1
-    (assinatura mensal: o relatorio do portal imprime 'por mes'); parcelamentos=[]`); a
+    (assinatura mensal: o relatorio do portal imprime "por mes"); parcelamentos=[] (assinatura nao
+    parcela); premioMensal=29.30 e premio/12 (…)`, a string do adapter verbatim); a
     `OFERTA_SEM_PERIODO` passa a ser uma seguradora fictícia ("Seguradora Exemplo", 980,00, `unknown`,
     evidência `nenhum dos 3 parcelamento(s) fecha com premio=980.0`), para o dev continuar vendo a
     ressalva. O `mock_progress` completo devolve 4 ofertas.
@@ -377,3 +379,15 @@ mensalidade" partiu desse dado errado.
   "por mês", sem a ressalva, depois de adapter → Lambda → chat2you. Ordem de deploy inalterada.
 - `especialista_auto.md:191` ("da mais barata para a mais cara") continua DEFERIDO; agora há um
   caso a mais para a instrução: mensal e total não se comparam pelo número.
+
+Revisão cega e Codex (12/09, madrugada): o verificador cego reprovou a primeira versão por um bloqueante
+real — `spec/jobs/autonomia/agents/tools/async_run_job_comparativo_arquivo_spec.rb` esperava três
+códigos entregues (`8 3 55`) e o mock completo passou a ter quatro (`999`); a validação anterior não
+incluía `spec/jobs`. Corrigido (os dois exemplos esperam `8 3 55 999`), com mais seis menores:
+ponteiros inline acima, issue/PR do adapter corretos (a mensagem do commit `6098452027` cita "#56"
+como se fosse PR — é a issue; a PR é #57; histórico não reescrito), evidência da `OFERTA_MENSAL`
+verbatim do adapter, `PremiumText#detalhe` só parcela `total` (spec novo), o exemplo "mensal DEPOIS
+dos totais" ganha uma sem período no arranjo, e `include('nenhum dos')` no spec do conector. Codex:
+APROVADO com um P3 de redação ("é a mais cara" → "não comparável sem período comum"), aplicado.
+Suíte `spec/services/autonomia/insurance` + `agents/tools/native` + `spec/jobs/autonomia/agents/tools`
+depois dos ajustes: 486 exemplos, 0 falhas, 0 erros fora de exemplos.

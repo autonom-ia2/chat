@@ -108,7 +108,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # link em texto e a sentinela do comparativo é gravada — antes, o `Progress` descartava o Hash
   # inválido e a execução dizia "comparativo enviado" com o cliente sem nada (rodada 2, P2).
   it 'entrega o link em texto pela consulta quando a URL do portal nao tem a forma segura' do
-    # Arrange — cotação completa no mock (`mock-0:1`), todos os preços já entregues, prazo vivo
+    # Arrange — cotação completa no mock (`mock-0:1`), todos os preços já entregues (as quatro
+    # ofertas do `mock_progress` completo: 8, 3, 55 mensal e 999 sem período), prazo vivo
     url_http = 'http://exemplo.test/comparativo-mock.pdf'
     mock = Autonomia::Insurance::Connector::Mock.new
     allow(mock).to receive(:quote_proposal).and_return('quote_id' => 'mock-0:1', 'url' => url_http)
@@ -118,7 +119,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-0:1',
-                                  cotacao::DELIVERED_KEY => %w[8 3 55], 'produto' => 'auto' })
+                                  cotacao::DELIVERED_KEY => %w[8 3 55 999], 'produto' => 'auto' })
     Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
     run.record_delivery!
 
@@ -155,7 +156,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-0:1',
-                                  cotacao::DELIVERED_KEY => %w[8 3 55], 'produto' => 'auto' })
+                                  cotacao::DELIVERED_KEY => %w[8 3 55 999], 'produto' => 'auto' })
     Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
     run.record_delivery!
     stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })

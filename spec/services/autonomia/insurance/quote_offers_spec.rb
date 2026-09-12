@@ -23,13 +23,16 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
 
   # O motivo da assinatura mensal desde a noite de 11/09/2026: o marcador é do portal, e o PDF do
   # comparativo da mesma conversa imprime "por mês".
-  def motivo_mensal
-    "packageType=1 (assinatura mensal: o relatorio do portal imprime 'por mes'); parcelamentos=[]"
+  def motivo_mensal(mensal = '24.87')
+    # A string é a do adapter (autonomia-adapters#57), verbatim; `mensal` é premio/12 daquele valor.
+    'packageType=1 (assinatura mensal: o relatorio do portal imprime "por mes"); ' \
+      "parcelamentos=[] (assinatura nao parcela); premioMensal=#{mensal} e premio/12 (derivado pelo portal, nao distingue periodo)"
   end
 
   # ENTREGA 13, termo 5 — preço de período desconhecido nunca é ordenado pelo número cru. A Bp
   # Assinatura (351,59, então sem período) aparecia na frente da Porto (1.321,25 no total) como se
-  # fosse a mais barata; sendo mensalidade (`packageType=1`), é a mais cara da lista.
+  # fosse a mais barata; sendo mensalidade (`packageType=1`), não é comparável ao total sem um
+  # período comum.
   describe '#quoted' do
     it 'poe o preco sem periodo DEPOIS dos totais, mesmo com o numero menor' do
       ofertas = described_class.new(
@@ -43,13 +46,17 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
     # ASSINATURA MENSAL: 298,43 por mês não é "mais barato" que 1.321,25 no total — são períodos
     # diferentes, e ×12 seria um número nosso (decisão de produto pendente). O bloco dos mensais vem
     # DEPOIS dos totais e ANTES dos sem período, e só se ordena pelo número entre si.
-    it 'poe a mensal DEPOIS dos totais, mesmo com o numero menor' do
+    it 'poe a mensal DEPOIS dos totais, mesmo com o numero menor — e ANTES de uma sem periodo mais barata' do
+      # A sem período (10,00) entra no arranjo de propósito: sem ela, uma mensal tratada como "sem
+      # período" iria para o fim do mesmo jeito, e o exemplo não distinguiria os dois blocos.
       ofertas = described_class.new(
-        'offers' => [offer('Bp Assinatura', 298.43, 'monthly', code: '55', motivo: motivo_mensal),
+        'offers' => [offer('X', 10.0, 'unknown', code: '1'),
+                     offer('Bp Assinatura', 298.43, 'monthly', code: '55', motivo: motivo_mensal),
                      offer('Suhai', 1818.48, code: '20'), offer('Porto', 1321.25, code: '8')]
       ).quoted
 
-      expect(ofertas.map { |o| o['insurer']['name'] }).to eq(['Porto', 'Suhai', 'Bp Assinatura'])
+      expect(ofertas.map { |o| o['insurer']['name'] }).to eq(['Porto', 'Suhai', 'Bp Assinatura', 'X'])
+      expect(described_class.item(ofertas[2])).to include('R$ 298,43 por mês')
     end
 
     it 'poe a mensal ANTES das sem periodo' do

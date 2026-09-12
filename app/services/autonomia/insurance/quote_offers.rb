@@ -36,8 +36,8 @@ class Autonomia::Insurance::QuoteOffers
   #
   # ENTREGA 13, termo 5: preços de períodos diferentes NUNCA se ordenam pelo número cru entre si. A
   # Bp Assinatura (351,59, sem parcelamento no payload) abria a lista na frente da Porto (1.321,25 no
-  # total) como se fosse a mais barata — e sendo mensalidade, é a mais cara. Mensal e total não se
-  # comparam sem uma conta nossa (×12 seria um número que o portal não deu, e é decisão de produto
+  # total) como se fosse a mais barata — e, sendo mensalidade, não é comparável ao total sem um
+  # período comum. Mensal e total não se comparam sem uma conta nossa (×12 seria um número que o portal não deu, e é decisão de produto
   # pendente); então cada período é um bloco, e o sem período nem entra na comparação — a ressalva
   # colada na oferta diz por quê.
   #

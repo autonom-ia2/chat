@@ -67,4 +67,14 @@ RSpec.describe Autonomia::Insurance::PremiumText do
     expect(described_class.new('amount' => 1.0).motivo).to eq('basis=nil sem basis_evidence')
     expect(described_class.new('amount' => 1.0, 'basis' => 'unknown').motivo).to eq('basis="unknown" sem basis_evidence')
   end
+
+  it 'nao parcela uma mensalidade, mesmo que venha installments junto de monthly' do
+    # O adapter não manda parcelamento com `monthly` (assinatura vem com `parcelamentos=[]`); se
+    # mandar, "por mês" e "ou 10x de" na mesma oferta seriam contradição. Só o total parcela.
+    texto = described_class.new('amount' => 298.43, 'basis' => 'monthly',
+                                'installments' => { 'count' => 10, 'amount' => 29.84 })
+    expect(texto.resumo).to eq('R$ 298,43 por mês')
+    expect(texto.detalhe).to be_nil
+  end
+
 end

@@ -79,7 +79,7 @@ RSpec.describe 'Autonomia::Insurance::Connector quote' do
       expect(mensal.first['premium']['basis_evidence']).to include('packageType=1')
       sem_periodo = result['offers'].select { |o| o['premium']['basis'] == 'unknown' }
       expect(sem_periodo.map { |o| o['insurer']['name'] }).to eq(['Seguradora Exemplo'])
-      expect(sem_periodo.first['premium']['basis_evidence']).to include('fecha com premio')
+      expect(sem_periodo.first['premium']['basis_evidence']).to include('nenhum dos')
     end
 
     it 'hands back a proposal url' do
