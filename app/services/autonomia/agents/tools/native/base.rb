@@ -273,6 +273,17 @@ class Autonomia::Agents::Tools::Native::Base
     true
   end
 
+  # A ENTREGA QUE UMA MENSAGEM JÁ PUBLICADA POR ESTA EXECUÇÃO CARREGA (rodada 4 da entrega 8, P1 do
+  # Codex). A retomada de um envio pendente (`RetomadaDeEnvio`, e o varredor que a chama) não tem
+  # entrega em mãos: tem a MENSAGEM, e dela o token (`ToolRun#delivery_token`, o digest do conteúdo).
+  # Sem a entrega não há como fazer a pergunta acima, e o reenvio entregava ao cliente o arquivo de
+  # uma cotação que já tinha sido refeita — existir no painel não é ter chegado ao cliente. Quem sabe
+  # reconhecer o próprio conteúdo pelo token é a ferramenta.
+  # -> a entrega, ou nil. O padrão é nil: quem não reconhece nada não barra nada.
+  def entrega_do_token(_run, _token)
+    nil
+  end
+
   private
 
   attr_reader :agent, :params, :delivery, :run

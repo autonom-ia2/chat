@@ -27,7 +27,8 @@
 # numa passada passariam dos 25 s que o Sidekiq dá ao job num shutdown. `poll` também ANOTA NA LINHA
 # DA COTAÇÃO quais propostas saíram (`ToolRun#anotar_propostas!` -> `InsuranceQuote::PROPOSTAS_KEY`,
 # que a medida da entrega 7 lê) — só as com MENSAGEM publicada —, e confere a cada passada se a
-# origem ainda vale. A mesma conferência é refeita na publicação efetiva (`publicavel?`), que pode
+# origem ainda vale: não morta e ainda a ÚLTIMA cotação da conversa (`Origem`). A mesma conferência
+# é refeita no encerramento por prazo e na publicação efetiva (`Publicacao#publicavel?`), que pode
 # sair até 90 s depois da passada que a produziu.
 class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::Tools::Native::Base
   Quote = ::Autonomia::Agents::Tools::Native::InsuranceQuote
@@ -56,6 +57,7 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
   include Recusas
   include Origem
   include Geracao
+  include Publicacao
 
   class << self
     def slug
@@ -131,64 +133,44 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
   # Antes era o contrário, e com a segunda seguradora em tempo esgotado a execução gastava as
   # passadas nela até o prazo estourar: a proposta que já estava pronta nunca saía.
   #
-  # Antes de qualquer uma, confere se a origem ainda vale: morta (um pedido novo a supersedeu) ou com
-  # uma cotação mais nova correndo sem preço, nada sai e o cliente lê o porquê. A segunda entrou
-  # nesta rodada (verificador cego, I1): uma cotação `done` não vira `superseded` quando outra abre,
-  # então `dead?` sozinho deixava passar o caso mais comum. As duas são conferidas de novo na
-  # publicação EFETIVA (`publicavel?`), que pode acontecer até 90 s depois desta passada.
+  # Antes de qualquer uma, confere se a origem ainda vale (`Origem#origem_ainda_vale?`): morta, ou já
+  # não sendo a última cotação da conversa, nada sai e o cliente lê o porquê. A mesma conferência é
+  # refeita na publicação EFETIVA (`publicavel?`), que pode acontecer até 90 s depois desta passada.
   # `attempt` é do contrato (`Base#poll`); aqui não há seguradora lenta para esperar.
   def poll(handle:, attempt:) # rubocop:disable Lint/UnusedMethodArgument
     return progress_class.done(deliveries: [handle['pedido']], handle: handle) if handle['pedido']
 
     origem = fixar_origem(handle[ORIGEM])
     return progress_class.failed('cotacao_ausente') if origem.nil?
-    return progress_class.done(deliveries: [recusar('cotacao_substituida', SUBSTITUIDA, onde: 'envio')]) if origem.dead?
-    return progress_class.done(deliveries: [recusar('cotacao_em_andamento', EM_ANDAMENTO, onde: 'envio')]) if cotacao_em_andamento?
+    return progress_class.done(deliveries: [recusar('cotacao_substituida', SUBSTITUIDA, onde: 'envio')]) unless origem_ainda_vale?
 
     entregar(confirmar(handle))
   end
 
   # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR (o prazo estourou, o job desistiu),
-  # no mesmo molde do comparativo da cotação: as propostas que o portal GEROU e que não chegaram ao
-  # cliente, mais o aviso de quem ficou pelo caminho — quem estava só PENDENTE no fim é, para quem
-  # espera, o mesmo que não gerada. Origem morta, substituída ou ausente: nada, porque o arquivo é
-  # dos preços que o cliente descartou.
+  # no mesmo molde do comparativo da cotação: a proposta que o portal GEROU e não chegou ao cliente,
+  # mais o aviso de quem ficou pelo caminho — quem estava só PENDENTE no fim é, para quem espera, o
+  # mesmo que não gerada. Origem morta, substituída ou ausente: nada, porque o arquivo é dos preços
+  # que o cliente descartou.
+  #
+  # UM ARQUIVO SÓ, também aqui (rodada 4, menor 1 do verificador cego): dois downloads de 20 s na
+  # mesma passada passam dos 25 s que o Sidekiq dá ao job num shutdown, e quem é morto no meio perde
+  # o segundo PARA SEMPRE — a marca `closed` já foi adquirida, e ninguém volta a este caminho. O
+  # segundo arquivo fica no handle e o cliente lê o fecho parcial, que é honesto sobre isso.
+  #
+  # E ANOTA O QUE JÁ VIROU MENSAGEM antes de sair (rodada 4, importante 1 do verificador cego):
+  # `confirmar` só rodava no `poll`, então uma proposta entregue na última passada antes do prazo
+  # sumia da medida da entrega 7 — o cliente com o PDF no WhatsApp e a cotação sem marca nenhuma.
   def closing_deliveries(handle)
     handle = handle.to_h
     return [] unless origem_ainda_vale?
 
-    nao_publicadas(handle).map { |proposta| entrega(proposta, handle['sufixo']) } +
+    confirmar(handle)
+    nao_publicadas(handle).first(1).map { |proposta| entrega(proposta, handle['sufixo']) } +
       aviso_de(handle[NAO_SAIU].to_h.keys + Array(handle[PENDENTES]))
   end
 
-  # A PUBLICAÇÃO EFETIVA PODE ACONTECER MUITO DEPOIS DO `poll`: adiada enquanto a cadeia de entrega
-  # humanizada do turno não drena (até 90 s), ou retomada por um envio pendente. A cotação pode ter
-  # sido refeita nesse meio-tempo, e o arquivo já baixado passaria a ser o do risco errado. O
-  # publicador pergunta isto sob o lock, imediatamente antes de criar a mensagem.
-  #
-  # SÓ AS PROPOSTAS SÃO BARRADAS. A mesma execução publica as frases que EXPLICAM o que houve ("a
-  # cotação foi refeita") e os fechos do job; barrá-las deixaria o cliente em silêncio depois de
-  # "já estou buscando", que é o defeito oposto.
-  def publicavel?(run, entrega)
-    return true unless da_origem?(run, entrega)
-
-    origem_ainda_vale?
-  end
-
   private
-
-  # A ENTREGA SAIU DESTA ORIGEM? Comparação de dado NOSSO contra dado NOSSO: a URL que este handle
-  # gravou. A proposta viaja como ARQUIVO (a URL do portal) ou, quando a forma não cabe, como o
-  # texto de reserva que termina na MESMA URL.
-  def da_origem?(run, entrega)
-    urls = Array(run.handle.to_h[GERADAS]).filter_map { |proposta| proposta['url'].to_s.presence if proposta.is_a?(Hash) }
-    return false if urls.empty?
-
-    arquivo = ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega)
-    return urls.include?(arquivo.url) if arquivo
-
-    urls.any? { |url| entrega.to_s.end_with?(url) }
-  end
 
   # O QUE JÁ CHEGOU AO CLIENTE, e o registro na linha da COTAÇÃO — é ela que "virou proposta", e é lá
   # que a medida da entrega 7 lê. A fonte de verdade é a MENSAGEM publicada, não o handle: o job
@@ -229,17 +211,6 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     geradas(handle).reject { |proposta| publicada?(proposta, handle['sufixo']) }
   end
 
-  # Existe na conversa a mensagem com o token DESTA entrega? O token é `execution_key` mais o digest
-  # do conteúdo (`ToolRun#delivery_token`) — a mesma identidade que o publicador usa para não
-  # duplicar. Sem a linha da execução (fora do job) não há `execution_key`, e nada está publicado.
-  def publicada?(proposta, sufixo)
-    return false if run.nil? || conversation.nil?
-
-    arquivo = arquivo_de(proposta, sufixo)
-    identidade = arquivo.valida? ? arquivo.identidade : arquivo.reserva
-    ::Autonomia::Agents::Tools::EntregaPublicada.existe?(conversation, run.delivery_token(identidade))
-  end
-
   # NENHUMA saiu: o portal não gerou as que o cliente pediu (recusa nomeada, registrada daqui — o job
   # só registra a do `start`), ou o handle não tem proposta nem falha (defeito, e o job fecha com a
   # nossa frase).
@@ -261,13 +232,7 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     recusar_entrada || recusar_escolha
   end
 
-  # A ORDEM IMPORTA. A origem MORTA é o motivo mais específico e vem primeiro: no job, a fixada que
-  # um pedido novo supersedeu diz "a cotação foi refeita" — mesmo que a nova esteja correndo (no
-  # turno a origem escolhida nunca está morta, e a conferência cai no caso seguinte). Depois, a
-  # cotação nova em andamento vale antes de "não encontrei cotação": o cliente acabou de mandar
-  # refazer, e a resposta certa é esperar por ela, não oferecer cotar de novo. Por último, a
-  # diferença entre "esta EXECUÇÃO não tem origem fixada" (anterior ao deploy) e "esta CONVERSA não
-  # tem cotação": a primeira pede o pedido de novo, a segunda oferece cotar.
+  # O que falta ANTES de olhar a cotação: o nome da seguradora e o teto de duas por vez.
   def recusar_entrada
     return recusa('proposta_sem_seguradora', SEM_SEGURADORA, faltando: [PARAMETRO]) if nomes.empty?
     return recusa('proposta_acima_do_teto', ACIMA_DO_TETO, faltando: [PARAMETRO]) if nomes.size > MAX_SEGURADORAS
@@ -275,10 +240,14 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     recusar_origem
   end
 
-  # As quatro maneiras de não haver de onde tirar a proposta, da mais específica para a mais geral.
+  # As três maneiras de não haver de onde tirar a proposta, da mais específica para a mais geral. A
+  # ORDEM IMPORTA. A origem que não serve mais — morta, ou já não sendo a última cotação da conversa
+  # — vem primeiro, e vale antes de "não encontrei cotação": o cliente acabou de mandar refazer, e a
+  # resposta certa é esperar pelos preços novos, não oferecer cotar de novo. Depois, a diferença
+  # entre "esta EXECUÇÃO não tem origem fixada" (anterior ao deploy) e "esta CONVERSA não tem
+  # cotação": a primeira pede o pedido de novo, a segunda oferece cotar.
   def recusar_origem
-    return recusa('cotacao_substituida', SUBSTITUIDA, faltando: []) if cotacao&.dead?
-    return recusa('cotacao_em_andamento', EM_ANDAMENTO, faltando: []) if cotacao_em_andamento?
+    return recusa('cotacao_substituida', SUBSTITUIDA, faltando: []) if cotacao && !origem_ainda_vale?
     return recusa('proposta_sem_origem', SEM_ORIGEM, faltando: []) if sem_origem?
 
     recusa('proposta_sem_cotacao', SEM_COTACAO, faltando: []) if cotacao.nil?

@@ -39,6 +39,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:duplicada) { Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA }
   let(:submetido) { described_class::SUBMITTED_KEY }
   let(:encerrada) { Autonomia::Agents::ToolRun::ENCERRADA_EM }
+  # A marca de encerramento é ADQUIRIDA em todo desfecho por falha desde a rodada 4 da entrega 8: o
+  # `fail_run` deixou de filtrar por `delivered_count` e passa sempre pela ferramenta (P2 do Codex).
+  # Ela não diz nada sobre intenção nem sobre número — é o que estes exemplos travam —, então sai da
+  # comparação junto com o instante do encerramento.
+  let(:fechada) { described_class::CLOSED_KEY }
   let(:incerto) { Autonomia::Agents::Tools::Native::EnvioIncerto }
   let(:progress) { Autonomia::Agents::Tools::Progress }
 
@@ -218,7 +223,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       expect(chamadas).to eq(2)
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'envio_incerto')
-      expect(run.handle.except(encerrada)).to eq(intencoes => 2, duplicada => true)
+      expect(run.handle.except(encerrada, fechada)).to eq(intencoes => 2, duplicada => true)
       expect(bot_contents).to eq(['não consegui confirmar o envio'])
     end
 
@@ -357,7 +362,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert — o `finish!` marca no mesmo comando que encerra; a anotação seguinte perde pelo status
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(run.handle.except(encerrada)).to eq(intencoes => 1, duplicada => true)
+      expect(run.handle.except(encerrada, fechada)).to eq(intencoes => 1, duplicada => true)
       expect(runs.possivelmente_duplicadas).to eq([run])
       expect(run.merge_handle!({ intencoes => 2 }, intencao: 1)).to be(false)
     end
@@ -379,7 +384,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert — o número fica, a marca não entra, e a frase é a de falha (o banco diz que há número)
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(run.handle.except(encerrada)).to eq(intencoes => 1, submetido => true, 'id' => 'cot-A')
+      expect(run.handle.except(encerrada, fechada)).to eq(intencoes => 1, submetido => true, 'id' => 'cot-A')
       expect(runs.possivelmente_duplicadas).to be_empty
       expect(bot_contents).to eq(['não consegui concluir a consulta'])
     end

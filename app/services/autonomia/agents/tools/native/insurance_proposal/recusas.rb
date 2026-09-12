@@ -17,12 +17,11 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Recusas
                   'quer primeiro.'.freeze
   SEM_COTACAO = 'Não encontrei nesta conversa uma cotação com preços para gerar a proposta. Se ' \
                 'quiser, faço a cotação primeiro.'.freeze
-  # A COTAÇÃO DE ORIGEM MUDOU DEBAIXO DO PEDIDO (rodada de correção, P1 do Codex). Em andamento: há
-  # uma cotação nova correndo e ainda sem preço — a proposta sairia da lista antiga, que o cliente
-  # acabou de mandar refazer. Substituída: a cotação de que a proposta sairia foi refeita depois do
-  # aceite (o cliente corrigiu um dado); o arquivo dela seria o do risco errado com cara de certo.
-  EM_ANDAMENTO = 'Ainda estou buscando os preços da cotação nova. Quando eles chegarem, me diga de qual ' \
-                 'seguradora você quer a proposta.'.freeze
+  # A COTAÇÃO DE ORIGEM DEIXOU DE SER A ÚLTIMA DA CONVERSA (P1 do Codex; regra única desde a rodada
+  # 4): o cliente mandou refazer depois deste pedido, e a proposta sairia dos preços que ele
+  # descartou — o risco errado com cara de certo. Um texto só, porque é um motivo só: não importa se
+  # a cotação nova ainda está buscando preço, se já entregou ou se morreu pelo caminho; a lista que
+  # vale é a dela. O que o cliente precisa saber é que a proposta espera pelos preços novos.
   SUBSTITUIDA = 'A cotação foi refeita depois desse pedido, e a proposta sairia dos preços antigos. ' \
                 'Quando os preços novos chegarem, é só me pedir de novo.'.freeze
   # SEM A COTAÇÃO DE ORIGEM NOS ARGUMENTOS (rodada 3, M4 do verificador cego): a execução foi aberta

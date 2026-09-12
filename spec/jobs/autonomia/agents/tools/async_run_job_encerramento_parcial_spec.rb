@@ -63,6 +63,36 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run
   end
 
+  # A MESMA execução, sem preço nenhum: submetida, prazo vencido, nada entregue.
+  def cotacao_sem_preco_e_prazo_vencido
+    run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug,
+                                           arguments: { 'produto' => 'auto', 'placa' => 'ABC1D23' },
+                                           scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 1.minute.ago)
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'cot-1', 'produto' => 'auto' })
+    run
+  end
+
+  # NÃO-REGRESSÃO DA COTAÇÃO (rodada 4 da entrega 8, P2 do Codex). O `fail_run` deixou de filtrar por
+  # `delivered_count` e passou a oferecer o encerramento à ferramenta SEMPRE — era o único jeito de a
+  # proposta já gerada sair quando o prazo estoura antes da primeira entrega. A cotação se protege
+  # sozinha: `comparison_pdf` devolve nil sem `entregues` no handle, então a execução que morre sem
+  # preço nenhum continua fechando com a frase de falha, sem comparativo e sem pedir nada ao portal
+  # (se pedisse, o PDF do conector `mock` não está stubbado neste exemplo e a mensagem seria outra).
+  it 'a cotacao que morre sem preco nenhum nao passa a mandar comparativo' do
+    # Arrange
+    run = cotacao_sem_preco_e_prazo_vencido
+
+    # Act
+    described_class.new.perform(run.id, 5)
+
+    # Assert — uma mensagem só, a de falha; nada do comparativo
+    expect(bot_contents).to eq([cotacao.failure_message])
+    expect(bot_contents).not_to include(cotacao::Comparativo::LEGENDA)
+    expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
+    expect(run.reload).to have_attributes(status: 'failed', delivered_count: 0)
+  end
+
   it 'publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue' do
     # Arrange — o comparativo do conector `mock` responde como PDF (entrega 11: sai como arquivo)
     run = cotacao_com_preco_entregue_e_prazo_vencido

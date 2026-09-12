@@ -72,9 +72,10 @@ class Autonomia::Agents::Tools::PendenciaDeEnvio
   end
 
   # A pendência que NÃO vai ser resolvida por envio: a marca sai e o motivo, FECHADO, fica no log —
-  # `execucao_morta`, `vinculo_mudou`, `canal_confirmou`, `nota_privada`, `sem_conversa`, `sem_execucao`.
-  # (`ferramenta_recusou`, o terceiro de `AutorizacaoDaExecucao::RECUSAS`, não chega aqui: a retomada
-  # não tem entrega em mãos — a mensagem já existe — e por isso não pergunta à ferramenta.)
+  # `execucao_morta`, `vinculo_mudou`, `ferramenta_recusou`, `canal_confirmou`, `nota_privada`,
+  # `sem_conversa`, `sem_execucao`. (`ferramenta_recusou` passou a chegar aqui na rodada 4 da entrega
+  # 8: a retomada identifica a entrega pelo TOKEN da mensagem e pergunta à ferramenta se ela ainda
+  # entregaria aquilo — a proposta de uma cotação já refeita não é reenviada, é abandonada.)
   def self.abandonar(mensagem, motivo:, contexto:)
     limpar(mensagem, contexto: contexto)
     Rails.logger.warn("[autonomia][tool][async] envio pendente abandonado #{contexto} message=#{mensagem.id} motivo=#{motivo}")

@@ -16,7 +16,12 @@
 #    `blocked`, e o Redis voltar não dispara nada. `recuperar` trava a conversa da mensagem, RELÊ a
 #    mensagem sob o lock, reconfere a autorização (a mesma do publicador, `AutorizacaoDaExecucao`) e
 #    decide: reenfileira e limpa; ou abandona (limpa a marca e registra o motivo, fechado) quando a
-#    autorização caiu, o canal já confirmou (`source_id`) ou a mensagem é nota privada.
+#    autorização caiu, o canal já confirmou (`source_id`), a mensagem é nota privada, ou a própria
+#    FERRAMENTA já não entregaria aquilo (rodada 4 da entrega 8, P1 do Codex: a proposta de uma
+#    cotação que foi refeita depois do pedido). A mensagem estar no painel não é ter chegado ao
+#    cliente — reenfileirar o `SendReplyJob` dela é entregar o arquivo agora —, e por isso a
+#    pergunta à ferramenta vale aqui como vale no publicador: o que identifica a entrega é o TOKEN
+#    que a mensagem carrega (`EntregaPublicada::CHAVE`), e é a ferramenta que o resolve.
 #
 # `reenviar` é a mecânica comum: o `SendReplyJob` é no-op para mensagem já enviada
 # (`Base::SendOnChannelService#invalid_message?` → `source_id.present?`) e para nota privada. Se o
@@ -86,10 +91,18 @@ class Autonomia::Agents::Tools::RetomadaDeEnvio
     return abandonar(mensagem, 'canal_confirmou') if mensagem.source_id.present?
     return abandonar(mensagem, 'nota_privada') if mensagem.private?
 
-    autorizado = autorizacao(conversation)
+    autorizado = autorizacao(conversation, token: token_de(mensagem))
     return abandonar(mensagem, autorizado.to_s) if recusada?(autorizado)
 
     retomar(mensagem)
+  end
+
+  # O TOKEN DA ENTREGA que esta mensagem carrega — o carimbo que o publicador pôs nela. É por ele que
+  # a FERRAMENTA reconhece o que é seu (`Native::Base#entrega_do_token`) e diz se aquilo ainda pode
+  # chegar ao cliente. Mensagem sem token (ou de quem não reconhece o token) não é recusada por aqui:
+  # vale o resto da autorização, como antes.
+  def token_de(mensagem)
+    mensagem.content_attributes.to_h[::Autonomia::Agents::Tools::EntregaPublicada::CHAVE]
   end
 
   # A marca sai (senão o varredor a acharia a cada 10 min) e o motivo, fechado, vai ao log.

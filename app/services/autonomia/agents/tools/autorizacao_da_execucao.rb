@@ -14,8 +14,13 @@
 # A LINHA VIVA NÃO É A ÚNICA PERGUNTA (rodada 3 da entrega 8, P1 do Codex). A execução da proposta
 # individual continua viva enquanto a COTAÇÃO de que ela saiu é refeita — e o arquivo dela passa a
 # ser o do risco errado. Quem sabe disso é a ferramenta, não este módulo: por isso a terceira
-# pergunta é para ela (`Native::Base#publicavel?`), feita só quando há uma ENTREGA em mãos (a
-# retomada de um envio pendente não tem: a mensagem já existe, e quem decide lá é o resto).
+# pergunta é para ela (`Native::Base#publicavel?`).
+#
+# E ELA VALE TAMBÉM NA RETOMADA (rodada 4, P1 do Codex). Ali não há entrega em mãos — há a MENSAGEM
+# pendente, e dela o token. A mensagem existir no painel NÃO é ter chegado ao cliente: reenfileirar o
+# `SendReplyJob` dela é entregar o arquivo agora. Então a retomada passa o TOKEN, a ferramenta o
+# resolve na própria entrega (`Native::Base#entrega_do_token`) e a pergunta é a mesma. Token que a
+# ferramenta não reconhece (uma frase, o comparativo, outra ferramenta) não recusa nada.
 module Autonomia::Agents::Tools::AutorizacaoDaExecucao
   # Os três motivos FECHADOS de recusa, como saem no log.
   RECUSAS = %i[execucao_morta vinculo_mudou ferramenta_recusou].freeze
@@ -23,9 +28,9 @@ module Autonomia::Agents::Tools::AutorizacaoDaExecucao
   private
 
   # -> o vínculo autorizado AGORA (`AgentInbox`), ou o motivo da recusa (um símbolo de `RECUSAS`).
-  def autorizacao(conversation, entrega: nil)
+  def autorizacao(conversation, entrega: nil, token: nil)
     return :execucao_morta if @run.reload.dead?
-    return :ferramenta_recusou unless entrega.nil? || ferramenta_publicaria?(entrega)
+    return :ferramenta_recusou unless ferramenta_publicaria?(entrega, token)
 
     agent_inbox = vinculo_autorizado(conversation)
     return :vinculo_mudou unless mesmo_vinculo?(agent_inbox)
@@ -37,14 +42,18 @@ module Autonomia::Agents::Tools::AutorizacaoDaExecucao
   # linha guarda (argumentos e conversa) — nunca memoizada, pelo mesmo motivo do vínculo: entre a
   # conferência de entrada e a mensagem há um download, e é a leitura de AGORA que autoriza.
   # Ferramenta fora do catálogo ou agente apagado não recusam nada: quem barra esses casos é o job.
-  # O que ela levantar sobe para o `rescue` do publicador, que devolve `blocked` — a mesma coisa que
-  # já acontece quando a autorização não pode ser lida.
-  def ferramenta_publicaria?(entrega)
+  # Sem entrega e sem token não há o que perguntar. O que ela levantar sobe para o `rescue` do
+  # publicador, que devolve `blocked` — a mesma coisa que já acontece quando a autorização não pode
+  # ser lida (a proposta individual trata as exceções DELA dentro do próprio hook, e não chega aqui).
+  def ferramenta_publicaria?(entrega, token)
+    return true if entrega.nil? && token.blank?
+
     native = ::Autonomia::Agents::Tools::Registry.find(@run.slug)
     return true if native.blank? || @run.agent.blank?
 
-    native.new(agent: @run.agent, params: @run.arguments, conversation: @run.conversation, run: @run)
-          .publicavel?(@run, entrega)
+    tool = native.new(agent: @run.agent, params: @run.arguments, conversation: @run.conversation, run: @run)
+    alvo = entrega || tool.entrega_do_token(@run, token)
+    alvo.nil? || tool.publicavel?(@run, alvo)
   end
 
   def recusada?(autorizacao)

@@ -40,11 +40,11 @@ module InstrucaoDaProposta
     # TERMO 3, pela frase inteira (mutação M3 da rodada de correção): invertida para "mande a
     # comparação no lugar", a instrução mandaria o modelo fazer o que o termo proíbe.
     'nunca mande a comparação no lugar, em silêncio' => -> { Autonomia::Agents::Tools::Recusa::MOTIVOS.key?('seguradora_nao_cotou') },
-    # A origem que mudou debaixo do pedido (rodada de correção, P1 do Codex). NO TURNO o modelo só
-    # pode ler "em andamento": a origem é escolhida entre as NÃO mortas, então `cotacao_substituida`
-    # nunca volta à conferência — ela é dita ao CLIENTE, no envio, e ensinar o modelo a tratar uma
-    # resposta que ele não recebe é promessa sem capacidade (rodada 3, M7 do verificador cego).
-    'há uma cotação nova em andamento' => -> { Autonomia::Agents::Tools::Recusa::MOTIVOS.key?('cotacao_em_andamento') },
+    # A origem que mudou debaixo do pedido (P1 do Codex). Desde a rodada 4 há UM motivo só para isso
+    # — a origem deixou de ser a última cotação da conversa —, e ele chega ao modelo na conferência
+    # do turno (`precheck`) e ao cliente no envio. Ensinar o modelo a tratar uma resposta que ele não
+    # recebe seria promessa sem capacidade (rodada 3, M7 do verificador cego); esta ele recebe.
+    'a cotação foi refeita' => -> { Autonomia::Agents::Tools::Recusa::MOTIVOS.key?('cotacao_substituida') },
     # "Gostei dessa" deixa de escalar: vira a proposta daquela seguradora.
     'primeiro entregue a proposta daquela seguradora' => -> { builder::TOOLS_DO_PRINCIPAL.include?(SLUG) }
   }.freeze

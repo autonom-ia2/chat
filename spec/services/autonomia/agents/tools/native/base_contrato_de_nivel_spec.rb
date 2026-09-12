@@ -31,7 +31,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   # O que o `Bound`, o job e o PUBLICADOR chamam NA INSTÂNCIA (`argumentos` é o que o aceite grava e
   # `publicavel?` é a última palavra da ferramenta antes de a mensagem existir: a proposta individual
   # fixa na primeira a cotação de origem e reconfere na segunda — entrega 8, rodadas de correção).
-  let(:trabalho_de_instancia) { %i[precheck closing_deliveries pedido argumentos publicavel? call start poll] }
+  let(:trabalho_de_instancia) { %i[precheck closing_deliveries pedido argumentos publicavel? entrega_do_token call start poll] }
   # Os cinco textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
   let(:frases) { %i[accepted_message waiting_message failure_message partial_message uncertain_message] }
 

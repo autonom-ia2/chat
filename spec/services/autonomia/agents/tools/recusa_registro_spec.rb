@@ -436,28 +436,20 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'proposta_acima_do_teto', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
         dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Porto', 'Bp', 'Suhai', origem: cotacao_com_precos)) }
       },
-      # A origem FIXADA no aceite morreu antes do `start` (rodada de correção, P1 do Codex).
+      # A origem FIXADA no aceite já não serve: morta antes do `start`, ou — desde a rodada 4 — já
+      # não sendo a última cotação da conversa (P1 do Codex). Um motivo só para os dois.
       'insurance_proposal.rb#recusar_origem#1' => {
         espera: { motivo: 'cotacao_substituida', slug: 'proposta_da_seguradora', onde: 'envio' },
         dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos(status: 'superseded'))) }
       },
-      # A cotou, B está correndo sem preço: a proposta espera pela nova.
-      'insurance_proposal.rb#recusar_origem#2' => {
-        espera: { motivo: 'cotacao_em_andamento', slug: 'proposta_da_seguradora', onde: 'envio' },
-        dispara: lambda {
-          origem = cotacao_com_precos
-          cotacao_nova_em_andamento
-          rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: origem))
-        }
-      },
       # Execução aberta ANTES do deploy que passou a fixar a origem no aceite (rodada 3, M4).
-      'insurance_proposal.rb#recusar_origem#3' => {
+      'insurance_proposal.rb#recusar_origem#2' => {
         espera: { motivo: 'proposta_sem_origem', slug: 'proposta_da_seguradora', onde: 'envio' },
         dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: nil)) }
       },
       # A origem fixada é de OUTRA conversa da mesma conta: não é cotação DESTA conversa, e
       # `cotacao_fixada` não a acha (rodada 3, M1 — a mutação que tira o escopo da conversa reprova).
-      'insurance_proposal.rb#recusar_origem#4' => {
+      'insurance_proposal.rb#recusar_origem#3' => {
         espera: { motivo: 'proposta_sem_cotacao', slug: 'proposta_da_seguradora', onde: 'envio' },
         dispara: lambda {
           alheia = cotacao_com_precos(conversa: create(:conversation, account: account, inbox: inbox, assignee: nil))
@@ -492,25 +484,15 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           rodar_passadas(run, desde: 0, ate: 2)
         }
       },
-      # A origem morreu ENTRE o `start` e o `poll`: o arquivo já gerado não sai, e a ferramenta registra
-      # daqui (o job só registra a recusa do `start`).
+      # A origem deixou de valer ENTRE o `start` e o `poll` (aqui pela cotação nova que a supersedeu):
+      # o arquivo já gerado não sai, e a ferramenta registra daqui — o job só registra a recusa do
+      # `start`. Desde a rodada 4 é uma saída só: a origem `done` com uma cotação nova aberta depois
+      # cai no MESMO motivo, porque a pergunta passou a ser "ela ainda é a última?".
       'insurance_proposal.rb#poll#1' => {
         espera: { motivo: 'cotacao_substituida', slug: 'proposta_da_seguradora', onde: 'envio' },
         dispara: lambda {
           ready_connection
           run = run_promovida(register_async_tool(proposta), arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos(status: 'running')))
-          rodar_passadas(run, desde: 0, ate: 0)
-          cotacao_nova_em_andamento
-          rodar_passadas(run, desde: 1, ate: 1)
-        }
-      },
-      # A origem `done` NÃO vira `superseded` quando outra cotação abre: quem barra a entrega é a
-      # conferência de "em andamento", que o `poll` passou a refazer (rodada 3, I1).
-      'insurance_proposal.rb#poll#2' => {
-        espera: { motivo: 'cotacao_em_andamento', slug: 'proposta_da_seguradora', onde: 'envio' },
-        dispara: lambda {
-          ready_connection
-          run = run_promovida(register_async_tool(proposta), arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos))
           rodar_passadas(run, desde: 0, ate: 0)
           cotacao_nova_em_andamento
           rodar_passadas(run, desde: 1, ate: 1)

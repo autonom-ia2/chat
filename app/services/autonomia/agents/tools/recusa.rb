@@ -69,9 +69,9 @@ module Autonomia::Agents::Tools::Recusa
     'proposta_sem_cotacao' => 'não há nesta conversa uma cotação com preço entregue de onde tirar a proposta',
     'seguradora_ambigua' => 'o nome falado casa com mais de uma seguradora que cotou; a resposta pede para escolher',
     'seguradora_nao_cotou' => 'a seguradora pedida não cotou este seguro; a resposta lista as que cotaram',
-    # Rodada de correção da entrega 8: a cotação de origem é fixada no aceite e conferida depois.
-    'cotacao_em_andamento' => 'há uma cotação nova em andamento nesta conversa, ainda sem preço; a proposta espera por ela',
-    'cotacao_substituida' => 'a cotação de origem foi substituída por um pedido novo depois do aceite; a proposta não sai dos preços antigos',
+    # Rodada de correção da entrega 8: a cotação de origem é fixada no aceite e só vale enquanto for
+    # a última desta conversa — o estado da cotação nova não importa.
+    'cotacao_substituida' => 'a cotação de origem não é mais a última desta conversa; a proposta não sai dos preços antigos',
     'proposta_nao_gerada' => 'o portal não gerou a proposta da seguradora pedida (recusou ou falhou), embora ela tenha cotado',
     'proposta_sem_origem' => 'a execução foi aberta sem a cotação de origem fixada (é anterior ao deploy); o pedido precisa ser refeito'
   }.freeze

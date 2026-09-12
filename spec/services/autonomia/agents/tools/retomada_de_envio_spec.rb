@@ -28,9 +28,9 @@ RSpec.describe Autonomia::Agents::Tools::RetomadaDeEnvio do
   # -> a mensagem marcada pela primeira tentativa do publicador (fila recusando o envio), com a fila já
   # de volta — LIDA DO BANCO, como o varredor a lê (`marcadas`): a instância do `let` carrega o
   # `display_id` que o banco atribui, e `lock!` recusa registro com mudança não persistida.
-  def mensagem_pendente
+  def mensagem_pendente(execucao = run, texto = 'cotação pronta')
     fila_recusa_o_envio
-    expect(Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish('cotação pronta')).to be_blocked
+    expect(Autonomia::Agents::Tools::AsyncPublisher.new(run: execucao).publish(texto)).to be_blocked
     fila_volta
     Message.find(conversation.messages.where(sender_type: 'AgentBot').sole.id).tap do |mensagem|
       expect(Autonomia::Agents::Tools::PendenciaDeEnvio).to be_pendente(mensagem)
@@ -71,5 +71,73 @@ RSpec.describe Autonomia::Agents::Tools::RetomadaDeEnvio do
     # Assert
     expect(resolvido).to be(true)
     expect(SendReplyJob).not_to have_been_enqueued
+  end
+
+  # A RETOMADA TAMBÉM PERGUNTA À FERRAMENTA (rodada 4 da entrega 8, P1 do Codex; mutação MR).
+  #
+  # A mensagem existir no painel NÃO é ter chegado ao cliente: reenfileirar o `SendReplyJob` dela é
+  # entregar o arquivo AGORA. Se a cotação de origem foi refeita nesse meio-tempo, a proposta é a dos
+  # preços que o cliente descartou — e o desvio R6 da rodada 3 ("a mensagem já existe, quem decide lá
+  # é o resto") deixava esse reenvio passar. Quem identifica a entrega é o TOKEN da mensagem, e a
+  # pendência é RESOLVIDA (`abandonar`), não deixada para o varredor reencontrar a cada 10 min.
+  describe 'a entrega que a propria ferramenta ja nao publicaria' do
+    let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
+    let(:proposta) { Autonomia::Agents::Tools::Native::InsuranceProposal }
+    # `http`: a forma de arquivo recusa a URL, a proposta vai como LINK EM TEXTO — e é esse texto,
+    # com o mesmo token, que a mensagem pendente carrega (o caminho da reserva, já provado na
+    # ferramenta). Assim a pendência é montada sem download nem anexo.
+    let(:url) { 'http://arquivos.exemplo.test/proposta-8.pdf' }
+    let(:reserva) { "Proposta da Porto:\n#{url}" }
+
+    # A cotação de origem (com preço e mapa de nomes) e a execução da PROPOSTA que saiu dela, com a
+    # URL já gerada no handle — o estado em que o publicador a entregou.
+    def proposta_gerada_da_cotacao
+      origem = Autonomia::Agents::ToolRun.create!(
+        account: account, agent: agent, conversation_id: conversation.id, slug: cotacao.slug, status: 'done',
+        execution_key: SecureRandom.uuid, arguments: { 'produto' => 'auto' },
+        handle: { 'quote_id' => 'q1', 'produto' => 'auto', cotacao::DELIVERED_KEY => ['8'],
+                  cotacao::NOMES_KEY => { '8' => 'Porto' } }
+      )
+      execucao_da_proposta(origem)
+    end
+
+    def execucao_da_proposta(origem)
+      run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: proposta.slug,
+                                             arguments: { 'seguradoras' => ['Porto'], proposta::ORIGEM => origem.id },
+                                             scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+      run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+      run.update!(handle: { 'sufixo' => 'placa ABC1D23',
+                            proposta::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => url }] })
+      run
+    end
+
+    def cotacao_nova
+      Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug, arguments: { 'produto' => 'auto' },
+                                       scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+                                .tap { |nova| nova.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now) }
+    end
+
+    it 'abandona a pendencia em vez de reenviar a proposta de uma cotacao ja refeita' do
+      # Arrange — a proposta virou mensagem, o envio ficou pendente, e só então o cliente mandou refazer
+      execucao = proposta_gerada_da_cotacao
+      mensagem = mensagem_pendente(execucao, reserva)
+      cotacao_nova
+
+      # Act
+      resolvido = described_class.new(run: execucao).recuperar(mensagem)
+
+      # Assert — nada vai ao cliente, e a pendência não fica para o varredor achar de novo
+      expect(resolvido).to be(true)
+      expect(SendReplyJob).not_to have_been_enqueued
+      expect(Autonomia::Agents::Tools::PendenciaDeEnvio).not_to be_marcada(Message.find(mensagem.id))
+    end
+
+    it 'reenvia normalmente enquanto a cotacao de origem continua sendo a ultima' do
+      execucao = proposta_gerada_da_cotacao
+      mensagem = mensagem_pendente(execucao, reserva)
+
+      expect(described_class.new(run: execucao).recuperar(mensagem)).to be(true)
+      expect(SendReplyJob).to have_been_enqueued.with(mensagem.id).once
+    end
   end
 end

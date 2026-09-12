@@ -549,10 +549,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(no_job_com_origem(velha, 'Porto').start['motivo']).to eq('proposta_sem_cotacao')
     end
 
-    # `pending` ÓRFÃ NÃO É COTAÇÃO EM ANDAMENTO (verificador cego, I2): o worker morreu entre o
+    # `pending` ÓRFÃ NÃO CONTA COMO RECOTAÇÃO (verificador cego, I2): o worker morreu entre o
     # aceite e o despacho — um deploy basta —, e a linha fica parada até o prazo, sem ninguém para
     # executá-la. Contá-la travaria a proposta por uma cotação que nunca vai acontecer; é a mesma
-    # convenção de `ToolRun.opened_for_turn?`. A mutação MI (`active?` de volta) reprova aqui.
+    # convenção de `ToolRun.opened_for_turn?` (`Origem::SEM_TRABALHO`).
     it 'a cotacao aceita e nunca promovida nao barra a proposta' do
       cotacao_com_precos
       Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug, arguments: { 'produto' => 'auto' },
@@ -565,18 +565,57 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     end
 
     # O CENÁRIO DO CODEX: A cotou, o cliente corrigiu o veículo e abriu B. "Me manda a da Porto"
-    # durante B não pode gerar a proposta de A — a resposta é que a cotação nova está em andamento.
-    it 'A cotou e B esta correndo sem preco: recusa "em andamento", no turno e no envio, sem portal' do
+    # durante B não pode gerar a proposta de A — e a resposta é a mesma no turno e no envio.
+    it 'A cotou e B esta correndo sem preco: recusa que a cotacao foi refeita, no turno e no envio, sem portal' do
       cotacao_com_precos(quote_id: 'A')
       cotacao_nova_em_andamento
 
       conferencia = no_turno('Porto').precheck
       handle = no_job_com_origem(Autonomia::Agents::ToolRun.find_by(slug: cotacao.slug, status: 'done'), 'Porto').start
 
-      expect(conferencia.motivo).to eq('cotacao_em_andamento')
-      expect(conferencia.to_s).to include('Ainda estou buscando os preços da cotação nova')
-      expect(handle['motivo']).to eq('cotacao_em_andamento')
+      expect(conferencia.motivo).to eq('cotacao_substituida')
+      expect(conferencia.to_s).to include('A cotação foi refeita depois desse pedido')
+      expect(handle['motivo']).to eq('cotacao_substituida')
       expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    # A ORIGEM SÓ VALE ENQUANTO FOR A ÚLTIMA (rodada 4, P1 do Codex; mutações MU e MO). A guarda
+    # anterior era "há uma cotação nova VIVA e ainda sem preço", e ela voltava a AUTORIZAR a origem
+    # antiga no instante em que a nova recebia preço: o cliente podia receber o PDF de A depois de já
+    # estar lendo os preços de B. É também aqui que se prova que o `start` usa a origem FIXADA e não
+    # a última com preço (MO): ignorá-la geraria a proposta de B, em vez de recusar.
+    it 'a cotacao nova que JA recebeu preco tambem barra a origem antiga' do
+      origem = cotacao_com_precos(quote_id: 'A')
+      cotacao_com_precos(quote_id: 'B')
+
+      handle = no_job_com_origem(origem, 'Porto').start
+
+      expect(handle['motivo']).to eq('cotacao_substituida')
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    # R7, que o verificador cego reproduziu pelo caminho real: a recotação que MORRE sem preço não
+    # barrava nada, e o anexo da lista antiga saía sem uma palavra ao cliente.
+    it 'a recotacao que falhou sem preco tambem barra a origem antiga' do
+      origem = cotacao_com_precos(quote_id: 'A')
+      cotacao_nova_em_andamento.update!(status: 'failed')
+
+      handle = no_job_com_origem(origem, 'Porto').start
+
+      expect(handle['motivo']).to eq('cotacao_substituida')
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    # E O CONTRÁRIO: enquanto ela É a última, a proposta sai — uma cotação mais VELHA na conversa não
+    # muda nada. Sem este exemplo, a regra "nunca entregue" passaria na mutação MU.
+    it 'a origem que ainda e a ultima cotacao da conversa gera a proposta' do
+      cotacao_com_precos(quote_id: 'velha')
+      origem = cotacao_com_precos(quote_id: 'A')
+
+      handle = no_job_com_origem(origem, 'Porto').start
+
+      expect(handle['motivo']).to be_nil
+      expect(handle[described_class::GERADAS].pluck('code')).to eq(['8'])
     end
 
     # ORIGEM SUPERSEDIDA ENTRE O ACEITE E O START: a lista parcial era a origem; um pedido novo a
@@ -591,18 +630,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(handle['motivo']).to eq('cotacao_substituida')
       expect(handle['pedido']).to include('A cotação foi refeita depois desse pedido')
       expect(connector).not_to have_received(:quote_proposal)
-    end
-
-    # O START USA SÓ A ORIGEM FIXADA (mutação MO reprova aqui): uma cotação MAIS NOVA com preço,
-    # encerrada depois do aceite, não troca a origem — a proposta é da lista que o cliente leu ao pedir.
-    it 'o start usa a origem fixada no aceite, e nao a ultima cotacao com preco da conversa' do
-      origem = cotacao_com_precos(quote_id: 'fixada')
-      cotacao_com_precos(quote_id: 'mais-nova')
-
-      handle = no_job_com_origem(origem, 'Porto').start
-
-      expect(handle['quote_id']).to eq('fixada')
-      expect(connector).to have_received(:quote_proposal).with(hash_including(quote_id: 'fixada')).once
     end
 
     it 'guarda no handle o que o poll precisa: a origem e o sufixo do nome do arquivo' do
@@ -756,6 +783,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     # e a proposta sai com a cotação ainda `running` — ou encerrada em `failed` depois de entregar
     # preço. Só as MORTAS não recebem proposta, e quem barra é o `poll`, antes de anotar.
     it 'anota tambem na cotacao ainda viva, e na encerrada por prazo com preco entregue' do
+      run # a cotação do `let` nasce ANTES das deste exemplo: a origem de cada passada é a última da conversa
       viva = cotacao_com_precos(status: 'running', quote_id: 'viva')
       publicar!(passada(handle.merge(described_class::ORIGEM => viva.id), 1))
       passada(handle.merge(described_class::ORIGEM => viva.id), 2)
@@ -823,19 +851,33 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(viva.handle).not_to have_key(cotacao::PROPOSTAS_KEY)
     end
 
-    # A COTAÇÃO NOVA CORRENDO TAMBÉM BARRA O `poll` (verificador cego, I1; mutação MA): uma origem
-    # `done` NÃO vira `superseded` quando outra abre, então `dead?` sozinho deixava a proposta da
-    # lista velha sair enquanto o cliente esperava os preços novos — o mesmo pedido que o `start`
-    # recusa. A janela é de dezenas de segundos a minutos, não "de segundos".
-    it 'a cotacao nova em andamento entre o start e o poll barra a entrega, e o cliente le o porque' do
+    # A COTAÇÃO NOVA TAMBÉM BARRA O `poll` (verificador cego, I1; mutação MU): uma origem `done` NÃO
+    # vira `superseded` quando outra abre, então `dead?` sozinho deixava a proposta da lista velha
+    # sair enquanto o cliente esperava os preços novos — o mesmo pedido que o `start` recusa. A
+    # janela é de dezenas de segundos a minutos, não "de segundos".
+    it 'a cotacao nova entre o start e o poll barra a entrega, e o cliente le o porque' do
       run
       cotacao_nova_em_andamento
 
       progresso = passada(handle, 1)
 
       expect(progresso).to be_done
-      expect(progresso.deliveries).to eq([described_class::EM_ANDAMENTO])
+      expect(progresso.deliveries).to eq([described_class::SUBSTITUIDA])
       expect(linha.reload.handle).not_to have_key(cotacao::PROPOSTAS_KEY)
+      expect(conversation.messages.count).to be_zero
+    end
+
+    # E A COTAÇÃO NOVA QUE JÁ TEM PREÇO barra igual (rodada 4, P1 do Codex): a guarda anterior
+    # soltava a origem antiga assim que a nova entregava preço, e o arquivo velho saía por cima da
+    # lista nova que o cliente estava lendo.
+    it 'a cotacao nova COM preco entre o start e o poll tambem barra a entrega' do
+      run
+      cotacao_com_precos(quote_id: 'B')
+
+      progresso = passada(handle, 1)
+
+      expect(progresso).to be_done
+      expect(progresso.deliveries).to eq([described_class::SUBSTITUIDA])
       expect(conversation.messages.count).to be_zero
     end
 
@@ -922,6 +964,34 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
 
       expect(no_job('Porto', 'Suhai', run: run).closing_deliveries(handle)).to be_empty
     end
+
+    # UM ARQUIVO SÓ, TAMBÉM AQUI (rodada 4, menor 1 do verificador cego; mutação MD): dois downloads
+    # de 20 s na mesma passada passam dos 25 s do shutdown do Sidekiq, e um SIGTERM no meio perde o
+    # segundo PARA SEMPRE — a marca `closed` já foi adquirida e ninguém volta a este caminho.
+    it 'entrega no maximo UM arquivo no encerramento, mesmo com duas propostas geradas' do
+      duas = handle.merge(
+        described_class::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'https://arquivos.exemplo.test/proposta-8.pdf' },
+                                     { 'code' => '20', 'name' => 'Suhai', 'url' => 'https://arquivos.exemplo.test/proposta-20.pdf' }],
+        described_class::PENDENTES => []
+      )
+
+      entregas = no_job('Porto', 'Suhai', run: run).closing_deliveries(duas)
+
+      expect(entregas.size).to eq(1)
+      expect(arquivo(entregas.first).nome).to eq('Proposta Porto — placa ABC1D23.pdf')
+    end
+
+    # A PROPOSTA ENTREGUE NÃO PODE SUMIR DA MEDIDA (rodada 4, importante 1 do verificador cego;
+    # mutação MM): `confirmar` só rodava no `poll`, então a proposta que virou mensagem na última
+    # passada antes do prazo ficava sem marca na cotação — o cliente com o PDF no WhatsApp e a
+    # medida da entrega 7 contando zero.
+    it 'anota na cotacao a proposta que ja virou mensagem, no proprio encerramento' do
+      publicar_entrega!(run, conversation, no_job('Porto', 'Suhai', run: run).closing_deliveries(handle).first)
+
+      no_job('Porto', 'Suhai', run: run).closing_deliveries(handle)
+
+      expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
+    end
   end
 
   # A ORIGEM RECONFERIDA NA PUBLICAÇÃO EFETIVA (Codex, rodada 2, P1). Entre o `poll` e a mensagem há
@@ -967,6 +1037,32 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       cotacao_nova_em_andamento
 
       expect(proposta.publicavel?(run, entrega)).to be(false)
+    end
+
+    # A cotação nova que JÁ entregou preço barra igual: a origem deixou de ser a última (rodada 4).
+    # A ferramenta é montada ANTES de B existir — é o que o publicador faz: ele a monta com os
+    # argumentos que o aceite gravou, com a origem já fixada na lista que o cliente leu.
+    it 'recusa a proposta quando a cotacao nova ja entregou preco' do
+      linha.update!(status: 'done')
+      run
+      ferramenta = proposta
+      cotacao_com_precos(quote_id: 'B')
+
+      expect(ferramenta.publicavel?(run, entrega)).to be(false)
+    end
+
+    # O QUE A CONFERÊNCIA LEVANTAR MORRE NO HOOK (rodada 4, menor 4 do verificador cego; mutação MX).
+    # Subindo, o publicador devolvia `blocked` para QUALQUER entrega daquela execução — inclusive as
+    # frases —, e o cliente ficava mudo depois de "já estou buscando". Na dúvida, o arquivo não sai;
+    # a frase, que nem chega a consultar o banco, sai.
+    it 'a conferencia que levanta nao sobe para o publicador: o arquivo nao sai, as frases saem' do
+      ferramenta = proposta
+      run
+      allow(Autonomia::Agents::ToolRun).to receive(:where).and_raise(ActiveRecord::StatementInvalid.new('banco fora'))
+
+      expect(ferramenta.publicavel?(run, entrega)).to be(false)
+      expect(ferramenta.publicavel?(run, described_class::SUBSTITUIDA)).to be(true)
+      expect(ferramenta.publicavel?(run, described_class::PARCIAL)).to be(true)
     end
 
     it 'recusa tambem o link de reserva da mesma proposta' do
@@ -1062,6 +1158,22 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(bot_messages.map(&:content))
         .to eq(['Proposta da Porto.', 'Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.',
                 described_class::PARCIAL])
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+    end
+
+    # O PRAZO ESTOUROU ANTES DA PRIMEIRA ENTREGA (rodada 4, P2 do Codex; mutação MF): o PDF já estava
+    # gerado e `delivered_count` era zero, então o encerramento nem era oferecido à ferramenta — saía
+    # só "não consegui gerar a proposta", com o arquivo pronto parado no handle.
+    it 'com o PDF gerado e o prazo estourado antes de qualquer entrega, o arquivo sai antes da frase' do
+      cotacao_com_precos
+      run = execucao('Porto')
+
+      passadas(run, 1)
+      run.update!(expires_at: 1.second.ago)
+      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 1)
+
+      expect(bot_messages.map(&:content)).to eq(['Proposta da Porto.', described_class::PARCIAL])
+      expect(bot_messages.first.attachments.sole.file.filename.to_s).to eq('Proposta Porto — placa ABC1D23.pdf')
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
     end
 

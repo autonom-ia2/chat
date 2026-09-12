@@ -227,13 +227,17 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.finish!('done')
   end
 
-  # ACABAR SEM FECHAR TAMBÉM É UM DESFECHO. A guarda `delivered_count.zero?` está certa no que ela
-  # evita — dizer "não consegui" a quem acabou de receber preço desmente o que ele está lendo —, mas
-  # o efeito era o cliente ficar sem NADA: em 08/09/2026 uma cotação entregou cinco preços, estourou
-  # o prazo, e a conversa simplesmente parou, sem comparativo e sem uma palavra.
+  # ACABAR SEM FECHAR TAMBÉM É UM DESFECHO, E QUEM DECIDE O QUE AINDA VALE É A FERRAMENTA. Em
+  # 08/09/2026 uma cotação entregou cinco preços, estourou o prazo, e a conversa simplesmente parou,
+  # sem comparativo e sem uma palavra. A correção de então condicionou o encerramento a
+  # `delivered_count` positivo, e sobrou o defeito simétrico (Codex, rodada 3 da entrega 8, P2): com
+  # o prazo vencendo ANTES da primeira entrega, o arquivo já gerado morria no handle e o cliente lia
+  # "não consegui gerar a proposta" ao lado de um PDF que existia.
   #
-  # Agora, quando já houve entrega, a ferramenta ganha a chance de entregar o que ainda vale (o
-  # comparativo em PDF) e o cliente recebe um fecho que não desmente os preços.
+  # Agora o encerramento é SEMPRE oferecido à ferramenta, e o filtro mora nela, que é quem sabe o que
+  # tem em mãos: a cotação só gera o comparativo com preço entregue (`comparison_pdf` exige
+  # `entregues`), então nada passa a sair onde não saía; a proposta individual só entrega o arquivo
+  # que o portal gerou e que ainda não virou mensagem.
   #
   # Quem acaba com intenção anotada e sem número (entrega 5) fica marcado para a lista do corretor,
   # seja qual for o código do desfecho: prazo esgotado ou terceira intenção, a cotação pode existir.
@@ -242,9 +246,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # leitura velha (um objeto que ainda diz "intenção sem número" quando outro processo já registrou).
   def fail_run(run, native, code)
     run.reload
-    if native.present?
-      run.delivered_count.zero? ? publish(run, mensagem_de_falha(run, native)) : encerrar(run, native)
-    end
+    encerrar(run, native) if native.present?
     run.finish!('failed', failure_code: code.presence || 'tool_failed')
   end
 
@@ -260,20 +262,35 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   def encerrar(run, native)
     return unless run.merge_handle!({ CLOSED_KEY => true }, ausente: CLOSED_KEY)
 
-    fechamento(run, native).each { |texto| publish(run, texto) }
+    publish(run, fecho(run, native, entregar_o_que_resta(run, native)))
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{run.slug} #{e.class}")
   end
 
-  # O que sai na despedida: o que a ferramenta ainda tem para entregar, e o fecho.
+  # O que a ferramenta ainda tem para entregar. -> true quando alguma dessas entregas foi aceita
+  # (publicada, ou adiada — a adiada sai sozinha pelo `AsyncPublishJob`).
+  #
+  # NÃO conta em `delivered_count`, de propósito: esse contador é o da entrega do TRABALHO, e é ele
+  # que diz, na janela do pedido repetido (entrega 10), que a execução deu resultado.
   #
   # SEM AGENTE NÃO SE MONTA A FERRAMENTA — e isto não é defesa sobrando: `agente_indisponivel` é um
   # dos caminhos que chegam aqui, alcançado JUSTAMENTE porque o agente sumiu.
-  def fechamento(run, native)
-    return [native.partial_message] if run.agent.blank?
+  def entregar_o_que_resta(run, native)
+    return false if run.agent.blank?
 
     tool = ferramenta(run, native)
-    Array(tool.closing_deliveries(tool_handle(run))) + [native.partial_message]
+    Array(tool.closing_deliveries(tool_handle(run))).map { |entrega| publish(run, entrega) }
+                                                    .any? { |result| result.published? || result.deferred? }
+  end
+
+  # O FECHO VEM DEPOIS DAS ENTREGAS, e é escolhido pelo que o cliente tem em mãos: com algo entregue
+  # (antes, ou agora no encerramento), o fecho parcial; sem nada, a frase de falha. Dizer "não
+  # consegui" a quem acabou de receber preço desmente o que ele está lendo, e dizer "o que chegou
+  # está aqui em cima" a quem não recebeu nada é pior ainda.
+  def fecho(run, native, entregou)
+    return native.partial_message if entregou || run.delivered_count.positive?
+
+    mensagem_de_falha(run, native)
   end
 
   # A ferramenta montada para trabalhar FORA do turno: com a conversa da execução (a proposta
