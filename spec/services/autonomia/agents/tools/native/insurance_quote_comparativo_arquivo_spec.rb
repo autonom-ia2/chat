@@ -31,7 +31,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   def comparativo(tool)
-    entrega_de_arquivo.de(tool.closing_deliveries('quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43']).first)
+    entrega_de_arquivo.de(tool.closing_deliveries({ 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'] }).first)
   end
 
   it 'entrega o comparativo como arquivo, nomeado pela placa que o cliente informou' do
@@ -75,7 +75,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
 
     it 'entrega o texto com o link, como antes, e registra o defeito da forma' do
-      entrega = tool.closing_deliveries('quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43']).first
+      entrega = tool.closing_deliveries({ 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'] }).first
 
       expect(entrega).to eq("Comparativo com todas as opções:\n#{url_http}")
       expect(Rails.logger).to have_received(:warn)
