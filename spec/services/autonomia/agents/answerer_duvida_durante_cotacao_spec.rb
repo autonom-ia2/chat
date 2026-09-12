@@ -78,12 +78,19 @@ RSpec.describe Autonomia::Agents::Answerer do
     connector
   end
 
-  # A cotação que já está correndo: aberta numa mensagem anterior e promovida pelo Responder.
-  def cotacao_correndo
-    run = Autonomia::Agents::ToolRun.open!(
+  # A cotação ACEITA no turno anterior e ainda não despachada: `pending`, que é como `ToolRun.open!`
+  # cria. Este é o estado frágil — `pending` é aceitação que ainda não virou trabalho, e é o estado
+  # que o `discard!` e a abertura de um pedido novo podem varrer.
+  def cotacao_aceita
+    Autonomia::Agents::ToolRun.open!(
       agent: agente, slug: cotacao.slug, arguments: { 'produto' => 'auto', 'dados' => '{}' },
       scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id, origin_message_id: 77 }
     )
+  end
+
+  # A cotação que já está correndo: aberta numa mensagem anterior e promovida pelo Responder.
+  def cotacao_correndo
+    run = cotacao_aceita
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
     run.reload
   end
@@ -96,15 +103,16 @@ RSpec.describe Autonomia::Agents::Answerer do
                                        headers: { 'Content-Type' => 'application/json' })
   end
 
-  # O modelo dublado: recebe o catálogo do turno e devolve a chamada de função que a §7.1 pede.
-  def stub_do_modelo(function_call:)
+  # O modelo dublado: recebe o catálogo do turno e devolve a chamada de função que a §7.1 pede. Sem
+  # `function_call` ele só devolve a resposta — serve para olhar o catálogo, sem executar nada.
+  def stub_do_modelo(function_call: nil)
     capturado = { tools: nil, outputs: nil }
     resolver = instance_double(Crm::Ai::CredentialResolver, resolve: 'ai-credential')
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
     client = instance_double(Crm::Ai::ResponsesClient)
     allow(client).to receive(:create_with_tool_executor) do |**kwargs, &executor|
       capturado[:tools] = Array(kwargs[:tools])
-      capturado[:outputs] = executor.call([function_call]) if executor
+      capturado[:outputs] = executor.call([function_call]) if function_call && executor
       { text: resposta_do_modelo }
     end
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
@@ -119,7 +127,13 @@ RSpec.describe Autonomia::Agents::Answerer do
     capturado[:outputs].first[:output]
   end
 
-  describe 'a dúvida é respondida pela cláusula (termo 1)' do
+  # TERMO 1, PARCIAL — O QUE SE PROVA AQUI É O CONTRATO FERRAMENTA→MODELO. O termo diz "a dúvida é
+  # respondida com a cláusula, dizendo de qual seguradora é": a frase que o CLIENTE lê é escrita pelo
+  # modelo, e aqui o modelo é dublado — o dublê responde "cobre reboque" independentemente do que a
+  # ferramenta devolveu. O que a máquina prova é o insumo: a consulta foi feita com a seguradora que
+  # o cliente citou, e o trecho e o nome da seguradora chegaram ao modelo. A conduta fecha na prova
+  # real (§7 da auditoria).
+  describe 'o que chega ao modelo na dúvida — contrato ferramenta→modelo (termo 1, parcial)' do
     it 'consulta as condições gerais e devolve ao modelo o trecho e a seguradora' do
       # Arrange
       cotacao_correndo
@@ -146,8 +160,11 @@ RSpec.describe Autonomia::Agents::Answerer do
     end
   end
 
-  describe 'a cotação em andamento não é tocada (termos 2 e 5)' do
-    it 'a execução continua running, sem linha nova, sem superseded e sem chamar o portal' do
+  # TERMOS 2 E 5 — invariante de código, e só dele: executar SOMENTE a consulta preserva a execução
+  # viva. Que o modelo chame só a consulta (e não também o especialista, que reabriria a cotação) é
+  # conduta dele, e se prova na conversa real.
+  describe 'executar só a consulta não toca na cotação em andamento (termos 2 e 5)' do
+    it 'a execução running continua running, sem linha nova, sem superseded e sem chamar o portal' do
       # Arrange
       portal = espiar_portal
       run = cotacao_correndo
@@ -165,7 +182,31 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(portal).not_to have_received(:quote_start)
     end
 
-    it 'o turno da dúvida não aceita nenhuma execução' do
+    # O ESTADO FRÁGIL: a cotação foi ACEITA no turno anterior e ainda não foi despachada (`pending`).
+    # `pending` não é protegida como `running` — ela não conta para `possivelmente_duplicada?`, e é o
+    # estado que um pedido novo varre (`ToolRun.open!` supersedia TODA execução ativa, pending
+    # inclusive). Se o turno da dúvida abrisse qualquer execução, é esta linha que morreria primeiro,
+    # e a cotação aceita nunca chegaria ao portal.
+    it 'a execução aceita e ainda não despachada continua pending' do
+      portal = espiar_portal
+      run = cotacao_aceita
+      stub_da_cg(status: 'answered', grounded: true)
+      stub_do_modelo(function_call: chamada_da_cg)
+
+      responder
+
+      expect(run.reload.status).to eq('pending')
+      expect(runs.count).to eq(1)
+      expect(runs.where(status: 'superseded')).to be_empty
+      expect(portal).not_to have_received(:quote_start)
+    end
+
+    # ISTO OLHA SÓ A MEMÓRIA DO TURNO, não o banco: `Delivery#runs` é a lista que `accept_async`
+    # preenche, e é ela que o `Responder` consulta no fim do turno para promover e despachar. Vazia
+    # quer dizer que o turno não tem nada a despachar — uma mutação que abrisse `ToolRun` por fora do
+    # `Delivery` passaria por aqui (e foi o que aconteceu em 12/09/2026). Quem conta linha no banco
+    # são os exemplos acima.
+    it 'o contexto de entrega do turno sai sem execução aceita — nada a despachar' do
       cotacao_correndo
       stub_da_cg(status: 'answered', grounded: true)
       stub_do_modelo(function_call: chamada_da_cg)
@@ -191,9 +232,12 @@ RSpec.describe Autonomia::Agents::Answerer do
     end
   end
 
-  # TERMO 4 — SEM CLÁUSULA, NÃO SE RESPONDE DE MEMÓRIA. `insufficient_context` sai da API com texto
-  # plausível junto; o que o modelo recebe é a ordem de não usar esse texto.
-  describe 'sem cláusula, o modelo é mandado não responder de memória (termo 4)' do
+  # TERMO 4, PARCIAL — TAMBÉM É CONTRATO FERRAMENTA→MODELO. `insufficient_context` sai da API com
+  # texto plausível junto; o que a ferramenta entrega ao modelo é a ordem de NÃO usar esse texto. Se
+  # o modelo obedece é outra coisa: o dublê deste arquivo responde "cobre reboque" mesmo com
+  # `insufficient_context`, e passa — porque a frase ao cliente não é o que este exemplo mede. A
+  # obediência fecha na prova real (§7 da auditoria, item 9).
+  describe 'sem cláusula, a ferramenta manda o modelo não responder de memória (termo 4, parcial)' do
     it 'não repassa a prosa plausível e manda confirmar com um especialista' do
       # Arrange
       cotacao_correndo
@@ -222,6 +266,43 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(run.reload.status).to eq('running')
       expect(runs.count).to eq(1)
       expect(portal).not_to have_received(:quote_start)
+    end
+  end
+
+  # A TERCEIRA FONTE QUE NÃO PODE EXISTIR (termo 4). "Sem cláusula, diga que não achou" só é uma
+  # ordem cumprível se a cláusula for a ÚNICA fonte possível para cobertura. `web_search` é a busca
+  # nativa da Responses API, entra no catálogo de todo agente por padrão (`Answerer#answer_tools`), e
+  # responderia a mesma pergunta com texto de internet — sem cláusula, sem seguradora e sem SUSEP.
+  # Ela sai do catálogo do agente de cotação, e só dele.
+  describe 'a busca web não é oferecida ao agente de cotação' do
+    around do |example|
+      with_modified_env(AI_WEB_SEARCH_ENABLED: 'true') { example.run }
+    end
+
+    it 'o turno da dúvida não tem web_search no catálogo, e tem a consulta às condições gerais' do
+      cotacao_correndo
+      stub_da_cg(status: 'answered', grounded: true)
+      capturado = stub_do_modelo(function_call: chamada_da_cg)
+
+      responder
+
+      expect(capturado[:tools].map { |tool| tool[:type] }).not_to include('web_search')
+      expect(capturado[:tools].filter_map { |tool| tool[:name] }).to include('consultar_condicoes_gerais')
+    end
+
+    # O CONTRASTE QUE IMPEDE A REGRESSÃO DOS OUTROS AGENTES: mesma conta, mesmo dublê, mesmo turno —
+    # quem não é agente de cotação continua com a busca. Sem este exemplo, desligar a busca para
+    # todo mundo passaria.
+    it 'um agente comum da mesma conta continua recebendo web_search' do
+      comum = Autonomia::Agents::Agent.create!(
+        account: account, name: 'Ana', agent_type: 'custom', status: :active, enabled: true,
+        instruction: 'Atenda o cliente.', config: { 'with_knowledge' => false }
+      )
+      capturado = stub_do_modelo
+
+      described_class.new(agent: comum, query: duvida, trust_instruction: true).answer
+
+      expect(capturado[:tools].map { |tool| tool[:type] }).to include('web_search')
     end
   end
 end
