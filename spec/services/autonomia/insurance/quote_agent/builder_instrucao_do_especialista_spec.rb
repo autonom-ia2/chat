@@ -13,11 +13,11 @@ require 'rails_helper'
 # PROVA POR MUTAÇÃO (`mutacoes_e3.py`): promessa falsa acrescentada ao texto, valor de cobertura de
 # volta, ferramenta tirada do especialista, `coverage` fora da entrada, runtime lendo a coluna —
 # cada uma reprova um exemplo daqui.
-module ManualDoEspecialistaDeAuto
-  ARQUIVO = Autonomia::Insurance::QuoteAgent::Builder::INSTRUCOES.join('especialista_auto.md')
+# O FORMULÁRIO E A ENTRADA, que é o que as promessas consultam. Mora separado da tabela porque são
+# duas coisas: ler o que o adapter expõe ao modelo, e escrever a promessa que depende disso. A tabela
+# só cresce, e misturar as duas fazia o módulo passar de 100 linhas a cada entrega.
+module FormularioDoEspecialista
   SCHEMA = Autonomia::Insurance::Connector::Mock::SCHEMA_AUTO
-
-  module_function
 
   def campos
     @campos ||= SCHEMA['campos'].index_by { |c| c['campo'] }
@@ -51,6 +51,13 @@ module ManualDoEspecialistaDeAuto
   def entrada_de_auto(params)
     Autonomia::Insurance::QuoteInput.new(produto: 'auto', params: params, dados: {}, commission_percent: nil).to_h
   end
+end
+
+module ManualDoEspecialistaDeAuto
+  extend FormularioDoEspecialista
+
+  ARQUIVO = Autonomia::Insurance::QuoteAgent::Builder::INSTRUCOES.join('especialista_auto.md')
+  SCHEMA = FormularioDoEspecialista::SCHEMA
 
   # CADA PROMESSA, PELA FRASE EXATA, E O QUE A SUSTENTA. A frase é a âncora: se o texto mudar e a
   # frase sumir, o exemplo reprova — a tabela não pode envelhecer em silêncio.
@@ -101,12 +108,19 @@ module ManualDoEspecialistaDeAuto
     # caso-producao-5045/`): sem o parágrafo, 13 defeitos em 16 no bilhete que só repassa as palavras
     # do cliente; com ele, 0.
     #
+    # A FRONTEIRA É REFERÊNCIA × INDICAÇÃO (P1 do Codex, 12/09). A primeira escrita desta regra dizia
+    # que o segurado é SEMPRE a pessoa da conversa — e isso quebra caso legítimo e previsto no
+    # próprio manual: cotar para a esposa com o CPF dela, cotar para empresa (§3), o "CPF do titular
+    # ou CNPJ" da §4. O que o documento não pode é DECIDIR sozinho; quem o cliente indica de forma
+    # explícita continua valendo.
+    #
     # QUEM É O SEGURADO É O QUE O ESPECIALISTA ESCREVE, e chega assim ao portal: o `cpf` e o `nome`
     # que ele manda viram `insured.document` e `insured.name` na entrada, e o grupo `insured` viaja.
     # Se o grupo saísse da entrada, ou se o CPF deixasse de decidir quem é o segurado, a regra
-    # perderia objeto. Os campos pessoais que ela proíbe copiar são conferidos um a um: proibir o que
-    # não existe no formulário seria texto sem alvo.
-    'E não vale para QUEM CONTRATA.' => lambda {
+    # perderia objeto. Os SEIS campos pessoais que ela proíbe copiar do documento são conferidos um a
+    # um — proibir o que não existe no formulário seria texto sem alvo — e são os mesmos seis que o
+    # contador da medição confere (`caso-producao-5045/medir.py`, `CAMPOS_PESSOAIS`).
+    'E para QUEM CONTRATA a ordem é outra: quem decide é o cliente, nunca o documento.' => lambda {
       entrada = entrada_de_auto('cpf' => '042.979.126-78', 'nome' => 'Rodrigo Silva')
 
       grupos_da_entrada.include?('insured') &&
@@ -115,10 +129,31 @@ module ManualDoEspecialistaDeAuto
         %w[insured.name insured.document insured.birthDate insured.maritalStatus insured.phone
            address.zipCode].all? { |n| campo(n) }
     },
+    # O CAMINHO LEGÍTIMO É EXPRESSÁVEL — e é isso que impede a regra de virar recusa. Cotar no nome
+    # de quem o cliente indicou, com o bônus DELA e a apólice DELA, tem de caber no MESMO pedido: o
+    # CPF que o especialista escreve é o único que decide o segurado, e o bloco de renovação viaja
+    # junto e intacto. `QuoteInput` recebe produto, params, dados e comissão — nada da conversa, nada
+    # do contato —, então não há por onde o interlocutor sobrescrever o segurado. Se essa assinatura
+    # ganhasse o contato, ou se a renovação deixasse de acompanhar um segurado diferente de quem
+    # digita, o texto estaria mandando recusar o caso legítimo.
+    'Compare o titular da apólice com o SEGURADO DESTA COTAÇÃO' => lambda {
+      renovacao = { 'isRenewal' => true, 'bonusClass' => 9, 'previousInsurerCode' => '4',
+                    'previousPolicyNumber' => '01.142.431.056070' }
+      entrada = entrada_de_auto('cpf' => '318.472.905-11', 'nome' => 'Ana Paula Ribeiro',
+                                'quotation' => renovacao)
+
+      Autonomia::Insurance::QuoteInput.instance_method(:initialize).parameters.map(&:last) ==
+        %i[produto params dados commission_percent] &&
+        entrada.dig('insured', 'document') == '31847290511' &&
+        entrada.dig('insured', 'name') == 'Ana Paula Ribeiro' &&
+        entrada['quotation'] == renovacao &&
+        Autonomia::Insurance::AutoRenewal.new('quotation' => renovacao).bonus == 9
+    },
     # POR QUE ELE ESTÁ NA LISTA DAS QUE PASSAM, e não na das que voltam vazias: nada neste
     # repositório confere de quem é o CPF. A entrada leva o que o modelo escreveu, seja de quem for,
     # e o `quotation` do titular — bônus e sinistros — viaja no mesmo pedido. A recusa, quando vem, é
-    # na emissão, longe daqui.
+    # na emissão, longe daqui. É a mesma capacidade que sustenta o caso legítimo acima: o código não
+    # distingue os dois, e por isso quem distingue é o texto.
     'Segurado trocado pelo titular do documento.' => lambda {
       entrada = entrada_de_auto('cpf' => '296.562.576-34',
                                 'quotation' => { 'isRenewal' => true, 'bonusClass' => 9 })
@@ -128,10 +163,10 @@ module ManualDoEspecialistaDeAuto
         entrada.dig('quotation', 'bonusClass') == 9
     },
     # O CAMINHO CERTO EXISTE E É LEGAL. Alguém tem de ser escrito no segurado — `insured.document` é
-    # obrigatório no formulário, e o erro é escrever ali o titular —, mas levar o bônus e o histórico
-    # dele não é obrigatório: os dois campos são opcionais. Se virassem exigência, este item
-    # proibiria a única saída que sobrou.
-    'Cota em nome do titular de uma apólice que não é do cliente.' => lambda {
+    # obrigatório no formulário, e o erro é o DOCUMENTO escolher quem —, mas levar o bônus e o
+    # histórico do titular não é obrigatório: os dois campos são opcionais. Se virassem exigência,
+    # este item proibiria a única saída que sobrou para a apólice de terceiro.
+    'Deixa o documento escolher o segurado — cota em nome de quem o cliente não indicou.' => lambda {
       campo('insured.document')['obrigatorio'] == true && expostos.include?('insured.name') &&
         %w[quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n)['obrigatorio'] == false }
     },
@@ -244,7 +279,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('c4c3532e8210aef05c7452ff6409e1ae')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('e31c962e7144de837d6335f5d4992a3f')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do
