@@ -87,6 +87,39 @@ module ManualDoEspecialistaDeAuto
       vazia = Autonomia::Insurance::AutoRenewal.new({})
       !vazia.renovacao? && vazia.bonus.nil? && !vazia.sem_bonus?
     },
+    # COBERTURA COPIADA DA APÓLICE (#410). Em 12/09/2026 o documento trouxe o quadro de coberturas e
+    # o pedido saiu com ele: dezessete seguradoras acionadas, nenhum preço; minutos depois, com as
+    # coberturas padrão, nove preços. A regra nova tem duas metades, e cada uma é uma capacidade.
+    # NÃO MANDAR precisa ser legal: todo campo de cobertura exposto — e o percentual da tabela de
+    # referência, que é escolha de cobertura morando no grupo do veículo — é opcional. Se um deles
+    # virar obrigatório, "a cotação sai com as coberturas padrão" deixa de ser verdade.
+    #
+    # O QUE ESTA ÂNCORA PROVA, E O QUE NÃO PROVA (P2 do Codex na #411). Ela lê o RETRATO local do
+    # formulário (`Connector::Mock::SCHEMA_AUTO`, o arquivo `mock/schema_auto.json`), não o contrato
+    # que roda: em produção o formulário vem de `Connection#quote_schema`, o schema que o adapter
+    # devolveu na sincronização da conexão. Torne uma cobertura obrigatória lá e deixe o retrato como
+    # está — esta âncora continua verde. Ela prova que NO RETRATO as coberturas são opcionais, e que
+    # ninguém as torna obrigatórias aqui dentro sem passar por esta tabela; ela NÃO detecta o dia em
+    # que o contrato real exigir cobertura, que é justamente quando a promessa do manual viraria
+    # mentira. Nada neste repositório compara os dois — o `http_contrato_real_spec` guarda só a
+    # tradução camelCase da fronteira, com resposta simulada, e não lê schema nenhum.
+    #
+    # O contrato vive no outro repositório e o CI deste não o tem. O que dá para reproduzir sem tocar
+    # no portal (`quoteSchema` do adapter é estático: sem sessão, sem rede, sem custo) é comparar os
+    # dois à mão, e foi feito em 12/09/2026:
+    #   (em autonomia-adapters, main) npx tsx src/cli/main.ts agger quote schema auto
+    # Os 17 campos que a lambda confere — 16 `coverage.*` e o `vehicle.referencedValuePercent` —
+    # saem de lá com `obrigatorio: false`, iguais ao retrato. A lacuna (ninguém refaz essa comparação
+    # sozinho, e o retrato já está velho em dois campos de outro grupo) está registrada na #412.
+    'Documento não é pedido' => lambda {
+      cobertura = expostos.grep(/\Acoverage\./) + ['vehicle.referencedValuePercent']
+
+      cobertura.size > 1 && cobertura.all? { |nome| campo(nome)['obrigatorio'] == false }
+    },
+    # MEXER DEPOIS precisa existir: o grupo `coverage` chega ao envio. Fora da entrada, o pedido de
+    # cobertura que o cliente já fez não teria por onde viajar na primeira cotação — e o ajuste que
+    # ele pedir depois do primeiro preço seria adiado para nunca.
+    'O que o cliente já pediu entra na primeira cotação' => -> { grupos_da_entrada.include?('coverage') },
     'Renovação garantida' => -> { campo('quotation.isGuaranteedRenewal') },
     'Nunca chute a seguradora anterior' => -> { valores('quotation.previousInsurerCode').any? },
     'A mesma seguradora tem dois códigos' => -> { campo('quotation.previousInsurerCode')['descricao'].include?('DIFERENTE') },
@@ -163,7 +196,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('8c5d2facc72b7d93721af0d178506045')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('8b331dbd3acb1706701836b9a5529650')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do

@@ -60,8 +60,11 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
   # é a saída de `agger quote schema auto` da CLI do adapter, com as chaves no formato que o
   # `Http` entrega (`condicional_a`). Regenerar quando o adapter mudar:
   #   (no autonomia-adapters) npx tsx src/cli/main.ts agger quote schema auto
-  # A spec `parametros_spec` compara este arquivo com o formulário montado; o contrato real
-  # (`http_contrato_real_spec`) é quem o compara com o adapter vivo.
+  # A spec `parametros_spec` compara este arquivo com o formulário montado. NADA neste repositório o
+  # compara com o adapter vivo — o `http_contrato_real_spec` guarda só a tradução camelCase da
+  # fronteira, com resposta simulada, e não lê schema nenhum. Enquanto ninguém regenerar e diffar, o
+  # retrato pode envelhecer em silêncio, e toda spec que lê `obrigatorio`, `valores` ou `descricao`
+  # daqui prova o retrato, não o contrato. Lacuna registrada na #412.
   SCHEMA_AUTO = JSON.parse(File.read(File.expand_path('mock/schema_auto.json', __dir__))).freeze
 
   SCHEMAS = {
