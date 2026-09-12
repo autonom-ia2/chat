@@ -222,7 +222,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # O VARREDOR NÃO PEDE O COMPARATIVO AO PORTAL , e aqui pelo caminho REAL: a mesma
   # cotação abandonada, fechada pelo `ReapStaleRunsJob`. Gerar o comparativo é login mais uma chamada
   # de até 60 s, e o varredor processa até 500 linhas em sequência num cron com 25 s de shutdown —
-  # morto no meio, a linha em curso fica com a marca `closed` e sem fecho, para sempre. O cliente
+  # morto no meio, o resto do lote espera a varredura seguinte, 10 min depois. O cliente
   # continua com os preços que leu e recebe o fecho honesto. (O PDF do conector `mock` não está
   # stubbado neste exemplo: se ele fosse pedido, sairia o link de reserva e este exemplo cairia.)
   it 'o varredor fecha a cotacao abandonada sem pedir o comparativo ao portal' do

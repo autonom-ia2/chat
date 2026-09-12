@@ -109,8 +109,8 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
   # O VARREDOR NÃO COMEÇA TRABALHO NOVO NO PORTAL (entrega 8). Ele é um cron que processa até
   # `BATCH_LIMIT` linhas EM SEQUÊNCIA, e sem esta guarda cada cotação abandonada com preço pediria ao
   # portal a geração do comparativo — login, uma chamada de até 60 s e o download, por linha. O
-  # Sidekiq desta instalação dá 25 s de shutdown: um deploy no meio do lote mata a passada, e a linha
-  # em curso já adquiriu a marca `closed` — nunca mais recebe fecho. Aqui sai só o que já está pronto.
+  # Sidekiq desta instalação dá 25 s de shutdown: um deploy no meio do lote mata a passada e joga o
+  # resto das linhas para a varredura seguinte, 10 min depois. Aqui sai só o que já está pronto.
   it 'diz a ferramenta que nao pode comecar trabalho novo, e entrega so o que ja esta pronto' do
     # Arrange — a ferramenta só teria algo a entregar se pudesse trabalhar de novo
     visto = []

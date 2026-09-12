@@ -122,9 +122,9 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   # caminho não é um job por execução: é um lote de até `BATCH_LIMIT` linhas processadas EM SEQUÊNCIA
   # dentro de um cron, e a cotação abandonada com preço pediria ao portal a geração do comparativo —
   # login mais uma chamada de até 60 s, mais o download — uma vez por linha. Com os 25 s de shutdown
-  # do Sidekiq, um deploy no meio do lote mata a passada; a linha em curso já adquiriu a marca
-  # `closed` e NUNCA MAIS recebe fecho. Então sai só o que já está pronto, e o fecho diz a verdade
-  # sobre o que o cliente tem.
+  # do Sidekiq, um deploy no meio do lote mata a passada e joga o resto das linhas para a varredura
+  # seguinte, 10 min depois — com o cliente esperando desde o começo. Então sai só o que já está
+  # pronto, e o fecho diz a verdade sobre o que o cliente tem.
   def encerrar(run, native)
     publicador = ->(entrega) { ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega) }
     ::Autonomia::Agents::Tools::Encerramento

@@ -62,8 +62,10 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
   describe 'cada passo cai sozinho, e o fecho é a última coisa' do
     # O PASSO QUE CONSULTA PODE FALHAR — e falha exatamente onde dói: a linha foi abandonada porque
     # algo quebrou, e `closing_deliveries` vai ao banco (e, na cotação, ao portal). Com um `rescue`
-    # só, a exceção pulava o fecho com a marca `closed` já gravada: nenhuma passada futura reentra,
-    # e o cliente que esperava ficava sem uma palavra para sempre.
+    # só, a exceção pulava o fecho — e pela porta do motor não há segunda chance: o `fail_run`
+    # chama o `finish!` logo em seguida, a linha vira terminal e o varredor (que só varre `running`)
+    # nunca mais a vê. O cliente que esperava ficava sem uma palavra. É a guarda irmã da segunda
+    # chance do fecho: uma cobre a exceção, a outra cobre o processo morto.
     it 'a ferramenta que levanta ao montar as entregas nao cala o fecho' do
       # Arrange
       run = execucao
@@ -297,7 +299,7 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
 
   # O VARREDOR NÃO COMEÇA TRABALHO NOVO NO PORTAL. Ele varre até 500 linhas em
   # sequência dentro de um cron, e o Sidekiq desta instalação tem 25 s de shutdown: quem é morto no
-  # meio deixa a linha em curso com a marca `closed` e sem fecho, para sempre. Quem decide o que
+  # meio joga o resto das linhas para a varredura seguinte, 10 min depois. Quem decide o que
   # ainda dá para entregar é a ferramenta — mas ela precisa saber em que caminho está.
   describe 'o aviso de que não se começa trabalho novo' do
     def perguntou(permitido)

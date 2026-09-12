@@ -29,7 +29,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # MAS ELE É TRABALHO NOVO NO PORTAL: `comparison_pdf` faz login e uma chamada de
   # até 60 s, e o publicador ainda baixa o arquivo. No caminho do VARREDOR isso não sai — lá são até
   # 500 linhas em sequência dentro de um cron, com 25 s de shutdown do Sidekiq, e quem é morto no
-  # meio deixa a linha em curso com a marca `closed` e sem fecho, para sempre. O cliente fica com os
+  # meio joga o resto do lote para a varredura seguinte, 10 min depois. O cliente fica com os
   # preços que já leu e com o fecho honesto sobre o que ele tem; o PDF do portal continua lá.
   #
   # E NÃO SE PEDE COMPARATIVO PARA QUEM NÃO TEM PREÇO. O comparativo é o complemento dos preços na
