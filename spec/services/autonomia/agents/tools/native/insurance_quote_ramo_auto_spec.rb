@@ -459,50 +459,47 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(connector).to have_received(:quote_proposal).with(hash_excluding(:insurer_code))
     end
 
-    # O FECHO E O ENCERRAMENTO PERGUNTAM PELO FATO, e o fato é a MENSAGEM na conversa. Por isso as
-    # três respostas da cotação ao `Tools::Encerramento` só se exercitam na ferramenta como o MOTOR
-    # a monta: com a conversa e com a LINHA da execução (é do `execution_key` dela que nasce a
-    # identidade de cada entrega). O handle diz o que esta execução TENTOU entregar; ele avança
-    # mesmo quando a publicação é recusada, e foi por acreditar nele que a frase parcial saiu para
-    # quem não tinha preço nenhum na tela.
+    # O FECHO E O ENCERRAMENTO PERGUNTAM PELO ACEITE, e o aceite mora na LINHA. Por isso as três
+    # respostas da cotação ao `Tools::Encerramento` só se exercitam na ferramenta como o MOTOR a
+    # monta: com a LINHA da execução (é do `execution_key` dela que nasce a identidade de cada
+    # entrega, e é nela que o publicador registra o que assumiu). O handle diz o que esta execução
+    # EMITIU; ele avança mesmo quando a publicação é recusada, e foi por acreditar nele que a frase
+    # parcial saiu para quem não tinha preço nenhum na tela.
     describe 'o fecho e o que ainda vale entregar' do
       let(:inbox) { create(:inbox, account: account) }
       let(:conversation) { create(:conversation, account: account, inbox: inbox) }
-      let(:agent_bot) { create(:agent_bot, account: account) }
       let(:run) do
         Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug, arguments: {},
                                          scope: { conversation_id: conversation.id })
       end
-      let(:tool_do_motor) do
-        described_class.new(agent: agent, params: params, conversation: conversation, run: run)
-      end
+      let(:tool_do_motor) { described_class.new(agent: agent, params: params, run: run) }
       let(:preco) { '*Ezze* — R$ 2.050,40 no total' }
       let(:fechado) { described_class::FECHADO_KEY }
 
-      # A MENSAGEM que o publicador teria criado: o que a torna reconhecível é o token, a identidade
-      # da entrega derivada do conteúdo. -> o token.
-      def ja_publicado(entrega)
+      # O ACEITE como o publicador o registra: `deferred` de propósito — a entrega ADIADA é aceita e
+      # ainda NÃO é mensagem, e é justamente esse estado que o fecho tem de reconhecer. -> o token.
+      def ja_aceito(entrega)
         token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
-        create(:message, account: account, inbox: inbox, conversation: conversation,
-                         message_type: :outgoing, sender: agent_bot, content: entrega.to_s,
-                         content_attributes: { 'autonomia_async_token' => token })
+        Autonomia::Agents::Tools::EntregaAceita.registrar(
+          run, entrega, Autonomia::Agents::Tools::AsyncPublisher::Result.new(status: :deferred)
+        )
         token
       end
 
-      # O handle de quem emitiu um preço: com a mensagem na conversa (o preço chegou) ou sem ela
+      # O handle de quem emitiu um preço: com o aceite na linha (o publicador assumiu) ou sem ele
       # (a publicação foi recusada e o handle avançou assim mesmo). São TEXTOS diferentes de
       # propósito — a identidade da entrega é o conteúdo, então o preço recusado não pode ser o
-      # mesmo que já está na tela.
+      # mesmo que o publicador aceitou.
       def handle_com_preco(chegou:)
         texto = chegou ? preco : '*Ezze* — R$ 1.999,00 no total (o que a publicação recusou)'
-        token = chegou ? ja_publicado(texto) : Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
+        token = chegou ? ja_aceito(texto) : Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
         { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'],
-          described_class::PRECOS_KEY => [token] }
+          described_class::PRECO_LEGADO_KEY => false, described_class::PRECOS_KEY => [token] }
       end
 
       # A IDENTIDADE DE CADA ENTREGA É GRAVADA NA PASSADA QUE A EMITE — é a única em que se sabe o
       # TEXTO, e é dele que o token nasce. Sem este registro o fecho não teria pelo que perguntar, e
-      # voltaria a decidir pelo handle (a intenção) em vez de pela mensagem (o fato).
+      # voltaria a decidir por `entregues` (o que se emitiu) em vez de pelo aceite.
       it 'grava a identidade do preco e do comparativo que emitiu' do
         allow(connector).to receive(:quote_result).and_return(
           result('completed', [offer('43', 'Ezze', 'quoted', 2050.40)])
@@ -516,6 +513,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(progresso.handle[described_class::COMPARATIVO_KEY])
           .to eq(tokens.token_de(run, progresso.deliveries.last))
         expect(progresso.handle[fechado]).to be(true)
+        # E A COBERTURA DA PROVA LEGADA: esta execução emitiu preço nesta versão, e não havia preço
+        # antes deste lote. É o que impede o `entregues` de valer como prova daqui em diante.
+        expect(progresso.handle[described_class::PRECO_LEGADO_KEY]).to be(false)
       end
 
       # O `compact` DO FECHO É SÓ PARA A IDENTIDADE AUSENTE — e ele estava apagando QUALQUER chave
@@ -580,33 +580,37 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(connector).not_to have_received(:quote_proposal)
       end
 
-      # RESULTADO É PREÇO QUE VIROU MENSAGEM. Nunca a pergunta pelo dado que falta (`poll` devolve
-      # `handle['pedido']` como entrega e `delivered_count` a conta, e era por ela que uma cotação
-      # que só perguntou dados fechava dizendo "o que chegou está aqui em cima") e nunca a lista de
-      # `entregues`, que é a intenção de quem publicou.
-      it 'so afirma resultado quando o preco virou MENSAGEM na conversa' do
+      # RESULTADO É PREÇO QUE O PUBLICADOR ACEITOU — e aceita inclui a ADIADA, que ainda não é
+      # mensagem (`ja_aceito` registra exatamente esse estado). Nunca a pergunta pelo dado que falta
+      # (`poll` devolve `handle['pedido']` como entrega e `delivered_count` a conta, e era por ela
+      # que uma cotação que só perguntou dados fechava dizendo "o que chegou está aqui em cima") e
+      # nunca a lista de `entregues`, que avança na emissão.
+      it 'so afirma resultado quando o publicador ACEITOU o preco, mesmo que adiado' do
         expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: true))).to be(true)
         expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: false))).to be(false)
         expect(tool_do_motor.resultado_entregue?('pedido' => 'Me diga a placa, por favor.')).to be(false)
       end
 
-      # A JANELA DO DEPLOY, GUARDADA (P1 da rodada 3). A execução que já estava em voo emitiu o
-      # preço na versão anterior e não tem `entregas_de_preco` no handle — a chave nasce na passada
-      # que emite. Sem ler a marca antiga, o fecho dela diz "nenhum preço chegou": nem comparativo,
-      # nem uma palavra, para quem já recebeu preço. É o incidente de 08/09/2026 de volta, durante
-      # a vida das execuções em voo.
+      # A JANELA DO DEPLOY, GUARDADA POR COBERTURA (P1 da rodada 3, corrigido na 4). A execução que
+      # já estava em voo emitiu o preço na versão anterior e não tem identidade nenhuma no handle.
+      # Sem ler a marca antiga, o fecho dela diz "nenhum preço chegou": nem comparativo, nem uma
+      # palavra, para quem já recebeu preço — o incidente de 08/09/2026 de volta durante a vida das
+      # execuções em voo.
       #
-      # É a MESMA saída de `portal_fechado?`: a marca antiga vale como prova LEGADA, e só quando a
-      # nova está AUSENTE. Guardado assim o fallback não alcança execução nenhuma posterior ao
-      # deploy — toda passada que emite preço grava a chave, mesmo quando a publicação é recusada —,
-      # então ele não reabre a frase falsa que a rodada 1 corrigiu.
-      it 'cai para `entregues` so quando a chave da identidade esta AUSENTE do handle' do
-        # legado: a marca antiga é a única prova que a linha em voo carrega
-        expect(tool_do_motor.resultado_entregue?(described_class::DELIVERED_KEY => ['43'])).to be(true)
-        # com a chave nova presente, quem responde é a MENSAGEM — o legado não reabre a frase falsa
+      # QUEM GUARDA O FALLBACK É `preco_legado`, gravada na primeira emissão desta versão: ela diz
+      # se havia preço ANTES. A rodada 3 guardava pela PRESENÇA da chave de identidade, e aí a linha
+      # de histórico MISTO — preço antigo na tela, preço novo recusado — perdia o antigo da conta.
+      it 'a prova legada vale por COBERTURA, e nao pela presenca da chave nova' do
+        legado = described_class::PRECO_LEGADO_KEY
+        entregues = described_class::DELIVERED_KEY
+        # linha em voo: `entregues` é a única prova que ela carrega
+        expect(tool_do_motor.resultado_entregue?(entregues => ['43'])).to be(true)
+        # histórico misto: emitiu nesta versão (recusado) E tinha preço antes — o antigo continua valendo
+        expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: false).merge(legado => true))).to be(true)
+        # nascida depois do deploy: emitiu, foi recusada, e não havia nada antes
         expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: false))).to be(false)
         # e `submeter` grava `entregues => []` desde a primeira passada: lista vazia não é preço
-        expect(tool_do_motor.resultado_entregue?(described_class::DELIVERED_KEY => [])).to be(false)
+        expect(tool_do_motor.resultado_entregue?(entregues => [])).to be(false)
       end
 
       # E SOBRA NÃO É "SEMPRE", POR MAIS QUE O ENCERRAMENTO SÓ EXISTA FORA DO CAMINHO FELIZ. Quem
@@ -620,17 +624,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(tool_do_motor.resta_entregar?('quote_id' => 'abc:1', fechado => true)).to be(false)
       end
 
-      # O COMPARATIVO EMITIDO QUE NÃO CHEGOU É SOBRA — e a sentinela não sabe disso: ela é gravada
-      # quando a entrega sai da ferramenta, antes de o publicador dizer se a mensagem entrou. Com a
+      # O COMPARATIVO EMITIDO QUE O PUBLICADOR NÃO ASSUMIU É SOBRA — e a sentinela não sabe disso:
+      # ela é gravada quando a entrega sai da ferramenta, antes de o publicador decidir. Com a
       # publicação recusada, o fecho calava sobre um comparativo que faltou (Codex).
-      it 'afirma sobra quando o comparativo saiu da ferramenta e nao virou mensagem' do
+      it 'afirma sobra quando o comparativo saiu da ferramenta e nao foi aceito' do
         token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, 'Comparativo: https://exemplo.test/c.pdf')
         handle = { fechado => true, described_class::PDF_SENT_KEY => true,
                    described_class::COMPARATIVO_KEY => token }
 
         expect(tool_do_motor.resta_entregar?(handle)).to be(true)
         expect(tool_do_motor.resta_entregar?(handle.merge(
-                                               described_class::COMPARATIVO_KEY => ja_publicado('Comparativo: https://exemplo.test/c.pdf')
+                                               described_class::COMPARATIVO_KEY => ja_aceito('Comparativo: https://exemplo.test/c.pdf')
                                              ))).to be(false)
       end
 

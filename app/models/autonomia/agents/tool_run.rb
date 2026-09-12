@@ -91,6 +91,11 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # `updated_at`: uma publicação adiada que sai depois do fim (`advance_sequence!`) mexe nele, e a
   # janela do pedido contaria da publicação, não do encerramento.
   ENCERRADA_EM = 'autonomia_encerrada_em'.freeze
+  # O QUE O PUBLICADOR ACEITOU (entrega 8a): a lista das identidades de entrega que voltaram
+  # `published` ou `deferred`. É o REGISTRO DO ACEITE — o que separa "eu tentei entregar" de "o
+  # publicador assumiu esta entrega" —, e quem o escreve é sempre quem publicou
+  # (`Tools::EntregaAceita`). A recusa não escreve nada. Ver `registrar_entrega_aceita!`.
+  ENTREGAS_ACEITAS = 'autonomia_entregas_aceitas'.freeze
 
   # Por quanto tempo uma consulta ENCERRADA com entrega ainda conta como "este pedido já foi feito".
   # Depois disso, repetir os mesmos dados é um pedido novo (o preço muda; a cotação do portal vence).
@@ -291,6 +296,32 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   def record_delivery!
     self.class.where(id: id).update_all('delivered_count = delivered_count + 1, updated_at = NOW()') # rubocop:disable Rails/SkipsModelValidations
     reload
+  end
+
+  # ACRESCENTA À LISTA DO ACEITE a identidade de uma entrega que o publicador assumiu (entrega 8a).
+  #
+  # O IRMÃO DE `record_delivery!`: aquele conta QUANTAS entregas foram aceitas, esta diz QUAIS. O
+  # contador não serve para o fecho — ele soma qualquer item aceito, inclusive a pergunta pelo dado
+  # que falta —, e a lista serve, porque a ferramenta sabe qual identidade emitiu como resultado.
+  #
+  # ESCRITA NA HORA DO ACEITE, E NÃO NO FIM DA PASSADA: o handle da ferramenta só vai ao banco no
+  # `record_attempt!` seguinte, e um processo morto entre a publicação e ele (deploy, 25 s de
+  # shutdown do Sidekiq) deixaria o cliente com o preço na tela e a linha sem saber disso — o fecho
+  # diria "não consegui" ao lado do preço. Por isso é UM UPDATE, aqui.
+  #
+  # E É UM UPDATE SÓ, sem ler-modificar-escrever: a lista é concatenada pelo BANCO
+  # (`|| ?::jsonb`), então dois publicadores da mesma execução não apagam um o token do outro. O
+  # `WHERE` com `@>` torna a escrita idempotente — o retry do Sidekiq que republica a mesma entrega
+  # (e recebe `published` pela dedupe do token) não acrescenta uma segunda cópia. `COALESCE` nos
+  # dois lados porque a chave só existe depois da primeira entrega aceita.
+  def registrar_entrega_aceita!(token)
+    lista = "COALESCE(handle->'#{ENTREGAS_ACEITAS}', '[]'::jsonb)"
+    escrita = "handle = jsonb_set(handle, ARRAY['#{ENTREGAS_ACEITAS}'], #{lista} || ?::jsonb), updated_at = ?"
+    updated = self.class.where(id: id)
+                  .where.not("#{lista} @> ?::jsonb", [token].to_json)
+                  .update_all([escrita, [token].to_json, Time.current]) # rubocop:disable Rails/SkipsModelValidations
+    reload
+    updated.positive?
   end
 
   # Já morreu: supersedida por um pedido novo, descartada com o turno, ou barrada pelo gate da conta.

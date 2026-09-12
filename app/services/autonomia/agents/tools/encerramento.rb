@@ -123,9 +123,13 @@ class Autonomia::Agents::Tools::Encerramento
   # UMA ENTREGA POR VEZ, E O QUE ELA LEVANTAR MORRE NELA. -> ela foi aceita? O `false` do `rescue` não
   # é "recusada": é "não sei", e o fecho o lê pelo lado conservador. O que NÃO pode acontecer é a
   # entrega seguinte apagar a anterior — o cliente já está com ela na tela.
+  #
+  # O ACEITE FICA REGISTRADO na linha (`Tools::EntregaAceita`), como no motor: é por ele que uma
+  # segunda passada — e a própria ferramenta, logo abaixo, ao decidir o fecho — sabe que esta
+  # entrega já foi assumida pelo publicador, mesmo quando ela ainda não virou mensagem.
   def publicar_uma(entrega)
-    resultado = publicar(entrega)
-    resultado.published? || resultado.deferred?
+    resultado = ::Autonomia::Agents::Tools::EntregaAceita.registrar(@run, entrega, publicar(entrega))
+    resultado.aceita?
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento entrega falhou slug=#{@run.slug} #{e.class}")
     false
@@ -205,9 +209,14 @@ class Autonomia::Agents::Tools::Encerramento
 
   # A ferramenta montada UMA vez para os dois passos (entregar e decidir o fecho): ela resolve
   # conexão e credencial na construção, e montá-la a cada pergunta seria trabalho repetido. Montada
-  # para trabalhar FORA do turno: com a conversa da execução, com a LINHA (é pelo `delivery_token`
-  # dela que a ferramenta sabe o que já foi publicado) e SEM `delivery`, de propósito — a presença
-  # dele é o que diz "dentro do turno" para quem escolhe a sessão por ela. nil sem agente.
+  # para trabalhar FORA do turno: com a LINHA (é pelo `delivery_token` dela que a ferramenta monta a
+  # identidade de cada entrega, e é nela que está o registro do aceite) e SEM `delivery`, de
+  # propósito — a presença dele é o que diz "dentro do turno" para quem escolhe a sessão por ela.
+  # nil sem agente.
+  #
+  # A MESMA INSTÂNCIA atravessa os dois passos, e é isso que faz a lista do aceite chegar atualizada
+  # ao fecho: `publicar_uma` grava nela pela LINHA, e `registrar_entrega_aceita!` recarrega o objeto
+  # que a ferramenta tem em mãos.
   def ferramenta
     return @ferramenta if defined?(@ferramenta)
 
@@ -215,7 +224,7 @@ class Autonomia::Agents::Tools::Encerramento
   end
 
   def montar
-    @native.new(agent: @run.agent, params: @run.arguments, conversation: @run.conversation, run: @run)
+    @native.new(agent: @run.agent, params: @run.arguments, run: @run)
   end
 
   # O handle da FERRAMENTA, sem as marcas do motor: ela não precisa conhecer o nosso controle. Quem as

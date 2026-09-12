@@ -14,29 +14,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
   let(:params) { { 'cpf' => '042.979.126-78', 'cep' => '31110-210', 'vehicle' => { 'plate' => 'hik-9383' } } }
   let(:entrega_de_arquivo) { Autonomia::Agents::Tools::EntregaDeArquivo }
-  # A FERRAMENTA COMO O MOTOR A MONTA (entrega 8a): com a conversa e a LINHA da execução. O
-  # encerramento só pede o comparativo a quem TEM preço na tela, e essa pergunta é feita ao banco —
-  # `entregues` no handle é a intenção de quem publicou, não prova de que a mensagem entrou.
+  # A FERRAMENTA COMO O MOTOR A MONTA (entrega 8a): com a LINHA da execução. O encerramento só pede
+  # o comparativo a quem tem preço ACEITO pelo publicador, e essa pergunta é feita à linha —
+  # `entregues` no handle é o que se emitiu, não o que o publicador assumiu.
   let(:inbox) { create(:inbox, account: account) }
   let(:conversation) { create(:conversation, account: account, inbox: inbox) }
-  let(:agent_bot) { create(:agent_bot, account: account) }
   let(:run) do
     Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug, arguments: {},
                                      scope: { conversation_id: conversation.id })
   end
   let(:tool) { ferramenta(params) }
-  # O handle de quem já entregou um preço AO CLIENTE: a mensagem existe, com o token dela.
+  # O handle de quem já entregou um preço AO CLIENTE: a identidade emitida, e o aceite na linha.
   let(:handle_com_preco) do
     texto = '*Ezze* — R$ 2.050,40 no total'
     token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
-    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
-                     sender: agent_bot, content: texto, content_attributes: { 'autonomia_async_token' => token })
+    run.registrar_entrega_aceita!(token)
     { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'],
       described_class::PRECOS_KEY => [token] }
   end
 
   def ferramenta(params)
-    described_class.new(agent: agent, params: params, conversation: conversation, run: run)
+    described_class.new(agent: agent, params: params, run: run)
   end
 
   before do

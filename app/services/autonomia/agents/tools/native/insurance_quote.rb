@@ -55,15 +55,21 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # daqui, antes de o publicador dizer se a mensagem entrou. Quem precisa saber se o cliente TEM o
   # comparativo pergunta pelo `COMPARATIVO_KEY`, que é a identidade da mensagem, à conversa.
   PDF_SENT_KEY = 'comparativo_enviado'.freeze
-  # O QUE ESTA EXECUÇÃO EMITIU, PELA IDENTIDADE QUE CADA ENTREGA TEM COMO MENSAGEM (entrega 8a).
-  # O handle é a INTENÇÃO de quem publicou; a mensagem é o FATO, e os dois divergem sempre que a
-  # publicação volta `blocked` depois de o handle já ter avançado — `deliver` roda ANTES de
-  # `record_attempt!`, então uma entrega bloqueada (conversa encerrada, agente desligado no meio,
-  # erro transitório do publicador) avança o handle com os códigos das ofertas mesmo sem mensagem
-  # nenhuma. Guardar o TOKEN é o que permite ao fecho fazer a pergunta do fato
-  # (`Tools::EntregaPublicada`): o handle diz o que procurar, a conversa diz se chegou.
+  # O QUE ESTA EXECUÇÃO EMITIU, PELA IDENTIDADE DE CADA ENTREGA (entrega 8a). É a TABELA DE
+  # CONSULTA do fecho, não a prova: emitir não é entregar — `deliver` roda ANTES de
+  # `record_attempt!`, então uma entrega recusada (conversa encerrada, agente desligado no meio,
+  # erro transitório do publicador) avança o handle com os códigos das ofertas sem que publicação
+  # nenhuma tenha sido assumida.
+  #
+  # A PROVA É O ACEITE, e ela mora na LINHA (`Tools::EntregaAceita`), gravada pelo publicador no
+  # momento em que ele assume a entrega. Estas duas chaves dizem por quais identidades perguntar —
+  # é o que a ferramenta sabe e o motor não: para ele, um preço e a pergunta pelo dado que falta são
+  # "uma entrega".
   PRECOS_KEY = 'entregas_de_preco'.freeze
   COMPARATIVO_KEY = 'entrega_do_comparativo'.freeze
+  # HAVIA PREÇO EMITIDO ANTES DE ESTA VERSÃO REGISTRAR O ACEITE? Gravada uma vez, na primeira
+  # emissão de preço desta execução. É a COBERTURA da prova legada — ver `Fecho#prova_legada?`.
+  PRECO_LEGADO_KEY = 'preco_legado'.freeze
   # O PORTAL FECHOU A COTAÇÃO — `completed` ou `failed` na consulta, que é o que `finished?` lê.
   # É FATO DO PORTAL, gravado por quem o leu, e não se deduz do comparativo: uma cotação que fecha
   # sem URL de comparativo (geração indisponível, portal sem arquivo) não grava `PDF_SENT_KEY`
@@ -257,7 +263,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     texto = ::Autonomia::Insurance::QuoteOffers.describe(
       fresh, first: already.empty?, aviso: avisar ? AVISO_SEM_BONUS : nil
     )
-    handle = registrar_entrega_de_preco(texto, registrar_sem_periodo(fresh, handle))
+    handle = registrar_entrega_de_preco(texto, registrar_sem_periodo(fresh, handle), already)
     [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
   end
 

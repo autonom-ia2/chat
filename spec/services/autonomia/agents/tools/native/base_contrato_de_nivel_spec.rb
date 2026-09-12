@@ -83,13 +83,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     expect(crua.new(agent: agent, params: {}).resta_entregar?({})).to be(false)
   end
 
-  # O CONSTRUTOR GANHOU `conversation:` E `run:` COM PADRÃO `nil` (entrega 8): é o motor que passa a
-  # entregá-los quando monta a ferramenta fora do turno. Nenhuma ferramenta de hoje os lê, e nenhuma
-  # sobrescreve `initialize` — este exemplo é o que prova a segunda metade sobre o catálogo inteiro,
-  # que é o que torna a mudança inofensiva para `cotar_seguro`.
-  it 'toda ferramenta do catalogo aceita ser montada com a conversa e a linha da execucao' do
+  # O CONSTRUTOR GANHOU `run:` COM PADRÃO `nil` (entrega 8a): é o motor que passa a entregá-lo
+  # quando monta a ferramenta fora do turno. Só a cotação o lê, e nenhuma nativa sobrescreve
+  # `initialize` — este exemplo é o que prova a segunda metade sobre o catálogo inteiro, que é o
+  # que torna a mudança inofensiva para as outras.
+  it 'toda ferramenta do catalogo aceita ser montada com a linha da execucao' do
     Autonomia::Agents::Tools::Registry.all.each do |ferramenta|
-      expect { ferramenta.new(agent: agent, params: {}, conversation: nil, run: nil) }
+      expect { ferramenta.new(agent: agent, params: {}, run: nil) }
         .not_to raise_error, "#{ferramenta} não aceita o construtor do motor"
     end
   end

@@ -164,27 +164,23 @@ class Autonomia::Agents::Tools::Native::Base
   # `delivery` é o contexto do turno (conversa), quando há um. A ferramenta continua sem saber de
   # conversa para TRABALHAR; ela só o carrega para o registro de recusa dizer qual conversa foi.
   #
-  # `conversation` é a conversa SEM o turno (entrega 8): o `AsyncRunJob` monta a ferramenta para
-  # `start`, `poll` e `closing_deliveries` fora do turno e, de propósito, sem `delivery` — a
-  # presença dele é o que diz "estou dentro do turno, com o modelo esperando" (é por ela que
-  # `InsuranceQuote::Veiculo#consultar_placa` escolhe a sessão). Uma ferramenta que trabalha sobre o
-  # que a CONVERSA já tem precisa dela nos dois contextos, e é `#conversation` que a entrega: pelo
-  # `delivery` no turno, por aqui no job.
+  # `run` é a LINHA DA EXECUÇÃO (entrega 8a), e serve para uma coisa só: a ferramenta saber o que o
+  # publicador ACEITOU entregar. A identidade de uma entrega é o `ToolRun#delivery_token` —
+  # `execution_key` mais o digest do conteúdo —, e sem a linha não há como montá-la; o aceite
+  # também mora nela (`Tools::EntregaAceita`). Nunca pelo handle da ferramenta, que só conhece o
+  # que se EMITIU.
   #
-  # `run` é a LINHA DA EXECUÇÃO, e serve para uma coisa só: a ferramenta perguntar o que JÁ FOI
-  # PUBLICADO. A identidade de uma entrega publicada é o `ToolRun#delivery_token` — `execution_key`
-  # mais o digest do conteúdo —, e sem a linha não há como montá-lo; a pergunta se faz pela MENSAGEM
-  # no banco (`Tools::EntregaPublicada`), nunca pelo handle, que é a intenção de quem publicou.
+  # O `AsyncRunJob` monta a ferramenta para `start`, `poll` e `closing_deliveries` fora do turno e,
+  # de propósito, SEM `delivery` — a presença dele é o que diz "estou dentro do turno, com o modelo
+  # esperando" (é por ela que `InsuranceQuote::Veiculo#consultar_placa` escolhe a sessão).
   #
-  # OS DOIS TÊM PADRÃO `nil`, e quem os lê hoje é a COTAÇÃO (`InsuranceQuote::Fecho`): com eles ela
-  # monta a identidade de cada entrega que emite e pergunta ao banco o que chegou. Quem não os usa
-  # não muda de comportamento — nenhuma nativa sobrescreve `initialize`, e
-  # `base_contrato_de_nivel_spec` percorre o catálogo inteiro para provar isso.
-  def initialize(agent:, params: {}, delivery: nil, conversation: nil, run: nil)
+  # PADRÃO `nil`, e quem o lê hoje é a COTAÇÃO (`InsuranceQuote::Fecho`). Quem não o usa não muda de
+  # comportamento — nenhuma nativa sobrescreve `initialize`, e `base_contrato_de_nivel_spec`
+  # percorre o catálogo inteiro para provar isso.
+  def initialize(agent:, params: {}, delivery: nil, run: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys
     @delivery = delivery
-    @conversation = conversation
     @run = run
   end
 
@@ -261,10 +257,11 @@ class Autonomia::Agents::Tools::Native::Base
   # como entrega). Quem sabe distinguir resultado de recado é a ferramenta, não o motor — e é por esta
   # pergunta que o fecho decide entre a frase parcial e o silêncio.
   #
-  # A RESPOSTA É SOBRE A MENSAGEM, NÃO SOBRE O HANDLE: o handle é a intenção de quem publicou, e ele
-  # avança mesmo quando a publicação é recusada. É para esta pergunta que a ferramenta recebe
-  # `conversation:` e `run:` — com os dois ela monta a identidade da entrega e pergunta ao banco
-  # (`Tools::EntregaPublicada`).
+  # A RESPOSTA É SOBRE O ACEITE, NÃO SOBRE A EMISSÃO: o handle da ferramenta só sabe o que ela
+  # tentou entregar, e avança mesmo quando a publicação é recusada. É para esta pergunta que a
+  # ferramenta recebe `run:` — com ela monta a identidade de cada entrega que emite e pergunta à
+  # lista do aceite (`Tools::EntregaAceita`), onde a publicação aceita, imediata ou ADIADA, está
+  # registrada. Pela mensagem não serve: a adiada ainda não é uma.
   # -> false por padrão: quem não sabe responder não afirma que entregou.
   def resultado_entregue?(_handle)
     false
@@ -284,12 +281,6 @@ class Autonomia::Agents::Tools::Native::Base
 
   def account
     agent.account
-  end
-
-  # A conversa em que a ferramenta trabalha, no turno (via `delivery`) e no job (via a execução).
-  # nil nas superfícies sem conversa (Testar, Copiloto, playground).
-  def conversation
-    @conversation || delivery.try(:conversation)
   end
 
   # Recusa nomeada da ferramenta SÍNCRONA, em JSON. Passa pelo registro (entrega 6) como as demais.

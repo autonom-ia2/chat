@@ -1,10 +1,16 @@
 # A ENTREGA QUE JÁ ESTÁ NA CONVERSA — a MENSAGEM que carrega o token dela (entrega 8).
 #
 # O publicador carimba cada mensagem com `autonomia_async_token`, a identidade da entrega derivada
-# do CONTEÚDO (`ToolRun#delivery_token`): é por ele que um retry não duplica. Quem precisa saber se
-# algo já chegou ao cliente pergunta AQUI, e não ao handle da execução — o handle é a intenção de
-# quem publicou, a mensagem é o fato, e os dois divergem sempre que a publicação volta `blocked`
-# depois de o handle já ter avançado.
+# do CONTEÚDO (`ToolRun#delivery_token`): é por ele que um retry não duplica, e é por ele que se
+# pergunta "esta entrega já é uma mensagem?".
+#
+# ISTO NÃO É A PERGUNTA "O CLIENTE JÁ RECEBEU?" — essa é `Tools::EntregaAceita`, o registro do
+# ACEITE. A mensagem só nasce quando a publicação é IMEDIATA; enquanto a cadeia de entrega
+# humanizada do turno está em curso (até 90 s), a publicação volta `deferred` e a mensagem ainda
+# não existe. Quem decide o fecho pela ausência da mensagem nessa janela cala para um cliente que
+# vai receber os preços segundos depois — foi o defeito da rodada 3 da entrega 8a. Aqui a pergunta
+# é outra, e tem um consumidor só: a IDEMPOTÊNCIA do fecho (`Tools::Encerramento`), que precisa
+# saber se AQUELA frase já está na conversa antes de escolher outra.
 #
 # Duas perguntas, uma identidade só. `token_de` é a IDENTIDADE que uma entrega TERÁ como mensagem, e
 # mora aqui porque quem pergunta "já chegou?" precisa montá-la ANTES de a mensagem existir: a
@@ -41,9 +47,23 @@ module Autonomia::Agents::Tools::EntregaPublicada
     run.delivery_token(arquivo ? arquivo.identidade : entrega.to_s.strip)
   end
 
-  # -> esta entrega JÁ É uma mensagem na conversa? É a pergunta do FATO, e a única que o fecho pode
-  # fazer: o handle diz o que se tentou entregar, não o que chegou.
+  # -> esta entrega já é uma mensagem na conversa E SEM PENDÊNCIA DE ENVIO conhecida?
+  #
+  # MENSAGEM NO BANCO NÃO É MENSAGEM ENTREGUE. O publicador marca (`Tools::PendenciaDeEnvio`) a
+  # mensagem cujo `SendReplyJob` não entrou na fila: ela existe, o cliente não a recebeu, e quem a
+  # encontrar pelo token deve TENTAR DE NOVO em vez de dar a entrega por feita. É o que
+  # `AsyncPublisher#retomar` faz — achar a mensagem pelo token e reemitir o envio, sob o lock, sem
+  # duplicar a mensagem.
+  #
+  # Por isso a pendência responde "ainda não": quem pergunta é o fecho idempotente
+  # (`Tools::Encerramento#fecho_publicado?`), e publicar de novo nesse estado é exatamente o certo
+  # — a dedupe por conteúdo do publicador encontra a mesma mensagem e retoma o envio dela. Dizer
+  # "já saiu" deixaria o fecho no banco e o cliente sem nenhuma palavra.
+  #
+  # `para` NÃO filtra a pendência, de propósito: quem quer a MENSAGEM (o publicador, para retomá-la)
+  # precisa dela justamente quando ela está pendente.
   def publicada?(conversation, token)
-    para(conversation, token).present?
+    mensagem = para(conversation, token)
+    mensagem.present? && !::Autonomia::Agents::Tools::PendenciaDeEnvio.pendente?(mensagem)
   end
 end

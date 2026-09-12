@@ -5,21 +5,33 @@
 # parcial e o silêncio, e só a ferramenta sabe respondê-las — `delivered_count` conta qualquer item
 # aceito para publicação, inclusive a pergunta pelo dado que falta.
 #
-# TODAS AS TRÊS DECIDEM PELO FATO, NUNCA PELA INTENÇÃO. O handle é o que esta execução TENTOU
-# entregar; a mensagem na conversa é o que o cliente TEM. Os dois divergem sempre que a publicação
-# volta `blocked` — e ela volta: `deliver` roda ANTES de `record_attempt!`, então uma entrega
-# recusada avança o handle com os códigos das ofertas sem que mensagem nenhuma tenha entrado. Com a
-# pergunta feita ao handle, o cliente que não recebeu preço nenhum lia "os preços acima são os que
-# chegaram" — sem nada acima — e o motor ainda pedia ao portal um comparativo para ninguém.
+# TODAS AS TRÊS DECIDEM PELO ACEITE, NUNCA PELA EMISSÃO. São coisas diferentes, e o handle só
+# conhece a segunda: `deliver` roda ANTES de `record_attempt!`, então uma entrega RECUSADA avança o
+# handle com os códigos das ofertas sem que publicação nenhuma tenha sido assumida. Com a pergunta
+# feita ao handle, o cliente que não recebeu preço nenhum lia "os preços acima são os que chegaram"
+# — sem nada acima — e o motor ainda pedia ao portal um comparativo para ninguém.
 #
-# A pergunta do fato é `Tools::EntregaPublicada`: a passada que EMITE a entrega grava no handle o
-# token dela (`PRECOS_KEY`, `COMPARATIVO_KEY`), e aqui se pergunta à conversa se esse token virou
-# mensagem. O handle diz o que procurar; a conversa diz se chegou.
+# E A PERGUNTA TAMBÉM NÃO É PELA MENSAGEM. Ela foi, na rodada 2, e criou o defeito simétrico: a
+# publicação ADIADA (a cadeia de entrega humanizada do turno em curso, até 90 s) é aceita e ainda
+# não é mensagem. Nessa janela — que é o caminho NORMAL, não uma avaria — o fecho lia "nenhum preço
+# chegou", não pedia o comparativo e não dizia uma palavra. O cliente recebia os preços pelo job
+# adiado e mais nada.
+#
+# O ACEITE é o que o publicador de fato decidiu, e ele é gravado na hora
+# (`Tools::EntregaAceita`, uma lista na LINHA): aceita imediata ou adiada, grava; recusada, não
+# grava nada. O handle guarda só as IDENTIDADES que esta execução emitiu — `PRECOS_KEY`,
+# `COMPARATIVO_KEY` —, que é a tabela de consulta de quem pergunta: o handle diz o que procurar, a
+# lista do aceite diz se foi assumido.
+#
+# (Por que a tabela de consulta é necessária: quem aceita é o publicador, e ele não distingue um
+# preço de uma pergunta pelo dado que falta — as duas são "uma entrega". Quem distingue é a
+# ferramenta, e ela só sabe o TEXTO na passada que o emite. Emitir sem ser aceito não prova nada;
+# é por isso que a lista de emitidos nunca é lida sozinha.)
 #
 # OS ESCRITORES DESSAS CHAVES MORAM AQUI TAMBÉM, e não na classe: quem grava a identidade e quem a
-# lê são o mesmo assunto, e separá-los é como as duas definições do token nasceram. São três, todos
-# privados — `token_da_entrega`, `registrar_entrega_de_preco` e `marcas_do_comparativo` —, chamados
-# pelas passadas de emissão (`precos` e `fechar`).
+# lê são o mesmo assunto, e separá-los é como as duas definições do token nasceram. São quatro,
+# todos privados — `token_da_entrega`, `registrar_entrega_de_preco`, `marcar_preco_legado` e
+# `marcas_do_comparativo` —, chamados pelas passadas de emissão (`precos` e `fechar`).
 #
 # Separado da ferramenta pelo mesmo motivo de `Comparativo`, `Declaracao`, `Recusas`, `Envio` e
 # `Veiculo`: é outro assunto, e a classe está no teto de linhas.
@@ -38,11 +50,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # preços que já leu e com o fecho honesto sobre o que ele tem; o PDF do portal continua lá.
   #
   # E NÃO SE PEDE COMPARATIVO PARA QUEM NÃO TEM PREÇO. O comparativo é o complemento dos preços na
-  # tela; sem nenhum deles ter chegado, gerá-lo é login mais uma chamada de até 60 s por uma entrega
-  # que muito provavelmente será recusada pelo mesmo motivo que recusou a primeira — e o cliente
-  # precisa, ali, da frase honesta de falha. A pergunta é pelo FATO (`resultado_entregue?`):
-  # `entregues` no handle não prova que preço algum chegou ao cliente — exceto na linha legada, que
-  # não carrega outra prova (ver `prova_legada?`), e que por isso também recebe o comparativo aqui.
+  # tela; sem nenhum deles ter sido aceito, gerá-lo é login mais uma chamada de até 60 s por uma
+  # entrega que muito provavelmente será recusada pelo mesmo motivo que recusou a primeira — e o
+  # cliente precisa, ali, da frase honesta de falha. A pergunta é a do ACEITE
+  # (`resultado_entregue?`).
   def closing_deliveries(handle, trabalho_novo: true)
     return [] unless trabalho_novo
     return [] unless resultado_entregue?(handle)
@@ -50,22 +61,22 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
     [comparison_pdf(handle.to_h)].compact
   end
 
-  # RESULTADO DA COTAÇÃO É PREÇO QUE VIROU MENSAGEM. Nunca o `pedido` — a pergunta pelo dado que
-  # falta também é uma entrega aceita (`poll` a devolve, e `delivered_count` a conta), e era por ela
-  # que uma cotação que só perguntou dados fechava dizendo "o que chegou está aqui em cima" sem nada
-  # em cima. E nunca a lista de `entregues`: ela é a intenção, e avança mesmo quando a publicação é
+  # RESULTADO DA COTAÇÃO É PREÇO QUE O PUBLICADOR ACEITOU. Nunca o `pedido` — a pergunta pelo dado
+  # que falta também é uma entrega aceita (`poll` a devolve, e `delivered_count` a conta), e era por
+  # ela que uma cotação que só perguntou dados fechava dizendo "o que chegou está aqui em cima" sem
+  # nada em cima. E nunca a lista de `entregues`: ela avança na EMISSÃO, mesmo quando a publicação é
   # recusada.
   #
-  # COM UMA EXCEÇÃO GUARDADA, e é a mesma de `portal_fechado?`: a linha que atravessou o DEPLOY.
-  # Ver `prova_legada?`.
+  # A PROVA LEGADA É UNIÃO, NÃO ALTERNATIVA (rodada 4): a linha que atravessou o deploy tem preço na
+  # tela e nenhum token nosso, e uma emissão nova recusada não pode apagar esse preço da conta. Ver
+  # `prova_legada?`.
   #
   # (`self.class::` porque o nome curto não se resolve dentro de um módulo compacto — o mesmo
   # cuidado de `Comparativo`.)
   def resultado_entregue?(handle)
     handle = handle.to_h
-    return prova_legada?(handle) unless handle.key?(self.class::PRECOS_KEY)
 
-    Array(handle[self.class::PRECOS_KEY]).any? { |token| publicada?(token) }
+    Array(handle[self.class::PRECOS_KEY]).any? { |token| aceita?(token) } || prova_legada?(handle)
   end
 
   # SOBRA ENQUANTO O PORTAL NÃO TIVER FECHADO — e depois dele, enquanto faltar chegar o que já foi
@@ -80,7 +91,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # quando houve comparativo a emitir, e uma cotação que fecha sem URL de comparativo não a grava —
   # ler a ausência como "ainda vem coisa" é a mesma frase falsa, pela outra ponta (Codex).
   #
-  # A SEGUNDA METADE é o comparativo EMITIDO que não chegou: a publicação voltou `blocked` com a
+  # A SEGUNDA METADE é o comparativo EMITIDO que não foi aceito: a publicação voltou `blocked` com a
   # sentinela já gravada. Aí sobrou mesmo, e calar seria esconder do cliente que falta algo.
   # Comparativo que nunca foi emitido não é sobra: não há o que chegar.
   #
@@ -93,22 +104,41 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
 
   private
 
-  # A IDENTIDADE DA MENSAGEM QUE ESTE PREÇO VAI VIRAR, guardada na passada que o emite — é a única
-  # em que se sabe o TEXTO, e é do texto que o token nasce. Quem lê é o fecho, que pergunta à
-  # conversa se a mensagem existe: o contador da execução não serve (conta qualquer item aceito,
-  # inclusive a pergunta pelo dado que falta) e a lista de `entregues` também não (ela avança mesmo
-  # quando a publicação é recusada). ACUMULA, porque cada lote de preços é uma mensagem.
+  # A IDENTIDADE DA MENSAGEM QUE ESTE PREÇO VAI TER, guardada na passada que o emite — é a única em
+  # que se sabe o TEXTO, e é do texto que o token nasce. É TABELA DE CONSULTA, não prova: quem
+  # responde "chegou?" é a lista do aceite, e esta lista diz por quais identidades perguntar. O
+  # contador da execução não serviria (conta qualquer item aceito, inclusive a pergunta pelo dado
+  # que falta) e a lista de `entregues` também não (são códigos de oferta, não identidades de
+  # entrega). ACUMULA, porque cada lote de preços é uma mensagem.
   # Sem execução não há token, e aí não se grava nada: o fecho cala, que é o lado conservador.
-  def registrar_entrega_de_preco(texto, handle)
+  def registrar_entrega_de_preco(texto, handle, already)
+    handle = marcar_preco_legado(handle, already)
     token = token_da_entrega(texto)
     return handle if token.blank?
 
     handle.merge(self.class::PRECOS_KEY => (Array(handle[self.class::PRECOS_KEY]).map(&:to_s) + [token]).uniq)
   end
 
+  # HAVIA PREÇO EMITIDO ANTES DE ESTA VERSÃO COMEÇAR A REGISTRAR O ACEITE? Gravado UMA vez, na
+  # primeira passada desta versão que emite preço nesta execução, e é o que dá COBERTURA à prova
+  # legada: sem ele, a única maneira de saber se `entregues` guarda preço de antes seria a presença
+  # da chave nova — e presença não é cobertura. Uma linha que atravessou o deploy com preço na tela
+  # e emitiu um preço novo (recusado) passava a ser julgada só pelo token novo, e o preço antigo
+  # sumia da conta: nem comparativo, nem uma palavra, para quem tinha preço na tela.
+  #
+  # `already` são os códigos que a execução já tinha entregue ANTES deste lote: emitidos por esta
+  # versão (e então há token para eles) ou pela anterior (e então não há). Falso é o caso comum — a
+  # execução que nasce depois do deploy —, e é ele que impede o fallback de reabrir a frase falsa da
+  # rodada 1.
+  def marcar_preco_legado(handle, already)
+    return handle if handle.key?(self.class::PRECO_LEGADO_KEY)
+
+    handle.merge(self.class::PRECO_LEGADO_KEY => Array(already).any?)
+  end
+
   # AS DUAS MARCAS DO COMPARATIVO, e elas dizem coisas diferentes: `PDF_SENT_KEY` é "já emiti este
-  # comparativo" (o que impede a segunda emissão) e `COMPARATIVO_KEY` é a IDENTIDADE da mensagem
-  # que ele vira — é por ela que o fecho pergunta ao banco se o cliente o recebeu. Sem execução não
+  # comparativo" (o que impede a segunda emissão) e `COMPARATIVO_KEY` é a IDENTIDADE da entrega —
+  # é por ela que o fecho pergunta à lista do aceite se o publicador a assumiu. Sem execução não
   # há identidade a gravar, e aí sai só a sentinela.
   #
   # A AUSÊNCIA DA IDENTIDADE SE RESOLVE AQUI, e não com um `compact` sobre o handle mesclado: aquele
@@ -126,22 +156,25 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
     ::Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
   end
 
-  # A PROVA LEGADA DE QUE O PREÇO CHEGOU, e só para a linha que atravessou o DEPLOY.
+  # A PROVA LEGADA DE QUE O PREÇO CHEGOU, e só para o preço emitido ANTES desta versão.
   #
-  # `PRECOS_KEY` é a identidade da mensagem, e quem a grava é a passada que EMITE o preço. A
-  # execução que já estava voando quando esta versão subiu emitiu o dela na versão anterior: o
-  # handle tem `entregues` e não tem a chave nova. Sem esta leitura, o fecho dessa linha conclui
+  # A execução que já estava voando quando esta versão subiu emitiu o dela na versão anterior: o
+  # handle tem `entregues` e nenhuma identidade nossa. Sem esta leitura, o fecho dessa linha conclui
   # "nenhum preço chegou" — e o cliente que já tinha preço na tela fica sem o comparativo E sem uma
   # palavra. É o incidente de 08/09/2026 de volta, durante toda a vida das execuções em voo.
   #
-  # O QUE TORNA ISTO SEGURO É A GUARDA, não o valor lido: cai-se aqui só quando a chave nova está
-  # AUSENTE do handle. Toda passada posterior ao deploy que emite preço a grava — inclusive quando a
-  # publicação é recusada, porque ela é gravada na EMISSÃO —, então nenhuma execução nova alcança
-  # este caminho, e a frase falsa que a rodada 1 corrigiu (`entregues` com a conversa vazia) não
-  # reabre. Um fallback INCONDICIONAL reabriria; guardado, não.
+  # O QUE TORNA ISTO SEGURO É A COBERTURA, não o valor lido: `PRECO_LEGADO_KEY` é gravada na
+  # primeira emissão desta versão e responde, com o que se sabia NAQUELE momento, se havia preço de
+  # antes. Toda execução nascida depois do deploy a grava como falsa na primeira emissão — inclusive
+  # quando a publicação é recusada, porque ela é gravada na EMISSÃO —, então nenhuma alcança a prova
+  # legada, e a frase falsa que a rodada 1 corrigiu não reabre. Um fallback por PRESENÇA da chave
+  # nova (rodada 3) também não reabria, mas perdia o preço antigo da linha de histórico misto.
   #
+  # Sem a marca, a linha nunca emitiu preço nesta versão e `entregues` é toda a prova que existe.
   # Lista vazia não é preço: `submeter` grava `entregues => []` desde a primeira passada.
   def prova_legada?(handle)
+    return handle[self.class::PRECO_LEGADO_KEY].present? if handle.key?(self.class::PRECO_LEGADO_KEY)
+
     Array(handle[self.class::DELIVERED_KEY]).any?
   end
 
@@ -155,14 +188,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
     handle[self.class::FECHADO_KEY].present? || handle[self.class::PDF_SENT_KEY].present?
   end
 
-  # O comparativo foi emitido e NÃO virou mensagem? Sem token gravado não há emissão conhecida —
-  # e o que não foi emitido não está faltando.
+  # O comparativo foi emitido e o publicador NÃO o assumiu? Sem token gravado não há emissão
+  # conhecida — e o que não foi emitido não está faltando.
   def comparativo_pendente?(handle)
     token = handle[self.class::COMPARATIVO_KEY]
-    token.present? && !publicada?(token)
+    token.present? && !aceita?(token)
   end
 
-  def publicada?(token)
-    ::Autonomia::Agents::Tools::EntregaPublicada.publicada?(conversation, token)
+  def aceita?(token)
+    ::Autonomia::Agents::Tools::EntregaAceita.aceita?(run, token)
   end
 end

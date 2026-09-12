@@ -196,6 +196,33 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.partial_message])
     end
 
+    # MENSAGEM NO BANCO COM ENVIO PENDENTE NÃO É FECHO ENTREGUE (rodada 4).
+    #
+    # O publicador deixa a mensagem no banco MARCADA quando o `SendReplyJob` dela não entra na fila
+    # (o Redis fora no meio da publicação): ela existe, o cliente não a recebeu. A pergunta pelo
+    # fecho já publicado enxergava só a existência — a passada seguinte saía calada, e o cliente
+    # ficava sem desfecho até o varredor passar.
+    #
+    # PUBLICAR DE NOVO É O CERTO, E NÃO DUPLICA: a dedupe por conteúdo do publicador acha a mesma
+    # mensagem pelo token e RETOMA o envio dela, sob o lock.
+    it 'o fecho com envio pendente e retomado pela passada seguinte, sem duplicar a mensagem' do
+      # Arrange — a fila recusa o envio ao canal; a mensagem do fecho fica marcada
+      run = execucao
+      tool = build_async_tool
+      fila_recusa_o_envio
+      encerrar(run, tool)
+      pendente = conversation.messages.reload.where(sender_type: 'AgentBot').last
+      expect(Autonomia::Agents::Tools::PendenciaDeEnvio.pendente?(pendente)).to be(true)
+
+      # Act — o Redis volta e a passada seguinte (retry do Sidekiq, varredor) encontra a linha
+      fila_volta
+      encerrar(run.reload, tool)
+
+      # Assert — uma mensagem só, e o envio dela entrou na fila
+      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+      expect(Autonomia::Agents::Tools::PendenciaDeEnvio.marcada?(pendente.reload)).to be(false)
+    end
+
     # A ENTREGA QUE O PUBLICADOR RECUSA NÃO É ENTREGA. `AsyncPublisher#publish` nunca levanta: ele
     # devolve `blocked` (autorização recusada sob o lock, conversa que já não aceita, exceção
     # engolida). Ler qualquer resultado como sucesso faria o fecho calar — ou pior, afirmar — para

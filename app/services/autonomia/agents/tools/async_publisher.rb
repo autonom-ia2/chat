@@ -68,6 +68,12 @@ class Autonomia::Agents::Tools::AsyncPublisher
     def deferred? = status == :deferred
     def blocked? = status == :blocked
     def skipped? = status == :skipped
+
+    # O PUBLICADOR ASSUMIU ESTA ENTREGA? Imediata ou adiada — a adiada sai sozinha pelo
+    # `AsyncPublishJob`, e tratá-la como "nada entregue" faz o desfecho falar por cima de uma
+    # cotação que está a caminho. É o que o contador da linha (`record_delivery!`) e o registro do
+    # aceite (`Tools::EntregaAceita`) contam, e é a pergunta que o encerramento faz por entrega.
+    def aceita? = published? || deferred?
   end
 
   # O que vira UMA mensagem na conversa: o texto, o token de idempotência (a identidade da entrega)

@@ -216,9 +216,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # quanto a ADIADA — a adiada sai sozinha pelo `AsyncPublishJob`, e tratá-la como "nada entregue"
   # faria o desfecho publicar "não consegui concluir" ao lado da cotação que estava a caminho.
   # `entrega` é texto ou a forma serializada de uma entrega de arquivo (o comparativo, entrega 11).
+  #
+  # DUAS ANOTAÇÕES, A MESMA PERGUNTA (entrega 8a): o contador diz QUANTAS entregas o publicador
+  # aceitou, e o registro do aceite (`Tools::EntregaAceita`) diz QUAIS. O contador não basta para o
+  # fecho — ele soma qualquer item aceito, inclusive a pergunta pelo dado que falta —, e as duas
+  # anotações acontecem no ACEITE, não na emissão: o handle da ferramenta só vai ao banco no
+  # `record_attempt!` seguinte.
   def deliver(run, entrega)
-    result = publish(run, entrega)
-    run.record_delivery! if result.published? || result.deferred?
+    result = ::Autonomia::Agents::Tools::EntregaAceita.registrar(run, entrega, publish(run, entrega))
+    run.record_delivery! if result.aceita?
     result
   end
 
@@ -267,16 +273,16 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
       .encerrar
   end
 
-  # A ferramenta montada para trabalhar FORA do turno: com a conversa da execução, com a LINHA (é
-  # pelo `delivery_token` dela que se sabe o que já foi publicado) e SEM `delivery`, de propósito: a
-  # presença do `delivery` é o que diz "dentro do turno" para quem escolhe a sessão por ela.
+  # A ferramenta montada para trabalhar FORA do turno: com a LINHA (é pelo `delivery_token` dela que
+  # se monta a identidade de cada entrega) e SEM `delivery`, de propósito: a presença do `delivery`
+  # é o que diz "dentro do turno" para quem escolhe a sessão por ela.
   #
-  # QUEM LÊ AS DUAS É O FECHO DA COTAÇÃO (entrega 8a): é com a conversa e a linha que ela monta a
-  # identidade de cada entrega que emite (`EntregaPublicada.token_de`) e, no encerramento, pergunta
-  # ao banco o que de fato chegou ao cliente. As duas nascem com padrão `nil` em `Native::Base`, e
-  # quem não as usa não muda de comportamento.
+  # QUEM LÊ A LINHA É O FECHO DA COTAÇÃO (entrega 8a): com ela a ferramenta monta a identidade de
+  # cada entrega que emite (`EntregaPublicada.token_de`) e, no encerramento, pergunta ao registro do
+  # ACEITE (`EntregaAceita`) o que o publicador assumiu. Nasce com padrão `nil` em `Native::Base`, e
+  # quem não a usa não muda de comportamento.
   def ferramenta(run, native)
-    native.new(agent: run.agent, params: run.arguments, conversation: run.conversation, run: run)
+    native.new(agent: run.agent, params: run.arguments, run: run)
   end
 
   # Parada por decisão do operador: sem mensagem ao cliente. Publicar aqui seria furar exatamente o
@@ -317,11 +323,17 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.handle.is_a?(Hash) && run.handle[SUBMITTED_KEY].present?
   end
 
-  # As marcas NOSSAS no handle: submetido, intenções, possivelmente duplicada, encerrado. A ferramenta
-  # não as vê (`tool_handle`) e não as escreve (`parte_da_ferramenta`); elas só mudam por escritas
-  # mescladas no banco (`ToolRun#merge_handle!`, `#record_attempt!`), nunca por cópia da memória.
+  # As marcas NOSSAS no handle: submetido, intenções, possivelmente duplicada, encerrado, e a lista
+  # do aceite. A ferramenta não as vê (`tool_handle`) e não as escreve (`parte_da_ferramenta`); elas
+  # só mudam por escritas mescladas no banco (`ToolRun#merge_handle!`, `#record_attempt!`,
+  # `#registrar_entrega_aceita!`), nunca por cópia da memória.
+  #
+  # A LISTA DO ACEITE PRECISA ESTAR AQUI, e não é detalhe: ela é escrita NO MEIO da passada, e o
+  # handle que a ferramenta devolve foi lido ANTES. Se ela viajasse no handle da ferramenta, o
+  # `record_attempt!` do fim da passada a regravaria com a cópia velha — o token recém-aceito
+  # sumiria. A ferramenta a lê pela LINHA (`Tools::EntregaAceita.aceita?`), nunca pelo handle.
   MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA, ToolRun::PEDIDO,
-            ToolRun::ENCERRADA_EM].freeze
+            ToolRun::ENCERRADA_EM, ToolRun::ENTREGAS_ACEITAS].freeze
   MARCAS_DE_INTENCAO = [ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA].freeze
 
   # O handle da FERRAMENTA, sem as nossas marcas: ela não precisa conhecer o nosso controle — nem
