@@ -53,7 +53,11 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # terminou. Só o Responder promove para `running` — se o turno morrer (falha de IA na segunda
   # chamada, sinal de silêncio), a execução é descartada e nunca chega a falar com o portal.
   ACTIVE_STATUSES = %w[pending running].freeze
-  TERMINAL_STATUSES = %w[done failed superseded discarded blocked].freeze
+  # Já MORREU: supersedida por um pedido novo, descartada com o turno, ou barrada pelo gate da conta
+  # (`dead?`). É o conjunto que a proposta individual (entrega 8) consulta para NÃO sair de uma
+  # cotação que o cliente corrigiu — por isso ele tem nome, e não só o predicado.
+  DEAD_STATUSES = %w[superseded discarded blocked].freeze
+  TERMINAL_STATUSES = (%w[done failed] + DEAD_STATUSES).freeze
   STATUSES = (ACTIVE_STATUSES + TERMINAL_STATUSES).freeze
 
   belongs_to :account
@@ -322,7 +326,7 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # Já morreu: supersedida por um pedido novo, descartada com o turno, ou barrada pelo gate da conta.
   # Publicar a partir de uma destas entregaria ao cliente o resultado de um pedido que ele corrigiu.
   def dead?
-    %w[superseded discarded blocked].include?(status)
+    DEAD_STATUSES.include?(status)
   end
 
   # Avança o contador de mensagens. Otimista no valor atual: se dois publicadores correrem, só um

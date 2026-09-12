@@ -306,19 +306,22 @@ RSpec.describe Autonomia::Insurance::Medida do
 
     # A FERRAMENTA DE PROPOSTA GRAVA, E A MEDIDA CONTA — pelo caminho real da escrita: a proposta
     # individual (`Native::InsuranceProposal#poll`) anota na LINHA DA COTAÇÃO, que já está `done`,
-    # os códigos que saíram; nenhuma linha da medida mudou. Gravar na linha da própria ferramenta
-    # (outro slug) deixaria a medida em zero para sempre — é o que este exemplo reprova.
+    # os códigos que saíram — UM por passada, porque cada passada entrega UM arquivo; nenhuma linha
+    # da medida mudou. Gravar na linha da própria ferramenta (outro slug) deixaria a medida em zero
+    # para sempre — é o que este exemplo reprova.
     it 'conta a proposta que a ferramenta de proposta gravou na linha da cotação' do
       # Arrange — a cotação encerrada, com preço entregue, como a ferramenta de cotação a deixa
       cotacao = run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete, 'entregues' => %w[8 20],
                                Autonomia::Agents::Tools::Native::InsuranceQuote::NOMES_KEY => { '8' => 'Porto', '20' => 'Suhai' } })
       ferramenta = Autonomia::Agents::Tools::Native::InsuranceProposal
-      handle = { 'quote_id' => 'q1', 'cotacao_run_id' => cotacao.id, 'sufixo' => 'placa ABC1D23',
+      handle = { 'quote_id' => 'q1', ferramenta::ORIGEM => cotacao.id, 'sufixo' => 'placa ABC1D23',
                  ferramenta::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'https://arquivos.exemplo.test/p-8.pdf' },
                                          { 'code' => '20', 'name' => 'Suhai', 'url' => 'https://arquivos.exemplo.test/p-20.pdf' }] }
+      no_job = -> { ferramenta.new(agent: agent, params: { 'seguradoras' => %w[Porto Suhai] }, conversation: cotacao.conversation) }
 
-      # Act — a passada que entrega os arquivos e anota
-      ferramenta.new(agent: agent, params: { 'seguradoras' => %w[Porto Suhai] }).poll(handle: handle, attempt: 1)
+      # Act — as duas passadas que entregam os arquivos e anotam
+      primeira = no_job.call.poll(handle: handle, attempt: 1)
+      no_job.call.poll(handle: primeira.handle, attempt: 2)
 
       # Assert — UMA cotação virou proposta, com DUAS propostas emitidas
       expect(cotacao.reload.handle[Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY]).to eq(%w[20 8])

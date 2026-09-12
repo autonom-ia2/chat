@@ -362,6 +362,38 @@ RSpec.describe Autonomia::Agents::ToolRun do
       expect(run.merge_handle!({ chave => ['8'] })).to be(false)
       expect(run.anotar_propostas!(['8'])).to be(true)
     end
+
+    # A ESCRITA NÃO OLHA O STATUS (mutação M2 da rodada de correção da entrega 8): o cliente escolhe
+    # na lista PARCIAL, com a cotação ainda `running`, e escolhe também depois de uma cotação que
+    # estourou o prazo com preço entregue (`failed`). Quem barra a linha MORTA é a ferramenta de
+    # proposta, antes de anotar — a origem supersedida nem chega aqui.
+    it 'escreve na cotacao ainda viva e na encerrada por prazo, nao so na done' do
+      viva = promote(open_run(slug: 'cotar_seguro'))
+      viva.record_attempt!(handle: { 'quote_id' => 'q1', 'entregues' => ['8'] })
+      vencida = promote(open_run(slug: 'cotar_seguro', conversation_id: other_conversation.id))
+      vencida.record_attempt!(handle: { 'quote_id' => 'q2', 'entregues' => ['8'] })
+      vencida.finish!('failed', failure_code: 'prazo_esgotado')
+
+      expect(viva.anotar_propostas!(['8'])).to be(true)
+      expect(vencida.anotar_propostas!(['8'])).to be(true)
+      expect(viva.reload).to have_attributes(status: 'running', handle: hash_including(chave => ['8']))
+      expect(vencida.reload).to have_attributes(status: 'failed', handle: hash_including(chave => ['8']))
+    end
+
+    # A MESCLA PRESERVA A CHAVE AUSENTE (Codex, P2): a consulta da cotação não devolve `propostas`, e
+    # é isso que faz a anotação de outro processo sobreviver ao `record_attempt!` dela. Com a chave
+    # no payload, a cópia velha venceria — por isso a consulta a tira do handle antes de devolver.
+    it 'record_attempt! sem a chave no payload preserva a anotacao do banco; com a chave, a substitui' do
+      run = promote(open_run(slug: 'cotar_seguro'))
+      run.record_attempt!(handle: { 'quote_id' => 'q1' })
+      run.anotar_propostas!(%w[8 20])
+
+      run.record_attempt!(handle: { 'entregues' => ['8'] })
+      expect(run.reload.handle).to include(chave => %w[20 8], 'entregues' => ['8'])
+
+      run.record_attempt!(handle: { chave => ['8'] })
+      expect(run.reload.handle[chave]).to eq(['8'])
+    end
   end
 
   describe '#dead?' do

@@ -6,11 +6,12 @@
 # portal já gera com o filtro (`insurerCode`); o que continua com pessoa é o que vem depois dela:
 # emissão, vistoria, pagamento.
 #
-# O QUE ELA NÃO FAZ: não cota. Lê a última cotação DESTA CONVERSA que tem preço entregue, traduz o
-# nome que o cliente falou no código pelo mapa que a própria cotação gravou
-# (`InsuranceQuote::NOMES_KEY`, código -> nome como o portal escreveu) e pede ao portal a proposta
-# daquele código. Duas seguradoras são dois arquivos na MESMA execução, e nenhuma cotação nova
-# (termo 4): `quote_start` não é chamado daqui em caminho nenhum.
+# O QUE ELA NÃO FAZ: não cota. Lê a cotação DE ORIGEM — escolhida UMA vez, no aceite, entre as desta
+# conversa com preço entregue, e fixada nos argumentos da execução (`Origem`) —, traduz o nome que o
+# cliente falou no código pelo mapa que a própria cotação gravou (`InsuranceQuote::NOMES_KEY`, código
+# -> nome como o portal escreveu) e pede ao portal a proposta daquele código. Duas seguradoras são
+# dois arquivos na MESMA execução, e nenhuma cotação nova (termo 4): `quote_start` não é chamado
+# daqui em caminho nenhum.
 #
 # O CASAMENTO DO NOME É COMPARAÇÃO DE DADOS (`Escolha`), não interpretação: quem entende a frase é o
 # modelo, que escreve o nome no parâmetro; o código compara texto normalizado com o mapa. O que não
@@ -20,11 +21,12 @@
 # ASSÍNCRONA, como a cotação: `quote/proposal` é uma chamada ao portal de até 60 s por seguradora
 # (`Connector::Http::READ_TIMEOUT`), e o turno não espera isso. No turno (`precheck`) só o que é
 # dado nosso: a cotação da conversa e o casamento dos nomes — o portal NUNCA é chamado dentro do
-# turno. O portal é chamado em `start`, dentro do `AsyncRunJob`, com a sessão da conexão
-# (`with_fresh_session`, como a cotação faz em `start`, `poll` e no comparativo — no job há tempo
-# para o login que o turno não tem). `poll` entrega os arquivos (`EntregaDeArquivo`, o publicador da
-# entrega 11 baixa e anexa) e ANOTA NA LINHA DA COTAÇÃO quais propostas saíram
-# (`ToolRun#anotar_propostas!` -> `InsuranceQuote::PROPOSTAS_KEY`, que a medida da entrega 7 lê).
+# turno. O portal é chamado no `AsyncRunJob`, UMA seguradora por passada (`Geracao`): `start` pede
+# a primeira, `poll` pede as pendentes e depois entrega os arquivos, também UM por passada — cada
+# `EntregaDeArquivo` é um download de até 20 s (`PRAZO_SEGUNDOS`), e dois numa passada passariam
+# dos 25 s que o Sidekiq dá ao job num shutdown. `poll` também ANOTA NA LINHA DA COTAÇÃO quais
+# propostas saíram (`ToolRun#anotar_propostas!` -> `InsuranceQuote::PROPOSTAS_KEY`, que a medida da
+# entrega 7 lê), e confere a cada passada se a origem ainda vale (`dead?`).
 class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::Tools::Native::Base
   Quote = ::Autonomia::Agents::Tools::Native::InsuranceQuote
   PARAMETRO = 'seguradoras'.freeze
@@ -32,12 +34,6 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
   # não é dinheiro (a proposta não consome cotação) — é o tamanho de uma resposta que se lê.
   MAX_SEGURADORAS = 2
   NOME = 'Proposta'.freeze
-  # As chaves do handle DESTA execução: as propostas que o portal gerou (`{code, name, url}`) e os
-  # nomes das que ele recusou. Não se chamam `propostas` de propósito: esse nome é o da chave que
-  # fica na LINHA DA COTAÇÃO (`InsuranceQuote::PROPOSTAS_KEY`, só códigos), e dois formatos sob o
-  # mesmo nome em duas linhas é como uma medida passa a somar a linha errada sem ninguém notar.
-  GERADAS = 'geradas'.freeze
-  NAO_SAIU = 'nao_saiu'.freeze
 
   DESCRICAO = 'Gera o PDF da PROPOSTA de UMA seguradora que já cotou nesta conversa, para o cliente ' \
               'que escolheu ("me manda a da Porto"). Não cota de novo e não é o comparativo de ' \
@@ -56,6 +52,8 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
   INCERTO = 'Não consegui confirmar se a proposta foi gerada. Um atendente vai conferir e retomar daqui.'.freeze
 
   include Recusas
+  include Origem
+  include Geracao
 
   class << self
     def slug
@@ -119,31 +117,72 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     recusada && conferencia(recusada['motivo'], recusada['pedido'], recusada['faltando'])
   end
 
-  # -> Hash serializável (o handle). A mesma avaliação do turno — a conferência pode ter caído — e
-  # então o portal, uma chamada por seguradora escolhida. Volta rápido para o job: submete e não espera.
+  # -> Hash serializável (o handle). A mesma avaliação do turno, agora sobre a origem FIXADA (a
+  # conferência pode ter caído; a origem pode ter morrido) — e então o portal, para a PRIMEIRA
+  # seguradora escolhida. Volta para o job com as demais pendentes: uma chamada por passada.
   def start
-    avaliar || gerar(escolha.codigos)
+    avaliar || iniciar(escolha.codigos)
   end
 
-  # -> Tools::Progress. Uma passada: entrega os arquivos, anota na cotação quais saíram, e acaba.
+  # -> Tools::Progress. UMA passada faz UMA coisa: pede ao portal a próxima seguradora pendente, OU
+  # entrega o próximo arquivo (anotando na cotação que ele saiu). Antes de qualquer uma, confere se a
+  # origem ainda vale: supersedida no caminho, o cliente lê que a cotação foi refeita, e nada sai.
   # `attempt` é do contrato (`Base#poll`); aqui não há seguradora lenta para esperar.
   def poll(handle:, attempt:) # rubocop:disable Lint/UnusedMethodArgument
     return progress_class.done(deliveries: [handle['pedido']], handle: handle) if handle['pedido']
 
-    propostas = Array(handle[GERADAS]).select { |proposta| proposta.is_a?(Hash) }
-    return progress_class.failed('sem_proposta') if propostas.empty?
+    origem = fixar_origem(handle[ORIGEM])
+    return progress_class.failed('cotacao_ausente') if origem.nil?
+    return progress_class.done(deliveries: [recusar('cotacao_substituida', SUBSTITUIDA, onde: 'envio')]) if origem.dead?
 
-    anotar_na_cotacao(handle, propostas.pluck('code'))
-    progress_class.done(deliveries: entregas(propostas, handle), handle: handle)
+    pendente = Array(handle[PENDENTES]).first
+    return progress_class.running(handle: tentar(handle, pendente)) if pendente
+
+    entregar(handle)
   end
 
   private
 
-  # Um arquivo por proposta e, se o portal recusou alguma, o aviso dela por último.
-  def entregas(propostas, handle)
-    lista = propostas.map { |proposta| entrega(proposta, handle['sufixo']) }
-    faltaram = Array(handle[NAO_SAIU])
-    faltaram.any? ? lista + [nao_saiu(faltaram)] : lista
+  # UM ARQUIVO POR PASSADA: `running` com o próximo que ainda não saiu; `done` com o último, seguido
+  # do aviso de quem o portal não gerou. Uma passada repetida (o handle não gravou depois de
+  # publicar) reencontra tudo enviado e encerra: a publicação é idempotente pelo conteúdo.
+  def entregar(handle)
+    geradas = Array(handle[GERADAS]).select { |proposta| proposta.is_a?(Hash) }
+    return sem_nenhuma(handle) if geradas.empty?
+
+    enviadas = Array(handle[ENVIADAS]).map(&:to_s)
+    faltam = geradas.reject { |proposta| enviadas.include?(proposta['code'].to_s) }
+    return progress_class.done(deliveries: aviso(handle), handle: handle) if faltam.empty?
+
+    entregar_proxima(handle, faltam.first, enviadas, ultima: faltam.size == 1)
+  end
+
+  # O REGISTRO É NA LINHA DA COTAÇÃO, não nesta: é a cotação que "virou proposta", e é lá que a
+  # medida da entrega 7 lê. Anotado quando o arquivo SAI, um código por passada, união no banco.
+  def entregar_proxima(handle, proposta, enviadas, ultima:)
+    codigo = proposta['code'].to_s
+    cotacao.anotar_propostas!([codigo])
+    proximo = handle.merge(ENVIADAS => enviadas + [codigo])
+    arquivo = entrega(proposta, handle['sufixo'])
+    return progress_class.running(deliveries: [arquivo], handle: proximo) unless ultima
+
+    progress_class.done(deliveries: [arquivo] + aviso(handle), handle: proximo)
+  end
+
+  # NENHUMA saiu: o portal não gerou as que o cliente pediu (recusa nomeada, registrada daqui — o job
+  # só registra a do `start`), ou o handle não tem proposta nem falha (defeito, e o job fecha com a
+  # nossa frase).
+  def sem_nenhuma(handle)
+    faltaram = handle[NAO_SAIU].to_h.keys
+    return progress_class.failed('sem_proposta') if faltaram.empty?
+
+    progress_class.done(deliveries: [recusar('proposta_nao_gerada', nao_gerada(nomes_de(faltaram)), onde: 'envio')])
+  end
+
+  # O aviso de quem o portal não gerou, por último — quando alguma saiu.
+  def aviso(handle)
+    faltaram = handle[NAO_SAIU].to_h.keys
+    faltaram.any? ? [nao_saiu(nomes_de(faltaram))] : []
   end
 
   # -> o handle de recusa (`pedido`/`motivo`/`faltando`), ou nil quando há o que gerar.
@@ -151,9 +190,16 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     recusar_entrada || recusar_escolha
   end
 
+  # A ORDEM IMPORTA. A origem MORTA é o motivo mais específico e vem primeiro: no job, a fixada que
+  # um pedido novo supersedeu diz "a cotação foi refeita" — mesmo que a nova esteja correndo (no
+  # turno a origem escolhida nunca está morta, e a conferência cai no caso seguinte). Depois, a
+  # cotação nova em andamento vale antes de "não encontrei cotação": o cliente acabou de mandar
+  # refazer, e a resposta certa é esperar por ela, não oferecer cotar de novo.
   def recusar_entrada
     return recusa('proposta_sem_seguradora', SEM_SEGURADORA, faltando: [PARAMETRO]) if nomes.empty?
     return recusa('proposta_acima_do_teto', ACIMA_DO_TETO, faltando: [PARAMETRO]) if nomes.size > MAX_SEGURADORAS
+    return recusa('cotacao_substituida', SUBSTITUIDA, faltando: []) if cotacao&.dead?
+    return recusa('cotacao_em_andamento', EM_ANDAMENTO, faltando: []) if cotacao_em_andamento?
 
     recusa('proposta_sem_cotacao', SEM_COTACAO, faltando: []) if cotacao.nil?
   end
@@ -164,35 +210,8 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     recusa('seguradora_nao_cotou', nao_cotou(escolha.nao_cotaram), faltando: [PARAMETRO]) if escolha.nao_cotaram.any?
   end
 
-  # UMA CHAMADA POR SEGURADORA, cada uma com o seu código. O que o portal recusou como "não cotou"
-  # (`:validation`) não apaga o que ele gerou para a outra: sai o arquivo que saiu, e o aviso da que
-  # não saiu. Só quando NENHUMA sai é recusa — a mesma de quem pede uma seguradora que não cotou.
-  def gerar(codigos)
-    urls = codigos.index_with { |codigo| proposta(codigo) }
-    sairam, nao_sairam = urls.keys.partition { |codigo| urls[codigo] }
-    return recusa('seguradora_nao_cotou', nao_cotou(nomes_de(codigos)), faltando: [PARAMETRO]) if sairam.empty?
-
-    { 'quote_id' => quote_id, 'cotacao_run_id' => cotacao.id, 'sufixo' => sufixo_do_arquivo,
-      GERADAS => sairam.map { |codigo| { 'code' => codigo, 'name' => mapa[codigo].to_s, 'url' => urls[codigo] } },
-      NAO_SAIU => nomes_de(nao_sairam) }
-  end
-
   def nomes_de(codigos)
     codigos.map { |codigo| mapa[codigo].to_s }
-  end
-
-  # -> a URL do PDF daquela seguradora, ou nil quando o portal disse que ela não cotou. Qualquer
-  # outra falha sobe: o job decide entre tentar de novo e desistir com a nossa frase.
-  def proposta(codigo)
-    resposta = sessions.with_fresh_session do |open_session|
-      connector.quote_proposal(provider: connection.provider, session: open_session, quote_id: quote_id, insurer_code: codigo)
-    end
-    resposta.to_h['url'].presence || raise(::Autonomia::Insurance::Connector::Error.new(:protocol, 'proposta sem url'))
-  rescue ::Autonomia::Insurance::Connector::Error => e
-    raise unless e.kind == :validation
-
-    Rails.logger.warn("[autonomia][insurance] portal recusou proposta account=#{account.id} seguradora=#{codigo}: nao cotou")
-    nil
   end
 
   # A entrega de arquivo na forma serializada (é ela que atravessa o `Progress` e o job) — ou, se a
@@ -209,15 +228,6 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     arquivo.reserva
   end
 
-  # O REGISTRO É NA LINHA DA COTAÇÃO, não nesta: é a cotação que "virou proposta", e é lá que a
-  # medida da entrega 7 lê. A linha é achada pelo id que `start` guardou, dentro da conta.
-  def anotar_na_cotacao(handle, codigos)
-    linha = ::Autonomia::Agents::ToolRun.find_by(id: handle['cotacao_run_id'], account_id: account.id, slug: Quote.slug)
-    return linha.anotar_propostas!(codigos) if linha
-
-    Rails.logger.warn("[autonomia][insurance] cotacao da proposta nao encontrada account=#{account.id} run=#{handle['cotacao_run_id']}")
-  end
-
   # O que o modelo escreveu, sem vazios e sem repetição pelo texto normalizado ("Porto" e "porto"
   # são um pedido). A ordem é a dele.
   def nomes
@@ -227,61 +237,6 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
 
   def escolha
     @escolha ||= Escolha.escolher(nomes, mapa)
-  end
-
-  # A ÚLTIMA COTAÇÃO DA CONVERSA COM PREÇO ENTREGUE E COM O MAPA DE NOMES: a mais recente por id, seja
-  # qual for o status — uma cotação supersedida por um pedido novo que ainda não tem preço continua
-  # sendo a que o cliente leu. Sem `nomes_entregues` (cotação anterior à entrega 8) não há como casar
-  # o nome, e a resposta é "não encontrei cotação": a instrução manda oferecer cotar de novo.
-  def cotacao
-    return @cotacao if defined?(@cotacao)
-
-    @cotacao = conversation && cotacoes_com_preco.order(id: :desc).first
-  end
-
-  def cotacoes_com_preco
-    entregues = Quote::DELIVERED_KEY
-    ::Autonomia::Agents::ToolRun.where(account_id: account.id, conversation_id: conversation.id, slug: Quote.slug)
-                                .where("handle->>'quote_id' IS NOT NULL")
-                                .where("jsonb_typeof(handle->?) = 'array' AND jsonb_array_length(handle->?) > 0", entregues, entregues)
-                                .where("jsonb_typeof(handle->?) = 'object'", Quote::NOMES_KEY)
-  end
-
-  # Código -> nome, como o portal escreveu e o cliente leu.
-  def mapa
-    @mapa ||= cotacao.handle[Quote::NOMES_KEY].to_h.transform_keys(&:to_s)
-  end
-
-  # Em ordem alfabética: o jsonb devolve as chaves na ordem dele (tamanho, depois bytes), que não é
-  # ordem para uma pessoa ler.
-  def cotaram
-    mapa.values.sort_by { |nome| Escolha.normalizar(nome) }
-  end
-
-  def quote_id
-    cotacao.handle['quote_id'].to_s
-  end
-
-  # O mesmo nome do comparativo (entrega 11): a placa que o cliente informou ou, sem ela, o ramo.
-  def sufixo_do_arquivo
-    produto = cotacao.handle['produto'].presence || Quote::AUTO
-    veiculo = cotacao.arguments['vehicle']
-    placa = produto == Quote::AUTO && veiculo.is_a?(Hash) ? veiculo['plate'] : nil
-    Quote::Comparativo.sufixo_do_arquivo(placa: placa, produto: produto)
-  end
-
-  # A sessão é a da conexão, reusada (#330); `with_fresh_session` renova se o portal a recusar.
-  def sessions
-    @sessions ||= ::Autonomia::Insurance::Connections::Session.new(connection, connector: connector)
-  end
-
-  def connection
-    @connection ||= ::Autonomia::Insurance::Connection.for_account(account).find(&:ready?) ||
-                    raise(::Autonomia::Insurance::Connector::Error.new(:config, 'sem conexão pronta'))
-  end
-
-  def connector
-    @connector ||= ::Autonomia::Insurance::Connector.client
   end
 
   def progress_class

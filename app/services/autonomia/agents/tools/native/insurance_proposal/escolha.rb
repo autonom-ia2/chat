@@ -8,18 +8,20 @@
 # proposta errada com cara de certa.
 #
 # A REGRA, para cada nome falado, contra os nomes cotados normalizados:
-#   - o falado é PREFIXO de exatamente um nome cotado -> é esse ("porto" -> "Porto"; "bp a" ->
-#     "Bp Assinatura"). O casamento exato é o caso particular do prefixo;
-#   - é prefixo de mais de um -> AMBÍGUO, e a resposta lista as candidatas. É o caso real de "Bp":
-#     no portal, 48 chama-se "Bp" e 55 "Bp Assinatura" (medido em 11/09/2026), e são produtos
-#     diferentes — um total anual e uma assinatura mensal. Dar ao exato a vitória automática
-#     mandaria a proposta da 48 a quem talvez tenha lido a 55; uma pergunta custa menos que o
-#     arquivo errado. (A issue #396 escreve "exato > prefixo único > ambíguo" e, na linha seguinte,
-#     pede "Bp" ambígua entre 48 e 55 — as duas coisas não cabem juntas com os nomes reais, e esta
-#     é a leitura em que o exemplo da issue vale.)
-#   - não é prefixo de nenhum -> NÃO COTOU, e a resposta lista quem cotou. Vale também para o nome
-#     mais longo que o do portal ("Porto Seguro" contra "Porto"): a descrição do parâmetro manda o
-#     modelo escrever o nome COMO SAIU NA LISTA DE PREÇOS, que é o mesmo mapa.
+#   - o falado é IGUAL a um nome cotado -> é esse, e a busca acaba aí ("bp" -> "Bp", código 48,
+#     mesmo com "Bp Assinatura" cotada). O exato vence porque o cliente leu a lista e escreveu o
+#     que leu: com 48 "Bp" e 55 "Bp Assinatura" cotadas (nomes reais do portal, medidos em
+#     11/09/2026), sem esta regra a 48 era INSELECIONÁVEL — qualquer texto que a alcançasse
+#     alcançava também a 55 (Codex, P2 da rodada de correção). A primeira versão desta ferramenta
+#     tratava "Bp" como ambígua, pela leitura de que uma pergunta custa menos que o arquivo errado;
+#     a revisão mostrou que o preço dessa leitura era não haver frase nenhuma que pedisse a 48;
+#   - não é igual a nenhum, e é PREFIXO de exatamente um -> é esse ("suh" -> "Suhai"; "bp a" ->
+#     "Bp Assinatura"). Prefixo, não pedaço: "assinatura" não casa "Bp Assinatura";
+#   - não é igual a nenhum, e é prefixo de mais de um -> AMBÍGUO, e a resposta lista as candidatas
+#     ("b" com Bp e Bp Assinatura cotadas);
+#   - não é igual nem prefixo de nenhum -> NÃO COTOU, e a resposta lista quem cotou. Vale também
+#     para o nome mais longo que o do portal ("Porto Seguro" contra "Porto"): a descrição do
+#     parâmetro manda o modelo escrever o nome COMO SAIU NA LISTA DE PREÇOS, que é o mesmo mapa.
 module Autonomia::Agents::Tools::Native::InsuranceProposal::Escolha
   # `codigos`: os códigos escolhidos, na ordem em que foram falados, sem repetir (dois nomes que
   # casam com a mesma seguradora são UMA proposta). `ambiguas`: nome falado -> nomes candidatos.
@@ -41,12 +43,20 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Escolha
   end
 
   def casar(falado, nomes, mapa, resultado)
-    candidatos = nomes.select { |_, nome| nome.start_with?(normalizar(falado)) }.keys
+    candidatos = candidatos_de(normalizar(falado), nomes)
     case candidatos.size
     when 0 then resultado.nao_cotaram << falado
     when 1 then resultado.codigos |= candidatos
     else resultado.ambiguas[falado] = candidatos.map { |codigo| mapa[codigo].to_s }.sort_by { |nome| normalizar(nome) }
     end
+  end
+
+  # O EXATO VENCE; só sem exato é que o prefixo conta. -> códigos candidatos.
+  def candidatos_de(falado, nomes)
+    exatos = nomes.select { |_, nome| nome == falado }.keys
+    return exatos if exatos.any?
+
+    nomes.select { |_, nome| nome.start_with?(falado) }.keys
   end
 
   # Minúsculas, sem acento, sem espaço duplo, sem espaço nas pontas — e só isso.

@@ -1,13 +1,20 @@
 require 'rails_helper'
 
-# A PROPOSTA DE UMA SEGURADORA SÓ (entrega 8 do Agente de Cotação, #396 — termos 1, 3 e 4).
+# A PROPOSTA DE UMA SEGURADORA SÓ (entrega 8 do Agente de Cotação, #396 — termos 1, 3 e 4) e a rodada
+# de correção de 12/09/2026 (Codex P1/P2 ×3, verificador cego A/B1/B2, mutações M1/M2/M8).
 #
 # O que estes exemplos travam: o cliente pede a proposta de UMA seguradora e recebe a DAQUELA, não o
 # comparativo (termo 1); quem não cotou é dito, com a lista de quem cotou, em vez do comparativo em
 # silêncio (termo 3); duas seguradoras são dois arquivos na mesma execução, e NENHUMA cotação nova
 # (termo 4 — `quote_start` nunca é chamado daqui). O casamento do nome é comparação de texto contra o
-# mapa que a cotação gravou (`nomes_entregues`): exato ou prefixo de um só nome casa; prefixo de mais
-# de um é ambíguo e pergunta; semelhança não existe ("Portu" não é "Porto").
+# mapa que a cotação gravou (`nomes_entregues`): o EXATO vence; sem exato, o prefixo de um só nome
+# casa; prefixo de mais de um é ambíguo e pergunta; semelhança não existe ("Portu" não é "Porto").
+#
+# A COTAÇÃO DE ORIGEM É FIXADA NO ACEITE (`#argumentos`) e só ela é usada depois: supersedida entre o
+# aceite e o `start`, ou entre o `start` e o `poll`, a resposta é nomeada e nada sai do portal.
+# UMA CHAMADA AO PORTAL POR PASSADA e UM ARQUIVO POR PASSADA: é o que mantém cada passada do job
+# dentro de uma chamada de 60 s ou de um download de 20 s, e o que faz uma URL gerada estar no banco
+# antes de a próxima ser pedida.
 #
 # Os nomes são os REAIS do portal em 11/09/2026: 8 "Porto", 48 "Bp", 55 "Bp Assinatura", 20 "Suhai".
 RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
@@ -32,6 +39,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
   let(:connector) { instance_double(Autonomia::Insurance::Connector::Mock) }
   # Os códigos pedidos ao portal, na ordem.
   let(:pedidos) { [] }
+  let(:conexao) { Autonomia::Insurance::Connection.for_account(account).sole }
 
   before do
     enable_test_encryption!
@@ -50,8 +58,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     with_modified_env(INSURANCE_QUOTING_ENABLED: 'true', AUTONOMIA_AGENTS_ENABLED: 'true') { example.run }
   end
 
-  # A cotação que a proposta lê: encerrada, com preço entregue e o mapa código -> nome (entrega 8),
-  # como a ferramenta de cotação a deixa.
+  # A cotação que a proposta lê: com preço entregue e o mapa código -> nome (entrega 8), como a
+  # ferramenta de cotação a deixa. `done` por padrão; `running` é a lista parcial que o cliente lê.
   def cotacao_com_precos(mapa: nomes, conversa: conversation, quote_id: 'q1', status: 'done',
                          arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'abc-1d23' } })
     Autonomia::Agents::ToolRun.create!(
@@ -62,18 +70,51 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     )
   end
 
+  # Uma cotação NOVA aberta pelo caminho real (`open!`): supersede a viva anterior e ainda não tem preço.
+  def cotacao_nova_em_andamento
+    run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug, arguments: { 'produto' => 'auto' },
+                                           scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+    run
+  end
+
   def arquivo(entrega)
     Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega)
   end
 
-  # No JOB a ferramenta nasce sem `delivery` e com a conversa da execução (`AsyncRunJob#ferramenta`).
-  def no_job(*seguradoras)
-    described_class.new(agent: agent, params: { 'seguradoras' => seguradoras }, conversation: conversation)
-  end
-
-  # No TURNO ela nasce com o `delivery` (`Bound#accept_async`).
+  # No TURNO ela nasce com o `delivery` (`Bound#accept_async`) e ESCOLHE a origem.
   def no_turno(*seguradoras)
     described_class.new(agent: agent, params: { 'seguradoras' => seguradoras }, delivery: delivery)
+  end
+
+  # No JOB ela nasce sem `delivery`, com os argumentos que o ACEITE gravou (`#argumentos`, a origem
+  # fixada) e a conversa da execução (`AsyncRunJob#ferramenta`). É o caminho real aceite -> job.
+  def no_job(*seguradoras)
+    described_class.new(agent: agent, params: no_turno(*seguradoras).argumentos, conversation: conversation)
+  end
+
+  # No job, com a origem ESCRITA À MÃO: para provar que o `start` usa só ela.
+  def no_job_com_origem(origem, *seguradoras)
+    params = { 'seguradoras' => seguradoras, described_class::ORIGEM => origem&.id }
+    described_class.new(agent: agent, params: params, conversation: conversation)
+  end
+
+  def portal_que_recusa(*codigos)
+    allow(connector).to receive(:quote_proposal) do |**kwargs|
+      raise Autonomia::Insurance::Connector::Error.new(:validation, 'nao cotou') if codigos.include?(kwargs[:insurer_code])
+
+      pedidos << kwargs[:insurer_code]
+      { 'quote_id' => kwargs[:quote_id], 'url' => "https://arquivos.exemplo.test/proposta-#{kwargs[:insurer_code]}.pdf" }
+    end
+  end
+
+  def portal_fora_do_ar_para(*codigos)
+    allow(connector).to receive(:quote_proposal) do |**kwargs|
+      pedidos << kwargs[:insurer_code]
+      raise Autonomia::Insurance::Connector::Error.new(:unavailable, 'X-Amz-Signature=abc') if codigos.include?(kwargs[:insurer_code])
+
+      { 'quote_id' => kwargs[:quote_id], 'url' => "https://arquivos.exemplo.test/proposta-#{kwargs[:insurer_code]}.pdf" }
+    end
   end
 
   it 'e assincrona: gerar a proposta e chamada ao portal de ate 60 s, e o turno nao espera' do
@@ -90,6 +131,34 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     expect(parametro['items']).to eq('type' => 'string')
   end
 
+  # A ORIGEM É ESCOLHIDA UMA VEZ, NO TURNO, e gravada nos argumentos da execução (Codex, P1).
+  describe '#argumentos — o aceite fixa a cotacao de origem' do
+    it 'grava, junto do que o modelo escreveu, a cotacao escolhida no turno' do
+      linha = cotacao_com_precos
+
+      expect(no_turno('Porto').argumentos).to eq('seguradoras' => ['Porto'], described_class::ORIGEM => linha.id)
+    end
+
+    it 'sem cotacao na conversa, devolve so o que o modelo escreveu' do
+      expect(no_turno('Porto').argumentos).to eq('seguradoras' => ['Porto'])
+    end
+
+    # Nunca uma morta: a supersedida é a que o cliente mandou refazer. A mais recente das vivas ou
+    # encerradas com preço é a que ele está lendo.
+    it 'escolhe a mais recente com preco que nao morreu, mesmo havendo uma supersedida mais nova' do
+      antiga = cotacao_com_precos(quote_id: 'antiga')
+      cotacao_com_precos(quote_id: 'refeita', status: 'superseded')
+
+      expect(no_turno('Porto').argumentos[described_class::ORIGEM]).to eq(antiga.id)
+    end
+
+    it 'a cotacao viva com preco parcial e origem: e a lista que o cliente esta lendo' do
+      parcial = cotacao_com_precos(status: 'running')
+
+      expect(no_turno('Porto').argumentos[described_class::ORIGEM]).to eq(parcial.id)
+    end
+  end
+
   describe '#start — a proposta da escolhida (termo 1)' do
     it 'pede ao portal a proposta da seguradora escolhida, pelo codigo do mapa da cotacao, e nao o comparativo' do
       # Arrange
@@ -100,6 +169,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
 
       # Assert
       expect(handle[described_class::GERADAS]).to eq([{ 'code' => '8', 'name' => 'Porto', 'url' => 'https://arquivos.exemplo.test/proposta-8.pdf' }])
+      expect(handle[described_class::PENDENTES]).to eq([])
       expect(handle['quote_id']).to eq('q1')
       expect(connector).to have_received(:quote_proposal).with(hash_including(insurer_code: '8', quote_id: 'q1')).once
       expect(connector).not_to have_received(:quote_start)
@@ -128,18 +198,43 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(connector).not_to have_received(:quote_proposal)
     end
 
-    # O CASO REAL DO HOMÔNIMO: no portal, 48 chama-se "Bp" e 55 "Bp Assinatura" — um total anual e
-    # uma assinatura mensal. "Bp" é prefixo das duas: ambíguo, e a resposta lista as duas. Dar ao
-    # exato a vitória mandaria a proposta da 48 a quem talvez tenha lido a 55.
-    it 'homonimo: "Bp" com 48 e 55 cotadas e ambiguo, e a resposta lista as candidatas' do
+    # PREFIXO, NÃO PEDAÇO (mutação M1 da rodada de correção): "assinatura" está DENTRO de "Bp
+    # Assinatura", e mesmo assim não é ela — `include?` no lugar de `start_with?` mandaria a 55.
+    it 'nao casa por pedaco do nome: "assinatura" nao e Bp Assinatura' do
+      cotacao_com_precos
+
+      handle = no_job('assinatura').start
+
+      expect(handle['motivo']).to eq('seguradora_nao_cotou')
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    # O CASO REAL DO HOMÔNIMO (Codex, P2): no portal, 48 chama-se "Bp" e 55 "Bp Assinatura". O
+    # EXATO VENCE — sem esta regra a 48 era inselecionável, porque todo prefixo de "bp" casa as duas.
+    it 'homonimo: "Bp" com 48 e 55 cotadas e a 48, porque o nome exato vence' do
       cotacao_com_precos
 
       handle = no_job('Bp').start
 
+      expect(handle[described_class::GERADAS].pluck('code')).to eq(['48'])
+      expect(connector).to have_received(:quote_proposal).with(hash_including(insurer_code: '48')).once
+    end
+
+    it 'sem exato, o prefixo de mais de um nome e ambiguo, e a resposta lista as candidatas' do
+      cotacao_com_precos
+
+      handle = no_job('B').start
+
       expect(handle['motivo']).to eq('seguradora_ambigua')
-      expect(handle['pedido']).to include('Bp pode ser Bp ou Bp Assinatura')
+      expect(handle['pedido']).to include('B pode ser Bp ou Bp Assinatura')
       expect(handle['faltando']).to eq(['seguradoras'])
       expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    it 'sem exato, o prefixo de um so casa: "bp a" e a Bp Assinatura' do
+      cotacao_com_precos
+
+      expect(no_job('bp a').start[described_class::GERADAS].pluck('code')).to eq(['55'])
     end
 
     it '"Bp Assinatura" e uma so, mesmo com a Bp cotada' do
@@ -160,6 +255,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       handle = no_job('Porto', 'porto').start
 
       expect(handle[described_class::GERADAS].pluck('code')).to eq(['8'])
+      expect(handle[described_class::PENDENTES]).to eq([])
       expect(connector).to have_received(:quote_proposal).once
     end
   end
@@ -189,57 +285,165 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(connector).not_to have_received(:quote_proposal)
     end
 
-    # O portal dizendo "não cotou" (422, `:validation`) contra o nosso mapa: é a mesma recusa, não
-    # `tool_execution_error`. O cliente lê quem cotou; a divergência vai ao log.
-    it 'o portal recusando a seguradora como "nao cotou" vira a mesma recusa nomeada, nao erro' do
+    # O PORTAL DIZENDO 422 PARA QUEM ESTÁ NO MAPA NÃO É "NÃO COTOU" (verificador cego, B1): o cliente
+    # acabou de ler o preço dela. É "não consegui gerar", com motivo próprio — nunca a frase
+    # autocontraditória "não tenho preço de Porto… quem cotou: Porto".
+    it 'o portal recusando (422) a seguradora que cotou vira "nao consegui gerar", nunca "nao cotou"' do
       cotacao_com_precos
-      allow(connector).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:validation, 'insurer did not quote'))
+      portal_que_recusa('8')
 
       handle = no_job('Porto').start
 
-      expect(handle['motivo']).to eq('seguradora_nao_cotou')
-      expect(handle['pedido']).to include('Porto')
-    end
-
-    it 'qualquer outra falha do portal sobe, para o job decidir entre tentar de novo e desistir' do
-      cotacao_com_precos
-      allow(connector).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:unavailable, 'X-Amz-Signature=abc'))
-
-      expect { no_job('Porto').start }.to raise_error(Autonomia::Insurance::Connector::Error)
-    end
-
-    it 'resposta do portal sem URL e falha, nao proposta vazia' do
-      cotacao_com_precos
-      allow(connector).to receive(:quote_proposal).and_return({ 'quote_id' => 'q1' })
-
-      expect { no_job('Porto').start }.to raise_error(Autonomia::Insurance::Connector::Error)
+      expect(handle['motivo']).to eq('proposta_nao_gerada')
+      expect(handle['pedido']).to include('Não consegui gerar a proposta de Porto agora')
+      expect(handle['pedido']).not_to include('Não tenho preço', 'Quem cotou')
     end
   end
 
-  # TERMO 4 — duas seguradoras, dois arquivos, na MESMA execução; e nenhuma cotação nova.
-  describe '#start — duas seguradoras (termo 4)' do
-    it 'gera as duas propostas na mesma execucao, uma chamada por seguradora, sem abrir cotacao' do
+  # O PORTAL FALHANDO NÃO LEVANTA NEM DESISTE (Codex, P2): a seguradora fica PENDENTE para a passada
+  # seguinte, até `MAX_TENTATIVAS`. O que falha ANTES da chamada — sessão, credencial, código em
+  # branco — sobe como sempre (verificador cego, B2).
+  describe '#start — o portal falha, a nossa parte falha' do
+    it 'a falha do portal (503) nao levanta: a seguradora fica pendente, com a tentativa contada' do
+      cotacao_com_precos
+      portal_fora_do_ar_para('8')
+
+      handle = no_job('Porto').start
+
+      expect(handle[described_class::GERADAS]).to eq([])
+      expect(handle[described_class::PENDENTES]).to eq(['8'])
+      expect(handle[described_class::TENTATIVAS]).to eq('8' => 1)
+      expect(handle['motivo']).to be_nil
+    end
+
+    it 'resposta do portal sem URL e falha do portal (protocol), nao proposta vazia' do
+      cotacao_com_precos
+      allow(connector).to receive(:quote_proposal).and_return({ 'quote_id' => 'q1' })
+
+      handle = no_job('Porto').start
+      segunda = no_job('Porto').poll(handle: handle, attempt: 1)
+
+      expect(handle[described_class::PENDENTES]).to eq(['8'])
+      expect(segunda.handle[described_class::NAO_SAIU]).to eq('8' => 'protocol')
+      expect(segunda.handle[described_class::PENDENTES]).to eq([])
+    end
+
+    # O `rescue` só envolve a chamada ao portal: a sessão falhando é problema NOSSO e sobe, para o
+    # job tentar de novo — e nunca vira "a seguradora não gerou" (mutação MR reprova aqui).
+    it 'credencial ausente na conexao sobe como erro, sem virar "nao gerou" e sem chamar o portal' do
+      cotacao_com_precos
+      conexao.forget_session!
+      conexao.update!(password: '')
+
+      expect { no_job('Porto').start }.to raise_error(Autonomia::Insurance::Connector::Error) { |e| expect(e.kind).to eq(:validation) }
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    it 'login recusado pelo portal sobe como erro, sem virar "nao gerou"' do
+      cotacao_com_precos
+      conexao.forget_session!
+      allow(connector).to receive(:open_session).and_raise(Autonomia::Insurance::Connector::Error.new(:auth_required, 'recusado'))
+
+      expect { no_job('Porto').start }.to raise_error(Autonomia::Insurance::Connector::Error) { |e| expect(e.kind).to eq(:auth_required) }
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    it 'sem conexao pronta sobe como erro de configuracao' do
+      cotacao_com_precos
+      conexao.update!(status: 'degraded')
+
+      expect { no_job('Porto').start }.to raise_error(Autonomia::Insurance::Connector::Error) { |e| expect(e.kind).to eq(:config) }
+    end
+
+    # CÓDIGO VAZIO NUNCA CHEGA AO PORTAL (verificador cego, A; mutação MV): `quote_proposal` sem
+    # `insurerCode` é o comparativo de TODAS com nome de proposta. O mapa da cotação já não grava
+    # código vazio; se um chegar aqui, é defeito nosso e sobe antes do conector.
+    it 'codigo de seguradora em branco no mapa nunca vira pedido ao portal' do
+      cotacao_com_precos(mapa: nomes.merge('' => 'Fantasma'))
+
+      expect { no_job('Fantasma').start }.to raise_error(Autonomia::Insurance::Connector::Error) { |e| expect(e.kind).to eq(:protocol) }
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+  end
+
+  # TERMO 4 — duas seguradoras, dois arquivos, na MESMA execução; e nenhuma cotação nova. UMA chamada
+  # ao portal por passada: o `start` pede a primeira e deixa a segunda pendente para o `poll`.
+  describe '#start e #poll — duas seguradoras (termo 4)' do
+    it 'o start pede so a primeira e deixa a segunda pendente; o poll pede a segunda, sem abrir cotacao' do
       cotacao_com_precos
 
       handle = no_job('Porto', 'Suhai').start
+      segunda = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
 
-      expect(handle[described_class::GERADAS].pluck('code')).to eq(%w[8 20])
+      expect(handle[described_class::GERADAS].pluck('code')).to eq(['8'])
+      expect(handle[described_class::PENDENTES]).to eq(['20'])
+      expect(segunda).to be_running
+      expect(segunda.deliveries).to be_empty
+      expect(segunda.handle[described_class::GERADAS].pluck('code')).to eq(%w[8 20])
       expect(pedidos).to eq(%w[8 20])
       expect(connector).not_to have_received(:quote_start)
     end
 
-    it 'quando o portal recusa uma das duas, sai a que saiu e o aviso da outra' do
-      cotacao_com_precos
-      allow(connector).to receive(:quote_proposal) do |**kwargs|
-        raise Autonomia::Insurance::Connector::Error.new(:validation, 'nao cotou') if kwargs[:insurer_code] == '20'
+    # O CENÁRIO DO CODEX (P2): Porto sai, Suhai 503. A Porto chega, o aviso é sobre a Suhai, e a Porto
+    # NÃO é pedida de novo — a URL dela ficou no handle da primeira passada.
+    it 'Porto sai e Suhai falha: a Porto chega, o aviso e sobre a Suhai, e a Porto nao e refeita' do
+      linha = cotacao_com_precos
+      portal_fora_do_ar_para('20')
+      ferramenta = -> { no_job('Porto', 'Suhai') }
 
-        { 'quote_id' => 'q1', 'url' => 'https://arquivos.exemplo.test/proposta-8.pdf' }
-      end
+      handle = ferramenta.call.start
+      tentativa1 = ferramenta.call.poll(handle: handle, attempt: 1)
+      tentativa2 = ferramenta.call.poll(handle: tentativa1.handle, attempt: 2)
+      entrega = ferramenta.call.poll(handle: tentativa2.handle, attempt: 3)
+
+      expect(tentativa1).to be_running
+      expect(tentativa1.handle[described_class::TENTATIVAS]).to eq('20' => 1)
+      expect(tentativa2.handle[described_class::NAO_SAIU]).to eq('20' => 'unavailable')
+      expect(entrega).to be_done
+      expect(entrega.deliveries.map { |item| arquivo(item)&.nome || item })
+        .to eq(['Proposta Porto — placa ABC1D23.pdf', 'Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.'])
+      expect(pedidos).to eq(%w[8 20 20])
+      expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
+    end
+
+    it 'quando o portal recusa (422) uma das duas, a recusa e definitiva: sai a que saiu e o aviso da outra' do
+      cotacao_com_precos
+      portal_que_recusa('20')
 
       handle = no_job('Porto', 'Suhai').start
+      segunda = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
+      entrega = no_job('Porto', 'Suhai').poll(handle: segunda.handle, attempt: 2)
 
-      expect(handle[described_class::GERADAS].pluck('code')).to eq(['8'])
-      expect(handle[described_class::NAO_SAIU]).to eq(['Suhai'])
+      expect(segunda.handle[described_class::NAO_SAIU]).to eq('20' => 'validation')
+      expect(segunda.handle[described_class::PENDENTES]).to eq([])
+      expect(entrega.deliveries.last).to eq('Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.')
+    end
+
+    it 'quando a primeira e recusada (422) e a segunda sai, a entrega e a segunda com o aviso da primeira' do
+      cotacao_com_precos
+      portal_que_recusa('8')
+
+      handle = no_job('Porto', 'Suhai').start
+      segunda = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
+      entrega = no_job('Porto', 'Suhai').poll(handle: segunda.handle, attempt: 2)
+
+      expect(handle['motivo']).to be_nil
+      expect(handle[described_class::PENDENTES]).to eq(['20'])
+      expect(entrega.deliveries.map { |item| arquivo(item)&.nome || item })
+        .to eq(['Proposta Suhai — placa ABC1D23.pdf', 'Não consegui gerar a proposta de Porto agora; as demais estão aqui em cima.'])
+    end
+
+    it 'quando NENHUMA sai, o cliente le que nao consegui gerar, e nao "nao cotou"' do
+      cotacao_com_precos
+      portal_que_recusa('8', '20')
+
+      handle = no_job('Porto', 'Suhai').start
+      segunda = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
+      entrega = no_job('Porto', 'Suhai').poll(handle: segunda.handle, attempt: 2)
+
+      expect(entrega).to be_done
+      expect(entrega.deliveries).to eq(['Não consegui gerar a proposta de Porto e Suhai agora. Posso tentar de novo daqui a pouco, ' \
+                                        'ou um atendente retoma daqui.'])
     end
 
     it 'mais de duas e recusa nomeada, antes de qualquer chamada' do
@@ -260,6 +464,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     end
   end
 
+  # A ORIGEM FIXADA (Codex, P1): o `start` usa a que o aceite gravou, e só ela; se ela morreu, ou se
+  # há uma cotação nova correndo, a resposta é nomeada e o portal não é chamado.
   describe '#start — qual cotacao' do
     it 'sem cotacao com preco nesta conversa e recusa nomeada, sem tocar no portal' do
       handle = no_job('Porto').start
@@ -290,25 +496,59 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(no_job('Porto').start['motivo']).to eq('proposta_sem_cotacao')
     end
 
-    # A MAIS RECENTE POR ID, seja qual for o status: a cotação supersedida por um pedido novo que ainda
-    # não tem preço continua sendo a que o cliente leu.
-    it 'usa a cotacao mais recente com preco, mesmo supersedida' do
-      cotacao_com_precos(quote_id: 'antiga')
-      cotacao_com_precos(quote_id: 'nova', status: 'superseded')
-      cotacao_com_precos(quote_id: 'sem-preco', mapa: {}, status: 'running')
+    # O CENÁRIO DO CODEX: A cotou, o cliente corrigiu o veículo e abriu B. "Me manda a da Porto"
+    # durante B não pode gerar a proposta de A — a resposta é que a cotação nova está em andamento.
+    it 'A cotou e B esta correndo sem preco: recusa "em andamento", no turno e no envio, sem portal' do
+      cotacao_com_precos(quote_id: 'A')
+      cotacao_nova_em_andamento
 
-      handle = no_job('Porto').start
+      conferencia = no_turno('Porto').precheck
+      handle = no_job_com_origem(Autonomia::Agents::ToolRun.find_by(slug: cotacao.slug, status: 'done'), 'Porto').start
 
-      expect(handle['quote_id']).to eq('nova')
-      expect(connector).to have_received(:quote_proposal).with(hash_including(quote_id: 'nova'))
+      expect(conferencia.motivo).to eq('cotacao_em_andamento')
+      expect(conferencia.to_s).to include('Ainda estou buscando os preços da cotação nova')
+      expect(handle['motivo']).to eq('cotacao_em_andamento')
+      expect(connector).not_to have_received(:quote_proposal)
     end
 
-    it 'guarda no handle o que o poll precisa: a linha da cotacao e o sufixo do nome do arquivo' do
+    # ORIGEM SUPERSEDIDA ENTRE O ACEITE E O START: a lista parcial era a origem; um pedido novo a
+    # supersedeu antes do job rodar. Nada sai do portal.
+    it 'a origem supersedida entre o aceite e o start e recusa nomeada, sem chamar o portal' do
+      cotacao_com_precos(status: 'running')
+      argumentos = no_turno('Porto').argumentos
+      cotacao_nova_em_andamento
+
+      handle = described_class.new(agent: agent, params: argumentos, conversation: conversation).start
+
+      expect(handle['motivo']).to eq('cotacao_substituida')
+      expect(handle['pedido']).to include('A cotação foi refeita depois desse pedido')
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    # O START USA SÓ A ORIGEM FIXADA (mutação MO reprova aqui): uma cotação MAIS NOVA com preço,
+    # encerrada depois do aceite, não troca a origem — a proposta é da lista que o cliente leu ao pedir.
+    it 'o start usa a origem fixada no aceite, e nao a ultima cotacao com preco da conversa' do
+      origem = cotacao_com_precos(quote_id: 'fixada')
+      cotacao_com_precos(quote_id: 'mais-nova')
+
+      handle = no_job_com_origem(origem, 'Porto').start
+
+      expect(handle['quote_id']).to eq('fixada')
+      expect(connector).to have_received(:quote_proposal).with(hash_including(quote_id: 'fixada')).once
+    end
+
+    it 'sem a origem nos argumentos (execucao aberta fora do aceite), o job nao escolhe: e recusa' do
+      cotacao_com_precos
+
+      expect(no_job_com_origem(nil, 'Porto').start['motivo']).to eq('proposta_sem_cotacao')
+    end
+
+    it 'guarda no handle o que o poll precisa: a origem e o sufixo do nome do arquivo' do
       linha = cotacao_com_precos
 
       handle = no_job('Porto').start
 
-      expect(handle['cotacao_run_id']).to eq(linha.id)
+      expect(handle[described_class::ORIGEM]).to eq(linha.id)
       expect(handle['sufixo']).to eq('placa ABC1D23')
     end
   end
@@ -319,7 +559,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     it 'devolve ao modelo a ambiguidade, com as candidatas, e nao toca no portal' do
       cotacao_com_precos
 
-      conferencia = no_turno('Bp').precheck
+      conferencia = no_turno('B').precheck
 
       expect(conferencia).to be_a(Autonomia::Agents::Tools::Native::Conferencia)
       expect(conferencia.motivo).to eq('seguradora_ambigua')
@@ -350,26 +590,44 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
 
     it 'sem sessao viva o turno segue igual: a conferencia nao depende do portal' do
       cotacao_com_precos
-      Autonomia::Insurance::Connection.for_account(account).sole.forget_session!
+      conexao.forget_session!
 
       expect(no_turno('Porto').precheck).to be_nil
-      expect(no_turno('Bp').precheck.motivo).to eq('seguradora_ambigua')
+      expect(no_turno('B').precheck.motivo).to eq('seguradora_ambigua')
     end
   end
 
-  describe '#poll — os arquivos, e o registro na cotacao' do
-    let(:handle) do
-      { 'quote_id' => 'q1', 'cotacao_run_id' => linha.id, 'sufixo' => 'placa ABC1D23',
-        described_class::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'https://arquivos.exemplo.test/proposta-8.pdf' },
-                                     { 'code' => '20', 'name' => 'Suhai', 'url' => 'https://arquivos.exemplo.test/proposta-20.pdf' }] }
-    end
+  describe '#poll — os arquivos, um por passada, e o registro na cotacao' do
     let(:linha) { cotacao_com_precos }
+    let(:handle) do
+      { 'quote_id' => 'q1', described_class::ORIGEM => linha.id, 'sufixo' => 'placa ABC1D23',
+        described_class::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'https://arquivos.exemplo.test/proposta-8.pdf' },
+                                     { 'code' => '20', 'name' => 'Suhai', 'url' => 'https://arquivos.exemplo.test/proposta-20.pdf' }],
+        described_class::PENDENTES => [], described_class::NAO_SAIU => {} }
+    end
 
-    it 'entrega um arquivo por proposta, nomeado pela seguradora e pela placa, com legenda e reserva' do
-      progresso = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
+    def duas_passadas(handle)
+      primeira = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
+      [primeira, no_job('Porto', 'Suhai').poll(handle: primeira.handle, attempt: 2)]
+    end
 
-      expect(progresso).to be_done
-      arquivos = progresso.deliveries.map { |entrega| arquivo(entrega) }
+    # UM ARQUIVO POR PASSADA (mutação M8 reprova aqui): cada `EntregaDeArquivo` é um download de até
+    # 20 s, e dois na mesma passada passariam dos 25 s que o Sidekiq dá ao job num shutdown.
+    it 'entrega um arquivo por passada: running com o primeiro, done com o ultimo' do
+      primeira, segunda = duas_passadas(handle)
+
+      expect(primeira).to be_running
+      expect(primeira.deliveries.size).to eq(1)
+      expect(primeira.handle[described_class::ENVIADAS]).to eq(['8'])
+      expect(segunda).to be_done
+      expect(segunda.deliveries.size).to eq(1)
+      expect(segunda.handle[described_class::ENVIADAS]).to eq(%w[8 20])
+    end
+
+    it 'nomeia cada arquivo pela seguradora e pela placa, com legenda e reserva' do
+      primeira, segunda = duas_passadas(handle)
+      arquivos = [arquivo(primeira.deliveries.first), arquivo(segunda.deliveries.first)]
+
       expect(arquivos.map(&:nome)).to eq(['Proposta Porto — placa ABC1D23.pdf', 'Proposta Suhai — placa ABC1D23.pdf'])
       expect(arquivos.map(&:legenda)).to eq(['Proposta da Porto.', 'Proposta da Suhai.'])
       expect(arquivos.first.reserva).to eq("Proposta da Porto:\nhttps://arquivos.exemplo.test/proposta-8.pdf")
@@ -384,28 +642,79 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
 
     # O REGISTRO É NA LINHA DA COTAÇÃO, que já está `done`: é ela que "virou proposta", e é lá que a
     # medida da entrega 7 lê. Uma escrita que exigisse linha viva contaria zero para sempre.
-    it 'anota na linha da COTACAO quais propostas sairam, e a medida conta' do
-      no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
+    it 'anota na linha da COTACAO quais propostas sairam, uma por passada, e a medida conta' do
+      primeira, = duas_passadas(handle)
 
+      expect(primeira.handle).not_to have_key(cotacao::PROPOSTAS_KEY)
       expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(%w[20 8])
       expect(linha.status).to eq('done')
       expect(Autonomia::Insurance::Medida.new(conta: account, inicio: nil, fim: nil).call)
         .to include(cotacoes: 1, cotacoes_com_proposta: 1, propostas_emitidas: 2)
     end
 
+    # A COTAÇÃO VIVA TAMBÉM É ANOTADA (mutação M2 reprova aqui): o cliente escolhe na lista parcial,
+    # e a proposta sai com a cotação ainda `running` — ou encerrada em `failed` depois de entregar
+    # preço. Só as MORTAS não recebem proposta, e quem barra é o `poll`, antes de anotar.
+    it 'anota tambem na cotacao ainda viva, e na encerrada por prazo com preco entregue' do
+      viva = cotacao_com_precos(status: 'running', quote_id: 'viva')
+      no_job('Porto').poll(handle: handle.merge(described_class::ORIGEM => viva.id), attempt: 1)
+      viva.update!(status: 'done')
+      vencida = cotacao_com_precos(status: 'failed', quote_id: 'vencida')
+      no_job('Porto').poll(handle: handle.merge(described_class::ORIGEM => vencida.id), attempt: 1)
+
+      expect(viva.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
+      expect(vencida.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
+    end
+
     it 'acumula sem repetir quando o cliente pede outra depois' do
       no_job('Porto').poll(handle: handle.merge(described_class::GERADAS => handle[described_class::GERADAS].first(1)), attempt: 1)
-      no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
+      duas_passadas(handle)
 
       expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(%w[20 8])
     end
 
-    it 'entrega o aviso da seguradora que o portal recusou, depois dos arquivos' do
-      progresso = no_job('Porto', 'Suhai').poll(handle: handle.merge(described_class::GERADAS => handle[described_class::GERADAS].first(1),
-                                                                     described_class::NAO_SAIU => ['Suhai']), attempt: 1)
+    it 'entrega o aviso da seguradora que o portal nao gerou depois do ULTIMO arquivo' do
+      so_porto = handle.merge(described_class::GERADAS => handle[described_class::GERADAS].first(1),
+                              described_class::NAO_SAIU => { '20' => 'validation' })
 
+      progresso = no_job('Porto', 'Suhai').poll(handle: so_porto, attempt: 1)
+
+      expect(progresso).to be_done
       expect(progresso.deliveries.size).to eq(2)
       expect(progresso.deliveries.last).to eq('Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.')
+    end
+
+    it 'com uma pendente, a passada pede ao portal e volta running sem entregar nada' do
+      pendente = handle.merge(described_class::GERADAS => handle[described_class::GERADAS].first(1), described_class::PENDENTES => ['20'])
+
+      progresso = no_job('Porto', 'Suhai').poll(handle: pendente, attempt: 1)
+
+      expect(progresso).to be_running
+      expect(progresso.deliveries).to be_empty
+      expect(progresso.handle[described_class::GERADAS].pluck('code')).to eq(%w[8 20])
+      expect(pedidos).to eq(['20'])
+    end
+
+    # ORIGEM SUPERSEDIDA ENTRE O START E O POLL: o arquivo já foi gerado, mas a cotação de que ele
+    # saiu foi refeita. Não entrega, não anota, e o cliente lê o porquê.
+    it 'a origem supersedida entre o start e o poll e recusa nomeada: nada e entregue nem anotado' do
+      viva = cotacao_com_precos(status: 'running')
+      cotacao_nova_em_andamento
+
+      progresso = no_job('Porto', 'Suhai').poll(handle: handle.merge(described_class::ORIGEM => viva.id), attempt: 1)
+
+      expect(viva.reload.status).to eq('superseded')
+      expect(progresso).to be_done
+      expect(progresso.deliveries).to eq(['A cotação foi refeita depois desse pedido, e a proposta sairia dos preços antigos. ' \
+                                          'Quando os preços novos chegarem, é só me pedir de novo.'])
+      expect(viva.handle).not_to have_key(cotacao::PROPOSTAS_KEY)
+    end
+
+    it 'sem a origem no handle (ou apagada), falha nomeada: nao ha como conferir se ela ainda vale' do
+      progresso = no_job('Porto').poll(handle: handle.except(described_class::ORIGEM), attempt: 1)
+
+      expect(progresso).to be_failed
+      expect(progresso.failure_code).to eq('cotacao_ausente')
     end
 
     it 'entrega a recusa do start ao cliente e acaba' do
@@ -425,17 +734,26 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(progresso.deliveries).to eq(["Proposta da Porto:\nhttp://arquivos.exemplo.test/p.pdf"])
     end
 
-    it 'falha nomeada quando o handle nao tem proposta nem pedido' do
-      progresso = no_job('Porto').poll(handle: { 'quote_id' => 'q1' }, attempt: 1)
+    it 'falha nomeada quando o handle nao tem proposta, pendente nem falha registrada' do
+      progresso = no_job('Porto').poll(handle: handle.merge(described_class::GERADAS => []), attempt: 1)
 
       expect(progresso).to be_failed
       expect(progresso.failure_code).to eq('sem_proposta')
     end
+
+    it 'uma passada repetida com tudo ja enviado encerra sem entregar de novo' do
+      tudo_enviado = handle.merge(described_class::ENVIADAS => %w[8 20])
+
+      progresso = no_job('Porto', 'Suhai').poll(handle: tudo_enviado, attempt: 3)
+
+      expect(progresso).to be_done
+      expect(progresso.deliveries).to be_empty
+    end
   end
 
-  # O CAMINHO REAL: o `AsyncRunJob` monta a ferramenta sem `delivery` e com a conversa da execução —
-  # é assim que `start` acha a cotação DA CONVERSA fora do turno. Depois, o publicador baixa o PDF e
-  # o anexa com o nome da seguradora, e a cotação fica marcada.
+  # O CAMINHO REAL: o `AsyncRunJob` monta a ferramenta sem `delivery`, com os argumentos que o aceite
+  # gravou e a conversa da execução. Depois, o publicador baixa o PDF e o anexa com o nome da
+  # seguradora, e a cotação fica marcada.
   describe 'pelo job' do
     let(:pdf) { "%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n" }
 
@@ -443,29 +761,35 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       register_async_tool(described_class)
       allow(Resolv).to receive(:getaddresses).and_call_original
       allow(Resolv).to receive(:getaddresses).with('arquivos.exemplo.test').and_return(['93.184.216.34'])
-      stub_request(:get, 'https://arquivos.exemplo.test/proposta-8.pdf')
-        .to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      %w[8 20].each do |codigo|
+        stub_request(:get, "https://arquivos.exemplo.test/proposta-#{codigo}.pdf")
+          .to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      end
     end
 
+    # A execução como o ACEITE a abre: com os argumentos da ferramenta (a origem fixada dentro).
     def execucao(*seguradoras)
-      run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug, arguments: { 'seguradoras' => seguradoras },
+      run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug, arguments: no_turno(*seguradoras).argumentos,
                                              scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
       run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
       run
+    end
+
+    def passadas(run, quantas)
+      quantas.times { |passada| Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, passada) }
     end
 
     def bot_messages
       conversation.messages.reload.where(sender_type: 'AgentBot').order(:id)
     end
 
-    it 'acha a cotacao da conversa em start, anexa a proposta em poll e marca a cotacao' do
+    it 'acha a cotacao fixada em start, anexa a proposta em poll e marca a cotacao' do
       # Arrange
       linha = cotacao_com_precos
       run = execucao('Porto')
 
-      # Act — a passada de submissão e a de consulta
-      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 0)
-      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 1)
+      # Act — a passada de submissão e a de entrega
+      passadas(run, 2)
 
       # Assert
       expect(connector).to have_received(:quote_proposal).with(hash_including(insurer_code: '8', quote_id: 'q1')).once
@@ -478,13 +802,39 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
     end
 
+    # Duas seguradoras são QUATRO passadas: pede a primeira, pede a segunda, entrega uma, entrega a outra.
+    it 'duas seguradoras chegam como dois anexos, em quatro passadas, uma chamada ao portal por passada' do
+      linha = cotacao_com_precos
+      run = execucao('Porto', 'Suhai')
+
+      passadas(run, 4)
+
+      expect(pedidos).to eq(%w[8 20])
+      expect(bot_messages.map(&:content)).to eq(['Proposta da Porto.', 'Proposta da Suhai.'])
+      expect(bot_messages.map { |mensagem| mensagem.attachments.sole.file.filename.to_s })
+        .to eq(['Proposta Porto — placa ABC1D23.pdf', 'Proposta Suhai — placa ABC1D23.pdf'])
+      expect(run.reload.status).to eq('done')
+      expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(%w[20 8])
+    end
+
     it 'sem cotacao na conversa, o cliente le a recusa e nenhuma chamada ao portal sai' do
       run = execucao('Porto')
 
-      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 0)
-      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 1)
+      passadas(run, 2)
 
       expect(bot_messages.map(&:content)).to eq([described_class::SEM_COTACAO])
+      expect(connector).not_to have_received(:quote_proposal)
+      expect(run.reload.status).to eq('done')
+    end
+
+    it 'com a origem supersedida entre o aceite e o start, o cliente le que a cotacao foi refeita' do
+      cotacao_com_precos(status: 'running')
+      run = execucao('Porto')
+      cotacao_nova_em_andamento
+
+      passadas(run, 2)
+
+      expect(bot_messages.map(&:content)).to eq([described_class::SUBSTITUIDA])
       expect(connector).not_to have_received(:quote_proposal)
       expect(run.reload.status).to eq('done')
     end
@@ -495,7 +845,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(described_class.available_for?(agent)).to be(true)
       expect(described_class.available_for?(agent)).to eq(cotacao.available_for?(agent))
 
-      Autonomia::Insurance::Connection.for_account(account).sole.update!(status: 'degraded')
+      conexao.update!(status: 'degraded')
       expect(described_class.available_for?(agent)).to be(false)
     end
   end

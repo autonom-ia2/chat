@@ -4,9 +4,10 @@
 # o vocabulário muda; `start` e `poll` mudam quando o fluxo muda.
 #
 # UM TEXTO POR MOTIVO, lido nos DOIS lugares: pelo MODELO na conferência do turno (`precheck`, que
-# devolve uma `Conferencia`) e pelo CLIENTE no envio (`start`, cuja recusa vira entrega). Por isso
-# cada frase é escrita para uma pessoa ler — sem código, sem nome de campo, sem vocabulário de
-# sistema — e diz o que fazer em seguida: o modelo a parafraseia, o cliente a lê como está.
+# devolve uma `Conferencia`) e pelo CLIENTE no envio (`start`, cuja recusa vira entrega; `poll`,
+# quando a cotação de origem morreu no meio). Por isso cada frase é escrita para uma pessoa ler —
+# sem código, sem nome de campo, sem vocabulário de sistema — e diz o que fazer em seguida: o modelo
+# a parafraseia, o cliente a lê como está.
 module Autonomia::Agents::Tools::Native::InsuranceProposal::Recusas
   extend ActiveSupport::Concern
 
@@ -16,6 +17,14 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Recusas
                   'quer primeiro.'.freeze
   SEM_COTACAO = 'Não encontrei nesta conversa uma cotação com preços para gerar a proposta. Se ' \
                 'quiser, faço a cotação primeiro.'.freeze
+  # A COTAÇÃO DE ORIGEM MUDOU DEBAIXO DO PEDIDO (rodada de correção, P1 do Codex). Em andamento: há
+  # uma cotação nova correndo e ainda sem preço — a proposta sairia da lista antiga, que o cliente
+  # acabou de mandar refazer. Substituída: a cotação de que a proposta sairia foi refeita depois do
+  # aceite (o cliente corrigiu um dado); o arquivo dela seria o do risco errado com cara de certo.
+  EM_ANDAMENTO = 'Ainda estou buscando os preços da cotação nova. Quando eles chegarem, me diga de qual ' \
+                 'seguradora você quer a proposta.'.freeze
+  SUBSTITUIDA = 'A cotação foi refeita depois desse pedido, e a proposta sairia dos preços antigos. ' \
+                'Quando os preços novos chegarem, é só me pedir de novo.'.freeze
   LISTA = { two_words_connector: ' e ', last_word_connector: ' e ' }.freeze
   OU = { two_words_connector: ' ou ', last_word_connector: ' ou ' }.freeze
 
@@ -29,14 +38,22 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Recusas
   end
 
   # TERMO 3: quem não cotou é dito, e quem cotou é listado — em vez do comparativo de todas em
-  # silêncio. "Não tenho preço de" vale para um nome e para dois.
+  # silêncio. "Não tenho preço de" vale para um nome e para dois. Só sai do NOSSO mapa: o portal
+  # dizendo 422 para quem está no mapa não é "não cotou", é `nao_gerada` (verificador cego, B1).
   def nao_cotou(falados)
     "Não tenho preço de #{falados.to_sentence(**LISTA)} nesta cotação. Quem cotou: " \
       "#{cotaram.to_sentence(**LISTA)}. Quer a proposta de alguma delas?"
   end
 
-  # O portal disse que a seguradora não cotou, contra o nosso registro de que cotou. O cliente lê a
-  # mesma coisa de sempre — quem cotou —, e a divergência vai ao log.
+  # O PORTAL NÃO GEROU a proposta de quem cotou, e NENHUMA outra saiu: recusou o código que ele
+  # próprio devolveu na cotação (422), ou falhou nas tentativas que tinha. O cliente lê que não saiu
+  # e o que pode fazer; nunca "não cotou" — ele acabou de ler o preço dela.
+  def nao_gerada(nomes)
+    "Não consegui gerar a proposta de #{nomes.to_sentence(**LISTA)} agora. Posso tentar de novo daqui a " \
+      'pouco, ou um atendente retoma daqui.'
+  end
+
+  # A mesma falha quando OUTRA proposta saiu: o aviso vem depois dos arquivos.
   def nao_saiu(nomes)
     "Não consegui gerar a proposta de #{nomes.to_sentence(**LISTA)} agora; as demais estão aqui em cima."
   end

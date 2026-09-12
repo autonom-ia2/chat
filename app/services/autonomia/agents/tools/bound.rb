@@ -79,7 +79,11 @@ class Autonomia::Agents::Tools::Bound
     antecipado = precheck_native(ferramenta)
     return recusar_pela_conferencia(antecipado, delivery) if antecipado
 
-    run, repetida = abrir(args, pedido_native(ferramenta), delivery)
+    # O que a execução guarda são os ARGUMENTOS DA FERRAMENTA (`Native::Base#argumentos`): o que o
+    # modelo escreveu e o que ela fixa no aceite — a proposta individual grava aqui a cotação de
+    # origem, para o job não a escolher de novo. Falha aqui cai no `rescue` abaixo: sem argumentos
+    # não há o que executar.
+    run, repetida = abrir(ferramenta.argumentos, pedido_native(ferramenta), delivery)
     return recusar_pela_repeticao(repetida, delivery) if repetida
     return recusar('execucao_ja_em_andamento', delivery) if run.blank?
 

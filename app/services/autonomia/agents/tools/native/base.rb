@@ -226,6 +226,17 @@ class Autonomia::Agents::Tools::Native::Base
     nil
   end
 
+  # O QUE A EXECUÇÃO GUARDA COMO ARGUMENTOS quando o aceite a abre (`Bound#accept_async`, rodada de
+  # correção da entrega 8): o que o modelo escreveu e, se a ferramenta precisar FIXAR algo no
+  # aceite, o que ela acrescenta. A proposta individual grava aqui a cotação de origem — escolhida
+  # UMA vez, no turno, com o modelo e o cliente olhando para a mesma lista de preços — para `start`
+  # e `poll` usarem só ela: escolher de novo no job, minutos depois, era como a proposta da cotação
+  # A saía enquanto o cliente já corria a cotação B (Codex, P1). Lido pelo `AsyncRunJob` como
+  # `params` nas passadas seguintes. -> Hash serializável. O padrão é o que o modelo escreveu.
+  def argumentos
+    params
+  end
+
   # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR. Em 08/09/2026 uma cotação
   # entregou cinco preços e morreu no prazo: o comparativo em PDF só era gerado no caminho feliz,
   # então não saiu — e `fail_run` não avisava nada porque já havia entrega. O cliente ficou com
@@ -254,11 +265,14 @@ class Autonomia::Agents::Tools::Native::Base
     ::Autonomia::Agents::Tools::Recusa.para_modelo(code, slug: self.class.slug, delivery: delivery, agente: agent)
   end
 
-  # Recusa em PROSA da ferramenta síncrona (ela pediu um dado antes de trabalhar): registra, com os
-  # NOMES dos parâmetros que faltaram, e devolve o texto, que não muda.
-  def recusar(codigo, texto, faltando: [])
-    ::Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: self.class.slug, agente: agent, faltando: faltando,
-                                                         conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(delivery))
+  # Recusa em PROSA: registra, com os NOMES dos parâmetros que faltaram e ONDE aconteceu, e devolve o
+  # texto, que não muda. `turno` é a ferramenta síncrona pedindo um dado antes de trabalhar; `envio`
+  # é a assíncrona recusando na entrega (a proposta individual, quando a cotação de origem morreu
+  # entre o `start` e o `poll`). A conversa vem de `#conversation` — pelo `delivery` no turno, pela
+  # execução no job —, e é por isso que a recusa do job sai com a conversa, e não com `-`.
+  def recusar(codigo, texto, faltando: [], onde: 'turno')
+    ::Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: self.class.slug, agente: agent, faltando: faltando, onde: onde,
+                                                         conversa: conversation&.id)
     texto
   end
 end
