@@ -50,25 +50,74 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     conversation.messages.reload.where(sender_type: 'AgentBot').order(:id).map(&:content)
   end
 
-  # A execução no estado em que o defeito aparecia: submetida, com um preço contado como entregue,
-  # e com o prazo vencido — como em 08/09/2026, quando cinco preços chegaram e a conversa parou.
-  def cotacao_com_preco_entregue_e_prazo_vencido
+  # O PREÇO COMO O CLIENTE O LÊ, e o comparativo como o portal o entrega. Os dois são ENTREGAS: o
+  # que o Arrange precisa montar não é "o handle diz que saiu", é a MENSAGEM na conversa — é ela
+  # que o fecho consulta desde a entrega 8a.
+  def preco_ao_cliente
+    '*Ezze* — R$ 2.050,40 no total'
+  end
+
+  def comparativo_do_portal
+    Autonomia::Agents::Tools::EntregaDeArquivo.new(
+      url: 'https://exemplo.test/comparativo-mock.pdf',
+      nome: 'Comparativo de seguro — placa ABC1D23.pdf',
+      legenda: cotacao::Comparativo::LEGENDA,
+      reserva: "#{cotacao::Comparativo::RESERVA}\nhttps://exemplo.test/comparativo-mock.pdf"
+    )
+  end
+
+  def stub_comparativo_pdf
+    stub_request(:get, 'https://exemplo.test/comparativo-mock.pdf')
+      .to_return(status: 200, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
+  end
+
+  # PUBLICA PELO CAMINHO REAL (o mesmo publicador do motor) e devolve o TOKEN da entrega — o que a
+  # ferramenta grava no handle na passada que a emite. Levanta se a publicação não entrar: um
+  # Arrange que mente sobre o que o cliente recebeu não prova nada.
+  def publicar!(run, entrega)
+    resultado = Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega)
+    raise "o Arrange nao publicou a entrega: #{resultado.status}" unless resultado.published?
+
+    Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
+  end
+
+  def abrir_execucao
     run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug,
                                            arguments: { 'produto' => 'auto', 'placa' => 'ABC1D23' },
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 1.minute.ago)
-    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'cot-1',
-                                  cotacao::DELIVERED_KEY => ['4'], 'produto' => 'auto' })
+    run
+  end
+
+  # A execução no estado em que o defeito aparecia: submetida, com um preço QUE O CLIENTE RECEBEU
+  # (mensagem na conversa, contada na linha) e com o prazo vencido — como em 08/09/2026, quando
+  # cinco preços chegaram e a conversa parou.
+  def cotacao_com_preco_entregue_e_prazo_vencido
+    run = abrir_execucao
+    token = publicar!(run, preco_ao_cliente)
     run.record_delivery!
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'cot-1',
+                                  cotacao::DELIVERED_KEY => ['4'], cotacao::PRECOS_KEY => [token],
+                                  'produto' => 'auto' })
+    run
+  end
+
+  # O MESMO HANDLE, SEM MENSAGEM NENHUMA: o publicador recusou o preço (conversa encerrada, agente
+  # desligado no meio, erro transitório) e o handle avançou assim mesmo — `deliver` roda ANTES de
+  # `record_attempt!`, e o contador só sobe quando a publicação é aceita. É o estado em que o fecho
+  # que perguntava ao handle afirmava "os preços acima são os que chegaram" sem nada acima.
+  def cotacao_com_preco_no_handle_e_nada_na_conversa
+    run = abrir_execucao
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'cot-1',
+                                  cotacao::DELIVERED_KEY => ['4'], 'produto' => 'auto',
+                                  cotacao::PRECOS_KEY => [Autonomia::Agents::Tools::EntregaPublicada
+                                    .token_de(run, preco_ao_cliente)] })
     run
   end
 
   # A MESMA execução, sem preço nenhum: submetida, prazo vencido, nada entregue.
   def cotacao_sem_preco_e_prazo_vencido
-    run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug,
-                                           arguments: { 'produto' => 'auto', 'placa' => 'ABC1D23' },
-                                           scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
-    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 1.minute.ago)
+    run = abrir_execucao
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'cot-1', 'produto' => 'auto' })
     run
   end
@@ -78,15 +127,22 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # persiste; o `finish_done` vem DEPOIS. Morto o worker entre os dois (deploy, hard shutdown do
   # Sidekiq), a linha fica `running` com tudo já entregue ao cliente.
   def cotacao_fechada_no_portal_com_a_linha_abandonada
-    run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug,
-                                           arguments: { 'produto' => 'auto', 'placa' => 'ABC1D23' },
-                                           scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
-    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 1.minute.ago)
+    run = abrir_execucao
+    stub_comparativo_pdf
+    preco = publicar!(run, preco_ao_cliente)
+    run.record_delivery!
+    comparativo = publicar!(run, comparativo_do_portal)
+    run.record_delivery!
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'cot-1',
                                   cotacao::DELIVERED_KEY => ['4'], cotacao::PDF_SENT_KEY => true,
-                                  'produto' => 'auto' })
-    run.record_delivery!
+                                  cotacao::FECHADO_KEY => true, cotacao::PRECOS_KEY => [preco],
+                                  cotacao::COMPARATIVO_KEY => comparativo, 'produto' => 'auto' })
     run
+  end
+
+  # O que o cliente já tinha na tela ANTES do encerramento, nesse estado.
+  def tela_de_quem_recebeu_tudo
+    [preco_ao_cliente, cotacao::Comparativo::LEGENDA]
   end
 
   # A FRASE PARCIAL NÃO SAI PARA QUEM RECEBEU TUDO, PELAS DUAS PORTAS DE ENCERRAMENTO.
@@ -102,8 +158,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act — a porta do MOTOR (`fail_run`)
     described_class.new.perform(run.id, 5)
 
-    # Assert — nem frase parcial, nem comparativo repetido, nem chamada nova ao portal
-    expect(bot_contents).to be_empty
+    # Assert — nem frase parcial, nem comparativo repetido, nem chamada nova ao portal: a tela do
+    # cliente é a mesma de antes do encerramento
+    expect(bot_contents).to eq(tela_de_quem_recebeu_tudo)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
@@ -116,8 +173,30 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert
-    expect(bot_contents).to be_empty
+    expect(bot_contents).to eq(tela_de_quem_recebeu_tudo)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+  end
+
+  # O HANDLE É A INTENÇÃO; A MENSAGEM É O FATO (P1 do verificador cego, 12/09/2026). Com
+  # `entregues` no handle e NENHUMA mensagem na conversa, o fecho que perguntava ao handle mandava
+  # o motor gerar o comparativo — login mais uma chamada de até 60 s ao portal — e ainda publicava
+  # "algumas seguradoras não responderam a tempo, os preços acima são os que chegaram" sem nada
+  # acima. Na `main`, esse estado lia a frase honesta de falha, que é o que ele volta a ler.
+  #
+  # O PORTAL NÃO É CHAMADO, e este exemplo o prova por construção: o PDF do conector `mock` não
+  # está stubbado aqui, então qualquer pedido de comparativo acrescentaria uma mensagem (o link de
+  # reserva) à lista abaixo.
+  it 'a cotacao cujo preco nunca chegou ao cliente fecha com a frase de falha, e nao pede comparativo' do
+    # Arrange
+    run = cotacao_com_preco_no_handle_e_nada_na_conversa
+
+    # Act
+    described_class.new.perform(run.id, 5)
+
+    # Assert
+    expect(bot_contents).to eq([cotacao.failure_message])
+    expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado', delivered_count: 0)
   end
 
   # NÃO-REGRESSÃO DA COTAÇÃO (Codex, P2). O `fail_run` deixou de filtrar por `delivered_count` e
@@ -155,7 +234,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert
-    expect(bot_contents).to eq([cotacao::PARCIAL])
+    expect(bot_contents).to eq([preco_ao_cliente, cotacao::PARCIAL])
     expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
@@ -163,14 +242,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   it 'publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue' do
     # Arrange — o comparativo do conector `mock` responde como PDF (entrega 11: sai como arquivo)
     run = cotacao_com_preco_entregue_e_prazo_vencido
-    stub_request(:get, 'https://exemplo.test/comparativo-mock.pdf')
-      .to_return(status: 200, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
+    stub_comparativo_pdf
 
     # Act
     described_class.new.perform(run.id, 5)
 
-    # Assert — primeiro o comparativo (o que ainda vale entregar), depois o fecho DA COTAÇÃO
-    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
+    # Assert — o preço que o cliente já tinha, depois o comparativo (o que ainda vale entregar) e
+    # por fim o fecho DA COTAÇÃO
+    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
     expect(bot_contents.last).to include('seguradoras')
     expect(bot_contents.join(' ')).not_to include('consultas')
     expect(run.reload.status).to eq('failed')

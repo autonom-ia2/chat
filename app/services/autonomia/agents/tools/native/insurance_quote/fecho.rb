@@ -5,6 +5,17 @@
 # parcial e o silêncio, e só a ferramenta sabe respondê-las — `delivered_count` conta qualquer item
 # aceito para publicação, inclusive a pergunta pelo dado que falta.
 #
+# TODAS AS TRÊS DECIDEM PELO FATO, NUNCA PELA INTENÇÃO. O handle é o que esta execução TENTOU
+# entregar; a mensagem na conversa é o que o cliente TEM. Os dois divergem sempre que a publicação
+# volta `blocked` — e ela volta: `deliver` roda ANTES de `record_attempt!`, então uma entrega
+# recusada avança o handle com os códigos das ofertas sem que mensagem nenhuma tenha entrado. Com a
+# pergunta feita ao handle, o cliente que não recebeu preço nenhum lia "os preços acima são os que
+# chegaram" — sem nada acima — e o motor ainda pedia ao portal um comparativo para ninguém.
+#
+# A pergunta do fato é `Tools::EntregaPublicada`: a passada que EMITE a entrega grava no handle o
+# token dela (`PRECOS_KEY`, `COMPARATIVO_KEY`), e aqui se pergunta à conversa se esse token virou
+# mensagem. O handle diz o que procurar; a conversa diz se chegou.
+#
 # Separado da ferramenta pelo mesmo motivo de `Comparativo`, `Declaracao`, `Recusas`, `Envio` e
 # `Veiculo`: é outro assunto, e a classe está no teto de linhas.
 module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
@@ -20,40 +31,74 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # 500 linhas em sequência dentro de um cron, com 25 s de shutdown do Sidekiq, e quem é morto no
   # meio deixa a linha em curso com a marca `closed` e sem fecho, para sempre. O cliente fica com os
   # preços que já leu e com o fecho honesto sobre o que ele tem; o PDF do portal continua lá.
+  #
+  # E NÃO SE PEDE COMPARATIVO PARA QUEM NÃO TEM PREÇO. O comparativo é o complemento dos preços na
+  # tela; sem nenhum deles ter chegado, gerá-lo é login mais uma chamada de até 60 s por uma entrega
+  # que muito provavelmente será recusada pelo mesmo motivo que recusou a primeira — e o cliente
+  # precisa, ali, da frase honesta de falha. A pergunta é pelo FATO: `entregues` no handle não prova
+  # que preço nenhum chegou ao cliente.
   def closing_deliveries(handle, trabalho_novo: true)
     return [] unless trabalho_novo
+    return [] unless resultado_entregue?(handle)
 
     [comparison_pdf(handle.to_h)].compact
   end
 
-  # RESULTADO DA COTAÇÃO É PREÇO PUBLICADO: a lista sob `DELIVERED_KEY`, que só
-  # recebe quem COTOU. Nunca o `pedido` — a pergunta pelo dado que falta também é uma entrega aceita
-  # (`poll` a devolve, e `delivered_count` a conta), e era por ela que uma cotação que só perguntou
-  # dados fechava dizendo "o que chegou está aqui em cima" sem nada em cima.
+  # RESULTADO DA COTAÇÃO É PREÇO QUE VIROU MENSAGEM. Nunca o `pedido` — a pergunta pelo dado que
+  # falta também é uma entrega aceita (`poll` a devolve, e `delivered_count` a conta), e era por ela
+  # que uma cotação que só perguntou dados fechava dizendo "o que chegou está aqui em cima" sem nada
+  # em cima. E nunca a lista de `entregues`: ela é a intenção, e avança mesmo quando a publicação é
+  # recusada.
   #
   # (`self.class::` porque o nome curto não se resolve dentro de um módulo compacto — o mesmo
   # cuidado de `Comparativo`.)
   def resultado_entregue?(handle)
-    Array(handle.to_h[self.class::DELIVERED_KEY]).any?
+    Array(handle.to_h[self.class::PRECOS_KEY]).any? { |token| publicada?(token) }
   end
 
-  # SOBRA ENQUANTO O PORTAL NÃO TIVER FECHADO — e quem prova que ele fechou é `PDF_SENT_KEY`.
+  # SOBRA ENQUANTO O PORTAL NÃO TIVER FECHADO — e depois dele, enquanto faltar chegar o que já foi
+  # emitido.
   #
-  # "Sempre sobra, por construção" era falso, e o estado que o desmente é alcançável HOJE. A chave
-  # só é gravada no ramo `done` de `build_progress` (`insurance_quote.rb`), depois do
-  # `return … unless finished?(result)`: ela existir significa que o portal respondeu `completed` (ou
-  # `failed`) e que o comparativo saiu. O que separa essa execução de um desfecho feliz é só o
-  # `finish!('done')` que veio DEPOIS do `record_attempt!` que persistiu o handle — morto o worker
-  # entre os dois, a linha fica `running` com a chave no banco e o varredor a encerra. Sem esta
-  # correção, quem recebeu os preços E o comparativo lia "algumas seguradoras não responderam a
-  # tempo". Frase nenhuma é melhor que frase falsa.
+  # "Sempre sobra, por construção" era falso, e o estado que o desmente é alcançável HOJE: o
+  # `finish!('done')` vem DEPOIS do `record_attempt!` que persistiu o handle, então um worker morto
+  # entre os dois deixa a linha `running` com o portal já fechado, e o varredor a encerra. Quem
+  # recebeu os preços E o comparativo lia "algumas seguradoras não responderam a tempo".
   #
-  # `PDF_SENT_KEY` sobrevive ao corte das marcas do motor (`AsyncRunJob::MARCAS` não a lista), então
-  # ela chega aqui pelo handle que o encerramento entrega.
+  # QUEM PROVA QUE O PORTAL FECHOU É `FECHADO_KEY`, e não `PDF_SENT_KEY`: a segunda só é gravada
+  # quando houve comparativo a emitir, e uma cotação que fecha sem URL de comparativo não a grava —
+  # ler a ausência como "ainda vem coisa" é a mesma frase falsa, pela outra ponta (Codex).
   #
-  # Ausente, não se pode afirmar que o portal fechou, e a frase parcial descreve o que o cliente tem:
-  # preços na tela e consulta em aberto. (Ela só é perguntada depois de `resultado_entregue?`.)
+  # A SEGUNDA METADE é o comparativo EMITIDO que não chegou: a publicação voltou `blocked` com a
+  # sentinela já gravada. Aí sobrou mesmo, e calar seria esconder do cliente que falta algo.
+  # Comparativo que nunca foi emitido não é sobra: não há o que chegar.
+  #
+  # As duas chaves sobrevivem ao corte das marcas do motor (`AsyncRunJob::MARCAS` não as lista),
+  # então chegam aqui pelo handle que o encerramento entrega.
   def resta_entregar?(handle)
-    !handle.to_h[self.class::PDF_SENT_KEY]
+    handle = handle.to_h
+    !portal_fechado?(handle) || comparativo_pendente?(handle)
+  end
+
+  private
+
+  # O portal fechou? `FECHADO_KEY` é a resposta; `PDF_SENT_KEY` vale como prova para as execuções
+  # que já estavam VOANDO quando esta versão subiu — ela só é gravada no mesmo ramo `done`, depois
+  # do `return … unless finished?(result)`, então quem a tem fechou. Sem esta segunda leitura, a
+  # linha que atravessou o deploy com o comparativo entregue fecharia dizendo "algumas seguradoras
+  # não responderam a tempo" a quem recebeu tudo — o defeito que esta entrega corrige, ressuscitado
+  # pela janela do deploy.
+  def portal_fechado?(handle)
+    handle[self.class::FECHADO_KEY].present? || handle[self.class::PDF_SENT_KEY].present?
+  end
+
+  # O comparativo foi emitido e NÃO virou mensagem? Sem token gravado não há emissão conhecida —
+  # e o que não foi emitido não está faltando.
+  def comparativo_pendente?(handle)
+    token = handle[self.class::COMPARATIVO_KEY]
+    token.present? && !publicada?(token)
+  end
+
+  def publicada?(token)
+    ::Autonomia::Agents::Tools::EntregaPublicada.publicada?(conversation, token)
   end
 end

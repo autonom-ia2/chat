@@ -47,10 +47,29 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # comparativo. O ponto de registro é este handle, na passada que gerar a proposta; a medida da
   # entrega 7 já conta a lista (`Insurance::Medida`), e hoje conta zero porque ninguém a escreve.
   PROPOSTAS_KEY = 'propostas'.freeze
-  # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial. A
+  # O PDF já foi EMITIDO? O comparativo sai UMA vez, no fim — não a cada entrega parcial. A
   # sentinela é gravada quando a ENTREGA sai da ferramenta, seja qual for a forma em que o
   # publicador a faça chegar (arquivo, ou o link de reserva quando o download falha).
+  #
+  # EMITIDO NÃO É ENTREGUE, e esta chave nunca soube a diferença: ela é gravada quando a entrega sai
+  # daqui, antes de o publicador dizer se a mensagem entrou. Quem precisa saber se o cliente TEM o
+  # comparativo pergunta pelo `COMPARATIVO_KEY`, que é a identidade da mensagem, à conversa.
   PDF_SENT_KEY = 'comparativo_enviado'.freeze
+  # O QUE ESTA EXECUÇÃO EMITIU, PELA IDENTIDADE QUE CADA ENTREGA TEM COMO MENSAGEM (entrega 8a).
+  # O handle é a INTENÇÃO de quem publicou; a mensagem é o FATO, e os dois divergem sempre que a
+  # publicação volta `blocked` depois de o handle já ter avançado — `deliver` roda ANTES de
+  # `record_attempt!`, então uma entrega bloqueada (conversa encerrada, agente desligado no meio,
+  # erro transitório do publicador) avança o handle com os códigos das ofertas mesmo sem mensagem
+  # nenhuma. Guardar o TOKEN é o que permite ao fecho fazer a pergunta do fato
+  # (`Tools::EntregaPublicada`): o handle diz o que procurar, a conversa diz se chegou.
+  PRECOS_KEY = 'entregas_de_preco'.freeze
+  COMPARATIVO_KEY = 'entrega_do_comparativo'.freeze
+  # O PORTAL FECHOU A COTAÇÃO — `completed` ou `failed` na consulta, que é o que `finished?` lê.
+  # É FATO DO PORTAL, gravado por quem o leu, e não se deduz do comparativo: uma cotação que fecha
+  # sem URL de comparativo (geração indisponível, portal sem arquivo) não grava `PDF_SENT_KEY`
+  # nenhum, e ler a ausência como "ainda tem seguradora por responder" é a frase de atraso dita a
+  # quem já recebeu tudo o que ia chegar.
+  FECHADO_KEY = 'portal_fechado'.freeze
   # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
   # quem precisa contar ao cliente é a primeira entrega de preços, minutos depois.
   SEM_BONUS_KEY = 'renovacao_sem_bonus'.freeze
@@ -204,15 +223,25 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
 
-    # O comparativo em PDF fecha a conversa, e sai UMA vez. É o que o portal entrega e o que o
-    # cliente guarda — a lista de preços no chat serve para decidir, o PDF serve para levar adiante.
-    # Desde a entrega 11 ele é uma entrega de ARQUIVO (`Comparativo`), não um texto com link.
-    pdf = comparison_pdf(next_handle)
-    if pdf
-      deliveries += [pdf]
-      next_handle = next_handle.merge(PDF_SENT_KEY => true)
-    end
-    progress_class.done(deliveries: deliveries, handle: next_handle)
+    # O PORTAL FECHOU, e isso se grava por si: é o fato que separa "ainda tem seguradora por
+    # responder" de "é isto que havia", e ele não pode depender de o comparativo ter saído.
+    fechar(deliveries, next_handle.merge(FECHADO_KEY => true))
+  end
+
+  # O comparativo em PDF fecha a conversa, e sai UMA vez. É o que o portal entrega e o que o
+  # cliente guarda — a lista de preços no chat serve para decidir, o PDF serve para levar adiante.
+  # Desde a entrega 11 ele é uma entrega de ARQUIVO (`Comparativo`), não um texto com link.
+  #
+  # Duas marcas, e elas dizem coisas diferentes: `PDF_SENT_KEY` é "já emiti este comparativo" (o
+  # que impede a segunda emissão) e `COMPARATIVO_KEY` é a IDENTIDADE da mensagem que ele vira — é
+  # por ela que o fecho pergunta ao banco se o cliente o recebeu. `compact` porque sem execução não
+  # há identidade a gravar.
+  def fechar(deliveries, handle)
+    pdf = comparison_pdf(handle)
+    return progress_class.done(deliveries: deliveries, handle: handle) if pdf.nil?
+
+    progress_class.done(deliveries: deliveries + [pdf],
+                        handle: handle.merge(PDF_SENT_KEY => true, COMPARATIVO_KEY => token_da_entrega(pdf)).compact)
   end
 
   # A UNIÃO DAS CONSULTAS, não a foto da última (entrega 7). O portal responde em pedaços — medido em
@@ -232,8 +261,26 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     texto = ::Autonomia::Insurance::QuoteOffers.describe(
       fresh, first: already.empty?, aviso: avisar ? AVISO_SEM_BONUS : nil
     )
-    handle = registrar_sem_periodo(fresh, handle)
+    handle = registrar_entrega_de_preco(texto, registrar_sem_periodo(fresh, handle))
     [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
+  end
+
+  # A IDENTIDADE DA MENSAGEM QUE ESTE PREÇO VAI VIRAR, guardada na passada que o emite — é a única
+  # em que se sabe o TEXTO, e é do texto que o token nasce. Quem lê é o fecho, que pergunta à
+  # conversa se a mensagem existe: o contador da execução não serve (conta qualquer item aceito,
+  # inclusive a pergunta pelo dado que falta) e a lista de `entregues` também não (ela avança mesmo
+  # quando a publicação é recusada). ACUMULA, porque cada lote de preços é uma mensagem.
+  # Sem execução não há token, e aí não se grava nada: o fecho cala, que é o lado conservador.
+  def registrar_entrega_de_preco(texto, handle)
+    token = token_da_entrega(texto)
+    return handle if token.blank?
+
+    handle.merge(PRECOS_KEY => (Array(handle[PRECOS_KEY]).map(&:to_s) + [token]).uniq)
+  end
+
+  # O token de uma entrega DESTA execução, pela mesma definição que o publicador usa.
+  def token_da_entrega(entrega)
+    ::Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
   end
 
   # O registro ACUMULA entre lotes (o lote 2 não pode apagar o motivo do lote 1) e só escreve a

@@ -57,10 +57,15 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
                                            arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } },
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 1.minute.ago)
-    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-1:1',
-                                  cotacao::DELIVERED_KEY => ['8'], 'produto' => 'auto' })
+    # O TOKEN DO PREÇO entra no handle porque é assim que a passada que o emite o registra desde a
+    # entrega 8a: o encerramento só pede o comparativo a quem TEM preço na tela, e ele confere isso
+    # procurando a MENSAGEM na conversa — `entregues` sozinho é a intenção de quem publicou.
     Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
     run.record_delivery!
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-1:1',
+                                  cotacao::DELIVERED_KEY => ['8'], 'produto' => 'auto',
+                                  cotacao::PRECOS_KEY => [Autonomia::Agents::Tools::EntregaPublicada
+                                    .token_de(run, preco)] })
     run
   end
 

@@ -453,62 +453,168 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(comparativo.url).to eq('https://exemplo.test/comparativo.pdf')
       expect(comparativo.reserva).to include('https://exemplo.test/comparativo.pdf')
       expect(progress.handle[described_class::PDF_SENT_KEY]).to be(true)
+      # O FECHAMENTO DO PORTAL SE GRAVA POR SI (entrega 8a): é ele que distingue "ainda tem
+      # seguradora por responder" de "é isto que havia", e não pode depender de o PDF ter saído.
+      expect(progress.handle[described_class::FECHADO_KEY]).to be(true)
       expect(connector).to have_received(:quote_proposal).with(hash_excluding(:insurer_code))
     end
 
-    # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele saía só no ramo `done`, quando
-    # o portal fechava a cotação — e em 08/09/2026 a execução entregou cinco preços e estourou o
-    # prazo na 22ª consulta, então o PDF nunca saiu. O `AsyncRunJob` chama isto ao desistir.
-    it 'entrega o comparativo tambem quando a cotacao acaba sem fechar' do
-      # Act — nenhum `done`: é o encerramento por prazo, com preços já entregues
-      # As CHAVES importam: `closing_deliveries` recebe um keyword desde a entrega 8, e um hash sem
-      # chaves na chamada vira keyword em vez de argumento posicional.
-      entregas = tool.closing_deliveries({ 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'] })
+    # O FECHO E O ENCERRAMENTO PERGUNTAM PELO FATO, e o fato é a MENSAGEM na conversa. Por isso as
+    # três respostas da cotação ao `Tools::Encerramento` só se exercitam na ferramenta como o MOTOR
+    # a monta: com a conversa e com a LINHA da execução (é do `execution_key` dela que nasce a
+    # identidade de cada entrega). O handle diz o que esta execução TENTOU entregar; ele avança
+    # mesmo quando a publicação é recusada, e foi por acreditar nele que a frase parcial saiu para
+    # quem não tinha preço nenhum na tela.
+    describe 'o fecho e o que ainda vale entregar' do
+      let(:inbox) { create(:inbox, account: account) }
+      let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+      let(:agent_bot) { create(:agent_bot, account: account) }
+      let(:run) do
+        Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug, arguments: {},
+                                         scope: { conversation_id: conversation.id })
+      end
+      let(:tool_do_motor) do
+        described_class.new(agent: agent, params: params, conversation: conversation, run: run)
+      end
+      let(:preco) { '*Ezze* — R$ 2.050,40 no total' }
+      let(:fechado) { described_class::FECHADO_KEY }
 
-      # Assert
-      expect(Autonomia::Agents::Tools::EntregaDeArquivo.de(entregas.first).url).to eq('https://exemplo.test/comparativo.pdf')
-    end
+      # A MENSAGEM que o publicador teria criado: o que a torna reconhecível é o token, a identidade
+      # da entrega derivada do conteúdo. -> o token.
+      def ja_publicado(entrega)
+        token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
+        create(:message, account: account, inbox: inbox, conversation: conversation,
+                         message_type: :outgoing, sender: agent_bot, content: entrega.to_s,
+                         content_attributes: { 'autonomia_async_token' => token })
+        token
+      end
 
-    it 'nao repete o comparativo no encerramento se ele ja tinha saido' do
-      entregas = tool.closing_deliveries({ 'quote_id' => 'abc:1', described_class::PDF_SENT_KEY => true,
-                                           described_class::DELIVERED_KEY => ['43'] })
+      # O handle de quem emitiu um preço: com a mensagem na conversa (o preço chegou) ou sem ela
+      # (a publicação foi recusada e o handle avançou assim mesmo). São TEXTOS diferentes de
+      # propósito — a identidade da entrega é o conteúdo, então o preço recusado não pode ser o
+      # mesmo que já está na tela.
+      def handle_com_preco(chegou:)
+        texto = chegou ? preco : '*Ezze* — R$ 1.999,00 no total (o que a publicação recusou)'
+        token = chegou ? ja_publicado(texto) : Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
+        { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'],
+          described_class::PRECOS_KEY => [token] }
+      end
 
-      expect(entregas).to be_empty
-    end
+      # A IDENTIDADE DE CADA ENTREGA É GRAVADA NA PASSADA QUE A EMITE — é a única em que se sabe o
+      # TEXTO, e é dele que o token nasce. Sem este registro o fecho não teria pelo que perguntar, e
+      # voltaria a decidir pelo handle (a intenção) em vez de pela mensagem (o fato).
+      it 'grava a identidade do preco e do comparativo que emitiu' do
+        allow(connector).to receive(:quote_result).and_return(
+          result('completed', [offer('43', 'Ezze', 'quoted', 2050.40)])
+        )
+        tokens = Autonomia::Agents::Tools::EntregaPublicada
 
-    # O COMPARATIVO É TRABALHO NOVO NO PORTAL: login mais uma chamada de até 60 s, e depois o
-    # download. No caminho do varredor — até 500 linhas em sequência num cron, com 25 s de shutdown
-    # do Sidekiq — ele não sai: quem é morto no meio deixa a linha em curso com a marca `closed` e
-    # sem fecho, para sempre. O PDF continua no portal; o cliente fica com os preços que já leu e
-    # com um fecho honesto sobre o que ele tem.
-    it 'nao gera o comparativo quando a passada nao pode comecar trabalho novo' do
-      entregas = tool.closing_deliveries({ 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'] },
-                                         trabalho_novo: false)
+        progresso = tool_do_motor.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
-      expect(entregas).to be_empty
-      expect(connector).not_to have_received(:quote_proposal)
-    end
+        expect(progresso.handle[described_class::PRECOS_KEY])
+          .to eq([tokens.token_de(run, progresso.deliveries.first)])
+        expect(progresso.handle[described_class::COMPARATIVO_KEY])
+          .to eq(tokens.token_de(run, progresso.deliveries.last))
+        expect(progresso.handle[fechado]).to be(true)
+      end
 
-    # AS DUAS PERGUNTAS DO FECHO. Resultado da cotação é PREÇO PUBLICADO, e nunca a pergunta pelo
-    # dado que falta: `poll` devolve `handle['pedido']` como entrega e `delivered_count` a conta,
-    # então uma cotação que só perguntou dados fechava dizendo "o que chegou está aqui em cima" —
-    # sem nada em cima.
-    it 'so afirma resultado quando ha preco entregue — a pergunta por dados nao conta' do
-      expect(tool.resultado_entregue?(described_class::DELIVERED_KEY => ['43'])).to be(true)
-      expect(tool.resultado_entregue?('pedido' => 'Me diga a placa, por favor.')).to be(false)
-      expect(tool.resultado_entregue?(described_class::DELIVERED_KEY => [])).to be(false)
-    end
+      # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele saía só no ramo `done`,
+      # quando o portal fechava a cotação — e em 08/09/2026 a execução entregou cinco preços e
+      # estourou o prazo na 22ª consulta, então o PDF nunca saiu. O `AsyncRunJob` chama isto ao
+      # desistir.
+      it 'entrega o comparativo tambem quando a cotacao acaba sem fechar' do
+        # Act — nenhum `done`: é o encerramento por prazo, com preços já entregues
+        # As CHAVES importam: `closing_deliveries` recebe um keyword desde a entrega 8, e um hash
+        # sem chaves na chamada vira keyword em vez de argumento posicional.
+        entregas = tool_do_motor.closing_deliveries(handle_com_preco(chegou: true))
 
-    # E SOBRA NÃO É "SEMPRE", POR MAIS QUE O ENCERRAMENTO SÓ EXISTA FORA DO CAMINHO FELIZ. A chave
-    # `comparativo_enviado` só é gravada no ramo `done` de `build_progress`, depois do
-    # `return … unless finished?(result)`: ela existir PROVA que o portal fechou e que o comparativo
-    # saiu. O que separa essa execução de um desfecho feliz é só o `finish!('done')` que vem DEPOIS
-    # do `record_attempt!` — morto o worker entre os dois, a linha fica `running` com a chave no
-    # banco e o varredor a encerra. Afirmar sobra ali é dizer "algumas seguradoras não responderam a
-    # tempo" a quem recebeu preços E comparativo.
-    it 'nao afirma sobra quando o comparativo ja saiu — o portal tinha fechado' do
-      expect(tool.resta_entregar?('quote_id' => 'abc:1')).to be(true)
-      expect(tool.resta_entregar?('quote_id' => 'abc:1', described_class::PDF_SENT_KEY => true)).to be(false)
+        # Assert
+        expect(Autonomia::Agents::Tools::EntregaDeArquivo.de(entregas.first).url).to eq('https://exemplo.test/comparativo.pdf')
+      end
+
+      # E NÃO SE PEDE COMPARATIVO PARA QUEM NÃO TEM PREÇO. `deliver` roda antes de
+      # `record_attempt!`, então uma entrega recusada (conversa encerrada, agente desligado no meio)
+      # avança `entregues` no handle sem que mensagem nenhuma tenha entrado. Nesse estado o motor
+      # pedia ao portal um comparativo de até 60 s para publicá-lo — provavelmente pelo mesmo canal
+      # que acabara de recusar o preço — e o cliente, que precisava da frase honesta de falha, lia
+      # "os preços acima são os que chegaram" sem nada acima.
+      it 'nao pede o comparativo quando o preco nunca chegou ao cliente' do
+        entregas = tool_do_motor.closing_deliveries(handle_com_preco(chegou: false))
+
+        expect(entregas).to be_empty
+        expect(connector).not_to have_received(:quote_proposal)
+      end
+
+      it 'nao repete o comparativo no encerramento se ele ja tinha saido' do
+        entregas = tool_do_motor.closing_deliveries(
+          handle_com_preco(chegou: true).merge(described_class::PDF_SENT_KEY => true)
+        )
+
+        expect(entregas).to be_empty
+      end
+
+      # O COMPARATIVO É TRABALHO NOVO NO PORTAL: login mais uma chamada de até 60 s, e depois o
+      # download. No caminho do varredor — até 500 linhas em sequência num cron, com 25 s de
+      # shutdown do Sidekiq — ele não sai: quem é morto no meio deixa a passada pela metade. O PDF
+      # continua no portal; o cliente fica com os preços que já leu e com um fecho honesto sobre o
+      # que ele tem.
+      it 'nao gera o comparativo quando a passada nao pode comecar trabalho novo' do
+        entregas = tool_do_motor.closing_deliveries(handle_com_preco(chegou: true), trabalho_novo: false)
+
+        expect(entregas).to be_empty
+        expect(connector).not_to have_received(:quote_proposal)
+      end
+
+      # RESULTADO É PREÇO QUE VIROU MENSAGEM. Nunca a pergunta pelo dado que falta (`poll` devolve
+      # `handle['pedido']` como entrega e `delivered_count` a conta, e era por ela que uma cotação
+      # que só perguntou dados fechava dizendo "o que chegou está aqui em cima") e nunca a lista de
+      # `entregues`, que é a intenção de quem publicou.
+      it 'so afirma resultado quando o preco virou MENSAGEM na conversa' do
+        expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: true))).to be(true)
+        expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: false))).to be(false)
+        expect(tool_do_motor.resultado_entregue?(described_class::DELIVERED_KEY => ['43'])).to be(false)
+        expect(tool_do_motor.resultado_entregue?('pedido' => 'Me diga a placa, por favor.')).to be(false)
+      end
+
+      # E SOBRA NÃO É "SEMPRE", POR MAIS QUE O ENCERRAMENTO SÓ EXISTA FORA DO CAMINHO FELIZ. Quem
+      # prova que o portal fechou é `portal_fechado`, gravado no ramo `done` de `build_progress`
+      # depois do `return … unless finished?(result)`. O que separa essa execução de um desfecho
+      # feliz é só o `finish!('done')` que vem DEPOIS do `record_attempt!` — morto o worker entre os
+      # dois, a linha fica `running` com a chave no banco e o varredor a encerra. Afirmar sobra ali
+      # é dizer "algumas seguradoras não responderam a tempo" a quem recebeu preços E comparativo.
+      it 'nao afirma sobra quando o portal fechou e nada ficou por chegar' do
+        expect(tool_do_motor.resta_entregar?('quote_id' => 'abc:1')).to be(true)
+        expect(tool_do_motor.resta_entregar?('quote_id' => 'abc:1', fechado => true)).to be(false)
+      end
+
+      # O COMPARATIVO EMITIDO QUE NÃO CHEGOU É SOBRA — e a sentinela não sabe disso: ela é gravada
+      # quando a entrega sai da ferramenta, antes de o publicador dizer se a mensagem entrou. Com a
+      # publicação recusada, o fecho calava sobre um comparativo que faltou (Codex).
+      it 'afirma sobra quando o comparativo saiu da ferramenta e nao virou mensagem' do
+        token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, 'Comparativo: https://exemplo.test/c.pdf')
+        handle = { fechado => true, described_class::PDF_SENT_KEY => true,
+                   described_class::COMPARATIVO_KEY => token }
+
+        expect(tool_do_motor.resta_entregar?(handle)).to be(true)
+        expect(tool_do_motor.resta_entregar?(handle.merge(
+                                               described_class::COMPARATIVO_KEY => ja_publicado('Comparativo: https://exemplo.test/c.pdf')
+                                             ))).to be(false)
+      end
+
+      # E O PORTAL PODE FECHAR SEM COMPARATIVO NENHUM: geração indisponível, portal sem arquivo. Aí
+      # `comparativo_enviado` nunca é gravado — e ler a ausência dela como "ainda tem seguradora por
+      # responder" é a frase de atraso dita a quem já recebeu tudo o que ia chegar (Codex).
+      it 'nao afirma sobra quando o portal fechou sem gerar comparativo' do
+        expect(tool_do_motor.resta_entregar?('quote_id' => 'abc:1', fechado => true)).to be(false)
+      end
+
+      # NÃO-REGRESSÃO DA JANELA DO DEPLOY: a execução que já estava voando não tem `portal_fechado`
+      # no handle, e a única prova que ela carrega é `comparativo_enviado` — gravada no MESMO ramo
+      # `done`. Sem lê-la, quem atravessou o deploy com tudo entregue fecharia com a frase falsa.
+      it 'aceita o comparativo_enviado como prova do fechamento nas linhas que atravessam o deploy' do
+        expect(tool_do_motor.resta_entregar?('quote_id' => 'abc:1',
+                                             described_class::PDF_SENT_KEY => true)).to be(false)
+      end
     end
 
     it 'never sends the PDF twice' do
