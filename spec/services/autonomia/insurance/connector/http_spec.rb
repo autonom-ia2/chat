@@ -123,6 +123,43 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
     end
   end
 
+  # A PROPOSTA DE UMA SEGURADORA SÓ (entrega 8): o mesmo endpoint do comparativo, com o código da
+  # seguradora no corpo. Até 12/09/2026 nenhum chamador passava `insurer_code`, e nenhum exemplo
+  # provava que ele viajava como `insurerCode` — o nome que o adapter lê.
+  describe '#quote_proposal' do
+    # O corpo que chegou ao adapter em `/v1/agger/quote/proposal`. O bloco vai em `.with { }`: um
+    # bloco passado direto a `a_request` é IGNORADO pelo WebMock (`a_request(method, uri)` não o
+    # recebe), e a asserção passaria com qualquer POST.
+    def corpo_enviado
+      corpo = nil
+      expect(
+        a_request(:post, invoke_url).with do |request|
+          event = JSON.parse(request.body)
+          corpo = JSON.parse(event['body']) if event['rawPath'] == '/v1/agger/quote/proposal'
+          corpo.present?
+        end
+      ).to have_been_made
+      corpo
+    end
+
+    it 'manda o código da seguradora como insurerCode quando pedem a proposta de uma só' do
+      stub_invoke(inner_status: 200, inner_body: { 'quoteId' => 'q1', 'url' => 'https://arquivos.exemplo.test/p-8.pdf' }.to_json)
+
+      resposta = described_class.new.quote_proposal(**with_session, quote_id: 'q1', insurer_code: '8')
+
+      expect(corpo_enviado).to eq('session' => { 'multicalculoToken' => 'multi' }, 'quoteId' => 'q1', 'insurerCode' => '8')
+      expect(resposta).to include('quote_id' => 'q1', 'url' => 'https://arquivos.exemplo.test/p-8.pdf')
+    end
+
+    it 'não manda insurerCode no comparativo de todas' do
+      stub_invoke(inner_status: 200, inner_body: { 'quoteId' => 'q1', 'url' => 'https://arquivos.exemplo.test/c.pdf' }.to_json)
+
+      described_class.new.quote_proposal(**with_session, quote_id: 'q1')
+
+      expect(corpo_enviado).to eq('session' => { 'multicalculoToken' => 'multi' }, 'quoteId' => 'q1')
+    end
+  end
+
   it 'signs the invocation, sends the open session in the event and returns the payload' do
     stub_invoke(inner_status: 200, inner_body: { 'status' => 'ready', 'account_label' => 'CORRETORA X' }.to_json)
 
@@ -148,8 +185,10 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
     stub_invoke(inner_status: 200, inner_body: { 'platform' => 'agger', 'data' => { 'token' => 'x' } }.to_json)
 
     expect(described_class.new.open_session(**credentials)).to include('platform' => 'agger')
+    # `.with { }`, e não um bloco direto em `a_request`: o WebMock ignora esse bloco, e o exemplo
+    # passava com qualquer POST — sem olhar o caminho nem o corpo (achado de 12/09/2026, entrega 8).
     expect(
-      a_request(:post, invoke_url) do |request|
+      a_request(:post, invoke_url).with do |request|
         event = JSON.parse(request.body)
         event['rawPath'] == '/v1/agger/session' &&
           JSON.parse(event['body']) == { 'username' => 'c@x.com', 'password' => 'segredo' }

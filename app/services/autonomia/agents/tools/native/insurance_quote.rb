@@ -41,11 +41,17 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # cliente; na renovação real de 11/09/2026 eram onze de dezessete, e as outras seis não deixavam
   # rastro nenhum. Sem esta chave, medir para cobrar seria contar execuções e chamá-las de consultas.
   ACIONADAS_KEY = 'seguradoras_acionadas'.freeze
-  # A PROPOSTA INDIVIDUAL, quando ela existir (entrega 8): os códigos das seguradoras cuja proposta
-  # saiu nesta cotação. A ferramenta de proposta por seguradora ainda não existe — `quote/proposal`
-  # com `insurer_code` é o caminho, e `comparison_pdf` já usa o mesmo endpoint SEM código para o
-  # comparativo. O ponto de registro é este handle, na passada que gerar a proposta; a medida da
-  # entrega 7 já conta a lista (`Insurance::Medida`), e hoje conta zero porque ninguém a escreve.
+  # O NOME DE QUEM COTOU, POR CÓDIGO (entrega 8): `{ "8" => "Porto", "55" => "Bp Assinatura" }`,
+  # acumulado a cada consulta como `DELIVERED_KEY`. É o mapa que a proposta individual
+  # (`Native::InsuranceProposal`) usa para traduzir o que o cliente FALOU ("me manda a da Porto") no
+  # código que o portal exige — por comparação de texto normalizado contra ESTE mapa, e não por
+  # tabela nossa: o nome é o que o portal escreveu na oferta, o mesmo que o cliente leu no preço.
+  NOMES_KEY = 'nomes_entregues'.freeze
+  # A PROPOSTA INDIVIDUAL (entrega 8): os códigos das seguradoras cuja proposta saiu desta cotação.
+  # Quem escreve é a ferramenta de proposta por seguradora (`Native::InsuranceProposal`), na linha
+  # DESTA execução — a cotação já está `done` quando o cliente escolhe, por isso a escrita é
+  # `ToolRun#anotar_propostas!`, e não `merge_handle!`. A medida da entrega 7 lê daqui
+  # (`Insurance::Medida`): cotações que viraram proposta, e a soma dos códigos em separado.
   PROPOSTAS_KEY = 'propostas'.freeze
   # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial. A
   # sentinela é gravada quando a ENTREGA sai da ferramenta, seja qual for a forma em que o
@@ -205,9 +211,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     leitura = ofertas.new(result)
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
     fresh = leitura.quoted.reject { |offer| already.include?(ofertas.code(offer)) }
-    next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| ofertas.code(offer) },
-                               ACIONADAS_KEY => acionadas(leitura, handle))
-    deliveries, next_handle = precos(fresh, already, next_handle)
+    deliveries, next_handle = precos(fresh, already, registrar(handle, leitura, already, fresh))
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
 
@@ -222,12 +226,31 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     progress_class.done(deliveries: deliveries, handle: next_handle)
   end
 
+  # O QUE A COTAÇÃO REGISTRA A CADA CONSULTA, no handle: quem já foi entregue, quem foi acionado
+  # (entrega 7) e o nome de quem cotou (entrega 8). Os três acumulam — nenhum é foto da última leitura.
+  def registrar(handle, leitura, already, fresh)
+    ofertas = ::Autonomia::Insurance::QuoteOffers
+    handle.merge(DELIVERED_KEY => already + fresh.map { |offer| ofertas.code(offer) },
+                 ACIONADAS_KEY => acionadas(leitura, handle),
+                 NOMES_KEY => nomes(leitura, handle))
+  end
+
   # A UNIÃO DAS CONSULTAS, não a foto da última (entrega 7). O portal responde em pedaços — medido em
   # 04/09/2026: 3 de 6 seguradoras devolveram preço em ~35 s e o negócio só assentou aos 392 s —, e
   # nada garante que uma consulta liste tudo o que a anterior listou. Gravar a foto apagaria
   # seguradoras que a corretora já acionou e pagou. União é idempotente: reconsulta não muda nada.
   def acionadas(leitura, handle)
     (Array(handle[ACIONADAS_KEY]).map(&:to_s) | leitura.acionadas).sort
+  end
+
+  # O MAPA CÓDIGO -> NOME de quem cotou (entrega 8), acumulado como `DELIVERED_KEY`: o nome de quem
+  # apareceu num lote anterior não pode sumir porque a consulta seguinte veio em pedaços. O nome é o
+  # que o cliente leu na lista de preços (`QuoteOffers.nome`, o do portal sem os caracteres que
+  # quebram o negrito) — é por ele que o cliente vai pedir a proposta.
+  def nomes(leitura, handle)
+    ofertas = ::Autonomia::Insurance::QuoteOffers
+    novos = leitura.quoted.to_h { |offer| [ofertas.code(offer), ofertas.nome(offer)] }
+    handle[NOMES_KEY].to_h.transform_keys(&:to_s).merge(novos)
   end
 
   # -> [deliveries, handle]. O aviso de renovação sem bônus tem SENTINELA própria, no mesmo molde do
