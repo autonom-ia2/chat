@@ -33,9 +33,10 @@ module ManualDoPrincipal
   # #403 escreveu a regra de titularidade, e vale para ele o mesmo motivo da §7.1: a frase-âncora não
   # vê o que for acrescentado ao lado dela. "Na dúvida, recuse o documento você mesma" passaria por
   # todas as âncoras desta tabela — é exatamente a conduta que a #403 existe para tirar do texto.
-  # Assinar o ARQUIVO inteiro continua não servindo: a entrega 8 volta a editar §5 e §10, e uma
-  # assinatura de arquivo reprovaria por mudança sem relação com esta. Quem editar este bloco
-  # reassina aqui e revisa `PROMESSAS_DO_DOCUMENTO` junto.
+  # Assinar o ARQUIVO inteiro continua não servindo, e a entrega 8 é a demonstração: aplicado o
+  # `origin/pr-399` de hoje (`ade5ca58db`) sobre esta árvore, o arquivo muda em §2, §5, §6 e §10 — e o
+  # md5 DESTE bloco não muda. Uma assinatura de arquivo reprovaria; a do bloco não. Quem editar
+  # este bloco reassina abaixo e revisa `PROMESSAS_DO_DOCUMENTO` junto.
   SECAO_ESPECIALISTAS = /### Os especialistas de ramo.*?(?=\n## \d)/m
 
   # O manual do especialista de auto — o mesmo arquivo que o `Builder` entrega ao especialista do
@@ -285,8 +286,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # MESMA ASSINATURA, MESMO MOTIVO, PARA O BLOCO DOS ESPECIALISTAS DA §5 (#403). A tabela
   # `PROMESSAS_DO_DOCUMENTO` vê as três frases que escrevi; não veria uma quarta, escrita ao lado
   # delas, mandando recusar o documento — que é a conduta que esta entrega tira do caminho. Quem
-  # editar este bloco reassina aqui e revisa a tabela junto. A entrega 8 volta a mexer na §5: é
-  # esperado que ela reprove estes exemplos e os reassine.
+  # editar este bloco reassina aqui e revisa a tabela junto.
+  #
+  # A ENTREGA 8 NÃO COLIDE COM ESTA ASSINATURA, medido e não suposto: mesclado o `origin/pr-399`
+  # de hoje (`ade5ca58db`) nesta árvore, a #399 mexe na §5 ANTES deste bloco — troca a linha
+  # "Você tem três/quatro ferramentas" e insere a subseção `proposta_da_seguradora` logo acima do
+  # "### Os especialistas de ramo" —, e o md5 abaixo permanece `6cc2e90d…`. Se a #399 mudar de
+  # forma e passar a editar o bloco, este exemplo reprova e é ele que avisa.
   describe 'o bloco dos especialistas da §5 é o texto revisado' do
     let(:secao) { ManualDoPrincipal.secao_especialistas(texto) }
 
