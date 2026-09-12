@@ -87,6 +87,20 @@ module ManualDoEspecialistaDeAuto
       vazia = Autonomia::Insurance::AutoRenewal.new({})
       !vazia.renovacao? && vazia.bonus.nil? && !vazia.sem_bonus?
     },
+    # COBERTURA COPIADA DA APÓLICE (#410). Em 12/09/2026 o documento trouxe o quadro de coberturas e
+    # o pedido saiu com ele: dezessete seguradoras acionadas, nenhum preço; minutos depois, com as
+    # coberturas padrão, nove preços. A regra nova tem duas metades, e cada uma é uma capacidade.
+    # NÃO MANDAR precisa ser legal: todo campo de cobertura exposto — e o percentual da tabela de
+    # referência, que é escolha de cobertura morando no grupo do veículo — é opcional. Se um deles
+    # virar obrigatório, "a cotação sai com as coberturas padrão" deixa de ser verdade.
+    'Documento não é pedido' => lambda {
+      cobertura = expostos.grep(/\Acoverage\./) + ['vehicle.referencedValuePercent']
+
+      cobertura.size > 1 && cobertura.all? { |nome| campo(nome)['obrigatorio'] == false }
+    },
+    # MEXER DEPOIS precisa existir: o grupo `coverage` chega ao envio. Fora da entrada, adiar o
+    # ajuste para depois do primeiro preço seria adiar para nunca.
+    'Ajuste de cobertura é conversa posterior' => -> { grupos_da_entrada.include?('coverage') },
     'Renovação garantida' => -> { campo('quotation.isGuaranteedRenewal') },
     'Nunca chute a seguradora anterior' => -> { valores('quotation.previousInsurerCode').any? },
     'A mesma seguradora tem dois códigos' => -> { campo('quotation.previousInsurerCode')['descricao'].include?('DIFERENTE') },
@@ -163,7 +177,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('8c5d2facc72b7d93721af0d178506045')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('1f68c3cc0c86e21727d5b12b254801d0')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do
