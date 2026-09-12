@@ -176,8 +176,11 @@ a identidade do preco que publicou, e o fecho a usa'` fecha o buraco: M16 reprov
   commit (acima).
 - O "CI verde" da rodada 1 era do HEAD do momento (`b68832d622`), não do commit citado ao lado de
   cada item — o CI roda no HEAD da PR, nunca commit a commit. Os números locais desta rodada estão
-  em "Validação" e são todos do código em **`f372b3c095`** (o último commit que toca `app/` ou
-  `spec/`; o que vem depois é só esta auditoria). O estado do CI é o que a PR #406 mostrar no HEAD
+  em "Validação", e a fronteira é esta: as SETE partições e a repetição do nó 1 rodaram sobre o
+  código de **`f372b3c095`**; o foco (497) e o rubocop (19 arquivos) rodaram depois de
+  **`ea296886af`**, cujo único toque em `app/` são dois comentários (`base.rb` e `async_run_job.rb`
+  deixaram de dizer que ninguém lê `conversation`/`run`). Nenhuma linha executável mudou entre os
+  dois. O estado do CI é o que a PR #406 mostrar no HEAD
   do momento — e não está afirmado aqui, porque um documento não pode atestar o resultado de uma
   corrida que só começa quando ele é empurrado.
 
