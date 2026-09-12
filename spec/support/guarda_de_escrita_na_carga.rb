@@ -25,10 +25,24 @@
 # justamente o nó que carregou o arquivo culpado — que é o nó onde a poluição acontece.
 #
 # O QUE FICA DE FORA: `rspec --dry-run` não roda hook nenhum, então lá a guarda é silenciosa (para
-# esse caso, conte as linhas no banco depois). E a guarda vê o que foi CARREGADO: um arquivo fora
-# da rodada não é conferido — no CI isso não é lacuna, porque os oito nós juntos carregam todos.
+# esse caso, conte as linhas no banco depois). A guarda vê o que foi CARREGADO: um arquivo fora da
+# rodada não é conferido — no CI isso não é lacuna, porque os oito nós juntos carregam todos. E ela
+# escuta `sql.active_record`: quem pegar o `raw_connection` e escrever por fora do ActiveRecord não
+# emite a notificação, e escapa.
 module GuardaDeEscritaNaCarga
+  # Escrita na cabeça do comando — a forma que o ActiveRecord emite em quase todo caso.
   ESCRITA = /\A\s*(?:INSERT|UPDATE|DELETE)\b/i
+
+  # Escrita dentro de CTE: `WITH nova AS (INSERT ... RETURNING id) SELECT id FROM nova`. O comando
+  # começa com `WITH`, então `ESCRITA` não o vê — mas ele grava do mesmo jeito.
+  ESCRITA_EM_CTE = /\A\s*WITH\b.*?\(\s*(?:INSERT|UPDATE|DELETE)\b/im
+
+  # Texto entre aspas simples, identificador entre aspas duplas e comentário (de bloco ou de linha),
+  # numa varredura só: quem começa primeiro vence, então `'--'` continua sendo texto e `/* it's */`
+  # continua sendo comentário. Sem isso um comentário na frente esconde o `INSERT`
+  # (`/* fixture */ INSERT INTO ...`) e a palavra `insert` dentro de uma string acusa quem não
+  # escreveu nada.
+  RUIDO = %r{'(?:[^']|'')*'|"(?:[^"]|"")*"|/\*.*?\*/|--[^\n]*}m
 
   # Só o que vem de um ARQUIVO DE SPEC. `spec/rails_helper.rb` e os helpers de `spec/support`
   # também estão sob `spec/`, e `maintain_test_schema!` escreve em `ar_internal_metadata` de
@@ -55,8 +69,18 @@ module GuardaDeEscritaNaCarga
       @assinatura = nil
     end
 
+    # Comentário vira espaço e texto vira string vazia, para que a decisão olhe só o comando.
+    def limpar(sql)
+      sql.gsub(RUIDO) { |trecho| trecho.start_with?("'", '"') ? "''" : ' ' }
+    end
+
+    def escrita?(sql)
+      comando = limpar(sql)
+      comando.match?(ESCRITA) || comando.match?(ESCRITA_EM_CTE)
+    end
+
     def registrar(dados)
-      return unless dados[:sql].to_s.match?(ESCRITA)
+      return unless escrita?(dados[:sql].to_s)
 
       origem = caller.find { |linha| linha.match?(ORIGEM) }
       return if origem.nil?
