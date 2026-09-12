@@ -456,12 +456,18 @@ para montar o token; o contrato de `poll` é compartilhado por todas as nativas.
 **R6 — `publicavel?` NÃO é consultado na retomada de envio pendente** (`RetomadaDeEnvio`): ali não há
 entrega em mãos e a mensagem JÁ EXISTE — bloquear o reenvio deixaria uma mensagem no painel que nunca
 sai para o cliente. O que vale lá é o que já valia: execução morta, vínculo, canal, nota privada.
+*[REVERTIDA na rodada 4 (P1 do Codex): a mensagem existir no painel NÃO é ter chegado ao cliente —
+reenfileirar o `SendReplyJob` dela é entregar o arquivo agora. A entrega passou a ser identificada
+pelo TOKEN da mensagem, e a pendência é ABANDONADA (resolvida, não deixada para o varredor).]*
 
 **R7 — cotação mais nova ENCERRADA sem preço não barra a proposta (M3): decisão de PRODUTO pendente,
 sem mudança nesta rodada.** Cenário: o cliente manda refazer, a cotação nova falha sem entregar preço
 nenhum, e ele então pede "me manda a da Porto". Hoje a proposta sai da lista antiga — que é a única
 lista que existe, e a que ele leu. Barrar seria não ter o que oferecer. Registrado para o PO; o dado
 para decidir (com que frequência uma recotação morre sem preço) está em `autonomia_agent_tool_runs`.
+*[DECIDIDA na rodada 4 pelo revisor final: BARRA. O verificador cego reproduziu o caso pelo caminho
+real — saía o anexo da lista antiga sem uma palavra ao cliente —, e a regra da última cotação o cobre
+sem cláusula própria.]*
 
 ### Validação (números)
 
@@ -508,7 +514,129 @@ Cada mutação aborta se a âncora não existir e confere que o arquivo REALMENT
   executado em produção; o script `rollout-proposta.sh` só ganhou um COMENTÁRIO sobre as execuções
   abertas antes do deploy (não há passo de dados para elas: a janela é o prazo de uma execução).
 - **M3 / R7** (cotação mais nova encerrada sem preço): decisão de produto, registrada acima.
+  *[FEITO na rodada 4.]*
 - **`fail_run` com `delivered_count` zero** (R4): mexe no fecho de todas as assíncronas.
+  *[FEITO na rodada 4, com spec de não-regressão da cotação.]*
 - **C8** (URL do portal no handle) e **`pedido` da entrega 10 na proposta** (D10): sem mudança, como
   nas rodadas anteriores.
 - **Reentrega desnecessária no caso `deferred`** (R3): custo aceito, medido, documentado.
+
+---
+
+## Rodada 4 (12/09/2026) — PR #399, os dois P1 e o P2 do Codex, e os quatro do verificador cego
+
+Base: `168e1df557`, árvore limpa. Suíte-base antes de qualquer edição: **1206 exemplos, 0 falhas**.
+Commit da rodada: `8a3f8c4c58`. O Codex REPROVOU a rodada 3 (dois P1 e um P2); o verificador cego
+APROVOU sem bloqueante, confirmou por spec própria que não há regressão na cotação em produção, e
+trouxe um achado novo. Esta rodada fecha os cinco e encerra a PR.
+
+### Achados e o que mudou
+
+| # | Achado | Correção | Guarda |
+|---|---|---|---|
+| 1 | **Codex P1 ×2 + R7** — a validade da origem era descrita por DOIS predicados (`dead?` e "há uma cotação nova VIVA e ainda sem preço") e cada versão deixava um buraco, porque uma cotação `done` nunca vira `superseded`: (a) `dead?` não pegava a origem `done` com outra aberta depois; (b) a guarda "viva sem preço" voltava a AUTORIZAR a origem antiga assim que a nova recebia preço — o cliente podia receber o PDF de A depois de já estar lendo os preços de B (`origem.rb:91`); (c) recotação `failed` sem preço não barrava nada, e o anexo da lista antiga saía sem uma palavra (R7, reproduzido pelo verificador) | REGRA ÚNICA, decidida pelo revisor final: **a origem fixada só vale enquanto for a ÚLTIMA cotação da conversa e não estiver morta** (`Origem#ultima_cotacao?`), seja qual for o estado da mais nova — viva, com preço, encerrada ou falhada. Um predicado, um motivo (`cotacao_substituida`), nos QUATRO pontos: turno/`start`, `poll`, `closing_deliveries` e `publicavel?`. `cotacao_em_andamento` deixou de existir (motivo, texto, gatilho e frase da §5) | `insurance_proposal_spec` «A cotou e B esta correndo sem preco…», «a cotacao nova que JA recebeu preco tambem barra» (MU + MO), «a recotacao que falhou sem preco tambem barra», «a origem que ainda e a ultima… gera a proposta», «a cotacao nova entre o start e o poll…», «a cotacao nova COM preco…», `#publicavel?` ×2, `#closing_deliveries`; `recusa_registro_spec` `recusar_origem#1` e `poll#1` |
+| 2 | **Codex P1** — `RetomadaDeEnvio#decidir` chamava `autorizacao(conversation)` SEM entrega, pulando o hook: uma proposta que virou mensagem e falhou no enfileiramento era reenviada depois, mesmo com a cotação já refeita. O desvio R6 dizia "a mensagem já existe"; existir no painel não é ter chegado ao cliente | A retomada passa o TOKEN da mensagem (`EntregaPublicada::CHAVE`); a ferramenta o resolve na própria entrega (`Native::Base#entrega_do_token`, padrão nil) e responde `publicavel?`. Recusada, a pendência é ABANDONADA com motivo `ferramenta_recusou` — resolvida, não deixada para o varredor achar a cada 10 min | `retomada_de_envio_spec` «abandona a pendencia em vez de reenviar a proposta de uma cotacao ja refeita» (MR) e «reenvia normalmente enquanto a cotacao de origem continua sendo a ultima» |
+| 3 | **Codex P2** — com o PDF gerado e `delivered_count` zero, o encerramento por prazo publicava só "Não consegui gerar a proposta" e o arquivo nunca saía | `fail_run` deixou de filtrar por `delivered_count`: o encerramento é SEMPRE oferecido à ferramenta, e o fecho vem DEPOIS das entregas — parcial se algo chegou (antes ou agora), frase de falha se nada chegou. O filtro mora em cada ferramenta | `insurance_proposal_spec` «com o PDF gerado e o prazo estourado antes de qualquer entrega, o arquivo sai antes da frase» (MF) e, no molde pedido, a NÃO-REGRESSÃO da cotação em `async_run_job_encerramento_parcial_spec` «a cotacao que morre sem preco nenhum nao passa a mandar comparativo» |
+| 4 | **Verificador, importante 1 (NOVO)** — `confirmar` só rodava no `poll`: a proposta que virava mensagem na última passada antes do prazo sumia da medida da entrega 7 (`PROPOSTAS_KEY` nil com o cliente já com o PDF) | `closing_deliveries` chama `confirmar` antes de montar o que falta | `insurance_proposal_spec` «anota na cotacao a proposta que ja virou mensagem, no proprio encerramento» (MM) |
+| 5 | **Verificador, menores 1 e 4** — o encerramento podia baixar DOIS arquivos na mesma passada (2×20 s num worker com shutdown de 25 s), contra a própria regra; e o que `publicavel?` levantasse subia, fazendo o publicador devolver `blocked` para QUALQUER entrega daquela execução — calando o cliente | UM arquivo por passada também no encerramento (`.first(1)`); a exceção é tratada DENTRO do hook (log + decisão explícita): o arquivo não sai, as frases saem | `insurance_proposal_spec` «entrega no maximo UM arquivo no encerramento» (MD) e «a conferencia que levanta nao sobe para o publicador» (MX) |
+
+### Decisões onde o desenho da rodada não fechava
+
+**S1 — `cotacao_em_andamento` foi REMOVIDO, não mantido ao lado do novo.** Dois motivos para a mesma
+coisa ("a lista que você leu não vale mais") custam duas frases, dois gatilhos e uma âncora na
+instrução — e foi exatamente a coexistência dos dois predicados que abriu os três buracos. O texto
+que ficou (`SUBSTITUIDA`) serve aos dois casos porque diz o que o cliente precisa saber: a cotação
+foi refeita, e a proposta sai dos preços novos quando eles chegarem. `Recusa::MOTIVOS` perdeu uma
+chave; `recusa_registro_spec` perdeu duas saídas (`recusar_origem#2`, `poll#2`) e renumerou o resto.
+
+**S2 — cotação que NUNCA virou trabalho não conta como recotação** (`Origem::SEM_TRABALHO` =
+`pending`, `discarded`, `blocked`). Sem isto, a regra da última ressuscitaria o I2 da rodada 3: uma
+`pending` órfã (worker morto entre o aceite e o despacho — um deploy basta) travaria a proposta por
+até uma hora por uma cotação que ninguém vai executar. É a MESMA lista de `ToolRun.opened_for_turn?`,
+pelo mesmo motivo. A `pending` legítima do mesmo turno não escapa: quando ela é promovida, o `poll`
+e a publicação conferem de novo.
+
+**S3 — o reconhecimento pelo token é um HOOK NOVO da ferramenta, não lógica na retomada.** A retomada
+tem a mensagem, não a entrega; montar a entrega ali exigiria que ela soubesse o formato de cada
+ferramenta. `entrega_do_token(run, token)` devolve nil por padrão — quem não reconhece nada não barra
+nada —, e só a proposta o implementa, comparando o token com o de cada proposta gerada (arquivo ou
+reserva, a mesma identidade dos dois lados).
+
+**S4 — o encerramento NÃO conta em `delivered_count`.** Continuou usando `publish`, não `deliver`:
+esse contador é o da entrega do TRABALHO e é lido pela janela do pedido repetido (entrega 10,
+`conta_como_pedido?`). Contar o comparativo/arquivo de fecho ali faria uma cotação que falhou passar
+a bloquear o mesmo pedido por 24 h — mudança de produto que ninguém pediu. Quem decide o fecho é o
+retorno das publicações do encerramento, em memória.
+
+**S5 — o que o hook levantar decide `false` (o arquivo não sai).** Na dúvida, a decisão é a do
+dinheiro: o risco errado com cara de certo é pior que o silêncio de UMA entrega. E o silêncio é só
+dela: a frase que explica o que houve não é da origem, e responde `true` antes de a conferência
+começar. É estritamente melhor que o estado anterior, em que a exceção calava tudo.
+
+**S6 — `publicavel?`/`da_origem?`/`publicada?` saíram para um módulo (`InsuranceProposal::Publicacao`).**
+A classe estava a 175/175 de `Metrics/ClassLength` desde a rodada 3; o módulo era o caminho que o
+arquivo já vinha seguindo (`Origem`, `Geracao`, `Recusas`). **E o C7 cobrou pedágio de novo**: dentro
+do módulo compacto o nome curto `GERADAS` (que mora em `Geracao`) não se resolve, o `NameError` caiu
+no `rescue` novo e `publicavel?` passou a devolver `false` para tudo — 11 exemplos vermelhos, seis
+deles do caminho real «pelo job», com a conversa MUDA. Corrigido usando o método `geradas` da classe
+em vez da constante, com o porquê no comentário. Foi o `rescue` que transformou um erro de escopo em
+silêncio: a lição vale para o próximo módulo.
+
+**S7 — a spec «o start usa a origem fixada, e nao a ultima com preco» foi SUBSTITUÍDA, não removida.**
+A premissa dela (origem fixada antiga + cotação nova com preço ⇒ gera da fixada) deixou de ser
+verdade: agora recusa. O que ela guardava (a mutação MO, "o job escolhe em vez de usar a fixada")
+passou para «a cotacao nova que JA recebeu preco tambem barra a origem antiga» — ignorar a fixada ali
+geraria a proposta de B em vez de recusar, e o exemplo reprova igual.
+
+### Validação (números)
+
+Banco `chatwoot_test_e8`. `bundle exec rspec … --format json`, exit 0 = verde.
+
+| Rodada | Arquivos | Exemplos | Falhas | Erros fora |
+|---|---|---|---|---|
+| Base (`168e1df557`, antes de editar) | os 4 diretórios | 1206 | 0 | 0 |
+| Alvo (1ª passada) | proposta, recusas, retomada, publicador, contrato de nível, `spec/jobs/autonomia`, `quote_agent/` | 415 | 16 | 0 |
+| Alvo (2ª passada, depois do C7) | idem | 414 | 1 | 0 |
+| **Final** | `spec/services/autonomia/insurance` + `agents` + `spec/jobs/autonomia` + `spec/models/autonomia` | **1215** (+9) | **0** | **0** (58 s) |
+
+Por spec (final): `insurance_proposal_spec` 87 (era 79: +9 novos, −1 substituída) ·
+`recusa_registro_spec` 52 (era 54: −2 saídas) · `retomada_de_envio_spec` 4 (era 2) ·
+`async_run_job_encerramento_parcial_spec` 2 (era 1) · `async_run_job_intencao_de_envio_spec` 24 ·
+`async_publisher_spec` 46 · `base_contrato_de_nivel_spec` 11 (`entrega_do_token` entrou na varredura
+de nível) · `builder_instrucao_da_proposta_spec` 15 · `medida_spec` 36 · `tool_run_spec` 29.
+
+`bundle exec rubocop` nos **17 `.rb`** tocados (10 de `app`, 7 de `spec`): **0 ofensas**, sem nenhuma
+no caminho — `Publicacao` nasceu justamente para não estourar o `ClassLength`.
+
+### Mutações (editar -> rodar alvo -> `git checkout --` -> md5 igual; árvore commitada em `8a3f8c4c58`)
+
+| # | Mutação | Specs alvo | Ex. | Falhas | md5 | Resultado |
+|---|---|---|---|---|---|---|
+| MU | `origem_ainda_vale?` sem `ultima_cotacao?` (aceita não ser a última) | proposta + `recusa_registro` | 139 | 8 | igual | **reprova** |
+| MR | `decidir` volta a chamar `autorizacao(conversation)` sem o token | `retomada_de_envio` | 4 | 1 | igual | **reprova** |
+| MF | `fail_run` volta a exigir `delivered_count > 0` | proposta + `encerramento_parcial` | 89 | 1 | igual | **reprova** |
+| MM | `closing_deliveries` sem `confirmar` | proposta | 87 | 1 | igual | **reprova** |
+| MD | `closing_deliveries` sem o `.first(1)` (dois arquivos) | proposta | 87 | 1 | igual | **reprova** |
+| MX | `publicavel?` sem o `rescue` (a exceção volta a subir) | proposta | 87 | 1 | igual | **reprova** |
+
+Cada mutação aborta se a âncora não existir e confere que o arquivo REALMENTE mudou antes de rodar.
+Árvore limpa depois das seis (`git status --short` vazio).
+
+### O que NÃO foi feito nesta rodada, e por quê
+
+- **Menor 2 do verificador** (`deferred` reemite e infla `delivered_count`): comportamento GENÉRICO
+  do motor assíncrono, afeta todas as ferramentas e hoje é inócuo para o cliente (o token impede a
+  mensagem duplicada; nenhum consumidor lê a magnitude do contador, só o sinal). **Issue
+  [#402](https://github.com/autonom-ia2/chat/issues/402)**, com a prova do verificador (3 passadas =
+  3 `AsyncPublishJob` e `delivered_count` 3 para um arquivo) e os dois caminhos possíveis. Refs #291.
+- **RESÍDUO CONHECIDO, aberto nesta rodada: a proposta entregue NO PRÓPRIO encerramento não é
+  anotada na medida.** `confirmar` anota o que JÁ virou mensagem, e o arquivo que o encerramento
+  entrega vira mensagem depois dele — não há passada seguinte para confirmá-lo. Anotar antes de
+  publicar seria exatamente o defeito 3 da rodada 3 (faturar o que o cliente não recebeu). Custa uma
+  proposta na contagem da entrega 7, no caso em que o prazo estoura antes de qualquer entrega.
+- **O varredor (`ReapStaleRunsJob`) não oferece `closing_deliveries`**: ele tem fecho próprio
+  (`uncertain_message`/`failure_message`) e não passa por `fail_run`. Fora do escopo dos cinco
+  pontos; a execução abandonada pelo varredor perde o arquivo já gerado do mesmo jeito que perdia.
+- **Prova real** (termo "Prova"): continua pendente de deploy + rollout na conta 16.
+- **C8** (URL do portal no handle) e **`pedido` da entrega 10 na proposta** (D10): seguem
+  registrados, sem mudança.
