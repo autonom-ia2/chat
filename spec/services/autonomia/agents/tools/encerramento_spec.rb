@@ -3,13 +3,17 @@ require 'rails_helper'
 # O ENCERRAMENTO, PASSO A PASSO (entrega 8).
 #
 # Ele é a ÚLTIMA coisa que acontece numa execução que acabou sem fechar, e a marca `closed` que ele
-# adquire no primeiro passo garante que ninguém volta aqui. Isso faz de cada passo seguinte um
-# caminho sem segunda chance: o que se perder ali, o cliente perde para sempre. Daí as três
-# propriedades que este arquivo trava:
+# adquire no primeiro passo impede que o TRABALHO se repita — não que a palavra ao cliente saia.
+# Cada passo é, ainda assim, um caminho estreito: o que se perder ali, o cliente perde. Daí as
+# quatro propriedades que este arquivo trava:
 #
 #   - CADA PASSO CAI SOZINHO. Um `rescue` cobrindo entregar e fechar deixava o cliente MUDO quando o
 #     passo que consulta o banco (e, na cotação, o portal) levantava — o mesmo tipo de erro que
 #     abandona a linha. Agora o fecho é publicado de qualquer jeito.
+#   - O FECHO TEM SEGUNDA CHANCE, E NÃO DUPLICA. A marca gravada antes da publicação fazia a passada
+#     seguinte (o retry do Sidekiq, o varredor) sair calada: morto o processo no meio, o cliente
+#     ficava sem resultado e sem desfecho, para sempre. Agora o passo pergunta à CONVERSA se o fecho
+#     desta execução já está lá.
 #   - UMA ENTREGA NÃO DERRUBA AS OUTRAS. Com o lote inteiro dentro de um tratamento só, a segunda
 #     entrega levantando apagava a primeira: o fecho publicava a frase de falha logo depois de uma
 #     publicação bem-sucedida.
@@ -128,21 +132,88 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       expect(bot_contents).to eq(['o que ficou pronto', tool.partial_message])
     end
 
-    # A MARCA É ADQUIRIDA ANTES DE TUDO, E ISSO TEM PREÇO. Quem não adquire não publica NADA — nem o
-    # fecho —, porque quem adquiriu já está publicando: dois encerradores sobre a mesma linha (o
-    # retry do Sidekiq depois de um hard shutdown, o varredor cruzando com o motor) publicariam duas
-    # vezes. O reverso é o que este exemplo trava: uma segunda passada não conserta a primeira.
-    it 'a segunda passada na mesma linha nao adquire a marca e nao publica nada' do
+    # A MARCA IMPEDE O TRABALHO DUAS VEZES, NÃO A PALAVRA DUAS VEZES. Dois encerradores sobre a
+    # mesma linha (o retry do Sidekiq depois de um hard shutdown, o varredor cruzando com o motor)
+    # não podem gerar dois comparativos — mas o SEGUNDO fecho não é uma segunda mensagem: ele é a
+    # mesma, e a pergunta pela mensagem publicada impede a duplicata.
+    it 'a segunda passada na mesma linha nao repete o fecho que ja saiu' do
       # Arrange
       run = execucao
       tool = build_async_tool
 
-      # Act — a primeira publica o fecho; a segunda encontra a marca já gravada
+      # Act — a primeira publica o fecho; a segunda encontra a marca gravada E o fecho na conversa
       encerrar(run, tool)
       de_novo = encerrar(run.reload, tool)
 
       # Assert
       expect(de_novo).to be(false)
+      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+    end
+
+    # E A PASSADA SEGUINTE CONSERTA A PRIMEIRA QUE MORREU NO MEIO. É o estado que a marca criava e
+    # não resolvia: adquirida antes de tudo, um processo morto entre ela e o fecho (um deploy, com
+    # os 25 s de shutdown do Sidekiq; até um minuto quando o passo das entregas chama o portal)
+    # deixava a linha `running`, o cliente sem resultado e sem desfecho — e nem o retry do Sidekiq
+    # nem o varredor tentavam de novo, porque a marca os fazia sair calados.
+    #
+    # O TRABALHO NÃO SE REFAZ: a marca continua valendo para ele.
+    it 'marca posta e fecho ausente: a passada seguinte fecha, e nao refaz o trabalho' do
+      # Arrange — a marca de quem morreu antes de publicar
+      run = execucao
+      chamadas = 0
+      tool = build_async_tool
+      tool.define_method(:closing_deliveries) do |_handle, **|
+        chamadas += 1
+        ['o arquivo que a primeira passada geraria de novo']
+      end
+      # As CHAVES importam: sem elas o hash vira keyword em vez de argumento posicional.
+      run.merge_handle!({ described_class::CLOSED_KEY => true })
+
+      # Act
+      encerrar(run.reload, tool)
+
+      # Assert — o cliente recebe a palavra que faltava, e o portal não é consultado de novo
+      expect(chamadas).to eq(0)
+      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+    end
+
+    # E A SEGUNDA PASSADA NÃO CONTRADIZ A PRIMEIRA. Ela não refaz as entregas — a marca está posta
+    # —, então lê `entregou` como falso e escolheria OUTRA frase: a de falha, logo depois de o
+    # cliente ter recebido o arquivo e a frase parcial. A dedupe por token do publicador não pegaria
+    # isso (são textos diferentes, duas mensagens); quem pega é a pergunta pelo fecho já publicado.
+    it 'a passada seguinte nao contradiz o fecho que ja saiu' do
+      # Arrange — nada contado na linha: é o estado em que as duas passadas discordam
+      run = execucao
+      tool = build_async_tool(closing: ['o arquivo que ficou pronto'], resultado: true, resta: true)
+
+      # Act
+      encerrar(run, tool)
+      encerrar(run.reload, tool)
+
+      # Assert
+      expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.partial_message])
+    end
+
+    # A ENTREGA QUE O PUBLICADOR RECUSA NÃO É ENTREGA. `AsyncPublisher#publish` nunca levanta: ele
+    # devolve `blocked` (autorização recusada sob o lock, conversa que já não aceita, exceção
+    # engolida). Ler qualquer resultado como sucesso faria o fecho calar — ou pior, afirmar — para
+    # quem não recebeu nada; o certo é a frase de falha, que é o que ele lia antes de haver
+    # encerramento.
+    it 'a entrega recusada pelo publicador nao conta, e o fecho e o da falha' do
+      # Arrange
+      run = execucao
+      tool = build_async_tool(closing: ['o arquivo que ficou pronto'])
+      publicador = lambda do |entrega|
+        next Autonomia::Agents::Tools::AsyncPublisher::Result.new(status: :blocked) if entrega.include?('arquivo')
+
+        Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega)
+      end
+
+      # Act
+      entregou = encerrar(run, tool, &publicador)
+
+      # Assert
+      expect(entregou).to be(false)
       expect(bot_contents).to eq(['não consegui concluir a consulta'])
     end
 

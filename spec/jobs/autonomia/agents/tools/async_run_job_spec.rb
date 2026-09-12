@@ -188,6 +188,33 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run.reload).to have_attributes(status: 'blocked', failure_code: 'nao_autorizado')
       expect(described_class).not_to have_been_enqueued
     end
+
+    # AGENTE APAGADO NO MEIO DO VOO (`agente_indisponivel`): o fecho parcial NÃO sai, e isto é uma
+    # mudança declarada em relação à `main`, que a publicava por `delivered_count.positive?`
+    # sozinho. Sem agente não há ferramenta a quem perguntar se houve resultado e se sobrou algo, e
+    # a frase que afirma as duas coisas não pode ser dita no escuro.
+    #
+    # O QUE SE PERDE JÁ ERA RECUSADO: apagado o agente, os vínculos caem com ele
+    # (`dependent: :destroy`), e o publicador recusa qualquer mensagem desta execução — a última
+    # asserção é essa prova, e é o que torna a mudança invisível para o cliente.
+    it 'com o agente apagado, fecha em silencio — e nem a frase da main chegaria' do
+      # Arrange — o cliente recebeu um preço e o agente some antes da passada seguinte
+      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['um preco']),
+                                           resultado: true, resta: true))
+      run = submitted_run
+      described_class.new.perform(run.id, 1)
+      agent.destroy!
+
+      # Act
+      described_class.new.perform(run.id, 2)
+
+      # Assert
+      expect(bot_contents).to eq(['um preco'])
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'agente_indisponivel',
+                                            delivered_count: 1)
+      expect(Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!('qualquer palavra'))
+        .to be_blocked
+    end
   end
 
   describe 'waiting notice' do

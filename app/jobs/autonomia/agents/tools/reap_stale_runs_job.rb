@@ -104,11 +104,16 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
     nil
   end
 
-  # O MESMO ENCERRAMENTO DO MOTOR (`Tools::Encerramento`, entrega 8). Até 12/09/2026 este caminho só
-  # publicava a frase de falha: o que a ferramenta ainda tinha para entregar — na cotação, o
-  # comparativo — morria no handle, e o cliente lia "não consegui" ao lado de um arquivo que existia.
-  # Era o defeito P2 vivo na OUTRA porta de encerramento, e a correção de lá não o alcançava porque o
+  # O MESMO ENCERRAMENTO DO MOTOR (`Tools::Encerramento`, entrega 8). Até 12/09/2026 este caminho
+  # publicava a frase de falha e só ela, sem passar pela ferramenta: quem já tinha recebido preço
+  # lia "não consegui" — ou, com `delivered_count` positivo, não lia nada. Era o defeito que o motor
+  # já tinha corrigido, intacto na outra porta, e fora do alcance da correção de lá porque o
   # varredor não passa por `fail_run`.
+  #
+  # O QUE MUDA AQUI, HOJE, É A FRASE — e só ela. O caminho das entregas fica aberto para a
+  # ferramenta que tem algo PRONTO (a 8b), mas a cotação não tem: com `trabalho_novo: false` o
+  # `closing_deliveries` dela devolve `[]`, sempre, porque o comparativo só existe depois de uma
+  # chamada ao portal. Dizer o contrário seria prometer um arquivo que este caminho não entrega.
   #
   # A publicação é FORÇADA (`publish!`): a cadeia de entrega humanizada daquele turno já morreu há
   # muito, e esperar por ela deixaria o cliente sem desfecho para sempre.

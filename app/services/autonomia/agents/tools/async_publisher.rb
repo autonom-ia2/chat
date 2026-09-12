@@ -249,7 +249,14 @@ class Autonomia::Agents::Tools::AsyncPublisher
   def entregar(conversation, arquivo, texto)
     return post_arquivo(conversation, arquivo) if arquivo
 
-    post(conversation, Corpo.new(texto: texto, token: @run.delivery_token(texto)))
+    post(conversation, Corpo.new(texto: texto, token: token_de(texto)))
+  end
+
+  # A IDENTIDADE DA ENTREGA VEM DE `Tools::EntregaPublicada`, e não daqui. Ela é a mesma pergunta
+  # que o fecho faz ao banco ("esta entrega virou mensagem?"), e uma segunda definição — texto
+  # aparado aqui, texto cru lá — faria o fecho procurar por uma mensagem que nunca existiu.
+  def token_de(entrega)
+    ::Autonomia::Agents::Tools::EntregaPublicada.token_de(@run, entrega)
   end
 
   # O ARQUIVO BAIXA E É GRAVADO FORA DO LOCK da conversa: é rede, com tetos próprios, e a conversa
@@ -272,7 +279,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # nem um log que aponta para a causa errada. O blob leva a MARCA da execução (rodada 7): se o
   # processo morrer entre a gravação e este `ensure`, o varredor (`ReapStaleRunsJob`) o reconhece.
   def post_arquivo(conversation, arquivo)
-    token = @run.delivery_token(arquivo.identidade)
+    token = token_de(arquivo)
     blob = arquivo.gravar(run_id: @run.id)
     anexado = false
     resultado, anexado = publicar_anexo(conversation, arquivo, token, blob)

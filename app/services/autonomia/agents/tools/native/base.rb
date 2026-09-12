@@ -244,9 +244,10 @@ class Autonomia::Agents::Tools::Native::Base
   # `trabalho_novo` DIZ SE ESTA PASSADA PODE INICIAR TRABALHO NOVO no portal para produzir a entrega
   # (entrega 8). Verdadeiro no motor; FALSO no varredor, que varre até 500 linhas
   # em sequência dentro de um cron enquanto o Sidekiq desta instalação dá 25 s de shutdown — morto no
-  # meio, a linha em curso já tem a marca `closed` e nunca mais recebe fecho. Quem precisa de uma
-  # chamada nova devolve [] ali, e o fecho reflete o que o cliente realmente tem. O que JÁ está
-  # pronto (um arquivo que o portal gerou e está no handle) sai pelos dois caminhos.
+  # meio, a passada morre no meio do lote. Quem precisa de uma chamada nova devolve [] ali, e o
+  # fecho reflete o que o cliente realmente tem. O que JÁ está pronto — um arquivo que a ferramenta
+  # guardou no handle — sai pelos dois caminhos; a cotação não tem nada assim (o comparativo só
+  # existe depois de uma chamada ao portal), então pelo varredor ela entrega [] e só fecha.
   # -> Array de textos para o cliente. Vazio por padrão.
   def closing_deliveries(_handle, trabalho_novo: true) # rubocop:disable Lint/UnusedMethodArgument
     []
@@ -258,6 +259,11 @@ class Autonomia::Agents::Tools::Native::Base
   # inclusive um aviso e inclusive a pergunta pelo dado que falta (a cotação devolve `handle['pedido']`
   # como entrega). Quem sabe distinguir resultado de recado é a ferramenta, não o motor — e é por esta
   # pergunta que o fecho decide entre a frase parcial e o silêncio.
+  #
+  # A RESPOSTA É SOBRE A MENSAGEM, NÃO SOBRE O HANDLE: o handle é a intenção de quem publicou, e ele
+  # avança mesmo quando a publicação é recusada. É para esta pergunta que a ferramenta recebe
+  # `conversation:` e `run:` — com os dois ela monta a identidade da entrega e pergunta ao banco
+  # (`Tools::EntregaPublicada`).
   # -> false por padrão: quem não sabe responder não afirma que entregou.
   def resultado_entregue?(_handle)
     false
