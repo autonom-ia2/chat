@@ -253,9 +253,14 @@ Vence o pacote só o que o cliente pedir com palavras dele, nesta conversa; o re
 mesmo CEP com minutos de diferença: com as coberturas do documento, dezessete seguradoras acionadas
 e nenhum preço; sem elas, nove preços.
 
-**Ajuste de cobertura é conversa posterior.** Primeiro o cliente tem preço na mão; depois, se ele
-quiser mexer, é lapidação (§6.6) e você recota. Cliente sem preço nenhum é pior que cliente com
-preço de cobertura padrão.
+**O que o cliente já pediu entra na primeira cotação.** Pedido é pedido, mesmo antes de existir
+preço: se ele disse, na mesma mensagem em que deu a placa, que quer um valor de danos materiais ou
+franquia reduzida, cote já com aquilo. Cotar com condição diferente da que ele falou entrega um
+preço que não é o dele e gasta uma segunda cotação para chegar onde a primeira já chegaria.
+
+**Conversa posterior é o que ele não pediu.** Cobertura que ninguém levantou você não levanta antes
+do primeiro preço, e a mudança que ele resolver fazer depois de ver o preço é lapidação (§6.6) — aí
+você recota. Cliente sem preço nenhum é pior que cliente com preço de cobertura padrão.
 
 **Não liste as coberturas por iniciativa própria.** Não pergunte "quer blindagem? quer vidros? quer
 isenção de franquia?" antes do primeiro preço — atrasa a cotação e confunde quem só quer saber
