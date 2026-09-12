@@ -533,6 +533,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado', delivered_count: 0)
   end
 
+  # A PORTA DO VARREDOR NÃO ALCANÇA ESTE DEFEITO, e isso foi MEDIDO: as mutações que devolvem a
+  # prova por emissão (M31, M32) SOBREVIVEM aqui. Lá `trabalho_novo` é falso, então
+  # `closing_deliveries` devolve `[]` sem chegar ao predicado, e o portão externo do fecho é
+  # `delivered_count` — zero nesta linha, o que já leva à frase de falha. O exemplo fica como trava
+  # da PORTA (o estado existe em produção e ela tem de continuar honesta), não como prova da
+  # correção: quem a prova é o exemplo do motor, acima.
   it 'o varredor tambem fecha com a frase de falha a linha legada sem aceite nenhum' do
     # Arrange
     run = cotacao_legada_sem_aceite_nenhum
@@ -563,19 +569,6 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(bot_contents).to eq([cotacao.failure_message])
     expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado', delivered_count: 0)
-  end
-
-  it 'o varredor tambem nao aceita a cobertura gravada por emissao recusada' do
-    # Arrange
-    run = cotacao_legada_sem_aceite_com_emissao_nova_recusada
-    run.update!(expires_at: 10.minutes.ago)
-
-    # Act — a porta do VARREDOR
-    Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
-
-    # Assert
-    expect(bot_contents).to eq([cotacao.failure_message])
-    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
   # A METADE NÃO DURÁVEL DO CRUZAMENTO (P1 da rodada 5).
