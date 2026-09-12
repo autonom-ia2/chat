@@ -19,9 +19,15 @@
 #
 # O ACEITE é o que o publicador de fato decidiu, e ele é gravado na hora
 # (`Tools::EntregaAceita`, uma lista na LINHA): aceita imediata ou adiada, grava; recusada, não
-# grava nada. O handle guarda só as IDENTIDADES que esta execução emitiu — `PRECOS_KEY`,
-# `COMPARATIVO_KEY` —, que é a tabela de consulta de quem pergunta: o handle diz o que procurar, a
-# lista do aceite diz se foi assumido.
+# grava nada. As IDENTIDADES que esta execução emitiu — `PRECOS_KEY`, `COMPARATIVO_KEY` — são a
+# tabela de consulta de quem pergunta: a identidade diz o que procurar, a lista do aceite diz se foi
+# assumido.
+#
+# AS DUAS METADES DO CRUZAMENTO TÊM A MESMA DURABILIDADE (rodada 5): a identidade do preço vai ao
+# banco na hora da EMISSÃO, pela mesma escrita de uma linha (`ToolRun#anexar_ao_handle!`) que grava
+# a lista do aceite, e não só no `record_attempt!` do fim da passada. Cruzar uma lista durável com
+# uma que ainda estava em memória deixava o cliente com o preço na tela e o fecho em silêncio quando
+# o processo morria entre o aceite e o fim da passada.
 #
 # (Por que a tabela de consulta é necessária: quem aceita é o publicador, e ele não distingue um
 # preço de uma pergunta pelo dado que falta — as duas são "uma entrega". Quem distingue é a
@@ -68,8 +74,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # recusada.
   #
   # A PROVA LEGADA É UNIÃO, NÃO ALTERNATIVA (rodada 4): a linha que atravessou o deploy tem preço na
-  # tela e nenhum token nosso, e uma emissão nova recusada não pode apagar esse preço da conta. Ver
-  # `prova_legada?`.
+  # tela e nenhum token nosso, e uma emissão nova recusada não pode apagar esse preço da conta. Ela
+  # também julga ACEITE, e não só emissão (rodada 5) — ver `prova_legada?`.
   #
   # (`self.class::` porque o nome curto não se resolve dentro de um módulo compacto — o mesmo
   # cuidado de `Comparativo`.)
@@ -111,12 +117,32 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # que falta) e a lista de `entregues` também não (são códigos de oferta, não identidades de
   # entrega). ACUMULA, porque cada lote de preços é uma mensagem.
   # Sem execução não há token, e aí não se grava nada: o fecho cala, que é o lado conservador.
+  #
+  # E ELA VAI AO BANCO AGORA, junto do handle que a passada devolve (rodada 5). A outra metade do
+  # cruzamento — a lista do ACEITE — é durável no instante do aceite, e esta viajava no handle até
+  # o `record_attempt!` do fim da passada: morto o processo entre uma coisa e a outra (deploy, 25 s
+  # de shutdown do Sidekiq), o cliente ficava com o preço na tela, o aceite registrado e NENHUMA
+  # identidade por onde perguntar — o fecho calava onde a `main` dizia a frase parcial verdadeira.
+  # Cruzar duas listas com durabilidades diferentes é o defeito; as duas são gravadas pelo mesmo
+  # `anexar_ao_handle!`, uma escrita cada, com a natureza na chave e a identidade no token.
   def registrar_entrega_de_preco(texto, handle, already)
     handle = marcar_preco_legado(handle, already)
     token = token_da_entrega(texto)
     return handle if token.blank?
 
+    gravar_na_linha { run.anexar_ao_handle!(self.class::PRECOS_KEY, token) }
     handle.merge(self.class::PRECOS_KEY => (Array(handle[self.class::PRECOS_KEY]).map(&:to_s) + [token]).uniq)
+  end
+
+  # A ESCRITA IMEDIATA É REFORÇO, NUNCA REQUISITO: o valor segue no handle que a passada devolve, e
+  # o `record_attempt!` do fim o persiste como sempre — esta escrita só fecha a janela entre os
+  # dois. Falhar aqui degrada para o comportamento de antes, e nunca derruba a passada que acabou
+  # de entregar preço ao cliente: o que levantasse subiria para o `advance` do motor, que trataria
+  # uma entrega bem-sucedida como falha da consulta.
+  def gravar_na_linha
+    yield
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] identidade da entrega nao durou run=#{run&.id} #{e.class}")
   end
 
   # HAVIA PREÇO EMITIDO ANTES DE ESTA VERSÃO COMEÇAR A REGISTRAR O ACEITE? Gravado UMA vez, na
@@ -145,6 +171,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # apagava QUALQUER chave nula do handle da ferramenta, não só esta. Hoje nenhuma é nula — a
   # diferença era inerte —, mas um apagamento silencioso de handle é exatamente o tipo de coisa que
   # só aparece depois, na chave que alguém acrescentar.
+  #
+  # E ESTA IDENTIDADE NÃO GANHA A ESCRITA IMEDIATA QUE A DO PREÇO GANHOU (rodada 5), porque ela não
+  # decide nada sozinha: `COMPARATIVO_KEY` só é lida por `comparativo_pendente?`, e `resta_entregar?`
+  # só chega nela quando `portal_fechado?` é VERDADE — fato que viaja em `FECHADO_KEY`/`PDF_SENT_KEY`,
+  # gravadas no MESMO `record_attempt!` que esta. Perdida a passada, perdem-se as três juntas, e não
+  # há cruzamento com durabilidades diferentes para fechar. (Adiantar `PDF_SENT_KEY` seria pior: ela
+  # é a sentinela que impede a segunda emissão, e torná-la durável antes da publicação transformaria
+  # a morte no meio em comparativo que ninguém reemite — a ponta que a issue #414 já carrega.)
   def marcas_do_comparativo(pdf)
     token = token_da_entrega(pdf)
     marcas = { self.class::PDF_SENT_KEY => true }
@@ -163,6 +197,23 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # "nenhum preço chegou" — e o cliente que já tinha preço na tela fica sem o comparativo E sem uma
   # palavra. É o incidente de 08/09/2026 de volta, durante toda a vida das execuções em voo.
   #
+  # SÃO DUAS METADES, E ATÉ A RODADA 4 ELA EXIGIA SÓ UMA. `entregues` e `PRECO_LEGADO_KEY` são
+  # EMISSÃO legada: as duas avançam na passada que emite, mesmo quando a publicação é recusada. Com
+  # a emissão valendo sozinha, a linha em voo cujo preço da versão anterior foi RECUSADO publicava o
+  # comparativo (mais uma chamada paga ao portal) e a frase "os preços acima são os que chegaram" —
+  # sem nada acima —, onde a `main` dizia a frase honesta de falha. Era o defeito da rodada 1 de
+  # volta, com a `main` acertando e esta PR errando. E pelo ramo da marca ele ficava permanente: a
+  # emissão nova também recusada grava a cobertura como verdadeira, e o estado falso passava a valer
+  # pelo resto da vida da linha.
+  #
+  # O ACEITE LEGADO É `delivered_count`, e ele existe (a auditoria da rodada 4 afirmou que "não há
+  # outra prova possível", e isso era falso): a versão ANTERIOR já o incrementava só em publicação
+  # ACEITA — imediata ou adiada — e nunca no aviso de espera nem nas frases de fecho, que não passam
+  # por `deliver`. Nos dois estados defeituosos ele vale zero; na linha legada de verdade vale um ou
+  # mais. E não há falso positivo pelo `pedido`: a pergunta pelo dado que falta é contada, mas o
+  # handle dela nunca tem `entregues` (quem grava `entregues => []` é `submeter`, e a recusa do
+  # `start` não chega lá), então a emissão legada já a exclui.
+  #
   # O QUE TORNA ISTO SEGURO É A COBERTURA, não o valor lido: `PRECO_LEGADO_KEY` é gravada na
   # primeira emissão desta versão e responde, com o que se sabia NAQUELE momento, se havia preço de
   # antes. Toda execução nascida depois do deploy a grava como falsa na primeira emissão — inclusive
@@ -170,12 +221,20 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # legada, e a frase falsa que a rodada 1 corrigiu não reabre. Um fallback por PRESENÇA da chave
   # nova (rodada 3) também não reabria, mas perdia o preço antigo da linha de histórico misto.
   #
-  # Sem a marca, a linha nunca emitiu preço nesta versão e `entregues` é toda a prova que existe.
+  # Sem a marca, a linha nunca emitiu preço nesta versão e `entregues` é toda a emissão que existe.
   # Lista vazia não é preço: `submeter` grava `entregues => []` desde a primeira passada.
   def prova_legada?(handle)
+    return false unless aceite_legado?
     return handle[self.class::PRECO_LEGADO_KEY].present? if handle.key?(self.class::PRECO_LEGADO_KEY)
 
     Array(handle[self.class::DELIVERED_KEY]).any?
+  end
+
+  # O publicador assumiu ALGUMA entrega desta execução? É a metade do ACEITE da prova legada, e o
+  # contador é a única forma dela que a versão anterior deixou. Sem execução não há contador, e aí
+  # não há prova nenhuma: o fecho cala, que é o lado conservador.
+  def aceite_legado?
+    run.present? && run.delivered_count.positive?
   end
 
   # O portal fechou? `FECHADO_KEY` é a resposta; `PDF_SENT_KEY` vale como prova para as execuções

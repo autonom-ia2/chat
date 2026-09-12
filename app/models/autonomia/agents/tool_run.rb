@@ -304,22 +304,44 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # contador não serve para o fecho — ele soma qualquer item aceito, inclusive a pergunta pelo dado
   # que falta —, e a lista serve, porque a ferramenta sabe qual identidade emitiu como resultado.
   #
-  # ESCRITA NA HORA DO ACEITE, E NÃO NO FIM DA PASSADA: o handle da ferramenta só vai ao banco no
-  # `record_attempt!` seguinte, e um processo morto entre a publicação e ele (deploy, 25 s de
-  # shutdown do Sidekiq) deixaria o cliente com o preço na tela e a linha sem saber disso — o fecho
-  # diria "não consegui" ao lado do preço. Por isso é UM UPDATE, aqui.
+  # ESCRITA NA HORA DO ACEITE, E NÃO NO FIM DA PASSADA. O que ela compra é o ADIAMENTO: a
+  # publicação adiada é aceita e ainda não é mensagem, e sem este registro o fecho não tinha como
+  # saber disso (rodada 4). O que ela NÃO compra, e o texto daqui afirmava até a rodada 5, é
+  # impedir "não consegui" ao lado do preço: o portão externo do fecho é `delivered_count`
+  # (`Encerramento#fecho`), gravado no `record_delivery!` que vem DEPOIS desta escrita — morto o
+  # processo entre as duas, a frase de falha sai do mesmo jeito.
   #
-  # E É UM UPDATE SÓ, sem ler-modificar-escrever: a lista é concatenada pelo BANCO
-  # (`|| ?::jsonb`), então dois publicadores da mesma execução não apagam um o token do outro. O
-  # `WHERE` com `@>` torna a escrita idempotente — o retry do Sidekiq que republica a mesma entrega
-  # (e recebe `published` pela dedupe do token) não acrescenta uma segunda cópia. `COALESCE` nos
-  # dois lados porque a chave só existe depois da primeira entrega aceita.
+  # QUEM PRECISA DA MESMA DURABILIDADE É O OUTRO LADO DO CRUZAMENTO: a lista do aceite diz QUAIS
+  # identidades o publicador assumiu, e quem diz o que cada identidade É (um preço, e não uma
+  # pergunta pelo dado que falta) é a ferramenta. Essa metade viajava no handle e só chegava ao
+  # banco no `record_attempt!` do fim da passada — cruzar duas listas com durabilidades diferentes
+  # deixava o cliente com o preço na tela e o fecho em SILÊNCIO. Por isso a ferramenta escreve a
+  # dela por aqui também (`anexar_ao_handle!`), na hora da emissão.
   def registrar_entrega_aceita!(token)
-    lista = "COALESCE(handle->'#{ENTREGAS_ACEITAS}', '[]'::jsonb)"
-    escrita = "handle = jsonb_set(handle, ARRAY['#{ENTREGAS_ACEITAS}'], #{lista} || ?::jsonb), updated_at = ?"
+    anexar_ao_handle!(ENTREGAS_ACEITAS, token)
+  end
+
+  # ACRESCENTA UM TOKEN A UMA LISTA DO HANDLE, no banco, em UM UPDATE. Duas listas passam por aqui,
+  # e as duas precisam ser duráveis NO INSTANTE em que o fato acontece: a do ACEITE, escrita pelo
+  # motor quando o publicador assume a entrega, e a das IDENTIDADES QUE A FERRAMENTA EMITIU,
+  # escrita por ela na passada que emite — a única em que ela conhece o texto de onde o token nasce.
+  # A chave nomeia a NATUREZA da entrega e o token é a IDENTIDADE dela: uma escrita, as duas coisas.
+  #
+  # SEM LER-MODIFICAR-ESCREVER: a lista é concatenada pelo BANCO (`|| ?::jsonb`), então dois
+  # escritores da mesma execução não apagam um o token do outro. O `WHERE` com `@>` torna a escrita
+  # idempotente — o retry do Sidekiq que republica a mesma entrega (e recebe `published` pela dedupe
+  # do token), ou a consulta que reemite o mesmo lote, não acrescenta uma segunda cópia. `COALESCE`
+  # nos dois lados porque a chave só existe depois do primeiro token, e `?::text` nos dois usos da
+  # chave porque `handle -> <literal sem tipo>` é ambíguo entre o operador de chave e o de índice.
+  #
+  # NÃO É GUARDADA PELO STATUS, de propósito: o aceite e a emissão são fatos consumados, e uma
+  # linha que acabou de ser supersedida não pode fazer a escrita do que JÁ saiu virar um no-op.
+  def anexar_ao_handle!(chave, token)
+    lista = "COALESCE(handle -> ?::text, '[]'::jsonb)"
+    escrita = "handle = jsonb_set(handle, ARRAY[?::text], #{lista} || ?::jsonb), updated_at = ?"
     updated = self.class.where(id: id)
-                  .where.not("#{lista} @> ?::jsonb", [token].to_json)
-                  .update_all([escrita, [token].to_json, Time.current]) # rubocop:disable Rails/SkipsModelValidations
+                  .where.not("#{lista} @> ?::jsonb", chave, [token].to_json)
+                  .update_all([escrita, chave, chave, [token].to_json, Time.current]) # rubocop:disable Rails/SkipsModelValidations
     reload
     updated.positive?
   end

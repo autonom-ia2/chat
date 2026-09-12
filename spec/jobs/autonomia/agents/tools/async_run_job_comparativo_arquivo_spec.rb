@@ -57,16 +57,29 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
                                            arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } },
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 1.minute.ago)
-    # O TOKEN DO PREÇO entra no handle porque é assim que a passada que o emite o registra desde a
-    # entrega 8a: o encerramento só pede o comparativo a quem TEM preço na tela, e ele confere isso
-    # procurando a MENSAGEM na conversa — `entregues` sozinho é a intenção de quem publicou.
-    Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
-    run.record_delivery!
+    token = publicar_e_aceitar!(run, preco)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-1:1',
                                   cotacao::DELIVERED_KEY => ['8'], 'produto' => 'auto',
-                                  cotacao::PRECOS_KEY => [Autonomia::Agents::Tools::EntregaPublicada
-                                    .token_de(run, preco)] })
+                                  cotacao::PRECO_LEGADO_KEY => false, cotacao::PRECOS_KEY => [token] })
     run
+  end
+
+  # PUBLICA PELO CAMINHO REAL E PASSA PELO ACEITE, como o motor faz (`AsyncRunJob#deliver`), e
+  # devolve o TOKEN da entrega. Levanta se a publicação não entrar: um Arrange que mente sobre o que
+  # o cliente recebeu não prova nada.
+  #
+  # O ACEITE É O PONTO (rodada 5): o encerramento só pede o comparativo a quem TEM preço na tela, e
+  # a pergunta é ao aceite — a identidade emitida (`PRECOS_KEY`) cruzada com a lista que o publicador
+  # escreve ao assumir a entrega. Publicar direto, sem registrar o aceite e sem a cobertura
+  # `preco_legado`, fazia os dois exemplos do comparativo passarem pela PROVA LEGADA (`entregues`
+  # não vazio) em vez do cruzamento que dizem exercitar.
+  def publicar_e_aceitar!(run, entrega)
+    publicador = Autonomia::Agents::Tools::AsyncPublisher.new(run: run)
+    resultado = Autonomia::Agents::Tools::EntregaAceita.registrar(run, entrega, publicador.publish(entrega))
+    raise "o Arrange nao publicou a entrega: #{resultado.status}" unless resultado.published?
+
+    run.record_delivery!
+    Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
   end
 
   it 'entrega o comparativo como anexo, nomeado pela placa, e depois o fecho' do

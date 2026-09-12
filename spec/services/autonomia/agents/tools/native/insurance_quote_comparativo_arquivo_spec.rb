@@ -24,13 +24,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
                                      scope: { conversation_id: conversation.id })
   end
   let(:tool) { ferramenta(params) }
-  # O handle de quem já entregou um preço AO CLIENTE: a identidade emitida, e o aceite na linha.
+  # O handle de quem já entregou um preço AO CLIENTE: a identidade emitida, e o aceite na linha. A
+  # COBERTURA entra explícita (`preco_legado` falso): sem ela o handle cairia na PROVA LEGADA
+  # (`entregues` não vazio) e estes exemplos passariam por lá em vez do aceite que exercitam.
   let(:handle_com_preco) do
     texto = '*Ezze* — R$ 2.050,40 no total'
     token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
     run.registrar_entrega_aceita!(token)
     { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'],
-      described_class::PRECOS_KEY => [token] }
+      described_class::PRECO_LEGADO_KEY => false, described_class::PRECOS_KEY => [token] }
   end
 
   def ferramenta(params)

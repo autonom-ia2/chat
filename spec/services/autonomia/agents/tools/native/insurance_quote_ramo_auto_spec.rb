@@ -518,6 +518,41 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(progresso.handle[described_class::PRECO_LEGADO_KEY]).to be(false)
       end
 
+      # A IDENTIDADE DO PREÇO É DURÁVEL NA HORA DA EMISSÃO (P1 da rodada 5). Quem persiste o handle
+      # da ferramenta é o motor, no `record_attempt!` do FIM da passada; a lista do aceite é gravada
+      # no meio dela, na hora do aceite. Cruzar as duas era cruzar durabilidades diferentes: morto o
+      # processo entre o aceite e o fim da passada, o cliente ficava com o preço na tela e o fecho
+      # sem identidade por onde perguntar. A LINHA já tem a identidade antes de a passada terminar —
+      # é isto que o exemplo trava, sem passar pelo motor.
+      it 'grava a identidade do preco na LINHA, na hora da emissao, sem esperar o fim da passada' do
+        allow(connector).to receive(:quote_result).and_return(
+          result('partial', [offer('43', 'Ezze', 'quoted', 2050.40)])
+        )
+
+        progresso = tool_do_motor.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)
+
+        token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, progresso.deliveries.first)
+        expect(run.reload.handle[described_class::PRECOS_KEY]).to eq([token])
+        expect(progresso.handle[described_class::PRECOS_KEY]).to eq([token])
+      end
+
+      # E A ESCRITA IMEDIATA É REFORÇO, NUNCA REQUISITO: o valor segue no handle que a passada
+      # devolve. Se ela levantasse, a exceção subiria para o `advance` do motor, que trataria uma
+      # entrega bem-sucedida como falha da consulta — a cotação inteira perdida por causa de uma
+      # escrita de reforço.
+      it 'a escrita imediata que falha nao derruba a entrega que acabou de sair' do
+        allow(connector).to receive(:quote_result).and_return(
+          result('partial', [offer('43', 'Ezze', 'quoted', 2050.40)])
+        )
+        allow(run).to receive(:anexar_ao_handle!).and_raise(ActiveRecord::StatementInvalid, 'banco fora')
+
+        progresso = tool_do_motor.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)
+
+        expect(progresso.deliveries.first).to include('Ezze')
+        expect(progresso.handle[described_class::PRECOS_KEY])
+          .to eq([Autonomia::Agents::Tools::EntregaPublicada.token_de(run, progresso.deliveries.first)])
+      end
+
       # O `compact` DO FECHO É SÓ PARA A IDENTIDADE AUSENTE — e ele estava apagando QUALQUER chave
       # nula do handle da ferramenta no ramo `done`, mais largo do que o comentário ao lado dele
       # dizia. Hoje nenhuma chave da cotação é nula, então a diferença é inerte; inerte e silenciosa
@@ -603,7 +638,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       it 'a prova legada vale por COBERTURA, e nao pela presenca da chave nova' do
         legado = described_class::PRECO_LEGADO_KEY
         entregues = described_class::DELIVERED_KEY
-        # linha em voo: `entregues` é a única prova que ela carrega
+        # A METADE DO ACEITE legado (rodada 5): a versão anterior contou a publicação que o
+        # publicador assumiu. Sem ela, emissão legada nenhuma vale — ver o exemplo seguinte.
+        run.record_delivery!
+        # linha em voo: `entregues` é a única emissão que ela carrega
         expect(tool_do_motor.resultado_entregue?(entregues => ['43'])).to be(true)
         # histórico misto: emitiu nesta versão (recusado) E tinha preço antes — o antigo continua valendo
         expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: false).merge(legado => true))).to be(true)
@@ -611,6 +649,30 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: false))).to be(false)
         # e `submeter` grava `entregues => []` desde a primeira passada: lista vazia não é preço
         expect(tool_do_motor.resultado_entregue?(entregues => [])).to be(false)
+      end
+
+      # A EMISSÃO LEGADA NÃO É PROVA SOZINHA (P1 da rodada 5). `entregues` e `preco_legado` avançam
+      # na passada que EMITE, mesmo quando a publicação é recusada — são as duas o mesmo lado da
+      # conta. Com a emissão valendo sozinha, a linha em voo cujo preço da versão anterior foi
+      # RECUSADO pedia o comparativo ao portal e publicava "os preços acima são os que chegaram" sem
+      # nada acima; e pelo ramo da marca o estado falso ficava permanente, porque a emissão nova
+      # também recusada grava a cobertura como verdadeira.
+      #
+      # O ACEITE LEGADO É `delivered_count`: a versão ANTERIOR já o incrementava só em publicação
+      # aceita (imediata ou adiada), e o aviso de espera e as frases de fecho não passam por lá.
+      it 'a prova legada exige o ACEITE da versao anterior, nao so a emissao dela' do
+        legado = described_class::PRECO_LEGADO_KEY
+        em_voo = { described_class::DELIVERED_KEY => ['43'] }
+        misto = em_voo.merge(legado => true)
+
+        # contador ZERO: a versão anterior emitiu e a publicação foi recusada
+        expect(tool_do_motor.resultado_entregue?(em_voo)).to be(false)
+        expect(tool_do_motor.resultado_entregue?(misto)).to be(false)
+
+        # o contador é a prova de aceite que a versão anterior deixou
+        run.record_delivery!
+        expect(tool_do_motor.resultado_entregue?(em_voo)).to be(true)
+        expect(tool_do_motor.resultado_entregue?(misto)).to be(true)
       end
 
       # E SOBRA NÃO É "SEMPRE", POR MAIS QUE O ENCERRAMENTO SÓ EXISTA FORA DO CAMINHO FELIZ. Quem

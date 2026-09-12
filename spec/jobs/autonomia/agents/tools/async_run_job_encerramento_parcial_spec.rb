@@ -165,6 +165,47 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run
   end
 
+  # A LINHA LEGADA CUJO PREÇO A VERSÃO ANTERIOR NÃO ENTREGOU. O handle é o de antes — tem
+  # `entregues` e nenhuma identidade nossa —, e o contador da linha é ZERO: a versão anterior
+  # emitiu o lote e a publicação foi RECUSADA, então ela não contou entrega nenhuma. O cliente não
+  # tem preço na tela, e `entregues` é intenção de quem publicou, não prova.
+  def cotacao_legada_sem_aceite_nenhum
+    run = abrir_execucao
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'cot-1',
+                                  cotacao::DELIVERED_KEY => ['4'], 'produto' => 'auto' })
+    run
+  end
+
+  # A MESMA LINHA, ainda viva e com o portal respondendo: a consulta DESTA versão emite um preço
+  # novo e a publicação também o recusa. `already` não está vazio, então a cobertura
+  # (`preco_legado`) é gravada como VERDADEIRA — e é por este ramo que o estado falso passava a
+  # valer pelo resto da vida da linha, não só pela ausência da chave.
+  def cotacao_legada_sem_aceite_com_emissao_nova_recusada
+    run = abrir_execucao(expires_at: 3.minutes.from_now)
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
+                                  'quote_id' => cotacao_em_andamento_no_mock,
+                                  cotacao::DELIVERED_KEY => ['8'] })
+    recusar_publicacao_de('Mapfre')
+    described_class.new.perform(run.id, 1)
+    run.reload
+  end
+
+  # A MORTE ENTRE O ACEITE E O FIM DA PASSADA (deploy: 25 s de shutdown do Sidekiq). O publicador
+  # ASSUMIU o preço — a mensagem entrou na conversa e o contador da linha subiu — e o
+  # `record_attempt!` que persiste o handle da ferramenta não chegou ao banco. Stubbar essa escrita
+  # é a única forma de parar ENTRE as duas linhas de `apply`; o que se mede depois é o estado do
+  # BANCO, que é tudo o que a passada seguinte (ou o varredor) encontra.
+  def matar_a_passada_antes_de_persistir_o_handle(run)
+    allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
+    allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
+    allow(run).to receive(:record_attempt!).and_return(true)
+  end
+
+  def reviver_a_linha(run)
+    allow(run).to receive(:record_attempt!).and_call_original
+    allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
+  end
+
   # A PUBLICAÇÃO QUE FALHA no meio, como ela falha de verdade: o publicador nunca levanta para fora
   # (`AsyncPublisher#publish` devolve `blocked`), e o handle da ferramenta avança assim mesmo.
   def recusar_publicacao_de(trecho)
@@ -467,6 +508,122 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Assert — o cliente continua com o preço antigo, e recebe o comparativo e o fecho dele
     expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+  end
+
+  # A PROVA LEGADA JULGAVA EMISSÃO, E PRECISA JULGAR ACEITE (P1 da rodada 5).
+  #
+  # `entregues` avança na passada que EMITE, mesmo com a publicação recusada — é o mesmo defeito da
+  # rodada 1, e a rodada 4 o deixou aberto para a linha legada: com o contador em ZERO, esta PR
+  # publicava o comparativo (login mais uma chamada paga ao portal) e a frase "algumas seguradoras
+  # não responderam a tempo, os preços acima são os que chegaram", sem nada acima. A `main`, no
+  # mesmo estado, dizia a frase honesta de falha — que é o que ela volta a dizer.
+  #
+  # O PORTAL NÃO É CHAMADO, e isto se prova por construção: o PDF do conector `mock` não está
+  # stubbado aqui, então qualquer pedido de comparativo acrescentaria o link de reserva à lista.
+  it 'a linha legada sem aceite nenhum fecha com a frase de falha, e nao pede comparativo' do
+    # Arrange
+    run = cotacao_legada_sem_aceite_nenhum
+
+    # Act — a porta do MOTOR
+    described_class.new.perform(run.id, 5)
+
+    # Assert
+    expect(bot_contents).to eq([cotacao.failure_message])
+    expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado', delivered_count: 0)
+  end
+
+  it 'o varredor tambem fecha com a frase de falha a linha legada sem aceite nenhum' do
+    # Arrange
+    run = cotacao_legada_sem_aceite_nenhum
+    run.update!(expires_at: 10.minutes.ago)
+
+    # Act — a porta do VARREDOR
+    Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+    # Assert
+    expect(bot_contents).to eq([cotacao.failure_message])
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+  end
+
+  # O RAMO DA MARCA, que é o que tornava o estado falso PERMANENTE: a emissão nova (também
+  # recusada) grava `preco_legado` como verdadeira, e a partir daí a linha afirmava resultado pelo
+  # resto da vida dela, sem nunca ter entregado nada.
+  it 'a emissao nova recusada nao vira prova na linha legada que nunca entregou nada' do
+    # Arrange — a cobertura gravada como verdadeira pela emissão real, e nada na tela do cliente
+    run = cotacao_legada_sem_aceite_com_emissao_nova_recusada
+    expect(bot_contents).to be_empty
+    expect(run.handle[cotacao::PRECO_LEGADO_KEY]).to be(true)
+
+    # Act — o prazo estoura, pela porta do MOTOR
+    run.update!(expires_at: 1.minute.ago)
+    described_class.new.perform(run.id, 5)
+
+    # Assert
+    expect(bot_contents).to eq([cotacao.failure_message])
+    expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado', delivered_count: 0)
+  end
+
+  it 'o varredor tambem nao aceita a cobertura gravada por emissao recusada' do
+    # Arrange
+    run = cotacao_legada_sem_aceite_com_emissao_nova_recusada
+    run.update!(expires_at: 10.minutes.ago)
+
+    # Act — a porta do VARREDOR
+    Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+    # Assert
+    expect(bot_contents).to eq([cotacao.failure_message])
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+  end
+
+  # A METADE NÃO DURÁVEL DO CRUZAMENTO (P1 da rodada 5).
+  #
+  # A lista do ACEITE é gravada na hora do aceite, num UPDATE. A TABELA DE CONSULTA — quais
+  # identidades são preço — viajava no handle da ferramenta e só chegava ao banco no
+  # `record_attempt!` do FIM da passada. Morto o processo entre as duas (o deploy é o caso comum), o
+  # cliente tem o preço na tela, o aceite está registrado, e não há identidade nenhuma por onde
+  # perguntar: o fecho desta PR ficava em SILÊNCIO onde a `main` dizia a frase parcial verdadeira.
+  # É o incidente de 08/09/2026 pela porta estreita.
+  it 'o preco aceito nao se perde quando a passada morre antes de persistir o handle' do
+    # Arrange — execução viva, cotação já respondendo no mock
+    run = abrir_execucao(expires_at: 3.minutes.from_now)
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
+                                  'quote_id' => cotacao_em_andamento_no_mock })
+    matar_a_passada_antes_de_persistir_o_handle(run)
+
+    # Act 1 — a consulta publica o preço e a passada morre antes de gravar o handle
+    described_class.new.perform(run.id, 1)
+    expect(bot_contents.sole).to include('Porto Seguro')
+    expect(run.reload.handle).not_to have_key(cotacao::DELIVERED_KEY)
+    expect(run.delivered_count).to eq(1)
+
+    # Act 2 — o prazo estoura e a passada seguinte encerra, pela porta do MOTOR
+    reviver_a_linha(run)
+    run.update!(expires_at: 1.minute.ago)
+    described_class.new.perform(run.id, 5)
+
+    # Assert — o fecho reconhece o preço que está na tela
+    expect(bot_contents.last).to eq(cotacao::PARCIAL)
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+  end
+
+  it 'o varredor tambem reconhece o preco aceito cujo handle nunca foi persistido' do
+    # Arrange
+    run = abrir_execucao(expires_at: 3.minutes.from_now)
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
+                                  'quote_id' => cotacao_em_andamento_no_mock })
+    matar_a_passada_antes_de_persistir_o_handle(run)
+    described_class.new.perform(run.id, 1)
+    run.update!(expires_at: 10.minutes.ago)
+
+    # Act — a porta do VARREDOR, com a linha relida do banco
+    Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+    # Assert
+    expect(bot_contents.last).to eq(cotacao::PARCIAL)
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
   it 'publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue' do
