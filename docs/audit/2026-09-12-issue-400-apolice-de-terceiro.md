@@ -63,7 +63,7 @@ ao que a sustenta no formulário:
 | --- | --- |
 | `placa, CEP, modelo, ano` | `vehicle.plate`, `vehicle.overnightZipCode`, `vehicle.fipeCode`, `vehicle.modelYear` expostos no formulário |
 | `sem marcar renovação, sem bônus e sem histórico de sinistros` | `quotation.isRenewal`, `quotation.bonusClass`, `quotation.previousClaimsCount` existem e são **opcionais** (`obrigatorio == false`) — dá mesmo para não mandar |
-| `a cotação saiu sem bônus porque a apólice está em outro nome` | `AutoRenewal.new({})` → `renovacao?` falso, `bonus` nil, `sem_bonus?` falso: a ausência é ausência, não um padrão preenchido em silêncio |
+| `a cotação saiu sem bônus porque a apólice está em outro nome` | Dois níveis, e vale distinguir (Codex, 12/09): no lado Rails a ausência É ausência — `AutoRenewal.new({})` devolve `renovacao?` falso, `bonus` nil, `sem_bonus?` falso, e `QuoteInput` não acrescenta bloco que o cliente não informou. No adapter, `quote-input.ts` NORMALIZA para seguro novo com `isRenewal false`, `bonusClass 0` e `previousClaimsCount 0` antes de enviar ao portal. Os defaults existem; o que eles não fazem é reintroduzir bônus de terceiro, que é o que a decisão exige |
 
 Assinatura do texto: `3eba319bca1e6159e950def73a2f91ab` → **`8c5d2facc72b7d93721af0d178506045`**.
 
@@ -183,5 +183,12 @@ Baixo e contido ao texto. A regra **amplia** o que o especialista aceita (deixa 
 documento) e **restringe** o que ele escreve no formulário (bônus e sinistros de terceiro nunca
 entram) — as duas direções erram para o lado seguro: o preço sai como o de quem faz o primeiro
 seguro, que é o que a emissão vai sustentar. O único jeito de a regra causar dano é o modelo
-aproveitar o bônus assim mesmo; é disso que a âncora do meio e o md5 tomam conta, e é o que a prova
-real da §8 mede.
+aproveitar o bônus assim mesmo.
+
+**O que as guardas garantem, e o que não garantem** (Codex, 12/09). Âncora e md5 protegem a
+INSTRUÇÃO: ninguém muda ou apaga a regra sem que a spec reprove e sem revisar a tabela `PROMESSAS`.
+Elas não executam o modelo e, portanto, não garantem obediência. A obediência foi medida onde dava
+para medir sem custo: o harness (§7) rodou a conversa real contra o modelo e o pedido saiu com
+`isRenewal=false`, sem `bonusClass` e sem `previousClaimsCount`, com placa e CEP vindos do documento
+— 7 de 7. O que continua sem medição é o AVISO ao cliente, que só aparece junto do primeiro preço:
+fica para a prova real da §8.
