@@ -156,7 +156,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   end
 
   # -> Tools::Progress. Uma consulta. Só entrega quem AINDA NÃO foi entregue.
+  #
+  # `PROPOSTAS_KEY` NÃO É DESTA CONSULTA, e sai do handle antes de qualquer coisa. Quem a escreve é a
+  # ferramenta de proposta (`ToolRun#anotar_propostas!`, união no banco), por vezes com esta cotação
+  # ainda `running` — o cliente escolhe na lista parcial. O handle que o job entrega aqui é uma
+  # LEITURA; devolvê-la com a chave dentro fazia o `record_attempt!` seguinte (`handle || ?`) escrever
+  # a cópia velha por cima da anotação que outro processo acabara de fazer (Codex, P2 da rodada de
+  # correção da entrega 8). Chave ausente no payload preserva a do banco (`ToolRun#mesclar`).
   def poll(handle:, attempt:)
+    handle = handle.to_h.except(PROPOSTAS_KEY)
     return progress_class.done(deliveries: [handle['pedido']], handle: handle) if handle['pedido']
 
     quote_id = handle['quote_id']
@@ -248,10 +256,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # apareceu num lote anterior não pode sumir porque a consulta seguinte veio em pedaços. O nome é o
   # que o cliente leu na lista de preços (`QuoteOffers.nome`, o do portal sem os caracteres que
   # quebram o negrito) — é por ele que o cliente vai pedir a proposta.
+  #
+  # CÓDIGO VAZIO NÃO ENTRA, como em `acionadas`: uma oferta cotada sem `insurer.code` viraria uma
+  # chave `""` no mapa, a proposta a escolheria pelo nome e pediria ao portal `quote/proposal` SEM
+  # `insurerCode` — que é o comparativo de TODAS as seguradoras, entregue com nome de proposta de uma
+  # (verificador cego, A). Sem código não há proposta individual possível; o nome fica fora do mapa.
   def nomes(leitura, handle)
     ofertas = ::Autonomia::Insurance::QuoteOffers
-    novos = leitura.quoted.to_h { |offer| [ofertas.code(offer), ofertas.nome(offer)] }
-    handle[NOMES_KEY].to_h.transform_keys(&:to_s).merge(novos)
+    novos = leitura.quoted.filter_map { |offer| [ofertas.code(offer), ofertas.nome(offer)] if ofertas.code(offer).present? }
+    handle[NOMES_KEY].to_h.transform_keys(&:to_s).merge(novos.to_h)
   end
 
   # -> [deliveries, handle]. O aviso de renovação sem bônus tem SENTINELA própria, no mesmo molde do

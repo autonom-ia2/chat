@@ -211,10 +211,87 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
   end
 
-  # A chave que a entrega 8 vai escrever. Ela já tem nome e já é lida pela medida (COTAÇÕES com
-  # proposta, e a soma dos códigos em separado); o que falta é a ferramenta de proposta por
+  # A chave que a entrega 8 escreve. Ela já tem nome e já é lida pela medida (COTAÇÕES com
+  # proposta, e a soma dos códigos em separado); quem a escreve é a ferramenta de proposta por
   # seguradora, e o ponto de registro é o handle desta execução.
   it 'declara onde a proposta individual sera registrada (entrega 8)' do
     expect(described_class::PROPOSTAS_KEY).to eq('propostas')
+  end
+
+  # O QUE A CONSULTA DA COTAÇÃO NUNCA ESCREVE (rodada de correção da entrega 8).
+  describe 'o mapa de nomes e a chave das propostas' do
+    def oferta_com_nome(code, name, amount)
+      { 'insurer' => { 'code' => code, 'name' => name }, 'status' => 'quoted',
+        'premium' => { 'amount' => amount, 'currency' => 'BRL', 'basis' => 'total' } }
+    end
+
+    # CÓDIGO VAZIO NÃO ENTRA NO MAPA (verificador cego, A; mutação MV): entraria como chave `""`, a
+    # proposta o escolheria pelo nome e pediria ao portal `quote/proposal` SEM `insurerCode` — o
+    # comparativo de TODAS com nome de proposta de uma.
+    it 'nao grava no mapa de nomes a oferta cotada sem codigo de seguradora' do
+      progresso = poll_com([oferta_com_nome('8', 'Porto', 900.0), oferta_com_nome('', 'Fantasma', 800.0)])
+
+      expect(progresso.handle[described_class::NOMES_KEY]).to eq('8' => 'Porto')
+      expect(progresso.handle[described_class::NOMES_KEY]).not_to have_key('')
+    end
+
+    # `propostas` É EXCLUSIVA DE `anotar_propostas!` (Codex, P2; mutação MP): a consulta a lê do
+    # handle e a devolveria; o `record_attempt!` seguinte gravaria a cópia velha por cima da anotação
+    # que outro processo fez no meio. Ausente do payload, a chave do banco fica como está.
+    it 'nao devolve `propostas` no handle da consulta, nem em andamento nem no fecho' do
+      andamento = poll_com([offer('8', 'quoted', 900.0)], handle: { 'quote_id' => 'q1', 'entregues' => [], described_class::PROPOSTAS_KEY => ['8'] })
+      fecho = poll_com([offer('8', 'quoted', 900.0)], handle: { 'quote_id' => 'q1', 'entregues' => ['8'], described_class::PROPOSTAS_KEY => ['8'] },
+                                                      status: 'completed')
+
+      expect(andamento.handle).not_to have_key(described_class::PROPOSTAS_KEY)
+      expect(fecho.handle).not_to have_key(described_class::PROPOSTAS_KEY)
+      expect(andamento.handle[described_class::DELIVERED_KEY]).to eq(['8'])
+    end
+  end
+
+  describe 'a anotacao de proposta e a consulta concorrente' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
+    let(:agent_bot) { create(:agent_bot, account: account) }
+    let(:agente_de_cotacao) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Mia', agent_type: 'insurance_quote',
+                                       status: :active, enabled: true, instruction: 'Cote.')
+    end
+    let!(:agent_inbox) do
+      Autonomia::Agents::AgentInbox.create!(agent: agente_de_cotacao, inbox: inbox, account: account, agent_bot: agent_bot)
+    end
+
+    around do |example|
+      with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true', INSURANCE_QUOTING_ENABLED: 'true') { example.run }
+    end
+
+    # O CENÁRIO DO CODEX (P2): o job lê o handle da cotação (com a proposta da Porto anotada), a
+    # consulta ao portal demora, e no meio a ferramenta de proposta anota a Suhai. O `record_attempt!`
+    # da consulta não pode apagar a Suhai — e é por isso que a consulta nunca devolve a chave.
+    it 'a anotacao feita entre a leitura do handle e o record_attempt! da consulta fica no banco' do
+      # Arrange — a cotação viva, com a Porto já anotada
+      account.update!(internal_attributes: account.internal_attributes.merge('autonomia_agents_enabled' => true))
+      ready_connection
+      connector = Autonomia::Insurance::Connector.client
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      run = Autonomia::Agents::ToolRun.open!(agent: agente_de_cotacao, slug: described_class.slug,
+                                             arguments: { 'produto' => 'bike', 'dados' => '{}' },
+                                             scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+      run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+      run.record_attempt!(handle: { Autonomia::Agents::Tools::AsyncRunJob::SUBMITTED_KEY => true, 'quote_id' => 'q1', 'entregues' => ['8'] })
+      run.anotar_propostas!(['8'])
+      # A consulta ao portal é o instante em que OUTRO processo anota a Suhai — o handle desta passada já foi lido.
+      allow(connector).to receive(:quote_result) do
+        Autonomia::Agents::ToolRun.find(run.id).anotar_propostas!(['20'])
+        { 'status' => 'partial', 'offers' => [offer('8', 'quoted', 900.0), offer('9', 'quoted', 950.0)] }
+      end
+
+      # Act — uma passada de consulta do motor
+      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 1)
+
+      # Assert — as duas anotações estão lá, e a consulta gravou o que é dela
+      expect(run.reload.handle[described_class::PROPOSTAS_KEY]).to eq(%w[20 8])
+      expect(run.handle[described_class::DELIVERED_KEY]).to eq(%w[8 9])
+    end
   end
 end
