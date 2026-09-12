@@ -3,8 +3,11 @@ require 'rails_helper'
 RSpec.describe SlackUploadsController do
   describe 'GET #show' do
     context 'when a valid blob key is provided' do
-      file = Rack::Test::UploadedFile.new('spec/assets/avatar.png', 'image/png')
-      blob = ActiveStorage::Blob.create_and_upload! io: file, filename: 'avatar.png'
+      # No corpo do `context` isto rodava em TEMPO DE CARGA, fora da transacao do exemplo: a linha
+      # era commitada e sobrevivia ao processo. Em `let` a criacao acontece dentro do exemplo, e o
+      # rollback a desfaz. Guarda contra a classe inteira: issue #407.
+      let(:file) { Rack::Test::UploadedFile.new('spec/assets/avatar.png', 'image/png') }
+      let(:blob) { ActiveStorage::Blob.create_and_upload!(io: file, filename: 'avatar.png') }
 
       it 'redirects to the blob service URL' do
         get :show, params: { blob_key: blob.key }
