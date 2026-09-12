@@ -320,8 +320,10 @@ mensalidade" partiu desse dado errado.
   - `PremiumText#resumo`: `total` → "R$ X no total"; `monthly` → "R$ X por mês"; qualquer outro →
     só "R$ X". `#indefinido?` = nem `total` nem `monthly` — continua o ÚNICO predicado de "tem
     período" (ressalva, registro no handle e ordem no lote). `#mensal?` passou a ser público para a
-    ordem no lote não reler `basis` por conta própria. `#detalhe` inalterado: ressalva quando
-    indefinido, parcelamento quando `installments` veio; assinatura não tem parcelamento
+    ordem no lote não reler `basis` por conta própria. `#detalhe`: ressalva quando indefinido,
+    parcelamento só quando `installments` veio COM `total` (revisão de 12/09: "por mês / ou 10x"
+    seria parcelar uma mensalidade; spec `premium_text_spec` "nao parcela uma mensalidade"); a
+    assinatura não tem parcelamento
     (`parcelamentos=[]`), então sai só a primeira linha.
   - `QuoteOffers#quoted`: três blocos, nesta ordem — totais por valor crescente; mensais por valor
     crescente ENTRE SI; sem período na ordem do portal. Períodos diferentes nunca se ordenam pelo
