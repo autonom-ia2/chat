@@ -242,7 +242,7 @@ class Autonomia::Agents::Tools::Native::Base
   # preços soltos, sem comparativo e sem uma palavra.
   #
   # `trabalho_novo` DIZ SE ESTA PASSADA PODE INICIAR TRABALHO NOVO no portal para produzir a entrega
-  # (rodada 6 da entrega 8, P2-E). Verdadeiro no motor; FALSO no varredor, que varre até 500 linhas
+  # (entrega 8). Verdadeiro no motor; FALSO no varredor, que varre até 500 linhas
   # em sequência dentro de um cron enquanto o Sidekiq desta instalação dá 25 s de shutdown — morto no
   # meio, a linha em curso já tem a marca `closed` e nunca mais recebe fecho. Quem precisa de uma
   # chamada nova devolve [] ali, e o fecho reflete o que o cliente realmente tem. O que JÁ está
@@ -252,7 +252,7 @@ class Autonomia::Agents::Tools::Native::Base
     []
   end
 
-  # O CLIENTE JÁ TEM RESULTADO DESTA EXECUÇÃO? (rodada 6 da entrega 8, P1-B.)
+  # O CLIENTE JÁ TEM RESULTADO DESTA EXECUÇÃO? (entrega 8.)
   #
   # `ToolRun#delivered_count` não responde isso: ele conta QUALQUER item aceito para publicação,
   # inclusive um aviso e inclusive a pergunta pelo dado que falta (a cotação devolve `handle['pedido']`
@@ -263,7 +263,7 @@ class Autonomia::Agents::Tools::Native::Base
     false
   end
 
-  # E SOBROU ALGO POR ENTREGAR? (rodada 6 da entrega 8, P1-B.) Perguntado DEPOIS das entregas do
+  # E SOBROU ALGO POR ENTREGAR? (entrega 8.) Perguntado DEPOIS das entregas do
   # encerramento: a frase parcial diz que algo ficou pelo caminho, e dizê-la a quem recebeu tudo o
   # que pediu é mentir.
   # -> false por padrão: sem sobra conhecida, o fecho parcial não sai.

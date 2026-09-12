@@ -9,7 +9,7 @@ module AsyncToolHelper
   # levantar, para exercitar "conferência caiu, aceita mesmo assim".
   # rubocop:disable Metrics/ParameterLists, Metrics/MethodLength -- é um construtor de dublê:
   # cada parâmetro é um comportamento que algum exemplo precisa ligar isoladamente.
-  # `resultado` e `resta` são as DUAS perguntas do fecho parcial (rodada 6 da entrega 8, P1-B). O
+  # `resultado` e `resta` são as DUAS perguntas do fecho parcial (entrega 8). O
   # padrão é o do `Base` — false, false —, e é ele que faz a ferramenta genérica fechar em SILÊNCIO
   # em vez de afirmar que algo ficou pelo caminho.
   def build_async_tool(slug: 'consultar_cotacao', handle: { 'id' => 'cot-1' }, poll: nil,
@@ -28,7 +28,7 @@ module AsyncToolHelper
       define_method(:precheck) { precheck.respond_to?(:call) ? precheck.call : precheck }
 
       # O que ainda vale entregar quando a execução acaba sem fechar (o comparativo, na cotação).
-      # `trabalho_novo:` é do contrato desde a rodada 6 e o dublê genérico o ignora: quem o observa
+      # `trabalho_novo:` é do contrato desde a entrega 8 e o dublê genérico o ignora: quem o observa
       # é `encerramento_spec`, que define o método por conta própria.
       define_method(:closing_deliveries) do |_handle, **|
         closing.respond_to?(:call) ? closing.call : Array(closing)

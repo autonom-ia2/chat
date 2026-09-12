@@ -39,7 +39,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:duplicada) { Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA }
   let(:submetido) { described_class::SUBMITTED_KEY }
   let(:encerrada) { Autonomia::Agents::ToolRun::ENCERRADA_EM }
-  # A marca de encerramento é ADQUIRIDA em todo desfecho por falha desde a rodada 4 da entrega 8: o
+  # A marca de encerramento é ADQUIRIDA em todo desfecho por falha desde a entrega 8: o
   # `fail_run` deixou de filtrar por `delivered_count` e passa sempre pela ferramenta (P2 do Codex).
   # Ela não diz nada sobre intenção nem sobre número — é o que estes exemplos travam —, então sai da
   # comparação junto com o instante do encerramento.
@@ -504,9 +504,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
       # Assert — o que importa é a FRASE: quem acabou de receber preço não lê "não consegui". Desde a
-      # rodada 5 da entrega 8 o varredor fecha pelo mesmo `Tools::Encerramento` do motor, e o fecho de
+      # entrega 8 o varredor fecha pelo mesmo `Tools::Encerramento` do motor, e o fecho de
       # quem já recebeu algo — e ainda tem algo por receber, que é o que esta ferramenta responde
-      # desde a rodada 6 — é o PARCIAL. A MAGNITUDE EXATA importa (rodada 6, P3): `be_positive`
+      # desde a entrega 8 — é o PARCIAL. A MAGNITUDE EXATA importa: `be_positive`
       # passava com o contador inflado, que é o defeito da issue #402.
       expect(run.reload).to have_attributes(status: 'failed', delivered_count: 1)
       expect(bot_contents).to eq([tool.partial_message])

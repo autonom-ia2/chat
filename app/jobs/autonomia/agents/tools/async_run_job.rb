@@ -34,7 +34,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # marca é gravada (pega a remoção acidental); a proteção contra o retry é raciocínio, como era a
   # do `SUBMITTED_KEY` quando ele nasceu.
   #
-  # Desde a rodada 5 da entrega 8 quem a DEFINE é `Tools::Encerramento`, dono do encerramento inteiro
+  # Desde a entrega 8 quem a DEFINE é `Tools::Encerramento`, dono do encerramento inteiro
   # (o varredor fecha pelo mesmo caminho). O nome continua aqui porque ela é uma das MARCAS do motor.
   CLOSED_KEY = ::Autonomia::Agents::Tools::Encerramento::CLOSED_KEY
 

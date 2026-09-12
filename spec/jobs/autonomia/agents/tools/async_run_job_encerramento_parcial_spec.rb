@@ -120,9 +120,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
-  # NÃO-REGRESSÃO DA COTAÇÃO (Codex, P2). O `fail_run` deixou de filtrar por
-  # `delivered_count` e passou a oferecer o encerramento à ferramenta SEMPRE — era o único jeito de a
-  # proposta já gerada sair quando o prazo estoura antes da primeira entrega. A cotação se protege
+  # NÃO-REGRESSÃO DA COTAÇÃO (Codex, P2). O `fail_run` deixou de filtrar por `delivered_count` e
+  # passou a oferecer o encerramento à ferramenta SEMPRE — era o único jeito de um arquivo já gerado
+  # sair quando o prazo estoura antes da primeira entrega. A cotação se protege
   # sozinha: `comparison_pdf` devolve nil sem `entregues` no handle, então a execução que morre sem
   # preço nenhum continua fechando com a frase de falha, sem comparativo e sem pedir nada ao portal
   # (se pedisse, o PDF do conector `mock` não está stubbado neste exemplo e a mensagem seria outra).
@@ -140,7 +140,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(run.reload).to have_attributes(status: 'failed', delivered_count: 0)
   end
 
-  # O VARREDOR NÃO PEDE O COMPARATIVO AO PORTAL (rodada 6, P2-E), e aqui pelo caminho REAL: a mesma
+  # O VARREDOR NÃO PEDE O COMPARATIVO AO PORTAL , e aqui pelo caminho REAL: a mesma
   # cotação abandonada, fechada pelo `ReapStaleRunsJob`. Gerar o comparativo é login mais uma chamada
   # de até 60 s, e o varredor processa até 500 linhas em sequência num cron com 25 s de shutdown —
   # morto no meio, a linha em curso fica com a marca `closed` e sem fecho, para sempre. O cliente

@@ -252,7 +252,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # comparativo e sem uma palavra.
     it 'entrega o que ainda vale e fecha a conversa quando ja houve entrega' do
       # Arrange
-      # A ferramenta responde as duas perguntas do fecho (rodada 6, P1-B): entregou preço e ainda
+      # A ferramenta responde as duas perguntas do fecho (entrega 8): entregou preço e ainda
       # tinha seguradora por responder — que é o que a frase parcial diz.
       register_async_tool(
         build_async_tool(poll: progress.running(deliveries: ['primeiros precos']),
@@ -289,8 +289,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Encerramento é cortesia sobre um caminho que já deu errado: falhar aqui apagaria o registro
     # do desfecho.
     #
-    # E O FECHO SAI ASSIM MESMO (rodada 6, P1-A): o passo que monta as entregas caiu, mas a marca
-    # `closed` já está gravada e ninguém volta aqui. Até a rodada 5 um `rescue` só cobria os três
+    # E O FECHO SAI ASSIM MESMO: o passo que monta as entregas caiu, mas a marca
+    # `closed` já está gravada e ninguém volta aqui. Um `rescue` só cobrindo os três
     # passos, e essa exceção — um erro de banco, o mesmo tipo que abandona a linha — deixava sem
     # resposta quem já tinha recebido preço.
     it 'registra o desfecho, e ainda fecha com o cliente, se o encerramento quebrar' do

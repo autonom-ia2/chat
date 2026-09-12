@@ -1,5 +1,4 @@
-# O QUE A COTAÇÃO ENTREGA — E O QUE ELA AFIRMA — QUANDO A EXECUÇÃO ACABA SEM FECHAR (entrega 4, e as
-# rodadas 5 e 6 da entrega 8).
+# O QUE A COTAÇÃO ENTREGA — E O QUE ELA AFIRMA — QUANDO A EXECUÇÃO ACABA SEM FECHAR (entregas 4 e 8).
 #
 # Três respostas ao `Tools::Encerramento`, e nenhuma delas é do motor: o que ainda vale entregar, se
 # o cliente já tem RESULTADO em mãos e se SOBROU alguma coisa. As duas últimas decidem entre a frase
@@ -16,7 +15,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # preços e estourou o prazo na 22ª consulta, então o PDF nunca saiu. O comparativo é o que o
   # cliente leva para decidir; os preços soltos no chat são o resumo dele.
   #
-  # MAS ELE É TRABALHO NOVO NO PORTAL (rodada 6, P2-E): `comparison_pdf` faz login e uma chamada de
+  # MAS ELE É TRABALHO NOVO NO PORTAL: `comparison_pdf` faz login e uma chamada de
   # até 60 s, e o publicador ainda baixa o arquivo. No caminho do VARREDOR isso não sai — lá são até
   # 500 linhas em sequência dentro de um cron, com 25 s de shutdown do Sidekiq, e quem é morto no
   # meio deixa a linha em curso com a marca `closed` e sem fecho, para sempre. O cliente fica com os
@@ -27,7 +26,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
     [comparison_pdf(handle.to_h)].compact
   end
 
-  # RESULTADO DA COTAÇÃO É PREÇO PUBLICADO (rodada 6, P1-B): a lista sob `DELIVERED_KEY`, que só
+  # RESULTADO DA COTAÇÃO É PREÇO PUBLICADO: a lista sob `DELIVERED_KEY`, que só
   # recebe quem COTOU. Nunca o `pedido` — a pergunta pelo dado que falta também é uma entrega aceita
   # (`poll` a devolve, e `delivered_count` a conta), e era por ela que uma cotação que só perguntou
   # dados fechava dizendo "o que chegou está aqui em cima" sem nada em cima.

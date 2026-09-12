@@ -44,11 +44,11 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
   end
 
   # QUEM JÁ RECEBEU ALGO E AINDA TEM ALGO POR RECEBER LÊ O FECHO PARCIAL, não o silêncio nem "não
-  # consegui" (rodada 5 da entrega 8). Antes o varredor calava aqui. Ele passou a fechar pelo MESMO
+  # consegui" (entrega 8). Antes o varredor calava aqui. Ele passou a fechar pelo MESMO
   # `Tools::Encerramento` do motor — que é o que faz o arquivo já pronto sair por este caminho —, e
   # um fecho tinha de vir junto: entregar um arquivo e não dizer nada é o defeito ao contrário.
   #
-  # QUEM RESPONDE AS DUAS PERGUNTAS É A FERRAMENTA (rodada 6, P1-B): `delivered_count` positivo
+  # QUEM RESPONDE AS DUAS PERGUNTAS É A FERRAMENTA (entrega 8): `delivered_count` positivo
   # sozinho não diz que houve resultado nem que sobrou algo — ver o exemplo seguinte.
   it 'fecha com a frase parcial quando o cliente ja recebeu uma entrega e algo ficou por entregar' do
     # Arrange
@@ -66,10 +66,10 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     expect(bot_contents.join(' ')).not_to include('não consegui')
   end
 
-  # E O CONTADOR SOZINHO NÃO COMPRA A FRASE (rodada 6, P1-B). `delivered_count` conta qualquer item
+  # E O CONTADOR SOZINHO NÃO COMPRA A FRASE (entrega 8). `delivered_count` conta qualquer item
   # aceito para publicação — inclusive um aviso, inclusive a pergunta pelo dado que falta, inclusive
   # a única proposta que o cliente pediu e recebeu. Sem a ferramenta dizer que houve RESULTADO e que
-  # SOBROU algo, o varredor volta ao silêncio que existia antes da rodada 5: o cliente fica com o que
+  # SOBROU algo, o varredor volta ao silêncio de antes: o cliente fica com o que
   # já leu, sem uma frase que descreve uma tela que ele não está vendo.
   it 'com o contador positivo e nada a dizer, fecha em silencio' do
     # Arrange
@@ -86,11 +86,11 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     expect(bot_contents).to be_empty
   end
 
-  # O VARREDOR OFERECE O ENCERRAMENTO À FERRAMENTA (rodada 5, P2). Ele fecha a linha quando a corrente
+  # O VARREDOR OFERECE O ENCERRAMENTO À FERRAMENTA (entrega 8). Ele fecha a linha quando a corrente
   # de jobs se rompe — e, até 12/09/2026, fechava publicando só a frase de falha: o que a ferramenta
   # ainda tinha para entregar (a proposta que o portal JÁ gerou, o comparativo da cotação) morria no
   # handle, e o cliente lia "não consegui" ao lado de um arquivo que existia. Era o defeito P2 da
-  # rodada 3 vivo na outra porta, fora do alcance da correção de lá — o varredor não passa por
+  # corrigido no motor, vivo na outra porta e fora do alcance da correção de lá — o varredor não passa por
   # `fail_run`. A ordem importa: primeiro o que vale entregar, depois o fecho.
   it 'entrega o que a ferramenta ainda tinha antes de publicar o fecho' do
     # Arrange
@@ -106,8 +106,8 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
-  # O VARREDOR NÃO COMEÇA TRABALHO NOVO NO PORTAL (rodada 6, P2-E). Ele é um cron que processa até
-  # `BATCH_LIMIT` linhas EM SEQUÊNCIA, e desde a rodada 5 cada cotação abandonada com preço pedia ao
+  # O VARREDOR NÃO COMEÇA TRABALHO NOVO NO PORTAL (entrega 8). Ele é um cron que processa até
+  # `BATCH_LIMIT` linhas EM SEQUÊNCIA, e sem esta guarda cada cotação abandonada com preço pediria ao
   # portal a geração do comparativo — login, uma chamada de até 60 s e o download, por linha. O
   # Sidekiq desta instalação dá 25 s de shutdown: um deploy no meio do lote mata a passada, e a linha
   # em curso já adquiriu a marca `closed` — nunca mais recebe fecho. Aqui sai só o que já está pronto.
