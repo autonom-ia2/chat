@@ -198,7 +198,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
     return agent_inbox if recusada?(agent_inbox)
 
     sequence = @run.sequence
-    existente = entrega_publicada(conversation, corpo.token)
+    existente = ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, corpo.token)
     return retomar(existente) if existente
 
     mensagem = build_message!(conversation, agent_inbox, sequence, corpo)
@@ -300,14 +300,6 @@ class Autonomia::Agents::Tools::AsyncPublisher
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] anexo falhou run=#{@run.id} causa=#{e.class}; vai como link")
     [post(conversation, Corpo.new(texto: arquivo.reserva, token: token)), false]
-  end
-
-  # -> a mensagem desta conversa que já carrega o token (a entrega publicada), ou nil. O `LIKE` é só a
-  # peneira barata; quem decide é a comparação exata do atributo.
-  def entrega_publicada(conversation, token)
-    conversation.messages.where(sender_type: 'AgentBot')
-                .where('content_attributes::text LIKE ?', "%#{token}%")
-                .detect { |message| message.content_attributes.to_h['autonomia_async_token'].to_s == token }
   end
 
   def build_message!(conversation, agent_inbox, sequence, corpo)
