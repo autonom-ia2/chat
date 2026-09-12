@@ -163,10 +163,28 @@ class Autonomia::Agents::Tools::Native::Base
 
   # `delivery` é o contexto do turno (conversa), quando há um. A ferramenta continua sem saber de
   # conversa para TRABALHAR; ela só o carrega para o registro de recusa dizer qual conversa foi.
-  def initialize(agent:, params: {}, delivery: nil)
+  #
+  # `conversation` é a conversa SEM o turno (entrega 8): o `AsyncRunJob` monta a ferramenta para
+  # `start`, `poll` e `closing_deliveries` fora do turno e, de propósito, sem `delivery` — a
+  # presença dele é o que diz "estou dentro do turno, com o modelo esperando" (é por ela que
+  # `InsuranceQuote::Veiculo#consultar_placa` escolhe a sessão). Uma ferramenta que trabalha sobre o
+  # que a CONVERSA já tem precisa dela nos dois contextos, e é `#conversation` que a entrega: pelo
+  # `delivery` no turno, por aqui no job.
+  #
+  # `run` é a LINHA DA EXECUÇÃO, e serve para uma coisa só: a ferramenta perguntar o que JÁ FOI
+  # PUBLICADO. A identidade de uma entrega publicada é o `ToolRun#delivery_token` — `execution_key`
+  # mais o digest do conteúdo —, e sem a linha não há como montá-lo; a pergunta se faz pela MENSAGEM
+  # no banco (`Tools::EntregaPublicada`), nunca pelo handle, que é a intenção de quem publicou.
+  #
+  # OS DOIS TÊM PADRÃO `nil` e NENHUMA ferramenta de hoje os lê: o motor passa a entregá-los porque é
+  # ele que monta a ferramenta fora do turno, e quem não os usa não muda de comportamento (nenhuma
+  # nativa sobrescreve `initialize` — `base_contrato_de_nivel_spec` percorre o catálogo inteiro).
+  def initialize(agent:, params: {}, delivery: nil, conversation: nil, run: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys
     @delivery = delivery
+    @conversation = conversation
+    @run = run
   end
 
   # -> String. NUNCA levanta: quem chama é o executor de ferramentas do turno.
@@ -222,17 +240,49 @@ class Autonomia::Agents::Tools::Native::Base
   # entregou cinco preços e morreu no prazo: o comparativo em PDF só era gerado no caminho feliz,
   # então não saiu — e `fail_run` não avisava nada porque já havia entrega. O cliente ficou com
   # preços soltos, sem comparativo e sem uma palavra.
+  #
+  # `trabalho_novo` DIZ SE ESTA PASSADA PODE INICIAR TRABALHO NOVO no portal para produzir a entrega
+  # (rodada 6 da entrega 8, P2-E). Verdadeiro no motor; FALSO no varredor, que varre até 500 linhas
+  # em sequência dentro de um cron enquanto o Sidekiq desta instalação dá 25 s de shutdown — morto no
+  # meio, a linha em curso já tem a marca `closed` e nunca mais recebe fecho. Quem precisa de uma
+  # chamada nova devolve [] ali, e o fecho reflete o que o cliente realmente tem. O que JÁ está
+  # pronto (um arquivo que o portal gerou e está no handle) sai pelos dois caminhos.
   # -> Array de textos para o cliente. Vazio por padrão.
-  def closing_deliveries(_handle)
+  def closing_deliveries(_handle, trabalho_novo: true) # rubocop:disable Lint/UnusedMethodArgument
     []
+  end
+
+  # O CLIENTE JÁ TEM RESULTADO DESTA EXECUÇÃO? (rodada 6 da entrega 8, P1-B.)
+  #
+  # `ToolRun#delivered_count` não responde isso: ele conta QUALQUER item aceito para publicação,
+  # inclusive um aviso e inclusive a pergunta pelo dado que falta (a cotação devolve `handle['pedido']`
+  # como entrega). Quem sabe distinguir resultado de recado é a ferramenta, não o motor — e é por esta
+  # pergunta que o fecho decide entre a frase parcial e o silêncio.
+  # -> false por padrão: quem não sabe responder não afirma que entregou.
+  def resultado_entregue?(_handle)
+    false
+  end
+
+  # E SOBROU ALGO POR ENTREGAR? (rodada 6 da entrega 8, P1-B.) Perguntado DEPOIS das entregas do
+  # encerramento: a frase parcial diz que algo ficou pelo caminho, e dizê-la a quem recebeu tudo o
+  # que pediu é mentir.
+  # -> false por padrão: sem sobra conhecida, o fecho parcial não sai.
+  def resta_entregar?(_handle)
+    false
   end
 
   private
 
-  attr_reader :agent, :params, :delivery
+  attr_reader :agent, :params, :delivery, :run
 
   def account
     agent.account
+  end
+
+  # A conversa em que a ferramenta trabalha, no turno (via `delivery`) e no job (via a execução).
+  # nil nas superfícies sem conversa (Testar, Copiloto, playground).
+  def conversation
+    @conversation || delivery.try(:conversation)
   end
 
   # Recusa nomeada da ferramenta SÍNCRONA, em JSON. Passa pelo registro (entrega 6) como as demais.

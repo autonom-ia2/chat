@@ -39,6 +39,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:duplicada) { Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA }
   let(:submetido) { described_class::SUBMITTED_KEY }
   let(:encerrada) { Autonomia::Agents::ToolRun::ENCERRADA_EM }
+  # A marca de encerramento é ADQUIRIDA em todo desfecho por falha desde a rodada 4 da entrega 8: o
+  # `fail_run` deixou de filtrar por `delivered_count` e passa sempre pela ferramenta (P2 do Codex).
+  # Ela não diz nada sobre intenção nem sobre número — é o que estes exemplos travam —, então sai da
+  # comparação junto com o instante do encerramento.
+  let(:fechada) { described_class::CLOSED_KEY }
   let(:incerto) { Autonomia::Agents::Tools::Native::EnvioIncerto }
   let(:progress) { Autonomia::Agents::Tools::Progress }
 
@@ -218,7 +223,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       expect(chamadas).to eq(2)
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'envio_incerto')
-      expect(run.handle.except(encerrada)).to eq(intencoes => 2, duplicada => true)
+      expect(run.handle.except(encerrada, fechada)).to eq(intencoes => 2, duplicada => true)
       expect(bot_contents).to eq(['não consegui confirmar o envio'])
     end
 
@@ -357,7 +362,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert — o `finish!` marca no mesmo comando que encerra; a anotação seguinte perde pelo status
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(run.handle.except(encerrada)).to eq(intencoes => 1, duplicada => true)
+      expect(run.handle.except(encerrada, fechada)).to eq(intencoes => 1, duplicada => true)
       expect(runs.possivelmente_duplicadas).to eq([run])
       expect(run.merge_handle!({ intencoes => 2 }, intencao: 1)).to be(false)
     end
@@ -379,7 +384,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert — o número fica, a marca não entra, e a frase é a de falha (o banco diz que há número)
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(run.handle.except(encerrada)).to eq(intencoes => 1, submetido => true, 'id' => 'cot-A')
+      expect(run.handle.except(encerrada, fechada)).to eq(intencoes => 1, submetido => true, 'id' => 'cot-A')
       expect(runs.possivelmente_duplicadas).to be_empty
       expect(bot_contents).to eq(['não consegui concluir a consulta'])
     end
@@ -407,7 +412,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
         visto << handle
         progress.running
       end
-      tool.define_method(:closing_deliveries) do |handle|
+      tool.define_method(:closing_deliveries) do |handle, **|
         visto << handle
         []
       end
@@ -432,7 +437,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       fechamentos = 0
       linha = runs
       tool = build_async_tool
-      tool.define_method(:closing_deliveries) do |_handle|
+      tool.define_method(:closing_deliveries) do |_handle, **|
         fechamentos += 1
         ['comparativo']
       end
@@ -480,22 +485,32 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
 
     it 'recarrega antes de decidir: preco entregue enquanto ele varria fica sem "nao consegui"' do
-      # Arrange — a linha veio da consulta sem entrega; um poll entrega um preço antes de o varredor chegar nela
+      # Arrange — a linha veio da consulta sem entrega; UM poll entrega UM preço antes de o varredor
+      # chegar nela. O dublê entrega na PRIMEIRA chamada ao catálogo e só nela: `Registry.find` é
+      # chamado mais de uma vez por passada (o publicador remonta a ferramenta a cada mensagem), e
+      # contar todas inflava `delivered_count` — a magnitude é justamente o que este exemplo trava.
       run = execucao(handle: { submetido => true, 'id' => 'cot-2', intencoes => 1 })
       run.update!(expires_at: 10.minutes.ago)
       linha = runs
-      tool = register_async_tool(build_async_tool)
+      entregou = false
+      tool = register_async_tool(build_async_tool(resultado: true, resta: true))
       allow(Autonomia::Agents::Tools::Registry).to receive(:find) do |slug|
-        linha.find(run.id).record_delivery!
+        linha.find(run.id).record_delivery! unless entregou
+        entregou = true
         slug.to_s == tool.slug ? tool : nil
       end
 
       # Act
       Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
-      # Assert
+      # Assert — o que importa é a FRASE: quem acabou de receber preço não lê "não consegui". Desde a
+      # rodada 5 da entrega 8 o varredor fecha pelo mesmo `Tools::Encerramento` do motor, e o fecho de
+      # quem já recebeu algo — e ainda tem algo por receber, que é o que esta ferramenta responde
+      # desde a rodada 6 — é o PARCIAL. A MAGNITUDE EXATA importa (rodada 6, P3): `be_positive`
+      # passava com o contador inflado, que é o defeito da issue #402.
       expect(run.reload).to have_attributes(status: 'failed', delivered_count: 1)
-      expect(bot_contents).to be_empty
+      expect(bot_contents).to eq([tool.partial_message])
+      expect(bot_contents.join(' ')).not_to include('não consegui')
     end
 
     it 'nao marca a abandonada que tem numero: a cotacao esta registrada' do
