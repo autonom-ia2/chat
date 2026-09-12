@@ -62,6 +62,47 @@ module ManualDoPrincipal
     Autonomia::Insurance::QuoteAgent::Builder::INSTRUCOES.join(ESPECIALISTA_DE_AUTO[:arquivo]).read
   end
 
+  # O ANEXO DE UM TURNO ANTERIOR CHEGA DE NOVO AO ESPECIALISTA — EXERCITADO, não inspecionado.
+  #
+  # POR QUE ASSIM (P2 do Codex na #416). A primeira versão desta âncora lia
+  # `Materia.private_instance_methods.include?(:anteriores)`: o método existir. Esvaziar o corpo
+  # (`def anteriores(_) = []`) deixava a âncora VERDE e a promessa morta. Aqui a matéria é montada
+  # de verdade — conversa, um PDF numa mensagem ANTERIOR à que abriu o turno, nenhum documento
+  # neste turno — e o que se afirma é o RESULTADO: o documento anterior volta, com o texto dentro.
+  # Esvaziar `anteriores`, tirar a releitura, virar a ordem da janela ou fechar o portão de mídia
+  # derruba este exemplo.
+  HISTORICO_DO_TURNO = [{ role: 'user', content: 'Segue a apólice.' },
+                        { role: 'user', content: 'usa a apólice do fulano' }].freeze
+
+  def materia_de_turno_sem_anexo
+    account = FactoryBot.create(:account)
+    inbox = FactoryBot.create(:inbox, account: account)
+    conversation = FactoryBot.create(:conversation, account: account, inbox: inbox, assignee: nil)
+    agent = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'custom',
+                                             status: :active, enabled: true, instruction: 'Atenda.')
+    anexar_apolice(conversation, inbox, account)
+    abriu = FactoryBot.create(:message, conversation: conversation, account: account, inbox: inbox,
+                                        message_type: :incoming, content: 'usa a apólice do fulano')
+    turno = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil,
+                                                   origin_message_id: abriu.id)
+    Autonomia::Agents::Specialists::Materia.new(delivery: turno, history: HISTORICO_DO_TURNO,
+                                                documents: [], agent: agent)
+  end
+
+  def textos_da_materia(materia)
+    materia.mensagens.flat_map { |m| m[:content].map { |c| c[:text] } }
+  end
+
+  def anexar_apolice(conversation, inbox, account)
+    mensagem = FactoryBot.create(:message, conversation: conversation, account: account, inbox: inbox,
+                                           message_type: :incoming, content: 'segue a apólice')
+    anexo = mensagem.attachments.new(account_id: account.id, file_type: :file)
+    anexo.file.attach(io: File.open(Rails.root.join('spec/assets/sample.pdf')),
+                      filename: 'apolice.pdf', content_type: 'application/pdf')
+    anexo.save!
+    anexo
+  end
+
   # CADA PROMESSA NOVA DA §7.1, PELA FRASE EXATA, E O QUE A SUSTENTA.
   PROMESSAS = {
     # Responder a dúvida sem passar pelo especialista só é possível porque a ferramenta é DO
@@ -118,9 +159,14 @@ module ManualDoPrincipal
     # QUEM DECIDE É O ESPECIALISTA porque a decisão está escrita no manual DELE — a §6.2, no arquivo
     # que o deploy entrega ao especialista de auto. Se essa regra sair de lá, a frase do principal
     # vira um encaminhamento para lugar nenhum, e este exemplo reprova junto.
+    #
+    # E A DECISÃO DELE É UMA COMPARAÇÃO, não um reflexo (#415, P1 do Codex): o titular do documento
+    # contra o SEGURADO INDICADO, que nem sempre é quem está conversando. Sem essa linha lá, o
+    # "quem decide é o especialista" daqui mandaria o caso para uma regra que recusa o legítimo.
     'aproveita de um documento em nome de outra pessoa é o especialista, não você.' => lambda {
       manual = manual_do_especialista_de_auto
       manual.include?('Se a apólice que ele mandou estiver em nome e CPF de outra pessoa') &&
+        manual.include?('Compare o titular da apólice com o SEGURADO DESTA COTAÇÃO') &&
         manual.include?('cote como seguro novo')
     },
     # DIZER QUE O DOCUMENTO ESTÁ EM OUTRO NOME cabe no pedido: a função do especialista tem um
@@ -130,6 +176,31 @@ module ManualDoPrincipal
       Autonomia::Agents::Specialist::REQUEST_PARAM == 'pedido' &&
         Autonomia::Agents::Specialist.new(slug: 'cotacao_auto', description: 'x')
                                      .openai_schema[:parameters][:required] == ['pedido']
+    },
+    # E EM TODO PEDIDO QUE VOCÊ SOUBER, NÃO SÓ NO TURNO DO ANEXO (#415). Em 12/09/2026, execução 20
+    # da conversa 5045, nenhum documento foi enviado no turno: a apólice de terceiro chegara duas
+    # horas antes, e a Lia só repassou "usa a apólice do William". O especialista leu aquilo como
+    # ordem e cotou no nome do titular. A regra acima agia no turno em que o documento chega; esta
+    # diz que ela vale sempre que o pedido se apoiar nele.
+    #
+    # O TEXTO PEDE SÓ O QUE O PRINCIPAL TEM (P2 do Codex na #416). A primeira escrita mandava repetir
+    # a divergência em TODO pedido apoiado no documento, e afirmava que o especialista "só sabe pelo
+    # bilhete". As duas coisas estavam erradas: o principal recebe os anexos do turno atual e uma
+    # janela de histórico — se a titularidade só existia dentro do PDF de um turno antigo, ou saiu da
+    # janela, ele não tem como saber —, e o especialista recebe a conversa e os documentos junto do
+    # pedido (`Materia#mensagens`). O que ele NÃO recebe é a leitura que a Lia fez deles.
+    #
+    # O QUE SUSTENTA, EXERCITADO: o anexo de um turno anterior chega de novo ao especialista, com o
+    # texto extraído. Sem isso, mandar repetir a divergência apontaria para um documento ausente. E
+    # a conversa viaja junto, que é o que torna falsa a frase antiga.
+    'E repita isso sempre que você souber, não só no turno em que o documento chegou.' => lambda {
+      materia = materia_de_turno_sem_anexo
+      docs = materia.documentos
+      textos = textos_da_materia(materia)
+
+      docs.map { |d| d[:name] } == ['apolice.pdf'] && docs.first[:text].present? &&
+        textos.any? { |t| t.include?('usa a apólice do fulano') } &&
+        textos.any? { |t| t.include?('<documento nome="apolice.pdf">') }
     }
   }.freeze
 end
@@ -283,15 +354,19 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
   end
 
-  # MESMA ASSINATURA, MESMO MOTIVO, PARA O BLOCO DOS ESPECIALISTAS DA §5 (#403). A tabela
-  # `PROMESSAS_DO_DOCUMENTO` vê as três frases que escrevi; não veria uma quarta, escrita ao lado
-  # delas, mandando recusar o documento — que é a conduta que esta entrega tira do caminho. Quem
-  # editar este bloco reassina aqui e revisa a tabela junto.
+  # MESMA ASSINATURA, MESMO MOTIVO, PARA O BLOCO DOS ESPECIALISTAS DA §5 (#403, agora com a #415). A
+  # tabela `PROMESSAS_DO_DOCUMENTO` vê as quatro frases que estão escritas; não veria uma quinta, ao
+  # lado delas, mandando recusar o documento — que é a conduta que a #403 tirou do caminho. Quem
+  # editar este bloco reassina aqui e revisa a tabela junto. A assinatura mudou duas vezes em
+  # 12/09/2026: com o parágrafo da #415 (`6cc2e90d…` -> `7c83a38a…`) e de novo com a correção do P2
+  # do Codex (`7c83a38a…` -> `730b22a3…`), que trocou "em todo pedido" por "em todo pedido que você
+  # souber" e tirou a afirmação falsa de que o especialista só sabe pelo bilhete. As duas mudanças
+  # são o efeito esperado desta guarda.
   #
-  # A ENTREGA 8 NÃO COLIDE COM ESTA ASSINATURA, medido e não suposto: mesclado o `origin/pr-399`
-  # de hoje (`ade5ca58db`) nesta árvore, a #399 mexe na §5 ANTES deste bloco — troca a linha
-  # "Você tem três/quatro ferramentas" e insere a subseção `proposta_da_seguradora` logo acima do
-  # "### Os especialistas de ramo" —, e o md5 abaixo permanece `6cc2e90d…`. Se a #399 mudar de
+  # A ENTREGA 8 NÃO COLIDIA COM A ASSINATURA ANTERIOR, medido e não suposto: mesclado o
+  # `origin/pr-399` de 12/09 (`ade5ca58db`) na árvore da #403, a #399 mexe na §5 ANTES deste bloco —
+  # troca a linha "Você tem três/quatro ferramentas" e insere a subseção `proposta_da_seguradora`
+  # logo acima do "### Os especialistas de ramo" — e o md5 do bloco não mudava. Se a #399 mudar de
   # forma e passar a editar o bloco, este exemplo reprova e é ele que avisa.
   describe 'o bloco dos especialistas da §5 é o texto revisado' do
     let(:secao) { ManualDoPrincipal.secao_especialistas(texto) }
@@ -304,7 +379,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('6cc2e90da520f0b14720f943307134cf')
+      expect(Digest::MD5.hexdigest(secao)).to eq('730b22a3c58a716b8be34cccb5fd4aec')
     end
 
     it 'não introduz variável para substituir' do
