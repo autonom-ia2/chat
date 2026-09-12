@@ -130,6 +130,23 @@ module ManualDoPrincipal
       Autonomia::Agents::Specialist::REQUEST_PARAM == 'pedido' &&
         Autonomia::Agents::Specialist.new(slug: 'cotacao_auto', description: 'x')
                                      .openai_schema[:parameters][:required] == ['pedido']
+    },
+    # E EM TODO PEDIDO, NÃO SÓ NO TURNO DO ANEXO (#415). Em 12/09/2026, execução 20 da conversa 5045,
+    # nenhum documento foi enviado no turno: a apólice de terceiro chegara duas horas antes, e a Lia
+    # só repassou "usa a apólice do William". O especialista leu aquilo como ordem e cotou no nome do
+    # titular. A regra acima agia no turno em que o documento chega; esta diz que ela vale sempre que
+    # o pedido se apoiar nele.
+    #
+    # O QUE SUSTENTA: o anexo de um turno anterior CHEGA de novo ao especialista — `Materia#documentos`
+    # preenche as vagas com os anexos anteriores do cliente (`anteriores`, janela de `JANELA` anexos,
+    # identidade por checksum) —, então repetir a divergência no pedido fala de um documento que ele
+    # tem na frente. O que ele não relê é o que a Lia concluiu no turno em que o anexo chegou: isso
+    # só existe se estiver escrito no pedido. Se essa releitura sumisse, o aviso apontaria para um
+    # documento ausente.
+    'E diga isso em todo pedido que se apoiar nesse documento, não só no turno em que ele chegou.' => lambda {
+      materia = Autonomia::Agents::Specialists::Materia
+      materia::MAX_DOCUMENTOS.positive? && materia::JANELA.positive? &&
+        materia.private_instance_methods.include?(:anteriores)
     }
   }.freeze
 end
@@ -283,15 +300,16 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
   end
 
-  # MESMA ASSINATURA, MESMO MOTIVO, PARA O BLOCO DOS ESPECIALISTAS DA §5 (#403). A tabela
-  # `PROMESSAS_DO_DOCUMENTO` vê as três frases que escrevi; não veria uma quarta, escrita ao lado
-  # delas, mandando recusar o documento — que é a conduta que esta entrega tira do caminho. Quem
-  # editar este bloco reassina aqui e revisa a tabela junto.
+  # MESMA ASSINATURA, MESMO MOTIVO, PARA O BLOCO DOS ESPECIALISTAS DA §5 (#403, agora com a #415). A
+  # tabela `PROMESSAS_DO_DOCUMENTO` vê as quatro frases que estão escritas; não veria uma quinta, ao
+  # lado delas, mandando recusar o documento — que é a conduta que a #403 tirou do caminho. Quem
+  # editar este bloco reassina aqui e revisa a tabela junto. A assinatura mudou em 12/09/2026 com o
+  # parágrafo da #415 (`6cc2e90d…` -> `7c83a38a…`), que é o efeito esperado desta guarda.
   #
-  # A ENTREGA 8 NÃO COLIDE COM ESTA ASSINATURA, medido e não suposto: mesclado o `origin/pr-399`
-  # de hoje (`ade5ca58db`) nesta árvore, a #399 mexe na §5 ANTES deste bloco — troca a linha
-  # "Você tem três/quatro ferramentas" e insere a subseção `proposta_da_seguradora` logo acima do
-  # "### Os especialistas de ramo" —, e o md5 abaixo permanece `6cc2e90d…`. Se a #399 mudar de
+  # A ENTREGA 8 NÃO COLIDIA COM A ASSINATURA ANTERIOR, medido e não suposto: mesclado o
+  # `origin/pr-399` de 12/09 (`ade5ca58db`) na árvore da #403, a #399 mexe na §5 ANTES deste bloco —
+  # troca a linha "Você tem três/quatro ferramentas" e insere a subseção `proposta_da_seguradora`
+  # logo acima do "### Os especialistas de ramo" — e o md5 do bloco não mudava. Se a #399 mudar de
   # forma e passar a editar o bloco, este exemplo reprova e é ele que avisa.
   describe 'o bloco dos especialistas da §5 é o texto revisado' do
     let(:secao) { ManualDoPrincipal.secao_especialistas(texto) }
@@ -304,7 +322,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('6cc2e90da520f0b14720f943307134cf')
+      expect(Digest::MD5.hexdigest(secao)).to eq('7c83a38a475bbfcd662c8ac6aa46600a')
     end
 
     it 'não introduz variável para substituir' do

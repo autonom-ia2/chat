@@ -47,6 +47,11 @@ module ManualDoEspecialistaDeAuto
     Autonomia::Insurance::QuoteInput::GRUPOS_DE_AUTO
   end
 
+  # A entrada como o `QuoteInput` a monta para auto — é ela que chega ao adapter.
+  def entrada_de_auto(params)
+    Autonomia::Insurance::QuoteInput.new(produto: 'auto', params: params, dados: {}, commission_percent: nil).to_h
+  end
+
   # CADA PROMESSA, PELA FRASE EXATA, E O QUE A SUSTENTA. A frase é a âncora: se o texto mudar e a
   # frase sumir, o exemplo reprova — a tabela não pode envelhecer em silêncio.
   PROMESSAS = {
@@ -86,6 +91,49 @@ module ManualDoEspecialistaDeAuto
     'a cotação saiu sem bônus porque a apólice está em outro nome' => lambda {
       vazia = Autonomia::Insurance::AutoRenewal.new({})
       !vazia.renovacao? && vazia.bonus.nil? && !vazia.sem_bonus?
+    },
+    # SEGURADO TROCADO PELO TITULAR DO DOCUMENTO (#415). Em 12/09/2026, execução 20 da conversa 5045:
+    # o cliente pediu "usa a apólice que te mandei, do William" e a cotação saiu no nome, no CPF, no
+    # nascimento e no telefone do William, marcada como renovação, com a classe de bônus 9 e um
+    # sinistro dele. A §4 dava precedência absoluta ao pedido do cliente e só excepcionava cobertura:
+    # "usa a apólice do fulano" era lido como ORDEM, não como documento de terceiro, e a §6.2 nunca
+    # disparava. Medido no caso de produção (`~/ops/agente-cotacao/teste-especialista/
+    # caso-producao-5045/`): sem o parágrafo, 13 defeitos em 16 no bilhete que só repassa as palavras
+    # do cliente; com ele, 0.
+    #
+    # QUEM É O SEGURADO É O QUE O ESPECIALISTA ESCREVE, e chega assim ao portal: o `cpf` e o `nome`
+    # que ele manda viram `insured.document` e `insured.name` na entrada, e o grupo `insured` viaja.
+    # Se o grupo saísse da entrada, ou se o CPF deixasse de decidir quem é o segurado, a regra
+    # perderia objeto. Os campos pessoais que ela proíbe copiar são conferidos um a um: proibir o que
+    # não existe no formulário seria texto sem alvo.
+    'E não vale para QUEM CONTRATA.' => lambda {
+      entrada = entrada_de_auto('cpf' => '042.979.126-78', 'nome' => 'Rodrigo Silva')
+
+      grupos_da_entrada.include?('insured') &&
+        entrada.dig('insured', 'document') == '04297912678' &&
+        entrada.dig('insured', 'name') == 'Rodrigo Silva' &&
+        %w[insured.name insured.document insured.birthDate insured.maritalStatus insured.phone
+           address.zipCode].all? { |n| campo(n) }
+    },
+    # POR QUE ELE ESTÁ NA LISTA DAS QUE PASSAM, e não na das que voltam vazias: nada neste
+    # repositório confere de quem é o CPF. A entrada leva o que o modelo escreveu, seja de quem for,
+    # e o `quotation` do titular — bônus e sinistros — viaja no mesmo pedido. A recusa, quando vem, é
+    # na emissão, longe daqui.
+    'Segurado trocado pelo titular do documento.' => lambda {
+      entrada = entrada_de_auto('cpf' => '296.562.576-34',
+                                'quotation' => { 'isRenewal' => true, 'bonusClass' => 9 })
+
+      grupos_da_entrada.include?('quotation') &&
+        entrada.dig('insured', 'document') == '29656257634' &&
+        entrada.dig('quotation', 'bonusClass') == 9
+    },
+    # O CAMINHO CERTO EXISTE E É LEGAL. Alguém tem de ser escrito no segurado — `insured.document` é
+    # obrigatório no formulário, e o erro é escrever ali o titular —, mas levar o bônus e o histórico
+    # dele não é obrigatório: os dois campos são opcionais. Se virassem exigência, este item
+    # proibiria a única saída que sobrou.
+    'Cota em nome do titular de uma apólice que não é do cliente.' => lambda {
+      campo('insured.document')['obrigatorio'] == true && expostos.include?('insured.name') &&
+        %w[quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n)['obrigatorio'] == false }
     },
     # COBERTURA COPIADA DA APÓLICE (#410). Em 12/09/2026 o documento trouxe o quadro de coberturas e
     # o pedido saiu com ele: dezessete seguradoras acionadas, nenhum preço; minutos depois, com as
@@ -196,7 +244,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('8b331dbd3acb1706701836b9a5529650')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('c4c3532e8210aef05c7452ff6409e1ae')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do
