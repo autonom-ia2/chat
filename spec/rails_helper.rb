@@ -28,10 +28,11 @@ rescue ActiveRecord::PendingMigrationError => e
   exit 1
 end
 
-# Depois de `maintain_test_schema!` (que escreve em `ar_internal_metadata`) e antes de o RSpec
-# carregar o primeiro arquivo de spec: a partir daqui, escrita no banco vinda de um `_spec.rb` só
-# pode ser corpo de `describe`/`context`, que roda fora da transação do exemplo.
-GuardaDeEscritaNaCarga.vigiar!
+# Abre a janela de carga: depois de `maintain_test_schema!` (que escreve em `ar_internal_metadata`)
+# e antes de o RSpec carregar o primeiro arquivo de spec. Daqui até o `before(:suite)`, linha
+# gravada em tabela de aplicação só pode ter vindo do corpo de um `describe`/`context`, que roda
+# fora da transação do exemplo. Quem mede é o PostgreSQL; ver `spec/support/`.
+GuardaDeEscritaNaCarga.abrir!
 
 RSpec.configure do |config|
   # Rails 7.2: `fixture_path` was removed in favour of `fixture_paths`.
