@@ -658,8 +658,8 @@ nada e o resumo do wrapper `rtk` mostra sucesso. Toda validação desta rodada f
 
 | # | Achado | Correção | Guarda |
 |---|---|---|---|
-| P1-1 | **`blocked` não é sinônimo de "nunca trabalhou"** (`origem.rb:41`). A lista `SEM_TRABALHO` veio copiada de `ToolRun.opened_for_turn?`, que responde outra pergunta — lá é "ainda não virou trabalho NESTE turno", aqui é "NUNCA trabalhou". Quem escreve `blocked` é `AsyncRunJob#block_run` (freio do operador), e ele desce DEPOIS de a cotação rodar, às vezes depois de ela já ter entregado preço: a cotação nova sumia da conta, a antiga voltava a ser "a última", e a proposta do risco velho publicava depois de uma recotação real — o P1 da rodada 3 reaberto por outra transição | "Nunca trabalhou" virou pergunta por ESTADO, não lista de status: `discarded` sempre fora; `blocked` fora só sem número no portal E sem nada entregue (`Origem#cotacoes_que_contam`) | `insurance_proposal_spec` «a recotacao barrada pelo operador DEPOIS de entregar preco continua sendo a ultima» (M1) e «a cotacao barrada pelo gate antes de trabalhar nao barra a proposta» |
-| P1-2 | **Janela entre a conferência e a publicação.** O publicador roda sob `conversation.with_lock` e `ToolRun#promote!` sob `pg_advisory_xact_lock(conversa+slug)`: mecanismos disjuntos. A causa-raiz não é "faltou lock" — é a AMBIGUIDADE do `pending`: a mesma lista tratava como órfã tanto a aceitação que vai promover em milissegundos quanto a que ficou parada porque o worker morreu | Separadas por IDADE (`PROMOCAO_ATE = 2.minutes`, o teto de 120 s de HTTP do turno que aceitou). Caminho (b), não (a) — ver decisão T1 | `insurance_proposal_spec` «a cotacao aceita agora, ainda por promover, barra a proposta da lista antiga» (M2) e, provando que o I2 não volta, «a cotacao aceita e nunca promovida, velha demais para promover, nao barra a proposta» |
+| P1-1 | **`blocked` não é sinônimo de "nunca trabalhou"** (`origem.rb:41`). A lista `SEM_TRABALHO` veio copiada de `ToolRun.opened_for_turn?`, que responde outra pergunta — lá é "ainda não virou trabalho NESTE turno", aqui é "NUNCA trabalhou". Quem escreve `blocked` é `AsyncRunJob#block_run` (freio do operador), e ele desce DEPOIS de a cotação rodar, às vezes depois de ela já ter entregado preço: a cotação nova sumia da conta, a antiga voltava a ser "a última", e a proposta do risco velho publicava depois de uma recotação real — o P1 da rodada 3 reaberto por outra transição | "Nunca trabalhou" virou pergunta por ESTADO, não lista de status: `discarded` sempre fora; `blocked` fora só sem número no portal E sem nada entregue (`Origem#cotacoes_que_contam`). **Registro corrigido na rodada 6 (P1-D):** isto ESTREITOU o critério, não o fechou — o ENVIO INCERTO (intenção anotada sem número, entrega 5) é, por definição, sem número e sem entrega, então seguia caindo em "nunca trabalhou" com uma cotação possivelmente aberta no portal | `insurance_proposal_spec` «a recotacao barrada pelo operador DEPOIS de entregar preco continua sendo a ultima» (M1) e «a cotacao barrada pelo gate antes de trabalhar nao barra a proposta» |
+| P1-2 | **Janela entre a conferência e a publicação.** O publicador roda sob `conversation.with_lock` e `ToolRun#promote!` sob `pg_advisory_xact_lock(conversa+slug)`: mecanismos disjuntos. A causa-raiz não é "faltou lock" — é a AMBIGUIDADE do `pending`: a mesma lista tratava como órfã tanto a aceitação que vai promover em milissegundos quanto a que ficou parada porque o worker morreu | Separadas por IDADE (`PROMOCAO_ATE = 2.minutes`, o teto de 120 s de HTTP do turno que aceitou). Caminho (b), não (a) — ver decisão T1. **Registro corrigido na rodada 6 (P1-C):** a idade passou a valer só na LEITURA; `ToolRun#promote!` continuou guardando apenas pelo status, e a `pending` de dez minutos ainda era promovida — janela ESTREITADA, não fechada | `insurance_proposal_spec` «a cotacao aceita agora, ainda por promover, barra a proposta da lista antiga» (M2) e, provando que o I2 não volta, «a cotacao aceita e nunca promovida, velha demais para promover, nao barra a proposta» |
 | P2-1 | **O varredor perdia PDF pronto** (`reap_stale_runs_job.rb:100`): `close` publicava a frase de falha e `finish!('failed')` sem oferecer `closing_deliveries`. O MESMO defeito P2 da rodada 3 na outra porta de encerramento — fora do alcance daquela correção porque o varredor não passa por `fail_run` | O encerramento inteiro passou a morar em `Tools::Encerramento`, usado pelas DUAS portas: adquire a marca `closed`, oferece as entregas, deixa a ferramenta anotar, publica o fecho. Quem publica é quem chama (o motor espera a cadeia; o varredor força) | `reap_stale_runs_job_spec` «entrega o que a ferramenta ainda tinha antes de publicar o fecho» e, pelo caminho REAL, `insurance_proposal_spec` «o varredor entrega a proposta ja gerada antes de fechar a linha abandonada» (M3) |
 | P2-2 | **A recotação que morre sem preço trancava a proposta para sempre** (`origem.rb:97`): A entregou preços, o cliente mandou refazer, B morreu `failed` sem preço — e o cliente, com os preços de A na tela, lia "quando os preços novos chegarem, é só me pedir de novo". Preços que nunca chegam | Muda a FRASE, não a regra (decisão do revisor final, mantida): `recotacao_sem_preco` diz que a recotação não trouxe preços e oferece cotar de novo. `SEM_TRABALHO` NÃO foi tocado para isto — incluir `failed`-sem-preço lá reabriria o R7 | `insurance_proposal_spec` «a recotacao que morreu sem preco barra a origem antiga, e a frase oferece cotar de novo» (M4), «a recotacao ainda viva mantem a frase de esperar pelos precos novos»; `recusa_registro_spec` `recusa_da_substituicao#1` e `recusar_substituicao#1` |
 | P3-1 | **`entrega_do_token` não tem `rescue` e o comentário afirmava que tinha** (`autorizacao_da_execucao.rb:45-47`): verdade só para `publicavel?` | A INVARIANTE ESCRITA foi corrigida, e o hook continua sem `rescue` — de propósito (T4). O que ele levanta sobe até o `rescue` de quem chamou, e o efeito é o mesmo dos dois lados: o que não se consegue conferir NÃO SAI | `retomada_de_envio_spec` «o hook que levanta nao reenvia a proposta: nada vai ao cliente, e a marca fica» (M5) |
@@ -676,6 +676,8 @@ caminho do dinheiro. Pior: no turno (`precheck`) não há transação, e `pg_adv
 solto na mesma instrução — não serializa nada. A idade ataca a ambiguidade real ("esta `pending` ainda pode
 virar `running`?"), é legível no ponto de uso e não cria invariante invisível. O custo é conhecido e
 auto-resolvido: uma órfã recém-criada segura a proposta por até 2 min, e o pedido seguinte funciona.
+(Na rodada 6 esse custo passou a ser de até 5 min, e a promoção fora do teto passou a ser recusada e
+descartada na escrita — P1-C.)
 
 **T2 — o silêncio do varredor não era opcional de manter; a correção do P2-1 o mata.** O gate
 `if native.present? && run.delivered_count.zero?` é INCOMPATÍVEL com oferecer `closing_deliveries`: com ele,
@@ -685,6 +687,9 @@ a usar a regra do motor (parcial se algo chegou, falha/incerteza se nada chegou)
 registrada:** a execução abandonada que JÁ tinha entregado algo passa a ler o fecho parcial onde antes havia
 silêncio — que é a decisão da entrega 4 ("acabar sem fechar também é um desfecho") aplicada à porta que ficara
 de fora. Dois exemplos que documentavam o silêncio foram reescritos, com o porquê no comentário.
+**A rodada 6 reverteu metade disto (P1-B):** o fecho parcial passou a depender de a FERRAMENTA afirmar
+que houve resultado e que sobrou algo; com o contador positivo e nada a declarar, o varredor volta a
+calar. O que fica da rodada 5 é a entrega do que estava pronto.
 
 **T3 — motivo NOVO (`recotacao_sem_preco`), não um segundo texto sob o motivo antigo.** A regra é uma só, mas o
 que o cliente pode FAZER é diferente ("espere" × "peça outra cotação"), e o registro de recusa é a única janela
@@ -756,5 +761,152 @@ Cada mutação aborta se a âncora não existir exatamente uma vez.
 - **O segundo arquivo do encerramento continua descartado** — trade-off dos 25 s de shutdown do Sidekiq,
   mantido de propósito (P3-3 pedia a frase, não o segundo download).
 - **Issue [#402]** (`deferred` reemite e infla `delivered_count`) e **C8**/**D10**: sem mudança.
+- **Prova real** (termo "Prova"): continua pendente de deploy + rollout na conta 16.
+- **Merge e deploy**: não feitos — dependem de aprovação explícita do Rodrigo.
+
+
+## Rodada 6 (12/09/2026) — PR #399, o fecho que afirmava o que não sabia
+
+Base: `9de90e5718` (rodada 5), árvore limpa, worktree
+`~/dev/worktrees/chat2you/entrega-8-proposta-da-seguradora` na branch
+`feat/entrega-8-proposta-da-seguradora`. Commit da rodada: `27a9a61147`. A rodada 5 teve CI verde nos
+dois lados e ainda assim foi REPROVADA pelo Codex (3 P1 + 1 P2) e pelo verificador cego (1 P1 + 4 P2 +
+3 P3); o revisor final confirmou os achados lendo o código e fixou as decisões de desenho.
+
+**O tema é um só: a rodada 5 trocou silêncio por frase, e a frase nem sempre é verdadeira.** A correção
+tem um critério único — cada frase que o cliente recebe precisa ser verdadeira em TODOS os estados
+possíveis; onde a frase nova seria falsa, o silêncio volta.
+
+**AS DUAS ARMADILHAS DE AMBIENTE, medidas de novo.** (1) Neste worktree `bundle` resolve para
+`/usr/bin/bundle` e FALHA com `Could not find 'bundler' (2.5.16)`: rspec e rubocop "passam" sem executar
+nada. Tudo abaixo foi rodado com `PATH="$HOME/.rbenv/shims:$PATH"` (ruby 3.4.4, bundler 2.5.16) e com o
+**exit code conferido** (`${pipestatus[1]}` em zsh). (2) O wrapper `rtk` resume a saída e mascara exit
+code, e `rubocop` sem lista explícita de arquivos varre o projeto inteiro e reporta ofensas de
+terceiros: a lista foi montada de `git status --porcelain -uall` — **`-uall` importa**, porque sem ele o
+arquivo novo dentro de um diretório novo (`app/models/concerns/autonomia/agents/`) aparece como
+DIRETÓRIO e fica de fora da varredura.
+
+### Achados e o que mudou
+
+| # | Achado | Correção | Guarda |
+|---|---|---|---|
+| P1-A | **O varredor podia ficar MUDO onde antes sempre falava** (`encerramento.rb:42-49`). A marca `closed` é adquirida na linha 43 e o fecho só sai na 46; qualquer exceção no meio caía no `rescue` único da 48, e nenhuma passada futura reentra. Até a rodada 4 o que vinha depois da marca eram métodos de CLASSE (sem banco, sem portal) que não tinham como falhar; a rodada 5 pôs `closing_deliveries` (consulta) e `confirmar_publicadas` (ESCRITA) antes do fecho — um erro de banco, o mesmo tipo que abandonou a linha, deixava o cliente sem uma palavra PARA SEMPRE | Cada etapa ganhou o seu próprio tratamento (`Encerramento#etapa`): falhar ao entregar ou ao anotar vira log e a sequência segue. O fecho é a ÚLTIMA coisa e não depende do sucesso de nenhuma das duas | `encerramento_spec` «a ferramenta que levanta ao montar as entregas nao cala o fecho» (M1), «a ferramenta que levanta ao anotar nao cala o fecho, e a entrega ja publicada fica» (M2), «nao levanta quando tudo falha ao mesmo tempo»; `async_run_job_spec` «registra o desfecho, e ainda fecha com o cliente, se o encerramento quebrar» |
+| P1-B | **O fecho decidia por um contador que não significa o que ele achava** (`encerramento.rb:76-77`). `delivered_count` é incrementado por qualquer item aceito para publicação: na cotação, `insurance_quote.rb:168` devolve `handle['pedido']` — a pergunta pelo dado que falta — como entrega; na proposta, o cliente que pediu UMA, recebeu essa uma e teve a corrente quebrada lia "não consegui enviar todas as propostas a tempo". O fecho nunca perguntava se sobrou alguma coisa | Duas perguntas NOVAS no contrato, respondidas pela ferramenta e conservadoras por padrão (`Native::Base#resultado_entregue?`, `#resta_entregar?`): a frase parcial só sai com resultado E sobra. Na cotação, resultado é preço publicado (`DELIVERED_KEY`), nunca o `pedido`; na proposta, é proposta que virou MENSAGEM, e sobra é gerada não publicada, pendente ou não gerada. Contador positivo sem resultado, ou resultado sem sobra, **volta ao silêncio** | `encerramento_spec` «contador positivo sem resultado fecha em SILENCIO», «resultado sem sobra fecha em SILENCIO», «com resultado E sobra, a frase parcial sai» (M3); `insurance_quote_ramo_auto_spec` «so afirma resultado quando ha preco entregue» (M4); `insurance_proposal_spec` «com o PDF gerado e o prazo estourado antes de qualquer entrega, o arquivo sai — e so ele» e «o varredor fecha com a frase parcial quando sobrou seguradora por entregar» (M5); `reap_stale_runs_job_spec` «com o contador positivo e nada a dizer, fecha em silencio» |
+| P1-C | **A idade da `pending` existia só na leitura.** `PROMOCAO_ATE` filtrava a consulta (`origem.rb:124`) mas `ToolRun#promote!` guardava só por status: a linha de dez minutos ainda promovia. E a constante estava ancorada no teto de UMA chamada HTTP (120 s), enquanto o intervalo real entre o aceite e a promoção inclui a segunda chamada ao modelo mais o pós-processamento do respondedor — margem zero, no sentido inseguro | A recusa passou a existir também na ESCRITA, e ela DESCARTA (uma linha que ninguém vai executar não fica dizendo "aceita"). O teto subiu para **5 minutos**. A leitura passou a REFERENCIAR a constante da escrita: duas constantes homônimas em dois arquivos é como a divergência volta | `tool_run_spec` «recusa a aceitacao velha demais para ainda virar trabalho, e a descarta» (M6), «promove a aceitacao que ainda esta dentro do teto», «a leitura da proposta usa exatamente o teto da escrita» (M7); `insurance_proposal_spec` «a pending velha nao promove depois de a proposta publicar» e «a cotacao aceita agora, ainda por promover, barra a proposta da lista antiga» |
+| P1-D | **`blocked` com envio incerto ainda virava "nunca trabalhou"** (`origem.rb:125`). O critério aceitava trabalho por `delivered_count > 0` ou `quote_id`, e o ENVIO INCERTO (entrega 5) é por definição intenção anotada SEM número e SEM entrega — e pode ter chegado ao portal. A recotação barrada nesse estado sumia da consulta, a origem antiga voltava a valer e a proposta do risco velho publicava | `ToolRun#envio_incerto?` entrou no critério, em SQL, com a MESMA condição que o `finish!` já usa | `insurance_proposal_spec` «a recotacao barrada com envio incerto continua sendo a ultima, e a frase nao promete preco» (M8), com «a cotacao barrada pelo gate antes de trabalhar nao barra a proposta» segurando o outro lado |
+| P2-E | **O varredor passou a falar com o portal, em lote, dentro de um cron.** `reap_running` varre até 500 linhas em sequência e cada cotação abandonada com preço disparava a geração do comparativo (login + chamada de até 60 s + download). O Sidekiq tem 25 s de shutdown; morto no meio, a linha em curso já tem a marca `closed` e nunca mais recebe fecho | `closing_deliveries` recebe `trabalho_novo:` (verdadeiro no motor, FALSO no varredor). A cotação devolve `[]` ali — o comparativo exige chamada nova; a proposta entrega igual, porque a URL já está no handle e o download é do publicador | `reap_stale_runs_job_spec` «diz a ferramenta que nao pode comecar trabalho novo» (M9); `async_run_job_encerramento_parcial_spec` «o varredor fecha a cotacao abandonada sem pedir o comparativo ao portal», com «publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue» provando que o motor continua gerando; `insurance_quote_ramo_auto_spec` e `insurance_proposal_spec` nos dois lados |
+| P3-1 | **`be_positive` perdeu a magnitude** (`async_run_job_intencao_de_envio_spec.rb:508`), que é justamente o que distingue uma entrega do contador inflado da issue #402 | Asserção exata de volta (`delivered_count: 1`). O dublê passou a entregar na PRIMEIRA chamada ao catálogo e só nela — `Registry.find` é chamado mais de uma vez por passada (o publicador remonta a ferramenta a cada mensagem), e era isso que inflava o contador do teste | `async_run_job_intencao_de_envio_spec` «recarrega antes de decidir» (M10: com o contador inflado o exemplo reprova; com `be_positive` passava) |
+| P3-2 | **A `pending` órfã dentro do teto faz o cliente ler "quando os preços novos chegarem, é só me pedir de novo"** de uma linha que ninguém vai executar | Resolvido pelo P1-C, sem frase nova — ver T3 | os mesmos exemplos do P1-C |
+| P3-3 | **A auditoria descrevia como fechado o que ficou apenas estreitado** (o `pending` sem vencimento na escrita, o `blocked` sem o envio incerto) | Texto da rodada 5 corrigido no ponto, com o apontamento para a rodada 6; T1 e T2 da rodada 5 ganharam a nota do que mudou depois | este arquivo |
+
+### Decisões onde o desenho não fechou sozinho
+
+**T1 — duas perguntas, não uma, e a cotação responde `true` a uma delas por construção.** O revisor fixou
+"resultado E sobra". Resultado é fácil de responder nas duas ferramentas. Sobra não: na proposta é
+contável (gerada sem mensagem, pendente, não gerada), mas na cotação não há como enumerar quem não
+respondeu — `ACIONADAS_KEY` inclui quem recusou o risco, e nem toda passada a escreve. O que se sabe com
+certeza é OUTRA coisa, e basta: o encerramento só existe nos caminhos em que a cotação NÃO fechou no
+portal (`fail_run` e o varredor); a que fecha vai por `finish_done`, que não passa por lá. Então
+`InsuranceQuote#resta_entregar?` devolve `true` com esse motivo escrito no lugar. Alternativa recusada:
+deduzir a sobra de `acionadas - entregues`, que teria calado a frase da entrega 4 em cenários reais e
+trocaria um defeito por outro.
+
+**T2 — o silêncio volta em três casos, e um deles reverte metade da rodada 5.** Passam a NÃO publicar
+fecho: (a) contador positivo sem resultado; (b) resultado sem sobra; (c) a ferramenta que não responde as
+duas perguntas (o padrão do `Base`). O caso (c) é a reversão: a rodada 5 tinha feito o varredor publicar
+o fecho parcial para QUALQUER execução com contador positivo. Em produção isso não muda nada — as duas
+ferramentas reais respondem —, mas muda o comportamento de qualquer ferramenta nativa futura, e muda os
+exemplos com dublê genérico, que foram reescritos com o porquê. A decisão é a do enunciado: frase nenhuma
+é melhor que frase falsa.
+
+**T3 — o P3-2 fica resolvido pelo P1-C, sem frase nova.** Depois desta rodada, o conjunto das `pending`
+que BARRAM a proposta é exatamente o conjunto das que ainda PODEM virar trabalho: passou do teto, a
+leitura não conta e a escrita recusa (e descarta). Dentro do teto, "quando os preços novos chegarem" é o
+que o sistema de fato espera — uma aceitação de menos de cinco minutos é indistinguível de um turno vivo,
+e essa é a ambiguidade que a idade resolve, não esconde. **Risco residual nomeado:** se a órfã morreu no
+primeiro segundo, o cliente lê essa frase por até 5 minutos e o pedido seguinte funciona. Inventar um
+terceiro texto para um estado que não se sabe distinguir seria trocar uma imprecisão por uma afirmação.
+
+**T4 — `promote!` DESCARTA em vez de só devolver `false`.** Deixar a linha em `pending` até o varredor
+passar (uma hora) mantém no banco uma execução que diz "aceita" e que ninguém vai executar — e foi
+exatamente essa ambiguidade que abriu o P1-C. `discard!` é guardado por status, então o descarte não
+atropela nada: quem já saiu de `pending` não é tocado.
+
+**T5 — a fronteira do P2-E é a CHAMADA que produz a entrega, não o custo total.** No varredor não sai o
+comparativo (login + `quote/proposal` de até 60 s, por linha), e SAI a proposta que o portal já gerou —
+a URL está no handle, e o que falta é o download do publicador. Não entregá-la seria reabrir o P2 da
+rodada 5 (o arquivo pronto morrendo no handle) para economizar segundos.
+
+**T6 — três extrações de módulo, por teto de linhas.** `Metrics/ClassLength` é 175 no projeto, e
+`ToolRun`, `InsuranceQuote` e `InsuranceProposal` já estavam em 172-173: as correções não cabiam. Em vez
+de abrir exceção no `.rubocop.yml` (que afrouxa o gate do repositório inteiro), o código novo saiu em
+módulos coesos, no padrão que a própria cotação já usa e documenta: `InsuranceQuote::Fecho`,
+`InsuranceProposal::Fecho` e o concern `Autonomia::Agents::ToolRunPromocao` (que leva `promote!` e
+`discard!` junto, porque o assunto é um só: quando uma aceitação vira trabalho).
+
+**T7 — o keyword novo mudou a forma de CHAMAR `closing_deliveries`.** Em Ruby 3, um hash sem chaves numa
+chamada a método que aceita keyword vira KEYWORD, não argumento posicional: `closing_deliveries('quote_id'
+=> 'x')` passou a estourar `ArgumentError`. Quatro chamadas em specs foram corrigidas com chaves
+explícitas. Registrado porque é a armadilha que espera o próximo chamador — o erro é barulhento (não
+silencioso), o que torna o risco aceitável.
+
+**T8 — a frase do `blocked` com envio incerto é `recotacao_sem_preco`, e isso foi o TESTE que mostrou.**
+A expectativa escrita primeiro era `cotacao_substituida`; o exemplo reprovou. Está certo o código: a
+recotação foi barrada pelo operador e nenhum job vai buscar preço para ela, então "quando os preços novos
+chegarem, é só me pedir de novo" seria promessa vazia — `recotacao_sem_preco` diz o que houve e oferece
+cotar de novo. A expectativa é que estava errada, e o exemplo hoje trava as duas coisas.
+
+### Validação (números)
+
+Banco `chatwoot_test_e8`, PATH do rbenv, exit code conferido em todos os comandos.
+
+| Alvo | Exemplos | Falhas | Exit |
+|---|---|---|---|
+| `spec/services/autonomia/insurance` + `agents` + `spec/jobs/autonomia` + `spec/models/autonomia` (os 4 da rodada 5) | **1252** (era 1226: +26) | **0** | **0** (51 s) |
+| `spec/services/autonomia/agents/tools` + `spec/jobs` (inteiro) + `spec/services/autonomia/insurance/quote_agent` | **1168** + 2 pendentes | **0** | **0** (51 s) |
+| `spec/requests/.../insurance/measurement_spec.rb` + `spec/controllers/super_admin/insurance_measurements_controller_spec.rb` (os dois specs fora de `autonomia` que tocam `ToolRun`) | **27** | **0** | **0** |
+
+Por spec tocada: `encerramento_spec` **10** (novo) · `insurance_proposal_spec` **101** (era 94) ·
+`insurance_quote_ramo_auto_spec` **45** (+2) · `tool_run_spec` **32** (era 29) ·
+`reap_stale_runs_job_spec` **17** (era 15) · `base_contrato_de_nivel_spec` **12** (era 11) ·
+`async_run_job_encerramento_parcial_spec` **3** (era 2) · `async_run_job_spec` **24** (=) ·
+`async_run_job_intencao_de_envio_spec` **24** (=).
+
+`bundle exec rubocop --force-exclusion` nos **20 `.rb`** da rodada (10 de `app`, 10 de `spec`): **0
+ofensas, exit 0**. Na primeira passada foram 4 ofensas — uma de sombreamento no spec novo e três de
+`Metrics/ClassLength` (183, 183 e 181 contra o teto de 175), que é o que motivou T6.
+
+### Mutações (aplicar -> conferir que o md5 mudou -> rodar alvo -> `git checkout --` -> md5 igual)
+
+Árvore commitada em `27a9a61147` ANTES das mutações — `git checkout --` restaura o commit, e é o que
+permite mutar também os arquivos NOVOS desta rodada. Cada mutação aborta se a âncora não aparecer
+exatamente uma vez. Árvore limpa depois das dez (`git status --porcelain -uall` vazio).
+
+| # | Mutação (desfaz a correção) | Specs alvo | Ex. | Falhas | md5 | Resultado |
+|---|---|---|---|---|---|---|
+| M1 | o passo das ENTREGAS volta a não ter tratamento próprio | encerramento + `async_run_job` | 34 | 2 | igual | **reprova** |
+| M2 | o passo da ANOTAÇÃO volta a não ter tratamento próprio | encerramento | 10 | 1 | igual | **reprova** |
+| M3 | o fecho parcial volta a sair sem perguntar nada à ferramenta | encerramento + varredor + proposta | 128 | 7 | igual | **reprova** |
+| M4 | na cotação, a pergunta por dados volta a contar como resultado | cotação (auto) + encerramento parcial | 48 | 1 | igual | **reprova** |
+| M5 | na proposta, "sobra" vira sempre verdadeiro | proposta | 101 | 4 | igual | **reprova** |
+| M6 | `promote!` volta a guardar só pelo status | `tool_run` + proposta | 133 | 2 | igual | **reprova** |
+| M7 | a leitura volta a ter constante própria (2 min) em vez de referenciar a da escrita | `tool_run` | 32 | 1 | igual | **reprova** |
+| M8 | `blocked` com envio incerto volta a ser "nunca trabalhou" | proposta | 101 | 1 | igual | **reprova** |
+| M9 | o varredor volta a poder começar trabalho novo no portal | varredor + encerramento parcial | 20 | 2 | igual | **reprova** |
+| M10 | o contador do dublê volta a inflar (#402) | intenção de envio | 24 | 1 | igual | **reprova** |
+
+### O que NÃO foi feito nesta rodada, e por quê
+
+- **A entrega ADIADA no encerramento continua sem anotação e sem fecho parcial.** Quando a publicação é
+  adiada (cadeia humanizada aberta), a mensagem nasce ~90 s depois: `resultado_entregue?` responde "ainda
+  não" e o fecho cala. É o lado conservador do mesmo limite de origem (a verdade é a mensagem, não o
+  handle), agora com uma consequência a mais — o cliente que recebe tudo por entrega adiada não lê fecho
+  nenhum.
+- **O segundo arquivo do encerramento continua descartado** (trade-off dos 25 s de shutdown), anunciado
+  pelo nome desde a rodada 5.
+- **Issue [#402]** (`deferred` reemite e infla `delivered_count`): o P3-1 recuperou a asserção que a
+  detecta no teste; a causa no código segue aberta.
+- **A frase da `pending` órfã dentro do teto** (P3-2): resolvida pelo P1-C, com o risco residual de até 5
+  minutos nomeado em T3.
 - **Prova real** (termo "Prova"): continua pendente de deploy + rollout na conta 16.
 - **Merge e deploy**: não feitos — dependem de aprovação explícita do Rodrigo.
