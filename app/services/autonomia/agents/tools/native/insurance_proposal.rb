@@ -62,6 +62,7 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
   include Origem
   include Geracao
   include Publicacao
+  include Fecho
 
   class << self
     def slug
@@ -151,47 +152,6 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     entregar(confirmar(handle))
   end
 
-  # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR (o prazo estourou, o job desistiu),
-  # no mesmo molde do comparativo da cotação: a proposta que o portal GEROU e não chegou ao cliente,
-  # mais o aviso de quem ficou pelo caminho — quem estava só PENDENTE no fim é, para quem espera, o
-  # mesmo que não gerada. Origem morta, substituída ou ausente: nada, porque o arquivo é dos preços
-  # que o cliente descartou.
-  #
-  # UM ARQUIVO SÓ, também aqui (rodada 4, menor 1 do verificador cego): dois downloads de 20 s na
-  # mesma passada passam dos 25 s que o Sidekiq dá ao job num shutdown, e quem é morto no meio perde
-  # o segundo PARA SEMPRE — a marca `closed` já foi adquirida, e ninguém volta a este caminho. O
-  # segundo arquivo fica no handle e o cliente lê o fecho parcial, que é honesto sobre isso.
-  #
-  # E ANOTA O QUE JÁ VIROU MENSAGEM antes de sair (rodada 4, importante 1 do verificador cego):
-  # `confirmar` só rodava no `poll`, então uma proposta entregue na última passada antes do prazo
-  # sumia da medida da entrega 7 — o cliente com o PDF no WhatsApp e a cotação sem marca nenhuma.
-  def closing_deliveries(handle)
-    handle = handle.to_h
-    return [] unless origem_ainda_vale?
-
-    confirmar(handle)
-    faltam = nao_publicadas(handle)
-    faltam.first(1).map { |proposta| entrega(proposta, handle['sufixo']) } +
-      aviso_da_gerada(faltam.drop(1)) +
-      aviso_de(handle[NAO_SAIU].to_h.keys + Array(handle[PENDENTES]))
-  end
-
-  # O QUE VIROU MENSAGEM AGORA, no próprio encerramento (rodada 5; resíduo aberto na rodada 4).
-  # `closing_deliveries` monta o que falta ANTES de a mensagem existir, e quem publica é o
-  # `Tools::Encerramento`, logo depois — sem esta chamada, a proposta entregue no fecho ficava fora da
-  # medida da entrega 7: o cliente com o PDF no WhatsApp e a cotação sem marca nenhuma.
-  #
-  # Anotar aqui NÃO é faturar o que o cliente não recebeu (o defeito 3 da rodada 3): a pergunta
-  # continua sendo a MENSAGEM publicada, nunca o handle — a publicação que voltou `blocked` não
-  # deixou mensagem, e não é anotada. Fica de fora só a ADIADA, que vira mensagem depois de todo
-  # mundo ter ido embora.
-  def confirmar_publicadas(handle)
-    return unless origem_ainda_vale?
-
-    confirmar(handle.to_h)
-    nil
-  end
-
   private
 
   # O QUE JÁ CHEGOU AO CLIENTE, e o registro na linha da COTAÇÃO — é ela que "virou proposta", e é lá
@@ -247,15 +207,6 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
   def aviso_de(codigos)
     faltaram = codigos.map(&:to_s).uniq
     faltaram.any? ? [nao_saiu(nomes_de(faltaram))] : []
-  end
-
-  # A QUE O PORTAL GEROU E NÃO COUBE NESTA PASSADA (rodada 5, P3 do revisor final). O encerramento
-  # entrega UM arquivo, e a segunda gerada é descartada — trade-off medido (25 s de shutdown), e ele
-  # fica. O que não fica é o cliente lendo "não consegui gerar todas" sobre um arquivo que EXISTE:
-  # ela é dita pelo nome, com o que fazer. Nunca entra em `aviso_de`, que é de quem NÃO foi gerada.
-  def aviso_da_gerada(propostas)
-    nomes = nomes_de(propostas.map { |proposta| proposta['code'].to_s })
-    nomes.any? ? [nao_enviada(nomes)] : []
   end
 
   # -> o handle de recusa (`pedido`/`motivo`/`faltando`), ou nil quando há o que gerar.

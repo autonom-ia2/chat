@@ -110,6 +110,45 @@ RSpec.describe Autonomia::Agents::ToolRun do
                                             expected_chunks: 3, notify_customer: true)
       expect(run.expires_at).to be_within(1.second).of(deadline)
     end
+
+    # O TETO DA PROMOÇÃO VALE NA ESCRITA (rodada 6 da entrega 8, P1-C). Até a rodada 5 ele existia só
+    # na LEITURA que decide se uma `pending` ainda conta como recotação (`InsuranceProposal::Origem`);
+    # aqui a guarda era só o status, então a aceitação de dez minutos — a órfã cujo worker morreu
+    # entre o aceite e o despacho — ainda virava `running` e abria no portal uma cotação que a
+    # conversa já tinha deixado para trás. Leitura e escrita discordando é a janela continuar aberta.
+    #
+    # E ELA NÃO FICA EM `pending`: uma linha que ninguém vai executar e que ainda diz "aceita" engana
+    # quem a lê até o varredor passar, uma hora depois.
+    it 'recusa a aceitacao velha demais para ainda virar trabalho, e a descarta' do
+      # Arrange
+      run = open_run
+      run.update!(created_at: described_class::PROMOCAO_ATE.ago - 1.second)
+
+      # Act
+      promovida = run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+
+      # Assert
+      expect(promovida).to be(false)
+      expect(run.reload).to have_attributes(status: 'discarded', expires_at: nil)
+    end
+
+    # UM TETO SÓ, PARA OS DOIS LADOS (rodada 6, P1-C). O defeito não era o valor: era a LEITURA
+    # (`InsuranceProposal::Origem`) e a ESCRITA (aqui) responderem coisas diferentes sobre a mesma
+    # linha. Duas constantes com o mesmo nome em dois arquivos é como isso volta — então a da
+    # leitura é uma referência a esta, e é isto que este exemplo trava.
+    it 'a leitura da proposta usa exatamente o teto da escrita' do
+      expect(Autonomia::Agents::Tools::Native::InsuranceProposal::PROMOCAO_ATE).to equal(described_class::PROMOCAO_ATE)
+    end
+
+    # A FRONTEIRA DO OUTRO LADO, sem a qual a guarda poderia ser "nenhuma promoção acontece": dentro
+    # do teto ela promove como sempre.
+    it 'promove a aceitacao que ainda esta dentro do teto' do
+      run = open_run
+      run.update!(created_at: described_class::PROMOCAO_ATE.ago + 5.seconds)
+
+      expect(run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)).to be(true)
+      expect(run.reload.status).to eq('running')
+    end
   end
 
   # AS ESCRITAS DO HANDLE SÃO MESCLADAS NO BANCO (entrega 5), nunca copiadas da memória, e `intencao:`

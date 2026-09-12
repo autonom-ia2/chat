@@ -412,7 +412,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
         visto << handle
         progress.running
       end
-      tool.define_method(:closing_deliveries) do |handle|
+      tool.define_method(:closing_deliveries) do |handle, **|
         visto << handle
         []
       end
@@ -437,7 +437,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       fechamentos = 0
       linha = runs
       tool = build_async_tool
-      tool.define_method(:closing_deliveries) do |_handle|
+      tool.define_method(:closing_deliveries) do |_handle, **|
         fechamentos += 1
         ['comparativo']
       end
@@ -485,13 +485,18 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
 
     it 'recarrega antes de decidir: preco entregue enquanto ele varria fica sem "nao consegui"' do
-      # Arrange — a linha veio da consulta sem entrega; um poll entrega um preço antes de o varredor chegar nela
+      # Arrange — a linha veio da consulta sem entrega; UM poll entrega UM preço antes de o varredor
+      # chegar nela. O dublê entrega na PRIMEIRA chamada ao catálogo e só nela: `Registry.find` é
+      # chamado mais de uma vez por passada (o publicador remonta a ferramenta a cada mensagem), e
+      # contar todas inflava `delivered_count` — a magnitude é justamente o que este exemplo trava.
       run = execucao(handle: { submetido => true, 'id' => 'cot-2', intencoes => 1 })
       run.update!(expires_at: 10.minutes.ago)
       linha = runs
-      tool = register_async_tool(build_async_tool)
+      entregou = false
+      tool = register_async_tool(build_async_tool(resultado: true, resta: true))
       allow(Autonomia::Agents::Tools::Registry).to receive(:find) do |slug|
-        linha.find(run.id).record_delivery!
+        linha.find(run.id).record_delivery! unless entregou
+        entregou = true
         slug.to_s == tool.slug ? tool : nil
       end
 
@@ -500,12 +505,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert — o que importa é a FRASE: quem acabou de receber preço não lê "não consegui". Desde a
       # rodada 5 da entrega 8 o varredor fecha pelo mesmo `Tools::Encerramento` do motor, e o fecho de
-      # quem já recebeu algo é o PARCIAL (era o silêncio, e silêncio não podia continuar: o varredor
-      # passou a oferecer as entregas do encerramento, e entregar um arquivo sem uma palavra de fecho
-      # é o defeito ao contrário). `delivered_count` aqui conta as chamadas ao `Registry.find` do
-      # dublê, não entregas: por isso a asserção é o sinal, não a magnitude.
-      expect(run.reload.status).to eq('failed')
-      expect(run.delivered_count).to be_positive
+      # quem já recebeu algo — e ainda tem algo por receber, que é o que esta ferramenta responde
+      # desde a rodada 6 — é o PARCIAL. A MAGNITUDE EXATA importa (rodada 6, P3): `be_positive`
+      # passava com o contador inflado, que é o defeito da issue #402.
+      expect(run.reload).to have_attributes(status: 'failed', delivered_count: 1)
       expect(bot_contents).to eq([tool.partial_message])
       expect(bot_contents.join(' ')).not_to include('não consegui')
     end

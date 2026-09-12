@@ -250,9 +250,36 @@ class Autonomia::Agents::Tools::Native::Base
   # entregou cinco preços e morreu no prazo: o comparativo em PDF só era gerado no caminho feliz,
   # então não saiu — e `fail_run` não avisava nada porque já havia entrega. O cliente ficou com
   # preços soltos, sem comparativo e sem uma palavra.
+  #
+  # `trabalho_novo` DIZ SE ESTA PASSADA PODE INICIAR TRABALHO NOVO no portal para produzir a entrega
+  # (rodada 6 da entrega 8, P2-E). Verdadeiro no motor; FALSO no varredor, que varre até 500 linhas
+  # em sequência dentro de um cron enquanto o Sidekiq desta instalação dá 25 s de shutdown — morto no
+  # meio, a linha em curso já tem a marca `closed` e nunca mais recebe fecho. Quem precisa de uma
+  # chamada nova devolve [] ali, e o fecho reflete o que o cliente realmente tem. O que JÁ está
+  # pronto (um arquivo que o portal gerou e está no handle) sai pelos dois caminhos.
   # -> Array de textos para o cliente. Vazio por padrão.
-  def closing_deliveries(_handle)
+  def closing_deliveries(_handle, trabalho_novo: true) # rubocop:disable Lint/UnusedMethodArgument
     []
+  end
+
+  # O CLIENTE JÁ TEM RESULTADO DESTA EXECUÇÃO? (rodada 6 da entrega 8, P1-B.)
+  #
+  # `ToolRun#delivered_count` não responde isso: ele conta QUALQUER item aceito para publicação,
+  # inclusive um aviso e inclusive a pergunta pelo dado que falta (a cotação devolve `handle['pedido']`
+  # como entrega). Quem sabe distinguir resultado de recado é a ferramenta, não o motor — e é por esta
+  # pergunta que o fecho decide entre a frase parcial e o silêncio.
+  # -> false por padrão: quem não sabe responder não afirma que entregou.
+  def resultado_entregue?(_handle)
+    false
+  end
+
+  # E SOBROU ALGO POR ENTREGAR? (rodada 6 da entrega 8, P1-B.) Perguntado DEPOIS das entregas do
+  # encerramento: a frase parcial diz que algo ficou pelo caminho, e dizê-la a quem recebeu tudo o
+  # que pediu é mentir — foi o que aconteceu com o cliente que pediu UMA proposta, recebeu essa uma e
+  # leu "não consegui enviar todas as propostas a tempo".
+  # -> false por padrão: sem sobra conhecida, o fecho parcial não sai.
+  def resta_entregar?(_handle)
+    false
   end
 
   # O QUE VIROU MENSAGEM NO PRÓPRIO ENCERRAMENTO (rodada 5 da entrega 8). `closing_deliveries` monta o

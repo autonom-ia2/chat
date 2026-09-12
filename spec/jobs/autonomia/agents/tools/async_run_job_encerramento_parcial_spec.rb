@@ -93,6 +93,26 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(run.reload).to have_attributes(status: 'failed', delivered_count: 0)
   end
 
+  # O VARREDOR NÃO PEDE O COMPARATIVO AO PORTAL (rodada 6, P2-E), e aqui pelo caminho REAL: a mesma
+  # cotação abandonada, fechada pelo `ReapStaleRunsJob`. Gerar o comparativo é login mais uma chamada
+  # de até 60 s, e o varredor processa até 500 linhas em sequência num cron com 25 s de shutdown —
+  # morto no meio, a linha em curso fica com a marca `closed` e sem fecho, para sempre. O cliente
+  # continua com os preços que leu e recebe o fecho honesto. (O PDF do conector `mock` não está
+  # stubbado neste exemplo: se ele fosse pedido, sairia o link de reserva e este exemplo cairia.)
+  it 'o varredor fecha a cotacao abandonada sem pedir o comparativo ao portal' do
+    # Arrange
+    run = cotacao_com_preco_entregue_e_prazo_vencido
+    run.update!(expires_at: 10.minutes.ago)
+
+    # Act
+    Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+    # Assert
+    expect(bot_contents).to eq([cotacao::PARCIAL])
+    expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+  end
+
   it 'publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue' do
     # Arrange — o comparativo do conector `mock` responde como PDF (entrega 11: sai como arquivo)
     run = cotacao_com_preco_entregue_e_prazo_vencido

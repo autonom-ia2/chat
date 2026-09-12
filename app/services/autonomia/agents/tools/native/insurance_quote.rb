@@ -83,6 +83,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   include Envio
   include Veiculo
   include Comparativo
+  include Fecho
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
   #
@@ -105,14 +106,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     raise unless e.kind == :not_implemented
 
     recusa('ramo_desconhecido', RAMO_DESCONHECIDO, faltando: ['produto'])
-  end
-
-  # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele era gerado só no ramo `done`,
-  # quando o portal marcava a cotação como `completed` — e em 08/09/2026 a execução entregou cinco
-  # preços e estourou o prazo na 22ª consulta, então o PDF nunca saiu. O comparativo é o que o
-  # cliente leva para decidir; os preços soltos no chat são o resumo dele.
-  def closing_deliveries(handle)
-    [comparison_pdf(handle.to_h)].compact
   end
 
   # A IDENTIDADE DO PEDIDO (entrega 10): digest da entrada como o ADAPTER a entende — transformações

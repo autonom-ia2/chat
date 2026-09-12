@@ -252,9 +252,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # comparativo e sem uma palavra.
     it 'entrega o que ainda vale e fecha a conversa quando ja houve entrega' do
       # Arrange
+      # A ferramenta responde as duas perguntas do fecho (rodada 6, P1-B): entregou preço e ainda
+      # tinha seguradora por responder — que é o que a frase parcial diz.
       register_async_tool(
         build_async_tool(poll: progress.running(deliveries: ['primeiros precos']),
-                         closing: ['Comparativo: https://portal.exemplo.test/c.pdf'])
+                         closing: ['Comparativo: https://portal.exemplo.test/c.pdf'],
+                         resultado: true, resta: true)
       )
       run = submitted_run
       described_class.new.perform(run.id, 0)
@@ -272,7 +275,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     # Dizer "não consegui" a quem acabou de receber preço desmente o que ele está lendo.
     it 'nao usa o texto de falha quando algo ja foi entregue' do
-      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['um preco'])))
+      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['um preco']),
+                                           resultado: true, resta: true))
       run = submitted_run
       described_class.new.perform(run.id, 0)
 
@@ -284,10 +288,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     # Encerramento é cortesia sobre um caminho que já deu errado: falhar aqui apagaria o registro
     # do desfecho.
-    it 'registra o desfecho mesmo se o encerramento quebrar' do
+    #
+    # E O FECHO SAI ASSIM MESMO (rodada 6, P1-A): o passo que monta as entregas caiu, mas a marca
+    # `closed` já está gravada e ninguém volta aqui. Até a rodada 5 um `rescue` só cobria os três
+    # passos, e essa exceção — um erro de banco, o mesmo tipo que abandona a linha — deixava sem
+    # resposta quem já tinha recebido preço.
+    it 'registra o desfecho, e ainda fecha com o cliente, se o encerramento quebrar' do
       register_async_tool(
         build_async_tool(poll: progress.running(deliveries: ['um preco']),
-                         closing: -> { raise 'comparativo fora do ar' })
+                         closing: -> { raise 'comparativo fora do ar' },
+                         resultado: true, resta: true)
       )
       run = submitted_run
       described_class.new.perform(run.id, 0)
@@ -295,6 +305,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
 
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+      expect(bot_contents.last).to include('não responderam a tempo')
     end
 
     # O RETRY DO SIDEKIQ NÃO PODE REPUBLICAR O COMPARATIVO. O encerramento publica e só depois

@@ -41,21 +41,29 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Origem
   #   - `pending` DEPENDE DA IDADE. A mesma lista tratava como órfã tanto a aceitação que vai promover
   #     em milissegundos quanto a que ficou parada porque o worker morreu — e era por essa fresta que
   #     a proposta antiga publicava enquanto a cotação nova promovia: `ToolRun#promote!` corre sob o
-  #     advisory lock do slug e o publicador sob o lock da CONVERSA, mecanismos disjuntos. A promoção
-  #     acontece no fim do turno que aceitou, e o turno tem teto de 120 s de HTTP
-  #     (`Crm::Ai::ResponsesClient#create_with_tool_executor`): o que passou disso não vai ser
-  #     promovido — é a órfã do I2, que o varredor recolhe em uma hora (`PENDING_MAX_AGE`).
+  #     advisory lock do slug e o publicador sob o lock da CONVERSA, mecanismos disjuntos. A idade
+  #     desfaz a ambiguidade, e desde a rodada 6 ela vale TAMBÉM NA ESCRITA: `promote!` recusa (e
+  #     descarta) a `pending` que passou do teto. Enquanto a recusa existia só aqui, a linha de dez
+  #     minutos era ignorada na consulta e promovida assim mesmo — a janela seguia aberta pelo outro
+  #     lado. Fora do teto, é a órfã do I2, que o varredor recolhe em uma hora (`PENDING_MAX_AGE`).
   #   - `blocked` DEPENDE DO TRABALHO FEITO. Quem a escreve é `AsyncRunJob#block_run`, quando o
   #     operador puxa o freio (kill-switch da conta, agente desligado, conversa fora da allowlist) —
   #     e isso acontece DEPOIS de a cotação ter rodado, às vezes depois de ela já ter entregado preço.
   #     Tratá-la como "nunca trabalhou" fazia a cotação nova sumir da conta, a antiga voltar a ser "a
   #     última", e a proposta do risco velho publicar depois de uma recotação real — o P1 da rodada 3
-  #     reaberto por outra transição. Trabalhou quem tem número no portal ou já entregou alguma coisa.
+  #     reaberto por outra transição. Trabalhou quem tem número no portal, já entregou alguma coisa
+  #     OU está com o ENVIO INCERTO (rodada 6, P1-D): a intenção anotada sem número (entrega 5) é,
+  #     por definição, a cotação que pode ter chegado ao portal SEM número e SEM entrega — os dois
+  #     sinais que o critério pedia. Barrada nesse estado, ela sumia da conta e a proposta do risco
+  #     velho voltava a publicar; a pergunta é a mesma que `ToolRun#envio_incerto?` responde, aqui
+  #     escrita em SQL como o `finish!` já a escreve.
   DESCARTADA = 'discarded'.freeze
   PENDENTE = 'pending'.freeze
   BLOQUEADA = 'blocked'.freeze
-  # Até quando uma `pending` ainda pode virar `running`: o teto de HTTP do turno que a aceitou.
-  PROMOCAO_ATE = 2.minutes
+  # O MESMO TETO DA ESCRITA, POR REFERÊNCIA (rodada 6, P1-C): leitura e escrita divergirem sobre
+  # "esta `pending` ainda vira trabalho?" é o defeito, e duas constantes com o mesmo nome em dois
+  # arquivos é como ele volta. A decisão e o porquê dos 5 minutos moram em `ToolRun::PROMOCAO_ATE`.
+  PROMOCAO_ATE = ::Autonomia::Agents::ToolRun::PROMOCAO_ATE
 
   # O que o aceite grava como argumentos (`Native::Base#argumentos`): o que o modelo escreveu MAIS a
   # cotação de origem escolhida agora. Sem cotação não há o que fixar — e a conferência já recusou.
@@ -118,11 +126,16 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Origem
   end
 
   # As que contam: nem descartada, nem `pending` velha demais para ainda ser promovida, nem `blocked`
-  # que nunca chegou a trabalhar — sem número no portal E sem nada entregue ao cliente.
+  # que nunca chegou a trabalhar — sem número no portal, sem nada entregue ao cliente E sem envio
+  # incerto (a intenção anotada que nunca virou número: pode haver cotação no portal).
   def cotacoes_que_contam
+    intencoes = ::Autonomia::Agents::ToolRun::INTENCOES
+    submetido = ::Autonomia::Agents::ToolRun::SUBMITTED_KEY
     cotacoes.where.not(status: DESCARTADA)
             .where('status <> ? OR created_at > ?', PENDENTE, PROMOCAO_ATE.ago)
-            .where("status <> ? OR delivered_count > 0 OR handle->>'quote_id' IS NOT NULL", BLOQUEADA)
+            .where("status <> ? OR delivered_count > 0 OR handle->>'quote_id' IS NOT NULL OR " \
+                   '(COALESCE((handle->>?)::int, 0) > 0 AND (handle->>?) IS NULL)',
+                   BLOQUEADA, intencoes, submetido)
   end
 
   # A RECOTAÇÃO ENCERROU SEM TRAZER PREÇO NENHUM? (rodada 5, achado do verificador cego.) A REGRA NÃO

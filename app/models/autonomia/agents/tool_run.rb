@@ -47,6 +47,9 @@
 # ("na verdade é 2019") não pode acabar com duas cotações concorrentes e dois preços conflitantes.
 # É o mesmo last-writer-wins que o namespace já usa no debounce, no sync_token e no build_token.
 class Autonomia::Agents::ToolRun < ApplicationRecord
+  # QUANDO UMA ACEITAÇÃO VIRA TRABALHO — e quando ela já não pode mais (`ToolRunPromocao`).
+  include ::Autonomia::Agents::ToolRunPromocao
+
   self.table_name = 'autonomia_agent_tool_runs'
 
   # `pending` é o estado em que a ferramenta foi ACEITA dentro do turno mas o turno ainda não
@@ -233,21 +236,6 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     "#{execution_key}:#{Digest::SHA256.hexdigest(text.to_s)[0, 16]}"
   end
 
-  # pending -> running. Guardado pelo status para que um despacho repetido (retry do turno) não
-  # reabra uma execução que já terminou. -> true quando ESTA chamada promoveu.
-  #
-  # SOB O MESMO LOCK de `abrir_ou_repetida` (entrega 10): um turno B que leu a `pending` de A (que
-  # não conta) não pode abrir enquanto A promove — ou A promove primeiro e B, ao entrar, encontra
-  # uma `running` e não abre; ou B abre primeiro (supersede) e a promoção de A perde pelo status.
-  # Sem isto, B supersedia uma execução já promovida e possivelmente submetida ao portal.
-  def promote!(expected_chunks:, notify_customer:, expires_at:)
-    self.class.transaction do
-      self.class.travar!(conversation_id, slug)
-      guarded_update('pending', status: 'running', expected_chunks: expected_chunks.to_i,
-                                notify_customer: notify_customer, expires_at: expires_at)
-    end
-  end
-
   # O desfecho MARCA o envio incerto (`envio_incerto?` em SQL: intenção anotada, número ausente) no
   # MESMO comando que muda o status: uma intenção anotada por outro processo pouco antes deste
   # `finish!` (janela de milissegundos) não pode acabar em `failed` sem marca com uma cotação aberta
@@ -264,11 +252,6 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
     reload
     true
-  end
-
-  # Descarta uma execução que nunca chegou a rodar (o turno morreu antes de despachar).
-  def discard!
-    guarded_update('pending', status: 'discarded')
   end
 
   # Conta uma tentativa e, se vier handle, MESCLA-O no banco (`handle || ?`): o que a ferramenta

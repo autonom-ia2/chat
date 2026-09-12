@@ -18,6 +18,15 @@
 #      daqui não há passada nenhuma;
 #   4. publica o FECHO, escolhido pelo que o cliente tem em mãos.
 #
+# CADA PASSO CAI SOZINHO, E O FECHO É A ÚLTIMA COISA (rodada 6, P1-A). A marca `closed` é adquirida
+# ANTES de tudo — é ela que impede dois encerradores —, e isso tem um preço: depois dela, nenhuma
+# passada futura reentra aqui. Até a rodada 5 um único `rescue` cobria os três passos, então uma
+# exceção entre a marca e o fecho deixava o cliente sem uma palavra, PARA SEMPRE. E o risco não era
+# teórico: até a rodada 4 o varredor publicava frases de CLASSE, sem banco e sem portal, que não
+# tinham como falhar; desde a rodada 5 o passo 2 consulta e o passo 3 ESCREVE — um erro de banco (o
+# mesmo que produziu a linha abandonada) engolia o fecho junto. Agora entregar e anotar são cortesias
+# que viram log quando falham, e o fecho não depende do sucesso de nenhuma das duas.
+#
 # QUEM PUBLICA É QUEM CHAMOU, pelo bloco: o motor publica ESPERANDO a cadeia de entrega humanizada do
 # turno (e re-agenda a adiada); o varredor FORÇA (`publish!`), porque a cadeia daquele turno morreu há
 # muito e esperar por ela deixaria o cliente sem desfecho para sempre.
@@ -26,9 +35,13 @@ class Autonomia::Agents::Tools::Encerramento
   # a execução em `running`, e o retry do Sidekiq reentraria aqui.
   CLOSED_KEY = 'autonomia_closed'.freeze
 
-  def initialize(run:, native:, &publicador)
+  # `trabalho_novo` = esta passada pode INICIAR trabalho novo no portal para produzir uma entrega?
+  # Verdadeiro no motor (uma execução por vez, num job que só faz isso); FALSO no varredor (rodada 6,
+  # P2-E) — ver `ReapStaleRunsJob#encerrar`.
+  def initialize(run:, native:, trabalho_novo: true, &publicador)
     @run = run
     @native = native
+    @trabalho_novo = trabalho_novo
     @publicador = publicador
   end
 
@@ -38,12 +51,14 @@ class Autonomia::Agents::Tools::Encerramento
   # execução deu resultado.
   #
   # Não deixa `StandardError` subir: o encerramento é cortesia sobre um caminho que já deu errado, e
-  # falhar aqui apagaria o `finish!` que registra o desfecho.
+  # falhar aqui apagaria o `finish!` que registra o desfecho. Este `rescue` é o de fora (a aquisição
+  # da marca, e o que escapar dos passos); cada passo tem o seu.
   def encerrar
     return false unless @run.merge_handle!({ CLOSED_KEY => true }, ausente: CLOSED_KEY)
 
-    entregou = entregar_o_que_resta
-    publicar(fecho(entregou))
+    entregou = etapa('entregas') { entregar_o_que_resta }
+    etapa('anotacao') { anotar_o_que_virou_mensagem }
+    etapa('fecho') { publicar_fecho(entregou) }
     entregou
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{@run.slug} #{e.class}")
@@ -52,40 +67,89 @@ class Autonomia::Agents::Tools::Encerramento
 
   private
 
-  # O que a ferramenta ainda tem para entregar, publicado na ordem em que ela devolveu — e, logo
-  # depois, a chance de ela anotar o que ACABOU de virar mensagem: ninguém mais passa por aqui.
+  # UM PASSO, UM TRATAMENTO (rodada 6, P1-A): o que ele levantar vira log e a sequência segue. -> o
+  # valor do passo, ou false quando ele caiu — quem lê isso é o fecho, e "não sei" conta como "não
+  # entreguei", que é o lado conservador.
+  def etapa(nome)
+    yield
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] encerramento #{nome} falhou slug=#{@run.slug} #{e.class}")
+    false
+  end
+
+  # O que a ferramenta ainda tem para entregar, publicado na ordem em que ela devolveu.
   #
   # SEM AGENTE NÃO SE MONTA A FERRAMENTA, e isto não é defesa sobrando: `agente_indisponivel` é um
   # dos caminhos que chegam ao encerramento, alcançado JUSTAMENTE porque o agente sumiu.
   def entregar_o_que_resta
-    return false if @run.agent.blank?
+    return false if ferramenta.nil?
 
-    ferramenta = montar
-    aceitas = Array(ferramenta.closing_deliveries(handle_da_ferramenta)).map { |entrega| publicar(entrega) }
-    ferramenta.confirmar_publicadas(handle_da_ferramenta)
+    aceitas = Array(ferramenta.closing_deliveries(handle_da_ferramenta, trabalho_novo: @trabalho_novo))
+              .map { |entrega| publicar(entrega) }
     aceitas.any? { |resultado| resultado.published? || resultado.deferred? }
   end
 
-  # O FECHO VEM DEPOIS DAS ENTREGAS, e é escolhido pelo que o cliente tem em mãos: com algo entregue
-  # (antes, ou agora no encerramento), o fecho parcial; sem nada, a frase de falha. Dizer "não
-  # consegui" a quem acabou de receber preço desmente o que ele está lendo, e dizer "o que chegou está
-  # aqui em cima" a quem não recebeu nada é pior ainda.
-  #
-  # Quem pode ter uma cotação correndo no portal sem registro nosso (entrega 5) não lê "não consegui":
-  # lê que não há confirmação. O estado é o do BANCO, não o de uma leitura velha.
-  def fecho(entregou)
-    return @native.partial_message if entregou || @run.delivered_count.positive?
+  # A chance de a ferramenta anotar o que ACABOU de virar mensagem: ninguém mais passa por aqui.
+  def anotar_o_que_virou_mensagem
+    ferramenta&.confirmar_publicadas(handle_da_ferramenta)
+  end
 
+  def publicar_fecho(entregou)
+    texto = fecho(entregou)
+    publicar(texto) if texto
+  end
+
+  # O FECHO VEM DEPOIS DAS ENTREGAS, e é escolhido pelo que o cliente tem em mãos. Sem NADA — nem
+  # entrega do trabalho, nem entrega do encerramento —, o cliente precisa de uma palavra: a frase de
+  # falha, ou a de envio incerto para quem pode ter uma cotação correndo no portal sem registro nosso
+  # (entrega 5). O estado é o do BANCO, não o de uma leitura velha.
+  def fecho(entregou)
+    return falha_ou_incerteza unless entregou || @run.delivered_count.positive?
+
+    parcial
+  end
+
+  def falha_ou_incerteza
     @run.envio_incerto? ? @native.uncertain_message : @native.failure_message
+  end
+
+  # A FRASE PARCIAL SÓ SAI QUANDO ELA É VERDADE, E QUEM SABE É A FERRAMENTA (rodada 6, P1-B).
+  #
+  # Até aqui bastava `delivered_count.positive?`, e o contador não significa o que o fecho achava: ele
+  # conta QUALQUER item aceito para publicação, inclusive a pergunta pelo dado que falta (a cotação
+  # devolve `handle['pedido']` como entrega) e inclusive a única proposta que o cliente pediu e
+  # recebeu. Nos dois casos o cliente lia que algo ficou pelo caminho — "o que chegou está aqui em
+  # cima" sem nada em cima; "não consegui enviar todas as propostas" com todas enviadas.
+  #
+  # São DUAS perguntas, as duas da ferramenta: houve RESULTADO (não um aviso, não uma pergunta) e
+  # SOBROU algo por entregar? Sem as duas, volta o SILÊNCIO de antes da rodada 5 — o ganho dela
+  # (entregar o que ficou pronto) fica; a frase inventada sai. Frase nenhuma é melhor que frase falsa.
+  #
+  # Sem agente não há ferramenta a quem perguntar, e sem resposta não se afirma nada: silêncio.
+  def parcial
+    return nil if ferramenta.nil?
+
+    handle = handle_da_ferramenta
+    return nil unless ferramenta.resultado_entregue?(handle) && ferramenta.resta_entregar?(handle)
+
+    @native.partial_message
   end
 
   def publicar(entrega)
     @publicador.call(entrega)
   end
 
-  # A ferramenta montada para trabalhar FORA do turno: com a conversa da execução, com a LINHA (é pelo
-  # `delivery_token` dela que a ferramenta sabe o que já foi publicado) e SEM `delivery`, de propósito
-  # — a presença dele é o que diz "dentro do turno" para quem escolhe a sessão por ela.
+  # A ferramenta montada UMA vez para os três passos (entregar, anotar, decidir o fecho): ela resolve
+  # conexão e credencial na construção, e montá-la a cada pergunta seria trabalho repetido. Montada
+  # para trabalhar FORA do turno: com a conversa da execução, com a LINHA (é pelo `delivery_token`
+  # dela que a ferramenta sabe o que já foi publicado) e SEM `delivery`, de propósito — a presença
+  # dele é o que diz "dentro do turno" para quem escolhe a sessão por ela. nil sem agente.
+  def ferramenta
+    return @ferramenta if defined?(@ferramenta)
+
+    @ferramenta = @run.agent.blank? ? nil : montar
+  end
+
   def montar
     @native.new(agent: @run.agent, params: @run.arguments, conversation: @run.conversation, run: @run)
   end
