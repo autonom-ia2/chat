@@ -30,26 +30,31 @@ class Autonomia::Insurance::QuoteOffers
     @result = result.to_h
   end
 
-  # SÓ quem cotou. Todas. Da mais barata para a mais cara ENTRE AS QUE TÊM PERÍODO; as sem período
-  # vêm depois, na ordem em que o portal as devolveu.
+  # SÓ quem cotou. Todas. Em TRÊS blocos, nesta ordem: os totais, da mais barata para a mais cara;
+  # depois as assinaturas mensais, da mais barata para a mais cara ENTRE SI; por fim as sem período,
+  # na ordem em que o portal as devolveu.
   #
-  # ENTREGA 13, termo 5: preço de período desconhecido não se ordena pelo número cru. A Bp Assinatura
-  # (351,59, sem parcelamento no payload) abria a lista na frente da Porto (1.321,25 no total) como
-  # se fosse a mais barata — e se 351,59 for mensalidade, é a mais cara. Não há como normalizar o que
-  # não tem período; então ele não entra na comparação, e a ressalva colada na oferta diz por quê.
+  # ENTREGA 13, termo 5: preços de períodos diferentes NUNCA se ordenam pelo número cru entre si. A
+  # Bp Assinatura (351,59, sem parcelamento no payload) abria a lista na frente da Porto (1.321,25 no
+  # total) como se fosse a mais barata — e, sendo mensalidade, não é comparável ao total sem um
+  # período comum. Mensal e total não se comparam sem uma conta nossa (×12 seria um número que o portal não deu, e é decisão de produto
+  # pendente); então cada período é um bloco, e o sem período nem entra na comparação — a ressalva
+  # colada na oferta diz por quê.
   #
   # UM PREDICADO SÓ para "tem período": o mesmo `PremiumText#indefinido?` que dispara a ressalva no
   # texto e o registro no handle. Havia dois critérios em dois lugares (`basis == 'total'` aqui,
   # `!total?` lá) sem nada que os prendesse; bastava um `basis` nil (conector que não seja o Http do
   # AGGER, payload sem `basis`) e a oferta era ordenada entre os totais pelo número cru enquanto o
   # cliente lia a ressalva e o handle a registrava como sem período — a lista e a frase discordando
-  # sobre a mesma oferta.
+  # sobre a mesma oferta. Pela mesma razão, "é mensal" também vem do `PremiumText`, e não de uma
+  # leitura própria de `basis` aqui.
   def quoted
     @quoted ||= begin
       cotadas = Array(@result['offers'])
                 .select { |offer| offer['status'] == 'quoted' && offer.dig('premium', 'amount').present? }
       sem_periodo, com_periodo = cotadas.partition { |offer| self.class.sem_periodo?(offer) }
-      com_periodo.sort_by { |offer| offer.dig('premium', 'amount').to_f } + sem_periodo
+      mensais, totais = com_periodo.partition { |offer| self.class.mensal?(offer) }
+      por_valor(totais) + por_valor(mensais) + sem_periodo
     end
   end
 
@@ -57,9 +62,15 @@ class Autonomia::Insurance::QuoteOffers
     ::Autonomia::Insurance::PremiumText.new(offer['premium']).indefinido?
   end
 
+  def self.mensal?(offer)
+    ::Autonomia::Insurance::PremiumText.new(offer['premium']).mensal?
+  end
+
   # -> { codigo da seguradora => motivo }. ENTREGA 13, termo 1: quando não sabemos o período, o
   # motivo fica registrado por oferta e diz qual campo do portal faltou ou veio ambíguo. É o
   # `basis_evidence` do adapter, sem tradução — traduzir seria pôr palavra nossa no lugar do dado.
+  # A assinatura mensal TEM período (`monthly`) e fica de fora: registrá-la aqui diria ao handle que
+  # o portal não informou o que ele informou em `packageType=1`.
   def sem_periodo
     quoted.select { |offer| self.class.sem_periodo?(offer) }.each_with_object({}) do |offer, motivos|
       motivos[self.class.code(offer)] = ::Autonomia::Insurance::PremiumText.new(offer['premium']).motivo
@@ -125,5 +136,12 @@ class Autonomia::Insurance::QuoteOffers
     return first ? 'Primeiros preços:' : 'Mais uma opção:' if quantas == 1
 
     first ? 'Primeiros preços:' : "Mais #{quantas} opções:"
+  end
+
+  private
+
+  # Da mais barata para a mais cara — só faz sentido DENTRO de um bloco de mesmo período.
+  def por_valor(offers)
+    offers.sort_by { |offer| offer.dig('premium', 'amount').to_f }
   end
 end

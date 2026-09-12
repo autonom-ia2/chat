@@ -617,10 +617,20 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       progresso_para(oferta('8', 'Porto', premium)).deliveries.join("\n")
     end
 
-    # O motivo da Bp Assinatura na renovação real de 11/09/2026, como o adapter o escreve.
+    # O motivo que o adapter ESCREVIA para a Bp Assinatura na renovação real de 11/09/2026, quando
+    # ainda a dava como `unknown` (antes de ler o `packageType=1`). Fica como exemplo de motivo de
+    # oferta sem período; a Bp real hoje sai `monthly` (`motivo_mensal`).
     def motivo_bp
       'parcelamentos=[] (vazio): o portal nao ofereceu plano de pagamento; ' \
         'premioMensal=29.30 e premio/12 (derivado pelo portal, nao distingue periodo)'
+    end
+
+    # O motivo da assinatura mensal desde a noite de 11/09/2026: o marcador é do portal, e o PDF do
+    # comparativo anexado na mesma conversa imprimia "R$ 298,43 por mês".
+    def motivo_mensal(mensal = '24.87')
+      # A string é a do adapter (autonomia-adapters#57), verbatim; `mensal` é premio/12 daquele valor.
+    'packageType=1 (assinatura mensal: o relatorio do portal imprime "por mes"); ' \
+      "parcelamentos=[] (assinatura nao parcela); premioMensal=#{mensal} e premio/12 (derivado pelo portal, nao distingue periodo)"
     end
 
     it 'diz o total e o parcelamento quando o portal informou os dois' do
@@ -704,6 +714,41 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       ).deliveries.join("\n")
 
       expect(texto.index('Porto')).to be < texto.index('Bp Assinatura')
+    end
+
+    # ASSINATURA MENSAL (11/09/2026, noite) — o cliente lia "R$ 298,43 — a seguradora não informou se
+    # é o total ou uma parcela" enquanto o PDF do portal, na mesma conversa, dizia "por mês". Com o
+    # adapter lendo o `packageType=1`, o cliente lê "por mês", e a oferta NÃO entra no registro de
+    # sem período: o portal informou, e o handle não pode dizer o contrário.
+    it 'no lote, a assinatura mensal sai "por mês" e não entra no registro de sem período' do
+      # Arrange / Act
+      progresso = progresso_para(
+        oferta('55', 'Bp Assinatura', { 'amount' => 298.43, 'currency' => 'BRL', 'basis' => 'monthly',
+                                        'basis_evidence' => motivo_mensal }),
+        oferta('8', 'Porto', { 'amount' => 1321.25, 'currency' => 'BRL', 'basis' => 'total' })
+      )
+      texto = progresso.deliveries.join("\n")
+
+      # Assert
+      expect(texto).to include('*Bp Assinatura* — R$ 298,43 por mês')
+      expect(texto).not_to include('não informou se é o total')
+      expect(progresso.handle).not_to have_key('preco_sem_periodo')
+      expect(progresso.handle['entregues']).to contain_exactly('55', '8')
+    end
+
+    # Períodos diferentes não se comparam pelo número cru: 298,43 por mês não é "mais barato" que
+    # 1.321,25 no total, e ×12 seria um número nosso. Bloco dos mensais depois dos totais, antes dos
+    # sem período.
+    it 'no lote, a mensal vem depois dos totais e antes dos sem período' do
+      texto = progresso_para(
+        oferta('999', 'Seguradora Exemplo', { 'amount' => 10.0, 'currency' => 'BRL', 'basis' => 'unknown' }),
+        oferta('55', 'Bp Assinatura', { 'amount' => 298.43, 'currency' => 'BRL', 'basis' => 'monthly',
+                                        'basis_evidence' => motivo_mensal }),
+        oferta('8', 'Porto', { 'amount' => 1321.25, 'currency' => 'BRL', 'basis' => 'total' })
+      ).deliveries.join("\n")
+
+      expect(texto.index('Porto')).to be < texto.index('Bp Assinatura')
+      expect(texto.index('Bp Assinatura')).to be < texto.index('Seguradora Exemplo')
     end
   end
 

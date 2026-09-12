@@ -159,13 +159,13 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
 
   private
 
-  # Duas seguradoras respondem cedo, a terceira demora. É o formato que a entrega parcial existe
+  # Duas seguradoras respondem cedo, as outras demoram. É o formato que a entrega parcial existe
   # para atender: mandar as duas primeiras em vez de segurar tudo pela mais lenta.
   def mock_progress(elapsed)
     return ['running', []] if elapsed < PARTIAL_AFTER
     return ['partial', [offer('8', 'Porto Seguro', 1200.5), offer('3', 'Mapfre', 1340.0)]] if elapsed < COMPLETE_AFTER
 
-    ['completed', [offer('8', 'Porto Seguro', 1200.5), offer('3', 'Mapfre', 1340.0), OFERTA_SEM_PERIODO]]
+    ['completed', [offer('8', 'Porto Seguro', 1200.5), offer('3', 'Mapfre', 1340.0), OFERTA_MENSAL, OFERTA_SEM_PERIODO]]
   end
 
   # O prêmio sai como o adapter o devolve (critério 5.5): `basis` e `basis_evidence` já em
@@ -178,16 +178,30 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
                      'basis_evidence' => "mock: parcelas=1 x premioDemaisParc=#{amount} fecha com premio=#{amount}" } }
   end
 
-  # A oferta sem período, COMO ELA É NA VIDA REAL: a Bp Assinatura da renovação de 11/09/2026 veio
-  # com `parcelamentos: []` e `premioMensal` = premio/12, e o adapter não tem como dizer o período.
-  # É a que deixa visível, em desenvolvimento, a ressalva colada na oferta e a ordem no lote
-  # (entrega 13).
-  OFERTA_SEM_PERIODO = {
+  # A assinatura mensal, COMO ELA É NA VIDA REAL: a Bp Assinatura da renovação de 11/09/2026 veio
+  # com `parcelamentos: []` e `packageType: 1` — o marcador de assinatura mensal do portal, que o PDF
+  # do comparativo imprime como "por mês". Até a noite de 11/09 o mock (e o adapter) a davam como
+  # `unknown`, e o cliente lia a ressalva para um preço que o portal sabia ser mensal. É a que deixa
+  # visível, em desenvolvimento, o "por mês" e o bloco dos mensais depois dos totais (entrega 13).
+  OFERTA_MENSAL = {
     'insurer' => { 'code' => '55', 'name' => 'Bp Assinatura', 'enabled' => true, 'integrationStatus' => 'ready' },
     'status' => 'quoted',
-    'premium' => { 'amount' => 351.59, 'currency' => 'BRL', 'basis' => 'unknown',
-                   'basis_evidence' => 'parcelamentos=[] (vazio): o portal nao ofereceu plano de pagamento; ' \
+    'premium' => { 'amount' => 351.59, 'currency' => 'BRL', 'basis' => 'monthly',
+                   'basis_evidence' => 'packageType=1 (assinatura mensal: o relatorio do portal imprime "por mes"); ' \
+                                       'parcelamentos=[] (assinatura nao parcela); ' \
                                        'premioMensal=29.30 e premio/12 (derivado pelo portal, nao distingue periodo)' }
+  }.freeze
+
+  # A oferta sem período, com seguradora FICTÍCIA de propósito: as duas reais que saíam `unknown` (a
+  # Bp Assinatura e a assinatura da Justos) eram assinaturas mensais marcadas por `packageType=1`, e
+  # pôr o nome de uma real aqui seria afirmar o que o portal não disse — o erro da Bp acima. Serve
+  # para o dev continuar vendo a ressalva colada na oferta, o registro no handle e o fim da lista
+  # (entrega 13).
+  OFERTA_SEM_PERIODO = {
+    'insurer' => { 'code' => '999', 'name' => 'Seguradora Exemplo', 'enabled' => true, 'integrationStatus' => 'ready' },
+    'status' => 'quoted',
+    'premium' => { 'amount' => 980.0, 'currency' => 'BRL', 'basis' => 'unknown',
+                   'basis_evidence' => 'nenhum dos 3 parcelamento(s) fecha com premio=980.0' }
   }.freeze
 
   # Auto sem placa não cota: o portal precisa dela ou do código FIPE para saber qual é o veículo.

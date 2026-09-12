@@ -13,16 +13,26 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
                      'basis_evidence' => extra[:motivo] } }
   end
 
-  # O motivo que o adapter escreve quando o período não sai — o da Bp Assinatura na renovação real
-  # de 11/09/2026, com os campos do portal pelo nome.
+  # O motivo que o adapter ESCREVIA para a Bp Assinatura na renovação real de 11/09/2026, quando ainda
+  # a dava como `unknown` — antes de ler o `packageType=1` do portal. Fica como o exemplo de motivo de
+  # oferta sem período, com os campos do portal pelo nome; a Bp real hoje sai `monthly` (abaixo).
   def motivo_bp
     'parcelamentos=[] (vazio): o portal nao ofereceu plano de pagamento; ' \
       'premioMensal=29.30 e premio/12 (derivado pelo portal, nao distingue periodo)'
   end
 
+  # O motivo da assinatura mensal desde a noite de 11/09/2026: o marcador é do portal, e o PDF do
+  # comparativo da mesma conversa imprime "por mês".
+  def motivo_mensal(mensal = '24.87')
+    # A string é a do adapter (autonomia-adapters#57), verbatim; `mensal` é premio/12 daquele valor.
+    'packageType=1 (assinatura mensal: o relatorio do portal imprime "por mes"); ' \
+      "parcelamentos=[] (assinatura nao parcela); premioMensal=#{mensal} e premio/12 (derivado pelo portal, nao distingue periodo)"
+  end
+
   # ENTREGA 13, termo 5 — preço de período desconhecido nunca é ordenado pelo número cru. A Bp
-  # Assinatura (351,59, sem período) aparecia na frente da Porto (1.321,25 no total) como se fosse
-  # a mais barata; se 351,59 for mensalidade, é a mais cara da lista.
+  # Assinatura (351,59, então sem período) aparecia na frente da Porto (1.321,25 no total) como se
+  # fosse a mais barata; sendo mensalidade (`packageType=1`), não é comparável ao total sem um
+  # período comum.
   describe '#quoted' do
     it 'poe o preco sem periodo DEPOIS dos totais, mesmo com o numero menor' do
       ofertas = described_class.new(
@@ -31,6 +41,41 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
       ).quoted
 
       expect(ofertas.map { |o| o['insurer']['name'] }).to eq(['Porto', 'Suhai', 'Bp Assinatura'])
+    end
+
+    # ASSINATURA MENSAL: 298,43 por mês não é "mais barato" que 1.321,25 no total — são períodos
+    # diferentes, e ×12 seria um número nosso (decisão de produto pendente). O bloco dos mensais vem
+    # DEPOIS dos totais e ANTES dos sem período, e só se ordena pelo número entre si.
+    it 'poe a mensal DEPOIS dos totais, mesmo com o numero menor — e ANTES de uma sem periodo mais barata' do
+      # A sem período (10,00) entra no arranjo de propósito: sem ela, uma mensal tratada como "sem
+      # período" iria para o fim do mesmo jeito, e o exemplo não distinguiria os dois blocos.
+      ofertas = described_class.new(
+        'offers' => [offer('X', 10.0, 'unknown', code: '1'),
+                     offer('Bp Assinatura', 298.43, 'monthly', code: '55', motivo: motivo_mensal),
+                     offer('Suhai', 1818.48, code: '20'), offer('Porto', 1321.25, code: '8')]
+      ).quoted
+
+      expect(ofertas.map { |o| o['insurer']['name'] }).to eq(['Porto', 'Suhai', 'Bp Assinatura', 'X'])
+      expect(described_class.item(ofertas[2])).to include('R$ 298,43 por mês')
+    end
+
+    it 'poe a mensal ANTES das sem periodo' do
+      ofertas = described_class.new(
+        'offers' => [offer('X', 10.0, 'unknown', code: '1'),
+                     offer('Bp Assinatura', 298.43, 'monthly', code: '55', motivo: motivo_mensal),
+                     offer('Porto', 1321.25, code: '8')]
+      ).quoted
+
+      expect(ofertas.map { |o| o['insurer']['name'] }).to eq(['Porto', 'Bp Assinatura', 'X'])
+    end
+
+    it 'ordena as mensais entre si, da mais barata para a mais cara' do
+      ofertas = described_class.new(
+        'offers' => [offer('Bp Assinatura', 298.43, 'monthly', code: '55', motivo: motivo_mensal),
+                     offer('Justos', 177.43, 'monthly', code: '47', motivo: motivo_mensal)]
+      ).quoted
+
+      expect(ofertas.map { |o| o['insurer']['name'] }).to eq(['Justos', 'Bp Assinatura'])
     end
 
     it 'entre os sem periodo, mantem a ordem em que o portal os devolveu, sem comparar numeros' do
@@ -84,6 +129,17 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
 
     it 'e vazio quando toda oferta tem periodo' do
       expect(described_class.new('offers' => [offer('Porto', 1321.25, code: '8')]).sem_periodo).to eq({})
+    end
+
+    # A mensal TEM período, marcado pelo portal: registrá-la diria ao handle que o portal não
+    # informou o que ele informou em `packageType=1`.
+    it 'nao registra a mensal, so quem saiu sem periodo' do
+      ofertas = described_class.new(
+        'offers' => [offer('Bp Assinatura', 298.43, 'monthly', code: '55', motivo: motivo_mensal),
+                     offer('X', 980.0, 'unknown', code: '1', motivo: 'nenhum dos 3 parcelamento(s) fecha com premio=980.0')]
+      )
+
+      expect(ofertas.sem_periodo).to eq('1' => 'nenhum dos 3 parcelamento(s) fecha com premio=980.0')
     end
 
     # O filtro é o de `#quoted` (só quem cotou com valor). Partindo de `offers` cru, o registro no
@@ -188,6 +244,16 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
       # total, e um "ou 2x de R$ 175,80" sozinho afirmaria por omissão o que o adapter negou.
       expect(texto).to include(Autonomia::Insurance::PremiumText::SEM_BASE)
       expect(texto).not_to include('2x de')
+    end
+
+    it 'diz "por mês" para a assinatura mensal, sem ressalva e sem parcelamento' do
+      texto = described_class.describe(
+        [offer('Bp Assinatura', 298.43, 'monthly', code: '55', motivo: motivo_mensal)], first: true
+      )
+
+      expect(texto).to include('*Bp Assinatura* — R$ 298,43 por mês')
+      expect(texto).not_to include(Autonomia::Insurance::PremiumText::SEM_BASE)
+      expect(texto).not_to include('x de')
     end
 
     it 'diz "no total" e o parcelamento quando o adapter derivou os dois' do
