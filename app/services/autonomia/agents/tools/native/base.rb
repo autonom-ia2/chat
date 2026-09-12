@@ -176,9 +176,10 @@ class Autonomia::Agents::Tools::Native::Base
   # mais o digest do conteúdo —, e sem a linha não há como montá-lo; a pergunta se faz pela MENSAGEM
   # no banco (`Tools::EntregaPublicada`), nunca pelo handle, que é a intenção de quem publicou.
   #
-  # OS DOIS TÊM PADRÃO `nil` e NENHUMA ferramenta de hoje os lê: o motor passa a entregá-los porque é
-  # ele que monta a ferramenta fora do turno, e quem não os usa não muda de comportamento (nenhuma
-  # nativa sobrescreve `initialize` — `base_contrato_de_nivel_spec` percorre o catálogo inteiro).
+  # OS DOIS TÊM PADRÃO `nil`, e quem os lê hoje é a COTAÇÃO (`InsuranceQuote::Fecho`): com eles ela
+  # monta a identidade de cada entrega que emite e pergunta ao banco o que chegou. Quem não os usa
+  # não muda de comportamento — nenhuma nativa sobrescreve `initialize`, e
+  # `base_contrato_de_nivel_spec` percorre o catálogo inteiro para provar isso.
   def initialize(agent:, params: {}, delivery: nil, conversation: nil, run: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys

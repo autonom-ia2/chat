@@ -271,9 +271,10 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # pelo `delivery_token` dela que se sabe o que já foi publicado) e SEM `delivery`, de propósito: a
   # presença do `delivery` é o que diz "dentro do turno" para quem escolhe a sessão por ela.
   #
-  # Nenhuma ferramenta de hoje lê `conversation` ou `run` — as duas nascem com padrão `nil` em
-  # `Native::Base` e são o contrato que a ferramenta da entrega 8b vai consumir. O que muda aqui é só
-  # quem PASSA; o que a cotação faz com `agent` e `params` é idêntico.
+  # QUEM LÊ AS DUAS É O FECHO DA COTAÇÃO (entrega 8a): é com a conversa e a linha que ela monta a
+  # identidade de cada entrega que emite (`EntregaPublicada.token_de`) e, no encerramento, pergunta
+  # ao banco o que de fato chegou ao cliente. As duas nascem com padrão `nil` em `Native::Base`, e
+  # quem não as usa não muda de comportamento.
   def ferramenta(run, native)
     native.new(agent: run.agent, params: run.arguments, conversation: run.conversation, run: run)
   end
