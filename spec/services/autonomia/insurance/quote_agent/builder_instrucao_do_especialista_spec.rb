@@ -117,17 +117,21 @@ module ManualDoEspecialistaDeAuto
     # QUEM É O SEGURADO É O QUE O ESPECIALISTA ESCREVE, e chega assim ao portal: o `cpf` e o `nome`
     # que ele manda viram `insured.document` e `insured.name` na entrada, e o grupo `insured` viaja.
     # Se o grupo saísse da entrada, ou se o CPF deixasse de decidir quem é o segurado, a regra
-    # perderia objeto. Os SEIS campos pessoais que ela proíbe copiar do documento são conferidos um a
-    # um — proibir o que não existe no formulário seria texto sem alvo — e são os mesmos seis que o
-    # contador da medição confere (`caso-producao-5045/medir.py`, `CAMPOS_PESSOAIS`).
+    # perderia objeto. As SEIS coisas pessoais que ela proíbe copiar do documento são conferidas uma
+    # a uma — proibir o que não existe no formulário seria texto sem alvo — e são as mesmas que o
+    # contador da medição confere (`caso-producao-5045/medir.py`, `CAMPOS_PESSOAIS`). O ENDEREÇO são
+    # três campos, não um: o CEP, o número e o complemento. Conferir só o CEP deixava o endereço do
+    # titular entrar pelo número, e o `numero` solto ainda funde em `address.number` na entrada.
     'E para QUEM CONTRATA a ordem é outra: quem decide é o cliente, nunca o documento.' => lambda {
-      entrada = entrada_de_auto('cpf' => '042.979.126-78', 'nome' => 'Rodrigo Silva')
+      entrada = entrada_de_auto('cpf' => '042.979.126-78', 'nome' => 'Rodrigo Silva',
+                                'numero' => '294')
 
       grupos_da_entrada.include?('insured') &&
         entrada.dig('insured', 'document') == '04297912678' &&
         entrada.dig('insured', 'name') == 'Rodrigo Silva' &&
+        entrada.dig('address', 'number') == '294' &&
         %w[insured.name insured.document insured.birthDate insured.maritalStatus insured.phone
-           address.zipCode].all? { |n| campo(n) }
+           address.zipCode address.number address.complement].all? { |n| campo(n) }
     },
     # O CAMINHO LEGÍTIMO É EXPRESSÁVEL — e é isso que impede a regra de virar recusa. Cotar no nome
     # de quem o cliente indicou, com o bônus DELA e a apólice DELA, tem de caber no MESMO pedido: o
@@ -279,7 +283,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('e31c962e7144de837d6335f5d4992a3f')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('9cc4cffcba4a269acc61e29154ecc2b0')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do
