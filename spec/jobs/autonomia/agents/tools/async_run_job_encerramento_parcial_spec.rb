@@ -206,6 +206,22 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
   end
 
+  # A ESCRITA DO ACEITE QUE CAI UMA VEZ: uma falha transitória do banco (conexão que volta em
+  # seguida, deadlock, lock timeout) — sem morte de processo nenhuma. É o que a identidade da
+  # entrega sempre soube absorver, porque ela tem uma segunda escrita no fim da passada.
+  def derrubar_a_primeira_escrita_do_aceite(run)
+    allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
+    allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
+    aceite = Autonomia::Agents::Tools::EntregaAceita::CHAVE
+    escritas = 0
+    allow(run).to receive(:anexar_ao_handle!).and_wrap_original do |original, chave, token|
+      escritas += 1 if chave == aceite
+      raise ActiveRecord::StatementInvalid, 'banco fora' if escritas == 1 && chave == aceite
+
+      original.call(chave, token)
+    end
+  end
+
   # A PUBLICAÇÃO QUE FALHA no meio, como ela falha de verdade: o publicador nunca levanta para fora
   # (`AsyncPublisher#publish` devolve `blocked`), e o handle da ferramenta avança assim mesmo.
   def recusar_publicacao_de(trecho)
@@ -617,6 +633,35 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Assert
     expect(bot_contents.last).to eq(cotacao::PARCIAL)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+  end
+
+  # A ASSIMETRIA DAS DUAS ESCRITAS (Codex, rodada 6). A identidade da entrega falha macio: o valor
+  # segue no handle e o `record_attempt!` do fim da passada o persiste. O ACEITE não tinha esse
+  # caminho — era uma escrita só —, e bastava uma falha transitória do banco, SEM morte de
+  # processo, para o encerramento sumir: o fecho lia "nada aceito", `closing_deliveries` devolvia
+  # `[]` e a frase parcial virava silêncio, onde a `main` falava pelo contador. Agora o token
+  # pendente é reescrito no mesmo `record_attempt!` — a mesma rede, no mesmo instante.
+  it 'o aceite cuja escrita falhou no meio da passada nao custa o fecho ao cliente' do
+    # Arrange — execução viva, cotação já respondendo no mock
+    run = abrir_execucao(expires_at: 3.minutes.from_now)
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
+                                  'quote_id' => cotacao_em_andamento_no_mock })
+    derrubar_a_primeira_escrita_do_aceite(run)
+
+    # Act 1 — a consulta publica o preço e a escrita do aceite cai
+    described_class.new.perform(run.id, 1)
+    preco = bot_contents.sole
+    expect(preco).to include('Porto Seguro')
+    expect(run.reload.delivered_count).to eq(1)
+
+    # Act 2 — o prazo estoura e a passada seguinte encerra
+    run.update!(expires_at: 1.minute.ago)
+    stub_comparativo_pdf
+    described_class.new.perform(run.id, 5)
+
+    # Assert — o cliente recebe o comparativo e o fecho de quem tem preço, e não o silêncio
+    expect(bot_contents).to eq([preco, cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
   it 'publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue' do

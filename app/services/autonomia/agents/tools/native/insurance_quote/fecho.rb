@@ -23,11 +23,19 @@
 # tabela de consulta de quem pergunta: a identidade diz o que procurar, a lista do aceite diz se foi
 # assumido.
 #
-# AS DUAS METADES DO CRUZAMENTO TÊM A MESMA DURABILIDADE (rodada 5): a identidade do preço vai ao
-# banco na hora da EMISSÃO, pela mesma escrita de uma linha (`ToolRun#anexar_ao_handle!`) que grava
-# a lista do aceite, e não só no `record_attempt!` do fim da passada. Cruzar uma lista durável com
-# uma que ainda estava em memória deixava o cliente com o preço na tela e o fecho em silêncio quando
-# o processo morria entre o aceite e o fim da passada.
+# AS DUAS METADES DO CRUZAMENTO NÃO TÊM A MESMA DURABILIDADE — e a rodada 5 afirmou que sim, o que
+# é falso (medido na rodada 6, issue R19 / #418). A identidade do preço passou a ir ao banco na
+# hora da EMISSÃO, pela mesma escrita de uma linha (`ToolRun#registrar_identidade_emitida!`) que
+# grava a lista do aceite, e isso fecha UMA janela: a da morte do processo entre o aceite e o fim da
+# passada, que deixava o cliente com o preço na tela e o fecho em silêncio. NÃO fecha a outra: esta
+# lista viaja TAMBÉM no handle da ferramenta, e o `record_attempt!` do fim da passada a REGRAVA com
+# a cópia em memória — duas passadas sobre a mesma linha (o retry do Sidekiq, o varredor cruzando
+# com o motor) e o token da primeira some. A lista do ACEITE não sofre isso porque é uma MARCA do
+# motor (`AsyncRunJob::MARCAS`), que o `record_attempt!` não toca.
+#
+# A saída candidata — ler esta lista pela LINHA, como o aceite já é lido — está na R19 com o custo
+# declarado: hoje o handle é a rede de segurança da escrita imediata, e sem ele uma escrita que
+# falhe perde a identidade de vez.
 #
 # (Por que a tabela de consulta é necessária: quem aceita é o publicador, e ele não distingue um
 # preço de uma pergunta pelo dado que falta — as duas são "uma entrega". Quem distingue é a
@@ -123,14 +131,19 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # o `record_attempt!` do fim da passada: morto o processo entre uma coisa e a outra (deploy, 25 s
   # de shutdown do Sidekiq), o cliente ficava com o preço na tela, o aceite registrado e NENHUMA
   # identidade por onde perguntar — o fecho calava onde a `main` dizia a frase parcial verdadeira.
-  # Cruzar duas listas com durabilidades diferentes é o defeito; as duas são gravadas pelo mesmo
-  # `anexar_ao_handle!`, uma escrita cada, com a natureza na chave e a identidade no token.
+  #
+  # O QUE ISSO NÃO COMPRA (rodada 6, medido): o valor CONTINUA no handle que a passada devolve, e
+  # o `record_attempt!` do fim regrava a chave inteira com essa cópia — uma passada que leu o
+  # handle ANTES apaga o token que a outra gravou. Dizer que as duas listas ficaram com a mesma
+  # durabilidade era falso; ver o cabeçalho e a R19 (#418). O handle continua aqui porque ele é a
+  # rede da escrita imediata (`gravar_na_linha` engole a falha), e trocar uma coisa pela outra é a
+  # decisão que a issue carrega.
   def registrar_entrega_de_preco(texto, handle, already)
     handle = marcar_preco_legado(handle, already)
     token = token_da_entrega(texto)
     return handle if token.blank?
 
-    gravar_na_linha { run.anexar_ao_handle!(self.class::PRECOS_KEY, token) }
+    gravar_na_linha { run.registrar_identidade_emitida!(self.class::PRECOS_KEY, token) }
     handle.merge(self.class::PRECOS_KEY => (Array(handle[self.class::PRECOS_KEY]).map(&:to_s) + [token]).uniq)
   end
 
@@ -179,6 +192,13 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # há cruzamento com durabilidades diferentes para fechar. (Adiantar `PDF_SENT_KEY` seria pior: ela
   # é a sentinela que impede a segunda emissão, e torná-la durável antes da publicação transformaria
   # a morte no meio em comparativo que ninguém reemite — a ponta que a issue #414 já carrega.)
+  #
+  # O QUE SE PAGA POR ISSO, DITO INTEIRO (rodada 6, R18): perdida a passada, a linha abandonada lê
+  # `portal_fechado` ausente e o fecho publica a frase parcial para quem recebeu preços E
+  # comparativo. Pela porta do MOTOR isso não é regressão (a `main` publica a parcial sempre que
+  # `delivered_count` é positivo); pela porta do VARREDOR É — lá a `main` calava com contador
+  # positivo. A janela é estreita (entre o aceite do comparativo e a persistência seguinte não há
+  # trabalho), e a decisão de não bloquear por ela está na auditoria.
   def marcas_do_comparativo(pdf)
     token = token_da_entrega(pdf)
     marcas = { self.class::PDF_SENT_KEY => true }
@@ -209,10 +229,21 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # O ACEITE LEGADO É `delivered_count`, e ele existe (a auditoria da rodada 4 afirmou que "não há
   # outra prova possível", e isso era falso): a versão ANTERIOR já o incrementava só em publicação
   # ACEITA — imediata ou adiada — e nunca no aviso de espera nem nas frases de fecho, que não passam
-  # por `deliver`. Nos dois estados defeituosos ele vale zero; na linha legada de verdade vale um ou
-  # mais. E não há falso positivo pelo `pedido`: a pergunta pelo dado que falta é contada, mas o
-  # handle dela nunca tem `entregues` (quem grava `entregues => []` é `submeter`, e a recusa do
-  # `start` não chega lá), então a emissão legada já a exclui.
+  # por `deliver`. Nos dois estados defeituosos que motivaram a correção ele vale zero; na linha
+  # legada de verdade vale um ou mais. E não há falso positivo pelo `pedido`: a pergunta pelo dado
+  # que falta é contada, mas o handle dela nunca tem `entregues` (quem grava `entregues => []` é
+  # `submeter`, e a recusa do `start` não chega lá), então a emissão legada já a exclui.
+  #
+  # O CONTADOR NÃO DIZ O QUE FOI ACEITO, e há um TERCEIRO estado em que ele mente a favor (rodada
+  # 6): linha legada com os preços recusados, cujo COMPARATIVO desta versão foi aceito na mesma
+  # passada — o contador vale um por causa dele, `entregues` é a emissão legada, e a prova legada
+  # passa sem que preço nenhum tenha chegado. Para virar frase falsa ainda é preciso que a passada
+  # morra antes do `record_attempt!` (com `portal_fechado` gravado não sobra nada e o fecho cala).
+  # NÃO é regressão — a `main` publica a parcial por `delivered_count` sozinho, e pede o comparativo
+  # pelo mesmo `entregues` — e não se fecha aqui porque o discriminador honesto não existe: separar
+  # "aceite de preço legado" de "aceite de outra coisa" exigiria contar os aceites desta versão, e
+  # o contador sobe também na republicação deduplicada, que não acrescenta token. Registrado com a
+  # reprodução na issue R19 (#418).
   #
   # O QUE TORNA ISTO SEGURO É A COBERTURA, não o valor lido: `PRECO_LEGADO_KEY` é gravada na
   # primeira emissão desta versão e responde, com o que se sabia NAQUELE momento, se havia preço de

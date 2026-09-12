@@ -91,11 +91,9 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # `updated_at`: uma publicação adiada que sai depois do fim (`advance_sequence!`) mexe nele, e a
   # janela do pedido contaria da publicação, não do encerramento.
   ENCERRADA_EM = 'autonomia_encerrada_em'.freeze
-  # O QUE O PUBLICADOR ACEITOU (entrega 8a): a lista das identidades de entrega que voltaram
-  # `published` ou `deferred`. É o REGISTRO DO ACEITE — o que separa "eu tentei entregar" de "o
-  # publicador assumiu esta entrega" —, e quem o escreve é sempre quem publicou
-  # (`Tools::EntregaAceita`). A recusa não escreve nada. Ver `registrar_entrega_aceita!`.
-  ENTREGAS_ACEITAS = 'autonomia_entregas_aceitas'.freeze
+  # A lista do ACEITE (`ENTREGAS_ACEITAS`) e a da ferramenta moram em `ListasDeEntrega`, junto com
+  # quem as escreve — outro assunto, e a classe estava no teto de linhas.
+  include ListasDeEntrega
 
   # Por quanto tempo uma consulta ENCERRADA com entrega ainda conta como "este pedido já foi feito".
   # Depois disso, repetir os mesmos dados é um pedido novo (o preço muda; a cotação do portal vence).
@@ -276,7 +274,15 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # devolveu por cima do que estava, marcas preservadas. Nunca substitui o handle por uma cópia da
   # memória — era o que um processo com objeto velho fazia com a marca gravada por outro (Codex,
   # 10/09/2026). `intencao:` exige a POSSE da passada (ver `posse`).
+  #
+  # É A ESCRITA DO FIM DA PASSADA, e é por isso que a segunda chance do aceite mora aqui
+  # (`reforcar_aceites!`, rodada 6): a identidade da entrega tem duas escritas — a imediata da
+  # ferramenta e esta —, então falhar na primeira degrada e não perde. O aceite tinha UMA, e uma
+  # falha transitória do banco (sem morte de processo) apagava o encerramento. Aqui ele ganha a
+  # mesma rede, no mesmo instante. ANTES da mescla, de propósito: a mescla é guardada pelo status
+  # (`posse`) e a escrita do aceite não é — o aceite é fato consumado mesmo em linha supersedida.
   def record_attempt!(handle: nil, intencao: nil)
+    reforcar_aceites!
     mesclar(posse(intencao), adicionar: handle.to_h, contar: true)
   end
 
@@ -296,54 +302,6 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   def record_delivery!
     self.class.where(id: id).update_all('delivered_count = delivered_count + 1, updated_at = NOW()') # rubocop:disable Rails/SkipsModelValidations
     reload
-  end
-
-  # ACRESCENTA À LISTA DO ACEITE a identidade de uma entrega que o publicador assumiu (entrega 8a).
-  #
-  # O IRMÃO DE `record_delivery!`: aquele conta QUANTAS entregas foram aceitas, esta diz QUAIS. O
-  # contador não serve para o fecho — ele soma qualquer item aceito, inclusive a pergunta pelo dado
-  # que falta —, e a lista serve, porque a ferramenta sabe qual identidade emitiu como resultado.
-  #
-  # ESCRITA NA HORA DO ACEITE, E NÃO NO FIM DA PASSADA. O que ela compra é o ADIAMENTO: a
-  # publicação adiada é aceita e ainda não é mensagem, e sem este registro o fecho não tinha como
-  # saber disso (rodada 4). O que ela NÃO compra, e o texto daqui afirmava até a rodada 5, é
-  # impedir "não consegui" ao lado do preço: o portão externo do fecho é `delivered_count`
-  # (`Encerramento#fecho`), gravado no `record_delivery!` que vem DEPOIS desta escrita — morto o
-  # processo entre as duas, a frase de falha sai do mesmo jeito.
-  #
-  # QUEM PRECISA DA MESMA DURABILIDADE É O OUTRO LADO DO CRUZAMENTO: a lista do aceite diz QUAIS
-  # identidades o publicador assumiu, e quem diz o que cada identidade É (um preço, e não uma
-  # pergunta pelo dado que falta) é a ferramenta. Essa metade viajava no handle e só chegava ao
-  # banco no `record_attempt!` do fim da passada — cruzar duas listas com durabilidades diferentes
-  # deixava o cliente com o preço na tela e o fecho em SILÊNCIO. Por isso a ferramenta escreve a
-  # dela por aqui também (`anexar_ao_handle!`), na hora da emissão.
-  def registrar_entrega_aceita!(token)
-    anexar_ao_handle!(ENTREGAS_ACEITAS, token)
-  end
-
-  # ACRESCENTA UM TOKEN A UMA LISTA DO HANDLE, no banco, em UM UPDATE. Duas listas passam por aqui,
-  # e as duas precisam ser duráveis NO INSTANTE em que o fato acontece: a do ACEITE, escrita pelo
-  # motor quando o publicador assume a entrega, e a das IDENTIDADES QUE A FERRAMENTA EMITIU,
-  # escrita por ela na passada que emite — a única em que ela conhece o texto de onde o token nasce.
-  # A chave nomeia a NATUREZA da entrega e o token é a IDENTIDADE dela: uma escrita, as duas coisas.
-  #
-  # SEM LER-MODIFICAR-ESCREVER: a lista é concatenada pelo BANCO (`|| ?::jsonb`), então dois
-  # escritores da mesma execução não apagam um o token do outro. O `WHERE` com `@>` torna a escrita
-  # idempotente — o retry do Sidekiq que republica a mesma entrega (e recebe `published` pela dedupe
-  # do token), ou a consulta que reemite o mesmo lote, não acrescenta uma segunda cópia. `COALESCE`
-  # nos dois lados porque a chave só existe depois do primeiro token, e `?::text` nos dois usos da
-  # chave porque `handle -> <literal sem tipo>` é ambíguo entre o operador de chave e o de índice.
-  #
-  # NÃO É GUARDADA PELO STATUS, de propósito: o aceite e a emissão são fatos consumados, e uma
-  # linha que acabou de ser supersedida não pode fazer a escrita do que JÁ saiu virar um no-op.
-  def anexar_ao_handle!(chave, token)
-    lista = "COALESCE(handle -> ?::text, '[]'::jsonb)"
-    escrita = "handle = jsonb_set(handle, ARRAY[?::text], #{lista} || ?::jsonb), updated_at = ?"
-    updated = self.class.where(id: id)
-                  .where.not("#{lista} @> ?::jsonb", chave, [token].to_json)
-                  .update_all([escrita, chave, chave, [token].to_json, Time.current]) # rubocop:disable Rails/SkipsModelValidations
-    reload
-    updated.positive?
   end
 
   # Já morreu: supersedida por um pedido novo, descartada com o turno, ou barrada pelo gate da conta.

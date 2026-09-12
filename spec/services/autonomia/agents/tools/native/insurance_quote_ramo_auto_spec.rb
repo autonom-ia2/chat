@@ -544,7 +544,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         allow(connector).to receive(:quote_result).and_return(
           result('partial', [offer('43', 'Ezze', 'quoted', 2050.40)])
         )
-        allow(run).to receive(:anexar_ao_handle!).and_raise(ActiveRecord::StatementInvalid, 'banco fora')
+        allow(run).to receive(:registrar_identidade_emitida!).and_raise(ActiveRecord::StatementInvalid, 'banco fora')
 
         progresso = tool_do_motor.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)
 

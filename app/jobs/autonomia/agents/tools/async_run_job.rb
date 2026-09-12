@@ -332,6 +332,12 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # handle que a ferramenta devolve foi lido ANTES. Se ela viajasse no handle da ferramenta, o
   # `record_attempt!` do fim da passada a regravaria com a cópia velha — o token recém-aceito
   # sumiria. A ferramenta a lê pela LINHA (`Tools::EntregaAceita.aceita?`), nunca pelo handle.
+  # É EXATAMENTE O QUE ACONTECE com a lista de identidades da ferramenta, que não é marca e por
+  # isso É regravada (medido na rodada 6; issue R19 (#418)).
+  #
+  # A LISTA TAMBÉM É A FRONTEIRA DO QUE A FERRAMENTA PODE ESCREVER: `ToolRun` recusa
+  # `registrar_identidade_emitida!` em qualquer chave desta lista, para que a ferramenta não
+  # invente um aceite nem cale o encerramento gravando `autonomia_closed`.
   MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA, ToolRun::PEDIDO,
             ToolRun::ENCERRADA_EM, ToolRun::ENTREGAS_ACEITAS].freeze
   MARCAS_DE_INTENCAO = [ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA].freeze

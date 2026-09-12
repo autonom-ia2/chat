@@ -35,6 +35,11 @@ module Autonomia::Agents::Tools::EntregaAceita
   # Sem execução ou sem `execution_key` não há token, e aí não se grava nada: quem não tem
   # identidade não afirma nada depois. A falha da ESCRITA não pode derrubar a entrega que já está
   # no ar — ela vira log, e o fecho decide pelo lado conservador (como se não tivesse sido aceita).
+  #
+  # MAS ELA NÃO É A ÚLTIMA PALAVRA (rodada 6): o token fica pendente na LINHA e o `record_attempt!`
+  # do fim da passada o reescreve. Sem isso, uma falha transitória do banco — sem morte de processo
+  # nenhuma — apagava o encerramento: o fecho lia "nada aceito", calava, e a `main` teria falado
+  # pelo contador. É a rede que a identidade da entrega sempre teve, e que faltava deste lado.
   def registrar(run, entrega, resultado)
     return resultado unless resultado.respond_to?(:aceita?) && resultado.aceita?
 
