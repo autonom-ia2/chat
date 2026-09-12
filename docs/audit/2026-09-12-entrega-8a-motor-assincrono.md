@@ -146,7 +146,8 @@ rspec/rubocop "passam" sem executar nada. Todo exit code abaixo foi lido de `${p
 
 - Foco: `bundle exec rspec spec/jobs/autonomia/agents/tools/ spec/services/autonomia/agents/tools/
   spec/models/autonomia/agents/tool_run_spec.rb` → **486 examples, 0 failures, exit 0**.
-- `bundle exec rubocop` nos 17 arquivos `.rb` do diff → **0 ofensas, exit 0**.
+- `bundle exec rubocop` nos 18 arquivos `.rb` do diff → **0 ofensas, exit 0**.
+- CI da PR #406 no SHA `b68832d622`: **12 de 12 checks verdes**, incluindo os oito nós de RSpec.
 - **Partições do CI.** O CI fatia por `find spec -name '*_spec.rb' | sort` com `i % 8`. Com
   `encerramento_spec.rb` entrando na lista ordenada, os arquivos tocados caem nos nós
   **1, 3, 4, 5, 6 e 7** — e a composição de cada nó MUDA em relação à `main`, porque um arquivo
