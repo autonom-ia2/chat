@@ -81,11 +81,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
   end
 
-  def abrir_execucao
+  def abrir_execucao(expires_at: 1.minute.ago)
     run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug,
                                            arguments: { 'produto' => 'auto', 'placa' => 'ABC1D23' },
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
-    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 1.minute.ago)
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: expires_at)
     run
   end
 
@@ -237,6 +237,34 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(bot_contents).to eq([preco_ao_cliente, cotacao::PARCIAL])
     expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+  end
+
+  # A CORRENTE INTEIRA, PELO CAMINHO REAL: a consulta publica o preço, grava a IDENTIDADE dele no
+  # handle na mesma passada, e o fecho a usa para saber que o cliente tem preço na tela. É o que dá
+  # consumidor ao `conversation:`/`run:` que o motor passa à ferramenta — sem eles não há
+  # `execution_key` de onde tirar o token, e o handle sai sem identidade nenhuma.
+  it 'a consulta grava a identidade do preco que publicou, e o fecho a usa' do
+    # Arrange — execução VIVA e submetida, com a cotação já em andamento no mock
+    run = abrir_execucao(expires_at: 3.minutes.from_now)
+    parcial_em = Autonomia::Insurance::Connector::Mock::PARTIAL_AFTER.to_i
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
+                                  'quote_id' => "mock-#{Time.current.to_i - parcial_em}:1" })
+
+    # Act 1 — a consulta
+    described_class.new.perform(run.id, 1)
+
+    # Assert 1 — o token no handle é o da MENSAGEM que entrou na conversa
+    token = Array(run.reload.handle[cotacao::PRECOS_KEY]).first
+    expect(token).to be_present
+    expect(Autonomia::Agents::Tools::EntregaPublicada.para(conversation, token)).to be_present
+
+    # Act 2 — o prazo estoura
+    run.update!(expires_at: 1.minute.ago)
+    stub_comparativo_pdf
+    described_class.new.perform(run.id, 5)
+
+    # Assert 2 — o fecho reconhece o preço que está na tela
+    expect(bot_contents.last).to eq(cotacao::PARCIAL)
   end
 
   it 'publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue' do
