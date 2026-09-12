@@ -518,6 +518,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(progresso.handle[fechado]).to be(true)
       end
 
+      # O `compact` DO FECHO É SÓ PARA A IDENTIDADE AUSENTE — e ele estava apagando QUALQUER chave
+      # nula do handle da ferramenta no ramo `done`, mais largo do que o comentário ao lado dele
+      # dizia. Hoje nenhuma chave da cotação é nula, então a diferença é inerte; inerte e silenciosa
+      # é como um apagamento de handle chega à produção.
+      it 'o fecho nao apaga chave nula que o handle da ferramenta ja carregava' do
+        allow(connector).to receive(:quote_result).and_return(
+          result('completed', [offer('43', 'Ezze', 'quoted', 2050.40)])
+        )
+
+        progresso = tool_do_motor.poll(handle: { 'quote_id' => 'abc:1', 'marca_da_ferramenta' => nil }, attempt: 4)
+
+        expect(progresso.handle).to have_key('marca_da_ferramenta')
+        expect(progresso.handle[described_class::COMPARATIVO_KEY]).to be_present
+      end
+
       # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele saía só no ramo `done`,
       # quando o portal fechava a cotação — e em 08/09/2026 a execução entregou cinco preços e
       # estourou o prazo na 22ª consulta, então o PDF nunca saiu. O `AsyncRunJob` chama isto ao
@@ -572,8 +587,26 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       it 'so afirma resultado quando o preco virou MENSAGEM na conversa' do
         expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: true))).to be(true)
         expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: false))).to be(false)
-        expect(tool_do_motor.resultado_entregue?(described_class::DELIVERED_KEY => ['43'])).to be(false)
         expect(tool_do_motor.resultado_entregue?('pedido' => 'Me diga a placa, por favor.')).to be(false)
+      end
+
+      # A JANELA DO DEPLOY, GUARDADA (P1 da rodada 3). A execução que já estava em voo emitiu o
+      # preço na versão anterior e não tem `entregas_de_preco` no handle — a chave nasce na passada
+      # que emite. Sem ler a marca antiga, o fecho dela diz "nenhum preço chegou": nem comparativo,
+      # nem uma palavra, para quem já recebeu preço. É o incidente de 08/09/2026 de volta, durante
+      # a vida das execuções em voo.
+      #
+      # É a MESMA saída de `portal_fechado?`: a marca antiga vale como prova LEGADA, e só quando a
+      # nova está AUSENTE. Guardado assim o fallback não alcança execução nenhuma posterior ao
+      # deploy — toda passada que emite preço grava a chave, mesmo quando a publicação é recusada —,
+      # então ele não reabre a frase falsa que a rodada 1 corrigiu.
+      it 'cai para `entregues` so quando a chave da identidade esta AUSENTE do handle' do
+        # legado: a marca antiga é a única prova que a linha em voo carrega
+        expect(tool_do_motor.resultado_entregue?(described_class::DELIVERED_KEY => ['43'])).to be(true)
+        # com a chave nova presente, quem responde é a MENSAGEM — o legado não reabre a frase falsa
+        expect(tool_do_motor.resultado_entregue?(handle_com_preco(chegou: false))).to be(false)
+        # e `submeter` grava `entregues => []` desde a primeira passada: lista vazia não é preço
+        expect(tool_do_motor.resultado_entregue?(described_class::DELIVERED_KEY => [])).to be(false)
       end
 
       # E SOBRA NÃO É "SEMPRE", POR MAIS QUE O ENCERRAMENTO SÓ EXISTA FORA DO CAMINHO FELIZ. Quem

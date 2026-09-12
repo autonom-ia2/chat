@@ -232,16 +232,12 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # cliente guarda — a lista de preços no chat serve para decidir, o PDF serve para levar adiante.
   # Desde a entrega 11 ele é uma entrega de ARQUIVO (`Comparativo`), não um texto com link.
   #
-  # Duas marcas, e elas dizem coisas diferentes: `PDF_SENT_KEY` é "já emiti este comparativo" (o
-  # que impede a segunda emissão) e `COMPARATIVO_KEY` é a IDENTIDADE da mensagem que ele vira — é
-  # por ela que o fecho pergunta ao banco se o cliente o recebeu. `compact` porque sem execução não
-  # há identidade a gravar.
+  # As duas marcas do comparativo são de `Fecho`, que é quem as lê.
   def fechar(deliveries, handle)
     pdf = comparison_pdf(handle)
     return progress_class.done(deliveries: deliveries, handle: handle) if pdf.nil?
 
-    progress_class.done(deliveries: deliveries + [pdf],
-                        handle: handle.merge(PDF_SENT_KEY => true, COMPARATIVO_KEY => token_da_entrega(pdf)).compact)
+    progress_class.done(deliveries: deliveries + [pdf], handle: handle.merge(marcas_do_comparativo(pdf)))
   end
 
   # A UNIÃO DAS CONSULTAS, não a foto da última (entrega 7). O portal responde em pedaços — medido em
@@ -263,24 +259,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     )
     handle = registrar_entrega_de_preco(texto, registrar_sem_periodo(fresh, handle))
     [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
-  end
-
-  # A IDENTIDADE DA MENSAGEM QUE ESTE PREÇO VAI VIRAR, guardada na passada que o emite — é a única
-  # em que se sabe o TEXTO, e é do texto que o token nasce. Quem lê é o fecho, que pergunta à
-  # conversa se a mensagem existe: o contador da execução não serve (conta qualquer item aceito,
-  # inclusive a pergunta pelo dado que falta) e a lista de `entregues` também não (ela avança mesmo
-  # quando a publicação é recusada). ACUMULA, porque cada lote de preços é uma mensagem.
-  # Sem execução não há token, e aí não se grava nada: o fecho cala, que é o lado conservador.
-  def registrar_entrega_de_preco(texto, handle)
-    token = token_da_entrega(texto)
-    return handle if token.blank?
-
-    handle.merge(PRECOS_KEY => (Array(handle[PRECOS_KEY]).map(&:to_s) + [token]).uniq)
-  end
-
-  # O token de uma entrega DESTA execução, pela mesma definição que o publicador usa.
-  def token_da_entrega(entrega)
-    ::Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
   end
 
   # O registro ACUMULA entre lotes (o lote 2 não pode apagar o motivo do lote 1) e só escreve a

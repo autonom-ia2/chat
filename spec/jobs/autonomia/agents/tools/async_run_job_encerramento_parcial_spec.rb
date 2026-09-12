@@ -115,6 +115,19 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run
   end
 
+  # A LINHA QUE JÁ ESTAVA EM VOO QUANDO ESTA VERSÃO SUBIU (janela do deploy). O handle é o da
+  # versão anterior: tem `entregues`, e NÃO tem `entregas_de_preco` — a chave nova só nasce na
+  # passada que emite o preço, e essa passada já aconteceu. O cliente tem o preço na tela, o
+  # contador da linha o conta, e o prazo venceu durante o deploy.
+  def cotacao_da_janela_do_deploy
+    run = abrir_execucao
+    publicar!(run, preco_ao_cliente)
+    run.record_delivery!
+    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'cot-1',
+                                  cotacao::DELIVERED_KEY => ['4'], 'produto' => 'auto' })
+    run
+  end
+
   # A MESMA execução, sem preço nenhum: submetida, prazo vencido, nada entregue.
   def cotacao_sem_preco_e_prazo_vencido
     run = abrir_execucao
@@ -265,6 +278,31 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     # Assert 2 — o fecho reconhece o preço que está na tela
     expect(bot_contents.last).to eq(cotacao::PARCIAL)
+  end
+
+  # A JANELA DO DEPLOY NÃO PODE CUSTAR O COMPARATIVO NEM O FECHO (P1 da rodada 3, 12/09/2026).
+  #
+  # A rodada 2 fez o fecho perguntar pela MENSAGEM, e a pergunta se faz pelo token que a passada
+  # emissora grava no handle. A execução que atravessa o deploy não tem esse token: ela emitiu o
+  # preço na versão anterior. O fecho lia "nenhum preço chegou" e o resultado era o pior dos dois
+  # mundos — nem comparativo, nem uma palavra — para quem já tinha recebido preço. Ou seja: durante
+  # a vida das execuções em voo, o incidente de 08/09/2026 voltava exatamente como era.
+  #
+  # A saída é a mesma que `portal_fechado?` já usa três métodos abaixo: a marca ANTIGA vale como
+  # prova legada, e só quando a nova está AUSENTE do handle. Guardado assim, o fallback alcança só
+  # a linha legada — qualquer execução posterior ao deploy que emita preço grava a chave —, então
+  # ele não reabre a frase falsa que a rodada 1 corrigiu.
+  it 'a execucao que atravessou o deploy recebe o comparativo E o fecho' do
+    # Arrange — handle da versão anterior, preço na tela do cliente
+    run = cotacao_da_janela_do_deploy
+    stub_comparativo_pdf
+
+    # Act
+    described_class.new.perform(run.id, 5)
+
+    # Assert — o comparativo sai, e o fecho é o de quem tem preço e ficou faltando coisa
+    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
   it 'publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue' do
