@@ -29,6 +29,21 @@ module ManualDoPrincipal
   # mudança sem relação nenhuma com esta entrega. O que esta entrega escreveu é a §7.1.
   SECAO_DUVIDA = /### 7\.1.*?(?=\n## \d)/m
 
+  # O BLOCO DOS ESPECIALISTAS DA §5, ISOLADO — do subtítulo até o próximo capítulo numerado. É onde a
+  # #403 escreveu a regra de titularidade, e vale para ele o mesmo motivo da §7.1: a frase-âncora não
+  # vê o que for acrescentado ao lado dela. "Na dúvida, recuse o documento você mesma" passaria por
+  # todas as âncoras desta tabela — é exatamente a conduta que a #403 existe para tirar do texto.
+  # Assinar o ARQUIVO inteiro continua não servindo, e a entrega 8 é a demonstração: aplicado o
+  # `origin/pr-399` de hoje (`ade5ca58db`) sobre esta árvore, o arquivo muda em §2, §5, §6 e §10 — e o
+  # md5 DESTE bloco não muda. Uma assinatura de arquivo reprovaria; a do bloco não. Quem editar
+  # este bloco reassina abaixo e revisa `PROMESSAS_DO_DOCUMENTO` junto.
+  SECAO_ESPECIALISTAS = /### Os especialistas de ramo.*?(?=\n## \d)/m
+
+  # O manual do especialista de auto — o mesmo arquivo que o `Builder` entrega ao especialista do
+  # ramo no deploy (`ESPECIALISTAS`), não uma cópia.
+  ESPECIALISTA_DE_AUTO = Autonomia::Insurance::QuoteAgent::Builder::ESPECIALISTAS
+                         .find { |e| e[:slug] == 'cotacao_auto' }.freeze
+
   module_function
 
   def principal
@@ -37,6 +52,14 @@ module ManualDoPrincipal
 
   def secao_duvida(texto)
     texto[SECAO_DUVIDA]
+  end
+
+  def secao_especialistas(texto)
+    texto[SECAO_ESPECIALISTAS]
+  end
+
+  def manual_do_especialista_de_auto
+    Autonomia::Insurance::QuoteAgent::Builder::INSTRUCOES.join(ESPECIALISTA_DE_AUTO[:arquivo]).read
   end
 
   # CADA PROMESSA NOVA DA §7.1, PELA FRASE EXATA, E O QUE A SUSTENTA.
@@ -75,6 +98,40 @@ module ManualDoPrincipal
         Autonomia::Agents::Tools::PedidoRepetido::MOTIVO.present?
     }
   }.freeze
+
+  # CADA PROMESSA DA REGRA DE TITULARIDADE DA §5 (#403), PELA FRASE EXATA, E O QUE A SUSTENTA.
+  #
+  # O FATO QUE ORIGINOU A ENTREGA: em 11/09/2026, numa conversa real, a Lia recebeu uma apólice em
+  # nome e CPF de outra pessoa, tratou a divergência como o "dados incoerentes" da §3 e recusou ali
+  # mesmo. A §6.2 do manual do especialista — que manda aproveitar placa, CEP, modelo e ano e cotar
+  # como seguro novo — só age depois que o pedido chega ao especialista, e nunca chegou. O buraco
+  # era do principal: nenhuma linha dizia que titularidade é matéria do ramo.
+  PROMESSAS_DO_DOCUMENTO = {
+    # A LIA NÃO TEM COMO DECIDIR, mesmo que quisesse: a ferramenta de cotação é do especialista, e o
+    # `Answerer#enabled_agent_tools` a esconde do principal. Repassar não é cortesia — é o único
+    # caminho que o código deixa aberto, e o que a frase faz é impedir que ele termine numa recusa.
+    'Documento que a pessoa mandar vai para o especialista, mesmo que o nome nele não seja o dela.' => lambda {
+      Autonomia::Insurance::QuoteAgent::Builder::TOOLS_DO_PRINCIPAL.exclude?('cotar_seguro') &&
+        Autonomia::Insurance::QuoteAgent::Builder::TOOLS_DO_ESPECIALISTA.include?('cotar_seguro') &&
+        ESPECIALISTA_DE_AUTO.present?
+    },
+    # QUEM DECIDE É O ESPECIALISTA porque a decisão está escrita no manual DELE — a §6.2, no arquivo
+    # que o deploy entrega ao especialista de auto. Se essa regra sair de lá, a frase do principal
+    # vira um encaminhamento para lugar nenhum, e este exemplo reprova junto.
+    'aproveita de um documento em nome de outra pessoa é o especialista, não você.' => lambda {
+      manual = manual_do_especialista_de_auto
+      manual.include?('Se a apólice que ele mandou estiver em nome e CPF de outra pessoa') &&
+        manual.include?('cote como seguro novo')
+    },
+    # DIZER QUE O DOCUMENTO ESTÁ EM OUTRO NOME cabe no pedido: a função do especialista tem um
+    # parâmetro só, de texto livre em português, e ele é obrigatório. Não há campo estruturado a
+    # preencher nem capacidade nova sendo prometida aqui.
+    'diga que o documento está em outro nome.' => lambda {
+      Autonomia::Agents::Specialist::REQUEST_PARAM == 'pedido' &&
+        Autonomia::Agents::Specialist.new(slug: 'cotacao_auto', description: 'x')
+                                     .openai_schema[:parameters][:required] == ['pedido']
+    }
+  }.freeze
 end
 
 RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
@@ -100,6 +157,31 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # mandar cotar de novo. Sem ela o texto proibiria só metade.
     it 'proíbe as duas coisas: acionar o especialista e recotar' do
       expect(texto).to include('não acione o especialista e não mande cotar de novo')
+    end
+  end
+
+  describe 'promessa e capacidade da §5 (documento em nome de outra pessoa, #403)' do
+    let(:secao) { ManualDoPrincipal.secao_especialistas(texto) }
+
+    ManualDoPrincipal::PROMESSAS_DO_DOCUMENTO.each do |frase, sustenta|
+      it "«#{frase.tr("\n", ' ')}» tem o que a sustenta" do
+        expect(ManualDoPrincipal.secao_especialistas(texto)).to include(frase)
+        expect(sustenta.call).to be_truthy
+      end
+    end
+
+    # A REGRA VIVE NO BLOCO DOS ESPECIALISTAS, não solta no arquivo. Fora dali ela não é lida junto
+    # do "você não cota", que é o que lhe dá sentido — e a assinatura abaixo deixaria de cobri-la.
+    it 'a regra está dentro do bloco dos especialistas de ramo' do
+      expect(secao).to be_present
+      expect(secao).to include('Documento que a pessoa mandar vai para o especialista')
+    end
+
+    # O NEGATIVO: a divergência de nome é tratada como matéria do ramo, não como o "dados
+    # incoerentes" da §3 — foi essa leitura que fez a Lia recusar em 11/09.
+    it 'diz que nome ou CPF diferentes não são dado incoerente' do
+      expect(secao).to be_present
+      expect(secao).to include('não são dado incoerente')
     end
   end
 
@@ -195,6 +277,36 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
 
     # O ARQUIVO É LIDO COM AS ESCOLHAS SUBSTITUÍDAS (#380): a §7.1 não pode trazer marcador novo.
+    it 'não introduz variável para substituir' do
+      expect(secao).to be_present
+      expect(secao.scan(/\$[a-zA-Z]+/)).to be_empty
+    end
+  end
+
+  # MESMA ASSINATURA, MESMO MOTIVO, PARA O BLOCO DOS ESPECIALISTAS DA §5 (#403). A tabela
+  # `PROMESSAS_DO_DOCUMENTO` vê as três frases que escrevi; não veria uma quarta, escrita ao lado
+  # delas, mandando recusar o documento — que é a conduta que esta entrega tira do caminho. Quem
+  # editar este bloco reassina aqui e revisa a tabela junto.
+  #
+  # A ENTREGA 8 NÃO COLIDE COM ESTA ASSINATURA, medido e não suposto: mesclado o `origin/pr-399`
+  # de hoje (`ade5ca58db`) nesta árvore, a #399 mexe na §5 ANTES deste bloco — troca a linha
+  # "Você tem três/quatro ferramentas" e insere a subseção `proposta_da_seguradora` logo acima do
+  # "### Os especialistas de ramo" —, e o md5 abaixo permanece `6cc2e90d…`. Se a #399 mudar de
+  # forma e passar a editar o bloco, este exemplo reprova e é ele que avisa.
+  describe 'o bloco dos especialistas da §5 é o texto revisado' do
+    let(:secao) { ManualDoPrincipal.secao_especialistas(texto) }
+
+    it 'está no arquivo e é extraído inteiro' do
+      expect(secao).to be_present
+      expect(secao).to start_with('### Os especialistas de ramo')
+      expect(secao).to end_with("a corretora não atende esse seguro e ofereça o que ela atende.\n")
+    end
+
+    it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
+      expect(secao).to be_present
+      expect(Digest::MD5.hexdigest(secao)).to eq('6cc2e90da520f0b14720f943307134cf')
+    end
+
     it 'não introduz variável para substituir' do
       expect(secao).to be_present
       expect(secao.scan(/\$[a-zA-Z]+/)).to be_empty
