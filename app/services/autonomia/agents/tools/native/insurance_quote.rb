@@ -211,7 +211,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     leitura = ofertas.new(result)
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
     fresh = leitura.quoted.reject { |offer| already.include?(ofertas.code(offer)) }
-    deliveries, next_handle = precos(fresh, already, registrar(handle, leitura, already, fresh))
+    deliveries, next_handle = precos(fresh, already, acumular(handle, leitura, already, fresh))
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
 
@@ -228,7 +228,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
   # O QUE A COTAÇÃO REGISTRA A CADA CONSULTA, no handle: quem já foi entregue, quem foi acionado
   # (entrega 7) e o nome de quem cotou (entrega 8). Os três acumulam — nenhum é foto da última leitura.
-  def registrar(handle, leitura, already, fresh)
+  # (Não se chama `registrar`: esse nome é o de um registrador de recusa para `VarreduraDeRecusas`.)
+  def acumular(handle, leitura, already, fresh)
     ofertas = ::Autonomia::Insurance::QuoteOffers
     handle.merge(DELIVERED_KEY => already + fresh.map { |offer| ofertas.code(offer) },
                  ACIONADAS_KEY => acionadas(leitura, handle),

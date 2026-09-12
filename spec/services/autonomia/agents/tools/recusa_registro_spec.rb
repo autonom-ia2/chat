@@ -35,6 +35,7 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
   let(:call) { { 'name' => tool.slug, 'arguments' => '{"cpf":"000"}', 'call_id' => 'c1' } }
   let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
   let(:placa) { Autonomia::Agents::Tools::Native::VehicleLookup }
+  let(:proposta) { Autonomia::Agents::Tools::Native::InsuranceProposal }
   let(:linhas) { [] }
 
   around do |example|
@@ -140,6 +141,24 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     end
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     Autonomia::Agents::Specialists::Runner.new(specialist: criar_especialista, request: request, delivery: delivery).call
+  end
+
+  # A cotação que a proposta individual lê (entrega 8): encerrada, com preço entregue e o mapa
+  # código -> nome, com os nomes REAIS do portal (48 "Bp" e 55 "Bp Assinatura" são homônimas).
+  def cotacao_com_precos
+    nomes = { '8' => 'Porto', '48' => 'Bp', '55' => 'Bp Assinatura' }
+    Autonomia::Agents::ToolRun.create!(account: account, agent: agent, conversation_id: conversation.id, slug: cotacao.slug,
+                                       status: 'done', execution_key: SecureRandom.uuid,
+                                       arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } },
+                                       handle: { 'quote_id' => 'q1', 'produto' => 'auto', cotacao::DELIVERED_KEY => nomes.keys,
+                                                 cotacao::NOMES_KEY => nomes })
+  end
+
+  # O portal diz que a seguradora não cotou (422), contra o nosso mapa.
+  def portal_que_recusa_a_proposta
+    connector = Autonomia::Insurance::Connector.client
+    allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+    allow(connector).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:validation, 'nao cotou'))
   end
 
   def run_promovida(ferramenta, arguments: { 'placa' => 'ABC1D23' })
@@ -377,6 +396,60 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           ready_connection
           rodar_job(cotacao, arguments: { 'produto' => 'drone', 'dados' => '{}' })
+        }
+      },
+      # A PROPOSTA DE UMA SEGURADORA SÓ (entrega 8). No turno, a conferência responde ao modelo sem
+      # abrir execução (uma saída, com o motivo que a avaliação devolveu); no envio, cada recusa tem a
+      # sua saída, e o job registra.
+      'insurance_proposal.rb#precheck#1' => {
+        espera: { motivo: 'proposta_sem_cotacao', slug: 'proposta_da_seguradora' },
+        dispara: lambda {
+          ready_connection
+          bound_para(proposta).execute({ 'name' => 'proposta_da_seguradora', 'arguments' => { seguradoras: ['Porto'] }.to_json },
+                                       delivery: delivery)
+          expect(Autonomia::Agents::ToolRun.count).to be_zero
+        }
+      },
+      'insurance_proposal.rb#recusar_entrada#1' => {
+        espera: { motivo: 'proposta_sem_seguradora', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
+        dispara: lambda {
+          cotacao_com_precos
+          rodar_job(proposta, arguments: { 'seguradoras' => [] })
+        }
+      },
+      'insurance_proposal.rb#recusar_entrada#2' => {
+        espera: { motivo: 'proposta_acima_do_teto', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
+        dispara: lambda {
+          cotacao_com_precos
+          rodar_job(proposta, arguments: { 'seguradoras' => %w[Porto Bp Suhai] })
+        }
+      },
+      'insurance_proposal.rb#recusar_entrada#3' => {
+        espera: { motivo: 'proposta_sem_cotacao', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: -> { rodar_job(proposta, arguments: { 'seguradoras' => ['Porto'] }) }
+      },
+      'insurance_proposal.rb#recusar_escolha#1' => {
+        espera: { motivo: 'seguradora_ambigua', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
+        dispara: lambda {
+          cotacao_com_precos
+          rodar_job(proposta, arguments: { 'seguradoras' => ['Bp'] })
+        }
+      },
+      'insurance_proposal.rb#recusar_escolha#2' => {
+        espera: { motivo: 'seguradora_nao_cotou', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
+        dispara: lambda {
+          cotacao_com_precos
+          rodar_job(proposta, arguments: { 'seguradoras' => ['Zurich'] })
+        }
+      },
+      # O portal recusando a seguradora como "não cotou" (422) é a mesma recusa nomeada, não erro.
+      'insurance_proposal.rb#gerar#1' => {
+        espera: { motivo: 'seguradora_nao_cotou', slug: 'proposta_da_seguradora', onde: 'envio', faltando: 'seguradoras' },
+        dispara: lambda {
+          ready_connection
+          cotacao_com_precos
+          portal_que_recusa_a_proposta
+          rodar_job(proposta, arguments: { 'seguradoras' => ['Porto'] })
         }
       },
       'async_run_job.rb#registrar_recusa#1' => {

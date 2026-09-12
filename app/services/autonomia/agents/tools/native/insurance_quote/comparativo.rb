@@ -17,6 +17,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   RESERVA = 'Comparativo com todas as opções:'.freeze
   NOME = 'Comparativo de seguro'.freeze
 
+  # O SUFIXO DO NOME DO ARQUIVO, o mesmo para o comparativo e para a proposta individual (entrega 8):
+  # a placa que o cliente informou ("placa HIK9383") ou, sem ela (chassi, FIPE, outro ramo), o ramo
+  # com espaço no lugar do sublinhado do código — o nome é para uma pessoa ler. Nada de CPF, nome ou
+  # CEP: só o dado que ele mesmo escreveu e já vê na conversa.
+  def self.sufixo_do_arquivo(placa:, produto:)
+    limpa = placa.to_s.upcase.gsub(/[^A-Z0-9]/, '')
+    limpa.present? ? "placa #{limpa}" : produto.to_s.tr('_', ' ')
+  end
+
   private
 
   # nil quando não há o que imprimir, quando já foi enviado, ou quando a geração falha. Nunca
@@ -54,12 +63,13 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   end
 
   # O NOME DIZ O QUE O ARQUIVO É, para o cliente achá-lo depois (termo 5): "Comparativo de seguro —
-  # placa HIK9383.pdf". A placa é o dado que ele mesmo informou e já vê na conversa; nada de CPF,
-  # nome ou CEP. Sem placa (chassi, FIPE, outro ramo) vai o ramo, com espaço no lugar do sublinhado
-  # do código — o nome é para uma pessoa ler.
+  # placa HIK9383.pdf" (ver `sufixo_do_arquivo`).
+  # (Caminho completo, e não `Comparativo`: dentro de um `module A::B::C` compacto o nome curto não
+  # se resolve, e o `rescue` de `comparison_pdf` engoliria o `NameError` — o comparativo sumiria em
+  # silêncio, como aconteceu na primeira versão desta linha em 12/09/2026.)
   def nome_do_comparativo
-    placa = quote_input.to_h.dig('vehicle', 'plate').to_s.upcase.gsub(/[^A-Z0-9]/, '')
-    sufixo = placa.present? ? "placa #{placa}" : produto.tr('_', ' ')
+    sufixo = ::Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
+             .sufixo_do_arquivo(placa: quote_input.to_h.dig('vehicle', 'plate'), produto: produto)
     "#{NOME} — #{sufixo}.pdf"
   end
 end

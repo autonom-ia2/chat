@@ -61,7 +61,14 @@ module Autonomia::Agents::Tools::Recusa
     'sem_veiculo' => 'auto sem placa, chassi nem código FIPE: não há veículo para cotar',
     'formulario_indisponivel' => 'auto sem formulário: a conexão não tem o schema do adapter, e a ferramenta não tinha onde receber o veículo',
     'placa_invalida' => 'a placa informada não tem o formato de uma placa',
-    'consulta_de_placa_indisponivel' => 'o portal não respondeu à consulta de placa'
+    'consulta_de_placa_indisponivel' => 'o portal não respondeu à consulta de placa',
+    # Entrega 8: a proposta de uma seguradora só. O código compara o nome falado com o mapa que a
+    # cotação gravou; o que não casa, casa com mais de uma ou não tem cotação de onde sair é recusa.
+    'proposta_sem_seguradora' => 'o pedido de proposta veio sem o nome de nenhuma seguradora',
+    'proposta_acima_do_teto' => 'o pedido de proposta trouxe mais de duas seguradoras de uma vez',
+    'proposta_sem_cotacao' => 'não há nesta conversa uma cotação com preço entregue de onde tirar a proposta',
+    'seguradora_ambigua' => 'o nome falado casa com mais de uma seguradora que cotou; a resposta pede para escolher',
+    'seguradora_nao_cotou' => 'a seguradora pedida não cotou este seguro; a resposta lista as que cotaram'
   }.freeze
   SEM_DESCRICAO = 'motivo fora do catálogo: falta a frase em MOTIVOS'.freeze
   DESCONHECIDA = 'desconhecida'.freeze

@@ -313,6 +313,57 @@ RSpec.describe Autonomia::Agents::ToolRun do
     end
   end
 
+  # A PROPOSTA INDIVIDUAL FICA NA LINHA DA COTAÇÃO (entrega 8), que já ENCERROU quando o cliente
+  # escolhe. `merge_handle!` só aceita linha viva — protege a posse de uma passada sobre a própria
+  # execução —, e por isso esta escrita é outra: sem status, só esta chave, união sem repetir.
+  describe '#anotar_propostas!' do
+    let(:chave) { Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY }
+
+    def cotacao_encerrada
+      run = promote(open_run(slug: 'cotar_seguro'))
+      run.record_attempt!(handle: { 'quote_id' => 'q1', 'entregues' => %w[8 20] })
+      run.finish!('done')
+      run
+    end
+
+    it 'escreve na linha ja encerrada, sem tocar no status nem nas marcas' do
+      # Arrange
+      run = cotacao_encerrada
+      antes = run.handle.except(chave)
+
+      # Act / Assert
+      expect(run.anotar_propostas!(['8'])).to be(true)
+      expect(run.status).to eq('done')
+      expect(run.handle[chave]).to eq(['8'])
+      expect(run.handle.except(chave)).to eq(antes)
+    end
+
+    it 'une sem repetir, no banco, quando o cliente pede outra depois' do
+      run = cotacao_encerrada
+
+      run.anotar_propostas!(['8'])
+      run.anotar_propostas!(%w[20 8])
+
+      expect(run.reload.handle[chave]).to eq(%w[20 8])
+    end
+
+    it 'nao escreve nada quando nao ha codigo' do
+      run = cotacao_encerrada
+
+      expect(run.anotar_propostas!([])).to be(false)
+      expect(run.anotar_propostas!(['', nil])).to be(false)
+      expect(run.reload.handle).not_to have_key(chave)
+    end
+
+    # `merge_handle!` recusa a linha encerrada — é a razão de esta escrita existir.
+    it 'chega onde merge_handle! nao chega: a linha encerrada' do
+      run = cotacao_encerrada
+
+      expect(run.merge_handle!({ chave => ['8'] })).to be(false)
+      expect(run.anotar_propostas!(['8'])).to be(true)
+    end
+  end
+
   describe '#dead?' do
     it 'is true only for statuses that must never publish again' do
       # Arrange

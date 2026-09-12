@@ -88,7 +88,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # Submete (primeira passada) ou consulta (demais). A ferramenta é instanciada a cada
   # execução: ela resolve conexão e credencial sozinha, e nada disso trafega pelo Redis.
   def advance(run, native, attempt)
-    tool = native.new(agent: run.agent, params: run.arguments)
+    tool = ferramenta(run, native)
     return submeter(run, native, tool, attempt) unless submitted?(run)
 
     apply(run, native, tool.poll(handle: tool_handle(run), attempt: attempt), attempt)
@@ -272,8 +272,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   def fechamento(run, native)
     return [native.partial_message] if run.agent.blank?
 
-    tool = native.new(agent: run.agent, params: run.arguments)
+    tool = ferramenta(run, native)
     Array(tool.closing_deliveries(tool_handle(run))) + [native.partial_message]
+  end
+
+  # A ferramenta montada para trabalhar FORA do turno: com a conversa da execução (a proposta
+  # individual lê a última cotação dela — entrega 8) e SEM `delivery`, de propósito — a presença do
+  # `delivery` é o que diz "dentro do turno" para quem escolhe a sessão por ela.
+  def ferramenta(run, native)
+    native.new(agent: run.agent, params: run.arguments, conversation: run.conversation)
   end
 
   # Parada por decisão do operador: sem mensagem ao cliente. Publicar aqui seria furar exatamente o

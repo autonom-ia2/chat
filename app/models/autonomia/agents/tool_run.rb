@@ -285,6 +285,32 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     mesclar(scope, adicionar: adicionar, remover: remover)
   end
 
+  # A PROPOSTA INDIVIDUAL FICA NA LINHA DA COTAÇÃO (entrega 8): os códigos das seguradoras cuja
+  # proposta saiu entram em `InsuranceQuote::PROPOSTAS_KEY` como UNIÃO feita pelo banco, sem repetir
+  # — é a lista que `Insurance::Medida` conta (cotações que viraram proposta, e a soma dos códigos).
+  #
+  # NÃO PASSA POR `merge_handle!`, E É DE PROPÓSITO. Aquela escrita só aceita linha VIVA (`vivas`,
+  # status `running`) porque protege a POSSE de uma passada do job sobre a própria execução. Aqui não
+  # há passada nem posse: quem escreve é OUTRA execução (a da ferramenta de proposta), sobre uma
+  # cotação que já encerrou — o cliente escolhe a seguradora DEPOIS de ler os preços, e a cotação já
+  # está `done`. Escrever "só se viva" faria a medida contar zero propostas para sempre. O alcance é
+  # só esta chave: nenhuma marca, status ou contador muda por aqui. -> true quando escreveu.
+  def anotar_propostas!(codigos)
+    lista = Array(codigos).map(&:to_s).reject(&:blank?).uniq
+    return false if lista.empty?
+
+    chave = ::Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY
+    uniao = "SELECT COALESCE(jsonb_agg(DISTINCT codigo ORDER BY codigo), '[]'::jsonb) FROM jsonb_array_elements_text(" \
+            "CASE WHEN jsonb_typeof(handle->?) = 'array' THEN handle->? ELSE '[]'::jsonb END || ?::jsonb) AS t(codigo)"
+    updated = self.class.where(id: id)
+                  .update_all(["handle = jsonb_set(handle, ?::text[], (#{uniao}), true), updated_at = ?", # rubocop:disable Rails/SkipsModelValidations
+                               "{#{chave}}", chave, chave, lista.to_json, Time.current])
+    return false if updated.zero?
+
+    reload
+    true
+  end
+
   # Registra que uma ENTREGA DA FERRAMENTA foi aceita para publicação (publicada ou adiada). O aviso
   # de espera e a frase de falha NÃO passam por aqui — é o que permite saber, no fim, se o cliente
   # recebeu algum resultado de verdade.

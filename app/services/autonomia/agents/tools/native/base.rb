@@ -163,10 +163,18 @@ class Autonomia::Agents::Tools::Native::Base
 
   # `delivery` é o contexto do turno (conversa), quando há um. A ferramenta continua sem saber de
   # conversa para TRABALHAR; ela só o carrega para o registro de recusa dizer qual conversa foi.
-  def initialize(agent:, params: {}, delivery: nil)
+  #
+  # `conversation` é a conversa SEM o turno (entrega 8): o `AsyncRunJob` monta a ferramenta para
+  # `start`, `poll` e `closing_deliveries` fora do turno e, de propósito, sem `delivery` — a
+  # presença dele é o que diz "estou dentro do turno, com o modelo esperando" (é por ela que
+  # `InsuranceQuote::Veiculo#consultar_placa` escolhe a sessão). Uma ferramenta que trabalha sobre o
+  # que a CONVERSA já tem (a proposta individual lê a última cotação dela) precisa da conversa nos
+  # dois contextos, e é `#conversation` que a entrega: pelo `delivery` no turno, por aqui no job.
+  def initialize(agent:, params: {}, delivery: nil, conversation: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys
     @delivery = delivery
+    @conversation = conversation
   end
 
   # -> String. NUNCA levanta: quem chama é o executor de ferramentas do turno.
@@ -233,6 +241,12 @@ class Autonomia::Agents::Tools::Native::Base
 
   def account
     agent.account
+  end
+
+  # A conversa em que a ferramenta trabalha, no turno (via `delivery`) e no job (via a execução).
+  # nil nas superfícies sem conversa (Testar, Copiloto, playground).
+  def conversation
+    @conversation || delivery.try(:conversation)
   end
 
   # Recusa nomeada da ferramenta SÍNCRONA, em JSON. Passa pelo registro (entrega 6) como as demais.
