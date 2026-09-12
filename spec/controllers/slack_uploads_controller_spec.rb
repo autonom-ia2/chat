@@ -5,7 +5,7 @@ RSpec.describe SlackUploadsController do
     context 'when a valid blob key is provided' do
       # No corpo do `context` isto rodava em TEMPO DE CARGA, fora da transacao do exemplo: a linha
       # era commitada e sobrevivia ao processo. Em `let` a criacao acontece dentro do exemplo, e o
-      # rollback a desfaz. Ver `spec/support/guarda_de_escrita_na_carga.rb`.
+      # rollback a desfaz. Guarda contra a classe inteira: issue #407.
       let(:file) { Rack::Test::UploadedFile.new('spec/assets/avatar.png', 'image/png') }
       let(:blob) { ActiveStorage::Blob.create_and_upload!(io: file, filename: 'avatar.png') }
 

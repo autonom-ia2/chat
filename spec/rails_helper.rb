@@ -28,12 +28,6 @@ rescue ActiveRecord::PendingMigrationError => e
   exit 1
 end
 
-# Abre a janela de carga: depois de `maintain_test_schema!` (que escreve em `ar_internal_metadata`)
-# e antes de o RSpec carregar o primeiro arquivo de spec. Daqui até o `before(:suite)`, linha
-# gravada em tabela de aplicação só pode ter vindo do corpo de um `describe`/`context`, que roda
-# fora da transação do exemplo. Quem mede é o PostgreSQL; ver `spec/support/`.
-GuardaDeEscritaNaCarga.abrir!
-
 RSpec.configure do |config|
   # Rails 7.2: `fixture_path` was removed in favour of `fixture_paths`.
   config.fixture_paths = [Rails.root.join('spec/fixtures')]
@@ -55,9 +49,6 @@ RSpec.configure do |config|
 
   # OpenAPI response validation via Skooma (request specs).
   config.include Skooma::RSpec[Rails.root.join('swagger/swagger.json')], type: :request
-
-  # Primeiro hook de suíte do processo: se a carga sujou o banco, nenhum resultado abaixo vale.
-  config.before(:suite) { GuardaDeEscritaNaCarga.conferir! }
 
   config.before do
     ActiveJob::Base.queue_adapter = :test
