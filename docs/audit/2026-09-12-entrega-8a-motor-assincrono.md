@@ -175,7 +175,11 @@ a identidade do preco que publicou, e o fecho a usa'` fecha o buraco: M16 reprov
 - A afirmação de "zero comportamento" na extração do `EntregaPublicada` está corrigida no item do
   commit (acima).
 - O "CI verde" da rodada 1 era do HEAD do momento (`b68832d622`), não do commit citado ao lado de
-  cada item. Os números desta rodada estão em "Validação", com o SHA exato.
+  cada item — o CI roda no HEAD da PR, nunca commit a commit. Os números locais desta rodada estão
+  em "Validação" e são todos do código em **`f372b3c095`** (o último commit que toca `app/` ou
+  `spec/`; o que vem depois é só esta auditoria). O estado do CI é o que a PR #406 mostrar no HEAD
+  do momento — e não está afirmado aqui, porque um documento não pode atestar o resultado de uma
+  corrida que só começa quando ele é empurrado.
 
 ### 7. Conflito com a `main` (P3-4)
 
