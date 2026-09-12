@@ -1,6 +1,6 @@
 # Entrega 8a — o motor do encerramento assíncrono (sem a ferramenta da proposta)
 
-Data: 12/09/2026 (rodada 1) e 12/09/2026 (rodada 2, depois da revisão). Issue: #396 (Part of
+Data: 12/09/2026 (rodadas 1, 2 e 3, as duas últimas depois de revisão). Issue: #396 (Part of
 #291). Branch `feat/entrega-8a-motor-assincrono`, **rebaseada sobre `origin/main` `8bcafb0570`**
 (era `261d7bb086`; a #405 entrou no meio — ver "Rodada 2", item 7). **Zero migration.** Sem merge,
 sem produção.
@@ -68,6 +68,23 @@ que o motor e a ferramenta se escondem um atrás do outro.
 - `closing_deliveries` devolve `[]` sem `trabalho_novo`; `resultado_entregue?` é preço publicado
   (`entregues`), nunca o `pedido`; `resta_entregar?` **corrigido** (ver abaixo).
 
+**`434387788e`** `fix(tool): a chave do token da entrega publicada vem da constante` (rodada 3)
+- `AsyncPublisher#build_message!` passa a gravar a chave por `EntregaPublicada::CHAVE`, e o hash
+  inteiro de `content_attributes` passa a usar chaves de string (o `ActionController::Parameters`
+  já as convertia; misturar as duas formas é ofensa de `Style/HashSyntax`).
+
+**`7a811d8342`** `fix(cotacao): a execução em voo no deploy volta a receber comparativo e fecho` (rodada 3)
+- `InsuranceQuote::Fecho#resultado_entregue?` cai para `entregues` (`prova_legada?`) quando
+  `entregas_de_preco` está AUSENTE do handle — a guarda é o que impede a frase falsa de voltar.
+- `InsuranceQuote#fechar` deixa de usar `.compact` sobre o handle mesclado; a ausência da
+  identidade se resolve em `marcas_do_comparativo`.
+- Os três escritores da identidade (`token_da_entrega`, `registrar_entrega_de_preco`,
+  `marcas_do_comparativo`) mudam-se de `InsuranceQuote` para `InsuranceQuote::Fecho` — a classe
+  bateu no teto de `Metrics/ClassLength` (177/175) e o módulo é quem lê as mesmas chaves.
+- Specs: dois exemplos novos em `insurance_quote_ramo_auto_spec` e um em
+  `async_run_job_encerramento_parcial_spec`; um exemplo existente do bloco do fecho perdeu a
+  asserção que agora descreve a linha legada (ela virou o exemplo próprio).
+
 ## Rodada 2 — o que a revisão derrubou, e o que passou a valer
 
 A rodada 1 foi reprovada pelo Codex e pelo verificador cego, que convergiram no MESMO erro por
@@ -110,10 +127,11 @@ Correção, em três peças:
 O fechamento do portal passa a se gravar por si (`portal_fechado`, no ramo `done` de
 `build_progress`, independente do PDF) em vez de ser deduzido de `comparativo_enviado` — que
 continua sendo lido como prova do fechamento, e só para isso, pelas execuções que atravessarem o
-deploy (ver R11).
+deploy (ver R11, corrigido na rodada 3).
 
 **O que prova:** `insurance_quote_ramo_auto_spec`, bloco `'o fecho e o que ainda vale entregar'`
-(dez exemplos, com a ferramenta montada como o motor a monta e a mensagem criada na conversa); e
+(dez exemplos na rodada 2, doze depois da rodada 3, com a ferramenta montada como o motor a monta
+e a mensagem criada na conversa); e
 pelo caminho real, `async_run_job_encerramento_parcial_spec`, `'a cotacao cujo preco nunca chegou ao
 cliente fecha com a frase de falha, e nao pede comparativo'` e `'a consulta grava a identidade do
 preco que publicou, e o fecho a usa'`. Mutações M11 a M17.
@@ -194,6 +212,157 @@ Durante esta rodada a `main` andou de novo (`356333935b`, #408 — documento de 
 especialista). Ela toca só `quote_agent/instrucoes/principal.md` e o spec de promessas dele:
 **zero interseção** com o diff desta PR, e por isso o ramo foi deixado em `8bcafb0570` — os
 números de validação abaixo são todos dessa base.
+
+## Rodada 3 — a janela do deploy, e o que foi medido em vez de afirmado
+
+A rodada 2 foi reprovada pelo Codex e pelo verificador cego. O bloqueante era o inverso do da
+rodada 1: em vez de afirmar demais, o fecho passou a **calar demais** — e calava exatamente para
+quem o incidente de 08/09/2026 deixou sem resposta.
+
+### 1. A execução em voo no deploy perdia o comparativo E o fecho (P1)
+
+**O estado, executado:** linha `running` com o handle da versão anterior (`entregues`, e **sem**
+`entregas_de_preco`), o preço já publicado na conversa, `delivered_count` positivo, prazo vencido.
+
+| | mensagens ao cliente |
+|---|---|
+| `main` | preço · comparativo · frase parcial |
+| rodada 2 | preço — **e nada mais**; a linha fecha em `failed` |
+| rodada 3 | preço · comparativo · frase parcial |
+
+`entregas_de_preco` é a identidade da mensagem, e quem a grava é a passada que EMITE o preço. A
+execução que atravessa o deploy emitiu o dela na versão anterior: não há o que procurar, e o fecho
+conclui "nenhum preço chegou". Durante toda a vida das execuções em voo (prazo da execução mais o
+`GRACE` do varredor), o cliente que já tinha recebido preço ficava sem o PDF e sem uma palavra —
+o incidente que esta entrega existe para eliminar, de volta.
+
+**A correção é a que o arquivo já usava três métodos abaixo.** `portal_fechado?` lê a marca antiga
+(`comparativo_enviado`) como prova LEGADA, guardada. `resultado_entregue?` passa a fazer o mesmo
+com `entregues` (`prova_legada?`): cai para ela **somente quando `entregas_de_preco` está AUSENTE
+do handle**.
+
+**Por que a objeção do R11 não se aplica.** O que ela recusava era um fallback **incondicional** —
+esse, sim, reabriria a frase falsa da rodada 1 (`entregues` avança mesmo com a publicação
+recusada). Guardado, o fallback alcança só a linha legada: toda passada posterior ao deploy que
+emite preço grava a chave, **inclusive quando a publicação é recusada**, porque ela é gravada na
+emissão. Não é raciocínio — é a mutação **M19**, que torna o fallback incondicional e derruba
+quatro exemplos, entre eles os dois que a rodada 2 escreveu contra a frase falsa.
+
+**O que prova:** `async_run_job_encerramento_parcial_spec`, `'a execucao que atravessou o deploy
+recebe o comparativo E o fecho'` (caminho real, porta do motor); e a unidade
+`insurance_quote_ramo_auto_spec`, `` 'cai para `entregues` so quando a chave da identidade esta
+AUSENTE do handle' ``. Mutações M18, M19 e M20.
+
+**O que continua sendo dívida, agora menor:** dentro da janela do deploy, a linha legada cuja
+publicação do preço foi RECUSADA lê `entregues` como prova e recebe a frase parcial sem ter preço
+na tela. É o resíduo do P1 da rodada 1, confinado às execuções em voo no momento do deploy — antes
+era o fecho inteiro que se perdia, para todas elas. Ver R11.
+
+### 2. O entrelaçamento de duas passadas: TENTADO, NÃO FECHADO (P2-1) — issue #413
+
+A marca `autonomia_closed` serializa o TRABALHO, não o fecho. Reproduzido de forma determinística
+(passada B chamada de dentro do `closing_deliveries` de A, mesma ordem temporal, sem threads):
+
+```
+mensagens = ["não consegui concluir a consulta", "o comparativo em PDF"]
+```
+
+O cliente lê a frase de falha e, em seguida, recebe o comparativo que ela nega.
+
+**Caminho tentado: pôr `fecho_publicado?` e a publicação do fecho sob o lock da conversa.** Não
+foi adotado, por duas medições:
+
+1. **O lock não fecha o defeito.** Com `publicar_fecho` inteiro dentro de
+   `conversation.with_lock`, a reprodução devolve a saída byte a byte idêntica. É esperado: o
+   problema é de ORDEM TEMPORAL (B publica em T+1 s, A entrega em T+60 s), não de leitura-e-escrita
+   concorrente. Um lock serializa; não reordena.
+2. **A transação de fora QUEBRA a reconciliação do publicador** (rodadas 7 a 9 da entrega 11).
+   `Message#send_reply` é `after_create_commit`: com o `with_lock` externo, ele passa a disparar no
+   commit de fora — fora do `VigiaDeEnvio.observar` e fora do `rescue` de `AsyncPublisher#post`.
+   Medido com o despacho de `MESSAGE_CREATED` levantando `Redis::CannotConnectError` (a montagem de
+   `async_publisher_spec`, bloco "quando a publicacao levanta depois do commit"):
+
+   | | `SendReplyJob` enfileirado | marca `autonomia_envio_pendente` |
+   |---|---|---|
+   | hoje | **1** (reconciliado na hora) | — |
+   | com o lock | **0** | **nenhuma** |
+
+   A mensagem do fecho fica no banco, o cliente nunca a recebe, e o varredor não pode recuperá-la
+   porque a marca que ele procura nunca foi gravada. Trocar um fecho fora de ordem por um fecho que
+   não chega é pior.
+
+É o caso de "se exigir redesenho do publicador, não force": **issue #413**, com as duas
+reproduções e o caminho candidato (a marca vira LEASE — quem não a adquire só fecha quando ela está
+velha; hoje não há carimbo utilizável, porque `ToolRun::ENCERRADA_EM` é gravado pelo `finish!`,
+depois do encerramento). Registrado como R15. O exemplo do entrelaçamento vai junto com a correção,
+na issue: um exemplo que documenta defeito não corrigido é um exemplo vermelho.
+
+### 3. A dívida do comparativo é maior do que a rodada 2 declarou (P2-2) — issue #414
+
+A rodada 2 escreveu que "o fecho passou a DIZER que sobrou". **Vale menos do que está escrito.**
+`entrega_do_comparativo` só é gravada em `fechar`, e `fechar` só é alcançado pelo ramo `done` de
+`build_progress` — ramo que termina em `finish_done` e **não passa pelo encerramento**. Logo
+`comparativo_pendente?` só é consultado na janela da LINHA ABANDONADA. No caminho normal, o
+comparativo emitido cuja publicação voltou `blocked` não gera aviso nenhum: o cliente não sabe que
+faltou algo.
+
+Corrigido no texto (ver "O que ficou de fora") e aberto como **issue #414**, com o exemplo que
+falta ("comparativo emitido e recusado no caminho normal"). **Não é regressão**: o buraco existe na
+`main`; o que esta PR fez foi torná-lo nomeável, ao separar "emitido" de "entregue".
+
+### 4. Duas definições da chave do token (P3)
+
+O publicador gravava o literal `autonomia_async_token:` e quem lê usava
+`EntregaPublicada::CHAVE` — a mesma classe de defeito que esta PR corrigiu para o VALOR, intacta na
+CHAVE. Agora os dois lados usam a constante.
+
+A prova é um contraste de mutação, e o mutante que **sobrevive** é o lado certo:
+
+| | `CHAVE` mutada para outro valor | resultado |
+|---|---|---|
+| M22a — como está agora (constante nos dois lados) | os dois lados se movem juntos | **0 falhas** em 24 exemplos |
+| M22b — com o literal de volta no publicador | escritor e leitor divergem | **5 falhas** em 24 exemplos |
+
+### 5. O `.compact` era mais largo que o comentário ao lado dele (P3)
+
+`fechar` fazia `handle.merge(PDF_SENT_KEY => …, COMPARATIVO_KEY => …).compact`, e o comentário
+dizia "`compact` porque sem execução não há identidade a gravar". O `compact` apagava QUALQUER
+chave nula do handle da FERRAMENTA, não só a identidade ausente. Inerte hoje (nenhuma chave da
+cotação é nula) e silencioso — que é como um apagamento de handle chega à produção. Agora a
+ausência se resolve em `marcas_do_comparativo`, que monta só as duas marcas.
+
+**O que prova:** `` 'o fecho nao apaga chave nula que o handle da ferramenta ja carregava' ``.
+Mutação M21.
+
+**Efeito colateral do conserto:** `InsuranceQuote` bateu no teto de `Metrics/ClassLength`
+(177/175). Os TRÊS escritores da identidade (`token_da_entrega`, `registrar_entrega_de_preco`,
+`marcas_do_comparativo`) mudaram-se para `InsuranceQuote::Fecho`, que é quem LÊ as mesmas chaves —
+o mesmo corte de `Comparativo`, `Declaracao`, `Recusas`, `Envio` e `Veiculo`, e o oposto de manter
+escritor e leitor separados (que foi como as duas definições do token nasceram). Movimentação pura,
+sem mudança de comportamento; a classe voltou para dentro do teto.
+
+### 6. A carga nova do varredor, medida (P3)
+
+Por linha abandonada passaram a existir consultas por CONTEÚDO de mensagem
+(`content_attributes::text LIKE`). Medido neste worktree, contando os `sql.active_record` de uma
+varredura com uma linha:
+
+| estado da linha | consultas por conteúdo | SQL total |
+|---|---|---|
+| abandonada com preço na tela | **5** | 45 |
+| legada (janela do deploy) | **4** | 44 |
+| abandonada sem preço nenhum | **4** | 73 |
+
+As cinco do primeiro caso são: TRÊS de `fecho_publicado?` (uma por frase possível de fecho), UMA de
+`resultado_entregue?` (um token de preço) e UMA do publicador ao postar o fecho. Na `main`, uma
+linha com `delivered_count` positivo não produzia nenhuma — o varredor só falava quando o contador
+era zero. **Delta: de 0 para 5 consultas por linha** no caso típico, e de 1 para 4 na linha sem
+preço.
+
+O que limita o custo: cada consulta é escopada por `conversation_id` e `sender_type` antes do
+`LIKE`, então é uma varredura pequena por conversa, não da tabela. O que NÃO está medido é o lote
+cheio: `BATCH_LIMIT` é 500 e o Sidekiq desta instalação tem 25 s de shutdown, o que põe o pior caso
+em ~2.500 consultas por conteúdo numa varredura. Registrado como R16.
 
 ## Os dois defeitos que a RODADA 1 corrigiu antes de entrar
 
@@ -283,10 +452,12 @@ e o exemplo que o fecha:
 | R8 | `Comparativo.sufixo_do_arquivo` — um `NameError` seria engolido pelo `rescue` de `comparison_pdf` e o comparativo sumiria em silêncio (já aconteceu uma vez no ramo) | perda silenciosa do comparativo em `cotar_seguro` | **mitigado por exclusão**: `comparativo.rb` não entra nesta PR. O arquivo está idêntico à `main` |
 | R9 | o encerramento adquire `closed` ANTES de qualquer publicação | se a marca já existir, o cliente não recebe palavra nenhuma — onde antes recebia a frase de falha | **era risco real e virou defeito: corrigido na rodada 2** (item 2). A marca guarda o trabalho; o fecho pergunta à conversa se já saiu e publica o que falta. `encerramento_spec`, `'marca posta e fecho ausente: a passada seguinte fecha, e nao refaz o trabalho'` e `'a passada seguinte nao contradiz o fecho que ja saiu'` (mutações M9 e M10) |
 | R10 | o lote de entregas sem isolamento por entrega | perde a publicação bem-sucedida e nega o que já saiu | corrigido nesta PR; ver o defeito 2 |
-| R11 | **janela do deploy**: execução `running` que atravessa o deploy não tem `entregas_de_preco` no handle (a chave nasce na passada que emite o preço) | o fecho dela lê "nenhum preço chegou": fecha em SILÊNCIO onde fecharia com a parcial, e não oferece o comparativo no encerramento | **risco aceito, declarado**. A janela é o tempo de vida de uma execução (prazo + `GRACE` do varredor, ordem de minutos) e o erro é para o lado conservador: o cliente fica com os preços que já leu, e nada falso é dito. A alternativa — cair para `entregues` quando a chave falta — reintroduziria a frase falsa do P1 para essa mesma janela. `comparativo_enviado` continua sendo lido como prova do fechamento do portal justamente para essa janela (`portal_fechado?`), e isso está travado em `'aceita o comparativo_enviado como prova do fechamento nas linhas que atravessam o deploy'` |
+| R11 | **janela do deploy**: execução `running` que atravessa o deploy não tem `entregas_de_preco` no handle (a chave nasce na passada que emite o preço) | na rodada 2 o fecho dela lia "nenhum preço chegou" e a linha perdia o comparativo E o fecho — o incidente de 08/09/2026 de volta para todas as execuções em voo | **era risco aceito e virou defeito: corrigido na rodada 3** (item 1). `entregues` vale como prova LEGADA, e só com `entregas_de_preco` AUSENTE do handle. O fallback INCONDICIONAL — que é o que este risco recusava — reabriria a frase falsa da rodada 1, e a mutação M19 prova que o teste pega isso. `comparativo_enviado` segue sendo lido como prova do fechamento pela mesma razão (`portal_fechado?`), travado em `'aceita o comparativo_enviado como prova do fechamento nas linhas que atravessam o deploy'`. **Resíduo declarado**: dentro da janela, a linha legada cuja publicação do preço foi RECUSADA recebe a frase parcial sem ter preço na tela |
 | R12 | a frase parcial passa a exigir a FERRAMENTA montada (agente vivo) | `agente_indisponivel` com contador positivo lia a frase na `main` e agora cala | decisão declarada, com exemplo — ver "Rodada 2", item 4. O publicador recusa qualquer mensagem dessa execução, então o cliente não perde nada que recebesse |
 | R13 | o handle da cotação ganha três chaves (`entregas_de_preco`, `entrega_do_comparativo`, `portal_fechado`) | leitor que itere o handle vê chaves novas; a coluna cresce | são da FERRAMENTA (não entram em `AsyncRunJob::MARCAS`) e nenhum leitor itera o handle — os consumidores são `Fecho` e `Comparativo`, por chave. Tamanho: dois tokens de 53 bytes e um booleano por execução |
 | R14 | `AsyncPublisher` passa a montar o token por `EntregaPublicada.token_de` | um token diferente do de antes republicaria mensagem já publicada | é a MESMA conta (`run.delivery_token` sobre a `identidade` do arquivo ou o texto aparado), agora em um lugar só; `async_run_job_comparativo_arquivo_spec` e `async_publisher_spec` exercitam os dois caminhos, inclusive o retry que não republica |
+| R15 | **entrelaçamento de duas passadas**: a marca `closed` serializa o TRABALHO, e `fecho_publicado?` é leitura sem lock | a passada que não tem a marca publica o fecho enquanto a que tem passa até 60 s no portal: o cliente lê "não consegui" e DEPOIS recebe o comparativo | **risco aceito, declarado — issue #413**, com as duas reproduções. O lock da conversa foi TENTADO e medido: não fecha o defeito (é ordem temporal, não contenção) e quebra a reconciliação do publicador (rodadas 7 a 9). Ver "Rodada 3", item 2. **Não é regressão**: a `main` não publica fecho nenhum por este caminho quando `delivered_count` é positivo |
+| R16 | **carga nova do varredor**: consultas por CONTEÚDO de mensagem por linha abandonada | até 500 linhas em sequência num cron com 25 s de shutdown do Sidekiq | **medido**: 5 consultas por linha no caso típico (3 do `fecho_publicado?`, 1 do `resultado_entregue?`, 1 do publicador), 4 na linha legada e 4 na sem preço. Na `main` eram 0 e 1. Pior caso do lote cheio: ~2.500 por varredura. Cada uma é escopada por `conversation_id` + `sender_type` antes do `LIKE`, então é varredura por conversa, não de tabela. **Não medido**: o lote cheio contra volume real. Ver "Rodada 3", item 6 |
 
 ## Validação (números)
 
@@ -295,7 +466,52 @@ rspec/rubocop "passam" sem executar nada. Todo exit code abaixo foi lido de `${p
 Banco de teste PRÓPRIO (`chatwoot_test_8a_base`, criado com `db:schema:load`), nunca o
 `chatwoot_test` compartilhado entre os worktrees deste repositório — ver a armadilha no fim.
 
-### Rodada 2 (a que vale)
+### Rodada 3 (a que vale)
+
+Código validado: **`7a811d8342`** (o HEAD do branch antes do commit desta auditoria). O SHA final
+da PR é o do commit de docs que vem depois dele, e ele **não toca `app/` nem `spec/`**.
+
+- Foco: `bundle exec rspec spec/jobs/autonomia/agents/tools/ spec/services/autonomia/agents/tools/
+  spec/models/autonomia/agents/tool_run_spec.rb` → **500 examples, 0 failures, exit 0**
+  (497 na rodada 2; +3 exemplos novos).
+- Área inteira: `bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia`
+  → **1172 examples, 0 failures, 3 pending, exit 0** (1167 na rodada 2).
+- `bundle exec rubocop` na lista EXPLÍCITA dos arquivos `.rb` do diff → **0 ofensas, exit 0**.
+  **Correção de um número da rodada 2:** ela diz "19 arquivos", e o diff tem **18** — o 19º era o
+  `slack_uploads_controller_spec.rb`, descartado no rebase (item 7 da rodada 2 já dizia que o
+  arquivo saiu do diff, mas a contagem do rubocop não foi atualizada junto.)
+  Uma ofensa apareceu no caminho e foi corrigida, não silenciada: `Metrics/ClassLength` em
+  `InsuranceQuote` (177/175), resolvida movendo os três escritores da identidade para
+  `InsuranceQuote::Fecho` — mais `Style/HashSyntax` no hash de `content_attributes`, que passou a
+  usar chaves de string em todas as entradas.
+- **Partições do CI** (`find spec -name '*_spec.rb' | sort`, `i % 8`; os arquivos desta PR caem nos
+  nós **1 a 7**, os mesmos da rodada 2). Todos rodados aqui, na íntegra, **na primeira passada**:
+
+  | nó | arquivos | rodada 3 | rodada 2 |
+  |---|---|---|---|
+  | 1 | 141 | 1365 ex, **0 falhas**, 12 pending — exit 0 | 1365 (só na repetição limpa) |
+  | 2 | 141 | 1188 ex, **0 falhas**, 3 pending — exit 0 | 1188 |
+  | 3 | 141 | 1166 ex, **0 falhas**, 36 pending — exit 0 | 1165 |
+  | 4 | 141 | 1333 ex, **0 falhas**, 2 pending — exit 0 | 1333 |
+  | 5 | 141 | 1273 ex, **0 falhas**, 18 pending — exit 0 | 1273 |
+  | 6 | 141 | 1610 ex, **0 falhas**, 18 pending — exit 0 | 1610 |
+  | 7 | 141 | 1746 ex, **0 falhas**, 34 pending — exit 0 | 1744 |
+
+  As diferenças são exatamente os exemplos novos: **+1 no nó 3** (a janela do deploy pelo caminho
+  real) e **+2 no nó 7** (a guarda do fallback e o `.compact`).
+
+- **A regra da rodada 2 foi obedecida, e o resultado a confirma.** Nenhuma escrita em `app/` ou
+  `spec/` enquanto uma partição rodava, e o nó 1 — que na rodada 2 deu 10 falhas na primeira
+  passada e 0 na repetição — fechou em **0 na primeira**. A causa daquelas falhas era mesmo o
+  `config.cache_classes = false` recarregando o Rails no meio da corrida, não o código.
+
+- **Armadilha de shell registrada (custou uma leitura errada).** `${pipestatus[1]}` no zsh é o
+  status do PRIMEIRO comando do pipeline — mas só do ÚLTIMO pipeline executado. Envolver a corrida
+  num subshell (`(bundle exec rspec … | tail)`) faz `pipestatus` valer para o subshell inteiro, e
+  ele devolve o status do `tail`: **`EXIT=0` sobre um rspec que falhou**. A primeira corrida RED
+  desta rodada foi lida assim. Todos os exit codes acima vieram de pipelines sem subshell.
+
+### Rodada 2 (histórico)
 
 - Foco: `bundle exec rspec spec/jobs/autonomia/agents/tools/ spec/services/autonomia/agents/tools/
   spec/models/autonomia/agents/tool_run_spec.rb` → **497 examples, 0 failures, exit 0**
@@ -388,6 +604,20 @@ reescritos): quem as substitui são M11, M12 e M13.
 | M16 | `async_run_job.rb` `ferramenta` | remove `conversation:` e `run:` (a capacidade sem consumidor do P3-2) | `async_run_job_encerramento_parcial_spec` + `async_run_job_comparativo_arquivo_spec` + `base_contrato_de_nivel_spec` | **SOBREVIVEU na primeira passada** (23 exemplos, 0 falhas). Com o exemplo novo `'a consulta grava a identidade do preco que publicou, e o fecho a usa'`: **1 falha** |
 | M17 | `encerramento.rb` `montar` | remove `conversation:` e `run:` na ferramenta do encerramento | `async_run_job_encerramento_parcial_spec` + `encerramento_spec` | **3 falhas** |
 
+### Rodada 3
+
+| # | âncora | mutação | alvo | resultado |
+|---|---|---|---|---|
+| M18 | `insurance_quote/fecho.rb` `resultado_entregue?` | remove a guarda inteira (volta ao comportamento da rodada 2) | `insurance_quote_ramo_auto_spec` + `async_run_job_encerramento_parcial_spec` | **2 falhas** — a unidade e o caminho real da janela do deploy |
+| M19 | `insurance_quote/fecho.rb` `resultado_entregue?` | torna o fallback INCONDICIONAL (`return prova_legada?(handle)` sem a guarda) — é exatamente o que o R11 recusava | idem | **4 falhas** — entre elas os DOIS exemplos que a rodada 2 escreveu contra a frase falsa (`'nao pede o comparativo quando o preco nunca chegou ao cliente'` e `'a cotacao cujo preco nunca chegou ao cliente fecha com a frase de falha…'`). É esta mutação que prova que a guarda é o que separa a correção do defeito antigo |
+| M20 | `insurance_quote/fecho.rb` `prova_legada?` | `Array(handle[DELIVERED_KEY]).any?` → `true` (lista vazia contaria como preço) | idem | **2 falhas** |
+| M21 | `insurance_quote.rb` `fechar` | volta o `.compact` largo sobre o handle mesclado | `insurance_quote_ramo_auto_spec` | **1 falha** — `'o fecho nao apaga chave nula que o handle da ferramenta ja carregava'` |
+| M22a | `entrega_publicada.rb` `CHAVE` | muda o VALOR da constante, com o código como está | `encerramento_spec` + `async_run_job_encerramento_parcial_spec` | **0 falhas** em 24 exemplos — os dois lados se movem juntos. Aqui o mutante SOBREVIVER é a prova: há uma definição só |
+| M22b | `entrega_publicada.rb` `CHAVE` **e** `async_publisher.rb` | muda o valor da constante **e** devolve o literal ao publicador (desfaz a correção) | idem | **5 falhas** em 24 exemplos — escritor e leitor divergem, e a pergunta "já chegou?" para de responder |
+
+Todos os arquivos voltaram ao md5 de antes (conferido em cada mutação, inclusive nas duas de M22,
+que tocam dois arquivos).
+
 Método idêntico ao da rodada 1 (`BOOTSNAP_CACHE_DIR` próprio; md5 conferido antes, depois da
 mutação e depois da restauração — igual ao de antes nas dez). Uma armadilha registrada porque
 custou trabalho: `git checkout -- <arquivo>` para restaurar a mutação **apaga a alteração não
@@ -431,19 +661,26 @@ commitada** do arquivo. As mutações desta rodada rodaram com cópia de seguran
   (3) o cenário do defeito 1 — deixar o portal fechar e matar o worker entre o `record_attempt!` e
   o `finish!('done')`, esperando **silêncio** no fecho; (4) NOVO na rodada 2 — conferir no handle de
   uma execução real que `entregas_de_preco` tem um token por mensagem de preço publicada e que
-  `portal_fechado` aparece quando o portal fecha. Evidência a coletar em cada uma: `run.id`,
+  `portal_fechado` aparece quando o portal fecha; (5) NOVO na rodada 3 — no deploy, conferir que
+  uma execução que estava `running` ANTES da subida (handle sem `entregas_de_preco`, com
+  `entregues`) ainda recebe o comparativo e o fecho ao expirar. Evidência a coletar em cada uma: `run.id`,
   `status`, `failure_code`, `delivered_count`, o `handle` (com `entregues`, `entregas_de_preco`,
   `entrega_do_comparativo`, `portal_fechado`, `comparativo_enviado`, `autonomia_closed`), as
   mensagens `AgentBot` em ordem, e as linhas `[autonomia][tool]` do log.
-- **A dívida que a rodada 2 assume, nomeada:** a execução que atravessa o deploy sem
-  `entregas_de_preco` fecha em silêncio em vez de parcial (R11), e o comparativo cujo PDF já foi
-  emitido e teve a publicação recusada NÃO é regerado — `comparison_pdf` continua barrando pela
-  sentinela `comparativo_enviado`, que é intenção. O fecho passou a DIZER que sobrou (é o que
-  `comparativo_pendente?` faz), mas quem ainda não reenvia é a emissão. Regerar significaria uma
-  URL nova, token novo, e um segundo comparativo para quem já tivesse recebido o primeiro por um
-  caminho que não vemos (a publicação adiada). Fica registrado como o próximo passo natural do
-  mesmo raciocínio, com a decisão pendente: reemitir com a URL GRAVADA no handle, em vez de pedir
-  outra ao portal.
+- **O comparativo emitido e recusado — issue #414.** A rodada 2 escreveu que "o fecho passou a
+  DIZER que sobrou (é o que `comparativo_pendente?` faz)". **Isso vale menos do que estava
+  escrito, e o texto está corrigido:** `entrega_do_comparativo` só é gravada em `fechar`, `fechar`
+  só é alcançado pelo ramo `done` de `build_progress`, e esse ramo termina em `finish_done` — que
+  **não passa pelo encerramento**. Logo o aviso só acontece na janela da LINHA ABANDONADA; no
+  caminho normal, o comparativo emitido cuja publicação voltou `blocked` não gera aviso nenhum.
+  Somam-se a isso as duas pontas que já estavam nomeadas: ninguém REENVIA (`comparison_pdf` barra
+  pela sentinela `comparativo_enviado`, que é intenção), e regerar significaria URL nova, token
+  novo e um segundo comparativo para quem já tivesse recebido o primeiro por um caminho que não
+  vemos (a publicação adiada). Tudo isso, mais o exemplo que falta ("comparativo emitido e recusado
+  no caminho normal"), está na **issue #414**, com a decisão pendente: reemitir com a URL GRAVADA
+  no handle, em vez de pedir outra ao portal. **Não é regressão** — o buraco existe na `main`.
+- **O entrelaçamento de duas passadas — issue #413.** Ver R15 e "Rodada 3", item 2. O exemplo do
+  entrelaçamento vai com a correção, na issue.
 
 ## Rollback
 
