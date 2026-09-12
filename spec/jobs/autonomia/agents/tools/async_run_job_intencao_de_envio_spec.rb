@@ -498,9 +498,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Act
       Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
-      # Assert
-      expect(run.reload).to have_attributes(status: 'failed', delivered_count: 1)
-      expect(bot_contents).to be_empty
+      # Assert — o que importa é a FRASE: quem acabou de receber preço não lê "não consegui". Desde a
+      # rodada 5 da entrega 8 o varredor fecha pelo mesmo `Tools::Encerramento` do motor, e o fecho de
+      # quem já recebeu algo é o PARCIAL (era o silêncio, e silêncio não podia continuar: o varredor
+      # passou a oferecer as entregas do encerramento, e entregar um arquivo sem uma palavra de fecho
+      # é o defeito ao contrário). `delivered_count` aqui conta as chamadas ao `Registry.find` do
+      # dublê, não entregas: por isso a asserção é o sinal, não a magnitude.
+      expect(run.reload.status).to eq('failed')
+      expect(run.delivered_count).to be_positive
+      expect(bot_contents).to eq([tool.partial_message])
+      expect(bot_contents.join(' ')).not_to include('não consegui')
     end
 
     it 'nao marca a abandonada que tem numero: a cotacao esta registrada' do

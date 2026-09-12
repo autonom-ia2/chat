@@ -43,9 +43,14 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     expect(bot_contents).to eq(['não consegui concluir a consulta'])
   end
 
-  it 'stays silent when the customer already received a delivery' do
+  # QUEM JÁ RECEBEU ALGO LÊ O FECHO PARCIAL, não o silêncio nem "não consegui" (rodada 5 da entrega
+  # 8). Antes o varredor calava aqui. Ele passou a fechar pelo MESMO `Tools::Encerramento` do motor —
+  # que é o que faz o arquivo já pronto sair por este caminho —, e um fecho tinha de vir junto:
+  # entregar um arquivo e não dizer nada é o defeito ao contrário. A frase não contradiz o que o
+  # cliente leu; dizer "não consegui" é que contradiria.
+  it 'fecha com a frase parcial quando o cliente ja recebeu uma entrega' do
     # Arrange
-    register_async_tool(build_async_tool)
+    tool = register_async_tool(build_async_tool)
     run = open_run
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 10.minutes.ago)
     run.record_delivery!
@@ -53,9 +58,30 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     # Act
     described_class.new.perform
 
-    # Assert — fecha a linha, mas não contradiz o que o cliente já leu
+    # Assert
     expect(run.reload.status).to eq('failed')
-    expect(bot_contents).to be_empty
+    expect(bot_contents).to eq([tool.partial_message])
+    expect(bot_contents.join(' ')).not_to include('não consegui')
+  end
+
+  # O VARREDOR OFERECE O ENCERRAMENTO À FERRAMENTA (rodada 5, P2). Ele fecha a linha quando a corrente
+  # de jobs se rompe — e, até 12/09/2026, fechava publicando só a frase de falha: o que a ferramenta
+  # ainda tinha para entregar (a proposta que o portal JÁ gerou, o comparativo da cotação) morria no
+  # handle, e o cliente lia "não consegui" ao lado de um arquivo que existia. Era o defeito P2 da
+  # rodada 3 vivo na outra porta, fora do alcance da correção de lá — o varredor não passa por
+  # `fail_run`. A ordem importa: primeiro o que vale entregar, depois o fecho.
+  it 'entrega o que a ferramenta ainda tinha antes de publicar o fecho' do
+    # Arrange
+    tool = register_async_tool(build_async_tool(closing: ['o arquivo que ficou pronto']))
+    run = open_run
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 10.minutes.ago)
+
+    # Act
+    described_class.new.perform
+
+    # Assert — o arquivo primeiro, o fecho parcial depois (algo chegou agora)
+    expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.partial_message])
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
   it 'leaves a run alone while it is still within its deadline plus the grace window' do

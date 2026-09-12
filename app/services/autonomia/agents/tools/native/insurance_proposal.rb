@@ -51,7 +51,11 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
            'documento da seguradora; contratar continua com um atendente.'.freeze
   ESPERANDO = 'Estou gerando a proposta agora. Assim que o arquivo estiver pronto, mando aqui.'.freeze
   FALHOU = 'Não consegui gerar a proposta agora. Um atendente vai retomar daqui.'.freeze
-  PARCIAL = 'Não consegui gerar todas as propostas a tempo. As que chegaram estão aqui em cima.'.freeze
+  # "ENVIAR", E NÃO "GERAR" (rodada 5, P3 do revisor final): o fecho parcial também sai quando o
+  # portal GEROU as duas e só uma coube na passada do encerramento — dizer "não consegui gerar" ali
+  # é desmentir um arquivo que existe. Quem ficou pronta e não foi enviada é dita pelo nome, com o
+  # que fazer (`Recusas#nao_enviada`); esta frase é o fecho, e vale para os dois casos.
+  PARCIAL = 'Não consegui enviar todas as propostas a tempo. As que chegaram estão aqui em cima.'.freeze
   INCERTO = 'Não consegui confirmar se a proposta foi gerada. Um atendente vai conferir e retomar daqui.'.freeze
 
   include Recusas
@@ -142,7 +146,7 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
 
     origem = fixar_origem(handle[ORIGEM])
     return progress_class.failed('cotacao_ausente') if origem.nil?
-    return progress_class.done(deliveries: [recusar('cotacao_substituida', SUBSTITUIDA, onde: 'envio')]) unless origem_ainda_vale?
+    return progress_class.done(deliveries: [recusar_substituicao]) unless origem_ainda_vale?
 
     entregar(confirmar(handle))
   end
@@ -166,8 +170,26 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     return [] unless origem_ainda_vale?
 
     confirmar(handle)
-    nao_publicadas(handle).first(1).map { |proposta| entrega(proposta, handle['sufixo']) } +
+    faltam = nao_publicadas(handle)
+    faltam.first(1).map { |proposta| entrega(proposta, handle['sufixo']) } +
+      aviso_da_gerada(faltam.drop(1)) +
       aviso_de(handle[NAO_SAIU].to_h.keys + Array(handle[PENDENTES]))
+  end
+
+  # O QUE VIROU MENSAGEM AGORA, no próprio encerramento (rodada 5; resíduo aberto na rodada 4).
+  # `closing_deliveries` monta o que falta ANTES de a mensagem existir, e quem publica é o
+  # `Tools::Encerramento`, logo depois — sem esta chamada, a proposta entregue no fecho ficava fora da
+  # medida da entrega 7: o cliente com o PDF no WhatsApp e a cotação sem marca nenhuma.
+  #
+  # Anotar aqui NÃO é faturar o que o cliente não recebeu (o defeito 3 da rodada 3): a pergunta
+  # continua sendo a MENSAGEM publicada, nunca o handle — a publicação que voltou `blocked` não
+  # deixou mensagem, e não é anotada. Fica de fora só a ADIADA, que vira mensagem depois de todo
+  # mundo ter ido embora.
+  def confirmar_publicadas(handle)
+    return unless origem_ainda_vale?
+
+    confirmar(handle.to_h)
+    nil
   end
 
   private
@@ -227,6 +249,15 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     faltaram.any? ? [nao_saiu(nomes_de(faltaram))] : []
   end
 
+  # A QUE O PORTAL GEROU E NÃO COUBE NESTA PASSADA (rodada 5, P3 do revisor final). O encerramento
+  # entrega UM arquivo, e a segunda gerada é descartada — trade-off medido (25 s de shutdown), e ele
+  # fica. O que não fica é o cliente lendo "não consegui gerar todas" sobre um arquivo que EXISTE:
+  # ela é dita pelo nome, com o que fazer. Nunca entra em `aviso_de`, que é de quem NÃO foi gerada.
+  def aviso_da_gerada(propostas)
+    nomes = nomes_de(propostas.map { |proposta| proposta['code'].to_s })
+    nomes.any? ? [nao_enviada(nomes)] : []
+  end
+
   # -> o handle de recusa (`pedido`/`motivo`/`faltando`), ou nil quando há o que gerar.
   def avaliar
     recusar_entrada || recusar_escolha
@@ -247,10 +278,27 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
   # entre "esta EXECUÇÃO não tem origem fixada" (anterior ao deploy) e "esta CONVERSA não tem
   # cotação": a primeira pede o pedido de novo, a segunda oferece cotar.
   def recusar_origem
-    return recusa('cotacao_substituida', SUBSTITUIDA, faltando: []) if cotacao && !origem_ainda_vale?
+    return recusa_da_substituicao if cotacao && !origem_ainda_vale?
     return recusa('proposta_sem_origem', SEM_ORIGEM, faltando: []) if sem_origem?
 
     recusa('proposta_sem_cotacao', SEM_COTACAO, faltando: []) if cotacao.nil?
+  end
+
+  # A ORIGEM DEIXOU DE SER A ÚLTIMA — e o que o cliente faz em seguida depende da recotação (rodada
+  # 5). Com ela viva, ou encerrada COM preço, esperar é legítimo, e o texto é o de sempre. Encerrada
+  # SEM preço nenhum, esperar é esperar para sempre: a frase diz isso e oferece cotar de novo. Dois
+  # textos e dois motivos no registro; a regra que barra a origem antiga continua sendo UMA.
+  def recusa_da_substituicao
+    return recusa('recotacao_sem_preco', RECOTACAO_SEM_PRECO, faltando: []) if recotacao_sem_preco?
+
+    recusa('cotacao_substituida', SUBSTITUIDA, faltando: [])
+  end
+
+  # A MESMA escolha no ENVIO (`poll`), onde a recusa vira entrega ao cliente e é registrada daqui.
+  def recusar_substituicao
+    return recusar('recotacao_sem_preco', RECOTACAO_SEM_PRECO, onde: 'envio') if recotacao_sem_preco?
+
+    recusar('cotacao_substituida', SUBSTITUIDA, onde: 'envio')
   end
 
   def recusar_escolha

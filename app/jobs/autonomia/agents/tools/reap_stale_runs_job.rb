@@ -97,17 +97,23 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   def close(run)
     native = ::Autonomia::Agents::Tools::Registry.find(run.slug)
     run.reload
-    tell_customer(run, native) if native.present? && run.delivered_count.zero?
+    encerrar(run, native) if native.present?
     run.finish!('failed', failure_code: 'execucao_abandonada')
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] reap failed run=#{run.id} #{e.class}")
     nil
   end
 
-  # Força a publicação: a cadeia de entrega humanizada daquele turno já morreu há muito, e esperar
-  # por ela deixaria o cliente sem desfecho para sempre.
-  def tell_customer(run, native)
-    texto = run.envio_incerto? ? native.uncertain_message : native.failure_message
-    ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(texto)
+  # O MESMO ENCERRAMENTO DO MOTOR (`Tools::Encerramento`, rodada 5 da entrega 8). Até 12/09/2026 este
+  # caminho só publicava a frase de falha: o que a ferramenta ainda tinha para entregar — a proposta
+  # que o portal JÁ gerou, o comparativo da cotação — morria no handle, e o cliente lia "não consegui"
+  # ao lado de um arquivo que existia. Era o defeito P2 da rodada 3 vivo na OUTRA porta de
+  # encerramento, e a correção de lá não o alcançava porque o varredor não passa por `fail_run`.
+  #
+  # A publicação é FORÇADA (`publish!`): a cadeia de entrega humanizada daquele turno já morreu há
+  # muito, e esperar por ela deixaria o cliente sem desfecho para sempre.
+  def encerrar(run, native)
+    publicador = ->(entrega) { ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega) }
+    ::Autonomia::Agents::Tools::Encerramento.new(run: run, native: native, &publicador).encerrar
   end
 end

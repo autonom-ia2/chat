@@ -132,6 +132,29 @@ RSpec.describe Autonomia::Agents::Tools::RetomadaDeEnvio do
       expect(Autonomia::Agents::Tools::PendenciaDeEnvio).not_to be_marcada(Message.find(mensagem.id))
     end
 
+    # O QUE `entrega_do_token` LEVANTA NÃO VIRA ENTREGA (rodada 5, P3). Ao contrário de `publicavel?`,
+    # este hook NÃO tem `rescue` — e o comentário de `AutorizacaoDaExecucao` afirmava que a proposta
+    # tratava as exceções dela "dentro do próprio hook, e não chega aqui": verdade só para o outro. A
+    # invariante verdadeira, agora escrita, é a mesma dos dois lados: o que não se consegue conferir
+    # NÃO SAI. Um `rescue` devolvendo nil aqui seria o CONTRÁRIO da decisão do dinheiro — nil
+    # significa "não reconheço esta entrega", e não barraria nada.
+    it 'o hook que levanta nao reenvia a proposta: nada vai ao cliente, e a marca fica' do
+      # Arrange — a proposta virou mensagem, o envio ficou pendente, e a conferência do token quebra
+      execucao = proposta_gerada_da_cotacao
+      mensagem = mensagem_pendente(execucao, reserva)
+      quebrada = Class.new(proposta) do
+        def entrega_do_token(_run, _token)
+          raise ActiveRecord::StatementInvalid, 'banco fora'
+        end
+      end
+      allow(Autonomia::Agents::Tools::Registry).to receive(:find).and_return(quebrada)
+
+      # Act / Assert — sobe para quem chamou (o varredor registra e segue), e nada é reenviado
+      expect { described_class.new(run: execucao).recuperar(mensagem) }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(SendReplyJob).not_to have_been_enqueued
+      expect(Autonomia::Agents::Tools::PendenciaDeEnvio).to be_marcada(Message.find(mensagem.id))
+    end
+
     it 'reenvia normalmente enquanto a cotacao de origem continua sendo a ultima' do
       execucao = proposta_gerada_da_cotacao
       mensagem = mensagem_pendente(execucao, reserva)

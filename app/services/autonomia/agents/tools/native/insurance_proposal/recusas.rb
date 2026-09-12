@@ -24,6 +24,13 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Recusas
   # vale é a dela. O que o cliente precisa saber é que a proposta espera pelos preços novos.
   SUBSTITUIDA = 'A cotação foi refeita depois desse pedido, e a proposta sairia dos preços antigos. ' \
                 'Quando os preços novos chegarem, é só me pedir de novo.'.freeze
+  # A RECOTAÇÃO MORREU SEM PREÇO (rodada 5, achado do verificador cego). O MOTIVO é o mesmo da
+  # anterior — a origem não é mais a última —, mas o que o cliente PODE FAZER é outro: não há preço
+  # novo a caminho, e esperar por ele é esperar para sempre. A regra não mudou (ver
+  # `Origem#recotacao_sem_preco?`); mudou a frase, e ela oferece o único caminho que existe.
+  RECOTACAO_SEM_PRECO = 'A cotação foi refeita depois desse pedido, mas a nova não chegou a trazer ' \
+                        'preços — então não tenho de onde tirar a proposta. Se quiser, faço a ' \
+                        'cotação de novo.'.freeze
   # SEM A COTAÇÃO DE ORIGEM NOS ARGUMENTOS (rodada 3, M4 do verificador cego): a execução foi aberta
   # antes do deploy que passou a fixá-la no aceite. Escolher uma cotação agora, minutos depois, é o
   # que a rodada 2 proibiu — então a resposta é honesta sobre o que aconteceu (não achei a cotação
@@ -62,6 +69,16 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Recusas
   # A mesma falha quando OUTRA proposta saiu: o aviso vem depois dos arquivos.
   def nao_saiu(nomes)
     "Não consegui gerar a proposta de #{nomes.to_sentence(**LISTA)} agora; as demais estão aqui em cima."
+  end
+
+  # A PROPOSTA QUE O PORTAL GEROU E NÃO COUBE NA PASSADA DO ENCERRAMENTO (rodada 5). Um arquivo por
+  # passada é trade-off medido — dois downloads de 20 s não cabem nos 25 s que o Sidekiq dá ao job num
+  # shutdown —, e o descarte continua; o que não pode é o cliente ler "não consegui gerar todas" sobre
+  # um arquivo que EXISTE. Ele fica sabendo que ela está pronta e o que fazer: pedir de novo funciona,
+  # porque a origem continua sendo a última cotação da conversa.
+  def nao_enviada(nomes)
+    "A proposta de #{nomes.to_sentence(**LISTA)} ficou pronta, mas não deu tempo de enviar o arquivo aqui. " \
+      'Me peça de novo que eu mando.'
   end
 
   # A recusa do envio VIRA ENTREGA, e não falha — o contrato que `poll` reconhece pelo `pedido`, o

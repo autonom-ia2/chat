@@ -33,7 +33,10 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # o status de volta para `running` não faz o job reentrar no encerramento. O spec trava que a
   # marca é gravada (pega a remoção acidental); a proteção contra o retry é raciocínio, como era a
   # do `SUBMITTED_KEY` quando ele nasceu.
-  CLOSED_KEY = 'autonomia_closed'.freeze
+  #
+  # Desde a rodada 5 da entrega 8 quem a DEFINE é `Tools::Encerramento`, dono do encerramento inteiro
+  # (o varredor fecha pelo mesmo caminho). O nome continua aqui porque ela é uma das MARCAS do motor.
+  CLOSED_KEY = ::Autonomia::Agents::Tools::Encerramento::CLOSED_KEY
 
   # A LINHA MUDOU DE DONO no meio da passada: um pedido novo a supersedeu, ou outro processo com a
   # mesma execução (o Sidekiq re-enfileira o job no hard shutdown, e o antigo pode estar vivo noutro
@@ -250,47 +253,17 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.finish!('failed', failure_code: code.presence || 'tool_failed')
   end
 
-  # Quem pode ter uma cotação correndo no portal sem registro nosso não lê "não consegui": lê que não
-  # há confirmação. A frase é da ferramenta, no nível de classe, como as outras que o job publica.
-  def mensagem_de_falha(run, native)
-    run.envio_incerto? ? native.uncertain_message : native.failure_message
-  end
-
-  # Não deixa `StandardError` subir: o encerramento é cortesia sobre um caminho que já deu errado, e
-  # falhar aqui apagaria o `finish!` que registra o desfecho. A marca `closed` é ADQUIRIDA no banco
-  # (`ausente:`): dois processos com a mesma execução e leitura velha não geram dois comparativos.
+  # O ENCERRAMENTO É UM SÓ, e mora em `Tools::Encerramento` (rodada 5 da entrega 8): a mesma sequência
+  # — adquirir a marca, oferecer as entregas à ferramenta, deixá-la anotar o que virou mensagem,
+  # publicar o fecho — vale para o VARREDOR, que fecha a linha quando ESTA corrente de jobs se rompe.
+  # Ele ficava com metade dela, e o cliente lia "não consegui" com o arquivo pronto parado no handle.
+  #
+  # Aqui a publicação ESPERA a cadeia de entrega humanizada do turno e re-agenda a adiada — é o que
+  # `publish` faz, e é por isso que quem publica é quem chama.
   def encerrar(run, native)
-    return unless run.merge_handle!({ CLOSED_KEY => true }, ausente: CLOSED_KEY)
-
-    publish(run, fecho(run, native, entregar_o_que_resta(run, native)))
-  rescue StandardError => e
-    Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{run.slug} #{e.class}")
-  end
-
-  # O que a ferramenta ainda tem para entregar. -> true quando alguma dessas entregas foi aceita
-  # (publicada, ou adiada — a adiada sai sozinha pelo `AsyncPublishJob`).
-  #
-  # NÃO conta em `delivered_count`, de propósito: esse contador é o da entrega do TRABALHO, e é ele
-  # que diz, na janela do pedido repetido (entrega 10), que a execução deu resultado.
-  #
-  # SEM AGENTE NÃO SE MONTA A FERRAMENTA — e isto não é defesa sobrando: `agente_indisponivel` é um
-  # dos caminhos que chegam aqui, alcançado JUSTAMENTE porque o agente sumiu.
-  def entregar_o_que_resta(run, native)
-    return false if run.agent.blank?
-
-    tool = ferramenta(run, native)
-    Array(tool.closing_deliveries(tool_handle(run))).map { |entrega| publish(run, entrega) }
-                                                    .any? { |result| result.published? || result.deferred? }
-  end
-
-  # O FECHO VEM DEPOIS DAS ENTREGAS, e é escolhido pelo que o cliente tem em mãos: com algo entregue
-  # (antes, ou agora no encerramento), o fecho parcial; sem nada, a frase de falha. Dizer "não
-  # consegui" a quem acabou de receber preço desmente o que ele está lendo, e dizer "o que chegou
-  # está aqui em cima" a quem não recebeu nada é pior ainda.
-  def fecho(run, native, entregou)
-    return native.partial_message if entregou || run.delivered_count.positive?
-
-    mensagem_de_falha(run, native)
+    ::Autonomia::Agents::Tools::Encerramento
+      .new(run: run, native: native) { |entrega| publish(run, entrega) }
+      .encerrar
   end
 
   # A ferramenta montada para trabalhar FORA do turno: com a conversa da execução (a proposta

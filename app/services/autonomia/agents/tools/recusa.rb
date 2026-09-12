@@ -72,6 +72,7 @@ module Autonomia::Agents::Tools::Recusa
     # Rodada de correção da entrega 8: a cotação de origem é fixada no aceite e só vale enquanto for
     # a última desta conversa — o estado da cotação nova não importa.
     'cotacao_substituida' => 'a cotação de origem não é mais a última desta conversa; a proposta não sai dos preços antigos',
+    'recotacao_sem_preco' => 'a recotação encerrou sem preço nenhum: a proposta não sai da lista antiga e não há preço novo a caminho',
     'proposta_nao_gerada' => 'o portal não gerou a proposta da seguradora pedida (recusou ou falhou), embora ela tenha cotado',
     'proposta_sem_origem' => 'a execução foi aberta sem a cotação de origem fixada (é anterior ao deploy); o pedido precisa ser refeito'
   }.freeze

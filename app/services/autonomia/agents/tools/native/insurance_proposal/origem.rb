@@ -32,13 +32,30 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Origem
   # A chave da cotação de origem: nos ARGUMENTOS da execução (gravada pelo aceite) e no HANDLE
   # (copiada pelo `start`, lida pelo `poll`). É o id da linha da cotação em `autonomia_agent_tool_runs`.
   ORIGEM = 'cotacao_run_id'.freeze
-  # As cotações que NUNCA viraram trabalho, e por isso não contam como "o cliente mandou refazer":
-  # a `pending` órfã (o worker morreu entre o aceite e o despacho — um deploy basta —, e a linha fica
-  # parada até o prazo, até uma hora), a descartada com o turno e a barrada pelo gate da conta.
-  # Nenhuma delas vai trazer preço novo, e contá-las travaria a proposta por uma cotação que ninguém
-  # vai executar. É a MESMA lista de `ToolRun.opened_for_turn?`, pelo mesmo motivo (verificador cego,
-  # I2 da rodada 3).
-  SEM_TRABALHO = %w[pending discarded blocked].freeze
+  # QUEM NUNCA VIROU TRABALHO NÃO É RECOTAÇÃO — e "nunca trabalhou" é pergunta por ESTADO, não uma
+  # lista de status (rodada 5). Até aqui a lista era a de `ToolRun.opened_for_turn?`
+  # (`pending discarded blocked`), copiada de uma pergunta PARECIDA e DIFERENTE: lá significa "ainda
+  # não virou trabalho NESTE TURNO"; aqui, "NUNCA trabalhou".
+  #
+  #   - `discarded` nunca trabalhou e nunca vai: o turno morreu antes do despacho.
+  #   - `pending` DEPENDE DA IDADE. A mesma lista tratava como órfã tanto a aceitação que vai promover
+  #     em milissegundos quanto a que ficou parada porque o worker morreu — e era por essa fresta que
+  #     a proposta antiga publicava enquanto a cotação nova promovia: `ToolRun#promote!` corre sob o
+  #     advisory lock do slug e o publicador sob o lock da CONVERSA, mecanismos disjuntos. A promoção
+  #     acontece no fim do turno que aceitou, e o turno tem teto de 120 s de HTTP
+  #     (`Crm::Ai::ResponsesClient#create_with_tool_executor`): o que passou disso não vai ser
+  #     promovido — é a órfã do I2, que o varredor recolhe em uma hora (`PENDING_MAX_AGE`).
+  #   - `blocked` DEPENDE DO TRABALHO FEITO. Quem a escreve é `AsyncRunJob#block_run`, quando o
+  #     operador puxa o freio (kill-switch da conta, agente desligado, conversa fora da allowlist) —
+  #     e isso acontece DEPOIS de a cotação ter rodado, às vezes depois de ela já ter entregado preço.
+  #     Tratá-la como "nunca trabalhou" fazia a cotação nova sumir da conta, a antiga voltar a ser "a
+  #     última", e a proposta do risco velho publicar depois de uma recotação real — o P1 da rodada 3
+  #     reaberto por outra transição. Trabalhou quem tem número no portal ou já entregou alguma coisa.
+  DESCARTADA = 'discarded'.freeze
+  PENDENTE = 'pending'.freeze
+  BLOQUEADA = 'blocked'.freeze
+  # Até quando uma `pending` ainda pode virar `running`: o teto de HTTP do turno que a aceitou.
+  PROMOCAO_ATE = 2.minutes
 
   # O que o aceite grava como argumentos (`Native::Base#argumentos`): o que o modelo escreveu MAIS a
   # cotação de origem escolhida agora. Sem cotação não há o que fixar — e a conferência já recusou.
@@ -90,9 +107,41 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Origem
   # É ELA A COTAÇÃO MAIS RECENTE DESTA CONVERSA? Por id (`cotacoes` já é conta + conversa + slug da
   # cotação), seja qual for o estado da mais nova: viva, com preço, encerrada ou falhada. Uma cotação
   # aberta depois da origem quer dizer que o cliente mandou refazer — e a lista que ele vai ler é a
-  # nova. Fora as que NUNCA viraram trabalho (`SEM_TRABALHO`).
+  # nova. Fora as que NUNCA viraram trabalho (ver as constantes no alto).
   def ultima_cotacao?(origem)
-    cotacoes.where.not(status: SEM_TRABALHO).order(id: :desc).limit(1).pick(:id) == origem.id
+    ultima_das_cotacoes&.id == origem.id
+  end
+
+  # A cotação mais recente que CONTA como recotação nesta conversa, ou nil quando não há nenhuma.
+  def ultima_das_cotacoes
+    cotacoes_que_contam.order(id: :desc).first
+  end
+
+  # As que contam: nem descartada, nem `pending` velha demais para ainda ser promovida, nem `blocked`
+  # que nunca chegou a trabalhar — sem número no portal E sem nada entregue ao cliente.
+  def cotacoes_que_contam
+    cotacoes.where.not(status: DESCARTADA)
+            .where('status <> ? OR created_at > ?', PENDENTE, PROMOCAO_ATE.ago)
+            .where("status <> ? OR delivered_count > 0 OR handle->>'quote_id' IS NOT NULL", BLOQUEADA)
+  end
+
+  # A RECOTAÇÃO ENCERROU SEM TRAZER PREÇO NENHUM? (rodada 5, achado do verificador cego.) A REGRA NÃO
+  # MUDA — a origem antiga continua não valendo, e incluir a `failed` sem preço em "nunca trabalhou"
+  # reabriria o R7 —, mas a FRASE precisa ser outra: prometer "quando os preços novos chegarem, é só
+  # me pedir de novo" a quem tem uma recotação MORTA sem preço é prometer o que não vem, e o cliente
+  # fica preso para sempre, com os preços antigos na tela e a proposta deles barrada.
+  #
+  # Só vale para a cotação NOVA (nunca para a própria origem, que pode ter morrido sendo a última) e
+  # só depois de ela encerrar: enquanto está viva, os preços ainda podem chegar — e aí a frase certa
+  # é a de sempre.
+  def recotacao_sem_preco?
+    nova = ultima_das_cotacoes
+    nova.present? && nova.id != cotacao&.id && encerrada_sem_preco?(nova)
+  end
+
+  def encerrada_sem_preco?(nova)
+    ::Autonomia::Agents::ToolRun::ACTIVE_STATUSES.exclude?(nova.status) &&
+      Array(nova.handle.to_h[::Autonomia::Agents::Tools::Native::InsuranceQuote::DELIVERED_KEY]).empty?
   end
 
   # EXECUÇÃO SEM ORIGEM FIXADA: a linha foi aberta antes do deploy desta rodada (uma `pending` que

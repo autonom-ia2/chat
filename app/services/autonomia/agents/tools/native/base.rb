@@ -255,6 +255,17 @@ class Autonomia::Agents::Tools::Native::Base
     []
   end
 
+  # O QUE VIROU MENSAGEM NO PRÓPRIO ENCERRAMENTO (rodada 5 da entrega 8). `closing_deliveries` monta o
+  # que ainda vale entregar ANTES de a mensagem existir, e quem publica é o encerramento, logo depois
+  # — não há passada seguinte, então o que sai ali ficava fora de qualquer registro que a ferramenta
+  # faça PELA MENSAGEM publicada (a proposta individual anota na cotação o que virou proposta, e é o
+  # que a medida da entrega 7 lê). O encerramento chama isto DEPOIS de publicar, e a pergunta que a
+  # ferramenta faz continua sendo a mesma de sempre: existe a mensagem com o token? Nunca o handle.
+  # -> nada. Padrão: nada.
+  def confirmar_publicadas(_handle)
+    nil
+  end
+
   # ESTA ENTREGA AINDA PODE SER PUBLICADA? (rodada 3 da entrega 8, P1 do Codex.)
   #
   # A publicação nem sempre acontece logo depois do `poll`: ela é ADIADA enquanto a cadeia de

@@ -551,12 +551,61 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
 
     # `pending` ÓRFÃ NÃO CONTA COMO RECOTAÇÃO (verificador cego, I2): o worker morreu entre o
     # aceite e o despacho — um deploy basta —, e a linha fica parada até o prazo, sem ninguém para
-    # executá-la. Contá-la travaria a proposta por uma cotação que nunca vai acontecer; é a mesma
-    # convenção de `ToolRun.opened_for_turn?` (`Origem::SEM_TRABALHO`).
-    it 'a cotacao aceita e nunca promovida nao barra a proposta' do
+    # executá-la. Contá-la travaria a proposta por uma cotação que nunca vai acontecer.
+    #
+    # ÓRFÃ É A QUE JÁ NÃO PODE SER PROMOVIDA (rodada 5): quem decide é a IDADE, não o status. A
+    # promoção acontece no fim do turno que aceitou, e o turno tem teto de 120 s de HTTP.
+    it 'a cotacao aceita e nunca promovida, velha demais para promover, nao barra a proposta' do
       cotacao_com_precos
+      orfa = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug, arguments: { 'produto' => 'auto' },
+                                              scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+      orfa.update!(created_at: described_class::PROMOCAO_ATE.ago - 1.minute)
+
+      handle = no_job('Porto').start
+
+      expect(handle['motivo']).to be_nil
+      expect(handle[described_class::GERADAS].pluck('code')).to eq(['8'])
+    end
+
+    # A JANELA ENTRE A CONFERÊNCIA E A PUBLICAÇÃO (rodada 5, P1). A aceitação recém-criada vai virar
+    # `running` em milissegundos, e `ToolRun#promote!` corre sob o advisory lock do slug enquanto o
+    # publicador corre sob o lock da CONVERSA: mecanismos disjuntos, nada os serializa. Tratada como
+    # órfã, ela deixava a proposta da lista ANTIGA publicar enquanto a cotação nova promovia. A
+    # ambiguidade era do `pending`, e quem a desfaz é a idade.
+    it 'a cotacao aceita agora, ainda por promover, barra a proposta da lista antiga' do
+      origem = cotacao_com_precos(quote_id: 'A')
       Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug, arguments: { 'produto' => 'auto' },
                                        scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+
+      handle = no_job_com_origem(origem, 'Porto').start
+
+      expect(handle['motivo']).to eq('cotacao_substituida')
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    # `blocked` NÃO É SINÔNIMO DE "NUNCA TRABALHOU" (rodada 5, P1). Quem escreve `blocked` é o freio
+    # do operador (`AsyncRunJob#block_run`: kill-switch da conta, agente desligado, conversa fora da
+    # allowlist), e ele desce DEPOIS de a cotação ter rodado — às vezes depois de ela já ter
+    # entregado preço. Contada como "nunca trabalhou", a recotação sumia da conta, a antiga voltava a
+    # ser "a última", e a proposta do risco velho publicava depois de uma recotação real.
+    it 'a recotacao barrada pelo operador DEPOIS de entregar preco continua sendo a ultima' do
+      origem = cotacao_com_precos(quote_id: 'A')
+      cotacao_com_precos(quote_id: 'B', status: 'blocked')
+
+      handle = no_job_com_origem(origem, 'Porto').start
+
+      expect(handle['motivo']).to eq('cotacao_substituida')
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    # E O CONTRÁRIO, que é o que justifica a lista original: a barrada pelo gate ANTES de trabalhar
+    # (sem número no portal e sem nada entregue) não vai trazer preço nenhum, e não pode travar a
+    # proposta da lista que o cliente está lendo.
+    it 'a cotacao barrada pelo gate antes de trabalhar nao barra a proposta' do
+      cotacao_com_precos
+      barrada = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug, arguments: { 'produto' => 'auto' },
+                                                 scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+      barrada.update!(status: 'blocked')
 
       handle = no_job('Porto').start
 
@@ -595,15 +644,32 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     end
 
     # R7, que o verificador cego reproduziu pelo caminho real: a recotação que MORRE sem preço não
-    # barrava nada, e o anexo da lista antiga saía sem uma palavra ao cliente.
-    it 'a recotacao que falhou sem preco tambem barra a origem antiga' do
+    # barrava nada, e o anexo da lista antiga saía sem uma palavra ao cliente. Ela continua barrando
+    # — mas a FRASE é outra (rodada 5): com a recotação morta sem preço, "quando os preços novos
+    # chegarem, é só me pedir de novo" promete o que não vem, e o cliente fica preso para sempre.
+    it 'a recotacao que morreu sem preco barra a origem antiga, e a frase oferece cotar de novo' do
       origem = cotacao_com_precos(quote_id: 'A')
       cotacao_nova_em_andamento.update!(status: 'failed')
 
       handle = no_job_com_origem(origem, 'Porto').start
 
-      expect(handle['motivo']).to eq('cotacao_substituida')
+      expect(handle['motivo']).to eq('recotacao_sem_preco')
+      expect(handle['pedido']).to eq(described_class::RECOTACAO_SEM_PRECO)
+      expect(handle['pedido']).to include('não chegou a trazer preços')
+      expect(handle['pedido']).not_to include('Quando os preços novos chegarem')
       expect(connector).not_to have_received(:quote_proposal)
+    end
+
+    # E A RECOTAÇÃO QUE AINDA ESTÁ VIVA continua com o texto de sempre: os preços podem chegar, e
+    # esperar é legítimo. Sem este exemplo, trocar a frase dos dois casos passaria despercebido.
+    it 'a recotacao ainda viva mantem a frase de esperar pelos precos novos' do
+      origem = cotacao_com_precos(quote_id: 'A')
+      cotacao_nova_em_andamento
+
+      handle = no_job_com_origem(origem, 'Porto').start
+
+      expect(handle['motivo']).to eq('cotacao_substituida')
+      expect(handle['pedido']).to include('Quando os preços novos chegarem')
     end
 
     # E O CONTRÁRIO: enquanto ela É a última, a proposta sai — uma cotação mais VELHA na conversa não
@@ -977,8 +1043,26 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
 
       entregas = no_job('Porto', 'Suhai', run: run).closing_deliveries(duas)
 
-      expect(entregas.size).to eq(1)
+      expect(entregas.count { |item| arquivo(item) }).to eq(1)
       expect(arquivo(entregas.first).nome).to eq('Proposta Porto — placa ABC1D23.pdf')
+    end
+
+    # A SEGUNDA GERADA É ANUNCIADA, NÃO DESCARTADA EM SILÊNCIO (rodada 5, P3). O descarte é o
+    # trade-off certo (dois downloads de 20 s não cabem nos 25 s de shutdown do Sidekiq), mas o
+    # cliente lia "não consegui gerar todas as propostas a tempo" sobre um arquivo que o portal
+    # GEROU. Ela é dita pelo nome, com o que fazer — e pedir de novo funciona.
+    it 'anuncia a segunda proposta GERADA como pronta, nunca como "nao consegui gerar"' do
+      duas = handle.merge(
+        described_class::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'https://arquivos.exemplo.test/proposta-8.pdf' },
+                                     { 'code' => '20', 'name' => 'Suhai', 'url' => 'https://arquivos.exemplo.test/proposta-20.pdf' }],
+        described_class::PENDENTES => []
+      )
+
+      entregas = no_job('Porto', 'Suhai', run: run).closing_deliveries(duas)
+
+      expect(entregas.last).to eq('A proposta de Suhai ficou pronta, mas não deu tempo de enviar o arquivo aqui. ' \
+                                  'Me peça de novo que eu mando.')
+      expect(entregas.join(' ')).not_to include('Não consegui gerar')
     end
 
     # A PROPOSTA ENTREGUE NÃO PODE SUMIR DA MEDIDA (rodada 4, importante 1 do verificador cego;
@@ -1177,6 +1261,25 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
     end
 
+    # A PROPOSTA ENTREGUE NO PRÓPRIO ENCERRAMENTO TAMBÉM CONTA NA MEDIDA (rodada 5, resíduo aberto na
+    # rodada 4). `confirmar` anota o que JÁ virou mensagem, e o arquivo que o encerramento entrega
+    # vira mensagem DEPOIS dele — não há passada seguinte para confirmá-lo, e a proposta sumia da
+    # contagem da entrega 7 com o cliente já com o PDF no WhatsApp. O exemplo anterior publicava
+    # ANTES de chamar o encerramento, então cobria só o caso da passada anterior.
+    it 'anota na cotacao a proposta que o PROPRIO encerramento entregou' do
+      linha = cotacao_com_precos
+      run = execucao('Porto')
+
+      passadas(run, 1)
+      run.update!(expires_at: 1.second.ago)
+      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 1)
+
+      expect(bot_messages.map(&:content)).to eq(['Proposta da Porto.', described_class::PARCIAL])
+      expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
+      expect(Autonomia::Insurance::Medida.new(conta: account, inicio: nil, fim: nil).call)
+        .to include(cotacoes_com_proposta: 1, propostas_emitidas: 1)
+    end
+
     # A PUBLICAÇÃO ADIADA NÃO PASSA DE NOVO PELO `poll`: quem a barra é o hook da ferramenta, sob o
     # lock, imediatamente antes de a mensagem existir (rodada 3, P1 do Codex).
     it 'a entrega adiada nao vira mensagem quando a cotacao e refeita antes da publicacao' do
@@ -1190,6 +1293,29 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
 
       expect(resultado).to be_blocked
       expect(bot_messages).to be_empty
+    end
+
+    # O VARREDOR TAMBÉM ENTREGA O QUE FICOU PRONTO (rodada 5, P2 — o caminho REAL do defeito). Quando
+    # a corrente de jobs se rompe (worker morto num deploy, enqueue perdido com o Redis fora), quem
+    # fecha a linha é o `ReapStaleRunsJob`, e ele não passa por `fail_run`: publicava a frase de falha
+    # e pronto, com o PDF já gerado parado no handle. O cliente lia que a proposta não saiu tendo o
+    # arquivo a um passo de distância.
+    it 'o varredor entrega a proposta ja gerada antes de fechar a linha abandonada' do
+      # Arrange — o `start` pediu ao portal e a URL está no handle; o job nunca mais rodou
+      linha = cotacao_com_precos
+      run = execucao('Porto')
+      passadas(run, 1)
+      run.update!(expires_at: 10.minutes.ago)
+
+      # Act
+      Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+      # Assert — o arquivo primeiro, o fecho depois; e a medida conta a proposta que saiu
+      expect(bot_messages.map(&:content)).to eq(['Proposta da Porto.', described_class::PARCIAL])
+      expect(bot_messages.first.attachments.sole.file.filename.to_s).to eq('Proposta Porto — placa ABC1D23.pdf')
+      expect(bot_messages.map(&:content).join(' ')).not_to include('Não consegui gerar a proposta')
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+      expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
     end
 
     # Sem origem fixada nos argumentos (execução anterior ao deploy que passou a fixá-la), o job não

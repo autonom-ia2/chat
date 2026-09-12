@@ -42,9 +42,18 @@ module Autonomia::Agents::Tools::AutorizacaoDaExecucao
   # linha guarda (argumentos e conversa) — nunca memoizada, pelo mesmo motivo do vínculo: entre a
   # conferência de entrada e a mensagem há um download, e é a leitura de AGORA que autoriza.
   # Ferramenta fora do catálogo ou agente apagado não recusam nada: quem barra esses casos é o job.
-  # Sem entrega e sem token não há o que perguntar. O que ela levantar sobe para o `rescue` do
-  # publicador, que devolve `blocked` — a mesma coisa que já acontece quando a autorização não pode
-  # ser lida (a proposta individual trata as exceções DELA dentro do próprio hook, e não chega aqui).
+  # Sem entrega e sem token não há o que perguntar.
+  #
+  # OS DOIS HOOKS TÊM DESTINOS DIFERENTES PARA O QUE LEVANTAM, e até a rodada 5 este comentário
+  # afirmava uma invariante que só valia para metade deles:
+  #   - `publicavel?` (da proposta individual) trata as exceções DELA dentro do próprio hook — log e
+  #     `false` explícito —, e de fato não chega aqui;
+  #   - `entrega_do_token` NÃO trata: ele lê o handle e monta a entrega, e o que levantar sobe por
+  #     aqui até o `rescue` de quem chamou — o publicador devolve `blocked`, e o varredor registra e
+  #     deixa a marca para a passada seguinte.
+  # O efeito é o mesmo dos dois lados, e é o que se quer: o que não se consegue conferir NÃO SAI. Um
+  # `rescue` devolvendo nil aqui seria o contrário da decisão do dinheiro — nil significa "não
+  # reconheço esta entrega", e não barraria nada.
   def ferramenta_publicaria?(entrega, token)
     return true if entrega.nil? && token.blank?
 
