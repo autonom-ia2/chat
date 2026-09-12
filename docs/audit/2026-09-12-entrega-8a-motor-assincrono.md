@@ -1,6 +1,6 @@
 # Entrega 8a — o motor do encerramento assíncrono (sem a ferramenta da proposta)
 
-Data: 12/09/2026 (rodadas 1 a 4, as três últimas depois de revisão). Issue: #396 (Part of
+Data: 12/09/2026 (rodadas 1 a 5, as quatro últimas depois de revisão). Issue: #396 (Part of
 #291). Branch `feat/entrega-8a-motor-assincrono`, **rebaseada sobre `origin/main` `8bcafb0570`**
 (era `261d7bb086`; a #405 entrou no meio — ver "Rodada 2", item 7). **Zero migration.** Sem merge,
 sem produção.
@@ -26,6 +26,12 @@ pergunta à ferramenta o que ainda vale entregar, publica, e só então publica 
 afirma o que o publicador de fato assumiu entregar** — a pergunta é pelo ACEITE registrado na
 linha (`Tools::EntregaAceita`), nunca pela emissão, que é o que a ferramenta tentou. Aceite inclui
 a publicação ADIADA, que é aceita e ainda não é mensagem; recusa não registra nada.
+
+A afirmação é um CRUZAMENTO — a identidade da entrega, que só a ferramenta conhece, com o aceite,
+que só o publicador conhece —, e desde a rodada 5 as duas metades têm a mesma durabilidade: as
+duas vão ao banco no instante do fato, pela mesma escrita de uma linha (`ToolRun#anexar_ao_handle!`).
+A prova LEGADA, para a linha que atravessou o deploy, é o mesmo par lido nas marcas da versão
+anterior: `entregues` (emissão) e `delivered_count` (aceite).
 
 ## Por que o motor entra sozinho
 
@@ -102,6 +108,24 @@ que o motor e a ferramenta se escondem um atrás do outro.
 - Specs: cinco exemplos novos (quatro em `async_run_job_encerramento_parcial_spec`, um em
   `encerramento_spec`); o Arrange do preço recusado passou a ser a CORRENTE INTEIRA (consulta real
   + publicação que cai) em vez de handle montado à mão.
+
+**`62a70bd19b`** `fix(cotacao): a prova legada julga ACEITE, e a identidade do preço dura` (rodada 5)
+- `InsuranceQuote::Fecho#prova_legada?` passa a exigir `aceite_legado?`
+  (`ToolRun#delivered_count` positivo) além da emissão legada que já lia.
+- `ToolRun#registrar_entrega_aceita!` vira uma chamada a `ToolRun#anexar_ao_handle!(chave, token)`
+  — o mesmo UPDATE, agora com a chave por parâmetro —, e `Fecho#registrar_entrega_de_preco` grava
+  a identidade do preço NA LINHA no instante da emissão, por ele. A escrita é reforço
+  (`gravar_na_linha` registra e não levanta): o valor segue no handle devolvido.
+- Comentários corrigidos em `tool_run.rb` (o que a escrita na hora do aceite compra, e o que não)
+  e em `fecho.rb` (por que a identidade do comparativo NÃO ganhou a mesma escrita).
+- Specs: três exemplos novos em `insurance_quote_ramo_auto_spec` e seis em
+  `async_run_job_encerramento_parcial_spec`; o Arrange dos dois exemplos do comparativo em
+  `async_run_job_comparativo_arquivo_spec` passa a registrar o ACEITE e a cobertura.
+
+**`bd4b528245`** `test(cotacao): a porta do varredor não alcança o defeito da prova legada, medido`
+- Sai o exemplo do varredor que só repetia o outro por outro arranjo (nenhuma mutação o
+  derrubava); o que fica ganha o motivo escrito: M31 e M32 sobrevivem contra essa porta.
+
 
 ## Rodada 2 — o que a revisão derrubou, e o que passou a valer
 
@@ -495,8 +519,10 @@ o mesmo predicado.
 
 Fechado junto com os itens 1 e 2: com o aceite como prova e a cobertura como guarda, a execução
 nascida depois do deploy cuja publicação foi recusada não afirma nada, não pede comparativo, e lê a
-frase de falha. **O resíduo que sobra** é só o da linha em voo NO deploy cujo preço da versão
-anterior tinha sido recusado — ela carrega `entregues` e nenhuma outra prova possível. Ver R11.
+frase de falha. **O resíduo que sobrava** era o da linha em voo NO deploy cujo
+preço da versão anterior tinha sido recusado: a rodada 4 escreveu que ela "carrega `entregues` e
+nenhuma outra prova possível", e isso é FALSO — `delivered_count` é a prova de ACEITE que aquela
+versão deixou. Fechado na rodada 5, item 1. Ver R11.
 
 ### 5. `conversation:` deixou de ter consumidor, e saiu
 
@@ -531,6 +557,153 @@ consciente**: na `main` a marca `closed` cala a segunda passada INTEIRA, então 
 existe — e também não existe fecho nenhum para quem morreu entre a marca e a publicação, que é o
 defeito que a rodada 2 corrigiu (item 2 de lá). Na rodada 3 o comportamento é idêntico ao desta: a
 guarda pergunta pela mensagem, e a adiada ainda não é uma.
+
+## Rodada 5 — a prova legada julgava EMISSÃO, e a outra metade do cruzamento não era durável
+
+A rodada 4 foi aprovada nos dois P1 dela (verificado por execução sobre `59b6b86a01`) e reprovada
+em dois pontos novos, nos quais o Codex e o verificador cego **convergiram**. Os dois são o mesmo
+cruzamento visto de dois ângulos: quem afirma que o cliente recebeu preço precisa de DUAS coisas —
+a identidade da entrega e o aceite dela —, e nas duas pontas faltava metade.
+
+### 1. `prova_legada?` aceitava EMISSÃO como prova de entrega (P1)
+
+`entregues` e `preco_legado` avançam na passada que EMITE, mesmo quando a publicação é recusada.
+Julgar por elas é o defeito da rodada 1, e a rodada 4 o deixou aberto para a linha legada.
+
+**O estado, executado pela corrente inteira** (linha com handle da versão anterior — `entregues`
+preenchido, nenhuma identidade nossa — e contador ZERO, porque a publicação daquela versão foi
+recusada; prazo estourado; porta do motor):
+
+| | mensagens que o cliente recebe |
+|---|---|
+| `main` | "Não consegui concluir a cotação agora. Um atendente vai retomar daqui." |
+| rodada 4 (`59b6b86a01`) | `["Comparativo com todas as opções.", "Algumas seguradoras não responderam a tempo. Os preços acima são os que chegaram."]` — **e mais uma chamada paga ao portal** |
+| rodada 5 | "Não consegui concluir a cotação agora. Um atendente vai retomar daqui." |
+
+Ou seja: a `main` acertando e esta PR errando, com "os preços acima" sem nada acima. **Pelo ramo da
+marca o estado ficava permanente:** a linha legada que emite um preço novo — também recusado —
+grava `preco_legado` como VERDADEIRA (porque `already` não está vazio), e a partir dali ela
+afirmaria resultado pelo resto da vida. Medido no mesmo estado, com a emissão nova real: a saída é
+byte a byte a mesma da tabela acima.
+
+**A auditoria da rodada 4 afirmava, em R11 e no item 4, que "não há outra prova possível para ela".
+Isso era falso, e o texto está corrigido:** `ToolRun#delivered_count` é exatamente a prova de
+ACEITE da versão anterior. Ela já o incrementava só em publicação aceita — imediata ou adiada
+(`AsyncRunJob#deliver`: `run.record_delivery! if result.aceita?`) —, e o aviso de espera e as
+frases de fecho não passam por `deliver`, então não o tocam. Nos dois estados defeituosos ele vale
+**zero**; na linha legada verdadeira vale um ou mais.
+
+**A correção:** `prova_legada?` passa a exigir as duas metades — `aceite_legado?`
+(`delivered_count.positive?`) **e** a emissão legada que ela já lia. Sem execução não há contador e
+não há prova: o fecho cala, que é o lado conservador.
+
+**Não há falso positivo pela pergunta de dado faltante**, e não por acaso: ela é contada no
+`delivered_count`, mas o handle dela nunca tem `entregues` — quem grava `entregues => []` é
+`submeter`, e a recusa do `start` não chega lá. A metade da EMISSÃO já a exclui.
+
+**O que prova:** `async_run_job_encerramento_parcial_spec`, `'a linha legada sem aceite nenhum
+fecha com a frase de falha, e nao pede comparativo'` e `'a emissao nova recusada nao vira prova na
+linha legada que nunca entregou nada'` (os dois pela corrente inteira, com o PDF do conector `mock`
+NÃO stubbado: se o portal fosse chamado, a lista de mensagens teria o link de reserva); e a unidade
+`'a prova legada exige o ACEITE da versao anterior, nao so a emissao dela'`. Mutações **M31** e
+**M32**.
+
+**A porta do varredor não alcança este defeito, e isso foi medido:** M31 e M32 SOBREVIVEM contra
+ela. Lá `trabalho_novo` é falso, `closing_deliveries` devolve `[]` sem chegar ao predicado, e o
+portão externo do fecho é `delivered_count` — zero nessa linha, o que já leva à frase de falha. O
+exemplo da porta do varredor fica como trava dela, com o motivo escrito no arquivo, e não como
+prova da correção.
+
+**Efeito colateral medido em M30** (`marcar_preco_legado` grava `true` sempre): caiu de 2 falhas
+para 1. Não é perda de cobertura — é a correção SUBSUMINDO aquele modo de falha: com o portão do
+aceite, gravar a cobertura errada deixa de produzir frase falsa, e o que sobra é a unidade que
+trava o valor gravado.
+
+### 2. A metade não durável do cruzamento (P1)
+
+A lista do ACEITE é gravada no instante do aceite, num UPDATE (`registrar_entrega_aceita!`). A
+TABELA DE CONSULTA — quais identidades são PREÇO, que é o que só a ferramenta sabe — viajava no
+handle e só chegava ao banco no `record_attempt!` do FIM da passada. Morte entre as duas (deploy,
+com os 25 s de shutdown do Sidekiq): o cliente tem o preço na tela, o aceite está registrado, e não
+há identidade nenhuma por onde perguntar.
+
+**O estado, executado pela corrente inteira** (consulta real que publica o preço, aceite
+registrado, `record_attempt!` que não chega ao banco; prazo estourando na passada seguinte):
+
+| | última mensagem do cliente |
+|---|---|
+| `main` | a frase parcial |
+| rodada 4 (`59b6b86a01`) | **nenhuma** — o fecho cala, e a última mensagem continua sendo o preço |
+| rodada 5 | a frase parcial |
+
+O Codex classificou como P1 por outro caminho; o verificador mediu e classificou como P2 porque o
+retry do Sidekiq cura. Tratado como bloqueante: é o incidente de 08/09/2026 pela porta estreita, e
+nas DUAS portas (a do varredor é a mais provável depois de um deploy).
+
+**A correção:** a identidade do preço vai ao banco na hora da EMISSÃO, pela MESMA escrita de uma
+linha que grava o aceite. `ToolRun#registrar_entrega_aceita!` foi generalizado em
+`ToolRun#anexar_ao_handle!(chave, token)` — a chave nomeia a NATUREZA da entrega, o token é a
+IDENTIDADE: uma escrita, as duas coisas, e as duas listas do cruzamento passam a ter a MESMA
+durabilidade. O handle devolvido continua carregando o valor: a escrita imediata é reforço, e se
+ela falhar (log, nunca exceção) o comportamento degrada para o de antes.
+
+**Por que NÃO mudar o contrato do publicador.** A alternativa literal — gravar natureza e
+identidade juntas no instante do ACEITE — exigiria que quem publica soubesse a natureza, e ele não
+sabe: `AsyncRunJob#deliver` e `Encerramento#publicar_uma` recebem um texto ou uma entrega de
+arquivo, e para eles um preço e a pergunta pelo dado que falta são "uma entrega". Levar a natureza
+até lá é mudar `Progress#deliveries`, o argumento do `AsyncPublisher#publish` e o payload do
+`AsyncPublishJob` (que atravessa o Redis). Adiantar a escrita da ferramenta para a emissão dá o
+mesmo resultado — no instante do aceite a natureza JÁ é durável — sem tocar em nada disso.
+
+**Por que não persistir o handle inteiro antes de publicar** (a outra alternativa óbvia, em
+`AsyncRunJob#apply`): `entregues` é "quem já foi entregue", e gravá-lo antes da publicação cria uma
+janela NOVA em que o preço se perde de vez — morto o processo entre a escrita e a publicação, a
+consulta seguinte não reemite aquelas ofertas. Trocaria um fecho calado por um preço perdido.
+
+**O que NÃO ganhou a escrita imediata, e por quê:** `entrega_do_comparativo`,
+`comparativo_enviado` e `portal_fechado`. `COMPARATIVO_KEY` só é lida por `comparativo_pendente?`,
+e `resta_entregar?` só chega nela quando `portal_fechado?` é verdade — fato que viaja em
+`FECHADO_KEY`/`PDF_SENT_KEY`, gravadas no MESMO `record_attempt!`. Perdida a passada, perdem-se as
+três juntas, e não sobra cruzamento com durabilidades diferentes para fechar. Adiantar
+`PDF_SENT_KEY` seria pior: ela é a sentinela que impede a segunda emissão, e torná-la durável antes
+da publicação transformaria a morte no meio em comparativo que ninguém reemite — a ponta que a
+issue #414 já carrega. Ver **R18**.
+
+**O que prova:** `async_run_job_encerramento_parcial_spec`, `'o preco aceito nao se perde quando a
+passada morre antes de persistir o handle'` (porta do motor) e `'o varredor tambem reconhece o
+preco aceito cujo handle nunca foi persistido'` (porta do varredor); e as unidades `'grava a
+identidade do preco na LINHA, na hora da emissao, sem esperar o fim da passada'` e `'a escrita
+imediata que falha nao derruba a entrega que acabou de sair'`. Mutações **M33**, **M34** e **M35**.
+
+### 3. Os textos que prometiam o que não acontece (P3)
+
+- **O comentário de `registrar_entrega_aceita!` dizia que a escrita imediata evita o fecho dizer
+  "não consegui" ao lado do preço.** Medido: não evita. O portão externo do fecho é
+  `delivered_count` (`Encerramento#fecho`), gravado no `record_delivery!` que vem DEPOIS dessa
+  escrita — morto o processo entre as duas, a frase de falha sai do mesmo jeito. O que a escrita
+  imediata compra é o caso ADIADO (a entrega aceita que ainda não é mensagem), e é isso que o texto
+  diz agora. Não era regressão; era promessa falsa no lugar mais lido do método.
+- **R17 estava estreito demais.** Ele descrevia só "a autorização cair dentro dos 90 s do
+  adiamento". Qualquer recusa definitiva da publicação adiada tem o mesmo efeito: o
+  `AsyncPublishJob` chama `publish`, e QUALQUER resultado `blocked` — a autorização recusada sob o
+  lock, o `rescue StandardError` do próprio publicador (banco, construção da mensagem), a
+  reconciliação que não conseguiu enfileirar o envio, a entrega descartada por forma — faz o job
+  voltar sem reagendar e sem remover o token do aceite. Texto corrigido no R17.
+- **R7 descrevia dois argumentos de construtor, e um foi removido na rodada 4.** `Base#initialize`
+  ganha UM kwarg (`run:`), e o exemplo que o prova chama-se `'toda ferramenta do catalogo aceita
+  ser montada com a linha da execucao'`. Corrigido.
+- **A ordem de validação era contraditória.** "O que ficou de fora" mandava a rodada real na conta
+  16 acontecer ANTES do merge; o cabeçalho e a seção "Ordem" mandam produção primeiro. Vale a
+  segunda, que é a decisão do CEO e a única executável: a rodada real precisa do portal com a
+  credencial da conta 16, que só existe no ambiente de produção. Texto alinhado em "O que ficou de
+  fora": **deploy → rodada real na conta 16 → só então abrir a 8b.**
+- **Dois exemplos do comparativo passavam pela prova legada em vez do aceite.** O Arrange de
+  `async_run_job_comparativo_arquivo_spec` publicava direto, sem registrar o ACEITE e sem a
+  cobertura `preco_legado`: com a prova legada intacta, apagar o cruzamento não os derrubava.
+  **Medido:** M36 (`resultado_entregue?` sem a cláusula do aceite) SOBREVIVIA contra o Arrange
+  antigo — os 5 exemplos do arquivo passavam, exit 0 — e DERRUBA os dois depois do endurecimento.
+  O Arrange agora passa por `EntregaAceita.registrar` com o resultado real da publicação, e o
+  `handle_com_preco` da unidade ganhou `preco_legado => false`.
 
 ## Os dois defeitos que a RODADA 1 corrigiu antes de entrar
 
@@ -616,17 +789,18 @@ e o exemplo que o fecha:
 | R4 | `delivered_count` pode estar inflado (issue #402: `deferred` reemite e o contador sobe) | contador inflado mudaria o que o cliente lê no fecho | o contador só é consultado quando `entregou` é falso, e a magnitude está travada (`delivered_count: 1`, não `be_positive`) em `async_run_job_intencao_de_envio_spec` e em `async_run_job_encerramento_parcial_spec`. **#402 fica como risco aceito** — ver "O que ficou de fora" |
 | R5 | `CLOSED_KEY` passa a ser gravada em todo desfecho por falha | qualquer leitor que itere o handle vê chave nova | `MARCAS` já a inclui e `handle_da_ferramenta` a remove, então a ferramenta não a vê. Os três exemplos de `async_run_job_intencao_de_envio_spec` que passaram a usar `.except(encerrada, fechada)` são a prova de que só o teste a enxergava |
 | R6 | mudança de aridade de `closing_deliveries` para `(handle, trabalho_novo:)` | uma ferramenta com a aridade velha levantaria `ArgumentError` dentro de `etapa('entregas')` e viraria log silencioso | só há dois implementadores (`Native::Base` e `InsuranceQuote::Fecho`), e os dois mudam juntos. `base_contrato_de_nivel_spec` percorre `Registry.all` |
-| R7 | `Base#initialize` ganha dois kwargs | uma ferramenta que sobrescrevesse `initialize` quebraria | nenhuma nativa sobrescreve. Provado sobre o catálogo inteiro pelo exemplo novo `'toda ferramenta do catalogo aceita ser montada com a conversa e a linha da execucao'` |
+| R7 | `Base#initialize` ganha UM kwarg (`run:`); `conversation:` entrou na rodada 1 e saiu na 4, por falta de consumidor | uma ferramenta que sobrescrevesse `initialize` quebraria | nenhuma nativa sobrescreve. Provado sobre o catálogo inteiro pelo exemplo `'toda ferramenta do catalogo aceita ser montada com a linha da execucao'` (**corrigido na rodada 5**: o texto ainda descrevia os dois kwargs e o nome antigo do exemplo) |
 | R8 | `Comparativo.sufixo_do_arquivo` — um `NameError` seria engolido pelo `rescue` de `comparison_pdf` e o comparativo sumiria em silêncio (já aconteceu uma vez no ramo) | perda silenciosa do comparativo em `cotar_seguro` | **mitigado por exclusão**: `comparativo.rb` não entra nesta PR. O arquivo está idêntico à `main` |
 | R9 | o encerramento adquire `closed` ANTES de qualquer publicação | se a marca já existir, o cliente não recebe palavra nenhuma — onde antes recebia a frase de falha | **era risco real e virou defeito: corrigido na rodada 2** (item 2). A marca guarda o trabalho; o fecho pergunta à conversa se já saiu e publica o que falta. `encerramento_spec`, `'marca posta e fecho ausente: a passada seguinte fecha, e nao refaz o trabalho'` e `'a passada seguinte nao contradiz o fecho que ja saiu'` (mutações M9 e M10) |
 | R10 | o lote de entregas sem isolamento por entrega | perde a publicação bem-sucedida e nega o que já saiu | corrigido nesta PR; ver o defeito 2 |
-| R11 | **janela do deploy**: execução `running` que atravessa o deploy não tem identidade de entrega nenhuma no handle (as chaves nascem na passada que emite o preço) | na rodada 2 o fecho dela lia "nenhum preço chegou" e a linha perdia o comparativo E o fecho — o incidente de 08/09/2026 de volta para todas as execuções em voo | **era risco aceito, virou defeito e foi corrigido em duas etapas.** Rodada 3: `entregues` vale como prova LEGADA, guardada pela PRESENÇA da chave nova. Rodada 4: a guarda passa a ser por COBERTURA (`preco_legado`, gravada na primeira emissão desta versão), porque a presença perdia o preço antigo da linha de histórico MISTO — ver "Rodada 4", item 2. O fallback INCONDICIONAL, que é o que este risco recusava, continua recusado: M25/M26/M30 provam que o teste pega os três desvios. `comparativo_enviado` segue sendo lido como prova do fechamento pela mesma razão (`portal_fechado?`), travado em `'aceita o comparativo_enviado como prova do fechamento nas linhas que atravessam o deploy'`. **Resíduo declarado, agora menor**: dentro da janela, a linha em voo cujo preço da versão ANTERIOR foi recusado ainda lê `entregues` como prova — não há outra prova possível para ela |
+| R11 | **janela do deploy**: execução `running` que atravessa o deploy não tem identidade de entrega nenhuma no handle (as chaves nascem na passada que emite o preço) | na rodada 2 o fecho dela lia "nenhum preço chegou" e a linha perdia o comparativo E o fecho — o incidente de 08/09/2026 de volta para todas as execuções em voo | **era risco aceito, virou defeito e foi corrigido em duas etapas.** Rodada 3: `entregues` vale como prova LEGADA, guardada pela PRESENÇA da chave nova. Rodada 4: a guarda passa a ser por COBERTURA (`preco_legado`, gravada na primeira emissão desta versão), porque a presença perdia o preço antigo da linha de histórico MISTO — ver "Rodada 4", item 2. O fallback INCONDICIONAL, que é o que este risco recusava, continua recusado: M25/M26/M30 provam que o teste pega os três desvios. `comparativo_enviado` segue sendo lido como prova do fechamento pela mesma razão (`portal_fechado?`), travado em `'aceita o comparativo_enviado como prova do fechamento nas linhas que atravessam o deploy'`. **Corrigido de vez na rodada 5**: a afirmação de que "não há outra prova possível para ela" era FALSA — `delivered_count` é a prova de ACEITE que a versão anterior deixou, e `prova_legada?` passou a exigi-la. A linha em voo cujo preço da versão anterior foi recusado lê a frase honesta de falha, como na `main` (M31, M32) |
 | R12 | a frase parcial passa a exigir a FERRAMENTA montada (agente vivo) | `agente_indisponivel` com contador positivo lia a frase na `main` e agora cala | decisão declarada, com exemplo — ver "Rodada 2", item 4. O publicador recusa qualquer mensagem dessa execução, então o cliente não perde nada que recebesse |
 | R13 | o handle ganha CINCO chaves: quatro da cotação (`entregas_de_preco`, `entrega_do_comparativo`, `portal_fechado`, `preco_legado`) e uma do motor (`autonomia_entregas_aceitas`) | leitor que itere o handle vê chaves novas; a coluna cresce | nenhum leitor itera o handle — os consumidores são `Fecho`, `Comparativo` e `EntregaAceita`, por chave. As quatro da ferramenta ficam fora de `AsyncRunJob::MARCAS`; a do motor entra nelas, e **precisa** entrar (ver "Rodada 4", item 1, e M28). Tamanho: por execução, dois tokens de 53 bytes, dois booleanos e a lista do aceite — um token de 53 bytes por entrega aceita, tipicamente 2 ou 3 |
 | R14 | `AsyncPublisher` passa a montar o token por `EntregaPublicada.token_de` | um token diferente do de antes republicaria mensagem já publicada | é a MESMA conta (`run.delivery_token` sobre a `identidade` do arquivo ou o texto aparado), agora em um lugar só; `async_run_job_comparativo_arquivo_spec` e `async_publisher_spec` exercitam os dois caminhos, inclusive o retry que não republica |
 | R15 | **entrelaçamento de duas passadas**: a marca `closed` serializa o TRABALHO, e `fecho_publicado?` é leitura sem lock | a passada que não tem a marca publica o fecho enquanto a que tem passa até 60 s no portal: o cliente lê "não consegui" e DEPOIS recebe o comparativo | **risco aceito, declarado — issue #413**, com as duas reproduções. O lock da conversa foi TENTADO e medido: não fecha o defeito (é ordem temporal, não contenção) e quebra a reconciliação do publicador (rodadas 7 a 9). Ver "Rodada 3", item 2. Na rodada 4 a issue ganhou uma **extensão nomeada**: o fecho ADIADO escapa da mesma guarda, porque a mensagem dele só nasce no `AsyncPublishJob` — reproduzido em "Rodada 4", item 6. **Não é regressão**: a `main` não publica fecho nenhum por este caminho quando `delivered_count` é positivo |
 | R16 | **carga nova do varredor**: consultas por CONTEÚDO de mensagem por linha abandonada | até 500 linhas em sequência num cron com 25 s de shutdown do Sidekiq | **medido, e MENOR desde a rodada 4**: **4** consultas `content_attributes::text LIKE` por linha nos três estados (com preço, legada, sem preço) — 3 do `fecho_publicado?` (uma por frase possível) e 1 do publicador. Antes eram 5 no caso típico; a quinta era a do `resultado_entregue?`, que passou a ler o ACEITE na linha, em memória. Na `main` eram 0 e 1. Pior caso do lote cheio: ~2.000 por varredura. Cada uma é escopada por `conversation_id` + `sender_type` antes do `LIKE`, então é varredura por conversa, não de tabela. **Não medido**: o lote cheio contra volume real. Ver "Rodada 3", item 6 |
-| R17 | **o aceite não é a chegada**: a publicação ADIADA é registrada no aceite e o `AsyncPublishJob` ainda pode recusá-la (execução supersedida, agente desligado, conversa em outra caixa dentro dos até 90 s) | o fecho afirma resultado — "os preços acima são os que chegaram" — para quem não recebeu preço | **risco aceito, declarado, e é o preço do critério da rodada 4.** O inverso (perguntar pela mensagem) é o P1 que esta rodada corrigiu, e ele é permanente e comum; este exige que a autorização caia DENTRO da janela do adiamento E que o encerramento aconteça depois disso. Saída candidata, fora do escopo: a recusa do job adiado REMOVER o token do aceite — mecânica nova no `AsyncPublishJob`, que hoje não conhece o registro. Ver "Rodada 4", item 1 |
+| R17 | **o aceite não é a chegada**: a publicação ADIADA é registrada no aceite e o `AsyncPublishJob` ainda pode recusá-la. **Corrigido na rodada 5 — a causa é mais larga do que este texto dizia**: não é só a autorização cair dentro dos até 90 s (execução supersedida, agente desligado, conversa em outra caixa). QUALQUER `blocked` do job adiado tem o mesmo efeito — a autorização recusada sob o lock, o `rescue StandardError` do próprio publicador (banco, construção da mensagem), a reconciliação que não conseguiu enfileirar o envio, a entrega descartada por forma —, porque o job volta sem reagendar e sem tirar o token do aceite | o fecho afirma resultado — "os preços acima são os que chegaram" — para quem não recebeu preço | **risco aceito, declarado, e é o preço do critério da rodada 4.** O inverso (perguntar pela mensagem) é o P1 que esta rodada corrigiu, e ele é permanente e comum; este exige que a publicação adiada termine em `blocked` E que o encerramento aconteça depois disso. Saída candidata, fora do escopo: a recusa do job adiado REMOVER o token do aceite — mecânica nova no `AsyncPublishJob`, que hoje não conhece o registro. Ver "Rodada 4", item 1 |
+| R18 | **a durabilidade parou na identidade do preço**: `comparativo_enviado`, `portal_fechado` e `entrega_do_comparativo` continuam indo ao banco só no `record_attempt!` do fim da passada | morto o processo entre o aceite do comparativo e o fim da passada, a linha abandonada lê `portal_fechado` ausente e publica a frase parcial para quem recebeu preços E comparativo | **resíduo declarado, e NÃO é regressão**: a `main` faz o mesmo (pior — ela publica a parcial sempre que `delivered_count` é positivo). Adiantar essas chaves não é de graça: `comparativo_enviado` é a sentinela que impede a segunda emissão, e torná-la durável antes da publicação vira comparativo que ninguém reemite (issue #414). A identidade do PREÇO precisou ser adiantada porque ela é cruzada com uma lista de durabilidade diferente; estas três são lidas juntas, na mesma escrita. Ver "Rodada 5", item 2 |
 
 ## Validação (números)
 
@@ -635,7 +809,62 @@ rspec/rubocop "passam" sem executar nada. Todo exit code abaixo foi lido de `${p
 Banco de teste PRÓPRIO (`chatwoot_test_8a_base`, criado com `db:schema:load`), nunca o
 `chatwoot_test` compartilhado entre os worktrees deste repositório — ver a armadilha no fim.
 
-### Rodada 4 (a que vale)
+### Rodada 5 (a que vale)
+
+Código validado: **`bd4b528245`**. `62a70bd19b` é a correção (app + spec), `bd4b528245` tira um
+exemplo que nenhuma mutação derrubava e escreve o motivo. As partições, as mutações e as
+reproduções rodaram sobre `bd4b528245`; o commit desta auditoria não toca `app/` nem `spec/`.
+
+- Foco: `bundle exec rspec spec/jobs/autonomia/agents/tools/ spec/services/autonomia/agents/tools/
+  spec/models/autonomia/agents/tool_run_spec.rb` → **513 examples, 0 failures, exit 0**
+  (505 na rodada 4; +9 exemplos novos, −1 removido).
+- Área inteira: `bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia`
+  → **1188 examples, 0 failures, 3 pending, exit 0** (1180 na rodada 4).
+- `bundle exec rubocop` na lista EXPLÍCITA dos **20** arquivos `.rb` do diff → **0 ofensas, exit 0**.
+- **Reprodução dos dois P1, antes e depois**, pela corrente inteira (`AsyncRunJob#perform` de
+  verdade, conector `mock`, publicador real). O "antes" é o próprio exemplo novo rodado contra o
+  `app/` de `59b6b86a01` (RED), e a saída abaixo é a que o RSpec imprimiu:
+
+  | P1 | porta | antes (`59b6b86a01`) | depois (`bd4b528245`) |
+  |---|---|---|---|
+  | prova legada sem aceite (linha legada, contador zero) | motor | `["Comparativo com todas as opções.", "Algumas seguradoras não responderam a tempo. Os preços acima são os que chegaram."]` — e uma chamada paga ao portal | `["Não consegui concluir a cotação agora. Um atendente vai retomar daqui."]` |
+  | o mesmo, pelo ramo da marca (emissão nova recusada grava `preco_legado` verdadeira) | motor | idem, byte a byte | idem |
+  | identidade não durável (morte entre o aceite e o `record_attempt!`) | motor | a última mensagem é o PREÇO: nenhum fecho | a frase parcial |
+  | idem | varredor | a última mensagem é o PREÇO: nenhum fecho | a frase parcial |
+
+  **A porta do varredor não alcança o P1 da prova legada**, e isso foi medido (M31 e M32
+  sobrevivem contra ela): lá `trabalho_novo` é falso e o portão externo do fecho é
+  `delivered_count`, zero nessa linha. O exemplo dessa porta fica como trava dela, com o motivo
+  escrito no arquivo. Ver "Rodada 5", item 1.
+- **Partições do CI** (`find spec -name '*_spec.rb' | sort`, `i % 8`, como em `testes.yml`,
+  reproduzido em `bash` para manter o índice base-zero do workflow). As OITO, **cada uma em banco
+  PRÓPRIO** (`chatwoot_test_8a_p0..p3`, recriados por `TEMPLATE chatwoot_test_8a_base` entre as
+  levas), sem nenhuma escrita em `app/` ou `spec/` durante as corridas:
+
+  | nó | arquivos | rodada 5 | rodada 4 |
+  |---|---|---|---|
+  | 0 | 142 | 1418 ex, **0 falhas**, 4 pending — exit 0 | 1418 |
+  | 1 | 141 | 1365 ex, **0 falhas**, 12 pending — exit 0 | 1365 |
+  | 2 | 141 | 1188 ex, **0 falhas**, 3 pending — exit 0 | 1188 |
+  | 3 | 141 | 1175 ex, **0 falhas**, 36 pending — exit 0 | 1170 |
+  | 4 | 141 | 1333 ex, **0 falhas**, 2 pending — exit 0 | 1333 |
+  | 5 | 141 | 1273 ex, **0 falhas**, 18 pending — exit 0 | 1273 |
+  | 6 | 141 | 1611 ex, **0 falhas**, 18 pending — exit 0 (sozinho) | 1611 |
+  | 7 | 141 | 1749 ex, **0 falhas**, 34 pending — exit 0 (sozinho) | 1746 |
+
+  As diferenças são exatamente os exemplos novos: **+5 no nó 3** (a linha legada sem aceite pelas
+  duas portas, o ramo da marca, e a durabilidade pelas duas portas, menos o exemplo removido) e
+  **+3 no nó 7** (as três unidades em `insurance_quote_ramo_auto_spec`).
+
+  **Armadilha nova, registrada:** os nós 0 a 5 rodaram QUATRO A QUATRO, cada um no seu banco, e
+  fecharam em 0 na primeira passada. Os nós 6 e 7 — os dois maiores — caíram com **17 e 31
+  falhas** nessa mesma leva, em specs sem nenhuma relação com a PR (`usage_recorder`,
+  `answerer`, `reporting_events`, `entrega_de_arquivo` com prazo de socket). Rodados SOZINHOS,
+  no mesmo banco recriado, fecharam em **0** — é contenção de máquina, não banco compartilhado:
+  quatro suítes Rails em paralelo em 10 núcleos estouram o que os exemplos com prazo medem. Os
+  números da tabela são os das corridas sozinhas.
+
+### Rodada 4 (histórico)
 
 Código validado: **`f87d9abf9a`** — as OITO partições, as mutações e as duas reproduções rodaram
 sobre ele. Depois dele vêm dois commits: `34977fbd59`, que toca **só comentários** em dois arquivos
@@ -847,6 +1076,43 @@ reescritos): quem as substitui são M11, M12 e M13.
 Todos os arquivos voltaram ao md5 de antes (conferido em cada mutação, inclusive nas duas de M22,
 que tocam dois arquivos).
 
+### Rodada 5
+
+Método: `mutar.rb` fora do repositório, que RECUSA rodar se o trecho âncora não existir e ABORTA
+se o arquivo não mudar de tamanho depois da substituição (mutação que não aplica faz o verde
+mentir). `DISABLE_BOOTSNAP=1` em todas: cache de ISeq não pode fazer um mutante rodar como o
+original. Restauração por `git checkout -- app/`, com os commits JÁ feitos — ver a armadilha.
+
+| # | âncora | mutação | alvo | resultado |
+|---|---|---|---|---|
+| M31 | `insurance_quote/fecho.rb` `prova_legada?` | remove `return false unless aceite_legado?` (volta a julgar só a EMISSÃO) | `async_run_job_encerramento_parcial_spec` + `insurance_quote_ramo_auto_spec` | **3 falhas** — a linha legada sem aceite e o ramo da marca pela corrente inteira, mais a unidade. **Sobrevive** contra a porta do varredor, e é isso que mostra que ela não alcança o defeito |
+| M32 | `insurance_quote/fecho.rb` `aceite_legado?` | `run.present? && run.delivered_count.positive?` → `run.present?` | idem | **3 falhas** — as mesmas |
+| M33 | `insurance_quote/fecho.rb` `registrar_entrega_de_preco` | remove a escrita imediata da identidade na linha | idem | **3 falhas** — a durabilidade pelas DUAS portas, mais a unidade que lê a linha logo depois do `poll` |
+| M34 | `tool_run.rb` `anexar_ao_handle!` | troca `where(id: id)` por `vivas` (escrita guardada pelo status) | `insurance_quote_ramo_auto_spec` + `insurance_quote_comparativo_arquivo_spec` | **10 falhas** — trava a decisão de NÃO guardar pelo status: aceite e emissão são fatos consumados, e uma linha recém-supersedida não pode transformar a escrita do que já saiu num no-op |
+| M35 | `insurance_quote/fecho.rb` `gravar_na_linha` | o `rescue` volta a levantar em vez de registrar | `insurance_quote_ramo_auto_spec` | **1 falha** — a escrita de reforço derrubaria a consulta que acabou de entregar preço |
+| M36 | `insurance_quote/fecho.rb` `resultado_entregue?` | remove a cláusula do ACEITE (fica só `prova_legada?`) | os quatro arquivos do fecho | **17 falhas**, e é a mutação que prova o endurecimento do Arrange: contra o Arrange ANTIGO dos dois exemplos do comparativo ela **sobrevivia** (5 passed, exit 0), porque eles passavam pela prova legada |
+
+**Repetidas da rodada 4 sobre o código novo** — nenhuma regressão de cobertura:
+
+| # | resultado rodada 5 | rodada 4 |
+|---|---|---|
+| M25 (remove `\|\| prova_legada?`) | **5 falhas** | 2 |
+| M26 (guarda da rodada 3) | **2 falhas** | 2 |
+| M29 (a lista não acumula) | **7 falhas** | 4 |
+| M30 (`marcar_preco_legado` sempre `true`) | **1 falha** | 2 |
+
+A queda de M30 é a correção SUBSUMINDO um modo de falha: com o portão do aceite, gravar a
+cobertura errada deixa de produzir frase falsa pela corrente inteira, e o que sobra é a unidade
+que trava o valor gravado. As subidas de M25 e M29 são os exemplos novos entrando no alvo.
+
+**A armadilha do `git checkout --`, de novo, e com custo:** restaurar o `app/` depois de rodar o
+RED contra `59b6b86a01` com `git checkout HEAD -- app/ spec/` **apagou uma edição de spec ainda
+não commitada** (o comentário da porta do varredor e a remoção do exemplo redundante). É a mesma
+armadilha já registrada na rodada 3, pela outra ponta: `git checkout <sha> -- <arquivo>` também
+ESCREVE NO ÍNDICE, então o `git checkout -- <arquivo>` seguinte restaura a versão antiga, não a
+do HEAD. O trabalho foi refeito e recommitado; a regra que sobra é a de sempre — commitar antes
+de qualquer corrida que precise trocar o conteúdo do worktree.
+
 ### Rodada 4
 
 | # | âncora | mutação | alvo | resultado |
@@ -910,7 +1176,10 @@ commitada** do arquivo. As mutações desta rodada rodaram com cópia de seguran
   mudaria a frase é uma execução cujo único item entregue foi reemitido e cuja ferramenta responde
   "houve resultado" — nenhuma o faz hoje.
 - **A rodada real na conta 16.** Nenhuma das seis rodadas da #399 rodou contra o portal, e esta
-  também não rodou. **Isto é uma lacuna, não uma pendência de forma.** Antes do merge, na conta 16:
+  também não rodou. **Isto é uma lacuna, não uma pendência de forma.** A ordem é a da
+  seção "Ordem" — **deploy → rodada real → 8b** —, e não "antes do merge", como este parágrafo
+  dizia até a rodada 5: a rodada real precisa do portal com a credencial da conta 16, que só existe
+  em produção. Depois do deploy, na conta 16:
   (1) cotação feliz completa — preços, comparativo, **nenhuma frase parcial**; (2) sem preço nenhum
   com prazo estourado — frase de falha e **zero** chamadas a `quote_proposal` no log do adapter;
   (3) o cenário do defeito 1 — deixar o portal fechar e matar o worker entre o `record_attempt!` e
@@ -950,7 +1219,9 @@ ferramenta) e `autonomia_entregas_aceitas` (do motor, uma marca como as outras c
 inertes no rollback: o código antigo lê `autonomia_closed` pelo mesmo `merge_handle!(ausente:)`, e
 as cinco novas simplesmente não têm leitor lá — o fecho antigo volta a perguntar ao handle, que
 continua com `entregues` e `comparativo_enviado` intactos. Sem PII (o token é `execution_key` +
-digest do conteúdo, nunca o texto), sem cleanup.
+digest do conteúdo, nunca o texto), sem cleanup. **Rodada 5:** nenhuma chave nova — o que mudou é
+QUANDO `entregas_de_preco` é escrita (na emissão, e não no fim da passada), com o mesmo valor e a
+mesma forma, e por isso o rollback continua sendo só código.
 
 ## Ordem
 
