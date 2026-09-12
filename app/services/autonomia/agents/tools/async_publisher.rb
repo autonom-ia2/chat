@@ -59,6 +59,14 @@
 #    (o job encerra, `comparativo_enviado` impede nova emissão, o Redis voltar não dispara nada) ficava
 #    para sempre: o `ReapStaleRunsJob` a acha a cada 10 min e a resolve pelo mesmo caminho, com a
 #    mesma autorização (`AutorizacaoDaExecucao`) reconferida sob o lock.
+#
+# 9. A PRÓPRIA FERRAMENTA TAMBÉM AUTORIZA A ENTREGA (rodada 3 da entrega 8, P1 do Codex):
+#    `Native::Base#publicavel?(run, entrega)`, dentro da mesma conferência sob o lock. O `dead?` da
+#    linha não cobre tudo — a execução da proposta individual continua viva enquanto a COTAÇÃO de
+#    que ela saiu é refeita, e a publicação ADIADA (até 90 s) ou retomada não passa de novo pelo
+#    `poll` que conferiria isso. A entrega vai junto da pergunta porque a mesma execução publica o
+#    ARQUIVO (que não pode sair de uma cotação morta) e as FRASES que explicam o que houve (que
+#    precisam sair).
 class Autonomia::Agents::Tools::AsyncPublisher
   include ::Autonomia::Agents::Tools::AutorizacaoDaExecucao
 
@@ -89,7 +97,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
     sem_conteudo = nada_a_publicar(entrega, arquivo)
     return sem_conteudo if sem_conteudo
 
-    conversation = authorized_conversation
+    conversation = authorized_conversation(arquivo || entrega)
     return Result.new(status: :blocked) if conversation.blank?
     return Result.new(status: :deferred) if wait_for_chain && humanized_chain_open?(conversation)
 
@@ -133,12 +141,18 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # depois, e ele receberia dois preços conflitantes. NÃO basta exigir `running?` — a entrega final
   # legítima é publicada e a linha fechada logo em seguida, então uma republicação adiada
   # encontraria a linha já `done`.
-  def authorized_conversation
+  def authorized_conversation(entrega)
     conversation = @run.conversation
     return if conversation.blank?
-    return if recusada?(autorizacao(conversation.reload))
 
-    conversation
+    autorizado = autorizacao(conversation.reload, entrega: entrega)
+    return conversation unless recusada?(autorizado)
+
+    # A RECUSA DA ENTRADA TAMBÉM FICA REGISTRADA, com a mesma linha da recusa sob o lock (rodada 3).
+    # Até aqui ela era silenciosa: `blocked` sem uma palavra no log, e a entrega que não saiu não
+    # deixava rastro nenhum — justamente o caso em que se quer saber por quê.
+    Rails.logger.warn("[autonomia][tool][async] publicacao recusada run=#{@run.id} motivo=#{autorizado}")
+    nil
   end
 
   # Há uma cadeia de entrega humanizada em curso para o turno que originou esta execução? A cadeia
@@ -177,10 +191,10 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # na entrega de arquivo; `blocked`, no fim. Só a mensagem desta chamada é reconciliada: uma mensagem
   # achada pelo token poderia ser de outro publicador, com um envio dele a caminho — a menos que ela
   # carregue a PENDÊNCIA que quem a criou gravou, e essa é retomada AINDA SOB O LOCK (decisões 7 e 8).
-  def post(conversation, corpo)
+  def post(conversation, corpo, entrega)
     vigia = ::Autonomia::Agents::Tools::VigiaDeEnvio.new
     publicado = nil
-    vigia.observar { conversation.with_lock { publicado = publicar_sob_lock(conversation, corpo) } }
+    vigia.observar { conversation.with_lock { publicado = publicar_sob_lock(conversation, corpo, entrega) } }
     resultado(publicado)
   rescue StandardError => e
     raise unless publicado.is_a?(Message) && publicado.persisted?
@@ -193,12 +207,12 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # RECONFERIDA AQUI, sob o lock e sem cache (`AutorizacaoDaExecucao`): `dead?` relido do banco e o
   # vínculo recalculado sobre a conversa que o lock acabou de recarregar — conta habilitada, agente
   # ligado e ativo, allowlist, mesma caixa. É esta conferência, não a da entrada, que autoriza a mensagem.
-  def publicar_sob_lock(conversation, corpo)
-    agent_inbox = autorizacao(conversation)
+  def publicar_sob_lock(conversation, corpo, entrega)
+    agent_inbox = autorizacao(conversation, entrega: entrega)
     return agent_inbox if recusada?(agent_inbox)
 
     sequence = @run.sequence
-    existente = entrega_publicada(conversation, corpo.token)
+    existente = ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, corpo.token)
     return retomar(existente) if existente
 
     mensagem = build_message!(conversation, agent_inbox, sequence, corpo)
@@ -249,7 +263,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
   def entregar(conversation, arquivo, texto)
     return post_arquivo(conversation, arquivo) if arquivo
 
-    post(conversation, Corpo.new(texto: texto, token: @run.delivery_token(texto)))
+    post(conversation, Corpo.new(texto: texto, token: @run.delivery_token(texto)), texto)
   end
 
   # O ARQUIVO BAIXA E É GRAVADO FORA DO LOCK da conversa: é rede, com tetos próprios, e a conversa
@@ -280,7 +294,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
   rescue ::Autonomia::Agents::Tools::EntregaDeArquivo::Indisponivel => e
     Rails.logger.warn("[autonomia][tool][async] arquivo indisponivel run=#{@run.id} motivo=#{e.motivo}" \
                       "#{" causa=#{e.causa}" if e.causa}; vai como link")
-    post(conversation, Corpo.new(texto: arquivo.reserva, token: token))
+    post(conversation, Corpo.new(texto: arquivo.reserva, token: token), arquivo)
   ensure
     ::Autonomia::Agents::Tools::EntregaDeArquivo.agendar_limpeza(blob, contexto: "run=#{@run.id}") if blob && !anexado
   end
@@ -295,19 +309,11 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # — nunca a mensagem da exceção (rodada 6, 11/09/2026). Se a reserva também levantar, sobe para o
   # `publish`, que devolve `blocked`, como sempre.
   def publicar_anexo(conversation, arquivo, token, blob)
-    resultado = post(conversation, Corpo.new(texto: arquivo.legenda, token: token, anexo: blob.signed_id))
+    resultado = post(conversation, Corpo.new(texto: arquivo.legenda, token: token, anexo: blob.signed_id), arquivo)
     [resultado, resultado.message.present? || blob.attachments.exists?]
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] anexo falhou run=#{@run.id} causa=#{e.class}; vai como link")
-    [post(conversation, Corpo.new(texto: arquivo.reserva, token: token)), false]
-  end
-
-  # -> a mensagem desta conversa que já carrega o token (a entrega publicada), ou nil. O `LIKE` é só a
-  # peneira barata; quem decide é a comparação exata do atributo.
-  def entrega_publicada(conversation, token)
-    conversation.messages.where(sender_type: 'AgentBot')
-                .where('content_attributes::text LIKE ?', "%#{token}%")
-                .detect { |message| message.content_attributes.to_h['autonomia_async_token'].to_s == token }
+    [post(conversation, Corpo.new(texto: arquivo.reserva, token: token), arquivo), false]
   end
 
   def build_message!(conversation, agent_inbox, sequence, corpo)

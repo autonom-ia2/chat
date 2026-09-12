@@ -146,8 +146,8 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
   # A cotação que a proposta individual lê (entrega 8): com preço entregue e o mapa código -> nome,
   # com os nomes REAIS do portal (48 "Bp" e 55 "Bp Assinatura" são homônimas). `done` por padrão;
   # `running` é a lista parcial, `superseded` a que um pedido novo refez.
-  def cotacao_com_precos(status: 'done', mapa: { '8' => 'Porto', '48' => 'Bp', '55' => 'Bp Assinatura' })
-    Autonomia::Agents::ToolRun.create!(account: account, agent: agent, conversation_id: conversation.id, slug: cotacao.slug,
+  def cotacao_com_precos(status: 'done', conversa: conversation, mapa: { '8' => 'Porto', '48' => 'Bp', '55' => 'Bp Assinatura' })
+    Autonomia::Agents::ToolRun.create!(account: account, agent: agent, conversation_id: conversa.id, slug: cotacao.slug,
                                        status: status, execution_key: SecureRandom.uuid,
                                        arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } },
                                        handle: { 'quote_id' => 'q1', 'produto' => 'auto', cotacao::DELIVERED_KEY => mapa.keys,
@@ -437,12 +437,12 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Porto', 'Bp', 'Suhai', origem: cotacao_com_precos)) }
       },
       # A origem FIXADA no aceite morreu antes do `start` (rodada de correção, P1 do Codex).
-      'insurance_proposal.rb#recusar_entrada#3' => {
+      'insurance_proposal.rb#recusar_origem#1' => {
         espera: { motivo: 'cotacao_substituida', slug: 'proposta_da_seguradora', onde: 'envio' },
         dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos(status: 'superseded'))) }
       },
       # A cotou, B está correndo sem preço: a proposta espera pela nova.
-      'insurance_proposal.rb#recusar_entrada#4' => {
+      'insurance_proposal.rb#recusar_origem#2' => {
         espera: { motivo: 'cotacao_em_andamento', slug: 'proposta_da_seguradora', onde: 'envio' },
         dispara: lambda {
           origem = cotacao_com_precos
@@ -450,9 +450,19 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: origem))
         }
       },
-      'insurance_proposal.rb#recusar_entrada#5' => {
-        espera: { motivo: 'proposta_sem_cotacao', slug: 'proposta_da_seguradora', onde: 'envio' },
+      # Execução aberta ANTES do deploy que passou a fixar a origem no aceite (rodada 3, M4).
+      'insurance_proposal.rb#recusar_origem#3' => {
+        espera: { motivo: 'proposta_sem_origem', slug: 'proposta_da_seguradora', onde: 'envio' },
         dispara: -> { rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: nil)) }
+      },
+      # A origem fixada é de OUTRA conversa da mesma conta: não é cotação DESTA conversa, e
+      # `cotacao_fixada` não a acha (rodada 3, M1 — a mutação que tira o escopo da conversa reprova).
+      'insurance_proposal.rb#recusar_origem#4' => {
+        espera: { motivo: 'proposta_sem_cotacao', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: lambda {
+          alheia = cotacao_com_precos(conversa: create(:conversation, account: account, inbox: inbox, assignee: nil))
+          rodar_job(proposta, arguments: pedido_de_proposta('Porto', origem: alheia))
+        }
       },
       # "B" é prefixo de Bp e de Bp Assinatura, sem ser igual a nenhuma: ambígua. ("Bp" é a 48: o exato vence.)
       'insurance_proposal.rb#recusar_escolha#1' => {
@@ -489,6 +499,18 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           ready_connection
           run = run_promovida(register_async_tool(proposta), arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos(status: 'running')))
+          rodar_passadas(run, desde: 0, ate: 0)
+          cotacao_nova_em_andamento
+          rodar_passadas(run, desde: 1, ate: 1)
+        }
+      },
+      # A origem `done` NÃO vira `superseded` quando outra cotação abre: quem barra a entrega é a
+      # conferência de "em andamento", que o `poll` passou a refazer (rodada 3, I1).
+      'insurance_proposal.rb#poll#2' => {
+        espera: { motivo: 'cotacao_em_andamento', slug: 'proposta_da_seguradora', onde: 'envio' },
+        dispara: lambda {
+          ready_connection
+          run = run_promovida(register_async_tool(proposta), arguments: pedido_de_proposta('Porto', origem: cotacao_com_precos))
           rodar_passadas(run, desde: 0, ate: 0)
           cotacao_nova_em_andamento
           rodar_passadas(run, desde: 1, ate: 1)

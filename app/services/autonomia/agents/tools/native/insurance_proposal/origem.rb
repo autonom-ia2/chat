@@ -12,14 +12,18 @@
 #     handle (o `start` a copia). Se ela morreu no caminho — supersedida por um pedido novo entre o
 #     aceite e o `start`, ou entre o `start` e o `poll` —, a resposta é `cotacao_substituida`, sem
 #     chamar o portal e sem entregar nada;
-#   - nos DOIS contextos, uma cotação mais nova VIVA e ainda sem preço é `cotacao_em_andamento`: o
-#     cliente acabou de mandar refazer, e a proposta sairia da lista que ele descartou. O `poll` não
-#     refaz esta conferência (a origem dele é a fixada; se um pedido novo a supersedeu, `dead?`
-#     pega; se ela já estava `done`, a proposta sai da lista que o cliente leu quando pediu).
+#   - nos TRÊS momentos — turno, `start` e `poll` —, uma cotação mais nova VIVA e ainda sem preço é
+#     `cotacao_em_andamento`: o cliente acabou de mandar refazer, e a proposta sairia da lista que
+#     ele descartou. Até a rodada 3 o `poll` conferia só `dead?`, e o caso mais comum escapava: uma
+#     origem `done` NÃO vira `superseded` quando outra abre (`ToolRun.open!` só supersede a viva),
+#     então a proposta da lista velha saía enquanto a nova corria — a mesma janela que o `start`
+#     recusa, aberta por dezenas de segundos a minutos (verificador cego, I1);
+#   - e a conferência é refeita na PUBLICAÇÃO EFETIVA (`InsuranceProposal#publicavel?`, chamado pelo
+#     publicador sob o lock): entre o `poll` e a mensagem há uma cadeia humanizada de até 90 s.
 #
-# Uma cotação `done` NÃO vira `superseded` quando outra abre — `ToolRun.open!` só supersede a que
-# está viva. Por isso a origem encerrada continua servível depois de um pedido novo, e é a
-# conferência de "em andamento" que barra a proposta enquanto os preços novos não chegam.
+# Uma cotação `done` NÃO vira `superseded` quando outra abre. Por isso a origem encerrada continua
+# servível depois de um pedido novo, e é a conferência de "em andamento" que barra a proposta
+# enquanto os preços novos não chegam.
 module Autonomia::Agents::Tools::Native::InsuranceProposal::Origem
   extend ActiveSupport::Concern
 
@@ -65,13 +69,34 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Origem
     cotacoes_com_preco.find_by(id: id)
   end
 
-  # Há uma cotação mais nova VIVA e ainda sem preço nesta conversa? Só a última conta: `open!`
+  # A origem ainda serve para uma proposta sair dela? Viva ou encerrada, NUNCA morta, e sem uma
+  # cotação mais nova correndo sem preço. É a mesma pergunta em três lugares: a entrada do `start`,
+  # a de cada passada do `poll` e a da publicação efetiva (`publicavel?`).
+  def origem_ainda_vale?
+    origem = cotacao
+    origem.present? && !origem.dead? && !cotacao_em_andamento?
+  end
+
+  # Há uma cotação mais nova CORRENDO e ainda sem preço nesta conversa? Só a última conta: `open!`
   # supersede a viva anterior, então a viva é sempre a mais recente.
+  #
+  # `running?`, não `active?` (verificador cego, I2): uma `pending` é uma aceitação que o turno ainda
+  # não promoveu, e a órfã — o worker morreu entre o aceite e o despacho, e um deploy basta — fica
+  # parada até o prazo da linha, até uma hora. Contá-la travaria a proposta por uma cotação que
+  # ninguém vai executar. É a mesma convenção de `ToolRun.opened_for_turn?`, pelo mesmo motivo.
   def cotacao_em_andamento?
     return false unless conversation
 
     ultima = cotacoes.order(id: :desc).first
-    ultima.present? && ultima.active? && !cotacoes_com_preco.exists?(id: ultima.id)
+    ultima.present? && ultima.running? && !cotacoes_com_preco.exists?(id: ultima.id)
+  end
+
+  # EXECUÇÃO SEM ORIGEM FIXADA: a linha foi aberta antes do deploy desta rodada (uma `pending` que
+  # esperava o despacho) ou fora do aceite. Não é "esta conversa não tem cotação" — pode ter, e a
+  # escolha do turno é que se perdeu; escolher agora, no job, é justamente o que a rodada 2 proibiu.
+  # Só no JOB: no turno a origem é escolhida, e a ausência dela é ausência de cotação mesmo.
+  def sem_origem?
+    delivery.nil? && params[ORIGEM].blank?
   end
 
   def cotacoes

@@ -170,11 +170,20 @@ class Autonomia::Agents::Tools::Native::Base
   # `InsuranceQuote::Veiculo#consultar_placa` escolhe a sessão). Uma ferramenta que trabalha sobre o
   # que a CONVERSA já tem (a proposta individual lê a última cotação dela) precisa da conversa nos
   # dois contextos, e é `#conversation` que a entrega: pelo `delivery` no turno, por aqui no job.
-  def initialize(agent:, params: {}, delivery: nil, conversation: nil)
+  #
+  # `run` é a LINHA DA EXECUÇÃO (rodada 3 da entrega 8), e serve para uma coisa só: a ferramenta
+  # perguntar o que JÁ FOI PUBLICADO. A identidade de uma entrega publicada é o
+  # `ToolRun#delivery_token` — `execution_key` mais o digest do conteúdo —, e sem a linha não há
+  # como montá-lo. É o que permite à proposta individual decidir o que falta entregar pela MENSAGEM
+  # no banco, e não pelo handle (o handle avançava mesmo quando a publicação voltava `blocked`, e o
+  # arquivo ficava contado como enviado sem existir; Codex, rodada 2, P2). nil no turno e nas
+  # superfícies sem execução.
+  def initialize(agent:, params: {}, delivery: nil, conversation: nil, run: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys
     @delivery = delivery
     @conversation = conversation
+    @run = run
   end
 
   # -> String. NUNCA levanta: quem chama é o executor de ferramentas do turno.
@@ -246,9 +255,27 @@ class Autonomia::Agents::Tools::Native::Base
     []
   end
 
+  # ESTA ENTREGA AINDA PODE SER PUBLICADA? (rodada 3 da entrega 8, P1 do Codex.)
+  #
+  # A publicação nem sempre acontece logo depois do `poll`: ela é ADIADA enquanto a cadeia de
+  # entrega humanizada do turno não drena (até 90 s, `AsyncPublishJob`) e pode ser RETOMADA depois.
+  # Nesse intervalo o mundo muda, e há ferramenta cujo resultado deixa de valer — a proposta
+  # individual sai de uma COTAÇÃO, e uma cotação refeita no meio torna o arquivo o do risco errado
+  # com cara de certo. O publicador pergunta isto imediatamente antes de criar a mensagem, sob o
+  # lock (`AutorizacaoDaExecucao`), e o `false` é recusa da mesma classe da execução morta:
+  # registrada, sem mensagem ao cliente.
+  #
+  # Recebe a ENTREGA além da execução porque a mesma execução publica coisas de naturezas
+  # diferentes: o arquivo que saiu do trabalho e as frases que EXPLICAM o que houve (a recusa
+  # "a cotação foi refeita", o fecho do job). Barrar tudo deixaria o cliente em silêncio depois de
+  # "já estou buscando" — que é o defeito oposto. -> true por padrão.
+  def publicavel?(_run, _entrega)
+    true
+  end
+
   private
 
-  attr_reader :agent, :params, :delivery
+  attr_reader :agent, :params, :delivery, :run
 
   def account
     agent.account

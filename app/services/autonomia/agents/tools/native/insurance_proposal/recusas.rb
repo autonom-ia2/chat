@@ -25,6 +25,13 @@ module Autonomia::Agents::Tools::Native::InsuranceProposal::Recusas
                  'seguradora você quer a proposta.'.freeze
   SUBSTITUIDA = 'A cotação foi refeita depois desse pedido, e a proposta sairia dos preços antigos. ' \
                 'Quando os preços novos chegarem, é só me pedir de novo.'.freeze
+  # SEM A COTAÇÃO DE ORIGEM NOS ARGUMENTOS (rodada 3, M4 do verificador cego): a execução foi aberta
+  # antes do deploy que passou a fixá-la no aceite. Escolher uma cotação agora, minutos depois, é o
+  # que a rodada 2 proibiu — então a resposta é honesta sobre o que aconteceu (não achei a cotação
+  # DESTE pedido) e pede o pedido de novo, que já nasce com a origem fixada. Some sozinha: nenhuma
+  # execução nova é aberta sem origem, e as `pending` de antes do deploy têm prazo de uma hora.
+  SEM_ORIGEM = 'Não consegui localizar a cotação desta conversa para gerar a proposta. Me peça de ' \
+               'novo, por favor, que eu busco o arquivo.'.freeze
   LISTA = { two_words_connector: ' e ', last_word_connector: ' e ' }.freeze
   OU = { two_words_connector: ' ou ', last_word_connector: ' ou ' }.freeze
 

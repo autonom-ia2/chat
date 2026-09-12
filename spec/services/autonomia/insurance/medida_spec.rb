@@ -306,22 +306,33 @@ RSpec.describe Autonomia::Insurance::Medida do
 
     # A FERRAMENTA DE PROPOSTA GRAVA, E A MEDIDA CONTA — pelo caminho real da escrita: a proposta
     # individual (`Native::InsuranceProposal#poll`) anota na LINHA DA COTAÇÃO, que já está `done`,
-    # os códigos que saíram — UM por passada, porque cada passada entrega UM arquivo; nenhuma linha
-    # da medida mudou. Gravar na linha da própria ferramenta (outro slug) deixaria a medida em zero
-    # para sempre — é o que este exemplo reprova.
+    # os códigos que saíram; nenhuma linha da medida mudou. Gravar na linha da própria ferramenta
+    # (outro slug) deixaria a medida em zero para sempre — é o que este exemplo reprova.
+    #
+    # A ANOTAÇÃO VEM DEPOIS DA MENSAGEM (rodada 3): cada passada entrega UM arquivo e a passada
+    # seguinte confirma que ele virou mensagem antes de anotar. Contar o que o publicador recusou
+    # seria faturar uma proposta que o cliente não recebeu.
     it 'conta a proposta que a ferramenta de proposta gravou na linha da cotação' do
       # Arrange — a cotação encerrada, com preço entregue, como a ferramenta de cotação a deixa
       cotacao = run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete, 'entregues' => %w[8 20],
                                Autonomia::Agents::Tools::Native::InsuranceQuote::NOMES_KEY => { '8' => 'Porto', '20' => 'Suhai' } })
       ferramenta = Autonomia::Agents::Tools::Native::InsuranceProposal
+      execucao = Autonomia::Agents::ToolRun.create!(account: account, agent: agent, conversation_id: cotacao.conversation_id,
+                                                    slug: ferramenta.slug, status: 'running', execution_key: SecureRandom.uuid,
+                                                    arguments: { 'seguradoras' => %w[Porto Suhai], ferramenta::ORIGEM => cotacao.id })
       handle = { 'quote_id' => 'q1', ferramenta::ORIGEM => cotacao.id, 'sufixo' => 'placa ABC1D23',
                  ferramenta::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'https://arquivos.exemplo.test/p-8.pdf' },
                                          { 'code' => '20', 'name' => 'Suhai', 'url' => 'https://arquivos.exemplo.test/p-20.pdf' }] }
-      no_job = -> { ferramenta.new(agent: agent, params: { 'seguradoras' => %w[Porto Suhai] }, conversation: cotacao.conversation) }
+      no_job = lambda {
+        ferramenta.new(agent: agent, params: { 'seguradoras' => %w[Porto Suhai] }, conversation: cotacao.conversation, run: execucao)
+      }
 
-      # Act — as duas passadas que entregam os arquivos e anotam
+      # Act — entrega, publicação, entrega, publicação, e a passada que confirma a última
       primeira = no_job.call.poll(handle: handle, attempt: 1)
-      no_job.call.poll(handle: primeira.handle, attempt: 2)
+      publicar_entrega!(execucao, cotacao.conversation, primeira.deliveries.first)
+      segunda = no_job.call.poll(handle: primeira.handle, attempt: 2)
+      publicar_entrega!(execucao, cotacao.conversation, segunda.deliveries.first)
+      no_job.call.poll(handle: segunda.handle, attempt: 3)
 
       # Assert — UMA cotação virou proposta, com DUAS propostas emitidas
       expect(cotacao.reload.handle[Autonomia::Agents::Tools::Native::InsuranceQuote::PROPOSTAS_KEY]).to eq(%w[20 8])

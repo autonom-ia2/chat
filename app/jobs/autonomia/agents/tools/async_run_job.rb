@@ -277,10 +277,11 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   # A ferramenta montada para trabalhar FORA do turno: com a conversa da execução (a proposta
-  # individual lê a última cotação dela — entrega 8) e SEM `delivery`, de propósito — a presença do
+  # individual lê a última cotação dela — entrega 8), com a LINHA (é pelo `delivery_token` dela que a
+  # ferramenta sabe o que já foi publicado — rodada 3) e SEM `delivery`, de propósito: a presença do
   # `delivery` é o que diz "dentro do turno" para quem escolhe a sessão por ela.
   def ferramenta(run, native)
-    native.new(agent: run.agent, params: run.arguments, conversation: run.conversation)
+    native.new(agent: run.agent, params: run.arguments, conversation: run.conversation, run: run)
   end
 
   # Parada por decisão do operador: sem mensagem ao cliente. Publicar aqui seria furar exatamente o

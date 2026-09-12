@@ -22,11 +22,13 @@
 # (`Connector::Http::READ_TIMEOUT`), e o turno não espera isso. No turno (`precheck`) só o que é
 # dado nosso: a cotação da conversa e o casamento dos nomes — o portal NUNCA é chamado dentro do
 # turno. O portal é chamado no `AsyncRunJob`, UMA seguradora por passada (`Geracao`): `start` pede
-# a primeira, `poll` pede as pendentes e depois entrega os arquivos, também UM por passada — cada
-# `EntregaDeArquivo` é um download de até 20 s (`PRAZO_SEGUNDOS`), e dois numa passada passariam
-# dos 25 s que o Sidekiq dá ao job num shutdown. `poll` também ANOTA NA LINHA DA COTAÇÃO quais
-# propostas saíram (`ToolRun#anotar_propostas!` -> `InsuranceQuote::PROPOSTAS_KEY`, que a medida da
-# entrega 7 lê), e confere a cada passada se a origem ainda vale (`dead?`).
+# a primeira, e o `poll` ENTREGA o que já foi gerado antes de pedir a próxima pendente — um arquivo
+# por passada, porque cada `EntregaDeArquivo` é um download de até 20 s (`PRAZO_SEGUNDOS`) e dois
+# numa passada passariam dos 25 s que o Sidekiq dá ao job num shutdown. `poll` também ANOTA NA LINHA
+# DA COTAÇÃO quais propostas saíram (`ToolRun#anotar_propostas!` -> `InsuranceQuote::PROPOSTAS_KEY`,
+# que a medida da entrega 7 lê) — só as com MENSAGEM publicada —, e confere a cada passada se a
+# origem ainda vale. A mesma conferência é refeita na publicação efetiva (`publicavel?`), que pode
+# sair até 90 s depois da passada que a produziu.
 class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::Tools::Native::Base
   Quote = ::Autonomia::Agents::Tools::Native::InsuranceQuote
   PARAMETRO = 'seguradoras'.freeze
@@ -124,9 +126,16 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     avaliar || iniciar(escolha.codigos)
   end
 
-  # -> Tools::Progress. UMA passada faz UMA coisa: pede ao portal a próxima seguradora pendente, OU
-  # entrega o próximo arquivo (anotando na cotação que ele saiu). Antes de qualquer uma, confere se a
-  # origem ainda vale: supersedida no caminho, o cliente lê que a cotação foi refeita, e nada sai.
+  # -> Tools::Progress. UMA passada faz UMA coisa: entrega o próximo arquivo que ainda não chegou ao
+  # cliente, OU pede ao portal a próxima seguradora pendente — NESTA ORDEM (rodada 3, P2 do Codex).
+  # Antes era o contrário, e com a segunda seguradora em tempo esgotado a execução gastava as
+  # passadas nela até o prazo estourar: a proposta que já estava pronta nunca saía.
+  #
+  # Antes de qualquer uma, confere se a origem ainda vale: morta (um pedido novo a supersedeu) ou com
+  # uma cotação mais nova correndo sem preço, nada sai e o cliente lê o porquê. A segunda entrou
+  # nesta rodada (verificador cego, I1): uma cotação `done` não vira `superseded` quando outra abre,
+  # então `dead?` sozinho deixava passar o caso mais comum. As duas são conferidas de novo na
+  # publicação EFETIVA (`publicavel?`), que pode acontecer até 90 s depois desta passada.
   # `attempt` é do contrato (`Base#poll`); aqui não há seguradora lenta para esperar.
   def poll(handle:, attempt:) # rubocop:disable Lint/UnusedMethodArgument
     return progress_class.done(deliveries: [handle['pedido']], handle: handle) if handle['pedido']
@@ -134,39 +143,101 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     origem = fixar_origem(handle[ORIGEM])
     return progress_class.failed('cotacao_ausente') if origem.nil?
     return progress_class.done(deliveries: [recusar('cotacao_substituida', SUBSTITUIDA, onde: 'envio')]) if origem.dead?
+    return progress_class.done(deliveries: [recusar('cotacao_em_andamento', EM_ANDAMENTO, onde: 'envio')]) if cotacao_em_andamento?
 
-    pendente = Array(handle[PENDENTES]).first
-    return progress_class.running(handle: tentar(handle, pendente)) if pendente
+    entregar(confirmar(handle))
+  end
 
-    entregar(handle)
+  # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR (o prazo estourou, o job desistiu),
+  # no mesmo molde do comparativo da cotação: as propostas que o portal GEROU e que não chegaram ao
+  # cliente, mais o aviso de quem ficou pelo caminho — quem estava só PENDENTE no fim é, para quem
+  # espera, o mesmo que não gerada. Origem morta, substituída ou ausente: nada, porque o arquivo é
+  # dos preços que o cliente descartou.
+  def closing_deliveries(handle)
+    handle = handle.to_h
+    return [] unless origem_ainda_vale?
+
+    nao_publicadas(handle).map { |proposta| entrega(proposta, handle['sufixo']) } +
+      aviso_de(handle[NAO_SAIU].to_h.keys + Array(handle[PENDENTES]))
+  end
+
+  # A PUBLICAÇÃO EFETIVA PODE ACONTECER MUITO DEPOIS DO `poll`: adiada enquanto a cadeia de entrega
+  # humanizada do turno não drena (até 90 s), ou retomada por um envio pendente. A cotação pode ter
+  # sido refeita nesse meio-tempo, e o arquivo já baixado passaria a ser o do risco errado. O
+  # publicador pergunta isto sob o lock, imediatamente antes de criar a mensagem.
+  #
+  # SÓ AS PROPOSTAS SÃO BARRADAS. A mesma execução publica as frases que EXPLICAM o que houve ("a
+  # cotação foi refeita") e os fechos do job; barrá-las deixaria o cliente em silêncio depois de
+  # "já estou buscando", que é o defeito oposto.
+  def publicavel?(run, entrega)
+    return true unless da_origem?(run, entrega)
+
+    origem_ainda_vale?
   end
 
   private
 
-  # UM ARQUIVO POR PASSADA: `running` com o próximo que ainda não saiu; `done` com o último, seguido
-  # do aviso de quem o portal não gerou. Uma passada repetida (o handle não gravou depois de
-  # publicar) reencontra tudo enviado e encerra: a publicação é idempotente pelo conteúdo.
-  def entregar(handle)
-    geradas = Array(handle[GERADAS]).select { |proposta| proposta.is_a?(Hash) }
-    return sem_nenhuma(handle) if geradas.empty?
+  # A ENTREGA SAIU DESTA ORIGEM? Comparação de dado NOSSO contra dado NOSSO: a URL que este handle
+  # gravou. A proposta viaja como ARQUIVO (a URL do portal) ou, quando a forma não cabe, como o
+  # texto de reserva que termina na MESMA URL.
+  def da_origem?(run, entrega)
+    urls = Array(run.handle.to_h[GERADAS]).filter_map { |proposta| proposta['url'].to_s.presence if proposta.is_a?(Hash) }
+    return false if urls.empty?
 
-    enviadas = Array(handle[ENVIADAS]).map(&:to_s)
-    faltam = geradas.reject { |proposta| enviadas.include?(proposta['code'].to_s) }
-    return progress_class.done(deliveries: aviso(handle), handle: handle) if faltam.empty?
+    arquivo = ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega)
+    return urls.include?(arquivo.url) if arquivo
 
-    entregar_proxima(handle, faltam.first, enviadas, ultima: faltam.size == 1)
+    urls.any? { |url| entrega.to_s.end_with?(url) }
   end
 
-  # O REGISTRO É NA LINHA DA COTAÇÃO, não nesta: é a cotação que "virou proposta", e é lá que a
-  # medida da entrega 7 lê. Anotado quando o arquivo SAI, um código por passada, união no banco.
-  def entregar_proxima(handle, proposta, enviadas, ultima:)
-    codigo = proposta['code'].to_s
-    cotacao.anotar_propostas!([codigo])
-    proximo = handle.merge(ENVIADAS => enviadas + [codigo])
-    arquivo = entrega(proposta, handle['sufixo'])
-    return progress_class.running(deliveries: [arquivo], handle: proximo) unless ultima
+  # O QUE JÁ CHEGOU AO CLIENTE, e o registro na linha da COTAÇÃO — é ela que "virou proposta", e é lá
+  # que a medida da entrega 7 lê. A fonte de verdade é a MENSAGEM publicada, não o handle: o job
+  # publica ANTES de gravar o handle, e uma publicação que volta `blocked` (autorização caída, banco)
+  # deixava o código anotado e o arquivo contado como enviado SEM existir mensagem nenhuma (Codex,
+  # rodada 2, P2). `ENVIADAS` continua no handle como CACHE do que já foi anotado: a anotação é uma
+  # escrita no banco, e repeti-la a cada passada seria ruído.
+  def confirmar(handle)
+    codigos = (geradas(handle) - nao_publicadas(handle)).map { |proposta| proposta['code'].to_s }
+    anotados = Array(handle[ENVIADAS]).map(&:to_s)
+    novos = codigos - anotados
+    return handle if novos.empty?
 
-    progress_class.done(deliveries: [arquivo] + aviso(handle), handle: proximo)
+    cotacao.anotar_propostas!(novos)
+    handle.merge(ENVIADAS => anotados | codigos)
+  end
+
+  # UMA COISA POR PASSADA, GERADAS ANTES DAS PENDENTES: cada `EntregaDeArquivo` é um download de até
+  # 20 s e cada pedido ao portal é uma chamada de até 60 s; as duas na mesma passada passariam dos
+  # 25 s que o Sidekiq dá ao job num shutdown. A passada que reentrega o que a anterior não conseguiu
+  # publicar é idempotente: o publicador reencontra a mensagem pelo token e não posta de novo.
+  def entregar(handle)
+    faltam = nao_publicadas(handle)
+    pendente = Array(handle[PENDENTES]).first
+    return progress_class.running(deliveries: [entrega(faltam.first, handle['sufixo'])], handle: handle) if faltam.any?
+    return progress_class.running(handle: tentar(handle, pendente)) if pendente
+    return sem_nenhuma(handle) if geradas(handle).empty?
+
+    # Nada por entregar e nada pendente: o aviso de quem o portal não gerou, e o fim.
+    progress_class.done(deliveries: aviso_de(handle[NAO_SAIU].to_h.keys), handle: handle)
+  end
+
+  def geradas(handle)
+    Array(handle[GERADAS]).select { |proposta| proposta.is_a?(Hash) }
+  end
+
+  def nao_publicadas(handle)
+    geradas(handle).reject { |proposta| publicada?(proposta, handle['sufixo']) }
+  end
+
+  # Existe na conversa a mensagem com o token DESTA entrega? O token é `execution_key` mais o digest
+  # do conteúdo (`ToolRun#delivery_token`) — a mesma identidade que o publicador usa para não
+  # duplicar. Sem a linha da execução (fora do job) não há `execution_key`, e nada está publicado.
+  def publicada?(proposta, sufixo)
+    return false if run.nil? || conversation.nil?
+
+    arquivo = arquivo_de(proposta, sufixo)
+    identidade = arquivo.valida? ? arquivo.identidade : arquivo.reserva
+    ::Autonomia::Agents::Tools::EntregaPublicada.existe?(conversation, run.delivery_token(identidade))
   end
 
   # NENHUMA saiu: o portal não gerou as que o cliente pediu (recusa nomeada, registrada daqui — o job
@@ -179,9 +250,9 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
     progress_class.done(deliveries: [recusar('proposta_nao_gerada', nao_gerada(nomes_de(faltaram)), onde: 'envio')])
   end
 
-  # O aviso de quem o portal não gerou, por último — quando alguma saiu.
-  def aviso(handle)
-    faltaram = handle[NAO_SAIU].to_h.keys
+  # O aviso de quem não saiu, depois dos arquivos.
+  def aviso_de(codigos)
+    faltaram = codigos.map(&:to_s).uniq
     faltaram.any? ? [nao_saiu(nomes_de(faltaram))] : []
   end
 
@@ -194,12 +265,21 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
   # um pedido novo supersedeu diz "a cotação foi refeita" — mesmo que a nova esteja correndo (no
   # turno a origem escolhida nunca está morta, e a conferência cai no caso seguinte). Depois, a
   # cotação nova em andamento vale antes de "não encontrei cotação": o cliente acabou de mandar
-  # refazer, e a resposta certa é esperar por ela, não oferecer cotar de novo.
+  # refazer, e a resposta certa é esperar por ela, não oferecer cotar de novo. Por último, a
+  # diferença entre "esta EXECUÇÃO não tem origem fixada" (anterior ao deploy) e "esta CONVERSA não
+  # tem cotação": a primeira pede o pedido de novo, a segunda oferece cotar.
   def recusar_entrada
     return recusa('proposta_sem_seguradora', SEM_SEGURADORA, faltando: [PARAMETRO]) if nomes.empty?
     return recusa('proposta_acima_do_teto', ACIMA_DO_TETO, faltando: [PARAMETRO]) if nomes.size > MAX_SEGURADORAS
+
+    recusar_origem
+  end
+
+  # As quatro maneiras de não haver de onde tirar a proposta, da mais específica para a mais geral.
+  def recusar_origem
     return recusa('cotacao_substituida', SUBSTITUIDA, faltando: []) if cotacao&.dead?
     return recusa('cotacao_em_andamento', EM_ANDAMENTO, faltando: []) if cotacao_em_andamento?
+    return recusa('proposta_sem_origem', SEM_ORIGEM, faltando: []) if sem_origem?
 
     recusa('proposta_sem_cotacao', SEM_COTACAO, faltando: []) if cotacao.nil?
   end
@@ -218,14 +298,21 @@ class Autonomia::Agents::Tools::Native::InsuranceProposal < Autonomia::Agents::T
   # URL do portal não cabe na forma (o adapter só garante que é uma URL), a reserva com o link, como
   # o comparativo faz: a forma recusada não pode apagar a entrega.
   def entrega(proposta, sufixo)
-    nome = proposta['name'].to_s
-    url = proposta['url'].to_s
-    arquivo = ::Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: "#{NOME} #{nome.tr('/\\', '-')} — #{sufixo}.pdf",
-                                                               legenda: "#{NOME} da #{nome}.", reserva: "#{NOME} da #{nome}:\n#{url}")
+    arquivo = arquivo_de(proposta, sufixo)
     return arquivo.to_h if arquivo.valida?
 
     Rails.logger.warn("[autonomia][insurance] proposta sem forma de arquivo account=#{account.id} defeito=#{arquivo.defeito}; vai como link")
     arquivo.reserva
+  end
+
+  # O arquivo de uma proposta — o mesmo objeto para ENTREGAR e para perguntar se ela JÁ FOI
+  # PUBLICADA (a identidade dele é o que vira o token da mensagem). Montado na hora nos dois usos:
+  # nada disto é guardado entre passadas.
+  def arquivo_de(proposta, sufixo)
+    nome = proposta['name'].to_s
+    url = proposta['url'].to_s
+    ::Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: "#{NOME} #{nome.tr('/\\', '-')} — #{sufixo}.pdf",
+                                                     legenda: "#{NOME} da #{nome}.", reserva: "#{NOME} da #{nome}:\n#{url}")
   end
 
   # O que o modelo escreveu, sem vazios e sem repetição pelo texto normalizado ("Porto" e "porto"

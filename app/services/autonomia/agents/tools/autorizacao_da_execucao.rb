@@ -10,20 +10,41 @@
 # conta) não publica nem reenvia: o cliente receberia o resultado de um pedido que já corrigiu. NÃO
 # basta exigir `running?` — a entrega final legítima é publicada e a linha fechada logo em seguida,
 # então uma republicação adiada (ou uma retomada) encontra a linha já `done`, e isso é legítimo.
+#
+# A LINHA VIVA NÃO É A ÚNICA PERGUNTA (rodada 3 da entrega 8, P1 do Codex). A execução da proposta
+# individual continua viva enquanto a COTAÇÃO de que ela saiu é refeita — e o arquivo dela passa a
+# ser o do risco errado. Quem sabe disso é a ferramenta, não este módulo: por isso a terceira
+# pergunta é para ela (`Native::Base#publicavel?`), feita só quando há uma ENTREGA em mãos (a
+# retomada de um envio pendente não tem: a mensagem já existe, e quem decide lá é o resto).
 module Autonomia::Agents::Tools::AutorizacaoDaExecucao
-  # Os dois motivos FECHADOS de recusa, como saem no log.
-  RECUSAS = %i[execucao_morta vinculo_mudou].freeze
+  # Os três motivos FECHADOS de recusa, como saem no log.
+  RECUSAS = %i[execucao_morta vinculo_mudou ferramenta_recusou].freeze
 
   private
 
   # -> o vínculo autorizado AGORA (`AgentInbox`), ou o motivo da recusa (um símbolo de `RECUSAS`).
-  def autorizacao(conversation)
+  def autorizacao(conversation, entrega: nil)
     return :execucao_morta if @run.reload.dead?
+    return :ferramenta_recusou unless entrega.nil? || ferramenta_publicaria?(entrega)
 
     agent_inbox = vinculo_autorizado(conversation)
     return :vinculo_mudou unless mesmo_vinculo?(agent_inbox)
 
     agent_inbox
+  end
+
+  # A PRÓPRIA FERRAMENTA AINDA PUBLICARIA ISTO? A ferramenta é montada aqui, do zero, com o que a
+  # linha guarda (argumentos e conversa) — nunca memoizada, pelo mesmo motivo do vínculo: entre a
+  # conferência de entrada e a mensagem há um download, e é a leitura de AGORA que autoriza.
+  # Ferramenta fora do catálogo ou agente apagado não recusam nada: quem barra esses casos é o job.
+  # O que ela levantar sobe para o `rescue` do publicador, que devolve `blocked` — a mesma coisa que
+  # já acontece quando a autorização não pode ser lida.
+  def ferramenta_publicaria?(entrega)
+    native = ::Autonomia::Agents::Tools::Registry.find(@run.slug)
+    return true if native.blank? || @run.agent.blank?
+
+    native.new(agent: @run.agent, params: @run.arguments, conversation: @run.conversation, run: @run)
+          .publicavel?(@run, entrega)
   end
 
   def recusada?(autorizacao)

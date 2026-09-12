@@ -88,15 +88,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
   end
 
   # No JOB ela nasce sem `delivery`, com os argumentos que o ACEITE gravou (`#argumentos`, a origem
-  # fixada) e a conversa da execução (`AsyncRunJob#ferramenta`). É o caminho real aceite -> job.
-  def no_job(*seguradoras)
-    described_class.new(agent: agent, params: no_turno(*seguradoras).argumentos, conversation: conversation)
+  # fixada), a conversa e a LINHA da execução (`AsyncRunJob#ferramenta`). É o caminho real
+  # aceite -> job. A linha só é necessária a partir do `poll`: é dela que sai o token pelo qual a
+  # ferramenta pergunta o que já virou mensagem.
+  def no_job(*seguradoras, run: nil)
+    described_class.new(agent: agent, params: no_turno(*seguradoras).argumentos, conversation: conversation, run: run)
   end
 
   # No job, com a origem ESCRITA À MÃO: para provar que o `start` usa só ela.
-  def no_job_com_origem(origem, *seguradoras)
+  def no_job_com_origem(origem, *seguradoras, run: nil)
     params = { 'seguradoras' => seguradoras, described_class::ORIGEM => origem&.id }
-    described_class.new(agent: agent, params: params, conversation: conversation)
+    described_class.new(agent: agent, params: params, conversation: conversation, run: run)
+  end
+
+  # A EXECUÇÃO como o ACEITE a abre: com os argumentos da ferramenta (a origem fixada dentro),
+  # promovida, que é o estado em que o job a encontra.
+  def execucao(*seguradoras, argumentos: nil)
+    run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug,
+                                           arguments: argumentos || no_turno(*seguradoras).argumentos,
+                                           scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+    run
   end
 
   def portal_que_recusa(*codigos)
@@ -156,6 +168,23 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       parcial = cotacao_com_precos(status: 'running')
 
       expect(no_turno('Porto').argumentos[described_class::ORIGEM]).to eq(parcial.id)
+    end
+
+    # O ACEITE PELO CAMINHO REAL (`Bound#execute`), e não pela chamada direta a `#argumentos`: é o
+    # `Bound` quem grava os argumentos da execução, e gravar ali o que o MODELO escreveu (em vez de
+    # `ferramenta.argumentos`) faria a origem nunca ser fixada — a mutação MB reprova aqui.
+    it 'o aceite grava a origem nos argumentos da execucao, pelo caminho do Bound' do
+      # Arrange
+      linha = cotacao_com_precos
+      bound = Autonomia::Agents::Tools::Bound.new(agent: agent, native: described_class)
+
+      # Act
+      saida = bound.execute({ 'name' => described_class.slug, 'arguments' => { seguradoras: ['Porto'] }.to_json },
+                            delivery: delivery)
+
+      # Assert
+      expect(saida).to eq(described_class::ACEITA)
+      expect(delivery.runs.sole.arguments).to eq('seguradoras' => ['Porto'], described_class::ORIGEM => linha.id)
     end
   end
 
@@ -369,14 +398,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
   # TERMO 4 — duas seguradoras, dois arquivos, na MESMA execução; e nenhuma cotação nova. UMA chamada
   # ao portal por passada: o `start` pede a primeira e deixa a segunda pendente para o `poll`.
   describe '#start e #poll — duas seguradoras (termo 4)' do
-    it 'o start pede so a primeira e deixa a segunda pendente; o poll pede a segunda, sem abrir cotacao' do
+    it 'o start pede so a primeira; o poll entrega a que saiu e so depois pede a segunda, sem abrir cotacao' do
       cotacao_com_precos
+      run = execucao('Porto', 'Suhai')
 
-      handle = no_job('Porto', 'Suhai').start
-      segunda = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
+      handle = no_job('Porto', 'Suhai', run: run).start
+      primeira = no_job('Porto', 'Suhai', run: run).poll(handle: handle, attempt: 1)
+      publicar_entrega!(run, conversation, primeira.deliveries.first)
+      segunda = no_job('Porto', 'Suhai', run: run).poll(handle: primeira.handle, attempt: 2)
 
-      expect(handle[described_class::GERADAS].pluck('code')).to eq(['8'])
       expect(handle[described_class::PENDENTES]).to eq(['20'])
+      expect(arquivo(primeira.deliveries.first).nome).to eq('Proposta Porto — placa ABC1D23.pdf')
       expect(segunda).to be_running
       expect(segunda.deliveries).to be_empty
       expect(segunda.handle[described_class::GERADAS].pluck('code')).to eq(%w[8 20])
@@ -384,24 +416,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(connector).not_to have_received(:quote_start)
     end
 
-    # O CENÁRIO DO CODEX (P2): Porto sai, Suhai 503. A Porto chega, o aviso é sobre a Suhai, e a Porto
-    # NÃO é pedida de novo — a URL dela ficou no handle da primeira passada.
+    # O CENÁRIO DO CODEX (P2): Porto sai, Suhai 503. A Porto chega NA PRIMEIRA passada de entrega
+    # (geradas antes das pendentes), o aviso é sobre a Suhai, e a Porto NÃO é pedida de novo — a URL
+    # dela ficou no handle da primeira passada.
     it 'Porto sai e Suhai falha: a Porto chega, o aviso e sobre a Suhai, e a Porto nao e refeita' do
       linha = cotacao_com_precos
       portal_fora_do_ar_para('20')
-      ferramenta = -> { no_job('Porto', 'Suhai') }
+      run = execucao('Porto', 'Suhai')
+      ferramenta = -> { no_job('Porto', 'Suhai', run: run) }
 
       handle = ferramenta.call.start
-      tentativa1 = ferramenta.call.poll(handle: handle, attempt: 1)
-      tentativa2 = ferramenta.call.poll(handle: tentativa1.handle, attempt: 2)
-      entrega = ferramenta.call.poll(handle: tentativa2.handle, attempt: 3)
+      entrega = ferramenta.call.poll(handle: handle, attempt: 1)
+      publicar_entrega!(run, conversation, entrega.deliveries.first)
+      tentativa1 = ferramenta.call.poll(handle: entrega.handle, attempt: 2)
+      tentativa2 = ferramenta.call.poll(handle: tentativa1.handle, attempt: 3)
+      aviso = ferramenta.call.poll(handle: tentativa2.handle, attempt: 4)
 
-      expect(tentativa1).to be_running
+      expect(arquivo(entrega.deliveries.first).nome).to eq('Proposta Porto — placa ABC1D23.pdf')
       expect(tentativa1.handle[described_class::TENTATIVAS]).to eq('20' => 1)
       expect(tentativa2.handle[described_class::NAO_SAIU]).to eq('20' => 'unavailable')
-      expect(entrega).to be_done
-      expect(entrega.deliveries.map { |item| arquivo(item)&.nome || item })
-        .to eq(['Proposta Porto — placa ABC1D23.pdf', 'Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.'])
+      expect(aviso).to be_done
+      expect(aviso.deliveries).to eq(['Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.'])
       expect(pedidos).to eq(%w[8 20 20])
       expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
     end
@@ -409,28 +444,34 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     it 'quando o portal recusa (422) uma das duas, a recusa e definitiva: sai a que saiu e o aviso da outra' do
       cotacao_com_precos
       portal_que_recusa('20')
+      run = execucao('Porto', 'Suhai')
 
-      handle = no_job('Porto', 'Suhai').start
-      segunda = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
-      entrega = no_job('Porto', 'Suhai').poll(handle: segunda.handle, attempt: 2)
+      handle = no_job('Porto', 'Suhai', run: run).start
+      primeira = no_job('Porto', 'Suhai', run: run).poll(handle: handle, attempt: 1)
+      publicar_entrega!(run, conversation, primeira.deliveries.first)
+      segunda = no_job('Porto', 'Suhai', run: run).poll(handle: primeira.handle, attempt: 2)
+      terceira = no_job('Porto', 'Suhai', run: run).poll(handle: segunda.handle, attempt: 3)
 
       expect(segunda.handle[described_class::NAO_SAIU]).to eq('20' => 'validation')
       expect(segunda.handle[described_class::PENDENTES]).to eq([])
-      expect(entrega.deliveries.last).to eq('Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.')
+      expect(terceira.deliveries.last).to eq('Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.')
     end
 
     it 'quando a primeira e recusada (422) e a segunda sai, a entrega e a segunda com o aviso da primeira' do
       cotacao_com_precos
       portal_que_recusa('8')
+      run = execucao('Porto', 'Suhai')
 
-      handle = no_job('Porto', 'Suhai').start
-      segunda = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
-      entrega = no_job('Porto', 'Suhai').poll(handle: segunda.handle, attempt: 2)
+      handle = no_job('Porto', 'Suhai', run: run).start
+      pedida = no_job('Porto', 'Suhai', run: run).poll(handle: handle, attempt: 1)
+      entrega = no_job('Porto', 'Suhai', run: run).poll(handle: pedida.handle, attempt: 2)
+      publicar_entrega!(run, conversation, entrega.deliveries.first)
+      fim = no_job('Porto', 'Suhai', run: run).poll(handle: entrega.handle, attempt: 3)
 
       expect(handle['motivo']).to be_nil
       expect(handle[described_class::PENDENTES]).to eq(['20'])
-      expect(entrega.deliveries.map { |item| arquivo(item)&.nome || item })
-        .to eq(['Proposta Suhai — placa ABC1D23.pdf', 'Não consegui gerar a proposta de Porto agora; as demais estão aqui em cima.'])
+      expect(arquivo(entrega.deliveries.first).nome).to eq('Proposta Suhai — placa ABC1D23.pdf')
+      expect(fim.deliveries).to eq(['Não consegui gerar a proposta de Porto agora; as demais estão aqui em cima.'])
     end
 
     it 'quando NENHUMA sai, o cliente le que nao consegui gerar, e nao "nao cotou"' do
@@ -467,33 +508,60 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
   # A ORIGEM FIXADA (Codex, P1): o `start` usa a que o aceite gravou, e só ela; se ela morreu, ou se
   # há uma cotação nova correndo, a resposta é nomeada e o portal não é chamado.
   describe '#start — qual cotacao' do
-    it 'sem cotacao com preco nesta conversa e recusa nomeada, sem tocar no portal' do
-      handle = no_job('Porto').start
+    # EXECUÇÃO SEM ORIGEM FIXADA é recusa PRÓPRIA (rodada 3, M4): é o que acontece com uma linha
+    # `pending` aberta antes do deploy que passou a fixar a origem no aceite. Não é "não encontrei
+    # cotação" — pode haver uma, e o que se perdeu foi a escolha do turno; escolher agora, no job,
+    # é justamente o que a rodada 2 proibiu. O texto pede o pedido de novo, que já nasce com origem.
+    it 'sem a origem fixada nos argumentos, o job nao escolhe: recusa propria, sem tocar no portal' do
+      cotacao_com_precos
 
-      expect(handle['motivo']).to eq('proposta_sem_cotacao')
-      expect(handle['pedido']).to include('Não encontrei nesta conversa uma cotação')
+      handle = no_job_com_origem(nil, 'Porto').start
+
+      expect(handle['motivo']).to eq('proposta_sem_origem')
+      expect(handle['pedido']).to eq(described_class::SEM_ORIGEM)
       expect(connector).not_to have_received(:quote_proposal)
     end
 
-    it 'a cotacao de OUTRA conversa nao conta' do
-      cotacao_com_precos(conversa: create(:conversation, account: account, inbox: inbox, assignee: nil))
+    # A ORIGEM É SEMPRE DESTA CONVERSA (rodada 3, M1): o id vem dos nossos argumentos, mas
+    # `cotacao_fixada` filtra por conta E conversa — tirar esse escopo (mutação MS) faria a proposta
+    # sair da cotação de outro cliente da mesma corretora.
+    it 'a cotacao de OUTRA conversa nao conta, mesmo fixada pelo id' do
+      alheia = cotacao_com_precos(conversa: create(:conversation, account: account, inbox: inbox, assignee: nil))
 
-      expect(no_job('Porto').start['motivo']).to eq('proposta_sem_cotacao')
+      handle = no_job_com_origem(alheia, 'Porto').start
+
+      expect(handle['motivo']).to eq('proposta_sem_cotacao')
+      expect(connector).not_to have_received(:quote_proposal)
     end
 
     it 'a cotacao sem preco entregue nao conta' do
-      cotacao_com_precos(mapa: {})
+      sem_preco = cotacao_com_precos(mapa: {})
 
-      expect(no_job('Porto').start['motivo']).to eq('proposta_sem_cotacao')
+      expect(no_job_com_origem(sem_preco, 'Porto').start['motivo']).to eq('proposta_sem_cotacao')
     end
 
     # A cotação anterior à entrega 8 tem `entregues` e não tem o mapa: não há como casar o nome.
     it 'a cotacao anterior a entrega 8, sem o mapa de nomes, nao conta' do
-      Autonomia::Agents::ToolRun.create!(account: account, agent: agent, conversation_id: conversation.id, slug: cotacao.slug,
-                                         status: 'done', execution_key: SecureRandom.uuid, arguments: {},
-                                         handle: { 'quote_id' => 'velha', cotacao::DELIVERED_KEY => ['8'] })
+      velha = Autonomia::Agents::ToolRun.create!(account: account, agent: agent, conversation_id: conversation.id, slug: cotacao.slug,
+                                                 status: 'done', execution_key: SecureRandom.uuid, arguments: {},
+                                                 handle: { 'quote_id' => 'velha', cotacao::DELIVERED_KEY => ['8'] })
 
-      expect(no_job('Porto').start['motivo']).to eq('proposta_sem_cotacao')
+      expect(no_job_com_origem(velha, 'Porto').start['motivo']).to eq('proposta_sem_cotacao')
+    end
+
+    # `pending` ÓRFÃ NÃO É COTAÇÃO EM ANDAMENTO (verificador cego, I2): o worker morreu entre o
+    # aceite e o despacho — um deploy basta —, e a linha fica parada até o prazo, sem ninguém para
+    # executá-la. Contá-la travaria a proposta por uma cotação que nunca vai acontecer; é a mesma
+    # convenção de `ToolRun.opened_for_turn?`. A mutação MI (`active?` de volta) reprova aqui.
+    it 'a cotacao aceita e nunca promovida nao barra a proposta' do
+      cotacao_com_precos
+      Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug, arguments: { 'produto' => 'auto' },
+                                       scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+
+      handle = no_job('Porto').start
+
+      expect(handle['motivo']).to be_nil
+      expect(handle[described_class::GERADAS].pluck('code')).to eq(['8'])
     end
 
     # O CENÁRIO DO CODEX: A cotou, o cliente corrigiu o veículo e abriu B. "Me manda a da Porto"
@@ -535,12 +603,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
 
       expect(handle['quote_id']).to eq('fixada')
       expect(connector).to have_received(:quote_proposal).with(hash_including(quote_id: 'fixada')).once
-    end
-
-    it 'sem a origem nos argumentos (execucao aberta fora do aceite), o job nao escolhe: e recusa' do
-      cotacao_com_precos
-
-      expect(no_job_com_origem(nil, 'Porto').start['motivo']).to eq('proposta_sem_cotacao')
     end
 
     it 'guarda no handle o que o poll precisa: a origem e o sufixo do nome do arquivo' do
@@ -597,35 +659,71 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     end
   end
 
-  describe '#poll — os arquivos, um por passada, e o registro na cotacao' do
+  describe '#poll — um arquivo por passada, confirmado pela mensagem' do
     let(:linha) { cotacao_com_precos }
-    let(:handle) do
+    let(:run) do
+      origem = linha
+      execucao(argumentos: { 'seguradoras' => %w[Porto Suhai], described_class::ORIGEM => origem.id })
+    end
+
+    def handle
       { 'quote_id' => 'q1', described_class::ORIGEM => linha.id, 'sufixo' => 'placa ABC1D23',
         described_class::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'https://arquivos.exemplo.test/proposta-8.pdf' },
                                      { 'code' => '20', 'name' => 'Suhai', 'url' => 'https://arquivos.exemplo.test/proposta-20.pdf' }],
-        described_class::PENDENTES => [], described_class::NAO_SAIU => {} }
+        described_class::PENDENTES => [], described_class::NAO_SAIU => {}, described_class::ENVIADAS => [] }
     end
 
-    def duas_passadas(handle)
-      primeira = no_job('Porto', 'Suhai').poll(handle: handle, attempt: 1)
-      [primeira, no_job('Porto', 'Suhai').poll(handle: primeira.handle, attempt: 2)]
+    def passada(entrada, attempt)
+      no_job('Porto', 'Suhai', run: run).poll(handle: entrada, attempt: attempt)
     end
 
-    # UM ARQUIVO POR PASSADA (mutação M8 reprova aqui): cada `EntregaDeArquivo` é um download de até
-    # 20 s, e dois na mesma passada passariam dos 25 s que o Sidekiq dá ao job num shutdown.
-    it 'entrega um arquivo por passada: running com o primeiro, done com o ultimo' do
-      primeira, segunda = duas_passadas(handle)
+    # A entrega de uma passada vira MENSAGEM, com o token que o publicador carimba (o caminho real —
+    # publicador, download, anexo — está em «pelo job»).
+    def publicar!(progresso)
+      publicar_entrega!(run, conversation, progresso.deliveries.first)
+      progresso
+    end
 
-      expect(primeira).to be_running
-      expect(primeira.deliveries.size).to eq(1)
-      expect(primeira.handle[described_class::ENVIADAS]).to eq(['8'])
-      expect(segunda).to be_done
-      expect(segunda.deliveries.size).to eq(1)
-      expect(segunda.handle[described_class::ENVIADAS]).to eq(%w[8 20])
+    # UM ARQUIVO POR PASSADA (mutação M8): cada `EntregaDeArquivo` é um download de até 20 s, e dois
+    # na mesma passada passariam dos 25 s que o Sidekiq dá ao job num shutdown. E A PASSADA SEGUINTE
+    # CONFIRMA: a execução só encerra depois de o último arquivo virar mensagem, porque é a mensagem
+    # — não o handle — que diz que ele chegou (mutação ME).
+    it 'entrega um arquivo por passada e so encerra depois de o ultimo virar mensagem' do
+      primeira = publicar!(passada(handle, 1))
+      segunda = publicar!(passada(primeira.handle, 2))
+      terceira = passada(segunda.handle, 3)
+
+      expect([primeira, segunda].map(&:deliveries).map(&:size)).to eq([1, 1])
+      expect(primeira.handle[described_class::ENVIADAS]).to eq([])
+      expect(segunda).to be_running
+      expect(segunda.handle[described_class::ENVIADAS]).to eq(['8'])
+      expect(terceira).to be_done
+      expect(terceira.deliveries).to be_empty
+      expect(terceira.handle[described_class::ENVIADAS]).to eq(%w[8 20])
+    end
+
+    # PUBLICAÇÃO QUE NÃO VIROU MENSAGEM (o publicador devolveu `blocked`: autorização caída, banco,
+    # conversa travada): o arquivo VOLTA na passada seguinte, e a cotação só é marcada quando a
+    # mensagem existe. Com a decisão pelo handle (mutação ME) o arquivo era contado como enviado sem
+    # existir, e o cliente ficava sem nada.
+    it 'reentrega o arquivo cuja publicacao nao virou mensagem, e so anota depois que ela existe' do
+      primeira = passada(handle, 1)
+      segunda = passada(primeira.handle, 2)
+
+      expect(arquivo(segunda.deliveries.first).nome).to eq(arquivo(primeira.deliveries.first).nome)
+      expect(segunda.handle[described_class::ENVIADAS]).to eq([])
+      expect(linha.reload.handle).not_to have_key(cotacao::PROPOSTAS_KEY)
+
+      publicar_entrega!(run, conversation, segunda.deliveries.first)
+      terceira = passada(segunda.handle, 3)
+
+      expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
+      expect(arquivo(terceira.deliveries.first).nome).to include('Suhai')
     end
 
     it 'nomeia cada arquivo pela seguradora e pela placa, com legenda e reserva' do
-      primeira, segunda = duas_passadas(handle)
+      primeira = publicar!(passada(handle, 1))
+      segunda = passada(primeira.handle, 2)
       arquivos = [arquivo(primeira.deliveries.first), arquivo(segunda.deliveries.first)]
 
       expect(arquivos.map(&:nome)).to eq(['Proposta Porto — placa ABC1D23.pdf', 'Proposta Suhai — placa ABC1D23.pdf'])
@@ -635,17 +733,19 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     end
 
     it 'nomeia pelo ramo quando a cotacao nao tem placa' do
-      progresso = no_job('Porto').poll(handle: handle.merge('sufixo' => 'fianca locaticia'), attempt: 1)
+      progresso = passada(handle.merge('sufixo' => 'fianca locaticia'), 1)
 
       expect(arquivo(progresso.deliveries.first).nome).to eq('Proposta Porto — fianca locaticia.pdf')
     end
 
     # O REGISTRO É NA LINHA DA COTAÇÃO, que já está `done`: é ela que "virou proposta", e é lá que a
     # medida da entrega 7 lê. Uma escrita que exigisse linha viva contaria zero para sempre.
-    it 'anota na linha da COTACAO quais propostas sairam, uma por passada, e a medida conta' do
-      primeira, = duas_passadas(handle)
+    it 'anota na linha da COTACAO quais propostas sairam, e a medida conta' do
+      primeira = publicar!(passada(handle, 1))
+      segunda = publicar!(passada(primeira.handle, 2))
+      terceira = passada(segunda.handle, 3)
 
-      expect(primeira.handle).not_to have_key(cotacao::PROPOSTAS_KEY)
+      expect(terceira.handle).not_to have_key(cotacao::PROPOSTAS_KEY)
       expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(%w[20 8])
       expect(linha.status).to eq('done')
       expect(Autonomia::Insurance::Medida.new(conta: account, inicio: nil, fim: nil).call)
@@ -657,19 +757,25 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     # preço. Só as MORTAS não recebem proposta, e quem barra é o `poll`, antes de anotar.
     it 'anota tambem na cotacao ainda viva, e na encerrada por prazo com preco entregue' do
       viva = cotacao_com_precos(status: 'running', quote_id: 'viva')
-      no_job('Porto').poll(handle: handle.merge(described_class::ORIGEM => viva.id), attempt: 1)
+      publicar!(passada(handle.merge(described_class::ORIGEM => viva.id), 1))
+      passada(handle.merge(described_class::ORIGEM => viva.id), 2)
       viva.update!(status: 'done')
       vencida = cotacao_com_precos(status: 'failed', quote_id: 'vencida')
-      no_job('Porto').poll(handle: handle.merge(described_class::ORIGEM => vencida.id), attempt: 1)
+      passada(handle.merge(described_class::ORIGEM => vencida.id), 1)
 
       expect(viva.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
       expect(vencida.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
     end
 
-    it 'acumula sem repetir quando o cliente pede outra depois' do
-      no_job('Porto').poll(handle: handle.merge(described_class::GERADAS => handle[described_class::GERADAS].first(1)), attempt: 1)
-      duas_passadas(handle)
+    it 'a passada repetida nao duplica a anotacao nem a entrega' do
+      primeira = publicar!(passada(handle, 1))
+      segunda = publicar!(passada(primeira.handle, 2))
+      terceira = passada(segunda.handle, 3)
+      repetida = passada(segunda.handle, 4)
 
+      expect(terceira).to be_done
+      expect(repetida).to be_done
+      expect(repetida.deliveries).to be_empty
       expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(%w[20 8])
     end
 
@@ -677,21 +783,29 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       so_porto = handle.merge(described_class::GERADAS => handle[described_class::GERADAS].first(1),
                               described_class::NAO_SAIU => { '20' => 'validation' })
 
-      progresso = no_job('Porto', 'Suhai').poll(handle: so_porto, attempt: 1)
+      primeira = publicar!(passada(so_porto, 1))
+      segunda = passada(primeira.handle, 2)
 
-      expect(progresso).to be_done
-      expect(progresso.deliveries.size).to eq(2)
-      expect(progresso.deliveries.last).to eq('Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.')
+      expect(primeira.deliveries.size).to eq(1)
+      expect(segunda).to be_done
+      expect(segunda.deliveries).to eq(['Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.'])
     end
 
-    it 'com uma pendente, a passada pede ao portal e volta running sem entregar nada' do
-      pendente = handle.merge(described_class::GERADAS => handle[described_class::GERADAS].first(1), described_class::PENDENTES => ['20'])
+    # GERADAS ANTES DAS PENDENTES (mutação MG, P2 do Codex): com a Porto pronta e a Suhai por pedir,
+    # a passada ENTREGA a Porto — não gasta a passada, e o prazo, numa chamada ao portal de até 60 s.
+    # Só quando não há mais nada por entregar é que a pendente é pedida.
+    it 'entrega a proposta pronta antes de pedir a pendente ao portal' do
+      pendente = handle.merge(described_class::GERADAS => handle[described_class::GERADAS].first(1),
+                              described_class::PENDENTES => ['20'])
 
-      progresso = no_job('Porto', 'Suhai').poll(handle: pendente, attempt: 1)
+      primeira = publicar!(passada(pendente, 1))
+      segunda = passada(primeira.handle, 2)
 
-      expect(progresso).to be_running
-      expect(progresso.deliveries).to be_empty
-      expect(progresso.handle[described_class::GERADAS].pluck('code')).to eq(%w[8 20])
+      expect(arquivo(primeira.deliveries.first).nome).to eq('Proposta Porto — placa ABC1D23.pdf')
+      expect(primeira.handle[described_class::PENDENTES]).to eq(['20'])
+      expect(segunda).to be_running
+      expect(segunda.deliveries).to be_empty
+      expect(segunda.handle[described_class::GERADAS].pluck('code')).to eq(%w[8 20])
       expect(pedidos).to eq(['20'])
     end
 
@@ -701,24 +815,39 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       viva = cotacao_com_precos(status: 'running')
       cotacao_nova_em_andamento
 
-      progresso = no_job('Porto', 'Suhai').poll(handle: handle.merge(described_class::ORIGEM => viva.id), attempt: 1)
+      progresso = passada(handle.merge(described_class::ORIGEM => viva.id), 1)
 
       expect(viva.reload.status).to eq('superseded')
       expect(progresso).to be_done
-      expect(progresso.deliveries).to eq(['A cotação foi refeita depois desse pedido, e a proposta sairia dos preços antigos. ' \
-                                          'Quando os preços novos chegarem, é só me pedir de novo.'])
+      expect(progresso.deliveries).to eq([described_class::SUBSTITUIDA])
       expect(viva.handle).not_to have_key(cotacao::PROPOSTAS_KEY)
     end
 
+    # A COTAÇÃO NOVA CORRENDO TAMBÉM BARRA O `poll` (verificador cego, I1; mutação MA): uma origem
+    # `done` NÃO vira `superseded` quando outra abre, então `dead?` sozinho deixava a proposta da
+    # lista velha sair enquanto o cliente esperava os preços novos — o mesmo pedido que o `start`
+    # recusa. A janela é de dezenas de segundos a minutos, não "de segundos".
+    it 'a cotacao nova em andamento entre o start e o poll barra a entrega, e o cliente le o porque' do
+      run
+      cotacao_nova_em_andamento
+
+      progresso = passada(handle, 1)
+
+      expect(progresso).to be_done
+      expect(progresso.deliveries).to eq([described_class::EM_ANDAMENTO])
+      expect(linha.reload.handle).not_to have_key(cotacao::PROPOSTAS_KEY)
+      expect(conversation.messages.count).to be_zero
+    end
+
     it 'sem a origem no handle (ou apagada), falha nomeada: nao ha como conferir se ela ainda vale' do
-      progresso = no_job('Porto').poll(handle: handle.except(described_class::ORIGEM), attempt: 1)
+      progresso = passada(handle.except(described_class::ORIGEM), 1)
 
       expect(progresso).to be_failed
       expect(progresso.failure_code).to eq('cotacao_ausente')
     end
 
     it 'entrega a recusa do start ao cliente e acaba' do
-      progresso = no_job('Zurich').poll(handle: { 'pedido' => 'Não tenho preço de Zurich.', 'motivo' => 'seguradora_nao_cotou' }, attempt: 1)
+      progresso = passada({ 'pedido' => 'Não tenho preço de Zurich.', 'motivo' => 'seguradora_nao_cotou' }, 1)
 
       expect(progresso).to be_done
       expect(progresso.deliveries).to eq(['Não tenho preço de Zurich.'])
@@ -729,25 +858,131 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
     it 'quando a URL do portal nao tem a forma segura, entrega o link em texto' do
       inseguro = handle.merge(described_class::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'http://arquivos.exemplo.test/p.pdf' }])
 
-      progresso = no_job('Porto').poll(handle: inseguro, attempt: 1)
+      progresso = passada(inseguro, 1)
 
       expect(progresso.deliveries).to eq(["Proposta da Porto:\nhttp://arquivos.exemplo.test/p.pdf"])
     end
 
+    # E a reserva publicada também conta como entregue: a identidade é a MESMA nos dois caminhos.
+    it 'o link de reserva publicado encerra a entrega daquela proposta' do
+      inseguro = handle.merge(described_class::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'http://arquivos.exemplo.test/p.pdf' }])
+
+      primeira = publicar!(passada(inseguro, 1))
+      segunda = passada(primeira.handle, 2)
+
+      expect(segunda).to be_done
+      expect(segunda.deliveries).to be_empty
+      expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
+    end
+
     it 'falha nomeada quando o handle nao tem proposta, pendente nem falha registrada' do
-      progresso = no_job('Porto').poll(handle: handle.merge(described_class::GERADAS => []), attempt: 1)
+      progresso = passada(handle.merge(described_class::GERADAS => []), 1)
 
       expect(progresso).to be_failed
       expect(progresso.failure_code).to eq('sem_proposta')
     end
+  end
 
-    it 'uma passada repetida com tudo ja enviado encerra sem entregar de novo' do
-      tudo_enviado = handle.merge(described_class::ENVIADAS => %w[8 20])
+  # O QUE AINDA VALE ENTREGAR QUANDO O PRAZO ACABA (Codex, rodada 2, P2): o arquivo que o portal
+  # gerou e não chegou ao cliente, e o aviso de quem ficou pelo caminho — pendente no fim é, para
+  # quem espera, o mesmo que não gerada.
+  describe '#closing_deliveries — o encerramento por prazo' do
+    let(:linha) { cotacao_com_precos }
+    let(:run) do
+      origem = linha
+      execucao(argumentos: { 'seguradoras' => %w[Porto Suhai], described_class::ORIGEM => origem.id })
+    end
 
-      progresso = no_job('Porto', 'Suhai').poll(handle: tudo_enviado, attempt: 3)
+    def handle
+      { 'sufixo' => 'placa ABC1D23', described_class::ORIGEM => linha.id,
+        described_class::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => 'https://arquivos.exemplo.test/proposta-8.pdf' }],
+        described_class::PENDENTES => ['20'] }
+    end
 
-      expect(progresso).to be_done
-      expect(progresso.deliveries).to be_empty
+    # Mutação MC (o fechamento sem as geradas) reprova aqui.
+    it 'entrega a proposta gerada que nao virou mensagem, e avisa de quem ficou pelo caminho' do
+      entregas = no_job('Porto', 'Suhai', run: run).closing_deliveries(handle)
+
+      expect(entregas.map { |item| arquivo(item)&.nome || item })
+        .to eq(['Proposta Porto — placa ABC1D23.pdf',
+                'Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.'])
+    end
+
+    it 'nao repete o que ja virou mensagem' do
+      publicar_entrega!(run, conversation, no_job('Porto', 'Suhai', run: run).closing_deliveries(handle).first)
+
+      entregas = no_job('Porto', 'Suhai', run: run).closing_deliveries(handle)
+
+      expect(entregas).to eq(['Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.'])
+    end
+
+    it 'nao entrega nada quando a cotacao de origem foi refeita' do
+      run
+      cotacao_nova_em_andamento
+
+      expect(no_job('Porto', 'Suhai', run: run).closing_deliveries(handle)).to be_empty
+    end
+  end
+
+  # A ORIGEM RECONFERIDA NA PUBLICAÇÃO EFETIVA (Codex, rodada 2, P1). Entre o `poll` e a mensagem há
+  # a cadeia de entrega humanizada (até 90 s) e a retomada de um envio pendente — e nenhuma das duas
+  # passa de novo pelo `poll`. Mutação MH (o publicador ignorando o hook) reprova em `async_publisher_spec`.
+  describe '#publicavel? — a ultima palavra antes da mensagem' do
+    let(:linha) { cotacao_com_precos(status: 'running') }
+    let(:run) do
+      origem = linha
+      execucao(argumentos: { 'seguradoras' => ['Porto'], described_class::ORIGEM => origem.id }).tap do |execucao|
+        execucao.update!(handle: { 'sufixo' => 'placa ABC1D23',
+                                   described_class::GERADAS => [{ 'code' => '8', 'name' => 'Porto', 'url' => url }] })
+      end
+    end
+
+    def url
+      'https://arquivos.exemplo.test/proposta-8.pdf'
+    end
+
+    def entrega
+      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: 'Proposta Porto — placa ABC1D23.pdf',
+                                                     legenda: 'Proposta da Porto.', reserva: "Proposta da Porto:\n#{url}").to_h
+    end
+
+    def proposta
+      no_job('Porto', run: run)
+    end
+
+    it 'autoriza enquanto a cotacao de origem vale' do
+      expect(proposta.publicavel?(run, entrega)).to be(true)
+    end
+
+    it 'recusa a proposta quando a origem foi supersedida depois do poll' do
+      run
+      cotacao_nova_em_andamento
+
+      expect(proposta.publicavel?(run, entrega)).to be(false)
+    end
+
+    it 'recusa a proposta quando uma cotacao nova esta correndo sem preco' do
+      linha.update!(status: 'done')
+      run
+      cotacao_nova_em_andamento
+
+      expect(proposta.publicavel?(run, entrega)).to be(false)
+    end
+
+    it 'recusa tambem o link de reserva da mesma proposta' do
+      run
+      cotacao_nova_em_andamento
+
+      expect(proposta.publicavel?(run, "Proposta da Porto:\n#{url}")).to be(false)
+    end
+
+    # A EXPLICAÇÃO SAI: barrar tudo deixaria o cliente em silêncio depois de "já estou buscando".
+    it 'deixa passar a explicacao e o fecho do job, mesmo com a origem morta' do
+      run
+      cotacao_nova_em_andamento
+
+      expect(proposta.publicavel?(run, described_class::SUBSTITUIDA)).to be(true)
+      expect(proposta.publicavel?(run, described_class::PARCIAL)).to be(true)
     end
   end
 
@@ -767,14 +1002,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       end
     end
 
-    # A execução como o ACEITE a abre: com os argumentos da ferramenta (a origem fixada dentro).
-    def execucao(*seguradoras)
-      run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug, arguments: no_turno(*seguradoras).argumentos,
-                                             scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
-      run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
-      run
-    end
-
     def passadas(run, quantas)
       quantas.times { |passada| Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, passada) }
     end
@@ -783,13 +1010,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       conversation.messages.reload.where(sender_type: 'AgentBot').order(:id)
     end
 
+    # TRÊS passadas: submeter, entregar, e a que confirma a mensagem e encerra.
     it 'acha a cotacao fixada em start, anexa a proposta em poll e marca a cotacao' do
       # Arrange
       linha = cotacao_com_precos
       run = execucao('Porto')
 
-      # Act — a passada de submissão e a de entrega
-      passadas(run, 2)
+      # Act
+      passadas(run, 3)
 
       # Assert
       expect(connector).to have_received(:quote_proposal).with(hash_including(insurer_code: '8', quote_id: 'q1')).once
@@ -802,12 +1030,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(['8'])
     end
 
-    # Duas seguradoras são QUATRO passadas: pede a primeira, pede a segunda, entrega uma, entrega a outra.
-    it 'duas seguradoras chegam como dois anexos, em quatro passadas, uma chamada ao portal por passada' do
+    # Duas seguradoras são CINCO passadas, nesta ordem: pede a primeira, entrega a primeira, pede a
+    # segunda, entrega a segunda, confirma e encerra. As geradas saem antes das pendentes — é o que
+    # faz o arquivo pronto chegar mesmo quando a segunda seguradora está muda (Codex, rodada 2, P2).
+    it 'duas seguradoras chegam como dois anexos, em cinco passadas, uma coisa por passada' do
       linha = cotacao_com_precos
       run = execucao('Porto', 'Suhai')
 
-      passadas(run, 4)
+      passadas(run, 5)
 
       expect(pedidos).to eq(%w[8 20])
       expect(bot_messages.map(&:content)).to eq(['Proposta da Porto.', 'Proposta da Suhai.'])
@@ -817,12 +1047,47 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceProposal do
       expect(linha.reload.handle[cotacao::PROPOSTAS_KEY]).to eq(%w[20 8])
     end
 
-    it 'sem cotacao na conversa, o cliente le a recusa e nenhuma chamada ao portal sai' do
+    # O PRAZO ESTOUROU COM A SEGUNDA SEGURADORA POR PEDIR (Codex, rodada 2, P2): a Porto pronta sai
+    # na primeira passada de entrega, e o encerramento por prazo ainda avisa da Suhai. Antes, a
+    # execução gastava as passadas pedindo a Suhai e morria publicando só "não consegui".
+    it 'com o prazo curto e a segunda seguradora por pedir, a Porto sai e o aviso da Suhai tambem' do
+      cotacao_com_precos
+      run = execucao('Porto', 'Suhai')
+
+      passadas(run, 2)
+      run.update!(expires_at: 1.second.ago)
+      Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 2)
+
+      expect(pedidos).to eq(['8'])
+      expect(bot_messages.map(&:content))
+        .to eq(['Proposta da Porto.', 'Não consegui gerar a proposta de Suhai agora; as demais estão aqui em cima.',
+                described_class::PARCIAL])
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+    end
+
+    # A PUBLICAÇÃO ADIADA NÃO PASSA DE NOVO PELO `poll`: quem a barra é o hook da ferramenta, sob o
+    # lock, imediatamente antes de a mensagem existir (rodada 3, P1 do Codex).
+    it 'a entrega adiada nao vira mensagem quando a cotacao e refeita antes da publicacao' do
+      cotacao_com_precos(status: 'running')
+      run = execucao('Porto')
+      passadas(run, 1)
+      entrega = no_job('Porto', run: run.reload).poll(handle: run.handle, attempt: 1).deliveries.first
+      cotacao_nova_em_andamento
+
+      resultado = Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega)
+
+      expect(resultado).to be_blocked
+      expect(bot_messages).to be_empty
+    end
+
+    # Sem origem fixada nos argumentos (execução anterior ao deploy que passou a fixá-la), o job não
+    # escolhe uma cotação agora: o cliente lê a recusa própria e pede de novo.
+    it 'sem a origem fixada, o cliente le a recusa e nenhuma chamada ao portal sai' do
       run = execucao('Porto')
 
       passadas(run, 2)
 
-      expect(bot_messages.map(&:content)).to eq([described_class::SEM_COTACAO])
+      expect(bot_messages.map(&:content)).to eq([described_class::SEM_ORIGEM])
       expect(connector).not_to have_received(:quote_proposal)
       expect(run.reload.status).to eq('done')
     end
