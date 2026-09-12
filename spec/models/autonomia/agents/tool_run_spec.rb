@@ -313,6 +313,100 @@ RSpec.describe Autonomia::Agents::ToolRun do
     end
   end
 
+  # AS LISTAS DE IDENTIDADE DO HANDLE (entrega 8a): o ACEITE (o que o publicador assumiu, marca do
+  # motor) e as IDENTIDADES QUE A FERRAMENTA EMITIU (chave dela). As duas são acrescentadas pelo
+  # mesmo UPDATE, e a idempotência e a concatenação pelo BANCO são o coração dele — até a rodada 6
+  # não havia exemplo direto: a cobertura era indireta, por mutação.
+  describe 'as listas de identidade no handle' do
+    let(:aceites) { described_class::ENTREGAS_ACEITAS }
+    let(:emitidas) { 'entregas_de_preco' }
+
+    it 'acumulam, e o mesmo token nao entra duas vezes' do
+      # Arrange
+      run = promote(open_run)
+
+      # Act
+      primeira = run.registrar_entrega_aceita!('tok-A')
+      repetida = run.registrar_entrega_aceita!('tok-A')
+      run.registrar_entrega_aceita!('tok-B')
+
+      # Assert — a repetição é um no-op declarado (é o retry do Sidekiq que republica a mesma
+      # entrega e recebe `published` pela dedupe do token)
+      expect([primeira, repetida]).to eq([true, false])
+      expect(run.reload.handle[aceites]).to eq(%w[tok-A tok-B])
+    end
+
+    # A CONCATENAÇÃO É DO BANCO, não do objeto: dois processos com a mesma execução (o Sidekiq
+    # re-enfileira o job no hard shutdown, e o antigo pode estar vivo noutro host) não podem apagar
+    # um o token do outro. É o que um ler-modificar-escrever faria.
+    it 'um objeto velho nao apaga o token que outro processo escreveu' do
+      # Arrange
+      run = promote(open_run)
+      velho = described_class.find(run.id)
+      run.registrar_entrega_aceita!('tok-A')
+      run.registrar_identidade_emitida!(emitidas, 'preco-A')
+
+      # Act
+      velho.registrar_entrega_aceita!('tok-B')
+      velho.registrar_identidade_emitida!(emitidas, 'preco-B')
+
+      # Assert
+      expect(velho.reload.handle).to include(aceites => %w[tok-A tok-B], emitidas => %w[preco-A preco-B])
+    end
+
+    # NÃO GUARDADAS PELO STATUS: o aceite e a emissão são fatos consumados. Uma linha supersedida
+    # por um pedido novo não pode transformar a escrita do que JÁ saiu num no-op.
+    it 'escrevem mesmo depois de a linha morrer' do
+      # Arrange
+      run = promote(open_run)
+      run.finish!('failed')
+
+      # Act / Assert
+      expect(run.registrar_entrega_aceita!('tok-A')).to be(true)
+      expect(run.reload.handle[aceites]).to eq(['tok-A'])
+    end
+
+    # O GUARDA-CORPO: a ferramenta não vê nem escreve as marcas do motor, e o escritor da lista dela
+    # seria a porta dos fundos — um aceite inventado, ou `autonomia_closed` gravado por ela, que
+    # calaria o encerramento de todas as passadas seguintes.
+    it 'a ferramenta nao escreve marca do motor pela lista dela' do
+      # Arrange
+      run = promote(open_run)
+
+      # Act / Assert
+      Autonomia::Agents::Tools::AsyncRunJob::MARCAS.each do |marca|
+        expect { run.registrar_identidade_emitida!(marca, 'tok-X') }.to raise_error(ArgumentError)
+      end
+      expect(run.reload.handle).not_to have_key(aceites)
+    end
+
+    # A REDE DA LISTA DO ACEITE (rodada 6). A identidade da entrega tem duas escritas — a imediata
+    # e o `record_attempt!` do fim da passada —, e o aceite tinha UMA: uma falha transitória do
+    # banco, sem morte de processo, apagava o encerramento (o fecho lia "nada aceito" e calava,
+    # onde a `main` falava pelo contador). Agora o token pendente é reescrito no fim da passada.
+    it 'o aceite cuja escrita falhou e reescrito no fim da passada' do
+      # Arrange — a primeira escrita do aceite cai, como cai uma conexão que volta em seguida
+      run = promote(open_run)
+      escritas_do_aceite = 0
+      allow(run).to receive(:anexar_ao_handle!).and_wrap_original do |original, chave, token|
+        escritas_do_aceite += 1 if chave == aceites
+        raise ActiveRecord::StatementInvalid, 'banco fora' if escritas_do_aceite == 1 && chave == aceites
+
+        original.call(chave, token)
+      end
+
+      # Act
+      Autonomia::Agents::Tools::EntregaAceita.registrar(
+        run, 'o preço', Autonomia::Agents::Tools::AsyncPublisher::Result.new(status: :published)
+      )
+      expect(run.reload.handle).not_to have_key(aceites)
+      run.record_attempt!(handle: { 'quote_id' => 'cot-1' })
+
+      # Assert — o token do aceite chegou ao banco pela segunda escrita, junto do handle
+      expect(run.reload.handle).to include(aceites => [run.delivery_token('o preço')], 'quote_id' => 'cot-1')
+    end
+  end
+
   describe '#dead?' do
     it 'is true only for statuses that must never publish again' do
       # Arrange

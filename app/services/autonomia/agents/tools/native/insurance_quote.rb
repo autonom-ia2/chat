@@ -47,10 +47,35 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # comparativo. O ponto de registro é este handle, na passada que gerar a proposta; a medida da
   # entrega 7 já conta a lista (`Insurance::Medida`), e hoje conta zero porque ninguém a escreve.
   PROPOSTAS_KEY = 'propostas'.freeze
-  # O PDF já foi entregue? O comparativo sai UMA vez, no fim — não a cada entrega parcial. A
+  # O PDF já foi EMITIDO? O comparativo sai UMA vez, no fim — não a cada entrega parcial. A
   # sentinela é gravada quando a ENTREGA sai da ferramenta, seja qual for a forma em que o
   # publicador a faça chegar (arquivo, ou o link de reserva quando o download falha).
+  #
+  # EMITIDO NÃO É ENTREGUE, e esta chave nunca soube a diferença: ela é gravada quando a entrega sai
+  # daqui, antes de o publicador dizer se assume a publicação. Quem precisa saber se o comparativo
+  # foi assumido cruza o `COMPARATIVO_KEY` (a identidade da entrega) com a lista do ACEITE.
   PDF_SENT_KEY = 'comparativo_enviado'.freeze
+  # O QUE ESTA EXECUÇÃO EMITIU, PELA IDENTIDADE DE CADA ENTREGA (entrega 8a). É a TABELA DE
+  # CONSULTA do fecho, não a prova: emitir não é entregar — `deliver` roda ANTES de
+  # `record_attempt!`, então uma entrega recusada (conversa encerrada, agente desligado no meio,
+  # erro transitório do publicador) avança o handle com os códigos das ofertas sem que publicação
+  # nenhuma tenha sido assumida.
+  #
+  # A PROVA É O ACEITE, e ela mora na LINHA (`Tools::EntregaAceita`), gravada pelo publicador no
+  # momento em que ele assume a entrega. Estas duas chaves dizem por quais identidades perguntar —
+  # é o que a ferramenta sabe e o motor não: para ele, um preço e a pergunta pelo dado que falta são
+  # "uma entrega".
+  PRECOS_KEY = 'entregas_de_preco'.freeze
+  COMPARATIVO_KEY = 'entrega_do_comparativo'.freeze
+  # HAVIA PREÇO EMITIDO ANTES DE ESTA VERSÃO REGISTRAR O ACEITE? Gravada uma vez, na primeira
+  # emissão de preço desta execução. É a COBERTURA da prova legada — ver `Fecho#prova_legada?`.
+  PRECO_LEGADO_KEY = 'preco_legado'.freeze
+  # O PORTAL FECHOU A COTAÇÃO — `completed` ou `failed` na consulta, que é o que `finished?` lê.
+  # É FATO DO PORTAL, gravado por quem o leu, e não se deduz do comparativo: uma cotação que fecha
+  # sem URL de comparativo (geração indisponível, portal sem arquivo) não grava `PDF_SENT_KEY`
+  # nenhum, e ler a ausência como "ainda tem seguradora por responder" é a frase de atraso dita a
+  # quem já recebeu tudo o que ia chegar.
+  FECHADO_KEY = 'portal_fechado'.freeze
   # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
   # quem precisa contar ao cliente é a primeira entrega de preços, minutos depois.
   SEM_BONUS_KEY = 'renovacao_sem_bonus'.freeze
@@ -77,6 +102,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   include Envio
   include Veiculo
   include Comparativo
+  include Fecho
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
   #
@@ -99,14 +125,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     raise unless e.kind == :not_implemented
 
     recusa('ramo_desconhecido', RAMO_DESCONHECIDO, faltando: ['produto'])
-  end
-
-  # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele era gerado só no ramo `done`,
-  # quando o portal marcava a cotação como `completed` — e em 08/09/2026 a execução entregou cinco
-  # preços e estourou o prazo na 22ª consulta, então o PDF nunca saiu. O comparativo é o que o
-  # cliente leva para decidir; os preços soltos no chat são o resumo dele.
-  def closing_deliveries(handle)
-    [comparison_pdf(handle.to_h)].compact
   end
 
   # A IDENTIDADE DO PEDIDO (entrega 10): digest da entrada como o ADAPTER a entende — transformações
@@ -211,15 +229,21 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
 
-    # O comparativo em PDF fecha a conversa, e sai UMA vez. É o que o portal entrega e o que o
-    # cliente guarda — a lista de preços no chat serve para decidir, o PDF serve para levar adiante.
-    # Desde a entrega 11 ele é uma entrega de ARQUIVO (`Comparativo`), não um texto com link.
-    pdf = comparison_pdf(next_handle)
-    if pdf
-      deliveries += [pdf]
-      next_handle = next_handle.merge(PDF_SENT_KEY => true)
-    end
-    progress_class.done(deliveries: deliveries, handle: next_handle)
+    # O PORTAL FECHOU, e isso se grava por si: é o fato que separa "ainda tem seguradora por
+    # responder" de "é isto que havia", e ele não pode depender de o comparativo ter saído.
+    fechar(deliveries, next_handle.merge(FECHADO_KEY => true))
+  end
+
+  # O comparativo em PDF fecha a conversa, e sai UMA vez. É o que o portal entrega e o que o
+  # cliente guarda — a lista de preços no chat serve para decidir, o PDF serve para levar adiante.
+  # Desde a entrega 11 ele é uma entrega de ARQUIVO (`Comparativo`), não um texto com link.
+  #
+  # As duas marcas do comparativo são de `Fecho`, que é quem as lê.
+  def fechar(deliveries, handle)
+    pdf = comparison_pdf(handle)
+    return progress_class.done(deliveries: deliveries, handle: handle) if pdf.nil?
+
+    progress_class.done(deliveries: deliveries + [pdf], handle: handle.merge(marcas_do_comparativo(pdf)))
   end
 
   # A UNIÃO DAS CONSULTAS, não a foto da última (entrega 7). O portal responde em pedaços — medido em
@@ -239,7 +263,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     texto = ::Autonomia::Insurance::QuoteOffers.describe(
       fresh, first: already.empty?, aviso: avisar ? AVISO_SEM_BONUS : nil
     )
-    handle = registrar_sem_periodo(fresh, handle)
+    handle = registrar_entrega_de_preco(texto, registrar_sem_periodo(fresh, handle), already)
     [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
   end
 

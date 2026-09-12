@@ -91,6 +91,9 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # `updated_at`: uma publicação adiada que sai depois do fim (`advance_sequence!`) mexe nele, e a
   # janela do pedido contaria da publicação, não do encerramento.
   ENCERRADA_EM = 'autonomia_encerrada_em'.freeze
+  # A lista do ACEITE (`ENTREGAS_ACEITAS`) e a da ferramenta moram em `ListasDeEntrega`, junto com
+  # quem as escreve — outro assunto, e a classe estava no teto de linhas.
+  include ListasDeEntrega
 
   # Por quanto tempo uma consulta ENCERRADA com entrega ainda conta como "este pedido já foi feito".
   # Depois disso, repetir os mesmos dados é um pedido novo (o preço muda; a cotação do portal vence).
@@ -271,7 +274,20 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # devolveu por cima do que estava, marcas preservadas. Nunca substitui o handle por uma cópia da
   # memória — era o que um processo com objeto velho fazia com a marca gravada por outro (Codex,
   # 10/09/2026). `intencao:` exige a POSSE da passada (ver `posse`).
+  #
+  # É A ESCRITA DO FIM DA PASSADA, e é por isso que a segunda chance do aceite mora aqui
+  # (`reforcar_aceites!`, rodada 6): a identidade da entrega tem duas escritas — a imediata da
+  # ferramenta e esta —, então falhar na primeira degrada e não perde. O aceite tinha UMA, e uma
+  # falha transitória do banco (sem morte de processo) apagava o encerramento. Aqui ele ganha a
+  # mesma rede, no mesmo instante. ANTES da mescla, de propósito: a mescla é guardada pelo status
+  # (`posse`) e a escrita do aceite não é — o aceite é fato consumado mesmo em linha supersedida.
+  #
+  # A REDE COBRE QUEM PASSA POR AQUI, e o encerramento não passa (precisão da rodada 7): no motor
+  # ele roda em `fail_run`, depois da última persistência, e no varredor não há `record_attempt!`.
+  # O aceite gravado por `Tools::Encerramento#publicar_uma` continua com uma escrita só — alcance
+  # declarado, porque quem o lê são as passadas seguintes, e para essas memória não vale.
   def record_attempt!(handle: nil, intencao: nil)
+    reforcar_aceites!
     mesclar(posse(intencao), adicionar: handle.to_h, contar: true)
   end
 

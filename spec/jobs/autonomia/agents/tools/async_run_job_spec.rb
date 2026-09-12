@@ -188,6 +188,33 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run.reload).to have_attributes(status: 'blocked', failure_code: 'nao_autorizado')
       expect(described_class).not_to have_been_enqueued
     end
+
+    # AGENTE APAGADO NO MEIO DO VOO (`agente_indisponivel`): o fecho parcial NÃO sai, e isto é uma
+    # mudança declarada em relação à `main`, que a publicava por `delivered_count.positive?`
+    # sozinho. Sem agente não há ferramenta a quem perguntar se houve resultado e se sobrou algo, e
+    # a frase que afirma as duas coisas não pode ser dita no escuro.
+    #
+    # O QUE SE PERDE JÁ ERA RECUSADO: apagado o agente, os vínculos caem com ele
+    # (`dependent: :destroy`), e o publicador recusa qualquer mensagem desta execução — a última
+    # asserção é essa prova, e é o que torna a mudança invisível para o cliente.
+    it 'com o agente apagado, fecha em silencio — e nem a frase da main chegaria' do
+      # Arrange — o cliente recebeu um preço e o agente some antes da passada seguinte
+      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['um preco']),
+                                           resultado: true, resta: true))
+      run = submitted_run
+      described_class.new.perform(run.id, 1)
+      agent.destroy!
+
+      # Act
+      described_class.new.perform(run.id, 2)
+
+      # Assert
+      expect(bot_contents).to eq(['um preco'])
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'agente_indisponivel',
+                                            delivered_count: 1)
+      expect(Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!('qualquer palavra'))
+        .to be_blocked
+    end
   end
 
   describe 'waiting notice' do
@@ -252,9 +279,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # comparativo e sem uma palavra.
     it 'entrega o que ainda vale e fecha a conversa quando ja houve entrega' do
       # Arrange
+      # A ferramenta responde as duas perguntas do fecho (entrega 8): entregou preço e ainda
+      # tinha seguradora por responder — que é o que a frase parcial diz.
       register_async_tool(
         build_async_tool(poll: progress.running(deliveries: ['primeiros precos']),
-                         closing: ['Comparativo: https://portal.exemplo.test/c.pdf'])
+                         closing: ['Comparativo: https://portal.exemplo.test/c.pdf'],
+                         resultado: true, resta: true)
       )
       run = submitted_run
       described_class.new.perform(run.id, 0)
@@ -272,7 +302,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     # Dizer "não consegui" a quem acabou de receber preço desmente o que ele está lendo.
     it 'nao usa o texto de falha quando algo ja foi entregue' do
-      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['um preco'])))
+      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['um preco']),
+                                           resultado: true, resta: true))
       run = submitted_run
       described_class.new.perform(run.id, 0)
 
@@ -284,10 +315,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     # Encerramento é cortesia sobre um caminho que já deu errado: falhar aqui apagaria o registro
     # do desfecho.
-    it 'registra o desfecho mesmo se o encerramento quebrar' do
+    #
+    # E O FECHO SAI ASSIM MESMO: o passo que monta as entregas caiu, mas a marca
+    # `closed` já está gravada e ninguém volta aqui. Um `rescue` só cobrindo os três
+    # passos, e essa exceção — um erro de banco, o mesmo tipo que abandona a linha — deixava sem
+    # resposta quem já tinha recebido preço.
+    it 'registra o desfecho, e ainda fecha com o cliente, se o encerramento quebrar' do
       register_async_tool(
         build_async_tool(poll: progress.running(deliveries: ['um preco']),
-                         closing: -> { raise 'comparativo fora do ar' })
+                         closing: -> { raise 'comparativo fora do ar' },
+                         resultado: true, resta: true)
       )
       run = submitted_run
       described_class.new.perform(run.id, 0)
@@ -295,6 +332,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
 
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+      expect(bot_contents.last).to include('não responderam a tempo')
     end
 
     # O RETRY DO SIDEKIQ NÃO PODE REPUBLICAR O COMPARATIVO. O encerramento publica e só depois

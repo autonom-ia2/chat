@@ -28,8 +28,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     %i[slug tool_name description params available_for? async? openai_schema
        accepted_message waiting_message failure_message partial_message uncertain_message]
   end
-  # O que o `Bound` e o job chamam NA INSTÂNCIA.
-  let(:trabalho_de_instancia) { %i[precheck closing_deliveries pedido call start poll] }
+  # O que o `Bound` e o job chamam NA INSTÂNCIA (`resultado_entregue?` e `resta_entregar?` são as
+  # duas perguntas que o `Tools::Encerramento` faz à ferramenta antes de escolher o fecho).
+  let(:trabalho_de_instancia) do
+    %i[precheck closing_deliveries resultado_entregue? resta_entregar? pedido call start poll]
+  end
   # Os cinco textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
   let(:frases) { %i[accepted_message waiting_message failure_message partial_message uncertain_message] }
 
@@ -65,5 +68,29 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
 
     expect(crua.new(agent: agent, params: {}).precheck).to be_nil
     expect(crua.new(agent: agent, params: {}).closing_deliveries({})).to eq([])
+  end
+
+  # AS DUAS PERGUNTAS DO FECHO PARCIAL SÃO CONSERVADORAS POR PADRÃO: quem não sabe dizer se entregou
+  # resultado, e se sobrou algo, não faz o fecho AFIRMAR nenhuma das duas. Um default `true` aqui
+  # seria a frase inventada de volta, agora no contrato.
+  it 'a ferramenta que nao redefine nao afirma que entregou resultado nem que sobrou algo' do
+    crua = Class.new(described_class) do
+      def self.slug = 'crua'
+      def self.description = 'teste'
+    end
+
+    expect(crua.new(agent: agent, params: {}).resultado_entregue?({})).to be(false)
+    expect(crua.new(agent: agent, params: {}).resta_entregar?({})).to be(false)
+  end
+
+  # O CONSTRUTOR GANHOU `run:` COM PADRÃO `nil` (entrega 8a): é o motor que passa a entregá-lo
+  # quando monta a ferramenta fora do turno. Só a cotação o lê, e nenhuma nativa sobrescreve
+  # `initialize` — este exemplo é o que prova a segunda metade sobre o catálogo inteiro, que é o
+  # que torna a mudança inofensiva para as outras.
+  it 'toda ferramenta do catalogo aceita ser montada com a linha da execucao' do
+    Autonomia::Agents::Tools::Registry.all.each do |ferramenta|
+      expect { ferramenta.new(agent: agent, params: {}, run: nil) }
+        .not_to raise_error, "#{ferramenta} não aceita o construtor do motor"
+    end
   end
 end

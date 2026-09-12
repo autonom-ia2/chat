@@ -68,6 +68,12 @@ class Autonomia::Agents::Tools::AsyncPublisher
     def deferred? = status == :deferred
     def blocked? = status == :blocked
     def skipped? = status == :skipped
+
+    # O PUBLICADOR ASSUMIU ESTA ENTREGA? Imediata ou adiada — a adiada sai sozinha pelo
+    # `AsyncPublishJob`, e tratá-la como "nada entregue" faz o desfecho falar por cima de uma
+    # cotação que está a caminho. É o que o contador da linha (`record_delivery!`) e o registro do
+    # aceite (`Tools::EntregaAceita`) contam, e é a pergunta que o encerramento faz por entrega.
+    def aceita? = published? || deferred?
   end
 
   # O que vira UMA mensagem na conversa: o texto, o token de idempotência (a identidade da entrega)
@@ -198,7 +204,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
     return agent_inbox if recusada?(agent_inbox)
 
     sequence = @run.sequence
-    existente = entrega_publicada(conversation, corpo.token)
+    existente = ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, corpo.token)
     return retomar(existente) if existente
 
     mensagem = build_message!(conversation, agent_inbox, sequence, corpo)
@@ -249,7 +255,14 @@ class Autonomia::Agents::Tools::AsyncPublisher
   def entregar(conversation, arquivo, texto)
     return post_arquivo(conversation, arquivo) if arquivo
 
-    post(conversation, Corpo.new(texto: texto, token: @run.delivery_token(texto)))
+    post(conversation, Corpo.new(texto: texto, token: token_de(texto)))
+  end
+
+  # A IDENTIDADE DA ENTREGA VEM DE `Tools::EntregaPublicada`, e não daqui. Ela é a mesma pergunta
+  # que o fecho faz ao banco ("esta entrega virou mensagem?"), e uma segunda definição — texto
+  # aparado aqui, texto cru lá — faria o fecho procurar por uma mensagem que nunca existiu.
+  def token_de(entrega)
+    ::Autonomia::Agents::Tools::EntregaPublicada.token_de(@run, entrega)
   end
 
   # O ARQUIVO BAIXA E É GRAVADO FORA DO LOCK da conversa: é rede, com tetos próprios, e a conversa
@@ -272,7 +285,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # nem um log que aponta para a causa errada. O blob leva a MARCA da execução (rodada 7): se o
   # processo morrer entre a gravação e este `ensure`, o varredor (`ReapStaleRunsJob`) o reconhece.
   def post_arquivo(conversation, arquivo)
-    token = @run.delivery_token(arquivo.identidade)
+    token = token_de(arquivo)
     blob = arquivo.gravar(run_id: @run.id)
     anexado = false
     resultado, anexado = publicar_anexo(conversation, arquivo, token, blob)
@@ -302,14 +315,6 @@ class Autonomia::Agents::Tools::AsyncPublisher
     [post(conversation, Corpo.new(texto: arquivo.reserva, token: token)), false]
   end
 
-  # -> a mensagem desta conversa que já carrega o token (a entrega publicada), ou nil. O `LIKE` é só a
-  # peneira barata; quem decide é a comparação exata do atributo.
-  def entrega_publicada(conversation, token)
-    conversation.messages.where(sender_type: 'AgentBot')
-                .where('content_attributes::text LIKE ?', "%#{token}%")
-                .detect { |message| message.content_attributes.to_h['autonomia_async_token'].to_s == token }
-  end
-
   def build_message!(conversation, agent_inbox, sequence, corpo)
     Messages::MessageBuilder.new(
       nil, conversation,
@@ -320,11 +325,16 @@ class Autonomia::Agents::Tools::AsyncPublisher
         # pessoa que assumiu, e ela precisa do dado — não do robô por cima dela.
         message_type: 'outgoing', sender_type: 'AgentBot',
         sender_id: agent_inbox.agent_bot_id, private: conversation.assignee_id.present?,
+        # A CHAVE DO TOKEN VEM DA CONSTANTE, como o valor já vinha (`token_de`). Escrever o literal
+        # aqui e ler pela constante em `EntregaPublicada` são DUAS definições da mesma identidade —
+        # a classe de defeito que esta entrega corrigiu para o valor, intacta na chave: renomear a
+        # constante faria o leitor procurar uma chave que o escritor nunca grava, e a pergunta "já
+        # chegou?" passaria a responder "não" para toda entrega.
         content_attributes: {
-          autonomia_agent_id: agent_inbox.agent.id,
-          autonomia_async_token: corpo.token,
-          autonomia_async_slug: @run.slug,
-          autonomia_async_sequence: sequence
+          'autonomia_agent_id' => agent_inbox.agent.id,
+          ::Autonomia::Agents::Tools::EntregaPublicada::CHAVE => corpo.token,
+          'autonomia_async_slug' => @run.slug,
+          'autonomia_async_sequence' => sequence
         }
       )
     ).perform

@@ -163,10 +163,25 @@ class Autonomia::Agents::Tools::Native::Base
 
   # `delivery` é o contexto do turno (conversa), quando há um. A ferramenta continua sem saber de
   # conversa para TRABALHAR; ela só o carrega para o registro de recusa dizer qual conversa foi.
-  def initialize(agent:, params: {}, delivery: nil)
+  #
+  # `run` é a LINHA DA EXECUÇÃO (entrega 8a), e serve para uma coisa só: a ferramenta saber o que o
+  # publicador ACEITOU entregar. A identidade de uma entrega é o `ToolRun#delivery_token` —
+  # `execution_key` mais o digest do conteúdo —, e sem a linha não há como montá-la; o aceite
+  # também mora nela (`Tools::EntregaAceita`). Nunca pelo handle da ferramenta, que só conhece o
+  # que se EMITIU.
+  #
+  # O `AsyncRunJob` monta a ferramenta para `start`, `poll` e `closing_deliveries` fora do turno e,
+  # de propósito, SEM `delivery` — a presença dele é o que diz "estou dentro do turno, com o modelo
+  # esperando" (é por ela que `InsuranceQuote::Veiculo#consultar_placa` escolhe a sessão).
+  #
+  # PADRÃO `nil`, e quem o lê hoje é a COTAÇÃO (`InsuranceQuote::Fecho`). Quem não o usa não muda de
+  # comportamento — nenhuma nativa sobrescreve `initialize`, e `base_contrato_de_nivel_spec`
+  # percorre o catálogo inteiro para provar isso.
+  def initialize(agent:, params: {}, delivery: nil, run: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys
     @delivery = delivery
+    @run = run
   end
 
   # -> String. NUNCA levanta: quem chama é o executor de ferramentas do turno.
@@ -222,14 +237,47 @@ class Autonomia::Agents::Tools::Native::Base
   # entregou cinco preços e morreu no prazo: o comparativo em PDF só era gerado no caminho feliz,
   # então não saiu — e `fail_run` não avisava nada porque já havia entrega. O cliente ficou com
   # preços soltos, sem comparativo e sem uma palavra.
+  #
+  # `trabalho_novo` DIZ SE ESTA PASSADA PODE INICIAR TRABALHO NOVO no portal para produzir a entrega
+  # (entrega 8). Verdadeiro no motor; FALSO no varredor, que varre até 500 linhas
+  # em sequência dentro de um cron enquanto o Sidekiq desta instalação dá 25 s de shutdown — morto no
+  # meio, a passada morre no meio do lote. Quem precisa de uma chamada nova devolve [] ali, e o
+  # fecho reflete o que o cliente realmente tem. O que JÁ está pronto — um arquivo que a ferramenta
+  # guardou no handle — sai pelos dois caminhos; a cotação não tem nada assim (o comparativo só
+  # existe depois de uma chamada ao portal), então pelo varredor ela entrega [] e só fecha.
   # -> Array de textos para o cliente. Vazio por padrão.
-  def closing_deliveries(_handle)
+  def closing_deliveries(_handle, trabalho_novo: true) # rubocop:disable Lint/UnusedMethodArgument
     []
+  end
+
+  # O CLIENTE JÁ TEM RESULTADO DESTA EXECUÇÃO? (entrega 8.)
+  #
+  # `ToolRun#delivered_count` não responde isso: ele conta QUALQUER item aceito para publicação,
+  # inclusive um aviso e inclusive a pergunta pelo dado que falta (a cotação devolve `handle['pedido']`
+  # como entrega). Quem sabe distinguir resultado de recado é a ferramenta, não o motor — e é por esta
+  # pergunta que o fecho decide entre a frase parcial e o silêncio.
+  #
+  # A RESPOSTA É SOBRE O ACEITE, NÃO SOBRE A EMISSÃO: o handle da ferramenta só sabe o que ela
+  # tentou entregar, e avança mesmo quando a publicação é recusada. É para esta pergunta que a
+  # ferramenta recebe `run:` — com ela monta a identidade de cada entrega que emite e pergunta à
+  # lista do aceite (`Tools::EntregaAceita`), onde a publicação aceita, imediata ou ADIADA, está
+  # registrada. Pela mensagem não serve: a adiada ainda não é uma.
+  # -> false por padrão: quem não sabe responder não afirma que entregou.
+  def resultado_entregue?(_handle)
+    false
+  end
+
+  # E SOBROU ALGO POR ENTREGAR? (entrega 8.) Perguntado DEPOIS das entregas do
+  # encerramento: a frase parcial diz que algo ficou pelo caminho, e dizê-la a quem recebeu tudo o
+  # que pediu é mentir.
+  # -> false por padrão: sem sobra conhecida, o fecho parcial não sai.
+  def resta_entregar?(_handle)
+    false
   end
 
   private
 
-  attr_reader :agent, :params, :delivery
+  attr_reader :agent, :params, :delivery, :run
 
   def account
     agent.account

@@ -33,7 +33,10 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # o status de volta para `running` não faz o job reentrar no encerramento. O spec trava que a
   # marca é gravada (pega a remoção acidental); a proteção contra o retry é raciocínio, como era a
   # do `SUBMITTED_KEY` quando ele nasceu.
-  CLOSED_KEY = 'autonomia_closed'.freeze
+  #
+  # Desde a entrega 8 quem a DEFINE é `Tools::Encerramento`, dono do encerramento inteiro
+  # (o varredor fecha pelo mesmo caminho). O nome continua aqui porque ela é uma das MARCAS do motor.
+  CLOSED_KEY = ::Autonomia::Agents::Tools::Encerramento::CLOSED_KEY
 
   # A LINHA MUDOU DE DONO no meio da passada: um pedido novo a supersedeu, ou outro processo com a
   # mesma execução (o Sidekiq re-enfileira o job no hard shutdown, e o antigo pode estar vivo noutro
@@ -88,7 +91,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # Submete (primeira passada) ou consulta (demais). A ferramenta é instanciada a cada
   # execução: ela resolve conexão e credencial sozinha, e nada disso trafega pelo Redis.
   def advance(run, native, attempt)
-    tool = native.new(agent: run.agent, params: run.arguments)
+    tool = ferramenta(run, native)
     return submeter(run, native, tool, attempt) unless submitted?(run)
 
     apply(run, native, tool.poll(handle: tool_handle(run), attempt: attempt), attempt)
@@ -213,9 +216,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # quanto a ADIADA — a adiada sai sozinha pelo `AsyncPublishJob`, e tratá-la como "nada entregue"
   # faria o desfecho publicar "não consegui concluir" ao lado da cotação que estava a caminho.
   # `entrega` é texto ou a forma serializada de uma entrega de arquivo (o comparativo, entrega 11).
+  #
+  # DUAS ANOTAÇÕES, A MESMA PERGUNTA (entrega 8a): o contador diz QUANTAS entregas o publicador
+  # aceitou, e o registro do aceite (`Tools::EntregaAceita`) diz QUAIS. O contador não basta para o
+  # fecho — ele soma qualquer item aceito, inclusive a pergunta pelo dado que falta —, e as duas
+  # anotações acontecem no ACEITE, não na emissão: o handle da ferramenta só vai ao banco no
+  # `record_attempt!` seguinte.
   def deliver(run, entrega)
-    result = publish(run, entrega)
-    run.record_delivery! if result.published? || result.deferred?
+    result = ::Autonomia::Agents::Tools::EntregaAceita.registrar(run, entrega, publish(run, entrega))
+    run.record_delivery! if result.aceita?
     result
   end
 
@@ -227,13 +236,18 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.finish!('done')
   end
 
-  # ACABAR SEM FECHAR TAMBÉM É UM DESFECHO. A guarda `delivered_count.zero?` está certa no que ela
-  # evita — dizer "não consegui" a quem acabou de receber preço desmente o que ele está lendo —, mas
-  # o efeito era o cliente ficar sem NADA: em 08/09/2026 uma cotação entregou cinco preços, estourou
-  # o prazo, e a conversa simplesmente parou, sem comparativo e sem uma palavra.
+  # ACABAR SEM FECHAR TAMBÉM É UM DESFECHO, E QUEM DECIDE O QUE AINDA VALE É A FERRAMENTA. Em
+  # 08/09/2026 uma cotação entregou cinco preços, estourou o prazo, e a conversa simplesmente parou,
+  # sem comparativo e sem uma palavra. A correção de então condicionou o encerramento a
+  # `delivered_count` positivo, e sobrou o defeito simétrico (Codex, entrega 8, P2): com o prazo
+  # vencendo ANTES da primeira entrega, um arquivo já gerado morre no handle e o cliente lê "não
+  # consegui" ao lado de um PDF que existia.
   #
-  # Agora, quando já houve entrega, a ferramenta ganha a chance de entregar o que ainda vale (o
-  # comparativo em PDF) e o cliente recebe um fecho que não desmente os preços.
+  # Agora o encerramento é SEMPRE oferecido à ferramenta, e o filtro mora nela, que é quem sabe o que
+  # tem em mãos. PARA A COTAÇÃO NADA MUDA no que sai: `comparison_pdf` devolve nil sem `entregues` no
+  # handle (`InsuranceQuote::Comparativo`), então a execução que morre sem preço nenhum continua
+  # fechando com a frase de falha e sem pedir nada ao portal — travado por exemplo pelo caminho real
+  # em `async_run_job_encerramento_parcial_spec`.
   #
   # Quem acaba com intenção anotada e sem número (entrega 5) fica marcado para a lista do corretor,
   # seja qual for o código do desfecho: prazo esgotado ou terceira intenção, a cotação pode existir.
@@ -242,38 +256,33 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # leitura velha (um objeto que ainda diz "intenção sem número" quando outro processo já registrou).
   def fail_run(run, native, code)
     run.reload
-    if native.present?
-      run.delivered_count.zero? ? publish(run, mensagem_de_falha(run, native)) : encerrar(run, native)
-    end
+    encerrar(run, native) if native.present?
     run.finish!('failed', failure_code: code.presence || 'tool_failed')
   end
 
-  # Quem pode ter uma cotação correndo no portal sem registro nosso não lê "não consegui": lê que não
-  # há confirmação. A frase é da ferramenta, no nível de classe, como as outras que o job publica.
-  def mensagem_de_falha(run, native)
-    run.envio_incerto? ? native.uncertain_message : native.failure_message
-  end
-
-  # Não deixa `StandardError` subir: o encerramento é cortesia sobre um caminho que já deu errado, e
-  # falhar aqui apagaria o `finish!` que registra o desfecho. A marca `closed` é ADQUIRIDA no banco
-  # (`ausente:`): dois processos com a mesma execução e leitura velha não geram dois comparativos.
-  def encerrar(run, native)
-    return unless run.merge_handle!({ CLOSED_KEY => true }, ausente: CLOSED_KEY)
-
-    fechamento(run, native).each { |texto| publish(run, texto) }
-  rescue StandardError => e
-    Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{run.slug} #{e.class}")
-  end
-
-  # O que sai na despedida: o que a ferramenta ainda tem para entregar, e o fecho.
+  # O ENCERRAMENTO É UM SÓ, e mora em `Tools::Encerramento` (entrega 8): a mesma sequência — adquirir
+  # a marca, oferecer as entregas à ferramenta, publicar o fecho — vale para o VARREDOR, que fecha a
+  # linha quando ESTA corrente de jobs se rompe. Ele ficava com metade dela, e o cliente lia "não
+  # consegui" com o arquivo pronto parado no handle.
   #
-  # SEM AGENTE NÃO SE MONTA A FERRAMENTA — e isto não é defesa sobrando: `agente_indisponivel` é um
-  # dos caminhos que chegam aqui, alcançado JUSTAMENTE porque o agente sumiu.
-  def fechamento(run, native)
-    return [native.partial_message] if run.agent.blank?
+  # Aqui a publicação ESPERA a cadeia de entrega humanizada do turno e re-agenda a adiada — é o que
+  # `publish` faz, e é por isso que quem publica é quem chama.
+  def encerrar(run, native)
+    ::Autonomia::Agents::Tools::Encerramento
+      .new(run: run, native: native) { |entrega| publish(run, entrega) }
+      .encerrar
+  end
 
-    tool = native.new(agent: run.agent, params: run.arguments)
-    Array(tool.closing_deliveries(tool_handle(run))) + [native.partial_message]
+  # A ferramenta montada para trabalhar FORA do turno: com a LINHA (é pelo `delivery_token` dela que
+  # se monta a identidade de cada entrega) e SEM `delivery`, de propósito: a presença do `delivery`
+  # é o que diz "dentro do turno" para quem escolhe a sessão por ela.
+  #
+  # QUEM LÊ A LINHA É O FECHO DA COTAÇÃO (entrega 8a): com ela a ferramenta monta a identidade de
+  # cada entrega que emite (`EntregaPublicada.token_de`) e, no encerramento, pergunta ao registro do
+  # ACEITE (`EntregaAceita`) o que o publicador assumiu. Nasce com padrão `nil` em `Native::Base`, e
+  # quem não a usa não muda de comportamento.
+  def ferramenta(run, native)
+    native.new(agent: run.agent, params: run.arguments, run: run)
   end
 
   # Parada por decisão do operador: sem mensagem ao cliente. Publicar aqui seria furar exatamente o
@@ -314,11 +323,27 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.handle.is_a?(Hash) && run.handle[SUBMITTED_KEY].present?
   end
 
-  # As marcas NOSSAS no handle: submetido, intenções, possivelmente duplicada, encerrado. A ferramenta
-  # não as vê (`tool_handle`) e não as escreve (`parte_da_ferramenta`); elas só mudam por escritas
-  # mescladas no banco (`ToolRun#merge_handle!`, `#record_attempt!`), nunca por cópia da memória.
+  # As marcas NOSSAS no handle: submetido, intenções, possivelmente duplicada, encerrado, e a lista
+  # do aceite. A ferramenta não as vê (`tool_handle`) e não as escreve PELO HANDLE
+  # (`parte_da_ferramenta` as tira do que ela devolve — o que ela alcança por outro caminho está na
+  # nota do fim); elas só mudam por escritas mescladas no banco (`ToolRun#merge_handle!`,
+  # `#record_attempt!`, `#registrar_entrega_aceita!`), nunca por cópia da memória.
+  #
+  # A LISTA DO ACEITE PRECISA ESTAR AQUI, e não é detalhe: ela é escrita NO MEIO da passada, e o
+  # handle que a ferramenta devolve foi lido ANTES. Se ela viajasse no handle da ferramenta, o
+  # `record_attempt!` do fim da passada a regravaria com a cópia velha — o token recém-aceito
+  # sumiria. A ferramenta a lê pela LINHA (`Tools::EntregaAceita.aceita?`), nunca pelo handle.
+  # É EXATAMENTE O QUE ACONTECE com a lista de identidades da ferramenta, que não é marca e por
+  # isso É regravada (medido na rodada 6; issue R19 (#418)).
+  #
+  # A LISTA É A FRONTEIRA DE UM CAMINHO, NÃO DA FERRAMENTA: `ToolRun` recusa
+  # `registrar_identidade_emitida!` em qualquer chave desta lista. Isso barra a chave reservada
+  # NAQUELE método, e só. A ferramenta recebe a linha inteira, e por ela ainda alcança
+  # `merge_handle!` (que grava `autonomia_closed` e cala o encerramento seguinte) e
+  # `registrar_entrega_aceita!` (que forja um aceite) — medido na rodada 7, e a fachada estreita que
+  # fecharia isso é a issue #419, pré-requisito da 8b.
   MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA, ToolRun::PEDIDO,
-            ToolRun::ENCERRADA_EM].freeze
+            ToolRun::ENCERRADA_EM, ToolRun::ENTREGAS_ACEITAS].freeze
   MARCAS_DE_INTENCAO = [ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA].freeze
 
   # O handle da FERRAMENTA, sem as nossas marcas: ela não precisa conhecer o nosso controle — nem

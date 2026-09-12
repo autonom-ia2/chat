@@ -97,17 +97,45 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   def close(run)
     native = ::Autonomia::Agents::Tools::Registry.find(run.slug)
     run.reload
-    tell_customer(run, native) if native.present? && run.delivered_count.zero?
+    encerrar(run, native) if native.present?
     run.finish!('failed', failure_code: 'execucao_abandonada')
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] reap failed run=#{run.id} #{e.class}")
     nil
   end
 
-  # Força a publicação: a cadeia de entrega humanizada daquele turno já morreu há muito, e esperar
-  # por ela deixaria o cliente sem desfecho para sempre.
-  def tell_customer(run, native)
-    texto = run.envio_incerto? ? native.uncertain_message : native.failure_message
-    ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(texto)
+  # O MESMO ENCERRAMENTO DO MOTOR (`Tools::Encerramento`, entrega 8). Até 12/09/2026 este caminho
+  # publicava a frase de falha e só ela, sem passar pela ferramenta: quem já tinha recebido preço
+  # lia "não consegui" — ou, com `delivered_count` positivo, não lia nada. Era o defeito que o motor
+  # já tinha corrigido, intacto na outra porta, e fora do alcance da correção de lá porque o
+  # varredor não passa por `fail_run`.
+  #
+  # O QUE MUDA AQUI, HOJE, É A FRASE — e só ela. O caminho das entregas fica aberto para a
+  # ferramenta que tem algo PRONTO (a 8b), mas a cotação não tem: com `trabalho_novo: false` o
+  # `closing_deliveries` dela devolve `[]`, sempre, porque o comparativo só existe depois de uma
+  # chamada ao portal. Dizer o contrário seria prometer um arquivo que este caminho não entrega.
+  #
+  # E A FRASE MUDA PARA MAIS, NÃO SÓ PARA MELHOR: com contador positivo esta porta CALAVA, e agora
+  # ela fala. É o certo em quase todo estado — quem recebeu preço merece um desfecho —, mas na
+  # janela do R18 (a passada que morre entre o aceite do comparativo e o `record_attempt!`) ela
+  # publica a frase parcial para quem recebeu TUDO, onde a `main` ficava em silêncio. Medida na
+  # rodada 6 e aceita por decisão registrada. NÃO é a única regressão declarada da entrega — a
+  # rodada 6 escreveu isso e era falso: R19 também é, pela ponta em que a lista de identidades
+  # regravada faz o fecho CALAR onde a `main` publicava pelo contador (rodada 7).
+  #
+  # A publicação é FORÇADA (`publish!`): a cadeia de entrega humanizada daquele turno já morreu há
+  # muito, e esperar por ela deixaria o cliente sem desfecho para sempre.
+  #
+  # E AQUI NÃO SE COMEÇA TRABALHO NOVO NO PORTAL (`trabalho_novo: false`). Este
+  # caminho não é um job por execução: é um lote de até `BATCH_LIMIT` linhas processadas EM SEQUÊNCIA
+  # dentro de um cron, e a cotação abandonada com preço pediria ao portal a geração do comparativo —
+  # login mais uma chamada de até 60 s, mais o download — uma vez por linha. Com os 25 s de shutdown
+  # do Sidekiq, um deploy no meio do lote mata a passada e joga o resto das linhas para a varredura
+  # seguinte, 10 min depois — com o cliente esperando desde o começo. Então sai só o que já está
+  # pronto, e o fecho diz a verdade sobre o que o cliente tem.
+  def encerrar(run, native)
+    publicador = ->(entrega) { ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega) }
+    ::Autonomia::Agents::Tools::Encerramento
+      .new(run: run, native: native, trabalho_novo: false, &publicador).encerrar
   end
 end

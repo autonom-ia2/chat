@@ -43,7 +43,35 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     expect(bot_contents).to eq(['não consegui concluir a consulta'])
   end
 
-  it 'stays silent when the customer already received a delivery' do
+  # QUEM JÁ RECEBEU ALGO E AINDA TEM ALGO POR RECEBER LÊ O FECHO PARCIAL, não o silêncio nem "não
+  # consegui" (entrega 8). Antes o varredor calava aqui. Ele passou a fechar pelo MESMO
+  # `Tools::Encerramento` do motor — que é o que faz o arquivo já pronto sair por este caminho —, e
+  # um fecho tinha de vir junto: entregar um arquivo e não dizer nada é o defeito ao contrário.
+  #
+  # QUEM RESPONDE AS DUAS PERGUNTAS É A FERRAMENTA (entrega 8): `delivered_count` positivo
+  # sozinho não diz que houve resultado nem que sobrou algo — ver o exemplo seguinte.
+  it 'fecha com a frase parcial quando o cliente ja recebeu uma entrega e algo ficou por entregar' do
+    # Arrange
+    tool = register_async_tool(build_async_tool(resultado: true, resta: true))
+    run = open_run
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 10.minutes.ago)
+    run.record_delivery!
+
+    # Act
+    described_class.new.perform
+
+    # Assert
+    expect(run.reload.status).to eq('failed')
+    expect(bot_contents).to eq([tool.partial_message])
+    expect(bot_contents.join(' ')).not_to include('não consegui')
+  end
+
+  # E O CONTADOR SOZINHO NÃO COMPRA A FRASE (entrega 8). `delivered_count` conta qualquer item
+  # aceito para publicação — inclusive um aviso, inclusive a pergunta pelo dado que falta, inclusive
+  # a única proposta que o cliente pediu e recebeu. Sem a ferramenta dizer que houve RESULTADO e que
+  # SOBROU algo, o varredor volta ao silêncio de antes: o cliente fica com o que
+  # já leu, sem uma frase que descreve uma tela que ele não está vendo.
+  it 'com o contador positivo e nada a dizer, fecha em silencio' do
     # Arrange
     register_async_tool(build_async_tool)
     run = open_run
@@ -53,9 +81,54 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     # Act
     described_class.new.perform
 
-    # Assert — fecha a linha, mas não contradiz o que o cliente já leu
+    # Assert
     expect(run.reload.status).to eq('failed')
     expect(bot_contents).to be_empty
+  end
+
+  # O VARREDOR OFERECE O ENCERRAMENTO À FERRAMENTA (entrega 8). Ele fecha a linha quando a corrente
+  # de jobs se rompe — e, até 12/09/2026, fechava publicando só a frase de falha: o que a ferramenta
+  # ainda tinha para entregar (a proposta que o portal JÁ gerou, o comparativo da cotação) morria no
+  # handle, e o cliente lia "não consegui" ao lado de um arquivo que existia. Era o defeito P2 da
+  # corrigido no motor, vivo na outra porta e fora do alcance da correção de lá — o varredor não passa por
+  # `fail_run`. A ordem importa: primeiro o que vale entregar, depois o fecho.
+  it 'entrega o que a ferramenta ainda tinha antes de publicar o fecho' do
+    # Arrange
+    tool = register_async_tool(build_async_tool(closing: ['o arquivo que ficou pronto'], resultado: true, resta: true))
+    run = open_run
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 10.minutes.ago)
+
+    # Act
+    described_class.new.perform
+
+    # Assert — o arquivo primeiro, o fecho parcial depois (algo chegou agora)
+    expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.partial_message])
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+  end
+
+  # O VARREDOR NÃO COMEÇA TRABALHO NOVO NO PORTAL (entrega 8). Ele é um cron que processa até
+  # `BATCH_LIMIT` linhas EM SEQUÊNCIA, e sem esta guarda cada cotação abandonada com preço pediria ao
+  # portal a geração do comparativo — login, uma chamada de até 60 s e o download, por linha. O
+  # Sidekiq desta instalação dá 25 s de shutdown: um deploy no meio do lote mata a passada e joga o
+  # resto das linhas para a varredura seguinte, 10 min depois. Aqui sai só o que já está pronto.
+  it 'diz a ferramenta que nao pode comecar trabalho novo, e entrega so o que ja esta pronto' do
+    # Arrange — a ferramenta só teria algo a entregar se pudesse trabalhar de novo
+    visto = []
+    tool = build_async_tool
+    tool.define_method(:closing_deliveries) do |_handle, trabalho_novo: true|
+      visto << trabalho_novo
+      trabalho_novo ? ['o comparativo que o portal ainda geraria'] : []
+    end
+    register_async_tool(tool)
+    run = open_run
+    run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 10.minutes.ago)
+
+    # Act
+    described_class.new.perform
+
+    # Assert
+    expect(visto).to eq([false])
+    expect(bot_contents).to eq(['não consegui concluir a consulta'])
   end
 
   it 'leaves a run alone while it is still within its deadline plus the grace window' do

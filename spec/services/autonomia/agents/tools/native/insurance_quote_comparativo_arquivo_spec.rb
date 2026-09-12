@@ -13,8 +13,31 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
                                      status: :active, enabled: true, instruction: 'Atenda.')
   end
   let(:params) { { 'cpf' => '042.979.126-78', 'cep' => '31110-210', 'vehicle' => { 'plate' => 'hik-9383' } } }
-  let(:tool) { described_class.new(agent: agent, params: params) }
   let(:entrega_de_arquivo) { Autonomia::Agents::Tools::EntregaDeArquivo }
+  # A FERRAMENTA COMO O MOTOR A MONTA (entrega 8a): com a LINHA da execução. O encerramento só pede
+  # o comparativo a quem tem preço ACEITO pelo publicador, e essa pergunta é feita à linha —
+  # `entregues` no handle é o que se emitiu, não o que o publicador assumiu.
+  let(:inbox) { create(:inbox, account: account) }
+  let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+  let(:run) do
+    Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug, arguments: {},
+                                     scope: { conversation_id: conversation.id })
+  end
+  let(:tool) { ferramenta(params) }
+  # O handle de quem já entregou um preço AO CLIENTE: a identidade emitida, e o aceite na linha. A
+  # COBERTURA entra explícita (`preco_legado` falso): sem ela o handle cairia na PROVA LEGADA
+  # (`entregues` não vazio) e estes exemplos passariam por lá em vez do aceite que exercitam.
+  let(:handle_com_preco) do
+    texto = '*Ezze* — R$ 2.050,40 no total'
+    token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
+    run.registrar_entrega_aceita!(token)
+    { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'],
+      described_class::PRECO_LEGADO_KEY => false, described_class::PRECOS_KEY => [token] }
+  end
+
+  def ferramenta(params)
+    described_class.new(agent: agent, params: params, run: run)
+  end
 
   before do
     enable_test_encryption!
@@ -31,7 +54,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   def comparativo(tool)
-    entrega_de_arquivo.de(tool.closing_deliveries('quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43']).first)
+    entrega_de_arquivo.de(tool.closing_deliveries(handle_com_preco).first)
   end
 
   it 'entrega o comparativo como arquivo, nomeado pela placa que o cliente informou' do
@@ -54,8 +77,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   it 'nomeia pelo ramo quando nao ha placa (chassi, FIPE ou outro ramo)' do
-    sem_placa = described_class.new(agent: agent, params: params.merge('vehicle' => { 'chassis' => '9BWZZZ377VT004251' }))
-    bike = described_class.new(agent: agent, params: { 'produto' => 'bike', 'dados' => '{}' })
+    sem_placa = ferramenta(params.merge('vehicle' => { 'chassis' => '9BWZZZ377VT004251' }))
+    bike = ferramenta('produto' => 'bike', 'dados' => '{}')
 
     expect(comparativo(sem_placa).nome).to eq('Comparativo de seguro — auto.pdf')
     expect(comparativo(bike).nome).to eq('Comparativo de seguro — bike.pdf')
@@ -75,7 +98,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
 
     it 'entrega o texto com o link, como antes, e registra o defeito da forma' do
-      entrega = tool.closing_deliveries('quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43']).first
+      entrega = tool.closing_deliveries(handle_com_preco).first
 
       expect(entrega).to eq("Comparativo com todas as opções:\n#{url_http}")
       expect(Rails.logger).to have_received(:warn)
@@ -84,7 +107,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   it 'nomeia pelo ramo com espaco, nunca pelo sublinhado do codigo' do
-    fianca = described_class.new(agent: agent, params: { 'produto' => 'fianca_locaticia', 'dados' => '{}' })
+    fianca = ferramenta('produto' => 'fianca_locaticia', 'dados' => '{}')
 
     expect(comparativo(fianca).nome).to eq('Comparativo de seguro — fianca locaticia.pdf')
   end
