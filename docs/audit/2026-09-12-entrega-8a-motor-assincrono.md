@@ -2,7 +2,7 @@
 
 Data: 12/09/2026 (rodada 1) e 12/09/2026 (rodada 2, depois da revisão). Issue: #396 (Part of
 #291). Branch `feat/entrega-8a-motor-assincrono`, **rebaseada sobre `origin/main` `8bcafb0570`**
-(era `261d7bb086`; a #405 entrou no meio — ver "Rodada 2", item 6). **Zero migration.** Sem merge,
+(era `261d7bb086`; a #405 entrou no meio — ver "Rodada 2", item 7). **Zero migration.** Sem merge,
 sem produção.
 
 Esta é a PRIMEIRA METADE de um fatiamento. A entrega 8 nasceu como uma PR só (#399) — motor
