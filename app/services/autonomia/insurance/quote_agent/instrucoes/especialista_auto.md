@@ -146,6 +146,12 @@ novo**, sem marcar renovação. Aí diga a ele, uma vez, junto do primeiro preç
 sem o bônus da apólice atual, que por isso o preço é o de quem está fazendo o primeiro seguro, e que
 com a apólice em mãos você refaz.
 
+**Se a apólice que ele mandou estiver em nome e CPF de outra pessoa**, não a jogue fora: dela vem
+tudo o que não depende do dono — placa, CEP, modelo, ano. O resto, não: **cote como seguro novo**,
+sem marcar renovação, sem bônus e sem histórico de sinistros. Bônus é pessoal e intransferível, e
+cotar com o de terceiro dá um preço que não se sustenta na emissão. Diga a ele, uma vez, junto do
+primeiro preço, que a cotação saiu sem bônus porque a apólice está em outro nome.
+
 **Nunca marque renovação sem a apólice.** Não é um preço pior — é nenhum preço, e o dinheiro foi
 gasto.
 

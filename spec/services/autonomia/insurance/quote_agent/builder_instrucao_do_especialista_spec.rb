@@ -69,6 +69,24 @@ module ManualDoEspecialistaDeAuto
     'incluir a filha que dirige' => -> { %w[vehicle.youngDriver vehicle.youngDriverAge vehicle.youngDriverGender].all? { |n| campo(n) } },
     'lembrou que tem rastreador' => -> { valores('vehicle.trackerCode').any? },
     'Antifurto tem a mesma armadilha' => -> { valores('vehicle.antiTheftCode').any? },
+    # APÓLICE EM NOME DE TERCEIRO (#400). A regra manda separar o que é do VEÍCULO, que serve, do que
+    # é do DONO, que não se transfere. Cada metade tem a sua âncora: sumiu a de cima, o formulário
+    # não tem mais onde escrever o que se aproveita; sumiu a de baixo, a cotação seria marcada como
+    # renovação com bônus alheio — e o preço não se sustenta na emissão.
+    'placa, CEP, modelo, ano' => lambda {
+      %w[vehicle.plate vehicle.overnightZipCode vehicle.fipeCode vehicle.modelYear].all? { |n| campo(n) }
+    },
+    'sem marcar renovação, sem bônus e sem histórico de sinistros' => lambda {
+      %w[quotation.isRenewal quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n)['obrigatorio'] == false }
+    },
+    # O AVISO SÓ É VERDADE SE A AUSÊNCIA FOR AUSÊNCIA: não marcar renovação e não mandar bônus tem de
+    # significar seguro novo sem bônus, não um padrão preenchido em silêncio. O aviso automático da
+    # ferramenta (`AVISO_SEM_BONUS`) não cobre este caso — ele exige `sem_bonus?`, que é renovação
+    # marcada —, então quem avisa é este texto.
+    'a cotação saiu sem bônus porque a apólice está em outro nome' => lambda {
+      vazia = Autonomia::Insurance::AutoRenewal.new({})
+      !vazia.renovacao? && vazia.bonus.nil? && !vazia.sem_bonus?
+    },
     'Renovação garantida' => -> { campo('quotation.isGuaranteedRenewal') },
     'Nunca chute a seguradora anterior' => -> { valores('quotation.previousInsurerCode').any? },
     'A mesma seguradora tem dois códigos' => -> { campo('quotation.previousInsurerCode')['descricao'].include?('DIFERENTE') },
@@ -145,7 +163,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('3eba319bca1e6159e950def73a2f91ab')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('8c5d2facc72b7d93721af0d178506045')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do
