@@ -435,6 +435,14 @@ defeito da rodada 1.
 resultado: o cliente recebe preco, comparativo e fecho'` (corrente inteira: consulta real com a
 cadeia aberta, prazo estourando, e o `AsyncPublishJob` drenado no fim). Mutações M23, M24, M28, M29.
 
+**O que o aceite NÃO garante, declarado:** a publicação adiada é registrada no aceite e ainda pode
+terminar `blocked` — a execução é supersedida, o agente é desligado ou a conversa muda de caixa
+dentro dos até 90 s do adiamento, e o `AsyncPublishJob` recusa. Nesse caso o fecho afirma resultado
+para quem não recebeu preço. É o preço do critério, e o inverso dele é o P1 acima, que é permanente
+e comum; este exige que a autorização caia DENTRO da janela do adiamento e que o encerramento
+aconteça depois. O caminho para fechá-lo (a recusa do job adiado REMOVER o token do aceite) é
+mecânica nova no `AsyncPublishJob`, fora do escopo desta rodada. Ver R17.
+
 ### 2. Histórico misto: a prova legada era por PRESENÇA, não por COBERTURA (P1)
 
 **O estado, executado pela corrente inteira:** linha que atravessou o deploy com preço na tela,
@@ -618,6 +626,7 @@ e o exemplo que o fecha:
 | R14 | `AsyncPublisher` passa a montar o token por `EntregaPublicada.token_de` | um token diferente do de antes republicaria mensagem já publicada | é a MESMA conta (`run.delivery_token` sobre a `identidade` do arquivo ou o texto aparado), agora em um lugar só; `async_run_job_comparativo_arquivo_spec` e `async_publisher_spec` exercitam os dois caminhos, inclusive o retry que não republica |
 | R15 | **entrelaçamento de duas passadas**: a marca `closed` serializa o TRABALHO, e `fecho_publicado?` é leitura sem lock | a passada que não tem a marca publica o fecho enquanto a que tem passa até 60 s no portal: o cliente lê "não consegui" e DEPOIS recebe o comparativo | **risco aceito, declarado — issue #413**, com as duas reproduções. O lock da conversa foi TENTADO e medido: não fecha o defeito (é ordem temporal, não contenção) e quebra a reconciliação do publicador (rodadas 7 a 9). Ver "Rodada 3", item 2. Na rodada 4 a issue ganhou uma **extensão nomeada**: o fecho ADIADO escapa da mesma guarda, porque a mensagem dele só nasce no `AsyncPublishJob` — reproduzido em "Rodada 4", item 6. **Não é regressão**: a `main` não publica fecho nenhum por este caminho quando `delivered_count` é positivo |
 | R16 | **carga nova do varredor**: consultas por CONTEÚDO de mensagem por linha abandonada | até 500 linhas em sequência num cron com 25 s de shutdown do Sidekiq | **medido, e MENOR desde a rodada 4**: **4** consultas `content_attributes::text LIKE` por linha nos três estados (com preço, legada, sem preço) — 3 do `fecho_publicado?` (uma por frase possível) e 1 do publicador. Antes eram 5 no caso típico; a quinta era a do `resultado_entregue?`, que passou a ler o ACEITE na linha, em memória. Na `main` eram 0 e 1. Pior caso do lote cheio: ~2.000 por varredura. Cada uma é escopada por `conversation_id` + `sender_type` antes do `LIKE`, então é varredura por conversa, não de tabela. **Não medido**: o lote cheio contra volume real. Ver "Rodada 3", item 6 |
+| R17 | **o aceite não é a chegada**: a publicação ADIADA é registrada no aceite e o `AsyncPublishJob` ainda pode recusá-la (execução supersedida, agente desligado, conversa em outra caixa dentro dos até 90 s) | o fecho afirma resultado — "os preços acima são os que chegaram" — para quem não recebeu preço | **risco aceito, declarado, e é o preço do critério da rodada 4.** O inverso (perguntar pela mensagem) é o P1 que esta rodada corrigiu, e ele é permanente e comum; este exige que a autorização caia DENTRO da janela do adiamento E que o encerramento aconteça depois disso. Saída candidata, fora do escopo: a recusa do job adiado REMOVER o token do aceite — mecânica nova no `AsyncPublishJob`, que hoje não conhece o registro. Ver "Rodada 4", item 1 |
 
 ## Validação (números)
 
