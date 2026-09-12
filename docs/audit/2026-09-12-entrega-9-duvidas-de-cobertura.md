@@ -95,7 +95,9 @@ gerais preserva a execução viva**. Só ferramenta assíncrona abre execução 
 `ToolRun.abrir_ou_repetida`), e é a abertura que supersedia a execução viva da conversa; a consulta é
 síncrona e não escreve em `autonomia_agent_tool_runs`. É isso que a guarda `!CG.async? &&
 COTACAO.async?` e a spec de integração amarram. O que **não** é invariante: que o modelo chame
-somente a consulta. Se ele chamar também o especialista no mesmo turno, a cotação é reaberta e a
+somente a consulta. Se ele chamar também o especialista no mesmo turno, a cotação PODE ser reaberta
+(só se houver nova chamada assíncrona aceita: pedido igual é recusado como repetido, e o especialista
+pode nem cotar) e a
 frase da instrução vira mentira — **escolher só a consulta é conduta, e se prova na conversa real**
 (§7), não por máquina.
 

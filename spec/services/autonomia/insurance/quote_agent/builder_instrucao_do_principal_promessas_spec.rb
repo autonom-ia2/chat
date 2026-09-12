@@ -54,7 +54,8 @@ module ManualDoPrincipal
     # (`Bound#accept_async`), e é a abertura que supersedia a execução viva da conversa
     # (`ToolRun.open!`). Isso é invariante de código, e é o que este lambda prova.
     # NÃO é invariante que o modelo vá chamar só a consulta: se ele chamar também o especialista, a
-    # cotação é reaberta e a frase da instrução vira mentira. Escolher só a consulta é CONDUTA, e se
+    # cotação PODE ser reaberta (só se houver nova chamada assíncrona aceita — pedido igual é recusado
+    # como repetido) e a frase da instrução vira mentira. Escolher só a consulta é CONDUTA, e se
     # prova na conversa real (§7 da auditoria), não aqui.
     'a cotação continua correndo' => -> { !CONDICOES_GERAIS.async? && COTACAO.async? },
     # Perguntar de qual seguradora é a dúvida não é capricho: o parâmetro é obrigatório no schema, e
