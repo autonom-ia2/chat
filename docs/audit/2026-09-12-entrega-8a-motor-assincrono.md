@@ -1,7 +1,8 @@
 # Entrega 8a — o motor do encerramento assíncrono (sem a ferramenta da proposta)
 
-Data: 12/09/2026 (rodadas 1 a 6, as cinco últimas depois de revisão). Issue: #396 (Part of
-#291). Branch `feat/entrega-8a-motor-assincrono`, **rebaseada sobre `origin/main` `8bcafb0570`**
+Data: 12/09/2026 (rodadas 1 a 7, as seis últimas depois de revisão; a **7 é só de TEXTO** — nenhuma
+linha de lógica, e os dois revisores convergiram em que o motor pode ir a produção). Issue: #396
+(Part of #291). Branch `feat/entrega-8a-motor-assincrono`, **rebaseada sobre `origin/main` `8bcafb0570`**
 (era `261d7bb086`; a #405 entrou no meio — ver "Rodada 2", item 7). **Zero migration.** Sem merge,
 sem produção.
 
@@ -28,10 +29,13 @@ linha (`Tools::EntregaAceita`), nunca pela emissão, que é o que a ferramenta t
 a publicação ADIADA, que é aceita e ainda não é mensagem; recusa não registra nada.
 
 A afirmação é um CRUZAMENTO — a identidade da entrega, que só a ferramenta conhece, com o aceite,
-que só o publicador conhece —, e desde a rodada 5 as duas metades têm a mesma durabilidade: as
-duas vão ao banco no instante do fato, pela mesma escrita de uma linha (`ToolRun#anexar_ao_handle!`).
-A prova LEGADA, para a linha que atravessou o deploy, é o mesmo par lido nas marcas da versão
-anterior: `entregues` (emissão) e `delivered_count` (aceite).
+que só o publicador conhece. As duas vão ao banco no instante do fato, pela mesma escrita de uma
+linha (`ToolRun::ListasDeEntrega#anexar_ao_handle!`), **e mesmo assim NÃO têm a mesma durabilidade**
+— a rodada 5 escreveu que passaram a ter, e a rodada 6 mediu que não. A lista da ferramenta viaja
+TAMBÉM no handle, e o `record_attempt!` do fim da passada a regrava com a cópia em memória; a do
+aceite é MARCA do motor e escapa disso. É o resíduo R19 (issue #418), e **é regressão** por uma das
+suas duas pontas. A prova LEGADA, para a linha que atravessou o deploy, é o mesmo par lido nas
+marcas da versão anterior: `entregues` (emissão) e `delivered_count` (aceite).
 
 ## Por que o motor entra sozinho
 
@@ -793,7 +797,9 @@ comparativo morre antes do `record_attempt!`, então `portal_fechado` não está
 verificador mediu —, o estado exige morte de processo naquele intervalo, e a alternativa (adiantar
 `comparativo_enviado`) troca uma frase a mais por um comparativo que ninguém reemite (issue #414).
 O texto corrigido está em R3, em R18, em `InsuranceQuote::Fecho#marcas_do_comparativo` e em
-`ReapStaleRunsJob#encerrar`, que agora nomeia esta como **a única regressão declarada da entrega**.
+`ReapStaleRunsJob#encerrar`. **Correção da rodada 7:** esse mesmo texto chamou R18 de "a única
+regressão declarada da entrega", e isso também é falso — R19 é a outra (ver "Rodada 7", item 5).
+Os dois lugares que diziam "única" foram corrigidos.
 
 ### 3. A assimetria do aceite: uma escrita só, sem rede (Codex) — corrigida
 
@@ -819,6 +825,11 @@ Três detalhes que são decisão, não acaso:
   termina nele; uma chamada avulsa em `AsyncRunJob#apply` seria mais uma coisa para a próxima
   porta esquecer. O `Encerramento` não precisa de reforço próprio: o aceite que ele grava
   (`publicar_uma`) só é LIDO por passadas posteriores, e para essas nenhuma rede em memória vale.
+  **O que a rodada 7 acrescentou aqui foi só onde esta nuance mora:** ela estava nesta auditoria e
+  não no código, e o comentário ao lado do método afirmava a rede sem qualificar — como se ela
+  valesse para os dois chamadores. Agora `ListasDeEntrega#registrar_entrega_aceita!`,
+  `EntregaAceita.registrar` e `record_attempt!` dizem quem tem rede e quem não tem. Ver
+  "Rodada 7", item 2.
 
 **O que prova:** `tool_run_spec`, `'o aceite cuja escrita falhou e reescrito no fim da passada'`
 (unidade), e `async_run_job_encerramento_parcial_spec`, `'o aceite cuja escrita falhou no meio da
@@ -843,6 +854,11 @@ versão, e o contador sobe também na republicação DEDUPLICADA, que não acres
 daria falso positivo. Inventar um portão que erra para fechar um estado que a `main` também tem
 seria trocar defeito conhecido por defeito novo. Registrado com a reprodução na issue R19 (#418).
 
+> **Corrigido na rodada 7 (item 3):** "o discriminador honesto não existe" é forte demais. O que
+> não existe é o discriminador **perfeito**. Existe um honesto e melhor que nada — a foto do
+> contador no instante em que `PRECO_LEGADO_KEY` é gravada —, que REDUZ e não elimina. **A decisão
+> de não fechar continua**, com a justificativa trocada.
+
 ### 5. O escritor do handle era público e aceitava qualquer chave (verificador) — fechado
 
 `ToolRun#anexar_ao_handle!` nasceu público na rodada 5, e com ele qualquer ferramenta poderia
@@ -859,6 +875,11 @@ pública são `registrar_entrega_aceita!(token)` (a lista do motor) e
 duas definições dela divergiriam no dia em que uma marca nova aparecesse. Mutação **M39** (1
 falha).
 
+> **Corrigido na rodada 7 (item 1):** "fechado" é falso, e é a afirmação mais grave desta
+> auditoria. O que fechou foi **o método nomeado**, não a ferramenta — ela recebe a LINHA inteira,
+> e `merge_handle!` e `registrar_entrega_aceita!` continuam públicos. O buraco segue aberto, agora
+> com nome e reprodução: issue **#419**, pré-requisito da 8b. Ver "Rodada 7", item 1.
+
 ### 6. Faltava spec direto do escritor (verificador) — cinco exemplos novos
 
 A idempotência e a concatenação pelo BANCO são o coração dessa escrita e só tinham cobertura
@@ -867,7 +888,8 @@ acumular sem repetir, dois objetos velhos que não se apagam, escrita em linha m
 marca do motor e o reforço do aceite. **O que isso comprou, medido:** M40 (remove o `WHERE` com
 `@>`, que é a idempotência) **não tinha quem a matasse** antes — agora derruba
 `'acumulam, e o mesmo token nao entra duas vezes'`. E as duas repetidas subiram: M41 (a lista não
-acumula, é a M29) foi de 7 para **12** falhas; M34 (escrita guardada pelo status) de 10 para
+acumula, é a M29) foi de 7 para **10** falhas contra a suíte de foco (o texto da rodada 6 dizia
+**12**, e 12 não reproduz — corrigido na rodada 7); M34 (escrita guardada pelo status) de 10 para
 **11**.
 
 ### 7. `ToolRun` bateu no teto de linhas, e o corte é o de sempre
@@ -880,6 +902,147 @@ escritores públicos, o escritor privado e o reforço. `ToolRun` fica com `inclu
 com o `record_attempt!`, que é quem chama o reforço. Mesmo padrão de `InsuranceQuote::Fecho`, e a
 mesma razão: é outro assunto. As mutações foram repetidas DEPOIS do corte, sobre os arquivos
 finais.
+
+## Rodada 7 — a quarta rodada em que o texto afirma mais do que o código entrega
+
+Os dois revisores convergiram: **o motor pode ir a produção, e nenhum dos dois achou defeito de
+comportamento.** Nesta rodada não há uma linha de lógica — só comentário e auditoria. O que ela
+corrige é o padrão que já custou as rodadas 2, 5 e 6: uma afirmação de texto maior do que o
+mecanismo que a sustenta.
+
+### 1. "A ferramenta não consegue mais forjar um aceite" era FALSO — issue #419
+
+A rodada 6 fechou `ToolRun#anexar_ao_handle!` (público, qualquer chave) atrás de dois nomes por
+natureza, e escreveu, no código e aqui, que com isso a ferramenta **não consegue mais** inventar um
+aceite nem calar o encerramento. O verificador provou que consegue — **pelo mesmo objeto que esta
+PR passou a entregar a ela**, a linha inteira (`Native::Base#initialize`, `run:`). Reproduzido
+nesta rodada, com a saída literal:
+
+```
+registrar_identidade_emitida!(autonomia_closed) -> recusou (ArgumentError)
+merge_handle!(autonomia_closed => true)         -> gravou (banco: true)
+registrar_entrega_aceita!('token-forjado')      -> gravou
+publicos alcancaveis: finish! record_attempt! record_delivery! advance_sequence! merge_handle! registrar_entrega_aceita!
+```
+
+`merge_handle!` e `registrar_entrega_aceita!` continuam públicos, e por eles a ferramenta alcança
+as duas coisas que a guarda dizia impedir. `finish!`, `record_attempt!`, `record_delivery!` e
+`advance_sequence!` estão lá do mesmo jeito.
+
+**Decisão do revisor final: corrigir o texto agora e abrir issue para a fachada.** A fachada
+estreita — entregar à ferramenta um objeto com o que ela precisa, no lugar do modelo inteiro — é o
+conserto certo, mas é mudança de código no fim de uma entrega de seis rodadas cujo escopo fechado é
+o MOTOR; e quem precisa dela é a **8b**, que vai escrever a próxima ferramenta. Então:
+
+- as frases passam a dizer **exatamente** o que é recusado (chave reservada, por aquele método
+  nomeado) e **o que não é** (a superfície pública do modelo continua alcançável). São **três**
+  lugares, e não dois: `ToolRun::ListasDeEntrega#registrar_identidade_emitida!`, o comentário de
+  `AsyncRunJob::MARCAS` e — achado ao varrer a classe de afirmação, não o caso — a constante
+  `ENTREGAS_ACEITAS`, que dizia que a ferramenta "não pode escrevê-la" quando
+  `registrar_entrega_aceita!` é público. O `MARCAS` também trocou "não as escreve" por "não as
+  escreve PELO HANDLE", que é o que `parte_da_ferramenta` de fato garante;
+- **issue #419**, com a reprodução acima, o custo da troca e os arquivos que ela toca, marcada como
+  **pré-requisito da 8b**.
+
+Nenhum chamador de hoje abusa. O catálogo tem **quatro** ferramentas (`InsuranceCapabilities`,
+`InsuranceQuote`, `VehicleLookup`, `InsuranceGeneralConditions`), todas construídas com `run:`, e a
+varredura mostra que **só a cotação lê o `run`** — em três pontos de `InsuranceQuote::Fecho`:
+`registrar_identidade_emitida!` (a lista dela), `run&.id` num log e `run.delivered_count` da prova
+legada. É buraco de projeto, não defeito em produção — mas é buraco com nome, e não mais "fechado".
+
+### 2. A rede do aceite não vale para os dois chamadores
+
+O comentário da rodada 6 afirmava, sem qualificar, que o token pendente é reescrito pela
+persistência do fim da passada. Isso vale para **o chamador do motor** (`AsyncRunJob#deliver`),
+onde o `record_attempt!` vem logo depois. **No encerramento não vem:** no motor o
+`Tools::Encerramento` roda dentro de `fail_run`, DEPOIS da última persistência, e no varredor
+(`ReapStaleRunsJob#close`) não há `record_attempt!` nenhum. Ali a escrita do aceite tem **uma
+chance só**, como antes da rodada 6.
+
+Não é descuido, e continua sendo a decisão certa: o aceite gravado pelo encerramento só é LIDO por
+passadas posteriores, e para essas nenhuma rede em memória valeria. A auditoria já tinha a nuance
+(item 3 da rodada 6, último marcador); **o código, que é o que o próximo lê, não tinha.** Agora
+tem, em quatro lugares: `ListasDeEntrega#registrar_entrega_aceita!`, `EntregaAceita.registrar`,
+`ToolRun#record_attempt!` e `ListasDeEntrega#reforcar_aceites!`. Os dois últimos carregavam também
+a equivalência que o Codex derrubou no R20 — "o mesmo alcance da identidade" —, e ela saiu junto:
+a identidade foi ao banco na emissão e **pode sobreviver**; o aceite pendente nunca chegou lá.
+
+### 3. "O discriminador honesto não existe" é forte demais
+
+Sobre o terceiro estado da prova legada (item 4 da rodada 6), a justificativa era que nenhum
+discriminador honesto existe. O verificador achou um: **a foto do `delivered_count` no instante em
+que `PRECO_LEGADO_KEY` é gravada.** É a mesma escrita (`marcar_preco_legado`, dentro de
+`registrar_entrega_de_preco`), e ela acontece dentro do `poll` — antes de `AsyncRunJob#apply`
+aceitar qualquer entrega desta passada. A foto é, portanto, o aceite que a versão ANTERIOR deixou,
+sem nada desta. No terceiro estado ela vale zero, e separa o caso.
+
+**Não é perfeito:** a linha legada cujo COMPARATIVO da versão anterior foi aceito, com os preços
+recusados, fotografa um e continua passando. Então **a decisão de não fechar continua** — e a
+justificativa passa a ser a verdadeira: o discriminador **perfeito** não existe; o melhor
+disponível é a foto do contador, que reduz e não elimina, e está registrado na issue #418. Texto
+corrigido em `InsuranceQuote::Fecho#prova_legada?` e no item 4 da rodada 6.
+
+### 4. Duas linhas da tabela de mutações que não se reproduzem como estão — uma por número, outra por endereço
+
+Todas as sete mutações da rodada 6 foram repetidas nesta rodada, sobre o byte final (só comentários
+mudaram desde então), com o mesmo roteiro de trava — âncora única, md5 obrigatório mudar, restaura
+e confere. **Cinco reproduzem exatamente: M37 (2), M38 (2), M39 (1), M40 (1), M33 (3).** As duas
+outras estavam erradas de maneiras diferentes:
+
+- **M41 — número errado.** Registrada com **12 falhas**; reproduz **7** contra os dois arquivos que
+  a própria linha lista como alvo e **10** contra a suíte de foco (10 também contra a área
+  inteira). **12 não reproduz em escopo nenhum.** E a aritmética do próprio texto já dava 10: "as
+  três novas do bloco direto mais as que já existiam" = 7 (rodada 5) + 3.
+- **M34 — alvo ambíguo, número certo.** Registrada com **11 falhas** contra "`tool_run_spec` + os
+  dois de cotação". Os "dois de cotação" são lidos de duas maneiras, e elas diferem em 6 falhas:
+  com o par do próprio M34 na rodada 5 (`insurance_quote_ramo_auto_spec` +
+  `insurance_quote_comparativo_arquivo_spec`) dá **11**, que é o número registrado e casa com a
+  aritmética declarada (10 da rodada 5 + `'escrevem mesmo depois de a linha morrer'`); com o par de
+  M33 (`async_run_job_encerramento_parcial_spec` + `insurance_quote_ramo_auto_spec`) dá **5** — e
+  foi por isso que o verificador não reproduziu. **Os três arquivos passam a ser nomeados**, e a
+  abreviação sai.
+
+A lição é a mesma das rodadas anteriores, aplicada à medição: alvo de mutação é endereço, e
+endereço abreviado é endereço que o próximo lê errado.
+
+### 5. Três correções de classificação (Codex), todas de texto
+
+- **O resumo ainda prometia a durabilidade que a rodada 6 retirou.** "O desenho, em uma frase"
+  dizia que "desde a rodada 5 as duas metades têm a mesma durabilidade" — exatamente a frase que o
+  item 1 da rodada 6 mediu como falsa. Corrigido no resumo.
+- **R19 estava classificado como "não regressão", e metade dele É regressão.** A rodada 6 escreveu
+  "nenhuma das duas é regressão". Vale para a segunda metade (o contador legado que não distingue
+  qual entrega foi aceita — a `main` erra igual). **Não vale para a primeira:** quando a identidade
+  do preço some da lista regravada, `resultado_entregue?` conclui "nenhum preço chegou" e o fecho
+  **CALA**, onde o motor da `main` publicava a frase parcial por `delivered_count` sozinho. Calar
+  onde a base falava é regressão. Corrigido em R19 e **na issue #418**. E some daqui e do
+  `ReapStaleRunsJob#encerrar` a afirmação de que R18 é "a única regressão declarada": são duas.
+- **R20 descrevia alcance errado.** Dizia que o que se perde com a morte da passada "é o MESMO da
+  identidade da entrega — que também só chega ao banco no `record_attempt!`". A identidade vai ao
+  banco na hora da EMISSÃO desde a rodada 5, então ela **pode sobreviver**; o que morre com o
+  processo é a **pendência do aceite**, que nunca chegou ao banco. Corrigido em R20.
+
+### 6. Duas diferenças de comportamento não declaradas (benignas) — R21 e R22
+
+Nenhuma das duas é defeito, e nenhuma estava na tabela de não-regressão, que é onde uma diferença
+de comportamento tem de aparecer:
+
+- **R21** — as chaves de `content_attributes` no publicador passaram de SÍMBOLO para TEXTO, e a do
+  token passou a vir da constante. **Aqui a revisão errou o diagnóstico, e a medição mandou:** a
+  troca símbolo→texto **não muda leitura nenhuma**, porque `Message` declara
+  `store :content_attributes, …, coder: JSON` e o valor é um `HashWithIndifferentAccess` — as duas
+  formas produzem hashes `==` iguais, medido. O que importa na linha é a outra metade, que a
+  revisão não citou: a chave do token deixou de ter duas definições. Declarado como as duas coisas
+  que ele é — uma inerte e uma real —, e não como a que foi suposta.
+- **R22** — `EntregaPublicada.para` ganhou guarda de token vazio, que o método privado de onde ela
+  saiu não tinha; sem ela, token `''` casava QUALQUER mensagem do bot. Estava descrito em "O que
+  mudou (por commit)", e agora está onde se procura por ele.
+
+### 7. O que esta rodada NÃO fez
+
+Nenhuma linha de lógica. A prova está em "Validação (números)", rodada 7: o `git diff` de `app/`
+contra o commit da rodada 6 é inteiramente comentário, conferido por filtro que derruba qualquer
+linha adicionada ou removida que não comece com `#`.
 
 ## Os dois defeitos que a RODADA 1 corrigiu antes de entrar
 
@@ -977,8 +1140,10 @@ e o exemplo que o fecha:
 | R16 | **carga nova do varredor**: consultas por CONTEÚDO de mensagem por linha abandonada | até 500 linhas em sequência num cron com 25 s de shutdown do Sidekiq | **medido, e MENOR desde a rodada 4**: **4** consultas `content_attributes::text LIKE` por linha nos três estados (com preço, legada, sem preço) — 3 do `fecho_publicado?` (uma por frase possível) e 1 do publicador. Antes eram 5 no caso típico; a quinta era a do `resultado_entregue?`, que passou a ler o ACEITE na linha, em memória. Na `main` eram 0 e 1. Pior caso do lote cheio: ~2.000 por varredura. Cada uma é escopada por `conversation_id` + `sender_type` antes do `LIKE`, então é varredura por conversa, não de tabela. **Não medido**: o lote cheio contra volume real. Ver "Rodada 3", item 6 |
 | R17 | **o aceite não é a chegada**: a publicação ADIADA é registrada no aceite e o `AsyncPublishJob` ainda pode recusá-la. **Corrigido na rodada 5 — a causa é mais larga do que este texto dizia**: não é só a autorização cair dentro dos até 90 s (execução supersedida, agente desligado, conversa em outra caixa). QUALQUER `blocked` do job adiado tem o mesmo efeito — a autorização recusada sob o lock, o `rescue StandardError` do próprio publicador (banco, construção da mensagem), a reconciliação que não conseguiu enfileirar o envio, a entrega descartada por forma —, porque o job volta sem reagendar e sem tirar o token do aceite | o fecho afirma resultado — "os preços acima são os que chegaram" — para quem não recebeu preço | **risco aceito, declarado, e é o preço do critério da rodada 4.** O inverso (perguntar pela mensagem) é o P1 que esta rodada corrigiu, e ele é permanente e comum; este exige que a publicação adiada termine em `blocked` E que o encerramento aconteça depois disso. Saída candidata, fora do escopo: a recusa do job adiado REMOVER o token do aceite — mecânica nova no `AsyncPublishJob`, que hoje não conhece o registro. Ver "Rodada 4", item 1 |
 | R18 | **a durabilidade parou na identidade do preço**: `comparativo_enviado`, `portal_fechado` e `entrega_do_comparativo` continuam indo ao banco só no `record_attempt!` do fim da passada | morto o processo entre o aceite do comparativo e o fim da passada, a linha abandonada lê `portal_fechado` ausente e publica a frase parcial para quem recebeu preços E comparativo | **resíduo declarado, e É REGRESSÃO por uma das duas portas — o texto da rodada 5 dizia que não era, e estava errado (corrigido na rodada 6, com reprodução).** Pela porta do MOTOR não é: a `main` publica a parcial sempre que `delivered_count` é positivo. Pela porta do VARREDOR é: lá a `main` CALAVA com contador positivo (`close`: `tell_customer … if run.delivered_count.zero?`), e hoje sai a frase parcial para quem recebeu preços E comparativo. **Aceito, não bloqueante** (decisão do revisor final): a janela é o intervalo entre o aceite do comparativo e a persistência seguinte, em que não há trabalho nenhum, e ela exige morte de processo ali dentro. Adiantar essas chaves não é de graça: `comparativo_enviado` é a sentinela que impede a segunda emissão, e torná-la durável antes da publicação vira comparativo que ninguém reemite (issue #414). A identidade do PREÇO precisou ser adiantada porque ela é cruzada com uma lista de durabilidade diferente; estas três são lidas juntas, na mesma escrita. Ver "Rodada 6", item 2 |
-| R19 | **a lista de identidades da ferramenta é regravada pelo `record_attempt!`** com a cópia em memória do handle; e o `delivered_count` da prova legada não distingue qual entrega foi aceita | duas passadas sobre a mesma linha (entrelaçamento, #413) apagam o token de preço que a outra gravou, e o fecho cala; e a linha legada cujo comparativo foi aceito afirma preço que não chegou | **resíduo declarado com as DUAS reproduções executadas, e issue aberta** — ver "Rodada 6", itens 1 e 4. A afirmação de que as duas metades tinham a mesma durabilidade era falsa e saiu do código e da auditoria. Saída candidata, **fora do escopo desta PR**: ler a lista do preço pela LINHA, como o aceite já é lido, ao custo declarado de perder a identidade de vez quando a escrita de reforço falhar (hoje o handle é a rede). Nenhuma das duas é regressão: a `main` decide por `entregues` e por `delivered_count` sozinhos |
-| R20 | **o reforço do aceite vive só em MEMÓRIA**, e só até o fim da passada | morta a passada entre o aceite e o `record_attempt!`, o token do aceite se perde e o fecho da passada seguinte não o vê | **é o alcance declarado, e é o MESMO da identidade da entrega** — que também só chega ao banco no `record_attempt!` daquela passada. Uma fila durável para isso seria uma escrita a mais por entrega para cobrir a janela que o resto do desenho já não cobre. Travado por M37/M38, que provam que a rede existe dentro da passada |
+| R19 | **a lista de identidades da ferramenta é regravada pelo `record_attempt!`** com a cópia em memória do handle; e o `delivered_count` da prova legada não distingue qual entrega foi aceita | duas passadas sobre a mesma linha (entrelaçamento, #413) apagam o token de preço que a outra gravou, e o fecho cala; e a linha legada cujo comparativo foi aceito afirma preço que não chegou | **resíduo declarado com as DUAS reproduções executadas, e issue aberta** — ver "Rodada 6", itens 1 e 4. A afirmação de que as duas metades tinham a mesma durabilidade era falsa e saiu do código e da auditoria. Saída candidata, **fora do escopo desta PR**: ler a lista do preço pela LINHA, como o aceite já é lido, ao custo declarado de perder a identidade de vez quando a escrita de reforço falhar (hoje o handle é a rede). **CLASSIFICAÇÃO CORRIGIDA NA RODADA 7 (Codex):** a rodada 6 escreveu "nenhuma das duas é regressão", e isso vale só para a segunda metade. A PRIMEIRA metade **é regressão**: some o token de preço, `resultado_entregue?` conclui "nenhum preço chegou" e o fecho **CALA** — onde a `main`, que decide por `delivered_count` sozinho, publicava a frase parcial. Calar onde a base falava é regressão, por qualquer porta. A SEGUNDA metade (o contador legado que não distingue qual entrega foi aceita) continua não sendo: a `main` erra igual, por `entregues` e `delivered_count` sozinhos. Corrigido também na issue #418 |
+| R20 | **o reforço do aceite vive só em MEMÓRIA**, e só até o fim da passada — e a rede só existe para quem ainda vai passar por `record_attempt!` | morta a passada entre o aceite e o `record_attempt!`, a PENDÊNCIA do aceite se perde e o fecho da passada seguinte não vê aquele token | **é o alcance declarado. ALCANCE CORRIGIDO NA RODADA 7 (Codex):** a rodada 6 escreveu que é "o MESMO da identidade da entrega — que também só chega ao banco no `record_attempt!`", e isso é falso desde a rodada 5: a identidade vai ao banco na hora da EMISSÃO (`registrar_identidade_emitida!`), então ela **pode sobreviver** à morte da passada; o que morre com o processo é a pendência do aceite, que nunca chegou ao banco. E a rede **não vale para os dois chamadores**: o aceite do motor (`AsyncRunJob#deliver`) tem o `record_attempt!` logo depois e ganha a segunda escrita; o do encerramento (`Tools::Encerramento#publicar_uma`) não tem — no motor o encerramento roda em `fail_run`, depois da última persistência, e no varredor não há `record_attempt!` nenhum —, e ali a escrita tem UMA chance. É deliberado: o aceite do encerramento só é lido por passadas POSTERIORES, e para essas memória não vale. Uma fila durável seria uma escrita a mais por entrega para cobrir uma janela que o resto do desenho já não cobre. Travado por M37/M38, que provam que a rede existe dentro da passada do motor |
+| R21 | **as chaves de `content_attributes` passaram de SÍMBOLO para TEXTO** no publicador (`build_message!`), e a do token passou a vir da constante `EntregaPublicada::CHAVE` | um leitor por símbolo passaria a ler `nil`; e a chave do token, escrita como literal num lado e lida por constante no outro, faria a pergunta "já chegou?" responder "não" para toda entrega no dia em que uma das duas mudasse | **a troca símbolo→texto é INERTE — medido, e a revisão que a levantou supôs o contrário.** `Message` declara `store :content_attributes, …, coder: JSON`, e por isso o valor é um `ActiveSupport::HashWithIndifferentAccess`: `Message.new(content_attributes: { autonomia_async_token: 'tok' })` e a mesma com chave de TEXTO produzem hashes **iguais** (`==` verdadeiro), e as duas respondem a `to_h['autonomia_async_token']`. Não muda leitura em memória nem no banco. (Leitores das quatro chaves em `app/`, `lib/` e `enterprise/`: `EntregaPublicada.para`, pela constante, e `MessageReportsController`, por `to_h['autonomia_agent_id']`; `autonomia_async_slug` e `autonomia_async_sequence` só têm leitor em spec. Todos por texto.) **O que NÃO é inerte é a outra metade:** a chave do token tinha DUAS definições — literal no escritor, constante no leitor —, que é a mesma classe de defeito que M22a/M22b travaram para o VALOR e estava intacta na CHAVE; hoje as duas vêm de `EntregaPublicada::CHAVE`. **Nada disso estava na tabela até a rodada 7** |
+| R22 | **a busca por token ganhou guarda de token vazio**: `EntregaPublicada.para` faz `return nil if conversation.blank? \|\| token.blank?`, que o método privado `AsyncPublisher#entrega_publicada` não tinha | com token `''` o `LIKE '%%'` casava QUALQUER mensagem do bot e a comparação exata passava em toda mensagem SEM a chave (`nil.to_s == ''`), devolvendo mensagem alheia como "a entrega já publicada" | **endurecimento, hoje inerte**: nenhum chamador entra com token vazio (`token_de` devolve nil sem execução, e quem recebe nil não chama). Está descrito desde a rodada 2 em "O que mudou (por commit)", no `c08122d040` — mas **não estava nesta tabela até a rodada 7**, que é onde um risco de não-regressão tem de aparecer |
 
 ## Validação (números)
 
@@ -987,7 +1152,94 @@ rspec/rubocop "passam" sem executar nada. Todo exit code abaixo foi lido de `${p
 Banco de teste PRÓPRIO (`chatwoot_test_8a_base`, criado com `db:schema:load`), nunca o
 `chatwoot_test` compartilhado entre os worktrees deste repositório — ver a armadilha no fim.
 
-### Rodada 6 (a que vale)
+### Rodada 7 (a que vale)
+
+Rodada **de texto**: o `app/` muda só em comentário e o `spec/` não muda. O que está abaixo existe
+para provar as duas coisas — que o diff é só texto, e que o verde continua verde sobre esse byte.
+
+**A PROVA DE QUE O DIFF É SÓ TEXTO**, dois filtros independentes sobre o mesmo `git diff` (contra
+`f441dfb9c0`, o HEAD da rodada 6):
+
+1. **Nenhuma linha `+`/`-` em `app/` que não seja comentário.** Saída vazia é a prova:
+
+   ```
+   git --no-pager diff -U0 -- app/ | grep -E '^[+-]' | grep -Ev '^(|---)' | grep -Ev '^[+-][[:space:]]*#'
+   [fim — exit do grep: 1]      # 1 = nenhuma linha casou
+   ```
+
+2. **O CÓDIGO de cada arquivo tocado é byte a byte o mesmo**, comparando o md5 do arquivo com as
+   linhas de comentário removidas, antes (`git show HEAD:<f>`) e depois:
+
+   ```
+   app/jobs/autonomia/agents/tools/async_run_job.rb               IGUAL  d70b510e d70b510e
+   app/jobs/autonomia/agents/tools/reap_stale_runs_job.rb         IGUAL  169aab8a 169aab8a
+   app/models/autonomia/agents/tool_run.rb                        IGUAL  3c5f5653 3c5f5653
+   app/models/autonomia/agents/tool_run/listas_de_entrega.rb      IGUAL  656f7dd3 656f7dd3
+   app/services/autonomia/agents/tools/entrega_aceita.rb          IGUAL  59c4808a 59c4808a
+   app/services/.../native/insurance_quote/fecho.rb               IGUAL  be2f94a1 be2f94a1
+   ```
+
+   O primeiro filtro pega uma linha de código trocada; o segundo pega também o caso que ele não
+   pegaria — código ESCONDIDO no fim de uma linha que começa com `#`, ou comentário virando código.
+
+`git status --porcelain -uall` lista sete arquivos: os seis de `app/` acima e esta auditoria.
+**Nenhum arquivo de `spec/`, de configuração ou de migration.**
+
+**Os números, sobre esse byte:**
+
+- Foco: `bundle exec rspec spec/jobs/autonomia/agents/tools/ spec/services/autonomia/agents/tools/
+  spec/models/autonomia/agents/tool_run_spec.rb` → **519 examples, 0 failures, exit 0** (as mesmas
+  519 da rodada 6 — nenhum exemplo entrou nem saiu).
+- Área inteira: `bundle exec rspec spec/services/autonomia spec/jobs/autonomia spec/models/autonomia`
+  → **1194 examples, 0 failures, 3 pending, exit 0** (idêntico à rodada 6).
+- `bundle exec rubocop` na lista EXPLÍCITA dos **22** arquivos `.rb` do diff da PR → **0 ofensas,
+  22 arquivos inspecionados, exit 0**. Lido de `--format json` (`.summary.offense_count`), não da
+  linha de resumo: **o condensador deste terminal reduz a saída do rubocop a `ok ✓ rubocop (22
+  files)`**, que é verde sem dizer quantas ofensas foram vistas — a mesma armadilha que a rodada 6
+  registrou para o rspec, pela outra ferramenta.
+- `bundle exec rails zeitwerk:check` → `All is good!`, exit 0.
+- **As sete mutações da rodada 6, repetidas sobre este byte** — ver a tabela de mutações. Cinco
+  reproduzem exatamente (M37, M38, M39, M40, M33); M41 estava com o número errado (12 → **10** no
+  foco, **7** nos dois arquivos do alvo) e M34 com o alvo ambíguo (os três arquivos, nomeados,
+  dão as **11** registradas; o outro par possível dá 5). Todas fecharam com `restauracao_ok=true`.
+- **A reprodução do item 1**, executada por sonda descartável (`spec/` temporário, removido em
+  seguida; `git status` limpo depois), com a saída literal no item.
+
+- **Partições do CI** (`find spec -name '*_spec.rb' | sort`, `i % 8`, como em `testes.yml`). **As
+  OITO**, e não um subconjunto: os dez arquivos de spec da PR caem em **todos os oito nós**, então
+  "as partições que contêm arquivos tocados" é a matriz inteira. Uma de cada vez, cada uma em banco
+  PRÓPRIO recriado por `TEMPLATE chatwoot_test_8a_base`, e com a conferência de `pg_stat_activity`
+  **antes** de recriar — a armadilha 2 da rodada 6 virou portão do roteiro, não lembrete.
+
+  | nó | arquivos | rodada 7 | rodada 6 |
+  |---|---|---|---|
+  | 0 | 142 | 1423 ex, **0 falhas**, 4 pending — exit 0 | 1423 ex, 0 falhas, 4 pending |
+  | 1 | 141 | 1365 ex, **0 falhas**, 12 pending — exit 0 | 1365 ex, 0 falhas, 12 pending (na repetição) |
+  | 2 | 141 | 1188 ex, **0 falhas**, 3 pending — exit 0 | 1188 ex, 0 falhas, 3 pending |
+  | 3 | 141 | 1176 ex, **0 falhas**, 36 pending — exit 0 | 1176 ex, 0 falhas, 36 pending |
+  | 4 | 141 | 1333 ex, **0 falhas**, 2 pending — exit 0 | 1333 ex, 0 falhas, 2 pending |
+  | 5 | 141 | 1273 ex, **0 falhas**, 18 pending — exit 0 | 1273 ex, 0 falhas, 18 pending |
+  | 6 | 141 | 1611 ex, **0 falhas**, 18 pending — exit 0 | 1611 ex, 0 falhas, 18 pending |
+  | 7 | 141 | 1749 ex, **0 falhas**, 34 pending — exit 0 | 1749 ex, 0 falhas, 34 pending |
+
+  **Os oito números são idênticos aos da rodada 6**, que é exatamente o que uma rodada de comentário
+  tem de produzir. Duas diferenças de processo, e as duas a favor: o **nó 1 passou de primeira**
+  (na rodada 6 ele caiu com as 10 falhas de recarregamento de constantes e precisou de repetição), e
+  a conferência de `pg_stat_activity` antes de cada `DROP DATABASE` virou portão do roteiro.
+
+  **A digital que prova que a tabela é do mesmo código:** o md5 dos seis arquivos de `app/` foi
+  gravado ANTES de lançar o nó 0 e conferido DEPOIS do nó 7 — idêntico. Sem isso a tabela seria
+  afirmação, não medição.
+
+  **A armadilha 1 da rodada 6, repetida por mim nesta — e o que ela custou:** editei comentário em
+  `app/` com o nó 1 em curso. Nada de comportamento mudou e o código já estava provado idêntico,
+  mas a corrida deixou de valer como prova do byte final. **As oito partições foram descartadas e
+  refeitas do zero** depois de todas as edições de `app/` terminarem, e só então a digital de md5
+  foi tirada. A regra que sobra é a que a rodada 6 já tinha escrito, agora com mecanismo: não basta
+  lembrar de não editar durante a corrida — é preciso que a corrida carregue a prova de que nada
+  mudou.
+
+### Rodada 6 (histórico)
 
 Código validado: **`b980ff156e`** — o commit do fix desta rodada. O commit desta auditoria não
 toca `app/` nem `spec/`.
@@ -1341,8 +1593,8 @@ depois. O foco, a área inteira, o rubocop e as oito partições rodaram sobre o
 | M38 | `listas_de_entrega.rb` `registrar_entrega_aceita!` | o `rescue` só re-levanta: o token não fica pendente | idem | **2 falhas** — as mesmas. É a metade do mecanismo que M37 não cobre |
 | M39 | `listas_de_entrega.rb` `registrar_identidade_emitida!` | remove a recusa de marca do motor | `tool_run_spec` | **1 falha** — `'a ferramenta nao escreve marca do motor pela lista dela'`, que percorre `AsyncRunJob::MARCAS` inteira |
 | M40 | `listas_de_entrega.rb` `anexar_ao_handle!` | remove o `where.not(… @> …)` — a escrita deixa de ser idempotente | `tool_run_spec` | **1 falha** — `'acumulam, e o mesmo token nao entra duas vezes'`. **Antes do spec direto, este mutante não tinha quem o matasse** |
-| M41 (M29 repetida) | `listas_de_entrega.rb` `anexar_ao_handle!` | a lista base vira `'[]'::jsonb`: cada token apaga o anterior | `tool_run_spec` + `async_run_job_encerramento_parcial_spec` | **12 falhas** (7 na rodada 5) — as três novas do bloco direto mais as que já existiam |
-| M34 (repetida) | `listas_de_entrega.rb` `anexar_ao_handle!` | `where(id: id)` → `vivas` (escrita guardada pelo status) | `tool_run_spec` + os dois de cotação | **11 falhas** (10 na rodada 5) — a nova é `'escrevem mesmo depois de a linha morrer'` |
+| M41 (M29 repetida) | `listas_de_entrega.rb` `anexar_ao_handle!` | a lista base vira `'[]'::jsonb`: cada token apaga o anterior | `tool_run_spec` + `async_run_job_encerramento_parcial_spec` | **7 falhas** contra esses dois arquivos; **10** contra a suíte de FOCO (e 10 contra a área inteira). A rodada 6 registrou **12**, e 12 não reproduz em escopo nenhum — número corrigido na rodada 7. As 10 do foco são as 7 que já existiam mais as 3 novas (2 do bloco direto em `tool_run_spec`, 1 da corrente em `async_run_job_encerramento_parcial_spec`), que é a aritmética que o próprio texto descrevia |
+| M34 (repetida) | `listas_de_entrega.rb` `anexar_ao_handle!` | `where(id: id)` → `vivas` (escrita guardada pelo status) | `tool_run_spec` + `insurance_quote_ramo_auto_spec` + `insurance_quote_comparativo_arquivo_spec` (os três, nomeados na rodada 7) | **11 falhas** — a nova é `'escrevem mesmo depois de a linha morrer'`, sobre as 10 da rodada 5. O número está certo; o ALVO estava escrito como "`tool_run_spec` + os dois de cotação", e "os dois de cotação" é ambíguo: com o par de M33 (`…encerramento_parcial` + `…ramo_auto`) dá **5**, e foi por isso que o verificador não reproduziu. Nomeados, os três dão 11; a suíte de foco também |
 | M33 (repetida) | `insurance_quote/fecho.rb` `registrar_entrega_de_preco` | remove a escrita imediata da identidade na linha | `async_run_job_encerramento_parcial_spec` + `insurance_quote_ramo_auto_spec` | **3 falhas** — as mesmas da rodada 5: a durabilidade pelas DUAS portas e a unidade. O rename para `registrar_identidade_emitida!` não custou cobertura |
 
 ### Rodada 5
@@ -1497,7 +1749,13 @@ QUANDO `entregas_de_preco` é escrita (na emissão, e não no fim da passada), c
 mesma forma, e por isso o rollback continua sendo só código. **Rodada 6:** também nenhuma chave
 nova. O reforço do aceite vive em MEMÓRIA e não deixa nada no banco; o arquivo novo
 (`tool_run/listas_de_entrega.rb`) é código movido, não estado. Rollback segue sendo só código.
+**Rodada 7:** nada. É rodada de TEXTO — o `app/` muda só em comentário, e o código, com os
+comentários removidos, é byte a byte o da rodada 6 (a prova está em "Validação", rodada 7).
 
 ## Ordem
 
 8a em produção → rodada real na conta 16 → só então abrir a 8b.
+
+**A 8b tem agora um pré-requisito nomeado:** a issue **#419** (fachada estreita para a ferramenta
+assíncrona). Hoje a ferramenta recebe o `ToolRun` inteiro, e é ela quem paga o preço de a fronteira
+ser só documental — a próxima ferramenta é a que a 8b vai escrever.

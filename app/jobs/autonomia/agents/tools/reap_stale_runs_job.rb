@@ -118,8 +118,10 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   # E A FRASE MUDA PARA MAIS, NÃO SÓ PARA MELHOR: com contador positivo esta porta CALAVA, e agora
   # ela fala. É o certo em quase todo estado — quem recebeu preço merece um desfecho —, mas na
   # janela do R18 (a passada que morre entre o aceite do comparativo e o `record_attempt!`) ela
-  # publica a frase parcial para quem recebeu TUDO, onde a `main` ficava em silêncio. É a única
-  # regressão declarada desta entrega, medida na rodada 6 e aceita por decisão registrada.
+  # publica a frase parcial para quem recebeu TUDO, onde a `main` ficava em silêncio. Medida na
+  # rodada 6 e aceita por decisão registrada. NÃO é a única regressão declarada da entrega — a
+  # rodada 6 escreveu isso e era falso: R19 também é, pela ponta em que a lista de identidades
+  # regravada faz o fecho CALAR onde a `main` publicava pelo contador (rodada 7).
   #
   # A publicação é FORÇADA (`publish!`): a cadeia de entrega humanizada daquele turno já morreu há
   # muito, e esperar por ela deixaria o cliente sem desfecho para sempre.

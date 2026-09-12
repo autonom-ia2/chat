@@ -15,7 +15,10 @@ module Autonomia::Agents::ToolRun::ListasDeEntrega
   # `published` ou `deferred`. É o REGISTRO DO ACEITE — o que separa "eu tentei entregar" de "o
   # publicador assumiu esta entrega" —, e quem o escreve é sempre quem publicou
   # (`Tools::EntregaAceita`). A recusa não escreve nada. É MARCA DO MOTOR (`AsyncRunJob::MARCAS`):
-  # a ferramenta não a vê no handle que recebe e não pode escrevê-la.
+  # a ferramenta não a vê no handle que recebe, e o handle que ela devolve não a regrava. Isso é o
+  # que "marca do motor" garante — e é SÓ isso: `registrar_entrega_aceita!` é público e a ferramenta
+  # tem a linha, então ela ALCANÇA esta lista pelo nome (rodada 7; ver a issue #419 e a nota em
+  # `registrar_identidade_emitida!`). Nenhuma ferramenta de hoje o faz.
   ENTREGAS_ACEITAS = 'autonomia_entregas_aceitas'.freeze
 
   # ACRESCENTA À LISTA DO ACEITE a identidade de uma entrega que o publicador assumiu.
@@ -37,9 +40,16 @@ module Autonomia::Agents::ToolRun::ListasDeEntrega
   # gravar. Medido na rodada 6 e registrado na issue R19 (#418); o que a escrita imediata comprou foi a
   # janela da morte de processo, não a do entrelaçamento.
   #
-  # A FALHA DESTA ESCRITA NÃO É O FIM: o token fica pendente em memória e o `record_attempt!` do
-  # fim da passada o reescreve (`reforcar_aceites!`) — é a rede que a identidade sempre teve, e que
-  # o aceite não tinha. Morta a passada, perdem-se as duas metades juntas, como já era.
+  # A FALHA DESTA ESCRITA NÃO É O FIM — PARA QUEM AINDA VAI PASSAR POR `record_attempt!`. O token
+  # fica pendente em memória e a escrita do fim da passada o reescreve (`reforcar_aceites!`); é a
+  # rede que a identidade sempre teve, e que o aceite não tinha. MAS ELA NÃO VALE PARA OS DOIS
+  # CHAMADORES, e a diferença é de quem chama, não deste método: o aceite gravado pelo MOTOR
+  # (`AsyncRunJob#deliver`) tem o `record_attempt!` logo depois, e ganha a segunda chance; o aceite
+  # gravado pelo ENCERRAMENTO (`Tools::Encerramento#publicar_uma`) não tem — no motor o encerramento
+  # roda em `fail_run`, DEPOIS da última persistência, e no varredor não há `record_attempt!`
+  # nenhum. Ali a escrita tem UMA chance só, como antes da rodada 6. É alcance declarado e não
+  # descuido: o aceite do encerramento só é lido por passadas POSTERIORES, e para essas nenhuma rede
+  # em memória valeria. Morta a passada, perdem-se as duas metades juntas, como já era.
   def registrar_entrega_aceita!(token)
     anexar_ao_handle!(ENTREGAS_ACEITAS, token)
   rescue StandardError
@@ -50,12 +60,24 @@ module Autonomia::Agents::ToolRun::ListasDeEntrega
   # A IDENTIDADE DE UMA ENTREGA QUE A FERRAMENTA EMITIU, na chave DELA. A chave nomeia a NATUREZA
   # da entrega (`entregas_de_preco`) e o token é a IDENTIDADE dela.
   #
-  # A CHAVE É DA FERRAMENTA, E O GUARDA-CORPO É O MESMO DE SEMPRE: ela não vê (`tool_handle`) nem
-  # escreve (`parte_da_ferramenta`) as marcas do motor, e sem esta recusa este método seria a porta
-  # dos fundos — uma ferramenta poderia inventar um aceite, ou pôr `autonomia_closed` no handle e
-  # calar o encerramento de todas as passadas seguintes. Nenhum chamador de hoje tenta; a guarda
-  # existe para que o próximo não consiga. A lista das marcas é lida de `AsyncRunJob::MARCAS`, que
-  # é onde ela já mora — duas definições da mesma fronteira divergiriam no dia em que ela mudasse.
+  # O QUE ESTA RECUSA COBRE É ESTE MÉTODO, E SÓ ELE: uma chave RESERVADA do motor
+  # (`AsyncRunJob::MARCAS`) passada POR AQUI levanta `ArgumentError`, e é isso. O que ela NÃO cobre
+  # é a FERRAMENTA — a rodada 6 escreveu que sim, e era falso. A ferramenta recebe a LINHA inteira
+  # (`Native::Base#initialize`, `run:`), então a superfície pública deste modelo continua ao alcance
+  # dela: `merge_handle!` põe `autonomia_closed` e cala o encerramento de todas as passadas
+  # seguintes, `registrar_entrega_aceita!` forja um aceite, e `finish!`, `record_attempt!`,
+  # `record_delivery!` e `advance_sequence!` estão lá do mesmo jeito. Medido na rodada 7:
+  #
+  #     registrar_identidade_emitida!(autonomia_closed) -> recusou (ArgumentError)
+  #     merge_handle!(autonomia_closed => true)         -> gravou
+  #     registrar_entrega_aceita!('token-forjado')      -> gravou
+  #
+  # ENTÃO O QUE ELA COMPRA É MENOS DO QUE PARECE, e vale dito inteiro: o caminho NOMEADO da lista da
+  # ferramenta deixa de ser a porta larga que o `anexar_ao_handle!` público era (rodada 5). Nada
+  # mais. O conserto da fronteira é a FACHADA ESTREITA — entregar à ferramenta um objeto com o que
+  # ela precisa, no lugar do modelo inteiro —, que é mudança de código, é pré-requisito da 8b e está
+  # proposta na issue #419. A lista das marcas é lida de `AsyncRunJob::MARCAS`, que é onde ela já
+  # mora — duas definições da mesma fronteira divergiriam no dia em que ela mudasse.
   def registrar_identidade_emitida!(chave, token)
     raise ArgumentError, "#{chave} e uma marca do motor" if marca_do_motor?(chave)
 
@@ -94,16 +116,20 @@ module Autonomia::Agents::ToolRun::ListasDeEntrega
   end
 
   # Os aceites cuja escrita imediata falhou, guardados só em MEMÓRIA e só enquanto esta passada
-  # viver. Não é fila: é o mesmo fato esperando a segunda escrita, do mesmo jeito que a identidade
-  # da entrega espera o `record_attempt!` no handle que a ferramenta devolveu.
+  # viver. Não é fila: é o mesmo fato esperando a segunda escrita, do mesmo jeito que a CÓPIA da
+  # identidade da entrega espera o `record_attempt!` no handle que a ferramenta devolveu. A
+  # semelhança para aí (precisão da rodada 7): a identidade tem também a escrita IMEDIATA da
+  # emissão, então ela pode já estar no banco; o aceite pendente nunca esteve.
   def aceites_pendentes
     @aceites_pendentes ||= []
   end
 
-  # A SEGUNDA (E ÚLTIMA) CHANCE DA LISTA DO ACEITE, no fim da passada (`record_attempt!`). Nunca
-  # levanta: derrubar a escrita do handle por causa do reforço trocaria um fecho calado por uma
-  # passada perdida. O que falhar de novo volta à lista, e morre com o processo — que é exatamente
-  # o alcance da rede da identidade.
+  # A SEGUNDA (E ÚLTIMA) CHANCE DA LISTA DO ACEITE, no fim da passada (`record_attempt!`) — e só
+  # para o aceite gravado por quem ainda vai passar por ele, que é o motor. Nunca levanta: derrubar
+  # a escrita do handle por causa do reforço trocaria um fecho calado por uma passada perdida. O que
+  # falhar de novo volta à lista e morre com o processo. NÃO É O MESMO ALCANCE DA IDENTIDADE, e a
+  # rodada 6 escreveu que era: a identidade já foi ao banco na emissão e pode sobreviver; o aceite
+  # pendente, não — ele nunca chegou lá.
   def reforcar_aceites!
     pendentes = aceites_pendentes
     return false if pendentes.empty?

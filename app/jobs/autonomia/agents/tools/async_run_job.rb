@@ -324,9 +324,10 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   # As marcas NOSSAS no handle: submetido, intenções, possivelmente duplicada, encerrado, e a lista
-  # do aceite. A ferramenta não as vê (`tool_handle`) e não as escreve (`parte_da_ferramenta`); elas
-  # só mudam por escritas mescladas no banco (`ToolRun#merge_handle!`, `#record_attempt!`,
-  # `#registrar_entrega_aceita!`), nunca por cópia da memória.
+  # do aceite. A ferramenta não as vê (`tool_handle`) e não as escreve PELO HANDLE
+  # (`parte_da_ferramenta` as tira do que ela devolve — o que ela alcança por outro caminho está na
+  # nota do fim); elas só mudam por escritas mescladas no banco (`ToolRun#merge_handle!`,
+  # `#record_attempt!`, `#registrar_entrega_aceita!`), nunca por cópia da memória.
   #
   # A LISTA DO ACEITE PRECISA ESTAR AQUI, e não é detalhe: ela é escrita NO MEIO da passada, e o
   # handle que a ferramenta devolve foi lido ANTES. Se ela viajasse no handle da ferramenta, o
@@ -335,9 +336,12 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # É EXATAMENTE O QUE ACONTECE com a lista de identidades da ferramenta, que não é marca e por
   # isso É regravada (medido na rodada 6; issue R19 (#418)).
   #
-  # A LISTA TAMBÉM É A FRONTEIRA DO QUE A FERRAMENTA PODE ESCREVER: `ToolRun` recusa
-  # `registrar_identidade_emitida!` em qualquer chave desta lista, para que a ferramenta não
-  # invente um aceite nem cale o encerramento gravando `autonomia_closed`.
+  # A LISTA É A FRONTEIRA DE UM CAMINHO, NÃO DA FERRAMENTA: `ToolRun` recusa
+  # `registrar_identidade_emitida!` em qualquer chave desta lista. Isso barra a chave reservada
+  # NAQUELE método, e só. A ferramenta recebe a linha inteira, e por ela ainda alcança
+  # `merge_handle!` (que grava `autonomia_closed` e cala o encerramento seguinte) e
+  # `registrar_entrega_aceita!` (que forja um aceite) — medido na rodada 7, e a fachada estreita que
+  # fecharia isso é a issue #419, pré-requisito da 8b.
   MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA, ToolRun::PEDIDO,
             ToolRun::ENCERRADA_EM, ToolRun::ENTREGAS_ACEITAS].freeze
   MARCAS_DE_INTENCAO = [ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA].freeze

@@ -240,10 +240,17 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # passa sem que preço nenhum tenha chegado. Para virar frase falsa ainda é preciso que a passada
   # morra antes do `record_attempt!` (com `portal_fechado` gravado não sobra nada e o fecho cala).
   # NÃO é regressão — a `main` publica a parcial por `delivered_count` sozinho, e pede o comparativo
-  # pelo mesmo `entregues` — e não se fecha aqui porque o discriminador honesto não existe: separar
-  # "aceite de preço legado" de "aceite de outra coisa" exigiria contar os aceites desta versão, e
-  # o contador sobe também na republicação deduplicada, que não acrescenta token. Registrado com a
-  # reprodução na issue R19 (#418).
+  # pelo mesmo `entregues`. E NÃO SE FECHA AQUI, mas a justificativa da rodada 6 era forte demais: o
+  # que não existe é o discriminador PERFEITO, não um discriminador honesto. Contar os aceites desta
+  # versão de fato não serve (o contador sobe também na republicação deduplicada, que não acrescenta
+  # token), mas existe algo melhor, achado na rodada 7: a FOTO DO CONTADOR no instante em que
+  # `PRECO_LEGADO_KEY` é gravada. É a mesma escrita, e ela acontece dentro do `poll`, antes de
+  # `AsyncRunJob#apply` aceitar qualquer coisa desta passada — então a foto é o aceite que a versão
+  # ANTERIOR deixou, sem nada desta. Neste terceiro estado ela vale zero e separa o caso. REDUZ E NÃO
+  # ELIMINA: a linha legada cujo COMPARATIVO da versão anterior foi aceito (com os preços recusados)
+  # fotografa um, e continua passando. Trocar uma chave a mais no handle por uma redução parcial de
+  # um estado que a `main` também tem é decisão de produto, e está na issue R19 (#418) com a
+  # reprodução.
   #
   # O QUE TORNA ISTO SEGURO É A COBERTURA, não o valor lido: `PRECO_LEGADO_KEY` é gravada na
   # primeira emissão desta versão e responde, com o que se sabia NAQUELE momento, se havia preço de

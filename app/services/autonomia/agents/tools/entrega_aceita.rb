@@ -36,10 +36,16 @@ module Autonomia::Agents::Tools::EntregaAceita
   # identidade não afirma nada depois. A falha da ESCRITA não pode derrubar a entrega que já está
   # no ar — ela vira log, e o fecho decide pelo lado conservador (como se não tivesse sido aceita).
   #
-  # MAS ELA NÃO É A ÚLTIMA PALAVRA (rodada 6): o token fica pendente na LINHA e o `record_attempt!`
-  # do fim da passada o reescreve. Sem isso, uma falha transitória do banco — sem morte de processo
-  # nenhuma — apagava o encerramento: o fecho lia "nada aceito", calava, e a `main` teria falado
-  # pelo contador. É a rede que a identidade da entrega sempre teve, e que faltava deste lado.
+  # MAS ELA NÃO É A ÚLTIMA PALAVRA QUANDO QUEM CHAMA AINDA VAI PERSISTIR (rodada 6): o token fica
+  # pendente em memória, no objeto da linha, e o `record_attempt!` do fim da passada o reescreve.
+  # Sem isso, uma falha transitória do banco — sem morte de processo nenhuma — apagava o
+  # encerramento: o fecho lia "nada aceito", calava, e a `main` teria falado pelo contador. É a rede
+  # que a identidade da entrega sempre teve, e que faltava deste lado.
+  #
+  # A REDE É DO CHAMADOR, E SÓ UM DOS DOIS A TEM (precisão da rodada 7): `AsyncRunJob#deliver`
+  # termina em `record_attempt!` e ganha a segunda escrita; `Tools::Encerramento#publicar_uma` não
+  # — no motor o encerramento roda em `fail_run`, depois da última persistência, e no varredor não
+  # há `record_attempt!` nenhum. Ali vale UMA escrita, e o alcance é o declarado em R20.
   def registrar(run, entrega, resultado)
     return resultado unless resultado.respond_to?(:aceita?) && resultado.aceita?
 

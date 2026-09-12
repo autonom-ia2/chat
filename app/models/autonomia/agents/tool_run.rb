@@ -281,6 +281,11 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # falha transitória do banco (sem morte de processo) apagava o encerramento. Aqui ele ganha a
   # mesma rede, no mesmo instante. ANTES da mescla, de propósito: a mescla é guardada pelo status
   # (`posse`) e a escrita do aceite não é — o aceite é fato consumado mesmo em linha supersedida.
+  #
+  # A REDE COBRE QUEM PASSA POR AQUI, e o encerramento não passa (precisão da rodada 7): no motor
+  # ele roda em `fail_run`, depois da última persistência, e no varredor não há `record_attempt!`.
+  # O aceite gravado por `Tools::Encerramento#publicar_uma` continua com uma escrita só — alcance
+  # declarado, porque quem o lê são as passadas seguintes, e para essas memória não vale.
   def record_attempt!(handle: nil, intencao: nil)
     reforcar_aceites!
     mesclar(posse(intencao), adicionar: handle.to_h, contar: true)
