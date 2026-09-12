@@ -34,9 +34,16 @@ module InstrucaoDaProposta
     'com uma ou duas seguradoras por vez' => -> { ferramenta::MAX_SEGURADORAS == 2 },
     # O nome vai como saiu na lista: é o mapa `nomes_entregues` que a cotação grava.
     'como saiu na lista de preços' => -> { Autonomia::Agents::Tools::Native::InsuranceQuote::NOMES_KEY == 'nomes_entregues' },
-    # As duas recusas que o texto ensina a tratar existem, com frase no catálogo.
+    # As recusas que o texto ensina a tratar existem, com frase no catálogo.
     'há mais de uma com aquele nome' => -> { Autonomia::Agents::Tools::Recusa::MOTIVOS.key?('seguradora_ambigua') },
     'aquela não cotou' => -> { Autonomia::Agents::Tools::Recusa::MOTIVOS.key?('seguradora_nao_cotou') },
+    # TERMO 3, pela frase inteira (mutação M3 da rodada de correção): invertida para "mande a
+    # comparação no lugar", a instrução mandaria o modelo fazer o que o termo proíbe.
+    'nunca mande a comparação no lugar, em silêncio' => -> { Autonomia::Agents::Tools::Recusa::MOTIVOS.key?('seguradora_nao_cotou') },
+    # A origem que mudou debaixo do pedido (rodada de correção, P1 do Codex): as duas recusas existem.
+    'cotação foi refeita ou ainda está em andamento' => lambda {
+      Autonomia::Agents::Tools::Recusa::MOTIVOS.key?('cotacao_substituida') && Autonomia::Agents::Tools::Recusa::MOTIVOS.key?('cotacao_em_andamento')
+    },
     # "Gostei dessa" deixa de escalar: vira a proposta daquela seguradora.
     'primeiro entregue a proposta daquela seguradora' => -> { builder::TOOLS_DO_PRINCIPAL.include?(SLUG) }
   }.freeze
