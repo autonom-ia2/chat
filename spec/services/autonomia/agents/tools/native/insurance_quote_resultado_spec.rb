@@ -140,6 +140,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(progresso.confirmar_logo?).to be(false)
     end
 
+    # A LEITURA ASSENTADA QUE PERDEU UMA SEGURADORA JÁ LISTADA, vinda de uma leitura em que ela corria: a
+    # próxima leitura igual também não fecharia, e a consulta fica no intervalo da tentativa.
+    it 'não pede quando a leitura assentada nova perdeu uma seguradora já listada' do
+      handle = inicio.merge(described_class::ACIONADAS_KEY => %w[11 19 47 8])
+
+      progresso = consultar(com_desfecho, handle)
+
+      expect(progresso).to be_running
+      expect(progresso.confirmar_logo?).to be(false)
+    end
+
     it 'pede quando a leitura assentada é diferente da anterior e cobre as já listadas' do
       handle = inicio.merge(described_class::ACIONADAS_KEY => %w[47 8], described_class::LEITURA_ASSENTADA_KEY => %w[47 8])
 

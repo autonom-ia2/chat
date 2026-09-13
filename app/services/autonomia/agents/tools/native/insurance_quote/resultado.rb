@@ -30,7 +30,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
   # A passada que não fechou a cotação. `handle` é o que a passada recebeu. `confirmar_logo` é verdade
   # quando a próxima leitura, repetindo esta, fecha a cotação (`QuoteOffers#confirma_na_proxima?`).
   def em_andamento(deliveries, next_handle, leitura, handle)
-    confirmar = leitura.confirma_na_proxima?(handle[self.class::ACIONADAS_KEY], handle[self.class::LEITURA_ASSENTADA_KEY])
+    confirmar = leitura.confirma_na_proxima?(handle[self.class::ACIONADAS_KEY])
     progress_class.running(deliveries: deliveries, handle: next_handle, confirmar_logo: confirmar)
   end
 end

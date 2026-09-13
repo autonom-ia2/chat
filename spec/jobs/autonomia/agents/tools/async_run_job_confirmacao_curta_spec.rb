@@ -142,6 +142,19 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
   end
 
+  it 'a leitura com todas com desfecho que perdeu uma seguradora já listada fica no intervalo da tentativa' do
+    freeze_time do
+      run = cotacao_correndo
+      run.record_attempt!(handle: { cotacao::ACIONADAS_KEY => %w[11 19 47 8] })
+      portal_responde(todas_com_desfecho)
+
+      passada(run, tentativa_tardia)
+
+      expect(run.status).to eq('running')
+      expect(agendada_para(run, tentativa_tardia + 1)).to eq(21.seconds.from_now)
+    end
+  end
+
   it 'a leitura que repete a anterior sem fechar volta ao intervalo da tentativa' do
     freeze_time do
       run = cotacao_correndo
