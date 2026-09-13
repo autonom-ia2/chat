@@ -95,6 +95,33 @@ RSpec.describe Autonomia::Insurance::Medida do
       expect(resultado[:cotacoes]).to be_zero
       expect(resultado[:seguradoras_acionadas]).to be_zero
     end
+
+    # FATIA 2 DO #420: a coluna "Com preço" do Super Admin lê `entregues`, e o resultado por seguradora
+    # guardado na mesma linha não muda a contagem, nem quando ele tem mais seguradoras com preço do que as
+    # entregues (o lote recusado pelo publicador, por exemplo).
+    it 'com preço continua sendo o tamanho de entregues, com o resultado por seguradora guardado' do
+      cotadas = %w[1 3 4 5 7 8 11 12 19 20 26 44].map do |code|
+        { 'insurer' => { 'code' => code, 'name' => "S#{code}" }, 'status' => 'quoted', 'premium' => { 'amount' => 1000.0 } }
+      end
+      run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete, 'entregues' => %w[1 3 4 5 7 8 11 12 19 20 26],
+                     Autonomia::Agents::Tools::Native::InsuranceQuote::RESULTADO_KEY =>
+                       Autonomia::Insurance::ResultadoPorSeguradora.unir({}, cotadas) })
+
+      resultado = medida
+
+      expect(resultado).to include(cotacoes: 1, seguradoras_acionadas: 17, seguradoras_com_preco: 11)
+    end
+
+    # A EXECUÇÃO DA FERRAMENTA DA LIA na mesma conversa não é cotação: ela lê o que a cotação guardou.
+    it 'nao conta a execução da ferramenta que mostra o resultado' do
+      conversa = conversa_de(account)
+      Autonomia::Agents::ToolRun.create!(
+        account: account, agent: agent, conversation_id: conversa.id, slug: Autonomia::Agents::Tools::Native::InsuranceQuoteResult.slug,
+        status: 'done', execution_key: SecureRandom.uuid, handle: { 'execucao_da_cotacao' => 1, 'seguradoras' => %w[8] }
+      )
+
+      expect(medida).to include(cotacoes: 0, seguradoras_acionadas: 0, seguradoras_com_preco: 0, cotacoes_sem_confirmacao: 0)
+    end
   end
 
   describe 'isolamento e janela' do

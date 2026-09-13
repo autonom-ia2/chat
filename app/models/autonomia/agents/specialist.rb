@@ -125,18 +125,26 @@ class Autonomia::Agents::Specialist < ApplicationRecord
     ::Autonomia::Insurance::QuoteAgent::Builder.descricao_mantida(self) || description
   end
 
+  # Os slugs das ferramentas reservadas a este especialista: os do deploy quando ele é um especialista do
+  # Agente de Cotação (`QuoteAgent::Builder.ferramentas_mantidas_do_especialista`, fatia 2 do #420), os
+  # gravados em `tool_slugs` para os demais. `tools` e a reserva do principal (`Answerer`) leem daqui.
+  def ferramentas_do_sistema
+    ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas_do_especialista(self) || tool_slugs
+  end
+
   # Ferramentas reservadas a este especialista, na ordem declarada. Slug que não existe (ou foi
   # desabilitado) é ignorado em silêncio: o especialista trabalha com o que sobrou em vez de
   # derrubar o turno inteiro por causa de uma configuração velha.
   def tools
-    return [] if tool_slugs.blank?
+    slugs = ferramentas_do_sistema
+    return [] if slugs.blank?
 
     # Memoizado: o runner consulta esta lista uma vez por turno, mas `for_agent` faz consulta ao
     # banco e monta o catálogo de nativas — não há motivo para refazer isso a cada chamada.
     @tools ||= begin
       by_slug = Autonomia::Agents::Tools::Bound.for_agent(agent).index_by(&:slug)
-      encontradas = tool_slugs.filter_map { |slug| by_slug[slug.to_s] }
-      avisar_descartadas(by_slug.keys, encontradas)
+      encontradas = slugs.filter_map { |slug| by_slug[slug.to_s] }
+      avisar_descartadas(slugs, by_slug.keys, encontradas)
       encontradas
     end
   end
@@ -147,8 +155,8 @@ class Autonomia::Agents::Specialist < ApplicationRecord
   # ainda assim responde ao principal — que foi o defeito da Lia em 08/09/2026: ela pediu placa,
   # CEP e CPF e anunciou uma cotação que nunca chegou ao portal. Continua não derrubando o turno,
   # mas agora deixa rastro. Só slug e id: nada de credencial nem de prompt.
-  def avisar_descartadas(disponiveis, encontradas)
-    faltando = tool_slugs.map(&:to_s) - encontradas.map(&:slug)
+  def avisar_descartadas(slugs, disponiveis, encontradas)
+    faltando = slugs.map(&:to_s) - encontradas.map(&:slug)
     return if faltando.empty?
 
     Rails.logger.warn(

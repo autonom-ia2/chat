@@ -17,8 +17,10 @@ class Autonomia::Agents::Tools::Progress
 
   attr_reader :status, :handle, :deliveries, :failure_code
 
-  def self.running(deliveries: [], handle: nil)
-    new(status: :running, deliveries: deliveries, handle: handle)
+  # `confirmar_logo`: a ferramenta pede a consulta seguinte no primeiro intervalo da progressão, e não no
+  # da tentativa (`AsyncRunJob#reschedule`). A cotação pede quando a próxima leitura pode fechá-la.
+  def self.running(deliveries: [], handle: nil, confirmar_logo: false)
+    new(status: :running, deliveries: deliveries, handle: handle, confirmar_logo: confirmar_logo)
   end
 
   def self.done(deliveries: [], handle: nil)
@@ -29,15 +31,21 @@ class Autonomia::Agents::Tools::Progress
     new(status: :failed, deliveries: deliveries, failure_code: code)
   end
 
-  def initialize(status:, deliveries: [], handle: nil, failure_code: nil)
+  def initialize(status:, deliveries: [], handle: nil, failure_code: nil, confirmar_logo: false)
     @status = status.to_sym
     @handle = handle
     @failure_code = sanitize_code(failure_code)
     @deliveries = sanitize(deliveries)
+    @confirmar_logo = confirmar_logo == true
   end
 
   def running?
     status == :running
+  end
+
+  # -> a ferramenta pediu a consulta seguinte no primeiro intervalo? Só vale para `running`.
+  def confirmar_logo?
+    running? && @confirmar_logo
   end
 
   def done?

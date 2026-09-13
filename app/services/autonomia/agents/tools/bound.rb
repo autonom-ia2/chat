@@ -84,10 +84,20 @@ class Autonomia::Agents::Tools::Bound
     return recusar('execucao_ja_em_andamento', delivery) if run.blank?
 
     delivery.register(run)
-    @native.accepted_message
+    aceite_native(ferramenta)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] async accept failed slug=#{slug} #{e.class}")
     recusar('tool_execution_error', delivery)
+  end
+
+  # O texto do aceite calculado pela instância (`Native::Base#aceite`), ou o `accepted_message` da classe.
+  # Nunca levanta: a execução já está registrada no turno, e uma exceção aqui viraria recusa ao modelo de
+  # uma execução que vai rodar.
+  def aceite_native(ferramenta)
+    ferramenta.aceite.presence || @native.accepted_message
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] aceite falhou slug=#{slug} #{e.class}")
+    @native.accepted_message
   end
 
   # TODA RECUSA EM JSON DESTE ARQUIVO PASSA POR AQUI (entrega 6; a da conferência, que é texto,

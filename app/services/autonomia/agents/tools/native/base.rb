@@ -132,6 +132,19 @@ class Autonomia::Agents::Tools::Native::Base
       'Não consegui confirmar o resultado da consulta. Um atendente vai conferir e retomar daqui.'
     end
 
+    # O HANDLE DESTA EXECUÇÃO TEM RESULTADO GUARDADO? (fatia 2 do #420.) Lido por
+    # `ToolRun#resultado_obtido?` para contar a execução como pedido feito. De classe: quem pergunta tem a
+    # linha, não a ferramenta montada. -> false por padrão.
+    def resultado_guardado?(_handle)
+      false
+    end
+
+    # A ENTREGA DESTA EXECUÇÃO AINDA PODE VIRAR MENSAGEM? Perguntado pelo publicador sob o lock da conversa,
+    # imediatamente antes de criar a mensagem (`Tools::AutorizacaoDaExecucao`). -> true por padrão.
+    def publicacao_vale?(_run)
+      true
+    end
+
     # EM `strict: true` NÃO EXISTE CAMPO FORA DE `required`.
     #
     # A OpenAI recusa a chamada INTEIRA — não a ferramenta, a chamada — quando `required` não lista
@@ -262,6 +275,13 @@ class Autonomia::Agents::Tools::Native::Base
   # nil (segue o fluxo normal).
   # NUNCA levanta e nunca bloqueia: conferência indisponível deixa o pedido seguir.
   def precheck
+    nil
+  end
+
+  # O QUE O MODELO LÊ QUANDO A EXECUÇÃO FOI ABERTA, calculado pela instância a partir do pedido (fatia 2 do
+  # #420). `Bound#accept_async` o devolve no lugar do `accepted_message` da classe.
+  # -> String, ou nil para usar o `accepted_message`. Nil por padrão.
+  def aceite
     nil
   end
 

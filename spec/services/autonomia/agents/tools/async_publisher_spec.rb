@@ -84,6 +84,40 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     end
   end
 
+  # A FERRAMENTA PODE RECUSAR A PUBLICAÇÃO NO INSTANTE DELA (fatia 2 do #420): `Native::Base.publicacao_vale?`,
+  # perguntado na entrada e sob o lock. A ferramenta da Lia recusa quando a cotação que ela leu deixou de ser
+  # a mais nova da conversa; o padrão não recusa.
+  describe 'when the tool says the delivery no longer holds' do
+    it 'blocks and posts nothing when the tool refuses, and publishes when it does not' do
+      promote
+      ferramenta = register_async_tool(build_async_tool(slug: 'consultar_cotacao'))
+      vale = false
+      ferramenta.define_singleton_method(:publicacao_vale?) { |_run| vale }
+
+      recusada = described_class.new(run: run).publish('lista de uma cotação velha')
+      vale = true
+      publicada = described_class.new(run: run).publish('lista da cotação atual')
+
+      expect(recusada).to be_blocked
+      expect(publicada).to be_published
+      expect(bot_messages.map(&:content)).to eq(['lista da cotação atual'])
+    end
+
+    it 'blocks under the lock when the answer changes after the entry check' do
+      promote
+      ferramenta = register_async_tool(build_async_tool(slug: 'consultar_cotacao'))
+      respostas = [true, false]
+      ferramenta.define_singleton_method(:publicacao_vale?) { |_run| respostas.shift }
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      result = described_class.new(run: run).publish('lista de uma cotação velha')
+
+      expect(result).to be_blocked
+      expect(bot_messages).to be_empty
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('motivo=resultado_superado'))
+    end
+  end
+
   # Um pedaço ÚNICO também não foi postado: está agendado com atraso de até 15s. Publicar sem esperar
   # entregaria a cotação antes da frase que a promete.
   describe 'ordering against a single-chunk humanized reply' do

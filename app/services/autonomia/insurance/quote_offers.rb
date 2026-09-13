@@ -50,12 +50,17 @@ class Autonomia::Insurance::QuoteOffers
   # leitura própria de `basis` aqui.
   def quoted
     @quoted ||= begin
-      cotadas = Array(@result['offers'])
-                .select { |offer| offer['status'] == 'quoted' && offer.dig('premium', 'amount').present? }
+      cotadas = Array(@result['offers']).select { |offer| self.class.cotada?(offer) }
       sem_periodo, com_periodo = cotadas.partition { |offer| self.class.sem_periodo?(offer) }
       mensais, totais = com_periodo.partition { |offer| self.class.mensal?(offer) }
       por_valor(totais) + por_valor(mensais) + sem_periodo
     end
+  end
+
+  # -> a oferta cotou e trouxe valor? É o critério de `quoted` e o de "com preço" do resultado guardado
+  # por seguradora (`Insurance::ResultadoPorSeguradora`).
+  def self.cotada?(offer)
+    offer['status'] == 'quoted' && offer.dig('premium', 'amount').present?
   end
 
   def self.sem_periodo?(offer)
@@ -125,6 +130,20 @@ class Autonomia::Insurance::QuoteOffers
   def todas_com_desfecho?(ja_acionadas, assentada_anterior)
     atual = assentada
     return false if atual.nil? || Array(assentada_anterior).map(&:to_s).sort != atual
+
+    (Array(ja_acionadas).map(&:to_s) - acionadas).empty?
+  end
+
+  # -> true quando a PRÓXIMA leitura, se repetir esta, faz `todas_com_desfecho?` responder verdade: esta
+  # leitura está assentada, é DIFERENTE da assentada anterior e lista todo código que alguma leitura
+  # anterior listou (fatia 2 do #420). A ferramenta usa a resposta para pedir a consulta seguinte no
+  # primeiro intervalo da progressão (`InsuranceQuote::Resultado#em_andamento`).
+  #
+  # A leitura igual à anterior que ainda não fechou a cotação responde falso: faltou uma seguradora que
+  # outra leitura listou, e a próxima leitura igual também não fecharia.
+  def confirma_na_proxima?(ja_acionadas, assentada_anterior)
+    atual = assentada
+    return false if atual.nil? || Array(assentada_anterior).map(&:to_s).sort == atual
 
     (Array(ja_acionadas).map(&:to_s) - acionadas).empty?
   end

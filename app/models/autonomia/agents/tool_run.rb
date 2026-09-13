@@ -150,8 +150,9 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   end
 
   # A ÚLTIMA execução desta ferramenta na conversa, se ela AINDA CONTA como pedido feito e tem os
-  # mesmos dados (entrega 10). Conta: a que está rodando; e a que encerrou com algo entregue há menos
-  # de `PEDIDO_VALE_POR`. NÃO conta: supersedida, descartada, bloqueada, falhada sem entrega, nem
+  # mesmos dados (entrega 10). Conta: a que está rodando; e a que encerrou com algo entregue ou com
+  # resultado guardado (`conta_como_pedido?`) há menos de `PEDIDO_VALE_POR`. NÃO conta: supersedida,
+  # descartada, bloqueada, falhada sem entrega e sem resultado guardado, nem
   # `pending` — repetir depois delas é tentar de novo, não duplicar. `pending` de propósito: uma
   # `pending` é uma aceitação que ainda não virou trabalho; quem chega depois com o mesmo pedido a
   # SUPERSEDE (e a promoção dela perde pelo status, sob o mesmo lock), e o RETRY do turno cujo worker
@@ -169,10 +170,18 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     handle.to_h[PEDIDO]
   end
 
+  # Encerrada com entrega aceita OU com resultado guardado (fatia 2 do #420), por união: a linha anterior
+  # a esta versão, sem resultado guardado, continua contando pelo contador.
   def conta_como_pedido?
     return true if running?
 
-    %w[done failed].include?(status) && delivered_count.positive? && encerrada_em > PEDIDO_VALE_POR.ago
+    %w[done failed].include?(status) && (delivered_count.positive? || resultado_obtido?) && encerrada_em > PEDIDO_VALE_POR.ago
+  end
+
+  # -> a ferramenta desta execução diz que o handle tem resultado guardado (`Native::Base.resultado_guardado?`).
+  # Slug fora do catálogo responde falso.
+  def resultado_obtido?
+    ::Autonomia::Agents::Tools::Registry.find(slug)&.resultado_guardado?(handle.to_h) || false
   end
 
   # O instante do encerramento. Linhas anteriores a esta marca (encerradas antes da entrega 10) caem

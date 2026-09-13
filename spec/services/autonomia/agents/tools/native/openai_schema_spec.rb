@@ -66,6 +66,20 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     end
   end
 
+  # A FERRAMENTA DE RESULTADO DA LIA (fatia 2 do #420): um parâmetro opcional, e é do principal — um
+  # opcional mal declarado derruba a chamada inteira dela, como em 08/09.
+  describe 'ver_resultado_da_cotacao' do
+    let(:schema) { Autonomia::Agents::Tools::Native::InsuranceQuoteResult.openai_schema }
+
+    it 'declara seguradora como string ou null, presente em required, sem anyOf, e nenhuma outra propriedade' do
+      expect(schema[:parameters][:properties].keys).to eq(['seguradora'])
+      expect(schema[:parameters][:required]).to eq(['seguradora'])
+      expect(schema[:parameters][:properties]['seguradora']['type']).to match_array(%w[string null])
+      expect(schema[:parameters][:properties]['seguradora']).not_to have_key('anyOf')
+      expect(schema.to_json).not_to include('anyOf')
+    end
+  end
+
   # A de cotação tem NOVE opcionais — quebraria pelo mesmo motivo. Ela é reservada pelo especialista,
   # que só roda quando o principal o chama; o log de 08/09 mostra a chamada do principal falhando
   # antes disso, então esta ferramenta nunca chegou a ser exercitada em produção.

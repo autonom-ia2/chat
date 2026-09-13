@@ -192,10 +192,11 @@ module Autonomia
 
       # Ferramentas visíveis ao PRINCIPAL: as do agente MENOS as reservadas por um especialista
       # habilitado (#311). É isso que mantém o contexto do principal limpo — ele não precisa conhecer
-      # a ferramenta de cotação, só saber que existe um especialista para o assunto.
+      # a ferramenta de cotação, só saber que existe um especialista para o assunto. A reserva é a de
+      # `Specialist#ferramentas_do_sistema` (a do deploy para os especialistas do Agente de Cotação).
       def enabled_agent_tools
         @enabled_agent_tools ||= begin
-          reserved = enabled_specialists.flat_map(&:tool_slugs).map(&:to_s).to_set
+          reserved = enabled_specialists.flat_map(&:ferramentas_do_sistema).map(&:to_s).to_set
           Tools::Bound.for_agent(@agent).reject { |tool| reserved.include?(tool.slug) }
         end
       end

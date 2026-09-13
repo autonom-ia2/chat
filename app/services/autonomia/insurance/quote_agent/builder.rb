@@ -20,7 +20,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # o que pertence ao especialista é o `Answerer#enabled_agent_tools`, em runtime. Deixar a de
   # cotação fora daqui não a reserva — APAGA: o catálogo do turno vem de `Tools::Bound.for_agent`,
   # e o `Specialist#tools` filtra ESSE catálogo. Fora dele o especialista roda sem ferramenta.
-  TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais].freeze
+  TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais ver_resultado_da_cotacao].freeze
   TOOLS_DO_ESPECIALISTA = %w[consultar_placa cotar_seguro].freeze
   TODAS_AS_TOOLS = (TOOLS_DO_PRINCIPAL + TOOLS_DO_ESPECIALISTA).freeze
 
@@ -57,6 +57,24 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # e a gravada no nascimento dizia "para pessoa física" enquanto o manual passou a cotar empresa.
   def self.descricao_mantida(specialist)
     mantido(specialist)&.dig(:descricao)
+  end
+
+  # AS FERRAMENTAS QUE VALEM SÃO AS DO DEPLOY (fatia 2 do #420), no molde de `instrucao_mantida`.
+  # `criar_agente` grava `TODAS_AS_TOOLS` em `native_tool_slugs` e `criar_especialista` grava
+  # `TOOLS_DO_ESPECIALISTA` em `tool_slugs`, só no nascimento: em 11/09/2026 `consultar_placa` chegou ao
+  # agente 24 por escrita no banco de produção. Quem monta o turno (`Agent#ferramentas_nativas`,
+  # `Specialist#ferramentas_do_sistema`) lê daqui; as colunas ficam como retrato do nascimento.
+  # -> `TODAS_AS_TOOLS` para o Agente de Cotação, nil para os demais.
+  def self.ferramentas_mantidas(agent)
+    agent&.agent_type == 'insurance_quote' ? TODAS_AS_TOOLS : nil
+  end
+
+  # -> `TOOLS_DO_ESPECIALISTA` para um especialista mantido, nil para os demais. A reserva que esconde as
+  # ferramentas do especialista do principal (`Answerer#enabled_agent_tools`) vem daqui: com só a lista do
+  # agente mantida, uma ferramenta nova do especialista apareceria para o principal até alguém escrever a
+  # coluna do especialista.
+  def self.ferramentas_mantidas_do_especialista(specialist)
+    mantido(specialist) ? TOOLS_DO_ESPECIALISTA : nil
   end
 
   # A entrada de `ESPECIALISTAS` deste especialista, quando é um que a Autonom.ia mantém.

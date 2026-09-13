@@ -13,6 +13,8 @@ module Autonomia::Agents::Tools::Registry
     # seguradora que recusou a credencial da corretora ficavam de fora dos outros dez, e nenhum dos
     # dois é de auto. Auto é um ramo com UM comportamento extra, o bônus de renovação.
     Autonomia::Agents::Tools::Native::InsuranceQuote,
+    # A consulta do principal ao resultado que a cotação guardou (fatia 2 do #420): lê o banco, não cota.
+    Autonomia::Agents::Tools::Native::InsuranceQuoteResult,
     Autonomia::Agents::Tools::Native::VehicleLookup,
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions
   ].freeze
@@ -31,10 +33,11 @@ module Autonomia::Agents::Tools::Registry
     TOOLS.map(&:slug)
   end
 
-  # Ferramentas realmente utilizáveis por este agente: ligadas na config E disponíveis (o gate
-  # `available_for?` evita oferecer no prompt algo que vai falhar por falta de configuração).
+  # Ferramentas realmente utilizáveis por este agente: ligadas (`Agent#ferramentas_nativas`: a lista do
+  # deploy para o Agente de Cotação, a config para os demais) E disponíveis (o gate `available_for?` evita
+  # oferecer no prompt algo que vai falhar por falta de configuração).
   def for_agent(agent)
-    enabled = Array(agent.native_tool_slugs).map(&:to_s)
+    enabled = Array(agent.ferramentas_nativas).map(&:to_s)
     return [] if enabled.empty?
 
     enabled.filter_map { |slug| find(slug) }.uniq.select { |tool| tool.available_for?(agent) }

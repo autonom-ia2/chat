@@ -152,4 +152,15 @@ RSpec.describe Autonomia::Agents::Tools::Progress do
       expect(entregue.reserva).to include(arquivo.url)
     end
   end
+
+  # O PEDIDO DE CONSULTA LOGO (fatia 2 do #420): só a passada `running` o carrega; por padrão, não.
+  describe '#confirmar_logo?' do
+    it 'vale só para running pedido pela ferramenta' do
+      expect(described_class.running(confirmar_logo: true).confirmar_logo?).to be(true)
+      expect(described_class.running.confirmar_logo?).to be(false)
+      expect(described_class.running(confirmar_logo: 'sim').confirmar_logo?).to be(false)
+      expect(described_class.new(status: :done, confirmar_logo: true).confirmar_logo?).to be(false)
+      expect(described_class.failed('x').confirmar_logo?).to be(false)
+    end
+  end
 end

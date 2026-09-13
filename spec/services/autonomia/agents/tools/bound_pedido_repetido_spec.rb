@@ -166,6 +166,59 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(saida).not_to include('concluída')
       expect(runs.count).to eq(1)
     end
+
+    # O RESULTADO GUARDADO TAMBÉM CONTA (fatia 2 do #420), por união com o contador.
+    describe 'com o resultado por seguradora guardado' do
+      def guardar(run, *ofertas)
+        handle = run.handle.merge(cotacao::RESULTADO_KEY => Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas))
+        run.update_columns(handle: handle) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      def cotou(code)
+        { 'insurer' => { 'code' => code, 'name' => "Seguradora #{code}" }, 'status' => 'quoted',
+          'premium' => { 'amount' => 2119.18, 'basis' => 'total' } }
+      end
+
+      def recusou(code)
+        { 'insurer' => { 'code' => code, 'name' => "Seguradora #{code}" }, 'status' => 'declined' }
+      end
+
+      it 'concluida sem entrega aceita e com preco guardado: barrada, e o texto nao diz zero resultados' do
+        guardar(consulta_existente(auto, desfecho: 'done'), cotou('8'), recusou('19'))
+
+        saida = pedir(auto, turno: 2)
+
+        expect(saida).to include('já terminou nesta conversa', 'resultado guardado e nenhuma entrega encaminhada para publicação')
+        expect(saida).not_to include('0 resultados')
+        expect(runs.count).to eq(1)
+      end
+
+      it 'com entrega aceita e preco guardado: o texto continua com o numero de entregas' do
+        guardar(consulta_existente(auto, entregues: 2, desfecho: 'done'), cotou('8'))
+
+        expect(pedir(auto, turno: 2)).to include('2 resultados encaminhados para publicação')
+        expect(runs.count).to eq(1)
+      end
+
+      # SÓ RECUSAS GUARDADAS NÃO SÃO RESULTADO: a cotação em que ninguém cotou continua sendo tentativa nova,
+      # como antes desta fatia.
+      it 'sem entrega aceita e so com recusas guardadas: o mesmo pedido e tentativa nova' do
+        guardar(consulta_existente(auto, desfecho: 'failed'), recusou('19'), recusou('47'))
+
+        expect(pedir(auto, turno: 2)).to eq(cotacao.accepted_message)
+        expect(runs.count).to eq(2)
+      end
+
+      it 'a janela de 24 horas vale igual para o resultado guardado' do
+        run = consulta_existente(auto, desfecho: 'done')
+        guardar(run, cotou('8'))
+        antiga = run.reload.handle.merge(Autonomia::Agents::ToolRun::ENCERRADA_EM => 25.hours.ago.iso8601)
+        run.update_columns(handle: antiga) # rubocop:disable Rails/SkipsModelValidations
+
+        expect(pedir(auto, turno: 2)).to eq(cotacao.accepted_message)
+        expect(runs.count).to eq(2)
+      end
+    end
   end
 
   # Dois turnos simultâneos com o mesmo pedido: a comparação, a abertura E a promoção ficam na mesma
