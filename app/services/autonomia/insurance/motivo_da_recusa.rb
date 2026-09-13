@@ -16,11 +16,13 @@
 # O texto devolvido é o sem o código do começo. Em qualquer outro caso devolve nil, e a Lia só pode dizer que a
 # seguradora não fez proposta.
 #
-# O ITEM 3 É O QUE FECHA (quarta rodada de revisão). As três rodadas anteriores recusavam pelo vocabulário da
-# conta (item 4), e cada revisão achou texto de conta com palavra que a lista não tinha, inclusive colado a uma
-# linha de risco ("Risco fora das políticas de aceitação Licença do multicálculo vencida."). Com o item 3, a
-# palavra desconhecida recusa. Hoje nenhuma palavra do vocabulário casa o item 4 (o spec trava isso), e ele
-# fica como a regra da issue escrita em código.
+# O ITEM 3 É O QUE MAIS RECUSA (quarta e quinta rodadas de revisão). As rodadas anteriores recusavam pelo
+# vocabulário da conta (item 4), e cada revisão achou texto de conta com palavra que a lista não tinha, inclusive
+# colado a uma linha de risco ("Risco fora das políticas de aceitação Licença do multicálculo vencida."). Com o item
+# 3, a palavra desconhecida recusa. Não fecha por construção: texto de conta escrito só com palavras do vocabulário
+# passa ("Seguro auto não permitido nesta seguradora."), e a quinta rodada tirou do vocabulário a segunda pessoa
+# ("seu", "sua": o portal fala com a corretora) e as palavras que serviam para falar da conta. Hoje nenhuma palavra
+# do vocabulário casa o item 4 (o spec trava isso), e ele fica como a regra da issue escrita em código.
 module Autonomia::Insurance::MotivoDaRecusa
   KIND_PERMITIDO = 'risco'.freeze
   # O teto do texto no conector (`quote-reason.ts`, `TETO_DO_TEXTO`).
@@ -97,7 +99,8 @@ module Autonomia::Insurance::MotivoDaRecusa
     texto = texto_de(reason)&.sub(CODIGO_DO_PORTAL, '')
     return nil unless texto&.match?(CARACTERES)
 
-    alvo = ActiveSupport::Inflector.transliterate(texto).downcase
+    # A letra latina que a transliteração não sabe escrever vira "#", que não separa palavra e não está no vocabulário.
+    alvo = ActiveSupport::Inflector.transliterate(texto, '#').downcase
     do_vocabulario?(alvo) && !recusado?(alvo) && do_risco?(alvo) ? texto : nil
   end
 

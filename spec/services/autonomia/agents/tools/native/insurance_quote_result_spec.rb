@@ -402,17 +402,25 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(publicado_por(atual)).to eq(itens(porto, allianz))
     end
 
-    it 'a lista sem mensagem não sai depois que uma mais nova sobre a mesma cotação foi despachada' do
+    # A LISTA LEVADA POR OUTRA NÃO SAI MAIS (quinta rodada de revisão): quem barra é a execução que gravou, sob o lock
+    # da conversa, que a levou; a mais nova que ainda não chegou ao `poll` não barra.
+    it 'a lista não entregue sai enquanto nenhuma mais nova a levou, e não sai depois' do
       anterior = exibicao(status: 'done', codigos: ['8'])
-      mais_nova = exibicao(status: 'pending', codigos: ['5'])
+      mais_nova = exibicao(status: 'running', codigos: ['5'])
       expect(described_class.publicacao_vale?(anterior)).to be(true)
 
-      %w[running done].each do |status|
-        mais_nova.update!(status: status)
-        expect(described_class.publicacao_vale?(anterior)).to be(false)
-      end
+      publicado_por(mais_nova)
 
-      mais_nova.update!(handle: mais_nova.handle.merge(described_class::EXECUCAO_KEY => fonte.id + 1000))
+      expect(mais_nova.reload.handle[described_class::ABSORVIDAS_KEY]).to eq([anterior.id])
+      expect(described_class.publicacao_vale?(anterior)).to be(false)
+    end
+
+    it 'a mais nova que não levou a lista, sobre outra cotação, não barra' do
+      anterior = exibicao(status: 'done', codigos: ['8'])
+      outra = exibicao(status: 'running', codigos: ['5'], cotacao_lida: fonte.id + 1000)
+
+      publicado_por(outra)
+
       expect(described_class.publicacao_vale?(anterior)).to be(true)
     end
 
@@ -440,12 +448,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
 
     # A LISTA COM PENDÊNCIA DE ENVIO (quarta rodada de revisão): está no banco e o cliente não a recebeu. Ela entra na
     # lista da mais nova, e a retomada do envio dela é barrada.
-    it 'a lista com pendência de envio não é entregue: entra na da mais nova, e a dela é barrada' do
+    it 'a lista com pendência de envio não é entregue: a retomada vale até a mais nova a levar, e não depois' do
       anterior = exibicao(status: 'done', codigos: ['8'], sequence: 1)
       lista_da(anterior, pendente: true)
       atual = exibicao(status: 'running', codigos: ['5'])
 
       expect(described_class.lista_entregue?(anterior)).to be(false)
+      expect(described_class.publicacao_vale?(anterior)).to be(true)
       expect(publicado_por(atual)).to eq(itens(porto, allianz))
       expect(described_class.publicacao_vale?(anterior)).to be(false)
     end
@@ -456,16 +465,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   describe 'o preço que a cotação ainda está enviando' do
     let(:bot) { create(:agent_bot, account: account) }
 
-    # A cotação com Porto e Allianz com preço, cada uma num lote de preço aceito (`aceitos`). `entregues` são os lotes
-    # que já são mensagem na conversa; `pendentes`, os que são mensagem com pendência de envio.
-    def cotacao_com_lotes(entregues: [], pendentes: [], aceitos: %w[porto allianz], mapeados: true)
+    # A cotação com Porto e Allianz com preço, cada uma num lote de preço, os dois emitidos há `emitidos` e aceitos
+    # (`aceitos`). `entregues` são os lotes que já são mensagem na conversa; `pendentes`, os que são mensagem com
+    # pendência de envio.
+    def cotacao_com_lotes(entregues: [], pendentes: [], aceitos: %w[porto allianz], mapeados: true, emitidos: 1.minute)
       run = cotacao_com(status: 'running', ofertas: [cotou('8', 'Porto Seguro', 2119.18), cotou('5', 'Allianz', 2402.55)])
       tokens = { 'porto' => "#{run.execution_key}:porto", 'allianz' => "#{run.execution_key}:allianz" }
-      lotes = mapeados ? { cotacao::Resultado::LOTES_KEY => { tokens['porto'] => ['8'], tokens['allianz'] => ['5'] } } : {}
       aceite = { cotacao::PRECOS_KEY => tokens.values, Autonomia::Agents::Tools::EntregaAceita::CHAVE => tokens.values_at(*aceitos) }
-      run.update!(handle: run.handle.merge(aceite).merge(lotes))
-      (entregues + pendentes).each { |lote| mensagem_do_lote(tokens[lote], pendente: pendentes.include?(lote)) }
+      run.update!(handle: run.handle.merge(aceite).merge(mapeados ? lotes_de(tokens, emitidos) : {}))
+      (entregues + pendentes).each { |nome| mensagem_do_lote(tokens[nome], pendente: pendentes.include?(nome)) }
       run
+    end
+
+    def lotes_de(tokens, emitidos)
+      lote = ->(codigo) { { 'codigos' => [codigo], 'emitido_em' => emitidos.ago.iso8601 } }
+      { cotacao::Resultado::LOTES_KEY => { tokens['porto'] => lote.call('8'), tokens['allianz'] => lote.call('5') } }
     end
 
     def mensagem_do_lote(token, pendente:)
@@ -478,7 +492,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       cotacao_com_lotes
 
       expect(no_turno.precheck.to_s).to eq(described_class::PRECOS_A_CAMINHO)
-      expect(no_turno('Allianz').precheck.to_s).to eq('Allianz fez proposta: o preço dela está sendo enviado agora, numa mensagem do sistema.')
+      expect(no_turno('Allianz').precheck.to_s).to eq('Allianz fez proposta: o preço dela está na fila de envio e chega numa mensagem do sistema.')
     end
 
     it 'com um lote entregue e outro a caminho, a lista leva só o entregue' do
@@ -489,11 +503,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(ferramenta.aceite.split("\n").first(2)).to eq([described_class::LISTA_DEPOIS, described_class::PARTE_A_CAMINHO])
       expect(ferramenta.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['8'])
       expect(no_turno('Porto e Allianz').aceite).to include('Porto Seguro fez proposta: o preço dela sai na lista',
-                                                            'Allianz fez proposta: o preço dela está sendo enviado agora')
+                                                            'Allianz fez proposta: o preço dela está na fila de envio')
     end
 
-    it 'o lote com pendência de envio está a caminho; o lote não aceito, não' do
+    # O LOTE COM PENDÊNCIA DE ENVIO (quinta rodada de revisão): publicado na hora com a fila fora, ele volta `blocked`
+    # do publicador e fica sem aceite; o varredor ainda o reenvia.
+    it 'o lote com pendência de envio está a caminho, com aceite ou sem; o lote não aceito e sem mensagem, não' do
       cotacao_com_lotes(entregues: ['porto'], pendentes: ['allianz'])
+      expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['8'])
+
+      Autonomia::Agents::ToolRun.delete_all
+      cotacao_com_lotes(entregues: ['porto'], pendentes: ['allianz'], aceitos: ['porto'])
       expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['8'])
 
       Autonomia::Agents::ToolRun.delete_all
@@ -501,10 +521,20 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(%w[8 5])
     end
 
-    it 'o lote a caminho sem os códigos gravados (emitido antes desta versão) segura todos os preços' do
-      cotacao_com_lotes(entregues: ['porto'], mapeados: false)
+    # O LOTE ACEITO QUE NUNCA VIROU MENSAGEM (quinta rodada de revisão): passada a janela, a publicação adiada não vem
+    # mais, e a lista da Lia volta a levar o preço.
+    it 'o lote aceito sem mensagem emitido há mais que a janela não está mais a caminho' do
+      cotacao_com_lotes(entregues: ['porto'], emitidos: Autonomia::Insurance::ResultadoDaCotacao::JANELA_DO_LOTE + 1.minute)
 
+      expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(%w[8 5])
+    end
+
+    it 'o lote a caminho sem os códigos gravados (emitido antes desta versão) segura todos os preços, dentro da janela' do
+      run = cotacao_com_lotes(entregues: ['porto'], mapeados: false)
       expect(no_turno.precheck.to_s).to eq(described_class::PRECOS_A_CAMINHO)
+
+      run.update_columns(updated_at: (Autonomia::Insurance::ResultadoDaCotacao::JANELA_DO_LOTE + 1.minute).ago) # rubocop:disable Rails/SkipsModelValidations
+      expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(%w[8 5])
     end
 
     it 'com todos os lotes entregues, a lista leva todos' do

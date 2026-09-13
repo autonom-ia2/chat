@@ -42,9 +42,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
                   'nem seguradora; se o cliente quiser ver os preços de novo, ofereça chamar um atendente.'.freeze
   SEM_PRECO_AINDA = 'A cotação ainda está correndo e nenhum preço chegou até agora. Não invente preço nem ' \
                     'seguradora.'.freeze
-  PRECOS_A_CAMINHO = 'Os preços desta cotação estão sendo enviados agora, numa mensagem do sistema. Não escreva ' \
+  PRECOS_A_CAMINHO = 'Os preços desta cotação estão na fila de envio e chegam numa mensagem do sistema. Não escreva ' \
                      'valor e não diga que vai mandar outra lista.'.freeze
-  PARTE_A_CAMINHO = 'Parte dos preços está sendo enviada agora, numa mensagem do sistema, e não entra na lista.'.freeze
+  PARTE_A_CAMINHO = 'Parte dos preços está na fila de envio, numa mensagem do sistema, e não entra na lista.'.freeze
   SEM_PRECO = 'Nenhuma seguradora fez proposta nesta cotação. Não invente preço nem seguradora.'.freeze
   NAO_ENCONTRADA = 'Nenhuma seguradora com esse nome está nesta cotação. Não liste as seguradoras: pergunte ao ' \
                    'cliente de qual ele fala.'.freeze
@@ -102,13 +102,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     def closing_message(_arguments = nil) = VAZIO
 
     # A lista só vira mensagem enquanto a cotação que a Lia leu no turno for a mais nova da conversa, e, quando
-    # ainda não é mensagem entregue, enquanto nenhuma execução mais nova desta ferramenta sobre a mesma cotação
-    # tiver sido despachada: a lista dessa leva os códigos desta (`codigos_a_publicar`).
+    # ainda não é mensagem entregue, enquanto nenhuma execução mais nova desta ferramenta a tiver levado na sua
+    # (`absorvida_depois?`, gravado por `codigos_a_publicar` sob o lock da conversa).
     def publicacao_vale?(run)
       execucao = run.handle.to_h[EXECUCAO_KEY]
       return false unless execucao.present? && Resultado.execucao_mais_nova(run.conversation_id)&.id == execucao.to_i
 
-      lista_entregue?(run) || !despachada_depois?(run, execucao.to_i)
+      lista_entregue?(run) || !absorvida_depois?(run)
     end
   end
 
@@ -228,7 +228,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
 
   # O preço que a cotação ainda está enviando não entra na lista (`ResultadoDaCotacao#a_caminho`).
   def fez_proposta(nome, codigo)
-    onde = resultado.a_caminho.include?(codigo) ? 'está sendo enviado agora, numa mensagem do sistema' : 'sai na lista depois da sua mensagem'
+    onde = resultado.a_caminho.include?(codigo) ? 'está na fila de envio e chega numa mensagem do sistema' : 'sai na lista depois da sua mensagem'
     "#{nome} fez proposta: o preço dela #{onde}."
   end
 

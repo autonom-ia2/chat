@@ -51,24 +51,24 @@ module TextosDeContaNoMotivo
   POR_OBJETO = {
     'veículo' => 'Veículo sem aceitação.', 'carro' => 'Carro sem aceitação.', 'moto' => 'Moto sem aceitação.',
     'caminhão' => 'Caminhão sem aceitação.', 'ônibus' => 'Ônibus sem aceitação.',
-    'utilitário' => 'Utilitário sem aceitação.', 'auto' => 'Produto auto sem aceitação.',
+    'utilitário' => 'Utilitário sem aceitação.', 'auto' => 'Seguro auto sem aceitação.',
     'acessório' => 'Acessórios fora da política de aceitação.', 'modelo' => 'Modelo sem aceitação.',
     'ano' => 'Ano fora da política de aceitação.', 'categoria' => 'Categoria sem aceitação.',
-    'tarifa' => 'Tarifa indisponível.', 'condutor' => 'Condutor fora da política de aceitação.',
+    'tarifa' => 'Tarifa sem aceitação.', 'condutor' => 'Condutor fora da política de aceitação.',
     'motorista' => 'Motorista fora da política de aceitação.', 'região' => 'Região sem aceitação.',
-    'circulação' => 'Área de circulação sem aceitação.', 'CEP' => 'CEP sem aceitação.',
-    'logradouro' => 'Logradouro fora da área de aceitação.', 'pernoite' => 'Local de pernoite sem aceitação.',
+    'circulação' => 'Circulação sem aceitação.', 'CEP' => 'CEP sem aceitação.',
+    'logradouro' => 'Logradouro fora da política de aceitação.', 'pernoite' => 'Pernoite sem aceitação.',
     'garagem' => 'Garagem fora da política de aceitação.', 'uso' => 'Tipo de uso sem aceitação.',
     'carga' => 'Carga sem aceitação.', 'idade' => 'Idade acima da aceita.',
     'segurado' => 'Restrição técnica para o Segurado', 'risco' => 'Risco sem aceitação nesta seguradora.',
-    'cenário' => 'Cenário sem aceitação.', 'cobertura' => 'Cobertura indisponível.',
+    'cenário' => 'Cenário sem aceitação.', 'cobertura' => 'Cobertura sem aceitação.',
     'blindagem' => 'Blindagem fora da política de aceitação.', 'rastreador' => 'Rastreador exigido para aceitação.',
-    'chassi' => 'Chassi remarcado sem aceitação.', 'FIPE' => 'Tabela FIPE fora da política de aceitação.',
-    'sinistro' => 'Histórico de sinistros fora da política.', 'bônus' => 'Classe de bônus sem aceitação.',
+    'chassi' => 'Chassi remarcado sem aceitação.', 'FIPE' => 'FIPE fora da política de aceitação.',
+    'sinistro' => 'Sinistros fora da política de aceitação.', 'bônus' => 'Bônus sem aceitação.',
     'vistoria' => 'Vistoria prévia obrigatória.', 'imóvel' => 'Imóvel fora da política de aceitação.',
     'residência' => 'Residência de veraneio sem aceitação.', 'construção' => 'Construção de madeira sem aceitação.',
     'profissão' => 'Profissão sem aceitação.', 'transporte' => 'Transporte de passageiros sem aceitação.',
-    'aplicativo' => 'Aplicativo sem aceitação.', 'placa' => 'Placa de outro estado sem aceitação.',
+    'aplicativo' => 'Aplicativo sem aceitação.', 'placa' => 'Placa sem aceitação.',
     'combustível' => 'Combustível GNV sem aceitação.', 'frota' => 'Frota sem aceitação.'
   }.freeze
 end
@@ -138,8 +138,24 @@ module TextosReaisDoMotivo
       'outro'
   }.freeze
 
-  # Os textos das revisões: os do conector, que saíram com a classe errada, e os das revisões da fatia 2, que saem
-  # `risco` do classificador real do conector falando da conta da corretora, de dado pessoal ou de valor.
+  # O CUSTO, DECLARADO: textos plausíveis de risco que a regra recusa (a Lia diz só que a seguradora não fez
+  # proposta), levantados pelas revisões da fatia 2.
+  CUSTO = [
+    'Condutor com menos de 2 anos de habilitação. Declinando cálculo.',
+    'Tempo de habilitação do condutor inferior ao exigido pela aceitação.',
+    'CEP de pernoite não cadastrado para aceitação.', 'Veículo bloqueado para aceitação nesta seguradora.',
+    'Veículo ano 2005 fora da política de aceitação.', 'CEP 04567-000 fora da área de aceitação.',
+    'Modelo não autorizado para uso em aplicativo. Declinando cálculo.',
+    'Veículo sem permissão de circulação na região. Declinando cálculo.', 'Código FIPE 0012345 sem aceitação.',
+    'Veículo com suspensão rebaixada sem aceitação.', 'Recusado por conta da região de circulação.',
+    'Veículo zero km sem aceitação.', 'Contratação não permitida.', 'Restrição técnica.',
+    'Declinando o risco: histórico de sinistros do segurado.', 'Placa de outro estado sem aceitação.'
+  ].freeze
+end
+
+# OS TEXTOS DAS REVISÕES: os do conector, que saíram com a classe errada, e os das revisões da fatia 2, que saem
+# `risco` do classificador real do conector falando da conta da corretora, de dado pessoal ou de valor.
+module TextosDasRevisoesDoMotivo
   DAS_REVISOES = [
     'Senha expirou. Declinando cálculo.', 'Sistema indisponível: sessão expirada, faça login novamente.',
     'Usuário fulano@corretora.com.br bloqueado.', 'Produtor não credenciado para este produto. Declinando cálculo.',
@@ -162,20 +178,26 @@ module TextosReaisDoMotivo
     'Veículo sem aceitação: CPF do operador divergente.', 'Veículo sem aceitação: e mail não confirmado.',
     'Prêmio mínimo de noventa não atingido para o veículo.', 'Veículo acima de um bilhão.',
     'Franquia de sessenta dólares para o veículo.', 'Veículo sem aceitação, prêmio mínimo de ８００.',
-    '٨٠٠ - Veículo sem aceitação.', 'Veículo sem aceitação пароль.', 'Senha123 - Veículo sem aceitação.'
-  ].freeze
-
-  # O CUSTO, DECLARADO: textos plausíveis de risco que a regra recusa (a Lia diz só que a seguradora não fez
-  # proposta), levantados pelas revisões da fatia 2.
-  CUSTO = [
-    'Condutor com menos de 2 anos de habilitação. Declinando cálculo.',
-    'Tempo de habilitação do condutor inferior ao exigido pela aceitação.',
-    'CEP de pernoite não cadastrado para aceitação.', 'Veículo bloqueado para aceitação nesta seguradora.',
-    'Veículo ano 2005 fora da política de aceitação.', 'CEP 04567-000 fora da área de aceitação.',
-    'Modelo não autorizado para uso em aplicativo. Declinando cálculo.',
-    'Veículo sem permissão de circulação na região. Declinando cálculo.', 'Código FIPE 0012345 sem aceitação.',
-    'Veículo com suspensão rebaixada sem aceitação.', 'Recusado por conta da região de circulação.',
-    'Veículo zero km sem aceitação.', 'Contratação não permitida.', 'Restrição técnica.'
+    '٨٠٠ - Veículo sem aceitação.', 'Veículo sem aceitação пароль.', 'Senha123 - Veículo sem aceitação.',
+    # Rodada 4: conta escrita só com palavras que estavam no vocabulário, e letra latina que não se translitera.
+    'Limite máximo de cotação de seguro auto nesta seguradora. Declinando cálculo.',
+    'Veículo sem aceitação: sua tabela não é mais aceita.',
+    'Nova análise dos seus dados obrigatória para cotação do veículo. Declinando cálculo.',
+    'Produto auto restrito para o seu tipo de contratação. Declinando cálculo.',
+    'Cotação do veículo não permitida: seus dados internos estão restritos nesta seguradora. Declinando cálculo.',
+    'Veículo sem aceitação: seu produto está indisponível nesta seguradora.',
+    'Risco sem aceitação: sua classe não é mais permitida nesta seguradora.',
+    'Restrição técnica: seu cálculo de seguro auto não é mais permitido nesta seguradora.',
+    'Veículo sem aceitação: seu limite de cotação já foi realizado.',
+    'Aceitação restrita: seus dados não são aceitos para cotação de seguro auto.',
+    'Veículo sem aceitação: seu histórico de cotação nesta seguradora.',
+    'Veículo sem aceitação: seu local de contratação não é permitido.',
+    'Veículo sem aceitação: sua área de contratação é restrita.',
+    'Veículo sem aceitação: seu estado de contratação é restrito.',
+    'Veículo sem aceitação: sua atividade está restrita nesta seguradora.',
+    'Aceitação restrita: dados do segurado recusados.',
+    'Veículo sem aceitação: ꜱᴇɴʜᴀ ᴇˣᴘɪʀᴏᴜ.', 'Veículo sem aceitação: ʟᴏɢɪɴ ᴅᴀ ᴄᴏʀʀᴇᴛᴏʀᴀ ʙʟᴏɋᴜᴇᴀᴅᴏ.',
+    'Veículo sem aceitação: ＳＥＮＨＡ ＥＸＰＩＲＯＵ.', 'Veículo sem aceitação acima de Ⅹ Ⅿ.'
   ].freeze
 end
 
@@ -209,7 +231,7 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
 
   describe 'o que libera' do
     ['Catálogo do veículo sem aceitação.', 'Veículo de permissionário sem aceitação.',
-     'Veículo não homologado para este produto.', 'Veículo sem aceitação nesta seguradora.',
+     'Veículo não homologado para aceitação.', 'Veículo sem aceitação nesta seguradora.',
      'Declinando o risco deste orçamento.'].each do |texto|
       it "libera «#{texto}»" do
         expect(permitido(texto)).to eq(texto)
@@ -267,7 +289,7 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
   end
 
   describe 'os textos das revisões, mesmo classificados como risco' do
-    TextosReaisDoMotivo::DAS_REVISOES.each do |texto|
+    TextosDasRevisoesDoMotivo::DAS_REVISOES.each do |texto|
       it "recusa «#{texto}»" do
         expect(permitido(texto)).to be_nil
       end

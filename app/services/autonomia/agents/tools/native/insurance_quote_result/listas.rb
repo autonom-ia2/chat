@@ -1,9 +1,9 @@
-# UMA LISTA POR PEDIDO, E NUNCA A MESMA DUAS VEZES (terceira e quarta rodadas de revisão da fatia 2 do #420).
+# UMA LISTA POR PEDIDO, E NUNCA A MESMA DUAS VEZES (terceira a quinta rodadas de revisão da fatia 2 do #420).
 #
 # A lista de uma execução da ferramenta da Lia leva também os códigos das execuções anteriores dela, na mesma
-# conversa e sobre a mesma cotação, cuja lista não é mensagem entregue (`codigos_a_publicar`); e a lista ainda não
-# entregue de uma execução não sai depois que uma mais nova, sobre a mesma cotação, foi despachada
-# (`InsuranceQuoteResult.publicacao_vale?`, com `despachada_depois?`).
+# conversa e sobre a mesma cotação, cuja lista não é mensagem entregue (`codigos_a_publicar`), e grava na própria
+# linha quais levou (`ABSORVIDAS_KEY`), sob o lock da conversa. A lista ainda não entregue de uma execução levada por
+# outra não sai mais (`InsuranceQuoteResult.publicacao_vale?`, com `absorvida_depois?`).
 #
 # "Mensagem entregue" é `lista_entregue?`: `sequence` positivo (o publicador o avança na mesma transação, sob o
 # lock da conversa, em que cria a mensagem) e nenhuma mensagem da execução com pendência de envio.
@@ -12,8 +12,8 @@
 module Autonomia::Agents::Tools::Native::InsuranceQuoteResult::Listas
   extend ActiveSupport::Concern
 
-  # Os status da execução mais nova que barra a lista não entregue de uma anterior: a já despachada.
-  DESPACHADAS = %w[running done].freeze
+  # No handle da execução: os ids das execuções anteriores cuja lista a desta leva.
+  ABSORVIDAS_KEY = 'listas_absorvidas'.freeze
   # Quantas execuções anteriores a passada lê, no máximo.
   ANTERIORES_LIDAS = 20
 
@@ -28,31 +28,36 @@ module Autonomia::Agents::Tools::Native::InsuranceQuoteResult::Listas
       Array(mensagens).none? { |mensagem| ::Autonomia::Agents::Tools::PendenciaDeEnvio.pendente?(mensagem) }
     end
 
-    # -> existe execução desta ferramenta na conversa, mais nova que `run`, já despachada, sobre a cotação `execucao`?
-    def despachada_depois?(run, execucao)
-      ::Autonomia::Agents::ToolRun.for_conversation(run.conversation_id).where(slug: slug, status: DESPACHADAS)
-                                  .where('id > ?', run.id)
-                                  .any? { |outra| outra.handle.to_h[self::EXECUCAO_KEY].to_i == execucao }
+    # -> alguma execução desta ferramenta na conversa, mais nova que `run`, levou a lista de `run` na sua?
+    def absorvida_depois?(run)
+      ::Autonomia::Agents::ToolRun.for_conversation(run.conversation_id).where(slug: slug).where('id > ?', run.id)
+                                  .any? { |outra| Array(outra.handle.to_h[ABSORVIDAS_KEY]).map(&:to_i).include?(run.id) }
     end
   end
 
   private
 
   # -> os códigos desta execução e os das anteriores desta ferramenta na conversa que `prometida?` aceita, lidas da
-  # mais nova para a mais antiga até a primeira com a lista entregue. A leitura é feita sob o lock da conversa, o
-  # mesmo sob o qual o publicador confere `publicacao_vale?` e cria a mensagem.
+  # mais nova para a mais antiga até a primeira com a lista entregue. A leitura e a gravação de quais foram levadas
+  # (`absorver`) são feitas sob o lock da conversa, o mesmo sob o qual o publicador confere `publicacao_vale?` e
+  # cria a mensagem.
   def codigos_a_publicar(handle, execucao)
     proprios = Array(handle[self.class::CODIGOS_KEY])
     return proprios if run&.conversation.nil?
 
-    anteriores = run.conversation.with_lock { prometidos_antes(execucao) }
-    (anteriores + proprios).uniq
+    levadas = run.conversation.with_lock { absorver(prometidas_antes(execucao)) }
+    (levadas.flat_map { |outra| Array(outra.handle.to_h[self.class::CODIGOS_KEY]) } + proprios).uniq
   end
 
-  def prometidos_antes(execucao)
-    anteriores.take_while { |outra| !self.class.lista_entregue?(outra) }
-              .select { |outra| prometida?(outra, execucao) }
-              .flat_map { |outra| Array(outra.handle.to_h[self.class::CODIGOS_KEY]) }
+  # Grava na linha desta execução quais anteriores ela leva. `merge_handle!` só grava com a execução viva: a que foi
+  # supersedida no meio da passada não barra ninguém, e a publicação dela é recusada por estar morta.
+  def absorver(anteriores)
+    run.merge_handle!({ ABSORVIDAS_KEY => anteriores.map(&:id) }) if anteriores.any?
+    anteriores
+  end
+
+  def prometidas_antes(execucao)
+    anteriores.take_while { |outra| !self.class.lista_entregue?(outra) }.select { |outra| prometida?(outra, execucao) }
   end
 
   # -> a lista de `outra`, sobre a mesma cotação, foi prometida numa fala que chegou ao cliente e ainda pode sair

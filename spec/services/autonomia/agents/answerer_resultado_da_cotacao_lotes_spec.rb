@@ -124,8 +124,41 @@ RSpec.describe Autonomia::Agents::Answerer do
     turno_da_lia(mensagem_do_cliente('e a Porto?'))
     Autonomia::Agents::Tools::AsyncPublishJob.new.perform(cotacao_run.id, adiado[1], Autonomia::Agents::Tools::AsyncConfig::MAX_PUBLISH_DEFERRALS)
 
-    expect(capturado[:saida]).to eq('Porto Seguro fez proposta: o preço dela está sendo enviado agora, numa mensagem do sistema.')
+    expect(capturado[:saida]).to eq('Porto Seguro fez proposta: o preço dela está na fila de envio e chega numa mensagem do sistema.')
     expect(vezes('Porto Seguro')).to eq(1)
+  end
+
+  # O LOTE PUBLICADO NA HORA COM A FILA DE ENVIO FORA (quinta rodada de revisão): a mensagem fica com pendência de envio
+  # e sem aceite, e o varredor ainda a reenvia. A Lia não repete o preço.
+  it 'com o lote publicado e o envio pendente, a Lia ouve que os preços estão na fila, e o preço sai uma vez' do
+    cotacao_run = cotacao_despachada(mensagem_do_cliente('quero cotar'), pedacos: 0)
+    fila_recusa_o_envio
+    motor.new.perform(cotacao_run.id, 1)
+    fila_volta
+    expect(conversation.messages.where(sender_type: 'AgentBot').map { |mensagem| mensagem.content_attributes['autonomia_envio_pendente'] })
+      .to eq([true])
+
+    capturado = modelo(nil, texto: 'Os preços estão chegando.')
+    turno_da_lia(mensagem_do_cliente('quanto deu?'))
+
+    expect(capturado[:saida]).to eq(ferramenta::PRECOS_A_CAMINHO)
+    expect([vezes('Porto Seguro'), vezes('Allianz')]).to eq([1, 1])
+  end
+
+  # A PUBLICAÇÃO ADIADA QUE MORREU (quinta rodada de revisão): passada a janela do lote, a Lia volta a publicar a lista,
+  # e o cliente recebe os preços.
+  it 'com o lote aceito que nunca virou mensagem, passada a janela, a lista da Lia sai' do
+    cotacao_run = cotacao_despachada(mensagem_do_cliente('quero cotar'), pedacos: 2)
+    motor.new.perform(cotacao_run.id, 1)
+    lote_adiado(cotacao_run)
+
+    travel(Autonomia::Insurance::ResultadoDaCotacao::JANELA_DO_LOTE + 1.minute) do
+      capturado = modelo(nil, texto: 'Seguem os preços.')
+      turno_da_lia(mensagem_do_cliente('quanto deu?'))
+
+      expect(capturado[:saida]).to start_with(ferramenta::LISTA_DEPOIS)
+      expect([vezes('Porto Seguro'), vezes('Allianz')]).to eq([1, 1])
+    end
   end
 
   # O CONTROLE: com o lote já entregue, o cliente que pede os preços de novo recebe a lista.
