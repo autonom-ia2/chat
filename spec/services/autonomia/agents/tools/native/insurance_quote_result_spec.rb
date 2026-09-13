@@ -402,17 +402,32 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(publicado_por(atual)).to eq(itens(porto, allianz))
     end
 
-    # A LISTA LEVADA POR OUTRA NÃO SAI MAIS (quinta rodada de revisão): quem barra é a execução que gravou, sob o lock
-    # da conversa, que a levou; a mais nova que ainda não chegou ao `poll` não barra.
-    it 'a lista não entregue sai enquanto nenhuma mais nova a levou, e não sai depois' do
+    # A LISTA SEM MENSAGEM NÃO SAI DEPOIS QUE A MAIS NOVA É DESPACHADA (terceira e sexta rodadas de revisão): a mais
+    # nova a leva no `poll`, e grava que a levou.
+    it 'a lista sem mensagem não sai depois que uma mais nova sobre a mesma cotação é despachada' do
       anterior = exibicao(status: 'done', codigos: ['8'])
-      mais_nova = exibicao(status: 'running', codigos: ['5'])
+      mais_nova = exibicao(status: 'pending', codigos: ['5'])
       expect(described_class.publicacao_vale?(anterior)).to be(true)
 
-      publicado_por(mais_nova)
+      mais_nova.update!(status: 'running')
+      expect(described_class.publicacao_vale?(anterior)).to be(false)
 
+      publicado_por(mais_nova)
       expect(mais_nova.reload.handle[described_class::ABSORVIDAS_KEY]).to eq([anterior.id])
       expect(described_class.publicacao_vale?(anterior)).to be(false)
+    end
+
+    # A LISTA LEVADA POR UMA QUE NÃO PUBLICOU (sexta rodada de revisão): o varredor abandonou o envio pendente de A depois
+    # de B levá-la (a marca sai, e A parece entregue), e a lista de B não saiu. C leva A também.
+    it 'leva também as listas que as anteriores já tinham levado' do
+      a = exibicao(status: 'done', codigos: ['8'], sequence: 1)
+      lista_da(a, pendente: false)
+      b = exibicao(status: 'done', codigos: ['5'])
+      b.update!(handle: b.handle.merge(described_class::ABSORVIDAS_KEY => [a.id]))
+      c = exibicao(status: 'running', codigos: ['5'])
+
+      expect(publicado_por(c)).to eq(itens(porto, allianz))
+      expect(c.reload.handle[described_class::ABSORVIDAS_KEY]).to contain_exactly(b.id, a.id)
     end
 
     it 'a mais nova que não levou a lista, sobre outra cotação, não barra' do
@@ -518,6 +533,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
 
       Autonomia::Agents::ToolRun.delete_all
       cotacao_com_lotes(entregues: ['porto'], aceitos: ['porto'])
+      expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(%w[8 5])
+    end
+
+    # A PENDÊNCIA QUE O VARREDOR NÃO PROCURA MAIS (sexta rodada de revisão): mais velha que a janela dele, ninguém vai
+    # reenviar o lote, e a lista da Lia volta a levar o preço.
+    it 'o lote com pendência de envio mais velha que a janela do varredor não está mais a caminho' do
+      cotacao_com_lotes(entregues: ['porto'], pendentes: ['allianz'])
+      antiga = (Autonomia::Agents::Tools::ReapStaleRunsJob::ENVIO_PENDENTE_JANELA + 1.hour).ago
+      conversation.messages.where(content: 'lote').find_each do |mensagem|
+        mensagem.update_columns(created_at: antiga) if mensagem.content_attributes['autonomia_envio_pendente'] # rubocop:disable Rails/SkipsModelValidations
+      end
+
       expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(%w[8 5])
     end
 

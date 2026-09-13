@@ -103,17 +103,20 @@ fora de `superseded`, `discarded`, `blocked` e `pending`. Não chama o conector 
   entrada do publicador e sob o lock da conversa: `Native::Base.publicacao_vale?`, chamado por
   `Tools::AutorizacaoDaExecucao#autorizacao`, recusa com `resultado_superado`. A retomada de envio pendente
   (`RetomadaDeEnvio`) faz a mesma pergunta e abandona a mensagem da lista quando surge cotação nova.
-- **Uma lista por pedido, e nunca a mesma duas vezes (rodadas 3 a 5, `InsuranceQuoteResult::Listas`).** "A lista
+- **Uma lista por pedido, e nunca a mesma duas vezes (rodadas 3 a 6, `InsuranceQuoteResult::Listas`).** "A lista
   é mensagem entregue" (`lista_entregue?`) é `sequence` positivo (o publicador o avança na mesma transação, sob o
   lock da conversa, em que cria a mensagem) e nenhuma mensagem da execução com pendência de envio. O `poll` lê, sob
   esse lock, as execuções anteriores desta ferramenta na conversa, da mais nova para a mais antiga, até a primeira
-  com a lista entregue, leva os códigos das `done` e das `superseded` que foram despachadas (`expires_at`) ou são do
-  mesmo turno, sobre a mesma cotação, e grava na própria linha, na mesma transação, quais levou
-  (`listas_absorvidas`). `publicacao_vale?` recusa a lista ainda não entregue de uma execução que outra, mais nova,
-  levou (rodada 5; até a rodada 4, a que uma mais nova despachada existia).
-- **O preço que a própria cotação ainda está enviando não entra na lista (rodadas 4 e 5).**
+  com a lista entregue, leva as `done` e as `superseded` que foram despachadas (`expires_at`) ou são do mesmo turno,
+  sobre a mesma cotação, **e as que essas já tinham levado** (rodada 6), e grava na própria linha, na mesma
+  transação, quais levou (`listas_absorvidas`). `publicacao_vale?` (`lista_levada?`) recusa a lista ainda não
+  entregue de uma execução que outra, mais nova, levou; e, se ela nem tem mensagem (`sequence` zero), também assim
+  que existe uma mais nova sobre a mesma cotação despachada (`running` ou `done`), que a leva no `poll`. A lista com
+  mensagem pendente de envio só é barrada por quem a levou: até lá, a retomada do envio vale.
+- **O preço que a própria cotação ainda está enviando não entra na lista (rodadas 4 a 6).**
   `ResultadoDaCotacao#a_caminho`: os códigos, pelo `LOTES_KEY`, dos lotes de preço (`PRECOS_KEY`) cuja mensagem
-  existe com pendência de envio (com aceite ou sem), ou que o publicador aceitou (`EntregaAceita::CHAVE`), não têm
+  existe com pendência de envio (com aceite ou sem) mais nova que a janela do varredor
+  (`ReapStaleRunsJob::ENVIO_PENDENTE_JANELA`, 2 dias), ou que o publicador aceitou (`EntregaAceita::CHAVE`), não têm
   mensagem e foram emitidos há menos de `JANELA_DO_LOTE` (10 min, acima do teto de adiamentos); lote a caminho sem
   os códigos gravados (emitido antes desta versão) segura todos. O resultado inteiro e o pedido por seguradora tiram
   esses códigos da lista e dizem ao modelo que o preço está na fila de envio.
@@ -258,11 +261,13 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
 22. **A execução mais nova `pending` não barra a lista anterior** (rodada 3). Uma `pending` pode ser descartada
     com o turno; se barrasse, a lista anterior se perderia junto. O custo é o residual 1 de "O que NÃO foi
     verificado".
-23. **A lista anterior é barrada pela mais nova que a levou, mesmo que a mais nova depois falhe** (rodada 3, com a
-    mais nova despachada; rodada 5, com a que gravou que a levou). Falha da execução da Lia depois de levar a lista
-    anterior é o estado da decisão 7 (sem palavra), e aí as duas listas ficam sem sair. A revisão da rodada 3
-    sugeriu adiar a anterior enquanto a nova não tiver a lista aceita, o que pede um terceiro valor no gancho do
-    publicador (hoje vale ou não vale), mudança no motor de todas as ferramentas; não fiz. Ver decisão 7.
+23. **A lista anterior é barrada pela mais nova que a levou, ou, sem mensagem, pela mais nova despachada, mesmo que
+    a mais nova depois falhe** (rodada 3, com a mais nova despachada; rodada 5, só com a que gravou que a levou;
+    rodada 6, as duas, porque a quinta revisão reproduziu a lista adiada saindo entre o despacho e o `poll` da nova,
+    e as duas listas saindo). Falha da execução da Lia depois de despachada é o estado da decisão 7 (sem palavra), e
+    aí as duas listas ficam sem sair. A revisão da rodada 3 sugeriu adiar a anterior enquanto a nova não tiver a
+    lista aceita, o que pede um terceiro valor no gancho do publicador (hoje vale ou não vale), mudança no motor de
+    todas as ferramentas; não fiz. Ver decisão 7.
 24. **O preço que a própria cotação ainda está enviando não entra na lista da Lia** (rodada 4). A terceira revisão
     reproduziu, pelo caminho real, a mesma seguradora em duas listas sem o cliente pedir duas vezes: o lote de
     preços da cotação adiado pela fala do turno (até 3 a 4 min com a cadeia abortada) e o cliente perguntando
@@ -285,20 +290,29 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
     reenvia A. Agora a lista de A entra na de B, e a retomada do envio de A é barrada por `publicacao_vale?`
     (a mensagem de A fica no banco, sem envio). A quarta revisão mostrou que o varredor podia abandonar A antes de
     B levá-la (B despachada, ainda sem `poll`), e A não saía em lugar nenhum. Rodada 5: quem barra A é a execução que
-    gravou, sob o lock da conversa, que a levou (`listas_absorvidas`); antes disso a retomada de A vale.
+    gravou, sob o lock da conversa, que a levou (`listas_absorvidas`); antes disso a retomada de A vale. A quinta
+    revisão mostrou que, abandonada a pendência de A depois de B levá-la, A parece entregue, e C (que leva B) não a
+    levava: a Porto prometida no turno de A não saía. Rodada 6: C leva também as que B já tinha levado.
 27. **O motivo do portal ao modelo não fecha por lista de palavras. Para o CEO decidir.** Cinco rodadas: lista de
     termos de conta (furada por vocabulário novo), objeto do risco (furada por conta colada a risco), vocabulário
     de liberação (furado por conta escrita com palavras do vocabulário). A quarta revisão sugeriu a causa raiz:
     **não passar o texto do portal ao modelo**, e sim uma categoria escrita pelo código a partir do objeto do risco
-    que o texto nomeia ("a seguradora recusou por causa do veículo", "da região", "do condutor"). Opções: (a)
-    manter o texto com a regra da rodada 5 (medido: 12 de 13 motivos reais do corpus liberados; perde 46 de 68
-    plausíveis; ainda passa conta escrita com palavras comuns); (b) categoria escrita pelo código (fecha o
-    vazamento por construção e deixa o custo independente do vocabulário; a Lia explica menos: "por causa do
-    veículo" em vez de "o veículo está acima da idade aceita"); (c) não contar motivo nenhum (só "não fez
-    proposta"). Recomendo (b). Não implementei: muda o que a decisão 1 do CEO permitiu à Lia contar.
+    que o texto nomeia ("a seguradora recusou por causa do veículo", "da região", "do condutor"). A quinta revisão
+    mediu a regra da rodada 5 com 134 textos sintéticos, todos `risco` no classificador real: **25 de 28 textos de
+    conta e permissão passam** reescritos sem as palavras retiradas ("Risco sem aceitação: cotação não é mais
+    permitida nesta seguradora.", "Veículo sem aceitação: cotação está restrita nesta seguradora."), **6 de 6 de
+    dado pessoal passam** ("Condutor principal com restrição."), e a retirada de palavras da rodada 5 custou 31 de 32
+    motivos plausíveis que só usavam uma delas ("Tabela FIPE", "Classe de bônus", "Local de pernoite", "Histórico de
+    sinistros"). Opções: (a) manter o texto com a regra atual (12 de 13 motivos reais do corpus liberados; passa
+    conta e dado pessoal escritos com palavras comuns; perde a maior parte dos motivos plausíveis); (b) categoria
+    escrita pelo código (fecha o vazamento por construção e deixa o custo independente do vocabulário; a Lia explica
+    menos: "por causa do veículo" em vez de "o veículo está acima da idade aceita"); (c) não contar motivo nenhum (só
+    "não fez proposta"). Recomendo (b). Não implementei: muda o que a decisão 1 do CEO permitiu à Lia contar.
 28. **"Segurado com restrição. Declinando cálculo." passa pela regra do motivo. Para o CEO decidir.** É igual em
     forma a "Restrição técnica para o Segurado", que está no corpus. Pode ser restrição de crédito de um segurado
-    que não é quem conversa. Tirar "segurado" do vocabulário recusa também a entrada do corpus.
+    que não é quem conversa. Tirar "segurado" do vocabulário recusa também a entrada do corpus. A quinta revisão
+    achou a mesma forma com o condutor ("Condutor principal com restrição.", 6 de 6 de dado pessoal passam); a
+    opção (b) da decisão 27 cobre os dois.
 29. **A regravação do handle pela passada seguinte (classe da #418) também apaga `LOTES_KEY` e `PRECOS_KEY`.** A
     quarta revisão reproduziu, com duas passadas sobre o mesmo handle, uma lista da Lia a mais além das duplicatas
     da própria #418. Declarado, sem conserto: é a mesma escrita do `record_attempt!` que a #418 trata.
@@ -356,6 +370,9 @@ Todos com `PATH="$HOME/.rbenv/shims:$PATH"`, exit code gravado em arquivo e cont
 | CI da PR #424 em `a12b1e0ca3` (run 34783889357) | suíte inteira do projeto (8 shards), RuboCop, Vitest, ESLint, Brakeman | 12 jobs `success` | — |
 | Depois da revisão (rodada 5) | o recorte da linha de base | 1989 exemplos, 0 falhas; md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes e depois | 0 |
 | Depois da revisão (rodada 5), fora do recorte | os mesmos 118 de antes | 118 exemplos, 0 falhas | 0 |
+| CI da PR #424 em `311f674562` (run 34786462640) | suíte inteira do projeto (8 shards), RuboCop, Vitest, ESLint, Brakeman | 12 jobs `success` | — |
+| Depois da revisão (rodada 6) | o recorte da linha de base | 1992 exemplos, 0 falhas; md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes e depois | 0 |
+| Depois da revisão (rodada 6), fora do recorte | os mesmos 118 de antes | 118 exemplos, 0 falhas | 0 |
 
 - `RAILS_ENV=test bundle exec rails zeitwerk:check`: "All is good!", exit 0 (em `9c0bdcb8be`, `f727ce1844` e
   depois da rodada 3).
@@ -609,6 +626,41 @@ comparativo, encerramento, pedido repetido, Medida e Super Admin).
 
 **10 de 10 reprovadas**, md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes e depois.
 
+## Rodada 6: a revisão de verificação de `311f674562`
+
+Revisor independente (agente com contexto próprio, só leitura, banco de teste próprio apagado no fim), com sondas
+pelo caminho real e o classificador real do conector sobre 134 textos. Confirmou corrigidos os três achados da
+rodada anterior (F1, F2, F6). Achou 1 P2 condicional e 5 P3. Os specs que ele rodou: 1246 exemplos em três grupos
+(rodada, motor e publicador, cotação e Super Admin), 0 falhas, exit 0; CI de `311f674562` com 12 checks `SUCCESS`.
+
+| Achado | Severidade | O que mudou |
+|---|---|---|
+| A regra do motivo deixa passar conta, permissão e dado pessoal escritos com palavras do vocabulário (25 de 28 e 6 de 6) | P2 (condicional) | Números na decisão 27, para o CEO |
+| A absorção não era transitiva, e a pendência abandonada pelo varredor fazia a lista parecer entregue: a Porto prometida não saía (reproduzido) | P3 | A lista leva também as que as anteriores já tinham levado (decisão 26); exemplo na ferramenta |
+| A lista adiada que chega ao teto entre o despacho e o `poll` do pedido novo saía, e a nova também (reproduzido) | P3 | Lista sem mensagem é barrada também pela mais nova despachada (decisão 23); exemplo de integração |
+| Lote retomado depois de `JANELA_DO_LOTE` num incidente de fila sai junto com a lista da Lia (reproduzido com relógio) | P3 (condicional) | Declarado em "O que NÃO foi verificado" |
+| Lote com pendência de envio mais velha que a janela do varredor ficava "na fila" para sempre (reproduzido) | P3 (baixa probabilidade) | A pendência só conta dentro de `ReapStaleRunsJob::ENVIO_PENDENTE_JANELA`; exemplo na ferramenta |
+| O custo da retirada de palavras da rodada 5 não estava declarado (31 de 32 motivos plausíveis) | P3 | Declarado na decisão 27 |
+
+Onde o revisor olhou e não achou defeito: os achados F1, F2 e F6 da rodada anterior, rodados de novo; a falha
+silenciosa de `merge_handle!` (só com a execução fora de `running`, e aí a publicação é recusada ou a passada é a
+mesma); `listas_absorvidas` sobrevivendo ao `record_attempt!`, ao `finish!` e ao `reforcar_aceites!`; a ordem dos
+locks (conversa e depois a linha da execução, sem inversão); o lote abandonado pelo varredor; o texto ao modelo nos
+estados novos; a transliteração com `#` e a retirada do código do portal.
+
+### Mutações da rodada 6
+
+| # | Mutação | Resultado |
+|---|---|---|
+| W01 | lista sem levar as que as anteriores já tinham levado | 1 falha |
+| W02 | lista sem mensagem não barrada pela mais nova despachada | 2 falhas |
+| W03 | lista com mensagem pendente também barrada pela mais nova despachada | 1 falha |
+| W04 | mais nova `pending` barra a lista sem mensagem | 1 falha |
+| W05 | lote com pendência de envio a caminho mesmo depois da janela do varredor | 1 falha |
+
+**5 de 5 reprovadas**, md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes e depois. **A rodada 6 não teve revisão
+independente**: os consertos dela foram cobertos por exemplo, mutação e suíte, não por um revisor.
+
 ## O que NÃO foi verificado
 
 - **Conversa real com o modelo.** Que a Lia chame a ferramenta quando o cliente pergunta, não escreva valor,
@@ -628,7 +680,8 @@ comparativo, encerramento, pedido repetido, Medida e Super Admin).
   com o cliente pedindo de novo no instante em que a lista anterior sai:
   1. a lista anterior, adiada, sai enquanto a execução do pedido novo ainda está `pending` (os segundos entre a
      chamada da ferramenta e o despacho do turno): ela não é barrada (decisão 22), e a lista nova repete os
-     códigos que o pedido novo nomeou;
+     códigos que o pedido novo nomeou. Para a lista anterior com mensagem pendente de envio, a janela vai até o
+     `poll` do pedido novo (decisão 23);
   2. mensagens cruzadas: a lista anterior vira mensagem logo antes de o pedido novo abrir. Aqui é um pedido
      novo de verdade; que o modelo veja a lista no histórico e não chame a ferramenta de novo é conduta do
      modelo, não verificada.
@@ -641,7 +694,10 @@ comparativo, encerramento, pedido repetido, Medida e Super Admin).
   caminhos de lock e não achou ordem invertida.
 - **O lote de preço aceito cuja publicação adiada morre** fica "a caminho" para a Lia por até `JANELA_DO_LOTE`
   (10 min) depois da emissão (decisão 24). A janela é maior que o teto de adiamentos medido (6 a 8 min), não
-  medida com a fila real.
+  medida com a fila real. **E o contrário**: num incidente que pare a fila por mais de 7 a 10 min no meio do
+  adiamento de um lote, o cliente que pergunta depois da janela recebe a lista da Lia, e o lote ainda sai quando a
+  fila volta: o preço duas vezes (reproduzido pela quinta revisão com o relógio adiantado). Sem conserto: a
+  publicação do lote não sabe que a Lia já mostrou aqueles preços.
 - **Lote de preço com a mensagem criada e a pendência de envio gravada logo depois**: entre as duas escritas
   (milissegundos, com o Redis fora) a Lia veria o lote como entregue. Sem teste.
 - **Três ou mais pedidos com listas levadas em cadeia e falhas no meio**: exercitados dois pedidos e a retomada do

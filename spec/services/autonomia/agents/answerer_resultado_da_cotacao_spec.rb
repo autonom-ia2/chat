@@ -304,6 +304,26 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(mensagens_do_bot.map(&:content)).to eq(['Seguem os preços.', 'Aqui estão os preços.', itens(porto, allianz)])
     end
 
+    # A LISTA ADIADA QUE CHEGA AO TETO ENTRE O DESPACHO E O `poll` DO PEDIDO NOVO (sexta rodada de revisão): ela é
+    # barrada pela execução nova já despachada, que a leva.
+    it 'a lista adiada que chega ao teto antes da leitura do pedido novo não sai, e a nova a leva' do
+      cotacao_da_conversa([porto, allianz])
+      modelo(function_call: chamada, texto: 'Seguem os preços.')
+      turno
+      anterior = exibicoes.sole
+      adiada = lista_adiada(anterior)
+
+      mensagem_do_cliente('cadê os preços?')
+      modelo(function_call: chamada('Porto'), texto: 'A Porto fez proposta.')
+      turno
+      nova = exibicoes.last
+      job.new.perform(nova.id, 0)
+      publicar_no_teto(anterior, adiada)
+      job.new.perform(nova.id, 1)
+
+      expect(mensagens_do_bot.map(&:content)).to eq(['Seguem os preços.', 'A Porto fez proposta.', itens(porto, allianz)])
+    end
+
     it 'a lista adiada do turno anterior e o pedido por uma seguradora: o que foi prometido sai uma vez' do
       cotacao_da_conversa([porto, allianz])
       modelo(function_call: chamada, texto: 'Seguem os preços.')

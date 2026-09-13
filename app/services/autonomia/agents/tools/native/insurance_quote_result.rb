@@ -9,7 +9,7 @@
 #     e o publicador os adia enquanto a entrega da fala do turno está em curso.
 #   - Sem preço a mostrar: `precheck` devolve o texto ao modelo e nenhuma execução é aberta.
 #
-# UMA LISTA POR PEDIDO, E NUNCA A MESMA DUAS VEZES (terceira e quarta rodadas de revisão): as listas de execuções
+# UMA LISTA POR PEDIDO, E NUNCA A MESMA DUAS VEZES (terceira a sexta rodadas de revisão): as listas de execuções
 # anteriores (`InsuranceQuoteResult::Listas`), e o preço cujo lote a própria cotação ainda está enviando, que não
 # entra na lista (`ResultadoDaCotacao#a_caminho`).
 #
@@ -102,13 +102,12 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     def closing_message(_arguments = nil) = VAZIO
 
     # A lista só vira mensagem enquanto a cotação que a Lia leu no turno for a mais nova da conversa, e, quando
-    # ainda não é mensagem entregue, enquanto nenhuma execução mais nova desta ferramenta a tiver levado na sua
-    # (`absorvida_depois?`, gravado por `codigos_a_publicar` sob o lock da conversa).
+    # ainda não é mensagem entregue, enquanto ela não sai em outra lista (`lista_levada?`).
     def publicacao_vale?(run)
       execucao = run.handle.to_h[EXECUCAO_KEY]
       return false unless execucao.present? && Resultado.execucao_mais_nova(run.conversation_id)&.id == execucao.to_i
 
-      lista_entregue?(run) || !absorvida_depois?(run)
+      lista_entregue?(run) || !lista_levada?(run, execucao.to_i)
     end
   end
 

@@ -152,7 +152,7 @@ class Autonomia::Insurance::ResultadoDaCotacao
   end
 
   # -> as identidades dos lotes de preço (`InsuranceQuote::PRECOS_KEY`) que ainda vão chegar ao cliente: a mensagem
-  # do lote existe com pendência de envio (`Tools::PendenciaDeEnvio`), com aceite ou sem; ou o publicador aceitou o
+  # do lote existe com pendência de envio que o varredor ainda procura, com aceite ou sem; ou o publicador aceitou o
   # lote (`Tools::EntregaAceita::CHAVE`), a mensagem não existe, e o lote foi emitido há menos de `JANELA_DO_LOTE`.
   def lotes_a_caminho
     precos = Array(run.handle.to_h[cotacao::PRECOS_KEY]).map(&:to_s)
@@ -164,9 +164,15 @@ class Autonomia::Insurance::ResultadoDaCotacao
 
   def lote_a_caminho?(token, aceitos)
     mensagem = ::Autonomia::Agents::Tools::EntregaPublicada.para(run.conversation, token)
-    return ::Autonomia::Agents::Tools::PendenciaDeEnvio.pendente?(mensagem) if mensagem
+    return envio_pendente?(mensagem) if mensagem
 
     aceitos.include?(token) && recente?(token)
+  end
+
+  # -> a mensagem tem pendência de envio que o varredor ainda procura (`ReapStaleRunsJob::ENVIO_PENDENTE_JANELA`).
+  def envio_pendente?(mensagem)
+    ::Autonomia::Agents::Tools::PendenciaDeEnvio.pendente?(mensagem) &&
+      mensagem.created_at > ::Autonomia::Agents::Tools::ReapStaleRunsJob::ENVIO_PENDENTE_JANELA.ago
   end
 
   # -> o lote foi emitido há menos de `JANELA_DO_LOTE`? Sem a hora gravada, vale a última escrita da execução.
