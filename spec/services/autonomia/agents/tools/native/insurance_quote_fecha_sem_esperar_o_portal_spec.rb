@@ -251,6 +251,26 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(entrega.legenda).not_to include(url)
     end
 
+    # A PASSADA QUE DEVOLVE `done` MARCA O HANDLE, e a que volta `running` para nova tentativa não
+    # marca. É por essa marca que o varredor sabe, numa linha que continua viva, que sobrou o desfecho.
+    it 'marca a conclusao na passada que devolve done, e nao na que volta para nova tentativa' do
+      allow(connector).to receive(:quote_proposal).and_raise(portal_fora)
+      tentativa = consultar('partial', com_desfecho, depois_de_uma_leitura('8', '47', '11'))
+      allow(connector).to receive(:quote_proposal).and_return({ 'url' => url })
+      concluida = consultar('partial', com_desfecho, tentativa.handle)
+
+      expect(tentativa.handle).not_to have_key(described_class::CONCLUSAO_KEY)
+      expect(concluida.handle[described_class::CONCLUSAO_KEY]).to be(true)
+    end
+
+    it 'afirma sobra quando a ferramenta ja devolveu done e a linha continua viva' do
+      handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['8'],
+                 described_class::FECHADO_KEY => true, tentativas => described_class::Comparativo::TETO_DE_TENTATIVAS }
+
+      expect(tool.resta_entregar?(handle)).to be(false)
+      expect(tool.resta_entregar?(handle.merge(described_class::CONCLUSAO_KEY => true))).to be(true)
+    end
+
     # O VARREDOR PERGUNTA SE SOBROU ALGO antes de dizer o fecho. Com o portal fechado e o comparativo
     # ainda por tentar, sobrou; esgotado o teto sem comparativo, não sobra mais nada a chegar.
     it 'afirma sobra enquanto o comparativo ainda sera tentado, e nao depois do teto' do

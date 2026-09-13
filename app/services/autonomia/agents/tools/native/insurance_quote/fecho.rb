@@ -52,6 +52,10 @@
 module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   extend ActiveSupport::Concern
 
+  # A PASSADA QUE FECHOU A COTAÇÃO DEVOLVEU `done` AO MOTOR (fatia 1 do PDF rápido, 13/09/2026). Gravada
+  # por `Comparativo#fechar` no handle de toda passada que devolve `done`, e lida por `resta_entregar?`.
+  CONCLUSAO_KEY = 'conclusao_devolvida'.freeze
+
   # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele era gerado só no ramo `done`,
   # quando o portal marcava a cotação como `completed` — e em 08/09/2026 a execução entregou cinco
   # preços e estourou o prazo na 22ª consulta, então o PDF nunca saiu. O comparativo é o que o
@@ -115,11 +119,19 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # comparativo (`trabalho_novo: false`); a resposta verdadeira ali é que sobrou o comparativo.
   # Esgotado o teto sem comparativo, não sobra.
   #
+  # A QUARTA (mesma fatia) é o desfecho de quem terminou: `CONCLUSAO_KEY` no handle de uma linha que o
+  # encerramento ainda encontra quer dizer que uma passada devolveu `done` e a linha não fechou — o
+  # processo morreu antes de `AsyncRunJob#finish_done` publicar o desfecho ou fechar a linha, ou o motor
+  # reagendou a passada porque o arquivo foi recusado. Sobrou pelo menos o desfecho. O fecho que sai
+  # daqui é o mesmo que o `done` publicaria, e a pergunta à conversa do encerramento impede o segundo.
+  # A linha gravada pela versão anterior não tem a marca, e continua caindo nas três primeiras.
+  #
   # As chaves lidas aqui sobrevivem ao corte das marcas do motor (`AsyncRunJob::MARCAS` não as lista),
   # então chegam pelo handle que o encerramento entrega.
   def resta_entregar?(handle)
     handle = handle.to_h
-    !portal_fechado?(handle) || comparativo_pendente?(handle) || comparativo_por_tentar?(handle)
+    !portal_fechado?(handle) || comparativo_pendente?(handle) || comparativo_por_tentar?(handle) ||
+      handle[self.class::CONCLUSAO_KEY].present?
   end
 
   private

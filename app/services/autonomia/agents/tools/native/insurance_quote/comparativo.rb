@@ -50,21 +50,26 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # As marcas só entram no handle depois de a entrega existir na forma em que vai sair
   # (`Progress.entregavel`), e é sobre essa forma que a identidade é calculada.
   def fechar(deliveries, handle)
-    return progress_class.done(deliveries: deliveries, handle: handle) unless comparativo_por_tentar?(handle)
+    return concluir_passada(deliveries, handle) unless comparativo_por_tentar?(handle)
 
     handle = handle.merge(TENTATIVAS_KEY => handle[TENTATIVAS_KEY].to_i + 1)
     pdf = gerar_comparativo(handle)
     entrega = pdf && progress_class.entregavel(pdf)
     return sem_comparativo(deliveries, handle) if entrega.nil?
 
-    progress_class.done(deliveries: deliveries + [entrega], handle: handle.merge(marcas_do_comparativo(entrega)))
+    concluir_passada(deliveries + [entrega], handle.merge(marcas_do_comparativo(entrega)))
   end
 
   # O comparativo desta passada não saiu: `running` se ainda há tentativa, `done` se não há.
   def sem_comparativo(deliveries, handle)
     return progress_class.running(deliveries: deliveries, handle: handle) if comparativo_por_tentar?(handle)
 
-    progress_class.done(deliveries: deliveries, handle: handle)
+    concluir_passada(deliveries, handle)
+  end
+
+  # `done`, com `Fecho::CONCLUSAO_KEY` no handle (ver `Fecho#resta_entregar?`).
+  def concluir_passada(deliveries, handle)
+    progress_class.done(deliveries: deliveries, handle: handle.merge(self.class::CONCLUSAO_KEY => true))
   end
 
   # -> verdade quando há preço emitido, o teto não foi atingido e o comparativo não foi assumido.

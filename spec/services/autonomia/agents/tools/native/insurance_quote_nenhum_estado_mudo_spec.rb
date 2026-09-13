@@ -286,6 +286,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           expect(conversation.messages.reload.map(&:content).join).not_to include(url)
         end
 
+        it 'a passada done que morreu antes do desfecho: o varredor diz o fecho' do
+          stub_request(:get, url).to_return(status: 200, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
+          portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
+          run = execucao(desfalque)
+          morre = job.new
+          allow(morre).to receive(:finish_done)
+          morre.perform(run.id, 5)
+          run.update!(expires_at: 10.minutes.ago)
+
+          Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+          expect(run.reload.status).to eq('failed')
+          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+        end
+
         it 'a linha abandonada esperando nova tentativa do comparativo: o varredor diz o fecho' do
           allow(mock).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, '504'))
           portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])

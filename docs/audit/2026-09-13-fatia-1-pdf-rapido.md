@@ -74,6 +74,9 @@ Antes de publicar, a mesma pergunta à conversa do encerramento (`fecho_publicad
 `FRASES_DE_FECHO`, inclusive a constante parcial da versão anterior). A regra "pergunta, depois publica"
 virou um método só (`publicar_se_nao_houver_fecho`), usado pelos dois caminhos.
 
+Toda passada que devolve `done` grava `conclusao_devolvida` no handle; se o processo morrer antes do
+desfecho, o varredor lê a marca como sobra e publica o mesmo fecho (decisão 10).
+
 ### 4. Tirar o link cru do PDF
 
 - `AsyncPublisher`: download, gravação ou anexo que falham não publicam nada (`sem_arquivo`) e voltam
@@ -125,6 +128,15 @@ virou um método só (`publicar_se_nao_houver_fecho`), usado pelos dois caminhos
    por leitura de código e sem teste próprio: a linha gravada pela `main` com portal fechado, preço
    entregue, geração do PDF falha e morte antes do `finish!` também passa a receber essa frase pelo
    varredor, onde a `main` calava.
+10. **A marca de conclusão (`conclusao_devolvida`) fecha a janela da morte no `done`.** Toda passada que
+    devolve `done` grava a marca no handle (`Comparativo#concluir_passada`), e `resta_entregar?` a conta
+    como sobra. Sem ela, a passada que persistia o handle (portal fechado, comparativo aceito) e morria
+    antes de `finish_done` publicar o desfecho deixava o varredor em silêncio — e essa janela era nova
+    em relação à `main` no caminho comum, porque lá a cotação com recusa nunca ficava com o portal
+    fechado. A linha gravada pela `main` não tem a marca e continua fechando em silêncio, como afirmam
+    os specs existentes ("a cotação que já entregou tudo fecha em silêncio"), que não foram tocados. Tem
+    teste pelo motor (o varredor publica o fecho; e não repete o que o `done` publicou antes de morrer)
+    e no `nenhum_estado_mudo`.
 
 ## Riscos de regressão verificados, e como
 
@@ -135,7 +147,8 @@ virou um método só (`publicar_se_nao_houver_fecho`), usado pelos dois caminhos
 | `Insurance::Medida` (Super Admin) | não lê status; exemplo pelo motor: `cotacoes: 1, seguradoras_acionadas: 5, seguradoras_com_preco: 2` — `entregues` só avança em `precos`, que não mudou |
 | `ReapStaleRunsJob` | código intocado; specs existentes verdes; exemplo novo da linha abandonada em nova tentativa |
 | execução em voo no deploy | exemplo com o handle que a `main` grava depois da segunda consulta: um PDF, um desfecho; e com a frase parcial da versão anterior já publicada: nenhum fecho novo ao lado |
-| nenhum estado mudo | `insurance_quote_nenhum_estado_mudo_spec` estendido: 5 estados novos × 4 desfalques do especialista |
+| nenhum estado mudo | `insurance_quote_nenhum_estado_mudo_spec` estendido: 6 estados novos × 4 desfalques do especialista |
+| morte entre gravar o `done` e publicar o desfecho | exemplos pelo motor: o varredor publica o fecho pela marca de conclusão; e não repete o que o `done` publicou antes de morrer |
 | specs de encerramento | `async_run_job_encerramento_parcial_spec`, `encerramento_spec`, `reap_stale_runs_job_spec`: sem alteração de exemplo existente, verdes |
 
 ## Specs existentes alterados, e por quê
@@ -167,43 +180,55 @@ foram lidos do JSON que o próprio rspec grava (`--format json --out`) e o exit 
 |---|---|---|---|
 | base (código intocado, `3f08e37c7c`) | `spec/jobs/autonomia/agents/tools`, `spec/services/autonomia/agents/tools`, `tool_run_spec`, `spec/services/autonomia/insurance`, `insurance_measurements_controller_spec`, `requests/.../autonomia/insurance`, `answerer_duvida_durante_cotacao_spec`, `responder_async_spec` | 1017 exemplos, 0 falhas | 0 |
 | RED (specs novos e alterados, `app/` intocado) | 10 arquivos | 273 exemplos, 65 falhas (+1 ajustado e conferido depois: 66) | 1 |
-| GREEN (mesmo escopo da base, código final) | idem base + 2 arquivos novos | 1078 exemplos, 0 falhas | 0 |
-| final (depois das mutações, md5 de `app/` igual antes e depois) | `spec/services/autonomia`, `spec/jobs/autonomia`, `spec/models/autonomia`, `spec/requests/api/v1/accounts/autonomia`, `spec/controllers/super_admin` | 1650 exemplos, 0 falhas, 3 pendentes (quarentena anterior: `registration_checkout/provisioner_spec`, `sso/provisioner_spec`) | 0 |
+| GREEN (mesmo escopo da base) | idem base + 2 arquivos novos | 1078 exemplos, 0 falhas | 0 |
+| RED da marca de conclusão (código do primeiro commit) | ferramenta, motor e `nenhum_estado_mudo` | 102 exemplos, 7 falhas | 1 |
+| GREEN com a marca (mesmo escopo da base) | idem | 1087 exemplos, 0 falhas | 0 |
+| final do primeiro commit (`347bbf7`, depois da rodada 1 de mutações) | `spec/services/autonomia`, `spec/jobs/autonomia`, `spec/models/autonomia`, `spec/requests/api/v1/accounts/autonomia`, `spec/controllers/super_admin` | 1650 exemplos, 0 falhas, 3 pendentes | 0 |
+| final (código com a marca, depois da rodada 2 de mutações; md5 de `app/` igual antes e depois) | idem | 1658 exemplos, 0 falhas, 3 pendentes (quarentena anterior: `registration_checkout/provisioner_spec`, `sso/provisioner_spec`) | 0 |
 
-Rubocop com lista explícita dos 21 arquivos tocados (10 de `app/`, 11 de `spec/`): 0 ofensas, exit 0.
+CI do fork ("Testes do fork": Rubocop, Brakeman e bundle-audit, ESLint, Vitest e RSpec em 8 partes, a
+suíte inteira) no `70438d5` — primeiro commit mais a correção de comentários, sem a marca: 12 jobs
+`success`.
+
+Rubocop com lista explícita dos arquivos tocados (10 de `app/`, 11 de `spec/`): 0 ofensas, exit 0.
 `rails zeitwerk:check`: "All is good!", exit 0.
 
 ### Mutações
 
 Uma por vez, pelo driver em Ruby (original em memória, âncora conferida como única, restauração com md5
-conferido), contra 11 arquivos de spec (299 exemplos). Resultado em três estados: PEGA / SOBREVIVEU /
-ERRO (erro de carga ou zero exemplos). **22 mutações, 22 PEGA, 0 sobreviventes, 0 erros; originais
-restaurados com md5 igual.**
+conferido), contra 11 arquivos de spec. Resultado em três estados: PEGA / SOBREVIVEU / ERRO (erro de
+carga ou zero exemplos).
+
+- **Rodada 1** (código do primeiro commit, 299 exemplos): 22 mutações, 22 PEGA.
+- **Rodada 2** (código final, com a marca de conclusão, 307 exemplos): **24 mutações, 24 PEGA, 0
+  sobreviventes, 0 erros; originais restaurados com md5 igual.** A tabela é a da rodada 2.
 
 | id | mutação | resultado | exemplos que caíram (amostra) |
 |---|---|---|---|
-| M1 | `finished?` só com `completed`/`failed` | PEGA 36 | fecha_sem_esperar (ferramenta) :76 :102 :128 |
+| M1 | `finished?` só com `completed`/`failed` | PEGA 39 | ferramenta :76 :102 :128 |
 | M2 | sem a exigência de leitura anterior | PEGA 47 | quote_offers :206 :220; ferramenta :90 |
 | M3 | sem a cobertura das acionadas | PEGA 3 | quote_offers :214 :220; ferramenta :119 |
 | M4 | lista negra (só `running` segura) | PEGA 1 | quote_offers :199 |
 | M5 | `error` fora dos desfechos | PEGA 2 | quote_offers :183; ferramenta :102 |
-| M6 | PDF que não sai encerra sem nova tentativa | PEGA 12 | ferramenta :141 :164 :233 |
-| M7 | sem teto de tentativas | PEGA 12 | ferramenta :164 :256; motor :257 |
+| M6 | PDF que não sai encerra sem nova tentativa | PEGA 13 | ferramenta :141 :164 :233 |
+| M7 | sem teto de tentativas | PEGA 13 | ferramenta :164 :266 :276 |
 | M8 | comparativo emitido conta como assumido sem aceite | PEGA 3 | ferramenta :184; motor :202 :273 |
 | M9 | sem a busca da mensagem na conversa | PEGA 2 | ferramenta :212; motor :231 |
 | M10 | `done` encerra com o arquivo recusado | PEGA 5 | motor :202 :231 :273 |
-| M11 | qualquer entrega recusada segura o `done` | PEGA 1 | motor :448 |
-| M12 | `done` sem o fecho de quem tem resultado | PEGA 23 | motor :132 :174 :202 |
+| M11 | qualquer entrega recusada segura o `done` | PEGA 1 | motor :496 |
+| M12 | `done` sem o fecho de quem tem resultado | PEGA 24 | motor :132 :174 :202 |
 | M13 | `done` sem a pergunta à conversa | PEGA 2 | motor :312; encerramento :416 |
-| M13b | `concluir` engolindo a exceção | PEGA 2 | motor :420; encerramento :438 |
+| M13b | `concluir` engolindo a exceção | PEGA 2 | motor :468; encerramento :438 |
 | M14 | fecho também para a pergunta pelo dado | PEGA 2 | encerramento :406 :438 |
-| M15 | `finish_done` da `main` | PEGA 20 | motor :132 :174 :202 |
-| M16 | download que falha publica a reserva | PEGA 11 | motor :202 :273 :400 |
+| M15 | `finish_done` da `main` | PEGA 21 | motor :132 :174 :202 |
+| M16 | download que falha publica a reserva | PEGA 11 | motor :202 :273 :448 |
 | M17 | anexo que falha publica a reserva | PEGA 2 | publicador :685 :936 |
 | M18 | falha sem procurar a mensagem no ar | PEGA 1 | publicador :487 |
 | M19 | forma recusada vira texto com o link | PEGA 3 | ferramenta :233; comparativo :104; job comparativo :131 |
 | M20 | reserva volta a carregar o link | PEGA 3 | ferramenta :246; comparativo :72; ramo_auto :440 |
-| M21 | `resta_entregar?` sem o comparativo por tentar | PEGA 6 | ferramenta :256; motor :371; nenhum_estado_mudo :289 |
+| M21 | `resta_entregar?` sem o comparativo por tentar | PEGA 6 | ferramenta :276; motor :371; nenhum_estado_mudo :304 |
+| M22 | `resta_entregar?` sem a marca de conclusão | PEGA 6 | ferramenta :266; motor :395; nenhum_estado_mudo :289 |
+| M23 | `done` sem gravar a marca de conclusão | PEGA 6 | ferramenta :256; motor :395; nenhum_estado_mudo :289 |
 
 "ferramenta" = `insurance_quote_fecha_sem_esperar_o_portal_spec`; "motor" =
 `async_run_job_fecha_sem_esperar_o_portal_spec`. Linhas no estado do código em que a rodada rodou.
@@ -220,11 +245,13 @@ restaurados com md5 igual.**
   é aceito no adiamento e o motor encerra; se o download falhar depois, no `AsyncPublishJob`, ninguém
   pede outro. O cliente fica sem PDF e sem link (antes recebia o link). Não há teste de nova tentativa
   para esse caminho, porque ela não existe.
-- **Morte do worker entre `record_attempt!` e a publicação do desfecho no `done`.** Com o portal fechado
-  e o comparativo aceito, o varredor fecha em silêncio — os specs existentes afirmam esse silêncio
-  ("a cotação que já entregou tudo fecha em silêncio") e não foram afrouxados. Nesse intervalo, o
-  cliente fica com preços e PDF e sem a frase de fecho. É decisão de produto se o varredor deve dizer o
-  fecho ali; ela muda a asserção desses specs.
+- **A linha da `main` na janela da morte do `done`.** Uma linha gravada pela versão anterior com o portal
+  fechado e o comparativo aceito, abandonada antes do `finish!`, fecha em silêncio pelo varredor (é o
+  que os specs existentes afirmam, e não foram tocados). Só a linha desta versão tem a marca de
+  conclusão (decisão 10). É decisão de produto se o varredor deve dizer o fecho também na linha antiga.
+- **Morte entre a publicação ADIADA do desfecho e o `finish!` com o Redis fora.** O `AsyncPublishJob`
+  não entra na fila, `concluir` levanta e a passada é tentada de novo; se o processo morrer antes, o
+  varredor publica o fecho pela marca. Não há teste com o Redis fora nesse ponto.
 - **Duas passadas concorrentes na mesma linha (R19/#418).** Podem pedir dois comparativos (URLs
   diferentes). Risco anterior a esta fatia; as novas tentativas acrescentam passadas no fim.
 - **Ordem PDF × fecho com as duas publicações adiadas.** Os dois `AsyncPublishJob` podem sair em ordem

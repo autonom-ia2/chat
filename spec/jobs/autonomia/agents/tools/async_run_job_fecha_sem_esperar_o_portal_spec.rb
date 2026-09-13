@@ -386,6 +386,54 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(mock).to have_received(:quote_proposal).once
   end
 
+  # A MORTE ENTRE GRAVAR O `done` E PUBLICAR O DESFECHO (um deploy: 25 s de shutdown do Sidekiq). A
+  # passada persistiu o handle com o portal fechado e o comparativo aceito, e o desfecho não saiu. O
+  # handle carrega a marca que a ferramenta grava ao devolver `done`, e o varredor, lendo-a, publica o
+  # fecho. A linha gravada pela versão anterior, sem a marca, continua fechando em silêncio
+  # (`async_run_job_encerramento_parcial_spec`).
+  describe 'a passada done que morre antes do desfecho' do
+    it 'o varredor publica o fecho que o done nao chegou a publicar' do
+      # Arrange — a passada grava o handle e morre antes de `finish_done`
+      run = cotacao_submetida
+      ate_a_leitura_parcial(run)
+      pdf_responde(pdf_ok)
+      portal_responde('partial', leitura_com_todas_com_desfecho)
+      morre = described_class.new
+      allow(morre).to receive(:finish_done)
+      morre.perform(run.id, 3)
+      expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA])
+      run.update!(expires_at: 10.minutes.ago)
+
+      # Act
+      Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+      # Assert
+      expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+    end
+
+    it 'o varredor nao repete o fecho que o done publicou antes de morrer' do
+      # Arrange — o desfecho sai e a passada morre antes do `finish!`
+      run = cotacao_submetida
+      ate_a_leitura_parcial(run)
+      pdf_responde(pdf_ok)
+      portal_responde('partial', leitura_com_todas_com_desfecho)
+      allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
+      allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
+      allow(run).to receive(:finish!).and_return(false)
+      described_class.new.perform(run.id, 3)
+      expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
+      Autonomia::Agents::ToolRun.where(id: run.id).update_all(expires_at: 10.minutes.ago) # rubocop:disable Rails/SkipsModelValidations
+
+      # Act
+      Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+      # Assert — um fecho só, e a linha fechada pelo varredor
+      expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
+      expect(Autonomia::Agents::ToolRun.find(run.id)).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+    end
+  end
+
   # A REGRA DO MOTOR, COM UMA FERRAMENTA QUALQUER: só a entrega de ARQUIVO recusada segura o `done`.
   # A de texto recusada (a pergunta pelo dado que falta é devolvida em toda passada) encerra como antes.
   describe 'o motor, com uma ferramenta qualquer' do
