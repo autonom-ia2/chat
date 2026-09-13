@@ -55,15 +55,21 @@ item que o código produz**: preço sem período, que leva a ressalva `SEM_BASE`
 linha, com o nome de seguradora mais longo que o portal devolveu nas medições ("Bp Assinatura") —
 **86 caracteres por item**.
 
-| seguradoras no lote | texto composto | folga |
-|---|---|---|
-| 17 (o que o portal real devolveu) | 2.089/3.000 | 911 |
-| 22 | 2.493/3.000 | 507 |
-| 26 (o maior lote que ainda cabe) | 2.990/3.000 | 10 |
-| 27 | estoura | — |
+**O que duas medições independentes reproduziram:** o texto composto só alcança o corte a partir da
+**27ª** seguradora no mesmo lote, e o portal real devolveu **17**.
 
-A folga é real e larga, e **não é guarda**: quando o corte morde, ele não avisa ninguém, e as ofertas
-cortadas já foram marcadas em `DELIVERED_KEY`. Está em "o que NÃO foi verificado".
+**O que elas NÃO reproduziram, e por isso não está afirmado aqui:** o número de caracteres em 17 e em
+22. As duas medições divergiram entre si nessas duas linhas, e a causa é o comprimento do item, que
+não é constante — o item de 86 caracteres exige um valor de quatro dígitos, e o item descrito em prosa
+acima tem 84. Trocado o pior item, o corte anda: com um valor de cinco dígitos (87 caracteres) ele
+chega na 26ª. Quem precisar do número exato mede de novo declarando o item; a conclusão que sustenta
+`MAX_FRASE = 350` é o corte na 27ª contra as 17 reais, e essa se sustenta em ambas.
+
+A folga **não é guarda**: quando o corte morde, ele não avisa ninguém. Duas perdas, as duas medidas e
+nenhuma tratada aqui: as ofertas cortadas já foram marcadas em `DELIVERED_KEY`, e **o primeiro bloco
+destruído é o aviso sem bônus** — que no mesmo merge grava `AVISO_SENT_KEY => true`, então o cliente é
+cotado sem classe de bônus, nunca sabe por quê, e o aviso não é reemitido. Estão em "o que NÃO foi
+verificado".
 
 ### 2. O nó das frases (P1-4)
 

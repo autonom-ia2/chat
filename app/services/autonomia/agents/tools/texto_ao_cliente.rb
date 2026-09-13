@@ -28,8 +28,9 @@ module Autonomia::Agents::Tools::TextoAoCliente
   # A FOLGA FOI MEDIDA, e está na auditoria de 12/09/2026 com os números: com as DUAS frases do
   # especialista no teto e o pior item que o código produz (86 caracteres — preço sem período, que
   # leva a ressalva inteira, com o nome de seguradora mais longo que o portal devolveu), o texto
-  # composto chega a 2.089/3.000 nas 17 seguradoras que o portal real devolveu, e só alcança o corte
-  # na 27ª. É folga medida sobre este teto; não é guarda, e o corte não avisa ninguém quando morde.
+  # composto só alcança o corte a partir da 27ª seguradora no mesmo lote, contra as 17 que o portal
+  # real devolveu (medido duas vezes, em 12/09/2026; o número de caracteres depende do comprimento do
+  # item e está em `docs/audit/`). É folga medida, não guarda: o corte não avisa ninguém quando morde.
   MAX_FRASE = 350
 
   # Travessão e meia-risca. Decisão do CEO (12/09/2026): não vão ao texto que o cliente lê. Onde o
@@ -138,10 +139,12 @@ module Autonomia::Agents::Tools::TextoAoCliente
     texto.gsub(url_ou_caminho) { ::Regexp.last_match(:url) || ::Autonomia::Agents::Config::TRUNCATION_SUFFIX }
   end
 
-  # UMA VARREDURA SÓ, COM A URL NA FRENTE da alternância: casando primeiro, ela consome o link
-  # inteiro e o bloco o devolve intacto; o que casar pelo outro lado é caminho de campo de verdade,
-  # e vira o sinal de corte. Apagar a URL antes e redigir depois não serviria — o texto que sai tem
-  # de ser o de entrada com o caminho trocado, e o link precisa voltar no lugar exato.
+  # UMA VARREDURA SÓ: o que casar pelo lado da URL volta intacto pelo bloco, o que casar pelo outro
+  # lado é caminho de campo de verdade e vira o sinal de corte. Quem faz o link sobreviver é a
+  # varredura única, NÃO a ordem da alternância — em Ruby vence a posição mais à esquerda, e a URL
+  # sempre começa antes de qualquer ponto dentro dela. Medido em 12/09/2026: invertendo os dois lados
+  # a suíte continua verde. Apagar a URL antes e redigir depois não serviria: o texto que sai tem de
+  # ser o de entrada com o caminho trocado, e o link precisa voltar no lugar exato.
   def url_ou_caminho
     @url_ou_caminho ||= /(?<url>#{URL.source})|#{caminho_de_campo.source}/
   end

@@ -26,15 +26,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   # O que o `Registry`, o `Bound` e o job leem NA CLASSE.
   let(:textos_de_classe) do
     %i[slug tool_name description params available_for? async? openai_schema
-       accepted_message waiting_message failure_message partial_message uncertain_message]
+       accepted_message waiting_message failure_message partial_message uncertain_message
+       closing_message]
   end
   # O que o `Bound` e o job chamam NA INSTÂNCIA (`resultado_entregue?` e `resta_entregar?` são as
   # duas perguntas que o `Tools::Encerramento` faz à ferramenta antes de escolher o fecho).
   let(:trabalho_de_instancia) do
     %i[precheck closing_deliveries resultado_entregue? resta_entregar? pedido call start poll]
   end
-  # Os cinco textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
-  let(:frases) { %i[accepted_message waiting_message failure_message partial_message uncertain_message] }
+  # Os textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
+  # `closing_message` entrou nesta lista com a entrega das frases do especialista: ela é o desfecho de
+  # quem TEM resultado, e nasceu da mesma família que em 08/09/2026 foi declarada na instância e nunca
+  # rodou — o cliente leu o texto genérico do `Base`. Declará-la na instância passa a reprovar aqui.
+  let(:frases) do
+    %i[accepted_message waiting_message failure_message partial_message uncertain_message closing_message]
+  end
 
   Autonomia::Agents::Tools::Registry.all.each do |ferramenta|
     describe ferramenta.name do
