@@ -69,10 +69,11 @@ module Autonomia::Agents::Tools::TextoAoCliente
   # comia `p.ex.`, `hub2you.ai` e `contato@corretora.com.br`.
   GRUPOS_DO_RAMO = %w[segurado configuracoes].freeze
 
-  # A URL SAI ANTES DE OLHAR, e sem isto a redação MUTILA O COMPARATIVO. A reserva do comparativo é
-  # a frase do especialista mais a URL que o portal gerou (`Comparativo#entrega_do_comparativo`), e
-  # essa URL termina em `.../quotation.pdf` — `quotation` é grupo de `Parametros::GRUPOS`, então o
-  # caminho de campo casa DENTRO do link e o cliente recebe uma aba que não abre. A `main` tinha
+  # A URL SAI ANTES DE OLHAR, e sem isto a redação MUTILA QUALQUER LINK. Até a fatia 1 do PDF rápido
+  # (13/09/2026) a reserva do comparativo era a frase do especialista mais a URL que o portal gerou;
+  # desde ela a reserva não leva a URL e não é publicada, mas a regra vale para todo texto que passa por
+  # `redigir`. A URL do portal termina em `.../quotation.pdf` — `quotation` é grupo de
+  # `Parametros::GRUPOS`, então o caminho de campo casaria DENTRO do link. A `main` tinha
   # esta exclusão (`Progress::URL`) e ela se perdeu junto com a peneira antiga; é regressão, não
   # desenho novo. Vale só para `redigir`: em `vetar` o modelo não escreve link nenhum, e recuar ali
   # custa uma frase.

@@ -138,9 +138,9 @@ RSpec.describe Autonomia::Agents::Tools::Progress do
       expect(entregue.url).to eq(arquivo.url)
     end
 
-    # A RESERVA é texto de cliente tanto quanto a legenda: é o que ele lê quando o arquivo falha. A
-    # URL fica intacta (a reserva legítima a carrega), e o caminho de campo que sobra é redigido
-    # (rodada 5, 11/09/2026 — a regra existia; faltava a guarda sobre a reserva).
+    # A RESERVA passa pela mesma depuração da legenda: a URL fica intacta e o caminho de campo que
+    # sobra é redigido (rodada 5, 11/09/2026). Desde 13/09/2026 o publicador não publica a reserva e a
+    # cotação não põe o link nela; este exemplo trava só a depuração da forma, com qualquer texto.
     it 'redige o caminho de campo da reserva sem levar o link junto' do
       suja = Autonomia::Agents::Tools::EntregaDeArquivo.new(url: arquivo.url, nome: arquivo.nome,
                                                             legenda: arquivo.legenda,

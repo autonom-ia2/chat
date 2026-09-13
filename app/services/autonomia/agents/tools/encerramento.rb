@@ -43,6 +43,11 @@
 # QUEM PUBLICA É QUEM CHAMOU, pelo bloco: o motor publica ESPERANDO a cadeia de entrega humanizada do
 # turno (e re-agenda a adiada); o varredor FORÇA (`publish!`), porque a cadeia daquele turno morreu há
 # muito e esperar por ela deixaria o cliente sem desfecho para sempre.
+#
+# A EXECUÇÃO QUE TERMINA EM `done` TAMBÉM PASSA POR AQUI, por `concluir` (fatia 1 do PDF rápido,
+# 13/09/2026): só o fecho, com a mesma pergunta à conversa antes de publicar. Desde essa fatia a
+# cotação encerra em `done` quando toda seguradora tem desfecho, e o fecho que ela recebia pelo
+# encerramento por prazo precisa sair por esse caminho.
 class Autonomia::Agents::Tools::Encerramento
   # A marca do TRABALHO do encerramento, adquirida antes dele: um sinal de shutdown no meio (deploy)
   # deixaria a execução em `running`, o retry do Sidekiq reentraria aqui, e a ferramenta geraria de
@@ -80,8 +85,8 @@ class Autonomia::Agents::Tools::Encerramento
     @publicador = publicador
   end
 
-  # -> true quando alguma entrega DO ENCERRAMENTO foi aceita (publicada, ou adiada — a adiada sai
-  # sozinha pelo `AsyncPublishJob`). Elas NÃO contam em `delivered_count`, de propósito: esse contador
+  # -> true quando alguma entrega DO ENCERRAMENTO foi aceita (publicada, ou adiada — a adiada fica com o
+  # `AsyncPublishJob`, que ainda pode recusá-la). Elas NÃO contam em `delivered_count`, de propósito: esse contador
   # é o da entrega do TRABALHO, e é ele que diz, na janela do pedido repetido (entrega 10), que a
   # execução deu resultado.
   #
@@ -100,6 +105,20 @@ class Autonomia::Agents::Tools::Encerramento
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{@run.slug} #{e.class}")
     false
+  end
+
+  # O DESFECHO DE UMA EXECUÇÃO QUE TERMINOU (`done`), chamado por `AsyncRunJob#finish_done` antes do
+  # `finish!` (fatia 1 do PDF rápido, 13/09/2026). Não adquire a marca `closed` e não entrega nada: só
+  # publica a frase de fecho, com a MESMA pergunta à conversa do passo 3 de `encerrar`
+  # (`fecho_publicado?`). A frase é escolhida por `conclusao`. -> nil.
+  #
+  # AO CONTRÁRIO DE `encerrar`, O QUE LEVANTA AQUI SOBE. No motor, a exceção chega a
+  # `AsyncRunJob#advance`, que trata a passada como falha e a tenta de novo (`retry_or_fail`) sem
+  # chegar ao `finish!` — era o que acontecia antes desta fatia quando a publicação do `finish_done`
+  # levantava. Engolir aqui fecharia a linha em `done` sem desfecho.
+  def concluir
+    publicar_se_nao_houver_fecho { conclusao }
+    nil
   end
 
   private
@@ -141,8 +160,12 @@ class Autonomia::Agents::Tools::Encerramento
   # O ACEITE FICA REGISTRADO na linha (`Tools::EntregaAceita`), como no motor: é por ele que uma
   # segunda passada — e a própria ferramenta, logo abaixo, ao decidir o fecho — sabe que esta
   # entrega já foi assumida pelo publicador, mesmo quando ela ainda não virou mensagem.
+  #
+  # A ENTREGA ADIADA fica anotada (`@adiada`, o token dela): o fecho desta passada é encadeado a ela
+  # (`encadear`), para não sair antes dela.
   def publicar_uma(entrega)
     resultado = ::Autonomia::Agents::Tools::EntregaAceita.registrar(@run, entrega, publicar(entrega))
+    @adiada = ::Autonomia::Agents::Tools::EntregaPublicada.token_de(@run, entrega) if resultado.deferred?
     resultado.aceita?
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento entrega falhou slug=#{@run.slug} #{e.class}")
@@ -155,10 +178,36 @@ class Autonomia::Agents::Tools::Encerramento
   # como falso —, e aí a dedupe por token do publicador não salvaria: seriam dois textos, duas
   # mensagens, uma contradizendo a outra. Por isso se pergunta antes, e por TODAS as frases.
   def publicar_fecho(entregou)
+    publicar_se_nao_houver_fecho { fecho(entregou) }
+  end
+
+  # A regra comum a `encerrar` e `concluir`: nenhuma frase de fecho desta execução na conversa, e só
+  # então a frase que o bloco escolher (nil não publica nada), encadeada à entrega que ainda está a
+  # caminho, quando há uma (`encadear`).
+  def publicar_se_nao_houver_fecho
     return if fecho_publicado?
 
-    texto = fecho(entregou)
-    publicar(texto) if texto
+    texto = yield
+    publicar(encadear(texto)) if texto
+  end
+
+  # O FECHO NUNCA SAI ANTES DA ENTREGA QUE ESTÁ A CAMINHO (rodada 2 da fatia 1 do PDF rápido,
+  # 13/09/2026). -> o texto, ou a `EntregaEncadeada` dele quando há de quem depender: a entrega adiada
+  # nesta passada (`@adiada`) ou a que a ferramenta diz estar aceita e ainda sem mensagem
+  # (`entrega_a_caminho`). O publicador adia a encadeada enquanto essa mensagem não existe, até
+  # `AsyncConfig::MAX_DEPENDENCY_DEFERRALS`.
+  #
+  # NÃO SEI É PUBLICAR: se a pergunta à ferramenta levantar, o fecho sai sem esperar — fora de ordem,
+  # e não em silêncio.
+  def encadear(texto)
+    ::Autonomia::Agents::Tools::EntregaEncadeada.forma(texto, depois_de: @adiada || a_caminho_pela_ferramenta)
+  end
+
+  def a_caminho_pela_ferramenta
+    ferramenta&.entrega_a_caminho(handle_da_ferramenta)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] entrega a caminho indisponivel slug=#{@run.slug} #{e.class}")
+    nil
   end
 
   # Alguma das frases de fecho DESTA execução já está na conversa?
@@ -221,6 +270,17 @@ class Autonomia::Agents::Tools::Encerramento
 
   def falha_ou_incerteza
     frase(@run.envio_incerto? ? :uncertain_message : :failure_message)
+  end
+
+  # A FRASE DE QUEM TERMINOU (`concluir`). Contador zero: a frase de falha. Resultado confirmado pela
+  # ferramenta (`resultado_entregue?`): o fecho de quem tem resultado — sem perguntar se sobrou algo,
+  # porque essa frase não diz que algo ficou pelo caminho. Entrega aceita que não é resultado (a
+  # pergunta pelo dado que falta) ou execução sem agente: nil, nada é publicado.
+  def conclusao
+    return frase(:failure_message) if @run.delivered_count.zero?
+    return nil unless ferramenta&.resultado_entregue?(handle_da_ferramenta)
+
+    frase(:closing_message)
   end
 
   # O FECHO DE QUEM TEM RESULTADO SÓ SAI QUANDO ELE É VERDADE, E QUEM SABE É A FERRAMENTA.

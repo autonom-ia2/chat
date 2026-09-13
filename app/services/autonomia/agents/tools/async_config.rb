@@ -41,6 +41,11 @@ module Autonomia::Agents::Tools::AsyncConfig
   # intercalar entre dois pedaços da mesma frase. Cada espera é curta e limitada.
   PUBLISH_DEFER_SECONDS = 3
   MAX_PUBLISH_DEFERRALS = 30
+  # O TETO DE ADIAMENTOS DE UMA ENTREGA ENCADEADA (`Tools::EntregaEncadeada`) enquanto a entrega de que ela
+  # depende não é mensagem: o dobro do teto da cadeia. A entrega de que ela depende é publicada forçada ao
+  # atingir `MAX_PUBLISH_DEFERRALS`; a encadeada, enfileirada depois dela, espera até o dobro antes de
+  # publicar sem ela.
+  MAX_DEPENDENCY_DEFERRALS = MAX_PUBLISH_DEFERRALS * 2
 
   # NÃO EXISTE TETO DE COTAÇÃO POR CONVERSA, E ISSO É DECISÃO DE PRODUTO.
   #

@@ -45,34 +45,45 @@
 # OS ESCRITORES DESSAS CHAVES MORAM AQUI TAMBÉM, e não na classe: quem grava a identidade e quem a
 # lê são o mesmo assunto, e separá-los é como as duas definições do token nasceram. São quatro,
 # todos privados — `token_da_entrega`, `registrar_entrega_de_preco`, `marcar_preco_legado` e
-# `marcas_do_comparativo` —, chamados pelas passadas de emissão (`precos` e `fechar`).
+# `marcas_do_comparativo` —, chamados pelas passadas de emissão (`precos` e `Comparativo#fechar`).
 #
 # Separado da ferramenta pelo mesmo motivo de `Comparativo`, `Declaracao`, `Recusas`, `Envio` e
 # `Veiculo`: é outro assunto, e a classe está no teto de linhas.
 module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   extend ActiveSupport::Concern
 
+  # A PASSADA QUE FECHOU A COTAÇÃO DEVOLVEU `done` AO MOTOR (fatia 1 do PDF rápido, 13/09/2026). Gravada
+  # por `Comparativo#fechar` no handle de toda passada que devolve `done`, e lida por `resta_entregar?`.
+  CONCLUSAO_KEY = 'conclusao_devolvida'.freeze
+
   # O COMPARATIVO NÃO PODE SER REFÉM DA SEGURADORA MAIS LENTA. Ele era gerado só no ramo `done`,
   # quando o portal marcava a cotação como `completed` — e em 08/09/2026 a execução entregou cinco
   # preços e estourou o prazo na 22ª consulta, então o PDF nunca saiu. O comparativo é o que o
   # cliente leva para decidir; os preços soltos no chat são o resumo dele.
   #
-  # MAS ELE É TRABALHO NOVO NO PORTAL: `comparison_pdf` faz login e uma chamada de
-  # até 60 s, e o publicador ainda baixa o arquivo. No caminho do VARREDOR isso não sai — lá são até
-  # 500 linhas em sequência dentro de um cron, com 25 s de shutdown do Sidekiq, e quem é morto no
-  # meio joga o resto do lote para a varredura seguinte, 10 min depois. O cliente fica com os
+  # MAS ELE É TRABALHO NOVO NO PORTAL: `gerar_comparativo` faz login e uma chamada de até 65 s, e o
+  # publicador ainda baixa o arquivo (até 20 s). No caminho do VARREDOR isso não sai — lá são até 500
+  # linhas em sequência dentro de um cron, com 25 s de shutdown do Sidekiq, e quem é morto no meio joga
+  # o resto do lote para a varredura seguinte, 10 min depois. O cliente fica com os
   # preços que já leu e com o fecho honesto sobre o que ele tem; o PDF do portal continua lá.
   #
   # E NÃO SE PEDE COMPARATIVO PARA QUEM NÃO TEM PREÇO. O comparativo é o complemento dos preços na
-  # tela; sem nenhum deles ter sido aceito, gerá-lo é login mais uma chamada de até 60 s por uma
+  # tela; sem nenhum deles ter sido aceito, gerá-lo é login mais uma chamada de até 65 s por uma
   # entrega que muito provavelmente será recusada pelo mesmo motivo que recusou a primeira — e o
   # cliente precisa, ali, da frase honesta de falha. A pergunta é a do ACEITE
   # (`resultado_entregue?`).
+  #
+  # O QUE DECIDE É `Comparativo#comparativo_por_tentar?`, e não uma sentinela gravada na emissão (rodada 2
+  # da fatia 1 do PDF rápido, 13/09/2026). A sentinela `comparativo_enviado` era gravada quando a entrega
+  # saía da ferramenta, antes do download: um comparativo cujo download falhou nunca era pedido de novo no
+  # prazo. Agora o prazo pede de novo enquanto houver preço emitido, tentativa sobrando e o comparativo não
+  # tiver sido assumido pelo publicador.
   def closing_deliveries(handle, trabalho_novo: true)
     return [] unless trabalho_novo
     return [] unless resultado_entregue?(handle)
+    return [] unless comparativo_por_tentar?(handle.to_h)
 
-    [comparison_pdf(handle.to_h)].compact
+    [gerar_comparativo(handle.to_h)].compact
   end
 
   # RESULTADO DA COTAÇÃO É PREÇO QUE O PUBLICADOR ACEITOU. Nunca o `pedido` — a pergunta pelo dado
@@ -87,10 +98,24 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   #
   # (`self.class::` porque o nome curto não se resolve dentro de um módulo compacto — o mesmo
   # cuidado de `Comparativo`.)
+  #
+  # O COMPARATIVO ASSUMIDO TAMBÉM É RESULTADO (sonda E da rodada 2): com o lote de preços recusado pelo
+  # publicador e o PDF aceito, o cliente tem o PDF e ficava sem frase nenhuma.
   def resultado_entregue?(handle)
     handle = handle.to_h
 
-    Array(handle[self.class::PRECOS_KEY]).any? { |token| aceita?(token) } || prova_legada?(handle)
+    Array(handle[self.class::PRECOS_KEY]).any? { |token| aceita?(token) } || comparativo_assumido?(handle) ||
+      prova_legada?(handle)
+  end
+
+  # -> o token do comparativo desta execução quando o publicador o aceitou e ele ainda não é mensagem na
+  # conversa (a publicação dele foi adiada); nil em qualquer outro caso. O encerramento encadeia o fecho a
+  # esse token (`Tools::Encerramento#encadear`).
+  def entrega_a_caminho(handle)
+    token = handle.to_h[self.class::COMPARATIVO_KEY]
+    return nil if token.blank? || !aceita?(token)
+
+    ::Autonomia::Agents::Tools::EntregaPublicada.para(run&.conversation, token).nil? ? token : nil
   end
 
   # SOBRA ENQUANTO O PORTAL NÃO TIVER FECHADO — e depois dele, enquanto faltar chegar o que já foi
@@ -102,18 +127,32 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # recebeu os preços E o comparativo lia "algumas seguradoras não responderam a tempo".
   #
   # QUEM PROVA QUE O PORTAL FECHOU É `FECHADO_KEY`, e não `PDF_SENT_KEY`: a segunda só é gravada
-  # quando houve comparativo a emitir, e uma cotação que fecha sem URL de comparativo não a grava —
+  # quando houve comparativo assumido, e uma cotação que fecha sem comparativo não a grava —
   # ler a ausência como "ainda vem coisa" é a mesma frase falsa, pela outra ponta (Codex).
   #
   # A SEGUNDA METADE é o comparativo EMITIDO que não foi aceito: a publicação voltou `blocked` com a
-  # sentinela já gravada. Aí sobrou mesmo, e calar seria esconder do cliente que falta algo.
-  # Comparativo que nunca foi emitido não é sobra: não há o que chegar.
+  # identidade já gravada. Aí sobrou mesmo, e calar seria esconder do cliente que falta algo.
   #
-  # As duas chaves sobrevivem ao corte das marcas do motor (`AsyncRunJob::MARCAS` não as lista),
-  # então chegam aqui pelo handle que o encerramento entrega.
+  # A TERCEIRA (fatia 1 do PDF rápido, 13/09/2026) é o comparativo que ainda seria tentado
+  # (`Comparativo#comparativo_por_tentar?`): a passada que fechou a cotação não conseguiu o PDF (a
+  # geração falhou, ou o publicador não o aceitou) e a execução seguiu para pedir de novo. Se a
+  # corrente de jobs morre antes da passada seguinte, quem encerra é o varredor, que não pede
+  # comparativo (`trabalho_novo: false`); a resposta verdadeira ali é que sobrou o comparativo.
+  # Esgotado o teto sem comparativo, não sobra.
+  #
+  # A QUARTA (mesma fatia) é o desfecho de quem terminou: `CONCLUSAO_KEY` no handle de uma linha que o
+  # encerramento ainda encontra quer dizer que uma passada devolveu `done` e a linha não fechou — o
+  # processo morreu antes de `AsyncRunJob#finish_done` publicar o desfecho ou fechar a linha, ou o motor
+  # reagendou a passada porque o arquivo foi recusado. Sobrou pelo menos o desfecho. O fecho que sai
+  # daqui é o mesmo que o `done` publicaria, e a pergunta à conversa do encerramento impede o segundo.
+  # A linha gravada pela versão anterior não tem a marca, e continua caindo nas três primeiras.
+  #
+  # As chaves lidas aqui sobrevivem ao corte das marcas do motor (`AsyncRunJob::MARCAS` não as lista),
+  # então chegam pelo handle que o encerramento entrega.
   def resta_entregar?(handle)
     handle = handle.to_h
-    !portal_fechado?(handle) || comparativo_pendente?(handle)
+    !portal_fechado?(handle) || comparativo_pendente?(handle) || comparativo_por_tentar?(handle) ||
+      handle[self.class::CONCLUSAO_KEY].present?
   end
 
   private
@@ -180,34 +219,18 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
     handle.merge(self.class::PRECO_LEGADO_KEY => Array(already).any?)
   end
 
-  # AS DUAS MARCAS DO COMPARATIVO, e elas dizem coisas diferentes: `PDF_SENT_KEY` é "já emiti este
-  # comparativo" (o que impede a segunda emissão) e `COMPARATIVO_KEY` é a IDENTIDADE da entrega —
-  # é por ela que o fecho pergunta à lista do aceite se o publicador a assumiu. Sem execução não
-  # há identidade a gravar, e aí sai só a sentinela.
+  # A IDENTIDADE DO COMPARATIVO EMITIDO (`COMPARATIVO_KEY`), pela mesma definição do publicador: é por ela
+  # que `Comparativo#comparativo_assumido?` pergunta à lista do aceite e à conversa se o publicador assumiu
+  # o arquivo. Sem execução não há token, e aí não se grava nada. A ausência se resolve aqui, e não com um
+  # `compact` sobre o handle mesclado, que apagaria qualquer outra chave nula do handle da ferramenta.
   #
-  # A AUSÊNCIA DA IDENTIDADE SE RESOLVE AQUI, e não com um `compact` sobre o handle mesclado: aquele
-  # apagava QUALQUER chave nula do handle da ferramenta, não só esta. Hoje nenhuma é nula — a
-  # diferença era inerte —, mas um apagamento silencioso de handle é exatamente o tipo de coisa que
-  # só aparece depois, na chave que alguém acrescentar.
-  #
-  # E ESTA IDENTIDADE NÃO GANHA A ESCRITA IMEDIATA QUE A DO PREÇO GANHOU (rodada 5), porque ela não
-  # decide nada sozinha: `COMPARATIVO_KEY` só é lida por `comparativo_pendente?`, e `resta_entregar?`
-  # só chega nela quando `portal_fechado?` é VERDADE — fato que viaja em `FECHADO_KEY`/`PDF_SENT_KEY`,
-  # gravadas no MESMO `record_attempt!` que esta. Perdida a passada, perdem-se as três juntas, e não
-  # há cruzamento com durabilidades diferentes para fechar. (Adiantar `PDF_SENT_KEY` seria pior: ela
-  # é a sentinela que impede a segunda emissão, e torná-la durável antes da publicação transformaria
-  # a morte no meio em comparativo que ninguém reemite — a ponta que a issue #414 já carrega.)
-  #
-  # O QUE SE PAGA POR ISSO, DITO INTEIRO (rodada 6, R18): perdida a passada, a linha abandonada lê
-  # `portal_fechado` ausente e o fecho publica a frase parcial para quem recebeu preços E
-  # comparativo. Pela porta do MOTOR isso não é regressão (a `main` publica a parcial sempre que
-  # `delivered_count` é positivo); pela porta do VARREDOR É — lá a `main` calava com contador
-  # positivo. A janela é estreita (entre o aceite do comparativo e a persistência seguinte não há
-  # trabalho), e a decisão de não bloquear por ela está na auditoria.
+  # NA EMISSÃO, SÓ A IDENTIDADE (rodada 2 da fatia 1 do PDF rápido, 13/09/2026). `PDF_SENT_KEY` é gravada
+  # por `Comparativo#concluir_passada`, na passada que encontra o comparativo assumido: a emissão acontece
+  # antes do download, e gravada aqui ela marcava como enviado o comparativo cujo download falhou.
+  # `Comparativo#fechar` leva esta identidade à linha antes de publicar o arquivo (ver lá o porquê).
   def marcas_do_comparativo(pdf)
     token = token_da_entrega(pdf)
-    marcas = { self.class::PDF_SENT_KEY => true }
-    token.blank? ? marcas : marcas.merge(self.class::COMPARATIVO_KEY => token)
+    token.blank? ? {} : { self.class::COMPARATIVO_KEY => token }
   end
 
   # O token de uma entrega DESTA execução, pela mesma definição que o publicador usa.
@@ -281,8 +304,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   end
 
   # O portal fechou? `FECHADO_KEY` é a resposta; `PDF_SENT_KEY` vale como prova para as execuções
-  # que já estavam VOANDO quando esta versão subiu — ela só é gravada no mesmo ramo `done`, depois
-  # do `return … unless finished?(result)`, então quem a tem fechou. Sem esta segunda leitura, a
+  # que já estavam VOANDO quando esta versão subiu — ela só é gravada no mesmo ramo, depois
+  # do `return … unless finished?(…)`, então quem a tem fechou. Sem esta segunda leitura, a
   # linha que atravessou o deploy com o comparativo entregue fecharia dizendo "algumas seguradoras
   # não responderam a tempo" a quem recebeu tudo — o defeito que esta entrega corrige, ressuscitado
   # pela janela do deploy.

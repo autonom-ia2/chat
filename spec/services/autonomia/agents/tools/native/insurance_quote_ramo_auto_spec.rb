@@ -447,12 +447,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
       # Assert — a lista serve para decidir; o PDF é o que o cliente leva adiante. Desde a entrega
-      # 11 ele sai como ARQUIVO (a forma serializada de `EntregaDeArquivo`), com o link de reserva.
+      # 11 ele sai como ARQUIVO (a forma serializada de `EntregaDeArquivo`). Desde a fatia 1 do PDF
+      # rápido (13/09/2026) a reserva não carrega o link do portal: a URL fica só em `url`.
       comparativo = Autonomia::Agents::Tools::EntregaDeArquivo.de(progress.deliveries.last)
       expect(comparativo.legenda).to include('Comparativo com todas as opções')
       expect(comparativo.url).to eq('https://exemplo.test/comparativo.pdf')
-      expect(comparativo.reserva).to include('https://exemplo.test/comparativo.pdf')
-      expect(progress.handle[described_class::PDF_SENT_KEY]).to be(true)
+      expect(comparativo.reserva).not_to include('https://exemplo.test/comparativo.pdf')
+      # A emissão conta a tentativa e não grava a sentinela de enviado (rodada 2 da fatia 1 do PDF rápido):
+      # o arquivo ainda vai ser baixado pelo publicador.
+      expect(progress.handle[described_class::Comparativo::TENTATIVAS_KEY]).to eq(1)
+      expect(progress.handle[described_class::PDF_SENT_KEY]).to be_blank
       # O FECHAMENTO DO PORTAL SE GRAVA POR SI (entrega 8a): é ele que distingue "ainda tem
       # seguradora por responder" de "é isto que havia", e não pode depender de o PDF ter saído.
       expect(progress.handle[described_class::FECHADO_KEY]).to be(true)
@@ -686,9 +690,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(tool_do_motor.resta_entregar?('quote_id' => 'abc:1', fechado => true)).to be(false)
       end
 
-      # O COMPARATIVO EMITIDO QUE O PUBLICADOR NÃO ASSUMIU É SOBRA — e a sentinela não sabe disso:
-      # ela é gravada quando a entrega sai da ferramenta, antes de o publicador decidir. Com a
-      # publicação recusada, o fecho calava sobre um comparativo que faltou (Codex).
+      # O COMPARATIVO EMITIDO QUE O PUBLICADOR NÃO ASSUMIU É SOBRA — e a sentinela da linha gravada pela
+      # versão anterior não sabe disso: lá ela era gravada quando a entrega saía da ferramenta, antes de o
+      # publicador decidir. Com a publicação recusada, o fecho calava sobre um comparativo que faltou (Codex).
       it 'afirma sobra quando o comparativo saiu da ferramenta e nao foi aceito' do
         token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, 'Comparativo: https://exemplo.test/c.pdf')
         handle = { fechado => true, described_class::PDF_SENT_KEY => true,
@@ -746,6 +750,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(connector).not_to have_received(:quote_proposal)
     end
 
+    # Desde a fatia 1 do PDF rápido (13/09/2026) o PDF que não sai volta `running`, para a passada
+    # seguinte pedir de novo (o teto e o esgotamento estão em
+    # `insurance_quote_fecha_sem_esperar_o_portal_spec`). Os preços continuam saindo na mesma passada.
     it 'keeps the prices when the PDF fails to generate' do
       # Arrange — um PDF que não sai não pode apagar preços que já chegaram
       allow(connector).to receive(:quote_result).and_return(
@@ -757,7 +764,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
       # Assert
-      expect(progress).to be_done
+      expect(progress).to be_running
       expect(progress.deliveries.join).to include('Ezze')
       expect(progress.deliveries.join).not_to include('Comparativo')
     end
