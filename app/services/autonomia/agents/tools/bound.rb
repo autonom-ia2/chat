@@ -79,7 +79,7 @@ class Autonomia::Agents::Tools::Bound
     antecipado = precheck_native(ferramenta)
     return recusar_pela_conferencia(antecipado, delivery) if antecipado
 
-    run, repetida = abrir(args, pedido_native(ferramenta), delivery)
+    run, repetida = abrir(args, ferramenta, delivery)
     return recusar_pela_repeticao(repetida, delivery) if repetida
     return recusar('execucao_ja_em_andamento', delivery) if run.blank?
 
@@ -122,13 +122,24 @@ class Autonomia::Agents::Tools::Bound
     conferencia.to_s
   end
 
-  # Compara com a última consulta e abre, na mesma seção crítica (entrega 10): -> [run, repetida].
-  def abrir(args, pedido, delivery)
+  # Compara com a última consulta e abre, na mesma seção crítica (entrega 10): -> [run, repetida]. A
+  # identidade do pedido e o handle de abertura vêm da instância que já fez a conferência.
+  def abrir(args, ferramenta, delivery)
     ::Autonomia::Agents::ToolRun.abrir_ou_repetida(
-      agent: @agent, slug: slug, arguments: args, pedido: pedido,
+      agent: @agent, slug: slug, arguments: args, pedido: pedido_native(ferramenta),
+      handle_inicial: abertura_native(ferramenta),
       scope: { conversation_id: delivery.conversation.id, agent_inbox_id: delivery.agent_inbox&.id,
                origin_message_id: delivery.origin_message_id }
     )
+  end
+
+  # O handle de abertura da instância (`Native::Base#handle_de_abertura`). Falha aqui é vazio: a execução abre
+  # sem ele.
+  def abertura_native(ferramenta)
+    ferramenta.handle_de_abertura.to_h
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] handle de abertura falhou slug=#{slug} #{e.class}")
+    {}
   end
 
   # "E AÍ, SAIU?" NÃO ABRE COTAÇÃO NOVA (entrega 10). O pedido tem os mesmos dados da última consulta

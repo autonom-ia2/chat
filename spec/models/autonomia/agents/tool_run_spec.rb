@@ -41,6 +41,19 @@ RSpec.describe Autonomia::Agents::ToolRun do
       expect(other.execution_key).not_to eq(run.execution_key)
     end
 
+    # O HANDLE DE ABERTURA (fatia 2 do #420): o que a ferramenta calculou no turno nasce na linha, sem marca do
+    # motor, ao lado da identidade do pedido.
+    it 'grava o handle de abertura sem as marcas do motor e com a identidade do pedido' do
+      marcas = { Autonomia::Agents::ToolRun::SUBMITTED_KEY => true, Autonomia::Agents::Tools::Encerramento::CLOSED_KEY => true,
+                 Autonomia::Agents::ToolRun::ENTREGAS_ACEITAS => ['forjado'] }
+
+      run = described_class.open!(agent: agent, slug: 'consultar_cotacao', arguments: {}, pedido: 'digest-1',
+                                  handle_inicial: marcas.merge(execucao_da_cotacao: 7).merge('seguradoras' => ['8']),
+                                  scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+
+      expect(run.handle).to eq('execucao_da_cotacao' => 7, 'seguradoras' => ['8'], described_class::PEDIDO => 'digest-1')
+    end
+
     it 'supersedes the live run of the same conversation and tool, keeping exactly one active' do
       # Arrange
       first = open_run

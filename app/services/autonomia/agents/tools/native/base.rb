@@ -6,8 +6,9 @@
 # tipado. É esse buraco que a ferramenta nativa fecha.
 #
 # Nativa é declarada em CÓDIGO (uma classe por ferramenta, registrada no Registry) e ligada por
-# conta através de `agent.config['native_tool_slugs']`. O dono da conta escolhe quais ligar; nunca
-# escreve a URL nem o cabeçalho — é isso que permite falar com o nosso adapter sem expor como.
+# agente através de `agent.config['native_tool_slugs']`, menos no Agente de Cotação, cuja lista é a do
+# deploy (`Agent#ferramentas_nativas`, fatia 2 do #420). Nunca se escreve a URL nem o cabeçalho — é isso
+# que permite falar com o nosso adapter sem expor como.
 class Autonomia::Agents::Tools::Native::Base
   # Toda ferramenta nativa devolve STRING para o modelo, igual à HTTP. Erro também é string: o
   # modelo lê e decide o que fazer, em vez de o turno morrer.
@@ -139,8 +140,9 @@ class Autonomia::Agents::Tools::Native::Base
       false
     end
 
-    # A ENTREGA DESTA EXECUÇÃO AINDA PODE VIRAR MENSAGEM? Perguntado pelo publicador sob o lock da conversa,
-    # imediatamente antes de criar a mensagem (`Tools::AutorizacaoDaExecucao`). -> true por padrão.
+    # A ENTREGA DESTA EXECUÇÃO AINDA PODE VIRAR MENSAGEM? Perguntado por `Tools::AutorizacaoDaExecucao`: no
+    # publicador, na entrada e de novo sob o lock da conversa antes de criar a mensagem; e na retomada de um
+    # envio pendente (`RetomadaDeEnvio`), que abandona a mensagem quando a resposta é falsa. -> true por padrão.
     def publicacao_vale?(_run)
       true
     end
@@ -283,6 +285,13 @@ class Autonomia::Agents::Tools::Native::Base
   # -> String, ou nil para usar o `accepted_message`. Nil por padrão.
   def aceite
     nil
+  end
+
+  # O QUE A EXECUÇÃO GUARDA NO HANDLE AO NASCER, calculado no turno pela mesma instância que respondeu o
+  # `aceite` (fatia 2 do #420). `Bound#abrir` o entrega a `ToolRun.open!`, que o grava sem as marcas do motor;
+  # as passadas do motor o encontram na linha. -> Hash; vazio por padrão.
+  def handle_de_abertura
+    {}
   end
 
   # A IDENTIDADE DO PEDIDO (entrega 10): o digest da entrada NORMALIZADA — pelo adapter, não por

@@ -416,9 +416,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       textos += [ao_modelo.call(nil), ao_modelo.call('Seguradora 3'), ao_modelo.call('Azul')]
       run.finish!('done')
       textos += [ao_modelo.call(nil), ao_modelo.call('Seguradora 3'), ao_modelo.call('Azul')]
+      run.update!(handle: run.handle.except('quote_id'))
+      textos << ao_modelo.call(nil)
 
-      expect(textos.size).to eq(8)
+      expect(textos.size).to eq(9)
       expect(textos).to all(be_present)
+      expect(textos.last).to eq(resultado::NAO_CHEGOU)
     end
 
     it 'os textos de classe da ferramenta da Lia sao vazios, com qualquer argumento' do

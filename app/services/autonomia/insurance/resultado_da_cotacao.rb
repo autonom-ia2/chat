@@ -51,6 +51,12 @@ class Autonomia::Insurance::ResultadoDaCotacao
     run.running? && run.handle.to_h[cotacao::FECHADO_KEY].blank?
   end
 
+  # -> a execução recebeu o número da cotação no portal? A recusada no `start` (faltou dado, ramo desconhecido)
+  # não recebeu.
+  def cotou?
+    run.handle.to_h['quote_id'].present?
+  end
+
   # -> a cotação foi feita sem a classe de bônus da apólice atual (`InsuranceQuote::SEM_BONUS_KEY`)?
   def sem_bonus?
     run.handle.to_h[cotacao::SEM_BONUS_KEY].present?

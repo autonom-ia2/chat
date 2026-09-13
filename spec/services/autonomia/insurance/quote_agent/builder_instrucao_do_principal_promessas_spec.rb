@@ -233,9 +233,10 @@ module ManualDoPrincipalResultado
                  'premium' => { 'amount' => 2119.18, 'basis' => 'total' } },
                { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined',
                  'reason' => { 'kind' => 'risco', 'text' => 'Risco sem aceitação para este cenário.' } }]
+    guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas)
     Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: COTACAO.slug, status: 'done',
                                        conversation_id: conversation.id, execution_key: SecureRandom.uuid, arguments: {},
-                                       handle: { COTACAO::RESULTADO_KEY => Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas) })
+                                       handle: { 'quote_id' => 'q-1:1', COTACAO::RESULTADO_KEY => guardado })
     [agent, conversation]
   end
 

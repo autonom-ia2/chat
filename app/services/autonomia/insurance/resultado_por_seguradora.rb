@@ -14,8 +14,11 @@ module Autonomia::Insurance::ResultadoPorSeguradora
   COM_PRECO = 'com_preco'.freeze
   SEM_PROPOSTA = 'sem_proposta'.freeze
   AGUARDANDO = 'aguardando'.freeze
-  # Na união, fica a entrada de desfecho maior; no empate, a que já estava guardada. Um desfecho não volta
-  # para `aguardando`, e o preço guardado não é trocado: é o do lote que o cliente recebeu primeiro.
+  # Na união, fica a entrada de desfecho maior; no empate, a que já estava guardada. Dentro de `unir`, um
+  # desfecho não volta para `aguardando`, e o preço guardado não é trocado: é o da primeira leitura em que a
+  # seguradora cotou, a mesma passada em que o lote dela é emitido. ENTRE PASSADAS CONCORRENTES não vale: o
+  # `record_attempt!` de cada uma regrava a chave inteira com a união que ela calculou, e a última escrita
+  # fica, mesmo mais velha (a classe de defeito da #418).
   PRECEDENCIA = { AGUARDANDO => 0, SEM_PROPOSTA => 1, COM_PRECO => 2 }.freeze
   # Os campos do prêmio que `PremiumText` lê para escrever o item e que `QuoteOffers#quoted` usa para ordenar.
   CAMPOS_DO_PREMIO = %w[amount basis installments].freeze

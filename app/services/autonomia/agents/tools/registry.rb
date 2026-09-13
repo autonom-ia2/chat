@@ -1,8 +1,9 @@
 # Catálogo das ferramentas NATIVAS disponíveis na instalação (#312).
 #
 # Nativa é declarada em código, não no banco: quem decide que ela existe somos nós; o dono da conta
-# só decide se liga (`agent.config['native_tool_slugs']`). Isso é deliberado — a ferramenta nativa
-# carrega credencial e assinatura, então a superfície precisa ser fechada.
+# só decide se liga (`agent.config['native_tool_slugs']`), menos no Agente de Cotação, cuja lista é a do
+# deploy e ignora a config (`Agent#ferramentas_nativas`, fatia 2 do #420). Isso é deliberado — a
+# ferramenta nativa carrega credencial e assinatura, então a superfície precisa ser fechada.
 module Autonomia::Agents::Tools::Registry
   # Ordem estável: entra no prompt nesta ordem quando o agente liga várias.
   TOOLS = [

@@ -70,6 +70,23 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(no_turno.precheck.to_s).to eq(described_class::SEM_RESULTADO)
     end
 
+    # A MAIS NOVA É UMA RECUSA DO `start` (faltou dado): ela nunca teve número no portal, e esconde a anterior
+    # com preço. O modelo ouve que ela não chegou às seguradoras, e não que o resultado "não ficou guardado".
+    it 'a cotação mais nova encerrada sem número do portal não chegou às seguradoras' do
+      cotacao_com(status: 'done', criada: 10.minutes.ago)
+      cotacao_com(status: 'done', guardado: false, criada: 1.minute.ago,
+                  handle: { 'quote_id' => nil, 'pedido' => 'Qual o ano do veículo?', 'motivo' => 'faltam_dados' })
+
+      expect(no_turno.precheck.to_s).to eq(described_class::NAO_CHEGOU)
+      expect(no_turno('Porto').precheck.to_s).to eq(described_class::NAO_CHEGOU)
+    end
+
+    it 'a cotação correndo que ainda não recebeu número do portal está ainda sem preço' do
+      cotacao_com(status: 'running', guardado: false, handle: { 'quote_id' => nil })
+
+      expect(no_turno.precheck.to_s).to eq(described_class::SEM_PRECO_AINDA)
+    end
+
     it 'cotação em voo no deploy, correndo e ainda sem o resultado guardado' do
       cotacao_com(status: 'running', guardado: false)
 
@@ -252,6 +269,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(progresso.deliveries).to be_empty
     end
 
+    # O QUE A LIA LEU NO TURNO É O QUE SAI (revisão da fatia 2, P2): a Sancor cotou entre o aceite e a primeira
+    # passada, e a lista continua sendo a dos códigos gravados na abertura.
+    it 'o start devolve os códigos gravados na abertura, sem reler a cotação' do
+      fonte = cotacao_com(status: 'running', ofertas: [cotou('8', 'Porto Seguro', 2119.18), correndo('19', 'Sancor')])
+      execucao.update!(handle: { described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['8'] })
+      depois = guardar.unir(fonte.handle[cotacao::RESULTADO_KEY], [cotou('19', 'Sancor', 1800.0)])
+      fonte.update!(handle: fonte.handle.merge(cotacao::RESULTADO_KEY => depois))
+
+      handle = no_motor('Porto e Sancor').start
+
+      expect(handle).to eq(described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['8'])
+      expect(no_motor('Porto e Sancor').poll(handle: handle, attempt: 1).deliveries)
+        .to eq([Autonomia::Insurance::QuoteOffers.item(cotou('8', 'Porto Seguro', 2119.18))])
+    end
+
+    it 'sem abertura gravada, o start lê a cotação agora' do
+      fonte = cotacao_com(status: 'done')
+
+      expect(no_motor('Allianz').start).to eq(described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['5'])
+    end
+
     it 'publicacao_vale? enquanto a cotação lida for a mais nova, e não depois' do
       cotacao_com(status: 'done', criada: 5.minutes.ago)
       execucao.update!(handle: no_motor.start)
@@ -260,6 +298,44 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       cotacao_com(status: 'running', ofertas: [cotou('3', 'Mapfre', 1999.0)], criada: 1.second.from_now)
       expect(described_class.publicacao_vale?(execucao)).to be(false)
       expect(described_class.publicacao_vale?(execucao.tap { |run| run.handle = {} })).to be(false)
+    end
+  end
+
+  # O HANDLE DE ABERTURA: o que a Lia leu no turno vai para a linha que a abertura cria, e o pedido anterior
+  # da mesma cotação que ainda não publicou (e que a abertura vai superseder) entra na lista deste.
+  describe 'o handle de abertura' do
+    def outra_execucao(status:, handle:, entregas: 0)
+      Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: described_class.slug, status: status,
+                                         conversation_id: conversation.id, execution_key: SecureRandom.uuid,
+                                         arguments: {}, handle: handle, delivered_count: entregas)
+    end
+
+    it 'grava a cotação lida e os códigos com preço do pedido, e nada quando não há preço' do
+      fonte = cotacao_com(status: 'done')
+
+      expect(no_turno('Allianz').handle_de_abertura)
+        .to eq(described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['5'])
+      expect(no_turno('Sancor').handle_de_abertura).to eq({})
+    end
+
+    it 'une os códigos de outra execução viva, sem entrega e sobre a mesma cotação' do
+      fonte = cotacao_com(status: 'done')
+      outra_execucao(status: 'pending', handle: { described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['8'] })
+
+      expect(no_turno('Allianz').handle_de_abertura[described_class::CODIGOS_KEY]).to contain_exactly('8', '5')
+    end
+
+    it 'não une a execução sobre outra cotação, a que já entregou, nem a encerrada' do
+      fonte = cotacao_com(status: 'done')
+      outra_execucao(status: 'running', entregas: 1,
+                     handle: { described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['8'] })
+      outra_execucao(status: 'done', handle: { described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['99'] })
+
+      expect(no_turno('Allianz').handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['5'])
+
+      Autonomia::Agents::ToolRun.where(slug: described_class.slug).find_each(&:destroy!)
+      outra_execucao(status: 'pending', handle: { described_class::EXECUCAO_KEY => fonte.id + 1000, described_class::CODIGOS_KEY => ['8'] })
+      expect(no_turno('Allianz').handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['5'])
     end
   end
 

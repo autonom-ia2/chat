@@ -3,15 +3,17 @@
 # Ferramenta ASSÍNCRONA de exibição, do principal. Lê o que a cotação mais nova da conversa guardou por
 # seguradora (`Insurance::ResultadoDaCotacao`) e não chama o portal.
 #
-#   - Com preço a mostrar: `precheck` devolve nil e a execução é aberta. O modelo recebe `aceite` e fala;
-#     a segunda passada do motor publica os itens (`poll`), escritos por `QuoteOffers.item`, e o
-#     publicador os adia enquanto a entrega da fala do turno está em curso.
+#   - Com preço a mostrar: `precheck` devolve nil e a execução é aberta com o que a Lia leu no turno
+#     (`handle_de_abertura`: a cotação e os códigos com preço). O modelo recebe `aceite` e fala; a
+#     segunda passada do motor publica os itens desses códigos (`poll`), escritos por `QuoteOffers.item`,
+#     e o publicador os adia enquanto a entrega da fala do turno está em curso.
 #   - Sem preço a mostrar: `precheck` devolve o texto ao modelo e nenhuma execução é aberta.
 #
-# O texto ao modelo não tem valor de prêmio. Tem o nome da seguradora perguntada, o desfecho dela e, só
-# quando `Insurance::MotivoDaRecusa` libera, o texto do portal.
+# Os textos desta classe ao modelo não trazem o valor do prêmio. Trazem o nome da seguradora perguntada, o
+# desfecho dela e, quando `Insurance::MotivoDaRecusa` libera, o texto do portal, que essa regra recusa com
+# valor escrito como número.
 #
-# Os cinco textos de classe que o motor e o encerramento publicam sem instância são vazios: o publicador
+# Os cinco textos de classe que o motor e o encerramento pedem sem instância são vazios: o publicador
 # devolve `skipped` para texto vazio, sem criar mensagem (`AsyncPublisher#texto_de`).
 class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents::Tools::Native::Base
   Resultado = ::Autonomia::Insurance::ResultadoDaCotacao
@@ -19,12 +21,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
 
   # O motivo com que `Bound#recusar_pela_conferencia` registra a resposta dada no turno.
   RESPONDIDO_NO_TURNO = 'resultado_respondido_no_turno'.freeze
-  # No handle desta execução: o id da execução de `cotar_seguro` lida no `start`, e os códigos a publicar.
+  # No handle desta execução, gravados na abertura: o id da execução de `cotar_seguro` que a Lia leu, e os
+  # códigos a publicar.
   EXECUCAO_KEY = 'execucao_da_cotacao'.freeze
   CODIGOS_KEY = 'seguradoras'.freeze
 
   # Os textos ao modelo.
   SEM_COTACAO = 'Não há cotação nesta conversa para mostrar. Não invente preço nem seguradora.'.freeze
+  NAO_CHEGOU = 'A última cotação desta conversa não chegou às seguradoras, e não há preço dela para mostrar. ' \
+               'Não invente preço nem seguradora.'.freeze
   SEM_RESULTADO = 'O resultado da cotação desta conversa não ficou guardado para consulta. Não invente preço ' \
                   'nem seguradora; se o cliente quiser ver os preços de novo, ofereça chamar um atendente.'.freeze
   SEM_PRECO_AINDA = 'A cotação ainda está correndo e nenhum preço chegou até agora. Não invente preço nem ' \
@@ -85,7 +90,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     def partial_message(_arguments = nil) = VAZIO
     def closing_message(_arguments = nil) = VAZIO
 
-    # A lista só vira mensagem enquanto a execução lida no `start` for a cotação mais nova da conversa.
+    # A lista só vira mensagem enquanto a cotação que a Lia leu no turno for a mais nova da conversa.
     def publicacao_vale?(run)
       execucao = run.handle.to_h[EXECUCAO_KEY]
       execucao.present? && Resultado.execucao_mais_nova(run.conversation_id)&.id == execucao.to_i
@@ -103,12 +108,27 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     resposta.first
   end
 
-  # -> a execução de `cotar_seguro` lida agora e os códigos com preço a publicar.
+  # -> a cotação lida no turno e os códigos com preço deste pedido, unidos aos de outra execução desta
+  # ferramenta, na mesma conversa e sobre a mesma cotação, ainda viva e sem entrega: a abertura desta a
+  # supersede (`ToolRun.open!`), e a lista dela sai nesta. Vazio quando não há preço a publicar.
+  def handle_de_abertura
+    codigos = resposta.last
+    return {} if codigos.empty?
+
+    execucao = resultado.run.id
+    { EXECUCAO_KEY => execucao, CODIGOS_KEY => codigos_sem_entrega(execucao) | codigos }
+  end
+
+  # -> o que a abertura gravou na linha. Sem abertura gravada (o `Bound` não a obteve), a cotação e os
+  # códigos lidos agora.
   def start
+    abertura = run ? run.handle.to_h.slice(EXECUCAO_KEY, CODIGOS_KEY) : {}
+    return abertura if abertura[EXECUCAO_KEY].present?
+
     { EXECUCAO_KEY => resultado&.run&.id, CODIGOS_KEY => resposta.last }
   end
 
-  # Publica os itens quando a execução lida no `start` ainda é a cotação mais nova da conversa.
+  # Publica os itens quando a cotação do handle ainda é a mais nova da conversa.
   def poll(handle:, **)
     atual = resultado
     return progress_class.done unless atual && atual.run.id == handle.to_h[EXECUCAO_KEY].to_i
@@ -121,11 +141,22 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   def resultado
     return @resultado if defined?(@resultado)
 
-    @resultado = Resultado.da_conversa(run&.conversation_id || delivery&.conversation&.id)
+    @resultado = Resultado.da_conversa(conversa_id)
+  end
+
+  def conversa_id
+    run&.conversation_id || delivery&.conversation&.id
   end
 
   def seguradora
     params['seguradora'].to_s.strip.presence
+  end
+
+  # Os códigos das execuções desta ferramenta na conversa, vivas, sem entrega aceita e sobre esta cotação.
+  def codigos_sem_entrega(execucao)
+    ::Autonomia::Agents::ToolRun.active.for_conversation(conversa_id).where(slug: self.class.slug, delivered_count: 0)
+                                .select { |outra| outra.handle.to_h[EXECUCAO_KEY].to_i == execucao }
+                                .flat_map { |outra| Array(outra.handle.to_h[CODIGOS_KEY]) }
   end
 
   # -> [texto ao modelo, códigos com preço a publicar], calculado uma vez por instância.
@@ -133,11 +164,12 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     @resposta ||= montar_resposta
   end
 
-  # A execução que não gravou resultado conta como "ainda sem preço" enquanto corre: a linha em voo no
-  # deploy grava o resultado na consulta seguinte.
+  # A cotação que ainda corre sem ter gravado resultado (a linha em voo no deploy, ou a que nem consultou o
+  # portal) conta como "ainda sem preço". A encerrada sem número do portal não chegou às seguradoras.
   def montar_resposta
     return [SEM_COTACAO, []] if resultado.nil?
-    return [SEM_RESULTADO, []] unless resultado.guardado? || resultado.correndo?
+    return [NAO_CHEGOU, []] unless resultado.correndo? || resultado.cotou?
+    return [SEM_RESULTADO, []] unless resultado.correndo? || resultado.guardado?
 
     seguradora ? por_seguradora : geral
   end

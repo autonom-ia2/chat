@@ -111,17 +111,26 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # Duas escritas numa transação: supersede a anterior e insere a nova. O índice único parcial é
   # quem garante de verdade — duas chamadas concorrentes fazem a segunda estourar `RecordNotUnique`,
   # e aí devolvemos nil em vez de mentir para o modelo dizendo que aceitamos.
-  def self.open!(agent:, slug:, arguments:, scope:, pedido: nil)
+  # `handle_inicial` é o que a ferramenta calculou no turno (`Native::Base#handle_de_abertura`, fatia 2 do
+  # #420), gravado sem as marcas do motor. O sexto parâmetro nomeado entra ao lado de `pedido`, que tem o mesmo
+  # papel (o que o turno sabe e a linha precisa guardar ao nascer).
+  def self.open!(agent:, slug:, arguments:, scope:, pedido: nil, handle_inicial: {}) # rubocop:disable Metrics/ParameterLists
     transaction(requires_new: true) do
       active.for_conversation(scope[:conversation_id]).where(slug: slug)
             .update_all(status: 'superseded', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       create!(account: agent.account, agent: agent, slug: slug, status: 'pending',
               conversation_id: scope[:conversation_id], agent_inbox_id: scope[:agent_inbox_id],
-              origin_message_id: scope[:origin_message_id], handle: pedido ? { PEDIDO => pedido } : {},
+              origin_message_id: scope[:origin_message_id], handle: handle_de_abertura(handle_inicial, pedido),
               execution_key: SecureRandom.uuid, arguments: arguments.to_h.deep_stringify_keys)
     end
   rescue ActiveRecord::RecordNotUnique
     nil
+  end
+
+  # -> o handle com que a execução nasce: o da ferramenta sem as marcas do motor, e a identidade do pedido.
+  def self.handle_de_abertura(handle_inicial, pedido)
+    base = handle_inicial.to_h.deep_stringify_keys.except(*::Autonomia::Agents::Tools::AsyncRunJob::MARCAS)
+    pedido ? base.merge(PEDIDO => pedido) : base
   end
 
   # ABRE, OU DEVOLVE A EXECUÇÃO QUE JÁ É ESTE PEDIDO (entrega 10). Comparação e abertura na MESMA
@@ -129,13 +138,13 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # simultâneos com o mesmo pedido comparam com nada, um abre, o outro supersede, e se o primeiro já
   # foi promovido e submetido há duas cotações no portal. A conferência (HTTP) fica fora da seção.
   # -> [execução aberta, nil] ou [nil, execução repetida]; [nil, nil] quando o índice único recusou.
-  def self.abrir_ou_repetida(agent:, slug:, arguments:, scope:, pedido: nil)
+  def self.abrir_ou_repetida(agent:, slug:, arguments:, scope:, pedido: nil, handle_inicial: {}) # rubocop:disable Metrics/ParameterLists
     transaction do
       travar!(scope[:conversation_id], slug)
       repetida = pedido_repetido(scope[:conversation_id], slug, pedido)
       next [nil, repetida] if repetida
 
-      [open!(agent: agent, slug: slug, arguments: arguments, scope: scope, pedido: pedido), nil]
+      [open!(agent: agent, slug: slug, arguments: arguments, scope: scope, pedido: pedido, handle_inicial: handle_inicial), nil]
     end
   end
 

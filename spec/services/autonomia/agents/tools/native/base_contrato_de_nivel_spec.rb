@@ -35,7 +35,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   # duas perguntas que o `Tools::Encerramento` faz à ferramenta antes de escolher o fecho; `aceite` é o
   # texto do aceite que depende do pedido, fatia 2 do #420).
   let(:trabalho_de_instancia) do
-    %i[precheck aceite closing_deliveries resultado_entregue? resta_entregar? pedido call start poll]
+    %i[precheck aceite handle_de_abertura closing_deliveries resultado_entregue? resta_entregar? pedido call start poll]
   end
   # Os textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
   # `closing_message` entrou nesta lista com a entrega das frases do especialista: ela é o desfecho de
@@ -101,6 +101,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     end
 
     expect(crua.new(agent: agent, params: {}).aceite).to be_nil
+    expect(crua.new(agent: agent, params: {}).handle_de_abertura).to eq({})
     expect(crua.resultado_guardado?({ 'resultado_por_seguradora' => { '8' => { 'desfecho' => 'com_preco' } } })).to be(false)
     expect(crua.publicacao_vale?(Autonomia::Agents::ToolRun.new)).to be(true)
   end
