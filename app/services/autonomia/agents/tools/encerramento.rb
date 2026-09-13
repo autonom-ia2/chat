@@ -43,6 +43,11 @@
 # QUEM PUBLICA É QUEM CHAMOU, pelo bloco: o motor publica ESPERANDO a cadeia de entrega humanizada do
 # turno (e re-agenda a adiada); o varredor FORÇA (`publish!`), porque a cadeia daquele turno morreu há
 # muito e esperar por ela deixaria o cliente sem desfecho para sempre.
+#
+# A EXECUÇÃO QUE TERMINA EM `done` TAMBÉM PASSA POR AQUI, por `concluir` (fatia 1 do PDF rápido,
+# 13/09/2026): só o fecho, com a mesma pergunta à conversa antes de publicar. Desde essa fatia a
+# cotação encerra em `done` quando toda seguradora tem desfecho, e o fecho que ela recebia pelo
+# encerramento por prazo precisa sair por esse caminho.
 class Autonomia::Agents::Tools::Encerramento
   # A marca do TRABALHO do encerramento, adquirida antes dele: um sinal de shutdown no meio (deploy)
   # deixaria a execução em `running`, o retry do Sidekiq reentraria aqui, e a ferramenta geraria de
@@ -102,6 +107,20 @@ class Autonomia::Agents::Tools::Encerramento
     false
   end
 
+  # O DESFECHO DE UMA EXECUÇÃO QUE TERMINOU (`done`), chamado por `AsyncRunJob#finish_done` antes do
+  # `finish!` (fatia 1 do PDF rápido, 13/09/2026). Não adquire a marca `closed` e não entrega nada: só
+  # publica a frase de fecho, com a MESMA pergunta à conversa do passo 3 de `encerrar`
+  # (`fecho_publicado?`). A frase é escolhida por `conclusao`. -> nil.
+  #
+  # AO CONTRÁRIO DE `encerrar`, O QUE LEVANTA AQUI SOBE. No motor, a exceção chega a
+  # `AsyncRunJob#advance`, que trata a passada como falha e a tenta de novo (`retry_or_fail`) sem
+  # chegar ao `finish!` — era o que acontecia antes desta fatia quando a publicação do `finish_done`
+  # levantava. Engolir aqui fecharia a linha em `done` sem desfecho.
+  def concluir
+    publicar_se_nao_houver_fecho { conclusao }
+    nil
+  end
+
   private
 
   # A aquisição da marca, no banco e só se ela ainda não estiver lá. -> esta passada é a dona do
@@ -155,9 +174,15 @@ class Autonomia::Agents::Tools::Encerramento
   # como falso —, e aí a dedupe por token do publicador não salvaria: seriam dois textos, duas
   # mensagens, uma contradizendo a outra. Por isso se pergunta antes, e por TODAS as frases.
   def publicar_fecho(entregou)
+    publicar_se_nao_houver_fecho { fecho(entregou) }
+  end
+
+  # A regra comum a `encerrar` e `concluir`: nenhuma frase de fecho desta execução na conversa, e só
+  # então a frase que o bloco escolher (nil não publica nada).
+  def publicar_se_nao_houver_fecho
     return if fecho_publicado?
 
-    texto = fecho(entregou)
+    texto = yield
     publicar(texto) if texto
   end
 
@@ -221,6 +246,17 @@ class Autonomia::Agents::Tools::Encerramento
 
   def falha_ou_incerteza
     frase(@run.envio_incerto? ? :uncertain_message : :failure_message)
+  end
+
+  # A FRASE DE QUEM TERMINOU (`concluir`). Contador zero: a frase de falha. Resultado confirmado pela
+  # ferramenta (`resultado_entregue?`): o fecho de quem tem resultado — sem perguntar se sobrou algo,
+  # porque essa frase não diz que algo ficou pelo caminho. Entrega aceita que não é resultado (a
+  # pergunta pelo dado que falta) ou execução sem agente: nil, nada é publicado.
+  def conclusao
+    return frase(:failure_message) if @run.delivered_count.zero?
+    return nil unless ferramenta&.resultado_entregue?(handle_da_ferramenta)
+
+    frase(:closing_message)
   end
 
   # O FECHO DE QUEM TEM RESULTADO SÓ SAI QUANDO ELE É VERDADE, E QUEM SABE É A FERRAMENTA.

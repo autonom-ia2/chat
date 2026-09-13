@@ -17,11 +17,13 @@
 # sobe o arquivo no `after_commit` da mensagem, e uma subida que falhasse ali deixaria a mensagem
 # no ar com a legenda e um anexo sem bytes — o cliente sem arquivo e sem link, e o token já
 # publicado fazendo qualquer retry virar duplicado (rodada 3 de revisão, 11/09/2026). Gravando
-# antes, a falha do armazenamento é `Indisponivel` como a do download, e cai na mesma reserva.
+# antes, a falha do armazenamento é `Indisponivel` como a do download, e tem o mesmo destino.
 #
-# A RESERVA é o texto com o link, o mesmo de antes: quando o download ou a gravação falham, o
-# cliente recebe o link como recebia — os preços que já saíram não voltam, e a falha do arquivo não
-# pode apagar a entrega. O publicador decide isso; este objeto só carrega os dois caminhos.
+# A RESERVA continua na forma e continua obrigatória (`defeito`), e desde a fatia 1 do PDF rápido
+# (13/09/2026) o publicador não a publica: quando o download ou a gravação falham, nada sai
+# (`AsyncPublisher#sem_arquivo`). Até essa data a reserva levava o link do portal ao cliente. Ela
+# fica na forma porque a versão anterior do publicador exige o campo — uma entrega serializada por
+# esta versão e publicada depois de um rollback seria descartada sem ele.
 class Autonomia::Agents::Tools::EntregaDeArquivo
   CHAVE = 'arquivo'.freeze
   # Um comparativo de auto tem dezenas de KB; o teto é folga de cem vezes, não medida. Existe para o
@@ -78,8 +80,8 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   FINALIDADE = 'entrega_de_arquivo'.freeze
 
   # O download ou a gravação não puderam entregar um PDF. `motivo` é um código curto FECHADO (nunca o
-  # texto da resposta, um cabeçalho, nem a mensagem da exceção): vai para o log, e o publicador cai
-  # para a reserva. `causa` é o NOME DA CLASSE da exceção de origem, quando há uma — o armazenamento
+  # texto da resposta, um cabeçalho, nem a mensagem da exceção): vai para o log, e o publicador não
+  # publica nada. `causa` é o NOME DA CLASSE da exceção de origem, quando há uma — o armazenamento
   # e a rede falham de muitos jeitos e o log precisa dizer qual, sem a mensagem.
   class Indisponivel < StandardError
     attr_reader :motivo, :causa
@@ -163,7 +165,7 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   end
 
   # O CAMPO que reprova a forma, como código curto ('url', 'nome', 'legenda', 'reserva'), ou nil
-  # quando a forma é válida. É o que vai ao log de quem cai para o link (a ferramenta) ou descarta
+  # quando a forma é válida. É o que vai ao log de quem recusa a forma (a ferramenta) ou descarta
   # (o publicador): o nome do campo, nunca o valor — a URL e os textos são dados de fora.
   def defeito
     return 'url' unless url.match?(URL_SEGURA)
@@ -177,8 +179,9 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     { CHAVE => { 'url' => url, 'nome' => nome, 'legenda' => legenda, 'reserva' => reserva } }
   end
 
-  # A identidade da entrega, para o token de publicação: a MESMA como arquivo e como reserva. Um
-  # retry que encontra o link já publicado não publica o arquivo por cima, e vice-versa.
+  # A identidade da entrega, para o token de publicação: derivada só da URL, e por isso a MESMA como
+  # arquivo e como a reserva que versões anteriores publicavam. Um retry que encontra a mensagem de uma
+  # delas no ar não publica outra por cima.
   def identidade
     "arquivo:#{url}"
   end

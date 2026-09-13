@@ -157,6 +157,72 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
     end
   end
 
+  # FATIA 1 DO PDF RÁPIDO (13/09/2026): a cotação encerra quando TODA seguradora já tem desfecho, sem
+  # esperar o portal declarar o negócio pronto. Medido no portal real: as dezessete responderam em
+  # 41 s, 98 s e 64 s, e o portal só se declarou pronto em 188 s, 380 s e 316 s.
+  #
+  # Cada exemplo abaixo é uma das três exigências da regra; tirar qualquer uma delas do código reprova
+  # pelo menos um.
+  describe '#todas_com_desfecho?' do
+    def oferta(code, status)
+      { 'insurer' => { 'code' => code, 'name' => "Seguradora #{code}" }, 'status' => status }
+    end
+
+    def leitura(*ofertas)
+      described_class.new('offers' => ofertas)
+    end
+
+    it 'e verdade quando toda seguradora listada antes esta nesta leitura com desfecho' do
+      atual = leitura(oferta('8', 'quoted'), oferta('3', 'declined'), oferta('7', 'auth_required'))
+
+      expect(atual.todas_com_desfecho?(%w[3 7 8])).to be(true)
+    end
+
+    # `error` só sai do adapter DEPOIS de o portal declarar o negócio pronto, para a oferta sem preço
+    # escolhível. Sem ele na lista, a cotação pronta com uma oferta assim esperaria o prazo inteiro.
+    it 'conta error como desfecho' do
+      expect(leitura(oferta('8', 'quoted'), oferta('4', 'error')).todas_com_desfecho?(%w[4 8])).to be(true)
+    end
+
+    # A OFERTA SEM PREÇO E SEM ERRO, COM O NEGÓCIO ABERTO, É `running` NO ADAPTER — inclusive a do
+    # cálculo cujos resultados vieram todos com erro. Ela segura o encerramento até o portal ficar
+    # pronto, quando passa a `error`.
+    it 'e falso com uma seguradora ainda running' do
+      atual = leitura(oferta('8', 'quoted'), oferta('3', 'declined'), oferta('19', 'running'))
+
+      expect(atual.todas_com_desfecho?(%w[3 8 19])).to be(false)
+    end
+
+    # O CONTRATO DO ADAPTER TEM STATUS QUE O AGGER NÃO PRODUZ (`queued`, `timeout`, `not_configured`).
+    # Um status fora da lista de desfechos segura o encerramento: é o comportamento de antes da regra,
+    # e não um encerramento no escuro.
+    it 'e falso com um status que nao esta na lista de desfechos' do
+      expect(leitura(oferta('8', 'quoted'), oferta('3', 'queued')).todas_com_desfecho?(%w[3 8])).to be(false)
+      expect(leitura(oferta('8', 'quoted'), oferta('3', nil)).todas_com_desfecho?(%w[3 8])).to be(false)
+    end
+
+    # A PRIMEIRA LEITURA NÃO ENCERRA: sem leitura anterior não há lista de acionadas, e uma seguradora
+    # que o portal ainda não tivesse listado não estaria em lugar nenhum para segurar o encerramento.
+    it 'e falso sem leitura anterior, mesmo com todas com desfecho' do
+      atual = leitura(oferta('8', 'quoted'), oferta('3', 'declined'))
+
+      expect(atual.todas_com_desfecho?(nil)).to be(false)
+      expect(atual.todas_com_desfecho?([])).to be(false)
+    end
+
+    # A LEITURA QUE PERDEU UMA SEGURADORA JÁ ACIONADA não encerra: a que sumiu pode ainda cotar.
+    it 'e falso quando esta leitura nao traz uma seguradora que uma leitura anterior listou' do
+      atual = leitura(oferta('8', 'quoted'), oferta('3', 'declined'))
+
+      expect(atual.todas_com_desfecho?(%w[3 8 19])).to be(false)
+    end
+
+    it 'e falso com a lista de ofertas vazia' do
+      expect(leitura.todas_com_desfecho?(%w[3 8])).to be(false)
+      expect(leitura.todas_com_desfecho?([])).to be(false)
+    end
+  end
+
   describe '.describe' do
     it 'poe o nome em negrito do WhatsApp, que e asterisco simples' do
       # Não há conversão de markdown na saída: `**nome**` chegaria com os asteriscos à mostra.

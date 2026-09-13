@@ -92,6 +92,27 @@ class Autonomia::Insurance::QuoteOffers
     Array(@result['offers']).filter_map { |offer| self.class.code(offer).presence }.uniq
   end
 
+  # OS STATUS DE OFERTA QUE CONTAM COMO DESFECHO DA SEGURADORA, lidos em `toOffer` do adapter
+  # (autonomia-adapters, `src/platforms/agger/http/quote.ts`): `quoted` sai com preço; `declined` e
+  # `auth_required` saem assim que o cálculo traz erro; `error` só sai depois de o portal declarar o
+  # negócio pronto. Sem preço e sem erro, com o negócio aberto, a oferta sai `running`. O contrato do
+  # adapter lista outros status (`queued`, `timeout`, `not_configured`) que o AGGER não produz; eles
+  # ficam fora desta lista, e uma oferta com um deles faz `todas_com_desfecho?` responder falso.
+  DESFECHOS = %w[quoted declined auth_required error].freeze
+
+  # -> true quando as três condições valem, nesta ordem:
+  #   1. `ja_acionadas` (a lista que as leituras ANTERIORES gravaram no handle) não está vazia;
+  #   2. todo código de `ja_acionadas` aparece nesta leitura (`acionadas`);
+  #   3. toda oferta desta leitura tem status em `DESFECHOS`.
+  # A 1 faz a primeira leitura responder falso. A 1 e a 2 juntas fazem a lista de ofertas vazia
+  # responder falso: sem leitura anterior não passa a 1, e com ela nenhum código anterior está aqui.
+  def todas_com_desfecho?(ja_acionadas)
+    anteriores = Array(ja_acionadas).map(&:to_s)
+    return false if anteriores.empty? || (anteriores - acionadas).any?
+
+    Array(@result['offers']).all? { |offer| DESFECHOS.include?(offer['status']) }
+  end
+
   # Seguradoras que recusaram a credencial que a corretora cadastrou NO PORTAL (critério 4.5).
   def credencial_pendente
     Array(@result['offers']).select { |offer| offer['status'] == 'auth_required' }

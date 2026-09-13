@@ -37,8 +37,8 @@ module Autonomia::Agents::Tools::EntregaPublicada
   end
 
   # A identidade que ESTA entrega tem (ou terá) como mensagem desta execução. A entrega de ARQUIVO
-  # responde por si (`EntregaDeArquivo#identidade`: a mesma como anexo e como link de reserva, para
-  # que um retry não publique o arquivo por cima do link); o texto responde por si mesmo, aparado
+  # responde por si (`EntregaDeArquivo#identidade`: derivada só da URL, a mesma como anexo e como o
+  # link de reserva que versões anteriores publicavam); o texto responde por si mesmo, aparado
   # como o publicador o apara antes de postar. nil sem execução — sem `execution_key` não há token,
   # e quem não tem token não afirma nada.
   def token_de(run, entrega)

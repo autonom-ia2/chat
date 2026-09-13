@@ -25,9 +25,10 @@
 #    endereço conectado conferido, teto de tamanho, prazo do corpo com teto por leitura e assinatura
 #    de PDF), FORA do lock da conversa, e anexa o blob gravado (pelo `signed_id`) pelo
 #    `Messages::MessageBuilder` — o mesmo caminho do agente humano que manda um arquivo. Quando o
-#    download OU a gravação falham, sai o texto de reserva com o link, como saía antes, com o motivo
-#    no log: a falha do arquivo não apaga a entrega, e nunca é silenciosa. A identidade é a mesma nos
-#    dois caminhos, então um retry não publica o arquivo por cima do link.
+#    download OU a gravação OU o anexo falham, NADA é publicado e o resultado é `blocked`, com o
+#    motivo no log (`sem_arquivo`); o link do portal não vai no lugar desde a fatia 1 do PDF rápido
+#    (13/09/2026). A exceção é a mensagem com o mesmo token que já está na conversa: ela responde por
+#    esta entrega (`retomar`).
 #
 # 5. A AUTORIZAÇÃO É RECONFERIDA SOB O LOCK, sem cache, imediatamente antes de criar a mensagem
 #    (rodada 7, 11/09/2026). Entre a conferência do começo e a mensagem há um download e uma gravação
@@ -179,7 +180,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
   #
   # O QUE LEVANTA DEPOIS DO COMMIT (um `after_commit` da mensagem que ESTA chamada criou e que FICOU
   # no banco) é reconciliado pelo envio (`reconciliar`); o que levanta antes, ou com a transação
-  # desfeita (`persisted?` volta a ser falso no rollback), sobe para quem chamou decidir — a reserva,
+  # desfeita (`persisted?` volta a ser falso no rollback), sobe para quem chamou decidir — `sem_arquivo`,
   # na entrega de arquivo; `blocked`, no fim. Só a mensagem desta chamada é reconciliada: uma mensagem
   # achada pelo token poderia ser de outro publicador, com um envio dele a caminho — a menos que ela
   # carregue a PENDÊNCIA que quem a criou gravou, e essa é retomada AINDA SOB O LOCK (decisões 7 e 8).
@@ -206,6 +207,8 @@ class Autonomia::Agents::Tools::AsyncPublisher
     sequence = @run.sequence
     existente = ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, corpo.token)
     return retomar(existente) if existente
+    # O corpo sem texto é o de `sem_arquivo`: ele só pergunta pela mensagem que já existe.
+    return Result.new(status: :blocked) if corpo.texto.blank?
 
     mensagem = build_message!(conversation, agent_inbox, sequence, corpo)
     # Só avança quando uma mensagem NOVA entrou: como a idempotência é pelo conteúdo, o duplicado
@@ -267,11 +270,11 @@ class Autonomia::Agents::Tools::AsyncPublisher
 
   # O ARQUIVO BAIXA E É GRAVADO FORA DO LOCK da conversa: é rede, com tetos próprios, e a conversa
   # não pode ficar travada por ele. Gravar ANTES da mensagem é o que põe a falha do armazenamento
-  # dentro da mesma fronteira de reserva que a do download: o ActiveStorage subiria o arquivo só no
+  # dentro da mesma fronteira que a do download: o ActiveStorage subiria o arquivo só no
   # `after_commit` da mensagem, e uma subida que falhasse ali deixaria a legenda no ar com um anexo
   # sem bytes e o token já publicado (rodada 3, 11/09/2026). Quando o download ou a gravação não
-  # entregam um PDF, vai a reserva (o texto com o link) com o mesmo token — e o motivo no log, com
-  # o código curto e a classe da causa, nunca o texto da resposta nem da exceção.
+  # entregam um PDF, vai a `sem_arquivo` com o mesmo token — e o motivo no log, com o código curto e
+  # a classe da causa, nunca o texto da resposta nem da exceção.
   #
   # O blob que NÃO virou anexo (o retry que encontrou a mensagem no ar, a publicação que não
   # concluiu, a autorização que caiu no caminho) é apagado EM SEGUNDO PLANO
@@ -292,8 +295,8 @@ class Autonomia::Agents::Tools::AsyncPublisher
     resultado
   rescue ::Autonomia::Agents::Tools::EntregaDeArquivo::Indisponivel => e
     Rails.logger.warn("[autonomia][tool][async] arquivo indisponivel run=#{@run.id} motivo=#{e.motivo}" \
-                      "#{" causa=#{e.causa}" if e.causa}; vai como link")
-    post(conversation, Corpo.new(texto: arquivo.reserva, token: token))
+                      "#{" causa=#{e.causa}" if e.causa}; nao publicado")
+    sem_arquivo(conversation, token)
   ensure
     ::Autonomia::Agents::Tools::EntregaDeArquivo.agendar_limpeza(blob, contexto: "run=#{@run.id}") if blob && !anexado
   end
@@ -304,15 +307,25 @@ class Autonomia::Agents::Tools::AsyncPublisher
   # mensagem no ar e a publicação recusada sob o lock não dão dono: o blob vai para a limpeza.
   #
   # A FALHA AO ANEXAR sem mensagem no banco (a transação voltou: anexo inválido, banco), depois de um
-  # download e uma gravação bons, cai na RESERVA com o MESMO token, registrada com a classe da causa
-  # — nunca a mensagem da exceção (rodada 6, 11/09/2026). Se a reserva também levantar, sobe para o
+  # download e uma gravação bons, vai a `sem_arquivo`, registrada com a classe da causa — nunca a
+  # mensagem da exceção (rodada 6, 11/09/2026). Se `sem_arquivo` também levantar, sobe para o
   # `publish`, que devolve `blocked`, como sempre.
   def publicar_anexo(conversation, arquivo, token, blob)
     resultado = post(conversation, Corpo.new(texto: arquivo.legenda, token: token, anexo: blob.signed_id))
     [resultado, resultado.message.present? || blob.attachments.exists?]
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][tool][async] anexo falhou run=#{@run.id} causa=#{e.class}; vai como link")
-    [post(conversation, Corpo.new(texto: arquivo.reserva, token: token)), false]
+    Rails.logger.warn("[autonomia][tool][async] anexo falhou run=#{@run.id} causa=#{e.class}; nao publicado")
+    [sem_arquivo(conversation, token), false]
+  end
+
+  # O ARQUIVO QUE NÃO PÔDE SER PUBLICADO: nenhuma mensagem nova, e o link do portal NÃO vai no lugar
+  # (fatia 1 do PDF rápido, 13/09/2026 — a URL não tem assinatura, leva o nome do segurado no caminho
+  # e baixa sem autenticação). Passa pelo mesmo `post` — lock, autorização, busca pelo token — com um
+  # corpo SEM TEXTO, que `publicar_sob_lock` nunca transforma em mensagem: se a mensagem com este
+  # token já está na conversa (o retry de uma entrega que saiu), devolve o que `retomar` devolver;
+  # se não está, `blocked`.
+  def sem_arquivo(conversation, token)
+    post(conversation, Corpo.new(texto: nil, token: token))
   end
 
   def build_message!(conversation, agent_inbox, sequence, corpo)

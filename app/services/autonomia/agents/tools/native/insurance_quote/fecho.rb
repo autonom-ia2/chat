@@ -45,7 +45,7 @@
 # OS ESCRITORES DESSAS CHAVES MORAM AQUI TAMBÉM, e não na classe: quem grava a identidade e quem a
 # lê são o mesmo assunto, e separá-los é como as duas definições do token nasceram. São quatro,
 # todos privados — `token_da_entrega`, `registrar_entrega_de_preco`, `marcar_preco_legado` e
-# `marcas_do_comparativo` —, chamados pelas passadas de emissão (`precos` e `fechar`).
+# `marcas_do_comparativo` —, chamados pelas passadas de emissão (`precos` e `Comparativo#fechar`).
 #
 # Separado da ferramenta pelo mesmo motivo de `Comparativo`, `Declaracao`, `Recusas`, `Envio` e
 # `Veiculo`: é outro assunto, e a classe está no teto de linhas.
@@ -107,13 +107,18 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   #
   # A SEGUNDA METADE é o comparativo EMITIDO que não foi aceito: a publicação voltou `blocked` com a
   # sentinela já gravada. Aí sobrou mesmo, e calar seria esconder do cliente que falta algo.
-  # Comparativo que nunca foi emitido não é sobra: não há o que chegar.
   #
-  # As duas chaves sobrevivem ao corte das marcas do motor (`AsyncRunJob::MARCAS` não as lista),
-  # então chegam aqui pelo handle que o encerramento entrega.
+  # A TERCEIRA (fatia 1 do PDF rápido, 13/09/2026) é o comparativo que ainda seria tentado
+  # (`Comparativo#comparativo_por_tentar?`): a passada que fechou a cotação não conseguiu o PDF e
+  # voltou `running` para pedir de novo. Se a corrente de jobs morre antes da passada seguinte, quem
+  # encerra é o varredor, que não pede comparativo (`trabalho_novo: false`); a resposta verdadeira ali
+  # é que sobrou o comparativo. Esgotado o teto sem comparativo, não sobra.
+  #
+  # As chaves lidas aqui sobrevivem ao corte das marcas do motor (`AsyncRunJob::MARCAS` não as lista),
+  # então chegam pelo handle que o encerramento entrega.
   def resta_entregar?(handle)
     handle = handle.to_h
-    !portal_fechado?(handle) || comparativo_pendente?(handle)
+    !portal_fechado?(handle) || comparativo_pendente?(handle) || comparativo_por_tentar?(handle)
   end
 
   private
@@ -281,8 +286,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   end
 
   # O portal fechou? `FECHADO_KEY` é a resposta; `PDF_SENT_KEY` vale como prova para as execuções
-  # que já estavam VOANDO quando esta versão subiu — ela só é gravada no mesmo ramo `done`, depois
-  # do `return … unless finished?(result)`, então quem a tem fechou. Sem esta segunda leitura, a
+  # que já estavam VOANDO quando esta versão subiu — ela só é gravada no mesmo ramo, depois
+  # do `return … unless finished?(…)`, então quem a tem fechou. Sem esta segunda leitura, a
   # linha que atravessou o deploy com o comparativo entregue fecharia dizendo "algumas seguradoras
   # não responderam a tempo" a quem recebeu tudo — o defeito que esta entrega corrige, ressuscitado
   # pela janela do deploy.

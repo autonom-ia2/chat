@@ -180,6 +180,128 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
   end
 
+  # OS ESTADOS NOVOS DA FATIA 1 DO PDF RÁPIDO (13/09/2026), pelo MOTOR. A cotação passa a encerrar em
+  # `done` quando toda seguradora tem desfecho, e o comparativo que não sai ganha nova tentativa. Até
+  # esta fatia o desfecho de toda cotação real saía pelo encerramento por prazo; estes exemplos provam
+  # que cada estado novo ainda termina com palavra ao cliente, sob as mesmas quatro formas de o
+  # especialista não escrever.
+  describe 'os estados novos do encerramento sem esperar o portal' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
+    let(:agent_bot) { create(:agent_bot, account: account) }
+    let(:agent_inbox) do
+      Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: agent_bot)
+    end
+    let(:mock) { Autonomia::Insurance::Connector::Mock.new }
+    let(:url) { 'https://exemplo.test/comparativo-mock.pdf' }
+    let(:job) { Autonomia::Agents::Tools::AsyncRunJob }
+
+    around do |example|
+      with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true', INSURANCE_QUOTING_ENABLED: 'true') { example.run }
+    end
+
+    before do
+      account.update!(internal_attributes: account.internal_attributes.merge('autonomia_agents_enabled' => true))
+      register_async_tool(described_class)
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(mock)
+      allow(mock).to receive(:quote_proposal).and_call_original
+      allow(Resolv).to receive(:getaddresses).and_call_original
+      allow(Resolv).to receive(:getaddresses).with('exemplo.test').and_return(['93.184.216.34'])
+    end
+
+    def portal(status, ofertas)
+      allow(mock).to receive(:quote_result).and_return({ 'quote_id' => 'q-1:1', 'status' => status, 'offers' => ofertas })
+    end
+
+    def recusa(code)
+      { 'insurer' => { 'code' => code, 'name' => "Seguradora #{code}" }, 'status' => 'declined' }
+    end
+
+    # A execução depois de uma consulta que já listou as duas seguradoras.
+    def execucao(desfalque, handle = {})
+      run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug,
+                                             arguments: base.merge(argumentos(desfalque)),
+                                             scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+      run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 5.minutes.from_now)
+      run.record_attempt!(handle: { Autonomia::Agents::Tools::AsyncRunJob::SUBMITTED_KEY => true, 'quote_id' => 'q-1:1',
+                                    described_class::DELIVERED_KEY => [],
+                                    described_class::ACIONADAS_KEY => %w[3 43] }.merge(handle))
+      run
+    end
+
+    def passadas(run, *tentativas)
+      tentativas.each { |tentativa| job.new.perform(run.id, tentativa) }
+      run.reload
+    end
+
+    def ultima_palavra
+      conversation.messages.reload.where(sender_type: 'AgentBot').order(:id).last&.content
+    end
+
+    DesfalquesDoEspecialista::NOMES.each do |desfalque|
+      describe "com #{desfalque}" do
+        it 'toda seguradora com desfecho e preco entregue: o done diz o fecho de quem tem resultado' do
+          stub_request(:get, url).to_return(status: 200, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
+          portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
+          run = execucao(desfalque)
+
+          passadas(run, 5)
+
+          expect(run.status).to eq('done')
+          expect(ultima_palavra).to be_present
+          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+        end
+
+        it 'toda seguradora recusou: o done diz a frase de falha' do
+          portal('running', [recusa('43'), recusa('3')])
+          run = execucao(desfalque)
+
+          passadas(run, 5)
+
+          expect(run.status).to eq('done')
+          expect(ultima_palavra).to be_present
+          expect(ultima_palavra).to eq(described_class.failure_message(run.arguments))
+        end
+
+        it 'o comparativo que nao sai ate o teto: o done ainda diz o fecho' do
+          allow(mock).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, '504'))
+          portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
+          run = execucao(desfalque)
+
+          passadas(run, 5, 6, 7)
+
+          expect(run.status).to eq('done')
+          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+        end
+
+        it 'o download que falha ate o teto: o done diz o fecho, sem link' do
+          stub_request(:get, url).to_return(status: 404, body: 'x')
+          portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
+          run = execucao(desfalque)
+
+          passadas(run, 5, 6, 7, 8)
+
+          expect(run.status).to eq('done')
+          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+          expect(conversation.messages.reload.map(&:content).join).not_to include(url)
+        end
+
+        it 'a linha abandonada esperando nova tentativa do comparativo: o varredor diz o fecho' do
+          allow(mock).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, '504'))
+          portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
+          run = execucao(desfalque)
+          passadas(run, 5)
+          run.update!(expires_at: 10.minutes.ago)
+
+          Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+          expect(run.reload.status).to eq('failed')
+          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+        end
+      end
+    end
+  end
+
   # A MORTE DA PARCIAL, DITA PELO QUE SAI NO LUGAR. A frase "algumas seguradoras não responderam a
   # tempo" deixa de existir para o cliente (decisão do CEO); o ESTADO que a produzia continua
   # falando, com um texto que não conta a nossa mecânica de leque.

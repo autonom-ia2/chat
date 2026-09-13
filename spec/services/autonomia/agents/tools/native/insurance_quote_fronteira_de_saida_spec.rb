@@ -79,13 +79,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     # entraram no texto que vai sair. Com o texto perdido na fronteira, `entregues` fica como estava
     # e a passada seguinte emite de novo.
     it 'texto que nao sobrevive a fronteira nao avanca o handle, e a passada seguinte reemite' do
-      # Arrange — a fronteira recusa o texto composto desta passada
+      # Arrange — a fronteira recusa o texto composto desta passada. A Mapfre ainda sem desfecho mantém
+      # a cotação aberta nas duas passadas: desde a fatia 1 do PDF rápido (13/09/2026) quem encerra é o
+      # desfecho de todas as seguradoras, e não o status geral, e este exemplo é sobre a reemissão numa
+      # cotação que continua.
       allow(progress).to receive(:entregavel).and_wrap_original do |original, valor|
         valor.is_a?(String) && valor.include?('Ezze') ? nil : original.call(valor)
       end
+      ainda_sem_desfecho = { 'insurer' => { 'code' => '3', 'name' => 'Mapfre' }, 'status' => 'running' }
 
       # Act
-      perdida = poll([offer('43', 'Ezze', 2050.40)])
+      perdida = poll([offer('43', 'Ezze', 2050.40), ainda_sem_desfecho])
 
       # Assert — nada saiu, e nada foi marcado como entregue
       expect(perdida.deliveries).to be_empty
@@ -93,7 +97,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       # Act 2 — a fronteira volta ao normal e a passada seguinte reemite a mesma oferta
       allow(progress).to receive(:entregavel).and_call_original
-      de_novo = poll([offer('43', 'Ezze', 2050.40)], handle: perdida.handle)
+      de_novo = poll([offer('43', 'Ezze', 2050.40), ainda_sem_desfecho], handle: perdida.handle)
 
       expect(de_novo.deliveries.sole).to include('R$ 2.050,40')
       expect(de_novo.handle[described_class::DELIVERED_KEY]).to eq(['43'])

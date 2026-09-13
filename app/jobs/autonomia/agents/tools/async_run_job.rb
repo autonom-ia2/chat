@@ -204,15 +204,30 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   def apply(run, native, progress, attempt)
-    Array(progress&.deliveries).each { |entrega| deliver(run, entrega) }
+    resultados = Array(progress&.deliveries).map { |entrega| [entrega, deliver(run, entrega)] }
     run.record_attempt!(handle: merged_handle(progress&.handle))
 
     if progress.nil? || progress.failed?
       fail_run(run, native, progress&.failure_code)
-    elsif progress.done?
+    elsif progress.done? && !arquivo_recusado?(resultados)
       finish_done(run, native)
     else
       reschedule(run, attempt)
+    end
+  end
+
+  # -> alguma entrega de ARQUIVO desta passada voltou do publicador sem ser aceita? Quando sim, a
+  # passada `done` não encerra a execução: `apply` a reagenda, e a ferramenta decide na passada
+  # seguinte se gera o arquivo de novo (na cotação, `InsuranceQuote::Comparativo#fechar`, com teto).
+  # Desde 13/09/2026 o publicador não manda o link no lugar do arquivo que não baixou, e é por aqui que
+  # esse download chega à nova tentativa.
+  #
+  # SÓ ARQUIVO: a entrega de texto recusada não segura o `done`. A cotação devolve a pergunta pelo
+  # dado que falta em toda passada (`poll` com `handle['pedido']`), e reagendá-la repetiria a mesma
+  # recusa até o prazo, onde hoje a execução encerra com a frase de falha.
+  def arquivo_recusado?(resultados)
+    resultados.any? do |entrega, resultado|
+      ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega) && !resultado.aceita?
     end
   end
 
@@ -232,11 +247,17 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     result
   end
 
-  # Terminou sem NADA entregue (todas as seguradoras mudas, por exemplo): o cliente precisa saber.
-  # Terminar em silêncio é o pior desfecho para quem está esperando — e dizer "não consegui" ao lado
-  # de uma cotação entregue é o segundo pior.
+  # TERMINOU (`done`): o desfecho sai por `Tools::Encerramento#concluir` e só então a linha fecha.
+  # Ele publica a frase de falha quando nada foi aceito (o que este método publicava antes da fatia 1
+  # do PDF rápido) e, desde 13/09/2026, o fecho de quem tem resultado quando a ferramenta confirma o
+  # resultado — antes, toda cotação real recebia esse fecho pelo encerramento por prazo, e o `done`
+  # virou o caminho comum. Nas duas frases, a mesma pergunta à conversa do encerramento
+  # (`fecho_publicado?`) antes de publicar.
+  #
+  # `run.reload` pelo mesmo motivo de `fail_run`: a decisão lê o contador e a lista do aceite do banco.
   def finish_done(run, native)
-    publish(run, native.failure_message(run.arguments)) if run.delivered_count.zero?
+    run.reload
+    ::Autonomia::Agents::Tools::Encerramento.new(run: run, native: native) { |entrega| publish(run, entrega) }.concluir
     run.finish!('done')
   end
 

@@ -422,7 +422,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(run.reload.sequence).to eq(1)
     end
 
-    it 'cai para o texto com o link quando o download falha, e registra o motivo' do
+    # O LINK DO PORTAL NÃO SAI MAIS NO LUGAR DO ARQUIVO (fatia 1 do PDF rápido, 13/09/2026): a URL não
+    # tem assinatura, leva o nome do segurado no caminho e baixa sem autenticação. O download que falha
+    # não publica NADA e devolve `blocked` — a entrega não é aceita, e quem chamou decide o que fazer
+    # (o motor reagenda, e a cotação pede outro comparativo).
+    it 'nao publica nada quando o download falha, nem o link, e registra o motivo' do
       # Arrange — o 404 do armazenamento do portal (XML de `BlobNotFound`)
       promote
       stub_request(:get, url).to_return(status: 404, body: '<Error><Code>BlobNotFound</Code></Error>',
@@ -433,17 +437,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       result = described_class.new(run: run).publish(arquivo.to_h)
 
       # Assert
-      expect(result).to be_published
-      mensagem = bot_messages.sole
-      expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
-      expect(mensagem.attachments).to be_empty
-      expect(Rails.logger).to have_received(:warn).with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=http_404/))
+      expect(result).to be_blocked
+      expect(bot_messages).to be_empty
+      expect(run.reload.sequence).to eq(0)
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=http_404; nao publicado/))
     end
 
-    # O que ninguém no caminho classifica (uma resposta HTTP malformada do servidor do blob) subia
-    # cru: `blocked`, nem arquivo nem link, com a sentinela do comparativo já gravada no caminho da
-    # consulta — o "anexo que só funciona quando tudo dá certo" por uma fresta (rodada 5, P3).
-    it 'cai para o texto com o link quando a camada HTTP levanta o que ninguem classifica' do
+    # O que ninguém no caminho classifica (uma resposta HTTP malformada do servidor do blob) tem o
+    # mesmo destino do 404: nada publicado, a causa pelo nome da classe no log.
+    it 'nao publica nada quando a camada HTTP levanta o que ninguem classifica' do
       # Arrange
       promote
       stub_request(:get, url).to_raise(Net::HTTPBadResponse)
@@ -453,35 +456,50 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       result = described_class.new(run: run).publish(arquivo.to_h)
 
       # Assert
-      expect(result).to be_published
-      mensagem = bot_messages.sole
-      expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
-      expect(mensagem.attachments).to be_empty
+      expect(result).to be_blocked
+      expect(bot_messages).to be_empty
       expect(Rails.logger).to have_received(:warn)
-        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=download causa=Net::HTTPBadResponse; vai como link/))
+        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=download causa=Net::HTTPBadResponse; nao publicado/))
     end
 
-    it 'nao publica de novo o que ja saiu, nem como arquivo por cima do link' do
-      # Arrange — a primeira publicação saiu como link; o retry encontra o arquivo no ar
+    it 'o retry depois de um download que falhou publica o arquivo uma vez so' do
+      # Arrange — a primeira tentativa não publicou nada; a segunda baixa
       promote
       stub_request(:get, url).to_return({ status: 404, body: 'x' }, { status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' } })
       publisher = described_class.new(run: run)
-      publisher.publish(arquivo.to_h)
+      expect(publisher.publish(arquivo.to_h)).to be_blocked
 
       # Act
       result = publisher.publish(arquivo.to_h)
 
-      # Assert — e o blob que o retry gravou antes de ver a mensagem no ar não fica sem dono: a
-      # limpeza é em segundo plano (rodada 4), então o que se afirma é que ela foi AGENDADA e que,
-      # feita, não sobra blob nenhum. A mensagem achada sem pendência de envio não é reenviada: o
-      # único `SendReplyJob` é o do `send_reply` dela (rodada 8).
+      # Assert — uma mensagem, com o arquivo, e nenhum blob sem dono
       expect(result).to be_published
-      expect(bot_messages.count).to eq(1)
+      expect(bot_messages.sole.attachments.sole.file.download).to eq(pdf)
       expect(run.reload.sequence).to eq(1)
       expect(SendReplyJob).to have_been_enqueued.once
-      expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
-      perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
-      expect(ActiveStorage::Blob.count).to eq(0)
+      expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
+    end
+
+    # O ARQUIVO JÁ NO AR CONTINUA PUBLICADO QUANDO O RETRY NÃO CONSEGUE BAIXAR. A dedupe pelo token
+    # acontece sob o lock, depois do download; sem a busca pelo token também no caminho da falha, o
+    # retry de uma entrega que JÁ saiu devolvia `blocked`, e o motor pediria outro comparativo ao
+    # portal por cima do que o cliente já tem.
+    it 'o retry que acha o arquivo no ar continua publicado mesmo com o download falhando' do
+      # Arrange — a primeira publicação saiu como anexo; o retry não consegue baixar
+      promote
+      stub_request(:get, url).to_return({ status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' } },
+                                        { status: 404, body: 'x' })
+      publisher = described_class.new(run: run)
+      expect(publisher.publish(arquivo.to_h)).to be_published
+
+      # Act
+      result = publisher.publish(arquivo.to_h)
+
+      # Assert — publicado, uma mensagem só (a do arquivo), e nenhum envio a mais
+      expect(result).to be_published
+      expect(bot_messages.sole.attachments.sole.file.download).to eq(pdf)
+      expect(run.reload.sequence).to eq(1)
+      expect(SendReplyJob).to have_been_enqueued.once
     end
 
     # A LIMPEZA DO BLOB SEM DONO NÃO FALA COM O RESULTADO (rodada 4, P3). Apagar o blob do retry na
@@ -514,6 +532,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     # E quando a PUBLICAÇÃO levanta, o log tem de dizer a causa DELA: com a limpeza síncrona, um
     # `delete` que falhasse no `ensure` trocava a exceção original pela do purge, e o log passava a
     # apontar para o armazenamento em vez de para o que derrubou a mensagem (rodada 4, P3).
+    #
+    # A LINHA QUE CARREGA A CAUSA MUDOU em 13/09/2026 (fatia 1 do PDF rápido): até então a reserva com
+    # o link era uma segunda mensagem, que levantava de novo e chegava ao `publish` como "publish
+    # failed". Sem a reserva não há segunda mensagem, e a causa sai na linha do anexo que falhou.
     it 'registra a causa da publicacao que levantou, e nao a da limpeza do blob' do
       # Arrange — download bom, mensagem que não nasce, armazenamento que não apaga
       promote
@@ -529,7 +551,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(result).to be_blocked
       expect(bot_messages.count).to eq(0)
       expect(Rails.logger).to have_received(:warn)
-        .with(a_string_matching(/publish failed run=#{run.id} ActiveRecord::ConnectionTimeoutError/))
+        .with(a_string_matching(/anexo falhou run=#{run.id} causa=ActiveRecord::ConnectionTimeoutError/))
       expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
     end
 
@@ -571,11 +593,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       # Act
       result = described_class.new(run: run).publish(arquivo.to_h)
 
-      # Assert — a causa no log é a da publicação, e a do agendamento tem a linha dela
+      # Assert — a causa no log é a da publicação (na linha do anexo desde 13/09/2026, ver o exemplo
+      # anterior), e a do agendamento tem a linha dela
       expect(result).to be_blocked
       expect(bot_messages.count).to eq(0)
       expect(Rails.logger).to have_received(:warn)
-        .with(a_string_matching(/publish failed run=#{run.id} ActiveRecord::ConnectionTimeoutError/))
+        .with(a_string_matching(/anexo falhou run=#{run.id} causa=ActiveRecord::ConnectionTimeoutError/))
       expect(Rails.logger).to have_received(:warn)
         .with(a_string_matching(/blob sem dono nao agendado run=#{run.id} blob=\d+ causa=Errno::ECONNREFUSED/))
     end
@@ -614,12 +637,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(a_request(:get, url)).not_to have_been_made
     end
 
-    # A FALHA DO ANEXO, DEPOIS DE UM DOWNLOAD BOM (rodada 3, P2). O ActiveStorage subia o arquivo
-    # no `after_commit` da mensagem: com o armazenamento fora, a mensagem já estava no ar com a
-    # legenda, um anexo sem bytes e o token publicado — o cliente sem arquivo e sem link, e o retry
-    # virando duplicado. Agora a gravação acontece ANTES da mensagem, dentro da mesma fronteira de
-    # reserva do download: o link vai como ia antes, registrado.
-    it 'cai para o texto com o link quando o armazenamento falha depois do download, sem anexo orfao' do
+    # A FALHA DO ANEXO, DEPOIS DE UM DOWNLOAD BOM (rodada 3, P2). A gravação acontece ANTES da mensagem,
+    # dentro da mesma fronteira do download. Até 13/09/2026 isso mandava o link; agora nada é publicado,
+    # e a linha do blob sem arquivo (salva antes da subida, rodada 6) vai para a limpeza.
+    it 'nao publica nada quando o armazenamento falha depois do download, sem anexo orfao' do
       # Arrange
       promote
       stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
@@ -629,14 +650,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       # Act
       result = described_class.new(run: run).publish(arquivo.to_h)
 
-      # Assert — a linha do blob sem arquivo (salva antes da subida, rodada 6) vai para a limpeza
-      expect(result).to be_published
-      mensagem = bot_messages.sole
-      expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
-      expect(mensagem.attachments).to be_empty
-      expect(mensagem.content_attributes['autonomia_async_token']).to eq(run.delivery_token(arquivo.identidade))
+      # Assert
+      expect(result).to be_blocked
+      expect(bot_messages).to be_empty
       expect(Rails.logger).to have_received(:warn)
-        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=armazenamento causa=Errno::ECONNREFUSED; vai como link/))
+        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=armazenamento causa=Errno::ECONNREFUSED; nao publicado/))
       expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
       perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
       expect(ActiveStorage::Blob.count).to eq(0)
@@ -644,7 +662,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
 
     # O MOTIVO É FECHADO: o cabeçalho que desmente o PDF é do servidor, e nada dele vai ao log —
     # antes saía `tipo_text_html`, com o valor externo dentro do código (rodada 6, 11/09/2026).
-    it 'cai para o texto com o link quando o tipo declarado desmente o PDF, sem o cabecalho no log' do
+    it 'nao publica nada quando o tipo declarado desmente o PDF, sem o cabecalho no log' do
       # Arrange
       promote
       stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'text/html; charset=utf-8' })
@@ -654,19 +672,18 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       result = described_class.new(run: run).publish(arquivo.to_h)
 
       # Assert
-      expect(result).to be_published
-      expect(bot_messages.sole.content).to eq("Comparativo com todas as opções:\n#{url}")
+      expect(result).to be_blocked
+      expect(bot_messages).to be_empty
       expect(Rails.logger).to have_received(:warn)
-        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=tipo_invalido; vai como link/))
+        .with(a_string_matching(/arquivo indisponivel run=#{run.id} motivo=tipo_invalido; nao publicado/))
       expect(Rails.logger).not_to have_received(:warn).with(a_string_matching(%r{text/html|text_html|charset}))
     end
 
     # A FALHA AO ANEXAR, depois de um download e uma gravação bons (rodada 6, 11/09/2026): a mensagem
-    # com o anexo não nasce (a transação volta) e, sem esta guarda, a exceção saía do publicador como
-    # `blocked` — nem arquivo nem link. Agora a reserva vai com o MESMO token, registrada com a classe
-    # da causa, e o blob que ficou sem dono vai para a limpeza.
-    it 'cai para o texto com o link quando o anexo nao pode ser publicado, com um so token e o blob na limpeza' do
-      # Arrange — a mensagem com anexo é inválida; a sem anexo (a reserva) nasce normalmente
+    # com o anexo não nasce (a transação volta). Até 13/09/2026 saía o link com o mesmo token; agora
+    # nada é publicado, a causa vai ao log pelo nome da classe, e o blob sem dono vai para a limpeza.
+    it 'nao publica nada quando o anexo nao pode ser publicado, e manda o blob para a limpeza' do
+      # Arrange — a mensagem com anexo é inválida
       promote
       stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
       allow(Messages::MessageBuilder).to receive(:new).and_wrap_original do |original, *args|
@@ -680,13 +697,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       result = described_class.new(run: run).publish(arquivo.to_h)
 
       # Assert
-      expect(result).to be_published
-      mensagem = bot_messages.sole
-      expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
-      expect(mensagem.attachments).to be_empty
-      expect(mensagem.content_attributes['autonomia_async_token']).to eq(run.delivery_token(arquivo.identidade))
+      expect(result).to be_blocked
+      expect(bot_messages).to be_empty
+      expect(run.reload.sequence).to eq(0)
       expect(Rails.logger).to have_received(:warn)
-        .with(a_string_matching(/anexo falhou run=#{run.id} causa=ActiveRecord::RecordInvalid; vai como link/))
+        .with(a_string_matching(/anexo falhou run=#{run.id} causa=ActiveRecord::RecordInvalid; nao publicado/))
       expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
     end
 
@@ -916,9 +931,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       # Só a mensagem que ESTA publicação criou e que FICOU no banco é reconciliada: quando o COMMIT
       # falha depois de criá-la (o `before_commit` da mensagem levanta e a transação volta), ela não
       # está no banco — `persisted?` volta a ser falso no rollback —, não há envio a reconciliar, e a
-      # exceção segue o caminho de sempre: a reserva com o mesmo token, e o blob sem dono na limpeza.
-      it 'cai para o texto com o link quando o commit da mensagem com anexo falha depois de cria-la' do
-        # Arrange — a mensagem com anexo levanta no `before_commit`; a reserva (sem anexo) passa
+      # exceção segue o caminho de sempre: nada publicado (até 13/09/2026, o link), e o blob sem dono na
+      # limpeza.
+      it 'nao publica nada quando o commit da mensagem com anexo falha depois de cria-la' do
+        # Arrange — a mensagem com anexo levanta no `before_commit`
         promote
         stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
         allow(Messages::MessageBuilder).to receive(:new).and_wrap_original do |original, *args|
@@ -936,13 +952,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
         result = described_class.new(run: run).publish(arquivo.to_h)
 
         # Assert
-        expect(result).to be_published
-        mensagem = bot_messages.sole
-        expect(mensagem.content).to eq("Comparativo com todas as opções:\n#{url}")
-        expect(mensagem.attachments).to be_empty
-        expect(SendReplyJob).to have_been_enqueued.with(mensagem.id).once
+        expect(result).to be_blocked
+        expect(bot_messages).to be_empty
+        expect(SendReplyJob).not_to have_been_enqueued
         expect(Rails.logger).to have_received(:warn)
-          .with(a_string_matching(/anexo falhou run=#{run.id} causa=ActiveRecord::StatementInvalid; vai como link/))
+          .with(a_string_matching(/anexo falhou run=#{run.id} causa=ActiveRecord::StatementInvalid; nao publicado/))
         expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
       end
     end
