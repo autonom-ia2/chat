@@ -42,7 +42,8 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
 
   # A MENSAGEM COM ENVIO PENDENTE (rodada 9 da entrega 11, P2 do Codex): o publicador a deixou no banco
   # com a marca porque o `SendReplyJob` não entrou na fila, e ninguém a reemite — o `AsyncRunJob`
-  # encerra, `comparativo_enviado` impede nova emissão do PDF, o Redis voltar não dispara nada. Este é
+  # encerra, a cotação não pede outro PDF para a mensagem que já está no banco
+  # (`InsuranceQuote::Comparativo#comparativo_assumido?`), o Redis voltar não dispara nada. Este é
   # o recuperador DURÁVEL: para cada marcada, a `RetomadaDeEnvio` da execução que a publicou trava a
   # conversa, relê a mensagem, reconfere a autorização e reenfileira (ou abandona, com motivo). A marca
   # sem execução (ou de execução apagada) é abandonada aqui: não há autorização que a valide.
@@ -133,9 +134,23 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   # do Sidekiq, um deploy no meio do lote mata a passada e joga o resto das linhas para a varredura
   # seguinte, 10 min depois — com o cliente esperando desde o começo. Então sai só o que já está
   # pronto, e o fecho diz a verdade sobre o que o cliente tem.
+  #
+  # O FECHO ENCADEADO AINDA ESPERA (rodada 2 da fatia 1 do PDF rápido, 13/09/2026). Forçar ignora a cadeia
+  # do turno, não a entrega de que o fecho depende (`Tools::EntregaEncadeada`, o comparativo adiado que
+  # ainda não é mensagem): o publicador devolve `deferred`, e o `AsyncPublishJob` enfileirado aqui já
+  # começa com a cadeia no teto e espera só a entrega.
   def encerrar(run, native)
-    publicador = ->(entrega) { ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega) }
     ::Autonomia::Agents::Tools::Encerramento
-      .new(run: run, native: native, trabalho_novo: false, &publicador).encerrar
+      .new(run: run, native: native, trabalho_novo: false) { |entrega| publicar_forcado(run, entrega) }.encerrar
+  end
+
+  def publicar_forcado(run, entrega)
+    config = ::Autonomia::Agents::Tools::AsyncConfig
+    result = ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega)
+    if result.deferred?
+      ::Autonomia::Agents::Tools::AsyncPublishJob.set(wait: config::PUBLISH_DEFER_SECONDS.seconds)
+                                                 .perform_later(run.id, result.adiada || entrega, config::MAX_PUBLISH_DEFERRALS)
+    end
+    result
   end
 end

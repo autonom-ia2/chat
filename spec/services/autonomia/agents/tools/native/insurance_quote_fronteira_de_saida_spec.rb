@@ -144,10 +144,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       poll([offer('43', 'Ezze', 2050.40)], handle: handle, status: 'completed')
     end
 
-    it 'marca o comparativo como enviado quando a entrega existe' do
+    # DESDE A RODADA 2 DA FATIA 1 DO PDF RÁPIDO a emissão grava só a identidade do comparativo: a
+    # sentinela de enviado espera o publicador assumir a entrega (o download acontece depois da passada).
+    it 'grava a identidade do comparativo quando a entrega existe, e nao a sentinela de enviado' do
       resultado = fechar({ 'quote_id' => 'abc:1' })
 
-      expect(resultado.handle[described_class::PDF_SENT_KEY]).to be(true)
+      expect(resultado.handle[described_class::PDF_SENT_KEY]).to be_blank
       expect(resultado.handle[described_class::COMPARATIVO_KEY]).to be_present
     end
 

@@ -9,9 +9,10 @@
 # O LINK DO PORTAL NÃO VAI AO CLIENTE (fatia 1 do PDF rápido, 13/09/2026). A URL do portal não tem
 # assinatura, leva o nome do segurado no caminho e baixa com HTTP 200 sem autenticação. Até essa data,
 # quando o arquivo não baixava, o publicador mandava o texto de reserva com a URL; agora ele não publica
-# nada. Quando isso acontece na passada que fecha a cotação, o motor não encerra e `fechar` pede outro
-# comparativo na passada seguinte, até `TETO_DE_TENTATIVAS`. A publicação ADIADA que falha depois, no
-# `AsyncPublishJob`, não ganha nova tentativa.
+# nada, e baixa ANTES de adiar (rodada 2): o download que falha volta recusado na mesma passada, o motor
+# não encerra e `fechar` pede outro comparativo na passada seguinte, até `TETO_DE_TENTATIVAS`. O que o
+# `AsyncPublishJob` ainda pode recusar depois de adiar é só o anexo do blob já gravado (autorização caída,
+# erro de banco), e isso não ganha nova tentativa.
 #
 # Separado da ferramenta pelo mesmo motivo de `Declaracao`, `Recusas`, `Envio` e `Veiculo`: é outro
 # assunto (como o comparativo chega ao cliente), e a classe está no teto de linhas.
@@ -25,16 +26,19 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # continua no pedido, e a forma da entrega de arquivo exige uma reserva. Ela não é publicada.
   RESERVA = 'Comparativo com todas as opções:'.freeze
   NOME = 'Comparativo de seguro'.freeze
-  # Quantas vezes esta execução já pediu o comparativo ao portal na passada que fecha a cotação.
-  # Gravado no handle da ferramenta por `fechar`, antes de cada pedido.
+  # Quantas vezes esta execução já pediu o comparativo ao portal na passada que fecha a cotação. Contado
+  # por `fechar` antes de cada pedido; vai à linha junto da identidade do comparativo emitido, ou no
+  # `record_attempt!` do fim da passada.
   TENTATIVAS_KEY = 'comparativo_tentativas'.freeze
   # O TETO DE PEDIDOS DO COMPARATIVO AO PORTAL, e por que três. Medido em 13/09/2026: 1 de 5 pedidos
-  # voltou 504, em 29 s. Se as falhas forem independentes nessa taxa, três seguidas acontecem em 0,8%
-  # das cotações (duas, em 4%). O custo de uma tentativa no pior caso é um intervalo de consulta (21 s
-  # no fim da progressão), a chamada ao portal (60 s de leitura, `Connector::Http::READ_TIMEOUT`) e o
-  # download (20 s, `EntregaDeArquivo::PRAZO_SEGUNDOS`): três somam ~303 s, que com os 98 s da cotação
-  # mais lenta medida chegam perto dos 420 s do prazo; uma quarta passaria dele. Quando o prazo chega
-  # antes, quem encerra é `AsyncRunJob#fail_run`, como antes desta fatia.
+  # voltou 504, em 29 s; se as falhas forem independentes nessa taxa (não foi medido), três seguidas
+  # acontecem em 0,8% das cotações. O TETO NÃO GARANTE TEMPO: no pior caso cada passada de nova tentativa
+  # custa o intervalo de consulta (21 s no fim da progressão), a leitura do portal (até 65 s,
+  # `Connector::Http::READ_TIMEOUT` mais `OPEN_TIMEOUT`), o pedido do comparativo (outros 65 s) e o
+  # download (20 s, `EntregaDeArquivo::PRAZO_SEGUNDOS`), ~171 s — e o prazo de 420 s pode vencer no meio
+  # das tentativas. O prazo só é conferido no começo de uma passada (`AsyncRunJob#stop?`); vencido, quem
+  # encerra é `AsyncRunJob#fail_run`, e o encerramento pede o comparativo mais uma vez quando ainda há
+  # tentativa sobrando (`Fecho#closing_deliveries`).
   TETO_DE_TENTATIVAS = 3
 
   private
@@ -49,6 +53,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   #
   # As marcas só entram no handle depois de a entrega existir na forma em que vai sair
   # (`Progress.entregavel`), e é sobre essa forma que a identidade é calculada.
+  #
+  # A IDENTIDADE E A CONTAGEM VÃO À LINHA ANTES DE O ARQUIVO SER PUBLICADO. O handle que esta passada
+  # devolve só chega ao banco no `record_attempt!` do fim dela, depois da publicação. Morto o processo
+  # entre as duas coisas (o Sidekiq reenfileira o job no hard shutdown de um deploy), a mesma passada
+  # rodava de novo sem a identidade, pedia outro comparativo ao portal, que devolve outra URL e com ela
+  # outra identidade, e o cliente recebia dois PDFs. Com a identidade na linha, a reentrada pergunta por
+  # ela (`comparativo_assumido?`). A escrita é reforço (`gravar_na_linha`): se falhar, as marcas seguem no
+  # handle da passada. Duas passadas SIMULTÂNEAS sobre a mesma linha ainda pedem dois comparativos: as
+  # duas leem a linha antes de qualquer uma gravar.
   def fechar(deliveries, handle)
     return concluir_passada(deliveries, handle) unless comparativo_por_tentar?(handle)
 
@@ -57,7 +70,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
     entrega = pdf && progress_class.entregavel(pdf)
     return sem_comparativo(deliveries, handle) if entrega.nil?
 
-    concluir_passada(deliveries + [entrega], handle.merge(marcas_do_comparativo(entrega)))
+    marcas = marcas_do_comparativo(entrega).merge(TENTATIVAS_KEY => handle[TENTATIVAS_KEY])
+    gravar_na_linha { run.merge_handle!(marcas) } if run
+    concluir_passada(deliveries + [entrega], handle.merge(marcas))
   end
 
   # O comparativo desta passada não saiu: `running` se ainda há tentativa, `done` se não há.
@@ -67,9 +82,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
     concluir_passada(deliveries, handle)
   end
 
-  # `done`, com `Fecho::CONCLUSAO_KEY` no handle (ver `Fecho#resta_entregar?`).
+  # `done`, com `Fecho::CONCLUSAO_KEY` no handle (ver `Fecho#resta_entregar?`) e, quando o comparativo
+  # desta execução já foi assumido pelo publicador, `PDF_SENT_KEY` — gravada aqui, e não na emissão.
   def concluir_passada(deliveries, handle)
-    progress_class.done(deliveries: deliveries, handle: handle.merge(self.class::CONCLUSAO_KEY => true))
+    marcas = { self.class::CONCLUSAO_KEY => true }
+    marcas[self.class::PDF_SENT_KEY] = true if comparativo_assumido?(handle)
+    progress_class.done(deliveries: deliveries, handle: handle.merge(marcas))
   end
 
   # -> verdade quando há preço emitido, o teto não foi atingido e o comparativo não foi assumido.
@@ -81,30 +99,23 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
     !comparativo_assumido?(handle)
   end
 
-  # -> verdade quando o comparativo foi emitido (`PDF_SENT_KEY`) e a identidade dele está na lista do
-  # aceite OU numa mensagem da conversa. Emitido SEM identidade gravada (a ferramenta montada sem
-  # execução não grava o token) também responde verdade: sem token não há o que perguntar, e responder
-  # falso faria a passada seguinte emitir outro comparativo.
+  # -> verdade quando a identidade do comparativo emitido (`COMPARATIVO_KEY`) está na lista do aceite OU
+  # numa mensagem da conversa. O aceite de uma entrega de arquivo só existe quando o arquivo foi baixado e
+  # gravado: o publicador baixa antes de publicar e antes de adiar (`AsyncPublisher::Arquivos`).
   #
   # A MENSAGEM CONTA MESMO SEM ACEITE, e o caso é real: o publicador cria a mensagem com o arquivo e,
   # quando o `SendReplyJob` não entra na fila, devolve `blocked` com a pendência gravada na mensagem — o
   # varredor a retoma (`ReapStaleRunsJob#retomar_envios_pendentes`). Cada pedido ao portal devolve uma
   # URL DIFERENTE (medido em 13/09/2026: dois pedidos da mesma cotação, duas URLs), e com ela uma
   # identidade diferente; pedir outro comparativo ali poria um segundo PDF na conversa.
+  #
+  # SEM IDENTIDADE GRAVADA, vale a sentinela `PDF_SENT_KEY`: é o handle da ferramenta montada sem execução
+  # (que não grava token) e o da linha gravada pela versão anterior sem token.
   def comparativo_assumido?(handle)
-    return false if handle[self.class::PDF_SENT_KEY].blank?
-
     token = handle[self.class::COMPARATIVO_KEY]
-    token.blank? || aceita?(token) || ::Autonomia::Agents::Tools::EntregaPublicada.para(run.conversation, token).present?
-  end
+    return handle[self.class::PDF_SENT_KEY].present? if token.blank?
 
-  # O comparativo do ENCERRAMENTO (`closing_deliveries`): nil quando já foi emitido ou quando não há
-  # preço emitido; senão, o que `gerar_comparativo` devolver.
-  def comparison_pdf(handle)
-    return if handle[self.class::PDF_SENT_KEY]
-    return if Array(handle[self.class::DELIVERED_KEY]).empty?
-
-    gerar_comparativo(handle)
+    aceita?(token) || ::Autonomia::Agents::Tools::EntregaPublicada.para(run&.conversation, token).present?
   end
 
   # UM PEDIDO DO COMPARATIVO AO PORTAL. -> a entrega de arquivo na forma serializada, ou nil quando a

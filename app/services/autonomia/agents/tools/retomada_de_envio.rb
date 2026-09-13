@@ -12,7 +12,8 @@
 #
 # 2. O VARREDOR (`ReapStaleRunsJob`, a cada 10 min): a única recuperação DURÁVEL. Sem ele, a marca
 #    dependia de alguém reemitir a entrega — e ninguém reemite: o `AsyncRunJob#apply` publica e
-#    encerra, `comparativo_enviado` impede nova emissão do PDF, o `AsyncPublishJob` para em
+#    encerra, a cotação não pede outro PDF para a mensagem que já está no banco
+#    (`InsuranceQuote::Comparativo#comparativo_assumido?`), o `AsyncPublishJob` para em
 #    `blocked`, e o Redis voltar não dispara nada. `recuperar` trava a conversa da mensagem, RELÊ a
 #    mensagem sob o lock, reconfere a autorização (a mesma do publicador, `AutorizacaoDaExecucao`) e
 #    decide: reenfileira e limpa; ou abandona (limpa a marca e registra o motivo, fechado) quando a

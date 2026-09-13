@@ -232,8 +232,10 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   # Entrega da FERRAMENTA (não o aviso, não a frase de falha). Conta como entregue tanto a publicada
-  # quanto a ADIADA — a adiada sai sozinha pelo `AsyncPublishJob`, e tratá-la como "nada entregue"
-  # faria o desfecho publicar "não consegui concluir" ao lado da cotação que estava a caminho.
+  # quanto a ADIADA — a adiada fica com o `AsyncPublishJob`, e tratá-la como "nada entregue" faria o
+  # desfecho publicar "não consegui concluir" ao lado da cotação que estava a caminho. O job adiado ainda
+  # pode recusá-la depois (autorização caída, erro de banco), e nada aqui fica sabendo; o que a rodada 2
+  # da fatia 1 do PDF rápido tirou desse caminho foi o download, que o publicador faz antes de adiar.
   # `entrega` é texto ou a forma serializada de uma entrega de arquivo (o comparativo, entrega 11).
   #
   # DUAS ANOTAÇÕES, A MESMA PERGUNTA (entrega 8a): o contador diz QUANTAS entregas o publicador
@@ -269,8 +271,8 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # consegui" ao lado de um PDF que existia.
   #
   # Agora o encerramento é SEMPRE oferecido à ferramenta, e o filtro mora nela, que é quem sabe o que
-  # tem em mãos. PARA A COTAÇÃO NADA MUDA no que sai: `comparison_pdf` devolve nil sem `entregues` no
-  # handle (`InsuranceQuote::Comparativo`), então a execução que morre sem preço nenhum continua
+  # tem em mãos. PARA A COTAÇÃO NADA MUDA no que sai: `closing_deliveries` não pede comparativo sem preço
+  # aceito (`InsuranceQuote::Fecho`), então a execução que morre sem preço nenhum continua
   # fechando com a frase de falha e sem pedir nada ao portal — travado por exemplo pelo caminho real
   # em `async_run_job_encerramento_parcial_spec`.
   #
@@ -329,14 +331,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   # A publicação é ADIADA enquanto a entrega humanizada do turno ainda está em curso —
-  # publicar no meio dela entregaria a cotação antes da frase que a promete. A entrega de arquivo
-  # viaja para o job adiado na forma serializada (Hash de texto), que é o que o Sidekiq carrega.
+  # publicar no meio dela entregaria a cotação antes da frase que a promete — ou enquanto a entrega de
+  # que um texto encadeado depende não é mensagem. O job adiado carrega a forma que o publicador devolve
+  # em `adiada`: para a entrega de arquivo é o arquivo já gravado (`ArquivoGravado`), sem a URL do portal.
   def publish(run, entrega)
     result = ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(entrega)
     if result.deferred?
       ::Autonomia::Agents::Tools::AsyncPublishJob
         .set(wait: AsyncConfig::PUBLISH_DEFER_SECONDS.seconds)
-        .perform_later(run.id, entrega, 1)
+        .perform_later(run.id, result.adiada || entrega, 1)
     end
     result
   end

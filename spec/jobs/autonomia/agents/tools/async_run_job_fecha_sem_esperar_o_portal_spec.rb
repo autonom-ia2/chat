@@ -105,12 +105,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run.reload
   end
 
-  # As duas primeiras consultas: tudo `running`, depois dois preços e três ainda sem preço.
-  def ate_a_leitura_parcial(run)
+  # As três primeiras consultas: tudo `running`; dois preços e três ainda sem preço; e a primeira leitura
+  # com todas as seguradoras com desfecho, que não fecha a cotação (a lista precisa se repetir, rodada 2).
+  # A passada seguinte, com a mesma leitura, é a que fecha.
+  def ate_todas_com_desfecho(run)
     portal_responde('running', leitura_inicial)
     passada(run, 1)
     portal_responde('partial', leitura_parcial)
     passada(run, 2)
+    portal_responde('partial', leitura_com_todas_com_desfecho)
+    passada(run, 3)
   end
 
   def bot_messages
@@ -132,12 +136,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   it 'encerra quando toda seguradora tem desfecho, com o portal ainda partial: precos, comparativo, fecho e done' do
     # Arrange
     run = cotacao_submetida
-    ate_a_leitura_parcial(run)
+    ate_todas_com_desfecho(run)
     pdf_responde(pdf_ok)
 
     # Act — a terceira consulta: o portal continua `partial`
     portal_responde('partial', leitura_com_todas_com_desfecho)
-    passada(run, 3)
+    passada(run, 4)
 
     # Assert — a conversa
     expect(precos).to include('R$ 2.119,18', 'R$ 2.323,17')
@@ -155,12 +159,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   it 'a linha done continua contando como pedido feito, com o texto de concluida, e a medida nao muda' do
     # Arrange
     run = cotacao_submetida
-    ate_a_leitura_parcial(run)
+    ate_todas_com_desfecho(run)
     pdf_responde(pdf_ok)
     portal_responde('partial', leitura_com_todas_com_desfecho)
 
     # Act
-    passada(run, 3)
+    passada(run, 4)
 
     # Assert
     expect(run.conta_como_pedido?).to be(true)
@@ -174,13 +178,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   it 'o comparativo que o portal nao gera na primeira vez sai na passada seguinte, com um fecho so' do
     # Arrange
     run = cotacao_submetida
-    ate_a_leitura_parcial(run)
+    ate_todas_com_desfecho(run)
     pdf_responde(pdf_ok)
     portal_responde('partial', leitura_com_todas_com_desfecho)
     allow(mock).to receive(:quote_proposal).and_raise(portal_fora)
 
     # Act 1 — o pedido de PDF volta 504
-    passada(run, 3)
+    passada(run, 4)
 
     # Assert 1 — nada novo na conversa, e a execução continua
     expect(bot_contents).to eq([precos])
@@ -189,7 +193,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     # Act 2 — o portal responde
     allow(mock).to receive(:quote_proposal).and_call_original
-    passada(run, 4)
+    passada(run, 5)
 
     # Assert 2
     expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
@@ -202,12 +206,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   it 'o download que falha nao manda o link: a passada seguinte gera o comparativo de novo' do
     # Arrange
     run = cotacao_submetida
-    ate_a_leitura_parcial(run)
+    ate_todas_com_desfecho(run)
     pdf_responde(pdf_nao_encontrado, pdf_ok)
     portal_responde('partial', leitura_com_todas_com_desfecho)
 
     # Act 1 — o download volta 404
-    passada(run, 3)
+    passada(run, 4)
 
     # Assert 1 — nenhuma mensagem nova, nenhum link, e a entrega não conta
     expect(bot_contents).to eq([precos])
@@ -215,7 +219,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(Autonomia::Agents::Tools::EntregaAceita.aceita?(run, run.handle[cotacao::COMPARATIVO_KEY])).to be(false)
 
     # Act 2
-    passada(run, 4)
+    passada(run, 5)
 
     # Assert 2 — o arquivo, o fecho, e o link em lugar nenhum
     expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
@@ -231,7 +235,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   it 'o comparativo que ficou na conversa com o envio pendente nao vira um segundo PDF' do
     # Arrange
     run = cotacao_submetida
-    ate_a_leitura_parcial(run)
+    ate_todas_com_desfecho(run)
     outra_url = 'https://exemplo.test/comparativo-mock-2.pdf'
     allow(mock).to receive(:quote_proposal).and_return({ 'url' => url }, { 'url' => outra_url })
     pdf_responde(pdf_ok)
@@ -240,9 +244,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     fila_recusa_o_envio
 
     # Act — a passada que cria a mensagem do PDF sem conseguir enfileirar o envio, e a seguinte
-    passada(run, 3)
-    expect(run.status).to eq('running')
     passada(run, 4)
+    expect(run.status).to eq('running')
+    passada(run, 5)
     fila_volta
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
@@ -257,12 +261,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     it 'com o portal sem gerar o PDF, conclui sem comparativo, sem link e com o fecho' do
       # Arrange
       run = cotacao_submetida
-      ate_a_leitura_parcial(run)
+      ate_todas_com_desfecho(run)
       portal_responde('partial', leitura_com_todas_com_desfecho)
       allow(mock).to receive(:quote_proposal).and_raise(portal_fora)
 
       # Act
-      [3, 4, 5].each { |tentativa| passada(run, tentativa) }
+      [4, 5, 6].each { |tentativa| passada(run, tentativa) }
 
       # Assert
       expect(bot_contents).to eq([precos, fecho])
@@ -273,12 +277,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     it 'com o download sempre falhando, conclui sem comparativo, sem link e com o fecho' do
       # Arrange
       run = cotacao_submetida
-      ate_a_leitura_parcial(run)
+      ate_todas_com_desfecho(run)
       portal_responde('partial', leitura_com_todas_com_desfecho)
       pdf_responde(pdf_nao_encontrado)
 
       # Act — três passadas recusam o arquivo; a quarta não pede mais
-      [3, 4, 5, 6].each { |tentativa| passada(run, tentativa) }
+      [4, 5, 6, 7].each { |tentativa| passada(run, tentativa) }
 
       # Assert
       expect(bot_contents).to eq([precos, fecho])
@@ -294,13 +298,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     it 'nao publica um segundo desfecho quando o fecho desta execucao ja esta na conversa' do
       # Arrange — o fecho já publicado por outra porta (o varredor cruzando com o motor)
       run = cotacao_submetida
-      ate_a_leitura_parcial(run)
+      ate_todas_com_desfecho(run)
       pdf_responde(pdf_ok)
       Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(cotacao.closing_message(run.arguments))
       portal_responde('partial', leitura_com_todas_com_desfecho)
 
       # Act
-      passada(run, 3)
+      passada(run, 4)
 
       # Assert
       expect(bot_contents).to eq([precos, fecho, cotacao::Comparativo::LEGENDA])
@@ -311,12 +315,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # parcial para isso): a linha que atravessa o deploy não recebe o fecho novo ao lado do antigo.
     it 'nao publica o fecho novo ao lado da frase parcial que a versao anterior publicou' do
       run = cotacao_submetida
-      ate_a_leitura_parcial(run)
+      ate_todas_com_desfecho(run)
       pdf_responde(pdf_ok)
       Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(cotacao::PARCIAL)
       portal_responde('partial', leitura_com_todas_com_desfecho)
 
-      passada(run, 3)
+      passada(run, 4)
 
       expect(bot_contents).to eq([precos, cotacao::PARCIAL, cotacao::Comparativo::LEGENDA])
     end
@@ -327,8 +331,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       portal_responde('running', leitura_inicial)
       passada(run, 1)
       portal_responde('running', %w[8 20 47 11 19].map { |codigo| oferta(codigo, 'declined') })
-
       passada(run, 2)
+      expect(run.status).to eq('running')
+
+      passada(run, 3)
 
       expect(bot_contents).to eq([cotacao.failure_message])
       expect(run).to have_attributes(status: 'done', delivered_count: 0)
@@ -357,8 +363,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     portal_responde('partial', [oferta('8', 'quoted', 2119.18), oferta('20', 'declined'), oferta('47', 'declined'),
                                 oferta('11', 'auth_required'), oferta('19', 'declined')])
 
-    # Act
+    # Act — a primeira leitura desta versão grava a leitura assentada; a segunda fecha
     passada(run, 7)
+    passada(run, 8)
 
     # Assert
     expect(bot_contents).to eq([texto, cotacao::Comparativo::LEGENDA, fecho])
@@ -371,10 +378,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   it 'o varredor fecha com o fecho de quem tem resultado a linha abandonada esperando nova tentativa' do
     # Arrange
     run = cotacao_submetida
-    ate_a_leitura_parcial(run)
+    ate_todas_com_desfecho(run)
     portal_responde('partial', leitura_com_todas_com_desfecho)
     allow(mock).to receive(:quote_proposal).and_raise(portal_fora)
-    passada(run, 3)
+    passada(run, 4)
     run.update!(expires_at: 10.minutes.ago)
 
     # Act
@@ -395,12 +402,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     it 'o varredor publica o fecho que o done nao chegou a publicar' do
       # Arrange — a passada grava o handle e morre antes de `finish_done`
       run = cotacao_submetida
-      ate_a_leitura_parcial(run)
+      ate_todas_com_desfecho(run)
       pdf_responde(pdf_ok)
       portal_responde('partial', leitura_com_todas_com_desfecho)
       morre = described_class.new
       allow(morre).to receive(:finish_done)
-      morre.perform(run.id, 3)
+      morre.perform(run.id, 4)
       expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA])
       run.update!(expires_at: 10.minutes.ago)
 
@@ -415,13 +422,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     it 'o varredor nao repete o fecho que o done publicou antes de morrer' do
       # Arrange — o desfecho sai e a passada morre antes do `finish!`
       run = cotacao_submetida
-      ate_a_leitura_parcial(run)
+      ate_todas_com_desfecho(run)
       pdf_responde(pdf_ok)
       portal_responde('partial', leitura_com_todas_com_desfecho)
       allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
       allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
       allow(run).to receive(:finish!).and_return(false)
-      described_class.new.perform(run.id, 3)
+      described_class.new.perform(run.id, 4)
       expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
       Autonomia::Agents::ToolRun.where(id: run.id).update_all(expires_at: 10.minutes.ago) # rubocop:disable Rails/SkipsModelValidations
 

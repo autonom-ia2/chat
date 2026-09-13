@@ -100,17 +100,28 @@ class Autonomia::Insurance::QuoteOffers
   # ficam fora desta lista, e uma oferta com um deles faz `todas_com_desfecho?` responder falso.
   DESFECHOS = %w[quoted declined auth_required error].freeze
 
-  # -> true quando as três condições valem, nesta ordem:
-  #   1. `ja_acionadas` (a lista que as leituras ANTERIORES gravaram no handle) não está vazia;
-  #   2. todo código de `ja_acionadas` aparece nesta leitura (`acionadas`);
-  #   3. toda oferta desta leitura tem status em `DESFECHOS`.
-  # A 1 faz a primeira leitura responder falso. A 1 e a 2 juntas fazem a lista de ofertas vazia
-  # responder falso: sem leitura anterior não passa a 1, e com ela nenhum código anterior está aqui.
-  def todas_com_desfecho?(ja_acionadas)
-    anteriores = Array(ja_acionadas).map(&:to_s)
-    return false if anteriores.empty? || (anteriores - acionadas).any?
+  # -> os códigos desta leitura, em ordem, quando ela tem oferta e TODA oferta tem status em `DESFECHOS`;
+  # nil quando não. É o que a ferramenta grava no handle a cada leitura (`InsuranceQuote::LEITURA_ASSENTADA_KEY`).
+  def assentada
+    ofertas = Array(@result['offers'])
+    return nil if ofertas.empty? || ofertas.any? { |offer| DESFECHOS.exclude?(offer['status']) }
 
-    Array(@result['offers']).all? { |offer| DESFECHOS.include?(offer['status']) }
+    acionadas.sort
+  end
+
+  # -> true quando as três condições valem (rodada 2 da fatia 1 do PDF rápido, 13/09/2026):
+  #   1. esta leitura está assentada (`assentada`);
+  #   2. a leitura IMEDIATAMENTE anterior também estava, com o MESMO conjunto de códigos
+  #      (`assentada_anterior`, o que a ferramenta gravou no handle na passada anterior);
+  #   3. todo código que alguma leitura anterior listou (`ja_acionadas`, a união) aparece nesta.
+  # A 2 faz a primeira leitura, e a primeira leitura assentada depois de uma com seguradora em andamento
+  # ou de uma lista diferente, responderem falso: a lista precisa se repetir, com desfecho, em duas leituras
+  # seguidas. Isso não depende de o portal listar todas as seguradoras na primeira leitura.
+  def todas_com_desfecho?(ja_acionadas, assentada_anterior)
+    atual = assentada
+    return false if atual.nil? || Array(assentada_anterior).map(&:to_s).sort != atual
+
+    (Array(ja_acionadas).map(&:to_s) - acionadas).empty?
   end
 
   # Seguradoras que recusaram a credencial que a corretora cadastrou NO PORTAL (critério 4.5).

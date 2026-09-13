@@ -188,13 +188,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     # Assert — o preço fica, nenhum link, nada de anexo, a entrega não conta; a linha do blob sem
     # arquivo (a subida falhou depois de a linha ser salva, rodada 6) vai para a limpeza em segundo
-    # plano; o comparativo foi emitido e não foi aceito, e a execução é reagendada
+    # plano; o comparativo foi emitido e não foi aceito — a identidade dele fica gravada, a sentinela de
+    # enviado não (rodada 2 da fatia 1 do PDF rápido) — e a execução é reagendada
     expect(bot_messages.map(&:content)).to eq([preco])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
     expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
     perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
     expect(ActiveStorage::Blob.count).to eq(0)
-    expect(run.reload.handle[cotacao::PDF_SENT_KEY]).to be(true)
+    expect(run.reload.handle.values_at(cotacao::PDF_SENT_KEY, cotacao::COMPARATIVO_KEY).map(&:present?)).to eq([false, true])
     expect(run).to have_attributes(delivered_count: 1, status: 'running')
   end
 end

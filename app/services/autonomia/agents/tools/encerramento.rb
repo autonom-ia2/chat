@@ -85,8 +85,8 @@ class Autonomia::Agents::Tools::Encerramento
     @publicador = publicador
   end
 
-  # -> true quando alguma entrega DO ENCERRAMENTO foi aceita (publicada, ou adiada — a adiada sai
-  # sozinha pelo `AsyncPublishJob`). Elas NÃO contam em `delivered_count`, de propósito: esse contador
+  # -> true quando alguma entrega DO ENCERRAMENTO foi aceita (publicada, ou adiada — a adiada fica com o
+  # `AsyncPublishJob`, que ainda pode recusá-la). Elas NÃO contam em `delivered_count`, de propósito: esse contador
   # é o da entrega do TRABALHO, e é ele que diz, na janela do pedido repetido (entrega 10), que a
   # execução deu resultado.
   #
@@ -160,8 +160,12 @@ class Autonomia::Agents::Tools::Encerramento
   # O ACEITE FICA REGISTRADO na linha (`Tools::EntregaAceita`), como no motor: é por ele que uma
   # segunda passada — e a própria ferramenta, logo abaixo, ao decidir o fecho — sabe que esta
   # entrega já foi assumida pelo publicador, mesmo quando ela ainda não virou mensagem.
+  #
+  # A ENTREGA ADIADA fica anotada (`@adiada`, o token dela): o fecho desta passada é encadeado a ela
+  # (`encadear`), para não sair antes dela.
   def publicar_uma(entrega)
     resultado = ::Autonomia::Agents::Tools::EntregaAceita.registrar(@run, entrega, publicar(entrega))
+    @adiada = ::Autonomia::Agents::Tools::EntregaPublicada.token_de(@run, entrega) if resultado.deferred?
     resultado.aceita?
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento entrega falhou slug=#{@run.slug} #{e.class}")
@@ -178,12 +182,32 @@ class Autonomia::Agents::Tools::Encerramento
   end
 
   # A regra comum a `encerrar` e `concluir`: nenhuma frase de fecho desta execução na conversa, e só
-  # então a frase que o bloco escolher (nil não publica nada).
+  # então a frase que o bloco escolher (nil não publica nada), encadeada à entrega que ainda está a
+  # caminho, quando há uma (`encadear`).
   def publicar_se_nao_houver_fecho
     return if fecho_publicado?
 
     texto = yield
-    publicar(texto) if texto
+    publicar(encadear(texto)) if texto
+  end
+
+  # O FECHO NUNCA SAI ANTES DA ENTREGA QUE ESTÁ A CAMINHO (rodada 2 da fatia 1 do PDF rápido,
+  # 13/09/2026). -> o texto, ou a `EntregaEncadeada` dele quando há de quem depender: a entrega adiada
+  # nesta passada (`@adiada`) ou a que a ferramenta diz estar aceita e ainda sem mensagem
+  # (`entrega_a_caminho`). O publicador adia a encadeada enquanto essa mensagem não existe, até
+  # `AsyncConfig::MAX_DEPENDENCY_DEFERRALS`.
+  #
+  # NÃO SEI É PUBLICAR: se a pergunta à ferramenta levantar, o fecho sai sem esperar — fora de ordem,
+  # e não em silêncio.
+  def encadear(texto)
+    ::Autonomia::Agents::Tools::EntregaEncadeada.forma(texto, depois_de: @adiada || a_caminho_pela_ferramenta)
+  end
+
+  def a_caminho_pela_ferramenta
+    ferramenta&.entrega_a_caminho(handle_da_ferramenta)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] entrega a caminho indisponivel slug=#{@run.slug} #{e.class}")
+    nil
   end
 
   # Alguma das frases de fecho DESTA execução já está na conversa?

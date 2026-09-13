@@ -225,7 +225,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 5.minutes.from_now)
       run.record_attempt!(handle: { Autonomia::Agents::Tools::AsyncRunJob::SUBMITTED_KEY => true, 'quote_id' => 'q-1:1',
                                     described_class::DELIVERED_KEY => [],
-                                    described_class::ACIONADAS_KEY => %w[3 43] }.merge(handle))
+                                    described_class::ACIONADAS_KEY => %w[3 43],
+                                    described_class::LEITURA_ASSENTADA_KEY => %w[3 43] }.merge(handle))
       run
     end
 

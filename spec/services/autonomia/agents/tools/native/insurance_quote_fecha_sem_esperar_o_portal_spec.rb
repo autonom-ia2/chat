@@ -62,10 +62,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     tool.poll(handle: handle, attempt: 5)
   end
 
-  # O handle depois de uma leitura ANTERIOR que já listou estas seguradoras (a lista de acionadas é
-  # gravada pela ferramenta em toda consulta).
+  # O handle depois de uma leitura ANTERIOR que listou estas seguradoras, todas com desfecho: a lista de
+  # acionadas e a leitura assentada são gravadas pela ferramenta em toda consulta.
   def depois_de_uma_leitura(*codigos)
-    { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [], described_class::ACIONADAS_KEY => codigos }
+    { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [], described_class::ACIONADAS_KEY => codigos,
+      described_class::LEITURA_ASSENTADA_KEY => codigos.sort }
   end
 
   def pdf_de(progresso)
@@ -84,9 +85,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(progresso.handle[described_class::FECHADO_KEY]).to be(true)
     end
 
-    # A PRIMEIRA LEITURA NÃO ENCERRA, e é exigência nossa além da do enunciado: sem leitura anterior,
-    # uma seguradora que o portal ainda não tivesse listado não estaria em lugar nenhum para segurar
-    # o encerramento. O custo é um intervalo de consulta.
+    # A PRIMEIRA LEITURA NÃO ENCERRA: a lista precisa se repetir, com desfecho, em duas leituras seguidas.
+    # O custo é um intervalo de consulta depois do último desfecho.
     it 'nao encerra na primeira leitura, mesmo com todas com desfecho' do
       progresso = consultar('partial', com_desfecho, { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [] })
 
@@ -98,7 +98,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
     # O CÁLCULO CUJOS RESULTADOS VIERAM TODOS COM ERRO, e o portal ainda aberto: o adapter o devolve
     # `running` (`toOffer`, sem prêmio escolhível e sem `calc.erros`). Ele adia o encerramento até o
-    # portal ficar pronto, quando a mesma oferta passa a `error` — e aí a cotação encerra.
+    # portal ficar pronto, quando a mesma oferta passa a `error` — e a cotação encerra na leitura seguinte,
+    # que repete a lista com desfecho.
     it 'a seguradora running adia o encerramento ate o portal ficar pronto, quando ela vira error' do
       # Arrange / Act 1 — o portal ainda aberto
       enquanto = consultar('partial', com_desfecho + [oferta('19', 'running')], depois_de_uma_leitura('8', '47', '11', '19'))
@@ -107,13 +108,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(enquanto).to be_running
       expect(connector).not_to have_received(:quote_proposal)
 
-      # Act 2 — o portal declara o negócio pronto
+      # Act 2 — o portal declara o negócio pronto; a primeira leitura com todas com desfecho
       pronto = consultar('partial', com_desfecho + [oferta('19', 'error')], enquanto.handle)
+      expect(pronto).to be_running
 
-      # Assert 2 — os preços já tinham saído; sai o comparativo
-      expect(pronto).to be_done
-      expect(pronto.deliveries.size).to eq(1)
-      expect(pdf_de(pronto).url).to eq(url)
+      # Act 3 — a mesma lista, de novo
+      fechada = consultar('partial', com_desfecho + [oferta('19', 'error')], pronto.handle)
+
+      # Assert — os preços já tinham saído; sai o comparativo
+      expect(fechada).to be_done
+      expect(fechada.deliveries.size).to eq(1)
+      expect(pdf_de(fechada).url).to eq(url)
     end
 
     it 'nao encerra quando a leitura perdeu uma seguradora que outra leitura ja tinha listado' do
@@ -189,9 +194,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # Act 2
       de_novo = consultar('partial', com_desfecho, emitido.handle)
 
-      # Assert 2
+      # Assert 2 — e a emissão NÃO grava a sentinela de comparativo enviado (rodada 2)
       expect(pdf_de(de_novo).url).to eq(url)
       expect(connector).to have_received(:quote_proposal).twice
+      expect([emitido, de_novo].map { |progresso| progresso.handle[described_class::PDF_SENT_KEY] }).to all(be_blank)
 
       # Act 3 — agora o publicador aceita
       Autonomia::Agents::Tools::EntregaAceita.registrar(
@@ -199,10 +205,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       )
       aceito = consultar('partial', com_desfecho, de_novo.handle)
 
-      # Assert 3
-      expect(aceito).to be_done
-      expect(aceito.deliveries).to be_empty
+      # Assert 3 — a sentinela é gravada na passada que encontra o comparativo assumido
+      expect(aceito).to have_attributes(status: :done, deliveries: [])
       expect(connector).to have_received(:quote_proposal).twice
+      expect(aceito.handle[described_class::PDF_SENT_KEY]).to be(true)
     end
 
     # CADA PEDIDO AO PORTAL DEVOLVE UMA URL DIFERENTE (medido em 13/09/2026), e com ela uma identidade

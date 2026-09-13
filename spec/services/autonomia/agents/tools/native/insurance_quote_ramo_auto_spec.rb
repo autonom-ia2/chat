@@ -453,7 +453,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(comparativo.legenda).to include('Comparativo com todas as opções')
       expect(comparativo.url).to eq('https://exemplo.test/comparativo.pdf')
       expect(comparativo.reserva).not_to include('https://exemplo.test/comparativo.pdf')
-      expect(progress.handle[described_class::PDF_SENT_KEY]).to be(true)
+      # A emissão conta a tentativa e não grava a sentinela de enviado (rodada 2 da fatia 1 do PDF rápido):
+      # o arquivo ainda vai ser baixado pelo publicador.
+      expect(progress.handle[described_class::Comparativo::TENTATIVAS_KEY]).to eq(1)
+      expect(progress.handle[described_class::PDF_SENT_KEY]).to be_blank
       # O FECHAMENTO DO PORTAL SE GRAVA POR SI (entrega 8a): é ele que distingue "ainda tem
       # seguradora por responder" de "é isto que havia", e não pode depender de o PDF ter saído.
       expect(progress.handle[described_class::FECHADO_KEY]).to be(true)
@@ -687,9 +690,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(tool_do_motor.resta_entregar?('quote_id' => 'abc:1', fechado => true)).to be(false)
       end
 
-      # O COMPARATIVO EMITIDO QUE O PUBLICADOR NÃO ASSUMIU É SOBRA — e a sentinela não sabe disso:
-      # ela é gravada quando a entrega sai da ferramenta, antes de o publicador decidir. Com a
-      # publicação recusada, o fecho calava sobre um comparativo que faltou (Codex).
+      # O COMPARATIVO EMITIDO QUE O PUBLICADOR NÃO ASSUMIU É SOBRA — e a sentinela da linha gravada pela
+      # versão anterior não sabe disso: lá ela era gravada quando a entrega saía da ferramenta, antes de o
+      # publicador decidir. Com a publicação recusada, o fecho calava sobre um comparativo que faltou (Codex).
       it 'afirma sobra quando o comparativo saiu da ferramenta e nao foi aceito' do
         token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, 'Comparativo: https://exemplo.test/c.pdf')
         handle = { fechado => true, described_class::PDF_SENT_KEY => true,

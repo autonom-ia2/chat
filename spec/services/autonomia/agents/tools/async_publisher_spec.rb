@@ -271,6 +271,56 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     end
   end
 
+  # O TEXTO ENCADEADO (rodada 2 da fatia 1 do PDF rápido, 13/09/2026): o fecho que só pode sair depois do
+  # comparativo adiado. Ele espera a MENSAGEM com o token de que depende, e não a cadeia do turno.
+  describe 'texto encadeado a outra entrega' do
+    let(:dependencia) { run.delivery_token('arquivo:https://arquivos.exemplo.test/comparativo.pdf') }
+    let(:fecho) { Autonomia::Agents::Tools::EntregaEncadeada.forma('Encerrei a busca.', depois_de: dependencia) }
+
+    def publicar_a_dependencia
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: agent_bot,
+                       content: 'Comparativo com todas as opções.',
+                       content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => dependencia })
+    end
+
+    it 'adia enquanto a entrega de que depende nao e mensagem, e sai depois dela' do
+      # Arrange
+      promote
+
+      # Act
+      antes = described_class.new(run: run).publish(fecho)
+      publicar_a_dependencia
+      depois = described_class.new(run: run).publish(antes.adiada)
+
+      # Assert
+      expect(antes).to be_deferred
+      adiada = Autonomia::Agents::Tools::EntregaEncadeada.de(antes.adiada)
+      expect([adiada.texto, adiada.depois_de]).to eq(['Encerrei a busca.', dependencia])
+      expect(depois).to be_published
+      expect(bot_messages.order(:id).pluck(:content)).to eq(['Comparativo com todas as opções.', 'Encerrei a busca.'])
+      expect(bot_messages.order(:id).last.content_attributes[Autonomia::Agents::Tools::EntregaPublicada::CHAVE])
+        .to eq(run.delivery_token('Encerrei a busca.'))
+    end
+
+    it 'publish! ignora a cadeia do turno, mas continua esperando a entrega de que o texto depende' do
+      promote(origin_message_id: 77, expected_chunks: 2)
+
+      result = described_class.new(run: run).publish!(fecho)
+
+      expect(result).to be_deferred
+      expect(bot_messages).to be_empty
+    end
+
+    it 'sem esperar a dependencia (o teto do job), o texto sai sem ela' do
+      promote(origin_message_id: 77, expected_chunks: 2)
+
+      result = described_class.new(run: run).publish(fecho, wait_for_chain: false, wait_for_dependency: false)
+
+      expect(result).to be_published
+      expect(bot_messages.sole.content).to eq('Encerrei a busca.')
+    end
+  end
+
   # A RETOMADA DA PENDÊNCIA ACONTECE SOB O LOCK (rodada 9, P2 do Codex). Até a rodada 8 a tentativa
   # seguinte lia a marca sob o lock, SOLTAVA o lock e reenfileirava fora dele: duas tentativas
   # concorrentes (o retry do Sidekiq e a reemissão pelo poll) liam a marca uma depois da outra, cada uma
@@ -624,17 +674,69 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
         .with(a_string_matching(/entrega descartada run=#{run.id}: não é texto nem arquivo \(Hash\)/)).twice
     end
 
-    it 'espera a cadeia humanizada como qualquer entrega, sem baixar nada antes da hora' do
+    # O ARQUIVO É BAIXADO E GRAVADO ANTES DE ADIAR (rodada 2 da fatia 1 do PDF rápido, 13/09/2026). Até
+    # então o adiamento não baixava nada e o download acontecia no job, depois de o motor ler o adiamento
+    # como aceite. Agora a entrega adiada carrega o blob gravado, e a URL do portal não vai para o job.
+    it 'baixa e grava antes de adiar, e a entrega adiada carrega o blob, sem a URL' do
       # Arrange
       promote(origin_message_id: 77, expected_chunks: 1)
-      stub_request(:get, url).to_return(status: 200, body: pdf)
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
 
       # Act
       result = described_class.new(run: run).publish(arquivo.to_h)
 
       # Assert
       expect(result).to be_deferred
-      expect(a_request(:get, url)).not_to have_been_made
+      expect(a_request(:get, url)).to have_been_made.once
+      gravado = Autonomia::Agents::Tools::ArquivoGravado.de(result.adiada)
+      expect(gravado.blob(run).download).to eq(pdf)
+      expect(gravado.token).to eq(run.delivery_token(arquivo.identidade))
+      expect(result.adiada.to_s).not_to include(url)
+      expect(bot_messages).to be_empty
+    end
+
+    it 'o download que falha com a cadeia aberta volta recusado, e nao adiado' do
+      promote(origin_message_id: 77, expected_chunks: 1)
+      stub_request(:get, url).to_return(status: 404, body: 'x')
+
+      result = described_class.new(run: run).publish(arquivo.to_h)
+
+      expect(result).to be_blocked
+      expect(ActiveStorage::Blob.count).to eq(0)
+    end
+
+    # A FORMA ADIADA É SÓ ANEXADA: nenhum download novo quando a cadeia fecha.
+    it 'a entrega adiada, com a cadeia fechada, anexa o blob ja gravado sem baixar de novo' do
+      # Arrange
+      promote(origin_message_id: 77, expected_chunks: 1)
+      stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
+      adiada = described_class.new(run: run).publish(arquivo.to_h).adiada
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: agent_bot,
+                       content: 'um pedaço', content_attributes: { 'autonomia_chunk_token' => '77:0' })
+
+      # Act
+      result = described_class.new(run: run).publish(adiada)
+
+      # Assert
+      expect(result).to be_published
+      expect(bot_messages.where.not(content: 'um pedaço').sole.attachments.sole.file.download).to eq(pdf)
+      expect(a_request(:get, url)).to have_been_made.once
+      expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
+    end
+
+    it 'descarta a forma de arquivo gravado de outra execucao' do
+      promote
+      outra = Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: 'consultar_cotacao', status: 'done',
+                                                 conversation_id: conversation.id, execution_key: SecureRandom.uuid)
+      blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(pdf), filename: 'x.pdf',
+                                                    metadata: Autonomia::Agents::Tools::EntregaDeArquivo.marca(run_id: outra.id))
+      forma = Autonomia::Agents::Tools::ArquivoGravado.new(blob_assinado: blob.signed_id, legenda: 'Comparativo',
+                                                           token: run.delivery_token('arquivo:x')).to_h
+
+      result = described_class.new(run: run).publish(forma)
+
+      expect(result).to be_blocked
+      expect(bot_messages).to be_empty
     end
 
     # A FALHA DO ANEXO, DEPOIS DE UM DOWNLOAD BOM (rodada 3, P2). A gravação acontece ANTES da mensagem,

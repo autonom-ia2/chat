@@ -32,7 +32,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   # O que o `Bound` e o job chamam NA INSTÂNCIA (`resultado_entregue?` e `resta_entregar?` são as
   # duas perguntas que o `Tools::Encerramento` faz à ferramenta antes de escolher o fecho).
   let(:trabalho_de_instancia) do
-    %i[precheck closing_deliveries resultado_entregue? resta_entregar? pedido call start poll]
+    %i[precheck closing_deliveries resultado_entregue? resta_entregar? entrega_a_caminho pedido call start poll]
   end
   # Os textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
   # `closing_message` entrou nesta lista com a entrega das frases do especialista: ela é o desfecho de

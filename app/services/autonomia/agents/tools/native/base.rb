@@ -315,6 +315,13 @@ class Autonomia::Agents::Tools::Native::Base
     false
   end
 
+  # UMA ENTREGA DESTA EXECUÇÃO FOI ACEITA PARA PUBLICAÇÃO E AINDA NÃO É MENSAGEM? (rodada 2 da fatia 1 do
+  # PDF rápido.) -> o token dela, e o fecho do encerramento é encadeado a ele (`Tools::EntregaEncadeada`);
+  # nil quando não há. -> nil por padrão: quem não sabe responder não segura o fecho.
+  def entrega_a_caminho(_handle)
+    nil
+  end
+
   private
 
   attr_reader :agent, :params, :delivery, :run

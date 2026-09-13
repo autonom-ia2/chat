@@ -41,11 +41,19 @@ module Autonomia::Agents::Tools::EntregaPublicada
   # link de reserva que versões anteriores publicavam); o texto responde por si mesmo, aparado
   # como o publicador o apara antes de postar. nil sem execução — sem `execution_key` não há token,
   # e quem não tem token não afirma nada.
+  #
+  # As duas formas que só existem depois do publicador (rodada 2 da fatia 1 do PDF rápido): o arquivo já
+  # gravado responde pelo token que carrega (`ArquivoGravado`, calculado sobre a entrega de arquivo
+  # original), e o texto encadeado responde pelo texto (`EntregaEncadeada`).
   def token_de(run, entrega)
     return nil if run.blank?
 
+    gravado = ::Autonomia::Agents::Tools::ArquivoGravado.de(entrega)
+    return gravado.token if gravado
+
     arquivo = ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega)
-    run.delivery_token(arquivo ? arquivo.identidade : entrega.to_s.strip)
+    encadeada = ::Autonomia::Agents::Tools::EntregaEncadeada.de(entrega)
+    run.delivery_token(arquivo&.identidade || encadeada&.texto || entrega.to_s.strip)
   end
 
   # -> esta entrega já é uma mensagem na conversa E SEM PENDÊNCIA DE ENVIO conhecida?

@@ -43,16 +43,19 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   ACIONADAS_KEY = 'seguradoras_acionadas'.freeze
   # A PROPOSTA INDIVIDUAL, quando ela existir (entrega 8): os códigos das seguradoras cuja proposta
   # saiu nesta cotação. A ferramenta de proposta por seguradora ainda não existe — `quote/proposal`
-  # com `insurer_code` é o caminho, e `comparison_pdf` já usa o mesmo endpoint SEM código para o
+  # com `insurer_code` é o caminho, e `gerar_comparativo` já usa o mesmo endpoint SEM código para o
   # comparativo. O ponto de registro é este handle, na passada que gerar a proposta; a medida da
   # entrega 7 já conta a lista (`Insurance::Medida`), e hoje conta zero porque ninguém a escreve.
   PROPOSTAS_KEY = 'propostas'.freeze
-  # O PDF já foi EMITIDO? O comparativo sai UMA vez, no fim — não a cada entrega parcial. A
-  # sentinela é gravada quando a ENTREGA de arquivo sai da ferramenta.
-  #
-  # EMITIDO NÃO É ENTREGUE, e esta chave nunca soube a diferença: ela é gravada quando a entrega sai
-  # daqui, antes de o publicador dizer se assume a publicação. Quem precisa saber se o comparativo
-  # foi assumido cruza o `COMPARATIVO_KEY` (a identidade da entrega) com a lista do ACEITE.
+  # O COMPARATIVO DESTA EXECUÇÃO FOI ASSUMIDO PELO PUBLICADOR. O comparativo sai UMA vez, no fim — não a
+  # cada entrega parcial. Desde a rodada 2 da fatia 1 do PDF rápido (13/09/2026) a sentinela é gravada
+  # por `Comparativo#concluir_passada`, na passada que encontra o comparativo assumido (no caminho comum,
+  # o comparativo aceito na passada que o emite, a execução encerra ali e ela não chega a ser gravada); até
+  # ali ela era gravada quando a entrega saía da ferramenta, antes do download, e a linha gravada pela
+  # versão anterior pode tê-la sem o arquivo. Quem decide se pede outro comparativo é
+  # `Comparativo#comparativo_por_tentar?`, que cruza o `COMPARATIVO_KEY` (a identidade da entrega) com a
+  # lista do ACEITE e com a conversa. A sentinela só vale sozinha sem identidade gravada, e como prova de
+  # portal fechado da linha da versão anterior (`Fecho#portal_fechado?`).
   PDF_SENT_KEY = 'comparativo_enviado'.freeze
   # O QUE ESTA EXECUÇÃO EMITIU, PELA IDENTIDADE DE CADA ENTREGA (entrega 8a). É a TABELA DE
   # CONSULTA do fecho, não a prova: emitir não é entregar — `deliver` roda ANTES de
@@ -76,6 +79,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # ausência como "ainda tem seguradora por responder" é a frase de atraso dita a quem já recebeu
   # tudo o que ia chegar.
   FECHADO_KEY = 'portal_fechado'.freeze
+  # OS CÓDIGOS DA ÚLTIMA LEITURA, quando toda seguradora nela tinha desfecho (`QuoteOffers#assentada`);
+  # nil quando não. Gravada a cada consulta; `finished?` a compara com a leitura seguinte.
+  LEITURA_ASSENTADA_KEY = 'leitura_assentada'.freeze
   # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
   # quem precisa contar ao cliente é a primeira entrega de preços, minutos depois.
   SEM_BONUS_KEY = 'renovacao_sem_bonus'.freeze
@@ -248,7 +254,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     leitura = ofertas.new(result)
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
     fresh = leitura.quoted.reject { |offer| already.include?(ofertas.code(offer)) }
-    deliveries, next_handle = precos(fresh, already, handle.merge(ACIONADAS_KEY => acionadas(leitura, handle)))
+    deliveries, next_handle = precos(fresh, already, handle.merge(ACIONADAS_KEY => acionadas(leitura, handle),
+                                                                  LEITURA_ASSENTADA_KEY => leitura.assentada))
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result, leitura, handle)
 
@@ -314,14 +321,17 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   end
 
   # A COTAÇÃO FECHOU NESTA CONSULTA? Verdade quando o portal disse `completed` ou `failed`, ou quando
-  # `QuoteOffers#todas_com_desfecho?` responde verdade para a lista de acionadas que o handle trouxe
-  # das consultas ANTERIORES (`handle` é o que esta passada recebeu, antes da união desta leitura).
+  # `QuoteOffers#todas_com_desfecho?` responde verdade com o que o handle trouxe das consultas ANTERIORES
+  # (`handle` é o que esta passada recebeu): a união das acionadas e a leitura assentada da passada
+  # anterior. Com as duas, a cotação só fecha na segunda leitura seguida com o mesmo conjunto e todas com
+  # desfecho — um intervalo de consulta a mais depois do último desfecho.
   #
   # A SEGUNDA METADE EXISTE PORQUE O ADAPTER DEVOLVE `partial` PARA DOIS ESTADOS: "ainda chegando
   # preço" e "portal pronto, algumas recusaram" (`quote.ts`, o status geral). Com preço e qualquer
   # recusa o status nunca é `completed`, e essa execução só acabava no prazo.
   def finished?(result, leitura, handle)
-    %w[completed failed].include?(result['status']) || leitura.todas_com_desfecho?(handle[ACIONADAS_KEY])
+    %w[completed failed].include?(result['status']) ||
+      leitura.todas_com_desfecho?(handle[ACIONADAS_KEY], handle[LEITURA_ASSENTADA_KEY])
   end
 
   # CRITÉRIO 4.5 — problema de credencial de seguradora nunca chega ao cliente final; vai para a
