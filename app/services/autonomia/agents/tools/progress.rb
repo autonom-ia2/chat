@@ -94,6 +94,12 @@ class Autonomia::Agents::Tools::Progress
     nil
   end
 
+  # SÓ `entregavel` PRECISAVA SAIR. As três acima viraram método de classe junto com ela, e o
+  # `private` abaixo só alcança instância — então elas ficaram públicas sem que ninguém decidisse
+  # isso. Quem chama de fora chama `entregavel`, que é a pergunta inteira ("esta entrega, na forma em
+  # que ela vai sair"); `texto` e `arquivo` são os dois ramos dela, e `descartar` é o log.
+  private_class_method :texto, :arquivo, :descartar
+
   private
 
   # Limita a quantidade e põe cada entrega na forma em que ela sai.

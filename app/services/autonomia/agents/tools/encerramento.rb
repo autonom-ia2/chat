@@ -55,12 +55,19 @@ class Autonomia::Agents::Tools::Encerramento
   # textos de CLASSE, e é por isso que ela se faz mesmo quando a ferramenta não pôde ser montada.
   #
   # SÃO QUATRO PAPÉIS, E CADA UM VALE POR DOIS TEXTOS (12/09/2026). Desde que a cotação deixa o
-  # especialista escrever as frases, o texto de um papel depende dos ARGUMENTOS da execução — e a
-  # versão anterior desta, num rollback, publica a CONSTANTE. Perguntar só pela frase resolvida
-  # faria a volta atrás pôr um segundo desfecho ao lado do primeiro, um contradizendo o outro. Por
-  # isso se pergunta pelas duas formas de cada papel, e `partial_message` continua na lista mesmo
-  # tendo deixado de sair: ela é justamente o que a versão anterior publica onde esta publica
-  # `closing_message`.
+  # especialista escrever as frases, o texto de um papel depende dos ARGUMENTOS da execução; até o
+  # deploy, o que saía era a CONSTANTE da classe.
+  #
+  # QUEM ISTO PROTEGE É O ROLL-FORWARD, E NÃO A VOLTA ATRÁS. A execução que já estava aberta recebeu
+  # o fecho da versão antiga — a constante —, e é esta versão que vai perguntar se ele já saiu:
+  # perguntando só pela frase resolvida, ela não acharia nada e poria um segundo desfecho ao lado do
+  # primeiro. Por isso `partial_message` continua na lista mesmo tendo deixado de sair: ela é o que a
+  # versão antiga publicava onde esta publica `closing_message`.
+  #
+  # O ROLLBACK NÃO GANHA NADA COM ISTO, porque a volta atrás leva embora este arquivo junto: a versão
+  # antiga pergunta pelas constantes dela, e `FECHO_COM_RESULTADO` não está entre elas. Voltar atrás
+  # só é seguro com o cliente que ainda não recebeu fecho nenhum — está na auditoria, em "Ordem de
+  # deploy e rollback".
   FRASES_DE_FECHO = %i[failure_message uncertain_message partial_message closing_message].freeze
 
   # `trabalho_novo` = esta passada pode INICIAR trabalho novo no portal para produzir uma entrega?

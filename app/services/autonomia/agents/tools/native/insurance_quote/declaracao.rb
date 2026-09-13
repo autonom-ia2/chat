@@ -79,11 +79,13 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
   FECHO_COM_RESULTADO = 'Encerrei a busca de preços por aqui. Se quiser, posso retomar a cotação ' \
                         'ou chamar um atendente.'.freeze
 
-  # NÃO SAI MAIS AO CLIENTE, E CONTINUA AQUI POR UM MOTIVO SÓ: o ROLLBACK. A identidade de uma
-  # entrega é o SHA do texto (`ToolRun#delivery_token`), e é por ela que o fecho pergunta se já
-  # publicou (`Tools::Encerramento#fecho_publicado?`). A versão anterior a esta publica ESTE texto;
-  # tirá-lo do conjunto de perguntas faria a volta atrás publicar um segundo desfecho ao lado do
-  # primeiro, um contradizendo o outro. Quem fala neste estado agora é `FECHO_COM_RESULTADO`.
+  # NÃO SAI MAIS AO CLIENTE, E CONTINUA AQUI POR UM MOTIVO SÓ: a execução que ATRAVESSA O DEPLOY. A
+  # identidade de uma entrega é o SHA do texto (`ToolRun#delivery_token`), e é por ela que o fecho
+  # pergunta se já publicou (`Tools::Encerramento#fecho_publicado?`). A execução aberta antes do
+  # deploy recebeu ESTE texto da versão antiga; tirá-lo do conjunto de perguntas faria esta versão
+  # publicar um segundo desfecho ao lado do primeiro, um contradizendo o outro. É proteção de
+  # roll-forward, não de rollback — a volta atrás leva este arquivo junto, e com ele a pergunta.
+  # Quem fala neste estado agora é `FECHO_COM_RESULTADO`.
   PARCIAL = 'Algumas seguradoras não responderam a tempo. Os preços acima são os que chegaram.'.freeze
 
   # O desfecho de quem pode ter uma cotação aberta no portal sem que a gente saiba o número
@@ -200,7 +202,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
     end
 
     # Continua devolvendo a constante, e só ela: esta frase não sai mais ao cliente e existe para o
-    # conjunto de perguntas do rollback (ver `PARCIAL`).
+    # conjunto de perguntas da execução que atravessa o deploy (ver `PARCIAL`).
     def partial_message(_arguments = nil)
       PARCIAL
     end

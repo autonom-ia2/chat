@@ -89,8 +89,12 @@ class Autonomia::Agents::Tools::Native::Base
     # método de INSTÂNCIA está escrevendo uma frase que nunca sai — foi o caso da cotação até
     # 10/09/2026 (entrega 4), e `contrato_de_nivel_spec` reprova isso.
     #
-    # NÃO SAI MAIS NA COTAÇÃO (12/09/2026): lá quem fala neste estado é `closing_message`, e esta
-    # constante ficou como pergunta do rollback. Nas demais ferramentas ela continua sendo o fecho.
+    # NENHUMA FERRAMENTA A PUBLICA HOJE (12/09/2026). Na cotação quem fala neste estado passou a ser
+    # `closing_message`, e ela era a única a chegar aqui: `Encerramento#parcial` é o único caminho que
+    # publicava este papel, e ele não o pede mais. O que sobra dela é a PERGUNTA — `FRASES_DE_FECHO`
+    # continua perguntando por este texto, porque é ele que a versão anterior publicou nas execuções
+    # abertas antes do deploy. Uma ferramenta assíncrona nova que queira fecho parcial a redefine e
+    # passa a publicá-la; nenhuma faz isso agora.
     def partial_message(_arguments = nil)
       'Algumas consultas não responderam a tempo. O que chegou está aqui em cima.'
     end

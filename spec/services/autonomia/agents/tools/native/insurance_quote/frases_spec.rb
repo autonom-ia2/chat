@@ -129,6 +129,28 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote::Frases do
       end
     end
 
+    # O NÓ CHEGA COM CHAVE DE TEXTO (veio da linha) OU COM SÍMBOLO (a ferramenta em memória). As duas
+    # grafias precisam resolver a mesma frase — trocar a leitura do hash inteiro pela leitura da
+    # chave não pode custar isso.
+    it 'le o no nas duas grafias de chave' do
+      frase = 'Já estou vendo isso com as companhias.'
+
+      expect(described_class.de({ described_class::NO => { 'espera' => frase } })[:espera]).to eq(frase)
+      expect(described_class.de({ described_class::NO.to_sym => { espera: frase } })[:espera]).to eq(frase)
+    end
+
+    # NÃO COPIA O FORMULÁRIO PARA LER UMA FRASE. `deep_stringify_keys` sobre `argumentos` duplicava
+    # os ~90 campos de auto a cada chamada, e o fecho chama isto umas seis vezes (quatro papéis, cada
+    # um resolvido e mais a constante, sem memória entre eles). O que se lê é a chave.
+    it 'nao copia o hash de argumentos inteiro para ler o no' do
+      argumentos = { 'dados' => { 'vehicle' => { 'plate' => 'ABC1D23' } },
+                     described_class::NO => { 'espera' => 'Já estou vendo isso.' } }
+
+      expect(argumentos).not_to receive(:deep_stringify_keys)
+
+      expect(described_class.de(argumentos)[:espera]).to eq('Já estou vendo isso.')
+    end
+
     # DETERMINISMO É REQUISITO: a identidade de uma entrega é o SHA do texto, e a ferramenta é
     # remontada a cada passada a partir dos mesmos argumentos. Duas leituras que discordassem dariam
     # um token na emissão e outro na pergunta do fecho.

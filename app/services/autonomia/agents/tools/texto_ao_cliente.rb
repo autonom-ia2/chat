@@ -24,6 +24,12 @@
 module Autonomia::Agents::Tools::TextoAoCliente
   # Teto de UMA frase do modelo. Nenhum papel precisa de mais que isto, e é ele que mantém o texto
   # composto (abertura + preços + aviso) longe do corte de `Progress::MAX_DELIVERY_CHARS`.
+  #
+  # A FOLGA FOI MEDIDA, e está na auditoria de 12/09/2026 com os números: com as DUAS frases do
+  # especialista no teto e o pior item que o código produz (86 caracteres — preço sem período, que
+  # leva a ressalva inteira, com o nome de seguradora mais longo que o portal devolveu), o texto
+  # composto chega a 2.089/3.000 nas 17 seguradoras que o portal real devolveu, e só alcança o corte
+  # na 27ª. É folga medida sobre este teto; não é guarda, e o corte não avisa ninguém quando morde.
   MAX_FRASE = 350
 
   # Travessão e meia-risca. Decisão do CEO (12/09/2026): não vão ao texto que o cliente lê. Onde o
@@ -37,9 +43,11 @@ module Autonomia::Agents::Tools::TextoAoCliente
   # WhatsApp, e o cliente lê o marcador.
   CRASE = '`'.freeze
 
-  # QUALQUER DÍGITO REPROVA. Número, contagem, valor e prazo são a mesma proibição do CEO, e esta é
-  # a regra que a cumpre inteira sem tentar distinguir um do outro. Nenhum dos papéis precisa de
-  # dígito: quem escreve valor em reais, período e quantidade é o código.
+  # QUALQUER DÍGITO REPROVA — e é só isso que esta regra faz. A proibição do CEO é mais larga
+  # (número, contagem, valor, prazo e nome de seguradora); o que a máquina cobre é a forma ESCRITA
+  # EM ALGARISMO. `Chegaram três opções`, `volto em cinco minutos` e `a Porto cotou` passam por
+  # aqui: quem as barra é o manual do especialista, não a peneira. Nenhum dos papéis precisa de
+  # dígito, porque quem escreve valor em reais, período e quantidade é o código.
   DIGITO = /[0-9]/
   MOEDA = /R\$/i
 
@@ -59,6 +67,15 @@ module Autonomia::Agents::Tools::TextoAoCliente
   # verdadeira a uma heurística de forma: a anterior — dois identificadores colados por um ponto —
   # comia `p.ex.`, `hub2you.ai` e `contato@corretora.com.br`.
   GRUPOS_DO_RAMO = %w[segurado configuracoes].freeze
+
+  # A URL SAI ANTES DE OLHAR, e sem isto a redação MUTILA O COMPARATIVO. A reserva do comparativo é
+  # a frase do especialista mais a URL que o portal gerou (`Comparativo#entrega_do_comparativo`), e
+  # essa URL termina em `.../quotation.pdf` — `quotation` é grupo de `Parametros::GRUPOS`, então o
+  # caminho de campo casa DENTRO do link e o cliente recebe uma aba que não abre. A `main` tinha
+  # esta exclusão (`Progress::URL`) e ela se perdeu junto com a peneira antiga; é regressão, não
+  # desenho novo. Vale só para `redigir`: em `vetar` o modelo não escreve link nenhum, e recuar ali
+  # custa uma frase.
+  URL = %r{https?://\S+}
 
   # VOCABULÁRIO DE SISTEMA. Os quatro primeiros são os que a instrução de aceite já proíbe ao modelo
   # (`Declaracao::ACEITA`) — ela nasceu porque o modelo devolveu ao cliente "a cotação está em
@@ -85,9 +102,9 @@ module Autonomia::Agents::Tools::TextoAoCliente
   end
 
   # As regras de CONTEÚDO, sobre a frase já aparada. Sete, e cada uma tem dono: o travessão e o
-  # dígito são a decisão do CEO (nenhuma frase carrega número, contagem, valor, prazo — e o
-  # travessão sai); o caminho de campo e a folha camelCase são o incidente de 08/09/2026; a crase é
-  # o modelo copiando o acento grave do manual; o vocabulário de sistema é o que `ACEITA` proíbe.
+  # dígito são a decisão do CEO (a parte dela que se verifica por forma — ver `DIGITO`); o caminho
+  # de campo e a folha camelCase são o incidente de 08/09/2026; a crase é o modelo copiando o acento
+  # grave do manual; o vocabulário de sistema é o que `ACEITA` proíbe.
   def proibido?(texto)
     return true if texto.include?(CRASE)
 
@@ -113,12 +130,20 @@ module Autonomia::Agents::Tools::TextoAoCliente
 
   # Troca o caminho de campo pelo sinal de corte e registra — sem ecoar o que casou, que é dado de
   # dentro. Chegar aqui é bug NOSSO: o texto neste ponto é feito de constantes, frases já vetadas e
-  # números que nós formatamos.
+  # números que nós formatamos. FORA DAS URLs, sempre: ver `URL`.
   def redigir(texto)
-    return texto unless texto.match?(caminho_de_campo)
+    return texto unless texto.gsub(URL, ' ').match?(caminho_de_campo)
 
     Rails.logger.warn('[autonomia][tool] caminho de campo redigido em texto de cliente')
-    texto.gsub(caminho_de_campo, ::Autonomia::Agents::Config::TRUNCATION_SUFFIX)
+    texto.gsub(url_ou_caminho) { ::Regexp.last_match(:url) || ::Autonomia::Agents::Config::TRUNCATION_SUFFIX }
+  end
+
+  # UMA VARREDURA SÓ, COM A URL NA FRENTE da alternância: casando primeiro, ela consome o link
+  # inteiro e o bloco o devolve intacto; o que casar pelo outro lado é caminho de campo de verdade,
+  # e vira o sinal de corte. Apagar a URL antes e redigir depois não serviria — o texto que sai tem
+  # de ser o de entrada com o caminho trocado, e o link precisa voltar no lugar exato.
+  def url_ou_caminho
+    @url_ou_caminho ||= /(?<url>#{URL.source})|#{caminho_de_campo.source}/
   end
 
   # `grupo.folha` com a folha começando em minúscula — a forma de `insured.document` e de

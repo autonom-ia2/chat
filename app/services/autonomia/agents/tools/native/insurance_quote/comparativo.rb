@@ -46,8 +46,11 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # (`Progress`, publicador) com o cliente sem arquivo e sem link. Então o que sai é a reserva — o
   # texto com o link, o de antes — e o defeito da forma vai ao log, pelo nome do campo.
   # OS DOIS TEXTOS DELA SÃO DO ESPECIALISTA, e passam pela mesma depuração do resto do que sai daqui
-  # — é ela que decide o texto final, e é do texto final que nasce a identidade da entrega. A URL
-  # entra depois da depuração, porque o corte por tamanho não pode cair no meio de um link.
+  # porque são texto de CLIENTE: o travessão sai, o caminho de campo é redigido e o teto vale. A
+  # IDENTIDADE NÃO ENTRA NESSA CONTA — a de uma entrega de arquivo é `"arquivo:#{url}"`
+  # (`EntregaDeArquivo#identidade`), a MESMA como arquivo e como reserva, de propósito: um retry que
+  # acha o link já publicado não manda o PDF por cima. Legenda e reserva não a alteram. A URL entra
+  # depois da depuração porque o corte por tamanho não pode cair no meio de um link.
   def entrega_do_comparativo(url)
     entrega = ::Autonomia::Agents::Tools::EntregaDeArquivo.new(
       url: url, nome: nome_do_comparativo, legenda: depurar(frases[:comparativo_legenda]).to_s,

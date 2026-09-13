@@ -247,9 +247,19 @@ module PromessasDasFrasesDoEspecialista
     # A OUTRA METADE: o manual afirma que a frase proibida é trocada por um texto padrão, e não que
     # ela some. Só é verdade porque TODA constante de recuo passa pela própria peneira — uma que não
     # passasse publicaria o que o texto acabou de proibir.
-    'sai um texto padrão no lugar' => lambda {
+    'põe um texto padrão no lugar' => lambda {
       FRASES.constantes.size == FRASES::ORDEM.size &&
         FRASES.constantes.values.all? { |texto| PENEIRA.vetar(texto) == texto }
+    },
+    # A FRONTEIRA DITA COM HONESTIDADE, E PROVADA NOS DOIS SENTIDOS (rodada de correção, 12/09/2026).
+    # O manual afirmava "frase com qualquer um deles é descartada", e três dos cinco itens da
+    # proibição do CEO não têm guarda: contagem por extenso, prazo por extenso e nome de seguradora
+    # atravessam a peneira e chegam ao cliente. Quem garante esses três é o MODELO, então é no manual
+    # DELE que isso precisa estar escrito. A âncora prende o texto; a lambda prova que ele é verdade
+    # — construída a guarda um dia, esta promessa cai e obriga a reescrever o manual junto.
+    'não enxerga contagem por extenso, prazo por extenso nem nome de seguradora' => lambda {
+      ['Chegaram três opções:', 'Volto em cinco minutos.', 'A Porto respondeu.']
+        .all? { |frase| PENEIRA.vetar(frase) == frase }
     },
     # A REGRA DE VOZ DO TRAVESSÃO TEM GUARDA NOS DOIS LADOS: a peneira reprova a frase do modelo que
     # o traga, e a depuração o troca no texto já composto (o nome da seguradora vem do portal).
@@ -323,7 +333,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('2e05afb8cbbc67671a48ed1325e54a3e')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('f4cac7c3a923066421ef0e4529c1f372')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do

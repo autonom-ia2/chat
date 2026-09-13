@@ -231,7 +231,14 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # `Progress` descartava a entrega inteira) deixava o handle dizendo que as ofertas já tinham saído:
   # elas nunca mais eram reemitidas (`fresh` as exclui), `delivered_count` ficava zero, e o cliente
   # lia a frase de falha sobre dezessete seguradoras que a corretora pagou. Quem a grava agora é
-  # `precos`, sobre as ofertas que de fato entraram no texto que vai sair.
+  # `precos`, e só depois de o texto do lote existir.
+  #
+  # ELA GRAVA O LOTE INTEIRO (`fresh`), E NÃO AS OFERTAS QUE ENTRARAM NO TEXTO. As duas listas são a
+  # mesma enquanto o texto cabe em `Progress::MAX_DELIVERY_CHARS`; passando do teto, o corte leva as
+  # últimas ofertas e elas ficam marcadas como entregues sem ter saído. Medido em 12/09/2026 e
+  # registrado na auditoria: com as duas frases do especialista no teto e o pior item que o código
+  # produz, o texto só alcança o corte na 27ª seguradora, e o portal real devolveu 17. É folga
+  # medida, não guarda — a guarda não existe.
   #
   # `ACIONADAS_KEY` continua aqui: ela é MEDIÇÃO DE FATURAMENTO (quantas seguradoras o portal pôs na
   # cotação), não estado de entrega, e perdê-la seria contar errado o que a corretora pagou.

@@ -58,11 +58,26 @@ RSpec.describe Autonomia::Agents::Tools::Progress do
     expect(described_class.entregavel(uma)).to eq(uma)
   end
 
-  # A ARMADILHA DA GUARDA. O comparativo é uma entrega legítima e carrega uma URL, cujo host casa
-  # com o padrão de caminho de campo. Guarda que come o comparativo troca um bug de texto por um
-  # entregável perdido — por isso a URL sai antes de olhar.
-  it 'entrega o comparativo em PDF, que tem URL' do
-    texto = "Comparativo com todas as opções:\nhttps://portal.exemplo.test/cotacao/9.pdf"
+  # A SUPERFÍCIE PÚBLICA DA CLASSE. `entregavel` saiu para fora porque a ferramenta precisa da mesma
+  # resposta antes de gravar o token; `texto`, `arquivo` e `descartar` foram junto por acidente, e o
+  # `private` do arquivo só alcança instância. Cada uma delas pública é um caminho que entrega texto
+  # sem passar pelo limite de quantidade e um segundo jeito de fazer a mesma pergunta.
+  it 'so entregavel e publica entre os metodos de classe da entrega' do
+    expect(described_class).to respond_to(:entregavel)
+    expect(described_class.singleton_class.private_method_defined?(:texto)).to be(true)
+    expect(described_class.singleton_class.private_method_defined?(:arquivo)).to be(true)
+    expect(described_class.singleton_class.private_method_defined?(:descartar)).to be(true)
+  end
+
+  # A ARMADILHA DA GUARDA. O comparativo é uma entrega legítima e carrega uma URL do portal, que
+  # termina em `quotation.pdf` — e `quotation` é grupo de `Parametros::GRUPOS`, então a regra de
+  # caminho de campo casa DENTRO do link. Guarda que come o comparativo troca um bug de texto por um
+  # entregável perdido; por isso a URL sai antes de olhar, em `TextoAoCliente.redigir`.
+  #
+  # ESTE EXEMPLO JÁ MENTIU: até a rodada de correção ele usava `.../cotacao/9.pdf`, que não dispara
+  # regra nenhuma, e passava com e sem a exclusão. A URL daqui dispara.
+  it 'entrega o comparativo em PDF, cuja URL carrega um grupo do formulario' do
+    texto = "Comparativo com todas as opções:\nhttps://portal.exemplo.com/v1/quotation.pdf"
 
     progress = described_class.done(deliveries: [texto])
 
@@ -88,10 +103,10 @@ RSpec.describe Autonomia::Agents::Tools::Progress do
   # não tem a forma de uma entrega de arquivo não passa: um Hash qualquer não é texto nem arquivo.
   describe 'entrega de arquivo' do
     let(:arquivo) do
-      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: 'https://portal.exemplo.test/cotacao/9.pdf',
+      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: 'https://portal.exemplo.com/v1/quotation.pdf',
                                                      nome: 'Comparativo de seguro, placa ABC1D23.pdf',
                                                      legenda: 'Comparativo com todas as opções.',
-                                                     reserva: "Comparativo com todas as opções:\nhttps://portal.exemplo.test/cotacao/9.pdf")
+                                                     reserva: "Comparativo com todas as opções:\nhttps://portal.exemplo.com/v1/quotation.pdf")
     end
 
     it 'entrega o arquivo, na forma serializada, ao lado dos textos' do

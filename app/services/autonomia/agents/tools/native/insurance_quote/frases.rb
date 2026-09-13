@@ -112,7 +112,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
   end
 
   # As constantes de recuo, cada uma lida do arquivo que declara o assunto dela — nenhum texto é
-  # digitado duas vezes. `frases_catalogo_spec` prova que as quatorze passam pela peneira e que são
+  # digitado duas vezes. `frases_spec` prova que as quatorze passam pela peneira e que são
   # distintas entre si: sem a primeira metade o recuo publicaria justamente o que a peneira proíbe,
   # e sem a segunda a garantia 2 não se fecharia.
   #
@@ -145,13 +145,24 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
   def escritas_pelo_especialista(argumentos)
     return {} unless argumentos.is_a?(Hash)
 
-    no = argumentos.deep_stringify_keys[NO]
-    return {} unless no.is_a?(Hash)
+    no = no_das_frases(argumentos)
+    return {} if no.empty?
 
     ORDEM.each_with_object({}) do |papel, escritas|
       texto = ::Autonomia::Agents::Tools::TextoAoCliente.vetar(no[papel.to_s])
       escritas[papel] = texto if texto && !constante_de_outro_papel?(papel, texto)
     end
+  end
+
+  # SÓ A CHAVE, E NÃO O HASH INTEIRO. Era `argumentos.deep_stringify_keys[NO]`: copiava junto o
+  # formulário da cotação — os ~90 campos de auto, até dezenas de KB — para ler um nó de quatorze
+  # frases, e isso umas seis vezes por fecho (`FRASES_DE_FECHO` são quatro papéis, cada um resolvido
+  # e mais a constante, sem memória entre as chamadas). A chave é lida nas duas grafias porque o
+  # `arguments` vem da linha com chave de texto e a ferramenta em memória pode carregá-lo com
+  # símbolo. Só o NÓ é normalizado, e ele tem um nível só: as folhas são texto.
+  def no_das_frases(argumentos)
+    no = argumentos[NO] || argumentos[NO.to_sym]
+    no.is_a?(Hash) ? no.stringify_keys : {}
   end
 
   # A frase do especialista que copia a constante de outro papel é recusada: sem isso, o papel dono

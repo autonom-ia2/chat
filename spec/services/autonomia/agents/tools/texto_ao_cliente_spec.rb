@@ -49,6 +49,15 @@ module FrasesDaPeneira
     'vazia' => '   ',
     'ausente' => nil
   }.freeze
+
+  # AS TRÊS FORMAS EM QUE A URL DO PORTAL CARREGA UM GRUPO DO FORMULÁRIO. O comparativo do AGGER sai
+  # em `.../quotation.pdf`, e `quotation` é grupo de `Parametros::GRUPOS`: a regra de caminho de
+  # campo casa DENTRO do link. Elas existem para `depurar`, que é quem trata o texto já composto.
+  URLS_DO_PORTAL = {
+    'caminho do portal' => 'https://portal.exemplo.com/v1/quotation.pdf',
+    'query string' => 'https://portal.exemplo.com/comparativo?doc=quotation.pdf&v=2',
+    'grupo no host' => 'https://quotation.exemplo.com/arquivo.pdf'
+  }.freeze
 end
 
 RSpec.describe Autonomia::Agents::Tools::TextoAoCliente do
@@ -108,11 +117,32 @@ RSpec.describe Autonomia::Agents::Tools::TextoAoCliente do
       expect(texto).not_to include('insured.document')
     end
 
-    it 'nao mexe em numero, moeda nem no link do comparativo' do
-      texto = "Comparativo com todas as opções:\nhttps://portal.exemplo.test/cotacao/9.pdf"
-
-      expect(depurar(texto)).to eq(texto)
+    it 'nao mexe em numero nem em moeda' do
       expect(depurar('• *Azul*: R$ 2.610,00 no total')).to eq('• *Azul*: R$ 2.610,00 no total')
+    end
+
+    # A URL DO COMPARATIVO, COM O CAMINHO DE CAMPO DENTRO DELA. Esta é a regressão que o exemplo
+    # anterior NÃO pegava: ele usava `.../cotacao/9.pdf`, e `cotacao` não é grupo do formulário —
+    # a regra nunca disparava, e o exemplo passava com e sem a exclusão de URL. O portal termina a
+    # URL do comparativo em `quotation.pdf`, e `quotation` É grupo (`Parametros::GRUPOS`): sem a
+    # exclusão o cliente recebe o link mutilado e o comparativo vira uma aba que não abre.
+    FrasesDaPeneira::URLS_DO_PORTAL.each do |forma, url|
+      it "entrega o link do comparativo inteiro (#{forma})" do
+        texto = "Comparativo com todas as opções:\n#{url}"
+
+        expect(depurar(texto)).to eq(texto)
+      end
+    end
+
+    # E A EXCLUSÃO NÃO PODE VIRAR ANISTIA: fora do link, o caminho de campo continua sendo redigido
+    # na mesma passada.
+    it 'redige o caminho de campo de fora sem tocar no link' do
+      url = 'https://portal.exemplo.com/v1/quotation.pdf'
+
+      texto = depurar("Comparativo com todas as opções:\n#{url}\ninsured.document")
+
+      expect(texto).to include(url)
+      expect(texto).not_to include('insured.document')
     end
 
     it 'troca travessao e meia-risca por hifen' do
