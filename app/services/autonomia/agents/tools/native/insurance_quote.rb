@@ -318,8 +318,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # das consultas ANTERIORES (`handle` é o que esta passada recebeu, antes da união desta leitura).
   #
   # A SEGUNDA METADE EXISTE PORQUE O ADAPTER DEVOLVE `partial` PARA DOIS ESTADOS: "ainda chegando
-  # preço" e "portal pronto, algumas recusaram" (`quote.ts`, o status geral). Com qualquer recusa o
-  # portal nunca diz `completed`, e a execução só acabava no prazo.
+  # preço" e "portal pronto, algumas recusaram" (`quote.ts`, o status geral). Com preço e qualquer
+  # recusa o status nunca é `completed`, e essa execução só acabava no prazo.
   def finished?(result, leitura, handle)
     %w[completed failed].include?(result['status']) || leitura.todas_com_desfecho?(handle[ACIONADAS_KEY])
   end

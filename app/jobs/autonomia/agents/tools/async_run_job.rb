@@ -250,9 +250,9 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # TERMINOU (`done`): o desfecho sai por `Tools::Encerramento#concluir` e só então a linha fecha.
   # Ele publica a frase de falha quando nada foi aceito (o que este método publicava antes da fatia 1
   # do PDF rápido) e, desde 13/09/2026, o fecho de quem tem resultado quando a ferramenta confirma o
-  # resultado — antes, toda cotação real recebia esse fecho pelo encerramento por prazo, e o `done`
-  # virou o caminho comum. Nas duas frases, a mesma pergunta à conversa do encerramento
-  # (`fecho_publicado?`) antes de publicar.
+  # resultado — as cotações reais de 12/09/2026 receberam esse fecho pelo encerramento por prazo, e
+  # com a fatia o `done` passa a ser o caminho de quem tem todas as seguradoras com desfecho. Nas duas
+  # frases, a mesma pergunta à conversa do encerramento (`fecho_publicado?`) antes de publicar.
   #
   # `run.reload` pelo mesmo motivo de `fail_run`: a decisão lê o contador e a lista do aceite do banco.
   def finish_done(run, native)

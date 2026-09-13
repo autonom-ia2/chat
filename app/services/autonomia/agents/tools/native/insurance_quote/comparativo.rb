@@ -8,9 +8,10 @@
 #
 # O LINK DO PORTAL NÃO VAI AO CLIENTE (fatia 1 do PDF rápido, 13/09/2026). A URL do portal não tem
 # assinatura, leva o nome do segurado no caminho e baixa com HTTP 200 sem autenticação. Até essa data,
-# quando o arquivo não baixava, o publicador mandava o texto de reserva com a URL; agora o download que
-# falha é um comparativo que não saiu, e `fechar` pede outro na passada seguinte, até
-# `TETO_DE_TENTATIVAS`.
+# quando o arquivo não baixava, o publicador mandava o texto de reserva com a URL; agora ele não publica
+# nada. Quando isso acontece na passada que fecha a cotação, o motor não encerra e `fechar` pede outro
+# comparativo na passada seguinte, até `TETO_DE_TENTATIVAS`. A publicação ADIADA que falha depois, no
+# `AsyncPublishJob`, não ganha nova tentativa.
 #
 # Separado da ferramenta pelo mesmo motivo de `Declaracao`, `Recusas`, `Envio` e `Veiculo`: é outro
 # assunto (como o comparativo chega ao cliente), e a classe está no teto de linhas.

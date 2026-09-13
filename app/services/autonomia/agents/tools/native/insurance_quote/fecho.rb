@@ -109,10 +109,11 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # sentinela já gravada. Aí sobrou mesmo, e calar seria esconder do cliente que falta algo.
   #
   # A TERCEIRA (fatia 1 do PDF rápido, 13/09/2026) é o comparativo que ainda seria tentado
-  # (`Comparativo#comparativo_por_tentar?`): a passada que fechou a cotação não conseguiu o PDF e
-  # voltou `running` para pedir de novo. Se a corrente de jobs morre antes da passada seguinte, quem
-  # encerra é o varredor, que não pede comparativo (`trabalho_novo: false`); a resposta verdadeira ali
-  # é que sobrou o comparativo. Esgotado o teto sem comparativo, não sobra.
+  # (`Comparativo#comparativo_por_tentar?`): a passada que fechou a cotação não conseguiu o PDF (a
+  # geração falhou, ou o publicador não o aceitou) e a execução seguiu para pedir de novo. Se a
+  # corrente de jobs morre antes da passada seguinte, quem encerra é o varredor, que não pede
+  # comparativo (`trabalho_novo: false`); a resposta verdadeira ali é que sobrou o comparativo.
+  # Esgotado o teto sem comparativo, não sobra.
   #
   # As chaves lidas aqui sobrevivem ao corte das marcas do motor (`AsyncRunJob::MARCAS` não as lista),
   # então chegam pelo handle que o encerramento entrega.
