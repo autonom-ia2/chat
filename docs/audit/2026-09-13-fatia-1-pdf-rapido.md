@@ -736,26 +736,67 @@ dependência.
     180 s. E o workflow de rollback liga o worker antigo (`deploy-autonomia-blue-green.yml:701`) antes de
     parar o atual (`:712`): durante a troca os dois consomem a fila `medium`, e o job com a forma nova que o
     worker antigo pegar é descartado.
-  - **Passo obrigatório antes de disparar o rollback** (rodada 3; não rodado contra produção):
-    1. Listar, só leitura, os jobs com as formas novas no Redis de produção, com as credenciais do ambiente
-       (`REDIS_URL`, e `REDIS_PASSWORD` quando separada), sem imprimir a credencial nem o payload: o argumento
-       do job traz o id assinado do blob, que baixa o PDF. A saída abaixo é só o id da execução:
+  - **Passo obrigatório antes de disparar o rollback** (corrigido na revisão da rodada 3; testado contra um
+    Redis descartável com senha, não contra produção):
+    1. Rodar o script abaixo no host, com as variáveis do ambiente do app (`REDIS_URL`, e `REDIS_PASSWORD`
+       quando separada). **Ele aborta em qualquer falha**: sem `PONG`, erro do `redis-cli` (flag `-e`) ou linha
+       fora do formato. **Saída vazia nunca libera o rollback**: só a linha `OK: leitura confirmada` seguida de
+       `lista vazia` libera. A senha vai por `REDISCLI_AUTH`, nunca pelo argv (a versão anterior usava `-u` com
+       a senha, visível no `ps`), e o payload nunca é impresso, porque traz o id assinado do blob, que baixa o PDF.
 
        ```sh
-       for chave in schedule retry; do
-         redis-cli -u "$REDIS_URL" ZRANGE "$chave" 0 -1
-       done | grep -E 'arquivo_gravado|encadeada' | grep -oE '"arguments":\[[0-9]+' | sed 's/.*\[//' | sort -u
-       redis-cli -u "$REDIS_URL" LRANGE queue:medium 0 -1 \
-         | grep -E 'arquivo_gravado|encadeada' | grep -oE '"arguments":\[[0-9]+' | sed 's/.*\[//' | sort -u
+       #!/bin/sh
+       # Passo 1 do rollback da PR #422: lista, só leitura, os ids de execução com jobs nas formas novas.
+       # ABORTA em qualquer falha: sem PONG, erro do redis-cli, ou linha fora do formato. Saída vazia nunca
+       # significa "nada a fazer"; só a linha "OK: leitura confirmada" seguida de "lista vazia" significa.
+       # A senha vai pelo ambiente (REDISCLI_AUTH), nunca pelo argv, e o payload nunca é impresso.
+       set -u
+       : "${REDIS_URL:?defina REDIS_URL}"
+       resto=$(printf '%s' "$REDIS_URL" | sed -E 's#^rediss?://##')
+       case "$REDIS_URL" in rediss://*) TLS=--tls ;; *) TLS= ;; esac
+       auth_url=$(printf '%s' "$resto" | sed -nE 's#^[^:@/]*:([^@]*)@.*#\1#p')
+       hostporta=$(printf '%s' "$resto" | sed -E 's#^[^@]*@##; s#/.*$##')
+       H=${hostporta%:*}; P=${hostporta##*:}; [ "$H" = "$hostporta" ] && P=6379
+       DB=$(printf '%s' "$resto" | sed -nE 's#^[^/]*/([0-9]+).*#\1#p'); DB=${DB:-0}
+       REDISCLI_AUTH=${REDIS_PASSWORD:-$auth_url}; export REDISCLI_AUTH
+       cli() { redis-cli $TLS -e -h "$H" -p "$P" -n "$DB" "$@"; }
+       pong=$(cli PING 2>&1)
+       [ "$pong" = "PONG" ] || { echo "ABORTADO: o Redis não respondeu PONG (autenticação ou conexão). Rollback NÃO liberado." >&2; exit 2; }
+       bruto=$( { cli ZRANGE schedule 0 -1 && cli ZRANGE retry 0 -1 && cli LRANGE queue:medium 0 -1; } 2>&1 ) \
+         || { echo "ABORTADO: a leitura das filas falhou. Rollback NÃO liberado." >&2; exit 3; }
+       ids=$(printf '%s\n' "$bruto" | grep -E 'arquivo_gravado|encadeada' | grep -oE '"arguments":\[[0-9]+' | sed 's/.*\[//' | sort -u)
+       if printf '%s\n' "$ids" | grep -qvE '^[0-9]*$'; then echo "ABORTADO: saída fora do formato. Rollback NÃO liberado." >&2; exit 4; fi
+       echo "OK: leitura confirmada"
+       if [ -n "$ids" ]; then for i in $ids; do echo "execucao $i"; done; else echo "lista vazia"; fi
        ```
+
+       Testado em 13/09/2026 com `redis-server` local e `requirepass`, 4 jobs (3 com as formas novas, 1 de outra
+       classe, que não pode aparecer):
+
+       | cenário | saída | exit |
+       |---|---|---|
+       | senha na URL (`redis://default:senha@host`) | OK, execuções 57908 e 58908 | 0 |
+       | senha só em `REDIS_PASSWORD` | OK, as mesmas | 0 |
+       | `redis://:senha@host` | OK, as mesmas | 0 |
+       | senha errada | ABORTADO | 2 |
+       | sem senha | ABORTADO | 2 |
+       | Redis inacessível | ABORTADO | 2 |
+       | erro no meio da leitura (`WRONGTYPE`) | ABORTADO | 3 |
+       | filas vazias | OK, lista vazia | 0 |
 
     2. Achar as conversas pelo banco, só leitura (psql; nunca `rails runner` em produção):
        `select id, conversation_id, status from autonomia_agent_tool_runs where id in (...);`
-    3. Lista vazia: rollback liberado. Com jobs na lista e o rollback podendo esperar, esperar a lista
-       esvaziar com o worker atual no ar (até ~3 a 4 min para o PDF e ~6 a 8 min para o fecho) e listar de
-       novo. Sem poder esperar: fazer o rollback e acompanhar essas conversas. O blob do PDF fica guardado por
-       1 h (`BLOB_SEM_DONO_IDADE`); reenviar à mão toca cliente e dado pessoal, e é decisão do Rodrigo, caso a
-       caso.
+    3. `OK` com lista vazia: rollback liberado. Com execuções na lista e o rollback podendo esperar, esperar a
+       lista esvaziar com o worker atual no ar (até ~3 a 4 min para o PDF e ~6 a 8 min para o fecho) e rodar o
+       script de novo. Sem poder esperar: fazer o rollback e acompanhar essas conversas. O blob do PDF fica
+       guardado por 1 h (`BLOB_SEM_DONO_IDADE`); reenviar à mão toca cliente e dado pessoal, e é decisão do
+       Rodrigo, caso a caso.
+    4. **A lista é uma foto.** Entre rodar o script e o workflow parar o worker atual (`:712`), cotações vivas
+       continuam criando jobs com as formas novas, e o worker antigo, ligado antes (`:701`), pode pegá-los e
+       descartá-los. Rodar o script imediatamente antes de disparar o workflow e, **logo depois do rollback**,
+       conferir no banco as cotações que terminaram na janela, porque os jobs descartados já não estão no Redis:
+       `select id, conversation_id, status, updated_at from autonomia_agent_tool_runs where slug = 'cotar_seguro'
+       and updated_at > now() - interval '15 minutes' order by updated_at;`
   - A rodada 1 dizia que as entregas de arquivo serializadas por ela "continuam válidas na anterior (a
     `reserva` segue na forma, só sem o link)" e omitia a consequência: com o download falhando, a `main`
     publica essa reserva, e sem o link o cliente leria "Comparativo com todas as opções:" sem nada depois. Na
@@ -769,3 +810,29 @@ dependência.
     portal fechado e não publica o fecho. Janela: as linhas em nova tentativa no minuto do rollback. Por
     leitura de código, sem teste.
   - O link volta ao cliente com o rollback (é o comportamento da `main`).
+
+## Revisão da rodada 3 (`ab4e68139a`)
+
+Código aprovado pelas sondas do revisor: 54 de 54 ordens de drenagem e 300 de 300 sorteios com o fecho por
+último; 18 de 18 estados sem silêncio e sem fecho duplo; o mutante que volta a esperar só o PDF cai em 33 de
+72. Reprovado por um item de texto, **R3-1**, corrigido acima.
+
+- **R3-1, corrigido.** O passo 1 do runbook terminava em `sort -u`: `NOAUTH`/`WRONGPASS` saíam no stdout e
+  eram filtrados pelo `grep`, e conexão recusada ia para o stderr. Em todos os casos a saída ficava vazia com
+  exit 0, e o passo 3 lia isso como "rollback liberado". Trocado pelo script que aborta, testado nos oito
+  cenários da tabela.
+- **R3-2, declarado.** O `rescue` de `Encerramento#entregas_a_caminho` (`encerramento.rb:207-215`) devolve só
+  `[@adiada]` quando a leitura do banco falha, e em `concluir` o `@adiada` é sempre nil. Nesse caso o fecho
+  pode sair antes dos preços (sondas R5a, R5b, R5c). Nunca fica mudo. Exige falha do banco dentro dessa leitura.
+- **R3-3, declarado.** O fecho espera o teto (~6 a 8 min) quando uma entrega aceita nunca vira mensagem. Só em
+  falha: lote de preços recusado no job por erro de banco; job perdido no Redis; anexo do PDF que falha ou blob
+  já apagado; **e agente humano que apaga a mensagem do bot** (`messages_controller.rb:23` troca o
+  `content_attributes` inteiro e o token some). Consequência nomeada pelo revisor: uma execução `done` não é
+  "morta" (`autorizacao_da_execucao.rb:21`), e `open!` só supersede execuções ativas (`tool_run.rb:116-117`);
+  com um fecho preso e uma cotação nova aberta nesse intervalo, o cliente pode ler o fecho velho depois da
+  mensagem da cotação nova. A mesma classe já existe na `main`, com as entregas adiadas da cotação anterior.
+- **R3-4, registro.** O `ExecStop` do Autonomia está na linha 348 (352 é a do Hub2You). A premissa antiga de
+  "25 s" e "reenfileira no hard shutdown" também está em `encerramento.rb:33`, `fecho.rb:66` e `:160`,
+  `native/base.rb:283`, `reap_stale_runs_job.rb:133` e `tool_run.rb:343`; não foi alterada nesta PR. No achado
+  5, `comparativo_tentativas=3` só vai à linha depois que o portal responde (`comparativo.rb:80-81`); para o
+  cliente o resultado é o mesmo.
