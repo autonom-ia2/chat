@@ -241,8 +241,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   end
 
   # O PORTAL JÁ TINHA FECHADO E O COMPARATIVO JÁ TINHA SAÍDO — só o `finish!('done')` não chegou a
-  # rodar. `build_progress` grava `comparativo_enviado` no ramo `done` e o `record_attempt!` o
-  # persiste; o `finish_done` vem DEPOIS. Morto o worker entre os dois (deploy, hard shutdown do
+  # rodar. `Comparativo#concluir_passada` grava `comparativo_enviado` na passada que encontra o comparativo
+  # aceito e o `record_attempt!` o persiste; o `finish_done` vem DEPOIS. Morto o worker entre os dois (deploy, hard shutdown do
   # Sidekiq), a linha fica `running` com tudo já entregue ao cliente.
   def cotacao_fechada_no_portal_com_a_linha_abandonada
     run = abrir_execucao
@@ -327,7 +327,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # NÃO-REGRESSÃO DA COTAÇÃO (Codex, P2). O `fail_run` deixou de filtrar por `delivered_count` e
   # passou a oferecer o encerramento à ferramenta SEMPRE — era o único jeito de um arquivo já gerado
   # sair quando o prazo estoura antes da primeira entrega. A cotação se protege
-  # sozinha: `comparison_pdf` devolve nil sem `entregues` no handle, então a execução que morre sem
+  # sozinha: `closing_deliveries` não pede comparativo sem preço aceito, então a execução que morre sem
   # preço nenhum continua fechando com a frase de falha, sem comparativo e sem pedir nada ao portal
   # (se pedisse, o PDF do conector `mock` não está stubbado neste exemplo e a mensagem seria outra).
   it 'a cotacao que morre sem preco nenhum nao passa a mandar comparativo' do

@@ -4,11 +4,13 @@ require 'rails_helper'
 #
 # O job roda sobre uma execução da ferramenta de cotação DE VERDADE, com o conector `mock`, no
 # estado em que o comparativo sai no fim (submetida, preço já entregue, prazo vencido), e o que se
-# lê na conversa é o que o cliente leria: o PDF como ANEXO, com o nome que diz o que ele é; ou, se
-# o download falhar, o texto com o link — e os preços que já saíram continuam lá.
+# lê na conversa é o que o cliente leria: o PDF como ANEXO, com o nome que diz o que ele é — e os
+# preços que já saíram continuam lá.
 #
-# O caminho de falha é exemplo, não nota de rodapé (termo 3): apagar a reserva no publicador
-# reprova o segundo exemplo. Provado por mutação em 11/09/2026.
+# O LINK DO PORTAL NÃO SAI MAIS (fatia 1 do PDF rápido, 13/09/2026): a URL não tem assinatura, leva o
+# nome do segurado no caminho e baixa sem autenticação. Até essa data, o download que falhava mandava
+# o texto com o link; agora é um comparativo que não saiu, e os exemplos de falha abaixo afirmam a
+# ausência do link e o que acontece no lugar dele.
 RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:account) do
     create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
@@ -103,9 +105,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
   end
 
-  # O 404 do armazenamento do portal (XML de `BlobNotFound`). O link vai como ia antes, o preço que
-  # já saiu fica, e o fecho sai do mesmo jeito.
-  it 'cai para o link quando o download falha, sem apagar o preco que ja saiu' do
+  # O 404 do armazenamento do portal (XML de `BlobNotFound`), pela porta do prazo. O link não sai, o
+  # preço que já saiu fica, a entrega não conta, e o fecho de quem tem resultado sai do mesmo jeito.
+  it 'nao manda o link quando o download falha, sem apagar o preco que ja saiu' do
     # Arrange
     run = cotacao_com_preco_publicado_e_prazo_vencido
     stub_request(:get, url).to_return(status: 404, body: '<Error><Code>BlobNotFound</Code></Error>',
@@ -116,16 +118,17 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert
-    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}", cotacao::FECHO_COM_RESULTADO])
+    expect(bot_messages.map(&:content)).to eq([preco, cotacao::FECHO_COM_RESULTADO])
+    expect(bot_messages.map(&:content).join).not_to include(url)
     expect(bot_messages.flat_map(&:attachments)).to be_empty
     expect(run.reload.delivered_count).to eq(entregues_antes)
     expect(run.status).to eq('failed')
   end
 
-  # O CAMINHO DA CONSULTA (`apply`, poll `done`), com a URL que a forma recusa: o cliente recebe o
-  # link em texto e a sentinela do comparativo é gravada — antes, o `Progress` descartava o Hash
-  # inválido e a execução dizia "comparativo enviado" com o cliente sem nada (rodada 2, P2).
-  it 'entrega o link em texto pela consulta quando a URL do portal nao tem a forma segura' do
+  # O CAMINHO DA CONSULTA (`apply`), com a URL que a forma recusa. Até 13/09/2026 o cliente recebia o
+  # link em texto; agora a forma recusada é um comparativo que não saiu: nada novo na conversa, nenhuma
+  # sentinela de comparativo enviado, e a execução segue para a nova tentativa.
+  it 'nao manda o link pela consulta quando a URL do portal nao tem a forma segura, e tenta de novo' do
     # Arrange — cotação completa no mock (`mock-0:1`), todos os preços já entregues (as quatro
     # ofertas do `mock_progress` completo: 8, 3, 55 mensal e 999 sem período), prazo vivo
     url_http = 'http://exemplo.test/comparativo-mock.pdf'
@@ -144,30 +147,30 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     described_class.new.perform(run.id, 1)
 
-    # Assert — o preço fica, o link sai em texto, a sentinela marca o comparativo como saído
-    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url_http}"])
+    # Assert — o preço fica, o link não sai, nada é marcado como enviado, e a execução continua
+    expect(bot_messages.map(&:content)).to eq([preco])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
-    expect(run.reload.handle[cotacao::PDF_SENT_KEY]).to be(true)
-    expect(run.delivered_count).to eq(2)
-    expect(run.status).to eq('done')
+    expect(run.reload.handle[cotacao::PDF_SENT_KEY]).to be_blank
+    expect(run.delivered_count).to eq(1)
+    expect(run.status).to eq('running')
+    expect(described_class).to have_been_enqueued.with(run.id, 2)
   end
 
-  it 'cai para o link tambem quando a URL responde algo que nao e PDF' do
+  it 'nao manda o link tambem quando a URL responde algo que nao e PDF' do
     run = cotacao_com_preco_publicado_e_prazo_vencido
     stub_request(:get, url).to_return(status: 200, body: '<html>manutenção</html>', headers: { 'Content-Type' => 'text/html' })
 
     described_class.new.perform(run.id, 5)
 
-    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}", cotacao::FECHO_COM_RESULTADO])
+    expect(bot_messages.map(&:content)).to eq([preco, cotacao::FECHO_COM_RESULTADO])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
   end
 
-  # A FALHA DO ANEXO DEPOIS DE UM DOWNLOAD BOM, pelo caminho da consulta (rodada 3, P2). Antes, o
-  # ActiveStorage subia o arquivo no `after_commit` da mensagem: com o armazenamento fora, a
-  # legenda ia ao ar com um anexo sem bytes, a sentinela do comparativo gravada e nenhum link — o
-  # cliente sem nada, e a execução dizendo "comparativo enviado". Agora o arquivo é gravado antes
-  # da mensagem, e a falha cai na mesma reserva do download: o link em texto, e a entrega conta.
-  it 'entrega o link em texto pela consulta quando o armazenamento falha depois do download' do
+  # A FALHA DO ANEXO DEPOIS DE UM DOWNLOAD BOM, pelo caminho da consulta (rodada 3, P2). O arquivo é
+  # gravado antes da mensagem, e a falha do armazenamento é tratada como a do download. Até 13/09/2026
+  # isso mandava o link em texto; agora nenhuma mensagem nasce, a entrega não conta, a linha do blob
+  # sem arquivo vai para a limpeza, e a execução continua para a nova tentativa do comparativo.
+  it 'nao manda o link pela consulta quando o armazenamento falha depois do download' do
     # Arrange — cotação completa no mock (`mock-0:1`), todos os preços já entregues, prazo vivo
     run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug,
                                            arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } },
@@ -183,15 +186,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     described_class.new.perform(run.id, 1)
 
-    # Assert — o preço fica, o link sai em texto, nada de anexo, a entrega conta; a linha do blob sem
-    # arquivo (a subida falhou depois de a linha ser salva, rodada 6) vai para a limpeza em segundo plano
-    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}"])
+    # Assert — o preço fica, nenhum link, nada de anexo, a entrega não conta; a linha do blob sem
+    # arquivo (a subida falhou depois de a linha ser salva, rodada 6) vai para a limpeza em segundo
+    # plano; o comparativo foi emitido e não foi aceito — a identidade dele fica gravada, a sentinela de
+    # enviado não (rodada 2 da fatia 1 do PDF rápido) — e a execução é reagendada
+    expect(bot_messages.map(&:content)).to eq([preco])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
     expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
     perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
     expect(ActiveStorage::Blob.count).to eq(0)
-    expect(run.reload.handle[cotacao::PDF_SENT_KEY]).to be(true)
-    expect(run.delivered_count).to eq(2)
-    expect(run.status).to eq('done')
+    expect(run.reload.handle.values_at(cotacao::PDF_SENT_KEY, cotacao::COMPARATIVO_KEY).map(&:present?)).to eq([false, true])
+    expect(run).to have_attributes(delivered_count: 1, status: 'running')
   end
 end

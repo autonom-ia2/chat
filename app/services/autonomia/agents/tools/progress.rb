@@ -5,7 +5,7 @@
 #
 # `deliveries` são textos DESTINADOS AO CLIENTE, escritos pela ferramenta a partir do que ela colheu
 # — ou, desde a entrega 11, um ARQUIVO para o cliente (`EntregaDeArquivo`, na forma serializada:
-# a URL de onde o publicador baixa, o nome, a legenda e o texto de reserva com o link).
+# a URL de onde o publicador baixa, o nome, a legenda e o texto de reserva, que não é publicado).
 # A ferramenta NUNCA tem canal para mandar erro ao cliente: falha se declara em `failure_code` (um
 # código curto nosso) e o texto que o cliente lê é escrito pelo publicador. Isso preserva a fronteira
 # que o `Bound` já defende hoje — mensagem de exceção pode carregar requisição assinada ou texto vindo

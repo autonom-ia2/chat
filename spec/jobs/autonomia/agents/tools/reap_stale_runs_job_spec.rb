@@ -236,8 +236,8 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
 
   # A MENSAGEM COM ENVIO PENDENTE (rodada 9 da entrega 11, P2 do Codex): o publicador a deixou no banco
   # com a marca porque o `SendReplyJob` não entrou na fila (o Redis fora), e NINGUÉM a reemite — o
-  # `AsyncRunJob` encerra, `comparativo_enviado` impede nova emissão do PDF, o Redis voltar não dispara
-  # nada. O varredor é o recuperador durável: pelo JOB inteiro, a mensagem marcada com a fila de volta
+  # `AsyncRunJob` encerra, a cotação não pede outro PDF para a mensagem que já está no banco, o Redis
+  # voltar não dispara nada. O varredor é o recuperador durável: pelo JOB inteiro, a mensagem marcada com a fila de volta
   # vira exatamente UM `SendReplyJob` e a marca sai; a execução que morreu não envia nada, a marca sai
   # e o motivo fica no log. A mensagem é criada pelo publicador de verdade, com a fila recusando o envio.
   describe 'envios pendentes' do

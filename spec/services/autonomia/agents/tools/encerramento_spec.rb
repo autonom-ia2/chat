@@ -360,6 +360,91 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
     end
   end
 
+  # O DESFECHO DE QUEM TERMINOU (`done`), fatia 1 do PDF rápido (13/09/2026).
+  #
+  # Até aqui toda cotação real recebia o desfecho pelo encerramento por prazo; a partir desta fatia o
+  # caminho comum é o `done`, e sem isto o desfecho sumia. As regras são as do fecho do encerramento
+  # onde elas se aplicam: a MESMA pergunta à conversa antes de publicar, a frase de falha para quem não
+  # recebeu nada, e o fecho de quem tem resultado quando a ferramenta confirma o resultado.
+  describe 'a conclusão de quem terminou (done)' do
+    def concluir(run, tool)
+      register_async_tool(tool)
+      publicador = ->(entrega) { Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega) }
+      described_class.new(run: run, native: tool, &publicador).concluir
+    end
+
+    it 'com resultado confirmado pela ferramenta, publica o fecho de quem tem resultado' do
+      run = execucao(entregas: 1)
+      tool = build_async_tool(resultado: true)
+
+      concluir(run, tool)
+
+      expect(bot_contents).to eq([tool.closing_message])
+    end
+
+    # O `done` não pergunta se SOBROU algo: o fecho de quem terminou não diz que algo ficou pelo caminho.
+    it 'nao depende de a ferramenta dizer que sobrou algo' do
+      run = execucao(entregas: 1)
+      tool = build_async_tool(resultado: true, resta: false)
+
+      concluir(run, tool)
+
+      expect(bot_contents).to eq([tool.closing_message])
+    end
+
+    it 'sem nada aceito, publica a frase de falha' do
+      run = execucao
+      tool = build_async_tool(resultado: true)
+
+      concluir(run, tool)
+
+      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+    end
+
+    # A PERGUNTA PELO DADO QUE FALTA é contada como entrega e não é resultado: ela é a última palavra, e
+    # o motor não publicava nada depois dela.
+    it 'com entrega aceita que nao e resultado, nao publica nada' do
+      run = execucao(entregas: 1)
+
+      concluir(run, build_async_tool(resultado: false))
+
+      expect(bot_contents).to be_empty
+    end
+
+    # NUNCA DOIS DESFECHOS: qualquer frase de fecho desta execução já na conversa — inclusive uma frase
+    # DIFERENTE da que esta conclusão escolheria — cala a conclusão.
+    it 'nao publica quando outra frase de fecho desta execucao ja esta na conversa' do
+      run = execucao(entregas: 1)
+      tool = build_async_tool(resultado: true)
+      Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(tool.failure_message)
+
+      concluir(run, tool)
+
+      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+    end
+
+    it 'duas conclusoes na mesma linha publicam um fecho so' do
+      run = execucao(entregas: 1)
+      tool = build_async_tool(resultado: true)
+
+      concluir(run, tool)
+      concluir(run.reload, tool)
+
+      expect(bot_contents).to eq([tool.closing_message])
+    end
+
+    # AO CONTRÁRIO DO ENCERRAMENTO, A CONCLUSÃO DEIXA SUBIR: quem chama é o motor, que trata a passada
+    # como falha e a tenta de novo sem fechar a linha. Engolir aqui fecharia a execução sem desfecho.
+    it 'deixa subir o que a ferramenta levanta, e nao publica nada' do
+      run = execucao(entregas: 1)
+      tool = build_async_tool
+      tool.define_method(:resultado_entregue?) { |_handle| raise ActiveRecord::StatementInvalid, 'banco fora' }
+
+      expect { concluir(run, tool) }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(bot_contents).to be_empty
+    end
+  end
+
   # O VARREDOR NÃO COMEÇA TRABALHO NOVO NO PORTAL. Ele varre até 500 linhas em
   # sequência dentro de um cron, e o Sidekiq desta instalação tem 25 s de shutdown: quem é morto no
   # meio joga o resto das linhas para a varredura seguinte, 10 min depois. Quem decide o que

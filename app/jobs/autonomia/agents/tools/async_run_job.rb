@@ -204,21 +204,38 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   def apply(run, native, progress, attempt)
-    Array(progress&.deliveries).each { |entrega| deliver(run, entrega) }
+    resultados = Array(progress&.deliveries).map { |entrega| [entrega, deliver(run, entrega)] }
     run.record_attempt!(handle: merged_handle(progress&.handle))
 
     if progress.nil? || progress.failed?
       fail_run(run, native, progress&.failure_code)
-    elsif progress.done?
+    elsif progress.done? && !arquivo_recusado?(resultados)
       finish_done(run, native)
     else
       reschedule(run, attempt)
     end
   end
 
+  # -> alguma entrega de ARQUIVO desta passada voltou do publicador sem ser aceita? Quando sim, a
+  # passada `done` não encerra a execução: `apply` a reagenda, e a ferramenta decide na passada
+  # seguinte se gera o arquivo de novo (na cotação, `InsuranceQuote::Comparativo#fechar`, com teto).
+  # Desde 13/09/2026 o publicador não manda o link no lugar do arquivo que não baixou, e é por aqui que
+  # esse download chega à nova tentativa.
+  #
+  # SÓ ARQUIVO: a entrega de texto recusada não segura o `done`. A cotação devolve a pergunta pelo
+  # dado que falta em toda passada (`poll` com `handle['pedido']`), e reagendá-la repetiria a mesma
+  # recusa até o prazo, onde hoje a execução encerra com a frase de falha.
+  def arquivo_recusado?(resultados)
+    resultados.any? do |entrega, resultado|
+      ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega) && !resultado.aceita?
+    end
+  end
+
   # Entrega da FERRAMENTA (não o aviso, não a frase de falha). Conta como entregue tanto a publicada
-  # quanto a ADIADA — a adiada sai sozinha pelo `AsyncPublishJob`, e tratá-la como "nada entregue"
-  # faria o desfecho publicar "não consegui concluir" ao lado da cotação que estava a caminho.
+  # quanto a ADIADA — a adiada fica com o `AsyncPublishJob`, e tratá-la como "nada entregue" faria o
+  # desfecho publicar "não consegui concluir" ao lado da cotação que estava a caminho. O job adiado ainda
+  # pode recusá-la depois (autorização caída, erro de banco), e nada aqui fica sabendo; o que a rodada 2
+  # da fatia 1 do PDF rápido tirou desse caminho foi o download, que o publicador faz antes de adiar.
   # `entrega` é texto ou a forma serializada de uma entrega de arquivo (o comparativo, entrega 11).
   #
   # DUAS ANOTAÇÕES, A MESMA PERGUNTA (entrega 8a): o contador diz QUANTAS entregas o publicador
@@ -232,11 +249,17 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     result
   end
 
-  # Terminou sem NADA entregue (todas as seguradoras mudas, por exemplo): o cliente precisa saber.
-  # Terminar em silêncio é o pior desfecho para quem está esperando — e dizer "não consegui" ao lado
-  # de uma cotação entregue é o segundo pior.
+  # TERMINOU (`done`): o desfecho sai por `Tools::Encerramento#concluir` e só então a linha fecha.
+  # Ele publica a frase de falha quando nada foi aceito (o que este método publicava antes da fatia 1
+  # do PDF rápido) e, desde 13/09/2026, o fecho de quem tem resultado quando a ferramenta confirma o
+  # resultado — as cotações reais de 12/09/2026 receberam esse fecho pelo encerramento por prazo, e
+  # com a fatia o `done` passa a ser o caminho de quem tem todas as seguradoras com desfecho. Nas duas
+  # frases, a mesma pergunta à conversa do encerramento (`fecho_publicado?`) antes de publicar.
+  #
+  # `run.reload` pelo mesmo motivo de `fail_run`: a decisão lê o contador e a lista do aceite do banco.
   def finish_done(run, native)
-    publish(run, native.failure_message(run.arguments)) if run.delivered_count.zero?
+    run.reload
+    ::Autonomia::Agents::Tools::Encerramento.new(run: run, native: native) { |entrega| publish(run, entrega) }.concluir
     run.finish!('done')
   end
 
@@ -248,8 +271,8 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # consegui" ao lado de um PDF que existia.
   #
   # Agora o encerramento é SEMPRE oferecido à ferramenta, e o filtro mora nela, que é quem sabe o que
-  # tem em mãos. PARA A COTAÇÃO NADA MUDA no que sai: `comparison_pdf` devolve nil sem `entregues` no
-  # handle (`InsuranceQuote::Comparativo`), então a execução que morre sem preço nenhum continua
+  # tem em mãos. PARA A COTAÇÃO NADA MUDA no que sai: `closing_deliveries` não pede comparativo sem preço
+  # aceito (`InsuranceQuote::Fecho`), então a execução que morre sem preço nenhum continua
   # fechando com a frase de falha e sem pedir nada ao portal — travado por exemplo pelo caminho real
   # em `async_run_job_encerramento_parcial_spec`.
   #
@@ -308,14 +331,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   # A publicação é ADIADA enquanto a entrega humanizada do turno ainda está em curso —
-  # publicar no meio dela entregaria a cotação antes da frase que a promete. A entrega de arquivo
-  # viaja para o job adiado na forma serializada (Hash de texto), que é o que o Sidekiq carrega.
+  # publicar no meio dela entregaria a cotação antes da frase que a promete — ou enquanto a entrega de
+  # que um texto encadeado depende não é mensagem. O job adiado carrega a forma que o publicador devolve
+  # em `adiada`: para a entrega de arquivo é o arquivo já gravado (`ArquivoGravado`), sem a URL do portal.
   def publish(run, entrega)
     result = ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(entrega)
     if result.deferred?
       ::Autonomia::Agents::Tools::AsyncPublishJob
         .set(wait: AsyncConfig::PUBLISH_DEFER_SECONDS.seconds)
-        .perform_later(run.id, entrega, 1)
+        .perform_later(run.id, result.adiada || entrega, 1)
     end
     result
   end

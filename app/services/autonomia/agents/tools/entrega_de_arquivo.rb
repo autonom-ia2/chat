@@ -17,11 +17,13 @@
 # sobe o arquivo no `after_commit` da mensagem, e uma subida que falhasse ali deixaria a mensagem
 # no ar com a legenda e um anexo sem bytes — o cliente sem arquivo e sem link, e o token já
 # publicado fazendo qualquer retry virar duplicado (rodada 3 de revisão, 11/09/2026). Gravando
-# antes, a falha do armazenamento é `Indisponivel` como a do download, e cai na mesma reserva.
+# antes, a falha do armazenamento é `Indisponivel` como a do download, e tem o mesmo destino.
 #
-# A RESERVA é o texto com o link, o mesmo de antes: quando o download ou a gravação falham, o
-# cliente recebe o link como recebia — os preços que já saíram não voltam, e a falha do arquivo não
-# pode apagar a entrega. O publicador decide isso; este objeto só carrega os dois caminhos.
+# A RESERVA continua na forma e continua obrigatória (`defeito`), e desde a fatia 1 do PDF rápido
+# (13/09/2026) o publicador não a publica: quando o download ou a gravação falham, nada sai
+# (`AsyncPublisher#sem_arquivo`). Até essa data a reserva levava o link do portal ao cliente. Ela
+# fica na forma porque a versão anterior do publicador exige o campo — uma entrega serializada por
+# esta versão e publicada depois de um rollback seria descartada sem ele.
 class Autonomia::Agents::Tools::EntregaDeArquivo
   CHAVE = 'arquivo'.freeze
   # Um comparativo de auto tem dezenas de KB; o teto é folga de cem vezes, não medida. Existe para o
@@ -30,11 +32,14 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # lock da conversa.
   TETO_BYTES = 10.megabytes
   # PRAZO DO CORPO COM TETO POR LEITURA (`total_timeout:` do `SafeFetch`), monotônico, abaixo dos 25 s
-  # que o Sidekiq desta instalação dá ao job num SHUTDOWN (`:timeout: 25`): um deploy no meio de um
-  # download normal ainda o deixa terminar, em vez de matar a publicação pela metade. Teto por leitura
-  # sozinho não segura um servidor que entrega um byte por segundo — ele nunca estoura a leitura e
-  # prende o worker pelo tempo que quiser (rodada 6, 11/09/2026); com o prazo, cada leitura do corpo
-  # espera no máximo o que resta dele, e a conexão e a espera pelos cabeçalhos ficam limitadas a ele
+  # que o Sidekiq desta instalação pede num SHUTDOWN (`:timeout: 25`). NO DEPLOY DE PRODUÇÃO O WORKER NÃO
+  # TEM ESSES 25 S: o `docker stop` sem `-t` do `chatwoot-worker` (`.github/workflows/deploy-*-blue-green.yml`)
+  # manda SIGKILL em 10 s, e o job morto não volta para a fila. Um download no meio do deploy pode morrer
+  # pela metade; a passada morta não se repete, e a execução fica para o varredor.
+  #
+  # Teto por leitura sozinho não segura um servidor que entrega um byte por segundo — ele nunca estoura a
+  # leitura e prende o worker pelo tempo que quiser (rodada 6, 11/09/2026); com o prazo, cada leitura do
+  # corpo espera no máximo o que resta dele, e a conexão e a espera pelos cabeçalhos ficam limitadas a ele
   # como teto por operação.
   #
   # O QUE O PRAZO NÃO COBRE (ressalva registrada na rodada 7, decisão de não implementar um orçamento
@@ -43,9 +48,10 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # leitura, e as linhas de controle do chunked entre dois pedaços. Modelo de ameaça: a URL vem do
   # nosso adapter (o blob do portal, https, sem redirecionamento), a abertura tem 5 s, cada leitura
   # é limitada pelo saldo; só um gotejamento de cabeçalhos abaixo do saldo evade. E o que evade NÃO
-  # tem teto de execução: os 25 s do Sidekiq só valem num shutdown — sem deploy, a thread fica ocupada
-  # enquanto o servidor gotejar (rodada 8: o texto anterior dizia que o shutdown "encerra o job de
-  # qualquer forma", e não é assim). O sinal, em produção, é o tempo do job fora da casa dos segundos.
+  # tem teto de execução: o tempo de shutdown (25 s no Sidekiq, 10 s no deploy de produção) só vale num
+  # shutdown — sem deploy, a thread fica ocupada enquanto o servidor gotejar (rodada 8: o texto anterior
+  # dizia que o shutdown "encerra o job de qualquer forma", e não é assim). O sinal, em produção, é o tempo
+  # do job fora da casa dos segundos.
   PRAZO_SEGUNDOS = 20
   # Teto da conexão (TCP + TLS), dentro do prazo.
   ABERTURA_SEGUNDOS = 5
@@ -78,8 +84,8 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   FINALIDADE = 'entrega_de_arquivo'.freeze
 
   # O download ou a gravação não puderam entregar um PDF. `motivo` é um código curto FECHADO (nunca o
-  # texto da resposta, um cabeçalho, nem a mensagem da exceção): vai para o log, e o publicador cai
-  # para a reserva. `causa` é o NOME DA CLASSE da exceção de origem, quando há uma — o armazenamento
+  # texto da resposta, um cabeçalho, nem a mensagem da exceção): vai para o log, e o publicador não
+  # publica nada. `causa` é o NOME DA CLASSE da exceção de origem, quando há uma — o armazenamento
   # e a rede falham de muitos jeitos e o log precisa dizer qual, sem a mensagem.
   class Indisponivel < StandardError
     attr_reader :motivo, :causa
@@ -163,7 +169,7 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   end
 
   # O CAMPO que reprova a forma, como código curto ('url', 'nome', 'legenda', 'reserva'), ou nil
-  # quando a forma é válida. É o que vai ao log de quem cai para o link (a ferramenta) ou descarta
+  # quando a forma é válida. É o que vai ao log de quem recusa a forma (a ferramenta) ou descarta
   # (o publicador): o nome do campo, nunca o valor — a URL e os textos são dados de fora.
   def defeito
     return 'url' unless url.match?(URL_SEGURA)
@@ -177,8 +183,9 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     { CHAVE => { 'url' => url, 'nome' => nome, 'legenda' => legenda, 'reserva' => reserva } }
   end
 
-  # A identidade da entrega, para o token de publicação: a MESMA como arquivo e como reserva. Um
-  # retry que encontra o link já publicado não publica o arquivo por cima, e vice-versa.
+  # A identidade da entrega, para o token de publicação: derivada só da URL, e por isso a MESMA como
+  # arquivo e como a reserva que versões anteriores publicavam. Um retry que encontra a mensagem de uma
+  # delas no ar não publica outra por cima.
   def identidade
     "arquivo:#{url}"
   end

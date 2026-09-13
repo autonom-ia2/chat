@@ -221,7 +221,7 @@ module ManualDoEspecialistaDeAuto
     'FLEX não é GASOLINA' => -> { (valores('vehicle.fuelType').values & %w[FLEX GASOLINA]).size == 2 },
     'Garagem em casa não tem opção "0"' => -> { valores('vehicle.garageAtHome').any? && !valores('vehicle.garageAtHome').key?('0') },
     'Quilometragem é faixa, não número livre' => -> { valores('vehicle.monthlyMileageBand').any? },
-    'No fim, o comparativo' => -> { cotacao.private_instance_methods.include?(:comparison_pdf) },
+    'No fim, o comparativo' => -> { cotacao.private_instance_methods.include?(:gerar_comparativo) },
     'a resposta está nas condições gerais: ferramenta dele' => lambda {
       Autonomia::Insurance::QuoteAgent::Builder::TOOLS_DO_PRINCIPAL.include?('consultar_condicoes_gerais')
     }

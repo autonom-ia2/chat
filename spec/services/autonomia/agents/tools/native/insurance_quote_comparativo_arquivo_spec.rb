@@ -3,7 +3,7 @@ require 'rails_helper'
 # O COMPARATIVO SAI COMO ARQUIVO, com nome que diz o que ele é (entrega 11, termos 1 e 5).
 #
 # A ferramenta não baixa nada: ela entrega a URL do portal, o NOME do arquivo, a legenda e a
-# reserva (o texto com o link, o mesmo de antes). O nome leva a placa — o dado que o cliente já
+# reserva (desde 13/09/2026 sem o link, que não sai mais ao cliente). O nome leva a placa — o dado que o cliente já
 # vê e pelo qual ele procura o arquivo depois —, e nenhum outro dado dele. Provado por mutação em
 # 11/09/2026: trocar o nome por um genérico ("comparativo.pdf") reprova o primeiro exemplo.
 RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
@@ -65,11 +65,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     expect(entrega.url).to eq('https://arquivos.exemplo.test/comparativo-9.pdf')
   end
 
-  it 'mantem a legenda e a reserva com o link, que e o que sai se o arquivo falhar' do
+  # A RESERVA NÃO CARREGA O LINK (fatia 1 do PDF rápido, 13/09/2026). A URL do portal não tem
+  # assinatura, leva o nome do segurado no caminho e baixa sem autenticação; o publicador deixou de
+  # mandá-la ao cliente quando o arquivo falha, e a forma deixou de copiá-la para um texto. A reserva
+  # continua na forma (a validação dela e a chave `comparativo_reserva` do pedido não mudaram).
+  it 'mantem a legenda e a reserva, sem o link do portal em nenhuma das duas' do
     entrega = comparativo(tool)
 
     expect(entrega.legenda).to eq('Comparativo com todas as opções.')
-    expect(entrega.reserva).to eq("Comparativo com todas as opções:\nhttps://arquivos.exemplo.test/comparativo-9.pdf")
+    expect(entrega.reserva).to eq('Comparativo com todas as opções:')
   end
 
   it 'nao poe no nome nada alem do que o cliente ja ve' do
@@ -85,9 +89,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   # A URL VEM DE FORA e a forma da entrega de arquivo pode recusá-la (o adapter só garante que é uma
-  # URL; https não é promessa). A falha da forma não pode apagar a entrega: sai o texto com o link,
-  # o de antes, e o motivo curto no log. Sem esta guarda o Hash inválido era descartado pelo
-  # `Progress` com a sentinela do comparativo já gravada — nem arquivo, nem link (rodada 2, P2).
+  # URL; https não é promessa). Até a fatia 1 do PDF rápido (13/09/2026) saía o texto com o link no
+  # lugar do arquivo; agora o link não vai ao cliente, e a forma recusada é um comparativo que não
+  # saiu: nada é entregue, e o motivo curto vai ao log.
   describe 'quando a URL do portal nao tem a forma segura' do
     let(:url_http) { 'http://arquivos.exemplo.test/comparativo-9.pdf' }
 
@@ -97,12 +101,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       allow(Rails.logger).to receive(:warn).and_call_original
     end
 
-    it 'entrega o texto com o link, como antes, e registra o defeito da forma' do
-      entrega = tool.closing_deliveries(handle_com_preco).first
+    it 'nao entrega nada, nem o link, e registra o defeito da forma' do
+      entregas = tool.closing_deliveries(handle_com_preco)
 
-      expect(entrega).to eq("Comparativo com todas as opções:\n#{url_http}")
+      expect(entregas).to be_empty
       expect(Rails.logger).to have_received(:warn)
-        .with(a_string_matching(/comparativo sem forma de arquivo account=#{account.id} defeito=url; vai como link/))
+        .with(a_string_matching(/comparativo sem forma de arquivo account=#{account.id} defeito=url; nao sai/))
     end
   end
 

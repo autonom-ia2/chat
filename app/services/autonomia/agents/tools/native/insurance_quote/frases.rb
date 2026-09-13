@@ -58,8 +58,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
                      'de bônus: diga que estes preços são os de quem faz o primeiro seguro, e que com a ' \
                      'classe de bônus da apólice atual você refaz a cotação.',
     comparativo_legenda: 'Legenda curta que sai junto do arquivo PDF com o comparativo.',
-    comparativo_reserva: 'Frase que apresenta o LINK do comparativo, para quando o arquivo não puder ' \
-                         'ser enviado. Termine com dois pontos: o link vem logo abaixo dela.',
+    comparativo_reserva: 'Frase curta sobre o comparativo em PDF, guardada junto do arquivo. Não escreva ' \
+                         'link nem endereço de site.',
     falta_dado: 'Frase para quando falta uma informação e não há como dizer qual.',
     pedido_do_que_falta: 'Frase que abre o pedido dos dados que faltam. Não escreva os dados: a lista ' \
                          'deles é acrescentada depois da sua frase. Termine com dois pontos.',
