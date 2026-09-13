@@ -206,7 +206,7 @@ describe('o texto que a aba Conexões escreve', () => {
     );
     const texto = wrapper.text();
     // 4 seguradoras distintas na conta, 1 recusada -> 3 passaram.
-    expect(texto).toContain('Azul recusou o login da corretora.');
+    expect(texto).toContain('Azul não aceitou o acesso da corretora (login ou permissão).');
     expect(texto).toContain('As outras 3 seguradoras da conta passaram.');
     // E a linha do produto conta o universo DELE: 2 de 3.
     expect(texto).toContain('2 de 3 seguradoras');
@@ -356,7 +356,7 @@ describe('o texto que a aba Conexões escreve', () => {
     expect(texto).not.toContain('uma seguradora a menos');
     // Concordância verbal com lista de nomes.
     expect(texto).toContain('Azul, Mitsui, Sompo estão fora');
-    expect(texto).toContain('Azul, Mitsui, Sompo recusaram o login');
+    expect(texto).toContain('Azul, Mitsui, Sompo não aceitaram o acesso');
   });
 
   // `check` vem do adapter sem normalização: valor novo do lado de lá não pode virar chave crua.
