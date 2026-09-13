@@ -57,6 +57,12 @@ class Autonomia::Insurance::ResultadoDaCotacao
     run.handle.to_h['quote_id'].present?
   end
 
+  # -> a execução decidiu submeter e o número nunca chegou (`ToolRun#envio_incerto?`): a cotação pode existir
+  # no portal.
+  def envio_incerto?
+    run.envio_incerto?
+  end
+
   # -> a cotação foi feita sem a classe de bônus da apólice atual (`InsuranceQuote::SEM_BONUS_KEY`)?
   def sem_bonus?
     run.handle.to_h[cotacao::SEM_BONUS_KEY].present?

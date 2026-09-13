@@ -241,6 +241,23 @@ RSpec.describe Autonomia::Agents::Answerer do
       create(:message, account: account, conversation: conversation, message_type: :incoming, content: texto)
     end
 
+    def exibicoes
+      Autonomia::Agents::ToolRun.where(slug: slug).order(:id)
+    end
+
+    # A lista do turno 1 fica adiada, como fica enquanto a entrega humanizada da fala está em curso: a cadeia
+    # ainda não postou o último pedaço. -> o `AsyncPublishJob` que ela enfileirou.
+    def lista_adiada(run)
+      run.update!(expected_chunks: 2)
+      publicar(run)
+      enqueued_jobs.find { |item| item[:job] == Autonomia::Agents::Tools::AsyncPublishJob && item[:args][0] == run.id }
+    end
+
+    # O teto de adiamentos da cadeia abortada (o cliente escreveu no meio): a publicação adiada tenta sem esperar.
+    def publicar_no_teto(run, adiada)
+      Autonomia::Agents::Tools::AsyncPublishJob.new.perform(run.id, adiada[:args][1], Autonomia::Agents::Tools::AsyncConfig::MAX_PUBLISH_DEFERRALS)
+    end
+
     # DUAS CHAMADAS NA MESMA RODADA (revisão da fatia 2, P2): a segunda abertura supersede a primeira, e a
     # lista da primeira entra na da segunda.
     it 'duas chamadas da ferramenta na mesma rodada: a lista sai com as duas seguradoras' do
@@ -266,6 +283,63 @@ RSpec.describe Autonomia::Agents::Answerer do
       publicar(execucao)
 
       expect(mensagens_do_bot.map(&:content)).to eq(['A da Porto vem aqui.', 'E a da Allianz também.', itens(porto, allianz)])
+    end
+
+    # A LISTA ADIADA E O "CADÊ?" (terceira rodada de revisão, P2): a execução do turno 1 fechou `done` com a
+    # lista adiada; o pedido do turno 2 a leva, e a adiada não sai mais.
+    it 'a lista adiada do turno anterior e o pedido de novo: a lista sai uma vez' do
+      cotacao_da_conversa([porto, allianz])
+      modelo(function_call: chamada, texto: 'Seguem os preços.')
+      turno
+      anterior = exibicoes.sole
+      adiada = lista_adiada(anterior)
+      expect(anterior.reload).to have_attributes(status: 'done', delivered_count: 1, sequence: 0)
+
+      mensagem_do_cliente('cadê os preços?')
+      modelo(function_call: chamada, texto: 'Aqui estão os preços.')
+      turno
+      publicar(exibicoes.last)
+      publicar_no_teto(anterior, adiada)
+
+      expect(mensagens_do_bot.map(&:content)).to eq(['Seguem os preços.', 'Aqui estão os preços.', itens(porto, allianz)])
+    end
+
+    it 'a lista adiada do turno anterior e o pedido por uma seguradora: o que foi prometido sai uma vez' do
+      cotacao_da_conversa([porto, allianz])
+      modelo(function_call: chamada, texto: 'Seguem os preços.')
+      turno
+      anterior = exibicoes.sole
+      adiada = lista_adiada(anterior)
+
+      mensagem_do_cliente('e a Porto?')
+      modelo(function_call: chamada('Porto'), texto: 'A Porto fez proposta.')
+      turno
+      publicar(exibicoes.last)
+      publicar_no_teto(anterior, adiada)
+
+      expect(mensagens_do_bot.map(&:content)).to eq(['Seguem os preços.', 'A Porto fez proposta.', itens(porto, allianz)])
+    end
+
+    # A LISTA QUE VIROU MENSAGEM E NÃO FOI CONTADA (o processo morreu entre a mensagem e o `record_delivery!`):
+    # o pedido seguinte não a repete.
+    it 'a lista anterior que virou mensagem sem ser contada não entra de novo na do pedido seguinte' do
+      cotacao_da_conversa([porto, allianz])
+      modelo(function_call: chamada('Porto'), texto: 'A da Porto vem aqui.')
+      turno
+      anterior = exibicoes.sole
+      job.new.perform(anterior.id, 0)
+      lista = ferramenta.new(agent: agente, params: anterior.arguments, run: anterior.reload)
+                        .poll(handle: anterior.handle.except(Autonomia::Agents::ToolRun::SUBMITTED_KEY)).deliveries.first
+      Autonomia::Agents::Tools::AsyncPublisher.new(run: anterior).publish(lista)
+      expect(anterior.reload).to have_attributes(status: 'running', delivered_count: 0, sequence: 1)
+
+      mensagem_do_cliente('e a Allianz?')
+      modelo(function_call: chamada('Allianz'), texto: 'E a da Allianz também.')
+      turno
+      publicar(exibicoes.last)
+      job.new.perform(anterior.id, 1)
+
+      expect(mensagens_do_bot.map(&:content)).to eq(['A da Porto vem aqui.', itens(porto), 'E a da Allianz também.', itens(allianz)])
     end
 
     # O QUE A LIA LEU É O QUE SAI (revisão da fatia 2, P2): a Sancor cotou entre a fala e a primeira passada, e a

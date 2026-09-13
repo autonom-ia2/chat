@@ -87,6 +87,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(no_turno.precheck.to_s).to eq(described_class::SEM_PRECO_AINDA)
     end
 
+    # ENVIO INCERTO (terceira rodada de revisão): o job decidiu submeter e o número nunca chegou. O cliente ouviu
+    # que um atendente vai conferir, e a cotação pode existir no portal: o modelo não ouve que ela não chegou.
+    it 'a cotação encerrada com envio incerto: pode ter chegado às seguradoras, e um atendente vai conferir' do
+      incerta = { 'quote_id' => nil, Autonomia::Agents::ToolRun::INTENCOES => 1 }
+      run = cotacao_com(status: 'failed', guardado: false, handle: incerta)
+      expect(no_turno.precheck.to_s).to eq(described_class::ENVIO_INCERTO)
+      expect(no_turno('Porto').precheck.to_s).to eq(described_class::ENVIO_INCERTO)
+
+      run.update!(status: 'running')
+      expect(no_turno.precheck.to_s).to eq(described_class::SEM_PRECO_AINDA)
+    end
+
     it 'cotação em voo no deploy, correndo e ainda sem o resultado guardado' do
       cotacao_com(status: 'running', guardado: false)
 
@@ -301,15 +313,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     end
   end
 
-  # O HANDLE DE ABERTURA: o que a Lia leu no turno vai para a linha que a abertura cria, e o pedido anterior
-  # da mesma cotação que ainda não publicou (e que a abertura vai superseder) entra na lista deste.
+  # O HANDLE DE ABERTURA: o que a Lia leu no turno vai para a linha que a abertura cria, e só isso.
   describe 'o handle de abertura' do
-    def outra_execucao(status:, handle:, entregas: 0)
-      Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: described_class.slug, status: status,
-                                         conversation_id: conversation.id, execution_key: SecureRandom.uuid,
-                                         arguments: {}, handle: handle, delivered_count: entregas)
-    end
-
     it 'grava a cotação lida e os códigos com preço do pedido, e nada quando não há preço' do
       fonte = cotacao_com(status: 'done')
 
@@ -318,24 +323,94 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(no_turno('Sancor').handle_de_abertura).to eq({})
     end
 
-    it 'une os códigos de outra execução viva, sem entrega e sobre a mesma cotação' do
+    it 'não leva os códigos de outra execução da ferramenta' do
       fonte = cotacao_com(status: 'done')
-      outra_execucao(status: 'pending', handle: { described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['8'] })
+      Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: described_class.slug, status: 'pending',
+                                         conversation_id: conversation.id, execution_key: SecureRandom.uuid, arguments: {},
+                                         handle: { described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['8'] })
 
-      expect(no_turno('Allianz').handle_de_abertura[described_class::CODIGOS_KEY]).to contain_exactly('8', '5')
+      expect(no_turno('Allianz').handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['5'])
+    end
+  end
+
+  # UMA LISTA POR PEDIDO, E NUNCA A MESMA DUAS VEZES (terceira rodada de revisão): a passada que publica leva
+  # os códigos das execuções anteriores sem mensagem, e a lista sem mensagem de uma anterior não sai depois que
+  # uma mais nova foi despachada.
+  describe 'as listas de execuções anteriores da ferramenta' do
+    let(:fonte) { cotacao_com(status: 'done') }
+    let(:porto) { cotou('8', 'Porto Seguro', 2119.18) }
+    let(:allianz) { cotou('5', 'Allianz', 2402.55) }
+
+    def exibicao(status:, codigos:, sequence: 0, cotacao_lida: fonte.id)
+      Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: described_class.slug, status: status,
+                                         conversation_id: conversation.id, execution_key: SecureRandom.uuid, arguments: {},
+                                         sequence: sequence,
+                                         handle: { described_class::EXECUCAO_KEY => cotacao_lida, described_class::CODIGOS_KEY => codigos })
     end
 
-    it 'não une a execução sobre outra cotação, a que já entregou, nem a encerrada' do
-      fonte = cotacao_com(status: 'done')
-      outra_execucao(status: 'running', entregas: 1,
-                     handle: { described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['8'] })
-      outra_execucao(status: 'done', handle: { described_class::EXECUCAO_KEY => fonte.id, described_class::CODIGOS_KEY => ['99'] })
+    def publicado_por(run)
+      ferramenta = described_class.new(agent: agent, params: run.arguments, run: run)
+      ferramenta.poll(handle: run.handle, attempt: 1).deliveries
+    end
 
-      expect(no_turno('Allianz').handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['5'])
+    def itens(*ofertas)
+      [ofertas.map { |oferta| Autonomia::Insurance::QuoteOffers.item(oferta) }.join("\n\n")]
+    end
 
-      Autonomia::Agents::ToolRun.where(slug: described_class.slug).find_each(&:destroy!)
-      outra_execucao(status: 'pending', handle: { described_class::EXECUCAO_KEY => fonte.id + 1000, described_class::CODIGOS_KEY => ['8'] })
-      expect(no_turno('Allianz').handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['5'])
+    it 'a lista leva os códigos da anterior supersedida e da encerrada, sem mensagem, sobre a mesma cotação' do
+      exibicao(status: 'superseded', codigos: ['8'])
+      atual = exibicao(status: 'running', codigos: ['5'])
+      expect(publicado_por(atual)).to eq(itens(porto, allianz))
+
+      Autonomia::Agents::ToolRun.where(slug: described_class.slug).delete_all
+      exibicao(status: 'done', codigos: ['8'])
+      atual = exibicao(status: 'running', codigos: ['5'])
+      expect(publicado_por(atual)).to eq(itens(porto, allianz))
+    end
+
+    it 'a leitura para na anterior que virou mensagem' do
+      exibicao(status: 'done', codigos: ['8'])
+      exibicao(status: 'done', codigos: ['5'], sequence: 1)
+      atual = exibicao(status: 'running', codigos: ['5'])
+
+      expect(publicado_por(atual)).to eq(itens(allianz))
+    end
+
+    it 'não leva a anterior sobre outra cotação, nem a falhada, a descartada ou a barrada' do
+      exibicao(status: 'superseded', codigos: ['8'], cotacao_lida: fonte.id + 1000)
+      %w[failed discarded blocked].each { |status| exibicao(status: status, codigos: ['8']) }
+      atual = exibicao(status: 'running', codigos: ['5'])
+
+      expect(publicado_por(atual)).to eq(itens(allianz))
+    end
+
+    it 'segue lendo depois das que não leva' do
+      exibicao(status: 'done', codigos: ['8'])
+      exibicao(status: 'failed', codigos: ['5'])
+      atual = exibicao(status: 'running', codigos: ['5'])
+
+      expect(publicado_por(atual)).to eq(itens(porto, allianz))
+    end
+
+    it 'a lista sem mensagem não sai depois que uma mais nova sobre a mesma cotação foi despachada' do
+      anterior = exibicao(status: 'done', codigos: ['8'])
+      mais_nova = exibicao(status: 'pending', codigos: ['5'])
+      expect(described_class.publicacao_vale?(anterior)).to be(true)
+
+      %w[running done].each do |status|
+        mais_nova.update!(status: status)
+        expect(described_class.publicacao_vale?(anterior)).to be(false)
+      end
+
+      mais_nova.update!(handle: mais_nova.handle.merge(described_class::EXECUCAO_KEY => fonte.id + 1000))
+      expect(described_class.publicacao_vale?(anterior)).to be(true)
+    end
+
+    it 'a lista que já virou mensagem continua valendo com uma mais nova despachada' do
+      anterior = exibicao(status: 'done', codigos: ['8'], sequence: 1)
+      exibicao(status: 'running', codigos: ['5'])
+
+      expect(described_class.publicacao_vale?(anterior)).to be(true)
     end
   end
 

@@ -6,79 +6,107 @@
 # "Sistema indisponível: sessão expirada, faça login novamente." sai `passageiro`, e "Usuário
 # fulano@corretora.com.br bloqueado." sai `outro`. Por isso o `kind` sozinho não libera o texto.
 #
-# `permitido` devolve o texto só quando o `kind` é `risco` E o texto não casa nenhum padrão de
-# `TERMOS_DE_CONTA` nem de `VALORES`. Em qualquer outro caso devolve nil, e a Lia só pode dizer que a
+# `permitido` devolve o texto quando, e só quando:
+#   1. o `kind` é `risco`;
+#   2. sem o código do portal do começo (`CODIGO_DO_PORTAL`: "400 - ", "[2005] - -", "UC00 - "), o texto não
+#      casa nenhum padrão de `VALORES`, e o primeiro deles é qualquer dígito;
+#   3. não casa nenhum padrão de `TERMOS_DE_CONTA`;
+#   4. casa algum padrão de `OBJETOS_DO_RISCO` (o veículo, o condutor, a região, a categoria, o risco...).
+# O texto devolvido é o sem o código do começo. Em qualquer outro caso devolve nil, e a Lia só pode dizer que a
 # seguradora não fez proposta.
 #
-# A LISTA É DE RADICAIS E VAI ALÉM DOS NOVE TERMOS DA REGRA (login, senha, sessão, token, usuário, acesso,
-# permissão, corretor, credencial). A revisão da fatia 2 passou dez textos pelo classificador real do
-# conector que saem `risco` e falam da conta da corretora com outras palavras ("Produtor não credenciado",
-# "Sistema deslogado", "Código SUSEP inválido", "Corretagem acima do limite"). O que a lista não conhece
-# ainda passa: ela recusa pelo vocabulário, não pelo sentido.
+# POR QUE O ITEM 4 (terceira rodada de revisão da fatia 2). Os itens 2 e 3 recusam pelo vocabulário, e o
+# vocabulário da conta da corretora não fecha: a segunda revisão passou pelo classificador real do conector
+# 22 textos de conta que saem `risco` com palavras que a lista não tinha ("Entre novamente no portal da
+# seguradora", "Licença do multicálculo vencida", "Vínculo com a sucursal inexistente"). Nenhum deles nomeia o
+# objeto do risco, e o item 4 recusa os 22. Os catorze textos reais de risco do corpus do conector nomeiam, e
+# passam. O que ainda passa é o texto que nomeia o objeto do risco e fala da conta com palavra fora do item 3.
 #
-# `VALORES` recusa valor escrito como número (com `R$`, "reais", "mil", centavos, milhar ou quatro
-# dígitos fora de colchete): o texto vai ao modelo, e valor ao cliente é escrito pelo código. O código do
-# portal entre colchetes ("[2005]") e o de até três dígitos ("400 - Restrição técnica") passam.
+# O item 2 faz com que nenhum dígito do portal chegue ao modelo: o valor ao cliente é escrito pelo código.
 module Autonomia::Insurance::MotivoDaRecusa
   KIND_PERMITIDO = 'risco'.freeze
   # O teto do texto no conector (`quote-reason.ts`, `TETO_DO_TEXTO`).
   TETO_DO_TEXTO = 300
-  # Cada padrão, casado no texto sem acento e em minúsculas.
+  # O código do portal no começo do texto: letras opcionais, ao menos um dígito, colchetes opcionais e um ou
+  # mais hífens. Casado no texto original, que é o devolvido.
+  CODIGO_DO_PORTAL = /\A\[?[[:alpha:]]*\d[[:alnum:]]*\]?(?:\s*-+)+\s*/
+
+  # Os padrões daqui para baixo são casados no texto sem acento e em minúsculas.
+  VALORES = {
+    'dígito' => /\d/, 'R$' => /r\$/, 'reais' => /\breais\b/, 'mil' => /\bmil\b/, 'milhão' => /\bmilh(?:ao|oes)\b/,
+    'centena por extenso' => /\bcem\b|\bcento\b|\b(?:duzent|trezent|quatrocent|quinhent|seiscent|setecent|oitocent|novecent)/
+  }.freeze
+
   TERMOS_DE_CONTA = {
-    # login, logar, logado, logou, logue, logon; deslogado, relogar; "log in".
-    'login' => /\b(?:des|re)?log(?:in|on|ar|ad|ou|ue)|\blog\s+in\b/,
-    'senha' => /\bsenhas?\b/,
-    'sessão' => /\bsess(?:ao|oes)\b/,
-    'token' => /\btokens?\b/,
-    'usuário' => /\busuari/,
-    # "acessório" não casa.
-    'acesso' => /\bacess(?!ori)/,
-    # "permitida" e "permissionário" não casam.
-    'permissão' => /\bpermiss(?!ionari)/,
+    # login, logar, logado, logou, logue, logon, logoff, logout; deslogado, relogar, autologin; "log in", "log off".
+    'login' => /\b(?:des|re|auto)?log(?:in|on|off|out|ar|ad|ou|ue)|\blog\s+(?:in|off|out)\b/,
+    'senha' => /\bsenhas?\b|\bpasswords?\b/, 'sessão' => /\bsess(?:ao|oes)\b/, 'token' => /\btokens?\b/,
+    'usuário' => /usuari/,
+    # "acessório" não casa; "permitida" e "permissionário" não casam.
+    'acesso' => /\bacess(?!ori)/, 'permissão' => /\bpermiss(?!ionari)/,
     # corretor, corretora, corretores; corretagem.
     'corretor' => /\bcorretor|\bcorretag/,
-    # credencial, credenciais, credenciado, credenciamento.
-    'credencial' => /\bcredenci/,
-    # autenticação, reautenticar.
-    'autenticação' => /autentic/,
-    'autorização' => /\bautoriz/,
-    'habilitação' => /\bhabilit/,
-    'produtor' => /\bprodutor/,
-    'SUSEP' => /\bsusep\b/,
-    'cadastro' => /\bcadastr/,
-    'comissão' => /\bcomiss/,
-    'certificado' => /\bcertificad/,
-    'bloqueado' => /\bbloquead/,
-    'e-mail' => /@/,
-    'link' => %r{https?://|\bwww\.}
+    # credencial, credenciado, descredenciado; autenticação, reautenticar; autorizado, desautorizado.
+    'credencial' => /credenci/, 'autenticação' => /autentic/, 'autorização' => /autoriz/,
+    # habilitação, habilitado; desabilitado, inabilitado (sem o "h").
+    'habilitação' => /abilit/,
+    'produtor' => /\bprodutor/, 'SUSEP' => /\bsusep\b/,
+    # cadastro, recadastramento; comissão; certificado, certificação; bloqueado, bloqueio, desbloqueio.
+    'cadastro' => /cadastr/, 'comissão' => /\bcomiss/, 'certificado' => /certific/, 'bloqueio' => /bloque(?:ad|io)/,
+    # "por conta de" e "em conta" não casam.
+    'conta' => /(?<!por )(?<!em )\bcontas?\b/,
+    # suspenso, suspensão; agenciador, agenciamento, agência; expirado, expirou, expiração.
+    'suspensão' => /suspens/, 'agenciamento' => /agenci/, 'inadimplência' => /inadimpl/, 'chave' => /\bchaves?\b/,
+    'integração' => /integrac/, 'expiração' => /expir/, 'portal' => /\bport(?:al|ais)\b/,
+    'e-mail' => /@|\be-?mails?\b/, 'link' => %r{https?://|\bwww\.},
+    # A marca com que o conector redige e-mail e segredo no texto.
+    'redigido' => /redacted/
   }.freeze
-  VALORES = {
-    'R$' => /r\$/,
-    'reais' => /\breais\b/,
-    'mil' => /\d\s*mil\b/,
-    'centavos' => /\d,\d{2}\b/,
-    'milhar' => /\d{1,3}(?:\.\d{3})+/,
-    'quatro dígitos' => /(?<!\[)\b\d{4,}\b(?!\])/
+
+  OBJETOS_DO_RISCO = {
+    'veículo' => /\bveicul/, 'carro' => /\bcarros?\b/, 'moto' => /\bmotos?\b|\bmotocic/, 'caminhão' => /\bcaminh(?:ao|oes)\b/,
+    'ônibus' => /\bonibus\b/, 'utilitário' => /\butilitari/, 'auto' => /\bauto\b|\bautomove/, 'acessório' => /\bacessori/,
+    'modelo' => /\bmodelos?\b/, 'ano' => /\banos?\b/, 'categoria' => /\bcategori/, 'tarifa' => /\btarif/,
+    'condutor' => /\bcondutor/, 'motorista' => /\bmotorista/, 'região' => /\bregi(?:ao|oes)\b/, 'circulação' => /\bcircula/,
+    'CEP' => /\bcep\b/, 'logradouro' => /\blogradour/, 'pernoite' => /\bpernoite/, 'garagem' => /\bgarage/,
+    'uso' => /\buso\b/, 'carga' => /\bcarga/, 'idade' => /\bidade\b/,
+    # segurado, segurada; "seguradora" não casa.
+    'segurado' => /\bsegurad(?!or)/,
+    'risco' => /\briscos?\b/, 'cenário' => /\bcenario/, 'cobertura' => /\bcobertura/, 'blindagem' => /\bblind/,
+    'rastreador' => /\brastread/, 'chassi' => /\bchassi/, 'FIPE' => /\bfipe\b/, 'sinistro' => /\bsinistr/,
+    'bônus' => /\bbonus\b/, 'vistoria' => /\bvistori/, 'imóvel' => /\bimove(?:l|is)\b/, 'residência' => /\bresiden/,
+    'construção' => /\bconstruc/, 'profissão' => /\bprofiss/, 'transporte' => /\btransport/, 'aplicativo' => /\baplicativ/,
+    'placa' => /\bplacas?\b/, 'combustível' => /\bcombustiv/, 'frota' => /\bfrotas?\b/
   }.freeze
 
   module_function
 
-  # -> o texto do portal, aparado, quando ele pode orientar a fala da Lia; nil quando não pode.
+  # -> o texto do portal, aparado e sem o código do começo, quando ele pode orientar a fala da Lia; nil quando
+  # não pode.
   def permitido(reason)
-    return nil unless reason.is_a?(Hash) && reason['kind'] == KIND_PERMITIDO
+    texto = texto_de(reason)
+    return nil if texto.nil?
 
-    texto = reason['text']
-    return nil unless texto.is_a?(String)
-
-    texto = texto.strip
-    return nil if texto.empty? || texto.length > TETO_DO_TEXTO || proibido?(texto)
-
-    texto
+    texto = texto.sub(CODIGO_DO_PORTAL, '')
+    alvo = ActiveSupport::Inflector.transliterate(texto).downcase
+    recusado?(alvo) || !do_risco?(alvo) ? nil : texto
   end
 
-  # -> o texto, sem acento e em minúsculas, casa algum padrão de `TERMOS_DE_CONTA` ou de `VALORES`?
-  def proibido?(texto)
-    alvo = ActiveSupport::Inflector.transliterate(texto).downcase
-    TERMOS_DE_CONTA.merge(VALORES).each_value.any? { |padrao| alvo.match?(padrao) }
+  # -> o texto aparado de um motivo de `kind` `risco`, não vazio e dentro do teto; nil nos outros casos.
+  def texto_de(reason)
+    return nil unless reason.is_a?(Hash) && reason['kind'] == KIND_PERMITIDO && reason['text'].is_a?(String)
+
+    texto = reason['text'].strip
+    texto.empty? || texto.length > TETO_DO_TEXTO ? nil : texto
+  end
+
+  # -> o texto (sem acento, em minúsculas) casa algum padrão de `VALORES` ou de `TERMOS_DE_CONTA`?
+  def recusado?(alvo)
+    VALORES.merge(TERMOS_DE_CONTA).each_value.any? { |padrao| alvo.match?(padrao) }
+  end
+
+  # -> o texto (sem acento, em minúsculas) casa algum padrão de `OBJETOS_DO_RISCO`?
+  def do_risco?(alvo)
+    OBJETOS_DO_RISCO.each_value.any? { |padrao| alvo.match?(padrao) }
   end
 end
