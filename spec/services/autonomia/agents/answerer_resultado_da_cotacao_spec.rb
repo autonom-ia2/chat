@@ -165,6 +165,20 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(delivery.runs.map(&:slug)).to eq([slug])
     end
 
+    # O ACEITE É O DA INSTÂNCIA (`Native::Base#aceite`), e não o texto fixo da classe: é por ele que o motivo
+    # de uma seguradora chega ao modelo no mesmo pedido em que outra tem preço a publicar.
+    it 'com preço de uma e motivo de outra: o aceite leva as duas falas, e a execução é aberta' do
+      sancor = { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined', 'reason' => risco }
+      cotacao_da_conversa([porto, sancor])
+      capturado = modelo(function_call: chamada('Sancor e Porto'))
+
+      responder
+
+      expect(saida(capturado)).to include('Porto Seguro fez proposta', 'Sancor não fez proposta nesta cotação.', risco['text'])
+      expect(saida(capturado)).not_to eq(ferramenta.accepted_message)
+      expect(Autonomia::Agents::ToolRun.where(slug: slug).sole.arguments).to eq('seguradora' => 'Sancor e Porto')
+    end
+
     it 'sem preço a mostrar: o modelo recebe o motivo liberado, e nenhuma execução é aberta' do
       cotacao_da_conversa([porto, { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined', 'reason' => risco }])
       capturado = modelo(function_call: chamada('Sancor'))

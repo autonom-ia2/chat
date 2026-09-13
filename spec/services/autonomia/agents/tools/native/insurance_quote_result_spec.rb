@@ -264,9 +264,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   end
 
   describe 'a procura pelo nome que o cliente escreveu' do
+    # '99' veio sem nome do portal: sem palavra no nome, ela não pode casar com consulta nenhuma.
     let(:nomes) do
       { '8' => 'Porto Seguro', '19' => 'Sancor', '48' => 'Bp', '55' => 'Bp Assinatura', '12' => 'Liberty Site',
-        '11' => 'Tokio', '4' => 'Hdi' }
+        '11' => 'Tokio', '4' => 'Hdi', '99' => '' }
     end
 
     before { cotacao_com(status: 'done', ofertas: nomes.map { |code, name| recusou(code, name) }) }
