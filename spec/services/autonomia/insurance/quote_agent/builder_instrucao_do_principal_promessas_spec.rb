@@ -277,9 +277,12 @@ module ManualDoPrincipalResultado
       RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
         Autonomia::Insurance::MotivoDaRecusa.permitido('kind' => 'passageiro', 'text' => 'Risco sem aceitação.').nil?
     },
-    # A regra do motivo recusa os três termos que a frase nomeia.
+    # A regra do motivo recusa os três termos que a frase nomeia, mesmo num texto de risco.
     'Nunca fale de login, senha ou permissão da corretora.' => lambda {
-      %w[login senha permissão].all? { |termo| Autonomia::Insurance::MotivoDaRecusa::TERMOS_DE_CONTA.key?(termo) }
+      %w[login senha permissão].all? { |termo| Autonomia::Insurance::MotivoDaRecusa::TERMOS_DE_CONTA.key?(termo) } &&
+        ['faça login', 'senha vencida', 'sem permissão'].all? do |termo|
+          Autonomia::Insurance::MotivoDaRecusa.permitido('kind' => 'risco', 'text' => "Veículo sem aceitação, #{termo}.").nil?
+        end
     }
   }.freeze
 end

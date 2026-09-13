@@ -400,6 +400,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           expect(palavras_do_bot).to eq([Autonomia::Insurance::QuoteOffers.item(offer('43', 'Ezze', 2050.40))])
           expect(exibicao.reload.status).to eq('done')
         end
+
+        # O LOTE ADIADO PELA FALA DO TURNO (quarta rodada de revisão): perguntada nesse intervalo, a Lia recebe texto e
+        # não abre lista; o lote sai com palavra, e o preço aparece uma vez.
+        it 'com o lote de preco adiado, a Lia recebe texto sem abrir lista, e o lote sai com palavra uma vez' do
+          allow(mock).to receive(:quote_result)
+            .and_return({ 'quote_id' => 'q-1:1', 'status' => 'partial', 'offers' => [offer('43', 'Ezze', 2050.40), recusa('3')] })
+          origem = create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'quero cotar')
+          run = cotacao_viva(desfalque)
+          run.update!(expected_chunks: 2, origin_message_id: origem.id)
+          job.new.perform(run.id, 12)
+          adiado = enqueued_jobs.reverse.find { |item| item[:job] == Autonomia::Agents::Tools::AsyncPublishJob }
+          delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 8)
+
+          ao_modelo = resultado.new(agent: agent, params: { 'seguradora' => nil }, delivery: delivery).precheck.to_s
+          Autonomia::Agents::Tools::AsyncPublishJob.new.perform(run.id, ActiveJob::Arguments.deserialize(adiado[:args])[1],
+                                                                Autonomia::Agents::Tools::AsyncConfig::MAX_PUBLISH_DEFERRALS)
+
+          expect(ao_modelo).to eq(resultado::PRECOS_A_CAMINHO)
+          expect(palavras_do_bot.size).to eq(1)
+          expect(palavras_do_bot.first.scan('*Ezze*').size).to eq(1)
+        end
       end
     end
 

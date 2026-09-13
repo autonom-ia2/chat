@@ -40,30 +40,36 @@ quando o PDF falha (fatia 3). Nada novo no Super Admin. Nada no conector.
   | 17 seguradoras: 11 com preço (com parcelamento) + 6 recusas com o motivo de risco mais longo do corpus do conector (134 caracteres) | **2.844** |
   | as mesmas 17, sem motivo liberado | 1.764 |
   | 17 com preço | 2.249 |
-  | pior caso: 17 recusas com motivo no teto de 300 caracteres | 6.647 |
+  | pior caso: 17 recusas com motivo no teto de 300 caracteres (medido com "x"; na rodada 4, com palavras do vocabulário e acento) | 6.647; 7.072 |
 
-  `resultado_por_seguradora_spec` trava os dois primeiros limites (≤ 3.000 e ≤ 7.000).
+  `resultado_por_seguradora_spec` trava os limites (≤ 3.000 e, desde a rodada 4, ≤ 8.000).
+- **Os códigos de cada lote de preço** (rodada 4): `InsuranceQuote::Resultado::LOTES_KEY`
+  (`codigos_por_lote_de_preco`), identidade da entrega do lote → códigos, gravada na passada que emite o lote
+  (`lote_de_preco`, chamado de `InsuranceQuote#entregues`). Chave da ferramenta, fora de `AsyncRunJob::MARCAS`.
 
 ### A regra do motivo
 
-`Insurance::MotivoDaRecusa.permitido(reason)` devolve o texto quando, e só quando (rodada 3):
+`Insurance::MotivoDaRecusa.permitido(reason)` devolve o texto quando, e só quando (rodada 4):
 
 1. `kind == 'risco'`, e o texto é String, não vazio e até 300 caracteres (o teto do conector);
-2. tirado o código do portal do começo (`CODIGO_DO_PORTAL`: "400 - ", "[2005] - -", "UC00 - "), o texto não
-   tem **dígito nenhum** nem valor por extenso (`R$`, "reais", "mil", "milhão", centena por extenso);
-3. não casa nenhum termo de conta (`TERMOS_DE_CONTA`, no texto sem acento): `login` (logar, logado, logou, logue,
-   logon, logoff, logout, deslogado, relogar, "log in"), `senha`/password, `sessão`, `token`, `usuari`,
-   `acess-` (não casa "acessório"), `permiss-` (não casa "permissionário"), `corretor-`/`corretag-`, `credenci`,
-   `autentic`, `autoriz`, `abilit` (habilitado, desabilitado, inabilitado), `produtor`, `SUSEP`, `cadastr`,
-   `comiss-`, `certific`, `bloque(ad|io)`, `conta` (não casa "por conta de"), `suspens`, `agenci`, `inadimpl`,
-   `chave`, `integrac`, `expir`, `portal`, e-mail, link e a marca `<REDACTED>` do conector;
-4. **nomeia o objeto do risco** (`OBJETOS_DO_RISCO`): veículo, carro, moto, modelo, ano, categoria, tarifa,
+2. tirado o código do portal do começo (`CODIGO_DO_PORTAL`: até três letras, um dígito, colchetes opcionais e
+   hífen: "400 - ", "[2005] - -", "UC00 - "), o texto só tem **letras latinas**, espaços e pontuação
+   (`CARACTERES`): nenhum dígito de nenhum alfabeto, nenhum símbolo;
+3. **toda palavra está no vocabulário** (`VOCABULARIO`, lido de `motivo_da_recusa_vocabulario.txt`: cerca de 330
+   palavras de ligação, de recusa e aceitação, e do objeto do risco). É lista de liberação: palavra desconhecida
+   recusa;
+4. não casa nenhum termo de conta (`TERMOS_DE_CONTA`) nem valor por extenso (`VALORES`). Hoje nenhuma palavra do
+   vocabulário casa esses padrões, e o spec trava isso: eles são a guarda do vocabulário e a regra da issue escrita
+   em código (a mutação que os tira da conferência sobrevive, U08);
+5. **nomeia o objeto do risco** (`OBJETOS_DO_RISCO`): veículo, carro, moto, modelo, ano, categoria, tarifa,
    condutor, região, CEP, pernoite, uso, carga, idade, segurado (não "seguradora"), risco, cenário, cobertura,
    rastreador, chassi, FIPE, sinistro, bônus, vistoria, imóvel e outros 20.
 
 O texto devolvido é o sem o código do começo: nenhum dígito do portal chega ao modelo. É aplicada na
-**gravação** (`ResultadoPorSeguradora`) e de novo na **leitura** (`ResultadoDaCotacao#motivo`). Ver as
-decisões 1, 16 e 21.
+**gravação** (`ResultadoPorSeguradora`) e de novo na **leitura** (`ResultadoDaCotacao#motivo`). Do corpus do
+conector, 12 das 13 entradas `risco` são liberadas (a décima segunda cola a linha de risco a um erro de sistema,
+"As Necessidades do Cliente, não foram salvas com sucesso", e é recusada), e nenhuma das 26 de outro `kind` passaria
+nem como `risco`. Ver as decisões 1, 16 e 21.
 
 ### 2. A ferramenta da Lia, `ver_resultado_da_cotacao`
 
@@ -80,6 +86,7 @@ fora de `superseded`, `discarded`, `blocked` e `pending`. Não chama o conector 
 | cotação encerrada sem número do portal (recusada no `start`) | `NAO_CHEGOU` (rodada 2) |
 | cotação encerrada sem a chave (anterior a esta versão) | `SEM_RESULTADO` |
 | cotação correndo sem preço (inclusive a em voo no deploy, sem a chave) | `SEM_PRECO_AINDA` |
+| todo preço está num lote que a cotação ainda está enviando (aceito pelo publicador, sem mensagem entregue) | `PRECOS_A_CAMINHO`; por seguradora, "o preço dela está sendo enviado agora" (rodada 4) |
 | cotação encerrada sem preço | `SEM_PRECO` |
 | `seguradora` nomeia quem não fez proposta | nome + "não fez proposta" + o motivo liberado, ou `SEM_MOTIVO` |
 | `seguradora` nomeia quem ainda corre | "ainda não respondeu" (enquanto a cotação corre; depois, "não fez proposta") |
@@ -94,12 +101,20 @@ fora de `superseded`, `discarded`, `blocked` e `pending`. Não chama o conector 
   entrada do publicador e sob o lock da conversa: `Native::Base.publicacao_vale?`, chamado por
   `Tools::AutorizacaoDaExecucao#autorizacao`, recusa com `resultado_superado`. A retomada de envio pendente
   (`RetomadaDeEnvio`) faz a mesma pergunta e abandona a mensagem da lista quando surge cotação nova.
-- **Uma lista por pedido, e nunca a mesma duas vezes (rodada 3).** "A lista virou mensagem" é `sequence`
-  positivo: o publicador o avança na mesma transação, sob o lock da conversa, em que cria a mensagem. O `poll`
-  lê, sob esse lock, as execuções anteriores desta ferramenta na conversa, da mais nova para a mais antiga, até a
-  primeira com mensagem, e leva os códigos das `superseded` e `done` sobre a mesma cotação. `publicacao_vale?`
-  recusa a lista ainda sem mensagem de uma execução quando existe outra mais nova, sobre a mesma cotação, em
-  `running` ou `done` (já despachada; a `pending` não barra).
+- **Uma lista por pedido, e nunca a mesma duas vezes (rodadas 3 e 4, `InsuranceQuoteResult::Listas`).** "A lista
+  é mensagem entregue" (`lista_entregue?`) é `sequence` positivo (o publicador o avança na mesma transação, sob o
+  lock da conversa, em que cria a mensagem) e nenhuma mensagem da execução com pendência de envio. O `poll` lê, sob
+  esse lock, as execuções anteriores desta ferramenta na conversa, da mais nova para a mais antiga, até a primeira
+  com a lista entregue, e leva os códigos das `done` e das `superseded` que foram despachadas (`expires_at`) ou
+  são do mesmo turno, sobre a mesma cotação. `publicacao_vale?` recusa a lista ainda não entregue de uma execução
+  quando existe outra mais nova, sobre a mesma cotação, em `running` ou `done` (já despachada; a `pending` não
+  barra).
+- **O preço que a própria cotação ainda está enviando não entra na lista (rodada 4).**
+  `ResultadoDaCotacao#a_caminho`: os códigos dos lotes de preço (`PRECOS_KEY`) que o publicador aceitou
+  (`EntregaAceita::CHAVE`) e que não são mensagem entregue (`EntregaPublicada.publicada?`), pelos códigos gravados
+  por lote (`LOTES_KEY`); lote a caminho sem os códigos gravados (emitido antes desta versão) segura todos. O
+  resultado inteiro e o pedido por seguradora tiram esses códigos da lista e dizem ao modelo que o preço está sendo
+  enviado.
 - Os cinco textos de classe (`waiting_message`, `failure_message`, `uncertain_message`, `partial_message`,
   `closing_message`) são `''`. O publicador devolve `skipped` para texto vazio, sem criar mensagem.
 - `Native::Base#aceite` (instância, nil por padrão) e `Bound#aceite_native`: o texto do aceite passa a
@@ -163,8 +178,11 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
    vazios cumprem "não podem publicar frase pronta do Base". A consequência, declarada: quando a execução da
    Lia falha depois de ela ter dito que a lista vem (prazo esgotado, falha de banco até o prazo, agente
    desligado, freio do operador, ou a cotação lida deixou de ser a mais nova), o cliente fica com a fala dela
-   e sem a lista. No caso "a cotação deixou de ser a mais nova", o turno que abriu a cotação nova fala. **Para
-   o CEO decidir:** aceitar, ou definir quem fala nesse estado (não há frase do especialista para ele).
+   e sem a lista. No caso "a cotação deixou de ser a mais nova", o turno que abriu a cotação nova fala. A
+   terceira revisão mediu que, com uma lista anterior adiada, **uma falha só** na publicação da lista nova basta
+   para as duas não saírem (a anterior é barrada pela nova despachada, decisão 23), e não "falha até o prazo":
+   texto recusado pelo publicador não reagenda a passada. **Para o CEO decidir:** aceitar, ou definir quem fala
+   nesse estado (não há frase do especialista para ele).
 8. **Reconferir na publicação, e não só no `poll`.** A publicação da lista pode ser adiada pela entrega da
    fala do turno; se o cliente escreve no meio, a cadeia é abortada e o adiamento dura até o teto (~3 a 4 min).
    Nesse intervalo uma cotação nova pode começar. O gancho `publicacao_vale?` fica em `AutorizacaoDaExecucao`,
@@ -191,20 +209,23 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
 14. **Com o especialista desligado**, a Lia recebe `cotar_seguro` e `consultar_placa` (já acontecia) e a
     ferramenta nova continua respondendo, venha a cotação do especialista ou dela.
 15. **`available_for?` é o módulo de seguros ligado**, sem exigir conexão pronta: a ferramenta lê o banco.
-16. **A regra do motivo exige o objeto do risco e nenhum dígito** (rodada 3; na rodada 2 era só lista de
-    radicais, e a decisão estava com o CEO). A segunda revisão passou pelo classificador real do conector 22
-    textos de conta que saem `risco` e que a lista de radicais não conhecia ("Entre novamente no portal da
-    seguradora", "Licença do multicálculo vencida", "Descredenciado para este produto", "Faça logoff") e 7 de
-    valor sem `R$` ("Prêmio mínimo de 800", "1,5 milhão"). Vocabulário de conta não fecha. O desenho novo:
-    liberar só texto que **nomeie o objeto do risco** (veículo, condutor, região, categoria, risco...) e não tenha
-    dígito depois do código do começo, além de não casar termo de conta. O que derrubou esta opção na rodada 2
-    ("sem dígito" recusaria 4 dos 14 textos reais) caiu com a retirada do código do começo: **os 14 textos reais
-    de risco do corpus continuam liberados**, 4 deles sem o código. Os 22 de conta e os 7 de valor são
-    recusados. O que ainda passa é o texto que nomeia o objeto do risco e fala da conta com palavra fora da lista.
-    O custo medido (a Lia perde o motivo) está no spec, em "o custo, declarado": tempo de habilitação do
-    condutor, CEP não cadastrado, veículo bloqueado, ano ou CEP escrito com número, "não autorizado para uso em
-    aplicativo", suspensão rebaixada. Não é mais decisão pendente: a regra ficou mais restrita que a da issue, e
-    o cliente perde motivo, não recebe conta. **Para o CEO saber**, não decidir.
+16. **A regra do motivo é uma lista de liberação por palavra** (rodada 4; na rodada 2 era lista de radicais de
+    conta, com a decisão para o CEO; na rodada 3, radicais mais objeto do risco e nenhum dígito). Cada revisão
+    achou texto de conta com palavra que a lista de conta não tinha: a segunda, 22 que saem `risco` do
+    classificador real ("Entre novamente no portal da seguradora", "Descredenciado", "Faça logoff") e 7 de valor
+    sem `R$`; a terceira, a conta **colada a uma linha de risco** ("Risco fora das políticas de aceitação Licença
+    do multicálculo vencida."), palavra de risco com outro sentido ("Uso indevido do multicálculo"), inglês,
+    dado pessoal ("operador joao.silva"), número por extenso e dígito de outro alfabeto. Lista de conta não
+    fecha por construção. O desenho da rodada 4 fecha pelo outro lado: **toda palavra do texto tem de estar num
+    vocabulário de cerca de 330 palavras** (ligação, recusa e aceitação, objeto do risco), só letras latinas e
+    pontuação, e o texto tem de nomear o objeto do risco. Medido no corpus do conector: das 13 entradas `risco`,
+    12 passam; a que cola o erro de sistema é recusada; nenhuma das 26 de outro `kind` passaria como `risco`. O
+    custo (a Lia perde o motivo) está no spec, "o custo, declarado": tempo de habilitação, CEP não cadastrado,
+    veículo bloqueado, ano ou CEP escrito com número, "não autorizado para uso em aplicativo", suspensão
+    rebaixada, "zero km", e todo motivo com palavra fora do vocabulário. A regra ficou mais restrita que a da
+    issue; o cliente perde motivo, não recebe conta nem valor. **Para o CEO saber**, não decidir. O vocabulário
+    é um arquivo de texto: acrescentar palavra é mudança de código com spec (a guarda recusa palavra que case
+    termo de conta ou valor).
 17. **O que a Lia leu é o que sai** (rodada 2) **e a lista anterior sem mensagem entra na do pedido novo, uma
     vez** (rodada 3). O `start` relia a cotação: uma seguradora que cotasse entre a fala e a primeira passada
     entrava na lista que a fala dizia não ter chegado. A abertura grava a cotação e os códigos lidos no turno
@@ -215,6 +236,8 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
     que a união fora do lock perdia a primeira lista com dois turnos simultâneos. Rodada 3: a união saiu da
     abertura e foi para o `poll`, sob o lock da conversa, pela `sequence` (a mensagem), e `publicacao_vale?`
     recusa a lista sem mensagem de uma execução quando outra mais nova sobre a mesma cotação já foi despachada.
+    Rodada 4: "mensagem" passou a ser "mensagem entregue" (sem pendência de envio, decisão 26), e a supersedida
+    só entra se foi despachada ou é do mesmo turno (decisão 25).
 18. **Cotação mais nova encerrada sem número do portal** (recusada no `start`) passou a ter texto próprio,
     `NAO_CHEGOU`. Antes caía em "não ficou guardado, ofereça um atendente", que é falso ali. A seleção da mais
     nova continua a da issue (fora de `superseded`, `discarded`, `blocked` e `pending`): a cotação anterior com
@@ -233,7 +256,25 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
     verificado".
 23. **A lista anterior é barrada pela mais nova `running` ou `done`, mesmo que a mais nova depois falhe** (rodada
     3). Falha da execução da Lia depois de despachada é o estado da decisão 7 (sem palavra), e aí as duas listas
-    ficam sem sair.
+    ficam sem sair. A revisão da rodada 3 sugeriu adiar a anterior enquanto a nova não tiver a lista aceita, o que
+    pede um terceiro valor no gancho do publicador (hoje vale ou não vale), mudança no motor de todas as
+    ferramentas; não fiz. Ver decisão 7.
+24. **O preço que a própria cotação ainda está enviando não entra na lista da Lia** (rodada 4). A terceira revisão
+    reproduziu, pelo caminho real, a mesma seguradora em duas listas sem o cliente pedir duas vezes: o lote de
+    preços da cotação adiado pela fala do turno (até 3 a 4 min com a cadeia abortada) e o cliente perguntando
+    "quanto deu?" nesse intervalo. A lista da Lia saía, e depois o lote. A cotação passou a gravar os códigos de
+    cada lote (`LOTES_KEY`), e a Lia tira da lista os códigos dos lotes aceitos e ainda não entregues
+    (`a_caminho`), dizendo ao modelo que o preço está sendo enviado. Lote a caminho sem os códigos gravados
+    (emitido antes desta versão) segura todos os preços. Lote com pendência de envio conta como a caminho.
+25. **A supersedida só entra na lista da mais nova se foi despachada ou é do mesmo turno** (rodada 4). A terceira
+    revisão reproduziu: turno 2 aceita a ferramenta e morre sem despachar (a execução fica `pending`); a lista do
+    turno 1 sai no teto; o turno 3 supersede a do turno 2 e levava os códigos dela, repetindo a lista do turno 1.
+    A do turno que não despachou não é promessa: o turno não falou. O custo: com dois turnos da conversa vivos ao
+    mesmo tempo, a lista prometida pelo turno cuja execução foi supersedida antes do despacho não sai.
+26. **A lista com pendência de envio não é lista entregue** (rodada 4). A revisão reproduziu: a fila recusa o
+    envio da lista A (a mensagem fica marcada), o cliente pede de novo, a lista B sai inteira, e o varredor
+    reenvia A. Agora a lista de A entra na de B, e a retomada do envio de A é barrada por `publicacao_vale?`
+    (a mensagem de A fica no banco, sem envio).
 
 ## Riscos de regressão verificados, e como
 
@@ -262,6 +303,10 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
   `bound_pedido_repetido_spec`, `medida_spec`, `insurance_quote_nenhum_estado_mudo_spec`, `tool_run_spec`
   (rodada 2: `open!` com `handle_inicial`): exemplos acrescentados; nenhum exemplo existente mudou de
   expectativa.
+- Rodada 4, nos specs novos desta PR: `resultado_por_seguradora_spec` monta o motivo do teto com palavras do
+  vocabulário (o de "x" deixou de ser guardado) e passa a exigir que ele seja guardado, com o limite em 8.000
+  bytes; a promessa "Nunca fale de login, senha ou permissão" do `builder_instrucao_do_principal_promessas_spec`
+  passou a exigir também que a regra recuse os três termos num texto de risco.
 
 ## Testes
 
@@ -278,11 +323,15 @@ Todos com `PATH="$HOME/.rbenv/shims:$PATH"`, exit code gravado em arquivo e cont
 | CI da PR #424 em `f727ce1844` (run 34776202500) | suíte inteira do projeto (8 shards), RuboCop, Vitest, ESLint, Brakeman | 12 jobs `success` | — |
 | Depois da revisão (rodada 3) | o recorte da linha de base | 1935 exemplos, 0 falhas; md5 de `app/` igual antes e depois | 0 |
 | Depois da revisão (rodada 3), fora do recorte | os mesmos 118 de antes | 118 exemplos, 0 falhas | 0 |
+| CI da PR #424 em `cc4587e32e` (run 34779930764) | suíte inteira do projeto (8 shards), RuboCop, Vitest, ESLint, Brakeman | 12 jobs `success` | — |
+| Depois da revisão (rodada 4) | o recorte da linha de base | 1963 exemplos, 0 falhas; md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes e depois | 0 |
+| Depois da revisão (rodada 4), fora do recorte | os mesmos 118 de antes | 118 exemplos, 0 falhas | 0 |
 
 - `RAILS_ENV=test bundle exec rails zeitwerk:check`: "All is good!", exit 0 (em `9c0bdcb8be`, `f727ce1844` e
   depois da rodada 3).
 - RuboCop com lista explícita: 20 arquivos de `app/` (exit 0), 17 specs (exit 0), 4 arquivos do refactor
-  (exit 0), 0 ofensas. Rodadas 2 e 3: os 38 `.rb` alterados desde `5742de5fcd`, 0 ofensas, exit 0.
+  (exit 0), 0 ofensas. Rodadas 2 e 3: os 38 `.rb` alterados desde `5742de5fcd`, 0 ofensas, exit 0. Rodada 4: os
+  40 `.rb` alterados ou novos desde `5742de5fcd`, 0 ofensas, exit 0.
 
 ### Mutações
 
@@ -434,6 +483,61 @@ da mesma rodada em sequência e a regressão de `cotar_seguro`.
 
 **20 de 21 reprovadas**; a sobrevivente é a do lock, declarada. md5 de `app/` igual antes e depois.
 
+## Rodada 4: a revisão de verificação de `cc4587e32e`
+
+Revisor independente (agente com contexto próprio, só leitura), com sondas pelo caminho real, a cadeia humanizada
+real (`ChunkedDeliveryJob`) e o classificador real do conector sobre 146 textos e o corpus inteiro. Achou 2 P2 (um
+condicional) e 6 P3. Os specs que ele rodou: 304 exemplos da rodada e 1029 de regressão (38 arquivos), 0 falhas,
+exit 0.
+
+| Achado | Severidade | O que mudou |
+|---|---|---|
+| A mesma seguradora em duas listas sem o cliente pedir duas vezes: o lote de preços da cotação adiado pela fala do turno e a lista da Lia pedida nesse intervalo (reproduzido, pelo resultado inteiro e por uma seguradora) | P2 | `LOTES_KEY` e `ResultadoDaCotacao#a_caminho` (decisão 24); spec de integração novo `answerer_resultado_da_cotacao_lotes_spec` e exemplo em `nenhum_estado_mudo` |
+| A regra do motivo julgava por palavra: conta colada a uma linha de risco passava, e uma entrada real do corpus (risco colado a erro de sistema) era liberada inteira; o spec guardava essa entrada truncada | P2 (condicional) | Lista de liberação por palavra, só letras latinas (decisão 16); o corpus do spec passou a ser o do conector, entrada por entrada, com as 26 de outro `kind` |
+| "por conta" liberava qualquer frase | P3 | Coberto pelo vocabulário ("conta" não está nele) |
+| Dígito fora do ASCII chegava ao modelo; o código do começo aceitava letras sem teto | P3 | `CARACTERES` (só letras latinas e pontuação) e até três letras no código |
+| Número por extenso, conta em inglês e dado pessoal liberados | P3 | Coberto pelo vocabulário; padrões de guarda para dezena, unidade, bilhão, milhar, moeda, inglês, operador, CPF |
+| A execução `pending` de um turno morto tornava o residual 1 de minutos, não de segundos | P3 | A supersedida só entra se foi despachada ou é do mesmo turno (decisão 25) |
+| Uma falha só na publicação da lista nova perde as duas listas | P3 | Declarado (decisões 7 e 23); o conserto sugerido muda o gancho do motor de todas as ferramentas |
+| Lista com pendência de envio saía duas vezes | P3 (classe anterior) | `lista_entregue?` (decisão 26) |
+
+Onde o revisor olhou e não achou defeito: a premissa da `sequence` (só o publicador grava o token e avança, na
+mesma transação e sob o lock; a reconciliação preserva os dois), a cadeia humanizada real com uma e com três listas,
+o varredor com lista adiada, a ordem dos locks, os 39 textos do corpus contra o classificador real, e a regressão
+fora da ferramenta da Lia e da regra do motivo.
+
+### Mutações da rodada 4
+
+| # | Mutação | Resultado |
+|---|---|---|
+| U01 | motivo sem o vocabulário | 13 falhas |
+| U02 | motivo sem a conferência dos caracteres | 4 falhas |
+| U03 | o código do portal não sai do texto | 7 falhas |
+| U04 | código do portal com letras sem teto | 2 falhas |
+| U05 | motivo sem exigir objeto do risco | 3 falhas |
+| U06 | vocabulário com palavra de conta ("senha") | 1 falha |
+| U07 | vocabulário com número por extenso ("noventa") | 1 falha |
+| U08 | motivo sem os termos de conta e de valor na conferência | **sobrevive** (esperado: o vocabulário já recusa essas palavras, e U06 e U07 guardam o vocabulário) |
+| U09 | lista leva a supersedida de outro turno nunca despachada | 1 falha |
+| U10 | lista sem a supersedida do mesmo turno | 2 falhas |
+| U11 | lista entregue ignorando a pendência de envio | 1 falha |
+| U12 | lista sem os códigos das anteriores | 7 falhas |
+| U13 | leitura das anteriores sem parar na entregue | 2 falhas |
+| U14 | `publicacao_vale?` sem barrar a anterior não entregue | 4 falhas |
+| U15 | `publicacao_vale?` barrando pela mais nova `pending` | 1 falha |
+| U16 | `publicacao_vale?` barrando pela mais nova sobre outra cotação | 1 falha |
+| U17 | resultado inteiro leva o preço a caminho | 9 falhas |
+| U18 | pedido por seguradora leva o preço a caminho | 2 falhas |
+| U19 | lote com pendência de envio conta como entregue | 1 falha |
+| U20 | lote a caminho sem os códigos gravados não segura nada | 1 falha |
+| U21 | lote não aceito conta como a caminho | 1 falha |
+| U22 | a cotação não grava os códigos do lote | 1 falha |
+| U23 | envio incerto volta a "não chegou" | 2 falhas |
+| U24 | leitura das anteriores fora do lock da conversa | **sobrevive** (esperado; ver "O que NÃO foi verificado") |
+
+**22 de 24 reprovadas**; as duas sobreviventes são as declaradas. md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes
+e depois.
+
 ## O que NÃO foi verificado
 
 - **Conversa real com o modelo.** Que a Lia chame a ferramenta quando o cliente pergunta, não escreva valor,
@@ -457,16 +561,25 @@ da mesma rodada em sequência e a regressão de `cotar_seguro`.
   2. mensagens cruzadas: a lista anterior vira mensagem logo antes de o pedido novo abrir. Aqui é um pedido
      novo de verdade; que o modelo veja a lista no histórico e não chame a ferramenta de novo é conduta do
      modelo, não verificada.
-  Sem teste nos dois.
+  Sem teste nos dois. A terceira revisão confirmou os dois com a cadeia humanizada real. O caso da execução
+  `pending` que nunca é despachada (turno morto), que a revisão mostrou durar até o retry do turno, foi fechado
+  na rodada 4 (decisão 25).
 - **O lock da conversa na leitura das anteriores** (`codigos_a_publicar`) fecha, pelo raciocínio, a corrida
-  entre o `poll` da execução nova e a transação do publicador da anterior. A mutação que o tira (T21)
-  sobrevive: a corrida exige duas conexões concorrentes, e o spec roda numa só.
+  entre o `poll` da execução nova e a transação do publicador da anterior. A mutação que o tira (T21, U24)
+  sobrevive: a corrida exige duas conexões concorrentes, e o spec roda numa só. A revisão da rodada 3 leu os
+  caminhos de lock e não achou ordem invertida.
+- **O lote de preço aceito cuja publicação adiada é recusada depois** (o vínculo da conversa mudou, por exemplo)
+  nunca vira mensagem e fica "a caminho" para a Lia, que não mostra aqueles preços (decisão 24). Sem teste.
+- **Lote de preço com a mensagem criada e a pendência de envio gravada logo depois**: entre as duas escritas
+  (milissegundos, com o Redis fora) a Lia veria o lote como entregue. Sem teste.
+- **O vocabulário do motivo contra texto real depois do #60**: medido no corpus sanitizado de 13/09/2026 (12 de
+  13 liberados). Motivo real com palavra fora do vocabulário perde o motivo sem aviso; não há registro de quantos.
 - **A confirmação curta encurta a janela entre as duas leituras** de 13 a 21 s para 3 a 8 s. A guarda das duas
   leituras depende de o portal já ter listado todas as seguradoras quando a lista se repete; nos brutos de
   13/09/2026 todas estavam listadas na primeira leitura, e o contrário não foi observado. Não medido com a
   janela nova.
-- **Texto que nomeia o objeto do risco e fala da conta da corretora com palavra fora da lista** continua passando
-  pela regra do motivo (decisão 16). Os textos de conta usados são sintéticos; nenhum está no corpus medido.
+- **Texto de conta da corretora escrito só com palavras do vocabulário e com um objeto do risco** passaria pela
+  regra do motivo (decisão 16). Não achei nem construí um; os textos de conta usados nas revisões são sintéticos.
 - **Ordem da lista depois da fala com a entrega humanizada ligada**, especificamente para a ferramenta nova. O
   adiamento pela cadeia do turno é o mecanismo geral (`async_publisher_spec`, "humanized chain deferral"); o
   spec de integração desta fatia usa a entrega clássica.

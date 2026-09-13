@@ -63,6 +63,13 @@ class Autonomia::Insurance::ResultadoDaCotacao
     run.envio_incerto?
   end
 
+  # -> os códigos com preço cujo lote a cotação emitiu, o publicador aceitou, e ainda não é mensagem entregue na
+  # conversa (`Tools::EntregaPublicada.publicada?`: a mensagem existe e não tem pendência de envio). Quando um lote
+  # a caminho não tem os códigos gravados (emitido antes desta versão): todos os códigos com preço.
+  def a_caminho
+    @a_caminho ||= codigos_a_caminho
+  end
+
   # -> a cotação foi feita sem a classe de bônus da apólice atual (`InsuranceQuote::SEM_BONUS_KEY`)?
   def sem_bonus?
     run.handle.to_h[cotacao::SEM_BONUS_KEY].present?
@@ -127,6 +134,26 @@ class Autonomia::Insurance::ResultadoDaCotacao
   def entrada(codigo)
     valor = entradas[codigo.to_s]
     valor.is_a?(Hash) ? valor : {}
+  end
+
+  def codigos_a_caminho
+    handle = run.handle.to_h
+    lotes = handle[cotacao::Resultado::LOTES_KEY].to_h
+    pendentes = lotes_sem_mensagem(handle)
+    return [] if pendentes.empty?
+    return com_preco if pendentes.any? { |token| !lotes.key?(token) }
+
+    pendentes.flat_map { |token| Array(lotes[token]).map(&:to_s) }.uniq
+  end
+
+  # -> as identidades dos lotes de preço (`InsuranceQuote::PRECOS_KEY`) que o publicador aceitou
+  # (`Tools::EntregaAceita::CHAVE`) e que não são mensagem entregue na conversa.
+  def lotes_sem_mensagem(handle)
+    precos = Array(handle[cotacao::PRECOS_KEY]).map(&:to_s)
+    aceitos = Array(handle[::Autonomia::Agents::Tools::EntregaAceita::CHAVE]).map(&:to_s) & precos
+    return [] if aceitos.empty? || run.conversation.nil?
+
+    aceitos.reject { |token| ::Autonomia::Agents::Tools::EntregaPublicada.publicada?(run.conversation, token) }
   end
 
   # Os códigos cuja entrada tem nome com alguma palavra: sem nome, uma entrada casaria com qualquer consulta.

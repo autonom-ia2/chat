@@ -1,0 +1,41 @@
+# AS PALAVRAS QUE UM MOTIVO DE RECUSA PODE TER PARA ORIENTAR A FALA DA LIA (fatia 2 do #420, quarta rodada de
+# revisão). Lido por `Autonomia::Insurance::MotivoDaRecusa::VOCABULARIO`. Sem acento, em minúsculas, separadas
+# por espaço ou linha; linha que começa com # é comentário.
+#
+# É lista de LIBERAÇÃO: texto com uma palavra fora dela não passa. As três rodadas de revisão anteriores
+# mostraram que a lista de termos de conta não fecha ("Licença do multicálculo vencida", "access denied",
+# "operador joao.silva", colados a uma linha de risco); esta fecha pelo outro lado. O que ela custa é o motivo de
+# risco escrito com palavra que não está aqui: a Lia diz só que a seguradora não fez proposta.
+#
+# Nenhuma palavra daqui pode casar um padrão de `MotivoDaRecusa::TERMOS_DE_CONTA` ou `VALORES`
+# (`motivo_da_recusa_spec`, "o vocabulário").
+
+# Ligação.
+a o as os e ou de da do das dos em na no nas nos ao aos para por pelo pela pelos pelas com sem um uma
+este esta estes estas esse essa esses essas isso isto deste desta destes destas neste nesta nestes nestas
+desse dessa nesse nessa que qual quais se nao mais menos muito muita acima abaixo ate apos entre sobre fora
+dentro outro outra outros outras mesmo mesma cada seu sua seus suas ja ainda tambem apenas somente conforme
+devido quando onde como s rp
+ser sera sao foi estao estamos possui possuem tem temos ha pode podem gostaria fazer realizar realizada
+realizado aceita aceito aceitos aceitas aceitar
+
+# Recusa e aceitação.
+aceitacao aceitavel inaceitavel restrita restrito restritas restritos restricao restricoes permitida permitido
+permitidas permitidos proibida proibido recusa recusado recusada declinando declinado declinada contratacao
+cotacao calculo orcamento seguro seguros seguradora seguradoras produto produtos disponivel indisponivel
+politica politicas criterio criterios interno internos interna internas analise dados motivo motivos tecnica
+tecnico tecnicas tecnicos informada informado informadas informados exigido exigida exigidos exigidas
+obrigatorio obrigatoria obrigatorios obrigatorias limite maximo maxima minimo minima nova novo
+
+# O objeto do risco.
+risco riscos cenario cenarios veiculo veiculos carro carros moto motos motocicleta motocicletas caminhao
+caminhoes onibus utilitario utilitarios auto automovel automoveis modelo modelos ano anos fabricacao marca
+categoria categorias tarifaria tarifario tarifa tarifas condutor condutores principal motorista motoristas
+regiao regioes circulacao cep pernoite garagem estacionamento logradouro endereco area local tipo tipos uso
+carga cargas transportada transportadas transportado transporte cigarro fumo idade segurado segurada
+segurados cobertura coberturas blindagem blindado blindada rastreador rastreamento chassi fipe tabela
+sinistro sinistros sinistralidade bonus classe vistoria previa imovel imoveis residencia residencial
+construcao madeira veraneio profissao atividade aplicativo taxi escolar locadora frota placa combustivel
+gnv diesel eletrico hibrido acessorio acessorios catalogo homologado homologada permissionario adaptado
+adaptada modificado modificada rebaixado rebaixada importado importada roubo furto incendio colisao
+passageiros particular estado cidade municipio zona rural urbana historico remarcado remarcada

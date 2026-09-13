@@ -9,11 +9,9 @@
 #     e o publicador os adia enquanto a entrega da fala do turno está em curso.
 #   - Sem preço a mostrar: `precheck` devolve o texto ao modelo e nenhuma execução é aberta.
 #
-# UMA LISTA POR PEDIDO, E NUNCA A MESMA DUAS VEZES (terceira rodada de revisão). A lista de uma execução leva
-# também os códigos das anteriores desta ferramenta, sobre a mesma cotação, cuja lista não virou mensagem
-# (`codigos_a_publicar`); e a lista ainda sem mensagem de uma execução não sai depois que uma mais nova, sobre a
-# mesma cotação, foi despachada (`publicacao_vale?`). "Virou mensagem" é `sequence` positivo: o publicador o
-# avança na mesma transação em que cria a mensagem.
+# UMA LISTA POR PEDIDO, E NUNCA A MESMA DUAS VEZES (terceira e quarta rodadas de revisão): as listas de execuções
+# anteriores (`InsuranceQuoteResult::Listas`), e o preço cujo lote a própria cotação ainda está enviando, que não
+# entra na lista (`ResultadoDaCotacao#a_caminho`).
 #
 # Os textos desta classe ao modelo não trazem o valor do prêmio. Trazem o nome da seguradora perguntada, o
 # desfecho dela e, quando `Insurance::MotivoDaRecusa` libera, o texto do portal, que essa regra só libera sem
@@ -22,6 +20,8 @@
 # Os cinco textos de classe que o motor e o encerramento pedem sem instância são vazios: o publicador
 # devolve `skipped` para texto vazio, sem criar mensagem (`AsyncPublisher#texto_de`).
 class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents::Tools::Native::Base
+  include Listas
+
   Resultado = ::Autonomia::Insurance::ResultadoDaCotacao
   Guardado = ::Autonomia::Insurance::ResultadoPorSeguradora
 
@@ -31,13 +31,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   # códigos a publicar.
   EXECUCAO_KEY = 'execucao_da_cotacao'.freeze
   CODIGOS_KEY = 'seguradoras'.freeze
-  # Os status de uma execução anterior cuja lista, sem mensagem, entra na desta: a supersedida por uma abertura
-  # mais nova e a encerrada (a publicação adiada, que a despachada depois dela barra).
-  PROMETIDAS = %w[superseded done].freeze
-  # Os status da execução mais nova que barra a lista sem mensagem de uma anterior: a já despachada.
-  DESPACHADAS = %w[running done].freeze
-  # Quantas execuções anteriores a passada lê, no máximo.
-  ANTERIORES_LIDAS = 20
 
   # Os textos ao modelo.
   SEM_COTACAO = 'Não há cotação nesta conversa para mostrar. Não invente preço nem seguradora.'.freeze
@@ -49,6 +42,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
                   'nem seguradora; se o cliente quiser ver os preços de novo, ofereça chamar um atendente.'.freeze
   SEM_PRECO_AINDA = 'A cotação ainda está correndo e nenhum preço chegou até agora. Não invente preço nem ' \
                     'seguradora.'.freeze
+  PRECOS_A_CAMINHO = 'Os preços desta cotação estão sendo enviados agora, numa mensagem do sistema. Não escreva ' \
+                     'valor e não diga que vai mandar outra lista.'.freeze
+  PARTE_A_CAMINHO = 'Parte dos preços está sendo enviada agora, numa mensagem do sistema, e não entra na lista.'.freeze
   SEM_PRECO = 'Nenhuma seguradora fez proposta nesta cotação. Não invente preço nem seguradora.'.freeze
   NAO_ENCONTRADA = 'Nenhuma seguradora com esse nome está nesta cotação. Não liste as seguradoras: pergunte ao ' \
                    'cliente de qual ele fala.'.freeze
@@ -106,21 +102,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     def closing_message(_arguments = nil) = VAZIO
 
     # A lista só vira mensagem enquanto a cotação que a Lia leu no turno for a mais nova da conversa, e, quando
-    # ainda não virou mensagem, enquanto nenhuma execução mais nova desta ferramenta sobre a mesma cotação tiver
-    # sido despachada: a lista dessa leva os códigos desta (`codigos_a_publicar`).
+    # ainda não é mensagem entregue, enquanto nenhuma execução mais nova desta ferramenta sobre a mesma cotação
+    # tiver sido despachada: a lista dessa leva os códigos desta (`codigos_a_publicar`).
     def publicacao_vale?(run)
       execucao = run.handle.to_h[EXECUCAO_KEY]
       return false unless execucao.present? && Resultado.execucao_mais_nova(run.conversation_id)&.id == execucao.to_i
 
-      run.sequence.positive? || !despachada_depois?(run, execucao.to_i)
-    end
-
-    private
-
-    def despachada_depois?(run, execucao)
-      ::Autonomia::Agents::ToolRun.for_conversation(run.conversation_id).where(slug: slug, status: DESPACHADAS)
-                                  .where('id > ?', run.id)
-                                  .any? { |outra| outra.handle.to_h[EXECUCAO_KEY].to_i == execucao }
+      lista_entregue?(run) || !despachada_depois?(run, execucao.to_i)
     end
   end
 
@@ -163,29 +151,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
 
   private
 
-  # -> os códigos desta execução e os das anteriores desta ferramenta na conversa, sobre a mesma cotação, em
-  # `PROMETIDAS` e sem mensagem, lidas da mais nova para a mais antiga até a primeira com mensagem. A leitura
-  # é feita sob o lock da conversa, o mesmo sob o qual o publicador confere `publicacao_vale?` e cria a mensagem.
-  def codigos_a_publicar(handle, execucao)
-    proprios = Array(handle[CODIGOS_KEY])
-    return proprios if run&.conversation.nil?
-
-    anteriores = run.conversation.with_lock { prometidos_antes(execucao) }
-    (anteriores + proprios).uniq
-  end
-
-  def prometidos_antes(execucao)
-    anteriores.take_while { |outra| outra.sequence.zero? }
-              .select { |outra| PROMETIDAS.include?(outra.status) && outra.handle.to_h[EXECUCAO_KEY].to_i == execucao }
-              .flat_map { |outra| Array(outra.handle.to_h[CODIGOS_KEY]) }
-  end
-
-  # -> até `ANTERIORES_LIDAS` execuções desta ferramenta na conversa, anteriores a esta, da mais nova para a mais antiga.
-  def anteriores
-    ::Autonomia::Agents::ToolRun.for_conversation(run.conversation_id).where(slug: self.class.slug).where('id < ?', run.id)
-                                .order(id: :desc).limit(ANTERIORES_LIDAS).to_a
-  end
-
   def resultado
     return @resultado if defined?(@resultado)
 
@@ -227,19 +192,25 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   end
 
   def geral
-    codigos = resultado.com_preco
-    return [resultado.correndo? ? SEM_PRECO_AINDA : SEM_PRECO, []] if codigos.empty?
+    todos = resultado.com_preco
+    return [resultado.correndo? ? SEM_PRECO_AINDA : SEM_PRECO, []] if todos.empty?
 
-    partes = [LISTA_DEPOIS, (AINDA_CORRENDO if resultado.correndo?), (HA_SEM_PROPOSTA if resultado.sem_proposta?),
-              (SEM_BONUS if resultado.sem_bonus?)]
-    [partes.compact.join("\n"), codigos]
+    codigos = todos - resultado.a_caminho
+    return [PRECOS_A_CAMINHO, []] if codigos.empty?
+
+    [avisos_do_geral(parte_a_caminho: codigos.size < todos.size).join("\n"), codigos]
+  end
+
+  def avisos_do_geral(parte_a_caminho:)
+    [LISTA_DEPOIS, (PARTE_A_CAMINHO if parte_a_caminho), (AINDA_CORRENDO if resultado.correndo?),
+     (HA_SEM_PROPOSTA if resultado.sem_proposta?), (SEM_BONUS if resultado.sem_bonus?)].compact
   end
 
   def por_seguradora
     codigos = resultado.procurar(seguradora)
     return [resultado.correndo? ? NAO_ENCONTRADA_AINDA : NAO_ENCONTRADA, []] if codigos.empty?
 
-    com_preco = resultado.com_preco(codigos)
+    com_preco = resultado.com_preco(codigos) - resultado.a_caminho
     partes = codigos.map { |codigo| fala(codigo) }
     partes = [LISTA_DEPOIS, *partes, (SEM_BONUS if resultado.sem_bonus?)] if com_preco.any?
     [partes.compact.join("\n"), com_preco]
@@ -249,10 +220,16 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   def fala(codigo)
     nome = resultado.nome(codigo)
     case resultado.desfecho(codigo)
-    when Guardado::COM_PRECO then "#{nome} fez proposta: o preço dela sai na lista depois da sua mensagem."
+    when Guardado::COM_PRECO then fez_proposta(nome, codigo)
     when Guardado::AGUARDANDO then "#{nome} ainda não respondeu, e a cotação continua correndo."
     else sem_proposta(nome, resultado.motivo(codigo))
     end
+  end
+
+  # O preço que a cotação ainda está enviando não entra na lista (`ResultadoDaCotacao#a_caminho`).
+  def fez_proposta(nome, codigo)
+    onde = resultado.a_caminho.include?(codigo) ? 'está sendo enviado agora, numa mensagem do sistema' : 'sai na lista depois da sua mensagem'
+    "#{nome} fez proposta: o preço dela #{onde}."
   end
 
   # Sem motivo liberado pela regra, o modelo só pode dizer que a seguradora não fez proposta.

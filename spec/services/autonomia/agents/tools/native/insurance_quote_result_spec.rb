@@ -341,11 +341,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     let(:porto) { cotou('8', 'Porto Seguro', 2119.18) }
     let(:allianz) { cotou('5', 'Allianz', 2402.55) }
 
-    def exibicao(status:, codigos:, sequence: 0, cotacao_lida: fonte.id)
+    # Uma execução da ferramenta da Lia na conversa. `origem` é a mensagem do turno que a abriu (71, se omitida);
+    # `expires_at` presente diz que o turno a promoveu.
+    def exibicao(status:, codigos:, cotacao_lida: fonte.id, **linha)
       Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: described_class.slug, status: status,
                                          conversation_id: conversation.id, execution_key: SecureRandom.uuid, arguments: {},
-                                         sequence: sequence,
+                                         sequence: linha.fetch(:sequence, 0), origin_message_id: linha.fetch(:origem, 71),
+                                         expires_at: linha[:expires_at],
                                          handle: { described_class::EXECUCAO_KEY => cotacao_lida, described_class::CODIGOS_KEY => codigos })
+    end
+
+    def lista_da(run, pendente:)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                       sender: create(:agent_bot, account: account), content: 'lista',
+                       content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => "#{run.execution_key}:abc",
+                                             'autonomia_envio_pendente' => pendente })
     end
 
     def publicado_por(run)
@@ -408,9 +418,99 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
 
     it 'a lista que já virou mensagem continua valendo com uma mais nova despachada' do
       anterior = exibicao(status: 'done', codigos: ['8'], sequence: 1)
+      lista_da(anterior, pendente: false)
       exibicao(status: 'running', codigos: ['5'])
 
+      expect(described_class.lista_entregue?(anterior)).to be(true)
       expect(described_class.publicacao_vale?(anterior)).to be(true)
+    end
+
+    # A SUPERSEDIDA DE OUTRO TURNO QUE NUNCA FOI DESPACHADA (quarta rodada de revisão): o turno dela não falou, e a
+    # lista dela não é promessa.
+    it 'a supersedida de outro turno que nunca foi despachada não entra; a despachada e a do mesmo turno entram' do
+      exibicao(status: 'superseded', codigos: ['8'], origem: 70)
+      atual = exibicao(status: 'running', codigos: ['5'])
+      expect(publicado_por(atual)).to eq(itens(allianz))
+
+      Autonomia::Agents::ToolRun.where(slug: described_class.slug).delete_all
+      exibicao(status: 'superseded', codigos: ['8'], origem: 70, expires_at: 5.minutes.from_now)
+      atual = exibicao(status: 'running', codigos: ['5'])
+      expect(publicado_por(atual)).to eq(itens(porto, allianz))
+    end
+
+    # A LISTA COM PENDÊNCIA DE ENVIO (quarta rodada de revisão): está no banco e o cliente não a recebeu. Ela entra na
+    # lista da mais nova, e a retomada do envio dela é barrada.
+    it 'a lista com pendência de envio não é entregue: entra na da mais nova, e a dela é barrada' do
+      anterior = exibicao(status: 'done', codigos: ['8'], sequence: 1)
+      lista_da(anterior, pendente: true)
+      atual = exibicao(status: 'running', codigos: ['5'])
+
+      expect(described_class.lista_entregue?(anterior)).to be(false)
+      expect(publicado_por(atual)).to eq(itens(porto, allianz))
+      expect(described_class.publicacao_vale?(anterior)).to be(false)
+    end
+  end
+
+  # O PREÇO QUE A COTAÇÃO AINDA ESTÁ ENVIANDO (quarta rodada de revisão): o lote aceito pelo publicador e ainda não
+  # entregue na conversa não entra na lista da Lia, que diria o mesmo preço duas vezes.
+  describe 'o preço que a cotação ainda está enviando' do
+    let(:bot) { create(:agent_bot, account: account) }
+
+    # A cotação com Porto e Allianz com preço, cada uma num lote de preço aceito (`aceitos`). `entregues` são os lotes
+    # que já são mensagem na conversa; `pendentes`, os que são mensagem com pendência de envio.
+    def cotacao_com_lotes(entregues: [], pendentes: [], aceitos: %w[porto allianz], mapeados: true)
+      run = cotacao_com(status: 'running', ofertas: [cotou('8', 'Porto Seguro', 2119.18), cotou('5', 'Allianz', 2402.55)])
+      tokens = { 'porto' => "#{run.execution_key}:porto", 'allianz' => "#{run.execution_key}:allianz" }
+      lotes = mapeados ? { cotacao::Resultado::LOTES_KEY => { tokens['porto'] => ['8'], tokens['allianz'] => ['5'] } } : {}
+      aceite = { cotacao::PRECOS_KEY => tokens.values, Autonomia::Agents::Tools::EntregaAceita::CHAVE => tokens.values_at(*aceitos) }
+      run.update!(handle: run.handle.merge(aceite).merge(lotes))
+      (entregues + pendentes).each { |lote| mensagem_do_lote(tokens[lote], pendente: pendentes.include?(lote)) }
+      run
+    end
+
+    def mensagem_do_lote(token, pendente:)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: bot,
+                       content: 'lote', content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => token,
+                                                              'autonomia_envio_pendente' => pendente })
+    end
+
+    it 'com todos os lotes a caminho, o modelo ouve que os preços estão sendo enviados, e nada é aberto' do
+      cotacao_com_lotes
+
+      expect(no_turno.precheck.to_s).to eq(described_class::PRECOS_A_CAMINHO)
+      expect(no_turno('Allianz').precheck.to_s).to eq('Allianz fez proposta: o preço dela está sendo enviado agora, numa mensagem do sistema.')
+    end
+
+    it 'com um lote entregue e outro a caminho, a lista leva só o entregue' do
+      cotacao_com_lotes(entregues: ['porto'])
+      ferramenta = no_turno
+
+      expect(ferramenta.precheck).to be_nil
+      expect(ferramenta.aceite.split("\n").first(2)).to eq([described_class::LISTA_DEPOIS, described_class::PARTE_A_CAMINHO])
+      expect(ferramenta.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['8'])
+      expect(no_turno('Porto e Allianz').aceite).to include('Porto Seguro fez proposta: o preço dela sai na lista',
+                                                            'Allianz fez proposta: o preço dela está sendo enviado agora')
+    end
+
+    it 'o lote com pendência de envio está a caminho; o lote não aceito, não' do
+      cotacao_com_lotes(entregues: ['porto'], pendentes: ['allianz'])
+      expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(['8'])
+
+      Autonomia::Agents::ToolRun.delete_all
+      cotacao_com_lotes(entregues: ['porto'], aceitos: ['porto'])
+      expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(%w[8 5])
+    end
+
+    it 'o lote a caminho sem os códigos gravados (emitido antes desta versão) segura todos os preços' do
+      cotacao_com_lotes(entregues: ['porto'], mapeados: false)
+
+      expect(no_turno.precheck.to_s).to eq(described_class::PRECOS_A_CAMINHO)
+    end
+
+    it 'com todos os lotes entregues, a lista leva todos' do
+      cotacao_com_lotes(entregues: %w[porto allianz])
+
+      expect(no_turno.handle_de_abertura[described_class::CODIGOS_KEY]).to eq(%w[8 5])
     end
   end
 

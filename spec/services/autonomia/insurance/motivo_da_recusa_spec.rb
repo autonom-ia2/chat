@@ -1,68 +1,60 @@
 require 'rails_helper'
 
-# UM EXEMPLO POR PADRÃO, com e sem acento. Cada texto nomeia o risco ("o risco") e só tem o termo como motivo
-# para ser recusado: sem ele, "Declinando o risco" seria liberado (o exemplo de controle abaixo).
+# OS PADRÕES DA REGRA E UM EXEMPLO DE CADA. Cada exemplo de termo de conta e de valor casa o seu padrão; cada
+# exemplo de objeto do risco é liberado e só ele nomeia o risco.
 module TextosDeContaNoMotivo
   POR_TERMO = {
-    'login' => ['Declinando o risco, faça login novamente.', 'Declinando o risco, faca LOGIN de novo.',
-                'Declinando o risco: sistema não logado.', 'Declinando o risco, logue de novo.',
-                'Declinando o risco: sistema deslogado.', 'Declinando o risco: necessário relogar.',
-                'Declinando o risco: faça o log in novamente.', 'Declinando o risco: faça logoff e entre de novo.'],
-    'senha' => ['Declinando o risco: senha vencida.', 'Declinando o risco: senhas divergentes.',
-                'Declinando o risco: password errado.'],
-    'sessão' => ['Declinando o risco: sessão encerrada.', 'Declinando o risco: sessao encerrada.',
-                 'Declinando o risco: sessões simultâneas.'],
-    'token' => ['Declinando o risco: token inválido.', 'Declinando o risco: TOKENS vencidos.'],
-    'usuário' => ['Declinando o risco: usuário sem perfil.', 'Declinando o risco: usuario sem perfil.'],
-    'acesso' => ['Declinando o risco: acesso negado.', 'Declinando o risco: não foi possível acessar.'],
-    'permissão' => ['Declinando o risco: sem permissão.', 'Declinando o risco: sem permissao.',
-                    'Declinando o risco: permissões insuficientes.'],
-    'corretor' => ['Declinando o risco: corretor inativo.', 'Declinando o risco: corretora inativa.',
-                   'Declinando o risco: corretagem acima do limite.'],
-    'credencial' => ['Declinando o risco: credencial vencida.', 'Declinando o risco: credenciais vencidas.',
-                     'Declinando o risco: credenciamento pendente.', 'Declinando o risco: descredenciado.'],
-    'autenticação' => ['Declinando o risco: falha de autenticação.', 'Declinando o risco: falha ao reautenticar.'],
-    'autorização' => ['Declinando o risco: não autorizado a calcular.', 'Declinando o risco: sem autorização.',
-                      'Declinando o risco: desautorizado a calcular.'],
-    'habilitação' => ['Declinando o risco: ramo não habilitado.', 'Declinando o risco: desabilitado.',
-                      'Declinando o risco: inabilitado para emissão.'],
-    'produtor' => ['Declinando o risco: produtor inativo.'],
-    'SUSEP' => ['Declinando o risco: código SUSEP inválido.'],
-    'cadastro' => ['Declinando o risco: cadastro incompleto.', 'Declinando o risco: recadastramento pendente.'],
-    'comissão' => ['Declinando o risco: comissão acima do permitido.', 'Declinando o risco: comissao divergente.'],
-    'certificado' => ['Declinando o risco: certificado digital vencido.', 'Declinando o risco: certificação pendente.'],
-    'bloqueio' => ['Declinando o risco: perfil bloqueado.', 'Declinando o risco: bloqueio comercial.'],
-    'conta' => ['Declinando o risco: conta inativa.', 'Declinando o risco: CONTAS inativas.'],
-    'suspensão' => ['Declinando o risco: operação suspensa.', 'Declinando o risco: suspensão comercial.'],
-    'agenciamento' => ['Declinando o risco: código do agenciador inválido.'],
-    'inadimplência' => ['Declinando o risco: inadimplência com a seguradora.'],
-    'chave' => ['Declinando o risco: chave inválida.'],
-    'integração' => ['Declinando o risco: falha na integração.'],
-    'expiração' => ['Declinando o risco: prazo expirado.', 'Declinando o risco: expirou.'],
-    'portal' => ['Declinando o risco: entre novamente no portal.'],
-    'e-mail' => ['Declinando o risco: contato@exemplo.test sem retorno.', 'Declinando o risco: e-mail não confirmado.'],
-    'link' => ['Declinando o risco: veja https://exemplo.test/ajuda.', 'Declinando o risco: veja www.exemplo.test.'],
-    'redigido' => ['Declinando o risco: contato do suporte <REDACTED>.']
+    'login' => ['faça login novamente', 'sistema deslogado', 'necessário relogar', 'faça o log in', 'faça logoff'],
+    'senha' => ['senha vencida', 'password expired'],
+    'sessão' => ['sessão encerrada', 'sessoes simultaneas'],
+    'token' => ['token inválido'],
+    'usuário' => ['usuário sem perfil', 'user locked'],
+    'acesso' => ['acesso negado', 'access denied'],
+    'permissão' => ['sem permissão', 'permissões insuficientes'],
+    'corretor' => ['corretor inativo', 'corretagem acima do limite'],
+    'credencial' => ['descredenciado', 'invalid credentials'],
+    'autenticação' => ['falha de autenticação', 'authentication failed'],
+    'autorização' => ['desautorizado a calcular', 'not authorized'],
+    'habilitação' => ['desabilitado', 'inabilitado para emissão', 'ramo não habilitado'],
+    'produtor' => ['produtor inativo'],
+    'SUSEP' => ['código SUSEP inválido'],
+    'cadastro' => ['recadastramento pendente'],
+    'comissão' => ['comissão acima do permitido'],
+    'certificado' => ['certificado digital vencido', 'certificação pendente'],
+    'bloqueio' => ['bloqueio comercial', 'perfil bloqueado', 'user locked'],
+    'conta' => ['conta inativa', 'account suspended'],
+    'suspensão' => ['conta suspensa', 'account suspended'],
+    'agenciamento' => ['código do agenciador inválido'],
+    'inadimplência' => ['inadimplência com a seguradora'],
+    'chave' => ['chave de integração expirada'],
+    'integração' => ['falha na integração'],
+    'expiração' => ['prazo expirado', 'password expired'],
+    'portal' => ['entre novamente no portal'],
+    'licença' => ['licença do multicálculo vencida'],
+    'multicálculo' => ['uso indevido do multicálculo'],
+    'operador' => ['operador joao.silva'],
+    'CPF' => ['CPF do operador divergente'],
+    'e-mail' => ['contato@exemplo.test', 'e-mail não confirmado', 'e mail não confirmado'],
+    'link' => ['veja https://exemplo.test/ajuda', 'veja www.exemplo.test'],
+    'redigido' => ['contato do suporte <REDACTED>']
   }.freeze
 
   POR_VALOR = {
-    'dígito' => ['Declinando o risco: prêmio mínimo 800 não atingido.', 'Declinando o risco: veículo ano 2005.'],
-    'R$' => ['Declinando o risco: valor em R$ acima do permitido.'],
-    'reais' => ['Declinando o risco: valor em reais acima do permitido.'],
-    'mil' => ['Declinando o risco: veículo acima de noventa mil.'],
-    'milhão' => ['Declinando o risco: veículo acima de um milhão.', 'Declinando o risco: acima de dois milhões.'],
-    'centena por extenso' => ['Declinando o risco: prêmio mínimo de oitocentos não atingido.',
-                              'Declinando o risco: parcela mínima de cem.']
+    'reais' => ['valor em reais acima do permitido'], 'mil' => ['veículo acima de trezentos mil'],
+    'milhão' => ['veículo acima de um milhão', 'acima de dois milhões'], 'bilhão' => ['veículo acima de um bilhão'],
+    'milhar' => ['dez milhares'], 'moeda' => ['franquia de sessenta dólares', 'dez euros'],
+    'centena por extenso' => ['prêmio mínimo de oitocentos', 'parcela mínima de cem'],
+    'dezena por extenso' => ['prêmio mínimo de noventa', 'oitenta e cinco'],
+    'unidade por extenso' => ['oitenta e cinco', 'dois anos']
   }.freeze
 
-  # UM EXEMPLO LIBERADO POR OBJETO DO RISCO, em que só ele nomeia o risco.
   POR_OBJETO = {
     'veículo' => 'Veículo sem aceitação.', 'carro' => 'Carro sem aceitação.', 'moto' => 'Moto sem aceitação.',
     'caminhão' => 'Caminhão sem aceitação.', 'ônibus' => 'Ônibus sem aceitação.',
     'utilitário' => 'Utilitário sem aceitação.', 'auto' => 'Produto auto sem aceitação.',
     'acessório' => 'Acessórios fora da política de aceitação.', 'modelo' => 'Modelo sem aceitação.',
     'ano' => 'Ano fora da política de aceitação.', 'categoria' => 'Categoria sem aceitação.',
-    'tarifa' => 'Tarifa indisponível para o perfil.', 'condutor' => 'Condutor fora da política de aceitação.',
+    'tarifa' => 'Tarifa indisponível.', 'condutor' => 'Condutor fora da política de aceitação.',
     'motorista' => 'Motorista fora da política de aceitação.', 'região' => 'Região sem aceitação.',
     'circulação' => 'Área de circulação sem aceitação.', 'CEP' => 'CEP sem aceitação.',
     'logradouro' => 'Logradouro fora da área de aceitação.', 'pernoite' => 'Local de pernoite sem aceitação.',
@@ -76,16 +68,16 @@ module TextosDeContaNoMotivo
     'vistoria' => 'Vistoria prévia obrigatória.', 'imóvel' => 'Imóvel fora da política de aceitação.',
     'residência' => 'Residência de veraneio sem aceitação.', 'construção' => 'Construção de madeira sem aceitação.',
     'profissão' => 'Profissão sem aceitação.', 'transporte' => 'Transporte de passageiros sem aceitação.',
-    'aplicativo' => 'Serviço por aplicativo sem aceitação.', 'placa' => 'Placa de outro estado sem aceitação.',
+    'aplicativo' => 'Aplicativo sem aceitação.', 'placa' => 'Placa de outro estado sem aceitação.',
     'combustível' => 'Combustível GNV sem aceitação.', 'frota' => 'Frota sem aceitação.'
   }.freeze
 end
 
 # OS TEXTOS DE FORA DESTE SPEC: o corpus do conector, os das revisões e o custo levantado por elas.
 module TextosReaisDoMotivo
-  # Os textos de risco do corpus sanitizado do conector (`autonomia-adapters`,
-  # `test/fixtures/agger/motivos-de-recusa.sanitized.json`, `textoLimpo`, 13/09/2026), e o que a regra devolve
-  # de cada um: o que a regra existe para deixar a Lia explicar.
+  # As entradas `risco` do corpus sanitizado do conector (`autonomia-adapters` `ad4372a597`,
+  # `test/fixtures/agger/motivos-de-recusa.sanitized.json`, `textoLimpo`), e o que a regra devolve de cada uma. A
+  # décima segunda cola uma linha de risco a um erro de sistema, e é recusada.
   RISCO_DO_CORPUS = {
     'Risco sem aceitação para este cenário nesta seguradora.' => 'Risco sem aceitação para este cenário nesta seguradora.',
     'Não temos um seguro disponível para este veículo. Gostaria de fazer uma nova cotação para outro carro?' =>
@@ -102,95 +94,125 @@ module TextosReaisDoMotivo
       'deste orçamento.',
     '400 - Restrição técnica para o Segurado' => 'Restrição técnica para o Segurado',
     'Tipo de veículo não aceito.' => 'Tipo de veículo não aceito.',
-    '[2005] - -Contratação não permitida  -  Ano Modelo do Veículo' => 'Contratação não permitida  -  Ano Modelo do Veículo',
+    '[2005] - -Contratação não permitida - Ano Modelo do Veículo' => 'Contratação não permitida - Ano Modelo do Veículo',
     'Moto de ano/modelo sem aceitação - RP' => 'Moto de ano/modelo sem aceitação - RP',
     '[2159] - -Contratação não permitida - Categoria do Veículo' => 'Contratação não permitida - Categoria do Veículo',
-    'UC00 - Risco fora das políticas de aceitação' => 'Risco fora das políticas de aceitação',
-    'Carga(s) transportada(s) ( Cigarro/Fumo) sem aceitação - RP' => 'Carga(s) transportada(s) ( Cigarro/Fumo) sem aceitação - RP',
-    'Veículo sem aceitação - RP' => 'Veículo sem aceitação - RP'
+    'UC00 - Risco fora das políticas de aceitação As Necessidades do Cliente, não foram salvas com sucesso, selecione nov' => nil,
+    'Carga(s) transportada(s) ( Cigarro/Fumo) sem aceitação - RP Veículo sem aceitação - RP' =>
+      'Carga(s) transportada(s) ( Cigarro/Fumo) sem aceitação - RP Veículo sem aceitação - RP'
   }.freeze
 
-  # Os textos das revisões: os do conector, que saíram com a classe errada, e os da revisão da fatia 2 (as duas
-  # rodadas), que saem `risco` do classificador real do conector falando da conta da corretora ou de valor.
+  # As outras 26 entradas do mesmo corpus, com o `kind` que o conector deu. Nenhuma passaria nem como `risco`.
+  OUTROS_DO_CORPUS = {
+    'O sistema de cálculo está indisponível, tente novamente em alguns instantes.' => 'passageiro',
+    'Serviço indisponível, tente novamente mais tarde' => 'passageiro',
+    'Houve uma instabilidade ao realizar o cálculo nesta seguradora, tente novamente em breve.' => 'passageiro',
+    'Usuário não possui acesso a funcionalidade. Por favor, verifique suas permissões no site da seguradora.' => 'credencial',
+    'Login ou senha incorreta. Confira suas credenciais de acesso.' => 'credencial',
+    'Erro ao processar o cálculo do prêmio' => 'outro',
+    'Desmoronamento - Para contratação desta cobertura é necessário enviar para Análise Técnica.' => 'outro',
+    'O Nome informado não corresponde ao CPF cadastrado. Por favor, verifique e tente novamente.' => 'outro',
+    'Corretor não encontrado. Por favor, selecione um corretor válido no cadastro da seguradora.' => 'credencial',
+    'LMI COB RC OBRIGATORIA PARA DANO MORAL' => 'outro',
+    'Houve um erro ao realizar este cálculo.' => 'outro',
+    'Não foi possível recuperar o valor dessa cotação. Por favor, tente novamente mais tarde.' => 'passageiro',
+    'Profissão deve ser especificada corretamente para que o cálculo prossiga.' => 'outro',
+    'Ocorreu uma divergencia entre a comissao informada e a comissao permitida.' => 'credencial',
+    'Nenhum produto com seguro disponível para exibição.' => 'outro',
+    'Só é permitida a contratação de [Faróis, Lanternas e Retrovisor] para veículos até 20 anos.' => 'outro',
+    'A cobertura "Impacto Veículos" não está disponível para esta cotação.' => 'outro',
+    'Ocorreu um erro ao calcular. Revise o formulario de calculo e tente novamente.' => 'outro',
+    'Origem da viagem deve ser especificada corretamente' => 'outro',
+    'Cálculo sem prêmio.' => 'outro',
+    'O valor informado de R$ 10.000,00 para a cobertura Roubo Residencial Condominos, Cobertura é invalido. O mínimo aceito' =>
+      'outro',
+    "Necessário contratar primeiro uma das coberturas: '000510026 - Responsabilidade Civil Operacoes', '000510304 - Resp Civ" =>
+      'outro',
+    '[165456] - Contratação da Cobertura Desmoronamento para o GRUPO ESCRITORIOS ATIVIDADE DEMAIS ESCRITÓRIOS está fora da p' =>
+      'outro',
+    'Para a Cobertura Responsabilidade Civil Empregador, Obrigat ria a contrata o da Cobertura Responsabilidade Civil Est' =>
+      'outro',
+    'A cobertura de INCENDIO / QUEDA DE RAIO / EXPLOSAO / IMPLOSAO ACIDENTAL / FUMACA / QUEDA DE AERONAVES não pode ser cont' =>
+      'outro',
+    'O valor do capital segurado deve ser entre R$100,00 e R$1.000,00, limitado a 250 vezes o capital segurado da cobertura' =>
+      'outro'
+  }.freeze
+
+  # Os textos das revisões: os do conector, que saíram com a classe errada, e os das revisões da fatia 2, que saem
+  # `risco` do classificador real do conector falando da conta da corretora, de dado pessoal ou de valor.
   DAS_REVISOES = [
     'Senha expirou. Declinando cálculo.', 'Sistema indisponível: sessão expirada, faça login novamente.',
     'Usuário fulano@corretora.com.br bloqueado.', 'Produtor não credenciado para este produto. Declinando cálculo.',
-    'Credenciamento pendente nesta seguradora. Declinando cálculo.', 'Não autorizado a calcular este produto. Declinando cálculo.',
-    'Perfil sem autorização para este ramo. Declinando cálculo.', 'Código SUSEP inválido. Declinando cálculo.',
-    'Sistema deslogado. Declinando cálculo.', 'Necessário relogar no portal. Declinando cálculo.',
-    'Falha ao reautenticar no portal da seguradora.', 'Percentual de comissão acima do permitido pela seguradora.',
-    'Corretagem acima do limite do produto. Declinando cálculo.', 'Prêmio mínimo de 1.500,00 não atingido. Declinando cálculo.',
-    'Valor do veículo acima de 300 mil reais.', 'Certificado digital vencido.', 'Cadastro do produtor bloqueado.',
-    'Faça o log in novamente. Declinando cálculo.', 'Login expirado.',
-    'Valor do veículo acima de 300 mil reais. Declinando cálculo.', 'Prêmio mínimo de R$ 800 não atingido. Declinando cálculo.',
-    'Prêmio mínimo 1500 não atingido. Declinando cálculo.', 'Taxa mínima de 15,00 não atingida. Declinando cálculo.',
-    'Descredenciado para este produto. Declinando cálculo.', 'Recadastramento pendente nesta seguradora. Declinando cálculo.',
-    'Desabilitado para este ramo. Declinando cálculo.', 'Desautorizado a calcular este produto. Declinando cálculo.',
-    'Inabilitado para emissão neste ramo. Declinando cálculo.', 'Conta suspensa nesta seguradora. Declinando cálculo.',
-    'Bloqueio comercial nesta seguradora. Declinando cálculo.', 'Código do agenciador inválido. Declinando cálculo.',
-    'Inadimplência com a seguradora. Declinando cálculo.', 'Desconto comercial acima do limite. Declinando cálculo.',
+    'Não autorizado a calcular este produto. Declinando cálculo.', 'Código SUSEP inválido. Declinando cálculo.',
+    'Sistema deslogado. Declinando cálculo.', 'Corretagem acima do limite do produto. Declinando cálculo.',
+    'Prêmio mínimo de 1.500,00 não atingido. Declinando cálculo.', 'Faça o log in novamente. Declinando cálculo.',
+    'Valor do veículo acima de 300 mil reais. Declinando cálculo.', 'Descredenciado para este produto. Declinando cálculo.',
+    'Recadastramento pendente nesta seguradora. Declinando cálculo.', 'Conta suspensa nesta seguradora. Declinando cálculo.',
     'Chave de integração expirada. Declinando cálculo.', 'Licença do multicálculo vencida. Declinando cálculo.',
-    'E-mail não confirmado no portal. Declinando cálculo.', 'Código de verificação inválido. Declinando cálculo.',
-    'Perfil não configurado para este produto. Declinando cálculo.', 'Entre novamente no portal da seguradora. Declinando cálculo.',
-    'Faça logoff e entre de novo. Declinando cálculo.', 'Vínculo com a sucursal inexistente. Declinando cálculo.',
-    'Convênio da filial inativo. Declinando cálculo.', 'Pró-labore acima do permitido. Declinando cálculo.',
-    'Password expired. Declinando cálculo.', 'Contato do suporte: <REDACTED>. Declinando cálculo.',
-    'Prêmio mínimo de 800 não atingido. Declinando cálculo.', 'Parcela mínima de 90 não atingida. Declinando cálculo.',
-    'Valor do veículo acima de trezentos mil. Declinando cálculo.', 'Valor do veículo acima de 1,5 milhão. Declinando cálculo.',
-    'Importância segurada acima de 2 milhões. Declinando cálculo.', 'Franquia mínima 950. Declinando cálculo.',
-    'Prêmio mínimo 1 500 não atingido. Declinando cálculo.'
+    'Entre novamente no portal da seguradora. Declinando cálculo.', 'Vínculo com a sucursal inexistente. Declinando cálculo.',
+    'Contato do suporte: <REDACTED>. Declinando cálculo.', 'Prêmio mínimo de 800 não atingido. Declinando cálculo.',
+    'Valor do veículo acima de trezentos mil. Declinando cálculo.', 'Importância segurada acima de 2 milhões. Declinando cálculo.',
+    # Rodada 3: conta colada a uma linha de risco, palavra de risco com outro sentido, inglês, dado pessoal, número.
+    'Risco fora das políticas de aceitação Licença do multicálculo vencida.',
+    'UC00 - Risco fora das políticas de aceitação Código de verificação inválido.',
+    'Veículo sem aceitação - RP Pró-labore acima do permitido.', 'Declinando o risco. Convênio da filial inativo.',
+    'Uso indevido do multicálculo detectado. Declinando cálculo.', 'Versão do aplicativo desatualizada. Declinando cálculo.',
+    'Veículo sem aceitação por conta inativa nesta seguradora.', 'Veículo sem aceitação: access denied.',
+    'Veículo sem aceitação: invalid credentials.', 'Veículo sem aceitação: operador joao.silva.',
+    'Veículo sem aceitação: CPF do operador divergente.', 'Veículo sem aceitação: e mail não confirmado.',
+    'Prêmio mínimo de noventa não atingido para o veículo.', 'Veículo acima de um bilhão.',
+    'Franquia de sessenta dólares para o veículo.', 'Veículo sem aceitação, prêmio mínimo de ８００.',
+    '٨٠٠ - Veículo sem aceitação.', 'Veículo sem aceitação пароль.', 'Senha123 - Veículo sem aceitação.'
   ].freeze
 
   # O CUSTO, DECLARADO: textos plausíveis de risco que a regra recusa (a Lia diz só que a seguradora não fez
-  # proposta), levantados pela revisão da fatia 2.
+  # proposta), levantados pelas revisões da fatia 2.
   CUSTO = [
     'Condutor com menos de 2 anos de habilitação. Declinando cálculo.',
     'Tempo de habilitação do condutor inferior ao exigido pela aceitação.',
     'CEP de pernoite não cadastrado para aceitação.', 'Veículo bloqueado para aceitação nesta seguradora.',
-    'Veículo ano 2005 fora da política de aceitação.', 'Ano modelo 2008 sem aceitação - RP',
-    'CEP 04567-000 fora da área de aceitação.', 'Modelo não autorizado para uso em aplicativo. Declinando cálculo.',
-    'Categoria do veículo não habilitada para o produto. Declinando cálculo.',
-    'Principal condutor sem CNH cadastrada. Declinando cálculo.',
+    'Veículo ano 2005 fora da política de aceitação.', 'CEP 04567-000 fora da área de aceitação.',
+    'Modelo não autorizado para uso em aplicativo. Declinando cálculo.',
     'Veículo sem permissão de circulação na região. Declinando cálculo.', 'Código FIPE 0012345 sem aceitação.',
-    'Produto indisponível para usuários de aplicativo. Declinando cálculo.',
-    'Veículo com rastreador bloqueado sem aceitação.', 'Certificado de registro do veículo irregular. Declinando cálculo.',
-    'Veículo de corretora de valores sem aceitação.', 'Veículo com suspensão rebaixada sem aceitação.',
-    'Contratação não permitida.', 'Restrição técnica.'
+    'Veículo com suspensão rebaixada sem aceitação.', 'Recusado por conta da região de circulação.',
+    'Veículo zero km sem aceitação.', 'Contratação não permitida.', 'Restrição técnica.'
   ].freeze
 end
 
-# A REGRA DO MOTIVO (fatia 2 do #420, registrada na issue em 13/09/2026): o texto do portal só orienta a
-# fala da Lia quando o `kind` é `risco`, o texto sem o código do começo não traz dígito, valor nem termo de conta,
-# e nomeia o objeto do risco. Em qualquer outro caso, nil. Os textos são sintéticos, na forma das mensagens de
-# recusa do portal, menos os do corpus do conector.
+# A REGRA DO MOTIVO (fatia 2 do #420, registrada na issue em 13/09/2026): o texto do portal só orienta a fala da Lia
+# quando o `kind` é `risco` e, sem o código do começo, o texto só tem letras latinas e pontuação, só palavras do
+# vocabulário, nenhum termo de conta nem valor, e nomeia o objeto do risco. Em qualquer outro caso, nil. Os textos
+# são sintéticos, na forma das mensagens de recusa do portal, menos os do corpus do conector.
 RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
-  def motivo(texto, kind: 'risco')
-    { 'kind' => kind, 'text' => texto }
-  end
-
   def permitido(texto, kind: 'risco')
-    described_class.permitido(motivo(texto, kind: kind))
+    described_class.permitido('kind' => kind, 'text' => texto)
   end
 
   def alvo(texto)
     ActiveSupport::Inflector.transliterate(texto).downcase
   end
 
-  describe 'o que libera' do
+  describe 'o corpus do conector' do
     TextosReaisDoMotivo::RISCO_DO_CORPUS.each do |texto, devolvido|
-      it "libera o texto de risco do corpus «#{texto}»" do
+      it "o risco «#{texto}» devolve #{devolvido.inspect}" do
         expect(permitido(texto)).to eq(devolvido)
       end
     end
 
-    describe 'palavras que começam como um padrão e não são um' do
-      ['Acessórios fora da política de aceitação.', 'Logradouro fora da área de aceitação.',
-       'Catálogo do veículo sem aceitação.', 'Veículo de permissionário sem aceitação.',
-       'Veículo não homologado para este produto.', 'Recusado por conta da região de circulação.',
-       'Veículo sem aceitação nesta seguradora.'].each do |texto|
-        it "libera «#{texto}»" do
-          expect(permitido(texto)).to eq(texto)
-        end
+    TextosReaisDoMotivo::OUTROS_DO_CORPUS.each do |texto, kind|
+      it "«#{texto}» (#{kind}) não passa, nem se viesse como risco" do
+        expect(permitido(texto, kind: kind)).to be_nil
+        expect(permitido(texto)).to be_nil
+      end
+    end
+  end
+
+  describe 'o que libera' do
+    ['Catálogo do veículo sem aceitação.', 'Veículo de permissionário sem aceitação.',
+     'Veículo não homologado para este produto.', 'Veículo sem aceitação nesta seguradora.',
+     'Declinando o risco deste orçamento.'].each do |texto|
+      it "libera «#{texto}»" do
+        expect(permitido(texto)).to eq(texto)
       end
     end
 
@@ -199,23 +221,36 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
     end
   end
 
-  # NENHUM DÍGITO CHEGA AO MODELO: o código do começo sai do texto devolvido, e o dígito que sobra recusa.
   describe 'o código do portal no começo' do
-    {
-      '400 - Veículo sem aceitação' => 'Veículo sem aceitação', '[2005] - -Veículo sem aceitação' => 'Veículo sem aceitação',
-      'UC00 - Veículo sem aceitação' => 'Veículo sem aceitação', '2005 - Contratação não permitida - Ano Modelo do Veículo' =>
-        'Contratação não permitida - Ano Modelo do Veículo'
-    }.each do |texto, devolvido|
-      it "sai de «#{texto}»" do
-        expect(permitido(texto)).to eq(devolvido)
+    { '400 - Veículo sem aceitação' => 'Veículo sem aceitação', '[2005] - -Veículo sem aceitação' => 'Veículo sem aceitação',
+      'UC00 - Veículo sem aceitação' => 'Veículo sem aceitação',
+      '2005 - Contratação não permitida - Ano Modelo do Veículo' => 'Contratação não permitida - Ano Modelo do Veículo' }
+      .each do |texto, devolvido|
+        it "sai de «#{texto}»" do
+          expect(permitido(texto)).to eq(devolvido)
+        end
+      end
+
+    ['Ano 2005 - modelo sem aceitação', 'Veículo sem aceitação [2005]', 'Veículo 400 - sem aceitação',
+     '400 Veículo sem aceitação', 'Senha123 - Veículo sem aceitação'].each do |texto|
+      it "fora do começo, ou sem hífen, ou com mais de três letras, o número fica e recusa «#{texto}»" do
+        expect(permitido(texto)).to be_nil
+      end
+    end
+  end
+
+  describe 'o que recusa pelos caracteres e pelo vocabulário' do
+    { 'dígito de outro alfabeto' => 'Veículo sem aceitação, prêmio mínimo de ８００.',
+      'dígito arábico no código' => '٨٠٠ - Veículo sem aceitação.', 'letra de outro alfabeto' => 'Veículo sem aceitação пароль.',
+      'símbolo de moeda' => 'Veículo sem aceitação acima de R$.', 'arroba' => 'Veículo sem aceitação @seguradora.',
+      'palavra fora do vocabulário' => 'Veículo sem aceitação, detectado.' }.each do |caso, texto|
+      it "#{caso}: recusa «#{texto}»" do
+        expect(permitido(texto)).to be_nil
       end
     end
 
-    ['Ano 2005 - modelo sem aceitação', 'Veículo sem aceitação [2005]', 'Veículo 400 - sem aceitação',
-     '400 Veículo sem aceitação'].each do |texto|
-      it "o dígito fora do código do começo recusa «#{texto}»" do
-        expect(permitido(texto)).to be_nil
-      end
+    it 'o controle: o mesmo texto sem o que recusa é liberado' do
+      expect(permitido('Veículo sem aceitação.')).to eq('Veículo sem aceitação.')
     end
   end
 
@@ -231,7 +266,6 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
     end
   end
 
-  # O `kind` erra, e a regra existe por isso.
   describe 'os textos das revisões, mesmo classificados como risco' do
     TextosReaisDoMotivo::DAS_REVISOES.each do |texto|
       it "recusa «#{texto}»" do
@@ -248,42 +282,36 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
     end
   end
 
-  describe 'cada padrão de recusa' do
-    it 'o controle: o mesmo começo, sem padrão, é liberado' do
-      expect(permitido('Declinando o risco deste orçamento.')).to eq('Declinando o risco deste orçamento.')
+  # O VOCABULÁRIO É A LISTA DE LIBERAÇÃO, e os padrões de conta e de valor são a guarda dela: nenhuma palavra do
+  # vocabulário pode casar um deles.
+  describe 'o vocabulário' do
+    let(:padroes) { described_class::TERMOS_DE_CONTA.merge(described_class::VALORES) }
+
+    it 'nenhuma palavra casa um termo de conta ou de valor' do
+      casadas = described_class::VOCABULARIO.select { |palavra| padroes.values.any? { |padrao| palavra.match?(padrao) } }
+
+      expect(casadas).to be_empty
     end
 
-    TextosDeContaNoMotivo::POR_TERMO.merge(TextosDeContaNoMotivo::POR_VALOR).each do |padrao, textos|
-      textos.each do |texto|
-        it "#{padrao}: recusa «#{texto}»" do
-          expect(permitido(texto)).to be_nil
+    it 'só tem palavras sem acento, em minúsculas' do
+      expect(described_class::VOCABULARIO.grep_v(/\A[a-z]+\z/)).to be_empty
+    end
+
+    TextosDeContaNoMotivo::POR_TERMO.merge(TextosDeContaNoMotivo::POR_VALOR).each do |padrao, exemplos|
+      exemplos.each do |exemplo|
+        it "#{padrao}: o padrão casa «#{exemplo}», e o texto com ele é recusado" do
+          expect(alvo(exemplo)).to match(described_class::TERMOS_DE_CONTA.merge(described_class::VALORES).fetch(padrao))
+          expect(permitido("Veículo sem aceitação, #{exemplo}.")).to be_nil
         end
       end
     end
 
-    # Padrão novo sem exemplo aqui reprova, e exemplo de padrão que saiu da lista também.
     it 'todo padrão da lista tem exemplo' do
       expect(TextosDeContaNoMotivo::POR_TERMO.keys).to match_array(described_class::TERMOS_DE_CONTA.keys)
       expect(TextosDeContaNoMotivo::POR_VALOR.keys).to match_array(described_class::VALORES.keys)
     end
-
-    # O EXEMPLO QUE SÓ AQUELE PADRÃO RECUSA: sem ele, apagar o padrão não reprovaria nada, porque outro padrão
-    # recusaria o mesmo texto. Todo exemplo nomeia o risco, então é o padrão que o recusa.
-    it 'todo padrão tem um exemplo que só ele recusa' do
-      padroes = described_class::TERMOS_DE_CONTA.merge(described_class::VALORES)
-      exemplos = TextosDeContaNoMotivo::POR_TERMO.merge(TextosDeContaNoMotivo::POR_VALOR)
-
-      sem_exemplo_proprio = padroes.keys.reject do |nome|
-        exemplos.fetch(nome).any? do |texto|
-          padroes.select { |_, padrao| alvo(texto).match?(padrao) }.keys == [nome] && described_class.do_risco?(alvo(texto))
-        end
-      end
-
-      expect(sem_exemplo_proprio).to be_empty
-    end
   end
 
-  # O ITEM 4: texto que não nomeia o objeto do risco não é liberado.
   describe 'cada objeto do risco' do
     TextosDeContaNoMotivo::POR_OBJETO.each do |objeto, texto|
       it "#{objeto}: libera «#{texto}»" do
@@ -291,7 +319,7 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
       end
     end
 
-    it 'sem objeto do risco, o texto sem termo de conta e sem valor é recusado' do
+    it 'sem objeto do risco, o texto só com palavras do vocabulário é recusado' do
       expect(permitido('Declinando cálculo.')).to be_nil
       expect(permitido('Contratação não permitida nesta seguradora.')).to be_nil
     end
@@ -317,11 +345,12 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
       expect(described_class.permitido('kind' => 'risco', 'text' => nil)).to be_nil
       expect(described_class.permitido('kind' => 'risco', 'text' => { 'a' => 1 })).to be_nil
       expect(permitido('   ')).to be_nil
-      expect(permitido("Risco sem aceitação #{'a' * described_class::TETO_DO_TEXTO}")).to be_nil
+      expect(permitido("Risco#{' o' * described_class::TETO_DO_TEXTO}")).to be_nil
     end
 
     it 'libera o texto exatamente no teto' do
-      texto = "Risco #{'a' * (described_class::TETO_DO_TEXTO - 6)}"
+      texto = "Risco#{' o' * ((described_class::TETO_DO_TEXTO - 5) / 2)}"
+      texto += '.' * (described_class::TETO_DO_TEXTO - texto.length)
 
       expect(texto.length).to eq(described_class::TETO_DO_TEXTO)
       expect(permitido(texto)).to eq(texto)

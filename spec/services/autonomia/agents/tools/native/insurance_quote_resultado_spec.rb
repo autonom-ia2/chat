@@ -64,6 +64,19 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       )
     end
 
+    # OS CÓDIGOS DE CADA LOTE DE PREÇO (quarta rodada de revisão), sob a identidade da entrega do lote: é por eles que
+    # a ferramenta da Lia sabe que preço a cotação ainda está enviando.
+    it 'grava os códigos de cada lote de preço sob a identidade da entrega do lote, acumulando' do
+      primeira = consultar([oferta('8', 'quoted', amount: 2119.18), oferta('47', 'running')], inicio)
+      segunda = consultar([oferta('47', 'quoted', amount: 1999.0), oferta('11', 'quoted', amount: 2500.0)], primeira.handle)
+
+      lotes = segunda.handle[described_class::LOTES_KEY]
+      tokens = segunda.handle[described_class::PRECOS_KEY]
+      expect(tokens.size).to eq(2)
+      expect(lotes).to eq(tokens.first => ['8'], tokens.last => %w[47 11])
+      expect(tokens).to eq((primeira.deliveries + segunda.deliveries).map { |texto| run.delivery_token(texto) })
+    end
+
     it 'grava também na passada que fecha a cotação' do
       ofertas = [oferta('8', 'quoted', amount: 2119.18), oferta('47', 'declined', reason: risco)]
       handle = inicio.merge(described_class::ACIONADAS_KEY => %w[47 8], described_class::LEITURA_ASSENTADA_KEY => %w[47 8])

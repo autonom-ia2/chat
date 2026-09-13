@@ -162,11 +162,15 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
       expect(guardado.to_json.bytesize).to be <= 3_000
     end
 
-    it 'dezessete recusas com o motivo no teto de 300 caracteres cabem em 7 KB' do
-      teto = { 'kind' => 'risco', 'text' => "Declinando o risco #{'x' * 281}" }
+    # O texto do teto é feito de palavras do vocabulário da regra (a quarta rodada exige), com acento: 7.072 bytes.
+    it 'dezessete recusas com o motivo no teto de 300 caracteres cabem em 8 KB' do
+      teto = { 'kind' => 'risco', 'text' => "Declinando o risco#{' do veículo' * 25}#{' do' * 2}." }
       ofertas = (1..17).map { |i| recusou(i.to_s, "Seguradora #{i}", reason: teto) }
+      guardado = described_class.unir({}, ofertas)
 
-      expect(described_class.unir({}, ofertas).to_json.bytesize).to be <= 7_000
+      expect(teto['text'].length).to eq(Autonomia::Insurance::MotivoDaRecusa::TETO_DO_TEXTO)
+      expect(guardado.values).to all(include('motivo' => teto))
+      expect(guardado.to_json.bytesize).to be <= 8_000
     end
   end
 end
