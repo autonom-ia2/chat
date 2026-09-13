@@ -92,13 +92,13 @@
         },
         "DISCLOSURE": "Como isto foi verificado",
         "INSURER_AUTH_OK": "A única foi conferida no portal e passou. | As {total} foram conferidas uma a uma no portal e passaram.",
-        "INSURER_AUTH_FAILED": "{names} recusou o login da corretora. | {names} recusaram o login da corretora.",
+        "INSURER_AUTH_FAILED": "{names} não aceitou o acesso da corretora (login ou permissão). | {names} não aceitaram o acesso da corretora (login ou permissão).",
         "INSURER_AUTH_REST": "Nenhuma outra seguradora da conta passou. | A outra seguradora da conta passou. | As outras {count} seguradoras da conta passaram.",
         "FROM_SCAN": "conferido na descoberta de {at}"
       },
       "INSURERS_PENDING": {
         "TITLE": "Seguradoras com credencial pendente",
-        "BODY": "{count} seguradora recusou o login que a corretora cadastrou no AGGER, vista na cotação de {at}. Ela não cota até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente. | {count} seguradoras recusaram o login que a corretora cadastrou no AGGER, vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no portal, e isso nunca é mostrado ao cliente."
+        "BODY": "{count} seguradora não aceitou o acesso que a corretora cadastrou no AGGER (login ou permissão), vista na cotação de {at}. Ela não cota até o acesso ser corrigido no AGGER ou no site da seguradora, e isso nunca é mostrado ao cliente. | {count} seguradoras não aceitaram o acesso que a corretora cadastrou no AGGER (login ou permissão), vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no AGGER ou no site da seguradora, e isso nunca é mostrado ao cliente."
       },
       "VERDICT": {
         "READY": "Pronta para cotar {count} produtos",
