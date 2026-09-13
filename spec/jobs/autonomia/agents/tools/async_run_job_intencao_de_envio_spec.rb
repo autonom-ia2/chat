@@ -509,7 +509,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # desde a entrega 8 — é o PARCIAL. A MAGNITUDE EXATA importa: `be_positive`
       # passava com o contador inflado, que é o defeito da issue #402.
       expect(run.reload).to have_attributes(status: 'failed', delivered_count: 1)
-      expect(bot_contents).to eq([tool.partial_message])
+      expect(bot_contents).to eq([tool.closing_message])
       expect(bot_contents.join(' ')).not_to include('não consegui')
     end
 

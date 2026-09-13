@@ -28,7 +28,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   # COBERTURA entra explícita (`preco_legado` falso): sem ela o handle cairia na PROVA LEGADA
   # (`entregues` não vazio) e estes exemplos passariam por lá em vez do aceite que exercitam.
   let(:handle_com_preco) do
-    texto = '*Ezze* — R$ 2.050,40 no total'
+    texto = '*Ezze*: R$ 2.050,40 no total'
     token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
     run.registrar_entrega_aceita!(token)
     { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'],
@@ -61,7 +61,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     entrega = comparativo(tool)
 
     expect(entrega).to be_a(entrega_de_arquivo)
-    expect(entrega.nome).to eq('Comparativo de seguro — placa HIK9383.pdf')
+    expect(entrega.nome).to eq('Comparativo de seguro, placa HIK9383.pdf')
     expect(entrega.url).to eq('https://arquivos.exemplo.test/comparativo-9.pdf')
   end
 
@@ -80,8 +80,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     sem_placa = ferramenta(params.merge('vehicle' => { 'chassis' => '9BWZZZ377VT004251' }))
     bike = ferramenta('produto' => 'bike', 'dados' => '{}')
 
-    expect(comparativo(sem_placa).nome).to eq('Comparativo de seguro — auto.pdf')
-    expect(comparativo(bike).nome).to eq('Comparativo de seguro — bike.pdf')
+    expect(comparativo(sem_placa).nome).to eq('Comparativo de seguro, auto.pdf')
+    expect(comparativo(bike).nome).to eq('Comparativo de seguro, bike.pdf')
   end
 
   # A URL VEM DE FORA e a forma da entrega de arquivo pode recusá-la (o adapter só garante que é uma
@@ -109,6 +109,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   it 'nomeia pelo ramo com espaco, nunca pelo sublinhado do codigo' do
     fianca = ferramenta('produto' => 'fianca_locaticia', 'dados' => '{}')
 
-    expect(comparativo(fianca).nome).to eq('Comparativo de seguro — fianca locaticia.pdf')
+    expect(comparativo(fianca).nome).to eq('Comparativo de seguro, fianca locaticia.pdf')
   end
 end

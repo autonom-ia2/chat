@@ -62,7 +62,7 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
 
     # Assert
     expect(run.reload.status).to eq('failed')
-    expect(bot_contents).to eq([tool.partial_message])
+    expect(bot_contents).to eq([tool.closing_message])
     expect(bot_contents.join(' ')).not_to include('não consegui')
   end
 
@@ -102,7 +102,7 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     described_class.new.perform
 
     # Assert — o arquivo primeiro, o fecho parcial depois (algo chegou agora)
-    expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.partial_message])
+    expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.closing_message])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 

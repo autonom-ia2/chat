@@ -35,12 +35,22 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
         end
       end
 
+      # `String` e não Array: é assim que se diz "obrigatório" em strict. O parâmetro `object` sai da
+      # recursão com chaves de SÍMBOLO (`objeto` as monta assim), e o de tipo simples com chaves de
+      # texto — o que importa nos dois é o tipo não aceitar `null`.
       it 'mantem obrigatorio como tipo simples' do
         obrigatorios = tool.params.reject { |p| p['required'] == false }.pluck('name')
 
         obrigatorios.each do |nome|
-          expect(props[nome]['type']).to be_a(String)
+          expect(props[nome]['type'] || props[nome][:type]).to be_a(String)
         end
+      end
+
+      # A CHAVE REPETIDA É HTTP 400 NA CHAMADA INTEIRA, e o agente fica mudo (`has non-unique
+      # elements`, medido em 12/09/2026). `match_array` acima não pega: ele compara os dois lados,
+      # e os dois carregam a duplicata.
+      it 'nao repete chave em required' do
+        expect(schema[:parameters][:required].uniq.size).to eq(props.keys.size)
       end
     end
   end

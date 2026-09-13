@@ -13,6 +13,16 @@ class Autonomia::Agents::Tools::Native::Base
   # modelo lê e decide o que fazer, em vez de o turno morrer.
   MAX_OUTPUT_CHARS = 8_000
 
+  # DOIS PARÂMETROS COM O MESMO NOME NO MESMO OBJETO. `objeto` monta `properties` por `to_h` — o
+  # segundo apaga o primeiro em silêncio — e `required` por `pluck`, que fica com os dois: um
+  # `required` de N+1 entradas para N propriedades, que a OpenAI responde com HTTP 400 na chamada
+  # INTEIRA (`has non-unique elements`), e o agente fica MUDO. É a mesma classe de falha de
+  # 08/09/2026, e ela é alcançável sem ninguém editar este repositório: os parâmetros de auto nascem
+  # do `quote/schema` do adapter, e um campo de RAIZ novo lá com o nome de um grupo ou do nó das
+  # frases bastaria. Por isso a guarda é aqui, na MONTAGEM, e não numa spec: spec não roda em
+  # produção no dia em que o adapter muda.
+  NomeDeParametroDuplicado = Class.new(StandardError)
+
   class << self
     # Identificador estável. Vira o nome da função no prompt, então segue o mesmo formato da
     # ferramenta HTTP (letras, dígitos e sublinhado; começa por letra).
@@ -78,27 +88,43 @@ class Autonomia::Agents::Tools::Native::Base
     # (publicados pelo job): o fecho sai mesmo quando o agente já não existe e não há instância. A ferramenta que o redefinir como
     # método de INSTÂNCIA está escrevendo uma frase que nunca sai — foi o caso da cotação até
     # 10/09/2026 (entrega 4), e `contrato_de_nivel_spec` reprova isso.
-    def partial_message
+    #
+    # NÃO SAI MAIS NA COTAÇÃO (12/09/2026): lá quem fala neste estado é `closing_message`, e esta
+    # constante ficou como pergunta do rollback. Nas demais ferramentas ela continua sendo o fecho.
+    def partial_message(_arguments = nil)
       'Algumas consultas não responderam a tempo. O que chegou está aqui em cima.'
     end
 
+    # O FECHO DE QUEM JÁ TEM RESULTADO, sem contar o que faltou. Nasceu em 12/09/2026 junto com a
+    # decisão de não dizer ao cliente quantas consultas ficaram pelo caminho: esse número é de quem
+    # opera, e já está no Super Admin. O estado continua falando — calar quem recebeu resultado e
+    # ficou esperando o resto é o defeito que a entrega 8 corrigiu.
+    def closing_message(_arguments = nil)
+      'Encerrei a consulta por aqui. Se precisar, um atendente continua com você.'
+    end
+
+    # OS QUATRO TEXTOS ABAIXO RECEBEM `arguments`, e o padrão os IGNORA. É o `ToolRun#arguments` da
+    # execução: a ferramenta que deixa o agente escrever as frases do cliente (a cotação, desde
+    # 12/09/2026) as resolve a partir dele, e o motor não precisa saber de qual ferramenta se trata.
+    # Quem não usa devolve a mesma frase de sempre.
+
     # Texto que o CÓDIGO publica quando o turno não avisou o cliente (o modelo ficou em silêncio,
     # a IA falhou, a porta de engajamento fechou). O aviso não pode depender de o modelo lembrar.
-    def waiting_message
+    def waiting_message(_arguments = nil)
       'Estou consultando agora. Assim que tiver o resultado, mando aqui.'
     end
 
     # Texto que o CÓDIGO publica quando a execução falha ou estoura o prazo. É escrito por nós, e
     # não pela ferramenta, de propósito: a mensagem de uma exceção pode carregar requisição assinada
     # ou texto vindo do portal, e isso não pode chegar ao cliente.
-    def failure_message
+    def failure_message(_arguments = nil)
       'Não consegui concluir a consulta agora. Um atendente vai retomar daqui.'
     end
 
     # Texto que o CÓDIGO publica quando a execução acaba sem se saber se o trabalho foi feito
     # (entrega 5): o job decidiu submeter e o número nunca chegou — o processo morreu, ou o portal
     # ficou mudo. Não é a frase de falha: "não consegui" afirmaria o que não se sabe.
-    def uncertain_message
+    def uncertain_message(_arguments = nil)
       'Não consegui confirmar o resultado da consulta. Um atendente vai conferir e retomar daqui.'
     end
 
@@ -136,12 +162,22 @@ class Autonomia::Agents::Tools::Native::Base
     # `properties` (a mesma forma de lista), e é assim que o formulário de auto entra ANINHADO —
     # `vehicle.plate` é `vehicle: { plate }`, como o adapter lê, e não um campo plano com ponto.
     def objeto(lista)
+      conferir_nomes!(lista)
       {
         type: 'object',
         properties: lista.to_h { |param| [param['name'], propriedade(param)] },
         required: lista.pluck('name'),
         additionalProperties: false
       }
+    end
+
+    # Levanta com os nomes repetidos — nunca com o valor de nada. Ver `NomeDeParametroDuplicado`.
+    def conferir_nomes!(lista)
+      nomes = lista.pluck('name')
+      repetidos = nomes.tally.select { |_, vezes| vezes > 1 }.keys
+      return if repetidos.empty?
+
+      raise NomeDeParametroDuplicado, "#{slug}: #{repetidos.join(', ')}"
     end
 
     def propriedade(param)

@@ -138,6 +138,11 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # durabilidade era falso; ver o cabeçalho e a R19 (#418). O handle continua aqui porque ele é a
   # rede da escrita imediata (`gravar_na_linha` engole a falha), e trocar uma coisa pela outra é a
   # decisão que a issue carrega.
+  #
+  # `texto` CHEGA AQUI JÁ NA FORMA EM QUE VAI SAIR (12/09/2026). Até esta entrega o token nascia do
+  # texto CRU e o `Progress` ainda o aparava e cortava depois; o publicador então calculava o token
+  # sobre ESSE outro texto, e `resultado_entregue?` cruzava duas listas de universos diferentes —
+  # nunca casava, e nem o comparativo saía. Quem depura agora é `precos`, antes de chamar isto.
   def registrar_entrega_de_preco(texto, handle, already)
     handle = marcar_preco_legado(handle, already)
     token = token_da_entrega(texto)

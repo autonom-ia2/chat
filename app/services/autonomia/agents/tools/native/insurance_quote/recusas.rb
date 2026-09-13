@@ -8,10 +8,17 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
 
   PEDIDO_DE_JSON = 'O campo `dados` não era um JSON válido. Reenvie como objeto JSON, por ' \
                    'exemplo {"configuracoes":{"marca":"Caloi"}}.'.freeze
-  # Lido pelo modelo (na conferência) e pelo cliente (no envio): sem vocabulário de sistema.
-  RAMO_DESCONHECIDO = 'Ainda não consigo cotar esse tipo de seguro por aqui. O que eu coto: ' \
-                      'automóvel, residencial, condomínio, empresarial, aluguel/fiança, viagem, ' \
-                      'acidentes pessoais, vida, vida em grupo, celular e bicicleta.'.freeze
+  # A LISTA DE RAMOS CONTINUA SENDO DO CÓDIGO (decisão do CEO, 12/09/2026), e por isso ela é uma
+  # constante própria: no envio ela é colada na frase que o especialista escreveu, e um modelo que a
+  # digitasse de memória listaria um ramo que a corretora não cota.
+  RAMOS_QUE_COTO = 'O que eu coto: automóvel, residencial, condomínio, empresarial, aluguel/fiança, ' \
+                   'viagem, acidentes pessoais, vida, vida em grupo, celular e bicicleta.'.freeze
+  # A abertura, sem a lista: é o que o papel `ramo_desconhecido` recua quando a frase do especialista
+  # não passa na peneira.
+  RAMO_DESCONHECIDO_ABERTURA = 'Ainda não consigo cotar esse tipo de seguro por aqui.'.freeze
+  # Lido pelo MODELO (na conferência): abertura e lista juntas, porque ali não há papel a resolver —
+  # o texto volta pelo canal da ferramenta, não pelo do cliente.
+  RAMO_DESCONHECIDO = "#{RAMO_DESCONHECIDO_ABERTURA} #{RAMOS_QUE_COTO}".freeze
 
   # ESTE TEXTO É LIDO PELO CLIENTE, e não pelo modelo. O comentário anterior aqui dizia o oposto —
   # "nomes de campo crus de propósito: quem traduz é o especialista" — e descrevia um tradutor que
@@ -36,6 +43,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
     'vehicle.isZeroKm' => 'se o veículo é zero-quilômetro'
   }.freeze
   FALTA_ALGO = 'Ainda preciso de mais uma informação para fechar a cotação.'.freeze
+  # A ABERTURA DO PEDIDO DO QUE FALTA, sem a lista: os RÓTULOS continuam vindo do código (decisão do
+  # CEO, 12/09/2026), e é esta frase que o especialista escreve. Termina em dois pontos porque a
+  # lista é colada depois dela.
+  PEDIDO_DO_QUE_FALTA = 'Para seguir com a cotação, ainda preciso destes dados:'.freeze
   # SEM PLACA, CHASSI OU FIPE NÃO HÁ VEÍCULO PARA COTAR (entrega 2, termo 10). O texto para o
   # MODELO diz o que fazer; o do CLIENTE só pede a placa — o resto é decisão do atendente.
   SEM_VEICULO = 'Não dá para cotar sem identificar o veículo: peça a placa. Se for zero-quilômetro ' \
@@ -51,11 +62,19 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
                    'não consegue cotar neste momento e encaminhe para um atendente.'.freeze
   LISTA = { two_words_connector: ' e ', last_word_connector: ' e ' }.freeze
 
+  # A FRASE É DO ESPECIALISTA, A LISTA É DO CÓDIGO. Sem rótulo nenhum a traduzir, sai o papel
+  # genérico; com rótulos, a abertura que ele escreveu mais os nomes que nós sabemos traduzir.
   def pedido_do_que_falta(faltantes)
     rotulos = faltantes.pluck('campo').filter_map { |campo| ROTULOS[campo.to_s] }.uniq
-    return FALTA_ALGO if rotulos.empty?
+    return frases[:falta_dado] if rotulos.empty?
 
-    "Para seguir com a cotação, ainda preciso destes dados: #{rotulos.to_sentence(**LISTA)}."
+    "#{frases[:pedido_do_que_falta]} #{rotulos.to_sentence(**LISTA)}."
+  end
+
+  # A FRASE É DO ESPECIALISTA, A LISTA DE RAMOS É DO CÓDIGO. O que o MODELO lê na conferência
+  # continua sendo a constante inteira (`RAMO_DESCONHECIDO`): lá não há papel a resolver.
+  def ramo_desconhecido_ao_cliente
+    "#{frases[:ramo_desconhecido]} #{RAMOS_QUE_COTO}"
   end
 
   # O QUE O MODELO LÊ NA CONFERÊNCIA (entrega 2): o campo e o motivo, como o adapter os escreveu —

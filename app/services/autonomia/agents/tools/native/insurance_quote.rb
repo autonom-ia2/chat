@@ -92,10 +92,16 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # desconto nem percentual: o quanto o bônus abate é decisão de cada seguradora, e prometer número
   # aqui vira preço que a emissão desmente. Diz o que é verdade — existe preço melhor, e ele depende
   # de um dado que está na apólice do cliente.
+  #
+  # PERDEU O "(É UM NÚMERO DE 0 A 10)" em 12/09/2026, e não por estilo: a decisão do CEO tirou
+  # número de toda frase que o cliente lê, e esta é a CONSTANTE DE RECUO do papel `aviso_sem_bonus` —
+  # um recuo que publicasse dígito faria a regra valer para o modelo e não para nós. O que se perde
+  # é a dica de qual é a cara do dado na apólice; o que se ganha é a regra sem exceção. O travessão
+  # também saiu, pelo mesmo motivo.
   AVISO_SEM_BONUS = 'Importante: cotei sem a classe de bônus da sua apólice atual, então estes ' \
                     'preços são os de quem está fazendo o primeiro seguro. Se você conferir a ' \
-                    'classe de bônus na apólice (é um número de 0 a 10) e me disser, eu refaço a ' \
-                    'cotação — com bônus costuma sair melhor.'.freeze
+                    'classe de bônus na apólice e me disser, eu refaço a cotação: com bônus ' \
+                    'costuma sair melhor.'.freeze
 
   include Declaracao
   include Recusas
@@ -112,10 +118,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # RAMO QUE O ADAPTER NÃO TEM É RECUSA, NÃO FALHA. `produto` é escrito pelo modelo; antes, um ramo
   # desconhecido levantava aqui a cada passada, o job tentava 60 vezes por 7 minutos e fechava em
   # `tool_failed` — o cliente esperava tudo isso por "não consegui", e nada dizia o motivo.
+  # AS FRASES SÃO DO ESPECIALISTA (12/09/2026). Cada recusa daqui vira uma `delivery`, que vai
+  # direto ao cliente: o texto é o do papel correspondente, escrito por ele no pedido, com recuo
+  # para a constante quando a frase não passa na peneira.
   def start
-    return recusa('json_invalido', FALTA_ALGO, faltando: ['dados']) if dados.nil?
-    return recusa('formulario_indisponivel', FALHOU, faltando: []) if sem_formulario?
-    return recusa('sem_veiculo', SEM_VEICULO_CLIENTE, faltando: [PLACA]) if sem_veiculo?
+    return recusa('json_invalido', frases[:falta_dado], faltando: ['dados']) if dados.nil?
+    return recusa('formulario_indisponivel', frases[:falhou], faltando: []) if sem_formulario?
+    return recusa('sem_veiculo', frases[:sem_veiculo], faltando: [PLACA]) if sem_veiculo?
 
     faltantes = validar
     return recusa('faltam_dados', pedido_do_que_falta(faltantes), faltando: campos(faltantes)) if faltantes.any?
@@ -124,7 +133,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   rescue ::Autonomia::Insurance::Connector::Error => e
     raise unless e.kind == :not_implemented
 
-    recusa('ramo_desconhecido', RAMO_DESCONHECIDO, faltando: ['produto'])
+    recusa('ramo_desconhecido', ramo_desconhecido_ao_cliente, faltando: ['produto'])
   end
 
   # A IDENTIDADE DO PEDIDO (entrega 10): digest da entrada como o ADAPTER a entende — transformações
@@ -217,15 +226,22 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
       SEM_BONUS_KEY => quote_input.auto? && quote_input.renewal.sem_bonus? }
   end
 
+  # NADA É MARCADO COMO ENTREGUE ANTES DE O TEXTO FINAL EXISTIR. `DELIVERED_KEY` era gravada AQUI,
+  # antes de `precos` compor coisa nenhuma — e uma entrega que morresse adiante (a peneira antiga do
+  # `Progress` descartava a entrega inteira) deixava o handle dizendo que as ofertas já tinham saído:
+  # elas nunca mais eram reemitidas (`fresh` as exclui), `delivered_count` ficava zero, e o cliente
+  # lia a frase de falha sobre dezessete seguradoras que a corretora pagou. Quem a grava agora é
+  # `precos`, sobre as ofertas que de fato entraram no texto que vai sair.
+  #
+  # `ACIONADAS_KEY` continua aqui: ela é MEDIÇÃO DE FATURAMENTO (quantas seguradoras o portal pôs na
+  # cotação), não estado de entrega, e perdê-la seria contar errado o que a corretora pagou.
   def build_progress(result, handle, _attempt)
     registrar_credencial_de_seguradora(result)
     ofertas = ::Autonomia::Insurance::QuoteOffers
     leitura = ofertas.new(result)
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
     fresh = leitura.quoted.reject { |offer| already.include?(ofertas.code(offer)) }
-    next_handle = handle.merge(DELIVERED_KEY => already + fresh.map { |offer| ofertas.code(offer) },
-                               ACIONADAS_KEY => acionadas(leitura, handle))
-    deliveries, next_handle = precos(fresh, already, next_handle)
+    deliveries, next_handle = precos(fresh, already, handle.merge(ACIONADAS_KEY => acionadas(leitura, handle)))
 
     return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result)
 
@@ -239,11 +255,17 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # Desde a entrega 11 ele é uma entrega de ARQUIVO (`Comparativo`), não um texto com link.
   #
   # As duas marcas do comparativo são de `Fecho`, que é quem as lê.
+  # AS MARCAS SÓ ENTRAM NO HANDLE DEPOIS DE A ENTREGA EXISTIR NA FORMA EM QUE VAI SAIR. `PDF_SENT_KEY`
+  # era gravada junto de um `pdf` que ainda podia morrer na peneira da saída — e aí `comparison_pdf`
+  # devolvia nil para sempre (a sentinela já estava lá) e o comparativo nunca mais era gerado. Hoje a
+  # entrega é posta na forma final por `Progress.entregavel`, e é sobre ESSA forma que a identidade é
+  # calculada: o token gravado passa a ser o token publicado.
   def fechar(deliveries, handle)
     pdf = comparison_pdf(handle)
-    return progress_class.done(deliveries: deliveries, handle: handle) if pdf.nil?
+    entrega = pdf && progress_class.entregavel(pdf)
+    return progress_class.done(deliveries: deliveries, handle: handle) if entrega.nil?
 
-    progress_class.done(deliveries: deliveries + [pdf], handle: handle.merge(marcas_do_comparativo(pdf)))
+    progress_class.done(deliveries: deliveries + [entrega], handle: handle.merge(marcas_do_comparativo(entrega)))
   end
 
   # A UNIÃO DAS CONSULTAS, não a foto da última (entrega 7). O portal responde em pedaços — medido em
@@ -256,15 +278,40 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
   # -> [deliveries, handle]. O aviso de renovação sem bônus tem SENTINELA própria, no mesmo molde do
   # PDF, e não é inferido de "esta é a primeira entrega".
+  #
+  # A ORDEM É COMPOR, DEPURAR, IDENTIFICAR E SÓ ENTÃO AVANÇAR O HANDLE. Texto que não sobrevive à
+  # depuração devolve o handle INTOCADO: as ofertas continuam fora de `entregues`, e a passada
+  # seguinte as emite de novo em vez de o cliente perder os preços que a corretora pagou.
   def precos(fresh, already, handle)
     return [[], handle] if fresh.empty?
 
     avisar = handle[SEM_BONUS_KEY].present? && handle[AVISO_SENT_KEY].blank?
-    texto = ::Autonomia::Insurance::QuoteOffers.describe(
-      fresh, first: already.empty?, aviso: avisar ? AVISO_SEM_BONUS : nil
-    )
+    texto = progress_class.entregavel(::Autonomia::Insurance::QuoteOffers.describe(
+                                        fresh, abertura: abertura_de_precos(fresh, already),
+                                               aviso: avisar ? frases[:aviso_sem_bonus] : nil
+                                      ))
+    return [[], handle] if texto.nil?
+
+    [[texto], entregues(fresh, already, texto, handle, avisar)]
+  end
+
+  # O handle DEPOIS de a entrega existir: os motivos de preço sem período, a identidade da entrega,
+  # os códigos que entraram neste texto e a sentinela do aviso.
+  def entregues(fresh, already, texto, handle, avisar)
+    codigos = fresh.map { |offer| ::Autonomia::Insurance::QuoteOffers.code(offer) }
     handle = registrar_entrega_de_preco(texto, registrar_sem_periodo(fresh, handle), already)
-    [[texto], avisar ? handle.merge(AVISO_SENT_KEY => true) : handle]
+    handle = handle.merge(DELIVERED_KEY => already + codigos)
+    avisar ? handle.merge(AVISO_SENT_KEY => true) : handle
+  end
+
+  # QUAL DAS TRÊS ABERTURAS, e quem sabe é quem conhece o lote. Em produção o texto é do especialista
+  # (`Frases`); as constantes são o recuo. `already.empty?` continua sendo o critério de "primeiro
+  # lote" — e ele melhorou junto com a ordem de gravação, porque `entregues` agora só avança quando
+  # o texto de fato existiu.
+  def abertura_de_precos(fresh, already)
+    return frases[:primeiros_precos] if already.empty?
+
+    fresh.size == 1 ? frases[:mais_um_preco] : frases[:mais_precos]
   end
 
   # O registro ACUMULA entre lotes (o lote 2 não pode apagar o motivo do lote 1) e só escreve a

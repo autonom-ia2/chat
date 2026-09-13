@@ -48,59 +48,57 @@ class Autonomia::Agents::Tools::Progress
     status == :failed
   end
 
-  private
-
-  # Corta o que não é texto útil e limita tamanho/quantidade. Não é sanitização de conteúdo (a
-  # ferramenta é nossa e responde por ela), é o freio contra despejar um payload inteiro na conversa.
+  # UMA ENTREGA, NA FORMA EM QUE ELA VAI SAIR — texto depurado, entrega de arquivo depurada nos dois
+  # textos dela, ou nil quando não sobrou nada que se possa publicar.
   #
-  # E DESCARTA CAMINHO DE CAMPO. Em 08/09/2026 uma entrega levou `insured.document` ao WhatsApp de
-  # um cliente: a ferramenta pôs no canal do cliente um texto que era para o modelo. O contrato
-  # acima já dizia que isso não podia; faltava quem o fizesse valer. Descarta a ENTREGA, nunca
-  # derruba a execução — perder uma frase é ruim, perder a cotação inteira é pior.
-  def sanitize(list)
-    Array(list).filter_map { |entrega| entrega.is_a?(String) ? texto(entrega) : arquivo(entrega) }
-               .first(MAX_DELIVERIES)
+  # PÚBLICA PORQUE A FERRAMENTA PRECISA DA MESMA RESPOSTA ANTES DE GRAVAR (12/09/2026). A identidade
+  # de uma entrega é o SHA do texto FINAL, e até aqui a ferramenta calculava o token sobre o texto
+  # CRU e só depois o `Progress` aparava e cortava: dois textos, dois tokens, e o fecho perguntando
+  # por uma mensagem que nunca existiu. Agora a ferramenta chama isto, calcula o token sobre o que
+  # volta e só então avança o handle; a segunda passada por aqui não muda mais nada, porque
+  # `TextoAoCliente.depurar` é idempotente.
+  def self.entregavel(valor)
+    valor.is_a?(String) ? texto(valor) : arquivo(valor)
   end
 
-  def texto(valor)
-    text = valor.to_s.strip.presence
-    return if text.nil? || caminho_de_campo?(text)
-
-    ::Autonomia::Agents::Config.truncate_text(text, MAX_DELIVERY_CHARS)
+  # Apara, troca travessão por hífen, redige caminho de campo que tenha escapado e corta no teto.
+  # NÃO DESCARTA POR CONTEÚDO — e essa é a mudança de 12/09/2026. A peneira que descartava a entrega
+  # inteira nasceu contra o texto do CÓDIGO (em 08/09 um cliente leu `insured.document` no
+  # WhatsApp), e passou a valer para uma entrega que é "abertura + dezessete preços + aviso" numa
+  # string só: descartá-la deixava o handle já avançado, as ofertas nunca mais eram reemitidas, e o
+  # cliente lia a frase de falha sobre dezessete seguradoras que a corretora pagou. Quem barra o
+  # texto de FORA (a frase que o modelo escreveu) é `TextoAoCliente.vetar`, na LEITURA do parâmetro,
+  # onde recuar custa uma frase e não a cotação.
+  def self.texto(valor)
+    ::Autonomia::Agents::Tools::TextoAoCliente.depurar(valor, teto: MAX_DELIVERY_CHARS)
   end
 
-  # A entrega de arquivo passa pela MESMA peneira nos dois textos dela (a legenda que sai com o
+  # A entrega de arquivo passa pela MESMA depuração nos dois textos dela (a legenda que sai com o
   # arquivo e a reserva que sai no lugar dele), e sai na forma serializada — é assim que ela chega
-  # ao handle e ao job. O que não é texto nem entrega de arquivo (um Hash qualquer) não passa.
-  def arquivo(valor)
+  # ao handle e ao job. O que não é texto nem entrega de arquivo (um Hash qualquer) não passa: aí
+  # não há o que publicar, e não é questão de conteúdo.
+  def self.arquivo(valor)
     entrega = ::Autonomia::Agents::Tools::EntregaDeArquivo.de(valor)
     return descartar('entrega que não é texto nem arquivo') if entrega.nil?
 
     legenda = texto(entrega.legenda)
     reserva = texto(entrega.reserva)
-    return if legenda.nil? || reserva.nil?
+    return descartar('entrega de arquivo sem legenda ou sem reserva') if legenda.nil? || reserva.nil?
 
     ::Autonomia::Agents::Tools::EntregaDeArquivo.new(url: entrega.url, nome: entrega.nome,
                                                      legenda: legenda, reserva: reserva).to_h
   end
 
-  def descartar(motivo)
+  def self.descartar(motivo)
     Rails.logger.warn("[autonomia][tool] entrega descartada: #{motivo}")
     nil
   end
 
-  # `a.b` sem espaço entre dois identificadores é assinatura de caminho de campo; frase em português
-  # tem espaço depois do ponto. URL SAI ANTES DE OLHAR: o comparativo em PDF é uma entrega legítima
-  # e o host dela casaria com o padrão — guarda que come o comparativo troca um bug de texto por um
-  # entregável perdido.
-  CAMINHO_DE_CAMPO = /\b[a-z][a-z0-9]*\.[a-z][a-zA-Z0-9]*\b/
-  URL = %r{https?://\S+}
+  private
 
-  def caminho_de_campo?(text)
-    return false unless text.gsub(URL, ' ').match?(CAMINHO_DE_CAMPO)
-
-    descartar('caminho de campo em texto de cliente')
-    true
+  # Limita a quantidade e põe cada entrega na forma em que ela sai.
+  def sanitize(list)
+    Array(list).filter_map { |entrega| self.class.entregavel(entrega) }.first(MAX_DELIVERIES)
   end
 
   # Código curto e previsível (o mesmo cuidado de `Bound#http_error_code`): nunca deixa texto livre

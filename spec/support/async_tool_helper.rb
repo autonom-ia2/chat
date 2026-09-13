@@ -20,9 +20,13 @@ module AsyncToolHelper
       define_singleton_method(:description) { 'Ferramenta assíncrona de teste.' }
       define_singleton_method(:async?) { true }
       define_singleton_method(:accepted_message) { 'aceito: consulta iniciada' }
-      define_singleton_method(:waiting_message) { 'estou consultando agora' }
-      define_singleton_method(:failure_message) { 'não consegui concluir a consulta' }
-      define_singleton_method(:uncertain_message) { 'não consegui confirmar o envio' }
+      # OS QUATRO TEXTOS DE CLASSE RECEBEM `arguments` DESDE 12/09/2026 (a ferramenta que deixa o
+      # agente escrever o que o cliente lê os resolve a partir dele). Este dublê ignora, como fazem
+      # todas as nativas menos a cotação — é justamente isso que o contrato precisa permitir.
+      define_singleton_method(:waiting_message) { |_arguments = nil| 'estou consultando agora' }
+      define_singleton_method(:failure_message) { |_arguments = nil| 'não consegui concluir a consulta' }
+      define_singleton_method(:uncertain_message) { |_arguments = nil| 'não consegui confirmar o envio' }
+      define_singleton_method(:closing_message) { |_arguments = nil| 'encerrei a consulta por aqui' }
 
       # A conferência do turno: devolve texto ao modelo (e nenhuma execução é aberta) ou nil.
       define_method(:precheck) { precheck.respond_to?(:call) ? precheck.call : precheck }

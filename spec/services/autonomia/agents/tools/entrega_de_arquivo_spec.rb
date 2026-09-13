@@ -11,7 +11,7 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
   let(:url) { 'https://arquivos.exemplo.test/comparativo-9.pdf' }
   let(:entrega) do
-    described_class.new(url: url, nome: 'Comparativo de seguro — placa ABC1D23.pdf',
+    described_class.new(url: url, nome: 'Comparativo de seguro, placa ABC1D23.pdf',
                         legenda: 'Comparativo com todas as opções.',
                         reserva: "Comparativo com todas as opções:\n#{url}")
   end
@@ -91,7 +91,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
 
         # Assert
         expect(blob).to be_persisted
-        expect(blob.filename.to_s).to eq('Comparativo de seguro — placa ABC1D23.pdf')
+        expect(blob.filename.to_s).to eq('Comparativo de seguro, placa ABC1D23.pdf')
         expect(blob.content_type).to eq('application/pdf')
         expect(blob.download).to eq(pdf)
         expect(ActiveStorage::Blob.find_signed!(blob.signed_id)).to eq(blob)

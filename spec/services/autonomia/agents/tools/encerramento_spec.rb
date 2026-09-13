@@ -102,7 +102,7 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
 
       # Assert — a primeira ficou, e o fecho é o de quem recebeu algo
       expect(entregou).to be(true)
-      expect(bot_contents).to eq(['o primeiro arquivo', tool.partial_message])
+      expect(bot_contents).to eq(['o primeiro arquivo', tool.closing_message])
     end
 
     # TODAS AS ENTREGAS SAEM, não só a primeira. O passo devolve "alguma foi aceita?", e responder
@@ -115,7 +115,7 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       entregou = encerrar(run, tool)
 
       expect(entregou).to be(true)
-      expect(bot_contents).to eq(['o primeiro arquivo', 'o segundo arquivo', tool.partial_message])
+      expect(bot_contents).to eq(['o primeiro arquivo', 'o segundo arquivo', tool.closing_message])
     end
 
     # E A ORDEM SEGUE: a entrega que levanta não impede a SEGUINTE de sair. Quem para no primeiro
@@ -131,7 +131,7 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
 
       encerrar(run, tool, &publicador)
 
-      expect(bot_contents).to eq(['o que ficou pronto', tool.partial_message])
+      expect(bot_contents).to eq(['o que ficou pronto', tool.closing_message])
     end
 
     # A MARCA IMPEDE O TRABALHO DUAS VEZES, NÃO A PALAVRA DUAS VEZES. Dois encerradores sobre a
@@ -193,7 +193,7 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       encerrar(run.reload, tool)
 
       # Assert
-      expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.partial_message])
+      expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.closing_message])
     end
 
     # MENSAGEM NO BANCO COM ENVIO PENDENTE NÃO É FECHO ENTREGUE (rodada 4).
@@ -255,9 +255,45 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
 
       expect { encerrar(run, tool) }.not_to raise_error
     end
+
+    # A PERGUNTA "ESTE FECHO JÁ SAIU?" PASSOU A PODER LEVANTAR (12/09/2026). Até aqui ela só lia
+    # constantes de classe; agora resolve a frase a partir dos argumentos da execução. Ela roda
+    # DENTRO de `etapa('fecho')`, cujo `rescue` engole tudo: levantando sem tratamento própria,
+    # `publicar_fecho` nunca rodaria e o cliente ficaria sem uma palavra — o buraco de silêncio que
+    # a entrega 8a fechou, reaberto pela resolução.
+    #
+    # NÃO SEI É PUBLICAR, e o lado conservador aqui é o contrário do de sempre: a dedupe por token
+    # do publicador pega o duplicado; nada pega o silêncio.
+    it 'a resolucao da frase que levanta nao cala o fecho: sai a constante da classe' do
+      run = execucao
+      tool = build_async_tool
+      tool.define_singleton_method(:failure_message) do |arguments = nil|
+        raise 'resolucao da frase caiu' if arguments
+
+        'não consegui concluir a consulta'
+      end
+
+      encerrar(run, tool)
+
+      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+    end
+
+    # A OUTRA METADE DA MESMA GARANTIA: a pergunta vai ao BANCO, e o banco cai. Com ela levantando
+    # dentro de `etapa('fecho')`, `publicar_fecho` nunca roda e o cliente fica sem uma palavra —
+    # publicar de novo, no pior caso, é a dedupe por token do publicador achando a mesma mensagem.
+    it 'a pergunta pelo fecho ja publicado que levanta nao cala o fecho' do
+      run = execucao
+      tool = build_async_tool
+      allow(Autonomia::Agents::Tools::EntregaPublicada)
+        .to receive(:publicada?).and_raise(ActiveRecord::StatementInvalid, 'banco fora')
+
+      encerrar(run, tool)
+
+      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+    end
   end
 
-  describe 'a frase parcial só sai quando é verdade' do
+  describe 'o fecho de quem tem resultado só sai quando é verdade' do
     # O CONTADOR NÃO SIGNIFICA "RESULTADO". Ele conta qualquer item aceito para publicação — na
     # cotação, `handle['pedido']` (a pergunta pelo dado que falta) é devolvido como entrega e conta.
     # Fechar com "o que chegou está aqui em cima" depois de só ter perguntado dados é descrever uma
@@ -282,13 +318,13 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
     end
 
     # As duas juntas é o caso que a frase descreve: chegou alguma coisa, e alguma coisa ficou.
-    it 'com resultado E sobra, a frase parcial sai' do
+    it 'com resultado E sobra, o fecho de quem tem resultado sai' do
       run = execucao(entregas: 1)
       tool = build_async_tool(resultado: true, resta: true)
 
       encerrar(run, tool)
 
-      expect(bot_contents).to eq([tool.partial_message])
+      expect(bot_contents).to eq([tool.closing_message])
     end
 
     # CONTADOR ZERO CONTINUA COMO ANTES: sem nada entregue, o cliente precisa de uma palavra — e ela
@@ -313,7 +349,7 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
 
     # A entrega DO ENCERRAMENTO vale como "algo chegou agora" para sair do ramo da falha — mas
     # continua sem bastar para a frase parcial, que é sobre o que FALTA.
-    it 'a entrega do proprio encerramento tira a frase de falha, e nao inventa a parcial' do
+    it 'a entrega do proprio encerramento tira a frase de falha, e nao inventa o fecho com resultado' do
       run = execucao
       tool = build_async_tool(closing: ['o arquivo que ficou pronto'], resultado: true)
 

@@ -12,6 +12,8 @@
 module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   extend ActiveSupport::Concern
 
+  # As duas constantes de RECUO dos papéis `comparativo_legenda` e `comparativo_reserva`: em
+  # produção quem as escreve é o especialista, no pedido (`InsuranceQuote::Frases`).
   LEGENDA = 'Comparativo com todas as opções.'.freeze
   # A reserva é o texto de antes, sem tirar nem pôr: "o link vai como hoje" é o termo 2.
   RESERVA = 'Comparativo com todas as opções:'.freeze
@@ -43,9 +45,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # sentinela do comparativo assim que algo sai daqui, e um Hash inválido seria descartado adiante
   # (`Progress`, publicador) com o cliente sem arquivo e sem link. Então o que sai é a reserva — o
   # texto com o link, o de antes — e o defeito da forma vai ao log, pelo nome do campo.
+  # OS DOIS TEXTOS DELA SÃO DO ESPECIALISTA, e passam pela mesma depuração do resto do que sai daqui
+  # — é ela que decide o texto final, e é do texto final que nasce a identidade da entrega. A URL
+  # entra depois da depuração, porque o corte por tamanho não pode cair no meio de um link.
   def entrega_do_comparativo(url)
-    entrega = ::Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: nome_do_comparativo, legenda: LEGENDA,
-                                                               reserva: "#{RESERVA}\n#{url}")
+    entrega = ::Autonomia::Agents::Tools::EntregaDeArquivo.new(
+      url: url, nome: nome_do_comparativo, legenda: depurar(frases[:comparativo_legenda]).to_s,
+      reserva: "#{depurar(frases[:comparativo_reserva])}\n#{url}"
+    )
     return entrega.to_h if entrega.valida?
 
     Rails.logger.warn("[autonomia][insurance] comparativo sem forma de arquivo account=#{account.id} " \
@@ -53,13 +60,18 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
     entrega.reserva
   end
 
-  # O NOME DIZ O QUE O ARQUIVO É, para o cliente achá-lo depois (termo 5): "Comparativo de seguro —
+  # O NOME DIZ O QUE O ARQUIVO É, para o cliente achá-lo depois (termo 5): "Comparativo de seguro,
   # placa HIK9383.pdf". A placa é o dado que ele mesmo informou e já vê na conversa; nada de CPF,
   # nome ou CEP. Sem placa (chassi, FIPE, outro ramo) vai o ramo, com espaço no lugar do sublinhado
   # do código — o nome é para uma pessoa ler.
+  #
+  # VÍRGULA, E NÃO TRAVESSÃO NEM DOIS PONTOS (decisão do CEO, 12/09/2026): o travessão sai do que
+  # chega ao cliente, e dois pontos o Windows recusa em nome de arquivo — a validação da forma
+  # (`EntregaDeArquivo::NOME_DE_PDF`) só barra `/` e `\`, então quem barraria seria o sistema
+  # operacional dele, na hora de salvar.
   def nome_do_comparativo
     placa = quote_input.to_h.dig('vehicle', 'plate').to_s.upcase.gsub(/[^A-Z0-9]/, '')
     sufixo = placa.present? ? "placa #{placa}" : produto.tr('_', ' ')
-    "#{NOME} — #{sufixo}.pdf"
+    "#{NOME}, #{sufixo}.pdf"
   end
 end

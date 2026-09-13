@@ -347,7 +347,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # a redação: prender o texto inteiro aqui é o que faz melhorar o layout parecer regressão.
       texto = progress.deliveries.first
       expect(texto.index('Ezze')).to be < texto.index('Mapfre')
-      expect(texto).to include('*Ezze* — R$ 2.050,40 no total')
+      expect(texto).to include('*Ezze*: R$ 2.050,40 no total')
       expect(progress.handle[described_class::DELIVERED_KEY]).to eq(%w[43 3])
     end
 
@@ -365,7 +365,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # Assert
       expect(progress).to be_done
       expect(progress.deliveries.first).to start_with('Mais uma opção:')
-      expect(progress.deliveries.first).to include('*Darwin* — R$ 3.407,87 no total')
+      expect(progress.deliveries.first).to include('*Darwin*: R$ 3.407,87 no total')
       expect(progress.deliveries.first).not_to include('Ezze')
     end
 
@@ -473,7 +473,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
                                          scope: { conversation_id: conversation.id })
       end
       let(:tool_do_motor) { described_class.new(agent: agent, params: params, run: run) }
-      let(:preco) { '*Ezze* — R$ 2.050,40 no total' }
+      let(:preco) { '*Ezze*: R$ 2.050,40 no total' }
       let(:fechado) { described_class::FECHADO_KEY }
 
       # O ACEITE como o publicador o registra: `deferred` de propósito — a entrega ADIADA é aceita e
@@ -491,7 +491,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # propósito — a identidade da entrega é o conteúdo, então o preço recusado não pode ser o
       # mesmo que o publicador aceitou.
       def handle_com_preco(chegou:)
-        texto = chegou ? preco : '*Ezze* — R$ 1.999,00 no total (o que a publicação recusou)'
+        texto = chegou ? preco : '*Ezze*: R$ 1.999,00 no total (o que a publicação recusou)'
         token = chegou ? ja_aceito(texto) : Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
         { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'],
           described_class::PRECO_LEGADO_KEY => false, described_class::PRECOS_KEY => [token] }
@@ -898,7 +898,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       texto = texto_para({ 'amount' => 2167.0, 'currency' => 'BRL', 'basis' => 'unknown' })
 
       # Assert
-      expect(texto).to include('*Porto* — R$ 2.167,00')
+      expect(texto).to include('*Porto*: R$ 2.167,00')
       expect(texto).not_to include('R$ 2.167,00 no total')
       expect(texto.downcase).not_to include('por mês')
       expect(texto.downcase).not_to include('ao ano')
@@ -972,7 +972,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       texto = progresso.deliveries.join("\n")
 
       # Assert
-      expect(texto).to include('*Bp Assinatura* — R$ 298,43 por mês')
+      expect(texto).to include('*Bp Assinatura*: R$ 298,43 por mês')
       expect(texto).not_to include('não informou se é o total')
       expect(progresso.handle).not_to have_key('preco_sem_periodo')
       expect(progresso.handle['entregues']).to contain_exactly('55', '8')
