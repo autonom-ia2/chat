@@ -228,6 +228,55 @@ module ManualDoEspecialistaDeAuto
   }.freeze
 end
 
+# AS PROMESSAS QUE A ENTREGA DAS FRASES ESCREVEU (12/09/2026), em módulo próprio pelo mesmo motivo
+# que o formulário mora separado: a tabela acima só cresce, e cada entrega que a engordasse no mesmo
+# módulo passaria do teto de linhas por um motivo que não é o dela.
+module PromessasDasFrasesDoEspecialista
+  FRASES = Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
+  PENEIRA = Autonomia::Agents::Tools::TextoAoCliente
+
+  PROMESSAS = {
+    # O manual só pode pedir que o especialista escreva as frases do cliente porque a ferramenta tem
+    # ONDE recebê-las: o nó de quatorze folhas no formulário. Tire o nó dos parâmetros e a §2.1 vira
+    # ordem impossível — ele escreveria num campo inexistente e o cliente leria o texto fixo de
+    # sempre, sem ninguém reclamar.
+    'Quem escreve essas frases é você' => lambda {
+      Autonomia::Agents::Tools::Native::InsuranceQuote.params.any? { |p| p['name'] == FRASES::NO } &&
+        FRASES::ORDEM.size == 14
+    },
+    # A OUTRA METADE: o manual afirma que a frase proibida é trocada por um texto padrão, e não que
+    # ela some. Só é verdade porque TODA constante de recuo passa pela própria peneira — uma que não
+    # passasse publicaria o que o texto acabou de proibir.
+    'põe um texto padrão no lugar' => lambda {
+      FRASES.constantes.size == FRASES::ORDEM.size &&
+        FRASES.constantes.values.all? { |texto| PENEIRA.vetar(texto) == texto }
+    },
+    # A FRONTEIRA DITA COM HONESTIDADE, E PROVADA NOS DOIS SENTIDOS (rodada de correção, 12/09/2026).
+    # O manual afirmava "frase com qualquer um deles é descartada", e três dos cinco itens da
+    # proibição do CEO não têm guarda: contagem por extenso, prazo por extenso e nome de seguradora
+    # atravessam a peneira e chegam ao cliente. Quem garante esses três é o MODELO, então é no manual
+    # DELE que isso precisa estar escrito. A âncora prende o texto; a lambda prova que ele é verdade
+    # — construída a guarda um dia, esta promessa cai e obriga a reescrever o manual junto.
+    'não enxerga contagem por extenso, prazo por extenso nem nome de seguradora' => lambda {
+      ['Chegaram três opções:', 'Volto em cinco minutos.', 'A Porto respondeu.']
+        .all? { |frase| PENEIRA.vetar(frase) == frase }
+    },
+    # A REGRA DE VOZ DO TRAVESSÃO TEM GUARDA NOS DOIS LADOS: a peneira reprova a frase do modelo que
+    # o traga, e a depuração o troca no texto já composto (o nome da seguradora vem do portal).
+    'Não use travessão em nada que chegue ao cliente' => lambda {
+      PENEIRA.vetar('Segue o comparativo — com tudo').nil? &&
+        PENEIRA.depurar('Porto — Cia', teto: 100) == 'Porto - Cia'
+    },
+    # E O ITEM DA LISTA SEGUE A MESMA REGRA: era o travessão que separava o nome do valor.
+    'use dois pontos, vírgula ou ponto final' => lambda {
+      item = Autonomia::Insurance::QuoteOffers.item(
+        'insurer' => { 'name' => 'Ezze' }, 'premium' => { 'amount' => 2050.4, 'basis' => 'total' }
+      )
+      item.include?('*Ezze*: R$') && item.exclude?('—')
+    }
+  }.freeze
+end
+
 RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   let(:texto) { ManualDoEspecialistaDeAuto::ARQUIVO.read }
   let(:account) { create(:account) }
@@ -241,7 +290,8 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   end
 
   describe 'promessa e capacidade (termos 2 e 4)' do
-    ManualDoEspecialistaDeAuto::PROMESSAS.each do |frase, sustenta|
+    ManualDoEspecialistaDeAuto::PROMESSAS
+      .merge(PromessasDasFrasesDoEspecialista::PROMESSAS).each do |frase, sustenta|
       it "«#{frase.tr("\n", ' ')}» tem o que a sustenta" do
         expect(texto).to include(frase)
         expect(sustenta.call).to be_truthy
@@ -283,7 +333,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('9cc4cffcba4a269acc61e29154ecc2b0')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('f4cac7c3a923066421ef0e4529c1f372')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do

@@ -101,24 +101,46 @@ class Autonomia::Insurance::QuoteOffers
     offer.dig('insurer', 'code').to_s
   end
 
-  # Texto pronto para o cliente. A segunda mensagem se anuncia como complemento — sem isso ela
-  # parece uma cotação nova e o cliente não sabe qual vale.
-  # QUEM ESCREVE ESTE TEXTO É O CÓDIGO, e não o modelo — de propósito: preço redigido por modelo é
-  # preço que ele pode arredondar, trocar de seguradora ou inventar. O custo dessa escolha é que a
+  # AS TRÊS ABERTURAS, E NENHUMA DELAS DIZ QUANTAS. Sem telegrafar o mecanismo: "Primeiros preços que
+  # chegaram" e "Chegaram mais opções" descrevem a nossa fila de entrega, que não é assunto de quem
+  # está comprando seguro.
+  #
+  # `MAIS_PRECOS` nasceu nesta entrega. A abertura de um lote seguinte com mais de uma oferta era
+  # `"Mais #{quantas} opções:"`, e a decisão do CEO de 12/09/2026 tirou número de toda frase que o
+  # cliente lê. Sem uma constante sem número, o recuo do papel publicaria justamente o que a decisão
+  # proíbe (`InsuranceQuote::Frases`).
+  #
+  # SÃO CONSTANTES DE RECUO, e quem escolhe entre as três é quem sabe o lote (`InsuranceQuote#precos`:
+  # é o primeiro lote? quantas ofertas vieram?). Em produção quem as escreve é o especialista, no
+  # pedido; estas são o que sai quando a frase dele não passa na peneira.
+  PRIMEIROS_PRECOS = 'Primeiros preços:'.freeze
+  MAIS_UM_PRECO = 'Mais uma opção:'.freeze
+  MAIS_PRECOS = 'Mais opções:'.freeze
+
+  # Texto pronto para o cliente: a abertura que quem chama resolveu, os itens, e o aviso quando há.
+  # A segunda mensagem se anuncia como complemento — sem isso ela parece uma cotação nova e o cliente
+  # não sabe qual vale.
+  #
+  # QUEM ESCREVE O ITEM É O CÓDIGO, e não o modelo — de propósito: preço redigido por modelo é preço
+  # que ele pode arredondar, trocar de seguradora ou inventar. O custo dessa escolha é que a
   # instrução ("negrito no nome e no valor") não alcança aqui; a formatação tem que ser feita nesta
   # linha. Até 08/09/2026 não era, e o cliente lia `Usebens: R$ 2837,70` numa lista corrida.
   #
-  # NEGRITO DO WHATSAPP É ASTERISCO SIMPLES. Não há conversão de markdown na saída (a mensagem vai
-  # crua em `outgoing_content`), então `**nome**` chegaria com os asteriscos à mostra.
-  def self.describe(offers, first:, aviso: nil)
-    corpo = "#{abertura(first, offers.size)}\n\n#{offers.map { |offer| item(offer) }.join("\n\n")}"
+  # A ABERTURA E O AVISO CHEGAM PRONTOS, e é por isso que `first:` saiu daqui: desde 12/09/2026 as
+  # duas são escritas pelo especialista no pedido, e este método não tem como saber qual papel é
+  # qual. Ele compõe; quem escolhe o texto é `InsuranceQuote::Frases`.
+  def self.describe(offers, abertura:, aviso: nil)
+    corpo = "#{abertura}\n\n#{offers.map { |offer| item(offer) }.join("\n\n")}"
     aviso ? "#{corpo}\n\n#{aviso}" : corpo
   end
 
   # Um item por oferta: nome e valor na primeira linha, o que qualifica aquele valor na segunda.
+  #
+  # DOIS PONTOS, E NÃO TRAVESSÃO (decisão do CEO, 12/09/2026): o travessão sai do texto que chega ao
+  # cliente, e aqui ele separava duas colunas — o nome e o valor.
   def self.item(offer)
     premium = ::Autonomia::Insurance::PremiumText.new(offer['premium'])
-    linha = "• *#{nome(offer)}* — #{premium.resumo}"
+    linha = "• *#{nome(offer)}*: #{premium.resumo}"
     detalhe = premium.detalhe
     detalhe ? "#{linha}\n  #{detalhe}" : linha
   end
@@ -128,14 +150,6 @@ class Autonomia::Insurance::QuoteOffers
   # duas apareceu ainda — e nenhuma das duas é nossa para garantir que não apareça.
   def self.nome(offer)
     offer.dig('insurer', 'name').to_s.tr("*\n\r", ' ').squeeze(' ').strip
-  end
-
-  # Sem telegrafar o mecanismo. "Primeiros preços que chegaram" e "Chegaram mais opções" descrevem
-  # a nossa fila de entrega, que não é assunto de quem está comprando seguro.
-  def self.abertura(first, quantas)
-    return first ? 'Primeiros preços:' : 'Mais uma opção:' if quantas == 1
-
-    first ? 'Primeiros preços:' : "Mais #{quantas} opções:"
   end
 
   private

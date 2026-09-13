@@ -82,10 +82,14 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # modelo emitiu o sinal de silêncio, a IA falhou, ou a porta de engajamento fechou). Sem
   # isto, o cliente que se despede na mesma mensagem em que pede a cotação recebe zero
   # confirmação e, um minuto depois, uma cotação caindo do nada.
+  #
+  # A FRASE PODE SER DO AGENTE, e por isso os argumentos da execução vão junto: a ferramenta que
+  # deixa o especialista escrever o que o cliente lê (a cotação) a resolve a partir deles; as
+  # demais ignoram o parâmetro e devolvem a de sempre.
   def notify_start(run, native)
     return unless run.notify_customer && run.sequence.zero?
 
-    publish(run, native.waiting_message)
+    publish(run, native.waiting_message(run.arguments))
   end
 
   # Submete (primeira passada) ou consulta (demais). A ferramenta é instanciada a cada
@@ -232,7 +236,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # Terminar em silêncio é o pior desfecho para quem está esperando — e dizer "não consegui" ao lado
   # de uma cotação entregue é o segundo pior.
   def finish_done(run, native)
-    publish(run, native.failure_message) if run.delivered_count.zero?
+    publish(run, native.failure_message(run.arguments)) if run.delivered_count.zero?
     run.finish!('done')
   end
 

@@ -373,7 +373,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
   describe 'entrega de arquivo' do
     let(:url) { 'https://arquivos.exemplo.test/comparativo-9.pdf' }
     let(:arquivo) do
-      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: 'Comparativo de seguro — placa ABC1D23.pdf',
+      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: 'Comparativo de seguro, placa ABC1D23.pdf',
                                                      legenda: 'Comparativo com todas as opções.',
                                                      reserva: "Comparativo com todas as opções:\n#{url}")
     end
@@ -398,7 +398,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(result).to be_published
       anexo = bot_messages.sole.attachments.sole
       expect(anexo.file_type).to eq('file')
-      expect(anexo.file.filename.to_s).to eq('Comparativo de seguro — placa ABC1D23.pdf')
+      expect(anexo.file.filename.to_s).to eq('Comparativo de seguro, placa ABC1D23.pdf')
       expect(anexo.file.content_type).to eq('application/pdf')
       expect(anexo.file.download).to eq(pdf)
       # O blob ANEXADO nunca vai para a limpeza: `download` ainda funcionaria com o `PurgeJob`

@@ -54,13 +54,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # que o Arrange precisa montar não é "o handle diz que saiu", é a MENSAGEM na conversa — é ela
   # que o fecho consulta desde a entrega 8a.
   def preco_ao_cliente
-    '*Ezze* — R$ 2.050,40 no total'
+    '*Ezze*: R$ 2.050,40 no total'
   end
 
   def comparativo_do_portal
     Autonomia::Agents::Tools::EntregaDeArquivo.new(
       url: 'https://exemplo.test/comparativo-mock.pdf',
-      nome: 'Comparativo de seguro — placa ABC1D23.pdf',
+      nome: 'Comparativo de seguro, placa ABC1D23.pdf',
       legenda: cotacao::Comparativo::LEGENDA,
       reserva: "#{cotacao::Comparativo::RESERVA}\nhttps://exemplo.test/comparativo-mock.pdf"
     )
@@ -359,7 +359,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::PARCIAL])
+    expect(bot_contents).to eq([preco_ao_cliente, cotacao::FECHO_COM_RESULTADO])
     expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
@@ -389,7 +389,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert 2 — o fecho reconhece o preço que está na tela
-    expect(bot_contents.last).to eq(cotacao::PARCIAL)
+    expect(bot_contents.last).to eq(cotacao::FECHO_COM_RESULTADO)
   end
 
   # A JANELA DO DEPLOY NÃO PODE CUSTAR O COMPARATIVO NEM O FECHO (P1 da rodada 3, 12/09/2026).
@@ -413,7 +413,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert — o comparativo sai, e o fecho é o de quem tem preço e ficou faltando coisa
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
+    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
@@ -456,7 +456,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert — sem comparativo (o PDF do `mock` nem está stubbado aqui), com o fecho de quem tem preço
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::PARCIAL])
+    expect(bot_contents).to eq([preco_ao_cliente, cotacao::FECHO_COM_RESULTADO])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
@@ -496,7 +496,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Assert — as três entregas do motor, na ordem em que foram aceitas
     entregas = bot_contents.drop(1)
     expect(entregas.first).to include('Porto Seguro')
-    expect(entregas.drop(1)).to eq([cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
+    expect(entregas.drop(1)).to eq([cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
@@ -522,7 +522,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert — o cliente continua com o preço antigo, e recebe o comparativo e o fecho dele
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
+    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
@@ -614,7 +614,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert — o fecho reconhece o preço que está na tela
-    expect(bot_contents.last).to eq(cotacao::PARCIAL)
+    expect(bot_contents.last).to eq(cotacao::FECHO_COM_RESULTADO)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
@@ -631,7 +631,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert
-    expect(bot_contents.last).to eq(cotacao::PARCIAL)
+    expect(bot_contents.last).to eq(cotacao::FECHO_COM_RESULTADO)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
@@ -660,11 +660,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert — o cliente recebe o comparativo e o fecho de quem tem preço, e não o silêncio
-    expect(bot_contents).to eq([preco, cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
+    expect(bot_contents).to eq([preco, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
-  it 'publica a frase de SEGURADORAS quando o prazo estoura com preço ja entregue' do
+  it 'publica o fecho de quem tem resultado quando o prazo estoura com preço ja entregue' do
     # Arrange — o comparativo do conector `mock` responde como PDF (entrega 11: sai como arquivo)
     run = cotacao_com_preco_entregue_e_prazo_vencido
     stub_comparativo_pdf
@@ -674,9 +674,57 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     # Assert — o preço que o cliente já tinha, depois o comparativo (o que ainda vale entregar) e
     # por fim o fecho DA COTAÇÃO
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
-    expect(bot_contents.last).to include('seguradoras')
+    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
+    # O FECHO É O DA COTAÇÃO, e não o genérico do `Base` — o defeito da entrega 4 era esse. E
+    # ele não conta ao cliente quantas seguradoras ficaram pelo caminho (decisão do CEO,
+    # 12/09/2026): esse número é de quem opera, e já está no Super Admin.
+    expect(bot_contents.last).not_to eq(Autonomia::Agents::Tools::Native::Base.closing_message)
     expect(bot_contents.join(' ')).not_to include('consultas')
+    expect(bot_contents.last).not_to include('não responderam')
     expect(run.reload.status).to eq('failed')
+  end
+
+  # AS FRASES DO ESPECIALISTA PELO CAMINHO DO MOTOR (12/09/2026). Os dois textos que o motor publica
+  # sem instância — o aviso de espera na primeira passada e o fecho no encerramento — passam a ser
+  # resolvidos a partir dos ARGUMENTOS da execução. Sem os argumentos viajando até lá, o cliente
+  # continua lendo a constante e o especialista escreve para ninguém.
+  describe 'as frases do especialista nos textos que o motor publica' do
+    let(:escritas) do
+      { 'espera' => 'Já pedi os preços e volto aqui assim que tiver notícia.',
+        'fecho_com_resultado' => 'Fechei a busca por aqui. Posso retomar quando você quiser.' }
+    end
+
+    def abrir_com_frases(expires_at:, notificar: false)
+      run = Autonomia::Agents::ToolRun.open!(
+        agent: agent, slug: cotacao.slug,
+        arguments: { 'produto' => 'auto', 'cpf' => '04297912678', 'cep' => '31110210',
+                     'vehicle' => { 'plate' => 'ABC1D23' }, 'frases_ao_cliente' => escritas },
+        scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id }
+      )
+      run.promote!(expected_chunks: 0, notify_customer: notificar, expires_at: expires_at)
+      run
+    end
+
+    it 'o aviso de espera sai com a frase que o especialista escreveu' do
+      run = abrir_com_frases(expires_at: 5.minutes.from_now, notificar: true)
+
+      described_class.new.perform(run.id, 0)
+
+      expect(bot_contents.first).to eq(escritas['espera'])
+    end
+
+    it 'o fecho de quem tem resultado sai com a frase que o especialista escreveu' do
+      run = abrir_com_frases(expires_at: 1.minute.ago)
+      stub_comparativo_pdf
+      publicar!(run, preco_ao_cliente)
+      run.record_delivery!
+      run.merge_handle!({ Autonomia::Agents::ToolRun::SUBMITTED_KEY => true, 'quote_id' => 'abc:1',
+                          cotacao::DELIVERED_KEY => ['43'], cotacao::PRECO_LEGADO_KEY => false,
+                          cotacao::PRECOS_KEY => [Autonomia::Agents::Tools::EntregaPublicada.token_de(run, preco_ao_cliente)] })
+
+      described_class.new.perform(run.id, 5)
+
+      expect(bot_contents.last).to eq(escritas['fecho_com_resultado'])
+    end
   end
 end

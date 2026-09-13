@@ -279,8 +279,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # comparativo e sem uma palavra.
     it 'entrega o que ainda vale e fecha a conversa quando ja houve entrega' do
       # Arrange
-      # A ferramenta responde as duas perguntas do fecho (entrega 8): entregou preço e ainda
-      # tinha seguradora por responder — que é o que a frase parcial diz.
+      # A ferramenta responde as duas perguntas do fecho (entrega 8): entregou resultado e ainda
+      # tinha algo por chegar — é isso que faz o fecho ser o de quem tem resultado.
       register_async_tool(
         build_async_tool(poll: progress.running(deliveries: ['primeiros precos']),
                          closing: ['Comparativo: https://portal.exemplo.test/c.pdf'],
@@ -294,8 +294,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(bot_contents.last(2))
-        .to eq(['Comparativo: https://portal.exemplo.test/c.pdf',
-                'Algumas consultas não responderam a tempo. O que chegou está aqui em cima.'])
+        .to eq(['Comparativo: https://portal.exemplo.test/c.pdf', 'encerrei a consulta por aqui'])
       expect(bot_contents).not_to include('não consegui concluir a consulta')
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
     end
@@ -310,7 +309,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
 
       expect(bot_contents).not_to include('não consegui concluir a consulta')
-      expect(bot_contents.last).to include('não responderam a tempo')
+      expect(bot_contents.last).to eq('encerrei a consulta por aqui')
     end
 
     # Encerramento é cortesia sobre um caminho que já deu errado: falhar aqui apagaria o registro
@@ -332,7 +331,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
 
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(bot_contents.last).to include('não responderam a tempo')
+      expect(bot_contents.last).to eq('encerrei a consulta por aqui')
     end
 
     # O RETRY DO SIDEKIQ NÃO PODE REPUBLICAR O COMPARATIVO. O encerramento publica e só depois

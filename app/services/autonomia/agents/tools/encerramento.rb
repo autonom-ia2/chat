@@ -52,9 +52,23 @@ class Autonomia::Agents::Tools::Encerramento
   # As frases que o fecho pode dizer. É por elas que se pergunta à conversa se o fecho desta
   # execução já saiu: a identidade de uma entrega publicada é derivada do CONTEÚDO
   # (`ToolRun#delivery_token`), então a pergunta "já houve fecho?" é a pergunta por cada uma. São
-  # três textos de CLASSE, e é por isso que ela se faz mesmo quando a ferramenta não pôde ser
-  # montada.
-  FRASES_DE_FECHO = %i[failure_message uncertain_message partial_message].freeze
+  # textos de CLASSE, e é por isso que ela se faz mesmo quando a ferramenta não pôde ser montada.
+  #
+  # SÃO QUATRO PAPÉIS, E CADA UM VALE POR DOIS TEXTOS (12/09/2026). Desde que a cotação deixa o
+  # especialista escrever as frases, o texto de um papel depende dos ARGUMENTOS da execução; até o
+  # deploy, o que saía era a CONSTANTE da classe.
+  #
+  # QUEM ISTO PROTEGE É O ROLL-FORWARD, E NÃO A VOLTA ATRÁS. A execução que já estava aberta recebeu
+  # o fecho da versão antiga — a constante —, e é esta versão que vai perguntar se ele já saiu:
+  # perguntando só pela frase resolvida, ela não acharia nada e poria um segundo desfecho ao lado do
+  # primeiro. Por isso `partial_message` continua na lista mesmo tendo deixado de sair: ela é o que a
+  # versão antiga publicava onde esta publica `closing_message`.
+  #
+  # O ROLLBACK NÃO GANHA NADA COM ISTO, porque a volta atrás leva embora este arquivo junto: a versão
+  # antiga pergunta pelas constantes dela, e `FECHO_COM_RESULTADO` não está entre elas. Voltar atrás
+  # só é seguro com o cliente que ainda não recebeu fecho nenhum — está na auditoria, em "Ordem de
+  # deploy e rollback".
+  FRASES_DE_FECHO = %i[failure_message uncertain_message partial_message closing_message].freeze
 
   # `trabalho_novo` = esta passada pode INICIAR trabalho novo no portal para produzir uma entrega?
   # Verdadeiro no motor (uma execução por vez, num job que só faz isso); FALSO no varredor — ver
@@ -148,14 +162,51 @@ class Autonomia::Agents::Tools::Encerramento
   end
 
   # Alguma das frases de fecho DESTA execução já está na conversa?
+  #
+  # NÃO SEI É PUBLICAR, NUNCA CALAR. Esta pergunta roda DENTRO de `etapa('fecho')`, cujo `rescue`
+  # engole tudo: até 12/09/2026 ela só lia constantes de classe e não tinha como levantar, e desde
+  # que resolve a frase pelos argumentos da execução, passou a poder. Levantando sem este `rescue`,
+  # `publicar_fecho` nunca rodaria e o cliente ficaria sem uma palavra — o buraco de silêncio que a
+  # entrega 8a fechou. O lado conservador aqui é o contrário do de sempre: a dedupe por token do
+  # publicador é a segunda guarda, e ela pega o duplicado; nada pega o silêncio.
   def fecho_publicado?
     conversa = @run.conversation
     return false if conversa.blank?
 
-    FRASES_DE_FECHO.any? do |frase|
-      token = ::Autonomia::Agents::Tools::EntregaPublicada.token_de(@run, @native.public_send(frase))
+    textos_de_fecho.any? do |texto|
+      token = ::Autonomia::Agents::Tools::EntregaPublicada.token_de(@run, texto)
       ::Autonomia::Agents::Tools::EntregaPublicada.publicada?(conversa, token)
     end
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] idempotencia do fecho indisponivel slug=#{@run.slug} #{e.class}")
+    false
+  end
+
+  # Os textos possíveis do fecho DESTA execução: por papel, a frase resolvida pelos argumentos e a
+  # constante da classe — ver `FRASES_DE_FECHO`. A ferramenta que não lê argumentos devolve a mesma
+  # coisa nas duas formas, e o `uniq` cuida disso.
+  def textos_de_fecho
+    FRASES_DE_FECHO.flat_map { |papel| [frase(papel), constante(papel)] }.compact_blank.uniq
+  end
+
+  # O TEXTO DE UM PAPEL DO FECHO, e a resolução dele é TOTAL. Ela passou a depender dos argumentos da
+  # execução em 12/09/2026, e o que levantar aqui é publicado em lugar nenhum: `etapa('fecho')`
+  # engole, e o cliente fica sem desfecho. Recuar para a constante entrega uma frase diferente da que
+  # o especialista escreveu — e entregar a frase errada é incomparavelmente melhor que o silêncio.
+  def frase(papel)
+    @native.public_send(papel, @run.arguments)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] frase do fecho indisponivel slug=#{@run.slug} papel=#{papel} #{e.class}")
+    constante(papel)
+  end
+
+  # A forma de CLASSE do mesmo papel: é ela que a versão anterior a esta publica, e é por isso que
+  # ela entra no conjunto de perguntas do rollback.
+  def constante(papel)
+    @native.public_send(papel)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] constante do fecho indisponivel slug=#{@run.slug} papel=#{papel} #{e.class}")
+    nil
   end
 
   # O FECHO VEM DEPOIS DAS ENTREGAS, e é escolhido pelo que o cliente tem em mãos. Sem NADA — nem
@@ -169,10 +220,10 @@ class Autonomia::Agents::Tools::Encerramento
   end
 
   def falha_ou_incerteza
-    @run.envio_incerto? ? @native.uncertain_message : @native.failure_message
+    frase(@run.envio_incerto? ? :uncertain_message : :failure_message)
   end
 
-  # A FRASE PARCIAL SÓ SAI QUANDO ELA É VERDADE, E QUEM SABE É A FERRAMENTA.
+  # O FECHO DE QUEM TEM RESULTADO SÓ SAI QUANDO ELE É VERDADE, E QUEM SABE É A FERRAMENTA.
   #
   # Até aqui bastava `delivered_count.positive?`, e o contador não significa o que o fecho achava: ele
   # conta QUALQUER item aceito para publicação, inclusive a pergunta pelo dado que falta (a cotação
@@ -184,9 +235,9 @@ class Autonomia::Agents::Tools::Encerramento
   #
   # SEM AGENTE NÃO HÁ FERRAMENTA A QUEM PERGUNTAR, E AÍ É SILÊNCIO — decisão declarada, e mudança
   # em relação à `main`, que publicava a frase parcial por `delivered_count.positive?` sozinho.
-  # `partial_message` é de CLASSE justamente para sair sem instância (entrega 4), e continua sendo:
-  # o que mudou é que agora ela precisa ser VERDADE, e quem sabe se houve resultado e se sobrou algo
-  # é a ferramenta. Afirmar sem poder conferir é o defeito que esta entrega corrige.
+  # A frase é de CLASSE justamente para sair sem instância (entrega 4), e continua sendo: o que
+  # mudou é que agora ela precisa ser VERDADE, e quem sabe se houve resultado e se sobrou algo é a
+  # ferramenta. Afirmar sem poder conferir é o defeito que a entrega 8 corrigiu.
   #
   # E o caminho é o `agente_indisponivel` (`AsyncRunJob#stop?`: a linha existe, o agente não): com o
   # agente apagado, `agent_inboxes` cai com ele (`dependent: :destroy`), então
@@ -194,13 +245,18 @@ class Autonomia::Agents::Tools::Encerramento
   # frase da `main` também não chegava ao cliente. O que se perde aqui é uma publicação que já era
   # recusada; o que se ganha é não afirmar no escuro. As frases de falha e de incerteza continuam
   # sendo tentadas, porque elas não afirmam nada sobre o que chegou.
+  #
+  # O QUE SAI MUDOU EM 12/09/2026, O ESTADO NÃO. Era `partial_message` — "algumas seguradoras não
+  # responderam a tempo" —, que contava ao cliente a nossa mecânica de leque; é `closing_message`,
+  # que encerra sem contar quantas ficaram pelo caminho. O estado continua produzindo palavra: o
+  # que o CEO proibiu foi a frase, não o desfecho.
   def parcial
     return nil if ferramenta.nil?
 
     handle = handle_da_ferramenta
     return nil unless ferramenta.resultado_entregue?(handle) && ferramenta.resta_entregar?(handle)
 
-    @native.partial_message
+    frase(:closing_message)
   end
 
   def publicar(entrega)

@@ -4,35 +4,80 @@ require 'rails_helper'
 # textos DESTINADOS AO CLIENTE" e "a ferramenta NUNCA tem canal para mandar erro ao cliente".
 # Faltava quem fizesse o contrato valer — em 08/09/2026 uma entrega levou `insured.document` e
 # "chame a ferramenta de novo" ao WhatsApp de um cliente real.
+#
+# A GUARDA DEIXOU DE DESCARTAR EM 12/09/2026, E O MOTIVO É DE DINHEIRO. Uma entrega passou a ser
+# "abertura + dezessete preços + aviso" numa string só; descartá-la inteira por causa de um nome de
+# campo deixava o handle já avançado, as ofertas nunca mais eram reemitidas (`fresh` as exclui) e o
+# cliente lia a frase de falha sobre dezessete seguradoras que a corretora pagou. Agora ela REDIGE:
+# o cliente continua sem ler o nome do campo, e continua com os preços. Quem barra o texto de FORA —
+# a frase que o modelo escreveu — é `TextoAoCliente.vetar`, na leitura do parâmetro, onde recuar
+# custa uma frase e não a cotação.
 RSpec.describe Autonomia::Agents::Tools::Progress do
   describe 'entrega com caminho de campo' do
-    it 'descarta em vez de mandar ao cliente' do
+    it 'redige o caminho de campo em vez de mandá-lo ao cliente' do
       # Arrange / Act
       progress = described_class.done(deliveries: ['Faltam: insured.document.'])
 
       # Assert
-      expect(progress.deliveries).to be_empty
+      expect(progress.deliveries.sole).not_to include('insured.document')
+      expect(progress.deliveries.sole).to start_with('Faltam:')
     end
 
-    it 'descarta sem derrubar a execucao' do
-      # Perder uma frase é ruim; perder a cotação inteira é pior.
-      progress = described_class.done(deliveries: ['Faltam: insured.document.'])
+    it 'nao descarta a entrega, que e onde moram os precos' do
+      # Perder uma frase é ruim; perder a cotação inteira é pior — e a entrega é a cotação inteira.
+      progress = described_class.done(deliveries: ["Primeiros preços:\n\n• *Porto Seguro*: R$ 2.340,18 no total\n\ninsured.document"])
 
+      expect(progress.deliveries.sole).to include('R$ 2.340,18')
+      expect(progress.deliveries.sole).not_to include('insured.document')
       expect(progress.done?).to be(true)
     end
 
     it 'nao come as entregas boas que vieram junto' do
       progress = described_class.done(deliveries: ['**Porto Seguro** R$ 2.340,18', 'segurado.cpfCnpj'])
 
-      expect(progress.deliveries).to eq(['**Porto Seguro** R$ 2.340,18'])
+      expect(progress.deliveries.first).to eq('**Porto Seguro** R$ 2.340,18')
+      expect(progress.deliveries.last).not_to include('cpfCnpj')
     end
   end
 
-  # A ARMADILHA DA GUARDA. O comparativo é uma entrega legítima e carrega uma URL, cujo host casa
-  # com o padrão de caminho de campo. Guarda que come o comparativo troca um bug de texto por um
-  # entregável perdido — por isso a URL sai antes de olhar.
-  it 'entrega o comparativo em PDF, que tem URL' do
-    texto = "Comparativo com todas as opções:\nhttps://portal.exemplo.test/cotacao/9.pdf"
+  # O TRAVESSÃO SAI DO QUE CHEGA AO CLIENTE (decisão do CEO, 12/09/2026). Onde ele separa colunas
+  # quem compõe escolhe o substituto; aqui, no texto já composto, ele vira hífen — um nome vindo do
+  # portal com travessão dentro não pode perder o sentido por causa da regra.
+  it 'troca o travessao por hifen no texto que sai' do
+    progress = described_class.done(deliveries: ['Comparativo — todas as opções'])
+
+    expect(progress.deliveries.sole).to eq('Comparativo - todas as opções')
+  end
+
+  # IDEMPOTENTE: a ferramenta depura para calcular a identidade da entrega e o `Progress` depura de
+  # novo. Uma segunda passada que mudasse o texto daria token gravado ≠ token publicado, e o fecho
+  # perguntaria por uma mensagem que nunca existiu.
+  it 'depurar duas vezes devolve o mesmo texto' do
+    uma = described_class.entregavel('Comparativo — placa ABC1D23, veja insured.document  ')
+
+    expect(described_class.entregavel(uma)).to eq(uma)
+  end
+
+  # A SUPERFÍCIE PÚBLICA DA CLASSE. `entregavel` saiu para fora porque a ferramenta precisa da mesma
+  # resposta antes de gravar o token; `texto`, `arquivo` e `descartar` foram junto por acidente, e o
+  # `private` do arquivo só alcança instância. Cada uma delas pública é um caminho que entrega texto
+  # sem passar pelo limite de quantidade e um segundo jeito de fazer a mesma pergunta.
+  it 'so entregavel e publica entre os metodos de classe da entrega' do
+    expect(described_class).to respond_to(:entregavel)
+    expect(described_class.singleton_class.private_method_defined?(:texto)).to be(true)
+    expect(described_class.singleton_class.private_method_defined?(:arquivo)).to be(true)
+    expect(described_class.singleton_class.private_method_defined?(:descartar)).to be(true)
+  end
+
+  # A ARMADILHA DA GUARDA. O comparativo é uma entrega legítima e carrega uma URL do portal, que
+  # termina em `quotation.pdf` — e `quotation` é grupo de `Parametros::GRUPOS`, então a regra de
+  # caminho de campo casa DENTRO do link. Guarda que come o comparativo troca um bug de texto por um
+  # entregável perdido; por isso a URL sai antes de olhar, em `TextoAoCliente.redigir`.
+  #
+  # ESTE EXEMPLO JÁ MENTIU: até a rodada de correção ele usava `.../cotacao/9.pdf`, que não dispara
+  # regra nenhuma, e passava com e sem a exclusão. A URL daqui dispara.
+  it 'entrega o comparativo em PDF, cuja URL carrega um grupo do formulario' do
+    texto = "Comparativo com todas as opções:\nhttps://portal.exemplo.com/v1/quotation.pdf"
 
     progress = described_class.done(deliveries: [texto])
 
@@ -58,10 +103,10 @@ RSpec.describe Autonomia::Agents::Tools::Progress do
   # não tem a forma de uma entrega de arquivo não passa: um Hash qualquer não é texto nem arquivo.
   describe 'entrega de arquivo' do
     let(:arquivo) do
-      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: 'https://portal.exemplo.test/cotacao/9.pdf',
-                                                     nome: 'Comparativo de seguro — placa ABC1D23.pdf',
+      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: 'https://portal.exemplo.com/v1/quotation.pdf',
+                                                     nome: 'Comparativo de seguro, placa ABC1D23.pdf',
                                                      legenda: 'Comparativo com todas as opções.',
-                                                     reserva: "Comparativo com todas as opções:\nhttps://portal.exemplo.test/cotacao/9.pdf")
+                                                     reserva: "Comparativo com todas as opções:\nhttps://portal.exemplo.com/v1/quotation.pdf")
     end
 
     it 'entrega o arquivo, na forma serializada, ao lado dos textos' do
@@ -83,22 +128,28 @@ RSpec.describe Autonomia::Agents::Tools::Progress do
       expect(progress.done?).to be(true)
     end
 
-    it 'descarta o arquivo cuja legenda levaria caminho de campo ao cliente' do
+    it 'redige o caminho de campo da legenda, e entrega o arquivo assim mesmo' do
       suja = Autonomia::Agents::Tools::EntregaDeArquivo.new(url: arquivo.url, nome: arquivo.nome,
                                                             legenda: 'Faltou insured.document', reserva: arquivo.reserva)
 
-      expect(described_class.done(deliveries: [suja]).deliveries).to be_empty
+      entregue = Autonomia::Agents::Tools::EntregaDeArquivo.de(described_class.done(deliveries: [suja]).deliveries.sole)
+
+      expect(entregue.legenda).not_to include('insured.document')
+      expect(entregue.url).to eq(arquivo.url)
     end
 
     # A RESERVA é texto de cliente tanto quanto a legenda: é o que ele lê quando o arquivo falha. A
-    # URL sai antes de olhar (a reserva legítima a carrega), e o caminho de campo que sobra reprova
+    # URL fica intacta (a reserva legítima a carrega), e o caminho de campo que sobra é redigido
     # (rodada 5, 11/09/2026 — a regra existia; faltava a guarda sobre a reserva).
-    it 'descarta o arquivo cuja reserva levaria caminho de campo ao cliente' do
+    it 'redige o caminho de campo da reserva sem levar o link junto' do
       suja = Autonomia::Agents::Tools::EntregaDeArquivo.new(url: arquivo.url, nome: arquivo.nome,
                                                             legenda: arquivo.legenda,
                                                             reserva: "Faltou insured.document\n#{arquivo.url}")
 
-      expect(described_class.done(deliveries: [suja]).deliveries).to be_empty
+      entregue = Autonomia::Agents::Tools::EntregaDeArquivo.de(described_class.done(deliveries: [suja]).deliveries.sole)
+
+      expect(entregue.reserva).not_to include('insured.document')
+      expect(entregue.reserva).to include(arquivo.url)
     end
   end
 end

@@ -91,10 +91,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert — o preço, o arquivo (legenda sem link), o fecho
-    expect(bot_messages.map(&:content)).to eq([preco, cotacao::Comparativo::LEGENDA, cotacao::PARCIAL])
+    expect(bot_messages.map(&:content)).to eq([preco, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
     anexo = bot_messages.second.attachments.sole
     expect(anexo.file_type).to eq('file')
-    expect(anexo.file.filename.to_s).to eq('Comparativo de seguro — placa ABC1D23.pdf')
+    expect(anexo.file.filename.to_s).to eq('Comparativo de seguro, placa ABC1D23.pdf')
     expect(anexo.file).to have_attributes(content_type: 'application/pdf', download: pdf)
     expect(bot_messages.map(&:content).join).not_to include(url)
     expect(run.reload.status).to eq('failed')
@@ -116,7 +116,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert
-    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}", cotacao::PARCIAL])
+    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}", cotacao::FECHO_COM_RESULTADO])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
     expect(run.reload.delivered_count).to eq(entregues_antes)
     expect(run.status).to eq('failed')
@@ -158,7 +158,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     described_class.new.perform(run.id, 5)
 
-    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}", cotacao::PARCIAL])
+    expect(bot_messages.map(&:content)).to eq([preco, "#{cotacao::Comparativo::RESERVA}\n#{url}", cotacao::FECHO_COM_RESULTADO])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
   end
 
