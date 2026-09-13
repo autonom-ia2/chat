@@ -446,8 +446,8 @@ Mesmo ambiente da rodada 1; números lidos do JSON do rspec e exit code de arqui
 
 | rodada | escopo | resultado | exit |
 |---|---|---|---|
-| RED: as sondas viradas em spec, contra o código de `29a5cf9c98` | `async_run_job_pdf_antes_do_adiamento_spec` (9 exemplos na época) | 9 exemplos, 9 falhas, pelos defeitos: `done` onde se afirma `running`, fecho antes dos adiados, fecho antes do PDF, blob inexistente antes de adiar | 1 |
-| GREEN do mesmo arquivo, código da rodada 2 | idem | 9 exemplos, 0 falhas | 0 |
+| RED das sondas viradas em spec, durante a implementação | `async_run_job_pdf_antes_do_adiamento_spec` (9 exemplos na época) | 9 exemplos, 9 falhas, com as mensagens dos defeitos: `done` onde se afirma `running`, fecho antes dos adiados, fecho antes do PDF, blob inexistente antes de adiar. O estado exato de `app/` nesse instante não ficou registrado; a prova por correção é a tabela de mutações | 1 |
+| GREEN do mesmo arquivo | idem | 9 exemplos, 0 falhas | 0 |
 | primeira ampla da rodada 2, antes de adaptar os specs existentes | escopo da base da rodada 1 | 1096 exemplos, 49 falhas | 1 |
 | ampla intermediária | escopo final | 1685 exemplos, 1 falha: `async_run_job_comparativo_arquivo_spec` afirmava a sentinela gravada na emissão (troquei pela identidade gravada e a sentinela em branco) | 1 |
 | base das mutações | 14 arquivos de spec | 347 exemplos, 0 falhas | 0 |
