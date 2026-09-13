@@ -7,6 +7,12 @@
 #
 # O TOKEN VIAJA PRONTO, calculado pelo publicador sobre a entrega de arquivo original
 # (`EntregaPublicada.token_de`, que usa `EntregaDeArquivo#identidade`). Recalculá-lo aqui exigiria a URL.
+#
+# O ID ASSINADO TAMBÉM BAIXA O PDF, E NÃO EXPIRA. `blob.signed_id` é gerado sem `expires_in`, e as rotas
+# padrão do ActiveStorage (não sobrescritas nesta instalação; lido em `config/`, não exercitado) entregam o
+# arquivo a quem tiver o id, sem autenticação. O ActiveJob registra os argumentos do job em INFO, a menos
+# que `ActiveJob::Base.log_arguments` esteja desligado (hoje só com `WHATSAPP_API_CAMPAIGNS_ENABLED`). Não é
+# regressão: a URL do portal, que ia no job antes, também baixava sem autenticação. Mas não é seguro.
 class Autonomia::Agents::Tools::ArquivoGravado
   CHAVE = 'arquivo_gravado'.freeze
   # `ToolRun#delivery_token`: a `execution_key` da execução, dois pontos e 16 dígitos hexadecimais.

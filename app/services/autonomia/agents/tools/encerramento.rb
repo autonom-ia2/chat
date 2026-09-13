@@ -182,8 +182,8 @@ class Autonomia::Agents::Tools::Encerramento
   end
 
   # A regra comum a `encerrar` e `concluir`: nenhuma frase de fecho desta execução na conversa, e só
-  # então a frase que o bloco escolher (nil não publica nada), encadeada à entrega que ainda está a
-  # caminho, quando há uma (`encadear`).
+  # então a frase que o bloco escolher (nil não publica nada), encadeada às entregas que ainda estão a
+  # caminho, quando há alguma (`encadear`).
   def publicar_se_nao_houver_fecho
     return if fecho_publicado?
 
@@ -191,23 +191,27 @@ class Autonomia::Agents::Tools::Encerramento
     publicar(encadear(texto)) if texto
   end
 
-  # O FECHO NUNCA SAI ANTES DA ENTREGA QUE ESTÁ A CAMINHO (rodada 2 da fatia 1 do PDF rápido,
-  # 13/09/2026). -> o texto, ou a `EntregaEncadeada` dele quando há de quem depender: a entrega adiada
-  # nesta passada (`@adiada`) ou a que a ferramenta diz estar aceita e ainda sem mensagem
-  # (`entrega_a_caminho`). O publicador adia a encadeada enquanto essa mensagem não existe, até
-  # `AsyncConfig::MAX_DEPENDENCY_DEFERRALS`.
-  #
-  # NÃO SEI É PUBLICAR: se a pergunta à ferramenta levantar, o fecho sai sem esperar — fora de ordem,
-  # e não em silêncio.
+  # O FECHO NUNCA SAI ANTES DAS ENTREGAS QUE ESTÃO A CAMINHO (rodadas 2 e 3 da fatia 1 do PDF rápido,
+  # 13/09/2026). -> o texto, ou a `EntregaEncadeada` dele quando há de quem depender. O publicador adia a
+  # encadeada enquanto alguma dessas entregas não é mensagem, até `AsyncConfig::MAX_DEPENDENCY_DEFERRALS`;
+  # no teto, o fecho sai sem elas.
   def encadear(texto)
-    ::Autonomia::Agents::Tools::EntregaEncadeada.forma(texto, depois_de: @adiada || a_caminho_pela_ferramenta)
+    ::Autonomia::Agents::Tools::EntregaEncadeada.forma(texto, depois_de: entregas_a_caminho)
   end
 
-  def a_caminho_pela_ferramenta
-    ferramenta&.entrega_a_caminho(handle_da_ferramenta)
+  # -> os tokens das entregas desta execução que o publicador aceitou e que ainda não são mensagem na
+  # conversa: os lotes de preço e o comparativo adiados, de qualquer passada (a lista do aceite,
+  # `Tools::EntregaAceita`), e a entrega que este encerramento acabou de adiar (`@adiada`, que continua
+  # valendo quando a escrita do aceite dela falhou).
+  #
+  # NÃO SEI É PUBLICAR: se a leitura levantar, o fecho espera só `@adiada`.
+  def entregas_a_caminho
+    conversa = @run.conversation
+    aceitas = Array(@run.handle.to_h[::Autonomia::Agents::Tools::EntregaAceita::CHAVE]).map(&:to_s)
+    (aceitas | [@adiada].compact).select { |token| ::Autonomia::Agents::Tools::EntregaPublicada.para(conversa, token).nil? }
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][tool] entrega a caminho indisponivel slug=#{@run.slug} #{e.class}")
-    nil
+    Rails.logger.warn("[autonomia][tool] entregas a caminho indisponiveis slug=#{@run.slug} #{e.class}")
+    [@adiada].compact
   end
 
   # Alguma das frases de fecho DESTA execução já está na conversa?

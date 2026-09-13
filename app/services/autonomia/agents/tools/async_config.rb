@@ -41,10 +41,13 @@ module Autonomia::Agents::Tools::AsyncConfig
   # intercalar entre dois pedaços da mesma frase. Cada espera é curta e limitada.
   PUBLISH_DEFER_SECONDS = 3
   MAX_PUBLISH_DEFERRALS = 30
-  # O TETO DE ADIAMENTOS DE UMA ENTREGA ENCADEADA (`Tools::EntregaEncadeada`) enquanto a entrega de que ela
-  # depende não é mensagem: o dobro do teto da cadeia. A entrega de que ela depende é publicada forçada ao
-  # atingir `MAX_PUBLISH_DEFERRALS`; a encadeada, enfileirada depois dela, espera até o dobro antes de
-  # publicar sem ela.
+  # O TETO DE ADIAMENTOS DE UMA ENTREGA ENCADEADA (`Tools::EntregaEncadeada`) enquanto alguma entrega de que
+  # ela depende não é mensagem: o dobro do teto da cadeia. As entregas de que ela depende são publicadas
+  # forçadas ao atingir `MAX_PUBLISH_DEFERRALS`; a encadeada espera até o dobro antes de publicar sem elas.
+  #
+  # EM TEMPO DE RELÓGIO, cada adiamento são os 3 s de `PUBLISH_DEFER_SECONDS` mais a espera até o poller de
+  # agendados do Sidekiq 7.3 acordar (em média a cada 5 s, `average_scheduled_poll_interval`): ~5,5 a 8 s. Os
+  # 30 adiamentos da cadeia são ~3 a 4 min, e os 60 da dependência, ~6 a 8 min, sem contar fila ocupada.
   MAX_DEPENDENCY_DEFERRALS = MAX_PUBLISH_DEFERRALS * 2
 
   # NÃO EXISTE TETO DE COTAÇÃO POR CONVERSA, E ISSO É DECISÃO DE PRODUTO.

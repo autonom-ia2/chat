@@ -108,16 +108,6 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
       prova_legada?(handle)
   end
 
-  # -> o token do comparativo desta execução quando o publicador o aceitou e ele ainda não é mensagem na
-  # conversa (a publicação dele foi adiada); nil em qualquer outro caso. O encerramento encadeia o fecho a
-  # esse token (`Tools::Encerramento#encadear`).
-  def entrega_a_caminho(handle)
-    token = handle.to_h[self.class::COMPARATIVO_KEY]
-    return nil if token.blank? || !aceita?(token)
-
-    ::Autonomia::Agents::Tools::EntregaPublicada.para(run&.conversation, token).nil? ? token : nil
-  end
-
   # SOBRA ENQUANTO O PORTAL NÃO TIVER FECHADO — e depois dele, enquanto faltar chegar o que já foi
   # emitido.
   #

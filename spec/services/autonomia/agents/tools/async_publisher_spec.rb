@@ -271,8 +271,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     end
   end
 
-  # O TEXTO ENCADEADO (rodada 2 da fatia 1 do PDF rápido, 13/09/2026): o fecho que só pode sair depois do
-  # comparativo adiado. Ele espera a MENSAGEM com o token de que depende, e não a cadeia do turno.
+  # O TEXTO ENCADEADO (rodadas 2 e 3 da fatia 1 do PDF rápido, 13/09/2026): o fecho que só pode sair depois
+  # das entregas aceitas que ainda não são mensagem. Ele espera a MENSAGEM de cada token de que depende, e não
+  # a cadeia do turno.
   describe 'texto encadeado a outra entrega' do
     let(:dependencia) { run.delivery_token('arquivo:https://arquivos.exemplo.test/comparativo.pdf') }
     let(:fecho) { Autonomia::Agents::Tools::EntregaEncadeada.forma('Encerrei a busca.', depois_de: dependencia) }
@@ -295,11 +296,32 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       # Assert
       expect(antes).to be_deferred
       adiada = Autonomia::Agents::Tools::EntregaEncadeada.de(antes.adiada)
-      expect([adiada.texto, adiada.depois_de]).to eq(['Encerrei a busca.', dependencia])
+      expect([adiada.texto, adiada.depois_de]).to eq(['Encerrei a busca.', [dependencia]])
       expect(depois).to be_published
       expect(bot_messages.order(:id).pluck(:content)).to eq(['Comparativo com todas as opções.', 'Encerrei a busca.'])
       expect(bot_messages.order(:id).last.content_attributes[Autonomia::Agents::Tools::EntregaPublicada::CHAVE])
         .to eq(run.delivery_token('Encerrei a busca.'))
+    end
+
+    # DEPENDE DE TODAS (rodada 3): o lote de preços adiado e o comparativo; basta uma sem mensagem para esperar.
+    it 'com duas entregas a caminho, adia enquanto qualquer uma nao e mensagem, e sai depois das duas' do
+      # Arrange
+      promote
+      precos = 'Mais opções: R$ 1.500,00'
+      a_caminho = [dependencia, run.delivery_token(precos)]
+      fecho_das_duas = Autonomia::Agents::Tools::EntregaEncadeada.forma('Encerrei a busca.', depois_de: a_caminho)
+      publicar_a_dependencia
+
+      # Act
+      com_uma = described_class.new(run: run).publish(fecho_das_duas)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: agent_bot,
+                       content: precos, content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => run.delivery_token(precos) })
+      com_as_duas = described_class.new(run: run).publish(com_uma.adiada)
+
+      # Assert
+      expect(com_uma).to be_deferred
+      expect(com_as_duas).to be_published
+      expect(bot_messages.order(:id).pluck(:content).last).to eq('Encerrei a busca.')
     end
 
     it 'publish! ignora a cadeia do turno, mas continua esperando a entrega de que o texto depende' do

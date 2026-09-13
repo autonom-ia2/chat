@@ -10,8 +10,9 @@
 # nunca entregar é pior.
 #
 # DOIS TETOS (rodada 2 da fatia 1 do PDF rápido, 13/09/2026): a cadeia do turno deixa de ser esperada em
-# `MAX_PUBLISH_DEFERRALS`, e a entrega de que um texto encadeado depende (`Tools::EntregaEncadeada`), em
-# `MAX_DEPENDENCY_DEFERRALS`. Quem chega aqui adiado pelo varredor já começa com a cadeia no teto.
+# `MAX_PUBLISH_DEFERRALS` (30 adiamentos, ~3 a 4 min de relógio com a espera do poller do Sidekiq), e as
+# entregas de que um texto encadeado depende (`Tools::EntregaEncadeada`), em `MAX_DEPENDENCY_DEFERRALS` (60,
+# ~6 a 8 min). Quem chega aqui adiado pelo varredor já começa com a cadeia no teto.
 class Autonomia::Agents::Tools::AsyncPublishJob < ApplicationJob
   queue_as :medium
 

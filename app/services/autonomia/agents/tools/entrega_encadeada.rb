@@ -1,10 +1,10 @@
-# UM TEXTO QUE SÓ PODE SER PUBLICADO DEPOIS DE OUTRA ENTREGA ESTAR NA CONVERSA (fatia 1 do PDF rápido,
-# rodada 2, 13/09/2026).
+# UM TEXTO QUE SÓ PODE SER PUBLICADO DEPOIS DE OUTRAS ENTREGAS ESTAREM NA CONVERSA (fatia 1 do PDF rápido,
+# rodadas 2 e 3, 13/09/2026).
 #
-# É a forma do fecho de quem tem resultado quando o comparativo desta execução foi aceito para publicação
-# e ainda não é uma mensagem (a publicação dele foi adiada). `depois_de` é o token dessa entrega
-# (`EntregaPublicada.token_de`). O publicador adia esta forma enquanto não houver mensagem com esse token
-# (`AsyncPublisher#esperar?`), até o teto de `AsyncConfig::MAX_DEPENDENCY_DEFERRALS`.
+# É a forma do fecho quando alguma entrega desta execução foi aceita para publicação e ainda não é uma
+# mensagem: o comparativo adiado e os lotes de preço adiados. `depois_de` é a lista dos tokens dessas
+# entregas (`EntregaPublicada.token_de`). O publicador adia esta forma enquanto algum desses tokens não
+# tiver mensagem (`AsyncPublisher#esperar?`), até o teto de `AsyncConfig::MAX_DEPENDENCY_DEFERRALS`.
 #
 # O TOKEN DESTA ENTREGA É O DO TEXTO (`EntregaPublicada.token_de`): é por ele que o fecho idempotente
 # (`Tools::Encerramento#fecho_publicado?`) a reconhece.
@@ -26,14 +26,15 @@ class Autonomia::Agents::Tools::EntregaEncadeada
 
   # -> o texto encadeado, serializado, quando há de quem depender; o próprio texto quando não há.
   def self.forma(texto, depois_de:)
-    return texto if texto.blank? || depois_de.blank?
+    tokens = Array(depois_de).map(&:to_s).compact_blank.uniq
+    return texto if texto.blank? || tokens.empty?
 
-    new(texto: texto, depois_de: depois_de).to_h
+    new(texto: texto, depois_de: tokens).to_h
   end
 
   def initialize(texto:, depois_de:)
     @texto = texto.to_s.strip
-    @depois_de = depois_de.to_s
+    @depois_de = Array(depois_de).map(&:to_s).compact_blank.uniq
   end
 
   def to_h

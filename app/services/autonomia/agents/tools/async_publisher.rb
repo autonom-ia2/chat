@@ -160,12 +160,12 @@ class Autonomia::Agents::Tools::AsyncPublisher
   end
 
   # -> esta publicação espera? A cadeia humanizada do turno aberta (quando `wait_for_chain`), ou, para o
-  # texto encadeado, nenhuma mensagem com o token de que ele depende (quando `wait_for_dependency`).
+  # texto encadeado, algum token de que ele depende ainda sem mensagem (quando `wait_for_dependency`).
   def esperar?(conversation, forma, wait_for_chain, wait_for_dependency)
     return true if wait_for_chain && humanized_chain_open?(conversation)
     return false unless wait_for_dependency && forma.is_a?(::Autonomia::Agents::Tools::EntregaEncadeada)
 
-    ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, forma.depois_de).nil?
+    forma.depois_de.any? { |token| ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, token).nil? }
   end
 
   # `deferred`, com a forma que o `AsyncPublishJob` deve carregar.

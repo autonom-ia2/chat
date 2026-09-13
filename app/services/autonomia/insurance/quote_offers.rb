@@ -116,7 +116,12 @@ class Autonomia::Insurance::QuoteOffers
   #   3. todo código que alguma leitura anterior listou (`ja_acionadas`, a união) aparece nesta.
   # A 2 faz a primeira leitura, e a primeira leitura assentada depois de uma com seguradora em andamento
   # ou de uma lista diferente, responderem falso: a lista precisa se repetir, com desfecho, em duas leituras
-  # seguidas. Isso não depende de o portal listar todas as seguradoras na primeira leitura.
+  # seguidas.
+  #
+  # A REGRA DEPENDE DE O PORTAL JÁ TER LISTADO TODAS AS SEGURADORAS quando a lista se repete. Duas leituras
+  # assentadas iguais com parte delas listada fecham a cotação, e a seguradora que o portal listar depois fica
+  # de fora (sonda C2 da revisão da rodada 2). Nos brutos da medição de 13/09/2026, as duas linhas do tempo
+  # completas tinham todos os cálculos listados já na primeira leitura; o contrário não foi observado.
   def todas_com_desfecho?(ja_acionadas, assentada_anterior)
     atual = assentada
     return false if atual.nil? || Array(assentada_anterior).map(&:to_s).sort != atual

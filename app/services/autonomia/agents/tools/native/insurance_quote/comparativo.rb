@@ -55,13 +55,20 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # (`Progress.entregavel`), e é sobre essa forma que a identidade é calculada.
   #
   # A IDENTIDADE E A CONTAGEM VÃO À LINHA ANTES DE O ARQUIVO SER PUBLICADO. O handle que esta passada
-  # devolve só chega ao banco no `record_attempt!` do fim dela, depois da publicação. Morto o processo
-  # entre as duas coisas (o Sidekiq reenfileira o job no hard shutdown de um deploy), a mesma passada
-  # rodava de novo sem a identidade, pedia outro comparativo ao portal, que devolve outra URL e com ela
-  # outra identidade, e o cliente recebia dois PDFs. Com a identidade na linha, a reentrada pergunta por
-  # ela (`comparativo_assumido?`). A escrita é reforço (`gravar_na_linha`): se falhar, as marcas seguem no
-  # handle da passada. Duas passadas SIMULTÂNEAS sobre a mesma linha ainda pedem dois comparativos: as
-  # duas leem a linha antes de qualquer uma gravar.
+  # devolve só chega ao banco no `record_attempt!` do fim dela, depois da publicação. Quando esse
+  # `record_attempt!` falha no banco e o de `AsyncRunJob#retry_or_fail` também, o `perform` levanta e o
+  # Sidekiq reexecuta a mesma passada sobre o handle do banco: sem a identidade, ela pedia outro comparativo
+  # ao portal, que devolve outra URL e com ela outra identidade, e o cliente recebia dois PDFs. Com a
+  # identidade na linha, a reentrada pergunta por ela (`comparativo_assumido?`). A escrita é reforço
+  # (`gravar_na_linha`): se falhar, as marcas seguem no handle da passada. No deploy de produção a passada
+  # não reentra: o `docker stop` sem `-t` do `chatwoot-worker` manda SIGKILL em 10 s, o job morto não volta
+  # para a fila, e quem fecha a linha é o varredor.
+  #
+  # DUAS PASSADAS SIMULTÂNEAS SOBRE A MESMA LINHA AINDA PEDEM DOIS COMPARATIVOS. A janela vai da leitura do
+  # handle até o ACEITE do arquivo, download incluído: a identidade gravada aqui só segura o segundo pedido
+  # depois de aceita. A única fonte real conhecida é o `perform_later` do reagendamento que levanta depois
+  # de o Redis já ter gravado o agendamento: `retry_or_fail` reagenda de novo, e a execução passa a ter duas
+  # correntes de jobs. Probabilidade desprezível; declarado junto da #418, sem teste no repositório.
   def fechar(deliveries, handle)
     return concluir_passada(deliveries, handle) unless comparativo_por_tentar?(handle)
 

@@ -122,6 +122,49 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
   end
 
+  # O último pedaço da cadeia do turno sai (`cotacao_submetida(cadeia_aberta: true)` espera dois).
+  def fechar_cadeia(run)
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: agent_bot,
+                     content: 'pedaço final do turno', content_attributes: { 'autonomia_chunk_token' => "#{run.origin_message_id}:1" })
+  end
+
+  # O que o cliente vê, na ordem, sem os pedaços do turno.
+  def ordem
+    bot_messages.reject { |mensagem| mensagem.content_attributes.to_h['autonomia_chunk_token'] }.map do |mensagem|
+      next 'pdf' if mensagem.attachments.any?
+      next 'fecho' if mensagem.content == fecho
+
+      mensagem.content.to_s.include?('R$') ? 'precos' : 'outro'
+    end
+  end
+
+  def tipo_do_job(job)
+    forma = ActiveJob::Arguments.deserialize(job['arguments'])[1]
+    return 'pdf' if Autonomia::Agents::Tools::ArquivoGravado.de(forma)
+    return 'fecho' if Autonomia::Agents::Tools::EntregaEncadeada.de(forma) || forma == fecho
+
+    forma.to_s.include?('R$') ? 'precos' : 'outro'
+  end
+
+  # A DRENAGEM PASSO A PASSO (rodada 3): a cada tique, cada `AsyncPublishJob` enfileirado roda UMA vez, com
+  # o PRÓPRIO contador de adiamentos, sem saltar para o teto. `segurar` (tipo => tiques) deixa os jobs de um
+  # tipo parados nos primeiros tiques, como o poller que chega atrasado para eles; `primeiro` roda os jobs
+  # de um tipo antes dos outros dentro de cada tique.
+  def drenar_passo_a_passo(segurar: {}, primeiro: nil, tiques: 90)
+    tiques.times do |tique|
+      break if adiados.empty?
+
+      rodar_tique(adiados.reject { |job| segurar.fetch(tipo_do_job(job), 0) > tique }, primeiro)
+    end
+  end
+
+  def rodar_tique(jobs, primeiro)
+    ActiveJob::Base.queue_adapter.enqueued_jobs.reject! { |job| jobs.any? { |rodando| rodando.equal?(job) } }
+    jobs.sort_by.with_index { |job, indice| [tipo_do_job(job) == primeiro ? 0 : 1, indice] }.each do |job|
+      Autonomia::Agents::Tools::AsyncPublishJob.new.perform(*ActiveJob::Arguments.deserialize(job['arguments']))
+    end
+  end
+
   describe 'sonda A: comparativo com a cadeia aberta e o download falhando' do
     it 'a passada nao encerra, o fecho nao sai, e a passada seguinte pede outro PDF' do
       # Arrange
@@ -147,9 +190,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run.status).to eq('done')
     end
 
-    # A LIA NÃO FICA TRAVADA POR 24 h por uma cotação cujo PDF não saiu: enquanto a nova tentativa não
-    # acontece, a linha não está concluída e o contador só conta os preços.
-    it 'o pedido repetido nao diz concluida enquanto o PDF nao saiu' do
+    # A LIA NÃO FICA TRAVADA POR 24 h por uma cotação cujo download do PDF foi recusado: enquanto a nova
+    # tentativa não acontece, a linha não está concluída e o contador só conta os preços. O PDF ACEITO e
+    # ADIADO é outro caso: a linha já é `done`, e o especialista lê "concluída" antes de o PDF sair (sonda U2
+    # da revisão da rodada 2; declarado na auditoria).
+    it 'o pedido repetido nao diz concluida enquanto o PDF recusado espera a nova tentativa' do
       run = cotacao_submetida(cadeia_aberta: true)
       stub_request(:get, url).to_return(pdf_nao_encontrado)
 
@@ -308,10 +353,103 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
   end
 
-  # A REENTRADA DEPOIS DE UMA PASSADA MORTA (a revisão da rodada 2 apontou: na `main` o comparativo da cotação
-  # com recusa era gerado sob a marca `autonomia_closed`, e o `fechar` gera sem ela). O Sidekiq reenfileira o
-  # job no hard shutdown, e a mesma passada roda de novo sobre o handle do banco. A passada abaixo publica o
-  # PDF e morre antes de gravar o handle (`Interrupt`, que o `advance` não captura, como `Sidekiq::Shutdown`).
+  # O FECHO SAI DEPOIS DE TODA ENTREGA ACEITA QUE AINDA NÃO É MENSAGEM (rodada 3 da fatia 1 do PDF rápido). A
+  # revisão da rodada 2 mostrou o fecho encadeado só ao PDF: o lote de preços adiado numa passada anterior
+  # saía depois de "Encerrei a busca de preços por aqui" (sondas N1, N1c e N2). Drenagem passo a passo.
+  describe 'o fecho depois de toda entrega aceita que ainda nao e mensagem' do
+    it 'a cadeia fecha entre a passada dos precos e a que fecha: PDF, precos e fecho, nesta ordem' do
+      # Arrange — os preços saem adiados com a cadeia aberta; o último pedaço do turno sai antes da passada que fecha
+      run = cotacao_submetida(cadeia_aberta: true)
+      stub_request(:get, url).to_return(pdf_ok)
+      portal_responde('running', leitura_inicial)
+      passada(run, 1)
+      portal_responde('partial', com_desfecho)
+      passada(run, 2)
+      fechar_cadeia(run)
+      passada(run, 3)
+
+      # Act
+      drenar_passo_a_passo
+
+      # Assert
+      expect(run.reload.status).to eq('done')
+      expect(ordem).to eq(%w[pdf precos fecho])
+    end
+
+    it 'com todas as seguradoras cotando (completed), o fecho tambem espera o lote de precos adiado' do
+      # Arrange
+      run = cotacao_submetida(cadeia_aberta: true)
+      stub_request(:get, url).to_return(pdf_ok)
+      todas = [oferta('8', 'quoted', 2119.18), oferta('20', 'quoted', 2323.17), oferta('47', 'quoted', 1999.0)]
+      portal_responde('running', leitura_inicial)
+      passada(run, 1)
+      portal_responde('partial', todas)
+      passada(run, 2)
+      fechar_cadeia(run)
+      portal_responde('completed', todas)
+      passada(run, 3)
+
+      # Act
+      drenar_passo_a_passo
+
+      # Assert
+      expect(ordem).to eq(%w[pdf precos fecho])
+    end
+
+    it 'com a cadeia abortada e o job dos precos atrasado pelo poller, sem falha nenhuma, o fecho sai por ultimo' do
+      # Arrange — o job dos preços anda quatro contagens na espera da passada seguinte, e depois atrasa seis tiques
+      run = cotacao_submetida(cadeia_aberta: true)
+      stub_request(:get, url).to_return(pdf_ok)
+      portal_responde('running', leitura_inicial)
+      passada(run, 1)
+      portal_responde('partial', com_desfecho)
+      passada(run, 2)
+      drenar_passo_a_passo(tiques: 4)
+      passada(run, 3)
+
+      # Act — o job do fecho é pego antes dos outros em cada tique
+      drenar_passo_a_passo(segurar: { 'precos' => 6 }, primeiro: 'fecho')
+
+      # Assert
+      expect(ordem).to eq(%w[pdf precos fecho])
+      expect(anexos.size).to eq(1)
+    end
+
+    # A ENTREGA QUE O PRÓPRIO ENCERRAMENTO ADIOU segura o fecho mesmo quando a escrita do aceite falha: o
+    # token dela não chega à lista do aceite, e o encerramento o guarda (`@adiada`).
+    it 'o fecho do prazo espera o PDF que o encerramento adiou, com a escrita do aceite falhando' do
+      # Arrange — a primeira tentativa do PDF falha no download; os preços saem no teto da cadeia
+      run = cotacao_submetida(cadeia_aberta: true)
+      outra_url = 'https://exemplo.test/comparativo-mock-2.pdf'
+      allow(mock).to receive(:quote_proposal).and_return({ 'url' => url }, { 'url' => outra_url })
+      stub_request(:get, url).to_return(pdf_nao_encontrado)
+      stub_request(:get, outra_url).to_return(pdf_ok)
+      proxima = ate_fechar(run)
+      drenar_passo_a_passo
+      expect(ordem).to eq(%w[precos])
+      allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
+      allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
+      allow(run).to receive(:registrar_entrega_aceita!).and_raise(ActiveRecord::StatementInvalid, 'banco fora')
+      run.update!(expires_at: 1.second.ago)
+
+      # Act — o encerramento pede o PDF, que é adiado; o job do fecho é pego antes em cada tique
+      passada(run, proxima)
+      RSpec::Mocks.space.proxy_for(run).reset
+      RSpec::Mocks.space.proxy_for(Autonomia::Agents::ToolRun).reset
+      drenar_passo_a_passo(primeiro: 'fecho')
+
+      # Assert
+      expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+      expect(ordem).to eq(%w[precos pdf fecho])
+    end
+  end
+
+  # A REENTRADA DEPOIS DE UMA PASSADA QUE NÃO GRAVOU O HANDLE (a revisão da rodada 2 apontou: na `main` o
+  # comparativo da cotação com recusa era gerado sob a marca `autonomia_closed`, e o `fechar` gera sem ela). A
+  # mesma passada roda de novo sobre o handle do banco quando o `perform` levanta para o Sidekiq (o
+  # `record_attempt!` de `retry_or_fail` falhando no banco, com `:max_retries: 3`). No deploy de produção, não:
+  # o `docker stop` sem `-t` mata o worker em 10 s, sem reenfileirar, e quem fecha a linha é o varredor. A
+  # passada abaixo publica o PDF e levanta antes de gravar o handle (`Interrupt`, que o `advance` não captura).
   # Cada pedido ao portal devolve outra URL: um segundo pedido seria um segundo PDF na conversa.
   describe 'a reentrada depois de a passada que publicou o PDF morrer antes de gravar o handle' do
     { 'imediata' => false, 'adiada' => true }.each do |publicacao, cadeia_aberta|

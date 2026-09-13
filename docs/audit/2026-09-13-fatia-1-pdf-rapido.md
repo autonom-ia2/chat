@@ -261,8 +261,8 @@ carga ou zero exemplos).
   diferentes). A rodada 1 disse "risco anterior a esta fatia", e não é inteiro: na `main` a cotação com
   recusa gerava o comparativo sob `autonomia_closed`, e nesta fatia ela gera no `fechar`, sem a marca. Ver
   R2-4, que também responde se a marca deveria cobrir o `fechar` (não).
-- **Ordem PDF × fecho com as duas publicações adiadas.** Corrigido na rodada 2: o fecho é encadeado ao PDF
-  adiado (item 6; sonda V).
+- **Ordem PDF × fecho com as duas publicações adiadas.** Corrigido na rodada 2 para o PDF (item 6; sonda V)
+  e na rodada 3 para toda entrega aceita que ainda não é mensagem, lote de preços incluído (achado 1).
 - **A frase `comparativo_reserva` continua sendo pedida ao especialista** e não sai mais. Na rodada 1 a
   descrição ainda dizia que o link vinha abaixo; na rodada 2 ela diz "Frase curta sobre o comparativo em
   PDF, guardada junto do arquivo. Não escreva link nem endereço de site." A chave continua no schema.
@@ -306,19 +306,27 @@ fecho podia sair antes do PDF adiado (V) e o especialista lia "concluída" sem o
 5. **Estabilidade da lista.** `QuoteOffers#assentada` (os códigos, quando toda oferta tem desfecho) é gravada
    a cada consulta em `leitura_assentada`; `todas_com_desfecho?(ja_acionadas, assentada_anterior)` exige a
    leitura atual assentada, com o MESMO conjunto da leitura imediatamente anterior, cobrindo as acionadas.
-   Nenhuma das duas leituras pode ter oferta em andamento.
-6. **Fecho depois do PDF.** `Tools::EntregaEncadeada` (texto e token de que ele depende). O encerramento
-   encadeia o fecho à entrega que ele mesmo adiou (`@adiada`) ou à que a ferramenta diz estar aceita e sem
-   mensagem (`entrega_a_caminho`: o comparativo adiado). O publicador adia a encadeada enquanto não houver
-   mensagem com o token. O `AsyncPublishJob` tem dois tetos no mesmo contador de adiamentos: a cadeia do
-   turno até 30 (90 s) e a dependência até 60 (180 s). O varredor (`publish!`) ignora a cadeia e continua
-   esperando a dependência; o job que ele enfileira já começa em 30, e espera até 90 s. No teto, o fecho sai
-   sem ela: fora de ordem, nunca em silêncio.
+   Nenhuma das duas leituras pode ter oferta em andamento. A regra DEPENDE de o portal já ter listado todas
+   as seguradoras quando a lista se repete: duas leituras iguais com parte delas listada fecham a cotação, e a
+   que aparecer depois fica de fora (sonda C2 da revisão da rodada 2; a rodada 2 escreveu no código que isso
+   "não depende", e era falso). Nas duas linhas do tempo completas medidas, todos os cálculos já estavam na
+   primeira leitura.
+6. **Fecho depois do PDF.** `Tools::EntregaEncadeada` (texto e tokens de que ele depende). Na rodada 2 o
+   encerramento encadeava o fecho só ao PDF (`@adiada` ou o `entrega_a_caminho` da ferramenta); a rodada 3 o
+   encadeia a toda entrega aceita que ainda não é mensagem (achado 1). O publicador adia a encadeada enquanto
+   algum desses tokens não tiver mensagem. O `AsyncPublishJob` tem dois tetos no mesmo contador de
+   adiamentos: a cadeia do turno até 30 e a dependência até 60. Em relógio, cada adiamento são os 3 s de
+   `PUBLISH_DEFER_SECONDS` mais a espera até o poller de agendados do Sidekiq 7.3 acordar (em média a cada
+   5 s): ~3 a 4 min e ~6 a 8 min, sem fila ocupada. A rodada 2 escreveu 90 s e 180 s, contando só os 3 s. O
+   varredor (`publish!`) ignora a cadeia e continua esperando a dependência; o job que ele enfileira já começa
+   em 30 e espera ~3 a 4 min. No teto, o fecho sai sem ela: fora de ordem, nunca em silêncio.
 7. **Sonda E.** `Fecho#resultado_entregue?` conta o comparativo assumido.
-8. **Reentrada depois de uma passada morta.** `Comparativo#fechar` grava a identidade e a contagem na linha
-   antes de publicar o arquivo (`gravar_na_linha`). O `record_attempt!` só vem depois da publicação; morto o
-   processo no meio, a mesma passada rodava de novo, pedia outro comparativo (outra URL, outra identidade) e
-   o cliente recebia dois PDFs. Teste com a publicação imediata e com a adiada.
+8. **Reentrada depois de uma passada que não gravou o handle.** `Comparativo#fechar` grava a identidade e a
+   contagem na linha antes de publicar o arquivo (`gravar_na_linha`). O `record_attempt!` só vem depois da
+   publicação; quando ele falha no banco e o de `retry_or_fail` também, o `perform` levanta e o Sidekiq
+   reexecuta a mesma passada, que pedia outro comparativo (outra URL, outra identidade) e o cliente recebia
+   dois PDFs. Teste com a publicação imediata e com a adiada. A rodada 2 atribuiu a reentrada ao
+   reenfileiramento no hard shutdown: no deploy de produção ele não acontece (achado 6e).
 9. **Textos corrigidos.** `comparativo.rb` (cabeçalho e teto), `texto_ao_cliente.rb` (a reserva não leva
    URL), `async_run_job.rb` ("a adiada sai sozinha" era falso para arquivo), `encerramento.rb` (idem),
    `frases.rb` (a descrição de `comparativo_reserva` dizia ao modelo que o link vinha abaixo),
@@ -348,6 +356,9 @@ para o desfecho completo até a segunda consulta.
   mais uma vez quando sobra tentativa (até ~85 s a mais). O total de pedidos ao portal continua limitado a 3.
 - Pior caso de relógio até o fecho: uma passada que começa aos ~419 s dura até ~150 s, mais 21 s de
   intervalo, mais o encerramento: ~675 s. É o caso em que toda chamada ao portal bate no timeout.
+- Depois do encerramento, o fecho encadeado ainda espera as entregas aceitas que não viraram mensagem: com
+  a cadeia do turno aberta, até ~3 a 4 min; quando uma delas nunca vira mensagem (PDF recusado no job, blob
+  apagado, job perdido), até o teto da dependência, ~6 a 8 min.
 - Testes (`async_run_job_pdf_antes_do_adiamento_spec`): o prazo que vence durante a passada cujo download
   falha (o encerramento pede de novo; um fecho, depois do PDF); o prazo com o teto esgotado (não pede; um
   fecho); o prazo com tentativa sobrando e o portal fora (pede uma vez; fecho sem PDF); o mesmo com a cadeia
@@ -362,10 +373,13 @@ R2-1. **O download antes de adiar alonga a passada do motor** em até 20 s, fora
 
 R2-2. **A publicação adiada ainda pode ser recusada depois do aceite** (autorização caída entre a passada e o
       job, erro de banco ao anexar). O blob existe, ninguém pede outro PDF e o cliente fica sem ele. O que saiu
-      desse caminho foi o download, que é a falha medida.
+      desse caminho foi o download. A falha MEDIDA em 13/09/2026 foi o 504 na geração do comparativo (1 de 5
+      pedidos), não o download; o download que falha é o cenário da revisão (sonda A), não uma medição (a
+      rodada 2 escreveu "a falha medida", e era falso).
 
-R2-3. **O fecho encadeado espera no máximo 180 s pela dependência** (90 s quando quem o enfileira é o
-      varredor), e depois sai sem ela.
+R2-3. **O fecho encadeado espera no máximo 60 adiamentos pelas dependências** (30 quando quem o enfileira é
+      o varredor), e depois sai sem elas. Em relógio, ~6 a 8 min (~3 a 4 min pelo varredor); a rodada 2
+      escreveu 180 s e 90 s.
 
 R2-4. **`autonomia_closed` NÃO deve cobrir o `fechar`.** Na `main`, a cotação com recusa (que nunca vira
       `completed`) gerava o comparativo no encerramento por prazo, sob `autonomia_closed`, adquirida no banco
@@ -374,21 +388,30 @@ R2-4. **`autonomia_closed` NÃO deve cobrir o `fechar`.** Na `main`, a cotação
       marca é de uma vez só ("quem não adquire não repete o trabalho"): cobrindo o `fechar`, a primeira
       tentativa que falhasse a adquiriria e nenhuma nova tentativa aconteceria, nem a do encerramento por
       prazo, que adquire a mesma marca. O que fica:
-      - a reentrada SEQUENCIAL (o mesmo job de novo, depois de o processo morrer) está fechada pela escrita
-        imediata do item 8, com uma janela de milissegundos: entre o `perform_later` do PDF adiado e o
-        registro do aceite;
-      - duas passadas SIMULTÂNEAS da mesma linha continuam podendo pedir dois comparativos. Há dois caminhos:
-        o hard shutdown do Sidekiq (o job reenfileirado roda enquanto o antigo ainda vive por milissegundos) e
-        uma corrente de jobs duplicada (o `perform_later` do reagendamento levanta depois de o Redis aceitar,
-        e `retry_or_fail` reagenda de novo). Uma aquisição por tentativa antes do pedido não bastaria sozinha:
-        o `record_attempt!` de uma passada regrava o handle da outra com a cópia em memória, identidade do
-        comparativo incluída (R19, #418). Não medido; a proposta é tratar junto da #418.
+      - a reentrada SEQUENCIAL (a mesma passada de novo, pelo retry do Sidekiq depois de o `perform`
+        levantar) está fechada pela escrita imediata do item 8, com uma janela de milissegundos: entre o
+        `perform_later` do PDF adiado e o registro do aceite;
+      - duas passadas SIMULTÂNEAS da mesma linha continuam podendo pedir dois comparativos, e a janela vai da
+        leitura do handle até o ACEITE do arquivo, download incluído: a identidade gravada pelo item 8 só
+        segura o segundo pedido depois de aceita (sonda N6b da revisão da rodada 2: a outra passada leu a
+        linha já com a identidade, durante o download, e pediu de novo). A rodada 2 escreveu "as duas leem a
+        linha antes de qualquer uma gravar", e a janela é maior. Fontes: no deploy de produção não há
+        reenfileiramento (o `docker stop` sem `-t` manda SIGKILL em 10 s; `deploy-autonomia-blue-green.yml`,
+        igual no Hub2You), então a única fonte real conhecida é o `perform_later` do reagendamento que
+        levanta depois de o Redis já ter gravado o agendamento: `retry_or_fail` reagenda de novo e a execução
+        passa a ter duas correntes. Probabilidade desprezível. Uma aquisição por tentativa antes do pedido não
+        bastaria sozinha: o `record_attempt!` de uma passada regrava o handle da outra com a cópia em
+        memória, identidade do comparativo incluída (R19, #418). Declarado junto da #418; NÃO fechado em
+        código nesta PR, e o aceite desse risco é do CEO (o coordenador leva a pergunta).
 
 R2-5. **A sonda E muda a frase**: preços recusados e PDF aceito recebem o fecho de quem tem resultado (na
       rodada 1, nenhuma frase). A `main` publicava a frase parcial por `delivered_count` nesse estado.
 
-R2-6. **O pedido repetido enquanto o PDF não saiu**: a linha está `running`, e o especialista lê que a
-      consulta está em andamento (sonda U), não "concluída".
+R2-6. **O pedido repetido enquanto o PDF não saiu**: com o download RECUSADO, a linha está `running`, e o
+      especialista lê que a consulta está em andamento (sonda U). Com o PDF ACEITO e ADIADO (a cadeia do turno
+      aberta), a linha já é `done`, e o especialista lê "concluída" antes de o PDF e o fecho estarem na
+      conversa (sonda U2 da revisão da rodada 2). A rodada 2 descreveu só o primeiro caso, e o título do
+      exemplo no spec também (corrigido na rodada 3).
 
 R2-7. **A nova tentativa pede outra URL ao portal, e não reemite uma URL gravada.** É a decisão que a #414
       deixou pendente ("reemitir com a URL GRAVADA no handle"). A URL não tem assinatura e leva o nome do
@@ -516,11 +539,181 @@ URL: o exemplo passou a usar duas, e F6 re-rodada sozinha: PEGA. Linhas no estad
 ### O que NÃO foi verificado (rodada 2)
 
 - **Portal real**, de novo: conector `mock` com dados sintéticos.
-- **Duas passadas simultâneas** (R2-4): sem teste.
+- **Duas passadas simultâneas** (R2-4): sem teste no repositório; a revisão da rodada 2 reproduziu nas
+  sondas N6 e N6b.
 - **Rollback com publicações adiadas no ar**: ver "Deploy e rollback". Por leitura de código.
 - **Publicação adiada recusada depois do aceite** (R2-2): sem teste de nova tentativa, porque ela não existe.
 - **Renovação de sessão** fora da conta de tempo.
 - **As sondas** rodaram numa cópia minha do arquivo do revisor, com a leitura a mais descrita acima.
+
+## Rodada 3 (13/09/2026): a reprovação da PR #422 em `f5a849b20b`
+
+A revisão adversarial da rodada 2 confirmou fechados todos os defeitos da rodada 1: nas sondas adaptadas, A,
+B, B2, C, E e V terminam no estado certo, nenhum estado fica mudo e não há anexo duplo. Reprovou por um
+defeito novo que o cliente vê, e por textos e o runbook de rollback.
+
+### Achado 1 (P2, cliente): o fecho saía antes de um lote de preços adiado
+
+O estado: uma passada deixa um lote de preços adiado (cadeia do turno aberta), a passada que fecha publica o
+PDF e o fecho, e o job dos preços roda depois dos dois. O cliente via o PDF, "Encerrei a busca de preços por
+aqui..." e só então "Mais opções: ...". O fecho estava encadeado só ao PDF (`Encerramento#encadear` e
+`Fecho#entrega_a_caminho`). Sondas da revisão: N1 (a cadeia fecha entre a passada dos preços e a que fecha),
+N1c (todas cotam, `completed`) e N2 (cadeia abortada e nenhuma falha: basta o job dos preços chegar seis
+tiques depois do poller).
+
+A correção:
+- `Encerramento#entregas_a_caminho`: os tokens da lista do aceite desta execução (`Tools::EntregaAceita`) que
+  ainda não têm mensagem na conversa, mais a entrega que o próprio encerramento acabou de adiar (`@adiada`,
+  que continua valendo quando a escrita do aceite dela falha). Quem sabe o que foi aceito é o motor, e a
+  pergunta não depende de qual entrega é o PDF: `Native::Base#entrega_a_caminho` e
+  `Fecho#entrega_a_caminho`, da rodada 2, saíram.
+- `EntregaEncadeada#depois_de` virou lista; `AsyncPublisher#esperar?` adia enquanto qualquer token da lista
+  não tiver mensagem.
+- O teto continua: no 60º adiamento o fecho sai sem elas, nunca em silêncio.
+- Não toca o adapter e não cria estado mudo: toda execução que publicava fecho continua publicando o mesmo
+  fecho; muda quando ele sai.
+
+Custo declarado: quando uma entrega aceita nunca vira mensagem (o PDF recusado no job, R2-2; o blob apagado,
+achado 4; o job perdido com o Redis), o fecho espera o teto da dependência, ~6 a 8 min, antes de sair. Na
+rodada 2 isso já valia para o PDF; agora vale também para um lote de preços.
+
+Não corrigido, e declarado: o PDF ainda pode sair antes de um lote de preços adiado (N1 termina em PDF,
+preços, fecho). A revisão pediu o fecho; o PDF antes de um lote atrasado já acontecia na `main` (por leitura
+de código: lá o PDF também saía na hora com a cadeia fechada, com o lote ainda adiado).
+
+### Achado 3 (P2): rollback sem mitigação
+
+Corrigido no texto e com passo de runbook, em "Deploy e rollback" e no corpo da PR. As janelas da rodada 2
+(90 s e 180 s) estavam erradas: cada adiamento são 3 s mais a espera do poller de agendados do Sidekiq 7.3.10
+(em média 5 s, lido em `sidekiq/scheduled.rb`, não medido), então ~3 a 4 min para o PDF e ~6 a 8 min para o
+fecho. E o workflow de rollback liga o worker antigo (`deploy-autonomia-blue-green.yml:701`) antes de parar
+o atual (`:712`): durante a troca os dois consomem a fila `medium`. Corrigido também em
+`async_publish_job.rb` e `async_config.rb`.
+
+### Achado 2 (declarado, só texto): dois PDFs de duas passadas na mesma linha
+
+Não fechado em código; o aceite é do CEO. Texto corrigido em `comparativo.rb` (`fechar`) e em R2-4: a janela
+vai até o ACEITE, download incluído, e não só "as duas leem antes de qualquer uma gravar" (sonda N6b). No
+deploy de produção não há reenfileiramento no shutdown: `ExecStop=/usr/bin/docker stop chatwoot-worker`, sem
+`-t` (`deploy-autonomia-blue-green.yml:352`; igual em `deploy-hub2you-blue-green.yml:352`), manda SIGKILL em
+10 s. A única fonte real conhecida é o `perform_later` do reagendamento que levanta depois de o Redis já ter
+gravado o agendamento. Probabilidade desprezível; declarado junto da #418.
+
+### Achados 4 e 5 (P3, declarados, sem código)
+
+- **4.** O job do PDF que roda mais de 1 h depois (Sidekiq parado ou atrasado) encontra o blob já apagado
+  pelo varredor (`BLOB_SEM_DONO_IDADE`, `reap_stale_runs_job.rb:27` e `:72-76`). O cliente fica com os preços
+  e o fecho, sem anexo (sonda N4). Com a rodada 3, o fecho ainda espera o teto da dependência antes de sair.
+- **5.** Um deploy durante a 3ª tentativa: `comparativo_tentativas=3` já está gravado (a escrita imediata do
+  item 8 da rodada 2), o SIGKILL mata a passada sem reenfileirar, e ninguém pede outro PDF. A execução fica
+  `running` até o varredor fechá-la, sem PDF: o prazo (420 s) mais `GRACE` (5 min), com o cron a cada 10 min,
+  dá 12 a 22 min depois do disparo. A sonda N9 mostra a linha com `comparativo_tentativas=3` numa reentrada;
+  em produção não há reentrada.
+
+### Achado 6 (P3): afirmações além do código, corrigidas no texto
+
+- **a.** O pedido repetido com o PDF aceito e adiado lê "concluída" (sonda U2): R2-6 e o título do exemplo em
+  `async_run_job_pdf_antes_do_adiamento_spec` descreviam só o download recusado.
+- **b.** 90 s / 180 s: ver achado 3 (auditoria, `async_publish_job.rb`, `async_config.rb`, corpo da PR).
+- **c.** `quote_offers.rb`: a regra da estabilidade DEPENDE de o portal já ter listado todas as seguradoras
+  quando a lista se repete (sonda C2); o texto dizia o contrário. Corrigido no código e no item 5.
+- **d.** R2-2: a falha medida foi o 504 na geração, não o download.
+- **e.** Reenfileiramento no shutdown e os 25 s para o download terminar não valem no deploy de produção
+  (SIGKILL em 10 s): corrigido em `comparativo.rb` (`fechar`), `entrega_de_arquivo.rb` (`PRAZO_SEGUNDOS`), no
+  item 8 e em R2-4. A mesma premissa aparece em comentários mais antigos de `async_run_job.rb` (cabeçalho,
+  `MudouDeDono`, `submeter`, `CLOSED_KEY`), de entregas anteriores; não foram tocados nesta rodada.
+- **f.** O `signed_id` do blob (`arquivo_gravado.rb`) baixa o mesmo PDF sem autenticação pelas rotas padrão
+  do ActiveStorage e não expira, e o ActiveJob registra os argumentos do job em INFO (a menos que
+  `log_arguments` esteja desligado, hoje só com `WHATSAPP_API_CAMPAIGNS_ENABLED`). Não é regressão (a URL do
+  portal no job também baixava sem autenticação), e não é seguro. Declarado no código.
+
+### Testes da rodada 3
+
+Mesmo ambiente das rodadas anteriores; números lidos do JSON do rspec e exit code de arquivo.
+
+| rodada | escopo | resultado | exit |
+|---|---|---|---|
+| sondas N1, N1c e N2 do revisor, em `f5a849b20b` (cópia com só o caminho da saída trocado) | 3 exemplos (afirmam o defeito) | 3 passam: PDF, fecho, preços | 0 |
+| RED: os exemplos novos, com `app/` igual a `f5a849b20b` | `async_run_job_pdf_antes_do_adiamento_spec`, `async_publisher_spec`, `async_publish_job_spec` | 74 exemplos, 5 falhas: N1, N1c e N2 pela ordem `pdf fecho precos`, e os 2 do publicador pela lista de dependências | 1 |
+| GREEN do mesmo escopo, mais `encerramento_spec`, `base_contrato_de_nivel_spec`, `quote_offers_spec`, `entrega_de_arquivo_spec` | 7 arquivos | 173 exemplos, 0 falhas | 0 |
+| sondas do revisor inteiras (a mesma cópia), depois da correção | 22 exemplos | 3 falhas, só N1, N1c e N2, que afirmam o defeito: as três terminam em PDF, preços, fecho. As outras 19 ficam como estavam | 1 |
+| base das mutações | 14 arquivos de spec | 352 exemplos, 0 falhas | 0 |
+| **final** (md5 de `app/` e `spec/` igual antes e depois) | `spec/services/autonomia`, `spec/jobs/autonomia`, `spec/models/autonomia`, `spec/requests/api/v1/accounts/autonomia`, `spec/controllers/super_admin` | **1690 exemplos, 0 falhas, 3 pendentes** (quarentena anterior: `provisioner_spec`) | **0** |
+
+Rubocop com lista explícita dos 35 arquivos Ruby da PR inteira (19 de `app/`, 16 de `spec/`): 0 ofensas, exit 0.
+`rails zeitwerk:check`: "All is good!", exit 0.
+
+Os exemplos novos, em `async_run_job_pdf_antes_do_adiamento_spec`, drenam os `AsyncPublishJob` passo a passo:
+cada job roda uma vez por tique com o PRÓPRIO contador, sem saltar para o teto, e o terceiro exemplo segura o
+job dos preços seis tiques e pega o job do fecho antes dos outros em cada tique. O quarto (a escrita do aceite
+falhando no encerramento) é a guarda de `@adiada`.
+
+### Mutações da rodada 3
+
+Mesmo driver, âncoras do código da rodada 3, 14 arquivos de spec (352 exemplos). **41 mutações, 41 PEGA, 0
+sobreviventes, 0 erros; originais restaurados, md5 de `app/` e `spec/` igual antes e depois.** A mutação do
+achado 1 é R3: o fecho volta a olhar só o PDF (a lista do aceite reduzida ao token do comparativo). Ela cai
+nos três exemplos novos das sondas N1, N1c e N2. F5 e F2 mudaram de âncora com o código: F5 tira as entregas
+aceitas de passadas anteriores, e F2 tira a espera pela lista. R3b faz o publicador esperar só a primeira
+dependência.
+
+"motor-pdf" = `async_run_job_pdf_antes_do_adiamento_spec`; "ferramenta" =
+`insurance_quote_fecha_sem_esperar_o_portal_spec`; "motor" = `async_run_job_fecha_sem_esperar_o_portal_spec`;
+"job comparativo" = `async_run_job_comparativo_arquivo_spec`. Linhas no estado do código da rodada 3.
+
+| id | mutação | resultado | exemplos que caíram (amostra) |
+|---|---|---|---|
+| B1 | blob antes de adiar: adia a entrega de arquivo sem baixar (o desenho da rodada 1) | PEGA 9 | motor-pdf :169 :197 :237 |
+| B2 | URL fora do Sidekiq: o motor enfileira a entrega com a URL | PEGA 2 | motor-pdf :338 :588 |
+| C1 | blob órfão: a forma gravada recusada na entrada não vai para a limpeza | PEGA 1 | motor-pdf :588 |
+| C2 | blob repassado ao adiamento vai para a limpeza | PEGA 1 | publicador :731 |
+| S1 | sentinela: comparativo emitido conta como assumido | PEGA 12 | ferramenta :189; motor :206 :277 |
+| S2 | sentinela gravada na emissão | PEGA 3 | ferramenta :189; job comparativo :173; fronteira :149 |
+| S3 | encerramento não pede de novo o comparativo já emitido | PEGA 4 | motor-pdf :211 :237 :420 |
+| M6 | PDF que não sai do portal encerra sem nova tentativa | PEGA 14 | ferramenta :146 :169 :239 |
+| M7 | sem teto de tentativas | PEGA 15 | ferramenta :169 :272 :282 |
+| M9 | sem a busca da mensagem na conversa | PEGA 2 | ferramenta :218; motor :235 |
+| M10 | done encerra com o arquivo recusado | PEGA 13 | motor :206 :235 :277 |
+| M11 | qualquer entrega recusada segura o done | PEGA 1 | motor :503 |
+| L1 | estabilidade: sem comparar com a leitura anterior | PEGA 77 | quote_offers :212 :220; ferramenta :90 |
+| L2 | estabilidade: compara a leitura consigo mesma | PEGA 75 | ferramenta :90 :103; motor :136 |
+| M1 | finished? só com completed/failed | PEGA 57 | ferramenta :77 :103 :133 |
+| M3 | sem a cobertura das acionadas | PEGA 1 | quote_offers :228 |
+| M4 | lista negra (só running segura) | PEGA 1 | quote_offers :205 |
+| M5 | error fora dos desfechos | PEGA 2 | quote_offers :190; ferramenta :103 |
+| F1 | fecho sem encadear | PEGA 7 | motor-pdf :237 :313 :338 |
+| F2 | publicador não espera a dependência | PEGA 11 | motor-pdf :237 :313 :338 |
+| R3b | publicador espera só a primeira dependência | PEGA 1 | publicador :307 |
+| F3 | um teto só no job | PEGA 5 | motor-pdf :237 :338 :399 |
+| F4 | publish! (varredor) não espera a dependência | PEGA 2 | motor-pdf :313; publicador :327 |
+| R3 | **achado 1: o fecho volta a olhar só o PDF** | PEGA 3 | motor-pdf :360 :379 :399 |
+| F5 | sem as entregas aceitas de passadas anteriores | PEGA 5 | motor-pdf :313 :338 :360 |
+| F6 | sem a entrega adiada pelo próprio encerramento | PEGA 1 | motor-pdf :420 |
+| E1 | resultado sem o comparativo assumido | PEGA 1 | motor-pdf :286 |
+| I1 | sem a escrita imediata da identidade e da contagem | PEGA 2 | motor-pdf :456 |
+| M12 | done sem o fecho de quem tem resultado | PEGA 33 | motor :136 :178 :206 |
+| M13 | done sem a pergunta à conversa | PEGA 6 | motor :316; motor-pdf :338 :360 |
+| M13b | concluir engolindo a exceção | PEGA 2 | motor :475; encerramento :438 |
+| M14 | fecho também para a pergunta pelo dado | PEGA 2 | encerramento :406 :438 |
+| M15 | finish_done da main | PEGA 30 | motor :136 :178 :206 |
+| M21 | resta_entregar? sem o comparativo por tentar | PEGA 7 | ferramenta :282; motor :378; motor-pdf :550 |
+| M22 | resta_entregar? sem a marca de conclusão | PEGA 8 | ferramenta :272; motor :402; motor-pdf :211 |
+| M23 | done sem gravar a marca de conclusão | PEGA 8 | ferramenta :262; motor :402; motor-pdf :211 |
+| M16 | download que falha publica a reserva | PEGA 20 | motor :206 :277 :455 |
+| M18 | sem_arquivo não procura a mensagem no ar | PEGA 1 | publicador :559 |
+| U1 | corpo sem texto vira mensagem | PEGA 23 | motor :206 :277 :455 |
+| M19 | forma recusada vira texto com o link | PEGA 3 | ferramenta :239; comparativo :104; job comparativo :131 |
+| M20 | reserva volta a carregar o link | PEGA 3 | ferramenta :252; comparativo :72; ramo_auto :440 |
+
+### O que NÃO foi verificado (rodada 3)
+
+- **Portal real**, de novo.
+- **O runbook de rollback** não foi rodado contra o Redis de produção; os comandos são de leitura, e o
+  formato do payload foi lido no adaptador do Sidekiq 7.3.10 para ActiveJob.
+- **A espera do poller** vem do código do Sidekiq 7.3.10 (`Scheduled::Poller#random_poll_interval`), não de
+  medição; fila `medium` ocupada soma a isso.
+- **Rotas do ActiveStorage** (achado 6f): lidas em `config/`, sem requisição feita.
+- **O PDF antes de um lote de preços adiado** (achado 1): não corrigido, declarado.
 
 ## Deploy e rollback
 
@@ -536,9 +729,33 @@ URL: o exemplo passou a usar duas, e F6 re-rodada sozinha: PEGA. Linhas no estad
     porque a linha da `main` já fechou. Janela: os jobs adiados no minuto do deploy.
 - **Rollback: reverter os commits da PR.**
   - `AsyncPublishJob` enfileirados por esta versão carregam `ArquivoGravado` ou `EntregaEncadeada`, e a `main`
-    não reconhece nenhum dos dois: descarta, com o log "entrega descartada" (`skipped`). O PDF e o fecho
-    desses jobs se perdem, com a execução já fechada. Janela: o que foi adiado até ~90 s (cadeia do turno) e
-    ~180 s (fecho encadeado) antes do rollback. Por leitura de código.
+    não reconhece nenhum dos dois: descarta, com o log "entrega descartada" (`skipped`). O cliente fica com os
+    preços, sem o PDF e sem o fecho, e a execução já está fechada. Janela, por leitura de código: um job de
+    PDF pode estar adiado por até ~3 a 4 min (30 adiamentos de 3 s mais a espera do poller de agendados do
+    Sidekiq, em média 5 s cada) e um fecho encadeado por até ~6 a 8 min (60). A rodada 2 escreveu 90 s e
+    180 s. E o workflow de rollback liga o worker antigo (`deploy-autonomia-blue-green.yml:701`) antes de
+    parar o atual (`:712`): durante a troca os dois consomem a fila `medium`, e o job com a forma nova que o
+    worker antigo pegar é descartado.
+  - **Passo obrigatório antes de disparar o rollback** (rodada 3; não rodado contra produção):
+    1. Listar, só leitura, os jobs com as formas novas no Redis de produção, com as credenciais do ambiente
+       (`REDIS_URL`, e `REDIS_PASSWORD` quando separada), sem imprimir a credencial nem o payload: o argumento
+       do job traz o id assinado do blob, que baixa o PDF. A saída abaixo é só o id da execução:
+
+       ```sh
+       for chave in schedule retry; do
+         redis-cli -u "$REDIS_URL" ZRANGE "$chave" 0 -1
+       done | grep -E 'arquivo_gravado|encadeada' | grep -oE '"arguments":\[[0-9]+' | sed 's/.*\[//' | sort -u
+       redis-cli -u "$REDIS_URL" LRANGE queue:medium 0 -1 \
+         | grep -E 'arquivo_gravado|encadeada' | grep -oE '"arguments":\[[0-9]+' | sed 's/.*\[//' | sort -u
+       ```
+
+    2. Achar as conversas pelo banco, só leitura (psql; nunca `rails runner` em produção):
+       `select id, conversation_id, status from autonomia_agent_tool_runs where id in (...);`
+    3. Lista vazia: rollback liberado. Com jobs na lista e o rollback podendo esperar, esperar a lista
+       esvaziar com o worker atual no ar (até ~3 a 4 min para o PDF e ~6 a 8 min para o fecho) e listar de
+       novo. Sem poder esperar: fazer o rollback e acompanhar essas conversas. O blob do PDF fica guardado por
+       1 h (`BLOB_SEM_DONO_IDADE`); reenviar à mão toca cliente e dado pessoal, e é decisão do Rodrigo, caso a
+       caso.
   - A rodada 1 dizia que as entregas de arquivo serializadas por ela "continuam válidas na anterior (a
     `reserva` segue na forma, só sem o link)" e omitia a consequência: com o download falhando, a `main`
     publica essa reserva, e sem o link o cliente leria "Comparativo com todas as opções:" sem nada depois. Na

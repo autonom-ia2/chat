@@ -32,11 +32,14 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # lock da conversa.
   TETO_BYTES = 10.megabytes
   # PRAZO DO CORPO COM TETO POR LEITURA (`total_timeout:` do `SafeFetch`), monotônico, abaixo dos 25 s
-  # que o Sidekiq desta instalação dá ao job num SHUTDOWN (`:timeout: 25`): um deploy no meio de um
-  # download normal ainda o deixa terminar, em vez de matar a publicação pela metade. Teto por leitura
-  # sozinho não segura um servidor que entrega um byte por segundo — ele nunca estoura a leitura e
-  # prende o worker pelo tempo que quiser (rodada 6, 11/09/2026); com o prazo, cada leitura do corpo
-  # espera no máximo o que resta dele, e a conexão e a espera pelos cabeçalhos ficam limitadas a ele
+  # que o Sidekiq desta instalação pede num SHUTDOWN (`:timeout: 25`). NO DEPLOY DE PRODUÇÃO O WORKER NÃO
+  # TEM ESSES 25 S: o `docker stop` sem `-t` do `chatwoot-worker` (`.github/workflows/deploy-*-blue-green.yml`)
+  # manda SIGKILL em 10 s, e o job morto não volta para a fila. Um download no meio do deploy pode morrer
+  # pela metade; a passada morta não se repete, e a execução fica para o varredor.
+  #
+  # Teto por leitura sozinho não segura um servidor que entrega um byte por segundo — ele nunca estoura a
+  # leitura e prende o worker pelo tempo que quiser (rodada 6, 11/09/2026); com o prazo, cada leitura do
+  # corpo espera no máximo o que resta dele, e a conexão e a espera pelos cabeçalhos ficam limitadas a ele
   # como teto por operação.
   #
   # O QUE O PRAZO NÃO COBRE (ressalva registrada na rodada 7, decisão de não implementar um orçamento
@@ -45,9 +48,10 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # leitura, e as linhas de controle do chunked entre dois pedaços. Modelo de ameaça: a URL vem do
   # nosso adapter (o blob do portal, https, sem redirecionamento), a abertura tem 5 s, cada leitura
   # é limitada pelo saldo; só um gotejamento de cabeçalhos abaixo do saldo evade. E o que evade NÃO
-  # tem teto de execução: os 25 s do Sidekiq só valem num shutdown — sem deploy, a thread fica ocupada
-  # enquanto o servidor gotejar (rodada 8: o texto anterior dizia que o shutdown "encerra o job de
-  # qualquer forma", e não é assim). O sinal, em produção, é o tempo do job fora da casa dos segundos.
+  # tem teto de execução: o tempo de shutdown (25 s no Sidekiq, 10 s no deploy de produção) só vale num
+  # shutdown — sem deploy, a thread fica ocupada enquanto o servidor gotejar (rodada 8: o texto anterior
+  # dizia que o shutdown "encerra o job de qualquer forma", e não é assim). O sinal, em produção, é o tempo
+  # do job fora da casa dos segundos.
   PRAZO_SEGUNDOS = 20
   # Teto da conexão (TCP + TLS), dentro do prazo.
   ABERTURA_SEGUNDOS = 5
