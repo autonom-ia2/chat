@@ -38,6 +38,8 @@ module Crm
 
       DEFAULT_AUTO_FOLLOWUP = {
         'enabled' => false,
+        'mode' => 'auto_send',
+        'allowed_days' => [0, 1, 2, 3, 4, 5, 6],
         'max_touches' => 3,
         'intervals_hours' => [20, 72, 168],
         'quiet_hours' => { 'start' => 8, 'end' => 20, 'tz' => 'contact' },

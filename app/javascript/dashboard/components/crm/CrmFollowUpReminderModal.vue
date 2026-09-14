@@ -121,6 +121,12 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
+      <p
+        v-if="activeReminder?.description"
+        class="mb-3 max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-5 text-n-slate-11"
+      >
+        {{ activeReminder.description }}
+      </p>
       <div class="flex flex-wrap items-center justify-end gap-2">
         <Button
           :label="t('CRM_KANBAN.FOLLOW_UP_REMINDER.OPEN_CRM')"

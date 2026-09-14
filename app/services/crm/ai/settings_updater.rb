@@ -41,14 +41,33 @@ module Crm
       end
 
       def normalize_auto_followup(params)
-        cfg = params.to_h.with_indifferent_access
+        cfg = Config.auto_followup_settings(@pipeline).merge(params.to_h.with_indifferent_access)
+        validate_auto_followup!(cfg)
         {
+          'mode' => cfg[:mode],
+          'allowed_days' => cfg[:allowed_days],
           'enabled' => cast_boolean(cfg[:enabled], default: false),
           'max_touches' => cfg[:max_touches].to_i,
           'intervals_hours' => Array(cfg[:intervals_hours]).map(&:to_i),
           'quiet_hours' => normalize_quiet_hours(cfg[:quiet_hours]),
           'tone_instructions' => cfg[:tone_instructions].to_s.strip
         }
+      end
+
+      def validate_auto_followup!(cfg)
+        days = cfg[:allowed_days]
+        intervals = cfg[:intervals_hours]
+        quiet = cfg[:quiet_hours].to_h.with_indifferent_access
+        valid = %w[auto_send ai_reminder].include?(cfg[:mode]) &&
+                days.is_a?(Array) && days.any? && days.all? { |day| day.is_a?(Integer) && (0..6).cover?(day) } &&
+                (1..3).cover?(cfg[:max_touches].to_i) && intervals.is_a?(Array) &&
+                intervals.length == cfg[:max_touches].to_i && intervals.all? { |hours| hours.is_a?(Integer) && hours.positive? } &&
+                intervals.each_cons(2).all? { |left, right| left < right } &&
+                (0..23).cover?(quiet[:start].to_i) && (1..24).cover?(quiet[:end].to_i) && quiet[:start].to_i < quiet[:end].to_i
+        return if valid
+
+        @pipeline.errors.add(:metadata, :invalid)
+        raise ActiveRecord::RecordInvalid, @pipeline
       end
 
       def normalize_quiet_hours(params)

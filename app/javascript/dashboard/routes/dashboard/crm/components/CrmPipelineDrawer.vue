@@ -318,10 +318,10 @@ const onSubmit = async () => {
   // Master save: "Salvar funil" also persists the embedded AI panel (auto_move,
   // criteria, handoff) so the user never loses it for forgetting "Salvar IA".
   // Done BEFORE emit('save') because saving the pipeline closes the drawer and
-  // unmounts the panel. Best-effort: the panel surfaces its own error and never
-  // throws, so the pipeline save always proceeds.
+  // unmounts the panel. Keep it open if its settings fail validation or persistence.
   if (aiPanel.value) {
-    await aiPanel.value.saveSettings({ silent: true });
+    const saved = await aiPanel.value.saveSettings({ silent: true });
+    if (saved === false) return;
   }
   emit('save', {
     pipeline: {

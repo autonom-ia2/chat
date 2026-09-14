@@ -90,4 +90,11 @@ describe('CrmPipelineDrawer form reset vs realtime churn', () => {
     expect(wrapper.vm.form.stages[0].id).toBe(10);
     expect(wrapper.vm.form.stages[0].name).toBe('Novo Editado');
   });
+  it('keeps the drawer open when AI settings fail to save', async () => {
+    const wrapper = mountDrawer();
+    wrapper.vm.aiPanel = { saveSettings: vi.fn().mockResolvedValue(false) };
+    await wrapper.vm.onSubmit();
+    expect(wrapper.emitted('save')).toBeUndefined();
+    wrapper.unmount();
+  });
 });

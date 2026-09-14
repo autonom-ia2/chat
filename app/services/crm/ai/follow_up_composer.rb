@@ -49,7 +49,7 @@ module Crm
             message_body: {
               type: 'string',
               maxLength: 700,
-              description: 'Mensagem de follow-up natural em PT-BR. Usada APENAS no modo free_form (dentro da janela 24h).'
+              description: 'Mensagem de follow-up natural em PT-BR. No modo reminder, sugestão de abordagem interna para a equipe.'
             },
             chosen_template: {
               type: 'object',
@@ -165,6 +165,7 @@ module Crm
 
       def instructions
         return callback_instructions if @purpose == :callback
+        return reminder_instructions if @mode == :reminder
 
         <<~PROMPT.strip
           Você é o cérebro de follow-up em português do Brasil para retomar conversas de vendas/atendimento que ficaram paradas, "de onde a conversa parou".
@@ -245,6 +246,25 @@ module Crm
             · Prazo já venceu → message_kind="aviso_andamento" e escreva um aviso curto de andamento, sem novidade inventada e sem pedido (ex.: "ainda estou com a seguradora; assim que retornar eu te trago o orçamento").
           - PRAZO: se a conversa disser o prazo ("te retorno hoje", "até amanhã", "na segunda"), use o que foi dito. Se não disser, considere vencido quando a última mensagem do cliente já estiver mais antiga que o intervalo entre os toques. O intervalo vem em "cadence.interval_hours" (horas); "cadence.touch" e "cadence.max_touches" dizem qual toque é este e quantos existem no total.
         RULES
+      end
+
+      def reminder_instructions
+        <<~PROMPT.strip
+          Você analisa a conversa para decidir se deve gerar um LEMBRETE INTERNO para a equipe agora.
+          Responda apenas no schema JSON solicitado. should_send significa GERAR LEMBRETE, nunca enviar ao cliente.
+          Só gere se houver uma pendência real, citável e que justifique ação agora. Horário vencido sozinho não basta.
+          Se houve encerramento, compra concluída, desistência ou pedido para parar, closure_detected=true e should_send=false.
+          Sem pendência ou com prazo prometido ainda não vencido: should_send=false.
+          Identifique next_action_owner como cliente, empresa ou terceiro, sem inverter quem deve agir.
+          open_loop explica o motivo do lembrete; open_loop_source copia um trecho LITERAL da conversa que o comprova.
+          message_body é uma sugestão de abordagem dirigida à EQUIPE: diga o que verificar ou retomar, sem inventar fatos.
+          Não escreva uma mensagem como se já estivesse sendo enviada ao cliente. Não consulte templates ou janela de 24h.
+          message_kind=cobranca quando a pendência for do cliente; aviso_andamento quando for da empresa ou de terceiro.
+          chosen_template deve ser zerado (index=-1, kind="native", name="", id=null, language=null); template_variables=[].
+          tone reflete a abordagem e confidence reflete a evidência e adequação de gerar o lembrete agora.
+          Considere as datas da conversa e cadence.interval_hours ao avaliar prazos. Não invente prazos.
+          #{@tone_instructions}
+        PROMPT
       end
 
       def mode_instructions

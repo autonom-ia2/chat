@@ -81,22 +81,16 @@ module Crm
         stop_reason = auto_stop_reason
         return stop_cadence(stop_reason) if stop_reason.present?
 
-        @send_mode = messaging_window.can_send_session_message? ? :free_form : :choose_template
+        return reschedule(compute_due(@now)) if outside_schedule?(@now)
+
+        @send_mode = delivery_mode
         @candidates = @send_mode == :choose_template ? template_candidates : []
         composition = compose
+        return reschedule(compute_due(execution_time)) if outside_schedule?(execution_time)
 
-        # Single gate. Closure/satisfaction => stop the whole cadence; everything
-        # else that fails the gate is a skip-safe no-send (still terminal => spent).
-        return stop_closure if closure?(composition)
+        persist_decision(composition)
 
-        no_send = no_send_reason(composition)
-        return skip(no_send) if no_send.present?
-
-        prepare_send_metadata(composition)
-        return reschedule_for_cap if capped?
-
-        send_result = Crm::FollowUps::MessageSender.new(follow_up: @follow_up).perform
-        handle_send_result(send_result)
+        apply_composition(composition)
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         # Compose failure is not a delivery failure: keep the cadence intact and
         # let the next due sweep retry. Routed through fail_touch so it shares the
@@ -106,11 +100,75 @@ module Crm
 
       private
 
+      def apply_composition(composition)
+        # Single gate. Closure/satisfaction => stop the whole cadence; everything
+        # else that fails the gate is a skip-safe no-send (still terminal => spent).
+        return stop_closure if closure?(composition)
+
+        no_send = no_send_reason(composition)
+        return skip(no_send) if no_send.present?
+
+        return create_reminder(composition) if reminder_mode?
+
+        send_composition(composition)
+      end
+
+      def execution_time
+        [@now, Time.current].max
+      end
+
+      def outside_schedule?(time)
+        compute_due(time) > time
+      end
+
+      def persist_decision(composition)
+        return if composition.blank?
+
+        @follow_up.update!(metadata: base_metadata.merge(decision_audit(composition)))
+      end
+
+      def delivery_mode
+        return :reminder if reminder_mode?
+
+        messaging_window.can_send_session_message? ? :free_form : :choose_template
+      end
+
+      def send_composition(composition)
+        @follow_up.update!(automation_mode: :auto_send_message)
+        prepare_send_metadata(composition)
+        return reschedule_for_cap if capped?
+
+        handle_send_result(Crm::FollowUps::MessageSender.new(follow_up: @follow_up).perform)
+      end
+
+      def reminder_mode?
+        config['mode'] == 'ai_reminder'
+      end
+
+      def reschedule(due_at)
+        @follow_up.update!(due_at: due_at)
+        merge_state!('next_due_at' => due_at.iso8601)
+        Result.rescheduled(@follow_up)
+      end
+
+      def create_reminder(composition)
+        @follow_up.update!(
+          automation_mode: :reminder_only,
+          description: [composition['open_loop'], composition['message_body']].filter_map(&:presence).join("\n\n"),
+          metadata: base_metadata.merge('action_mode' => 'ai_reminder')
+        )
+        record_touch!('reminded')
+        reset_retries!
+        schedule_next_touch
+        Result.new(status: :reminded, follow_up: @follow_up)
+      end
+
       # ---- (a) auto-stop re-checks --------------------------------------------
 
       # Returns a stopped_reason string when the cadence must hard-stop now, else nil.
       def auto_stop_reason
         return 'spent' if state['spent']
+        return 'max_touches' if touch > max_touches
         return 'won_lost' if @card.won? || @card.lost? || @card.archived?
         return 'opt_out' if state['opted_out']
         return 'replied' if customer_replied_since_scheduling?
@@ -216,7 +274,7 @@ module Crm
       # Reúne os motivos de não-envio num lugar só, para o perform continuar linear.
       def no_send_reason(composition)
         return skip_reason(composition) unless composable?(composition)
-        return 'status_notice_already_sent' if repeated_status_notice?(composition)
+        return 'status_notice_already_sent' if !reminder_mode? && repeated_status_notice?(composition)
 
         nil
       end
@@ -430,7 +488,7 @@ module Crm
           log_activity('ai_followup_failed', touch: touch, error: error.to_s, attempts: attempts, final: true)
           Result.failed_final(@follow_up, error)
         else
-          retry_at = @now + RETRY_BACKOFF
+          retry_at = compute_due(@now + RETRY_BACKOFF)
           log_activity('ai_followup_failed', touch: touch, error: error.to_s, attempts: attempts, retry_at: retry_at.iso8601)
           Result.failed(@follow_up, error, retry_at)
         end
@@ -440,7 +498,11 @@ module Crm
         if touch < max_touches
           next_touch = touch + 1
           timezone = resolved_timezone
-          due_at = compute_due(cadence_anchor_at + interval_hours(next_touch).hours, timezone)
+          target = cadence_anchor_at + interval_hours(next_touch).hours
+          # Keep the configured gap when multiple overdue touches would otherwise land together.
+          gap = [interval_hours(next_touch) - interval_hours(touch), 1].max.hours
+          target = @now + gap if target <= @now
+          due_at = compute_due(target, timezone)
           Crm::FollowUps::AutoFollowupTouchBuilder.new(card: @card, touch: next_touch, due_at: due_at, timezone: timezone).perform
           merge_state!('active' => true, 'touch' => next_touch, 'next_due_at' => due_at.iso8601)
         else
@@ -585,19 +647,7 @@ module Crm
       # candidate falls before start, push to start the same day; if at/after end,
       # push to start the next day. No jitter in MVP.
       def compute_due(candidate, timezone = resolved_timezone)
-        quiet = config['quiet_hours'].to_h
-        start_hour = quiet['start'].presence&.to_i
-        end_hour = quiet['end'].presence&.to_i
-        return candidate if start_hour.blank? || end_hour.blank?
-
-        local = candidate.in_time_zone(ActiveSupport::TimeZone[timezone])
-        window_start = local.change(hour: start_hour, min: 0, sec: 0)
-        window_end = local.change(hour: end_hour, min: 0, sec: 0)
-
-        return window_start if local < window_start
-        return (window_start + 1.day) if local >= window_end
-
-        candidate
+        Crm::FollowUps::AllowedSchedule.new(config: config, timezone: timezone).next_at(candidate)
       end
 
       # MUST match AutoFollowupPlanner#resolved_timezone. Never blank (falls back

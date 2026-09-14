@@ -1007,7 +1007,8 @@
         "REACTIVATE_CONFIRM_BODY": "This contact asked to stop receiving automated messages. Reactivating resumes follow-ups for them. The action is recorded under your name.",
         "REACTIVATE_CONFIRM_OK": "Reactivate anyway",
         "RESET_SUCCESS": "Cycle restarted.",
-        "RESET_ERROR": "Could not restart."
+        "RESET_ERROR": "Could not restart.",
+        "TIMELINE_TOUCH_REMINDER": "Touch {n}: AI generated a team reminder"
       }
     },
     "COPILOT": {
@@ -1233,7 +1234,48 @@
         "TONE_PLACEHOLDER": "informal, address as 'você', focus on travel insurance…",
         "CARD_STATUS": "Follow-up {n}/{total}",
         "TOUCH_LABEL": "Touch {n}",
-        "QUIET_HOURS_HELP": "If the computed time falls outside this window, the send is moved to the next allowed time (e.g. the next morning)."
+        "QUIET_HOURS_HELP": "If the computed time falls outside this window, the send is moved to the next allowed time (e.g. the next morning).",
+        "ACTION_LABEL": "How should AI follow up?",
+        "AI_HELP": "AI analyzes the conversation and decides whether there is something to follow up on. Choose how it should act.",
+        "MODES": {
+          "auto_send": {
+            "TITLE": "AI sends to the customer",
+            "HELP": "AI evaluates the conversation and sends a message when a follow-up is justified."
+          },
+          "ai_reminder": {
+            "TITLE": "AI creates a team reminder",
+            "HELP": "AI decides whether to create an internal reminder with a reason and suggested next step."
+          }
+        },
+        "EVALUATION_OFFSETS": "AI evaluates this many hours after the last real conversation message",
+        "AI_INSTRUCTIONS": "Instructions for AI",
+        "REMINDER_BADGE": "AI evaluates whether to create a reminder",
+        "SESSION_BADGE": "AI writes if the session window is open",
+        "TEMPLATE_BADGE": "Approved template if outside 24h",
+        "SCHEDULE_LABEL": "Allowed hours and days",
+        "DAYS_LABEL": "Days of the week",
+        "DAYS": {
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat",
+          "0": "Sun"
+        },
+        "DAYS_FULL": {
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday",
+          "0": "Sunday"
+        },
+        "SCHEDULE_HELP": "Contact timezone. Outside these days and hours, AI evaluates at the next allowed time. Reaching the scheduled time alone does not trigger a message or reminder.",
+        "REMINDER_INFO": "AI only creates a reminder when a real pending matter justifies action. The team receives the reason and a suggested next step. No message is sent to the customer.",
+        "OFFICIAL_INFO": "Official WhatsApp: outside the 24-hour window, AI must use a suitable approved template. The window is checked at send time, including after postponements. Without a suitable template, no message is sent.",
+        "INVALID_SCHEDULE": "Select at least one day, an end time after the start, and increasing positive intervals for 1 to 3 follow-ups."
       },
       "SAVE": "Save AI settings",
       "SAVE_SUCCESS": "AI settings saved.",

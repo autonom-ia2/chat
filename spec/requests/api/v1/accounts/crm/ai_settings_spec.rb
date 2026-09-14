@@ -115,4 +115,36 @@ RSpec.describe 'CRM AI settings API', type: :request do
     expect(handoff['mode']).to eq('direct')
     expect(handoff['selector_mode']).to eq('direct')
   end
+
+  it 'round-trips the AI reminder mode and allowed days' do
+    account, admin = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: admin)
+    path = "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}/ai_settings"
+    patch path, params: { ai_settings: { auto_followup: { mode: 'ai_reminder', allowed_days: [1, 3, 5] } } },
+                headers: auth_headers(admin), as: :json
+    expect(response).to have_http_status(:ok)
+    get path, headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'auto_followup', 'mode')).to eq('ai_reminder')
+    expect(response.parsed_body.dig('payload', 'auto_followup', 'allowed_days')).to eq([1, 3, 5])
+  end
+
+  it 'rejects empty weekdays and unknown modes without changing the configuration' do
+    account, admin = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: admin)
+    path = "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}/ai_settings"
+    original = pipeline.metadata.deep_dup
+    [{ allowed_days: [] }, { mode: 'send_everything' }].each do |invalid|
+      patch path, params: { ai_settings: { auto_followup: invalid } }, headers: auth_headers(admin), as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(pipeline.reload.metadata).to eq(original)
+    end
+  end
+
+  it 'preserves legacy all-week schedules and defaults new pipelines to weekdays' do
+    account, admin = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: admin)
+    expect(Crm::Ai::Config.auto_followup_settings(pipeline)[:allowed_days]).to eq([1, 2, 3, 4, 5])
+    pipeline.update!(metadata: {})
+    expect(Crm::Ai::Config.auto_followup_settings(pipeline)[:allowed_days]).to eq([0, 1, 2, 3, 4, 5, 6])
+  end
 end

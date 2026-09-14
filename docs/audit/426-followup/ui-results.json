@@ -1,0 +1,14 @@
+{
+  "component": "CrmAiSettingsPanel.vue",
+  "api": "local fixture; Rails API tested separately",
+  "checks": [
+    "mode switch",
+    "instructions retained",
+    "save and reload",
+    "weekdays persisted",
+    "desktop hour/day alignment",
+    "390px without overflow",
+    "pt_BR fallback without overflow"
+  ],
+  "consoleErrors": []
+}
