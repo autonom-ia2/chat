@@ -11,28 +11,19 @@
 # basta exigir `running?` — a entrega final legítima é publicada e a linha fechada logo em seguida,
 # então uma republicação adiada (ou uma retomada) encontra a linha já `done`, e isso é legítimo.
 module Autonomia::Agents::Tools::AutorizacaoDaExecucao
-  # Os motivos FECHADOS de recusa, como saem no log.
-  RECUSAS = %i[execucao_morta resultado_superado vinculo_mudou].freeze
+  # Os dois motivos FECHADOS de recusa, como saem no log.
+  RECUSAS = %i[execucao_morta vinculo_mudou].freeze
 
   private
 
   # -> o vínculo autorizado AGORA (`AgentInbox`), ou o motivo da recusa (um símbolo de `RECUSAS`).
   def autorizacao(conversation)
     return :execucao_morta if @run.reload.dead?
-    return :resultado_superado unless publicacao_vale?
 
     agent_inbox = vinculo_autorizado(conversation)
     return :vinculo_mudou unless mesmo_vinculo?(agent_inbox)
 
     agent_inbox
-  end
-
-  # A ferramenta da execução ainda aceita que a entrega vire mensagem (`Native::Base.publicacao_vale?`; a
-  # ferramenta da Lia recusa quando a cotação que ela leu deixou de ser a mais nova da conversa). Slug
-  # fora do catálogo não recusa aqui.
-  def publicacao_vale?
-    native = ::Autonomia::Agents::Tools::Registry.find(@run.slug)
-    native.nil? || native.publicacao_vale?(@run)
   end
 
   def recusada?(autorizacao)

@@ -111,17 +111,6 @@ RSpec.describe Autonomia::Insurance::Medida do
 
       expect(resultado).to include(cotacoes: 1, seguradoras_acionadas: 17, seguradoras_com_preco: 11)
     end
-
-    # A EXECUÇÃO DA FERRAMENTA DA LIA na mesma conversa não é cotação: ela lê o que a cotação guardou.
-    it 'nao conta a execução da ferramenta que mostra o resultado' do
-      conversa = conversa_de(account)
-      Autonomia::Agents::ToolRun.create!(
-        account: account, agent: agent, conversation_id: conversa.id, slug: Autonomia::Agents::Tools::Native::InsuranceQuoteResult.slug,
-        status: 'done', execution_key: SecureRandom.uuid, handle: { 'execucao_da_cotacao' => 1, 'seguradoras' => %w[8] }
-      )
-
-      expect(medida).to include(cotacoes: 0, seguradoras_acionadas: 0, seguradoras_com_preco: 0, cotacoes_sem_confirmacao: 0)
-    end
   end
 
   describe 'isolamento e janela' do

@@ -2,21 +2,27 @@
 
 Data: 13/09/2026 · Branch `feat/cotacao-lia-ve-resultados` · base `origin/main` (`5742de5fcd`).
 
+**Desenho atual: o da rodada 8** (13/09/2026, decisão do coordenador): a ferramenta da Lia é síncrona, a lista de
+preços vai como anexo do turno, escrita pelo código, e a categoria do motivo só sai por molde fechado. As seções das
+rodadas 2 a 7 ficam como histórico do desenho assíncrono, que saiu; onde contradizem a rodada 8, vale a rodada 8.
+
 ## Objetivo
 
 Quatro coisas, e só elas:
 
 1. a cotação **guarda o resultado por seguradora** no handle da execução, em toda consulta, como união;
-2. a Lia ganha uma **ferramenta assíncrona de exibição**, `ver_resultado_da_cotacao`, que lê esse resultado
-   sem ir ao portal; com preço, o código publica os itens depois da fala dela; o motivo de quem não cotou
-   só chega ao modelo como categoria escrita pelo código (do veículo ou da região; rodada 7, decisão do CEO), e só
+2. a Lia ganha uma **ferramenta síncrona**, `ver_resultado_da_cotacao`, que lê esse resultado no instante da pergunta,
+   sem ir ao portal; com preço, o código escreve a lista e a anexa ao turno, e o `Responder` a entrega logo depois da
+   fala dela, na mesma entrega (rodada 8; nas rodadas 1 a 7 ela era assíncrona); o motivo de quem não cotou só chega
+   ao modelo como categoria escrita pelo código (do veículo ou da região, por molde fechado; rodadas 7 e 8), e só
    quando o pedido nomeia a seguradora;
 3. o **pedido repetido** conta também a execução com resultado guardado, por união com o contador;
 4. a **confirmação do fechamento** (a segunda leitura igual) roda no primeiro intervalo da progressão, e não
    no intervalo da tentativa.
 
 Fora, de propósito: parar os lotes de preço, sinal de vida depois de 2 min, rede de segurança da lista
-quando o PDF falha (fatia 3). Nada novo no Super Admin. Nada no conector.
+quando o PDF falha (fatia 3). Nada novo no Super Admin. Nada no conector. No motor assíncrono, só a gravação do
+resultado (pedido repetido) e a confirmação curta: o resto voltou igual ao da `main` na rodada 8.
 
 ## O que mudou, por item
 
@@ -54,109 +60,95 @@ quando o PDF falha (fatia 3). Nada novo no Super Admin. Nada no conector.
   emite o lote (`lote_de_preco`, chamado de `InsuranceQuote#entregues`). Chave da ferramenta, fora de
   `AsyncRunJob::MARCAS`; cresce cerca de 90 bytes por lote.
 
-### A regra do motivo (rodada 7: categoria escrita pelo código)
+### A regra do motivo (rodada 8: categoria por molde fechado)
 
 **Nenhum texto do portal vai ao modelo nem ao banco** (decisão do CEO de 13/09/2026 sobre as decisões 27 e 28, opção
-b). `Insurance::MotivoDaRecusa.categoria(reason)` lê o texto e devolve `'veiculo'`, `'regiao'` ou nil (o genérico)
-quando, e só quando:
+b), e **a categoria só sai por molde fechado** (decisão do coordenador sobre o achado P3-1 da revisão da rodada 7).
+`Insurance::MotivoDaRecusa.categoria(reason)` devolve `'veiculo'`, `'regiao'` ou nil (o genérico) quando, e só quando:
 
-1. `kind == 'risco'` e o texto é String. Qualquer outro `kind` (`passageiro`, `credencial`, `outro`) é nil;
-2. o texto, transliterado e em minúsculas, não tem letra que a transliteração não sabe escrever (vira `#`);
-3. não casa nenhum termo de conta da corretora (`TERMOS_DE_CONTA`: login, senha, sessão, token, usuário, acesso,
-   permissão, corretor, credencial, SUSEP, cadastro, comissão, bloqueio, conta, portal, operador, perfil, parceiro,
-   comercial, contrato, e-mail, link, a marca `<REDACTED>` e outros), nenhum termo da pessoa (`TERMOS_DA_PESSOA`:
-   segurado, condutor, motorista, proprietário, cliente, pessoa, CPF/CNPJ/CNH, crédito, financeiro, sinistro, bônus,
-   profissão) nem termo de dúvida (`TERMOS_DE_DUVIDA`: interno, critério, análise);
-4. casa os padrões de **uma categoria só** (`CATEGORIAS`), que nomeiam o atributo recusado: `veiculo` (idade do
-   veículo, ano modelo, este modelo ou modelo do veículo, tipo de veículo, categoria tarifária ou do veículo) e
-   `regiao` (CEP, localidade, região, circulação, pernoite). As duas, ou nenhuma: nil.
+1. `kind == 'risco'` e o texto é String UTF-8 válida. Qualquer outro `kind` (`passageiro`, `credencial`, `outro`) é nil;
+2. **toda palavra do texto**, sem acento e em minúsculas, contando palavras de função e números, está no conjunto da
+   categoria (`MOLDES`). Uma palavra desconhecida manda para o genérico;
+3. o texto nomeia o que foi recusado: no veículo, um atributo (idade, ano, modelo, tipo, categoria, tarifária,
+   fabricação) **e** o veículo (veículo, carro, moto, motocicleta, automóvel, caminhão, ônibus, auto), porque "idade",
+   "tipo" e "categoria" sozinhos também servem para a pessoa e para a cobertura; na região, CEP, localidade, região,
+   circulação ou pernoite.
 
-Na dúvida, nil: o erro aceitável é a Lia dizer só que a seguradora não fez proposta. O perfil do segurado e do condutor
-("Segurado com restrição", "Condutor principal com restrição") não vira categoria. A categoria é gravada no handle
+Os conjuntos, inteiros (`motivo_da_recusa.rb`): as palavras de função e de recusa das duas categorias (`COMUNS`: artigos,
+preposições e contrações, demonstrativos, "não", "sem", aceito/aceita/aceitação, permitido/permitida, possui,
+restrito/restrita, recusado/recusada, fora, acima, atendido/atendida, política, informado/informada, seguradora); no
+veículo, os atributos, os nomes do veículo e a abertura de recusa que o portal escreve ("cotação não será realizada por
+motivos técnicos", "cobertura"); na região, os atributos e "local". Nenhum conjunto tem palavra de conta da corretora, da
+pessoa ou de critério interno, e o `motivo_da_recusa_spec` trava isso com as palavras que as revisões usaram. As listas
+de termos da rodada 7 (`TERMOS_DE_CONTA`, `TERMOS_DA_PESSOA`, `TERMOS_DE_DUVIDA`) saíram: com o molde fechado, qualquer
+termo delas já é palavra desconhecida. A letra que a transliteração não sabe escrever vira `#`, e a palavra com ela é
+desconhecida.
+
+Na dúvida, nil: o erro aceitável é a Lia dizer só que a seguradora não fez proposta. A categoria é gravada no handle
 (`ResultadoPorSeguradora#sem_proposta`), a leitura só devolve o que é categoria (`ResultadoDaCotacao#motivo`), e o
-modelo lê uma de duas falas fechadas (`InsuranceQuoteResult::MOTIVOS`) ou `SEM_MOTIVO`. O vocabulário de liberação da
-rodada 5 (`motivo_da_recusa_vocabulario.txt`), o código do portal, os caracteres e os valores por extenso saíram: sem
-texto ao modelo, não têm mais uso.
+modelo lê uma de duas falas fechadas (`InsuranceQuoteResult::MOTIVOS`) ou `SEM_MOTIVO`, cada uma com a categoria
+escrita (`Categoria do motivo: veiculo`, `regiao` ou `nenhuma`).
 
-**O corpus do conector** (`autonomia-adapters`, `test/fixtures/agger/motivos-de-recusa.sanitized.json`, 39 mensagens):
-7 das 13 `risco` saem `veiculo`, nenhuma sai `regiao`, e as 26 de outro `kind` saem nil. As 6 `risco` que saem nil: duas
-não nomeiam atributo ("Risco sem aceitação para este cenário nesta seguradora.", "Não temos um seguro disponível para
-este veículo..."), uma tem termo de dúvida ("Após análise dos dados do veículo, região de circulação e critérios
-internos..."), duas têm termo da pessoa ("400 - Restrição técnica para o Segurado", "UC00 - Risco fora das políticas
-de aceitação As Necessidades do Cliente...") e uma só diz "Veículo sem aceitação" ("Carga(s) transportada(s) (
-Cigarro/Fumo) sem aceitação - RP Veículo sem aceitação - RP"). A tabela inteira está na seção da rodada 7.
-**Os textos das revisões** (os 28 de conta da quinta revisão, os 6 de dado pessoal, "Senha expirou. Declinando
-cálculo.", "Usuário fulano@corretora.com.br bloqueado." e os outros 23 das revisões anteriores): todos nil.
+**O corpus do conector** (`autonomia-adapters`, `test/fixtures/agger/motivos-de-recusa.sanitized.json`, 39 mensagens;
+tabela inteira na seção da rodada 8): 4 das 13 `risco` saem `veiculo`, nenhuma sai `regiao`, e as 35 outras saem
+genéricas. **Custo em motivos reais:** as mensagens 31, 32 e 33, que a rodada 7 dava como do veículo, caem no genérico.
+**Custo nos 23 motivos plausíveis da rodada 7:** a categoria sai em 5 (eram 10). **Os textos das revisões** (os 28 de
+conta da quinta revisão, os 6 de dado pessoal, os 25 das revisões anteriores e os 31 da revisão da rodada 7, em
+`SondasDoMotivo::REVISAO_7`, que com os padrões da rodada 7 saíam todos com categoria): todos nil, incluindo "Tipo de
+veículo sem aceitação para o seu código." e "Negativado: CEP sem aceitação.".
 
-**O custo, medido** (23 motivos sintéticos plausíveis, todos de veículo ou de região, `scratchpad/f2-r7-custo.rb`): 10
-saem com categoria ("Idade do veículo fora da política de aceitação.", "Rastreador obrigatório para este modelo.",
-"CEP de pernoite sem aceitação.") e 13 caem no genérico, porque o atributo não está entre os que a decisão do CEO
-listou ou não está escrito na forma dos padrões: blindado, importado, leilão, chassi remarcado, tabela FIPE, valor do
-veículo, uso comercial ou por aplicativo, "com mais de 20 anos", cidade, município, estado, área de risco. Nesses a Lia
-diz só que a seguradora não fez proposta. Ampliar a lista é decisão de produto; o risco de ampliar é o de sempre, um
-atributo que também serve para falar da conta.
+### 2. A ferramenta da Lia, `ver_resultado_da_cotacao` (rodada 8: síncrona, lista como anexo do turno)
 
-### 2. A ferramenta da Lia, `ver_resultado_da_cotacao`
+`Native::InsuranceQuoteResult`, **síncrona**, com um parâmetro: `seguradora`, `type: [string, null]`, em `required`, sem
+`anyOf` (`openai_schema_spec`, `insurance_quote_result_spec`). Nas rodadas 1 a 7 ela era assíncrona; a troca e o motivo
+estão na seção "Rodada 8".
 
-`Native::InsuranceQuoteResult`, assíncrona, com um parâmetro: `seguradora`, `type: [string, null]`, em
-`required`, sem `anyOf` (`openai_schema_spec`, `insurance_quote_result_spec`).
+Lê, **no instante da pergunta**, `Insurance::ResultadoDaCotacao.da_conversa`: a execução de `cotar_seguro` mais nova da
+conversa com status fora de `superseded`, `discarded`, `blocked` e `pending`. Não chama o conector nem exige conexão.
+Não abre execução, não guarda nada entre turnos e não sabe de lista de outro turno: a mesma pergunta feita duas vezes
+recebe a lista duas vezes.
 
-Lê `Insurance::ResultadoDaCotacao.da_conversa`: a execução de `cotar_seguro` mais nova da conversa com status
-fora de `superseded`, `discarded`, `blocked` e `pending`. Não chama o conector nem exige conexão.
+| Estado | O que o modelo recebe | O que é anexado ao turno |
+|---|---|---|
+| sem contexto de entrega (Testar, Copiloto, playground) | `{"error":"lista_indisponivel_nesta_superficie"}`, com a linha do registro de recusa | nada |
+| sem cotação na conversa | `SEM_COTACAO` | nada |
+| cotação encerrada com envio incerto (intenção anotada, número ausente) | `ENVIO_INCERTO` | nada |
+| cotação encerrada sem número do portal (recusada no `start`) | `NAO_CHEGOU` | nada |
+| cotação encerrada sem a chave (anterior a esta versão) | `SEM_RESULTADO` | nada |
+| cotação correndo sem preço (inclusive a em voo no deploy, sem a chave) | `SEM_PRECO_AINDA` | nada |
+| cotação encerrada sem preço | `SEM_PRECO` | nada |
+| todo preço está num lote que a cotação ainda está enviando (`a_caminho`) | quantas cotaram + `PRECOS_A_CAMINHO` | nada |
+| há preço a mostrar, resultado inteiro | quantas cotaram (número, sem nome) + `LISTA_ANEXADA` + `PARTE_A_CAMINHO`, `AINDA_CORRENDO`, `HA_SEM_PROPOSTA` e `SEM_BONUS` quando valem | os itens de `QuoteOffers.item` dos códigos com preço fora do lote a caminho, na ordem de `QuoteOffers#quoted` |
+| `seguradora` nomeia quem cotou | quantas cotaram + `LISTA_ANEXADA` + "X fez proposta: o preço dela vai na lista anexada" (ou "está na fila de envio e chega numa mensagem do sistema", sem `LISTA_ANEXADA` quando nenhuma nomeada tem preço fora do lote a caminho) | os itens das nomeadas com preço fora do lote a caminho |
+| `seguradora` nomeia quem não fez proposta | quantas cotaram + "X não fez proposta nesta cotação." + a fala da categoria (`MOTIVOS`) ou `SEM_MOTIVO` | nada |
+| `seguradora` nomeia quem ainda corre | quantas cotaram + "X ainda não respondeu" (enquanto a cotação corre; depois, "não fez proposta") | nada |
+| `seguradora` não casa ninguém | `NAO_ENCONTRADA` / `NAO_ENCONTRADA_AINDA` | nada |
 
-| Estado | O que acontece |
-|---|---|
-| sem cotação na conversa | `precheck` devolve `SEM_COTACAO` ao modelo; nenhuma execução |
-| cotação encerrada com envio incerto (intenção anotada, número ausente) | `ENVIO_INCERTO` (rodada 3) |
-| cotação encerrada sem número do portal (recusada no `start`) | `NAO_CHEGOU` (rodada 2) |
-| cotação encerrada sem a chave (anterior a esta versão) | `SEM_RESULTADO` |
-| cotação correndo sem preço (inclusive a em voo no deploy, sem a chave) | `SEM_PRECO_AINDA` |
-| todo preço está num lote que a cotação ainda está enviando (`a_caminho`) | `PRECOS_A_CAMINHO`; por seguradora, "o preço dela está na fila de envio e chega numa mensagem do sistema" (rodadas 4 e 5) |
-| cotação encerrada sem preço | `SEM_PRECO` |
-| `seguradora` nomeia quem não fez proposta | nome + "não fez proposta" + a fala da categoria do motivo (`MOTIVOS`: do veículo ou da região), ou `SEM_MOTIVO` (rodada 7) |
-| `seguradora` nomeia quem ainda corre | "ainda não respondeu" (enquanto a cotação corre; depois, "não fez proposta") |
-| `seguradora` não casa ninguém | `NAO_ENCONTRADA` / `NAO_ENCONTRADA_AINDA` |
-| há preço a publicar (resultado inteiro, ou `seguradora` nomeia quem cotou) | `precheck` nil, a execução abre com a cotação lida e os códigos com preço no handle (`handle_de_abertura`, rodada 2), o modelo recebe `aceite`; a 1ª passada do motor (`start`) devolve o que a abertura gravou; a 2ª (`poll`) publica os itens de `QuoteOffers.item` desses códigos e dos das execuções anteriores sem mensagem sobre a mesma cotação (rodada 3), na ordem de `QuoteOffers#quoted`, e devolve `running`; a seguinte encerra quando a lista foi aceita pelo publicador ou já é mensagem, e sem isso a publica de novo; o encerramento (prazo, tentativas, varredor) é a última tentativa (rodada 7) |
-
-- Os textos da ferramenta ao modelo não trazem o valor do prêmio. O resultado inteiro não leva nome nem
-  motivo: diz que a lista sai depois da fala, se a cotação ainda corre, se há quem não fez proposta e se a
-  cotação foi sem bônus. O texto do portal nunca entra (rodada 7): o modelo lê a fala fechada da categoria.
-- `poll` só publica se a cotação gravada na abertura ainda for a mais nova. A publicação reconfere de novo, na
-  entrada do publicador e sob o lock da conversa: `Native::Base.publicacao_vale?`, chamado por
-  `Tools::AutorizacaoDaExecucao#autorizacao`, recusa com `resultado_superado`. A retomada de envio pendente
-  (`RetomadaDeEnvio`) faz a mesma pergunta e abandona a mensagem da lista quando surge cotação nova.
-- **Uma lista por pedido, nunca a mesma duas vezes, e uma falha nunca perde as duas (rodadas 3 a 7,
-  `InsuranceQuoteResult::Listas`; a revisão da rodada 7 mostrou que as três promessas ainda não se cumprem inteiras:
-  achados P2-1, P2-2 e P2-3, abertos).** "A lista é mensagem entregue" (`lista_entregue?`) é `sequence` positivo (o
-  publicador o avança na mesma transação, sob o lock da conversa, em que cria a mensagem) e nenhuma mensagem da
-  execução com pendência de envio. A passada que publica (`emitir_lista`) lê, sob esse lock, as execuções anteriores
-  desta ferramenta na conversa sobre a mesma cotação, da mais nova para a mais antiga: **leva** as que prometeram a
-  lista numa fala (`done`, `failed`, e as `superseded` despachadas ou do mesmo turno) e não a têm entregue, com os
-  códigos que a lista delas já levava (rodada 6); **desconta** as que viraram mensagem entregue depois de esta
-  execução abrir (rodada 7: o cliente as recebeu depois de pedir de novo); e **para** na primeira entregue antes de
-  ela abrir. Grava na própria linha, em `lista`, os códigos, as execuções levadas e a identidade da entrega. **A
-  anterior só conta como levada depois de a lista nova ser aceita** pelo publicador (`Tools::EntregaAceita`) ou já ser
-  mensagem (`lista_levada?`, rodada 7): antes disso ela continua valendo, a dela e a retomada do envio dela.
-  `publicacao_vale?` recusa só a lista levada; a barreira da rodada 6 ("sem mensagem, barrada pela mais nova
-  despachada") saiu, porque barrava antes do aceite.
-- **A lista sai até ser aceita (rodada 7).** A passada que a emite devolve `running`; a seguinte encerra quando a lista
-  foi aceita ou é mensagem, e, sem nenhum dos dois, a emite de novo. A primeira emissão pede a consulta seguinte no
-  intervalo curto (`confirmar_logo`); a que sai de novo segue a progressão das tentativas. Prazo esgotado, tentativas
-  no fim ou varredor: `closing_deliveries` publica a lista que ainda vale, a última tentativa, sem frase. A cotação
-  lida deixar de ser a mais nova encerra em silêncio, sem lista e sem frase.
-- **O preço que a própria cotação ainda está enviando não entra na lista (rodadas 4 a 6).**
-  `ResultadoDaCotacao#a_caminho`: os códigos, pelo `LOTES_KEY`, dos lotes de preço (`PRECOS_KEY`) cuja mensagem
-  existe com pendência de envio (com aceite ou sem) mais nova que a janela do varredor
-  (`ReapStaleRunsJob::ENVIO_PENDENTE_JANELA`, 2 dias), ou que o publicador aceitou (`EntregaAceita::CHAVE`), não têm
-  mensagem e foram emitidos há menos de `JANELA_DO_LOTE` (10 min, acima do teto de adiamentos); lote a caminho sem
-  os códigos gravados (emitido antes desta versão) segura todos. O resultado inteiro e o pedido por seguradora tiram
-  esses códigos da lista e dizem ao modelo que o preço está na fila de envio.
-- Os cinco textos de classe (`waiting_message`, `failure_message`, `uncertain_message`, `partial_message`,
-  `closing_message`) são `''`. O publicador devolve `skipped` para texto vazio, sem criar mensagem.
-- `Native::Base#aceite` (instância, nil por padrão) e `Bound#aceite_native`: o texto do aceite passa a
-  poder depender do pedido. As outras ferramentas continuam com o `accepted_message` da classe.
-- A resposta dada no turno é registrada pelo `Bound` como conferência, com o motivo novo
-  `resultado_respondido_no_turno` (`Tools::Recusa::MOTIVOS`).
+- **O modelo nunca recebe valor em reais nem texto do portal.** O que ele recebe é estado; o valor está só no anexo, que
+  ele não vê.
+- **O anexo do turno** (`Tools::Delivery#anexar(chave, texto, dados:)`) é um por chave. A ferramenta chamada duas vezes no
+  mesmo turno troca o próprio anexo, no mesmo lugar, pela lista com os códigos das duas chamadas (`dados` guarda os
+  códigos já anexados). O cliente recebe uma lista por turno. Só o `Responder` cria o `Delivery`.
+- **A entrega, no `Operate::Responder`**, logo depois da resposta, nos três caminhos:
+  - **clássico** (`classic_deliver`): a resposta e depois cada anexo, dentro do mesmo lock e da mesma transação
+    (`post_reply_and_anexos!`), com a idempotência de `already_replied?`: os anexos levam o mesmo
+    `autonomia_reply_to_message_id` da resposta, e o retry do `ReplyJob` não posta nada de novo;
+  - **humanizado** (`deliver_humanized`): os anexos entram no fim do array de `chunks`, cada um como um pedaço inteiro
+    (sem o `ReplyChunker`), com a pausa mínima de um pedaço, na mesma cadeia do `ChunkedDeliveryJob`; `@expected_chunks`
+    conta os anexos, porque as entregas assíncronas do mesmo turno esperam o último pedaço. Quando o quebrador não
+    produz pedaço, o caminho é o clássico, com os anexos, e `@expected_chunks` fica zero, como na `main`;
+  - **voz** (`deliver_voice`): o áudio e depois os anexos como texto, no mesmo lock; com a síntese falhando, a resposta
+    em texto e depois os anexos.
+- **Turno mudo** (`no_usable_reply?`: sinal de silêncio, falha de IA, resposta vazia): o anexo sai sozinho, pelo caminho
+  clássico (sob o lock, com `still_eligible?` e `already_replied?`), sem evento `replied`, e o turno continua `silenced`
+  (decisão 19, aceita pelo CEO). A gravação é best-effort: a falha vai ao log, e a execução assíncrona aceita no mesmo
+  turno é despachada como seria sem o anexo (decisão 39).
+- **O preço que a própria cotação ainda está enviando não entra na lista (rodadas 4 a 6, mantido).**
+  `ResultadoDaCotacao#a_caminho`: os códigos, pelo `LOTES_KEY`, dos lotes de preço (`PRECOS_KEY`) cuja mensagem existe
+  com pendência de envio (com aceite ou sem) mais nova que a janela do varredor (`ReapStaleRunsJob::ENVIO_PENDENTE_JANELA`,
+  2 dias), ou que o publicador aceitou (`EntregaAceita::CHAVE`), não têm mensagem e foram emitidos há menos de
+  `JANELA_DO_LOTE` (10 min); lote a caminho sem os códigos gravados (emitido antes desta versão) segura todos. Sem isso,
+  o lote adiado pela fala do turno da cotação e a lista da Lia pedida nesse intervalo levariam o mesmo preço duas vezes.
 
 **Como ela chega ao agente 24 sem escrita em produção.** `QuoteAgent::Builder.ferramentas_mantidas(agent)`
 devolve `TODAS_AS_TOOLS` para `agent_type == 'insurance_quote'`, e `Agent#ferramentas_nativas` lê daí
@@ -165,12 +157,11 @@ segue o mesmo molde: `Builder.ferramentas_mantidas_do_especialista` → `Special
 lida por `Specialist#tools` e por `Answerer#enabled_agent_tools`. `ver_resultado_da_cotacao` está em
 `TOOLS_DO_PRINCIPAL`.
 
-**`principal.md`**: "Você tem quatro." e a subseção `### ver_resultado_da_cotacao`, antes de
-`### Os especialistas de ramo` (o md5 desse bloco e o da §7.1 não mudaram). A subseção nova é assinada por
-md5 (`b1758bb74c1a6ca87e9e7151d996ef7c`) com sete promessas, cada uma exercitada. Rodada 7: o parágrafo do motivo
-diz que a ferramenta entrega se a recusa foi pelo veículo ou pela região, que a Lia conta com as palavras dela sem
-acrescentar detalhe, e que nunca fala de restrição da pessoa; sem frase pronta e sem travessão. md5 novo
-`a09fe65f1e2f82f910032e1c58be54de`, nove promessas.
+**`principal.md`**: "Você tem quatro." e a subseção `### ver_resultado_da_cotacao`, antes de `### Os especialistas de
+ramo` (o md5 desse bloco e o da §7.1 não mudaram). Rodada 8: "a lista vai anexada à sua resposta e chega logo depois da
+sua mensagem" e "Cada consulta mostra o que a cotação tem naquele momento"; sem frase pronta e sem travessão. md5
+`429fbe18230433e92c3e07bf14cd4f5f`, dez promessas, cada uma exercitada (a do "naquele momento" troca o resultado
+guardado entre duas consultas e confere que nenhuma execução abriu).
 
 ### 3. Pedido repetido
 
@@ -193,6 +184,12 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
 (21 s), da leitura que vê todas com desfecho até a execução em `done` passam **3 s**; antes, 21 s.
 
 ## Decisões onde o desenho não fechou sozinho
+
+**Rodada 8.** A troca de desenho supera as decisões presas à ferramenta assíncrona: **5, 6, 7, 8, 13, 17, 22, 23, 25,
+26, 30, 31, 32 e 33** ficam como histórico (a execução, o aceite e a lista levada, descontada e publicada pelo motor
+saíram), e **1 e 16** (as listas de termos e de liberação do motivo) deram lugar ao molde fechado. Continuam valendo
+2, 3, 4, 9, 10, 11, 12, 14, 15, 18, 20, 21, 24, 27, 28, 29 e 34; a 19 continua, com o anexo entregue pelo `Responder`.
+As decisões da rodada 8 são as de 35 em diante.
 
 1. **A regra do motivo recusa mais do que a lista da issue.** As formas verbais de login, `autenticação` e
    `@` entram porque a revisão do conector achou texto de credencial fora das palavras da lista (e-mail no
@@ -382,24 +379,58 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
 34. **As duas falas da categoria ao modelo** (`MOTIVOS`, rodada 7) dizem de onde é o motivo e que não se sabe mais
     que isso, e mandam contar com as palavras da Lia sem acrescentar detalhe. Não são frase ao cliente: são texto ao
     modelo, como `SEM_MOTIVO`.
+35. **Um anexo por chave, por turno** (`Tools::Delivery#anexar`, rodada 8). A rodada de ferramentas do modelo pode chamar
+    a ferramenta duas vezes no mesmo turno; a segunda troca o anexo, no lugar dele, pela lista com os códigos das duas
+    (`dados` guarda os já anexados), e o cliente recebe uma lista só. Em turnos diferentes, cada pergunta recebe a sua.
+36. **A resposta e os anexos na mesma transação, nas entregas clássica e em voz** (`post_reply_and_anexos!` dentro do
+    `with_lock`, rodada 8). Saem todos ou nenhum, e o `already_replied?` do retry vê todos (o anexo leva o mesmo
+    `autonomia_reply_to_message_id`). O custo: a gravação da lista que falha desfaz a fala, e o turno cai em
+    `falha_no_turno` (silêncio, e as execuções assíncronas aceitas no turno descartadas), como a gravação da fala que
+    falha na `main`; o turno com anexo faz uma escrita a mais nessa transação (N3).
+37. **Na entrega humanizada, cada anexo é um pedaço inteiro no fim da cadeia** (rodada 8), com a pausa mínima de um
+    pedaço (`HUMANIZE[:min_chunk_delay_ms]`, 900 ms): o texto é do sistema e não há digitação a imitar.
+    `@expected_chunks` conta os anexos. Resposta que o quebrador não quebra vai pelo caminho clássico, com os anexos, e
+    `@expected_chunks` fica zero, como na `main`.
+38. **Na voz, os anexos saem como texto depois do áudio** (rodada 8), no mesmo lock; com a síntese falhando, a fala em
+    texto e depois os anexos.
+39. **No turno mudo, a gravação do anexo não derruba o despacho** (rodada 8). O anexo sai sozinho, pelo caminho clássico,
+    sob o lock, com `still_eligible?` e `already_replied?`, sem evento `replied`. A primeira versão da rodada deixava a
+    falha subir até `falha_no_turno`, que descarta a execução assíncrona aceita no mesmo turno, e a sonda da rodada
+    mostrou a execução `discarded` onde o mesmo turno sem anexo a despacha. A gravação passou a ser best-effort: a falha
+    vai ao log (só a classe) e o despacho segue.
+40. **Sem contexto de entrega, erro nomeado** (`lista_indisponivel_nesta_superficie`, pelo registro de recusa, rodada 8).
+    A ferramenta continua no catálogo do Testar, do Copiloto e do playground, como toda nativa: sumir faria o Testar
+    mentir sobre o agente de produção.
+41. **O que o modelo recebe é estado** (rodada 8): quantas seguradoras fizeram proposta (número, sem nome), se a lista vai
+    anexada e os avisos (`PARTE_A_CAMINHO`, `AINDA_CORRENDO`, `HA_SEM_PROPOSTA`, `SEM_BONUS`). Com `seguradora`: o nome
+    de cada nomeada, o desfecho e a categoria escrita. Nunca valor, nunca texto do portal, nunca travessão.
+42. **O molde do veículo exige o nome do veículo** (rodada 8). "Categoria tarifária não aceita." cai no genérico:
+    "categoria", "tipo" e "idade" também servem para a pessoa e para a cobertura.
+43. **Texto que não é String UTF-8 válida vai ao genérico antes da transliteração** (rodada 8). A revisão da rodada 7 mostrou
+    `transliterate` levantando com UTF-16 e ASCII-8BIT, que o `JSON.parse` do conector não produz.
+44. **`a_caminho` fica** (decisão 24, rodada 8): sem ele, o lote adiado pela fala do turno da cotação e a lista da Lia
+    pedida nesse intervalo levariam o mesmo preço duas vezes.
+45. **P2-3 fora desta PR** (decisão do coordenador, rodada 8): a publicação adiada que falha uma vez e não tenta de novo é
+    da `main` e muda o motor de todas as entregas adiadas. Issue **#425**.
 
 ## Riscos de regressão verificados, e como
 
 | Risco | Como |
 |---|---|
-| Coluna "Com preço" do Super Admin | `medida_spec`: com a chave nova e 12 preços guardados, `seguradoras_com_preco` continua 11 (`entregues`); a execução da ferramenta da Lia não conta como cotação |
-| Encerramento e fecho iguais | `Fecho`, `Comparativo#fechar`, `Encerramento` e o `closing_deliveries` da cotação sem alteração (o da ferramenta da Lia é novo na rodada 7, decisão 33); as suítes da fatia 1 (`*_fecha_sem_esperar_o_portal_spec`, `async_run_job_encerramento_parcial_spec`, `encerramento_spec`, `nenhum_estado_mudo`) passam |
+| Coluna "Com preço" do Super Admin | `medida_spec`: com a chave nova e 12 preços guardados, `seguradoras_com_preco` continua 11 (`entregues`); a ferramenta da Lia não abre execução (rodada 8) |
+| Encerramento e fecho iguais | `Fecho`, `Comparativo#fechar`, `Encerramento` e o `closing_deliveries` da cotação sem alteração (o da ferramenta da Lia saiu com o desenho assíncrono, na rodada 8); as suítes da fatia 1 (`*_fecha_sem_esperar_o_portal_spec`, `async_run_job_encerramento_parcial_spec`, `encerramento_spec`, `nenhum_estado_mudo`) passam |
 | Ferramenta nova com o especialista desligado | `answerer_resultado_da_cotacao_spec` |
 | Schema strict | `openai_schema_spec` (laço do catálogo + exemplo nomeado: uma propriedade, `required == ['seguradora']`, sem `anyOf`) |
-| Nota privada | `answerer_resultado_da_cotacao_spec`: com responsável humano o `Responder` cala antes do modelo e nenhuma execução abre; humano que assume entre a fala e a publicação recebe os itens em nota privada |
+| Humano na conversa | `answerer_resultado_da_cotacao_spec`: com responsável humano a Lia não responde e a ferramenta não roda; `responder_anexos_spec`: humano que assume durante a chamada ao modelo não recebe fala nem lista. Humano que assume no meio da cadeia humanizada: a cadeia para e a lista não sai, nem em nota privada (N2 da rodada 8) |
 | Execuções em voo no deploy | cotação correndo sem a chave ganha o resultado na consulta seguinte (`insurance_quote_resultado_spec`); a ferramenta lê essa linha como "ainda sem preço" e a encerrada sem a chave como "não guardado" (`insurance_quote_result_spec`); pedido repetido da linha sem a chave conta pelo contador (exemplos da entrega 10, inalterados) |
-| `nenhum_estado_mudo` | estendido: confirmação curta + `done` com fecho, e itens da Lia sem frase pronta, sob as quatro formas de o especialista não escrever; texto ao modelo presente em todo estado sem preço |
+| `nenhum_estado_mudo` | estendido: confirmação curta + `done` com fecho; a ferramenta da Lia anexa os itens ao turno sem frase pronta, é síncrona e não abre execução (rodada 8); texto ao modelo presente em todo estado sem preço |
 | Pedido repetido não mente | `bound_pedido_repetido_spec`: sem entrega e com preço guardado não diz "0 resultados"; com entrega diz o número; só recusas é tentativa nova; janela de 24 h vale igual |
 | Catálogo de outros agentes | `registry_spec` (tipo `custom` lê a config), `answerer_resultado_da_cotacao_spec` |
-| Registro de recusa | `recusa_registro_spec` com o gatilho da saída nova |
-| Contrato de nível | `base_contrato_de_nivel_spec` com `aceite`, `resultado_guardado?`, `publicacao_vale?` |
+| Registro de recusa | `recusa_registro_spec` com o gatilho `insurance_quote_result.rb#call#1` (`lista_indisponivel_nesta_superficie`, rodada 8) |
+| Contrato de nível | `base_contrato_de_nivel_spec` com `resultado_guardado?` (`aceite`, `handle_de_abertura` e `publicacao_vale?` saíram na rodada 8) |
 | Nenhum texto do portal ao modelo nem ao banco (rodada 7) | `insurance_quote_result_spec`: as 39 mensagens do corpus, no `kind` e no status do conector, e os 59 textos das revisões numa cotação só, perguntadas uma a uma: o modelo lê só `SEM_MOTIVO` ou as falas de `MOTIVOS`, nenhum texto aparece, e conta e pessoa saem no genérico; `resultado_por_seguradora_spec`: nenhum desses textos no JSON guardado |
-| Palavra ao cliente em todo estado da lista (rodada 7) | `insurance_quote_nenhum_estado_mudo_spec`: a lista recusada pelo publicador até o prazo sai no encerramento, uma vez e sem frase; `answerer_resultado_da_cotacao_spec`: falha passageira, anterior no teto antes do aceite da nova, falha até o prazo, cotação nova e varredor. Não cobre a lista aceita que morre com o pedido seguinte (P2-1) nem a falha na publicação adiada (P2-3), achados abertos da revisão da rodada 7 |
+| Palavra ao cliente em todo estado (rodada 8) | `responder_anexos_spec` e `answerer_resultado_da_cotacao_spec`: a fala e a lista nos três caminhos, o turno mudo (a lista sozinha; com assíncrona aceita e a gravação da lista falhando, o despacho segue), o retry e o humano; sem anexo, os specs do `Responder` que já existiam passam sem mudança. Os casos em que a lista prometida não chega: N1 a N5 da seção da rodada 8 |
+| Motor assíncrono igual ao da `main` (rodada 8) | `git diff 5742de5fcd --stat` sobre o motor: 5 arquivos, só a gravação do resultado (pedido repetido) e a confirmação curta; `async_publisher_spec` e `tool_run_spec` iguais aos da `main`, passando |
 
 ## Specs existentes alterados, e por quê
 
@@ -425,6 +456,14 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
   passou a sair, com a nova sem repetir os códigos dela; `builder_instrucao_do_principal_promessas_spec` com o
   parágrafo novo do motivo; `insurance_quote_nenhum_estado_mudo_spec` com a terceira passada e o exemplo da lista no
   encerramento.
+- Rodada 8 (a troca de desenho): `insurance_quote_result_spec` e `answerer_resultado_da_cotacao_spec` reescritos para a
+  ferramenta síncrona e o anexo; `answerer_resultado_da_cotacao_lotes_spec` e `insurance_quote_nenhum_estado_mudo_spec`
+  adaptados (a Lia anexa em vez de abrir execução); `motivo_da_recusa_spec` reescrito para o molde fechado, com as 31
+  sondas da revisão da rodada 7 em `SondasDoMotivo::REVISAO_7` (`spec/support/textos_do_motivo.rb`, onde as mensagens
+  31, 32 e 33 do corpus passaram a genérico); `builder_instrucao_do_principal_promessas_spec` com o parágrafo novo e dez
+  promessas; `recusa_registro_spec` com o gatilho `insurance_quote_result.rb#call#1`; `base_contrato_de_nivel_spec` só
+  com `resultado_guardado?`; `async_publisher_spec` e `tool_run_spec` voltaram aos da `main`; `medida_spec` perdeu o
+  exemplo da execução da Lia. Novos: `responder_anexos_spec` (16 exemplos) e `delivery_spec` (4).
 
 ## Testes
 
@@ -455,6 +494,9 @@ Todos com `PATH="$HOME/.rbenv/shims:$PATH"`, exit code gravado em arquivo e cont
 | Rodada 7 | o recorte da linha de base | 1941 exemplos, 0 falhas (51 a menos que a rodada 6: o spec do vocabulário do motivo, 264 exemplos, deu lugar ao da categoria, 195, e entraram 18 exemplos novos); md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes e depois (`51c17d78782abab21005184915b5d2eb`) | 0 |
 | Rodada 7, fora do recorte | os mesmos 118 de antes | 118 exemplos, 0 falhas | 0 |
 | CI da PR #424 em `05450ad1ce` (run 34792789781) | suíte inteira do projeto (8 shards), RuboCop, Vitest, ESLint, Brakeman | 12 jobs `success` | — |
+| Rodada 8, os specs alterados ou novos desde `5742de5fcd` (os 19 `_spec.rb` da lista do RuboCop) | 19 arquivos | 601 exemplos, 0 falhas | 0 |
+| Rodada 8 | o recorte da linha de base | 1885 exemplos, 0 falhas; md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes e depois (`350e3b378f75b0034035ffa4b2511a1a`) | 0 |
+| Rodada 8, fora do recorte | os mesmos 118 de antes | 118 exemplos, 0 falhas | 0 |
 
 - `RAILS_ENV=test bundle exec rails zeitwerk:check`: "All is good!", exit 0 (em `9c0bdcb8be`, `f727ce1844` e
   depois da rodada 3).
@@ -462,6 +504,8 @@ Todos com `PATH="$HOME/.rbenv/shims:$PATH"`, exit code gravado em arquivo e cont
   (exit 0), 0 ofensas. Rodadas 2 e 3: os 38 `.rb` alterados desde `5742de5fcd`, 0 ofensas, exit 0. Rodada 4: os
   40 `.rb` alterados ou novos desde `5742de5fcd`, 0 ofensas, exit 0. Rodada 7: os 41 `.rb` alterados ou novos desde
   `5742de5fcd`, 0 ofensas (`--format json`, `offense_count` 0), exit 0; `zeitwerk:check` "All is good!", exit 0.
+  Rodada 8: os 40 `.rb` alterados ou novos desde `5742de5fcd` (20 de `app/`, 19 specs e o suporte do motivo), 0 ofensas
+  (`--format json`, `offense_count` 0, `inspected_file_count` 40), exit 0; `zeitwerk:check` "All is good!", exit 0.
 
 ### Mutações
 
@@ -946,10 +990,273 @@ pedido novo nessa passada mata a publicação adiada dela. Nenhum código novo d
 só da auditoria. O conserto do P2-1 e o do P2-3 mexem no motor (`AsyncRunJob#apply` e `AsyncPublishJob`), e o do P3-1
 muda o desenho da classificação: ficam para a decisão do coordenador.
 
+**Rodada 8:** P2-1, P2-2, P3-3 e P3-4 saíram com o desenho assíncrono; P3-1 foi fechado pelo molde fechado; P2-3 foi
+para a issue #425.
+
+## Rodada 8: a troca de desenho (13/09/2026)
+
+### Por que
+
+Decisão do coordenador depois da revisão da rodada 7, registrada com o motivo que ele deu: foram sete rodadas em que a
+ferramenta assíncrona `ver_resultado_da_cotacao` gerou corrida nova a cada correção (estado mudo, duplicata, absorção de
+lista, execução substituída, publicação adiada). A causa está no desenho: uma ferramenta assíncrona que junta e desconta
+listas entre pedidos feitos em execuções diferentes. Enquanto esse desenho existir, esse tipo de defeito continua
+aparecendo, e o que sai é o desenho. P2-1, P2-2 e a decisão 7 não foram corrigidos dentro dele.
+
+### O desenho novo
+
+1. **A ferramenta é síncrona**, e a lista de preços vai como **anexo do turno**, escrita pelo código e entregue logo
+   depois da fala da Lia, na mesma entrega (`Tools::Delivery#anexar`, `Operate::Responder`).
+2. **Sem contexto de entrega** (Testar, Copiloto, playground), a ferramenta devolve o erro nomeado
+   `lista_indisponivel_nesta_superficie`, pelo registro de recusa, e não anexa nada.
+3. **O `Responder` entrega os anexos depois da resposta** nos três caminhos: humanizado (fim da cadeia do
+   `ChunkedDeliveryJob`, cada anexo um pedaço inteiro, sem o `ReplyChunker`), clássico (a resposta e os anexos no mesmo
+   lock, com a idempotência de `already_replied?`) e voz (o áudio e os anexos como texto). `@expected_chunks` conta os
+   anexos. **No turno mudo, o anexo sai sozinho** (decisão 19, aceita).
+4. **O modelo nunca recebe valor em reais**: recebe quantas seguradoras fizeram proposta, se a lista vai anexada e,
+   quando o cliente perguntou por uma seguradora, o nome, o desfecho e a categoria (`veiculo`, `regiao` ou `nenhuma`).
+   Nem travessão, nem frase pronta, nem texto do portal.
+5. **Nada de `ToolRun`, fila ou absorção.** Cada pergunta mostra o que está guardado naquele instante; perguntou duas
+   vezes, recebe duas vezes. A ferramenta lê a execução mais nova de `cotar_seguro` da conversa no instante da pergunta.
+
+### O que saiu
+
+- A ferramenta assíncrona de exibição: `Native::InsuranceQuoteResult` como execução do motor (`async?`, `precheck`,
+  `aceite`, `handle_de_abertura`, `start`, `poll`, `closing_deliveries`, os cinco textos de classe vazios) e
+  `insurance_quote_result/listas.rb` inteiro (a lista levada, descontada e aceita). O arquivo
+  `insurance_quote_result.rb` continua, com a ferramenta síncrona.
+- Os ganchos que ela criou fora dela: `Native::Base.publicacao_vale?`, `Native::Base#aceite` e `#handle_de_abertura`;
+  `Tools::AutorizacaoDaExecucao#publicacao_vale?` e a recusa `resultado_superado`; `Bound#aceite_native` e
+  `#abertura_native`; `ToolRun.open!(handle_inicial:)` e `ToolRun.handle_de_abertura`; o motivo
+  `resultado_respondido_no_turno` do registro de recusa.
+- As listas de termos do motivo (`TERMOS_DE_CONTA`, `TERMOS_DA_PESSOA`, `TERMOS_DE_DUVIDA`) e os padrões por expressão
+  regular das categorias: o molde fechado os substitui.
+- Nos specs: os exemplos de `publicacao_vale?` do `async_publisher_spec` e o de `handle_inicial` do `tool_run_spec` (os
+  dois arquivos voltaram aos da `main`), os níveis de `aceite`, `handle_de_abertura` e `publicacao_vale?` do
+  `base_contrato_de_nivel_spec`, o exemplo da execução da Lia da `medida_spec`, e os exemplos de passadas, lista levada e
+  encerramento da ferramenta da Lia.
+
+Nenhum nome da lista acima aparece mais em `app/` (conferido nome a nome contra `fd5ac3d07f`).
+
+### O que continua
+
+- `resultado_por_seguradora` no handle da cotação (`InsuranceQuote::Resultado`) e os códigos por lote de preço
+  (`LOTES_KEY`), que a ferramenta usa para não repetir o preço que a cotação ainda está enviando (`a_caminho`).
+- A união no pedido repetido (`ToolRun#conta_como_pedido?`, `#resultado_obtido?`, `Native::Base.resultado_guardado?`,
+  `PedidoRepetido#resultados`).
+- A confirmação curta de 3 s (`QuoteOffers#confirma_na_proxima?`, `Progress.running(confirmar_logo:)`,
+  `AsyncRunJob#reschedule(curto:)`).
+- O `principal.md`, ajustado ao anexo, com o md5 novo `429fbe18230433e92c3e07bf14cd4f5f` e dez promessas.
+
+### O motor assíncrono voltou ao da `main`
+
+`git diff 5742de5fcd --stat` sobre o motor inteiro (`app/jobs/autonomia/agents/tools`, `AsyncPublisher` e
+`async_publisher/`, `Encerramento`, `EntregaAceita`, `EntregaPublicada`, `EntregaDeArquivo`, `EntregaEncadeada`,
+`ArquivoGravado`, `AutorizacaoDaExecucao`, `RetomadaDeEnvio`, `PendenciaDeEnvio`, `VigiaDeEnvio`, `Progress`,
+`AsyncConfig`, `AsyncDispatcher`, `Bound`, `PedidoRepetido`, `Native::Base`, `ToolRun` e `tool_run/`): **5 arquivos,
+42 linhas a mais e 11 a menos**, só nos dois pontos.
+
+| Arquivo | Diferença | Ponto |
+|---|---|---|
+| `async_run_job.rb` | `reschedule(run, attempt, curto:)` e o `apply` que passa `progress.confirmar_logo?` | confirmação curta |
+| `progress.rb` | `Progress.running(confirmar_logo:)` e `#confirmar_logo?` | confirmação curta |
+| `tool_run.rb` | `conta_como_pedido?` por união com `resultado_obtido?`, e o comentário do pedido repetido | gravação do resultado (pedido repetido) |
+| `native/base.rb` | `resultado_guardado?` de classe, e o cabeçalho que diz que a lista do Agente de Cotação é a do deploy | gravação do resultado (pedido repetido) |
+| `pedido_repetido.rb` | "resultado guardado e nenhuma entrega encaminhada para publicação" com o contador em zero | gravação do resultado (pedido repetido) |
+
+`AsyncPublisher`, `AsyncPublishJob`, `Encerramento`, `AutorizacaoDaExecucao`, `RetomadaDeEnvio`, `ReapStaleRunsJob`,
+`Bound` e os demais estão idênticos aos da `main`. Fora do motor, e por causa do desenho novo: `Tools::Delivery` (os
+anexos), `Operate::Responder` (a entrega deles) e `Tools::Recusa` (o código `lista_indisponivel_nesta_superficie`).
+
+### Um estado mudo achado nesta rodada, e fechado
+
+Ao conferir os estados mudos antes do commit, uma sonda mostrou um caso que a primeira versão desta rodada deixava
+mudo: **turno mudo com uma ferramenta assíncrona aceita no mesmo turno e a gravação da lista falhando.** A exceção subia
+até `falha_no_turno`, que descarta as execuções aceitas no turno. Pelo `Responder` real, com uma assíncrona de teste
+(`scratchpad/r8-sonda-mudo/sonda_turno_mudo_spec.rb`, 4 exemplos, exit 0): sem anexo, a execução fica `running` com 1
+`AsyncRunJob` enfileirado (é o que a `main` faz no turno mudo); com o anexo e a primeira gravação falhando, a execução
+ficava `discarded`, sem job e sem mensagem, nas entregas clássica e humanizada. **Conserto:** a gravação do anexo no turno
+mudo é best-effort (`postar_anexos_do_turno_mudo`: a falha vai ao log, só a classe, e o despacho segue), no molde do
+`handoff_if_signaled`. Exemplo novo em `responder_anexos_spec` (clássica e humanizada) e mutação Z23. Os números abaixo são
+os de depois do conserto; a suíte, o RuboCop, o `zeitwerk:check` e as mutações rodaram de novo.
+
+### A ordem no canal (achado desta rodada, para decisão)
+
+A ordem fala e depois lista está provada no Chatwoot, nos três caminhos. Até o cliente, lido no código e sem teste: cada
+mensagem sai para o canal pelo seu `SendReplyJob` (`Message#send_reply`, no `after_create_commit`, fila `high`, Sidekiq
+com `SIDEKIQ_CONCURRENCY` 10 por padrão), sem ordem por conversa.
+
+- **Humanizada** (ligada por padrão: `AI_HUMANIZE_DELIVERY` e `config['humanize_delivery']`): a lista entra na fila pelo
+  menos 900 ms depois do último pedaço da fala, a mesma folga que separa os pedaços da fala na `main`.
+- **Clássica** (humanizada desligada, ou resposta que o quebrador não quebra): a fala e a lista entram na fila no mesmo
+  commit, e duas threads podem enviá-las ao mesmo tempo; a ordem de chegada não é garantida.
+- **Voz** (desligada por padrão: `AI_AGENT_VOICE_REPLY` e `config['voice_reply']`, e só no turno com áudio do cliente): a
+  mensagem com anexo sai com `wait: 2.seconds` e a lista em texto sem espera, então a lista tende a chegar antes do
+  áudio.
+
+A configuração do agente 24 em produção não foi lida. Pôr a lista da clássica e da voz na ordem até o cliente muda o
+mecanismo que a rodada 8 definiu para esses caminhos (o anexo no mesmo lock); um caminho possível é entregar o anexo pela
+cadeia do `ChunkedDeliveryJob`, com uma pausa depois da resposta, herdando N1 e N2. Fica para decisão.
+
+### O anexo nos três caminhos, e o que prova cada ponto
+
+| Ponto | Exemplo que cai sem ele | Mutação |
+|---|---|---|
+| clássico: a fala e depois a lista, na mesma transação, com o `autonomia_reply_to_message_id` da resposta | `responder_anexos_spec` "a fala sai primeiro e a lista depois"; `answerer_resultado_da_cotacao_spec` "a fala da Lia sai primeiro" | Z01, Z12 |
+| humanizado: a lista no fim da cadeia, inteira, sem o quebrador; a cadeia posta a fala e depois a lista | `responder_anexos_spec` "a lista entra no fim da cadeia como um pedaço inteiro", "a cadeia posta a fala e depois a lista"; `answerer_resultado_da_cotacao_spec` "com a entrega humanizada" | Z02, Z10 |
+| `@expected_chunks` conta a lista | `responder_anexos_spec` "expected_chunks conta os pedaços da fala e a lista" (com uma assíncrona aceita no mesmo turno) | Z08 |
+| voz: o áudio e depois a lista como texto; com a síntese falhando, a fala em texto e a lista | `responder_anexos_spec` "o áudio sai primeiro e a lista depois", "com a síntese falhando" | Z03, Z11 |
+| turno mudo: a lista sai sozinha, uma vez, sem evento `replied`, com a entrega clássica e com a humanizada ligada | `responder_anexos_spec` "turno mudo"; `answerer_resultado_da_cotacao_spec` "o turno mudo" | Z09 |
+| turno mudo com assíncrona aceita e a gravação da lista falhando: o despacho segue | `responder_anexos_spec` "a assíncrona é despachada e o turno continua mudo" | Z23 |
+| idempotência no retry do `ReplyJob` | `responder_anexos_spec` "o retry do ReplyJob não repete" (clássico, mudo e humanizado); `answerer_resultado_da_cotacao_spec` "o retry do ReplyJob" | Z04, Z05 |
+| o modelo sem valor | `insurance_quote_result_spec` "nenhum texto ao modelo tem valor ou travessão, em nenhum estado; o valor está só no anexo"; `answerer_resultado_da_cotacao_spec` "com preço a mostrar" | Z06 |
+| sem contexto de entrega, o erro nomeado | `insurance_quote_result_spec` "sem contexto de entrega"; `recusa_registro_spec` `insurance_quote_result.rb#call#1` | Z13 |
+| uma lista por turno com duas chamadas; duas perguntas, duas listas | `insurance_quote_result_spec` "mais de uma chamada"; `answerer_resultado_da_cotacao_spec` "duas chamadas", "pede os preços de novo" | Z14 |
+| o molde fechado | `motivo_da_recusa_spec` e o `insurance_quote_result_spec` "o modelo nunca recebe texto do portal" | Z07, Z17 a Z22 |
+
+### O corpus do conector com o molde fechado (P3-1)
+
+As 39 mensagens de `test/fixtures/agger/motivos-de-recusa.sanitized.json` (`autonomia-adapters`), com o texto, o `kind`
+e o status conferidos contra o arquivo na rodada 7, classificadas pela regra desta rodada (`scratchpad/f2-r8-classifica.rb`,
+o `motivo_da_recusa.rb` da árvore carregado com ActiveSupport, sem Rails). Mudam só as linhas 31, 32 e 33.
+
+| # | `textoLimpo` | `kind` do conector | status | categoria |
+|---|---|---|---|---|
+| 1 | Risco sem aceitação para este cenário nesta seguradora. | `risco` | `declined` | genérico |
+| 2 | Não temos um seguro disponível para este veículo. Gostaria de fazer uma nova cotação para outro carro? | `risco` | `declined` | genérico |
+| 3 | Cotação não será realizada por motivos técnicos: Veículo acima da idade permitida | `risco` | `declined` | `veiculo` |
+| 4 | Aceitacao Restrita, cobertura auto nao permitida para este modelo. | `risco` | `declined` | `veiculo` |
+| 5 | O veículo não possui aceitação para a categoria tarifária informada. | `risco` | `declined` | `veiculo` |
+| 6 | Após análise dos dados do veículo, região de circulação e critérios internos de aceitação, estamos declinando o risco deste orçamento. | `risco` | `declined` | genérico |
+| 7 | O sistema de cálculo está indisponível, tente novamente em alguns instantes. | `passageiro` | `declined` | genérico |
+| 8 | Serviço indisponível, tente novamente mais tarde | `passageiro` | `declined` | genérico |
+| 9 | Houve uma instabilidade ao realizar o cálculo nesta seguradora, tente novamente em breve. | `passageiro` | `declined` | genérico |
+| 10 | Usuário não possui acesso a funcionalidade. Por favor, verifique suas permissões no site da seguradora. | `credencial` | `auth_required` | genérico |
+| 11 | Login ou senha incorreta. Confira suas credenciais de acesso. | `credencial` | `auth_required` | genérico |
+| 12 | Erro ao processar o cálculo do prêmio | `outro` | `declined` | genérico |
+| 13 | Desmoronamento - Para contratação desta cobertura é necessário enviar para Análise Técnica. | `outro` | `declined` | genérico |
+| 14 | O Nome informado não corresponde ao CPF cadastrado. Por favor, verifique e tente novamente. | `outro` | `declined` | genérico |
+| 15 | 400 - Restrição técnica para o Segurado | `risco` | `declined` | genérico |
+| 16 | O valor informado de R$ 10.000,00 para a cobertura Roubo Residencial Condominos, Cobertura é invalido. O mínimo aceito | `outro` | `declined` | genérico |
+| 17 | Corretor não encontrado. Por favor, selecione um corretor válido no cadastro da seguradora. | `credencial` | `declined` | genérico |
+| 18 | Necessário contratar primeiro uma das coberturas: '000510026 - Responsabilidade Civil Operacoes', '000510304 - Resp Civ | `outro` | `declined` | genérico |
+| 19 | [165456] - Contratação da Cobertura Desmoronamento para o GRUPO ESCRITORIOS ATIVIDADE DEMAIS ESCRITÓRIOS está fora da p | `outro` | `declined` | genérico |
+| 20 | Para a Cobertura Responsabilidade Civil Empregador, Obrigat ria a contrata o da Cobertura Responsabilidade Civil Est | `outro` | `declined` | genérico |
+| 21 | A cobertura de INCENDIO / QUEDA DE RAIO / EXPLOSAO / IMPLOSAO ACIDENTAL / FUMACA / QUEDA DE AERONAVES não pode ser cont | `outro` | `declined` | genérico |
+| 22 | LMI COB RC OBRIGATORIA PARA DANO MORAL | `outro` | `declined` | genérico |
+| 23 | Houve um erro ao realizar este cálculo. | `outro` | `declined` | genérico |
+| 24 | Não foi possível recuperar o valor dessa cotação. Por favor, tente novamente mais tarde. | `passageiro` | `declined` | genérico |
+| 25 | O valor do capital segurado deve ser entre R$100,00 e R$1.000,00, limitado a 250 vezes o capital segurado da cobertura | `outro` | `declined` | genérico |
+| 26 | Profissão deve ser especificada corretamente para que o cálculo prossiga. | `outro` | `declined` | genérico |
+| 27 | Ocorreu uma divergencia entre a comissao informada e a comissao permitida. | `credencial` | `declined` | genérico |
+| 28 | Tipo de veículo não aceito. | `risco` | `declined` | `veiculo` |
+| 29 | Nenhum produto com seguro disponível para exibição. | `outro` | `declined` | genérico |
+| 30 | Só é permitida a contratação de [Faróis, Lanternas e Retrovisor] para veículos até 20 anos. | `outro` | `declined` | genérico |
+| 31 | [2005] - -Contratação não permitida - Ano Modelo do Veículo | `risco` | `declined` | genérico |
+| 32 | Moto de ano/modelo sem aceitação - RP | `risco` | `declined` | genérico |
+| 33 | [2159] - -Contratação não permitida - Categoria do Veículo | `risco` | `declined` | genérico |
+| 34 | UC00 - Risco fora das políticas de aceitação As Necessidades do Cliente, não foram salvas com sucesso, selecione nov | `risco` | `declined` | genérico |
+| 35 | Carga(s) transportada(s) ( Cigarro/Fumo) sem aceitação - RP Veículo sem aceitação - RP | `risco` | `declined` | genérico |
+| 36 | A cobertura "Impacto Veículos" não está disponível para esta cotação. | `outro` | `declined` | genérico |
+| 37 | Ocorreu um erro ao calcular. Revise o formulario de calculo e tente novamente. | `outro` | `declined` | genérico |
+| 38 | Origem da viagem deve ser especificada corretamente | `outro` | `declined` | genérico |
+| 39 | Cálculo sem prêmio. | `outro` | `declined` | genérico |
+
+`risco`: 13, com categoria **4** (todas `veiculo`; eram 7). `passageiro`: 4, `credencial`: 4, `outro`: 18, nenhuma com
+categoria.
+
+**Custo em motivos reais:** as mensagens 31, 32 e 33 caem no genérico. Nas 31 e 33, o número do código do portal
+("2005", "2159") e "contratação" são palavras fora do molde; na 32, "RP". A Lia passa a dizer só que a seguradora não
+fez proposta onde antes diria que ela não aceitou o veículo.
+
+**Custo nos 23 motivos plausíveis da rodada 7** (`scratchpad/f2-r7-custo.rb`, rodado com a regra da rodada 7, tirada de
+`fd5ac3d07f`, e com a desta): a categoria sai em **5 (eram 10)**. Caem no genérico "Rastreador obrigatório para este
+modelo." ("rastreador", "obrigatório"), "Categoria tarifária não aceita." (não nomeia o veículo), "Localidade sem
+aceitação para este produto." ("produto"), "Região de risco sem aceitação." ("risco") e "Pernoite em via pública sem
+aceitação." ("via", "pública").
+
+**As sondas:** os 31 textos da revisão da rodada 7, que saíam todos com categoria, saem todos genéricos, e os dois
+controles saem com a categoria certa ("Tipo de veículo não aceito." `veiculo`, "CEP sem aceitação." `regiao`). Os 59
+textos das revisões anteriores continuam genéricos.
+
+### P2-3: fora desta PR
+
+A publicação adiada que falha uma vez e não tenta de novo é da `main` e muda o motor de todas as entregas adiadas: issue
+**#425** (`autonom-ia2/chat`), com o cenário, a sonda e o conserto proposto, no Project com prioridade P2. A sonda,
+reescrita sobre o motor genérico (sem a ferramenta da Lia), reproduz na árvore desta rodada: nenhuma mensagem do bot e
+nenhum `AsyncPublishJob` novo depois de uma falha (`scratchpad/p2-3/publicacao_adiada_uma_falha_spec.rb`, 1 exemplo,
+exit 0). Com a ferramenta síncrona, a lista da Lia não passa mais por esse caminho; os lotes de preço e o comparativo
+continuam passando, como na `main`.
+
+P3-3 (a lista anterior repetida durante a chamada ao modelo) e P3-4 (a recusa permanente gastando tentativas) eram do
+desenho assíncrono e saíram com ele. P3-2 era da auditoria e foi corrigido na rodada 7.
+
+### Mutações da rodada 8
+
+Executor `scratchpad/f2-mutacoes-r8b.rb`: uma ou mais trocas exatas por mutação, cada trecho casando uma vez, arquivos
+restaurados com md5 conferido; md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes e depois (`350e3b378f75b0034035ffa4b2511a1a`). Specs por grupo:
+entrega, `responder_anexos_spec` e `answerer_resultado_da_cotacao_spec`; ferramenta, os da ferramenta, da integração,
+das promessas, do `nenhum_estado_mudo` e dos lotes; categoria, os do motivo, do resultado guardado, da ferramenta e das
+promessas. Z13 e Z21 caem por exceção, e é o comportamento que elas testam: a guarda que tiram é a que evita a exceção
+(conversa nula; transliteração de texto que não é UTF-8).
+
+| # | Mutação | Specs | Resultado |
+|---|---|---|---|
+| Z01 | anexo antes da fala, na entrega clássica | 34 exemplos | 8 falhas |
+| Z02 | anexo antes da fala, na entrega humanizada | 34 exemplos | 3 falhas |
+| Z03 | anexo antes do áudio, na entrega em voz | 34 exemplos | 1 falha |
+| Z04 | anexo duplicado no retry, na entrega clássica | 34 exemplos | 2 falhas |
+| Z05 | anexo duplicado no retry, no turno mudo | 34 exemplos | 2 falhas |
+| Z06 | valor chegando ao modelo (o anexo junto do texto da ferramenta) | 199 exemplos | 5 falhas |
+| Z07 | palavra desconhecida liberando categoria | 262 exemplos | 39 falhas |
+| Z08 | `@expected_chunks` sem contar os anexos | 34 exemplos | 1 falha |
+| Z09 | turno mudo sem o anexo | 34 exemplos | 4 falhas |
+| Z10 | anexo passando pelo quebrador | 34 exemplos | 4 falhas |
+| Z11 | entrega em voz sem o anexo | 34 exemplos | 1 falha |
+| Z12 | entrega clássica sem o anexo | 34 exemplos | 9 falhas |
+| Z13 | sem contexto de entrega, sem o erro nomeado | 199 exemplos | 1 falha (exceção) |
+| Z14 | duas chamadas no mesmo turno: a segunda troca a lista sem somar | 199 exemplos | 2 falhas |
+| Z15 | o preço a caminho entra na lista | 199 exemplos | 10 falhas |
+| Z16 | o modelo não recebe quantas cotaram | 199 exemplos | 4 falhas |
+| Z17 | motivo sem exigir `kind` risco | 262 exemplos | 6 falhas |
+| Z18 | molde do veículo sem exigir o nome do veículo | 262 exemplos | 1 falha |
+| Z19 | molde da região sem exigir o atributo | 262 exemplos | 1 falha |
+| Z20 | molde com palavra de conta ("seu", "código") | 262 exemplos | 5 falhas |
+| Z21 | texto que não é UTF-8 válido chega à transliteração | 262 exemplos | 1 falha (exceção) |
+| Z22 | a leitura aceita motivo guardado fora das categorias | 262 exemplos | 1 falha |
+| Z23 | turno mudo: a falha ao gravar o anexo derruba o despacho da assíncrona | 34 exemplos | 2 falhas |
+
+**23 de 23 reprovadas.**
+
+### Os estados em que a lista prometida não chega
+
+Nenhum estado que hoje leva palavra ao cliente deixa de levar: a `main` não tem a ferramenta; sem anexo, o `Responder`
+entrega como a `main` (os specs do `Responder` que já existiam passam sem mudança); e o turno mudo com assíncrona aceita
+continua despachando (conserto acima). Os casos em que a Lia diz que a lista vem e ela não vem, com o cenário de cada um:
+
+- **N1. O cliente escreve no meio da cadeia humanizada, antes do pedaço da lista.** O `ChunkedDeliveryJob` aborta o resto
+  da cadeia (regra da `main` para a fala), e a lista vai junto. O turno novo responde à mensagem nova; a lista só sai se
+  a Lia consultar de novo. No desenho assíncrono ela saía pelo motor, no teto de adiamentos.
+- **N2. Um humano assume a conversa durante a cadeia humanizada.** A cadeia para (regra da `main`), e a lista não sai.
+  No desenho assíncrono ela saía como nota privada.
+- **N3. A gravação da lista falha na entrega clássica ou em voz.** A transação desfaz a fala junto, e o turno cai em
+  `falha_no_turno` (silêncio, e as execuções assíncronas aceitas no turno descartadas), o mesmo estado da `main` quando a
+  gravação da fala falha; o turno com anexo faz uma escrita a mais nessa transação. Na cadeia humanizada, o pedaço que
+  falha levanta, e o job tenta de novo sem duplicar (token do pedaço).
+- **N4. Retry do `ReplyJob` antes do primeiro pedaço, com o modelo escrevendo outra fala.** A segunda cadeia para no
+  primeiro pedaço que a primeira já postou (regra da `main`); se a segunda correr na frente, a lista que sai é a dela.
+- **N5. O lote de preço a caminho** (`JANELA_DO_LOTE`, 10 min) continua com os resíduos das rodadas 4 a 6 (em "O que
+  NÃO foi verificado").
+
+Por desenho, e não resíduo: a pergunta feita duas vezes recebe a lista duas vezes; a cotação trocada entre a pergunta e
+a entrega sai com a lista da cotação lida na pergunta; no turno mudo com assíncrona aceita, a lista sai pelo caminho
+clássico e a assíncrona é despachada com `expected_chunks` zero.
+
 ## O que NÃO foi verificado
 
 - **Conversa real com o modelo.** Que a Lia chame a ferramenta quando o cliente pergunta, não escreva valor,
-  não liste seguradoras e não conte motivo sem pergunta é conduta do modelo; aqui o modelo é dublado.
+  não liste seguradoras e não conte motivo sem pergunta é conduta do modelo; aqui o modelo é dublado. Rodada 8: que a
+  fala dela apresente a lista anexada sem repetir os itens também é conduta do modelo.
 - **`quote/result` real com o `reason` do conector #60.** O resultado guardado foi exercitado com fixtures
   sintéticas na forma do corpus sanitizado do conector, não com uma leitura real depois do #60. Lido no
   conector (`src/platforms/agger/http/quote.ts`, `toOffer`, `origin/main` `ad4372a`): só a oferta que sai de
@@ -961,27 +1268,10 @@ muda o desenho da classificação: ficam para a decisão do coordenador.
   sempre (sonda do revisor): a Lia diria que a seguradora não fez proposta, e o pedido repetido não contaria o
   resultado. Mesma classe da #418; sem conserto e sem teste nesta fatia. A fonte conhecida de duas passadas é a
   corrente de jobs duplicada (`perform_later` que levanta depois de o Redis gravar).
-- **Os dois casos em que o cliente ainda pode receber a mesma seguradora em duas listas** (rodada 3), os dois
-  com o cliente pedindo de novo no instante em que a lista anterior sai:
-  1. a lista anterior, adiada, sai enquanto a execução do pedido novo ainda está `pending` (os segundos entre a
-     chamada da ferramenta e o despacho do turno): ela não é barrada (decisão 22), e a lista nova repetia os
-     códigos que o pedido novo nomeou. **Rodada 7:** a lista nova desconta a anterior que virou mensagem depois de
-     ela abrir, e não repete; o que sobra é a ordem (resíduo R4 da rodada 7). O mesmo vale para a pendência de envio
-     retomada depois de a nova abrir; a retomada antes, com a mensagem criada antes de a nova abrir, é o resíduo R5;
-  2. mensagens cruzadas: a lista anterior vira mensagem logo antes de o pedido novo abrir. Aqui é um pedido
-     novo de verdade; que o modelo veja a lista no histórico e não chame a ferramenta de novo é conduta do
-     modelo, não verificada. **Corrigido pela revisão da rodada 7 (achado P3-3):** quando a lista anterior sai durante
-     a chamada ao modelo do pedido novo (depois da mensagem do cliente e antes de a execução nova abrir), o histórico
-     já foi montado e o modelo não tem como vê-la; o corte do desconto é a abertura da execução, e a lista nova a
-     repete (sonda S4, falha nos dois SHAs). Não é conduta do modelo.
-  Sem teste nos dois. A terceira revisão confirmou os dois com a cadeia humanizada real. O caso da execução
-  `pending` que nunca é despachada (turno morto), que a revisão mostrou durar até o retry do turno, foi fechado
-  na rodada 4 (decisão 25).
-- **O lock da conversa na leitura das anteriores** (`emitir_lista`, antes `codigos_a_publicar`) fecha, pelo
-  raciocínio, a corrida entre a composição da lista nova e a transação do publicador da anterior. A mutação que o
-  tira (T21, U24, Y16) sobrevive: a corrida exige duas conexões concorrentes, e o spec roda numa só. A revisão da
-  rodada 3 leu os caminhos de lock e não achou ordem invertida. O lock não cobre o intervalo entre a composição e
-  o aceite da nova (resíduo R1 da rodada 7).
+- **As listas em cadeia saíram com o desenho assíncrono (rodada 8).** Os dois casos da mesma seguradora em duas listas
+  (rodada 3), o lock da composição da lista (mutações T21, U24 e Y16, que sobreviviam) e os três ou mais pedidos com
+  listas levadas não existem mais: não há lista levada, descontada nem composta sob lock. Perguntar duas vezes recebe
+  duas listas, por desenho.
 - **O lote de preço aceito cuja publicação adiada morre** fica "a caminho" para a Lia por até `JANELA_DO_LOTE`
   (10 min) depois da emissão (decisão 24). A janela é maior que o teto de adiamentos medido (6 a 8 min), não
   medida com a fila real. **E o contrário**: num incidente que pare a fila por mais de 7 a 10 min no meio do
@@ -990,9 +1280,7 @@ muda o desenho da classificação: ficam para a decisão do coordenador.
   publicação do lote não sabe que a Lia já mostrou aqueles preços.
 - **Lote de preço com a mensagem criada e a pendência de envio gravada logo depois**: entre as duas escritas
   (milissegundos, com o Redis fora) a Lia veria o lote como entregue. Sem teste.
-- **Três ou mais pedidos com listas levadas em cadeia e falhas no meio**: exercitados dois pedidos e a retomada do
-  envio; a cadeia maior, só pela leitura.
-- **A categoria do motivo contra texto real depois do #60**: medida no corpus sanitizado do conector (7 das 13
+- **A categoria do motivo contra texto real depois do #60**: medida no corpus sanitizado do conector (rodada 8: 4 das 13
   mensagens `risco` com categoria, todas `veiculo`; nenhuma `regiao` no corpus, e a categoria da região só foi
   exercitada com texto sintético). Motivo real que nomeia o atributo com palavra fora dos padrões cai no genérico
   sem aviso; não há registro de quantos.
@@ -1000,35 +1288,29 @@ muda o desenho da classificação: ficam para a decisão do coordenador.
   leituras depende de o portal já ter listado todas as seguradoras quando a lista se repete; nos brutos de
   13/09/2026 todas estavam listadas na primeira leitura, e o contrário não foi observado. Não medido com a
   janela nova.
-- **Texto de conta da corretora ou de restrição da pessoa que nomeia um atributo do veículo ou da região sem nenhum
-  termo das listas** sai com categoria. A revisão da rodada 7 escreveu 31 assim, todos `risco` no classificador real
-  do conector, e **os 31 saem com categoria** (achado P3-1): 15 de conta ("Tipo de veículo sem aceitação para o seu
-  código.", "Localidade sem aceitação na plataforma."), 14 da pessoa ("Proponente sem aceitação para esta região.",
-  "Negativado: CEP sem aceitação.", "Tipo de veículo sem aceitação para menores de 25 anos.") e 2 de "modelo" que não
-  é do veículo ("Este modelo de apólice não possui aceitação."). O modelo não recebe o texto, e nada é guardado além
-  da categoria: o dano é a Lia afirmar um motivo que não é o verdadeiro ("não aceitou o veículo"). A versão commitada
-  dizia que nenhum dos 59 textos das revisões era assim: é verdade, mas 58 deles não casam padrão de categoria nenhum
-  e sairiam genéricos mesmo sem as listas de termos (sonda S6 da revisão); o filtro de termos é provado pelos exemplos
-  "cada termo colado a 'Tipo de veículo não aceito'" do `motivo_da_recusa_spec`, e não por eles.
-- **Ordem da lista depois da fala com a entrega humanizada ligada**, especificamente para a ferramenta nova. O
-  adiamento pela cadeia do turno é o mecanismo geral (`async_publisher_spec`, "humanized chain deferral"); o
-  spec de integração desta fatia usa a entrega clássica.
-- **Resposta em áudio** (`deliver_voice`) seguida da lista.
+- **Texto de conta ou da pessoa escrito só com as palavras do molde** (rodada 8). Os 31 textos da revisão da rodada 7
+  (achado P3-1) saem genéricos. Um texto de conta ou da pessoa escrito só com as palavras de um conjunto, e nomeando o
+  atributo e o veículo (ou o atributo da região), ainda sairia com categoria. Os conjuntos não têm palavra de conta nem
+  da pessoa, e não se conhece texto assim; não há prova de que não exista.
+- **A ordem de chegada no WhatsApp** (rodada 8). Lida no código, não medida com o canal real: ver "A ordem no canal"
+  na seção da rodada 8 (na clássica a ordem não é garantida; na voz a lista tende a chegar antes do áudio).
+- **N1 a N4 da rodada 8 com o Sidekiq e o canal reais.** Exercitados com os jobs da cadeia rodados à mão no spec.
 - **O schema contra a API da OpenAI.** Validado pela forma (`openai_schema_spec`), não por chamada real.
-- **Custo por turno**: a ferramenta nova acrescenta uma função ao prompt do agente de cotação; e uma consulta
-  por publicação da lista (`publicacao_vale?`). Não medido.
+- **Custo por turno**: a ferramenta nova acrescenta uma função ao prompt do agente de cotação, e cada chamada lê o
+  banco dentro do turno (a execução mais nova e as mensagens dos lotes de preço). Não medido.
 - **Rollback executado.**
 
 ## Deploy e rollback
 
 - Sem migration, sem variável de ambiente nova, sem escrita em banco. Deploy normal do chat2you.
 - Depois do deploy, o agente 24 passa a oferecer `ver_resultado_da_cotacao` no turno seguinte, e o
-  `principal.md` novo vale na montagem seguinte do prompt.
+  `principal.md` novo vale na montagem seguinte do prompt. O `Responder` de todos os agentes passa a entregar os anexos
+  do turno; sem ferramenta que anexe (todos os outros agentes), a entrega é a da `main`.
 - **Rollback**: voltar à imagem de `5742de5fcd`. Efeitos conhecidos:
   - a coluna `native_tool_slugs` do agente 24 volta a mandar (os quatro slugs de antes): a ferramenta some do
     turno;
-  - execução da ferramenta nova em voo: `Registry.find` não a acha, e o motor a fecha com
-    `ferramenta_indisponivel`, sem mensagem;
-  - `AsyncPublishJob` da lista já adiado publica sem a reconferência (o publicador antigo não tem o gancho);
-  - o handle das cotações mantém a chave `resultado_por_seguradora`, que a versão antiga ignora;
+  - a ferramenta não abre execução nem deixa estado fora do turno: não há execução dela em voo nem publicação adiada a
+    descartar (rodada 8);
+  - o handle das cotações mantém as chaves `resultado_por_seguradora` e `codigos_por_lote_de_preco`, que a versão
+    antiga ignora;
   - o pedido repetido volta a contar só pelo contador.

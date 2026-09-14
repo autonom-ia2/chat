@@ -1,59 +1,27 @@
 require 'rails_helper'
 
-# UM EXEMPLO POR PADRÃO. Cada exemplo de categoria casa só o seu padrão; cada exemplo de termo casa só o seu termo, e
-# colado a um texto que sairia `veiculo` o leva ao genérico.
-module PadroesDoMotivo
-  POR_CATEGORIA = {
-    'idade do veículo' => ['Idade do veículo acima do limite.', 'Veículo acima da idade permitida.'],
-    'ano modelo' => ['Ano modelo fora da política de aceitação.', 'Ano de fabricação fora da política.'],
-    'modelo' => ['Cobertura não permitida para este modelo.', 'Modelo restrito para aceitação.', 'Modelo do veículo sem aceitação.'],
-    'tipo de veículo' => ['Tipo de veículo não aceito.'],
-    'categoria tarifária' => ['Categoria tarifária sem aceitação.', 'Categoria do veículo sem aceitação.'],
-    'CEP' => ['CEP sem aceitação.'], 'localidade' => ['Localidade sem aceitação.'], 'região' => ['Região sem aceitação.'],
-    'circulação' => ['Área de circulação sem aceitação.'], 'pernoite' => ['Local de pernoite sem aceitação.']
-  }.freeze
-
-  POR_TERMO = {
-    'login' => ['faça login novamente', 'sistema deslogado', 'faça o log in'], 'senha' => ['senha vencida', 'password errado'],
-    'sessão' => ['sessão encerrada'], 'token' => ['token inválido'], 'usuário' => ['usuário inativo', 'user inativo'],
-    'acesso' => ['acesso negado', 'access denied'], 'permissão' => ['sem permissão'], 'corretor' => ['corretor inativo', 'corretagem alta'],
-    'credencial' => ['descredenciado', 'invalid credentials'], 'autenticação' => ['falha de autenticação'],
-    'autorização' => ['desautorizado a calcular', 'not authorized'], 'habilitação' => %w[desabilitado inabilitado],
-    'produtor' => ['produtor inativo'], 'SUSEP' => ['código SUSEP inválido'], 'cadastro' => ['recadastramento pendente'],
-    'comissão' => ['comissão acima do permitido'], 'certificado' => ['certificado digital vencido'], 'bloqueio' => ['emissão bloqueada'],
-    'conta' => ['conta inativa', 'account inativa'], 'suspensão' => ['operação suspensa'], 'agenciamento' => ['código do agenciador inválido'],
-    'inadimplência' => ['inadimplência com a seguradora'], 'chave' => ['chave inválida'], 'integração' => ['falha na integração'],
-    'expiração' => ['prazo expirado'], 'portal' => ['entre novamente no portal'], 'licença' => ['licença vencida'],
-    'multicálculo' => ['uso indevido do multicálculo'], 'operador' => ['operador joao.silva'], 'sucursal' => ['sucursal inexistente'],
-    'filial' => ['filial inativa'], 'convênio' => ['convênio inativo'], 'pró-labore' => ['pró-labore acima do permitido'],
-    'vínculo' => ['vínculo inexistente'], 'perfil' => ['perfil não configurado'], 'verificação' => ['código de verificação inválido'],
-    'parceiro' => ['parceiro inativo', 'parceria encerrada'], 'comercial' => ['desconto comercial'], 'contrato' => ['contrato encerrado'],
-    'e-mail' => ['contato@exemplo.test', 'e mail não confirmado'], 'link' => ['veja www.exemplo.test'],
-    'redigido' => ['contato do suporte <REDACTED>']
-  }.freeze
-
-  POR_TERMO_DA_PESSOA = {
-    'segurado' => ['segurado com restrição'], 'condutor' => ['condutor principal com restrição'], 'motorista' => ['motorista com restrição'],
-    'proprietário' => ['proprietário com restrição'], 'cliente' => ['cliente com restrição'], 'pessoa' => ['pessoa física com restrição'],
-    'documento' => ['CPF divergente', 'CNH vencida'], 'crédito' => ['restrição de crédito'], 'financeiro' => ['restrição financeira'],
-    'sinistro' => ['histórico de sinistros'], 'bônus' => ['classe de bônus'], 'profissão' => ['profissão sem aceitação']
-  }.freeze
-
-  POR_TERMO_DE_DUVIDA = {
-    'interno' => ['política interna'], 'critério' => ['critério da seguradora'], 'análise' => ['após análise']
-  }.freeze
-end
-
-# A REGRA DO MOTIVO (fatia 2 do #420; decisão do CEO de 13/09/2026): o código classifica o motivo em `veiculo` ou `regiao`,
-# e só isso vai ao modelo. `kind` fora de `risco`, termo de conta, termo da pessoa, termo de dúvida, letra ilegível, duas
-# categorias ou nenhuma: nil, o genérico.
+# A REGRA DO MOTIVO POR MOLDE FECHADO (fatia 2 do #420; decisões do CEO de 13/09/2026, sétima e oitava rodadas): o código
+# classifica o motivo em `veiculo` ou `regiao`, e só isso vai ao modelo. A categoria sai só quando TODA palavra do texto
+# está no molde da categoria e o texto nomeia o que foi recusado. Palavra desconhecida, `kind` fora de `risco`, texto
+# que não é String UTF-8 válida: nil, o genérico.
 RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
+  # Motivos de veículo e de região que o molde aceita, escritos com as palavras que os portais usam.
+  aceitos = {
+    'Tipo de veículo não aceito.' => 'veiculo',
+    'Idade do veículo fora da política de aceitação.' => 'veiculo',
+    'Modelo do veículo sem aceitação nesta seguradora.' => 'veiculo',
+    'Carro acima da idade permitida.' => 'veiculo',
+    'Categoria tarifária do veículo não aceita.' => 'veiculo',
+    'Ano de fabricação do veículo não permitido.' => 'veiculo',
+    'Cobertura auto não permitida para este modelo.' => 'veiculo',
+    'CEP sem aceitação.' => 'regiao',
+    'Região de circulação não atendida pela seguradora.' => 'regiao',
+    'Local de pernoite sem aceitação.' => 'regiao',
+    'Localidade não aceita.' => 'regiao'
+  }.freeze
+
   def categoria(texto, kind: 'risco')
     described_class.categoria('kind' => kind, 'text' => texto)
-  end
-
-  def alvo(texto)
-    ActiveSupport::Inflector.transliterate(texto).downcase
   end
 
   describe 'o corpus do conector' do
@@ -66,7 +34,8 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
 
   describe 'o que cai no genérico, mesmo classificado como risco pelo conector' do
     { 'conta da corretora' => TextosDoMotivo::CONTA, 'dado da pessoa' => TextosDoMotivo::PESSOA,
-      'textos das revisões' => TextosDoMotivo::REVISOES }.each do |grupo, textos|
+      'textos das revisões' => TextosDoMotivo::REVISOES, 'sondas da revisão da sétima rodada' => SondasDoMotivo::REVISAO_7 }
+      .each do |grupo, textos|
       textos.each do |texto|
         it "#{grupo}: «#{texto}»" do
           expect(categoria(texto)).to be_nil
@@ -77,7 +46,7 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
 
   describe 'o kind decide antes do texto' do
     %w[passageiro credencial outro].each do |kind|
-      it "o kind #{kind} com um texto que o risco classificaria sai genérico" do
+      it "o kind #{kind} com um texto que o molde aceitaria sai genérico" do
         expect(categoria('Tipo de veículo não aceito.', kind: kind)).to be_nil
       end
     end
@@ -91,69 +60,71 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
     end
   end
 
-  describe 'cada categoria' do
-    PadroesDoMotivo::POR_CATEGORIA.each do |padrao, textos|
-      textos.each do |texto|
-        it "#{padrao}: «#{texto}»" do
-          esperada = described_class::CATEGORIAS.find { |_nome, padroes| padroes.key?(padrao) }.first
-
-          expect(categoria(texto)).to eq(esperada)
-        end
+  describe 'o molde fechado' do
+    aceitos.each do |texto, esperada|
+      it "«#{texto}» sai #{esperada}" do
+        expect(categoria(texto)).to eq(esperada)
       end
     end
 
-    it 'texto com as duas categorias sai genérico' do
+    # A decisão: uma palavra desconhecida manda para o genérico, em qualquer posição do texto.
+    it 'uma palavra desconhecida manda para o genérico, no começo, no meio e no fim' do
+      aceitos.each_key do |texto|
+        expect(categoria("Seu #{texto}")).to be_nil
+        expect(categoria(texto.sub(' ', ' corretor '))).to be_nil
+        expect(categoria(texto.sub(/\.\z/, ' nesta plataforma.'))).to be_nil
+      end
+    end
+
+    it 'os dois exemplos da decisão caem no genérico' do
+      expect(categoria('Tipo de veículo sem aceitação para o seu código.')).to be_nil
+      expect(categoria('Negativado: CEP sem aceitação.')).to be_nil
+    end
+
+    it 'número é palavra, e fora do molde' do
+      expect(categoria('Tipo de veículo 2005 não aceito.')).to be_nil
+      expect(categoria('Veículo com mais de 20 anos: idade não permitida.')).to be_nil
+    end
+
+    # "Idade", "tipo" e "categoria" também são da pessoa, da cobertura e da habilitação: sem o veículo no texto, genérico.
+    it 'o molde do veículo exige o atributo e o veículo' do
+      expect(categoria('Idade não permitida.')).to be_nil
+      expect(categoria('Tipo de cobertura não aceito.')).to be_nil
+      expect(categoria('Categoria tarifária não aceita.')).to be_nil
+      expect(categoria('Veículo sem aceitação.')).to be_nil
+    end
+
+    it 'o molde da região exige o atributo da região' do
+      expect(categoria('Sem aceitação nesta seguradora.')).to be_nil
+      expect(categoria('Local sem aceitação.')).to be_nil
+    end
+
+    it 'texto com o veículo e a região sai genérico' do
       expect(categoria('Modelo do veículo sem aceitação neste CEP.')).to be_nil
     end
 
-    it 'texto de risco que não nomeia o atributo sai genérico' do
-      expect(categoria('Veículo sem aceitação.')).to be_nil
-      expect(categoria('Risco sem aceitação para este cenário.')).to be_nil
+    it 'letra que a transliteração não escreve é palavra desconhecida' do
+      expect(categoria('Tipo de veículo não aceito: ꜱᴇɴʜᴀ.')).to be_nil
     end
 
-    it 'texto com letra que a transliteração não escreve sai genérico, com o atributo nomeado' do
-      expect(categoria('Tipo de veículo não aceito: ꜱᴇɴʜᴀ ᴇˣᴘɪʀᴏᴜ.')).to be_nil
+    it 'texto que não é UTF-8 válido sai genérico, sem levantar' do
+      expect(categoria('Tipo de veículo não aceito.'.encode('UTF-16LE'))).to be_nil
+      expect(categoria((+"Tipo de ve\xEDculo n\xE3o aceito.").force_encoding('ASCII-8BIT'))).to be_nil
+      expect(categoria("Tipo de ve\xC3culo n\xE3o aceito.")).to be_nil
     end
 
-    it 'todo padrão de categoria tem exemplo, e um que só ele casa' do
-      padroes = described_class::CATEGORIAS.values.reduce(:merge)
-      sem_exemplo_proprio = padroes.keys.reject do |nome|
-        PadroesDoMotivo::POR_CATEGORIA.fetch(nome, []).any? { |texto| padroes.select { |_, padrao| alvo(texto).match?(padrao) }.keys == [nome] }
-      end
+    # O MOLDE NÃO TEM PALAVRA DE CONTA NEM DA PESSOA: é a garantia de que "Tipo de veículo sem aceitação para o <conta>"
+    # e "<pessoa>: CEP sem aceitação" nunca viram categoria, por mais que alguém amplie o molde.
+    it 'nenhum molde tem palavra da conta da corretora, da pessoa ou de critério interno' do
+      proibidas = %w[login senha sessao token usuario acesso permissao corretor corretora corretagem credencial codigo
+                     cadastro comissao bloqueio conta portal operador perfil parceiro comercial contrato plano pacote
+                     agente escritorio regional unidade plataforma sistema seu sua segurado segurada condutor motorista
+                     proprietario cliente pessoa proponente titular tomador beneficiario negativado score cpf cnh
+                     credito financeiro sinistro bonus profissao renda restricao pendencia interno
+                     interna criterio analise]
+      no_molde = described_class::MOLDES.values.flat_map { |molde| proibidas.select { |palavra| molde[:palavras].include?(palavra) } }
 
-      expect(PadroesDoMotivo::POR_CATEGORIA.keys).to match_array(padroes.keys)
-      expect(sem_exemplo_proprio).to be_empty
-    end
-  end
-
-  # UM TERMO TIRA A CATEGORIA: colado a "Tipo de veículo não aceito", que sozinho sai `veiculo`.
-  describe 'cada termo que leva ao genérico' do
-    let(:base) { 'Tipo de veículo não aceito' }
-
-    it 'o controle: o texto sem termo sai veiculo' do
-      expect(categoria("#{base}.")).to eq(described_class::VEICULO)
-    end
-
-    { TERMOS_DE_CONTA: PadroesDoMotivo::POR_TERMO, TERMOS_DA_PESSOA: PadroesDoMotivo::POR_TERMO_DA_PESSOA,
-      TERMOS_DE_DUVIDA: PadroesDoMotivo::POR_TERMO_DE_DUVIDA }.each do |lista, exemplos|
-      exemplos.each do |termo, textos|
-        textos.each do |texto|
-          it "#{lista} #{termo}: «#{texto}»" do
-            expect(categoria("#{base}, #{texto}.")).to be_nil
-          end
-        end
-      end
-
-      it "todo padrão de #{lista} tem exemplo, e um que só ele casa entre todos os termos" do
-        todos = described_class::TERMOS_DE_CONTA.merge(described_class::TERMOS_DA_PESSOA).merge(described_class::TERMOS_DE_DUVIDA)
-        padroes = described_class.const_get(lista)
-        sem_exemplo_proprio = padroes.keys.reject do |nome|
-          exemplos.fetch(nome, []).any? { |texto| todos.select { |_, padrao| alvo(texto).match?(padrao) }.keys == [nome] }
-        end
-
-        expect(exemplos.keys).to match_array(padroes.keys)
-        expect(sem_exemplo_proprio).to be_empty
-      end
+      expect(no_molde).to be_empty
     end
   end
 end

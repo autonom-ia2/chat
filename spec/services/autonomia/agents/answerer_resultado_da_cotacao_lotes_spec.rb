@@ -3,8 +3,9 @@ require 'rails_helper'
 # O LOTE DE PREÇOS DA COTAÇÃO AINDA A CAMINHO E A LISTA DA LIA, PELO CAMINHO REAL (quarta rodada de revisão da fatia
 # 2 do #420). A cotação é despachada no turno de uma mensagem cuja entrega humanizada ficou aberta (dois pedaços
 # esperados, nenhum postado: o cliente escreveu no meio), e o lote de preços dela fica adiado. O cliente pergunta
-# quanto deu nesse intervalo. Caminho real: agente do `Builder`, `AsyncRunJob` da cotação, `Operate::Responder`,
-# motor e publicador da ferramenta da Lia, `AsyncPublishJob`. Dublados: o modelo e a leitura do portal. Dados sintéticos.
+# quanto deu nesse intervalo. Caminho real: agente do `Builder`, `AsyncRunJob` da cotação, `Operate::Responder` com a
+# ferramenta síncrona da Lia e a lista anexada ao turno (desenho da rodada 8), `AsyncPublishJob`. Dublados: o modelo e a
+# leitura do portal. Dados sintéticos.
 RSpec.describe Autonomia::Agents::Answerer do
   let(:account) do
     create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
@@ -83,10 +84,6 @@ RSpec.describe Autonomia::Agents::Answerer do
   def turno_da_lia(mensagem)
     Autonomia::Agents::Operate::Responder.new(conversation: conversation.reload, agent_inbox: agent_inbox,
                                               reply_to_message_id: mensagem.id).perform
-    Autonomia::Agents::ToolRun.where(slug: ferramenta.slug).find_each do |run|
-      motor.new.perform(run.id, 0)
-      motor.new.perform(run.id, 1)
-    end
   end
 
   def lote_adiado(run)
@@ -100,7 +97,7 @@ RSpec.describe Autonomia::Agents::Answerer do
     conversation.messages.reload.where(sender_type: 'AgentBot').sum { |mensagem| mensagem.content.to_s.scan("*#{nome}*").size }
   end
 
-  it 'com o lote adiado, a Lia ouve que os preços estão sendo enviados, não abre lista, e cada preço sai uma vez' do
+  it 'com o lote adiado, a Lia ouve que os preços estão sendo enviados, não anexa lista, e cada preço sai uma vez' do
     cotacao_run = cotacao_despachada(mensagem_do_cliente('quero cotar'), pedacos: 2)
     motor.new.perform(cotacao_run.id, 1)
     adiado = lote_adiado(cotacao_run)
@@ -110,7 +107,7 @@ RSpec.describe Autonomia::Agents::Answerer do
     turno_da_lia(mensagem_do_cliente('quanto deu?'))
     Autonomia::Agents::Tools::AsyncPublishJob.new.perform(cotacao_run.id, adiado[1], Autonomia::Agents::Tools::AsyncConfig::MAX_PUBLISH_DEFERRALS)
 
-    expect(capturado[:saida]).to eq(ferramenta::PRECOS_A_CAMINHO)
+    expect(capturado[:saida]).to end_with(ferramenta::PRECOS_A_CAMINHO)
     expect(Autonomia::Agents::ToolRun.where(slug: ferramenta.slug)).to be_empty
     expect([vezes('Porto Seguro'), vezes('Allianz')]).to eq([1, 1])
   end
@@ -124,7 +121,7 @@ RSpec.describe Autonomia::Agents::Answerer do
     turno_da_lia(mensagem_do_cliente('e a Porto?'))
     Autonomia::Agents::Tools::AsyncPublishJob.new.perform(cotacao_run.id, adiado[1], Autonomia::Agents::Tools::AsyncConfig::MAX_PUBLISH_DEFERRALS)
 
-    expect(capturado[:saida]).to eq('Porto Seguro fez proposta: o preço dela está na fila de envio e chega numa mensagem do sistema.')
+    expect(capturado[:saida]).to include('Porto Seguro fez proposta: o preço dela está na fila de envio e chega numa mensagem do sistema.')
     expect(vezes('Porto Seguro')).to eq(1)
   end
 
@@ -141,11 +138,11 @@ RSpec.describe Autonomia::Agents::Answerer do
     capturado = modelo(nil, texto: 'Os preços estão chegando.')
     turno_da_lia(mensagem_do_cliente('quanto deu?'))
 
-    expect(capturado[:saida]).to eq(ferramenta::PRECOS_A_CAMINHO)
+    expect(capturado[:saida]).to end_with(ferramenta::PRECOS_A_CAMINHO)
     expect([vezes('Porto Seguro'), vezes('Allianz')]).to eq([1, 1])
   end
 
-  # A PUBLICAÇÃO ADIADA QUE MORREU (quinta rodada de revisão): passada a janela do lote, a Lia volta a publicar a lista,
+  # A PUBLICAÇÃO ADIADA QUE MORREU (quinta rodada de revisão): passada a janela do lote, a Lia volta a anexar a lista,
   # e o cliente recebe os preços.
   it 'com o lote aceito que nunca virou mensagem, passada a janela, a lista da Lia sai' do
     cotacao_run = cotacao_despachada(mensagem_do_cliente('quero cotar'), pedacos: 2)
@@ -156,7 +153,7 @@ RSpec.describe Autonomia::Agents::Answerer do
       capturado = modelo(nil, texto: 'Seguem os preços.')
       turno_da_lia(mensagem_do_cliente('quanto deu?'))
 
-      expect(capturado[:saida]).to start_with(ferramenta::LISTA_DEPOIS)
+      expect(capturado[:saida]).to include(ferramenta::LISTA_ANEXADA)
       expect([vezes('Porto Seguro'), vezes('Allianz')]).to eq([1, 1])
     end
   end
@@ -170,7 +167,7 @@ RSpec.describe Autonomia::Agents::Answerer do
     capturado = modelo(nil, texto: 'Seguem de novo.')
     turno_da_lia(mensagem_do_cliente('manda de novo'))
 
-    expect(capturado[:saida]).to start_with(ferramenta::LISTA_DEPOIS)
+    expect(capturado[:saida]).to include(ferramenta::LISTA_ANEXADA)
     expect([vezes('Porto Seguro'), vezes('Allianz')]).to eq([2, 2])
   end
 end

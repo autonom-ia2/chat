@@ -109,7 +109,7 @@ class Autonomia::Insurance::ResultadoDaCotacao
   # categorias não conta como motivo.
   def motivo(codigo)
     guardado = entrada(codigo)['motivo']
-    ::Autonomia::Insurance::MotivoDaRecusa::CATEGORIAS.key?(guardado) ? guardado : nil
+    ::Autonomia::Insurance::MotivoDaRecusa::CATEGORIAS.include?(guardado) ? guardado : nil
   end
 
   # -> os códigos das seguradoras que `consulta` nomeia, primeiro as do passo 2 e depois as do passo 3:

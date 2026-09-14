@@ -1,12 +1,12 @@
-# OS TEXTOS REAIS E OS DAS REVISÕES DO MOTIVO DE RECUSA (fatia 2 do #420, sétima rodada: o motivo vira categoria, e
-# nenhum texto do portal vai ao modelo). Usados por `motivo_da_recusa_spec`, `resultado_por_seguradora_spec` e
-# `insurance_quote_result_spec`.
+# OS TEXTOS REAIS E OS DAS REVISÕES DO MOTIVO DE RECUSA (fatia 2 do #420: desde a sétima rodada o motivo vira categoria e
+# nenhum texto do portal vai ao modelo; desde a oitava, a categoria sai só por molde fechado). Usados por
+# `motivo_da_recusa_spec`, `resultado_por_seguradora_spec` e `insurance_quote_result_spec`.
 module TextosDoMotivo
   VEICULO = Autonomia::Insurance::MotivoDaRecusa::VEICULO
 
   # As 39 mensagens do corpus do conector (`autonomia-adapters`, `origin/main` `ad4372a597`,
   # `test/fixtures/agger/motivos-de-recusa.sanitized.json`): `textoLimpo`, o `kind` e o status que o conector dá a cada
-  # uma, e a categoria que sai daqui.
+  # uma, e a categoria que sai daqui. As três de risco que perderam a categoria na oitava rodada estão marcadas.
   CORPUS = [
     ['Risco sem aceitação para este cenário nesta seguradora.', 'risco', 'declined', nil],
     ['Não temos um seguro disponível para este veículo. Gostaria de fazer uma nova cotação para outro carro?', 'risco', 'declined', nil],
@@ -46,9 +46,12 @@ module TextosDoMotivo
     ['Tipo de veículo não aceito.', 'risco', 'declined', VEICULO],
     ['Nenhum produto com seguro disponível para exibição.', 'outro', 'declined', nil],
     ['Só é permitida a contratação de [Faróis, Lanternas e Retrovisor] para veículos até 20 anos.', 'outro', 'declined', nil],
-    ['[2005] - -Contratação não permitida - Ano Modelo do Veículo', 'risco', 'declined', VEICULO],
-    ['Moto de ano/modelo sem aceitação - RP', 'risco', 'declined', VEICULO],
-    ['[2159] - -Contratação não permitida - Categoria do Veículo', 'risco', 'declined', VEICULO],
+    # Molde fechado (oitava rodada): o código do portal "2005" é palavra fora do molde.
+    ['[2005] - -Contratação não permitida - Ano Modelo do Veículo', 'risco', 'declined', nil],
+    # Molde fechado (oitava rodada): "RP" é palavra fora do molde.
+    ['Moto de ano/modelo sem aceitação - RP', 'risco', 'declined', nil],
+    # Molde fechado (oitava rodada): o código do portal "2159" é palavra fora do molde.
+    ['[2159] - -Contratação não permitida - Categoria do Veículo', 'risco', 'declined', nil],
     ['UC00 - Risco fora das políticas de aceitação As Necessidades do Cliente, não foram salvas com sucesso, selecione nov',
      'risco', 'declined', nil],
     ['Carga(s) transportada(s) ( Cigarro/Fumo) sem aceitação - RP Veículo sem aceitação - RP', 'risco', 'declined', nil],
@@ -106,5 +109,45 @@ module TextosDoMotivo
     'Tarifa do veículo sem aceitação no seu perfil comercial.', 'Modelo de contrato do parceiro não assinado. Declinando cálculo.',
     'Veículo sem aceitação: proprietário anterior com restrição.', 'Limite máximo de cotação de seguro auto nesta seguradora. Declinando cálculo.',
     'Veículo sem aceitação: sua tabela não é mais aceita.', 'Veículo sem aceitação: ꜱᴇɴʜᴀ ᴇˣᴘɪʀᴏᴜ.', 'Veículo sem aceitação: ＳＥＮＨＡ ＥＸＰＩＲＯＵ.'
+  ].freeze
+end
+
+# AS SONDAS DA REVISÃO DA SÉTIMA RODADA (fatia 2 do #420), num módulo próprio: `TextosDoMotivo` não passa do teto de linhas.
+module SondasDoMotivo
+  # Os 31 textos da revisão da sétima rodada: conta da corretora, restrição ou dado da pessoa e "modelo" que não é do
+  # veículo, todos `risco` no classificador real do conector e escritos para casar um atributo do veículo ou da região
+  # sem termo de lista nenhum. Com os padrões da sétima rodada, os 31 saíam com categoria; com o molde fechado, nenhum.
+  REVISAO_7 = [
+    'Tipo de veículo sem aceitação para o seu código.',
+    'Categoria do veículo sem aceitação no seu plano.',
+    'Categoria tarifária sem aceitação para a assessoria.',
+    'Região de atuação não configurada. Declinando cálculo.',
+    'CEP fora da área de atendimento da sua unidade. Declinando cálculo.',
+    'Limite diário de cotações atingido para este tipo de veículo. Declinando cálculo.',
+    'Este modelo de cálculo não possui aceitação nesta seguradora.',
+    'Região não parametrizada no sistema. Declinando cálculo.',
+    'Modelo do veículo sem aceitação para o agente.',
+    'Localidade sem aceitação na plataforma.',
+    'Categoria do veículo sem aceitação para o seu escritório.',
+    'Tipo de veículo sem aceitação para a sua regional.',
+    'Modelo do veículo sem aceitação: aguardando aprovação do gerente.',
+    'Tipo de veículo sem aceitação no pacote contratado.',
+    'Circulação sem aceitação para o grupo econômico.',
+    'Proponente sem aceitação para esta região.',
+    'Tipo de veículo sem aceitação para menores de 25 anos.',
+    'Região de circulação sem aceitação para a idade do titular.',
+    'Modelo do veículo sem aceitação para a faixa etária informada.',
+    'Tomador com pendência: localidade sem aceitação.',
+    'Negativado: CEP sem aceitação.',
+    'Beneficiário com restrição: localidade sem aceitação.',
+    'Estado civil sem aceitação para o tipo de veículo.',
+    'Score insuficiente: região sem aceitação.',
+    'Região sem aceitação para residentes com pendência judicial.',
+    'Idade do veículo incompatível com a renda declarada. Declinando cálculo.',
+    'Titular com restrição para este modelo. Declinando cálculo.',
+    'Restrição técnica para o proponente na região de circulação.',
+    'CEP de cobrança sem aceitação.',
+    'Este modelo de apólice não possui aceitação.',
+    'Desse modelo de questionário não temos aceitação.'
   ].freeze
 end

@@ -242,10 +242,16 @@ module ManualDoPrincipalResultado
     [agent, conversation]
   end
 
-  def no_turno(seguradora)
-    agent, conversation = conversa_com_cotacao
+  def no_turno(seguradora, conversa = conversa_com_cotacao)
+    agent, conversation = conversa
     delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil, origin_message_id: 1)
     RESULTADO.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: delivery)
+  end
+
+  # O que o modelo lê, e o que a ferramenta anexou ao turno.
+  def consultar(seguradora, conversa = conversa_com_cotacao)
+    ferramenta = no_turno(seguradora, conversa)
+    [ferramenta.call, ferramenta.send(:delivery).anexos]
   end
 
   # CADA PROMESSA DO BLOCO, PELA FRASE EXATA, E O QUE A SUSTENTA.
@@ -253,44 +259,61 @@ module ManualDoPrincipalResultado
     # A ferramenta é do principal e responde sem o portal: a conta desta conversa não tem conexão nenhuma.
     'O que a cotação desta conversa já recebeu das seguradoras, sem cotar de novo.' => lambda {
       BUILDER::TOOLS_DO_PRINCIPAL.include?(RESULTADO.slug) && BUILDER::TOOLS_DO_ESPECIALISTA.exclude?(RESULTADO.slug) &&
-        no_turno('Sancor').precheck.to_s.start_with?('Sancor não fez proposta')
+        consultar('Sancor').first.include?('Sancor não fez proposta')
     },
     # Um parâmetro só, e a procura acha mais de uma seguradora no mesmo texto.
     'escreva todos os nomes no mesmo campo, numa chamada só.' => lambda {
-      ferramenta = no_turno('Sancor e Porto')
+      ao_modelo, = consultar('Sancor e Porto')
       RESULTADO.openai_schema[:parameters][:required] == ['seguradora'] &&
-        ferramenta.aceite.include?('Porto Seguro fez proposta') && ferramenta.aceite.include?('Sancor não fez proposta')
+        ao_modelo.include?('Porto Seguro fez proposta') && ao_modelo.include?('Sancor não fez proposta')
     },
-    # Quem escreve o preço é o código: a execução é assíncrona e publica o item de `QuoteOffers.item`.
-    "Quando houver preço para mostrar, a lista sai logo depois da sua\nmensagem." => lambda {
-      ferramenta = no_turno(nil)
-      RESULTADO.async? && ferramenta.precheck.nil? && ferramenta.start[RESULTADO::CODIGOS_KEY] == ['8']
+    # Quem escreve o preço é o código: a ferramenta é síncrona e anexa ao turno o item de `QuoteOffers.item`, que o
+    # `Operate::Responder` entrega depois da resposta.
+    "Quando houver preço para mostrar, a lista vai anexada à sua\nresposta e chega logo depois da sua mensagem." => lambda {
+      ao_modelo, anexos = consultar(nil)
+      item = Autonomia::Insurance::QuoteOffers.item('insurer' => { 'code' => '8', 'name' => 'Porto Seguro' }, 'status' => 'quoted',
+                                                    'premium' => { 'amount' => 2119.18, 'basis' => 'total' })
+      !RESULTADO.async? && anexos == [item] && ao_modelo.include?(RESULTADO::LISTA_ANEXADA) && ao_modelo.exclude?('2.119')
     },
     # O modelo recebe da ferramenta a mesma regra.
-    "sem valor, sem listar\nseguradoras e sem travessão." => lambda {
-      RESULTADO::LISTA_DEPOIS.include?('sem escrever valor, sem listar seguradoras e sem travessão')
+    'sem valor, sem listar seguradoras e sem travessão.' => lambda {
+      RESULTADO::LISTA_ANEXADA.include?('sem escrever valor, sem listar seguradoras e sem travessão')
+    },
+    # Nada fica guardado entre consultas: a segunda lê o que a cotação tem agora, e nenhuma execução é aberta.
+    "Cada consulta mostra o que a cotação\ntem naquele momento." => lambda {
+      conversa = conversa_com_cotacao
+      cotacao = Autonomia::Agents::ToolRun.find_by!(slug: COTACAO.slug, conversation_id: conversa.last.id)
+      antes = consultar('Allianz', conversa).first
+      allianz = { 'insurer' => { 'code' => '5', 'name' => 'Allianz' }, 'status' => 'quoted',
+                  'premium' => { 'amount' => 2402.55, 'basis' => 'total' } }
+      guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir(cotacao.handle[COTACAO::RESULTADO_KEY], [allianz])
+      cotacao.update!(handle: cotacao.handle.merge(COTACAO::RESULTADO_KEY => guardado))
+      depois, anexos = consultar('Allianz', conversa)
+      antes == RESULTADO::NAO_ENCONTRADA && depois.include?('Allianz fez proposta') && anexos.one? &&
+        Autonomia::Agents::ToolRun.where(slug: RESULTADO.slug).none?
     },
     # O motivo só chega ao modelo quando o pedido nomeia a seguradora: o resultado inteiro não o traz.
     'O motivo de quem não fez proposta só sai quando a pessoa perguntar por aquela seguradora' => lambda {
       motivo = RESULTADO::MOTIVOS.fetch(MOTIVO::VEICULO)
-      no_turno(nil).aceite.exclude?(motivo) && no_turno('Sancor').precheck.to_s.include?(motivo)
+      consultar(nil).first.exclude?(motivo) && consultar('Sancor').first.include?(motivo)
     },
     # A ferramenta entrega uma de duas categorias, escritas pelo código.
     'que a ferramenta entregar: se a recusa foi pelo veículo ou pela região.' => lambda {
-      MOTIVO::CATEGORIAS.keys == [MOTIVO::VEICULO, MOTIVO::REGIAO] && RESULTADO::MOTIVOS.keys == MOTIVO::CATEGORIAS.keys
+      MOTIVO::CATEGORIAS == [MOTIVO::VEICULO, MOTIVO::REGIAO] && RESULTADO::MOTIVOS.keys == MOTIVO::CATEGORIAS
     },
     # O texto do portal não chega ao modelo: não há detalhe a acrescentar além da categoria.
     'sem acrescentar detalhe que a ferramenta não deu.' => lambda {
-      no_turno('Sancor').precheck.to_s.exclude?(MOTIVO_DO_VEICULO) &&
+      consultar('Sancor').first.exclude?(MOTIVO_DO_VEICULO) &&
         RESULTADO::MOTIVOS.values.all? { |texto| texto.include?('sem acrescentar detalhe') }
     },
     "Quando a ferramenta disser que não há motivo que\nvocê possa contar" => lambda {
       RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
         MOTIVO.categoria('kind' => 'passageiro', 'text' => MOTIVO_DO_VEICULO).nil?
     },
-    # A regra do motivo tira a categoria de texto com os termos da conta e com a pessoa, mesmo com o veículo recusado.
+    # O molde fechado do motivo não tem palavra de conta nem da pessoa: com qualquer uma delas, o texto vai ao genérico.
     "Nunca fale de login, senha ou\npermissão da corretora, nem de restrição da pessoa." => lambda {
-      %w[login senha permissão].all? { |termo| MOTIVO::TERMOS_DE_CONTA.key?(termo) } &&
+      moldes = MOTIVO::MOLDES.values.map { |molde| molde[:palavras] }
+      %w[login senha permissao segurado condutor restricao].none? { |palavra| moldes.any? { |palavras| palavras.include?(palavra) } } &&
         ['faça login', 'senha vencida', 'sem permissão', 'segurado com restrição'].all? do |termo|
           MOTIVO.categoria('kind' => 'risco', 'text' => "Tipo de veículo não aceito, #{termo}.").nil?
         end
@@ -501,7 +524,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('a09fe65f1e2f82f910032e1c58be54de')
+      expect(Digest::MD5.hexdigest(secao)).to eq('429fbe18230433e92c3e07bf14cd4f5f')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do

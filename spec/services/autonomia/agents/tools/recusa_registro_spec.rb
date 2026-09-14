@@ -407,13 +407,13 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
             .execute({ 'arguments' => { seguradora: 'Porto' }.to_json }, delivery: delivery)
         }
       },
-      # A ferramenta da Lia (fatia 2 do #420) sem preço a publicar: responde no turno e não abre execução.
-      'insurance_quote_result.rb#precheck#1' => {
-        espera: { motivo: 'resultado_respondido_no_turno', slug: 'ver_resultado_da_cotacao' },
+      # A ferramenta da Lia (fatia 2 do #420) sem contexto de entrega (Testar, Copiloto, playground): não há conversa
+      # para ler a cotação nem turno para receber a lista.
+      'insurance_quote_result.rb#call#1' => {
+        espera: { motivo: 'lista_indisponivel_nesta_superficie', slug: 'ver_resultado_da_cotacao', conversa: '-' },
         dispara: lambda {
           bound_para(Autonomia::Agents::Tools::Native::InsuranceQuoteResult)
-            .execute({ 'name' => 'ver_resultado_da_cotacao', 'arguments' => { seguradora: nil }.to_json }, delivery: delivery)
-          expect(Autonomia::Agents::ToolRun.count).to be_zero
+            .execute({ 'name' => 'ver_resultado_da_cotacao', 'arguments' => { seguradora: nil }.to_json })
         }
       }
     }

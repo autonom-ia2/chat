@@ -321,8 +321,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   # OS ESTADOS NOVOS DA FATIA 2 DO #420: a cotação que pede a confirmação no intervalo curto, e a ferramenta
   # da Lia que mostra o resultado guardado. Na cotação, cada estado novo ainda termina com palavra ao cliente,
   # sob as quatro formas de o especialista não escrever. Na ferramenta da Lia, quem fala é a Lia: com preço, o
-  # código publica os itens depois da fala dela; sem preço, o modelo recebe um texto para falar, em todo
-  # estado. A ferramenta não publica frase pronta nenhuma (os textos de classe dela são vazios).
+  # código anexa os itens ao turno, e o Responder os entrega depois da fala dela; sem preço, o modelo recebe um
+  # texto para falar, em todo estado. A ferramenta é síncrona e não publica nada sozinha (desenho da rodada 8).
   describe 'os estados novos da fatia 2 (resultado guardado e ferramenta da Lia)' do
     let(:inbox) { create(:inbox, account: account) }
     let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
@@ -382,24 +382,20 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           expect(palavras_do_bot.last).to eq(described_class.closing_message(run.arguments))
         end
 
-        # A ferramenta da Lia lê a cotação cuja chamada teve este desfalque: o que ela publica são os itens
+        # A ferramenta da Lia lê a cotação cuja chamada teve este desfalque: o que ela anexa ao turno são os itens
         # do código, e nunca uma frase do especialista ou uma constante.
-        it 'a ferramenta da Lia publica os itens de preco depois da fala, sem frase pronta' do
+        it 'a ferramenta da Lia anexa ao turno os itens de preco, sem frase pronta' do
           fonte = cotacao_viva(desfalque)
           fonte.record_attempt!(handle: { described_class::RESULTADO_KEY =>
                                             Autonomia::Insurance::ResultadoPorSeguradora.unir({}, [offer('43', 'Ezze', 2050.40)]) })
           fonte.finish!('done')
-          register_async_tool(resultado)
-          exibicao = Autonomia::Agents::ToolRun.open!(agent: agent, slug: resultado.slug, arguments: { 'seguradora' => nil },
-                                                      scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
-          exibicao.promote!(expected_chunks: 0, notify_customer: true, expires_at: 5.minutes.from_now)
+          delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 8)
 
-          job.new.perform(exibicao.id, 0)
-          job.new.perform(exibicao.id, 1)
-          job.new.perform(exibicao.id, 2)
+          ao_modelo = resultado.new(agent: agent, params: { 'seguradora' => nil }, delivery: delivery).call
 
-          expect(palavras_do_bot).to eq([Autonomia::Insurance::QuoteOffers.item(offer('43', 'Ezze', 2050.40))])
-          expect(exibicao.reload.status).to eq('done')
+          expect(delivery.anexos).to eq([Autonomia::Insurance::QuoteOffers.item(offer('43', 'Ezze', 2050.40))])
+          expect(ao_modelo).to include(resultado::LISTA_ANEXADA)
+          expect(palavras_do_bot).to be_empty
         end
 
         # O LOTE ADIADO PELA FALA DO TURNO (quarta rodada de revisão): perguntada nesse intervalo, a Lia recebe texto e
@@ -414,50 +410,22 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           adiado = enqueued_jobs.reverse.find { |item| item[:job] == Autonomia::Agents::Tools::AsyncPublishJob }
           delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 8)
 
-          ao_modelo = resultado.new(agent: agent, params: { 'seguradora' => nil }, delivery: delivery).precheck.to_s
+          ao_modelo = resultado.new(agent: agent, params: { 'seguradora' => nil }, delivery: delivery).call
           Autonomia::Agents::Tools::AsyncPublishJob.new.perform(run.id, ActiveJob::Arguments.deserialize(adiado[:args])[1],
                                                                 Autonomia::Agents::Tools::AsyncConfig::MAX_PUBLISH_DEFERRALS)
 
-          expect(ao_modelo).to eq(resultado::PRECOS_A_CAMINHO)
+          expect(ao_modelo).to end_with(resultado::PRECOS_A_CAMINHO)
+          expect(delivery.anexos).to be_empty
           expect(palavras_do_bot.size).to eq(1)
           expect(palavras_do_bot.first.scan('*Ezze*').size).to eq(1)
         end
       end
     end
 
-    # A LISTA QUE O PUBLICADOR RECUSOU ATÉ O PRAZO (decisão do CEO, sétima rodada): a fala da Lia prometeu a lista, e
-    # ela sai na última tentativa, a do encerramento, sem frase pronta. Uma vez só.
-    it 'a lista da Lia recusada pelo publicador ate o prazo sai no encerramento, uma vez e sem frase' do
-      fonte = cotacao_viva('nó vazio')
-      fonte.record_attempt!(handle: { described_class::RESULTADO_KEY =>
-                                        Autonomia::Insurance::ResultadoPorSeguradora.unir({}, [offer('43', 'Ezze', 2050.40)]) })
-      fonte.finish!('done')
-      register_async_tool(resultado)
-      exibicao = Autonomia::Agents::ToolRun.open!(agent: agent, slug: resultado.slug, arguments: { 'seguradora' => nil },
-                                                  scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
-      exibicao.promote!(expected_chunks: 0, notify_customer: true, expires_at: 5.minutes.from_now)
-      recusas = 0
-      allow(Messages::MessageBuilder).to receive(:new).and_wrap_original do |original, *args|
-        raise ActiveRecord::StatementInvalid, 'banco fora' if (recusas += 1) <= 2
-
-        original.call(*args)
-      end
-
-      job.new.perform(exibicao.id, 0)
-      job.new.perform(exibicao.id, 1)
-      job.new.perform(exibicao.id, 2)
-      expect(palavras_do_bot).to be_empty
-      exibicao.update!(expires_at: 1.minute.ago)
-      job.new.perform(exibicao.id, 3)
-
-      expect(exibicao.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(palavras_do_bot).to eq([Autonomia::Insurance::QuoteOffers.item(offer('43', 'Ezze', 2050.40))])
-    end
-
-    # SEM PREÇO A PUBLICAR, QUEM FALA É A LIA, e ela recebe um texto em todo estado.
+    # SEM PREÇO A ANEXAR, QUEM FALA É A LIA, e ela recebe um texto em todo estado.
     it 'sem preco a publicar, o modelo recebe texto em todo estado da ferramenta da Lia' do
       delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 7)
-      ao_modelo = ->(seguradora) { resultado.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: delivery).precheck.to_s }
+      ao_modelo = ->(seguradora) { resultado.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: delivery).call }
       guardado = ->(ofertas) { { described_class::RESULTADO_KEY => Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas) } }
       textos = [ao_modelo.call(nil)]
 
@@ -478,13 +446,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(textos.last).to eq(resultado::ENVIO_INCERTO)
     end
 
-    it 'os textos de classe da ferramenta da Lia sao vazios, com qualquer argumento' do
-      DesfalquesDoEspecialista::NOMES.each do |desfalque|
-        args = argumentos(desfalque)
-        textos = %i[waiting_message failure_message uncertain_message partial_message closing_message]
+    # SEM MOTOR: a ferramenta da Lia é síncrona, não abre execução, e nenhuma frase do motor sai por ela.
+    it 'a ferramenta da Lia e sincrona e nao abre execucao' do
+      delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 9)
+      cotacao_viva('nó vazio')
 
-        expect(textos.map { |texto| resultado.public_send(texto, args) }).to all(eq(''))
-      end
+      resultado.new(agent: agent, params: { 'seguradora' => nil }, delivery: delivery).call
+
+      expect(resultado.async?).to be(false)
+      expect(Autonomia::Agents::ToolRun.where(slug: resultado.slug)).to be_empty
+      expect(palavras_do_bot).to be_empty
     end
   end
 

@@ -140,13 +140,6 @@ class Autonomia::Agents::Tools::Native::Base
       false
     end
 
-    # A ENTREGA DESTA EXECUÇÃO AINDA PODE VIRAR MENSAGEM? Perguntado por `Tools::AutorizacaoDaExecucao`: no
-    # publicador, na entrada e de novo sob o lock da conversa antes de criar a mensagem; e na retomada de um
-    # envio pendente (`RetomadaDeEnvio`), que abandona a mensagem quando a resposta é falsa. -> true por padrão.
-    def publicacao_vale?(_run)
-      true
-    end
-
     # EM `strict: true` NÃO EXISTE CAMPO FORA DE `required`.
     #
     # A OpenAI recusa a chamada INTEIRA — não a ferramenta, a chamada — quando `required` não lista
@@ -278,20 +271,6 @@ class Autonomia::Agents::Tools::Native::Base
   # NUNCA levanta e nunca bloqueia: conferência indisponível deixa o pedido seguir.
   def precheck
     nil
-  end
-
-  # O QUE O MODELO LÊ QUANDO A EXECUÇÃO FOI ABERTA, calculado pela instância a partir do pedido (fatia 2 do
-  # #420). `Bound#accept_async` o devolve no lugar do `accepted_message` da classe.
-  # -> String, ou nil para usar o `accepted_message`. Nil por padrão.
-  def aceite
-    nil
-  end
-
-  # O QUE A EXECUÇÃO GUARDA NO HANDLE AO NASCER, calculado no turno pela mesma instância que respondeu o
-  # `aceite` (fatia 2 do #420). `Bound#abrir` o entrega a `ToolRun.open!`, que o grava sem as marcas do motor;
-  # as passadas do motor o encontram na linha. -> Hash; vazio por padrão.
-  def handle_de_abertura
-    {}
   end
 
   # A IDENTIDADE DO PEDIDO (entrega 10): o digest da entrada NORMALIZADA — pelo adapter, não por

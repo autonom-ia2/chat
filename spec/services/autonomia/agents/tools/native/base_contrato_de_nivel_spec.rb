@@ -23,19 +23,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom',
                                      status: :active, enabled: true, instruction: 'Atenda.')
   end
-  # O que o `Registry`, o `Bound` e o job leem NA CLASSE.
-  # `resultado_guardado?` (lido por `ToolRun#resultado_obtido?`) e `publicacao_vale?` (lido pelo publicador)
-  # entraram na fatia 2 do #420: quem pergunta tem a linha, não a ferramenta montada.
+  # O que o `Registry`, o `Bound` e o job leem NA CLASSE. `resultado_guardado?` (lido por
+  # `ToolRun#resultado_obtido?`) entrou na fatia 2 do #420: quem pergunta tem a linha, não a ferramenta montada.
   let(:textos_de_classe) do
     %i[slug tool_name description params available_for? async? openai_schema
        accepted_message waiting_message failure_message partial_message uncertain_message
-       closing_message resultado_guardado? publicacao_vale?]
+       closing_message resultado_guardado?]
   end
   # O que o `Bound` e o job chamam NA INSTÂNCIA (`resultado_entregue?` e `resta_entregar?` são as
-  # duas perguntas que o `Tools::Encerramento` faz à ferramenta antes de escolher o fecho; `aceite` é o
-  # texto do aceite que depende do pedido, fatia 2 do #420).
+  # duas perguntas que o `Tools::Encerramento` faz à ferramenta antes de escolher o fecho).
   let(:trabalho_de_instancia) do
-    %i[precheck aceite handle_de_abertura closing_deliveries resultado_entregue? resta_entregar? pedido call start poll]
+    %i[precheck closing_deliveries resultado_entregue? resta_entregar? pedido call start poll]
   end
   # Os textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
   # `closing_message` entrou nesta lista com a entrega das frases do especialista: ela é o desfecho de
@@ -92,18 +90,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     expect(crua.new(agent: agent, params: {}).resta_entregar?({})).to be(false)
   end
 
-  # OS TRÊS DA FATIA 2 DO #420, pelo lado conservador de cada um: sem aceite próprio vale o da classe, sem
-  # resultado guardado a execução não conta como pedido pelo resultado, e a publicação não é vetada.
-  it 'a ferramenta que nao redefine usa o aceite da classe, nao guarda resultado e nao veta a publicacao' do
+  # FATIA 2 DO #420, pelo lado conservador: sem redefinir, a execução não conta como pedido pelo resultado guardado.
+  it 'a ferramenta que nao redefine nao diz que guardou resultado' do
     crua = Class.new(described_class) do
       def self.slug = 'crua'
       def self.description = 'teste'
     end
 
-    expect(crua.new(agent: agent, params: {}).aceite).to be_nil
-    expect(crua.new(agent: agent, params: {}).handle_de_abertura).to eq({})
     expect(crua.resultado_guardado?({ 'resultado_por_seguradora' => { '8' => { 'desfecho' => 'com_preco' } } })).to be(false)
-    expect(crua.publicacao_vale?(Autonomia::Agents::ToolRun.new)).to be(true)
   end
 
   # O CONSTRUTOR GANHOU `run:` COM PADRÃO `nil` (entrega 8a): é o motor que passa a entregá-lo
