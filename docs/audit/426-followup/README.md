@@ -53,3 +53,7 @@ A prévia usa fixture de API; a aceitação final no drawer completo e com login
 2. Após aprovação, publicar via workflow manual existente, registrar imagem anterior e validar primeiro um funil controlado. Sem migração de schema.
 3. Não fazer rollback cego para código antigo com cadências novas pendentes: o código antigo não respeita `allowed_days` e não passa lembretes pelo novo gate.
 4. Em rollback autorizado, interromper o processamento programado durante a transição; inventariar e cancelar/reagendar os toques pendentes afetados antes de restaurar a imagem anterior. Preservar metadados e lembretes já emitidos para auditoria. Confirmar os modos e flags antes de retomar o processamento. Não basta desligar apenas a IA no código antigo, pois lembretes internos seguem outro ramo.
+
+## Achado do CI e correção
+
+O primeiro CI completo identificou duas expectativas antigas em `meta_sync_metadata_spec.rb`: a criação do funil agora inclui os dias úteis, mas os testes esperavam que `metadata.ai` tivesse somente `tone`. A verificação passou a comparar uma cópia dos metadados persistidos antes do PATCH com os metadados depois dele, preservando a garantia de não sobrescrever configurações irmãs. A suíte desse arquivo foi reexecutada localmente: 5 exemplos, zero falhas. O teste separado de criação continua exigindo explicitamente segunda a sexta em novos funis.
