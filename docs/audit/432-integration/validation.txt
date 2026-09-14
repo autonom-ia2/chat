@@ -1,0 +1,42 @@
+import.log
+PASS sending blocked while queued
+PASS database prevents concurrent imports
+PASS job completes with durable counters
+PASS custom fields preserved
+PASS duplicate job delivery is idempotent
+PASS sending available after completion
+PASS late failure rolls back all recipients and persists safe error
+PASS retry after failure succeeds without duplication
+PASS header error persisted and retained file retryable
+PASS recovery enqueues interrupted work
+PASS interrupted work completes on recovery
+PASS duplicate worker and recovery skip a live worker lock
+PASS expired file cannot be retried
+PASS retention schedules file purge
+PASS 20,004-row CSV counts including invalid duplicate suppressed and long name
+PASS large import campaign counters exact
+MEASURE csv_rows=20004 elapsed_seconds=1.509 sql_queries=61
+api.log
+PASS upload accepted asynchronously status=202
+PASS upload returns queued before parsing or inserting
+MEASURE xlsx_upload_response_seconds=0.142
+PASS API blocks send during import
+PASS API blocks scheduling during import
+PASS API blocks deletion during import
+PASS API blocks cancel during import
+PASS second upload rejected while active
+PASS retry rejected while active
+PASS real XLSX background import completes with exact counts
+MEASURE xlsx_rows=20000 worker_seconds=3.521 sql_queries=60
+PASS fresh client reads durable completion
+PASS cross-tenant retry rejected
+PASS retry API queues retained file
+PASS retry committed input adds no duplicates
+PASS no email delivery performed or enqueued
+review-fixes.log
+PASS disabled feature prevents worker and maintenance mutations
+PASS disabled maintenance does not enqueue or purge
+PASS maintenance releases lock before immediately dispatched worker claims import
+RSpec: 142 examples, 0 failures, 3 pending
+Vitest: 3 files, 18 tests passed
+UI: CRM desktop/mobile persistence and alignment passed; import four states desktop/mobile passed
