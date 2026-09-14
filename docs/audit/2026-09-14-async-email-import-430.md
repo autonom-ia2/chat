@@ -26,6 +26,8 @@ Ruby 3.4.4, PostgreSQL local, banco exclusivo `chat2you_430_test`, Rails em test
 | Falha injetada após inserts | Zero destinatários novos; estado failed; erro sanitizado |
 | Retry | Completa sem duplicar nem inflar contadores |
 | Worker duplicado | Mantém resultado já confirmado; NOWAIT impede concorrência |
+| Morte real do worker | Processo Ruby separado recebeu SIGKILL após inserts; banco desfez destinatários, estado processing permaneceu recuperável e maintenance concluiu a importação |
+| Fila indisponível no upload | HTTP 202 com arquivo persistido; maintenance reenfileirou e concluiu; registro abandonado expirou corretamente |
 | Recovery | Reagenda trabalho interrompido; ignora lock de worker ativo |
 | Envio/agendamento/exclusão/cancelamento | API rejeita enquanto existe importação ativa |
 | Segunda importação/retry concorrente | API rejeita; índice parcial também impede admissão duplicada |
@@ -40,9 +42,13 @@ Ruby 3.4.4, PostgreSQL local, banco exclusivo `chat2you_430_test`, Rails em test
 
 Medições locais são evidência funcional e de redução de consultas; não constituem SLA de produção nem comparação de hardware equivalente. Não foi testada a planilha real do incidente.
 
-Comandos: `bundle exec rails db:create db:schema:load db:migrate` com banco exclusivo; `bundle exec rails runner .codex/verify_import.rb`; `bundle exec rails runner .codex/verify_api.rb`; `vitest run --config .codex/vitest.config.ts .codex/recipient-import.test.js`; RuboCop e ESLint limitados aos arquivos alterados. Roteiros e fixtures sintéticos em `.codex/`, sem adicionar specs permanentes conforme orientação do projeto. O primeiro merge de configuração Vitest ampliou indevidamente o escopo; a execução ampla foi interrompida e substituída pela execução focada de quatro casos. Um teste de cleanup de polling levou à inclusão de encerramento explícito ao desmontar/desativar o componente.
+Comandos: `bundle exec rails db:create db:schema:load db:migrate` com banco exclusivo; `bundle exec rails runner .codex/verify_import.rb`; `bundle exec rails runner .codex/verify_api.rb`; `vitest run --config .codex/vitest.config.ts .codex/recipient-import.test.js`; RuboCop e ESLint limitados aos arquivos alterados. Cenários adicionais: `.codex/verify_storage_failure.rb`, `.codex/verify_worker_crash.rb` e `.codex/verify_outbox.rb`. Roteiros e fixtures sintéticos em `.codex/`, sem adicionar specs permanentes conforme orientação do projeto. O primeiro merge de configuração Vitest ampliou indevidamente o escopo; a execução ampla foi interrompida e substituída pela execução focada de quatro casos. Um teste de cleanup de polling levou à inclusão de encerramento explícito ao desmontar/desativar o componente.
 
 Dependências instaladas apenas no worktree (pnpm 10, lockfile preservado). Hooks não são instalados pelo setup `--ignore-scripts`; os checks são executados explicitamente.
+
+## CI do PR
+
+Run `34896294176`, commit `8f9c6b784`: oito shards RSpec e Vitest concluíram com sucesso; jobs de lint também verdes. RuboCop local dos nove arquivos Ruby alterados não tem offenses. Os jobs de segurança e lint do repositório usam `continue-on-error`; verde não significa relatório vazio. Brakeman reportou 45 warnings e bundle-audit reportou vulnerabilidade de path traversal na versão existente de rubyzip; não houve alteração de Gemfile/lockfile neste PR. O relatório Brakeman não apontou os novos arquivos de importação. Não foi feita triagem geral dos alertas fora deste escopo.
 
 ## Deploy e rollback propostos — dependem de aprovação
 
@@ -55,4 +61,4 @@ Dependências instaladas apenas no worktree (pnpm 10, lockfile preservado). Hook
 
 ## Review adversarial independente
 
-Em andamento por agente separado, em modo somente leitura. Achados e resolução serão registrados antes de encerrar a entrega.
+Solicitado a agente separado, em modo somente leitura. O parecer final e a resolução dos achados serão publicados no PR #431 antes de encerrar a entrega. Este registro documental contém as evidências de implementação e validação; consulte o PR para o fechamento do review.
