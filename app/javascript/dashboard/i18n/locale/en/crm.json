@@ -1275,7 +1275,7 @@
         "SCHEDULE_HELP": "Contact timezone. Outside these days and hours, AI evaluates at the next allowed time. Reaching the scheduled time alone does not trigger a message or reminder.",
         "REMINDER_INFO": "AI only creates a reminder when a real pending matter justifies action. The team receives the reason and a suggested next step. No message is sent to the customer.",
         "OFFICIAL_INFO": "Official WhatsApp: outside the 24-hour window, AI must use a suitable approved template. The window is checked at send time, including after postponements. Without a suitable template, no message is sent.",
-        "INVALID_SCHEDULE": "Select at least one day, an end time after the start, and increasing positive intervals for 1 to 3 follow-ups."
+        "INVALID_SCHEDULE": "Select at least one day, whole-hour times with the end after the start, and increasing positive intervals for 1 to 3 follow-ups."
       },
       "SAVE": "Save AI settings",
       "SAVE_SUCCESS": "AI settings saved.",

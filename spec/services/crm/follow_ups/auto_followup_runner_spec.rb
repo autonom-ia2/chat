@@ -26,7 +26,10 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     }
   end
 
-  before { travel_to Time.utc(2026, 9, 14, 15) }
+  before do
+    travel_to Time.utc(2026, 9, 14, 15)
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+  end
 
   def seed_transcript_line(follow_up)
     follow_up.conversation.messages.incoming.last.update!(content: transcript_line)
@@ -48,6 +51,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     create_incoming_message(conversation: conversation)
     conversation.messages.incoming.last.update!(created_at: 30.hours.ago)
     pipeline, stage = create_crm_pipeline(account: account, user: user)
+    pipeline.update!(metadata: { ai: { auto_followup: { enabled: true } } })
     card = account.crm_cards.create!(pipeline: pipeline, stage: stage, inbox: inbox,
                                      contact: contact, primary_conversation: conversation, title: 'Lead')
     [account, user, contact, conversation, card]
@@ -195,6 +199,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: user)
     create_incoming_message(conversation: conversation)
     pipeline, stage = create_crm_pipeline(account: account, user: user)
+    pipeline.update!(metadata: { ai: { auto_followup: { enabled: true } } })
     card = account.crm_cards.create!(
       pipeline: pipeline, stage: stage, inbox: inbox, contact: contact,
       primary_conversation: conversation, title: 'Lead'
@@ -273,6 +278,114 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
       follow_up.account.update!(locale: 'pt_BR')
       described_class.new(follow_up: follow_up, now: now).perform
       expect(follow_up.reload.title).to eq('Lembrete da IA 1')
+    end
+
+    it 'stops when the card closes during AI evaluation' do
+      follow_up = reminder_setup
+      composer = instance_double(Crm::Ai::FollowUpComposer)
+      allow(Crm::Ai::FollowUpComposer).to receive(:new).and_return(composer)
+      allow(composer).to receive(:perform) do
+        Crm::Card.find(follow_up.card_id).update!(status: :won)
+        status_notice
+      end
+      result = described_class.new(follow_up: follow_up, now: now).perform
+      expect(result.status).to eq(:stopped)
+    end
+
+    it 'respects days changed during AI evaluation' do
+      follow_up = reminder_setup
+      composer = instance_double(Crm::Ai::FollowUpComposer)
+      allow(Crm::Ai::FollowUpComposer).to receive(:new).and_return(composer)
+      allow(composer).to receive(:perform) do
+        pipeline = Crm::Pipeline.find(follow_up.card.pipeline_id)
+        metadata = pipeline.metadata.deep_dup
+        metadata['ai']['auto_followup']['allowed_days'] = [2]
+        pipeline.update!(metadata: metadata)
+        status_notice
+      end
+      result = described_class.new(follow_up: follow_up, now: now).perform
+      expect(result.status).to eq(:rescheduled)
+    end
+
+    def during_composition
+      composer = instance_double(Crm::Ai::FollowUpComposer)
+      allow(Crm::Ai::FollowUpComposer).to receive(:new).and_return(composer)
+      allow(composer).to receive(:perform) do
+        yield
+        status_notice
+      end
+    end
+
+    def change_followup_config(follow_up, changes)
+      pipeline = Crm::Pipeline.find(follow_up.card.pipeline_id)
+      data = pipeline.metadata.deep_dup
+      data['ai']['auto_followup'].merge!(changes.stringify_keys)
+      pipeline.update!(metadata: data)
+    end
+
+    it 'preserves cancellation during AI evaluation without notifying or creating another touch' do
+      follow_up = reminder_setup
+      during_composition { Crm::FollowUp.find(follow_up.id).update!(status: :canceled) }
+      expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+      expect(Crm::FollowUps::Broadcaster).not_to receive(:broadcast_due)
+      expect { Crm::FollowUps::DueProcessor.new(now: now).perform }.not_to change(Crm::FollowUp, :count)
+      expect(follow_up.reload).to be_canceled
+    end
+
+    it 'stops if the customer replies while AI is evaluating' do
+      follow_up = reminder_setup
+      during_composition do
+        travel 1.second
+        create_incoming_message(conversation: follow_up.conversation)
+      end
+      expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+      expect(described_class.new(follow_up: follow_up, now: now).perform.status).to eq(:stopped)
+      expect(follow_up.reload.description).to be_blank
+    end
+
+    it 'preserves opt-out state written while AI is evaluating' do
+      follow_up = reminder_setup
+      during_composition do
+        card = Crm::Card.find(follow_up.card_id)
+        data = card.metadata.deep_dup
+        data['ai'] ||= {}
+        data['ai']['auto_followup_state'] = { 'opted_out' => true }
+        card.update!(metadata: data)
+      end
+      expect(described_class.new(follow_up: follow_up, now: now).perform.status).to eq(:stopped)
+      expect(follow_up.card.reload.metadata.dig('ai', 'auto_followup_state', 'opted_out')).to be(true)
+    end
+
+    [false, true].each do |global|
+      it "leaves the touch pending when #{global ? 'global AI' : 'the pipeline'} is disabled during evaluation" do
+        follow_up = reminder_setup
+        during_composition do
+          if global
+            allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
+          else
+            change_followup_config(follow_up, enabled: false)
+          end
+        end
+        expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+        expect(described_class.new(follow_up: follow_up, now: now).perform.status).to eq(:rescheduled)
+        expect(follow_up.reload).to be_pending
+        expect(follow_up.description).to be_blank
+      end
+    end
+
+    %w[auto_send ai_reminder].each do |initial_mode|
+      it "discards the old composition when #{initial_mode} changes during evaluation" do
+        follow_up = reminder_setup
+        change_followup_config(follow_up, mode: initial_mode)
+        follow_up.card.reload
+        during_composition do
+          change_followup_config(follow_up, mode: initial_mode == 'auto_send' ? 'ai_reminder' : 'auto_send')
+        end
+        expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+        expect(described_class.new(follow_up: follow_up, now: now).perform.status).to eq(:rescheduled)
+        expect(follow_up.reload.due_at).to be > now
+        expect(follow_up.description).to be_blank
+      end
     end
 
     it 'does not create a reminder when AI declines' do

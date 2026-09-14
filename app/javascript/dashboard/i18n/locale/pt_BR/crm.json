@@ -1275,7 +1275,7 @@
         "SCHEDULE_HELP": "Fuso do contato. Fora desses dias e horários, a IA avalia no próximo horário permitido. Chegar ao horário programado, por si só, não gera mensagem nem lembrete.",
         "REMINDER_INFO": "A IA só cria um lembrete quando uma pendência real justifica uma ação. A equipe recebe o motivo e uma sugestão do próximo passo. Nenhuma mensagem é enviada ao cliente.",
         "OFFICIAL_INFO": "WhatsApp oficial: fora da janela de 24 horas, a IA precisa usar um template aprovado adequado. A janela é conferida no envio, inclusive após adiamentos. Sem template adequado, nenhuma mensagem é enviada.",
-        "INVALID_SCHEDULE": "Selecione pelo menos um dia, um horário final após o inicial e intervalos positivos em ordem crescente para 1 a 3 follow-ups."
+        "INVALID_SCHEDULE": "Selecione pelo menos um dia, horários em horas inteiras com o final após o inicial e intervalos positivos em ordem crescente para 1 a 3 follow-ups."
       },
       "SAVE": "Salvar IA",
       "SAVE_SUCCESS": "Configurações de IA salvas.",

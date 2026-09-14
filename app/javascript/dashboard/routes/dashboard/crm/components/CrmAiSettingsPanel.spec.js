@@ -108,6 +108,41 @@ describe('AI follow-up settings', () => {
     wrapper.unmount();
   });
 
+  it('can disable a follow-up even when its hidden schedule is invalid', async () => {
+    const wrapper = await render('pt_BR');
+    const numbers = wrapper
+      .findAll('section')
+      .at(-1)
+      .findAll('input[type="number"]');
+    await numbers[4].setValue(8);
+    await numbers[5].setValue(8);
+    const enabled = wrapper.findAll('input[type="checkbox"]').at(-1);
+    await enabled.setValue(false);
+    expect(await wrapper.vm.saveSettings()).toBe(true);
+    expect(CrmKanbanAPI.updateAiSettings).toHaveBeenLastCalledWith(
+      426,
+      expect.objectContaining({
+        ai_settings: expect.objectContaining({
+          auto_followup: { enabled: false },
+        }),
+      })
+    );
+    wrapper.unmount();
+  });
+
+  it('rejects fractional hours before making a save request', async () => {
+    const wrapper = await render();
+    CrmKanbanAPI.updateAiSettings.mockClear();
+    const numbers = wrapper
+      .findAll('section')
+      .at(-1)
+      .findAll('input[type="number"]');
+    await numbers[4].setValue(8.5);
+    expect(await wrapper.vm.saveSettings()).toBe(false);
+    expect(CrmKanbanAPI.updateAiSettings).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it('reports failure to the parent when persistence fails', async () => {
     const wrapper = await render();
     CrmKanbanAPI.updateAiSettings.mockRejectedValue(new Error('unavailable'));

@@ -41,7 +41,13 @@ module Crm
       end
 
       def normalize_auto_followup(params)
-        cfg = Config.auto_followup_settings(@pipeline).merge(params.to_h.with_indifferent_access)
+        current = Config.auto_followup_settings(@pipeline)
+        incoming = params.to_h.with_indifferent_access
+        # Disabling must remain possible for legacy/invalid schedules. Ignore
+        # hidden form fields and preserve the saved configuration for later editing.
+        return current.stringify_keys.merge('enabled' => false) if incoming.key?(:enabled) && !cast_boolean(incoming[:enabled], default: true)
+
+        cfg = current.merge(incoming)
         validate_auto_followup!(cfg)
         {
           'mode' => cfg[:mode],
@@ -63,11 +69,16 @@ module Crm
                 (1..3).cover?(cfg[:max_touches].to_i) && intervals.is_a?(Array) &&
                 intervals.length == cfg[:max_touches].to_i && intervals.all? { |hours| hours.is_a?(Integer) && hours.positive? } &&
                 intervals.each_cons(2).all? { |left, right| left < right } &&
-                (0..23).cover?(quiet[:start].to_i) && (1..24).cover?(quiet[:end].to_i) && quiet[:start].to_i < quiet[:end].to_i
+                valid_hour?(quiet[:start], 0..23) && valid_hour?(quiet[:end], 1..24) && quiet[:start].to_i < quiet[:end].to_i
         return if valid
 
         @pipeline.errors.add(:metadata, :invalid)
         raise ActiveRecord::RecordInvalid, @pipeline
+      end
+
+      def valid_hour?(value, range)
+        integer = value.is_a?(Integer) || (value.is_a?(String) && value.match?(/\A\d+\z/))
+        integer && range.cover?(value.to_i)
       end
 
       def normalize_quiet_hours(params)

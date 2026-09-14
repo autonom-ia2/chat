@@ -57,3 +57,12 @@ O agente também levantou possível duplicação após falha parcial e ausência
 
 Nenhuma correção de produto foi feita nesta rodada; apenas relatório e evidências. i18n está corrigido conforme validação anterior. QA autenticado no drawer completo e avaliação com modelo real continuam fora da evidência disponível.
 
+
+## Correções autorizadas — reavaliação em andamento
+
+- Após a composição, o executor relê follow-up/card/configuração, reavalia cancelamento, habilitação e agenda; uma composição cujo modo/janela mudou é descartada e reagendada. Uma transição explícita já realizada é preservada.
+- Desligar envia apenas `enabled:false` e preserva a agenda gravada, inclusive a legada. Habilitar novamente exige configuração válida.
+- Horários fracionários são rejeitados na UI e no backend, com texto de validação en/pt_BR atualizado.
+- Os cenários de regressão foram incorporados aos specs, incluindo resposta, opt-out, desligamento global/funil, ambos sentidos de troca de modo e cancelamento durante avaliação. Composer simulado; nenhum envio real.
+- Validação: suíte afetada com 135 exemplos, zero falhas e 3 quarentenas preexistentes; após adicionar a preservação de cancelamento, runner/due_processor reexecutados com 36 exemplos, zero falhas. UI: 12 testes aprovados. RuboCop: 5 arquivos sem infrações. Navegador: desligamento legado persistido como false, frações bloqueadas, QA desktop/mobile em pt_BR aprovado.
+- Revisor independente acionado novamente; resultado ainda não incorporado nesta entrada.

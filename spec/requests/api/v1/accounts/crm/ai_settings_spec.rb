@@ -147,4 +147,32 @@ RSpec.describe 'CRM AI settings API', type: :request do
     pipeline.update!(metadata: {})
     expect(Crm::Ai::Config.auto_followup_settings(pipeline)[:allowed_days]).to eq([0, 1, 2, 3, 4, 5, 6])
   end
+
+  it 'disables a legacy schedule without validating or replacing its hidden fields' do
+    account, admin = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: admin)
+    legacy = { 'enabled' => true, 'quiet_hours' => { 'start' => 8, 'end' => 8 }, 'intervals_hours' => [6, 72, 168] }
+    pipeline.update!(metadata: { ai: { auto_followup: legacy } })
+    path = "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}/ai_settings"
+    patch path, params: { ai_settings: { auto_followup: { enabled: false, quiet_hours: { start: 2, end: 1 } } } },
+                headers: auth_headers(admin), as: :json
+    expect(response).to have_http_status(:ok)
+    saved = pipeline.reload.metadata.dig('ai', 'auto_followup')
+    expect(saved['enabled']).to be(false)
+    expect(saved['quiet_hours']).to eq(legacy['quiet_hours'])
+    patch path, params: { ai_settings: { auto_followup: { enabled: true } } }, headers: auth_headers(admin), as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(pipeline.reload.metadata.dig('ai', 'auto_followup', 'enabled')).to be(false)
+  end
+
+  it 'rejects fractional hours instead of silently truncating them' do
+    account, admin = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: admin)
+    original = pipeline.metadata.deep_dup
+    patch "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}/ai_settings",
+          params: { ai_settings: { auto_followup: { quiet_hours: { start: 8.5, end: 20.5 } } } },
+          headers: auth_headers(admin), as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(pipeline.reload.metadata).to eq(original)
+  end
 end

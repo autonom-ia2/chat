@@ -86,7 +86,8 @@ module Crm
         @send_mode = delivery_mode
         @candidates = @send_mode == :choose_template ? template_candidates : []
         composition = compose
-        return reschedule(compute_due(execution_time)) if outside_schedule?(execution_time)
+        refreshed_result = recheck_after_composition
+        return refreshed_result if refreshed_result
 
         persist_decision(composition)
 
@@ -99,6 +100,27 @@ module Crm
       end
 
       private
+
+      # DueProcessor holds the follow-up row lock throughout execution. Re-read
+      # related rows after the slow AI call instead of acting on its old snapshot.
+      def recheck_after_composition
+        @follow_up.reload
+        return Result.new(status: :unchanged, follow_up: @follow_up) unless @follow_up.pending?
+
+        @card = @follow_up.card.reload
+        @config = nil
+        @messaging_window = nil
+        @now = execution_time
+        stop_reason = auto_stop_reason
+        return stop_cadence(stop_reason) if stop_reason.present?
+        return Result.rescheduled(@follow_up) unless Crm::Ai::Config.enabled? && config['enabled']
+        return reschedule(compute_due(@now)) if outside_schedule?(@now)
+        # A reminder's composition cannot become a customer message (or vice versa).
+        # Also recompose if the official messaging window expired during the call.
+        return reschedule(compute_due(@now + 1.minute)) if delivery_mode != @send_mode
+
+        nil
+      end
 
       def apply_composition(composition)
         # Single gate. Closure/satisfaction => stop the whole cadence; everything

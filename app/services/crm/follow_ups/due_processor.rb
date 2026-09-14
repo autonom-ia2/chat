@@ -101,6 +101,8 @@ class Crm::FollowUps::DueProcessor
 
     result = Crm::FollowUps::AutoFollowupRunner.new(follow_up: follow_up, now: @now).perform
 
+    return if result.status == :unchanged # Preserve an explicit transition made during the AI call.
+
     case result.status
     when :reminded
       return process_overdue(follow_up)

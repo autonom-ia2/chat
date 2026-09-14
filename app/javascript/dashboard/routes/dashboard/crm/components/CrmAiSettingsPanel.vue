@@ -76,6 +76,8 @@ const scheduleValid = computed(() => {
     form.autoFollowup;
   return (
     allowedDays.length > 0 &&
+    Number.isInteger(quietHours.start) &&
+    Number.isInteger(quietHours.end) &&
     quietHours.start >= 0 &&
     quietHours.end <= 24 &&
     quietHours.start < quietHours.end &&
@@ -91,7 +93,9 @@ const scheduleValid = computed(() => {
   );
 });
 const canSave = computed(
-  () => Boolean(props.pipelineId) && scheduleValid.value
+  () =>
+    Boolean(props.pipelineId) &&
+    (!form.autoFollowup.enabled || scheduleValid.value)
 );
 
 const loadSettings = async () => {
@@ -161,19 +165,21 @@ const saveSettings = async ({ silent = false } = {}) => {
         callback_enabled: form.callbackEnabled,
         callback_mode: form.callbackMode,
         stale_hours: form.staleHours,
-        auto_followup: {
-          enabled: form.autoFollowup.enabled,
-          mode: form.autoFollowup.mode,
-          allowed_days: form.autoFollowup.allowedDays,
-          max_touches: form.autoFollowup.maxTouches,
-          intervals_hours: form.autoFollowup.intervalsHours,
-          quiet_hours: {
-            start: form.autoFollowup.quietHours.start,
-            end: form.autoFollowup.quietHours.end,
-            tz: form.autoFollowup.quietHours.tz,
-          },
-          tone_instructions: form.autoFollowup.toneInstructions,
-        },
+        auto_followup: form.autoFollowup.enabled
+          ? {
+              enabled: form.autoFollowup.enabled,
+              mode: form.autoFollowup.mode,
+              allowed_days: form.autoFollowup.allowedDays,
+              max_touches: form.autoFollowup.maxTouches,
+              intervals_hours: form.autoFollowup.intervalsHours,
+              quiet_hours: {
+                start: form.autoFollowup.quietHours.start,
+                end: form.autoFollowup.quietHours.end,
+                tz: form.autoFollowup.quietHours.tz,
+              },
+              tone_instructions: form.autoFollowup.toneInstructions,
+            }
+          : { enabled: false },
       },
       stage_criteria: form.stageCriteria,
     });
@@ -561,7 +567,11 @@ watch(
         </template>
       </section>
 
-      <p v-if="!scheduleValid" role="alert" class="mb-0 text-xs text-n-ruby-11">
+      <p
+        v-if="form.autoFollowup.enabled && !scheduleValid"
+        role="alert"
+        class="mb-0 text-xs text-n-ruby-11"
+      >
         {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.INVALID_SCHEDULE') }}
       </p>
       <Button
