@@ -500,7 +500,7 @@ watch(
                   t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_LABEL')
                 }}</span>
                 <div
-                  class="flex flex-wrap gap-1"
+                  class="grid grid-cols-7 gap-1"
                   role="group"
                   :aria-label="
                     t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_LABEL')
@@ -514,7 +514,7 @@ watch(
                     :aria-label="
                       t(`CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_FULL.${day}`)
                     "
-                    class="h-9 rounded-md border px-2 text-xs font-medium"
+                    class="h-9 rounded-md border px-1.5 text-xs font-medium"
                     :class="
                       form.autoFollowup.allowedDays.includes(day)
                         ? 'border-n-brand bg-n-brand/10 text-n-brand'
