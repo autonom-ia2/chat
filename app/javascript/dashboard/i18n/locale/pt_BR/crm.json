@@ -1007,7 +1007,8 @@
         "REACTIVATE_CONFIRM_BODY": "Este contato pediu para não receber mais mensagens automáticas. Reativar volta a enviar follow-up para ele. A ação fica registrada com seu nome.",
         "REACTIVATE_CONFIRM_OK": "Reativar mesmo assim",
         "RESET_SUCCESS": "Ciclo reiniciado.",
-        "RESET_ERROR": "Não foi possível reiniciar."
+        "RESET_ERROR": "Não foi possível reiniciar.",
+        "TIMELINE_TOUCH_REMINDER": "Toque {n}: a IA gerou um lembrete para a equipe"
       }
     },
     "COPILOT": {
@@ -1233,7 +1234,48 @@
         "TONE_PLACEHOLDER": "informal, trate por você, foque em seguro viagem…",
         "CARD_STATUS": "Follow-up {n}/{total}",
         "TOUCH_LABEL": "{n}º toque",
-        "QUIET_HOURS_HELP": "Se o horário calculado cair fora dessa janela, o envio é adiado para o próximo horário permitido (ex.: a manhã seguinte)."
+        "QUIET_HOURS_HELP": "Se o horário calculado cair fora dessa janela, o envio é adiado para o próximo horário permitido (ex.: a manhã seguinte).",
+        "ACTION_LABEL": "Como a IA deve fazer o acompanhamento?",
+        "AI_HELP": "A IA analisa a conversa e decide se há algo a acompanhar. Escolha como ela deve agir.",
+        "MODES": {
+          "auto_send": {
+            "TITLE": "IA envia ao cliente",
+            "HELP": "A IA avalia a conversa e envia uma mensagem quando há motivo para retomar o contato."
+          },
+          "ai_reminder": {
+            "TITLE": "IA cria lembrete para a equipe",
+            "HELP": "A IA decide se deve criar um lembrete interno, com motivo e sugestão do próximo passo."
+          }
+        },
+        "EVALUATION_OFFSETS": "A IA avalia após estas horas desde a última mensagem da conversa, sem contar follow-ups automáticos e notas internas",
+        "AI_INSTRUCTIONS": "Instruções para a IA",
+        "REMINDER_BADGE": "A IA avalia se deve criar um lembrete",
+        "SESSION_BADGE": "A IA escreve se a janela de atendimento estiver aberta",
+        "TEMPLATE_BADGE": "Template aprovado se estiver fora de 24h",
+        "SCHEDULE_LABEL": "Horários e dias permitidos",
+        "DAYS_LABEL": "Dias da semana",
+        "DAYS": {
+          "1": "Seg",
+          "2": "Ter",
+          "3": "Qua",
+          "4": "Qui",
+          "5": "Sex",
+          "6": "Sáb",
+          "0": "Dom"
+        },
+        "DAYS_FULL": {
+          "1": "Segunda-feira",
+          "2": "Terça-feira",
+          "3": "Quarta-feira",
+          "4": "Quinta-feira",
+          "5": "Sexta-feira",
+          "6": "Sábado",
+          "0": "Domingo"
+        },
+        "SCHEDULE_HELP": "Fuso do contato. Fora desses dias e horários, a IA avalia no próximo horário permitido. Chegar ao horário programado, por si só, não gera mensagem nem lembrete.",
+        "REMINDER_INFO": "A IA só cria um lembrete quando uma pendência real justifica uma ação. A equipe recebe o motivo e uma sugestão do próximo passo. Nenhuma mensagem é enviada ao cliente.",
+        "OFFICIAL_INFO": "WhatsApp oficial: fora da janela de 24 horas, a IA precisa usar um template aprovado adequado. A janela é conferida no envio, inclusive após adiamentos. Sem template adequado, nenhuma mensagem é enviada.",
+        "INVALID_SCHEDULE": "Selecione pelo menos um dia, um horário final após o inicial e intervalos positivos em ordem crescente para 1 a 3 follow-ups."
       },
       "SAVE": "Salvar IA",
       "SAVE_SUCCESS": "Configurações de IA salvas.",

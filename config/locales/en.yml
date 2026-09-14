@@ -621,6 +621,7 @@ en:
       teams: 'Microsoft Teams'
       google_meet: 'Google Meet'
     follow_up_reminder:
+      ai_title: 'AI reminder %{touch}'
       subject: 'Reminder: %{title}'
       push_title: 'Reminder: %{title}'
       greeting: 'Hi %{name},'

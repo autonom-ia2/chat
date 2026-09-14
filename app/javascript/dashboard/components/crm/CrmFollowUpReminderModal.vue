@@ -8,7 +8,7 @@ import { useCrmFollowUpReminders } from 'dashboard/composables/useCrmFollowUpRem
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const isSaving = ref(false);
 
@@ -29,7 +29,7 @@ const cardTitle = computed(() => activeReminder.value?.card?.title || '');
 const dueLabel = computed(() => {
   const dueAt = activeReminder.value?.due_at;
   if (!dueAt) return '';
-  return new Date(dueAt).toLocaleString();
+  return new Date(dueAt).toLocaleString(locale.value.replace('_', '-'));
 });
 const modeLabel = computed(() => {
   if (activeReminder.value?.automation_mode === 'snooze_conversation') {

@@ -154,6 +154,7 @@ module Crm
       def create_reminder(composition)
         @follow_up.update!(
           automation_mode: :reminder_only,
+          title: I18n.t('crm.follow_up_reminder.ai_title', locale: @follow_up.account.locale, touch: touch),
           description: [composition['open_loop'], composition['message_body']].filter_map(&:presence).join("\n\n"),
           metadata: base_metadata.merge('action_mode' => 'ai_reminder')
         )

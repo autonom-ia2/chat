@@ -29,7 +29,7 @@ git diff --check
 ```
 
 - RSpec: 124 casos, zero falhas, 3 pendentes preexistentes em `messaging_window_spec.rb`. Incluído novo caso ativo comprovando que uma janela oficial expirada sem template não chega ao remetente.
-- Vitest: 9 casos aprovados, incluindo propagação da falha de persistência ao drawer.
+- Vitest: 10 casos aprovados, incluindo propagação da falha de persistência ao drawer.
 - RuboCop: 14 arquivos, zero infrações.
 - ESLint: zero erros; avisos da configuração de descoberta de chaves CRM de i18n existentes no projeto.
 - Browser QA: componente Vue real, Tailwind e cores do projeto, API local de fixture para isolar a interação. A API Rails foi testada separadamente pelos request specs. Troca de modos, persistência ao recarregar, instruções preservadas, alinhamento de horário/dias no desktop e ausência de overflow em 390 px. Não representa um E2E autenticado na AWS.
@@ -43,13 +43,13 @@ Revisados dispatch, seleção de modo, gate da IA, citação verificável, cance
 
 ## Limitações para revisão
 
-As regras do projeto restringem traduções a inglês. As novas chaves estão apenas em `locale/en/crm.json`; pt_BR usa fallback em inglês, portanto não reproduz integralmente os textos em português do mockup. Não foi alterada a política de tradução sem decisão do responsável.
+A solicitação posterior de Rodrigo para cuidar do i18n nesta revisão autoriza a tradução do escopo aprovado em pt_BR. Os dois modos, agenda, instruções, validação e histórico têm tradução local. Um teste monta o componente em português sem fallback; o QA visual foi repetido nos dois modos e em 390 px, com as capturas atualizadas. O título emitido usa o idioma da conta e a data do popup usa o idioma da interface. Reexecução do runner: 21 exemplos, zero falhas; lint dos arquivos alterados sem erros.
 
 A prévia usa fixture de API; a aceitação final no drawer completo e com login no ambiente alvo permanece para a etapa de publicação autorizada. Os testes não avaliam o modelo real e não substituem uma amostra operacional após ativação.
 
 ## Publicação e rollback — preparados, não executados
 
-1. Revisar a PR, resolver a decisão de tradução, confirmar CI e identificar o ambiente AWS correto antes de pedir aprovação de merge/deploy.
+1. Revisar a PR, confirmar CI e identificar o ambiente AWS correto antes de pedir aprovação de merge/deploy.
 2. ATENÇÃO: os workflows atuais de Autonom.ia e Hub2You disparam deploy automaticamente em push na main para mudanças de código. Portanto, aprovação de merge deve considerar os dois destinos e a publicação automática, ou uma contenção operacional explicitamente aprovada antes do merge. Há também workflow_dispatch. Registrar imagem anterior e validar primeiro um funil controlado. Sem migração de schema.
 3. Não fazer rollback cego para código antigo com cadências novas pendentes: o código antigo não respeita `allowed_days` e não passa lembretes pelo novo gate.
 4. Em rollback autorizado, interromper o processamento programado durante a transição; inventariar e cancelar/reagendar os toques pendentes afetados antes de restaurar a imagem anterior. Preservar metadados e lembretes já emitidos para auditoria. Confirmar os modos e flags antes de retomar o processamento. Não basta desligar apenas a IA no código antigo, pois lembretes internos seguem outro ramo.

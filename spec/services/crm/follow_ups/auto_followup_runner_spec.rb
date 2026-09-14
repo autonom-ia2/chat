@@ -268,6 +268,13 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
       expect(follow_up.card.reload.metadata.dig('ai', 'auto_followup_state', 'touches').last['outcome']).to eq('reminded')
     end
 
+    it 'localizes the reminder title using the account language' do
+      follow_up = reminder_setup
+      follow_up.account.update!(locale: 'pt_BR')
+      described_class.new(follow_up: follow_up, now: now).perform
+      expect(follow_up.reload.title).to eq('Lembrete da IA 1')
+    end
+
     it 'does not create a reminder when AI declines' do
       follow_up = reminder_setup
       stub_composition(status_notice.merge('should_send' => false))
