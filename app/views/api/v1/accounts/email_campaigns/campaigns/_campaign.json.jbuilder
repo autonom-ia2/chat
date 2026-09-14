@@ -26,3 +26,4 @@ json.ses_configuration_set campaign.ses_configuration_set
 json.last_error campaign.last_error
 json.created_at campaign.created_at
 json.updated_at campaign.updated_at
+json.recipient_import campaign.latest_recipient_import&.public_status

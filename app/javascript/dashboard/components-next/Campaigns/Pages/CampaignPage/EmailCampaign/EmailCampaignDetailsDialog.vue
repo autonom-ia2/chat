@@ -1,9 +1,15 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useRecipientImportPolling } from 'dashboard/composables/useRecipientImportPolling';
+import {
+  isRecipientImportActive,
+  recipientImportError,
+} from 'dashboard/helper/emailCampaignImport';
+import RecipientImportStatus from './RecipientImportStatus.vue';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -25,7 +31,7 @@ const route = useRoute();
 const router = useRouter();
 
 const recipients = useMapGetter('emailCampaigns/getRecipients');
-const importResult = useMapGetter('emailCampaigns/getImportResult');
+
 const uiFlags = useMapGetter('emailCampaigns/getUIFlags');
 const campaigns = useMapGetter('emailCampaigns/getCampaigns');
 
@@ -65,9 +71,37 @@ const liveCampaign = computed(
     (campaigns.value || []).find(item => item.id === props.campaign.id) ||
     props.campaign
 );
+useRecipientImportPolling(liveCampaign);
 const isDraft = computed(() => liveCampaign.value.status === 'draft');
 const hasCampaignBody = computed(() => Boolean(liveCampaign.value.body_html));
-const isImporting = computed(() => uiFlags.value.isImporting);
+const importResult = computed(() =>
+  liveCampaign.value.recipient_import?.status === 'completed'
+    ? liveCampaign.value.recipient_import.result
+    : null
+);
+const isImporting = computed(
+  () => uiFlags.value.isImporting || isRecipientImportActive(liveCampaign.value)
+);
+const isRetrying = ref(false);
+const retryImport = async () => {
+  isRetrying.value = true;
+  try {
+    await store.dispatch('emailCampaigns/retryImport', props.campaign.id);
+  } catch (error) {
+    useAlert(recipientImportError(t, error.response?.data?.error));
+  } finally {
+    isRetrying.value = false;
+  }
+};
+watch(
+  () => liveCampaign.value.recipient_import?.status,
+  status => {
+    if (status === 'completed') {
+      store.dispatch('emailCampaigns/getRecipients', { id: props.campaign.id });
+      fetchTemplateTools();
+    }
+  }
+);
 const isFetching = computed(() => uiFlags.value.isFetching);
 
 const statusLabel = status => {
@@ -119,16 +153,16 @@ const onFileChange = async event => {
       id: props.campaign.id,
       file,
     });
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.RECIPIENTS.IMPORT_SUCCESS'));
-    fetchTemplateTools();
+    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.IMPORT.QUEUED'));
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.RECIPIENTS.IMPORT_ERROR'));
+    useAlert(recipientImportError(t, error.response?.data?.error));
   } finally {
     event.target.value = '';
   }
 };
 
 const submitSchedule = async () => {
+  if (isImporting.value) return;
   if (!hasCampaignBody.value) {
     openBuilder();
     return;
@@ -185,6 +219,14 @@ onMounted(() => {
       </div>
 
       <div class="flex flex-col gap-5 p-6 overflow-y-auto">
+        <RecipientImportStatus :campaign="liveCampaign" />
+        <Button
+          v-if="isDraft && liveCampaign.recipient_import?.retryable"
+          :label="t('CAMPAIGN.EMAIL_CAMPAIGN.IMPORT.RETRY')"
+          :disabled="isRetrying || isImporting"
+          :is-loading="isRetrying"
+          @click="retryImport"
+        />
         <div class="flex flex-wrap items-center gap-3">
           <input
             ref="fileInput"
@@ -207,7 +249,7 @@ onMounted(() => {
             {{ t('CAMPAIGN.EMAIL_CAMPAIGN.RECIPIENTS.ADD_MORE_HINT') }}
           </span>
           <Button
-            v-if="isDraft && hasCampaignBody"
+            v-if="isDraft && hasCampaignBody && !isImporting"
             :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.SCHEDULE')"
             icon="i-lucide-calendar-clock"
             color="slate"

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_14_190000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2143,6 +2143,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
     t.index ["source_provider"], name: "index_data_imports_on_source_provider"
   end
 
+  create_table "email_campaign_imports", force: :cascade do |t|
+    t.bigint "email_campaign_id", null: false
+    t.integer "status", default: 0, null: false
+    t.jsonb "result", default: {}, null: false
+    t.string "error_code"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_campaign_id"], name: "idx_email_campaign_imports_active", unique: true, where: "(status = ANY (ARRAY[0, 1]))"
+    t.index ["email_campaign_id"], name: "index_email_campaign_imports_on_email_campaign_id"
+    t.index ["status", "updated_at"], name: "index_email_campaign_imports_on_status_and_updated_at"
+  end
+
   create_table "email_campaign_recipients", force: :cascade do |t|
     t.bigint "email_campaign_id", null: false
     t.string "name"
@@ -3008,6 +3021,7 @@ add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "ctwa_tracked_link_clicks", "ctwa_tracked_links", column: "tracked_link_id", on_delete: :cascade
   add_foreign_key "ctwa_tracked_links", "accounts", on_delete: :cascade
   add_foreign_key "ctwa_tracked_links", "inboxes", on_delete: :cascade
+  add_foreign_key "email_campaign_imports", "email_campaigns"
   add_foreign_key "email_campaign_recipients", "email_campaigns"
   add_foreign_key "email_campaign_templates", "accounts"
   add_foreign_key "email_campaigns", "accounts"

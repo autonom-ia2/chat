@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useRecipientImportPolling } from 'dashboard/composables/useRecipientImportPolling';
+import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -32,6 +34,8 @@ const campaignId = computed(() => Number(route.params.campaignId));
 const campaign = computed(() =>
   campaigns.value.find(item => item.id === campaignId.value)
 );
+
+useRecipientImportPolling(campaign);
 
 // UNICA fonte da verdade do editor: o composable singleton.
 const { isReady, device, getMjml, getHtml, setMjml, setDevice } =
@@ -306,6 +310,13 @@ const fetchPlaceholders = async () => {
   }
 };
 
+watch(
+  () => campaign.value?.recipient_import?.status,
+  status => {
+    if (status === 'completed') fetchPlaceholders();
+  }
+);
+
 onMounted(async () => {
   if (!campaign.value) {
     await store.dispatch('emailCampaigns/get');
@@ -324,6 +335,11 @@ onActivated(() => {
 
 <template>
   <div class="flex flex-col flex-1 h-full min-h-0 bg-n-surface-1">
+    <RecipientImportStatus
+      v-if="campaign"
+      :campaign="campaign"
+      class="px-4 py-2"
+    />
     <!-- Top bar nova: hierarquia clara, "Criar com IA" = HERÓI -->
     <div
       class="flex items-center justify-between gap-3 px-4 py-3 border-b border-n-weak"

@@ -31,14 +31,25 @@ export const getters = {
 };
 
 export const actions = {
-  get: async ({ commit }) => {
-    commit(types.SET_EMAIL_CAMPAIGN_UI_FLAG, { isFetching: true });
+  get: async ({ commit }, { silent = false } = {}) => {
+    if (!silent) commit(types.SET_EMAIL_CAMPAIGN_UI_FLAG, { isFetching: true });
     try {
       const response = await EmailCampaignsAPI.get();
       commit(types.SET_EMAIL_CAMPAIGNS, response.data.payload.campaigns || []);
     } finally {
-      commit(types.SET_EMAIL_CAMPAIGN_UI_FLAG, { isFetching: false });
+      if (!silent)
+        commit(types.SET_EMAIL_CAMPAIGN_UI_FLAG, { isFetching: false });
     }
+  },
+  getOne: async ({ commit }, id) => {
+    const response = await EmailCampaignsAPI.show(id);
+    commit(types.EDIT_EMAIL_CAMPAIGN, response.data.payload);
+    return response.data.payload;
+  },
+  retryImport: async ({ commit }, id) => {
+    const response = await EmailCampaignsAPI.retryImport(id);
+    commit(types.EDIT_EMAIL_CAMPAIGN, response.data.payload.campaign);
+    return response.data.payload;
   },
   create: async ({ commit }, payload) => {
     commit(types.SET_EMAIL_CAMPAIGN_UI_FLAG, { isCreating: true });

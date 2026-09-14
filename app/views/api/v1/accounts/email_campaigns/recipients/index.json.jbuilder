@@ -9,13 +9,5 @@ json.payload do
     json.count @recipients_count
     json.current_page @current_page.to_i
   end
-  if @result
-    json.import_result do
-      json.imported @result.imported
-      json.duplicates @result.duplicates
-      json.invalid @result.invalid
-      json.suppressed @result.suppressed
-      json.total @result.total
-    end
-  end
+  json.import_result @campaign.latest_recipient_import&.result.presence
 end

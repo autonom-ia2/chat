@@ -401,7 +401,9 @@ Rails.application.routes.draw do
                 post :duplicate
                 post :resolve_video, to: 'videos#resolve'
               end
-              resources :recipients, only: [:index, :create]
+              resources :recipients, only: [:index, :create] do
+                post :retry_import, on: :collection
+              end
             end
             get  'campaigns/:id/placeholders', to: 'template_tools#placeholders'
             get  'campaigns/:id/validate',     to: 'template_tools#validate'
