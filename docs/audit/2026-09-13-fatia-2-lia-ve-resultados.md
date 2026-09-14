@@ -88,6 +88,14 @@ Cigarro/Fumo) sem aceitação - RP Veículo sem aceitação - RP"). A tabela int
 **Os textos das revisões** (os 28 de conta da quinta revisão, os 6 de dado pessoal, "Senha expirou. Declinando
 cálculo.", "Usuário fulano@corretora.com.br bloqueado." e os outros 23 das revisões anteriores): todos nil.
 
+**O custo, medido** (23 motivos sintéticos plausíveis, todos de veículo ou de região, `scratchpad/f2-r7-custo.rb`): 10
+saem com categoria ("Idade do veículo fora da política de aceitação.", "Rastreador obrigatório para este modelo.",
+"CEP de pernoite sem aceitação.") e 13 caem no genérico, porque o atributo não está entre os que a decisão do CEO
+listou ou não está escrito na forma dos padrões: blindado, importado, leilão, chassi remarcado, tabela FIPE, valor do
+veículo, uso comercial ou por aplicativo, "com mais de 20 anos", cidade, município, estado, área de risco. Nesses a Lia
+diz só que a seguradora não fez proposta. Ampliar a lista é decisão de produto; o risco de ampliar é o de sempre, um
+atributo que também serve para falar da conta.
+
 ### 2. A ferramenta da Lia, `ver_resultado_da_cotacao`
 
 `Native::InsuranceQuoteResult`, assíncrona, com um parâmetro: `seguradora`, `type: [string, null]`, em
@@ -118,7 +126,8 @@ fora de `superseded`, `discarded`, `blocked` e `pending`. Não chama o conector 
   `Tools::AutorizacaoDaExecucao#autorizacao`, recusa com `resultado_superado`. A retomada de envio pendente
   (`RetomadaDeEnvio`) faz a mesma pergunta e abandona a mensagem da lista quando surge cotação nova.
 - **Uma lista por pedido, nunca a mesma duas vezes, e uma falha nunca perde as duas (rodadas 3 a 7,
-  `InsuranceQuoteResult::Listas`).** "A lista é mensagem entregue" (`lista_entregue?`) é `sequence` positivo (o
+  `InsuranceQuoteResult::Listas`; a revisão da rodada 7 mostrou que as três promessas ainda não se cumprem inteiras:
+  achados P2-1, P2-2 e P2-3, abertos).** "A lista é mensagem entregue" (`lista_entregue?`) é `sequence` positivo (o
   publicador o avança na mesma transação, sob o lock da conversa, em que cria a mensagem) e nenhuma mensagem da
   execução com pendência de envio. A passada que publica (`emitir_lista`) lê, sob esse lock, as execuções anteriores
   desta ferramenta na conversa sobre a mesma cotação, da mais nova para a mais antiga: **leva** as que prometeram a
@@ -215,7 +224,8 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
    rodada 7:** a lista anterior só conta como levada depois de a nova ser aceita; a falha passageira (banco ou
    publicador) tenta de novo pelas tentativas do motor, com o encerramento como última tentativa; a cotação lida
    substituída por uma mais nova cala, e é o certo. Os resíduos, com o cenário de cada um, estão na seção da rodada 7
-   ("Os resíduos da decisão 7").
+   ("Os resíduos da decisão 7"). **A revisão da rodada 7 achou a decisão ainda não cumprida inteira** (P2-1, estado
+   mudo novo; P2-3, a falha na publicação adiada): consertos abertos, para decisão.
 8. **Reconferir na publicação, e não só no `poll`.** A publicação da lista pode ser adiada pela entrega da
    fala do turno; se o cliente escreve no meio, a cadeia é abortada e o adiamento dura até o teto (~3 a 4 min).
    Nesse intervalo uma cotação nova pode começar. O gancho `publicacao_vale?` fica em `AutorizacaoDaExecucao`,
@@ -389,7 +399,7 @@ Ganho, pelo motor e com o relógio parado (`async_run_job_confirmacao_curta_spec
 | Registro de recusa | `recusa_registro_spec` com o gatilho da saída nova |
 | Contrato de nível | `base_contrato_de_nivel_spec` com `aceite`, `resultado_guardado?`, `publicacao_vale?` |
 | Nenhum texto do portal ao modelo nem ao banco (rodada 7) | `insurance_quote_result_spec`: as 39 mensagens do corpus, no `kind` e no status do conector, e os 59 textos das revisões numa cotação só, perguntadas uma a uma: o modelo lê só `SEM_MOTIVO` ou as falas de `MOTIVOS`, nenhum texto aparece, e conta e pessoa saem no genérico; `resultado_por_seguradora_spec`: nenhum desses textos no JSON guardado |
-| Palavra ao cliente em todo estado da lista (rodada 7) | `insurance_quote_nenhum_estado_mudo_spec`: a lista recusada pelo publicador até o prazo sai no encerramento, uma vez e sem frase; `answerer_resultado_da_cotacao_spec`: falha passageira, anterior no teto antes do aceite da nova, falha até o prazo, cotação nova e varredor |
+| Palavra ao cliente em todo estado da lista (rodada 7) | `insurance_quote_nenhum_estado_mudo_spec`: a lista recusada pelo publicador até o prazo sai no encerramento, uma vez e sem frase; `answerer_resultado_da_cotacao_spec`: falha passageira, anterior no teto antes do aceite da nova, falha até o prazo, cotação nova e varredor. Não cobre a lista aceita que morre com o pedido seguinte (P2-1) nem a falha na publicação adiada (P2-3), achados abertos da revisão da rodada 7 |
 
 ## Specs existentes alterados, e por quê
 
@@ -444,6 +454,7 @@ Todos com `PATH="$HOME/.rbenv/shims:$PATH"`, exit code gravado em arquivo e cont
 | Rodada 7, os specs afetados (antes dos ajustes de formatação pedidos pelo RuboCop; o recorte abaixo roda depois deles) | os 12 arquivos da ferramenta da Lia, do motivo, do resultado guardado, das promessas, da integração, dos lotes, do `nenhum_estado_mudo`, da Medida, do registro de recusa, do schema e do `builder_spec` | 595 exemplos, 0 falhas | 0 |
 | Rodada 7 | o recorte da linha de base | 1941 exemplos, 0 falhas (51 a menos que a rodada 6: o spec do vocabulário do motivo, 264 exemplos, deu lugar ao da categoria, 195, e entraram 18 exemplos novos); md5 de `app/` (`.rb`, `.md` e `.txt`) igual antes e depois (`51c17d78782abab21005184915b5d2eb`) | 0 |
 | Rodada 7, fora do recorte | os mesmos 118 de antes | 118 exemplos, 0 falhas | 0 |
+| CI da PR #424 em `05450ad1ce` (run 34792789781) | suíte inteira do projeto (8 shards), RuboCop, Vitest, ESLint, Brakeman | 12 jobs `success` | — |
 
 - `RAILS_ENV=test bundle exec rails zeitwerk:check`: "All is good!", exit 0 (em `9c0bdcb8be`, `f727ce1844` e
   depois da rodada 3).
@@ -797,7 +808,9 @@ Os 59 textos das revisões (os 28 de conta da quinta revisão, os 6 de dado pess
 cálculo.", "Usuário fulano@corretora.com.br bloqueado." e os outros 23) saem todos genéricos, com `kind` `risco`. O
 `motivo_da_recusa_spec` tem um exemplo por mensagem do corpus e por texto das revisões; o `insurance_quote_result_spec`
 põe todos numa cotação e pergunta por cada seguradora: o modelo lê só `SEM_MOTIVO` ou uma das duas falas de `MOTIVOS`,
-e nenhum texto aparece.
+e nenhum texto aparece. **Isso prova que nenhum texto chega ao modelo, e não que conta e pessoa nunca viram
+categoria:** 58 dos 59 não casam padrão de categoria nenhum (sonda S6 da revisão da rodada 7), e 31 textos escritos
+para casar um atributo sem termo das listas saem com categoria (achado P3-1, em "O que NÃO foi verificado").
 
 ### A lista que sai até ser aceita
 
@@ -815,34 +828,46 @@ e nenhum texto aparece.
 
 ### Os resíduos da decisão 7
 
-Nenhum destes estados deixa de levar palavra que levava na rodada 6; cada um é um caso em que a regra "nunca duas
-vezes, e uma falha nunca perde as duas" não se cumpre inteira.
+Cada um é um caso em que a regra "nunca duas vezes, e uma falha nunca perde as duas" não se cumpre inteira. **A
+versão commitada em `05450ad1ce` dizia que nenhum deles deixava de levar palavra que a rodada 6 levava: a revisão da
+rodada 7 mostrou que é falso** (R6, achado P2-1), e que R2 e R4 estavam descritos para menos (P2-3 e P2-2). As
+correções abaixo são dessa revisão; os consertos estão abertos (ver "A revisão da rodada 7").
 
 - **R1. A anterior que sai nos milissegundos entre a composição da nova e o aceite dela.** Turno 1 com a lista adiada
   pela fala; o cliente pede de novo; a passada da nova compõe (leva a anterior) e solta o lock; antes de o motor
   registrar o aceite da nova, o `AsyncPublishJob` da anterior (no teto, ou com a cadeia fechada) publica. A nova sai
   com os mesmos códigos: a mesma seguradora duas vezes. A janela vai da saída do lock da composição ao
   `EntregaAceita.registrar` da nova. Sem teste: precisa de duas conexões concorrentes.
-- **R2. A publicação adiada da nova, já aceita, que não sai nunca.** A nova é aceita adiada, a anterior passa a ser
-  barrada, e o `AsyncPublishJob` da nova não publica: banco fora por mais tempo que as retentativas do Sidekiq. As duas
-  ficam sem sair. É a lacuna de toda entrega adiada do motor (`AsyncRunJob#deliver`: "O job adiado ainda pode
-  recusá-la depois (autorização caída, erro de banco), e nada aqui fica sabendo"). Autorização caída depois do aceite
-  (agente desligado, conversa fora da allowlist) cala por desenho: é o freio do operador.
+- **R2. A publicação adiada, já aceita, que falha uma vez.** A lista é aceita adiada (o caso normal com a entrega
+  humanizada ligada) e o `AsyncPublishJob` falha ao publicar: **uma falha basta**. O publicador transforma a exceção em
+  `blocked` (`AsyncPublisher#publish`) e o job só reagenda `deferred` (`AsyncPublishJob#perform`), então não há
+  retentativa, nem do Sidekiq. A lista não sai; se ela tinha levado uma anterior, as duas ficam sem sair. A versão
+  commitada dizia "banco fora por mais tempo que as retentativas do Sidekiq": errado (achado P2-3, reproduzido nos dois
+  SHAs, `260be4f385` e `05450ad1ce`). É a lacuna de toda entrega adiada do motor, também dos lotes de preço e do PDF
+  (`AsyncRunJob#deliver`: "O job adiado ainda pode recusá-la depois (autorização caída, erro de banco), e nada aqui
+  fica sabendo"). Autorização caída depois do aceite (agente desligado, conversa fora da allowlist) cala por desenho.
 - **R3. A nova recusada em todas as tentativas e no encerramento.** O publicador recusa a lista nova até o prazo (7 min)
   ou as 60 tentativas, e de novo no encerramento. A nova não sai; a anterior, que a nova não chegou a levar, sai
   (teste "a falha até o prazo e no encerramento"). O que só a nova prometeu fica sem sair até um pedido seguinte, que a
   leva (decisão 31). É o estado da decisão 7, agora só depois de todas as tentativas.
 - **R4. A anterior que sai antes da fala nova.** A lista anterior adiada vira mensagem depois de a execução nova abrir
   e antes de a fala nova ser postada. A nova a desconta; sem código sobrando, não publica nada, e a fala nova ("sai na
-  lista depois da minha mensagem") vem depois da lista. Cada preço sai uma vez, fora da ordem prometida.
+  lista depois da minha mensagem") vem depois da lista. **E com um pedido seguinte o preço sai de novo** (achado P2-2):
+  a nova que descontou tudo fecha sem gravar `lista`, e a mais nova seguinte a leva pelos códigos do pedido dela
+  (`codigos_da_lista` cai nos códigos do pedido quando `lista` não existe). Na rodada 6 a mais nova despachada barrava
+  a anterior, e isso não acontecia.
 - **R5. A anterior com envio pendente retomada antes de a nova compor.** A mensagem da anterior está no banco com
   pendência de envio, o cliente pede de novo, e a retomada (motor ou varredor) a reenvia antes da composição da nova.
   A mensagem foi criada antes de a nova abrir, e a nova não a desconta: os códigos pedidos de novo saem duas vezes.
   Mesma classe das "mensagens cruzadas" de "O que NÃO foi verificado".
-- **R6. A anterior ainda `running` na passada que confere o aceite.** O cliente pede de novo nos cerca de 3 s entre a
-  emissão da lista e a passada seguinte. A abertura nova supersede a anterior; a publicação adiada dela é recusada por
-  estar morta (regra do publicador para toda execução supersedida), e só a nova a leva. Se a nova cair em R3, as duas
-  ficam sem sair. Na rodada 6 a anterior já estava `done` nessa passada.
+- **R6. A anterior ainda `running` quando o pedido novo abre.** A abertura nova (`ToolRun.open!`) supersede a execução
+  viva; a publicação adiada da anterior é recusada por estar morta (regra do publicador para toda execução
+  supersedida), e só a nova a leva. Se a nova cair em R3, ou se o turno dela morrer antes do despacho (a `pending` é
+  descartada e não leva nada), a lista da anterior não sai, até um pedido seguinte que a leve. **É estado mudo novo**
+  (achado P2-1, reproduzido pelo caminho real: em `260be4f385` a lista sai, em `05450ad1ce` não): na rodada 6 a
+  anterior já estava `done` depois da passada que publicava, e a janela ia só do despacho a essa passada; na rodada 7
+  ela vai até a passada que confere o aceite. Cada espera de 3 s custa de 5,5 a 8 s de relógio (`AsyncConfig`, o poller
+  de agendados do Sidekiq).
 
 O silêncio com a cotação lida substituída por uma mais nova não é resíduo: é a decisão do CEO, com teste (nenhuma das
 duas listas sai e nenhuma frase sai).
@@ -889,6 +914,38 @@ e as falhas eram `NoMethodError`, não comportamento; os números abaixo são os
 do resultado guardado, da ferramenta, das promessas e da integração (351 exemplos); Y, os da ferramenta, da integração
 e do `nenhum_estado_mudo` (187 exemplos).
 
+### A revisão da rodada 7 (sobre `05450ad1ce`), e a parada
+
+CI de `05450ad1ce` (run 34792789781): 12 jobs `success`. Revisor independente (agente com contexto próprio, só leitura,
+banco de teste próprio `chatwoot_test_rev7f2` e extração `git archive` de `260be4f385` na pasta de rascunho, os dois
+removidos no fim), com sondas pelo caminho real (`Responder`, motor, publicador, `AsyncPublishJob`, varredor), cada uma
+rodada nos dois SHAs, e o classificador real do conector (`origin/main` `ad4372a`) sobre 31 textos novos. **Nenhum P1,
+três P2, quatro P3.** O texto do portal não chega ao modelo nem ao banco em nenhum caminho que ele achou. Linha de base
+dele na HEAD: os 7 specs da rodada, 259 exemplos, 0 falhas, exit 0.
+
+| Achado | Sev. | Cenário | Evidência | Conserto sugerido | Estado |
+|---|---|---|---|---|---|
+| P2-1. A lista aceita morre quando o pedido seguinte abre antes da passada que confere o aceite, e o turno dele cai antes do despacho | P2 (estado mudo novo) | R6 acima | sonda S2 e S2b: em `05450ad1ce` 6 exemplos, 5 falhas, exit 1 (as mensagens ficam só com a fala; a anterior `superseded`, a nova `discarded`); em `260be4f385` S2, S2b e o controle passam | encerrar `done` na mesma passada quando o publicador aceitou a lista, e o motor reagendar só a lista recusada, como já faz com arquivo (`AsyncRunJob#apply`, `arquivo_recusado?`); some a passada de confirmação | aberto |
+| P2-2. A execução que descontou a lista toda volta, no pedido seguinte, com os códigos do pedido dela | P2 (duplicata nova) | R4 acima, com um terceiro pedido | sonda S5: em `05450ad1ce` 1 exemplo, 1 falha, exit 1 (a lista inteira sai duas vezes); em `260be4f385` 1 exemplo, 0 falhas, exit 0 | gravar `lista` também com a composição vazia (`codigos: []`), e `codigos_da_lista` respeitar a chave presente | aberto |
+| P2-3. A publicação adiada, já aceita, que falha uma vez não tenta de novo; com uma anterior levada, perde as duas | P2 (anterior à rodada; a auditoria o dava por resolvido) | R2 acima | sonda S3a e S3b: falham nos dois SHAs; nenhum job novo enfileirado | o `AsyncPublishJob` reagendar o `blocked` que veio de exceção, com teto; o `Result` do publicador distinguir erro de recusa de autorização. Muda o motor de todas as entregas adiadas (lotes de preço e PDF em produção) | aberto, para decisão |
+| P3-1. Conta e pessoa com categoria | P3 | 31 textos `risco` no conector real que casam um atributo sem termo das listas | sonda S1: 33 exemplos, 32 falhas, exit 1 (os 31 com categoria; a 32ª é `transliterate` com UTF-16 ou ASCII-8BIT, que o `JSON.parse` do conector não produz) | aceitar só moldes fechados de "atributo + recusa" (toda palavra do texto num conjunto pequeno), o que dispensa as listas de termos e deixa mais motivos no genérico | aberto, para decisão |
+| P3-2. Os 59 textos das revisões não provam o filtro de termos | P3 | 58 dos 59 não casam padrão de categoria | sonda S6: exit 0 | afirmação corrigida acima; a prova do filtro é o exemplo por termo | auditoria corrigida |
+| P3-3. A lista anterior que sai durante a chamada ao modelo do pedido novo é repetida | P3 (anterior à rodada) | o cliente escreve "cadê?" logo depois da fala, e a lista anterior sai com o histórico do turno novo já montado | sonda S4: falha nos dois SHAs (a mesma seguradora 2 vezes) | cortar o desconto pela mensagem do cliente que abriu o turno, e não pela abertura da execução | aberto |
+| P3-4. A recusa permanente de autorização gasta todas as tentativas; e a fala da região convida a detalhe | P3 | `vinculo_mudou` (a conversa trocou de caixa) | sonda S7: em `05450ad1ce` 61 passadas até `prazo_esgotado` (em produção o prazo de 420 s limita a cerca de 25); em `260be4f385`, 2 | encerrar quando a recusa é de autorização (a mesma distinção do P2-3); tirar "(CEP, circulação ou pernoite)" de `MOTIVOS` | aberto |
+
+Onde o revisor olhou e não achou defeito: o único consumidor de `reason` é `ResultadoPorSeguradora#sem_proposta`; a
+leitura só aceita chave de `CATEGORIAS`; o `{kind, text}` antigo, `auth_required`, letra que não se translitera,
+fullwidth e caractere invisível caem no genérico; nada vai a log; o `record_attempt!` não apaga `lista`; o
+`merge_handle!` só deixa de gravar em execução morta, que não publica; o encerramento depois do aceite não republica;
+a cotação nova cala a lista; os laços são limitados por tentativas e prazo; a falha passageira na publicação imediata
+tenta de novo; a seção nova do `principal.md` não tem travessão.
+
+**Parada.** A decisão do CEO para esta rodada foi "se alguma correção deixar um estado mudo, pare e me avise". O P2-1 é
+exatamente isso: a lista que sai até ser aceita manteve a execução viva por uma passada a mais, e a abertura de um
+pedido novo nessa passada mata a publicação adiada dela. Nenhum código novo depois de `05450ad1ce`; esta atualização é
+só da auditoria. O conserto do P2-1 e o do P2-3 mexem no motor (`AsyncRunJob#apply` e `AsyncPublishJob`), e o do P3-1
+muda o desenho da classificação: ficam para a decisão do coordenador.
+
 ## O que NÃO foi verificado
 
 - **Conversa real com o modelo.** Que a Lia chame a ferramenta quando o cliente pergunta, não escreva valor,
@@ -913,7 +970,10 @@ e do `nenhum_estado_mudo` (187 exemplos).
      retomada depois de a nova abrir; a retomada antes, com a mensagem criada antes de a nova abrir, é o resíduo R5;
   2. mensagens cruzadas: a lista anterior vira mensagem logo antes de o pedido novo abrir. Aqui é um pedido
      novo de verdade; que o modelo veja a lista no histórico e não chame a ferramenta de novo é conduta do
-     modelo, não verificada.
+     modelo, não verificada. **Corrigido pela revisão da rodada 7 (achado P3-3):** quando a lista anterior sai durante
+     a chamada ao modelo do pedido novo (depois da mensagem do cliente e antes de a execução nova abrir), o histórico
+     já foi montado e o modelo não tem como vê-la; o corte do desconto é a abertura da execução, e a lista nova a
+     repete (sonda S4, falha nos dois SHAs). Não é conduta do modelo.
   Sem teste nos dois. A terceira revisão confirmou os dois com a cadeia humanizada real. O caso da execução
   `pending` que nunca é despachada (turno morto), que a revisão mostrou durar até o retry do turno, foi fechado
   na rodada 4 (decisão 25).
@@ -940,11 +1000,16 @@ e do `nenhum_estado_mudo` (187 exemplos).
   leituras depende de o portal já ter listado todas as seguradoras quando a lista se repete; nos brutos de
   13/09/2026 todas estavam listadas na primeira leitura, e o contrário não foi observado. Não medido com a
   janela nova.
-- **Texto de conta da corretora que nomeia um atributo do veículo ou da região sem nenhum termo de conta, da pessoa
-  ou de dúvida** sai com categoria (por exemplo "Categoria do veículo sem aceitação nesta seguradora."). O modelo não
-  recebe o texto: a Lia diria que a seguradora não aceitou o veículo, sem detalhe. Nenhum dos 59 textos das revisões
-  é assim; é o limite de uma classificação por padrão, e o erro possível é uma categoria a mais, nunca texto do
-  portal.
+- **Texto de conta da corretora ou de restrição da pessoa que nomeia um atributo do veículo ou da região sem nenhum
+  termo das listas** sai com categoria. A revisão da rodada 7 escreveu 31 assim, todos `risco` no classificador real
+  do conector, e **os 31 saem com categoria** (achado P3-1): 15 de conta ("Tipo de veículo sem aceitação para o seu
+  código.", "Localidade sem aceitação na plataforma."), 14 da pessoa ("Proponente sem aceitação para esta região.",
+  "Negativado: CEP sem aceitação.", "Tipo de veículo sem aceitação para menores de 25 anos.") e 2 de "modelo" que não
+  é do veículo ("Este modelo de apólice não possui aceitação."). O modelo não recebe o texto, e nada é guardado além
+  da categoria: o dano é a Lia afirmar um motivo que não é o verdadeiro ("não aceitou o veículo"). A versão commitada
+  dizia que nenhum dos 59 textos das revisões era assim: é verdade, mas 58 deles não casam padrão de categoria nenhum
+  e sairiam genéricos mesmo sem as listas de termos (sonda S6 da revisão); o filtro de termos é provado pelos exemplos
+  "cada termo colado a 'Tipo de veículo não aceito'" do `motivo_da_recusa_spec`, e não por eles.
 - **Ordem da lista depois da fala com a entrega humanizada ligada**, especificamente para a ferramenta nova. O
   adiamento pela cadeia do turno é o mecanismo geral (`async_publisher_spec`, "humanized chain deferral"); o
   spec de integração desta fatia usa a entrega clássica.
