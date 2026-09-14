@@ -46,7 +46,7 @@ Inspeção estática dos workflows atuais confirmou:
 3. Sidekiq blue para e Sidekiq green inicia antes da mudança do listener para green.
 4. Configuração de filas inclui low, scheduled_jobs, housekeeping e active_storage_purge.
 
-Antes da publicação, confirmar nos dois destinos o armazenamento ActiveStorage persistente e compartilhado entre web/worker/instâncias, e as filas efetivamente consumidas. A existência de config/storage.yml não comprova configuração runtime. Nenhum acesso a secrets, SSM, AWS ou banco de produção foi feito nesta etapa.
+Antes da publicação, confirmar nos dois destinos o armazenamento ActiveStorage persistente e compartilhado entre web/worker/instâncias, e as filas efetivamente consumidas. ActiveStorage::PurgeJob usa default nesta configuração, embora active_storage_purge também esteja listada. A existência de config/storage.yml não comprova configuração runtime. Nenhum acesso a secrets, SSM, AWS ou banco de produção foi feito nesta etapa.
 
 Importações usam a fila low, compartilhada com outros trabalhos; backlog pode atrasar filas de menor prioridade. Não foi realizado teste de saturação ou garantido SLA de execução. A recuperação de importação é periódica, não instantânea.
 
@@ -64,4 +64,15 @@ Healthcheck e CI não comprovam resultado em produção. QA após deploy deve us
 
 ## Revisão e CI
 
-Parecer independente e CI em acompanhamento; atualizar antes de encerrar a entrega.
+Revisor independente integration_review, somente leitura: nenhum bloqueador de integração confirmado. Deltas disjuntos (39 e 25 arquivos), ambos os heads preservados e ordem migration/web/worker/tráfego compatível nos dois workflows.
+
+Gates de publicação confirmados pelo revisor:
+
+- P1: fallback de produção aceita disco local e os containers não montam volume compartilhado. IaC declara S3/permissões, mas é necessário confirmar ACTIVE_STORAGE_SERVICE=amazon efetivo e prova controlada de escrita/leitura entre web e worker antes de liberar a publicação.
+- P1: rollback automático troca listener antes do worker anterior e não trata pendências das features. O runbook combinado acima deve anteceder qualquer rollback.
+- P2 condicionado: prioridade estrita das filas pode atrasar follow-ups/recovery quando houver backlog contínuo; sem evidência de starvation atual.
+- Hub2You declara e força EMAIL_CAMPAIGN_ENABLED=true; Autonom.ia mantém desativado por padrão. Não habilitar automaticamente no outro destino. Confirmar runtime e limitar E2E da importação ao destino habilitado.
+
+CI final, link do run e estado de aprovação são registrados na PR #433 após conclusão, sem novo commit meramente para repetir o status do GitHub. Segurança e lint são informativos (continue-on-error), portanto um job verde não significa ausência de alertas preexistentes.
+
+Diff-check apontou apenas duas linhas em branco no fim de arquivos documentais já herdados da #427 (runner-reproduction.txt e runner-results.txt); nenhum ajuste de produto resultou desta integração.
