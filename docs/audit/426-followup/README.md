@@ -50,7 +50,7 @@ A prévia usa fixture de API; a aceitação final no drawer completo e com login
 ## Publicação e rollback — preparados, não executados
 
 1. Revisar a PR, resolver a decisão de tradução, confirmar CI e identificar o ambiente AWS correto antes de pedir aprovação de merge/deploy.
-2. Após aprovação, publicar via workflow manual existente, registrar imagem anterior e validar primeiro um funil controlado. Sem migração de schema.
+2. ATENÇÃO: os workflows atuais de Autonom.ia e Hub2You disparam deploy automaticamente em push na main para mudanças de código. Portanto, aprovação de merge deve considerar os dois destinos e a publicação automática, ou uma contenção operacional explicitamente aprovada antes do merge. Há também workflow_dispatch. Registrar imagem anterior e validar primeiro um funil controlado. Sem migração de schema.
 3. Não fazer rollback cego para código antigo com cadências novas pendentes: o código antigo não respeita `allowed_days` e não passa lembretes pelo novo gate.
 4. Em rollback autorizado, interromper o processamento programado durante a transição; inventariar e cancelar/reagendar os toques pendentes afetados antes de restaurar a imagem anterior. Preservar metadados e lembretes já emitidos para auditoria. Confirmar os modos e flags antes de retomar o processamento. Não basta desligar apenas a IA no código antigo, pois lembretes internos seguem outro ramo.
 
