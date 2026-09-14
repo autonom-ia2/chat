@@ -67,3 +67,7 @@ O CI do código `fcc23a1de72c7f62e2570da84e9f2e565a26ea89` terminou com sucesso:
 ## Retomada da revisão — parecer recebido
 
 O estado pendente acima foi superado pela revisão independente recebida na rodada seguinte. Parecer consolidado: **requer ajustes**, com dois cenários pós-IA reproduzidos em Rails e bloqueio de desligamento reproduzido na UI/serviço. Ver [revisão adversarial](ADVERSARIAL_REVIEW.md) e suas evidências. Nenhuma correção de produto nesta rodada, nenhum merge/deploy.
+
+## Correções e reavaliação concluídas
+
+Os quatro achados foram corrigidos nos commits `883267207` e `7b0897fe8`. O revisor independente confirmou as correções e aprovou com o limite temporal de ações já aceitas, documentado no relatório. QA pt_BR e testes locais aprovados; CI final em acompanhamento. Sem merge/deploy.

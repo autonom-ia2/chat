@@ -1,5 +1,7 @@
 # Revisão adversarial — PR #427
 
+**Estado atual: quatro achados corrigidos e revisor independente aprovou com o limite temporal descrito ao final.** Código final das correções: `7b0897fe8`. Os achados e reprovações abaixo são o histórico da revisão. CI final em acompanhamento.
+
 Base: `5742de5fc`. Código revisado: `f2d19443a1d945983d4e86eb8f8df019e1fdab57` (código funcional igual a `fcc23a1de`). Revisão estática e reproduções locais com dados sintéticos; nenhum acesso à produção ou chamada paga de IA.
 
 ## Parecer: requer ajustes antes de seguir
@@ -74,3 +76,7 @@ A fase final agora segura locks de card e pipeline após a IA, na ordem follow-u
 Provas concorrentes locais com conexões PostgreSQL separadas confirmaram `wait_event_type=Lock`: 1 caso de cancelamento do follow-up e 2 casos da fase final (card/pipeline), todos aprovados. O teste com resposta durante a escrita de auditoria também passa; runner/due_processor: 37 exemplos, zero falhas. O revisor retirou a alegação de cancelamento efetivado sendo sobrescrito, pois UPDATE adquire o row lock implicitamente.
 
 Limite temporal: a última verificação é o ponto de aceitação da ação. Uma mensagem que chegue depois desse ponto pode coincidir com uma ação já aceita; não há promessa de recolher mensagem já enfileirada/enviada. Os locks de card/pipeline não bloqueiam ingestão de mensagens. Não foi introduzido bloqueio global de mensagens nem alterado o fluxo de entrada.
+
+### Confirmação independente recebida
+
+O revisor confirmou: os quatro achados originais estão sanados; locks card/pipeline fecham a corrida com Closer/SettingsUpdater, a releitura após IA cobre mudanças durante a composição, a consulta final cobre resposta antes desse ponto, e desativação/frações estão corrigidas. Parecer aprovado com o limite temporal acima. Não há garantia de recolher uma ação depois de aceita. O revisor também retirou o cenário artificial de atualização do status dentro da própria transação como evidência de corrida externa.
