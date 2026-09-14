@@ -198,3 +198,8 @@ autonomia_reap_stale_tool_runs_job:
   cron: '*/10 * * * *'
   class: 'Autonomia::Agents::Tools::ReapStaleRunsJob'
   queue: scheduled_jobs
+
+email_campaign_recipient_import_maintenance_job:
+  cron: '*/5 * * * *'
+  class: 'EmailCampaigns::RecipientImportMaintenanceJob'
+  queue: housekeeping

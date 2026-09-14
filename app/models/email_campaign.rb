@@ -59,6 +59,9 @@ class EmailCampaign < ApplicationRecord
   belongs_to :sender_identity, class_name: 'EmailSenderIdentity', optional: true
   belongs_to :sender_inbox, class_name: 'Inbox', optional: true
 
+  has_many :email_campaign_imports, dependent: :destroy
+  has_one :latest_recipient_import, -> { order(id: :desc) }, class_name: 'EmailCampaignImport',
+                                                             inverse_of: :email_campaign, dependent: nil
   has_many :email_campaign_recipients, dependent: :destroy
   has_many :email_events, through: :email_campaign_recipients, source: :email_events
 
@@ -105,7 +108,7 @@ class EmailCampaign < ApplicationRecord
   EMAIL_REGEX = URI::MailTo::EMAIL_REGEXP
 
   def sendable?
-    (draft? || scheduled?) && subject.present? && body_html.present? && sender_ready? &&
+    (draft? || scheduled?) && !recipient_import_active? && subject.present? && body_html.present? && sender_ready? &&
       email_campaign_recipients.exists?
   end
 
@@ -133,12 +136,16 @@ class EmailCampaign < ApplicationRecord
   # Atomic draft/scheduled -> sending transition. Returns true only for the caller
   # whose UPDATE actually flips the row, closing the send_now TOCTOU window.
   def claim_for_sending!
-    claimed = EmailCampaign.where(id: id, status: [self.class.statuses[:draft], self.class.statuses[:scheduled]])
-                           .update_all(status: self.class.statuses[:sending], updated_at: Time.current)
-    return false if claimed.zero?
+    with_lock do
+      return false unless sendable?
 
-    reload
-    true
+      update!(status: :sending)
+      true
+    end
+  end
+
+  def recipient_import_active?
+    email_campaign_imports.active.exists?
   end
 
   def pause!
