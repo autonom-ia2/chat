@@ -24,6 +24,8 @@ RSpec.describe 'CRM meta_sync metadata API', type: :request do
         metadata: { 'ai' => { 'tone' => 'formal' }, 'goals' => { 'monthly_target_cents' => 1000 } }
       )
 
+      original_ai = pipeline.metadata['ai'].deep_dup
+
       patch "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}",
             params: { pipeline: { meta_sync: { enabled: true, events: { won: true, lost: false, moved: true },
                                                dataset_id: 'DS9' } } },
@@ -31,7 +33,7 @@ RSpec.describe 'CRM meta_sync metadata API', type: :request do
 
       expect(response).to have_http_status(:ok)
       metadata = pipeline.reload.metadata
-      expect(metadata['ai']).to eq('tone' => 'formal')
+      expect(metadata['ai']).to eq(original_ai)
       expect(metadata['goals']).to eq('monthly_target_cents' => 1000)
       expect(metadata['meta_sync']).to eq(
         'enabled' => true,
@@ -44,13 +46,15 @@ RSpec.describe 'CRM meta_sync metadata API', type: :request do
       account, user = create_account_and_user
       pipeline = account.crm_pipelines.create!(name: 'Funil', created_by: user, status: :active, metadata: { 'ai' => { 'tone' => 'x' } })
 
+      original_ai = pipeline.metadata['ai'].deep_dup
+
       patch "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}",
             params: { pipeline: { name: 'Funil 2' } },
             headers: auth_headers(user)
 
       expect(response).to have_http_status(:ok)
       metadata = pipeline.reload.metadata
-      expect(metadata['ai']).to eq('tone' => 'x')
+      expect(metadata['ai']).to eq(original_ai)
       expect(metadata).not_to have_key('meta_sync')
     end
   end
