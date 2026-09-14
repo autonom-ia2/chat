@@ -57,3 +57,9 @@ A prévia usa fixture de API; a aceitação final no drawer completo e com login
 ## Achado do CI e correção
 
 O primeiro CI completo identificou duas expectativas antigas em `meta_sync_metadata_spec.rb`: a criação do funil agora inclui os dias úteis, mas os testes esperavam que `metadata.ai` tivesse somente `tone`. A verificação passou a comparar uma cópia dos metadados persistidos antes do PATCH com os metadados depois dele, preservando a garantia de não sobrescrever configurações irmãs. A suíte desse arquivo foi reexecutada localmente: 5 exemplos, zero falhas. O teste separado de criação continua exigindo explicitamente segunda a sexta em novos funis.
+
+## Revisão adversarial solicitada em 14/09
+
+Foram acionados dois revisores separados, em sequência. O primeiro foi interrompido após não devolver relatório nem checkpoint; a tentativa substituta também ficou sem retorno após pedidos explícitos de parecer parcial e foi interrompida. Não há achado de agente recebido nem aprovação adversarial. A revisão permanece pendente, e a PR permanece em rascunho.
+
+O CI do código `fcc23a1de72c7f62e2570da84e9f2e565a26ea89` terminou com sucesso: https://github.com/autonom-ia2/chat/actions/runs/34892401526 . As 32 chaves de frontend novas/alteradas têm correspondentes pt_BR e interpolações equivalentes. Este registro posterior altera somente documentação.
