@@ -214,6 +214,8 @@ module ManualDoPrincipalResultado
   RESULTADO = Autonomia::Agents::Tools::Native::InsuranceQuoteResult
   COTACAO = Autonomia::Agents::Tools::Native::InsuranceQuote
   BUILDER = Autonomia::Insurance::QuoteAgent::Builder
+  MOTIVO = Autonomia::Insurance::MotivoDaRecusa
+  MOTIVO_DO_VEICULO = 'Tipo de veículo não aceito.'.freeze
 
   module_function
 
@@ -221,7 +223,7 @@ module ManualDoPrincipalResultado
     texto[SECAO]
   end
 
-  # UMA CONVERSA COM UMA COTAÇÃO ENCERRADA: Porto cotou, Sancor recusou com motivo de risco. A conta NÃO tem
+  # UMA CONVERSA COM UMA COTAÇÃO ENCERRADA: Porto cotou, Sancor recusou pelo tipo do veículo. A conta NÃO tem
   # conexão com o portal, de propósito: a ferramenta de resultado responde sem ela.
   def conversa_com_cotacao
     account = FactoryBot.create(:account, internal_attributes: { 'autonomia_insurance_enabled' => true })
@@ -232,7 +234,7 @@ module ManualDoPrincipalResultado
     ofertas = [{ 'insurer' => { 'code' => '8', 'name' => 'Porto Seguro' }, 'status' => 'quoted',
                  'premium' => { 'amount' => 2119.18, 'basis' => 'total' } },
                { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined',
-                 'reason' => { 'kind' => 'risco', 'text' => 'Risco sem aceitação para este cenário.' } }]
+                 'reason' => { 'kind' => 'risco', 'text' => MOTIVO_DO_VEICULO } }]
     guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas)
     Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: COTACAO.slug, status: 'done',
                                        conversation_id: conversation.id, execution_key: SecureRandom.uuid, arguments: {},
@@ -270,18 +272,27 @@ module ManualDoPrincipalResultado
     },
     # O motivo só chega ao modelo quando o pedido nomeia a seguradora: o resultado inteiro não o traz.
     'O motivo de quem não fez proposta só sai quando a pessoa perguntar por aquela seguradora' => lambda {
-      motivo = 'Risco sem aceitação para este cenário.'
+      motivo = RESULTADO::MOTIVOS.fetch(MOTIVO::VEICULO)
       no_turno(nil).aceite.exclude?(motivo) && no_turno('Sancor').precheck.to_s.include?(motivo)
     },
-    "Quando a\nferramenta disser que não há motivo que você possa contar" => lambda {
-      RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
-        Autonomia::Insurance::MotivoDaRecusa.permitido('kind' => 'passageiro', 'text' => 'Risco sem aceitação.').nil?
+    # A ferramenta entrega uma de duas categorias, escritas pelo código.
+    'que a ferramenta entregar: se a recusa foi pelo veículo ou pela região.' => lambda {
+      MOTIVO::CATEGORIAS.keys == [MOTIVO::VEICULO, MOTIVO::REGIAO] && RESULTADO::MOTIVOS.keys == MOTIVO::CATEGORIAS.keys
     },
-    # A regra do motivo recusa os três termos que a frase nomeia, mesmo num texto de risco.
-    'Nunca fale de login, senha ou permissão da corretora.' => lambda {
-      %w[login senha permissão].all? { |termo| Autonomia::Insurance::MotivoDaRecusa::TERMOS_DE_CONTA.key?(termo) } &&
-        ['faça login', 'senha vencida', 'sem permissão'].all? do |termo|
-          Autonomia::Insurance::MotivoDaRecusa.permitido('kind' => 'risco', 'text' => "Veículo sem aceitação, #{termo}.").nil?
+    # O texto do portal não chega ao modelo: não há detalhe a acrescentar além da categoria.
+    'sem acrescentar detalhe que a ferramenta não deu.' => lambda {
+      no_turno('Sancor').precheck.to_s.exclude?(MOTIVO_DO_VEICULO) &&
+        RESULTADO::MOTIVOS.values.all? { |texto| texto.include?('sem acrescentar detalhe') }
+    },
+    "Quando a ferramenta disser que não há motivo que\nvocê possa contar" => lambda {
+      RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
+        MOTIVO.categoria('kind' => 'passageiro', 'text' => MOTIVO_DO_VEICULO).nil?
+    },
+    # A regra do motivo tira a categoria de texto com os termos da conta e com a pessoa, mesmo com o veículo recusado.
+    "Nunca fale de login, senha ou\npermissão da corretora, nem de restrição da pessoa." => lambda {
+      %w[login senha permissão].all? { |termo| MOTIVO::TERMOS_DE_CONTA.key?(termo) } &&
+        ['faça login', 'senha vencida', 'sem permissão', 'segurado com restrição'].all? do |termo|
+          MOTIVO.categoria('kind' => 'risco', 'text' => "Tipo de veículo não aceito, #{termo}.").nil?
         end
     }
   }.freeze
@@ -484,13 +495,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     it 'está no arquivo, antes do bloco dos especialistas, e é extraído inteiro' do
       expect(secao).to be_present
       expect(secao).to start_with('### `ver_resultado_da_cotacao`')
-      expect(secao).to end_with("Nunca fale de login, senha ou permissão da corretora.\n")
+      expect(secao).to end_with("permissão da corretora, nem de restrição da pessoa.\n")
       expect(texto.index(secao)).to be < texto.index('### Os especialistas de ramo')
     end
 
     it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('b1758bb74c1a6ca87e9e7151d996ef7c')
+      expect(Digest::MD5.hexdigest(secao)).to eq('a09fe65f1e2f82f910032e1c58be54de')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do

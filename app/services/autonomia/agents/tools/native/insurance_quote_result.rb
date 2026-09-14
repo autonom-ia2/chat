@@ -9,13 +9,17 @@
 #     e o publicador os adia enquanto a entrega da fala do turno está em curso.
 #   - Sem preço a mostrar: `precheck` devolve o texto ao modelo e nenhuma execução é aberta.
 #
-# UMA LISTA POR PEDIDO, E NUNCA A MESMA DUAS VEZES (terceira a sexta rodadas de revisão): as listas de execuções
+# A LISTA SAI ATÉ SER ACEITA (decisão do CEO, sétima rodada). A passada que a publica devolve `running`; a seguinte
+# confere o aceite e só então encerra, e a lista não aceita sai de novo, pelas tentativas e pelo prazo do motor. O
+# encerramento (`closing_deliveries`) é a última tentativa. A cotação lida deixar de ser a mais nova encerra em
+# silêncio, e é o certo: o turno que abriu a cotação nova fala.
+#
+# UMA LISTA POR PEDIDO, E NUNCA A MESMA DUAS VEZES (terceira a sétima rodadas de revisão): as listas de execuções
 # anteriores (`InsuranceQuoteResult::Listas`), e o preço cujo lote a própria cotação ainda está enviando, que não
 # entra na lista (`ResultadoDaCotacao#a_caminho`).
 #
-# Os textos desta classe ao modelo não trazem o valor do prêmio. Trazem o nome da seguradora perguntada, o
-# desfecho dela e, quando `Insurance::MotivoDaRecusa` libera, o texto do portal, que essa regra só libera sem
-# dígito nenhum.
+# Os textos desta classe ao modelo não trazem o valor do prêmio nem texto do portal. Trazem o nome da seguradora
+# perguntada, o desfecho dela e, quando `Insurance::MotivoDaRecusa` classifica o motivo, a categoria dele (`MOTIVOS`).
 #
 # Os cinco textos de classe que o motor e o encerramento pedem sem instância são vazios: o publicador
 # devolve `skipped` para texto vazio, sem criar mensagem (`AsyncPublisher#texto_de`).
@@ -57,6 +61,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   HA_SEM_PROPOSTA = 'Algumas seguradoras não fizeram proposta: só fale delas se o cliente perguntar.'.freeze
   SEM_BONUS = 'Esta cotação foi feita sem a classe de bônus da apólice atual.'.freeze
   SEM_MOTIVO = 'Não há motivo que você possa contar: diga só que ela não fez proposta.'.freeze
+  # O que o modelo lê sobre o motivo, por categoria (`Insurance::MotivoDaRecusa::CATEGORIAS`). Nunca o texto do portal.
+  MOTIVOS = {
+    ::Autonomia::Insurance::MotivoDaRecusa::VEICULO =>
+      'O motivo que ela deu é do veículo cotado, e não se sabe qual característica: conte com as suas palavras que ' \
+      'ela não aceitou o veículo, sem acrescentar detalhe.',
+    ::Autonomia::Insurance::MotivoDaRecusa::REGIAO =>
+      'O motivo que ela deu é da região (CEP, circulação ou pernoite), e não se sabe mais que isso: conte com as suas ' \
+      'palavras que ela não atende a região, sem acrescentar detalhe.'
+  }.freeze
   VAZIO = ''.freeze
 
   class << self
@@ -101,13 +114,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     def partial_message(_arguments = nil) = VAZIO
     def closing_message(_arguments = nil) = VAZIO
 
-    # A lista só vira mensagem enquanto a cotação que a Lia leu no turno for a mais nova da conversa, e, quando
-    # ainda não é mensagem entregue, enquanto ela não sai em outra lista (`lista_levada?`).
+    # A lista só vira mensagem enquanto a cotação que a Lia leu no turno for a mais nova da conversa, e enquanto nenhuma
+    # lista mais nova já aceita a levou (`lista_levada?`).
     def publicacao_vale?(run)
       execucao = run.handle.to_h[EXECUCAO_KEY]
       return false unless execucao.present? && Resultado.execucao_mais_nova(run.conversation_id)&.id == execucao.to_i
 
-      lista_entregue?(run) || !lista_levada?(run, execucao.to_i)
+      !lista_levada?(run)
     end
   end
 
@@ -139,13 +152,23 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     { EXECUCAO_KEY => resultado&.run&.id, CODIGOS_KEY => resposta.last }
   end
 
-  # Publica os itens quando a cotação do handle ainda é a mais nova da conversa.
+  # -> `running` com a lista enquanto ela não foi aceita; `done` quando ela foi aceita, quando outra mais nova a levou,
+  # quando não sobrou código, ou quando a cotação lida deixou de ser a mais nova. A primeira emissão pede a consulta
+  # seguinte logo, para conferir o aceite; a que sai de novo (a anterior não foi aceita) segue a progressão das
+  # tentativas, como qualquer passada do motor.
   def poll(handle:, **)
-    atual = resultado
     execucao = handle.to_h[EXECUCAO_KEY].to_i
-    return progress_class.done unless atual && atual.run.id == execucao
+    texto = lista_vale?(execucao) ? emitir_lista(handle.to_h, execucao) : nil
+    return progress_class.done unless texto
 
-    progress_class.done(deliveries: [atual.itens(codigos_a_publicar(handle.to_h, execucao))].compact)
+    progress_class.running(deliveries: [texto], confirmar_logo: handle.to_h.dig(LISTA_KEY, 'token').blank?)
+  end
+
+  # A ÚLTIMA TENTATIVA, no encerramento por prazo, por tentativas ou pelo varredor: a lista que ainda vale e não foi
+  # aceita. Não chama o portal, então sai também sem `trabalho_novo`.
+  def closing_deliveries(handle, trabalho_novo: true) # rubocop:disable Lint/UnusedMethodArgument
+    execucao = handle.to_h[EXECUCAO_KEY].to_i
+    lista_vale?(execucao) ? [emitir_lista(handle.to_h, execucao)].compact : []
   end
 
   private
@@ -231,12 +254,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     "#{nome} fez proposta: o preço dela #{onde}."
   end
 
-  # Sem motivo liberado pela regra, o modelo só pode dizer que a seguradora não fez proposta.
-  def sem_proposta(nome, motivo)
-    return "#{nome} não fez proposta nesta cotação. #{SEM_MOTIVO}" if motivo.nil?
-
-    "#{nome} não fez proposta nesta cotação. A seguradora deu este motivo, para você explicar com as suas " \
-      "palavras, sem copiar o texto: \"#{motivo}\""
+  # Sem categoria do motivo, o modelo só pode dizer que a seguradora não fez proposta.
+  def sem_proposta(nome, categoria)
+    "#{nome} não fez proposta nesta cotação. #{MOTIVOS.fetch(categoria, SEM_MOTIVO)}"
   end
 
   def conferencia(motivo, texto)

@@ -6,8 +6,8 @@
 #
 # Uma entrada por código de seguradora, sempre com o nome:
 #   - com preço:    { 'nome', 'desfecho' => 'com_preco', 'premio' => { amount, basis, installments } }
-#   - sem proposta: { 'nome', 'desfecho' => 'sem_proposta' }, mais 'motivo' => { 'kind', 'text' } só
-#                   quando `MotivoDaRecusa.permitido` libera o texto;
+#   - sem proposta: { 'nome', 'desfecho' => 'sem_proposta' }, mais 'motivo' => 'veiculo' ou 'regiao' só quando
+#                   `MotivoDaRecusa.categoria` classifica o motivo; o texto do portal nunca é guardado;
 #   - sem desfecho: { 'nome', 'desfecho' => 'aguardando' }.
 # `auth_required` (credencial da corretora) vira sem proposta e nunca guarda motivo.
 module Autonomia::Insurance::ResultadoPorSeguradora
@@ -57,15 +57,13 @@ module Autonomia::Insurance::ResultadoPorSeguradora
     { 'nome' => nome, 'desfecho' => AGUARDANDO }
   end
 
-  # A entrada sem proposta, com o motivo só quando a oferta não é `auth_required` e a regra libera o texto.
+  # A entrada sem proposta, com a categoria do motivo só quando a oferta não é `auth_required` e a regra classifica.
   def sem_proposta(nome, oferta)
     entrada = { 'nome' => nome, 'desfecho' => SEM_PROPOSTA }
     return entrada if oferta['status'] == CREDENCIAL
 
-    texto = ::Autonomia::Insurance::MotivoDaRecusa.permitido(oferta['reason'])
-    return entrada if texto.nil?
-
-    entrada.merge('motivo' => { 'kind' => ::Autonomia::Insurance::MotivoDaRecusa::KIND_PERMITIDO, 'text' => texto })
+    categoria = ::Autonomia::Insurance::MotivoDaRecusa.categoria(oferta['reason'])
+    categoria ? entrada.merge('motivo' => categoria) : entrada
   end
 
   def desfecho(entrada)

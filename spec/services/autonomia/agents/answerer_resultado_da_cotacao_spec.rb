@@ -47,8 +47,9 @@ RSpec.describe Autonomia::Agents::Answerer do
       'premium' => { 'amount' => amount, 'currency' => 'BRL', 'basis' => 'total' } }
   end
 
+  # Um motivo de risco que o código classifica como do veículo (`Insurance::MotivoDaRecusa`).
   def risco
-    { 'kind' => 'risco', 'text' => 'Risco sem aceitação para este cenário nesta seguradora.' }
+    { 'kind' => 'risco', 'text' => 'Tipo de veículo não aceito.' }
   end
 
   # A cotação da conversa, encerrada (ou no status pedido), com o resultado guardado destas ofertas; `handle`
@@ -168,28 +169,45 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(delivery.runs.map(&:slug)).to eq([slug])
     end
 
-    # O ACEITE É O DA INSTÂNCIA (`Native::Base#aceite`), e não o texto fixo da classe: é por ele que o motivo
-    # de uma seguradora chega ao modelo no mesmo pedido em que outra tem preço a publicar.
-    it 'com preço de uma e motivo de outra: o aceite leva as duas falas, e a execução é aberta' do
+    # O ACEITE É O DA INSTÂNCIA (`Native::Base#aceite`), e não o texto fixo da classe: é por ele que a categoria do
+    # motivo de uma seguradora chega ao modelo no mesmo pedido em que outra tem preço a publicar.
+    it 'com preço de uma e motivo de outra: o aceite leva as duas falas, com a categoria e sem o texto do portal' do
       sancor = { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined', 'reason' => risco }
       cotacao_da_conversa([porto, sancor])
       capturado = modelo(function_call: chamada('Sancor e Porto'))
 
       responder
 
-      expect(saida(capturado)).to include('Porto Seguro fez proposta', 'Sancor não fez proposta nesta cotação.', risco['text'])
+      expect(saida(capturado)).to include('Porto Seguro fez proposta', 'Sancor não fez proposta nesta cotação.',
+                                          ferramenta::MOTIVOS.fetch('veiculo'))
+      expect(saida(capturado)).not_to include(risco['text'])
       expect(saida(capturado)).not_to eq(ferramenta.accepted_message)
       expect(Autonomia::Agents::ToolRun.where(slug: slug).sole.arguments).to eq('seguradora' => 'Sancor e Porto')
     end
 
-    it 'sem preço a mostrar: o modelo recebe o motivo liberado, e nenhuma execução é aberta' do
+    it 'sem preço a mostrar: o modelo recebe a categoria do motivo, nunca o texto do portal, e nenhuma execução é aberta' do
       cotacao_da_conversa([porto, { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined', 'reason' => risco }])
       capturado = modelo(function_call: chamada('Sancor'))
 
       responder
 
-      expect(saida(capturado)).to include('Sancor não fez proposta nesta cotação.', risco['text'])
+      expect(saida(capturado)).to eq("Sancor não fez proposta nesta cotação. #{ferramenta::MOTIVOS.fetch('veiculo')}")
       expect(Autonomia::Agents::ToolRun.where(slug: slug)).to be_empty
+    end
+
+    # A CONTA DA CORRETORA E O DADO DA PESSOA NÃO VIRAM CATEGORIA (decisão do CEO, sétima rodada): pelo caminho real, o
+    # modelo ouve só que a seguradora não fez proposta.
+    it 'motivo com a conta da corretora ou com o dado da pessoa: o modelo ouve só que ela não fez proposta' do
+      ['Senha expirou. Declinando cálculo.', 'Condutor principal com restrição.'].each do |texto|
+        Autonomia::Agents::ToolRun.where(slug: cotacao.slug).delete_all
+        reason = { 'kind' => 'risco', 'text' => texto }
+        cotacao_da_conversa([porto, { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined', 'reason' => reason }])
+        capturado = modelo(function_call: chamada('Sancor'))
+
+        responder
+
+        expect(saida(capturado)).to eq("Sancor não fez proposta nesta cotação. #{ferramenta::SEM_MOTIVO}")
+      end
     end
 
     # A MAIS NOVA É A RECUSA DO `start` (revisão da fatia 2, P3): o modelo não ouve "não ficou guardado, ofereça
@@ -232,9 +250,37 @@ RSpec.describe Autonomia::Agents::Answerer do
       ofertas.map { |oferta| Autonomia::Insurance::QuoteOffers.item(oferta) }.join("\n\n")
     end
 
+    # As três passadas do motor: o `start`, a que publica a lista e a que confere o aceite e encerra.
     def publicar(run)
       job.new.perform(run.id, 0)
       job.new.perform(run.id, 1)
+      job.new.perform(run.id, 2)
+    end
+
+    # O publicador falha ao criar a mensagem (erro de banco) nas publicações desta execução, `vezes` vezes.
+    def publicador_falhando(run, vezes: Float::INFINITY)
+      falhas = 0
+      allow(Messages::MessageBuilder).to receive(:new).and_wrap_original do |original, *args|
+        token = args[2][:content_attributes][Autonomia::Agents::Tools::EntregaPublicada::CHAVE].to_s
+        if token.start_with?("#{run.execution_key}:") && falhas < vezes
+          falhas += 1
+          raise ActiveRecord::StatementInvalid, 'banco fora'
+        end
+        original.call(*args)
+      end
+    end
+
+    # O turno 1 pede a Porto, e a lista dele fica adiada; o turno 2 pede a Allianz. -> [anterior, adiada, nova].
+    def porto_adiada_e_allianz_pedida
+      cotacao_da_conversa([porto, allianz])
+      modelo(function_call: chamada('Porto'), texto: 'A da Porto vem aqui.')
+      turno
+      anterior = exibicoes.sole
+      adiada = lista_adiada(anterior)
+      mensagem_do_cliente('e a Allianz?')
+      modelo(function_call: chamada('Allianz'), texto: 'E a da Allianz também.')
+      turno
+      [anterior, adiada, exibicoes.last]
     end
 
     def mensagem_do_cliente(texto)
@@ -304,9 +350,9 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(mensagens_do_bot.map(&:content)).to eq(['Seguem os preços.', 'Aqui estão os preços.', itens(porto, allianz)])
     end
 
-    # A LISTA ADIADA QUE CHEGA AO TETO ENTRE O DESPACHO E O `poll` DO PEDIDO NOVO (sexta rodada de revisão): ela é
-    # barrada pela execução nova já despachada, que a leva.
-    it 'a lista adiada que chega ao teto antes da leitura do pedido novo não sai, e a nova a leva' do
+    # A LISTA ADIADA QUE CHEGA AO TETO ENTRE O DESPACHO E O `poll` DO PEDIDO NOVO (sexta rodada de revisão; na sétima,
+    # a nova não a barra antes de ter a própria lista aceita): ela sai, e a nova desconta os códigos dela.
+    it 'a lista adiada que chega ao teto antes da leitura do pedido novo sai, e a nova não repete o que ela levou' do
       cotacao_da_conversa([porto, allianz])
       modelo(function_call: chamada, texto: 'Seguem os preços.')
       turno
@@ -385,6 +431,8 @@ RSpec.describe Autonomia::Agents::Answerer do
       turno
       job.new.perform(execucao.id, 0)
       job.new.perform(execucao.id, 1)
+      expect(execucao.reload.status).to eq('running')
+      job.new.perform(execucao.id, 2)
 
       expect(mensagens_do_bot.map(&:content)).to eq(['Aqui estão as opções que chegaram.', itens(porto, allianz)])
       expect(execucao.reload.status).to eq('done')
@@ -438,8 +486,9 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(mensagens_do_bot.map(&:content)).to include(itens(porto))
     end
 
-    # NENHUMA FRASE PRONTA: nem o aviso de espera do turno mudo, nem a frase de falha do prazo.
-    it 'o turno mudo e o prazo esgotado não publicam frase nenhuma da ferramenta' do
+    # NENHUMA FRASE PRONTA: nem o aviso de espera do turno mudo, nem a frase de falha do prazo. A lista que o turno
+    # aceitou sai no encerramento, a última tentativa (decisões 7 e 19 da auditoria).
+    it 'o turno mudo e o prazo esgotado não publicam frase nenhuma da ferramenta, só a lista' do
       cotacao_da_conversa([porto])
       modelo(function_call: chamada, texto: Autonomia::Agents::Operate::Responder::SILENCE_TOKEN)
       turno
@@ -451,7 +500,86 @@ RSpec.describe Autonomia::Agents::Answerer do
       job.new.perform(run.id, 1)
 
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(mensagens_do_bot).to be_empty
+      expect(mensagens_do_bot.map(&:content)).to eq([itens(porto)])
+    end
+
+    # A FALHA DEPOIS DO ACEITE (decisão do CEO, sétima rodada): a lista anterior só conta como levada depois de a nova ser
+    # aceita, a falha passageira tenta de novo pelas tentativas do motor, e uma falha nunca perde as duas.
+    describe 'a falha na publicação da lista nova' do
+      it 'uma falha passageira: a tentativa seguinte publica a lista com as duas, e a anterior não sai de novo' do
+        anterior, adiada, nova = porto_adiada_e_allianz_pedida
+        publicador_falhando(nova, vezes: 1)
+
+        job.new.perform(nova.id, 0)
+        job.new.perform(nova.id, 1)
+        expect(nova.reload.handle.dig(ferramenta::LISTA_KEY, 'levadas')).to eq([anterior.id])
+        expect(ferramenta.publicacao_vale?(anterior)).to be(true)
+        job.new.perform(nova.id, 2)
+        publicar_no_teto(anterior, adiada)
+        job.new.perform(nova.id, 3)
+
+        expect(nova.reload.status).to eq('done')
+        expect(mensagens_do_bot.map(&:content)).to eq(['A da Porto vem aqui.', 'E a da Allianz também.', itens(porto, allianz)])
+      end
+
+      it 'a anterior chega ao teto enquanto a nova não foi aceita: ela sai, e a nova sai sem repetir a Porto' do
+        anterior, adiada, nova = porto_adiada_e_allianz_pedida
+        publicador_falhando(nova, vezes: 1)
+
+        job.new.perform(nova.id, 0)
+        job.new.perform(nova.id, 1)
+        publicar_no_teto(anterior, adiada)
+        job.new.perform(nova.id, 2)
+        job.new.perform(nova.id, 3)
+
+        expect(nova.reload.status).to eq('done')
+        expect(mensagens_do_bot.map(&:content)).to eq(['A da Porto vem aqui.', 'E a da Allianz também.', itens(porto), itens(allianz)])
+      end
+
+      # O RESÍDUO DECLARADO: a lista nova recusada em todas as tentativas e no encerramento não sai; a anterior, que ela
+      # não chegou a levar, ainda sai.
+      it 'a falha até o prazo e no encerramento: a nova não sai, e a anterior ainda sai' do
+        anterior, adiada, nova = porto_adiada_e_allianz_pedida
+        publicador_falhando(nova)
+
+        job.new.perform(nova.id, 0)
+        job.new.perform(nova.id, 1)
+        nova.update!(expires_at: 1.minute.ago)
+        job.new.perform(nova.id, 2)
+        publicar_no_teto(anterior, adiada)
+
+        expect(nova.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+        expect(mensagens_do_bot.map(&:content)).to eq(['A da Porto vem aqui.', 'E a da Allianz também.', itens(porto)])
+      end
+
+      # A COTAÇÃO NOVA: o silêncio é o certo, e quem fala é o turno que a abriu. Nem a lista nova, nem a anterior adiada,
+      # nem frase de falha.
+      it 'com a cotação lida substituída por uma mais nova, nenhuma das duas listas sai e nenhuma frase sai' do
+        anterior, adiada, nova = porto_adiada_e_allianz_pedida
+        job.new.perform(nova.id, 0)
+        cotacao_da_conversa([allianz], status: 'running', criada: 1.second.from_now)
+
+        job.new.perform(nova.id, 1)
+        publicar_no_teto(anterior, adiada)
+
+        expect(nova.reload).to have_attributes(status: 'done', delivered_count: 0)
+        expect(mensagens_do_bot.map(&:content)).to eq(['A da Porto vem aqui.', 'E a da Allianz também.'])
+      end
+
+      # A CORRENTE DE JOBS ROMPIDA: o varredor encerra a execução e publica a lista pela mesma última tentativa.
+      it 'a corrente de jobs rompida: o varredor publica a lista, sem frase' do
+        cotacao_da_conversa([porto])
+        modelo(function_call: chamada, texto: 'Segue o preço.')
+        turno
+        run = execucao
+        job.new.perform(run.id, 0)
+        run.update!(expires_at: 10.minutes.ago)
+
+        Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
+
+        expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
+        expect(mensagens_do_bot.map(&:content)).to eq(['Segue o preço.', itens(porto)])
+      end
     end
   end
 end

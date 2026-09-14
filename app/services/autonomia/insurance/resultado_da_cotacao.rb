@@ -105,9 +105,11 @@ class Autonomia::Insurance::ResultadoDaCotacao
     guardado == Guardado::AGUARDANDO && !correndo? ? Guardado::SEM_PROPOSTA : guardado
   end
 
-  # -> o texto do portal que pode orientar a fala, com a regra aplicada de novo na leitura; nil sem motivo.
+  # -> a categoria do motivo guardada (`MotivoDaRecusa::CATEGORIAS`), ou nil. O que foi guardado fora dessas
+  # categorias não conta como motivo.
   def motivo(codigo)
-    ::Autonomia::Insurance::MotivoDaRecusa.permitido(entrada(codigo)['motivo'])
+    guardado = entrada(codigo)['motivo']
+    ::Autonomia::Insurance::MotivoDaRecusa::CATEGORIAS.key?(guardado) ? guardado : nil
   end
 
   # -> os códigos das seguradoras que `consulta` nomeia, primeiro as do passo 2 e depois as do passo 3:

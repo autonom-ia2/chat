@@ -396,6 +396,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
           job.new.perform(exibicao.id, 0)
           job.new.perform(exibicao.id, 1)
+          job.new.perform(exibicao.id, 2)
 
           expect(palavras_do_bot).to eq([Autonomia::Insurance::QuoteOffers.item(offer('43', 'Ezze', 2050.40))])
           expect(exibicao.reload.status).to eq('done')
@@ -422,6 +423,35 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           expect(palavras_do_bot.first.scan('*Ezze*').size).to eq(1)
         end
       end
+    end
+
+    # A LISTA QUE O PUBLICADOR RECUSOU ATÉ O PRAZO (decisão do CEO, sétima rodada): a fala da Lia prometeu a lista, e
+    # ela sai na última tentativa, a do encerramento, sem frase pronta. Uma vez só.
+    it 'a lista da Lia recusada pelo publicador ate o prazo sai no encerramento, uma vez e sem frase' do
+      fonte = cotacao_viva('nó vazio')
+      fonte.record_attempt!(handle: { described_class::RESULTADO_KEY =>
+                                        Autonomia::Insurance::ResultadoPorSeguradora.unir({}, [offer('43', 'Ezze', 2050.40)]) })
+      fonte.finish!('done')
+      register_async_tool(resultado)
+      exibicao = Autonomia::Agents::ToolRun.open!(agent: agent, slug: resultado.slug, arguments: { 'seguradora' => nil },
+                                                  scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+      exibicao.promote!(expected_chunks: 0, notify_customer: true, expires_at: 5.minutes.from_now)
+      recusas = 0
+      allow(Messages::MessageBuilder).to receive(:new).and_wrap_original do |original, *args|
+        raise ActiveRecord::StatementInvalid, 'banco fora' if (recusas += 1) <= 2
+
+        original.call(*args)
+      end
+
+      job.new.perform(exibicao.id, 0)
+      job.new.perform(exibicao.id, 1)
+      job.new.perform(exibicao.id, 2)
+      expect(palavras_do_bot).to be_empty
+      exibicao.update!(expires_at: 1.minute.ago)
+      job.new.perform(exibicao.id, 3)
+
+      expect(exibicao.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+      expect(palavras_do_bot).to eq([Autonomia::Insurance::QuoteOffers.item(offer('43', 'Ezze', 2050.40))])
     end
 
     # SEM PREÇO A PUBLICAR, QUEM FALA É A LIA, e ela recebe um texto em todo estado.

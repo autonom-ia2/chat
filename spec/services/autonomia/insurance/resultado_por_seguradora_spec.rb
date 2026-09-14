@@ -2,13 +2,12 @@ require 'rails_helper'
 
 # AS DEZESSETE SEGURADORAS DE UMA COTAÇÃO REAL, na forma que o `Connector::Http` entrega (dados sintéticos:
 # os nomes são os das seguradoras que o portal lista; valores e textos são inventados). Onze cotam com
-# parcelamento, seis recusam com o texto de risco mais longo medido no conector (134 caracteres).
+# parcelamento, seis recusam pela idade do veículo (um texto do corpus do conector, que sai com categoria).
 module DezesseteSeguradoras
   COTAM = { '50' => 'Pier', '55' => 'Bp Assinatura', '44' => 'Usebens', '8' => 'Porto Seguro', '20' => 'Suhai',
             '11' => 'Tokio', '47' => 'Justos', '3' => 'Mapfre', '5' => 'Allianz', '26' => 'Ituran', '56' => 'Azul' }.freeze
   RECUSAM = { '48' => 'Bp', '46' => 'Darwin', '1' => 'Bradesco', '4' => 'Hdi', '19' => 'Sancor', '7' => 'Zurich' }.freeze
-  RISCO_LONGO = 'Após análise dos dados do veículo, região de circulação e critérios internos de aceitação, ' \
-                'estamos declinando o risco deste orçamento.'.freeze
+  RISCO_DO_VEICULO = 'Cotação não será realizada por motivos técnicos: Veículo acima da idade permitida'.freeze
 
   module_function
 
@@ -21,7 +20,7 @@ module DezesseteSeguradoras
     end
     recusam = RECUSAM.map do |code, name|
       { 'insurer' => { 'code' => code, 'name' => name }, 'status' => 'declined',
-        'reason' => { 'kind' => 'risco', 'text' => RISCO_LONGO } }
+        'reason' => { 'kind' => 'risco', 'text' => RISCO_DO_VEICULO } }
     end
     cotam + recusam
   end
@@ -43,7 +42,7 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
     { 'insurer' => { 'code' => code, 'name' => name }, 'status' => 'running' }
   end
 
-  let(:risco) { { 'kind' => 'risco', 'text' => 'Risco sem aceitação para este cenário nesta seguradora.' } }
+  let(:risco) { { 'kind' => 'risco', 'text' => 'Tipo de veículo não aceito.' } }
 
   describe 'uma leitura' do
     it 'guarda nome e prêmio de quem cotou, só com os campos que o item de preço usa' do
@@ -54,10 +53,11 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
                                                     'installments' => { 'count' => 10, 'amount' => 211.92 } } })
     end
 
-    it 'guarda sem proposta com o motivo quando a regra libera o texto' do
+    it 'guarda sem proposta com a categoria do motivo, e nunca o texto do portal' do
       guardado = described_class.unir({}, [recusou('19', 'Sancor', reason: risco)])
 
-      expect(guardado['19']).to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta', 'motivo' => risco)
+      expect(guardado['19']).to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta', 'motivo' => 'veiculo')
+      expect(guardado.to_json).not_to include(risco['text'])
     end
 
     it 'guarda sem proposta e sem motivo quando o kind não é risco' do
@@ -81,9 +81,21 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
       expect(guardado.to_json).not_to include('auth_required', 'risco', risco['text'])
     end
 
-    it 'error sem preço é sem proposta, com o motivo liberado' do
+    it 'error sem preço é sem proposta, com a categoria do motivo' do
       expect(described_class.unir({}, [recusou('9', 'Ezze', status: 'error', reason: risco)])['9'])
-        .to include('desfecho' => 'sem_proposta', 'motivo' => risco)
+        .to include('desfecho' => 'sem_proposta', 'motivo' => 'veiculo')
+    end
+
+    # NENHUM TEXTO DO PORTAL NO BANCO: o corpus do conector, no status e no kind que o conector dá, e os das revisões.
+    it 'não guarda texto do portal de nenhuma mensagem do corpus nem das revisões' do
+      revisoes = (TextosDoMotivo::CONTA + TextosDoMotivo::PESSOA + TextosDoMotivo::REVISOES).map { |texto| [texto, 'risco', 'declined'] }
+      linhas = TextosDoMotivo::CORPUS.map { |linha| linha.first(3) } + revisoes
+      ofertas = linhas.each_with_index.map do |(texto, kind, status), i|
+        recusou(i.to_s, "Seguradora #{i}", status: status, reason: { 'kind' => kind, 'text' => texto })
+      end
+      guardado = described_class.unir({}, ofertas).to_json
+
+      expect(linhas.map(&:first).select { |texto| guardado.include?(texto) }).to be_empty
     end
 
     it 'seguradora sem desfecho e quoted sem valor ficam aguardando' do
@@ -155,22 +167,20 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
 
   # O TAMANHO NO HANDLE, medido: dezessete seguradoras numa chave jsonb regravada a cada passada.
   describe 'o tamanho com 17 seguradoras' do
-    it 'onze com preço e seis recusas com o motivo mais longo medido cabem em 3 KB' do
+    it 'onze com preço e seis recusas com a categoria do motivo cabem em 3 KB' do
       guardado = described_class.unir({}, DezesseteSeguradoras.ofertas)
 
       expect(guardado.size).to eq(17)
       expect(guardado.to_json.bytesize).to be <= 3_000
     end
 
-    # O texto do teto é feito de palavras do vocabulário da regra (a quarta rodada exige), com acento: 7.072 bytes.
-    it 'dezessete recusas com o motivo no teto de 300 caracteres cabem em 8 KB' do
-      teto = { 'kind' => 'risco', 'text' => "Declinando o risco#{' do veículo' * 25}#{' do' * 2}." }
-      ofertas = (1..17).map { |i| recusou(i.to_s, "Seguradora #{i}", reason: teto) }
+    # Guarda-se a categoria, e não o texto: o pior caso das recusas é o de dezessete com categoria.
+    it 'dezessete recusas com a categoria do motivo cabem em 2 KB' do
+      ofertas = (1..17).map { |i| recusou(i.to_s, "Seguradora #{i}", reason: risco) }
       guardado = described_class.unir({}, ofertas)
 
-      expect(teto['text'].length).to eq(Autonomia::Insurance::MotivoDaRecusa::TETO_DO_TEXTO)
-      expect(guardado.values).to all(include('motivo' => teto))
-      expect(guardado.to_json.bytesize).to be <= 8_000
+      expect(guardado.values).to all(include('motivo' => 'veiculo'))
+      expect(guardado.to_json.bytesize).to be <= 2_000
     end
   end
 end

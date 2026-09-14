@@ -17,7 +17,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   let(:params) { { 'cpf' => '111.444.777-35', 'cep' => '01001-000', 'vehicle' => { 'plate' => 'ABC1D23' } } }
   let(:tool) { described_class.new(agent: agent, params: params, run: run) }
   let(:chave) { described_class::RESULTADO_KEY }
-  let(:risco) { { 'kind' => 'risco', 'text' => 'Risco sem aceitação para este cenário nesta seguradora.' } }
+  let(:risco) { { 'kind' => 'risco', 'text' => 'Tipo de veículo não aceito.' } }
   let(:connector) do
     instance_double(Autonomia::Insurance::Connector::Mock,
                     quote_validate: { 'valido' => true, 'problemas' => [] },
@@ -59,7 +59,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(primeira.handle[chave].transform_values { |e| e['desfecho'] }).to eq('8' => 'com_preco', '47' => 'aguardando')
       expect(segunda.handle[chave]).to eq(
         '8' => { 'nome' => 'Seguradora 8', 'desfecho' => 'com_preco', 'premio' => { 'amount' => 2119.18, 'basis' => 'total' } },
-        '47' => { 'nome' => 'Seguradora 47', 'desfecho' => 'sem_proposta', 'motivo' => risco },
+        '47' => { 'nome' => 'Seguradora 47', 'desfecho' => 'sem_proposta', 'motivo' => 'veiculo' },
         '11' => { 'nome' => 'Seguradora 11', 'desfecho' => 'sem_proposta' }
       )
     end

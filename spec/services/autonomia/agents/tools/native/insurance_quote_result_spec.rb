@@ -14,7 +14,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   let(:delivery) { Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil, origin_message_id: 90) }
   let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
   let(:guardar) { Autonomia::Insurance::ResultadoPorSeguradora }
-  let(:risco) { { 'kind' => 'risco', 'text' => 'Risco sem aceitação para este cenário nesta seguradora.' } }
+  let(:risco) { { 'kind' => 'risco', 'text' => 'Tipo de veículo não aceito.' } }
 
   around { |example| with_modified_env(INSURANCE_QUOTING_ENABLED: 'true') { example.run } }
 
@@ -114,12 +114,37 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(no_turno.precheck.to_s).to eq(described_class::SEM_PRECO)
     end
 
-    it 'seguradora sem proposta com o motivo que a regra libera: o nome e o texto do portal' do
+    it 'seguradora sem proposta com o motivo classificado: o nome e a categoria, nunca o texto do portal' do
       cotacao_com(status: 'done')
 
       texto = no_turno('Sancor').precheck.to_s
 
-      expect(texto).to include('Sancor não fez proposta nesta cotação.', risco['text'])
+      expect(texto).to eq("Sancor não fez proposta nesta cotação. #{described_class::MOTIVOS.fetch('veiculo')}")
+      expect(texto).not_to include(risco['text'])
+    end
+
+    it 'seguradora recusada pela região: a categoria da região' do
+      cotacao_com(status: 'done', ofertas: [recusou('19', 'Sancor', reason: { 'kind' => 'risco', 'text' => 'CEP sem aceitação.' })])
+
+      expect(no_turno('Sancor').precheck.to_s).to eq("Sancor não fez proposta nesta cotação. #{described_class::MOTIVOS.fetch('regiao')}")
+    end
+
+    # NENHUM TEXTO DO PORTAL CHEGA AO MODELO (decisão do CEO, sétima rodada): o corpus do conector, no kind e no status
+    # que o conector dá, e os textos das revisões. O modelo lê uma de três falas fechadas; a conta e a pessoa, o genérico.
+    it 'o modelo nunca recebe texto do portal, em nenhuma mensagem do corpus nem das revisões' do
+      genericos = TextosDoMotivo::CONTA + TextosDoMotivo::PESSOA + TextosDoMotivo::REVISOES
+      linhas = TextosDoMotivo::CORPUS.map { |linha| linha.first(3) } + genericos.map { |texto| [texto, 'risco', 'declined'] }
+      cotacao_com(status: 'done', ofertas: linhas.each_with_index.map do |(texto, kind, status), i|
+        recusou(i.to_s, "Seguradora #{i}", status: status, reason: { 'kind' => kind, 'text' => texto })
+      end)
+
+      falas = linhas.each_index.map do |i|
+        no_turno("Seguradora #{i}").precheck.to_s.delete_prefix("Seguradora #{i} não fez proposta nesta cotação. ")
+      end
+
+      expect(falas.uniq - [described_class::SEM_MOTIVO, *described_class::MOTIVOS.values]).to be_empty
+      expect(linhas.each_with_index.select { |(texto, _, _), i| falas[i].include?(texto) }).to be_empty
+      expect(falas.last(genericos.size)).to all(eq(described_class::SEM_MOTIVO))
     end
 
     # CREDENCIAL DA CORRETORA: o modelo recebe só que a seguradora não fez proposta.
@@ -132,15 +157,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(texto.downcase).not_to match(/login|senha|permiss|credencia|acesso|corretor|risco sem/)
     end
 
-    # A REGRA É APLICADA DE NOVO NA LEITURA: um motivo guardado por uma regra mais frouxa não passa.
-    it 'motivo guardado com termo de conta não chega ao modelo' do
-      entrada = { 'nome' => 'Sancor', 'desfecho' => 'sem_proposta',
-                  'motivo' => { 'kind' => 'risco', 'text' => 'Senha expirou. Declinando cálculo.' } }
-      cotacao_com(status: 'done', guardado: false, handle: { cotacao::RESULTADO_KEY => { '19' => entrada } })
+    # A LEITURA SÓ ACEITA AS CATEGORIAS: um motivo guardado em outra forma (texto, ou uma categoria que não existe) não
+    # chega ao modelo.
+    it 'motivo guardado fora das categorias não chega ao modelo' do
+      ['conta', { 'kind' => 'risco', 'text' => 'Senha expirou. Declinando cálculo.' }].each do |guardado|
+        entrada = { 'nome' => 'Sancor', 'desfecho' => 'sem_proposta', 'motivo' => guardado }
+        Autonomia::Agents::ToolRun.where(slug: cotacao.slug).delete_all
+        cotacao_com(status: 'done', guardado: false, handle: { cotacao::RESULTADO_KEY => { '19' => entrada } })
 
-      texto = no_turno('sancor').precheck.to_s
-
-      expect(texto).to eq("Sancor não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}")
+        expect(Autonomia::Insurance::ResultadoDaCotacao.da_conversa(conversation.id).motivo('19')).to be_nil
+        expect(no_turno('sancor').precheck.to_s).to eq("Sancor não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}")
+      end
     end
 
     it 'seguradora ainda sem desfecho: ainda não respondeu enquanto corre; não fez proposta depois de encerrada' do
@@ -196,7 +223,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       ferramenta = no_turno('Sancor e Porto')
 
       expect(ferramenta.precheck).to be_nil
-      expect(ferramenta.aceite).to include('Porto Seguro fez proposta', 'Sancor não fez proposta nesta cotação.', risco['text'])
+      expect(ferramenta.aceite).to include('Porto Seguro fez proposta', 'Sancor não fez proposta nesta cotação.',
+                                           described_class::MOTIVOS.fetch('veiculo'))
+      expect(ferramenta.aceite).not_to include(risco['text'])
       expect(ferramenta.start[described_class::CODIGOS_KEY]).to eq(['8'])
     end
   end
@@ -249,7 +278,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       described_class.new(agent: agent, params: execucao.arguments, run: execucao)
     end
 
-    it 'publica os itens escritos por QuoteOffers.item, na ordem da lista de preços' do
+    it 'publica os itens escritos por QuoteOffers.item, na ordem da lista de preços, e pede a consulta seguinte logo' do
       cotacao_com(status: 'done')
       handle = no_motor.start
 
@@ -258,8 +287,53 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       itens = [cotou('8', 'Porto Seguro', 2119.18), cotou('5', 'Allianz', 2402.55)].map do |oferta|
         Autonomia::Insurance::QuoteOffers.item(oferta)
       end
-      expect(progresso).to be_done
+      expect(progresso).to be_running
+      expect(progresso.confirmar_logo?).to be(true)
       expect(progresso.deliveries).to eq([itens.join("\n\n")])
+    end
+
+    # A LISTA SAI ATÉ SER ACEITA (decisão do CEO, sétima rodada): a passada seguinte encerra só com o aceite gravado ou
+    # com a mensagem da lista na conversa; sem nenhum dos dois, a lista sai de novo, no intervalo da tentativa.
+    it 'a passada seguinte encerra com a lista aceita ou já publicada, e publica de novo sem nenhum dos dois' do
+      cotacao_com(status: 'done')
+      execucao.update!(handle: no_motor.start)
+      lista = no_motor.poll(handle: execucao.handle, attempt: 1).deliveries.first
+      token = execucao.reload.handle.dig(described_class::LISTA_KEY, 'token')
+
+      expect(token).to eq(Autonomia::Agents::Tools::EntregaPublicada.token_de(execucao, lista))
+      de_novo = no_motor.poll(handle: execucao.handle, attempt: 2)
+      expect(de_novo).to have_attributes(running?: true, deliveries: [lista], confirmar_logo?: false)
+
+      execucao.registrar_entrega_aceita!(token)
+      expect(no_motor.poll(handle: execucao.handle, attempt: 3)).to have_attributes(done?: true, deliveries: [])
+    end
+
+    it 'com a mensagem da lista na conversa e o aceite não gravado, a passada seguinte encerra' do
+      cotacao_com(status: 'done')
+      execucao.update!(handle: no_motor.start)
+      no_motor.poll(handle: execucao.handle, attempt: 1)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                       sender: create(:agent_bot, account: account), content: 'lista',
+                       content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE =>
+                                               execucao.reload.handle.dig(described_class::LISTA_KEY, 'token') })
+
+      expect(no_motor.poll(handle: execucao.handle, attempt: 2)).to have_attributes(done?: true, deliveries: [])
+    end
+
+    # A ÚLTIMA TENTATIVA, NO ENCERRAMENTO: a lista que ainda vale; nada depois do aceite ou com a cotação trocada.
+    it 'closing_deliveries entrega a lista que ainda vale e não foi aceita' do
+      cotacao_com(status: 'done', criada: 5.minutes.ago)
+      execucao.update!(handle: no_motor.start)
+
+      lista = no_motor.closing_deliveries(execucao.handle, trabalho_novo: false)
+      expect(lista).to eq(no_motor.poll(handle: execucao.handle, attempt: 1).deliveries)
+
+      execucao.registrar_entrega_aceita!(execucao.reload.handle.dig(described_class::LISTA_KEY, 'token'))
+      expect(no_motor.closing_deliveries(execucao.handle)).to eq([])
+
+      Autonomia::Agents::ToolRun.where(slug: described_class.slug).update_all(handle: execucao.handle.except(described_class::LISTA_KEY)) # rubocop:disable Rails/SkipsModelValidations
+      cotacao_com(status: 'running', ofertas: [cotou('3', 'Mapfre', 1999.0)], criada: 1.second.from_now)
+      expect(no_motor.closing_deliveries(execucao.reload.handle)).to eq([])
     end
 
     it 'publica só os itens da seguradora perguntada' do
@@ -386,48 +460,89 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(publicado_por(atual)).to eq(itens(allianz))
     end
 
-    it 'não leva a anterior sobre outra cotação, nem a falhada, a descartada ou a barrada' do
+    it 'leva a anterior que falhou; não leva a de outra cotação, a descartada nem a barrada' do
       exibicao(status: 'superseded', codigos: ['8'], cotacao_lida: fonte.id + 1000)
-      %w[failed discarded blocked].each { |status| exibicao(status: status, codigos: ['8']) }
+      %w[discarded blocked].each { |status| exibicao(status: status, codigos: ['8']) }
       atual = exibicao(status: 'running', codigos: ['5'])
-
       expect(publicado_por(atual)).to eq(itens(allianz))
+
+      Autonomia::Agents::ToolRun.where(slug: described_class.slug).delete_all
+      exibicao(status: 'failed', codigos: ['8'])
+      atual = exibicao(status: 'running', codigos: ['5'])
+      expect(publicado_por(atual)).to eq(itens(porto, allianz))
     end
 
     it 'segue lendo depois das que não leva' do
       exibicao(status: 'done', codigos: ['8'])
-      exibicao(status: 'failed', codigos: ['5'])
+      exibicao(status: 'discarded', codigos: ['5'])
       atual = exibicao(status: 'running', codigos: ['5'])
 
       expect(publicado_por(atual)).to eq(itens(porto, allianz))
     end
 
-    # A LISTA SEM MENSAGEM NÃO SAI DEPOIS QUE A MAIS NOVA É DESPACHADA (terceira e sexta rodadas de revisão): a mais
-    # nova a leva no `poll`, e grava que a levou.
-    it 'a lista sem mensagem não sai depois que uma mais nova sobre a mesma cotação é despachada' do
+    # A LISTA ANTERIOR SÓ CONTA COMO LEVADA DEPOIS DE A NOVA SER ACEITA (decisão do CEO, sétima rodada): antes, uma falha
+    # na publicação da nova perderia as duas.
+    it 'a lista levada só barra a anterior depois de a nova ser aceita ou publicada' do
       anterior = exibicao(status: 'done', codigos: ['8'])
-      mais_nova = exibicao(status: 'pending', codigos: ['5'])
-      expect(described_class.publicacao_vale?(anterior)).to be(true)
-
-      mais_nova.update!(status: 'running')
-      expect(described_class.publicacao_vale?(anterior)).to be(false)
+      mais_nova = exibicao(status: 'running', codigos: ['5'])
 
       publicado_por(mais_nova)
-      expect(mais_nova.reload.handle[described_class::ABSORVIDAS_KEY]).to eq([anterior.id])
+      lista = mais_nova.reload.handle[described_class::LISTA_KEY]
+      expect(lista).to include('codigos' => %w[8 5], 'levadas' => [anterior.id])
+      expect(described_class.publicacao_vale?(anterior)).to be(true)
+
+      mais_nova.registrar_entrega_aceita!(lista['token'])
+      expect(described_class.publicacao_vale?(anterior)).to be(false)
+    end
+
+    it 'a lista levada pela nova que já é mensagem barra a anterior, mesmo sem o aceite gravado' do
+      anterior = exibicao(status: 'done', codigos: ['8'])
+      mais_nova = exibicao(status: 'running', codigos: ['5'])
+      publicado_por(mais_nova)
+
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                       sender: create(:agent_bot, account: account), content: 'lista',
+                       content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE =>
+                                               mais_nova.reload.handle.dig(described_class::LISTA_KEY, 'token') })
+
       expect(described_class.publicacao_vale?(anterior)).to be(false)
     end
 
     # A LISTA LEVADA POR UMA QUE NÃO PUBLICOU (sexta rodada de revisão): o varredor abandonou o envio pendente de A depois
-    # de B levá-la (a marca sai, e A parece entregue), e a lista de B não saiu. C leva A também.
-    it 'leva também as listas que as anteriores já tinham levado' do
+    # de B levá-la (a marca sai, e A parece entregue), e a lista de B não saiu. C leva a lista inteira de B, com A.
+    it 'leva a lista inteira da anterior, com o que ela já tinha levado' do
       a = exibicao(status: 'done', codigos: ['8'], sequence: 1)
       lista_da(a, pendente: false)
       b = exibicao(status: 'done', codigos: ['5'])
-      b.update!(handle: b.handle.merge(described_class::ABSORVIDAS_KEY => [a.id]))
+      b.update!(handle: b.handle.merge(described_class::LISTA_KEY => { 'codigos' => %w[5 8], 'levadas' => [a.id], 'token' => 'b' }))
       c = exibicao(status: 'running', codigos: ['5'])
 
       expect(publicado_por(c)).to eq(itens(porto, allianz))
-      expect(c.reload.handle[described_class::ABSORVIDAS_KEY]).to contain_exactly(b.id, a.id)
+      expect(c.reload.handle.dig(described_class::LISTA_KEY, 'levadas')).to eq([b.id])
+    end
+
+    # A LISTA ANTERIOR QUE VIROU MENSAGEM DEPOIS DE ESTA ABRIR (a publicação adiada que chegou ao teto antes da leitura
+    # desta): o cliente a recebeu depois de pedir de novo, e ela é descontada desta.
+    it 'desconta os códigos da anterior entregue depois de esta abrir, e encerra quando não sobra nada' do
+      anterior = exibicao(status: 'done', codigos: ['8'], sequence: 1)
+      atual = exibicao(status: 'running', codigos: %w[8 5])
+      atual.update_columns(created_at: 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
+      lista_da(anterior, pendente: false)
+      expect(publicado_por(atual.reload)).to eq(itens(allianz))
+
+      atual.update_columns(status: 'discarded') # rubocop:disable Rails/SkipsModelValidations
+      so_porto = exibicao(status: 'running', codigos: ['8'])
+      so_porto.update_columns(created_at: 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
+      expect(described_class.new(agent: agent, params: {}, run: so_porto.reload).poll(handle: so_porto.handle, attempt: 1)).to be_done
+    end
+
+    it 'não desconta a anterior entregue antes de esta abrir: a leitura para nela' do
+      anterior = exibicao(status: 'done', codigos: ['8'], sequence: 1)
+      lista_da(anterior, pendente: false)
+      Message.where(conversation_id: conversation.id).update_all(created_at: 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
+      atual = exibicao(status: 'running', codigos: %w[8 5])
+
+      expect(publicado_por(atual)).to eq(itens(porto, allianz))
     end
 
     it 'a mais nova que não levou a lista, sobre outra cotação, não barra' do
@@ -439,12 +554,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(described_class.publicacao_vale?(anterior)).to be(true)
     end
 
-    it 'a lista que já virou mensagem continua valendo com uma mais nova despachada' do
-      anterior = exibicao(status: 'done', codigos: ['8'], sequence: 1)
-      lista_da(anterior, pendente: false)
+    it 'a lista sem mensagem continua valendo com uma mais nova despachada que ainda não publicou' do
+      anterior = exibicao(status: 'done', codigos: ['8'])
       exibicao(status: 'running', codigos: ['5'])
 
-      expect(described_class.lista_entregue?(anterior)).to be(true)
+      expect(described_class.lista_entregue?(anterior)).to be(false)
       expect(described_class.publicacao_vale?(anterior)).to be(true)
     end
 
@@ -463,14 +577,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
 
     # A LISTA COM PENDÊNCIA DE ENVIO (quarta rodada de revisão): está no banco e o cliente não a recebeu. Ela entra na
     # lista da mais nova, e a retomada do envio dela é barrada.
-    it 'a lista com pendência de envio não é entregue: a retomada vale até a mais nova a levar, e não depois' do
+    it 'a lista com pendência de envio não é entregue: a retomada vale até a lista que a leva ser aceita' do
       anterior = exibicao(status: 'done', codigos: ['8'], sequence: 1)
       lista_da(anterior, pendente: true)
       atual = exibicao(status: 'running', codigos: ['5'])
 
       expect(described_class.lista_entregue?(anterior)).to be(false)
-      expect(described_class.publicacao_vale?(anterior)).to be(true)
       expect(publicado_por(atual)).to eq(itens(porto, allianz))
+      expect(described_class.publicacao_vale?(anterior)).to be(true)
+
+      atual.registrar_entrega_aceita!(atual.reload.handle.dig(described_class::LISTA_KEY, 'token'))
       expect(described_class.publicacao_vale?(anterior)).to be(false)
     end
   end
