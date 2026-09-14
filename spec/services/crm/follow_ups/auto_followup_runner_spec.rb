@@ -332,6 +332,19 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
       expect(follow_up.reload).to be_canceled
     end
 
+    it 'catches a reply that commits after the initial post-AI check' do
+      follow_up = reminder_setup
+      runner = described_class.new(follow_up: follow_up, now: now)
+      allow(runner).to receive(:persist_decision).and_wrap_original do |method, payload|
+        method.call(payload)
+        travel 1.second
+        create_incoming_message(conversation: follow_up.conversation)
+      end
+      expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+      expect(runner.perform.status).to eq(:stopped)
+      expect(follow_up.reload.description).to be_blank
+    end
+
     it 'stops if the customer replies while AI is evaluating' do
       follow_up = reminder_setup
       during_composition do

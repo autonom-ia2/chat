@@ -66,3 +66,11 @@ Nenhuma correção de produto foi feita nesta rodada; apenas relatório e evidê
 - Os cenários de regressão foram incorporados aos specs, incluindo resposta, opt-out, desligamento global/funil, ambos sentidos de troca de modo e cancelamento durante avaliação. Composer simulado; nenhum envio real.
 - Validação: suíte afetada com 135 exemplos, zero falhas e 3 quarentenas preexistentes; após adicionar a preservação de cancelamento, runner/due_processor reexecutados com 36 exemplos, zero falhas. UI: 12 testes aprovados. RuboCop: 5 arquivos sem infrações. Navegador: desligamento legado persistido como false, frações bloqueadas, QA desktop/mobile em pt_BR aprovado.
 - Revisor independente acionado novamente; resultado ainda não incorporado nesta entrada.
+
+### Ajuste após retorno do revisor
+
+A fase final agora segura locks de card e pipeline após a IA, na ordem follow-up → card → pipeline. Encerramento e edição de configuração esperam o término da aceitação da decisão; alterações concluídas antes dessa fase são relidas. Uma consulta adicional de resposta do cliente ocorre após a escrita de auditoria, imediatamente antes da aceitação do efeito.
+
+Provas concorrentes locais com conexões PostgreSQL separadas confirmaram `wait_event_type=Lock`: 1 caso de cancelamento do follow-up e 2 casos da fase final (card/pipeline), todos aprovados. O teste com resposta durante a escrita de auditoria também passa; runner/due_processor: 37 exemplos, zero falhas. O revisor retirou a alegação de cancelamento efetivado sendo sobrescrito, pois UPDATE adquire o row lock implicitamente.
+
+Limite temporal: a última verificação é o ponto de aceitação da ação. Uma mensagem que chegue depois desse ponto pode coincidir com uma ação já aceita; não há promessa de recolher mensagem já enfileirada/enviada. Os locks de card/pipeline não bloqueiam ingestão de mensagens. Não foi introduzido bloqueio global de mensagens nem alterado o fluxo de entrada.

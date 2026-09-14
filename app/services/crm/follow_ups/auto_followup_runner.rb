@@ -86,12 +86,7 @@ module Crm
         @send_mode = delivery_mode
         @candidates = @send_mode == :choose_template ? template_candidates : []
         composition = compose
-        refreshed_result = recheck_after_composition
-        return refreshed_result if refreshed_result
-
-        persist_decision(composition)
-
-        apply_composition(composition)
+        apply_current_composition(composition)
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         # Compose failure is not a delivery failure: keep the cadence intact and
         # let the next due sweep retry. Routed through fail_touch so it shares the
@@ -101,8 +96,22 @@ module Crm
 
       private
 
-      # DueProcessor holds the follow-up row lock throughout execution. Re-read
-      # related rows after the slow AI call instead of acting on its old snapshot.
+      # Lock only the final database phase, not the slow AI call. This serializes
+      # closing the card / editing the schedule against accepting this decision.
+      # DueProcessor already holds the follow-up lock: follow-up -> card -> pipeline.
+      def apply_current_composition(composition)
+        @card.with_lock do
+          @card.pipeline.with_lock do
+            refreshed_result = recheck_after_composition
+            next refreshed_result if refreshed_result
+
+            persist_decision(composition)
+            apply_composition(composition)
+          end
+        end
+      end
+
+      # Re-read related rows after the slow AI call instead of using its snapshot.
       def recheck_after_composition
         @follow_up.reload
         return Result.new(status: :unchanged, follow_up: @follow_up) unless @follow_up.pending?
@@ -130,6 +139,9 @@ module Crm
         no_send = no_send_reason(composition)
         return skip(no_send) if no_send.present?
 
+        # Messages can arrive independently of the card lock. Check again at the
+        # last decision point, after the audit write and before accepting an effect.
+        return stop_cadence('replied') if customer_replied_since_scheduling?
         return create_reminder(composition) if reminder_mode?
 
         send_composition(composition)
