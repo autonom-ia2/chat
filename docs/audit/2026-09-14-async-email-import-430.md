@@ -35,7 +35,7 @@ Ruby 3.4.4, PostgreSQL local, banco exclusivo `chat2you_430_test`, Rails em test
 | Falha de armazenamento após commit | HTTP 503, estado failed, retry do arquivo incompleto bloqueado e novo upload aceito imediatamente |
 | Retenção | Retry expirado recusado; purge agendado |
 | Entrega | Nenhum DeliveryJob enfileirado; nenhum e-mail enviado |
-| Componentes Vue | 5 casos: preservação dos destinatários após HTTP 202, estado/resultado, erro sanitizado, polling persistente/encerramento, falha de rede |
+| Componentes Vue | 6 casos: conclusão rápida entre imports, preservação dos destinatários após HTTP 202, estado/resultado, erro sanitizado, polling persistente/encerramento, falha de rede |
 | Ruby lint | 9 arquivos, sem offenses |
 | JS lint | Zero erros; warnings de resolução de recursos de i18n na configuração existente |
 | Diff | `git diff --check` sem erros |
@@ -69,4 +69,7 @@ Review somente leitura por agente independente do implementador, snapshot `8f9c6
 - **P2 — Tradução pt-BR:** não aplicada por instrução explícita superior do usuário e do AGENTS atual: alterar somente inglês; traduções comunitárias seguem o fluxo próprio. As novas mensagens usam fallback inglês. Essa limitação está declarada, não é lacuna oculta.
 - **Risco condicionado de fila:** housekeeping tem menor prioridade que low; backlog contínuo pode atrasar maintenance/purge. Sem evidência de starvation atual. Operação deve monitorar idade das importações e latência de housekeeping; cron de cinco minutos não é promessa de execução em cinco minutos.
 
-Testes focados dos achados em `.codex/verify_review_fixes.rb` e `.codex/recipient-import.test.js`: três verificações backend e cinco frontend passaram. Revalidação independente dos deltas solicitada; parecer final será registrado no PR #431 sem alegar aprovação de merge/deploy.
+Testes focados dos achados em `.codex/verify_review_fixes.rb` e `.codex/recipient-import.test.js`: três verificações backend e seis frontend passaram. Revalidação independente dos deltas solicitada; parecer final será registrado no PR #431 sem alegar aprovação de merge/deploy.
+
+
+Conferência adicional: a tabela observa tanto ID quanto status da importação. Assim, uma nova lista que já concluiu antes de chegar a resposta 202 também atualiza a tabela (completed para completed com ID diferente). O componente real montado confirmou esse cenário.

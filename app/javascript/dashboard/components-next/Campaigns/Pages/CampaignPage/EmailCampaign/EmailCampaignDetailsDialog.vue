@@ -94,8 +94,11 @@ const retryImport = async () => {
   }
 };
 watch(
-  () => liveCampaign.value.recipient_import?.status,
-  status => {
+  [
+    () => liveCampaign.value.recipient_import?.id,
+    () => liveCampaign.value.recipient_import?.status,
+  ],
+  ([, status]) => {
     if (status === 'completed') {
       store.dispatch('emailCampaigns/getRecipients', { id: props.campaign.id });
       fetchTemplateTools();
