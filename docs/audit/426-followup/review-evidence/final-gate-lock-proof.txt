@@ -44,4 +44,3 @@ Local only: include in the existing AI team reminders context with use_transacti
         worker&.join(5)
       end
     end
-

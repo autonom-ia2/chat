@@ -70,4 +70,4 @@ O estado pendente acima foi superado pela revisão independente recebida na roda
 
 ## Correções e reavaliação concluídas
 
-Os quatro achados foram corrigidos nos commits `883267207` e `7b0897fe8`. O revisor independente confirmou as correções e aprovou com o limite temporal de ações já aceitas, documentado no relatório. QA pt_BR e testes locais aprovados; CI final em acompanhamento. Sem merge/deploy.
+Os quatro achados foram corrigidos nos commits `883267207` e `7b0897fe8`. O revisor independente confirmou as correções e aprovou com o limite temporal de ações já aceitas, documentado no relatório. QA pt_BR e testes locais aprovados; Suíte final em banco limpo: 137 exemplos, zero falhas, três quarentenas preexistentes. CI: consultar checks da PR #427. Sem merge/deploy.

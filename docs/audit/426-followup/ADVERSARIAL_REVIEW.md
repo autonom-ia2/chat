@@ -1,6 +1,6 @@
 # Revisão adversarial — PR #427
 
-**Estado atual: quatro achados corrigidos e revisor independente aprovou com o limite temporal descrito ao final.** Código final das correções: `7b0897fe8`. Os achados e reprovações abaixo são o histórico da revisão. CI final em acompanhamento.
+**Estado atual: quatro achados corrigidos e revisor independente aprovou com o limite temporal descrito ao final.** Código final das correções: `7b0897fe8`. Os achados e reprovações abaixo são o histórico da revisão. CI final: consultar os checks da PR #427.
 
 Base: `5742de5fc`. Código revisado: `f2d19443a1d945983d4e86eb8f8df019e1fdab57` (código funcional igual a `fcc23a1de`). Revisão estática e reproduções locais com dados sintéticos; nenhum acesso à produção ou chamada paga de IA.
 
@@ -80,3 +80,7 @@ Limite temporal: a última verificação é o ponto de aceitação da ação. Um
 ### Confirmação independente recebida
 
 O revisor confirmou: os quatro achados originais estão sanados; locks card/pipeline fecham a corrida com Closer/SettingsUpdater, a releitura após IA cobre mudanças durante a composição, a consulta final cobre resposta antes desse ponto, e desativação/frações estão corrigidas. Parecer aprovado com o limite temporal acima. Não há garantia de recolher uma ação depois de aceita. O revisor também retirou o cenário artificial de atualização do status dentro da própria transação como evidência de corrida externa.
+
+### Suíte final em banco limpo
+
+A suíte final foi repetida após remover os três registros sintéticos persistidos pelas provas concorrentes no PostgreSQL exclusivo desta tarefa. Resultado: **137 exemplos, zero falhas, três quarentenas preexistentes**. A execução anterior com esses registros extras falhou em quatro expectativas de varredura global, não no comportamento corrigido; nenhuma mudança de produto foi necessária para obter o resultado em banco limpo. `git diff --check` das correções também passou após remover linhas vazias finais de dois artefatos.
