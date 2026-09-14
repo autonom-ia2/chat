@@ -63,3 +63,7 @@ O primeiro CI completo identificou duas expectativas antigas em `meta_sync_metad
 Foram acionados dois revisores separados, em sequência. O primeiro foi interrompido após não devolver relatório nem checkpoint; a tentativa substituta também ficou sem retorno após pedidos explícitos de parecer parcial e foi interrompida. Não há achado de agente recebido nem aprovação adversarial. A revisão permanece pendente, e a PR permanece em rascunho.
 
 O CI do código `fcc23a1de72c7f62e2570da84e9f2e565a26ea89` terminou com sucesso: https://github.com/autonom-ia2/chat/actions/runs/34892401526 . As 32 chaves de frontend novas/alteradas têm correspondentes pt_BR e interpolações equivalentes. Este registro posterior altera somente documentação.
+
+## Retomada da revisão — parecer recebido
+
+O estado pendente acima foi superado pela revisão independente recebida na rodada seguinte. Parecer consolidado: **requer ajustes**, com dois cenários pós-IA reproduzidos em Rails e bloqueio de desligamento reproduzido na UI/serviço. Ver [revisão adversarial](ADVERSARIAL_REVIEW.md) e suas evidências. Nenhuma correção de produto nesta rodada, nenhum merge/deploy.
