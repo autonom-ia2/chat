@@ -37,7 +37,7 @@ module Crm
           created_by: resolved_sender,
           title: title,
           follow_up_type: :message,
-          automation_mode: :auto_send_message,
+          automation_mode: Crm::Ai::Config.auto_followup_settings(@card.pipeline)[:mode] == 'ai_reminder' ? :reminder_only : :auto_send_message,
           due_at: @due_at,
           timezone: timezone,
           metadata: metadata

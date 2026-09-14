@@ -1,0 +1,38 @@
+Failures:
+
+  1) Crm::FollowUps::AutoFollowupRunner with AI team reminders adversarial: stops when the card closes during AI evaluation
+     Failure/Error: expect(result.status).to eq(:stopped)
+
+       expected: :stopped
+            got: :reminded
+
+       (compared using ==)
+
+       Diff:
+       @@ -1 +1 @@
+       -:stopped
+       +:reminded
+     # ./.codex/adversarial_runner_spec.rb:287:in 'block (3 levels) in <top (required)>'
+
+  2) Crm::FollowUps::AutoFollowupRunner with AI team reminders adversarial: respects days changed during AI evaluation
+     Failure/Error: expect(result.status).to eq(:rescheduled)
+
+       expected: :rescheduled
+            got: :reminded
+
+       (compared using ==)
+
+       Diff:
+       @@ -1 +1 @@
+       -:rescheduled
+       +:reminded
+     # ./.codex/adversarial_runner_spec.rb:302:in 'block (3 levels) in <top (required)>'
+
+Finished in 0.62502 seconds (files took 2.47 seconds to load)
+2 examples, 2 failures
+
+Failed examples:
+
+rspec ./.codex/adversarial_runner_spec.rb:278 # Crm::FollowUps::AutoFollowupRunner with AI team reminders adversarial: stops when the card closes during AI evaluation
+rspec ./.codex/adversarial_runner_spec.rb:290 # Crm::FollowUps::AutoFollowupRunner with AI team reminders adversarial: respects days changed during AI evaluation
+

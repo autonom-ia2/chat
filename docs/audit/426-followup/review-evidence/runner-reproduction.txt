@@ -1,0 +1,27 @@
+    it 'adversarial: stops when the card closes during AI evaluation' do
+      follow_up = reminder_setup
+      composer = instance_double(Crm::Ai::FollowUpComposer)
+      allow(Crm::Ai::FollowUpComposer).to receive(:new).and_return(composer)
+      allow(composer).to receive(:perform) do
+        Crm::Card.find(follow_up.card_id).update!(status: :won)
+        status_notice
+      end
+      result = described_class.new(follow_up: follow_up, now: now).perform
+      expect(result.status).to eq(:stopped)
+    end
+
+    it 'adversarial: respects days changed during AI evaluation' do
+      follow_up = reminder_setup
+      composer = instance_double(Crm::Ai::FollowUpComposer)
+      allow(Crm::Ai::FollowUpComposer).to receive(:new).and_return(composer)
+      allow(composer).to receive(:perform) do
+        pipeline = Crm::Pipeline.find(follow_up.card.pipeline_id)
+        metadata = pipeline.metadata.deep_dup
+        metadata['ai']['auto_followup']['allowed_days'] = [2]
+        pipeline.update!(metadata: metadata)
+        status_notice
+      end
+      result = described_class.new(follow_up: follow_up, now: now).perform
+      expect(result.status).to eq(:rescheduled)
+    end
+

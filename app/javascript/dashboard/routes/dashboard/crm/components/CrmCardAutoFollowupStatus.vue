@@ -36,7 +36,9 @@ const maxTouches = computed(() => {
   return Number.isFinite(max) && max > 0 ? max : touches.value.length || 1;
 });
 const usedTouches = computed(() => {
-  const sent = touches.value.filter(item => item?.outcome === 'sent').length;
+  const sent = touches.value.filter(item =>
+    ['sent', 'reminded'].includes(item?.outcome)
+  ).length;
   return sent || touches.value.length;
 });
 const isSpent = computed(() => state.value?.spent === true);
@@ -72,6 +74,16 @@ const statusText = computed(() => {
 const timelineEntries = computed(() =>
   touches.value.map((item, index) => {
     const n = item?.touch || index + 1;
+    if (item?.outcome === 'reminded') {
+      return {
+        key: index,
+        label: t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.TIMELINE_TOUCH_REMINDER', {
+          n,
+        }),
+        icon: 'i-lucide-bell-ring',
+        tone: 'text-n-teal-11',
+      };
+    }
     if (item?.outcome === 'sent' && item?.mode === 'template') {
       return {
         key: index,
