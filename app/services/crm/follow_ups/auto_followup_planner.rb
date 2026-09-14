@@ -142,20 +142,7 @@ module Crm
       end
 
       def clamp_into_quiet_hours(time, timezone)
-        quiet = @config[:quiet_hours].to_h
-        start_hour = quiet['start'].to_i
-        end_hour = quiet['end'].to_i
-        return time if start_hour >= end_hour
-
-        zone = ActiveSupport::TimeZone[timezone]
-        local = time.in_time_zone(zone)
-        if local.hour < start_hour
-          local.change(hour: start_hour, min: 0, sec: 0).utc
-        elsif local.hour >= end_hour
-          (local + 1.day).change(hour: start_hour, min: 0, sec: 0).utc
-        else
-          time
-        end
+        Crm::FollowUps::AllowedSchedule.new(config: @config, timezone: timezone).next_at(time)
       end
 
       # Resolves the cadence timezone (contact -> contact country -> account

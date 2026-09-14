@@ -8,7 +8,7 @@ import { useCrmFollowUpReminders } from 'dashboard/composables/useCrmFollowUpRem
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const isSaving = ref(false);
 
@@ -29,7 +29,7 @@ const cardTitle = computed(() => activeReminder.value?.card?.title || '');
 const dueLabel = computed(() => {
   const dueAt = activeReminder.value?.due_at;
   if (!dueAt) return '';
-  return new Date(dueAt).toLocaleString();
+  return new Date(dueAt).toLocaleString(locale.value.replace('_', '-'));
 });
 const modeLabel = computed(() => {
   if (activeReminder.value?.automation_mode === 'snooze_conversation') {
@@ -121,6 +121,12 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
+      <p
+        v-if="activeReminder?.description"
+        class="mb-3 max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-5 text-n-slate-11"
+      >
+        {{ activeReminder.description }}
+      </p>
       <div class="flex flex-wrap items-center justify-end gap-2">
         <Button
           :label="t('CRM_KANBAN.FOLLOW_UP_REMINDER.OPEN_CRM')"

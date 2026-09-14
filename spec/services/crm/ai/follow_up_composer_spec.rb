@@ -32,4 +32,12 @@ RSpec.describe Crm::Ai::FollowUpComposer do
     expect(instructions).not_to include('nós perguntamos e ele sumiu')
     expect(instructions).to include('Quem falou por último NÃO define, sozinho, de quem é a pendência')
   end
+
+  it 'evaluates reminders with AI without requiring a customer-facing message or template' do
+    reminder = described_class.new(card: nil, client: nil, context: {}, mode: :reminder,
+                                   tone_instructions: 'Foque em seguro viagem')
+    prompt = reminder.send(:instructions)
+    expect(prompt).to include('LEMBRETE INTERNO', 'trecho LITERAL', 'Foque em seguro viagem', 'prazo prometido ainda não vencido')
+    expect(prompt).not_to include('MODO choose_template', 'MODO free_form')
+  end
 end

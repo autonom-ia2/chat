@@ -1,0 +1,17 @@
+require 'active_record'
+require 'active_support/all'
+module Crm; module Ai; end; end
+require File.join(Dir.pwd, 'app/services/crm/ai/config')
+require File.join(Dir.pwd, 'app/services/crm/ai/settings_updater')
+class ReviewPipeline
+  include ActiveModel::Model
+  attr_accessor :metadata
+end
+pipeline = ReviewPipeline.new(metadata: {'ai'=>{'auto_followup'=>{'enabled'=>true,'quiet_hours'=>{'start'=>8,'end'=>8,'tz'=>'contact'}}}})
+updater=Crm::Ai::SettingsUpdater.new(pipeline: pipeline, params: {})
+begin
+  updater.send(:normalize_auto_followup, {enabled: false})
+rescue ActiveRecord::RecordInvalid => e
+  puts "disable_legacy_result=#{e.class.name}"
+end
+puts "fractional_hours=#{updater.send(:normalize_auto_followup, {quiet_hours: {start: 8.5, end: 20.5}})['quiet_hours'].inspect}"

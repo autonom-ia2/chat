@@ -48,6 +48,10 @@ class EmailCampaignsAPI extends ApiClient {
     return axios.get(`${this.url}/${id}/validate`);
   }
 
+  retryImport(id) {
+    return axios.post(`${this.url}/${id}/recipients/retry_import`);
+  }
+
   importRecipients(id, file) {
     const formData = new FormData();
     formData.append('import_file', file);

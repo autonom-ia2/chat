@@ -5,6 +5,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useToggle } from '@vueuse/core';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { isRecipientImportActive } from 'dashboard/helper/emailCampaignImport';
+import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -99,15 +101,19 @@ const builderRoute = campaign => ({
 const hasCampaignBody = campaign => Boolean(campaign.body_html);
 const canSendNow = campaign =>
   campaign.status === 'draft' &&
+  !isRecipientImportActive(campaign) &&
   campaign.recipients_count > 0 &&
   hasCampaignBody(campaign);
 const canPause = campaign => campaign.status === 'sending';
 const canResume = campaign => campaign.status === 'paused';
 const canCancel = campaign =>
+  !isRecipientImportActive(campaign) &&
   ['draft', 'scheduled', 'sending', 'paused'].includes(campaign.status);
 
-const fetchCampaigns = () =>
-  enabled.value ? store.dispatch('emailCampaigns/get') : Promise.resolve();
+const fetchCampaigns = (silent = false) =>
+  enabled.value
+    ? store.dispatch('emailCampaigns/get', { silent })
+    : Promise.resolve();
 
 // Realtime-ish refresh: a campaign in a transient state (sending / scheduled)
 // changes server-side as Sidekiq delivers + SNS events land, but the list is
@@ -120,13 +126,15 @@ const hasActiveCampaign = computed(() =>
   campaigns.value.some(
     c =>
       ['sending', 'scheduled'].includes(c.status) ||
-      c.ai_status === 'processing'
+      c.ai_status === 'processing' ||
+      isRecipientImportActive(c)
   )
 );
 const startPolling = () => {
   if (pollTimer) return;
   pollTimer = setInterval(() => {
-    if (hasActiveCampaign.value && !isFetching.value) fetchCampaigns();
+    if (hasActiveCampaign.value && !isFetching.value)
+      fetchCampaigns(true).catch(() => {});
   }, POLL_MS);
 };
 
@@ -379,10 +387,13 @@ onBeforeUnmount(() => {
                 color="ruby"
                 variant="ghost"
                 size="sm"
+                :disabled="isRecipientImportActive(campaign)"
                 @click="removeCampaign(campaign)"
               />
             </div>
           </div>
+
+          <RecipientImportStatus :campaign="campaign" />
 
           <p v-if="campaign.last_error" class="mb-0 text-xs text-n-ruby-11">
             {{ campaign.last_error }}

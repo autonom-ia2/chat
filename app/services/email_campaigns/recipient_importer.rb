@@ -37,51 +37,52 @@ module EmailCampaigns
       parsed.rows.reject { |row| row.values.all? { |v| v.to_s.strip.empty? } }
     end
 
+    BATCH_SIZE = 500
+
     def import_rows(rows, mapper)
       suppressed = EmailSuppression.suppressed_set_for(@account)
-      seen = Set.new
+      seen = @campaign.email_campaign_recipients.pluck(:email).to_set(&:downcase)
       stats = { imported: 0, duplicates: 0, invalid: 0, suppressed: 0 }
 
       ActiveRecord::Base.transaction do
-        rows.each { |row| process_row(row, mapper, suppressed, seen, stats) }
+        rows.each_slice(BATCH_SIZE) do |batch|
+          records = batch.filter_map { |row| build_recipient(row, mapper, suppressed, seen, stats) }
+          EmailCampaignRecipient.insert_all!(records) if records.any? # rubocop:disable Rails/SkipsModelValidations -- validated above; DB enforces uniqueness
+        end
         @campaign.refresh_counters!
       end
 
       Result.new(total: rows.size, **stats)
     end
 
-    def process_row(row, mapper, suppressed, seen, stats)
-      name = value_at(row, mapper.mapping[:name])
-      raw_email = value_at(row, mapper.mapping[:email])
-      normalized = EmailCampaigns::EmailNormalizer.normalize!(raw_email)
-      email = normalized.email
+    def build_recipient(row, mapper, suppressed, seen, stats) # rubocop:disable Metrics/MethodLength
+      email = EmailCampaigns::EmailNormalizer.normalize!(value_at(row, mapper.mapping[:email])).email
+      if seen.include?(email)
+        stats[:duplicates] += 1
+        return
+      end
 
-      return (stats[:duplicates] += 1) if seen.include?(email) || existing?(email)
-
-      seen << email
       is_suppressed = suppressed.include?(email)
-      stats[is_suppressed ? :suppressed : :imported] += 1
-      @campaign.email_campaign_recipients.create!(
-        name: name.presence, email: email, status: is_suppressed ? :suppressed : :pending,
+      recipient = EmailCampaignRecipient.new(
+        email_campaign: @campaign, name: value_at(row, mapper.mapping[:name]).presence,
+        email: email, status: is_suppressed ? :suppressed : :pending,
         custom_data: custom_data_for(row, mapper.extra_columns)
       )
+      unless recipient.valid?(:recipient_import)
+        stats[:invalid] += 1
+        return
+      end
+
+      seen << email
+      stats[is_suppressed ? :suppressed : :imported] += 1
+      recipient.attributes.slice('email_campaign_id', 'name', 'email', 'status', 'custom_data')
     rescue EmailCampaigns::EmailNormalizer::Error
       stats[:invalid] += 1
-    rescue ActiveRecord::RecordInvalid
-      # A row that fails persistence (e.g. name > 255 chars hitting the global
-      # 255 validation) must count as invalid without aborting the whole import.
-      # Roll back the optimistic counter + seen-claim made before create!.
-      stats[:invalid] += 1
-      stats[is_suppressed ? :suppressed : :imported] -= 1 unless is_suppressed.nil?
-      seen.delete(email) unless email.nil?
+      nil
     end
 
     def custom_data_for(row, extra_columns)
       extra_columns.transform_values { |index| value_at(row, index) }
-    end
-
-    def existing?(email)
-      @campaign.email_campaign_recipients.where('lower(email) = ?', email).exists?
     end
 
     def value_at(row, index)

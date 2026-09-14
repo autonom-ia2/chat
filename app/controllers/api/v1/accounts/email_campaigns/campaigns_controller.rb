@@ -4,7 +4,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
 
   def index
     authorize EmailCampaign
-    @campaigns = campaign_scope.includes(:sender_identity).order(created_at: :desc)
+    @campaigns = campaign_scope.includes(:sender_identity, latest_recipient_import: :source_file_attachment).order(created_at: :desc)
   end
 
   def show; end
@@ -27,11 +27,13 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   end
 
   def destroy
-    # Bulk-delete events + recipients to avoid per-row AR destroy callbacks cascading
-    # over 50k+ rows. builder_assets still purge via dependent: :destroy on @campaign.destroy!.
-    EmailEvent.where(recipient_id: @campaign.email_campaign_recipients.select(:id)).delete_all
-    @campaign.email_campaign_recipients.delete_all
-    @campaign.destroy!
+    @campaign.with_lock do
+      return render_unprocessable('import_in_progress') if @campaign.recipient_import_active?
+
+      EmailEvent.where(recipient_id: @campaign.email_campaign_recipients.select(:id)).delete_all
+      @campaign.email_campaign_recipients.delete_all
+      @campaign.destroy!
+    end
     head :no_content
   end
 
@@ -45,9 +47,12 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
 
   def schedule
     return render_unprocessable('email_campaign.scheduled_at_required') if params[:scheduled_at].blank?
-    return render_unprocessable('email_campaign.not_sendable') unless @campaign.sendable?
 
-    @campaign.update!(status: :scheduled, scheduled_at: params[:scheduled_at])
+    @campaign.with_lock do
+      return render_unprocessable('email_campaign.not_sendable') unless @campaign.sendable?
+
+      @campaign.update!(status: :scheduled, scheduled_at: params[:scheduled_at])
+    end
     render :show
   end
 
@@ -62,7 +67,11 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   end
 
   def cancel
-    @campaign.cancel!
+    @campaign.with_lock do
+      return render_unprocessable('import_in_progress') if @campaign.recipient_import_active?
+
+      @campaign.cancel!
+    end
     render :show
   end
 

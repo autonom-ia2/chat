@@ -841,6 +841,24 @@
           "shipping-update": "Shipping update",
           "upsell": "Upsell"
         }
+      },
+      "IMPORT": {
+        "QUEUED": "List received. Import queued; you can leave this page.",
+        "PROCESSING": "Importing the list. Sending is unavailable until the import finishes.",
+        "COMPLETED": "List import completed.",
+        "SUMMARY": "Imported: {imported} · Duplicates: {duplicates} · Invalid: {invalid} · Suppressed: {suppressed} · Total: {total}",
+        "RETRY": "Retry import",
+        "ERRORS": {
+          "FAILED": "Import failed. No contacts from this attempt were added. Retry or upload the file again.",
+          "INVALID_FILE": "The file could not be read. Upload a valid CSV or XLSX file.",
+          "FILE_TOO_LARGE": "The file exceeds the upload size limit. Split the list and try again.",
+          "EMPTY_FILE": "The list is empty. Add contacts and upload it again.",
+          "ROW_LIMIT": "The list exceeds 50,000 rows. Split it into smaller files.",
+          "HEADERS": "Use one Name column and one Email column in the first row of the first sheet, without duplicate headers.",
+          "IN_PROGRESS": "An import is already in progress for this campaign. Wait for it to finish.",
+          "EXPIRED": "The uploaded file expired. Upload the list again.",
+          "UPLOAD_FAILED": "The file could not be stored. Upload the list again."
+        }
       }
     }
   }
