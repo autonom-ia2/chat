@@ -2,6 +2,8 @@ class EmailCampaigns::RecipientImportMaintenanceJob < ApplicationJob
   queue_as :housekeeping
 
   def perform
+    return unless EmailCampaigns::Config.enabled?
+
     # Also recovers a crash between committing the upload and enqueueing its job.
     EmailCampaignImport.active.where(updated_at: ...EmailCampaignImport::RECOVERY_AFTER.ago).find_each do |import|
       recover(import)
@@ -15,6 +17,7 @@ class EmailCampaigns::RecipientImportMaintenanceJob < ApplicationJob
   private
 
   def recover(import)
+    enqueue = false
     import.with_lock('FOR UPDATE NOWAIT') do
       return unless import.active? && import.updated_at < EmailCampaignImport::RECOVERY_AFTER.ago
 
@@ -22,9 +25,12 @@ class EmailCampaigns::RecipientImportMaintenanceJob < ApplicationJob
         import.update!(status: :failed, error_code: 'file_expired', completed_at: Time.current)
       else
         import.update!(updated_at: Time.current)
-        EmailCampaigns::RecipientImportJob.perform_later(import.id)
+        enqueue = true
       end
     end
+    # The worker uses NOWAIT. Enqueue only after the transaction releases its
+    # lock, otherwise a fast worker can mistake maintenance for a live worker.
+    EmailCampaigns::RecipientImportJob.perform_later(import.id) if enqueue
   rescue ActiveRecord::LockWaitTimeout
     # A live worker still owns the import; do not expire or enqueue it.
     nil

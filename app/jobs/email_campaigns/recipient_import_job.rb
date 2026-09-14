@@ -1,7 +1,9 @@
 class EmailCampaigns::RecipientImportJob < ApplicationJob
   queue_as :low
 
-  def perform(import_id) # rubocop:disable Metrics/MethodLength
+  def perform(import_id)
+    return unless EmailCampaigns::Config.enabled?
+
     import = EmailCampaignImport.find_by(id: import_id)
     return unless import
 
@@ -12,15 +14,7 @@ class EmailCampaigns::RecipientImportJob < ApplicationJob
 
       import.update!(status: :processing)
     end
-    import.with_lock('FOR UPDATE NOWAIT') do
-      return unless import.active?
-
-      result = EmailCampaigns::RecipientImporter.new(
-        import.email_campaign, import.source_file, filename: import.source_file.filename.to_s
-      ).perform
-      # Recipients, counters and completion commit together, or all roll back.
-      import.update!(status: :completed, result: result.to_h, error_code: nil, completed_at: Time.current)
-    end
+    process(import)
   rescue ActiveRecord::LockWaitTimeout
     # Another delivery of this job owns the import.
     nil
@@ -32,6 +26,18 @@ class EmailCampaigns::RecipientImportJob < ApplicationJob
   end
 
   private
+
+  def process(import)
+    import.with_lock('FOR UPDATE NOWAIT') do
+      return unless import.active?
+
+      result = EmailCampaigns::RecipientImporter.new(
+        import.email_campaign, import.source_file, filename: import.source_file.filename.to_s
+      ).perform
+      # Recipients, counters and completion commit together, or all roll back.
+      import.update!(status: :completed, result: result.to_h, error_code: nil, completed_at: Time.current)
+    end
+  end
 
   def error_code(error)
     return error.message if error.is_a?(EmailCampaigns::RecipientImporter::Error)

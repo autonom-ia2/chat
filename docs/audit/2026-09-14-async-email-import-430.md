@@ -35,7 +35,7 @@ Ruby 3.4.4, PostgreSQL local, banco exclusivo `chat2you_430_test`, Rails em test
 | Falha de armazenamento após commit | HTTP 503, estado failed, retry do arquivo incompleto bloqueado e novo upload aceito imediatamente |
 | Retenção | Retry expirado recusado; purge agendado |
 | Entrega | Nenhum DeliveryJob enfileirado; nenhum e-mail enviado |
-| Componentes Vue | 4 casos: estado/resultado, erro sanitizado, polling persistente/encerramento, falha de rede |
+| Componentes Vue | 5 casos: preservação dos destinatários após HTTP 202, estado/resultado, erro sanitizado, polling persistente/encerramento, falha de rede |
 | Ruby lint | 9 arquivos, sem offenses |
 | JS lint | Zero erros; warnings de resolução de recursos de i18n na configuração existente |
 | Diff | `git diff --check` sem erros |
@@ -61,4 +61,12 @@ Run `34896294176`, commit `8f9c6b784`: oito shards RSpec e Vitest concluíram co
 
 ## Review adversarial independente
 
-Solicitado a agente separado, em modo somente leitura. O parecer final e a resolução dos achados serão publicados no PR #431 antes de encerrar a entrega. Este registro documental contém as evidências de implementação e validação; consulte o PR para o fechamento do review.
+Review somente leitura por agente independente do implementador, snapshot `8f9c6b784`. Achados e tratamento:
+
+- **P1 — Enqueue sob lock na maintenance:** confirmado. Enqueue movido para depois da transação. Reproduzido com dispatcher que inicia imediatamente o worker em outra conexão PostgreSQL; agora conclui, em vez de descartar por NOWAIT.
+- **P2 — Feature flag nos jobs:** corrigido nos dois novos jobs. Teste com flag desligada confirma ausência de mutação, enqueue ou purge. Desligar a flag impede novas execuções; não mata job já em execução. Por isso o plano de rollback continua exigindo drenagem.
+- **P3 — HTTP 202 limpava a lista visível:** corrigido no store; a resposta de aceitação preserva destinatários existentes. Teste montado confirmou estado queued sem apagar a lista.
+- **P2 — Tradução pt-BR:** não aplicada por instrução explícita superior do usuário e do AGENTS atual: alterar somente inglês; traduções comunitárias seguem o fluxo próprio. As novas mensagens usam fallback inglês. Essa limitação está declarada, não é lacuna oculta.
+- **Risco condicionado de fila:** housekeeping tem menor prioridade que low; backlog contínuo pode atrasar maintenance/purge. Sem evidência de starvation atual. Operação deve monitorar idade das importações e latência de housekeeping; cron de cinco minutos não é promessa de execução em cinco minutos.
+
+Testes focados dos achados em `.codex/verify_review_fixes.rb` e `.codex/recipient-import.test.js`: três verificações backend e cinco frontend passaram. Revalidação independente dos deltas solicitada; parecer final será registrado no PR #431 sem alegar aprovação de merge/deploy.

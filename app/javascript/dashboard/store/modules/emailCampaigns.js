@@ -176,10 +176,12 @@ export const actions = {
     commit(types.SET_EMAIL_CAMPAIGN_UI_FLAG, { isImporting: true });
     try {
       const response = await EmailCampaignsAPI.importRecipients(id, file);
-      commit(
-        types.SET_EMAIL_CAMPAIGN_RECIPIENTS,
-        response.data.payload.recipients || []
-      );
+      if (response.status !== 202) {
+        commit(
+          types.SET_EMAIL_CAMPAIGN_RECIPIENTS,
+          response.data.payload.recipients || []
+        );
+      }
       commit(
         types.SET_EMAIL_CAMPAIGN_IMPORT_RESULT,
         response.data.payload.import_result || null
