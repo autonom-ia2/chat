@@ -1,0 +1,345 @@
+require 'rails_helper'
+
+# A LIA VÊ O RESULTADO DA COTAÇÃO, PELO CAMINHO REAL (fatia 2 do #420, desenho da rodada 8).
+#
+# O agente é o que o `Builder` cria (principal + especialista de auto), o catálogo do turno é o do `Answerer`, o turno
+# é o do `Operate::Responder`, e a lista de preços é o anexo do turno, entregue depois da fala. Dublados: o modelo
+# (devolve a chamada de função e a fala) e nada mais. Os dados são sintéticos.
+RSpec.describe Autonomia::Agents::Answerer do
+  let(:account) do
+    create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
+  end
+  let(:inbox) { create(:inbox, account: account) }
+  let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
+  let(:agent_bot) { create(:agent_bot, account: account) }
+  let(:agente) do
+    Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Seguros do Vale').call
+  end
+  let(:agent_inbox) do
+    Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: account, agent_bot: agent_bot)
+  end
+  let(:delivery) do
+    Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 91)
+  end
+  let(:slug) { 'ver_resultado_da_cotacao' }
+  let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
+  let(:ferramenta) { Autonomia::Agents::Tools::Native::InsuranceQuoteResult }
+  let(:porto) { cotou('8', 'Porto Seguro', 2119.18) }
+  let(:allianz) { cotou('5', 'Allianz', 2402.55) }
+
+  around do |example|
+    with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true', INSURANCE_QUOTING_ENABLED: 'true',
+                      AI_HUMANIZE_DELIVERY: 'false', AI_AGENT_MEDIA: 'false') { example.run }
+  end
+
+  before do
+    enable_test_encryption!
+    conexao = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
+    conexao.update!(status: 'ready')
+    conexao.store_session!({ 'multicalculoToken' => 'multi' }, expires_at: 3.hours.from_now)
+    # Sem base de conhecimento: o retrieval não é o assunto deste spec e chamaria embedding.
+    agente.update!(config: agente.config.merge('with_knowledge' => false))
+  end
+
+  def cotou(code, name, amount)
+    { 'insurer' => { 'code' => code, 'name' => name }, 'status' => 'quoted',
+      'premium' => { 'amount' => amount, 'currency' => 'BRL', 'basis' => 'total' } }
+  end
+
+  # Um motivo de risco que o molde do veículo aceita (`Insurance::MotivoDaRecusa`).
+  def risco
+    { 'kind' => 'risco', 'text' => 'Tipo de veículo não aceito.' }
+  end
+
+  def sancor(reason = risco)
+    { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined', 'reason' => reason }
+  end
+
+  # A cotação da conversa, encerrada (ou no status pedido), com o resultado guardado destas ofertas; `handle`
+  # substitui o handle inteiro.
+  def cotacao_da_conversa(ofertas, status: 'done', criada: 5.minutes.ago, handle: nil)
+    Autonomia::Agents::ToolRun.create!(
+      account: account, agent: agente, slug: cotacao.slug, status: status, conversation_id: conversation.id,
+      agent_inbox_id: agent_inbox.id, execution_key: SecureRandom.uuid, arguments: {}, created_at: criada,
+      handle: handle || { 'quote_id' => 'q-1:1', cotacao::RESULTADO_KEY => Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas) }
+    )
+  end
+
+  def chamada(seguradora = nil, id = 'r1')
+    { 'name' => slug, 'call_id' => id, 'arguments' => { 'seguradora' => seguradora }.to_json }
+  end
+
+  def fala(texto)
+    { reply: texto, confidence: 0.9, should_handoff: false, handoff_reason: nil,
+      used_snippet_ids: [], answered_from_knowledge: false }.to_json
+  end
+
+  # O modelo dublado: recebe o catálogo e devolve as chamadas de função da rodada (uma, ou várias em
+  # `chamadas`); `capturado` guarda o que ele recebeu.
+  def modelo(function_call: nil, chamadas: nil, texto: 'Aqui estão as opções que chegaram.')
+    capturado = { tools: nil, outputs: nil }
+    lista = chamadas || [function_call].compact
+    resolver = instance_double(Crm::Ai::CredentialResolver, resolve: 'ai-credential')
+    allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
+    client = instance_double(Crm::Ai::ResponsesClient)
+    allow(client).to receive(:create_with_tool_executor) do |**kwargs, &executor|
+      capturado[:tools] = Array(kwargs[:tools]).filter_map { |tool| tool[:name] }
+      capturado[:outputs] = executor.call(lista) if lista.any? && executor
+      { text: fala(texto) }
+    end
+    allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+    capturado
+  end
+
+  def responder
+    described_class.new(agent: agente, query: 'quais preços chegaram?', trust_instruction: true, delivery: delivery).answer
+  end
+
+  def saida(capturado)
+    capturado[:outputs].first[:output]
+  end
+
+  def itens(*ofertas)
+    ofertas.map { |oferta| Autonomia::Insurance::QuoteOffers.item(oferta) }.join("\n\n")
+  end
+
+  describe 'o catálogo do turno' do
+    it 'a ferramenta é do principal, e o especialista não a recebe' do
+      capturado = modelo
+
+      responder
+
+      expect(capturado[:tools]).to include(slug, 'consultar_condicoes_gerais')
+      expect(capturado[:tools]).not_to include('cotar_seguro', 'consultar_placa')
+      expect(agente.specialists.first.tools.map(&:slug)).to contain_exactly('consultar_placa', 'cotar_seguro')
+    end
+
+    # O AGENTE 24 EM PRODUÇÃO tem a lista gravada em 11/09/2026, sem a ferramenta nova. Ela chega pela lista
+    # do deploy, e nada é escrito na linha do agente.
+    it 'chega ao agente criado antes, com a lista antiga gravada, sem escrita no agente' do
+      antiga = %w[consultar_produtos_cotacao consultar_condicoes_gerais cotar_seguro consultar_placa]
+      agente.update!(config: agente.config.merge('native_tool_slugs' => antiga))
+      config_antes = agente.reload.config
+      capturado = modelo
+
+      responder
+
+      expect(capturado[:tools]).to include(slug)
+      expect(agente.reload.config).to eq(config_antes)
+    end
+
+    # A RESERVA TAMBÉM É A DO DEPLOY: sem ela, a ferramenta que o especialista ganhou depois do nascimento
+    # (em 11/09/2026 foi `consultar_placa`) apareceria para o principal enquanto a coluna não fosse escrita.
+    it 'a ferramenta do especialista que falta na coluna dele continua reservada, e chega ao especialista' do
+      especialista = agente.specialists.first
+      especialista.update!(tool_slugs: ['cotar_seguro'])
+      capturado = modelo
+
+      responder
+
+      expect(capturado[:tools]).not_to include('consultar_placa', 'cotar_seguro')
+      expect(especialista.reload.tools.map(&:slug)).to contain_exactly('consultar_placa', 'cotar_seguro')
+    end
+
+    # COM O ESPECIALISTA DESLIGADO não há reserva: o principal recebe tudo, como já acontecia antes desta
+    # fatia. A ferramenta nova continua do principal e lê a cotação da conversa do mesmo jeito.
+    it 'com o especialista desligado, a Lia recebe também a de cotação, e a de resultado continua respondendo' do
+      agente.specialists.first.update!(enabled: false)
+      cotacao_da_conversa([porto])
+      capturado = modelo(function_call: chamada)
+
+      responder
+
+      expect(capturado[:tools]).to include(slug, 'cotar_seguro', 'consultar_placa')
+      expect(saida(capturado)).to include(ferramenta::LISTA_ANEXADA)
+    end
+
+    it 'agente comum sem o slug na config não recebe a ferramenta' do
+      comum = Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom', status: :active,
+                                               enabled: true, instruction: 'Atenda.',
+                                               config: { 'native_tool_slugs' => ['consultar_condicoes_gerais'] })
+
+      expect(Autonomia::Agents::Tools::Registry.for_agent(comum).map(&:slug)).to eq(['consultar_condicoes_gerais'])
+    end
+  end
+
+  describe 'o turno' do
+    it 'com preço a mostrar: o modelo recebe o estado sem valor, a lista fica anexada ao turno, e nenhuma execução abre' do
+      cotacao_da_conversa([porto, allianz])
+      capturado = modelo(function_call: chamada)
+
+      responder
+
+      expect(saida(capturado)).to include('2 seguradoras fizeram proposta nesta cotação.', ferramenta::LISTA_ANEXADA)
+      expect(saida(capturado)).not_to match(/R\$|2119|2\.119|2402|2\.402/)
+      expect(delivery.anexos).to eq([itens(porto, allianz)])
+      expect(Autonomia::Agents::ToolRun.where(slug: slug)).to be_empty
+    end
+
+    it 'com preço de uma e motivo de outra: as duas falas, com a categoria e sem o texto do portal' do
+      cotacao_da_conversa([porto, sancor])
+      capturado = modelo(function_call: chamada('Sancor e Porto'))
+
+      responder
+
+      expect(saida(capturado)).to include('Porto Seguro fez proposta', 'Sancor não fez proposta nesta cotação.',
+                                          ferramenta::MOTIVOS.fetch('veiculo'))
+      expect(saida(capturado)).not_to include(risco['text'])
+      expect(delivery.anexos).to eq([itens(porto)])
+    end
+
+    it 'sem preço a mostrar: o modelo recebe a categoria do motivo, e nada é anexado' do
+      cotacao_da_conversa([porto, sancor])
+      capturado = modelo(function_call: chamada('Sancor'))
+
+      responder
+
+      expect(saida(capturado)).to end_with("Sancor não fez proposta nesta cotação. #{ferramenta::MOTIVOS.fetch('veiculo')}")
+      expect(delivery.anexos).to be_empty
+    end
+
+    # A CONTA DA CORRETORA E O DADO DA PESSOA NÃO VIRAM CATEGORIA: pelo caminho real, o modelo ouve só que a seguradora
+    # não fez proposta.
+    it 'motivo com a conta da corretora ou com o dado da pessoa: o modelo ouve só que ela não fez proposta' do
+      ['Tipo de veículo sem aceitação para o seu código.', 'Negativado: CEP sem aceitação.'].each do |texto|
+        Autonomia::Agents::ToolRun.where(slug: cotacao.slug).delete_all
+        cotacao_da_conversa([porto, sancor('kind' => 'risco', 'text' => texto)])
+        capturado = modelo(function_call: chamada('Sancor'))
+
+        responder
+
+        expect(saida(capturado)).to end_with("Sancor não fez proposta nesta cotação. #{ferramenta::SEM_MOTIVO}")
+      end
+    end
+
+    # A MAIS NOVA É A RECUSA DO `start`: o modelo ouve que a última cotação não chegou às seguradoras.
+    it 'a cotação mais nova recusada antes do portal: o modelo ouve que ela não chegou às seguradoras' do
+      cotacao_da_conversa([porto], criada: 10.minutes.ago)
+      cotacao_da_conversa([], criada: 1.minute.ago,
+                              handle: { 'pedido' => 'Qual o ano do veículo?', 'motivo' => 'faltam_dados',
+                                        Autonomia::Agents::ToolRun::SUBMITTED_KEY => true })
+      capturado = modelo(function_call: chamada)
+
+      responder
+
+      expect(saida(capturado)).to eq(ferramenta::NAO_CHEGOU)
+      expect(delivery.anexos).to be_empty
+    end
+  end
+
+  describe 'do turno à entrega' do
+    let(:user) { create(:user, account: account) }
+
+    before do
+      conversation.update!(assignee_agent_bot_id: agent_bot.id)
+      mensagem_do_cliente('quais preços chegaram?')
+    end
+
+    def turno
+      Autonomia::Agents::Operate::Responder.new(conversation: conversation, agent_inbox: agent_inbox,
+                                                reply_to_message_id: conversation.messages.incoming.last.id).perform
+    end
+
+    def mensagens_do_bot
+      conversation.messages.reload.where(sender_type: 'AgentBot').order(:id)
+    end
+
+    def mensagem_do_cliente(texto)
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: texto)
+    end
+
+    it 'a fala da Lia sai primeiro, e a lista de preços logo depois, escrita pelo código' do
+      cotacao_da_conversa([porto, allianz])
+      modelo(function_call: chamada, texto: 'Aqui estão as opções que chegaram.')
+
+      turno
+
+      expect(mensagens_do_bot.map(&:content)).to eq(['Aqui estão as opções que chegaram.', itens(porto, allianz)])
+      expect(Autonomia::Agents::ToolRun.where(slug: slug)).to be_empty
+    end
+
+    it 'com a entrega humanizada, a lista é o último pedaço da cadeia da fala' do
+      with_modified_env(AI_HUMANIZE_DELIVERY: 'true') do
+        cotacao_da_conversa([porto, allianz])
+        modelo(function_call: chamada, texto: 'Aqui estão as opções que chegaram até agora.')
+
+        turno
+
+        cadeia = enqueued_jobs.find { |item| item[:job] == Autonomia::Agents::Operate::ChunkedDeliveryJob }
+        chunks = ActiveJob::Arguments.deserialize(cadeia[:args])[3]
+        expect(chunks.map { |chunk| chunk['text'] }.last).to eq(itens(porto, allianz))
+      end
+    end
+
+    # DUAS CHAMADAS NA MESMA RODADA: uma lista só, com as duas seguradoras.
+    it 'duas chamadas da ferramenta na mesma rodada: uma lista com as duas seguradoras' do
+      cotacao_da_conversa([porto, allianz])
+      modelo(chamadas: [chamada('Porto', 'r1'), chamada('Allianz', 'r2')], texto: 'Seguem as opções.')
+
+      turno
+
+      expect(mensagens_do_bot.map(&:content)).to eq(['Seguem as opções.', itens(porto, allianz)])
+    end
+
+    # O CLIENTE PERGUNTOU DUAS VEZES, RECEBE DUAS VEZES: cada turno mostra o que está guardado naquele instante.
+    it 'o cliente que pede os preços de novo, noutra mensagem, recebe a lista de novo' do
+      cotacao_da_conversa([porto, allianz])
+      modelo(function_call: chamada, texto: 'Seguem os preços.')
+      turno
+      mensagem_do_cliente('manda de novo?')
+      modelo(function_call: chamada, texto: 'Claro, seguem de novo.')
+
+      turno
+
+      expect(mensagens_do_bot.map(&:content)).to eq(['Seguem os preços.', itens(porto, allianz), 'Claro, seguem de novo.', itens(porto, allianz)])
+    end
+
+    it 'o retry do ReplyJob não repete a fala nem a lista' do
+      cotacao_da_conversa([porto])
+      modelo(function_call: chamada, texto: 'Segue o preço.')
+
+      2.times { turno }
+
+      expect(mensagens_do_bot.map(&:content)).to eq(['Segue o preço.', itens(porto)])
+    end
+
+    # A COTAÇÃO TROCADA ENTRE DUAS PERGUNTAS: a segunda mostra a nova.
+    it 'a cotação trocada entre duas perguntas: a segunda lista é a da cotação nova' do
+      cotacao_da_conversa([porto], criada: 10.minutes.ago)
+      modelo(function_call: chamada, texto: 'Segue.')
+      turno
+      cotacao_da_conversa([allianz], status: 'running', criada: 1.second.from_now)
+      mensagem_do_cliente('e agora?')
+      modelo(function_call: chamada, texto: 'Segue a nova.')
+
+      turno
+
+      expect(mensagens_do_bot.map(&:content)).to eq(['Segue.', itens(porto), 'Segue a nova.', itens(allianz)])
+    end
+
+    # O TURNO MUDO (decisão 19, aceita): a lista sai sozinha.
+    it 'o turno mudo: a lista sai sozinha, sem frase' do
+      cotacao_da_conversa([porto])
+      modelo(function_call: chamada, texto: Autonomia::Agents::Operate::Responder::SILENCE_TOKEN)
+
+      resultado = turno
+
+      expect(resultado.status).to eq(:silenced)
+      expect(mensagens_do_bot.map(&:content)).to eq([itens(porto)])
+    end
+
+    # NOTA PRIVADA: com um responsável humano na conversa, a Lia não responde, e a ferramenta nem chega a
+    # ser oferecida ao modelo.
+    it 'com responsável humano, a Lia não responde e a ferramenta não roda' do
+      cotacao_da_conversa([porto])
+      conversation.update!(assignee: user)
+      capturado = modelo(function_call: chamada)
+
+      resultado = turno
+
+      expect(resultado.status).to eq(:silenced)
+      expect(capturado[:tools]).to be_nil
+      expect(mensagens_do_bot).to be_empty
+    end
+  end
+end

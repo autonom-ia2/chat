@@ -46,8 +46,12 @@ class Autonomia::Agents::Tools::PedidoRepetido
     @run.status == 'done' ? 'concluída' : 'encerrada sem concluir'
   end
 
+  # Com o contador em zero e resultado guardado (a execução conta como pedido por `ToolRun#resultado_obtido?`),
+  # o texto diz isso sem número, em vez de "0 resultados encaminhados".
   def resultados
     n = @run.delivered_count.to_i
+    return 'resultado guardado e nenhuma entrega encaminhada para publicação' if n.zero? && @run.resultado_obtido?
+
     n == 1 ? '1 resultado encaminhado para publicação' : "#{n} resultados encaminhados para publicação"
   end
 

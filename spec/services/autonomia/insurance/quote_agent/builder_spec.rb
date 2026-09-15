@@ -105,6 +105,32 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
   end
 
+  # AS LISTAS DE FERRAMENTAS SÃO AS DO DEPLOY (fatia 2 do #420), no molde de `instrucao_mantida`.
+  describe 'as ferramentas mantidas' do
+    it 'a lista do Agente de Cotação é a do deploy, com a ferramenta de resultado da Lia no principal' do
+      expect(described_class::TOOLS_DO_PRINCIPAL).to include('ver_resultado_da_cotacao')
+      expect(described_class::TOOLS_DO_ESPECIALISTA).not_to include('ver_resultado_da_cotacao')
+      expect(described_class.ferramentas_mantidas(construir)).to eq(described_class::TODAS_AS_TOOLS)
+    end
+
+    it 'a reserva do especialista mantido é a do deploy' do
+      expect(described_class.ferramentas_mantidas_do_especialista(construir.specialists.first))
+        .to eq(described_class::TOOLS_DO_ESPECIALISTA)
+    end
+
+    it 'agente e especialista que não são do Agente de Cotação não têm lista mantida' do
+      comum = Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom', status: :active,
+                                               enabled: true, instruction: 'Atenda.')
+      especialista = Autonomia::Agents::Specialist.create!(agent: comum, name: 'Auto', slug: 'cotacao_auto',
+                                                           description: 'x', instruction: 'Cote.', tool_slugs: ['cotar_seguro'])
+
+      expect(described_class.ferramentas_mantidas(comum)).to be_nil
+      expect(described_class.ferramentas_mantidas(nil)).to be_nil
+      expect(described_class.ferramentas_mantidas_do_especialista(especialista)).to be_nil
+      expect(especialista.ferramentas_do_sistema).to eq(['cotar_seguro'])
+    end
+  end
+
   describe 'o especialista de auto' do
     it 'nasce junto, ligado e com a ferramenta de cotacao' do
       # Act

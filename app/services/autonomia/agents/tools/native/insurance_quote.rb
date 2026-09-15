@@ -115,6 +115,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   include Veiculo
   include Comparativo
   include Fecho
+  include Resultado
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
   #
@@ -246,18 +247,18 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # produz, o texto só alcança o corte na 27ª seguradora, e o portal real devolveu 17. É folga
   # medida, não guarda — a guarda não existe.
   #
-  # `ACIONADAS_KEY` continua aqui: ela é MEDIÇÃO DE FATURAMENTO (quantas seguradoras o portal pôs na
-  # cotação), não estado de entrega, e perdê-la seria contar errado o que a corretora pagou.
+  # `ACIONADAS_KEY` continua sendo gravada em toda consulta (`Resultado#marcas_da_leitura`): ela é MEDIÇÃO
+  # DE FATURAMENTO (quantas seguradoras o portal pôs na cotação), não estado de entrega, e perdê-la seria
+  # contar errado o que a corretora pagou. A mesma escrita grava o resultado por seguradora (fatia 2 do #420).
   def build_progress(result, handle, _attempt)
     registrar_credencial_de_seguradora(result)
     ofertas = ::Autonomia::Insurance::QuoteOffers
     leitura = ofertas.new(result)
     already = Array(handle[DELIVERED_KEY]).map(&:to_s)
     fresh = leitura.quoted.reject { |offer| already.include?(ofertas.code(offer)) }
-    deliveries, next_handle = precos(fresh, already, handle.merge(ACIONADAS_KEY => acionadas(leitura, handle),
-                                                                  LEITURA_ASSENTADA_KEY => leitura.assentada))
+    deliveries, next_handle = precos(fresh, already, handle.merge(marcas_da_leitura(result, leitura, handle)))
 
-    return progress_class.running(deliveries: deliveries, handle: next_handle) unless finished?(result, leitura, handle)
+    return em_andamento(deliveries, next_handle, leitura, handle) unless finished?(result, leitura, handle)
 
     # A COTAÇÃO FECHOU, e isso se grava por si: é o fato que separa "ainda tem seguradora por
     # responder" de "é isto que havia", e ele não pode depender de o comparativo ter saído. O que a
@@ -297,7 +298,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   def entregues(fresh, already, texto, handle, avisar)
     codigos = fresh.map { |offer| ::Autonomia::Insurance::QuoteOffers.code(offer) }
     handle = registrar_entrega_de_preco(texto, registrar_sem_periodo(fresh, handle), already)
-    handle = handle.merge(DELIVERED_KEY => already + codigos)
+    handle = lote_de_preco(handle, texto, codigos).merge(DELIVERED_KEY => already + codigos)
     avisar ? handle.merge(AVISO_SENT_KEY => true) : handle
   end
 

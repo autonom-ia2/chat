@@ -6,8 +6,9 @@
 # tipado. É esse buraco que a ferramenta nativa fecha.
 #
 # Nativa é declarada em CÓDIGO (uma classe por ferramenta, registrada no Registry) e ligada por
-# conta através de `agent.config['native_tool_slugs']`. O dono da conta escolhe quais ligar; nunca
-# escreve a URL nem o cabeçalho — é isso que permite falar com o nosso adapter sem expor como.
+# agente através de `agent.config['native_tool_slugs']`, menos no Agente de Cotação, cuja lista é a do
+# deploy (`Agent#ferramentas_nativas`, fatia 2 do #420). Nunca se escreve a URL nem o cabeçalho — é isso
+# que permite falar com o nosso adapter sem expor como.
 class Autonomia::Agents::Tools::Native::Base
   # Toda ferramenta nativa devolve STRING para o modelo, igual à HTTP. Erro também é string: o
   # modelo lê e decide o que fazer, em vez de o turno morrer.
@@ -130,6 +131,13 @@ class Autonomia::Agents::Tools::Native::Base
     # ficou mudo. Não é a frase de falha: "não consegui" afirmaria o que não se sabe.
     def uncertain_message(_arguments = nil)
       'Não consegui confirmar o resultado da consulta. Um atendente vai conferir e retomar daqui.'
+    end
+
+    # O HANDLE DESTA EXECUÇÃO TEM RESULTADO GUARDADO? (fatia 2 do #420.) Lido por
+    # `ToolRun#resultado_obtido?` para contar a execução como pedido feito. De classe: quem pergunta tem a
+    # linha, não a ferramenta montada. -> false por padrão.
+    def resultado_guardado?(_handle)
+      false
     end
 
     # EM `strict: true` NÃO EXISTE CAMPO FORA DE `required`.
