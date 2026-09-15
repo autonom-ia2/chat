@@ -722,6 +722,7 @@
         "NO_PREVIEW": "Sem pré-visualização para este modelo.",
         "APPLIED": "Modelo aplicado à campanha.",
         "APPLY_ERROR": "Não foi possível aplicar o modelo. Tente novamente.",
+        "MISSING_BODY": "Este modelo não possui conteúdo editável. Escolha outro modelo ou recrie o template.",
         "LOAD_ERROR": "Não foi possível carregar os modelos. Tente novamente.",
         "CATEGORIES": {
           "abandoned-cart": "Carrinho abandonado",

@@ -8,6 +8,7 @@ import { useAlert } from 'dashboard/composables';
 import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import { buildTemplateCampaignPayload } from './emailTemplateBody';
 
 const { t } = useI18n();
 const store = useStore();
@@ -155,13 +156,17 @@ const useTemplate = async template => {
   isApplying.value = true;
   try {
     const { data } = await EmailCampaignTemplatesAPI.show(template.id);
-    const bodyMjml = data.body_mjml;
+    const campaignPayload = buildTemplateCampaignPayload(data);
+
+    if (!campaignPayload) {
+      useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.MISSING_BODY'));
+      return;
+    }
 
     if (campaignId.value) {
       await store.dispatch('emailCampaigns/update', {
         id: campaignId.value,
-        body_mjml: bodyMjml,
-        body_html: data.body_html || '',
+        ...campaignPayload,
       });
       useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.APPLIED'));
       goToBuilder();

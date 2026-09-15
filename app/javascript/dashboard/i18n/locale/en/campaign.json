@@ -829,6 +829,7 @@
         "NO_PREVIEW": "No preview available for this template.",
         "APPLIED": "Template applied to the campaign.",
         "APPLY_ERROR": "Could not apply the template. Please try again.",
+        "MISSING_BODY": "This template does not have editable content. Choose another template or recreate it.",
         "LOAD_ERROR": "Could not load the templates. Please try again.",
         "CATEGORIES": {
           "abandoned-cart": "Abandoned cart",
