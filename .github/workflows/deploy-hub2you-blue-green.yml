@@ -25,7 +25,7 @@ on:
       green_instance_type:
         description: EC2 instance type for the new green instance.
         required: false
-        default: t3.small
+        default: t3.medium
         type: string
       confirm_production:
         description: Confirm that this operation may change production.
@@ -369,7 +369,7 @@ jobs:
         run: |
           green_instance_id=$(aws ec2 run-instances \
             --image-id "$AMI_ID" \
-            --instance-type "${{ github.event.inputs.green_instance_type || 't3.small' }}" \
+            --instance-type "${{ github.event.inputs.green_instance_type || 't3.medium' }}" \
             --subnet-id "$SUBNET_ID" \
             --security-group-ids $SECURITY_GROUP_IDS \
             --iam-instance-profile "Name=$IAM_PROFILE_NAME" \
