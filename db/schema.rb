@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_14_190000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_16_120100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -493,6 +493,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_190000) do
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_specialists_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_specialists_on_autonomia_agent_id"
   end
+
   create_table "autonomia_agent_tool_runs", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "autonomia_agent_id", null: false
@@ -515,9 +516,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_190000) do
     t.datetime "updated_at", null: false
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
-    t.index ["conversation_id", "slug"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying])::text[]))"
+    t.index ["conversation_id", "slug"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
     t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true
   end
+
   create_table "autonomia_agent_tools", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "autonomia_agent_id", null: false
@@ -2143,6 +2145,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_190000) do
     t.index ["source_provider"], name: "index_data_imports_on_source_provider"
   end
 
+  create_table "email_campaign_import_issues", force: :cascade do |t|
+    t.bigint "email_campaign_id", null: false
+    t.bigint "email_campaign_import_id"
+    t.integer "row_number", null: false
+    t.string "raw_address", limit: 320, null: false
+    t.string "reason_code", null: false
+    t.string "suggestion", limit: 320
+    t.datetime "created_at", null: false
+    t.index ["email_campaign_id"], name: "index_email_campaign_import_issues_on_email_campaign_id"
+    t.index ["email_campaign_import_id", "row_number"], name: "idx_import_issues_row", unique: true
+    t.index ["email_campaign_import_id"], name: "index_email_campaign_import_issues_on_email_campaign_import_id"
+  end
+
   create_table "email_campaign_imports", force: :cascade do |t|
     t.bigint "email_campaign_id", null: false
     t.integer "status", default: 0, null: false
@@ -2169,7 +2184,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_190000) do
     t.integer "attempts", default: 0, null: false
     t.datetime "last_event_at"
     t.jsonb "custom_data", default: {}, null: false
+    t.string "preflight_status", default: "unchecked", null: false
+    t.string "preflight_reason_code"
+    t.string "preflight_suggestion", limit: 320
+    t.datetime "preflight_checked_at"
+    t.datetime "preflight_valid_until"
     t.index "email_campaign_id, lower((email)::text)", name: "idx_email_campaign_recipients_campaign_email", unique: true
+    t.index ["email_campaign_id", "id"], name: "idx_recipients_preflight_unchecked", where: "((status = 0) AND ((preflight_status)::text = 'unchecked'::text))"
+    t.index ["email_campaign_id", "preflight_valid_until"], name: "idx_recipients_preflight_due"
     t.index ["email_campaign_id", "status"], name: "idx_email_campaign_recipients_campaign_status"
     t.index ["email_campaign_id"], name: "index_email_campaign_recipients_on_email_campaign_id"
     t.index ["ses_message_id"], name: "index_email_campaign_recipients_on_ses_message_id"
@@ -2227,6 +2249,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_190000) do
     t.datetime "ai_requested_at"
     t.datetime "ai_completed_at"
     t.jsonb "ai_subject_variants", default: [], null: false
+    t.string "hygiene_pause_reason"
+    t.jsonb "preflight_summary", default: {}, null: false
+    t.string "preflight_lease_token"
+    t.datetime "preflight_lease_expires_at"
+    t.bigint "preflight_cursor", default: 0, null: false
+    t.bigint "preflight_ceiling", default: 0, null: false
     t.index ["account_id", "status", "scheduled_at"], name: "idx_email_campaigns_account_status_scheduled"
     t.index ["account_id"], name: "index_email_campaigns_on_account_id"
     t.index ["sender_identity_id"], name: "index_email_campaigns_on_sender_identity_id"
@@ -2264,6 +2292,42 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_190000) do
     t.index "account_id, lower((domain)::text)", name: "idx_email_sender_identities_account_domain", unique: true
     t.index ["account_id", "status"], name: "idx_email_sender_identities_account_status"
     t.index ["account_id"], name: "index_email_sender_identities_on_account_id"
+  end
+
+  create_table "email_suppression_events", force: :cascade do |t|
+    t.bigint "email_suppression_state_id", null: false
+    t.bigint "account_id", null: false
+    t.bigint "origin_campaign_id"
+    t.string "event_key", limit: 200, null: false
+    t.string "action", null: false
+    t.string "reason", null: false
+    t.string "source", null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "first_seen_at", null: false
+    t.datetime "last_seen_at", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id", "email_suppression_state_id", "event_key"], name: "idx_suppression_events_replay", unique: true
+    t.index ["account_id"], name: "index_email_suppression_events_on_account_id"
+    t.index ["email_suppression_state_id", "reason", "occurred_at"], name: "idx_suppression_events_window"
+    t.index ["email_suppression_state_id"], name: "index_email_suppression_events_on_email_suppression_state_id"
+  end
+
+  create_table "email_suppression_states", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "email", null: false
+    t.boolean "active", default: false, null: false
+    t.string "reason"
+    t.string "source"
+    t.datetime "expires_at"
+    t.datetime "first_seen_at"
+    t.datetime "last_seen_at"
+    t.integer "occurrences", default: 0, null: false
+    t.bigint "origin_campaign_id"
+    t.datetime "created_at", null: false
+    t.index ["account_id", "email"], name: "idx_suppression_states_account_email", unique: true
+    t.index ["account_id"], name: "index_email_suppression_states_on_account_id"
+    t.check_constraint "email::text = lower(btrim(email::text))", name: "suppression_state_normalized_email"
   end
 
   create_table "email_suppressions", force: :cascade do |t|
@@ -2916,7 +2980,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_190000) do
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
   add_foreign_key "autonomia_agent_specialists", "accounts"
   add_foreign_key "autonomia_agent_tool_runs", "accounts"
-add_foreign_key "autonomia_agent_tools", "accounts"
+  add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
@@ -3021,6 +3085,8 @@ add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "ctwa_tracked_link_clicks", "ctwa_tracked_links", column: "tracked_link_id", on_delete: :cascade
   add_foreign_key "ctwa_tracked_links", "accounts", on_delete: :cascade
   add_foreign_key "ctwa_tracked_links", "inboxes", on_delete: :cascade
+  add_foreign_key "email_campaign_import_issues", "email_campaign_imports"
+  add_foreign_key "email_campaign_import_issues", "email_campaigns"
   add_foreign_key "email_campaign_imports", "email_campaigns"
   add_foreign_key "email_campaign_recipients", "email_campaigns"
   add_foreign_key "email_campaign_templates", "accounts"
@@ -3029,6 +3095,7 @@ add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "email_campaigns", "inboxes", column: "sender_inbox_id", on_delete: :nullify
   add_foreign_key "email_events", "email_campaign_recipients", column: "recipient_id"
   add_foreign_key "email_sender_identities", "accounts"
+  add_foreign_key "email_suppression_states", "accounts", on_delete: :cascade
   add_foreign_key "email_suppressions", "accounts"
   add_foreign_key "idempotency_keys", "accounts"
   add_foreign_key "inboxes", "portals"

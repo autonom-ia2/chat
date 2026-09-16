@@ -13,6 +13,7 @@ module EmailCampaigns
       end
 
       def tick
+        return if @campaign.recipient_import_active?
         return finalize if no_pending?
         return if pause_if_guardrail_or_autopause!
         return reschedule(seconds_until_next_window) unless within_business_hours?
@@ -21,7 +22,7 @@ module EmailCampaigns
         recipient = next_pending
         return finalize if recipient.nil?
 
-        RecipientSender.new(@campaign, Sender.new(@inbox)).deliver(recipient, suppressed_set)
+        RecipientSender.new(@campaign, Sender.new(@inbox)).deliver(recipient)
 
         @campaign.reload
         return finalize if @campaign.sending? && no_pending?
@@ -37,10 +38,6 @@ module EmailCampaigns
 
       def no_pending?
         !@campaign.email_campaign_recipients.pending.exists?
-      end
-
-      def suppressed_set
-        EmailSuppression.suppressed_set_for(@account)
       end
 
       def finalize

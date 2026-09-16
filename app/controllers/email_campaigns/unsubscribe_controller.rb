@@ -44,14 +44,17 @@ class EmailCampaigns::UnsubscribeController < ApplicationController
 
   def suppress!(recipient)
     campaign = recipient.email_campaign
-    EmailSuppression.find_or_create_by!(account_id: campaign.account_id, email: recipient.email) do |suppression|
-      suppression.reason = 'unsubscribe'
-      suppression.source = 'link'
-    end
-    return if recipient.unsubscribed?
+    recipient.with_lock do
+      EmailCampaigns::SuppressionRegistry.new(account: campaign.account, email: recipient.email, campaign: campaign).block!(
+        reason: 'unsubscribe', source: 'link', event_key: "unsubscribe:#{recipient.id}"
+      )
+      return if recipient.unsubscribed?
 
-    recipient.email_events.create!(event_type: :unsubscribe, occurred_at: Time.current)
-    recipient.update!(status: :unsubscribed, last_event_at: Time.current)
+      recipient.email_events.create!(event_type: :unsubscribe, occurred_at: Time.current)
+      # A verified opt-out must not be rolled back by unrelated legacy name/custom-data validators.
+      recipient.update_columns(status: EmailCampaignRecipient.statuses[:unsubscribed], # rubocop:disable Rails/SkipsModelValidations
+                               last_event_at: Time.current, updated_at: Time.current)
+    end
     campaign.refresh_counters!
   end
 end
