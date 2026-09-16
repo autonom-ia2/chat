@@ -20,7 +20,17 @@ class EmailCampaigns::PreflightDecision
   end
 
   def campaign_allowed?(campaign)
-    !@config.enforce? || !unresolved(campaign).exists?
+    return false if campaign.recipient_import_active?
+    return true unless @config.enforce?
+
+    # Reuse the authoritative active union, bounded to each pending candidate batch.
+    # Do not persist suppression/preflight changes or reset strong blocks here.
+    unresolved(campaign).in_batches(of: 500) do |batch|
+      emails = batch.pluck(:email)
+      blocked = EmailSuppression.blocking_reasons_for(campaign.account, emails)
+      return false if emails.any? { |email| !blocked.key?(email.strip.downcase) }
+    end
+    true
   end
 
   def pause!(campaign)

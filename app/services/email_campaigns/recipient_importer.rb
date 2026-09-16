@@ -37,7 +37,7 @@ module EmailCampaigns
     end
 
     def data_rows(parsed)
-      parsed.rows.reject { |row| row.values.all? { |v| v.to_s.strip.empty? } }
+      parsed.rows.reject { |row| row.values.all? { |value| value.to_s.valid_encoding? && value.to_s.strip.empty? } }
     end
 
     BATCH_SIZE = 500
@@ -63,6 +63,9 @@ module EmailCampaigns
     end
 
     def build_recipient(row, mapper, suppressed, seen, stats) # rubocop:disable Metrics/MethodLength
+      raw_address = row.values[mapper.mapping[:email]].to_s
+      raise EmailCampaigns::EmailNormalizer::Error, 'invalid_email' unless raw_address.dup.force_encoding(Encoding::UTF_8).valid_encoding?
+
       email = EmailCampaigns::EmailNormalizer.normalize!(value_at(row, mapper.mapping[:email])).email
       if seen.include?(email)
         record_issue(row, mapper, 'duplicate')
@@ -94,7 +97,14 @@ module EmailCampaigns
 
     def record_issue(row, mapper, reason)
       @issues << { email_campaign_id: @campaign.id, email_campaign_import_id: @import&.id, row_number: row.row_number,
-                   raw_address: row.values[mapper.mapping[:email]].to_s.first(320), reason_code: reason, created_at: Time.current }
+                   raw_address: issue_address(row.values[mapper.mapping[:email]]), reason_code: reason, created_at: Time.current }
+    end
+
+    def issue_address(value)
+      raw = value.to_s.dup.force_encoding(Encoding::UTF_8)
+      # Escape unpersistable bytes only in rejection evidence, never in recipient identity.
+      raw = raw.b.dump[1...-1] unless raw.valid_encoding? && raw.exclude?("\0")
+      raw.first(320)
     end
 
     def custom_data_for(row, extra_columns)

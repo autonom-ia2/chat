@@ -41,7 +41,7 @@ The internal `release!(source:, event_key:, authorization:, occurred_at:)` requi
 
 - `EmailSuppression.suppressed?(account, email)` checks current legacy presence OR active new state.
 - `EmailSuppression.suppressed_set_for(account)` returns normalized emails from that same union.
-- `EmailSuppression.blocking_reasons_for(account, emails)` returns `{ normalized_email => reason_code }` for blocking addresses only, in two batch queries. Pass the current report page's emails. Legacy reason wins over state; unknown legacy reasons map to `legacy_suppression`. Known codes: hard_bounce, manual, complaint, unsubscribe, provider_suppression, temporary_failure. No per-recipient query is needed for a report page.
+- `EmailSuppression.blocking_reasons_for(account, emails)` returns `{ normalized_email => reason_code }` for blocking addresses only, in two batch queries. Pass the current report page's emails or a bounded eligibility batch. Legacy reason wins over state; unknown legacy reasons map to `legacy_suppression`. Known codes: hard_bounce, manual, complaint, unsubscribe, provider_suppression, temporary_failure. No per-recipient query is needed for a report page.
 
 Normalization preserves plus tags/dots and only trims/downcases. All lookups are account-scoped. Do not use legacy rows alone for new report/send eligibility, or state alone to infer that a recipient was released. Existing report fixtures creating temporary legacy rows must move to EmailSuppressionState; parent owns those files.
 
@@ -74,9 +74,13 @@ DNS is outside database transactions and row locks; DNS-enabled perform rejects 
 
 The import after-update-commit callback uses enqueue. Maintenance discovers unchecked recipients, due external outcomes when DNS=true, and expired leases (including a crash after the last recipient write but before summary). An enqueue failure leaves the durable lease recoverable after expiry. No lock spans DNS. Dispatched recipients, terminal campaigns and active imports are excluded.
 
+Maintenance isolates `ActiveRecord::RecordInvalid` for each campaign, including a draft DirectInbox campaign whose sender inbox was deleted. It logs JSON with only `event=email_campaign_preflight_enqueue_failed`, `campaign_id` and `error_class`; other campaigns continue. Existing import recovery and file retention run in an ensure path after preflight scheduling, including in shadow/DNS=false. Database/connection failures are not swallowed: housekeeping is attempted and the job still fails. An invalid campaign remains pending operator repair; this does not bypass its validations or disable shadow preflight.
+
 Local-only outcomes (`dns_disabled`, provider_typo, unsupported_local_part, invalid_email, idn_requires_ascii_domain) have **no expiry**. Maintenance only requeues unchecked recipients when DNS=false. Enabling DNS also selects existing dns_disabled rows and expired external DNS outcomes. Pure typo/identity findings require explicit recheck; changing shadow/warning/enforce alone does not repeat identical DNS work. There is no periodic 50k-row churn in default shadow/DNS=false.
 
 Recipient fields remain preflight_status (unchecked/valid/invalid/review/unknown), reason_code, suggestion, checked_at, valid_until. `PreflightDecision.new(config:).call(recipient)` returns allowed/mode/status/reason_code/suggestion/warning. `campaign_allowed?` and `unresolved` perform eligibility queries without DNS. Revalidation never clears manual/tenant/provider pauses, enqueues delivery, or resumes a campaign.
+
+`unresolved` selects pending preflight candidates; `campaign_allowed?` checks them in batches of at most 500 through `EmailSuppression.blocking_reasons_for`. Only currently blocked addresses are excluded from the enforce hold, using the same tenant-scoped legacy/new-state union and expiry rules as delivery. An opt-out after import therefore allows fresh valid peers to proceed; the existing delivery claim/dispatch gates still prevent sending to the blocked address. Expired quarantine and inactive observations do not exempt eligible unresolved recipients. Unknown/DNS-disabled/review findings still hold those recipients. Active imports return false in every mode. These reads never reset persisted protection, resume campaigns or load the entire account's suppression set for each row.
 
 ## DNS transport and evidence
 
@@ -124,5 +128,7 @@ This closure worker runs only syntax, offline tests and focused RuboCop. It does
 ### Retention and existing recipients
 
 Recipient import keeps the existing ApplicationRecord 255-character string limit; this feature does not introduce a new name policy. A rejection unrelated to the address is classified as `invalid_recipient`, never as proof of an invalid email. Signed opt-out transitions update only status/timestamps under a lock, so unrelated invalid fields on a legacy record cannot roll back permanent protection.
+
+Rejected `raw_address` evidence containing NUL or invalid UTF-8 is represented with Ruby byte escapes (for example, literal `\x00` and `\xFF`), then capped at 320 characters. The invalid row remains counted with `invalid_email`; valid peers stay in the same atomic import batch. Invalid encoding is detected before address trimming/normalization, and blank-row filtering preserves malformed evidence even when the name is blank. This changes evidence only, not valid address identity or normalization. CSV formula escaping remains in `export_attributes`/`CsvSanitizer`. Offline simulated persistence tests and new Rails regressions are recorded in `docs/audit/436-pr0-review-fixes.md`; PostgreSQL execution remains the parent's responsibility.
 
 Observation states belong to the account and are removed by the database only when an authorized existing account-deletion flow removes that account. Append-only audit rows retain numeric logical account/state references without blocking deletion; they do not retain a copied recipient address. Normal campaign operations cannot delete or rewrite audit history. Legacy permanent suppressions keep their previous retention behavior. Code rollback and mode changes never delete suppression/audit data.

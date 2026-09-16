@@ -134,7 +134,8 @@ jobs:
           python3 .github/scripts/email-protection-files.py rspec > tmp/email436/ci/rspec-files
           mapfile -d '' -t files < tmp/email436/ci/rspec-files
           printf '%s\n' "${files[@]}"
-          bundle exec rspec --require spec_helper --fail-if-no-examples --format progress --format json --out tmp/email436/ci/rspec.json "${files[@]}"
+          bundle exec rspec --require spec_helper --format progress --format json --out tmp/email436/ci/rspec.json "${files[@]}"
+          ruby -rjson -e 'report = JSON.parse(File.read(ARGV.fetch(0))); abort "No RSpec examples executed" unless report.dig("summary", "example_count").to_i.positive?' tmp/email436/ci/rspec.json
       - name: RuboCop - cumulative changed Ruby, excluding generated schema
         run: |
           python3 .github/scripts/email-protection-files.py ruby-lint > tmp/email436/ci/ruby-files
