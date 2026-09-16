@@ -10,9 +10,7 @@ module EmailCampaigns
         type = { 'Delivery' => :delivered, 'Bounce' => :bounce, 'Complaint' => :complaint }[event_type]
         return unless recipient && type
 
-        # Share the Account -> recipient order with PR439 workers during blue/green.
-        processed = recipient.email_campaign.account.with_lock do
-          recipient.lock!
+        processed = EmailEvent.with_recipient_feedback_locks(recipient, event_type: type) do
           # One outcome of each type per dispatch. Lock closes parallel SNS replay,
           # before both metrics and quarantine occurrences. Keep the original payload.
           next false if recipient.email_events.where(event_type: type).exists?

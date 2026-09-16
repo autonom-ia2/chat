@@ -16,7 +16,7 @@ module EmailCampaigns
     end
 
     def start(campaign)
-      enqueue = campaign.with_lock do
+      enqueue = campaign.with_delivery_lock do
         campaign.reload
         next unless ready?(campaign)
 
@@ -28,9 +28,11 @@ module EmailCampaigns
         campaign.mark_sending!
         true
       end
-      EmailCampaigns::DeliveryJob.perform_later(campaign.id) if enqueue && Config.enabled?
+      ActiveRecord.after_all_transactions_commit { EmailCampaigns::DeliveryJob.perform_later(campaign.id) } if enqueue && Config.enabled?
     rescue StandardError => e
-      campaign&.update(status: :failed, last_error: e.message.to_s.truncate(500))
+      campaign.with_delivery_lock do
+        campaign.update(status: :failed, last_error: e.message.to_s.truncate(500)) if campaign.scheduled? || campaign.sending?
+      end
     end
   end
 end

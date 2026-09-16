@@ -3,7 +3,8 @@ class EmailCampaignImport < ApplicationRecord
   has_one_attached :source_file
   has_many :email_campaign_import_issues, dependent: :destroy
 
-  after_update_commit :enqueue_preflight, if: -> { saved_change_to_status? && completed? }
+  # Capture the transition before a later reload/save clears Rails' dirty history.
+  after_update :enqueue_preflight_after_commit, if: -> { saved_change_to_status? && completed? }
 
   enum status: { queued: 0, processing: 1, completed: 2, failed: 3 }
   scope :active, -> { where(status: [:queued, :processing]) }
@@ -24,6 +25,10 @@ class EmailCampaignImport < ApplicationRecord
   end
 
   private
+
+  def enqueue_preflight_after_commit
+    ActiveRecord.after_all_transactions_commit { enqueue_preflight }
+  end
 
   def enqueue_preflight
     EmailCampaigns::RecipientPreflightJob.enqueue(email_campaign_id)

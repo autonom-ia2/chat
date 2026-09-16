@@ -9,10 +9,17 @@ module EmailCampaigns
       def initialize(campaign)
         @campaign = campaign
         @inbox = campaign.sender_inbox
-        @account = campaign.account
       end
 
       def tick
+        EmailCampaigns::Reputation::CampaignDeliveryLock.synchronize(@campaign.id) do
+          deliver_tick if @campaign.reload.sending?
+        end
+      end
+
+      private
+
+      def deliver_tick
         return if @campaign.recipient_import_active?
         return finalize if no_pending?
         return if pause_if_guardrail_or_autopause!
@@ -29,8 +36,6 @@ module EmailCampaigns
 
         reschedule(random_interval) if @campaign.sending?
       end
-
-      private
 
       def next_pending
         @campaign.email_campaign_recipients.pending.order(:id).first
@@ -81,10 +86,8 @@ module EmailCampaigns
 
       # ---- guardrail + auto-pausa ----
       def pause_if_guardrail_or_autopause!
-        if EmailCampaigns::Guardrail.paused?(@account)
-          pause!('guardrail de reputação da conta')
-          return true
-        end
+        return true if EmailCampaigns::Reputation::Admission.new(@campaign).park_if_blocked!
+
         if autopause_tripped?
           pause!('muitas falhas de envio seguidas — verifique a caixa e a lista de contatos')
           return true
@@ -109,7 +112,12 @@ module EmailCampaigns
       end
 
       def pause!(reason)
-        @campaign.update!(status: :paused, last_error: "Envio pausado: #{reason}.")
+        @campaign.with_delivery_lock do
+          next unless @campaign.sending? || @campaign.scheduled?
+
+          @campaign.update!(status: :paused, pause_reason: { kind: 'technical', code: 'direct_inbox_autopause' },
+                            last_error: "Envio pausado: #{reason}.")
+        end
       end
     end
   end

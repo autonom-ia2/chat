@@ -81,6 +81,7 @@ class EmailCampaign < ApplicationRecord
   enum ai_status: { idle: 0, processing: 1, ready: 2, failed: 3 }, _prefix: :ai
 
   BODY_HTML_MAX = 500_000
+  CANCELLATION_BATCH_SIZE = 100
 
   before_validation { self.from_email = from_email.to_s.strip.downcase.presence }
   # No modo direto, o "De:" é SEMPRE o e-mail da caixa (você envia como a própria conta).
@@ -137,13 +138,23 @@ class EmailCampaign < ApplicationRecord
   end
 
   def mark_sending!
-    update!(status: :sending)
+    with_delivery_lock do
+      next false unless scheduled? && !recipient_import_active?
+
+      update!(status: :sending)
+    end
+  end
+
+  # All delivery mutations enter account -> state -> campaign before assigning
+  # attributes. Do not wrap this in a child lock or call it from a save callback.
+  def with_delivery_lock(&)
+    EmailCampaigns::Reputation::Admission.new(self).with_campaign_locks(&)
   end
 
   # Atomic draft/scheduled -> sending transition. Returns true only for the caller
   # whose UPDATE actually flips the row, closing the send_now TOCTOU window.
   def claim_for_sending!
-    with_lock do
+    with_delivery_lock do
       return false unless sendable?
 
       update!(status: :sending)
@@ -151,48 +162,78 @@ class EmailCampaign < ApplicationRecord
     end
   end
 
+  def schedule!(scheduled_at:)
+    with_delivery_lock do
+      return false unless sendable?
+
+      update!(status: :scheduled, scheduled_at: scheduled_at)
+    end
+  end
+
+  # Includes ambiguous claims/failures whose provider feedback may still arrive later.
+  def delivery_history?
+    recipients = email_campaign_recipients
+    recipients.where.not(sent_at: nil).or(recipients.where.not(status: %i[pending suppressed])).exists? || email_events.exists?
+  end
+
   def recipient_import_active?
     email_campaign_imports.active.exists?
   end
 
   def pause!
-    return unless sending? || scheduled?
+    with_delivery_lock do
+      next unless sending? || scheduled?
 
-    update!(status: :paused, hygiene_pause_reason: nil)
-  end
-
-  def resume!
-    return unless paused?
-
-    return unless EmailCampaigns::PreflightDecision.new.campaign_allowed?(self)
-
-    update!(status: :sending, hygiene_pause_reason: nil)
-    EmailCampaigns::DeliveryJob.perform_later(id) if EmailCampaigns::Config.enabled?
-  end
-
-  def cancel!
-    return if terminal?
-
-    with_lock do
-      update!(status: :canceled)
-      email_campaign_recipients.where(status: :pending)
-                               .update_all(status: EmailCampaignRecipient.statuses[:suppressed],
-                                           updated_at: Time.current)
-      refresh_counters!
+      update!(status: :paused, hygiene_pause_reason: nil, pause_reason: { kind: 'manual', code: 'manual_pause' })
     end
   end
 
+  def resume!(actor: nil)
+    return false unless reload.paused?
+
+    ensure_resume_eligible!
+    # Reputation collects outside all campaign/account locks. Publication and the
+    # campaign transition commit together; a failed final hygiene check rolls back release.
+    result = EmailCampaigns::Guardrail.resume!(account, actor: actor, delivery_mode: delivery_mode) do
+      with_lock do
+        ensure_resume_eligible!
+        update!(status: :sending, hygiene_pause_reason: nil, pause_reason: {}, last_error: nil)
+      end
+    end
+    raise CustomExceptions::EmailReputationBlocked, result unless result[:resume_allowed]
+
+    ActiveRecord.after_all_transactions_commit { EmailCampaigns::DeliveryJob.perform_later(id) } if EmailCampaigns::Config.enabled?
+    true
+  end
+
+  def cancel!
+    with_delivery_lock do
+      return false if recipient_import_active?
+      return true if sent? || failed?
+
+      update!(status: :canceled)
+    end
+    # Cancellation fences new claims first. Cleanup is repeatable, with bounded
+    # batches so a large list cannot hold the account write lock for the whole list.
+    email_campaign_recipients.pending.in_batches(of: CANCELLATION_BATCH_SIZE) do |batch|
+      with_delivery_lock do
+        batch.update_all(status: EmailCampaignRecipient.statuses[:suppressed], updated_at: Time.current)
+      end
+    end
+    refresh_counters!
+  end
+
   def finalize!
-    with_lock do
+    with_delivery_lock do
       return unless sending?
       return if recipient_import_active? || email_campaign_recipients.pending.exists?
       # Another worker may own an optimistic claim but not have reached the provider.
       # An ambiguous claim without a persisted receipt requires operator review.
       return if email_campaign_recipients.sent.exists?(sent_at: nil)
 
-      refresh_counters!
       update!(status: :sent, sent_at: Time.current)
     end
+    refresh_counters!
   end
 
   # ---- geração de e-mail por IA (assíncrona/durável) ----
@@ -238,9 +279,20 @@ class EmailCampaign < ApplicationRecord
   NON_DISPATCHED_STATUSES = %w[pending failed suppressed].freeze
 
   def refresh_counters!
+    # A caller may still own import/recipient locks in an outer transaction.
+    # Both aggregation and parent locking must wait for that transaction's commit.
+    ActiveRecord.after_all_transactions_commit do
+      counters = counter_attributes
+      with_delivery_lock { update_columns(counters) }
+    end
+  end
+
+  private
+
+  def counter_attributes
     counts = email_campaign_recipients.group(:status).count
     ev = event_counters
-    update_columns(
+    {
       recipients_count: counts.values.sum,
       sent_count: counts.values.sum -
         NON_DISPATCHED_STATUSES.sum { |s| count_for(counts, s) },
@@ -253,10 +305,23 @@ class EmailCampaign < ApplicationRecord
       complained_count: ev[:complained],
       unsubscribed_count: ev[:unsubscribed],
       updated_at: Time.current
-    )
+    }
   end
 
-  private
+  def ensure_resume_eligible!
+    code = if !paused?
+             'campaign_not_paused'
+           elsif recipient_import_active?
+             'recipient_import_active'
+           elsif !EmailCampaigns::PreflightDecision.new.campaign_allowed?(self)
+             EmailCampaigns::PreflightDecision::PAUSE_REASON
+           end
+    return unless code
+
+    raise CustomExceptions::EmailReputationBlocked.new(
+      resume_allowed: false, protection: { kind: 'hygiene', code: code, overridable: false }
+    )
+  end
 
   # Backstop sanitization: run the same MJML cleaner used on AI output over any body_mjml that
   # changes (direct MJML edits, video blocks, hand-pasted markup) so it isn't limited to the AI

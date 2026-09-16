@@ -26,7 +26,7 @@ class Api::V1::Accounts::EmailCampaigns::RecipientsController < Api::V1::Account
   end
 
   def retry_import
-    @campaign.with_lock do
+    @campaign.with_delivery_lock do
       return render_unprocessable('email_campaign.not_editable') unless @campaign.draft?
       return render_unprocessable('import_in_progress') if @campaign.recipient_import_active?
 
@@ -41,7 +41,7 @@ class Api::V1::Accounts::EmailCampaigns::RecipientsController < Api::V1::Account
   private
 
   def persist_upload(file)
-    @campaign.with_lock do
+    @campaign.with_delivery_lock do
       return render_unprocessable('email_campaign.not_editable') unless @campaign.draft?
       return render_unprocessable('import_in_progress') if @campaign.recipient_import_active?
 
