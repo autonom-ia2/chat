@@ -173,4 +173,33 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do
     expect(state.observation_generation).to be > first_generation
     expect(state.trigger_snapshot).to eq(initial)
   end
+
+  it 'cannot release or override an existing block with a safe observation superseded by feedback' do
+    service.evaluate!
+    state = EmailReputationState.find_by!(account: account)
+    protected_attributes = state.attributes.slice('trigger_snapshot', 'triggered_at', 'current_metrics', 'evaluated_feedback_version', 'override')
+    allow(collector).to receive(:call) do
+      EmailCampaigns::Reputation::EvaluationQueue.invalidate(account.id)
+      metrics.merge(permanent: 0, bounced: 0)
+    end
+    expect(service.resume!).to include(blocked: true, resume_allowed: false,
+                                       protection: include(code: 'reputation_evaluation_superseded'))
+    result = service.override!(actor: super_admin, reason: 'Reviewed synthetic source', duration_seconds: 60, message_budget: 2)
+    expect(result).to include(blocked: true, resume_allowed: false, override_active: false)
+    expect(state.reload.attributes.slice(*protected_attributes.keys)).to eq(protected_attributes)
+    expect(state.feedback_version).to eq(2)
+    expect(EmailReputationAudit.where(account: account, action: %w[released override_granted])).to be_empty
+  end
+
+  %w[shadow warning].each do |mode|
+    it "does not publish a superseded harmful observation in #{mode}" do
+      allow(collector).to receive(:call) do
+        EmailCampaigns::Reputation::EvaluationQueue.invalidate(account.id)
+        metrics
+      end
+      evaluator = described_class.new(account, policy: EmailCampaigns::Reputation::Policy.new('EMAIL_REPUTATION_MODE' => mode))
+      expect(evaluator.evaluate!).to include(blocked: false, resume_allowed: false, current_metrics: {})
+      expect(EmailReputationAudit.where(account: account, action: 'paused')).to be_empty
+    end
+  end
 end

@@ -76,8 +76,7 @@ class EmailCampaigns::Reputation::ProviderMonitor
   end
 
   def persist(attributes)
-    state = EmailProviderState.find_by(provider_key: @config.provider_key) ||
-            EmailProviderState.create_or_find_by!(provider_key: @config.provider_key)
+    state = EmailProviderState.for_provider(@config.provider_key)
     state.with_lock do
       # An older overlapping poll must not replace newer telemetry; unknown cannot clear a block.
       return state if state.checked_at && state.checked_at >= attributes.fetch(:checked_at)

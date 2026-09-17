@@ -12,7 +12,7 @@ class EmailCampaigns::DeliveryClaim
 
   # Final authorization after rendering. No rendering, DNS or provider I/O under locks.
   def claim(recipient)
-    result = @admission.with_delivery_locks(recipient) do |state|
+    result = @admission.with_delivery_locks(recipient, provider: true) do |state|
       eligible = eligibility(recipient, :pending)
       next eligible unless eligible == :ready
 
@@ -37,7 +37,7 @@ class EmailCampaigns::DeliveryClaim
     # A successful dispatch check is the handoff boundary. A later ambiguous call
     # cannot reuse this gate to release an already authorized message.
     @claimed_id = nil
-    @admission.with_delivery_locks(recipient) do
+    @admission.with_delivery_locks(recipient, provider: true) do
       eligible = eligibility(recipient, :sent)
       next true if eligible == :ready
 

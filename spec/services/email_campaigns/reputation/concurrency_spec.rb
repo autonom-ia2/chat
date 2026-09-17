@@ -105,6 +105,62 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
     expect(EmailReputationAudit.where(account: account, action: 'released')).to be_empty
   end
 
+  # rubocop:disable RSpec/MultipleExpectations -- barrier, durable incident and lease invariants across three cycles
+  it 'blocks before the next claim through three feedback-superseded harmful evaluations and keeps following up' do
+    accepted = Array.new(100) do |index|
+      campaign.email_campaign_recipients.create!(email: "stream#{index}@example.com", sent_at: 1.hour.ago, status: :sent)
+    end
+    described_class.new(account, policy: policy).evaluate!
+    state = EmailReputationState.find_by!(account: account)
+    published = state.attributes.slice('current_metrics', 'policy', 'evaluated_at', 'evaluated_feedback_version')
+    accepted.first(10).each do |row|
+      row.email_events.create!(event_type: :bounce, payload: { bounce: { bounceType: 'Permanent' } })
+    end
+    snapshot = nil
+    3.times do |cycle|
+      token = state.reload.evaluation_lease_token
+      worker = Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          Thread.current[:slow_reputation_collection] = true
+          described_class.new(Account.find(account.id), policy: policy).evaluate!
+        end
+      end
+      begin
+        pid = Timeout.timeout(5) { captured.pop }
+        expect(ActiveRecord::Base.connection.select_value('SELECT pg_backend_pid()')).not_to eq(pid)
+        accepted.fetch(10 + cycle).email_events.create!(event_type: :bounce, payload: { bounce: { bounceType: 'Transient' } })
+      ensure
+        release << true
+        worker.join(5) || worker.kill.join
+      end
+      expect(worker.value).to include(blocked: true, resume_allowed: false,
+                                      protection: include(code: 'reputation_evaluation_superseded'))
+      expect(state.reload.attributes.slice(*published.keys)).to eq(published)
+      expect(state.feedback_version).to eq(11 + cycle)
+      snapshot ||= state.trigger_snapshot.deep_dup
+      expect(state.trigger_snapshot).to eq(snapshot)
+      expect(snapshot).to include('superseded' => true, 'feedback_version' => 10)
+      expect(snapshot.dig('metrics', 'permanent_ratio')).to eq(0.1)
+      expect(account.reload.internal_attributes['email_campaigns_paused']).to be_present
+      pending = campaign.email_campaign_recipients.create!(email: "denied#{cycle}@example.com")
+      campaign.update!(status: :sending) # Exercise reputation again, not just the previous campaign pause.
+      expect(EmailCampaigns::DeliveryClaim.new(campaign).claim(pending)).to eq(:paused)
+      expect(pending.reload).to be_pending
+      expect do
+        EmailCampaigns::Reputation::EvaluationQueue.finish(account.id, token)
+      end.to have_enqueued_job(EmailCampaigns::ReputationEvaluationJob).with(account.id, kind_of(String))
+      expect(state.reload.evaluation_lease_token).not_to eq(token)
+    end
+    expect(EmailReputationAudit.where(account: account, action: 'paused').pluck(:snapshot)).to eq([snapshot])
+    token = state.reload.evaluation_lease_token
+    expect(described_class.new(account, policy: policy).evaluate!).to include(blocked: true)
+    expect(state.reload.evaluated_feedback_version).to eq(state.feedback_version)
+    EmailCampaigns::Reputation::EvaluationQueue.finish(account.id, token)
+    expect(state.reload.evaluation_lease_token).to be_nil
+  end
+
+  # rubocop:enable RSpec/MultipleExpectations
+
   it 'invalidates a pre-feedback observation before the committed event reaches its enqueue callback' do
     recipient = campaign.email_campaign_recipients.create!(email: 'commit-barrier@example.com', sent_at: 1.hour.ago)
     observation = EmailCampaigns::Reputation::Observation.new(account.id).collect

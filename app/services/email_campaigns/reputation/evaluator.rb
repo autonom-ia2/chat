@@ -14,7 +14,7 @@ class EmailCampaigns::Reputation::Evaluator
   end
 
   def resume!(actor: nil, delivery_mode: 'ses')
-    observed do |account, state, observation|
+    observed(delivery_mode: delivery_mode) do |account, state, observation|
       refresh!(account, state, observation)
       provider = EmailCampaigns::Reputation::ProviderGate.protection if delivery_mode.to_s == 'ses'
       result = payload(state)
@@ -33,7 +33,7 @@ class EmailCampaigns::Reputation::Evaluator
 
     duration, budget = validate_override!(reason, duration_seconds, message_budget)
 
-    observed do |account, state, observation|
+    observed(delivery_mode: 'ses') do |account, state, observation|
       refresh!(account, state, observation)
       raise CustomExceptions::EmailReputationOverride, 'override requires a protected account' unless state.blocked
 
@@ -62,19 +62,39 @@ class EmailCampaigns::Reputation::Evaluator
 
   # Collection never holds Account/state locks. A later observation or committed feedback
   # invalidates this generation. In particular, stale resume/override requests fail closed.
-  def observed
+  def observed(delivery_mode: nil)
     observation = EmailCampaigns::Reputation::Observation.new(@account_id).collect
     account = Account.find(@account_id)
     account.with_lock do
       state = EmailReputationState.find_by!(account_id: @account_id)
       state.with_lock do
         unless observation.current?(state)
+          block_superseded!(state, observation)
+          ActiveRecord.after_all_transactions_commit { EmailCampaigns::Reputation::EvaluationQueue.request(@account_id) }
           next payload(state).merge(resume_allowed: false,
                                     protection: { kind: 'technical', code: 'reputation_evaluation_superseded', overridable: false })
         end
-        yield account, state, observation
+        EmailCampaigns::Reputation::ProviderGate.with_admission_lock(delivery_mode: delivery_mode) do
+          yield account, state, observation
+        end
       end
     end
+  end
+
+  # Stale evidence may only add protection. Keep published metrics/version untouched;
+  # the immutable incident records exactly which superseded observation caused the block.
+  def block_superseded!(state, observation)
+    return if state.blocked || @policy.mode != 'enforce'
+
+    decision = @policy.evaluate(observation.metrics)
+    return unless decision[:pause]
+
+    snapshot = { triggered_at: Time.current.iso8601, code: 'reputation_threshold', policy: @policy.snapshot,
+                 metrics: observation.metrics.merge(decision).merge(evaluation_generation: observation.generation),
+                 superseded: true, feedback_version: observation.feedback_version }
+    state.update!(blocked: true, level: 'paused', triggered_at: snapshot.fetch(:triggered_at), trigger_snapshot: snapshot, override: {})
+    audit!(state, 'paused', snapshot: snapshot)
+    mirror_flag!({ at: state.triggered_at, reason: 'email_reputation_protection' })
   end
 
   def refresh!(account, state, observation)

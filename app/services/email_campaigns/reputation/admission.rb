@@ -20,20 +20,23 @@ class EmailCampaigns::Reputation::Admission
   end
 
   # Short, shared lock order. Callers only perform local eligibility/claim writes here.
-  def with_delivery_locks(recipient)
-    with_campaign_locks do |state|
+  def with_delivery_locks(recipient, provider: false)
+    with_campaign_locks(provider: provider) do |state|
       recipient.with_lock { yield state }
     end
   end
 
+  # Account -> reputation state -> SES provider (when enabled) -> campaign -> recipient.
   # Enter before taking any campaign/recipient lock, never from a save callback.
   # with_lock reloads clean objects; callers must assign changes inside this block.
-  def with_campaign_locks
+  def with_campaign_locks(provider: false)
     ActiveRecord::Base.uncached do
       Account.find(@campaign.account_id).with_lock do
         state = EmailReputationState.find_by(account_id: @campaign.account_id)
         state&.lock!
-        @campaign.with_lock { yield state }
+        EmailCampaigns::Reputation::ProviderGate.with_admission_lock(delivery_mode: provider ? @campaign.delivery_mode : nil) do
+          @campaign.with_lock { yield state }
+        end
       end
     end
   end

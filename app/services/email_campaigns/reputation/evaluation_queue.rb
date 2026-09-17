@@ -29,7 +29,10 @@ class EmailCampaigns::Reputation::EvaluationQueue
 
       state.evaluation_lease_until = nil
       state.evaluation_lease_token = nil
-      lease = claim(state) if state.feedback_version > state.evaluated_feedback_version
+      # A monotonic block does not publish metrics. Retry even if only a newer
+      # observation generation (rather than new feedback) superseded the worker.
+      unpublished = state.current_metrics['evaluation_generation'] != state.observation_generation
+      lease = claim(state) if unpublished || state.feedback_version > state.evaluated_feedback_version
       state.save!
       lease
     end

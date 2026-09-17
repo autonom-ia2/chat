@@ -11,6 +11,7 @@ class EmailCampaigns::Reputation::ProviderRelease
     validate_release!(reason)
 
     state = @monitor.call
+    # Collection has completed. Provider-only lock: never take tenant/campaign locks here.
     state.with_lock do
       raise CustomExceptions::EmailReputationOverride, 'provider_release_denied' unless releasable?(state)
 

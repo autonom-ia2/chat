@@ -1,5 +1,16 @@
 class EmailCampaigns::Reputation::ProviderGate
   class << self
+    # Compound writers acquire Account -> reputation state -> provider -> campaign -> recipient.
+    # Monitor/release take only provider, after external collection; never acquire Account from there.
+    def with_admission_lock(delivery_mode: 'ses', &)
+      return yield unless delivery_mode.to_s == 'ses'
+
+      config = EmailCampaigns::Reputation::ProviderConfig.new
+      return yield unless config.enabled
+
+      EmailProviderState.for_provider(config.provider_key).with_lock(&)
+    end
+
     def protection(config: EmailCampaigns::Reputation::ProviderConfig.new, now: Time.current)
       state = EmailProviderState.find_by(provider_key: config.provider_key)
       code = block_code(state, config, now)

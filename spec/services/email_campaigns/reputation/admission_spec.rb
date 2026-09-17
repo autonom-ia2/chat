@@ -58,6 +58,8 @@ RSpec.describe EmailCampaigns::Reputation::Admission do
     inbox = create(:channel_email, account: account).inbox
     campaign.update!(delivery_mode: :direct_inbox, sender_inbox: inbox)
     expect(EmailCampaigns::Reputation::ProviderGate).not_to receive(:protection)
+    expect(EmailCampaigns::Reputation::ProviderConfig).not_to receive(:new)
+    expect(EmailProviderState).not_to receive(:for_provider)
     expect(admission.claim!(recipient)).to be(true)
   end
 
@@ -71,6 +73,18 @@ RSpec.describe EmailCampaigns::Reputation::Admission do
     with_modified_env('EMAIL_REPUTATION_MODE' => 'invalid') do
       expect(admission.park_if_blocked!).to be(true)
       expect(campaign.reload.pause_reason).to include('kind' => 'technical', 'code' => 'reputation_configuration_invalid')
+    end
+  end
+
+  [false, true].each do |monitor_enabled|
+    it "fails closed for the manual env block with monitoring #{monitor_enabled}" do
+      allow(EmailCampaigns::Reputation::ProviderGate).to receive(:protection).and_call_original
+      with_modified_env('EMAIL_REPUTATION_PROVIDER_MONITOR' => monitor_enabled.to_s,
+                        'EMAIL_REPUTATION_PROVIDER_BLOCK' => 'true', 'EMAIL_REPUTATION_AWS_ACCOUNT_ID' => '123456789012') do
+        expect(admission.claim!(recipient)).to be(false)
+        expect(recipient.reload).to be_pending
+        expect(campaign.reload.pause_reason['code']).to eq('provider_manual_block')
+      end
     end
   end
 end

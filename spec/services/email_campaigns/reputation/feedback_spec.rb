@@ -100,4 +100,31 @@ RSpec.describe EmailCampaigns::ReputationEvaluationJob do # rubocop:disable RSpe
     expect(state.evaluated_feedback_version).to eq(state.feedback_version)
     expect(enqueued_jobs.count { |job| job[:job] == described_class }).to eq(1)
   end
+
+  it 'follows up a generation-only supersession even when feedback was already evaluated' do
+    recipient.update!(sent_at: Time.current)
+    recipient.email_events.create!(event_type: :complaint)
+    state = EmailReputationState.find_by!(account: account)
+    token = state.evaluation_lease_token
+    policy = EmailCampaigns::Reputation::Policy.new('EMAIL_REPUTATION_MODE' => 'enforce')
+    EmailCampaigns::Reputation::Evaluator.new(account, policy: policy).evaluate!
+    published = state.reload.current_metrics.deep_dup
+    observation = EmailCampaigns::Reputation::Observation.new(account.id).collect
+    # A newer reservation supersedes the first, even with no additional feedback.
+    EmailCampaigns::Reputation::Observation.new(account.id).collect
+    allow(EmailCampaigns::Reputation::Observation).to receive(:new).and_return(observation)
+    allow(observation).to receive(:collect).and_return(observation)
+    with_modified_env('EMAIL_REPUTATION_MODE' => 'enforce') do
+      expect(EmailCampaigns::Reputation::Evaluator.new(account).evaluate!).to include(blocked: true, resume_allowed: false)
+    end
+    expect(state.reload.current_metrics).to eq(published)
+    expect(state.evaluated_feedback_version).to eq(state.feedback_version)
+    expect do
+      EmailCampaigns::Reputation::EvaluationQueue.finish(account.id, token)
+    end.to have_enqueued_job(described_class).with(account.id, kind_of(String))
+    next_token = state.reload.evaluation_lease_token
+    expect(next_token).not_to eq(token)
+    expect { EmailCampaigns::Reputation::EvaluationQueue.finish(account.id, token) }.not_to have_enqueued_job(described_class)
+    expect(state.reload.evaluation_lease_token).to eq(next_token)
+  end
 end
