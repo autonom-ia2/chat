@@ -40,16 +40,22 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
 
   it 'collects 50k sends without blocking an unrelated JSON update or admission before publication' do
     connection = ActiveRecord::Base.connection
-    connection.execute(<<~SQL.squish)
-      INSERT INTO email_campaign_recipients (email_campaign_id, email, status, sent_at, created_at, updated_at)
-      SELECT #{campaign.id}, 'synthetic-' || n || '@example.com', 1, NOW(), NOW(), NOW()
-      FROM generate_series(1, 50000) n
-    SQL
-    connection.execute(<<~SQL.squish)
-      INSERT INTO email_events (recipient_id, event_type, occurred_at, payload, created_at, updated_at)
-      SELECT id, 3, NOW(), '{"bounce":{"bounceType":"Permanent"}}'::jsonb, NOW(), NOW()
-      FROM email_campaign_recipients WHERE email_campaign_id = #{campaign.id} ORDER BY id
-    SQL
+    # The gate measures aggregation/locking at 50k, not fixture insertion speed. Slow CI
+    # runners can exceed the app's ordinary 14s statement timeout while validating 50k FKs,
+    # so only the synthetic seed transaction gets a wider local timeout.
+    connection.transaction do
+      connection.execute("SET LOCAL statement_timeout = '60s'")
+      connection.execute(<<~SQL.squish)
+        INSERT INTO email_campaign_recipients (email_campaign_id, email, status, sent_at, created_at, updated_at)
+        SELECT #{campaign.id}, 'synthetic-' || n || '@example.com', 1, NOW(), NOW(), NOW()
+        FROM generate_series(1, 50000) n
+      SQL
+      connection.execute(<<~SQL.squish)
+        INSERT INTO email_events (recipient_id, event_type, occurred_at, payload, created_at, updated_at)
+        SELECT id, 3, NOW(), '{"bounce":{"bounceType":"Permanent"}}'::jsonb, NOW(), NOW()
+        FROM email_campaign_recipients WHERE email_campaign_id = #{campaign.id} ORDER BY id
+      SQL
+    end
     pending = campaign.email_campaign_recipients.create!(email: 'pending@example.com')
     worker = Thread.new do
       ActiveRecord::Base.connection_pool.with_connection do
