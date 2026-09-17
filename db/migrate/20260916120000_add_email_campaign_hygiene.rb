@@ -73,8 +73,8 @@ class AddEmailCampaignHygiene < ActiveRecord::Migration[7.1]
 
   def create_import_issues
     create_table :email_campaign_import_issues do |t|
-      t.references :email_campaign, null: false, foreign_key: true
-      t.references :email_campaign_import, foreign_key: true
+      t.references :email_campaign, null: false, foreign_key: { on_delete: :cascade }
+      t.references :email_campaign_import, foreign_key: { on_delete: :cascade }
       t.integer :row_number, null: false
       t.string :raw_address, null: false, limit: 320
       t.string :reason_code, null: false

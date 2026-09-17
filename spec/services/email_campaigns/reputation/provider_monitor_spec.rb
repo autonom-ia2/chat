@@ -41,6 +41,17 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
     expect(state.observed_at).to eq(now - 3600)
   end
 
+  it 'does not treat an unknown polling error on an existing block as new harmful evidence' do
+    state = EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', blocked: true,
+                                       harmful_generation: 7, observed_at: now - 60, checked_at: now - 60)
+    allow(ses).to receive(:get_account).and_raise(Net::ReadTimeout)
+    travel 1.second do
+      monitor.call
+    end
+    expect(state.reload).to have_attributes(status: 'blocked', blocked: true, harmful_generation: 7,
+                                            error_code: 'Net::ReadTimeout')
+  end
+
   it 'does no work by default and treats missing CloudWatch points as unknown' do
     disabled = EmailCampaigns::Reputation::ProviderConfig.new({})
     expect(described_class.new(config: disabled, ses: ses, cloudwatch: cloudwatch).call).to be_nil

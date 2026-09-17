@@ -78,22 +78,47 @@ class EmailCampaigns::Reputation::ProviderMonitor
   def persist(attributes)
     state = EmailProviderState.for_provider(@config.provider_key)
     state.with_lock do
-      # An older overlapping poll must not replace newer telemetry; unknown cannot clear a block.
-      return state if state.checked_at && state.checked_at >= attributes.fetch(:checked_at)
+      # Older overlapping polls cannot replace newer telemetry. A late harmful
+      # observation may still add the irreversible provider latch/audit, but never
+      # rewinds checked_at/status/telemetry or releases anything.
+      if state.checked_at && state.checked_at >= attributes.fetch(:checked_at)
+        latch_superseded_block!(state, attributes)
+        return state
+      end
 
       update_observation!(state, attributes)
     end
     state
   end
 
+  def latch_superseded_block!(state, attributes)
+    return unless attributes[:status] == 'blocked'
+
+    newly_blocked = !state.blocked
+    state.update!(blocked: true, harmful_generation: state.harmful_generation + 1)
+    return unless newly_blocked
+
+    EmailReputationAudit.create!(provider_key: state.provider_key, action: 'provider_blocked',
+                                 snapshot: { code: 'provider_blocked', checked_at: attributes[:checked_at],
+                                             observed_at: attributes[:observed_at], superseded: true })
+  end
+
   def update_observation!(state, attributes)
+    harmful = attributes[:status] == 'blocked'
     attributes[:status] = 'blocked' if state.status == 'blocked' && attributes[:status] == 'unknown'
-    newly_blocked = !state.blocked && (state.latched? || attributes[:status] == 'blocked')
-    attributes[:blocked] = true if newly_blocked
+    newly_blocked = !state.blocked && (state.latched? || harmful)
+    apply_block_attributes!(state, attributes, harmful, newly_blocked)
     state.update!(attributes)
     return unless newly_blocked
 
     EmailReputationAudit.create!(provider_key: state.provider_key, action: 'provider_blocked',
                                  snapshot: { code: 'provider_blocked', checked_at: state.checked_at })
+  end
+
+  def apply_block_attributes!(state, attributes, harmful, newly_blocked)
+    return unless harmful || newly_blocked
+
+    attributes[:blocked] = true
+    attributes[:harmful_generation] = state.harmful_generation + 1 if harmful
   end
 end

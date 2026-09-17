@@ -111,6 +111,47 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
     expect(EmailReputationAudit.where(account: account, action: 'released')).to be_empty
   end
 
+  %w[shadow warning].each do |mode|
+    it "keeps legacy protection monotonic through three superseded harmful evaluations in #{mode}", :aggregate_failures do
+      accepted = Array.new(50) do |index|
+        campaign.email_campaign_recipients.create!(email: "superseded-#{mode}-#{index}@example.com", sent_at: 1.hour.ago, status: :sent)
+      end
+      accepted.first(5).each do |row|
+        row.email_events.create!(event_type: :bounce, payload: { bounce: { bounceType: 'Permanent' } })
+      end
+      mode_policy = EmailCampaigns::Reputation::Policy.new('EMAIL_REPUTATION_MODE' => mode)
+      snapshot = nil
+      3.times do |cycle|
+        worker = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            Thread.current[:slow_reputation_collection] = true
+            described_class.new(Account.find(account.id), policy: mode_policy).evaluate!
+          end
+        end
+        begin
+          pid = Timeout.timeout(5) { captured.pop }
+          expect(ActiveRecord::Base.connection.select_value('SELECT pg_backend_pid()')).not_to eq(pid)
+          accepted.fetch(5 + cycle).email_events.create!(event_type: :bounce, payload: { bounce: { bounceType: 'Transient' } })
+        ensure
+          release << true
+          worker.join(5) || worker.kill.join
+        end
+        expect(worker.value).to include(blocked: true, resume_allowed: false,
+                                        protection: include(code: 'reputation_evaluation_superseded'))
+        state = EmailReputationState.find_by!(account: account)
+        expect(state.current_metrics).to eq({})
+        snapshot ||= state.trigger_snapshot.deep_dup
+        expect(state.trigger_snapshot).to eq(snapshot)
+        expect(snapshot).to include('superseded' => true, 'feedback_version' => 5)
+        pending = campaign.email_campaign_recipients.create!(email: "denied-superseded-#{mode}-#{cycle}@example.com")
+        campaign.update!(status: :sending)
+        expect(EmailCampaigns::DeliveryClaim.new(campaign).claim(pending)).to eq(:paused)
+        expect(pending.reload).to be_pending
+      end
+      expect(EmailReputationAudit.where(account: account, action: 'paused').count).to eq(1)
+    end
+  end
+
   # rubocop:disable RSpec/MultipleExpectations -- barrier, durable incident and lease invariants across three cycles
   it 'blocks before the next claim through three feedback-superseded harmful evaluations and keeps following up' do
     accepted = Array.new(100) do |index|

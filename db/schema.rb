@@ -2312,6 +2312,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_123000) do
     t.string "provider_key", null: false
     t.string "status", default: "unknown", null: false
     t.boolean "blocked", default: false, null: false
+    t.bigint "harmful_generation", default: 0, null: false
     t.boolean "manual_block", default: false, null: false
     t.string "manual_reason"
     t.jsonb "telemetry", default: {}, null: false
@@ -3165,8 +3166,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_123000) do
   add_foreign_key "ctwa_tracked_link_clicks", "ctwa_tracked_links", column: "tracked_link_id", on_delete: :cascade
   add_foreign_key "ctwa_tracked_links", "accounts", on_delete: :cascade
   add_foreign_key "ctwa_tracked_links", "inboxes", on_delete: :cascade
-  add_foreign_key "email_campaign_import_issues", "email_campaign_imports"
-  add_foreign_key "email_campaign_import_issues", "email_campaigns"
+  add_foreign_key "email_campaign_import_issues", "email_campaign_imports", on_delete: :cascade
+  add_foreign_key "email_campaign_import_issues", "email_campaigns", on_delete: :cascade
   add_foreign_key "email_campaign_imports", "email_campaigns"
   add_foreign_key "email_campaign_recipients", "email_campaigns"
   add_foreign_key "email_campaign_templates", "accounts"

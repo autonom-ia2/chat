@@ -31,6 +31,7 @@ class CreateEmailReputationStates < ActiveRecord::Migration[7.1]
       t.string :provider_key, null: false
       t.string :status, null: false, default: 'unknown'
       t.boolean :blocked, null: false, default: false
+      t.bigint :harmful_generation, null: false, default: 0
       t.boolean :manual_block, null: false, default: false
       t.string :manual_reason
       t.jsonb :telemetry, null: false, default: {}

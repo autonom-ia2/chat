@@ -84,13 +84,16 @@ class EmailCampaigns::Reputation::Evaluator
   # Stale evidence may only add protection. Keep published metrics/version untouched;
   # the immutable incident records exactly which superseded observation caused the block.
   def block_superseded!(state, observation)
-    return if state.blocked || @policy.mode != 'enforce'
+    return if state.blocked
 
     decision = @policy.evaluate(observation.metrics)
-    return unless decision[:pause]
+    return unless effective_pause?(observation.metrics, decision)
 
+    effective = effective_pause?(observation.metrics, decision)
     snapshot = { triggered_at: Time.current.iso8601, code: 'reputation_threshold', policy: @policy.snapshot,
-                 metrics: observation.metrics.merge(decision).merge(evaluation_generation: observation.generation),
+                 metrics: observation.metrics.merge(decision).merge(policy_pause: decision[:pause], pause: effective,
+                                                                    effective_pause: effective,
+                                                                    evaluation_generation: observation.generation),
                  superseded: true, feedback_version: observation.feedback_version }
     state.update!(blocked: true, level: 'paused', triggered_at: snapshot.fetch(:triggered_at), trigger_snapshot: snapshot, override: {})
     audit!(state, 'paused', snapshot: snapshot)
@@ -100,7 +103,7 @@ class EmailCampaigns::Reputation::Evaluator
   def refresh!(account, state, observation)
     metrics = observation.metrics
     decision = @policy.evaluate(metrics)
-    should_pause = @policy.mode == 'enforce' ? decision[:pause] : EmailCampaigns::Reputation::LegacyDecision.pause?(metrics)
+    should_pause = effective_pause?(metrics, decision)
     if @policy.mode != 'enforce'
       decision[:resume_allowed] = EmailCampaigns::Reputation::LegacyDecision.resume_allowed?(metrics, proposed: decision[:resume_allowed])
     end
@@ -110,6 +113,12 @@ class EmailCampaigns::Reputation::Evaluator
     record_alert!(state)
     revoke_override!(state, observation.fingerprint)
     persist_protection!(state, account.internal_attributes[FLAG_KEY], should_pause)
+  end
+
+  # Superseded observations can only add protection. During shadow/warning the
+  # legacy guardrail remains authoritative for pausing until enforcement takes over.
+  def effective_pause?(metrics, decision = @policy.evaluate(metrics))
+    @policy.mode == 'enforce' ? decision[:pause] : EmailCampaigns::Reputation::LegacyDecision.pause?(metrics)
   end
 
   def persist_protection!(state, legacy, should_pause)

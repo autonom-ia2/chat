@@ -192,14 +192,22 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do
   end
 
   %w[shadow warning].each do |mode|
-    it "does not publish a superseded harmful observation in #{mode}" do
+    it "adds legacy protection from a superseded harmful observation in #{mode} without publishing stale metrics" do
+      legacy_harmful = metrics.merge(sent: 50, permanent: 0, bounced: 3, transient: 3)
       allow(collector).to receive(:call) do
         EmailCampaigns::Reputation::EvaluationQueue.invalidate(account.id)
-        metrics
+        legacy_harmful
       end
       evaluator = described_class.new(account, policy: EmailCampaigns::Reputation::Policy.new('EMAIL_REPUTATION_MODE' => mode))
-      expect(evaluator.evaluate!).to include(blocked: false, resume_allowed: false, current_metrics: {})
-      expect(EmailReputationAudit.where(account: account, action: 'paused')).to be_empty
+      result = evaluator.evaluate!
+      expect(result).to include(blocked: true, resume_allowed: false, current_metrics: {})
+      persisted = EmailReputationState.find_by!(account: account).trigger_snapshot
+      expect(persisted['superseded']).to be(true)
+      expect(result.dig(:trigger_snapshot, 'metrics', 'sent')).to eq(50)
+      expect(result.dig(:trigger_snapshot, 'metrics', 'pause')).to be(true)
+      expect(result.dig(:trigger_snapshot, 'metrics', 'policy_pause')).to be(false)
+      expect(result.dig(:trigger_snapshot, 'metrics', 'effective_pause')).to be(true)
+      expect(EmailReputationAudit.where(account: account, action: 'paused').count).to eq(1)
     end
   end
 end

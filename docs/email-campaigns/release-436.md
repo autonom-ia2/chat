@@ -2,28 +2,31 @@
 
 Data de validação local:17/09/2026. Escopo: código e PRs, **sem autorização de merge, deploy, liberação de campanha ou backfill em produção**.
 
-## Série de PRs e ordem de aprovação
+## PR final de integração e trilha técnica
 
-| Ordem | Entrega | Branch | Dependência |
+As PRs #438–#442 continuam como **decomposição técnica e histórico de review**. Elas não devem ser mergeadas individualmente. A única PR deployável desta entrega é a **#443**, branch `feat/436-email-protection-final-integration`, diretamente contra `main`, contendo integralmente as cinco frentes.
+
+| Papel | PR | Entrega | Merge/deploy |
 | --- | --- | --- | --- |
-| 1 | Higiene e quarentena | `feat/436-01-email-hygiene` | main |
-| 2 | Reputação e admissão segura | `feat/436-02-email-reputation` | primeira PR |
-| 3 | Métricas, filtros e API | `feat/436-03-email-reports` | segunda PR |
-| 4 | UI humanizada e i18n | `feat/436-04-email-ux` | terceira PR |
-| 5 | Histórico, recuperação e fechamento | `feat/436-05-email-operations` | quarta PR |
+| Trilha técnica | #438 | Higiene e quarentena | Não mergear separadamente |
+| Trilha técnica | #439 | Reputação e admissão segura | Não mergear separadamente |
+| Trilha técnica | #440 | Métricas, filtros e API | Não mergear separadamente |
+| Trilha técnica | #441 | UI humanizada e i18n | Não mergear separadamente |
+| Trilha técnica | #442 | Histórico e recuperação | Não mergear separadamente |
+| **Integração final** | **#443** | **#438 + #439 + #440 + #441 + #442** | **Um merge em `main` → um blue-green** |
 
-As bases das PRs2–5 são temporariamente as branches anteriores para manter a revisão delimitada. **Não usar Merge enquanto a base for uma feature branch.** Após aprovação e deploy saudável da PR anterior, rebasear/retargetear a próxima para main, repetir CI e conferir o diff antes da nova aprovação. Cada merge em main aciona blue/green; não são cinco merges simultâneos.
+Qualquer mudança no HEAD da #443 exige CI próprio e nova revisão do diff consolidado. As fases `shadow`, `warning` e `enforce` são ativações operacionais posteriores ao único deploy, controladas por flags e aprovações próprias; não representam novos merges desta série.
 
 ## Gates adversariais obrigatórios antes de merge
 
-A cadeia foi rebaseada até a PR442 e os bloqueadores encontrados na revisão adversarial foram convertidos em regressões. **Isto ainda não autoriza merge**: falta o CI remoto verde no SHA final publicado e a revisão independente final desse SHA. Os gates locais abaixo foram executados em PostgreSQL/Redis descartáveis em loopback, sem produção, AWS ou envio real.
+A revisão externa da #443 no SHA `28fb2997e8222d63c8c8ab10c2df977aadc3a76a` encontrou dois P1 e um P2. Os três foram corrigidos na worktree final e convertidos em regressões. **Isto ainda não autoriza merge**: o novo HEAD precisa de CI próprio verde e nova revisão independente. Os gates locais abaixo foram executados em PostgreSQL/Redis descartáveis em loopback, sem produção, AWS ou envio real.
 
 | Gate adversarial | Fechamento local |
 | --- | --- |
 | Locks entre versão intermediária e candidata | Ordem `Account → state → campaign → recipient` e regressões cross-caller/mixed-version; nenhuma confirmação falsa de opt-out no gate final. |
-| Provider block versus claim | Ambas as ordens de corrida cobertas; admissão posterior ao latch é negada e transporte já admitido mantém semântica explícita. |
-| Feedback contínuo | Avaliação nociva superseded bloqueia monotonicamente e agenda sucessora; três ciclos e convergência fresca cobertos. |
-| Importação HTTP real | GET, multipart import e retry passam pelo Jbuilder/DTO real, com 200/202 e job persistido/enfileirado. |
+| Provider block versus claim/monitor | Ambas as ordens claim/latch continuam cobertas. Poll nocivo antigo que conclui depois de telemetria saudável mais nova preserva a telemetria nova, mas incrementa `harmful_generation`, adiciona `blocked=true` e auditoria quando cria o latch. `ProviderRelease` captura essa geração após a coleta e recusa liberar se um nocivo persistir antes do lock final. |
+| Feedback contínuo | `shadow`/`warning` aplicam `LegacyDecision` e `enforce` aplica a policy nova; observação superseded somente adiciona proteção, nunca publica métricas obsoletas nem libera. Regressões reais cobrem os três modos. |
+| Importação HTTP real / rollback | GET, multipart import e retry passam pelo Jbuilder/DTO real. As FKs de `email_campaign_import_issues` usam `ON DELETE CASCADE`; teste de upgrade `main schema → migrations #443 → código real da main` destruiu campanha/import/issue sem FK/500. |
 | Quarentena fora de ordem | Permutações, replay, janela antiga/futura e expiração usam evento qualificante mais recente sem encurtar proteção. |
 | Evidência corrigida na mesma chave | Promoção append-only única, prioridade forte preservada, apply completed e reimportação bloqueada. |
 | Denominador misto | SES usa apenas aceites SES; DirectInbox/unknown não entram no denominador oficial/local SES e a UI explicita proveniência. |
@@ -31,18 +34,18 @@ A cadeia foi rebaseada até a PR442 e os bloqueadores encontrados na revisão ad
 | Exclusão local versus proteção tenant | `invalid/review` local não é rotulado como blacklist/proteção; supressão tenant real mantém precedência. |
 | Contador de enviados após prevenção | `sent_count` deriva de `sent_at`; prevenção posterior não apaga aceite já persistido. |
 
-O CI dedicado deve repetir os gates no SHA final. Testes locais não certificam comportamento em produção nem substituem a observação blue/green entre merges.
+O CI dedicado deve repetir os gates no SHA final. Testes locais não certificam comportamento em produção nem substituem a observação do único blue-green antes de qualquer ativação operacional.
 
 ## Evidência integrada local após os fixes adversariais
 
-HEAD local validado da cadeia antes da atualização documental: `4b10d0beecef4506aefbe14af7dc94ba928061cf`. A atualização deste documento não altera código; o CI remoto deve validar o novo SHA documental publicado.
+Base da correção externa: #443 em `28fb2997e8222d63c8c8ab10c2df977aadc3a76a`. Os resultados abaixo incluem as correções P1/P1/P2 ainda antes do novo commit publicado. O SHA que receber esses commits deve repetir o CI próprio da #443 e a revisão externa.
 
 | Gate | Resultado local | Evidência |
 | --- | --- | --- |
-| Backend cumulativo das cinco entregas | **900 exemplos, zero falhas; um pending preexistente de Account** | `tmp/email436/final-p2-rspec.json` |
+| Backend cumulativo das cinco entregas | **907 exemplos, zero falhas; um pending preexistente de Account** | `tmp/email436/external-review-final.json` |
 | Manutenção/backfill focado | **121 exemplos, zero falhas/pending** | `tmp/email436/pr442-focused.json` |
-| Ruby puro | **9 arquivos;57 testes;50.876 asserções; zero falhas/erros/skips** | `tmp/email436/final-p2-pure.log` |
-| RuboCop cumulativo | **184 arquivos, zero infrações** | `tmp/email436/final-p2-rubocop.log` |
+| Ruby puro | **9 arquivos;57 testes;50.876 asserções; zero falhas/erros/skips** | `tmp/email436/external-review-pure.log` |
+| RuboCop cumulativo | **185 arquivos, zero infrações** | `tmp/email436/external-review-final-rubocop.log` |
 | Frontend completo | **461 arquivos /5.087 testes; zero falhas/pending** | PR441 `tmp/email436/p2-final-full-vitest.json` |
 | Idiomas | **57 módulos,43 ativos,263 mensagens/módulo,14.991 renderizações; fallback false** | PR441 `tmp/email436/p2-final-i18n.json` |
 | Build | Vite test real aprovado | PR441 `tmp/email436/p2-final-build.log` |
@@ -85,11 +88,13 @@ Não foi realizada revisão humana nativa das57 traduções, teste de todos os n
 
 ## Rollout e rollback
 
-1. Aprovar a PR seguinte somente com CI no HEAD e diff esperado; merge único e aguardar blue/green saudável.
-2. Preservar defaults de análise/monitoramento desativado no deploy inicial; as proteções legadas e supressões fortes não são apagadas.
-3. Após validação operacional separadamente autorizada, passar por shadow, warning e enforcement. Ativação de DNS/monitor global/backfill apply é decisão operacional, não efeito escondido da migração.
-4. Backfill começa por preview e aplica apenas com flag+confirmação+SuperAdmin persistido e escopo correto. Nunca retoma campanhas ou libera SES automaticamente.
-5. Rollback de aplicação usa o procedimento blue/green vigente. Manter tabelas/aditivos, eventos, supressões e snapshots; não fazer rollback destrutivo de banco nem limpar flags para forçar envio.
+1. Revisar **somente a PR #443** contra `main`, exigir CI próprio verde no HEAD exato e aprovação explícita do Rodrigo.
+2. Um único merge da #443 dispara **um blue-green**. Não mergear #438–#442 separadamente. Acompanhar as duas stacks, confirmar versão/saúde e executar apenas o smoke previamente autorizado antes de qualquer mudança de flags.
+3. Deploy inicial mantém `EMAIL_CAMPAIGN_HYGIENE_MODE=shadow`, `EMAIL_REPUTATION_MODE=shadow`, DNS=false, provider monitor=false e backfill apply=false, salvo decisão operacional explícita em contrário.
+4. `warning` e depois `enforce` são mudanças operacionais independentes, somente após observação, evidência e aprovação. DNS, monitor global e backfill apply continuam opt-ins separados.
+5. Backfill começa por preview e aplica somente com flag + confirmação + SuperAdmin persistido e escopo correto. Nunca retoma campanhas ou libera SES automaticamente.
+6. Rollback de código deve drenar/suspender os jobs novos antes de voltar a leitor antigo. Preservar tabelas, eventos, supressões, quarentenas, snapshots e auditoria; não executar down destrutivo nem limpar flags para forçar envio.
+7. Compatibilidade de exclusão com leitor antigo é mantida no banco: as FKs novas de `email_campaign_import_issues` para campanha/import têm `ON DELETE CASCADE`. O gate local `main schema → migrations #443 → código real da main` terminou com campanha/import/issue removidos (`0/0/0`).
 
 [Higiene](hygiene.md) · [Reputação](reputation.md) · [Relatórios/API](reports.md) · [Operações e rollback](operations.md) · [QA visual](../../tests/qa/email-campaigns/README.md). O board é Autonom.ia Dev, com Projeto=Hub2You (opção existente para Chat2You), Status, Tipo, Prioridade, Risco, Próxima ação e Ambiente preenchidos em cada item.
 

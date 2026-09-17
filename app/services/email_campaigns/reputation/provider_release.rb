@@ -11,9 +11,12 @@ class EmailCampaigns::Reputation::ProviderRelease
     validate_release!(reason)
 
     state = @monitor.call
+    collected_harmful_generation = state.harmful_generation
     # Collection has completed. Provider-only lock: never take tenant/campaign locks here.
+    # Any harmful observation persisted after this collection invalidates the release.
     state.with_lock do
-      raise CustomExceptions::EmailReputationOverride, 'provider_release_denied' unless releasable?(state)
+      unchanged = state.harmful_generation == collected_harmful_generation
+      raise CustomExceptions::EmailReputationOverride, 'provider_release_denied' unless unchanged && releasable?(state)
 
       state.update!(blocked: false, manual_block: false, manual_reason: nil)
       EmailReputationAudit.create!(provider_key: state.provider_key, actor_id: actor.id, action: 'provider_released',
