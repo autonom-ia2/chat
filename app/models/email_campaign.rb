@@ -271,13 +271,9 @@ class EmailCampaign < ApplicationRecord
                              ai_error: message.to_s.truncate(500), ai_completed_at: Time.current)
   end
 
-  # Recipients that were successfully dispatched. A recipient leaves the literal
-  # :sent bucket as SNS events arrive (-> :delivered / :opened / :clicked /
-  # :bounced / :complained / :unsubscribed), so counting only 'sent' made the
-  # "Enviados" total drop back to 0 once delivery was confirmed. Everything except
-  # pending / failed / suppressed means the email was sent.
-  NON_DISPATCHED_STATUSES = %w[pending failed suppressed].freeze
-
+  # Persisted `sent_at` is the durable evidence that a transport was accepted.
+  # Recipient status can later move to delivered/bounced/complained/unsubscribed or
+  # even provider-suppressed; those transitions must never make "Enviados" decrease.
   def refresh_counters!
     # A caller may still own import/recipient locks in an outer transaction.
     # Both aggregation and parent locking must wait for that transaction's commit.
@@ -294,8 +290,7 @@ class EmailCampaign < ApplicationRecord
     ev = event_counters
     {
       recipients_count: counts.values.sum,
-      sent_count: counts.values.sum -
-        NON_DISPATCHED_STATUSES.sum { |s| count_for(counts, s) },
+      sent_count: email_campaign_recipients.where.not(sent_at: nil).count,
       failed_count: count_for(counts, 'failed'),
       suppressed_count: count_for(counts, 'suppressed'),
       delivered_count: ev[:delivered],

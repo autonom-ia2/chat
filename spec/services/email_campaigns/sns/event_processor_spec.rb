@@ -56,6 +56,20 @@ RSpec.describe EmailCampaigns::Sns::EventProcessor do
     end
   end
 
+  it 'keeps sent_count monotonic when an accepted recipient is later provider-suppressed' do
+    recipient.update_columns(sent_at: 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
+    campaign.refresh_counters!
+    expect(campaign.reload.sent_count).to eq(1)
+    complaint = { 'eventType' => 'Complaint', 'mail' => event['mail'],
+                  'complaint' => { 'complaintSubType' => 'OnAccountSuppressionList' } }
+
+    described_class.new(complaint).process
+
+    expect(recipient.reload).to be_suppressed
+    expect(campaign.reload.sent_count).to eq(1)
+    expect(campaign.email_campaign_recipients.where.not(sent_at: nil).count).to eq(1)
+  end
+
   [{}, { 'complaintSubType' => nil }, { 'complaintSubType' => 'FutureUnknown' }, nil].each do |details|
     it "keeps a real complaint with #{details.inspect} and its replays as spam evidence" do
       complaint = { 'eventType' => 'Complaint', 'mail' => event['mail'], 'complaint' => details }
