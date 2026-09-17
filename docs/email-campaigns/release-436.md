@@ -14,7 +14,24 @@ Data de validação local:17/09/2026. Escopo: código e PRs, **sem autorização
 
 As bases das PRs2–5 são temporariamente as branches anteriores para manter a revisão delimitada. **Não usar Merge enquanto a base for uma feature branch.** Após aprovação e deploy saudável da PR anterior, rebasear/retargetear a próxima para main, repetir CI e conferir o diff antes da nova aprovação. Cada merge em main aciona blue/green; não são cinco merges simultâneos.
 
-## Evidência integrada
+## Gates adversariais obrigatórios antes de merge
+
+**PR442 não está pronta para merge.** O parent deve rebasear sobre a PR441 corrigida e integrar a correção de promoção do registry da PR438. Os resultados abaixo são registros de execuções anteriores; não validam esses fixes nem as novas regressões. Reexecutar no HEAD resultante, registrar SHA, cenário, resultado e artefato em `docs/audit/`, e submeter a review antes da aprovação explícita.
+
+| Gate pendente | Prova exigida antes de merge |
+| --- | --- |
+| Compatibilidade de locks no deploy misto | PostgreSQL real com caminhos da versão atualmente implantada e da candidata concorrendo; exercitar escritores de feedback/supressão e admissão. Demonstrar ausência de deadlock e preservação dos positivos antigos. Testar somente dois workers da versão nova não satisfaz o gate. Se incompatíveis, bloquear rollout misto e revisar o plano de transição. |
+| Bloqueio do provedor versus claim | Forçar as duas ordens de concorrência entre persistência do bloqueio e admissão. Nenhum novo transporte admitido depois do bloqueio persistido; claim já admitido e recibo têm semântica explícita. Não basta teste sequencial ou mock de lock. |
+| Progresso com feedback contínuo | Injetar feedback durante avaliação/reconciliação; demonstrar progresso de gerações, publicação e processamento de pendências sem starvation, loop infinito ou aplicação de snapshot obsoleto. Registrar limites e contagens observados. |
+| Renderização HTTP real da importação | Percorrer rota autenticada, importação assíncrona, status e resposta renderizada pelo serializer/Jbuilder real. Conferir a lista preservada no 202 e leitura final; UI deve consumir esse contrato. Fixtures JSON isoladas não cobrem a integração. |
+| Ordem de chegada da quarentena | Permutar eventos antigos/recentes, duplicados e expiração; provar que a ordem de chegada não encurta a proteção devida, não conta duplicata e não transforma temporário em bloqueio eterno. |
+| Evidência corrigida com a mesma chave | `unknown_bounce` já auditado em `ses:m1:bounce`, EmailEvent corrigido para Permanent/General, apply autorizado termina completed com hard_bounce ativo, positivo legado e reimportação suprimida. Repetição idempotente/nova execução não promove duas vezes. Incluir prevenção corrigida, prioridade forte e auditoria append-only; executar `maintenance/corrected_evidence_spec.rb` após PR438. |
+| Denominador misto | Coorte sintética com SES, DirectInbox e origem desconhecida; conferir numeradores/denominadores coerentes entre SQL, HTTP e UI, distinguindo prevenção, permanente global e métrica oficial. Não misturar entregas aceitas de uma origem com eventos de outra. |
+| Erro aninhado na UI | Usar o formato de erro aninhado realmente devolvido pela API; verificar mensagem visível, estado de loading encerrado, dados preservados e retry utilizável. Não aceitar `[object Object]`, erro invisível ou sucesso indevido. |
+
+Esses gates complementam as suítes existentes de horizonte/cursor, batch, fencing, idempotência e paridade preview/apply. Nesta rodada foram autorizados somente sintaxe e RuboCop; Rails/Postgres e os gates integrados ficam para o parent após os rebases, em harness isolado. Nenhum gate pendente pode ser substituído pelos números históricos a seguir.
+
+## Evidência integrada anterior aos fixes adversariais
 
 | Gate | Resultado local | Evidência |
 | --- | --- | --- |
