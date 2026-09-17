@@ -8,9 +8,13 @@ class EmailReputationState < ApplicationRecord
       override.fetch('remaining').positive?
   end
 
-  # The unique DB index arbitrates concurrent first observations; no uniqueness validator.
+  # First creation must acquire Account before occupying the unique state key/FK.
+  # Existing-state callers only lock/update state; compound writers enter account-first.
   def self.for_account(account_id)
-    find_by(account_id: account_id) || create_or_find_by!(account_id: account_id)
+    state = find_by(account_id: account_id)
+    return state if state
+
+    Account.find(account_id).with_lock { create_or_find_by!(account_id: account_id) }
   end
 
   private

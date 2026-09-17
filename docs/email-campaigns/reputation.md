@@ -1,6 +1,6 @@
 # Reputação e admissão de campanhas — #436
 
-Backend em revisão. O log do parent após a migração revisada registra **84 exemplos, zero falhas** (`tmp/email436/reputation-v2-rspec-second.log`, 6,86s). Esse resultado precede a correção final de subtipos abaixo. As novas regressões Rails aguardam execução pelo parent; nesta rodada só há validação offline. Nenhuma prontidão para PR/merge/deploy ou saúde operacional é afirmada.
+Backend em revisão. A base limpa do parent, após limpeza das fixtures sintéticas, registra **461 exemplos, zero falhas e um pending preexistente de Account** (`tmp/email436/rebased-clean-rspec.json`). Substitui o JSON anterior de banco sujo; precede as correções dos dois P1s em 2026-09-17. As novas regressões Rails e CI aguardam o parent; nesta rodada só há validação offline. Nenhuma prontidão para merge/deploy ou saúde operacional é afirmada. Evidência e manifesto em [436-pr1-review-fixes.md](../audit/436-pr1-review-fixes.md).
 
 ## Métricas e política efetivamente aplicada
 
@@ -18,7 +18,15 @@ Classificação local corrigida conforme as fontes AWS verificadas pelo parent e
 
 A [documentação da lista global SES](https://docs.aws.amazon.com/ses/latest/dg/sending-email-global-suppression-list.html) informa que `Suppressed` conta na taxa de bounce da conta e na quota. A [documentação de notificações](https://docs.aws.amazon.com/ses/latest/dg/notification-contents.html) distingue as listas de conta/tenant, que não contam nessa taxa, e o opt-out `UnsubscribedRecipient`. O [conteúdo dos eventos Firehose](https://docs.aws.amazon.com/ses/latest/dg/event-publishing-retrieving-firehose-contents.html) documenta `EmailValidationSuppressed`. Os quatro subtipos de prevenção ficam também fora de `transient` e `unknown`; o aceite SES continua no denominador local `sent`.
 
-Permanentes genéricos e `Suppressed` não provam endereço inválido ou `NoEmail`. Higiene mantém sua própria classificação/supressão. Nenhuma regra de higiene, escopo de usuário, backfill ou UI foi alterada nesta correção.
+Permanentes genéricos e `Suppressed` não provam endereço inválido ou `NoEmail`. A classificação de bounce foi preservada.
+
+Para **Complaint**, `complaintSubType=OnAccountSuppressionList/OnTenantSuppressionList` significa prevenção sem tentativa nem nova reclamação. As fontes [notification-contents](https://docs.aws.amazon.com/ses/latest/dg/notification-contents.html) e [sending-email-suppression-list](https://docs.aws.amazon.com/ses/latest/dg/sending-email-suppression-list.html) foram verificadas pelo parent em **2026-09-17**, conforme a instrução recebida; não houve consulta de rede nesta rodada. Esses eventos não entram em `complaints`, taxa, alerta de spam ou fingerprint nocivo, e não revogam override por novo feedback nocivo. `provider_prevented` agora conta destinatários distintos com prevenção de bounce **ou** complaint, uma vez por destinatário na coorte. O denominador `sent` continua sendo o aceite local confirmado, sem pretensão de reproduzir a métrica oficial AWS.
+
+SNS mantém o `EmailEvent` bruto com o enum `complaint=4`, mas grava bloqueio forte `provider_suppression` no registro durável e no espelho de supressão, com status `suppressed`. Estados `unsubscribed`/`complained` e razões mais fortes são preservados. Replays não duplicam evento, ocorrência ou versão de feedback. Complaint sem subtipo, com `null` ou subtipo desconhecido continua reclamação real; nunca inferir prevenção a partir de outros subtipos de bounce.
+
+Contrato público para relatórios/backfill: `EmailCampaigns::ComplaintClassifier::PREVENTED_SUBTYPES` contém somente os dois subtipos acima. `.provider_prevented?(complaint)` e `.real_complaint?(complaint)` recebem o objeto `complaint` com chaves string, ou `nil`, **não** o envelope. `PROVIDER_PREVENTED_SQL` e `REAL_COMPLAINT_SQL` são predicados SQL completos, incluindo `event_type = 4` e extração de `payload`; `PREVENTED_SUBTYPE_SQL` testa somente o subtipo com `COALESCE`, portanto não perde missing/null. São expressões sobre colunas não qualificadas de `email_events`, para uso em relações sem ambiguidade de nomes. `Metrics::COUNT_FILTERS[:complaints]` e `#harmful_feedback_fingerprint` usam `REAL_COMPLAINT_SQL`; `COUNT_FILTERS[:provider_prevented]` combina prevenção de bounce e complaint.
+
+**Integração pendente do parent:** propagar esse contrato para `436-reports-integration` e os contadores derivados. Nesta worktree, `EmailCampaign#event_counters` ainda calcula `complained` contando todo evento bruto do tipo complaint, e `#refresh_counters!` persiste esse valor em `complained_count`; ambos estão fora do escopo desta correção. O contador de produto deve usar `REAL_COMPLAINT_SQL` e preservar sua regra de deduplicação. Sem essa propagação, esse contador ainda pode rotular prevenção como reclamação. Nenhum backfill, enum, API de provedor ou fonte de outra worktree foi alterado.
 
 | Sinal local | Política nova padrão |
 | --- | --- |
@@ -57,11 +65,13 @@ Migrações ainda não implantadas, renomeadas para evitar colisão com higiene;
 - `20260916121100_index_email_reputation_cohorts.rb`
 - `20260916121200_protect_email_reputation_history.rb`
 
-O parent já executou 84 exemplos sem falhas após a migração revisada, conforme o log citado. Este agente não executou migração nem editou schema; nova validação Rails/DB após integração continua a cargo do parent.
+A última base validada pelo parent é o JSON limpo de 461 exemplos citado acima. Este agente não executou migração nem editou schema; nova validação Rails/DB após integração continua a cargo do parent.
 
 ## Concorrência, custo e fila
 
 `Observation` reserva uma geração monotônica em lock curto de estado; coleta métricas e fingerprint **fora** de locks de conta/estado. Publicação adquire account → state, verifica geração e versão de feedback, e descarta observações ultrapassadas com `reputation_evaluation_superseded`. Retomada/override ultrapassados não liberam nada. `EmailCampaign#resume!` coleta antes de qualquer lock externo; a mudança da campanha ocorre no bloco de publicação, na ordem account → state → campaign.
+
+`EmailReputationState.for_account(account_id)` mantém leitura rápida quando o estado existe. Na primeira criação, adquire `Account.with_lock` **antes** de `create_or_find_by!` ocupar a chave única e resolver a FK. Evita o ciclo entre SNS segurando Account e a avaliação segurando a inserção ainda não confirmada. Observation e Queue não adquirem Account depois de travar um estado existente; SNS entra pelo wrapper Account → state → campaign → recipient. Escritores compostos futuros devem entrar por `EmailEvent.with_recipient_feedback_locks` antes de qualquer lock de filho. Criação avulsa de EmailEvent invalida em `before_save`, antes de inserir o evento/FK do recipient; nunca mover essa invalidação apenas para pós-commit.
 
 A versão de feedback é invalidada **dentro da transação do EmailEvent, em before_save**. O callback pós-commit apenas solicita a fila. Isso fecha a janela entre commit do sinal nocivo e enqueue. Correções de classificação também invalidam. **Integração de higiene que use insert_all/update_all/SQL deve chamar `EvaluationQueue.invalidate(account_id)` na mesma transação e `request(account_id)` após commit.** Não envolver o avaliador inteiro em transação/lock externo. Se outro fluxo passar a segurar recipient/campaign ao gravar feedback, preservar a ordem de locks compartilhada na integração.
 
@@ -115,7 +125,7 @@ Códigos: `email_campaign.protected`, `email_campaign.invalid_override`, `email_
 
 Preservar patches de higiene, relatório e UI do parent nos arquivos sobrepostos, sobretudo EmailEvent, Guardrail, engines, campaign model/controller, routes, schedule e `.env.example`. `account.rb` não foi alterado nesta revisão. Não há overlay Enterprise correspondente encontrado nas buscas locais.
 
-Specs novos incluem duas conexões PostgreSQL com PIDs diferentes e fixtures transacionais desativadas apenas nos testes concorrentes: 50 mil sends, barreiras de coleta/commit, retomada real, publicação fora de ordem, polls concorrentes e advisory lock. Limpeza fica nos registros sintéticos criados; auditorias append-only retêm IDs lógicos. Outros specs verificam incidentes, prevenção, lease, retenção via DeleteObjectJob, payload e autorização. **O log anterior do parent registra 84 exemplos sem falhas; os specs alterados nesta correção final ainda não foram executados.**
+Specs incluem duas conexões PostgreSQL com PIDs diferentes e fixtures transacionais desativadas apenas nos testes concorrentes: 50 mil sends, barreiras de coleta/commit, retomada real, publicação fora de ordem, polls concorrentes e advisory lock. A regressão de primeira criação segura Account numa sessão e confirma via `pg_blocking_pids`/`pg_stat_activity` que a outra espera no lock de Account, antes do INSERT; a dona processa SNS e a avaliação publica evento/versão/geração/snapshot preservados. Queue.invalidate/request também são cobertos. Limpeza fica nos registros sintéticos criados; auditorias append-only retêm IDs lógicos. **Todos os testes anteriores foram preservados; as regressões Rails adicionadas nesta rodada ainda não foram executadas.**
 
 Parent: validar o conjunto integrado no DB sintético com as três migrações revisadas, rodar regressões completas, integrar higiene/UI, revisar diff e atualizar issue/PR/Project. Sem commit nesta entrega. Merge/deploy dependem de aprovação explícita.
 

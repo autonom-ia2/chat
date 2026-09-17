@@ -11,8 +11,8 @@ class EmailCampaigns::Reputation::Metrics
     permanent: "event_type = 3 AND (#{PERMANENT_SQL})",
     transient: "event_type = 3 AND NOT (#{PREVENTED_SQL}) AND payload #>> '{bounce,bounceType}' = 'Transient'",
     unknown: "event_type = 3 AND NOT (#{PREVENTED_SQL}) AND COALESCE(payload #>> '{bounce,bounceType}', '') NOT IN ('Permanent', 'Transient')",
-    provider_prevented: "event_type = 3 AND (#{PREVENTED_SQL})",
-    bounced: "event_type = 3 AND NOT (#{PREVENTED_SQL})", complaints: 'event_type = 4'
+    provider_prevented: "(event_type = 3 AND (#{PREVENTED_SQL})) OR (#{EmailCampaigns::ComplaintClassifier::PROVIDER_PREVENTED_SQL})",
+    bounced: "event_type = 3 AND NOT (#{PREVENTED_SQL})", complaints: EmailCampaigns::ComplaintClassifier::REAL_COMPLAINT_SQL
   }.freeze
 
   def initialize(account_id, now: Time.current)
@@ -66,6 +66,6 @@ class EmailCampaigns::Reputation::Metrics
     EmailEvent.joins(recipient: :email_campaign)
               .where(email_campaigns: { account_id: @account_id, delivery_mode: :ses })
               .where.not(email_campaign_recipients: { sent_at: nil })
-              .where("email_events.event_type = 4 OR (email_events.event_type = 3 AND (#{PERMANENT_SQL}))")
+              .where("(#{EmailCampaigns::ComplaintClassifier::REAL_COMPLAINT_SQL}) OR (email_events.event_type = 3 AND (#{PERMANENT_SQL}))")
   end
 end

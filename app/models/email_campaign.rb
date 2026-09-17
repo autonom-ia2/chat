@@ -346,7 +346,8 @@ class EmailCampaign < ApplicationRecord
   end
 
   # Event-derived counters. Opens are deduped per recipient (Apple MPP inflation — the report
-  # labels opens APPROXIMATE); click/bounce/complaint/unsubscribe are raw event counts.
+  # labels opens APPROXIMATE); click/bounce/unsubscribe are raw event counts.
+  # Complaint prevention notifications are not new recipient spam reports.
   def event_counters
     by_type = email_events.group(:event_type).count
     {
@@ -354,7 +355,7 @@ class EmailCampaign < ApplicationRecord
       opened: email_events.opens.distinct.count(:recipient_id),
       clicked: type_count(by_type, :click),
       bounced: type_count(by_type, :bounce),
-      complained: type_count(by_type, :complaint),
+      complained: email_events.where(EmailCampaigns::ComplaintClassifier::REAL_COMPLAINT_SQL).count,
       unsubscribed: type_count(by_type, :unsubscribe)
     }
   end

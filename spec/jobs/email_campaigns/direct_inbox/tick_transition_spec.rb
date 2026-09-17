@@ -28,6 +28,8 @@ RSpec.describe EmailCampaigns::DirectInbox::TickJob do # rubocop:disable RSpec/S
     campaign.email_campaign_recipients.delete_all
     campaign.destroy!
     EmailSenderIdentity.where(account_id: account.id).destroy_all
+    inbox.channel.destroy!
+    inbox.destroy! if inbox.persisted?
     account.destroy!
   end
 

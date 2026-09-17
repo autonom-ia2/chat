@@ -39,6 +39,7 @@ RSpec.describe 'Feedback integration lock protocol', type: :model do
     EmailEvent.where(recipient_id: recipients.select(:id)).delete_all
     recipients.delete_all
     campaigns.destroy_all
+    EmailSuppression.where(account_id: account.id).delete_all
     EmailSenderIdentity.where(account_id: account.id).destroy_all
     account.destroy!
   end
@@ -76,6 +77,43 @@ RSpec.describe 'Feedback integration lock protocol', type: :model do
     worker.value.tap { expect(enqueue_transactions).to all(eq(0)) }
   end
 
+  it 'locks Account before the first state INSERT while SNS owns Account, preserving feedback and the published snapshot' do
+    worker = waiting_sql = nil
+    account.with_lock do
+      expect(EmailReputationState.where(account: account)).not_to exist
+      worker, pid = database_worker { EmailCampaigns::Reputation::Evaluator.new(Account.find(account.id)).evaluate! }
+      wait_for_database_block(pid)
+      waiting_sql = ActiveRecord::Base.connection.select_value("SELECT query FROM pg_stat_activity WHERE pid = #{Integer(pid)}")
+      # Original code waits here in INSERT (unique key occupied, account FK blocked).
+      # SNS would then wait for that same unique key: two SQL sessions form a cycle.
+      EmailCampaigns::Sns::EventProcessor.new(payload).process
+    end
+    expect(completed(worker)).to include(blocked: true)
+    expect(waiting_sql).to match(/SELECT .*FROM "accounts".*FOR UPDATE/m)
+    state = EmailReputationState.where(account: account).sole
+    expect(state).to have_attributes(feedback_version: 1, evaluated_feedback_version: 1, observation_generation: 1)
+    expect(state.trigger_snapshot.fetch('metrics')).to include('complaints' => 1, 'evaluation_generation' => 1)
+    expect(recipient.email_events.complaint.sole.payload).to eq(payload)
+    expect(EmailSuppression.find_by!(account: account, email: recipient.email).reason).to eq('complaint')
+  end
+
+  %i[invalidate request].each do |operation|
+    it "serializes first-state queue #{operation} behind the account owner without losing SNS feedback" do
+      worker = waiting_sql = nil
+      account.with_lock do
+        worker, pid = database_worker { EmailCampaigns::Reputation::EvaluationQueue.public_send(operation, account.id) }
+        wait_for_database_block(pid)
+        waiting_sql = ActiveRecord::Base.connection.select_value("SELECT query FROM pg_stat_activity WHERE pid = #{Integer(pid)}")
+        EmailCampaigns::Sns::EventProcessor.new(payload).process
+      end
+      completed(worker)
+      expect(waiting_sql).to match(/SELECT .*FROM "accounts".*FOR UPDATE/m)
+      expect(EmailReputationState.where(account: account).sole.feedback_version).to eq(operation == :invalidate ? 2 : 1)
+      expect(recipient.email_events.complaint.sole.payload).to eq(payload)
+      expect(WebMock).not_to have_requested(:any, /./)
+    end
+  end
+
   [true, false].each do |existing_state|
     it "serializes SNS behind admission before recipient locking with existing state=#{existing_state}" do
       state = EmailReputationState.create!(account: account) if existing_state
@@ -100,7 +138,7 @@ RSpec.describe 'Feedback integration lock protocol', type: :model do
   end
 
   it 'keeps a later admission suppressed when SNS wins the account lock before the final claim' do
-    future = create(:email_campaign, account: account, status: :sending)
+    future = create(:email_campaign, account: account, sender_identity: campaign.sender_identity, status: :sending)
     pending = create(:email_campaign_recipient, email_campaign: future, email: recipient.email,
                                                 preflight_status: 'valid', preflight_valid_until: 1.hour.from_now)
     feedback = admission = nil

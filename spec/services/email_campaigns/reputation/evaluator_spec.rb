@@ -160,6 +160,7 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do
       expect(snapshot[:metrics]).to be_nil
     end
   end
+
   it 'publishes the generation of the evaluated observation without changing the original trigger' do
     service.evaluate!
     state = EmailReputationState.find_by!(account: account)
@@ -172,5 +173,4 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do
     expect(state.observation_generation).to be > first_generation
     expect(state.trigger_snapshot).to eq(initial)
   end
-
 end

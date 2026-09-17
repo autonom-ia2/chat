@@ -57,6 +57,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
     return render_unprocessable('email_campaign.scheduled_at_required') if params[:scheduled_at].blank?
 
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.schedule!(scheduled_at: params[:scheduled_at])
+
     render :show
   end
 
@@ -76,6 +77,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
 
   def cancel
     return render_unprocessable('import_in_progress') if @campaign.cancel! == false
+
     render :show
   end
 

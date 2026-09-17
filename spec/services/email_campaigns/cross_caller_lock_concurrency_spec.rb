@@ -34,6 +34,7 @@ RSpec.describe 'Email cross-caller lock closure', type: :model do
     EmailCampaignImport.where(email_campaign_id: campaigns.select(:id)).destroy_all
     recipients.delete_all
     campaigns.destroy_all
+    EmailSuppression.where(account_id: account.id).delete_all
     EmailSenderIdentity.where(account_id: account.id).destroy_all
     account.destroy!
   end
@@ -93,7 +94,7 @@ RSpec.describe 'Email cross-caller lock closure', type: :model do
 
   it 'serializes link opt-out with feedback and prevents a later send to the same address' do # rubocop:disable RSpec/MultipleExpectations
     recipient.update!(status: :sent, ses_message_id: "link-feedback-#{recipient.id}", sent_at: 1.hour.ago)
-    future = create(:email_campaign, account: account, status: :sending)
+    future = create(:email_campaign, account: account, sender_identity: campaign.sender_identity, status: :sending)
     pending = create(:email_campaign_recipient, email_campaign: future, email: recipient.email,
                                                 preflight_status: 'valid', preflight_valid_until: 1.hour.from_now)
     unsubscribe = feedback = nil

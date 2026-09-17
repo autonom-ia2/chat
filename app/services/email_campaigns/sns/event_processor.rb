@@ -69,9 +69,20 @@ module EmailCampaigns
       end
 
       def on_complaint(recipient)
+        return on_prevented_complaint(recipient) if EmailCampaigns::ComplaintClassifier.provider_prevented?(@event['complaint'])
+
         registry(recipient).block!(reason: 'complaint', source: 'ses', event_key: "ses:#{message_id}:complaint",
                                    occurred_at: event_time('complaint'))
         recipient.mark_complained! unless recipient.unsubscribed?
+      end
+
+      def on_prevented_complaint(recipient)
+        registry(recipient).block!(reason: 'provider_suppression', source: 'ses', event_key: "ses:#{message_id}:complaint",
+                                   occurred_at: event_time('complaint'))
+        return if recipient.unsubscribed? || recipient.complained?
+
+        recipient.update_columns(status: EmailCampaignRecipient.statuses[:suppressed], # rubocop:disable Rails/SkipsModelValidations
+                                 last_event_at: Time.current, updated_at: Time.current)
       end
 
       def registry(recipient)
