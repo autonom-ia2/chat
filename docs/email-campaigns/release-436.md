@@ -16,33 +16,37 @@ As bases das PRs2–5 são temporariamente as branches anteriores para manter a 
 
 ## Gates adversariais obrigatórios antes de merge
 
-**PR442 não está pronta para merge.** O parent deve rebasear sobre a PR441 corrigida e integrar a correção de promoção do registry da PR438. Os resultados abaixo são registros de execuções anteriores; não validam esses fixes nem as novas regressões. Reexecutar no HEAD resultante, registrar SHA, cenário, resultado e artefato em `docs/audit/`, e submeter a review antes da aprovação explícita.
+A cadeia foi rebaseada até a PR442 e os bloqueadores encontrados na revisão adversarial foram convertidos em regressões. **Isto ainda não autoriza merge**: falta o CI remoto verde no SHA final publicado e a revisão independente final desse SHA. Os gates locais abaixo foram executados em PostgreSQL/Redis descartáveis em loopback, sem produção, AWS ou envio real.
 
-| Gate pendente | Prova exigida antes de merge |
+| Gate adversarial | Fechamento local |
 | --- | --- |
-| Compatibilidade de locks no deploy misto | PostgreSQL real com caminhos da versão atualmente implantada e da candidata concorrendo; exercitar escritores de feedback/supressão e admissão. Demonstrar ausência de deadlock e preservação dos positivos antigos. Testar somente dois workers da versão nova não satisfaz o gate. Se incompatíveis, bloquear rollout misto e revisar o plano de transição. |
-| Bloqueio do provedor versus claim | Forçar as duas ordens de concorrência entre persistência do bloqueio e admissão. Nenhum novo transporte admitido depois do bloqueio persistido; claim já admitido e recibo têm semântica explícita. Não basta teste sequencial ou mock de lock. |
-| Progresso com feedback contínuo | Injetar feedback durante avaliação/reconciliação; demonstrar progresso de gerações, publicação e processamento de pendências sem starvation, loop infinito ou aplicação de snapshot obsoleto. Registrar limites e contagens observados. |
-| Renderização HTTP real da importação | Percorrer rota autenticada, importação assíncrona, status e resposta renderizada pelo serializer/Jbuilder real. Conferir a lista preservada no 202 e leitura final; UI deve consumir esse contrato. Fixtures JSON isoladas não cobrem a integração. |
-| Ordem de chegada da quarentena | Permutar eventos antigos/recentes, duplicados e expiração; provar que a ordem de chegada não encurta a proteção devida, não conta duplicata e não transforma temporário em bloqueio eterno. |
-| Evidência corrigida com a mesma chave | `unknown_bounce` já auditado em `ses:m1:bounce`, EmailEvent corrigido para Permanent/General, apply autorizado termina completed com hard_bounce ativo, positivo legado e reimportação suprimida. Repetição idempotente/nova execução não promove duas vezes. Incluir prevenção corrigida, prioridade forte e auditoria append-only; executar `maintenance/corrected_evidence_spec.rb` após PR438. |
-| Denominador misto | Coorte sintética com SES, DirectInbox e origem desconhecida; conferir numeradores/denominadores coerentes entre SQL, HTTP e UI, distinguindo prevenção, permanente global e métrica oficial. Não misturar entregas aceitas de uma origem com eventos de outra. |
-| Erro aninhado na UI | Usar o formato de erro aninhado realmente devolvido pela API; verificar mensagem visível, estado de loading encerrado, dados preservados e retry utilizável. Não aceitar `[object Object]`, erro invisível ou sucesso indevido. |
+| Locks entre versão intermediária e candidata | Ordem `Account → state → campaign → recipient` e regressões cross-caller/mixed-version; nenhuma confirmação falsa de opt-out no gate final. |
+| Provider block versus claim | Ambas as ordens de corrida cobertas; admissão posterior ao latch é negada e transporte já admitido mantém semântica explícita. |
+| Feedback contínuo | Avaliação nociva superseded bloqueia monotonicamente e agenda sucessora; três ciclos e convergência fresca cobertos. |
+| Importação HTTP real | GET, multipart import e retry passam pelo Jbuilder/DTO real, com 200/202 e job persistido/enfileirado. |
+| Quarentena fora de ordem | Permutações, replay, janela antiga/futura e expiração usam evento qualificante mais recente sem encurtar proteção. |
+| Evidência corrigida na mesma chave | Promoção append-only única, prioridade forte preservada, apply completed e reimportação bloqueada. |
+| Denominador misto | SES usa apenas aceites SES; DirectInbox/unknown não entram no denominador oficial/local SES e a UI explicita proveniência. |
+| Erro aninhado e estado da UI | `protection.code` real é consumido, filtros sobrevivem refresh/IA, loading/retry permanecem coerentes. |
+| Exclusão local versus proteção tenant | `invalid/review` local não é rotulado como blacklist/proteção; supressão tenant real mantém precedência. |
+| Contador de enviados após prevenção | `sent_count` deriva de `sent_at`; prevenção posterior não apaga aceite já persistido. |
 
-Esses gates complementam as suítes existentes de horizonte/cursor, batch, fencing, idempotência e paridade preview/apply. Nesta rodada foram autorizados somente sintaxe e RuboCop; Rails/Postgres e os gates integrados ficam para o parent após os rebases, em harness isolado. Nenhum gate pendente pode ser substituído pelos números históricos a seguir.
+O CI dedicado deve repetir os gates no SHA final. Testes locais não certificam comportamento em produção nem substituem a observação blue/green entre merges.
 
-## Evidência integrada anterior aos fixes adversariais
+## Evidência integrada local após os fixes adversariais
+
+HEAD local validado da cadeia antes da atualização documental: `4b10d0beecef4506aefbe14af7dc94ba928061cf`. A atualização deste documento não altera código; o CI remoto deve validar o novo SHA documental publicado.
 
 | Gate | Resultado local | Evidência |
 | --- | --- | --- |
-| Backend cumulativo das cinco entregas + regressões | 829 exemplos, zero falhas; um pending preexistente de Account | `tmp/email436/final-series-rspec.json` |
-| Frontend completo | 459 arquivos,5.058 testes aprovados; zero falhas/pending | `436-reports-integration/tmp/email436/ui-integrated-vitest-final.json` |
-| Idiomas | 57 módulos,43 ativos;262 chaves/módulo;14.934 mensagens compiladas/renderizadas; fallback false | `ui-integrated-locales.log` e script de i18n |
-| Build | Vite test aprovado, CSS/componentes reais | `ui-integrated-build.log` |
-| Browser | 137 checks aprovados;97 capturas | `visual/results.json` e PNGs no harness/artefato CI |
-| Ruby lint | 177 arquivos cumulativos sem infrações | `final-series-rubocop.log` |
-| Contratos Ruby puros | 38 testes,50.733 asserções; sem falhas/erros/skips | `final-series-pure.log` |
-| ESLint | Zero erros/chaves literais ausentes; apenas warning nativo de chave dinâmica | `ci/eslint.json`, com verificação de idiomas separada |
+| Backend cumulativo das cinco entregas | **900 exemplos, zero falhas; um pending preexistente de Account** | `tmp/email436/final-p2-rspec.json` |
+| Manutenção/backfill focado | **121 exemplos, zero falhas/pending** | `tmp/email436/pr442-focused.json` |
+| Ruby puro | **9 arquivos;57 testes;50.876 asserções; zero falhas/erros/skips** | `tmp/email436/final-p2-pure.log` |
+| RuboCop cumulativo | **184 arquivos, zero infrações** | `tmp/email436/final-p2-rubocop.log` |
+| Frontend completo | **461 arquivos /5.087 testes; zero falhas/pending** | PR441 `tmp/email436/p2-final-full-vitest.json` |
+| Idiomas | **57 módulos,43 ativos,263 mensagens/módulo,14.991 renderizações; fallback false** | PR441 `tmp/email436/p2-final-i18n.json` |
+| Build | Vite test real aprovado | PR441 `tmp/email436/p2-final-build.log` |
+| Browser/componentes reais | **170 checks, zero falhas,131 PNGs; zero rede externa/console/page errors** | PR441 `tmp/email436/visual/results.json` |
 
 Os testes backend usaram PostgreSQL/Redis exclusivos em loopback, `RAILS_ENV=test`, ambiente sem credenciais herdadas e WebMock. O browser usa componentes/CSS reais com respostas sintéticas e rede externa bloqueada; **não é um teste de envio real nem de produção**. A fonte de frontend da última PR é idêntica à validada na PR de UI. O CI dedicado repete os gates no SHA publicado e inclui os artefatos sintéticos; não se declara verde antes de seu término.
 

@@ -25,7 +25,7 @@ O único relaxamento de lint é `RSpec/MultipleExpectations`, justificado no nov
 
 ## Release e runbook
 
-Atualizados `docs/email-campaigns/release-436.md` e `docs/email-campaigns/operations.md`. Os números da release foram rotulados como evidência anterior aos fixes adversariais. São gates pendentes antes de merge: compatibilidade de locks entre versões implantada/candidata; provider block versus claim nas duas ordens; progresso sob feedback contínuo; renderização HTTP real da importação; ordem de chegada da quarentena; evidência corrigida com mesma chave; denominador misto; erro aninhado na UI. Parent registra SHA, cenário, resultado e artefato após os rebases. Compatibilidade entre dois workers novos não comprova deploy misto.
+Atualizados `docs/email-campaigns/release-436.md` e `docs/email-campaigns/operations.md`. Os números da release foram rotulados como evidência anterior aos fixes adversariais. Foram definidos como gates obrigatórios e depois executados localmente após os rebases: compatibilidade de locks entre versões implantada/candidata; provider block versus claim nas duas ordens; progresso sob feedback contínuo; renderização HTTP real da importação; ordem de chegada da quarentena; evidência corrigida com mesma chave; denominador misto; erro aninhado na UI. Os resultados finais estão consolidados em `release-436.md`; compatibilidade entre dois workers novos, isoladamente, não comprova deploy misto.
 
 ## Validação executada
 
@@ -44,17 +44,13 @@ Compilação estática final: **18 Ruby files compiled without execution**, exit
 
 Nenhum boot Rails, RSpec, banco, rede, AWS, SSH, instalação ou acesso a produção. Git usado somente em leitura (`--no-optional-locks diff --stat` e `ls-files --others`); sem stage/commit/branch/rebase/PR/Project/merge/deploy. Foram alterados apenas os dois documentos acima e acrescentados o novo spec e este registro. Sintaxe e lint não comprovam persistência, callbacks, promoção, renderização ou concorrência.
 
-## Próximo passo do parent
-
-Após receber PR441 corrigida e PR438, executar o diretório completo `spec/services/email_campaigns/maintenance` e os specs HTTP de manutenção listados no runbook no harness Rails/Postgres isolado, além dos oito gates adversariais integrados. Confirmar os 13 casos novos sem skip, inclusive o estado final e reimportação após Permanent/General. Atualizar PR/Project e review com os resultados reais antes de pedir aprovação de merge; os resultados históricos não fecham essas pendências.
-
 ## Execução integrada pelo parent após os rebases
 
 Ambiente: PostgreSQL17 em `127.0.0.1:15436`, Redis em `127.0.0.1:16436`, `RAILS_ENV=test`, AWS metadata desligada, arquivos de credenciais apontados para `/dev/null`, frontend sintético e sem chamadas reais de e-mail/AWS. Banco de teste recriado por `db:schema:load` antes da validação final.
 
 - manutenção/backfill/HTTP, incluindo os 13 casos de evidência corrigida: **121 exemplos, zero falhas/pending**;
-- seletor cumulativo das cinco entregas, com o novo spec incluído: **899 exemplos, zero falhas, um pending preexistente de `Account has_many autonomia_account_links`**, sem pending novo;
-- gates puros finais após os contratos de lock/lease: **9 arquivos; 67 testes e 50.838 asserções, zero falhas/erros/skips**;
-- RuboCop cumulativo desta cadeia foi executado antes do último ajuste de doubles puros e não encontrou infrações; o parent repetirá o lint final no SHA publicado junto ao CI.
+- seletor cumulativo das cinco entregas, com o novo spec incluído: **900 exemplos, zero falhas, um pending preexistente de `Account has_many autonomia_account_links`**, sem pending novo;
+- gates puros finais após os contratos de lock/lease: **9 arquivos;57 testes e50.876 asserções, zero falhas/erros/skips**;
+- RuboCop cumulativo final: **184 arquivos, zero infrações**. O CI remoto repetirá o gate no SHA publicado.
 
 A suíte cumulativa demonstra a promoção pela mesma chave, prioridade forte, conclusão do run, idempotência e reimportação bloqueada pelo positivo tenant. Ela não equivale a teste de produção, nem autoriza backfill real. Evidências locais: `tmp/email436/pr442-focused.json`, `final-rspec.json`, `final2-pure.log`.
