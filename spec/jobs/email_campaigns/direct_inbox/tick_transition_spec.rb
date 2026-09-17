@@ -28,6 +28,10 @@ RSpec.describe EmailCampaigns::DirectInbox::TickJob do # rubocop:disable RSpec/S
     campaign.email_campaign_recipients.delete_all
     campaign.destroy!
     EmailSenderIdentity.where(account_id: account.id).destroy_all
+    # The application removes hours asynchronously; this nontransactional fixture
+    # must remove only its own rows before deleting the inbox, or later model specs
+    # encounter orphaned hours through WorkingHour.today.
+    WorkingHour.where(inbox_id: inbox.id).delete_all
     inbox.channel.destroy!
     inbox.destroy! if inbox.persisted?
     account.destroy!

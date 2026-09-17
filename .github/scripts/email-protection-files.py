@@ -17,6 +17,7 @@ FEATURE = re.compile(
 UI_ROOT = "app/javascript/dashboard/components-next/Campaigns/EmailProtection/"
 BASELINE_SPECS = {
     "spec/models/account_spec.rb",
+    "spec/models/working_hour_spec.rb",
     "spec/enterprise/models/account_spec.rb",
     "spec/models/email_template_spec.rb",
     "spec/services/email_campaigns/ses/sender_spec.rb",
