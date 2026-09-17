@@ -123,4 +123,19 @@ RSpec.describe EmailCampaigns::RecipientQuery do # rubocop:disable RSpec/SpecFil
     expect(query.meta).to include(count: 2, current_page: 1, applied_filters: {})
     expect(described_class.new(campaign, problem: true).call.pluck(:id)).to eq([unchecked.id, unknown.id])
   end
+
+  it 'keeps campaign-local invalid/review exclusions visible without calling them tenant protection' do
+    invalid = create(:email_campaign_recipient, email_campaign: campaign, status: :suppressed,
+                                                preflight_status: 'invalid', preflight_reason_code: 'nxdomain')
+    review = create(:email_campaign_recipient, email_campaign: campaign, status: :suppressed,
+                                               preflight_status: 'review', preflight_reason_code: 'provider_typo')
+    protected_row = create(:email_campaign_recipient, email_campaign: campaign, status: :suppressed,
+                                                      preflight_status: 'invalid', preflight_reason_code: 'nxdomain')
+    EmailSuppression.create!(account: campaign.account, email: protected_row.email, reason: 'hard_bounce')
+
+    expect(described_class.new(campaign, status: 'preflight_invalid').call.pluck(:id)).to eq([invalid.id])
+    expect(described_class.new(campaign, status: 'preflight_review').call.pluck(:id)).to eq([review.id])
+    expect(EmailCampaigns::Presentation::Hygiene.new(campaign).call[:counts])
+      .to include(invalid: 1, review: 1, protected: 1)
+  end
 end

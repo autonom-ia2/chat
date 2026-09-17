@@ -231,7 +231,11 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
     with_modified_env EMAIL_REPUTATION_PROVIDER_BLOCK: 'true' do
       post "#{base}/campaigns/#{campaign.id}/resume", headers: headers, as: :json
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body.dig('protection', 'code')).to eq('provider_manual_block')
+      expect(response.parsed_body).to eq(
+        'error' => 'email_campaign.protected',
+        'protection' => { 'kind' => 'provider', 'code' => 'provider_manual_block', 'overridable' => false, 'resume_allowed' => false }
+      )
+      expect(campaign.reload).to be_paused
       inbox = create(:inbox, :with_email, account: account)
       direct = create(:email_campaign, account: account, status: :paused, delivery_mode: :direct_inbox,
                                        sender_identity: nil, sender_inbox: inbox)
@@ -239,6 +243,19 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
       post "#{base}/campaigns/#{direct.id}/resume", headers: headers, as: :json
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.dig('payload', 'protection', 'provider', 'state')).to eq('not_applicable')
+    end
+  end
+
+  it 'uses the same allowlisted protection envelope for a blocked send-now' do
+    campaign.update!(status: :draft)
+    with_modified_env EMAIL_REPUTATION_PROVIDER_BLOCK: 'true' do
+      post "#{base}/campaigns/#{campaign.id}/send_now", headers: headers, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq(
+        'error' => 'email_campaign.protected',
+        'protection' => { 'kind' => 'provider', 'code' => 'provider_manual_block', 'overridable' => false, 'resume_allowed' => false }
+      )
+      expect(campaign.reload).to be_draft
     end
   end
 

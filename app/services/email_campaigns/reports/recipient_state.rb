@@ -6,9 +6,9 @@ class EmailCampaigns::Reports::RecipientState
   end
 
   def protected_ids
-    suppression_matches
-      .or(@campaign.email_campaign_recipients.where(status: %i[suppressed unsubscribed complained]))
-      .select(:id)
+    rows = @campaign.email_campaign_recipients
+    generic_suppressed = rows.where(status: :suppressed).where.not(id: local_preflight_excluded_ids)
+    rows.where(id: account_protected_ids).or(generic_suppressed).select(:id)
   end
 
   def opted_out_ids
@@ -17,7 +17,7 @@ class EmailCampaigns::Reports::RecipientState
   end
 
   def preflight(status)
-    @campaign.email_campaign_recipients.pending.where(sent_at: nil, preflight_status: status).where.not(id: protected_ids)
+    @campaign.email_campaign_recipients.where(sent_at: nil, preflight_status: status).where.not(id: account_protected_ids)
   end
 
   def attention
@@ -38,7 +38,9 @@ class EmailCampaigns::Reports::RecipientState
 
   def unsent_classification
     Arel.sql(<<~SQL.squish)
-      CASE WHEN id IN (#{protected_ids.to_sql}) THEN 'protected'
+      CASE WHEN id IN (#{account_protected_ids.to_sql}) THEN 'protected'
+           WHEN id IN (#{local_preflight_excluded_ids.to_sql}) THEN preflight_status
+           WHEN id IN (#{protected_ids.to_sql}) THEN 'protected'
            WHEN status != #{EmailCampaignRecipient.statuses.fetch('pending')} THEN 'unknown'
            WHEN id IN (#{ready_ids.to_sql}) THEN 'ready'
            WHEN preflight_status IN ('invalid', 'review', 'unknown') THEN preflight_status
@@ -47,6 +49,17 @@ class EmailCampaigns::Reports::RecipientState
   end
 
   private
+
+  def account_protected_ids
+    suppression_matches
+      .or(@campaign.email_campaign_recipients.where(status: %i[unsubscribed complained]))
+      .select(:id)
+  end
+
+  def local_preflight_excluded_ids
+    @campaign.email_campaign_recipients.where(status: :suppressed, sent_at: nil, preflight_status: %w[invalid review])
+             .where.not(id: account_protected_ids).select(:id)
+  end
 
   # Legacy rows are permanent positives. Match the batch API's legacy-first reason
   # precedence in SQL, without loading an account's entire suppression list.

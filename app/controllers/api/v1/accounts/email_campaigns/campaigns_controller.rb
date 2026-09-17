@@ -4,8 +4,6 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
            status: :unprocessable_entity
   end
 
-  helper_method :campaign_presentation
-
   before_action :fetch_campaign,
                 only: [:show, :update, :destroy, :send_now, :schedule, :pause, :resume, :cancel, :duplicate, :reevaluate, :recheck]
   before_action :validate_hygiene_configuration, only: [:resume, :reevaluate, :recheck]
@@ -50,7 +48,10 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
 
   def send_now
     protection = ::EmailCampaigns::Guardrail.protection(Current.account, delivery_mode: @campaign.delivery_mode)
-    return render json: { error: 'email_campaign.protected', protection: protection }, status: :unprocessable_entity if protection
+    if protection
+      return render json: { error: 'email_campaign.protected', protection: EmailCampaigns::Presentation::Errors.protection(protection) },
+                    status: :unprocessable_entity
+    end
 
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.sendable?
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.claim_for_sending!
@@ -129,11 +130,6 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   end
 
   private
-
-  def campaign_presentation(campaign)
-    @campaign_presenter ||= EmailCampaigns::Presentation::Campaign.new(account: Current.account, actor: Current.user)
-    @campaign_presenter.call(campaign)
-  end
 
   def render_campaign(status: :ok)
     @campaign.reload

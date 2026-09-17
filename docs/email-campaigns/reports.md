@@ -574,3 +574,59 @@ expiração/releitura, no_data, resposta reputacional real e proveniência SES/d
 Runtime destes ajustes não foi executado aqui. Manifesto e checks estáticos efetivamente
 executados: `docs/audit/436-reports-p2-provenance.md`. O parent deve incluir o novo spec na
 suíte de relatórios e repetir o baseline; os 61 anteriores não validam este diff.
+
+### Contratos de backend P1/P2 da PR440 — 2026-09-17
+
+O helper `campaign_presentation` pertence agora ao `EmailCampaigns::BaseController`,
+herdado por todos os controllers deste namespace e disponibilizado ao Jbuilder por
+`helper_method`. Há uma única implementação; a lista mantém seu presenter em lote.
+`GET campaigns/:id/recipients` responde 200 e inclui o mesmo DTO do detalhe em
+`payload.campaign`. Upload multipart (`POST campaigns/:id/recipients`) e
+`POST campaigns/:id/recipients/retry_import` respondem 202 após enfileirar, com esse
+mesmo DTO atualizado e `recipient_import.status=queued`. Aceite não significa
+importação concluída; os destinatários persistidos são preservados durante a fila.
+Os requests usam autenticação por token, o escopo da conta e a policy existentes.
+
+`pause_reason` público consulta primeiro o JSON persistido da campanha. Somente quando
+ele está vazio usa `hygiene_pause_reason`: `hygiene_validation_required` vira
+`preflight_review`. Motivos de reputação, provedor e pausa manual têm precedência;
+texto desconhecido vira `unknown`. A regra é a mesma em campanhas, destinatários e relatórios.
+
+Resume protegido mantém HTTP 422 com envelope estruturado, também usado por send-now:
+
+```json
+{
+  "error": "email_campaign.protected",
+  "protection": {
+    "kind": "provider",
+    "code": "provider_manual_block",
+    "overridable": false,
+    "resume_allowed": false
+  }
+}
+```
+
+`Presentation::Errors::PROTECTION_CODES` define os códigos e seus kinds. Apenas os
+quatro campos de `protection` acima são publicados; razão livre, métricas internas,
+actor e diagnósticos não entram no erro. PR441 deve ler `protection.code` aninhado.
+
+As fórmulas de relatórios permanecem intactas. `summary`, cada linha de `campaigns`
+e o detalhe publicam `rate_metadata` e `reputation_coverage`. O filtro `campaign_id`
+recorta as bases de summary para a campanha selecionada. Exemplo de contrato:
+
+| Seleção | sent total | hard_bounce_rate | Numerador / denominador | excluded_direct_sent |
+| --- | ---: | ---: | --- | ---: |
+| 1 SES com bounce permanente + 3 direct aceitos | 4 | 100% | 1 / 1 SES aceito | 3 |
+| Apenas a campanha SES | 1 | 100% | 1 / 1 SES aceito | 0 |
+| Apenas a campanha direct | 3 | null | 0 / 0 SES aceitos | 3 |
+
+`rate_metadata.hard_bounce_rate.basis=ses_accepted_recipients` e inclui value,
+numerator, denominator e status (`available`/`no_data`). `reputation_coverage.sent`
+é o denominador SES; seu scope é `selected_ses_campaigns`, accepted_basis é
+`recipient_sent_at` e official_ses_ratio é false. No conjunto misto, o bounce_rate
+legado continua 25%, com denominador 4 e basis `accepted_recipients`.
+
+Specs HTTP novas: `recipients_presentation_436_spec.rb` e `report_contracts_436_spec.rb`
+em `spec/requests/api/v1/accounts/email_campaigns/`; request specs renderizam os
+Jbuilders reais. **Runtime deste diff pendente com o parent**, inclusive após o
+rebase sobre PR439. Ver [auditoria desta rodada](../audit/440-backend-api-findings.md).

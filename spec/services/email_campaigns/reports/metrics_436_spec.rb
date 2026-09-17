@@ -35,6 +35,9 @@ RSpec.describe EmailCampaigns::Reports::Builder do # rubocop:disable RSpec/SpecF
     expect(summary).to include(sent: 4, bounce_rate: 25.0, hard_bounce_rate: 100.0, complaint_rate: 100.0)
     expect(summary[:reputation_coverage]).to include(sent: 1, excluded_direct_sent: 3, official_ses_ratio: false)
     expect(summary[:rate_metadata][:bounce_rate]).to include(basis: 'accepted_recipients', denominator: 4)
+    expect(summary[:rate_metadata][:hard_bounce_rate]).to eq(
+      value: 100.0, numerator: 1, denominator: 1, basis: 'ses_accepted_recipients', status: 'available'
+    )
   end
 
   it 'separates provider prevention from permanent outcomes without calling it invalid mailbox' do

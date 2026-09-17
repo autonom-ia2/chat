@@ -1,6 +1,8 @@
 class Api::V1::Accounts::EmailCampaigns::BaseController < Api::V1::Accounts::BaseController
   before_action :ensure_email_campaign_enabled
 
+  helper_method :campaign_presentation
+
   rescue_from EmailCampaigns::Reports::Parameters::Invalid do |error|
     render json: { error: 'email_campaign.invalid_filter', parameter: error.parameter }, status: :unprocessable_entity
   end
@@ -13,6 +15,11 @@ class Api::V1::Accounts::EmailCampaigns::BaseController < Api::V1::Accounts::Bas
   end
 
   private
+
+  def campaign_presentation(campaign)
+    @campaign_presenter ||= EmailCampaigns::Presentation::Campaign.new(account: Current.account, actor: Current.user)
+    @campaign_presenter.call(campaign)
+  end
 
   def validate_hygiene_configuration
     EmailCampaigns::Presentation::Configuration.hygiene

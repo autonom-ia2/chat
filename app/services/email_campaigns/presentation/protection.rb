@@ -15,7 +15,7 @@ class EmailCampaigns::Presentation::Protection
   }.freeze
 
   def self.pause_reason(campaign)
-    reason = campaign.pause_reason
+    reason = campaign.pause_reason.presence || campaign.hygiene_pause_reason
     code = reason.is_a?(Hash) ? reason['code'] : reason
     REASONS.fetch(code, code.nil? || code == '' || reason == {} ? nil : 'unknown')
   end

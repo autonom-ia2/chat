@@ -56,6 +56,7 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
   end
 
   it 'normalizes actual persisted campaign reason objects without forwarding free text' do
+    campaign.hygiene_pause_reason = 'hygiene_validation_required'
     {
       'manual_pause' => 'manual', 'reputation_paused' => 'reputation', 'legacy_pause' => 'reputation',
       'provider_manual_block' => 'provider_blocked', 'provider_telemetry_unknown' => 'provider_blocked',
@@ -63,6 +64,18 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
     }.each do |code, expected|
       campaign.pause_reason = { 'kind' => 'ignored', 'code' => code, 'reason' => 'never expose' }
       expect(described_class.pause_reason(campaign)).to eq(expected)
+    end
+  end
+
+  it 'uses the hygiene reason only when the primary pause reason is empty, without exposing free text' do
+    [nil, {}, ''].each do |empty_reason|
+      campaign.pause_reason = empty_reason
+      campaign.hygiene_pause_reason = 'hygiene_validation_required'
+      expect(described_class.pause_reason(campaign)).to eq('preflight_review')
+      campaign.hygiene_pause_reason = 'private diagnostic'
+      expect(described_class.pause_reason(campaign)).to eq('unknown')
+      campaign.hygiene_pause_reason = nil
+      expect(described_class.pause_reason(campaign)).to be_nil
     end
   end
 

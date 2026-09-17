@@ -75,6 +75,16 @@ RSpec.describe EmailCampaigns::Presentation do # rubocop:disable RSpec/SpecFileP
   end
 
   describe EmailCampaigns::Presentation::Errors do
+    it 'rejects free-text codes and filters fields and kinds even for a known protection code' do
+      expect(described_class.protection(code: 'private operator diagnostic', kind: 'private', note: 'secret', resume_allowed: true)).to eq(
+        kind: 'technical', code: 'unknown', overridable: false, resume_allowed: false
+      )
+      expect(described_class.protection(code: 'hygiene_validation_required', kind: 'private', note: 'secret',
+                                        actor_id: 987, overridable: 'true', resume_allowed: true)).to eq(
+                                          kind: 'hygiene', code: 'hygiene_validation_required', overridable: false, resume_allowed: false
+                                        )
+    end
+
     it 'maps an explicit blocked payload without exposing internal data or allowing resume' do
       result = described_class.protection(blocked: true, resume_allowed: true, overridable: true,
                                           current_metrics: { private: 'metrics' }, actor_id: 987, note: 'private', reason: 'operator')
