@@ -44,8 +44,8 @@ RSpec.describe EmailCampaigns::Reports::Builder do # rubocop:disable RSpec/SpecF
   end
 
   it 'keeps all account options independent of selection/status/search and filters only results' do
-    second = create(:email_campaign, account: campaign.account, name: 'Second')
-    paused = create(:email_campaign, account: campaign.account, status: :paused)
+    second = create(:email_campaign, account: campaign.account, sender_identity: campaign.sender_identity, name: 'Second')
+    paused = create(:email_campaign, account: campaign.account, sender_identity: campaign.sender_identity, status: :paused)
     foreign = create(:email_campaign)
     query = described_class.new(account: campaign.account, params: { campaign_id: campaign.id, campaign_status: 'draft', q: campaign.name })
     expect(query.campaigns.pluck(:id)).to eq([campaign.id])
@@ -63,7 +63,7 @@ RSpec.describe EmailCampaigns::Reports::Builder do # rubocop:disable RSpec/SpecF
   end
 
   it 'batches list metric reads independently of campaign count' do
-    campaigns = create_list(:email_campaign, 4, account: campaign.account)
+    campaigns = create_list(:email_campaign, 4, account: campaign.account, sender_identity: campaign.sender_identity)
     campaigns.each { |row| create(:email_campaign_recipient, email_campaign: row) }
     queries = []
     subscription = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
@@ -95,8 +95,8 @@ RSpec.describe EmailCampaigns::Reports::Builder do # rubocop:disable RSpec/SpecF
   end
 
   it 'supports the UI attention campaign alias and rejects invalid campaign IDs' do
-    paused = create(:email_campaign, account: campaign.account, status: :paused)
-    failed = create(:email_campaign, account: campaign.account, status: :failed)
+    paused = create(:email_campaign, account: campaign.account, sender_identity: campaign.sender_identity, status: :paused)
+    failed = create(:email_campaign, account: campaign.account, sender_identity: campaign.sender_identity, status: :failed)
     query = EmailCampaigns::CampaignQuery.new(account: campaign.account, params: { campaign_status: 'attention' })
     expect(query.call.pluck(:id)).to contain_exactly(paused.id, failed.id)
     expect do

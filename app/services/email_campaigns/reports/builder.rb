@@ -14,7 +14,7 @@ class EmailCampaigns::Reports::Builder
     records.map do |campaign|
       metrics.by_campaign.fetch(campaign.id).merge(
         id: campaign.id, name: campaign.name, subject: campaign.subject, status: campaign.status, created_at: campaign.created_at,
-        pause_reason: EmailCampaigns::Presentation::Protection.pause_reason(campaign)
+        delivery_mode: campaign.delivery_mode, pause_reason: EmailCampaigns::Presentation::Protection.pause_reason(campaign)
       )
     end
   end
@@ -54,6 +54,7 @@ class EmailCampaigns::Reports::Builder
     # arrays from hiding their numeric KPI counterparts.
     hygiene = EmailCampaigns::Presentation::Hygiene.new(campaign, actor: @actor).call
     values.merge(id: campaign.id, name: campaign.name, subject: campaign.subject, status: campaign.status,
+                 delivery_mode: campaign.delivery_mode,
                  pause_reason: EmailCampaigns::Presentation::Protection.pause_reason(campaign),
                  meta: { delivery_evidence: values.fetch(:delivery_evidence) },
                  opened_count: values[:opened], clicked_count: values[:clicked],
@@ -84,7 +85,7 @@ class EmailCampaigns::Reports::Builder
     series = buckets.sort.map do |bucket, counts|
       { bucket: bucket.iso8601, delivered: counts['delivered'], open: counts['open'], click: counts['click'] }
     end
-    { interval: interval, since: since.iso8601, series: series }
+    { interval: interval, since: since.iso8601, series: series, delivery_mode: campaign.delivery_mode }
   end
 
   private

@@ -15,12 +15,6 @@ class EmailCampaigns::Reports::BounceOutcomes
     EmailEvent.unscoped.from("(#{latest.to_sql}) latest_bounces")
   end
 
-  def for_recipients
-    evidence.pluck(Arel.sql('recipient_id'), Arel.sql('bounce')).to_h.transform_values do |bounce|
-      EmailCampaigns::BounceClassifier.call(bounce.is_a?(Hash) ? bounce : {})
-    end
-  end
-
   def matching(classification)
     expression = "jsonb_build_object('bounceType', bounce ->> 'bounceType', 'bounceSubType', bounce ->> 'bounceSubType')"
     pairs = evidence.distinct.pluck(Arel.sql(expression))

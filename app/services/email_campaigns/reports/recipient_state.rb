@@ -36,6 +36,16 @@ class EmailCampaigns::Reports::RecipientState
     @campaign.email_campaign_recipients.pending.where(sent_at: nil, ses_message_id: [nil, '']).where.not(id: protected_ids)
   end
 
+  def unsent_classification
+    Arel.sql(<<~SQL.squish)
+      CASE WHEN id IN (#{protected_ids.to_sql}) THEN 'protected'
+           WHEN status != #{EmailCampaignRecipient.statuses.fetch('pending')} THEN 'unknown'
+           WHEN id IN (#{ready_ids.to_sql}) THEN 'ready'
+           WHEN preflight_status IN ('invalid', 'review', 'unknown') THEN preflight_status
+           ELSE 'unchecked' END
+    SQL
+  end
+
   private
 
   # Legacy rows are permanent positives. Match the batch API's legacy-first reason

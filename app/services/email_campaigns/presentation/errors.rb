@@ -11,11 +11,15 @@ class EmailCampaigns::Presentation::Errors
 
   def self.protection(value)
     value = value.to_h.with_indifferent_access
-    value = value[:protection].to_h.with_indifferent_access if value.key?(:protection)
-    code = value[:code]
-    return { kind: 'technical', code: 'unknown', overridable: false } unless PROTECTION_CODES.key?(code)
+    nested = value[:protection].to_h.with_indifferent_access
+    cause = PROTECTION_CODES.key?(nested[:code]) ? nested : value
+    code = cause[:code]
+    if !PROTECTION_CODES.key?(code) && value[:blocked] == true
+      return { kind: 'reputation', code: 'reputation_paused', overridable: false, resume_allowed: false }
+    end
+    return { kind: 'technical', code: 'unknown', overridable: false, resume_allowed: false } unless PROTECTION_CODES.key?(code)
 
-    { kind: PROTECTION_CODES.fetch(code), code: code, overridable: value[:overridable] == true }
+    { kind: PROTECTION_CODES.fetch(code), code: code, overridable: cause[:overridable] == true, resume_allowed: false }
   end
 
   def self.import_code(value)

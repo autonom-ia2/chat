@@ -22,12 +22,15 @@ RSpec.describe 'Email reputation API', type: :request do
   end
 
   it 'retains the successful campaign response shape and resumes a manual pause' do
+    campaign.email_campaign_recipients.create!(email: 'next@example.org')
     post "#{url}/campaigns/#{campaign.id}/resume", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body['payload']).to include('id' => campaign.id, 'status' => 'sending', 'pause_reason' => {})
+    expect(response.parsed_body['payload']).to include('id' => campaign.id, 'status' => 'sending', 'pause_reason' => nil)
+    expect(campaign.reload.pause_reason).to eq({})
   end
 
   it 'returns a machine code plus protection and refreshes persisted metrics when resume is denied' do
+    campaign.email_campaign_recipients.create!(email: 'next@example.org')
     account.update!(internal_attributes: { email_campaigns_paused: { reason: 'old' } })
     allow(collector).to receive(:call).and_return(sent: 100, permanent: 10, bounced: 10, complaints: 0)
     post "#{url}/campaigns/#{campaign.id}/resume", headers: admin.create_new_auth_token, as: :json
@@ -40,6 +43,7 @@ RSpec.describe 'Email reputation API', type: :request do
   end
 
   it 'releases a safe guarded resume and clears only the tenant pause flag' do
+    campaign.email_campaign_recipients.create!(email: 'next@example.org')
     account.update!(internal_attributes: { email_campaigns_paused: { reason: 'old' }, unrelated: 'keep' })
     post "#{url}/campaigns/#{campaign.id}/resume", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:ok)
@@ -100,6 +104,7 @@ RSpec.describe 'Email reputation API', type: :request do
 
   %w[shadow warning].each do |mode|
     it "does not enqueue delivery on protected legacy resume in #{mode}" do
+      campaign.email_campaign_recipients.create!(email: 'next@example.org')
       allow(collector).to receive(:call).and_return(sent: 100, permanent: 0, transient: 6, bounced: 6, complaints: 0)
       with_modified_env('EMAIL_REPUTATION_MODE' => mode) do
         expect do
@@ -146,6 +151,7 @@ RSpec.describe 'Email reputation API', type: :request do
   end
 
   it 'allows a bounded SuperAdmin exception to resume an active legacy pause while retaining protection' do
+    campaign.email_campaign_recipients.create!(email: 'next@example.org')
     super_admin = create(:user, type: 'SuperAdmin', account: account, role: :administrator)
     allow(collector).to receive(:call).and_return(sent: 100, permanent: 0, transient: 6, bounced: 6, complaints: 0)
     with_modified_env('EMAIL_REPUTATION_MODE' => 'warning') do

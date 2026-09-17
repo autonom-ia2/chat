@@ -28,7 +28,7 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
 
   def recipients
     query = EmailCampaigns::RecipientQuery.new(@campaign, recipient_params)
-    @meta = query.meta
+    @meta = query.meta.merge(delivery_mode: @campaign.delivery_mode)
     @recipients = EmailCampaigns::Presentation::Recipients.new(@campaign, query.paginated).call
   end
 

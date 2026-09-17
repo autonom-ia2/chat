@@ -23,7 +23,7 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
 
   it 'reads a public campaign DTO without collection or mutation and shares one protection presenter across a list' do
     recipient
-    create(:email_campaign, account: account, status: :draft)
+    create(:email_campaign, account: account, sender_identity: campaign.sender_identity, status: :draft)
     expect(EmailCampaigns::Reputation::Metrics).not_to receive(:new)
     expect(EmailCampaigns::Reputation::Evaluator).not_to receive(:new)
     expect(EmailCampaigns::RecipientPreflightJob).not_to receive(:enqueue)
@@ -42,7 +42,7 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
 
   it 'whitelists list statuses and rejects malformed scalar shapes, conflicts and unsupported dates' do
     campaign
-    create(:email_campaign, account: account, status: :draft)
+    create(:email_campaign, account: account, sender_identity: campaign.sender_identity, status: :draft)
     get "#{base}/campaigns", params: { status: 'attention', order: 'private', account: 'ignored' }, headers: headers, as: :json
     expect(response.parsed_body.fetch('payload').fetch('campaigns').pluck('id')).to eq([campaign.id])
     [{ status: 'bogus' }, { status: ['paused'] }, { q: { private: 'value' } }, { status: 'paused', campaign_status: 'draft' },
@@ -105,7 +105,13 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
                                                     headers: headers, as: :json
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body).to include('error' => 'email_campaign.protected')
-    expect(response.body).not_to include('provider-diagnostic', 'current_metrics', 'policy', 'trigger_snapshot', 'actor_id', 'override')
+    expect(response.parsed_body.fetch('protection')).to eq(
+      'kind' => 'reputation', 'code' => 'reputation_paused', 'overridable' => false, 'resume_allowed' => false
+    )
+    expect(response.parsed_body.keys).to contain_exactly('error', 'protection')
+    expect(response.body).not_to include(
+      'provider-diagnostic', 'current_metrics', 'policy', 'trigger_snapshot', 'actor_id', 'override', 'private-note'
+    )
     expect(campaign.reload).to be_paused
     expect(state.reload).to be_blocked
     expect(state.observation_generation).to be > generation
@@ -243,8 +249,12 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
       expect(response).to have_http_status(:not_found)
       expect(response.body).not_to include('private-campaign')
       agent = create(:user, account: account, role: :agent)
+      get '/api/v1/profile', headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.fetch('id')).to eq(agent.id)
       post "#{base}/campaigns/#{campaign.id}/#{action}", headers: agent.create_new_auth_token, as: :json
-      expect(response).to have_http_status(:forbidden)
+      expect(response).to have_http_status(:unauthorized)
+      expect(response.parsed_body).to eq('error' => 'You are not authorized to do this action')
       expect(campaign.reload).to be_paused
       expect(EmailReputationState.where(account_id: [account.id, foreign.account_id])).not_to exist
     end
@@ -301,8 +311,12 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
       expect(response).to have_http_status(:not_found)
       expect(response.body).not_to include('private@example.org')
       agent = create(:user, account: account, role: :agent)
+      get '/api/v1/profile', headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.fetch('id')).to eq(agent.id)
       get "#{base}/reports/#{campaign.id}/#{action}", headers: agent.create_new_auth_token
-      expect(response).to have_http_status(:forbidden)
+      expect(response).to have_http_status(:unauthorized)
+      expect(response.parsed_body).to eq('error' => 'You are not authorized to do this action')
       expect(response.media_type).to eq('application/json')
       expect(response.headers['Content-Disposition']).to be_nil
     end
@@ -326,18 +340,78 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
     end
   end
 
+  it 'keeps provider complaint prevention out of UI spam counters and presents the same protected statuses in JSON and CSV' do
+    statuses = %i[sent suppressed unsubscribed complained]
+    rows = EmailCampaigns::ComplaintClassifier::PREVENTED_SUBTYPES.flat_map do |subtype|
+      statuses.map do |status|
+        row = create(:email_campaign_recipient, email_campaign: campaign, status: status, sent_at: 1.hour.ago)
+        row.email_events.create!(event_type: :complaint, occurred_at: 30.minutes.ago) if status == :complained
+        2.times do
+          row.email_events.create!(event_type: :complaint, payload: { complaint: { complaintSubType: subtype } })
+        end
+        row
+      end
+    end
+    get "#{base}/reports", headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+    payload = response.parsed_body.fetch('payload')
+    expect(payload.fetch('summary')).to include('complained' => 2, 'provider_prevented' => 8, 'complaint_rate' => 25.0)
+    expect(payload.fetch('campaigns').sole).to include('complained' => 2, 'provider_prevented' => 8, 'complaint_rate' => 25.0)
+    expect(payload.dig('summary', 'activity', 'complaint')).to eq(18)
+    get "#{base}/reports/#{campaign.id}", headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.fetch('payload')).to include('complained' => 2, 'provider_prevented' => 8)
+
+    get "#{base}/reports/#{campaign.id}/recipients", headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+    presented = response.parsed_body.dig('payload', 'recipients')
+    expect(presented.pluck('id')).to eq(rows.map(&:id))
+    expect(presented.pluck('status')).to eq(%w[suppressed suppressed unsubscribed complained] * 2)
+    expect(presented.values_at(0, 1, 4, 5)).to all(include('delivery_outcome' => 'unknown', 'reason_code' => 'provider_suppression'))
+
+    get "#{base}/reports/#{campaign.id}/export", headers: headers
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq('text/csv')
+    csv = CSV.parse(response.body.delete_prefix("\uFEFF"), headers: true)
+    expect(csv.pluck('id').map(&:to_i)).to eq(rows.map(&:id))
+    expect(csv.pluck('status')).to eq(presented.pluck('status'))
+    expect(csv.pluck('reason_code')).to eq(presented.pluck('reason_code'))
+    expect(rows.map { |row| row.reload.status }).to eq(%w[sent suppressed unsubscribed complained] * 2)
+  end
+
   it 'exposes delivery evidence in report metadata without presenting direct acceptance as confirmed delivery' do
     inbox = create(:inbox, :with_email, account: account)
     direct = create(:email_campaign, account: account, delivery_mode: :direct_inbox, sender_identity: nil, sender_inbox: inbox)
     row = create(:email_campaign_recipient, email_campaign: direct, status: :sent, sent_at: 1.hour.ago)
     row.email_events.create!(event_type: :delivered, payload: { via: 'direct_inbox' })
+    ses_row = create(:email_campaign_recipient, email_campaign: campaign, status: :sent, sent_at: 1.hour.ago)
+    ses_row.email_events.create!(event_type: :delivered, payload: { via: 'direct_inbox' })
     get "#{base}/reports", headers: headers, as: :json
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.dig('payload', 'meta', 'delivery_evidence')).to include(
-      'provider_confirmed' => 0, 'direct_acceptance_only' => 1, 'legacy_delivered_includes_acceptance' => true
+      'provider_confirmed' => 1, 'direct_acceptance_only' => 1, 'legacy_delivered_includes_acceptance' => true
+    )
+    expect(response.parsed_body.dig('payload', 'summary', 'delivered')).to eq(2)
+    expect(response.parsed_body.dig('payload', 'campaigns')).to contain_exactly(
+      include('id' => direct.id, 'delivery_mode' => 'direct_inbox', 'delivered' => 1),
+      include('id' => campaign.id, 'delivery_mode' => 'ses', 'delivered' => 1)
     )
     get "#{base}/reports/#{direct.id}", headers: headers, as: :json
     expect(response.parsed_body.dig('payload', 'meta', 'delivery_evidence', 'provider_confirmed')).to eq(0)
+    [direct, campaign].each do |source|
+      get "#{base}/reports/#{source.id}", params: { delivery_mode: 'untrusted' }, headers: headers, as: :json
+      expect(response.parsed_body.fetch('payload')).to include('delivery_mode' => source.delivery_mode, 'delivered' => 1)
+      get "#{base}/reports/#{source.id}/recipients", params: { delivery_mode: 'untrusted' }, headers: headers, as: :json
+      expect(response.parsed_body.dig('payload', 'meta', 'delivery_mode')).to eq(source.delivery_mode)
+      expect(response.parsed_body.dig('payload', 'recipients')).to all(include('delivery_mode' => source.delivery_mode, 'status' => 'sent'))
+      get "#{base}/reports/#{source.id}/timeline", headers: headers, as: :json
+      expect(response.parsed_body.dig('payload', 'delivery_mode')).to eq(source.delivery_mode)
+      expect(response.parsed_body.dig('payload', 'series').sum { |bucket| bucket['delivered'] }).to eq(1)
+    end
+    expect([row.reload.status, ses_row.reload.status]).to eq(%w[sent sent])
+    get "#{base}/reports/#{direct.id}/recipients", params: { q: 'no-match' }, headers: headers, as: :json
+    expect(response.parsed_body.dig('payload', 'recipients')).to eq([])
+    expect(response.parsed_body.dig('payload', 'meta', 'delivery_mode')).to eq('direct_inbox')
     get "#{base}/reports", params: { since: '2026-09-01' }, headers: headers, as: :json
     expect(response).to have_http_status(:unprocessable_entity)
   end

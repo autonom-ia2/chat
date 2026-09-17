@@ -1,11 +1,11 @@
 # Relatórios de campanhas — épico #436
 
 Implementação de leitura, consultas, apresentação e CSV. Não altera envio, importador,
-contadores persistidos, rotas nem decisões de reputação. Não faz DNS, SMTP ou chamadas ao SES.
+contadores persistidos nem decisões de reputação. Não faz DNS, SMTP ou chamadas ao SES.
 
-## Integração pelo responsável principal
+## Integração atual
 
-Dentro do bloco `resources :reports` existente, adicionar:
+As rotas de issues já estão conectadas ao controller no bloco `resources :reports`:
 
 ```ruby
 member do
@@ -38,16 +38,43 @@ query.paginated # página de 50 registros
 query.meta      # count/current_page/per_page/total_pages/applied_filters
 
 query = EmailCampaigns::CampaignQuery.new(account: Current.account, params: permitted_filters)
-query.call      # relação para Reports e integração posterior no CampaignsController#index
+query.call      # relação compartilhada por Reports e CampaignsController#index
 query.options   # todas as campanhas autorizadas da conta; sem q/status/campaign_id
 
 EmailCampaigns::Presentation::Hygiene.new(campaign, actor: Current.user).call
 EmailCampaigns::Presentation::ImportSummary.new(campaign).call
 ```
 
-No endpoint de campanha, o integrador pode atribuir o resultado de `Hygiene` a `preflight`.
-Nenhum helper foi inserido no controller/jbuilder de campanhas, que pertencem a outro responsável.
-Para detalhe de relatório, o Builder já inclui `preflight` e recebe `actor:` opcional.
+O endpoint de campanha já usa `Presentation::Campaign` no controller/Jbuilder para publicar
+`preflight` e `protection`. O detalhe de relatório usa o Builder com `actor:`.
+A negação por Pundit retorna 401 com `You are not authorized to do this action`, conforme
+`RequestExceptionHandler`; campanha de outra conta, após autorização, continua retornando 404.
+
+## Listagem de campanhas: leituras agrupadas e frescor
+
+`GET campaigns` cria `Presentation::CampaignBatch` por request, depois do escopo autorizado.
+A coleção é materializada apenas como campanhas; o contexto rejeita contas divergentes.
+Higiene usa três agregações para a coleção inteira: classificação dos não enviados por
+campanha, enviados com `sent_at` e issues por campanha. Ausência de linhas recebe zeros;
+`recipients_total = counts.total + historical_sent`, sem somar issues aos destinatários.
+A classificação SQL é compartilhada em `RecipientState#unsent_classification`, com proteção
+antes de ready e as mesmas subconsultas por conta para supressões legadas e estados ativos.
+Não há N conjuntos de supressão em memória, nem carregamento de destinatários/eventos.
+
+A membership administrativa é lida uma vez e compartilhada com Hygiene/Protection. Importação
+ativa é uma consulta de IDs distintos de campanha (qualquer import queued/processing, não
+apenas o mais recente). Candidatos de retomada usam `RecipientState#resume_candidates/ready_ids`;
+pendências enforce usam `PreflightDecision#unresolved`, retirando `protected_ids`. São até
+duas consultas adicionais de IDs distintos para toda a coleção, em vez de EXISTS por item.
+Estado reputacional, provider e permissão SuperAdmin continuam compartilhados no request.
+O número de consultas fica limitado independentemente de 1 ou 20 campanhas; trabalho e tamanho
+das agregações continuam proporcionais aos dados consultados, sem promessa de tempo constante.
+
+Não há locks, transação de leitura longa, DNS, coleta reputacional ou liberação. O contexto
+vale somente para a lista daquele request. Novo GET refaz as leituras; detalhe e resposta
+após mutação continuam com apresentação nova e consultas de campanha individuais. Quarentena
+`temporary_failure` expirada deixa de bloquear pela regra canônica; opt-out/complaint/manual
+ativos e supressões legadas continuam protegidos. Expiração nunca escreve nem libera a pausa.
 
 ## Filtros e significado do status
 
@@ -92,6 +119,28 @@ Parâmetros fora da whitelist não alteram a consulta. `q` tem limite 320 caract
 relatório nunca os aplicou e ainda não oferece filtro temporal. A UI atual não os envia.
 Não há simulação de uma janela de eventos usando essas chaves.
 
+## Proveniência de entrega para a UI
+
+Campo aditivo `delivery_mode`, sempre lido de `EmailCampaign#delivery_mode` persistido,
+com os únicos valores `ses` e `direct_inbox` do enum existente:
+
+- `GET reports`: `payload.campaigns[].delivery_mode` em cada resumo de campanha.
+- `GET reports/:id`: `payload.delivery_mode` no detalhe.
+- `GET reports/:id/recipients`: cada `payload.recipients[].delivery_mode` e
+  `payload.meta.delivery_mode`, inclusive quando a página/filtro não tem destinatários.
+- `GET reports/:id/timeline`: `payload.delivery_mode`, aplicável a todos os buckets.
+
+Não se aceita esse valor de query params, destinatário, metadados ou payload de evento.
+`payload.summary` pode misturar modos, portanto não recebe um modo único: os totais
+`delivery_evidence` existentes em summary/meta e por campanha continuam sendo a fonte para
+separar `provider_confirmed` de `direct_acceptance_only`.
+
+O frontend deve rotular os eventos/contadores legados `delivered` de `direct_inbox` como
+**aceitação pelo provedor**, nunca confirmação no destinatário. SES representa o feedback
+de entrega do provedor; não comprova leitura humana nem colocação na caixa principal.
+Esta mudança não regrava ou renomeia status bruto, não muda o contador `delivered`, seus
+buckets ou filtros e não altera o CSV legado. A integração visual fica com o owner da UI.
+
 ## Métricas e bases
 
 O escopo é a coorte de destinatários das campanhas selecionadas, com **todos os eventos
@@ -102,7 +151,8 @@ Campos numéricos legados continuam disponíveis: recipients, sent, delivered, o
 clicked, bounced, complained, unsubscribed, failed, suppressed. `sent` conta destinatários
 com `sent_at`, que registra aceitação, mesmo que seu estado atual tenha avançado.
 Delivered/opened/clicked/bounced/complained/unsubscribed contam destinatários distintos com
-um evento correspondente. Failed/suppressed são contagens de status atual.
+um evento correspondente; `complained` considera somente reclamações reais segundo o
+classificador compartilhado. Failed/suppressed são contagens de status atual.
 `current_status_counts` separa todos os estados atuais; `activity` contém eventos brutos.
 Contadores antigos persistidos não são regravados nem usados para estes KPIs.
 
@@ -113,7 +163,7 @@ Contadores antigos persistidos não são regravados nem usados para estes KPIs.
 | unsubscribe_rate | destinatários com opt-out | destinatários entregues |
 | bounce_rate | destinatários com bounce, todos os modos | aceitos, todos os modos |
 | hard_bounce_rate | destinatários aceitos SES com bounce permanente no histórico | aceitos SES |
-| complaint_rate | destinatários aceitos SES com complaint | aceitos SES |
+| complaint_rate | destinatários aceitos SES com reclamação real no histórico | aceitos SES |
 
 A antiga divisão de bounce/complaint por entregues foi removida. `bounce_rate` inclui
 classes não permanentes e **não** serve para proteção; usar `hard_bounce_rate` na apresentação
@@ -148,6 +198,24 @@ não pertence a provider_prevented. `UnsubscribedRecipient` preserva o motivo `u
 Um destinatário pode ter classes diferentes em eventos históricos e aparece uma vez em cada
 classe; somá-las não produz o total de pessoas. Um evento de prevenção posterior não apaga
 um bounce permanente anterior. Status bounced sem evento só vira unknown na lista, sem inventar KPI.
+
+Complaint usa `EmailCampaigns::ComplaintClassifier::REAL_COMPLAINT_SQL`: os subtipos
+`OnAccountSuppressionList` e `OnTenantSuppressionList` são prevenção; ausência, null e
+subtipo desconhecido continuam sendo reclamação real. `complained`, `complaint_rate` e
+`reputation_coverage.complaints` excluem prevenção. `activity.complaint` mantém todo o histórico.
+
+`provider_prevented` conta destinatários distintos na união de Bounce e Complaint,
+reutilizando `Reputation::Metrics::COUNT_FILTERS[:provider_prevented]`. Duplicatas e
+notificações dos dois tipos para a mesma pessoa contam uma vez. Reclamação real e prevenção
+podem coexistir: uma não elimina a outra, independentemente da ordem. As classes se sobrepõem
+e não devem ser somadas como pessoas exclusivas. O backend de política permanece inalterado.
+
+`Presentation::Recipients` consulta o último Bounce e a última Complaint separadamente,
+com desempate por occurred_at/id, em uma consulta limitada à página/lote. Última Complaint
+de prevenção apresenta status `suppressed`, outcome `unknown` e razão `provider_suppression`;
+status persistidos `unsubscribed` e `complained` são preservados. JSON e CSV compartilham esse
+adapter sem regravar destinatários. Os filtros de status e `current_status_counts` continuam
+baseados no estado persistido; essa normalização é da apresentação da evidência.
 
 Aliases numéricos da UI: `permanent_bounced`, `temporary_bounced`, `unknown_bounced` são
 iguais aos campos preservados `permanent_bounces`, `temporary_bounces`, `unknown_bounces`,
@@ -193,6 +261,8 @@ Set de até 50 mil emails para estes filtros.
 duas consultas limitadas aos emails do lote, com prioridade legada. Motivo legado não
 reconhecido sai como `legacy_suppression`, sem texto livre. Lote vazio retorna imediatamente,
 sem consulta nem `IN (NULL)`. Associação account é lida na campanha, nunca em cada destinatário.
+`RecipientOutcomes` devolve no máximo duas evidências por destinatário, mantendo as quatro
+consultas do lote (evidências, atividade open/click e duas de supressão) com account já carregada.
 
 `Hygiene#call`:
 
@@ -251,7 +321,7 @@ Enumerator; X-Accel-Buffering=no é enviado, sem adicionar infraestrutura.
 Todas as células textuais recebem neutralização de `= + - @`, inclusive após espaços ou
 caracteres de controle. CSV cuida de aspas, vírgulas e quebras de linha. Validação de filtros,
 autorização e captura do horizonte ocorrem antes dos headers para erros conhecidos retornarem
-JSON 422/403/404. Erro de infraestrutura após começar o stream não pode trocar CSV por JSON.
+JSON 422/401/404. Erro de infraestrutura após começar o stream não pode trocar CSV por JSON.
 
 ## DTO público de proteção e integração obrigatória do parent
 
@@ -354,7 +424,19 @@ provedor continua vetando campanhas SES. Administrador da conta não é SuperAdm
 só é anunciado com ambas as autorizações e não substitui os requisitos de resume.
 Sem campanha selecionada, capabilities são false.
 
-### Wiring de campanha e POSTs pelo parent; contrato da UI
+### Erro público de retomada bloqueada
+
+A negativa comum de `Evaluator#resume!` pode retornar `Payload.for_state` com
+`blocked: true` e sem `code`. `Errors.protection` traduz esse caso estrito para
+`{kind: "reputation", code: "reputation_paused", overridable: false, resume_allowed: false}`.
+Um `protection.code` aninhado conhecido tem precedência, inclusive provider bloqueado e
+avaliação técnica substituída. Códigos públicos conhecidos continuam na allowlist;
+`blocked` ausente/false/string não prova bloqueio e, sem causa conhecida, retorna technical/unknown.
+Toda resposta de erro preserva `resume_allowed: false`. Nunca serializa current_metrics,
+policy, trigger_snapshot, actor, note ou razão livre do operador. A tradução é somente
+apresentação: não executa release, reevaluate ou alteração de estado.
+
+### Wiring de campanha e POSTs; contrato da UI
 
 1. Preservar o marcador já publicado pelo PR1 ao integrar e rodar a suíte local. Instanciar o adapter por **request**,
    nunca singleton global nem reutilizado antes/depois de uma mutação:
@@ -377,8 +459,8 @@ Sem campanha selecionada, capabilities são false.
    de avaliação; recheck agenda/invalida conforme o serviço de higiene real. Nenhum deles libera
    a pausa. Após a operação, reload da campanha/conta e **nova** apresentação, respondendo
    `{payload: <campanha atualizada com id,status,pause_reason,protection,preflight>}` via show.
-   O PR1 lido ainda retorna `{protection: <payload interno>}` em reevaluate: esse retorno deve
-   ser substituído, não repassado ao cliente. Resume também retorna o mesmo DTO atualizado.
+   Esse wiring já está em `CampaignsController#render_campaign`; reevaluate, recheck e
+   resume retornam o DTO atualizado, sem repassar o payload interno de Guardrail.
 3. POST resume continua validando política, higiene e provider no serviço transacional real;
    para conta protegida, também geração/feedback/release. Pausa manual sem bloqueio não deve
    adquirir a exigência reputacional de amostra mínima. O DTO é orientação visual; jamais aceitar release_eligible do cliente
@@ -408,7 +490,7 @@ O contrato de integração permanece:
   número percentual ou null, além de rates aninhadas; nenhuma conversão necessária.
 - `reevaluate`/`recheck`: devolver `{payload: <campaign com protection e preflight>}`.
   `EmailCampaignHealth` também aceita `payload.campaign`, mas testes de C usam payload direto.
-  Essas actions/rotas e o wiring da apresentação no endpoint de campanhas pertencem ao principal.
+  Essas actions/rotas e o wiring da apresentação já estão integrados no checkout.
 - `preflight.counts.total`: seis categorias dos não enviados; duplicate é opcional para C
   e permanece ausente aqui. Não somar issues nem histórico enviado às categorias.
 - `preflight.status='blocked'`: já alinhado ao alias blocked→protected de EmailHygieneSummary.
@@ -424,7 +506,7 @@ O contrato de integração permanece:
   Não converter supressão do provedor em caixa inexistente, nem unknown em endereço inválido.
 - Filtro de atenção de C já envia problem=true e omite status; problem=false na API significa
   complemento, mas o cliente atual omite false intencionalmente. A ausência continua sem filtro.
-- `import_issues/export`: action e exportador prontos aqui, rota ainda depende do principal.
+- `import_issues/export`: action, exportador e rota já conectados.
   O cliente C atual envia apenas page nos issues; backend já aceita q e reason/reason_code.
 - Timestamps de atributos permanecem objetos Time no serviço e viram strings ISO no Jbuilder;
   CSV converte explicitamente com iso8601. Não usar `String#iso8601` para datas já serializadas.
@@ -440,6 +522,7 @@ O contrato de integração permanece:
   "name": "Contato exemplo",
   "email": "contato@example.org",
   "status": "bounced",
+  "delivery_mode": "ses",
   "attempts": 1,
   "last_event_at": "2026-09-16T12:05:00Z",
   "sent_at": "2026-09-16T12:00:00Z",
@@ -463,14 +546,31 @@ Specs novas: `spec/services/email_campaigns/presentation/protection_spec.rb`,
 combinações/escapes, aliases, paginação, 10.001 registros CSV, fórmulas, opções independentes,
 eventos duplicados/tardios, bases vazias, SES/direct, limite de consultas, higiene e import issues.
 
-**Não executadas nesta worktree**, por restrição explícita. Apenas no ambiente isolado já
-preparado pelo responsável principal, após integrar modelos/migrações/rotas:
+**Estado de runtime em 2026-09-17:** o resultado recebido do parent em
+`tmp/email436/reports-first.json` contém 204 exemplos, 32 falhas e nenhum pending.
+Esta rodada corrige fixtures, autenticação dos testes, contrato 401, booleano de higiene e
+classificação Complaint. A nova execução de Rails/RSpec permanece exclusivamente com o parent.
+As specs novas não foram executadas aqui. Parser/lint passaram em 39 arquivos; ver
+`docs/audit/436-reports-runtime-fixes.md`. No harness isolado do parent:
 
 ```sh
 eval "$(rbenv init -)"
-bundle exec rspec spec/services/email_campaigns/reports/recipient_query_436_spec.rb spec/services/email_campaigns/reports/metrics_436_spec.rb spec/services/email_campaigns/reports/presentation_436_spec.rb spec/services/email_campaigns/reports/export_and_issues_436_spec.rb spec/controllers/email_campaigns/reports_436_spec.rb spec/services/email_campaigns/presentation/protection_spec.rb
+bundle exec rspec spec/services/email_campaigns/reports/recipient_query_436_spec.rb spec/services/email_campaigns/reports/metrics_436_spec.rb spec/services/email_campaigns/reports/complaint_metrics_436_spec.rb spec/services/email_campaigns/reports/presentation_436_spec.rb spec/services/email_campaigns/reports/export_and_issues_436_spec.rb spec/controllers/email_campaigns/reports_436_spec.rb spec/services/email_campaigns/presentation/protection_spec.rb spec/requests/api/v1/accounts/email_campaigns/reports_integration_436_spec.rb
 ```
 
 Verificações de relatórios estão em `docs/audit/436-reports.md`; o contrato final de resume,
 manifesto de arquivos e verificações deste recorte estão em `docs/audit/436-resume-contract.md`. Revisão independente,
 execução Rails, medição de queries SQL e validação da entrega HTTP do Enumerator continuam pendentes.
+
+### Rodada dos dois P2s — 2026-09-17
+
+`tmp/email436/reports-contract-third.json` foi lido: 61 exemplos, zero falhas, zero pending
+na rodada anterior do parent. As fixtures pending, autenticação HTTP por token e
+`resume_allowed: false` dessa rodada foram preservadas. O novo teste HTTP
+`spec/requests/api/v1/accounts/email_campaigns/reports_query_budget_436_spec.rb` compara
+1 e 20 campanhas sent/paused/sending em shadow/enforce usando `sql.active_record`, incluindo
+SQL servido pelo query cache, com Hygiene real. Os specs também cobrem paridade lista/detalhe,
+expiração/releitura, no_data, resposta reputacional real e proveniência SES/direct mista.
+Runtime destes ajustes não foi executado aqui. Manifesto e checks estáticos efetivamente
+executados: `docs/audit/436-reports-p2-provenance.md`. O parent deve incluir o novo spec na
+suíte de relatórios e repetir o baseline; os 61 anteriores não validam este diff.

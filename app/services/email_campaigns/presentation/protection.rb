@@ -20,14 +20,15 @@ class EmailCampaigns::Presentation::Protection
     REASONS.fetch(code, code.nil? || code == '' || reason == {} ? nil : 'unknown')
   end
 
-  def initialize(account:, actor: nil, now: Time.current)
+  def initialize(account:, actor: nil, now: Time.current, batch: nil)
     @account = account
     @actor = actor
     @now = now
+    @batch = batch
     @state = EmailReputationState.find_by(account_id: account.id)
     @policy = EmailCampaigns::Reputation::Policy.new
     @provider = EmailCampaigns::Presentation::ProtectionProvider.new(now: now)
-    @membership = account.account_users.find_by(user_id: actor.id) if actor
+    @membership = batch ? batch.membership : account.account_users.find_by(user_id: actor.id) if actor
   end
 
   def call(campaign: nil, preflight: nil)
@@ -132,7 +133,7 @@ class EmailCampaigns::Presentation::Protection
   end
 
   def hygiene_ready?(campaign, preflight)
-    return false if campaign.recipient_import_active?
+    return false if @batch ? @batch.import_active?(campaign) : campaign.recipient_import_active?
 
     config = EmailCampaigns::Presentation::Configuration.hygiene
     return false unless valid_preflight?(preflight, config)
@@ -141,6 +142,7 @@ class EmailCampaigns::Presentation::Protection
     # actual candidate with bounded SQL, using the shared suppression predicates.
     state = EmailCampaigns::Reports::RecipientState.new(campaign, now: @now)
     return false unless enforce_ready?(campaign, config, state)
+    return @batch.resume_candidate?(campaign, config) if @batch
 
     recipients = state.resume_candidates
     recipients = recipients.where(id: state.ready_ids) if config.enforce?
@@ -161,6 +163,7 @@ class EmailCampaigns::Presentation::Protection
   def enforce_ready?(campaign, config, state)
     return true unless config.enforce?
     return false if campaign.preflight_summary['rechecking']
+    return !@batch.unresolved?(campaign, config) if @batch
 
     # Same unresolved scope as admission, subtracting the active protection union
     # in SQL instead of materializing batches during a GET.

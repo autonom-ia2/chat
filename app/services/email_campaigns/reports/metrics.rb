@@ -55,17 +55,29 @@ class EmailCampaigns::Reports::Metrics
   end
 
   def load_events
+    # Fixed-size aggregates: raw activity retains prevention notifications, while
+    # complaint KPIs use real complaints and prevention is distinct across BOTH types.
+    prevented = EmailCampaigns::Reputation::Metrics::COUNT_FILTERS.fetch(:provider_prevented)
     EmailEvent.joins(:recipient).where(recipient_id: @recipients.select(:id))
-              .group('email_campaign_recipients.email_campaign_id', :event_type, Arel.sql('email_campaign_recipients.sent_at IS NOT NULL'))
-              .pluck(Arel.sql('email_campaign_recipients.email_campaign_id'), :event_type,
-                     Arel.sql('email_campaign_recipients.sent_at IS NOT NULL'), Arel.sql('COUNT(*)'),
-                     Arel.sql('COUNT(DISTINCT recipient_id)')).each do |id, type, accepted, activity, unique|
-      add_event_counts(id, type, accepted, activity, unique)
+              .group('email_campaign_recipients.email_campaign_id', Arel.sql('email_campaign_recipients.sent_at IS NOT NULL'))
+              .pluck(Arel.sql('email_campaign_recipients.email_campaign_id'), Arel.sql('email_campaign_recipients.sent_at IS NOT NULL'),
+                     Arel.sql("COUNT(DISTINCT recipient_id) FILTER (WHERE #{prevented})"), *event_counts_sql)
+              .each do |id, accepted, prevention, *counts|
+      EVENTS.each_key.with_index { |type, index| add_event_counts(id, type, accepted, *counts.slice(index * 2, 2)) }
+      @data.fetch(id)[:provider_prevented] += prevention
+      @data.fetch(id)[:reputation_counts][:provider_prevented] += prevention if accepted && @ses_ids.include?(id)
+    end
+  end
+
+  def event_counts_sql
+    EVENTS.keys.flat_map do |type|
+      activity = "event_type = #{EmailEvent.event_types.fetch(type)}"
+      unique = type == 'complaint' ? EmailCampaigns::ComplaintClassifier::REAL_COMPLAINT_SQL : activity
+      [Arel.sql("COUNT(*) FILTER (WHERE #{activity})"), Arel.sql("COUNT(DISTINCT recipient_id) FILTER (WHERE #{unique})")]
     end
   end
 
   def add_event_counts(id, type, accepted, activity, unique)
-    type = EmailEvent.event_types.key(type) if type.is_a?(Integer)
     row = @data.fetch(id)
     row[EVENTS.fetch(type)] += unique
     row[:activity][type] += activity
@@ -75,7 +87,9 @@ class EmailCampaigns::Reports::Metrics
 
   def load_bounces
     EmailCampaigns::Reports::BounceOutcomes.new(@recipients).grouped.each do |(id, classification, accepted), count|
-      key = classification == 'provider_prevented' ? :provider_prevented : "#{classification}_bounces".to_sym
+      next if classification == 'provider_prevented' # Already counted across bounce + complaint in load_events.
+
+      key = "#{classification}_bounces".to_sym
       row = @data.fetch(id)
       row[key] += count
       row[:reputation_counts][key] += count if accepted && @ses_ids.include?(id)
