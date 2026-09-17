@@ -169,6 +169,28 @@ describe('real backend reason codes', () => {
       'pending'
     );
   });
+  it('distinguishes campaign-local preflight exclusions from tenant protection', () => {
+    expect(
+      statusKey({ status: 'suppressed', preflight_status: 'invalid' })
+    ).toBe('invalid');
+    expect(
+      statusKey({ status: 'suppressed', preflight_status: 'review' })
+    ).toBe('review');
+    expect(
+      statusKey({
+        status: 'suppressed',
+        preflight_status: 'invalid',
+        suppression_reason: 'hard_bounce',
+      })
+    ).toBe('suppressed');
+    expect(
+      statusKey({
+        status: 'suppressed',
+        preflight_status: 'review',
+        suppression_reason: 'provider_suppression',
+      })
+    ).toBe('suppressed');
+  });
 });
 
 describe('delivery provenance', () => {

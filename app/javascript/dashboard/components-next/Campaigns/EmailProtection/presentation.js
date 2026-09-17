@@ -91,6 +91,10 @@ export function deliveryKey(source = {}) {
 export function statusKey(row = {}, campaign = false) {
   if (row.status === 'delivered' && !campaign)
     return deliveryKey({ delivery_mode: row.delivery_mode });
+  if (!campaign && row.status === 'suppressed' && !row.suppression_reason) {
+    if (row.preflight_status === 'invalid') return 'invalid';
+    if (row.preflight_status === 'review') return 'review';
+  }
   if (row.status === 'paused')
     return campaign && MANUAL_REASONS.includes(row.pause_reason)
       ? 'manual'

@@ -243,6 +243,47 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
     );
     expect(wrapper.text()).not.toContain(t('EMAIL_CAMPAIGN_PROTECTION.EMPTY'));
   });
+  it('labels local preflight exclusions separately from tenant protection', async () => {
+    await flushPromises();
+    const next = structuredClone(response);
+    next.data.payload.recipients = [
+      {
+        id: 10,
+        email: 'invalid@example.test',
+        status: 'suppressed',
+        preflight_status: 'invalid',
+        suppression_reason: null,
+      },
+      {
+        id: 11,
+        email: 'review@example.test',
+        status: 'suppressed',
+        preflight_status: 'review',
+        suppression_reason: null,
+      },
+      {
+        id: 12,
+        email: 'protected@example.test',
+        status: 'suppressed',
+        preflight_status: 'invalid',
+        suppression_reason: 'hard_bounce',
+      },
+    ];
+    next.data.payload.meta.count = 3;
+    next.data.payload.meta.total_pages = 1;
+    Reports.getRecipients.mockResolvedValue(next);
+    await wrapper.setProps({ refreshKey: 71 });
+    await flushPromises();
+    const labels = wrapper
+      .findAll('tbody tr')
+      .map(row => row.findAll('td')[2].text());
+    expect(labels).toEqual([
+      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.invalid'),
+      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.review'),
+      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.suppressed'),
+    ]);
+  });
+
   it('keeps retry counters in optional details and renders full email as text', async () => {
     await flushPromises();
     expect(wrapper.find('thead').text()).not.toContain(

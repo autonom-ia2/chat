@@ -383,12 +383,37 @@ onMounted(() => {
               {{ number(liveCampaign.failed_count) }}
             </span>
           </div>
-          <div class="flex flex-col">
+          <div
+            v-if="liveCampaign.preflight?.counts?.invalid"
+            class="flex flex-col"
+          >
             <span class="text-xs text-n-slate-11">
-              {{ t(`${NS}.STATUS.suppressed`) }}
+              {{ t(`${NS}.STATUS.invalid`) }}
             </span>
             <span class="font-medium text-n-slate-12">
-              {{ number(liveCampaign.suppressed_count) }}
+              {{ number(liveCampaign.preflight.counts.invalid) }}
+            </span>
+          </div>
+          <div
+            v-if="liveCampaign.preflight?.counts?.review"
+            class="flex flex-col"
+          >
+            <span class="text-xs text-n-slate-11">
+              {{ t(`${NS}.STATUS.review`) }}
+            </span>
+            <span class="font-medium text-n-slate-12">
+              {{ number(liveCampaign.preflight.counts.review) }}
+            </span>
+          </div>
+          <div
+            v-if="liveCampaign.preflight?.counts?.protected"
+            class="flex flex-col"
+          >
+            <span class="text-xs text-n-slate-11">
+              {{ t(`${NS}.STATUS.protected`) }}
+            </span>
+            <span class="font-medium text-n-slate-12">
+              {{ number(liveCampaign.preflight.counts.protected) }}
             </span>
           </div>
         </div>

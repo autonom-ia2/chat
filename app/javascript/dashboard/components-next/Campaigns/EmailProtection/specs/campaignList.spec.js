@@ -24,6 +24,10 @@ vi.mock('dashboard/composables/store', () => ({
               name: 'Synthetic',
               status: 'paused',
               last_error: 'private provider message',
+              suppressed_count: 6,
+              preflight: {
+                counts: { invalid: 1, review: 2, protected: 3 },
+              },
             },
           ],
         })[name]
@@ -74,6 +78,18 @@ it('sends the list status filter to the store and keeps unsafe legacy resume hid
     wrapper.findAll('button').some(button => button.text() === 'Resume sending')
   ).toBe(false);
   expect(wrapper.text()).not.toContain('private provider message');
+  expect(wrapper.text()).toContain(
+    i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.STATUS.invalid')
+  );
+  expect(wrapper.text()).toContain(
+    i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.STATUS.review')
+  );
+  expect(wrapper.text()).toContain(
+    i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.STATUS.protected')
+  );
+  expect(wrapper.text()).not.toContain(
+    i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.STATUS.suppressed')
+  );
   await wrapper.find('select').setValue('attention');
   await flushPromises();
   expect(dispatch).toHaveBeenLastCalledWith(
