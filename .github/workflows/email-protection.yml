@@ -169,7 +169,6 @@ jobs:
       # Build-only synthetic values: no Rails server, DB, mail or production boot.
       NODE_ENV: production
       VITE_RUBY_SKIP_ASSETS_PRECOMPILE_INSTALL: 'true'
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/email436-browsers
     steps:
       - uses: actions/checkout@v4
         with:
@@ -217,6 +216,9 @@ jobs:
         run: |
           bundle exec vite build --mode test
           compgen -G 'public/vite-test/assets/dashboard-*.css' > /dev/null
+      - name: Select one isolated Chromium directory for installation and execution
+        run: |
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/email436-browsers\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Install isolated browser from its existing pnpm lock
         working-directory: tests/playwright
         run: |
