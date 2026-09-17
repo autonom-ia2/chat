@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "ניהול קמפיינים",
+      "DESCRIPTION": "מעקב אחר השליחה, המסירה והאיכות של קמפייני הדוא״ל."
+    },
+    "PAYWALL": {
+      "TITLE": "קמפייני דוא״ל אינם מופעלים",
+      "DESCRIPTION": "יש להפעיל קמפייני דוא״ל כדי לראות דוחות מסירה ומעורבות."
+    },
+    "FILTER": {
+      "LABEL": "קמפיין",
+      "ALL": "כל הקמפיינים"
+    },
+    "APPROXIMATE": "משוער",
+    "OPEN_APPROXIMATE_HINT": "שיעורי הפתיחה משוערים. Apple Mail Privacy Protection ותכונות דומות עלולות להגדיל אותם באמצעות טעינה מוקדמת של תמונות.",
+    "KPIS": {
+      "DELIVERED": "נמסרו",
+      "OPENED": "נפתחו",
+      "CLICKED": "נלחצו",
+      "UNSUBSCRIBED": "הסרות מהרשימה",
+      "COMPLAINED": "דיווחים על דואר זבל",
+      "SENT": "נשלח",
+      "BOUNCED": "לא נמסר"
+    },
+    "RATES": {
+      "OPEN_RATE": "שיעור פתיחה",
+      "CLICK_RATE": "שיעור לחיצה",
+      "BOUNCE_RATE": "שיעור אי־מסירה",
+      "COMPLAINT_RATE": "שיעור דיווחים",
+      "UNSUBSCRIBE_RATE": "שיעור הסרה",
+      "OVER_DELIVERED": "מתוך ההודעות שנמסרו"
+    },
+    "TABLE": {
+      "EMAIL": "דוא״ל",
+      "NAME": "שם",
+      "LAST_EVENT_AT": "פעילות אחרונה",
+      "STATUS": "מצב",
+      "ATTEMPTS": "ניסיונות",
+      "OPENS": "פתיחות",
+      "CLICKS": "לחיצות"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "אין עדיין נתוני קמפיינים",
+      "SUBTITLE": "יש לשלוח קמפיין דוא״ל כדי לראות מדדי מסירה ומעורבות."
+    },
+    "ERROR": "לא ניתן לטעון את הדוח. נסו שוב.",
+    "EXPORT_CSV": "ייצוא CSV",
+    "TIMELINE": {
+      "TITLE": "מסירות, פתיחות ולחיצות לאורך זמן",
+      "EMPTY": "טרם נרשמו אירועים לקמפיין הזה.",
+      "INTERVAL": {
+        "DAY": "לפי יום",
+        "HOUR": "לפי שעה"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "לחיצות לפי קישור",
+      "EMPTY": "טרם נרשמו לחיצות.",
+      "URL": "קישור",
+      "UNIQUE": "לחיצות ייחודיות",
+      "TOTAL": "סך הלחיצות"
+    },
+    "RECIPIENTS": {
+      "TITLE": "נמענים",
+      "EMPTY": "לא נמצאו נמענים.",
+      "PAGE_OF": "עמוד {page} מתוך {total}",
+      "PREV": "הקודם",
+      "NEXT": "הבא",
+      "SEARCH_PLACEHOLDER": "חיפוש שם או דוא״ל"
+    },
+    "COMPARISON": {
+      "TITLE": "השוואת קמפיינים"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "קישורים ניתנים למעקב וקודי QR",
+      "SUBTITLE": "צרו קישור או QR לכל קמפיין, מוכר או חנות. שיחות שמתחילות דרכו משויכות למקור ב־CRM.",
+      "ADD": "קישור חדש",
+      "NAME_PLACEHOLDER": "לדוגמה: QR לחנות — מרכז העיר",
+      "INBOX": "תיבת WhatsApp",
+      "PREFILLED": "הודעה שמולאה מראש",
+      "PREFILLED_PLACEHOLDER": "לדוגמה: שלום! אשמח לדעת עוד",
+      "CODE": "קוד",
+      "CONVERSATIONS": "שיחות",
+      "COPY_LINK": "העתקת קישור",
+      "COPIED": "הועתק!",
+      "DOWNLOAD_QR": "הורדת QR",
+      "DELETE": "מחיקה",
+      "DELETE_CONFIRM": "למחוק קישור זה? שיחות שכבר שויכו שומרות על המקור שלהן.",
+      "EMPTY": "אין עדיין קישורים למעקב. צרו ראשון כדי לשייך שיחות לחנות, למוכר או לקישור בפרופיל.",
+      "CREATE_SUCCESS": "הקישור נוצר",
+      "CREATE_ERROR": "לא ניתן ליצור את הקישור",
+      "NAME": "שם",
+      "CLICKS": "לחיצות"
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Campagnebeheer",
+      "DESCRIPTION": "Volg de verzending, bezorging en kwaliteit van je e-mailcampagnes."
+    },
+    "PAYWALL": {
+      "TITLE": "E-mailcampagnes zijn niet ingeschakeld",
+      "DESCRIPTION": "Schakel e-mailcampagnes in om rapporten over bezorging en interactie te bekijken."
+    },
+    "FILTER": {
+      "LABEL": "Campagne",
+      "ALL": "Alle campagnes"
+    },
+    "APPROXIMATE": "bij benadering",
+    "OPEN_APPROXIMATE_HINT": "Openingspercentages zijn schattingen. Privacybescherming in Apple Mail en vergelijkbare functies kunnen het aantal openingen verhogen door afbeeldingen vooraf te laden.",
+    "KPIS": {
+      "SENT": "Verzonden",
+      "DELIVERED": "Bezorgd",
+      "OPENED": "Geopend",
+      "CLICKED": "Aangeklikt",
+      "UNSUBSCRIBED": "Afmeldingen",
+      "BOUNCED": "Niet bezorgd",
+      "COMPLAINED": "Spamklachten"
+    },
+    "RATES": {
+      "OPEN_RATE": "Openingspercentage",
+      "CLICK_RATE": "Klikpercentage",
+      "BOUNCE_RATE": "Percentage niet bezorgd",
+      "COMPLAINT_RATE": "Percentage spamklachten",
+      "UNSUBSCRIBE_RATE": "Afmeldingspercentage",
+      "OVER_DELIVERED": "van bezorgde berichten"
+    },
+    "TABLE": {
+      "EMAIL": "E-mailadres",
+      "NAME": "Naam",
+      "LAST_EVENT_AT": "Laatste activiteit",
+      "STATUS": "Status",
+      "ATTEMPTS": "Pogingen",
+      "OPENS": "Openingen",
+      "CLICKS": "Klikken"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Nog geen campagnegegevens",
+      "SUBTITLE": "Verstuur een e-mailcampagne om cijfers over bezorging en interactie te bekijken."
+    },
+    "ERROR": "Het campagnerapport kon niet worden geladen. Probeer het opnieuw.",
+    "EXPORT_CSV": "CSV exporteren",
+    "TIMELINE": {
+      "TITLE": "Bezorgingen, openingen en klikken in de loop van de tijd",
+      "EMPTY": "Nog geen gebeurtenissen voor deze campagne vastgelegd.",
+      "INTERVAL": {
+        "DAY": "Per dag",
+        "HOUR": "Per uur"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klikken per link",
+      "EMPTY": "Nog geen klikken vastgelegd.",
+      "URL": "Link",
+      "UNIQUE": "Unieke klikken",
+      "TOTAL": "Totaal aantal klikken"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Ontvangers",
+      "SEARCH_PLACEHOLDER": "Zoeken op naam of e-mailadres",
+      "EMPTY": "Geen ontvangers gevonden.",
+      "PAGE_OF": "Pagina {page} van {total}",
+      "PREV": "Vorige",
+      "NEXT": "Volgende"
+    },
+    "COMPARISON": {
+      "TITLE": "Campagnes vergelijken"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Traceerbare links en QR-codes",
+      "SUBTITLE": "Maak een link of QR-code per campagne, verkoper of winkel. Gesprekken die hiermee beginnen, krijgen hun herkomst toegewezen in het CRM.",
+      "ADD": "Nieuwe link",
+      "NAME": "Naam",
+      "NAME_PLACEHOLDER": "Bijv. QR winkel — Centrum",
+      "INBOX": "WhatsApp-inbox",
+      "PREFILLED": "Vooraf ingevuld bericht",
+      "PREFILLED_PLACEHOLDER": "Bijv. Hallo! Ik wil graag meer weten",
+      "CODE": "Code",
+      "CLICKS": "Klikken",
+      "CONVERSATIONS": "Gesprekken",
+      "COPY_LINK": "Link kopiëren",
+      "COPIED": "Gekopieerd!",
+      "DOWNLOAD_QR": "QR-code downloaden",
+      "DELETE": "Verwijderen",
+      "DELETE_CONFIRM": "Deze link verwijderen? Gesprekken met een toegewezen herkomst behouden die herkomst.",
+      "EMPTY": "Nog geen traceerbare links. Maak de eerste om gesprekken uit een winkel, via een verkoper of vanuit een bio toe te wijzen.",
+      "CREATE_SUCCESS": "Link aangemaakt",
+      "CREATE_ERROR": "De link kon niet worden aangemaakt"
+    }
+  }
+}

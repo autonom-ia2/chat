@@ -319,6 +319,134 @@
         "SUCCESS_MESSAGE": "Campanha excluída com sucesso",
         "ERROR_MESSAGE": "Ocorreu um erro. Por favor, tente novamente."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Cancelar",
+        "CANCEL_SUCCESS": "Campanha cancelada.",
+        "DELETE": "Eliminar",
+        "DELETE_SUCCESS": "Campanha eliminada.",
+        "DUPLICATE": "Duplicar",
+        "DUPLICATE_SUCCESS": "Campanha duplicada. Atualize os destinatários e o agendamento.",
+        "EDIT": "Editar",
+        "MANAGE_RECIPIENTS": "Destinatários",
+        "OPEN_BUILDER": "Editor",
+        "PAUSE": "Colocar em pausa",
+        "PAUSE_SUCCESS": "Campanha em pausa.",
+        "SCHEDULE": "Agendar",
+        "SCHEDULE_SUCCESS": "Campanha agendada.",
+        "SEND_NOW": "Enviar agora",
+        "SEND_SUCCESS": "Campanha na fila de envio."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Falha da IA",
+          "PROCESSING": "IA a gerar",
+          "READY": "IA pronta"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Com falha",
+        "RECIPIENTS": "Destinatários",
+        "SENT": "Enviados"
+      },
+      "DESCRIPTION": "Escreva uma mensagem, escolha um domínio de envio verificado, carregue a lista de destinatários e envie agora ou agende o envio.",
+      "DIALOG": {
+        "BASE_HINT": "Carregue um CSV ou XLSX com as colunas name e email. As colunas detetadas ficam disponíveis como variáveis de personalização.",
+        "BASE_IMPORTING": "A importar a lista…",
+        "BASE_LABEL": "Lista de contactos (CSV ou XLSX)",
+        "BASE_PICK": "Escolher ficheiro",
+        "BASE_SELECTED": "Selecionado: {name}",
+        "CANCEL": "Cancelar",
+        "CREATE_AND_OPEN": "Criar e abrir no editor",
+        "CREATE_TITLE": "Nova campanha de correio eletrónico",
+        "DIRECT_OPTION": "envio direto através desta caixa de entrada",
+        "DIRECT_WARNING": "Atenção: esta é a sua caixa de correio pessoal. Utilize-a apenas para poucos contactos reais seus que autorizaram o envio. O envio em massa a partir de uma conta de webmail gratuita pode bloquear ou suspender a conta. O limite é de 100 por dia, com intervalos semelhantes ao envio manual. Para listas maiores, verifique o seu próprio domínio.",
+        "EDIT_TITLE": "Editar campanha de correio eletrónico",
+        "ERROR": "Não foi possível guardar a campanha. Tente novamente.",
+        "FROM_EMAIL_DIRECT_HINT": "Enviado diretamente a partir desta caixa de correio.",
+        "FROM_EMAIL_ERROR": "O endereço do remetente é obrigatório",
+        "FROM_EMAIL_HINT": "Tem de ser um endereço {'@'}{domain} (o seu domínio verificado).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Tem de ser um endereço do seu domínio de envio verificado.",
+        "FROM_EMAIL_INVALID": "Introduza um endereço válido do seu domínio verificado",
+        "FROM_EMAIL_LABEL": "Endereço do remetente",
+        "FROM_EMAIL_PLACEHOLDER": "Ex.: promocoes{'@'}suaempresa.com",
+        "FROM_NAME_ERROR": "O nome do remetente é obrigatório",
+        "FROM_NAME_LABEL": "Nome do remetente",
+        "FROM_NAME_PLACEHOLDER": "Ex.: Marketing Acme",
+        "NAME_ERROR": "Introduza um nome para a campanha",
+        "NAME_LABEL": "Nome da campanha",
+        "NAME_PLACEHOLDER": "Ex.: Boletim de junho",
+        "NO_VERIFIED_DOMAIN": "Ainda não existe um domínio de envio verificado. Adicione e verifique um em Domínios de envio de correio eletrónico.",
+        "REPLY_TO_ERROR": "O endereço de resposta é obrigatório",
+        "REPLY_TO_HINT": "As respostas são enviadas para este endereço. Ligue-o como caixa de entrada para transformar as respostas em conversas.",
+        "REPLY_TO_INVALID": "Introduza um endereço de correio eletrónico válido",
+        "REPLY_TO_LABEL": "Endereço de resposta",
+        "REPLY_TO_PLACEHOLDER": "Ex.: apoio{'@'}suaempresa.com",
+        "SAVE_DRAFT": "Guardar rascunho",
+        "SENDER_ERROR": "Selecione um domínio de envio verificado",
+        "SENDER_LABEL": "Domínio de envio",
+        "SENDER_PLACEHOLDER": "Selecione um domínio verificado",
+        "SUCCESS": "Campanha guardada."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Crie a primeira campanha para escrever e enviar uma mensagem a uma lista importada.",
+        "TITLE": "Ainda não existem campanhas de correio eletrónico"
+      },
+      "HEADER_TITLE": "Campanhas de correio eletrónico",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "A lista está vazia. Adicione contactos e carregue-a novamente.",
+          "EXPIRED": "O ficheiro carregado expirou. Carregue a lista novamente.",
+          "FAILED": "A importação falhou. Nenhum contacto desta tentativa foi adicionado. Tente novamente ou volte a carregar o ficheiro.",
+          "FILE_TOO_LARGE": "O ficheiro excede o tamanho permitido. Divida a lista e tente novamente.",
+          "HEADERS": "Utilize uma coluna Name e uma coluna Email na primeira linha da primeira folha, sem cabeçalhos duplicados.",
+          "INVALID_FILE": "Não foi possível ler o ficheiro. Carregue um ficheiro CSV ou XLSX válido.",
+          "IN_PROGRESS": "Já existe uma importação em curso para esta campanha. Aguarde a conclusão.",
+          "ROW_LIMIT": "A lista excede 50 000 linhas. Divida-a em ficheiros menores.",
+          "UPLOAD_FAILED": "Não foi possível guardar o ficheiro. Carregue a lista novamente."
+        },
+        "QUEUED": "Lista recebida. Importação em fila de espera; pode sair desta página.",
+        "RETRY": "Repetir importação",
+        "PROCESSING": "A importar a lista. O envio está indisponível até à conclusão.",
+        "COMPLETED": "Importação da lista concluída.",
+        "SUMMARY": "Adicionados: {imported} · Duplicados: {duplicates} · Inválidos: {invalid} · Excluídos do envio: {suppressed} · Total: {total}"
+      },
+      "NEW": "Nova campanha de correio eletrónico",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Variável copiada para a área de transferência.",
+        "EMPTY": "Importe destinatários para consultar as variáveis das colunas da folha de cálculo.",
+        "SUBTITLE": "Clique numa variável para a copiar e cole-a no assunto, no texto de pré-visualização ou no corpo da mensagem.",
+        "TITLE": "Variáveis disponíveis"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Adicionar mais contactos",
+        "ADD_MORE_HINT": "A lista foi carregada ao criar a campanha. Carregue outro CSV/XLSX para acrescentar contactos.",
+        "SUBTITLE": "Carregue um CSV ou XLSX com as colunas name e email. Os destinatários são usados apenas nesta campanha e não são adicionados aos seus contactos.",
+        "TITLE": "Destinatários"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Cancelar",
+        "DATETIME_ERROR": "Escolha a data e a hora",
+        "DATETIME_LABEL": "Enviar em",
+        "SUBMIT": "Agendar"
+      },
+      "STATUS": {
+        "CANCELED": "Cancelado",
+        "DRAFT": "Rascunho",
+        "FAILED": "Com falha",
+        "PAUSED": "Em pausa",
+        "SCHEDULED": "Agendado",
+        "SENDING": "A enviar",
+        "SENT": "Enviado"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} destinatário(s) sem valor",
+        "BLANK_LABEL": "Destinatários sem valor:",
+        "MISSING_LABEL": "Usadas no modelo, mas não encontradas nos destinatários:",
+        "OK": "Todas as variáveis usadas nesta campanha têm valores. Pode avançar.",
+        "TITLE": "Verificação antes do envio"
+      }
     }
   }
 }

@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Avbryt",
+        "CANCEL_SUCCESS": "Kampanjen har avbrutits.",
+        "DELETE_SUCCESS": "Kampanjen har tagits bort.",
+        "DUPLICATE": "Duplicera",
+        "DUPLICATE_SUCCESS": "Kampanjen har duplicerats. Uppdatera mottagarna och schemat.",
+        "EDIT": "Redigera",
+        "OPEN_BUILDER": "Redigerare",
+        "PAUSE": "Pausa",
+        "PAUSE_SUCCESS": "Kampanjen har pausats.",
+        "SCHEDULE": "Schemalägg",
+        "SCHEDULE_SUCCESS": "Kampanjen har schemalagts.",
+        "SEND_NOW": "Skicka nu",
+        "SEND_SUCCESS": "Kampanjen ligger i kö för utskick.",
+        "MANAGE_RECIPIENTS": "Mottagare",
+        "DELETE": "Ta bort"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "AI misslyckades",
+          "PROCESSING": "AI genererar",
+          "READY": "AI är klar"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Misslyckades",
+        "SENT": "Skickat",
+        "RECIPIENTS": "Mottagare"
+      },
+      "DESCRIPTION": "Skriv ett e-postmeddelande, välj en verifierad avsändardomän, ladda upp mottagarlistan och skicka nu eller schemalägg.",
+      "DIALOG": {
+        "BASE_HINT": "Ladda upp CSV eller XLSX med kolumnerna name och email. Identifierade kolumner blir fält för personanpassning.",
+        "BASE_IMPORTING": "Importerar lista…",
+        "BASE_LABEL": "Kontaktlista (CSV eller XLSX)",
+        "BASE_PICK": "Välj fil",
+        "BASE_SELECTED": "Vald: {name}",
+        "CREATE_AND_OPEN": "Skapa och öppna i redigeraren",
+        "CREATE_TITLE": "Ny e-postkampanj",
+        "DIRECT_OPTION": "direktutskick via den här inkorgen",
+        "DIRECT_WARNING": "Det här är din personliga brevlåda. Använd den bara för små utskick till dina egna verkliga kontakter som har samtyckt. Massutskick från gratis e-posttjänster kan få kontot blockerat eller avstängt. Gränsen är 100 per dag, med pauser som vid manuell sändning. Verifiera din egen domän för större listor.",
+        "EDIT_TITLE": "Redigera e-postkampanj",
+        "ERROR": "Kampanjen kunde inte sparas. Försök igen.",
+        "FROM_EMAIL_DIRECT_HINT": "Skickas direkt från den här brevlådan.",
+        "FROM_EMAIL_ERROR": "Avsändarens e-postadress krävs",
+        "FROM_EMAIL_HINT": "Adressen måste vara {'@'}{domain}, din verifierade domän.",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Adressen måste tillhöra din verifierade avsändardomän.",
+        "FROM_EMAIL_INVALID": "Ange en giltig adress på din verifierade domän",
+        "FROM_EMAIL_LABEL": "Avsändarens e-postadress",
+        "FROM_EMAIL_PLACEHOLDER": "T.ex. promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "Avsändarens namn krävs",
+        "FROM_NAME_LABEL": "Avsändarens namn",
+        "FROM_NAME_PLACEHOLDER": "T.ex. Acmes marknadsavdelning",
+        "NAME_ERROR": "Ange ett kampanjnamn",
+        "NAME_LABEL": "Kampanjnamn",
+        "NAME_PLACEHOLDER": "T.ex. Nyhetsbrev för juni",
+        "NO_VERIFIED_DOMAIN": "Ingen verifierad avsändardomän ännu. Lägg först till och verifiera en under avsändardomäner för e-post.",
+        "REPLY_TO_ERROR": "Svarsadress krävs",
+        "REPLY_TO_HINT": "Svar skickas till den här adressen. Anslut den som en inkorg för att göra svaren till samtal.",
+        "REPLY_TO_INVALID": "Ange en giltig e-postadress",
+        "REPLY_TO_LABEL": "Svarsadress",
+        "REPLY_TO_PLACEHOLDER": "T.ex. support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "Spara utkast",
+        "SENDER_ERROR": "Välj en verifierad avsändardomän",
+        "SENDER_LABEL": "Avsändardomän",
+        "SENDER_PLACEHOLDER": "Välj en verifierad domän",
+        "SUCCESS": "Kampanjen har sparats.",
+        "CANCEL": "Avbryt"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Skapa din första kampanj för att skriva och skicka e-post till en importerad lista.",
+        "TITLE": "Inga e-postkampanjer ännu"
+      },
+      "HEADER_TITLE": "E-postkampanjer",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Listan är tom. Lägg till kontakter och ladda upp den igen.",
+          "EXPIRED": "Den uppladdade filen har gått ut. Ladda upp listan igen.",
+          "FAILED": "Importen misslyckades. Inga kontakter från försöket lades till. Försök igen eller ladda upp filen på nytt.",
+          "FILE_TOO_LARGE": "Filen överskrider storleksgränsen. Dela upp listan och försök igen.",
+          "HEADERS": "Använd en kolumn Name och en kolumn Email på första raden i första bladet, utan dubbla rubriker.",
+          "INVALID_FILE": "Filen kunde inte läsas. Ladda upp en giltig CSV- eller XLSX-fil.",
+          "IN_PROGRESS": "En import pågår redan för kampanjen. Vänta tills den är klar.",
+          "ROW_LIMIT": "Listan överskrider 50 000 rader. Dela upp den i mindre filer.",
+          "UPLOAD_FAILED": "Filen kunde inte lagras. Ladda upp listan igen."
+        },
+        "RETRY": "Försök importera igen",
+        "QUEUED": "Listan har tagits emot. Importen är köad; du kan lämna den här sidan.",
+        "PROCESSING": "Importerar listan. Sändning är inte tillgänglig förrän importen är klar.",
+        "COMPLETED": "Importen av listan är klar.",
+        "SUMMARY": "Tillagda: {imported} · Dubbletter: {duplicates} · Ogiltiga: {invalid} · Uteslutna från sändning: {suppressed} · Totalt: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Fältet har kopierats till urklipp.",
+        "EMPTY": "Importera mottagare för att se fälten från kalkylbladets kolumner.",
+        "SUBTITLE": "Klicka på ett fält för att kopiera det och klistra sedan in det i ämnet, förhandsvisningstexten eller meddelandet.",
+        "TITLE": "Tillgängliga fält"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Lägg till fler kontakter",
+        "ADD_MORE_HINT": "Listan laddades upp när kampanjen skapades. Ladda upp en till CSV/XLSX för att lägga till fler kontakter.",
+        "SUBTITLE": "Ladda upp CSV eller XLSX med kolumnerna name och email. Mottagarna används bara för den här kampanjen och läggs inte till bland dina kontakter.",
+        "TITLE": "Mottagare"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Välj datum och tid",
+        "DATETIME_LABEL": "Skicka vid",
+        "CANCEL": "Avbryt",
+        "SUBMIT": "Schemalägg"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} mottagare utan värde",
+        "BLANK_LABEL": "Mottagare utan värde:",
+        "MISSING_LABEL": "Används i mallen men saknas hos mottagarna:",
+        "OK": "Alla fält som används i kampanjen har värden. Klart att skicka.",
+        "TITLE": "Kontroll före utskick"
+      },
+      "STATUS": {
+        "CANCELED": "Avbrutet",
+        "DRAFT": "Utkast",
+        "SCHEDULED": "Schemalagt",
+        "SENDING": "Skickar",
+        "SENT": "Skickat",
+        "PAUSED": "Sändningen pausad",
+        "FAILED": "Misslyckades"
+      },
+      "NEW": "Ny e-postkampanj"
     }
   }
 }

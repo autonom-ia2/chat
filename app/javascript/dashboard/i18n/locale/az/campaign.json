@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Ləğv et",
+        "CANCEL_SUCCESS": "Kampaniya ləğv edildi.",
+        "DELETE_SUCCESS": "Kampaniya silindi.",
+        "DUPLICATE": "Dublikat yarat",
+        "DUPLICATE_SUCCESS": "Kampaniyanın surəti yaradıldı. Alıcıları və cədvəli yeniləyin.",
+        "EDIT": "Redaktə et",
+        "OPEN_BUILDER": "Redaktor",
+        "PAUSE": "Fasilə ver",
+        "PAUSE_SUCCESS": "Kampaniyaya fasilə verildi.",
+        "SCHEDULE": "Planlaşdır",
+        "SCHEDULE_SUCCESS": "Kampaniya planlaşdırıldı.",
+        "SEND_NOW": "İndi göndər",
+        "SEND_SUCCESS": "Kampaniya göndərilmə növbəsinə əlavə edildi.",
+        "MANAGE_RECIPIENTS": "Alıcılar",
+        "DELETE": "Sil"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Süni intellekt xətası",
+          "PROCESSING": "Süni intellekt yaradır",
+          "READY": "Süni intellekt hazırdır"
+        }
+      },
+      "DESCRIPTION": "E-poçt yazın, təsdiqlənmiş göndərmə domeni seçin, alıcı siyahısını yükləyin və indi göndərin və ya planlaşdırın.",
+      "DIALOG": {
+        "BASE_HINT": "name və email sütunları olan CSV və ya XLSX yükləyin. Aşkarlanan sütunlar fərdiləşdirmə sahələrinə çevrilir.",
+        "BASE_IMPORTING": "Siyahı idxal edilir…",
+        "BASE_LABEL": "Əlaqə siyahısı (CSV və ya XLSX)",
+        "BASE_PICK": "Fayl seç",
+        "BASE_SELECTED": "Seçildi: {name}",
+        "CREATE_AND_OPEN": "Yarat və redaktorda aç",
+        "CREATE_TITLE": "Yeni e-poçt kampaniyası",
+        "DIRECT_OPTION": "bu qutudan birbaşa göndərmə",
+        "DIRECT_WARNING": "Diqqət: bu, şəxsi poçt qutunuzdur. Yalnız öz həqiqi, razılıq vermiş əlaqələrinizə az həcmdə göndərin. Pulsuz veb-poçtdan kütləvi göndəriş hesabınızı bloklaya və ya dayandıra bilər. Gündə 100 mesaj və təbii fasilələr tətbiq edirik; böyük siyahılar üçün öz domeninizi təsdiqləyin.",
+        "EDIT_TITLE": "E-poçt kampaniyasını redaktə et",
+        "ERROR": "Kampaniya saxlanmadı. Yenidən cəhd edin.",
+        "FROM_EMAIL_DIRECT_HINT": "Birbaşa bu poçt qutusu adından göndərilir.",
+        "FROM_EMAIL_ERROR": "Göndərənin e-poçtu tələb olunur",
+        "FROM_EMAIL_HINT": "Ünvan {'@'}{domain} olmalıdır (təsdiqlənmiş domeniniz).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Ünvan təsdiqlənmiş göndərmə domeninizə aid olmalıdır.",
+        "FROM_EMAIL_INVALID": "Təsdiqlənmiş domeninizdə etibarlı ünvan daxil edin",
+        "FROM_EMAIL_LABEL": "Göndərənin e-poçtu",
+        "FROM_EMAIL_PLACEHOLDER": "Məs. teklif{'@'}sirketiniz.com",
+        "FROM_NAME_ERROR": "Göndərənin adı tələb olunur",
+        "FROM_NAME_LABEL": "Göndərənin adı",
+        "FROM_NAME_PLACEHOLDER": "Məs. Acme marketinq şöbəsi",
+        "NAME_ERROR": "Kampaniya adı daxil edin",
+        "NAME_LABEL": "Kampaniyanın adı",
+        "NAME_PLACEHOLDER": "Məs. İyun bülleteni",
+        "NO_VERIFIED_DOMAIN": "Hələ təsdiqlənmiş göndərmə domeni yoxdur. E-poçt göndərmə domenləri bölməsində əlavə edib təsdiqləyin.",
+        "REPLY_TO_ERROR": "Cavab ünvanı tələb olunur",
+        "REPLY_TO_HINT": "Cavablar bu ünvana gəlir. Cavabları söhbətə çevirmək üçün onu gələnlər qutusu kimi qoşun.",
+        "REPLY_TO_INVALID": "Etibarlı e-poçt ünvanı daxil edin",
+        "REPLY_TO_LABEL": "Cavab ünvanı",
+        "REPLY_TO_PLACEHOLDER": "Məs. destek{'@'}sirketiniz.com",
+        "SAVE_DRAFT": "Qaralamanı saxla",
+        "SENDER_ERROR": "Təsdiqlənmiş göndərmə domeni seçin",
+        "SENDER_LABEL": "Göndərmə domeni",
+        "SENDER_PLACEHOLDER": "Təsdiqlənmiş domen seçin",
+        "SUCCESS": "Kampaniya saxlanıldı.",
+        "CANCEL": "Ləğv et"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "İdxal edilmiş siyahıya e-poçt yazıb göndərmək üçün ilk kampaniyanızı yaradın.",
+        "TITLE": "Hələ e-poçt kampaniyası yoxdur"
+      },
+      "HEADER_TITLE": "E-poçt kampaniyaları",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Siyahı boşdur. Əlaqələr əlavə edib yenidən yükləyin.",
+          "EXPIRED": "Yüklənmiş faylın müddəti bitib. Siyahını yenidən yükləyin.",
+          "FAILED": "İdxal alınmadı. Bu cəhddə heç bir əlaqə əlavə edilmədi. Yenidən cəhd edin və ya faylı yükləyin.",
+          "FILE_TOO_LARGE": "Fayl ölçü həddini keçir. Siyahını bölüb yenidən cəhd edin.",
+          "HEADERS": "İlk vərəqin ilk sətrində bir Name və bir Email sütunu istifadə edin, başlıqları təkrarlamayın.",
+          "INVALID_FILE": "Fayl oxunmadı. Etibarlı CSV və ya XLSX yükləyin.",
+          "IN_PROGRESS": "Bu kampaniyanın idxalı artıq davam edir. Tamamlanmasını gözləyin.",
+          "ROW_LIMIT": "Siyahı 50.000 sətri keçir. Daha kiçik fayllara bölün.",
+          "UPLOAD_FAILED": "Fayl saxlanmadı. Siyahını yenidən yükləyin."
+        },
+        "RETRY": "İdxalı təkrarla",
+        "QUEUED": "Siyahı alındı. İdxal növbəyə alındı; bu səhifədən çıxa bilərsiniz.",
+        "PROCESSING": "Siyahı idxal edilir. Tamamlanana qədər göndəriş mümkün deyil.",
+        "COMPLETED": "Siyahının idxalı tamamlandı.",
+        "SUMMARY": "Əlavə edilən: {imported} · Təkrar: {duplicates} · Yanlış: {invalid} · Göndərişdən çıxarılan: {suppressed} · Cəmi: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Sahə mübadilə buferinə kopyalandı.",
+        "EMPTY": "Cədvəl sütunlarından yaranan sahələri görmək üçün alıcıları idxal edin.",
+        "SUBTITLE": "Sahəni kliklə kopyalayın, sonra mövzuya, önizləmə mətninə və ya mesaja yapışdırın.",
+        "TITLE": "Mövcud sahələr"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Daha çox əlaqə əlavə et",
+        "ADD_MORE_HINT": "Siyahı kampaniya yaradılarkən yüklənib. Əlavə əlaqələr üçün başqa CSV/XLSX yükləyin.",
+        "SUBTITLE": "name və email sütunlu CSV və ya XLSX yükləyin. Alıcılar yalnız bu kampaniya üçündür və əlaqələrinizə əlavə edilmir.",
+        "TITLE": "Alıcılar"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Tarix və saat seçin",
+        "DATETIME_LABEL": "Göndərilmə vaxtı",
+        "CANCEL": "Ləğv et",
+        "SUBMIT": "Planlaşdır"
+      },
+      "STATUS": {
+        "PAUSED": "Fasilədə",
+        "CANCELED": "Ləğv edildi",
+        "DRAFT": "Qaralama",
+        "FAILED": "Göndəriş uğursuz oldu",
+        "SCHEDULED": "Planlaşdırıldı",
+        "SENDING": "Göndərilir",
+        "SENT": "Göndərildi"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} alıcıda dəyər yoxdur",
+        "BLANK_LABEL": "Dəyəri olmayan alıcılar:",
+        "MISSING_LABEL": "Şablonda istifadə olunur, lakin alıcılarda tapılmadı:",
+        "OK": "Kampaniyanın bütün sahələrində dəyər var. Göndərməyə hazırdır.",
+        "TITLE": "Göndərmədən əvvəl yoxlama"
+      },
+      "COUNTS": {
+        "SENT": "Göndərildi",
+        "RECIPIENTS": "Alıcılar",
+        "FAILED": "Göndəriş uğursuz oldu"
+      },
+      "NEW": "Yeni e-poçt kampaniyası"
     }
   }
 }

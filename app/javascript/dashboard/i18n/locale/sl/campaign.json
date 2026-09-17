@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Prekliči",
+        "CANCEL_SUCCESS": "Kampanja je preklicana.",
+        "DELETE_SUCCESS": "Kampanja je izbrisana.",
+        "DUPLICATE": "Podvoji",
+        "DUPLICATE_SUCCESS": "Kampanja je podvojena. Posodobite prejemnike in urnik.",
+        "EDIT": "Uredi",
+        "OPEN_BUILDER": "Urejevalnik",
+        "PAUSE": "Začasno ustavi",
+        "PAUSE_SUCCESS": "Kampanja je začasno ustavljena.",
+        "SCHEDULE": "Načrtuj",
+        "SCHEDULE_SUCCESS": "Kampanja je načrtovana.",
+        "SEND_NOW": "Pošlji zdaj",
+        "SEND_SUCCESS": "Kampanja je v čakalni vrsti za pošiljanje.",
+        "MANAGE_RECIPIENTS": "Prejemniki",
+        "DELETE": "Izbriši"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Napaka umetne inteligence",
+          "PROCESSING": "Umetna inteligenca ustvarja",
+          "READY": "Umetna inteligenca je pripravljena"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Neuspešno",
+        "SENT": "Poslano",
+        "RECIPIENTS": "Prejemniki"
+      },
+      "DESCRIPTION": "Sestavite e-pošto, izberite preverjeno domeno za pošiljanje, naložite seznam prejemnikov in pošljite takoj ali načrtujte pošiljanje.",
+      "DIALOG": {
+        "BASE_HINT": "Naložite CSV ali XLSX s stolpcema name in email. Zaznani stolpci postanejo polja za prilagajanje sporočil.",
+        "BASE_IMPORTING": "Uvažanje seznama…",
+        "BASE_LABEL": "Seznam stikov (CSV ali XLSX)",
+        "BASE_PICK": "Izberi datoteko",
+        "BASE_SELECTED": "Izbrano: {name}",
+        "CREATE_AND_OPEN": "Ustvari in odpri v urejevalniku",
+        "CREATE_TITLE": "Nova e-poštna kampanja",
+        "DIRECT_OPTION": "neposredno pošiljanje prek tega predala",
+        "DIRECT_WARNING": "To je vaš osebni predal. Uporabljajte ga le za manjše količine sporočil svojim resničnim stikom, ki so v prejemanje privolili. Množično pošiljanje prek brezplačne pošte lahko povzroči blokado računa. Omejitev je 100 sporočil na dan z razmiki kot pri ročnem pošiljanju. Za večje sezname preverite lastno domeno.",
+        "EDIT_TITLE": "Uredi e-poštno kampanjo",
+        "ERROR": "Kampanje ni bilo mogoče shraniti. Poskusite znova.",
+        "FROM_EMAIL_DIRECT_HINT": "Poslano neposredno iz tega predala.",
+        "FROM_EMAIL_ERROR": "Vnesite e-pošto pošiljatelja",
+        "FROM_EMAIL_HINT": "Naslov mora biti {'@'}{domain}, na vaši preverjeni domeni.",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Naslov mora biti na vaši preverjeni domeni za pošiljanje.",
+        "FROM_EMAIL_INVALID": "Vnesite veljaven naslov na preverjeni domeni",
+        "FROM_EMAIL_LABEL": "E-pošta pošiljatelja",
+        "FROM_EMAIL_PLACEHOLDER": "Npr. promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "Vnesite ime pošiljatelja",
+        "FROM_NAME_LABEL": "Ime pošiljatelja",
+        "FROM_NAME_PLACEHOLDER": "Npr. Trženje Acme",
+        "NAME_ERROR": "Vnesite ime kampanje",
+        "NAME_LABEL": "Ime kampanje",
+        "NAME_PLACEHOLDER": "Npr. Junijske novice",
+        "NO_VERIFIED_DOMAIN": "Preverjene domene še ni. Najprej jo dodajte in preverite v razdelku domen za pošiljanje e-pošte.",
+        "REPLY_TO_ERROR": "Vnesite naslov za odgovore",
+        "REPLY_TO_HINT": "Odgovori prispejo na ta naslov. Povežite ga kot predal, da odgovore spremenite v pogovore.",
+        "REPLY_TO_INVALID": "Vnesite veljaven e-poštni naslov",
+        "REPLY_TO_LABEL": "Naslov za odgovore",
+        "REPLY_TO_PLACEHOLDER": "Npr. support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "Shrani osnutek",
+        "SENDER_ERROR": "Izberite preverjeno domeno za pošiljanje",
+        "SENDER_LABEL": "Domena za pošiljanje",
+        "SENDER_PLACEHOLDER": "Izberite preverjeno domeno",
+        "SUCCESS": "Kampanja je shranjena.",
+        "CANCEL": "Prekliči"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Ustvarite prvo kampanjo za sestavljanje in pošiljanje e-pošte uvoženemu seznamu.",
+        "TITLE": "E-poštnih kampanj še ni"
+      },
+      "HEADER_TITLE": "E-poštne kampanje",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Seznam je prazen. Dodajte stike in ga znova naložite.",
+          "EXPIRED": "Naložena datoteka je potekla. Znova naložite seznam.",
+          "FAILED": "Uvoz ni uspel. Noben stik iz tega poskusa ni bil dodan. Poskusite znova ali ponovno naložite datoteko.",
+          "FILE_TOO_LARGE": "Datoteka presega omejitev velikosti. Razdelite seznam in poskusite znova.",
+          "HEADERS": "V prvi vrstici prvega lista uporabite en stolpec Name in en Email brez podvojenih glav.",
+          "INVALID_FILE": "Datoteke ni bilo mogoče prebrati. Naložite veljaven CSV ali XLSX.",
+          "IN_PROGRESS": "Uvoz za to kampanjo že poteka. Počakajte na zaključek.",
+          "ROW_LIMIT": "Seznam presega 50.000 vrstic. Razdelite ga na manjše datoteke.",
+          "UPLOAD_FAILED": "Datoteke ni bilo mogoče shraniti. Znova naložite seznam."
+        },
+        "RETRY": "Ponovi uvoz",
+        "QUEUED": "Seznam je prejet. Uvoz je v čakalni vrsti; to stran lahko zapustite.",
+        "PROCESSING": "Uvažanje seznama. Pošiljanje ni na voljo do konca uvoza.",
+        "COMPLETED": "Uvoz seznama je končan.",
+        "SUMMARY": "Dodano: {imported} · Dvojniki: {duplicates} · Neveljavno: {invalid} · Izključeno iz pošiljanja: {suppressed} · Skupaj: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Polje je kopirano v odložišče.",
+        "EMPTY": "Uvozite prejemnike za prikaz polj iz stolpcev preglednice.",
+        "SUBTITLE": "Kliknite polje, da ga kopirate, nato ga prilepite v zadevo, besedilo predogleda ali telo sporočila.",
+        "TITLE": "Razpoložljiva polja"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Dodaj stike",
+        "ADD_MORE_HINT": "Seznam je bil naložen ob ustvarjanju kampanje. Naložite še en CSV/XLSX za dodajanje stikov.",
+        "SUBTITLE": "Naložite CSV ali XLSX s stolpcema name in email. Prejemniki se uporabijo samo za to kampanjo in se ne dodajo vašim stikom.",
+        "TITLE": "Prejemniki"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Izberite datum in uro",
+        "DATETIME_LABEL": "Čas pošiljanja",
+        "CANCEL": "Prekliči",
+        "SUBMIT": "Načrtuj"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: prejemniki brez vrednosti — {count}",
+        "BLANK_LABEL": "Prejemniki brez vrednosti:",
+        "MISSING_LABEL": "Uporabljeno v predlogi, vendar manjka pri prejemnikih:",
+        "OK": "Vsa polja v tej kampanji imajo vrednosti. Pripravljeno za pošiljanje.",
+        "TITLE": "Preverjanje pred pošiljanjem"
+      },
+      "STATUS": {
+        "CANCELED": "Preklicano",
+        "DRAFT": "Osnutek",
+        "SCHEDULED": "Načrtovano",
+        "SENDING": "Pošiljanje v teku",
+        "SENT": "Poslano",
+        "PAUSED": "Pošiljanje začasno ustavljeno",
+        "FAILED": "Neuspešno"
+      },
+      "NEW": "Nova e-poštna kampanja"
     }
   }
 }

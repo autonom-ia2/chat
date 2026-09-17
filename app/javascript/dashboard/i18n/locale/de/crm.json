@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampagnenverwaltung",
+      "DESCRIPTION": "Versand, Zustellung und Qualität Ihrer E-Mail-Kampagnen verfolgen."
+    },
+    "PAYWALL": {
+      "TITLE": "E-Mail-Kampagnen sind nicht aktiviert",
+      "DESCRIPTION": "Aktivieren Sie E-Mail-Kampagnen, um Zustellungs- und Interaktionsberichte zu sehen."
+    },
+    "FILTER": {
+      "LABEL": "Kampagne",
+      "ALL": "Alle Kampagnen"
+    },
+    "APPROXIMATE": "geschätzt",
+    "OPEN_APPROXIMATE_HINT": "Öffnungsraten sind Schätzungen. Apple Mail Privacy Protection und ähnliche Funktionen können durch vorgeladene Bilder mehr Öffnungen erfassen.",
+    "KPIS": {
+      "DELIVERED": "Zugestellt",
+      "OPENED": "Geöffnet",
+      "CLICKED": "Angeklickt",
+      "UNSUBSCRIBED": "Abmeldungen",
+      "COMPLAINED": "Spam-Meldungen",
+      "SENT": "Gesendet",
+      "BOUNCED": "Nicht zugestellt"
+    },
+    "RATES": {
+      "OPEN_RATE": "Öffnungsrate",
+      "CLICK_RATE": "Klickrate",
+      "BOUNCE_RATE": "Anteil nicht zugestellter E-Mails",
+      "COMPLAINT_RATE": "Spam-Melderate",
+      "UNSUBSCRIBE_RATE": "Abmelderate",
+      "OVER_DELIVERED": "der zugestellten E-Mails"
+    },
+    "TABLE": {
+      "EMAIL": "E-Mail",
+      "NAME": "Name",
+      "LAST_EVENT_AT": "Letzte Aktivität",
+      "STATUS": "Status",
+      "ATTEMPTS": "Versuche",
+      "OPENS": "Öffnungen",
+      "CLICKS": "Klicks"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Noch keine Kampagnendaten",
+      "SUBTITLE": "Senden Sie eine E-Mail-Kampagne, um Zustellungen und Interaktionen auszuwerten."
+    },
+    "ERROR": "Kampagnenbericht konnte nicht geladen werden. Bitte erneut versuchen.",
+    "EXPORT_CSV": "CSV exportieren",
+    "TIMELINE": {
+      "TITLE": "Zustellungen, Öffnungen und Klicks im Zeitverlauf",
+      "EMPTY": "Noch keine Ereignisse für diese Kampagne erfasst.",
+      "INTERVAL": {
+        "DAY": "Nach Tag",
+        "HOUR": "Nach Stunde"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klicks je Link",
+      "EMPTY": "Noch keine Klicks erfasst.",
+      "URL": "Link",
+      "UNIQUE": "Eindeutige Klicks",
+      "TOTAL": "Klicks insgesamt"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Empfänger",
+      "EMPTY": "Keine Empfänger gefunden.",
+      "PAGE_OF": "Seite {page} von {total}",
+      "PREV": "Zurück",
+      "NEXT": "Weiter",
+      "SEARCH_PLACEHOLDER": "Nach Name oder E-Mail suchen"
+    },
+    "COMPARISON": {
+      "TITLE": "Kampagnenvergleich"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Nachverfolgbare Links und QR-Codes",
+      "SUBTITLE": "Erstellen Sie je Kampagne, Verkäufer oder Geschäft einen Link oder QR-Code. Darüber gestartete Gespräche werden im CRM dieser Quelle zugeordnet.",
+      "ADD": "Neuer Link",
+      "NAME_PLACEHOLDER": "Z. B. Laden-QR — Innenstadt",
+      "INBOX": "WhatsApp-Posteingang",
+      "PREFILLED": "Vorausgefüllte Nachricht",
+      "PREFILLED_PLACEHOLDER": "Z. B. Hallo! Ich möchte mehr erfahren",
+      "CODE": "Code",
+      "CONVERSATIONS": "Gespräche",
+      "COPY_LINK": "Link kopieren",
+      "COPIED": "Kopiert!",
+      "DOWNLOAD_QR": "QR-Code herunterladen",
+      "DELETE": "Löschen",
+      "DELETE_CONFIRM": "Diesen Link löschen? Bereits zugeordnete Gespräche behalten ihre Herkunft.",
+      "EMPTY": "Noch keine nachverfolgbaren Links. Erstellen Sie einen, um Gespräche einem Geschäft, Verkäufer oder Profillink zuzuordnen.",
+      "CREATE_SUCCESS": "Link erstellt",
+      "CREATE_ERROR": "Link konnte nicht erstellt werden",
+      "NAME": "Name",
+      "CLICKS": "Klicks"
+    }
+  }
+}

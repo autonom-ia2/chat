@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Kanselahin",
+        "CANCEL_SUCCESS": "Nakansela ang kampanya.",
+        "DELETE_SUCCESS": "Natanggal ang kampanya.",
+        "DUPLICATE": "Gumawa ng kopya",
+        "DUPLICATE_SUCCESS": "Nakopya ang kampanya. I-update ang mga tatanggap at iskedyul.",
+        "EDIT": "I-edit",
+        "OPEN_BUILDER": "Editor",
+        "PAUSE": "I-pause",
+        "PAUSE_SUCCESS": "Naka-pause ang kampanya.",
+        "SCHEDULE": "Itakda ang iskedyul",
+        "SCHEDULE_SUCCESS": "Naitakda ang iskedyul ng kampanya.",
+        "SEND_NOW": "Ipadala ngayon",
+        "SEND_SUCCESS": "Nakapila na ang kampanya para ipadala.",
+        "MANAGE_RECIPIENTS": "Mga tatanggap",
+        "DELETE": "Tanggalin"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Nabigo ang AI",
+          "PROCESSING": "Gumagawa ang AI",
+          "READY": "Handa na ang AI"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Nabigo",
+        "SENT": "Naipadala",
+        "RECIPIENTS": "Mga tatanggap"
+      },
+      "DESCRIPTION": "Gumawa ng email, pumili ng beripikadong domain sa pagpapadala, i-upload ang listahan ng tatanggap at ipadala ngayon o itakda ang iskedyul.",
+      "DIALOG": {
+        "BASE_HINT": "Mag-upload ng CSV o XLSX na may mga column na name at email. Ang mga natukoy na column ay magiging mga field para sa personalisasyon.",
+        "BASE_IMPORTING": "Ini-import ang listahan…",
+        "BASE_LABEL": "Listahan ng contact (CSV o XLSX)",
+        "BASE_PICK": "Pumili ng file",
+        "BASE_SELECTED": "Napili: {name}",
+        "CREATE_AND_OPEN": "Gumawa at buksan sa editor",
+        "CREATE_TITLE": "Bagong kampanya sa email",
+        "DIRECT_OPTION": "direktang pagpapadala gamit ang inbox na ito",
+        "DIRECT_WARNING": "Personal na mailbox mo ito. Gamitin lamang sa kaunting pagpapadala sa mga tunay mong contact na pumayag tumanggap. Ang maramihang pagpapadala mula sa libreng email ay maaaring magpablock o magsuspinde ng account. Limitado ito sa 100 bawat araw, na may pagitan gaya ng manwal na pagpapadala. Para sa mas malaking listahan, beripikahin ang sarili mong domain.",
+        "EDIT_TITLE": "I-edit ang kampanya sa email",
+        "ERROR": "Hindi ma-save ang kampanya. Subukan muli.",
+        "FROM_EMAIL_DIRECT_HINT": "Direktang ipinapadala bilang mailbox na ito.",
+        "FROM_EMAIL_ERROR": "Kailangan ang email ng nagpadala",
+        "FROM_EMAIL_HINT": "Dapat nasa {'@'}{domain} ang address, ang iyong beripikadong domain.",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Dapat nasa beripikadong domain sa pagpapadala ang address.",
+        "FROM_EMAIL_INVALID": "Maglagay ng wastong address sa iyong beripikadong domain",
+        "FROM_EMAIL_LABEL": "Email ng nagpadala",
+        "FROM_EMAIL_PLACEHOLDER": "Hal. promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "Kailangan ang pangalan ng nagpadala",
+        "FROM_NAME_LABEL": "Pangalan ng nagpadala",
+        "FROM_NAME_PLACEHOLDER": "Hal. Pangkat sa marketing ng Acme",
+        "NAME_ERROR": "Maglagay ng pangalan ng kampanya",
+        "NAME_LABEL": "Pangalan ng kampanya",
+        "NAME_PLACEHOLDER": "Hal. Balita para sa Hunyo",
+        "NO_VERIFIED_DOMAIN": "Wala pang beripikadong domain sa pagpapadala. Magdagdag at magberipika muna sa seksiyon ng mga domain sa pagpapadala ng email.",
+        "REPLY_TO_ERROR": "Kailangan ang address para sa tugon",
+        "REPLY_TO_HINT": "Sa address na ito mapupunta ang mga tugon. Ikonekta ito bilang inbox para gawing mga usapan ang mga tugon.",
+        "REPLY_TO_INVALID": "Maglagay ng wastong email address",
+        "REPLY_TO_LABEL": "Address para sa tugon",
+        "REPLY_TO_PLACEHOLDER": "Hal. support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "I-save ang burador",
+        "SENDER_ERROR": "Pumili ng beripikadong domain sa pagpapadala",
+        "SENDER_LABEL": "Domain sa pagpapadala",
+        "SENDER_PLACEHOLDER": "Pumili ng beripikadong domain",
+        "SUCCESS": "Na-save ang kampanya.",
+        "CANCEL": "Kanselahin"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Gumawa ng unang kampanya para sumulat at magpadala ng email sa na-import na listahan.",
+        "TITLE": "Wala pang kampanya sa email"
+      },
+      "HEADER_TITLE": "Mga kampanya sa email",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Walang laman ang listahan. Magdagdag ng contact at i-upload muli.",
+          "EXPIRED": "Nag-expire na ang na-upload na file. I-upload muli ang listahan.",
+          "FAILED": "Nabigo ang pag-import. Walang contact na nadagdag sa pagtatangkang ito. Subukan muli o i-upload ulit ang file.",
+          "FILE_TOO_LARGE": "Lampas sa limitasyon ng laki ang file. Hatiin ang listahan at subukan muli.",
+          "HEADERS": "Gumamit ng isang Name at isang Email na column sa unang row ng unang sheet, nang walang nauulit na header.",
+          "INVALID_FILE": "Hindi mabasa ang file. Mag-upload ng wastong CSV o XLSX.",
+          "IN_PROGRESS": "May isinasagawang import na para sa kampanyang ito. Hintaying matapos.",
+          "ROW_LIMIT": "Lampas sa 50,000 row ang listahan. Hatiin ito sa mas maliliit na file.",
+          "UPLOAD_FAILED": "Hindi maimbak ang file. I-upload muli ang listahan."
+        },
+        "RETRY": "Subukang i-import muli",
+        "QUEUED": "Natanggap ang listahan. Nakapila ang pag-import; maaari kang umalis sa pahinang ito.",
+        "PROCESSING": "Ini-import ang listahan. Hindi maaaring magpadala hangga't hindi ito natatapos.",
+        "COMPLETED": "Tapos na ang pag-import ng listahan.",
+        "SUMMARY": "Naidagdag: {imported} · Doble: {duplicates} · Di-wasto: {invalid} · Hindi kasama sa pagpapadala: {suppressed} · Kabuuan: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Nakopya ang field sa clipboard.",
+        "EMPTY": "Mag-import ng mga tatanggap para makita ang mga field mula sa mga column ng spreadsheet.",
+        "SUBTITLE": "I-click ang field para kopyahin, at i-paste sa paksa, tekstong paunang tanaw o katawan ng mensahe.",
+        "TITLE": "Mga magagamit na field"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Magdagdag pa ng contact",
+        "ADD_MORE_HINT": "Na-upload ang listahan noong ginawa ang kampanya. Mag-upload ng isa pang CSV/XLSX para magdagdag ng contact.",
+        "SUBTITLE": "Mag-upload ng CSV o XLSX na may mga column na name at email. Para lang sa kampanyang ito ang mga tatanggap at hindi sila idaragdag sa iyong mga contact.",
+        "TITLE": "Mga tatanggap"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Pumili ng petsa at oras",
+        "DATETIME_LABEL": "Oras ng pagpapadala",
+        "CANCEL": "Kanselahin",
+        "SUBMIT": "Itakda ang iskedyul"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} tatanggap na walang halaga",
+        "BLANK_LABEL": "Mga tatanggap na walang halaga:",
+        "MISSING_LABEL": "Ginagamit sa template ngunit hindi nakita sa datos ng mga tatanggap:",
+        "OK": "May halaga ang lahat ng field sa kampanyang ito. Handa nang ipadala.",
+        "TITLE": "Pagsusuri bago magpadala"
+      },
+      "STATUS": {
+        "CANCELED": "Kinansela",
+        "DRAFT": "Burador",
+        "SCHEDULED": "Nakatakda",
+        "SENDING": "Ipinapadala",
+        "SENT": "Naipadala",
+        "PAUSED": "Pansamantalang itinigil ang pagpapadala",
+        "FAILED": "Nabigo"
+      },
+      "NEW": "Bagong kampanya sa email"
     }
   }
 }
