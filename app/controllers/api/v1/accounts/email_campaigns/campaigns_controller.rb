@@ -1,14 +1,19 @@
 class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts::EmailCampaigns::BaseController
   rescue_from CustomExceptions::EmailReputationBlocked do |error|
-    render json: { error: error.message, protection: error.protection }, status: :unprocessable_entity
+    render json: { error: 'email_campaign.protected', protection: EmailCampaigns::Presentation::Errors.protection(error.protection) },
+           status: :unprocessable_entity
   end
 
+  helper_method :campaign_presentation
+
   before_action :fetch_campaign,
-                only: [:show, :update, :destroy, :send_now, :schedule, :pause, :resume, :cancel, :duplicate, :reevaluate]
+                only: [:show, :update, :destroy, :send_now, :schedule, :pause, :resume, :cancel, :duplicate, :reevaluate, :recheck]
+  before_action :validate_hygiene_configuration, only: [:resume, :reevaluate, :recheck]
 
   def index
     authorize EmailCampaign
-    @campaigns = campaign_scope.includes(:sender_identity, latest_recipient_import: :source_file_attachment).order(created_at: :desc)
+    query = EmailCampaigns::CampaignQuery.new(account: Current.account, params: report_filter_params(%w[status campaign_status q since until]))
+    @campaigns = query.call.includes(:sender_identity, latest_recipient_import: :source_file_attachment)
   end
 
   def show; end
@@ -18,7 +23,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
     authorize @campaign
     @campaign.ses_configuration_set = @campaign.sender_identity&.ses_configuration_set
     @campaign.save!
-    render :show, status: :created
+    render_campaign(status: :created)
   end
 
   def update
@@ -27,7 +32,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
     @campaign.assign_attributes(campaign_params)
     @campaign.ses_configuration_set = @campaign.sender_identity&.ses_configuration_set if @campaign.sender_identity_id_changed?
     @campaign.save!
-    render :show
+    render_campaign
   end
 
   def destroy
@@ -50,7 +55,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.claim_for_sending!
 
     EmailCampaigns::DeliveryJob.perform_later(@campaign.id)
-    render :show
+    render_campaign
   end
 
   def schedule
@@ -58,27 +63,46 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
 
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.schedule!(scheduled_at: params[:scheduled_at])
 
-    render :show
+    render_campaign
   end
 
   def pause
     @campaign.pause!
-    render :show
+    render_campaign
   end
 
   def resume
-    @campaign.resume!(actor: Current.user)
-    render :show
+    state = EmailCampaigns::Reports::RecipientState.new(@campaign)
+    candidates = state.resume_candidates
+    candidates = candidates.where(id: state.ready_ids) if EmailCampaigns::Presentation::Configuration.hygiene.enforce?
+    return render_unprocessable('email_campaign.not_sendable') unless candidates.exists?
+    return render_unprocessable('email_campaign.not_sendable') unless @campaign.resume!(actor: Current.user)
+
+    render_campaign
   end
 
   def reevaluate
-    render json: { protection: ::EmailCampaigns::Guardrail.reevaluate!(Current.account, delivery_mode: @campaign.delivery_mode) }
+    ::EmailCampaigns::Guardrail.reevaluate!(Current.account, delivery_mode: @campaign.delivery_mode)
+    render_campaign
+  end
+
+  def recheck
+    return render_unprocessable('import_in_progress') if @campaign.recipient_import_active?
+    return render_unprocessable('email_campaign.not_editable') if @campaign.terminal?
+
+    # enqueue owns account -> state -> campaign locking and coalesces a live pass.
+    EmailCampaigns::RecipientPreflightJob.enqueue(@campaign.id, recheck: true)
+    @campaign.reload
+    return render_unprocessable('import_in_progress') if @campaign.recipient_import_active?
+    return render_unprocessable('email_campaign.not_editable') if @campaign.terminal?
+
+    render_campaign(status: :accepted)
   end
 
   def cancel
     return render_unprocessable('import_in_progress') if @campaign.cancel! == false
 
-    render :show
+    render_campaign
   end
 
   def duplicate
@@ -100,10 +124,22 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
     authorize @campaign, :create?
     @campaign.ses_configuration_set = @campaign.sender_identity&.ses_configuration_set
     @campaign.save!
-    render :show, status: :created
+    render_campaign(status: :created)
   end
 
   private
+
+  def campaign_presentation(campaign)
+    @campaign_presenter ||= EmailCampaigns::Presentation::Campaign.new(account: Current.account, actor: Current.user)
+    @campaign_presenter.call(campaign)
+  end
+
+  def render_campaign(status: :ok)
+    @campaign.reload
+    Current.account.reload
+    @campaign_presenter = nil
+    render :show, status: status
+  end
 
   def campaign_scope
     EmailCampaign.where(account: Current.account)
