@@ -24,7 +24,7 @@ A revisão externa da #443 no SHA `28fb2997e8222d63c8c8ab10c2df977aadc3a76a` enc
 | Gate adversarial | Fechamento local |
 | --- | --- |
 | Locks entre versão intermediária e candidata | Ordem `Account → state → campaign → recipient` e regressões cross-caller/mixed-version; nenhuma confirmação falsa de opt-out no gate final. |
-| Provider block versus claim/monitor | Ambas as ordens claim/latch continuam cobertas. Poll nocivo antigo que conclui depois de telemetria saudável mais nova preserva a telemetria nova, mas incrementa `harmful_generation`, adiciona `blocked=true` e auditoria quando cria o latch. `ProviderRelease` captura essa geração após a coleta e recusa liberar se um nocivo persistir antes do lock final. |
+| Provider block versus claim/monitor | Ambas as ordens claim/latch continuam cobertas. Poll nocivo antigo que conclui depois de telemetria saudável mais nova preserva a telemetria nova, mas incrementa `harmful_generation`, adiciona `blocked=true` e auditoria quando cria o latch. `ProviderRelease` captura a geração **antes da rechecagem externa** e recusa liberar se qualquer nocivo for persistido durante a operação, inclusive se a própria consulta nociva terminar fora de ordem. |
 | Feedback contínuo | `shadow`/`warning` aplicam `LegacyDecision` e `enforce` aplica a policy nova; observação superseded somente adiciona proteção, nunca publica métricas obsoletas nem libera. Regressões reais cobrem os três modos. |
 | Importação HTTP real / rollback | GET, multipart import e retry passam pelo Jbuilder/DTO real. As FKs de `email_campaign_import_issues` usam `ON DELETE CASCADE`; teste de upgrade `main schema → migrations #443 → código real da main` destruiu campanha/import/issue sem FK/500. |
 | Quarentena fora de ordem | Permutações, replay, janela antiga/futura e expiração usam evento qualificante mais recente sem encurtar proteção. |
@@ -38,11 +38,11 @@ O CI dedicado deve repetir os gates no SHA final. Testes locais não certificam 
 
 ## Evidência integrada local após os fixes adversariais
 
-Base da correção externa: #443 em `28fb2997e8222d63c8c8ab10c2df977aadc3a76a`. Os resultados abaixo incluem as correções P1/P1/P2 ainda antes do novo commit publicado. O SHA que receber esses commits deve repetir o CI próprio da #443 e a revisão externa.
+Base da correção externa: #443 em `28fb2997e8222d63c8c8ab10c2df977aadc3a76a`. Os resultados abaixo incluem as correções P1/P1/P2 e o fechamento do race residual de `ProviderRelease`, ainda antes do novo commit publicado. O SHA que receber esses commits deve repetir o CI próprio da #443 e a revisão externa.
 
 | Gate | Resultado local | Evidência |
 | --- | --- | --- |
-| Backend cumulativo das cinco entregas | **907 exemplos, zero falhas; um pending preexistente de Account** | `tmp/email436/external-review-final.json` |
+| Backend cumulativo das cinco entregas | **909 exemplos, zero falhas; um pending preexistente de Account** | `tmp/email436/external-review-final.json` |
 | Manutenção/backfill focado | **121 exemplos, zero falhas/pending** | `tmp/email436/pr442-focused.json` |
 | Ruby puro | **9 arquivos;57 testes;50.876 asserções; zero falhas/erros/skips** | `tmp/email436/external-review-pure.log` |
 | RuboCop cumulativo | **185 arquivos, zero infrações** | `tmp/email436/external-review-final-rubocop.log` |

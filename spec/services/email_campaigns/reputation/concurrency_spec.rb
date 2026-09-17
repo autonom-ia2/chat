@@ -30,9 +30,14 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
   end
 
   after do
-    # Scoped synthetic cleanup only. Append-only audits deliberately retain logical IDs.
-    EmailEvent.where(recipient_id: campaign.email_campaign_recipients.select(:id)).delete_all
-    campaign.email_campaign_recipients.delete_all
+    # Scoped synthetic cleanup only. The 50k stress case can exceed the application's
+    # ordinary statement timeout while deleting fixtures on a slow CI runner; product
+    # queries above still run with the normal timeout.
+    ActiveRecord::Base.connection.transaction do
+      ActiveRecord::Base.connection.execute("SET LOCAL statement_timeout = '60s'")
+      EmailEvent.where(recipient_id: campaign.email_campaign_recipients.select(:id)).delete_all
+      campaign.email_campaign_recipients.delete_all
+    end
     campaign.destroy!
     identity.destroy!
     account.destroy!
@@ -55,6 +60,11 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
         SELECT id, 3, NOW(), '{"bounce":{"bounceType":"Permanent"}}'::jsonb, NOW(), NOW()
         FROM email_campaign_recipients WHERE email_campaign_id = #{campaign.id} ORDER BY id
       SQL
+      # The synthetic database starts empty. Refresh statistics after the bulk seed so
+      # the metric query is measured with a realistic planner, not empty-table estimates.
+      connection.execute('ANALYZE email_campaign_recipients')
+      connection.execute('ANALYZE email_events')
+      connection.execute('ANALYZE email_campaigns')
     end
     pending = campaign.email_campaign_recipients.create!(email: 'pending@example.com')
     worker = Thread.new do

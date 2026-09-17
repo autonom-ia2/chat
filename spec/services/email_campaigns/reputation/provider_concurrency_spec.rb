@@ -152,6 +152,89 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do # rubocop:disable 
     actor&.destroy!
   end
 
+  it 'denies release when its own harmful poll finishes late behind newer healthy telemetry' do
+    state = EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', blocked: true,
+                                       observed_at: 1.minute.ago, checked_at: 1.minute.ago)
+    actor = create(:user, type: 'SuperAdmin')
+    harmful_started = Queue.new
+    finish_harmful = Queue.new
+    harmful_ses = instance_double(EmailCampaigns::Ses::Client)
+    allow(harmful_ses).to receive(:get_account) do
+      harmful_started << true
+      finish_harmful.pop
+      { 'SendingEnabled' => true, 'EnforcementStatus' => 'PROBATION' }
+    end
+    stub_safe_cloudwatch(cloudwatch)
+    release_monitor = described_class.new(config: config, ses: harmful_ses, cloudwatch: cloudwatch)
+    releaser = EmailCampaigns::Reputation::ProviderRelease.new(config: config, monitor: release_monitor)
+    worker = Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        releaser.call(actor: actor, reason: 'Reviewed provider remediation')
+      rescue CustomExceptions::EmailReputationOverride => e
+        e.message
+      end
+    end
+    Timeout.timeout(5) { harmful_started.pop }
+    travel 1.second do
+      healthy_ses = instance_double(EmailCampaigns::Ses::Client,
+                                    get_account: { 'SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY' })
+      described_class.new(config: config, ses: healthy_ses, cloudwatch: cloudwatch).call
+    end
+    expect(state.reload).to have_attributes(status: 'healthy', blocked: true, harmful_generation: 0)
+    finish_harmful << true
+    worker.join(5) || worker.kill.join
+    expect(worker.value).to eq('provider_release_denied')
+    expect(state.reload).to have_attributes(status: 'healthy', blocked: true, harmful_generation: 1)
+    expect(EmailCampaigns::Reputation::ProviderGate.protection(config: config)[:code]).to eq('provider_blocked')
+    expect(EmailReputationAudit.where(provider_key: config.provider_key, action: 'provider_released')).to be_empty
+  ensure
+    finish_harmful << true if defined?(finish_harmful) && worker&.alive?
+    worker&.join(1)
+    actor&.destroy!
+  end
+
+  it 'denies release when harm persists after healthy collection but before that collection is persisted' do
+    state = EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', blocked: true,
+                                       observed_at: 1.minute.ago, checked_at: 1.minute.ago)
+    actor = create(:user, type: 'SuperAdmin')
+    collected = Queue.new
+    persist_healthy = Queue.new
+    stub_safe_cloudwatch(cloudwatch)
+    healthy_ses = instance_double(EmailCampaigns::Ses::Client,
+                                  get_account: { 'SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY' })
+    release_monitor = described_class.new(config: config, ses: healthy_ses, cloudwatch: cloudwatch)
+    allow(release_monitor).to receive(:persist).and_wrap_original do |original, attributes|
+      collected << attributes.fetch(:checked_at)
+      persist_healthy.pop
+      original.call(attributes)
+    end
+    releaser = EmailCampaigns::Reputation::ProviderRelease.new(config: config, monitor: release_monitor)
+    worker = Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        releaser.call(actor: actor, reason: 'Reviewed provider remediation')
+      rescue CustomExceptions::EmailReputationOverride => e
+        e.message
+      end
+    end
+    Timeout.timeout(5) { collected.pop }
+    travel 1.second do
+      harmful_ses = instance_double(EmailCampaigns::Ses::Client,
+                                    get_account: { 'SendingEnabled' => true, 'EnforcementStatus' => 'PROBATION' })
+      described_class.new(config: config, ses: harmful_ses, cloudwatch: cloudwatch).call
+    end
+    expect(state.reload).to have_attributes(status: 'blocked', blocked: true, harmful_generation: 1)
+    persist_healthy << true
+    worker.join(5) || worker.kill.join
+    expect(worker.value).to eq('provider_release_denied')
+    expect(state.reload).to have_attributes(status: 'blocked', blocked: true, harmful_generation: 1)
+    expect(EmailCampaigns::Reputation::ProviderGate.protection(config: config)[:code]).to eq('provider_blocked')
+    expect(EmailReputationAudit.where(provider_key: config.provider_key, action: 'provider_released')).to be_empty
+  ensure
+    persist_healthy << true if defined?(persist_healthy) && worker&.alive?
+    worker&.join(1)
+    actor&.destroy!
+  end
+
   it 'creates only one valid state when two initial polls race at the unique constraint' do
     reached = Queue.new
     proceed = Queue.new

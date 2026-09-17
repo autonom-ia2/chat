@@ -10,12 +10,15 @@ class EmailCampaigns::Reputation::ProviderRelease
 
     validate_release!(reason)
 
+    # Snapshot before any external collection. A harmful provider observation that is
+    # persisted at any point during this recheck — including this very poll finishing
+    # out of order — increments the monotonic generation and invalidates release.
+    baseline_state = EmailProviderState.for_provider(@config.provider_key)
+    baseline_harmful_generation = baseline_state.harmful_generation
     state = @monitor.call
-    collected_harmful_generation = state.harmful_generation
     # Collection has completed. Provider-only lock: never take tenant/campaign locks here.
-    # Any harmful observation persisted after this collection invalidates the release.
     state.with_lock do
-      unchanged = state.harmful_generation == collected_harmful_generation
+      unchanged = state.harmful_generation == baseline_harmful_generation
       raise CustomExceptions::EmailReputationOverride, 'provider_release_denied' unless unchanged && releasable?(state)
 
       state.update!(blocked: false, manual_block: false, manual_reason: nil)
