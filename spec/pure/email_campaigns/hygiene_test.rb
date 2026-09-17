@@ -127,12 +127,12 @@ class EmailProviderSuppressionTest < Minitest::Test # rubocop:disable Style/OneC
   def test_provider_prevention_promotes_temporary_state_to_nonexpiring_block
     registry = EmailCampaigns::SuppressionRegistry.allocate
     state = State.new(active: true, reason: 'temporary_failure', expires_at: Time.at(1000).utc)
-    registry.send(:apply_block, state, 'provider_suppression', 'ses', Time.at(500).utc)
+    registry.send(:apply_block, state, 'provider_suppression', 'ses')
     assert state.active
     assert_equal 'provider_suppression', state.reason
     assert_equal 'ses', state.source
     assert_nil state.expires_at
-    registry.send(:apply_block, state, 'temporary_failure', 'ses', Time.at(600).utc)
+    registry.send(:apply_block, state, 'temporary_failure', 'ses')
     assert_equal 'provider_suppression', state.reason
     assert_nil state.expires_at
   end

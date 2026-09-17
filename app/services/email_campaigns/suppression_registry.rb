@@ -23,7 +23,7 @@ class EmailCampaigns::SuppressionRegistry
     raise ArgumentError, 'invalid reason' unless RECORD_REASONS.include?(reason)
 
     write(reason: reason, source: source, event_key: event_key, occurred_at: occurred_at, metadata: metadata, action: 'record') do |row|
-      apply_block(row, reason, source, occurred_at)
+      apply_block(row, reason, source)
       mirror_permanent!(reason, source) if PRIORITY.key?(reason) && reason != 'temporary_failure'
     end
   end
@@ -52,13 +52,31 @@ class EmailCampaigns::SuppressionRegistry
     EmailSuppressionState.transaction do
       row = locked_state
       existing = row.email_suppression_events.find_by(event_key: key)
-      next Result.new(suppression: row, event: existing, duplicate: true) if existing
+      if existing
+        attributes = correction_attributes(row, existing, attributes)
+        next Result.new(suppression: row, event: existing, duplicate: true) unless attributes
+      end
 
       event = append_event(row, attributes)
       yield row
       row.save!
       Result.new(suppression: row, event: event, duplicate: false)
     end
+  end
+
+  def correction_attributes(row, original, attributes)
+    return unless original.action == 'record' && attributes.fetch(:action) == 'record'
+
+    reason = attributes.fetch(:reason)
+    priority = PRIORITY.fetch(reason, 0)
+    return unless priority > [1, PRIORITY.fetch(original.reason, 0)].max
+
+    # A correction is durable evidence too: a later weaker correction is a replay.
+    stronger_keys = PRIORITY.filter_map { |value, rank| "correction:#{original.id}:#{value}" if rank >= priority }
+    return if row.email_suppression_events.exists?(event_key: stronger_keys)
+
+    attributes.merge(action: 'correction', event_key: "correction:#{original.id}:#{reason}", occurred_at: original.occurred_at,
+                     metadata: attributes.fetch(:metadata).merge('corrects_event_id' => original.id))
   end
 
   def locked_state
@@ -92,26 +110,30 @@ class EmailCampaigns::SuppressionRegistry
     legacy.update!(reason: reason, source: source) if PRIORITY.fetch(reason) > PRIORITY.fetch(legacy.reason, 7)
   end
 
-  def apply_block(row, reason, source, occurred_at)
+  def apply_block(row, reason, source)
     return unless PRIORITY.key?(reason)
     return if stronger_state?(row, reason)
-    return if reason == 'temporary_failure' && !quarantine_due?(row)
+
+    if reason == 'temporary_failure'
+      expiry = quarantine_expiry(row)
+      return unless expiry
+    end
 
     row.assign_attributes(active: true, reason: reason, source: source, origin_campaign_id: @campaign&.id || row.origin_campaign_id)
-    row.expires_at = quarantine_expiry(row, reason, occurred_at)
+    row.expires_at = expiry
   end
 
   def stronger_state?(row, reason)
     row.active && row.reason != 'temporary_failure' && PRIORITY.fetch(row.reason, 7) >= PRIORITY.fetch(reason)
   end
 
-  def quarantine_expiry(row, reason, occurred_at)
-    [row.expires_at, occurred_at + @config.quarantine_duration].compact.max if reason == 'temporary_failure'
-  end
+  def quarantine_expiry(row)
+    now = Time.current
+    times = row.email_suppression_events.where(action: 'record', reason: 'temporary_failure')
+               .where(occurred_at: (now - @config.temporary_window)..now)
+               .order(occurred_at: :desc).limit(@config.temporary_threshold).pluck(:occurred_at)
+    return if times.size < @config.temporary_threshold
 
-  def quarantine_due?(row)
-    row.email_suppression_events.where(action: 'record', reason: 'temporary_failure')
-       .where(occurred_at: (Time.current - @config.temporary_window)..Time.current)
-       .limit(@config.temporary_threshold).count >= @config.temporary_threshold
+    [row.expires_at, times.first + @config.quarantine_duration].compact.max
   end
 end

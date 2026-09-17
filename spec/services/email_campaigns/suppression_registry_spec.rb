@@ -53,6 +53,106 @@ RSpec.describe EmailCampaigns::SuppressionRegistry do
     expect(EmailSuppression.suppressed_set_for(account)).to be_empty
   end
 
+  it 'uses the newest qualifying event for identical quarantine and expiry in either arrival order' do
+    travel_to Time.zone.parse('2026-09-17 12:00:00') do
+      now = Time.current
+      emails = %w[chronological@example.org reversed@example.org]
+      [[now - 6.days, now - 1.day, now], [now, now - 1.day, now - 6.days]].zip(emails).each do |times, email|
+        writer = described_class.new(account: account, email: email, config: EmailCampaigns::HygieneConfig.new({}))
+        times.each do |time|
+          2.times { writer.record!(reason: 'temporary_failure', source: 'ses', event_key: time.iso8601, occurred_at: time) }
+        end
+      end
+      states = EmailSuppressionState.where(account: account)
+      expect(states.pluck(:expires_at, :occurrences)).to eq([[now + 72.hours, 3], [now + 72.hours, 3]])
+      expect(EmailSuppression.suppressed_set_for(account)).to match_array(emails)
+      expect(EmailSuppression.where(account: account)).to be_empty
+      travel_to(now + 72.hours - 1.second)
+      expect(EmailSuppression.suppressed_set_for(account)).to match_array(emails)
+      travel_to(now + 72.hours)
+      expect(EmailSuppression.suppressed_set_for(account)).to be_empty
+    end
+  end
+
+  it 'retains a longer existing quarantine when a late temporary event arrives' do
+    freeze_time do
+      3.times { |i| registry.record!(reason: 'temporary_failure', source: 'ses', event_key: "soft:#{i}") }
+      state = EmailSuppressionState.find_by!(account: account)
+      state.update!(expires_at: 5.days.from_now)
+      registry.record!(reason: 'temporary_failure', source: 'ses', event_key: 'late', occurred_at: 6.days.ago)
+      expect(state.reload.expires_at).to eq(5.days.from_now)
+    end
+  end
+
+  %w[unknown_bounce temporary_failure provider_suppression].each do |reason|
+    it "promotes same-key #{reason} to hard bounce once, keeping the original audit immutable" do
+      original = registry.record!(reason: reason, source: 'ses', event_key: 'k' * 200, occurred_at: 30.days.ago,
+                                  metadata: { 'classification' => 'unknown' }).event
+      snapshot = original.attributes
+      result = registry.block!(reason: 'hard_bounce', source: 'backfill', event_key: original.event_key,
+                               metadata: { 'classification' => 'permanent' })
+      replay = registry.block!(reason: 'hard_bounce', source: 'backfill', event_key: original.event_key)
+      expect([result.duplicate, replay.duplicate]).to eq([false, true])
+      expect(original.reload.attributes).to eq(snapshot)
+      correction = result.event
+      expect([correction.action, correction.reason, correction.occurred_at]).to eq(['correction', 'hard_bounce', original.occurred_at])
+      expect(correction.metadata).to eq('classification' => 'permanent', 'corrects_event_id' => original.id)
+      expect(correction.event_key.length).to be <= 200
+      state = result.suppression.reload
+      expect([state.active, state.reason, state.expires_at, state.occurrences, state.email_suppression_events.count]).to eq(
+        [true, 'hard_bounce', nil, 2, 2]
+      )
+      expect(EmailSuppression.find_by!(account: account).reason).to eq('hard_bounce')
+    end
+  end
+
+  %w[hard_bounce manual complaint unsubscribe].each do |reason|
+    it "never weakens same-key #{reason} to provider suppression" do
+      registry.block!(reason: reason, source: 'ses', event_key: 'durable')
+      replay = registry.block!(reason: 'provider_suppression', source: 'backfill', event_key: 'durable')
+      expect(replay.duplicate).to be true
+      expect(replay.suppression.reason).to eq(reason)
+      expect(EmailSuppression.find_by!(account: account).reason).to eq(reason)
+      expect(EmailSuppressionEvent.where(account: account).count).to eq(1)
+    end
+  end
+
+  it 'deduplicates weaker corrections too, while permitting a subsequent stronger correction' do
+    registry.record!(reason: 'unknown_bounce', source: 'ses', event_key: 'durable')
+    registry.block!(reason: 'hard_bounce', source: 'backfill', event_key: 'durable')
+    replay = registry.block!(reason: 'provider_suppression', source: 'backfill', event_key: 'durable')
+    expect(replay.duplicate).to be true
+    registry.block!(reason: 'complaint', source: 'backfill', event_key: 'durable')
+    expect(EmailSuppressionState.find_by!(account: account).reason).to eq('complaint')
+    expect(EmailSuppression.find_by!(account: account).reason).to eq('complaint')
+    expect(EmailSuppressionEvent.where(account: account).order(:id).pluck(:reason)).to eq(%w[unknown_bounce hard_bounce complaint])
+  end
+
+  %w[manual complaint unsubscribe].each do |reason|
+    it "keeps an independent #{reason} stronger than corrected hard-bounce evidence" do
+      registry.record!(reason: 'unknown_bounce', source: 'ses', event_key: 'durable')
+      registry.block!(reason: reason, source: 'manual', event_key: 'independent')
+      registry.block!(reason: 'hard_bounce', source: 'backfill', event_key: 'durable')
+      expect(EmailSuppressionState.find_by!(account: account).reason).to eq(reason)
+      expect(EmailSuppression.find_by!(account: account).reason).to eq(reason)
+      expect(EmailSuppressionEvent.where(account: account, action: 'correction').count).to eq(1)
+    end
+  end
+
+  it 'rolls back a same-key correction if the permanent mirror fails, leaving the original intact' do
+    original = registry.record!(reason: 'unknown_bounce', source: 'ses', event_key: 'durable').event
+    snapshot = original.attributes
+    allow(EmailSuppression).to receive(:insert_all).and_raise(StandardError, 'synthetic mirror failure')
+    expect do
+      registry.block!(reason: 'hard_bounce', source: 'backfill', event_key: 'durable')
+    end.to raise_error(StandardError, 'synthetic mirror failure')
+    expect(original.reload.attributes).to eq(snapshot)
+    expect(EmailSuppressionEvent.where(account: account).count).to eq(1)
+    state = EmailSuppressionState.find_by!(account: account)
+    expect([state.active, state.occurrences]).to eq([false, 1])
+    expect(EmailSuppression.where(account: account)).to be_empty
+  end
+
   it 'retains every legacy positive even with arbitrary release authorization' do
     suppression = EmailSuppression.create!(account: account, email: 'person+tag@example.org', reason: nil, source: 'import')
     3.times { |i| registry.record!(reason: 'temporary_failure', source: 'ses', event_key: "bounce:#{i}") }

@@ -1,6 +1,46 @@
-# #436 / PR0 — fechamento final de higiene (2026-09-16)
+# #436 / PR438 — bloqueios adversariais (2026-09-17)
 
-**Correção local concluída; não declara PR pronto.** Esta seção é o delta mais recente e substitui os contratos anteriores de classificação/supressão de provedor. Foram lidos AGENTS.md, este manifesto e tmp/email436/pr0-closure-review.md. Os 85 exemplos Rails/zero falhas registrados pelo pai são anteriores a este delta; não validam as novas regressões.
+Escopo local: branch `feat/436-01-email-hygiene`. Este delta substitui os contratos anteriores sobre locks, expiração temporária e replay de evidência corrigida. Os resultados de banco registrados abaixo, de rodadas anteriores, **não validam este delta**. Não há declaração de pronto para merge.
+
+## Correções e evidência de código
+
+1. **Blue/green PR438 web + PR439 worker:** `UnsubscribeController#suppress!` e `Sns::EventProcessor#process` agora adquirem Account antes de recipient; a inserção de estado/mirror acontece depois, na mesma transação. Antes, recipient podia ser retido enquanto a FK do novo estado aguardava Account, fechando o ciclo com worker Account → campaign → recipient. O novo writer aguarda Account sem possuir recipient. Counters são atualizados depois do bloco de locks; verificação da assinatura SNS acontece antes do EventProcessor. Não há rede/DNS sob locks, classes de reputação PR439 ou mudança na resposta genérica 200 do descadastro. Busca por `SuppressionRegistry`, `EmailSuppressionState.create/insert` e `EmailSuppression.create/find_or_create/insert` em `app` e `enterprise` encontrou somente esses dois callers e os inserts internos do registry; nenhum outro caminho recipient → Account ou override Enterprise foi encontrado.
+2. **Quarentena independente da ordem:** o registry seleciona até o threshold de eventos `record/temporary_failure` mais recentes na janela inclusiva `[agora - 7 dias, agora]`. Com três eventos, a expiração é o maior valor entre a expiração existente e o `occurred_at` mais recente +72h. Para T, T-1d, T-6d recebidos em T, ordem cronológica e inversa bloqueiam até T+72h e expiram exatamente nesse instante. Eventos fora da janela/futuros não contam; replay não infla contagem; estado forte não perde prioridade.
+3. **Mesma chave com evidência corrigida:** evidência forte de prioridade estritamente maior que a original e que as correções já aceitas gera `action=correction`, chave determinística `correction:<ID original>:<motivo>` e `metadata.corrects_event_id`. A chave fica abaixo de 200 caracteres mesmo se a chave original tiver 200. O evento original conserva todos os atributos; a correção usa seu occurred_at histórico e os novos source/metadata. Append, agregados, promoção do estado e mirror permanente são atômicos. Replay igual/mais fraco é duplicata, inclusive após uma correção; uma evidência ainda mais forte pode ser anexada uma vez. unknown/temporary/provider → hard_bounce promove; hard_bounce → provider não. Unsubscribe, complaint, manual e hard_bounce não são rebaixados, inclusive quando vieram de outra chave; motivo legado desconhecido permanece autoritativo. `occurrences` conta a nova entrada de auditoria; correções não são novos eventos temporários. PR442 pode reapresentar sua chave durável após rebase; nenhum backfill foi executado aqui.
+
+## Regressões adicionadas
+
+- `spec/services/email_campaigns/hygiene_concurrency_spec.rb`: quatro casos PostgreSQL sem fixtures transacionais, usando **duas conexões reais**. A conexão que modela PR439 segura Account/campaign; `pg_blocking_pids` confirma que o writer PR438 está aguardando essa conexão antes de o worker tentar recipient. Exercita HTTP real dentro do Rack (sem socket de rede) para opt-out assinado e EventProcessor para opt-out SNS, hard bounce e complaint. Verifica persistência no estado, legado, eventos e status; 200 isolado não basta. Helpers de coordenação são compartilhados pelos quatro cenários. **Não executados nesta rodada.**
+- `spec/services/email_campaigns/suppression_registry_spec.rb`: ordem cronológica/inversa T/T-1d/T-6d, replay, bloqueio até o segundo anterior e expiração exata em T+72h, max da expiração existente; promoção de unknown/temporary/provider com chave de 200 caracteres; preservação integral do original; idempotência, cadeia de correções, prioridade independente e rollback em falha do mirror. **Não executados nesta rodada.**
+- `spec/pure/email_campaigns/suppression_registry_test.rb`: quatro testes offline, 68 asserções, seis permutações da ordem, exclusão de eventos antigos/futuros, max da expiração, correções/idempotência e histórico original. Adaptador em memória apenas para decisões; não prova SQL/FK/transações/locks.
+- `spec/pure/email_campaigns/hygiene_test.rb`: duas chamadas ao método privado de decisão ajustadas à assinatura sem occurred_at; as asserções de proteção foram preservadas.
+
+## Validação local desta rodada
+
+Ruby 3.4.4 via `eval "$(rbenv init -)"`; dependências já instaladas. Comandos sem boot Rails, instalações ou conexões externas:
+
+| Comando | Resultado |
+| --- | --- |
+| `bundle exec ruby -rwebmock -e 'WebMock.enable!; WebMock.disable_net_connect!; load ARGV.fetch(0)' <cada um dos cinco spec/pure/email_campaigns/*_test.rb>` | **28 testes / 50.717 asserções**, zero falhas/erros/skips |
+| `RUBOCOP_CACHE_ROOT=/tmp/email436-adversarial-rubocop bundle exec rubocop --no-server --cache false <sete arquivos Ruby deste delta>` | **7 arquivos, zero infrações** |
+| `ruby -c <cada um dos sete arquivos Ruby deste delta>` | **7 × Syntax OK** |
+| `git diff --check` (somente leitura) | exit 0 |
+
+Os sete arquivos Ruby são os três arquivos de produção citados e os quatro arquivos de teste citados acima. Alterações adicionais apenas em `docs/email-campaigns/hygiene.md` e neste audit. UI, reputação, provedores, reports, migrations/schema, envs e o untracked preexistente `.husky/_/` foram preservados.
+
+Contraprova offline: `git show HEAD:app/services/email_campaigns/suppression_registry.rb` foi lido para uma árvore temporária `/tmp/email436-adversarial-before-frurvcw0`, com o mesmo teste novo e HygieneConfig local. O comando puro acima contra essa árvore terminou com **4 testes / 8 asserções / 4 falhas esperadas**, sem erros/skips (seed 23773): expiração T-3d em vez de T+72h e promoção rejeitada como duplicate. A primeira execução revelou que o adaptador de teste herdava `Struct#count`; ele foi corrigido para contar eventos antes desta contraprova válida. A árvore temporária não substituiu código do checkout nem escreveu objetos Git. Não houve contraprova PostgreSQL executada.
+
+## Handoff ao pai
+
+Executar em PostgreSQL isolado os specs de registry, concorrência, mixed-version, unsubscribe e SNS; manter fixtures transacionais desabilitadas nos casos de threads e pool com ao menos duas conexões. Os quatro testes de overlap precisam falhar no código anterior (erro/deadlock ou ausência de persistência) e passar no corrigido. Conferir os 18 exemplos Rails adicionados junto às regressões preexistentes antes de qualquer conclusão de integração. O novo teste puro ainda está untracked e deve entrar no commit do pai.
+
+Sem execução Rails/RSpec/DB, AWS, SSH, rede, produção, instalação, escrita Git ou ações remotas de Issue/PR/Project. Commit, atualização de Project, review e aprovação ficam com o pai; merge/deploy continuam pendentes de aprovação explícita. Rollback de comportamento segue shadow/DNS=false, preservando estado/auditoria; retirar estas correções reintroduz o risco de lock durante a sobreposição e os defeitos de replay/quarentena. Nenhuma alteração de schema exige rollback nesta rodada.
+
+---
+
+# Histórico — fechamento de higiene (2026-09-16)
+
+**Registro histórico; não declara PR pronto.** Esta seção substituiu os contratos anteriores de classificação/supressão de provedor; o delta de 2026-09-17 acima é o mais recente. Foram lidos AGENTS.md, este manifesto e tmp/email436/pr0-closure-review.md. Os 85 exemplos Rails/zero falhas registrados pelo pai são anteriores a este delta; não validam as novas regressões.
 
 ## Delta exato
 
@@ -149,6 +189,7 @@ spec/jobs/email_campaigns/recipient_preflight_job_spec.rb
 spec/models/email_campaign_import_issue_spec.rb
 spec/models/email_suppression_event_spec.rb
 spec/pure/email_campaigns/hygiene_test.rb
+spec/pure/email_campaigns/suppression_registry_test.rb
 spec/services/email_campaigns/delivery_hygiene_spec.rb
 spec/services/email_campaigns/hygiene_concurrency_spec.rb
 spec/services/email_campaigns/preflight_decision_spec.rb
@@ -193,3 +234,11 @@ Fresh main schema loaded into disposable `chat2you_email436_hygiene_v3_test` on 
 - Logs locais: `tmp/email436/pr0-clean-rspec.log`, `pr0-final-rubocop.log`. Suítes reproduzíveis pelos caminhos do manifesto; não dependem desses logs para passar.
 - `db/schema.rb` veio do banco isolado com migrações 120000/120100; diferenças adicionais são formatação canônica do dump PostgreSQL, sem DDL fora de e-mail.
 - Nenhum teste enviou e-mail real. Não houve leitura/escrita de produção, merge nem deploy. CI remoto ainda será conferido no PR.
+
+## Gate adversarial do parent — 17/09/2026
+
+Após as correções de lock misto blue/green, promoção de evidência corrigida, quarentena fora de ordem e exclusão local de `invalid/review` em `enforce`, o parent reconstruiu o schema apenas no PostgreSQL sintético local e executou a seleção cumulativa do feature mais o novo spec de exclusão: **298 exemplos RSpec, 0 falhas, 1 pending preexistente de Account**. O pending não foi criado nem alterado por #436.
+
+As seis suítes puras em `spec/pure/email_campaigns` passaram com **43 testes / 50.792 asserções, 0 falhas/erros/skips**. RuboCop dos **11 arquivos Ruby alterados/adicionados** passou sem infrações. O preflight atualiza os contadores da campanha quando converte um destinatário determinístico em exclusão local, sem criar `EmailSuppression`/quarentena de tenant. Evidências locais: `tmp/email436/pr438-cumulative.json`, `pr438-fix-pure.log` e `pr438-fix-rubocop.log`.
+
+Nenhum banco/serviço de produção, SES/SMTP/AWS, merge, deploy ou alteração de flag foi utilizado. CI remoto no SHA publicado permanece obrigatório.

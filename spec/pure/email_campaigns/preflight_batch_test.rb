@@ -41,7 +41,7 @@ class PreflightBatchTest < Minitest::Test
     job.instance_variable_set(:@lease, Lease.new(rows))
     visited = []
     cursor = 0
-    writes = lambda { |recipient, result, _token|
+    writes = lambda { |recipient, result, _token, _config|
       visited << recipient.id
       assert_nil result[:valid_until]
     }

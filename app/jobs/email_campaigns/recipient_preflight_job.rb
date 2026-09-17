@@ -43,11 +43,16 @@ class EmailCampaigns::RecipientPreflightJob < ApplicationJob
     return unless claimed
 
     cursor = process_batch(*claimed, config)
-    continuation = @lease.advance(claimed.first, cursor)
-    self.class.perform_later(campaign_id, *continuation) if continuation
+    finish_batch(campaign, claimed.first, cursor)
   end
 
   private
+
+  def finish_batch(campaign, token, cursor)
+    campaign.refresh_counters! if @counter_refresh_needed
+    continuation = @lease.advance(token, cursor)
+    self.class.perform_later(campaign.id, *continuation) if continuation
+  end
 
   def check_transaction!(config)
     return unless config.dns_enabled? && ActiveRecord::Base.connection.transaction_open?
@@ -64,7 +69,7 @@ class EmailCampaigns::RecipientPreflightJob < ApplicationJob
       break if cursor > initial_cursor && (monotonic >= deadline || domains.size >= DOMAIN_BUDGET)
 
       result = preflight.call(recipient.email)
-      persist_result(recipient, result, token)
+      persist_result(recipient, result, token, config)
       cursor = recipient.id
     end
     cursor
@@ -76,15 +81,20 @@ class EmailCampaigns::RecipientPreflightJob < ApplicationJob
     EmailCampaigns::AddressPreflight.new(validator: lookup)
   end
 
-  def persist_result(recipient, result, token)
+  def persist_result(recipient, result, token, config)
+    attributes = { preflight_status: result.fetch(:status), preflight_reason_code: result.fetch(:reason_code),
+                   preflight_suggestion: result[:suggestion], preflight_checked_at: Time.current,
+                   preflight_valid_until: result.fetch(:valid_until), updated_at: Time.current }
+    # Deterministic findings exclude this campaign row only; retain the evidence
+    # and never create a tenant suppression or silently repair the address.
+    attributes[:status] = :suppressed if config.enforce? && %w[invalid review].include?(result.fetch(:status))
+
     # Compare-and-set plus fencing token: stale network responses cannot update a
     # newer pass, dispatched history, or a recipient changed by another writer.
-    EmailCampaignRecipient.where(id: recipient.id, status: :pending, preflight_checked_at: recipient.preflight_checked_at)
-                          .where(email_campaign_id: @lease.holder_scope(token).select(:id)).update_all( # rubocop:disable Rails/SkipsModelValidations
-                            preflight_status: result.fetch(:status), preflight_reason_code: result.fetch(:reason_code),
-                            preflight_suggestion: result[:suggestion], preflight_checked_at: Time.current,
-                            preflight_valid_until: result.fetch(:valid_until), updated_at: Time.current
-                          )
+    updated = EmailCampaignRecipient.where(id: recipient.id, status: :pending, preflight_checked_at: recipient.preflight_checked_at)
+                                    .where(email_campaign_id: @lease.holder_scope(token).select(:id))
+                                    .update_all(attributes) # rubocop:disable Rails/SkipsModelValidations
+    @counter_refresh_needed = true if updated.positive? && attributes.key?(:status)
   end
 
   def monotonic
