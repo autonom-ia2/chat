@@ -21,3 +21,7 @@ A primeira execução Vitest desta árvore não carregou `fake-indexeddb`: o arq
 - Browser Playwright: **137 checks aprovados,97 PNGs**, desktop/mobile/dark/árabe RTL, busca/status/página/export, estados vazios/erro, teclado, proveniência SES/direct e veto de retomada. Capturas revisadas, incluindo a busca mobile corrigida.
 
 Evidências locais: `ui-integrated-build.log`, `ui-integrated-vitest-final.json`, `ui-integrated-locales.log`, `ci/eslint.json`, `visual/results.json` e PNGs sob `tmp/email436`. O browser renderiza componentes e CSS reais com respostas sintéticas; não é um teste de envio real nem de produção. O backend/API é validado em sua própria suíte PostgreSQL. Nenhum merge/deploy/flag operacional alterado. O CI deve repetir o gate no commit publicado.
+
+## Correção do caminho do navegador no CI Linux
+
+O primeiro CI remoto de UI aprovou testes/build/lint, mas não iniciou o navegador: o instalador gravava no cache padrão e apenas a etapa do harness definia `PLAYWRIGHT_BROWSERS_PATH`. A variável foi movida para o ambiente do job, compartilhado por instalação e execução. Uma verificação de existência do executável da mesma biblioteca carregada pelo harness foi adicionada imediatamente após a instalação. Nenhum teste foi removido ou substituído; o gate de137 verificações deve rodar novamente no CI. O problema era de preparação do runner e não gerou operação ou deploy de produção.

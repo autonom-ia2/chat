@@ -169,6 +169,7 @@ jobs:
       # Build-only synthetic values: no Rails server, DB, mail or production boot.
       NODE_ENV: production
       VITE_RUBY_SKIP_ASSETS_PRECOMPILE_INSTALL: 'true'
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/email436-browsers
     steps:
       - uses: actions/checkout@v4
         with:
@@ -222,9 +223,8 @@ jobs:
           git ls-files --error-unmatch pnpm-lock.yaml > /dev/null
           pnpm install --frozen-lockfile --prod=false --ignore-scripts
           pnpm exec playwright install --with-deps chromium
+          node --input-type=module -e "import { chromium } from './node_modules/playwright/index.mjs'; import { existsSync } from 'node:fs'; if (!existsSync(chromium.executablePath())) throw new Error('Installed Chromium executable missing');"
       - name: Isolated harness - synthetic routes and loopback only
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/email436-browsers
         run: |
           node --test tests/qa/email-campaigns/*.test.mjs
           node tests/qa/email-campaigns/run.mjs
