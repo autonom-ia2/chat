@@ -5,6 +5,8 @@ import pt_BR from 'dashboard/i18n/locale/pt_BR/emailCampaignProtection.json';
 import Panel from '../EmailProtectionPanel.vue';
 import Hygiene from '../EmailHygieneSummary.vue';
 import Badge from '../EmailStatusBadge.vue';
+import ImportStatus from '../../Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
+import { importPopulationCampaign } from '../../../../../../../tests/qa/email-campaigns/fixtures.mjs';
 
 const defaultPlugins = config.global.plugins;
 beforeAll(() => {
@@ -289,6 +291,76 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
         .findAll('button')
         .some(button => button.text() === t('EMAIL_CAMPAIGN_PROTECTION.RESUME'))
     ).toBe(allowed);
+  });
+  it('keeps original import rows separate from current unsent recipients', () => {
+    const wrapper = mount(
+      {
+        components: { ImportStatus, Hygiene },
+        data: () => ({ campaign: importPopulationCampaign }),
+        template:
+          '<div><ImportStatus :campaign="campaign" /><Hygiene :preflight="campaign.preflight" /></div>',
+      },
+      options
+    );
+    expect(wrapper.findComponent(ImportStatus).text()).toContain(
+      t('EMAIL_CAMPAIGN_PROTECTION.IMPORT_ORIGINAL')
+    );
+    expect(wrapper.findComponent(ImportStatus).text()).toContain(
+      t(
+        'EMAIL_CAMPAIGN_PROTECTION.IMPORT_SUMMARY',
+        importPopulationCampaign.recipient_import.result
+      )
+    );
+    const hygiene = wrapper.findComponent(Hygiene);
+    expect(hygiene.find('h3').text()).toBe(
+      t('EMAIL_CAMPAIGN_PROTECTION.HYGIENE')
+    );
+    expect(hygiene.findAll('dd').map(node => node.text())).toEqual(['1', '1']);
+    expect(hygiene.text()).not.toContain(
+      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.duplicate')
+    );
+    expect(hygiene.text()).not.toContain(
+      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.invalid')
+    );
+  });
+  it('explains a supplied hygiene pause and never infers one from preflight alone', async () => {
+    const wrapper = mount(Panel, {
+      ...options,
+      props: {
+        campaign: {
+          ...importPopulationCampaign,
+          protection: { state: 'paused', current: null },
+        },
+      },
+    });
+    expect(wrapper.text()).toContain(
+      t('EMAIL_CAMPAIGN_PROTECTION.REASON.review')
+    );
+    expect(wrapper.text()).toContain(t('EMAIL_CAMPAIGN_PROTECTION.RECHECK'));
+    await wrapper.setProps({
+      campaign: { ...importPopulationCampaign, pause_reason: undefined },
+    });
+    expect(wrapper.text()).not.toContain(
+      t('EMAIL_CAMPAIGN_PROTECTION.REASON.review')
+    );
+    expect(wrapper.text()).not.toContain(
+      t('EMAIL_CAMPAIGN_PROTECTION.RECHECK')
+    );
+  });
+  it('does not fabricate a missing original import count', () => {
+    const wrapper = mount(ImportStatus, {
+      ...options,
+      props: {
+        campaign: {
+          recipient_import: {
+            status: 'completed',
+            result: { total: 1, imported: 1 },
+          },
+        },
+      },
+    });
+    expect(wrapper.text()).not.toContain('Duplicates: 0');
+    expect(wrapper.findAll('p')).toHaveLength(1);
   });
   it.each(['shadow', 'warning'])(
     'labels %s as analysis only and reconciles each row once',

@@ -64,10 +64,10 @@
     "RECHECK": "Tarkista osoitteet uudelleen",
     "RESUME": "Jatka lähettämistä",
     "PROBLEMS": "Tarkastele ongelmaluetteloa",
-    "HARD_RATE": "Pysyvät virheet / lähetetyt",
-    "COMPLAINT_RATE": "Roskaposti-ilmoitukset / lähetetyt",
+    "HARD_RATE": "Ei toimitettu — pysyvä virhe / SES",
+    "COMPLAINT_RATE": "Merkitty roskapostiksi / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Osoitteiden analyysi",
+    "HYGIENE": "Nykyinen analyysi vastaanottajista, joille ei ole vielä lähetetty",
     "ANALYSIS_ONLY": "Vain analyysi: nämä tulokset eivät estäneet lähettämistä.",
     "ENFORCED": "Suojaus käytössä: estetyt osoitteet jätetään lähetyksen ulkopuolelle.",
     "ISSUES": "Tarkista tuonnin ongelmat",
@@ -92,12 +92,13 @@
     "LOADING": "Ladataan…",
     "EMPTY": "Näillä suodattimilla ei löytynyt tuloksia.",
     "UNKNOWN_DATE": "Ei ilmoitettu",
-    "OVER_SENT": "lähetetyistä sähköposteista",
+    "OVER_SENT": "SES:n hyväksymät lähetykset: {count}",
     "SENT_AT": "Lähetetty: {date}",
     "IMPORT_QUEUED": "Luettelo vastaanotettu. Tuonti on jonossa; voit poistua tältä sivulta.",
     "IMPORT_PROCESSING": "Luetteloa tuodaan. Lähettäminen ei ole käytettävissä ennen tuonnin valmistumista.",
     "IMPORT_COMPLETED": "Luettelon tuonti valmis.",
     "IMPORT_SUMMARY": "Lisätty: {imported} · Kaksoiskappaleet: {duplicates} · Virheelliset: {invalid} · Lähetyksestä pois jätetyt: {suppressed} · Yhteensä: {total}",
-    "DELIVERY_HINT": "Kokonaismäärät voivat sisältää lähetyspalvelun hyväksynnän; toimitusta vastaanottajan palvelimelle ei ole aina vahvistettu."
+    "DELIVERY_HINT": "Kokonaismäärät voivat sisältää lähetyspalvelun hyväksynnän; toimitusta vastaanottajan palvelimelle ei ole aina vahvistettu.",
+    "IMPORT_ORIGINAL": "Alkuperäinen tuontitulos"
   }
 }

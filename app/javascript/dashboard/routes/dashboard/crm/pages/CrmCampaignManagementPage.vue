@@ -6,11 +6,14 @@ import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import EmailRecipients from 'dashboard/components-next/Campaigns/EmailProtection/EmailRecipients.vue';
 import EmailStatusBadge from 'dashboard/components-next/Campaigns/EmailProtection/EmailStatusBadge.vue';
 import EmailStatusFilter from 'dashboard/components-next/Campaigns/EmailProtection/EmailStatusFilter.vue';
+import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
 import EmailCampaignHealth from 'dashboard/components-next/Campaigns/EmailProtection/EmailCampaignHealth.vue';
 import {
   NS,
   formatNumber,
   deliveryKey,
+  reputationDenominator,
+  hasActiveEmailWork,
   localeTag,
 } from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
 import { useEmailReportRefresh } from 'dashboard/components-next/Campaigns/EmailProtection/useEmailReportRefresh';
@@ -156,7 +159,14 @@ const kpiCards = computed(() => {
 const rateLabel = (rate, key) => {
   if (typeof rate !== 'number') return '—';
   const denominator = ['BOUNCED', 'COMPLAINED'].includes(key)
-    ? t(`${NS}.OVER_SENT`)
+    ? t(`${NS}.OVER_SENT`, {
+        count: number(
+          reputationDenominator(
+            summary.value,
+            key === 'BOUNCED' ? 'hard_bounce_rate' : 'complaint_rate'
+          )
+        ),
+      })
     : `· ${deliveryLabel(summary.value || {})}`;
   return `${t(`${NS}.RATE`, { value: number(rate) })} ${denominator}`;
 };
@@ -311,10 +321,13 @@ const onFilterChange = async () => {
   });
   await Promise.all([fetchReports(), fetchCampaignDrilldown()]);
 };
-useEmailReportRefresh(() =>
-  !isLoading.value && emailReportsEnabled.value
-    ? Promise.all([fetchReports(), fetchCampaignDrilldown()])
-    : undefined
+useEmailReportRefresh(
+  () =>
+    !isLoading.value && emailReportsEnabled.value
+      ? Promise.all([fetchReports(), fetchCampaignDrilldown()])
+      : undefined,
+  () =>
+    campaigns.value.some(hasActiveEmailWork) || hasActiveEmailWork(health.value)
 );
 
 const intervalOptions = computed(() => [
@@ -698,6 +711,7 @@ onMounted(() => {
           v-show="!isLoading && !hasError"
           class="flex flex-col min-w-0 gap-6"
         >
+          <RecipientImportStatus :campaign="health" />
           <EmailCampaignHealth
             :campaign="health"
             @updated="fetchReports"
@@ -929,6 +943,11 @@ onMounted(() => {
                     </td>
                     <td class="py-2 pe-3 text-end text-n-slate-12">
                       {{ row.bounceRate }}
+                      <span class="block text-xs text-n-slate-11">{{
+                        t(`${NS}.OVER_SENT`, {
+                          count: number(reputationDenominator(row)),
+                        })
+                      }}</span>
                     </td>
                     <td class="py-2 text-end text-n-slate-12">
                       {{ row.unsubscribeRate }}

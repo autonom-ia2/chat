@@ -64,10 +64,10 @@
     "RECHECK": "Verifica di nuovo gli indirizzi",
     "RESUME": "Riprendi l'invio",
     "PROBLEMS": "Esamina l'elenco dei problemi",
-    "HARD_RATE": "Errori permanenti / email inviate",
-    "COMPLAINT_RATE": "Segnalazioni di spam / email inviate",
+    "HARD_RATE": "Non recapitata — errore permanente / SES",
+    "COMPLAINT_RATE": "Segnalata come spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Analisi degli indirizzi",
+    "HYGIENE": "Analisi attuale dei destinatari a cui non è ancora stato inviato nulla",
     "ANALYSIS_ONLY": "Solo analisi: questi risultati non hanno impedito l'invio.",
     "ENFORCED": "Protezione attiva: gli indirizzi bloccati sono esclusi dall'invio.",
     "ISSUES": "Verifica i problemi di importazione",
@@ -92,12 +92,13 @@
     "LOADING": "Caricamento…",
     "EMPTY": "Nessun risultato per questi filtri.",
     "UNKNOWN_DATE": "Non indicato",
-    "OVER_SENT": "delle email inviate",
+    "OVER_SENT": "Invii accettati da SES: {count}",
     "SENT_AT": "Inviata: {date}",
     "IMPORT_QUEUED": "Elenco ricevuto. Importazione in coda; puoi lasciare questa pagina.",
     "IMPORT_PROCESSING": "Importazione dell'elenco in corso. L'invio non è disponibile fino al completamento.",
     "IMPORT_COMPLETED": "Importazione dell'elenco completata.",
     "IMPORT_SUMMARY": "Aggiunti: {imported} · Duplicati: {duplicates} · Non validi: {invalid} · Esclusi dall'invio: {suppressed} · Totale: {total}",
-    "DELIVERY_HINT": "I totali possono includere l’accettazione del servizio di invio; la consegna al server del destinatario non è sempre confermata."
+    "DELIVERY_HINT": "I totali possono includere l’accettazione del servizio di invio; la consegna al server del destinatario non è sempre confermata.",
+    "IMPORT_ORIGINAL": "Risultato originale dell’importazione"
   }
 }

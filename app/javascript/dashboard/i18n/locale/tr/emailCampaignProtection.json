@@ -64,10 +64,10 @@
     "RECHECK": "Adresleri yeniden kontrol et",
     "RESUME": "Gönderime devam et",
     "PROBLEMS": "Sorun listesini incele",
-    "HARD_RATE": "Kalıcı hatalar / gönderilenler",
-    "COMPLAINT_RATE": "İstenmeyen posta bildirimleri / gönderilenler",
+    "HARD_RATE": "Teslim edilmedi — kalıcı hata / SES",
+    "COMPLAINT_RATE": "İstenmeyen posta olarak işaretlendi / SES",
     "RATE": "% {value}",
-    "HYGIENE": "Adres analizi",
+    "HYGIENE": "Henüz gönderim yapılmamış alıcıların güncel analizi",
     "ANALYSIS_ONLY": "Yalnızca analiz: bu bulgular gönderimi engellemedi.",
     "ENFORCED": "Koruma etkin: engellenen adresler gönderime dahil edilmez.",
     "ISSUES": "İçe aktarma sorunlarını incele",
@@ -92,12 +92,13 @@
     "LOADING": "Yükleniyor…",
     "EMPTY": "Bu filtrelerle eşleşen sonuç yok.",
     "UNKNOWN_DATE": "Belirtilmedi",
-    "OVER_SENT": "oranı (gönderilen e-postalara göre)",
+    "OVER_SENT": "SES tarafından kabul edilen gönderimler: {count}",
     "SENT_AT": "Gönderildi: {date}",
     "IMPORT_QUEUED": "Liste alındı. İçe aktarma sıraya alındı; bu sayfadan ayrılabilirsiniz.",
     "IMPORT_PROCESSING": "Liste içe aktarılıyor. Tamamlanana kadar gönderim kullanılamaz.",
     "IMPORT_COMPLETED": "Listenin içe aktarımı tamamlandı.",
     "IMPORT_SUMMARY": "Eklenen: {imported} · Yinelenen: {duplicates} · Geçersiz: {invalid} · Gönderim dışı: {suppressed} · Toplam: {total}",
-    "DELIVERY_HINT": "Toplamlar gönderim hizmetinin kabulünü içerebilir; alıcının sunucusuna teslimat her zaman doğrulanmış değildir."
+    "DELIVERY_HINT": "Toplamlar gönderim hizmetinin kabulünü içerebilir; alıcının sunucusuna teslimat her zaman doğrulanmış değildir.",
+    "IMPORT_ORIGINAL": "İlk içe aktarma sonucu"
   }
 }

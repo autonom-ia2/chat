@@ -64,10 +64,10 @@
     "RECHECK": "Znovu zkontrolovat adresy",
     "RESUME": "Pokračovat v odesílání",
     "PROBLEMS": "Zobrazit seznam problémů",
-    "HARD_RATE": "Trvalá selhání / odesláno",
-    "COMPLAINT_RATE": "Hlášení spamu / odesláno",
+    "HARD_RATE": "Nedoručeno — trvalé selhání / SES",
+    "COMPLAINT_RATE": "Označeno jako spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Analýza adres",
+    "HYGIENE": "Aktuální analýza příjemců, kterým dosud nebylo odesláno",
     "ANALYSIS_ONLY": "Pouze analýza: tato zjištění nezabránila odesílání.",
     "ENFORCED": "Ochrana je aktivní: blokované adresy jsou z odesílání vyloučeny.",
     "ISSUES": "Zkontrolovat problémy s importem",
@@ -92,12 +92,13 @@
     "LOADING": "Načítání…",
     "EMPTY": "Pro tyto filtry nejsou žádné výsledky.",
     "UNKNOWN_DATE": "Neuvedeno",
-    "OVER_SENT": "z odeslaných e-mailů",
+    "OVER_SENT": "Odeslání přijatá službou SES: {count}",
     "SENT_AT": "Odesláno: {date}",
     "IMPORT_QUEUED": "Seznam přijat. Import je ve frontě; tuto stránku můžete opustit.",
     "IMPORT_PROCESSING": "Probíhá import seznamu. Odesílání je do jeho dokončení nedostupné.",
     "IMPORT_COMPLETED": "Import seznamu dokončen.",
     "IMPORT_SUMMARY": "Přidáno: {imported} · Duplicity: {duplicates} · Neplatné: {invalid} · Vyloučeno z odesílání: {suppressed} · Celkem: {total}",
-    "DELIVERY_HINT": "Součty mohou zahrnovat přijetí odesílací službou; doručení na server příjemce není vždy potvrzeno."
+    "DELIVERY_HINT": "Součty mohou zahrnovat přijetí odesílací službou; doručení na server příjemce není vždy potvrzeno.",
+    "IMPORT_ORIGINAL": "Původní výsledek importu"
   }
 }

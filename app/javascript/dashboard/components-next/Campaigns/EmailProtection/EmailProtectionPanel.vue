@@ -10,6 +10,7 @@ import {
   statusKey,
   reasonKey,
   formatNumber,
+  reputationDenominator,
   formatDate,
 } from './presentation';
 const props = defineProps({
@@ -44,11 +45,16 @@ const titleKey = computed(() => {
     ? 'TITLE'
     : 'HEALTH';
 });
-const reason = computed(
-  () =>
+const reason = computed(() => {
+  if (blockReason.value && blockReason.value !== 'unknown')
+    return blockReason.value;
+  if (props.campaign.pause_reason === 'hygiene_validation_required')
+    return 'review';
+  return (
     blockReason.value ||
     reasonKey(health.value?.reason_code || props.campaign.pause_reason)
-);
+  );
+});
 const canResume = computed(() =>
   canResumeCampaign({ ...props.campaign, protection: health.value })
 );
@@ -129,6 +135,9 @@ const rate = value =>
       class="m-0 text-sm text-n-slate-11"
     >
       {{ t(`${NS}.REASON.${reason}`) }}
+      <span v-if="campaign.pause_reason === 'hygiene_validation_required'">{{
+        t(`${NS}.RECHECK`)
+      }}</span>
     </p>
     <p
       v-if="['shadow', 'warning'].includes(health?.mode)"
@@ -183,6 +192,15 @@ const rate = value =>
             {{ rate(section.metrics?.complaint_rate) }}
           </dd>
         </dl>
+        <p class="m-0 text-xs text-n-slate-11">
+          {{
+            t(`${NS}.OVER_SENT`, {
+              count: number(
+                reputationDenominator(section.metrics) ?? section.metrics?.sent
+              ),
+            })
+          }}
+        </p>
       </div>
     </div>
     <template v-if="health?.provider">

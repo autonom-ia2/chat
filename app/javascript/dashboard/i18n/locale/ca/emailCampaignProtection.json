@@ -64,10 +64,10 @@
     "RECHECK": "Tornar a verificar les adreces",
     "RESUME": "Reprendre l’enviament",
     "PROBLEMS": "Consultar la llista de problemes",
-    "HARD_RATE": "Fallades permanents / enviats",
-    "COMPLAINT_RATE": "Denúncies de correu brossa / enviats",
+    "HARD_RATE": "No lliurat — fallada permanent / SES",
+    "COMPLAINT_RATE": "Marcat com a correu brossa / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Anàlisi d’adreces",
+    "HYGIENE": "Anàlisi actual dels destinataris pendents d’enviament",
     "ANALYSIS_ONLY": "Només anàlisi: aquests resultats no han impedit l’enviament.",
     "ENFORCED": "Protecció activa: les adreces bloquejades queden excloses de l’enviament.",
     "ISSUES": "Revisar els problemes d’importació",
@@ -92,12 +92,13 @@
     "LOADING": "S’està carregant…",
     "EMPTY": "Cap resultat per a aquests filtres.",
     "UNKNOWN_DATE": "No indicat",
-    "OVER_SENT": "dels correus enviats",
+    "OVER_SENT": "Enviaments acceptats per SES: {count}",
     "SENT_AT": "Enviat: {date}",
     "IMPORT_QUEUED": "Llista rebuda. Importació a la cua; pots sortir d’aquesta pàgina.",
     "IMPORT_PROCESSING": "S’està important la llista. L’enviament no estarà disponible fins que acabi.",
     "IMPORT_COMPLETED": "Importació de la llista completada.",
     "IMPORT_SUMMARY": "Afegits: {imported} · Duplicats: {duplicates} · No vàlids: {invalid} · Exclosos de l’enviament: {suppressed} · Total: {total}",
-    "DELIVERY_HINT": "Els totals poden incloure l’acceptació del servei d’enviament; el lliurament al servidor del destinatari no sempre està confirmat."
+    "DELIVERY_HINT": "Els totals poden incloure l’acceptació del servei d’enviament; el lliurament al servidor del destinatari no sempre està confirmat.",
+    "IMPORT_ORIGINAL": "Resultat original de la importació"
   }
 }

@@ -64,10 +64,10 @@
     "RECHECK": "Kontrollér adresser igen",
     "RESUME": "Genoptag afsendelse",
     "PROBLEMS": "Se problemlisten",
-    "HARD_RATE": "Permanente fejl / sendt",
-    "COMPLAINT_RATE": "Spamklager / sendt",
+    "HARD_RATE": "Ikke leveret — permanent fejl / SES",
+    "COMPLAINT_RATE": "Markeret som spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Adresseanalyse",
+    "HYGIENE": "Aktuel analyse af modtagere, der endnu ikke er sendt til",
     "ANALYSIS_ONLY": "Kun analyse: Disse resultater forhindrede ikke afsendelse.",
     "ENFORCED": "Beskyttelse aktiv: Blokerede adresser udelukkes fra afsendelse.",
     "ISSUES": "Gennemgå importproblemer",
@@ -92,12 +92,13 @@
     "LOADING": "Indlæser…",
     "EMPTY": "Ingen resultater med disse filtre.",
     "UNKNOWN_DATE": "Ikke oplyst",
-    "OVER_SENT": "af sendte e-mails",
+    "OVER_SENT": "Afsendelser accepteret af SES: {count}",
     "SENT_AT": "Sendt: {date}",
     "IMPORT_QUEUED": "Liste modtaget. Importen er sat i kø; du kan forlade denne side.",
     "IMPORT_PROCESSING": "Importerer listen. Afsendelse er ikke tilgængelig, før importen er afsluttet.",
     "IMPORT_COMPLETED": "Import af listen afsluttet.",
     "IMPORT_SUMMARY": "Tilføjet: {imported} · Dubletter: {duplicates} · Ugyldige: {invalid} · Udelukket fra afsendelse: {suppressed} · I alt: {total}",
-    "DELIVERY_HINT": "Totalerne kan omfatte accept fra afsendertjenesten; levering til modtagerens server er ikke altid bekræftet."
+    "DELIVERY_HINT": "Totalerne kan omfatte accept fra afsendertjenesten; levering til modtagerens server er ikke altid bekræftet.",
+    "IMPORT_ORIGINAL": "Oprindeligt importresultat"
   }
 }

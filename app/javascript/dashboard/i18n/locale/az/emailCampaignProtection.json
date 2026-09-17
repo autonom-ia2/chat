@@ -64,10 +64,10 @@
     "RECHECK": "Ünvanları yenidən yoxla",
     "RESUME": "Göndərişi davam etdir",
     "PROBLEMS": "Problemlər siyahısına bax",
-    "HARD_RATE": "Daimi xətalar / göndərilənlər",
-    "COMPLAINT_RATE": "Spam şikayətləri / göndərilənlər",
+    "HARD_RATE": "Çatdırılmadı — daimi xəta / SES",
+    "COMPLAINT_RATE": "Spam kimi işarələndi / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Ünvanların təhlili",
+    "HYGIENE": "Hələ göndərilməmiş alıcıların cari təhlili",
     "ANALYSIS_ONLY": "Yalnız təhlil: bu nəticələr göndərişin qarşısını almayıb.",
     "ENFORCED": "Qoruma aktivdir: bloklanmış ünvanlar göndərişdən çıxarılır.",
     "ISSUES": "İdxal problemlərini nəzərdən keçir",
@@ -92,12 +92,13 @@
     "LOADING": "Yüklənir…",
     "EMPTY": "Bu filtrlərə uyğun nəticə yoxdur.",
     "UNKNOWN_DATE": "Göstərilməyib",
-    "OVER_SENT": "göndərilmiş e-poçtların",
+    "OVER_SENT": "SES tərəfindən qəbul edilmiş göndərişlər: {count}",
     "SENT_AT": "Göndərildi: {date}",
     "IMPORT_QUEUED": "Siyahı alındı. İdxal növbəyə alındı; bu səhifədən çıxa bilərsiniz.",
     "IMPORT_PROCESSING": "Siyahı idxal edilir. Tamamlanana qədər göndəriş mümkün deyil.",
     "IMPORT_COMPLETED": "Siyahının idxalı tamamlandı.",
     "IMPORT_SUMMARY": "Əlavə edilən: {imported} · Təkrar: {duplicates} · Yanlış: {invalid} · Göndərişdən çıxarılan: {suppressed} · Cəmi: {total}",
-    "DELIVERY_HINT": "Cəmlərə göndərmə xidmətinin qəbulu daxil ola bilər; alıcının serverinə çatdırılma həmişə təsdiqlənmir."
+    "DELIVERY_HINT": "Cəmlərə göndərmə xidmətinin qəbulu daxil ola bilər; alıcının serverinə çatdırılma həmişə təsdiqlənmir.",
+    "IMPORT_ORIGINAL": "İlkin idxal nəticəsi"
   }
 }

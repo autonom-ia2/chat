@@ -23,7 +23,7 @@ const result = computed(() => {
   if (
     !counts ||
     !Number.isInteger(counts.total) ||
-    !keys.every(key => Number.isInteger(counts[key])) ||
+    !keys.every(key => Number.isInteger(counts[key]) && counts[key] >= 0) ||
     keys.reduce((sum, key) => sum + counts[key], 0) !== counts.total
   )
     return null;
@@ -39,6 +39,9 @@ const result = computed(() => {
 <template>
   <div class="contents">
     <div v-if="currentImport" class="text-sm" role="status" aria-live="polite">
+      <h3 class="m-0 text-sm font-medium text-n-slate-12">
+        {{ t(`${NS}.IMPORT_ORIGINAL`) }}
+      </h3>
       <p
         class="mb-0"
         :class="
@@ -50,9 +53,7 @@ const result = computed(() => {
         {{ message }}
       </p>
       <p
-        v-if="
-          currentImport.status === 'completed' && result && !campaign.preflight
-        "
+        v-if="currentImport.status === 'completed' && result"
         class="mb-0 text-xs text-n-slate-11"
       >
         {{ t(`${NS}.IMPORT_SUMMARY`, result) }}

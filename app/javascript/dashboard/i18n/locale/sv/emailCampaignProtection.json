@@ -64,10 +64,10 @@
     "RECHECK": "Kontrollera adresserna igen",
     "RESUME": "Återuppta sändning",
     "PROBLEMS": "Granska problemlistan",
-    "HARD_RATE": "Permanenta fel / skickade",
-    "COMPLAINT_RATE": "Skräppostanmälningar / skickade",
+    "HARD_RATE": "Inte levererat — permanent fel / SES",
+    "COMPLAINT_RATE": "Markerat som skräppost / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Adressanalys",
+    "HYGIENE": "Aktuell analys av mottagare som ännu inte fått något skickat",
     "ANALYSIS_ONLY": "Enbart analys: dessa resultat hindrade inte sändningen.",
     "ENFORCED": "Skyddet är aktivt: blockerade adresser utesluts från sändningen.",
     "ISSUES": "Granska importproblem",
@@ -92,12 +92,13 @@
     "LOADING": "Laddar…",
     "EMPTY": "Inga resultat för dessa filter.",
     "UNKNOWN_DATE": "Inte angivet",
-    "OVER_SENT": "av skickade mejl",
+    "OVER_SENT": "Sändningar som accepterats av SES: {count}",
     "SENT_AT": "Skickat: {date}",
     "IMPORT_QUEUED": "Listan har tagits emot. Importen är köad; du kan lämna den här sidan.",
     "IMPORT_PROCESSING": "Importerar listan. Sändning är inte tillgänglig förrän importen är klar.",
     "IMPORT_COMPLETED": "Importen av listan är klar.",
     "IMPORT_SUMMARY": "Tillagda: {imported} · Dubbletter: {duplicates} · Ogiltiga: {invalid} · Uteslutna från sändning: {suppressed} · Totalt: {total}",
-    "DELIVERY_HINT": "Totalsiffrorna kan omfatta acceptans från sändningstjänsten; leverans till mottagarens server är inte alltid bekräftad."
+    "DELIVERY_HINT": "Totalsiffrorna kan omfatta acceptans från sändningstjänsten; leverans till mottagarens server är inte alltid bekräftad.",
+    "IMPORT_ORIGINAL": "Ursprungligt importresultat"
   }
 }

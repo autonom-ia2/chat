@@ -64,10 +64,10 @@
     "RECHECK": "Suriin muli ang mga address",
     "RESUME": "Ipagpatuloy ang pagpapadala",
     "PROBLEMS": "Tingnan ang listahan ng mga problema",
-    "HARD_RATE": "Permanenteng pagkabigo / naipadala",
-    "COMPLAINT_RATE": "Mga ulat ng spam / naipadala",
+    "HARD_RATE": "Hindi naihatid — permanenteng pagkabigo / SES",
+    "COMPLAINT_RATE": "Minarkahang spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Pagsusuri ng mga address",
+    "HYGIENE": "Kasalukuyang pagsusuri ng mga tatanggap na hindi pa napadalhan",
     "ANALYSIS_ONLY": "Pagsusuri lamang: hindi pinigilan ng mga resultang ito ang pagpapadala.",
     "ENFORCED": "Aktibo ang proteksiyon: hindi kasama sa pagpapadala ang mga na-block na address.",
     "ISSUES": "Suriin ang mga problema sa pag-import",
@@ -92,12 +92,13 @@
     "LOADING": "Naglo-load…",
     "EMPTY": "Walang resulta para sa mga filter na ito.",
     "UNKNOWN_DATE": "Hindi ibinigay",
-    "OVER_SENT": "ng mga naipadalang email",
+    "OVER_SENT": "Mga pagpapadalang tinanggap ng SES: {count}",
     "SENT_AT": "Naipadala: {date}",
     "IMPORT_QUEUED": "Natanggap ang listahan. Nakapila ang pag-import; maaari kang umalis sa pahinang ito.",
     "IMPORT_PROCESSING": "Ini-import ang listahan. Hindi maaaring magpadala hangga't hindi ito natatapos.",
     "IMPORT_COMPLETED": "Tapos na ang pag-import ng listahan.",
     "IMPORT_SUMMARY": "Naidagdag: {imported} · Doble: {duplicates} · Di-wasto: {invalid} · Hindi kasama sa pagpapadala: {suppressed} · Kabuuan: {total}",
-    "DELIVERY_HINT": "Maaaring kasama sa mga kabuuan ang pagtanggap ng serbisyo sa pagpapadala; hindi laging kumpirmado ang paghatid sa server ng tatanggap."
+    "DELIVERY_HINT": "Maaaring kasama sa mga kabuuan ang pagtanggap ng serbisyo sa pagpapadala; hindi laging kumpirmado ang paghatid sa server ng tatanggap.",
+    "IMPORT_ORIGINAL": "Orihinal na resulta ng pag-import"
   }
 }

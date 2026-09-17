@@ -64,10 +64,10 @@
     "RECHECK": "Kontrollo përsëri adresat",
     "RESUME": "Vazhdo dërgimin",
     "PROBLEMS": "Shiko listën e problemeve",
-    "HARD_RATE": "Dështime të përhershme / të dërguara",
-    "COMPLAINT_RATE": "Raportime për postë të padëshiruar / të dërguara",
+    "HARD_RATE": "Nuk u dorëzua — dështim i përhershëm / SES",
+    "COMPLAINT_RATE": "Shënuar si postë e padëshiruar / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Analiza e adresave",
+    "HYGIENE": "Analiza aktuale e marrësve të cilëve ende nuk u është dërguar",
     "ANALYSIS_ONLY": "Vetëm analizë: këto gjetje nuk e penguan dërgimin.",
     "ENFORCED": "Mbrojtja është aktive: adresat e bllokuara përjashtohen nga dërgimi.",
     "ISSUES": "Rishiko problemet e importimit",
@@ -92,12 +92,13 @@
     "LOADING": "Duke ngarkuar…",
     "EMPTY": "Nuk ka rezultate për këta filtra.",
     "UNKNOWN_DATE": "Nuk është dhënë",
-    "OVER_SENT": "nga email-et e dërguara",
+    "OVER_SENT": "Dërgesa të pranuara nga SES: {count}",
     "SENT_AT": "Dërguar: {date}",
     "IMPORT_QUEUED": "Lista u mor. Importimi është në radhë; mund të largoheni nga kjo faqe.",
     "IMPORT_PROCESSING": "Lista po importohet. Dërgimi nuk është i disponueshëm derisa të përfundojë.",
     "IMPORT_COMPLETED": "Importimi i listës përfundoi.",
     "IMPORT_SUMMARY": "Shtuar: {imported} · Dublikata: {duplicates} · Të pavlefshme: {invalid} · Përjashtuar nga dërgimi: {suppressed} · Gjithsej: {total}",
-    "DELIVERY_HINT": "Totalet mund të përfshijnë pranimin nga shërbimi i dërgimit; dorëzimi te serveri i marrësit nuk është gjithmonë i konfirmuar."
+    "DELIVERY_HINT": "Totalet mund të përfshijnë pranimin nga shërbimi i dërgimit; dorëzimi te serveri i marrësit nuk është gjithmonë i konfirmuar.",
+    "IMPORT_ORIGINAL": "Rezultati fillestar i importimit"
   }
 }

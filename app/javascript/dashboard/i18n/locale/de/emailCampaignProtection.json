@@ -64,10 +64,10 @@
     "RECHECK": "Adressen erneut prüfen",
     "RESUME": "Versand fortsetzen",
     "PROBLEMS": "Problemliste ansehen",
-    "HARD_RATE": "Dauerhafte Fehler / gesendet",
-    "COMPLAINT_RATE": "Spam-Meldungen / gesendet",
+    "HARD_RATE": "Nicht zugestellt — dauerhafter Fehler / SES",
+    "COMPLAINT_RATE": "Als Spam gemeldet / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Adressanalyse",
+    "HYGIENE": "Aktuelle Analyse der noch nicht angeschriebenen Empfänger",
     "ANALYSIS_ONLY": "Nur Analyse: Diese Ergebnisse haben den Versand nicht verhindert.",
     "ENFORCED": "Schutz aktiv: Blockierte Adressen werden vom Versand ausgeschlossen.",
     "ISSUES": "Importprobleme prüfen",
@@ -92,12 +92,13 @@
     "LOADING": "Wird geladen…",
     "EMPTY": "Keine Ergebnisse für diese Filter.",
     "UNKNOWN_DATE": "Nicht angegeben",
-    "OVER_SENT": "aller gesendeten E-Mails",
+    "OVER_SENT": "Von SES akzeptierte Sendungen: {count}",
     "SENT_AT": "Gesendet: {date}",
     "IMPORT_QUEUED": "Liste erhalten. Import eingereiht; Sie können diese Seite verlassen.",
     "IMPORT_PROCESSING": "Die Liste wird importiert. Bis zum Abschluss ist kein Versand möglich.",
     "IMPORT_COMPLETED": "Listenimport abgeschlossen.",
     "IMPORT_SUMMARY": "Hinzugefügt: {imported} · Duplikate: {duplicates} · Ungültig: {invalid} · Vom Versand ausgeschlossen: {suppressed} · Insgesamt: {total}",
-    "DELIVERY_HINT": "Die Summen können Annahmen durch den Versanddienst enthalten; die Zustellung an den Empfängerserver ist nicht immer bestätigt."
+    "DELIVERY_HINT": "Die Summen können Annahmen durch den Versanddienst enthalten; die Zustellung an den Empfängerserver ist nicht immer bestätigt.",
+    "IMPORT_ORIGINAL": "Ursprüngliches Importergebnis"
   }
 }

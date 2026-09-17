@@ -128,7 +128,13 @@ const copyEmail = async recipient => {
     exportError.value = t(`${NS}.ERROR`);
   }
 };
-useEmailReportRefresh(() => (!isPending.value ? fetchRecipients() : undefined));
+useEmailReportRefresh(
+  () => (!isPending.value ? fetchRecipients() : undefined),
+  () =>
+    recipients.value.some(
+      row => row.status === 'pending' || row.preflight_status === 'unchecked'
+    )
+);
 onBeforeUnmount(() => clearTimeout(searchTimer));
 const showProblems = () => {
   search.value = '';

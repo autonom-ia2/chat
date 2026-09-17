@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useToggle } from '@vueuse/core';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useEmitter } from 'dashboard/composables/emitter';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { useAlert } from 'dashboard/composables';
 import { isRecipientImportActive } from 'dashboard/helper/emailCampaignImport';
 import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
@@ -14,6 +16,7 @@ import EmailCampaignHealth from 'dashboard/components-next/Campaigns/EmailProtec
 import {
   NS,
   safeError,
+  hasActiveEmailWork,
   formatNumber,
 } from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
 import { useEmailReportRefresh } from 'dashboard/components-next/Campaigns/EmailProtection/useEmailReportRefresh';
@@ -112,8 +115,11 @@ watch(campaignStatus, () => {
   });
   fetchCampaigns();
 });
-useEmailReportRefresh(() =>
-  !request.isPending.value ? fetchCampaigns(true) : undefined
+useEmitter(BUS_EVENTS.EMAIL_CAMPAIGN_AI_READY, () => fetchCampaigns(true));
+useEmitter(BUS_EVENTS.EMAIL_CAMPAIGN_AI_FAILED, () => fetchCampaigns(true));
+useEmailReportRefresh(
+  () => (!request.isPending.value ? fetchCampaigns(true) : undefined),
+  () => campaigns.value.some(hasActiveEmailWork)
 );
 
 const openCompose = () => {

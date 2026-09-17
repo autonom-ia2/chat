@@ -1,3 +1,107 @@
+export const importPopulationCampaign = {
+  id: 4361,
+  status: 'paused',
+  pause_reason: 'hygiene_validation_required',
+  recipient_import: {
+    status: 'completed',
+    result: { total: 3, imported: 1, duplicates: 1, invalid: 1, suppressed: 0 },
+  },
+  preflight: {
+    status: 'analysing',
+    mode: 'enforce',
+    counts_basis: 'current_unsent_recipients',
+    counts: { total: 1, unchecked: 1 },
+    can_recheck: true,
+  },
+};
+export const mixedReputationSummary = {
+  open_rate: 0,
+  click_rate: 0,
+  unsubscribe_rate: 0,
+  delivered: 3,
+  opened: 0,
+  clicked: 0,
+  temporary_bounced: 0,
+  unknown_bounced: 0,
+  unsubscribed: 0,
+  delivery_evidence: {
+    provider_confirmed: 0,
+    direct_acceptance_only: 3,
+    legacy_delivered_includes_acceptance: true,
+  },
+  sent: 4,
+  permanent_bounced: 1,
+  complained: 0,
+  hard_bounce_rate: 100,
+  complaint_rate: 0,
+  reputation_coverage: {
+    sent: 1,
+    excluded_direct_sent: 3,
+    scope: 'selected_ses_campaigns',
+    official_ses_ratio: false,
+  },
+  rate_metadata: {
+    hard_bounce_rate: {
+      value: 100,
+      numerator: 1,
+      denominator: 1,
+      basis: 'ses_accepted_recipients',
+    },
+    complaint_rate: {
+      value: 0,
+      numerator: 0,
+      denominator: 1,
+      basis: 'ses_accepted_recipients',
+    },
+  },
+};
+export const mixedReputationCampaigns = [
+  {
+    ...mixedReputationSummary,
+    id: 4361,
+    name: 'QA SES',
+    status: 'sent',
+    delivery_mode: 'ses',
+    sent: 1,
+    delivered: 0,
+    delivery_evidence: {
+      provider_confirmed: 0,
+      direct_acceptance_only: 0,
+      legacy_delivered_includes_acceptance: false,
+    },
+  },
+  {
+    ...mixedReputationSummary,
+    id: 4362,
+    name: 'QA direct',
+    status: 'sent',
+    delivery_mode: 'direct_inbox',
+    sent: 3,
+    permanent_bounced: 0,
+    hard_bounce_rate: null,
+    complaint_rate: null,
+    rate_metadata: {
+      hard_bounce_rate: {
+        value: null,
+        numerator: 0,
+        denominator: 0,
+        basis: 'ses_accepted_recipients',
+      },
+      complaint_rate: {
+        value: null,
+        numerator: 0,
+        denominator: 0,
+        basis: 'ses_accepted_recipients',
+      },
+    },
+    reputation_coverage: {
+      sent: 0,
+      excluded_direct_sent: 3,
+      scope: 'selected_ses_campaigns',
+      official_ses_ratio: false,
+    },
+  },
+];
 export const current = {
   sent: 1200,
   permanent_bounces: 18,
@@ -208,7 +312,11 @@ export function responseFor(url, method, state) {
   if (method === 'POST') return error(503);
   if (path.endsWith('/reports')) {
     if (state.reportError) return error(500);
-    let selected = campaigns.filter(
+    let selected = (
+      state.scenario === 'mixed-denominator'
+        ? mixedReputationCampaigns
+        : campaigns
+    ).filter(
       c =>
         !params.get('campaign_id') || String(c.id) === params.get('campaign_id')
     );
@@ -221,7 +329,8 @@ export function responseFor(url, method, state) {
     selected = selected.map(c => {
       const direct =
         state.scenario === 'direct' ||
-        (state.scenario === 'mixed' && c.id === 4362);
+        (['mixed', 'mixed-denominator'].includes(state.scenario) &&
+          c.id === 4362);
       return {
         ...c,
         delivery_mode: direct ? 'direct_inbox' : 'ses',
@@ -234,7 +343,25 @@ export function responseFor(url, method, state) {
           : c.delivery_evidence,
       };
     });
+    if (state.scenario === 'import-populations') {
+      selected = selected.map(c =>
+        c.id === 4361
+          ? {
+              ...c,
+              ...importPopulationCampaign,
+              protection: { state: 'unknown' },
+            }
+          : c
+      );
+    }
     const summary = { ...campaigns[0], delivery_evidence: evidence };
+    if (state.scenario === 'mixed-denominator') {
+      Object.assign(
+        summary,
+        params.get('campaign_id') ? selected[0] : mixedReputationSummary
+      );
+      if (!params.get('campaign_id')) delete summary.delivery_mode;
+    }
     if (state.scenario === 'mixed') {
       delete summary.delivery_mode;
       for (const key of [

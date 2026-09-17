@@ -64,10 +64,10 @@
     "RECHECK": "Adressen opnieuw controleren",
     "RESUME": "Verzending hervatten",
     "PROBLEMS": "Probleemlijst bekijken",
-    "HARD_RATE": "Permanente fouten / verzonden",
-    "COMPLAINT_RATE": "Spammeldingen / verzonden",
+    "HARD_RATE": "Niet afgeleverd — permanente fout / SES",
+    "COMPLAINT_RATE": "Als spam gemeld / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Adresanalyse",
+    "HYGIENE": "Huidige analyse van ontvangers aan wie nog niet is verzonden",
     "ANALYSIS_ONLY": "Alleen analyse: deze bevindingen hebben de verzending niet verhinderd.",
     "ENFORCED": "Bescherming actief: geblokkeerde adressen worden uitgesloten van verzending.",
     "ISSUES": "Importproblemen bekijken",
@@ -92,12 +92,13 @@
     "LOADING": "Laden…",
     "EMPTY": "Geen resultaten voor deze filters.",
     "UNKNOWN_DATE": "Niet opgegeven",
-    "OVER_SENT": "van verzonden e-mails",
+    "OVER_SENT": "Door SES geaccepteerde verzendingen: {count}",
     "SENT_AT": "Verzonden: {date}",
     "IMPORT_QUEUED": "Lijst ontvangen. Import staat in de wachtrij; je kunt deze pagina verlaten.",
     "IMPORT_PROCESSING": "De lijst wordt geïmporteerd. Verzenden is pas beschikbaar wanneer dit voltooid is.",
     "IMPORT_COMPLETED": "Import van de lijst voltooid.",
     "IMPORT_SUMMARY": "Toegevoegd: {imported} · Duplicaten: {duplicates} · Ongeldig: {invalid} · Uitgesloten van verzending: {suppressed} · Totaal: {total}",
-    "DELIVERY_HINT": "Totalen kunnen acceptatie door de verzenddienst bevatten; aflevering bij de server van de ontvanger is niet altijd bevestigd."
+    "DELIVERY_HINT": "Totalen kunnen acceptatie door de verzenddienst bevatten; aflevering bij de server van de ontvanger is niet altijd bevestigd.",
+    "IMPORT_ORIGINAL": "Oorspronkelijk importresultaat"
   }
 }

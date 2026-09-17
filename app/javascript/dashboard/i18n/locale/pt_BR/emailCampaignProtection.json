@@ -64,10 +64,10 @@
     "RECHECK": "Verificar endereços novamente",
     "RESUME": "Retomar envio",
     "PROBLEMS": "Ver lista de problemas",
-    "HARD_RATE": "Falhas permanentes / enviados",
-    "COMPLAINT_RATE": "Marcações como spam / enviados",
+    "HARD_RATE": "Não entregue — falha permanente / SES",
+    "COMPLAINT_RATE": "Marcado como spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Análise dos endereços",
+    "HYGIENE": "Análise atual dos destinatários ainda não enviados",
     "ANALYSIS_ONLY": "Somente análise: estes resultados não impediram o envio.",
     "ENFORCED": "Proteção ativa: endereços bloqueados ficam fora do envio.",
     "ISSUES": "Revisar problemas da importação",
@@ -92,12 +92,13 @@
     "LOADING": "Carregando…",
     "EMPTY": "Nenhum resultado para estes filtros.",
     "UNKNOWN_DATE": "Não informado",
-    "OVER_SENT": "dos e-mails enviados",
+    "OVER_SENT": "Envios aceitos pelo SES: {count}",
     "SENT_AT": "Enviado: {date}",
     "IMPORT_QUEUED": "Lista recebida. Importação na fila; você pode sair desta página.",
     "IMPORT_PROCESSING": "Importando a lista. O envio fica indisponível até a conclusão.",
     "IMPORT_COMPLETED": "Importação da lista concluída.",
     "IMPORT_SUMMARY": "Adicionados: {imported} · Duplicados: {duplicates} · Inválidos: {invalid} · Fora do envio: {suppressed} · Total: {total}",
-    "DELIVERY_HINT": "Os totais podem incluir aceitação pelo serviço de envio; a entrega ao servidor do destinatário nem sempre está confirmada."
+    "DELIVERY_HINT": "Os totais podem incluir aceitação pelo serviço de envio; a entrega ao servidor do destinatário nem sempre está confirmada.",
+    "IMPORT_ORIGINAL": "Resultado original da importação"
   }
 }

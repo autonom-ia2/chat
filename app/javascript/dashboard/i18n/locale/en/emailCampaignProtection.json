@@ -64,10 +64,10 @@
     "RECHECK": "Check addresses again",
     "RESUME": "Resume sending",
     "PROBLEMS": "Inspect problem list",
-    "HARD_RATE": "Permanent failures / sent",
-    "COMPLAINT_RATE": "Spam reports / sent",
+    "HARD_RATE": "Not delivered — permanent failure / SES",
+    "COMPLAINT_RATE": "Marked as spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Address analysis",
+    "HYGIENE": "Current analysis of unsent recipients",
     "ANALYSIS_ONLY": "Analysis only: these findings did not prevent sending.",
     "ENFORCED": "Protection active: blocked addresses are excluded from sending.",
     "ISSUES": "Review import issues",
@@ -92,12 +92,13 @@
     "LOADING": "Loading…",
     "EMPTY": "No results for these filters.",
     "UNKNOWN_DATE": "Not informed",
-    "OVER_SENT": "of sent emails",
+    "OVER_SENT": "SES accepted sends: {count}",
     "SENT_AT": "Sent: {date}",
     "IMPORT_QUEUED": "List received. Import queued; you can leave this page.",
     "IMPORT_PROCESSING": "Importing the list. Sending is unavailable until it finishes.",
     "IMPORT_COMPLETED": "List import completed.",
     "IMPORT_SUMMARY": "Added: {imported} · Duplicates: {duplicates} · Invalid: {invalid} · Excluded from sending: {suppressed} · Total: {total}",
-    "DELIVERY_HINT": "Totals may include acceptance by the sending service; delivery to the recipient server is not always confirmed."
+    "DELIVERY_HINT": "Totals may include acceptance by the sending service; delivery to the recipient server is not always confirmed.",
+    "IMPORT_ORIGINAL": "Original import result"
   }
 }

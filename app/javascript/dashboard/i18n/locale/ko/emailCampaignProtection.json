@@ -64,10 +64,10 @@
     "RECHECK": "주소 다시 확인",
     "RESUME": "발송 재개",
     "PROBLEMS": "문제 목록 확인",
-    "HARD_RATE": "영구적 오류 / 발송 건수",
-    "COMPLAINT_RATE": "스팸 신고 / 발송 건수",
+    "HARD_RATE": "전달되지 않음 — 영구적 오류 / SES",
+    "COMPLAINT_RATE": "스팸으로 신고됨 / SES",
     "RATE": "{value}%",
-    "HYGIENE": "주소 분석",
+    "HYGIENE": "아직 발송하지 않은 수신자의 현재 분석",
     "ANALYSIS_ONLY": "분석만 수행: 이 결과로 인해 발송이 차단되지는 않았습니다.",
     "ENFORCED": "보호 활성화: 차단된 주소는 발송 대상에서 제외됩니다.",
     "ISSUES": "가져오기 문제 검토",
@@ -92,12 +92,13 @@
     "LOADING": "불러오는 중…",
     "EMPTY": "이 필터에 해당하는 결과가 없습니다.",
     "UNKNOWN_DATE": "제공되지 않음",
-    "OVER_SENT": "발송된 이메일 중",
+    "OVER_SENT": "SES가 수락한 발송 수: {count}",
     "SENT_AT": "발송: {date}",
     "IMPORT_QUEUED": "목록을 받았습니다. 가져오기가 대기 중이며 이 페이지를 나가도 됩니다.",
     "IMPORT_PROCESSING": "목록을 가져오는 중입니다. 완료될 때까지 발송할 수 없습니다.",
     "IMPORT_COMPLETED": "목록 가져오기가 완료되었습니다.",
     "IMPORT_SUMMARY": "추가: {imported} · 중복: {duplicates} · 유효하지 않음: {invalid} · 발송 제외: {suppressed} · 합계: {total}",
-    "DELIVERY_HINT": "합계에는 발송 서비스의 수락이 포함될 수 있으며, 수신자 서버로의 전달이 항상 확인된 것은 아닙니다."
+    "DELIVERY_HINT": "합계에는 발송 서비스의 수락이 포함될 수 있으며, 수신자 서버로의 전달이 항상 확인된 것은 아닙니다.",
+    "IMPORT_ORIGINAL": "원래 가져오기 결과"
   }
 }

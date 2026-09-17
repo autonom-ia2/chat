@@ -21,17 +21,21 @@ const classifications = [
 ];
 // Counts are mutually exclusive server classifications. Never infer zeros or
 // subtract overlapping legacy import counters to manufacture readiness.
+const suppliedClassifications = computed(() =>
+  classifications.filter(key =>
+    Object.hasOwn(props.preflight?.counts || {}, key)
+  )
+);
 const reconciled = computed(() => {
   const counts = props.preflight?.counts;
   return (
     counts &&
     Number.isInteger(counts.total) &&
-    classifications.every(
-      key =>
-        (Number.isInteger(counts[key]) && counts[key] >= 0) ||
-        (key === 'duplicate' && counts[key] === undefined)
+    counts.total >= 0 &&
+    suppliedClassifications.value.every(
+      key => Number.isInteger(counts[key]) && counts[key] >= 0
     ) &&
-    classifications.reduce((sum, key) => sum + (counts[key] || 0), 0) ===
+    suppliedClassifications.value.reduce((sum, key) => sum + counts[key], 0) ===
       counts.total
   );
 });
@@ -74,10 +78,10 @@ const state = computed(
       {{ t(`${NS}.${reconciled ? 'CLASSIFICATION' : 'PENDING_COUNTS'}`) }}
     </p>
     <dl v-if="reconciled" class="grid grid-cols-2 gap-3 m-0 sm:grid-cols-4">
-      <div v-for="key in ['total', ...classifications]" :key="key">
+      <div v-for="key in ['total', ...suppliedClassifications]" :key="key">
         <dt class="text-xs text-n-slate-11">{{ t(`${NS}.STATUS.${key}`) }}</dt>
         <dd class="m-0 text-sm font-medium text-n-slate-12">
-          {{ formatNumber(preflight.counts[key] ?? 0, locale) }}
+          {{ formatNumber(preflight.counts[key], locale) }}
         </dd>
       </div>
     </dl>

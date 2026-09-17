@@ -64,10 +64,10 @@
     "RECHECK": "Periksa alamat lagi",
     "RESUME": "Lanjutkan pengiriman",
     "PROBLEMS": "Periksa daftar masalah",
-    "HARD_RATE": "Kegagalan permanen / terkirim",
-    "COMPLAINT_RATE": "Laporan spam / terkirim",
+    "HARD_RATE": "Tidak tersampaikan — kegagalan permanen / SES",
+    "COMPLAINT_RATE": "Ditandai sebagai spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Analisis alamat",
+    "HYGIENE": "Analisis saat ini untuk penerima yang belum dikirimi",
     "ANALYSIS_ONLY": "Hanya analisis: temuan ini tidak mencegah pengiriman.",
     "ENFORCED": "Perlindungan aktif: alamat yang diblokir dikecualikan dari pengiriman.",
     "ISSUES": "Tinjau masalah impor",
@@ -92,12 +92,13 @@
     "LOADING": "Memuat…",
     "EMPTY": "Tidak ada hasil untuk filter ini.",
     "UNKNOWN_DATE": "Tidak diinformasikan",
-    "OVER_SENT": "dari email terkirim",
+    "OVER_SENT": "Pengiriman yang diterima SES: {count}",
     "SENT_AT": "Terkirim: {date}",
     "IMPORT_QUEUED": "Daftar diterima. Impor masuk antrean; Anda dapat meninggalkan halaman ini.",
     "IMPORT_PROCESSING": "Mengimpor daftar. Pengiriman tidak tersedia hingga impor selesai.",
     "IMPORT_COMPLETED": "Impor daftar selesai.",
     "IMPORT_SUMMARY": "Ditambahkan: {imported} · Duplikat: {duplicates} · Tidak valid: {invalid} · Dikecualikan dari pengiriman: {suppressed} · Total: {total}",
-    "DELIVERY_HINT": "Total dapat mencakup penerimaan oleh layanan pengiriman; pengiriman ke server penerima tidak selalu terkonfirmasi."
+    "DELIVERY_HINT": "Total dapat mencakup penerimaan oleh layanan pengiriman; pengiriman ke server penerima tidak selalu terkonfirmasi.",
+    "IMPORT_ORIGINAL": "Hasil impor awal"
   }
 }

@@ -68,7 +68,8 @@ describe.each(['en', 'pt_BR'])('server protection actions (%s)', locale => {
     API.recheck.mockRejectedValue({
       response: {
         data: {
-          error_code: 'ses_account_paused',
+          error: 'email_campaign.protected',
+          protection: { code: 'provider_blocked' },
           message: 'private provider token',
         },
       },
@@ -149,9 +150,14 @@ describe.each(['en', 'pt_BR'])('server protection actions (%s)', locale => {
         .some(item => item.text() === t('EMAIL_CAMPAIGN_PROTECTION.RESUME'))
     ).toBe(false);
   });
-  it.each(['provider_blocked', 'private unknown exception'])(
+  it.each([
+    ['provider_blocked', 'provider'],
+    ['hygiene_validation_required', 'review'],
+    ['reputation_paused', 'reputation'],
+    ['private unknown exception', null],
+  ])(
     'keeps pause and trigger on resume error %s without exposing server details',
-    async code => {
+    async (code, reason) => {
       const eligible = {
         ...campaign,
         protection: {
@@ -169,7 +175,11 @@ describe.each(['en', 'pt_BR'])('server protection actions (%s)', locale => {
       await wrapper.setProps({ campaign: eligible });
       API.resume.mockRejectedValue({
         response: {
-          data: { error_code: code, message: 'private provider token' },
+          data: {
+            error: 'email_campaign.protected',
+            protection: { code },
+            message: 'private provider token',
+          },
         },
       });
       const trigger = wrapper.find('[data-section="TRIGGER"]').text();
@@ -182,8 +192,8 @@ describe.each(['en', 'pt_BR'])('server protection actions (%s)', locale => {
       expect(wrapper.find('[data-section="TRIGGER"]').text()).toBe(trigger);
       expect(wrapper.find('[role="alert"]').text()).toBe(
         t(
-          code === 'provider_blocked'
-            ? 'EMAIL_CAMPAIGN_PROTECTION.REASON.provider'
+          reason
+            ? `EMAIL_CAMPAIGN_PROTECTION.REASON.${reason}`
             : 'EMAIL_CAMPAIGN_PROTECTION.ERROR'
         )
       );

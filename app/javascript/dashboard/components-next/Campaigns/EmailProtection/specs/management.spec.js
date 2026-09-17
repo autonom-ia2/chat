@@ -340,3 +340,60 @@ it('keeps a mixed total conserved while labeling each campaign by its own source
   expect(cards[2].find('.text-2xl').text()).toBe('—');
   expect(rows.every(row => row.findAll('td')[4].text() === '—')).toBe(true);
 });
+
+it.each(['metadata', 'coverage', 'missing'])(
+  'uses SES acceptance instead of four mixed sends (%s)',
+  async source => {
+    const summary = {
+      sent: 4,
+      permanent_bounced: 1,
+      complained: 0,
+      hard_bounce_rate: 100,
+      complaint_rate: 0,
+      ...(source === 'metadata'
+        ? {
+            rate_metadata: {
+              hard_bounce_rate: { denominator: 1 },
+              complaint_rate: { denominator: 1 },
+            },
+          }
+        : {}),
+      ...(source === 'coverage' ? { reputation_coverage: { sent: 1 } } : {}),
+    };
+    Reports.getReports.mockResolvedValue({
+      data: {
+        payload: {
+          summary,
+          campaigns: [{ ...summary, id: 1, name: 'Mixed', status: 'sent' }],
+        },
+      },
+    });
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', component: Page }],
+    });
+    await router.push('/');
+    const i18n = createI18n({
+      legacy: false,
+      locale: 'en',
+      fallbackLocale: false,
+      messages: { en: { ...en, ...crm } },
+    });
+    wrapper = mount(Page, { global: { plugins: [i18n, router] } });
+    await flushPromises();
+    const cards = wrapper.findAll('section.grid > div');
+    expect(cards[0].find('.text-2xl').text()).toBe('4');
+    const denominator = source === 'missing' ? '—' : '1';
+    expect(cards[5].text()).toContain(
+      `100% SES accepted sends: ${denominator}`
+    );
+    expect(cards[6].text()).toContain(`0% SES accepted sends: ${denominator}`);
+    expect(wrapper.findAll('table').at(-1).text()).toContain(
+      `SES accepted sends: ${denominator}`
+    );
+    expect(wrapper.text()).not.toContain('of sent emails');
+    expect(wrapper.text()).toContain(
+      i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.SCOPE')
+    );
+  }
+);

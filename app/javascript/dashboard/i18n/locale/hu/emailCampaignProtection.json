@@ -64,10 +64,10 @@
     "RECHECK": "Címek ismételt ellenőrzése",
     "RESUME": "Küldés folytatása",
     "PROBLEMS": "Problémák listájának megtekintése",
-    "HARD_RATE": "Végleges hibák / elküldött levelek",
-    "COMPLAINT_RATE": "Levélszemét-bejelentések / elküldött levelek",
+    "HARD_RATE": "Nem kézbesítve — végleges hiba / SES",
+    "COMPLAINT_RATE": "Levélszemétként jelentve / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Címek elemzése",
+    "HYGIENE": "Azon címzettek aktuális elemzése, akiknek még nem történt küldés",
     "ANALYSIS_ONLY": "Csak elemzés: ezek az eredmények nem akadályozták meg a küldést.",
     "ENFORCED": "A védelem aktív: a blokkolt címek ki vannak zárva a küldésből.",
     "ISSUES": "Importálási problémák áttekintése",
@@ -92,12 +92,13 @@
     "LOADING": "Betöltés…",
     "EMPTY": "Nincs találat ezekkel a szűrőkkel.",
     "UNKNOWN_DATE": "Nincs megadva",
-    "OVER_SENT": "az elküldött e-mailekből",
+    "OVER_SENT": "A SES által elfogadott küldések: {count}",
     "SENT_AT": "Elküldve: {date}",
     "IMPORT_QUEUED": "A lista megérkezett. Az importálás várólistára került; elhagyhatja ezt az oldalt.",
     "IMPORT_PROCESSING": "A lista importálása folyamatban van. A küldés a befejezésig nem érhető el.",
     "IMPORT_COMPLETED": "A lista importálása befejeződött.",
     "IMPORT_SUMMARY": "Hozzáadva: {imported} · Ismétlődések: {duplicates} · Érvénytelen: {invalid} · Küldésből kizárva: {suppressed} · Összesen: {total}",
-    "DELIVERY_HINT": "Az összesítések tartalmazhatják a küldőszolgáltatás általi elfogadást; a címzett szerverére történő kézbesítés nem mindig igazolt."
+    "DELIVERY_HINT": "Az összesítések tartalmazhatják a küldőszolgáltatás általi elfogadást; a címzett szerverére történő kézbesítés nem mindig igazolt.",
+    "IMPORT_ORIGINAL": "Eredeti importálási eredmény"
   }
 }

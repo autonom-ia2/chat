@@ -64,10 +64,10 @@
     "RECHECK": "Verifică din nou adresele",
     "RESUME": "Reia trimiterea",
     "PROBLEMS": "Examinează lista de probleme",
-    "HARD_RATE": "Erori permanente / e-mailuri trimise",
-    "COMPLAINT_RATE": "Raportări de spam / e-mailuri trimise",
+    "HARD_RATE": "Nelivrat — eroare permanentă / SES",
+    "COMPLAINT_RATE": "Marcat ca spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Analiza adreselor",
+    "HYGIENE": "Analiza actuală a destinatarilor fără trimitere efectuată",
     "ANALYSIS_ONLY": "Doar analiză: aceste rezultate nu au împiedicat trimiterea.",
     "ENFORCED": "Protecție activă: adresele blocate sunt excluse de la trimitere.",
     "ISSUES": "Verifică problemele de import",
@@ -92,12 +92,13 @@
     "LOADING": "Se încarcă…",
     "EMPTY": "Niciun rezultat pentru aceste filtre.",
     "UNKNOWN_DATE": "Nespecificat",
-    "OVER_SENT": "din e-mailurile trimise",
+    "OVER_SENT": "Trimiteri acceptate de SES: {count}",
     "SENT_AT": "Trimis: {date}",
     "IMPORT_QUEUED": "Listă primită. Importul este în așteptare; poți părăsi această pagină.",
     "IMPORT_PROCESSING": "Se importă lista. Trimiterea nu este disponibilă până la finalizare.",
     "IMPORT_COMPLETED": "Importul listei a fost finalizat.",
     "IMPORT_SUMMARY": "Adăugate: {imported} · Duplicate: {duplicates} · Nevalide: {invalid} · Excluse de la trimitere: {suppressed} · Total: {total}",
-    "DELIVERY_HINT": "Totalurile pot include acceptarea de către serviciul de trimitere; livrarea la serverul destinatarului nu este întotdeauna confirmată."
+    "DELIVERY_HINT": "Totalurile pot include acceptarea de către serviciul de trimitere; livrarea la serverul destinatarului nu este întotdeauna confirmată.",
+    "IMPORT_ORIGINAL": "Rezultatul inițial al importului"
   }
 }

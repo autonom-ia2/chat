@@ -3,6 +3,8 @@ import en from 'dashboard/i18n/locale/en/emailCampaignProtection.json';
 import pt from 'dashboard/i18n/locale/pt_BR/emailCampaignProtection.json';
 import {
   statusKey,
+  safeError,
+  reputationDenominator,
   canResumeCampaign,
   reasonKey,
   deliveryKey,
@@ -215,5 +217,45 @@ describe('delivery provenance', () => {
     expect(RECIPIENT_STATUSES).toContain('delivered');
     expect(RECIPIENT_STATUSES).not.toContain('accepted_service');
     expect(RECIPIENT_STATUSES).not.toContain('acceptance_recorded');
+  });
+});
+
+describe('reputation denominator and safe errors', () => {
+  it('uses rate metadata before SES coverage, never mixed total sent', () => {
+    expect(reputationDenominator({ sent: 4 })).toBeUndefined();
+    expect(reputationDenominator(null)).toBeUndefined();
+    expect(
+      reputationDenominator({ sent: 4, reputation_coverage: { sent: 1 } })
+    ).toBe(1);
+    expect(
+      reputationDenominator(
+        {
+          sent: 4,
+          reputation_coverage: { sent: 1 },
+          rate_metadata: { complaint_rate: { denominator: 0 } },
+        },
+        'complaint_rate'
+      )
+    ).toBe(0);
+  });
+  it('prefers nested protection and never reflects arbitrary server text', () => {
+    expect(
+      safeError(key => key, {
+        response: {
+          data: {
+            error_code: 'invalid_email',
+            error: 'private',
+            protection: { code: 'provider_blocked' },
+          },
+        },
+      })
+    ).toBe('EMAIL_CAMPAIGN_PROTECTION.REASON.provider');
+    ['private', 'toString', '__proto__'].forEach(code => {
+      expect(
+        safeError(key => key, {
+          response: { data: { error: code, protection: { code } } },
+        })
+      ).toBe('EMAIL_CAMPAIGN_PROTECTION.ERROR');
+    });
   });
 });

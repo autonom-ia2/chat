@@ -64,10 +64,10 @@
     "RECHECK": "Kiểm tra lại địa chỉ",
     "RESUME": "Tiếp tục gửi",
     "PROBLEMS": "Xem danh sách vấn đề",
-    "HARD_RATE": "Lỗi vĩnh viễn / đã gửi",
-    "COMPLAINT_RATE": "Báo cáo thư rác / đã gửi",
+    "HARD_RATE": "Không được phát — lỗi vĩnh viễn / SES",
+    "COMPLAINT_RATE": "Đã đánh dấu là thư rác / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Phân tích địa chỉ",
+    "HYGIENE": "Phân tích hiện tại về người nhận chưa được gửi thư",
     "ANALYSIS_ONLY": "Chỉ phân tích: những kết quả này không ngăn việc gửi.",
     "ENFORCED": "Đang bảo vệ: địa chỉ bị chặn được loại khỏi danh sách gửi.",
     "ISSUES": "Xem xét vấn đề khi nhập",
@@ -92,12 +92,13 @@
     "LOADING": "Đang tải…",
     "EMPTY": "Không có kết quả cho các bộ lọc này.",
     "UNKNOWN_DATE": "Chưa cung cấp",
-    "OVER_SENT": "trong số email đã gửi",
+    "OVER_SENT": "Lượt gửi được SES chấp nhận: {count}",
     "SENT_AT": "Đã gửi: {date}",
     "IMPORT_QUEUED": "Đã nhận danh sách. Đang chờ nhập; bạn có thể rời trang này.",
     "IMPORT_PROCESSING": "Đang nhập danh sách. Chưa thể gửi cho đến khi hoàn tất.",
     "IMPORT_COMPLETED": "Đã nhập xong danh sách.",
     "IMPORT_SUMMARY": "Đã thêm: {imported} · Trùng lặp: {duplicates} · Không hợp lệ: {invalid} · Loại khỏi danh sách gửi: {suppressed} · Tổng: {total}",
-    "DELIVERY_HINT": "Tổng số có thể bao gồm việc dịch vụ gửi chấp nhận; việc chuyển đến máy chủ người nhận không phải lúc nào cũng được xác nhận."
+    "DELIVERY_HINT": "Tổng số có thể bao gồm việc dịch vụ gửi chấp nhận; việc chuyển đến máy chủ người nhận không phải lúc nào cũng được xác nhận.",
+    "IMPORT_ORIGINAL": "Kết quả nhập ban đầu"
   }
 }

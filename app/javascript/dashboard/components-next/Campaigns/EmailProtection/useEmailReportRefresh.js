@@ -1,23 +1,44 @@
-import { onMounted, onBeforeUnmount } from 'vue';
-// Late delivery events can arrive after sending pauses or finishes. One visible
-// refresh per minute, at most ten per mount; manual refresh remains available.
-export function useEmailReportRefresh(refresh) {
+import { onMounted, onBeforeUnmount, watch } from 'vue';
+const ACTIVE_DELAY = 60000;
+const MAX_IDLE_DELAY = 300000;
+// Active work stays fresh. Idle reports still receive late delivery events,
+// backing off to five minutes without an arbitrary end to updates.
+export function useEmailReportRefresh(refresh, isActive = () => false) {
   let timer;
-  let remaining = 10;
+  let delay = ACTIVE_DELAY;
+  let stopped = true;
   let pending = false;
-  onMounted(() => {
-    timer = setInterval(async () => {
-      if (document.visibilityState !== 'visible' || pending || !remaining)
-        return;
-      remaining -= 1;
-      pending = true;
-      try {
-        await refresh();
-      } finally {
-        pending = false;
+  const schedule = () => {
+    if (stopped) return;
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      if (document.visibilityState === 'visible') {
+        pending = true;
+        try {
+          await refresh();
+        } finally {
+          pending = false;
+          delay = isActive()
+            ? ACTIVE_DELAY
+            : Math.min(delay * 2, MAX_IDLE_DELAY);
+          schedule();
+        }
+      } else {
+        schedule();
       }
-      if (!remaining) clearInterval(timer);
-    }, 60000);
+    }, delay);
+  };
+  watch(isActive, active => {
+    if (!active) return;
+    delay = ACTIVE_DELAY;
+    if (!pending) schedule();
   });
-  onBeforeUnmount(() => clearInterval(timer));
+  onMounted(() => {
+    stopped = false;
+    schedule();
+  });
+  onBeforeUnmount(() => {
+    stopped = true;
+    clearTimeout(timer);
+  });
 }

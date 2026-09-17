@@ -64,10 +64,10 @@
     "RECHECK": "Athuga netföng aftur",
     "RESUME": "Halda sendingu áfram",
     "PROBLEMS": "Skoða vandamálalista",
-    "HARD_RATE": "Varanlegar villur / sent",
-    "COMPLAINT_RATE": "Tilkynningar um ruslpóst / sent",
+    "HARD_RATE": "Ekki afhent — varanleg villa / SES",
+    "COMPLAINT_RATE": "Merkt sem ruslpóstur / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Greining netfanga",
+    "HYGIENE": "Núverandi greining viðtakenda sem ekki hefur verið sent til",
     "ANALYSIS_ONLY": "Aðeins greining: þessar niðurstöður komu ekki í veg fyrir sendingu.",
     "ENFORCED": "Vernd virk: lokuð netföng eru útilokuð frá sendingu.",
     "ISSUES": "Fara yfir innflutningsvandamál",
@@ -92,12 +92,13 @@
     "LOADING": "Hleður…",
     "EMPTY": "Engar niðurstöður fyrir þessar síur.",
     "UNKNOWN_DATE": "Ekki tilgreint",
-    "OVER_SENT": "af sendum tölvupóstum",
+    "OVER_SENT": "Sendingar samþykktar af SES: {count}",
     "SENT_AT": "Sent: {date}",
     "IMPORT_QUEUED": "Listi móttekinn. Innflutningur er í biðröð; þú mátt yfirgefa þessa síðu.",
     "IMPORT_PROCESSING": "Verið er að flytja inn listann. Ekki er hægt að senda fyrr en því er lokið.",
     "IMPORT_COMPLETED": "Innflutningi listans lokið.",
     "IMPORT_SUMMARY": "Bætt við: {imported} · Tvítekningar: {duplicates} · Ógilt: {invalid} · Útilokað frá sendingu: {suppressed} · Samtals: {total}",
-    "DELIVERY_HINT": "Heildartölur geta innihaldið móttöku sendingarþjónustu; afhending á netþjón viðtakanda er ekki alltaf staðfest."
+    "DELIVERY_HINT": "Heildartölur geta innihaldið móttöku sendingarþjónustu; afhending á netþjón viðtakanda er ekki alltaf staðfest.",
+    "IMPORT_ORIGINAL": "Upprunaleg niðurstaða innflutnings"
   }
 }

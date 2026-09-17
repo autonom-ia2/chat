@@ -64,10 +64,10 @@
     "RECHECK": "Sprawdź adresy ponownie",
     "RESUME": "Wznów wysyłanie",
     "PROBLEMS": "Sprawdź listę problemów",
-    "HARD_RATE": "Trwałe błędy / wysłane",
-    "COMPLAINT_RATE": "Zgłoszenia spamu / wysłane",
+    "HARD_RATE": "Nie dostarczono — trwały błąd / SES",
+    "COMPLAINT_RATE": "Oznaczono jako spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Analiza adresów",
+    "HYGIENE": "Bieżąca analiza odbiorców, do których jeszcze nie wysłano",
     "ANALYSIS_ONLY": "Tylko analiza: te wyniki nie zablokowały wysyłania.",
     "ENFORCED": "Ochrona aktywna: zablokowane adresy są wykluczone z wysyłki.",
     "ISSUES": "Sprawdź problemy z importem",
@@ -92,12 +92,13 @@
     "LOADING": "Wczytywanie…",
     "EMPTY": "Brak wyników dla tych filtrów.",
     "UNKNOWN_DATE": "Nie podano",
-    "OVER_SENT": "wysłanych wiadomości e-mail",
+    "OVER_SENT": "Wysyłki zaakceptowane przez SES: {count}",
     "SENT_AT": "Wysłano: {date}",
     "IMPORT_QUEUED": "Otrzymano listę. Import oczekuje w kolejce; możesz opuścić tę stronę.",
     "IMPORT_PROCESSING": "Importowanie listy. Wysyłanie będzie dostępne po zakończeniu importu.",
     "IMPORT_COMPLETED": "Import listy zakończony.",
     "IMPORT_SUMMARY": "Dodane: {imported} · Duplikaty: {duplicates} · Nieprawidłowe: {invalid} · Wykluczone z wysyłki: {suppressed} · Razem: {total}",
-    "DELIVERY_HINT": "Sumy mogą obejmować przyjęcie przez usługę wysyłającą; dostarczenie do serwera odbiorcy nie zawsze jest potwierdzone."
+    "DELIVERY_HINT": "Sumy mogą obejmować przyjęcie przez usługę wysyłającą; dostarczenie do serwera odbiorcy nie zawsze jest potwierdzone.",
+    "IMPORT_ORIGINAL": "Pierwotny wynik importu"
   }
 }

@@ -64,10 +64,10 @@
     "RECHECK": "Semak alamat sekali lagi",
     "RESUME": "Sambung penghantaran",
     "PROBLEMS": "Semak senarai masalah",
-    "HARD_RATE": "Kegagalan kekal / dihantar",
-    "COMPLAINT_RATE": "Laporan spam / dihantar",
+    "HARD_RATE": "Tidak disampaikan — kegagalan kekal / SES",
+    "COMPLAINT_RATE": "Ditandai sebagai spam / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Analisis alamat",
+    "HYGIENE": "Analisis semasa penerima yang belum dihantar e-mel",
     "ANALYSIS_ONLY": "Analisis sahaja: penemuan ini tidak menghalang penghantaran.",
     "ENFORCED": "Perlindungan aktif: alamat yang disekat dikecualikan daripada penghantaran.",
     "ISSUES": "Semak masalah import",
@@ -92,12 +92,13 @@
     "LOADING": "Memuatkan…",
     "EMPTY": "Tiada hasil untuk penapis ini.",
     "UNKNOWN_DATE": "Tidak dimaklumkan",
-    "OVER_SENT": "daripada e-mel yang dihantar",
+    "OVER_SENT": "Penghantaran yang diterima SES: {count}",
     "SENT_AT": "Dihantar: {date}",
     "IMPORT_QUEUED": "Senarai diterima. Import berada dalam baris gilir; anda boleh meninggalkan halaman ini.",
     "IMPORT_PROCESSING": "Mengimport senarai. Penghantaran tidak tersedia sehingga import selesai.",
     "IMPORT_COMPLETED": "Import senarai selesai.",
     "IMPORT_SUMMARY": "Ditambah: {imported} · Pendua: {duplicates} · Tidak sah: {invalid} · Dikecualikan daripada penghantaran: {suppressed} · Jumlah: {total}",
-    "DELIVERY_HINT": "Jumlah mungkin merangkumi penerimaan oleh perkhidmatan penghantaran; penghantaran ke pelayan penerima tidak sentiasa disahkan."
+    "DELIVERY_HINT": "Jumlah mungkin merangkumi penerimaan oleh perkhidmatan penghantaran; penghantaran ke pelayan penerima tidak sentiasa disahkan.",
+    "IMPORT_ORIGINAL": "Hasil import asal"
   }
 }

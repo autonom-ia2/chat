@@ -64,10 +64,10 @@
     "RECHECK": "アドレスを再確認",
     "RESUME": "送信を再開",
     "PROBLEMS": "問題一覧を確認",
-    "HARD_RATE": "恒久的なエラー / 送信済み",
-    "COMPLAINT_RATE": "迷惑メールの報告 / 送信済み",
+    "HARD_RATE": "未配信 — 恒久的なエラー / SES",
+    "COMPLAINT_RATE": "迷惑メールとして報告 / SES",
     "RATE": "{value}%",
-    "HYGIENE": "アドレス分析",
+    "HYGIENE": "未送信の宛先の現在の分析",
     "ANALYSIS_ONLY": "分析のみ：これらの結果によって送信が阻止されることはありませんでした。",
     "ENFORCED": "保護が有効です：ブロックされたアドレスは送信対象から除外されます。",
     "ISSUES": "インポートの問題を確認",
@@ -92,12 +92,13 @@
     "LOADING": "読み込み中…",
     "EMPTY": "このフィルターに一致する結果はありません。",
     "UNKNOWN_DATE": "未提供",
-    "OVER_SENT": "送信済みメールに対する割合",
+    "OVER_SENT": "SES が受け付けた送信数：{count}",
     "SENT_AT": "送信日時：{date}",
     "IMPORT_QUEUED": "リストを受け付けました。インポートは待機中です。このページを離れても構いません。",
     "IMPORT_PROCESSING": "リストをインポートしています。完了するまで送信は利用できません。",
     "IMPORT_COMPLETED": "リストのインポートが完了しました。",
     "IMPORT_SUMMARY": "追加：{imported} · 重複：{duplicates} · 無効：{invalid} · 送信対象外：{suppressed} · 合計：{total}",
-    "DELIVERY_HINT": "合計には送信サービスによる受け付けが含まれる場合があります。受信者のサーバーへの配信が常に確認されているわけではありません。"
+    "DELIVERY_HINT": "合計には送信サービスによる受け付けが含まれる場合があります。受信者のサーバーへの配信が常に確認されているわけではありません。",
+    "IMPORT_ORIGINAL": "元のインポート結果"
   }
 }

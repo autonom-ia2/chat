@@ -64,10 +64,10 @@
     "RECHECK": "Manzillarni qayta tekshirish",
     "RESUME": "Yuborishni davom ettirish",
     "PROBLEMS": "Muammolar ro‘yxatini ko‘rish",
-    "HARD_RATE": "Doimiy xatolar / yuborilganlar",
-    "COMPLAINT_RATE": "Spam shikoyatlari / yuborilganlar",
+    "HARD_RATE": "Yetkazilmadi — doimiy xato / SES",
+    "COMPLAINT_RATE": "Spam deb belgilandi / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Manzillar tahlili",
+    "HYGIENE": "Hali xat yuborilmagan oluvchilarning joriy tahlili",
     "ANALYSIS_ONLY": "Faqat tahlil: bu natijalar yuborishga to‘sqinlik qilmadi.",
     "ENFORCED": "Himoya faol: bloklangan manzillar yuborishdan chiqariladi.",
     "ISSUES": "Import muammolarini tekshirish",
@@ -92,12 +92,13 @@
     "LOADING": "Yuklanmoqda…",
     "EMPTY": "Bu filtrlar uchun natija yo‘q.",
     "UNKNOWN_DATE": "Ko‘rsatilmagan",
-    "OVER_SENT": "yuborilgan xatlarga nisbatan",
+    "OVER_SENT": "SES qabul qilgan jo‘natmalar: {count}",
     "SENT_AT": "Yuborildi: {date}",
     "IMPORT_QUEUED": "Ro‘yxat qabul qilindi. Import navbatga qo‘yildi; bu sahifadan chiqishingiz mumkin.",
     "IMPORT_PROCESSING": "Ro‘yxat import qilinmoqda. Tugamaguncha yuborish imkonsiz.",
     "IMPORT_COMPLETED": "Ro‘yxat importi yakunlandi.",
     "IMPORT_SUMMARY": "Qo‘shilgan: {imported} · Takroriy: {duplicates} · Noto‘g‘ri: {invalid} · Yuborishdan chiqarilgan: {suppressed} · Jami: {total}",
-    "DELIVERY_HINT": "Jami sonlar yuborish xizmatining qabulini o‘z ichiga olishi mumkin; oluvchining serveriga yetkazish har doim ham tasdiqlanmagan."
+    "DELIVERY_HINT": "Jami sonlar yuborish xizmatining qabulini o‘z ichiga olishi mumkin; oluvchining serveriga yetkazish har doim ham tasdiqlanmagan.",
+    "IMPORT_ORIGINAL": "Dastlabki import natijasi"
   }
 }

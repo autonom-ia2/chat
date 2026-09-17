@@ -145,8 +145,12 @@ async function openScreen(name, options = {}) {
     );
   }
   await settle();
-  const t = key => page.evaluate(key => window.__qa.t(key), key);
-  const ns = key => t(`EMAIL_CAMPAIGN_PROTECTION.${key}`);
+  const t = (key, values) =>
+    page.evaluate(
+      ([message, params]) => window.__qa.t(message, params),
+      [key, values]
+    );
+  const ns = (key, values) => t(`EMAIL_CAMPAIGN_PROTECTION.${key}`, values);
   const section = page.locator('section').filter({
     has: page.getByRole('heading', {
       name: await t('CAMPAIGN_MANAGEMENT.RECIPIENTS.TITLE'),
@@ -378,6 +382,92 @@ async function smoke(screen) {
   const { page, record, inspect, shot } = screen;
   await inspect();
   record.initialLayout = record.layout;
+  if (screen.state.scenario === 'import-populations') {
+    await check(
+      `${record.name}: original import and unsent analysis remain separate`,
+      async () => {
+        const number = value =>
+          new Intl.NumberFormat(screen.record.locale.replace('_', '-')).format(
+            value
+          );
+        const original = screen.page
+          .getByRole('heading', {
+            name: await screen.ns('IMPORT_ORIGINAL'),
+            exact: true,
+          })
+          .locator('..');
+        assert(
+          (await original.innerText()).includes(
+            await screen.ns('IMPORT_SUMMARY', {
+              total: number(3),
+              imported: number(1),
+              duplicates: number(1),
+              invalid: number(1),
+              suppressed: number(0),
+            })
+          ),
+          'Original import result hidden or changed'
+        );
+        const hygiene = screen.page
+          .getByRole('heading', {
+            name: await screen.ns('HYGIENE'),
+            exact: true,
+          })
+          .locator('..');
+        assert(
+          JSON.stringify(await hygiene.locator('dd').allTextContents()) ===
+            JSON.stringify([number(1), number(1)]),
+          'Hygiene must show only supplied counts'
+        );
+        assert(
+          !(await hygiene.innerText()).includes(
+            await screen.ns('STATUS.duplicate')
+          ),
+          'Missing duplicate count invented'
+        );
+        const panel = screen.page.locator('section[aria-live]').first();
+        assert(
+          (await panel.innerText()).includes(await screen.ns('REASON.review')),
+          'Hygiene pause review explanation missing'
+        );
+        assert(
+          (await panel.innerText()).includes(await screen.ns('RECHECK')),
+          'Recheck explanation missing'
+        );
+      }
+    );
+    await screen.shot('import-populations');
+  }
+  if (screen.state.scenario === 'mixed-denominator') {
+    await check(
+      `${record.name}: mixed send reputation denominator is one SES acceptance`,
+      async () => {
+        const cards = screen.page.locator('section.grid > div');
+        assert(
+          (await cards.nth(0).innerText()).includes('4'),
+          'Mixed total lost'
+        );
+        const text = await cards.nth(5).innerText();
+        assert(
+          text.includes('100%') &&
+            text.includes(await screen.ns('OVER_SENT', { count: 1 })),
+          'SES denominator missing from permanent failure rate'
+        );
+        assert(
+          (await cards.nth(6).innerText()).includes(
+            await screen.ns('OVER_SENT', { count: 1 })
+          ),
+          'SES denominator missing from complaint rate'
+        );
+      }
+    );
+    await shot('mixed-denominator');
+    await screen.requestAfter('/reports', () =>
+      screen.campaignSelect.selectOption('4361')
+    );
+    await inspect();
+  }
+
   await shot('whole');
   await check(`${record.name}: no unhandled runtime errors`, () =>
     assert(
@@ -775,7 +865,10 @@ try {
     css: results.css,
     utilities: results.utilities,
   } = await startServer());
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({
+    headless: true,
+    executablePath: chromium.executablePath(),
+  });
   results.browserVersion = browser.version();
   const desktop = await openScreen('pt-desktop');
   await smoke(desktop);
@@ -1097,6 +1190,19 @@ try {
     ['pt-provider', { scenario: 'provider' }],
     ['pt-manual-provider', { scenario: 'provider', campaign: 4363 }],
     ['pt-unfresh', { scenario: 'unfresh' }],
+    [
+      'pt-mixed-denominator',
+      { scenario: 'mixed-denominator', campaign: false },
+    ],
+    ['pt-import-populations', { scenario: 'import-populations' }],
+    [
+      'ar-import-mobile',
+      {
+        scenario: 'import-populations',
+        locale: 'ar',
+        viewport: { width: 390, height: 844 },
+      },
+    ],
   ]) {
     const screen = await openScreen(name, options);
     await smoke(screen);

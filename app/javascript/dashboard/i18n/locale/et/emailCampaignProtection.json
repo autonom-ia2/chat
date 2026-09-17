@@ -64,10 +64,10 @@
     "RECHECK": "Kontrolli aadresse uuesti",
     "RESUME": "Jätka saatmist",
     "PROBLEMS": "Vaata probleemide loendit",
-    "HARD_RATE": "Püsivad tõrked / saadetud",
-    "COMPLAINT_RATE": "Rämpspostikaebused / saadetud",
+    "HARD_RATE": "Kohale toimetamata — püsiv tõrge / SES",
+    "COMPLAINT_RATE": "Märgitud rämpspostiks / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Aadresside analüüs",
+    "HYGIENE": "Veel saatmata kirjade saajate praegune analüüs",
     "ANALYSIS_ONLY": "Ainult analüüs: need tulemused ei takistanud saatmist.",
     "ENFORCED": "Kaitse on aktiivne: blokeeritud aadressid jäetakse saatmisest välja.",
     "ISSUES": "Vaata impordiprobleemid üle",
@@ -92,12 +92,13 @@
     "LOADING": "Laadimine…",
     "EMPTY": "Nende filtritega tulemusi pole.",
     "UNKNOWN_DATE": "Pole esitatud",
-    "OVER_SENT": "saadetud e-kirjadest",
+    "OVER_SENT": "SES-i vastu võetud saatmised: {count}",
     "SENT_AT": "Saadetud: {date}",
     "IMPORT_QUEUED": "Loend vastu võetud. Import on järjekorras; võite sellelt lehelt lahkuda.",
     "IMPORT_PROCESSING": "Loendit imporditakse. Saatmine pole enne lõpetamist saadaval.",
     "IMPORT_COMPLETED": "Loendi import lõpetatud.",
     "IMPORT_SUMMARY": "Lisatud: {imported} · Duplikaadid: {duplicates} · Vigased: {invalid} · Saatmisest välja jäetud: {suppressed} · Kokku: {total}",
-    "DELIVERY_HINT": "Koguarvud võivad sisaldada saatmisteenuse vastuvõtte; jõudmine saaja serverisse ei ole alati kinnitatud."
+    "DELIVERY_HINT": "Koguarvud võivad sisaldada saatmisteenuse vastuvõtte; jõudmine saaja serverisse ei ole alati kinnitatud.",
+    "IMPORT_ORIGINAL": "Algne imporditulemus"
   }
 }

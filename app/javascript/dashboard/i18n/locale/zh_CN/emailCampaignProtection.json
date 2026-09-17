@@ -64,10 +64,10 @@
     "RECHECK": "重新检查地址",
     "RESUME": "恢复发送",
     "PROBLEMS": "查看问题列表",
-    "HARD_RATE": "永久性失败 / 已发送",
-    "COMPLAINT_RATE": "垃圾邮件举报 / 已发送",
+    "HARD_RATE": "未送达 — 永久性失败 / SES",
+    "COMPLAINT_RATE": "已标记为垃圾邮件 / SES",
     "RATE": "{value}%",
-    "HYGIENE": "地址分析",
+    "HYGIENE": "尚未发送的收件人当前分析",
     "ANALYSIS_ONLY": "仅作分析：这些结果并未阻止发送。",
     "ENFORCED": "保护已启用：被拦截的地址将排除在发送范围之外。",
     "ISSUES": "查看导入问题",
@@ -92,12 +92,13 @@
     "LOADING": "正在加载…",
     "EMPTY": "没有符合这些筛选条件的结果。",
     "UNKNOWN_DATE": "未提供",
-    "OVER_SENT": "占已发送邮件",
+    "OVER_SENT": "SES 接受的发送数：{count}",
     "SENT_AT": "发送时间：{date}",
     "IMPORT_QUEUED": "列表已收到。导入已排队，您可以离开此页面。",
     "IMPORT_PROCESSING": "正在导入列表。完成前无法发送。",
     "IMPORT_COMPLETED": "列表导入完成。",
     "IMPORT_SUMMARY": "已添加：{imported} · 重复：{duplicates} · 无效：{invalid} · 已排除发送：{suppressed} · 总计：{total}",
-    "DELIVERY_HINT": "总数可能包含发送服务的接受记录，并非都已确认送达收件人服务器。"
+    "DELIVERY_HINT": "总数可能包含发送服务的接受记录，并非都已确认送达收件人服务器。",
+    "IMPORT_ORIGINAL": "原始导入结果"
   }
 }

@@ -64,10 +64,10 @@
     "RECHECK": "重新檢查地址",
     "RESUME": "繼續傳送",
     "PROBLEMS": "查看問題清單",
-    "HARD_RATE": "永久性失敗 / 已傳送",
-    "COMPLAINT_RATE": "垃圾郵件檢舉 / 已傳送",
+    "HARD_RATE": "未送達 — 永久性失敗 / SES",
+    "COMPLAINT_RATE": "已標記為垃圾郵件 / SES",
     "RATE": "{value}%",
-    "HYGIENE": "地址分析",
+    "HYGIENE": "尚未傳送的收件者目前分析",
     "ANALYSIS_ONLY": "僅供分析：這些結果並未阻止傳送。",
     "ENFORCED": "保護已啟用：遭封鎖的地址將排除在傳送範圍之外。",
     "ISSUES": "查看匯入問題",
@@ -92,12 +92,13 @@
     "LOADING": "正在載入…",
     "EMPTY": "沒有符合這些篩選條件的結果。",
     "UNKNOWN_DATE": "未提供",
-    "OVER_SENT": "占已傳送電子郵件",
+    "OVER_SENT": "SES 接受的傳送數：{count}",
     "SENT_AT": "傳送時間：{date}",
     "IMPORT_QUEUED": "已收到清單。匯入已排入佇列，您可以離開此頁面。",
     "IMPORT_PROCESSING": "正在匯入清單。完成前無法傳送。",
     "IMPORT_COMPLETED": "清單匯入完成。",
     "IMPORT_SUMMARY": "已新增：{imported} · 重複：{duplicates} · 無效：{invalid} · 已排除傳送：{suppressed} · 總計：{total}",
-    "DELIVERY_HINT": "總數可能包含傳送服務的接受記錄，並非都已確認送達收件者伺服器。"
+    "DELIVERY_HINT": "總數可能包含傳送服務的接受記錄，並非都已確認送達收件者伺服器。",
+    "IMPORT_ORIGINAL": "原始匯入結果"
   }
 }

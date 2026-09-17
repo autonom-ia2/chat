@@ -64,10 +64,10 @@
     "RECHECK": "Vēlreiz pārbaudīt adreses",
     "RESUME": "Atsākt sūtīšanu",
     "PROBLEMS": "Skatīt problēmu sarakstu",
-    "HARD_RATE": "Pastāvīgas kļūmes / nosūtītie",
-    "COMPLAINT_RATE": "Ziņojumi par mēstulēm / nosūtītie",
+    "HARD_RATE": "Nav piegādāts — pastāvīga kļūme / SES",
+    "COMPLAINT_RATE": "Atzīmēts kā mēstule / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Adrešu analīze",
+    "HYGIENE": "Pašreizējā analīze par saņēmējiem, kuriem vēl nav nosūtīts",
     "ANALYSIS_ONLY": "Tikai analīze: šie rezultāti neaizkavēja sūtīšanu.",
     "ENFORCED": "Aizsardzība aktīva: bloķētās adreses ir izslēgtas no sūtīšanas.",
     "ISSUES": "Pārskatīt importēšanas problēmas",
@@ -92,12 +92,13 @@
     "LOADING": "Ielādē…",
     "EMPTY": "Šiem filtriem nav rezultātu.",
     "UNKNOWN_DATE": "Nav norādīts",
-    "OVER_SENT": "no nosūtītajiem e-pastiem",
+    "OVER_SENT": "SES pieņemtie sūtījumi: {count}",
     "SENT_AT": "Nosūtīts: {date}",
     "IMPORT_QUEUED": "Saraksts saņemts. Importēšana ir rindā; varat atstāt šo lapu.",
     "IMPORT_PROCESSING": "Notiek saraksta importēšana. Sūtīšana nav pieejama līdz tās pabeigšanai.",
     "IMPORT_COMPLETED": "Saraksta importēšana pabeigta.",
     "IMPORT_SUMMARY": "Pievienoti: {imported} · Dublikāti: {duplicates} · Nederīgi: {invalid} · Izslēgti no sūtīšanas: {suppressed} · Kopā: {total}",
-    "DELIVERY_HINT": "Kopsummas var ietvert sūtīšanas pakalpojuma pieņemšanu; piegāde saņēmēja serverim ne vienmēr ir apstiprināta."
+    "DELIVERY_HINT": "Kopsummas var ietvert sūtīšanas pakalpojuma pieņemšanu; piegāde saņēmēja serverim ne vienmēr ir apstiprināta.",
+    "IMPORT_ORIGINAL": "Sākotnējais importa rezultāts"
   }
 }

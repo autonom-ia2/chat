@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { campaigns, recipients, preflight, responseFor } from './fixtures.mjs';
+import {
+  campaigns,
+  recipients,
+  preflight,
+  responseFor,
+  importPopulationCampaign,
+  mixedReputationSummary,
+} from './fixtures.mjs';
 
 const origin = 'http://127.0.0.1:3437/api/v1/accounts/436/email_campaigns';
 
@@ -169,4 +176,36 @@ test('mixed fixture summary conserves both source counts across campaigns', () =
     { scenario: 'mixed' }
   ).json.payload;
   assert.equal(timeline.delivery_mode, 'direct_inbox');
+});
+
+test('original import rows remain distinct from the current unsent population', () => {
+  const payload = responseFor(
+    new URL(`${origin}/reports?campaign_id=4361`),
+    'GET',
+    { scenario: 'import-populations' }
+  ).json.payload;
+  assert.deepEqual(
+    payload.campaigns[0].recipient_import,
+    importPopulationCampaign.recipient_import
+  );
+  assert.deepEqual(payload.preflight.counts, { total: 1, unchecked: 1 });
+  assert.equal(Object.hasOwn(payload.preflight.counts, 'duplicate'), false);
+  assert.equal(
+    payload.campaigns[0].pause_reason,
+    'hygiene_validation_required'
+  );
+});
+test('mixed reputation fixture uses one SES acceptance rather than four total sends', () => {
+  const payload = responseFor(new URL(`${origin}/reports`), 'GET', {
+    scenario: 'mixed-denominator',
+  }).json.payload;
+  assert.equal(
+    payload.campaigns.reduce((sum, c) => sum + c.sent, 0),
+    4
+  );
+  assert.equal(payload.campaigns[0].delivery_mode, 'ses');
+  assert.equal(payload.campaigns[1].delivery_mode, 'direct_inbox');
+  Object.entries(mixedReputationSummary).forEach(([key, value]) => {
+    assert.deepEqual(payload.summary[key], value);
+  });
 });

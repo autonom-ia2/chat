@@ -253,7 +253,7 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
     );
     expect(wrapper.find('td').text()).toBe('synthetic@example.test');
   });
-  it('refreshes paused or final recipients only while visible, at most ten times', async () => {
+  it('refreshes idle recipients while visible with bounded backoff until unmount', async () => {
     await flushPromises();
     wrapper.unmount();
     vi.useFakeTimers();
@@ -278,10 +278,12 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
     expect(Reports.getRecipients).not.toHaveBeenCalled();
     visibility.mockReturnValue('visible');
     await vi.advanceTimersByTimeAsync(12 * 60000);
-    expect(Reports.getRecipients).toHaveBeenCalledTimes(10);
+    expect(Reports.getRecipients).toHaveBeenCalledTimes(4);
+    await vi.advanceTimersByTimeAsync(50 * 60000);
+    expect(Reports.getRecipients).toHaveBeenCalledTimes(14);
     wrapper.unmount();
-    await vi.advanceTimersByTimeAsync(60000);
-    expect(Reports.getRecipients).toHaveBeenCalledTimes(10);
+    await vi.advanceTimersByTimeAsync(10 * 60000);
+    expect(Reports.getRecipients).toHaveBeenCalledTimes(14);
   });
 });
 

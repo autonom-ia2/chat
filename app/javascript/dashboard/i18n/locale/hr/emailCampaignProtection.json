@@ -64,10 +64,10 @@
     "RECHECK": "Ponovno provjeri adrese",
     "RESUME": "Nastavi slanje",
     "PROBLEMS": "Pregledaj popis problema",
-    "HARD_RATE": "Trajne pogreške / poslano",
-    "COMPLAINT_RATE": "Prijave neželjene pošte / poslano",
+    "HARD_RATE": "Nije dostavljeno — trajna pogreška / SES",
+    "COMPLAINT_RATE": "Označeno kao neželjena pošta / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Analiza adresa",
+    "HYGIENE": "Trenutačna analiza primatelja kojima još nije poslano",
     "ANALYSIS_ONLY": "Samo analiza: ovi nalazi nisu spriječili slanje.",
     "ENFORCED": "Zaštita je aktivna: blokirane adrese isključene su iz slanja.",
     "ISSUES": "Pregledaj probleme s uvozom",
@@ -92,12 +92,13 @@
     "LOADING": "Učitavanje…",
     "EMPTY": "Nema rezultata za ove filtre.",
     "UNKNOWN_DATE": "Nije navedeno",
-    "OVER_SENT": "od poslanih e-poruka",
+    "OVER_SENT": "Slanja koja je SES prihvatio: {count}",
     "SENT_AT": "Poslano: {date}",
     "IMPORT_QUEUED": "Popis je primljen. Uvoz je na čekanju; možete napustiti ovu stranicu.",
     "IMPORT_PROCESSING": "Uvoz popisa je u tijeku. Slanje nije dostupno dok uvoz ne završi.",
     "IMPORT_COMPLETED": "Uvoz popisa dovršen.",
     "IMPORT_SUMMARY": "Dodano: {imported} · Duplikati: {duplicates} · Neispravno: {invalid} · Isključeno iz slanja: {suppressed} · Ukupno: {total}",
-    "DELIVERY_HINT": "Ukupni brojevi mogu uključivati prihvat usluge slanja; isporuka poslužitelju primatelja nije uvijek potvrđena."
+    "DELIVERY_HINT": "Ukupni brojevi mogu uključivati prihvat usluge slanja; isporuka poslužitelju primatelja nije uvijek potvrđena.",
+    "IMPORT_ORIGINAL": "Izvorni rezultat uvoza"
   }
 }

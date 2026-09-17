@@ -64,10 +64,10 @@
     "RECHECK": "Dar kartą patikrinti adresus",
     "RESUME": "Tęsti siuntimą",
     "PROBLEMS": "Peržiūrėti problemų sąrašą",
-    "HARD_RATE": "Nuolatinės klaidos / išsiųsti laiškai",
-    "COMPLAINT_RATE": "Pranešimai apie šlamštą / išsiųsti laiškai",
+    "HARD_RATE": "Nepristatyta — nuolatinė klaida / SES",
+    "COMPLAINT_RATE": "Pažymėta kaip šlamštas / SES",
     "RATE": "{value}%",
-    "HYGIENE": "Adresų analizė",
+    "HYGIENE": "Dabartinė gavėjų, kuriems dar neišsiųsta, analizė",
     "ANALYSIS_ONLY": "Tik analizė: šie rezultatai siuntimo nesustabdė.",
     "ENFORCED": "Apsauga aktyvi: užblokuotais adresais nesiunčiama.",
     "ISSUES": "Peržiūrėti importavimo problemas",
@@ -92,12 +92,13 @@
     "LOADING": "Įkeliama…",
     "EMPTY": "Pagal šiuos filtrus rezultatų nėra.",
     "UNKNOWN_DATE": "Nenurodyta",
-    "OVER_SENT": "iš išsiųstų el. laiškų",
+    "OVER_SENT": "SES priimti siuntimai: {count}",
     "SENT_AT": "Išsiųsta: {date}",
     "IMPORT_QUEUED": "Sąrašas gautas. Importavimas įtrauktas į eilę; galite išeiti iš šio puslapio.",
     "IMPORT_PROCESSING": "Importuojamas sąrašas. Siuntimas bus galimas tik baigus importavimą.",
     "IMPORT_COMPLETED": "Sąrašo importavimas baigtas.",
     "IMPORT_SUMMARY": "Pridėta: {imported} · Dublikatai: {duplicates} · Netinkami: {invalid} · Neįtraukti į siuntimą: {suppressed} · Iš viso: {total}",
-    "DELIVERY_HINT": "Bendri skaičiai gali apimti siuntimo paslaugos priėmimą; pristatymas gavėjo serveriui ne visada patvirtintas."
+    "DELIVERY_HINT": "Bendri skaičiai gali apimti siuntimo paslaugos priėmimą; pristatymas gavėjo serveriui ne visada patvirtintas.",
+    "IMPORT_ORIGINAL": "Pradinis importavimo rezultatas"
   }
 }

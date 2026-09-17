@@ -167,7 +167,7 @@ export function reasonKey(code) {
     provider_typo: 'review',
     idn_requires_ascii_domain: 'review',
   };
-  return reasons[code] || 'unknown';
+  return Object.hasOwn(reasons, code) ? reasons[code] : 'unknown';
 }
 
 export function protectionBlockReason(protection) {
@@ -198,12 +198,26 @@ export function canResumeCampaign(campaign = {}) {
 
 export const safeError = (t, error) => {
   const key = reasonKey(
-    error?.response?.data?.error_code ||
+    error?.response?.data?.protection?.code ||
+      error?.response?.data?.error_code ||
       error?.response?.data?.code ||
       error?.response?.data?.error
   );
   return t(key === 'unknown' ? `${NS}.ERROR` : `${NS}.REASON.${key}`);
 };
+// Report totals include direct sends; reputation denominators do not.
+export const reputationDenominator = (source = {}, rate = 'hard_bounce_rate') =>
+  source?.rate_metadata?.[rate]?.denominator ??
+  source?.reputation_coverage?.sent;
+
+export const hasActiveEmailWork = (campaign = {}) =>
+  ['scheduled', 'sending'].includes(campaign.status) ||
+  campaign.ai_status === 'processing' ||
+  ['queued', 'processing'].includes(campaign.recipient_import?.status) ||
+  ['queued', 'processing', 'analysing'].includes(campaign.preflight?.status) ||
+  campaign.preflight?.counts?.unchecked > 0 ||
+  ['paused', 'attention', 'high_risk'].includes(campaign.protection?.state);
+
 export const localeTag = locale => locale.replace('_', '-');
 export const formatNumber = (value, locale) =>
   typeof value === 'number' && Number.isFinite(value)
