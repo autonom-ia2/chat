@@ -5,6 +5,13 @@ require 'minitest/mock'
 require 'active_support'
 require 'active_support/core_ext'
 module EmailCampaigns; end
+Account = Class.new do
+  attr_reader :id
+
+  def initialize(id = 1) = @id = id
+  def self.find(id) = new(id)
+  def with_lock = yield
+end
 EmailSuppressionState = Class.new do
   def self.transaction
     yield
@@ -46,6 +53,7 @@ class SuppressionRegistryTest < Minitest::Test
   def setup
     @now = Time.utc(2026, 9, 17, 12)
     @registry = EmailCampaigns::SuppressionRegistry.allocate
+    @registry.instance_variable_set(:@account, Account.new(1))
     @registry.instance_variable_set(:@config, EmailCampaigns::HygieneConfig.new({}))
     @state = State.new(active: false, occurrences: 0, email_suppression_events: Events.new([]))
     @mirrors = []

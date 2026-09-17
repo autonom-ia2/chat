@@ -6,12 +6,24 @@ class EmailCampaigns::DirectInbox::TickJob < ApplicationJob
     return unless EmailCampaigns::Config.enabled?
 
     campaign = EmailCampaign.find_by(id: campaign_id)
-    return if campaign.blank? || !campaign.direct_inbox?
+    return if campaign.blank?
 
-    campaign.reload
-    return unless campaign.sending? || campaign.scheduled?
+    eligible = campaign.with_delivery_lock do
+      next false unless eligible_for_tick?(campaign)
+      next false if campaign.recipient_import_active?
 
-    campaign.mark_sending! unless campaign.sending?
-    EmailCampaigns::DirectInbox::DeliveryEngine.new(campaign).tick
+      campaign.update!(status: :sending) if campaign.scheduled?
+      true
+    end
+    return unless eligible
+
+    ActiveRecord.after_all_transactions_commit { EmailCampaigns::DirectInbox::DeliveryEngine.new(campaign).tick }
+  end
+
+  private
+
+  def eligible_for_tick?(campaign)
+    campaign.direct_inbox? && (campaign.sending? ||
+      (campaign.scheduled? && campaign.scheduled_at.present? && campaign.scheduled_at <= Time.current))
   end
 end

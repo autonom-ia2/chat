@@ -56,6 +56,7 @@ class Pr0ReviewGatesTest < Minitest::Test
   end
   Campaign = Struct.new(:id, :account, :import_active) do
     def recipient_import_active? = import_active
+    def preflight_summary = (@preflight_summary ||= {})
   end
   Config = Struct.new(:enforce) do
     def enforce? = enforce
@@ -133,6 +134,13 @@ class Pr0ReviewGatesTest < Minitest::Test
         refute decision.campaign_allowed?(Campaign.new(42, Object.new, false))
       end
     end
+  end
+
+  def test_incremental_recheck_keeps_old_validation_ineligible_only_in_enforce
+    campaign = Campaign.new(42, Object.new, false)
+    campaign.preflight_summary['rechecking'] = true
+    refute EmailCampaigns::PreflightDecision.new(config: Config.new(true)).campaign_allowed?(campaign)
+    assert EmailCampaigns::PreflightDecision.new(config: Config.new(false)).campaign_allowed?(campaign)
   end
 
   def test_active_import_is_never_allowed_in_shadow_or_enforce

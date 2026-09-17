@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_16_120100) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_16_121200) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2192,6 +2192,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_120100) do
     t.index "email_campaign_id, lower((email)::text)", name: "idx_email_campaign_recipients_campaign_email", unique: true
     t.index ["email_campaign_id", "id"], name: "idx_recipients_preflight_unchecked", where: "((status = 0) AND ((preflight_status)::text = 'unchecked'::text))"
     t.index ["email_campaign_id", "preflight_valid_until"], name: "idx_recipients_preflight_due"
+    t.index ["email_campaign_id", "sent_at"], name: "idx_email_reputation_sent_cohort", where: "(sent_at IS NOT NULL)"
     t.index ["email_campaign_id", "status"], name: "idx_email_campaign_recipients_campaign_status"
     t.index ["email_campaign_id"], name: "index_email_campaign_recipients_on_email_campaign_id"
     t.index ["ses_message_id"], name: "index_email_campaign_recipients_on_ses_message_id"
@@ -2255,6 +2256,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_120100) do
     t.datetime "preflight_lease_expires_at"
     t.bigint "preflight_cursor", default: 0, null: false
     t.bigint "preflight_ceiling", default: 0, null: false
+    t.jsonb "pause_reason", default: {}, null: false
     t.index ["account_id", "status", "scheduled_at"], name: "idx_email_campaigns_account_status_scheduled"
     t.index ["account_id"], name: "index_email_campaigns_on_account_id"
     t.index ["sender_identity_id"], name: "index_email_campaigns_on_sender_identity_id"
@@ -2272,6 +2274,52 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_120100) do
     t.index ["occurred_at"], name: "idx_email_events_occurred_at"
     t.index ["recipient_id", "event_type"], name: "idx_email_events_recipient_type"
     t.index ["recipient_id"], name: "index_email_events_on_recipient_id"
+  end
+
+  create_table "email_provider_states", force: :cascade do |t|
+    t.string "provider_key", null: false
+    t.string "status", default: "unknown", null: false
+    t.boolean "blocked", default: false, null: false
+    t.boolean "manual_block", default: false, null: false
+    t.string "manual_reason"
+    t.jsonb "telemetry", default: {}, null: false
+    t.datetime "observed_at"
+    t.datetime "checked_at"
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider_key"], name: "index_email_provider_states_on_provider_key", unique: true
+  end
+
+  create_table "email_reputation_audits", force: :cascade do |t|
+    t.bigint "account_id"
+    t.string "provider_key"
+    t.string "action", null: false
+    t.bigint "actor_id"
+    t.jsonb "snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_email_reputation_audits_account_time"
+    t.index ["account_id"], name: "index_email_reputation_audits_on_account_id"
+  end
+
+  create_table "email_reputation_states", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "observation_generation", default: 0, null: false
+    t.bigint "feedback_version", default: 0, null: false
+    t.bigint "evaluated_feedback_version", default: 0, null: false
+    t.datetime "evaluation_lease_until"
+    t.string "evaluation_lease_token"
+    t.boolean "blocked", default: false, null: false
+    t.string "level", default: "unknown", null: false
+    t.jsonb "current_metrics", default: {}, null: false
+    t.jsonb "policy", default: {}, null: false
+    t.datetime "evaluated_at"
+    t.datetime "triggered_at"
+    t.jsonb "trigger_snapshot", default: {}, null: false
+    t.jsonb "override", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_email_reputation_states_on_account_id", unique: true
   end
 
   create_table "email_sender_identities", force: :cascade do |t|
@@ -3094,6 +3142,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_120100) do
   add_foreign_key "email_campaigns", "email_sender_identities", column: "sender_identity_id"
   add_foreign_key "email_campaigns", "inboxes", column: "sender_inbox_id", on_delete: :nullify
   add_foreign_key "email_events", "email_campaign_recipients", column: "recipient_id"
+  add_foreign_key "email_reputation_states", "accounts", on_delete: :cascade
   add_foreign_key "email_sender_identities", "accounts"
   add_foreign_key "email_suppression_states", "accounts", on_delete: :cascade
   add_foreign_key "email_suppressions", "accounts"
@@ -3114,6 +3163,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_120100) do
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute(<<-SQL)
+CREATE OR REPLACE FUNCTION public.email_reputation_audit_append_only()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$ BEGIN RAISE EXCEPTION 'email reputation audit is append-only'; END; $function$
+  SQL
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER email_reputation_audit_append_only BEFORE DELETE OR UPDATE ON \"email_reputation_audits\" FOR EACH ROW EXECUTE FUNCTION email_reputation_audit_append_only()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute(<<-SQL)
+CREATE OR REPLACE FUNCTION public.email_reputation_snapshot_immutable()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$ BEGIN IF OLD.triggered_at IS NOT NULL AND NOT (NOT OLD.blocked AND NEW.blocked) AND (NEW.triggered_at IS DISTINCT FROM OLD.triggered_at OR NEW.trigger_snapshot IS DISTINCT FROM OLD.trigger_snapshot) THEN RAISE EXCEPTION 'email reputation trigger snapshot is immutable'; END IF; RETURN NEW; END; $function$
+  SQL
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER email_reputation_snapshot_immutable BEFORE UPDATE ON \"email_reputation_states\" FOR EACH ROW EXECUTE FUNCTION email_reputation_snapshot_immutable()")
+
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").
       after(:insert).

@@ -10,9 +10,7 @@ module EmailCampaigns
         type = { 'Delivery' => :delivered, 'Bounce' => :bounce, 'Complaint' => :complaint }[event_type]
         return unless recipient && type
 
-        # Share the Account -> recipient order with PR439 workers during blue/green.
-        processed = recipient.email_campaign.account.with_lock do
-          recipient.lock!
+        processed = EmailEvent.with_recipient_feedback_locks(recipient, event_type: type) do
           # One outcome of each type per dispatch. Lock closes parallel SNS replay,
           # before both metrics and quarantine occurrences. Keep the original payload.
           next false if recipient.email_events.where(event_type: type).exists?
@@ -71,9 +69,20 @@ module EmailCampaigns
       end
 
       def on_complaint(recipient)
+        return on_prevented_complaint(recipient) if EmailCampaigns::ComplaintClassifier.provider_prevented?(@event['complaint'])
+
         registry(recipient).block!(reason: 'complaint', source: 'ses', event_key: "ses:#{message_id}:complaint",
                                    occurred_at: event_time('complaint'))
         recipient.mark_complained! unless recipient.unsubscribed?
+      end
+
+      def on_prevented_complaint(recipient)
+        registry(recipient).block!(reason: 'provider_suppression', source: 'ses', event_key: "ses:#{message_id}:complaint",
+                                   occurred_at: event_time('complaint'))
+        return if recipient.unsubscribed? || recipient.complained?
+
+        recipient.update_columns(status: EmailCampaignRecipient.statuses[:suppressed], # rubocop:disable Rails/SkipsModelValidations
+                                 last_event_at: Time.current, updated_at: Time.current)
       end
 
       def registry(recipient)

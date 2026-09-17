@@ -1,6 +1,10 @@
 class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts::EmailCampaigns::BaseController
+  rescue_from CustomExceptions::EmailReputationBlocked do |error|
+    render json: { error: error.message, protection: error.protection }, status: :unprocessable_entity
+  end
+
   before_action :fetch_campaign,
-                only: [:show, :update, :destroy, :send_now, :schedule, :pause, :resume, :cancel, :duplicate]
+                only: [:show, :update, :destroy, :send_now, :schedule, :pause, :resume, :cancel, :duplicate, :reevaluate]
 
   def index
     authorize EmailCampaign
@@ -27,8 +31,9 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   end
 
   def destroy
-    @campaign.with_lock do
+    @campaign.with_delivery_lock do
       return render_unprocessable('import_in_progress') if @campaign.recipient_import_active?
+      return render_unprocessable('email_campaign.delivery_history_retained') if @campaign.delivery_history?
 
       EmailEvent.where(recipient_id: @campaign.email_campaign_recipients.select(:id)).delete_all
       @campaign.email_campaign_recipients.delete_all
@@ -38,6 +43,9 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   end
 
   def send_now
+    protection = ::EmailCampaigns::Guardrail.protection(Current.account, delivery_mode: @campaign.delivery_mode)
+    return render json: { error: 'email_campaign.protected', protection: protection }, status: :unprocessable_entity if protection
+
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.sendable?
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.claim_for_sending!
 
@@ -48,11 +56,8 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   def schedule
     return render_unprocessable('email_campaign.scheduled_at_required') if params[:scheduled_at].blank?
 
-    @campaign.with_lock do
-      return render_unprocessable('email_campaign.not_sendable') unless @campaign.sendable?
+    return render_unprocessable('email_campaign.not_sendable') unless @campaign.schedule!(scheduled_at: params[:scheduled_at])
 
-      @campaign.update!(status: :scheduled, scheduled_at: params[:scheduled_at])
-    end
     render :show
   end
 
@@ -62,16 +67,17 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   end
 
   def resume
-    @campaign.resume!
+    @campaign.resume!(actor: Current.user)
     render :show
   end
 
-  def cancel
-    @campaign.with_lock do
-      return render_unprocessable('import_in_progress') if @campaign.recipient_import_active?
+  def reevaluate
+    render json: { protection: ::EmailCampaigns::Guardrail.reevaluate!(Current.account, delivery_mode: @campaign.delivery_mode) }
+  end
 
-      @campaign.cancel!
-    end
+  def cancel
+    return render_unprocessable('import_in_progress') if @campaign.cancel! == false
+
     render :show
   end
 

@@ -49,7 +49,9 @@ class EmailCampaigns::SuppressionRegistry
     raise ArgumentError, 'event_key required (max 200)' if key.blank? || key.length > 200
     raise ArgumentError, 'source required' if attributes.fetch(:source).blank?
 
-    EmailSuppressionState.transaction do
+    # Standalone registry writers must resolve account before suppression/legacy
+    # locks and their FKs. Compound callers already hold this same account lock.
+    Account.find(@account.id).with_lock do
       row = locked_state
       existing = row.email_suppression_events.find_by(event_key: key)
       if existing

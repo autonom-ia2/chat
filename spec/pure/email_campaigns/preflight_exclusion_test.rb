@@ -19,12 +19,13 @@ class PreflightExclusionTest < Minitest::Test
     @job = EmailCampaigns::RecipientPreflightJob.new
     @recipient = Struct.new(:id, :preflight_checked_at).new(1, nil)
     @scope = Minitest::Mock.new
-    @holder = Minitest::Mock.new
-    @lease = Minitest::Mock.new
+    @lease = Object.new
     @writes = []
-    @holder.expect(:select, :holder_subquery, [:id])
-    @lease.expect(:holder_scope, @holder, ['running-token'])
-    @scope.expect(:where, @scope, [], email_campaign_id: :holder_subquery)
+    @lease.define_singleton_method(:with_holder) do |token, &block|
+      raise 'unexpected lease token' unless token == 'running-token'
+
+      block.call
+    end
     @scope.expect(:update_all, 1) { |attributes| @writes << attributes }
     @job.instance_variable_set(:@lease, @lease)
     @lookup = lambda do |**criteria|
@@ -50,7 +51,7 @@ class PreflightExclusionTest < Minitest::Test
       assert_equal expected, attributes.except(:preflight_checked_at, :updated_at)
       assert_instance_of Time, attributes[:preflight_checked_at]
       assert_instance_of Time, attributes[:updated_at]
-      [@scope, @holder, @lease].each(&:verify)
+      @scope.verify
     end
   end
 end

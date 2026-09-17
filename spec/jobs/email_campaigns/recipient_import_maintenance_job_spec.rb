@@ -18,15 +18,34 @@ RSpec.describe EmailCampaigns::RecipientImportMaintenanceJob do
     expired = create(:email_campaign).email_campaign_imports.create!(status: :failed, created_at: 2.days.ago)
     expired.source_file.attach(io: StringIO.new("name,email\n"), filename: 'expired.csv', content_type: 'text/csv')
     expect(broken.reload.sender_inbox_id).to be_nil
-    expect(Rails.logger).to receive(:error).with(
-      { event: 'email_campaign_preflight_enqueue_failed', campaign_id: broken.id, error_class: 'ActiveRecord::RecordInvalid' }.to_json
-    )
+    expect(Rails.logger).not_to receive(:error)
     with_modified_env('EMAIL_CAMPAIGN_HYGIENE_MODE' => 'shadow', 'EMAIL_CAMPAIGN_HYGIENE_DNS_ENABLED' => 'false') do
       expect { described_class.perform_now }.not_to raise_error
     end
-    expect(enqueued_jobs.select { |job| job[:job] == EmailCampaigns::RecipientPreflightJob }.pluck(:args).map(&:first)).to include(healthy.id)
+    expect(enqueued_jobs.select do |job|
+      job[:job] == EmailCampaigns::RecipientPreflightJob
+    end.pluck(:args).map(&:first)).to include(healthy.id, broken.id)
     expect(EmailCampaigns::RecipientImportJob).to have_been_enqueued.with(recoverable.id)
     expect(ActiveStorage::PurgeJob).to have_been_enqueued
+  end
+
+  it 'isolates a campaign-specific enqueue failure without skipping other campaigns or housekeeping' do
+    broken = create(:email_campaign)
+    create(:email_campaign_recipient, email_campaign: broken)
+    healthy = create(:email_campaign)
+    create(:email_campaign_recipient, email_campaign: healthy)
+    recoverable = create(:email_campaign).email_campaign_imports.create!(updated_at: 11.minutes.ago)
+    allow(EmailCampaigns::RecipientPreflightJob).to receive(:enqueue).and_wrap_original do |original, id, **options|
+      raise ActiveRecord::RecordInvalid, broken if id == broken.id
+
+      original.call(id, **options)
+    end
+    expect(Rails.logger).to receive(:error).with(
+      { event: 'email_campaign_preflight_enqueue_failed', campaign_id: broken.id, error_class: 'ActiveRecord::RecordInvalid' }.to_json
+    )
+    expect { described_class.perform_now }.not_to raise_error
+    expect(enqueued_jobs.select { |job| job[:job] == EmailCampaigns::RecipientPreflightJob }.pluck(:args).map(&:first)).to include(healthy.id)
+    expect(EmailCampaigns::RecipientImportJob).to have_been_enqueued.with(recoverable.id)
   end
 
   it 'attempts existing housekeeping but propagates a global preflight database failure' do

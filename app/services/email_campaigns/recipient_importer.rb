@@ -16,6 +16,12 @@ module EmailCampaigns
     end
 
     def perform
+      prepare unless @rows
+      import_rows(@rows, @mapper)
+    end
+
+    # Parse/download before the job takes ownership of the import transaction.
+    def prepare
       parsed = CampaignImports::Parser.new(@file, filename: @filename).perform
       raise Error, 'unsupported_file_format' unless CampaignImports::Config.supported_formats.include?(parsed.format)
 
@@ -24,7 +30,9 @@ module EmailCampaigns
       raise Error, 'empty_file' if rows.blank?
       raise Error, 'row_limit_exceeded' if rows.size > MAX_ROWS
 
-      import_rows(rows, mapper)
+      @rows = rows
+      @mapper = mapper
+      self
     end
 
     private
@@ -47,7 +55,9 @@ module EmailCampaigns
       seen = @campaign.email_campaign_recipients.pluck(:email).to_set(&:downcase)
       stats = { imported: 0, duplicates: 0, invalid: 0, suppressed: 0 }
 
-      ActiveRecord::Base.transaction do
+      # Resolve the parent FK before any inserted recipient/issue/import FK.
+      # No account/state locks or campaign writes are allowed until this commits.
+      @campaign.with_lock('FOR KEY SHARE') do
         rows.each_slice(BATCH_SIZE) do |batch|
           @issues = []
           records = batch.filter_map { |row| build_recipient(row, mapper, suppressed, seen, stats) }

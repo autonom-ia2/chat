@@ -44,10 +44,7 @@ class EmailCampaigns::UnsubscribeController < ApplicationController
 
   def suppress!(recipient)
     campaign = recipient.email_campaign
-    # PR439 workers enter Account before recipient. The state FK must never wait
-    # for that Account while this writer already owns the recipient lock.
-    campaign.account.with_lock do
-      recipient.lock!
+    EmailCampaigns::Reputation::Admission.new(campaign).with_delivery_locks(recipient) do
       EmailCampaigns::SuppressionRegistry.new(account: campaign.account, email: recipient.email, campaign: campaign).block!(
         reason: 'unsubscribe', source: 'link', event_key: "unsubscribe:#{recipient.id}"
       )

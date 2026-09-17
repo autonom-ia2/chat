@@ -28,14 +28,19 @@ class EmailCampaigns::RecipientImportJob < ApplicationJob
   private
 
   def process(import)
-    import.with_lock('FOR UPDATE NOWAIT') do
-      return unless import.active?
+    importer = EmailCampaigns::RecipientImporter.new(
+      import.email_campaign, import.source_file, filename: import.source_file.filename.to_s, import: import
+    ).prepare
+    # Reserve the parent FK before the import row. This branch only inserts
+    # children: it must not acquire account/state or update campaign until commit.
+    import.email_campaign.with_lock('FOR KEY SHARE') do
+      import.with_lock('FOR UPDATE NOWAIT') do
+        next unless import.active?
 
-      result = EmailCampaigns::RecipientImporter.new(
-        import.email_campaign, import.source_file, filename: import.source_file.filename.to_s, import: import
-      ).perform
-      # Recipients, counters and completion commit together, or all roll back.
-      import.update!(status: :completed, result: result.to_h, error_code: nil, completed_at: Time.current)
+        result = importer.perform
+        # Recipients/issues/completion remain atomic. Counters wait for commit.
+        import.update!(status: :completed, result: result.to_h, error_code: nil, completed_at: Time.current)
+      end
     end
   end
 

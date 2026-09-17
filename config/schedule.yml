@@ -203,3 +203,9 @@ email_campaign_recipient_import_maintenance_job:
   cron: '*/5 * * * *'
   class: 'EmailCampaigns::RecipientImportMaintenanceJob'
   queue: housekeeping
+
+# Read-only, disabled unless EMAIL_REPUTATION_PROVIDER_MONITOR=true.
+email_campaign_provider_monitor_job:
+  cron: '*/5 * * * *'
+  class: 'EmailCampaigns::ProviderMonitorJob'
+  queue: scheduled_jobs

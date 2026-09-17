@@ -4,10 +4,10 @@ class EmailCampaigns::GuardrailSweepJob < ApplicationJob
   def perform
     return unless EmailCampaigns::Config.enabled?
 
-    account_ids = EmailCampaignRecipient.joins(:email_campaign)
-                                        .where(sent_at: EmailCampaigns::Guardrail::WINDOW.ago..)
-                                        .distinct
-                                        .pluck('email_campaigns.account_id')
-    Account.where(id: account_ids).find_each { |account| EmailCampaigns::Guardrail.evaluate!(account) }
+    # Reconcile durable feedback, old legacy flags and paused tenants even without recent sends.
+    Account.where(id: EmailCampaign.select(:account_id))
+           .or(Account.where(id: EmailReputationState.select(:account_id)))
+           .or(Account.where("internal_attributes ? 'email_campaigns_paused'"))
+           .find_each { |account| EmailCampaigns::Guardrail.evaluate!(account) }
   end
 end

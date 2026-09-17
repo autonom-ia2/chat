@@ -2,65 +2,82 @@ class EmailCampaigns::DeliveryClaim
   def initialize(campaign)
     @campaign = campaign
     @decision = EmailCampaigns::PreflightDecision.new
+    @admission = EmailCampaigns::Reputation::Admission.new(campaign)
   end
 
-  def claim(recipient)
-    result = recipient.with_lock do
-      return :skipped unless recipient.pending?
-      return :skipped if recipient.sent_at.present? || recipient.ses_message_id.present?
-      return suppress(recipient) if EmailSuppression.suppressed?(@campaign.account, recipient.email)
-      next :paused unless @decision.call(recipient)[:allowed]
+  # Check before rendering without reserving a recipient or spending override budget.
+  def prepare(recipient)
+    @admission.with_delivery_locks(recipient) { eligibility(recipient, :pending) }
+  end
 
-      # Claim transitions intentionally bypass identity validation while locked.
-      recipient.update_columns(status: EmailCampaignRecipient.statuses[:sent], updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  # Final authorization after rendering. No rendering, DNS or provider I/O under locks.
+  def claim(recipient)
+    result = @admission.with_delivery_locks(recipient, provider: true) do |state|
+      eligible = eligibility(recipient, :pending)
+      next eligible unless eligible == :ready
+
+      # The recipient lock reloads status; the conditional update also fences duplicate claims.
+      claimed = EmailCampaignRecipient.where(id: recipient.id, email_campaign_id: @campaign.id, status: :pending)
+                                      .update_all(status: EmailCampaignRecipient.statuses[:sent], updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      next :skipped unless claimed.positive?
+
+      @admission.consume_override!(state) if state&.override_active?
+      recipient.reload
       :claimed
     end
-    @decision.pause!(@campaign) if result == :paused
+    @claimed_id = recipient.id if result == :claimed
     result
   end
 
-  # Call after rendering, immediately before provider dispatch. The caller owns the
-  # claim. No network work is done while holding a database lock/transaction.
+  # Compatibility for the old two-phase caller. Only this gate's undispatched claim
+  # can be checked/released. New engines render before claim and dispatch immediately.
   def dispatch_allowed?(recipient)
-    # Campaign -> recipient order matches cancellation/finalization. Both short
-    # locks are released before the caller invokes the provider.
-    @campaign.with_lock do
-      recipient.with_lock do
-        check_dispatch(recipient)
-      end
+    return false unless @claimed_id == recipient.id
+
+    # A successful dispatch check is the handoff boundary. A later ambiguous call
+    # cannot reuse this gate to release an already authorized message.
+    @claimed_id = nil
+    @admission.with_delivery_locks(recipient, provider: true) do
+      eligible = eligibility(recipient, :sent)
+      next true if eligible == :ready
+
+      release_claim(recipient) if recipient.sent? && unreceipted?(recipient)
+      false
     end
   end
 
   private
 
-  def check_dispatch(recipient)
-    return false unless recipient.sent?
-    return false if recipient.sent_at.present? || recipient.ses_message_id.present?
+  def eligibility(recipient, expected_status) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity -- keep authorization gates together
+    return :skipped unless recipient.email_campaign_id == @campaign.id && recipient.status == expected_status.to_s
+    return :skipped unless unreceipted?(recipient)
+    return suppress(recipient) if EmailSuppression.suppressed?(@campaign.account, recipient.email)
+    return :skipped unless @campaign.sending?
+    return :skipped if @campaign.recipient_import_active?
+    return :paused if @admission.park_if_blocked!
+    return :ready if @decision.call(recipient)[:allowed]
 
-    if EmailSuppression.suppressed?(@campaign.account, recipient.email)
-      suppress(recipient)
-      return false
-    end
-    allowed = @decision.call(recipient)[:allowed]
-    return true if allowed && @campaign.sending?
-
-    release_claim(recipient, allowed)
+    @decision.pause!(@campaign)
+    # pause! uses conditional SQL. Keep this clean locked instance consistent so a
+    # later explicit transition is not lost to Rails' partial-update dirty tracking.
+    @campaign.reload
+    :paused
   end
 
-  def release_claim(recipient, allowed)
-    # This claim has demonstrably not reached a provider.
+  def unreceipted?(recipient)
+    recipient.sent_at.nil? && recipient.ses_message_id.blank?
+  end
+
+  def release_claim(recipient)
+    # This compatibility caller has demonstrably not reached a provider.
     next_status = @campaign.terminal? ? :suppressed : :pending
     recipient.update_columns( # rubocop:disable Rails/SkipsModelValidations
       status: EmailCampaignRecipient.statuses.fetch(next_status.to_s), updated_at: Time.current
     )
-    @decision.pause!(@campaign) unless allowed
-    false
   end
 
   def suppress(recipient)
-    EmailCampaignRecipient.where(id: recipient.id, status: %i[pending sent]).update_all( # rubocop:disable Rails/SkipsModelValidations
-      status: EmailCampaignRecipient.statuses[:suppressed], updated_at: Time.current
-    )
+    recipient.update_columns(status: EmailCampaignRecipient.statuses[:suppressed], updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     :suppressed
   end
 end

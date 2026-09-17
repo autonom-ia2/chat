@@ -6,8 +6,9 @@ class EmailCampaigns::PreflightDecision
   end
 
   # No DNS or writes. Suitable for later guardrail/report/UI integration.
-  def call(recipient)
-    fresh = recipient.preflight_status == 'valid' && recipient.preflight_valid_until.present? && recipient.preflight_valid_until > Time.current
+  def call(recipient) # rubocop:disable Metrics/CyclomaticComplexity -- freshness and durable recheck are one admission decision
+    fresh = recipient.preflight_status == 'valid' && recipient.preflight_valid_until.present? && recipient.preflight_valid_until > Time.current &&
+            !EmailCampaign.where(id: recipient.email_campaign_id).exists?(['preflight_summary @> ?', { rechecking: true }.to_json])
     { allowed: !@config.enforce? || fresh, mode: @config.mode, status: recipient.preflight_status,
       reason_code: fresh ? nil : recipient.preflight_reason_code || 'unchecked',
       suggestion: recipient.preflight_suggestion, warning: @config.mode == 'warning' && !fresh }
@@ -22,6 +23,7 @@ class EmailCampaigns::PreflightDecision
   def campaign_allowed?(campaign)
     return false if campaign.recipient_import_active?
     return true unless @config.enforce?
+    return false if campaign.preflight_summary['rechecking']
 
     # Reuse the authoritative active union, bounded to each pending candidate batch.
     # Do not persist suppression/preflight changes or reset strong blocks here.

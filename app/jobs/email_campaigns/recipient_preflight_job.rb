@@ -15,7 +15,7 @@ class EmailCampaigns::RecipientPreflightJob < ApplicationJob
     lease = EmailCampaigns::PreflightLease.new(campaign).acquire(recheck: recheck)
     return false unless lease
 
-    perform_later(campaign_id, *lease)
+    ActiveRecord.after_all_transactions_commit { perform_later(campaign_id, *lease) }
     true
   end
 
@@ -51,7 +51,7 @@ class EmailCampaigns::RecipientPreflightJob < ApplicationJob
   def finish_batch(campaign, token, cursor)
     campaign.refresh_counters! if @counter_refresh_needed
     continuation = @lease.advance(token, cursor)
-    self.class.perform_later(campaign.id, *continuation) if continuation
+    ActiveRecord.after_all_transactions_commit { self.class.perform_later(campaign.id, *continuation) } if continuation
   end
 
   def check_transaction!(config)
@@ -91,10 +91,12 @@ class EmailCampaigns::RecipientPreflightJob < ApplicationJob
 
     # Compare-and-set plus fencing token: stale network responses cannot update a
     # newer pass, dispatched history, or a recipient changed by another writer.
-    updated = EmailCampaignRecipient.where(id: recipient.id, status: :pending, preflight_checked_at: recipient.preflight_checked_at)
-                                    .where(email_campaign_id: @lease.holder_scope(token).select(:id))
-                                    .update_all(attributes) # rubocop:disable Rails/SkipsModelValidations
-    @counter_refresh_needed = true if updated.positive? && attributes.key?(:status)
+    @lease.with_holder(token) do
+      updated = EmailCampaignRecipient.where(id: recipient.id, status: :pending,
+                                             preflight_checked_at: recipient.preflight_checked_at)
+                                      .update_all(attributes) # rubocop:disable Rails/SkipsModelValidations
+      @counter_refresh_needed = true if updated.positive? && attributes.key?(:status)
+    end
   end
 
   def monotonic

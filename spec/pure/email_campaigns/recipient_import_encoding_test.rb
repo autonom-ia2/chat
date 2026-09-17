@@ -76,6 +76,11 @@ class RecipientImportEncodingTest < Minitest::Test
     @campaign.expect(:email_campaign_recipients, existing)
     @campaign.expect(:id, 42)
     @campaign.expect(:refresh_counters!, nil)
+    @campaign.expect(:with_lock, nil) do |mode, &operation|
+      assert_equal 'FOR KEY SHARE', mode
+      ActiveRecord::Base.transaction(&operation)
+      true
+    end
   end
 
   def test_nul_csv_does_not_roll_back_valid_row_or_disappear_from_counts
