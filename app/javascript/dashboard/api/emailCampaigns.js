@@ -6,6 +6,21 @@ class EmailCampaignsAPI extends ApiClient {
     super('email_campaigns/campaigns', { accountScoped: true });
   }
 
+  get({ status, signal } = {}) {
+    return axios.get(this.url, {
+      params: { status: status || undefined },
+      signal,
+    });
+  }
+
+  reevaluate(id) {
+    return axios.post(`${this.url}/${id}/reevaluate`);
+  }
+
+  recheck(id) {
+    return axios.post(`${this.url}/${id}/recheck`);
+  }
+
   sendNow(id) {
     return axios.post(`${this.url}/${id}/send_now`);
   }

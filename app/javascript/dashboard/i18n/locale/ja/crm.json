@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "キャンペーン管理",
+      "DESCRIPTION": "メールキャンペーンの送信、配信、品質を確認できます。"
+    },
+    "PAYWALL": {
+      "TITLE": "メールキャンペーンは有効になっていません",
+      "DESCRIPTION": "メールキャンペーンを有効にすると、配信状況と反応のレポートを確認できます。"
+    },
+    "FILTER": {
+      "LABEL": "キャンペーン",
+      "ALL": "すべてのキャンペーン"
+    },
+    "APPROXIMATE": "推定値",
+    "OPEN_APPROXIMATE_HINT": "開封率は推定値です。Apple Mailのプライバシー保護などの機能が画像を先読みすると、開封数が多く記録される場合があります。",
+    "KPIS": {
+      "SENT": "送信済み",
+      "DELIVERED": "配信済み",
+      "OPENED": "開封済み",
+      "CLICKED": "クリックあり",
+      "UNSUBSCRIBED": "配信停止",
+      "BOUNCED": "未達",
+      "COMPLAINED": "迷惑メールの報告"
+    },
+    "RATES": {
+      "OPEN_RATE": "開封率",
+      "CLICK_RATE": "クリック率",
+      "BOUNCE_RATE": "未達率",
+      "COMPLAINT_RATE": "迷惑メール報告率",
+      "UNSUBSCRIBE_RATE": "配信停止率",
+      "OVER_DELIVERED": "配信済みメールに対する割合"
+    },
+    "TABLE": {
+      "EMAIL": "メールアドレス",
+      "NAME": "名前",
+      "LAST_EVENT_AT": "最終アクティビティ",
+      "STATUS": "状態",
+      "ATTEMPTS": "試行回数",
+      "OPENS": "開封数",
+      "CLICKS": "クリック数"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "キャンペーンのデータはまだありません",
+      "SUBTITLE": "メールキャンペーンを送信すると、配信状況と反応の指標を確認できます。"
+    },
+    "ERROR": "キャンペーンレポートを読み込めませんでした。もう一度お試しください。",
+    "EXPORT_CSV": "CSVをエクスポート",
+    "TIMELINE": {
+      "TITLE": "配信数、開封数、クリック数の推移",
+      "EMPTY": "このキャンペーンにはまだイベントが記録されていません。",
+      "INTERVAL": {
+        "DAY": "日別",
+        "HOUR": "時間別"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "リンク別のクリック数",
+      "EMPTY": "クリックはまだ記録されていません。",
+      "URL": "リンク",
+      "UNIQUE": "ユニーククリック数",
+      "TOTAL": "合計クリック数"
+    },
+    "RECIPIENTS": {
+      "TITLE": "受信者",
+      "SEARCH_PLACEHOLDER": "名前またはメールアドレスで検索",
+      "EMPTY": "受信者が見つかりませんでした。",
+      "PAGE_OF": "{total}ページ中{page}ページ",
+      "PREV": "前へ",
+      "NEXT": "次へ"
+    },
+    "COMPARISON": {
+      "TITLE": "キャンペーンの比較"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "追跡可能なリンクとQRコード",
+      "SUBTITLE": "キャンペーン、販売担当者、店舗ごとにリンクやQRコードを作成できます。そこから始まった会話には、CRMで流入元が紐付けられます。",
+      "ADD": "新しいリンク",
+      "NAME": "名前",
+      "NAME_PLACEHOLDER": "例：店舗QR — 中央店",
+      "INBOX": "WhatsApp受信トレイ",
+      "PREFILLED": "入力済みメッセージ",
+      "PREFILLED_PLACEHOLDER": "例：こんにちは！詳しく知りたいです",
+      "CODE": "コード",
+      "CLICKS": "クリック数",
+      "CONVERSATIONS": "会話",
+      "COPY_LINK": "リンクをコピー",
+      "COPIED": "コピーしました！",
+      "DOWNLOAD_QR": "QRコードをダウンロード",
+      "DELETE": "削除",
+      "DELETE_CONFIRM": "このリンクを削除しますか？すでに紐付けられた会話の流入元は保持されます。",
+      "EMPTY": "追跡可能なリンクはまだありません。リンクを作成して、店舗、販売担当者、プロフィールからの会話の流入元を記録しましょう。",
+      "CREATE_SUCCESS": "リンクを作成しました",
+      "CREATE_ERROR": "リンクを作成できませんでした"
+    }
+  }
+}

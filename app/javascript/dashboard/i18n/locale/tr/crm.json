@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampanya yönetimi",
+      "DESCRIPTION": "E-posta kampanyalarının gönderimini, teslimatını ve kalitesini takip edin."
+    },
+    "PAYWALL": {
+      "TITLE": "E-posta kampanyaları etkin değil",
+      "DESCRIPTION": "Teslimat ve etkileşim raporlarını görmek için e-posta kampanyalarını etkinleştirin."
+    },
+    "FILTER": {
+      "LABEL": "Kampanya",
+      "ALL": "Tüm kampanyalar"
+    },
+    "APPROXIMATE": "yaklaşık",
+    "OPEN_APPROXIMATE_HINT": "Açılma oranları yaklaşık değerlerdir. Apple Mail gizlilik koruması ve benzer özellikler, resimleri önceden yükleyerek açılma sayısını artırabilir.",
+    "KPIS": {
+      "SENT": "Gönderilen",
+      "DELIVERED": "Teslim edilen",
+      "OPENED": "Açılan",
+      "CLICKED": "Tıklanan",
+      "UNSUBSCRIBED": "Abonelikten ayrılanlar",
+      "COMPLAINED": "Spam şikâyetleri",
+      "BOUNCED": "Teslim edilmedi"
+    },
+    "RATES": {
+      "OPEN_RATE": "Açılma oranı",
+      "CLICK_RATE": "Tıklanma oranı",
+      "BOUNCE_RATE": "Teslim edilememe oranı",
+      "COMPLAINT_RATE": "Şikâyet oranı",
+      "UNSUBSCRIBE_RATE": "Abonelikten ayrılma oranı",
+      "OVER_DELIVERED": "teslim edilenler içinde"
+    },
+    "TABLE": {
+      "EMAIL": "E-posta",
+      "NAME": "Ad",
+      "LAST_EVENT_AT": "Son etkinlik",
+      "STATUS": "Durum",
+      "ATTEMPTS": "Denemeler",
+      "OPENS": "Açılmalar",
+      "CLICKS": "Tıklamalar"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Henüz kampanya verisi yok",
+      "SUBTITLE": "Teslimat ve etkileşim ölçümlerini görmek için bir e-posta kampanyası gönderin."
+    },
+    "ERROR": "Kampanya raporu yüklenemedi. Tekrar deneyin.",
+    "EXPORT_CSV": "CSV dışa aktar",
+    "TIMELINE": {
+      "TITLE": "Zaman içinde teslimatlar, açılmalar ve tıklamalar",
+      "EMPTY": "Bu kampanya için henüz etkinlik kaydedilmedi.",
+      "INTERVAL": {
+        "DAY": "Güne göre",
+        "HOUR": "Saate göre"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Bağlantıya göre tıklamalar",
+      "EMPTY": "Henüz tıklama kaydedilmedi.",
+      "URL": "Bağlantı",
+      "UNIQUE": "Benzersiz tıklamalar",
+      "TOTAL": "Toplam tıklamalar"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Alıcılar",
+      "EMPTY": "Alıcı bulunamadı.",
+      "PAGE_OF": "Sayfa {page} / {total}",
+      "PREV": "Önceki",
+      "NEXT": "Sonraki",
+      "SEARCH_PLACEHOLDER": "Ad veya e-posta ara"
+    },
+    "COMPARISON": {
+      "TITLE": "Kampanya karşılaştırması"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "İzlenebilir bağlantılar ve QR kodları",
+      "SUBTITLE": "Her kampanya, satıcı veya mağaza için bir bağlantı ya da QR kodu oluşturun. Bunlarla başlayan görüşmeler CRM içinde kaynağıyla ilişkilendirilir.",
+      "ADD": "Yeni bağlantı",
+      "NAME_PLACEHOLDER": "Örn. Mağaza QR kodu — Merkez",
+      "INBOX": "WhatsApp gelen kutusu",
+      "PREFILLED": "Önceden doldurulmuş mesaj",
+      "PREFILLED_PLACEHOLDER": "Örn. Merhaba! Daha fazla bilgi almak istiyorum",
+      "CODE": "Kod",
+      "CONVERSATIONS": "Görüşmeler",
+      "COPY_LINK": "Bağlantıyı kopyala",
+      "COPIED": "Kopyalandı!",
+      "DOWNLOAD_QR": "QR kodunu indir",
+      "DELETE": "Sil",
+      "DELETE_CONFIRM": "Bu bağlantı silinsin mi? Önceden ilişkilendirilen görüşmelerin kaynağı korunur.",
+      "EMPTY": "Henüz izlenebilir bağlantı yok. Mağaza, satıcı veya profil bağlantısından gelen görüşmeleri ilişkilendirmek için ilkini oluşturun.",
+      "CREATE_SUCCESS": "Bağlantı oluşturuldu",
+      "CREATE_ERROR": "Bağlantı oluşturulamadı",
+      "NAME": "Ad",
+      "CLICKS": "Tıklamalar"
+    }
+  }
+}

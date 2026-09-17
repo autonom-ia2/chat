@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Kampanya başarıyla silindi",
         "ERROR_MESSAGE": "Bir hata oluştu, lütfen tekrar deneyin."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "İptal et",
+        "CANCEL_SUCCESS": "Kampanya iptal edildi.",
+        "DELETE_SUCCESS": "Kampanya silindi.",
+        "DUPLICATE": "Çoğalt",
+        "DUPLICATE_SUCCESS": "Kampanya çoğaltıldı. Alıcıları ve zamanlamayı güncelleyin.",
+        "EDIT": "Düzenle",
+        "OPEN_BUILDER": "Düzenleyici",
+        "PAUSE": "Duraklat",
+        "PAUSE_SUCCESS": "Kampanya duraklatıldı.",
+        "SCHEDULE": "Zamanla",
+        "SCHEDULE_SUCCESS": "Kampanya zamanlandı.",
+        "SEND_NOW": "Şimdi gönder",
+        "SEND_SUCCESS": "Kampanya gönderim kuyruğuna alındı.",
+        "MANAGE_RECIPIENTS": "Alıcılar",
+        "DELETE": "Sil"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Yapay zekâ hatası",
+          "PROCESSING": "Yapay zekâ oluşturuyor",
+          "READY": "Yapay zekâ hazır"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Başarısız",
+        "SENT": "Gönderildi",
+        "RECIPIENTS": "Alıcılar"
+      },
+      "DESCRIPTION": "E-postanızı yazın, doğrulanmış bir gönderim alan adı seçin, alıcı listenizi yükleyin ve hemen gönderin veya zamanlayın.",
+      "DIALOG": {
+        "BASE_HINT": "name ve email sütunları olan bir CSV veya XLSX yükleyin. Algılanan sütunlar kişiselleştirme alanlarına dönüşür.",
+        "BASE_IMPORTING": "Liste içe aktarılıyor…",
+        "BASE_LABEL": "Kişi listesi (CSV veya XLSX)",
+        "BASE_PICK": "Dosya seç",
+        "BASE_SELECTED": "Seçilen: {name}",
+        "CREATE_AND_OPEN": "Oluştur ve düzenleyicide aç",
+        "CREATE_TITLE": "Yeni e-posta kampanyası",
+        "DIRECT_OPTION": "bu gelen kutusundan doğrudan gönderim",
+        "DIRECT_WARNING": "Bu sizin kişisel posta kutunuzdur. Yalnızca izin vermiş gerçek kişilerinize az sayıda mesaj göndermek için kullanın. Ücretsiz posta hizmetinden toplu gönderim yapmak hesabın engellenmesine veya askıya alınmasına yol açabilir. Sınır günde 100 mesajdır; gönderimler elle yapılıyormuş gibi aralıklıdır. Daha büyük listeler için kendi alan adınızı doğrulayın.",
+        "EDIT_TITLE": "E-posta kampanyasını düzenle",
+        "ERROR": "Kampanya kaydedilemedi. Tekrar deneyin.",
+        "FROM_EMAIL_DIRECT_HINT": "Doğrudan bu posta kutusundan gönderilir.",
+        "FROM_EMAIL_ERROR": "Gönderici e-postası gerekli",
+        "FROM_EMAIL_HINT": "Adres, doğrulanmış alan adınızda {'@'}{domain} olmalıdır.",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Adres, doğrulanmış gönderim alan adınızda olmalıdır.",
+        "FROM_EMAIL_INVALID": "Doğrulanmış alan adınızda geçerli bir adres girin",
+        "FROM_EMAIL_LABEL": "Gönderici e-postası",
+        "FROM_EMAIL_PLACEHOLDER": "Örn. promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "Gönderici adı gerekli",
+        "FROM_NAME_LABEL": "Gönderici adı",
+        "FROM_NAME_PLACEHOLDER": "Örn. Acme Pazarlama",
+        "NAME_ERROR": "Bir kampanya adı girin",
+        "NAME_LABEL": "Kampanya adı",
+        "NAME_PLACEHOLDER": "Örn. Haziran bülteni",
+        "NO_VERIFIED_DOMAIN": "Henüz doğrulanmış gönderim alan adı yok. Önce e-posta gönderim alan adları bölümünden bir alan adı ekleyip doğrulayın.",
+        "REPLY_TO_ERROR": "Yanıt adresi gerekli",
+        "REPLY_TO_HINT": "Yanıtlar bu adrese gelir. Yanıtları görüşmelere dönüştürmek için adresi gelen kutusu olarak bağlayın.",
+        "REPLY_TO_INVALID": "Geçerli bir e-posta adresi girin",
+        "REPLY_TO_LABEL": "Yanıt adresi",
+        "REPLY_TO_PLACEHOLDER": "Örn. support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "Taslağı kaydet",
+        "SENDER_ERROR": "Doğrulanmış bir gönderim alan adı seçin",
+        "SENDER_LABEL": "Gönderim alan adı",
+        "SENDER_PLACEHOLDER": "Doğrulanmış bir alan adı seçin",
+        "SUCCESS": "Kampanya kaydedildi.",
+        "CANCEL": "İptal et"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "İçe aktarılan listeye e-posta yazıp göndermek için ilk kampanyanızı oluşturun.",
+        "TITLE": "Henüz e-posta kampanyası yok"
+      },
+      "HEADER_TITLE": "E-posta kampanyaları",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Liste boş. Kişiler ekleyip yeniden yükleyin.",
+          "EXPIRED": "Yüklenen dosyanın süresi doldu. Listeyi yeniden yükleyin.",
+          "FAILED": "İçe aktarma başarısız. Bu denemeden hiçbir kişi eklenmedi. Tekrar deneyin veya dosyayı yeniden yükleyin.",
+          "FILE_TOO_LARGE": "Dosya boyut sınırını aşıyor. Listeyi bölüp tekrar deneyin.",
+          "HEADERS": "İlk sayfanın ilk satırında, başlıkları tekrarlamadan bir Name ve bir Email sütunu kullanın.",
+          "INVALID_FILE": "Dosya okunamadı. Geçerli bir CSV veya XLSX dosyası yükleyin.",
+          "IN_PROGRESS": "Bu kampanya için zaten bir içe aktarma sürüyor. Bitmesini bekleyin.",
+          "ROW_LIMIT": "Liste 50.000 satırı aşıyor. Daha küçük dosyalara bölün.",
+          "UPLOAD_FAILED": "Dosya saklanamadı. Listeyi yeniden yükleyin."
+        },
+        "RETRY": "İçe aktarmayı yeniden dene",
+        "QUEUED": "Liste alındı. İçe aktarma sıraya alındı; bu sayfadan ayrılabilirsiniz.",
+        "PROCESSING": "Liste içe aktarılıyor. Tamamlanana kadar gönderim kullanılamaz.",
+        "COMPLETED": "Listenin içe aktarımı tamamlandı.",
+        "SUMMARY": "Eklenen: {imported} · Yinelenen: {duplicates} · Geçersiz: {invalid} · Gönderim dışı: {suppressed} · Toplam: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Alan panoya kopyalandı.",
+        "EMPTY": "Tablo sütunlarındaki kişiselleştirme alanlarını görmek için alıcıları içe aktarın.",
+        "SUBTITLE": "Kopyalamak için bir alana tıklayın, ardından konuya, önizleme metnine veya mesaj gövdesine yapıştırın.",
+        "TITLE": "Kullanılabilir alanlar"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Daha fazla kişi ekle",
+        "ADD_MORE_HINT": "Liste, kampanya oluşturulurken yüklendi. Kişi eklemek için başka bir CSV/XLSX yükleyin.",
+        "SUBTITLE": "name ve email sütunları olan bir CSV veya XLSX yükleyin. Alıcılar yalnızca bu kampanyada kullanılır ve kişilerinize eklenmez.",
+        "TITLE": "Alıcılar"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Tarih ve saat seçin",
+        "DATETIME_LABEL": "Gönderim zamanı",
+        "CANCEL": "İptal et",
+        "SUBMIT": "Zamanla"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: değeri olmayan {count} alıcı",
+        "BLANK_LABEL": "Değeri olmayan alıcılar:",
+        "MISSING_LABEL": "Şablonda kullanılıyor ancak alıcılarda bulunamadı:",
+        "OK": "Bu kampanyadaki tüm alanların değerleri var. Gönderime hazır.",
+        "TITLE": "Gönderim öncesi kontrol"
+      },
+      "STATUS": {
+        "CANCELED": "İptal edildi",
+        "DRAFT": "Taslak",
+        "SCHEDULED": "Planlandı",
+        "SENDING": "Gönderiliyor",
+        "SENT": "Gönderildi",
+        "PAUSED": "Gönderim duraklatıldı",
+        "FAILED": "Başarısız"
+      },
+      "NEW": "Yeni e-posta kampanyası"
     }
   }
 }

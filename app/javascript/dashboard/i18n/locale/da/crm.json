@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampagnestyring",
+      "DESCRIPTION": "Følg afsendelse, levering og kvalitet af dine e-mailkampagner."
+    },
+    "PAYWALL": {
+      "TITLE": "E-mailkampagner er ikke aktiveret",
+      "DESCRIPTION": "Aktivér e-mailkampagner for at se rapporter om levering og engagement."
+    },
+    "FILTER": {
+      "LABEL": "Kampagne",
+      "ALL": "Alle kampagner"
+    },
+    "APPROXIMATE": "anslået",
+    "OPEN_APPROXIMATE_HINT": "Åbningsrater er anslåede. Apple Mail Privacy Protection og lignende funktioner kan øge antallet ved at forudindlæse billeder.",
+    "KPIS": {
+      "DELIVERED": "Leveret",
+      "OPENED": "Åbnet",
+      "CLICKED": "Klikket",
+      "UNSUBSCRIBED": "Afmeldinger",
+      "COMPLAINED": "Spamklager",
+      "SENT": "Sendt",
+      "BOUNCED": "Ikke leveret"
+    },
+    "RATES": {
+      "OPEN_RATE": "Åbningsrate",
+      "CLICK_RATE": "Klikrate",
+      "BOUNCE_RATE": "Andel ikke leveret",
+      "COMPLAINT_RATE": "Klagerate",
+      "UNSUBSCRIBE_RATE": "Afmeldingsrate",
+      "OVER_DELIVERED": "af leverede"
+    },
+    "TABLE": {
+      "EMAIL": "E-mail",
+      "NAME": "Navn",
+      "LAST_EVENT_AT": "Seneste aktivitet",
+      "STATUS": "Status",
+      "ATTEMPTS": "Forsøg",
+      "OPENS": "Åbninger",
+      "CLICKS": "Klik"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Ingen kampagnedata endnu",
+      "SUBTITLE": "Send en e-mailkampagne for at se målinger af levering og engagement."
+    },
+    "ERROR": "Kampagnerapporten kunne ikke indlæses. Prøv igen.",
+    "EXPORT_CSV": "Eksportér CSV",
+    "TIMELINE": {
+      "TITLE": "Leveringer, åbninger og klik over tid",
+      "EMPTY": "Ingen hændelser registreret for denne kampagne endnu.",
+      "INTERVAL": {
+        "DAY": "Pr. dag",
+        "HOUR": "Pr. time"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klik pr. link",
+      "EMPTY": "Ingen klik registreret endnu.",
+      "URL": "Link",
+      "UNIQUE": "Unikke klik",
+      "TOTAL": "Klik i alt"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Modtagere",
+      "EMPTY": "Ingen modtagere fundet.",
+      "PAGE_OF": "Side {page} af {total}",
+      "PREV": "Forrige",
+      "NEXT": "Næste",
+      "SEARCH_PLACEHOLDER": "Søg efter navn eller e-mail"
+    },
+    "COMPARISON": {
+      "TITLE": "Sammenligning af kampagner"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Sporbare links og QR-koder",
+      "SUBTITLE": "Opret et link eller en QR-kode pr. kampagne, sælger eller butik. Samtaler startet via den får deres kilde tilknyttet i CRM.",
+      "ADD": "Nyt link",
+      "NAME_PLACEHOLDER": "F.eks. Butiks-QR — Centrum",
+      "INBOX": "WhatsApp-indbakke",
+      "PREFILLED": "Forudfyldt besked",
+      "PREFILLED_PLACEHOLDER": "F.eks. Hej! Jeg vil gerne vide mere",
+      "CODE": "Kode",
+      "CONVERSATIONS": "Samtaler",
+      "COPY_LINK": "Kopiér link",
+      "COPIED": "Kopieret!",
+      "DOWNLOAD_QR": "Download QR-kode",
+      "DELETE": "Slet",
+      "DELETE_CONFIRM": "Slet dette link? Allerede tilknyttede samtaler beholder deres oprindelse.",
+      "EMPTY": "Ingen sporbare links endnu. Opret et for at knytte samtaler til butik, sælger eller profillink.",
+      "CREATE_SUCCESS": "Link oprettet",
+      "CREATE_ERROR": "Linket kunne ikke oprettes",
+      "NAME": "Navn",
+      "CLICKS": "Klik"
+    }
+  }
+}

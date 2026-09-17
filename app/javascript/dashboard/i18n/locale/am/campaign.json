@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "ሰርዝ",
+        "CANCEL_SUCCESS": "ዘመቻው ተሰርዟል።",
+        "DELETE_SUCCESS": "ዘመቻው ተወግዷል።",
+        "DUPLICATE": "ቅጂ ፍጠር",
+        "DUPLICATE_SUCCESS": "የዘመቻው ቅጂ ተፈጥሯል። ተቀባዮችንና መርሐ ግብሩን ያዘምኑ።",
+        "EDIT": "አርትዕ",
+        "OPEN_BUILDER": "አርታዒ",
+        "PAUSE": "ለጊዜው አቁም",
+        "PAUSE_SUCCESS": "ዘመቻው ለጊዜው ቆሟል።",
+        "SCHEDULE": "ጊዜ መድብ",
+        "SCHEDULE_SUCCESS": "ለዘመቻው ጊዜ ተመድቧል።",
+        "SEND_NOW": "አሁን ላክ",
+        "SEND_SUCCESS": "ዘመቻው ወደ መላኪያ ተራ ተጨምሯል።",
+        "MANAGE_RECIPIENTS": "ተቀባዮች",
+        "DELETE": "ሰርዝ"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "ሰው ሠራሽ አስተውሎት አልተሳካም",
+          "PROCESSING": "ሰው ሠራሽ አስተውሎት እየፈጠረ ነው",
+          "READY": "ሰው ሠራሽ አስተውሎት ዝግጁ ነው"
+        }
+      },
+      "DESCRIPTION": "ኢሜይል ይጻፉ፣ የተረጋገጠ መላኪያ ጎራ ይምረጡ፣ የተቀባይ ዝርዝር ይጫኑና አሁን ይላኩ ወይም ጊዜ ይመድቡ።",
+      "DIALOG": {
+        "BASE_HINT": "name እና email አምዶች ያሉትን CSV ወይም XLSX ይጫኑ። የተለዩ አምዶች መልእክትን ለግለሰብ ማበጀት የሚያስችሉ መስኮች ይሆናሉ።",
+        "BASE_IMPORTING": "ዝርዝሩ እየገባ ነው…",
+        "BASE_LABEL": "የእውቂያ ዝርዝር (CSV ወይም XLSX)",
+        "BASE_PICK": "ፋይል ምረጥ",
+        "BASE_SELECTED": "የተመረጠ፦ {name}",
+        "CREATE_AND_OPEN": "ፍጠርና በአርታዒው ክፈት",
+        "CREATE_TITLE": "አዲስ የኢሜይል ዘመቻ",
+        "DIRECT_OPTION": "በዚህ ሳጥን ቀጥታ መላክ",
+        "DIRECT_WARNING": "ማስታወሻ፦ ይህ የግል ፖስታ ሳጥንዎ ነው። ፈቃድ ለሰጡ የራስዎ እውነተኛ እውቂያዎች በትንሽ መጠን ብቻ ይጠቀሙበት። ከነፃ ዌብሜይል በብዛት መላክ መለያዎን ሊያግድ ወይም ሊያስቆም ይችላል። በተፈጥሯዊ ክፍተት በቀን 100 ብቻ እንፈቅዳለን፤ ለትልቅ ዝርዝር የራስዎን ጎራ ያረጋግጡ።",
+        "EDIT_TITLE": "የኢሜይል ዘመቻ አርትዕ",
+        "ERROR": "ዘመቻው ሊቀመጥ አልቻለም። እንደገና ይሞክሩ።",
+        "FROM_EMAIL_DIRECT_HINT": "በዚህ ፖስታ ሳጥን ስም ቀጥታ ይላካል።",
+        "FROM_EMAIL_ERROR": "የላኪው ኢሜይል ያስፈልጋል",
+        "FROM_EMAIL_HINT": "አድራሻው {'@'}{domain} መሆን አለበት (የተረጋገጠው ጎራዎ)።",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "አድራሻው በተረጋገጠው መላኪያ ጎራዎ ውስጥ መሆን አለበት።",
+        "FROM_EMAIL_INVALID": "በተረጋገጠው ጎራዎ ውስጥ ትክክለኛ አድራሻ ያስገቡ",
+        "FROM_EMAIL_LABEL": "የላኪ ኢሜይል",
+        "FROM_EMAIL_PLACEHOLDER": "ለምሳሌ፦ promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "የላኪው ስም ያስፈልጋል",
+        "FROM_NAME_LABEL": "የላኪ ስም",
+        "FROM_NAME_PLACEHOLDER": "ለምሳሌ፦ የAcme ግብይት ክፍል",
+        "NAME_ERROR": "የዘመቻ ስም ያስገቡ",
+        "NAME_LABEL": "የዘመቻ ስም",
+        "NAME_PLACEHOLDER": "ለምሳሌ፦ የሰኔ ዜና መጽሔት",
+        "NO_VERIFIED_DOMAIN": "እስካሁን የተረጋገጠ መላኪያ ጎራ የለም። በኢሜይል መላኪያ ጎራዎች ክፍል አንድ ጨምረው ያረጋግጡ።",
+        "REPLY_TO_ERROR": "የምላሽ አድራሻ ያስፈልጋል",
+        "REPLY_TO_HINT": "ምላሾች ወደዚህ አድራሻ ይመጣሉ። ወደ ውይይት ለመቀየር እንደ ገቢ መልእክት ሳጥን ያገናኙት።",
+        "REPLY_TO_INVALID": "ትክክለኛ የኢሜይል አድራሻ ያስገቡ",
+        "REPLY_TO_LABEL": "የምላሽ አድራሻ",
+        "REPLY_TO_PLACEHOLDER": "ለምሳሌ፦ support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "ረቂቅ አስቀምጥ",
+        "SENDER_ERROR": "የተረጋገጠ መላኪያ ጎራ ይምረጡ",
+        "SENDER_LABEL": "የመላኪያ ጎራ",
+        "SENDER_PLACEHOLDER": "የተረጋገጠ ጎራ ይምረጡ",
+        "SUCCESS": "ዘመቻው ተቀምጧል።",
+        "CANCEL": "ሰርዝ"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "ለገባው ዝርዝር ኢሜይል ለመጻፍና ለመላክ የመጀመሪያውን ዘመቻ ይፍጠሩ።",
+        "TITLE": "እስካሁን የኢሜይል ዘመቻዎች የሉም"
+      },
+      "HEADER_TITLE": "የኢሜይል ዘመቻዎች",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "ዝርዝሩ ባዶ ነው። እውቂያዎችን ጨምረው እንደገና ይጫኑ።",
+          "EXPIRED": "የተጫነው ፋይል ጊዜው አልፏል። ዝርዝሩን እንደገና ይጫኑ።",
+          "FAILED": "ማስገባት አልተሳካም። ከዚህ ሙከራ ምንም እውቂያ አልተጨመረም። እንደገና ይሞክሩ ወይም ፋይሉን ይጫኑ።",
+          "FILE_TOO_LARGE": "ፋይሉ የመጠን ገደቡን አልፏል። ዝርዝሩን ከፋፍለው እንደገና ይሞክሩ።",
+          "HEADERS": "በመጀመሪያው ወረቀት የመጀመሪያ ረድፍ አንድ Name እና አንድ Email አምድ ይጠቀሙ፤ ርዕሶችን አይድገሙ።",
+          "INVALID_FILE": "ፋይሉ ሊነበብ አልቻለም። ትክክለኛ CSV ወይም XLSX ይጫኑ።",
+          "IN_PROGRESS": "ለዚህ ዘመቻ ማስገባት እየተካሄደ ነው። እስኪያልቅ ይጠብቁ።",
+          "ROW_LIMIT": "ዝርዝሩ ከ50,000 ረድፎች በላይ ነው። ወደ ትናንሽ ፋይሎች ይከፋፍሉት።",
+          "UPLOAD_FAILED": "ፋይሉ ሊቀመጥ አልቻለም። ዝርዝሩን እንደገና ይጫኑ።"
+        },
+        "RETRY": "ማስገባትን እንደገና ሞክር",
+        "QUEUED": "ዝርዝሩ ደርሷል። ማስገባቱ ወረፋ ላይ ነው፤ ከዚህ ገጽ መውጣት ይችላሉ።",
+        "PROCESSING": "ዝርዝሩ በመግባት ላይ ነው። እስኪጠናቀቅ ድረስ መላክ አይቻልም።",
+        "COMPLETED": "ዝርዝሩን ማስገባት ተጠናቋል።",
+        "SUMMARY": "የተጨመሩ፦ {imported} · የተደገሙ፦ {duplicates} · ልክ ያልሆኑ፦ {invalid} · ከመላክ የተገለሉ፦ {suppressed} · ጠቅላላ፦ {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "መስኩ ወደ ቅንጥብ ሰሌዳ ተቀድቷል።",
+        "EMPTY": "ከሰንጠረዥዎ አምዶች የተገኙ መስኮችን ለማየት ተቀባዮችን ያስገቡ።",
+        "SUBTITLE": "ለመቅዳት መስኩን ጠቅ ያድርጉ፤ ከዚያ በርዕስ፣ በቅድመ እይታ ጽሑፍ ወይም በመልእክቱ አካል ይለጥፉት።",
+        "TITLE": "ያሉ መስኮች"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "ተጨማሪ እውቂያዎች ጨምር",
+        "ADD_MORE_HINT": "ዝርዝሩ ዘመቻው ሲፈጠር ተጭኗል። ተጨማሪ እውቂያዎችን ለመጨመር ሌላ CSV/XLSX ይጫኑ።",
+        "SUBTITLE": "name እና email አምዶች ያሉትን CSV ወይም XLSX ይጫኑ። ተቀባዮቹ ለዚህ ዘመቻ ብቻ ናቸው፣ ወደ እውቂያዎችዎም አይጨመሩም።",
+        "TITLE": "ተቀባዮች"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "ቀንና ሰዓት ይምረጡ",
+        "DATETIME_LABEL": "የመላኪያ ጊዜ",
+        "CANCEL": "ሰርዝ",
+        "SUBMIT": "ጊዜ መድብ"
+      },
+      "STATUS": {
+        "PAUSED": "ለጊዜው ቆሟል",
+        "CANCELED": "ተሰርዟል",
+        "DRAFT": "ረቂቅ",
+        "FAILED": "መላክ አልተሳካም",
+        "SCHEDULED": "መርሐግብር ተይዞለታል",
+        "SENDING": "በመላክ ላይ",
+        "SENT": "ተልኳል"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}፦ እሴት የሌላቸው {count} ተቀባዮች",
+        "BLANK_LABEL": "እሴት የሌላቸው ተቀባዮች፦",
+        "MISSING_LABEL": "በአብነቱ የተጠቀሙባቸው ግን በተቀባዮች ያልተገኙ፦",
+        "OK": "የዚህ ዘመቻ ሁሉም መስኮች እሴቶች አሏቸው። ለመላክ ዝግጁ ነው።",
+        "TITLE": "ከመላክ በፊት ማረጋገጫ"
+      },
+      "COUNTS": {
+        "SENT": "ተልኳል",
+        "RECIPIENTS": "ተቀባዮች",
+        "FAILED": "መላክ አልተሳካም"
+      },
+      "NEW": "አዲስ የኢሜይል ዘመቻ"
     }
   }
 }

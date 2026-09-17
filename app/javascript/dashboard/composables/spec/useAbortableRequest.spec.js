@@ -24,6 +24,20 @@ const abortableRunner =
     });
 
 describe('useAbortableRequest', () => {
+  it('discards a late response even if the transport ignores abort', async () => {
+    const { run } = useAbortableRequest();
+    let resolveFirst;
+    const first = run(
+      () =>
+        new Promise(resolve => {
+          resolveFirst = resolve;
+        })
+    );
+    await expect(run(() => Promise.resolve('new'))).resolves.toBe('new');
+    resolveFirst('stale');
+    await expect(first).resolves.toBeUndefined();
+  });
+
   it('passes a fresh signal to the runner and returns its result', async () => {
     const { run } = useAbortableRequest();
     let received = null;

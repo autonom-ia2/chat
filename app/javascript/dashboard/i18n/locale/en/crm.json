@@ -2,7 +2,7 @@
   "CAMPAIGN_MANAGEMENT": {
     "HEADER": {
       "TITLE": "Campaign Management",
-      "DESCRIPTION": "Track delivery, opens, clicks, unsubscribes, bounces and spam complaints for your email campaigns."
+      "DESCRIPTION": "Track sending, delivery and the quality of your email campaigns."
     },
     "PAYWALL": {
       "TITLE": "Email campaigns are not enabled",
@@ -20,13 +20,13 @@
       "OPENED": "Opened",
       "CLICKED": "Clicked",
       "UNSUBSCRIBED": "Unsubscribes",
-      "BOUNCED": "Bounces",
+      "BOUNCED": "Not delivered",
       "COMPLAINED": "Spam complaints"
     },
     "RATES": {
       "OPEN_RATE": "Open rate",
       "CLICK_RATE": "Click rate",
-      "BOUNCE_RATE": "Bounce rate",
+      "BOUNCE_RATE": "Non-delivery rate",
       "COMPLAINT_RATE": "Complaint rate",
       "UNSUBSCRIBE_RATE": "Unsubscribe rate",
       "OVER_DELIVERED": "of delivered"

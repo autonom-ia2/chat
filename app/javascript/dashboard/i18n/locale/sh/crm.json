@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Upravljanje kampanjama",
+      "DESCRIPTION": "Pratite slanje, isporuku i kvalitet email kampanja."
+    },
+    "PAYWALL": {
+      "TITLE": "Email kampanje nisu uključene",
+      "DESCRIPTION": "Uključite email kampanje da biste videli izveštaje o isporuci i angažovanju."
+    },
+    "FILTER": {
+      "LABEL": "Kampanja",
+      "ALL": "Sve kampanje"
+    },
+    "APPROXIMATE": "približno",
+    "OPEN_APPROXIMATE_HINT": "Stope otvaranja su približne. Zaštita privatnosti u Apple Mail i slične funkcije mogu povećati broj otvaranja unapred učitavajući slike.",
+    "KPIS": {
+      "SENT": "Poslato",
+      "DELIVERED": "Isporučeno",
+      "OPENED": "Otvoreno",
+      "CLICKED": "Kliknuto",
+      "UNSUBSCRIBED": "Odjave",
+      "COMPLAINED": "Prijave neželjene pošte",
+      "BOUNCED": "Nije isporučeno"
+    },
+    "RATES": {
+      "OPEN_RATE": "Stopa otvaranja",
+      "CLICK_RATE": "Stopa klikova",
+      "BOUNCE_RATE": "Stopa neisporučenih poruka",
+      "COMPLAINT_RATE": "Stopa prijava neželjene pošte",
+      "UNSUBSCRIBE_RATE": "Stopa odjava",
+      "OVER_DELIVERED": "od isporučenih"
+    },
+    "TABLE": {
+      "EMAIL": "Email",
+      "NAME": "Ime",
+      "LAST_EVENT_AT": "Poslednja aktivnost",
+      "STATUS": "Status",
+      "ATTEMPTS": "Pokušaji",
+      "OPENS": "Otvaranja",
+      "CLICKS": "Klikovi"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Još nema podataka o kampanjama",
+      "SUBTITLE": "Pošaljite email kampanju da biste pratili isporuku i angažovanje."
+    },
+    "ERROR": "Izveštaj nije moguće učitati. Pokušajte ponovo.",
+    "EXPORT_CSV": "Izvezi CSV",
+    "TIMELINE": {
+      "TITLE": "Isporuke, otvaranja i klikovi tokom vremena",
+      "EMPTY": "Još nema zabeleženih događaja za ovu kampanju.",
+      "INTERVAL": {
+        "DAY": "Po danu",
+        "HOUR": "Po satu"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klikovi po linku",
+      "EMPTY": "Još nema zabeleženih klikova.",
+      "URL": "Link",
+      "UNIQUE": "Jedinstveni klikovi",
+      "TOTAL": "Ukupno klikova"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Primaoci",
+      "EMPTY": "Nema pronađenih primalaca.",
+      "PAGE_OF": "Stranica {page} od {total}",
+      "PREV": "Prethodna",
+      "NEXT": "Sledeća",
+      "SEARCH_PLACEHOLDER": "Pretraži ime ili imejl"
+    },
+    "COMPARISON": {
+      "TITLE": "Poređenje kampanja"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Linkovi i QR kodovi sa praćenjem",
+      "SUBTITLE": "Napravite link ili QR kod za kampanju, prodavca ili prodavnicu. Razgovori započeti preko njih dobijaju oznaku izvora u CRM-u.",
+      "ADD": "Novi link",
+      "NAME_PLACEHOLDER": "Npr. QR prodavnice — Centar",
+      "INBOX": "WhatsApp sanduče",
+      "PREFILLED": "Unapred popunjena poruka",
+      "PREFILLED_PLACEHOLDER": "Npr. Zdravo! Želim da saznam više",
+      "CODE": "Kod",
+      "CONVERSATIONS": "Razgovori",
+      "COPY_LINK": "Kopiraj link",
+      "COPIED": "Kopirano!",
+      "DOWNLOAD_QR": "Preuzmi QR kod",
+      "DELETE": "Obriši",
+      "DELETE_CONFIRM": "Obrisati ovaj link? Već povezani razgovori zadržavaju svoj izvor.",
+      "EMPTY": "Još nema linkova sa praćenjem. Napravite prvi za razgovore iz prodavnice, od prodavca ili iz opisa profila.",
+      "CREATE_SUCCESS": "Link je napravljen",
+      "CREATE_ERROR": "Link nije moguće napraviti",
+      "NAME": "Ime",
+      "CLICKS": "Klikovi"
+    }
+  }
+}

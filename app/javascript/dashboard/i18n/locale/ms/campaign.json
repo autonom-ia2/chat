@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Batal",
+        "CANCEL_SUCCESS": "Kempen dibatalkan.",
+        "DELETE": "Padam",
+        "DELETE_SUCCESS": "Kempen dipadamkan.",
+        "DUPLICATE": "Gandakan",
+        "DUPLICATE_SUCCESS": "Kempen digandakan. Kemas kini penerima dan jadual.",
+        "EDIT": "Edit",
+        "MANAGE_RECIPIENTS": "Penerima",
+        "OPEN_BUILDER": "Penyunting",
+        "PAUSE": "Jeda",
+        "PAUSE_SUCCESS": "Kempen dijeda.",
+        "SCHEDULE": "Jadualkan",
+        "SCHEDULE_SUCCESS": "Kempen dijadualkan.",
+        "SEND_NOW": "Hantar sekarang",
+        "SEND_SUCCESS": "Kempen dimasukkan ke baris gilir penghantaran."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "AI gagal",
+          "PROCESSING": "AI sedang menjana",
+          "READY": "AI sedia"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Gagal",
+        "RECIPIENTS": "Penerima",
+        "SENT": "Dihantar"
+      },
+      "DESCRIPTION": "Tulis e-mel, pilih domain penghantaran yang disahkan, muat naik senarai penerima dan hantar sekarang atau jadualkan.",
+      "DIALOG": {
+        "BASE_HINT": "Muat naik CSV atau XLSX dengan lajur name dan email. Lajur yang dikesan menjadi pemboleh ubah pemperibadian.",
+        "BASE_IMPORTING": "Mengimport senarai…",
+        "BASE_LABEL": "Senarai kenalan (CSV atau XLSX)",
+        "BASE_PICK": "Pilih fail",
+        "BASE_SELECTED": "Dipilih: {name}",
+        "CANCEL": "Batal",
+        "CREATE_AND_OPEN": "Cipta dan buka dalam penyunting",
+        "CREATE_TITLE": "Kempen e-mel baharu",
+        "DIRECT_OPTION": "penghantaran terus melalui peti masuk ini",
+        "DIRECT_WARNING": "Perhatian: ini peti mel peribadi anda. Gunakan hanya untuk bilangan kecil kenalan sebenar anda yang telah memberi persetujuan. Penghantaran pukal melalui webmel percuma boleh menyekat atau menggantung akaun anda. Hadnya ialah 100 sehari, dengan sela masa seperti penghantaran manual. Untuk senarai lebih besar, sahkan domain anda sendiri.",
+        "EDIT_TITLE": "Edit kempen e-mel",
+        "ERROR": "Kempen tidak dapat disimpan. Cuba lagi.",
+        "FROM_EMAIL_DIRECT_HINT": "Dihantar terus daripada peti mel ini.",
+        "FROM_EMAIL_ERROR": "E-mel pengirim diperlukan",
+        "FROM_EMAIL_HINT": "Mestilah alamat {'@'}{domain} (domain anda yang disahkan).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Mestilah alamat pada domain penghantaran anda yang disahkan.",
+        "FROM_EMAIL_INVALID": "Masukkan alamat yang sah pada domain anda yang disahkan",
+        "FROM_EMAIL_LABEL": "E-mel pengirim",
+        "FROM_EMAIL_PLACEHOLDER": "Cth. promosi{'@'}syarikatanda.com",
+        "FROM_NAME_ERROR": "Nama pengirim diperlukan",
+        "FROM_NAME_LABEL": "Nama pengirim",
+        "FROM_NAME_PLACEHOLDER": "Cth. Pemasaran Acme",
+        "NAME_ERROR": "Masukkan nama kempen",
+        "NAME_LABEL": "Nama kempen",
+        "NAME_PLACEHOLDER": "Cth. Surat berita Jun",
+        "NO_VERIFIED_DOMAIN": "Belum ada domain penghantaran yang disahkan. Tambah dan sahkan satu dalam Domain penghantaran e-mel dahulu.",
+        "REPLY_TO_ERROR": "Alamat balasan diperlukan",
+        "REPLY_TO_HINT": "Balasan dihantar ke alamat ini. Sambungkannya sebagai peti masuk untuk menjadikan balasan sebagai perbualan.",
+        "REPLY_TO_INVALID": "Masukkan alamat e-mel yang sah",
+        "REPLY_TO_LABEL": "Alamat balasan",
+        "REPLY_TO_PLACEHOLDER": "Cth. bantuan{'@'}syarikatanda.com",
+        "SAVE_DRAFT": "Simpan draf",
+        "SENDER_ERROR": "Pilih domain penghantaran yang disahkan",
+        "SENDER_LABEL": "Domain penghantaran",
+        "SENDER_PLACEHOLDER": "Pilih domain yang disahkan",
+        "SUCCESS": "Kempen disimpan."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Cipta kempen pertama untuk menulis dan menghantar e-mel kepada senarai yang diimport.",
+        "TITLE": "Belum ada kempen e-mel"
+      },
+      "HEADER_TITLE": "Kempen e-mel",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Senarai kosong. Tambah kenalan dan muat naik semula.",
+          "EXPIRED": "Fail yang dimuat naik telah tamat tempoh. Muat naik senarai semula.",
+          "FAILED": "Import gagal. Tiada kenalan daripada percubaan ini ditambah. Cuba lagi atau muat naik fail semula.",
+          "FILE_TOO_LARGE": "Fail melebihi had saiz muat naik. Bahagikan senarai dan cuba lagi.",
+          "HEADERS": "Gunakan satu lajur Name dan satu lajur Email pada baris pertama helaian pertama, tanpa pengepala pendua.",
+          "INVALID_FILE": "Fail tidak dapat dibaca. Muat naik fail CSV atau XLSX yang sah.",
+          "IN_PROGRESS": "Import untuk kempen ini sedang berjalan. Tunggu sehingga selesai.",
+          "ROW_LIMIT": "Senarai melebihi 50,000 baris. Bahagikannya kepada fail yang lebih kecil.",
+          "UPLOAD_FAILED": "Fail tidak dapat disimpan. Muat naik senarai semula."
+        },
+        "QUEUED": "Senarai diterima. Import berada dalam baris gilir; anda boleh meninggalkan halaman ini.",
+        "RETRY": "Cuba import semula",
+        "PROCESSING": "Mengimport senarai. Penghantaran tidak tersedia sehingga import selesai.",
+        "COMPLETED": "Import senarai selesai.",
+        "SUMMARY": "Ditambah: {imported} · Pendua: {duplicates} · Tidak sah: {invalid} · Dikecualikan daripada penghantaran: {suppressed} · Jumlah: {total}"
+      },
+      "NEW": "Kempen e-mel baharu",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Pemboleh ubah disalin ke papan klip.",
+        "EMPTY": "Import penerima untuk melihat pemboleh ubah daripada lajur hamparan anda.",
+        "SUBTITLE": "Klik pemboleh ubah untuk menyalinnya, kemudian tampal pada subjek, teks pratonton atau isi e-mel.",
+        "TITLE": "Pemboleh ubah tersedia"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Tambah lagi kenalan",
+        "ADD_MORE_HINT": "Senarai dimuat naik semasa kempen dicipta. Muat naik CSV/XLSX lain untuk menambah kenalan.",
+        "SUBTITLE": "Muat naik CSV atau XLSX dengan lajur name dan email. Penerima hanya digunakan untuk kempen ini dan tidak ditambah pada kenalan anda.",
+        "TITLE": "Penerima"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Batal",
+        "DATETIME_ERROR": "Pilih tarikh dan masa",
+        "DATETIME_LABEL": "Hantar pada",
+        "SUBMIT": "Jadualkan"
+      },
+      "STATUS": {
+        "CANCELED": "Dibatalkan",
+        "DRAFT": "Draf",
+        "FAILED": "Gagal",
+        "PAUSED": "Dijeda",
+        "SCHEDULED": "Dijadualkan",
+        "SENDING": "Sedang menghantar",
+        "SENT": "Dihantar"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} penerima tanpa nilai",
+        "BLANK_LABEL": "Penerima tanpa nilai:",
+        "MISSING_LABEL": "Digunakan dalam templat tetapi tidak ditemukan pada penerima:",
+        "OK": "Semua pemboleh ubah dalam kempen ini mempunyai nilai. Anda boleh teruskan.",
+        "TITLE": "Semakan sebelum penghantaran"
+      }
     }
   }
 }

@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Bekor qilish",
+        "CANCEL_SUCCESS": "Kampaniya bekor qilindi.",
+        "DELETE_SUCCESS": "Kampaniya o‘chirildi.",
+        "DUPLICATE": "Nusxasini yaratish",
+        "DUPLICATE_SUCCESS": "Kampaniya nusxasi yaratildi. Qabul qiluvchilar va jadvalni yangilang.",
+        "EDIT": "Tahrirlash",
+        "OPEN_BUILDER": "Muharrir",
+        "PAUSE": "Vaqtincha to‘xtatish",
+        "PAUSE_SUCCESS": "Kampaniya vaqtincha to‘xtatildi.",
+        "SCHEDULE": "Rejalashtirish",
+        "SCHEDULE_SUCCESS": "Kampaniya rejalashtirildi.",
+        "SEND_NOW": "Hozir yuborish",
+        "SEND_SUCCESS": "Kampaniya yuborish navbatiga qo‘yildi.",
+        "MANAGE_RECIPIENTS": "Qabul qiluvchilar",
+        "DELETE": "O‘chirish"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Sun’iy intellekt xatosi",
+          "PROCESSING": "Sun’iy intellekt yaratmoqda",
+          "READY": "Sun’iy intellekt tayyor"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Muvaffaqiyatsiz",
+        "SENT": "Yuborildi",
+        "RECIPIENTS": "Qabul qiluvchilar"
+      },
+      "DESCRIPTION": "Email yozing, tasdiqlangan yuborish domenini tanlang, qabul qiluvchilar ro‘yxatini yuklang va hozir yuboring yoki rejalashtiring.",
+      "DIALOG": {
+        "BASE_HINT": "name va email ustunlari bo‘lgan CSV yoki XLSX yuklang. Aniqlangan ustunlar shaxsiylashtirish maydonlariga aylanadi.",
+        "BASE_IMPORTING": "Ro‘yxat import qilinmoqda…",
+        "BASE_LABEL": "Kontaktlar ro‘yxati (CSV yoki XLSX)",
+        "BASE_PICK": "Faylni tanlash",
+        "BASE_SELECTED": "Tanlangan: {name}",
+        "CREATE_AND_OPEN": "Yaratish va muharrirda ochish",
+        "CREATE_TITLE": "Yangi email kampaniyasi",
+        "DIRECT_OPTION": "shu pochta qutisi orqali bevosita yuborish",
+        "DIRECT_WARNING": "Bu sizning shaxsiy pochta qutingiz. Undan faqat rozilik bergan haqiqiy kontaktlaringizga kam miqdorda yuborish uchun foydalaning. Bepul pochta xizmatidan ommaviy yuborish hisobingiz bloklanishi yoki to‘xtatilishiga olib kelishi mumkin. Cheklov kuniga 100 ta xat, yuborishlar qo‘lda yuborish kabi oraliqlarda bajariladi. Katta ro‘yxatlar uchun o‘z domeningizni tasdiqlang.",
+        "EDIT_TITLE": "Email kampaniyasini tahrirlash",
+        "ERROR": "Kampaniyani saqlab bo‘lmadi. Qayta urinib ko‘ring.",
+        "FROM_EMAIL_DIRECT_HINT": "Bevosita shu pochta qutisi nomidan yuboriladi.",
+        "FROM_EMAIL_ERROR": "Yuboruvchi emaili kerak",
+        "FROM_EMAIL_HINT": "Manzil tasdiqlangan domeningizda {'@'}{domain} bo‘lishi kerak.",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Manzil tasdiqlangan yuborish domeningizda bo‘lishi kerak.",
+        "FROM_EMAIL_INVALID": "Tasdiqlangan domeningizdagi to‘g‘ri manzilni kiriting",
+        "FROM_EMAIL_LABEL": "Yuboruvchi emaili",
+        "FROM_EMAIL_PLACEHOLDER": "Masalan, promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "Yuboruvchi ismi kerak",
+        "FROM_NAME_LABEL": "Yuboruvchi ismi",
+        "FROM_NAME_PLACEHOLDER": "Masalan, Acme marketing bo‘limi",
+        "NAME_ERROR": "Kampaniya nomini kiriting",
+        "NAME_LABEL": "Kampaniya nomi",
+        "NAME_PLACEHOLDER": "Masalan, Iyun yangiliklari",
+        "NO_VERIFIED_DOMAIN": "Hali tasdiqlangan yuborish domeni yo‘q. Avval email yuborish domenlari bo‘limida domen qo‘shing va tasdiqlang.",
+        "REPLY_TO_ERROR": "Javob manzili kerak",
+        "REPLY_TO_HINT": "Javoblar shu manzilga keladi. Javoblarni suhbatlarga aylantirish uchun uni kiruvchi xatlar qutisi sifatida ulang.",
+        "REPLY_TO_INVALID": "To‘g‘ri email manzilini kiriting",
+        "REPLY_TO_LABEL": "Javob manzili",
+        "REPLY_TO_PLACEHOLDER": "Masalan, support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "Qoralamani saqlash",
+        "SENDER_ERROR": "Tasdiqlangan yuborish domenini tanlang",
+        "SENDER_LABEL": "Yuborish domeni",
+        "SENDER_PLACEHOLDER": "Tasdiqlangan domenni tanlang",
+        "SUCCESS": "Kampaniya saqlandi.",
+        "CANCEL": "Bekor qilish"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Import qilingan ro‘yxatga email yozish va yuborish uchun birinchi kampaniyangizni yarating.",
+        "TITLE": "Hali email kampaniyalari yo‘q"
+      },
+      "HEADER_TITLE": "Email kampaniyalari",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Ro‘yxat bo‘sh. Kontaktlar qo‘shing va qayta yuklang.",
+          "EXPIRED": "Yuklangan faylning muddati tugagan. Ro‘yxatni qayta yuklang.",
+          "FAILED": "Import bajarilmadi. Bu urinishdagi kontaktlar qo‘shilmadi. Qayta urining yoki faylni qayta yuklang.",
+          "FILE_TOO_LARGE": "Fayl hajm cheklovidan katta. Ro‘yxatni bo‘lib, qayta urining.",
+          "HEADERS": "Birinchi varaqning birinchi qatorida bittadan Name va Email ustunlarini ishlating, sarlavhalar takrorlanmasin.",
+          "INVALID_FILE": "Faylni o‘qib bo‘lmadi. To‘g‘ri CSV yoki XLSX faylini yuklang.",
+          "IN_PROGRESS": "Bu kampaniya uchun import allaqachon bajarilmoqda. Tugashini kuting.",
+          "ROW_LIMIT": "Ro‘yxat 50 000 qatordan oshgan. Uni kichikroq fayllarga bo‘ling.",
+          "UPLOAD_FAILED": "Faylni saqlab bo‘lmadi. Ro‘yxatni qayta yuklang."
+        },
+        "RETRY": "Importni qayta urinish",
+        "QUEUED": "Ro‘yxat qabul qilindi. Import navbatga qo‘yildi; bu sahifadan chiqishingiz mumkin.",
+        "PROCESSING": "Ro‘yxat import qilinmoqda. Tugamaguncha yuborish imkonsiz.",
+        "COMPLETED": "Ro‘yxat importi yakunlandi.",
+        "SUMMARY": "Qo‘shilgan: {imported} · Takroriy: {duplicates} · Noto‘g‘ri: {invalid} · Yuborishdan chiqarilgan: {suppressed} · Jami: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Maydon almashish buferiga nusxalandi.",
+        "EMPTY": "Jadval ustunlaridagi maydonlarni ko‘rish uchun qabul qiluvchilarni import qiling.",
+        "SUBTITLE": "Maydonni nusxalash uchun bosing, so‘ng mavzu, oldindan ko‘rish matni yoki xat matniga joylang.",
+        "TITLE": "Mavjud maydonlar"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Yana kontakt qo‘shish",
+        "ADD_MORE_HINT": "Ro‘yxat kampaniya yaratilganda yuklangan. Yana kontaktlar qo‘shish uchun boshqa CSV/XLSX yuklang.",
+        "SUBTITLE": "name va email ustunlari bo‘lgan CSV yoki XLSX yuklang. Qabul qiluvchilar faqat shu kampaniyada ishlatiladi va kontaktlaringizga qo‘shilmaydi.",
+        "TITLE": "Qabul qiluvchilar"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Sana va vaqtni tanlang",
+        "DATETIME_LABEL": "Yuborish vaqti",
+        "CANCEL": "Bekor qilish",
+        "SUBMIT": "Rejalashtirish"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: qiymati yo‘q qabul qiluvchilar — {count}",
+        "BLANK_LABEL": "Qiymati yo‘q qabul qiluvchilar:",
+        "MISSING_LABEL": "Shablonda ishlatilgan, ammo qabul qiluvchilarda topilmagan:",
+        "OK": "Bu kampaniyadagi barcha maydonlarda qiymat bor. Yuborishga tayyor.",
+        "TITLE": "Yuborishdan oldingi tekshiruv"
+      },
+      "STATUS": {
+        "CANCELED": "Bekor qilindi",
+        "DRAFT": "Qoralama",
+        "SCHEDULED": "Rejalashtirilgan",
+        "SENDING": "Yuborilmoqda",
+        "SENT": "Yuborildi",
+        "PAUSED": "Yuborish to‘xtatildi",
+        "FAILED": "Muvaffaqiyatsiz"
+      },
+      "NEW": "Yangi email kampaniyasi"
     }
   }
 }

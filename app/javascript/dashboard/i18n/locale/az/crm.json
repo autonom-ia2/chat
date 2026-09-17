@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampaniyaların idarə edilməsi",
+      "DESCRIPTION": "E-poçt kampaniyalarının göndərilməsini, çatdırılmasını və keyfiyyətini izləyin."
+    },
+    "PAYWALL": {
+      "TITLE": "E-poçt kampaniyaları aktiv deyil",
+      "DESCRIPTION": "Çatdırılma və qarşılıqlı əlaqə hesabatları üçün e-poçt kampaniyalarını aktivləşdirin."
+    },
+    "FILTER": {
+      "LABEL": "Kampaniya",
+      "ALL": "Bütün kampaniyalar"
+    },
+    "APPROXIMATE": "təxmini",
+    "OPEN_APPROXIMATE_HINT": "Açılma göstəriciləri təxminidir. Apple Mail Privacy Protection və oxşar funksiyalar şəkilləri əvvəlcədən yükləyərək onları artıra bilər.",
+    "KPIS": {
+      "DELIVERED": "Çatdırılıb",
+      "OPENED": "Açılıb",
+      "CLICKED": "Kliklənib",
+      "UNSUBSCRIBED": "Abunəlikdən çıxışlar",
+      "COMPLAINED": "Spam şikayətləri",
+      "SENT": "Göndərildi",
+      "BOUNCED": "Çatdırılmadı"
+    },
+    "RATES": {
+      "OPEN_RATE": "Açılma faizi",
+      "CLICK_RATE": "Klik faizi",
+      "BOUNCE_RATE": "Çatdırılmayanların faizi",
+      "COMPLAINT_RATE": "Şikayət faizi",
+      "UNSUBSCRIBE_RATE": "Abunəlikdən çıxış faizi",
+      "OVER_DELIVERED": "çatdırılanlardan"
+    },
+    "TABLE": {
+      "EMAIL": "E-poçt",
+      "NAME": "Ad",
+      "LAST_EVENT_AT": "Son fəaliyyət",
+      "STATUS": "Vəziyyət",
+      "ATTEMPTS": "Cəhdlər",
+      "OPENS": "Açılmalar",
+      "CLICKS": "Kliklər"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Hələ kampaniya məlumatı yoxdur",
+      "SUBTITLE": "Çatdırılma və qarşılıqlı əlaqə göstəriciləri üçün e-poçt kampaniyası göndərin."
+    },
+    "ERROR": "Kampaniya hesabatı yüklənmədi. Yenidən cəhd edin.",
+    "EXPORT_CSV": "CSV ixrac et",
+    "TIMELINE": {
+      "TITLE": "Zaman üzrə çatdırılmalar, açılmalar və kliklər",
+      "EMPTY": "Bu kampaniya üçün hələ hadisə qeydə alınmayıb.",
+      "INTERVAL": {
+        "DAY": "Gün üzrə",
+        "HOUR": "Saat üzrə"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Keçid üzrə kliklər",
+      "EMPTY": "Hələ klik qeydə alınmayıb.",
+      "URL": "Keçid",
+      "UNIQUE": "Unikal kliklər",
+      "TOTAL": "Ümumi kliklər"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Alıcılar",
+      "EMPTY": "Alıcı tapılmadı.",
+      "PAGE_OF": "Səhifə {page} / {total}",
+      "PREV": "Əvvəlki",
+      "NEXT": "Növbəti",
+      "SEARCH_PLACEHOLDER": "Ad və ya e-poçt üzrə axtar"
+    },
+    "COMPARISON": {
+      "TITLE": "Kampaniyaların müqayisəsi"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "İzlənən keçidlər və QR kodları",
+      "SUBTITLE": "Hər kampaniya, satıcı və ya mağaza üçün keçid və ya QR yaradın. Onunla başlayan söhbətlər CRM-də mənbəyə bağlanır.",
+      "ADD": "Yeni keçid",
+      "NAME_PLACEHOLDER": "Məs. Mağaza QR — Mərkəz",
+      "INBOX": "WhatsApp gələnlər qutusu",
+      "PREFILLED": "Əvvəlcədən doldurulmuş mesaj",
+      "PREFILLED_PLACEHOLDER": "Məs. Salam! Ətraflı məlumat istəyirəm",
+      "CODE": "Kod",
+      "CONVERSATIONS": "Söhbətlər",
+      "COPY_LINK": "Keçidi kopyala",
+      "COPIED": "Kopyalandı!",
+      "DOWNLOAD_QR": "QR yüklə",
+      "DELETE": "Sil",
+      "DELETE_CONFIRM": "Bu keçid silinsin? Artıq əlaqələndirilmiş söhbətlər öz mənbəyini saxlayır.",
+      "EMPTY": "Hələ izlənən keçid yoxdur. Söhbətləri mağaza, satıcı və ya profil keçidinə bağlamaq üçün ilk keçidi yaradın.",
+      "CREATE_SUCCESS": "Keçid yaradıldı",
+      "CREATE_ERROR": "Keçid yaradıla bilmədi",
+      "NAME": "Ad",
+      "CLICKS": "Kliklər"
+    }
+  }
+}

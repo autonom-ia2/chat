@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Otkaži",
+        "CANCEL_SUCCESS": "Kampanja je otkazana.",
+        "DELETE_SUCCESS": "Kampanja je obrisana.",
+        "DUPLICATE": "Dupliraj",
+        "DUPLICATE_SUCCESS": "Kampanja je duplirana. Ažurirajte primaoce i raspored.",
+        "EDIT": "Uredi",
+        "OPEN_BUILDER": "Uređivač",
+        "PAUSE": "Pauziraj",
+        "PAUSE_SUCCESS": "Kampanja je pauzirana.",
+        "SCHEDULE": "Zakaži",
+        "SCHEDULE_SUCCESS": "Kampanja je zakazana.",
+        "SEND_NOW": "Pošalji odmah",
+        "SEND_SUCCESS": "Kampanja je u redu za slanje.",
+        "MANAGE_RECIPIENTS": "Primaoci",
+        "DELETE": "Obriši"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Greška veštačke inteligencije",
+          "PROCESSING": "Veštačka inteligencija generiše",
+          "READY": "Veštačka inteligencija je spremna"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Neuspešno",
+        "SENT": "Poslato",
+        "RECIPIENTS": "Primaoci"
+      },
+      "DESCRIPTION": "Sastavite email, izaberite potvrđeni domen za slanje, otpremite spisak primalaca i pošaljite odmah ili zakažite.",
+      "DIALOG": {
+        "BASE_HINT": "Otpremite CSV ili XLSX sa kolonama name i email. Prepoznate kolone postaju promenljive za personalizaciju.",
+        "BASE_IMPORTING": "Uvoz spiska…",
+        "BASE_LABEL": "Spisak kontakata (CSV ili XLSX)",
+        "BASE_PICK": "Izaberi datoteku",
+        "BASE_SELECTED": "Izabrano: {name}",
+        "CREATE_AND_OPEN": "Napravi i otvori u uređivaču",
+        "CREATE_TITLE": "Nova email kampanja",
+        "DIRECT_OPTION": "direktno slanje kroz ovo sanduče",
+        "DIRECT_WARNING": "Ovo je lično sanduče. Koristite ga samo za mali broj svojih stvarnih kontakata koji su pristali na poruke. Masovno slanje iz besplatnog sandučeta može dovesti do blokiranja naloga. Ograničenje je 100 poruka dnevno, uz razmake kao pri ručnom slanju. Za veće spiskove potvrdite svoj domen.",
+        "EDIT_TITLE": "Uredi email kampanju",
+        "ERROR": "Kampanju nije moguće sačuvati. Pokušajte ponovo.",
+        "FROM_EMAIL_DIRECT_HINT": "Šalje se direktno sa ovog sandučeta.",
+        "FROM_EMAIL_ERROR": "Unesite email pošiljaoca",
+        "FROM_EMAIL_HINT": "Adresa mora biti {'@'}{domain}, na vašem potvrđenom domenu.",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Adresa mora biti na vašem potvrđenom domenu za slanje.",
+        "FROM_EMAIL_INVALID": "Unesite ispravnu adresu na potvrđenom domenu",
+        "FROM_EMAIL_LABEL": "Email pošiljaoca",
+        "FROM_EMAIL_PLACEHOLDER": "Npr. promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "Unesite ime pošiljaoca",
+        "FROM_NAME_LABEL": "Ime pošiljaoca",
+        "FROM_NAME_PLACEHOLDER": "Npr. Acme marketing",
+        "NAME_ERROR": "Unesite naziv kampanje",
+        "NAME_LABEL": "Naziv kampanje",
+        "NAME_PLACEHOLDER": "Npr. Junski bilten",
+        "NO_VERIFIED_DOMAIN": "Još nema potvrđenog domena. Najpre dodajte i potvrdite domen u odeljku za domene za slanje emaila.",
+        "REPLY_TO_ERROR": "Unesite adresu za odgovore",
+        "REPLY_TO_HINT": "Odgovori stižu na ovu adresu. Povežite je kao sanduče da biste odgovore pretvorili u razgovore.",
+        "REPLY_TO_INVALID": "Unesite ispravnu email adresu",
+        "REPLY_TO_LABEL": "Adresa za odgovore",
+        "REPLY_TO_PLACEHOLDER": "Npr. support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "Sačuvaj nacrt",
+        "SENDER_ERROR": "Izaberite potvrđeni domen za slanje",
+        "SENDER_LABEL": "Domen za slanje",
+        "SENDER_PLACEHOLDER": "Izaberite potvrđeni domen",
+        "SUCCESS": "Kampanja je sačuvana.",
+        "CANCEL": "Otkaži"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Napravite prvu kampanju da sastavite i pošaljete email uvezenom spisku.",
+        "TITLE": "Još nema email kampanja"
+      },
+      "HEADER_TITLE": "Email kampanje",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Spisak je prazan. Dodajte kontakte i ponovo ga otpremite.",
+          "EXPIRED": "Rok važenja otpremljene datoteke je istekao. Ponovo otpremite spisak.",
+          "FAILED": "Uvoz nije uspeo. Nijedan kontakt iz ovog pokušaja nije dodat. Pokušajte ponovo ili ponovo otpremite datoteku.",
+          "FILE_TOO_LARGE": "Datoteka premašuje dozvoljenu veličinu. Podelite spisak i pokušajte ponovo.",
+          "HEADERS": "U prvom redu prvog lista koristite jednu kolonu Name i jednu Email, bez ponovljenih zaglavlja.",
+          "INVALID_FILE": "Datoteku nije moguće pročitati. Otpremite ispravan CSV ili XLSX.",
+          "IN_PROGRESS": "Uvoz za ovu kampanju je već u toku. Sačekajte da se završi.",
+          "ROW_LIMIT": "Spisak premašuje 50.000 redova. Podelite ga u manje datoteke.",
+          "UPLOAD_FAILED": "Datoteku nije moguće sačuvati. Ponovo otpremite spisak."
+        },
+        "RETRY": "Ponovi uvoz",
+        "QUEUED": "Lista je primljena. Uvoz čeka u redu; možete napustiti ovu stranicu.",
+        "PROCESSING": "Uvoz liste je u toku. Slanje nije dostupno dok se ne završi.",
+        "COMPLETED": "Uvoz liste je završen.",
+        "SUMMARY": "Dodato: {imported} · Duplikati: {duplicates} · Neispravni: {invalid} · Isključeni iz slanja: {suppressed} · Ukupno: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Promenljiva je kopirana u međuspremnik.",
+        "EMPTY": "Uvezite primaoce da biste videli promenljive iz kolona tabele.",
+        "SUBTITLE": "Kliknite na promenljivu da je kopirate, pa je nalepite u naslov, pregled teksta ili telo poruke.",
+        "TITLE": "Dostupne promenljive"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Dodaj kontakte",
+        "ADD_MORE_HINT": "Spisak je otpremljen pri pravljenju kampanje. Otpremite novi CSV/XLSX da dodate kontakte.",
+        "SUBTITLE": "Otpremite CSV ili XLSX sa kolonama name i email. Primaoci se koriste samo za ovu kampanju i ne dodaju se vašim kontaktima.",
+        "TITLE": "Primaoci"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Izaberite datum i vreme",
+        "DATETIME_LABEL": "Vreme slanja",
+        "CANCEL": "Otkaži",
+        "SUBMIT": "Zakaži"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: primalaca bez vrednosti — {count}",
+        "BLANK_LABEL": "Primaoci bez vrednosti:",
+        "MISSING_LABEL": "Koristi se u šablonu, ali nedostaje kod primalaca:",
+        "OK": "Sve promenljive u kampanji imaju vrednosti. Spremno za slanje.",
+        "TITLE": "Provera pre slanja"
+      },
+      "STATUS": {
+        "CANCELED": "Otkazano",
+        "DRAFT": "Nacrt",
+        "SCHEDULED": "Zakazano",
+        "SENDING": "Slanje u toku",
+        "SENT": "Poslato",
+        "PAUSED": "Slanje pauzirano",
+        "FAILED": "Neuspešno"
+      },
+      "NEW": "Nova email kampanja"
     }
   }
 }

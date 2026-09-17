@@ -191,14 +191,14 @@ jobs:
           test -f scripts/check-email-protection-i18n.mjs
           test -f tests/qa/email-campaigns/run.mjs
           mkdir -p tmp/email436/ci
-      - name: Focused Vitest - components, API, composables and campaign baseline
+      - name: Full Vitest - application and campaign regression
         env:
           NODE_ENV: test
         run: |
           python3 .github/scripts/email-protection-files.py frontend > tmp/email436/ci/frontend-files
           mapfile -d '' -t files < tmp/email436/ci/frontend-files
           printf '%s\n' "${files[@]}"
-          pnpm exec vitest run --maxWorkers=2 --minWorkers=1 --no-cache --no-coverage --reporter=default --reporter=junit --outputFile=tmp/email436/ci/vitest.xml "${files[@]}"
+          pnpm exec vitest run --maxWorkers=2 --minWorkers=1 --no-cache --no-coverage --reporter=default --reporter=junit --outputFile=tmp/email436/ci/vitest.xml
       - name: All 57 locale modules - compile and render without fallback
         run: node scripts/check-email-protection-i18n.mjs | tee tmp/email436/ci/locales.json
       - name: ESLint and Prettier - cumulative changed feature JS and Vue
@@ -206,7 +206,8 @@ jobs:
           python3 .github/scripts/email-protection-files.py frontend-lint > tmp/email436/ci/frontend-lint-files
           mapfile -d '' -t files < tmp/email436/ci/frontend-lint-files
           if (( ${#files[@]} )); then
-            pnpm exec eslint --max-warnings 0 "${files[@]}"
+            node --test .github/scripts/email-protection-eslint.test.mjs
+            node .github/scripts/email-protection-eslint.mjs "${files[@]}"
             pnpm exec prettier --check "${files[@]}"
           else
             echo 'No changed feature JS/Vue files to lint.'
@@ -238,6 +239,7 @@ jobs:
           if-no-files-found: ignore
           path: |
             tmp/email436/ci/vitest.xml
+            tmp/email436/ci/eslint.json
             tmp/email436/ci/locales.json
             tmp/email436/visual/results.json
             tmp/email436/visual/*.png

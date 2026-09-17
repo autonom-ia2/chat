@@ -77,7 +77,7 @@ def select(mode, files):
                 and p != "db/schema.rb" and Path(p).is_file()]
     if mode == "frontend-lint":
         return [p for p in files if p.startswith("app/javascript/")
-                and p.endswith((".js", ".vue")) and relevant(p) and Path(p).is_file()]
+                and p.endswith((".js", ".vue")) and Path(p).is_file()]
     raise ValueError(f"Unknown selection: {mode}")
 
 

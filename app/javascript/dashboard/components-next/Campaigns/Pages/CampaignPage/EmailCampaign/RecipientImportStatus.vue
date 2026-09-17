@@ -1,35 +1,62 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { recipientImportError } from 'dashboard/helper/emailCampaignImport';
+import {
+  NS,
+  formatNumber,
+} from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
 
 const props = defineProps({ campaign: { type: Object, required: true } });
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const currentImport = computed(() => props.campaign.recipient_import);
 const message = computed(() => {
   const value = currentImport.value;
   if (!value) return '';
-  if (value.status === 'failed')
-    return recipientImportError(t, value.error_code);
-  return t(`CAMPAIGN.EMAIL_CAMPAIGN.IMPORT.${value.status.toUpperCase()}`);
+  if (value.status === 'failed') return t(`${NS}.ERROR`);
+  return ['queued', 'processing', 'completed'].includes(value.status)
+    ? t(`${NS}.IMPORT_${value.status.toUpperCase()}`)
+    : t(`${NS}.STATUS.unknown`);
+});
+const result = computed(() => {
+  const counts = currentImport.value?.result;
+  const keys = ['imported', 'duplicates', 'invalid', 'suppressed'];
+  if (
+    !counts ||
+    !Number.isInteger(counts.total) ||
+    !keys.every(key => Number.isInteger(counts[key])) ||
+    keys.reduce((sum, key) => sum + counts[key], 0) !== counts.total
+  )
+    return null;
+  return Object.fromEntries(
+    [...keys, 'total'].map(key => [
+      key,
+      formatNumber(counts[key], locale.value),
+    ])
+  );
 });
 </script>
 
 <template>
-  <div v-if="currentImport" class="text-sm" role="status" aria-live="polite">
-    <p
-      class="mb-0"
-      :class="
-        currentImport.status === 'failed' ? 'text-n-ruby-11' : 'text-n-slate-11'
-      "
-    >
-      {{ message }}
-    </p>
-    <p
-      v-if="currentImport.status === 'completed'"
-      class="mb-0 text-xs text-n-slate-11"
-    >
-      {{ t('CAMPAIGN.EMAIL_CAMPAIGN.IMPORT.SUMMARY', currentImport.result) }}
-    </p>
+  <div class="contents">
+    <div v-if="currentImport" class="text-sm" role="status" aria-live="polite">
+      <p
+        class="mb-0"
+        :class="
+          currentImport.status === 'failed'
+            ? 'text-n-ruby-11'
+            : 'text-n-slate-11'
+        "
+      >
+        {{ message }}
+      </p>
+      <p
+        v-if="
+          currentImport.status === 'completed' && result && !campaign.preflight
+        "
+        class="mb-0 text-xs text-n-slate-11"
+      >
+        {{ t(`${NS}.IMPORT_SUMMARY`, result) }}
+      </p>
+    </div>
   </div>
 </template>
