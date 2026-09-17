@@ -5,6 +5,8 @@ ___
 
 # Chatwoot
 
+Email campaign operations: [maintenance, rollout and rollback runbook](docs/email-campaigns/operations.md).
+
 The modern customer support platform, an open-source alternative to Intercom, Zendesk, Salesforce Service Cloud etc.
 
 <p>
