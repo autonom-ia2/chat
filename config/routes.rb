@@ -406,6 +406,7 @@ Rails.application.routes.draw do
                 post :cancel
                 post :duplicate
                 post :reevaluate
+                post :recheck
                 post :resolve_video, to: 'videos#resolve'
               end
               resources :recipients, only: [:index, :create] do
@@ -426,6 +427,8 @@ Rails.application.routes.draw do
                 get :timeline
                 get :recipients
                 get :export
+                get :import_issues
+                get 'import_issues/export', action: :export_import_issues
               end
             end
           end
