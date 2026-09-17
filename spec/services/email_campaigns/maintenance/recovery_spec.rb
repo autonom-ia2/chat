@@ -2,6 +2,7 @@ require 'rails_helper'
 
 RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # rubocop:disable RSpec/SpecFilePathFormat
   let(:account) { create(:account) }
+  let(:suppression_events) { EmailSuppressionEvent.where(account_id: account.id) }
   let(:actor) { create(:user, account: account, type: 'SuperAdmin').becomes(SuperAdmin) }
   let(:campaign) { create(:email_campaign, account: account) }
   let(:recipient) { create(:email_campaign_recipient, email_campaign: campaign) }
@@ -16,7 +17,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
     expect(run.reload.public_progress).to include('status' => 'completed', 'dry_run' => true)
     expect(run.counts).to be_empty
     expect(EmailSuppression.count).to eq(0)
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
     expect do
       EmailCampaigns::Maintenance::Start.call(account: account, actor: actor, config: config,
                                               parameters: parameters.merge(mode: 'apply', confirm: 'apply'))
@@ -32,7 +33,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
     3.times { described_class.new(run: run.reload, config: config).call }
     expect(run.reload.public_progress).to include('status' => 'failed', 'dry_run' => true, 'error_code' => 'batch_failed')
     expect(run.public_progress.to_json).not_to include('private provider failure')
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
   end
 
   it 'does not publish a batch continuation before its outer transaction commits' do
@@ -46,7 +47,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
     end
     expect(enqueued_jobs).to be_empty
     expect(persisted.reload.event_cursor).to eq(0)
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
   end
 
   it 'limits a batch to 500 and excludes subsequent event and legacy inserts from its horizon' do
@@ -75,13 +76,13 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
     worker.instance_variable_set(:@token, token)
     worker.send(:process_row, first)
     expect(run.reload.event_cursor).to eq(first.id)
-    expect(EmailSuppressionEvent.count).to eq(1)
+    expect(suppression_events.count).to eq(1)
     travel 3.minutes do
       described_class.new(run: EmailProtectionMaintenanceRun.find(run.id), config: config).call
     end
     expect(run.reload.event_cursor).to eq(second.id)
     expect(run.counts).to include('events_processed' => 2, 'block_records_created' => 2)
-    expect(EmailSuppressionEvent.count).to eq(2)
+    expect(suppression_events.count).to eq(2)
     expect(EmailSuppressionState.sole.occurrences).to eq(2)
   end
 
@@ -95,12 +96,12 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
       raise ActiveRecord::Rollback
     end
     expect(run.reload.event_cursor).to eq(0)
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
     travel 3.minutes do
       described_class.new(run: run.reload, config: config).call
     end
     expect(run.reload.counts['events_processed']).to eq(1)
-    expect(EmailSuppressionEvent.count).to eq(1)
+    expect(suppression_events.count).to eq(1)
   end
 
   it 'fences a stale holder after another worker reclaims an expired lease' do
@@ -114,7 +115,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
       expect(old.send(:process_row, event)).to be(false)
       expect(run.reload.lease_token).to eq(new_token)
     end
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
   end
 
   it 'bounds repeated crashed batches and allows explicit retry without resetting evidence or horizon' do
@@ -138,7 +139,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
     recipient.email_events.create!(event_type: :complaint)
     described_class.new(run: run, config: EmailCampaigns::Maintenance::Config.new({})).call
     expect(run.reload).to have_attributes(status: 'failed', error_code: 'apply_disabled', event_cursor: 0)
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
   end
 
   it 'stops an existing apply run when its operator is no longer a persisted SuperAdmin' do
@@ -147,7 +148,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
     actor.update!(type: nil)
     described_class.new(run: persisted_run, config: config).call
     expect(run.reload).to have_attributes(status: 'failed', error_code: 'actor_unavailable', event_cursor: 0)
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
   end
 
   it 'bounds a bad historical row without exposing its value or losing the committed cursor' do
@@ -161,7 +162,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
     end
     expect(run.reload).to have_attributes(status: 'failed', error_code: 'batch_failed', error_count: 3, event_cursor: first.id)
     expect(run.counts['events_processed']).to eq(1)
-    expect(EmailSuppressionEvent.count).to eq(1)
+    expect(suppression_events.count).to eq(1)
     expect(run.public_progress.to_json).not_to include('private invalid address')
   ensure
     travel_back
@@ -182,7 +183,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do # ru
         described_class.new(run: persisted.reload, config: config).call
       end
       expect(persisted.reload).to have_attributes(status: 'failed', error_code: 'actor_unavailable', event_cursor: 0)
-      expect(EmailSuppressionEvent.count).to eq(0)
+      expect(suppression_events.count).to eq(0)
     end
   end
 end

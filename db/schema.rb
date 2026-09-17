@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_16_121200) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_16_123000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2276,6 +2276,38 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_121200) do
     t.index ["recipient_id"], name: "index_email_events_on_recipient_id"
   end
 
+  create_table "email_protection_maintenance_runs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "actor_id"
+    t.string "reason", limit: 200, null: false
+    t.string "idempotency_key", limit: 100, null: false
+    t.boolean "dry_run", default: true, null: false
+    t.integer "batch_size", default: 100, null: false
+    t.string "status", default: "pending", null: false
+    t.string "phase", default: "events", null: false
+    t.bigint "event_horizon", null: false
+    t.bigint "legacy_horizon", null: false
+    t.bigint "event_cursor", default: 0, null: false
+    t.bigint "legacy_cursor", default: 0, null: false
+    t.jsonb "counts", default: {}, null: false
+    t.string "lease_token"
+    t.datetime "lease_expires_at"
+    t.datetime "next_dispatch_at", null: false
+    t.integer "retry_count", default: 0, null: false
+    t.integer "attempts", default: 0, null: false
+    t.integer "enqueue_attempts", default: 0, null: false
+    t.integer "error_count", default: 0, null: false
+    t.string "error_code"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "idempotency_key"], name: "idx_email_maintenance_idempotency", unique: true
+    t.index ["account_id"], name: "index_email_protection_maintenance_runs_on_account_id"
+    t.index ["status", "next_dispatch_at"], name: "idx_email_maintenance_dispatch"
+    t.check_constraint "batch_size >= 1 AND batch_size <= 500", name: "email_maintenance_batch_bound"
+  end
+
   create_table "email_provider_states", force: :cascade do |t|
     t.string "provider_key", null: false
     t.string "status", default: "unknown", null: false
@@ -3142,6 +3174,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_121200) do
   add_foreign_key "email_campaigns", "email_sender_identities", column: "sender_identity_id"
   add_foreign_key "email_campaigns", "inboxes", column: "sender_inbox_id", on_delete: :nullify
   add_foreign_key "email_events", "email_campaign_recipients", column: "recipient_id"
+  add_foreign_key "email_protection_maintenance_runs", "accounts", on_delete: :cascade
   add_foreign_key "email_reputation_states", "accounts", on_delete: :cascade
   add_foreign_key "email_sender_identities", "accounts"
   add_foreign_key "email_suppression_states", "accounts", on_delete: :cascade

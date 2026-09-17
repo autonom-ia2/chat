@@ -99,3 +99,11 @@ O pacote recebido tinha 27 arquivos (25 Ruby + 2 documentos). Acrescenta spec HT
 - Parent prepara schema/migrations completos, inclusive retry_count, e executa os [comandos de aceitação local](../email-campaigns/operations.md#aceitação-automatizada-local--execução-pelo-parent) no harness SQL real em loopback. Sintaxe/lint não comprovam after_commit, concorrência, autenticação nem cardinalidade dos modelos em runtime.
 - Parent mantém aggregate docs/CI remoto, PR/Project e review. Merge/deploy/configuração/apply precisam dos gates e aprovação explícita; nada disso foi efetuado nesta rodada.
 - Runbook distingue shadow/warning/enforce de higiene e reputação, monitor/DNS/backfill independentes, observação das duas stacks após cada merge blue-green, proteção opt-out/quarentena retida e ausência de liberação automática de latch histórico.
+
+## Validação funcional pelo integrador
+
+Migração123000 aplicada somente em banco sintético loopback; schema regenerado contém `retry_count`. A suíte própria passou em **108 exemplos, zero falhas**. A suíte cumulativa de higiene/reputação/operações e baseline passou em **596 exemplos, zero falhas, um pending preexistente de Account**. Os eventos append-only retidos por testes concorrentes de outra conta foram preservados; as expectativas dos testes de manutenção passaram a usar o escopo da conta, sem apagar auditorias nem alterar código de produto para ocultar dados.
+
+RuboCop cumulativo: **147 arquivos sem infrações**. Revisão independente estática: PASS, sem achados concretos nos controles de autorização, preview/apply, isolamento, locking, idempotência, fencing, recuperação ou redação. Os nove problemas de setup do primeiro runtime foram corrigidos com identidade remetente reutilizada, autenticação HTTP real e verificações pós-commit isoladas dos jobs de criação de usuário. Nenhum teste novo foi ignorado.
+
+Evidências locais: `tmp/email436/operations-second.json`, `operations-cumulative-final.json`, `operations-cumulative-lint.log` e `operations-independent-review.md`. A integração com as PRs de relatórios/UI e CI remoto será validada novamente no SHA final. Nenhum backfill de produção, chamada real de envio, alteração de flags, merge ou deploy.

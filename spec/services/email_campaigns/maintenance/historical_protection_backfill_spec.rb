@@ -2,6 +2,7 @@ require 'rails_helper'
 
 RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
   let(:account) { create(:account) }
+  let(:suppression_events) { EmailSuppressionEvent.where(account_id: account.id) }
   let(:actor) { create(:user, account: account, type: 'SuperAdmin').becomes(SuperAdmin) }
   let(:campaign) { create(:email_campaign, account: account, status: :paused) }
   let(:recipient) { create(:email_campaign_recipient, email_campaign: campaign, ses_message_id: 'historical-message') }
@@ -17,11 +18,13 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     parameters[:mode] = 'dry_run'
     parameters.delete(:confirm)
     before = [recipient.reload.attributes, campaign.reload.attributes]
+    expect(Mail).not_to receive(:new)
+    expect(EmailCampaigns::Ses::Client).not_to receive(:new)
     described_class.new(run: run, config: config).call
     expect(run.reload.counts).to include('events_processed' => 1, 'eligible_events' => 1, 'unprotected_candidate_events' => 1)
     expect(EmailSuppression.count).to eq(0)
     expect(EmailSuppressionState.count).to eq(0)
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
     expect([recipient.reload.attributes, campaign.reload.attributes]).to eq(before)
   end
 
@@ -35,8 +38,14 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     it "classifies historical #{type}/#{subtype} from actual payload" do
       payload['bounce'] = { 'bounceType' => type, 'bounceSubType' => subtype }
       recipient.email_events.create!(event_type: :bounce, payload: payload)
+      preview_input = parameters.except(:mode, :confirm).merge(idempotency_key: 'bounce_preview_436')
+      preview = EmailCampaigns::Maintenance::Start.call(account: account, actor: actor, config: config, parameters: preview_input)
+      described_class.new(run: preview, config: config).call
+      expect(preview.reload.counts[counter]).to eq(1)
+      expect([EmailSuppression.count, EmailSuppressionState.count, suppression_events.count]).to eq([0, 0, 0])
       described_class.new(run: run, config: config).call
-      expect(run.reload.counts[counter]).to eq(1)
+      expect(run.reload.counts.slice('eligible_events', 'skipped_temporary_events', 'skipped_unknown_events'))
+        .to eq(preview.counts.slice('eligible_events', 'skipped_temporary_events', 'skipped_unknown_events'))
       expect(EmailSuppression.suppressed?(account, recipient.email)).to eq(counter == 'eligible_events')
     end
   end
@@ -56,7 +65,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
       described_class.new(run: run, config: config).call
       expect(EmailSuppressionState.sole).to have_attributes(active: true, reason: reason, expires_at: nil)
       expect(EmailSuppression.sole.reason).to eq(reason)
-      audit = EmailSuppressionEvent.sole
+      audit = suppression_events.sole
       expect(audit.reason).to eq(reason)
       expect(audit.metadata).to eq('historical_event_id' => historical.id, 'maintenance_run_id' => run.id,
                                    'classification' => classification, 'reason_code' => reason_code)
@@ -65,7 +74,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
         reason: reason, source: 'ses', event_key: "ses:#{recipient.ses_message_id}:bounce"
       )
       expect(result.duplicate).to be(true)
-      expect(EmailSuppressionEvent.count).to eq(1)
+      expect(suppression_events.count).to eq(1)
     end
   end
 
@@ -73,7 +82,8 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     legacy = EmailSuppression.create!(account: account, email: recipient.email, reason: 'provider_suppression', created_at: 3.years.ago)
     described_class.new(run: run, config: config).call
     described_class.new(run: run.reload, config: config).call
-    expect(EmailSuppressionEvent.sole).to have_attributes(reason: 'provider_suppression', occurred_at: legacy.created_at)
+    expect(suppression_events.sole).to have_attributes(reason: 'provider_suppression',
+                                                       occurred_at: legacy.created_at)
     expect(EmailSuppressionState.sole.reason).to eq('provider_suppression')
     EmailCampaigns::SuppressionRegistry.new(account: account, email: recipient.email).block!(
       reason: 'hard_bounce', source: 'ses', event_key: 'ses:later:bounce'
@@ -90,7 +100,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     described_class.new(run: run, config: config).call
     expect(EmailSuppressionState.sole.reason).to eq('unsubscribe')
     expect(EmailSuppression.sole.reason).to eq('unsubscribe')
-    expect(EmailSuppressionEvent.order(:id).pluck(:reason)).to eq(%w[unsubscribe complaint provider_suppression])
+    expect(suppression_events.order(:id).pluck(:reason)).to eq(%w[unsubscribe complaint provider_suppression])
   end
 
   %w[hard_bounce complaint unsubscribe].each do |reason|
@@ -104,7 +114,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
       described_class.new(run: run.reload, config: config).call
       expect(EmailSuppressionState.sole).to have_attributes(reason: reason, active: true, expires_at: nil)
       expect(EmailSuppression.sole.reason).to eq(reason)
-      expect(EmailSuppressionEvent.where(reason: 'provider_suppression').count).to eq(1)
+      expect(suppression_events.where(reason: 'provider_suppression').count).to eq(1)
     end
   end
 
@@ -115,7 +125,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     described_class.new(run: run, config: config).call
     expect(run.reload.counts).to include('skipped_unknown_events' => 1, 'skipped_temporary_events' => 3)
     expect(EmailSuppressionState.count).to eq(0)
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
   end
 
   it 'keeps permanent, spam and unsubscribe evidence across reimport without changing paused campaign or recipients' do
@@ -124,7 +134,8 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     recipient.email_events.create!(event_type: :bounce, payload: payload)
     before = [campaign.reload.attributes, recipient.reload.attributes]
     described_class.new(run: run, config: config).call
-    imported = create(:email_campaign_recipient, email_campaign: create(:email_campaign, account: account), email: recipient.email)
+    future = create(:email_campaign, account: account, sender_identity: campaign.sender_identity)
+    imported = create(:email_campaign_recipient, email_campaign: future, email: recipient.email)
     expect(EmailSuppression.blocking_reasons_for(account, [imported.email])).to eq(imported.email => 'unsubscribe')
     expect(EmailSuppressionState.find_by!(account: account, email: imported.email).reason).to eq('unsubscribe')
     expect(run.reload.counts).to include('eligible_events' => 3, 'block_records_created' => 3, 'already_protected_events' => 2)
@@ -138,7 +149,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
       reason: 'hard_bounce', source: 'ses', event_key: "ses:#{recipient.ses_message_id}:bounce"
     )
     expect(result.duplicate).to be(true)
-    expect(EmailSuppressionEvent.count).to eq(1)
+    expect(suppression_events.count).to eq(1)
     expect(run.reload.counts).to include('events_processed' => 2, 'eligible_events' => 2,
                                          'block_records_created' => 1, 'duplicate_events' => 1, 'already_protected_events' => 1)
   end
@@ -157,7 +168,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     original = legacy.attributes
     described_class.new(run: run, config: config).call
     described_class.new(run: run.reload, config: config).call
-    event = EmailSuppressionEvent.sole
+    event = suppression_events.sole
     expect(legacy.reload.attributes).to eq(original)
     expect(event).to have_attributes(reason: 'manual', source: 'backfill', occurred_at: legacy.created_at)
     expect(event.metadata).to include('evidence_code' => 'legacy_permanent_positive')
@@ -172,7 +183,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     described_class.new(run: run.reload, config: config).call
     expect(state.reload.reason).to eq('unsubscribe')
     expect(legacy.reload.reason).to eq('hard_bounce')
-    expect(EmailSuppressionEvent.sole.occurred_at).to eq(legacy.created_at)
+    expect(suppression_events.sole.occurred_at).to eq(legacy.created_at)
   end
 
   it 'excludes foreign account evidence and checks account ownership again when constructing proof' do
@@ -193,7 +204,8 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     serialized = [run.reload.public_progress.to_json, *messages].join
     expect(serialized).not_to include(recipient.email, 'provider-secret', parameters[:reason], parameters[:idempotency_key], 'historical-message')
     expect(messages.join).to include('email_protection.batch_finished')
-    expect(EmailSuppressionEvent.sole.metadata.to_json).not_to include(parameters[:reason], parameters[:idempotency_key], 'provider-secret')
+    expect(suppression_events.sole.metadata.to_json).not_to include(parameters[:reason],
+                                                                    parameters[:idempotency_key], 'provider-secret')
   end
 
   it 'preserves the account guardrail, manual campaign pause and disabled global sending' do
@@ -220,15 +232,15 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
       preview = EmailCampaigns::Maintenance::Start.call(account: account, actor: actor, config: config, parameters: preview_input)
       described_class.new(run: preview, config: config).call
       expect(preview.reload.counts['eligible_events']).to eq(1)
-      expect(EmailSuppressionEvent.count).to eq(0)
+      expect(suppression_events.count).to eq(0)
       described_class.new(run: run, config: config).call
       expect(run.reload.counts['eligible_events']).to eq(preview.counts['eligible_events'])
       expect(EmailSuppressionState.sole).to have_attributes(reason: 'provider_suppression', active: true, expires_at: nil)
       expect(EmailSuppression.sole.reason).to eq('provider_suppression')
-      expect(EmailSuppressionEvent.sole).to have_attributes(reason: 'provider_suppression', source: 'backfill',
-                                                            occurred_at: historical.occurred_at, event_key: 'ses:historical-message:complaint')
-      expect(EmailSuppressionEvent.sole.metadata).to eq('reason_code' => 'provider_suppression',
-                                                        'historical_event_id' => historical.id, 'maintenance_run_id' => run.id)
+      expect(suppression_events.sole).to have_attributes(reason: 'provider_suppression', source: 'backfill',
+                                                         occurred_at: historical.occurred_at, event_key: 'ses:historical-message:complaint')
+      expect(suppression_events.sole.metadata).to eq('reason_code' => 'provider_suppression',
+                                                     'historical_event_id' => historical.id, 'maintenance_run_id' => run.id)
     end
   end
 
@@ -238,7 +250,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     described_class.new(run: run, config: config).call
     expect(EmailSuppressionState.sole.reason).to eq('unsubscribe')
     expect(EmailSuppression.sole.reason).to eq('unsubscribe')
-    expect(EmailSuppressionEvent.order(:id).pluck(:reason)).to eq(%w[unsubscribe provider_suppression])
+    expect(suppression_events.order(:id).pluck(:reason)).to eq(%w[unsubscribe provider_suppression])
   end
 
   it 'retains active quarantine when historical temporary evidence is replayed after a behavioral rollback to shadow' do
@@ -251,6 +263,6 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
     end
     expect(state.reload.attributes).to eq(original)
     expect(run.reload.counts['skipped_temporary_events']).to eq(1)
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
   end
 end

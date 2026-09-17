@@ -2,6 +2,7 @@ require 'rails_helper'
 
 RSpec.describe EmailCampaigns::Maintenance::Dispatch do
   let(:account) { create(:account) }
+  let(:suppression_events) { EmailSuppressionEvent.where(account_id: account.id) }
   let(:actor) { create(:user, account: account, type: 'SuperAdmin').becomes(SuperAdmin) }
   let(:parameters) { { reason: 'Outbox verification', idempotency_key: 'outbox_436_01' } }
 
@@ -62,14 +63,14 @@ RSpec.describe EmailCampaigns::Maintenance::Dispatch do
       EmailCampaigns::ProtectionBackfillJob.perform_now(run.id)
       expect(run.reload.status).to eq('completed')
     end
-    expect(EmailSuppressionEvent.count).to eq(0)
+    expect(suppression_events.count).to eq(0)
   end
 
   it 'retains audit without blocking authorized account cleanup after a completed preview' do
     EmailCampaigns::SuppressionRegistry.new(account: account, email: 'synthetic@example.org').record!(
       reason: 'unknown_bounce', source: 'ses', event_key: 'retention-maintenance-436'
     )
-    audit = EmailSuppressionEvent.sole
+    audit = suppression_events.sole
     run = EmailCampaigns::Maintenance::Start.call(account: account, actor: actor, parameters: parameters)
     2.times { EmailCampaigns::ProtectionBackfillJob.perform_now(run.id) }
     expect(run.reload.status).to eq('completed')

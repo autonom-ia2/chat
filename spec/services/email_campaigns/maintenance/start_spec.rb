@@ -2,10 +2,15 @@ require 'rails_helper'
 
 RSpec.describe EmailCampaigns::Maintenance::Start do
   let(:account) { create(:account) }
-  let(:actor) { create(:user, account: account, type: 'SuperAdmin').becomes(SuperAdmin) }
+  let!(:actor) { create(:user, account: account, type: 'SuperAdmin').becomes(SuperAdmin) }
   let(:parameters) { { reason: 'epic436 reviewed', idempotency_key: 'epic436_apply_01', mode: 'apply', confirm: 'apply' } }
   let(:enabled) { EmailCampaigns::Maintenance::Config.new('EMAIL_CAMPAIGN_PROTECTION_BACKFILL_ENABLED' => 'true') }
   let(:disabled) { EmailCampaigns::Maintenance::Config.new({}) }
+
+  before do
+    # Finish fixture callbacks before observing Start's transaction and dispatch.
+    clear_enqueued_jobs
+  end
 
   it 'requires a persisted platform administrator, including for dry run' do
     [create(:user, account: account, role: :administrator), SuperAdmin.new].each do |user|
@@ -50,7 +55,7 @@ RSpec.describe EmailCampaigns::Maintenance::Start do
         run = described_class.call(account: account, actor: actor, parameters: parameters, config: enabled)
         expect(enqueued_jobs).to be_empty
       end
-    end.to have_enqueued_job(EmailCampaigns::ProtectionBackfillJob)
+    end.to have_enqueued_job(EmailCampaigns::ProtectionBackfillJob).with { |id| expect(id).to eq(run.id) }.exactly(:once)
     expect(run.reload.enqueue_attempts).to eq(1)
   end
 
@@ -63,11 +68,11 @@ RSpec.describe EmailCampaigns::Maintenance::Start do
   end
 
   it 'checks current membership and account status even when invoked without a controller' do
-    actor.account_users.where(account: account).delete_all
+    account.update!(status: :suspended)
     expect { described_class.call(account: account, actor: actor, parameters: parameters, config: enabled) }
       .to raise_error(Pundit::NotAuthorizedError)
-    create(:account_user, account: account, user: actor)
-    account.update!(status: :suspended)
+    account.update!(status: :active)
+    actor.account_users.find_by!(account: account).destroy!
     expect { described_class.call(account: account, actor: actor, parameters: parameters, config: enabled) }
       .to raise_error(Pundit::NotAuthorizedError)
     expect(EmailProtectionMaintenanceRun.count).to eq(0)
