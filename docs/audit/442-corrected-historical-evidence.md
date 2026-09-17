@@ -53,4 +53,4 @@ Ambiente: PostgreSQL17 em `127.0.0.1:15436`, Redis em `127.0.0.1:16436`, `RAILS_
 - gates puros finais após os contratos de lock/lease: **9 arquivos;57 testes e50.876 asserções, zero falhas/erros/skips**;
 - RuboCop cumulativo final: **184 arquivos, zero infrações**. O CI remoto repetirá o gate no SHA publicado.
 
-A suíte cumulativa demonstra a promoção pela mesma chave, prioridade forte, conclusão do run, idempotência e reimportação bloqueada pelo positivo tenant. Ela não equivale a teste de produção, nem autoriza backfill real. Evidências locais: `tmp/email436/pr442-focused.json`, `final-rspec.json`, `final2-pure.log`.
+A suíte cumulativa demonstra a promoção pela mesma chave, prioridade forte, conclusão do run, idempotência e reimportação bloqueada pelo positivo tenant. Ela não equivale a teste de produção, nem autoriza backfill real. Evidências locais finais: `tmp/email436/pr442-focused.json`, `final-p2-rspec.json`, `final-p2-pure.log` e `final-p2-rubocop.log`.
