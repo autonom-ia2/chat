@@ -56,12 +56,13 @@ RSpec.describe 'Preflight lock and commit closure', type: :model do
     job = EmailCampaigns::RecipientPreflightJob.new
     job.instance_variable_set(:@lease, lease)
     result = { status: 'invalid', reason_code: 'invalid_domain', valid_until: 1.hour.from_now }
-    job.send(:persist_result, recipient, result, running)
+    config = EmailCampaigns::HygieneConfig.new
+    job.send(:persist_result, recipient, result, running, config)
     expect(recipient.reload.preflight_status).to eq('valid')
     expect(lease.advance(running, recipient.id)).to be_nil
     expect(campaign.reload.preflight_lease_token).to eq(current)
     expect(campaign.preflight_summary).to include('rechecking' => true)
-    job.send(:persist_result, recipient, result, current)
+    job.send(:persist_result, recipient, result, current, config)
     expect(recipient.reload.preflight_status).to eq('invalid')
   end
 
