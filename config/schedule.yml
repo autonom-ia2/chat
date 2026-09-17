@@ -209,3 +209,10 @@ email_campaign_provider_monitor_job:
   cron: '*/5 * * * *'
   class: 'EmailCampaigns::ProviderMonitorJob'
   queue: scheduled_jobs
+
+# Recovers only existing maintenance outboxes/expired leases; never creates a run.
+# Apply remains separately gated by EMAIL_CAMPAIGN_PROTECTION_BACKFILL_ENABLED.
+email_campaign_protection_backfill_reconcile_job:
+  cron: '* * * * *'
+  class: 'EmailCampaigns::ProtectionBackfillReconcileJob'
+  queue: housekeeping

@@ -385,6 +385,9 @@ Rails.application.routes.draw do
             end
           end
           namespace :email_campaigns do
+            post 'maintenance/backfills', to: 'maintenance#create'
+            get 'maintenance/backfills/:id', to: 'maintenance#show'
+            post 'maintenance/backfills/:id/retry', to: 'maintenance#retry'
             resource :reputation, only: [:show] do
               get :history
               post :provider_release
