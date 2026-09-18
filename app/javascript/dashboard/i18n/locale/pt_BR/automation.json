@@ -203,7 +203,12 @@
       "CHANGE_PRIORITY": "Alterar Prioridade",
       "ADD_SLA": "Adicionar SLA",
       "OPEN_CONVERSATION": "Abrir conversa",
-      "PENDING_CONVERSATION": "Marcar conversa como pendente"
+      "PENDING_CONVERSATION": "Marcar conversa como pendente",
+      "CRM_CREATE_CARD": "Criar card no CRM",
+      "CRM_MOVE_CARD_STAGE": "Mover card do CRM para a etapa",
+      "CRM_MARK_CARD_WON": "Marcar card do CRM como ganho",
+      "CRM_MARK_CARD_LOST": "Marcar card do CRM como perdido",
+      "CRM_ASSIGN_CARD_OWNER": "Definir responsável do card do CRM"
     },
     "MESSAGE_TYPES": {
       "INCOMING": "Mensagem Recebida",
@@ -233,7 +238,16 @@
       "ASSIGNEE_NAME": "Agente atribuído",
       "TEAM_NAME": "Time",
       "PRIORITY": "Prioridade",
-      "LABELS": "Etiquetas"
-    }
+      "LABELS": "Etiquetas",
+      "CRM_PIPELINE": "Funil do CRM",
+      "CRM_STAGE": "Etapa do CRM",
+      "CRM_CARD_STATUS": "Status do card do CRM"
+    },
+    "CRM_CARD_STATUS": {
+      "OPEN": "Aberto",
+      "WON": "Ganho",
+      "LOST": "Perdido"
+    },
+    "CRM_OPTIONS_ERROR": "Não foi possível carregar os funis do CRM."
   }
 }

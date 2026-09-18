@@ -1,4 +1,6 @@
 class AutomationRules::ActionService < ActionService
+  include AutomationRules::CrmActions
+
   def initialize(rule, account, conversation)
     super(conversation)
     @rule = rule

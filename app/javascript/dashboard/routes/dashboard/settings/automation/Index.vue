@@ -14,6 +14,7 @@ import TabBar from 'dashboard/components-next/tabbar/TabBar.vue';
 import { BaseTable } from 'dashboard/components-next/table';
 import { DEFAULT_DELAY_MINUTES } from './constants';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { loadCrmAutomationOptions } from 'dashboard/composables/useCrmAutomationOptions';
 
 const getters = useStoreGetters();
 const store = useStore();
@@ -131,6 +132,11 @@ onMounted(() => {
   store.dispatch('automations/get');
   if (isSLAEnabled.value) {
     store.dispatch('sla/get');
+  }
+  if (getters['globalConfig/get'].value?.crmKanbanEnabled) {
+    loadCrmAutomationOptions().catch(() =>
+      useAlert(t('AUTOMATION.CRM_OPTIONS_ERROR'))
+    );
   }
 });
 

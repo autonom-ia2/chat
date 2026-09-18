@@ -1,6 +1,8 @@
 require 'json'
 
 class AutomationRules::ConditionsFilterService < FilterService
+  include AutomationRules::CrmConditions
+
   ATTRIBUTE_MODEL = 'contact_attribute'.freeze
 
   def initialize(rule, conversation = nil, options = {})
@@ -64,6 +66,8 @@ class AutomationRules::ConditionsFilterService < FilterService
     conversation_filter = @conversation_filters[query_hash['attribute_key']]
     contact_filter = @contact_filters[query_hash['attribute_key']]
     message_filter = @message_filters[query_hash['attribute_key']]
+
+    return if apply_crm_filter(query_hash, current_index)
 
     if conversation_filter
       @query_string += conversation_query_string('conversations', conversation_filter, query_hash.with_indifferent_access, current_index)
@@ -205,6 +209,7 @@ class AutomationRules::ConditionsFilterService < FilterService
       )
     end
 
+    records = records.joins(JOIN_SQL) if crm_conditions?
     records = records.where(messages: { id: @options[:message].id }) if @options[:message].present?
     records
   end

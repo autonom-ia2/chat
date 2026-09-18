@@ -108,6 +108,11 @@ const ACTION_ICONS = {
   add_sla: 'i-lucide-gauge',
   disable_crm_ai_followup: 'i-lucide-bot-off',
   enable_crm_ai_followup: 'i-lucide-bot',
+  crm_create_card: 'i-lucide-square-plus',
+  crm_move_card_stage: 'i-lucide-move-right',
+  crm_mark_card_won: 'i-lucide-trophy',
+  crm_mark_card_lost: 'i-lucide-circle-x',
+  crm_assign_card_owner: 'i-lucide-user-round-check',
 };
 
 const DEFAULT_ACTION_ICON = 'i-lucide-zap';
@@ -154,6 +159,7 @@ export const getActionOptions = ({
   type,
   addNoneToListFn,
   priorityOptions,
+  crmStages = [],
 }) => {
   const actionsMap = {
     assign_agent: addNoneToListFn ? addNoneToListFn(agents) : agents,
@@ -165,6 +171,9 @@ export const getActionOptions = ({
     remove_label: generateLabelOptions(labels),
     change_priority: priorityOptions,
     add_sla: slaPolicies,
+    crm_create_card: crmStages,
+    crm_move_card_stage: crmStages,
+    crm_assign_card_owner: agents,
   };
   return actionsMap[type];
 };
@@ -184,6 +193,9 @@ export const getConditionOptions = ({
   type,
   priorityOptions,
   messageTypeOptions,
+  crmPipelines = [],
+  crmStages = [],
+  crmCardStatuses = [],
 }) => {
   if (isCustomAttributeCheckbox(customAttributes, type)) {
     return booleanFilterOptions;
@@ -207,6 +219,9 @@ export const getConditionOptions = ({
     private_note: booleanFilterOptions,
     priority: priorityOptions,
     labels: generateLabelOptions(labels),
+    crm_pipeline_id: crmPipelines,
+    crm_stage_id: crmStages,
+    crm_card_status: crmCardStatuses,
   };
 
   return conditionFilterMaps[type];

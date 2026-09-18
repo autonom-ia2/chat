@@ -131,6 +131,8 @@ const validateSingleAction = action => {
     'pending_conversation',
     'disable_crm_ai_followup',
     'enable_crm_ai_followup',
+    'crm_mark_card_won',
+    'crm_mark_card_lost',
   ];
 
   if (

@@ -34,6 +34,7 @@ class AutomationRules::ConditionValidationService
 
   def valid_condition?(condition)
     key = condition['attribute_key']
+    return AutomationRules::CrmConditions.valid_operator?(condition) if AutomationRules::CrmConditions.key?(key)
 
     conversation_filter = @conversation_filters[key]
     contact_filter = @contact_filters[key]

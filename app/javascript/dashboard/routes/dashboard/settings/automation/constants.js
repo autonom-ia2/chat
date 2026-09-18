@@ -5,6 +5,28 @@ import {
   OPERATOR_TYPES_6,
 } from './operators';
 
+// Card do CRM da conversa (AutomationRules::CrmConditions). Só aparecem com o CRM ligado.
+const CRM_CONDITIONS = [
+  {
+    key: 'crm_pipeline_id',
+    name: 'CRM_PIPELINE',
+    inputType: 'multi_select',
+    filterOperators: OPERATOR_TYPES_3,
+  },
+  {
+    key: 'crm_stage_id',
+    name: 'CRM_STAGE',
+    inputType: 'multi_select',
+    filterOperators: OPERATOR_TYPES_1,
+  },
+  {
+    key: 'crm_card_status',
+    name: 'CRM_CARD_STATUS',
+    inputType: 'multi_select',
+    filterOperators: OPERATOR_TYPES_1,
+  },
+];
+
 export const AUTOMATIONS = {
   message_created: {
     conditions: [
@@ -86,6 +108,7 @@ export const AUTOMATIONS = {
         inputType: 'multi_select',
         filterOperators: OPERATOR_TYPES_3,
       },
+      ...CRM_CONDITIONS,
     ],
     actions: [
       {
@@ -228,6 +251,7 @@ export const AUTOMATIONS = {
         inputType: 'multi_select',
         filterOperators: OPERATOR_TYPES_3,
       },
+      ...CRM_CONDITIONS,
     ],
     actions: [
       {
@@ -374,6 +398,7 @@ export const AUTOMATIONS = {
         inputType: 'multi_select',
         filterOperators: OPERATOR_TYPES_3,
       },
+      ...CRM_CONDITIONS,
     ],
     actions: [
       {
@@ -514,6 +539,7 @@ export const AUTOMATIONS = {
         inputType: 'multi_select',
         filterOperators: OPERATOR_TYPES_3,
       },
+      ...CRM_CONDITIONS,
     ],
     actions: [
       {
@@ -644,6 +670,7 @@ export const AUTOMATIONS = {
         inputType: 'multi_select',
         filterOperators: OPERATOR_TYPES_1,
       },
+      ...CRM_CONDITIONS,
     ],
     actions: [
       {
@@ -804,6 +831,31 @@ export const AUTOMATION_ACTION_TYPES = [
     key: 'enable_crm_ai_followup',
     label: 'ENABLE_CRM_AI_FOLLOWUP',
     inputType: null,
+  },
+  {
+    key: 'crm_create_card',
+    label: 'CRM_CREATE_CARD',
+    inputType: 'search_select',
+  },
+  {
+    key: 'crm_move_card_stage',
+    label: 'CRM_MOVE_CARD_STAGE',
+    inputType: 'search_select',
+  },
+  {
+    key: 'crm_mark_card_won',
+    label: 'CRM_MARK_CARD_WON',
+    inputType: null,
+  },
+  {
+    key: 'crm_mark_card_lost',
+    label: 'CRM_MARK_CARD_LOST',
+    inputType: null,
+  },
+  {
+    key: 'crm_assign_card_owner',
+    label: 'CRM_ASSIGN_CARD_OWNER',
+    inputType: 'search_select',
   },
   {
     key: 'change_priority',
