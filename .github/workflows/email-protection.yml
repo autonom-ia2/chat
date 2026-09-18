@@ -1,0 +1,247 @@
+name: Email protection - feature and bounded regression
+
+# Deliberately independent of the manually disabled testes.yml. No push trigger:
+# pull_request covers feature pushes without duplicate push + PR runs.
+on:
+  pull_request:
+    branches: [main, 'feat/436-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: email-protection-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: 'true'
+  TZ: UTC
+  RAILS_ENV: test
+  RACK_ENV: test
+  FRONTEND_URL: https://example.test
+  SECRET_KEY_BASE: issue436-synthetic-test-only-000000000000000000000000000000000000000000000000000000000000
+  AWS_EC2_METADATA_DISABLED: 'true'
+  AWS_SHARED_CREDENTIALS_FILE: /dev/null
+  AWS_CONFIG_FILE: /dev/null
+  AWS_SDK_LOAD_CONFIG: 'false'
+  AWS_ACCESS_KEY_ID: issue436-synthetic
+  AWS_SECRET_ACCESS_KEY: issue436-synthetic-not-a-secret
+  AWS_REGION: us-east-1
+  EMAIL_CAMPAIGN_ENABLED: 'false'
+  EMAIL_CAMPAIGN_HYGIENE_DNS_ENABLED: 'false'
+  HUSKY: '0'
+  BUNDLE_FROZEN: 'true'
+  CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  scope:
+    name: Detect feature scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    outputs:
+      run: ${{ steps.scope.outputs.run }}
+      ui: ${{ steps.scope.outputs.ui }}
+      baseline: ${{ steps.scope.outputs.baseline }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select branch or relevant PR paths; cumulative main ancestor
+        id: scope
+        env:
+          CI_HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 .github/scripts/email-protection-files.py scope >> "$GITHUB_OUTPUT"
+      - name: Explain selection
+        env:
+          RUN_GATE: ${{ steps.scope.outputs.run }}
+          HAS_UI: ${{ steps.scope.outputs.ui }}
+          BASELINE: ${{ steps.scope.outputs.baseline }}
+        run: |
+          printf 'Feature gate selected: %s\nUI present: %s\nCumulative lint baseline: %s\n' "$RUN_GATE" "$HAS_UI" "$BASELINE" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$HAS_UI" != true ]]; then
+            echo 'Frontend not applicable: protection UI is absent (PR0); no stub test substitutes it.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  backend:
+    name: Email backend and bounded regression
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: email436
+          POSTGRES_PASSWORD: email436-synthetic
+          POSTGRES_DB: email436_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U email436 -d email436_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      FEATURE_BASELINE: ${{ needs.scope.outputs.baseline }}
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: '5432'
+      POSTGRES_USERNAME: email436
+      POSTGRES_PASSWORD: email436-synthetic
+      POSTGRES_DATABASE: email436_test
+      REDIS_URL: redis://127.0.0.1:6379/0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          # Reads .ruby-version and Gemfile.lock (including Bundler version).
+          bundler-cache: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install locked root dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Pure contracts - each file in its own Ruby process
+        run: |
+          mkdir -p tmp/email436/ci
+          python3 .github/scripts/email-protection-files.py pure > tmp/email436/ci/pure-files
+          mapfile -d '' -t files < tmp/email436/ci/pure-files
+          for file in "${files[@]}"; do
+            printf '\nRunning %s\n' "$file"
+            bundle exec ruby -rwebmock -e 'WebMock.enable!; WebMock.disable_net_connect!; load ARGV.fetch(0)' "$file"
+          done | tee tmp/email436/ci/pure-results.txt
+      - name: Fresh synthetic schema - standard loader and available guard hook
+        # Source C registers its reputation guards inside db:load_config/load_schema.
+        # Do not bypass rails_helper's maintain_test_schema! or run production seeds.
+        run: bundle exec rake db:create db:schema:load
+      - name: RSpec - all email feature specs plus bounded baseline
+        run: |
+          python3 .github/scripts/email-protection-files.py rspec > tmp/email436/ci/rspec-files
+          mapfile -d '' -t files < tmp/email436/ci/rspec-files
+          printf '%s\n' "${files[@]}"
+          bundle exec rspec --require spec_helper --format progress --format json --out tmp/email436/ci/rspec.json "${files[@]}"
+          ruby -rjson -e 'report = JSON.parse(File.read(ARGV.fetch(0))); abort "No RSpec examples executed" unless report.dig("summary", "example_count").to_i.positive?' tmp/email436/ci/rspec.json
+      - name: RuboCop - cumulative changed Ruby, excluding generated schema
+        run: |
+          python3 .github/scripts/email-protection-files.py ruby-lint > tmp/email436/ci/ruby-files
+          mapfile -d '' -t files < tmp/email436/ci/ruby-files
+          if (( ${#files[@]} )); then
+            bundle exec rubocop --force-exclusion "${files[@]}"
+          else
+            echo 'No changed Ruby files to lint.'
+          fi
+      - name: Verify dependency locks were not rewritten
+        run: git diff --exit-code -- Gemfile.lock pnpm-lock.yaml tests/playwright/pnpm-lock.yaml
+      - name: Upload synthetic test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: email-protection-backend
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            tmp/email436/ci/rspec.json
+            tmp/email436/ci/pure-results.txt
+
+  frontend:
+    name: Email UI, locales, build and isolated browser
+    needs: scope
+    if: needs.scope.outputs.run == 'true' && needs.scope.outputs.ui == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      FEATURE_BASELINE: ${{ needs.scope.outputs.baseline }}
+      # Build-only synthetic values: no Rails server, DB, mail or production boot.
+      NODE_ENV: production
+      VITE_RUBY_SKIP_ASSETS_PRECOMPILE_INSTALL: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install locked root dependencies including test/build tools
+        run: pnpm install --frozen-lockfile --prod=false
+      - name: Require real UI and locale coverage
+        run: |
+          test -f app/javascript/dashboard/components-next/Campaigns/EmailProtection/EmailProtectionPanel.vue
+          test -f app/javascript/dashboard/components-next/Campaigns/EmailProtection/specs/locales.spec.js
+          test -f scripts/check-email-protection-i18n.mjs
+          test -f tests/qa/email-campaigns/run.mjs
+          mkdir -p tmp/email436/ci
+      - name: Full Vitest - application and campaign regression
+        env:
+          NODE_ENV: test
+        run: |
+          python3 .github/scripts/email-protection-files.py frontend > tmp/email436/ci/frontend-files
+          mapfile -d '' -t files < tmp/email436/ci/frontend-files
+          printf '%s\n' "${files[@]}"
+          pnpm exec vitest run --maxWorkers=2 --minWorkers=1 --no-cache --no-coverage --reporter=default --reporter=junit --outputFile=tmp/email436/ci/vitest.xml
+      - name: All 57 locale modules - compile and render without fallback
+        run: node scripts/check-email-protection-i18n.mjs | tee tmp/email436/ci/locales.json
+      - name: ESLint and Prettier - cumulative changed feature JS and Vue
+        run: |
+          python3 .github/scripts/email-protection-files.py frontend-lint > tmp/email436/ci/frontend-lint-files
+          mapfile -d '' -t files < tmp/email436/ci/frontend-lint-files
+          if (( ${#files[@]} )); then
+            node --test .github/scripts/email-protection-eslint.test.mjs
+            node .github/scripts/email-protection-eslint.mjs "${files[@]}"
+            pnpm exec prettier --check "${files[@]}"
+          else
+            echo 'No changed feature JS/Vue files to lint.'
+          fi
+      - name: Build actual Vite test assets
+        run: |
+          bundle exec vite build --mode test
+          compgen -G 'public/vite-test/assets/dashboard-*.css' > /dev/null
+      - name: Select one isolated Chromium directory for installation and execution
+        run: |
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/email436-browsers\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Install isolated browser from its existing pnpm lock
+        working-directory: tests/playwright
+        run: |
+          git ls-files --error-unmatch pnpm-lock.yaml > /dev/null
+          pnpm install --frozen-lockfile --prod=false --ignore-scripts
+          pnpm exec playwright install --with-deps chromium
+          node --input-type=module -e "import { chromium } from './node_modules/playwright/index.mjs'; import { existsSync } from 'node:fs'; if (!existsSync(chromium.executablePath())) throw new Error('Installed Chromium executable missing');"
+      - name: Isolated harness - synthetic routes and loopback only
+        run: |
+          node --test tests/qa/email-campaigns/*.test.mjs
+          node tests/qa/email-campaigns/run.mjs
+      - name: Verify dependency locks were not rewritten
+        run: git diff --exit-code -- Gemfile.lock pnpm-lock.yaml tests/playwright/pnpm-lock.yaml
+      - name: Upload test reports and synthetic screenshots only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: email-protection-frontend
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            tmp/email436/ci/vitest.xml
+            tmp/email436/ci/eslint.json
+            tmp/email436/ci/locales.json
+            tmp/email436/visual/results.json
+            tmp/email436/visual/*.png

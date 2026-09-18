@@ -1,20 +1,33 @@
 <script setup>
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useToggle } from '@vueuse/core';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useEmitter } from 'dashboard/composables/emitter';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { useAlert } from 'dashboard/composables';
 import { isRecipientImportActive } from 'dashboard/helper/emailCampaignImport';
 import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
 
+import EmailStatusBadge from 'dashboard/components-next/Campaigns/EmailProtection/EmailStatusBadge.vue';
+import EmailStatusFilter from 'dashboard/components-next/Campaigns/EmailProtection/EmailStatusFilter.vue';
+import EmailCampaignHealth from 'dashboard/components-next/Campaigns/EmailProtection/EmailCampaignHealth.vue';
+import {
+  NS,
+  safeError,
+  hasActiveEmailWork,
+  formatNumber,
+} from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
+import { useEmailReportRefresh } from 'dashboard/components-next/Campaigns/EmailProtection/useEmailReportRefresh';
+import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CampaignLayout from 'dashboard/components-next/Campaigns/CampaignLayout.vue';
 import EmailCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDialog.vue';
 import EmailCampaignDetailsDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDetailsDialog.vue';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
@@ -32,41 +45,8 @@ const enabled = computed(
     globalConfig.value?.emailCampaignEnabled === true &&
     globalConfig.value?.crmKanbanEnabled === true
 );
-const isFetching = computed(() => uiFlags.value.isFetching);
-
-const statusLabel = status => {
-  switch (status) {
-    case 'draft':
-      return t('CAMPAIGN.EMAIL_CAMPAIGN.STATUS.DRAFT');
-    case 'scheduled':
-      return t('CAMPAIGN.EMAIL_CAMPAIGN.STATUS.SCHEDULED');
-    case 'sending':
-      return t('CAMPAIGN.EMAIL_CAMPAIGN.STATUS.SENDING');
-    case 'sent':
-      return t('CAMPAIGN.EMAIL_CAMPAIGN.STATUS.SENT');
-    case 'paused':
-      return t('CAMPAIGN.EMAIL_CAMPAIGN.STATUS.PAUSED');
-    case 'canceled':
-      return t('CAMPAIGN.EMAIL_CAMPAIGN.STATUS.CANCELED');
-    case 'failed':
-      return t('CAMPAIGN.EMAIL_CAMPAIGN.STATUS.FAILED');
-    default:
-      return status;
-  }
-};
-
-const statusClass = status => {
-  const map = {
-    draft: 'text-n-slate-11 bg-n-alpha-2',
-    scheduled: 'text-n-blue-11 bg-n-blue-3',
-    sending: 'text-n-amber-11 bg-n-amber-3',
-    sent: 'text-n-teal-11 bg-n-teal-3',
-    paused: 'text-n-amber-11 bg-n-amber-3',
-    canceled: 'text-n-slate-11 bg-n-alpha-2',
-    failed: 'text-n-ruby-11 bg-n-ruby-3',
-  };
-  return map[status] || 'text-n-slate-11 bg-n-alpha-2';
-};
+const request = useAbortableRequest();
+const isFetching = request.isPending;
 
 // Selo da geração de e-mail por IA (assíncrona). idle não mostra nada.
 const aiBadge = aiStatus => {
@@ -105,38 +85,42 @@ const canSendNow = campaign =>
   campaign.recipients_count > 0 &&
   hasCampaignBody(campaign);
 const canPause = campaign => campaign.status === 'sending';
-const canResume = campaign => campaign.status === 'paused';
 const canCancel = campaign =>
   !isRecipientImportActive(campaign) &&
   ['draft', 'scheduled', 'sending', 'paused'].includes(campaign.status);
 
-const fetchCampaigns = (silent = false) =>
-  enabled.value
-    ? store.dispatch('emailCampaigns/get', { silent })
-    : Promise.resolve();
-
-// Realtime-ish refresh: a campaign in a transient state (sending / scheduled)
-// changes server-side as Sidekiq delivers + SNS events land, but the list is
-// fetched once on mount. Poll while any campaign is transient so the status badge
-// flips to "Enviada" and the counts settle without a manual reload; idle (no-op)
-// when everything is terminal.
-const POLL_MS = 6000;
-let pollTimer = null;
-const hasActiveCampaign = computed(() =>
-  campaigns.value.some(
-    c =>
-      ['sending', 'scheduled'].includes(c.status) ||
-      c.ai_status === 'processing' ||
-      isRecipientImportActive(c)
-  )
+const campaignStatus = ref(
+  typeof route.query.email_status === 'string' ? route.query.email_status : ''
 );
-const startPolling = () => {
-  if (pollTimer) return;
-  pollTimer = setInterval(() => {
-    if (hasActiveCampaign.value && !isFetching.value)
-      fetchCampaigns(true).catch(() => {});
-  }, POLL_MS);
+const errorMessage = ref('');
+const number = value => formatNumber(value, locale.value);
+const fetchCampaigns = async (silent = false) => {
+  if (!enabled.value) return;
+  errorMessage.value = '';
+  try {
+    await request.run(signal =>
+      store.dispatch('emailCampaigns/get', {
+        silent,
+        status: campaignStatus.value,
+        signal,
+      })
+    );
+  } catch (error) {
+    errorMessage.value = safeError(t, error);
+  }
 };
+watch(campaignStatus, () => {
+  router.replace({
+    query: { ...route.query, email_status: campaignStatus.value || undefined },
+  });
+  fetchCampaigns();
+});
+useEmitter(BUS_EVENTS.EMAIL_CAMPAIGN_AI_READY, () => fetchCampaigns(true));
+useEmitter(BUS_EVENTS.EMAIL_CAMPAIGN_AI_FAILED, () => fetchCampaigns(true));
+useEmailReportRefresh(
+  () => (!request.isPending.value ? fetchCampaigns(true) : undefined),
+  () => campaigns.value.some(hasActiveEmailWork)
+);
 
 const openCompose = () => {
   editing.value = null;
@@ -148,7 +132,9 @@ const openEdit = campaign => {
   toggleDialog(true);
 };
 
-const openRecipients = campaign => {
+const detailsProblems = ref(false);
+const openRecipients = (campaign, problems = false) => {
+  detailsProblems.value = problems;
   detailsCampaign.value = campaign;
 };
 
@@ -160,10 +146,15 @@ const onSaved = () => {
 
 const sendNow = async campaign => {
   try {
-    await store.dispatch('emailCampaigns/sendNow', campaign.id);
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.SEND_SUCCESS'));
+    const result = await store.dispatch('emailCampaigns/sendNow', campaign.id);
+    useAlert(
+      result.status === 'paused'
+        ? t(`${NS}.STILL_BLOCKED`)
+        : t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.SEND_SUCCESS')
+    );
+    fetchCampaigns(true);
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.ERROR'));
+    useAlert(safeError(t, error));
   }
 };
 
@@ -172,16 +163,7 @@ const pause = async campaign => {
     await store.dispatch('emailCampaigns/pause', campaign.id);
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.PAUSE_SUCCESS'));
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.ERROR'));
-  }
-};
-
-const resume = async campaign => {
-  try {
-    await store.dispatch('emailCampaigns/resume', campaign.id);
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.RESUME_SUCCESS'));
-  } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.ERROR'));
+    useAlert(safeError(t, error));
   }
 };
 
@@ -190,7 +172,7 @@ const cancel = async campaign => {
     await store.dispatch('emailCampaigns/cancel', campaign.id);
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.CANCEL_SUCCESS'));
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.ERROR'));
+    useAlert(safeError(t, error));
   }
 };
 
@@ -203,7 +185,7 @@ const duplicate = async campaign => {
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.DUPLICATE_SUCCESS'));
     router.push(builderRoute(newCampaign));
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.ERROR'));
+    useAlert(safeError(t, error));
   }
 };
 
@@ -212,22 +194,16 @@ const removeCampaign = async campaign => {
     await store.dispatch('emailCampaigns/delete', campaign.id);
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.DELETE_SUCCESS'));
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.ERROR'));
+    useAlert(safeError(t, error));
   }
 };
 
 onMounted(() => {
   if (!enabled.value) return;
-  store.dispatch('emailCampaigns/get');
+  fetchCampaigns();
   store.dispatch('emailSenderIdentities/get');
   // Caixas conectadas alimentam as opções de "envio direto" no diálogo de campanha.
   store.dispatch('inboxes/get');
-  startPolling();
-});
-
-onBeforeUnmount(() => {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = null;
 });
 </script>
 
@@ -252,8 +228,22 @@ onBeforeUnmount(() => {
         {{ t('CAMPAIGN.EMAIL_CAMPAIGN.DESCRIPTION') }}
       </p>
 
+      <div class="flex flex-wrap items-end gap-3">
+        <EmailStatusFilter v-model="campaignStatus" campaign />
+        <Button
+          :label="t(`${NS}.REFRESH`)"
+          icon="i-lucide-refresh-cw"
+          slate
+          outline
+          :disabled="isFetching"
+          @click="fetchCampaigns()"
+        />
+      </div>
+      <p v-if="errorMessage" role="alert" class="m-0 text-sm text-n-ruby-11">
+        {{ errorMessage }}
+      </p>
       <div
-        v-if="isFetching"
+        v-else-if="isFetching"
         class="flex items-center justify-center py-10 text-n-slate-11"
       >
         <Spinner />
@@ -285,15 +275,10 @@ onBeforeUnmount(() => {
               <p class="mb-1 text-sm truncate text-n-slate-11">
                 {{ campaign.subject }}
               </p>
-              <span
-                class="inline-flex px-2 py-1 text-xs font-medium rounded-md"
-                :class="statusClass(campaign.status)"
-              >
-                {{ statusLabel(campaign.status) }}
-              </span>
+              <EmailStatusBadge :record="campaign" campaign />
               <span
                 v-if="aiBadge(campaign.ai_status)"
-                class="inline-flex items-center gap-1 px-2 py-1 ml-2 text-xs font-medium rounded-md"
+                class="inline-flex items-center gap-1 px-2 py-1 ms-2 text-xs font-medium rounded-md"
                 :class="aiBadge(campaign.ai_status).class"
               >
                 <span
@@ -362,16 +347,6 @@ onBeforeUnmount(() => {
                 @click="pause(campaign)"
               />
               <Button
-                v-if="canResume(campaign)"
-                :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.RESUME')"
-                icon="i-lucide-play"
-                color="blue"
-                variant="ghost"
-                size="sm"
-                :is-loading="uiFlags.isUpdating"
-                @click="resume(campaign)"
-              />
-              <Button
                 v-if="canCancel(campaign)"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.CANCEL')"
                 icon="i-lucide-x"
@@ -394,9 +369,23 @@ onBeforeUnmount(() => {
           </div>
 
           <RecipientImportStatus :campaign="campaign" />
+          <EmailCampaignHealth
+            v-if="
+              campaign.status === 'paused' ||
+              campaign.protection ||
+              campaign.preflight
+            "
+            :campaign="campaign"
+            @updated="fetchCampaigns(true)"
+            @problems="openRecipients(campaign, true)"
+          />
 
           <p v-if="campaign.last_error" class="mb-0 text-xs text-n-ruby-11">
-            {{ campaign.last_error }}
+            {{
+              safeError(t, {
+                response: { data: { error_code: campaign.error_code } },
+              })
+            }}
           </p>
 
           <div class="flex flex-wrap gap-6 text-sm">
@@ -405,7 +394,7 @@ onBeforeUnmount(() => {
                 {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.RECIPIENTS') }}
               </span>
               <span class="font-medium text-n-slate-12">
-                {{ campaign.recipients_count }}
+                {{ number(campaign.recipients_count) }}
               </span>
             </div>
             <div class="flex flex-col">
@@ -413,7 +402,7 @@ onBeforeUnmount(() => {
                 {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.SENT') }}
               </span>
               <span class="font-medium text-n-slate-12">
-                {{ campaign.sent_count }}
+                {{ number(campaign.sent_count) }}
               </span>
             </div>
             <div class="flex flex-col">
@@ -421,15 +410,40 @@ onBeforeUnmount(() => {
                 {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.FAILED') }}
               </span>
               <span class="font-medium text-n-slate-12">
-                {{ campaign.failed_count }}
+                {{ number(campaign.failed_count) }}
               </span>
             </div>
-            <div class="flex flex-col">
+            <div
+              v-if="campaign.preflight?.counts?.invalid"
+              class="flex flex-col"
+            >
               <span class="text-xs text-n-slate-11">
-                {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.SUPPRESSED') }}
+                {{ t(`${NS}.STATUS.invalid`) }}
               </span>
               <span class="font-medium text-n-slate-12">
-                {{ campaign.suppressed_count }}
+                {{ number(campaign.preflight.counts.invalid) }}
+              </span>
+            </div>
+            <div
+              v-if="campaign.preflight?.counts?.review"
+              class="flex flex-col"
+            >
+              <span class="text-xs text-n-slate-11">
+                {{ t(`${NS}.STATUS.review`) }}
+              </span>
+              <span class="font-medium text-n-slate-12">
+                {{ number(campaign.preflight.counts.review) }}
+              </span>
+            </div>
+            <div
+              v-if="campaign.preflight?.counts?.protected"
+              class="flex flex-col"
+            >
+              <span class="text-xs text-n-slate-11">
+                {{ t(`${NS}.STATUS.protected`) }}
+              </span>
+              <span class="font-medium text-n-slate-12">
+                {{ number(campaign.preflight.counts.protected) }}
               </span>
             </div>
           </div>
@@ -440,6 +454,7 @@ onBeforeUnmount(() => {
     <EmailCampaignDetailsDialog
       v-if="detailsCampaign"
       :campaign="detailsCampaign"
+      :initial-problem="detailsProblems"
       @close="detailsCampaign = null"
     />
   </CampaignLayout>

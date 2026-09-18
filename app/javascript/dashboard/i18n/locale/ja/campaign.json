@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "キャンペーンが正常に削除されました",
         "ERROR_MESSAGE": "エラーが発生しました。もう一度お試しください。"
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "キャンセル",
+        "CANCEL_SUCCESS": "キャンペーンをキャンセルしました。",
+        "DELETE": "削除",
+        "DELETE_SUCCESS": "キャンペーンを削除しました。",
+        "DUPLICATE": "複製",
+        "DUPLICATE_SUCCESS": "キャンペーンを複製しました。受信者と送信予定を更新してください。",
+        "EDIT": "編集",
+        "MANAGE_RECIPIENTS": "受信者",
+        "OPEN_BUILDER": "エディター",
+        "PAUSE": "一時停止",
+        "PAUSE_SUCCESS": "キャンペーンを一時停止しました。",
+        "SCHEDULE": "送信予約",
+        "SCHEDULE_SUCCESS": "キャンペーンの送信を予約しました。",
+        "SEND_NOW": "今すぐ送信",
+        "SEND_SUCCESS": "キャンペーンを送信待ちに追加しました。"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "AI生成に失敗",
+          "PROCESSING": "AI生成中",
+          "READY": "AI生成完了"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "失敗",
+        "RECIPIENTS": "受信者",
+        "SENT": "送信済み"
+      },
+      "DESCRIPTION": "メールを作成し、確認済みの送信ドメインを選び、受信者リストをアップロードして、今すぐ送信するか送信を予約します。",
+      "DIALOG": {
+        "BASE_HINT": "nameとemailの列を含むCSVまたはXLSXをアップロードしてください。検出された列は差し込み用の変数になります。",
+        "BASE_IMPORTING": "リストをインポート中…",
+        "BASE_LABEL": "連絡先リスト（CSVまたはXLSX）",
+        "BASE_PICK": "ファイルを選択",
+        "BASE_SELECTED": "選択済み：{name}",
+        "CANCEL": "キャンセル",
+        "CREATE_AND_OPEN": "作成してエディターで開く",
+        "CREATE_TITLE": "新しいメールキャンペーン",
+        "DIRECT_OPTION": "この受信トレイから直接送信",
+        "DIRECT_WARNING": "ご注意：これは個人用のメールボックスです。送信に同意したご自身の実在する連絡先に、少量を送る場合のみご利用ください。無料のWebメールから大量に送信すると、アカウントがブロックまたは停止される場合があります。1日100件まで、手動送信のように間隔を空けて送信します。大きなリストには、ご自身のドメインを確認してご利用ください。",
+        "EDIT_TITLE": "メールキャンペーンを編集",
+        "ERROR": "キャンペーンを保存できませんでした。もう一度お試しください。",
+        "FROM_EMAIL_DIRECT_HINT": "このメールボックスから直接送信されます。",
+        "FROM_EMAIL_ERROR": "送信者のメールアドレスは必須です",
+        "FROM_EMAIL_HINT": "{'@'}{domain}（確認済みドメイン）のアドレスを使用してください。",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "確認済みの送信ドメインのアドレスを使用してください。",
+        "FROM_EMAIL_INVALID": "確認済みドメインの有効なアドレスを入力してください",
+        "FROM_EMAIL_LABEL": "送信者のメールアドレス",
+        "FROM_EMAIL_PLACEHOLDER": "例：promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "送信者名は必須です",
+        "FROM_NAME_LABEL": "送信者名",
+        "FROM_NAME_PLACEHOLDER": "例：Acme マーケティング部",
+        "NAME_ERROR": "キャンペーン名を入力してください",
+        "NAME_LABEL": "キャンペーン名",
+        "NAME_PLACEHOLDER": "例：6月のニュースレター",
+        "NO_VERIFIED_DOMAIN": "確認済みの送信ドメインがありません。まず「メール送信ドメイン」でドメインを追加して確認してください。",
+        "REPLY_TO_ERROR": "返信先は必須です",
+        "REPLY_TO_HINT": "返信はこのアドレスに届きます。受信トレイとして接続すると、返信が会話になります。",
+        "REPLY_TO_INVALID": "有効なメールアドレスを入力してください",
+        "REPLY_TO_LABEL": "返信先",
+        "REPLY_TO_PLACEHOLDER": "例：support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "下書きを保存",
+        "SENDER_ERROR": "確認済みの送信ドメインを選択してください",
+        "SENDER_LABEL": "送信ドメイン",
+        "SENDER_PLACEHOLDER": "確認済みドメインを選択",
+        "SUCCESS": "キャンペーンを保存しました。"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "最初のキャンペーンを作成し、インポートしたリスト宛てのメールを作成して送信しましょう。",
+        "TITLE": "メールキャンペーンはまだありません"
+      },
+      "HEADER_TITLE": "メールキャンペーン",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "リストが空です。連絡先を追加して再度アップロードしてください。",
+          "EXPIRED": "アップロードしたファイルの有効期限が切れました。リストを再度アップロードしてください。",
+          "FAILED": "インポートに失敗しました。この試行では連絡先は追加されていません。再試行するか、ファイルを再度アップロードしてください。",
+          "FILE_TOO_LARGE": "ファイルがアップロードのサイズ上限を超えています。リストを分割して再度お試しください。",
+          "HEADERS": "最初のシートの1行目にName列とEmail列を1つずつ使用し、見出しを重複させないでください。",
+          "INVALID_FILE": "ファイルを読み込めませんでした。有効なCSVまたはXLSXファイルをアップロードしてください。",
+          "IN_PROGRESS": "このキャンペーンのインポートはすでに進行中です。完了までお待ちください。",
+          "ROW_LIMIT": "リストが50,000行を超えています。小さいファイルに分割してください。",
+          "UPLOAD_FAILED": "ファイルを保存できませんでした。リストを再度アップロードしてください。"
+        },
+        "QUEUED": "リストを受け付けました。インポートは待機中です。このページを離れても構いません。",
+        "RETRY": "インポートを再試行",
+        "PROCESSING": "リストをインポートしています。完了するまで送信は利用できません。",
+        "COMPLETED": "リストのインポートが完了しました。",
+        "SUMMARY": "追加：{imported} · 重複：{duplicates} · 無効：{invalid} · 送信対象外：{suppressed} · 合計：{total}"
+      },
+      "NEW": "新しいメールキャンペーン",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "変数をクリップボードにコピーしました。",
+        "EMPTY": "受信者をインポートすると、表の列に対応する差し込み変数を確認できます。",
+        "SUBTITLE": "変数をクリックしてコピーし、件名、プレビューテキスト、または本文に貼り付けてください。",
+        "TITLE": "使用可能な差し込み変数"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "連絡先を追加",
+        "ADD_MORE_HINT": "キャンペーン作成時にリストをアップロード済みです。別のCSV/XLSXをアップロードすると、連絡先を追加できます。",
+        "SUBTITLE": "nameとemailの列を含むCSVまたはXLSXをアップロードしてください。受信者はこのキャンペーンにのみ使用され、連絡先には追加されません。",
+        "TITLE": "受信者"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "キャンセル",
+        "DATETIME_ERROR": "日時を選択してください",
+        "DATETIME_LABEL": "送信日時",
+        "SUBMIT": "送信予約"
+      },
+      "STATUS": {
+        "CANCELED": "キャンセル済み",
+        "DRAFT": "下書き",
+        "FAILED": "失敗",
+        "PAUSED": "一時停止中",
+        "SCHEDULED": "予約済み",
+        "SENDING": "送信中",
+        "SENT": "送信済み"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}：値がない受信者は{count}件",
+        "BLANK_LABEL": "値がない受信者：",
+        "MISSING_LABEL": "テンプレートで使用されていますが、受信者データに見つかりません：",
+        "OK": "このキャンペーンで使用するすべての変数に値があります。続行できます。",
+        "TITLE": "送信前の確認"
+      }
     }
   }
 }

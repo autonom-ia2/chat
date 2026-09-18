@@ -5,6 +5,10 @@ ___
 
 # Chatwoot
 
+Email campaign operations: [maintenance, rollout and rollback runbook](docs/email-campaigns/operations.md).
+
+Email protection #436: [acceptance matrix, validation evidence and approval sequence](docs/email-campaigns/release-436.md).
+
 The modern customer support platform, an open-source alternative to Intercom, Zendesk, Salesforce Service Cloud etc.
 
 <p>

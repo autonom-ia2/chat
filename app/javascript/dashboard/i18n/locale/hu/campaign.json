@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Kampány sikeresen törölve",
         "ERROR_MESSAGE": "Hiba történt, kérjük próbáld újra."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Mégse",
+        "CANCEL_SUCCESS": "Kampány visszavonva.",
+        "DELETE": "Törlés",
+        "DELETE_SUCCESS": "Kampány törölve.",
+        "DUPLICATE": "Másolat készítése",
+        "DUPLICATE_SUCCESS": "Kampány lemásolva. Frissítse a címzetteket és az ütemezést.",
+        "EDIT": "Szerkesztés",
+        "MANAGE_RECIPIENTS": "Címzettek",
+        "OPEN_BUILDER": "Szerkesztő",
+        "PAUSE": "Szüneteltetés",
+        "PAUSE_SUCCESS": "Kampány szüneteltetve.",
+        "SCHEDULE": "Ütemezés",
+        "SCHEDULE_SUCCESS": "Kampány ütemezve.",
+        "SEND_NOW": "Küldés most",
+        "SEND_SUCCESS": "A kampány küldési sorba került."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "MI-hiba",
+          "PROCESSING": "Az MI generál",
+          "READY": "Az MI elkészült"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Sikertelen",
+        "RECIPIENTS": "Címzettek",
+        "SENT": "Elküldve"
+      },
+      "DESCRIPTION": "Írjon e-mailt, válasszon ellenőrzött küldődomaint, töltse fel a címzetteket, majd küldje el most vagy ütemezze a küldést.",
+      "DIALOG": {
+        "BASE_HINT": "Töltsön fel CSV- vagy XLSX-fájlt name és email oszlopokkal. A felismert oszlopok személyre szabási változóként használhatók.",
+        "BASE_IMPORTING": "Lista importálása…",
+        "BASE_LABEL": "Névjegylista (CSV vagy XLSX)",
+        "BASE_PICK": "Fájl kiválasztása",
+        "BASE_SELECTED": "Kiválasztva: {name}",
+        "CANCEL": "Mégse",
+        "CREATE_AND_OPEN": "Létrehozás és megnyitás a szerkesztőben",
+        "CREATE_TITLE": "Új e-mail-kampány",
+        "DIRECT_OPTION": "közvetlen küldés ebből a postafiókból",
+        "DIRECT_WARNING": "Figyelem: ez az Ön személyes postafiókja. Csak kis mennyiségű küldésre használja, saját valós, hozzájáruló kapcsolataihoz. Az ingyenes webmailből végzett tömeges küldés a fiók letiltásához vagy felfüggesztéséhez vezethet. A korlát napi 100 levél, kézi küldéshez hasonló időközökkel. Nagyobb listához ellenőrizze saját domainjét.",
+        "EDIT_TITLE": "E-mail-kampány szerkesztése",
+        "ERROR": "A kampány nem menthető. Próbálja újra.",
+        "FROM_EMAIL_DIRECT_HINT": "Közvetlenül ebből a postafiókból küldve.",
+        "FROM_EMAIL_ERROR": "A feladó e-mail-címe kötelező",
+        "FROM_EMAIL_HINT": "{'@'}{domain} végződésű cím szükséges (az Ön ellenőrzött domainje).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Az ellenőrzött küldődomainhez tartozó cím szükséges.",
+        "FROM_EMAIL_INVALID": "Adjon meg érvényes címet az ellenőrzött domainjén",
+        "FROM_EMAIL_LABEL": "Feladó e-mail-címe",
+        "FROM_EMAIL_PLACEHOLDER": "Pl. akcio{'@'}cege.com",
+        "FROM_NAME_ERROR": "A feladó neve kötelező",
+        "FROM_NAME_LABEL": "Feladó neve",
+        "FROM_NAME_PLACEHOLDER": "Pl. Acme marketing",
+        "NAME_ERROR": "Adja meg a kampány nevét",
+        "NAME_LABEL": "Kampány neve",
+        "NAME_PLACEHOLDER": "Pl. Júniusi hírlevél",
+        "NO_VERIFIED_DOMAIN": "Még nincs ellenőrzött küldődomain. Először adjon hozzá és ellenőrizzen egyet az E-mail-küldő domainek résznél.",
+        "REPLY_TO_ERROR": "A válaszcím kötelező",
+        "REPLY_TO_HINT": "A válaszok erre a címre érkeznek. Csatlakoztassa postafiókként, hogy a válaszokból beszélgetések legyenek.",
+        "REPLY_TO_INVALID": "Adjon meg érvényes e-mail-címet",
+        "REPLY_TO_LABEL": "Válaszcím",
+        "REPLY_TO_PLACEHOLDER": "Pl. segitseg{'@'}cege.com",
+        "SAVE_DRAFT": "Piszkozat mentése",
+        "SENDER_ERROR": "Válasszon ellenőrzött küldődomaint",
+        "SENDER_LABEL": "Küldődomain",
+        "SENDER_PLACEHOLDER": "Válasszon ellenőrzött domaint",
+        "SUCCESS": "Kampány mentve."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Hozza létre első kampányát, majd írjon és küldjön e-mailt egy importált listának.",
+        "TITLE": "Még nincsenek e-mail-kampányok"
+      },
+      "HEADER_TITLE": "E-mail-kampányok",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "A lista üres. Adjon hozzá névjegyeket, és töltse fel újra.",
+          "EXPIRED": "A feltöltött fájl lejárt. Töltse fel újra a listát.",
+          "FAILED": "Az importálás sikertelen. Ebből a próbálkozásból nem került hozzáadásra névjegy. Próbálja újra, vagy töltse fel újra a fájlt.",
+          "FILE_TOO_LARGE": "A fájl meghaladja a méretkorlátot. Ossza fel a listát, és próbálja újra.",
+          "HEADERS": "Az első munkalap első sorában egy Name és egy Email oszlop legyen, ismétlődő fejlécek nélkül.",
+          "INVALID_FILE": "A fájl nem olvasható. Töltsön fel érvényes CSV- vagy XLSX-fájlt.",
+          "IN_PROGRESS": "Ehhez a kampányhoz már folyamatban van importálás. Várja meg a végét.",
+          "ROW_LIMIT": "A lista meghaladja az 50 000 sort. Ossza kisebb fájlokra.",
+          "UPLOAD_FAILED": "A fájl nem tárolható. Töltse fel újra a listát."
+        },
+        "QUEUED": "A lista megérkezett. Az importálás várólistára került; elhagyhatja ezt az oldalt.",
+        "RETRY": "Importálás újrapróbálása",
+        "PROCESSING": "A lista importálása folyamatban van. A küldés a befejezésig nem érhető el.",
+        "COMPLETED": "A lista importálása befejeződött.",
+        "SUMMARY": "Hozzáadva: {imported} · Ismétlődések: {duplicates} · Érvénytelen: {invalid} · Küldésből kizárva: {suppressed} · Összesen: {total}"
+      },
+      "NEW": "Új e-mail-kampány",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Változó a vágólapra másolva.",
+        "EMPTY": "Importáljon címzetteket a táblázat oszlopaihoz tartozó változók megtekintéséhez.",
+        "SUBTITLE": "Kattintson egy változóra a másoláshoz, majd illessze a tárgyba, az előnézeti szövegbe vagy a levél törzsébe.",
+        "TITLE": "Elérhető változók"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "További névjegyek hozzáadása",
+        "ADD_MORE_HINT": "A lista a kampány létrehozásakor lett feltöltve. További névjegyekhez töltsön fel új CSV/XLSX-fájlt.",
+        "SUBTITLE": "Töltsön fel CSV- vagy XLSX-fájlt name és email oszlopokkal. A címzettek csak ehhez a kampányhoz használhatók, nem kerülnek a névjegyek közé.",
+        "TITLE": "Címzettek"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Mégse",
+        "DATETIME_ERROR": "Válasszon dátumot és időpontot",
+        "DATETIME_LABEL": "Küldés időpontja",
+        "SUBMIT": "Ütemezés"
+      },
+      "STATUS": {
+        "CANCELED": "Megszakítva",
+        "DRAFT": "Piszkozat",
+        "FAILED": "Sikertelen",
+        "PAUSED": "Szüneteltetve",
+        "SCHEDULED": "Ütemezve",
+        "SENDING": "Küldés folyamatban",
+        "SENT": "Elküldve"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} címzett érték nélkül",
+        "BLANK_LABEL": "Érték nélküli címzettek:",
+        "MISSING_LABEL": "A sablonban használt, de a címzetteknél nem található változók:",
+        "OK": "A kampány minden használt változójához tartozik érték. Folytathatja.",
+        "TITLE": "Küldés előtti ellenőrzés"
+      }
     }
   }
 }

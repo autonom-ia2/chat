@@ -4,6 +4,16 @@ class EmailCampaigns::RecipientImportMaintenanceJob < ApplicationJob
   def perform
     return unless EmailCampaigns::Config.enabled?
 
+    begin
+      enqueue_preflights
+    ensure
+      maintain_imports
+    end
+  end
+
+  private
+
+  def maintain_imports
     # Also recovers a crash between committing the upload and enqueueing its job.
     EmailCampaignImport.active.where(updated_at: ...EmailCampaignImport::RECOVERY_AFTER.ago).find_each do |import|
       recover(import)
@@ -14,7 +24,18 @@ class EmailCampaigns::RecipientImportMaintenanceJob < ApplicationJob
     end
   end
 
-  private
+  def enqueue_preflights
+    # Recover lost preflight enqueues and recheck expired/inconclusive outcomes.
+    ids = EmailCampaigns::RecipientPreflightJob.due.select(:email_campaign_id)
+    expired = EmailCampaign.where.not(preflight_lease_token: nil).where('preflight_lease_expires_at <= ?', Time.current)
+    EmailCampaign.where(id: ids).or(expired).where(status: %i[draft scheduled sending paused]).find_each(batch_size: 50) do |campaign|
+      EmailCampaigns::RecipientPreflightJob.enqueue(campaign.id) unless campaign.recipient_import_active?
+    rescue ActiveRecord::RecordInvalid => e
+      # An invalid campaign must not starve other campaigns or import housekeeping.
+      # Database/connection failures still propagate after housekeeping is attempted.
+      Rails.logger.error({ event: 'email_campaign_preflight_enqueue_failed', campaign_id: campaign.id, error_class: e.class.name }.to_json)
+    end
+  end
 
   def recover(import)
     enqueue = false

@@ -11,20 +11,28 @@ module EmailCampaigns
 
     private
 
+    def ready?(campaign)
+      campaign.scheduled? && campaign.scheduled_at <= Time.current && campaign.sender_ready? && !campaign.recipient_import_active?
+    end
+
     def start(campaign)
-      enqueue = false
-      campaign.with_lock do
+      enqueue = campaign.with_delivery_lock do
         campaign.reload
-        next unless campaign.scheduled? && campaign.scheduled_at <= Time.current
-        # Aceita os dois modos: SES (sender_identity verificado) e direto (caixa conectada).
-        next unless campaign.sender_ready?
+        next unless ready?(campaign)
+
+        unless EmailCampaigns::PreflightDecision.new.campaign_allowed?(campaign)
+          EmailCampaigns::PreflightDecision.new.pause!(campaign)
+          next
+        end
 
         campaign.mark_sending!
-        enqueue = true
+        true
       end
-      EmailCampaigns::DeliveryJob.perform_later(campaign.id) if enqueue && Config.enabled?
+      ActiveRecord.after_all_transactions_commit { EmailCampaigns::DeliveryJob.perform_later(campaign.id) } if enqueue && Config.enabled?
     rescue StandardError => e
-      campaign&.update(status: :failed, last_error: e.message.to_s.truncate(500))
+      campaign.with_delivery_lock do
+        campaign.update(status: :failed, last_error: e.message.to_s.truncate(500)) if campaign.scheduled? || campaign.sending?
+      end
     end
   end
 end

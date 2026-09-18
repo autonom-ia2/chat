@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampanjeadministrasjon",
+      "DESCRIPTION": "Følg sending, levering og kvalitet for e-postkampanjene dine."
+    },
+    "PAYWALL": {
+      "TITLE": "E-postkampanjer er ikke aktivert",
+      "DESCRIPTION": "Aktiver e-postkampanjer for å se rapporter om levering og engasjement."
+    },
+    "FILTER": {
+      "LABEL": "Kampanje",
+      "ALL": "Alle kampanjer"
+    },
+    "APPROXIMATE": "omtrentlig",
+    "OPEN_APPROXIMATE_HINT": "Åpningsrater er omtrentlige. Personvernfunksjoner i Apple Mail og lignende kan øke antall åpninger ved å forhåndslaste bilder.",
+    "KPIS": {
+      "SENT": "Sendt",
+      "DELIVERED": "Levert",
+      "OPENED": "Åpnet",
+      "CLICKED": "Klikket",
+      "UNSUBSCRIBED": "Avmeldinger",
+      "BOUNCED": "Ikke levert",
+      "COMPLAINED": "Søppelpostklager"
+    },
+    "RATES": {
+      "OPEN_RATE": "Åpningsrate",
+      "CLICK_RATE": "Klikkrate",
+      "BOUNCE_RATE": "Andel ikke levert",
+      "COMPLAINT_RATE": "Klagerate",
+      "UNSUBSCRIBE_RATE": "Avmeldingsrate",
+      "OVER_DELIVERED": "av leverte"
+    },
+    "TABLE": {
+      "EMAIL": "E-post",
+      "NAME": "Navn",
+      "LAST_EVENT_AT": "Siste aktivitet",
+      "STATUS": "Status",
+      "ATTEMPTS": "Forsøk",
+      "OPENS": "Åpninger",
+      "CLICKS": "Klikk"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Ingen kampanjedata ennå",
+      "SUBTITLE": "Send en e-postkampanje for å se tall for levering og engasjement."
+    },
+    "ERROR": "Kunne ikke laste kampanjerapporten. Prøv igjen.",
+    "EXPORT_CSV": "Eksporter CSV",
+    "TIMELINE": {
+      "TITLE": "Leveringer, åpninger og klikk over tid",
+      "EMPTY": "Ingen hendelser registrert for denne kampanjen ennå.",
+      "INTERVAL": {
+        "DAY": "Per dag",
+        "HOUR": "Per time"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klikk per lenke",
+      "EMPTY": "Ingen klikk registrert ennå.",
+      "URL": "Lenke",
+      "UNIQUE": "Unike klikk",
+      "TOTAL": "Totalt antall klikk"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Mottakere",
+      "SEARCH_PLACEHOLDER": "Søk etter navn eller e-post",
+      "EMPTY": "Ingen mottakere funnet.",
+      "PAGE_OF": "Side {page} av {total}",
+      "PREV": "Forrige",
+      "NEXT": "Neste"
+    },
+    "COMPARISON": {
+      "TITLE": "Sammenligning av kampanjer"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Sporbare lenker og QR-koder",
+      "SUBTITLE": "Opprett en lenke eller QR-kode per kampanje, selger eller butikk. Samtaler startet via disse får kilden tilordnet i CRM.",
+      "ADD": "Ny lenke",
+      "NAME": "Navn",
+      "NAME_PLACEHOLDER": "F.eks. Butikk-QR — Sentrum",
+      "INBOX": "WhatsApp-innboks",
+      "PREFILLED": "Forhåndsutfylt melding",
+      "PREFILLED_PLACEHOLDER": "F.eks. Hei! Jeg vil vite mer",
+      "CODE": "Kode",
+      "CLICKS": "Klikk",
+      "CONVERSATIONS": "Samtaler",
+      "COPY_LINK": "Kopier lenke",
+      "COPIED": "Kopiert!",
+      "DOWNLOAD_QR": "Last ned QR",
+      "DELETE": "Slett",
+      "DELETE_CONFIRM": "Slette denne lenken? Samtaler som allerede er tilordnet, beholder kilden sin.",
+      "EMPTY": "Ingen sporbare lenker ennå. Opprett den første for å tilordne samtaler fra butikk, selger eller biografi.",
+      "CREATE_SUCCESS": "Lenke opprettet",
+      "CREATE_ERROR": "Kunne ikke opprette lenken"
+    }
+  }
+}

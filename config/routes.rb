@@ -385,6 +385,15 @@ Rails.application.routes.draw do
             end
           end
           namespace :email_campaigns do
+            post 'maintenance/backfills', to: 'maintenance#create'
+            get 'maintenance/backfills/:id', to: 'maintenance#show'
+            post 'maintenance/backfills/:id/retry', to: 'maintenance#retry'
+            resource :reputation, only: [:show] do
+              get :history
+              post :provider_release
+              post :reevaluate
+              post :override
+            end
             resources :sender_identities, only: [:index, :create, :show, :destroy] do
               member do
                 post :verify
@@ -399,6 +408,8 @@ Rails.application.routes.draw do
                 post :resume
                 post :cancel
                 post :duplicate
+                post :reevaluate
+                post :recheck
                 post :resolve_video, to: 'videos#resolve'
               end
               resources :recipients, only: [:index, :create] do
@@ -419,6 +430,8 @@ Rails.application.routes.draw do
                 get :timeline
                 get :recipients
                 get :export
+                get :import_issues
+                get 'import_issues/export', action: :export_import_issues
               end
             end
           end

@@ -9,107 +9,109 @@ module EmailCampaigns
 
     def initialize(campaign)
       @campaign = campaign
-      @account = campaign.account
     end
 
     def perform
       return unless EmailCampaigns::Config.enabled?
-      return unless eligible?
-      return guardrail_pause! if EmailCampaigns::Guardrail.paused?(@account)
 
-      @campaign.mark_sending! unless @campaign.sending?
+      EmailCampaigns::Reputation::CampaignDeliveryLock.synchronize(@campaign.id) { deliver_batch }
+    end
+
+    private
+
+    def deliver_batch
+      return unless eligible?
+
+      @admission = EmailCampaigns::Reputation::Admission.new(@campaign)
+      return if @admission.park_if_blocked!
+
+      @campaign.mark_sending! if @campaign.scheduled?
       sender = EmailCampaigns::Ses::Sender.new(@campaign.sender_identity)
-      suppressed = EmailSuppression.suppressed_set_for(@account)
 
       @campaign.email_campaign_recipients.pending.find_each(batch_size: BATCH_SIZE) do |recipient|
         break unless @campaign.reload.sending?
+        break if @campaign.recipient_import_active? || @admission.park_if_blocked!
 
-        deliver_one(recipient, sender, suppressed)
+        deliver_one(recipient, sender)
         sleep(SEND_INTERVAL) if SEND_INTERVAL.positive?
       end
 
       @campaign.finalize! if @campaign.reload.sending? && no_pending?
     end
 
-    private
-
     def eligible?
       @campaign.reload
       return false unless @campaign.sending? || @campaign.scheduled?
       return false unless @campaign.sender_identity&.usable?
+      return false if @campaign.recipient_import_active?
 
       true
     end
 
-    # Tenant-level guardrail tripped (bounce/complaint over limit in the 7d window):
-    # refuse to send and park the campaign with a clear, actionable error.
-    def guardrail_pause!
-      reason = @account.internal_attributes.dig(EmailCampaigns::Guardrail::FLAG_KEY, 'reason')
-      @campaign.update!(status: :paused,
-                        last_error: 'Envios pausados pelo guardrail de reputação da conta ' \
-                                    "(#{reason}). Após resolver a causa, solicite a liberação do guardrail.")
-    end
-
-    def deliver_one(recipient, sender, suppressed)
-      return recipient.mark_suppressed! if suppressed.include?(recipient.email.downcase)
-      return unless claim(recipient)
+    def deliver_one(recipient, sender, _suppressed = nil)
+      gate = EmailCampaigns::DeliveryClaim.new(@campaign)
+      return unless gate.prepare(recipient) == :ready
 
       rendered = render(recipient)
       tracked_html = EmailCampaigns::Tracking::Injector.new(recipient, rendered[:body_html]).perform
-      message_id = sender.deliver(
-        to: recipient.email,
-        subject: rendered[:subject],
-        html_body: tracked_html,
-        reply_to: @campaign.reply_to.presence || default_reply_to,
-        from_email: from_email,
-        headers: unsubscribe_headers(recipient)
-      )
+      headers = unsubscribe_headers(recipient)
+      claimed = gate.claim(recipient) == :claimed
+      return unless claimed
+
+      message_id = dispatch(sender, recipient, rendered, tracked_html, headers)
       # SES has ACCEPTED the message by here — never route a post-send failure through the
       # transient-retry path (that would re-queue + re-send a delivered message = duplicate email).
       persist_sent!(recipient, message_id)
     rescue StandardError => e
       Rails.logger.error("[EmailCampaigns::DeliveryEngine] campaign=#{@campaign.id} recipient=#{recipient.id} #{e.message}")
-      handle_send_failure(recipient, e)
+      handle_send_failure(recipient, e) if claimed
     ensure
       @campaign.refresh_counters!
     end
 
+    def dispatch(sender, recipient, rendered, tracked_html, headers)
+      sender.deliver(
+        to: recipient.email,
+        subject: rendered[:subject],
+        html_body: tracked_html,
+        reply_to: @campaign.reply_to.presence || default_reply_to,
+        from_email: from_email,
+        headers: headers
+      )
+    end
+
     # Post-send bookkeeping. The claim already flipped the row to :sent; persist the message_id.
-    # If the local write blips, retry it a few times then give up WITHOUT re-queueing — the row
+    # If the local write fails, give up WITHOUT re-queueing — the row
     # stays :sent (at-most-once), we only lose the ses_message_id linkage for that recipient.
     def persist_sent!(recipient, message_id)
-      recipient.update_columns(ses_message_id: message_id, sent_at: Time.current, last_error: nil, updated_at: Time.current)
+      EmailCampaigns::Reputation::Admission.new(@campaign).with_delivery_locks(recipient) do
+        recipient.update_columns(ses_message_id: message_id, sent_at: Time.current, last_error: nil, updated_at: Time.current)
+      end
     rescue StandardError => e
       Rails.logger.error("[EmailCampaigns::DeliveryEngine] post-send persist failed campaign=#{@campaign.id} " \
                          "recipient=#{recipient.id} ses_message_id=#{message_id} #{e.message}")
     end
 
-    # SES transient signals: throttling / 5xx / timeouts → requeue (claim is undone to pending,
-    # attempts bumped) up to MAX_ATTEMPTS, then permanently failed. Permanent errors (bad
-    # address, validation) fail immediately. at-most-once is preserved: a recipient whose SES
-    # call SUCCEEDED never raises and is never reset.
-    TRANSIENT_PATTERNS = /throttl|throttling|timeout|timed out|temporar|503|500|502|504|rate exceeded|service unavailable/i
-
+    # Only an explicit provider rejection for throttling is safe to retry. Timeouts,
+    # connection loss and server failures may follow acceptance: never blind-resend.
     def handle_send_failure(recipient, error)
-      if transient?(error)
-        recipient.register_attempt!(error.message)
-      else
-        recipient.mark_failed!(error.message)
+      EmailCampaigns::Reputation::Admission.new(@campaign).with_delivery_locks(recipient) do
+        next unless recipient.sent? && recipient.sent_at.nil? && recipient.ses_message_id.blank?
+
+        if error.is_a?(EmailCampaigns::Ses::Error) && error.message.match?(/\A429\b/)
+          retry_rejected!(recipient, error)
+        else
+          recipient.mark_failed!(error.message)
+        end
       end
     end
 
-    def transient?(error)
-      return true if error.is_a?(Net::OpenTimeout) || error.is_a?(Net::ReadTimeout) || error.is_a?(Timeout::Error)
-
-      error.message.to_s.match?(TRANSIENT_PATTERNS)
-    end
-
-    # Atomically claim a pending recipient so concurrent runs cannot double-send.
-    # Only the run whose UPDATE flips the row (pending -> sent) owns the delivery.
-    def claim(recipient)
-      claimed = EmailCampaignRecipient.where(id: recipient.id, status: EmailCampaignRecipient.statuses[:pending])
-                                      .update_all(status: EmailCampaignRecipient.statuses[:sent], updated_at: Time.current)
-      claimed.positive?
+    def retry_rejected!(recipient, error)
+      if @campaign.terminal?
+        recipient.update_columns(status: EmailCampaignRecipient.statuses[:suppressed], updated_at: Time.current)
+      else
+        recipient.register_attempt!(error.message)
+      end
     end
 
     def render(recipient)

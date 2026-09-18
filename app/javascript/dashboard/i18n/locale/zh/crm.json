@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "营销活动管理",
+      "DESCRIPTION": "跟踪邮件活动的发送、送达情况和质量。"
+    },
+    "PAYWALL": {
+      "TITLE": "尚未启用邮件活动",
+      "DESCRIPTION": "启用邮件活动后，即可在此查看送达和互动报告。"
+    },
+    "FILTER": {
+      "LABEL": "活动",
+      "ALL": "所有活动"
+    },
+    "APPROXIMATE": "估算值",
+    "OPEN_APPROXIMATE_HINT": "打开率为估算值。Apple Mail 隐私保护等功能会预加载图片，可能导致打开次数偏高。",
+    "KPIS": {
+      "SENT": "已发送",
+      "DELIVERED": "已送达",
+      "OPENED": "已打开",
+      "CLICKED": "已点击",
+      "UNSUBSCRIBED": "退订",
+      "COMPLAINED": "垃圾邮件投诉",
+      "BOUNCED": "未送达"
+    },
+    "RATES": {
+      "OPEN_RATE": "打开率",
+      "CLICK_RATE": "点击率",
+      "BOUNCE_RATE": "未送达率",
+      "COMPLAINT_RATE": "投诉率",
+      "UNSUBSCRIBE_RATE": "退订率",
+      "OVER_DELIVERED": "占已送达邮件"
+    },
+    "TABLE": {
+      "EMAIL": "电子邮箱",
+      "NAME": "姓名",
+      "LAST_EVENT_AT": "最近活动",
+      "STATUS": "状态",
+      "ATTEMPTS": "尝试次数",
+      "OPENS": "打开次数",
+      "CLICKS": "点击次数"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "暂无活动数据",
+      "SUBTITLE": "发送邮件活动后，即可查看送达和互动指标。"
+    },
+    "ERROR": "无法加载活动报告，请重试。",
+    "EXPORT_CSV": "导出 CSV",
+    "TIMELINE": {
+      "TITLE": "送达、打开和点击的时间趋势",
+      "EMPTY": "此活动尚无事件记录。",
+      "INTERVAL": {
+        "DAY": "按天",
+        "HOUR": "按小时"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "各链接点击次数",
+      "EMPTY": "暂无点击记录。",
+      "URL": "链接",
+      "UNIQUE": "独立点击次数",
+      "TOTAL": "总点击次数"
+    },
+    "RECIPIENTS": {
+      "TITLE": "收件人",
+      "EMPTY": "未找到收件人。",
+      "PAGE_OF": "第 {page} 页，共 {total} 页",
+      "PREV": "上一页",
+      "NEXT": "下一页",
+      "SEARCH_PLACEHOLDER": "搜索姓名或邮箱"
+    },
+    "COMPARISON": {
+      "TITLE": "活动对比"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "可追踪链接和二维码",
+      "SUBTITLE": "为每个活动、销售人员或门店创建链接或二维码。通过它们发起的对话会在 CRM 中关联相应来源。",
+      "ADD": "新建链接",
+      "NAME_PLACEHOLDER": "例如：市中心门店二维码",
+      "INBOX": "WhatsApp 收件箱",
+      "PREFILLED": "预填消息",
+      "PREFILLED_PLACEHOLDER": "例如：您好！我想了解更多",
+      "CODE": "代码",
+      "CONVERSATIONS": "对话",
+      "COPY_LINK": "复制链接",
+      "COPIED": "已复制！",
+      "DOWNLOAD_QR": "下载二维码",
+      "DELETE": "删除",
+      "DELETE_CONFIRM": "删除此链接？已关联的对话会保留其来源。",
+      "EMPTY": "暂无可追踪链接。创建第一个链接，将对话关联到门店、销售人员或个人简介中的链接。",
+      "CREATE_SUCCESS": "链接已创建",
+      "CREATE_ERROR": "无法创建链接",
+      "NAME": "姓名",
+      "CLICKS": "点击次数"
+    }
+  }
+}
