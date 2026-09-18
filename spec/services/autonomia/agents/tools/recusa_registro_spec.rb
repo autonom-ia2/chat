@@ -415,6 +415,15 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           bound_para(Autonomia::Agents::Tools::Native::InsuranceQuoteResult)
             .execute({ 'name' => 'ver_resultado_da_cotacao', 'arguments' => { seguradora: nil }.to_json })
         }
+      },
+      # A proposta de uma seguradora (entrega 8b, #459) sem contexto de entrega: não há conversa para ler a cotação
+      # nem para receber o arquivo.
+      'insurance_quote_proposal.rb#call#1' => {
+        espera: { motivo: 'lista_indisponivel_nesta_superficie', slug: 'enviar_proposta_da_seguradora', conversa: '-' },
+        dispara: lambda {
+          bound_para(Autonomia::Agents::Tools::Native::InsuranceQuoteProposal)
+            .execute({ 'name' => 'enviar_proposta_da_seguradora', 'arguments' => { seguradora: 'Porto' }.to_json })
+        }
       }
     }
   end

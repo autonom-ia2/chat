@@ -16,6 +16,8 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::InsuranceQuote,
     # A consulta do principal ao resultado que a cotação guardou (fatia 2 do #420): lê o banco, não cota.
     Autonomia::Agents::Tools::Native::InsuranceQuoteResult,
+    # A proposta de uma seguradora só, em PDF, sobre a mesma cotação (entrega 8b, #459): não cota.
+    Autonomia::Agents::Tools::Native::InsuranceQuoteProposal,
     Autonomia::Agents::Tools::Native::VehicleLookup,
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions
   ].freeze
