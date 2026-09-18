@@ -204,7 +204,12 @@
       "CHANGE_PRIORITY": "Change Priority",
       "ADD_SLA": "Add SLA",
       "OPEN_CONVERSATION": "Open conversation",
-      "PENDING_CONVERSATION": "Mark conversation as pending"
+      "PENDING_CONVERSATION": "Mark conversation as pending",
+      "CRM_CREATE_CARD": "Create CRM card",
+      "CRM_MOVE_CARD_STAGE": "Move CRM card to stage",
+      "CRM_MARK_CARD_WON": "Mark CRM card as won",
+      "CRM_MARK_CARD_LOST": "Mark CRM card as lost",
+      "CRM_ASSIGN_CARD_OWNER": "Set CRM card owner"
     },
     "MESSAGE_TYPES": {
       "INCOMING": "Incoming Message",
@@ -234,7 +239,16 @@
       "ASSIGNEE_NAME": "Assignee",
       "TEAM_NAME": "Team",
       "PRIORITY": "Priority",
-      "LABELS": "Labels"
-    }
+      "LABELS": "Labels",
+      "CRM_PIPELINE": "CRM pipeline",
+      "CRM_STAGE": "CRM stage",
+      "CRM_CARD_STATUS": "CRM card status"
+    },
+    "CRM_CARD_STATUS": {
+      "OPEN": "Open",
+      "WON": "Won",
+      "LOST": "Lost"
+    },
+    "CRM_OPTIONS_ERROR": "Could not load CRM pipelines."
   }
 }

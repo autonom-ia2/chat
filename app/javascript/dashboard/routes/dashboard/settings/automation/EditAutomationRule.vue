@@ -5,6 +5,7 @@ import { useAutomation } from 'dashboard/composables/useAutomation';
 import { useEditableAutomation } from 'dashboard/composables/useEditableAutomation';
 import AutomationRuleForm from './AutomationRuleForm.vue';
 import { AUTOMATION_ACTION_TYPES } from './constants';
+import { crmAutomationOptionsReady } from 'dashboard/composables/useCrmAutomationOptions';
 
 const props = defineProps({
   selectedResponse: {
@@ -48,7 +49,9 @@ const syncAutomationFromSelected = (source = props.selectedResponse) => {
 
 // Format from the rule passed to open(): the prop updates a tick later, so at open() time
 // automation still holds the previously selected rule (its execution_delay hydrates the form).
-const open = rule => {
+const open = async rule => {
+  // Condições/ações de CRM só viram opções depois que os funis carregarem.
+  await crmAutomationOptionsReady();
   syncAutomationFromSelected(rule);
   formRef.value?.open(rule?.execution_delay);
 };

@@ -8,6 +8,7 @@ import {
   getActionOptions,
   getConditionOptions,
 } from 'dashboard/helper/automationHelper';
+import { useCrmAutomationOptions } from 'dashboard/composables/useCrmAutomationOptions';
 import {
   MESSAGE_CONDITION_VALUES,
   PRIORITY_CONDITION_VALUES,
@@ -27,6 +28,11 @@ export default function useAutomationValues() {
   const labels = useMapGetter('labels/getLabels');
   const teams = useMapGetter('teams/getTeams');
   const slaPolicies = useMapGetter('sla/getSLA');
+  const {
+    pipelines: crmPipelines,
+    stages: crmStages,
+    cardStatusOptions: crmCardStatuses,
+  } = useCrmAutomationOptions();
 
   const booleanFilterOptions = computed(() => [
     { id: true, name: t('FILTER.ATTRIBUTE_LABELS.TRUE') },
@@ -112,6 +118,9 @@ export default function useAutomationValues() {
       languages,
       countries,
       type,
+      crmPipelines: crmPipelines.value,
+      crmStages: crmStages.value,
+      crmCardStatuses: crmCardStatuses.value,
     });
   };
 
@@ -141,6 +150,7 @@ export default function useAutomationValues() {
       type,
       addNoneToListFn: addNoneToList,
       priorityOptions: priorityOptions.value,
+      crmStages: crmStages.value,
     });
   };
 

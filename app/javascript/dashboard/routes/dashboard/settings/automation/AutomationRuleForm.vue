@@ -2,6 +2,8 @@
 import { ref, computed, h, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { useMapGetter } from 'dashboard/composables/store';
+import { isCrmAutomationKey } from 'dashboard/composables/useCrmAutomationOptions';
 import { useOperators } from 'dashboard/components-next/filter/operators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
@@ -82,6 +84,11 @@ const INPUT_TYPE_MAP = {
 
 const { t } = useI18n();
 const { isCloudFeatureEnabled } = useAccount();
+const globalConfig = useMapGetter('globalConfig/get');
+const isCrmEnabled = computed(
+  () => globalConfig.value?.crmKanbanEnabled === true
+);
+const isAvailableKey = key => isCrmEnabled.value || !isCrmAutomationKey(key);
 const { operators } = useOperators();
 
 provideDropdownTeleport();
@@ -176,7 +183,10 @@ const filterTypes = computed(() => {
   const event = eventName.value;
   if (!event || !props.automationTypes[event]) return [];
 
-  const attributes = getTranslatedAttributes(props.automationTypes, event);
+  const attributes = getTranslatedAttributes(
+    props.automationTypes,
+    event
+  ).filter(attr => isAvailableKey(attr.key));
 
   return attributes.map(attr => {
     if (attr.disabled) {
@@ -235,11 +245,13 @@ const automationActionTypes = computed(() => {
     ? AUTOMATION_ACTION_TYPES
     : AUTOMATION_ACTION_TYPES.filter(({ key }) => key !== 'add_sla');
 
-  return actionTypes.map(action => ({
-    ...action,
-    label: t(`AUTOMATION.ACTIONS.${action.label}`),
-    icon: getActionIcon(action.key),
-  }));
+  return actionTypes
+    .filter(({ key }) => isAvailableKey(key))
+    .map(action => ({
+      ...action,
+      label: t(`AUTOMATION.ACTIONS.${action.label}`),
+      icon: getActionIcon(action.key),
+    }));
 });
 
 watch(
