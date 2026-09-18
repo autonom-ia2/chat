@@ -27,7 +27,8 @@
         "CONFIRM": "Apagar",
         "CANCEL": "Cancelar"
       },
-      "INTERNAL_BADGE": "Copiloto da equipe"
+      "INTERNAL_BADGE": "Copiloto da equipe",
+      "DELETE_ERROR": "Não foi possível excluir o agente. Tente novamente."
     },
     "TYPES": {
       "PICK_TITLE": "O que seu agente deve fazer?",
