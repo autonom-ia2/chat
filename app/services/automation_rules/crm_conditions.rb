@@ -20,7 +20,7 @@ module AutomationRules::CrmConditions
              OR EXISTS (SELECT 1 FROM crm_card_conversations
                         WHERE crm_card_conversations.card_id = crm_cards.id
                           AND crm_card_conversations.conversation_id = conversations.id))
-      ORDER BY (crm_cards.conversation_id = conversations.id) DESC, crm_cards.id
+      ORDER BY (crm_cards.conversation_id = conversations.id) IS TRUE DESC, crm_cards.id
       LIMIT 1
     ) crm_card ON TRUE
   SQL

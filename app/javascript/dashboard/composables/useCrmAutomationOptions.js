@@ -6,12 +6,14 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 // a tela de Automação carrega uma vez e os formulários de criar/editar só leem.
 const pipelines = ref([]);
 const stages = ref([]);
+// Promessa da carga em andamento: a edição espera por ela antes de montar a regra salva.
+let loading = Promise.resolve();
 
 const CARD_STATUSES = ['open', 'won', 'lost'];
 
 export const isCrmAutomationKey = key => key.includes('crm_');
 
-export const loadCrmAutomationOptions = async () => {
+const fetchCrmAutomationOptions = async () => {
   const { data } = await CrmKanbanAPI.getPipelines();
   const pipelineList = data.payload || [];
   const stageLists = await Promise.all(
@@ -26,6 +28,13 @@ export const loadCrmAutomationOptions = async () => {
   pipelines.value = pipelineList.map(({ id, name }) => ({ id, name }));
   stages.value = stageLists.flat();
 };
+
+export const loadCrmAutomationOptions = () => {
+  loading = fetchCrmAutomationOptions();
+  return loading;
+};
+
+export const crmAutomationOptionsReady = () => loading.catch(() => {});
 
 export function useCrmAutomationOptions() {
   const { t } = useI18n();

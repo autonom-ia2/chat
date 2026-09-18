@@ -5,7 +5,7 @@ class Crm::Cards::ConversationCardFinder
 
   def find(conversation)
     active_cards.where(conversation_id: conversation.id).first ||
-      active_cards.joins(:card_conversations).find_by(crm_card_conversations: { conversation_id: conversation.id })
+      active_cards.joins(:card_conversations).where(crm_card_conversations: { conversation_id: conversation.id }).order(:id).first
   end
 
   private

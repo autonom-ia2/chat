@@ -2,6 +2,8 @@
 # Kanban, então mover, ganhar ou perder também disparam as automações de etapa e os eventos de
 # conversão (Meta CAPI / Google) configurados no funil.
 module AutomationRules::CrmActions
+  include Events::Types
+
   private
 
   def crm_create_card(params)
@@ -11,18 +13,21 @@ module AutomationRules::CrmActions
     stage = crm_stage(params)
     return if stage.blank?
 
-    Crm::Cards::Creator.new(
+    card = Crm::Cards::Creator.new(
       account: @account, user: nil, conversation: @conversation,
       params: { pipeline_id: stage.pipeline_id, stage_id: stage.id }
     ).perform
+    Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_CREATED)
   end
 
   def crm_move_card_stage(params)
     card = crm_card
     stage = crm_stage(params)
-    return if card.blank? || stage.blank?
+    # Como no Kanban (só cards abertos): mover card ganho/perdido reabriria eventos de etapa.
+    return if card.blank? || stage.blank? || !card.open?
 
     Crm::Cards::Mover.new(card: card, actor: nil, target_stage: stage).perform
+    Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_MOVED)
   end
 
   def crm_mark_card_won(_params)
@@ -40,6 +45,7 @@ module AutomationRules::CrmActions
 
     card.update!(owner: owner, last_activity_at: Time.current)
     Crm::ActivityLogger.new(card: card, actor: nil, event_type: 'update', payload: { owner_id: owner.id }).perform
+    Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_UPDATED)
   end
 
   def close_crm_card(result)
@@ -47,6 +53,7 @@ module AutomationRules::CrmActions
     return if card.blank? || card.status == result
 
     Crm::Cards::Closer.new(card: card, actor: nil, result: result).perform
+    Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_UPDATED)
   end
 
   def crm_card

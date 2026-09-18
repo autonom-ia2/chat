@@ -51,6 +51,14 @@ RSpec.describe AutomationRules::CrmActions do
       expect(card.reload.stage_id).to eq(next_stage.id)
     end
 
+    it 'crm_move_card_stage não mexe em card já fechado' do
+      card = create_card(status: :won)
+
+      run_action('crm_move_card_stage', [next_stage.id])
+
+      expect(card.reload.stage_id).to eq(stage.id)
+    end
+
     it 'crm_mark_card_won e crm_mark_card_lost fecham o card' do
       card = create_card
 
@@ -121,6 +129,17 @@ RSpec.describe AutomationRules::CrmActions do
       Crm::CardConversation.create!(account: account, card: card, conversation: conversation)
 
       expect(matches?('crm_stage_id', 'equal_to', [stage.id])).to be(true)
+    end
+
+    # conversation_id NULL (card desvinculado da principal) não pode passar à frente do card principal:
+    # a condição tem que olhar o mesmo card que a ação vai alterar (ConversationCardFinder).
+    it 'prefere o card principal a um card só vinculado sem conversa principal' do
+      create_card
+      linked = account.crm_cards.create!(pipeline: pipeline, stage: next_stage, contact: conversation.contact, title: 'Outro')
+      Crm::CardConversation.create!(account: account, card: linked, conversation: conversation)
+
+      expect(matches?('crm_stage_id', 'equal_to', [stage.id])).to be(true)
+      expect(matches?('crm_stage_id', 'equal_to', [next_stage.id])).to be(false)
     end
 
     it 'rejeita operador não suportado' do
