@@ -11,10 +11,6 @@ class Autonomia::Insurance::ResultadoDaCotacao
   FORA = %w[superseded discarded blocked pending].freeze
   # As palavras que não distinguem uma seguradora de outra no nome ("Porto Seguro", "Sancor Seguros").
   PALAVRAS_VAZIAS = %w[a o as os e de da do das dos seguro seguros seguradora seguradoras cia companhia sa].freeze
-  # Por quanto tempo depois de emitido o lote aceito e ainda sem mensagem conta como a caminho. Acima do teto de
-  # adiamentos da publicação (`AsyncConfig::MAX_DEPENDENCY_DEFERRALS`, 6 a 8 min de relógio): passado ele, a
-  # publicação adiada não vem mais, e a lista da Lia volta a levar esses preços.
-  JANELA_DO_LOTE = 10.minutes
 
   def self.cotacao
     ::Autonomia::Agents::Tools::Native::InsuranceQuote
@@ -65,12 +61,6 @@ class Autonomia::Insurance::ResultadoDaCotacao
   # no portal.
   def envio_incerto?
     run.envio_incerto?
-  end
-
-  # -> os códigos com preço cujo lote ainda vai chegar ao cliente (`lotes_a_caminho`). Quando um lote a caminho não
-  # tem os códigos gravados (emitido antes desta versão): todos os códigos com preço.
-  def a_caminho
-    @a_caminho ||= codigos_a_caminho
   end
 
   # -> a cotação foi feita sem a classe de bônus da apólice atual (`InsuranceQuote::SEM_BONUS_KEY`)?
@@ -139,51 +129,6 @@ class Autonomia::Insurance::ResultadoDaCotacao
   def entrada(codigo)
     valor = entradas[codigo.to_s]
     valor.is_a?(Hash) ? valor : {}
-  end
-
-  def lotes
-    run.handle.to_h[cotacao::Resultado::LOTES_KEY].to_h
-  end
-
-  def codigos_a_caminho
-    tokens = lotes_a_caminho
-    return [] if tokens.empty?
-    return com_preco if tokens.any? { |token| !lotes[token].is_a?(Hash) }
-
-    tokens.flat_map { |token| Array(lotes[token]['codigos']).map(&:to_s) }.uniq
-  end
-
-  # -> as identidades dos lotes de preço (`InsuranceQuote::PRECOS_KEY`) que ainda vão chegar ao cliente: a mensagem
-  # do lote existe com pendência de envio que o varredor ainda procura, com aceite ou sem; ou o publicador aceitou o
-  # lote (`Tools::EntregaAceita::CHAVE`), a mensagem não existe, e o lote foi emitido há menos de `JANELA_DO_LOTE`.
-  def lotes_a_caminho
-    precos = Array(run.handle.to_h[cotacao::PRECOS_KEY]).map(&:to_s)
-    return [] if precos.empty? || run.conversation.nil?
-
-    aceitos = Array(run.handle.to_h[::Autonomia::Agents::Tools::EntregaAceita::CHAVE]).map(&:to_s)
-    precos.select { |token| lote_a_caminho?(token, aceitos) }
-  end
-
-  def lote_a_caminho?(token, aceitos)
-    mensagem = ::Autonomia::Agents::Tools::EntregaPublicada.para(run.conversation, token)
-    return envio_pendente?(mensagem) if mensagem
-
-    aceitos.include?(token) && recente?(token)
-  end
-
-  # -> a mensagem tem pendência de envio que o varredor ainda procura (`ReapStaleRunsJob::ENVIO_PENDENTE_JANELA`).
-  def envio_pendente?(mensagem)
-    ::Autonomia::Agents::Tools::PendenciaDeEnvio.pendente?(mensagem) &&
-      mensagem.created_at > ::Autonomia::Agents::Tools::ReapStaleRunsJob::ENVIO_PENDENTE_JANELA.ago
-  end
-
-  # -> o lote foi emitido há menos de `JANELA_DO_LOTE`? Sem a hora gravada, vale a última escrita da execução.
-  def recente?(token)
-    lote = lotes[token]
-    emitido = (Time.zone.parse(lote['emitido_em'].to_s) if lote.is_a?(Hash))
-    (emitido || run.updated_at) > JANELA_DO_LOTE.ago
-  rescue ArgumentError
-    run.updated_at > JANELA_DO_LOTE.ago
   end
 
   # Os códigos cuja entrada tem nome com alguma palavra: sem nome, uma entrada casaria com qualquer consulta.

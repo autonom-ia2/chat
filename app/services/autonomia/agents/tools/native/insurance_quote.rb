@@ -298,7 +298,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   def entregues(fresh, already, texto, handle, avisar)
     codigos = fresh.map { |offer| ::Autonomia::Insurance::QuoteOffers.code(offer) }
     handle = registrar_entrega_de_preco(texto, registrar_sem_periodo(fresh, handle), already)
-    handle = lote_de_preco(handle, texto, codigos).merge(DELIVERED_KEY => already + codigos)
+    handle = handle.merge(DELIVERED_KEY => already + codigos)
     avisar ? handle.merge(AVISO_SENT_KEY => true) : handle
   end
 

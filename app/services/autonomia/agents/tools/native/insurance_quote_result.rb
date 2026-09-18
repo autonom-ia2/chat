@@ -13,9 +13,6 @@
 # pergunta feita duas vezes recebe a lista duas vezes. Duas chamadas no MESMO turno anexam uma lista só, com as
 # seguradoras das duas (a chave do anexo é a mesma).
 #
-# O preço cujo lote a própria cotação ainda está enviando não entra na lista (`ResultadoDaCotacao#a_caminho`): o
-# cliente o receberia duas vezes.
-#
 # Sem contexto de entrega (Testar, Copiloto, playground) não há conversa para ler nem turno para receber a lista:
 # erro nomeado, pelo registro de recusa.
 class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents::Tools::Native::Base
@@ -39,9 +36,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   SEM_PRECO_AINDA = 'A cotação ainda está correndo e nenhum preço chegou até agora. Não invente preço nem ' \
                     'seguradora.'.freeze
   SEM_PRECO = 'Nenhuma seguradora fez proposta nesta cotação. Não invente preço nem seguradora.'.freeze
-  PRECOS_A_CAMINHO = 'Os preços desta cotação estão na fila de envio e chegam numa mensagem do sistema. Não escreva ' \
-                     'valor e não diga que vai mandar outra lista.'.freeze
-  PARTE_A_CAMINHO = 'Parte dos preços está na fila de envio, numa mensagem do sistema, e não entra na lista.'.freeze
   NAO_ENCONTRADA = 'Nenhuma seguradora com esse nome está nesta cotação. Não liste as seguradoras: pergunte ao ' \
                    'cliente de qual ele fala.'.freeze
   NAO_ENCONTRADA_AINDA = 'Nenhuma seguradora com esse nome apareceu nesta cotação até agora, e ela ainda está ' \
@@ -139,14 +133,11 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     todos = @resultado.com_preco
     return [@resultado.correndo? ? SEM_PRECO_AINDA : SEM_PRECO, []] if todos.empty?
 
-    codigos = todos - @resultado.a_caminho
-    return [[contagem(todos.size), PRECOS_A_CAMINHO].join("\n"), []] if codigos.empty?
-
-    [avisos_do_geral(todos.size, parte_a_caminho: codigos.size < todos.size).join("\n"), codigos]
+    [avisos_do_geral(todos.size).join("\n"), todos]
   end
 
-  def avisos_do_geral(total, parte_a_caminho:)
-    [contagem(total), LISTA_ANEXADA, (PARTE_A_CAMINHO if parte_a_caminho), (AINDA_CORRENDO if @resultado.correndo?),
+  def avisos_do_geral(total)
+    [contagem(total), LISTA_ANEXADA, (AINDA_CORRENDO if @resultado.correndo?),
      (HA_SEM_PROPOSTA if @resultado.sem_proposta?), (SEM_BONUS if @resultado.sem_bonus?)].compact
   end
 
@@ -154,7 +145,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     codigos = @resultado.procurar(seguradora)
     return [@resultado.correndo? ? NAO_ENCONTRADA_AINDA : NAO_ENCONTRADA, []] if codigos.empty?
 
-    com_preco = @resultado.com_preco(codigos) - @resultado.a_caminho
+    com_preco = @resultado.com_preco(codigos)
     partes = [contagem(@resultado.com_preco.size), (LISTA_ANEXADA if com_preco.any?), *codigos.map { |codigo| fala(codigo) },
               (SEM_BONUS if com_preco.any? && @resultado.sem_bonus?)]
     [partes.compact.join("\n"), com_preco]
@@ -172,14 +163,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   def fala(codigo)
     nome = @resultado.nome(codigo)
     case @resultado.desfecho(codigo)
-    when Guardado::COM_PRECO then fez_proposta(nome, codigo)
+    when Guardado::COM_PRECO then "#{nome} fez proposta: o preço dela vai na lista anexada."
     when Guardado::AGUARDANDO then "#{nome} ainda não respondeu, e a cotação continua correndo."
     else "#{nome} não fez proposta nesta cotação. #{MOTIVOS.fetch(@resultado.motivo(codigo), SEM_MOTIVO)}"
     end
-  end
-
-  def fez_proposta(nome, codigo)
-    onde = @resultado.a_caminho.include?(codigo) ? 'está na fila de envio e chega numa mensagem do sistema' : 'vai na lista anexada'
-    "#{nome} fez proposta: o preço dela #{onde}."
   end
 end

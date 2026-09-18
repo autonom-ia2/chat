@@ -1,5 +1,9 @@
 # Fatia 2 do #420: a Lia vê o resultado da cotação
 
+> **Aviso (18/09/2026).** As rodadas 1 a 7 descrevem o desenho assíncrono, abandonado. Vale o desenho síncrono de
+> `9fc9c5605f`, com a remoção do mecanismo de lote "a caminho" (`LOTES_KEY`, `lote_de_preco`, `JANELA_DO_LOTE`,
+> `ResultadoDaCotacao#a_caminho`, `PRECOS_A_CAMINHO`, `PARTE_A_CAMINHO`): a lista da Lia mostra tudo o que está guardado.
+
 Data: 13/09/2026 · Branch `feat/cotacao-lia-ve-resultados` · base `origin/main` (`5742de5fcd`).
 
 **Desenho atual: o da rodada 8** (13/09/2026, decisão do coordenador): a ferramenta da Lia é síncrona, a lista de
