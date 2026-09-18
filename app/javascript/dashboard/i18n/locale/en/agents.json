@@ -27,7 +27,8 @@
         "CONFIRM": "Delete",
         "CANCEL": "Cancel"
       },
-      "INTERNAL_BADGE": "Team copilot"
+      "INTERNAL_BADGE": "Team copilot",
+      "DELETE_ERROR": "We couldn't delete the agent. Try again."
     },
     "TYPES": {
       "PICK_TITLE": "What should your agent do?",
