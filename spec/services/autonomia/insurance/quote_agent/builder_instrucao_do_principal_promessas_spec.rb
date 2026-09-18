@@ -546,7 +546,38 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
 
     it 'diz quantas ferramentas a Lia tem, contando a nova' do
-      expect(texto).to include('Você tem quatro.')
+      expect(texto).to include('Você tem cinco.')
+    end
+  end
+
+  # O BLOCO DA PROPOSTA DE UMA SEGURADORA (entrega 8b, #459): assinado por md5 pelo mesmo motivo dos outros. Nasceu
+  # entre o bloco do resultado e o dos especialistas, e as assinaturas dos dois não mudaram.
+  describe 'o bloco da proposta de uma seguradora da §5 (entrega 8b)' do
+    let(:secao) { texto[/### `enviar_proposta_da_seguradora`.*?(?=\n### )/m] }
+
+    it 'está no arquivo, antes do bloco dos especialistas, e a ferramenta é do principal' do
+      expect(secao).to be_present
+      expect(secao).to end_with("diga isso com as suas palavras.\n")
+      expect(texto.index(secao)).to be < texto.index('### Os especialistas de ramo')
+      expect(described_class::TOOLS_DO_PRINCIPAL).to include('enviar_proposta_da_seguradora')
+      expect(Autonomia::Agents::Tools::Registry.find('enviar_proposta_da_seguradora')).to be_present
+    end
+
+    it 'mantém o comparativo como padrão, uma seguradora por chamada, e não cota de novo' do
+      expect(secao).to include('O comparativo com todas as opções continua sendo o padrão')
+      expect(secao).to include('Uma seguradora por chamada: se ela pedir duas, chame duas vezes.')
+      expect(secao).to include('Pedir a proposta não é pedir outra cotação.')
+    end
+
+    it 'mudou? revise este bloco e assine aqui' do
+      expect(secao).to be_present
+      expect(Digest::MD5.hexdigest(secao)).to eq('2decd25cc65537a4d55b83c0b300ac6b')
+    end
+
+    it 'não escreve valor em reais, travessão nem variável para substituir' do
+      expect(secao).to be_present
+      expect(secao).not_to include('R$', '—', '–')
+      expect(secao.scan(/\$[a-zA-Z]+/)).to be_empty
     end
   end
 end

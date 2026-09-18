@@ -249,8 +249,9 @@ class Autonomia::Agents::Tools::AsyncPublisher
     sequence = @run.sequence
     existente = ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, corpo.token)
     return retomar(existente) if existente
-    # O corpo sem texto é o de `sem_arquivo`: ele só pergunta pela mensagem que já existe.
-    return Result.new(status: :blocked) if corpo.texto.blank?
+    # O corpo sem texto E sem anexo é o de `sem_arquivo`: ele só pergunta pela mensagem que já existe. O anexo
+    # sem legenda é a proposta de uma seguradora (entrega 8b): a frase que acompanha é da Lia.
+    return Result.new(status: :blocked) if corpo.texto.blank? && corpo.anexo.blank?
 
     mensagem = build_message!(conversation, agent_inbox, sequence, corpo)
     # Só avança quando uma mensagem NOVA entrou: como a idempotência é pelo conteúdo, o duplicado
