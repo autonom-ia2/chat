@@ -20,6 +20,8 @@ import {
   CRM_MANAGE_AI_PERMISSION,
   AUTONOMIA_PERMISSIONS,
   CAMPAIGN_PERMISSIONS,
+  PROSPECTING_PERMISSIONS,
+  INSURANCE_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -165,17 +167,17 @@ const showCrmHandoffEntry = computed(
 );
 const autonomiaProspectingEnabled = computed(
   () =>
-    currentRole.value === 'administrator' &&
+    (isAdministrator.value || hasAnyPermission(PROSPECTING_PERMISSIONS)) &&
     currentAccount.value(accountId.value)?.autonomia_prospecting_enabled ===
       true
 );
 // Módulo Cotação (Insurance): ENV master (kill-switch global, via globalConfig) E conta
-// marcada pelo SuperAdmin (`autonomia_insurance_enabled` no payload da conta). Admin-only,
-// como todo endpoint Autonom.ia.
+// marcada pelo SuperAdmin (`autonomia_insurance_enabled` no payload da conta). Admin ou função com
+// insurance_view/insurance_manage (#452), como no backend.
 const autonomiaInsuranceEnabled = computed(
   () =>
     globalConfig.value?.insuranceQuotingEnabled === true &&
-    currentRole.value === 'administrator' &&
+    (isAdministrator.value || hasAnyPermission(INSURANCE_PERMISSIONS)) &&
     currentAccount.value(accountId.value)?.autonomia_insurance_enabled === true
 );
 

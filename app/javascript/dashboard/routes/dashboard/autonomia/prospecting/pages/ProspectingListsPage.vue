@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CampaignsAPI from 'dashboard/api/campaigns';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
 import {
   activeAdvancedLeadFiltersCount,
@@ -19,6 +20,7 @@ import {
 } from '../utils/prospectingPriority';
 
 const { t } = useI18n();
+const canManage = useCanManage('prospecting_manage');
 const route = useRoute();
 
 const isLoading = ref(true);
@@ -243,6 +245,7 @@ const verifyLeadWhatsApp = async lead => {
 };
 
 const verifyLeadsWhatsApp = leadsToVerify => {
+  if (!canManage.value) return;
   leadsToVerify
     .filter(shouldVerifyWhatsApp)
     .slice(0, 25)
@@ -577,6 +580,7 @@ onMounted(loadPage);
         </p>
       </div>
       <button
+        v-if="canManage"
         type="button"
         class="inline-flex h-9 items-center gap-2 rounded-md bg-n-brand px-3 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         :title="t('PROSPECTING.LISTS.NEW_LIST')"
@@ -669,6 +673,7 @@ onMounted(loadPage);
                 </div>
               </button>
               <div
+                v-if="canManage"
                 class="flex flex-wrap items-center gap-2 border-t border-n-weak px-3 py-2.5"
               >
                 <button
@@ -1086,6 +1091,7 @@ onMounted(loadPage);
                     {{ t('PROSPECTING.SEARCH.OPEN_MAP') }}
                   </a>
                   <button
+                    v-if="canManage"
                     type="button"
                     class="inline-flex h-8 items-center gap-1 rounded-md px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed"
                     :class="
@@ -1186,7 +1192,7 @@ onMounted(loadPage);
                     {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
                   </a>
                   <button
-                    v-else
+                    v-else-if="canManage"
                     type="button"
                     class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="
@@ -1202,6 +1208,7 @@ onMounted(loadPage);
                     }}
                   </button>
                   <button
+                    v-if="canManage"
                     type="button"
                     class="inline-flex h-8 items-center gap-1.5 rounded-md border border-red-100 bg-red-50 px-3 text-xs font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                     :title="t('PROSPECTING.LISTS.REMOVE_LEAD')"

@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import ProspectingGoogleMap from '../components/ProspectingGoogleMap.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
@@ -20,6 +21,7 @@ import {
 } from '../utils/prospectingPriority';
 
 const { t } = useI18n();
+const canManage = useCanManage('prospecting_manage');
 const route = useRoute();
 
 const isLoading = ref(true);
@@ -797,6 +799,7 @@ async function verifyLeadWhatsApp(lead) {
 }
 
 verifyLeadsWhatsApp = leadsToVerify => {
+  if (!canManage.value) return;
   leadsToVerify
     .filter(shouldVerifyWhatsApp)
     .slice(0, 25)
@@ -1005,6 +1008,7 @@ onMounted(async () => {
         </p>
       </div>
       <button
+        v-if="canManage"
         type="button"
         class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-n-brand px-4 text-sm font-medium text-white"
         @click="toggleNewSearch"
@@ -1532,6 +1536,7 @@ onMounted(async () => {
                 </div>
               </button>
               <div
+                v-if="canManage"
                 class="flex flex-wrap items-center gap-2 border-t border-n-weak px-3 py-2.5"
               >
                 <button
@@ -1862,6 +1867,7 @@ onMounted(async () => {
                         }}
                       </span>
                       <button
+                        v-if="canManage"
                         type="button"
                         class="h-7 rounded-md bg-n-brand px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="
@@ -2054,6 +2060,7 @@ onMounted(async () => {
                       {{ t('PROSPECTING.SEARCH.OPEN_DETAILS') }}
                     </button>
                     <button
+                      v-if="canManage"
                       type="button"
                       class="inline-flex h-8 items-center gap-1 rounded-md px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed"
                       :class="
@@ -2154,7 +2161,7 @@ onMounted(async () => {
                       {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
                     </a>
                     <button
-                      v-else
+                      v-else-if="canManage"
                       type="button"
                       class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                       :disabled="
@@ -2747,7 +2754,7 @@ onMounted(async () => {
             {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
           </a>
           <button
-            v-else
+            v-else-if="canManage"
             type="button"
             class="h-9 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="

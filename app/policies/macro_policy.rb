@@ -12,13 +12,13 @@ class MacroPolicy < ApplicationPolicy
   end
 
   def update?
-    return @account_user.administrator? if @record.global?
+    return @account_user.permission_granted?('macro_manage') if @record.global?
 
     author?
   end
 
   def destroy?
-    return @account_user.administrator? if @record.global?
+    return @account_user.permission_granted?('macro_manage') if @record.global?
 
     author?
   end

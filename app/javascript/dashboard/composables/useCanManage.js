@@ -15,3 +15,13 @@ export function useCanManage(manageKey) {
       getUserPermissions(currentUser.value, accountId.value).includes(manageKey)
   );
 }
+
+// True only when the current seat's custom role holds `key` (admins and plain agents get false).
+export function useHasCustomRolePermission(key) {
+  const currentUser = useMapGetter('getCurrentUser');
+  const accountId = useMapGetter('getCurrentAccountId');
+
+  return computed(() =>
+    getUserPermissions(currentUser.value, accountId.value).includes(key)
+  );
+}

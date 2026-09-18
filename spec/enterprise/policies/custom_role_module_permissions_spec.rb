@@ -135,6 +135,33 @@ RSpec.describe 'Custom role module permissions', type: :policy do # rubocop:disa
     end
   end
 
+  describe 'settings keys' do
+    it 'gate label, attribute, automation and SLA writes by their keys' do
+      context = context_for(custom_role_user('label_manage', 'attribute_manage', 'automation_view', 'sla_manage'))
+
+      expect(LabelPolicy.new(context, Label).create?).to be(true)
+      expect(CustomAttributeDefinitionPolicy.new(context, CustomAttributeDefinition).update?).to be(true)
+      expect(AutomationRulePolicy.new(context, AutomationRule).index?).to be(true)
+      expect(AutomationRulePolicy.new(context, AutomationRule).create?).to be(false)
+      expect(SlaPolicyPolicy.new(context, SlaPolicy).destroy?).to be(true)
+    end
+
+    it 'keeps plain agents out of settings writes' do
+      context = context_for(agent)
+
+      expect(LabelPolicy.new(context, Label).create?).to be(false)
+      expect(AutomationRulePolicy.new(context, AutomationRule).index?).to be(false)
+      expect(SlaPolicyPolicy.new(context, SlaPolicy).create?).to be(false)
+    end
+
+    it 'lets macro_manage edit team-wide macros' do
+      macro = create(:macro, account: account, visibility: :global, created_by: admin, updated_by: admin)
+
+      expect(MacroPolicy.new(context_for(custom_role_user('macro_manage')), macro).update?).to be(true)
+      expect(MacroPolicy.new(context_for(agent), macro).update?).to be(false)
+    end
+  end
+
   describe 'help center read-only' do
     let(:portal) { create(:portal, account_id: account.id) }
     let(:article) { create(:article, portal: portal, account_id: account.id, author_id: admin.id) }

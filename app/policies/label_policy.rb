@@ -4,18 +4,18 @@ class LabelPolicy < ApplicationPolicy
   end
 
   def update?
-    @account_user.administrator?
+    @account_user.permission_granted?('label_manage')
   end
 
   def show?
-    @account_user.administrator?
+    @account_user.permission_granted?('label_manage')
   end
 
   def create?
-    @account_user.administrator?
+    @account_user.permission_granted?('label_manage')
   end
 
   def destroy?
-    @account_user.administrator?
+    @account_user.permission_granted?('label_manage')
   end
 end

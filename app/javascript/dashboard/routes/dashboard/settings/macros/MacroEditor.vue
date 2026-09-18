@@ -10,6 +10,7 @@ import actionQueryGenerator from 'dashboard/helper/actionQueryGenerator.js';
 import { getActionIcon } from 'dashboard/helper/automationHelper';
 import { useMacros } from 'dashboard/composables/useMacros';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { useHasCustomRolePermission } from 'dashboard/composables/useCanManage';
 
 const store = useStore();
 const getters = useStoreGetters();
@@ -20,7 +21,10 @@ const router = useRouter();
 const { t } = useI18n();
 
 const { getMacroDropdownValues } = useMacros();
-const { isAdmin } = useAdmin();
+const { isAdmin: isAccountAdmin } = useAdmin();
+const hasMacroManage = useHasCustomRolePermission('macro_manage');
+// Custom roles with macro_manage (#452) manage team-wide macros like admins.
+const isAdmin = computed(() => isAccountAdmin.value || hasMacroManage.value);
 
 const macro = ref(null);
 const mode = ref('CREATE');

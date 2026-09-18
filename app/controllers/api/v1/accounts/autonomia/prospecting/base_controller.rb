@@ -1,15 +1,11 @@
 class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accounts::BaseController
   before_action :ensure_feature_enabled
-  before_action :ensure_account_administrator
+  before_action -> { check_module_permission!('prospecting') }
 
   private
 
   def ensure_feature_enabled
     render json: { error: 'autonomia.prospecting.disabled' }, status: :not_found unless ::Autonomia::Prospecting::Config.enabled?(Current.account)
-  end
-
-  def ensure_account_administrator
-    raise Pundit::NotAuthorizedError unless Current.account_user&.administrator?
   end
 
   def searches_scope

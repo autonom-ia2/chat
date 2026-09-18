@@ -22,7 +22,7 @@ export default {
     {
       path: frontendURL('accounts/:accountId/settings/prospecting'),
       meta: {
-        permissions: ['administrator'],
+        permissions: ['administrator', 'prospecting_manage'],
       },
       beforeEnter: ensureProspectingEnabled,
       component: SettingsWrapper,
@@ -36,7 +36,7 @@ export default {
           name: 'settings_prospecting_index',
           component: ProspectingSettingsPage,
           meta: {
-            permissions: ['administrator'],
+            permissions: ['administrator', 'prospecting_manage'],
           },
         },
       ],

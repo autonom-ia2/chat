@@ -5,6 +5,7 @@ import { formatDelay } from 'dashboard/helper/automationHelper';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ToggleSwitch from 'dashboard/components-next/switch/Switch.vue';
 import { BaseTableRow, BaseTableCell } from 'dashboard/components-next/table';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 
 const props = defineProps({
   automation: {
@@ -18,6 +19,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['toggle', 'edit', 'delete', 'clone']);
+
+const canManage = useCanManage('automation_manage');
 
 const readableDate = date => messageStamp(new Date(date), 'LLL d, yyyy');
 const readableDateWithTime = date =>
@@ -62,7 +65,7 @@ const automationActive = computed({
       </BaseTableCell>
 
       <BaseTableCell>
-        <ToggleSwitch v-model="automationActive" />
+        <ToggleSwitch v-model="automationActive" :disabled="!canManage" />
       </BaseTableCell>
 
       <BaseTableCell :title="readableDateWithTime(automation.created_on)">
@@ -72,7 +75,7 @@ const automationActive = computed({
       </BaseTableCell>
 
       <BaseTableCell align="end">
-        <div class="flex gap-3 justify-end flex-shrink-0">
+        <div v-if="canManage" class="flex gap-3 justify-end flex-shrink-0">
           <Button
             v-tooltip.top="$t('AUTOMATION.FORM.EDIT')"
             icon="i-woot-edit-pen"

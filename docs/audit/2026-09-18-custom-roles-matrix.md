@@ -24,3 +24,17 @@
 ## Pendências
 - `InboxesController` já excedia `Metrics/ClassLength` antes desta mudança.
 - Sub-abas de caixa com muitas ações (colaboradores, CSAT, configuração, conexão, voz) não escondem botões para quem só tem Ver; o backend responde 403.
+
+# PR 2 de #452 — Prospecção, Cotação e configurações leves
+
+## Decisões técnicas
+- Novas chaves: `prospecting_view/manage`, `insurance_view/manage`, `automation_view/manage`, `label_manage`, `attribute_manage`, `macro_manage`, `sla_manage`.
+- `Api::BaseController#check_module_permission!(modulo)`: GET exige `_view`, escrita exige `_manage`. Usado por Autonomia, Prospecção e Cotação.
+- Prospecção: rodar busca, enriquecer, verificar WhatsApp e criar card/contato são escrita (custo ou dado novo) → `prospecting_manage`.
+- Etiquetas, atributos e SLA já eram legíveis por todos; só a escrita ganhou chave. Macros: `macro_manage` edita e publica macros da equipe; macros pessoais seguem livres.
+- Configurações: a página inicial leva cada função à primeira tela que ela pode abrir.
+
+## Validação
+- RSpec novos: 23 (policy + request), verdes. Suíte existente dos módulos do PR 2: 366 exemplos, 0 falhas.
+- Vitest: 20 (matriz/macros) + 255 (autonomia/insurance/automation), verdes. ESLint 0 erros.
+- Rubocop: ofensas restantes pré-existentes (`Lint/DuplicateBranch` em `prospecting/base_controller.rb`, `Metrics/ClassLength` em `InboxesController`).

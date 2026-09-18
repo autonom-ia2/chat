@@ -37,6 +37,10 @@
 # - 'campaign_view': view campaigns and their reports. 'campaign_manage': create, send and import lists.
 # - 'inbox_view': view every inbox configuration. 'inbox_manage': create, connect and configure inboxes.
 # - 'canned_response_manage': create, edit and delete canned responses.
+# - 'prospecting_view' / 'prospecting_manage': prospecting searches, leads and lists.
+# - 'insurance_view' / 'insurance_manage': insurance quoting (Cotação) connection and quote agent.
+# - 'automation_view' / 'automation_manage': automation rules.
+# - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -69,6 +73,16 @@ class CustomRole < ApplicationRecord
     inbox_view
     inbox_manage
     canned_response_manage
+    prospecting_view
+    prospecting_manage
+    insurance_view
+    insurance_manage
+    automation_view
+    automation_manage
+    label_manage
+    attribute_manage
+    macro_manage
+    sla_manage
   ].freeze
 
   validates :name, presence: true

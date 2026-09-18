@@ -1,6 +1,6 @@
 class Api::V1::Accounts::Autonomia::BaseController < Api::V1::Accounts::BaseController
   before_action :ensure_feature_enabled
-  before_action :ensure_autonomia_permission
+  before_action :check_autonomia_permission
 
   # Onda 6 (P2) — valor de enum inválido (agent_type/actuation/status fora do conjunto) levanta
   # ArgumentError no assign → virava 500. Devolve 422 (erro do cliente). SÓ o erro de enum é tratado
@@ -45,12 +45,8 @@ class Api::V1::Accounts::Autonomia::BaseController < Api::V1::Accounts::BaseCont
 
   # Admin ou função personalizada: leitura exige autonomia_view; escrita (criar, treinar, publicar) exige
   # autonomia_manage. O construtor é IP e roda jobs de IA, então agente comum sem função segue sem acesso.
-  def ensure_autonomia_permission
-    raise Pundit::NotAuthorizedError unless Current.account_user&.permission_granted?(autonomia_permission_key)
-  end
-
-  def autonomia_permission_key
-    request.get? || request.head? ? 'autonomia_view' : 'autonomia_manage'
+  def check_autonomia_permission
+    check_module_permission!('autonomia')
   end
 
   # Escopos sempre presos à conta corrente (isolamento de conta) — nunca consulta global.

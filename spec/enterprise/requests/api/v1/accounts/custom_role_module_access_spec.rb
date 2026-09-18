@@ -58,6 +58,22 @@ RSpec.describe 'Custom role module access', type: :request do
     end
   end
 
+  describe 'prospecting' do
+    let(:lists_path) { "/api/v1/accounts/#{account.id}/autonomia/prospecting/lists" }
+
+    before { Autonomia::Prospecting::Config.enable_for!(account) }
+
+    it 'lets prospecting_view read lists but not create them' do
+      headers = custom_role_user('prospecting_view').create_new_auth_token
+
+      get lists_path, headers: headers, as: :json
+      expect(response).to have_http_status(:success)
+
+      post lists_path, params: { name: 'Nova' }, headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
+
   describe 'canned responses' do
     let(:path) { "/api/v1/accounts/#{account.id}/canned_responses" }
     let(:params) { { canned_response: { short_code: 'oi', content: 'Olá' } } }

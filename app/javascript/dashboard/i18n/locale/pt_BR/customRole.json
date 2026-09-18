@@ -54,7 +54,17 @@
       "CAMPAIGN_MANAGE": "Editar campanhas",
       "INBOX_VIEW": "Ver caixas de entrada",
       "INBOX_MANAGE": "Editar caixas de entrada",
-      "CANNED_RESPONSE_MANAGE": "Editar respostas prontas"
+      "CANNED_RESPONSE_MANAGE": "Editar respostas prontas",
+      "PROSPECTING_VIEW": "Ver prospecção",
+      "PROSPECTING_MANAGE": "Editar prospecção",
+      "INSURANCE_VIEW": "Ver cotação",
+      "INSURANCE_MANAGE": "Editar cotação",
+      "AUTOMATION_VIEW": "Ver automações",
+      "AUTOMATION_MANAGE": "Editar automações",
+      "LABEL_MANAGE": "Editar etiquetas",
+      "ATTRIBUTE_MANAGE": "Editar atributos personalizados",
+      "MACRO_MANAGE": "Editar macros da equipe",
+      "SLA_MANAGE": "Editar políticas de SLA"
     },
     "MATRIX": {
       "LEVELS": {
@@ -75,7 +85,8 @@
         "CRM": "CRM",
         "AUTONOMIA": "Autonom.ia",
         "MARKETING": "Marketing",
-        "CONNECTIONS": "Conexões"
+        "CONNECTIONS": "Conexões",
+        "SETTINGS": "Configurações"
       },
       "MODULES": {
         "CONVERSATIONS": {
@@ -113,6 +124,34 @@
         "INBOXES": {
           "NAME": "Caixas de entrada",
           "HINT": "Canais, QR do WhatsApp e membros"
+        },
+        "PROSPECTING": {
+          "NAME": "Prospecção",
+          "HINT": "Buscas de leads, leads e listas"
+        },
+        "INSURANCE": {
+          "NAME": "Cotação",
+          "HINT": "Conexão com seguradoras e agente de cotação"
+        },
+        "AUTOMATIONS": {
+          "NAME": "Automações",
+          "HINT": "Regras de automação"
+        },
+        "LABELS": {
+          "NAME": "Etiquetas",
+          "HINT": "Todos aplicam; Editar cria e altera"
+        },
+        "ATTRIBUTES": {
+          "NAME": "Atributos personalizados",
+          "HINT": "Todos preenchem; Editar muda as definições"
+        },
+        "MACROS": {
+          "NAME": "Macros da equipe",
+          "HINT": "Macros pessoais continuam liberadas para todos"
+        },
+        "SLA": {
+          "NAME": "SLA",
+          "HINT": "Políticas de SLA"
         }
       },
       "FOOTNOTE": "Editar já inclui Ver. Usuários, funções, integrações, faturamento e segurança continuam com o administrador."
