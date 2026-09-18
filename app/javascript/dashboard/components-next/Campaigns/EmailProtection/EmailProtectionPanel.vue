@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import EmailStatusBadge from './EmailStatusBadge.vue';
 import {
   NS,
@@ -20,6 +21,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['reevaluate', 'resume', 'problems']);
 const { t, locale } = useI18n();
+const canManage = useCanManage('campaign_manage');
 const health = computed(() => props.protection || props.campaign.protection);
 const blockReason = computed(() => protectionBlockReason(health.value));
 const state = computed(() => {
@@ -212,7 +214,7 @@ const rate = value =>
     </template>
     <div class="flex flex-wrap gap-2">
       <Button
-        v-if="campaign.id && health?.capabilities?.reevaluate"
+        v-if="canManage && campaign.id && health?.capabilities?.reevaluate"
         :label="t(`${NS}.REEVALUATE`)"
         icon="i-lucide-refresh-cw"
         :disabled="busy"
@@ -222,7 +224,7 @@ const rate = value =>
         @click="emit('reevaluate')"
       />
       <Button
-        v-if="canResume"
+        v-if="canManage && canResume"
         :label="t(`${NS}.RESUME`)"
         icon="i-lucide-play"
         :disabled="busy"

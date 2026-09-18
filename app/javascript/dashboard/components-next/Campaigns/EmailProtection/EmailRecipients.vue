@@ -5,6 +5,7 @@ import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import ReportsAPI from 'dashboard/api/emailCampaignReports';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import EmailStatusBadge from './EmailStatusBadge.vue';
 import EmailStatusFilter from './EmailStatusFilter.vue';
 import { useEmailReportRefresh } from './useEmailReportRefresh';
@@ -22,6 +23,7 @@ const props = defineProps({
   refreshKey: { type: [Number, String], default: 0 },
 });
 const { t, locale } = useI18n();
+const canManage = useCanManage('campaign_manage');
 const { run, abort, isPending } = useAbortableRequest();
 const section = ref(null);
 const search = ref('');
@@ -182,6 +184,7 @@ defineExpose({ fetchRecipients, showProblems });
         @click="fetchRecipients"
       />
       <Button
+        v-if="canManage"
         :label="t(`${NS}.EXPORT`)"
         icon="i-lucide-download"
         sm

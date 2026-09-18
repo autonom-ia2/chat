@@ -34,8 +34,8 @@
     },
     "PERMISSIONS": {
       "CONVERSATION_MANAGE": "Manage all conversations",
-      "CONVERSATION_UNASSIGNED_MANAGE": "Manage unassigned conversations and those assigned to them",
-      "CONVERSATION_PARTICIPATING_MANAGE": "Manage participating conversations and those assigned to them",
+      "CONVERSATION_UNASSIGNED_MANAGE": "Unassigned conversations",
+      "CONVERSATION_PARTICIPATING_MANAGE": "Conversations they participate in",
       "CONTACT_MANAGE": "Manage contacts",
       "REPORT_MANAGE": "Manage reports",
       "KNOWLEDGE_BASE_MANAGE": "Manage knowledge base",
@@ -45,11 +45,116 @@
       "CRM_MANAGE_PIPELINES": "Manage CRM pipelines & automations",
       "CRM_MANAGE_AI": "Manage CRM AI",
       "CRM_VIEW_REPORTS": "View CRM reports",
-      "CRM_ADMIN": "CRM admin (full access)"
+      "CRM_ADMIN": "CRM admin (full access)",
+      "CONTACT_VIEW": "View contacts",
+      "KNOWLEDGE_BASE_VIEW": "View knowledge base",
+      "AUTONOMIA_VIEW": "View and test Autonom.ia agents",
+      "AUTONOMIA_MANAGE": "Edit Autonom.ia agents",
+      "CAMPAIGN_VIEW": "View campaigns",
+      "CAMPAIGN_MANAGE": "Edit campaigns",
+      "INBOX_VIEW": "View inboxes",
+      "INBOX_MANAGE": "Edit inboxes",
+      "CANNED_RESPONSE_MANAGE": "Edit canned responses",
+      "PROSPECTING_VIEW": "View prospecting",
+      "PROSPECTING_MANAGE": "Edit prospecting",
+      "INSURANCE_VIEW": "View insurance quoting",
+      "INSURANCE_MANAGE": "Edit insurance quoting",
+      "AUTOMATION_VIEW": "View automations",
+      "AUTOMATION_MANAGE": "Edit automations",
+      "LABEL_MANAGE": "Edit labels",
+      "ATTRIBUTE_MANAGE": "Edit custom attributes",
+      "MACRO_MANAGE": "Edit team macros",
+      "SLA_MANAGE": "Edit SLA policies"
     },
-    "PERMISSION_GROUPS": {
-      "GENERAL": "General",
-      "CRM": "CRM"
+    "MATRIX": {
+      "LEVELS": {
+        "NONE": "No access",
+        "VIEW": "View",
+        "MANAGE": "Edit",
+        "LIMITED": "Limited",
+        "ALL": "All"
+      },
+      "PRESETS": {
+        "LABEL": "Start from a template:",
+        "SUPERVISOR": "Supervisor",
+        "MARKETING": "Marketing",
+        "AGENT": "Agent"
+      },
+      "GROUPS": {
+        "SERVICE": "Service",
+        "CRM": "CRM",
+        "AUTONOMIA": "Autonom.ia",
+        "MARKETING": "Marketing",
+        "CONNECTIONS": "Connections",
+        "SETTINGS": "Settings"
+      },
+      "MODULES": {
+        "CONVERSATIONS": {
+          "NAME": "Conversations",
+          "HINT": "Which conversations they can handle"
+        },
+        "CONTACTS": {
+          "NAME": "Contacts",
+          "HINT": "List, import and export"
+        },
+        "KNOWLEDGE_BASE": {
+          "NAME": "Knowledge base",
+          "HINT": "Portals and articles"
+        },
+        "REPORTS": {
+          "NAME": "Reports",
+          "HINT": "Service dashboards"
+        },
+        "CANNED_RESPONSES": {
+          "NAME": "Canned responses",
+          "HINT": "Everyone can use them; Edit creates and changes them"
+        },
+        "CRM": {
+          "NAME": "CRM",
+          "HINT": "Pipelines and cards"
+        },
+        "AUTONOMIA": {
+          "NAME": "Autonom.ia agents",
+          "HINT": "View and test, or create, train and publish"
+        },
+        "CAMPAIGNS": {
+          "NAME": "Campaigns",
+          "HINT": "Email, WhatsApp, SMS and contact lists"
+        },
+        "INBOXES": {
+          "NAME": "Inboxes",
+          "HINT": "Channels, WhatsApp QR code and members"
+        },
+        "PROSPECTING": {
+          "NAME": "Prospecting",
+          "HINT": "Lead searches, leads and lists"
+        },
+        "INSURANCE": {
+          "NAME": "Insurance quoting",
+          "HINT": "Insurer connection and quote agent"
+        },
+        "AUTOMATIONS": {
+          "NAME": "Automations",
+          "HINT": "Automation rules"
+        },
+        "LABELS": {
+          "NAME": "Labels",
+          "HINT": "Everyone can apply them; Edit creates and changes them"
+        },
+        "ATTRIBUTES": {
+          "NAME": "Custom attributes",
+          "HINT": "Everyone can fill them; Edit changes the definitions"
+        },
+        "MACROS": {
+          "NAME": "Team macros",
+          "HINT": "Personal macros stay available to everyone"
+        },
+        "SLA": {
+          "NAME": "SLA",
+          "HINT": "SLA policies"
+        }
+      },
+      "FOOTNOTE": "Edit includes View. Users, custom roles, integrations, billing and security stay with administrators."
     },
     "FORM": {
       "NAME": {

@@ -7,7 +7,7 @@ class Api::V1::Accounts::AppliedSlasController < Api::V1::Accounts::EnterpriseAc
   before_action :ensure_sla_feature_enabled
   before_action :set_applied_slas, only: [:index, :metrics, :download]
   before_action :set_current_page, only: [:index]
-  before_action :check_admin_authorization?
+  before_action -> { check_permission_granted!('report_manage') }
 
   sort_on :created_at, type: :datetime
 

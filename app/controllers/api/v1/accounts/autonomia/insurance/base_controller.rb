@@ -1,6 +1,6 @@
 class Api::V1::Accounts::Autonomia::Insurance::BaseController < Api::V1::Accounts::BaseController
   before_action :ensure_feature_enabled
-  before_action :ensure_account_administrator
+  before_action -> { check_module_permission!('insurance') }
 
   private
 
@@ -9,10 +9,6 @@ class Api::V1::Accounts::Autonomia::Insurance::BaseController < Api::V1::Account
     return if ::Autonomia::Insurance::Config.enabled?(Current.account)
 
     render json: { error: 'autonomia.insurance.disabled' }, status: :not_found
-  end
-
-  def ensure_account_administrator
-    raise Pundit::NotAuthorizedError unless Current.account_user&.administrator?
   end
 
   def connection

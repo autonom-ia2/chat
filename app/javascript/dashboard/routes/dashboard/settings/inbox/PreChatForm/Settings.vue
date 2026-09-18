@@ -8,6 +8,7 @@ import PreChatFields from './PreChatFields.vue';
 import { getPreChatFields } from 'dashboard/helper/preChat';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsToggleSection.vue';
 
 const props = defineProps({
@@ -18,6 +19,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const canManage = useCanManage('inbox_manage');
 const store = useStore();
 
 const uiFlags = useMapGetter('inboxes/getUIFlags');
@@ -141,7 +143,10 @@ onMounted(() => {
           </table>
         </div>
       </div>
-      <div class="w-full flex justify-end items-center py-4 mt-2">
+      <div
+        v-if="canManage"
+        class="w-full flex justify-end items-center py-4 mt-2"
+      >
         <Button
           type="submit"
           :label="$t('INBOX_MGMT.SETTINGS_POPUP.UPDATE_PRE_CHAT_FORM_SETTINGS')"

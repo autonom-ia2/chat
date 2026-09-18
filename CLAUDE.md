@@ -123,3 +123,9 @@ Practical checklist for any change impacting core logic or public APIs
 - Registre decisões, comandos de validação, resultados e bloqueios em `docs/audit/`.
 - Nunca registre prompts completos, tokens, secrets, credenciais ou dados de clientes.
 - Merge, deploy, produção, banco de produção, secrets, auth, billing e infraestrutura exigem aprovação explícita do Rodrigo.
+
+## Funções personalizadas (custom roles)
+
+- Módulo novo que é só de admin: gate com `AccountUser#permission_granted?('<modulo>_view' | '<modulo>_manage')`. No OSS responde `administrator?`; o EE soma as chaves da função, e `_manage` implica `_view`. Agente comum sem função continua sem acesso.
+- Checklist de uma chave nova: `CustomRole::PERMISSIONS`, policy/controller, módulo em `settings/customRoles/permissionMatrix.js`, i18n `CUSTOM_ROLE.MATRIX` (en + pt_BR), `meta.permissions` da rota, entrada do menu e `useCanManage('<modulo>_manage')` nos botões de escrita.
+- Nunca delegar por função: usuários, funções, integrações/webhooks/tokens, conta, faturamento, financeiro, segurança.

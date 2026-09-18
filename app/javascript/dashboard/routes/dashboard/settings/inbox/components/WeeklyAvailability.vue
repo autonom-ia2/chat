@@ -13,6 +13,7 @@ import {
   timeZoneOptions,
 } from '../helpers/businessHour';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 
 const DEFAULT_TIMEZONE = {
@@ -35,6 +36,9 @@ export default {
       type: Object,
       default: () => ({}),
     },
+  },
+  setup() {
+    return { canManage: useCanManage('inbox_manage') };
   },
   data() {
     return {
@@ -214,7 +218,10 @@ export default {
           </table>
         </div>
       </div>
-      <div class="w-full flex justify-end items-center py-4 mt-2">
+      <div
+        v-if="canManage"
+        class="w-full flex justify-end items-center py-4 mt-2"
+      >
         <NextButton
           type="submit"
           :label="$t('INBOX_MGMT.BUSINESS_HOURS.UPDATE')"

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -17,6 +18,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['delete', 'checked']);
+const canManage = useCanManage('campaign_manage');
 
 const { t } = useI18n();
 const store = useStore();
@@ -138,7 +140,7 @@ const runCheck = async () => {
           {{ statusLabel }}
         </span>
       </div>
-      <div class="flex items-center gap-2 shrink-0">
+      <div v-if="canManage" class="flex items-center gap-2 shrink-0">
         <Button
           v-if="!isVerified"
           :label="t('CAMPAIGN.EMAIL_SENDER.ACTIONS.CHECK')"

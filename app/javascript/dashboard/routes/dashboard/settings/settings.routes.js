@@ -2,7 +2,31 @@ import { frontendURL } from '../../../helper/URLHelper';
 import {
   ROLES,
   CONVERSATION_PERMISSIONS,
+  CANNED_RESPONSE_MANAGE_PERMISSION,
+  INBOX_PERMISSIONS,
+  AUTOMATION_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
+import {
+  getUserPermissions,
+  hasPermissions,
+} from 'dashboard/helper/permissionsHelper.js';
+
+const CANNED_LIST_PERMISSIONS = [
+  ...ROLES,
+  ...CONVERSATION_PERMISSIONS,
+  CANNED_RESPONSE_MANAGE_PERMISSION,
+];
+
+// First settings page each custom role can open (#452), in sidebar order.
+const SETTINGS_LANDINGS = [
+  { name: 'canned_list', permissions: CANNED_LIST_PERMISSIONS },
+  { name: 'settings_inbox_list', permissions: INBOX_PERMISSIONS },
+  { name: 'labels_list', permissions: ['label_manage'] },
+  { name: 'attributes_list', permissions: ['attribute_manage'] },
+  { name: 'automation_list', permissions: AUTOMATION_PERMISSIONS },
+  { name: 'macros_wrapper', permissions: ['macro_manage'] },
+  { name: 'sla_list', permissions: ['sla_manage'] },
+];
 
 import account from './account/account.routes';
 import agent from './agents/agent.routes';
@@ -35,7 +59,7 @@ export default {
       path: frontendURL('accounts/:accountId/settings'),
       name: 'settings_home',
       meta: {
-        permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
+        permissions: SETTINGS_LANDINGS.flatMap(page => page.permissions),
       },
       redirect: to => {
         if (
@@ -45,7 +69,14 @@ export default {
           return { name: 'general_settings_index', params: to.params };
         }
 
-        return { name: 'canned_list', params: to.params };
+        const permissions = getUserPermissions(
+          store.getters.getCurrentUser,
+          to.params.accountId
+        );
+        const landing = SETTINGS_LANDINGS.find(page =>
+          hasPermissions(page.permissions, permissions)
+        );
+        return { name: landing.name, params: to.params };
       },
     },
     ...account.routes,

@@ -20,6 +20,7 @@ import {
 } from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import PlaceholderChips from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/PlaceholderChips.vue';
 
 const props = defineProps({
@@ -31,6 +32,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
+const canManage = useCanManage('campaign_manage');
 
 const { t, locale } = useI18n();
 const recipientsPanel = ref(null);
@@ -213,13 +215,15 @@ onMounted(() => {
           @problems="recipientsPanel?.showProblems()"
         />
         <Button
-          v-if="isDraft && liveCampaign.recipient_import?.retryable"
+          v-if="
+            canManage && isDraft && liveCampaign.recipient_import?.retryable
+          "
           :label="t('CAMPAIGN.EMAIL_CAMPAIGN.IMPORT.RETRY')"
           :disabled="isRetrying || isImporting"
           :is-loading="isRetrying"
           @click="retryImport"
         />
-        <div class="flex flex-wrap items-center gap-3">
+        <div v-if="canManage" class="flex flex-wrap items-center gap-3">
           <input
             ref="fileInput"
             type="file"

@@ -23,4 +23,14 @@ class Api::BaseController < ApplicationController
   def check_admin_authorization?
     raise Pundit::NotAuthorizedError unless Current.account_user.administrator?
   end
+
+  # Admin, or a custom role holding `key` (see AccountUser#permission_granted?).
+  def check_permission_granted!(key)
+    raise Pundit::NotAuthorizedError unless Current.account_user&.permission_granted?(key)
+  end
+
+  # Reads need `<module>_view`, writes `<module>_manage` (#452).
+  def check_module_permission!(module_key)
+    check_permission_granted!(request.get? || request.head? ? "#{module_key}_view" : "#{module_key}_manage")
+  end
 end

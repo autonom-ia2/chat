@@ -3,6 +3,7 @@ import { frontendURL } from '../../../../helper/URLHelper';
 import {
   ROLES,
   CONVERSATION_PERMISSIONS,
+  CANNED_RESPONSE_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 import SettingsWrapper from '../SettingsWrapper.vue';
 import CannedHome from './Index.vue';
@@ -24,7 +25,11 @@ export default {
           name: 'canned_list',
           meta: {
             featureFlag: FEATURE_FLAGS.CANNED_RESPONSES,
-            permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
+            permissions: [
+              ...ROLES,
+              ...CONVERSATION_PERMISSIONS,
+              CANNED_RESPONSE_MANAGE_PERMISSION,
+            ],
           },
           component: CannedHome,
         },

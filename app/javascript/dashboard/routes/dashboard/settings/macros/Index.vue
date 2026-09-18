@@ -10,11 +10,15 @@ import { useStoreGetters, useStore } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { BaseTable } from 'dashboard/components-next/table';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { useHasCustomRolePermission } from 'dashboard/composables/useCanManage';
 
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
-const { isAdmin } = useAdmin();
+const { isAdmin: isAccountAdmin } = useAdmin();
+const hasMacroManage = useHasCustomRolePermission('macro_manage');
+// Custom roles with macro_manage (#452) manage team-wide macros like admins.
+const isAdmin = computed(() => isAccountAdmin.value || hasMacroManage.value);
 
 const showDeleteConfirmationPopup = ref(false);
 const selectedMacro = ref({});

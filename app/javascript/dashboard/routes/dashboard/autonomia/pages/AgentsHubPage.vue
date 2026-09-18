@@ -6,6 +6,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
@@ -19,6 +20,7 @@ import AgentCard from '../components/AgentCard.vue';
 const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
+const canManage = useCanManage('autonomia_manage');
 
 const loadError = ref(false);
 const deleteDialogRef = ref(null);
@@ -41,7 +43,7 @@ const openAgent = agent => {
     name: 'autonomia_agent_panel',
     params: {
       agentId: agent.id,
-      tab: agent.status === 'draft' ? 'publish' : 'test',
+      tab: canManage.value && agent.status === 'draft' ? 'publish' : 'test',
     },
   });
 };
@@ -110,7 +112,7 @@ onMounted(() => loadAgents());
         </div>
       </div>
       <NextButton
-        v-if="agents.length"
+        v-if="canManage && agents.length"
         solid
         blue
         icon="i-lucide-sparkles"
@@ -149,7 +151,7 @@ onMounted(() => loadAgents());
         :subtitle="t('AGENTS.HUB.EMPTY.SUBTITLE')"
         :show-backdrop="false"
       >
-        <template #actions>
+        <template v-if="canManage" #actions>
           <NextButton
             solid
             blue

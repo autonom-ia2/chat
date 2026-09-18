@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import EmailStatusBadge from './EmailStatusBadge.vue';
 import { NS, formatNumber } from './presentation';
 const props = defineProps({
@@ -10,6 +11,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['recheck', 'issues']);
 const { t, locale } = useI18n();
+const canManage = useCanManage('campaign_manage');
 const classifications = [
   'ready',
   'protected',
@@ -87,7 +89,7 @@ const state = computed(
     </dl>
     <div class="flex flex-wrap gap-2">
       <Button
-        v-if="preflight?.can_recheck"
+        v-if="canManage && preflight?.can_recheck"
         :label="t(`${NS}.RECHECK`)"
         icon="i-lucide-refresh-cw"
         :disabled="busy"

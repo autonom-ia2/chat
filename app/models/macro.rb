@@ -36,7 +36,8 @@ class Macro < ApplicationRecord
 
   def set_visibility(user, params)
     self.visibility = params[:visibility]
-    self.visibility = :personal if user.agent?
+    # Custom roles with macro_manage (#452) may publish team-wide macros, like admins.
+    self.visibility = :personal if user.agent? && !Current.account_user&.permission_granted?('macro_manage')
   end
 
   def self.with_visibility(user, _params)

@@ -6,6 +6,11 @@ const api = vi.hoisted(() => ({
   getQuoteAgent: vi.fn(),
   createQuoteAgent: vi.fn(),
 }));
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { ref } = await import('vue');
+  return { useCanManage: () => ref(true) };
+});
+
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: api }));
 
 const push = vi.hoisted(() => vi.fn());

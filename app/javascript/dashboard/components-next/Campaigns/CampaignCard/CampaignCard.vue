@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 
 import CardLayout from 'dashboard/components-next/CardLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -51,6 +52,7 @@ const props = defineProps({
 const emit = defineEmits(['edit', 'delete', 'analytics']);
 
 const { t } = useI18n();
+const canManage = useCanManage('campaign_manage');
 
 const STATUS_COMPLETED = 'completed';
 const STATUS_PROCESSING = 'processing';
@@ -143,7 +145,7 @@ const inboxIcon = computed(() => {
         @click="emit('analytics')"
       />
       <Button
-        v-if="isLiveChatType"
+        v-if="canManage && isLiveChatType"
         variant="faded"
         size="sm"
         color="slate"
@@ -151,6 +153,7 @@ const inboxIcon = computed(() => {
         @click="emit('edit')"
       />
       <Button
+        v-if="canManage"
         variant="faded"
         color="ruby"
         size="sm"

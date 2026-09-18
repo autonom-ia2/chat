@@ -7,6 +7,7 @@ import { useAlert } from 'dashboard/composables';
 
 import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { buildTemplateCampaignPayload } from './emailTemplateBody';
 
@@ -14,6 +15,7 @@ const { t } = useI18n();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
+const canManage = useCanManage('campaign_manage');
 
 const campaigns = useMapGetter('emailCampaigns/getCampaigns');
 
@@ -323,6 +325,7 @@ onBeforeUnmount(() => {
                 @click="openPreview(template)"
               />
               <Button
+                v-if="canManage"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.USE')"
                 color="blue"
                 size="sm"
@@ -409,6 +412,7 @@ onBeforeUnmount(() => {
             @click="closePreview"
           />
           <Button
+            v-if="canManage"
             type="button"
             color="blue"
             icon="i-lucide-check"

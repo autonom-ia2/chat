@@ -8,6 +8,7 @@ import { useRecipientImportPolling } from 'dashboard/composables/useRecipientImp
 import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
 
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import GrapesEditor from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/GrapesEditor.vue';
@@ -26,6 +27,7 @@ const { t } = useI18n();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
+const canManage = useCanManage('campaign_manage');
 
 const campaigns = useMapGetter('emailCampaigns/getCampaigns');
 const uiFlags = useMapGetter('emailCampaigns/getUIFlags');
@@ -360,6 +362,7 @@ onActivated(() => {
             v-model="subjectInput"
             type="text"
             class="w-64 max-w-full p-0 text-xs bg-transparent border-0 truncate text-n-slate-11 focus:outline-none focus:ring-0"
+            :readonly="!canManage"
             :aria-label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SUBJECT_LABEL')"
             :placeholder="
               t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SUBJECT_PLACEHOLDER')
@@ -371,26 +374,28 @@ onActivated(() => {
       </div>
       <div class="relative flex items-center gap-2">
         <!-- HERÓI: ação primária destacada (azul, solid) -->
-        <Button
-          :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_COMPOSE')"
-          icon="i-lucide-sparkles"
-          color="blue"
-          size="sm"
-          :disabled="!isReady"
-          @click="openAiDialog"
-        />
+        <template v-if="canManage">
+          <Button
+            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_COMPOSE')"
+            icon="i-lucide-sparkles"
+            color="blue"
+            size="sm"
+            :disabled="!isReady"
+            @click="openAiDialog"
+          />
 
-        <div class="w-px h-6 mx-1 bg-n-weak" />
+          <div class="w-px h-6 mx-1 bg-n-weak" />
 
-        <AiBlockActions v-if="isReady" />
-        <Button
-          :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.TEMPLATES')"
-          icon="i-lucide-layout-template"
-          color="slate"
-          variant="link"
-          size="sm"
-          @click="openGallery()"
-        />
+          <AiBlockActions v-if="isReady" />
+          <Button
+            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.TEMPLATES')"
+            icon="i-lucide-layout-template"
+            color="slate"
+            variant="link"
+            size="sm"
+            @click="openGallery()"
+          />
+        </template>
         <Button
           :label="previewLabel"
           icon="i-lucide-smartphone"
@@ -400,34 +405,36 @@ onActivated(() => {
           :disabled="!isReady"
           @click="togglePreview()"
         />
-        <Button
-          :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST')"
-          icon="i-lucide-mail-check"
-          color="slate"
-          variant="outline"
-          size="sm"
-          :disabled="!isReady"
-          @click="toggleTestPopover"
-        />
-        <Button
-          :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE')"
-          icon="i-lucide-save"
-          color="slate"
-          variant="outline"
-          size="sm"
-          :is-loading="uiFlags.isUpdating"
-          :disabled="!isReady"
-          @click="save()"
-        />
-        <Button
-          :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE')"
-          icon="i-lucide-bookmark-plus"
-          color="slate"
-          variant="outline"
-          size="sm"
-          :disabled="!isReady"
-          @click="toggleSaveTemplatePopover"
-        />
+        <template v-if="canManage">
+          <Button
+            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST')"
+            icon="i-lucide-mail-check"
+            color="slate"
+            variant="outline"
+            size="sm"
+            :disabled="!isReady"
+            @click="toggleTestPopover"
+          />
+          <Button
+            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE')"
+            icon="i-lucide-save"
+            color="slate"
+            variant="outline"
+            size="sm"
+            :is-loading="uiFlags.isUpdating"
+            :disabled="!isReady"
+            @click="save()"
+          />
+          <Button
+            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE')"
+            icon="i-lucide-bookmark-plus"
+            color="slate"
+            variant="outline"
+            size="sm"
+            :disabled="!isReady"
+            @click="toggleSaveTemplatePopover"
+          />
+        </template>
         <div
           v-if="showTestPopover"
           class="absolute right-0 z-50 flex flex-col w-72 gap-3 p-4 border rounded-lg shadow-lg top-10 border-n-weak bg-n-solid-1"

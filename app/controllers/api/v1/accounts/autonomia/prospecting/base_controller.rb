@@ -1,15 +1,11 @@
 class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accounts::BaseController
   before_action :ensure_feature_enabled
-  before_action :ensure_account_administrator
+  before_action -> { check_module_permission!('prospecting') }
 
   private
 
   def ensure_feature_enabled
     render json: { error: 'autonomia.prospecting.disabled' }, status: :not_found unless ::Autonomia::Prospecting::Config.enabled?(Current.account)
-  end
-
-  def ensure_account_administrator
-    raise Pundit::NotAuthorizedError unless Current.account_user&.administrator?
   end
 
   def searches_scope
@@ -69,15 +65,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     digits = lead.phone.to_s.gsub(/\D/, '')
     return if digits.blank?
 
-    phone = if lead.phone.to_s.strip.start_with?('+')
-              "+#{digits}"
-            elsif digits.start_with?('55')
-              "+#{digits}"
-            elsif digits.length.in?([10, 11])
-              "+55#{digits}"
-            else
-              "+#{digits}"
-            end
+    # Local BR numbers (10–11 digits, no "+" and no "55") get the country code; everything else is kept.
+    needs_country_code = !lead.phone.to_s.strip.start_with?('+') && !digits.start_with?('55') && digits.length.in?([10, 11])
+    phone = needs_country_code ? "+55#{digits}" : "+#{digits}"
 
     phone.match?(/\A\+[1-9]\d{7,14}\z/) ? phone : nil
   end

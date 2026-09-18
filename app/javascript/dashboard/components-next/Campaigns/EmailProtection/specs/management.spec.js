@@ -8,6 +8,11 @@ import Reports from 'dashboard/api/emailCampaignReports';
 import Page from 'dashboard/routes/dashboard/crm/pages/CrmCampaignManagementPage.vue';
 import Recipients from '../EmailRecipients.vue';
 import LineChart from 'shared/components/charts/LineChart.vue';
+// Mounted without a store: grant manage so write controls render as for an admin.
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { ref } = await import('vue');
+  return { useCanManage: () => ref(true) };
+});
 vi.mock('dashboard/api/emailCampaignReports', () => ({
   default: {
     getReports: vi.fn(),

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import AutonomiaInsuranceAPI from 'dashboard/api/autonomiaInsurance';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 
 // Aba Agente (PRD §18-19). Até 08/09/2026 era um CARTAZ: o botão "Criar Agente de Cotação" apenas
 // navegava para o construtor conversacional, e quem clicasse saía de lá com um agente `custom` sem
@@ -15,6 +16,7 @@ import AutonomiaInsuranceAPI from 'dashboard/api/autonomiaInsurance';
 // partir do que a tela mandar seria diferente a cada versão do frontend.
 const { t } = useI18n();
 const router = useRouter();
+const canManage = useCanManage('insurance_manage');
 
 const BEHAVIORS = ['consultivo', 'objetivo'];
 const PILLARS = ['COLLECT', 'QUOTE', 'EXPLAIN', 'HANDOFF'];
@@ -144,7 +146,7 @@ const goToAgents = () => {
         <div class="flex items-center gap-2">
           <span class="i-lucide-circle-check size-4 text-n-teal-11 shrink-0" />
           <span class="text-sm font-medium text-n-slate-12">
-            {{ t('INSURANCE.AGENT.EXISTING.TITLE') }} — {{ agent.name }}
+            {{ `${t('INSURANCE.AGENT.EXISTING.TITLE')} — ${agent.name}` }}
           </span>
         </div>
         <p v-if="branchNames" class="text-sm text-n-slate-11">
@@ -160,7 +162,7 @@ const goToAgents = () => {
         class="flex flex-wrap items-center gap-2 mt-5"
       >
         <NextButton
-          v-if="!agent"
+          v-if="!agent && canManage"
           solid
           blue
           icon="i-lucide-sparkles"
@@ -168,7 +170,7 @@ const goToAgents = () => {
           @click="openForm"
         />
         <NextButton
-          v-else
+          v-else-if="agent"
           solid
           blue
           icon="i-lucide-external-link"

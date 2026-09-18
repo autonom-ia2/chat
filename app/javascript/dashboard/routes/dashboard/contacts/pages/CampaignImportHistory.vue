@@ -6,12 +6,14 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CampaignImportsAPI from 'dashboard/api/campaignImports';
 
 const store = useStore();
 const router = useRouter();
+const canManage = useCanManage('campaign_manage');
 const route = useRoute();
 const { t } = useI18n();
 
@@ -391,7 +393,7 @@ onBeforeUnmount(() => {
                 </p>
               </td>
               <td class="min-w-0 px-2 py-4 align-top">
-                <div class="flex flex-col items-start gap-1">
+                <div v-if="canManage" class="flex flex-col items-start gap-1">
                   <Button
                     v-if="campaignImport.downloads?.error_csv"
                     :label="t('CAMPAIGN_IMPORT.DOWNLOADS.ERRORS')"
@@ -425,7 +427,7 @@ onBeforeUnmount(() => {
                 </div>
               </td>
               <td class="min-w-0 px-4 py-4 align-top text-right">
-                <div class="flex justify-end w-full gap-2">
+                <div v-if="canManage" class="flex justify-end w-full gap-2">
                   <Button
                     v-if="canConfirm(campaignImport)"
                     :label="t('CAMPAIGN_IMPORT.ACTIONS.CONFIRM')"

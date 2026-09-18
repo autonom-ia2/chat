@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { picoSearch } from '@chatwoot/pico-search';
 import Avatar from 'next/avatar/Avatar.vue';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import {
@@ -19,7 +19,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
-const { isAdmin } = useAdmin();
+const canManage = useCanManage('inbox_manage');
 
 const showDeletePopup = ref(false);
 const selectedInbox = ref({});
@@ -105,7 +105,7 @@ const openDelete = inbox => {
           </span>
         </template>
         <template #actions>
-          <router-link v-if="isAdmin" :to="{ name: 'settings_inbox_new' }">
+          <router-link v-if="canManage" :to="{ name: 'settings_inbox_new' }">
             <Button :label="$t('SETTINGS.INBOXES.NEW_INBOX')" size="sm" />
           </router-link>
         </template>
@@ -162,7 +162,6 @@ const openDelete = inbox => {
               }"
             >
               <Button
-                v-if="isAdmin"
                 v-tooltip.top="$t('INBOX_MGMT.SETTINGS')"
                 icon="i-woot-settings"
                 slate
@@ -170,7 +169,7 @@ const openDelete = inbox => {
               />
             </router-link>
             <Button
-              v-if="isAdmin"
+              v-if="canManage"
               v-tooltip.top="$t('INBOX_MGMT.DELETE.BUTTON_TEXT')"
               icon="i-woot-bin"
               slate

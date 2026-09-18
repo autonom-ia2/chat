@@ -3,6 +3,7 @@ import { mapGetters } from 'vuex';
 import { shouldBeUrl } from 'shared/helpers/Validators';
 import { useAlert } from 'dashboard/composables';
 import { useVuelidate } from '@vuelidate/core';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import Avatar from 'next/avatar/Avatar.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -90,7 +91,7 @@ export default {
   },
   mixins: [inboxMixin],
   setup() {
-    return { v$: useVuelidate() };
+    return { v$: useVuelidate(), canManage: useCanManage('inbox_manage') };
   },
   data() {
     return {
@@ -873,7 +874,7 @@ export default {
           </div>
         </Banner>
         <WhatsappManualMigrationBanner
-          v-if="showWhatsAppManualMigration"
+          v-if="canManage && showWhatsAppManualMigration"
           class="mx-6 mb-6"
           :class="bannerMaxWidth"
           @start="openWhatsAppManualMigrationDialog"
@@ -899,7 +900,7 @@ export default {
                 :size="64"
                 :icon-name="inboxIcon"
                 name=""
-                allow-upload
+                :allow-upload="canManage"
                 rounded-full
                 @upload="handleImageUpload"
                 @delete="handleAvatarDelete"
@@ -1022,7 +1023,7 @@ export default {
               class="[&>div>div]:justify-end [&>div>div]:flex lg:[&>div:first-child]:h-12 [&>div:first-child]:h-16"
             >
               <NextButton
-                v-if="!showBusinessNameInput"
+                v-if="canManage && !showBusinessNameInput"
                 ghost
                 blue
                 sm
@@ -1361,7 +1362,10 @@ export default {
               />
             </SettingsAccordion>
 
-            <div class="w-full flex justify-end items-center py-4 mt-2">
+            <div
+              v-if="canManage"
+              class="w-full flex justify-end items-center py-4 mt-2"
+            >
               <NextButton
                 v-if="isAPIInbox"
                 type="submit"

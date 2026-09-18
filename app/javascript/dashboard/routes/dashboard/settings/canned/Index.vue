@@ -11,6 +11,8 @@ import { picoSearch } from '@chatwoot/pico-search';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
+import { CANNED_RESPONSE_MANAGE_PERMISSION } from 'dashboard/constants/permissions.js';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import {
   BaseTable,
@@ -27,6 +29,7 @@ const store = useStore();
 const { t } = useI18n();
 
 const { getPlainText } = useMessageFormatter();
+const canManage = useCanManage(CANNED_RESPONSE_MANAGE_PERMISSION);
 
 const showAddPopup = ref(false);
 const loading = ref({});
@@ -159,7 +162,7 @@ const tableHeaders = computed(() => {
             {{ $t('CANNED_MGMT.COUNT', { n: records.length }) }}
           </span>
         </template>
-        <template #actions>
+        <template v-if="canManage" #actions>
           <Button
             :label="$t('CANNED_MGMT.HEADER_BTN_TXT')"
             size="sm"
@@ -222,7 +225,10 @@ const tableHeaders = computed(() => {
               </BaseTableCell>
 
               <BaseTableCell align="end" class="w-24">
-                <div class="flex gap-3 justify-end flex-shrink-0">
+                <div
+                  v-if="canManage"
+                  class="flex gap-3 justify-end flex-shrink-0"
+                >
                   <Button
                     v-tooltip.top="$t('CANNED_MGMT.EDIT.BUTTON_TEXT')"
                     icon="i-woot-edit-pen"

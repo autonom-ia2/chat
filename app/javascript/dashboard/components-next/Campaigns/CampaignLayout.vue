@@ -1,6 +1,7 @@
 <script setup>
 import { vOnClickOutside } from '@vueuse/components';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 
 defineProps({
   headerTitle: {
@@ -14,6 +15,7 @@ defineProps({
 });
 
 const emit = defineEmits(['click', 'close']);
+const canManage = useCanManage('campaign_manage');
 
 const handleButtonClick = () => {
   emit('click');
@@ -37,6 +39,7 @@ const handleButtonClick = () => {
             class="relative group/campaign-button"
           >
             <Button
+              v-if="canManage"
               :label="buttonLabel"
               icon="i-lucide-plus"
               size="sm"

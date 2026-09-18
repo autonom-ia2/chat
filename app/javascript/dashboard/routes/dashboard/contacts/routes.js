@@ -3,15 +3,16 @@ import ContactsIndex from './pages/ContactsIndex.vue';
 import ContactManageView from './pages/ContactManageView.vue';
 import CampaignImportHistory from './pages/CampaignImportHistory.vue';
 import { FEATURE_FLAGS } from '../../../featureFlags';
+import { CAMPAIGN_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
 const commonMeta = {
   featureFlag: FEATURE_FLAGS.CRM,
-  permissions: ['administrator', 'agent', 'contact_manage'],
+  permissions: ['administrator', 'agent', 'contact_manage', 'contact_view'],
 };
 
 const campaignImportMeta = {
   featureFlag: FEATURE_FLAGS.CRM,
-  permissions: ['administrator'],
+  permissions: ['administrator', ...CAMPAIGN_PERMISSIONS],
 };
 
 export const routes = [

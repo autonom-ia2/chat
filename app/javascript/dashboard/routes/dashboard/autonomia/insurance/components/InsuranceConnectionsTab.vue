@@ -7,6 +7,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import InsuranceStatusBadge from './InsuranceStatusBadge.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import {
   CONNECTION_STATES,
   asksBrokerAction,
@@ -24,6 +25,7 @@ import {
 // `te` = "translation exists". Necessário porque o segundo argumento de `t()` não funciona como
 // valor padrão: com a chave ausente, o vue-i18n devolve a própria chave.
 const { t, te } = useI18n();
+const canManage = useCanManage('insurance_manage');
 
 const connection = ref(buildConnection());
 const isLoading = ref(true);
@@ -464,6 +466,7 @@ const productDot = item => {
 // A legenda lista as cores que ESTÃO na tela, e não uma lista fixa. Assim ela não descreve cor
 // ausente nem deixa cor órfã — o defeito era exatamente esse: três cores, duas entradas.
 const LEGEND_ORDER = ['LEGEND_QUOTING', 'LEGEND_PENDING', 'LEGEND_NONE'];
+const INFERRED_MARKER = '*';
 const DOT_BY_LEGEND = {
   LEGEND_QUOTING: 'bg-n-teal-9',
   LEGEND_PENDING: 'bg-n-amber-9',
@@ -558,7 +561,7 @@ onUnmounted(pararAcompanhamento);
               <p v-if="!showForm" class="text-xs truncate text-n-slate-11">
                 {{ t('INSURANCE.CONNECTION.PROVIDER_AGGER') }}
                 <template v-if="connection.external_account_label">
-                  — {{ connection.external_account_label }}
+                  {{ `— ${connection.external_account_label}` }}
                 </template>
               </p>
             </div>
@@ -580,7 +583,7 @@ onUnmounted(pararAcompanhamento);
           <p class="text-sm text-n-slate-11">
             {{ t('INSURANCE.CONNECTION.FORM.INTRO') }}
           </p>
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div v-if="canManage" class="grid gap-4 sm:grid-cols-2">
             <Input
               id="insurance-agger-username"
               v-model="form.username"
@@ -602,7 +605,7 @@ onUnmounted(pararAcompanhamento);
           <p class="text-xs text-n-slate-11">
             {{ t('INSURANCE.CONNECTION.FORM.SECURITY_NOTE') }}
           </p>
-          <div>
+          <div v-if="canManage">
             <NextButton
               solid
               blue
@@ -731,7 +734,7 @@ onUnmounted(pararAcompanhamento);
                O mecanismo continua vivo e utilizável pelo adapter:
                `agger portal link -q <cotacao> -o <arquivo>`. Ver autonom-ia2/chat#345 e
                autonom-ia2/autonomia-adapters#42. -->
-          <div class="flex flex-wrap items-center gap-2">
+          <div v-if="canManage" class="flex flex-wrap items-center gap-2">
             <NextButton
               faded
               slate
@@ -847,7 +850,7 @@ onUnmounted(pararAcompanhamento);
                 </span>
                 <span v-if="row.detail" class="text-xs text-n-slate-11">
                   {{ row.detail }}
-                  <span v-if="row.source"> · {{ row.source }}</span>
+                  <span v-if="row.source">{{ ` · ${row.source}` }}</span>
                 </span>
               </div>
             </div>
@@ -917,7 +920,7 @@ onUnmounted(pararAcompanhamento);
                     class="ml-1 text-xs text-n-slate-11"
                     :title="t('INSURANCE.CAPABILITIES.INFERRED_HINT')"
                   >
-                    *
+                    {{ INFERRED_MARKER }}
                   </span>
                 </span>
                 <!-- O código do ramo no portal. É por ele que o corretor acha o produto do outro

@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import ProspectingGoogleMap from '../components/ProspectingGoogleMap.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
@@ -20,7 +21,10 @@ import {
 } from '../utils/prospectingPriority';
 
 const { t } = useI18n();
+const canManage = useCanManage('prospecting_manage');
 const route = useRoute();
+const DOT_SEPARATOR = '·';
+const EMPTY_VALUE = '-';
 
 const isLoading = ref(true);
 const isSearching = ref(false);
@@ -797,6 +801,7 @@ async function verifyLeadWhatsApp(lead) {
 }
 
 verifyLeadsWhatsApp = leadsToVerify => {
+  if (!canManage.value) return;
   leadsToVerify
     .filter(shouldVerifyWhatsApp)
     .slice(0, 25)
@@ -1005,6 +1010,7 @@ onMounted(async () => {
         </p>
       </div>
       <button
+        v-if="canManage"
         type="button"
         class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-n-brand px-4 text-sm font-medium text-white"
         @click="toggleNewSearch"
@@ -1501,7 +1507,7 @@ onMounted(async () => {
                       {{ search.query }}
                     </h3>
                     <p class="block w-full truncate text-xs text-n-slate-10">
-                      {{ search.location }} · {{ formatSearchArea(search) }}
+                      {{ `${search.location} · ${formatSearchArea(search)}` }}
                     </p>
                   </div>
                   <span
@@ -1532,6 +1538,7 @@ onMounted(async () => {
                 </div>
               </button>
               <div
+                v-if="canManage"
                 class="flex flex-wrap items-center gap-2 border-t border-n-weak px-3 py-2.5"
               >
                 <button
@@ -1862,6 +1869,7 @@ onMounted(async () => {
                         }}
                       </span>
                       <button
+                        v-if="canManage"
                         type="button"
                         class="h-7 rounded-md bg-n-brand px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="
@@ -1942,7 +1950,7 @@ onMounted(async () => {
                           v-if="leadPriorityTheme(lead)"
                           class="text-n-slate-6"
                         >
-                          ·
+                          {{ DOT_SEPARATOR }}
                         </span>
                         <span
                           class="min-w-0 flex-1 truncate text-sm text-n-slate-10"
@@ -2018,11 +2026,11 @@ onMounted(async () => {
                     </div>
                     <div v-if="lead.decision_name" class="leading-relaxed">
                       <span class="font-semibold text-emerald-950">
-                        {{ t('PROSPECTING.SEARCH.DECISION_MAKER') }}:
+                        {{ `${t('PROSPECTING.SEARCH.DECISION_MAKER')}:` }}
                       </span>
                       {{ lead.decision_name }}
                       <span v-if="lead.decision_role">
-                        · {{ lead.decision_role }}
+                        {{ `· ${lead.decision_role}` }}
                       </span>
                     </div>
                     <div
@@ -2054,6 +2062,7 @@ onMounted(async () => {
                       {{ t('PROSPECTING.SEARCH.OPEN_DETAILS') }}
                     </button>
                     <button
+                      v-if="canManage"
                       type="button"
                       class="inline-flex h-8 items-center gap-1 rounded-md px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed"
                       :class="
@@ -2154,7 +2163,7 @@ onMounted(async () => {
                       {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
                     </a>
                     <button
-                      v-else
+                      v-else-if="canManage"
                       type="button"
                       class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                       :disabled="
@@ -2468,7 +2477,7 @@ onMounted(async () => {
                       v-if="factor?.points"
                       class="ml-auto shrink-0 font-mono text-xs text-red-600"
                     >
-                      -{{ factor.points }}
+                      {{ `-${factor.points}` }}
                     </span>
                   </li>
                 </ul>
@@ -2514,7 +2523,7 @@ onMounted(async () => {
                   <div class="mt-1 break-words leading-relaxed">
                     {{ selectedLeadDetail.decision_name }}
                     <span v-if="selectedLeadDetail.decision_role">
-                      · {{ selectedLeadDetail.decision_role }}
+                      {{ `· ${selectedLeadDetail.decision_role}` }}
                     </span>
                   </div>
                 </div>
@@ -2535,7 +2544,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_EMAIL') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_EMAIL')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_email }}
                   </div>
@@ -2544,7 +2553,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_WHATSAPP') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_WHATSAPP')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_whatsapp }}
                   </div>
@@ -2553,7 +2562,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_INSTAGRAM') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_INSTAGRAM')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_instagram }}
                   </div>
@@ -2562,7 +2571,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_FACEBOOK') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_FACEBOOK')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_facebook }}
                   </div>
@@ -2571,7 +2580,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_LINKEDIN') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_LINKEDIN')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_linkedin }}
                   </div>
@@ -2580,7 +2589,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_CNPJ') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_CNPJ')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_cnpj }}
                   </div>
@@ -2703,7 +2712,7 @@ onMounted(async () => {
                 {{
                   selectedLeadDetail.latitude && selectedLeadDetail.longitude
                     ? `${selectedLeadDetail.latitude}, ${selectedLeadDetail.longitude}`
-                    : '-'
+                    : EMPTY_VALUE
                 }}
               </div>
             </div>
@@ -2747,7 +2756,7 @@ onMounted(async () => {
             {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
           </a>
           <button
-            v-else
+            v-else-if="canManage"
             type="button"
             class="h-9 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="

@@ -4,6 +4,7 @@ import { useAlert } from 'dashboard/composables';
 import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFieldSection.vue';
 import LoadingState from 'dashboard/components/widgets/LoadingState.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import SelectInput from 'dashboard/components-next/select/Select.vue';
 
 export default {
@@ -18,6 +19,9 @@ export default {
       type: Object,
       default: () => ({}),
     },
+  },
+  setup() {
+    return { canManage: useCanManage('inbox_manage') };
   },
   data() {
     return {
@@ -100,7 +104,10 @@ export default {
         <template #extra>
           <div class="grid grid-cols-1 lg:grid-cols-8 mt-3">
             <div class="col-span-1 lg:col-span-2 invisible" />
-            <div class="col-span-1 lg:col-span-6 flex gap-2 mx-1">
+            <div
+              v-if="canManage"
+              class="col-span-1 lg:col-span-6 flex gap-2 mx-1"
+            >
               <NextButton
                 type="submit"
                 :label="$t('AGENT_BOTS.BOT_CONFIGURATION.SUBMIT')"

@@ -30,6 +30,17 @@
 # - 'crm_manage_ai': Can manage CRM AI settings and trigger/accept AI suggestions.
 # - 'crm_view_reports': Can view CRM reports (forward-looking).
 # - 'crm_admin': Umbrella that implies every crm_* permission.
+#
+# Module keys: '<module>_manage' implies '<module>_view' (see Enterprise::AccountUser#permission_granted?).
+# - 'contact_view' / 'knowledge_base_view': read-only access to contacts / help center.
+# - 'autonomia_view': view and test Autonom.ia agents. 'autonomia_manage': create, train and publish them.
+# - 'campaign_view': view campaigns and their reports. 'campaign_manage': create, send and import lists.
+# - 'inbox_view': view every inbox configuration. 'inbox_manage': create, connect and configure inboxes.
+# - 'canned_response_manage': create, edit and delete canned responses.
+# - 'prospecting_view' / 'prospecting_manage': prospecting searches, leads and lists.
+# - 'insurance_view' / 'insurance_manage': insurance quoting (Cotação) connection and quote agent.
+# - 'automation_view' / 'automation_manage': automation rules.
+# - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -53,6 +64,25 @@ class CustomRole < ApplicationRecord
     crm_manage_ai
     crm_view_reports
     crm_admin
+    contact_view
+    knowledge_base_view
+    autonomia_view
+    autonomia_manage
+    campaign_view
+    campaign_manage
+    inbox_view
+    inbox_manage
+    canned_response_manage
+    prospecting_view
+    prospecting_manage
+    insurance_view
+    insurance_manage
+    automation_view
+    automation_manage
+    label_manage
+    attribute_manage
+    macro_manage
+    sla_manage
   ].freeze
 
   validates :name, presence: true

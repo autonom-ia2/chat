@@ -1,5 +1,6 @@
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import { frontendURL } from '../../../../helper/URLHelper';
+import { INBOX_PERMISSIONS } from 'dashboard/constants/permissions.js';
 import ChannelFactory from './ChannelFactory.vue';
 
 import SettingsContent from '../Wrapper.vue';
@@ -29,7 +30,7 @@ export default {
           component: InboxHome,
           meta: {
             featureFlag: FEATURE_FLAGS.INBOX_MANAGEMENT,
-            permissions: ['administrator'],
+            permissions: ['administrator', ...INBOX_PERMISSIONS],
           },
         },
       ],
@@ -58,7 +59,7 @@ export default {
               component: ChannelList,
               meta: {
                 featureFlag: FEATURE_FLAGS.INBOX_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', 'inbox_manage'],
               },
             },
             {
@@ -67,7 +68,7 @@ export default {
               component: FinishSetup,
               meta: {
                 featureFlag: FEATURE_FLAGS.INBOX_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', 'inbox_manage'],
               },
             },
             {
@@ -76,7 +77,7 @@ export default {
               component: ChannelFactory,
               meta: {
                 featureFlag: FEATURE_FLAGS.INBOX_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', 'inbox_manage'],
               },
               props: route => {
                 return { channelName: route.params.sub_page };
@@ -87,7 +88,7 @@ export default {
               name: 'settings_inboxes_add_agents',
               meta: {
                 featureFlag: FEATURE_FLAGS.INBOX_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', 'inbox_manage'],
               },
               component: AddAgents,
             },
@@ -99,7 +100,7 @@ export default {
           component: Settings,
           meta: {
             featureFlag: FEATURE_FLAGS.INBOX_MANAGEMENT,
-            permissions: ['administrator'],
+            permissions: ['administrator', ...INBOX_PERMISSIONS],
           },
         },
       ],
