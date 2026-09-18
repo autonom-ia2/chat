@@ -68,6 +68,11 @@ class Autonomia::Insurance::ResultadoDaCotacao
     run.handle.to_h[cotacao::SEM_BONUS_KEY].present?
   end
 
+  # -> os códigos de toda seguradora guardada.
+  def codigos
+    entradas.keys
+  end
+
   # -> os códigos com preço entre `codigos` (todos, quando omitido), na ordem da lista de preços.
   def com_preco(codigos = entradas.keys)
     ofertas(codigos).map { |oferta| Ofertas.code(oferta) }
@@ -78,15 +83,28 @@ class Autonomia::Insurance::ResultadoDaCotacao
     entradas.keys.any? { |codigo| desfecho(codigo) == Guardado::SEM_PROPOSTA }
   end
 
-  # -> o texto dos itens de preço destes códigos, cada um escrito por `QuoteOffers.item`; nil sem preço.
-  def itens(codigos)
-    lista = ofertas(codigos)
-    lista.empty? ? nil : lista.map { |oferta| Ofertas.item(oferta) }.join("\n\n")
+  # -> o preço desta seguradora como a Lia o recebe (fatia 3 do #420): o valor com o período
+  # (`PremiumText#resumo`) e o parcelamento ou a ressalva de período não informado (`PremiumText#detalhe`).
+  # nil sem preço.
+  def preco(codigo)
+    guardada = oferta(codigo.to_s)
+    return nil if guardada.nil?
+
+    premio = ::Autonomia::Insurance::PremiumText.new(guardada['premium'])
+    [premio.resumo, premio.detalhe].compact.join(', ')
   end
 
-  # -> alguma oferta com preço destes códigos é a assinatura mensal (`QuoteOffers.mensal?`)?
-  def com_assinatura_mensal?(codigos)
-    ofertas(codigos).any? { |oferta| Ofertas.mensal?(oferta) }
+  # -> o nome de toda seguradora desta cotação, como o item o escreve.
+  def nomes
+    entradas.keys.map { |codigo| nome(codigo) }.compact_blank
+  end
+
+  # -> o comparativo em PDF desta cotação foi aceito pelo publicador? A identidade dele na lista do aceite
+  # (`InsuranceQuote::COMPARATIVO_KEY`) ou a sentinela das execuções anteriores (`PDF_SENT_KEY`).
+  def comparativo_enviado?
+    handle = run.handle.to_h
+    token = handle[cotacao::COMPARATIVO_KEY]
+    handle[cotacao::PDF_SENT_KEY].present? || ::Autonomia::Agents::Tools::EntregaAceita.aceita?(run, token)
   end
 
   # -> o nome da seguradora, limpo como o item o escreve (`QuoteOffers.nome`).

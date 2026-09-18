@@ -2,19 +2,9 @@ require 'rails_helper'
 
 # A FRONTEIRA DE SAÍDA DA COTAÇÃO (entrega das frases do especialista, 12/09/2026).
 #
-# Os dois defeitos que este arquivo trava fazem o CLIENTE PERDER PREÇO que a corretora já pagou, e
-# os dois nasciam do mesmo erro de ordem: o handle era marcado como entregue ANTES de o texto final
-# existir.
-#
-#   P1-1 — a peneira do `Progress` descartava a entrega inteira ao achar um caminho de campo, e
-#          `build_progress` já tinha gravado `entregues` com os códigos das ofertas. Elas nunca mais
-#          eram reemitidas, `delivered_count` ficava zero e o cliente lia a frase de falha sobre
-#          dezessete seguradoras acionadas.
-#   P1-2 — a mesma peneira devolvia nil para a entrega de arquivo, e `PDF_SENT_KEY` já estava
-#          gravada: `comparison_pdf` devolvia nil para sempre e o comparativo nunca mais saía.
-#
-# E o P2 do token: ele era calculado sobre o texto CRU e o publicador o calculava sobre o texto
-# APARADO — duas identidades para a mesma entrega, e `resultado_entregue?` nunca casava.
+# P1-2 — a peneira do `Progress` devolvia nil para a entrega de arquivo, e `PDF_SENT_KEY` já estava gravada: o
+# comparativo nunca mais saía. Os exemplos do lote de preço (P1-1 e o token do preço) saíram com o lote, na fatia 3
+# do #420: a cotação não publica mais preço.
 RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   let(:account) { create(:account, internal_attributes: { 'autonomia_insurance_enabled' => true }) }
   let(:agent) do
@@ -61,80 +51,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     tool.poll(handle: handle, attempt: 1)
   end
 
-  describe 'P1-1 — a entrega com caminho de campo não pode custar os preços' do
-    # O NOME DA SEGURADORA VEM DO PORTAL, e é por ele que um identificador entra num texto que é
-    # nosso. Antes desta entrega o `Progress` descartava a entrega INTEIRA: o cliente perdia os dois
-    # preços, e o handle já dizia que eles tinham saído.
-    it 'entrega os precos e redige o identificador que veio do portal' do
-      # Arrange / Act
-      resultado = poll([offer('43', 'insured.document Seguros', 2050.40), offer('3', 'Mapfre', 2582.76)])
-
-      # Assert
-      texto = resultado.deliveries.sole
-      expect(texto).to include('R$ 2.050,40', 'R$ 2.582,76')
-      expect(texto).not_to include('insured.document')
-    end
-
-    # A OUTRA METADE, e é ela que custava dinheiro: o handle só avança sobre as ofertas que de fato
-    # entraram no texto que vai sair. Com o texto perdido na fronteira, `entregues` fica como estava
-    # e a passada seguinte emite de novo.
-    it 'texto que nao sobrevive a fronteira nao avanca o handle, e a passada seguinte reemite' do
-      # Arrange — a fronteira recusa o texto composto desta passada. A Mapfre ainda sem desfecho mantém
-      # a cotação aberta nas duas passadas: desde a fatia 1 do PDF rápido (13/09/2026) quem encerra é o
-      # desfecho de todas as seguradoras, e não o status geral, e este exemplo é sobre a reemissão numa
-      # cotação que continua.
-      allow(progress).to receive(:entregavel).and_wrap_original do |original, valor|
-        valor.is_a?(String) && valor.include?('Ezze') ? nil : original.call(valor)
-      end
-      ainda_sem_desfecho = { 'insurer' => { 'code' => '3', 'name' => 'Mapfre' }, 'status' => 'running' }
-
-      # Act
-      perdida = poll([offer('43', 'Ezze', 2050.40), ainda_sem_desfecho])
-
-      # Assert — nada saiu, e nada foi marcado como entregue
-      expect(perdida.deliveries).to be_empty
-      expect(perdida.handle[described_class::DELIVERED_KEY]).to be_blank
-
-      # Act 2 — a fronteira volta ao normal e a passada seguinte reemite a mesma oferta
-      allow(progress).to receive(:entregavel).and_call_original
-      de_novo = poll([offer('43', 'Ezze', 2050.40), ainda_sem_desfecho], handle: perdida.handle)
-
-      expect(de_novo.deliveries.sole).to include('R$ 2.050,40')
-      expect(de_novo.handle[described_class::DELIVERED_KEY]).to eq(['43'])
-    end
-
-    # O AVISO DE RENOVAÇÃO SEM BÔNUS VALE POR SAIR UMA VEZ, e a sentinela dele segue a mesma ordem:
-    # marcar o aviso como enviado sem o texto ter saído é o aviso perdido para sempre.
-    it 'nao marca o aviso como enviado quando o texto nao saiu' do
-      allow(progress).to receive(:entregavel).and_return(nil)
-      handle = { 'quote_id' => 'abc:1', described_class::SEM_BONUS_KEY => true }
-
-      perdida = poll([offer('43', 'Ezze', 2050.40)], handle: handle)
-
-      expect(perdida.handle[described_class::AVISO_SENT_KEY]).to be_blank
-    end
-  end
-
-  describe 'P2 — a identidade gravada é a identidade publicada' do
-    # O TOKEN NASCIA DO TEXTO CRU e o publicador o calculava sobre o texto que o `Progress` tinha
-    # aparado: duas listas de universos diferentes, e `resultado_entregue?` nunca casava — nem o
-    # comparativo saía. O travessão no nome da seguradora é o caso que separa os dois textos.
-    it 'o token gravado no handle e o token do texto que sai' do
-      resultado = poll([offer('43', 'Porto Seguro — Cia de Seguros Gerais', 2050.40)])
-
-      texto = resultado.deliveries.sole
-      expect(texto).not_to include('—')
-      expect(resultado.handle[described_class::PRECOS_KEY]).to eq([publicada.token_de(run, texto)])
-    end
-
-    it 'grava a identidade na linha, e nao so no handle' do
-      resultado = poll([offer('43', 'Ezze', 2050.40)])
-
-      expect(run.reload.handle[described_class::PRECOS_KEY])
-        .to eq([publicada.token_de(run, resultado.deliveries.sole)])
-    end
-  end
-
   describe 'P1-2 — o comparativo que não sai não pode ficar marcado como enviado' do
     before do
       allow(connector).to receive(:quote_proposal).and_return({ 'url' => 'https://arquivos.exemplo.test/c-9.pdf' })
@@ -165,7 +81,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # Assert — sem a sentinela, a passada seguinte gera o comparativo de novo
       expect(resultado.handle[described_class::PDF_SENT_KEY]).to be_blank
       expect(resultado.handle[described_class::COMPARATIVO_KEY]).to be_blank
-      expect(resultado.deliveries.sole).to include('R$ 2.050,40')
+      expect(resultado.deliveries).to be_empty
     end
 
     # A IDENTIDADE DO COMPARATIVO É DA ENTREGA QUE SAI, não da que se pretendia mandar. Quando a URL
@@ -179,34 +95,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
   end
 
-  describe 'a pontuação que chega ao cliente' do
-    # DOIS PONTOS NO ITEM DA LISTA (decisão do CEO): o travessão separava o nome do valor.
-    it 'separa nome e valor por dois pontos, nunca por travessao' do
-      texto = poll([offer('43', 'Ezze', 2050.40)]).deliveries.sole
-
-      expect(texto).to include('• *Ezze*: R$ 2.050,40 no total')
-      expect(texto).not_to include('—')
-    end
-
-    # E A GUARDA VALE PARA O TEXTO GERADO, não só para a frase do modelo: o nome vem do portal.
-    it 'nao deixa travessao do portal chegar ao cliente' do
-      texto = poll([offer('43', 'Bradesco — Auto/RE', 2050.40)]).deliveries.sole
-
-      expect(texto).not_to match(/[—–]/)
-      expect(texto).to include('Bradesco - Auto/RE')
-    end
-  end
-
   describe 'as frases do especialista no caminho real' do
     let(:params) do
-      super().merge('frases_ao_cliente' => { 'primeiros_precos' => 'Olha o que já chegou:',
+      super().merge('frases_ao_cliente' => { 'comparativo_legenda' => 'Aqui está o comparativo completo.',
                                              'sem_veiculo' => 'Me manda a placa do carro, por favor.' })
     end
 
-    it 'abre o lote de precos com a frase que o especialista escreveu' do
-      texto = poll([offer('43', 'Ezze', 2050.40)]).deliveries.sole
+    it 'a legenda do comparativo e a frase que o especialista escreveu' do
+      allow(connector).to receive(:quote_proposal).and_return({ 'url' => 'https://arquivos.exemplo.test/c-9.pdf' })
 
-      expect(texto).to start_with("Olha o que já chegou:\n\n• *Ezze*:")
+      entrega = poll([offer('43', 'Ezze', 2050.40)], status: 'completed').deliveries.sole
+
+      expect(Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega).legenda).to eq('Aqui está o comparativo completo.')
     end
 
     it 'recusa sem veiculo com a frase que o especialista escreveu' do

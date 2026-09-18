@@ -7,14 +7,15 @@ module AsyncToolHelper
   # é assim que se testa "parcial no 1º, final no 2º".
   # `precheck` aceita texto (o que o modelo recebe no lugar do aceite) ou um callable — que pode
   # levantar, para exercitar "conferência caiu, aceita mesmo assim".
-  # rubocop:disable Metrics/ParameterLists, Metrics/MethodLength -- é um construtor de dublê:
+  # rubocop:disable Metrics/ParameterLists, Metrics/MethodLength, Metrics/AbcSize -- é um construtor de dublê:
   # cada parâmetro é um comportamento que algum exemplo precisa ligar isoladamente.
   # `resultado` e `resta` são as DUAS perguntas do fecho parcial (entrega 8). O
   # padrão é o do `Base` — false, false —, e é ele que faz a ferramenta genérica fechar em SILÊNCIO
-  # em vez de afirmar que algo ficou pelo caminho.
+  # em vez de afirmar que algo ficou pelo caminho. `a_pedir` é o resultado guardado que não chegou ao cliente
+  # (fatia 3 do #420), e o fecho diz então que ele pode pedir aqui (`valores_message`).
   def build_async_tool(slug: 'consultar_cotacao', handle: { 'id' => 'cot-1' }, poll: nil,
                        start_error: nil, poll_error: nil, precheck: nil, closing: nil,
-                       resultado: false, resta: false)
+                       resultado: false, resta: false, a_pedir: false)
     Class.new(::Autonomia::Agents::Tools::Native::Base) do
       define_singleton_method(:slug) { slug }
       define_singleton_method(:description) { 'Ferramenta assíncrona de teste.' }
@@ -27,6 +28,7 @@ module AsyncToolHelper
       define_singleton_method(:failure_message) { |_arguments = nil| 'não consegui concluir a consulta' }
       define_singleton_method(:uncertain_message) { |_arguments = nil| 'não consegui confirmar o envio' }
       define_singleton_method(:closing_message) { |_arguments = nil| 'encerrei a consulta por aqui' }
+      define_singleton_method(:valores_message) { |_arguments = nil| 'o resultado está comigo, é só pedir' }
 
       # A conferência do turno: devolve texto ao modelo (e nenhuma execução é aberta) ou nil.
       define_method(:precheck) { precheck.respond_to?(:call) ? precheck.call : precheck }
@@ -40,6 +42,7 @@ module AsyncToolHelper
 
       define_method(:resultado_entregue?) { |_handle| resultado }
       define_method(:resta_entregar?) { |_handle| resta }
+      define_method(:resultado_a_pedir?) { |_handle| a_pedir }
 
       define_method(:start) do
         raise start_error if start_error
@@ -54,7 +57,7 @@ module AsyncToolHelper
       end
     end
   end
-  # rubocop:enable Metrics/ParameterLists, Metrics/MethodLength
+  # rubocop:enable Metrics/ParameterLists, Metrics/MethodLength, Metrics/AbcSize
 
   # Faz o catálogo devolver esta ferramenta para o slug dela (e nada para os outros).
   def register_async_tool(tool)

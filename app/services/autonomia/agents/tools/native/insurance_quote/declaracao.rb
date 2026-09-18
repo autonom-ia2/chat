@@ -88,6 +88,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
   # Quem fala neste estado agora é `FECHO_COM_RESULTADO`.
   PARCIAL = 'Algumas seguradoras não responderam a tempo. Os preços acima são os que chegaram.'.freeze
 
+  # O FECHO DE QUEM TEM PREÇO E NÃO RECEBEU O COMPARATIVO (fatia 3 do #420): o PDF falhou nas três
+  # tentativas, ou a execução acabou antes dele. Os preços estão guardados e a Lia os escreve quando o
+  # cliente pede (`ver_resultado_da_cotacao`); a frase diz isso, sem valor nenhum.
+  VALORES_NA_CONVERSA = 'Os valores de cada seguradora estão guardados comigo. Se quiser, me peça aqui ' \
+                        'mesmo que eu te passo.'.freeze
+
   # O desfecho de quem pode ter uma cotação aberta no portal sem que a gente saiba o número
   # (entrega 5): o job decidiu submeter e o número nunca chegou. Não diz "não consegui" — a cotação
   # pode estar pronta lá. Diz o que é verdade.
@@ -188,7 +194,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
       ACEITA
     end
 
-    # OS QUATRO TEXTOS QUE O MOTOR PUBLICA SEM INSTÂNCIA passam a ser escritos pelo especialista no
+    # OS TEXTOS QUE O MOTOR PUBLICA SEM INSTÂNCIA passam a ser escritos pelo especialista no
     # pedido (decisão do CEO, 12/09/2026). `arguments` é o `ToolRun#arguments` — os mesmos
     # argumentos com que a ferramenta foi chamada —, e `Frases.de` é função pura deles: sem
     # argumentos, ou com uma frase que a peneira reprova, sai a constante de recuo desta classe.
@@ -213,6 +219,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
 
     def closing_message(arguments = nil)
       frases(arguments)[:fecho_com_resultado]
+    end
+
+    def valores_message(arguments = nil)
+      frases(arguments)[:valores_na_conversa]
+    end
+
+    # -> os papéis cujo texto de recuo está nesta mensagem (`Frases.recuos_em`), para o registro no log.
+    def recuos_em(texto)
+      ::Autonomia::Agents::Tools::Native::InsuranceQuote::Frases.recuos_em(texto)
     end
 
     private

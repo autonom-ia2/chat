@@ -45,6 +45,10 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # escritas com compare-and-set de `submeter`.
   MudouDeDono = Class.new(StandardError)
 
+  # O SINAL DE VIDA JÁ FOI TENTADO nesta execução. Adquirida no banco antes de publicar (`ausente:`), como
+  # `CLOSED_KEY`: duas passadas sobre a mesma linha não mandam duas mensagens.
+  SINAL_DE_VIDA_KEY = 'autonomia_sinal_de_vida'.freeze
+
   def perform(run_id, attempt = 0)
     run = ToolRun.find_by(id: run_id)
     return if run.blank? || !run.running?
@@ -212,8 +216,29 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     elsif progress.done? && !arquivo_recusado?(resultados)
       finish_done(run, native)
     else
+      sinal_de_vida(run, native)
       reschedule(run, attempt, curto: progress.confirmar_logo?)
     end
+  end
+
+  # SINAL DE VIDA (fatia 3 do #420, decisão do CEO). A cotação não publica mais preço enquanto corre: o
+  # cliente recebe o comparativo e o fecho no fim. Se `AsyncConfig::SINAL_DE_VIDA_SECONDS` passam desde o
+  # pedido e a execução segue sem terminar, sai UMA mensagem, a frase de espera que o agente escreveu no
+  # pedido (`waiting_message`), sem número e sem lista. A execução que termina antes não passa por aqui.
+  #
+  # Publicada como o aviso de espera (`publish`, e não `deliver`): não conta em `delivered_count` nem no
+  # registro do aceite, que dizem ao fecho se o cliente recebeu resultado. Se o aviso de espera já saiu no
+  # começo com o mesmo texto, o publicador acha a mensagem pela identidade do texto e não a repete.
+  #
+  # Chamado também pela passada que falhou e vai tentar de novo (`retry_or_fail`), e por isso não levanta:
+  # a falha dele vira log, e a próxima consulta é agendada do mesmo jeito.
+  def sinal_de_vida(run, native)
+    return if run.created_at > AsyncConfig::SINAL_DE_VIDA_SECONDS.seconds.ago
+    return unless run.merge_handle!({ SINAL_DE_VIDA_KEY => true }, ausente: SINAL_DE_VIDA_KEY)
+
+    publish(run, native.waiting_message(run.arguments))
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool][async] sinal de vida falhou run=#{run.id} #{e.class}")
   end
 
   # -> alguma entrega de ARQUIVO desta passada voltou do publicador sem ser aceita? Quando sim, a
@@ -322,6 +347,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     run.record_attempt!
     return fail_run(run, native, 'tool_failed') if run.expired? || attempt + 1 >= AsyncConfig::MAX_ATTEMPTS
 
+    sinal_de_vida(run, native)
     reschedule(run, attempt)
   end
 
@@ -373,7 +399,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # `registrar_entrega_aceita!` (que forja um aceite) — medido na rodada 7, e a fachada estreita que
   # fecharia isso é a issue #419, pré-requisito da 8b.
   MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA, ToolRun::PEDIDO,
-            ToolRun::ENCERRADA_EM, ToolRun::ENTREGAS_ACEITAS].freeze
+            ToolRun::ENCERRADA_EM, ToolRun::ENTREGAS_ACEITAS, SINAL_DE_VIDA_KEY].freeze
   MARCAS_DE_INTENCAO = [ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA].freeze
 
   # O handle da FERRAMENTA, sem as nossas marcas: ela não precisa conhecer o nosso controle — nem

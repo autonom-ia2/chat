@@ -1,10 +1,7 @@
 require 'rails_helper'
 
-# O TEXTO DO PREÇO É ESCRITO POR CÓDIGO, e não pelo modelo — preço redigido por modelo é preço que
-# ele pode arredondar ou trocar de seguradora. O custo dessa escolha é que a instrução ("negrito no
-# nome e no valor") não alcança aqui, e ninguém testava o formato: em 08/09/2026 o cliente leu
-# `Usebens: R$ 2837,70` numa lista corrida, sem negrito, sem milhar, com a mesma ressalva repetida
-# por extenso em toda mensagem.
+# A LEITURA DAS OFERTAS DE UMA COTAÇÃO: a ordem por período, o que conta como desfecho e o nome limpo. Desde a
+# fatia 3 do #420 o texto do preço ao cliente é da Lia, e a conferência dele mora em `ConferenciaDePrecos`.
 RSpec.describe Autonomia::Insurance::QuoteOffers do
   # `extra`: `code:` (a seguradora) e `motivo:` (o `basis_evidence` do adapter).
   def offer(name, amount, basis = 'total', installments = nil, **extra)
@@ -56,7 +53,7 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
       ).quoted
 
       expect(ofertas.map { |o| o['insurer']['name'] }).to eq(['Porto', 'Suhai', 'Bp Assinatura', 'X'])
-      expect(described_class.item(ofertas[2])).to include('R$ 298,43 por mês')
+      expect(Autonomia::Insurance::PremiumText.new(ofertas[2]['premium']).resumo).to eq('R$ 298,43 por mês')
     end
 
     it 'poe a mensal ANTES das sem periodo' do
@@ -237,130 +234,11 @@ RSpec.describe Autonomia::Insurance::QuoteOffers do
     end
   end
 
-  describe '.describe' do
-    it 'poe o nome em negrito do WhatsApp, que e asterisco simples' do
-      # Não há conversão de markdown na saída: `**nome**` chegaria com os asteriscos à mostra.
-      texto = described_class.describe([offer('Suhai', 4147.70)], abertura: described_class::PRIMEIROS_PRECOS)
-
-      expect(texto).to include('*Suhai*')
-      expect(texto).not_to include('**')
-    end
-
-    it 'separa o milhar' do
-      texto = described_class.describe([offer('Usebens', 2837.70)], abertura: described_class::PRIMEIROS_PRECOS)
-
-      expect(texto).to include('R$ 2.837,70')
-      expect(texto).not_to include('R$ 2837,70')
-    end
-
-    it 'abre item com marcador, um por linha' do
-      texto = described_class.describe([offer('Darwin', 2058.27), offer('Justos', 198.33)], abertura: described_class::PRIMEIROS_PRECOS)
-
-      expect(texto.lines.grep(/\A• /).size).to eq(2)
-    end
-
-    # A ressalva vale para UMA oferta, e vinha como parágrafo no fim valendo para o bloco inteiro —
-    # maior que os próprios preços, e sem dizer de quem era.
-    it 'cola a ressalva na oferta a que ela pertence' do
-      texto = described_class.describe(
-        [offer('Bp Assinatura', 402.26, nil, nil), offer('Darwin', 2058.27, 'total')], abertura: described_class::MAIS_UM_PRECO
-      )
-      linhas = texto.lines.map(&:chomp)
-      indice = linhas.index { |linha| linha.include?('Bp Assinatura') }
-
-      expect(linhas[indice + 1]).to include('não informou')
-      # E aparece UMA vez: como parágrafo do bloco ela valia para ofertas que tinham base.
-      expect(texto.scan('não informou').size).to eq(1)
-    end
-
-    it 'nao repete a ressalva quando todas as ofertas tem base' do
-      texto = described_class.describe([offer('Suhai', 4147.70, 'total')], abertura: described_class::PRIMEIROS_PRECOS)
-
-      expect(texto).not_to include('não informou')
-    end
-
-    # "Primeiros preços que chegaram" / "Chegaram mais opções" descreviam a NOSSA fila de entrega.
-    it 'nao telegrafa o mecanismo de entrega' do
-      texto = described_class.describe([offer('Darwin', 2058.27)], abertura: described_class::MAIS_UM_PRECO)
-
-      expect(texto).not_to include('chegaram')
-      expect(texto).not_to include('Chegaram')
-    end
-
-    it 'abre o primeiro lote sem prometer que virao outros' do
-      texto = described_class.describe([offer('Suhai', 4147.70)], abertura: described_class::PRIMEIROS_PRECOS)
-
-      expect(texto).to start_with('Primeiros preços:')
-    end
-
-    # Nome vindo do portal, interpolado dentro do negrito: um `*` fecharia o negrito cedo.
-    it 'nao deixa o nome da seguradora quebrar o negrito' do
-      texto = described_class.describe([offer("Se*gu\nradora", 100.0)], abertura: described_class::PRIMEIROS_PRECOS)
-
-      expect(texto).to start_with("Primeiros preços:\n\n• *Se gu radora*:")
-    end
-
-    # A ABERTURA CHEGA PRONTA e sai como veio. Quem escolhe entre as três é quem conhece o lote
-    # (`InsuranceQuote#abertura_de_precos`), e em produção quem a ESCREVE é o especialista — este
-    # método não tem como saber qual papel é qual. Antes ele decidia aqui dentro, por `first:` e pelo
-    # tamanho do lote, e a abertura de lote seguinte com mais de uma oferta dizia quantas eram.
-    it 'usa a abertura que recebeu, sem inventar outra' do
-      texto = described_class.describe([offer('Darwin', 2058.27), offer('Justos', 198.33)],
-                                       abertura: 'Chegou mais gente:')
-
-      expect(texto).to start_with("Chegou mais gente:\n\n• *")
-    end
-
-    # A CONSTANTE DE RECUO DO LOTE SEGUINTE NÃO DIZ QUANTAS (decisão do CEO, 12/09/2026). Ela era
-    # `"Mais #{quantas} opções:"`, e o recuo publicaria o número que a decisão proíbe.
-    it 'nao tem numero em nenhuma das tres aberturas' do
-      aberturas = [described_class::PRIMEIROS_PRECOS, described_class::MAIS_UM_PRECO, described_class::MAIS_PRECOS]
-
-      expect(aberturas.grep(/[0-9]/)).to be_empty
-      expect(aberturas.uniq.size).to eq(3)
-    end
-
-    # ENTREGA 13, termo 4 — período genuinamente desconhecido: o preço sai SEM afirmar período
-    # nenhum. "no total" só quando o adapter disse `total`; parcelamento sozinho não prova nada aqui,
-    # porque quem deriva é o adapter, e este texto só traduz o que veio.
-    it 'nao afirma periodo quando o adapter nao soube, nem com parcelamento no payload' do
-      texto = described_class.describe(
-        [offer('Bp Assinatura', 351.59, 'unknown', { 'count' => 2, 'amount' => 175.8 })], abertura: described_class::PRIMEIROS_PRECOS
-      )
-
-      expect(texto).to include('*Bp Assinatura*: R$ 351,59')
-      expect(texto).not_to include('no total')
-      expect(texto.downcase).not_to include('por mês')
-      expect(texto.downcase).not_to include('ao ano')
-      # A ressalva sai mesmo com parcelamento no payload: sem período, o parcelamento não prova o
-      # total, e um "ou 2x de R$ 175,80" sozinho afirmaria por omissão o que o adapter negou.
-      expect(texto).to include(Autonomia::Insurance::PremiumText::SEM_BASE)
-      expect(texto).not_to include('2x de')
-    end
-
-    it 'diz "por mês" para a assinatura mensal, sem ressalva e sem parcelamento' do
-      texto = described_class.describe(
-        [offer('Bp Assinatura', 298.43, 'monthly', code: '55', motivo: motivo_mensal)], abertura: described_class::PRIMEIROS_PRECOS
-      )
-
-      expect(texto).to include('*Bp Assinatura*: R$ 298,43 por mês')
-      expect(texto).not_to include(Autonomia::Insurance::PremiumText::SEM_BASE)
-      expect(texto).not_to include('x de')
-    end
-
-    it 'diz "no total" e o parcelamento quando o adapter derivou os dois' do
-      texto = described_class.describe(
-        [offer('Tokio', 1901.97, 'total', { 'count' => 12, 'amount' => 158.39 })], abertura: described_class::PRIMEIROS_PRECOS
-      )
-
-      expect(texto).to include('R$ 1.901,97 no total')
-      expect(texto).to include('ou 12x de R$ 158,39')
-    end
-
-    it 'mantem o aviso de bonus quando ele vem' do
-      texto = described_class.describe([offer('Suhai', 4147.70)], abertura: described_class::PRIMEIROS_PRECOS, aviso: 'Cotei sem o bônus.')
-
-      expect(texto).to end_with('Cotei sem o bônus.')
+  # A LISTA DE PREÇOS ESCRITA PELO CÓDIGO SAIU (fatia 3 do #420): quem escreve é a Lia, com os dados de
+  # `ResultadoDaCotacao#preco`. O que fica daqui é o nome limpo que vai a ela.
+  describe '.nome' do
+    it 'tira do nome da seguradora o asterisco e a quebra de linha' do
+      expect(described_class.nome(offer("Se*gu\nradora", 100.0))).to eq('Se gu radora')
     end
   end
 end

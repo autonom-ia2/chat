@@ -2,8 +2,8 @@
 #
 # É o que permite uma ferramenta assíncrona existir sem que o `Bound` — ou o `Registry`, ou a própria
 # ferramenta — passe a conhecer conversa e mensagem. O Responder cria este objeto, ele desce até o
-# ponto de execução da ferramenta, e volta carregando as execuções que foram aceitas no turno e os
-# anexos do turno.
+# ponto de execução da ferramenta, e volta carregando as execuções que foram aceitas no turno e o
+# resultado de cotação que o modelo leu nele.
 #
 # Desce POR CHAMADA (`Bound#execute(call, delivery:)`), não pela construção da ferramenta. É
 # deliberado: `Tools::Bound.for_agent` tem DOIS chamadores — o `Answerer` e o `Specialist#tools`,
@@ -14,11 +14,6 @@
 # SEM contexto (Testar, Copiloto, playground) a ferramenta continua no catálogo e devolve erro
 # nomeado. Sumir do catálogo faria o Testar mentir sobre o agente de produção.
 class Autonomia::Agents::Tools::Delivery
-  # ANEXO DO TURNO (fatia 2 do #420): texto escrito pelo CÓDIGO que o `Operate::Responder` entrega logo
-  # depois da resposta do modelo, na mesma entrega. O modelo nunca recebe o texto do anexo. `dados` é o que
-  # a ferramenta precisa para refazer o anexo quando é chamada de novo no mesmo turno.
-  Anexo = Struct.new(:texto, :dados, keyword_init: true)
-
   attr_reader :conversation, :agent_inbox, :origin_message_id, :runs
 
   # `origin_message_id` é a mensagem do cliente que abriu o turno. Ela entra na execução no momento
@@ -30,7 +25,6 @@ class Autonomia::Agents::Tools::Delivery
     @agent_inbox = agent_inbox
     @origin_message_id = origin_message_id
     @runs = []
-    @anexos = {}
   end
 
   def register(run)
@@ -42,19 +36,12 @@ class Autonomia::Agents::Tools::Delivery
     @runs.any?
   end
 
-  # UM ANEXO POR CHAVE: a ferramenta chamada duas vezes no mesmo turno troca o anexo dela no lugar em que
-  # ele entrou, e o cliente recebe um só.
-  def anexar(chave, texto, dados: nil)
-    @anexos[chave.to_s] = Anexo.new(texto: texto.to_s, dados: dados)
-  end
+  # O QUE `ver_resultado_da_cotacao` DEVOLVEU AO MODELO NESTE TURNO (fatia 3 do #420), como
+  # `ConferenciaDePrecos::Dados`. O `Answerer` confere a fala contra isto antes de ela sair. Duas chamadas
+  # no mesmo turno somam.
+  attr_reader :resultado_do_turno
 
-  # -> o anexo desta chave neste turno, ou nil.
-  def anexo(chave)
-    @anexos[chave.to_s]
-  end
-
-  # -> os textos a entregar depois da resposta, na ordem em que as chaves entraram.
-  def anexos
-    @anexos.values.map(&:texto).reject(&:blank?)
+  def registrar_resultado(dados)
+    @resultado_do_turno = @resultado_do_turno ? @resultado_do_turno + dados : dados
   end
 end

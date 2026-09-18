@@ -18,7 +18,8 @@
 # não toca no portal.
 #
 # O QUE VAI PARA O CLIENTE, e o que não vai (decisão do PO):
-#   - preço de seguradora que cotou: vai;
+#   - preço de seguradora que cotou: vai no comparativo em PDF e, quando o cliente pergunta, na fala da
+#     Lia (`ver_resultado_da_cotacao`). Esta ferramenta não publica lista de preço (fatia 3 do #420);
 #   - seguradora que recusou o risco: NÃO vai por iniciativa nossa. O cliente pediu preço, não
 #     auditoria, e a recusa fala do bem e da região dele. Só se ele perguntar — e aí quem responde é
 #     a instrução do especialista, não esta ferramenta;
@@ -32,13 +33,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # milhares de caracteres com folga. Parsear antes de olhar o tamanho é trabalho que ninguém pediu.
   MAX_DADOS_BYTES = 20_000
   DEFAULT_COMMISSION = 10.0
-  # Chave nossa dentro do handle: quem já foi entregue. É o que faz a segunda mensagem ser
-  # "chegaram mais opções" em vez de repetir as que o cliente já leu.
+  # OS CÓDIGOS DE QUEM COTOU COM PREÇO nesta cotação, união das consultas. O nome é do tempo em que cada
+  # preço era publicado num lote; desde a fatia 3 do #420 nenhum é, e a chave continua sendo o que a
+  # coluna "Com preço" do Super Admin conta (`Insurance::Medida`) e o que decide pedir o comparativo
+  # (`Comparativo#comparativo_por_tentar?`).
   DELIVERED_KEY = 'entregues'.freeze
   # QUANTAS SEGURADORAS ESTA COTAÇÃO ACIONOU (entrega 7). Os códigos de TODAS as que o portal pôs na
   # cotação — cotou, recusou o risco ou recusou a nossa credencial —, que é a unidade que a corretora
-  # paga. `DELIVERED_KEY` não serve para isso: ele guarda quem COTOU, que é o que já foi para o
-  # cliente; na renovação real de 11/09/2026 eram onze de dezessete, e as outras seis não deixavam
+  # paga. `DELIVERED_KEY` não serve para isso: ele guarda só quem COTOU; na renovação real de 11/09/2026 eram
+  # onze de dezessete, e as outras seis não deixavam
   # rastro nenhum. Sem esta chave, medir para cobrar seria contar execuções e chamá-las de consultas.
   ACIONADAS_KEY = 'seguradoras_acionadas'.freeze
   # A PROPOSTA INDIVIDUAL, quando ela existir (entrega 8): os códigos das seguradoras cuja proposta
@@ -67,10 +70,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # momento em que ele assume a entrega. Estas duas chaves dizem por quais identidades perguntar —
   # é o que a ferramenta sabe e o motor não: para ele, um preço e a pergunta pelo dado que falta são
   # "uma entrega".
+  #
+  # `PRECOS_KEY` NÃO É MAIS ESCRITA (fatia 3 do #420, a cotação não publica lote de preço). Ela só existe
+  # nas execuções abertas antes do deploy, e `Fecho#resultado_entregue?` continua a lendo para elas.
   PRECOS_KEY = 'entregas_de_preco'.freeze
   COMPARATIVO_KEY = 'entrega_do_comparativo'.freeze
   # HAVIA PREÇO EMITIDO ANTES DE ESTA VERSÃO REGISTRAR O ACEITE? Gravada uma vez, na primeira
-  # emissão de preço desta execução. É a COBERTURA da prova legada — ver `Fecho#prova_legada?`.
+  # consulta desta versão (`Fecho#marcar_preco_legado`). É a COBERTURA da prova legada — ver `Fecho#prova_legada?`.
   PRECO_LEGADO_KEY = 'preco_legado'.freeze
   # A COTAÇÃO FECHOU — `finished?` respondeu verdade na consulta: o portal disse `completed` ou
   # `failed`, ou toda seguradora listada já tinha desfecho (`QuoteOffers#todas_com_desfecho?`). É
@@ -83,18 +89,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # nil quando não. Gravada a cada consulta; `finished?` a compara com a leitura seguinte.
   LEITURA_ASSENTADA_KEY = 'leitura_assentada'.freeze
   # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
-  # quem precisa contar ao cliente é a primeira entrega de preços, minutos depois.
+  # quem conta ao cliente é a legenda do comparativo (`Comparativo#legenda_do_comparativo`), minutos depois.
   SEM_BONUS_KEY = 'renovacao_sem_bonus'.freeze
-  # O aviso JÁ SAIU. Sentinela própria, no mesmo molde do `PDF_SENT_KEY`, e não inferência a partir
-  # de `already.empty?`: `deliver` roda ANTES de `record_attempt!`, então uma entrega bloqueada
-  # (conversa encerrada, erro transitório do publisher) avançava o handle com os códigos das ofertas
-  # mesmo assim — e o aviso, que vale por sair UMA vez, não sairia nunca mais.
-  AVISO_SENT_KEY = 'aviso_sem_bonus_enviado'.freeze
   # Por seguradora, POR QUE o preço saiu sem período (entrega 13, termo 1): o motivo do adapter, que
   # nomeia o campo do portal que faltou ou veio ambíguo. Fica no handle da execução, consultável
   # depois em `autonomia_agent_tool_runs.handle->'preco_sem_periodo'`, sem reabrir a cotação.
   SEM_PERIODO_KEY = 'preco_sem_periodo'.freeze
-  # Sai UMA vez, junto do primeiro preço, e só em renovação de auto sem classe de bônus. Não promete
+  # Sai na legenda do comparativo, e só em renovação de auto sem classe de bônus. Não promete
   # desconto nem percentual: o quanto o bônus abate é decisão de cada seguradora, e prometer número
   # aqui vira preço que a emissão desmente. Diz o que é verdade — existe preço melhor, e ele depende
   # de um dado que está na apólice do cliente.
@@ -233,37 +234,25 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
       SEM_BONUS_KEY => quote_input.auto? && quote_input.renewal.sem_bonus? }
   end
 
-  # NADA É MARCADO COMO ENTREGUE ANTES DE O TEXTO FINAL EXISTIR. `DELIVERED_KEY` era gravada AQUI,
-  # antes de `precos` compor coisa nenhuma — e uma entrega que morresse adiante (a peneira antiga do
-  # `Progress` descartava a entrega inteira) deixava o handle dizendo que as ofertas já tinham saído:
-  # elas nunca mais eram reemitidas (`fresh` as exclui), `delivered_count` ficava zero, e o cliente
-  # lia a frase de falha sobre dezessete seguradoras que a corretora pagou. Quem a grava agora é
-  # `precos`, e só depois de o texto do lote existir.
+  # A CONSULTA GRAVA, E NÃO PUBLICA (fatia 3 do #420). Até aqui cada leitura publicava, escrito pelo
+  # código, o lote de preços que chegou desde a anterior. Agora o cliente recebe o comparativo e o fecho,
+  # e os valores quem escreve é a Lia quando ele pergunta (`ver_resultado_da_cotacao`). Cada leitura grava
+  # as marcas de `Resultado#marcas_da_leitura`; a que fecha a cotação pede o comparativo
+  # (`Comparativo#fechar`).
   #
-  # ELA GRAVA O LOTE INTEIRO (`fresh`), E NÃO AS OFERTAS QUE ENTRARAM NO TEXTO. As duas listas são a
-  # mesma enquanto o texto cabe em `Progress::MAX_DELIVERY_CHARS`; passando do teto, o corte leva as
-  # últimas ofertas e elas ficam marcadas como entregues sem ter saído. Medido em 12/09/2026 e
-  # registrado na auditoria: com as duas frases do especialista no teto e o pior item que o código
-  # produz, o texto só alcança o corte na 27ª seguradora, e o portal real devolveu 17. É folga
-  # medida, não guarda — a guarda não existe.
-  #
-  # `ACIONADAS_KEY` continua sendo gravada em toda consulta (`Resultado#marcas_da_leitura`): ela é MEDIÇÃO
-  # DE FATURAMENTO (quantas seguradoras o portal pôs na cotação), não estado de entrega, e perdê-la seria
-  # contar errado o que a corretora pagou. A mesma escrita grava o resultado por seguradora (fatia 2 do #420).
+  # `marcar_preco_legado` antes das marcas: a primeira passada desta versão grava se a versão anterior já
+  # tinha publicado preço (`Fecho#prova_legada?`), olhando `entregues` antes de a leitura o atualizar.
   def build_progress(result, handle, _attempt)
     registrar_credencial_de_seguradora(result)
-    ofertas = ::Autonomia::Insurance::QuoteOffers
-    leitura = ofertas.new(result)
-    already = Array(handle[DELIVERED_KEY]).map(&:to_s)
-    fresh = leitura.quoted.reject { |offer| already.include?(ofertas.code(offer)) }
-    deliveries, next_handle = precos(fresh, already, handle.merge(marcas_da_leitura(result, leitura, handle)))
+    leitura = ::Autonomia::Insurance::QuoteOffers.new(result)
+    handle = marcar_preco_legado(handle, handle[DELIVERED_KEY])
+    next_handle = handle.merge(marcas_da_leitura(result, leitura, handle))
 
-    return em_andamento(deliveries, next_handle, leitura, handle) unless finished?(result, leitura, handle)
+    return em_andamento(next_handle, leitura, handle) unless finished?(result, leitura, handle)
 
     # A COTAÇÃO FECHOU, e isso se grava por si: é o fato que separa "ainda tem seguradora por
-    # responder" de "é isto que havia", e ele não pode depender de o comparativo ter saído. O que a
-    # passada devolve daqui em diante é decidido por `Comparativo#fechar`.
-    fechar(deliveries, next_handle.merge(FECHADO_KEY => true))
+    # responder" de "é isto que havia", e ele não pode depender de o comparativo ter saído.
+    fechar(next_handle.merge(FECHADO_KEY => true))
   end
 
   # A UNIÃO DAS CONSULTAS, não a foto da última (entrega 7). O portal responde em pedaços — medido em
@@ -272,53 +261,6 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # seguradoras que a corretora já acionou e pagou. União é idempotente: reconsulta não muda nada.
   def acionadas(leitura, handle)
     (Array(handle[ACIONADAS_KEY]).map(&:to_s) | leitura.acionadas).sort
-  end
-
-  # -> [deliveries, handle]. O aviso de renovação sem bônus tem SENTINELA própria, no mesmo molde do
-  # PDF, e não é inferido de "esta é a primeira entrega".
-  #
-  # A ORDEM É COMPOR, DEPURAR, IDENTIFICAR E SÓ ENTÃO AVANÇAR O HANDLE. Texto que não sobrevive à
-  # depuração devolve o handle INTOCADO: as ofertas continuam fora de `entregues`, e a passada
-  # seguinte as emite de novo em vez de o cliente perder os preços que a corretora pagou.
-  def precos(fresh, already, handle)
-    return [[], handle] if fresh.empty?
-
-    avisar = handle[SEM_BONUS_KEY].present? && handle[AVISO_SENT_KEY].blank?
-    texto = progress_class.entregavel(::Autonomia::Insurance::QuoteOffers.describe(
-                                        fresh, abertura: abertura_de_precos(fresh, already),
-                                               aviso: avisar ? frases[:aviso_sem_bonus] : nil
-                                      ))
-    return [[], handle] if texto.nil?
-
-    [[texto], entregues(fresh, already, texto, handle, avisar)]
-  end
-
-  # O handle DEPOIS de a entrega existir: os motivos de preço sem período, a identidade da entrega,
-  # os códigos que entraram neste texto e a sentinela do aviso.
-  def entregues(fresh, already, texto, handle, avisar)
-    codigos = fresh.map { |offer| ::Autonomia::Insurance::QuoteOffers.code(offer) }
-    handle = registrar_entrega_de_preco(texto, registrar_sem_periodo(fresh, handle), already)
-    handle = handle.merge(DELIVERED_KEY => already + codigos)
-    avisar ? handle.merge(AVISO_SENT_KEY => true) : handle
-  end
-
-  # QUAL DAS TRÊS ABERTURAS, e quem sabe é quem conhece o lote. Em produção o texto é do especialista
-  # (`Frases`); as constantes são o recuo. `already.empty?` continua sendo o critério de "primeiro
-  # lote" — e ele melhorou junto com a ordem de gravação, porque `entregues` agora só avança quando
-  # o texto de fato existiu.
-  def abertura_de_precos(fresh, already)
-    return frases[:primeiros_precos] if already.empty?
-
-    fresh.size == 1 ? frases[:mais_um_preco] : frases[:mais_precos]
-  end
-
-  # O registro ACUMULA entre lotes (o lote 2 não pode apagar o motivo do lote 1) e só escreve a
-  # chave quando há o que registrar. `fresh` já é a lista de quem cotou.
-  def registrar_sem_periodo(fresh, handle)
-    motivos = ::Autonomia::Insurance::QuoteOffers.new('offers' => fresh).sem_periodo
-    return handle if motivos.empty?
-
-    handle.merge(SEM_PERIODO_KEY => handle[SEM_PERIODO_KEY].to_h.merge(motivos))
   end
 
   # A COTAÇÃO FECHOU NESTA CONSULTA? Verdade quando o portal disse `completed` ou `failed`, ou quando

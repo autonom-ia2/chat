@@ -1,28 +1,21 @@
-# A LIA VÊ O RESULTADO DA COTAÇÃO (fatia 2 do #420; desenho da rodada 8).
+# A LIA VÊ O RESULTADO DA COTAÇÃO (fatia 2 do #420) E ESCREVE OS PREÇOS (fatia 3).
 #
 # Ferramenta SÍNCRONA do principal. Lê, no instante da pergunta, o que a cotação mais nova da conversa guardou
 # por seguradora (`Insurance::ResultadoDaCotacao`), e não chama o portal.
 #
-#   - Com preço a mostrar, a lista é escrita pelo código (`QuoteOffers.item`) e ANEXADA ao turno
-#     (`Tools::Delivery#anexar`): o `Operate::Responder` a entrega logo depois da fala da Lia, na mesma entrega.
-#   - O modelo recebe só estado: quantas seguradoras fizeram proposta, se a lista vai anexada, quantas opções ela
-#     leva e se a assinatura mensal está nela e, quando o cliente
-#     perguntou por uma seguradora, o nome, o desfecho e a categoria do motivo (`veiculo`, `regiao` ou nenhuma).
-#     Nunca valor, nunca texto do portal.
+# DEVOLVE OS DADOS AO MODELO, e quem escreve ao cliente é a Lia (decisão do CEO, 18/09/2026): por seguradora,
+# o nome, o valor com o período e o parcelamento, ou o desfecho e a categoria do motivo (`veiculo`, `regiao` ou
+# nenhuma) de quem não fez proposta. Nunca texto do portal. O que ela devolveu fica registrado no turno
+# (`Tools::Delivery#registrar_resultado`), e o `Answerer` confere a fala contra isso antes de ela sair
+# (`ConferenciaDePrecos`).
 #
-# Nada de execução, de fila ou de lista de outro turno: cada pergunta mostra o que está guardado agora, e a mesma
-# pergunta feita duas vezes recebe a lista duas vezes. Duas chamadas no MESMO turno anexam uma lista só, com as
-# seguradoras das duas (a chave do anexo é a mesma).
-#
-# Sem contexto de entrega (Testar, Copiloto, playground) não há conversa para ler nem turno para receber a lista:
+# Sem contexto de entrega (Testar, Copiloto, playground) não há conversa para ler nem turno para conferir:
 # erro nomeado, pelo registro de recusa.
 class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents::Tools::Native::Base
   Resultado = ::Autonomia::Insurance::ResultadoDaCotacao
   Guardado = ::Autonomia::Insurance::ResultadoPorSeguradora
   Motivo = ::Autonomia::Insurance::MotivoDaRecusa
 
-  # A chave do anexo desta ferramenta no turno.
-  ANEXO = 'lista_de_precos'.freeze
   # O código da recusa sem contexto de entrega (`Tools::Recusa::MOTIVOS`).
   SEM_CONTEXTO = 'lista_indisponivel_nesta_superficie'.freeze
 
@@ -41,9 +34,12 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
                    'cliente de qual ele fala.'.freeze
   NAO_ENCONTRADA_AINDA = 'Nenhuma seguradora com esse nome apareceu nesta cotação até agora, e ela ainda está ' \
                          'correndo. Não liste as seguradoras.'.freeze
-  LISTA_ANEXADA = 'A lista com os preços vai anexada à sua resposta e chega logo depois da sua mensagem, escrita ' \
-                  'pelo sistema. Na sua mensagem, apresente a lista com as suas palavras, sem escrever valor, sem ' \
-                  'listar seguradoras e sem travessão.'.freeze
+  # Como a Lia usa os preços desta resposta: regra de conteúdo, e não frase, porque as palavras são dela.
+  COMO_ESCREVER = 'Escreva você a resposta ao cliente, com o recorte que ele pediu: as mais baratas, uma ' \
+                  'seguradora, só as mensais, o que for. Cada valor e cada nome de seguradora exatamente como ' \
+                  'estão aqui, e o período sempre junto do valor. Não ordene um valor por mês contra um valor ' \
+                  'total pelo número. Sem travessão.'.freeze
+  COMPARATIVO_ENVIADO = 'O comparativo em PDF desta cotação, com todos os preços, já foi entregue ao cliente.'.freeze
   AINDA_CORRENDO = 'A cotação ainda está correndo: podem chegar mais preços.'.freeze
   HA_SEM_PROPOSTA = 'Algumas seguradoras não fizeram proposta: só fale delas se o cliente perguntar.'.freeze
   SEM_BONUS = 'Esta cotação foi feita sem a classe de bônus da apólice atual.'.freeze
@@ -68,7 +64,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     def description
       'Mostra o resultado da cotação desta conversa, com o que as seguradoras já responderam, sem cotar de ' \
         'novo. Use quando o cliente pedir para ver os preços outra vez, perguntar quanto deu uma seguradora ' \
-        'ou perguntar se uma seguradora fez proposta. Os preços vão numa lista escrita pelo sistema, anexada à sua resposta.'
+        'ou perguntar se uma seguradora fez proposta. Devolve os preços e o que cada seguradora respondeu, para você ' \
+        'escrever a resposta.'
     end
 
     def params
@@ -85,15 +82,14 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     end
   end
 
-  # -> o texto ao modelo. Com preço a mostrar, anexa a lista ao turno antes de devolver.
+  # -> o texto ao modelo. O mesmo texto fica registrado no turno para a conferência da fala.
   def call
     conversa = delivery&.conversation
     return ::Autonomia::Agents::Tools::Recusa.para_modelo(SEM_CONTEXTO, slug: self.class.slug, delivery: delivery, agente: agent) if conversa.nil?
 
-    texto, codigos = resposta(conversa)
-    return texto if codigos.empty?
-
-    [texto, conteudo_do_anexo(anexar(codigos))].join("\n")
+    texto = resposta(conversa)
+    delivery.registrar_resultado(dados_do_turno(texto))
+    texto
   end
 
   private
@@ -102,34 +98,18 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     params['seguradora'].to_s.strip.presence
   end
 
-  # -> [texto ao modelo, códigos com preço a anexar].
   def resposta(conversa)
     @resultado = Resultado.da_conversa(conversa.id)
-    return [SEM_COTACAO, []] if @resultado.nil?
+    return SEM_COTACAO if @resultado.nil?
 
-    sem_leitura = texto_sem_leitura
-    return [sem_leitura, []] if sem_leitura
-
-    seguradora ? por_seguradora : geral
+    texto_sem_leitura || (seguradora ? por_seguradora : geral)
   end
 
-  # A lista do turno: os códigos desta chamada somados aos que uma chamada anterior do mesmo turno já anexou.
-  # -> os códigos anexados.
-  def anexar(codigos)
-    todos = (Array(delivery.anexo(ANEXO)&.dados) + codigos).uniq
-    delivery.anexar(ANEXO, @resultado.itens(todos), dados: todos)
-    todos
-  end
-
-  # O que a lista anexada leva, contado sobre os mesmos códigos que `anexar` escreveu: quantas opções e se a
-  # assinatura mensal está entre elas. A lista sai inteira; este texto diz isso ao modelo para ele não prometer
-  # ao cliente um recorte que o anexo não tem (18/09/2026: a Lia prometeu só as três mais baratas e sem a
-  # mensal, e a lista trouxe as onze, com a mensal).
-  def conteudo_do_anexo(codigos)
-    total = @resultado.com_preco(codigos).size
-    mensal = @resultado.com_assinatura_mensal?(codigos) ? 'e a assinatura mensal está entre elas' : 'sem assinatura mensal'
-    "A lista anexada leva #{total} #{total == 1 ? 'opção' : 'opções'}, #{mensal}. Ela sai inteira, sempre: não " \
-      'prometa ao cliente um recorte dela, como só as mais baratas ou sem a mensal.'
+  # O que a conferência precisa: o texto que o modelo recebeu, o nome de toda seguradora da cotação e se o
+  # comparativo já foi entregue.
+  def dados_do_turno(texto)
+    ::Autonomia::Agents::ConferenciaDePrecos::Dados.new(texto: texto, seguradoras: @resultado&.nomes.to_a,
+                                                        comparativo: @resultado&.comparativo_enviado? || false)
   end
 
   # -> o texto de quando a cotação encerrada não tem resultado a ler, ou nil. A que ainda corre sem ter gravado
@@ -144,26 +124,32 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     SEM_RESULTADO unless @resultado.guardado?
   end
 
+  # Todas as seguradoras: primeiro as com preço, na ordem da lista de preços, depois as demais, sem o motivo
+  # (ele só vai quando o cliente pergunta por aquela seguradora, `por_seguradora`).
   def geral
-    todos = @resultado.com_preco
-    return [@resultado.correndo? ? SEM_PRECO_AINDA : SEM_PRECO, []] if todos.empty?
+    com_preco = @resultado.com_preco
+    return @resultado.correndo? ? SEM_PRECO_AINDA : SEM_PRECO if com_preco.empty?
 
-    [avisos_do_geral(todos.size).join("\n"), todos]
-  end
-
-  def avisos_do_geral(total)
-    [contagem(total), LISTA_ANEXADA, (AINDA_CORRENDO if @resultado.correndo?),
-     (HA_SEM_PROPOSTA if @resultado.sem_proposta?), (SEM_BONUS if @resultado.sem_bonus?)].compact
+    outras = @resultado.codigos - com_preco
+    [contagem(com_preco.size), *com_preco.map { |codigo| fala(codigo) },
+     (HA_SEM_PROPOSTA if @resultado.sem_proposta?), *outras.map { |codigo| fala(codigo, motivo: false) },
+     *avisos].compact.join("\n")
   end
 
   def por_seguradora
     codigos = @resultado.procurar(seguradora)
-    return [@resultado.correndo? ? NAO_ENCONTRADA_AINDA : NAO_ENCONTRADA, []] if codigos.empty?
+    return @resultado.correndo? ? NAO_ENCONTRADA_AINDA : NAO_ENCONTRADA if codigos.empty?
 
-    com_preco = @resultado.com_preco(codigos)
-    partes = [contagem(@resultado.com_preco.size), (LISTA_ANEXADA if com_preco.any?), *codigos.map { |codigo| fala(codigo) },
-              (SEM_BONUS if com_preco.any? && @resultado.sem_bonus?)]
-    [partes.compact.join("\n"), com_preco]
+    partes = [contagem(@resultado.com_preco.size), *codigos.map { |codigo| fala(codigo) }]
+    partes += avisos if @resultado.com_preco(codigos).any?
+    partes.join("\n")
+  end
+
+  # O que acompanha os preços: a cotação ainda correndo, a renovação sem bônus, o comparativo já entregue e
+  # como escrever.
+  def avisos
+    [(AINDA_CORRENDO if @resultado.correndo?), (SEM_BONUS if @resultado.sem_bonus?),
+     (COMPARATIVO_ENVIADO if @resultado.comparativo_enviado?), COMO_ESCREVER].compact
   end
 
   # Quantas seguradoras fizeram proposta, sem nome e sem valor.
@@ -174,13 +160,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     "#{total} #{total == 1 ? 'seguradora fez' : 'seguradoras fizeram'} proposta #{quando}."
   end
 
-  # O que o modelo lê sobre UMA seguradora.
-  def fala(codigo)
+  # O que o modelo lê sobre UMA seguradora. `motivo:` falso tira a categoria de quem não fez proposta.
+  def fala(codigo, motivo: true)
     nome = @resultado.nome(codigo)
     case @resultado.desfecho(codigo)
-    when Guardado::COM_PRECO then "#{nome} fez proposta: o preço dela vai na lista anexada."
+    when Guardado::COM_PRECO then "#{nome} fez proposta: #{@resultado.preco(codigo)}."
     when Guardado::AGUARDANDO then "#{nome} ainda não respondeu, e a cotação continua correndo."
-    else "#{nome} não fez proposta nesta cotação. #{MOTIVOS.fetch(@resultado.motivo(codigo), SEM_MOTIVO)}"
+    else ["#{nome} não fez proposta nesta cotação.", (MOTIVOS.fetch(@resultado.motivo(codigo), SEM_MOTIVO) if motivo)].compact.join(' ')
     end
   end
 end

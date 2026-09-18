@@ -1,9 +1,9 @@
 require 'rails_helper'
 
-# A FERRAMENTA DA LIA QUE VÊ O RESULTADO DA COTAÇÃO (fatia 2 do #420, desenho da rodada 8): síncrona, sobre linhas
-# reais de `autonomia_agent_tool_runs`. O que o modelo lê é o texto que `call` devolve; a lista de preços é o anexo
-# do turno (`Tools::Delivery#anexos`). O caminho pelo turno e pelo Responder está em
-# `answerer_resultado_da_cotacao_spec`. Dados sintéticos.
+# A FERRAMENTA DA LIA QUE VÊ O RESULTADO DA COTAÇÃO (fatia 2 do #420) E DEVOLVE OS PREÇOS A ELA (fatia 3): síncrona,
+# sobre linhas reais de `autonomia_agent_tool_runs`. O que o modelo lê é o texto que `call` devolve, e o mesmo texto
+# fica registrado no turno (`Tools::Delivery#resultado_do_turno`) para a conferência da fala. O caminho pelo turno e
+# pelo Responder está em `answerer_resultado_da_cotacao_spec`. Dados sintéticos.
 RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   let(:account) { create(:account, internal_attributes: { 'autonomia_insurance_enabled' => true }) }
   let(:agent) do
@@ -53,8 +53,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     described_class.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: turno).call
   end
 
-  def itens(*ofertas)
-    ofertas.map { |oferta| Autonomia::Insurance::QuoteOffers.item(oferta) }.join("\n\n")
+  # A linha que o modelo lê de uma seguradora com preço.
+  def preco(oferta)
+    premio = Autonomia::Insurance::PremiumText.new(oferta['premium'])
+    "#{oferta.dig('insurer', 'name')} fez proposta: #{[premio.resumo, premio.detalhe].compact.join(', ')}."
   end
 
   it 'é síncrona e não abre execução' do
@@ -75,10 +77,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     expect(JSON.parse(saida)).to eq('error' => described_class::SEM_CONTEXTO)
   end
 
-  describe 'o que chega ao modelo, sem preço a anexar' do
-    # Nesses estados nada é anexado ao turno.
+  describe 'o que chega ao modelo, sem preço' do
+    # Nesses estados o modelo não recebe valor nenhum, e o que fica registrado no turno é o mesmo texto.
     def ao_modelo(seguradora = nil, turno: delivery)
-      super.tap { expect(turno.anexos).to be_empty }
+      super.tap do |texto|
+        expect(Autonomia::Agents::ConferenciaDePrecos.valores(texto)).to be_empty
+        expect(turno.resultado_do_turno.texto).to end_with(texto)
+      end
     end
 
     it 'sem cotação na conversa' do
@@ -212,98 +217,92 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     end
   end
 
-  describe 'com preço a anexar' do
-    def anexo_leva(total, mensal: false)
-      "A lista anexada leva #{total} #{total == 1 ? 'opção' : 'opções'}, " \
-        "#{mensal ? 'e a assinatura mensal está entre elas' : 'sem assinatura mensal'}. Ela sai inteira, sempre: " \
-        'não prometa ao cliente um recorte dela, como só as mais baratas ou sem a mensal.'
-    end
-
-    # PROVA REAL DE 18/09/2026: o cliente pediu "só as três mais baratas", a Lia prometeu o recorte e a lista
-    # trouxe todas, com a assinatura mensal. O modelo passa a ler o que o anexo leva, contado sobre o anexo.
-    it 'diz ao modelo quantas opções o anexo leva e se a assinatura mensal está nele' do
-      mensal = { 'insurer' => { 'code' => '55', 'name' => 'Bp Assinatura' }, 'status' => 'quoted',
-                 'premium' => { 'amount' => 199.9, 'currency' => 'BRL', 'basis' => 'monthly' } }
-      cotacao_com(status: 'done', ofertas: [porto, allianz, mensal])
-
-      expect(ao_modelo.split("\n").last).to eq(anexo_leva(3, mensal: true))
-      expect(delivery.anexos).to eq([itens(porto, allianz, mensal)])
-
-      turno = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil)
-      expect(ao_modelo('Porto', turno: turno).split("\n").last).to eq(anexo_leva(1))
-    end
-
-    it 'o resultado inteiro: o modelo lê o estado, e a lista vai anexada, escrita por QuoteOffers.item' do
+  describe 'com preço' do
+    # O RECORTE É DA LIA (fatia 3 do #420): a ferramenta devolve todas, com o valor, o período e o parcelamento, e
+    # a regra de como escrever. Na prova real de 18/09/2026 o cliente pediu só as três mais baratas e recebeu onze.
+    it 'o resultado inteiro: quantas cotaram, cada preço com o período, quem não fez proposta, e como escrever' do
       cotacao_com(status: 'running')
 
       texto = ao_modelo
 
-      expect(texto.split("\n")).to eq(['2 seguradoras fizeram proposta até agora.', described_class::LISTA_ANEXADA,
-                                       described_class::AINDA_CORRENDO, described_class::HA_SEM_PROPOSTA, anexo_leva(2)])
-      expect(delivery.anexos).to eq([itens(porto, allianz)])
+      expect(texto.split("\n")).to eq(['2 seguradoras fizeram proposta até agora.', preco(porto), preco(allianz),
+                                       described_class::HA_SEM_PROPOSTA, 'Mitsui não fez proposta nesta cotação.',
+                                       'Sancor não fez proposta nesta cotação.', described_class::AINDA_CORRENDO,
+                                       described_class::COMO_ESCREVER])
+      expect(texto).to include('Porto Seguro fez proposta: R$ 2.119,18 no total, ou 10x de R$ 211,92.')
+      expect(texto).not_to include(described_class::MOTIVOS.fetch('veiculo'))
     end
 
-    it 'o resultado inteiro de cotação encerrada, só com preços, sem bônus' do
-      cotacao_com(status: 'done', ofertas: [porto], handle: { cotacao::SEM_BONUS_KEY => true })
+    it 'a mensal diz por mês, sem parcelamento, e vem depois dos totais' do
+      mensal = { 'insurer' => { 'code' => '55', 'name' => 'Bp Assinatura' }, 'status' => 'quoted',
+                 'premium' => { 'amount' => 199.9, 'currency' => 'BRL', 'basis' => 'monthly' } }
+      cotacao_com(status: 'done', ofertas: [mensal, porto])
 
-      expect(ao_modelo.split("\n")).to eq(['1 seguradora fez proposta nesta cotação.', described_class::LISTA_ANEXADA,
-                                           described_class::SEM_BONUS, anexo_leva(1)])
+      linhas = ao_modelo.split("\n")
+
+      expect(linhas[1..2]).to eq([preco(porto), 'Bp Assinatura fez proposta: R$ 199,90 por mês.'])
     end
 
-    it 'uma seguradora com preço: só ela na lista' do
+    it 'cotação encerrada sem bônus, com o comparativo entregue' do
+      run = cotacao_com(status: 'done', ofertas: [porto], handle: { cotacao::SEM_BONUS_KEY => true,
+                                                                    cotacao::COMPARATIVO_KEY => 'tok-pdf' })
+      run.registrar_entrega_aceita!('tok-pdf')
+
+      expect(ao_modelo.split("\n")).to eq(['1 seguradora fez proposta nesta cotação.', preco(porto), described_class::SEM_BONUS,
+                                           described_class::COMPARATIVO_ENVIADO, described_class::COMO_ESCREVER])
+      expect(delivery.resultado_do_turno.comparativo).to be(true)
+    end
+
+    it 'uma seguradora com preço: só ela' do
       cotacao_com(status: 'done')
 
       texto = ao_modelo('a porto')
 
-      expect(texto).to include(described_class::LISTA_ANEXADA, 'Porto Seguro fez proposta: o preço dela vai na lista anexada.')
-      expect(delivery.anexos).to eq([itens(porto)])
+      expect(texto).to include(preco(porto), described_class::COMO_ESCREVER)
+      expect(texto).not_to include('Allianz')
     end
 
-    it 'uma com preço e uma sem proposta no mesmo pedido: as duas falas, e só a com preço na lista' do
+    it 'uma com preço e uma sem proposta no mesmo pedido: o preço de uma e a categoria da outra' do
       cotacao_com(status: 'done')
 
       texto = ao_modelo('Sancor e Porto')
 
-      expect(texto).to include('Porto Seguro fez proposta', 'Sancor não fez proposta nesta cotação.',
-                               described_class::MOTIVOS.fetch('veiculo'))
+      expect(texto).to include(preco(porto), 'Sancor não fez proposta nesta cotação.', described_class::MOTIVOS.fetch('veiculo'))
       expect(texto).not_to include(risco['text'])
-      expect(delivery.anexos).to eq([itens(porto)])
+    end
+
+    # O QUE A CONFERÊNCIA RECEBE: o texto que o modelo leu, todas as seguradoras da cotação e se o PDF já foi.
+    it 'registra no turno o texto, as seguradoras da cotação e o comparativo' do
+      cotacao_com(status: 'done')
+
+      texto = ao_modelo('Porto')
+
+      expect(delivery.resultado_do_turno.texto).to eq(texto)
+      expect(delivery.resultado_do_turno.seguradoras).to contain_exactly('Porto Seguro', 'Allianz', 'Sancor', 'Mitsui')
+      expect(delivery.resultado_do_turno.comparativo).to be(false)
     end
   end
 
-  # O MODELO NUNCA RECEBE VALOR: varre os estados com preço e os por seguradora, e o anexo tem o valor.
-  it 'nenhum texto ao modelo tem valor ou travessão, em nenhum estado; o valor está só no anexo' do
+  # O MODELO NUNCA RECEBE TEXTO DO PORTAL NEM TRAVESSÃO, em nenhum estado.
+  it 'nenhum texto ao modelo tem travessão, em nenhum estado' do
     cotacao_com(status: 'running', handle: { cotacao::SEM_BONUS_KEY => true })
     textos = [nil, 'Porto', 'Allianz', 'Sancor', 'Mitsui', 'Sancor e Porto', 'Azul'].map do |seguradora|
       ao_modelo(seguradora, turno: Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil))
     end
 
     expect(textos).to all(be_present)
-    expect(textos.join("\n")).not_to match(/R\$|2119|2\.119|2402|2\.402|211,92|240,26|—/)
-    ao_modelo
-    expect(delivery.anexos.join).to include('2.119,18')
+    expect(textos.join("\n")).not_to match(/—|–/)
+    expect(textos.join("\n")).not_to include(risco['text'])
   end
 
-  # UMA LISTA POR TURNO: a ferramenta chamada duas vezes no mesmo turno troca o próprio anexo pela lista com as
-  # seguradoras das duas chamadas. Outro turno (outra pergunta do cliente) tem a lista dele.
   describe 'mais de uma chamada' do
-    it 'duas chamadas no mesmo turno anexam uma lista só, com as seguradoras das duas, na ordem da lista de preços' do
+    it 'duas chamadas no mesmo turno somam no que fica registrado para a conferência' do
       cotacao_com(status: 'done')
 
       ao_modelo('Allianz')
       ao_modelo('Porto')
-      ao_modelo('Allianz')
 
-      expect(delivery.anexos).to eq([itens(porto, allianz)])
-    end
-
-    it 'a mesma pergunta em dois turnos recebe a lista nos dois' do
-      cotacao_com(status: 'done')
-      turnos = Array.new(2) { Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil) }
-
-      turnos.each { |turno| ao_modelo(nil, turno: turno) }
-
-      expect(turnos.map(&:anexos)).to eq([[itens(porto, allianz)], [itens(porto, allianz)]])
+      expect(Autonomia::Agents::ConferenciaDePrecos.valores(delivery.resultado_do_turno.texto)).to include(211_918, 240_255)
     end
   end
 
@@ -313,9 +312,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
         cotacao_com(status: 'done', ofertas: [porto], criada: 10.minutes.ago)
         cotacao_com(status: status, ofertas: [allianz], criada: 1.minute.ago)
 
-        ao_modelo
-
-        expect(delivery.anexos).to eq([itens(porto)])
+        expect(ao_modelo).to include(preco(porto))
+        expect(ao_modelo).not_to include('Allianz')
       end
     end
 
@@ -334,7 +332,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       cotacao_com(status: 'running', ofertas: [allianz], criada: 1.second.from_now)
       ao_modelo
 
-      expect([primeiro.anexos, delivery.anexos]).to eq([[itens(porto)], [itens(allianz)]])
+      expect(primeiro.resultado_do_turno.texto).to include(preco(porto))
+      expect(delivery.resultado_do_turno.texto).to include(preco(allianz))
+      expect(delivery.resultado_do_turno.texto).not_to include('Porto')
     end
 
     it 'não lê cotação de outra conversa' do

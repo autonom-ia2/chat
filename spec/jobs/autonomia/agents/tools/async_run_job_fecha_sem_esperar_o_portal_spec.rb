@@ -125,15 +125,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     bot_messages.map(&:content)
   end
 
-  def precos
-    bot_contents.first
-  end
-
   def fecho
     cotacao::FECHO_COM_RESULTADO
   end
 
-  it 'encerra quando toda seguradora tem desfecho, com o portal ainda partial: precos, comparativo, fecho e done' do
+  it 'encerra quando toda seguradora tem desfecho, com o portal ainda partial: comparativo, fecho e done' do
     # Arrange
     run = cotacao_submetida
     ate_todas_com_desfecho(run)
@@ -144,12 +140,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     passada(run, 4)
 
     # Assert — a conversa
-    expect(precos).to include('R$ 2.119,18', 'R$ 2.323,17')
-    expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
-    expect(bot_messages.second.attachments.sole.file.download).to eq(pdf)
+    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, fecho])
+    expect(bot_messages.first.attachments.sole.file.download).to eq(pdf)
     expect(bot_contents.join).not_to include(url)
     # Assert — a linha
-    expect(run).to have_attributes(status: 'done', failure_code: nil, delivered_count: 2)
+    expect(run).to have_attributes(status: 'done', failure_code: nil, delivered_count: 1)
     expect(run.handle).to include(cotacao::FECHADO_KEY => true, cotacao::DELIVERED_KEY => %w[8 20])
   end
 
@@ -170,7 +165,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(run.conta_como_pedido?).to be(true)
     expect(Autonomia::Agents::ToolRun.pedido_repetido(conversation.id, cotacao.slug, 'pedido-sintetico')).to eq(run)
     expect(Autonomia::Agents::Tools::PedidoRepetido.new(run).to_s)
-      .to include('já terminou nesta conversa', '(concluída)', '2 resultados encaminhados para publicação')
+      .to include('já terminou nesta conversa', '(concluída)', '1 resultado encaminhado para publicação')
     expect(Autonomia::Insurance::Medida.new(conta: account, inicio: nil, fim: nil).call)
       .to include(cotacoes: 1, seguradoras_acionadas: 5, seguradoras_com_preco: 2, cotacoes_sem_medida: 0)
   end
@@ -187,7 +182,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     passada(run, 4)
 
     # Assert 1 — nada novo na conversa, e a execução continua
-    expect(bot_contents).to eq([precos])
+    expect(bot_contents).to eq([])
     expect(run.status).to eq('running')
     expect(described_class).to have_been_enqueued.with(run.id, 4)
 
@@ -196,7 +191,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     passada(run, 5)
 
     # Assert 2
-    expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
+    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, fecho])
     expect(run.status).to eq('done')
   end
 
@@ -214,15 +209,15 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     passada(run, 4)
 
     # Assert 1 — nenhuma mensagem nova, nenhum link, e a entrega não conta
-    expect(bot_contents).to eq([precos])
-    expect(run).to have_attributes(status: 'running', delivered_count: 1)
+    expect(bot_contents).to eq([])
+    expect(run).to have_attributes(status: 'running', delivered_count: 0)
     expect(Autonomia::Agents::Tools::EntregaAceita.aceita?(run, run.handle[cotacao::COMPARATIVO_KEY])).to be(false)
 
     # Act 2
     passada(run, 5)
 
     # Assert 2 — o arquivo, o fecho, e o link em lugar nenhum
-    expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
+    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, fecho])
     expect(bot_contents.join).not_to include(url)
     expect(run.status).to eq('done')
     expect(mock).to have_received(:quote_proposal).twice
@@ -251,7 +246,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert — um PDF só, o fecho, e um pedido só ao portal
-    expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
+    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, fecho])
     expect(bot_messages.flat_map(&:attachments).size).to eq(1)
     expect(mock).to have_received(:quote_proposal).once
     expect(run.reload.status).to eq('done')
@@ -268,8 +263,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Act
       [4, 5, 6].each { |tentativa| passada(run, tentativa) }
 
-      # Assert
-      expect(bot_contents).to eq([precos, fecho])
+      # Assert — sem comparativo e sem lote, o fecho diz que os valores podem ser pedidos na conversa
+      expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
       expect(run.status).to eq('done')
       expect(mock).to have_received(:quote_proposal).exactly(3).times
     end
@@ -285,7 +280,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       [4, 5, 6, 7].each { |tentativa| passada(run, tentativa) }
 
       # Assert
-      expect(bot_contents).to eq([precos, fecho])
+      expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
       expect(bot_contents.join).not_to include(url)
       expect(run.status).to eq('done')
       expect(mock).to have_received(:quote_proposal).exactly(3).times
@@ -307,7 +302,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       passada(run, 4)
 
       # Assert
-      expect(bot_contents).to eq([precos, fecho, cotacao::Comparativo::LEGENDA])
+      expect(bot_contents).to eq([fecho, cotacao::Comparativo::LEGENDA])
       expect(run.status).to eq('done')
     end
 
@@ -322,7 +317,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       passada(run, 4)
 
-      expect(bot_contents).to eq([precos, cotacao::PARCIAL, cotacao::Comparativo::LEGENDA])
+      expect(bot_contents).to eq([cotacao::PARCIAL, cotacao::Comparativo::LEGENDA])
     end
 
     # TODAS RECUSARAM: nenhum preço, nenhum comparativo, e a frase de falha — sem esperar o prazo.
@@ -374,8 +369,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
   # O VARREDOR, NO MEIO DE UMA NOVA TENTATIVA: a corrente de jobs morreu depois de a passada gravar o
   # portal fechado e a primeira tentativa do comparativo. Ele não pede o PDF (não começa trabalho
-  # novo) e diz o fecho de quem tem resultado — sobrou o comparativo.
-  it 'o varredor fecha com o fecho de quem tem resultado a linha abandonada esperando nova tentativa' do
+  # novo) e, sem comparativo nem lote de preço (fatia 3 do #420), diz que os valores podem ser pedidos.
+  it 'o varredor fecha a linha abandonada esperando nova tentativa dizendo que os valores podem ser pedidos' do
     # Arrange
     run = cotacao_submetida
     ate_todas_com_desfecho(run)
@@ -387,8 +382,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
-    # Assert
-    expect(bot_contents).to eq([precos, fecho])
+    # Assert — sem comparativo, o fecho diz que os valores podem ser pedidos na conversa
+    expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
     expect(mock).to have_received(:quote_proposal).once
   end
@@ -408,14 +403,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       morre = described_class.new
       allow(morre).to receive(:finish_done)
       morre.perform(run.id, 4)
-      expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA])
+      expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA])
       run.update!(expires_at: 10.minutes.ago)
 
       # Act
       Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
       # Assert
-      expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
+      expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, fecho])
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
     end
 
@@ -429,14 +424,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
       allow(run).to receive(:finish!).and_return(false)
       described_class.new.perform(run.id, 4)
-      expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
+      expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, fecho])
       Autonomia::Agents::ToolRun.where(id: run.id).update_all(expires_at: 10.minutes.ago) # rubocop:disable Rails/SkipsModelValidations
 
       # Act
       Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
       # Assert — um fecho só, e a linha fechada pelo varredor
-      expect(bot_contents).to eq([precos, cotacao::Comparativo::LEGENDA, fecho])
+      expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, fecho])
       expect(Autonomia::Agents::ToolRun.find(run.id)).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
     end
   end

@@ -49,7 +49,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote::Frases do
     it 'a espera nao manda afirmar um envio que ainda nao aconteceu' do
       cotacao = Autonomia::Agents::Tools::Native::InsuranceQuote
 
-      expect(described_class::DESCRICOES[:espera]).to include('não afirme que já foi enviado')
+      expect(described_class::DESCRICOES[:espera]).to include('não afirme que o pedido já foi')
       expect(cotacao::Declaracao::ESPERANDO).not_to include('seguradoras')
       expect(cotacao::Declaracao::ACEITA).to include('NÃO afirme que já foi')
     end

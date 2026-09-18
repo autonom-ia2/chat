@@ -257,7 +257,20 @@ class Autonomia::Agents::Tools::AsyncPublisher
     # não ocupa posição nenhuma, e avançar nele faria o contador mentir sobre quantas mensagens a
     # execução publicou.
     @run.advance_sequence!(sequence)
+    registrar_recuos(corpo.texto)
     mensagem
+  end
+
+  # O TEXTO DE RESERVA QUE SAIU FICA NO LOG (fatia 3 do #420): a execução, a ferramenta e o papel de cada
+  # recuo que a mensagem nova leva (`Native::Base.recuos_em`). O recuo é a rede para quando a frase do
+  # agente falha; sem este registro, ninguém sabe quantas vezes ele fala no lugar do agente. Roda dentro
+  # do lock, depois de a mensagem existir: não levanta, porque levantar ali desfaria a mensagem.
+  def registrar_recuos(texto)
+    Array(::Autonomia::Agents::Tools::Registry.find(@run.slug)&.recuos_em(texto)).each do |papel|
+      Rails.logger.warn("[autonomia][recuo] run=#{@run.id} slug=#{@run.slug} papel=#{papel}")
+    end
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][recuo] registro falhou run=#{@run.id} #{e.class}")
   end
 
   def resultado(publicado)

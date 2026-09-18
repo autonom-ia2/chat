@@ -364,48 +364,26 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(progresso.status).to eq(:failed)
     end
 
-    it 'entrega so quem cotou, do mais barato para o mais caro' do
-      # Arrange
-      ready_connection
-      connector = Autonomia::Insurance::Connector.client
-      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-      allow(connector).to receive(:quote_result).and_return(
-        'status' => 'completed',
-        'offers' => [offer('8', 'Porto', 'quoted', 900.0), offer('3', 'Mapfre', 'quoted', 700.0),
-                     offer('9', 'Azul', 'declined'), offer('7', 'Pier', 'auth_required')]
-      )
-
-      # Act
-      progresso = tool('produto' => 'bike', 'dados' => '{}')
-                  .poll(handle: { 'quote_id' => 'q1', 'entregues' => [] }, attempt: 1)
-
-      # Assert — recusa de risco e problema de credencial nunca viram texto ao cliente.
-      texto = progresso.deliveries.first
-      expect(texto).to include('Mapfre')
-      expect(texto).to include('Porto')
-      expect(texto).not_to include('Azul')
-      expect(texto).not_to include('Pier')
-      expect(texto.index('Mapfre')).to be < texto.index('Porto')
-    end
-
-    # A segunda mensagem se anuncia como complemento; sem isso ela parece cotação nova e o cliente
-    # não sabe qual vale.
-    it 'nao repete quem ja foi entregue' do
+    # A CONSULTA GRAVA E NÃO PUBLICA (fatia 3 do #420): o preço que chegou não vira lista ao cliente. Fica
+    # gravado quem cotou (união com o que já estava) e o resultado por seguradora, que a Lia lê quando o
+    # cliente pergunta. Recusa de risco e credencial também não viram texto.
+    it 'grava quem cotou e o resultado, e nao publica lista de preco' do
       ready_connection
       connector = Autonomia::Insurance::Connector.client
       allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
       allow(connector).to receive(:quote_result).and_return(
         'status' => 'running',
-        'offers' => [offer('8', 'Porto', 'quoted', 900.0), offer('3', 'Mapfre', 'quoted', 700.0)]
+        'offers' => [offer('8', 'Porto', 'quoted', 900.0), offer('3', 'Mapfre', 'quoted', 700.0),
+                     offer('9', 'Azul', 'declined'), offer('7', 'Pier', 'auth_required')]
       )
 
       progresso = tool('produto' => 'bike', 'dados' => '{}')
-                  .poll(handle: { 'quote_id' => 'q1', 'entregues' => ['3'] }, attempt: 1)
+                  .poll(handle: { 'quote_id' => 'q1', 'entregues' => ['5'] }, attempt: 1)
 
-      # Continua se anunciando como complemento — sem telegrafar a nossa fila de entrega.
-      expect(progresso.deliveries.first).to start_with('Mais uma opção:')
-      expect(progresso.deliveries.first).not_to include('Mapfre')
       expect(progresso.status).to eq(:running)
+      expect(progresso.deliveries).to eq([])
+      expect(progresso.handle['entregues']).to contain_exactly('5', '3', '8')
+      expect(progresso.handle[described_class::RESULTADO_KEY].keys).to contain_exactly('8', '3', '9', '7')
     end
 
     it 'nao entrega nada quando nenhum preco novo chegou' do

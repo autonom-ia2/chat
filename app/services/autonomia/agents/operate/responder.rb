@@ -10,11 +10,6 @@ module Autonomia
       #   - caso contrário -> posta a resposta OUTGOING pelo caminho canônico (Messages::MessageBuilder
       #     com sender AgentBot espelho), igual ao Crm::FollowUps::MessageSender.
       #
-      # ANEXOS DO TURNO (fatia 2 do #420): o texto que uma ferramenta síncrona escreveu pelo código e anexou ao
-      # `Tools::Delivery` (a lista de preços da Lia) sai logo DEPOIS da resposta, na mesma entrega, nos três
-      # caminhos: humanizado (fim da cadeia), clássico (mesmo lock) e voz (texto depois do áudio). No turno mudo,
-      # o anexo sai sozinho.
-      #
       # SEM HANDOFF DE SISTEMA NA RESPOSTA: "passar para humano" é TEXTO da instrução e a resposta
       # postada não muda. O que o sinal `should_handoff` da instrução faz (#284) é fechar o ciclo do
       # ai_assignee: `conversation.bot_handoff!` (solta o espelho, abre a conversa) + evento handed_off.
@@ -209,7 +204,7 @@ module Autonomia
             elsif already_replied?
               Result.replied(nil)
             else
-              Result.replied(post_reply_and_anexos!(result.reply))
+              Result.replied(post_reply!(result.reply))
             end
           end
 
@@ -232,7 +227,6 @@ module Autonomia
 
         # Sintetiza a resposta em áudio (TTS) e posta como mensagem outgoing SÓ-ÁUDIO. A síntese (lenta)
         # roda FORA do lock; o lock só posta. Falha/áudio vazio -> cai no texto (post_reply!), nunca mudo.
-        # Os anexos do turno saem como TEXTO, depois do áudio, no mesmo lock.
         def deliver_voice(result)
           audio = synthesize_audio(result.reply) # fora do lock; nil em falha
           outcome = @conversation.with_lock do
@@ -241,9 +235,9 @@ module Autonomia
             elsif already_replied?
               Result.replied(nil)
             elsif audio.present?
-              Result.replied(post_audio_reply!(audio).tap { postar_anexos! })
+              Result.replied(post_audio_reply!(audio))
             else
-              Result.replied(post_reply_and_anexos!(result.reply)) # fallback texto
+              Result.replied(post_reply!(result.reply)) # fallback texto
             end
           end
           if outcome.status == :replied && outcome.message.present?
@@ -300,24 +294,16 @@ module Autonomia
           return Result.replied(nil) if already_replied?      # um settle anterior já entregou
           return Result.silenced unless still_eligible?       # humano assumiu durante a IA -> não posta
 
-          pedacos = ::Autonomia::Agents::Operate::ReplyChunker.call(result.reply)
-          # Nada a quebrar (ex.: resposta só com invisíveis) -> caminho clássico (paridade com OFF),
-          # nunca engole a resposta silenciosamente. Os anexos do turno vão junto, pelo mesmo caminho.
-          return classic_deliver(result) if pedacos.empty?
-
-          # Os anexos do turno entram no FIM da cadeia, cada um como um pedaço inteiro (sem o quebrador).
-          chunks = pedacos + pedacos_dos_anexos
-          # Quantos pedaços a cadeia vai postar, anexos incluídos. A entrega ASSÍNCRONA espera esse número
-          # aparecer antes de publicar, para não se intercalar no meio da frase que o agente ainda está
+          chunks = ::Autonomia::Agents::Operate::ReplyChunker.call(result.reply)
+          # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
+          # antes de publicar, para não se intercalar no meio da frase que o agente ainda está
           # "digitando" (a cadeia pode durar até 90s).
           @expected_chunks = chunks.length
-          iniciar_cadeia(result, chunks)
-          Result.replied(nil)
-        end
+          # Nada a quebrar (ex.: resposta só com invisíveis) -> caminho clássico (paridade com OFF),
+          # nunca engole a resposta silenciosamente.
+          return classic_deliver(result) if chunks.empty?
 
-        # Mostra "digitando" e agenda o 1º pedaço. `used_entry_ids` viaja no meta (só ids) para o job registrar as
-        # fontes no evento replied.
-        def iniciar_cadeia(result, chunks)
+          # `used_entry_ids` viaja no meta (só ids) para o job registrar as fontes no evento replied.
           meta = {
             'confidence' => result.confidence, 'answered_from_knowledge' => result.answered_from_knowledge,
             'used_entry_ids' => ::Autonomia::Agents::Operate::EventLogger.used_entry_ids(result)
@@ -326,6 +312,7 @@ module Autonomia
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
             .set(wait: (chunks.first['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0).seconds)
             .perform_later(@conversation.id, @agent_inbox.id, @reply_to_message_id, chunks, 0, meta)
+          Result.replied(nil)
         end
 
         # Motor de resposta em modo INSTRUÇÃO-DIRIGIDO: devolve a resposta do modelo como veio (sem
@@ -351,42 +338,13 @@ module Autonomia
 
         # Silêncio, mas SEM abandonar o que a ferramenta assíncrona já aceitou dentro do turno: o
         # cliente pediu a consulta e vai receber o aviso e o resultado pelo job.
-        #
-        # TURNO MUDO COM ANEXO (decisão 19 da fatia 2 do #420): o anexo sai sozinho, pelo caminho clássico (sob o
-        # lock, com a idempotência de `already_replied?`), sem evento `replied`: o modelo não falou.
         def silence_with_async(_result)
-          postar_anexos_do_turno_mudo if anexos.any?
           dispatch_async(replied: false)
           Result.silenced
         end
 
-        # Sem return/break dentro do with_lock (dispararia ROLLBACK). Best-effort: a falha ao gravar o anexo não derruba
-        # o despacho que vem depois. No turno mudo sem anexo a execução assíncrona aceita é despachada, e o anexo não
-        # pode ser o motivo de ela ser descartada (`falha_no_turno`).
-        def postar_anexos_do_turno_mudo
-          @conversation.with_lock do
-            postar_anexos! if still_eligible? && !already_replied?
-          end
-        rescue StandardError => e
-          Rails.logger.warn("[autonomia][operate] anexo_do_turno_mudo_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
-          nil
-        end
-
-        # -> os textos anexados ao turno pelas ferramentas (`Tools::Delivery#anexos`).
-        def anexos
-          @delivery&.anexos.to_a
-        end
-
-        # Cada anexo como um pedaço inteiro da cadeia humanizada, com a pausa mínima de um pedaço: o texto é do
-        # sistema, e não há digitação a imitar.
-        def pedacos_dos_anexos
-          anexos.map do |texto|
-            { 'text' => texto, 'type' => 'anexo', 'delay_ms' => ::Autonomia::Agents::Config::HUMANIZE[:min_chunk_delay_ms] }
-          end
-        end
-
         # CONTEXTO DE ENTREGA (#313). Só existe no atendimento — é o que autoriza uma ferramenta
-        # ASSÍNCRONA a ser aceita, e é o coletor das execuções aceitas e dos anexos deste turno.
+        # ASSÍNCRONA a ser aceita, e é o coletor das execuções aceitas neste turno.
         def delivery
           @delivery ||= ::Autonomia::Agents::Tools::Delivery.new(conversation: @conversation,
                                                                  agent_inbox: @agent_inbox,
@@ -504,17 +462,6 @@ module Autonomia
                                             .limit(::Autonomia::Agents::Config::HISTORY_MAX_TURNS * 2)
                                             .to_a
                                             .reverse
-        end
-
-        # A resposta e, depois dela, os anexos do turno, na mesma transação do lock: saem todos ou nenhum, e o
-        # `already_replied?` de um retry vê todos. -> a mensagem da resposta.
-        def post_reply_and_anexos!(text)
-          post_reply!(text).tap { postar_anexos! }
-        end
-
-        # Os anexos do turno, cada um uma mensagem com o mesmo `autonomia_reply_to_message_id` da resposta.
-        def postar_anexos!
-          anexos.each { |texto| post_reply!(texto) }
         end
 
         # Caminho CANÔNICO channel-agnóstico (= Crm::FollowUps::MessageSender): a entrega

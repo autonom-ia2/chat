@@ -332,9 +332,40 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
     it 'sem nada entregue, a frase de falha' do
       run = execucao
 
-      encerrar(run, build_async_tool(resultado: true, resta: true))
+      encerrar(run, build_async_tool(resta: true))
 
       expect(bot_contents).to eq(['não consegui concluir a consulta'])
+    end
+
+    # O RESULTADO QUE A FERRAMENTA CONFIRMA VALE COM O CONTADOR ZERADO (fatia 3 do #420): o comparativo na
+    # conversa com o envio pendente não foi contado pelo publicador.
+    it 'com resultado confirmado e contador zero, o fecho de quem tem resultado' do
+      run = execucao
+      tool = build_async_tool(resultado: true, resta: true)
+
+      encerrar(run, tool)
+
+      expect(bot_contents).to eq([tool.closing_message])
+    end
+
+    # O RESULTADO GUARDADO QUE NÃO CHEGOU (fatia 3 do #420): a frase diz que ele pode ser pedido aqui.
+    it 'com resultado guardado que nao chegou, a frase de que pode ser pedido' do
+      run = execucao
+      tool = build_async_tool(a_pedir: true)
+
+      encerrar(run, tool)
+
+      expect(bot_contents).to eq([tool.valores_message])
+    end
+
+    # E a entrega que ESTE encerramento teve aceita é o resultado: a frase de pedir não sai ao lado dela.
+    it 'a entrega aceita do encerramento nao sai com a frase de que o resultado pode ser pedido' do
+      run = execucao
+      tool = build_async_tool(closing: ['o arquivo que ficou pronto'], a_pedir: true, resta: true)
+
+      encerrar(run, tool)
+
+      expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.closing_message])
     end
 
     # Quem pode ter uma cotação correndo no portal sem registro nosso (entrega 5) não lê "não
@@ -392,9 +423,27 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       expect(bot_contents).to eq([tool.closing_message])
     end
 
-    it 'sem nada aceito, publica a frase de falha' do
+    it 'com resultado guardado que nao chegou, publica a frase de que pode ser pedido' do
+      run = execucao
+      tool = build_async_tool(a_pedir: true)
+
+      concluir(run, tool)
+
+      expect(bot_contents).to eq([tool.valores_message])
+    end
+
+    it 'com resultado confirmado e contador zero, publica o fecho de quem tem resultado' do
       run = execucao
       tool = build_async_tool(resultado: true)
+
+      concluir(run, tool)
+
+      expect(bot_contents).to eq([tool.closing_message])
+    end
+
+    it 'sem nada aceito, publica a frase de falha' do
+      run = execucao
+      tool = build_async_tool
 
       concluir(run, tool)
 

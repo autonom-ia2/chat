@@ -182,7 +182,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       passada(run, proxima)
       drenar_publicacoes_adiadas
 
-      # Assert 2 — preços, PDF e fecho, nesta ordem
+      # Assert 2 — PDF e fecho, nesta ordem
       expect(mock).to have_received(:quote_proposal).twice
       expect(anexos.size).to eq(1)
       expect(conteudos.last(2)).to eq([cotacao::Comparativo::LEGENDA, fecho])
@@ -191,7 +191,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
 
     # A LIA NÃO FICA TRAVADA POR 24 h por uma cotação cujo download do PDF foi recusado: enquanto a nova
-    # tentativa não acontece, a linha não está concluída e o contador só conta os preços. O PDF ACEITO e
+    # tentativa não acontece, a linha não está concluída e o contador não conta nada. O PDF ACEITO e
     # ADIADO é outro caso: a linha já é `done`, e o especialista lê "concluída" antes de o PDF sair (sonda U2
     # da revisão da rodada 2; declarado na auditoria).
     it 'o pedido repetido nao diz concluida enquanto o PDF recusado espera a nova tentativa' do
@@ -203,7 +203,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       expect(run.reload.status).to eq('running')
       expect(Autonomia::Agents::Tools::PedidoRepetido.new(run).to_s).not_to include('concluída')
-      expect(run.delivered_count).to eq(1)
+      expect(run.delivered_count).to eq(0)
     end
   end
 
@@ -276,7 +276,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       passada(run, 4)
 
       # Assert
-      expect(conteudos.join).to include('R$ 1.500,00')
+      expect(run.handle[cotacao::DELIVERED_KEY]).to include('47')
       expect(run.status).to eq('done')
       expect(run.handle[cotacao::ACIONADAS_KEY]).to eq(%w[20 47 8])
     end
@@ -310,7 +310,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   end
 
   describe 'sonda V: o fecho adiado nunca sai antes do PDF' do
-    it 'com a passada morta antes do finish! e o varredor antes dos adiados: preços, PDF e um fecho, nesta ordem' do
+    it 'com a passada morta antes do finish! e o varredor antes dos adiados: PDF e um fecho, nesta ordem' do
       # Arrange — toda passada do motor morre antes do `finish!`, seja qual for a que fecha a cotação
       run = cotacao_submetida(cadeia_aberta: true)
       stub_request(:get, url).to_return(pdf_ok)
@@ -332,7 +332,6 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(conteudos.count(fecho)).to eq(1)
       expect(anexos.size).to eq(1)
       expect(conteudos.index(fecho)).to be > conteudos.index(cotacao::Comparativo::LEGENDA)
-      expect(conteudos.index(fecho)).to be > conteudos.index { |texto| texto.include?('2.119,18') }
     end
 
     it 'pelo motor, com a cadeia aberta e o job do fecho pego antes do job do PDF: o fecho sai depois do PDF' do
@@ -353,72 +352,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
   end
 
-  # O FECHO SAI DEPOIS DE TODA ENTREGA ACEITA QUE AINDA NÃO É MENSAGEM (rodada 3 da fatia 1 do PDF rápido). A
-  # revisão da rodada 2 mostrou o fecho encadeado só ao PDF: o lote de preços adiado numa passada anterior
-  # saía depois de "Encerrei a busca de preços por aqui" (sondas N1, N1c e N2). Drenagem passo a passo.
+  # O FECHO SAI DEPOIS DE TODA ENTREGA ACEITA QUE AINDA NÃO É MENSAGEM (rodada 3 da fatia 1 do PDF rápido). Os
+  # exemplos do lote de preços adiado saíram com o lote (fatia 3 do #420); fica o PDF que o encerramento adiou.
   describe 'o fecho depois de toda entrega aceita que ainda nao e mensagem' do
-    it 'a cadeia fecha entre a passada dos precos e a que fecha: PDF, precos e fecho, nesta ordem' do
-      # Arrange — os preços saem adiados com a cadeia aberta; o último pedaço do turno sai antes da passada que fecha
-      run = cotacao_submetida(cadeia_aberta: true)
-      stub_request(:get, url).to_return(pdf_ok)
-      portal_responde('running', leitura_inicial)
-      passada(run, 1)
-      portal_responde('partial', com_desfecho)
-      passada(run, 2)
-      fechar_cadeia(run)
-      passada(run, 3)
-
-      # Act
-      drenar_passo_a_passo
-
-      # Assert
-      expect(run.reload.status).to eq('done')
-      expect(ordem).to eq(%w[pdf precos fecho])
-    end
-
-    it 'com todas as seguradoras cotando (completed), o fecho tambem espera o lote de precos adiado' do
-      # Arrange
-      run = cotacao_submetida(cadeia_aberta: true)
-      stub_request(:get, url).to_return(pdf_ok)
-      todas = [oferta('8', 'quoted', 2119.18), oferta('20', 'quoted', 2323.17), oferta('47', 'quoted', 1999.0)]
-      portal_responde('running', leitura_inicial)
-      passada(run, 1)
-      portal_responde('partial', todas)
-      passada(run, 2)
-      fechar_cadeia(run)
-      portal_responde('completed', todas)
-      passada(run, 3)
-
-      # Act
-      drenar_passo_a_passo
-
-      # Assert
-      expect(ordem).to eq(%w[pdf precos fecho])
-    end
-
-    it 'com a cadeia abortada e o job dos precos atrasado pelo poller, sem falha nenhuma, o fecho sai por ultimo' do
-      # Arrange — o job dos preços anda quatro contagens na espera da passada seguinte, e depois atrasa seis tiques
-      run = cotacao_submetida(cadeia_aberta: true)
-      stub_request(:get, url).to_return(pdf_ok)
-      portal_responde('running', leitura_inicial)
-      passada(run, 1)
-      portal_responde('partial', com_desfecho)
-      passada(run, 2)
-      drenar_passo_a_passo(tiques: 4)
-      passada(run, 3)
-
-      # Act — o job do fecho é pego antes dos outros em cada tique
-      drenar_passo_a_passo(segurar: { 'precos' => 6 }, primeiro: 'fecho')
-
-      # Assert
-      expect(ordem).to eq(%w[pdf precos fecho])
-      expect(anexos.size).to eq(1)
-    end
-
     # A ENTREGA QUE O PRÓPRIO ENCERRAMENTO ADIOU segura o fecho mesmo quando a escrita do aceite falha: o
     # token dela não chega à lista do aceite, e o encerramento o guarda (`@adiada`).
     it 'o fecho do prazo espera o PDF que o encerramento adiou, com a escrita do aceite falhando' do
-      # Arrange — a primeira tentativa do PDF falha no download; os preços saem no teto da cadeia
+      # Arrange — a primeira tentativa do PDF falha no download
       run = cotacao_submetida(cadeia_aberta: true)
       outra_url = 'https://exemplo.test/comparativo-mock-2.pdf'
       allow(mock).to receive(:quote_proposal).and_return({ 'url' => url }, { 'url' => outra_url })
@@ -426,7 +366,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       stub_request(:get, outra_url).to_return(pdf_ok)
       proxima = ate_fechar(run)
       drenar_passo_a_passo
-      expect(ordem).to eq(%w[precos])
+      expect(ordem).to eq([])
       allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
       allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
       allow(run).to receive(:registrar_entrega_aceita!).and_raise(ActiveRecord::StatementInvalid, 'banco fora')
@@ -440,7 +380,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(ordem).to eq(%w[precos pdf fecho])
+      expect(ordem).to eq(%w[pdf fecho])
     end
   end
 
@@ -508,7 +448,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(conteudos.index(fecho)).to be > conteudos.index(cotacao::Comparativo::LEGENDA)
     end
 
-    it 'vencido com o teto de tentativas esgotado: o encerramento nao pede mais, e sai um fecho so' do
+    it 'vencido com o teto de tentativas esgotado: o encerramento nao pede mais, e diz que os valores podem ser pedidos' do
       # Arrange — três passadas de comparativo com o download falhando; a terceira volta recusada e reagenda
       run = cotacao_submetida
       stub_request(:get, url).to_return(pdf_nao_encontrado)
@@ -526,10 +466,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
       expect(mock).to have_received(:quote_proposal).exactly(3).times
       expect(anexos).to be_empty
-      expect(conteudos.count(fecho)).to eq(1)
+      expect(conteudos).to eq([cotacao.valores_message(run.arguments)])
     end
 
-    it 'sem prazo vencido, o teto esgotado encerra done sem o PDF, com um fecho so' do
+    it 'sem prazo vencido, o teto esgotado encerra done sem o PDF, dizendo que os valores podem ser pedidos' do
       # Arrange
       run = cotacao_submetida
       stub_request(:get, url).to_return(pdf_nao_encontrado)
@@ -544,10 +484,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run.status).to eq('done')
       expect(mock).to have_received(:quote_proposal).exactly(3).times
       expect(anexos).to be_empty
-      expect(conteudos.count(fecho)).to eq(1)
+      expect(conteudos).to eq([cotacao.valores_message(run.arguments)])
     end
 
-    it 'vencido com tentativa sobrando e o portal fora: o encerramento pede uma vez, e sai o fecho sem PDF' do
+    it 'vencido com tentativa sobrando e o portal fora: o encerramento pede uma vez, e diz que os valores podem ser pedidos' do
       # Arrange
       run = cotacao_submetida
       allow(mock).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, '504'))
@@ -562,7 +502,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
       expect(mock).to have_received(:quote_proposal).twice
       expect(anexos).to be_empty
-      expect(conteudos.count(fecho)).to eq(1)
+      expect(conteudos).to eq([cotacao.valores_message(run.arguments)])
     end
   end
 
