@@ -116,7 +116,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
   # O GANHO, NA LINHA DO TEMPO: da leitura que vê todas com desfecho até a execução fechar. Antes desta
   # fatia, 21 s; agora, 3 s.
-  it 'da ultima resposta ao fechamento da cotação passam 3 s, com precos, comparativo e fecho' do
+  it 'da ultima resposta ao fechamento da cotação passam 3 s, com comparativo e fecho' do
     run = cotacao_correndo
     portal_responde(todas_com_desfecho)
     inicio = Time.zone.now.change(usec: 0)
@@ -127,7 +127,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     expect(confirmacao - inicio).to eq(3.0)
     expect(run.status).to eq('done')
-    expect(conversation.messages.reload.where(sender_type: 'AgentBot').count).to eq(3)
+    expect(conversation.messages.reload.where(sender_type: 'AgentBot').count).to eq(2)
   end
 
   it 'a confirmação curta respeita a progressão configurada no agente' do

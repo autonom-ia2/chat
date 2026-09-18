@@ -133,6 +133,18 @@ class Autonomia::Agents::Tools::Native::Base
       'Não consegui confirmar o resultado da consulta. Um atendente vai conferir e retomar daqui.'
     end
 
+    # O FECHO DE QUEM TEM RESULTADO GUARDADO QUE NÃO CHEGOU A ELE (fatia 3 do #420): ele pode pedir aqui
+    # mesmo. Publicado pelo encerramento quando `resultado_a_pedir?` responde verdade.
+    def valores_message(_arguments = nil)
+      'O resultado ficou guardado comigo. Se quiser, me peça aqui mesmo.'
+    end
+
+    # -> os papéis cujo texto de recuo aparece nesta mensagem. O publicador registra cada um no log.
+    # A ferramenta que não deixa o agente escrever as frases não tem recuo: [] por padrão.
+    def recuos_em(_texto)
+      []
+    end
+
     # O HANDLE DESTA EXECUÇÃO TEM RESULTADO GUARDADO? (fatia 2 do #420.) Lido por
     # `ToolRun#resultado_obtido?` para contar a execução como pedido feito. De classe: quem pergunta tem a
     # linha, não a ferramenta montada. -> false por padrão.
@@ -312,6 +324,13 @@ class Autonomia::Agents::Tools::Native::Base
   # registrada. Pela mensagem não serve: a adiada ainda não é uma.
   # -> false por padrão: quem não sabe responder não afirma que entregou.
   def resultado_entregue?(_handle)
+    false
+  end
+
+  # O RESULTADO EXISTE E NÃO CHEGOU AO CLIENTE? (fatia 3 do #420.) Verdade quando a ferramenta guardou
+  # resultado e nenhuma entrega dele foi aceita: o fecho diz que ele pode pedir aqui mesmo
+  # (`valores_message`). -> false por padrão.
+  def resultado_a_pedir?(_handle)
     false
   end
 

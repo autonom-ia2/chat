@@ -19,18 +19,28 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
 
   private
 
-  # As três chaves que toda consulta grava: a união das acionadas, a leitura assentada e a união do
-  # resultado por seguradora com as ofertas desta leitura.
+  # O que toda consulta grava: a união das acionadas, a leitura assentada, a união do resultado por
+  # seguradora com as ofertas desta leitura, a união dos códigos de quem cotou (`DELIVERED_KEY`) e, quando
+  # há, o motivo de cada preço sem período (`SEM_PERIODO_KEY`, acumulado entre consultas).
   def marcas_da_leitura(result, leitura, handle)
-    { self.class::ACIONADAS_KEY => acionadas(leitura, handle),
-      self.class::LEITURA_ASSENTADA_KEY => leitura.assentada,
-      RESULTADO_KEY => ::Autonomia::Insurance::ResultadoPorSeguradora.unir(handle[RESULTADO_KEY], result.to_h['offers']) }
+    marcas = { self.class::ACIONADAS_KEY => acionadas(leitura, handle),
+               self.class::LEITURA_ASSENTADA_KEY => leitura.assentada,
+               RESULTADO_KEY => ::Autonomia::Insurance::ResultadoPorSeguradora.unir(handle[RESULTADO_KEY], result.to_h['offers']),
+               self.class::DELIVERED_KEY => cotaram(leitura, handle) }
+    sem_periodo = leitura.sem_periodo
+    return marcas if sem_periodo.empty?
+
+    marcas.merge(self.class::SEM_PERIODO_KEY => handle[self.class::SEM_PERIODO_KEY].to_h.merge(sem_periodo))
+  end
+
+  def cotaram(leitura, handle)
+    Array(handle[self.class::DELIVERED_KEY]).map(&:to_s) | leitura.quoted.map { |oferta| ::Autonomia::Insurance::QuoteOffers.code(oferta) }
   end
 
   # A passada que não fechou a cotação. `handle` é o que a passada recebeu. `confirmar_logo` é verdade
   # quando a próxima leitura, repetindo esta, fecha a cotação (`QuoteOffers#confirma_na_proxima?`).
-  def em_andamento(deliveries, next_handle, leitura, handle)
+  def em_andamento(next_handle, leitura, handle)
     confirmar = leitura.confirma_na_proxima?(handle[self.class::ACIONADAS_KEY])
-    progress_class.running(deliveries: deliveries, handle: next_handle, confirmar_logo: confirmar)
+    progress_class.running(handle: next_handle, confirmar_logo: confirmar)
   end
 end

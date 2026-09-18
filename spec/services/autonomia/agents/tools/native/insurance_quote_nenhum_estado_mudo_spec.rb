@@ -11,7 +11,7 @@ require 'rails_helper'
 # falhar: execução aberta antes desta versão (sem o nó), nó vazio, frases em branco e frases que a
 # peneira reprova. Em todas as quatro sai palavra.
 module DesfalquesDoEspecialista
-  # AS QUATRO FORMAS DE O ESPECIALISTA NÃO ESCREVER. `strict` garante a presença das quatorze
+  # AS QUATRO FORMAS DE O ESPECIALISTA NÃO ESCREVER. `strict` garante a presença das doze
   # chaves, nunca o conteúdo delas — a garantia de que sai palavra é do código, não do modelo.
   FRASES = Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
   NOMES = ['execução aberta antes desta versão (sem o nó)', 'nó vazio',
@@ -77,15 +77,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
   DesfalquesDoEspecialista::NOMES.each do |desfalque|
     describe "com #{desfalque}" do
-      # OS QUATRO TEXTOS DE CLASSE: o motor os publica sem instância — o aviso de espera na primeira
-      # passada, os desfechos no encerramento, inclusive com o agente já apagado.
-      it 'os quatro textos de classe saem' do
+      # OS TEXTOS DE CLASSE: o motor os publica sem instância — o aviso de espera na primeira passada e o
+      # sinal de vida, os desfechos no encerramento, inclusive com o agente já apagado.
+      it 'os textos de classe saem' do
         args = argumentos(desfalque)
 
         expect(described_class.waiting_message(args)).to be_present
         expect(described_class.failure_message(args)).to be_present
         expect(described_class.uncertain_message(args)).to be_present
         expect(described_class.closing_message(args)).to be_present
+        expect(described_class.valores_message(args)).to be_present
       end
 
       it 'a recusa por JSON invalido pede palavra ao cliente' do
@@ -129,43 +130,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(ferramenta(desfalque).start['pedido']).to be_present
       end
 
-      it 'o primeiro lote de precos abre com palavra' do
-        consulta('running', [offer('43', 'Ezze', 2050.40)])
-
-        texto = ferramenta(desfalque).poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1).deliveries.sole
-
-        expect(texto.lines.first.strip).to be_present
-        expect(texto).to include('R$ 2.050,40')
-      end
-
-      it 'o lote seguinte de uma opcao abre com palavra, e sem numero' do
-        consulta('running', [offer('43', 'Ezze', 2050.40), offer('3', 'Mapfre', 2582.76)])
-
-        texto = ferramenta(desfalque).poll(handle: { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'] },
-                                           attempt: 1).deliveries.sole
-
-        expect(texto.lines.first.strip).to be_present
-        expect(texto.lines.first).not_to match(/[0-9]/)
-      end
-
-      it 'o lote seguinte de varias opcoes abre com palavra, e sem numero' do
-        consulta('running', [offer('43', 'Ezze', 2050.40), offer('3', 'Mapfre', 2582.76), offer('9', 'Darwin', 3407.87)])
-
-        texto = ferramenta(desfalque).poll(handle: { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'] },
-                                           attempt: 1).deliveries.sole
-
-        expect(texto.lines.first.strip).to be_present
-        expect(texto.lines.first).not_to match(/[0-9]/)
-      end
-
-      it 'o aviso de renovacao sem bonus sai junto do primeiro preco' do
-        consulta('running', [offer('43', 'Ezze', 2050.40)])
+      # O AVISO DA RENOVAÇÃO SEM BÔNUS SAI NA LEGENDA DO COMPARATIVO (fatia 3 do #420): o primeiro lote de
+      # preços, que o levava, não existe mais.
+      it 'o aviso de renovacao sem bonus sai na legenda do comparativo' do
+        consulta('completed', [offer('43', 'Ezze', 2050.40)])
         handle = { 'quote_id' => 'abc:1', described_class::SEM_BONUS_KEY => true }
 
-        resultado = ferramenta(desfalque).poll(handle: handle, attempt: 1)
+        entregas = ferramenta(desfalque).poll(handle: handle, attempt: 1).deliveries
+        legenda = Autonomia::Agents::Tools::EntregaDeArquivo.de(entregas.sole).legenda
 
-        expect(resultado.deliveries.sole.split("\n\n").last).to be_present
-        expect(resultado.handle[described_class::AVISO_SENT_KEY]).to be(true)
+        expect(legenda.split("\n\n").size).to eq(2)
+        expect(legenda.split("\n\n")).to all(be_present)
       end
 
       it 'o comparativo sai com legenda e com reserva' do
@@ -264,7 +239,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           expect(ultima_palavra).to eq(described_class.failure_message(run.arguments))
         end
 
-        it 'o comparativo que nao sai ate o teto: o done ainda diz o fecho' do
+        # O PDF QUE NÃO SAI (fatia 3 do #420): sem lote de preço, o cliente não tem valor nenhum na tela, e o
+        # fecho diz que ele pode pedir os valores ali mesmo.
+        it 'o comparativo que nao sai ate o teto: o done diz que os valores podem ser pedidos na conversa' do
           allow(mock).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, '504'))
           portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
           run = execucao(desfalque)
@@ -272,10 +249,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           passadas(run, 5, 6, 7)
 
           expect(run.status).to eq('done')
-          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+          expect(ultima_palavra).to eq(described_class.valores_message(run.arguments))
         end
 
-        it 'o download que falha ate o teto: o done diz o fecho, sem link' do
+        it 'o download que falha ate o teto: o done diz que os valores podem ser pedidos, sem link' do
           stub_request(:get, url).to_return(status: 404, body: 'x')
           portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
           run = execucao(desfalque)
@@ -283,7 +260,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           passadas(run, 5, 6, 7, 8)
 
           expect(run.status).to eq('done')
-          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+          expect(ultima_palavra).to eq(described_class.valores_message(run.arguments))
           expect(conversation.messages.reload.map(&:content).join).not_to include(url)
         end
 
@@ -302,7 +279,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
         end
 
-        it 'a linha abandonada esperando nova tentativa do comparativo: o varredor diz o fecho' do
+        it 'a linha abandonada esperando nova tentativa do comparativo: o varredor diz que os valores podem ser pedidos' do
           allow(mock).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, '504'))
           portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
           run = execucao(desfalque)
@@ -312,7 +289,20 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
           expect(run.reload.status).to eq('failed')
-          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+          expect(ultima_palavra).to eq(described_class.valores_message(run.arguments))
+        end
+
+        # O SINAL DE VIDA (fatia 3 do #420): passados dois minutos sem terminar, sai UMA vez a frase de espera.
+        it 'a cotacao que passa de dois minutos sem terminar diz uma vez que continua cuidando' do
+          portal('running', [offer('43', 'Ezze', 2050.40)])
+          run = execucao(desfalque)
+          run.update_columns(created_at: 121.seconds.ago) # rubocop:disable Rails/SkipsModelValidations
+
+          passadas(run, 5, 6)
+
+          expect(run.status).to eq('running')
+          expect(conversation.messages.reload.where(sender_type: 'AgentBot').map(&:content))
+            .to eq([described_class.waiting_message(run.arguments)])
         end
       end
     end
@@ -382,9 +372,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           expect(palavras_do_bot.last).to eq(described_class.closing_message(run.arguments))
         end
 
-        # A ferramenta da Lia lê a cotação cuja chamada teve este desfalque: o que ela anexa ao turno são os itens
-        # do código, e nunca uma frase do especialista ou uma constante.
-        it 'a ferramenta da Lia anexa ao turno os itens de preco, sem frase pronta' do
+        # A ferramenta da Lia lê a cotação cuja chamada teve este desfalque: o que ela devolve ao modelo são os dados
+        # da cotação, e nunca uma frase do especialista ou uma constante. Quem fala é a Lia.
+        it 'a ferramenta da Lia devolve ao modelo os dados de preco, sem frase pronta e sem publicar' do
           fonte = cotacao_viva(desfalque)
           fonte.record_attempt!(handle: { described_class::RESULTADO_KEY =>
                                             Autonomia::Insurance::ResultadoPorSeguradora.unir({}, [offer('43', 'Ezze', 2050.40)]) })
@@ -393,15 +383,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
           ao_modelo = resultado.new(agent: agent, params: { 'seguradora' => nil }, delivery: delivery).call
 
-          expect(delivery.anexos).to eq([Autonomia::Insurance::QuoteOffers.item(offer('43', 'Ezze', 2050.40))])
-          expect(ao_modelo).to include(resultado::LISTA_ANEXADA)
+          expect(ao_modelo).to include('Ezze fez proposta: R$ 2.050,40 no total')
+          expect(described_class::Frases.constantes.values.none? { |frase| ao_modelo.include?(frase) }).to be(true)
           expect(palavras_do_bot).to be_empty
         end
       end
     end
 
-    # SEM PREÇO A ANEXAR, QUEM FALA É A LIA, e ela recebe um texto em todo estado.
-    it 'sem preco a publicar, o modelo recebe texto em todo estado da ferramenta da Lia' do
+    # SEM PREÇO, QUEM FALA É A LIA, e ela recebe um texto em todo estado.
+    it 'sem preco, o modelo recebe texto em todo estado da ferramenta da Lia' do
       delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 7)
       ao_modelo = ->(seguradora) { resultado.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: delivery).call }
       guardado = ->(ofertas) { { described_class::RESULTADO_KEY => Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas) } }

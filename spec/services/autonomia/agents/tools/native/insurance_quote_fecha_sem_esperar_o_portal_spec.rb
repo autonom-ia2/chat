@@ -80,7 +80,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       # Assert
       expect(progresso).to be_done
-      expect(progresso.deliveries.first).to include('R$ 2.119,18')
+      expect(progresso.deliveries.size).to eq(1)
       expect(pdf_de(progresso).url).to eq(url)
       expect(progresso.handle[described_class::FECHADO_KEY]).to be(true)
     end
@@ -91,7 +91,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       progresso = consultar('partial', com_desfecho, { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [] })
 
       expect(progresso).to be_running
-      expect(progresso.deliveries.sole).to include('R$ 2.119,18')
+      expect(progresso.deliveries).to be_empty
       expect(progresso.handle[described_class::FECHADO_KEY]).to be_blank
       expect(connector).not_to have_received(:quote_proposal)
     end
@@ -115,7 +115,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # Act 3 — a mesma lista, de novo
       fechada = consultar('partial', com_desfecho + [oferta('19', 'error')], pronto.handle)
 
-      # Assert — os preços já tinham saído; sai o comparativo
+      # Assert — sai o comparativo
       expect(fechada).to be_done
       expect(fechada.deliveries.size).to eq(1)
       expect(pdf_de(fechada).url).to eq(url)
@@ -148,9 +148,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       allow(connector).to receive(:quote_proposal).and_raise(portal_fora)
       primeira = consultar('partial', com_desfecho, depois_de_uma_leitura('8', '47', '11'))
 
-      # Assert 1 — os preços saem; o fechamento do portal fica gravado; é a primeira tentativa
+      # Assert 1 — nada sai; o fechamento do portal fica gravado; é a primeira tentativa
       expect(primeira).to be_running
-      expect(primeira.deliveries.sole).to include('R$ 2.119,18')
+      expect(primeira.deliveries).to be_empty
       expect(primeira.handle).to include(described_class::FECHADO_KEY => true, tentativas => 1)
 
       # Act 2 — o portal responde

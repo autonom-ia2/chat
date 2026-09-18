@@ -44,9 +44,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   private
 
   # A PASSADA QUE FECHA A COTAÇÃO. -> Tools::Progress.
-  #   - sem comparativo a tentar (`comparativo_por_tentar?` falso: nenhum preço emitido, comparativo
-  #     assumido, ou teto atingido): `done` com as entregas da passada;
-  #   - comparativo gerado: `done` com ele no fim das entregas, e as marcas dele no handle. Se o
+  #   - sem comparativo a tentar (`comparativo_por_tentar?` falso: nenhuma seguradora cotou, comparativo
+  #     assumido, ou teto atingido): `done` sem entrega;
+  #   - comparativo gerado: `done` com ele como entrega, e as marcas dele no handle. Se o
   #     publicador não o aceitar, o motor não encerra (`AsyncRunJob#apply`) e a passada seguinte volta
   #     aqui para decidir por `comparativo_por_tentar?`;
   #   - comparativo que não saiu do portal: `running` enquanto ainda houver tentativa, `done` depois.
@@ -69,24 +69,24 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # depois de aceita. A única fonte real conhecida é o `perform_later` do reagendamento que levanta depois
   # de o Redis já ter gravado o agendamento: `retry_or_fail` reagenda de novo, e a execução passa a ter duas
   # correntes de jobs. Probabilidade desprezível; declarado junto da #418, sem teste no repositório.
-  def fechar(deliveries, handle)
-    return concluir_passada(deliveries, handle) unless comparativo_por_tentar?(handle)
+  def fechar(handle)
+    return concluir_passada([], handle) unless comparativo_por_tentar?(handle)
 
     handle = handle.merge(TENTATIVAS_KEY => handle[TENTATIVAS_KEY].to_i + 1)
     pdf = gerar_comparativo(handle)
     entrega = pdf && progress_class.entregavel(pdf)
-    return sem_comparativo(deliveries, handle) if entrega.nil?
+    return sem_comparativo(handle) if entrega.nil?
 
     marcas = marcas_do_comparativo(entrega).merge(TENTATIVAS_KEY => handle[TENTATIVAS_KEY])
     gravar_na_linha { run.merge_handle!(marcas) } if run
-    concluir_passada(deliveries + [entrega], handle.merge(marcas))
+    concluir_passada([entrega], handle.merge(marcas))
   end
 
   # O comparativo desta passada não saiu: `running` se ainda há tentativa, `done` se não há.
-  def sem_comparativo(deliveries, handle)
-    return progress_class.running(deliveries: deliveries, handle: handle) if comparativo_por_tentar?(handle)
+  def sem_comparativo(handle)
+    return progress_class.running(handle: handle) if comparativo_por_tentar?(handle)
 
-    concluir_passada(deliveries, handle)
+    concluir_passada([], handle)
   end
 
   # `done`, com `Fecho::CONCLUSAO_KEY` no handle (ver `Fecho#resta_entregar?`) e, quando o comparativo
@@ -97,7 +97,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
     progress_class.done(deliveries: deliveries, handle: handle.merge(marcas))
   end
 
-  # -> verdade quando há preço emitido, o teto não foi atingido e o comparativo não foi assumido.
+  # -> verdade quando alguma seguradora cotou, o teto não foi atingido e o comparativo não foi assumido.
   # Também é lida por `Fecho#resta_entregar?`.
   def comparativo_por_tentar?(handle)
     return false if Array(handle[self.class::DELIVERED_KEY]).empty?
@@ -134,7 +134,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
                                quote_id: handle['quote_id'])
     end
     url = proposal.to_h['url'].presence
-    url && entrega_do_comparativo(url)
+    url && entrega_do_comparativo(url, handle)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] comparativo falhou account=#{account.id} #{e.class}")
     nil
@@ -148,9 +148,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # especialista depuradas pela mesma função da saída (`depurar`), sem o link. A identidade de uma
   # entrega de arquivo é `"arquivo:#{url}"` (`EntregaDeArquivo#identidade`): legenda e reserva não a
   # alteram.
-  def entrega_do_comparativo(url)
+  def entrega_do_comparativo(url, handle)
     entrega = ::Autonomia::Agents::Tools::EntregaDeArquivo.new(
-      url: url, nome: nome_do_comparativo, legenda: depurar(frases[:comparativo_legenda]).to_s,
+      url: url, nome: nome_do_comparativo, legenda: depurar(legenda_do_comparativo(handle)).to_s,
       reserva: depurar(frases[:comparativo_reserva]).to_s
     )
     return entrega.to_h if entrega.valida?
@@ -158,6 +158,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
     Rails.logger.warn("[autonomia][insurance] comparativo sem forma de arquivo account=#{account.id} " \
                       "defeito=#{entrega.defeito}; nao sai")
     nil
+  end
+
+  # A LEGENDA LEVA O AVISO DA RENOVAÇÃO SEM BÔNUS (fatia 3 do #420): ele saía junto do primeiro lote de
+  # preços, que deixou de existir, e o comparativo é agora o que leva os preços ao cliente.
+  def legenda_do_comparativo(handle)
+    return frases[:comparativo_legenda] if handle[self.class::SEM_BONUS_KEY].blank?
+
+    "#{frases[:comparativo_legenda]}\n\n#{frases[:aviso_sem_bonus]}"
   end
 
   # O NOME DIZ O QUE O ARQUIVO É, para o cliente achá-lo depois (termo 5): "Comparativo de seguro,

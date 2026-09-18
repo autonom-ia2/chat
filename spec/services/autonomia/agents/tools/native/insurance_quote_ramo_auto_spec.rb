@@ -185,102 +185,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       end
     end
 
+    # O AVISO SAI NA LEGENDA DO COMPARATIVO (fatia 3 do #420): o primeiro lote de preços, que o levava, não existe
+    # mais. O comparativo sai uma vez, e o aviso com ele.
     describe 'aviso de renovação sem bônus' do
-      it 'sai junto do primeiro preço, uma vez só' do
-        # Arrange
+      def legenda(sem_bonus)
         ready_connection
-        resultado = { 'status' => 'running',
+        resultado = { 'status' => 'completed',
                       'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '1', 'name' => 'Ezze' },
                                      'premium' => { 'amount' => 2050.4 } }] }
-        connector = conector_pronto(quote_result: resultado)
+        connector = conector_pronto(quote_result: resultado, quote_proposal: { 'url' => 'https://arquivos.exemplo.test/c.pdf' })
         allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-        handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [],
-                   described_class::SEM_BONUS_KEY => true }
+        handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [], described_class::SEM_BONUS_KEY => sem_bonus }
 
-        # Act
-        primeira = tool.poll(handle: handle, attempt: 1)
-
-        # Assert
-        expect(primeira.deliveries.first).to include('Ezze')
-        expect(primeira.deliveries.first).to include('classe de bônus')
+        Autonomia::Agents::Tools::EntregaDeArquivo.de(tool.poll(handle: handle, attempt: 1).deliveries.sole).legenda
       end
 
-      it 'marca no handle que saiu, para não repetir' do
-        # Arrange
-        ready_connection
-        resultado = { 'status' => 'running',
-                      'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '1', 'name' => 'Ezze' },
-                                     'premium' => { 'amount' => 2050.4 } }] }
-        connector = conector_pronto(quote_result: resultado)
-        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-        handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [],
-                   described_class::SEM_BONUS_KEY => true }
-
-        # Act
-        primeira = tool.poll(handle: handle, attempt: 1)
-
-        # Assert
-        expect(primeira.handle[described_class::AVISO_SENT_KEY]).to be(true)
-      end
-
-      it 'não repete depois de já ter saído' do
-        # Arrange — segunda leva, com a sentinela do aviso já marcada
-        ready_connection
-        resultado = { 'status' => 'running',
-                      'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '2', 'name' => 'Mapfre' },
-                                     'premium' => { 'amount' => 2582.76 } }] }
-        connector = conector_pronto(quote_result: resultado)
-        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-        handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['1'],
-                   described_class::SEM_BONUS_KEY => true,
-                   described_class::AVISO_SENT_KEY => true }
-
-        # Act
-        segunda = tool.poll(handle: handle, attempt: 2)
-
-        # Assert
-        expect(segunda.deliveries.first).to include('Mapfre')
-        expect(segunda.deliveries.first).not_to include('classe de bônus')
-      end
-
-      # `deliver` roda ANTES de `record_attempt!`: uma entrega bloqueada avança o handle com os
-      # códigos das ofertas mesmo assim. Com a regra antiga (só na primeira entrega) o aviso se
-      # perdia para sempre nessa janela. Com sentinela própria, ele sai na leva seguinte.
-      it 'sai numa entrega posterior quando a primeira não chegou a sair' do
-        # Arrange — já há oferta entregue, mas o aviso nunca foi marcado
-        ready_connection
-        resultado = { 'status' => 'running',
-                      'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '2', 'name' => 'Mapfre' },
-                                     'premium' => { 'amount' => 2582.76 } }] }
-        connector = conector_pronto(quote_result: resultado)
-        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-        handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['1'],
-                   described_class::SEM_BONUS_KEY => true }
-
-        # Act
-        segunda = tool.poll(handle: handle, attempt: 2)
-
-        # Assert
-        expect(segunda.deliveries.first).to include('classe de bônus')
-        expect(segunda.handle[described_class::AVISO_SENT_KEY]).to be(true)
+      it 'sai na legenda do comparativo' do
+        expect(legenda(true)).to include('classe de bônus')
       end
 
       it 'não avisa quando a renovação veio com bônus' do
-        # Arrange
-        ready_connection
-        resultado = { 'status' => 'running',
-                      'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '1', 'name' => 'Ezze' },
-                                     'premium' => { 'amount' => 1800.0 } }] }
-        connector = conector_pronto(quote_result: resultado)
-        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-        handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [],
-                   described_class::SEM_BONUS_KEY => false }
-
-        # Act
-        progresso = tool.poll(handle: handle, attempt: 1)
-
-        # Assert
-        expect(progresso.deliveries.first).not_to include('classe de bônus')
+        expect(legenda(false)).not_to include('classe de bônus')
       end
     end
 
@@ -330,43 +255,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(progress.deliveries).to be_empty
     end
 
-    it 'delivers the first prices as soon as they arrive, cheapest first' do
-      # Arrange
+    # A CONSULTA NÃO PUBLICA PREÇO (fatia 3 do #420): grava quem cotou, na ordem da lista de preços.
+    it 'records who quoted, cheapest first, and publishes nothing while the quote runs' do
       allow(connector).to receive(:quote_result).and_return(
         result('running',
                [offer('3', 'Mapfre', 'quoted', 2582.76), offer('43', 'Ezze', 'quoted', 2050.40)])
       )
 
-      # Act
-      progress = tool.poll(handle: { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [] },
-                           attempt: 1)
+      progress = tool.poll(handle: { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [] }, attempt: 1)
 
-      # Assert
-      # A ORDEM É O QUE ESTE EXEMPLO GUARDA — mais barata primeiro. O texto exato mudou de forma em
-      # 08/09/2026 (marcador, negrito do WhatsApp, milhar) e a asserção passou a olhar a ordem, não
-      # a redação: prender o texto inteiro aqui é o que faz melhorar o layout parecer regressão.
-      texto = progress.deliveries.first
-      expect(texto.index('Ezze')).to be < texto.index('Mapfre')
-      expect(texto).to include('*Ezze*: R$ 2.050,40 no total')
+      expect(progress.deliveries).to be_empty
       expect(progress.handle[described_class::DELIVERED_KEY]).to eq(%w[43 3])
-    end
-
-    it 'announces the late ones as a follow-up, never repeating what the customer already read' do
-      # Arrange — é o que impede a segunda mensagem de parecer uma cotação nova
-      allow(connector).to receive(:quote_result).and_return(
-        result('completed',
-               [offer('43', 'Ezze', 'quoted', 2050.40), offer('9', 'Darwin', 'quoted', 3407.87)])
-      )
-
-      # Act
-      progress = tool.poll(handle: { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => ['43'] },
-                           attempt: 5)
-
-      # Assert
-      expect(progress).to be_done
-      expect(progress.deliveries.first).to start_with('Mais uma opção:')
-      expect(progress.deliveries.first).to include('*Darwin*: R$ 3.407,87 no total')
-      expect(progress.deliveries.first).not_to include('Ezze')
     end
 
     it 'never tells the customer that an insurer refused the risk' do
@@ -380,7 +279,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 3)
 
       # Assert
-      expect(progress.deliveries.join).to include('Ezze')
       expect(progress.deliveries.join).not_to include('Justos')
     end
 
@@ -404,37 +302,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     # das 17 seguradoras que a corretora tinha acabado de pagar. Removido em 10/09/2026 por decisão
     # do Rodrigo. Sem este exemplo, alguém preocupado com "poluir a conversa" o traz de volta numa
     # linha, e as opções somem sem ninguém notar.
-    it 'delivers every insurer that quoted — there is NO ceiling on options' do
-      # Arrange
+    it 'keeps every insurer that quoted — there is NO ceiling on options' do
       offers = (1..17).map { |i| offer(i.to_s, "Seguradora#{i}", 'quoted', i * 100) }
-      allow(connector).to receive(:quote_result).and_return(result('completed', offers))
+      allow(connector).to receive(:quote_result).and_return(result('running', offers))
 
-      # Act
       progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
-      # Assert — conta MARCADOR, e não linha: cada oferta ocupa duas linhas mais o espaço entre
-      # elas, e contar linha mediria a formatação em vez do número de opções.
-      expect(progress.deliveries.first.scan('• ').size).to eq(17)
-      expect(progress.deliveries.first).to include('*Seguradora17*')
-    end
-
-    # O que impede afogar o cliente NÃO é teto: é a entrega em lotes. Cada volta manda só o que
-    # chegou desde a anterior, na ordem em que as seguradoras respondem.
-    it 'delivers only what arrived since the last batch' do
-      # Arrange
-      primeiro = [offer('1', 'A', 'quoted', 100), offer('2', 'B', 'quoted', 200)]
-      allow(connector).to receive(:quote_result).and_return(result('partial', primeiro))
-      parcial = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)
-
-      # Act — na volta seguinte chega uma terceira
-      allow(connector).to receive(:quote_result)
-        .and_return(result('completed', primeiro + [offer('3', 'C', 'quoted', 300)]))
-      segunda = tool.poll(handle: parcial.handle, attempt: 2)
-
-      # Assert
-      expect(parcial.deliveries.first.scan('• ').size).to eq(2)
-      expect(segunda.deliveries.first).to include('*C*')
-      expect(segunda.deliveries.first).not_to include('*A*')
+      expect(progress.handle[described_class::DELIVERED_KEY].size).to eq(17)
+      expect(Autonomia::Insurance::ResultadoPorSeguradora.com_preco?(progress.handle[described_class::RESULTADO_KEY])).to be(true)
+      expect(progress.handle[described_class::RESULTADO_KEY].size).to eq(17)
     end
 
     it 'closes with the comparison PDF, one per quote, like the portal does' do
@@ -446,7 +322,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # Act
       progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
-      # Assert — a lista serve para decidir; o PDF é o que o cliente leva adiante. Desde a entrega
+      # Assert — o PDF é o que o cliente leva adiante. Desde a entrega
       # 11 ele sai como ARQUIVO (a forma serializada de `EntregaDeArquivo`). Desde a fatia 1 do PDF
       # rápido (13/09/2026) a reserva não carrega o link do portal: a URL fica só em `url`.
       comparativo = Autonomia::Agents::Tools::EntregaDeArquivo.de(progress.deliveries.last)
@@ -501,10 +377,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           described_class::PRECO_LEGADO_KEY => false, described_class::PRECOS_KEY => [token] }
       end
 
-      # A IDENTIDADE DE CADA ENTREGA É GRAVADA NA PASSADA QUE A EMITE — é a única em que se sabe o
-      # TEXTO, e é dele que o token nasce. Sem este registro o fecho não teria pelo que perguntar, e
-      # voltaria a decidir por `entregues` (o que se emitiu) em vez de pelo aceite.
-      it 'grava a identidade do preco e do comparativo que emitiu' do
+      # A IDENTIDADE DO COMPARATIVO É GRAVADA NA PASSADA QUE O EMITE. Preço não é mais emitido (fatia 3 do #420),
+      # e a cobertura da prova legada fica gravada na primeira consulta desta versão.
+      it 'grava a identidade do comparativo que emitiu, e nenhuma de preco' do
         allow(connector).to receive(:quote_result).and_return(
           result('completed', [offer('43', 'Ezze', 'quoted', 2050.40)])
         )
@@ -512,49 +387,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
         progresso = tool_do_motor.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
-        expect(progresso.handle[described_class::PRECOS_KEY])
-          .to eq([tokens.token_de(run, progresso.deliveries.first)])
-        expect(progresso.handle[described_class::COMPARATIVO_KEY])
-          .to eq(tokens.token_de(run, progresso.deliveries.last))
+        expect(progresso.deliveries.size).to eq(1)
+        expect(progresso.handle[described_class::PRECOS_KEY]).to be_nil
+        expect(progresso.handle[described_class::COMPARATIVO_KEY]).to eq(tokens.token_de(run, progresso.deliveries.last))
         expect(progresso.handle[fechado]).to be(true)
-        # E A COBERTURA DA PROVA LEGADA: esta execução emitiu preço nesta versão, e não havia preço
-        # antes deste lote. É o que impede o `entregues` de valer como prova daqui em diante.
         expect(progresso.handle[described_class::PRECO_LEGADO_KEY]).to be(false)
-      end
-
-      # A IDENTIDADE DO PREÇO É DURÁVEL NA HORA DA EMISSÃO (P1 da rodada 5). Quem persiste o handle
-      # da ferramenta é o motor, no `record_attempt!` do FIM da passada; a lista do aceite é gravada
-      # no meio dela, na hora do aceite. Cruzar as duas era cruzar durabilidades diferentes: morto o
-      # processo entre o aceite e o fim da passada, o cliente ficava com o preço na tela e o fecho
-      # sem identidade por onde perguntar. A LINHA já tem a identidade antes de a passada terminar —
-      # é isto que o exemplo trava, sem passar pelo motor.
-      it 'grava a identidade do preco na LINHA, na hora da emissao, sem esperar o fim da passada' do
-        allow(connector).to receive(:quote_result).and_return(
-          result('partial', [offer('43', 'Ezze', 'quoted', 2050.40)])
-        )
-
-        progresso = tool_do_motor.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)
-
-        token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, progresso.deliveries.first)
-        expect(run.reload.handle[described_class::PRECOS_KEY]).to eq([token])
-        expect(progresso.handle[described_class::PRECOS_KEY]).to eq([token])
-      end
-
-      # E A ESCRITA IMEDIATA É REFORÇO, NUNCA REQUISITO: o valor segue no handle que a passada
-      # devolve. Se ela levantasse, a exceção subiria para o `advance` do motor, que trataria uma
-      # entrega bem-sucedida como falha da consulta — a cotação inteira perdida por causa de uma
-      # escrita de reforço.
-      it 'a escrita imediata que falha nao derruba a entrega que acabou de sair' do
-        allow(connector).to receive(:quote_result).and_return(
-          result('partial', [offer('43', 'Ezze', 'quoted', 2050.40)])
-        )
-        allow(run).to receive(:registrar_identidade_emitida!).and_raise(ActiveRecord::StatementInvalid, 'banco fora')
-
-        progresso = tool_do_motor.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 1)
-
-        expect(progresso.deliveries.first).to include('Ezze')
-        expect(progresso.handle[described_class::PRECOS_KEY])
-          .to eq([Autonomia::Agents::Tools::EntregaPublicada.token_de(run, progresso.deliveries.first)])
       end
 
       # O `compact` DO FECHO É SÓ PARA A IDENTIDADE AUSENTE — e ele estava apagando QUALQUER chave
@@ -586,17 +423,30 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
         expect(Autonomia::Agents::Tools::EntregaDeArquivo.de(entregas.first).url).to eq('https://exemplo.test/comparativo.pdf')
       end
 
-      # E NÃO SE PEDE COMPARATIVO PARA QUEM NÃO TEM PREÇO. `deliver` roda antes de
-      # `record_attempt!`, então uma entrega recusada (conversa encerrada, agente desligado no meio)
-      # avança `entregues` no handle sem que mensagem nenhuma tenha entrado. Nesse estado o motor
-      # pedia ao portal um comparativo de até 60 s para publicá-lo — provavelmente pelo mesmo canal
-      # que acabara de recusar o preço — e o cliente, que precisava da frase honesta de falha, lia
-      # "os preços acima são os que chegaram" sem nada acima.
-      it 'nao pede o comparativo quando o preco nunca chegou ao cliente' do
+      # SEM LOTE DE PREÇO, O ENCERRAMENTO PEDE O COMPARATIVO PARA QUEM TEM PREÇO GUARDADO (fatia 3 do #420): exigir
+      # um lote aceito calaria o comparativo de toda execução que acaba pelo prazo. E a identidade vai à linha,
+      # para o fecho reconhecer o comparativo aceito logo em seguida.
+      it 'pede o comparativo no encerramento quando alguma seguradora cotou, e grava a identidade na linha' do
+        run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 5.minutes.from_now)
         entregas = tool_do_motor.closing_deliveries(handle_com_preco(chegou: false))
+
+        expect(Autonomia::Agents::Tools::EntregaDeArquivo.de(entregas.sole).url).to eq('https://exemplo.test/comparativo.pdf')
+        expect(run.reload.handle[described_class::COMPARATIVO_KEY])
+          .to eq(Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entregas.sole))
+      end
+
+      it 'nao pede o comparativo quando nenhuma seguradora cotou' do
+        entregas = tool_do_motor.closing_deliveries({ 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [] })
 
         expect(entregas).to be_empty
         expect(connector).not_to have_received(:quote_proposal)
+      end
+
+      # O RESULTADO A PEDIR (fatia 3 do #420): preço guardado e nenhum resultado aceito.
+      it 'ha resultado a pedir quando alguma seguradora cotou e nada foi aceito' do
+        expect(tool_do_motor.resultado_a_pedir?(handle_com_preco(chegou: false))).to be(true)
+        expect(tool_do_motor.resultado_a_pedir?(handle_com_preco(chegou: true))).to be(false)
+        expect(tool_do_motor.resultado_a_pedir?(described_class::DELIVERED_KEY => [])).to be(false)
       end
 
       it 'nao repete o comparativo no encerramento se ele ja tinha saido' do
@@ -752,7 +602,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
     # Desde a fatia 1 do PDF rápido (13/09/2026) o PDF que não sai volta `running`, para a passada
     # seguinte pedir de novo (o teto e o esgotamento estão em
-    # `insurance_quote_fecha_sem_esperar_o_portal_spec`). Os preços continuam saindo na mesma passada.
+    # `insurance_quote_fecha_sem_esperar_o_portal_spec`). Os preços continuam guardados.
     it 'keeps the prices when the PDF fails to generate' do
       # Arrange — um PDF que não sai não pode apagar preços que já chegaram
       allow(connector).to receive(:quote_result).and_return(
@@ -765,8 +615,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       # Assert
       expect(progress).to be_running
-      expect(progress.deliveries.join).to include('Ezze')
-      expect(progress.deliveries.join).not_to include('Comparativo')
+      expect(progress.deliveries).to be_empty
+      expect(progress.handle[described_class::DELIVERED_KEY]).to eq(['43'])
     end
 
     it 'fails loudly when the handle lost the quote id' do
@@ -818,11 +668,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       _, progresso = polling_com([offer('5', 'Allianz', 'auth_required'),
                                   offer('8', 'Porto', 'quoted', 1200.0)])
 
-      # Assert
-      texto = progresso.deliveries.join("\n")
-      expect(texto).to include('Porto')
-      expect(texto).not_to include('Allianz')
-      expect(texto.downcase).not_to include('credencial')
+      # Assert — nada é publicado, e a credencial não vira motivo guardado
+      expect(progresso.deliveries).to be_empty
+      expect(progresso.handle[described_class::RESULTADO_KEY]['5']).to eq('nome' => 'Allianz', 'desfecho' => 'sem_proposta')
     end
 
     it 'limpa o registro quando as seguradoras voltam a cotar' do
@@ -862,8 +710,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       { 'insurer' => { 'code' => code, 'name' => name }, 'status' => 'quoted', 'premium' => premium }
     end
 
+    # O preço como a Lia o recebe da ferramenta (`ResultadoDaCotacao#preco`), montado do resultado guardado.
     def texto_para(premium)
-      progresso_para(oferta('8', 'Porto', premium)).deliveries.join("\n")
+      guardado = progresso_para(oferta('8', 'Porto', premium)).handle[described_class::RESULTADO_KEY]
+      run = Autonomia::Agents::ToolRun.new(handle: { described_class::RESULTADO_KEY => guardado })
+      "Porto: #{Autonomia::Insurance::ResultadoDaCotacao.new(run).preco('8')}"
     end
 
     # O motivo que o adapter ESCREVIA para a Bp Assinatura na renovação real de 11/09/2026, quando
@@ -905,7 +756,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       texto = texto_para({ 'amount' => 2167.0, 'currency' => 'BRL', 'basis' => 'unknown' })
 
       # Assert
-      expect(texto).to include('*Porto*: R$ 2.167,00')
+      expect(texto).to include('Porto: R$ 2.167,00')
       expect(texto).not_to include('R$ 2.167,00 no total')
       expect(texto.downcase).not_to include('por mês')
       expect(texto.downcase).not_to include('ao ano')
@@ -955,32 +806,32 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
     # ENTREGA 13, termo 5 — no texto de um lote, o preço sem período nunca aparece na frente de um
     # total pelo número cru: 351,59 sem período não é "mais barato" que 1.321,25 no total.
-    it 'no lote, o preço sem período vem depois dos totais, mesmo com número menor' do
-      texto = progresso_para(
+    it 'na ordem gravada, o preço sem período vem depois dos totais, mesmo com número menor' do
+      ordem = progresso_para(
         oferta('55', 'Bp Assinatura', { 'amount' => 351.59, 'currency' => 'BRL', 'basis' => 'unknown',
                                         'basis_evidence' => motivo_bp }),
         oferta('8', 'Porto', { 'amount' => 1321.25, 'currency' => 'BRL', 'basis' => 'total' })
-      ).deliveries.join("\n")
+      ).handle['entregues']
 
-      expect(texto.index('Porto')).to be < texto.index('Bp Assinatura')
+      expect(ordem).to eq(%w[8 55])
     end
 
     # ASSINATURA MENSAL (11/09/2026, noite) — o cliente lia "R$ 298,43 — a seguradora não informou se
     # é o total ou uma parcela" enquanto o PDF do portal, na mesma conversa, dizia "por mês". Com o
     # adapter lendo o `packageType=1`, o cliente lê "por mês", e a oferta NÃO entra no registro de
     # sem período: o portal informou, e o handle não pode dizer o contrário.
-    it 'no lote, a assinatura mensal sai "por mês" e não entra no registro de sem período' do
+    it 'a assinatura mensal sai "por mês" e não entra no registro de sem período' do
       # Arrange / Act
       progresso = progresso_para(
         oferta('55', 'Bp Assinatura', { 'amount' => 298.43, 'currency' => 'BRL', 'basis' => 'monthly',
                                         'basis_evidence' => motivo_mensal }),
         oferta('8', 'Porto', { 'amount' => 1321.25, 'currency' => 'BRL', 'basis' => 'total' })
       )
-      texto = progresso.deliveries.join("\n")
+      run = Autonomia::Agents::ToolRun.new(handle: progresso.handle)
+      texto = Autonomia::Insurance::ResultadoDaCotacao.new(run).preco('55')
 
       # Assert
-      expect(texto).to include('*Bp Assinatura*: R$ 298,43 por mês')
-      expect(texto).not_to include('não informou se é o total')
+      expect(texto).to eq('R$ 298,43 por mês')
       expect(progresso.handle).not_to have_key('preco_sem_periodo')
       expect(progresso.handle['entregues']).to contain_exactly('55', '8')
     end
@@ -988,16 +839,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     # Períodos diferentes não se comparam pelo número cru: 298,43 por mês não é "mais barato" que
     # 1.321,25 no total, e ×12 seria um número nosso. Bloco dos mensais depois dos totais, antes dos
     # sem período.
-    it 'no lote, a mensal vem depois dos totais e antes dos sem período' do
-      texto = progresso_para(
+    it 'na ordem gravada, a mensal vem depois dos totais e antes dos sem período' do
+      ordem = progresso_para(
         oferta('999', 'Seguradora Exemplo', { 'amount' => 10.0, 'currency' => 'BRL', 'basis' => 'unknown' }),
         oferta('55', 'Bp Assinatura', { 'amount' => 298.43, 'currency' => 'BRL', 'basis' => 'monthly',
                                         'basis_evidence' => motivo_mensal }),
         oferta('8', 'Porto', { 'amount' => 1321.25, 'currency' => 'BRL', 'basis' => 'total' })
-      ).deliveries.join("\n")
+      ).handle['entregues']
 
-      expect(texto.index('Porto')).to be < texto.index('Bp Assinatura')
-      expect(texto.index('Bp Assinatura')).to be < texto.index('Seguradora Exemplo')
+      expect(ordem).to eq(%w[8 55 999])
     end
   end
 

@@ -248,10 +248,10 @@ module ManualDoPrincipalResultado
     RESULTADO.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: delivery)
   end
 
-  # O que o modelo lê, e o que a ferramenta anexou ao turno.
+  # O que o modelo lê, e o que ficou registrado no turno para a conferência da fala.
   def consultar(seguradora, conversa = conversa_com_cotacao)
     ferramenta = no_turno(seguradora, conversa)
-    [ferramenta.call, ferramenta.send(:delivery).anexos]
+    [ferramenta.call, ferramenta.send(:delivery).resultado_do_turno]
   end
 
   # CADA PROMESSA DO BLOCO, PELA FRASE EXATA, E O QUE A SUSTENTA.
@@ -267,20 +267,32 @@ module ManualDoPrincipalResultado
       RESULTADO.openai_schema[:parameters][:required] == ['seguradora'] &&
         ao_modelo.include?('Porto Seguro fez proposta') && ao_modelo.include?('Sancor não fez proposta')
     },
-    # Quem escreve o preço é o código: a ferramenta é síncrona e anexa ao turno o item de `QuoteOffers.item`, que o
-    # `Operate::Responder` entrega depois da resposta.
-    "Quando houver preço para mostrar, a lista vai anexada à sua\nresposta e chega logo depois da sua mensagem." => lambda {
-      ao_modelo, anexos = consultar(nil)
-      item = Autonomia::Insurance::QuoteOffers.item('insurer' => { 'code' => '8', 'name' => 'Porto Seguro' }, 'status' => 'quoted',
-                                                    'premium' => { 'amount' => 2119.18, 'basis' => 'total' })
-      !RESULTADO.async? && anexos == [item] && ao_modelo.include?(RESULTADO::LISTA_ANEXADA) && ao_modelo.exclude?('2.119')
+    # Pedir os preços não abre execução: a ferramenta é síncrona e do principal, e nenhuma cotação nova é aberta.
+    'Pedir os preços não é pedir outra cotação' => lambda {
+      consultar(nil)
+      !RESULTADO.async? && BUILDER::TOOLS_DO_PRINCIPAL.include?(RESULTADO.slug) &&
+        Autonomia::Agents::ToolRun.where(slug: [RESULTADO.slug]).none?
     },
-    # O modelo recebe da ferramenta a mesma regra.
-    'sem valor, sem listar seguradoras e sem travessão.' => lambda {
-      RESULTADO::LISTA_ANEXADA.include?('sem escrever valor, sem listar seguradoras e sem travessão')
+    # A ferramenta devolve ao modelo o valor com o período, e o registra no turno para a conferência (fatia 3).
+    'Quem escreve os preços é você, com os dados que a ferramenta devolve.' => lambda {
+      ao_modelo, turno = consultar(nil)
+      ao_modelo.include?('Porto Seguro fez proposta: R$ 2.119,18 no total') && turno.texto == ao_modelo &&
+        turno.seguradoras.include?('Porto Seguro')
+    },
+    'Escreva só o recorte que a pessoa pediu.' => -> { RESULTADO::COMO_ESCREVER.include?('com o recorte que ele pediu') },
+    # O período vem do adapter e vai junto do valor na linha de cada seguradora (`PremiumText#resumo`).
+    'O período vai sempre junto do valor' => -> { consultar(nil).first.include?('R$ 2.119,18 no total') },
+    # A lista que a ferramenta devolve já separa os períodos (`QuoteOffers#quoted`), e o texto ao modelo repete a regra.
+    'Nunca ordene um valor por mês contra um valor total pelo número cru' => -> { RESULTADO::COMO_ESCREVER.include?('Não ordene') },
+    # A conferência existe e não deixa valor que não está nos dados passar.
+    'O sistema confere a sua resposta' => lambda {
+      _, turno = consultar(nil)
+      Autonomia::Agents::Answerer.private_instance_methods.include?(:conferir_precos) &&
+        Autonomia::Agents::ConferenciaDePrecos.new(turno).publicavel('Porto Seguro: R$ 1.999,00.') { nil } ==
+          Autonomia::Agents::ConferenciaDePrecos::RECUO_SEM_COMPARATIVO
     },
     # Nada fica guardado entre consultas: a segunda lê o que a cotação tem agora, e nenhuma execução é aberta.
-    "Cada consulta mostra o que a cotação\ntem naquele momento." => lambda {
+    'Cada consulta mostra o que a cotação tem naquele momento.' => lambda {
       conversa = conversa_com_cotacao
       cotacao = Autonomia::Agents::ToolRun.find_by!(slug: COTACAO.slug, conversation_id: conversa.last.id)
       antes = consultar('Allianz', conversa).first
@@ -288,8 +300,8 @@ module ManualDoPrincipalResultado
                   'premium' => { 'amount' => 2402.55, 'basis' => 'total' } }
       guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir(cotacao.handle[COTACAO::RESULTADO_KEY], [allianz])
       cotacao.update!(handle: cotacao.handle.merge(COTACAO::RESULTADO_KEY => guardado))
-      depois, anexos = consultar('Allianz', conversa)
-      antes == RESULTADO::NAO_ENCONTRADA && depois.include?('Allianz fez proposta') && anexos.one? &&
+      depois = consultar('Allianz', conversa).first
+      antes == RESULTADO::NAO_ENCONTRADA && depois.include?('Allianz fez proposta: R$ 2.402,55 no total') &&
         Autonomia::Agents::ToolRun.where(slug: RESULTADO.slug).none?
     },
     # O motivo só chega ao modelo quando o pedido nomeia a seguradora: o resultado inteiro não o traz.
@@ -459,7 +471,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('197f319bce3a110da98823bb7d359dbf')
+      expect(Digest::MD5.hexdigest(secao)).to eq('b5bbc4c00099a879ea0877b5a09da28e')
     end
 
     # O ARQUIVO É LIDO COM AS ESCOLHAS SUBSTITUÍDAS (#380): a §7.1 não pode trazer marcador novo.
@@ -524,7 +536,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('429fbe18230433e92c3e07bf14cd4f5f')
+      expect(Digest::MD5.hexdigest(secao)).to eq('9d7fa68356107d16adee94eb60121c70')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do

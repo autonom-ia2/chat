@@ -59,7 +59,8 @@ class Autonomia::Agents::Tools::Encerramento
   # (`ToolRun#delivery_token`), então a pergunta "já houve fecho?" é a pergunta por cada uma. São
   # textos de CLASSE, e é por isso que ela se faz mesmo quando a ferramenta não pôde ser montada.
   #
-  # SÃO QUATRO PAPÉIS, E CADA UM VALE POR DOIS TEXTOS (12/09/2026). Desde que a cotação deixa o
+  # SÃO CINCO PAPÉIS, E CADA UM VALE POR DOIS TEXTOS (12/09/2026; `valores_message` desde a fatia 3 do
+  # #420). Desde que a cotação deixa o
   # especialista escrever as frases, o texto de um papel depende dos ARGUMENTOS da execução; até o
   # deploy, o que saía era a CONSTANTE da classe.
   #
@@ -73,7 +74,7 @@ class Autonomia::Agents::Tools::Encerramento
   # antiga pergunta pelas constantes dela, e `FECHO_COM_RESULTADO` não está entre elas. Voltar atrás
   # só é seguro com o cliente que ainda não recebeu fecho nenhum — está na auditoria, em "Ordem de
   # deploy e rollback".
-  FRASES_DE_FECHO = %i[failure_message uncertain_message partial_message closing_message].freeze
+  FRASES_DE_FECHO = %i[failure_message uncertain_message partial_message closing_message valores_message].freeze
 
   # `trabalho_novo` = esta passada pode INICIAR trabalho novo no portal para produzir uma entrega?
   # Verdadeiro no motor (uma execução por vez, num job que só faz isso); FALSO no varredor — ver
@@ -266,25 +267,35 @@ class Autonomia::Agents::Tools::Encerramento
   # entrega do trabalho, nem entrega do encerramento —, o cliente precisa de uma palavra: a frase de
   # falha, ou a de envio incerto para quem pode ter uma cotação correndo no portal sem registro nosso
   # (entrega 5). O estado é o do BANCO, não o de uma leitura velha.
+  #
+  # ANTES DE TUDO, O RESULTADO QUE NÃO CHEGOU (fatia 3 do #420): com preço guardado e nenhum resultado
+  # aceito, a frase diz que o cliente pode pedir os valores aqui (`valores_a_pedir?`).
+  #
+  # E O RESULTADO JÁ ENTREGUE CONTA MESMO COM O CONTADOR ZERADO: o comparativo que está na conversa com o envio
+  # pendente não foi contado pelo publicador, e até a fatia 3 era o lote de preço que mantinha o contador acima
+  # de zero. A entrega que ESTE encerramento acabou de ter aceita (`entregou`) também conta: com a escrita do
+  # aceite falhando, a lista do aceite não a mostra.
   def fecho(entregou)
-    return falha_ou_incerteza unless entregou || @run.delivered_count.positive?
+    return frase(:valores_message) if !entregou && valores_a_pedir?
+    return falha_ou_incerteza unless entregou || @run.delivered_count.positive? || resultado_entregue?
 
-    parcial
+    parcial(entregou)
   end
 
   def falha_ou_incerteza
     frase(@run.envio_incerto? ? :uncertain_message : :failure_message)
   end
 
-  # A FRASE DE QUEM TERMINOU (`concluir`). Contador zero: a frase de falha. Resultado confirmado pela
-  # ferramenta (`resultado_entregue?`): o fecho de quem tem resultado — sem perguntar se sobrou algo,
-  # porque essa frase não diz que algo ficou pelo caminho. Entrega aceita que não é resultado (a
-  # pergunta pelo dado que falta) ou execução sem agente: nil, nada é publicado.
+  # A FRASE DE QUEM TERMINOU (`concluir`). Resultado guardado que não chegou: a frase de que ele pode pedir os
+  # valores. Resultado confirmado pela ferramenta (`resultado_entregue?`): o fecho de quem tem resultado — sem
+  # perguntar se sobrou algo, porque essa frase não diz que algo ficou pelo caminho. Contador zero: a frase de
+  # falha. Entrega aceita que não é resultado (a pergunta pelo dado que falta) ou execução sem agente: nil.
   def conclusao
+    return frase(:valores_message) if valores_a_pedir?
+    return frase(:closing_message) if resultado_entregue?
     return frase(:failure_message) if @run.delivered_count.zero?
-    return nil unless ferramenta&.resultado_entregue?(handle_da_ferramenta)
 
-    frase(:closing_message)
+    nil
   end
 
   # O FECHO DE QUEM TEM RESULTADO SÓ SAI QUANDO ELE É VERDADE, E QUEM SABE É A FERRAMENTA.
@@ -314,13 +325,26 @@ class Autonomia::Agents::Tools::Encerramento
   # responderam a tempo" —, que contava ao cliente a nossa mecânica de leque; é `closing_message`,
   # que encerra sem contar quantas ficaram pelo caminho. O estado continua produzindo palavra: o
   # que o CEO proibiu foi a frase, não o desfecho.
-  def parcial
+  #
+  # `entregou` é a entrega do encerramento aceita agora (na cotação, o comparativo): é resultado mesmo quando a
+  # escrita do aceite dela falhou.
+  def parcial(entregou)
     return nil if ferramenta.nil?
 
     handle = handle_da_ferramenta
-    return nil unless ferramenta.resultado_entregue?(handle) && ferramenta.resta_entregar?(handle)
+    return nil unless (entregou || ferramenta.resultado_entregue?(handle)) && ferramenta.resta_entregar?(handle)
 
     frase(:closing_message)
+  end
+
+  # A ferramenta confirma que o cliente tem resultado? Sem agente não há ferramenta, e a resposta é não.
+  def resultado_entregue?
+    ferramenta.present? && ferramenta.resultado_entregue?(handle_da_ferramenta)
+  end
+
+  # A ferramenta guardou resultado que não chegou ao cliente? Sem agente não há ferramenta, e a resposta é não.
+  def valores_a_pedir?
+    ferramenta.present? && ferramenta.resultado_a_pedir?(handle_da_ferramenta)
   end
 
   def publicar(entrega)

@@ -116,7 +116,7 @@ module Autonomia
                                 error: 'ai_unavailable') if parsed.nil?
 
         AnswerResult.new(
-          reply: parsed['reply'], confidence: clamp(parsed['confidence'].to_f),
+          reply: conferir_precos(parsed['reply']), confidence: clamp(parsed['confidence'].to_f),
           handoff: { should: parsed['should_handoff'] == true, reason: parsed['handoff_reason'].presence },
           used_knowledge: used_knowledge(parsed['used_snippet_ids'], snippets, parsed),
           answered_from_knowledge: parsed['answered_from_knowledge'] == true,
@@ -125,6 +125,26 @@ module Autonomia
       end
 
       private
+
+      # A FALA COM PREÇO SAI CONFERIDA (fatia 3 do #420). Quando `ver_resultado_da_cotacao` rodou neste turno, a
+      # resposta passa por `ConferenciaDePrecos`, que pode pedir ao modelo uma reescrita (`reescrever`).
+      def conferir_precos(reply)
+        dados = @delivery&.resultado_do_turno
+        return reply if dados.nil? || reply.blank?
+
+        ConferenciaDePrecos.new(dados, conversa: @delivery.conversation&.id).publicavel(reply) do |pedido|
+          reescrever(reply, pedido)
+        end
+      end
+
+      # A reescrita pedida pela conferência: a mesma instrução e a mesma conversa do turno, a fala que não
+      # bateu e o pedido, sem ferramenta. -> o Hash do `ConferenciaDePrecos::REESCRITA`.
+      def reescrever(reply, pedido)
+        input = @prompt.input + [PromptParts::Mensagem.montar('assistant', reply), PromptParts::Mensagem.montar('user', pedido)]
+        raw = @cliente.create(model: Config::ANSWERER_MODEL, instructions: @prompt.instructions, input: input,
+                              schema: ConferenciaDePrecos::REESCRITA, reasoning_effort: Config::ANSWERER_REASONING_EFFORT)
+        JSON.parse(raw[:text])
+      end
 
       # Cinto e suspensório: o Retriever já degrada para [] em erro de embedding/provider
       # (resiliência do Testar). Este rescue defensivo garante que NENHUMA exceção inesperada
@@ -153,14 +173,14 @@ module Autonomia
         credential = Crm::Ai::CredentialResolver.new(account: @agent.account).resolve
         return nil if credential.blank?
 
-        pb = PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets,
-                               images: @images, documents: @documents, audience: @audience)
-        raw = Crm::Ai::ResponsesClient.new(
-          credential: credential, feature: 'agente_resposta', account: @agent.account
-        ).create_with_tool_executor(
+        # O prompt e o cliente ficam na instância: a reescrita pedida pela conferência de preços os reusa.
+        @prompt = PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets,
+                                    images: @images, documents: @documents, audience: @audience)
+        @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: 'agente_resposta', account: @agent.account)
+        raw = @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
-          instructions: pb.instructions,
-          input: pb.input,
+          instructions: @prompt.instructions,
+          input: @prompt.input,
           schema: PromptBuilder::ANSWER_SCHEMA,
           reasoning_effort: Config::ANSWERER_REASONING_EFFORT,
           tools: answer_tools

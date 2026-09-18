@@ -43,9 +43,12 @@
 # é por isso que a lista de emitidos nunca é lida sozinha.)
 #
 # OS ESCRITORES DESSAS CHAVES MORAM AQUI TAMBÉM, e não na classe: quem grava a identidade e quem a
-# lê são o mesmo assunto, e separá-los é como as duas definições do token nasceram. São quatro,
-# todos privados — `token_da_entrega`, `registrar_entrega_de_preco`, `marcar_preco_legado` e
-# `marcas_do_comparativo` —, chamados pelas passadas de emissão (`precos` e `Comparativo#fechar`).
+# lê são o mesmo assunto, e separá-los é como as duas definições do token nasceram. São três, todos
+# privados — `token_da_entrega`, `marcar_preco_legado` e `marcas_do_comparativo` —, chamados pela
+# consulta (`build_progress`), pela passada que fecha (`Comparativo#fechar`) e pelo encerramento.
+#
+# DESDE A FATIA 3 DO #420 NÃO HÁ LOTE DE PREÇO. `PRECOS_KEY` e a prova legada só respondem pelas
+# execuções abertas antes do deploy; para as novas, resultado entregue é o comparativo assumido.
 #
 # Separado da ferramenta pelo mesmo motivo de `Comparativo`, `Declaracao`, `Recusas`, `Envio` e
 # `Veiculo`: é outro assunto, e a classe está no teto de linhas.
@@ -73,20 +76,25 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   # cliente precisa, ali, da frase honesta de falha. A pergunta é a do ACEITE
   # (`resultado_entregue?`).
   #
-  # O QUE DECIDE É `Comparativo#comparativo_por_tentar?`, e não uma sentinela gravada na emissão (rodada 2
-  # da fatia 1 do PDF rápido, 13/09/2026). A sentinela `comparativo_enviado` era gravada quando a entrega
-  # saía da ferramenta, antes do download: um comparativo cujo download falhou nunca era pedido de novo no
-  # prazo. Agora o prazo pede de novo enquanto houver preço emitido, tentativa sobrando e o comparativo não
-  # tiver sido assumido pelo publicador.
+  # O QUE DECIDE É `Comparativo#comparativo_por_tentar?`: alguma seguradora cotou, sobra tentativa e o
+  # comparativo não foi assumido. Até a fatia 3 do #420 ele também exigia um lote de preço aceito; sem
+  # lote, essa condição calaria o comparativo de toda execução que acaba pelo prazo.
+  #
+  # A IDENTIDADE VAI À LINHA ANTES DE O ENCERRAMENTO PUBLICAR, como em `Comparativo#fechar`: é por ela que
+  # `resultado_entregue?`, logo depois, reconhece o comparativo aceito e o fecho não diz ao cliente que
+  # ele pode pedir os valores ao lado do PDF que acabou de chegar.
   def closing_deliveries(handle, trabalho_novo: true)
-    return [] unless trabalho_novo
-    return [] unless resultado_entregue?(handle)
-    return [] unless comparativo_por_tentar?(handle.to_h)
+    return [] unless trabalho_novo && comparativo_por_tentar?(handle.to_h)
 
-    [gerar_comparativo(handle.to_h)].compact
+    entrega = gerar_comparativo(handle.to_h)
+    return [] if entrega.nil?
+
+    gravar_na_linha { run.merge_handle!(marcas_do_comparativo(entrega)) } if run
+    [entrega]
   end
 
-  # RESULTADO DA COTAÇÃO É PREÇO QUE O PUBLICADOR ACEITOU. Nunca o `pedido` — a pergunta pelo dado
+  # RESULTADO DA COTAÇÃO É O QUE O PUBLICADOR ACEITOU: o comparativo e, nas execuções abertas antes da
+  # fatia 3 do #420, o lote de preço. Nunca o `pedido` — a pergunta pelo dado
   # que falta também é uma entrega aceita (`poll` a devolve, e `delivered_count` a conta), e era por
   # ela que uma cotação que só perguntou dados fechava dizendo "o que chegou está aqui em cima" sem
   # nada em cima. E nunca a lista de `entregues`: ela avança na EMISSÃO, mesmo quando a publicação é
@@ -106,6 +114,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
 
     Array(handle[self.class::PRECOS_KEY]).any? { |token| aceita?(token) } || comparativo_assumido?(handle) ||
       prova_legada?(handle)
+  end
+
+  # HÁ PREÇO GUARDADO E NENHUM RESULTADO CHEGOU AO CLIENTE (fatia 3 do #420): o comparativo falhou nas
+  # tentativas, ou a execução acabou antes dele. O encerramento diz então que ele pode pedir os valores
+  # na conversa (`valores_message`), em vez da frase de falha ou do silêncio.
+  def resultado_a_pedir?(handle)
+    handle = handle.to_h
+    Array(handle[self.class::DELIVERED_KEY]).any? && !resultado_entregue?(handle)
   end
 
   # SOBRA ENQUANTO O PORTAL NÃO TIVER FECHADO — e depois dele, enquanto faltar chegar o que já foi
@@ -147,40 +163,6 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
 
   private
 
-  # A IDENTIDADE DA MENSAGEM QUE ESTE PREÇO VAI TER, guardada na passada que o emite — é a única em
-  # que se sabe o TEXTO, e é do texto que o token nasce. É TABELA DE CONSULTA, não prova: quem
-  # responde "chegou?" é a lista do aceite, e esta lista diz por quais identidades perguntar. O
-  # contador da execução não serviria (conta qualquer item aceito, inclusive a pergunta pelo dado
-  # que falta) e a lista de `entregues` também não (são códigos de oferta, não identidades de
-  # entrega). ACUMULA, porque cada lote de preços é uma mensagem.
-  # Sem execução não há token, e aí não se grava nada: o fecho cala, que é o lado conservador.
-  #
-  # E ELA VAI AO BANCO AGORA, junto do handle que a passada devolve (rodada 5). A outra metade do
-  # cruzamento — a lista do ACEITE — é durável no instante do aceite, e esta viajava no handle até
-  # o `record_attempt!` do fim da passada: morto o processo entre uma coisa e a outra (deploy, 25 s
-  # de shutdown do Sidekiq), o cliente ficava com o preço na tela, o aceite registrado e NENHUMA
-  # identidade por onde perguntar — o fecho calava onde a `main` dizia a frase parcial verdadeira.
-  #
-  # O QUE ISSO NÃO COMPRA (rodada 6, medido): o valor CONTINUA no handle que a passada devolve, e
-  # o `record_attempt!` do fim regrava a chave inteira com essa cópia — uma passada que leu o
-  # handle ANTES apaga o token que a outra gravou. Dizer que as duas listas ficaram com a mesma
-  # durabilidade era falso; ver o cabeçalho e a R19 (#418). O handle continua aqui porque ele é a
-  # rede da escrita imediata (`gravar_na_linha` engole a falha), e trocar uma coisa pela outra é a
-  # decisão que a issue carrega.
-  #
-  # `texto` CHEGA AQUI JÁ NA FORMA EM QUE VAI SAIR (12/09/2026). Até esta entrega o token nascia do
-  # texto CRU e o `Progress` ainda o aparava e cortava depois; o publicador então calculava o token
-  # sobre ESSE outro texto, e `resultado_entregue?` cruzava duas listas de universos diferentes —
-  # nunca casava, e nem o comparativo saía. Quem depura agora é `precos`, antes de chamar isto.
-  def registrar_entrega_de_preco(texto, handle, already)
-    handle = marcar_preco_legado(handle, already)
-    token = token_da_entrega(texto)
-    return handle if token.blank?
-
-    gravar_na_linha { run.registrar_identidade_emitida!(self.class::PRECOS_KEY, token) }
-    handle.merge(self.class::PRECOS_KEY => (Array(handle[self.class::PRECOS_KEY]).map(&:to_s) + [token]).uniq)
-  end
-
   # A ESCRITA IMEDIATA É REFORÇO, NUNCA REQUISITO: o valor segue no handle que a passada devolve, e
   # o `record_attempt!` do fim o persiste como sempre — esta escrita só fecha a janela entre os
   # dois. Falhar aqui degrada para o comportamento de antes, e nunca derruba a passada que acabou
@@ -193,16 +175,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   end
 
   # HAVIA PREÇO EMITIDO ANTES DE ESTA VERSÃO COMEÇAR A REGISTRAR O ACEITE? Gravado UMA vez, na
-  # primeira passada desta versão que emite preço nesta execução, e é o que dá COBERTURA à prova
+  # primeira consulta desta versão nesta execução (`build_progress`), e é o que dá COBERTURA à prova
   # legada: sem ele, a única maneira de saber se `entregues` guarda preço de antes seria a presença
   # da chave nova — e presença não é cobertura. Uma linha que atravessou o deploy com preço na tela
   # e emitiu um preço novo (recusado) passava a ser julgada só pelo token novo, e o preço antigo
   # sumia da conta: nem comparativo, nem uma palavra, para quem tinha preço na tela.
   #
-  # `already` são os códigos que a execução já tinha entregue ANTES deste lote: emitidos por esta
-  # versão (e então há token para eles) ou pela anterior (e então não há). Falso é o caso comum — a
-  # execução que nasce depois do deploy —, e é ele que impede o fallback de reabrir a frase falsa da
-  # rodada 1.
+  # `already` é `entregues` antes da consulta desta passada: o que a versão anterior publicou. Falso é o
+  # caso comum — a execução que nasce depois do deploy —, e é ele que impede o fallback de reabrir a
+  # frase falsa da rodada 1.
   def marcar_preco_legado(handle, already)
     return handle if handle.key?(self.class::PRECO_LEGADO_KEY)
 

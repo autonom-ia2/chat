@@ -125,15 +125,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run
   end
 
-  # O PREÇO QUE O PUBLICADOR RECUSOU, PELA CORRENTE INTEIRA: a consulta real emite o lote e a
-  # publicação cai (erro transitório do publicador). O handle avança assim mesmo — `deliver` roda
-  # ANTES de `record_attempt!` —, e o contador não sobe. É o estado em que o fecho que perguntava
-  # ao handle afirmava "os preços acima são os que chegaram" sem nada acima.
-  def cotacao_com_preco_recusado_pelo_publicador
+  # A COTAÇÃO COM PREÇO GUARDADO E NADA NA TELA DO CLIENTE (fatia 3 do #420): a consulta real grava quem cotou e
+  # não publica lote nenhum. O contador fica em zero.
+  def cotacao_com_preco_guardado_e_nada_publicado
     run = abrir_execucao(expires_at: 3.minutes.from_now)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
                                   'quote_id' => cotacao_em_andamento_no_mock })
-    recusar_publicacao_de('Porto Seguro')
     described_class.new.perform(run.id, 1)
     run.reload
   end
@@ -174,52 +171,6 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'cot-1',
                                   cotacao::DELIVERED_KEY => ['4'], 'produto' => 'auto' })
     run
-  end
-
-  # A MESMA LINHA, ainda viva e com o portal respondendo: a consulta DESTA versão emite um preço
-  # novo e a publicação também o recusa. `already` não está vazio, então a cobertura
-  # (`preco_legado`) é gravada como VERDADEIRA — e é por este ramo que o estado falso passava a
-  # valer pelo resto da vida da linha, não só pela ausência da chave.
-  def cotacao_legada_sem_aceite_com_emissao_nova_recusada
-    run = abrir_execucao(expires_at: 3.minutes.from_now)
-    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
-                                  'quote_id' => cotacao_em_andamento_no_mock,
-                                  cotacao::DELIVERED_KEY => ['8'] })
-    recusar_publicacao_de('Mapfre')
-    described_class.new.perform(run.id, 1)
-    run.reload
-  end
-
-  # A MORTE ENTRE O ACEITE E O FIM DA PASSADA (deploy: 25 s de shutdown do Sidekiq). O publicador
-  # ASSUMIU o preço — a mensagem entrou na conversa e o contador da linha subiu — e o
-  # `record_attempt!` que persiste o handle da ferramenta não chegou ao banco. Stubbar essa escrita
-  # é a única forma de parar ENTRE as duas linhas de `apply`; o que se mede depois é o estado do
-  # BANCO, que é tudo o que a passada seguinte (ou o varredor) encontra.
-  def matar_a_passada_antes_de_persistir_o_handle(run)
-    allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
-    allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
-    allow(run).to receive(:record_attempt!).and_return(true)
-  end
-
-  def reviver_a_linha(run)
-    allow(run).to receive(:record_attempt!).and_call_original
-    allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
-  end
-
-  # A ESCRITA DO ACEITE QUE CAI UMA VEZ: uma falha transitória do banco (conexão que volta em
-  # seguida, deadlock, lock timeout) — sem morte de processo nenhuma. É o que a identidade da
-  # entrega sempre soube absorver, porque ela tem uma segunda escrita no fim da passada.
-  def derrubar_a_primeira_escrita_do_aceite(run)
-    allow(Autonomia::Agents::ToolRun).to receive(:find_by).and_call_original
-    allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
-    aceite = Autonomia::Agents::Tools::EntregaAceita::CHAVE
-    escritas = 0
-    allow(run).to receive(:anexar_ao_handle!).and_wrap_original do |original, chave, token|
-      escritas += 1 if chave == aceite
-      raise ActiveRecord::StatementInvalid, 'banco fora' if escritas == 1 && chave == aceite
-
-      original.call(chave, token)
-    end
   end
 
   # A PUBLICAÇÃO QUE FALHA no meio, como ela falha de verdade: o publicador nunca levanta para fora
@@ -296,32 +247,30 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
-  # EMITIR NÃO É ENTREGAR (P1 da rodada 1, 12/09/2026) — e aqui a recusa acontece pela CORRENTE
-  # INTEIRA: a consulta real emite o lote de preços e a publicação cai. Com `entregues` no handle e
-  # NENHUMA publicação aceita, o fecho que perguntava ao handle mandava o motor gerar o comparativo
-  # — login mais uma chamada de até 60 s ao portal — e ainda publicava "algumas seguradoras não
-  # responderam a tempo, os preços acima são os que chegaram" sem nada acima. Na `main`, esse
-  # estado lia a frase honesta de falha, que é o que ele volta a ler.
-  #
-  # É ESTE EXEMPLO QUE IMPEDE A PROVA LEGADA DE VIRAR FALLBACK INCONDICIONAL: a linha tem
-  # `entregues` com um código, e mesmo assim não afirma nada — porque a marca de cobertura
-  # (`preco_legado`), gravada pela emissão real, diz que não havia preço antes.
-  #
-  # O PORTAL NÃO É CHAMADO, e este exemplo o prova por construção: o PDF do conector `mock` não
-  # está stubbado aqui, então qualquer pedido de comparativo acrescentaria uma mensagem (o link de
-  # reserva) à lista abaixo.
-  it 'a cotacao cujo preco nunca chegou ao cliente fecha com a frase de falha, e nao pede comparativo' do
-    # Arrange
-    run = cotacao_com_preco_recusado_pelo_publicador
+  # SEM LOTE DE PREÇO, O PRAZO PEDE O COMPARATIVO PARA QUEM TEM PREÇO GUARDADO (fatia 3 do #420). A consulta não
+  # publicou nada, o contador está em zero, e ainda assim o cliente recebe o comparativo e o fecho de quem tem
+  # resultado: exigir um lote aceito deixaria toda cotação que acaba pelo prazo sem PDF.
+  it 'a cotacao com preco guardado e nada na tela recebe o comparativo e o fecho quando o prazo estoura' do
+    run = cotacao_com_preco_guardado_e_nada_publicado
+    expect(bot_contents).to be_empty
     run.update!(expires_at: 1.minute.ago)
+    stub_comparativo_pdf
 
-    # Act
     described_class.new.perform(run.id, 5)
 
-    # Assert
-    expect(bot_contents).to eq([cotacao.failure_message])
-    expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
-    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado', delivered_count: 0)
+    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+  end
+
+  # E O PDF QUE NÃO SAI NO ENCERRAMENTO: o fecho diz que os valores podem ser pedidos na conversa.
+  it 'a cotacao com preco guardado cujo comparativo nao sai no prazo diz que os valores podem ser pedidos' do
+    run = cotacao_com_preco_guardado_e_nada_publicado
+    run.update!(expires_at: 1.minute.ago)
+    stub_request(:get, 'https://exemplo.test/comparativo-mock.pdf').to_return(status: 404, body: 'x')
+
+    described_class.new.perform(run.id, 5)
+
+    expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
   end
 
   # NÃO-REGRESSÃO DA COTAÇÃO (Codex, P2). O `fail_run` deixou de filtrar por `delivered_count` e
@@ -364,34 +313,6 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
-  # A CORRENTE INTEIRA, PELO CAMINHO REAL: a consulta publica o preço, grava a IDENTIDADE dele no
-  # handle na mesma passada, e o fecho a usa para saber que o cliente tem preço na tela. É o que dá
-  # consumidor ao `conversation:`/`run:` que o motor passa à ferramenta — sem eles não há
-  # `execution_key` de onde tirar o token, e o handle sai sem identidade nenhuma.
-  it 'a consulta grava a identidade do preco que publicou, e o fecho a usa' do
-    # Arrange — execução VIVA e submetida, com a cotação já em andamento no mock
-    run = abrir_execucao(expires_at: 3.minutes.from_now)
-    parcial_em = Autonomia::Insurance::Connector::Mock::PARTIAL_AFTER.to_i
-    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
-                                  'quote_id' => "mock-#{Time.current.to_i - parcial_em}:1" })
-
-    # Act 1 — a consulta
-    described_class.new.perform(run.id, 1)
-
-    # Assert 1 — o token no handle é o da MENSAGEM que entrou na conversa
-    token = Array(run.reload.handle[cotacao::PRECOS_KEY]).first
-    expect(token).to be_present
-    expect(Autonomia::Agents::Tools::EntregaPublicada.para(conversation, token)).to be_present
-
-    # Act 2 — o prazo estoura
-    run.update!(expires_at: 1.minute.ago)
-    stub_comparativo_pdf
-    described_class.new.perform(run.id, 5)
-
-    # Assert 2 — o fecho reconhece o preço que está na tela
-    expect(bot_contents.last).to eq(cotacao::FECHO_COM_RESULTADO)
-  end
-
   # A JANELA DO DEPLOY NÃO PODE CUSTAR O COMPARATIVO NEM O FECHO (P1 da rodada 3, 12/09/2026).
   #
   # A rodada 2 fez o fecho perguntar pela MENSAGEM, e a pergunta se faz pelo token que a passada
@@ -424,23 +345,21 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # do fim da passada regravaria a lista com a cópia velha — o token recém-aceito sumiria, e o fecho
   # de uma linha abandonada depois diria que o comparativo não chegou.
   it 'a lista do aceite acumula entre passadas e sobrevive ao handle da ferramenta' do
-    # Arrange — cotação em andamento; a segunda consulta acontece com o portal já fechado
+    # Arrange — cotação em andamento, com um aceite anterior já registrado na linha
     run = abrir_execucao(expires_at: 3.minutes.from_now)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
                                   'quote_id' => cotacao_em_andamento_no_mock })
     stub_comparativo_pdf
-
-    # Act — duas passadas com entrega: o primeiro lote de preços, e depois o resto mais o comparativo
     described_class.new.perform(run.id, 1)
-    aceitas_na_primeira = Array(run.reload.handle[Autonomia::Agents::Tools::EntregaAceita::CHAVE])
+    run.reload.registrar_entrega_aceita!('aceite-anterior')
+
+    # Act — a passada que fecha a cotação e entrega o comparativo
     travel_to(Autonomia::Insurance::Connector::Mock::COMPLETE_AFTER.from_now) { described_class.new.perform(run.id, 2) }
 
-    # Assert — a primeira continua lá, e as duas novas entraram
+    # Assert — o aceite anterior continua lá, e o do comparativo entrou
     aceitas = Array(run.reload.handle[Autonomia::Agents::Tools::EntregaAceita::CHAVE])
-    expect(aceitas_na_primeira.size).to eq(1)
-    expect(aceitas).to start_with(aceitas_na_primeira)
-    expect(aceitas.size).to eq(3)
-    expect(run.delivered_count).to eq(3)
+    expect(aceitas).to eq(['aceite-anterior', run.handle[cotacao::COMPARATIVO_KEY]])
+    expect(run.delivered_count).to eq(1)
   end
 
   # E PELA PORTA DO VARREDOR TAMBÉM (rodada 4). A linha que atravessa o deploy é fechada pelas
@@ -471,17 +390,17 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # O gatilho é o adiamento NORMAL (até 90 s), não uma avaria: a passada que entrega o preço com a
   # cadeia aberta e a passada seguinte, que encontra o prazo vencido, ficam a um intervalo de
   # distância uma da outra.
-  it 'a entrega ADIADA conta como resultado: o cliente recebe preco, comparativo e fecho' do
+  it 'a entrega ADIADA conta como resultado: o cliente recebe comparativo e fecho' do
     # Arrange — cadeia do turno em curso (um pedaço esperado, nenhum postado) e cotação respondendo
     run = abrir_execucao(expires_at: 3.minutes.from_now, cadeia: 1, origem: 4242)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
                                   'quote_id' => cotacao_em_andamento_no_mock })
     stub_comparativo_pdf
 
-    # Act 1 — a consulta publica o preço, e a cadeia aberta o ADIA
+    # Act 1 — a consulta grava o preço e não publica nada
     described_class.new.perform(run.id, 1)
     expect(bot_contents).to be_empty
-    expect(run.reload.delivered_count).to eq(1)
+    expect(run.reload.delivered_count).to eq(0)
 
     # Act 2 — o prazo estoura antes de a publicação adiada sair
     run.update!(expires_at: 1.minute.ago)
@@ -493,10 +412,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(bot_contents).to eq(['deixa eu consultar aqui'])
     drenar_publicacoes_adiadas
 
-    # Assert — as três entregas do motor, na ordem em que foram aceitas
-    entregas = bot_contents.drop(1)
-    expect(entregas.first).to include('Porto Seguro')
-    expect(entregas.drop(1)).to eq([cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
+    # Assert — o comparativo adiado e o fecho encadeado a ele, nesta ordem
+    expect(bot_contents.drop(1)).to eq([cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
@@ -536,16 +453,18 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   #
   # O PORTAL NÃO É CHAMADO, e isto se prova por construção: o PDF do conector `mock` não está
   # stubbado aqui, então qualquer pedido de comparativo acrescentaria o link de reserva à lista.
-  it 'a linha legada sem aceite nenhum fecha com a frase de falha, e nao pede comparativo' do
+  # DESDE A FATIA 3 DO #420 o preço guardado basta para o comparativo sair no prazo: o cliente sem nada na tela
+  # recebe o PDF e o fecho de quem tem resultado, e não a frase de falha sobre uma cotação que deu preço.
+  it 'a linha legada sem aceite nenhum recebe o comparativo e o fecho' do
     # Arrange
     run = cotacao_legada_sem_aceite_nenhum
+    stub_comparativo_pdf
 
     # Act — a porta do MOTOR
     described_class.new.perform(run.id, 5)
 
     # Assert
-    expect(bot_contents).to eq([cotacao.failure_message])
-    expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
+    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado', delivered_count: 0)
   end
 
@@ -555,113 +474,17 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # `delivered_count` — zero nesta linha, o que já leva à frase de falha. O exemplo fica como trava
   # da PORTA (o estado existe em produção e ela tem de continuar honesta), não como prova da
   # correção: quem a prova é o exemplo do motor, acima.
-  it 'o varredor tambem fecha com a frase de falha a linha legada sem aceite nenhum' do
+  it 'o varredor fecha a linha legada sem aceite nenhum dizendo que os valores podem ser pedidos' do
     # Arrange
     run = cotacao_legada_sem_aceite_nenhum
     run.update!(expires_at: 10.minutes.ago)
 
-    # Act — a porta do VARREDOR
+    # Act — a porta do VARREDOR, que não pede o comparativo
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert
-    expect(bot_contents).to eq([cotacao.failure_message])
+    expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
-  end
-
-  # O RAMO DA MARCA, que é o que tornava o estado falso PERMANENTE: a emissão nova (também
-  # recusada) grava `preco_legado` como verdadeira, e a partir daí a linha afirmava resultado pelo
-  # resto da vida dela, sem nunca ter entregado nada.
-  it 'a emissao nova recusada nao vira prova na linha legada que nunca entregou nada' do
-    # Arrange — a cobertura gravada como verdadeira pela emissão real, e nada na tela do cliente
-    run = cotacao_legada_sem_aceite_com_emissao_nova_recusada
-    expect(bot_contents).to be_empty
-    expect(run.handle[cotacao::PRECO_LEGADO_KEY]).to be(true)
-
-    # Act — o prazo estoura, pela porta do MOTOR
-    run.update!(expires_at: 1.minute.ago)
-    described_class.new.perform(run.id, 5)
-
-    # Assert
-    expect(bot_contents).to eq([cotacao.failure_message])
-    expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
-    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado', delivered_count: 0)
-  end
-
-  # A METADE NÃO DURÁVEL DO CRUZAMENTO (P1 da rodada 5).
-  #
-  # A lista do ACEITE é gravada na hora do aceite, num UPDATE. A TABELA DE CONSULTA — quais
-  # identidades são preço — viajava no handle da ferramenta e só chegava ao banco no
-  # `record_attempt!` do FIM da passada. Morto o processo entre as duas (o deploy é o caso comum), o
-  # cliente tem o preço na tela, o aceite está registrado, e não há identidade nenhuma por onde
-  # perguntar: o fecho desta PR ficava em SILÊNCIO onde a `main` dizia a frase parcial verdadeira.
-  # É o incidente de 08/09/2026 pela porta estreita.
-  it 'o preco aceito nao se perde quando a passada morre antes de persistir o handle' do
-    # Arrange — execução viva, cotação já respondendo no mock
-    run = abrir_execucao(expires_at: 3.minutes.from_now)
-    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
-                                  'quote_id' => cotacao_em_andamento_no_mock })
-    matar_a_passada_antes_de_persistir_o_handle(run)
-
-    # Act 1 — a consulta publica o preço e a passada morre antes de gravar o handle
-    described_class.new.perform(run.id, 1)
-    expect(bot_contents.sole).to include('Porto Seguro')
-    expect(run.reload.handle).not_to have_key(cotacao::DELIVERED_KEY)
-    expect(run.delivered_count).to eq(1)
-
-    # Act 2 — o prazo estoura e a passada seguinte encerra, pela porta do MOTOR
-    reviver_a_linha(run)
-    run.update!(expires_at: 1.minute.ago)
-    described_class.new.perform(run.id, 5)
-
-    # Assert — o fecho reconhece o preço que está na tela
-    expect(bot_contents.last).to eq(cotacao::FECHO_COM_RESULTADO)
-    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-  end
-
-  it 'o varredor tambem reconhece o preco aceito cujo handle nunca foi persistido' do
-    # Arrange
-    run = abrir_execucao(expires_at: 3.minutes.from_now)
-    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
-                                  'quote_id' => cotacao_em_andamento_no_mock })
-    matar_a_passada_antes_de_persistir_o_handle(run)
-    described_class.new.perform(run.id, 1)
-    run.update!(expires_at: 10.minutes.ago)
-
-    # Act — a porta do VARREDOR, com a linha relida do banco
-    Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
-
-    # Assert
-    expect(bot_contents.last).to eq(cotacao::FECHO_COM_RESULTADO)
-    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
-  end
-
-  # A ASSIMETRIA DAS DUAS ESCRITAS (Codex, rodada 6). A identidade da entrega falha macio: o valor
-  # segue no handle e o `record_attempt!` do fim da passada o persiste. O ACEITE não tinha esse
-  # caminho — era uma escrita só —, e bastava uma falha transitória do banco, SEM morte de
-  # processo, para o encerramento sumir: o fecho lia "nada aceito", `closing_deliveries` devolvia
-  # `[]` e a frase parcial virava silêncio, onde a `main` falava pelo contador. Agora o token
-  # pendente é reescrito no mesmo `record_attempt!` — a mesma rede, no mesmo instante.
-  it 'o aceite cuja escrita falhou no meio da passada nao custa o fecho ao cliente' do
-    # Arrange — execução viva, cotação já respondendo no mock
-    run = abrir_execucao(expires_at: 3.minutes.from_now)
-    run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
-                                  'quote_id' => cotacao_em_andamento_no_mock })
-    derrubar_a_primeira_escrita_do_aceite(run)
-
-    # Act 1 — a consulta publica o preço e a escrita do aceite cai
-    described_class.new.perform(run.id, 1)
-    preco = bot_contents.sole
-    expect(preco).to include('Porto Seguro')
-    expect(run.reload.delivered_count).to eq(1)
-
-    # Act 2 — o prazo estoura e a passada seguinte encerra
-    run.update!(expires_at: 1.minute.ago)
-    stub_comparativo_pdf
-    described_class.new.perform(run.id, 5)
-
-    # Assert — o cliente recebe o comparativo e o fecho de quem tem preço, e não o silêncio
-    expect(bot_contents).to eq([preco, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
-    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
   it 'publica o fecho de quem tem resultado quando o prazo estoura com preço ja entregue' do

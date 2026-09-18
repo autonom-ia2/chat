@@ -237,12 +237,12 @@ module PromessasDasFrasesDoEspecialista
 
   PROMESSAS = {
     # O manual só pode pedir que o especialista escreva as frases do cliente porque a ferramenta tem
-    # ONDE recebê-las: o nó de quatorze folhas no formulário. Tire o nó dos parâmetros e a §2.1 vira
+    # ONDE recebê-las: o nó de doze folhas no formulário. Tire o nó dos parâmetros e a §2.1 vira
     # ordem impossível — ele escreveria num campo inexistente e o cliente leria o texto fixo de
     # sempre, sem ninguém reclamar.
     'Quem escreve essas frases é você' => lambda {
       Autonomia::Agents::Tools::Native::InsuranceQuote.params.any? { |p| p['name'] == FRASES::NO } &&
-        FRASES::ORDEM.size == 14
+        FRASES::ORDEM.size == 12
     },
     # A OUTRA METADE: o manual afirma que a frase proibida é trocada por um texto padrão, e não que
     # ela some. Só é verdade porque TODA constante de recuo passa pela própria peneira — uma que não
@@ -267,12 +267,9 @@ module PromessasDasFrasesDoEspecialista
       PENEIRA.vetar('Segue o comparativo — com tudo').nil? &&
         PENEIRA.depurar('Porto — Cia', teto: 100) == 'Porto - Cia'
     },
-    # E O ITEM DA LISTA SEGUE A MESMA REGRA: era o travessão que separava o nome do valor.
+    # O RECUO QUE SAI NO LUGAR DA FRASE TAMBÉM SEGUE A REGRA: nenhuma constante de recuo leva travessão.
     'use dois pontos, vírgula ou ponto final' => lambda {
-      item = Autonomia::Insurance::QuoteOffers.item(
-        'insurer' => { 'name' => 'Ezze' }, 'premium' => { 'amount' => 2050.4, 'basis' => 'total' }
-      )
-      item.include?('*Ezze*: R$') && item.exclude?('—')
+      FRASES.constantes.values.none? { |texto| texto.match?(/[—–]/) }
     }
   }.freeze
 end
@@ -333,7 +330,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('7bc8f74cf35533a82678d17b752ff338')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('b0a5a0c3d41ae4b555c66cd31e95cd78')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do
