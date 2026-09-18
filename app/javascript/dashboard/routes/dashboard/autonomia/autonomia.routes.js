@@ -1,5 +1,9 @@
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
-import { AUTONOMIA_PERMISSIONS } from 'dashboard/constants/permissions.js';
+import {
+  AUTONOMIA_PERMISSIONS,
+  PROSPECTING_PERMISSIONS,
+  INSURANCE_PERMISSIONS,
+} from 'dashboard/constants/permissions.js';
 import store from 'dashboard/store';
 
 // Lazy-loaded pages (owned by HUB / CONSTRUTOR / PAINEL implementers).
@@ -15,9 +19,15 @@ const ProspectingListsPage = () =>
 const InviteConnectionPage = () => import('./pages/InviteConnectionPage.vue');
 const InsurancePage = () => import('./insurance/pages/InsurancePage.vue');
 
-// Prospecting and insurance stay admin-only (their backends enforce it).
-const meta = {
-  permissions: ['administrator'],
+// Prospecção e Cotação (#452): Ver lê, Editar escreve; o backend aplica o mesmo corte.
+const prospectingMeta = {
+  permissions: ['administrator', ...PROSPECTING_PERMISSIONS],
+};
+const prospectingManageMeta = {
+  permissions: ['administrator', 'prospecting_manage'],
+};
+const insuranceMeta = {
+  permissions: ['administrator', ...INSURANCE_PERMISSIONS],
 };
 
 // Agentes Autonom.ia (#452): custom roles with autonomia_view see and test agents; creating
@@ -127,21 +137,21 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/autonomia/prospecting/search'),
     name: 'autonomia_prospecting_search',
-    meta,
+    meta: prospectingMeta,
     beforeEnter: ensureProspectingEnabled,
     component: ProspectingSearchPage,
   },
   {
     path: frontendURL('accounts/:accountId/autonomia/prospecting/lists'),
     name: 'autonomia_prospecting_lists',
-    meta,
+    meta: prospectingMeta,
     beforeEnter: ensureProspectingEnabled,
     component: ProspectingListsPage,
   },
   {
     path: frontendURL('accounts/:accountId/autonomia/prospecting/settings'),
     name: 'autonomia_prospecting_settings',
-    meta,
+    meta: prospectingManageMeta,
     beforeEnter: ensureProspectingEnabled,
     redirect: to => ({
       name: 'settings_prospecting_index',
@@ -151,7 +161,7 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/autonomia/insurance'),
     name: 'autonomia_insurance',
-    meta,
+    meta: insuranceMeta,
     beforeEnter: ensureInsuranceEnabled,
     redirect: to => ({
       name: 'autonomia_insurance_connections',
@@ -161,7 +171,7 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/autonomia/insurance/connections'),
     name: 'autonomia_insurance_connections',
-    meta,
+    meta: insuranceMeta,
     beforeEnter: ensureInsuranceEnabled,
     component: InsurancePage,
     props: { tab: 'connections' },
@@ -169,7 +179,7 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/autonomia/insurance/agent'),
     name: 'autonomia_insurance_agent',
-    meta,
+    meta: insuranceMeta,
     beforeEnter: ensureInsuranceEnabled,
     component: InsurancePage,
     props: { tab: 'agent' },

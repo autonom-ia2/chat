@@ -4,7 +4,7 @@ class SlaPolicyPolicy < ApplicationPolicy
   end
 
   def update?
-    @account_user.administrator?
+    @account_user.permission_granted?('sla_manage')
   end
 
   def show?
@@ -12,10 +12,10 @@ class SlaPolicyPolicy < ApplicationPolicy
   end
 
   def create?
-    @account_user.administrator?
+    @account_user.permission_granted?('sla_manage')
   end
 
   def destroy?
-    @account_user.administrator?
+    @account_user.permission_granted?('sla_manage')
   end
 end

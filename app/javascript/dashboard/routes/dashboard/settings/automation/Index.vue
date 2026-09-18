@@ -13,11 +13,13 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import TabBar from 'dashboard/components-next/tabbar/TabBar.vue';
 import { BaseTable } from 'dashboard/components-next/table';
 import { DEFAULT_DELAY_MINUTES } from './constants';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
 const confirmDialog = ref(null);
+const canManage = useCanManage('automation_manage');
 
 const loading = ref({});
 const addDialogRef = ref(null);
@@ -278,7 +280,7 @@ const tableHeaders = computed(() => {
             {{ $t('AUTOMATION.COUNT', { n: visibleRecords.length }) }}
           </span>
         </template>
-        <template #actions>
+        <template v-if="canManage" #actions>
           <Button
             :label="$t('AUTOMATION.HEADER_BTN_TXT')"
             size="sm"

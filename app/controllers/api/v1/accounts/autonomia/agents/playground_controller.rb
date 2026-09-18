@@ -1,5 +1,5 @@
 class Api::V1::Accounts::Autonomia::Agents::PlaygroundController < Api::V1::Accounts::Autonomia::BaseController
-  # Herda BaseController: gate de feature flag (404 com flag off) + ensure_autonomia_permission +
+  # Herda BaseController: gate de feature flag (404 com flag off) + check_autonomia_permission +
   # agents_scope (isolamento por conta). Sandbox puro: nada é persistido, não há conversa/inbox real.
   before_action :fetch_agent
 
@@ -26,8 +26,8 @@ class Api::V1::Accounts::Autonomia::Agents::PlaygroundController < Api::V1::Acco
   private
 
   # Testar é leitura: "Ver" inclui testar o agente no playground (#452).
-  def autonomia_permission_key
-    'autonomia_view'
+  def check_autonomia_permission
+    check_permission_granted!('autonomia_view')
   end
 
   def fetch_agent

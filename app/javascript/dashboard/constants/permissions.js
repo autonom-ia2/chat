@@ -13,6 +13,12 @@ export const AUTONOMIA_PERMISSIONS = ['autonomia_view', 'autonomia_manage'];
 export const CAMPAIGN_PERMISSIONS = ['campaign_view', 'campaign_manage'];
 export const INBOX_PERMISSIONS = ['inbox_view', 'inbox_manage'];
 export const CANNED_RESPONSE_MANAGE_PERMISSION = 'canned_response_manage';
+export const PROSPECTING_PERMISSIONS = [
+  'prospecting_view',
+  'prospecting_manage',
+];
+export const INSURANCE_PERMISSIONS = ['insurance_view', 'insurance_manage'];
+export const AUTOMATION_PERMISSIONS = ['automation_view', 'automation_manage'];
 
 export const ROLES = ['agent', 'administrator'];
 

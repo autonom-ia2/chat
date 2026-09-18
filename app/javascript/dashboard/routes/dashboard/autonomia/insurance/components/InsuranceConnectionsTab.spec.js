@@ -9,6 +9,11 @@ const api = vi.hoisted(() => ({
   rescan: vi.fn(),
   removeConnection: vi.fn(),
 }));
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { ref } = await import('vue');
+  return { useCanManage: () => ref(true) };
+});
+
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: api }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 

@@ -70,6 +70,14 @@ export const MODULE_GROUPS = [
         key: 'AUTONOMIA',
         levels: { view: 'autonomia_view', manage: 'autonomia_manage' },
       },
+      {
+        key: 'PROSPECTING',
+        levels: { view: 'prospecting_view', manage: 'prospecting_manage' },
+      },
+      {
+        key: 'INSURANCE',
+        levels: { view: 'insurance_view', manage: 'insurance_manage' },
+      },
     ],
   },
   {
@@ -88,6 +96,19 @@ export const MODULE_GROUPS = [
         key: 'INBOXES',
         levels: { view: 'inbox_view', manage: 'inbox_manage' },
       },
+    ],
+  },
+  {
+    key: 'SETTINGS',
+    modules: [
+      {
+        key: 'AUTOMATIONS',
+        levels: { view: 'automation_view', manage: 'automation_manage' },
+      },
+      { key: 'LABELS', levels: { manage: 'label_manage' } },
+      { key: 'ATTRIBUTES', levels: { manage: 'attribute_manage' } },
+      { key: 'MACROS', levels: { manage: 'macro_manage' } },
+      { key: 'SLA', levels: { manage: 'sla_manage' } },
     ],
   },
 ];
@@ -204,6 +225,8 @@ export const PRESETS = {
       AUTONOMIA: LEVELS.VIEW,
       CAMPAIGNS: LEVELS.VIEW,
       INBOXES: LEVELS.VIEW,
+      PROSPECTING: LEVELS.VIEW,
+      AUTOMATIONS: LEVELS.VIEW,
     }),
     'crm_view_reports',
   ],
@@ -213,6 +236,8 @@ export const PRESETS = {
       REPORTS: LEVELS.VIEW,
       CRM: LEVELS.VIEW,
       CAMPAIGNS: LEVELS.MANAGE,
+      PROSPECTING: LEVELS.MANAGE,
+      LABELS: LEVELS.MANAGE,
     }),
     'crm_view_reports',
   ],

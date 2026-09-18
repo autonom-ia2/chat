@@ -23,6 +23,11 @@ const api = vi.hoisted(() => ({
   rescan: vi.fn(),
   removeConnection: vi.fn(),
 }));
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { ref } = await import('vue');
+  return { useCanManage: () => ref(true) };
+});
+
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: api }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
@@ -206,7 +211,9 @@ describe('o texto que a aba Conexões escreve', () => {
     );
     const texto = wrapper.text();
     // 4 seguradoras distintas na conta, 1 recusada -> 3 passaram.
-    expect(texto).toContain('Azul não aceitou o acesso da corretora (login ou permissão).');
+    expect(texto).toContain(
+      'Azul não aceitou o acesso da corretora (login ou permissão).'
+    );
     expect(texto).toContain('As outras 3 seguradoras da conta passaram.');
     // E a linha do produto conta o universo DELE: 2 de 3.
     expect(texto).toContain('2 de 3 seguradoras');
