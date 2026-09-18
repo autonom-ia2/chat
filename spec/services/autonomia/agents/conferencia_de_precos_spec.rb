@@ -97,6 +97,51 @@ RSpec.describe Autonomia::Agents::ConferenciaDePrecos do
     end
   end
 
+  # O VALOR É DAQUELA SEGURADORA (revisão da PR #454): valor e nome existirem nos dados não basta. As três falas
+  # erradas abaixo saíam ao cliente sem reescrita.
+  describe 'o valor na seguradora e no período certos' do
+    let(:dados_da_cotacao) do
+      described_class::Dados.new(
+        texto: "4 seguradoras fizeram proposta nesta cotação.\n" \
+               "Tokio Marine fez proposta: R$ 1.999,90 no total.\n" \
+               "Porto Seguro fez proposta: R$ 2.119,18 no total.\n" \
+               "Allianz fez proposta: R$ 2.402,55 no total.\n" \
+               "Bp Assinatura fez proposta: R$ 298,43 por mês.\n" \
+               'Sancor não fez proposta nesta cotação.',
+        seguradoras: ['Tokio Marine', 'Porto Seguro', 'Allianz', 'Bp Assinatura', 'Sancor'], comparativo: true
+      )
+    end
+    let(:reescrita) { { 'reply' => 'reescrita', 'reply_sem_valores' => 'Os valores estão no comparativo.' } }
+
+    def publicado(fala)
+      pedidos = []
+      saida = described_class.new(dados_da_cotacao).publicavel(fala) do |pedido|
+        pedidos << pedido
+        reescrita
+      end
+      [saida, pedidos.size]
+    end
+
+    it 'os valores trocados entre duas seguradoras voltam para reescrita' do
+      expect(publicado('Tokio Marine R$ 2.119,18 no total; Porto Seguro R$ 1.999,90 no total')).to eq(['reescrita', 1])
+    end
+
+    it 'a mensal dita como total volta para reescrita' do
+      expect(publicado('A mais barata é a Bp Assinatura, R$ 298,43 no total.')).to eq(['reescrita', 1])
+    end
+
+    it 'o valor de outra seguradora posto na que nao fez proposta volta para reescrita' do
+      expect(publicado('A Sancor ficou em R$ 2.119,18 no total.')).to eq(['reescrita', 1])
+    end
+
+    it 'as tres mais baratas com valores e periodos certos saem sem reescrita' do
+      fala = 'As três mais baratas no total: *Tokio Marine* R$ 1.999,90 no total; *Porto Seguro* R$ 2.119,18 no total; ' \
+             "*Allianz* R$ 2.402,55 no total.\nTem também a *Bp Assinatura*, R$ 298,43 por mês."
+
+      expect(publicado(fala)).to eq([fala, 0])
+    end
+  end
+
   describe 'Dados#+' do
     it 'duas chamadas no turno somam texto, seguradoras e comparativo' do
       outra = described_class::Dados.new(texto: 'Allianz fez proposta: R$ 2.402,55 no total.', seguradoras: ['Allianz'],

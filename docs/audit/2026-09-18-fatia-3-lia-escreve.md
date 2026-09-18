@@ -59,8 +59,9 @@ antes da fatia 2), `LISTA_ANEXADA`, `QuoteOffers.describe/item` e as três abert
 
 - A conferência só roda no turno em que `ver_resultado_da_cotacao` foi chamada. Valor escrito sem chamar a
   ferramenta não é conferido; o manual manda chamar.
-- Seguradora fora da cotação não é reconhecida como nome (não há catálogo), e valor trocado entre duas
-  seguradoras da mesma resposta passa (cada valor existe nos dados).
+- Seguradora fora da cotação não é reconhecida como nome (não há catálogo).
+- Quatro lacunas da conferência que a revisão deixou fora (troca sem `;`, valor sem "R$" nem centavos, preço de
+  memória, palavra igual a nome de seguradora): #455.
 - O sinal de vida reusa a frase `espera`. Se ela já saiu no começo (turno mudo), o publicador acha a mesma
   identidade e não a repete. O sinal é adquirido antes de publicar: publicação recusada não tenta de novo.
 - O aviso sem bônus viaja com o PDF; sem PDF, a Lia o recebe nos dados quando o cliente pergunta.
@@ -72,3 +73,19 @@ Sem migration. Execuções em voo: a primeira consulta desta versão grava `prec
 e a prova legada continua valendo para quem já tinha lote na tela. Rollback volta os lotes; execuções abertas
 nesta versão não têm `entregas_de_preco`; na versão anterior o comparativo assumido também é resultado
 (`Fecho#resultado_entregue?`), então quem recebeu o PDF recebe o fecho de quem tem resultado.
+
+## Revisão da PR #454: o valor é daquela seguradora
+
+Bloqueio da revisão: a conferência aceitava valor e nome que existiam nos dados mesmo trocados. Saíam sem
+reescrita "Tokio Marine R$ 2.119,18 no total; Porto Seguro R$ 1.999,90 no total", "a Bp Assinatura, R$ 298,43 no
+total" (é por mês) e "a Sancor ficou em R$ 2.119,18" (a Sancor não fez proposta). Correção (`trocados`, do protótipo
+do revisor): a fala é partida em trechos (linha, fim de frase, `;`); no trecho com uma seguradora, cada valor está
+na linha dela e o período não contradiz o dela; com várias, cada valor está na linha de uma delas.
+
+- Os três exemplos caem sem a correção e passam com ela; "as três mais baratas" certa sai sem reescrita.
+- Mutação: sem a checagem de período, o exemplo da Bp cai.
+- Sonda do revisor: 11 exemplos, 0 falhas, exit 0. As três falas erradas e "HDI com preço" vão para reescrita; as
+  certas saem como vieram. "Só a Porto ... ou 10x de R$ 211,92" vai para reescrita porque os dados da sonda não
+  têm parcelamento (valor inventado, correto). "1.500 reais" passa: lacuna 2 da #455.
+- Banco de teste local (`chatwoot_test`): removidos dois blobs `list.csv` sem anexo (ids 1600 e 1601) deixados por
+  outra rodada.

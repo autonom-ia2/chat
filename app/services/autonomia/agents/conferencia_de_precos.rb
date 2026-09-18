@@ -4,7 +4,8 @@
 # que `ver_resultado_da_cotacao` devolveu no turno; o código só confere. Este é o único lugar da conferência:
 #
 #   1. todo valor em reais da fala está no texto que a ferramenta devolveu neste turno, e toda seguradora da
-#      cotação que a fala cita também está nele;
+#      cotação que a fala cita também está nele; e no trecho que cita seguradora, o valor é o DELA, com o
+#      período dela (`trocados`);
 #   2. se não bater, o modelo é chamado UMA vez para reescrever, e escreve junto uma versão sem valor nenhum;
 #   3. se a reescrita não bater, sai a versão sem valores, conferida do mesmo jeito;
 #   4. se nem ela passar, ou a chamada falhar, sai o recuo, registrado no log.
@@ -39,6 +40,11 @@ class Autonomia::Agents::ConferenciaDePrecos
   COM_CENTAVOS = /(?<![\d.,])(\d{1,3}(?:\.\d{3})+|\d+),(\d{2})(?!\d)(?!\s*%)/
   # Valor em reais sem centavos ("R$ 1.321"): só com o cifrão, para não confundir com contagem.
   SEM_CENTAVOS = /R\$\s*(\d{1,3}(?:\.\d{3})+|\d+)(?!\d|[.,]\d)/
+  # O período que a fala ou a linha dos dados afirma (`PremiumText#resumo` escreve "no total" e "por mês").
+  PERIODO_MES = /por m[eê]s|mensal/i
+  PERIODO_TOTAL = /no total|[àa] vista|por ano|anual/i
+  # Onde a fala se parte em trechos: quebra de linha, ou espaço depois de fim de frase ou de ponto e vírgula.
+  TRECHOS = /\n|(?<=[.;!?])\s+/
 
   # OS RECUOS, quando nem a reescrita nem a versão sem valores passam. Sem valor e sem nome de seguradora.
   RECUO_COM_COMPARATIVO = 'Os valores de cada seguradora estão no comparativo em PDF que te mandei.'.freeze
@@ -81,9 +87,37 @@ class Autonomia::Agents::ConferenciaDePrecos
     recuo('reescrita divergente')
   end
 
-  # -> o que a fala escreve e os dados não têm: valores (em centavos) e nomes de seguradora.
+  # -> o que a fala escreve e os dados não têm: valores (em centavos), nomes de seguradora e valores postos na
+  # seguradora ou no período errados.
   def divergencias(texto)
-    (self.class.valores(texto).uniq - permitidos) + (citadas(texto) - citadas(@dados.texto))
+    (self.class.valores(texto).uniq - permitidos) + (citadas(texto) - citadas(@dados.texto)) + trocados(texto)
+  end
+
+  # O VALOR É DAQUELA SEGURADORA (revisão da PR #454). Em cada trecho da fala que cita seguradora: com uma só,
+  # cada valor do trecho está na linha dela nos dados, e o período do trecho não contradiz o dela; com várias,
+  # cada valor está na linha de uma delas. -> os valores fora do lugar, e `:periodo` para o período trocado.
+  def trocados(texto)
+    texto.to_s.split(TRECHOS).flat_map do |trecho|
+      nomes = citadas(trecho)
+      valores = self.class.valores(trecho)
+      next [] if nomes.empty? || valores.empty?
+
+      linhas = linhas_de(nomes)
+      fora = valores - linhas.flat_map { |linha| self.class.valores(linha) }
+      nomes.one? && periodo_trocado?(trecho, linhas.join(' ')) ? fora + [:periodo] : fora
+    end
+  end
+
+  # As linhas dos dados do turno que citam alguma destas seguradoras (uma linha por seguradora).
+  def linhas_de(nomes)
+    @dados.texto.to_s.lines.select { |linha| citadas(linha).intersect?(nomes) }
+  end
+
+  # O trecho diz "por mês" onde o dado é total, ou "no total" onde o dado é por mês.
+  def periodo_trocado?(fala, dado)
+    mes = ->(texto) { texto.match?(PERIODO_MES) && !texto.match?(PERIODO_TOTAL) }
+    total = ->(texto) { texto.match?(PERIODO_TOTAL) && !texto.match?(PERIODO_MES) }
+    (total.call(dado) && mes.call(fala)) || (mes.call(dado) && total.call(fala))
   end
 
   def sem_valores?(texto)
