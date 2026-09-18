@@ -84,6 +84,11 @@ class Autonomia::Insurance::ResultadoDaCotacao
     lista.empty? ? nil : lista.map { |oferta| Ofertas.item(oferta) }.join("\n\n")
   end
 
+  # -> alguma oferta com preço destes códigos é a assinatura mensal (`QuoteOffers.mensal?`)?
+  def com_assinatura_mensal?(codigos)
+    ofertas(codigos).any? { |oferta| Ofertas.mensal?(oferta) }
+  end
+
   # -> o nome da seguradora, limpo como o item o escreve (`QuoteOffers.nome`).
   def nome(codigo)
     Ofertas.nome('insurer' => { 'name' => entrada(codigo)['nome'] })

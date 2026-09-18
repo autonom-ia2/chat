@@ -213,13 +213,33 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   end
 
   describe 'com preço a anexar' do
+    def anexo_leva(total, mensal: false)
+      "A lista anexada leva #{total} #{total == 1 ? 'opção' : 'opções'}, " \
+        "#{mensal ? 'e a assinatura mensal está entre elas' : 'sem assinatura mensal'}. Ela sai inteira, sempre: " \
+        'não prometa ao cliente um recorte dela, como só as mais baratas ou sem a mensal.'
+    end
+
+    # PROVA REAL DE 18/09/2026: o cliente pediu "só as três mais baratas", a Lia prometeu o recorte e a lista
+    # trouxe todas, com a assinatura mensal. O modelo passa a ler o que o anexo leva, contado sobre o anexo.
+    it 'diz ao modelo quantas opções o anexo leva e se a assinatura mensal está nele' do
+      mensal = { 'insurer' => { 'code' => '55', 'name' => 'Bp Assinatura' }, 'status' => 'quoted',
+                 'premium' => { 'amount' => 199.9, 'currency' => 'BRL', 'basis' => 'monthly' } }
+      cotacao_com(status: 'done', ofertas: [porto, allianz, mensal])
+
+      expect(ao_modelo.split("\n").last).to eq(anexo_leva(3, mensal: true))
+      expect(delivery.anexos).to eq([itens(porto, allianz, mensal)])
+
+      turno = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil)
+      expect(ao_modelo('Porto', turno: turno).split("\n").last).to eq(anexo_leva(1))
+    end
+
     it 'o resultado inteiro: o modelo lê o estado, e a lista vai anexada, escrita por QuoteOffers.item' do
       cotacao_com(status: 'running')
 
       texto = ao_modelo
 
       expect(texto.split("\n")).to eq(['2 seguradoras fizeram proposta até agora.', described_class::LISTA_ANEXADA,
-                                       described_class::AINDA_CORRENDO, described_class::HA_SEM_PROPOSTA])
+                                       described_class::AINDA_CORRENDO, described_class::HA_SEM_PROPOSTA, anexo_leva(2)])
       expect(delivery.anexos).to eq([itens(porto, allianz)])
     end
 
@@ -227,7 +247,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       cotacao_com(status: 'done', ofertas: [porto], handle: { cotacao::SEM_BONUS_KEY => true })
 
       expect(ao_modelo.split("\n")).to eq(['1 seguradora fez proposta nesta cotação.', described_class::LISTA_ANEXADA,
-                                           described_class::SEM_BONUS])
+                                           described_class::SEM_BONUS, anexo_leva(1)])
     end
 
     it 'uma seguradora com preço: só ela na lista' do
