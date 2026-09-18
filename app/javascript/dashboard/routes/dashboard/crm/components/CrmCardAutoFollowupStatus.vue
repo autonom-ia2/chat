@@ -4,7 +4,9 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import Switch from 'dashboard/components-next/switch/Switch.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import ContactAPI from 'dashboard/api/contacts';
 
 const props = defineProps({
   card: { type: Object, default: null },
@@ -12,9 +14,13 @@ const props = defineProps({
 
 const emit = defineEmits(['reset']);
 
+// Mesma chave de Crm::Ai::Config::CONTACT_FOLLOWUP_DISABLED_KEY (exclusão por contato).
+const CONTACT_FOLLOWUP_DISABLED_KEY = 'crm_ai_followup_disabled';
+
 const { t } = useI18n();
 
 const isResetting = ref(false);
+const isSavingContact = ref(false);
 const reactivateDialogRef = ref(null);
 
 const cardId = computed(() => props.card?.id || null);
@@ -44,8 +50,16 @@ const usedTouches = computed(() => {
 const isSpent = computed(() => state.value?.spent === true);
 const stoppedReason = computed(() => state.value?.stopped_reason || null);
 const isOptedOut = computed(() => stoppedReason.value === 'opt_out');
+const contact = computed(() => props.card?.contact || null);
+const isContactDisabled = computed(
+  () =>
+    contact.value?.additional_attributes?.[CONTACT_FOLLOWUP_DISABLED_KEY] ===
+    true
+);
 
 const statusText = computed(() => {
+  if (isContactDisabled.value)
+    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_CONTACT_DISABLED');
   if (!hasState.value)
     return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_NOT_STARTED');
   const reason = stoppedReason.value;
@@ -133,6 +147,21 @@ const resetCycle = async () => {
   }
 };
 
+const onContactToggle = async disabled => {
+  if (!contact.value?.id || isSavingContact.value) return;
+  isSavingContact.value = true;
+  try {
+    await ContactAPI.update(contact.value.id, {
+      additional_attributes: { [CONTACT_FOLLOWUP_DISABLED_KEY]: disabled },
+    });
+    emit('reset');
+  } catch {
+    useAlert(t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.CONTACT_TOGGLE_ERROR'));
+  } finally {
+    isSavingContact.value = false;
+  }
+};
+
 const onResetClick = () => {
   if (isOptedOut.value) {
     reactivateDialogRef.value?.open();
@@ -181,6 +210,18 @@ const onResetClick = () => {
       <span class="i-lucide-hand size-3.5 shrink-0" />
       <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.OPT_OUT_HINT') }}</span>
     </p>
+
+    <label
+      v-if="contact?.id"
+      class="mb-0 flex items-center justify-between gap-3 text-xs text-n-slate-11"
+    >
+      <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.CONTACT_TOGGLE') }}</span>
+      <Switch
+        :model-value="isContactDisabled"
+        :disabled="isSavingContact"
+        @update:model-value="onContactToggle"
+      />
+    </label>
 
     <div v-if="isSpent || isOptedOut" class="flex justify-end">
       <Button

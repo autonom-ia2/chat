@@ -129,6 +129,8 @@ const validateSingleAction = action => {
     'remove_assigned_team',
     'open_conversation',
     'pending_conversation',
+    'disable_crm_ai_followup',
+    'enable_crm_ai_followup',
   ];
 
   if (

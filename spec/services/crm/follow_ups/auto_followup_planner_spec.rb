@@ -224,4 +224,15 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
     follow_up = card.reload.follow_ups.sole
     expect(follow_up.due_at.utc).to be_within(1.second).of(Time.utc(2026, 8, 10, 11, 0, 0))
   end
+
+  # Exclusão por contato (Automação ou drawer): vale em qualquer funil, mesmo com o card elegível.
+  it 'contato com crm_ai_followup_disabled NÃO recebe o toque 1' do
+    account, user = create_account_and_user
+    pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+    card, conversation = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
+    conversation.contact.update!(additional_attributes: { 'crm_ai_followup_disabled' => true })
+
+    expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+    expect(card.reload.follow_ups.count).to eq(0)
+  end
 end

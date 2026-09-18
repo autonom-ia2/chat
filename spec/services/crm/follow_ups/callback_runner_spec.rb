@@ -264,4 +264,17 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
     expect(result.status).to eq(:failed)
     expect(result.retry_at).to be_present
   end
+
+  it 'contato com crm_ai_followup_disabled vira :fallback (lembrete humano) sem chamar a IA' do
+    account, user = create_account_and_user
+    card, conversation = setup_card(account: account, user: user)
+    follow_up = build_callback_follow_up(account: account, card: card, conversation: conversation)
+    conversation.contact.update!(additional_attributes: { 'crm_ai_followup_disabled' => true })
+    expect(Crm::Ai::FollowUpComposer).not_to receive(:new)
+
+    result = described_class.new(follow_up: follow_up, now: Time.current).perform
+
+    expect(result.status).to eq(:fallback)
+    expect(result.error).to eq('contact_disabled')
+  end
 end

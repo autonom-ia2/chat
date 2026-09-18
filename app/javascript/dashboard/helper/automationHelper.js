@@ -106,6 +106,8 @@ const ACTION_ICONS = {
   resolve_conversation: 'i-lucide-circle-check',
   change_priority: 'i-lucide-signal-high',
   add_sla: 'i-lucide-gauge',
+  disable_crm_ai_followup: 'i-lucide-bot-off',
+  enable_crm_ai_followup: 'i-lucide-bot',
 };
 
 const DEFAULT_ACTION_ICON = 'i-lucide-zap';

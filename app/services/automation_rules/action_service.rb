@@ -54,6 +54,23 @@ class AutomationRules::ActionService < ActionService
     Messages::MessageBuilder.new(nil, @conversation.reload, params).perform
   end
 
+  def disable_crm_ai_followup(_params)
+    update_contact_crm_ai_followup(disabled: true)
+  end
+
+  def enable_crm_ai_followup(_params)
+    update_contact_crm_ai_followup(disabled: false)
+  end
+
+  # A exclusão mora no contato (vale em todos os funis); planner, runner e retorno por data a leem.
+  def update_contact_crm_ai_followup(disabled:)
+    contact = @conversation.contact
+    return if contact.blank?
+
+    key = Crm::Ai::Config::CONTACT_FOLLOWUP_DISABLED_KEY
+    contact.update!(additional_attributes: contact.additional_attributes.to_h.merge(key => disabled))
+  end
+
   def send_email_to_team(params)
     teams = Team.where(id: params[0][:team_ids])
 

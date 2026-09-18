@@ -197,6 +197,8 @@
       "SEND_WEBHOOK_EVENT": "Enviar evento de Webhook",
       "SEND_ATTACHMENT": "Enviar Anexo",
       "SEND_MESSAGE": "Enviar Mensagem",
+      "DISABLE_CRM_AI_FOLLOWUP": "Desativar follow-up de IA do CRM",
+      "ENABLE_CRM_AI_FOLLOWUP": "Reativar follow-up de IA do CRM",
       "ADD_PRIVATE_NOTE": "Adicionar uma Nota Privada",
       "CHANGE_PRIORITY": "Alterar Prioridade",
       "ADD_SLA": "Adicionar SLA",

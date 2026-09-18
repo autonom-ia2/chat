@@ -218,4 +218,30 @@ RSpec.describe AutomationRules::ActionService do
       end
     end
   end
+
+  describe 'follow-up de IA do CRM por contato' do
+    let(:contact) { conversation.contact }
+
+    def run_action(action_name)
+      rule.update!(actions: [{ action_name: action_name, action_params: [] }])
+      described_class.new(rule, account, conversation).perform
+    end
+
+    it 'disable_crm_ai_followup marca o contato preservando os outros atributos' do
+      contact.update!(additional_attributes: { 'city' => 'Recife' })
+
+      run_action('disable_crm_ai_followup')
+
+      expect(contact.reload.additional_attributes).to include('crm_ai_followup_disabled' => true, 'city' => 'Recife')
+      expect(Crm::Ai::Config.contact_followup_disabled?(contact)).to be(true)
+    end
+
+    it 'enable_crm_ai_followup desfaz a marca' do
+      contact.update!(additional_attributes: { 'crm_ai_followup_disabled' => true })
+
+      run_action('enable_crm_ai_followup')
+
+      expect(Crm::Ai::Config.contact_followup_disabled?(contact.reload)).to be(false)
+    end
+  end
 end

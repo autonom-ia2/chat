@@ -796,6 +796,16 @@ export const AUTOMATION_ACTION_TYPES = [
     inputType: 'textarea',
   },
   {
+    key: 'disable_crm_ai_followup',
+    label: 'DISABLE_CRM_AI_FOLLOWUP',
+    inputType: null,
+  },
+  {
+    key: 'enable_crm_ai_followup',
+    label: 'ENABLE_CRM_AI_FOLLOWUP',
+    inputType: null,
+  },
+  {
     key: 'change_priority',
     label: 'CHANGE_PRIORITY',
     inputType: 'search_select',
