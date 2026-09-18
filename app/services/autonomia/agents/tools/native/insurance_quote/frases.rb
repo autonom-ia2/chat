@@ -66,9 +66,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
     sem_veiculo: 'Frase que pede a placa do veículo, ou o chassi quando ele ainda não tem placa.',
     ramo_desconhecido: 'Frase que diz que você não cota esse tipo de seguro por aqui. Não liste os ' \
                        'ramos: a lista do que a corretora cota é acrescentada depois da sua frase.',
-    falhou: 'Frase para quando a cotação não pôde ser concluída e um atendente vai retomar.',
-    incerto: 'Frase para quando não foi possível confirmar se a cotação chegou a ser aberta, e um ' \
-             'atendente vai conferir.',
+    falhou: 'Frase para quando não deu para fazer a cotação agora, e um atendente vai retomar.',
+    incerto: 'Frase para quando não deu para saber se o pedido chegou às seguradoras, e um atendente ' \
+             'vai conferir.',
     fecho_com_resultado: 'Frase que encerra a busca para quem já recebeu preços. Não diga que alguma ' \
                          'seguradora deixou de responder.'
   }.freeze

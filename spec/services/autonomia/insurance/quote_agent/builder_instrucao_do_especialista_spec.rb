@@ -333,7 +333,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('f4cac7c3a923066421ef0e4529c1f372')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('7bc8f74cf35533a82678d17b752ff338')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do

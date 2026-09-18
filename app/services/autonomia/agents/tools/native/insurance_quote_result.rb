@@ -5,7 +5,8 @@
 #
 #   - Com preço a mostrar, a lista é escrita pelo código (`QuoteOffers.item`) e ANEXADA ao turno
 #     (`Tools::Delivery#anexar`): o `Operate::Responder` a entrega logo depois da fala da Lia, na mesma entrega.
-#   - O modelo recebe só estado: quantas seguradoras fizeram proposta, se a lista vai anexada e, quando o cliente
+#   - O modelo recebe só estado: quantas seguradoras fizeram proposta, se a lista vai anexada, quantas opções ela
+#     leva e se a assinatura mensal está nela e, quando o cliente
 #     perguntou por uma seguradora, o nome, o desfecho e a categoria do motivo (`veiculo`, `regiao` ou nenhuma).
 #     Nunca valor, nunca texto do portal.
 #
@@ -90,8 +91,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     return ::Autonomia::Agents::Tools::Recusa.para_modelo(SEM_CONTEXTO, slug: self.class.slug, delivery: delivery, agente: agent) if conversa.nil?
 
     texto, codigos = resposta(conversa)
-    anexar(codigos) if codigos.any?
-    texto
+    return texto if codigos.empty?
+
+    [texto, conteudo_do_anexo(anexar(codigos))].join("\n")
   end
 
   private
@@ -112,9 +114,22 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   end
 
   # A lista do turno: os códigos desta chamada somados aos que uma chamada anterior do mesmo turno já anexou.
+  # -> os códigos anexados.
   def anexar(codigos)
     todos = (Array(delivery.anexo(ANEXO)&.dados) + codigos).uniq
     delivery.anexar(ANEXO, @resultado.itens(todos), dados: todos)
+    todos
+  end
+
+  # O que a lista anexada leva, contado sobre os mesmos códigos que `anexar` escreveu: quantas opções e se a
+  # assinatura mensal está entre elas. A lista sai inteira; este texto diz isso ao modelo para ele não prometer
+  # ao cliente um recorte que o anexo não tem (18/09/2026: a Lia prometeu só as três mais baratas e sem a
+  # mensal, e a lista trouxe as onze, com a mensal).
+  def conteudo_do_anexo(codigos)
+    total = @resultado.com_preco(codigos).size
+    mensal = @resultado.com_assinatura_mensal?(codigos) ? 'e a assinatura mensal está entre elas' : 'sem assinatura mensal'
+    "A lista anexada leva #{total} #{total == 1 ? 'opção' : 'opções'}, #{mensal}. Ela sai inteira, sempre: não " \
+      'prometa ao cliente um recorte dela, como só as mais baratas ou sem a mensal.'
   end
 
   # -> o texto de quando a cotação encerrada não tem resultado a ler, ou nil. A que ainda corre sem ter gravado
