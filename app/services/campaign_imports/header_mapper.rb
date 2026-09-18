@@ -5,6 +5,7 @@ module CampaignImports
       phone_number: ['telefone', 'phone', 'phone_number', 'whatsapp', 'celular', 'numero', 'número'],
       email: ['email', 'e-mail', 'e mail', 'correio', 'correio eletronico', 'correio eletrônico']
     }.freeze
+    EMAIL_CONTAINS_ALIASES = ['email', 'e-mail', 'e mail'].freeze
 
     Result = Struct.new(:mapping, :errors, :extra_columns, keyword_init: true)
 
@@ -91,10 +92,19 @@ module CampaignImports
     def logical_name_for(header)
       candidates = @mode == :email ? ALIASES.slice(:name, :email) : ALIASES
       candidates.each do |logical_name, aliases|
+        return logical_name if email_header_contains_alias?(logical_name, header)
         return logical_name if aliases.map { |item| self.class.normalize(item) }.include?(header)
       end
 
       nil
+    end
+
+    def email_header_contains_alias?(logical_name, header)
+      return false unless @mode == :email && logical_name == :email
+
+      EMAIL_CONTAINS_ALIASES
+        .map { |item| self.class.normalize(item) }
+        .any? { |item| header.include?(item) }
     end
   end
 end

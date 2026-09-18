@@ -4,6 +4,10 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import {
+  isRecipientImportActive,
+  recipientImportError,
+} from 'dashboard/helper/emailCampaignImport';
 
 import Input from 'dashboard/components-next/input/Input.vue';
 import Select from 'dashboard/components-next/select/Select.vue';
@@ -117,7 +121,6 @@ const selectedIdentity = computed(() =>
 
 const baseFileInput = ref(null);
 const baseFile = ref(null);
-const baseResult = ref(null);
 
 const selectedDomain = computed(() => selectedIdentity.value?.domain);
 
@@ -202,30 +205,19 @@ const pickBaseFile = () => baseFileInput.value?.click();
 
 const onBaseFileChange = event => {
   baseFile.value = event.target.files?.[0] || null;
-  baseResult.value = null;
 };
 
 const importBase = async campaignId => {
   if (!baseFile.value) return;
   try {
-    const payload = await store.dispatch('emailCampaigns/importRecipients', {
+    await store.dispatch('emailCampaigns/importRecipients', {
       id: campaignId,
       file: baseFile.value,
     });
-    const imported = payload?.import_result?.imported ?? 0;
-    let columns = [];
-    try {
-      const placeholdersData = await store.dispatch(
-        'emailCampaigns/fetchPlaceholders',
-        campaignId
-      );
-      columns = placeholdersData?.placeholders || [];
-    } catch (placeholderError) {
-      columns = [];
-    }
-    baseResult.value = { imported, columns };
-  } catch {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.BASE_IMPORT_ERROR'));
+    baseFile.value = null;
+    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.IMPORT.QUEUED'));
+  } catch (error) {
+    useAlert(recipientImportError(t, error.response?.data?.error));
     throw new Error('base_import_failed');
   }
 };
@@ -415,7 +407,7 @@ const submit = async ({ openEditor = false } = {}) => {
             color="slate"
             variant="outline"
             size="sm"
-            :disabled="isSaving"
+            :disabled="isSaving || isRecipientImportActive(campaign)"
             @click="pickBaseFile"
           />
           <span v-if="baseFile" class="text-xs truncate text-n-slate-11">
@@ -432,28 +424,6 @@ const submit = async ({ openEditor = false } = {}) => {
         <p v-if="isImporting" class="mb-0 text-xs text-n-slate-11">
           {{ t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.BASE_IMPORTING') }}
         </p>
-        <div
-          v-else-if="baseResult"
-          class="flex flex-col gap-1 p-3 border rounded-lg border-n-weak"
-        >
-          <span class="text-xs font-medium text-n-teal-11">
-            {{
-              t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.BASE_IMPORT_RESULT', {
-                count: baseResult.imported,
-              })
-            }}
-          </span>
-          <span
-            v-if="baseResult.columns.length"
-            class="text-xs text-n-slate-11"
-          >
-            {{
-              t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.BASE_IMPORT_COLUMNS', {
-                columns: baseResult.columns.join(', '),
-              })
-            }}
-          </span>
-        </div>
       </div>
     </div>
 

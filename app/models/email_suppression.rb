@@ -20,9 +20,8 @@
 #
 class EmailSuppression < ApplicationRecord
   belongs_to :account
-
-  REASONS = %w[hard_bounce complaint unsubscribe manual].freeze
-  SOURCES = %w[ses api import manual].freeze
+  REASONS = %w[hard_bounce complaint unsubscribe manual provider_suppression].freeze
+  SOURCES = %w[ses api import manual link].freeze
 
   before_validation :normalize_email
   before_create :set_created_at
@@ -30,13 +29,28 @@ class EmailSuppression < ApplicationRecord
   validates :email, presence: true, format: { with: EmailCampaign::EMAIL_REGEX }
   validates :email, uniqueness: { scope: :account_id, case_sensitive: false }
 
-  # Returns a downcased Set of suppressed emails for an account (DeliveryJob preload).
+  # Every legacy row is a permanent positive, including rows written by old releases.
   def self.suppressed_set_for(account)
-    where(account_id: account.id).pluck(:email).map(&:downcase).to_set
+    legacy = where(account_id: account.id).pluck(:email)
+    states = EmailSuppressionState.blocking.where(account_id: account.id).pluck(:email)
+    (legacy + states).map { |email| email.strip.downcase }.to_set
   end
 
   def self.suppressed?(account, email)
-    where(account_id: account.id).where('lower(email) = ?', email.to_s.downcase).exists?
+    normalized = email.to_s.strip.downcase
+    exists?(['account_id = ? AND lower(email) = ?', account.id, normalized]) ||
+      EmailSuppressionState.blocking.exists?(account_id: account.id, email: normalized)
+  end
+
+  # Two bounded queries; legacy presence wins regardless of newer state's expiry.
+  # Unknown legacy reason strings are exposed as a bounded permanent code.
+  def self.blocking_reasons_for(account, emails)
+    normalized = emails.map { |email| email.to_s.strip.downcase }.uniq
+    states = EmailSuppressionState.blocking.where(account_id: account.id, email: normalized).pluck(:email, :reason).to_h
+    where(account_id: account.id).where('lower(email) IN (?)', normalized).pluck(:email, :reason).each do |email, reason|
+      states[email.strip.downcase] = REASONS.include?(reason) ? reason : 'legacy_suppression'
+    end
+    states
   end
 
   private

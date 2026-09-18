@@ -6,6 +6,21 @@ class EmailCampaignsAPI extends ApiClient {
     super('email_campaigns/campaigns', { accountScoped: true });
   }
 
+  get({ status, signal } = {}) {
+    return axios.get(this.url, {
+      params: { status: status || undefined },
+      signal,
+    });
+  }
+
+  reevaluate(id) {
+    return axios.post(`${this.url}/${id}/reevaluate`);
+  }
+
+  recheck(id) {
+    return axios.post(`${this.url}/${id}/recheck`);
+  }
+
   sendNow(id) {
     return axios.post(`${this.url}/${id}/send_now`);
   }
@@ -46,6 +61,10 @@ class EmailCampaignsAPI extends ApiClient {
 
   validate(id) {
     return axios.get(`${this.url}/${id}/validate`);
+  }
+
+  retryImport(id) {
+    return axios.post(`${this.url}/${id}/recipients/retry_import`);
   }
 
   importRecipients(id, file) {

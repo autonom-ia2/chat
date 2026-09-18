@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Gestão de campanhas",
+      "DESCRIPTION": "Acompanhe o envio, a entrega e a qualidade das suas campanhas de correio eletrónico."
+    },
+    "PAYWALL": {
+      "TITLE": "As campanhas de correio eletrónico não estão ativadas",
+      "DESCRIPTION": "Ative as campanhas de correio eletrónico para consultar os relatórios de entrega e interação."
+    },
+    "FILTER": {
+      "LABEL": "Campanha",
+      "ALL": "Todas as campanhas"
+    },
+    "APPROXIMATE": "aproximado",
+    "OPEN_APPROXIMATE_HINT": "As taxas de abertura são aproximadas. A Proteção de Privacidade do Apple Mail e funções semelhantes podem aumentar as aberturas ao pré-carregar imagens.",
+    "KPIS": {
+      "SENT": "Enviados",
+      "DELIVERED": "Entregues",
+      "OPENED": "Abertos",
+      "CLICKED": "Com cliques",
+      "UNSUBSCRIBED": "Cancelamentos de subscrição",
+      "BOUNCED": "Não entregues",
+      "COMPLAINED": "Denúncias de spam"
+    },
+    "RATES": {
+      "OPEN_RATE": "Taxa de abertura",
+      "CLICK_RATE": "Taxa de cliques",
+      "BOUNCE_RATE": "Taxa de não entrega",
+      "COMPLAINT_RATE": "Taxa de denúncias de spam",
+      "UNSUBSCRIBE_RATE": "Taxa de cancelamento de subscrição",
+      "OVER_DELIVERED": "dos entregues"
+    },
+    "TABLE": {
+      "EMAIL": "Correio eletrónico",
+      "NAME": "Nome",
+      "LAST_EVENT_AT": "Última atividade",
+      "STATUS": "Estado",
+      "ATTEMPTS": "Tentativas",
+      "OPENS": "Aberturas",
+      "CLICKS": "Cliques"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Ainda não existem dados de campanhas",
+      "SUBTITLE": "Envie uma campanha para consultar métricas de entrega e interação."
+    },
+    "ERROR": "Não foi possível carregar o relatório da campanha. Tente novamente.",
+    "EXPORT_CSV": "Exportar CSV",
+    "TIMELINE": {
+      "TITLE": "Entregas, aberturas e cliques ao longo do tempo",
+      "EMPTY": "Ainda não existem eventos registados nesta campanha.",
+      "INTERVAL": {
+        "DAY": "Por dia",
+        "HOUR": "Por hora"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Cliques por ligação",
+      "EMPTY": "Ainda não existem cliques registados.",
+      "URL": "Ligação",
+      "UNIQUE": "Cliques únicos",
+      "TOTAL": "Total de cliques"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Destinatários",
+      "SEARCH_PLACEHOLDER": "Pesquisar por nome ou endereço de correio eletrónico",
+      "EMPTY": "Não foram encontrados destinatários.",
+      "PAGE_OF": "Página {page} de {total}",
+      "PREV": "Anterior",
+      "NEXT": "Seguinte"
+    },
+    "COMPARISON": {
+      "TITLE": "Comparação de campanhas"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Ligações rastreáveis e códigos QR",
+      "SUBTITLE": "Crie uma ligação ou um QR por campanha, vendedor ou loja. As conversas iniciadas através deles ficam com a origem identificada no CRM.",
+      "ADD": "Nova ligação",
+      "NAME": "Nome",
+      "NAME_PLACEHOLDER": "Ex.: QR da loja — Centro",
+      "INBOX": "Caixa de entrada do WhatsApp",
+      "PREFILLED": "Mensagem pré-preenchida",
+      "PREFILLED_PLACEHOLDER": "Ex.: Olá! Gostaria de saber mais",
+      "CODE": "Código",
+      "CLICKS": "Cliques",
+      "CONVERSATIONS": "Conversas",
+      "COPY_LINK": "Copiar ligação",
+      "COPIED": "Copiado!",
+      "DOWNLOAD_QR": "Descarregar QR",
+      "DELETE": "Eliminar",
+      "DELETE_CONFIRM": "Eliminar esta ligação? As conversas já atribuídas mantêm a sua origem.",
+      "EMPTY": "Ainda não existem ligações rastreáveis. Crie a primeira para identificar conversas da loja, do vendedor ou da biografia.",
+      "CREATE_SUCCESS": "Ligação criada",
+      "CREATE_ERROR": "Não foi possível criar a ligação"
+    }
+  }
+}

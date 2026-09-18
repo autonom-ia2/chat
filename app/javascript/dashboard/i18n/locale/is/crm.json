@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Umsjón herferða",
+      "DESCRIPTION": "Fylgstu með sendingu, afhendingu og gæðum tölvupóstherferðanna þinna."
+    },
+    "PAYWALL": {
+      "TITLE": "Tölvupóstherferðir eru ekki virkjaðar",
+      "DESCRIPTION": "Virkjaðu tölvupóstherferðir til að sjá skýrslur um afhendingu og virkni viðtakenda."
+    },
+    "FILTER": {
+      "LABEL": "Herferð",
+      "ALL": "Allar herferðir"
+    },
+    "APPROXIMATE": "áætlað",
+    "OPEN_APPROXIMATE_HINT": "Opnunarhlutföll eru áætluð. Persónuvernd í Apple Mail og sambærilegar aðgerðir geta fjölgað skráðum opnunum með því að hlaða myndum fyrirfram.",
+    "KPIS": {
+      "SENT": "Sent",
+      "DELIVERED": "Afhent",
+      "OPENED": "Opnað",
+      "CLICKED": "Smellt",
+      "UNSUBSCRIBED": "Afskráningar",
+      "BOUNCED": "Ekki afhent",
+      "COMPLAINED": "Tilkynningar um ruslpóst"
+    },
+    "RATES": {
+      "OPEN_RATE": "Opnunarhlutfall",
+      "CLICK_RATE": "Smellihlutfall",
+      "BOUNCE_RATE": "Hlutfall óafhentra sendinga",
+      "COMPLAINT_RATE": "Hlutfall ruslpósttilkynninga",
+      "UNSUBSCRIBE_RATE": "Afskráningarhlutfall",
+      "OVER_DELIVERED": "af afhentum sendingum"
+    },
+    "TABLE": {
+      "EMAIL": "Netfang",
+      "NAME": "Nafn",
+      "LAST_EVENT_AT": "Síðasta virkni",
+      "STATUS": "Staða",
+      "ATTEMPTS": "Tilraunir",
+      "OPENS": "Opnanir",
+      "CLICKS": "Smellir"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Engin herferðargögn enn",
+      "SUBTITLE": "Sendu tölvupóstherferð til að sjá mælingar á afhendingu og virkni viðtakenda."
+    },
+    "ERROR": "Ekki tókst að hlaða herferðarskýrslunni. Reyndu aftur.",
+    "EXPORT_CSV": "Flytja út CSV",
+    "TIMELINE": {
+      "TITLE": "Afhendingar, opnanir og smellir yfir tíma",
+      "EMPTY": "Engir atburðir hafa verið skráðir fyrir þessa herferð.",
+      "INTERVAL": {
+        "DAY": "Eftir degi",
+        "HOUR": "Eftir klukkustund"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Smellir eftir tengli",
+      "EMPTY": "Engir smellir skráðir enn.",
+      "URL": "Tengill",
+      "UNIQUE": "Einstakir smellir",
+      "TOTAL": "Smellir samtals"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Viðtakendur",
+      "SEARCH_PLACEHOLDER": "Leita eftir nafni eða netfangi",
+      "EMPTY": "Engir viðtakendur fundust.",
+      "PAGE_OF": "Síða {page} af {total}",
+      "PREV": "Fyrri",
+      "NEXT": "Næsta"
+    },
+    "COMPARISON": {
+      "TITLE": "Samanburður herferða"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Rekjanlegir tenglar og QR-kóðar",
+      "SUBTITLE": "Búðu til tengil eða QR-kóða fyrir hverja herferð, söluaðila eða verslun. Samtöl sem hefjast þar fá uppruna sinn skráðan í CRM.",
+      "ADD": "Nýr tengill",
+      "NAME": "Nafn",
+      "NAME_PLACEHOLDER": "T.d. QR verslunar — Miðbær",
+      "INBOX": "WhatsApp-pósthólf",
+      "PREFILLED": "Forútfyllt skilaboð",
+      "PREFILLED_PLACEHOLDER": "T.d. Hæ! Ég vil vita meira",
+      "CODE": "Kóði",
+      "CLICKS": "Smellir",
+      "CONVERSATIONS": "Samtöl",
+      "COPY_LINK": "Afrita tengil",
+      "COPIED": "Afritað!",
+      "DOWNLOAD_QR": "Sækja QR-kóða",
+      "DELETE": "Eyða",
+      "DELETE_CONFIRM": "Eyða þessum tengli? Samtöl sem hafa þegar fengið uppruna skráðan halda honum.",
+      "EMPTY": "Engir rekjanlegir tenglar enn. Búðu til þann fyrsta til að rekja samtöl frá verslun, söluaðila eða prófíllýsingu.",
+      "CREATE_SUCCESS": "Tengill búinn til",
+      "CREATE_ERROR": "Ekki tókst að búa til tengilinn"
+    }
+  }
+}

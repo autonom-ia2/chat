@@ -10,17 +10,21 @@ module EmailCampaigns
       end
 
       def record_open(payload = {})
-        return if @recipient.email_events.opens.exists?
+        @recipient.with_lock do
+          return if @recipient.email_events.opens.exists?
 
-        @recipient.email_events.create!(event_type: :open, occurred_at: Time.current, payload: payload)
-        @recipient.mark_opened!
+          @recipient.email_events.create!(event_type: :open, occurred_at: Time.current, payload: payload)
+          @recipient.mark_opened!
+        end
         @campaign.refresh_counters!
       end
 
       def record_click(url, payload = {})
-        @recipient.email_events.create!(event_type: :click, url: url.to_s.truncate(255),
-                                        occurred_at: Time.current, payload: payload)
-        @recipient.mark_clicked!
+        @recipient.with_lock do
+          @recipient.email_events.create!(event_type: :click, url: url.to_s.truncate(255),
+                                          occurred_at: Time.current, payload: payload)
+          @recipient.mark_clicked!
+        end
         @campaign.refresh_counters!
       end
     end

@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Správa kampaní",
+      "DESCRIPTION": "Sledujte odosielanie, doručenie a kvalitu e-mailových kampaní."
+    },
+    "PAYWALL": {
+      "TITLE": "E-mailové kampane nie sú zapnuté",
+      "DESCRIPTION": "Zapnite e-mailové kampane a zobrazte si prehľady doručenia a zapojenia."
+    },
+    "FILTER": {
+      "LABEL": "Kampaň",
+      "ALL": "Všetky kampane"
+    },
+    "APPROXIMATE": "približne",
+    "OPEN_APPROXIMATE_HINT": "Miera otvorení je približná. Ochrana súkromia Apple Mail a podobné funkcie môžu predbežným načítaním obrázkov zvýšiť počet otvorení.",
+    "KPIS": {
+      "SENT": "Odoslané",
+      "DELIVERED": "Doručené",
+      "OPENED": "Otvorené",
+      "CLICKED": "Kliknuté",
+      "UNSUBSCRIBED": "Odhlásenia",
+      "COMPLAINED": "Sťažnosti na spam",
+      "BOUNCED": "Nedoručené"
+    },
+    "RATES": {
+      "OPEN_RATE": "Miera otvorení",
+      "CLICK_RATE": "Miera kliknutí",
+      "BOUNCE_RATE": "Miera nedoručenia",
+      "COMPLAINT_RATE": "Miera sťažností",
+      "UNSUBSCRIBE_RATE": "Miera odhlásení",
+      "OVER_DELIVERED": "z doručených"
+    },
+    "TABLE": {
+      "EMAIL": "E-mail",
+      "NAME": "Meno",
+      "LAST_EVENT_AT": "Posledná aktivita",
+      "STATUS": "Stav",
+      "ATTEMPTS": "Pokusy",
+      "OPENS": "Otvorenia",
+      "CLICKS": "Kliknutia"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Zatiaľ žiadne údaje o kampaniach",
+      "SUBTITLE": "Odošlite e-mailovú kampaň a začnite sledovať doručenie a zapojenie."
+    },
+    "ERROR": "Prehľad sa nepodarilo načítať. Skúste to znova.",
+    "EXPORT_CSV": "Exportovať CSV",
+    "TIMELINE": {
+      "TITLE": "Doručenia, otvorenia a kliknutia v čase",
+      "EMPTY": "Pre túto kampaň zatiaľ nie sú zaznamenané udalosti.",
+      "INTERVAL": {
+        "DAY": "Podľa dňa",
+        "HOUR": "Podľa hodiny"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Kliknutia podľa odkazu",
+      "EMPTY": "Zatiaľ žiadne zaznamenané kliknutia.",
+      "URL": "Odkaz",
+      "UNIQUE": "Jedinečné kliknutia",
+      "TOTAL": "Kliknutia spolu"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Príjemcovia",
+      "EMPTY": "Nenašli sa žiadni príjemcovia.",
+      "PAGE_OF": "Strana {page} z {total}",
+      "PREV": "Predchádzajúca",
+      "NEXT": "Ďalšia",
+      "SEARCH_PLACEHOLDER": "Hľadať meno alebo e-mail"
+    },
+    "COMPARISON": {
+      "TITLE": "Porovnanie kampaní"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Sledovateľné odkazy a QR kódy",
+      "SUBTITLE": "Vytvorte odkaz alebo QR kód pre kampaň, predajcu či predajňu. Rozhovory začaté cez ne budú mať v CRM priradený zdroj.",
+      "ADD": "Nový odkaz",
+      "NAME_PLACEHOLDER": "Napr. QR predajne — Centrum",
+      "INBOX": "Schránka WhatsApp",
+      "PREFILLED": "Predvyplnená správa",
+      "PREFILLED_PLACEHOLDER": "Napr. Dobrý deň! Chcem vedieť viac",
+      "CODE": "Kód",
+      "CONVERSATIONS": "Rozhovory",
+      "COPY_LINK": "Kopírovať odkaz",
+      "COPIED": "Skopírované!",
+      "DOWNLOAD_QR": "Stiahnuť QR kód",
+      "DELETE": "Odstrániť",
+      "DELETE_CONFIRM": "Odstrániť tento odkaz? Už priradené rozhovory si zachovajú svoj zdroj.",
+      "EMPTY": "Zatiaľ žiadne sledovateľné odkazy. Vytvorte prvý pre rozhovory z predajne, od predajcu alebo z profilu.",
+      "CREATE_SUCCESS": "Odkaz bol vytvorený",
+      "CREATE_ERROR": "Odkaz sa nepodarilo vytvoriť",
+      "NAME": "Meno",
+      "CLICKS": "Kliknutia"
+    }
+  }
+}

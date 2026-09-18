@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Zrušiť",
+        "CANCEL_SUCCESS": "Kampaň bola zrušená.",
+        "DELETE_SUCCESS": "Kampaň bola odstránená.",
+        "DUPLICATE": "Duplikovať",
+        "DUPLICATE_SUCCESS": "Kampaň bola duplikovaná. Aktualizujte príjemcov a plán.",
+        "EDIT": "Upraviť",
+        "OPEN_BUILDER": "Editor",
+        "PAUSE": "Pozastaviť",
+        "PAUSE_SUCCESS": "Kampaň bola pozastavená.",
+        "SCHEDULE": "Naplánovať",
+        "SCHEDULE_SUCCESS": "Kampaň bola naplánovaná.",
+        "SEND_NOW": "Odoslať teraz",
+        "SEND_SUCCESS": "Kampaň bola zaradená do frontu na odoslanie.",
+        "MANAGE_RECIPIENTS": "Príjemcovia",
+        "DELETE": "Odstrániť"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Chyba AI",
+          "PROCESSING": "AI generuje",
+          "READY": "AI je pripravená"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Neúspešné",
+        "SENT": "Odoslané",
+        "RECIPIENTS": "Príjemcovia"
+      },
+      "DESCRIPTION": "Vytvorte e-mail, vyberte overenú odosielaciu doménu, nahrajte zoznam príjemcov a odošlite teraz alebo naplánujte odoslanie.",
+      "DIALOG": {
+        "BASE_HINT": "Nahrajte CSV alebo XLSX so stĺpcami name a email. Rozpoznané stĺpce sa stanú premennými na prispôsobenie.",
+        "BASE_IMPORTING": "Import zoznamu…",
+        "BASE_LABEL": "Zoznam kontaktov (CSV alebo XLSX)",
+        "BASE_PICK": "Vybrať súbor",
+        "BASE_SELECTED": "Vybrané: {name}",
+        "CREATE_AND_OPEN": "Vytvoriť a otvoriť v editore",
+        "CREATE_TITLE": "Nová e-mailová kampaň",
+        "DIRECT_OPTION": "priame odosielanie cez túto schránku",
+        "DIRECT_WARNING": "Toto je osobná schránka. Používajte ju len na malý objem správ vlastným skutočným kontaktom, ktoré s nimi súhlasili. Hromadné odosielanie cez bezplatnú schránku môže viesť k zablokovaniu účtu. Limit je 100 správ denne s odstupmi ako pri ručnom odosielaní. Pre väčšie zoznamy overte vlastnú doménu.",
+        "EDIT_TITLE": "Upraviť e-mailovú kampaň",
+        "ERROR": "Kampaň sa nepodarilo uložiť. Skúste to znova.",
+        "FROM_EMAIL_DIRECT_HINT": "Odosiela sa priamo z tejto schránky.",
+        "FROM_EMAIL_ERROR": "Zadajte e-mail odosielateľa",
+        "FROM_EMAIL_HINT": "Adresa musí byť {'@'}{domain}, na vašej overenej doméne.",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Adresa musí byť na vašej overenej odosielacej doméne.",
+        "FROM_EMAIL_INVALID": "Zadajte platnú adresu na overenej doméne",
+        "FROM_EMAIL_LABEL": "E-mail odosielateľa",
+        "FROM_EMAIL_PLACEHOLDER": "Napr. promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "Zadajte meno odosielateľa",
+        "FROM_NAME_LABEL": "Meno odosielateľa",
+        "FROM_NAME_PLACEHOLDER": "Napr. Marketing Acme",
+        "NAME_ERROR": "Zadajte názov kampane",
+        "NAME_LABEL": "Názov kampane",
+        "NAME_PLACEHOLDER": "Napr. Júnový newsletter",
+        "NO_VERIFIED_DOMAIN": "Zatiaľ nemáte overenú doménu. Najskôr ju pridajte a overte v sekcii odosielacích domén.",
+        "REPLY_TO_ERROR": "Zadajte adresu na odpovede",
+        "REPLY_TO_HINT": "Odpovede prídu na túto adresu. Pripojte ju ako schránku, aby sa odpovede zmenili na rozhovory.",
+        "REPLY_TO_INVALID": "Zadajte platnú e-mailovú adresu",
+        "REPLY_TO_LABEL": "Adresa na odpovede",
+        "REPLY_TO_PLACEHOLDER": "Napr. support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "Uložiť koncept",
+        "SENDER_ERROR": "Vyberte overenú odosielaciu doménu",
+        "SENDER_LABEL": "Odosielacia doména",
+        "SENDER_PLACEHOLDER": "Vyberte overenú doménu",
+        "SUCCESS": "Kampaň bola uložená.",
+        "CANCEL": "Zrušiť"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Vytvorte prvú kampaň a odošlite e-mail importovanému zoznamu.",
+        "TITLE": "Zatiaľ žiadne e-mailové kampane"
+      },
+      "HEADER_TITLE": "E-mailové kampane",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Zoznam je prázdny. Pridajte kontakty a nahrajte ho znova.",
+          "EXPIRED": "Platnosť nahraného súboru vypršala. Nahrajte zoznam znova.",
+          "FAILED": "Import zlyhal. Žiadne kontakty z tohto pokusu neboli pridané. Skúste znova alebo súbor opäť nahrajte.",
+          "FILE_TOO_LARGE": "Súbor prekračuje povolenú veľkosť. Rozdeľte zoznam a skúste znova.",
+          "HEADERS": "V prvom riadku prvého hárka použite jeden stĺpec Name a jeden Email bez duplicitných hlavičiek.",
+          "INVALID_FILE": "Súbor sa nepodarilo prečítať. Nahrajte platný CSV alebo XLSX.",
+          "IN_PROGRESS": "Import pre túto kampaň už prebieha. Počkajte na dokončenie.",
+          "ROW_LIMIT": "Zoznam má viac ako 50 000 riadkov. Rozdeľte ho na menšie súbory.",
+          "UPLOAD_FAILED": "Súbor sa nepodarilo uložiť. Nahrajte zoznam znova."
+        },
+        "RETRY": "Zopakovať import",
+        "QUEUED": "Zoznam bol prijatý. Import čaká vo fronte; túto stránku môžete opustiť.",
+        "PROCESSING": "Prebieha import zoznamu. Odosielanie nie je dostupné, kým sa nedokončí.",
+        "COMPLETED": "Import zoznamu dokončený.",
+        "SUMMARY": "Pridané: {imported} · Duplikáty: {duplicates} · Neplatné: {invalid} · Vylúčené z odosielania: {suppressed} · Celkom: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Premenná bola skopírovaná do schránky.",
+        "EMPTY": "Importujte príjemcov a zobrazte premenné zo stĺpcov tabuľky.",
+        "SUBTITLE": "Kliknutím skopírujte premennú a vložte ju do predmetu, úvodného náhľadu alebo tela správy.",
+        "TITLE": "Dostupné premenné"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Pridať kontakty",
+        "ADD_MORE_HINT": "Zoznam bol nahraný pri vytvorení kampane. Nahrajte ďalší CSV/XLSX a pridajte kontakty.",
+        "SUBTITLE": "Nahrajte CSV alebo XLSX so stĺpcami name a email. Príjemcovia sa použijú iba v tejto kampani a nepridajú sa medzi vaše kontakty.",
+        "TITLE": "Príjemcovia"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Vyberte dátum a čas",
+        "DATETIME_LABEL": "Čas odoslania",
+        "CANCEL": "Zrušiť",
+        "SUBMIT": "Naplánovať"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: počet príjemcov bez hodnoty — {count}",
+        "BLANK_LABEL": "Príjemcovia bez hodnoty:",
+        "MISSING_LABEL": "Použité v šablóne, ale chýbajúce u príjemcov:",
+        "OK": "Všetky premenné tejto kampane majú hodnoty. Môžete odoslať.",
+        "TITLE": "Kontrola pred odoslaním"
+      },
+      "STATUS": {
+        "CANCELED": "Zrušené",
+        "DRAFT": "Koncept",
+        "SCHEDULED": "Naplánované",
+        "SENDING": "Odosiela sa",
+        "SENT": "Odoslané",
+        "PAUSED": "Odosielanie pozastavené",
+        "FAILED": "Neúspešné"
+      },
+      "NEW": "Nová e-mailová kampaň"
     }
   }
 }

@@ -40,6 +40,18 @@ class Crm::Pipeline < ApplicationRecord
 
   enum status: { active: 0, archived: 1 }
 
+  before_validation :initialize_followup_days, on: :create
+
   validates :name, presence: true
   validates :metadata, jsonb_attributes_length: true
+
+  private
+
+  def initialize_followup_days
+    config = (metadata || {}).deep_dup
+    config['ai'] ||= {}
+    config['ai']['auto_followup'] ||= {}
+    config['ai']['auto_followup']['allowed_days'] ||= [1, 2, 3, 4, 5]
+    self.metadata = config
+  end
 end

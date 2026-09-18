@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_16_123000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -493,6 +493,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_specialists_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_specialists_on_autonomia_agent_id"
   end
+
   create_table "autonomia_agent_tool_runs", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "autonomia_agent_id", null: false
@@ -515,9 +516,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
     t.datetime "updated_at", null: false
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
-    t.index ["conversation_id", "slug"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying])::text[]))"
+    t.index ["conversation_id", "slug"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
     t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true
   end
+
   create_table "autonomia_agent_tools", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "autonomia_agent_id", null: false
@@ -2143,6 +2145,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
     t.index ["source_provider"], name: "index_data_imports_on_source_provider"
   end
 
+  create_table "email_campaign_import_issues", force: :cascade do |t|
+    t.bigint "email_campaign_id", null: false
+    t.bigint "email_campaign_import_id"
+    t.integer "row_number", null: false
+    t.string "raw_address", limit: 320, null: false
+    t.string "reason_code", null: false
+    t.string "suggestion", limit: 320
+    t.datetime "created_at", null: false
+    t.index ["email_campaign_id"], name: "index_email_campaign_import_issues_on_email_campaign_id"
+    t.index ["email_campaign_import_id", "row_number"], name: "idx_import_issues_row", unique: true
+    t.index ["email_campaign_import_id"], name: "index_email_campaign_import_issues_on_email_campaign_import_id"
+  end
+
+  create_table "email_campaign_imports", force: :cascade do |t|
+    t.bigint "email_campaign_id", null: false
+    t.integer "status", default: 0, null: false
+    t.jsonb "result", default: {}, null: false
+    t.string "error_code"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_campaign_id"], name: "idx_email_campaign_imports_active", unique: true, where: "(status = ANY (ARRAY[0, 1]))"
+    t.index ["email_campaign_id"], name: "index_email_campaign_imports_on_email_campaign_id"
+    t.index ["status", "updated_at"], name: "index_email_campaign_imports_on_status_and_updated_at"
+  end
+
   create_table "email_campaign_recipients", force: :cascade do |t|
     t.bigint "email_campaign_id", null: false
     t.string "name"
@@ -2156,7 +2184,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
     t.integer "attempts", default: 0, null: false
     t.datetime "last_event_at"
     t.jsonb "custom_data", default: {}, null: false
+    t.string "preflight_status", default: "unchecked", null: false
+    t.string "preflight_reason_code"
+    t.string "preflight_suggestion", limit: 320
+    t.datetime "preflight_checked_at"
+    t.datetime "preflight_valid_until"
     t.index "email_campaign_id, lower((email)::text)", name: "idx_email_campaign_recipients_campaign_email", unique: true
+    t.index ["email_campaign_id", "id"], name: "idx_recipients_preflight_unchecked", where: "((status = 0) AND ((preflight_status)::text = 'unchecked'::text))"
+    t.index ["email_campaign_id", "preflight_valid_until"], name: "idx_recipients_preflight_due"
+    t.index ["email_campaign_id", "sent_at"], name: "idx_email_reputation_sent_cohort", where: "(sent_at IS NOT NULL)"
     t.index ["email_campaign_id", "status"], name: "idx_email_campaign_recipients_campaign_status"
     t.index ["email_campaign_id"], name: "index_email_campaign_recipients_on_email_campaign_id"
     t.index ["ses_message_id"], name: "index_email_campaign_recipients_on_ses_message_id"
@@ -2214,6 +2250,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
     t.datetime "ai_requested_at"
     t.datetime "ai_completed_at"
     t.jsonb "ai_subject_variants", default: [], null: false
+    t.string "hygiene_pause_reason"
+    t.jsonb "preflight_summary", default: {}, null: false
+    t.string "preflight_lease_token"
+    t.datetime "preflight_lease_expires_at"
+    t.bigint "preflight_cursor", default: 0, null: false
+    t.bigint "preflight_ceiling", default: 0, null: false
+    t.jsonb "pause_reason", default: {}, null: false
     t.index ["account_id", "status", "scheduled_at"], name: "idx_email_campaigns_account_status_scheduled"
     t.index ["account_id"], name: "index_email_campaigns_on_account_id"
     t.index ["sender_identity_id"], name: "index_email_campaigns_on_sender_identity_id"
@@ -2231,6 +2274,85 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
     t.index ["occurred_at"], name: "idx_email_events_occurred_at"
     t.index ["recipient_id", "event_type"], name: "idx_email_events_recipient_type"
     t.index ["recipient_id"], name: "index_email_events_on_recipient_id"
+  end
+
+  create_table "email_protection_maintenance_runs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "actor_id"
+    t.string "reason", limit: 200, null: false
+    t.string "idempotency_key", limit: 100, null: false
+    t.boolean "dry_run", default: true, null: false
+    t.integer "batch_size", default: 100, null: false
+    t.string "status", default: "pending", null: false
+    t.string "phase", default: "events", null: false
+    t.bigint "event_horizon", null: false
+    t.bigint "legacy_horizon", null: false
+    t.bigint "event_cursor", default: 0, null: false
+    t.bigint "legacy_cursor", default: 0, null: false
+    t.jsonb "counts", default: {}, null: false
+    t.string "lease_token"
+    t.datetime "lease_expires_at"
+    t.datetime "next_dispatch_at", null: false
+    t.integer "retry_count", default: 0, null: false
+    t.integer "attempts", default: 0, null: false
+    t.integer "enqueue_attempts", default: 0, null: false
+    t.integer "error_count", default: 0, null: false
+    t.string "error_code"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "idempotency_key"], name: "idx_email_maintenance_idempotency", unique: true
+    t.index ["account_id"], name: "index_email_protection_maintenance_runs_on_account_id"
+    t.index ["status", "next_dispatch_at"], name: "idx_email_maintenance_dispatch"
+    t.check_constraint "batch_size >= 1 AND batch_size <= 500", name: "email_maintenance_batch_bound"
+  end
+
+  create_table "email_provider_states", force: :cascade do |t|
+    t.string "provider_key", null: false
+    t.string "status", default: "unknown", null: false
+    t.boolean "blocked", default: false, null: false
+    t.bigint "harmful_generation", default: 0, null: false
+    t.boolean "manual_block", default: false, null: false
+    t.string "manual_reason"
+    t.jsonb "telemetry", default: {}, null: false
+    t.datetime "observed_at"
+    t.datetime "checked_at"
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider_key"], name: "index_email_provider_states_on_provider_key", unique: true
+  end
+
+  create_table "email_reputation_audits", force: :cascade do |t|
+    t.bigint "account_id"
+    t.string "provider_key"
+    t.string "action", null: false
+    t.bigint "actor_id"
+    t.jsonb "snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_email_reputation_audits_account_time"
+    t.index ["account_id"], name: "index_email_reputation_audits_on_account_id"
+  end
+
+  create_table "email_reputation_states", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "observation_generation", default: 0, null: false
+    t.bigint "feedback_version", default: 0, null: false
+    t.bigint "evaluated_feedback_version", default: 0, null: false
+    t.datetime "evaluation_lease_until"
+    t.string "evaluation_lease_token"
+    t.boolean "blocked", default: false, null: false
+    t.string "level", default: "unknown", null: false
+    t.jsonb "current_metrics", default: {}, null: false
+    t.jsonb "policy", default: {}, null: false
+    t.datetime "evaluated_at"
+    t.datetime "triggered_at"
+    t.jsonb "trigger_snapshot", default: {}, null: false
+    t.jsonb "override", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_email_reputation_states_on_account_id", unique: true
   end
 
   create_table "email_sender_identities", force: :cascade do |t|
@@ -2251,6 +2373,42 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
     t.index "account_id, lower((domain)::text)", name: "idx_email_sender_identities_account_domain", unique: true
     t.index ["account_id", "status"], name: "idx_email_sender_identities_account_status"
     t.index ["account_id"], name: "index_email_sender_identities_on_account_id"
+  end
+
+  create_table "email_suppression_events", force: :cascade do |t|
+    t.bigint "email_suppression_state_id", null: false
+    t.bigint "account_id", null: false
+    t.bigint "origin_campaign_id"
+    t.string "event_key", limit: 200, null: false
+    t.string "action", null: false
+    t.string "reason", null: false
+    t.string "source", null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "first_seen_at", null: false
+    t.datetime "last_seen_at", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id", "email_suppression_state_id", "event_key"], name: "idx_suppression_events_replay", unique: true
+    t.index ["account_id"], name: "index_email_suppression_events_on_account_id"
+    t.index ["email_suppression_state_id", "reason", "occurred_at"], name: "idx_suppression_events_window"
+    t.index ["email_suppression_state_id"], name: "index_email_suppression_events_on_email_suppression_state_id"
+  end
+
+  create_table "email_suppression_states", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "email", null: false
+    t.boolean "active", default: false, null: false
+    t.string "reason"
+    t.string "source"
+    t.datetime "expires_at"
+    t.datetime "first_seen_at"
+    t.datetime "last_seen_at"
+    t.integer "occurrences", default: 0, null: false
+    t.bigint "origin_campaign_id"
+    t.datetime "created_at", null: false
+    t.index ["account_id", "email"], name: "idx_suppression_states_account_email", unique: true
+    t.index ["account_id"], name: "index_email_suppression_states_on_account_id"
+    t.check_constraint "email::text = lower(btrim(email::text))", name: "suppression_state_normalized_email"
   end
 
   create_table "email_suppressions", force: :cascade do |t|
@@ -2903,7 +3061,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_04_180000) do
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
   add_foreign_key "autonomia_agent_specialists", "accounts"
   add_foreign_key "autonomia_agent_tool_runs", "accounts"
-add_foreign_key "autonomia_agent_tools", "accounts"
+  add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
@@ -3008,13 +3166,19 @@ add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "ctwa_tracked_link_clicks", "ctwa_tracked_links", column: "tracked_link_id", on_delete: :cascade
   add_foreign_key "ctwa_tracked_links", "accounts", on_delete: :cascade
   add_foreign_key "ctwa_tracked_links", "inboxes", on_delete: :cascade
+  add_foreign_key "email_campaign_import_issues", "email_campaign_imports", on_delete: :cascade
+  add_foreign_key "email_campaign_import_issues", "email_campaigns", on_delete: :cascade
+  add_foreign_key "email_campaign_imports", "email_campaigns"
   add_foreign_key "email_campaign_recipients", "email_campaigns"
   add_foreign_key "email_campaign_templates", "accounts"
   add_foreign_key "email_campaigns", "accounts"
   add_foreign_key "email_campaigns", "email_sender_identities", column: "sender_identity_id"
   add_foreign_key "email_campaigns", "inboxes", column: "sender_inbox_id", on_delete: :nullify
   add_foreign_key "email_events", "email_campaign_recipients", column: "recipient_id"
+  add_foreign_key "email_protection_maintenance_runs", "accounts", on_delete: :cascade
+  add_foreign_key "email_reputation_states", "accounts", on_delete: :cascade
   add_foreign_key "email_sender_identities", "accounts"
+  add_foreign_key "email_suppression_states", "accounts", on_delete: :cascade
   add_foreign_key "email_suppressions", "accounts"
   add_foreign_key "idempotency_keys", "accounts"
   add_foreign_key "inboxes", "portals"
@@ -3033,6 +3197,28 @@ add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute(<<-SQL)
+CREATE OR REPLACE FUNCTION public.email_reputation_audit_append_only()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$ BEGIN RAISE EXCEPTION 'email reputation audit is append-only'; END; $function$
+  SQL
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER email_reputation_audit_append_only BEFORE DELETE OR UPDATE ON \"email_reputation_audits\" FOR EACH ROW EXECUTE FUNCTION email_reputation_audit_append_only()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute(<<-SQL)
+CREATE OR REPLACE FUNCTION public.email_reputation_snapshot_immutable()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$ BEGIN IF OLD.triggered_at IS NOT NULL AND NOT (NOT OLD.blocked AND NEW.blocked) AND (NEW.triggered_at IS DISTINCT FROM OLD.triggered_at OR NEW.trigger_snapshot IS DISTINCT FROM OLD.trigger_snapshot) THEN RAISE EXCEPTION 'email reputation trigger snapshot is immutable'; END IF; RETURN NEW; END; $function$
+  SQL
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER email_reputation_snapshot_immutable BEFORE UPDATE ON \"email_reputation_states\" FOR EACH ROW EXECUTE FUNCTION email_reputation_snapshot_immutable()")
+
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").
       after(:insert).

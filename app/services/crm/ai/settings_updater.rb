@@ -41,14 +41,44 @@ module Crm
       end
 
       def normalize_auto_followup(params)
-        cfg = params.to_h.with_indifferent_access
+        current = Config.auto_followup_settings(@pipeline)
+        incoming = params.to_h.with_indifferent_access
+        # Disabling must remain possible for legacy/invalid schedules. Ignore
+        # hidden form fields and preserve the saved configuration for later editing.
+        return current.stringify_keys.merge('enabled' => false) if incoming.key?(:enabled) && !cast_boolean(incoming[:enabled], default: true)
+
+        cfg = current.merge(incoming)
+        validate_auto_followup!(cfg)
         {
+          'mode' => cfg[:mode],
+          'allowed_days' => cfg[:allowed_days],
           'enabled' => cast_boolean(cfg[:enabled], default: false),
           'max_touches' => cfg[:max_touches].to_i,
           'intervals_hours' => Array(cfg[:intervals_hours]).map(&:to_i),
           'quiet_hours' => normalize_quiet_hours(cfg[:quiet_hours]),
           'tone_instructions' => cfg[:tone_instructions].to_s.strip
         }
+      end
+
+      def validate_auto_followup!(cfg)
+        days = cfg[:allowed_days]
+        intervals = cfg[:intervals_hours]
+        quiet = cfg[:quiet_hours].to_h.with_indifferent_access
+        valid = %w[auto_send ai_reminder].include?(cfg[:mode]) &&
+                days.is_a?(Array) && days.any? && days.all? { |day| day.is_a?(Integer) && (0..6).cover?(day) } &&
+                (1..3).cover?(cfg[:max_touches].to_i) && intervals.is_a?(Array) &&
+                intervals.length == cfg[:max_touches].to_i && intervals.all? { |hours| hours.is_a?(Integer) && hours.positive? } &&
+                intervals.each_cons(2).all? { |left, right| left < right } &&
+                valid_hour?(quiet[:start], 0..23) && valid_hour?(quiet[:end], 1..24) && quiet[:start].to_i < quiet[:end].to_i
+        return if valid
+
+        @pipeline.errors.add(:metadata, :invalid)
+        raise ActiveRecord::RecordInvalid, @pipeline
+      end
+
+      def valid_hour?(value, range)
+        integer = value.is_a?(Integer) || (value.is_a?(String) && value.match?(/\A\d+\z/))
+        integer && range.cover?(value.to_i)
       end
 
       def normalize_quiet_hours(params)

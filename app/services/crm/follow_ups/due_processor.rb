@@ -23,7 +23,7 @@ class Crm::FollowUps::DueProcessor
   end
 
   def dispatch(follow_up)
-    if follow_up.auto_send_message? && ai_followup?(follow_up)
+    if ai_followup?(follow_up)
       process_ai_followup(follow_up)
     elsif follow_up.auto_send_message? && ai_callback?(follow_up)
       process_ai_callback(follow_up)
@@ -101,7 +101,11 @@ class Crm::FollowUps::DueProcessor
 
     result = Crm::FollowUps::AutoFollowupRunner.new(follow_up: follow_up, now: @now).perform
 
+    return if result.status == :unchanged # Preserve an explicit transition made during the AI call.
+
     case result.status
+    when :reminded
+      return process_overdue(follow_up)
     when :sent
       follow_up.update!(status: :done, completed_at: @now)
       log_message_sent(follow_up, follow_up.conversation&.messages&.find_by(id: follow_up.metadata.to_h['sent_message_id']))

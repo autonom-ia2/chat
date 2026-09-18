@@ -1,0 +1,4 @@
+PostgreSQL local, separate pooled connections; pg_stat_activity verified wait_event_type=Lock.
+Follow-up row: 1 example, 0 failures.
+Final phase card/pipeline: 2 examples, 0 failures.
+Updates completed only after the held locks were released. No real messages or AI calls.

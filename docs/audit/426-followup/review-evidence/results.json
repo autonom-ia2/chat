@@ -1,0 +1,14 @@
+{
+  "reviewed_head": "f2d19443a1d945983d4e86eb8f8df019e1fdab57",
+  "scope": "Local synthetic fixture; no production, no paid AI, no customer sends",
+  "disable_legacy_schedule": {
+    "input": {"enabled": true, "quiet_hours": {"start": 8, "end": 8}},
+    "ui_after_unchecking_enabled": {"checked": false, "saveDisabled": true, "persistedEnabled": true},
+    "actual_settings_service_patch_enabled_false": "ActiveRecord::RecordInvalid"
+  },
+  "fractional_hours": {
+    "ui": {"saveDisabled": false, "payload": {"start": 8.5, "end": 20.5, "tz": "contact"}},
+    "actual_settings_service_result": {"start": 8, "end": 20, "tz": "contact"},
+    "classification": "Preexisting behavior, still present in the changed scheduling UI"
+  }
+}

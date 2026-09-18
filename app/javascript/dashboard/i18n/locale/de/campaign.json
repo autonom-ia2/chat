@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Kampagne erfolgreich gelöscht",
         "ERROR_MESSAGE": "Es ist ein Fehler aufgetreten, bitte versuchen Sie es erneut."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Abbrechen",
+        "CANCEL_SUCCESS": "Kampagne abgebrochen.",
+        "DELETE_SUCCESS": "Kampagne gelöscht.",
+        "DUPLICATE": "Duplizieren",
+        "DUPLICATE_SUCCESS": "Kampagne dupliziert. Empfänger und Versandzeit aktualisieren.",
+        "EDIT": "Bearbeiten",
+        "OPEN_BUILDER": "Editor",
+        "PAUSE": "Pausieren",
+        "PAUSE_SUCCESS": "Kampagne pausiert.",
+        "SCHEDULE": "Planen",
+        "SCHEDULE_SUCCESS": "Kampagne geplant.",
+        "SEND_NOW": "Jetzt senden",
+        "SEND_SUCCESS": "Kampagne zum Versand eingereiht.",
+        "MANAGE_RECIPIENTS": "Empfänger",
+        "DELETE": "Löschen"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "KI fehlgeschlagen",
+          "PROCESSING": "KI erstellt Inhalte",
+          "READY": "KI bereit"
+        }
+      },
+      "DESCRIPTION": "E-Mail verfassen, bestätigte Versanddomain auswählen, Empfängerliste hochladen und sofort oder geplant senden.",
+      "DIALOG": {
+        "BASE_HINT": "CSV oder XLSX mit den Spalten name und email hochladen. Erkannte Spalten werden zu Personalisierungsvariablen.",
+        "BASE_IMPORTING": "Liste wird importiert…",
+        "BASE_LABEL": "Kontaktliste (CSV oder XLSX)",
+        "BASE_PICK": "Datei auswählen",
+        "BASE_SELECTED": "Ausgewählt: {name}",
+        "CREATE_AND_OPEN": "Erstellen und im Editor öffnen",
+        "CREATE_TITLE": "Neue E-Mail-Kampagne",
+        "DIRECT_OPTION": "direkt über diesen Posteingang senden",
+        "DIRECT_WARNING": "Achtung: Dies ist Ihr persönliches Postfach. Nur für eigene echte Kontakte mit Einwilligung und geringe Mengen verwenden. Massenversand über kostenloses Webmail kann zur Kontosperrung führen. Wir begrenzen auf 100 pro Tag mit natürlichen Abständen. Bestätigen Sie für größere Listen Ihre eigene Domain.",
+        "EDIT_TITLE": "E-Mail-Kampagne bearbeiten",
+        "ERROR": "Kampagne konnte nicht gespeichert werden. Bitte erneut versuchen.",
+        "FROM_EMAIL_DIRECT_HINT": "Direkter Versand mit diesem Postfach als Absender.",
+        "FROM_EMAIL_ERROR": "Absenderadresse erforderlich",
+        "FROM_EMAIL_HINT": "Adresse muss zu {'@'}{domain} gehören (Ihre bestätigte Domain).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Adresse muss zu Ihrer bestätigten Versanddomain gehören.",
+        "FROM_EMAIL_INVALID": "Gültige Adresse Ihrer bestätigten Domain eingeben",
+        "FROM_EMAIL_LABEL": "Absenderadresse",
+        "FROM_EMAIL_PLACEHOLDER": "Z. B. promo{'@'}ihrefirma.com",
+        "FROM_NAME_ERROR": "Absendername erforderlich",
+        "FROM_NAME_LABEL": "Absendername",
+        "FROM_NAME_PLACEHOLDER": "Z. B. Acme-Marketing",
+        "NAME_ERROR": "Kampagnennamen eingeben",
+        "NAME_LABEL": "Kampagnenname",
+        "NAME_PLACEHOLDER": "Z. B. Juni-Rundbrief",
+        "NO_VERIFIED_DOMAIN": "Noch keine bestätigte Versanddomain. Zuerst unter E-Mail-Versanddomains eine Domain hinzufügen und bestätigen.",
+        "REPLY_TO_ERROR": "Antwortadresse erforderlich",
+        "REPLY_TO_HINT": "Antworten gehen an diese Adresse. Verbinden Sie sie als Posteingang, um Antworten als Gespräche zu erhalten.",
+        "REPLY_TO_INVALID": "Gültige E-Mail-Adresse eingeben",
+        "REPLY_TO_LABEL": "Antwortadresse",
+        "REPLY_TO_PLACEHOLDER": "Z. B. support{'@'}ihrefirma.com",
+        "SAVE_DRAFT": "Entwurf speichern",
+        "SENDER_ERROR": "Bestätigte Versanddomain auswählen",
+        "SENDER_LABEL": "Versanddomain",
+        "SENDER_PLACEHOLDER": "Bestätigte Domain auswählen",
+        "SUCCESS": "Kampagne gespeichert.",
+        "CANCEL": "Abbrechen"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Erstellen Sie Ihre erste Kampagne, um eine E-Mail an eine importierte Liste zu verfassen und zu senden.",
+        "TITLE": "Noch keine E-Mail-Kampagnen"
+      },
+      "HEADER_TITLE": "E-Mail-Kampagnen",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Die Liste ist leer. Kontakte hinzufügen und erneut hochladen.",
+          "EXPIRED": "Die hochgeladene Datei ist abgelaufen. Liste erneut hochladen.",
+          "FAILED": "Import fehlgeschlagen. Es wurden keine Kontakte hinzugefügt. Erneut versuchen oder Datei erneut hochladen.",
+          "FILE_TOO_LARGE": "Die Datei überschreitet die Größenbegrenzung. Liste aufteilen und erneut versuchen.",
+          "HEADERS": "In der ersten Zeile des ersten Tabellenblatts je eine Spalte Name und Email verwenden, ohne doppelte Überschriften.",
+          "INVALID_FILE": "Datei konnte nicht gelesen werden. Gültige CSV- oder XLSX-Datei hochladen.",
+          "IN_PROGRESS": "Für diese Kampagne läuft bereits ein Import. Warten Sie auf den Abschluss.",
+          "ROW_LIMIT": "Die Liste überschreitet 50.000 Zeilen. In kleinere Dateien aufteilen.",
+          "UPLOAD_FAILED": "Datei konnte nicht gespeichert werden. Liste erneut hochladen."
+        },
+        "RETRY": "Import erneut versuchen",
+        "QUEUED": "Liste erhalten. Import eingereiht; Sie können diese Seite verlassen.",
+        "PROCESSING": "Die Liste wird importiert. Bis zum Abschluss ist kein Versand möglich.",
+        "COMPLETED": "Listenimport abgeschlossen.",
+        "SUMMARY": "Hinzugefügt: {imported} · Duplikate: {duplicates} · Ungültig: {invalid} · Vom Versand ausgeschlossen: {suppressed} · Insgesamt: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Variable in die Zwischenablage kopiert.",
+        "EMPTY": "Empfänger importieren, um Variablen aus Ihren Tabellenspalten zu sehen.",
+        "SUBTITLE": "Variable anklicken, kopieren und in Betreff, Vorschautext oder Nachricht einfügen.",
+        "TITLE": "Verfügbare Variablen"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Weitere Kontakte hinzufügen",
+        "ADD_MORE_HINT": "Die Liste wurde beim Erstellen hochgeladen. Weitere Kontakte mit einer zusätzlichen CSV-/XLSX-Datei hinzufügen.",
+        "SUBTITLE": "CSV oder XLSX mit name und email hochladen. Empfänger gelten nur für diese Kampagne und werden nicht Ihren Kontakten hinzugefügt.",
+        "TITLE": "Empfänger"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Datum und Uhrzeit auswählen",
+        "DATETIME_LABEL": "Senden am",
+        "CANCEL": "Abbrechen",
+        "SUBMIT": "Planen"
+      },
+      "STATUS": {
+        "PAUSED": "Pausiert",
+        "CANCELED": "Abgebrochen",
+        "DRAFT": "Entwurf",
+        "FAILED": "Senden fehlgeschlagen",
+        "SCHEDULED": "Geplant",
+        "SENDING": "Wird gesendet",
+        "SENT": "Gesendet"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} Empfänger ohne Wert",
+        "BLANK_LABEL": "Empfänger ohne Wert:",
+        "MISSING_LABEL": "In der Vorlage verwendet, aber bei den Empfängern nicht gefunden:",
+        "OK": "Alle Variablen dieser Kampagne haben Werte. Versand ist bereit.",
+        "TITLE": "Prüfung vor dem Versand"
+      },
+      "COUNTS": {
+        "SENT": "Gesendet",
+        "RECIPIENTS": "Empfänger",
+        "FAILED": "Senden fehlgeschlagen"
+      },
+      "NEW": "Neue E-Mail-Kampagne"
     }
   }
 }

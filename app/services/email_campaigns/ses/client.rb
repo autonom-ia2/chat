@@ -10,6 +10,11 @@ module EmailCampaigns
     class Client
       API_VERSION_PATH = '/v2/email'.freeze
 
+      # SESv2 account status does not expose reputation rates (those live in CloudWatch).
+      def get_account # rubocop:disable Naming/AccessorMethodName -- matches the SESv2 operation name
+        get("#{API_VERSION_PATH}/account")
+      end
+
       def create_email_identity(domain)
         post("#{API_VERSION_PATH}/identities", { EmailIdentity: domain }, idempotent: true)
       end
@@ -106,7 +111,7 @@ module EmailCampaigns
       def execute(method, url, headers, body)
         uri = URI.parse(url)
         request = build_request(method, uri, headers, body)
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(request) }
+        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 10) { |http| http.request(request) }
         handle(response)
       rescue Error
         raise

@@ -36,12 +36,17 @@ class EmailCampaignRecipient < ApplicationRecord
                  delivered: 4, opened: 5, clicked: 6, bounced: 7, complained: 8,
                  unsubscribed: 9 }
 
+  PREFLIGHT_STATUSES = %w[unchecked valid invalid review unknown].freeze
+  validates :preflight_status, inclusion: { in: PREFLIGHT_STATUSES }
+
   MAX_ATTEMPTS = 3
 
   before_validation :normalize_email
 
   validates :email, presence: true, format: { with: EmailCampaign::EMAIL_REGEX }
-  validates :email, uniqueness: { scope: :email_campaign_id, case_sensitive: false }
+  # Bulk import checks its preloaded set and the database unique index instead.
+  validates :email, uniqueness: { scope: :email_campaign_id, case_sensitive: false },
+                    unless: -> { validation_context == :recipient_import }
 
   def mark_sent!(ses_message_id)
     update!(status: :sent, ses_message_id: ses_message_id, sent_at: Time.current, last_error: nil)
