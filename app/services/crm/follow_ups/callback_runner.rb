@@ -42,8 +42,8 @@ module Crm
 
       # -> Result (:sent | :fallback | :failed)
       def perform
-        return Result.fallback('card_archived') if @card&.archived?
-        return Result.fallback('no_conversation') if @follow_up.conversation.blank?
+        skip_reason_before_compose = precondition_fallback_reason
+        return Result.fallback(skip_reason_before_compose) if skip_reason_before_compose
 
         @send_mode = messaging_window.can_send_session_message? ? :free_form : :choose_template
         @candidates = @send_mode == :choose_template ? template_candidates : []
@@ -70,6 +70,14 @@ module Crm
       end
 
       private
+
+      # Contato excluído do follow-up de IA: o retorno combinado vira lembrete humano, a IA não envia.
+      def precondition_fallback_reason
+        return 'card_archived' if @card&.archived?
+        return 'no_conversation' if @follow_up.conversation.blank?
+
+        'contact_disabled' if Crm::Ai::Config.contact_followup_disabled?(@follow_up.conversation.contact)
+      end
 
       def deliver
         send_result = Crm::FollowUps::MessageSender.new(follow_up: @follow_up).perform

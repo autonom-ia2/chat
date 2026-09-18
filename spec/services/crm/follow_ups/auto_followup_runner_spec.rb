@@ -506,4 +506,20 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
       expect(follow_up.reload).to be_overdue
     end
   end
+
+  describe 'exclusão por contato' do
+    it 'para a cadência sem chamar a IA e sem gastar o ciclo' do
+      account, user = create_account_and_user
+      follow_up = setup_followup(account: account, user: user)
+      follow_up.conversation.contact.update!(additional_attributes: { 'crm_ai_followup_disabled' => true })
+      expect(Crm::Ai::FollowUpComposer).not_to receive(:new)
+
+      result = described_class.new(follow_up: follow_up, now: Time.current).perform
+
+      state = follow_up.card.reload.metadata.dig('ai', 'auto_followup_state')
+      expect(result.status).to eq(:stopped)
+      expect(state['stopped_reason']).to eq('contact_disabled')
+      expect(state['spent']).to be(false)
+    end
+  end
 end

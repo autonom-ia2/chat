@@ -127,8 +127,18 @@ module Crm
       TRANSCRIPT_MAX_CHARS = 1500
       CAPTION_MAX_CHARS = 400
 
+      # Exclusão do follow-up automático de IA por contato (auto-followup e retorno por data).
+      # Mora no contato, não no card, para valer em qualquer funil e sobreviver a um card novo.
+      CONTACT_FOLLOWUP_DISABLED_KEY = 'crm_ai_followup_disabled'.freeze
+
       def self.enabled?
         ::Crm::Config.enabled? && BOOLEAN.cast(ENV.fetch('CRM_AI_ENABLED', false))
+      end
+
+      def self.contact_followup_disabled?(contact)
+        return false if contact.blank?
+
+        BOOLEAN.cast(contact.additional_attributes.to_h[CONTACT_FOLLOWUP_DISABLED_KEY]) == true
       end
 
       def self.media_enabled?

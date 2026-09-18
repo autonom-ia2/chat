@@ -70,6 +70,7 @@ module Crm
       # After this many CONSECUTIVE failures the cadence is finalized rather than
       # retried forever.
       MAX_RETRIES = 3
+      CONTACT_DISABLED_REASON = 'contact_disabled'.freeze
 
       def initialize(follow_up:, now: Time.current)
         @follow_up = follow_up
@@ -205,10 +206,24 @@ module Crm
         return 'spent' if state['spent']
         return 'max_touches' if touch > max_touches
         return 'won_lost' if @card.won? || @card.lost? || @card.archived?
-        return 'opt_out' if state['opted_out']
+
+        consent_reason = consent_stop_reason
+        return consent_reason if consent_reason
         return 'replied' if customer_replied_since_scheduling?
 
         nil
+      end
+
+      # Cliente pediu para sair (card) ou o contato foi excluído do follow-up de IA.
+      def consent_stop_reason
+        return 'opt_out' if state['opted_out']
+
+        CONTACT_DISABLED_REASON if contact_followup_disabled?
+      end
+
+      def contact_followup_disabled?
+        contact = @follow_up.conversation&.contact || @card.contact
+        Crm::Ai::Config.contact_followup_disabled?(contact)
       end
 
       # A newer inbound message than the last touch we sent (or, before the first
@@ -550,10 +565,12 @@ module Crm
 
       # ---- stop / skip helpers -------------------------------------------------
 
-      # Hard auto-stop (won/lost/archived, opt-out, reply, spent). Terminal => spent.
+      # Hard auto-stop (won/lost/archived, opt-out, reply, spent). Terminal => spent, exceto a
+      # exclusão por contato: não gasta o ciclo, para o planner voltar a armar quando reativarem.
       def stop_cadence(reason)
         cancel_pending_siblings
-        merge_state!('active' => false, 'spent' => true, 'stopped_reason' => reason, 'next_due_at' => nil)
+        spent = reason != CONTACT_DISABLED_REASON
+        merge_state!('active' => false, 'spent' => spent, 'stopped_reason' => reason, 'next_due_at' => nil)
         log_activity('ai_followup_stopped', reason: reason, touch: touch)
         Result.stopped(@follow_up)
       end

@@ -139,6 +139,7 @@ Padrão **um toque por vez** (não pré-compõe tudo):
 
 ### 4.6 Auto-stop, compliance, frequency cap
 - **Auto-stop (hard gates):** resposta inbound (hook no evento de mensagem / `CardSyncer`), opt-out/STOP, negócio won/lost, `max_touches` atingido → cancela follow-ups pendentes da cadência.
+- **Exclusão por contato (#462):** `contact.additional_attributes.crm_ai_followup_disabled = true` tira o contato do follow-up de IA em todos os funis. O planner não arma; o runner para a cadência com `stopped_reason = contact_disabled` sem gastar o ciclo (reativar o contato deixa o planner armar de novo); o retorno por data (`ai_callback`) vira lembrete humano. Marcado pelas ações de Automação "Desativar/Reativar follow-up de IA do CRM" ou pela chave no drawer do card.
 - **Opt-in: ASSUMIDO** (decisão #2) — sem gate de consentimento; quem já conversou é tratado como opt-in. *(Risco de política da Meta registrado em §10; decisão do produto.)*
 - **Frequency cap:** máx. 1 template marketing/24h/contato; nunca 2 sem resposta (evita erro 131049). Mantido como proteção técnica/qualidade.
 - **Quiet hours / fuso:** desloca `due_at` para a próxima janela permitida.

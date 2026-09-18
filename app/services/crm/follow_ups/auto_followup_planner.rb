@@ -57,6 +57,7 @@ module Crm
         return false unless Crm::FollowUps::MessagingWindow.new(conversation, at: @now).whatsapp_capable?
         return false if cadence_active?(card) || cadence_spent?(card) || opted_out?(card)
         return false if pending_callback?(card)
+        return false if Crm::Ai::Config.contact_followup_disabled?(conversation.contact)
         return false unless sufficient_two_way_exchange?(conversation)
 
         anchor_at = Crm::FollowUps::CadenceAnchor.new(conversation).at
