@@ -50,12 +50,17 @@ class Autonomia::Insurance::QuoteOffers
   # leitura própria de `basis` aqui.
   def quoted
     @quoted ||= begin
-      cotadas = Array(@result['offers'])
-                .select { |offer| offer['status'] == 'quoted' && offer.dig('premium', 'amount').present? }
+      cotadas = Array(@result['offers']).select { |offer| self.class.cotada?(offer) }
       sem_periodo, com_periodo = cotadas.partition { |offer| self.class.sem_periodo?(offer) }
       mensais, totais = com_periodo.partition { |offer| self.class.mensal?(offer) }
       por_valor(totais) + por_valor(mensais) + sem_periodo
     end
+  end
+
+  # -> a oferta cotou e trouxe valor? É o critério de `quoted` e o de "com preço" do resultado guardado
+  # por seguradora (`Insurance::ResultadoPorSeguradora`).
+  def self.cotada?(offer)
+    offer['status'] == 'quoted' && offer.dig('premium', 'amount').present?
   end
 
   def self.sem_periodo?(offer)
@@ -127,6 +132,18 @@ class Autonomia::Insurance::QuoteOffers
     return false if atual.nil? || Array(assentada_anterior).map(&:to_s).sort != atual
 
     (Array(ja_acionadas).map(&:to_s) - acionadas).empty?
+  end
+
+  # -> true quando esta leitura está assentada e lista todo código que alguma leitura anterior listou
+  # (`ja_acionadas`, a união). Chamado só na passada em que `todas_com_desfecho?` respondeu falso
+  # (`InsuranceQuote::Resultado#em_andamento`, fatia 2 do #420): ali, verdade quer dizer que a próxima
+  # leitura, se repetir esta, fecha a cotação, e a ferramenta pede a consulta seguinte no primeiro intervalo
+  # da progressão.
+  #
+  # A leitura assentada que perdeu uma seguradora já listada responde falso: a próxima leitura igual também
+  # não fecharia a cotação.
+  def confirma_na_proxima?(ja_acionadas)
+    assentada.present? && (Array(ja_acionadas).map(&:to_s) - acionadas).empty?
   end
 
   # Seguradoras que recusaram a credencial que a corretora cadastrou NO PORTAL (critério 4.5).

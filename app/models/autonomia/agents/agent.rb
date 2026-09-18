@@ -191,6 +191,13 @@ module Autonomia
         ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_do_principal(self) || instruction
       end
 
+      # AS FERRAMENTAS NATIVAS QUE VALEM PARA ESTE AGENTE (fatia 2 do #420). Para o Agente de Cotação, a
+      # lista do deploy (`QuoteAgent::Builder.ferramentas_mantidas`); para os demais, `native_tool_slugs`.
+      # Quem monta o catálogo do turno (`Tools::Registry.for_agent`) lê daqui.
+      def ferramentas_nativas
+        ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) || native_tool_slugs
+      end
+
       # Aplica config gerada pelo Construtor (token-guarded — análogo a ai_guarded_update do
       # EmailCampaign). `build_token` é o token ativo do BuildThread; a escrita só vence se este
       # ainda for o token da geração corrente (idempotência anti-supersede). `attrs` já vem mapeado

@@ -318,6 +318,125 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
   end
 
+  # OS ESTADOS NOVOS DA FATIA 2 DO #420: a cotação que pede a confirmação no intervalo curto, e a ferramenta
+  # da Lia que mostra o resultado guardado. Na cotação, cada estado novo ainda termina com palavra ao cliente,
+  # sob as quatro formas de o especialista não escrever. Na ferramenta da Lia, quem fala é a Lia: com preço, o
+  # código anexa os itens ao turno, e o Responder os entrega depois da fala dela; sem preço, o modelo recebe um
+  # texto para falar, em todo estado. A ferramenta é síncrona e não publica nada sozinha (desenho da rodada 8).
+  describe 'os estados novos da fatia 2 (resultado guardado e ferramenta da Lia)' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
+    let(:agent_bot) { create(:agent_bot, account: account) }
+    let(:agent_inbox) do
+      Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: agent_bot)
+    end
+    let(:mock) { Autonomia::Insurance::Connector::Mock.new }
+    let(:job) { Autonomia::Agents::Tools::AsyncRunJob }
+    let(:resultado) { Autonomia::Agents::Tools::Native::InsuranceQuoteResult }
+
+    around do |example|
+      with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true', INSURANCE_QUOTING_ENABLED: 'true') { example.run }
+    end
+
+    before do
+      account.update!(internal_attributes: account.internal_attributes.merge('autonomia_agents_enabled' => true))
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(mock)
+      allow(mock).to receive(:quote_proposal).and_call_original
+      allow(Resolv).to receive(:getaddresses).and_call_original
+      allow(Resolv).to receive(:getaddresses).with('exemplo.test').and_return(['93.184.216.34'])
+      stub_request(:get, 'https://exemplo.test/comparativo-mock.pdf')
+        .to_return(status: 200, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
+    end
+
+    def recusa(code)
+      { 'insurer' => { 'code' => code, 'name' => "Seguradora #{code}" }, 'status' => 'declined' }
+    end
+
+    def cotacao_viva(desfalque)
+      run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: described_class.slug, arguments: base.merge(argumentos(desfalque)),
+                                             scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
+      run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 5.minutes.from_now)
+      run.record_attempt!(handle: { job::SUBMITTED_KEY => true, 'quote_id' => 'q-1:1', described_class::DELIVERED_KEY => [],
+                                    described_class::ACIONADAS_KEY => %w[3 43] })
+      run
+    end
+
+    def palavras_do_bot
+      conversation.messages.reload.where(sender_type: 'AgentBot').order(:id).map(&:content)
+    end
+
+    DesfalquesDoEspecialista::NOMES.each do |desfalque|
+      describe "com #{desfalque}" do
+        it 'a primeira leitura com todas com desfecho pede a confirmacao logo, e o done seguinte diz o fecho' do
+          register_async_tool(described_class)
+          allow(mock).to receive(:quote_result)
+            .and_return({ 'quote_id' => 'q-1:1', 'status' => 'partial', 'offers' => [offer('43', 'Ezze', 2050.40), recusa('3')] })
+          run = cotacao_viva(desfalque)
+
+          job.new.perform(run.id, 12)
+          confirmacao = enqueued_jobs.find { |item| item[:job] == job && item[:args] == [run.id, 13] }
+          job.new.perform(run.id, 13)
+
+          expect(confirmacao[:at]).to be_within(2).of(3.seconds.from_now.to_f)
+          expect(run.reload.status).to eq('done')
+          expect(palavras_do_bot.last).to eq(described_class.closing_message(run.arguments))
+        end
+
+        # A ferramenta da Lia lê a cotação cuja chamada teve este desfalque: o que ela anexa ao turno são os itens
+        # do código, e nunca uma frase do especialista ou uma constante.
+        it 'a ferramenta da Lia anexa ao turno os itens de preco, sem frase pronta' do
+          fonte = cotacao_viva(desfalque)
+          fonte.record_attempt!(handle: { described_class::RESULTADO_KEY =>
+                                            Autonomia::Insurance::ResultadoPorSeguradora.unir({}, [offer('43', 'Ezze', 2050.40)]) })
+          fonte.finish!('done')
+          delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 8)
+
+          ao_modelo = resultado.new(agent: agent, params: { 'seguradora' => nil }, delivery: delivery).call
+
+          expect(delivery.anexos).to eq([Autonomia::Insurance::QuoteOffers.item(offer('43', 'Ezze', 2050.40))])
+          expect(ao_modelo).to include(resultado::LISTA_ANEXADA)
+          expect(palavras_do_bot).to be_empty
+        end
+      end
+    end
+
+    # SEM PREÇO A ANEXAR, QUEM FALA É A LIA, e ela recebe um texto em todo estado.
+    it 'sem preco a publicar, o modelo recebe texto em todo estado da ferramenta da Lia' do
+      delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 7)
+      ao_modelo = ->(seguradora) { resultado.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: delivery).call }
+      guardado = ->(ofertas) { { described_class::RESULTADO_KEY => Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas) } }
+      textos = [ao_modelo.call(nil)]
+
+      run = cotacao_viva('nó vazio')
+      textos << ao_modelo.call(nil)
+      run.record_attempt!(handle: guardado.call([recusa('3')]))
+      textos += [ao_modelo.call(nil), ao_modelo.call('Seguradora 3'), ao_modelo.call('Azul')]
+      run.finish!('done')
+      textos += [ao_modelo.call(nil), ao_modelo.call('Seguradora 3'), ao_modelo.call('Azul')]
+      run.update!(handle: run.handle.except('quote_id'))
+      textos << ao_modelo.call(nil)
+      expect(textos.last).to eq(resultado::NAO_CHEGOU)
+      run.update!(handle: run.handle.except(job::SUBMITTED_KEY).merge(Autonomia::Agents::ToolRun::INTENCOES => 1))
+      textos << ao_modelo.call(nil)
+
+      expect(textos.size).to eq(10)
+      expect(textos).to all(be_present)
+      expect(textos.last).to eq(resultado::ENVIO_INCERTO)
+    end
+
+    # SEM MOTOR: a ferramenta da Lia é síncrona, não abre execução, e nenhuma frase do motor sai por ela.
+    it 'a ferramenta da Lia e sincrona e nao abre execucao' do
+      delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 9)
+      cotacao_viva('nó vazio')
+
+      resultado.new(agent: agent, params: { 'seguradora' => nil }, delivery: delivery).call
+
+      expect(resultado.async?).to be(false)
+      expect(Autonomia::Agents::ToolRun.where(slug: resultado.slug)).to be_empty
+      expect(palavras_do_bot).to be_empty
+    end
+  end
+
   # A MORTE DA PARCIAL, DITA PELO QUE SAI NO LUGAR. A frase "algumas seguradoras não responderam a
   # tempo" deixa de existir para o cliente (decisão do CEO); o ESTADO que a produzia continua
   # falando, com um texto que não conta a nossa mecânica de leque.

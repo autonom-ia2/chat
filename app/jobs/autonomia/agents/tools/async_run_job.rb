@@ -212,7 +212,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     elsif progress.done? && !arquivo_recusado?(resultados)
       finish_done(run, native)
     else
-      reschedule(run, attempt)
+      reschedule(run, attempt, curto: progress.confirmar_logo?)
     end
   end
 
@@ -325,8 +325,10 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     reschedule(run, attempt)
   end
 
-  def reschedule(run, attempt)
-    self.class.set(wait: AsyncConfig.interval_for(run.agent, attempt))
+  # A passada seguinte, no intervalo desta tentativa; com `curto`, no primeiro intervalo da progressão do
+  # agente (a ferramenta pediu a consulta logo: `Progress#confirmar_logo?`). A tentativa conta igual.
+  def reschedule(run, attempt, curto: false)
+    self.class.set(wait: AsyncConfig.interval_for(run.agent, curto ? 0 : attempt))
         .perform_later(run.id, attempt + 1)
   end
 

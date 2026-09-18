@@ -205,6 +205,122 @@ module ManualDoPrincipal
   }.freeze
 end
 
+# O BLOCO DA FERRAMENTA DE RESULTADO DA §5 (fatia 2 do #420): o bloco, a conversa que exercita as promessas e
+# a tabela de promessas. Módulo próprio, ao lado de `ManualDoPrincipal`, para não passar do teto de linhas.
+module ManualDoPrincipalResultado
+  # Do título até o subtítulo seguinte. Assinado pelo mesmo motivo dos outros dois blocos: a frase-âncora
+  # não vê o que for escrito ao lado dela.
+  SECAO = /### `ver_resultado_da_cotacao`.*?(?=\n### )/m
+  RESULTADO = Autonomia::Agents::Tools::Native::InsuranceQuoteResult
+  COTACAO = Autonomia::Agents::Tools::Native::InsuranceQuote
+  BUILDER = Autonomia::Insurance::QuoteAgent::Builder
+  MOTIVO = Autonomia::Insurance::MotivoDaRecusa
+  MOTIVO_DO_VEICULO = 'Tipo de veículo não aceito.'.freeze
+
+  module_function
+
+  def secao(texto)
+    texto[SECAO]
+  end
+
+  # UMA CONVERSA COM UMA COTAÇÃO ENCERRADA: Porto cotou, Sancor recusou pelo tipo do veículo. A conta NÃO tem
+  # conexão com o portal, de propósito: a ferramenta de resultado responde sem ela.
+  def conversa_com_cotacao
+    account = FactoryBot.create(:account, internal_attributes: { 'autonomia_insurance_enabled' => true })
+    inbox = FactoryBot.create(:inbox, account: account)
+    conversation = FactoryBot.create(:conversation, account: account, inbox: inbox)
+    agent = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'custom',
+                                             status: :active, enabled: true, instruction: 'Atenda.')
+    ofertas = [{ 'insurer' => { 'code' => '8', 'name' => 'Porto Seguro' }, 'status' => 'quoted',
+                 'premium' => { 'amount' => 2119.18, 'basis' => 'total' } },
+               { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined',
+                 'reason' => { 'kind' => 'risco', 'text' => MOTIVO_DO_VEICULO } }]
+    guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas)
+    Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: COTACAO.slug, status: 'done',
+                                       conversation_id: conversation.id, execution_key: SecureRandom.uuid, arguments: {},
+                                       handle: { 'quote_id' => 'q-1:1', COTACAO::RESULTADO_KEY => guardado })
+    [agent, conversation]
+  end
+
+  def no_turno(seguradora, conversa = conversa_com_cotacao)
+    agent, conversation = conversa
+    delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil, origin_message_id: 1)
+    RESULTADO.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: delivery)
+  end
+
+  # O que o modelo lê, e o que a ferramenta anexou ao turno.
+  def consultar(seguradora, conversa = conversa_com_cotacao)
+    ferramenta = no_turno(seguradora, conversa)
+    [ferramenta.call, ferramenta.send(:delivery).anexos]
+  end
+
+  # CADA PROMESSA DO BLOCO, PELA FRASE EXATA, E O QUE A SUSTENTA.
+  PROMESSAS = {
+    # A ferramenta é do principal e responde sem o portal: a conta desta conversa não tem conexão nenhuma.
+    'O que a cotação desta conversa já recebeu das seguradoras, sem cotar de novo.' => lambda {
+      BUILDER::TOOLS_DO_PRINCIPAL.include?(RESULTADO.slug) && BUILDER::TOOLS_DO_ESPECIALISTA.exclude?(RESULTADO.slug) &&
+        consultar('Sancor').first.include?('Sancor não fez proposta')
+    },
+    # Um parâmetro só, e a procura acha mais de uma seguradora no mesmo texto.
+    'escreva todos os nomes no mesmo campo, numa chamada só.' => lambda {
+      ao_modelo, = consultar('Sancor e Porto')
+      RESULTADO.openai_schema[:parameters][:required] == ['seguradora'] &&
+        ao_modelo.include?('Porto Seguro fez proposta') && ao_modelo.include?('Sancor não fez proposta')
+    },
+    # Quem escreve o preço é o código: a ferramenta é síncrona e anexa ao turno o item de `QuoteOffers.item`, que o
+    # `Operate::Responder` entrega depois da resposta.
+    "Quando houver preço para mostrar, a lista vai anexada à sua\nresposta e chega logo depois da sua mensagem." => lambda {
+      ao_modelo, anexos = consultar(nil)
+      item = Autonomia::Insurance::QuoteOffers.item('insurer' => { 'code' => '8', 'name' => 'Porto Seguro' }, 'status' => 'quoted',
+                                                    'premium' => { 'amount' => 2119.18, 'basis' => 'total' })
+      !RESULTADO.async? && anexos == [item] && ao_modelo.include?(RESULTADO::LISTA_ANEXADA) && ao_modelo.exclude?('2.119')
+    },
+    # O modelo recebe da ferramenta a mesma regra.
+    'sem valor, sem listar seguradoras e sem travessão.' => lambda {
+      RESULTADO::LISTA_ANEXADA.include?('sem escrever valor, sem listar seguradoras e sem travessão')
+    },
+    # Nada fica guardado entre consultas: a segunda lê o que a cotação tem agora, e nenhuma execução é aberta.
+    "Cada consulta mostra o que a cotação\ntem naquele momento." => lambda {
+      conversa = conversa_com_cotacao
+      cotacao = Autonomia::Agents::ToolRun.find_by!(slug: COTACAO.slug, conversation_id: conversa.last.id)
+      antes = consultar('Allianz', conversa).first
+      allianz = { 'insurer' => { 'code' => '5', 'name' => 'Allianz' }, 'status' => 'quoted',
+                  'premium' => { 'amount' => 2402.55, 'basis' => 'total' } }
+      guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir(cotacao.handle[COTACAO::RESULTADO_KEY], [allianz])
+      cotacao.update!(handle: cotacao.handle.merge(COTACAO::RESULTADO_KEY => guardado))
+      depois, anexos = consultar('Allianz', conversa)
+      antes == RESULTADO::NAO_ENCONTRADA && depois.include?('Allianz fez proposta') && anexos.one? &&
+        Autonomia::Agents::ToolRun.where(slug: RESULTADO.slug).none?
+    },
+    # O motivo só chega ao modelo quando o pedido nomeia a seguradora: o resultado inteiro não o traz.
+    'O motivo de quem não fez proposta só sai quando a pessoa perguntar por aquela seguradora' => lambda {
+      motivo = RESULTADO::MOTIVOS.fetch(MOTIVO::VEICULO)
+      consultar(nil).first.exclude?(motivo) && consultar('Sancor').first.include?(motivo)
+    },
+    # A ferramenta entrega uma de duas categorias, escritas pelo código.
+    'que a ferramenta entregar: se a recusa foi pelo veículo ou pela região.' => lambda {
+      MOTIVO::CATEGORIAS == [MOTIVO::VEICULO, MOTIVO::REGIAO] && RESULTADO::MOTIVOS.keys == MOTIVO::CATEGORIAS
+    },
+    # O texto do portal não chega ao modelo: não há detalhe a acrescentar além da categoria.
+    'sem acrescentar detalhe que a ferramenta não deu.' => lambda {
+      consultar('Sancor').first.exclude?(MOTIVO_DO_VEICULO) &&
+        RESULTADO::MOTIVOS.values.all? { |texto| texto.include?('sem acrescentar detalhe') }
+    },
+    "Quando a ferramenta disser que não há motivo que\nvocê possa contar" => lambda {
+      RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
+        MOTIVO.categoria('kind' => 'passageiro', 'text' => MOTIVO_DO_VEICULO).nil?
+    },
+    # O molde fechado do motivo não tem palavra de conta nem da pessoa: com qualquer uma delas, o texto vai ao genérico.
+    "Nunca fale de login, senha ou\npermissão da corretora, nem de restrição da pessoa." => lambda {
+      moldes = MOTIVO::MOLDES.values.map { |molde| molde[:palavras] }
+      %w[login senha permissao segurado condutor restricao].none? { |palavra| moldes.any? { |palavras| palavras.include?(palavra) } } &&
+        ['faça login', 'senha vencida', 'sem permissão', 'segurado com restrição'].all? do |termo|
+          MOTIVO.categoria('kind' => 'risco', 'text' => "Tipo de veículo não aceito, #{termo}.").nil?
+        end
+    }
+  }.freeze
+end
+
 RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   let(:texto) { ManualDoPrincipal::ARQUIVO.read }
   let(:account) { create(:account, internal_attributes: { 'autonomia_insurance_enabled' => true }) }
@@ -264,7 +380,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     it 'todo slug do catálogo que aparece no texto está em TOOLS_DO_PRINCIPAL' do
       citadas = Autonomia::Agents::Tools::Registry.slugs.select { |slug| texto.include?(slug) }
 
-      expect(citadas).to include('consultar_condicoes_gerais')
+      expect(citadas).to include('consultar_condicoes_gerais', 'ver_resultado_da_cotacao')
       expect(citadas - described_class::TOOLS_DO_PRINCIPAL).to be_empty
     end
 
@@ -308,21 +424,20 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(condicoes_gerais.available_for?(agente.reload)).to be(false)
     end
 
-    # O NEGATIVO DO TERMO 3 — "habilitada nos agentes que já existem" NÃO é consequência do código.
-    # `Registry.for_agent` filtra pelo que está LIGADO no agente (`agent.native_tool_slugs`), gravado
-    # no nascimento: um agente criado antes de a ferramenta existir, com a lista sem o slug, não a
-    # recebe — com módulo ligado, conexão pronta e `available_for?` verdadeiro do mesmo jeito. O
-    # `Builder` só escreve a lista em `criar_agente`. Quem já existe depende de rollout, e é por isso
-    # que o termo 3 se prova no agente 24 em produção (auditoria da entrega 2, linha 144) — aqui se
-    # prova apenas que a lista é o que manda.
-    it 'agente já criado sem o slug em native_tool_slugs não recebe a ferramenta' do
+    # O TERMO 3 PASSOU A SER CONSEQUÊNCIA DO CÓDIGO (fatia 2 do #420). Até aqui `Registry.for_agent`
+    # filtrava pela lista gravada no nascimento (`native_tool_slugs`), e o agente criado antes de a
+    # ferramenta existir só a recebia por escrita no banco de produção. Agora a lista do Agente de Cotação
+    # é a do deploy (`Builder.ferramentas_mantidas`, lida por `Agent#ferramentas_nativas`): o agente com a
+    # lista antiga gravada recebe a ferramenta, e a coluna não é tocada. Para os outros tipos de agente a
+    # coluna continua mandando (`registry_spec`).
+    it 'agente de cotação já criado sem o slug em native_tool_slugs recebe a ferramenta pela lista do deploy' do
       agente = construir
       sem_a_cg = agente.native_tool_slugs - ['consultar_condicoes_gerais']
       agente.update!(config: agente.config.merge('native_tool_slugs' => sem_a_cg))
 
       expect(condicoes_gerais.available_for?(agente)).to be(true)
-      expect(Autonomia::Agents::Tools::Bound.for_agent(agente).map(&:slug))
-        .not_to include('consultar_condicoes_gerais')
+      expect(Autonomia::Agents::Tools::Bound.for_agent(agente.reload).map(&:slug)).to include('consultar_condicoes_gerais')
+      expect(agente.reload.native_tool_slugs).not_to include('consultar_condicoes_gerais')
     end
   end
 
@@ -385,6 +500,41 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     it 'não introduz variável para substituir' do
       expect(secao).to be_present
       expect(secao.scan(/\$[a-zA-Z]+/)).to be_empty
+    end
+  end
+
+  # O BLOCO DA FERRAMENTA DE RESULTADO (fatia 2 do #420): promessa por frase exata e assinatura por md5.
+  # Nasceu ANTES do "### Os especialistas de ramo", e é por isso que a assinatura daquele bloco não mudou.
+  describe 'promessa e capacidade da ferramenta de resultado da §5 (fatia 2 do #420)' do
+    let(:secao) { ManualDoPrincipalResultado.secao(texto) }
+
+    ManualDoPrincipalResultado::PROMESSAS.each do |frase, sustenta|
+      it "«#{frase.tr("\n", ' ')}» tem o que a sustenta" do
+        expect(ManualDoPrincipalResultado.secao(texto)).to include(frase)
+        expect(sustenta.call).to be_truthy
+      end
+    end
+
+    it 'está no arquivo, antes do bloco dos especialistas, e é extraído inteiro' do
+      expect(secao).to be_present
+      expect(secao).to start_with('### `ver_resultado_da_cotacao`')
+      expect(secao).to end_with("permissão da corretora, nem de restrição da pessoa.\n")
+      expect(texto.index(secao)).to be < texto.index('### Os especialistas de ramo')
+    end
+
+    it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
+      expect(secao).to be_present
+      expect(Digest::MD5.hexdigest(secao)).to eq('429fbe18230433e92c3e07bf14cd4f5f')
+    end
+
+    it 'não escreve valor em reais nem introduz variável para substituir' do
+      expect(secao).to be_present
+      expect(secao).not_to include('R$')
+      expect(secao.scan(/\$[a-zA-Z]+/)).to be_empty
+    end
+
+    it 'diz quantas ferramentas a Lia tem, contando a nova' do
+      expect(texto).to include('Você tem quatro.')
     end
   end
 end

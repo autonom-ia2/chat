@@ -46,4 +46,15 @@ RSpec.describe Autonomia::Agents::Tools::Registry do
 
     expect(described_class.for_agent(agent).size).to eq(1)
   end
+
+  # FATIA 2 DO #420: o Agente de Cotação usa a lista do deploy (`QuoteAgent::Builder.ferramentas_mantidas`),
+  # e não a gravada em `native_tool_slugs`. Os outros tipos de agente continuam com a gravada (acima).
+  it 'offers the deploy list to the quote agent, whatever list is stored in its config' do
+    lia = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote', status: :active,
+                                           enabled: true, instruction: 'Cote.', config: { 'native_tool_slugs' => ['cotar_seguro'] })
+    described_class.all.each { |tool| allow(tool).to receive(:available_for?).and_return(true) }
+
+    expect(described_class.for_agent(lia).map(&:slug)).to eq(Autonomia::Insurance::QuoteAgent::Builder::TODAS_AS_TOOLS)
+    expect(lia.reload.native_tool_slugs).to eq(['cotar_seguro'])
+  end
 end

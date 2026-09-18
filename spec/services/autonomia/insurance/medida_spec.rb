@@ -95,6 +95,22 @@ RSpec.describe Autonomia::Insurance::Medida do
       expect(resultado[:cotacoes]).to be_zero
       expect(resultado[:seguradoras_acionadas]).to be_zero
     end
+
+    # FATIA 2 DO #420: a coluna "Com preço" do Super Admin lê `entregues`, e o resultado por seguradora
+    # guardado na mesma linha não muda a contagem, nem quando ele tem mais seguradoras com preço do que as
+    # entregues (o lote recusado pelo publicador, por exemplo).
+    it 'com preço continua sendo o tamanho de entregues, com o resultado por seguradora guardado' do
+      cotadas = %w[1 3 4 5 7 8 11 12 19 20 26 44].map do |code|
+        { 'insurer' => { 'code' => code, 'name' => "S#{code}" }, 'status' => 'quoted', 'premium' => { 'amount' => 1000.0 } }
+      end
+      run!(handle: { 'quote_id' => 'q1', 'seguradoras_acionadas' => dezessete, 'entregues' => %w[1 3 4 5 7 8 11 12 19 20 26],
+                     Autonomia::Agents::Tools::Native::InsuranceQuote::RESULTADO_KEY =>
+                       Autonomia::Insurance::ResultadoPorSeguradora.unir({}, cotadas) })
+
+      resultado = medida
+
+      expect(resultado).to include(cotacoes: 1, seguradoras_acionadas: 17, seguradoras_com_preco: 11)
+    end
   end
 
   describe 'isolamento e janela' do
