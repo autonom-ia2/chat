@@ -40,6 +40,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
   SEM_PROPOSTA = '%<nome>s não fez proposta nesta cotação, e não há proposta dela para enviar. Nada foi enviado ao ' \
                  'cliente.'.freeze
   AINDA_NAO = '%<nome>s ainda não respondeu, e a cotação continua correndo. Nada foi enviado ao cliente.'.freeze
+  # A COTAÇÃO CORRENDO E O NOME AINDA SEM RESULTADO: a seguradora pode não ter respondido, então nem "nenhuma fez
+  # proposta" nem a lista de quem já fez (que daria a entender que a pedida não fez). Achado da revisão da PR #460.
+  AINDA_CORRENDO = 'A cotação ainda está correndo e essa seguradora não apareceu no resultado até agora. Nada foi ' \
+                   'enviado ao cliente: o comparativo chega quando a cotação terminar.'.freeze
   FALHOU = 'Não deu para gerar a proposta da %<nome>s agora. Nada foi enviado ao cliente: não mande link nem ' \
            'invente valor.'.freeze
 
@@ -79,14 +83,16 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     return SEM_COTACAO if @resultado.nil?
 
     codigos = @resultado.procurar(params['seguradora'].to_s)
-    return qual if codigos.size != 1
+    return qual(codigos) if codigos.size != 1
 
     responder(codigos.first)
   end
 
   private
 
-  def qual
+  def qual(codigos)
+    return AINDA_CORRENDO if codigos.empty? && @resultado.correndo?
+
     nomes = @resultado.com_preco.map { |codigo| @resultado.nome(codigo) }
     nomes.empty? ? SEM_PRECO : format(QUAL, nomes: nomes.to_sentence(two_words_connector: ' e ', last_word_connector: ' e '))
   end

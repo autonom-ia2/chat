@@ -135,6 +135,23 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
       expect(mensagens_do_bot).to be_empty
     end
 
+    it 'com a cotação correndo e sem resultado ainda: não diz que ninguém fez proposta' do
+      ofertas.clear
+      cotacao_da_conversa(status: 'running')
+
+      expect(pedir('Porto')).to eq(described_class::AINDA_CORRENDO)
+      expect(connector).not_to have_received(:quote_proposal)
+      expect(mensagens_do_bot).to be_empty
+    end
+
+    it 'com a cotação correndo e a pedida ainda fora do resultado: não lista as outras como se ela não tivesse cotado' do
+      ofertas.replace([cotou('44', 'Usebens', 1647.82)])
+      cotacao_da_conversa(status: 'running')
+
+      expect(pedir('Porto')).to eq(described_class::AINDA_CORRENDO)
+      expect(mensagens_do_bot).to be_empty
+    end
+
     it 'ambíguo (mais de uma casa): devolve a lista para o modelo perguntar' do
       cotacao_da_conversa
 
