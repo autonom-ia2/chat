@@ -22,6 +22,7 @@ import {
 const { t } = useI18n();
 const canManage = useCanManage('prospecting_manage');
 const route = useRoute();
+const DOT_SEPARATOR = '·';
 
 const isLoading = ref(true);
 const isCreating = ref(false);
@@ -666,7 +667,7 @@ onMounted(loadPage);
                   class="flex flex-wrap items-center gap-2 text-xs text-n-slate-10"
                 >
                   <span>{{ formatDate(list.created_at) }}</span>
-                  <span v-if="list.campaign_segment">·</span>
+                  <span v-if="list.campaign_segment">{{ DOT_SEPARATOR }}</span>
                   <span v-if="list.campaign_segment" class="text-n-teal-11">
                     {{ t('PROSPECTING.LISTS.SEGMENT_READY') }}
                   </span>
@@ -995,7 +996,7 @@ onMounted(loadPage);
                         v-if="leadPriorityTheme(lead)"
                         class="text-n-slate-6"
                       >
-                        ·
+                        {{ DOT_SEPARATOR }}
                       </span>
                       <span
                         class="min-w-0 flex-1 truncate text-sm text-n-slate-10"
@@ -1063,11 +1064,11 @@ onMounted(loadPage);
                   </div>
                   <div v-if="lead.decision_name" class="leading-relaxed">
                     <span class="font-semibold text-emerald-950">
-                      {{ t('PROSPECTING.SEARCH.DECISION_MAKER') }}:
+                      {{ `${t('PROSPECTING.SEARCH.DECISION_MAKER')}:` }}
                     </span>
                     {{ lead.decision_name }}
                     <span v-if="lead.decision_role">
-                      · {{ lead.decision_role }}
+                      {{ `· ${lead.decision_role}` }}
                     </span>
                   </div>
                   <div
@@ -1581,7 +1582,7 @@ onMounted(loadPage);
                       {{ leadPriorityTheme(lead).title }}
                     </span>
                     <span v-if="leadPriorityTheme(lead)" class="text-n-slate-6">
-                      ·
+                      {{ DOT_SEPARATOR }}
                     </span>
                     <span
                       class="min-w-0 flex-1 truncate text-xs text-n-slate-10"

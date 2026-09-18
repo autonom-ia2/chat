@@ -23,6 +23,8 @@ import {
 const { t } = useI18n();
 const canManage = useCanManage('prospecting_manage');
 const route = useRoute();
+const DOT_SEPARATOR = '·';
+const EMPTY_VALUE = '-';
 
 const isLoading = ref(true);
 const isSearching = ref(false);
@@ -1505,7 +1507,7 @@ onMounted(async () => {
                       {{ search.query }}
                     </h3>
                     <p class="block w-full truncate text-xs text-n-slate-10">
-                      {{ search.location }} · {{ formatSearchArea(search) }}
+                      {{ `${search.location} · ${formatSearchArea(search)}` }}
                     </p>
                   </div>
                   <span
@@ -1948,7 +1950,7 @@ onMounted(async () => {
                           v-if="leadPriorityTheme(lead)"
                           class="text-n-slate-6"
                         >
-                          ·
+                          {{ DOT_SEPARATOR }}
                         </span>
                         <span
                           class="min-w-0 flex-1 truncate text-sm text-n-slate-10"
@@ -2024,11 +2026,11 @@ onMounted(async () => {
                     </div>
                     <div v-if="lead.decision_name" class="leading-relaxed">
                       <span class="font-semibold text-emerald-950">
-                        {{ t('PROSPECTING.SEARCH.DECISION_MAKER') }}:
+                        {{ `${t('PROSPECTING.SEARCH.DECISION_MAKER')}:` }}
                       </span>
                       {{ lead.decision_name }}
                       <span v-if="lead.decision_role">
-                        · {{ lead.decision_role }}
+                        {{ `· ${lead.decision_role}` }}
                       </span>
                     </div>
                     <div
@@ -2475,7 +2477,7 @@ onMounted(async () => {
                       v-if="factor?.points"
                       class="ml-auto shrink-0 font-mono text-xs text-red-600"
                     >
-                      -{{ factor.points }}
+                      {{ `-${factor.points}` }}
                     </span>
                   </li>
                 </ul>
@@ -2521,7 +2523,7 @@ onMounted(async () => {
                   <div class="mt-1 break-words leading-relaxed">
                     {{ selectedLeadDetail.decision_name }}
                     <span v-if="selectedLeadDetail.decision_role">
-                      · {{ selectedLeadDetail.decision_role }}
+                      {{ `· ${selectedLeadDetail.decision_role}` }}
                     </span>
                   </div>
                 </div>
@@ -2542,7 +2544,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_EMAIL') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_EMAIL')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_email }}
                   </div>
@@ -2551,7 +2553,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_WHATSAPP') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_WHATSAPP')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_whatsapp }}
                   </div>
@@ -2560,7 +2562,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_INSTAGRAM') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_INSTAGRAM')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_instagram }}
                   </div>
@@ -2569,7 +2571,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_FACEBOOK') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_FACEBOOK')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_facebook }}
                   </div>
@@ -2578,7 +2580,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_LINKEDIN') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_LINKEDIN')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_linkedin }}
                   </div>
@@ -2587,7 +2589,7 @@ onMounted(async () => {
                     class="break-words"
                   >
                     <span class="font-semibold">
-                      {{ t('PROSPECTING.SEARCH.ENRICHED_CNPJ') }}:
+                      {{ `${t('PROSPECTING.SEARCH.ENRICHED_CNPJ')}:` }}
                     </span>
                     {{ selectedLeadDetail.enriched_cnpj }}
                   </div>
@@ -2710,7 +2712,7 @@ onMounted(async () => {
                 {{
                   selectedLeadDetail.latitude && selectedLeadDetail.longitude
                     ? `${selectedLeadDetail.latitude}, ${selectedLeadDetail.longitude}`
-                    : '-'
+                    : EMPTY_VALUE
                 }}
               </div>
             </div>

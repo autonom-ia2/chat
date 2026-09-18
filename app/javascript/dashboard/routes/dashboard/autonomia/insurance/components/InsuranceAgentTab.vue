@@ -146,7 +146,7 @@ const goToAgents = () => {
         <div class="flex items-center gap-2">
           <span class="i-lucide-circle-check size-4 text-n-teal-11 shrink-0" />
           <span class="text-sm font-medium text-n-slate-12">
-            {{ t('INSURANCE.AGENT.EXISTING.TITLE') }} — {{ agent.name }}
+            {{ `${t('INSURANCE.AGENT.EXISTING.TITLE')} — ${agent.name}` }}
           </span>
         </div>
         <p v-if="branchNames" class="text-sm text-n-slate-11">
