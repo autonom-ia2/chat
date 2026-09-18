@@ -6,25 +6,13 @@ export const CRM_MANAGE_AI_PERMISSION = 'crm_manage_ai';
 export const CRM_VIEW_REPORTS_PERMISSION = 'crm_view_reports';
 export const CRM_ADMIN_PERMISSION = 'crm_admin';
 
-export const CRM_PERMISSIONS = [
-  CRM_VIEW_PERMISSION,
-  CRM_MANAGE_CARDS_PERMISSION,
-  CRM_MOVE_CARDS_PERMISSION,
-  CRM_MANAGE_PIPELINES_PERMISSION,
-  CRM_MANAGE_AI_PERMISSION,
-  CRM_VIEW_REPORTS_PERMISSION,
-  CRM_ADMIN_PERMISSION,
-];
-
-export const AVAILABLE_CUSTOM_ROLE_PERMISSIONS = [
-  'conversation_manage',
-  'conversation_unassigned_manage',
-  'conversation_participating_manage',
-  'contact_manage',
-  'report_manage',
-  'knowledge_base_manage',
-  ...CRM_PERMISSIONS,
-];
+// Module keys (#452): `<module>_manage` implies `<module>_view` on the backend, so routes list both.
+export const CONTACT_VIEW_PERMISSION = 'contact_view';
+export const KNOWLEDGE_BASE_VIEW_PERMISSION = 'knowledge_base_view';
+export const AUTONOMIA_PERMISSIONS = ['autonomia_view', 'autonomia_manage'];
+export const CAMPAIGN_PERMISSIONS = ['campaign_view', 'campaign_manage'];
+export const INBOX_PERMISSIONS = ['inbox_view', 'inbox_manage'];
+export const CANNED_RESPONSE_MANAGE_PERMISSION = 'canned_response_manage';
 
 export const ROLES = ['agent', 'administrator'];
 

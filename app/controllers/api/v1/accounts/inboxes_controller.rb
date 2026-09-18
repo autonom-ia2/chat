@@ -8,7 +8,7 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   include Api::V1::Accounts::Concerns::WhatsappHealthManagement
 
   def index
-    @inboxes = policy_scope(Current.account.inboxes)
+    @inboxes = inboxes_scope
                .includes(:channel, :portal, :working_hours, { avatar_attachment: :blob })
                .order_by_name
   end
@@ -108,9 +108,17 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
 
   private
 
+  # inbox_view (#452) lists every account inbox for the settings pages. The Inbox policy scope stays
+  # membership-based: it also decides which mailboxes feed the CRM calendar.
+  def inboxes_scope
+    return Current.account.inboxes if Current.account_user&.permission_granted?('inbox_view')
+
+    policy_scope(Current.account.inboxes)
+  end
+
   def fetch_inbox
     @inbox = Current.account.inboxes.find(params[:id])
-    authorize @inbox, :show?
+    authorize @inbox, :settings?
   end
 
   def fetch_agent_bot

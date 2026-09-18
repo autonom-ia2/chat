@@ -34,8 +34,8 @@
     },
     "PERMISSIONS": {
       "CONVERSATION_MANAGE": "Gerenciar todas conversas",
-      "CONVERSATION_UNASSIGNED_MANAGE": "Gerenciar conversas não atribuídas e aquelas atribuídas a elas",
-      "CONVERSATION_PARTICIPATING_MANAGE": "Gerenciar conversas que participa e aquelas atribuídas a elas",
+      "CONVERSATION_UNASSIGNED_MANAGE": "Conversas não atribuídas",
+      "CONVERSATION_PARTICIPATING_MANAGE": "Conversas que participa",
       "CONTACT_MANAGE": "Gerenciar contatos",
       "REPORT_MANAGE": "Gerenciar relatórios",
       "KNOWLEDGE_BASE_MANAGE": "Gerenciar base de conhecimento",
@@ -45,11 +45,77 @@
       "CRM_MANAGE_PIPELINES": "Gerenciar funis e automações do CRM",
       "CRM_MANAGE_AI": "Gerenciar IA do CRM",
       "CRM_VIEW_REPORTS": "Visualizar relatórios do CRM",
-      "CRM_ADMIN": "Administrador do CRM (acesso total)"
+      "CRM_ADMIN": "Administrador do CRM (acesso total)",
+      "CONTACT_VIEW": "Ver contatos",
+      "KNOWLEDGE_BASE_VIEW": "Ver base de conhecimento",
+      "AUTONOMIA_VIEW": "Ver e testar Agentes Autonom.ia",
+      "AUTONOMIA_MANAGE": "Editar Agentes Autonom.ia",
+      "CAMPAIGN_VIEW": "Ver campanhas",
+      "CAMPAIGN_MANAGE": "Editar campanhas",
+      "INBOX_VIEW": "Ver caixas de entrada",
+      "INBOX_MANAGE": "Editar caixas de entrada",
+      "CANNED_RESPONSE_MANAGE": "Editar respostas prontas"
     },
-    "PERMISSION_GROUPS": {
-      "GENERAL": "Geral",
-      "CRM": "CRM"
+    "MATRIX": {
+      "LEVELS": {
+        "NONE": "Sem acesso",
+        "VIEW": "Ver",
+        "MANAGE": "Editar",
+        "LIMITED": "Limitado",
+        "ALL": "Todas"
+      },
+      "PRESETS": {
+        "LABEL": "Começar de um modelo:",
+        "SUPERVISOR": "Supervisor",
+        "MARKETING": "Marketing",
+        "AGENT": "Atendente"
+      },
+      "GROUPS": {
+        "SERVICE": "Atendimento",
+        "CRM": "CRM",
+        "AUTONOMIA": "Autonom.ia",
+        "MARKETING": "Marketing",
+        "CONNECTIONS": "Conexões"
+      },
+      "MODULES": {
+        "CONVERSATIONS": {
+          "NAME": "Conversas",
+          "HINT": "Quais conversas pode atender"
+        },
+        "CONTACTS": {
+          "NAME": "Contatos",
+          "HINT": "Lista, importar e exportar"
+        },
+        "KNOWLEDGE_BASE": {
+          "NAME": "Base de conhecimento",
+          "HINT": "Portais e artigos"
+        },
+        "REPORTS": {
+          "NAME": "Relatórios",
+          "HINT": "Painéis de atendimento"
+        },
+        "CANNED_RESPONSES": {
+          "NAME": "Respostas prontas",
+          "HINT": "Todos usam; Editar cria e altera"
+        },
+        "CRM": {
+          "NAME": "CRM",
+          "HINT": "Funis e cards"
+        },
+        "AUTONOMIA": {
+          "NAME": "Agentes Autonom.ia",
+          "HINT": "Ver e testar, ou criar, treinar e publicar"
+        },
+        "CAMPAIGNS": {
+          "NAME": "Campanhas",
+          "HINT": "E-mail, WhatsApp, SMS e listas de contatos"
+        },
+        "INBOXES": {
+          "NAME": "Caixas de entrada",
+          "HINT": "Canais, QR do WhatsApp e membros"
+        }
+      },
+      "FOOTNOTE": "Editar já inclui Ver. Usuários, funções, integrações, faturamento e segurança continuam com o administrador."
     },
     "FORM": {
       "NAME": {

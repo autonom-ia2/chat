@@ -23,6 +23,7 @@ import { useEmailReportRefresh } from 'dashboard/components-next/Campaigns/Email
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import CampaignLayout from 'dashboard/components-next/Campaigns/CampaignLayout.vue';
 import EmailCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDialog.vue';
 import EmailCampaignDetailsDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDetailsDialog.vue';
@@ -32,6 +33,7 @@ const store = useStore();
 const route = useRoute();
 const router = useRouter();
 const [showDialog, toggleDialog] = useToggle();
+const canManage = useCanManage('campaign_manage');
 
 const campaigns = useMapGetter('emailCampaigns/getCampaigns');
 const uiFlags = useMapGetter('emailCampaigns/getUIFlags');
@@ -298,6 +300,7 @@ onMounted(() => {
                 @click="openRecipients(campaign)"
               />
               <Button
+                v-if="canManage"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.DUPLICATE')"
                 icon="i-lucide-copy"
                 color="slate"
@@ -307,7 +310,7 @@ onMounted(() => {
                 @click="duplicate(campaign)"
               />
               <Button
-                v-if="campaign.status === 'draft'"
+                v-if="canManage && campaign.status === 'draft'"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.EDIT')"
                 icon="i-lucide-pencil"
                 color="slate"
@@ -328,7 +331,7 @@ onMounted(() => {
                 />
               </router-link>
               <Button
-                v-if="canSendNow(campaign)"
+                v-if="canManage && canSendNow(campaign)"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.SEND_NOW')"
                 icon="i-lucide-send"
                 color="blue"
@@ -338,7 +341,7 @@ onMounted(() => {
                 @click="sendNow(campaign)"
               />
               <Button
-                v-if="canPause(campaign)"
+                v-if="canManage && canPause(campaign)"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.PAUSE')"
                 icon="i-lucide-pause"
                 color="amber"
@@ -347,7 +350,7 @@ onMounted(() => {
                 @click="pause(campaign)"
               />
               <Button
-                v-if="canCancel(campaign)"
+                v-if="canManage && canCancel(campaign)"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.CANCEL')"
                 icon="i-lucide-x"
                 color="ruby"
@@ -356,7 +359,7 @@ onMounted(() => {
                 @click="cancel(campaign)"
               />
               <Button
-                v-if="campaign.status === 'draft'"
+                v-if="canManage && campaign.status === 'draft'"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.DELETE')"
                 icon="i-lucide-trash-2"
                 color="ruby"

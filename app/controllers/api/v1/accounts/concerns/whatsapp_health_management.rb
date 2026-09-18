@@ -3,7 +3,7 @@ module Api::V1::Accounts::Concerns::WhatsappHealthManagement
 
   included do
     skip_before_action :check_authorization, only: [:health, :register_webhook]
-    before_action :check_admin_authorization?, only: [:register_webhook]
+    before_action -> { check_permission_granted!('inbox_manage') }, only: [:register_webhook]
     before_action :validate_whatsapp_cloud_channel, only: [:health, :register_webhook]
   end
 

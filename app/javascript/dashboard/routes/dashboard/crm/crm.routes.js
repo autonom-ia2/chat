@@ -3,6 +3,7 @@ import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
   CRM_ADMIN_PERMISSION,
+  CAMPAIGN_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 import CrmKanbanPage from './pages/CrmKanbanPage.vue';
 import CrmDashboardPage from './pages/CrmDashboardPage.vue';
@@ -25,6 +26,11 @@ const reportsMeta = {
 // administrator or an explicit crm_admin seat may reach the settings page.
 const adminMeta = {
   permissions: ['administrator', CRM_ADMIN_PERMISSION],
+};
+
+// Campaign reports and CTWA links are campaign data (#452): their APIs check campaign_view.
+const campaignsMeta = {
+  permissions: ['administrator', ...CAMPAIGN_PERMISSIONS],
 };
 
 const ensureCrmEnabled = (to, _from, next) => {
@@ -87,7 +93,7 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/crm/campaign-management'),
     name: 'crm_campaign_management_index',
-    meta: reportsMeta,
+    meta: campaignsMeta,
     beforeEnter: ensureCrmEnabled,
     component: CrmCampaignManagementPage,
   },

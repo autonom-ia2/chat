@@ -7,6 +7,11 @@ import Hygiene from '../EmailHygieneSummary.vue';
 import Badge from '../EmailStatusBadge.vue';
 import ImportStatus from '../../Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
 import { importPopulationCampaign } from '../../../../../../../tests/qa/email-campaigns/fixtures.mjs';
+// Mounted without a store: grant manage so write controls render as for an admin.
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { ref } = await import('vue');
+  return { useCanManage: () => ref(true) };
+});
 
 const defaultPlugins = config.global.plugins;
 beforeAll(() => {

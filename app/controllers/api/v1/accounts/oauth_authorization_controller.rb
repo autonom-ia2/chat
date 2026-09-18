@@ -31,6 +31,6 @@ class Api::V1::Accounts::OauthAuthorizationController < Api::V1::Accounts::BaseC
   private
 
   def check_authorization
-    raise Pundit::NotAuthorizedError unless Current.account_user.administrator?
+    check_permission_granted!('inbox_manage')
   end
 end

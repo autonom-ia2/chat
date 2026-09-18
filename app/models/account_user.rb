@@ -66,6 +66,12 @@ class AccountUser < ApplicationRecord
     administrator? ? ['administrator'] : ['agent']
   end
 
+  # Gate for modules that are admin-only by default (e.g. autonomia_manage, campaign_view).
+  # OSS: administrators only. Enterprise extends it with custom role keys.
+  def permission_granted?(_key)
+    administrator?
+  end
+
   def push_event_data
     {
       id: id,

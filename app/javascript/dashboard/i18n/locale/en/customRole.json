@@ -34,8 +34,8 @@
     },
     "PERMISSIONS": {
       "CONVERSATION_MANAGE": "Manage all conversations",
-      "CONVERSATION_UNASSIGNED_MANAGE": "Manage unassigned conversations and those assigned to them",
-      "CONVERSATION_PARTICIPATING_MANAGE": "Manage participating conversations and those assigned to them",
+      "CONVERSATION_UNASSIGNED_MANAGE": "Unassigned conversations",
+      "CONVERSATION_PARTICIPATING_MANAGE": "Conversations they participate in",
       "CONTACT_MANAGE": "Manage contacts",
       "REPORT_MANAGE": "Manage reports",
       "KNOWLEDGE_BASE_MANAGE": "Manage knowledge base",
@@ -45,11 +45,77 @@
       "CRM_MANAGE_PIPELINES": "Manage CRM pipelines & automations",
       "CRM_MANAGE_AI": "Manage CRM AI",
       "CRM_VIEW_REPORTS": "View CRM reports",
-      "CRM_ADMIN": "CRM admin (full access)"
+      "CRM_ADMIN": "CRM admin (full access)",
+      "CONTACT_VIEW": "View contacts",
+      "KNOWLEDGE_BASE_VIEW": "View knowledge base",
+      "AUTONOMIA_VIEW": "View and test Autonom.ia agents",
+      "AUTONOMIA_MANAGE": "Edit Autonom.ia agents",
+      "CAMPAIGN_VIEW": "View campaigns",
+      "CAMPAIGN_MANAGE": "Edit campaigns",
+      "INBOX_VIEW": "View inboxes",
+      "INBOX_MANAGE": "Edit inboxes",
+      "CANNED_RESPONSE_MANAGE": "Edit canned responses"
     },
-    "PERMISSION_GROUPS": {
-      "GENERAL": "General",
-      "CRM": "CRM"
+    "MATRIX": {
+      "LEVELS": {
+        "NONE": "No access",
+        "VIEW": "View",
+        "MANAGE": "Edit",
+        "LIMITED": "Limited",
+        "ALL": "All"
+      },
+      "PRESETS": {
+        "LABEL": "Start from a template:",
+        "SUPERVISOR": "Supervisor",
+        "MARKETING": "Marketing",
+        "AGENT": "Agent"
+      },
+      "GROUPS": {
+        "SERVICE": "Service",
+        "CRM": "CRM",
+        "AUTONOMIA": "Autonom.ia",
+        "MARKETING": "Marketing",
+        "CONNECTIONS": "Connections"
+      },
+      "MODULES": {
+        "CONVERSATIONS": {
+          "NAME": "Conversations",
+          "HINT": "Which conversations they can handle"
+        },
+        "CONTACTS": {
+          "NAME": "Contacts",
+          "HINT": "List, import and export"
+        },
+        "KNOWLEDGE_BASE": {
+          "NAME": "Knowledge base",
+          "HINT": "Portals and articles"
+        },
+        "REPORTS": {
+          "NAME": "Reports",
+          "HINT": "Service dashboards"
+        },
+        "CANNED_RESPONSES": {
+          "NAME": "Canned responses",
+          "HINT": "Everyone can use them; Edit creates and changes them"
+        },
+        "CRM": {
+          "NAME": "CRM",
+          "HINT": "Pipelines and cards"
+        },
+        "AUTONOMIA": {
+          "NAME": "Autonom.ia agents",
+          "HINT": "View and test, or create, train and publish"
+        },
+        "CAMPAIGNS": {
+          "NAME": "Campaigns",
+          "HINT": "Email, WhatsApp, SMS and contact lists"
+        },
+        "INBOXES": {
+          "NAME": "Inboxes",
+          "HINT": "Channels, WhatsApp QR code and members"
+        }
+      },
+      "FOOTNOTE": "Edit includes View. Users, custom roles, integrations, billing and security stay with administrators."
     },
     "FORM": {
       "NAME": {

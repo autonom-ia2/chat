@@ -5,6 +5,7 @@ import { useToggle } from '@vueuse/core';
 import { useStore } from 'dashboard/composables/store';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -15,6 +16,7 @@ const { t } = useI18n();
 const store = useStore();
 const refreshTimer = ref(null);
 const [showCreateDialog, toggleCreateDialog] = useToggle();
+const canManage = useCanManage('campaign_manage');
 
 const campaigns = useMapGetter('whatsappApiCampaigns/getCampaigns');
 const uiFlags = useMapGetter('whatsappApiCampaigns/getUIFlags');
@@ -254,7 +256,7 @@ onBeforeUnmount(() => {
                 {{ scheduledAtLabel(campaign.scheduled_at) }}
               </td>
               <td class="px-4 py-4 align-top">
-                <div class="flex justify-end gap-1">
+                <div v-if="canManage" class="flex justify-end gap-1">
                   <Button
                     v-if="campaign.status === 'running'"
                     icon="i-lucide-pause"

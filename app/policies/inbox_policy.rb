@@ -26,6 +26,17 @@ class InboxPolicy < ApplicationPolicy
     Current.user.assigned_inboxes.include? record
   end
 
+  # Settings pages (#452): members see their inboxes and inbox_view sees every account inbox. Kept apart
+  # from show?, which also gates starting conversations and calls in the inbox.
+  def settings?
+    show? || @account_user.permission_granted?('inbox_view')
+  end
+
+  # Members keep creating CSAT templates as before; inbox_view alone only reads them (#452).
+  def manage_csat_templates?
+    show? || @account_user.permission_granted?('inbox_manage')
+  end
+
   def assignable_agents?
     true
   end
@@ -39,39 +50,40 @@ class InboxPolicy < ApplicationPolicy
   end
 
   def campaigns?
-    @account_user.administrator?
+    @account_user.permission_granted?('campaign_view')
   end
 
   def create?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def update?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def destroy?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def set_agent_bot?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def avatar?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def sync_templates?
-    @account_user.administrator?
+    inbox_manage?
   end
 
+  # Credentials stay admin-only even for inbox_manage (#452): the token and the secret leave the account.
   def whatsapp_business_management_token?
     @account_user.administrator?
   end
 
   def health?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def reset_secret?
@@ -79,22 +91,28 @@ class InboxPolicy < ApplicationPolicy
   end
 
   def enable_whatsapp_api_campaigns?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def disable_whatsapp_api_campaigns?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def enable_whatsapp_calling?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def disable_whatsapp_calling?
-    @account_user.administrator?
+    inbox_manage?
   end
 
   def set_inbound_calls?
-    @account_user.administrator?
+    inbox_manage?
+  end
+
+  private
+
+  def inbox_manage?
+    @account_user.permission_granted?('inbox_manage')
   end
 end

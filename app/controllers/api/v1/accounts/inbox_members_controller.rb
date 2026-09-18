@@ -3,7 +3,7 @@ class Api::V1::Accounts::InboxMembersController < Api::V1::Accounts::BaseControl
   before_action :current_agents_ids, only: [:create, :update]
 
   def show
-    authorize @inbox, :show?
+    authorize @inbox, :settings?
     fetch_updated_agents
   end
 

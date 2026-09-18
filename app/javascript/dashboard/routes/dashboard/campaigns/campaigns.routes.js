@@ -9,10 +9,11 @@ import WhatsAppApiCampaignsPage from './pages/WhatsAppApiCampaignsPage.vue';
 import EmailSenderPage from './pages/EmailSenderPage.vue';
 import EmailCampaignsPage from './pages/EmailCampaignsPage.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { CAMPAIGN_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
 const meta = {
   featureFlag: FEATURE_FLAGS.CAMPAIGNS,
-  permissions: ['administrator'],
+  permissions: ['administrator', ...CAMPAIGN_PERMISSIONS],
 };
 
 const requireEmailCampaigns = (to, _from, next) => {

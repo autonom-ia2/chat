@@ -2,7 +2,19 @@ import { frontendURL } from '../../../helper/URLHelper';
 import {
   ROLES,
   CONVERSATION_PERMISSIONS,
+  CANNED_RESPONSE_MANAGE_PERMISSION,
+  INBOX_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
+import {
+  getUserPermissions,
+  hasPermissions,
+} from 'dashboard/helper/permissionsHelper.js';
+
+const CANNED_LIST_PERMISSIONS = [
+  ...ROLES,
+  ...CONVERSATION_PERMISSIONS,
+  CANNED_RESPONSE_MANAGE_PERMISSION,
+];
 
 import account from './account/account.routes';
 import agent from './agents/agent.routes';
@@ -35,7 +47,7 @@ export default {
       path: frontendURL('accounts/:accountId/settings'),
       name: 'settings_home',
       meta: {
-        permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
+        permissions: [...CANNED_LIST_PERMISSIONS, ...INBOX_PERMISSIONS],
       },
       redirect: to => {
         if (
@@ -43,6 +55,15 @@ export default {
           store.getters.getCurrentCustomRoleId === null
         ) {
           return { name: 'general_settings_index', params: to.params };
+        }
+
+        // Custom roles holding only inbox keys (#452) land on the inbox list.
+        const permissions = getUserPermissions(
+          store.getters.getCurrentUser,
+          to.params.accountId
+        );
+        if (!hasPermissions(CANNED_LIST_PERMISSIONS, permissions)) {
+          return { name: 'settings_inbox_list', params: to.params };
         }
 
         return { name: 'canned_list', params: to.params };

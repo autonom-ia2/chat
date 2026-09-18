@@ -1,4 +1,5 @@
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
+import { AUTONOMIA_PERMISSIONS } from 'dashboard/constants/permissions.js';
 import store from 'dashboard/store';
 
 // Lazy-loaded pages (owned by HUB / CONSTRUTOR / PAINEL implementers).
@@ -14,10 +15,18 @@ const ProspectingListsPage = () =>
 const InviteConnectionPage = () => import('./pages/InviteConnectionPage.vue');
 const InsurancePage = () => import('./insurance/pages/InsurancePage.vue');
 
-// Admin-only: every Autonomia backend endpoint enforces
-// `ensure_account_administrator`, so non-admins would 403 on each call.
+// Prospecting and insurance stay admin-only (their backends enforce it).
 const meta = {
   permissions: ['administrator'],
+};
+
+// Agentes Autonom.ia (#452): custom roles with autonomia_view see and test agents; creating
+// one needs autonomia_manage. The backend enforces the same split.
+const agentsMeta = {
+  permissions: ['administrator', ...AUTONOMIA_PERMISSIONS],
+};
+const agentsManageMeta = {
+  permissions: ['administrator', 'autonomia_manage'],
 };
 
 // Gate POR CONTA (aditivo, ISOLADO): mantém o ENV master (kill-switch global,
@@ -91,14 +100,14 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/agents'),
     name: 'autonomia_agents_index',
-    meta,
+    meta: agentsMeta,
     beforeEnter: ensureAutonomiaEnabled,
     component: AgentsHubPage,
   },
   {
     path: frontendURL('accounts/:accountId/agents/new'),
     name: 'autonomia_agents_builder',
-    meta,
+    meta: agentsManageMeta,
     beforeEnter: ensureAutonomiaEnabled,
     component: AgentBuilderPage,
   },
@@ -107,7 +116,7 @@ export const routes = [
       'accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?'
     ),
     name: 'autonomia_agent_panel',
-    meta,
+    meta: agentsMeta,
     beforeEnter: ensureAutonomiaEnabled,
     component: AgentPanelPage,
     props: route => ({

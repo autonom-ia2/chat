@@ -46,7 +46,7 @@ class Api::V1::Accounts::InboxCsatTemplatesController < Api::V1::Accounts::BaseC
 
   def fetch_inbox
     @inbox = Current.account.inboxes.find(params[:inbox_id])
-    authorize @inbox, :show?
+    authorize @inbox, action_name == 'show' ? :settings? : :manage_csat_templates?
   end
 
   def validate_whatsapp_channel

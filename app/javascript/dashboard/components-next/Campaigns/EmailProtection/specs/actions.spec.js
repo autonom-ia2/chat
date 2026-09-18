@@ -5,6 +5,11 @@ import pt_BR from 'dashboard/i18n/locale/pt_BR/emailCampaignProtection.json';
 import API from 'dashboard/api/emailCampaigns';
 import Health from '../EmailCampaignHealth.vue';
 import Panel from '../EmailProtectionPanel.vue';
+// Mounted without a store: grant manage so write controls render as for an admin.
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { ref } = await import('vue');
+  return { useCanManage: () => ref(true) };
+});
 vi.mock('dashboard/api/emailCampaigns', () => ({
   default: { reevaluate: vi.fn(), recheck: vi.fn(), resume: vi.fn() },
 }));

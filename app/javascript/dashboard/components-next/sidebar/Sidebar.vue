@@ -17,6 +17,9 @@ import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
   CRM_ADMIN_PERMISSION,
+  CRM_MANAGE_AI_PERMISSION,
+  AUTONOMIA_PERMISSIONS,
+  CAMPAIGN_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -137,10 +140,28 @@ const currentUser = useMapGetter('getCurrentUser');
 const currentRole = useMapGetter('getCurrentRole');
 const currentCustomRoleId = useMapGetter('getCurrentCustomRoleId');
 
-// Admin-only: the Autonomia backend enforces administrator on every endpoint,
-// so hide the entry from non-admins to match (a plain agent would 403).
+const isAdministrator = computed(() => currentRole.value === 'administrator');
+const hasAnyPermission = keys => {
+  const permissions = getUserPermissions(currentUser.value, accountId.value);
+  return keys.some(key => permissions.includes(key));
+};
+
+// Admins, or custom roles with autonomia_view/autonomia_manage (#452) — same gate as the backend.
 const autonomiaAgentsEnabled = computed(
-  () => autonomiaAgentsFlag.value && currentRole.value === 'administrator'
+  () =>
+    autonomiaAgentsFlag.value &&
+    (isAdministrator.value || hasAnyPermission(AUTONOMIA_PERMISSIONS))
+);
+// CRM Campaign Management reads campaign reports and CTWA links, gated by campaign_view (#452).
+const canViewCampaigns = computed(
+  () => isAdministrator.value || hasAnyPermission(CAMPAIGN_PERMISSIONS)
+);
+// crm_manage_ai seats reach the CRM handoff page without the admin-only assignment hub.
+const showCrmHandoffEntry = computed(
+  () =>
+    !isAdministrator.value &&
+    crmAiEnabled.value &&
+    hasAnyPermission([CRM_MANAGE_AI_PERMISSION, CRM_ADMIN_PERMISSION])
 );
 const autonomiaProspectingEnabled = computed(
   () =>
@@ -915,7 +936,7 @@ const menuItems = computed(() => {
                     },
                   ]
                 : []),
-              ...(emailCampaignEnabled.value && canViewCrmReports.value
+              ...(emailCampaignEnabled.value && canViewCampaigns.value
                 ? [
                     {
                       name: 'CRM Campaign Management',
@@ -1169,6 +1190,20 @@ const menuItems = computed(() => {
                   'agent_capacity_policy_edit',
                 ],
                 to: accountScopedRoute('assignment_policy_index'),
+              },
+            ]
+          : []),
+        ...(showCrmHandoffEntry.value
+          ? [
+              {
+                name: 'Settings CRM Handoff',
+                label: t('ASSIGNMENT_POLICY.INDEX.CRM_HANDOFF.TITLE'),
+                icon: 'i-lucide-user-cog',
+                activeOn: [
+                  'crm_handoff_settings_index',
+                  'crm_handoff_settings_edit',
+                ],
+                to: accountScopedRoute('crm_handoff_settings_index'),
               },
             ]
           : []),

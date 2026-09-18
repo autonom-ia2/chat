@@ -1,51 +1,53 @@
+# Campaign list imports write contacts and labels, and the source file carries personal data:
+# only listing and reports are read-level (campaign_view); everything else needs campaign_manage.
 class CampaignImportPolicy < ApplicationPolicy
   def index?
-    administrator?
+    permission_granted?('campaign_view')
   end
 
   def show?
-    administrator?
-  end
-
-  def create?
-    administrator?
-  end
-
-  def destroy?
-    administrator?
-  end
-
-  def validate?
-    administrator?
-  end
-
-  def preview_labels?
-    administrator?
-  end
-
-  def confirm?
-    administrator?
-  end
-
-  def errors?
-    administrator?
+    permission_granted?('campaign_view')
   end
 
   def report?
-    administrator?
+    permission_granted?('campaign_view')
+  end
+
+  def errors?
+    permission_granted?('campaign_view')
+  end
+
+  def create?
+    permission_granted?('campaign_manage')
+  end
+
+  def destroy?
+    permission_granted?('campaign_manage')
+  end
+
+  def validate?
+    permission_granted?('campaign_manage')
+  end
+
+  def preview_labels?
+    permission_granted?('campaign_manage')
+  end
+
+  def confirm?
+    permission_granted?('campaign_manage')
   end
 
   def undo_labels?
-    administrator?
+    permission_granted?('campaign_manage')
   end
 
   def download?
-    administrator?
+    permission_granted?('campaign_manage')
   end
 
   private
 
-  def administrator?
-    @account_user.administrator?
+  def permission_granted?(key)
+    @account_user.permission_granted?(key)
   end
 end

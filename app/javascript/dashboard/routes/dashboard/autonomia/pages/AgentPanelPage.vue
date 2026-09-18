@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -33,6 +34,7 @@ const router = useRouter();
 
 const uiFlags = useMapGetter('autonomiaAgents/getUIFlags');
 const currentUser = useMapGetter('getCurrentUser');
+const canManage = useCanManage('autonomia_manage');
 
 const agent = computed(() =>
   store.getters['autonomiaAgents/getRecord'](Number(props.agentId))
@@ -56,6 +58,8 @@ const TAB_ICONS = {
 // The first four sit in the segmented group; "Ajustar" (tune) is pulled out to
 // the right of a divider because it edits the agent rather than inspecting it.
 const MAIN_TAB_KEYS = ['test', 'knowledge', 'tools', 'channels', 'performance'];
+// View-only seats (autonomia_view without autonomia_manage) only test and read performance.
+const VIEW_ONLY_TAB_KEYS = ['test', 'performance'];
 
 const buildTab = key => ({
   key,
@@ -77,6 +81,10 @@ const visibleTabKeys = computed(() => {
     keys = keys.filter(key => key !== 'tools');
   }
 
+  if (!canManage.value) {
+    keys = keys.filter(key => VIEW_ONLY_TAB_KEYS.includes(key));
+  }
+
   return keys;
 });
 
@@ -91,6 +99,8 @@ const pillClass = key =>
     : 'text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2';
 
 const activeComponent = computed(() => {
+  if (!canManage.value && !VIEW_ONLY_TAB_KEYS.includes(props.tab))
+    return PanelTest;
   switch (props.tab) {
     case 'knowledge':
       return PanelKnowledge;
@@ -164,9 +174,13 @@ const toggleStatus = async () => {
 // render PanelChannels with no tab to return to. Bounce it back to the default
 // tab once the agent record is known.
 watch(
-  [isInternal, isSuperAdmin, () => props.tab],
-  ([internal, superAdmin, tab]) => {
-    if ((internal && tab === 'channels') || (!superAdmin && tab === 'tools')) {
+  [isInternal, isSuperAdmin, canManage, () => props.tab],
+  ([internal, superAdmin, manage, tab]) => {
+    if (
+      (internal && tab === 'channels') ||
+      (!superAdmin && tab === 'tools') ||
+      (!manage && !VIEW_ONLY_TAB_KEYS.includes(tab))
+    ) {
       router.replace({
         name: 'autonomia_agent_panel',
         params: { agentId: props.agentId, tab: 'test' },
@@ -210,7 +224,10 @@ onMounted(() => {
             <!-- Pausar/ativar direto no cabeçalho. Só aparece quando o agente já
                  saiu do rascunho (draft ativa pela superfície de publicação). -->
             <button
-              v-if="agent.status === 'active' || agent.status === 'paused'"
+              v-if="
+                canManage &&
+                (agent.status === 'active' || agent.status === 'paused')
+              "
               type="button"
               :disabled="isTogglingStatus"
               class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full transition-colors text-n-slate-11 hover:text-n-slate-12 bg-n-alpha-1 hover:bg-n-alpha-2 disabled:opacity-50"
@@ -251,18 +268,20 @@ onMounted(() => {
           <i :class="item.icon" class="size-4" />
           {{ item.label }}
         </button>
-        <span class="w-px h-5 mx-1 bg-n-weak" aria-hidden="true" />
-        <button
-          type="button"
-          role="tab"
-          :aria-selected="tab === tuneTab.key"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-          :class="pillClass(tuneTab.key)"
-          @click="onTabChanged(tuneTab.key)"
-        >
-          <i :class="tuneTab.icon" class="size-4" />
-          {{ tuneTab.label }}
-        </button>
+        <template v-if="canManage">
+          <span class="w-px h-5 mx-1 bg-n-weak" aria-hidden="true" />
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="tab === tuneTab.key"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+            :class="pillClass(tuneTab.key)"
+            @click="onTabChanged(tuneTab.key)"
+          >
+            <i :class="tuneTab.icon" class="size-4" />
+            {{ tuneTab.label }}
+          </button>
+        </template>
       </div>
     </header>
 

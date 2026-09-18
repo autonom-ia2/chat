@@ -23,4 +23,9 @@ class Api::BaseController < ApplicationController
   def check_admin_authorization?
     raise Pundit::NotAuthorizedError unless Current.account_user.administrator?
   end
+
+  # Admin, or a custom role holding `key` (see AccountUser#permission_granted?).
+  def check_permission_granted!(key)
+    raise Pundit::NotAuthorizedError unless Current.account_user&.permission_granted?(key)
+  end
 end

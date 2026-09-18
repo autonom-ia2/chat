@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 
 const props = defineProps({
   agent: {
@@ -13,6 +14,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['select', 'delete']);
+const canManage = useCanManage('autonomia_manage');
 
 const { t } = useI18n();
 
@@ -117,7 +119,10 @@ const statusLabel = computed(() => {
       </span>
     </div>
 
-    <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+    <div
+      v-if="canManage"
+      class="flex flex-wrap items-center justify-end gap-2 pt-1"
+    >
       <!-- Rascunho sem ação de publicar era beco sem saída — leva pra aba
            de publicação (AgentsHubPage já roteia draft -> tab publish). -->
       <NextButton

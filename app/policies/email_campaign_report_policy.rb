@@ -1,15 +1,16 @@
 class EmailCampaignReportPolicy < ApplicationPolicy
   def view?
-    administrator?
+    permission_granted?('campaign_view')
   end
 
+  # The export carries recipient e-mails (personal data), so it needs the manage key.
   def export?
-    administrator?
+    permission_granted?('campaign_manage')
   end
 
   private
 
-  def administrator?
-    account_user&.administrator?
+  def permission_granted?(key)
+    account_user&.permission_granted?(key)
   end
 end

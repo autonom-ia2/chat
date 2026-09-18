@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import ReportsAPI from 'dashboard/api/emailCampaignReports';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import EmailStatusBadge from './EmailStatusBadge.vue';
 import {
   NS,
@@ -16,6 +17,7 @@ const props = defineProps({
   campaignId: { type: [String, Number], required: true },
 });
 const { t, locale } = useI18n();
+const canManage = useCanManage('campaign_manage');
 const { run, isPending } = useAbortableRequest();
 const issues = ref([]);
 const page = ref(1);
@@ -71,6 +73,7 @@ const download = async () => {
     </h3>
     <div class="flex flex-wrap gap-2">
       <Button
+        v-if="canManage"
         :label="t(`${NS}.DOWNLOAD_ISSUES`)"
         icon="i-lucide-download"
         sm

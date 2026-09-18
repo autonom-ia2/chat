@@ -8,6 +8,11 @@ import arProtection from 'dashboard/i18n/locale/ar/emailCampaignProtection.json'
 import arCrm from 'dashboard/i18n/locale/ar/crm.json';
 import Reports from 'dashboard/api/emailCampaignReports';
 import Recipients from '../EmailRecipients.vue';
+// Mounted without a store: grant manage so write controls render as for an admin.
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { ref } = await import('vue');
+  return { useCanManage: () => ref(true) };
+});
 vi.mock('dashboard/api/emailCampaignReports', () => ({
   default: { getRecipients: vi.fn(), export: vi.fn() },
 }));
