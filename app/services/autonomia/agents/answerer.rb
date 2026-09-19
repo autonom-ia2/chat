@@ -92,9 +92,10 @@ module Autonomia
 
       # -> Autonomia::Agents::AnswerResult
       def answer
+        @conferencia_da_fala = conferencia_da_fala
         snippets = retrieve_snippets
         parsed = generate(snippets)
-        return trust_instruction_result(parsed, snippets) if @trust_instruction
+        return trust_instruction_result(conferir_fala(parsed), snippets) if @trust_instruction
         return safe_handoff if parsed.nil?
 
         build_result(parsed, snippets)
@@ -143,6 +144,55 @@ module Autonomia
         input = @prompt.input + [PromptParts::Mensagem.montar('assistant', reply), PromptParts::Mensagem.montar('user', pedido)]
         raw = @cliente.create(model: Config::ANSWERER_MODEL, instructions: @prompt.instructions, input: input,
                               schema: ConferenciaDePrecos::REESCRITA, reasoning_effort: Config::ANSWERER_REASONING_EFFORT)
+        JSON.parse(raw[:text])
+      end
+
+      # A FALA NÃO PROMETE PARA DEPOIS NEM CONTRADIZ A COTAÇÃO QUE FECHOU (#510, #511). Só no atendimento do Agente
+      # de Cotação. A cotação que corre é lida AQUI, antes do modelo: é o estado que ele vai ler.
+      def conferencia_da_fala
+        return nil unless @trust_instruction && @delivery && @agent.agent_type == 'insurance_quote'
+
+        ConferenciaDaFala.new(cotacao_no_inicio: ConferenciaDaFala.cotacao_correndo(@delivery.conversation&.id))
+      end
+
+      # Se a fala dispara um sinal da `ConferenciaDaFala`, o modelo reescreve UMA vez, com as ferramentas do turno
+      # (a promessa se resolve consultando agora). Sai a reescrita, mesmo que ainda dispare; sem reescrita
+      # utilizável, sai a fala original. O log leva só os sinais.
+      def conferir_fala(parsed)
+        sinais = sinais_da_fala(parsed)
+        return parsed if sinais.empty?
+
+        registrar_fala('reescrita pedida', sinais)
+        reescrita = reescrever_fala(parsed['reply'], @conferencia_da_fala.pedido(sinais))
+        return parsed unless reescrita.is_a?(Hash) && reescrita['reply'].to_s.strip.present?
+
+        restantes = sinais_da_fala(reescrita)
+        registrar_fala('reescrita ainda dispara', restantes) if restantes.any?
+        reescrita
+      rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
+        registrar_fala("reescrita falhou #{e.class}", sinais)
+        parsed
+      end
+
+      def sinais_da_fala(parsed)
+        return [] if @conferencia_da_fala.nil? || parsed.nil?
+
+        @conferencia_da_fala.sinais(parsed['reply'], ferramentas_no_turno: @ferramentas_no_turno.to_i,
+                                                     escalou: parsed['should_handoff'] == true)
+      end
+
+      def registrar_fala(motivo, sinais)
+        Rails.logger.warn("[autonomia][conferencia_da_fala] #{motivo} conversa=#{@delivery.conversation&.id} " \
+                          "sinais=#{Array(sinais).join(',')}")
+      end
+
+      # A reescrita da fala: a mesma instrução, a conversa do turno, a fala e o pedido, COM as ferramentas.
+      def reescrever_fala(reply, pedido)
+        input = @prompt.input + [PromptParts::Mensagem.montar('assistant', reply), PromptParts::Mensagem.montar('user', pedido)]
+        raw = @cliente.create_with_tool_executor(
+          model: Config::ANSWERER_MODEL, instructions: @prompt.instructions, input: input,
+          schema: PromptBuilder::ANSWER_SCHEMA, reasoning_effort: Config::ANSWERER_REASONING_EFFORT, tools: answer_tools
+        ) { |calls| execute_tool_calls(calls) }
         JSON.parse(raw[:text])
       end
 
@@ -226,6 +276,7 @@ module Autonomia
       end
 
       def execute_tool_calls(calls)
+        @ferramentas_no_turno = @ferramentas_no_turno.to_i + Array(calls).size
         tools_by_slug = enabled_agent_tools.index_by(&:slug)
         specialists_by_function = enabled_specialists.index_by(&:function_name)
         Array(calls).map do |call|
