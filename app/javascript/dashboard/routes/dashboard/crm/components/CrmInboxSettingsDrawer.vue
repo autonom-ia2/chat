@@ -2,6 +2,7 @@
 import { computed, reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 
@@ -12,14 +13,18 @@ const props = defineProps({
   pipelines: { type: Array, default: () => [] },
   stagesByPipeline: { type: Object, default: () => ({}) },
   isLoading: { type: Boolean, default: false },
-  isSaving: { type: Boolean, default: false },
   isLoadingStages: { type: Boolean, default: false },
+  // Resultado do último salvamento, vindo da página: { inboxId, ok, at }.
+  saveResult: { type: Object, default: null },
 });
 
 const emit = defineEmits(['close', 'save', 'loadPipelineStages']);
 
 const { t } = useI18n();
 const forms = reactive({});
+// Caixas com salvamento em andamento e caixas salvas nesta abertura da janela.
+const pending = reactive(new Set());
+const saved = reactive(new Set());
 
 const settingByInboxId = computed(() =>
   props.settings.reduce((result, setting) => {
@@ -34,24 +39,83 @@ const sortedInboxes = computed(() =>
   )
 );
 
+const toForm = (setting = {}) => ({
+  crm_enabled: Boolean(setting.crm_enabled),
+  visibility_mode: setting.visibility_mode || 'all_inbox_cards',
+  auto_create_card: Boolean(setting.auto_create_card),
+  default_pipeline_id: setting.default_pipeline_id || '',
+  default_stage_id: setting.default_stage_id || '',
+});
+
+const formFromSetting = inboxId =>
+  toForm(settingByInboxId.value[Number(inboxId)]);
+
+const FIELDS = [
+  'crm_enabled',
+  'visibility_mode',
+  'auto_create_card',
+  'default_pipeline_id',
+  'default_stage_id',
+];
+
+const sameForm = (first, second) =>
+  FIELDS.every(field => String(first[field]) === String(second[field]));
+
+const formFor = inbox => forms[inbox.id] || {};
+const isDirty = inbox =>
+  Boolean(forms[inbox.id]) &&
+  !sameForm(forms[inbox.id], formFromSetting(inbox.id));
+const isSavingInbox = inbox => pending.has(inbox.id);
+const isSavedInbox = inbox => saved.has(inbox.id) && !isDirty(inbox);
+
+const dirtyCount = computed(
+  () => sortedInboxes.value.filter(inbox => isDirty(inbox)).length
+);
+
 const resetForms = () => {
   Object.keys(forms).forEach(key => {
     delete forms[key];
   });
-
+  pending.clear();
+  saved.clear();
   sortedInboxes.value.forEach(inbox => {
-    const setting = settingByInboxId.value[Number(inbox.id)] || {};
-    forms[inbox.id] = {
-      crm_enabled: Boolean(setting.crm_enabled),
-      visibility_mode: setting.visibility_mode || 'all_inbox_cards',
-      auto_create_card: Boolean(setting.auto_create_card),
-      default_pipeline_id: setting.default_pipeline_id || '',
-      default_stage_id: setting.default_stage_id || '',
-    };
+    forms[inbox.id] = formFromSetting(inbox.id);
   });
 };
 
-const formFor = inbox => forms[inbox.id] || {};
+// Dados novos do servidor só substituem o formulário da caixa que acabou de
+// salvar ou que não tem alteração pendente: salvar uma caixa não pode apagar o
+// que a pessoa mudou em outra.
+const syncForms = previousSettings => {
+  const previousById = (previousSettings || []).reduce((result, setting) => {
+    result[Number(setting.inbox_id)] = setting;
+    return result;
+  }, {});
+
+  sortedInboxes.value.forEach(inbox => {
+    const fresh = formFromSetting(inbox.id);
+    const current = forms[inbox.id];
+    if (!current) {
+      forms[inbox.id] = fresh;
+      return;
+    }
+    const previous = previousById[Number(inbox.id)];
+    const hadNoEdits = !previous || sameForm(current, toForm(previous));
+    if (hadNoEdits) forms[inbox.id] = fresh;
+  });
+};
+
+const toOption = (value, label) => ({ value, label });
+
+const visibilityOptions = computed(() => [
+  toOption('all_inbox_cards', t('CRM_KANBAN.INBOX_SETTINGS.ALL_INBOX_CARDS')),
+  toOption('assigned_only', t('CRM_KANBAN.INBOX_SETTINGS.ASSIGNED_ONLY')),
+]);
+
+const pipelineOptions = computed(() => [
+  toOption('', t('CRM_KANBAN.INBOX_SETTINGS.NO_DEFAULT_PIPELINE')),
+  ...props.pipelines.map(pipeline => toOption(pipeline.id, pipeline.name)),
+]);
 
 const stagesFor = inbox => {
   const pipelineId = formFor(inbox).default_pipeline_id;
@@ -59,12 +123,28 @@ const stagesFor = inbox => {
   return props.stagesByPipeline[String(pipelineId)] || [];
 };
 
-const onPipelineChange = inbox => {
+const stageOptionsFor = inbox => [
+  toOption('', t('CRM_KANBAN.INBOX_SETTINGS.FIRST_STAGE')),
+  ...stagesFor(inbox).map(stage => toOption(stage.id, stage.name)),
+];
+
+const onVisibilityChange = (inbox, value) => {
+  // Clicar de novo na opção escolhida desmarca no ComboBox; visibilidade não
+  // pode ficar vazia.
+  if (value) formFor(inbox).visibility_mode = value;
+};
+
+const onPipelineChange = (inbox, value) => {
   const form = formFor(inbox);
+  form.default_pipeline_id = value || '';
   form.default_stage_id = '';
   if (form.default_pipeline_id) {
     emit('loadPipelineStages', form.default_pipeline_id);
   }
+};
+
+const onStageChange = (inbox, value) => {
+  formFor(inbox).default_stage_id = value || '';
 };
 
 const onCrmEnabledChange = inbox => {
@@ -76,6 +156,8 @@ const onCrmEnabledChange = inbox => {
 
 const saveInbox = inbox => {
   const form = formFor(inbox);
+  saved.delete(inbox.id);
+  pending.add(inbox.id);
   emit('save', {
     inboxId: inbox.id,
     crm_enabled: form.crm_enabled,
@@ -87,11 +169,32 @@ const saveInbox = inbox => {
 };
 
 watch(
-  () => [props.show, props.inboxes, props.settings],
-  () => {
-    if (props.show) resetForms();
+  () => props.show,
+  show => {
+    if (show) resetForms();
   },
   { immediate: true }
+);
+
+watch(
+  () => [props.inboxes, props.settings],
+  (_current, previous) => {
+    if (props.show) syncForms(previous?.[1]);
+  }
+);
+
+// A página informa o resultado de cada salvamento. Sucesso: a caixa passa a
+// mostrar "Salvo" e adota o que o servidor gravou. Falha: a página já avisou
+// por alerta; aqui só libera o botão e mantém o que a pessoa digitou.
+watch(
+  () => props.saveResult,
+  result => {
+    if (!result || !pending.has(result.inboxId)) return;
+    pending.delete(result.inboxId);
+    if (!result.ok) return;
+    saved.add(result.inboxId);
+    forms[result.inboxId] = formFromSetting(result.inboxId);
+  }
 );
 
 useKeyboardEvents({
@@ -147,7 +250,8 @@ useKeyboardEvents({
           <section
             v-for="inbox in sortedInboxes"
             :key="inbox.id"
-            class="grid gap-4 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+            class="grid gap-4 rounded-lg border bg-n-alpha-black2 p-4"
+            :class="isDirty(inbox) ? 'border-n-amber-7' : 'border-n-weak'"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -172,66 +276,43 @@ useKeyboardEvents({
             </div>
 
             <div class="grid gap-3 md:grid-cols-[1fr_1fr]">
-              <label class="grid gap-1">
+              <div class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.INBOX_SETTINGS.VISIBILITY') }}
                 </span>
-                <select
-                  v-model="formFor(inbox).visibility_mode"
-                  class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="all_inbox_cards">
-                    {{ t('CRM_KANBAN.INBOX_SETTINGS.ALL_INBOX_CARDS') }}
-                  </option>
-                  <option value="assigned_only">
-                    {{ t('CRM_KANBAN.INBOX_SETTINGS.ASSIGNED_ONLY') }}
-                  </option>
-                </select>
-              </label>
+                <ComboBox
+                  :model-value="formFor(inbox).visibility_mode"
+                  :options="visibilityOptions"
+                  @update:model-value="onVisibilityChange(inbox, $event)"
+                />
+              </div>
 
-              <label class="grid gap-1">
+              <div class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.INBOX_SETTINGS.DEFAULT_PIPELINE') }}
                 </span>
-                <select
-                  v-model="formFor(inbox).default_pipeline_id"
-                  class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                  @change="onPipelineChange(inbox)"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.INBOX_SETTINGS.NO_DEFAULT_PIPELINE') }}
-                  </option>
-                  <option
-                    v-for="pipeline in pipelines"
-                    :key="pipeline.id"
-                    :value="pipeline.id"
-                  >
-                    {{ pipeline.name }}
-                  </option>
-                </select>
-              </label>
+                <ComboBox
+                  :model-value="formFor(inbox).default_pipeline_id"
+                  :options="pipelineOptions"
+                  :placeholder="
+                    t('CRM_KANBAN.INBOX_SETTINGS.NO_DEFAULT_PIPELINE')
+                  "
+                  @update:model-value="onPipelineChange(inbox, $event)"
+                />
+              </div>
 
-              <label class="grid gap-1">
+              <div class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.INBOX_SETTINGS.DEFAULT_STAGE') }}
                 </span>
-                <select
-                  v-model="formFor(inbox).default_stage_id"
-                  class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                <ComboBox
+                  :model-value="formFor(inbox).default_stage_id"
+                  :options="stageOptionsFor(inbox)"
+                  :placeholder="t('CRM_KANBAN.INBOX_SETTINGS.FIRST_STAGE')"
                   :disabled="!formFor(inbox).default_pipeline_id"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.INBOX_SETTINGS.FIRST_STAGE') }}
-                  </option>
-                  <option
-                    v-for="stage in stagesFor(inbox)"
-                    :key="stage.id"
-                    :value="stage.id"
-                  >
-                    {{ stage.name }}
-                  </option>
-                </select>
-              </label>
+                  @update:model-value="onStageChange(inbox, $event)"
+                />
+              </div>
 
               <div class="flex items-end justify-between gap-3">
                 <label
@@ -247,17 +328,42 @@ useKeyboardEvents({
                     {{ t('CRM_KANBAN.INBOX_SETTINGS.AUTO_CREATE') }}
                   </span>
                 </label>
+                <span
+                  v-if="isSavedInbox(inbox)"
+                  class="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-n-teal-11"
+                  role="status"
+                >
+                  <span class="i-lucide-circle-check size-4" />
+                  {{ t('CRM_KANBAN.INBOX_SETTINGS.SAVED') }}
+                </span>
                 <Button
+                  v-else
                   :label="t('CRM_KANBAN.INBOX_SETTINGS.SAVE')"
                   icon="i-lucide-check"
                   sm
-                  :is-loading="isSaving || isLoadingStages"
+                  :disabled="!isDirty(inbox) || isLoadingStages"
+                  :is-loading="isSavingInbox(inbox)"
                   @click="saveInbox(inbox)"
                 />
               </div>
             </div>
           </section>
         </div>
+      </div>
+
+      <div
+        class="flex items-center justify-between gap-3 border-t border-n-weak px-6 py-4"
+      >
+        <p class="mb-0 text-sm text-n-slate-11">
+          <template v-if="dirtyCount">
+            {{ t('CRM_KANBAN.INBOX_SETTINGS.UNSAVED', { count: dirtyCount }) }}
+          </template>
+        </p>
+        <Button
+          :label="t('CRM_KANBAN.INBOX_SETTINGS.DONE')"
+          :color="dirtyCount ? 'slate' : 'blue'"
+          @click="$emit('close')"
+        />
       </div>
     </div>
   </transition>
