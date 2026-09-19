@@ -19,13 +19,15 @@ Ajuste de frontend/QA da Gestão de Campanhas. Sem alteração de backend, banco
 - tooltip ampliado localmente para evitar truncamento de rótulos;
 - `LineChart.vue` ganhou opções opt-in, mantendo os defaults antigos para os demais consumidores.
 
-## Gates executados antes da integração com main
+## Gates finais
 
 - focused frontend: 16/16;
 - fixtures QA: 10/10;
 - helpers browser: 11/11;
+- frontend completo: 5.524/5.524 em 497 arquivos;
+- i18n: 57 módulos, 43 ativos, 14.991 mensagens renderizadas, fallback desativado;
 - Vite build real: aprovado;
-- Chromium isolado: 215 checks, 0 falhas, 150 screenshots;
+- Chromium isolado: 215 checks, 0 falhas, 153 screenshots;
 - console errors: 0;
 - page errors: 0;
 - external requests: 0;
@@ -33,7 +35,7 @@ Ajuste de frontend/QA da Gestão de Campanhas. Sem alteração de backend, banco
 
 ## Visual review
 
-Revisão independente: PASS_WITH_POLISH, sem P1/P2. Daily desktop, hourly desktop, dark e RTL aprovados. O único P3 identificado foi truncamento do primeiro rótulo do tooltip; corrigido depois do review. A captura mobile correta do gráfico horário tem 342x648 e inclui o card completo.
+Revisão independente final: **PASS_VISUAL**, sem P1/P2 e sem P3 pendente. Desktop diário, desktop horário, mobile horário, dark e RTL aprovados. Tooltip agrupado aprovado sem truncamento; seletor com contraste claro; eixo X sem sobreposição; nenhuma referência visível a AWS, SES ou provedor.
 
 ## Regras de produto verificadas
 
@@ -42,7 +44,3 @@ Revisão independente: PASS_WITH_POLISH, sem P1/P2. Daily desktop, hourly deskto
 - alternar Por dia/Por hora não agrega nem descarta buckets do payload;
 - a redução do eixo X afeta apenas rótulos visíveis;
 - outros consumidores do LineChart mantêm os defaults existentes.
-
-## Pendente antes de aprovação final
-
-Após rebase na main atual: repetir gates de frontend/build/browser e CI da PR.
