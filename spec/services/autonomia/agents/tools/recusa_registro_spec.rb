@@ -379,6 +379,21 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           rodar_job(cotacao, arguments: { 'produto' => 'drone', 'dados' => '{}' })
         }
       },
+      # #470: o `quote/start` recusa a entrada (a consulta de CPF não achou a pessoa).
+      'envio.rb#recusa_da_entrada#1' => {
+        espera: { motivo: 'faltam_dados', slug: 'cotar_seguro', onde: 'envio', faltando: 'insured.birthDate,insured.gender' },
+        dispara: lambda {
+          ready_connection
+          connector = Autonomia::Insurance::Connector.client
+          allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+          issues = ['insured.birthDate: Required', 'insured.gender: Required']
+          allow(connector).to receive(:quote_start)
+            .and_raise(Autonomia::Insurance::Connector::Error.new(:validation, 'invalid', { 'issues' => issues }))
+          dados = { segurado: { nome: 'Fulano', cpfCnpj: '04297912678' },
+                    configuracoes: { marca: 'Caloi', valorMercado: 8000, numeroSerie: 'SN-1' } }
+          rodar_job(cotacao, arguments: { 'produto' => 'bike', 'dados' => dados.to_json })
+        }
+      },
       'async_run_job.rb#registrar_recusa#1' => {
         espera: { motivo: 'faltam_dados', onde: 'envio', faltando: 'insured.document' },
         dispara: lambda {

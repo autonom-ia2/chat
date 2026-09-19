@@ -166,6 +166,18 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
       end
   end
 
+  # #470: sem os `details` a recusa do `quote/start` chegava sem dizer QUAL campo faltou.
+  it 'keeps the adapter error details, and an empty hash when there are none' do
+    issues = ['insured.birthDate: Required', 'insured.gender: Required']
+    stub_invoke(inner_status: 422, inner_body: { 'error' => 'validation', 'details' => { 'issues' => issues } }.to_json)
+    expect { described_class.new.connection_status(**with_session) }
+      .to raise_error(an_object_having_attributes(kind: :validation, details: { 'issues' => issues }))
+
+    stub_invoke(inner_status: 422, inner_body: { 'error' => 'validation', 'details' => 'texto' }.to_json)
+    expect { described_class.new.connection_status(**with_session) }
+      .to raise_error(an_object_having_attributes(kind: :validation, details: {}))
+  end
+
   it 'treats a lambda runtime failure as unavailable' do
     stub_invoke(inner_status: 200, inner_body: '{}', outer_body: { 'errorType' => 'Runtime.ExitError' }.to_json)
 

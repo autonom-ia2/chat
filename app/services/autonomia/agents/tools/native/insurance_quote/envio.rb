@@ -15,6 +15,25 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Envio
   # de novo. Tudo o que não está aqui vira `Native::EnvioIncerto`.
   NAO_ENVIOU = %i[auth_required validation config not_implemented].freeze
 
+  # A ENTRADA QUE O ADAPTER RECUSOU no `quote/start` (#470). Ele confere a entrada com o Zod ANTES do
+  # `calcularV2` (`quote.ts#start`), então nada foi cotado nem cobrado. O caso real: a consulta de CPF
+  # não achou a pessoa, e faltaram nascimento e sexo — dados que o cliente tem e o agente pergunta.
+  # Tratado como falha passageira, virava 15 tentativas em 7 minutos e "um atendente vai continuar".
+  #
+  # Classe própria, e não o `Connector::Error` de `validation`, para o `start` só transformar em
+  # recusa o que veio DESTA chamada: um `validation` do login não é dado que falta ao cliente.
+  # E só com a lista de campos (`details.issues`): `validation` sem ela é o portal recusando o
+  # `calcularV2` ou a corretora sem seguradora no ramo, e nada disso é pergunta ao cliente.
+  class EntradaRecusada < StandardError
+    # -> "campo: motivo", como o adapter escreve (`quote.ts`, `path.join('.')` do Zod).
+    attr_reader :issues
+
+    def initialize(issues)
+      @issues = Array(issues).map(&:to_s)
+      super('entrada recusada pelo adapter')
+    end
+  end
+
   private
 
   # -> o id da cotação no portal. Levanta `EnvioIncerto` quando a chamada saiu e não se sabe o que o
@@ -28,10 +47,23 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Envio
   def chamar_portal(open_session, pedido)
     connector.quote_start(session: open_session, **pedido)
   rescue ::Autonomia::Insurance::Connector::Error => e
+    issues = e.details.to_h.stringify_keys['issues'] if e.kind == :validation
+    raise EntradaRecusada, issues if issues.present?
     raise if NAO_ENVIOU.include?(e.kind)
 
     raise ::Autonomia::Agents::Tools::Native::EnvioIncerto, e.kind
   rescue StandardError => e
     raise ::Autonomia::Agents::Tools::Native::EnvioIncerto, e.class.name
+  end
+
+  # A MESMA RECUSA DA CONFERÊNCIA (`validar`), com o pedido do que falta e sem nova tentativa.
+  # "insured.birthDate: Required" vira { 'campo' => 'insured.birthDate', 'motivo' => 'Required' }, o
+  # formato que `pedido_do_que_falta` e `campos` leem. Campo sem rótulo conhecido sai na frase genérica.
+  def recusa_da_entrada(erro)
+    faltantes = erro.issues.map do |issue|
+      campo, motivo = issue.split(':', 2).map(&:strip)
+      { 'campo' => campo, 'motivo' => motivo }
+    end
+    recusa('faltam_dados', pedido_do_que_falta(faltantes), faltando: campos(faltantes))
   end
 end

@@ -142,6 +142,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     raise unless e.kind == :not_implemented
 
     recusa('ramo_desconhecido', ramo_desconhecido_ao_cliente, faltando: ['produto'])
+  rescue Envio::EntradaRecusada => e
+    # Falta dado que o cliente tem, e não há o que tentar de novo (#470): recusa, não falha passageira.
+    recusa_da_entrada(e)
   end
 
   # A IDENTIDADE DO PEDIDO (entrega 10): digest da entrada como o ADAPTER a entende — transformações
