@@ -147,13 +147,7 @@ const navigateTo = nav => {
   }
 };
 
-const sendMessage = async message => {
-  if (isSending.value || !message?.trim()) return;
-  // Pin the account this request belongs to: if the user switches accounts before the reply lands,
-  // the late response must NOT be appended into the now-current account's thread (cross-account leak).
-  const requestAccount = accountId.value;
-  store.addUserMessage(message);
-  isSending.value = true;
+const requestReply = async (requestAccount, message) => {
   try {
     const { data } = await AutonomiaGuideAPI.chat({
       message,
@@ -177,6 +171,19 @@ const sendMessage = async message => {
   } finally {
     isSending.value = false;
   }
+};
+
+// CopilotInput clears the field only when this returns true. Accept = the question is in the
+// thread, so return right away and let the reply load behind the loader; false keeps the text.
+const sendMessage = message => {
+  if (isSending.value || !message?.trim()) return false;
+  // Pin the account this request belongs to: if the user switches accounts before the reply lands,
+  // the late response must NOT be appended into the now-current account's thread (cross-account leak).
+  const requestAccount = accountId.value;
+  store.addUserMessage(message);
+  isSending.value = true;
+  requestReply(requestAccount, message);
+  return true;
 };
 
 watch(

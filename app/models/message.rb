@@ -432,8 +432,10 @@ class Message < ApplicationRecord
   end
 
   def reopen_resolved_conversation
-    # mark resolved bot conversation as pending to be reopened by bot processor service
-    if conversation.inbox.active_bot?
+    # mark resolved bot conversation as pending to be reopened by bot processor service.
+    # PO: caixas com bot WEBHOOK reabrem open, como nascem (Conversation#webhook_bot_inbox?); o
+    # responsável (IA ou humano) não muda — resolver não desatribui ninguém.
+    if conversation.inbox.active_bot? && !conversation.webhook_bot_inbox?
       conversation.pending!
     elsif conversation.inbox.api?
       Current.executed_by = sender if reopened_by_contact?
