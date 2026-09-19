@@ -7,6 +7,9 @@ import crm from 'dashboard/i18n/locale/en/crm.json';
 import Reports from 'dashboard/api/emailCampaignReports';
 import Page from 'dashboard/routes/dashboard/crm/pages/CrmCampaignManagementPage.vue';
 import Recipients from '../EmailRecipients.vue';
+import EmailStatusFilter from '../EmailStatusFilter.vue';
+import FilterSelect from 'dashboard/components-next/filter/inputs/FilterSelect.vue';
+import { displayStatusLabel } from '../presentation';
 import LineChart from 'shared/components/charts/LineChart.vue';
 // Mounted without a store: grant manage so write controls render as for an admin.
 vi.mock('dashboard/composables/useCanManage', async () => {
@@ -80,14 +83,26 @@ it('retains independent campaign options and recipient filters through report re
   });
   wrapper = mount(Page, { global: { plugins: [i18n, router] } });
   await flushPromises();
-  const selector = wrapper.find('select');
-  expect(selector.findAll('option')).toHaveLength(3);
-  await selector.setValue('1');
+  const campaignPicker = wrapper
+    .findAllComponents(FilterSelect)
+    .find(component =>
+      component.props('options')?.some(option => option.label === 'First')
+    );
+  expect(campaignPicker.props('options')).toHaveLength(3);
+  campaignPicker.vm.$emit('update:modelValue', '1');
   await flushPromises();
-  expect(selector.findAll('option')).toHaveLength(3);
+  expect(campaignPicker.props('options')).toHaveLength(3);
+
   const recipients = wrapper.findComponent(Recipients);
-  await recipients.find('select').setValue('failed');
+  recipients
+    .findAllComponents(EmailStatusFilter)[0]
+    .vm.$emit('update:modelValue', 'attention');
   await flushPromises();
+  recipients
+    .findAllComponents(EmailStatusFilter)[1]
+    .vm.$emit('update:modelValue', 'hard_bounced');
+  await flushPromises();
+
   const element = recipients.element;
   const refresh = wrapper
     .findAll('button')
@@ -95,13 +110,26 @@ it('retains independent campaign options and recipient filters through report re
   await refresh.trigger('click');
   await flushPromises();
   expect(wrapper.findComponent(Recipients).element).toBe(element);
-  expect(wrapper.findComponent(Recipients).find('select').element.value).toBe(
-    'failed'
-  );
-  await wrapper.findAll('select')[1].setValue('attention');
+  expect(
+    wrapper
+      .findComponent(Recipients)
+      .findAllComponents(EmailStatusFilter)[0]
+      .props('modelValue')
+  ).toBe('attention');
+  expect(
+    wrapper
+      .findComponent(Recipients)
+      .findAllComponents(EmailStatusFilter)[1]
+      .props('modelValue')
+  ).toBe('hard_bounced');
+
+  wrapper
+    .findAllComponents(EmailStatusFilter)
+    .find(component => component.props('campaign'))
+    .vm.$emit('update:modelValue', 'attention');
   await flushPromises();
   expect(Reports.getReports).toHaveBeenLastCalledWith(
-    1,
+    '1',
     expect.objectContaining({ campaignStatus: 'attention' })
   );
   expect(router.currentRoute.value.query).toMatchObject({
@@ -214,21 +242,19 @@ it.each([
     );
     expect(chart.datasets[0].data).toEqual([10, null]);
     expect(chart.datasets[1].data).toEqual([7, null]);
-    expect(wrapper.text()).toContain(
+    const help = wrapper
+      .findAll('[aria-label]')
+      .map(node => node.attributes('aria-label'))
+      .find(label =>
+        label?.includes(t('EMAIL_CAMPAIGN_PROTECTION.METRICS_HINT'))
+      );
+    expect(help).toBeTruthy();
+    if (key !== 'delivered') {
+      expect(help).toContain(t('EMAIL_CAMPAIGN_PROTECTION.DELIVERY_HINT'));
+    }
+    expect(wrapper.text()).not.toContain(
       t('EMAIL_CAMPAIGN_PROTECTION.METRICS_HINT')
     );
-    if (key !== 'delivered')
-      expect(wrapper.text()).toContain(
-        t('EMAIL_CAMPAIGN_PROTECTION.DELIVERY_HINT')
-      );
-    if (evidence) {
-      expect(wrapper.text()).toContain(
-        `${t('EMAIL_CAMPAIGN_PROTECTION.STATUS.delivered')}: ${evidence.provider_confirmed}`
-      );
-      expect(wrapper.text()).toContain(
-        `${t('EMAIL_CAMPAIGN_PROTECTION.STATUS.accepted_service')}: ${evidence.direct_acceptance_only ?? '—'}`
-      );
-    }
     expect(campaign).toEqual(before);
   }
 );
@@ -293,7 +319,7 @@ it('keeps a mixed total conserved while labeling each campaign by its own source
   const campaigns = [
     {
       id: 1,
-      name: 'Synthetic SES',
+      name: 'Synthetic verified',
       delivery_mode: 'ses',
       delivered: 7,
       status: 'sent',
@@ -339,15 +365,14 @@ it('keeps a mixed total conserved while labeling each campaign by its own source
   );
   expect(rows[1].findAll('td')[3].text()).toBe('3 Accepted by sending service');
   const cards = wrapper.findAll('section.grid > div');
-  expect(cards[0].find('.text-2xl').text()).toBe('—');
-  expect(cards[1].find('.text-2xl').text()).toBe('10');
-  expect(cards[1].text()).toContain('Acceptance recorded');
-  expect(cards[2].find('.text-2xl').text()).toBe('—');
-  expect(rows.every(row => row.findAll('td')[4].text() === '—')).toBe(true);
+  expect(cards).toHaveLength(1);
+  expect(cards[0].find('.text-2xl').text()).toBe('10');
+  expect(cards[0].text()).toContain('Acceptance recorded');
+  expect(rows.every(row => row.findAll('td')[4].text() === '')).toBe(true);
 });
 
 it.each(['metadata', 'coverage', 'missing'])(
-  'uses SES acceptance instead of four mixed sends (%s)',
+  'uses the reputation cohort instead of four mixed sends (%s)',
   async source => {
     const summary = {
       sent: 4,
@@ -388,17 +413,27 @@ it.each(['metadata', 'coverage', 'missing'])(
     await flushPromises();
     const cards = wrapper.findAll('section.grid > div');
     expect(cards[0].find('.text-2xl').text()).toBe('4');
-    const denominator = source === 'missing' ? '—' : '1';
-    expect(cards[5].text()).toContain(
-      `100% SES accepted sends: ${denominator}`
+    const permanentLabel = displayStatusLabel(i18n.global.t, 'permanent');
+    const failureCard = cards.find(card =>
+      card.text().includes(permanentLabel)
     );
-    expect(cards[6].text()).toContain(`0% SES accepted sends: ${denominator}`);
-    expect(wrapper.findAll('table').at(-1).text()).toContain(
-      `SES accepted sends: ${denominator}`
+    const spamCard = cards.find(card =>
+      card
+        .text()
+        .includes(i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.STATUS.complained'))
     );
-    expect(wrapper.text()).not.toContain('of sent emails');
-    expect(wrapper.text()).toContain(
-      i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.SCOPE')
-    );
+    expect(failureCard.text()).toContain('100%');
+    expect(spamCard.text()).toContain('0%');
+    const comparison = wrapper.findAll('table').at(-1).text();
+    if (source === 'missing') {
+      expect(failureCard.text()).not.toContain('Sent:');
+      expect(spamCard.text()).not.toContain('Sent:');
+      expect(comparison).not.toContain('Sent:');
+    } else {
+      expect(failureCard.text()).toContain('100% · Sent: 1');
+      expect(spamCard.text()).toContain('0% · Sent: 1');
+      expect(comparison).toContain('Sent: 1');
+    }
+    expect(wrapper.text()).not.toContain('SES');
   }
 );

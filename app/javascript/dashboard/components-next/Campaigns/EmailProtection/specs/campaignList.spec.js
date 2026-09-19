@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import protection from 'dashboard/i18n/locale/en/emailCampaignProtection.json';
 import campaignMessages from 'dashboard/i18n/locale/en/campaign.json';
 import Page from 'dashboard/routes/dashboard/campaigns/pages/EmailCampaignsPage.vue';
+import EmailStatusFilter from '../EmailStatusFilter.vue';
 const { dispatch } = vi.hoisted(() => ({ dispatch: vi.fn() }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/store', () => ({
@@ -90,14 +91,16 @@ it('sends the list status filter to the store and keeps unsafe legacy resume hid
   expect(wrapper.text()).not.toContain(
     i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.STATUS.suppressed')
   );
-  await wrapper.find('select').setValue('attention');
+  wrapper
+    .findComponent(EmailStatusFilter)
+    .vm.$emit('update:modelValue', 'attention');
   await flushPromises();
   expect(dispatch).toHaveBeenLastCalledWith(
     'emailCampaigns/get',
     expect.objectContaining({ status: 'attention' })
   );
   expect(router.currentRoute.value.query.email_status).toBe('attention');
-  await wrapper.find('select').setValue('');
+  wrapper.findComponent(EmailStatusFilter).vm.$emit('update:modelValue', '');
   await flushPromises();
   expect(dispatch).toHaveBeenLastCalledWith(
     'emailCampaigns/get',
