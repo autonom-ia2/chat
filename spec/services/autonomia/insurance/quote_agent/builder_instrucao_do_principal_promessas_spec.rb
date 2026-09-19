@@ -200,7 +200,7 @@ module ManualDoPrincipal
 
       docs.map { |d| d[:name] } == ['apolice.pdf'] && docs.first[:text].present? &&
         textos.any? { |t| t.include?('usa a apólice do fulano') } &&
-        textos.any? { |t| t.include?('<documento nome="apolice.pdf">') }
+        textos.any? { |t| t.include?('<documento nome="apolice.pdf" enviado_em="') }
     }
   }.freeze
 end
