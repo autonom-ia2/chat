@@ -39,6 +39,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
     'address.zipCode' => 'CEP', 'segurado.cep' => 'CEP',
     'address.number' => 'número do endereço', 'segurado.numero' => 'número do endereço',
     'vehicle.plate' => 'placa do veículo',
+    # Os dois que a consulta de CPF preenche quando acha a pessoa, e que o `quote/start` recusa quando
+    # não acha (#470).
+    'insured.birthDate' => 'data de nascimento do titular', 'insured.gender' => 'sexo do titular',
     # O único problema que o chat2you levanta sozinho (`Veiculo#problema_de_zero_km`).
     'vehicle.isZeroKm' => 'se o veículo é zero-quilômetro'
   }.freeze
