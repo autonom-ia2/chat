@@ -416,16 +416,27 @@ export function responseFor(url, method, state) {
       meta: { count: selected.length },
     });
   }
-  if (path.endsWith('/timeline'))
-    return ok({
-      delivery_mode: deliveryMode,
-      series: [0, 1, 2].map(i => ({
-        bucket: `2026-09-${14 + i}T00:00:00Z`,
-        delivered: 120 + i * 40,
-        open: 65 + i * 20,
-        click: 10 + i * 5,
-      })),
-    });
+  if (path.endsWith('/timeline')) {
+    const hourly = params.get('interval') === 'hour';
+    const series = hourly
+      ? Array.from({ length: 24 }, (_, hour) => {
+          const distance = Math.abs(hour - 14);
+          const delivered = Math.max(0, 300 - distance * 28);
+          return {
+            bucket: `2026-09-19T${String(hour).padStart(2, '0')}:00:00Z`,
+            delivered,
+            open: Math.round(delivered * 0.24),
+            click: Math.round(delivered * 0.08),
+          };
+        })
+      : [0, 1, 2].map(i => ({
+          bucket: `2026-09-${14 + i}T00:00:00Z`,
+          delivered: 120 + i * 40,
+          open: 65 + i * 20,
+          click: 10 + i * 5,
+        }));
+    return ok({ delivery_mode: deliveryMode, series });
+  }
   if (path.endsWith('/clicks'))
     return ok({
       clicks: [

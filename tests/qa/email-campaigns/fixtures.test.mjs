@@ -120,6 +120,14 @@ for (const [scenario, mode, confirmed, direct] of [
       timeline.series.map(row => row.delivered),
       [120, 160, 200]
     );
+    const hourlyTimeline = responseFor(
+      new URL(`${origin}/reports/4361/timeline?interval=hour`),
+      'GET',
+      state
+    ).json.payload;
+    assert.equal(hourlyTimeline.delivery_mode, mode);
+    assert.equal(hourlyTimeline.series.length, 24);
+    assert.equal(hourlyTimeline.series[14].bucket, '2026-09-19T14:00:00Z');
     const rows = responseFor(
       new URL(`${origin}/reports/4361/recipients?status=delivered`),
       'GET',
