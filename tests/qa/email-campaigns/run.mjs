@@ -109,14 +109,20 @@ async function openScreen(name, options = {}) {
     await route.fulfill(response);
   });
   await page.goto(
-    `http://127.0.0.1:3437/app/accounts/436/crm/campaign-management?locale=${locale}&theme=${options.theme || 'light'}${options.campaign === false ? '' : `&campaign=${options.campaign || 4361}`}`
+    `http://127.0.0.1:3437/app/accounts/436/crm/campaign-management?locale=${locale}&theme=${options.theme || 'light'}&role=${options.role || 'admin'}${options.campaign === false ? '' : `&campaign=${options.campaign || 4361}`}`
   );
   await page.waitForFunction(() => window.__qa?.ready === true, null, {
     timeout: 60000,
   });
-  await page.locator('[data-section="CURRENT"]').waitFor();
   const scroller = page.locator('#app > .overflow-y-auto');
   await scroller.waitFor();
+  if (options.contentWidth) {
+    await scroller.evaluate((element, width) => {
+      element.style.width = `${width}px`;
+      element.style.maxWidth = `${width}px`;
+      element.style.marginInlineStart = 'auto';
+    }, options.contentWidth);
+  }
   await page.evaluate(() => document.fonts.ready);
   async function settle() {
     const deadline = Date.now() + 10000;
@@ -157,10 +163,76 @@ async function openScreen(name, options = {}) {
       exact: true,
     }),
   });
-  const campaignSelect = page.getByRole('combobox', {
+  const campaignFilterGroup = page.getByRole('group', {
     name: await t('CAMPAIGN_MANAGEMENT.FILTER.LABEL'),
     exact: true,
   });
+  const recipientFilterGroup = section.getByRole('group', {
+    name: await t('CAMPAIGN_MANAGEMENT.TABLE.STATUS'),
+    exact: true,
+  });
+
+  async function dropdownItems(group) {
+    const trigger = group.getByRole('button').first();
+    await trigger.click();
+    const floating = page.locator('[data-dropdown-menu]:visible').last();
+    if (await floating.count()) {
+      return { trigger, items: floating.locator('li.n-dropdown-item > *') };
+    }
+    return {
+      trigger,
+      items: group.locator('li.n-dropdown-item > *:visible'),
+    };
+  }
+
+  async function chooseDropdown(group, index) {
+    const { items } = await dropdownItems(group);
+    assert((await items.count()) > index, `Missing dropdown option ${index}`);
+    await items.nth(index).click();
+    await settle();
+  }
+
+  async function countDropdownOptions(group) {
+    const { trigger, items } = await dropdownItems(group);
+    const count = await items.count();
+    await trigger.click();
+    await settle();
+    return count;
+  }
+
+  const recipientStatusIndex = {
+    '': 0,
+    pending: 1,
+    delivered: 2,
+    attention: 3,
+    unsubscribed: 4,
+  };
+  const problemStatusIndex = {
+    attention: 0,
+    temporary_bounced: 1,
+    hard_bounced: 2,
+    complained: 3,
+    preflight_invalid: 4,
+    preflight_review: 5,
+  };
+
+  const selectCampaign = value =>
+    chooseDropdown(campaignFilterGroup, value ? Number(value) - 4360 : 0);
+  const campaignOptionCount = () => countDropdownOptions(campaignFilterGroup);
+  const campaignSelectionLabel = () =>
+    campaignFilterGroup.getByRole('button').first().innerText();
+  const selectRecipientStatus = value =>
+    chooseDropdown(recipientFilterGroup, recipientStatusIndex[value]);
+  const recipientOptionCount = () => countDropdownOptions(recipientFilterGroup);
+  const recipientSelectionLabel = () =>
+    recipientFilterGroup.getByRole('button').first().innerText();
+  async function selectProblemStatus(value) {
+    const problemGroup = section.getByRole('group', {
+      name: await ns('STATUS.attention'),
+      exact: true,
+    });
+    await chooseDropdown(problemGroup, problemStatusIndex[value]);
+  }
   async function shot(suffix, target, { sequence = true } = {}) {
     await settle();
     const range = await scroller.evaluate(
@@ -333,9 +405,9 @@ async function openScreen(name, options = {}) {
         bodyWidth: document.body.scrollWidth,
         dark: document.documentElement.classList.contains('dark'),
         direction: document.documentElement.dir,
-        badges: [...document.querySelectorAll('span[tabindex="0"][title]')].map(
-          rect
-        ),
+        badges: [...document.querySelectorAll('[data-email-status-badge]')]
+          .filter(window.__qaDom.isExposed)
+          .map(rect),
         buttons: [...document.querySelectorAll('button')]
           .filter(window.__qaDom.isExposed)
           .map(rect),
@@ -346,7 +418,9 @@ async function openScreen(name, options = {}) {
         ]
           .filter(window.__qaDom.isExposed)
           .map(rect),
-        tables: [...document.querySelectorAll('table')].map(rect),
+        tables: [...document.querySelectorAll('table')]
+          .filter(window.__qaDom.isExposed)
+          .map(rect),
         controls: [...document.querySelectorAll('input, select')].map(rect),
         emailFields: [...document.querySelectorAll('td > bdi')].map(rect),
         recipientRows: [...document.querySelectorAll('tr')]
@@ -369,7 +443,16 @@ async function openScreen(name, options = {}) {
     t,
     ns,
     section,
-    campaignSelect,
+    campaignFilterGroup,
+    recipientFilterGroup,
+    dropdownItems,
+    selectCampaign,
+    campaignOptionCount,
+    campaignSelectionLabel,
+    selectRecipientStatus,
+    recipientOptionCount,
+    recipientSelectionLabel,
+    selectProblemStatus,
     shot,
     latest,
     requestAfter,
@@ -440,31 +523,41 @@ async function smoke(screen) {
   }
   if (screen.state.scenario === 'mixed-denominator') {
     await check(
-      `${record.name}: mixed send reputation denominator is one SES acceptance`,
+      `${record.name}: mixed send reputation denominator uses the verified sending cohort`,
       async () => {
         const cards = screen.page.locator('section.grid > div');
         assert(
           (await cards.nth(0).innerText()).includes('4'),
           'Mixed total lost'
         );
-        const text = await cards.nth(5).innerText();
+        const sentLabel = await screen.t('CAMPAIGN_MANAGEMENT.KPIS.SENT');
+        const permanentLabel = (await screen.ns('STATUS.permanent'))
+          .split('—')
+          .at(-1)
+          .trim();
+        const permanent = cards.filter({ hasText: permanentLabel });
+        const complaint = cards.filter({
+          hasText: await screen.ns('STATUS.complained'),
+        });
         assert(
-          text.includes('100%') &&
-            text.includes(await screen.ns('OVER_SENT', { count: 1 })),
-          'SES denominator missing from permanent failure rate'
+          (await permanent.first().innerText()).includes('100%') &&
+            (await permanent.first().innerText()).includes(`${sentLabel}: 1`),
+          'Reputation denominator missing from permanent failure rate'
         );
         assert(
-          (await cards.nth(6).innerText()).includes(
-            await screen.ns('OVER_SENT', { count: 1 })
+          (await complaint.first().innerText()).includes(`${sentLabel}: 1`),
+          'Reputation denominator missing from complaint rate'
+        );
+        assert(
+          !/\b(?:SES|Amazon|AWS)\b/i.test(
+            await screen.page.locator('body').innerText()
           ),
-          'SES denominator missing from complaint rate'
+          'Provider implementation name leaked to customer UI'
         );
       }
     );
     await shot('mixed-denominator');
-    await screen.requestAfter('/reports', () =>
-      screen.campaignSelect.selectOption('4361')
-    );
+    await screen.requestAfter('/reports', () => screen.selectCampaign('4361'));
     await inspect();
   }
 
@@ -526,7 +619,7 @@ async function smoke(screen) {
       'Badge styles missing'
     );
     assert(
-      record.layout.tables.length > 1 &&
+      record.layout.tables.length > 0 &&
         record.layout.tables.every(
           t => Number.isFinite(t.width) && t.width > 0 && t.height > 0
         ),
@@ -644,7 +737,7 @@ async function keyboardCoverage(screen) {
     expected.every(control => seen.has(control.id)),
     `Reached ${buttons.filter(control => seen.has(control.id)).length}/${buttons.length} exposed enabled buttons; missing ${JSON.stringify(expected.filter(control => !seen.has(control.id)))}`
   );
-  const detailsCount = await section.locator('details').count();
+  const detailsCount = await section.locator('details:visible').count();
   assert(detailsCount > 0, 'Recipient details missing');
   const detailsEvidence = [];
   for (let index = 0; index < detailsCount; index++) {
@@ -743,15 +836,16 @@ async function rtlEmails(screen) {
         text: element.textContent,
       }))
     );
-  const fields = await collect(section.locator('td > bdi'));
+  const table = section.locator('table:visible').first();
+  const rows = table.locator('tbody tr');
+  const fields = await collect(table.locator('td > bdi'));
   assert(
-    fields.length === (await section.locator('tbody tr').count()) &&
-      fields.length > 0,
+    fields.length === (await rows.count()) && fields.length > 0,
     'Missing table email isolation fields'
   );
   const detailsFields = [];
   for (let index = 0; index < fields.length; index++) {
-    const details = section.locator('details').nth(index);
+    const details = rows.nth(index).locator('details');
     await details.locator('summary').click();
     const field = await collect(details.locator('bdi'));
     assert(
@@ -777,7 +871,7 @@ async function rtlEmails(screen) {
     ),
     'Email itself is not explicitly LTR and bidi-isolated'
   );
-  const localizedDirections = await section
+  const localizedDirections = await table
     .locator('tbody tr td:nth-child(3), summary')
     .evaluateAll(elements =>
       elements.map(element => ({
@@ -801,57 +895,57 @@ async function rtlEmails(screen) {
 }
 async function mobileTable(screen) {
   const { section, page, shot } = screen;
-  const table = section.locator('table');
-  const scroll = table.locator('..');
-  const geometry = await table.evaluate(element => ({
+  const list = section.locator('[data-recipient-mobile-list]');
+  const cards = list.locator('[data-recipient-card]');
+  const desktopTable = section.locator('table');
+
+  const geometry = await list.evaluate(element => ({
     width: element.getBoundingClientRect().width,
-    columns: [...element.querySelectorAll('tbody tr')].map(row => ({
-      email: row.cells[0].getBoundingClientRect().width,
-      height: row.getBoundingClientRect().height,
+    scrollWidth: element.scrollWidth,
+    overflowX: getComputedStyle(element).overflowX,
+    cards: [...element.querySelectorAll('[data-recipient-card]')].map(card => ({
+      width: card.getBoundingClientRect().width,
+      height: card.getBoundingClientRect().height,
     })),
-    container: {
-      width: element.parentElement.clientWidth,
-      scrollWidth: element.parentElement.scrollWidth,
-      overflowX: getComputedStyle(element.parentElement).overflowX,
-    },
   }));
+
   assert(
-    geometry.columns.length > 0 &&
-      geometry.columns.every(row => row.email >= 180 && row.height <= 160),
-    `Unreadable mobile recipients: ${JSON.stringify(geometry)}`
+    geometry.cards.length > 0 &&
+      geometry.cards.every(
+        card => card.width >= 300 && card.width <= 390 && card.height <= 260
+      ),
+    `Unreadable mobile recipient cards: ${JSON.stringify(geometry)}`
   );
   assert(
-    geometry.container.scrollWidth > geometry.container.width &&
-      geometry.container.overflowX === 'auto',
-    'Recipient overflow must scroll inside table container'
+    geometry.scrollWidth <= geometry.width + 1,
+    'Mobile recipient cards must not require horizontal scrolling'
   );
-  for (const side of ['left', 'right']) {
-    await scroll.evaluate((element, side) => {
-      element.scrollLeft = side === 'left' ? 0 : element.scrollWidth;
-    }, side);
-    const x = await scroll.evaluate(element => element.scrollLeft);
-    assert(side === 'left' ? x === 0 : x > 0, `Cannot scroll table ${side}`);
-    await shot(`table-${side}`, section);
-    assert(
-      page.viewportSize().width === 390 && page.viewportSize().height === 844,
-      'Physical mobile viewport changed'
-    );
-  }
-  const details = section.locator('details').first();
+  assert(
+    (await desktopTable.evaluate(
+      element => getComputedStyle(element.parentElement).display
+    )) === 'none',
+    'Desktop recipient table is still visible on mobile'
+  );
+
+  await shot('recipient-cards', section);
+  assert(
+    page.viewportSize().width === 390 && page.viewportSize().height === 844,
+    'Physical mobile viewport changed'
+  );
+
+  const details = cards.first().locator('details');
   await details.locator('summary').click();
   assert(
     (await details.innerText()).includes(recipients[0].name.trim()),
-    'Full long name inaccessible in details'
+    'Full long name inaccessible in mobile details'
   );
   assert(
     (await details.locator('bdi').innerText()) === recipients[0].email,
-    'Full long email inaccessible'
+    'Full long email inaccessible in mobile details'
   );
-  await shot('table-right-full-identity', details);
+  await shot('recipient-card-full-identity', details);
   await details.locator('summary').click();
-  await scroll.evaluate(element => {
-    element.scrollLeft = 0;
-  });
+
   const documentWidth = await page.evaluate(
     () => document.documentElement.scrollWidth
   );
@@ -877,35 +971,295 @@ try {
     ns,
     t,
     section,
-    campaignSelect,
+    campaignFilterGroup,
+    recipientFilterGroup,
+    dropdownItems,
+    selectCampaign,
+    campaignOptionCount,
+    campaignSelectionLabel,
+    selectRecipientStatus,
+    recipientOptionCount,
+    recipientSelectionLabel,
+    selectProblemStatus,
     shot,
     requestAfter,
     latest,
     state,
+    settle,
   } = desktop;
   await shot('protection', page.locator('section[aria-live]').first());
   await shot('recipients-before', section);
+  await check(
+    'PT: customer surface uses Chatwoot controls and hides infrastructure jargon',
+    async () => {
+      const panelText = await page
+        .locator('section[aria-live]')
+        .first()
+        .innerText();
+      const bodyText = await page.locator('body').innerText();
+      assert(
+        (await page.locator('select').count()) === 0,
+        'Native select rendered'
+      );
+      assert(
+        !/\b(?:SES|Amazon|AWS)\b/i.test(bodyText),
+        'Infrastructure name leaked'
+      );
+      assert(
+        !panelText.includes('—'),
+        'Primary protection panel shows placeholder dash'
+      );
+      assert(
+        !bodyText.includes(await ns('ANALYSIS_ONLY')),
+        'Customer surface exposes contradictory analysis-only copy'
+      );
+    }
+  );
+  await check(
+    'PT: tracked-link inbox selector matches the adjacent input height',
+    async () => {
+      const form = page.locator('form').filter({
+        has: page.getByRole('textbox', {
+          name: await t('CRM_KANBAN.TRACKED_LINKS.NAME'),
+          exact: true,
+        }),
+      });
+      const input = form.getByRole('textbox', {
+        name: await t('CRM_KANBAN.TRACKED_LINKS.NAME'),
+        exact: true,
+      });
+      const trigger = form.getByRole('button', {
+        name: await t('CRM_KANBAN.TRACKED_LINKS.INBOX'),
+        exact: true,
+      });
+      const [left, right] = await Promise.all([
+        input.boundingBox(),
+        trigger.boundingBox(),
+      ]);
+      assert(left && right, 'Tracked-link controls are not rendered');
+      assert(
+        Math.abs(left.height - right.height) <= 1,
+        JSON.stringify({ left, right })
+      );
+      assert(
+        Math.abs(left.y + left.height - right.y - right.height) <= 3,
+        JSON.stringify({ left, right })
+      );
+      return { inputHeight: left.height, triggerHeight: right.height };
+    }
+  );
+  await check(
+    'PT: production tooltip plugin renders the metric help without provider jargon',
+    async () => {
+      const help = page.locator('header [tabindex="0"][aria-label]').first();
+      await help.hover();
+      // FloatingVue's real popper uses aria-hidden and classes, not role="tooltip".
+      const tooltip = page
+        .locator('.v-popper--theme-tooltip.v-popper__popper--shown')
+        .first();
+      await tooltip.waitFor({ state: 'visible' });
+      const content = await tooltip.innerText();
+      assert(
+        content.includes(await ns('METRICS_HINT')),
+        'Metric explanation missing from the real tooltip'
+      );
+      assert(
+        !/\b(?:SES|Amazon|AWS)\b/i.test(content),
+        'Provider implementation name leaked in tooltip'
+      );
+      await page.mouse.move(0, 0);
+      await tooltip.waitFor({ state: 'hidden' });
+      return { shown: true, hiddenAfterLeave: true };
+    }
+  );
+  await check(
+    'PT: search and primary status filter align cleanly',
+    async () => {
+      const search = section.getByRole('textbox', {
+        name: await ns('SEARCH'),
+        exact: true,
+      });
+      const statusButton = section
+        .getByRole('group', {
+          name: await t('CAMPAIGN_MANAGEMENT.TABLE.STATUS'),
+          exact: true,
+        })
+        .getByRole('button')
+        .first();
+      const [searchBox, statusBox] = await Promise.all([
+        search.boundingBox(),
+        statusButton.boundingBox(),
+      ]);
+      assert(searchBox && statusBox, 'Missing filter geometry');
+      const searchBottom = searchBox.y + searchBox.height;
+      const statusBottom = statusBox.y + statusBox.height;
+      assert(
+        Math.abs(searchBottom - statusBottom) <= 3,
+        `Filter bottoms differ: search=${searchBottom}, status=${statusBottom}`
+      );
+      assert(
+        (await recipientOptionCount()) === 5,
+        'Main recipient filter must have exactly five choices'
+      );
+    }
+  );
+  await check(
+    'PT: primary recipient menu visibly exposes exactly five choices',
+    async () => {
+      const { trigger, items } = await dropdownItems(recipientFilterGroup);
+      assert(
+        (await items.count()) === 5,
+        'Primary recipient menu must expose exactly five choices'
+      );
+      await shot('recipient-filter-open', null, { sequence: false });
+      await trigger.click();
+      await settle();
+    }
+  );
+  await check(
+    'PT: primary and contextual filters operate with the keyboard',
+    async () => {
+      const trigger = recipientFilterGroup.getByRole('button').first();
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      const menu = page.getByRole('listbox', {
+        name: await t('CAMPAIGN_MANAGEMENT.TABLE.STATUS'),
+        exact: true,
+      });
+      assert(await menu.isVisible(), 'Enter did not open the custom menu');
+      assert(
+        (await menu.getByRole('option').count()) === 5,
+        'Keyboard menu lost options'
+      );
+      await page.keyboard.press('End');
+      assert(
+        await menu
+          .getByRole('option')
+          .last()
+          .evaluate(el => el === document.activeElement),
+        'End did not focus last option'
+      );
+      await page.keyboard.press('Home');
+      await page.keyboard.press('ArrowDown');
+      await requestAfter('/recipients', () => page.keyboard.press('Enter'));
+      assert(
+        latest('/recipients').query.status === 'pending',
+        'Keyboard selection differs from API filter'
+      );
+      assert(
+        await trigger.evaluate(el => el === document.activeElement),
+        'Selection did not restore trigger focus'
+      );
+      await page.keyboard.press('Space');
+      assert(await menu.isVisible(), 'Space did not open the custom menu');
+      await page.keyboard.press('Escape');
+      assert(!(await menu.isVisible()), 'Escape did not close');
+      assert(
+        await trigger.evaluate(el => el === document.activeElement),
+        'Escape lost trigger focus'
+      );
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Tab');
+      assert(!(await menu.isVisible()), 'Tab did not leave dropdown');
+      assert(
+        !(await trigger.evaluate(el => el === document.activeElement)),
+        'Tab trapped focus on trigger'
+      );
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Home');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await requestAfter('/recipients', () => page.keyboard.press('Space'));
+      const problemGroup = section.getByRole('group', {
+        name: await ns('STATUS.attention'),
+        exact: true,
+      });
+      const problemTrigger = problemGroup.getByRole('button').first();
+      await problemTrigger.focus();
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Home');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await requestAfter('/recipients', () => page.keyboard.press('Enter'));
+      assert(
+        latest('/recipients').query.status === 'hard_bounced' &&
+          latest('/recipients').query.problem === 'true',
+        'Contextual keyboard filter is not exact'
+      );
+      await requestAfter('/recipients', () => selectRecipientStatus(''));
+    }
+  );
+  await check(
+    'PT: temporary, permanent and spam statuses have distinct visual meaning',
+    async () => {
+      const badgeInfo = async label => {
+        const badge = section
+          .locator('tbody td:nth-child(3) span[tabindex="0"]')
+          .filter({ hasText: label })
+          .first();
+        assert(await badge.count(), `Badge missing: ${label}`);
+        return badge.evaluate(element => ({
+          background: getComputedStyle(element).backgroundColor,
+          color: getComputedStyle(element).color,
+          icon: [...element.querySelectorAll('span')]
+            .map(node => node.className)
+            .find(className => String(className).includes('i-lucide')),
+        }));
+      };
+      const permanentLabel = (await ns('STATUS.permanent'))
+        .split('—')
+        .at(-1)
+        .trim();
+      const temporaryInfo = await badgeInfo(await ns('STATUS.temporary'));
+      const permanentInfo = await badgeInfo(permanentLabel);
+      assert(
+        temporaryInfo.background !== permanentInfo.background &&
+          temporaryInfo.icon !== permanentInfo.icon,
+        JSON.stringify({ temporaryInfo, permanentInfo })
+      );
+
+      await requestAfter('/recipients', () =>
+        selectRecipientStatus('attention')
+      );
+      await requestAfter('/recipients', () =>
+        selectProblemStatus('complained')
+      );
+      const spamInfo = await badgeInfo(await ns('STATUS.complained'));
+      assert(
+        spamInfo.icon !== permanentInfo.icon &&
+          spamInfo.icon !== temporaryInfo.icon,
+        JSON.stringify({ spamInfo, permanentInfo, temporaryInfo })
+      );
+      await requestAfter('/recipients', () => selectRecipientStatus(''));
+    }
+  );
   await check('PT: three campaign choices survive selection', async () => {
+    assert((await campaignOptionCount()) === 4, 'Expected all + three options');
+    await requestAfter('/reports', () => selectCampaign('4362'));
     assert(
-      (await campaignSelect.locator('option').count()) === 4,
-      'Expected all + three options'
-    );
-    await requestAfter('/reports', () => campaignSelect.selectOption('4362'));
-    assert(
-      (await campaignSelect.locator('option').count()) === 4,
+      (await campaignOptionCount()) === 4,
       'Options shrank after selecting sent campaign'
     );
-    await requestAfter('/reports', () => campaignSelect.selectOption('4361'));
+    await requestAfter('/reports', () => selectCampaign('4361'));
   });
   await check(
-    'PT: current metrics differ from immutable pause snapshot; locale formatting',
+    'PT: protection details stay secondary and preserve immutable pause snapshot',
     async () => {
-      const currentText = await page
-        .locator('[data-section="CURRENT"]')
-        .innerText();
-      const triggerText = await page
-        .locator('[data-section="TRIGGER"]')
-        .innerText();
+      const panel = page.locator('section[aria-live]').first();
+      const currentSection = page.locator('[data-section="CURRENT"]');
+      const triggerSection = page.locator('[data-section="TRIGGER"]');
+      assert(
+        !(await currentSection.isVisible()) &&
+          !(await triggerSection.isVisible()),
+        'Technical detail opened by default'
+      );
+      await panel
+        .getByRole('button', { name: await ns('DETAILS'), exact: true })
+        .click();
+      const currentText = await currentSection.innerText();
+      const triggerText = await triggerSection.innerText();
       const date = await page.evaluate(
         value =>
           new Intl.DateTimeFormat('pt-BR', {
@@ -922,11 +1276,18 @@ try {
           triggerText.includes('8%'),
         'Current/trigger date/count/rate mismatch'
       );
+      await panel
+        .getByRole('button', { name: await ns('DETAILS'), exact: true })
+        .click();
+      assert(
+        !(await currentSection.isVisible()),
+        'Technical detail did not close'
+      );
       return { currentText, triggerText };
     }
   );
   await check('PT: full long email copy and details', async () => {
-    await section.locator('summary').first().click();
+    await section.locator('summary:visible').first().click();
     await section
       .getByRole('button', { name: await ns('COPY'), exact: true })
       .first()
@@ -937,22 +1298,26 @@ try {
       'Clipboard truncated'
     );
     await shot('long-email-details', section);
-    await section.locator('summary').first().click();
+    await section.locator('summary:visible').first().click();
   });
   await check(
     'PT: status + search + problem combine; page 2; export identical filters',
     async () => {
+      assert(
+        (await recipientOptionCount()) === 5,
+        'Main recipient filter must expose exactly five decisions'
+      );
       await requestAfter('/recipients', () =>
-        section.getByRole('combobox').selectOption('hard_bounced')
+        selectRecipientStatus('attention')
+      );
+      await requestAfter('/recipients', () =>
+        selectProblemStatus('hard_bounced')
       );
       const search = section.getByRole('textbox', {
         name: await ns('SEARCH'),
         exact: true,
       });
       await requestAfter('/recipients', () => search.fill('qa-'));
-      await requestAfter('/recipients', () =>
-        section.getByRole('checkbox').check()
-      );
       await requestAfter('/recipients', async () =>
         section
           .getByRole('button', {
@@ -1057,12 +1422,10 @@ try {
       );
       assert(
         latest('/recipients').query.problem === 'true' &&
-          (await section.getByRole('checkbox').isChecked()),
+          (await recipientSelectionLabel()) === (await ns('STATUS.attention')),
         'Problems did not activate attention'
       );
-      await requestAfter('/recipients', async () =>
-        section.getByRole('checkbox').uncheck()
-      );
+      await requestAfter('/recipients', () => selectRecipientStatus(''));
     }
   );
   await check('PT: duplicate protection state is presented once', async () =>
@@ -1129,7 +1492,7 @@ try {
   await check(
     'PT: manual capability permits resume with a truthful title',
     async () => {
-      await requestAfter('/reports', () => campaignSelect.selectOption('4363'));
+      await requestAfter('/reports', () => selectCampaign('4363'));
       assert(
         await page
           .getByRole('button', { name: await ns('RESUME'), exact: true })
@@ -1157,7 +1520,10 @@ try {
           .first()
           .click()
       );
-      assert((await campaignSelect.inputValue()) === '4363', 'Selection lost');
+      assert(
+        (await campaignSelectionLabel()).includes('QA — Pausa manual'),
+        'Selection lost'
+      );
       assert(
         await page
           .getByText(await t('CAMPAIGN_MANAGEMENT.ERROR'), { exact: true })
@@ -1181,8 +1547,14 @@ try {
   await desktop.context.close();
   for (const [name, options] of [
     ['pt-dark', { theme: 'dark' }],
+    ['pt-readonly', { role: 'readonly' }],
+    ['pt-mixed-evidence', { scenario: 'mixed' }],
     ['ar-rtl', { locale: 'ar', viewport: { width: 1440, height: 900 } }],
     ['pt-mobile', { viewport: { width: 390, height: 844 } }],
+    [
+      'pt-sidebar-narrow',
+      { viewport: { width: 1024, height: 900 }, contentWidth: 742 },
+    ],
     ['de-desktop', { locale: 'de' }],
     ['en-desktop', { locale: 'en' }],
     ['pt-unknown', { scenario: 'unknown' }],
@@ -1211,18 +1583,83 @@ try {
       screen.page.locator('section[aria-live]').first()
     );
     await screen.shot('recipients', screen.section);
+    if (name === 'pt-readonly') {
+      await check(
+        'Read-only: real permission composable hides write and export actions',
+        async () => {
+          for (const key of ['RESUME', 'REEVALUATE', 'RECHECK', 'EXPORT']) {
+            assert(
+              (await screen.page
+                .getByRole('button', {
+                  name: await screen.ns(key),
+                  exact: true,
+                })
+                .count()) === 0,
+              `Unauthorized action ${key}`
+            );
+          }
+          assert(
+            await screen.section.isVisible(),
+            'Read-only recipient list is missing'
+          );
+        }
+      );
+    }
+    if (name === 'pt-mixed-evidence') {
+      await check(
+        'Mixed: collapsed evidence preserves both exact delivery populations',
+        async () => {
+          await screen.requestAfter('/reports', () =>
+            screen.selectCampaign('')
+          );
+          const toggle = screen.page.locator('[data-delivery-evidence-toggle]');
+          const evidence = screen.page.locator('[data-delivery-evidence]');
+          assert(
+            !(await evidence.isVisible()),
+            'Evidence should start collapsed'
+          );
+          await toggle.click();
+          const payload = screen.latest('/reports').response.json.payload;
+          assert(
+            payload?.summary?.delivery_evidence,
+            'Missing synthetic response evidence'
+          );
+          assert(
+            payload.summary.delivery_evidence.provider_confirmed > 0 &&
+              payload.summary.delivery_evidence.direct_acceptance_only > 0,
+            'Mixed gate must exercise both positive populations'
+          );
+          const counts = await evidence.locator('dd').allTextContents();
+          const format = value => new Intl.NumberFormat('pt-BR').format(value);
+          assert(
+            counts[0].trim() ===
+              format(payload.summary.delivery_evidence.provider_confirmed),
+            'Recipient-server acceptance count was lost'
+          );
+          assert(
+            counts[1].trim() ===
+              format(payload.summary.delivery_evidence.direct_acceptance_only),
+            'Sending-service acceptance count was lost'
+          );
+          assert(
+            !/\b(?:SES|Amazon|AWS)\b/.test(await evidence.innerText()),
+            'Infrastructure jargon leaked into details'
+          );
+          await screen.shot('delivery-evidence', evidence);
+          await toggle.click();
+        }
+      );
+    }
     if (name === 'pt-direct') {
       await check(
         'Direct: sending-service acceptance with unchanged delivered query',
         async () => {
           await screen.requestAfter('/recipients', () =>
-            screen.section.getByRole('combobox').selectOption('delivered')
+            screen.selectRecipientStatus('delivered')
           );
           const label = await screen.ns('STATUS.accepted_service');
           assert(
-            (await screen.section
-              .locator('option[value="delivered"]')
-              .innerText()) === label,
+            (await screen.recipientSelectionLabel()) === label,
             'Direct filter claims recipient delivery'
           );
           const badges = await screen.section
@@ -1238,10 +1675,17 @@ try {
               .at(-1).query.status === 'delivered',
             'Machine filter changed'
           );
+          const deliveryHint = await screen.ns('DELIVERY_HINT');
           assert(
-            (await screen.page.locator('body').innerText()).includes(
-              await screen.ns('DELIVERY_HINT')
-            ),
+            await screen.section
+              .locator('[aria-label]')
+              .evaluateAll(
+                (nodes, hint) =>
+                  nodes.some(node =>
+                    node.getAttribute('aria-label')?.includes(hint)
+                  ),
+                deliveryHint
+              ),
             'Missing acceptance caveat'
           );
           await screen.shot('direct-delivered', screen.section);
@@ -1261,8 +1705,8 @@ try {
       });
     if (name === 'ar-rtl') {
       await check(
-        'Arabic: RTL layout with localized status/dropdown/button labels',
-        () => {
+        'Arabic: RTL layout with localized status and interface controls',
+        async () => {
           assert(screen.record.layout.direction === 'rtl', 'RTL inactive');
           assert(
             screen.record.layout.badges.some(b =>
@@ -1270,11 +1714,32 @@ try {
             ),
             'Arabic badge absent'
           );
+          for (const label of [
+            await screen.ns('REFRESH'),
+            await screen.ns('EXPORT'),
+            await screen.ns('CLEAR'),
+          ]) {
+            assert(
+              /[\u0600-\u06ff]/.test(label),
+              `Untranslated label: ${label}`
+            );
+            assert(
+              (await screen.page
+                .getByRole('button', { name: label, exact: true })
+                .count()) > 0,
+              `Localized control missing: ${label}`
+            );
+          }
+          const statusTrigger = screen.section
+            .getByRole('group', {
+              name: await screen.t('CAMPAIGN_MANAGEMENT.TABLE.STATUS'),
+              exact: true,
+            })
+            .getByRole('button')
+            .first();
           assert(
-            screen.record.layout.buttons.every(b =>
-              /[\u0600-\u06ff]/.test(b.text)
-            ),
-            'Button untranslated'
+            /[\u0600-\u06ff]/.test(await statusTrigger.innerText()),
+            'Status dropdown label is not localized'
           );
         }
       );
@@ -1282,6 +1747,50 @@ try {
         'Arabic: table and open detail email isolation preserves RTL labels',
         () => rtlEmails(screen)
       );
+    }
+    if (name === 'pt-sidebar-narrow') {
+      await screen.requestAfter('/recipients', () =>
+        screen.selectRecipientStatus('attention')
+      );
+      await check(
+        'Narrow dashboard: contextual filters wrap inside sidebar-constrained content',
+        async () => {
+          const sectionBox = await screen.section.boundingBox();
+          assert(sectionBox, 'Recipient section has no geometry');
+          const filterBar = screen.section.locator(
+            '[data-email-recipient-filters]'
+          );
+          const groups = filterBar.getByRole('group');
+          const boxes = await groups.evaluateAll(nodes =>
+            nodes.map(node => {
+              const rect = node.getBoundingClientRect();
+              return {
+                left: rect.left,
+                right: rect.right,
+                width: rect.width,
+              };
+            })
+          );
+          assert(
+            boxes.every(
+              box =>
+                box.left >= sectionBox.x - 1 &&
+                box.right <= sectionBox.x + sectionBox.width + 1
+            ),
+            JSON.stringify({ sectionBox, boxes })
+          );
+          const overflow = await filterBar.evaluate(element => ({
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+          }));
+          assert(
+            overflow.scrollWidth <= overflow.clientWidth + 1,
+            JSON.stringify(overflow)
+          );
+          return { sectionBox, boxes, overflow };
+        }
+      );
+      await screen.shot('attention-filters', screen.section);
     }
     if (name === 'pt-mobile') {
       await check(
@@ -1310,13 +1819,70 @@ try {
               geometry.labelHeight <= geometry.lineHeight * 2.1,
             'Search label wraps into a narrow column'
           );
-          return geometry;
+          const statusGroup = screen.section.getByRole('group', {
+            name: await screen.t('CAMPAIGN_MANAGEMENT.TABLE.STATUS'),
+            exact: true,
+          });
+          const statusBox = await statusGroup.boundingBox();
+          assert(
+            statusBox && statusBox.width >= 220,
+            `Status filter collapsed to ${statusBox?.width}px`
+          );
+          return { ...geometry, statusWidth: statusBox.width };
         }
       );
       await check(
-        'Mobile: readable recipient columns, bounded rows and internal horizontal scroll',
+        'Mobile: readable recipient cards without horizontal scroll',
         () => mobileTable(screen)
       );
+      await check(
+        'Mobile: clicks by link render as cards without clipping',
+        async () => {
+          const clicksSection = screen.page.locator('section').filter({
+            has: screen.page.getByRole('heading', {
+              name: await screen.t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.TITLE'),
+              exact: true,
+            }),
+          });
+          const cards = clicksSection.locator('[data-click-card]');
+          assert((await cards.count()) > 0, 'Mobile click cards are missing');
+          assert(
+            !(await clicksSection.locator('table').isVisible()),
+            'Desktop click table is still visible on mobile'
+          );
+          const geometry = await cards.evaluateAll(elements =>
+            elements.map(element => {
+              const rect = element.getBoundingClientRect();
+              const parent = element.parentElement.getBoundingClientRect();
+              return {
+                left: rect.left,
+                right: rect.right,
+                parentLeft: parent.left,
+                parentRight: parent.right,
+                scrollWidth: element.scrollWidth,
+                clientWidth: element.clientWidth,
+              };
+            })
+          );
+          assert(
+            geometry.every(
+              item =>
+                item.left >= item.parentLeft - 1 &&
+                item.right <= item.parentRight + 1 &&
+                item.scrollWidth <= item.clientWidth + 1
+            ),
+            JSON.stringify(geometry)
+          );
+          return geometry;
+        }
+      );
+      const mobileClicksSection = screen.page.locator('section').filter({
+        has: screen.page.getByRole('heading', {
+          name: await screen.t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.TITLE'),
+          exact: true,
+        }),
+      });
+      await screen.shot('mobile-click-cards', mobileClicksSection);
       await check(
         'Mobile: 100% exposed buttons and each detail copy reachable by keyboard',
         () => keyboardCoverage(screen)
@@ -1348,7 +1914,7 @@ try {
           const panel = screen.page.locator('section[aria-live]').first();
           assert(
             (await panel.locator('h3').innerText()) ===
-              (await screen.ns('TITLE')),
+              (await screen.ns('STATUS.paused_unknown')),
             'Provider block mislabeled as manual-only'
           );
           assert(
@@ -1371,18 +1937,22 @@ try {
             .first()
             .innerText();
           assert(
-            panel.includes(await screen.ns('STATUS.unknown')) &&
+            panel.includes(await screen.ns('STATUS.paused_unknown')) &&
               !panel.includes(await screen.ns('STATUS.healthy')) &&
               panel.includes(await screen.ns('REASON.unknown')),
-            'Unknown state fallback incorrect'
+            'Paused campaign with missing evaluation was not kept safely paused'
           );
           assert(
-            (
-              await screen.page
-                .locator('[data-section="CURRENT"] dd')
-                .allTextContents()
-            ).every(s => s === '—'),
-            'Unknown metrics fabricated'
+            !panel.includes('—'),
+            'Unknown state exposed placeholder dashes'
+          );
+          const currentDetails = screen.page.locator(
+            '[data-section="CURRENT"]'
+          );
+          assert(
+            (await currentDetails.count()) === 0 ||
+              !(await currentDetails.isVisible()),
+            'Unknown technical metrics exposed by default'
           );
           assert(
             (await screen.page.locator('body').innerText()).includes(
@@ -1414,6 +1984,17 @@ try {
         ),
         'Unhandled error after initial smoke'
       )
+  );
+  await check('All screens register the production tooltip directive', () =>
+    assert(
+      results.screens.every(
+        screen =>
+          !(screen.runtime?.vueWarnings || []).some(warning =>
+            warning.includes('Failed to resolve directive: tooltip')
+          )
+      ),
+      'The production tooltip directive is missing from a tested screen'
+    )
   );
   await check('All HTTP fixture routes match intended account scope', () =>
     assert(

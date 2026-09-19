@@ -4,6 +4,7 @@ import { createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import { createI18n } from 'vue-i18n';
 import axios from 'axios';
+import FloatingVue from 'floating-vue';
 import App from './App.vue';
 
 const params = new URLSearchParams(location.search);
@@ -17,28 +18,85 @@ const loaders = {
 };
 const messages = (await loaders[locale]()).default;
 window.axios = axios;
-window.globalConfig = { installationName: 'QA Synthetic', frontendUrl: location.origin };
+window.globalConfig = {
+  installationName: 'QA Synthetic',
+  frontendUrl: location.origin,
+};
 window.__qa = { locale, missing: [], vueErrors: [], vueWarnings: [] };
 document.documentElement.lang = locale.replace('_', '-');
 document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
-document.documentElement.classList.toggle('dark', params.get('theme') === 'dark');
+document.documentElement.classList.toggle(
+  'dark',
+  params.get('theme') === 'dark'
+);
 const initialRoute = '/app/accounts/436/crm/campaign-management';
 history.replaceState(null, '', initialRoute + location.search);
 const router = createRouter({
   history: createMemoryHistory(),
   routes: [{ path: initialRoute, component: App }],
 });
-await router.push({ path: initialRoute, query: params.get('campaign') ? { email_campaign: params.get('campaign') } : {} });
+await router.push({
+  path: initialRoute,
+  query: params.get('campaign')
+    ? { email_campaign: params.get('campaign') }
+    : {},
+});
 const store = createStore({
+  getters: {
+    getCurrentAccountId: () => 436,
+    getCurrentCustomRoleId: () =>
+      params.get('role') === 'readonly' ? 81 : null,
+    getCurrentUser: () => ({
+      accounts: [
+        {
+          id: 436,
+          permissions:
+            params.get('role') === 'readonly'
+              ? ['campaign_view']
+              : ['campaign_manage', 'campaign_view'],
+        },
+      ],
+    }),
+  },
   modules: {
-    globalConfig: { namespaced: true, getters: { get: () => ({ emailCampaignEnabled: true, crmKanbanEnabled: true, installationName: 'QA Synthetic' }) } },
-    inboxes: { namespaced: true, getters: { getWhatsAppInboxes: () => [] }, actions: { get: () => [] } },
+    globalConfig: {
+      namespaced: true,
+      getters: {
+        get: () => ({
+          emailCampaignEnabled: true,
+          crmKanbanEnabled: true,
+          installationName: 'QA Synthetic',
+        }),
+      },
+    },
+    inboxes: {
+      namespaced: true,
+      getters: { getWhatsAppInboxes: () => [] },
+      actions: { get: () => [] },
+    },
   },
 });
-const i18n = createI18n({ legacy: false, locale, fallbackLocale: false, messages: { [locale]: messages }, missing: (language, key) => { window.__qa.missing.push({ language, key }); } });
+const i18n = createI18n({
+  legacy: false,
+  locale,
+  fallbackLocale: false,
+  messages: { [locale]: messages },
+  missing: (language, key) => {
+    window.__qa.missing.push({ language, key });
+  },
+});
 window.__qa.t = (key, values) => i18n.global.t(key, values || {});
 const app = createApp(App);
-app.config.errorHandler = (error, instance, info) => { window.__qa.vueErrors.push({ message: error.message, info }); console.error(error); };
+app.config.errorHandler = (error, instance, info) => {
+  window.__qa.vueErrors.push({ message: error.message, info });
+  console.error(error);
+};
 app.config.warnHandler = message => window.__qa.vueWarnings.push(message);
+app.use(FloatingVue, {
+  instantMove: true,
+  arrowOverflow: false,
+  disposeTimeout: 5000000,
+  themes: { tooltip: { strategy: 'fixed' } },
+});
 app.use(store).use(createPinia()).use(router).use(i18n).mount('#app');
 window.__qa.ready = true;

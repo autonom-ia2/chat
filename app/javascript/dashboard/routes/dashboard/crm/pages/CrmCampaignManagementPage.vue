@@ -15,6 +15,7 @@ import {
   reputationDenominator,
   hasActiveEmailWork,
   localeTag,
+  displayStatusLabel,
 } from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
 import { useEmailReportRefresh } from 'dashboard/components-next/Campaigns/EmailProtection/useEmailReportRefresh';
 import QRCode from 'qrcode';
@@ -25,6 +26,7 @@ import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import LineChart from 'shared/components/charts/LineChart.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
+import FilterSelect from 'dashboard/components-next/filter/inputs/FilterSelect.vue';
 
 const { t, locale } = useI18n();
 const route = useRoute();
@@ -48,6 +50,17 @@ const enabled = computed(
 );
 
 const summary = ref(null);
+const showDeliveryEvidence = ref(false);
+const deliveryEvidenceRows = computed(() => {
+  const evidence = summary.value?.delivery_evidence;
+  if (!evidence) return [];
+  return [
+    ['delivered', evidence.provider_confirmed],
+    ['accepted_service', evidence.direct_acceptance_only],
+  ]
+    .filter(([, count]) => Number.isInteger(count) && count >= 0)
+    .map(([key, count]) => ({ key, label: t(`${NS}.STATUS.${key}`), count }));
+});
 const campaigns = ref([]);
 const campaignOptions = ref([]);
 const selectedCampaignId = ref(
@@ -58,6 +71,18 @@ const selectedCampaignId = ref(
 const campaignStatus = ref(
   typeof route.query.email_status === 'string' ? route.query.email_status : ''
 );
+const campaignFilterOptions = computed(() => [
+  {
+    value: '',
+    label: t('CAMPAIGN_MANAGEMENT.FILTER.ALL'),
+    icon: 'i-lucide-list-filter',
+  },
+  ...campaignOptions.value.map(campaign => ({
+    value: String(campaign.id),
+    label: campaign.name,
+    icon: 'i-lucide-mail',
+  })),
+]);
 const reportRequest = useAbortableRequest();
 const timelineRequest = useAbortableRequest();
 const clicksRequest = useAbortableRequest();
@@ -74,6 +99,13 @@ const hasError = ref(false);
 const timeline = ref([]);
 const timelineSource = ref({});
 const deliveryLabel = source => t(`${NS}.STATUS.${deliveryKey(source)}`);
+const summaryMetricHelp = computed(() => {
+  const hints = [t(`${NS}.METRICS_HINT`)];
+  if (deliveryKey(summary.value || {}) !== 'delivered') {
+    hints.push(t(`${NS}.DELIVERY_HINT`));
+  }
+  return hints.join(' ');
+});
 const timelineInterval = ref('day');
 const clicks = ref([]);
 const trackedLinks = ref([]);
@@ -86,6 +118,18 @@ const isTrackedLinksLoading = ref(false);
 const isTrackedLinkCreating = ref(false);
 const deletingTrackedLinkId = ref(null);
 const copiedTrackedLinkId = ref(null);
+const inboxFilterOptions = computed(() => [
+  {
+    value: '',
+    label: t('CRM_KANBAN.TRACKED_LINKS.INBOX'),
+    icon: 'i-lucide-inbox',
+  },
+  ...(whatsappInboxes.value || []).map(inbox => ({
+    value: String(inbox.id),
+    label: inbox.name,
+    icon: 'i-lucide-inbox',
+  })),
+]);
 
 const kpiCards = computed(() => {
   const s = summary.value || {};
@@ -127,8 +171,8 @@ const kpiCards = computed(() => {
     },
     {
       key: 'BOUNCED',
-      label: t(`${NS}.STATUS.permanent`),
-      icon: 'i-lucide-mail-x',
+      label: displayStatusLabel(t, 'permanent'),
+      icon: 'i-lucide-circle-x',
       value: s.permanent_bounced ?? null,
       rate: s.hard_bounce_rate,
     },
@@ -142,33 +186,34 @@ const kpiCards = computed(() => {
     {
       key: 'TEMPORARY',
       label: t(`${NS}.STATUS.temporary`),
-      icon: 'i-lucide-clock',
+      icon: 'i-lucide-refresh-cw',
       value: s.temporary_bounced,
       rate: null,
     },
     {
       key: 'UNKNOWN',
-      label: t(`${NS}.STATUS.bounce_unknown`),
+      label: displayStatusLabel(t, 'bounce_unknown'),
       icon: 'i-lucide-circle-help',
       value: s.unknown_bounced,
       rate: null,
     },
-  ];
+  ].filter(card => typeof card.value === 'number');
 });
 
 const rateLabel = (rate, key) => {
-  if (typeof rate !== 'number') return '—';
-  const denominator = ['BOUNCED', 'COMPLAINED'].includes(key)
-    ? t(`${NS}.OVER_SENT`, {
-        count: number(
-          reputationDenominator(
-            summary.value,
-            key === 'BOUNCED' ? 'hard_bounce_rate' : 'complaint_rate'
-          )
-        ),
-      })
-    : `· ${deliveryLabel(summary.value || {})}`;
-  return `${t(`${NS}.RATE`, { value: number(rate) })} ${denominator}`;
+  if (typeof rate !== 'number') return '';
+  const formattedRate = t(`${NS}.RATE`, { value: number(rate) });
+  if (!['BOUNCED', 'COMPLAINED'].includes(key)) {
+    return `${formattedRate} · ${deliveryLabel(summary.value || {})}`;
+  }
+
+  const count = reputationDenominator(
+    summary.value,
+    key === 'BOUNCED' ? 'hard_bounce_rate' : 'complaint_rate'
+  );
+  return typeof count === 'number'
+    ? `${formattedRate} · ${t('CAMPAIGN_MANAGEMENT.KPIS.SENT')}: ${number(count)}`
+    : formattedRate;
 };
 
 const hasCampaigns = computed(() => campaigns.value.length > 0);
@@ -180,7 +225,13 @@ const canCreateTrackedLink = computed(
 );
 
 const percentage = value =>
-  typeof value === 'number' ? t(`${NS}.RATE`, { value: number(value) }) : '—';
+  typeof value === 'number' ? t(`${NS}.RATE`, { value: number(value) }) : '';
+const reputationSampleLabel = source => {
+  const count = reputationDenominator(source);
+  return typeof count === 'number'
+    ? `${t('CAMPAIGN_MANAGEMENT.KPIS.SENT')}: ${number(count)}`
+    : '';
+};
 const comparisonRows = computed(() =>
   campaigns.value.map(c => ({
     ...c,
@@ -455,9 +506,20 @@ onMounted(() => {
         <h1 class="mb-1 text-xl font-semibold text-n-slate-12">
           {{ t('CAMPAIGN_MANAGEMENT.HEADER.TITLE') }}
         </h1>
-        <p class="m-0 text-sm text-n-slate-11">
-          {{ t('CAMPAIGN_MANAGEMENT.HEADER.DESCRIPTION') }}
-        </p>
+        <div class="flex items-center gap-1.5">
+          <p class="m-0 text-sm text-n-slate-11">
+            {{ t('CAMPAIGN_MANAGEMENT.HEADER.DESCRIPTION') }}
+          </p>
+          <span
+            v-if="summary && hasCampaigns"
+            v-tooltip.top="summaryMetricHelp"
+            class="inline-flex text-n-slate-10"
+            tabindex="0"
+            :aria-label="summaryMetricHelp"
+          >
+            <span class="i-lucide-info size-4" />
+          </span>
+        </div>
       </div>
     </header>
 
@@ -483,23 +545,19 @@ onMounted(() => {
             {{ t('CAMPAIGN_MANAGEMENT.FILTER.LABEL') }}
           </span>
           <div class="flex flex-wrap items-center gap-3">
-            <select
-              v-model="selectedCampaignId"
+            <div
+              role="group"
               :aria-label="t('CAMPAIGN_MANAGEMENT.FILTER.LABEL')"
-              class="px-3 h-9 text-sm border rounded-lg outline-none border-n-weak bg-n-alpha-black1 text-n-slate-12 min-w-60"
-              @change="onFilterChange"
             >
-              <option value="">
-                {{ t('CAMPAIGN_MANAGEMENT.FILTER.ALL') }}
-              </option>
-              <option
-                v-for="campaign in campaignOptions"
-                :key="campaign.id"
-                :value="campaign.id"
-              >
-                {{ campaign.name }}
-              </option>
-            </select>
+              <FilterSelect
+                v-model="selectedCampaignId"
+                :options="campaignFilterOptions"
+                keyboard-navigation
+                :aria-label="t('CAMPAIGN_MANAGEMENT.FILTER.LABEL')"
+                class="min-w-60"
+                @update:model-value="onFilterChange"
+              />
+            </div>
             <EmailStatusFilter
               v-model="campaignStatus"
               campaign
@@ -540,25 +598,21 @@ onMounted(() => {
             :placeholder="t('CRM_KANBAN.TRACKED_LINKS.NAME_PLACEHOLDER')"
           />
 
-          <label class="flex flex-col min-w-0 gap-1">
+          <label
+            class="flex flex-col min-w-0 gap-1"
+            role="group"
+            :aria-label="t('CRM_KANBAN.TRACKED_LINKS.INBOX')"
+          >
             <span class="mb-0.5 text-heading-3 text-n-slate-12">
               {{ t('CRM_KANBAN.TRACKED_LINKS.INBOX') }}
             </span>
-            <select
+            <FilterSelect
               v-model="trackedLinkForm.inboxId"
-              class="w-full px-3 h-10 text-sm border rounded-lg outline-none border-n-weak bg-n-alpha-black1 text-n-slate-12"
-            >
-              <option value="">
-                {{ t('CRM_KANBAN.TRACKED_LINKS.INBOX') }}
-              </option>
-              <option
-                v-for="inbox in whatsappInboxes"
-                :key="inbox.id"
-                :value="inbox.id"
-              >
-                {{ inbox.name }}
-              </option>
-            </select>
+              :options="inboxFilterOptions"
+              keyboard-navigation
+              :aria-label="t('CRM_KANBAN.TRACKED_LINKS.INBOX')"
+              class="w-full [&>button]:!h-10 [&>button]:!w-full [&>button]:!justify-start"
+            />
           </label>
 
           <Input
@@ -736,31 +790,37 @@ onMounted(() => {
               >
                 {{ rateLabel(card.rate, card.key) }}
               </span>
+              <template
+                v-if="card.key === 'DELIVERED' && deliveryEvidenceRows.length"
+              >
+                <Button
+                  :label="t(`${NS}.DETAILS`)"
+                  :icon="
+                    showDeliveryEvidence
+                      ? 'i-lucide-chevron-up'
+                      : 'i-lucide-chevron-down'
+                  "
+                  :aria-expanded="showDeliveryEvidence"
+                  sm
+                  slate
+                  ghost
+                  class="self-start"
+                  data-delivery-evidence-toggle
+                  @click="showDeliveryEvidence = !showDeliveryEvidence"
+                />
+                <div v-show="showDeliveryEvidence" data-delivery-evidence>
+                  <dl class="flex flex-col gap-2 m-0 text-xs">
+                    <div v-for="item in deliveryEvidenceRows" :key="item.key">
+                      <dt class="text-n-slate-11">{{ item.label }}</dt>
+                      <dd class="m-0 font-medium text-n-slate-12">
+                        {{ number(item.count) }}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </template>
             </div>
           </section>
-
-          <p class="flex items-start gap-2 m-0 text-xs text-n-slate-11">
-            <span class="i-lucide-info size-4 shrink-0" />
-            {{ t(`${NS}.METRICS_HINT`) }}
-          </p>
-
-          <p
-            v-if="deliveryKey(summary) !== 'delivered'"
-            class="m-0 text-xs text-n-slate-11"
-          >
-            {{ t(`${NS}.DELIVERY_HINT`) }}
-          </p>
-          <p
-            v-if="summary.delivery_evidence"
-            class="m-0 text-xs text-n-slate-11"
-          >
-            {{
-              `${t(`${NS}.STATUS.delivered`)}: ${number(summary.delivery_evidence.provider_confirmed)}`
-            }}
-            {{
-              ` · ${t(`${NS}.STATUS.accepted_service`)}: ${number(summary.delivery_evidence.direct_acceptance_only)}`
-            }}
-          </p>
 
           <template v-if="selectedCampaignId">
             <section
@@ -834,42 +894,78 @@ onMounted(() => {
               <p v-else-if="!clicks.length" class="m-0 text-sm text-n-slate-11">
                 {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.EMPTY') }}
               </p>
-              <div v-else class="max-w-full overflow-x-auto">
-                <table class="w-full text-sm border-collapse">
-                  <thead>
-                    <tr
-                      class="text-start border-b border-n-weak text-n-slate-11"
-                    >
-                      <th class="py-2 pe-3 text-xs font-medium">
-                        {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.URL') }}
-                      </th>
-                      <th class="py-2 pe-3 text-xs font-medium text-end">
-                        {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.UNIQUE') }}
-                      </th>
-                      <th class="py-2 text-xs font-medium text-end">
-                        {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.TOTAL') }}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="click in clicks"
-                      :key="click.url"
-                      class="border-b border-n-weak last:border-b-0"
-                    >
-                      <td class="max-w-md py-2 pe-3 truncate text-n-slate-12">
-                        {{ click.url }}
-                      </td>
-                      <td class="py-2 pe-3 text-end text-n-slate-12">
-                        {{ number(click.unique_clicks) }}
-                      </td>
-                      <td class="py-2 text-end text-n-slate-12">
-                        {{ number(click.total_clicks) }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <template v-else>
+                <div
+                  class="flex flex-col gap-2 sm:hidden"
+                  data-clicks-mobile-list
+                >
+                  <article
+                    v-for="click in clicks"
+                    :key="`mobile-${click.url}`"
+                    class="flex flex-col gap-3 p-3 border rounded-lg border-n-weak bg-n-alpha-1"
+                    data-click-card
+                  >
+                    <bdi dir="ltr" class="text-sm break-all text-n-slate-12">
+                      {{ click.url }}
+                    </bdi>
+                    <dl class="grid grid-cols-2 gap-3 m-0 text-xs">
+                      <div>
+                        <dt class="text-n-slate-10">
+                          {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.UNIQUE') }}
+                        </dt>
+                        <dd class="m-0 font-medium text-n-slate-12">
+                          {{ number(click.unique_clicks) }}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt class="text-n-slate-10">
+                          {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.TOTAL') }}
+                        </dt>
+                        <dd class="m-0 font-medium text-n-slate-12">
+                          {{ number(click.total_clicks) }}
+                        </dd>
+                      </div>
+                    </dl>
+                  </article>
+                </div>
+
+                <div class="hidden max-w-full overflow-x-auto sm:block">
+                  <table class="w-full text-sm border-collapse">
+                    <thead>
+                      <tr
+                        class="text-start border-b border-n-weak text-n-slate-11"
+                      >
+                        <th class="py-2 pe-3 text-xs font-medium">
+                          {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.URL') }}
+                        </th>
+                        <th class="py-2 pe-3 text-xs font-medium text-end">
+                          {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.UNIQUE') }}
+                        </th>
+                        <th class="py-2 text-xs font-medium text-end">
+                          {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.TOTAL') }}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="click in clicks"
+                        :key="click.url"
+                        class="border-b border-n-weak last:border-b-0"
+                      >
+                        <td class="max-w-md py-2 pe-3 truncate text-n-slate-12">
+                          {{ click.url }}
+                        </td>
+                        <td class="py-2 pe-3 text-end text-n-slate-12">
+                          {{ number(click.unique_clicks) }}
+                        </td>
+                        <td class="py-2 text-end text-n-slate-12">
+                          {{ number(click.total_clicks) }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
             </section>
 
             <EmailRecipients
@@ -907,7 +1003,7 @@ onMounted(() => {
                       {{ t('CAMPAIGN_MANAGEMENT.RATES.CLICK_RATE') }}
                     </th>
                     <th class="py-2 pe-3 text-xs font-medium text-end">
-                      {{ t(`${NS}.HARD_RATE`) }}
+                      {{ displayStatusLabel(t, 'permanent') }}
                     </th>
                     <th class="py-2 text-xs font-medium text-end">
                       {{ t('CAMPAIGN_MANAGEMENT.RATES.UNSUBSCRIBE_RATE') }}
@@ -943,11 +1039,12 @@ onMounted(() => {
                     </td>
                     <td class="py-2 pe-3 text-end text-n-slate-12">
                       {{ row.bounceRate }}
-                      <span class="block text-xs text-n-slate-11">{{
-                        t(`${NS}.OVER_SENT`, {
-                          count: number(reputationDenominator(row)),
-                        })
-                      }}</span>
+                      <span
+                        v-if="reputationSampleLabel(row)"
+                        class="block text-xs text-n-slate-11"
+                      >
+                        {{ reputationSampleLabel(row) }}
+                      </span>
                     </td>
                     <td class="py-2 text-end text-n-slate-12">
                       {{ row.unsubscribeRate }}

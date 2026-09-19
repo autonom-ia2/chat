@@ -59,7 +59,7 @@ export const mixedReputationCampaigns = [
   {
     ...mixedReputationSummary,
     id: 4361,
-    name: 'QA SES',
+    name: 'QA verificado',
     status: 'sent',
     delivery_mode: 'ses',
     sent: 1,
@@ -73,7 +73,7 @@ export const mixedReputationCampaigns = [
   {
     ...mixedReputationSummary,
     id: 4362,
-    name: 'QA direct',
+    name: 'QA direto',
     status: 'sent',
     delivery_mode: 'direct_inbox',
     sent: 3,

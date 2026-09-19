@@ -28,6 +28,11 @@ const suppliedClassifications = computed(() =>
     Object.hasOwn(props.preflight?.counts || {}, key)
   )
 );
+const visibleClassifications = computed(() =>
+  suppliedClassifications.value.filter(
+    key => (props.preflight?.counts?.[key] || 0) > 0
+  )
+);
 const reconciled = computed(() => {
   const counts = props.preflight?.counts;
   return (
@@ -64,23 +69,11 @@ const state = computed(
       {{ t(`${NS}.HYGIENE`) }}
     </h3>
     <div><EmailStatusBadge :record="{ status: state }" /></div>
-    <p
-      v-if="['shadow', 'warning'].includes(preflight?.mode)"
-      class="m-0 text-sm text-n-amber-11"
-    >
-      {{ t(`${NS}.ANALYSIS_ONLY`) }}
-    </p>
-    <p
-      v-else-if="preflight?.mode === 'enforce'"
-      class="m-0 text-sm text-n-slate-11"
-    >
-      {{ t(`${NS}.ENFORCED`) }}
-    </p>
     <p class="m-0 text-xs text-n-slate-11">
       {{ t(`${NS}.${reconciled ? 'CLASSIFICATION' : 'PENDING_COUNTS'}`) }}
     </p>
     <dl v-if="reconciled" class="grid grid-cols-2 gap-3 m-0 sm:grid-cols-4">
-      <div v-for="key in ['total', ...suppliedClassifications]" :key="key">
+      <div v-for="key in ['total', ...visibleClassifications]" :key="key">
         <dt class="text-xs text-n-slate-11">{{ t(`${NS}.STATUS.${key}`) }}</dt>
         <dd class="m-0 text-sm font-medium text-n-slate-12">
           {{ formatNumber(preflight.counts[key], locale) }}

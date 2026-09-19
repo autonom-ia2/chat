@@ -8,6 +8,7 @@ import arProtection from 'dashboard/i18n/locale/ar/emailCampaignProtection.json'
 import arCrm from 'dashboard/i18n/locale/ar/crm.json';
 import Reports from 'dashboard/api/emailCampaignReports';
 import Recipients from '../EmailRecipients.vue';
+import EmailStatusFilter from '../EmailStatusFilter.vue';
 // Mounted without a store: grant manage so write controls render as for an admin.
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref } = await import('vue');
@@ -23,6 +24,21 @@ beforeAll(() => {
 afterAll(() => {
   config.global.plugins = defaultPlugins;
 });
+
+const setPrimaryFilter = async (wrapper, value) => {
+  wrapper
+    .findAllComponents(EmailStatusFilter)[0]
+    .vm.$emit('update:modelValue', value);
+  await flushPromises();
+};
+
+const setProblemFilter = async (wrapper, value) => {
+  wrapper
+    .findAllComponents(EmailStatusFilter)[1]
+    .vm.$emit('update:modelValue', value);
+  await flushPromises();
+};
+
 const response = {
   data: {
     payload: {
@@ -81,13 +97,19 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
       Reports.getRecipients.mockResolvedValue(next);
       await wrapper.setProps({ refreshKey: 1 });
       await flushPromises();
-      expect(wrapper.findAll('tbody td')[2].text()).toBe(
-        t(`EMAIL_CAMPAIGN_PROTECTION.STATUS.${badge}`)
+      const expectedBadge = t(`EMAIL_CAMPAIGN_PROTECTION.STATUS.${badge}`);
+      expect(wrapper.findAll('tbody td')[2].text()).toBe(expectedBadge);
+      expect(wrapper.findAllComponents(EmailStatusFilter)[0].text()).toContain(
+        t('EMAIL_CAMPAIGN_PROTECTION.ALL')
       );
-      expect(wrapper.find('option[value="delivered"]').text()).toBe(
-        t(`EMAIL_CAMPAIGN_PROTECTION.STATUS.${filter}`)
+      await setPrimaryFilter(wrapper, 'delivered');
+      const expectedFilter =
+        filter === 'delivered'
+          ? t('CAMPAIGN_MANAGEMENT.KPIS.DELIVERED')
+          : t(`EMAIL_CAMPAIGN_PROTECTION.STATUS.${filter}`);
+      expect(wrapper.findAllComponents(EmailStatusFilter)[0].text()).toContain(
+        expectedFilter
       );
-      await wrapper.find('select').setValue('delivered');
       await flushPromises();
       expect(Reports.getRecipients).toHaveBeenLastCalledWith(
         7,
@@ -104,9 +126,15 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
         status: 'delivered',
         problem: false,
       });
-      expect(wrapper.text()).toContain(
-        t('EMAIL_CAMPAIGN_PROTECTION.METRICS_HINT')
-      );
+      expect(
+        wrapper
+          .findAll('[aria-label]')
+          .some(node =>
+            node
+              .attributes('aria-label')
+              ?.includes(t('EMAIL_CAMPAIGN_PROTECTION.METRICS_HINT'))
+          )
+      ).toBe(true);
     }
   );
   it('clears previous campaign provenance while the new recipients are pending', async () => {
@@ -124,8 +152,8 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
         })
     );
     await wrapper.setProps({ campaignId: 8 });
-    expect(wrapper.find('option[value="delivered"]').text()).toBe(
-      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.acceptance_recorded')
+    expect(wrapper.findAllComponents(EmailStatusFilter)[0].text()).toContain(
+      t('EMAIL_CAMPAIGN_PROTECTION.ALL')
     );
     resolve(response);
     await flushPromises();
@@ -136,15 +164,15 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
   it('combines search, status, problem and pagination; clears filters server-side', async () => {
     await flushPromises();
     await wrapper.find('input[type="text"]').setValue('ana');
-    await wrapper.find('select').setValue('bounced');
-    await wrapper.find('input[type="checkbox"]').setValue(true);
+    await setPrimaryFilter(wrapper, 'attention');
+    await setProblemFilter(wrapper, 'hard_bounced');
     await flushPromises();
     expect(Reports.getRecipients).toHaveBeenLastCalledWith(
       7,
       expect.objectContaining({
         page: 1,
         search: 'ana',
-        status: 'bounced',
+        status: 'hard_bounced',
         problem: true,
       })
     );
@@ -160,11 +188,11 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
       expect.objectContaining({
         page: 2,
         search: 'ana',
-        status: 'bounced',
+        status: 'hard_bounced',
         problem: true,
       })
     );
-    await wrapper.find('select').setValue('delivered');
+    await setPrimaryFilter(wrapper, 'delivered');
     await flushPromises();
     expect(Reports.getRecipients).toHaveBeenLastCalledWith(
       7,
@@ -188,7 +216,7 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
   it('keeps filters after refresh and exports exactly those filters; shows export errors', async () => {
     await flushPromises();
     await wrapper.find('input[type="text"]').setValue('ana');
-    await wrapper.find('select').setValue('attention');
+    await setPrimaryFilter(wrapper, 'attention');
     await flushPromises();
     await wrapper.setProps({ refreshKey: 1 });
     await flushPromises();
@@ -223,8 +251,8 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
           resolveOld = resolve;
         })
     );
-    await wrapper.find('select').setValue('sent');
-    await wrapper.find('select').setValue('delivered');
+    await setPrimaryFilter(wrapper, 'pending');
+    await setPrimaryFilter(wrapper, 'delivered');
     await flushPromises();
     resolveOld({
       data: {
@@ -241,7 +269,8 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
   it('shows a request error instead of a successful empty list', async () => {
     await flushPromises();
     Reports.getRecipients.mockRejectedValue(new Error('private'));
-    await wrapper.find('select').setValue('failed');
+    await setPrimaryFilter(wrapper, 'attention');
+    await setProblemFilter(wrapper, 'hard_bounced');
     await flushPromises();
     expect(wrapper.find('[role="alert"]').text()).toBe(
       t('EMAIL_CAMPAIGN_PROTECTION.ERROR')

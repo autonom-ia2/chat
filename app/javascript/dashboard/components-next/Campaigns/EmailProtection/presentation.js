@@ -12,23 +12,18 @@ export const CAMPAIGN_STATUSES = [
 ];
 export const RECIPIENT_STATUSES = [
   '',
-  'attention',
   'pending',
-  'sent',
   'delivered',
-  'opened',
-  'clicked',
-  'failed',
-  'suppressed',
-  'bounced',
-  'hard_bounced',
-  'temporary_bounced',
-  'unknown_bounced',
-  'complained',
+  'attention',
   'unsubscribed',
+];
+export const PROBLEM_STATUSES = [
+  'attention',
+  'temporary_bounced',
+  'hard_bounced',
+  'complained',
   'preflight_invalid',
   'preflight_review',
-  'preflight_unknown',
 ];
 const BOUNCES = {
   hard_bounced: 'permanent',
@@ -121,6 +116,18 @@ export function statusKey(row = {}, campaign = false) {
     preflight[row.status] ||
     (STATUS_KEYS.has(row.status) ? row.status : 'unknown')
   );
+}
+
+export function displayStatusLabel(t, key) {
+  const value = t(`${NS}.STATUS.${key}`);
+  if (key === 'permanent' && value.includes('—')) {
+    const compact = value.split('—').at(-1).trim();
+    return compact.replace(/^./u, character => character.toLocaleUpperCase());
+  }
+  if (key === 'bounce_unknown') {
+    return value.replace(/\s*—\s*/u, ': ');
+  }
+  return value;
 }
 
 export function reasonKey(code) {

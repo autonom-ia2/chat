@@ -2,6 +2,8 @@ import { mount, config } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import en from 'dashboard/i18n/locale/en/emailCampaignProtection.json';
 import pt_BR from 'dashboard/i18n/locale/pt_BR/emailCampaignProtection.json';
+import enCrm from 'dashboard/i18n/locale/en/crm.json';
+import ptCrm from 'dashboard/i18n/locale/pt_BR/crm.json';
 import Panel from '../EmailProtectionPanel.vue';
 import Hygiene from '../EmailHygieneSummary.vue';
 import Badge from '../EmailStatusBadge.vue';
@@ -21,7 +23,10 @@ afterAll(() => {
   config.global.plugins = defaultPlugins;
 });
 
-const messages = { en, pt_BR };
+const messages = {
+  en: { ...enCrm, ...en },
+  pt_BR: { ...ptCrm, ...pt_BR },
+};
 
 describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
   const i18n = createI18n({ legacy: false, locale, messages });
@@ -33,10 +38,10 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
       props: { campaign: { id: 1, status: 'paused' } },
     });
     expect(wrapper.text()).toContain(
-      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.unknown')
+      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.paused_unknown')
     );
     expect(wrapper.text()).not.toContain(t('EMAIL_CAMPAIGN_PROTECTION.RESUME'));
-    expect(wrapper.text()).toContain(t('EMAIL_CAMPAIGN_PROTECTION.SCOPE'));
+    expect(wrapper.text()).not.toContain(t('EMAIL_CAMPAIGN_PROTECTION.SCOPE'));
   });
   it.each([
     [
@@ -57,13 +62,13 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
       { state: 'healthy', current: { evaluated_at: '2026-09-16' } },
       'HEALTH',
     ],
-    ['unknown', { status: 'paused' }, null, 'HEALTH'],
+    ['unknown', { status: 'paused' }, null, 'STATUS.paused_unknown'],
     ['unfresh', { status: 'sent' }, { state: 'healthy' }, 'HEALTH'],
     [
       'reputation',
       { status: 'paused', pause_reason: 'reputation' },
       { state: 'paused' },
-      'TITLE',
+      'STATUS.paused_unknown',
     ],
     [
       'manual with account pause',
@@ -73,7 +78,7 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
         reason_code: 'reputation',
         capabilities: { resume: true },
       },
-      'TITLE',
+      'STATUS.paused_unknown',
     ],
     [
       'manual with provider block',
@@ -84,7 +89,7 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
         provider: { state: 'blocked' },
         capabilities: { resume: true },
       },
-      'TITLE',
+      'STATUS.paused_unknown',
     ],
   ])('uses a truthful title for %s', (_name, campaign, protection, title) => {
     const wrapper = mount(Panel, {
@@ -114,12 +119,9 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
       },
     });
     const badges = wrapper.findAllComponents(Badge);
-    expect(badges).toHaveLength(2);
-    expect(badges[0].element.parentElement.textContent).toContain(
-      t('EMAIL_CAMPAIGN_PROTECTION.HEALTH')
-    );
-    expect(badges[1].element.parentElement.textContent).toContain(
-      t('EMAIL_CAMPAIGN_PROTECTION.CAMPAIGN_STATUS')
+    expect(badges).toHaveLength(1);
+    expect(badges[0].text()).toContain(
+      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.manual')
     );
   });
   it.each([
@@ -146,7 +148,7 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
         },
       });
       expect(wrapper.find('h3').text()).toBe(
-        t('EMAIL_CAMPAIGN_PROTECTION.TITLE')
+        t('EMAIL_CAMPAIGN_PROTECTION.STATUS.paused_unknown')
       );
       expect(
         wrapper
@@ -182,7 +184,7 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
     });
     const trigger = wrapper.find('[data-section="TRIGGER"]').text();
     expect(wrapper.find('h3').text()).toBe(
-      t('EMAIL_CAMPAIGN_PROTECTION.TITLE')
+      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.paused_unknown')
     );
     expect(wrapper.findComponent(Badge).props('record').status).toBe('paused');
     await wrapper
@@ -251,7 +253,14 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
     });
     expect(wrapper.find('[data-section="CURRENT"]').text()).toContain('200');
     expect(wrapper.find('[data-section="TRIGGER"]').text()).toContain('100');
-    expect(wrapper.text()).toContain(t('EMAIL_CAMPAIGN_PROTECTION.HARD_RATE'));
+    const permanentRow = wrapper.find('[data-section="CURRENT"] dl');
+    expect(permanentRow.text()).toContain(
+      '0.5'.replace('.', locale === 'pt_BR' ? ',' : '.') + '%'
+    );
+    expect(permanentRow.text()).toContain('1');
+    expect(wrapper.text()).not.toContain(
+      t('CAMPAIGN_MANAGEMENT.RATES.BOUNCE_RATE')
+    );
     expect(wrapper.text()).not.toContain('hard_bounce_rate');
     expect(wrapper.text()).not.toContain(t('EMAIL_CAMPAIGN_PROTECTION.RESUME'));
     await wrapper
@@ -368,7 +377,7 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
     expect(wrapper.findAll('p')).toHaveLength(1);
   });
   it.each(['shadow', 'warning'])(
-    'labels %s as analysis only and reconciles each row once',
+    'keeps internal %s mode out of customer copy and reconciles each row once',
     mode => {
       const wrapper = mount(Hygiene, {
         ...options,
@@ -390,7 +399,7 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
           },
         },
       });
-      expect(wrapper.text()).toContain(
+      expect(wrapper.text()).not.toContain(
         t('EMAIL_CAMPAIGN_PROTECTION.ANALYSIS_ONLY')
       );
       expect(wrapper.text()).not.toContain(

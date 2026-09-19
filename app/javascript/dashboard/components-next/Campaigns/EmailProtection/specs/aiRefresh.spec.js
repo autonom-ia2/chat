@@ -5,6 +5,7 @@ import { createStore } from 'vuex';
 import protection from 'dashboard/i18n/locale/en/emailCampaignProtection.json';
 import campaignMessages from 'dashboard/i18n/locale/en/campaign.json';
 import Page from 'dashboard/routes/dashboard/campaigns/pages/EmailCampaignsPage.vue';
+import EmailStatusFilter from '../EmailStatusFilter.vue';
 import emailCampaigns from 'dashboard/store/modules/emailCampaigns';
 import API from 'dashboard/api/emailCampaigns';
 import ActionCable from 'dashboard/helper/actionCable';
@@ -107,7 +108,9 @@ it.each([
       expect(store.state.emailCampaigns.records).toEqual([records[0]]);
       expect(wrapper.text()).toContain('Paused synthetic');
       expect(wrapper.text()).not.toContain('Draft synthetic');
-      expect(wrapper.find('select').element.value).toBe('paused');
+      expect(wrapper.findComponent(EmailStatusFilter).props('modelValue')).toBe(
+        'paused'
+      );
       expect(toastListener).toHaveBeenCalledWith(data);
       wrapper.unmount();
       API.get.mockClear();
