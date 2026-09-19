@@ -12,7 +12,7 @@ runtime. Mesmo sendo `.md`/`.yml`, mudança nessas pastas **dispara** deploy;
 sem isso, um PR que só atualiza o Guia nunca chegaria a produção (#486).
 
 O filtro é `on.push.paths` com padrões avaliados em ordem (o último que casa
-decide): `**`, `.*`, `.*/**`, `!.github/**`, `!docs/**`, `!**/*.md`,
+decide): `**`, `.*`, `.*/**`, `!.github/**`, `!docs/**`, `!*.md`, `!**/*.md`,
 `lib/operator_guide/**`, `config/onboarding/**`. `paths-ignore` não aceita
 reinclusão com `!`, por isso a troca.
 

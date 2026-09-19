@@ -18,6 +18,7 @@ on:
       - '.*/**'
       - '!.github/**'
       - '!docs/**'
+      - '!*.md'
       - '!**/*.md'
       - 'lib/operator_guide/**'
       - 'config/onboarding/**'
