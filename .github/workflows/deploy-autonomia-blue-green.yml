@@ -2,16 +2,25 @@ name: Deploy Autonomia Chatwoot Blue Green
 
 on:
   # Deploy automatico em push na main religado apos as duas stacks chegarem a
-  # 4.17.1 (Refs #274). paths-ignore evita que um merge que so toca workflow ou
-  # docs consuma a janela de rollback (a instancia N-2 e terminada 5 min apos
-  # cada deploy). Politica documentada em docs/production-deploy-gates.md.
+  # 4.17.1 (Refs #274). Um merge que so toca workflow ou docs nao dispara deploy,
+  # para nao consumir a janela de rollback (a instancia N-2 e terminada 5 min
+  # apos cada deploy). Excecao: o conteudo do Guia da Plataforma e da trilha de
+  # onboarding e lido em runtime, entao .md dessas pastas dispara deploy (#486).
+  # Os padroes sao avaliados em ordem; o ultimo que casa decide. '.*' e '.*/**'
+  # garantem arquivos e pastas com ponto na raiz (a doc nao garante que '**' os pegue).
+  # Politica documentada em docs/production-deploy-gates.md.
   push:
     branches:
       - main
-    paths-ignore:
-      - '.github/**'
-      - 'docs/**'
-      - '**.md'
+    paths:
+      - '**'
+      - '.*'
+      - '.*/**'
+      - '!.github/**'
+      - '!docs/**'
+      - '!**/*.md'
+      - 'lib/operator_guide/**'
+      - 'config/onboarding/**'
   workflow_dispatch:
     inputs:
       action:

@@ -2,9 +2,19 @@
 
 Os deploys de produção das stacks Autonom.ia e Hub2You disparam
 automaticamente em push na `main` **exceto** quando o push só altera
-`.github/**`, `docs/**` ou arquivos `*.md` (`paths-ignore`): mudança de
-workflow ou documentação não consome a janela de rollback. Rollback continua
+`.github/**`, `docs/**` ou arquivos `*.md`: mudança de workflow ou
+documentação não consome a janela de rollback. Rollback continua
 exclusivamente manual.
+
+**Exceção:** `lib/operator_guide/**` (conhecimento do Guia da Plataforma) e
+`config/onboarding/**` (trilha de onboarding) são lidos pela aplicação em
+runtime. Mesmo sendo `.md`/`.yml`, mudança nessas pastas **dispara** deploy;
+sem isso, um PR que só atualiza o Guia nunca chegaria a produção (#486).
+
+O filtro é `on.push.paths` com padrões avaliados em ordem (o último que casa
+decide): `**`, `.*`, `.*/**`, `!.github/**`, `!docs/**`, `!**/*.md`,
+`lib/operator_guide/**`, `config/onboarding/**`. `paths-ignore` não aceita
+reinclusão com `!`, por isso a troca.
 
 Para executar um dos workflows à mão, o operador precisa:
 
@@ -25,7 +35,8 @@ deploy automático em push na `main` pelo PR #230 (2026-07-28) e voltou a ser
 manual no PR #275 (2026-09-02), como pré-requisito do upgrade Chatwoot 4.17.1
 (#274): o rollback blue-green tem um degrau só, então merge e deploy precisam
 ser decisões separadas. Com as duas stacks em 4.17.1 (2026-09-03), o deploy
-automático em push voltou, agora com `paths-ignore` para workflow e docs.
+automático em push voltou, agora com `paths-ignore` para workflow e docs. Em
+2026-09-19 o filtro virou `paths` para reincluir o Guia e a trilha (#486).
 
 Regra operacional que permanece: a instância N-2 é terminada 5 minutos após
 cada deploy bem-sucedido, logo só existe um degrau de rollback por stack. Antes
