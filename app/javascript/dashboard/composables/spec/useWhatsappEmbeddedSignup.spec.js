@@ -159,12 +159,14 @@ describe('useWhatsappEmbeddedSignup', () => {
     await flushPromises();
     emit({ event: 'FINISH_ONLY_WABA', data: { waba_id: 'waba-1' } });
 
+    // No coexistence signal on this event: null lets the backend fall back to
+    // Meta's health data (an explicit false would skip that check).
     await expect(result).resolves.toEqual({
       code: 'auth-code',
       business_id: '',
       waba_id: 'waba-1',
       phone_number_id: '',
-      is_coexistence: false,
+      is_coexistence: null,
     });
   });
 
@@ -292,7 +294,7 @@ describe('useWhatsappEmbeddedSignup', () => {
       business_id: '',
       waba_id: 'waba-1',
       phone_number_id: '',
-      is_coexistence: false,
+      is_coexistence: null,
     });
   });
 

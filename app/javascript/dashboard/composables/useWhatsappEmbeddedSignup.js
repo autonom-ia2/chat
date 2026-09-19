@@ -6,6 +6,8 @@ import {
   createMessageHandler,
   isValidBusinessData,
   classifySignupEvent,
+  coexistenceSignal,
+  COMPLETION_RESULTS,
   SIGNUP_RESULT,
 } from 'dashboard/routes/dashboard/settings/inbox/channels/whatsapp/utils';
 
@@ -30,8 +32,6 @@ import {
 // Meta closes its popup without any event in some failure modes. Without a
 // deadline the caller spins indefinitely with no way to tell the user why.
 const SIGNUP_TIMEOUT_MS = 5 * 60 * 1000;
-
-const COMPLETION_RESULTS = [SIGNUP_RESULT.FINISH, SIGNUP_RESULT.UNSUPPORTED];
 
 export function useWhatsappEmbeddedSignup() {
   const { t } = useI18n();
@@ -106,7 +106,7 @@ export function useWhatsappEmbeddedSignup() {
             return;
           }
           businessData = data.data;
-          isCoexistence = Boolean(result.isCoexistence);
+          isCoexistence = coexistenceSignal(result);
           resolveIfReady();
         } else if (result.type === SIGNUP_RESULT.CANCEL) {
           settle(resolve, null);

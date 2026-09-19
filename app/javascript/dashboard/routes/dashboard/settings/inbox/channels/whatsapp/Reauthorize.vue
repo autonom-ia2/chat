@@ -10,6 +10,8 @@ import {
   createMessageHandler,
   isValidBusinessData,
   classifySignupEvent,
+  coexistenceSignal,
+  COMPLETION_RESULTS,
   SIGNUP_RESULT,
 } from './utils';
 
@@ -25,6 +27,14 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+
+// With the inbox's stored IDs the reauthorization needs nothing else from Meta;
+// the terminal event only says whether the number is coexistence. Before 4.18.0
+// this path reauthorized as soon as FB.login returned the code. Waiting on the
+// event without a deadline could leave the button spinning, so it gets a short
+// grace window and, past it, is_coexistence goes as null (backend falls back to
+// Meta's health data).
+const FINISH_GRACE_MS = 10 * 1000;
 
 const isRequestingAuthorization = ref(false);
 const isLoadingFacebook = ref(true);
@@ -76,18 +86,19 @@ const handleEmbeddedSignupEvents = async (data, authCode) => {
 
   const result = classifySignupEvent(data);
 
-  if (result.type === SIGNUP_RESULT.FINISH) {
+  if (COMPLETION_RESULTS.includes(result.type)) {
     const businessData = data.data;
 
     // phone_number_id isn't required here: the backend resolves it from the WABA
-    // (PhoneInfoService) when omitted, which coexistence completions sometimes do.
+    // (PhoneInfoService, matching the reauthorized channel's number) when omitted,
+    // which coexistence and FINISH_ONLY_WABA completions do.
     if (isValidBusinessData(businessData)) {
       await reauthorizeWhatsApp({
         code: authCode,
         business_id: businessData.business_id || '',
         waba_id: businessData.waba_id,
         phone_number_id: businessData.phone_number_id || '',
-        is_coexistence: result.isCoexistence,
+        is_coexistence: coexistenceSignal(result),
       });
     } else {
       isRequestingAuthorization.value = false;
@@ -95,11 +106,6 @@ const handleEmbeddedSignupEvents = async (data, authCode) => {
         t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.INVALID_BUSINESS_DATA')
       );
     }
-  } else if (result.type === SIGNUP_RESULT.UNSUPPORTED) {
-    isRequestingAuthorization.value = false;
-    useAlert(
-      t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.UNSUPPORTED_COMPLETION')
-    );
   } else if (result.type === SIGNUP_RESULT.CANCEL) {
     isRequestingAuthorization.value = false;
     useAlert(t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.CANCELLED'));
@@ -139,7 +145,7 @@ const startEmbeddedSignup = () => {
     // Non-terminal payloads must not tear down the listener — the flow is still live.
     if (type === SIGNUP_RESULT.IGNORE) return;
 
-    if (type === SIGNUP_RESULT.FINISH) {
+    if (COMPLETION_RESULTS.includes(type)) {
       // Keep the first terminal event: a coexistence FINISH must win over a
       // later normal FINISH that can arrive before the auth code is known.
       pendingEvent = pendingEvent || data;
@@ -173,14 +179,8 @@ const createFinishEventWaiter = () => {
 
       window.removeEventListener('message', listener);
 
-      if (result.type === SIGNUP_RESULT.FINISH) {
-        resolve(result.isCoexistence);
-      } else if (result.type === SIGNUP_RESULT.UNSUPPORTED) {
-        reject(
-          new Error(
-            t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.UNSUPPORTED_COMPLETION')
-          )
-        );
+      if (COMPLETION_RESULTS.includes(result.type)) {
+        resolve(coexistenceSignal(result));
       } else if (result.type === SIGNUP_RESULT.CANCEL) {
         reject(
           new Error(t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.CANCELLED'))
@@ -196,10 +196,22 @@ const createFinishEventWaiter = () => {
     });
     window.addEventListener('message', listener);
   });
-  return {
-    promise,
-    cleanup: () => window.removeEventListener('message', listener),
+  const cleanup = () => window.removeEventListener('message', listener);
+
+  // Called once FB.login has returned the code. Resolves with the coexistence
+  // signal if Meta's terminal event arrives within FINISH_GRACE_MS, else null.
+  const waitAfterCode = () => {
+    let timer;
+    const grace = new Promise(resolve => {
+      timer = setTimeout(() => resolve(null), FINISH_GRACE_MS);
+    });
+    return Promise.race([promise, grace]).finally(() => {
+      clearTimeout(timer);
+      cleanup();
+    });
   };
+
+  return { waitAfterCode, cleanup };
 };
 
 const handleLoginAndReauthorize = async () => {
@@ -227,7 +239,7 @@ const handleLoginAndReauthorize = async () => {
     );
 
     if (hasExistingConfig) {
-      const isCoexistence = await finishWaiter.promise;
+      const isCoexistence = await finishWaiter.waitAfterCode();
       await reauthorizeWhatsApp({
         code: authCode,
         business_id: existingConfig.business_account_id,

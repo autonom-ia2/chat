@@ -59,6 +59,23 @@ export const SIGNUP_RESULT = Object.freeze({
   IGNORE: 'ignore',
 });
 
+// Completions the fork sends to the backend (#225). UNSUPPORTED ones
+// (FINISH_ONLY_WABA, FINISH_OBO_MIGRATION, FINISH_GRANT_ONLY_API_ACCESS) are
+// not refused here: Whatsapp::PhoneInfoService resolves the WABA's only number
+// (or the reauthorized channel's own number) and fails with a clear error when
+// that is ambiguous.
+export const COMPLETION_RESULTS = Object.freeze([
+  SIGNUP_RESULT.FINISH,
+  SIGNUP_RESULT.UNSUPPORTED,
+]);
+
+// is_coexistence to send for a completion. Only a FINISH tells coexistence
+// apart; anything else is unknown, and null (never false) lets
+// Whatsapp::WebhookSetupService fall back to Meta's health data, since an
+// explicit false skips that check.
+export const coexistenceSignal = result =>
+  result?.type === SIGNUP_RESULT.FINISH ? result.isCoexistence : null;
+
 // Maps a WA_EMBEDDED_SIGNUP payload onto the outcomes callers act on. v4 spells the
 // explicit failure event `ERROR` where v3 used `error`, and also reports user-facing
 // failures as a CANCEL carrying an error_message — a bare CANCEL is a deliberate
