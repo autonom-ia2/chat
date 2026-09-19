@@ -259,15 +259,48 @@ RSpec.describe Message do
       expect(message.conversation.open?).to be false
     end
 
-    it 'will mark the conversation as pending if the agent bot is active' do
-      agent_bot = create(:agent_bot)
-      inbox = conversation.inbox
-      inbox.agent_bot = agent_bot
-      inbox.save!
+    context 'when the inbox has an active webhook agent bot' do
+      let(:agent_bot) { create(:agent_bot, account: conversation.account) }
+
+      before { create(:agent_bot_inbox, inbox: conversation.inbox, agent_bot: agent_bot) }
+
+      it 'reopens as open and keeps the AI assignee' do
+        conversation.update!(ai_assignee: agent_bot)
+        conversation.resolved!
+        message.save!
+        conversation.reload
+        expect(conversation.open?).to be true
+        expect(conversation.ai_assignee).to eq(agent_bot)
+      end
+
+      it 'reopens as open and keeps the human assignee' do
+        agent = create(:user, account: conversation.account, role: :agent)
+        create(:inbox_member, inbox: conversation.inbox, user: agent)
+        conversation.update!(assignee: agent)
+        conversation.resolved!
+        message.save!
+        conversation.reload
+        expect(conversation.open?).to be true
+        expect(conversation.assignee).to eq(agent)
+        expect(conversation.ai_assignee).to be_nil
+      end
+
+      it 'reopens as open without assigning anyone when nobody was assigned' do
+        conversation.update!(assignee: nil, ai_assignee: nil)
+        conversation.resolved!
+        message.save!
+        conversation.reload
+        expect(conversation.open?).to be true
+        expect(conversation.assignee).to be_nil
+        expect(conversation.ai_assignee).to be_nil
+      end
+    end
+
+    it 'keeps marking the conversation as pending for a non-webhook bot (dialogflow)' do
+      create(:integrations_hook, :dialogflow, inbox: conversation.inbox)
       conversation.resolved!
       message.save!
-      expect(conversation.open?).to be false
-      expect(conversation.pending?).to be true
+      expect(conversation.reload.pending?).to be true
     end
   end
 

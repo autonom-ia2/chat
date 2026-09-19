@@ -198,6 +198,13 @@ class Conversation < ApplicationRecord
     dispatcher_dispatch(CONVERSATION_BOT_HANDOFF)
   end
 
+  # A caixa tem um AgentBot WEBHOOK ATIVO? (n8n / espelho do operador Autonom.ia). Essas conversas nunca
+  # ficam `pending`: nascem open e, resolvidas, reabrem open (Message#reopen_resolved_conversation).
+  # Exige o vínculo AgentBotInbox ATIVO (não só um agent_bot stale) — robustez sugerida na revisão.
+  def webhook_bot_inbox?
+    inbox.agent_bot_inbox&.active? && inbox.agent_bot&.webhook? || false
+  end
+
   def unread_messages
     agent_last_seen_at.present? ? messages.created_since(agent_last_seen_at) : messages
   end
@@ -334,12 +341,6 @@ class Conversation < ApplicationRecord
     return unless inbox.agent_bot_inbox&.active? && assignee_id.blank?
 
     self.ai_assignee = inbox.agent_bot
-  end
-
-  # A caixa tem um AgentBot WEBHOOK ATIVO? (n8n / espelho do operador Autonom.ia). Só essas nascem open.
-  # Exige o vínculo AgentBotInbox ATIVO (não só um agent_bot stale) — robustez sugerida na revisão.
-  def webhook_bot_inbox?
-    inbox.agent_bot_inbox&.active? && inbox.agent_bot&.webhook? || false
   end
 
   def notify_conversation_creation
