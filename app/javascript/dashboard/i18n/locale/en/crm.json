@@ -1189,7 +1189,10 @@
       "DEFAULT_STAGE": "Default stage",
       "FIRST_STAGE": "First pipeline stage",
       "AUTO_CREATE": "Create card automatically",
-      "SAVE": "Save"
+      "SAVE": "Save",
+      "SAVED": "Saved",
+      "UNSAVED": "Unsaved changes in {count} inbox(es)",
+      "DONE": "Done"
     },
     "AI_SETTINGS": {
       "TITLE": "Pipeline AI",

@@ -1188,7 +1188,10 @@
       "DEFAULT_STAGE": "Etapa padrão",
       "FIRST_STAGE": "Primeira etapa do funil",
       "AUTO_CREATE": "Criar card automaticamente",
-      "SAVE": "Salvar"
+      "SAVE": "Salvar",
+      "SAVED": "Salvo",
+      "UNSAVED": "Alterações não salvas em {count} caixa(s)",
+      "DONE": "Concluir"
     },
     "AI_SETTINGS": {
       "TITLE": "IA do funil",
