@@ -24,6 +24,17 @@ class Autonomia::Insurance::ResultadoDaCotacao
                                 .where.not(status: FORA).order(created_at: :desc, id: :desc).first
   end
 
+  # -> a execução de `cotar_seguro` mais nova da conversa que recebeu o número no portal (`#cotou?`), em
+  # qualquer estado, ou nil. É a BASE de uma recotação (#465): a entrada que de fato foi cotada. Uma trocada
+  # por pedido novo depois de cotar conta; a recusada no `start`, que nunca chegou ao portal, não.
+  def self.ultima_cotada(conversation_id)
+    return nil if conversation_id.blank?
+
+    ::Autonomia::Agents::ToolRun.for_conversation(conversation_id).where(slug: cotacao.slug)
+                                .where("COALESCE(handle ->> 'quote_id', '') <> ''")
+                                .order(created_at: :desc, id: :desc).first
+  end
+
   # -> a leitura da cotação mais nova da conversa, ou nil quando não há.
   def self.da_conversa(conversation_id)
     run = execucao_mais_nova(conversation_id)
