@@ -16,7 +16,6 @@ class Api::V1::Accounts::WahaInboxesController < Api::V1::Accounts::BaseControll
     result = Waha::InboxProvisioner.new(
       account: Current.account,
       phone: permitted_create_params[:phone],
-      api_access_token: current_user.access_token&.token,
       display_name: permitted_create_params[:name],
       ai_agent: permitted_create_params[:ai_agent],
       api_access_token: api_access_token
@@ -52,6 +51,9 @@ class Api::V1::Accounts::WahaInboxesController < Api::V1::Accounts::BaseControll
     rescue Waha::Client::Error
       client.restart_session(session)
     end
+    # Em STOPPED o logout só limpa a autenticação e não religa a sessão; sem o
+    # start, nenhum QR novo aparece e o botão "Gerar novo QR Code" não faz nada.
+    client.start_session(session) if safe_session(client, session)['status'] == 'STOPPED'
     render json: { status: 'connecting' }
   rescue Waha::Client::Error => e
     # Detalhe só nos logs; ao cliente, código estável (pode conter resposta do motor).

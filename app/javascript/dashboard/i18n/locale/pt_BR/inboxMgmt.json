@@ -783,9 +783,14 @@
     "WAHA_CONNECTION": {
       "SUBTITLE": "Estado da conexão, atualizado automaticamente",
       "SCAN_TITLE": "Leia o QR Code para conectar",
-      "STEP_1": "Abra o WhatsApp no celular desse número",
-      "STEP_2": "Vá em Configurações e depois Aparelhos conectados",
-      "STEP_3": "Toque em Conectar um aparelho e leia o código",
+      "STEP_1": "Abra o WhatsApp (ou WhatsApp Business) no celular desse número",
+      "STEP_2": "Toque em ⋮ (Android) ou Configurações (iPhone) e depois em Aparelhos conectados",
+      "STEP_3": "Toque em Conectar um aparelho e aponte o celular para este código",
+      "HINT": "Leia pelo próprio WhatsApp, não pela câmera do celular.",
+      "TIME_LEFT": "Tempo para ler: cerca de {time}",
+      "PREPARING": "Preparando o código…",
+      "EXPIRED_TITLE": "O QR Code expirou",
+      "EXPIRED_HELP": "O WhatsApp encerra o pareamento quando nenhum código é lido em cerca de dois minutos e meio. Gere um novo com o celular na mão. A caixa de entrada e as configurações continuam como estão.",
       "RECONNECT": "Gerar novo QR Code",
       "CONNECTED_HELP": "Conectado. Você já pode enviar e receber mensagens.",
       "STATUS": {
