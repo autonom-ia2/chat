@@ -1552,6 +1552,9 @@ try {
       await check(
         'Mixed: collapsed evidence preserves both exact delivery populations',
         async () => {
+          await screen.requestAfter('/reports', () =>
+            screen.selectCampaign('')
+          );
           const toggle = screen.page.locator('[data-delivery-evidence-toggle]');
           const evidence = screen.page.locator('[data-delivery-evidence]');
           assert(
@@ -1559,14 +1562,15 @@ try {
             'Evidence should start collapsed'
           );
           await toggle.click();
-          const response = screen.latest('/reports').response;
-          const payload =
-            typeof response.body === 'string'
-              ? JSON.parse(response.body).payload
-              : response.body?.payload;
+          const payload = screen.latest('/reports').response.json.payload;
           assert(
             payload?.summary?.delivery_evidence,
             'Missing synthetic response evidence'
+          );
+          assert(
+            payload.summary.delivery_evidence.provider_confirmed > 0 &&
+              payload.summary.delivery_evidence.direct_acceptance_only > 0,
+            'Mixed gate must exercise both positive populations'
           );
           const counts = await evidence.locator('dd').allTextContents();
           const format = value => new Intl.NumberFormat('pt-BR').format(value);
