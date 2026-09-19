@@ -17,6 +17,18 @@ vi.mock('dashboard/components-next/filter/operators', () => ({
   useOperators: () => ({ operators: { value: {} } }),
 }));
 
+// The fork gates CRM automation keys on globalConfig (466a1da717). This spec mounts
+// the form without a Vuex store, so only that getter is stubbed (CRM off).
+vi.mock('dashboard/composables/store', async importOriginal => {
+  const { ref } = await import('vue');
+  const original = await importOriginal();
+  return {
+    ...original,
+    useMapGetter: key =>
+      key === 'globalConfig/get' ? ref({}) : original.useMapGetter(key),
+  };
+});
+
 const automationTypes = Object.fromEntries(
   [
     'conversation_created',
