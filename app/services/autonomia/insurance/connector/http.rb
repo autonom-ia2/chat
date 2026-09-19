@@ -212,7 +212,7 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     raise error(:protocol, "resposta inesperada do connector em #{path}") if inner_code == 200
 
     raise error(KIND_BY_STATUS.fetch(inner_code, :unavailable),
-                business_message(payload) || "connector HTTP #{inner_code}")
+                business_message(payload) || "connector HTTP #{inner_code}", business_details(payload))
   end
 
   # Camada de infraestrutura: a chamada foi aceita e o handler chegou a rodar?
@@ -233,14 +233,21 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     (payload['message'].presence || payload['error'].presence).to_s.truncate(160).presence
   end
 
+  # O `details` do erro do adapter, quando vier. É dele que sai a lista do que falta quando o
+  # `quote/start` recusa a entrada (`details.issues`, #470). Ao cliente só chega o rótulo de `Recusas::ROTULOS`.
+  def business_details(payload)
+    details = payload.is_a?(Hash) ? payload['details'] : nil
+    details.is_a?(Hash) ? details : {}
+  end
+
   def json_or_nil(raw)
     JSON.parse(raw.to_s)
   rescue JSON::ParserError
     nil
   end
 
-  def error(kind, message)
-    Autonomia::Insurance::Connector::Error.new(kind, message)
+  def error(kind, message, details = {})
+    Autonomia::Insurance::Connector::Error.new(kind, message, details)
   end
 
   def invoke_uri

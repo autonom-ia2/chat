@@ -318,17 +318,70 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect { cotar }.to raise_error(incerto) { |e| expect(e.motivo).to eq('resposta sem quote_id') }
     end
 
-    it 'o portal dizendo que recusou (entrada, credencial) sobe como esta: nao cotou' do
+    it 'o portal recusando a credencial sobe como esta: nao cotou' do
       ready_connection
       connector = connector_dublado
-
-      allow(connector).to receive(:quote_start).and_raise(erro.new(:validation, 'campo x'))
-      expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:validation) }
 
       # `auth_required` renova a sessão e chama de novo; recusada duas vezes, sobe como está
       allow(connector).to receive(:quote_start).and_raise(erro.new(:auth_required, '401'))
       expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:auth_required) }
-      expect(connector).to have_received(:quote_start).exactly(3).times
+      expect(connector).to have_received(:quote_start).twice
+    end
+
+    # #470. O adapter confere a entrada ANTES do `calcularV2`: nada foi cotado. Sem a pessoa na
+    # consulta de CPF faltam nascimento e sexo, e isso é pergunta ao cliente, não falha passageira.
+    # Antes subia como erro, e o job tentava 15 vezes até o prazo.
+    it 'entrada recusada pelo adapter vira a recusa faltam_dados, com o pedido e o que faltou' do
+      ready_connection
+      connector = connector_dublado
+      issues = ['insured.birthDate: Required', 'insured.gender: Required']
+      allow(connector).to receive(:quote_start).and_raise(erro.new(:validation, 'auto quote input invalid', { 'issues' => issues }))
+
+      resultado = cotar
+
+      expect(resultado['motivo']).to eq('faltam_dados')
+      expect(resultado['faltando']).to eq(%w[insured.birthDate insured.gender])
+      expect(resultado['pedido']).to eq(
+        "#{described_class::PEDIDO_DO_QUE_FALTA} data de nascimento do titular e sexo do titular."
+      )
+      expect(resultado).not_to have_key('quote_id')
+      expect(connector).to have_received(:quote_start).once
+    end
+
+    # Sem `details.issues` é o portal recusando o `calcularV2`, ou a corretora sem seguradora no
+    # ramo: não é pergunta ao cliente, e segue subindo como antes.
+    it 'validation sem a lista de campos sobe como esta: nao vira pedido ao cliente' do
+      ready_connection
+      allow(connector_dublado).to receive(:quote_start)
+        .and_raise(erro.new(:validation, 'nenhuma seguradora habilitada neste ramo', { 'ramo' => '2' }))
+
+      expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:validation) }
+    end
+
+    # Erro de FORMATO pediria de novo um dado que o cliente já deu: só campo AUSENTE vira pergunta.
+    it 'validation so de formato nao vira pedido ao cliente: sobe como esta' do
+      ready_connection
+      allow(connector_dublado).to receive(:quote_start)
+        .and_raise(erro.new(:validation, 'auto quote input invalid', { 'issues' => ['vehicle.plate: placa com 7 caracteres'] }))
+
+      expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:validation) }
+    end
+
+    it 'com ausente e formato juntos, pede so o ausente' do
+      ready_connection
+      issues = ['insured.birthDate: Required', 'vehicle.plate: placa com 7 caracteres']
+      allow(connector_dublado).to receive(:quote_start).and_raise(erro.new(:validation, 'x', { 'issues' => issues }))
+
+      expect(cotar['faltando']).to eq(%w[insured.birthDate])
+    end
+
+    it 'validation fora do quote_start (no login) nao vira pedido ao cliente: sobe como esta' do
+      record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
+      record.update!(status: 'ready')
+      connector = connector_dublado
+      allow(connector).to receive(:open_session).and_raise(erro.new(:validation, 'credenciais'))
+
+      expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:validation) }
     end
 
     it 'falha ANTES da chamada paga (o login) sobe como esta, e o portal nao e chamado' do

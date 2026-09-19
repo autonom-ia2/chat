@@ -79,3 +79,11 @@ Gates reproduzíveis pelo workflow `.github/workflows/email-protection.yml`: `vi
 Não houve certificação humana nativa dos 57 idiomas, teste de leitor de tela ou execução de envio real. A jornada de busca longa/teleport do seletor possui cobertura com componentes reais em jsdom; isso não equivale a testar todas as combinações possíveis em navegador. A implementação já existente de limpar filtros pode produzir chamada adicional por watcher; os testes certificam o escopo final correto, não uma garantia inédita de requisição única.
 
 Nenhum acesso de escrita a produção, mudança de flag, merge ou deploy foi realizado nesta tarefa. Após a aprovação explícita, somente a PR #468 deve ser mergeada, produzindo um único blue/green. O smoke pós-deploy deve conferir a tela, permissões, filtros e exportação sem enviar e-mails reais. Rollback é da aplicação; esta PR não introduz dados ou migrações a reverter.
+
+## Atualização final da base após a conferência de CI
+
+O run `35433840023` terminou verde no SHA `946a04b1284bec3c73fe2198702e9274d0f8c210`. Na conferência final, a main já estava em `3e5512db7188e3d53b0c36a86b705389083b0d02`, com as PRs #471 e #472 de conexões/cotação de seguros. A publicação não foi marcada como pronta com a base antiga.
+
+As duas atualizações foram incorporadas somente à branch da PR #468. A interseção de arquivos com o frontend desta entrega era vazia; a integração não teve conflitos. Foi verificado que `app/javascript`, o harness de navegador e `vitest.config.ts` permaneceram idênticos ao conteúdo funcional anteriormente testado. O diff contra a nova main continua sem alteração de backend, configuração, migrações ou dependências por esta PR. Um novo CI próprio deve aprovar essa integração antes da passagem para Ready for review.
+
+Esta integração de base não mergeou a PR em main nem disparou deploy. O SHA/run da publicação final fica registrado na descrição e comentário de fechamento da PR.
