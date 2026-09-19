@@ -68,7 +68,9 @@ describe('WhatsApp Reauthorize', () => {
       await vi.runOnlyPendingTimersAsync();
 
       const pending = wrapper.vm.requestAuthorization();
-      await vi.advanceTimersByTimeAsync(10 * 1000);
+      await vi.advanceTimersByTimeAsync(10 * 1000 - 1);
+      expect(whatsappChannel.reauthorizeWhatsApp).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
       await pending;
 
       expect(whatsappChannel.reauthorizeWhatsApp).toHaveBeenCalledWith({

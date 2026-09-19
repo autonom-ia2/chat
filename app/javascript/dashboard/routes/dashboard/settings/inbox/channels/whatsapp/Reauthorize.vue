@@ -196,6 +196,9 @@ const createFinishEventWaiter = () => {
     });
     window.addEventListener('message', listener);
   });
+  // A CANCEL/ERROR can reject this before FB.login returns the code; the race in
+  // waitAfterCode still receives it, this only avoids an unhandled rejection.
+  promise.catch(() => {});
   const cleanup = () => window.removeEventListener('message', listener);
 
   // Called once FB.login has returned the code. Resolves with the coexistence
