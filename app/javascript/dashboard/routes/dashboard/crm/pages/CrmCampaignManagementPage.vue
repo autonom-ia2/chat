@@ -611,7 +611,7 @@ onMounted(() => {
               :options="inboxFilterOptions"
               keyboard-navigation
               :aria-label="t('CRM_KANBAN.TRACKED_LINKS.INBOX')"
-              class="w-full"
+              class="w-full [&>button]:!h-10 [&>button]:!w-full [&>button]:!justify-start"
             />
           </label>
 

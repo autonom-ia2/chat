@@ -1016,6 +1016,63 @@ try {
     }
   );
   await check(
+    'PT: tracked-link inbox selector matches the adjacent input height',
+    async () => {
+      const form = page.locator('form').filter({
+        has: page.getByRole('textbox', {
+          name: await t('CRM_KANBAN.TRACKED_LINKS.NAME'),
+          exact: true,
+        }),
+      });
+      const input = form.getByRole('textbox', {
+        name: await t('CRM_KANBAN.TRACKED_LINKS.NAME'),
+        exact: true,
+      });
+      const trigger = form.getByRole('button', {
+        name: await t('CRM_KANBAN.TRACKED_LINKS.INBOX'),
+        exact: true,
+      });
+      const [left, right] = await Promise.all([
+        input.boundingBox(),
+        trigger.boundingBox(),
+      ]);
+      assert(left && right, 'Tracked-link controls are not rendered');
+      assert(
+        Math.abs(left.height - right.height) <= 1,
+        JSON.stringify({ left, right })
+      );
+      assert(
+        Math.abs(left.y + left.height - right.y - right.height) <= 3,
+        JSON.stringify({ left, right })
+      );
+      return { inputHeight: left.height, triggerHeight: right.height };
+    }
+  );
+  await check(
+    'PT: production tooltip plugin renders the metric help without provider jargon',
+    async () => {
+      const help = page.locator('header [tabindex="0"][aria-label]').first();
+      await help.hover();
+      // FloatingVue's real popper uses aria-hidden and classes, not role="tooltip".
+      const tooltip = page
+        .locator('.v-popper--theme-tooltip.v-popper__popper--shown')
+        .first();
+      await tooltip.waitFor({ state: 'visible' });
+      const content = await tooltip.innerText();
+      assert(
+        content.includes(await ns('METRICS_HINT')),
+        'Metric explanation missing from the real tooltip'
+      );
+      assert(
+        !/\b(?:SES|Amazon|AWS)\b/i.test(content),
+        'Provider implementation name leaked in tooltip'
+      );
+      await page.mouse.move(0, 0);
+      await tooltip.waitFor({ state: 'hidden' });
+      return { shown: true, hiddenAfterLeave: true };
+    }
+  );
+  await check(
     'PT: search and primary status filter align cleanly',
     async () => {
       const search = section.getByRole('textbox', {
@@ -1927,6 +1984,17 @@ try {
         ),
         'Unhandled error after initial smoke'
       )
+  );
+  await check('All screens register the production tooltip directive', () =>
+    assert(
+      results.screens.every(
+        screen =>
+          !(screen.runtime?.vueWarnings || []).some(warning =>
+            warning.includes('Failed to resolve directive: tooltip')
+          )
+      ),
+      'The production tooltip directive is missing from a tested screen'
+    )
   );
   await check('All HTTP fixture routes match intended account scope', () =>
     assert(

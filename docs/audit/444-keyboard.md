@@ -115,3 +115,12 @@ Parent: aplicar wiring acima, executar jornada real de teclado com busca/lista l
 ## Integração do parent
 
 Opt-in ativado apenas nos seletores usados pela gestão de campanhas. O spec tem nome `FilterSelect.emailCampaignKeyboard.spec.js` para integrar o seletor existente do CI de e-mail. O ajuste de dependências inline foi colocado no `vitest.config.ts`: os testes reais de VueUse/Vuex usam o mesmo alias Vue da aplicação, sem mockar o menu, instalar dependências ou alterar o runtime de produção. O comando normal de Vitest e toda a suíte serão repetidos com esse ajuste, sem depender do runner temporário.
+
+
+## Fechamento integrado — 19/09/2026
+
+As instruções de handoff e resultados parciais anteriores descrevem a implementação; o status atual consolidado está em [444-email-campaign-uiux.md](444-email-campaign-uiux.md). Teclado permanece opt-in, desativado por padrão no componente compartilhado. Foram preservados trigger, foco, nome acessível, escolha, busca e fechamento dos menus, incluindo testes com teleport.
+
+Depois da revisão adversarial, o seletor de caixa mantém seu botão/ref padrão; a altura é ajustada exclusivamente por utilitários Tailwind locais. Não ficou o slot customizado intermediário que perdia a referência de posicionamento. O fechamento independente desse delta recebeu PASS.
+
+Gates integrados finais locais: 434 testes focados/teclado sem falhas; navegador com 212 verificações aprovadas, 148 capturas e servidor encerrado. Os controles vizinhos do formulário mediram 40/40 px. O harness agora registra FloatingVue como na aplicação e testa a ajuda real por hover/conteúdo/ocultação, sem warnings de diretiva ausente. O CI da publicação final continua obrigatório; este registro não autoriza merge/deploy.

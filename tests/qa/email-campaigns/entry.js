@@ -4,6 +4,7 @@ import { createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import { createI18n } from 'vue-i18n';
 import axios from 'axios';
+import FloatingVue from 'floating-vue';
 import App from './App.vue';
 
 const params = new URLSearchParams(location.search);
@@ -91,5 +92,11 @@ app.config.errorHandler = (error, instance, info) => {
   console.error(error);
 };
 app.config.warnHandler = message => window.__qa.vueWarnings.push(message);
+app.use(FloatingVue, {
+  instantMove: true,
+  arrowOverflow: false,
+  disposeTimeout: 5000000,
+  themes: { tooltip: { strategy: 'fixed' } },
+});
 app.use(store).use(createPinia()).use(router).use(i18n).mount('#app');
 window.__qa.ready = true;
