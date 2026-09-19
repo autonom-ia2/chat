@@ -22,21 +22,22 @@ const mountSelect = ({ teleport = false, custom = false, ...props } = {}) => {
         if (teleport) provideDropdownTeleport();
         return {
           props: reactive(props),
+          labels: { before: 'Before', custom: 'Custom status', after: 'After' },
           custom,
           selected: ref(props.modelValue ?? 'active'),
         };
       },
       template: `
         <div>
-          <button data-before>Before</button>
+          <button data-before>{{ labels.before }}</button>
           <FilterSelect v-model="selected" v-bind="props" aria-label="Campaign status">
             <template v-if="custom" #trigger="{ toggle, keyboardAttrs, expanded }">
               <FilterButton v-bind="keyboardAttrs" type="button" :data-expanded="expanded" @click="toggle">
-                Custom status
+                {{ labels.custom }}
               </FilterButton>
             </template>
           </FilterSelect>
-          <button data-after>After</button>
+          <button data-after>{{ labels.after }}</button>
         </div>`,
     }),
     {
