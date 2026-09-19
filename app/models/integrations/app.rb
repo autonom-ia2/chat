@@ -47,6 +47,10 @@ class Integrations::App
       "#{params[:action]}&client_id=#{client_id}&redirect_uri=#{self.class.slack_integration_url}"
     when 'linear'
       build_linear_action
+    when 'shopify'
+      return unless Shopify::FeatureGate.enabled?(account: Current.account)
+
+      GlobalConfigService.load('SHOPIFY_APP_STORE_URL', nil)
     else
       params[:action]
     end
@@ -103,6 +107,8 @@ class Integrations::App
       # AI runs on a system API key fallback (Crm::Ai::CredentialResolver) with no
       # Integrations::Hook, so reflect actual credential availability instead of a hook.
       ::Crm::Ai::CredentialResolver.new(account: account).configured?
+    when 'shopify'
+      account.hooks.exists?(app_id: id, status: :enabled)
     else
       account.hooks.exists?(app_id: id)
     end
@@ -139,7 +145,8 @@ class Integrations::App
   private
 
   def shopify_enabled?(account)
-    account.feature_enabled?('shopify_integration') && GlobalConfigService.load('SHOPIFY_CLIENT_ID', nil).present?
+    Shopify::FeatureGate.enabled?(account: account) &&
+      GlobalConfigService.load('SHOPIFY_CLIENT_ID', nil).present?
   end
 
   def notion_enabled?(account)

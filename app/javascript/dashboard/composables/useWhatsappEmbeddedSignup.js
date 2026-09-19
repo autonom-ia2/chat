@@ -1,9 +1,12 @@
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   setupFacebookSdk,
   initWhatsAppEmbeddedSignup,
   createMessageHandler,
   isValidBusinessData,
+  classifySignupEvent,
+  SIGNUP_RESULT,
 } from 'dashboard/routes/dashboard/settings/inbox/channels/whatsapp/utils';
 
 // Drives Meta's WhatsApp embedded-signup popup (Facebook JS SDK). FB.login()
@@ -16,31 +19,22 @@ import {
 // (alerts, navigation, etc). Resolves `null` when the user cancels the popup;
 // rejects on SDK load or signup errors. The window listener is scoped to a
 // single run, so this is safe to call from anywhere without lifecycle wiring.
-// Meta signals a completed signup with a different event per flow. Only FINISH
-// and FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING were handled, so a customer who
-// finished through any other flow left the promise pending forever — no inbox,
-// no error, just a spinner. The full list is in Meta's Embedded Signup
-// implementation docs.
-const COMPLETION_EVENTS = [
-  'FINISH', // Cloud API
-  'FINISH_ONLY_WABA', // finished without attaching a phone number
-  'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING', // Coexistence
-  'FINISH_OBO_MIGRATION', // on-behalf-of migration
-  'FINISH_GRANT_ONLY_API_ACCESS', // grant-only API access
-];
-
-// Meta emits ERROR (uppercase, like every other event it sends) when it
-// refuses the signup — e.g. the customer switches to an ineligible account
-// while confirming. The handler compared against lowercase 'error', so the
-// rejection never matched any branch and the promise stayed pending: the
-// customer saw a spinner instead of Meta's reason.
-const ERROR_EVENTS = ['ERROR', 'error'];
+//
+// Meta signals a completed signup with a different event per flow (#225). The
+// events classifySignupEvent reports as UNSUPPORTED (FINISH_ONLY_WABA,
+// FINISH_OBO_MIGRATION, FINISH_GRANT_ONLY_API_ACCESS) still go to the backend
+// here, as before 4.18.0: Whatsapp::PhoneInfoService uses the WABA's only number
+// or fails with a clear error when there are none or several, so refusing them
+// up front would break a signup that works today.
 
 // Meta closes its popup without any event in some failure modes. Without a
 // deadline the caller spins indefinitely with no way to tell the user why.
 const SIGNUP_TIMEOUT_MS = 5 * 60 * 1000;
 
+const COMPLETION_RESULTS = [SIGNUP_RESULT.FINISH, SIGNUP_RESULT.UNSUPPORTED];
+
 export function useWhatsappEmbeddedSignup() {
+  const { t } = useI18n();
   const isAuthenticating = ref(false);
 
   const runEmbeddedSignup = () => {
@@ -50,6 +44,7 @@ export function useWhatsappEmbeddedSignup() {
     return new Promise((resolve, reject) => {
       let authCode = null;
       let businessData = null;
+      let isCoexistence = false;
       let settled = false;
       let messageHandler;
       let lastEvent = null;
@@ -88,29 +83,39 @@ export function useWhatsappEmbeddedSignup() {
         if (!authCode || !businessData) return;
         settle(resolve, {
           code: authCode,
-          business_id: businessData.business_id,
+          business_id: businessData.business_id || '',
           waba_id: businessData.waba_id,
           phone_number_id: businessData.phone_number_id || '',
+          is_coexistence: isCoexistence,
         });
       };
 
       messageHandler = createMessageHandler(data => {
         lastEvent = data.event;
-        if (COMPLETION_EVENTS.includes(data.event)) {
+        const result = classifySignupEvent(data);
+
+        if (COMPLETION_RESULTS.includes(result.type)) {
+          // Keep the first terminal event: a coexistence FINISH must win over a
+          // later normal FINISH that can arrive before the auth code is known.
+          if (businessData) return;
           if (!isValidBusinessData(data.data)) {
-            settle(reject, new Error('Invalid business data'));
+            const invalidData = t(
+              'INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.INVALID_BUSINESS_DATA'
+            );
+            settle(reject, new Error(invalidData));
             return;
           }
           businessData = data.data;
+          isCoexistence = Boolean(result.isCoexistence);
           resolveIfReady();
-        } else if (data.event === 'CANCEL') {
+        } else if (result.type === SIGNUP_RESULT.CANCEL) {
           settle(resolve, null);
-        } else if (ERROR_EVENTS.includes(data.event)) {
-          // Meta puts the reason in data.data.error_message; the top-level
-          // read below is a fallback for older payload shapes.
-          const reason =
-            data.data?.error_message || data.error_message || 'Signup error';
-          settle(reject, new Error(reason));
+        } else if (result.type === SIGNUP_RESULT.ERROR) {
+          // classifySignupEvent reads Meta's reason from data.data.error_message.
+          const signupError = t(
+            'INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.SIGNUP_ERROR'
+          );
+          settle(reject, new Error(result.errorMessage || signupError));
         }
       });
 

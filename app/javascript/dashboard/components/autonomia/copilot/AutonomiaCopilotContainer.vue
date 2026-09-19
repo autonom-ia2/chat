@@ -25,7 +25,6 @@ const { t } = useI18n();
 const { uiSettings, updateUISettings } = useUISettings();
 const globalConfig = useMapGetter('globalConfig/get');
 const currentChat = useMapGetter('getSelectedChat');
-const getInbox = useMapGetter('inboxes/getInbox');
 const { width: windowWidth } = useWindowSize();
 
 const store = useAutonomiaCopilotStore();
@@ -57,11 +56,6 @@ const conversationDisplayId = computed(() => currentChat.value?.id);
 const showPanel = computed(
   () => isEnabled.value && isPanelOpen.value && !!conversationDisplayId.value
 );
-
-const conversationInboxType = computed(() => {
-  const inbox = getInbox.value(currentChat.value?.inbox_id);
-  return inbox?.channel_type || '';
-});
 
 const hasAgents = computed(() => agents.value.length > 0);
 const hasMessages = computed(() => messages.length > 0);
@@ -229,7 +223,6 @@ onMounted(() => {
               v-else
               :message="item.message"
               :is-last-message="index === messages.length - 1"
-              :conversation-inbox-type="conversationInboxType"
             />
           </template>
           <CopilotLoader v-if="isSending" />

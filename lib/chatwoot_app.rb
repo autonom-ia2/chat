@@ -32,6 +32,10 @@ module ChatwootApp
       ENV.fetch('DEPLOYMENT_ENV', 'self-hosted') != 'cloud'
   end
 
+  def self.self_hosted_paid?
+    enterprise? && !chatwoot_cloud? && %w[premium enterprise].include?(ChatwootHub.pricing_plan)
+  end
+
   def self.custom?
     @custom ||= root.join('custom').exist?
   end

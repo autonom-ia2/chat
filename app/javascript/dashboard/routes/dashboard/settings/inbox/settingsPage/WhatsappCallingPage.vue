@@ -7,6 +7,7 @@ import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsTo
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TextArea from 'next/textarea/TextArea.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import CallRecordingSettings from './CallRecordingSettings.vue';
 
 export default {
   components: {
@@ -15,6 +16,7 @@ export default {
     NextButton,
     TextArea,
     Spinner,
+    CallRecordingSettings,
   },
   props: {
     inbox: {
@@ -168,6 +170,8 @@ export default {
           </template>
         </SettingsToggleSection>
       </div>
+
+      <CallRecordingSettings :inbox="inbox" />
 
       <SettingsFieldSection
         v-if="phoneNumber"

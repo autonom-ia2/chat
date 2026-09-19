@@ -105,3 +105,4 @@ CLAUDE.local.md
 local/
 Procfile.worktree
 credential.env
+.nodeterm/project.json

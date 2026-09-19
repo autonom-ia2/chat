@@ -198,15 +198,13 @@ const hasActiveChild = computed(() => {
   return activeChild.value !== undefined;
 });
 
-const handleCollapsedClick = () => {
-  if (hasChildren.value && hasAccessibleChildren.value) {
-    const firstItem = accessibleItems.value[0];
-    router.push(firstItem.to);
-  }
-};
+// Groups that only hold children link to their first accessible child
+const linkTo = computed(() => props.to ?? accessibleItems.value[0]?.to);
 
 const toggleTrigger = () => {
-  if (
+  if (!hasChildren.value && props.to) {
+    router.push(props.to);
+  } else if (
     hasAccessibleChildren.value &&
     !isExpanded.value &&
     !hasActiveChild.value
@@ -255,14 +253,14 @@ watch(
     <!-- Collapsed State -->
     <template v-if="isCollapsed">
       <div
+        ref="triggerRef"
         class="relative"
         @mouseenter="handleMouseEnter"
         @mouseleave="handleMouseLeave"
       >
         <component
-          :is="to && !hasChildren ? 'router-link' : 'button'"
-          ref="triggerRef"
-          :to="to && !hasChildren ? to : undefined"
+          :is="linkTo ? 'router-link' : 'button'"
+          :to="linkTo"
           type="button"
           class="flex items-center justify-center size-10 rounded-lg"
           :class="{
@@ -270,7 +268,6 @@ watch(
             'text-n-slate-11 hover:bg-n-alpha-2': !isActive && !hasActiveChild,
           }"
           :title="label"
-          @click="hasChildren ? handleCollapsedClick() : undefined"
         >
           <img
             v-if="image"
@@ -300,7 +297,7 @@ watch(
         :image
         :name
         :label
-        :to
+        :to="linkTo"
         :getter-keys="getterKeys"
         :is-active="isActive"
         :has-active-child="hasActiveChild"

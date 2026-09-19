@@ -33,7 +33,9 @@ export default {
     },
   },
   setup() {
-    const { agentsList } = useAgentsList(true, { includeAgentBots: true });
+    const { agentsList } = useAgentsList(true, {
+      includeAIAssignees: true,
+    });
     const { canViewCrm } = useCrmPermissions();
     return {
       agentsList,
