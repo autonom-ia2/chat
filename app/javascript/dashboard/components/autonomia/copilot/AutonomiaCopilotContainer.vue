@@ -136,16 +136,7 @@ const fetchAgents = async () => {
   }
 };
 
-const sendMessage = async message => {
-  if (isSending.value || !activeAgent.value || !conversationDisplayId.value) {
-    return;
-  }
-  // Pin the conversation this request belongs to. If the agent navigates to
-  // another conversation before the response lands, the late reply must NOT be
-  // appended into the now-current conversation's thread (cross-conversation leak).
-  const requestConversation = conversationDisplayId.value;
-  store.addUserMessage(message);
-  isSending.value = true;
+const requestReply = async (requestConversation, message) => {
   try {
     const { data } = await AutonomiaCopilotAPI.chat(requestConversation, {
       agentId: activeAgent.value.id,
@@ -171,6 +162,22 @@ const sendMessage = async message => {
     // even if the conversation changed mid-flight, so the new conversation isn't stuck.
     isSending.value = false;
   }
+};
+
+// CopilotInput clears the field only when this returns true. Accept = the question is in the
+// thread, so return right away and let the reply load behind the loader; false keeps the text.
+const sendMessage = message => {
+  if (isSending.value || !activeAgent.value || !conversationDisplayId.value) {
+    return false;
+  }
+  // Pin the conversation this request belongs to. If the agent navigates to
+  // another conversation before the response lands, the late reply must NOT be
+  // appended into the now-current conversation's thread (cross-conversation leak).
+  const requestConversation = conversationDisplayId.value;
+  store.addUserMessage(message);
+  isSending.value = true;
+  requestReply(requestConversation, message);
+  return true;
 };
 
 watch(showPanel, opened => {
