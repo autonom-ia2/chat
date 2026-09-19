@@ -1,5 +1,72 @@
 # Rollback do upgrade Chatwoot 4.17.1 (deploy de 2026-09-03)
 
+## Atualização 2026-09-19: upgrade Chatwoot 4.18.0 (`64f547cf76`, PR #475, épico #474)
+
+O deploy automático de `64f547cf76` levou as duas stacks para a 4.18.0 e
+**terminou as instâncias N-2**. O rollback rápido volta para `0ec0caf8fc`
+(4.17.1 + fork, a versão que estava no ar antes do upgrade).
+
+| | hub2you | autonomia |
+|---|---|---|
+| Green `64f547cf76`, 4.18.0 (no ar) | `i-09808f7bdf206371c` · TG `cw-hub2-green-329/3808b9e723f4748c` | `i-00df8c875ed5da6cd` · TG `cw-auto-green-314/f2be815343b614a9` |
+| Blue `0ec0caf8fc`, 4.17.1 (parado, rollback) | `i-0d19c80958ece4e0f` · TG `cw-hub2-green-328/16202473cb016b28` | `i-0f6e6eff1f6ebb6fd` · TG `cw-auto-green-313/e100deb80677de69` |
+| Imagem ECR do blue | tag `rollback-pre-4180-0ec0caf8fc` | tag `rollback-pre-4180-0ec0caf8fc` |
+| Snapshot RDS antes do upgrade | `chatwoot-autonomia-prod-pre-upgrade-4180-20260919` | `chatwoot-autonomia-prod-pre-upgrade-4180-20260919` |
+
+**Migrations deste release** (aditivas; o código 4.17.1 roda com o banco já migrado):
+
+- `20260811000001` backfill `ai_assignee_type`: 0 linhas em produção, medido;
+- `20260813000000` `audits.city/country/country_code`;
+- `20260831000000` `provider_name` em canais sociais.
+
+Voltar o tráfego para o blue **não exige reverter o banco**.
+
+### Opção A: voltar o tráfego para o blue `0ec0caf8fc` (minutos, sem tocar banco)
+
+hub2you (a autonomia é igual, com os IDs da tabela e o prefixo de credencial de
+`~/dev/Appsell/credential.env`):
+
+1. Ligar o blue:
+
+   ```bash
+   aws ec2 start-instances --profile hub2you --region us-east-1 --instance-ids i-0d19c80958ece4e0f
+   ```
+
+2. Esperar o target ficar `healthy`:
+
+   ```bash
+   aws elbv2 describe-target-health --profile hub2you --region us-east-1 --target-group-arn arn:aws:elasticloadbalancing:us-east-1:354307071110:targetgroup/cw-hub2-green-328/16202473cb016b28
+   ```
+
+3. Trocar o listener:
+
+   ```bash
+   aws elbv2 modify-listener --profile hub2you --region us-east-1 --listener-arn arn:aws:elasticloadbalancing:us-east-1:354307071110:listener/app/chatwoot-autonomia-prod-ec2/464e18b9554cab60/6a4364c69884a430 --default-actions Type=forward,TargetGroupArn=arn:aws:elasticloadbalancing:us-east-1:354307071110:targetgroup/cw-hub2-green-328/16202473cb016b28
+   ```
+
+4. Parar o worker do green, para não haver dois Sidekiq consumindo a mesma fila:
+
+   ```bash
+   aws ssm send-command --profile hub2you --region us-east-1 --instance-ids i-09808f7bdf206371c --document-name AWS-RunShellScript --parameters 'commands=["sudo systemctl stop chatwoot-worker.service"]'
+   ```
+
+Autonomia: blue `i-0f6e6eff1f6ebb6fd`, TG `cw-auto-green-313/e100deb80677de69`,
+listener `…/683d6fd8206c13ad/48599e78c182fcbc`, green `i-00df8c875ed5da6cd`.
+
+### Opção B: blue indisponível, subir a imagem etiquetada
+
+Mesmo procedimento da Opção B original abaixo, com a imagem
+`<conta>.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod:rollback-pre-4180-0ec0caf8fc`.
+
+### Não fazer
+
+- Não terminar os blues acima nem apagar as tags `rollback-pre-4180-*` antes do
+  fim da janela de observação.
+- Não restaurar o snapshot, exceto em perda de dados: ele descarta tudo o que
+  foi gravado depois do upgrade.
+
+---
+
 ## Atualização 2026-09-03, segundo release (`bbb09a91ac`: #288 + #289)
 
 Deploy automático de `bbb09a91ac` (público-alvo + horário de atuação do agente,
