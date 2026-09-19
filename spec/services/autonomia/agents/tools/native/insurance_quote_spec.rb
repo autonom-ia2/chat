@@ -358,6 +358,23 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:validation) }
     end
 
+    # Erro de FORMATO pediria de novo um dado que o cliente já deu: só campo AUSENTE vira pergunta.
+    it 'validation so de formato nao vira pedido ao cliente: sobe como esta' do
+      ready_connection
+      allow(connector_dublado).to receive(:quote_start)
+        .and_raise(erro.new(:validation, 'auto quote input invalid', { 'issues' => ['vehicle.plate: placa com 7 caracteres'] }))
+
+      expect { cotar }.to raise_error(erro) { |e| expect(e.kind).to eq(:validation) }
+    end
+
+    it 'com ausente e formato juntos, pede so o ausente' do
+      ready_connection
+      issues = ['insured.birthDate: Required', 'vehicle.plate: placa com 7 caracteres']
+      allow(connector_dublado).to receive(:quote_start).and_raise(erro.new(:validation, 'x', { 'issues' => issues }))
+
+      expect(cotar['faltando']).to eq(%w[insured.birthDate])
+    end
+
     it 'validation fora do quote_start (no login) nao vira pedido ao cliente: sobe como esta' do
       record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
       record.update!(status: 'ready')

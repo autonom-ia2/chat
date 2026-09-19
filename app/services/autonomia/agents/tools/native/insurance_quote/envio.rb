@@ -47,13 +47,22 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Envio
   def chamar_portal(open_session, pedido)
     connector.quote_start(session: open_session, **pedido)
   rescue ::Autonomia::Insurance::Connector::Error => e
-    issues = e.details.to_h.stringify_keys['issues'] if e.kind == :validation
-    raise EntradaRecusada, issues if issues.present?
+    ausentes = campos_ausentes(e)
+    raise EntradaRecusada, ausentes if ausentes.present?
     raise if NAO_ENVIOU.include?(e.kind)
 
     raise ::Autonomia::Agents::Tools::Native::EnvioIncerto, e.kind
   rescue StandardError => e
     raise ::Autonomia::Agents::Tools::Native::EnvioIncerto, e.class.name
+  end
+
+  # SÓ CAMPO AUSENTE vira pergunta ao cliente (achado da revisão da PR #472). Um erro de FORMATO ("placa com
+  # 7 caracteres") pediria de novo um dado que o cliente já deu, e o modelo tende a reenviar igual: laço.
+  # Esses seguem o caminho de antes.
+  def campos_ausentes(erro)
+    return [] unless erro.kind == :validation
+
+    Array(erro.details.to_h.stringify_keys['issues']).map(&:to_s).select { |issue| issue.split(':', 2)[1].to_s.strip == 'Required' }
   end
 
   # A MESMA RECUSA DA CONFERÊNCIA (`validar`), com o pedido do que falta e sem nova tentativa.
