@@ -94,7 +94,7 @@ describe('CrmInboxSettingsDrawer', () => {
     await wrapper.setProps({
       settings: [{ ...SETTINGS[0], crm_enabled: true }, SETTINGS[1]],
     });
-    await wrapper.setProps({ saveResult: { inboxId: 1, ok: true, at: 1 } });
+    await wrapper.setProps({ saveResult: { inboxId: '1', ok: true, at: 1 } });
     await nextTick();
 
     const [firstAfter, secondAfter] = sections(wrapper);

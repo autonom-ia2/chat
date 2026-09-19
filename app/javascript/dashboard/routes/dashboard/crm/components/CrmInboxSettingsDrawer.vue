@@ -65,8 +65,8 @@ const formFor = inbox => forms[inbox.id] || {};
 const isDirty = inbox =>
   Boolean(forms[inbox.id]) &&
   !sameForm(forms[inbox.id], formFromSetting(inbox.id));
-const isSavingInbox = inbox => pending.has(inbox.id);
-const isSavedInbox = inbox => saved.has(inbox.id) && !isDirty(inbox);
+const isSavingInbox = inbox => pending.has(Number(inbox.id));
+const isSavedInbox = inbox => saved.has(Number(inbox.id)) && !isDirty(inbox);
 
 const dirtyCount = computed(
   () => sortedInboxes.value.filter(inbox => isDirty(inbox)).length
@@ -156,8 +156,8 @@ const onCrmEnabledChange = inbox => {
 
 const saveInbox = inbox => {
   const form = formFor(inbox);
-  saved.delete(inbox.id);
-  pending.add(inbox.id);
+  saved.delete(Number(inbox.id));
+  pending.add(Number(inbox.id));
   emit('save', {
     inboxId: inbox.id,
     crm_enabled: form.crm_enabled,
@@ -189,11 +189,12 @@ watch(
 watch(
   () => props.saveResult,
   result => {
-    if (!result || !pending.has(result.inboxId)) return;
-    pending.delete(result.inboxId);
+    const inboxId = Number(result?.inboxId);
+    if (!result || !pending.has(inboxId)) return;
+    pending.delete(inboxId);
     if (!result.ok) return;
-    saved.add(result.inboxId);
-    forms[result.inboxId] = formFromSetting(result.inboxId);
+    saved.add(inboxId);
+    forms[inboxId] = formFromSetting(inboxId);
   }
 );
 
