@@ -797,6 +797,8 @@
       "PREPARING": "Preparing the code…",
       "EXPIRED_TITLE": "The QR code expired",
       "EXPIRED_HELP": "WhatsApp ends the pairing when no code is scanned within about two and a half minutes. Generate a new one with the phone in hand. The inbox and its settings stay as they are.",
+      "DISCONNECTED_TITLE": "WhatsApp disconnected",
+      "DISCONNECTED_HELP": "The connection with this number was closed. Generate a new QR code and scan it with the phone of this number. The inbox and its settings stay as they are.",
       "RECONNECT": "Generate new QR code",
       "CONNECTED_HELP": "Connected. You can send and receive messages now.",
       "STATUS": {

@@ -27,10 +27,13 @@ let timer = null;
 let clock = null;
 
 const connected = computed(() => status.value === 'connected');
-// FAILED/STOPPED: o WhatsApp encerrou o pareamento e não chega QR novo sem
-// reiniciar a sessão.
+// FAILED (rodada de QR esgotada) e STOPPED (sessão desligada): não chega QR
+// novo sem reiniciar a sessão. O texto muda conforme o motivo.
 const isExpired = computed(() =>
   ['failed', 'disconnected'].includes(status.value)
+);
+const stoppedKey = computed(() =>
+  status.value === 'disconnected' ? 'DISCONNECTED' : 'EXPIRED'
 );
 const timeLeft = computed(() => {
   if (!qrIndex.value || !qrDataUrl.value) return '';
@@ -68,26 +71,35 @@ const renderQr = async value => {
   }
 };
 
+// Só a resposta da consulta mais recente vale: uma consulta disparada antes do
+// "Gerar novo QR Code" não pode trazer de volta o estado antigo.
+let latestRequest = 0;
+
 const poll = async () => {
+  latestRequest += 1;
+  const request = latestRequest;
   try {
     const { data } = await WahaInboxAPI.connection(props.inbox.id);
+    if (request !== latestRequest) return;
     status.value = data.status;
     phone.value = data.phone;
-    if (data.connected || !data.qr) {
+    // QR nulo com a sessão aguardando leitura é passageiro: mantém a contagem.
+    if (data.connected || isExpired.value) {
       resetQr();
-    } else if (data.qr !== qrValue.value) {
+    } else if (data.qr && data.qr !== qrValue.value) {
       qrValue.value = data.qr;
       qrIndex.value += 1;
       qrShownAt.value = Date.now();
       await renderQr(data.qr);
     }
   } catch {
-    status.value = 'unknown';
+    if (request === latestRequest) status.value = 'unknown';
   }
 };
 
 const reconnect = async () => {
   isReconnecting.value = true;
+  latestRequest += 1;
   try {
     await WahaInboxAPI.reconnect(props.inbox.id);
     status.value = 'connecting';
@@ -162,12 +174,19 @@ onBeforeUnmount(() => {
         v-else-if="isExpired"
         class="flex flex-col items-center gap-3 px-4 py-8 text-center border rounded-lg border-n-weak"
       >
-        <span class="i-lucide-timer-off size-8 text-n-slate-10" />
+        <span
+          class="size-8 text-n-slate-10"
+          :class="
+            stoppedKey === 'DISCONNECTED'
+              ? 'i-lucide-unplug'
+              : 'i-lucide-timer-off'
+          "
+        />
         <p class="mb-0 text-base font-medium text-n-slate-12">
-          {{ tk('EXPIRED_TITLE') }}
+          {{ tk(`${stoppedKey}_TITLE`) }}
         </p>
         <p class="max-w-md mb-0 text-sm text-n-slate-11">
-          {{ tk('EXPIRED_HELP') }}
+          {{ tk(`${stoppedKey}_HELP`) }}
         </p>
         <NextButton
           :is-loading="isReconnecting"

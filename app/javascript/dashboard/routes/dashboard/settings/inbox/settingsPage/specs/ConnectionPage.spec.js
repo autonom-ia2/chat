@@ -95,4 +95,49 @@ describe('ConnectionPage (WhatsApp via QR)', () => {
     expect(wrapper.find('img').exists()).toBe(false);
     expect(wrapper.findAll('button')).toHaveLength(0);
   });
+
+  it('keeps the QR and its countdown when one poll comes back without a code', async () => {
+    connectionReturns({ status: 'awaiting_scan', phone: '', qr: 'code-1' });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    connectionReturns({ status: 'awaiting_scan', phone: '', qr: null });
+    await vi.advanceTimersByTimeAsync(3000);
+    connectionReturns({ status: 'awaiting_scan', phone: '', qr: 'code-1' });
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(wrapper.find('img').attributes('src')).toContain('code-1');
+    expect(wrapper.text()).toContain(`${KEY}.TIME_LEFT|2:34`);
+  });
+
+  it('tells a stopped session apart from an expired QR', async () => {
+    connectionReturns({ status: 'disconnected', phone: '', qr: null });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(`${KEY}.DISCONNECTED_TITLE`);
+    expect(wrapper.text()).not.toContain(`${KEY}.EXPIRED_TITLE`);
+  });
+
+  it('ignores a poll answer that arrives after a newer one', async () => {
+    let answerOld;
+    WahaInboxAPI.connection
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            answerOld = resolve;
+          })
+      )
+      .mockResolvedValue({
+        data: { status: 'awaiting_scan', phone: '', qr: 'code-new' },
+      });
+    const wrapper = mountPage();
+    await vi.advanceTimersByTimeAsync(3000);
+
+    answerOld({ data: { status: 'failed', phone: '', qr: null } });
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain(`${KEY}.EXPIRED_TITLE`);
+    expect(wrapper.find('img').attributes('src')).toContain('code-new');
+  });
 });

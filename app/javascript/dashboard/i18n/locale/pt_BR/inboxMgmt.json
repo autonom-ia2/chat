@@ -791,6 +791,8 @@
       "PREPARING": "Preparando o código…",
       "EXPIRED_TITLE": "O QR Code expirou",
       "EXPIRED_HELP": "O WhatsApp encerra o pareamento quando nenhum código é lido em cerca de dois minutos e meio. Gere um novo com o celular na mão. A caixa de entrada e as configurações continuam como estão.",
+      "DISCONNECTED_TITLE": "WhatsApp desconectado",
+      "DISCONNECTED_HELP": "A conexão com este número foi encerrada. Gere um novo QR Code e leia com o celular desse número. A caixa de entrada e as configurações continuam como estão.",
       "RECONNECT": "Gerar novo QR Code",
       "CONNECTED_HELP": "Conectado. Você já pode enviar e receber mensagens.",
       "STATUS": {
