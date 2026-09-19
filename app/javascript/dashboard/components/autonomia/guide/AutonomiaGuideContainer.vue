@@ -218,7 +218,6 @@ watch(accountId, () => store.reset());
                 :message="item.message"
                 :is-last-message="index === messages.length - 1"
                 :sender-name="$t('AUTONOMIA_GUIDE.TITLE')"
-                conversation-inbox-type=""
               />
               <Button
                 v-if="navLocation(item.navigation)"

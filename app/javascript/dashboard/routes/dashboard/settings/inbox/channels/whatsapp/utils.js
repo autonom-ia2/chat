@@ -29,12 +29,88 @@ export const initializeFacebook = (appId, apiVersion) => {
   });
 };
 
-// `waba_id` is the only identifier Meta guarantees across every completion
-// event. FINISH_ONLY_WABA in particular arrives without a phone number, and
-// `business_id` is absent in some Coexistence payloads — requiring either of
-// them rejected valid signups as "Invalid business data".
+// Only waba_id is guaranteed: Meta's coexistence FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING
+// event documents data: { waba_id } alone — no business_id or phone_number_id.
+// FINISH_ONLY_WABA also arrives without a phone number, and `business_id` is absent
+// in some Coexistence payloads — requiring either of them rejected valid signups.
 export const isValidBusinessData = businessData => {
   return Boolean(businessData && businessData.waba_id);
+};
+
+const COEXISTENCE_FINISH_EVENT = 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING';
+
+const FINISH_EVENTS = ['FINISH', COEXISTENCE_FINISH_EVENT];
+
+// Terminal events that end the flow without a Cloud API phone number we can build an
+// inbox from. Embedded Signup v4 can emit any of them depending on the products
+// enabled on the configuration; without an explicit branch the popup simply closes
+// and the caller waits on a promise that never settles.
+const UNSUPPORTED_FINISH_EVENTS = [
+  'FINISH_ONLY_WABA',
+  'FINISH_OBO_MIGRATION',
+  'FINISH_GRANT_ONLY_API_ACCESS',
+];
+
+export const SIGNUP_RESULT = Object.freeze({
+  FINISH: 'finish',
+  UNSUPPORTED: 'unsupported',
+  CANCEL: 'cancel',
+  ERROR: 'error',
+  IGNORE: 'ignore',
+});
+
+// Completions the fork sends to the backend (#225). UNSUPPORTED ones
+// (FINISH_ONLY_WABA, FINISH_OBO_MIGRATION, FINISH_GRANT_ONLY_API_ACCESS) are
+// not refused here: Whatsapp::PhoneInfoService resolves the WABA's only number
+// (or the reauthorized channel's own number) and fails with a clear error when
+// that is ambiguous.
+export const COMPLETION_RESULTS = Object.freeze([
+  SIGNUP_RESULT.FINISH,
+  SIGNUP_RESULT.UNSUPPORTED,
+]);
+
+// is_coexistence to send for a completion. Only a FINISH tells coexistence
+// apart; anything else is unknown, and null (never false) lets
+// Whatsapp::WebhookSetupService fall back to Meta's health data, since an
+// explicit false skips that check.
+export const coexistenceSignal = result =>
+  result?.type === SIGNUP_RESULT.FINISH ? result.isCoexistence : null;
+
+// Maps a WA_EMBEDDED_SIGNUP payload onto the outcomes callers act on. v4 spells the
+// explicit failure event `ERROR` where v3 used `error`, and also reports user-facing
+// failures as a CANCEL carrying an error_message — a bare CANCEL is a deliberate
+// dismissal, so the two have to be told apart rather than both read as "cancelled".
+export const classifySignupEvent = data => {
+  const event = data?.event;
+  if (typeof event !== 'string') return { type: SIGNUP_RESULT.IGNORE };
+
+  // Meta puts the reason in data.data.error_message (#225, Royalty incident); the
+  // top-level read is a fallback for older payload shapes. Reading only the top
+  // level would also downgrade a CANCEL that carries a reason to a silent cancel.
+  const errorMessage = data?.data?.error_message || data?.error_message;
+
+  if (FINISH_EVENTS.includes(event)) {
+    return {
+      type: SIGNUP_RESULT.FINISH,
+      isCoexistence: event === COEXISTENCE_FINISH_EVENT,
+    };
+  }
+
+  if (UNSUPPORTED_FINISH_EVENTS.includes(event)) {
+    return { type: SIGNUP_RESULT.UNSUPPORTED };
+  }
+
+  if (event.toUpperCase() === 'ERROR') {
+    return { type: SIGNUP_RESULT.ERROR, errorMessage };
+  }
+
+  if (event === 'CANCEL') {
+    return errorMessage
+      ? { type: SIGNUP_RESULT.ERROR, errorMessage }
+      : { type: SIGNUP_RESULT.CANCEL };
+  }
+
+  return { type: SIGNUP_RESULT.IGNORE };
 };
 
 export const createMessageHandler = onEmbeddedSignupData => {

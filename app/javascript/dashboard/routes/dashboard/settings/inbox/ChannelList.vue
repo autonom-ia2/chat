@@ -12,7 +12,7 @@ import ChannelItem from 'dashboard/components/widgets/ChannelItem.vue';
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const { accountId, currentAccount } = useAccount();
+const { accountId, currentAccount, isOnChatwootCloud } = useAccount();
 
 const globalConfig = useMapGetter('globalConfig/get');
 
@@ -91,7 +91,12 @@ const channelList = computed(() => {
     channels.push({
       key: 'tiktok',
       title: t('INBOX_MGMT.ADD.AUTH.CHANNEL.TIKTOK.TITLE'),
-      description: t('INBOX_MGMT.ADD.AUTH.CHANNEL.TIKTOK.DESCRIPTION'),
+      description:
+        currentAccount.value &&
+        isOnChatwootCloud.value &&
+        !enabledFeatures.value.channel_tiktok
+          ? t('INBOX_MGMT.ADD.AUTH.CHANNEL.TIKTOK.ACCESS_REQUEST_DESCRIPTION')
+          : t('INBOX_MGMT.ADD.AUTH.CHANNEL.TIKTOK.DESCRIPTION'),
       icon: 'i-woot-tiktok',
     });
   }

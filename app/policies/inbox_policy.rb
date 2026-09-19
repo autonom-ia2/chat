@@ -90,6 +90,11 @@ class InboxPolicy < ApplicationPolicy
     @account_user.administrator?
   end
 
+  # Same rule as reset_secret? (#452): the HMAC token is a credential that leaves the account.
+  def rotate_hmac_token?
+    @account_user.administrator?
+  end
+
   def enable_whatsapp_api_campaigns?
     inbox_manage?
   end
@@ -107,6 +112,10 @@ class InboxPolicy < ApplicationPolicy
   end
 
   def set_inbound_calls?
+    inbox_manage?
+  end
+
+  def set_call_recording?
     inbox_manage?
   end
 

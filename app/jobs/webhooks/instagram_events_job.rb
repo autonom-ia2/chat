@@ -13,7 +13,7 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   # @return [Array] We will support further events like reaction or seen in future
   # `:reaction` é tratado pela Autonom.ia (operate): #reaction só materializa em inbox com agente ativo +
   # flag on; demais inboxes seguem ignorando reações (zero regressão).
-  SUPPORTED_EVENTS = [:message, :read, :reaction].freeze
+  SUPPORTED_EVENTS = [:message, :read, :postback, :reaction].freeze
 
   def perform(entries)
     @entries = entries
@@ -145,6 +145,14 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   def read(messaging, channel)
     # Use a single service to handle read status for both channel types since the params are same
     ::Instagram::ReadStatusService.new(params: messaging, channel: channel).perform
+  end
+
+  def postback(messaging, channel)
+    postback_message = {
+      mid: messaging[:postback][:mid],
+      text: messaging[:postback][:title]
+    }
+    message(messaging.merge(message: postback_message), channel)
   end
 
   # AUTONOMIA (Onda 2b): reação no Instagram. Payload Meta: reaction={mid,action,reaction,emoji}.
