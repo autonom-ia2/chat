@@ -16,8 +16,16 @@ O reviewer inicial identificou clipping na tabela de cliques mobile. A lista pas
 
 ## Atualização de base
 
-A implementação partiu do merge 2b1fe44b22. A main avançou em outras entregas e adicionou useCanManage às ações de campanha. O rebase preservará essas permissões e os testes correspondentes; não é permitido trocar arquivos completos por versões anteriores.
+A implementação partiu do merge 2b1fe44b22. A main avançou em outras entregas e adicionou useCanManage às ações de campanha. O rebase preservou essas permissões e os testes correspondentes; não é permitido trocar arquivos completos por versões anteriores.
 
 ## Validação final
 
 Pendente neste checkpoint. Os logs locais anteriores e o CI de versões anteriores não substituem os gates do HEAD final. Registrar aqui resultados exatos, limitações, review e matriz dos 14 aceites antes de entregar a PR como pronta.
+
+## Correções do review adversarial
+
+O review sobre 562a0ed8be identificou quatro P2: seleção por teclado ausente nos dropdowns; afirmação excessiva de entrega; perda de detalhamento por evidência; e taxa permanente com rótulo de falhas gerais. Todos receberam correções com testes: opt-in `keyboardNavigation` usando os componentes existentes; descrição precisa de aceitação pelo servidor; disclosure dos dois contadores originais; percentual junto à classificação permanente, sem nomes da infraestrutura.
+
+O opt-in limita a mudança de comportamento do FilterSelect aos três seletores da gestão de campanhas. A configuração Vitest alinha VueUse/Vuex à instância Vue da aplicação, para executar componentes reais sem stubs, corrigindo duplicação local de Vue em testes. Nenhum lockfile, dependência instalada ou configuração de runtime mudou.
+
+Primeiro gate integrado depois do rebase e dessas correções: **434 testes focados aprovados** (14 aceites e teclado incluídos), sem falhas/pending. Um teste de visibilidade precisou de `attachTo: document.body` para que jsdom invalide corretamente o estilo dos ancestrais; manteve-se a asserção de abrir/fechar e o gate de navegador. Full suite/build/browser/CI finais ainda serão registrados abaixo. Browser plugin não está listado nesta sessão; a validação usa o Playwright/Chromium já instalado.

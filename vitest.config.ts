@@ -32,7 +32,9 @@ export default defineConfig({
     },
     server: {
       deps: {
-        inline: ['tinykeys', '@material/mwc-icon'],
+        // Match the app's Vue alias inside composable dependencies as well. Otherwise
+        // pnpm's secondary Vue copy can disconnect real dropdown refs in jsdom.
+        inline: ['tinykeys', '@material/mwc-icon', /@vueuse\//, /vuex/],
       },
     },
     setupFiles: ['fake-indexeddb/auto', 'vitest.setup.js'],

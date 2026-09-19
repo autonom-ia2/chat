@@ -22,7 +22,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['reevaluate', 'resume', 'problems']);
-const { t, te, locale } = useI18n();
+const { t, locale } = useI18n();
 const canManage = useCanManage('campaign_manage');
 const showDetails = ref(false);
 const health = computed(() => props.protection || props.campaign.protection);
@@ -98,39 +98,24 @@ const summaryCards = computed(() =>
 
 const metricRows = metrics => {
   if (!metrics) return [];
-  const rows = [
-    [`${NS}.STATUS.sent`, metrics.sent, false],
-    [`${NS}.STATUS.permanent`, metrics.permanent_bounces, false],
-    [`${NS}.STATUS.temporary`, metrics.temporary_bounces, false],
-    [`${NS}.STATUS.bounce_unknown`, metrics.unknown_bounces, false],
-    [`${NS}.STATUS.complained`, metrics.complaints, false],
-    [
-      te('CAMPAIGN_MANAGEMENT.RATES.BOUNCE_RATE')
-        ? 'CAMPAIGN_MANAGEMENT.RATES.BOUNCE_RATE'
-        : `${NS}.STATUS.permanent`,
-      metrics.hard_bounce_rate,
-      true,
-    ],
-    [
-      te('CAMPAIGN_MANAGEMENT.RATES.COMPLAINT_RATE')
-        ? 'CAMPAIGN_MANAGEMENT.RATES.COMPLAINT_RATE'
-        : `${NS}.STATUS.complained`,
-      metrics.complaint_rate,
-      true,
-    ],
-  ];
-  return rows
-    .filter(([, value]) => typeof value === 'number')
-    .map(([label, value, isRate]) => ({
-      label: [`${NS}.STATUS.permanent`, `${NS}.STATUS.bounce_unknown`].includes(
-        label
+  return [
+    ['sent', 'sent'],
+    ['permanent', 'permanent_bounces', 'hard_bounce_rate'],
+    ['temporary', 'temporary_bounces'],
+    ['bounce_unknown', 'unknown_bounces'],
+    ['complained', 'complaints', 'complaint_rate'],
+  ]
+    .filter(([, countKey, rateKey]) =>
+      [metrics[countKey], metrics[rateKey]].some(
+        value => typeof value === 'number'
       )
-        ? displayStatusLabel(
-            t,
-            label === `${NS}.STATUS.permanent` ? 'permanent' : 'bounce_unknown'
-          )
-        : t(label),
-      value: isRate ? rate(value) : number(value),
+    )
+    .map(([key, countKey, rateKey]) => ({
+      key,
+      label: displayStatusLabel(t, key),
+      count:
+        typeof metrics[countKey] === 'number' ? number(metrics[countKey]) : '',
+      rate: typeof metrics[rateKey] === 'number' ? rate(metrics[rateKey]) : '',
     }));
 };
 
@@ -310,12 +295,14 @@ const hasDetails = computed(
             v-if="metricRows(section.metrics).length"
             class="grid grid-cols-2 gap-x-3 gap-y-1 m-0 text-xs text-n-slate-12"
           >
-            <template
-              v-for="row in metricRows(section.metrics)"
-              :key="row.label"
-            >
+            <template v-for="row in metricRows(section.metrics)" :key="row.key">
               <dt>{{ row.label }}</dt>
-              <dd class="m-0 text-end">{{ row.value }}</dd>
+              <dd class="flex flex-wrap justify-end gap-2 m-0 text-end">
+                <span v-if="row.count">{{ row.count }}</span>
+                <span v-if="row.rate" class="text-n-slate-11">{{
+                  row.rate
+                }}</span>
+              </dd>
             </template>
           </dl>
         </div>

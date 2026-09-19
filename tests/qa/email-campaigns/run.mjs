@@ -109,7 +109,7 @@ async function openScreen(name, options = {}) {
     await route.fulfill(response);
   });
   await page.goto(
-    `http://127.0.0.1:3437/app/accounts/436/crm/campaign-management?locale=${locale}&theme=${options.theme || 'light'}${options.campaign === false ? '' : `&campaign=${options.campaign || 4361}`}`
+    `http://127.0.0.1:3437/app/accounts/436/crm/campaign-management?locale=${locale}&theme=${options.theme || 'light'}&role=${options.role || 'admin'}${options.campaign === false ? '' : `&campaign=${options.campaign || 4361}`}`
   );
   await page.waitForFunction(() => window.__qa?.ready === true, null, {
     timeout: 60000,
@@ -1060,6 +1060,81 @@ try {
     }
   );
   await check(
+    'PT: primary and contextual filters operate with the keyboard',
+    async () => {
+      const trigger = recipientFilterGroup.getByRole('button').first();
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      const menu = page.getByRole('listbox', {
+        name: await t('CAMPAIGN_MANAGEMENT.TABLE.STATUS'),
+        exact: true,
+      });
+      assert(await menu.isVisible(), 'Enter did not open the custom menu');
+      assert(
+        (await menu.getByRole('option').count()) === 5,
+        'Keyboard menu lost options'
+      );
+      await page.keyboard.press('End');
+      assert(
+        await menu
+          .getByRole('option')
+          .last()
+          .evaluate(el => el === document.activeElement),
+        'End did not focus last option'
+      );
+      await page.keyboard.press('Home');
+      await page.keyboard.press('ArrowDown');
+      await requestAfter('/recipients', () => page.keyboard.press('Enter'));
+      assert(
+        latest('/recipients').query.status === 'pending',
+        'Keyboard selection differs from API filter'
+      );
+      assert(
+        await trigger.evaluate(el => el === document.activeElement),
+        'Selection did not restore trigger focus'
+      );
+      await page.keyboard.press('Space');
+      assert(await menu.isVisible(), 'Space did not open the custom menu');
+      await page.keyboard.press('Escape');
+      assert(!(await menu.isVisible()), 'Escape did not close');
+      assert(
+        await trigger.evaluate(el => el === document.activeElement),
+        'Escape lost trigger focus'
+      );
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Tab');
+      assert(!(await menu.isVisible()), 'Tab did not leave dropdown');
+      assert(
+        !(await trigger.evaluate(el => el === document.activeElement)),
+        'Tab trapped focus on trigger'
+      );
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Home');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await requestAfter('/recipients', () => page.keyboard.press('Space'));
+      const problemGroup = section.getByRole('group', {
+        name: await ns('STATUS.attention'),
+        exact: true,
+      });
+      const problemTrigger = problemGroup.getByRole('button').first();
+      await problemTrigger.focus();
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Home');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await requestAfter('/recipients', () => page.keyboard.press('Enter'));
+      assert(
+        latest('/recipients').query.status === 'hard_bounced' &&
+          latest('/recipients').query.problem === 'true',
+        'Contextual keyboard filter is not exact'
+      );
+      await requestAfter('/recipients', () => selectRecipientStatus(''));
+    }
+  );
+  await check(
     'PT: temporary, permanent and spam statuses have distinct visual meaning',
     async () => {
       const badgeInfo = async label => {
@@ -1415,6 +1490,8 @@ try {
   await desktop.context.close();
   for (const [name, options] of [
     ['pt-dark', { theme: 'dark' }],
+    ['pt-readonly', { role: 'readonly' }],
+    ['pt-mixed-evidence', { scenario: 'mixed' }],
     ['ar-rtl', { locale: 'ar', viewport: { width: 1440, height: 900 } }],
     ['pt-mobile', { viewport: { width: 390, height: 844 } }],
     [
@@ -1449,6 +1526,69 @@ try {
       screen.page.locator('section[aria-live]').first()
     );
     await screen.shot('recipients', screen.section);
+    if (name === 'pt-readonly') {
+      await check(
+        'Read-only: real permission composable hides write and export actions',
+        async () => {
+          for (const key of ['RESUME', 'REEVALUATE', 'RECHECK', 'EXPORT']) {
+            assert(
+              (await screen.page
+                .getByRole('button', {
+                  name: await screen.ns(key),
+                  exact: true,
+                })
+                .count()) === 0,
+              `Unauthorized action ${key}`
+            );
+          }
+          assert(
+            await screen.section.isVisible(),
+            'Read-only recipient list is missing'
+          );
+        }
+      );
+    }
+    if (name === 'pt-mixed-evidence') {
+      await check(
+        'Mixed: collapsed evidence preserves both exact delivery populations',
+        async () => {
+          const toggle = screen.page.locator('[data-delivery-evidence-toggle]');
+          const evidence = screen.page.locator('[data-delivery-evidence]');
+          assert(
+            !(await evidence.isVisible()),
+            'Evidence should start collapsed'
+          );
+          await toggle.click();
+          const response = screen.latest('/reports').response;
+          const payload =
+            typeof response.body === 'string'
+              ? JSON.parse(response.body).payload
+              : response.body?.payload;
+          assert(
+            payload?.summary?.delivery_evidence,
+            'Missing synthetic response evidence'
+          );
+          const counts = await evidence.locator('dd').allTextContents();
+          const format = value => new Intl.NumberFormat('pt-BR').format(value);
+          assert(
+            counts[0].trim() ===
+              format(payload.summary.delivery_evidence.provider_confirmed),
+            'Recipient-server acceptance count was lost'
+          );
+          assert(
+            counts[1].trim() ===
+              format(payload.summary.delivery_evidence.direct_acceptance_only),
+            'Sending-service acceptance count was lost'
+          );
+          assert(
+            !/\b(?:SES|Amazon|AWS)\b/.test(await evidence.innerText()),
+            'Infrastructure jargon leaked into details'
+          );
+          await screen.shot('delivery-evidence', evidence);
+          await toggle.click();
+        }
+      );
+    }
     if (name === 'pt-direct') {
       await check(
         'Direct: sending-service acceptance with unchanged delivered query',

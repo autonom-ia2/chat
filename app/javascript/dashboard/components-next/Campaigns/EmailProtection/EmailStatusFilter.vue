@@ -100,12 +100,15 @@ const update = value => emit('update:modelValue', value);
     <FilterSelect
       :model-value="modelValue"
       :options="options"
+      keyboard-navigation
+      :aria-label="fieldLabel"
       hide-icon
       variant="faded"
       @update:model-value="update"
     >
-      <template #trigger="{ toggle }">
+      <template #trigger="{ toggle, keyboardAttrs }">
         <Button
+          v-bind="keyboardAttrs"
           type="button"
           md
           slate

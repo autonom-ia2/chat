@@ -50,6 +50,17 @@ const enabled = computed(
 );
 
 const summary = ref(null);
+const showDeliveryEvidence = ref(false);
+const deliveryEvidenceRows = computed(() => {
+  const evidence = summary.value?.delivery_evidence;
+  if (!evidence) return [];
+  return [
+    ['delivered', evidence.provider_confirmed],
+    ['accepted_service', evidence.direct_acceptance_only],
+  ]
+    .filter(([, count]) => Number.isInteger(count) && count >= 0)
+    .map(([key, count]) => ({ key, label: t(`${NS}.STATUS.${key}`), count }));
+});
 const campaigns = ref([]);
 const campaignOptions = ref([]);
 const selectedCampaignId = ref(
@@ -541,6 +552,8 @@ onMounted(() => {
               <FilterSelect
                 v-model="selectedCampaignId"
                 :options="campaignFilterOptions"
+                keyboard-navigation
+                :aria-label="t('CAMPAIGN_MANAGEMENT.FILTER.LABEL')"
                 class="min-w-60"
                 @update:model-value="onFilterChange"
               />
@@ -596,6 +609,8 @@ onMounted(() => {
             <FilterSelect
               v-model="trackedLinkForm.inboxId"
               :options="inboxFilterOptions"
+              keyboard-navigation
+              :aria-label="t('CRM_KANBAN.TRACKED_LINKS.INBOX')"
               class="w-full"
             />
           </label>
@@ -775,6 +790,35 @@ onMounted(() => {
               >
                 {{ rateLabel(card.rate, card.key) }}
               </span>
+              <template
+                v-if="card.key === 'DELIVERED' && deliveryEvidenceRows.length"
+              >
+                <Button
+                  :label="t(`${NS}.DETAILS`)"
+                  :icon="
+                    showDeliveryEvidence
+                      ? 'i-lucide-chevron-up'
+                      : 'i-lucide-chevron-down'
+                  "
+                  :aria-expanded="showDeliveryEvidence"
+                  sm
+                  slate
+                  ghost
+                  class="self-start"
+                  data-delivery-evidence-toggle
+                  @click="showDeliveryEvidence = !showDeliveryEvidence"
+                />
+                <div v-show="showDeliveryEvidence" data-delivery-evidence>
+                  <dl class="flex flex-col gap-2 m-0 text-xs">
+                    <div v-for="item in deliveryEvidenceRows" :key="item.key">
+                      <dt class="text-n-slate-11">{{ item.label }}</dt>
+                      <dd class="m-0 font-medium text-n-slate-12">
+                        {{ number(item.count) }}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </template>
             </div>
           </section>
 
@@ -959,7 +1003,7 @@ onMounted(() => {
                       {{ t('CAMPAIGN_MANAGEMENT.RATES.CLICK_RATE') }}
                     </th>
                     <th class="py-2 pe-3 text-xs font-medium text-end">
-                      {{ t('CAMPAIGN_MANAGEMENT.RATES.BOUNCE_RATE') }}
+                      {{ displayStatusLabel(t, 'permanent') }}
                     </th>
                     <th class="py-2 text-xs font-medium text-end">
                       {{ t('CAMPAIGN_MANAGEMENT.RATES.UNSUBSCRIBE_RATE') }}

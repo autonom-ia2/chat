@@ -97,10 +97,7 @@ describe.each(['en', 'pt_BR'])('recipient server filters (%s)', locale => {
       Reports.getRecipients.mockResolvedValue(next);
       await wrapper.setProps({ refreshKey: 1 });
       await flushPromises();
-      const expectedBadge =
-        badge === 'delivered'
-          ? t('CAMPAIGN_MANAGEMENT.KPIS.DELIVERED')
-          : t(`EMAIL_CAMPAIGN_PROTECTION.STATUS.${badge}`);
+      const expectedBadge = t(`EMAIL_CAMPAIGN_PROTECTION.STATUS.${badge}`);
       expect(wrapper.findAll('tbody td')[2].text()).toBe(expectedBadge);
       expect(wrapper.findAllComponents(EmailStatusFilter)[0].text()).toContain(
         t('EMAIL_CAMPAIGN_PROTECTION.ALL')
@@ -397,7 +394,7 @@ describe('recipient RTL and full identity semantics', () => {
       row.findAll('td').every(cell => cell.attributes('dir') === undefined)
     ).toBe(true);
     expect(row.findAll('td')[2].text()).toBe(
-      i18n.global.t('CAMPAIGN_MANAGEMENT.KPIS.DELIVERED')
+      i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.STATUS.delivered')
     );
     expect(row.find('details').text()).toContain(recipient.name.trim());
     expect(row.find('summary').attributes('tabindex')).not.toBe('-1');

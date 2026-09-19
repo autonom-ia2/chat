@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { mount, config } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
+import { createStore } from 'vuex';
 import enProtection from 'dashboard/i18n/locale/en/emailCampaignProtection.json';
 import enCrm from 'dashboard/i18n/locale/en/crm.json';
 import Badge from '../EmailStatusBadge.vue';
@@ -29,7 +30,19 @@ const i18n = createI18n({
   fallbackLocale: false,
   messages: { en: { ...enCrm, ...enProtection } },
 });
-const global = { plugins: [i18n] };
+const permissionsStore = createStore({
+  state: () => ({ customRoleId: null }),
+  getters: {
+    getCurrentRole: () => 'administrator',
+    getCurrentCustomRoleId: state => state.customRoleId,
+    getCurrentAccountId: () => 1,
+    getCurrentUser: () => ({ accounts: [{ id: 1, permissions: [] }] }),
+  },
+});
+const global = { plugins: [permissionsStore, i18n] };
+afterEach(() => {
+  permissionsStore.state.customRoleId = null;
+});
 const t = i18n.global.t;
 
 describe('issue #444 UX acceptance', () => {
@@ -211,5 +224,25 @@ describe('issue #444 UX acceptance', () => {
       expect(source).not.toContain('HARD_RATE');
       expect(source).not.toContain('OVER_SENT');
     });
+  });
+  it('preserves campaign_manage guards while allowing read-only protection details', () => {
+    permissionsStore.state.customRoleId = 81;
+    const wrapper = mount(Panel, {
+      props: {
+        campaign: { id: 1, status: 'paused', pause_reason: 'manual' },
+        protection: {
+          state: 'healthy',
+          provider: { state: 'healthy' },
+          capabilities: { reevaluate: true, resume: true },
+          current: { sent: 100, evaluated_at: '2026-09-18T00:00:00Z' },
+        },
+      },
+      global,
+    });
+    const buttons = wrapper.findAll('button').map(button => button.text());
+    expect(buttons).not.toContain(t('EMAIL_CAMPAIGN_PROTECTION.RESUME'));
+    expect(buttons).not.toContain(t('EMAIL_CAMPAIGN_PROTECTION.REEVALUATE'));
+    expect(buttons).toContain(t('EMAIL_CAMPAIGN_PROTECTION.DETAILS'));
+    wrapper.unmount();
   });
 });

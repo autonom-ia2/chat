@@ -9,7 +9,7 @@ const props = defineProps({
   campaign: Boolean,
 });
 
-const { t, te } = useI18n();
+const { t } = useI18n();
 const key = computed(() => statusKey(props.record, props.campaign));
 
 const VISUALS = {
@@ -41,13 +41,7 @@ const VISUALS = {
 const visual = computed(
   () => VISUALS[key.value] || ['bg-n-alpha-2 text-n-slate-11', 'i-lucide-info']
 );
-const label = computed(() =>
-  key.value === 'delivered'
-    ? te('CHAT_LIST.DELIVERED')
-      ? t('CHAT_LIST.DELIVERED')
-      : t('CAMPAIGN_MANAGEMENT.KPIS.DELIVERED')
-    : displayStatusLabel(t, key.value)
-);
+const label = computed(() => displayStatusLabel(t, key.value));
 
 const hint = computed(() =>
   t(

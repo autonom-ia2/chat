@@ -253,7 +253,12 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
     });
     expect(wrapper.find('[data-section="CURRENT"]').text()).toContain('200');
     expect(wrapper.find('[data-section="TRIGGER"]').text()).toContain('100');
-    expect(wrapper.text()).toContain(
+    const permanentRow = wrapper.find('[data-section="CURRENT"] dl');
+    expect(permanentRow.text()).toContain(
+      '0.5'.replace('.', locale === 'pt_BR' ? ',' : '.') + '%'
+    );
+    expect(permanentRow.text()).toContain('1');
+    expect(wrapper.text()).not.toContain(
       t('CAMPAIGN_MANAGEMENT.RATES.BOUNCE_RATE')
     );
     expect(wrapper.text()).not.toContain('hard_bounce_rate');

@@ -357,7 +357,10 @@ it('keeps a mixed total conserved while labeling each campaign by its own source
     locale: 'en',
     messages: { en: { ...en, ...crm } },
   });
-  wrapper = mount(Page, { global: { plugins: [i18n, router] } });
+  wrapper = mount(Page, {
+    attachTo: document.body,
+    global: { plugins: [i18n, router] },
+  });
   await flushPromises();
   const rows = wrapper.findAll('table').at(-1).findAll('tbody tr');
   expect(rows[0].findAll('td')[3].text()).toBe(
@@ -368,6 +371,16 @@ it('keeps a mixed total conserved while labeling each campaign by its own source
   expect(cards).toHaveLength(1);
   expect(cards[0].find('.text-2xl').text()).toBe('10');
   expect(cards[0].text()).toContain('Acceptance recorded');
+  const evidence = wrapper.find('[data-delivery-evidence]');
+  expect(evidence.isVisible()).toBe(false);
+  await wrapper.find('[data-delivery-evidence-toggle]').trigger('click');
+  expect(evidence.isVisible()).toBe(true);
+  const details = evidence.findAll('dl > div');
+  expect(details[0].find('dt').text()).toBe('Accepted by recipient server');
+  expect(details[0].find('dd').text()).toBe('7');
+  expect(details[1].find('dt').text()).toBe('Accepted by sending service');
+  expect(details[1].find('dd').text()).toBe('3');
+  expect(evidence.text()).not.toMatch(/\b(?:SES|AWS|Amazon)\b/);
   expect(rows.every(row => row.findAll('td')[4].text() === '')).toBe(true);
 });
 
