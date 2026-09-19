@@ -39,23 +39,53 @@ RSpec.describe 'Autonomia Insurance Connection API', type: :request do
   end
 
   describe 'POST /connection' do
-    it 'stores credentials, syncs with the (mock) connector and never echoes the password' do
+    it 'stores credentials, authenticates and never echoes the password' do
       enable_feature!
       post base, params: credentials, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)
       payload = response.parsed_body['payload']
-      expect(payload['status']).to eq('ready')
+      expect(payload['status']).to eq('discovering')
       expect(payload['username_hint']).to eq('co*******@exemplo.com.br')
-      expect(payload['capabilities']['products'].map { |p| p['product'] }).to include('auto')
+      expect(payload['last_authenticated_at']).to be_present
       expect(response.body).not_to include('segredo')
       expect(response.body).not_to include('corretora@exemplo.com.br')
     end
 
-    it 'maps an invalid password to auth_required instead of raising' do
+    # #469: a descoberta passava de 15 s dentro da requisição e o Rack::Timeout devolvia 500.
+    it 'does not discover capabilities inline: it enqueues the ScanJob instead' do
       enable_feature!
-      post base, params: { connection: { username: 'x@y.com', password: 'invalid' } },
-                 headers: admin.create_new_auth_token, as: :json
+      connector = Autonomia::Insurance::Connector::Mock.new
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      expect(connector).not_to receive(:capabilities)
+
+      expect do
+        post base, params: credentials, headers: admin.create_new_auth_token, as: :json
+      end.to have_enqueued_job(Autonomia::Insurance::Connections::ScanJob)
+
+      connection = Autonomia::Insurance::Connection.find_by(account: account)
+      expect(connection.status).to eq('discovering')
+      expect(connection.capabilities).to be_blank
+    end
+
+    it 'settles to ready with capabilities once the ScanJob runs' do
+      enable_feature!
+      perform_enqueued_jobs(only: Autonomia::Insurance::Connections::ScanJob) do
+        post base, params: credentials, headers: admin.create_new_auth_token, as: :json
+      end
+
+      get base, headers: admin.create_new_auth_token, as: :json
+      payload = response.parsed_body['payload']
+      expect(payload['status']).to eq('ready')
+      expect(payload['capabilities']['products'].map { |p| p['product'] }).to include('auto')
+    end
+
+    it 'maps an invalid password to auth_required instead of raising, without enqueuing discovery' do
+      enable_feature!
+      expect do
+        post base, params: { connection: { username: 'x@y.com', password: 'invalid' } },
+                   headers: admin.create_new_auth_token, as: :json
+      end.not_to have_enqueued_job(Autonomia::Insurance::Connections::ScanJob)
 
       expect(response).to have_http_status(:success)
       expect(response.parsed_body['payload']).to include('status' => 'auth_required')
@@ -85,8 +115,11 @@ RSpec.describe 'Autonomia Insurance Connection API', type: :request do
     it 'refreshes capabilities for a configured connection' do
       enable_feature!
       post base, params: credentials, headers: admin.create_new_auth_token, as: :json
-      post "#{base}/scan", headers: admin.create_new_auth_token, as: :json
+      perform_enqueued_jobs(only: Autonomia::Insurance::Connections::ScanJob) do
+        post "#{base}/scan", headers: admin.create_new_auth_token, as: :json
+      end
       expect(response).to have_http_status(:success)
+      get base, headers: admin.create_new_auth_token, as: :json
       expect(response.parsed_body['payload']['last_capability_scan_at']).to be_present
     end
   end
