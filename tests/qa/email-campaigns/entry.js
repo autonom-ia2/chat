@@ -5,6 +5,7 @@ import { createRouter, createMemoryHistory } from 'vue-router';
 import { createI18n } from 'vue-i18n';
 import axios from 'axios';
 import FloatingVue from 'floating-vue';
+import '@chatwoot/viz/style.css';
 import App from './App.vue';
 
 const params = new URLSearchParams(location.search);

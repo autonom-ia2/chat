@@ -989,6 +989,7 @@ try {
   } = desktop;
   await shot('protection', page.locator('section[aria-live]').first());
   await shot('recipients-before', section);
+  const timelineSection = page.locator('[data-campaign-timeline]');
   await check(
     'PT: customer surface uses Chatwoot controls and hides infrastructure jargon',
     async () => {
@@ -1070,6 +1071,153 @@ try {
       await page.mouse.move(0, 0);
       await tooltip.waitFor({ state: 'hidden' });
       return { shown: true, hiddenAfterLeave: true };
+    }
+  );
+  await check(
+    'PT: timeline hides point labels and uses the native grouped tooltip',
+    async () => {
+      assert(await timelineSection.isVisible(), 'Timeline card is not visible');
+      assert(
+        (await timelineSection.locator('.cw-viz-line__value').count()) === 0,
+        'Point values are rendered over the line chart'
+      );
+      assert(
+        (await timelineSection.locator('[data-timeline-metric]').count()) === 3,
+        'Timeline KPI strip is incomplete'
+      );
+      const dailyTicks = timelineSection.locator(
+        '.cw-viz-line__x-tick:not(.hidden)'
+      );
+      assert(
+        (await dailyTicks.count()) <= 7,
+        'Daily timeline exposes too many x-axis labels'
+      );
+      const hoverTarget = timelineSection
+        .locator('.cw-viz-line__point-group[data-point-index="1"]')
+        .first();
+      await hoverTarget.hover();
+      const tooltip = timelineSection.getByRole('tooltip').first();
+      await tooltip.waitFor({ state: 'visible' });
+      const tooltipText = await tooltip.innerText();
+      assert(
+        tooltipText.includes(await t('CAMPAIGN_MANAGEMENT.TABLE.OPENS')) &&
+          tooltipText.includes(await t('CAMPAIGN_MANAGEMENT.TABLE.CLICKS')),
+        'Timeline tooltip does not group engagement series'
+      );
+      await shot('timeline-day', timelineSection, { sequence: false });
+      await page.mouse.move(0, 0);
+      return { visibleTicks: await dailyTicks.count() };
+    }
+  );
+  await check(
+    'PT: hourly timeline preserves 24 points with sparse readable labels',
+    async () => {
+      const hourLabel = await t('CAMPAIGN_MANAGEMENT.TIMELINE.INTERVAL.HOUR');
+      const hourButton = timelineSection.getByRole('button', {
+        name: hourLabel,
+        exact: true,
+      });
+      await requestAfter('/timeline', () => hourButton.click());
+      await settle();
+
+      const hourlyRequest = latest('/timeline');
+      assert(
+        hourlyRequest?.query?.interval === 'hour',
+        JSON.stringify(hourlyRequest)
+      );
+      const hourlyPoints = timelineSection.locator(
+        '.cw-viz-line__series[data-series-id="delivered"] .cw-viz-line__point-group'
+      );
+      assert(
+        (await hourlyPoints.count()) === 24,
+        `Expected 24 hourly delivery points, got ${await hourlyPoints.count()}`
+      );
+      const visibleTicks = timelineSection.locator(
+        '.cw-viz-line__x-tick:not(.hidden)'
+      );
+      const visibleTickCount = await visibleTicks.count();
+      assert(
+        visibleTickCount >= 4 && visibleTickCount <= 7,
+        `Hourly timeline exposes ${visibleTickCount} x-axis labels`
+      );
+      assert(
+        (await timelineSection.locator('.cw-viz-line__value').count()) === 0,
+        'Hourly chart restored overlapping point values'
+      );
+      const tickLabels = await visibleTicks
+        .locator('.cw-viz-line__axis-label--x')
+        .allTextContents();
+      assert(
+        tickLabels.every(label => label.trim() && !label.includes('…')),
+        `Hourly axis contains truncated labels: ${JSON.stringify(tickLabels)}`
+      );
+      assert(
+        new Set(tickLabels).size === tickLabels.length,
+        `Hourly axis labels are ambiguous: ${JSON.stringify(tickLabels)}`
+      );
+      const pathStyles = await timelineSection
+        .locator('.cw-viz-line__path')
+        .evaluateAll(paths =>
+          paths.map(path => ({
+            fill: getComputedStyle(path).fill,
+            stroke: getComputedStyle(path).stroke,
+          }))
+        );
+      assert(
+        pathStyles.every(style => style.fill === 'none'),
+        `Line paths must not render an area fill: ${JSON.stringify(pathStyles)}`
+      );
+      const pointBackgrounds = await timelineSection
+        .locator('.cw-viz-line__point-background')
+        .evaluateAll(points =>
+          points.map(point => getComputedStyle(point).fill)
+        );
+      assert(
+        pointBackgrounds.every(
+          fill =>
+            fill !== 'rgb(0, 0, 0)' &&
+            fill !== 'rgba(0, 0, 0, 1)' &&
+            fill !== 'black'
+        ),
+        `Point borders fell back to black: ${JSON.stringify([
+          ...new Set(pointBackgrounds),
+        ])}`
+      );
+
+      const focusPoint = hourlyPoints.nth(14);
+      await focusPoint.hover();
+      const tooltip = timelineSection.getByRole('tooltip').first();
+      await tooltip.waitFor({ state: 'visible' });
+      assert(
+        (await tooltip.locator('.cw-viz-line__tooltip-row').count()) === 3,
+        'Hourly tooltip must show all three metrics'
+      );
+      const tooltipLabels = await tooltip
+        .locator('.cw-viz-line__tooltip-label')
+        .evaluateAll(labels =>
+          labels.map(label => ({
+            text: label.textContent?.trim(),
+            clientWidth: label.clientWidth,
+            scrollWidth: label.scrollWidth,
+          }))
+        );
+      assert(
+        tooltipLabels.every(
+          label => label.scrollWidth <= label.clientWidth + 1
+        ),
+        `Timeline tooltip labels are truncated: ${JSON.stringify(tooltipLabels)}`
+      );
+      await shot('timeline-hour', timelineSection, { sequence: false });
+      await page.mouse.move(0, 0);
+
+      const dayButton = timelineSection.getByRole('button', {
+        name: await t('CAMPAIGN_MANAGEMENT.TIMELINE.INTERVAL.DAY'),
+        exact: true,
+      });
+      await requestAfter('/timeline', () => dayButton.click());
+      await settle();
+
+      return { points: 24, visibleTicks: visibleTickCount };
     }
   );
   await check(
@@ -1692,7 +1840,7 @@ try {
         }
       );
     }
-    if (name === 'pt-dark')
+    if (name === 'pt-dark') {
       await check('Dark: rendered theme changes badge colors', () => {
         assert(screen.record.layout.dark, 'Dark class not active');
         const light = results.screens[0].initialLayout.badges[0];
@@ -1703,6 +1851,11 @@ try {
         );
         return { light, dark };
       });
+      const darkTimeline = screen.page.locator('[data-campaign-timeline]');
+      await darkTimeline.scrollIntoViewIfNeeded();
+      await screen.settle();
+      await screen.shot('timeline-day-dark', darkTimeline, { sequence: false });
+    }
     if (name === 'ar-rtl') {
       await check(
         'Arabic: RTL layout with localized status and interface controls',
@@ -1747,6 +1900,10 @@ try {
         'Arabic: table and open detail email isolation preserves RTL labels',
         () => rtlEmails(screen)
       );
+      const rtlTimeline = screen.page.locator('[data-campaign-timeline]');
+      await rtlTimeline.scrollIntoViewIfNeeded();
+      await screen.settle();
+      await screen.shot('timeline-day-rtl', rtlTimeline, { sequence: false });
     }
     if (name === 'pt-sidebar-narrow') {
       await screen.requestAfter('/recipients', () =>
@@ -1883,6 +2040,61 @@ try {
         }),
       });
       await screen.shot('mobile-click-cards', mobileClicksSection);
+      await check(
+        'Mobile: hourly timeline stays inside the card with sparse labels',
+        async () => {
+          const timeline = screen.page.locator('[data-campaign-timeline]');
+          const hourButton = timeline.getByRole('button', {
+            name: await screen.t('CAMPAIGN_MANAGEMENT.TIMELINE.INTERVAL.HOUR'),
+            exact: true,
+          });
+          await screen.requestAfter('/timeline', () => hourButton.click());
+          await screen.settle();
+
+          const bounds = await timeline.evaluate(element => ({
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+          }));
+          assert(
+            bounds.scrollWidth <= bounds.clientWidth + 1,
+            JSON.stringify(bounds)
+          );
+          const ticks = timeline.locator('.cw-viz-line__x-tick:not(.hidden)');
+          assert(
+            (await ticks.count()) <= 4,
+            'Mobile hourly chart exposes too many axis labels'
+          );
+          const labelGeometry = await ticks
+            .locator('.cw-viz-line__axis-label--x')
+            .evaluateAll(labels =>
+              labels.map(label => {
+                const rect = label.getBoundingClientRect();
+                return {
+                  left: rect.left,
+                  right: rect.right,
+                  width: rect.width,
+                };
+              })
+            );
+          assert(
+            labelGeometry.every(
+              (label, index) =>
+                index === 0 || label.left >= labelGeometry[index - 1].right - 1
+            ),
+            `Mobile hourly labels overlap: ${JSON.stringify(labelGeometry)}`
+          );
+          assert(
+            (await timeline.locator('.cw-viz-line__value').count()) === 0,
+            'Mobile hourly chart renders point values'
+          );
+          await screen.shot('timeline-hour-mobile', timeline);
+          return {
+            ...bounds,
+            visibleTicks: await ticks.count(),
+            labelGeometry,
+          };
+        }
+      );
       await check(
         'Mobile: 100% exposed buttons and each detail copy reachable by keyboard',
         () => keyboardCoverage(screen)
