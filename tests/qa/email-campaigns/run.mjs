@@ -1175,6 +1175,45 @@ try {
         new Set(tickLabels).size === tickLabels.length,
         `Hourly axis labels are ambiguous: ${JSON.stringify(tickLabels)}`
       );
+
+      const timelineChart = timelineSection.locator('[data-timeline-chart]');
+      await timelineChart.evaluate(element => {
+        element.style.width = '320px';
+      });
+      await page.waitForTimeout(100);
+
+      const resizedTicks = timelineSection.locator(
+        '.cw-viz-line__x-tick:not(.hidden)'
+      );
+      const resizedLabels = await resizedTicks
+        .locator('.cw-viz-line__axis-label--x')
+        .allTextContents();
+      assert(
+        resizedLabels.every(label => label.trim() && !label.includes('…')),
+        `Hourly labels regressed after resize: ${JSON.stringify(resizedLabels)}`
+      );
+      assert(
+        (await hourlyPoints.count()) === 24,
+        'Resize removed hourly data points'
+      );
+
+      await timelineChart.evaluate(element => {
+        element.style.width = '';
+      });
+      await page.waitForTimeout(100);
+
+      const restoredLabels = await timelineSection
+        .locator(
+          '.cw-viz-line__x-tick:not(.hidden) .cw-viz-line__axis-label--x'
+        )
+        .allTextContents();
+      assert(
+        restoredLabels.every(label => label.trim() && !label.includes('…')),
+        `Hourly labels did not recover after resize: ${JSON.stringify(
+          restoredLabels
+        )}`
+      );
+
       const pathStyles = await timelineSection
         .locator('.cw-viz-line__path')
         .evaluateAll(paths =>

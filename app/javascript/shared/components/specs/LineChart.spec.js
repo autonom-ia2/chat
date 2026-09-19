@@ -15,11 +15,13 @@ vi.mock('@chatwoot/viz', () => ({
     ],
     template: `
       <div class="viz-line-mock">
-        <span
-          v-for="(label, index) in data.categories"
-          :key="index"
-          class="cw-viz-line__x-tick"
-        >{{ label }}</span>
+        <svg>
+          <g
+            v-for="(label, index) in data.categories"
+            :key="index"
+            class="cw-viz-line__x-tick"
+          ><text>{{ label }}</text></g>
+        </svg>
       </div>
     `,
   },
@@ -27,7 +29,16 @@ vi.mock('@chatwoot/viz', () => ({
 
 describe('LineChart.vue', () => {
   const collection = {
-    labels: ['00h', '01h', '02h', '03h', '04h', '05h', '06h', '07h'],
+    labels: [
+      '00:00 full',
+      '01:00 full',
+      '02:00 full',
+      '03:00 full',
+      '04:00 full',
+      '05:00 full',
+      '06:00 full',
+      '07:00 full',
+    ],
     datasets: [
       {
         id: 'delivered',
@@ -96,6 +107,13 @@ describe('LineChart.vue', () => {
       { index: 6, hidden: false },
       { index: 7, hidden: false },
     ]);
+
+    await wrapper.setProps({ xTickLabels: [] });
+    await flushPromises();
+
+    expect(
+      wrapper.findAll('.cw-viz-line__x-tick').map(tick => tick.text())
+    ).toEqual(collection.labels);
   });
 
   it('keeps the existing default presentation for other consumers', async () => {
