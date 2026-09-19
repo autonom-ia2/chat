@@ -179,8 +179,8 @@ const showDeliveryHint = computed(
           v-for="option in intervalOptions"
           :key="option.id"
           :label="option.label"
-          :variant="interval === option.id ? 'solid' : 'ghost'"
-          color="slate"
+          :variant="interval === option.id ? 'faded' : 'ghost'"
+          :color="interval === option.id ? 'blue' : 'slate'"
           size="sm"
           :aria-pressed="interval === option.id"
           @click="emit('update:interval', option.id)"
@@ -244,7 +244,7 @@ const showDeliveryHint = computed(
           :x-inset="12"
           :x-label-stride="xLabelStride"
           :x-tick-labels="xTickLabels"
-          class="[&_.cw-viz-line__axis]:stroke-n-weak [&_.cw-viz-line__tick-mark]:stroke-n-weak [&_.cw-viz-line\_\_tooltip]:!max-w-[22rem] max-sm:[&_.cw-viz-line\_\_tooltip]:!max-w-[calc(100%-1rem)]"
+          class="![--cw-viz-line-width:0.125rem] [&_.cw-viz-line__axis]:stroke-n-weak [&_.cw-viz-line__tick-mark]:stroke-n-weak [&_.cw-viz-line\_\_tooltip]:!max-w-[22rem] max-sm:[&_.cw-viz-line\_\_tooltip]:!max-w-[calc(100%-1rem)]"
         />
       </div>
 

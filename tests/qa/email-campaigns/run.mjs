@@ -1125,6 +1125,26 @@ try {
         hourlyRequest?.query?.interval === 'hour',
         JSON.stringify(hourlyRequest)
       );
+      const dayButton = timelineSection.getByRole('button', {
+        name: await t('CAMPAIGN_MANAGEMENT.TIMELINE.INTERVAL.DAY'),
+        exact: true,
+      });
+      const segmentStyles = await Promise.all(
+        [hourButton, dayButton].map(button =>
+          button.evaluate(element => {
+            const style = getComputedStyle(element);
+            return {
+              backgroundColor: style.backgroundColor,
+              color: style.color,
+            };
+          })
+        )
+      );
+      assert(
+        segmentStyles[0].backgroundColor !== segmentStyles[1].backgroundColor ||
+          segmentStyles[0].color !== segmentStyles[1].color,
+        `Timeline interval selection lacks visual contrast: ${JSON.stringify(segmentStyles)}`
+      );
       const hourlyPoints = timelineSection.locator(
         '.cw-viz-line__series[data-series-id="delivered"] .cw-viz-line__point-group'
       );
@@ -1161,11 +1181,16 @@ try {
           paths.map(path => ({
             fill: getComputedStyle(path).fill,
             stroke: getComputedStyle(path).stroke,
+            strokeWidth: getComputedStyle(path).strokeWidth,
           }))
         );
       assert(
         pathStyles.every(style => style.fill === 'none'),
         `Line paths must not render an area fill: ${JSON.stringify(pathStyles)}`
+      );
+      assert(
+        pathStyles.every(style => Number.parseFloat(style.strokeWidth) >= 2),
+        `Timeline lines are too thin: ${JSON.stringify(pathStyles)}`
       );
       const pointBackgrounds = await timelineSection
         .locator('.cw-viz-line__point-background')
@@ -1210,10 +1235,6 @@ try {
       await shot('timeline-hour', timelineSection, { sequence: false });
       await page.mouse.move(0, 0);
 
-      const dayButton = timelineSection.getByRole('button', {
-        name: await t('CAMPAIGN_MANAGEMENT.TIMELINE.INTERVAL.DAY'),
-        exact: true,
-      });
       await requestAfter('/timeline', () => dayButton.click());
       await settle();
 
