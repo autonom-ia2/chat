@@ -159,7 +159,7 @@ pt_BR:
         contact_phone_required: 'Número de telefone do contato é obrigatório'
         permission_request_failed: 'Falha ao enviar solicitação de permissão de chamada'
     openai:
-      invalid_api_key: 'A chave da API da OpenAI é inválida ou revogada. Por favor, verifique sua chave no seu painel da OpenAI.'
+      invalid_api_key: 'Chave da OpenAI recusada. Confira se ela está correta, se não foi revogada e se a conta tem crédito em platform.openai.com.'
     inboxes:
       imap:
         socket_error: Por favor, verifique a conexão de rede, endereço IMAP e tente novamente.

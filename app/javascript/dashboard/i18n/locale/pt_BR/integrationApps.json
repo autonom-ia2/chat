@@ -8,7 +8,9 @@
     "NO_RESULTS": "Nenhum resultado encontrado correspondente à sua busca",
     "STATUS": {
       "ENABLED": "Ativado",
-      "DISABLED": "Desativado"
+      "DISABLED": "Desativado",
+      "ACTIVE": "Conectado e funcionando",
+      "INACTIVE": "Conectado, mas desligado. Desconecte e conecte de novo para usar."
     },
     "CONFIGURE": "Configurar",
     "ADD_BUTTON": "Adicionar um novo hook",
