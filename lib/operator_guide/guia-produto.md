@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (138 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (162 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1436,7 +1436,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 ### Ajustar chaves, limites e critérios de score da prospecção
 - intent: Onde coloco a chave do Google?; Por que o mapa não aparece na busca?; Como mudo o funil padrão dos cards?; Como limito quantas buscas podem ser feitas por dia?; Como mudo o peso do score dos leads?
 - onde_fica: Configurações > Prospecção
-- rota: `autonomia_prospecting_settings` - `/app/accounts/:accountId/autonomia/prospecting/settings`
+- rota: `settings_prospecting_index` - `/app/accounts/:accountId/settings/prospecting`
 - gate: papel `administrator` ou `prospecting_manage`
 - pre_requisitos: ser administrador ou ter a permissão de gerenciar prospecção
 - passos: 1. Abra Configurações > Prospecção; 2. Na aba geral, cole a chave de busca de locais e a chave de exibição do mapa; 3. Defina o funil e a etapa padrão usados ao criar cards; 4. Ajuste limite por busca, cache e limites diário e mensal; 5. Na aba score, escolha um perfil ou mude para customizado para editar os pesos; 6. Salve.
@@ -1472,3 +1472,243 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Cotação > Agente; 2. Clique em configurar e criar; 3. Informe o nome do agente e o nome da corretora; 4. Escreva o horário em que a sua equipe assume; 5. Escolha o comportamento, consultivo ou objetivo; 6. Crie o agente e siga editando em Meus agentes.
 - gotchas: é um agente de cotação por conta, e se já existir a tela mostra o que existe em vez de criar outro; nome do agente e da corretora são obrigatórios; o horário precisa ser texto simples de dias e horas; a jornada de cotação, os formulários e as regras de segurança são mantidos pela plataforma e não se editam aqui, você muda identidade, horário e comportamento; nos dois comportamentos o agente responde cobertura consultando as condições gerais, nunca de memória.
 - nav_target: `autonomia_insurance_agent`
+
+### Ligar a verificação em duas etapas da sua conta
+- intent: Como ativo a verificação em duas etapas?; Onde configuro o segundo fator do meu usuário?; O que acontece se eu perder o celular com o aplicativo?; Onde pego novos códigos de recuperação?; Como desligo a verificação em duas etapas?
+- onde_fica: Menu do usuário > Configurações do perfil > Autenticação em Dois Fatores
+- rota: `profile_settings_mfa` - `/app/accounts/:accountId/profile/mfa`
+- gate: papel `administrator` ou `agent` ou `custom_role`
+- pre_requisitos: um aplicativo autenticador no celular, e a senha atual, que é exigida para desligar
+- passos: 1. Abra Configurações do perfil; 2. Em Autenticação em Dois Fatores, clique em gerenciar; 3. Habilite a verificação; 4. Leia o QR Code no aplicativo, ou copie a chave se não conseguir escanear; 5. Digite o código de 6 dígitos e confirme; 6. Guarde os códigos de recuperação e finalize.
+- gotchas: os códigos de recuperação só aparecem uma vez, logo depois da verificação, e cada um serve para um único uso; perdendo o celular, entrar com um código de recuperação é a única saída sem ajuda externa, e perdendo o celular e os códigos só o suporte resolve; gerar novos códigos invalida todos os antigos na hora; para desligar, a plataforma pede a senha mais um código; se a verificação estiver desligada na instalação inteira, a tela nem abre.
+- nav_target: `profile_settings_mfa`
+
+### Ver o histórico de chamadas e ouvir gravações
+- intent: Onde vejo as ligações que entraram?; Como acho as chamadas perdidas?; Onde ouço a gravação de uma ligação?; Como vejo as chamadas de um agente específico?; Por que a tela de chamadas está vazia?
+- onde_fica: Chamadas
+- rota: `calls_dashboard_index` - `/app/accounts/:accountId/calls`
+- gate: papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- pre_requisitos: recurso de voz liberado na conta e uma caixa de entrada com voz habilitada
+- passos: 1. Abra Chamadas; 2. Use os atalhos de perdidas e sem resposta para ir ao que precisa de retorno; 3. Escolha entre recebidas, efetuadas ou em andamento; 4. Filtre por caixa de entrada, e por agente se você for administrador; 5. Ouça a gravação na linha da chamada, quando existir; 6. Clique no número da conversa para abrir o atendimento ligado a ela.
+- gotchas: sem canal de voz configurado a tela mostra o convite para configurar, e não uma lista vazia; quem não é administrador vê apenas as próprias chamadas, por isso o filtro de agente nem aparece; perdidas é chamada que entrou e ninguém atendeu, sem resposta é chamada que você fez e não atenderam; gravação só aparece se o provedor gravou aquela chamada; os filtros ficam no endereço da página, então o link copiado reabre a mesma visão.
+- nav_target: `calls_dashboard_index`
+
+### Ver quem está no site neste momento
+- intent: Quem está no meu site agora?; O que significa a lista Ativo em Contatos?; Por que meus contatos de WhatsApp não aparecem em Ativo?; Como falo com quem está navegando agora?
+- onde_fica: Contatos > Ativo
+- rota: `contacts_dashboard_active` - `/app/accounts/:accountId/contacts/active`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: canal de chat ao vivo instalado no site, que é o que informa presença
+- passos: 1. Abra Contatos; 2. Clique em Ativo; 3. Confira quem está presente agora; 4. Abra o contato para ver a ficha ou iniciar uma conversa; 5. Volte a todos os contatos quando quiser a base inteira.
+- gotchas: presença é medida em segundos, não em dias, então a lista muda sozinha o tempo todo e o contato sai dela pouco depois de fechar a página; quem fala por WhatsApp ou e-mail não aparece aqui mesmo tendo conversado há pouco, porque não há sessão aberta no site; lista vazia quase sempre significa ninguém no site, não erro; o botão de filtros do cabeçalho não funciona nesta visão.
+- nav_target: `contacts_dashboard_active`
+
+### Abrir a ficha de um contato e juntar cadastros repetidos
+- intent: Onde edito os dados de um cliente?; Como vejo todas as conversas que já tive com esta pessoa?; Como junto dois cadastros do mesmo cliente?; Onde bloqueio um contato?; Onde anoto informações sobre o cliente?
+- onde_fica: Contatos > clicar no contato
+- rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: contato já cadastrado
+- passos: 1. Abra Contatos e clique no contato; 2. Ajuste os dados à esquerda e salve; 3. Use as abas de atributos, histórico, notas, mídia e mesclar; 4. Em histórico, veja as conversas anteriores; 5. Em notas, registre o que a equipe precisa saber; 6. Para juntar cadastros repetidos, abra mesclar, escolha o contato principal e confirme.
+- gotchas: ao mesclar, o contato principal é o que sobrevive e o outro é excluído, com os dados do principal prevalecendo em caso de conflito, e não há desfazer; excluir contato é permanente; bloquear não apaga o contato, só impede novo contato; e-mail ou telefone repetido é recusado por já pertencer a outro cadastro; abrindo a ficha a partir de um segmento ou de uma etiqueta, a tela é a mesma e o voltar devolve para aquela lista.
+- nav_target: `contacts_edit`
+
+### Cadastrar empresas e achar a que você procura
+- intent: Onde cadastro uma empresa?; Como agrupo os contatos de uma mesma empresa?; Onde busco uma empresa pelo nome ou domínio?; Por que não vejo Empresas no menu?
+- onde_fica: Empresas
+- rota: `companies_dashboard_index` - `/app/accounts/:accountId/companies`
+- gate: feature flag `companies`; papel `administrator` ou `agent`
+- pre_requisitos: recurso de Empresas liberado na conta
+- passos: 1. Abra Empresas; 2. Busque pelo nome ou domínio; 3. Ajuste a ordenação; 4. Clique em adicionar empresa e preencha os dados; 5. Ao salvar, a plataforma abre a ficha da empresa criada.
+- gotchas: Empresas é liberado por conta, então pode simplesmente não aparecer no menu; criar a empresa não vincula contato nenhum, o vínculo é feito dentro da ficha ou pelo campo empresa do contato; busca e ordenação ficam no endereço da página, então dá para compartilhar o link já filtrado.
+- nav_target: `companies_dashboard_index`
+
+### Ver a empresa por dentro e vincular os contatos dela
+- intent: Como vinculo um contato a uma empresa?; Onde vejo as conversas dos contatos de uma empresa?; Como tiro um contato de uma empresa?; O que acontece com os contatos se eu excluir a empresa?
+- onde_fica: Empresas > clicar na empresa
+- rota: `companies_dashboard_show` - `/app/accounts/:accountId/companies/:companyId`
+- gate: feature flag `companies`; papel `administrator` ou `agent`
+- pre_requisitos: empresa cadastrada e contatos existentes para vincular
+- passos: 1. Abra Empresas e clique na empresa; 2. Ajuste nome, domínio, descrição e avatar e atualize; 3. Use as abas de histórico, notas e contatos; 4. Em contatos, adicione pesquisando e confirmando o vínculo; 5. Use remover para desvincular.
+- gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta.
+- nav_target: `companies_dashboard_show`
+
+### Abrir a Central de Ajuda no portal certo
+- intent: Onde fica a Central de Ajuda?; Por que abriu outro portal?; Como troco de portal?; Sumiu a Central de Ajuda do menu, e agora?
+- onde_fica: Central de Ajuda
+- rota: `portals_index` - `/app/accounts/:accountId/portals/:navigationPath`
+- gate: feature flag `help_center`; papel `administrator` ou `knowledge_base_manage`
+- pre_requisitos: recurso de Central de Ajuda liberado na conta, e permissão de gerenciar base de conhecimento
+- passos: 1. Clique em Central de Ajuda e escolha artigos, categorias, localidades ou configurações; 2. a tela abre o último portal e idioma que você usou; 3. se o portal lembrado não existir mais, ela abre o primeiro portal da conta.
+- gotchas: não é uma tela de verdade, é um redirecionamento, por isso o endereço muda sozinho; sem nenhum portal criado, ela leva direto à criação; a lembrança do último portal é de cada usuário, então dois colegas podem abrir portais diferentes pelo mesmo item do menu.
+- nav_target: `portals_index`
+
+### Criar o portal da central de ajuda
+- intent: Como crio uma central de ajuda?; O que é portal?; O que preencho para criar o portal?; Onde escolho o endereço do portal?
+- onde_fica: Central de Ajuda > Criar portal
+- rota: `portals_new` - `/app/accounts/:accountId/portals/new`
+- gate: feature flag `help_center`; papel `administrator` ou `knowledge_base_manage`
+- pre_requisitos: permissão de gerenciar base de conhecimento
+- passos: 1. Clique em criar portal; 2. preencha o nome; 3. confira o endereço, preenchido sozinho a partir do nome; 4. crie; 5. o portal abre já na lista de artigos.
+- gotchas: só existem dois campos aqui, e logo, cor, domínio e integrações ficam para depois, em configurações; o endereço só aceita letras, números e hífen; o portal nasce com inglês como idioma padrão, então adicione o português antes de escrever; mudar o endereço depois muda o link público.
+- nav_target: `portals_new`
+
+### Ajustar aparência, domínio e integrações do portal
+- intent: Como coloco meu domínio na central de ajuda?; Onde troco o logo e a cor?; Como ligo o chat ao vivo no portal?; Como coloco a medição de acesso?; Como excluo um portal?
+- onde_fica: Central de Ajuda > Configurações
+- rota: `portals_settings_index` - `/app/accounts/:accountId/portals/:portalSlug/settings`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal criado, e acesso ao painel de DNS para usar domínio próprio
+- passos: 1. Abra configurações e use as abas de geral, domínio, tema e integrações; 2. em geral ajuste logo, nome, textos e cor; 3. em domínio cadastre o seu endereço e aponte o registro indicado; 4. em tema escolha o leiaute e os links sociais; 5. em integrações ligue o chat ao vivo e as ferramentas de medição.
+- gotchas: trocar o endereço recarrega a tela no link novo e os antigos deixam de funcionar; excluir o portal pede o nome na confirmação e é permanente; sendo o último portal, a tela volta para a criação; dá para enviar as instruções de DNS por e-mail para quem cuida do site; campo de integração em branco desliga aquela integração.
+- nav_target: `portals_settings_index`
+
+### Cuidar dos idiomas do portal
+- intent: Como coloco a central de ajuda em português?; Como adiciono outro idioma?; O que é idioma em rascunho?; Como escolho o que aparece na página inicial do portal?
+- onde_fica: Central de Ajuda > Localidades
+- rota: `portals_locales_index` - `/app/accounts/:accountId/portals/:portalSlug/locales`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal criado
+- passos: 1. Abra localidades e veja o cartão de cada idioma; 2. adicione um idioma novo, escolhendo se entra publicado ou em rascunho; 3. use o menu do cartão para tornar padrão, publicar ou mover para rascunho; 4. localize o conteúdo daquele idioma; 5. escolha as categorias e artigos em destaque na página inicial.
+- gotchas: idioma em rascunho não aparece para o visitante, e serve para montar o conteúdo antes de abrir; o idioma padrão é o que abre para quem entra e não pode ir para rascunho; campo em branco herda o valor do idioma padrão; artigos e categorias são por idioma, e escrever em português não gera as versões nos outros.
+- nav_target: `portals_locales_index`
+
+### Ver, filtrar e organizar os artigos do portal
+- intent: Onde vejo todos os artigos?; Como acho um artigo específico?; Como publico vários artigos de uma vez?; Como mudo a ordem dos artigos dentro da categoria?; Onde estão meus rascunhos?
+- onde_fica: Central de Ajuda > Artigos
+- rota: `portals_articles_index` - `/app/accounts/:accountId/portals/:portalSlug/:locale/:categorySlug?/articles/:tab?`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal criado com pelo menos um idioma
+- passos: 1. Abra artigos; 2. escolha a aba de todos, meus, rascunho, publicado ou arquivado; 3. ajuste idioma e categoria; 4. busque pelo texto; 5. marque artigos para publicar, arquivar, mover de categoria ou excluir em lote.
+- gotchas: trocar o idioma limpa o filtro de categoria; arrastar para reordenar só existe dentro de uma categoria, e não funciona com busca ativa; a ação em lote pula artigos publicados que têm edições não publicadas e avisa quantos ignorou, menos quando a ação é publicar; excluir em lote é definitivo.
+- nav_target: `portals_articles_index`
+
+### Escrever um artigo do zero
+- intent: Como crio um artigo?; Em que categoria o artigo entra?; Como mudo o autor do artigo?; Escrevi o texto e não salvou, por quê?
+- onde_fica: Central de Ajuda > Artigos > Novo artigo
+- rota: `portals_articles_new` - `/app/accounts/:accountId/portals/:portalSlug/:locale/:categorySlug?/articles/new`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal com o idioma escolhido e pelo menos uma categoria nesse idioma
+- passos: 1. Clique em novo artigo; 2. escreva o título e clique fora do campo, o que cria o artigo como rascunho; 3. ajuste autor e categoria; 4. escreva o conteúdo; 5. a tela passa sozinha para a edição do artigo criado.
+- gotchas: nada é salvo enquanto o título estiver vazio, porque é ele que cria o artigo; entrando pela categoria, o artigo já nasce nela, senão cai na primeira da lista; o salvamento automático do conteúdo só começa depois que o artigo existe; havendo arquivo subindo, a criação espera terminar.
+- nav_target: `portals_articles_new`
+
+### Editar, revisar e publicar um artigo
+- intent: Editei o artigo e o site não mudou, por quê?; Como publico as alterações?; Como volto atrás numa edição?; Onde coloco título e descrição para busca?; Como vejo o artigo como o cliente vê?
+- onde_fica: Central de Ajuda > Artigos > clicar no artigo
+- rota: `portals_articles_edit` - `/app/accounts/:accountId/portals/:portalSlug/:locale/:categorySlug?/articles/:tab?/edit/:articleSlug`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: artigo já criado
+- passos: 1. Abra o artigo pela lista; 2. edite título e conteúdo, que salvam sozinhos; 3. pré-visualize para ver a página pública; 4. use o menu de status para publicar, voltar a rascunho ou arquivar; 5. em artigo publicado, publique as alterações, compare com o que está no ar ou descarte a edição.
+- gotchas: em artigo já publicado a edição fica guardada e não vai ao ar até você publicar as alterações, e é por isso que o site continua mostrando o texto antigo; mudar o status com alterações pendentes pergunta antes se aplica ou descarta; publicar fica bloqueado enquanto um salvamento ou envio de arquivo está em andamento; título e descrição para busca ficam no painel de propriedades, não no corpo do texto.
+- nav_target: `portals_articles_edit`
+
+### Criar e ordenar as categorias do portal
+- intent: Como agrupo os artigos por assunto?; Como crio uma categoria?; Como mudo a ordem das categorias no site?; Como renomeio ou excluo uma categoria?
+- onde_fica: Central de Ajuda > Categorias
+- rota: `portals_categories_index` - `/app/accounts/:accountId/portals/:portalSlug/:locale/categories`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal criado com o idioma desejado
+- passos: 1. Abra categorias e escolha o idioma; 2. crie a categoria com nome, endereço, descrição e ícone; 3. arraste os cartões para definir a ordem no portal público; 4. clique numa categoria para ver e reordenar os artigos dela.
+- gotchas: categoria é por idioma, e criar em português não cria a equivalente nos outros; o endereço da categoria entra no link público; arrastar para reordenar não funciona com busca ativa; excluir pelo menu do cartão apaga na hora, sem tela de confirmação.
+- nav_target: `portals_categories_index`
+
+### Levar as conversas para o Slack
+- intent: Como coloco as conversas no Slack?; Dá para responder o cliente de dentro do Slack?; Por que não acho o Slack nas integrações?; Conectei o Slack e nada chega, o que falta?
+- onde_fica: Configurações > Integrações > Slack
+- rota: `settings_integrations_slack` - `/app/accounts/:accountId/settings/integrations/slack`
+- gate: feature flag `integrations`; papel `administrator`
+- pre_requisitos: ser administrador, e a credencial do Slack configurada pelo time da plataforma, senão o cartão nem aparece
+- passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Slack e conecte; 3. Autorize no seu espaço do Slack; 4. Escolha o canal; 5. Escolha entre sincronização nos dois sentidos e somente alertas.
+- gotchas: autorizar não basta, a integração fica inativa até você escolher um canal; para canal privado, adicione o aplicativo ao canal no Slack antes; na sincronização nos dois sentidos tudo que a equipe escrever na conversa do Slack vai para o cliente, e só vira nota interna com o prefixo note:; a resposta só sai com o nome do agente se o e-mail dele no Slack for o mesmo da plataforma; quando a conexão expira, a saída é excluir e conectar de novo.
+- nav_target: `settings_integrations_slack`
+
+### Conectar o Linear para abrir tarefas da conversa
+- intent: Onde conecto o Linear?; Como abro uma tarefa a partir de uma conversa?; O Linear não aparece nas integrações, por quê?; Como desconecto o Linear?
+- onde_fica: Configurações > Integrações > Linear
+- rota: `settings_integrations_linear` - `/app/accounts/:accountId/settings/integrations/linear`
+- gate: papel `administrator`
+- pre_requisitos: ser administrador, recurso liberado na conta e credencial configurada pelo time da plataforma
+- passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Linear; 3. Conecte; 4. Autorize dentro do Linear; 5. Confirme que a tela mostra conectado.
+- gotchas: são duas condições somadas para o cartão existir, recurso na conta e credencial da plataforma, e faltando uma não há nada a fazer pelo painel; a conta aceita uma conexão só; depois de conectado, o uso acontece dentro da conversa, não nesta tela; desconectar derruba os vínculos existentes.
+- nav_target: `settings_integrations_linear`
+
+### Conectar o Notion
+- intent: Como conecto o Notion?; Onde autorizo meu espaço do Notion?; Não encontro o Notion nas integrações; Como removo o acesso?
+- onde_fica: Configurações > Integrações > Notion
+- rota: `settings_integrations_notion` - `/app/accounts/:accountId/settings/integrations/notion`
+- gate: papel `administrator`
+- pre_requisitos: ser administrador, recurso liberado na conta e credencial configurada pelo time da plataforma
+- passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Notion; 3. Conecte; 4. Escolha o espaço de trabalho e autorize; 5. Confirme que aparece conectado.
+- gotchas: mesmo padrão do Linear, e se faltar recurso ou credencial o cartão some da lista; a conexão é da conta inteira, não por caixa de entrada; excluir remove o acesso ao espaço e derruba o que dependia dele.
+- nav_target: `settings_integrations_notion`
+
+### Conectar a loja Shopify
+- intent: Como conecto minha loja Shopify?; Qual endereço eu coloco para conectar a loja?; Deu erro ao voltar da Shopify, e agora?; Por que a Shopify não aparece nas integrações?
+- onde_fica: Configurações > Integrações > Shopify
+- rota: `settings_integrations_shopify` - `/app/accounts/:accountId/settings/integrations/shopify`
+- gate: feature flag `integrations`; papel `administrator`
+- pre_requisitos: ser administrador, a integração ligada na instalação e liberada na conta, e o endereço da loja no formato sualoja.myshopify.com
+- passos: 1. Abra Configurações > Integrações; 2. Clique no cartão da Shopify; 3. Conecte; 4. Digite o endereço da loja; 5. Conclua a autorização e volte.
+- gotchas: o campo só aceita endereço terminado em myshopify.com, e o domínio próprio da loja é recusado, mesmo sendo o que seus clientes usam; são três condições para o cartão aparecer, e sem elas o endereço direto dá página não encontrada; se a volta trouxer erro, a tela avisa e basta repetir.
+- nav_target: `settings_integrations_shopify`
+
+### Mostrar um sistema seu dentro da conversa
+- intent: Como mostro os dados do meu sistema dentro da conversa?; Onde cadastro um aplicativo no painel?; Dá para ver a apólice do cliente sem sair do atendimento?; Cadastrei o aplicativo e ele abre em branco, por quê?
+- onde_fica: Configurações > Integrações > Painel de Aplicativos
+- rota: `settings_integrations_dashboard_apps` - `/app/accounts/:accountId/settings/integrations/dashboard_apps`
+- gate: feature flag `integrations`; papel `administrator`
+- pre_requisitos: ser administrador e ter uma página publicada que possa ser aberta dentro de outra
+- passos: 1. Abra Configurações > Integrações; 2. Entre em Painel de Aplicativos; 3. Adicione um aplicativo; 4. Preencha o nome e o endereço da sua página; 5. Salve e confira numa conversa.
+- gotchas: nome e endereço válido são obrigatórios; a plataforma entrega o contexto da conversa à sua página por um aviso de janela, e se a sua página não escutar esse aviso ela abre em branco, parecendo quebrada, embora o cadastro esteja certo; excluir tira o aplicativo de todas as conversas na hora.
+- nav_target: `settings_integrations_dashboard_apps`
+
+### Ver os modelos de mensagem do WhatsApp
+- intent: Onde vejo os modelos do WhatsApp?; Como crio um modelo novo?; Meu modelo foi aprovado mas não aparece aqui, por quê?; Como vejo o modelo antes de usar numa campanha?
+- onde_fica: Configurações > Modelos
+- rota: `settings_templates` - `/app/accounts/:accountId/settings/templates`
+- gate: papel `administrator`
+- pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
+- passos: 1. Abra Configurações > Modelos; 2. Sincronize os modelos; 3. Filtre por caixa, idioma e tipo; 4. Busque pelo nome ou pelo texto; 5. Abra o modelo para ver status, categoria e caixas.
+- gotchas: esta tela só exibe, porque criar e editar modelo é sempre no provedor, e não há botão de criar aqui; sincronizar fica desligado sem nenhuma caixa de WhatsApp; a sincronização leva alguns minutos e a tela mostra a hora da última tentativa; respondendo só parte das caixas, aparece aviso de sincronização parcial e a lista fica incompleta; modelo ainda não enviado para aprovação não serve para campanha.
+- nav_target: `settings_templates`
+
+### Trazer contatos e conversas de outra ferramenta
+- intent: Como trago meus contatos da ferramenta antiga?; Dá para importar o histórico de conversas?; De quais sistemas eu consigo importar?; Posso rodar duas importações ao mesmo tempo?
+- onde_fica: Configurações > Dados > Importar
+- rota: `settings_data_imports` - `/app/accounts/:accountId/settings/data`
+- gate: feature flag `data_import`; papel `administrator`
+- pre_requisitos: ser administrador, recurso liberado na conta, e a chave de acesso do sistema de origem
+- passos: 1. Abra Configurações > Dados; 2. Clique em importar; 3. Escolha a fonte; 4. Dê um nome que você reconheça depois; 5. Cole a chave e, quando for o caso, o domínio; 6. Marque contatos, conversas ou os dois e importe.
+- gotchas: as fontes são apenas as duas listadas, e não existe envio de planilha nesta tela, porque o CSV de contatos fica em Contatos; a chave é testada antes e o botão só libera quando ela é aceita, então chave errada trava aqui e não no meio da carga; só uma importação roda por vez; a aba de exportar existe mas ainda não está disponível.
+- nav_target: `settings_data_imports`
+
+### Acompanhar uma importação e ver o que ficou de fora
+- intent: Como sei se a importação terminou?; Quantos contatos entraram de verdade?; O que deu erro na importação?; Por que alguns registros foram ignorados?
+- onde_fica: Configurações > Dados > clicar na importação
+- rota: `settings_data_import_show` - `/app/accounts/:accountId/settings/data/:dataImportId`
+- gate: feature flag `data_import`; papel `administrator`
+- pre_requisitos: uma importação já iniciada
+- passos: 1. Abra Configurações > Dados; 2. Clique na importação; 3. Leia os totais e o progresso; 4. Abra as seções de erros e de ignorados; 5. Baixe o arquivo de cada uma para conferir linha a linha; 6. Se precisar, tente novamente ou cancele.
+- gotchas: registro ignorado não é erro, é linha que a plataforma decidiu não trazer, e o motivo está no arquivo; as seções abrem sozinhas quando há algo dentro; a tela se atualiza enquanto a importação roda e para quando termina; cancelar encerra e não volta sozinha.
+- nav_target: `settings_data_import_show`
+
+### Escolher um modelo pronto de e-mail
+- intent: Onde estão os modelos prontos de e-mail?; Como aplico um modelo na minha campanha?; Dá para ver o modelo antes de usar?; Usar um modelo apaga o que eu já escrevi?
+- onde_fica: Campanhas > Campanhas de e-mail > abrir a campanha > galeria de modelos
+- rota: `campaigns_email_templates` - `/app/accounts/:accountId/campaigns/email_campaigns/:campaignId/templates`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: campanhas de e-mail liberadas na conta, uma campanha já criada e permissão de gerenciar campanhas
+- passos: 1. Abra Campanhas > Campanhas de e-mail; 2. Abra a campanha no editor; 3. Vá para a galeria de modelos; 4. Filtre pela categoria; 5. Pré-visualize e use o modelo.
+- gotchas: usar o modelo substitui o conteúdo atual da campanha, então quem já escreveu perde o que estava lá; sem permissão de gerenciar campanhas sobra só a pré-visualização; as miniaturas carregam conforme você rola; se o modelo não tiver conteúdo editável, a tela avisa e nada é aplicado.
+- nav_target: `campaigns_email_templates`
+
+### Ver o resultado de uma campanha de WhatsApp
+- intent: Quantas pessoas receberam a campanha?; Quantos leram a mensagem?; Por que alguns contatos foram ignorados?; A campanha já terminou de enviar?; Como vejo contato por contato o que aconteceu?
+- onde_fica: Campanhas > WhatsApp Oficial > Ver análises
+- rota: `campaigns_whatsapp_analytics` - `/app/accounts/:accountId/campaigns/whatsapp/:campaignId/analytics`
+- gate: feature flag `whatsapp_campaign`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: uma campanha de WhatsApp Oficial já enviada ou em envio
+- passos: 1. Abra Campanhas > WhatsApp Oficial; 2. Clique em ver análises; 3. Leia os números de público, enviadas, entregues, lidas, falhas e ignoradas; 4. Use as abas de status para filtrar; 5. Navegue pela lista para ver contato por contato.
+- gotchas: entregues já inclui as lidas, então somar os dois conta o mesmo contato duas vezes; enviadas quer dizer aceita para entrega, não entregue no celular; ignoradas são contatos descartados antes do envio, quase sempre telefone ausente ou inválido, e é o número que vale olhar para limpar a base; campanhas enviadas antes desta tela existir aparecem sem dado, e isso não é erro.
+- nav_target: `campaigns_whatsapp_analytics`
