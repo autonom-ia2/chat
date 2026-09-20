@@ -64,6 +64,27 @@
     },
     "SIDEBAR_DESCRIPTION": {
       "DIALOGFLOW": "Dialogflow é uma plataforma de processamento de linguagem natural para a construção de interfaces conversais. Integrá-lo com {installationName} permite que os bots lidem primeiro com consultas e transfiram para os agentes quando necessário. Ele ajuda a qualificar leads e reduzir a carga de trabalho dos agentes respondendo às FAQ. Para adicionar um fluxo de diálogo (Dialogflow), crie uma Conta de Serviço no Google Console e compartilhe as credenciais. Consulte sua documentação para obter detalhes"
+    },
+    "START_HERE": "Comece por aqui",
+    "OPENAI_KEY_GUIDE": {
+      "TITLE": "Como criar sua chave da OpenAI",
+      "SUBTITLE": "A chave é sua e fica na sua conta da OpenAI. Leva uns 5 minutos e você paga o uso direto para eles.",
+      "STEPS": {
+        "ACCOUNT": "Crie uma conta em platform.openai.com. É a plataforma de desenvolvedor, diferente do site do ChatGPT.",
+        "BILLING": "Em Billing, adicione entre US$ 5 e US$ 10 com um cartão internacional. Sem crédito, a chave existe mas não responde.",
+        "AUTO_RECHARGE": "Deixe a recarga automática desligada. Assim você gasta só o que colocou e decide quando repor.",
+        "CREATE_KEY": "Crie uma chave nova e escolha sem expiração. Chave com prazo para de funcionar sozinha, no meio do seu atendimento.",
+        "COPY_NOW": "Copie a chave na hora em que ela aparecer. A OpenAI não mostra de novo: se você fechar a janela, precisa criar outra.",
+        "PASTE_HERE": "Volte aqui, clique em Conectar e cole a chave no campo API Key."
+      },
+      "WARNINGS": {
+        "SUBSCRIPTION": "A assinatura do ChatGPT Plus não serve. São cobranças separadas: o crédito da API é outro.",
+        "CARD": "Cartão recusado? A OpenAI só aceita cartão com compra internacional habilitada. Peça isso ao seu banco."
+      },
+      "LINKS": {
+        "BILLING": "Abrir o Billing da OpenAI",
+        "KEYS": "Abrir a página de chaves"
+      }
     }
   }
 }

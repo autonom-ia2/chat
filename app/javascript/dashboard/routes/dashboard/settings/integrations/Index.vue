@@ -6,6 +6,10 @@ import { picoSearch } from '@chatwoot/pico-search';
 import IntegrationItem from './IntegrationItem.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
+import {
+  CRM_AI_INTEGRATION_ID,
+  isCrmAiKeyPending,
+} from 'dashboard/helper/crmAiKey';
 
 const store = useStore();
 const getters = useStoreGetters();
@@ -18,11 +22,35 @@ const integrationList = computed(
   () => getters['integrations/getAppIntegrations'].value
 );
 
+// Enquanto falta a chave da OpenAI, o cartão dela vem primeiro e marcado: é o
+// passo que destrava o CRM com IA, os agentes e o Guia. Com a chave ligada, a
+// lista volta à ordem de sempre.
+const chavePendente = computed(() => {
+  const crmAi = integrationList.value.find(
+    item => item.id === CRM_AI_INTEGRATION_ID
+  );
+  return Boolean(crmAi) && isCrmAiKeyPending(crmAi);
+});
+
+const orderedIntegrationList = computed(() => {
+  if (!chavePendente.value) return integrationList.value;
+  return [
+    ...integrationList.value.filter(item => item.id === CRM_AI_INTEGRATION_ID),
+    ...integrationList.value.filter(item => item.id !== CRM_AI_INTEGRATION_ID),
+  ];
+});
+
 const filteredIntegrationList = computed(() => {
   const query = searchQuery.value.trim();
-  if (!query) return integrationList.value;
-  return picoSearch(integrationList.value, query, ['name', 'description']);
+  if (!query) return orderedIntegrationList.value;
+  return picoSearch(orderedIntegrationList.value, query, [
+    'name',
+    'description',
+  ]);
 });
+
+const isDestaque = item =>
+  chavePendente.value && item.id === CRM_AI_INTEGRATION_ID;
 
 onMounted(() => {
   store.dispatch('integrations/get');
@@ -66,6 +94,7 @@ onMounted(() => {
             :name="item.name"
             :description="item.description"
             :enabled="item.enabled"
+            :highlighted="isDestaque(item)"
           />
         </div>
       </div>
