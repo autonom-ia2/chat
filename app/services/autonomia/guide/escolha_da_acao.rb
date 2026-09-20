@@ -24,22 +24,44 @@ class Autonomia::Guide::EscolhaDaAcao
     - `caminho` traz os valores dos parâmetros da rota (o `:id` de "PATCH inboxes/:id").
       Só preencha com identificador que a pessoa informou ou que apareceu na conversa
       como resultado de uma consulta. Na dúvida, devolva ação nula.
-    - `corpo` traz os campos do recurso, com os nomes que a API usa.
+    - `corpo_json` traz os campos do recurso como um objeto JSON em texto, com os
+      nomes que a API usa. Ex.: {"name":"Comercial"}. Sem campo nenhum, use {}.
     - Não invente valor que a pessoa não disse: deixe o campo fora.
-    - `descricao` é uma frase curta em português dizendo o que vai acontecer, para
-      a pessoa ler antes de confirmar. Seja literal, não suavize.
+    - `descricao` é uma frase curta, NO IDIOMA EM QUE A PESSOA ESCREVEU, dizendo o
+      que vai acontecer, para ela ler antes de confirmar. Seja literal, não suavize.
   TEXTO
 
+  # O cliente espera { name:, schema: } e manda `strict: true`. No modo estrito
+  # toda propriedade entra em `required`, todo objeto fecha com
+  # `additionalProperties: false`, e não existe objeto de chave livre. Por isso o
+  # caminho vem como lista de pares, e o corpo vem como JSON em texto — o corpo
+  # tem valores de tipos diferentes (texto, número, booleano), e serializar
+  # preserva o tipo em vez de achatar tudo em string.
   ESQUEMA = {
-    type: 'object',
-    properties: {
-      acao: { type: %w[string null], description: 'Uma das ações da lista, ou nulo.' },
-      caminho: { type: %w[object null], description: 'Valores dos parâmetros da rota.', additionalProperties: true },
-      corpo: { type: %w[object null], description: 'Campos do recurso.', additionalProperties: true },
-      descricao: { type: %w[string null], description: 'O que vai acontecer, em português.' }
-    },
-    required: %w[acao],
-    additionalProperties: false
+    name: 'guia_acao',
+    schema: {
+      type: 'object',
+      properties: {
+        acao: { type: %w[string null], description: 'Uma das ações da lista, ou nulo.' },
+        caminho: {
+          type: %w[array null],
+          description: 'Um item por parâmetro da rota. Ex.: chave "id", valor "42".',
+          items: {
+            type: 'object',
+            properties: { chave: { type: 'string' }, valor: { type: 'string' } },
+            required: %w[chave valor],
+            additionalProperties: false
+          }
+        },
+        corpo_json: {
+          type: %w[string null],
+          description: 'Os campos do recurso como um objeto JSON em texto. Ex.: {"name":"Comercial"}.'
+        },
+        descricao: { type: %w[string null], description: 'O que vai acontecer, na língua de quem pediu.' }
+      },
+      required: %w[acao caminho corpo_json descricao],
+      additionalProperties: false
+    }
   }.freeze
 
   def initialize(account:, user:, account_user: nil)
@@ -92,8 +114,29 @@ class Autonomia::Guide::EscolhaDaAcao
     return nil unless acoes.catalogo.include?(acao)
 
     { acao: acao,
-      dados: { caminho: limpo(bruto['caminho']), corpo: limpo(bruto['corpo']),
+      dados: { caminho: limpo(pares_para_mapa(bruto['caminho'])), corpo: limpo(corpo_de(bruto['corpo_json'])),
                descricao: bruto['descricao'].to_s.strip.presence } }
+  end
+
+  # A lista de pares que o modo estrito exige vira o mapa que a execução usa.
+  def pares_para_mapa(pares)
+    return {} unless pares.is_a?(Array)
+
+    pares.each_with_object({}) do |par, mapa|
+      next unless par.is_a?(Hash)
+
+      chave = par['chave'].to_s
+      mapa[chave] = par['valor'] if chave.present?
+    end
+  end
+
+  # O corpo vem serializado para preservar tipo. JSON quebrado vira corpo vazio:
+  # melhor a plataforma recusar por falta de campo do que executar com lixo.
+  def corpo_de(texto)
+    dados = JSON.parse(texto.to_s)
+    dados.is_a?(Hash) ? dados : {}
+  rescue JSON::ParserError
+    {}
   end
 
   # Valor escrito por quem pede vira conteúdo na plataforma. Mesma higiene das
@@ -111,7 +154,10 @@ class Autonomia::Guide::EscolhaDaAcao
     visivel.squeeze(' ').strip[0, 200].to_s
   end
 
+  # O mesmo modelo que o CRM usa para classificar. Antes isto perguntava por um
+  # `default_model` que NUNCA existiu, então caía sempre no fallback gpt-4.1-mini
+  # — um modelo que recusa o `reasoning.effort` que este cliente sempre envia.
   def modelo
-    ::Crm::Ai::Config.respond_to?(:default_model) ? ::Crm::Ai::Config.default_model : 'gpt-4.1-mini'
+    ::Crm::Ai::Config::MODEL_CLASSIFY
   end
 end
