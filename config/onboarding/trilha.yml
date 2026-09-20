@@ -34,6 +34,8 @@ passos:
       É a chave que liga o CRM com IA, os agentes e o Guia da Plataforma. Sem
       ela, metade da plataforma fica parada.
     rota: settings_applications_integration
+    rota_params:
+      integration_id: crm_kanban_ai
     alvo_destaque: integration-crm-kanban-ai
     verificacao: chave_ia_conectada
     fluxos_guia:

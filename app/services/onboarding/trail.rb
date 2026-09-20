@@ -10,8 +10,8 @@ class Onboarding::Trail
                            pre_requisitos].freeze
   PERFIS_VALIDOS = %w[administrator agent].freeze
 
-  Passo = Struct.new(:id, :ordem, :titulo, :por_que, :rota, :alvo_destaque, :verificacao, :fluxos_guia, :video,
-                     :artigo, :pulavel, :perfis, :pre_requisitos, keyword_init: true) do
+  Passo = Struct.new(:id, :ordem, :titulo, :por_que, :rota, :rota_params, :alvo_destaque, :verificacao, :fluxos_guia,
+                     :video, :artigo, :pulavel, :perfis, :pre_requisitos, keyword_init: true) do
     def pulavel?
       pulavel == true
     end
