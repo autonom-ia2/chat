@@ -67,7 +67,9 @@ const aoPular = async passo => {
 </script>
 
 <template>
-  <section class="w-full max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
+  <section
+    class="h-full w-full overflow-y-auto max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6"
+  >
     <header class="flex flex-col gap-3">
       <h1 class="mb-0 text-2xl font-medium text-n-slate-12">
         {{
