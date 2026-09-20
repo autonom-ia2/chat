@@ -58,8 +58,11 @@ module ManualDoPrincipal
     texto[SECAO_ESPECIALISTAS]
   end
 
+  # O MANUAL MONTADO (#525): o bloco comum e o do ramo, como o especialista o recebe. O que o
+  # principal promete tem de existir no que o especialista LÊ, não no arquivo em que hoje está
+  # escrito — a regra pode mudar de arquivo sem mudar de dono.
   def manual_do_especialista_de_auto
-    Autonomia::Insurance::QuoteAgent::Builder::INSTRUCOES.join(ESPECIALISTA_DE_AUTO[:arquivo]).read
+    Autonomia::Insurance::QuoteAgent::Builder.instrucao_do_especialista(ESPECIALISTA_DE_AUTO[:arquivo])
   end
 
   # O ANEXO DE UM TURNO ANTERIOR CHEGA DE NOVO AO ESPECIALISTA — EXERCITADO, não inspecionado.
