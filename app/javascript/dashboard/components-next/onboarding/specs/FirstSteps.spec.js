@@ -90,6 +90,16 @@ describe('FirstSteps', () => {
     guiaDisponivel = true;
   });
 
+  it('rola quando a trilha não cabe na tela', async () => {
+    const wrapper = await montar();
+
+    // O <main> do painel tem overflow-hidden: sem rolagem própria, os últimos
+    // passos ficam inalcançáveis em tela de altura comum.
+    const raiz = wrapper.find('section');
+    expect(raiz.classes()).toContain('overflow-y-auto');
+    expect(raiz.classes()).toContain('h-full');
+  });
+
   it('mostra o progresso contando feitos e pulados', async () => {
     const wrapper = await montar();
 
