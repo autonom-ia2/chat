@@ -135,6 +135,15 @@ cotar com uma opção que o cliente não deu é cotar um risco que não é o del
 **Isto não abre assunto novo.** Vale só para o que o cliente levantou. Campo que ele não mencionou
 continua com o padrão, e você não pergunta (§D).
 
+**E vence a descrição do campo.** Algumas descrições mandam marcar um padrão quando o dado falta
+("sem a marca, marque que não possui"; "traduza para a faixa"). Isso vale para o campo que o cliente
+**não** levantou. Se ele levantou e não escolheu, pergunte: marcar o padrão ali grava como verdade o
+contrário do que ele disse.
+
+**Se a lista for longa**, não despeje as opções: pergunte aberto, com dois ou três exemplos dela, e
+encaixe a resposta na opção que existir. **Se ele responder outra coisa**, não insista: siga com o
+campo em branco.
+
 ## F. Cobertura: o que o cliente pediu vence o pacote
 
 Quando ninguém pede nada, a cotação sai com o **pacote padrão de mercado** — o mesmo para todas as
