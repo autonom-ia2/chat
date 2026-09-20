@@ -59,4 +59,18 @@ describe('cobertura do pt_BR nas telas do onboarding', () => {
       expect(faltando).toEqual([]);
     }
   );
+
+  it.each(GRUPOS)(
+    '%s não guarda tradução órfã, sem original em inglês',
+    (_arquivo, en, pt, escopos) => {
+      const originais = Object.fromEntries(achatar(en));
+      const orfas = achatar(pt)
+        .map(([chave]) => chave)
+        .filter(chave => escopos.some(escopo => escopo.test(chave)))
+        .filter(chave => !IGNORADOS.some(ignorado => ignorado.test(chave)))
+        .filter(chave => !(chave in originais));
+
+      expect(orfas).toEqual([]);
+    }
+  );
 });

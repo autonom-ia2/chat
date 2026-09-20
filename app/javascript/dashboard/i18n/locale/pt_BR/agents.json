@@ -183,8 +183,7 @@
       "CONNECT_ACTIVATE": "Conectar e ativar",
       "ACTIVATE_INTERNAL": "Ativar copiloto",
       "ACTIVATED_INTERNAL": "Copiloto ativado! Abra qualquer conversa e encontre-o na barra lateral direita.",
-      "BACK": "Voltar",
-      "TEST_FIRST": "Testar antes"
+      "BACK": "Voltar"
     },
     "PANEL": {
       "LOADING": "Carregando agente…",

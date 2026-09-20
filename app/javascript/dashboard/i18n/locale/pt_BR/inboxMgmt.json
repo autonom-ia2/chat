@@ -432,8 +432,7 @@
             "USE_CASE_LABEL": "Como a empresa vai usar",
             "USE_CASE_PLACEHOLDER": "Por exemplo: somos uma corretora de seguros e usamos o WhatsApp para tirar dúvidas de apólice e acompanhar renovações.",
             "SUBMIT": "Enviar",
-            "ERROR": "Não foi possível liberar o acesso. Tente de novo.",
-            "FOOTNOTE": "Analisaremos sua solicitação e informaremos se essa opção pode ser habilitada. Você também pode continuar com a configuração manual abaixo."
+            "ERROR": "Não foi possível liberar o acesso. Tente de novo."
           },
           "RESTRICTED_WARNING": "O cadastro integrado do WhatsApp está temporariamente indisponível devido a um problema na API da Meta, e não por uma falha no Chatwoot. Você pode utilizar a configuração manual para números compatíveis com a Cloud API. Estamos trabalhando em conjunto com a Meta para resolver a situação o mais rápido possível.",
           "STATUS_LINK": "Ver atualizações de status",
