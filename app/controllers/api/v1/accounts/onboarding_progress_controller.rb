@@ -6,19 +6,32 @@ class Api::V1::Accounts::OnboardingProgressController < Api::V1::Accounts::BaseC
     render json: { passos: progresso.perform }
   end
 
+  # Pular e retomar mudam a trilha da conta inteira: só administrador.
   def skip
+    return render_sem_permissao unless administrador?
+
     render json: { passo: progresso.pular(params[:id]), status: 'pulado' }
   rescue ArgumentError => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def resume
+    return render_sem_permissao unless administrador?
+
     render json: { passo: progresso.retomar(params[:id]), status: 'pendente' }
   rescue ArgumentError => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
   private
+
+  def administrador?
+    Current.account_user&.administrator?
+  end
+
+  def render_sem_permissao
+    render_unauthorized('Apenas administradores mudam a trilha de onboarding')
+  end
 
   def progresso
     @progresso ||= Onboarding::Progress.new(

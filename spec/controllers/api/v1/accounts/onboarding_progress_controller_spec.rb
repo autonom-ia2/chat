@@ -67,6 +67,15 @@ RSpec.describe 'Onboarding progress API', type: :request do
     end
   end
 
+  describe 'permissão' do
+    it 'não deixa agente pular passo da conta' do
+      post "#{base}/equipe/skip", headers: agente.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(account.reload.custom_attributes['onboarding_passos_pulados']).to be_blank
+    end
+  end
+
   describe 'POST resume' do
     it 'devolve o passo pulado para pendente' do
       post "#{base}/equipe/skip", headers: admin.create_new_auth_token, as: :json

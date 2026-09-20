@@ -33,7 +33,7 @@ class Onboarding::Progress
     raise ArgumentError, 'passo desconhecido' if passo.blank?
     raise ArgumentError, 'passo não pode ser pulado' unless passo.pulavel?
 
-    gravar_pulados(pulados | [passo.id])
+    gravar_pulados { |atuais| atuais | [passo.id] }
     passo.id
   end
 
@@ -41,7 +41,7 @@ class Onboarding::Progress
     passo = Onboarding::Trail.find(passo_id)
     raise ArgumentError, 'passo desconhecido' if passo.blank?
 
-    gravar_pulados(pulados - [passo.id])
+    gravar_pulados { |atuais| atuais - [passo.id] }
     passo.id
   end
 
@@ -74,9 +74,16 @@ class Onboarding::Progress
     @pulados ||= Array((@account.custom_attributes || {})[PULADOS_KEY])
   end
 
-  def gravar_pulados(lista)
-    @account.update!(custom_attributes: (@account.custom_attributes || {}).merge(PULADOS_KEY => lista.uniq))
-    @pulados = lista.uniq
+  # Trava a linha da conta: custom_attributes guarda outras coisas (passo do
+  # cadastro, convites pendentes) e duas escritas ao mesmo tempo perderiam uma.
+  def gravar_pulados
+    @account.with_lock do
+      @account.reload
+      atuais = Array((@account.custom_attributes || {})[PULADOS_KEY])
+      novos = (yield atuais).uniq
+      @account.update!(custom_attributes: (@account.custom_attributes || {}).merge(PULADOS_KEY => novos))
+      @pulados = novos
+    end
   end
 
   # Passo 0: avisos do navegador ligados para quem está vendo a tela.
@@ -106,9 +113,10 @@ class Onboarding::Progress
     Crm::PipelineInbox.exists?(pipeline_id: pipelines_da_conta) && Crm::Card.exists?(account_id: @account.id)
   end
 
-  # Passo 5: mais alguém além de quem criou a conta.
+  # Passo 5: mais alguém de verdade além de quem criou a conta.
+  # tira os AccountUsers ocultos que sustentam tokens de integração.
   def equipe_convidada?
-    @account.account_users.where.not(role: nil).limit(2).count > 1
+    @account.account_users.where(integration: false).limit(2).count > 1
   end
 
   # Passo 6: agente de IA ativo e ligado a uma caixa.

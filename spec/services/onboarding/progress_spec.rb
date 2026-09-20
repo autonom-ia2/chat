@@ -21,6 +21,23 @@ RSpec.describe Onboarding::Progress do
     end
   end
 
+  describe 'custo das consultas' do
+    it 'faz no máximo uma consulta por regra, sem varrer tabela' do
+      account
+      user
+      consultas = []
+      assinatura = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, dados|
+        consultas << dados[:sql] unless dados[:name].to_s.in?(%w[SCHEMA TRANSACTION CACHE])
+      end
+
+      described_class.new(account: account, user: user).perform
+      ActiveSupport::Notifications.unsubscribe(assinatura)
+
+      expect(consultas.size).to be <= Onboarding::Progress::REGRAS.size + 4
+      expect(consultas).to all(match(/LIMIT|COUNT|EXISTS/i))
+    end
+  end
+
   describe 'passo 0, perfil' do
     it 'fica feito quando o usuário tem aviso do navegador ligado' do
       expect(status('perfil')).to eq('pendente')
