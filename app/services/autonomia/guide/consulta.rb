@@ -74,7 +74,7 @@ class Autonomia::Guide::Consulta
   # é o que garante que a resposta seja exatamente a que ele receberia na tela.
   # O token nunca é registrado em log.
   def requisitar(caminho, filtros)
-    uri = URI.parse("http://127.0.0.1:3000#{caminho}")
+    uri = URI.parse("http://127.0.0.1:#{porta}#{caminho}")
     uri.query = URI.encode_www_form(filtros.slice(*%w[status page sort]).compact) if filtros.present?
 
     requisicao = Net::HTTP::Get.new(uri)
@@ -84,6 +84,13 @@ class Autonomia::Guide::Consulta
     Net::HTTP.start(uri.hostname, uri.port, open_timeout: 2, read_timeout: 8) do |http|
       http.request(requisicao)
     end
+  end
+
+  # A porta é a do próprio processo, não um palpite: o Procfile sobe o Rails com
+  # `-p $PORT`. Se ela mudar e isto ficasse fixo, toda leitura falharia calada —
+  # que é exatamente o modo de falha que esta issue veio consertar.
+  def porta
+    ENV.fetch('PORT', 3000)
   end
 
   # Resposta de API é verbosa e cheia de campo que não ajuda a responder. Corta

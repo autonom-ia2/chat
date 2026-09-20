@@ -60,6 +60,24 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(requisicao_capturada['api_access_token']).to eq(admin.access_token.token)
     end
 
+    # A porta vem do processo, não de um palpite: fixa em 3000, uma mudança de
+    # porta faria toda leitura falhar em silêncio.
+    it 'chama a porta em que o Rails está de fato escutando' do
+      porta_capturada = nil
+      allow(Net::HTTP).to receive(:start) do |_host, porta, _opcoes, &bloco|
+        porta_capturada = porta
+        http = instance_double(Net::HTTP)
+        allow(http).to receive(:request).and_return(instance_double(Net::HTTPResponse, code: '200', body: '[]'))
+        bloco.call(http)
+      end
+
+      with_modified_env PORT: '4001' do
+        consulta.ler('inboxes')
+      end
+
+      expect(porta_capturada).to eq(4001)
+    end
+
     it 'devolve o conteúdo que a API entregou' do
       responder('200', '{"payload":[{"name":"Comercial"}]}')
 
