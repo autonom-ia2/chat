@@ -1,427 +1,393 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (112 fluxos)
+# Explicações do Guia da Plataforma — a parte que só nós sabemos
 
-> ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
-> permissão saem do roteador do painel, e o texto humano fica em
-> `lib/operator_guide/porques.md`. Editar aqui é trabalho perdido no próximo build.
+> O "onde fica", o "por que importa" e o "o que dá errado" de cada fluxo.
+>
+> A rota, o endereço e a permissão NÃO ficam aqui: saem do próprio roteador do painel,
+> pelo gerador. Escreva aqui e rode `pnpm guia:build`.
+>
+> Cada bloco é um fluxo. O cabeçalho é um nome curto e único; o campo `rota` aponta a
+> tela no roteador. Vários fluxos podem apontar para a mesma tela.
 
-Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código), perfil, pré-requisitos, passos, gotchas, nav_target.
-
-### Ver os Primeiros passos
+### ver_os_primeiros_passos
+- titulo: Ver os Primeiros passos
+- rota: first_steps
 - intent: Por onde eu comeco?; Onde vejo o que falta configurar na conta?; O que eu preciso fazer para a plataforma funcionar?; Cade a lista de primeiros passos?; Como sei se ja terminei a configuracao?
 - onde_fica: Menu lateral > Primeiros passos (e tambem a tela inicial da conta enquanto nao ha conversa aberta)
-- rota: `first_steps` - `/app/accounts/:accountId/primeiros-passos`
-- gate: papel `administrator`
 - pre_requisitos: nenhum
 - passos: 1. Abra Primeiros passos no menu lateral; 2. Leia o passo em destaque, que e sempre o primeiro que ainda falta; 3. Clique em Fazer agora para ir direto a tela daquele passo; 4. Volte a lista e siga para o proximo.
 - gotchas: cada passo so fica Feito quando o estado real da conta muda, nunca por clique; passos opcionais trazem Deixar para depois e podem ser retomados; o passo em foco mostra os pre-requisitos externos (por exemplo, conta na OpenAI com credito); a lista some do centro da tela quando o essencial termina, mas continua no menu.
-- nav_target: `first_steps`
 
-### Criar caixa de entrada
+### criar_caixa_de_entrada
+- titulo: Criar caixa de entrada
+- rota: settings_inbox_new
 - intent: Como crio uma caixa de entrada?; Onde adiciono um novo canal?; Quero conectar um WhatsApp, email, site ou API.; Como comeco um inbox novo?
 - onde_fica: Configuracoes > Caixas de entrada > Nova caixa
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter credenciais/dados do canal escolhido quando o canal exigir
 - passos: 1. Abra Configuracoes; 2. Entre em Caixas de entrada; 3. Clique em adicionar nova caixa; 4. Escolha o tipo de canal; 5. Preencha os dados e avance para agentes/finalizacao.
 - gotchas: cada canal pede dados diferentes; canais sociais/email podem exigir autorizacao externa; a etapa final pode mostrar webhook, script ou instrucoes de DNS.
-- nav_target: `settings_inbox_new`
 
-### Editar configuracoes da caixa
+### editar_configuracoes_da_caixa
+- titulo: Editar configuracoes da caixa
+- rota: settings_inbox_show
 - intent: Onde altero uma caixa existente?; Como mudo nome, saudacao ou configuracoes do inbox?; Onde vejo as abas de configuracao da caixa?
 - onde_fica: Configuracoes > Caixas de entrada > selecionar caixa
-- rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - pre_requisitos: caixa de entrada ja criada
 - passos: 1. Abra Configuracoes; 2. Entre em Caixas de entrada; 3. Selecione a caixa; 4. Use as abas de configuracao; 5. Atualize os campos necessarios e salve.
 - gotchas: a rota usa `:tab?`; abas como `configuration`, `collaborators`, `business-hours` e `inbox-settings` aparecem conforme o tipo de canal.
-- nav_target: `settings_inbox_show`
 
-### Gerenciar agentes da caixa
+### gerenciar_agentes_da_caixa
+- titulo: Gerenciar agentes da caixa
+- rota: settings_inbox_show
 - intent: Como coloco agentes em uma caixa?; Onde removo um agente do inbox?; Por que um agente nao ve uma caixa?; Como ajusto autoatribuicao da caixa?
 - onde_fica: Configuracoes > Caixas de entrada > selecionar caixa > Colaboradores
-- rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - pre_requisitos: caixa criada; agentes convidados/ativos na conta
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Colaboradores; 3. Marque ou desmarque agentes; 4. Ajuste as opcoes de atribuicao quando necessario; 5. Salve.
 - gotchas: o agente precisa estar ativo na conta; sem estar associado a caixa, ele pode nao receber/visualizar conversas daquele canal.
-- nav_target: `settings_inbox_show`
 
-### Definir horario de atendimento da caixa
+### definir_horario_de_atendimento_da_caixa
+- titulo: Definir horario de atendimento da caixa
+- rota: settings_inbox_show
 - intent: Onde configuro horario comercial?; Como mudo dias e horas de atendimento?; Como configuro disponibilidade da caixa?
 - onde_fica: Configuracoes > Caixas de entrada > selecionar caixa > Horario de atendimento
-- rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - pre_requisitos: caixa criada
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Horario de atendimento; 3. Ative/ajuste os dias da semana; 4. Configure faixas de horario; 5. Salve.
 - gotchas: mensagens e automacoes podem considerar a disponibilidade da caixa; conta nova nasce no fuso da operacao (America/Sao_Paulo por padrao) e a caixa herda esse fuso ao ser criada; a tela mostra o fuso realmente salvo, inclusive UTC; confira fuso horario e intervalos antes de salvar.
-- nav_target: `settings_inbox_show`
 
-### Atribuir conversa
+### atribuir_conversa
+- titulo: Atribuir conversa
+- rota: inbox_conversation
 - intent: Como atribuo uma conversa a alguem?; Onde passo atendimento para outro agente?; Como atribuo a conversa a um time?
 - onde_fica: Conversas > abrir conversa > painel de acoes/atribuicao
-- rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: conversa existente; agente/time disponivel e com acesso ao inbox
 - passos: 1. Abra a conversa; 2. Localize o bloco de atribuicao no painel lateral; 3. Escolha agente ou time; 4. Confirme a mudanca; 5. Verifique se o nome aparece na conversa.
 - gotchas: agentes sem acesso ao inbox podem nao aparecer; usuarios com permissao restrita podem nao conseguir atuar em conversas de terceiros.
-- nav_target: `inbox_conversation`
 
-### Resolver conversa
+### resolver_conversa
+- titulo: Resolver conversa
+- rota: inbox_conversation
 - intent: Como marco conversa como resolvida?; Onde encerro um atendimento?; Como tiro uma conversa da fila aberta?
 - onde_fica: Conversas > abrir conversa > botao/status de resolver
-- rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: conversa aberta ou pendente
 - passos: 1. Abra a conversa; 2. Revise se nao ha pendencias; 3. Clique para marcar como resolvida; 4. Confirme se a conversa saiu da lista de abertas; 5. Reabra se precisar continuar atendimento.
 - gotchas: configuracoes de auto-resolucao podem resolver conversas por inatividade; resolver nao apaga o historico.
-- nav_target: `inbox_conversation`
 
-### Adiar conversa
+### adiar_conversa
+- titulo: Adiar conversa
+- rota: inbox_conversation
 - intent: Como faco snooze de uma conversa?; Onde adio um atendimento?; Quero que a conversa volte depois.; Como removo da fila ate uma data?
 - onde_fica: Conversas > abrir conversa > acoes da conversa > Snooze/Adiar
-- rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: conversa existente
 - passos: 1. Abra a conversa; 2. Use a acao de adiar/snooze; 3. Escolha um preset ou data/hora; 4. Confirme; 5. Acompanhe quando ela voltar para a fila.
 - gotchas: conversa adiada pode sumir da lista principal ate o horario escolhido; use filtros/status se precisar encontra-la antes.
-- nav_target: `inbox_conversation`
 
-### Alterar prioridade da conversa
+### alterar_prioridade_da_conversa
+- titulo: Alterar prioridade da conversa
+- rota: inbox_conversation
 - intent: Como marco uma conversa como urgente?; Onde altero prioridade?; Como tiro prioridade alta de uma conversa?
 - onde_fica: Conversas > abrir conversa > painel de acoes > prioridade
-- rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: conversa existente
 - passos: 1. Abra a conversa; 2. Localize o campo de prioridade; 3. Selecione a prioridade desejada; 4. Aguarde a confirmacao; 5. Use filtros/ordenacao para priorizar a fila.
 - gotchas: prioridade organiza a operacao, mas nao altera sozinho SLA, atribuicao ou automacoes ja configuradas.
-- nav_target: `inbox_conversation`
 
-### Aplicar etiquetas na conversa
+### aplicar_etiquetas_na_conversa
+- titulo: Aplicar etiquetas na conversa
+- rota: inbox_conversation
 - intent: Como coloco etiqueta em uma conversa?; Onde removo uma tag do atendimento?; Como organizo conversas por etiquetas?
 - onde_fica: Conversas > abrir conversa > painel de acoes > etiquetas
-- rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: etiqueta criada em Configuracoes > Etiquetas
 - passos: 1. Abra a conversa; 2. Clique em etiquetas/labels no painel lateral; 3. Pesquise a etiqueta; 4. Adicione ou remova; 5. Use a sidebar de etiquetas para consultar depois.
 - gotchas: etiquetas ocultas ou especificas de importacao custom podem nao aparecer na sidebar; etiquetas de conversa e contato podem ser usadas em contextos diferentes.
-- nav_target: `inbox_conversation`
 
-### Filtrar conversas
+### filtrar_conversas
+- titulo: Filtrar conversas
+- rota: home
 - intent: Como filtro conversas?; Onde vejo conversas por canal, time ou etiqueta?; Como encontro uma fila especifica?
 - onde_fica: Conversas > Todas; tambem na sidebar em Canais, Times e Etiquetas
-- rota: `home` - `/app/accounts/:accountId/dashboard`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: conversas existentes; filtros/canais/times/etiquetas conforme o caso
 - passos: 1. Abra Conversas; 2. Use a sidebar para escolher Todas, Canal, Time ou Etiqueta; 3. Ajuste status e filtros da lista; 4. Abra a conversa desejada; 5. Limpe filtros para voltar a visao geral.
 - gotchas: rotas de canal/time/etiqueta exigem parametros reais; se nada aparecer, confira permissao, status da conversa e acesso ao inbox.
-- nav_target: `home`
 - highlight: `conversations-advanced-filter`
 
-### Usar visoes customizadas de conversas
+### usar_visoes_customizadas_de_conversas
+- titulo: Usar visoes customizadas de conversas
+- rota: folder_conversations
 - intent: Onde ficam as pastas de conversas?; Como abro uma visao salva?; Como uso uma custom view de atendimentos?
 - onde_fica: Conversas > Pastas/Visoes customizadas
-- rota: `folder_conversations` - `/app/accounts/:accountId/custom_view/:id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: visao customizada de conversa criada
 - passos: 1. Abra Conversas; 2. Expanda Pastas/Visoes customizadas na sidebar; 3. Selecione a visao; 4. Revise os filtros aplicados; 5. Abra os atendimentos listados.
 - gotchas: se a custom view foi removida ou nao esta disponivel, a rota redireciona para `home`.
-- nav_target: `folder_conversations`
 
-### Ver conversas com mencoes
+### ver_conversas_com_mencoes
+- titulo: Ver conversas com mencoes
+- rota: conversation_mentions
 - intent: Onde vejo conversas em que fui mencionado?; Como encontro minhas mencoes?; Onde estao os atendimentos com @?
 - onde_fica: Conversas > Mencoes
-- rota: `conversation_mentions` - `/app/accounts/:accountId/mentions/conversations`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: haver mencoes em conversas acessiveis ao usuario
 - passos: 1. Abra Conversas; 2. Clique em Mencoes na sidebar; 3. Revise a lista; 4. Abra a conversa; 5. Responda ou acompanhe conforme necessario.
 - gotchas: mencoes dependem de acesso a conversa; mencoes antigas podem estar em conversas resolvidas ou filtradas.
-- nav_target: `conversation_mentions`
 
-### Ver conversas nao atendidas
+### ver_conversas_nao_atendidas
+- titulo: Ver conversas nao atendidas
+- rota: conversation_unattended
 - intent: Onde vejo conversas sem atendimento?; Como acho conversas nao atribuidas?; Onde esta a fila de nao atendidas?
 - onde_fica: Conversas > Nao atendidas
-- rota: `conversation_unattended` - `/app/accounts/:accountId/unattended/conversations`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: conversas abertas sem atendimento/atribuicao conforme a regra da plataforma
 - passos: 1. Abra Conversas; 2. Clique em Nao atendidas; 3. Revise a fila; 4. Atribua a um agente/time; 5. Responda ou resolva.
 - gotchas: automacoes e regras de autoatribuicao podem tirar conversas dessa fila rapidamente.
-- nav_target: `conversation_unattended`
 
-### Criar contato
+### criar_contato
+- titulo: Criar contato
+- rota: contacts_dashboard_index
 - intent: Como cadastro um contato?; Onde adiciono um cliente manualmente?; Como salvo nome, email e telefone?
 - onde_fica: Contatos > Todos os contatos > Adicionar contato
-- rota: `contacts_dashboard_index` - `/app/accounts/:accountId/contacts`
-- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: nenhum
 - passos: 1. Abra Contatos; 2. Clique em Adicionar contato; 3. Preencha nome e dados de contato; 4. Salve; 5. Abra o detalhe do contato se precisar editar mais campos.
 - gotchas: email e telefone podem acusar duplicidade; criar contato nao inicia conversa automaticamente.
-- nav_target: `contacts_dashboard_index`
 - highlight: `contacts-more-actions`
 
-### Criar segmento de contatos
+### criar_segmento_de_contatos
+- titulo: Criar segmento de contatos
+- rota: contacts_dashboard_segments_index
 - intent: Como salvo um segmento de contatos?; Onde crio uma lista filtrada?; Como separo contatos por criterios?
 - onde_fica: Contatos > Todos os contatos > filtros > criar segmento
-- rota: `contacts_dashboard_segments_index` - `/app/accounts/:accountId/contacts/segments/:segmentId`
-- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: filtros aplicaveis aos contatos; contatos existentes
 - passos: 1. Abra Contatos; 2. Abra filtros; 3. Configure as condicoes; 4. Aplique e salve como segmento; 5. Acesse o segmento pela sidebar.
 - gotchas: segmentos dependem da query salva; se atributos ou etiquetas mudarem, o resultado do segmento tambem muda.
-- nav_target: `contacts_dashboard_segments_index`
 
-### Aplicar etiquetas em contatos
+### aplicar_etiquetas_em_contatos
+- titulo: Aplicar etiquetas em contatos
+- rota: contacts_dashboard_labels_index
 - intent: Como marco contatos com etiqueta?; Onde vejo contatos por tag?; Como aplico etiqueta em varios contatos?
 - onde_fica: Contatos > Todos os contatos; ou Contatos > Marcados com
-- rota: `contacts_dashboard_labels_index` - `/app/accounts/:accountId/contacts/labels/:label`
-- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: etiqueta criada; contatos existentes
 - passos: 1. Abra Contatos; 2. Selecione um ou mais contatos; 3. Use a barra de acoes em massa; 4. Adicione ou remova etiquetas; 5. Abra Marcados com para ver a lista por etiqueta.
 - gotchas: a sidebar mostra etiquetas visiveis; etiquetas ocultas criadas por recursos custom podem nao aparecer como filtro visual.
-- nav_target: `contacts_dashboard_labels_index`
 
-### Importar contatos por CSV
+### importar_contatos_por_csv
+- titulo: Importar contatos por CSV
+- rota: contacts_dashboard_index
 - intent: Como importo contatos?; Onde subo uma planilha CSV de contatos?; Como faco importacao nativa de contatos?
 - onde_fica: Contatos > Todos os contatos > menu de acoes > Importar contatos
-- rota: `contacts_dashboard_index` - `/app/accounts/:accountId/contacts`
-- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: arquivo CSV no formato esperado; dados minimos de contato
 - passos: 1. Abra Contatos; 2. Clique em Importar contatos; 3. Baixe o CSV de exemplo se precisar; 4. Escolha o arquivo CSV; 5. Confirme a importacao e aguarde notificacao por email.
 - gotchas: este e o import nativo de contatos por CSV; nao confundir com Importar base de campanha, que e recurso custom controlado por `CAMPAIGN_IMPORT_ENABLED`.
-- nav_target: `contacts_dashboard_index`
 
-### Convidar e gerenciar agentes
+### convidar_e_gerenciar_agentes
+- titulo: Convidar e gerenciar agentes
+- rota: agent_list
 - intent: Como convido um agente?; Onde vejo usuarios da conta?; Como desativo ou edito um agente?
 - onde_fica: Configuracoes > Agentes
-- rota: `agent_list` - `/app/accounts/:accountId/settings/agents/list`
-- gate: feature flag `agent_management`; papel `administrator`
 - pre_requisitos: email do agente; limite/plano permitir novo usuario quando aplicavel
 - passos: 1. Abra Configuracoes; 2. Entre em Agentes; 3. Clique para adicionar/editar agente; 4. Informe dados e papel; 5. Salve e acompanhe convite/status.
 - gotchas: agente convidado pode precisar aceitar convite antes de operar; acesso a inbox tambem depende de associacao na caixa.
-- nav_target: `agent_list`
 - highlight: `settings-add-agent`
 
-### Ajustar papel do agente
+### ajustar_papel_do_agente
+- titulo: Ajustar papel do agente
+- rota: agent_list
 - intent: Como faco alguem virar administrador?; Onde mudo papel de agente?; Como aplico um papel customizado a um usuario?
 - onde_fica: Configuracoes > Agentes > editar agente
-- rota: `agent_list` - `/app/accounts/:accountId/settings/agents/list`
-- gate: feature flag `agent_management`; papel `administrator`
 - pre_requisitos: agente existente; papel customizado criado quando for usar custom role
 - passos: 1. Abra Configuracoes > Agentes; 2. Edite o agente; 3. Escolha `administrator`, `agent` ou papel customizado; 4. Salve; 5. Revise acesso a caixas/times se necessario.
 - gotchas: papel da conta nao substitui associacao a inbox; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`.
-- nav_target: `agent_list`
 
-### Criar papeis customizados
+### criar_papeis_customizados
+- titulo: Criar papeis customizados
+- rota: custom_roles_list
 - intent: Como crio um papel customizado?; Onde configuro permissoes granulares?; Como limito acesso de um usuario?
 - onde_fica: Configuracoes > Papeis customizados
-- rota: `custom_roles_list` - `/app/accounts/:accountId/settings/custom-roles/list`
-- gate: feature flag `custom_roles`; papel `administrator`
 - pre_requisitos: Enterprise/Cloud habilitado; saber quais permissoes o grupo deve receber
 - passos: 1. Abra Configuracoes; 2. Entre em Papeis customizados; 3. Crie ou edite um papel; 4. Marque permissoes como conversa, contato, relatorio ou CRM; 5. Salve e aplique no agente.
 - gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; permissao customizada nao concede automaticamente acesso a todas as caixas.
-- nav_target: `custom_roles_list`
 - highlight: `settings-add-role`
 
-### Criar e editar times
+### criar_e_editar_times
+- titulo: Criar e editar times
+- rota: settings_teams_new
 - intent: Como crio um time?; Onde adiciono agentes a uma equipe?; Como edito membros de um time?
 - onde_fica: Configuracoes > Times
-- rota: `settings_teams_new` - `/app/accounts/:accountId/settings/teams/new`
-- gate: feature flag `team_management`; papel `administrator`
 - pre_requisitos: agentes ativos para adicionar ao time
 - passos: 1. Abra Configuracoes > Times; 2. Clique em criar time; 3. Defina nome/descricao; 4. Adicione agentes; 5. Finalize e use o time em atribuicoes/filtros.
 - gotchas: times ajudam em atribuicao e filtro, mas agentes ainda precisam ter acesso aos inboxes usados.
-- nav_target: `settings_teams_new`
 - highlight: `settings-new-team`
 
-### Criar automacoes
+### criar_automacoes
+- titulo: Criar automacoes
+- rota: automation_list
 - intent: Como crio uma automacao?; Onde configuro regras automaticas?; Como atribuir, etiquetar ou enviar mensagem automaticamente?
 - onde_fica: Configuracoes > Automacao
-- rota: `automation_list` - `/app/accounts/:accountId/settings/automation/list`
-- gate: feature flag `automations`; papel `administrator` ou `automation_view` ou `automation_manage`
 - pre_requisitos: definir gatilho, condicoes e acoes; labels/times/agentes criados quando usados
 - passos: 1. Abra Configuracoes > Automacao; 2. Crie uma regra; 3. Escolha o evento gatilho; 4. Configure condicoes; 5. Escolha acoes e salve.
 - gotchas: automacoes podem se sobrepor; revise ordem, condicoes e efeitos como atribuir time, adicionar etiqueta ou enviar webhook.
-- nav_target: `automation_list`
 - highlight: `settings-add-automation`
 
-### Criar respostas prontas
+### criar_respostas_prontas
+- titulo: Criar respostas prontas
+- rota: canned_list
 - intent: Como crio uma resposta pronta?; Onde cadastro um texto padrao?; Como uso slash command no atendimento?
 - onde_fica: Configuracoes > Respostas prontas
-- rota: `canned_list` - `/app/accounts/:accountId/settings/canned-response/list`
-- gate: feature flag `canned_responses`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `canned_response_manage`
 - pre_requisitos: texto e shortcode definidos
 - passos: 1. Abra Configuracoes > Respostas prontas; 2. Clique em adicionar; 3. Defina shortcode e conteudo; 4. Salve; 5. Na conversa, digite `/` e selecione a resposta.
 - gotchas: resposta pronta insere texto no composer; revise antes de enviar; shortcodes devem ser faceis de memorizar.
-- nav_target: `canned_list`
 - highlight: `settings-add-canned`
 
-### Criar macros
+### criar_macros
+- titulo: Criar macros
+- rota: macros_new
 - intent: Como crio uma macro?; Onde salvo acoes repetitivas?; Como executo varias acoes em uma conversa?
 - onde_fica: Configuracoes > Macros
-- rota: `macros_new` - `/app/accounts/:accountId/settings/macros/new`
-- gate: feature flag `macros`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `macro_manage`
 - pre_requisitos: acoes desejadas disponiveis; labels/times/agentes criados quando usados
 - passos: 1. Abra Configuracoes > Macros; 2. Clique em nova macro; 3. Defina nome/visibilidade; 4. Adicione acoes; 5. Salve e execute pela conversa quando necessario.
 - gotchas: macros publicas podem ser restritas a administradores; macro nao deve ser usada para contornar permissoes de operacao.
-- nav_target: `macros_new`
 
-### Ver relatorios
+### ver_relatorios
+- titulo: Ver relatorios
+- rota: account_overview_reports
 - intent: Onde vejo relatorios?; Como acompanho volume e desempenho?; Onde vejo relatorio por agente, caixa, time ou etiqueta?
 - onde_fica: Relatorios > Visao geral / Conversas / Agentes / Caixas / Times / Etiquetas
-- rota: `account_overview_reports` - `/app/accounts/:accountId/reports/overview`
-- gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: conversas e eventos suficientes para gerar metricas
 - passos: 1. Abra Relatorios; 2. Escolha Visao geral ou outro recorte; 3. Ajuste periodo/filtros; 4. Compare metricas; 5. Abra detalhes quando a tela oferecer drilldown.
 - gotchas: rotas especificas tambem existem, como `conversation_reports`; usuarios sem `report_manage` nao acessam relatorios.
-- nav_target: `account_overview_reports`
 
-### Ajustar configuracoes da conta
+### ajustar_configuracoes_da_conta
+- titulo: Ajustar configuracoes da conta
+- rota: general_settings_index
 - intent: Onde altero configuracoes da conta?; Como mudo dados gerais da empresa?; Onde configuro comportamento global?
 - onde_fica: Configuracoes > Configuracoes da conta
-- rota: `general_settings_index` - `/app/accounts/:accountId/settings/general`
-- gate: papel `administrator`
 - pre_requisitos: nenhum
 - passos: 1. Abra Configuracoes; 2. Entre em Configuracoes da conta; 3. Edite os campos gerais; 4. Ajuste opcoes globais disponiveis; 5. Salve.
 - gotchas: configuracoes da conta sao diferentes de preferencias pessoais; perfil/notificacoes ficam no menu do usuario.
-- nav_target: `general_settings_index`
 - highlight: `settings-account-save`
 
-### Ajustar perfil e notificacoes
+### ajustar_perfil_e_notificacoes
+- titulo: Ajustar perfil e notificacoes
+- rota: profile_settings_index
 - intent: Onde mudo meu perfil?; Como configuro notificacoes?; Como altero assinatura, idioma ou alertas?
 - onde_fica: Menu do usuario/perfil > Configuracoes do perfil
-- rota: `profile_settings_index` - `/app/accounts/:accountId/profile/settings`
-- gate: papel `administrator` ou `agent` ou `custom_role`
 - pre_requisitos: usuario autenticado
 - passos: 1. Abra o menu do usuario; 2. Entre em perfil/configuracoes; 3. Atualize dados pessoais; 4. Ajuste preferencias de notificacao; 5. Salve.
 - gotchas: MFA usa a rota `profile_settings_mfa` e so abre quando MFA esta habilitado globalmente; algumas instalacoes podem bloquear atualizacao de perfil.
-- nav_target: `profile_settings_index`
 - highlight: `profile-update-basic`
 
-### Criar webhooks
+### criar_webhooks
+- titulo: Criar webhooks
+- rota: settings_integrations_webhook
 - intent: Como crio um webhook?; Onde configuro callback HTTP?; Como assino eventos da conta?
 - onde_fica: Configuracoes > Integracoes > Webhook
-- rota: `settings_integrations_webhook` - `/app/accounts/:accountId/settings/integrations/webhook`
-- gate: feature flag `integrations`; papel `administrator`
 - pre_requisitos: endpoint publico HTTPS; saber quais eventos assinar
 - passos: 1. Abra Configuracoes > Integracoes; 2. Entre em Webhook; 3. Clique em adicionar novo webhook; 4. Informe nome, endpoint e eventos; 5. Crie e copie o segredo quando exibido.
 - gotchas: endpoints privados, locais ou sem HTTPS podem falhar; copie/guarde o segredo para validar assinaturas.
-- nav_target: `settings_integrations_webhook`
 - highlight: `settings-add-webhook`
 
-### Gerenciar integracoes
+### gerenciar_integracoes
+- titulo: Gerenciar integracoes
+- rota: settings_applications
 - intent: Onde conecto Slack, Linear, Notion ou Shopify?; Como vejo integracoes disponiveis?; Onde configuro aplicativos do dashboard?
 - onde_fica: Configuracoes > Integracoes
-- rota: `settings_applications` - `/app/accounts/:accountId/settings/integrations`
-- gate: feature flag `integrations`; papel `administrator`
 - pre_requisitos: credenciais/conta externa quando a integracao exigir OAuth ou token
 - passos: 1. Abra Configuracoes > Integracoes; 2. Escolha a integracao; 3. Conecte ou configure hooks; 4. Autorize no provedor externo quando solicitado; 5. Salve e teste.
 - gotchas: `linear_integration`, `notion_integration`, `shopify_integration` e apps custom podem ter disponibilidade separada; webhook e dashboard apps ficam dentro da mesma area.
-- nav_target: `settings_applications`
 
-### Consultar relatorio de SLA
+### consultar_relatorio_de_sla
+- titulo: Consultar relatorio de SLA
+- rota: sla_reports
+- feature: sla
 - intent: Onde vejo SLA?; Como acompanho violacoes de SLA?; Onde consulto conversas com prazo vencido?
 - onde_fica: Relatorios > SLA
-- rota: `sla_reports` - `/app/accounts/:accountId/reports/sla`
-- gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: SLA configurado e aplicado a conversas; dados de atendimento no periodo escolhido
 - passos: 1. Abra Relatorios; 2. Entre em SLA; 3. Ajuste periodo/filtros; 4. Revise metricas e tabela; 5. Abra a conversa quando precisar investigar.
 - gotchas: esta rota e de relatorio; criacao/gestao de politicas SLA pode depender de recursos Enterprise ou customizados fora do fluxo nativo.
-- nav_target: `sla_reports`
 - highlight: `reports-download-sla`
 
-### Abrir o CRM Kanban e filtrar oportunidades
+### abrir_o_crm_kanban_e_filtrar_oportunidades
+- titulo: Abrir o CRM Kanban e filtrar oportunidades
+- rota: crm_kanban_index
 - intent: "Onde vejo o CRM?"; "Como filtro oportunidades?"; "Onde vejo as oportunidades ganhas ou perdidas?"; "Onde vejo o que perdi / o que ganhei?"; "Como alterno entre Kanban, lista e calendário?"
 - onde_fica: Sidebar > CRM > CRM Kanban
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
 - passos: Abra **CRM Kanban**; selecione o funil; use busca, prioridade e follow-up na barra; abra **Filtros** (caixa, responsável, time, estágio, valor, card parado, tipo de vínculo); alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
 - gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips e podem esconder cards.
-- nav_target: `crm_kanban_index`
 - highlight: `crm-filters`
 
-### Criar funis, estágios e conectar caixas ao CRM
+### criar_funis_estagios_e_conectar_caixas_ao_crm
+- titulo: Criar funis, estágios e conectar caixas ao CRM
+- rota: crm_kanban_index
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Novo funil ou Editar funil; também CRM Kanban > Configurações da caixa
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: caixas já criadas quando o objetivo for vincular atendimento ao funil.
 - passos: São duas paradas. 1. Clique em Novo funil, defina nome e estágios e salve — as descrições dos estágios já vêm prontas. 2. Abra Configurar inboxes, ligue o CRM na caixa, escolha o funil e a etapa de entrada e salve; isso já cria o vínculo entre a caixa e o funil, com a criação automática de cards ligada. Não é mais preciso voltar em Editar funil para vincular a caixa.
 - gotchas: a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Inbox e automação continua valendo para a caixa que alimenta mais de um funil; deletar estágio abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
-- nav_target: `crm_kanban_index`
 - highlight: `crm-new-pipeline`
 
-### Criar card ou oportunidade no CRM
+### criar_card_ou_oportunidade_no_crm
+- titulo: Criar card ou oportunidade no CRM
+- rota: crm_kanban_index
 - intent: "Como crio uma oportunidade?"; "Como adiciono um card no funil?"; "Como associo contato, caixa e responsável?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Novo card
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: funil e estágio existentes; contato opcional, mas recomendado para histórico e follow-ups.
 - passos: Clique em Novo card; preencha título, estágio, valor, prioridade e previsão; busque ou vincule contato; selecione dono, time e caixa quando necessário; salve.
 - gotchas: cards sem conversa são "standalone" e podem sumir se o filtro "vinculado" estiver ativo; valores são tratados em centavos no backend e exibidos formatados; a caixa influencia visibilidade para agentes.
-- nav_target: `crm_kanban_index`
 - highlight: `crm-new-card`
 
-### Mover card, ganhar, perder ou reabrir oportunidade
+### mover_card_ganhar_perder_ou_reabrir_oportunidade
+- titulo: Mover card, ganhar, perder ou reabrir oportunidade
+- rota: crm_kanban_index
 - intent: "Como movo uma oportunidade de estágio?"; "Como marco como ganha?"; "Como reabro um negócio perdido?"
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente em funil ativo.
 - passos: Arraste o card entre colunas no Kanban ou abra o drawer; ajuste estágio e responsável; para fechar, use ações de ganhar ou perder; informe valor ganho ou motivo da perda quando solicitado; reabra pelo mesmo drawer quando aplicável.
 - gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder e arquivar não deletam contato nem conversa.
-- nav_target: `crm_kanban_index`
 
-### Criar follow-ups e lembretes no CRM
+### criar_follow_ups_e_lembretes_no_crm
+- titulo: Criar follow-ups e lembretes no CRM
+- rota: crm_kanban_index
 - intent: "Como crio um lembrete?"; "Como programo follow-up de WhatsApp?"; "Como vejo follow-ups atrasados?"
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Follow-ups; ou CRM > CRM Calendar > clique no dia
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente; para follow-up de mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
 - passos: Abra o card; entre em Follow-ups; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; salve; conclua ou cancele pelo card ou calendário.
 - gotchas: sem conversa vinculada não há snooze/envio automático; WhatsApp fora da janela pode exigir template; lembretes vencidos aparecem por popup e no filtro de follow-up.
-- nav_target: `crm_kanban_index`
 
-### Usar o card CRM a partir de uma conversa
+### usar_o_card_crm_a_partir_de_uma_conversa
+- titulo: Usar o card CRM a partir de uma conversa
+- rota: crm_kanban_index
 - intent: "Onde está o card CRM desta conversa?"; "Como vinculo atendimento a uma oportunidade?"; "Por que não vejo card no painel da conversa?"
 - onde_fica: Conversas > abrir conversa > botão/card CRM no painel lateral; depois CRM > CRM Kanban
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: conversa existente; a caixa pode ter auto-criação de card configurada em CRM > Configurações da caixa.
 - passos: Abra a conversa; procure o bloco/ação de CRM; crie ou abra o card vinculado; revise contato, responsável e estágio; use o link do card para navegar ao CRM.
 - gotchas: se a caixa estiver configurada para não criar card automaticamente, o card não aparece sozinho; em caixas "assigned only", visibilidade pode depender de atribuição/participação; cards standalone não têm conversa para abrir.
-- nav_target: `crm_kanban_index`
 
-### Configurar SLA do CRM
+### configurar_sla_do_crm
+- titulo: Configurar SLA do CRM
+- rota: crm_sla_index
+- feature: sla
 - intent: "Onde configuro SLA do CRM?"; "Como defino horários de atendimento?"; "Por que a página de SLA está bloqueada?"
 - onde_fica: Sidebar > CRM > CRM SLA
-- rota: `crm_sla_index` - `/app/accounts/:accountId/crm/sla`
-- gate: papel `administrator` ou `crm_admin`
 - pre_requisitos: funis e caixas para associar políticas e agendas.
 - passos: Abra CRM SLA; crie/edite políticas de SLA por funil; configure agenda de caixas; salve as janelas de atendimento; volte ao CRM para validar impacto nos cards.
 - gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; agenda incorreta gera leitura errada de prazo.
-- nav_target: `crm_sla_index`
 - highlight: `crm-new-sla`
 
-### Ver dashboard CRM e métricas de funil
+### ver_dashboard_crm_e_metricas_de_funil
+- titulo: Ver dashboard CRM e métricas de funil
+- rota: crm_dashboard_index
 - intent: "Onde vejo relatório do CRM?"; "Como acompanho conversão do funil?"; "Como comparo IA e humano?"
 - onde_fica: Sidebar > CRM > CRM Dashboard
-- rota: `crm_dashboard_index` - `/app/accounts/:accountId/crm/dashboard`
-- gate: papel `administrator` ou `agent` ou `crm_view_reports`
 - pre_requisitos: ao menos um funil com cards; metas e dados de reuniões aparecem quando houver configuração/dados.
 - passos: Abra CRM Dashboard; selecione funil; escolha período; revise KPIs, funil, ganho/perdido, follow-ups, carga por responsável e IA versus humano; use atualizar se dados mudaram.
 - gotchas: moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados.
-- nav_target: `crm_dashboard_index`
 
-### Usar calendário CRM e agendar reunião
+### usar_calendario_crm_e_agendar_reuniao
+- titulo: Usar calendário CRM e agendar reunião
+- rota: crm_calendar_index
 - intent: "Onde fica o calendário CRM?"; "Como agendo uma reunião no card?"; "Como evitar conflito de agenda?"
 - onde_fica: Sidebar > CRM > CRM Calendar; ou CRM Kanban > visualização Calendário
-- rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: caixa de e-mail Google ou Microsoft conectada com calendário ativo; card CRM existente para a reunião.
 - passos: Abra CRM Calendar; clique em um dia ou abra um card e escolha agendar reunião; selecione caixa/calendário, data, horário, duração e convidados; confira horários ocupados; confirme.
 - gotchas: sem caixa com `calendar_enabled`, o scheduler mostra estado vazio; horários ocupados vêm do free/busy do provedor e podem falhar de forma silenciosa; reuniões arrastadas no calendário não são alteradas sem confirmação, abrem o scheduler de reagendamento.
-- nav_target: `crm_calendar_index`
 
-### Configurar link público de agendamento
+### configurar_link_publico_de_agendamento
+- titulo: Configurar link público de agendamento
+- rota: public_booking_page
 - intent: "Como crio um link de agenda?"; "Onde configuro /book/:slug?"; "Como cada vendedor tem seu próprio link?"
 - onde_fica: Sidebar > CRM > CRM Calendar > Perfis de agendamento
 - pre_requisitos: caixa Google/Microsoft com calendário ativo; funil/estágio padrão recomendado; agentes membros da caixa para links por agente.
@@ -429,162 +395,148 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: no modo por agente, o slug base pode não funcionar e cada agente deve usar seu link individual; a página pública envia e-mail de confirmação antes de criar a reunião; links dependem de `FRONTEND_URL` correto para o e-mail de confirmação.
 - nav_target: `crm_calendar_index`
 
-### Sincronizar RSVP, reagendar e registrar no-show
+### sincronizar_rsvp_reagendar_e_registrar_no_show
+- titulo: Sincronizar RSVP, reagendar e registrar no-show
+- rota: crm_calendar_index
 - intent: "Como vejo se o convidado da reunião aceitou ou recusou?"; "Onde vejo o RSVP / confirmação de presença dos convidados da reunião?"; "Como marco no-show (não compareceu)?"; "Como cancelo ou reagendo uma reunião?"; "Status de presença dos convidados da reunião no calendário."
 - onde_fica: Sidebar > CRM > CRM Calendar > abrir evento de reunião
-- rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: reunião criada pelo CRM ou pelo link público; calendário conectado ao provedor.
 - passos: Abra o evento no calendário; use atualizar RSVP para sincronizar com Google/Microsoft; use Entrar, Abrir card, Reagendar ou Cancelar; após o fim da reunião, marque Realizada ou No-show; adicione notas se realizada.
 - gotchas: outcome só aparece depois do horário de término, não durante a reunião; cancelar/reagendar chama o provedor externo e pode falhar por token expirado; resumo por IA depende de `CRM_AI_ENABLED` e credencial configurada.
-- nav_target: `crm_calendar_index`
 
-### Criar e verificar identidade de remetente de e-mail
+### criar_e_verificar_identidade_de_remetente_de_e_mail
+- titulo: Criar e verificar identidade de remetente de e-mail
+- rota: campaigns_email_sender_index
 - intent: "Como libero um domínio para disparo?"; "Onde vejo DKIM/SPF/DMARC?"; "Por que não consigo escolher remetente?"
 - onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Identidades de remetente
-- rota: `campaigns_email_sender_index` - `/app/accounts/:accountId/campaigns/email_sender`
-- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: acesso ao DNS do domínio ou caixa webmail conectada para envio direto em baixo volume.
 - passos: Abra Identidades de remetente; clique em novo domínio; informe domínio e e-mail opcional; copie os registros DNS; clique em Verificar agora ou aguarde polling; use apenas identidades verificadas na campanha.
 - gotchas: domínios pendentes não aparecem como remetente SES; webmail gratuito aparece como opção de envio direto, mas com aviso e limitações; remover identidade em uso retorna erro.
-- nav_target: `campaigns_email_sender_index`
 - highlight: `campaigns-add-sender`
 
-### Criar campanha de e-mail e importar base
+### criar_campanha_de_e_mail_e_importar_base
+- titulo: Criar campanha de e-mail e importar base
+- rota: campaigns_email_index
 - intent: "Como crio uma campanha de e-mail?"; "Como importo destinatários?"; "Por que o botão de criar está desabilitado?"
 - onde_fica: Sidebar > Campanhas > Campanhas de e-mail
-- rota: `campaigns_email_index` - `/app/accounts/:accountId/campaigns/email_campaigns`
-- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: identidade verificada ou caixa webmail elegível; arquivo CSV/XLSX de destinatários quando houver base externa.
 - passos: Clique em Nova campanha; informe nome e remetente; defina nome do remetente, e-mail, reply-to e preheader; anexe CSV/XLSX de base se necessário; salve e abra o editor.
 - gotchas: `from_email` precisa pertencer ao domínio SES verificado; envio direto trava o campo "De" com o e-mail da caixa; a importação pode gerar placeholders a partir das colunas da base.
-- nav_target: `campaigns_email_index`
 - highlight: `campaigns-new-email`
 
-### Montar e-mail com editor, IA e templates
+### montar_e_mail_com_editor_ia_e_templates
+- titulo: Montar e-mail com editor, IA e templates
+- rota: campaigns_email_builder
 - intent: "Como edito o corpo do e-mail?"; "Onde uso IA para escrever?"; "Como aplicar template?"
 - onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Abrir builder
-- rota: `campaigns_email_builder` - `/app/accounts/:accountId/campaigns/email_campaigns/:campaignId/builder`
-- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanha em rascunho; para IA, `CRM_AI_ENABLED=true` e credencial de IA resolvível.
 - passos: Abra o builder; escolha IA, galeria de templates ou começar do zero; ajuste assunto no topo; edite blocos e propriedades; use placeholders disponíveis; envie teste e salve.
 - gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de disparar.
-- nav_target: `campaigns_email_builder`
 
-### Gerenciar destinatários, agendar e enviar campanha de e-mail
+### gerenciar_destinatarios_agendar_e_enviar_campanha_de_e_mail
+- titulo: Gerenciar destinatários, agendar e enviar campanha de e-mail
+- rota: campaigns_email_index
 - intent: "Como adiciono mais destinatários?"; "Como agendo envio?"; "Quando aparece Enviar agora?"
 - onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Gerenciar destinatários
-- rota: `campaigns_email_index` - `/app/accounts/:accountId/campaigns/email_campaigns`
-- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanha em rascunho; corpo HTML salvo para agendar/enviar; destinatários importados.
 - passos: Abra Gerenciar destinatários; importe CSV/XLSX adicional se precisar; confira placeholders e validação de template; agende data/hora ou volte ao builder se não houver corpo; na lista, use Enviar agora, Pausar, Retomar ou Cancelar conforme status.
 - gotchas: Enviar agora só aparece em rascunho com destinatários e corpo; validação alerta placeholders ausentes ou vazios; a lista faz polling enquanto há campanha `sending`, `scheduled` ou IA processando.
-- nav_target: `campaigns_email_index`
 
-### Ver gestão e relatório de campanhas de e-mail
+### ver_gestao_e_relatorio_de_campanhas_de_e_mail
+- titulo: Ver gestão e relatório de campanhas de e-mail
+- rota: crm_campaign_management_index
 - intent: "Onde vejo a taxa de abertura e de clique das campanhas de e-mail?"; "Onde fica o relatório / métricas das campanhas de e-mail (open rate, click rate)?"; "Como exporto o relatório (CSV) de uma campanha de e-mail?"; "Como comparo o desempenho de campanhas de e-mail?"
 - onde_fica: Sidebar > CRM > Gestão de campanhas
-- rota: `crm_campaign_management_index` - `/app/accounts/:accountId/crm/campaign-management`
-- gate: papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanhas de e-mail já enviadas ou com eventos de entrega.
 - passos: Abra Gestão de campanhas; filtre por todas ou por uma campanha; revise KPIs de enviado, entregue, abertura aproximada, clique, descadastro, bounce e complaint; ajuste intervalo da linha do tempo; exporte CSV quando uma campanha estiver selecionada.
 - gotchas: abertura é aproximada por limitação de tracking; exportar CSV só aparece com campanha específica; esta tela é relatório, não o lugar de editar campanha.
-- nav_target: `crm_campaign_management_index`
 
-### Criar campanha WhatsApp API
+### criar_campanha_whatsapp_api
+- titulo: Criar campanha WhatsApp API
+- rota: campaigns_whatsapp_api_index
 - intent: "Como disparo campanha pelo WhatsApp API?"; "Onde escolho rótulos de audiência?"; "Como pauso ou cancelo?"
 - onde_fica: Sidebar > Campanhas > WhatsApp API
-- rota: `campaigns_whatsapp_api_index` - `/app/accounts/:accountId/campaigns/whatsapp_api`
-- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: caixa elegível de WhatsApp API; rótulos de contato para audiência; template ou mensagem/mídia.
 - passos: Abra WhatsApp API; clique em Nova campanha; selecione caixa; escolha template ou escreva mensagem com variáveis; anexe mídia se precisar; selecione rótulos de audiência; agende e crie.
 - gotchas: audiência é por label, não por segmento salvo; uma campanha precisa de mensagem ou mídia; campanhas em `scheduled/running/paused` têm polling e ações de pausar/retomar/cancelar.
-- nav_target: `campaigns_whatsapp_api_index`
 - highlight: `campaigns-new-whatsapp`
 
-### Importar base de campanha em Contatos
+### importar_base_de_campanha_em_contatos
+- titulo: Importar base de campanha em Contatos
+- rota: contacts_dashboard_index
 - intent: "Como importo uma base de campanha?"; "Qual arquivo posso subir?"; "Como divido contatos em lotes?"
 - onde_fica: Sidebar > Contatos > Todos os contatos > menu de ações (três pontos) > Importar base
-- rota: `contacts_dashboard_index` - `/app/accounts/:accountId/contacts`
-- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: arquivo CSV ou XLSX com colunas lógicas de nome e telefone; telefones móveis brasileiros; nome da campanha; quantidade de lotes.
 - passos: Abra Contatos; clique no menu de ações; escolha Importar base; informe nome da campanha e número de lotes; selecione CSV/XLSX; confirme; acompanhe no histórico.
 - gotchas: a UI aceita só `.csv` e `.xlsx`; se houver qualquer linha inválida, nada deve ser importado; fórmulas, telefones fixos, nomes em branco, duplicados no arquivo e limites de tamanho/linhas são rejeitados.
-- nav_target: `contacts_dashboard_index`
 
-### Confirmar importação, baixar CSVs e desfazer rótulos
+### confirmar_importacao_baixar_csvs_e_desfazer_rotulos
+- titulo: Confirmar importação, baixar CSVs e desfazer rótulos
+- rota: contacts_campaign_imports
 - intent: "Onde vejo histórico de importações?"; "Como confirmo uma base validada?"; "Como removo os rótulos de uma importação?"
 - onde_fica: Sidebar > Contatos > Todos os contatos > menu de ações > Histórico; ou URL direta de importações
-- rota: `contacts_campaign_imports` - `/app/accounts/:accountId/contacts/campaign-imports`
-- gate: feature flag `crm`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: importação criada; para desfazer, importação concluída ou concluída com falhas.
 - passos: Abra o histórico; aguarde status sair de uploaded/validating/importing; se estiver `ready_to_confirm`, clique Confirmar; baixe CSV de erros, normalizado ou relatório quando disponíveis; em importações concluídas, use Desfazer rótulos.
 - gotchas: desfazer remove apenas labels criadas/aplicadas por aquela importação, não deleta contatos; arquivos expiram conforme política de retenção; status em processamento atualiza a cada 5 segundos.
-- nav_target: `contacts_campaign_imports`
 - highlight: `campaign-imports-back-to-contacts`
 
-### Abrir hub de Agentes Autonom.ia
+### abrir_hub_de_agentes_autonom_ia
+- titulo: Abrir hub de Agentes Autonom.ia
+- rota: autonomia_agents_index
 - intent: "Onde ficam meus agentes?"; "Como crio um agente Autonom.ia?"; "Por que não vejo o menu Agentes?"
 - onde_fica: Sidebar > Agentes > Meus agentes
-- rota: `autonomia_agents_index` - `/app/accounts/:accountId/agents`
-- gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: conta habilitada pelo gate isolado; credencial de IA quando a liberação for global por conta.
 - passos: Abra Agentes; revise os cards existentes; clique em Criar com IA; para abrir um agente existente, clique no card; use a aba Testar como entrada padrão do painel.
 - gotchas: o menu Agentes aparece assim que a chave da OpenAI é conectada em Integracoes, sem precisar recarregar a pagina; backend de agentes é admin-only e retorna 404 quando o gate está off; a sidebar também esconde o grupo para não admins; o card mostra apenas `human_card`, não a instrução interna.
-- nav_target: `autonomia_agents_index`
 - highlight: `agents-create`
 
-### Criar agente externo com base de conhecimento
+### criar_agente_externo_com_base_de_conhecimento
+- titulo: Criar agente externo com base de conhecimento
+- rota: autonomia_agents_builder
 - intent: "Como crio um agente para atender clientes?"; "Como subo materiais no construtor?"; "Como conecto no fim?"
 - onde_fica: Sidebar > Agentes > Construtor de agente
-- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
-- gate: papel `administrator` ou `autonomia_manage`
 - pre_requisitos: tipo de agente escolhido; materiais opcionais em PDF, TXT, MD, JSON, XLSX ou DOCX; caixa elegível se for conectar ao atendimento.
 - passos: Escolha atuação Externa e Com conhecimento; selecione o tipo de agente; responda à entrevista do construtor; anexe arquivos ou adicione links no painel de materiais; avance para revisão; teste e conecte uma caixa.
 - gotchas: antes da primeira mensagem pode não existir draft agent, então anexos pedem para iniciar a conversa; links colados no chat não viram fonte automaticamente, aparece sugestão para adicionar; a instrução final só existe depois de finalizar/revisar.
-- nav_target: `autonomia_agents_builder`
 
-### Criar agente interno ou sem base
+### criar_agente_interno_ou_sem_base
+- titulo: Criar agente interno ou sem base
+- rota: autonomia_agents_builder
 - intent: "Como crio um agente interno para a equipe?"; "Como faço sem base de conhecimento?"; "Esse agente responde clientes?"
 - onde_fica: Sidebar > Agentes > Construtor de agente
-- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
-- gate: papel `administrator` ou `autonomia_manage`
 - pre_requisitos: definir atuação Interna ou Sem conhecimento na tela inicial.
 - passos: Escolha atuação Interna quando o agente for copiloto da equipe; escolha Sem conhecimento se ele deve partir só da conversa guiada; selecione o tipo ou "Outros"; responda ao construtor; finalize para revisar; abra o painel para testar.
 - gotchas: agente interno não conecta em caixa e a aba Canais fica oculta/redireciona; atuação `both` não é escolhida no construtor, é ajuste posterior; sem base reduz respostas ancoradas e pode aumentar handoff por falta de conhecimento.
-- nav_target: `autonomia_agents_builder`
 
-### Atualizar conhecimento e fontes do agente
+### atualizar_conhecimento_e_fontes_do_agente
+- titulo: Atualizar conhecimento e fontes do agente
+- rota: autonomia_agent_panel
 - intent: "Como adiciono conhecimento depois de criado?"; "Como reprocesso uma fonte?"; "Como vejo a qualidade da base?"
 - onde_fica: Sidebar > Agentes > Meus agentes > abrir agente > Conhecimento
-- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
-- gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente existente; arquivo suportado ou URL para fonte.
 - passos: Abra o agente; entre em Conhecimento; arraste arquivos ou clique Adicionar; escolha link ou arquivo; acompanhe status do revisor e barra de confiança; use Reenviar para reprocessar ou remover para excluir fonte.
 - gotchas: remover/adicionar fonte recalcula a confiança e pode atualizar a instrução de agentes finalizados; a aba "Mídias para enviar" só aparece quando existir fonte desse tipo; formatos aceitos no diálogo são `.pdf`, `.txt`, `.md`, `.json`, `.xlsx`, `.docx`.
-- nav_target: `autonomia_agent_panel`
 
-### Conectar ou desconectar agente de uma caixa
+### conectar_ou_desconectar_agente_de_uma_caixa
+- titulo: Conectar ou desconectar agente de uma caixa
+- rota: autonomia_agent_panel
 - intent: "Como coloco o agente para atender uma caixa?"; "Por que uma caixa aparece ocupada?"; "Como desconecto um agente?"
 - onde_fica: Sidebar > Agentes > Meus agentes > abrir agente > Canais
-- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
-- gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente ativo/finalizado; caixa elegível; cada caixa pode hospedar apenas um agente.
 - passos: Abra o agente; entre em Canais; veja caixas conectadas e elegíveis; clique Conectar em uma caixa livre; para remover, use Desconectar na lista de conectadas.
 - gotchas: agentes internos não conectam em caixa; caixas ocupadas aparecem sem botão de conectar; mudar um agente com canais conectados para `internal` pode ser rejeitado pelo backend.
-- nav_target: `autonomia_agent_panel`
 
-### Testar, acompanhar e ajustar agente
+### testar_acompanhar_e_ajustar_agente
+- titulo: Testar, acompanhar e ajustar agente
+- rota: autonomia_agent_panel
 - intent: "Como testo o agente?"; "Como vejo desempenho?"; "Como ajusto tom, handoff ou instrução?"
 - onde_fica: Sidebar > Agentes > Meus agentes > abrir agente > Testar, Performance ou Ajustar
-- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
-- gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente existente; para métricas, conversas/respostas já registradas.
 - passos: Use Testar para conversar e ver confiança, handoff e fontes usadas; use Performance para período 7d/30d, respostas, handoff e taxa de conhecimento; use Ajustar para saudação, fallback, tom, estratégia de handoff, limiar de confiança e atuação; em modo guiado, use Re-conversar.
 - gotchas: testar agente não finalizado mostra aviso; histórico de teste fica em `sessionStorage` por agente; modo manual expõe instrução, mas não permite salvar instrução vazia; Performance pode ficar vazia até o agente operar de verdade.
-- nav_target: `autonomia_agent_panel`
 
-### Usar Copiloto Autonom.ia na conversa
+### usar_copiloto_autonom_ia_na_conversa
+- titulo: Usar Copiloto Autonom.ia na conversa
 - intent: "Como peço ajuda ao copiloto interno?"; "Por que o botão do copiloto não aparece?"; "Como trocar o agente do copiloto?"
 - onde_fica: Dashboard de conversas > botão flutuante de Copiloto Autonom.ia ou painel lateral do copiloto
 - pre_requisitos: conversa selecionada; ao menos um agente interno/both ativo e finalizado para a conta.
@@ -592,40 +544,40 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: o launcher some quando o painel já está aberto e também se não houver conversa/estado compatível; o thread reseta ao trocar de conversa para evitar vazamento de contexto; este copiloto é independente do Captain e não exige `captain_integration`.
 - nav_target: `inbox_conversation`
 
-### Configurar a chave de IA da plataforma
+### configurar_a_chave_de_ia_da_plataforma
+- titulo: Configurar a chave de IA da plataforma
+- rota: settings_applications_integration
 - intent: Onde coloco a chave da OpenAI?; Como habilito a IA do CRM Kanban?; Por que a IA da Autonom.ia nao funciona?; Onde configuro a IA da plataforma?
 - onde_fica: Configuracoes > Integracoes > CRM Kanban AI; depois CRM > CRM Kanban > editar funil > IA
-- rota: `settings_applications_integration` - `/app/accounts/:accountId/settings/integrations/:integration_id`
-- gate: feature flag `integrations`; papel `administrator`
 - perfil: `administrator` cadastra ou troca a chave da conta. `agent` nao cadastra chave; diga para pedir a um administrator. Custom role `crm_manage_ai` ou `crm_admin` pode ajustar a IA do funil no CRM quando a rota do CRM estiver liberada, mas nao acessa a tela de Integracoes; se nao puder, diga que a credencial precisa ser configurada por um administrator.
 - pre_requisitos: chave OpenAI valida; acesso de administrator; opcionalmente API Base URL quando nao usar `https://api.openai.com`.
 - passos: 1. Abra Configuracoes > Integracoes; 2. Entre em CRM Kanban AI; 3. Clique para configurar ou adicionar a integracao; 4. Preencha API Key e, se precisar, API Base URL: conectar ja liga a IA, nao existe mais caixa Enable CRM Kanban AI no formulario; 5. Salve e depois abra CRM Kanban para configurar a IA por funil.
 - gotchas: depois de conectar, a tela da integracao mostra "Conectado e funcionando"; se mostrar "Conectado, mas desligado", a conta ficou com a IA desligada e e preciso desconectar e conectar de novo; chave recusada costuma ser chave errada, revogada ou conta OpenAI sem credito; a integracao generica `openai` nao e a mesma coisa que `crm_kanban_ai`; se ja existir um hook `crm_kanban_ai` vazio ou desativado, ele impede o fallback para a chave global de sistema; a chave global de fallback e configuracao de super-admin, nao da conta; a tela de IA do funil ajusta criterios/auto-move/follow-up, mas nao cria a credencial.
 - nav_target: `settings_applications_integration` com `integration_id=crm_kanban_ai`
 
-### Primeiros passos numa conta nova
+### primeiros_passos_numa_conta_nova
+- titulo: Primeiros passos numa conta nova
+- rota: onboarding_account_details
 - intent: O que configurar primeiro numa conta nova?; Qual checklist inicial da plataforma?; Como comecar o onboarding?; Depois de criar a conta, para onde vou?
 - onde_fica: Onboarding inicial da conta; depois Sidebar > Configuracoes e Sidebar > CRM
-- rota: `onboarding_account_details` - `/app/accounts/:accountId/onboarding`
-- gate: papel `administrator` ou `agent` ou `custom_role`
 - perfil: `administrator` faz o checklist completo. `agent` e custom roles nao criam caixas, agentes, times ou configuracoes da conta; diga que eles podem ajustar perfil/notificacoes e pedir ao administrator para concluir o onboarding. Custom roles com permissoes operacionais podem usar as telas liberadas depois que a conta estiver configurada.
 - pre_requisitos: nenhum; para conectar canais, ter credenciais do canal escolhido.
 - passos: 1. Complete os dados da conta, idioma, fuso e site no onboarding; 2. Crie a primeira caixa de entrada; 3. Convide agentes e associe-os a caixa; 4. Configure horario de atendimento e mensagens basicas da caixa; 5. Crie times ou filas se a operacao tiver mais de uma equipe; 6. Configure a chave de IA/CRM se a conta usar Kanban ou agentes Autonom.ia.
 - gotchas: sem agentes vinculados a caixa, usuarios podem nao ver conversas do canal; horario de atendimento fica dentro da caixa, nao nas configuracoes gerais; agents/custom roles veem menos itens na sidebar porque a navegacao respeita permissoes reais.
 - nav_target: `settings_inbox_new`
 
-### Visao geral dos canais
+### visao_geral_dos_canais
+- titulo: Visao geral dos canais
+- rota: settings_inbox_new
 - intent: Qual canal devo conectar?; Como conecto WhatsApp, Instagram ou email?; Onde crio live-chat do site?; Como comeco com Telegram ou API?
 - onde_fica: Configuracoes > Caixas de entrada > Nova caixa
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - perfil: `administrator` cria canais e conclui o wizard. `agent` e custom roles nao criam caixas; diga para pedir a um administrator e, se ja houver caixa criada, orientar apenas como acessar conversas permitidas.
 - pre_requisitos: credenciais do provedor escolhido; para WhatsApp API, numero em formato `55DDNNNNNNNNN`; para Instagram, conta/authorization da Meta; para email, conta Google/Microsoft ou endereco para encaminhamento; para site, dominio do site; para Telegram, token do bot; para API, webhook opcional.
 - passos: 1. Abra Nova caixa e escolha o canal; 2. Para WhatsApp oficial, escolha Cloud/Twilio e siga a autorizacao ou configuracao manual; 3. Para WhatsApp API, informe modo humano ou IA, nome da caixa e telefone; 4. Para Instagram, autorize o perfil; para email, escolha Google, Microsoft ou encaminhamento; 5. Para site, Telegram ou API, preencha os campos do canal; 6. Adicione agentes e finalize o wizard.
 - gotchas: `settings_inboxes_page_channel` precisa do `sub_page` correto; WhatsApp API nesta fork e o conector WAHA, nao a campanha WhatsApp API; Instagram fica desabilitado se o app id nao estiver configurado; email via Google/Microsoft pode exigir credenciais OAuth; o passo de agentes usa `settings_inboxes_add_agents` e o final usa `settings_inbox_finish`.
-- nav_target: `settings_inbox_new`
 
-### Usar o proprio Guia Autonom.ia
+### usar_o_proprio_guia_autonom_ia
+- titulo: Usar o proprio Guia Autonom.ia
 - intent: O que o Guia faz?; Voce consegue me levar para uma tela?; O Guia pode configurar por mim?; Como pergunto onde fica uma funcao?
 - onde_fica: Widget/atalho global do Guia dentro do dashboard, quando habilitado
 - perfil: `administrator`, `agent` e custom roles podem perguntar ao Guia quando o recurso estiver habilitado para a conta. Se o usuario pedir uma tela bloqueada para o perfil dele, diga que o perfil atual nao tem acesso, explique o motivo e ofereca caminho alternativo ou orientacao para acionar um administrator.
@@ -634,7 +586,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: o Guia e read-only: nao cria, edita, envia, apaga, integra ou desfaz nada; ele nao deve revelar segredos nem burlar permissoes; rotas com parametros, como `:inboxId` ou `:agentId`, precisam de um item real escolhido antes da navegacao; se uma feature estiver desligada, o Guia deve explicar o gate em vez de prometer a tela.
 - nav_target: —
 
-### Escalar para suporte humano
+### escalar_para_suporte_humano
+- titulo: Escalar para suporte humano
 - intent: Quando devo falar com suporte humano?; Como abro um chamado?; Onde contato o suporte?; O Guia nao resolveu, o que faco?
 - onde_fica: Menu do perfil/avatar > Contate o suporte, quando o item estiver disponivel; em white-label/custom branded, usar o canal de suporte definido pela operacao Autonom.ia
 - perfil: `administrator`, `agent` e custom roles podem escalar quando o item estiver visivel. Se o item nao aparecer, diga que o atalho de suporte nao esta habilitado para esta instalacao/perfil e oriente usar o canal humano contratado ou pedir ao administrator/super-admin da plataforma.
@@ -643,559 +596,512 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: o Guia nao abre chamado por conta propria; em white-label o item nativo de suporte pode ficar escondido mesmo com a feature ligada; nao envie senhas, tokens, chaves OpenAI, credenciais de S3/SMTP ou dados sensiveis em texto aberto.
 - nav_target: —
 
-### Gerenciar Central de Ajuda
+### gerenciar_central_de_ajuda
+- titulo: Gerenciar Central de Ajuda
+- rota: portals_index
 - intent: Onde fica a Central de Ajuda?; Como crio artigo ou categoria?; Como mudo idioma do portal?; Onde configuro portal de help center?
 - onde_fica: Sidebar > Central de Ajuda > Artigos, Categorias, Idiomas ou Configuracoes
-- rota: `portals_index` - `/app/accounts/:accountId/portals/:navigationPath`
-- gate: feature flag `help_center`; papel `administrator` ou `knowledge_base_manage`
 - perfil: `administrator`, `agent` ou custom role com `knowledge_base_manage` acessam as rotas de conteudo liberadas pela meta; criar o primeiro portal (`portals_new`) exige `administrator` ou custom role com `knowledge_base_manage`. Se o perfil nao puder, diga que a Central de Ajuda nao esta liberada para aquele usuario e oriente pedir permissao `knowledge_base_manage` ou acesso de administrador.
 - pre_requisitos: para editar conteudo, portal existente; para publicar em varios idiomas, locales adicionados ao portal
 - passos: 1. Abra Central de Ajuda na sidebar; 2. Entre em Artigos para listar, criar, editar, publicar ou filtrar por status; 3. Use Categorias para organizar artigos; 4. Use Idiomas para gerenciar locales do portal; 5. Use Configuracoes para nome, slug, dominio/widget e ajustes do portal.
 - gotchas: se nao houver portal, a tela redireciona para `portals_new`; agentes sem permissao de criacao podem precisar de um admin para criar o primeiro portal; a sidebar usa `portals_index` com `navigationPath`, mas a tela final cai nas rotas `portals_*`; dominio customizado/SSL so faz polling em Cloud.
-- nav_target: `portals_index`
 
-### Gerenciar catalogo de etiquetas
+### gerenciar_catalogo_de_etiquetas
+- titulo: Gerenciar catalogo de etiquetas
+- rota: labels_list
 - intent: Onde crio uma etiqueta nova?; Como edito cor ou nome de uma label?; Como escondo etiqueta da sidebar?; Onde apago uma etiqueta?
 - onde_fica: Sidebar > Configuracoes > Etiquetas
-- rota: `labels_list` - `/app/accounts/:accountId/settings/labels/list`
-- gate: feature flag `labels`; papel `administrator` ou `label_manage`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que ele pode aplicar etiquetas onde tiver acesso, mas criar/editar/excluir o catalogo de etiquetas exige administrador.
 - pre_requisitos: nenhum
 - passos: 1. Abra Configuracoes; 2. Entre em Etiquetas; 3. Clique em adicionar etiqueta ou edite uma existente; 4. Preencha nome, descricao, cor e a opcao de exibir na sidebar; 5. Salve ou confirme a exclusao quando necessario.
 - gotchas: esta tela gerencia o catalogo, diferente de aplicar etiqueta em conversa/contato; o nome e salvo em lowercase; a opcao `show_on_sidebar` controla se aparece na sidebar; etiquetas ocultas ainda podem existir e ser usadas por fluxos customizados.
-- nav_target: `labels_list`
 - highlight: `settings-add-label`
 
-### Gerenciar atributos customizados
+### gerenciar_atributos_customizados
+- titulo: Gerenciar atributos customizados
+- rota: attributes_list
 - intent: Onde crio campo customizado?; Como adiciono atributo de contato?; Como adiciono atributo de conversa?; Como edito lista de opcoes de um atributo?
 - onde_fica: Sidebar > Configuracoes > Atributos customizados
-- rota: `attributes_list` - `/app/accounts/:accountId/settings/custom-attributes/list`
-- gate: feature flag `custom_attributes`; papel `administrator` ou `attribute_manage`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que ele pode ver/preencher atributos nas telas onde tiver acesso, mas criar/editar/excluir atributos customizados exige administrador.
 - pre_requisitos: definir se o atributo e de conversa ou contato antes de criar
 - passos: 1. Abra Configuracoes > Atributos customizados; 2. Escolha a aba Conversa ou Contato; 3. Clique para adicionar atributo; 4. Informe nome, chave, descricao e tipo; 5. Para tipo lista, cadastre as opcoes; para texto, use regex se precisar validar; 6. Salve.
 - gotchas: tipos disponiveis: texto, numero, link, data, lista e checkbox; a chave nao pode conter espacos; depois de criado, a chave e o tipo ficam travados para edicao; atributos usados no pre-chat ou como obrigatorios aparecem com badges.
-- nav_target: `attributes_list`
 - highlight: `settings-add-attribute`
 
-### Configurar CSAT da caixa
+### configurar_csat_da_caixa
+- titulo: Configurar CSAT da caixa
+- rota: settings_inbox_show
 - intent: Como ativo pesquisa de satisfacao?; Onde configuro CSAT?; Como escolho quando enviar avaliacao?; Como configuro CSAT no WhatsApp?
 - onde_fica: Sidebar > Configuracoes > Caixas de entrada > selecionar caixa > CSAT
-- rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que configurar CSAT e uma configuracao de caixa e precisa de administrador; o usuario pode apenas consultar relatorios se tiver `report_manage`.
 - pre_requisitos: caixa de entrada existente; etiquetas criadas se a regra de envio for baseada em labels
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba CSAT; 3. Ative a pesquisa; 4. Defina tipo de exibicao/mensagem ou template, conforme o canal; 5. Configure a regra por etiquetas; 6. Salve.
 - gotchas: CSAT e enviado uma vez por conversa; em canais WhatsApp a tela cria/atualiza template dedicado e mostra status de aprovacao; alterar template existente pode pedir confirmacao; se a regra por label nao bater, a pesquisa nao dispara.
-- nav_target: `settings_inbox_show`
 
-### Configurar widget do site
+### configurar_widget_do_site
+- titulo: Configurar widget do site
+- rota: settings_inbox_show
 - intent: Como configuro o live-chat do site?; Onde altero cor e texto do widget?; Como ativo formulario pre-chat?; Onde pego o script do widget?
 - onde_fica: Sidebar > Configuracoes > Caixas de entrada > caixa de website/live-chat
-- rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que editar widget, pre-chat, disponibilidade e dominio permitido exige administrador da conta.
 - pre_requisitos: caixa do tipo Website/live-chat ja criada; para criar uma nova, use `settings_inbox_new`
 - passos: 1. Abra Configuracoes > Caixas de entrada e selecione a caixa de website; 2. Em Configuracoes, ajuste nome, titulo, tagline, cor, posicao/tipo do bubble, saudacao e recursos do widget; 3. Em Pre-chat, habilite o formulario e escolha campos; 4. Em Horario de atendimento, configure disponibilidade; 5. Em Configuracao, revise HMAC, dominios permitidos e acesso mobile quando aplicavel.
 - gotchas: as abas de widget so aparecem para caixas web widget; restringir dominios bloqueia embeds fora da lista; mobile apps podem precisar da opcao de webview; o script aparece no final da criacao e tambem no preview/configuracao da caixa.
-- nav_target: `settings_inbox_show`
 
-### Gerenciar agent bots nativos
+### gerenciar_agent_bots_nativos
+- titulo: Gerenciar agent bots nativos
+- rota: agent_bots
 - intent: Onde crio um bot nativo?; Como conecto um bot webhook/API?; Como ligo um bot a uma caixa?; Onde configuro Dialogflow?
 - onde_fica: Sidebar > Configuracoes > Agent Bots; para conectar na caixa: Configuracoes > Caixas de entrada > selecionar caixa > Bot Configuration
-- rota: `agent_bots` - `/app/accounts/:accountId/settings/agent-bots`
-- gate: feature flag `agent_bots`; papel `administrator`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que bots e conexao de bots por caixa sao configuracoes administrativas.
 - pre_requisitos: endpoint HTTPS do bot webhook/API; caixa criada para conectar o bot; credenciais JSON e Project ID se for Dialogflow
 - passos: 1. Abra Agent Bots; 2. Crie ou edite um bot com nome, descricao, avatar e webhook URL; 3. Copie o access token e secret quando forem exibidos; 4. Abra a caixa desejada e entre em Bot Configuration; 5. Selecione o bot e salve; 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
 - gotchas: nesta fork, `agent_bots` cria bot do tipo webhook; Dialogflow nao e criado nessa tela, e sim em Integracoes; bots `system_bot` aparecem na lista mas nao podem ser editados/excluidos; desconectar bot da caixa nao apaga o bot do catalogo.
-- nav_target: `agent_bots`
 - highlight: `settings-add-bot`
 
-### Usar busca global
+### usar_busca_global
+- titulo: Usar busca global
+- rota: search
 - intent: Como busco uma conversa?; Onde procuro mensagens antigas?; Como acho contato pela busca?; Como encontro artigo da Central de Ajuda?
 - onde_fica: Barra superior/sidebar > campo de busca ou atalho Cmd/Ctrl+K
-- rota: `search` - `/app/accounts/:accountId/search/:tab?`
-- gate: papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `contact_manage` ou `knowledge_base_manage`
 - perfil: `administrator` e `agent` podem buscar conforme acesso; custom role com `conversation_manage`, `conversation_unassigned_manage` ou `conversation_participating_manage` ve conversas/mensagens; custom role com `contact_manage` ve contatos; custom role com `knowledge_base_manage` ve artigos. Se o perfil nao puder, explique que a busca so mostra tipos de resultado permitidos ao usuario.
 - pre_requisitos: existir dado acessivel ao usuario; para artigos, Central de Ajuda habilitada
 - passos: 1. Abra a busca global pela sidebar ou atalho; 2. Digite o termo e pressione enter; 3. Use as abas Tudo, Contatos, Conversas, Mensagens e Artigos conforme aparecerem; 4. Use Ver mais ou Carregar mais quando houver muitos resultados; 5. Abra o item encontrado para navegar ao detalhe.
 - gotchas: a aba Tudo mostra apenas alguns resultados por tipo; filtros avancados de data, remetente e inbox so entram no payload quando `advanced_search` esta ativo; resultados seguem permissao e acesso a inbox/contato/artigo.
-- nav_target: `search`
 - highlight: `global-search`
 
-### Configurar seguranca da conta e do usuario
+### configurar_seguranca_da_conta_e_do_usuario
+- titulo: Configurar seguranca da conta e do usuario
+- rota: security_settings_index
 - intent: Onde configuro SSO/SAML?; Como ativo MFA?; Onde troco minha senha?; Por que nao vejo seguranca?
 - onde_fica: SAML: Sidebar > Configuracoes > Seguranca; senha/MFA: menu de perfil > Configuracoes do perfil
-- rota: `security_settings_index` - `/app/accounts/:accountId/settings/security`
-- gate: feature flag `saml`; papel `administrator`
 - perfil: SAML exige `administrator`; senha e MFA ficam disponiveis para `administrator`, `agent` e `custom_role` no perfil proprio. Se o perfil nao puder acessar SAML, diga que SSO e configuracao administrativa; se MFA/senha nao aparecer, orientar a abrir configuracoes do proprio perfil.
 - pre_requisitos: para SAML, dados do IdP: SSO URL, certificado e Entity ID; para MFA, aplicativo autenticador; para senha, senha atual
 - passos: 1. Para SAML, abra Configuracoes > Seguranca; 2. Ative SAML e preencha SSO URL, IdP Entity ID e certificado; 3. Confira fingerprint, SP Entity ID e mapeamento de atributos; 4. Para senha, abra Perfil > Configuracoes e use Trocar senha; 5. Para MFA, use Gerenciar 2FA, leia o QR Code, valide o codigo e guarde os codigos de backup.
 - gotchas: se `saml` estiver desabilitado ou a instalacao nao for Cloud/Enterprise, a rota pode nao aparecer ou mostrar bloqueio; se login SAML nao estiver em `allowedLoginMethods`, a tela mostra mensagem de desabilitado; `profile_settings_mfa` redireciona para perfil quando MFA global esta desligado.
-- nav_target: `security_settings_index`
 
-### Consultar logs de auditoria
+### consultar_logs_de_auditoria
+- titulo: Consultar logs de auditoria
+- rota: auditlogs_list
 - intent: Onde vejo log de auditoria?; Como descubro quem alterou algo?; Onde vejo atividades administrativas?; Tem historico com IP?
 - onde_fica: Sidebar > Configuracoes > Logs de auditoria
-- rota: `auditlogs_list` - `/app/accounts/:accountId/settings/audit-logs/list`
-- gate: feature flag `audit_logs`; papel `administrator`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que logs de auditoria sao restritos a administradores.
 - pre_requisitos: feature habilitada na conta/plano; haver eventos auditaveis
 - passos: 1. Abra Configuracoes; 2. Entre em Logs de auditoria; 3. Revise atividade, horario e IP; 4. Navegue pelas paginas no rodape; 5. Use o texto do evento para identificar agente, recurso e alteracao.
 - gotchas: a tela nao tem busca/filtro avancado neste componente; os textos sao gerados por chaves de traducao a partir do payload; se a feature estiver desativada, pode aparecer paywall/bloqueio ou a entrada sumir.
-- nav_target: `auditlogs_list`
 
-### Gerenciar aplicacoes e dashboard apps
+### gerenciar_aplicacoes_e_dashboard_apps
+- titulo: Gerenciar aplicacoes e dashboard apps
+- rota: settings_applications
 - intent: Onde configuro integracoes?; Como crio app no painel da conversa?; Como conecto Dialogflow, Slack ou webhook?; O que sao dashboard apps?
 - onde_fica: Sidebar > Configuracoes > Integracoes; para apps embutidos: Integracoes > Dashboard Apps
-- rota: `settings_applications` - `/app/accounts/:accountId/settings/integrations`
-- gate: feature flag `integrations`; papel `administrator`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que integrar aplicativos, webhooks e dashboard apps exige administrador.
 - pre_requisitos: credenciais da integracao ou URL do app; para dashboard app, titulo e URL valida; para Dialogflow, Project ID, JSON de credenciais e caixa de entrada
 - passos: 1. Abra Configuracoes > Integracoes; 2. Pesquise a aplicacao desejada; 3. Clique em configurar; 4. Para hooks, preencha credenciais e selecione a caixa quando a integracao for por inbox; 5. Para Dashboard Apps, abra a area propria e cadastre titulo e URL; 6. Salve e teste no contexto da conversa/caixa.
 - gotchas: Dashboard App usa conteudo do tipo `frame` com URL valida; Dialogflow e uma integracao por inbox, nao um `agent_bot`; algumas integracoes so aparecem como ativas se houver credencial global ou feature habilitada; remover hook desconecta a integracao.
-- nav_target: `settings_applications`
 
-### Ver plano e cobranca
+### ver_plano_e_cobranca
+- titulo: Ver plano e cobranca
+- rota: billing_settings_index
 - intent: Onde vejo meu plano?; Como abro cobranca?; Onde compro creditos?; Esta instalacao tem billing?
 - onde_fica: Sidebar > Configuracoes > Billing/Cobranca
-- rota: `billing_settings_index` - `/app/accounts/:accountId/settings/billing`
-- gate: papel `administrator`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que plano e cobranca sao restritos a administradores.
 - pre_requisitos: conta Cloud com dados de assinatura em `custom_attributes`; para comprar creditos, plano diferente de Hacker
 - passos: 1. Abra Configuracoes > Billing; 2. Revise plano atual, quantidade de assentos e renovacao; 3. Use Gerenciar assinatura para abrir o portal de cobranca; 4. Revise creditos/limites do Captain quando aparecerem; 5. Use comprar creditos se o plano permitir.
 - gotchas: no fork self-hosted/white-label, considerar nao-aplicavel se `isOnChatwootCloud` for falso; quando nao ha billing plan, a tela tenta atualizar uma vez e pode mostrar mensagem de ausencia de billing; compra de creditos nao aparece no plano Hacker.
-- nav_target: `billing_settings_index`
 
-### Configurar IA do CRM por funil
+### configurar_ia_do_crm_por_funil
+- titulo: Configurar IA do CRM por funil
+- rota: crm_kanban_index
 - intent: "Como ligo a IA de um funil?"; "Onde configuro auto follow-up do CRM?"; "Como a IA decide mover cards de etapa?"; "Como ativo deteccao de callback?"
 - onde_fica: Sidebar > CRM > CRM Kanban > selecionar funil > Editar funil > IA do funil
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_ai`/`crm_admin`; se o perfil nao puder, diga que ele pode visualizar o CRM quando tiver acesso, mas precisa de permissao de IA do CRM para alterar essas configuracoes.
 - pre_requisitos: funil ja criado; etapas do funil definidas; para auto-move, criterios de IA por etapa bem descritos.
 - passos: 1. Abra CRM Kanban; 2. Selecione o funil; 3. Clique em Editar funil; 4. No bloco IA do funil, habilite IA, auto-move, callback e/ou follow-up automatico; 5. Preencha criterios por etapa, handoff e horarios de envio; 6. Clique em Salvar IA ou Salvar funil.
 - gotchas: o painel so aparece ao editar um funil existente; auto-move depende de criterios por etapa; callback tem modos "so lembrar", "enviar mensagem" ou "ambos"; follow-up automatico envia mensagens, entao deve ser ligado com cuidado.
-- nav_target: `crm_kanban_index`
 
-### Usar sugestoes e resumo por IA no card do CRM
+### usar_sugestoes_e_resumo_por_ia_no_card_do_crm
+- titulo: Usar sugestoes e resumo por IA no card do CRM
+- rota: crm_kanban_index
 - intent: "Como peco para a IA analisar um card?"; "Onde aceito a etapa sugerida pela IA?"; "Como vejo resumo da conversa no card?"
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card > paineis de IA no drawer do card
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_ai`/`crm_admin` para analisar, aceitar, dispensar e atualizar resumo; custom role apenas com `crm_view` pode ser orientada a visualizar o card, mas nao a executar acoes de IA.
 - pre_requisitos: card existente; para resumo, card precisa estar vinculado a uma conversa visivel ao usuario.
 - passos: 1. Abra o card; 2. Veja o painel Sugestao de estagio; 3. Clique em Analisar agora quando quiser reavaliar; 4. Aceite para mover o card ou dispense a sugestao; 5. No painel Resumo da conversa por IA, use Atualizar quando precisar regenerar.
 - gotchas: se a IA ficar abaixo do limiar, a tela mostra que nao encontrou etapa adequada; resumo nao aparece para card sem conversa; aceitar sugestao move o card de etapa.
-- nav_target: `crm_kanban_index`
 
-### Conectar ou autorizar calendario em uma caixa de e-mail
+### conectar_ou_autorizar_calendario_em_uma_caixa_de_e_mail
+- titulo: Conectar ou autorizar calendario em uma caixa de e-mail
+- rota: settings_inboxes_page_channel
 - intent: "Como libero agenda Google no CRM?"; "Como autorizo calendario da Microsoft?"; "Por que nao aparece caixa para agendar reuniao?"; "Como reconecto calendario de uma inbox?"
 - onde_fica: Configuracoes > Caixas de entrada > Nova caixa > Email > Google ou Microsoft; para revisar caixa existente: Configuracoes > Caixas de entrada > selecionar caixa
-- rota: `settings_inboxes_page_channel` - `/app/accounts/:accountId/settings/inboxes/new/:sub_page`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - perfil: `administrator`; se o perfil nao puder, diga que conexao OAuth de e-mail/calendario e acao administrativa e peca a um administrador da conta para conectar ou reautorizar a caixa.
 - pre_requisitos: credenciais OAuth Google ou Microsoft configuradas para a conta ou globalmente; permissao no provedor para consentir acesso de e-mail e calendario.
 - passos: 1. Abra Nova caixa e escolha Email; 2. Escolha Google ou Microsoft; 3. Entre com a conta de e-mail que sera a caixa; 4. Aceite as permissoes solicitadas, incluindo calendario; 5. Ao voltar, confirme que a caixa aparece no CRM Calendar e nos perfis de agendamento.
 - gotchas: `calendar_enabled` e `calendar_scope_granted` so ficam ativos se o provedor devolver escopo de calendario; caixas Google/Microsoft conectadas antes da flag podem precisar reautorizar; entrar com o mesmo e-mail no fluxo OAuth atualiza a caixa existente em vez de criar outra; provedores "outros" por IMAP/SMTP nao habilitam calendario.
-- nav_target: `settings_inboxes_page_channel`
 
-### Configurar pagina de agendamento em caixa compartilhada e links por agente
+### configurar_pagina_de_agendamento_em_caixa_compartilhada_e_links_por_agente
+- titulo: Configurar pagina de agendamento em caixa compartilhada e links por agente
+- rota: crm_calendar_index
 - intent: "Como varios vendedores usam o mesmo e-mail para agenda?"; "Como gero um link de agendamento para cada agente?"; "O que significa caixa compartilhada no booking?"
 - onde_fica: Sidebar > CRM > CRM Calendar > Pagina de agendamento
-- rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`; se o perfil nao puder, diga que a API de perfis de agendamento e administrativa. Custom role com `crm_manage_pipelines` pode ver controles de CRM, mas deve pedir a um administrador para salvar/gerar links de booking.
 - pre_requisitos: caixa de e-mail Google/Microsoft conectada com calendario; agentes adicionados como membros da caixa; funil/etapa padrao recomendados para criar o lead corretamente.
 - passos: 1. Abra CRM Calendar; 2. Clique em Pagina de agendamento; 3. Habilite a pagina da caixa; 4. Em Atribuicao, escolha Por agente (links individuais); 5. Marque Caixa compartilhada quando varios agentes usam o mesmo e-mail; 6. Salve e copie o link de cada agente.
 - gotchas: em modo por agente, compartilhe os links individuais, nao o slug base; agente sem acesso a caixa nao e elegivel; com `calendar_shared`, disponibilidade e calculada pelos compromissos CRM do agente, nao pelo free/busy agregado da caixa compartilhada.
-- nav_target: `crm_calendar_index`
 - highlight: `crm-booking-page`
 
-### Gerenciar tokens de integracao do CRM
+### gerenciar_tokens_de_integracao_do_crm
+- titulo: Gerenciar tokens de integracao do CRM
+- rota: crm_integration_tokens_index
 - intent: "Onde crio token para integrar o CRM?"; "Como gero token para n8n?"; "Como revogo ou rotaciono um token do CRM?"
 - onde_fica: URL direta de CRM Settings > Integration tokens; tambem acessivel pelo guia de n8n em Configuracoes > Integracoes > n8n (Conexoes do CRM)
-- rota: `crm_integration_tokens_index` - `/app/accounts/:accountId/crm/settings/integration-tokens`
-- gate: papel `administrator` ou `crm_admin`
 - perfil: `administrator` ou custom role com `crm_admin`; agentes comuns, agentes sem custom role e custom roles sem `crm_admin` nao podem gerenciar tokens. Diga que tokens sao credenciais administrativas e devem ser criados por admin/CRM admin.
 - pre_requisitos: saber o nome da integracao e os escopos minimos necessarios (`crm_view`, `crm_manage_cards`, `crm_move_cards`, `crm_manage_pipelines`, `crm_manage_ai`, `crm_view_reports`, `crm_admin`).
 - passos: 1. Abra a pagina de tokens; 2. Informe um nome identificavel; 3. Marque somente os escopos necessarios; 4. Crie o token; 5. Copie o segredo exibido uma unica vez; 6. Use Rotacionar ou Revogar quando precisar trocar ou encerrar o acesso.
 - gotchas: o segredo nao e mostrado de novo depois de dispensado; rotacionar revoga o token anterior imediatamente; revogar remove o acesso na hora; para n8n, a tela mostra o header `api_access_token`.
-- nav_target: `crm_integration_tokens_index`
 - highlight: `crm-new-token`
 
-### Configurar integracao CRM com n8n
+### configurar_integracao_crm_com_n8n
+- titulo: Configurar integracao CRM com n8n
+- rota: settings_integrations_crm_n8n
 - intent: "Como conecto o CRM ao n8n?"; "Quais eventos do CRM posso enviar por webhook?"; "Onde configuro automacao externa para cards?"
 - onde_fica: Configuracoes > Integracoes > n8n (Conexoes do CRM)
-- rota: `settings_integrations_crm_n8n` - `/app/accounts/:accountId/settings/integrations/crm_n8n`
-- gate: feature flag `integrations`; papel `administrator`
 - perfil: `administrator`; se o perfil nao puder, diga que a tela de integracoes e webhooks e administrativa. Custom role `crm_admin` pode acessar tokens pela rota do CRM, mas nao substitui o acesso administrativo a Configuracoes > Integracoes.
 - pre_requisitos: endpoint HTTPS publico do n8n; token de CRM com escopos adequados; decidir quais eventos assinar.
 - passos: 1. Abra n8n (Conexoes do CRM); 2. Clique para criar token de API do CRM; 3. Copie o token no n8n usando o header `api_access_token`; 4. Volte e crie um webhook; 5. Marque eventos como `crm.card.created`, `crm.card.moved`, `crm.card.won`, `crm.card.lost`, `crm.card.reopened` ou `crm.card.archived`.
 - gotchas: n8n local ou URL privada pode ser bloqueado por protecao SSRF; eventos de CRM so aparecem no webhook quando `CRM_KANBAN_ENABLED=true`; token e webhook sao duas partes separadas da integracao.
-- nav_target: `settings_integrations_crm_n8n`
 - highlight: `crm-n8n-token`
 
-### Configurar CRM por caixa de entrada
+### configurar_crm_por_caixa_de_entrada
+- titulo: Configurar CRM por caixa de entrada
+- rota: crm_kanban_index
 - intent: "Como faco conversas virarem cards automaticamente?"; "Como defino funil padrao por inbox?"; "Como restringo cards da caixa para o agente atribuido?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Configuracoes de inbox
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que ele precisa de permissao para gerenciar funis/configuracoes do CRM.
 - pre_requisitos: caixas de entrada criadas; funil e etapas existentes quando quiser definir padrao.
 - passos: 1. Abra CRM Kanban; 2. Clique em Configuracoes de inbox; 3. Ative CRM na caixa desejada; 4. Escolha visibilidade entre todos os cards da inbox ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
 - gotchas: se CRM ativo for desligado, a criacao automatica tambem e desligada; `assigned_only` muda a visibilidade de agentes; funil/etapa padrao precisam pertencer a mesma conta.
-- nav_target: `crm_kanban_index`
 - highlight: `crm-configure-inboxes`
 
-### Criar automacoes por etapa do funil
+### criar_automacoes_por_etapa_do_funil
+- titulo: Criar automacoes por etapa do funil
+- rota: crm_kanban_index
 - intent: "Como automatizo uma etapa do CRM?"; "Como criar follow-up ao mover card?"; "Como atribuir responsavel automaticamente quando entrar numa etapa?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Editar funil > etapa > icone de automacoes
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que automacoes de etapa fazem parte da gestao de funis.
 - pre_requisitos: funil salvo; etapa existente; agentes disponiveis quando a acao for atribuir responsavel.
 - passos: 1. Abra Editar funil; 2. Na etapa desejada, clique no icone de automacoes; 3. Crie uma regra e escolha gatilho de entrada ou saida; 4. Adicione passos como Criar follow-up, Atribuir responsavel ou Mover estagio; 5. Defina atraso e parametros; 6. Salve a regra.
 - gotchas: automacoes so aparecem para etapas ja salvas; regras podem encadear movimentos, entao evite loops; follow-ups criados pela automacao aparecem no card e no calendario.
-- nav_target: `crm_kanban_index`
 
-### Salvar e compartilhar visoes da lista do CRM
+### salvar_e_compartilhar_visoes_da_lista_do_crm
+- titulo: Salvar e compartilhar visoes da lista do CRM
+- rota: crm_kanban_index
 - intent: "Como salvo uma visualizacao do CRM?"; "Como compartilhar filtros e colunas da lista?"; "Onde aplico uma visao salva?"
 - onde_fica: Sidebar > CRM > CRM Kanban > alternar para Lista > botao de visoes salvas
-- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` ou custom role com `crm_view`; se o perfil nao puder, diga que ele precisa ao menos de acesso de visualizacao do CRM. Somente dono da visao ou administrador edita/exclui uma visao existente.
 - pre_requisitos: funil selecionado; modo Lista aberto; filtros, colunas, ordenacao, agrupamento ou densidade ajustados.
 - passos: 1. Abra o CRM em modo Lista; 2. Ajuste filtros, colunas e ordenacao; 3. Clique no botao de visoes salvas; 4. Crie uma nova visao; 5. Escolha visibilidade privada, time ou conta; 6. Aplique a visao quando quiser restaurar a configuracao.
 - gotchas: visoes privadas aparecem so para o dono; visoes de time/conta aparecem para outros usuarios com acesso ao CRM; a visao salva captura configuracao da lista, nao altera cards.
-- nav_target: `crm_kanban_index`
 
-### Ordenar e filtrar status da lista de conversas
+### ordenar_e_filtrar_status_da_lista_de_conversas
+- titulo: Ordenar e filtrar status da lista de conversas
+- rota: home
 - intent: Como ordeno minhas conversas?; Onde mudo a ordem da lista?; Como mostro só conversas resolvidas/pendentes/adiadas?; Como vejo conversas por prioridade ou não lidas?
 - onde_fica: Conversas > cabeçalho da lista > botão de ordenação (ícone de setas)
-- rota: `home` - `/app/accounts/:accountId/dashboard`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: estar na lista de conversas (sem filtro avançado/pasta ativos)
 - passos: 1. Abra Conversas; 2. Clique no botão de ordenação (ícone de setas) no topo da lista; 3. Em Status escolha Abertas, Resolvidas, Pendentes, Adiadas ou Todas; 4. Em Ordenar por escolha por última atividade, criação, prioridade, não lidas ou tempo de espera; 5. A preferência fica salva para as próximas visitas.
 - gotchas: o botão de ordenação só aparece na visão padrão da lista — quando há filtro avançado ou pasta aplicada ele some; a escolha de status/ordem é salva nas preferências do usuário (uiSettings) e não é um filtro avançado.
-- nav_target: `home`
 - highlight: `conversations-sort-status`
 
-### Iniciar nova conversa
+### iniciar_nova_conversa
+- titulo: Iniciar nova conversa
+- rota: home
 - intent: Como começo uma nova conversa?; Onde envio a primeira mensagem para um contato?; Como crio um atendimento do zero?; Como mando mensagem proativa por WhatsApp/e-mail?
 - onde_fica: Sidebar (canto superior) > botão de nova conversa (ícone de caneta)
-- rota: `home` - `/app/accounts/:accountId/dashboard`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: existir ao menos uma caixa de entrada que permita criar conversa; contato existente ou criar um novo no fluxo
 - passos: 1. Clique no botão de nova conversa (ícone de caneta) no topo da sidebar; 2. Selecione a caixa de entrada; 3. Escolha ou crie o contato; 4. Para WhatsApp/e-mail escolha o template/opções; 5. Escreva a mensagem e envie para abrir a conversa.
 - gotchas: canais que exigem janela/template (WhatsApp API) podem limitar o envio livre; a caixa precisa suportar criação de conversa; o contato precisa ter o identificador correto (telefone/e-mail) do canal escolhido.
-- nav_target: `home`
 - highlight: `conversations-compose-new`
 
-### Filtrar contatos
+### filtrar_contatos
+- titulo: Filtrar contatos
+- rota: contacts_dashboard_index
 - intent: Como filtro contatos?; Onde aplico condições por atributo ou etiqueta?; Como busco contatos por critérios avançados?
 - onde_fica: Contatos > Todos os contatos > botão de filtros (ícone de funil) no cabeçalho
-- rota: `contacts_dashboard_index` - `/app/accounts/:accountId/contacts`
-- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: contatos existentes; atributos/etiquetas para usar como condição
 - passos: 1. Abra Contatos; 2. Clique no ícone de filtros (funil) no cabeçalho; 3. Adicione condições por atributo, etiqueta ou padrão; 4. Aplique o filtro; 5. Opcionalmente salve como segmento.
 - gotchas: o botão de filtros não aparece nas visões Marcados com (etiqueta) nem Ativos; um ponto colorido no ícone indica que há filtros aplicados.
-- nav_target: `contacts_dashboard_index`
 - highlight: `contacts-open-filter`
 
-### Ordenar lista de contatos
+### ordenar_lista_de_contatos
+- titulo: Ordenar lista de contatos
+- rota: contacts_dashboard_index
 - intent: Como ordeno os contatos?; Onde mudo a ordem da lista de contatos?; Como classifico por nome ou data de criação?
 - onde_fica: Contatos > Todos os contatos > botão de ordenação (ícone de setas) no cabeçalho
-- rota: `contacts_dashboard_index` - `/app/accounts/:accountId/contacts`
-- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: nenhum
 - passos: 1. Abra Contatos; 2. Clique no ícone de ordenação (setas) no cabeçalho; 3. Escolha o campo em Classificar por; 4. Escolha Crescente ou Decrescente em Ordenação; 5. A lista é reordenada automaticamente.
 - gotchas: a preferência de ordenação fica salva nas configurações de interface (contacts_sort_by) e é aplicada também em segmentos e busca.
-- nav_target: `contacts_dashboard_index`
 - highlight: `contacts-sort-menu`
 
-### Ver histórico de importações de campanha
+### ver_historico_de_importacoes_de_campanha
+- titulo: Ver histórico de importações de campanha
+- rota: contacts_campaign_imports
 - intent: Onde vejo o histórico de bases importadas?; Como acompanho o status das importações de campanha?; Onde fica a lista de importações?
 - onde_fica: Contatos > Todos os contatos > menu de ações (três pontos) > Histórico de bases
-- rota: `contacts_campaign_imports` - `/app/accounts/:accountId/contacts/campaign-imports`
-- gate: feature flag `crm`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: pelo menos uma importação de base criada
 - passos: 1. Abra Contatos; 2. Clique no menu de ações (três pontos); 3. Escolha Histórico de bases; 4. Acompanhe o status, baixe CSVs e use as ações da linha.
 - gotchas: a página só abre com CAMPAIGN_IMPORT_ENABLED=true e papel administrador, caso contrário redireciona para Contatos; status em processamento atualiza a cada 5 segundos.
-- nav_target: `contacts_campaign_imports`
 - highlight: `campaign-imports-history-title`
 
-### Trocar a senha no perfil
+### trocar_a_senha_no_perfil
+- titulo: Trocar a senha no perfil
+- rota: profile_settings_index
 - intent: Como troco minha senha?; Onde mudo a senha da minha conta?; Como atualizo a senha de acesso?; Esqueci minha senha, mudo aqui?
 - onde_fica: Menu do usuario/perfil > Configuracoes do perfil > Senha
-- rota: `profile_settings_index` - `/app/accounts/:accountId/profile/settings`
-- gate: papel `administrator` ou `agent` ou `custom_role`
 - pre_requisitos: saber a senha atual; nova senha com pelo menos 6 caracteres
 - passos: 1. Abra Configuracoes do perfil; 2. Va ate a secao Senha; 3. Informe a senha atual; 4. Digite e confirme a nova senha; 5. Clique em Mudar Senha.
 - gotchas: a troca de senha so existe quando a atualizacao de perfil esta liberada; senha e confirmacao precisam coincidir e ter no minimo 6 caracteres; esqueci-a-senha (reset por e-mail) e um fluxo de login separado, nao esta nesta tela.
-- nav_target: `profile_settings_index`
 - highlight: `profile-change-password`
 
-### Copiar ou reiniciar o token de acesso da API
+### copiar_ou_reiniciar_o_token_de_acesso_da_api
+- titulo: Copiar ou reiniciar o token de acesso da API
+- rota: profile_settings_index
 - intent: Onde pego meu token de acesso?; Como copio a chave de API do usuario?; Como reinicio/rotaciono meu access token?; Onde fica o token pessoal de API?
 - onde_fica: Menu do usuario/perfil > Configuracoes do perfil > Token de acesso
-- rota: `profile_settings_index` - `/app/accounts/:accountId/profile/settings`
-- gate: papel `administrator` ou `agent` ou `custom_role`
 - pre_requisitos: usuario autenticado
 - passos: 1. Abra Configuracoes do perfil; 2. Role ate a secao Token de acesso; 3. Use o icone de olho para revelar o token; 4. Clique em Copiar para usar em integracoes; 5. Use Reiniciar para gerar um novo token quando precisar revogar o atual.
 - gotchas: este token e pessoal do usuario, diferente dos tokens de integracao do CRM; reiniciar invalida o token anterior imediatamente e quebra integracoes que o usavam.
-- nav_target: `profile_settings_index`
 - highlight: `profile-copy-access-token`
 
-### Baixar relatório de agentes
+### baixar_relatorio_de_agentes
+- titulo: Baixar relatório de agentes
+- rota: agent_reports_index
 - intent: Como baixo o relatório de agentes?; Onde exporto o desempenho por agente?; Como gero o CSV de agentes?; Onde fica o download do relatório de agentes?
 - onde_fica: Relatorios > Agentes
-- rota: `agent_reports_index` - `/app/accounts/:accountId/reports/agents_overview`
-- gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: conversas atribuídas a agentes no período escolhido
 - passos: 1. Abra Relatorios; 2. Entre em Agentes; 3. Ajuste o período/filtros; 4. Clique em Baixar relatórios de agentes; 5. Abra o arquivo gerado.
 - gotchas: o download usa o período/filtros ativos na tela; usuários sem `report_manage` não acessam.
-- nav_target: `agent_reports_index`
 - highlight: `reports-download-agents`
 
-### Baixar relatório de caixas
+### baixar_relatorio_de_caixas
+- titulo: Baixar relatório de caixas
+- rota: inbox_reports_index
 - intent: Como baixo o relatório por caixa de entrada?; Onde exporto o desempenho das caixas?; Como gero o CSV de caixas?; Onde fica o download do relatório de caixas?
 - onde_fica: Relatorios > Caixas
-- rota: `inbox_reports_index` - `/app/accounts/:accountId/reports/inboxes_overview`
-- gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: conversas nas caixas no período escolhido
 - passos: 1. Abra Relatorios; 2. Entre em Caixas; 3. Ajuste o período/filtros; 4. Clique em Baixar relatórios de entrada; 5. Abra o arquivo gerado.
 - gotchas: o rótulo no botão é 'Baixar relatórios de entrada'; o download respeita o período ativo.
-- nav_target: `inbox_reports_index`
 - highlight: `reports-download-inboxes`
 
-### Baixar relatório de times
+### baixar_relatorio_de_times
+- titulo: Baixar relatório de times
+- rota: team_reports_index
 - intent: Como baixo o relatório por time?; Onde exporto o desempenho dos times?; Como gero o CSV de times?; Onde fica o download do relatório de times?
 - onde_fica: Relatorios > Times
-- rota: `team_reports_index` - `/app/accounts/:accountId/reports/teams_overview`
-- gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: times criados e conversas atribuídas no período
 - passos: 1. Abra Relatorios; 2. Entre em Times; 3. Ajuste o período/filtros; 4. Clique em Baixar relatórios de time; 5. Abra o arquivo gerado.
 - gotchas: o download respeita o período/filtros ativos na tela.
-- nav_target: `team_reports_index`
 - highlight: `reports-download-teams`
 
-### Baixar relatório de etiquetas
+### baixar_relatorio_de_etiquetas
+- titulo: Baixar relatório de etiquetas
+- rota: label_reports_index
 - intent: Como baixo o relatório por etiqueta?; Onde exporto o desempenho das etiquetas?; Como gero o CSV de etiquetas?; Onde fica o download do relatório de etiquetas?
 - onde_fica: Relatorios > Etiquetas
-- rota: `label_reports_index` - `/app/accounts/:accountId/reports/labels_overview`
-- gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: etiquetas aplicadas a conversas no período
 - passos: 1. Abra Relatorios; 2. Entre em Etiquetas; 3. Ajuste o período/filtros; 4. Clique em Baixar relatórios de etiquetas; 5. Abra o arquivo gerado.
 - gotchas: o download respeita o período/filtros ativos na tela.
-- nav_target: `label_reports_index`
 - highlight: `reports-download-labels`
 
-### Baixar relatório de CSAT
+### baixar_relatorio_de_csat
+- titulo: Baixar relatório de CSAT
+- rota: csat_reports
 - intent: Onde vejo a satisfação do cliente (CSAT)?; Como exporto as respostas de CSAT?; Como baixo o relatório de CSAT?; Onde acompanho avaliações dos clientes?
 - onde_fica: Relatorios > CSAT
-- rota: `csat_reports` - `/app/accounts/:accountId/reports/csat`
-- gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: pesquisa de CSAT habilitada e respostas coletadas no período
 - passos: 1. Abra Relatorios; 2. Entre em CSAT; 3. Ajuste o período/filtros; 4. Revise as métricas e respostas; 5. Clique em Baixar relatórios de CSAT para exportar.
 - gotchas: o botão de download usa o rótulo 'Baixar relatórios de CSAT'; sem respostas no período a tela fica vazia.
-- nav_target: `csat_reports`
 - highlight: `reports-download-csat`
 
-### Criar campanha SMS
+### criar_campanha_sms
+- titulo: Criar campanha SMS
+- rota: campaigns_sms_index
 - intent: Como crio uma campanha de SMS?; Onde disparo SMS em massa?; Como agendo um envio de SMS?; Onde fica campanhas SMS?
 - onde_fica: Sidebar > Campanhas > Campanhas SMS
-- rota: `campaigns_sms_index` - `/app/accounts/:accountId/campaigns/sms`
-- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: caixa de SMS conectada; audiência (rótulos/contatos); mensagem do SMS
 - passos: 1. Abra Campanhas > Campanhas SMS; 2. Clique em Criar campanha; 3. Selecione a caixa de SMS; 4. Escreva a mensagem; 5. Defina audiência e agendamento; 6. Crie a campanha.
 - gotchas: o botão 'Criar campanha' fica no cabeçalho da página (CampaignLayout); a criação abre um diálogo; sem caixa de SMS conectada não há opções de envio.
-- nav_target: `campaigns_sms_index`
 - highlight: `campaigns-new-sms`
 
-### Criar campanha de chat ao vivo
+### criar_campanha_de_chat_ao_vivo
+- titulo: Criar campanha de chat ao vivo
+- rota: campaigns_livechat_index
 - intent: Como crio uma campanha de chat ao vivo?; Como disparo mensagem proativa no widget?; Onde configuro campanha de live chat?; Como abordo visitantes automaticamente?
 - onde_fica: Sidebar > Campanhas > Campanhas de chat ao vivo
-- rota: `campaigns_livechat_index` - `/app/accounts/:accountId/campaigns/live_chat`
-- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: caixa de site/widget de chat ao vivo conectada
 - passos: 1. Abra Campanhas > Campanhas de chat ao vivo; 2. Clique em Criar campanha; 3. Selecione a caixa de site; 4. Defina título, mensagem e regra de URL/tempo; 5. Crie a campanha.
 - gotchas: campanhas de chat ao vivo são contínuas (ongoing) e dependem do widget; o botão 'Criar campanha' fica no cabeçalho e abre um diálogo.
-- nav_target: `campaigns_livechat_index`
 - highlight: `campaigns-new-livechat`
 
-### Criar campanha WhatsApp Oficial
+### criar_campanha_whatsapp_oficial
+- titulo: Criar campanha WhatsApp Oficial
+- rota: campaigns_whatsapp_index
 - intent: Como crio campanha no WhatsApp oficial?; Onde disparo mensagem em massa pelo WhatsApp?; Como uso template oficial em campanha?; Qual a diferença para WhatsApp API?
 - onde_fica: Sidebar > Campanhas > Campanhas WhatsApp Oficial
-- rota: `campaigns_whatsapp_index` - `/app/accounts/:accountId/campaigns/whatsapp`
-- gate: feature flag `whatsapp_campaign`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: caixa de WhatsApp oficial conectada; template/audiência
 - passos: 1. Abra Campanhas > Campanhas WhatsApp Oficial; 2. Clique em Criar campanha; 3. Selecione a caixa de WhatsApp; 4. Escolha template ou mensagem; 5. Defina audiência e agendamento; 6. Crie.
 - gotchas: esta é a tela 'WhatsApp Oficial' (whatsapp_campaigns), diferente de 'WhatsApp API' (campaigns_whatsapp_api_index); só aparece com a feature flag whatsapp_campaigns ativa.
-- nav_target: `campaigns_whatsapp_index`
 - highlight: `campaigns-new-whatsapp-official`
 
-### Usar e filtrar o calendário CRM por tipo de evento
+### usar_e_filtrar_o_calendario_crm_por_tipo_de_evento
+- titulo: Usar e filtrar o calendário CRM por tipo de evento
+- rota: crm_calendar_index
 - intent: Como filtro o calendário por tipo?; Como mostro só reuniões / só follow-ups no calendário?; Como escondo os eventos externos do calendário?; O que são os chips Lembretes, WhatsApp, Previsões, Reuniões e Externos?
 - onde_fica: Sidebar > CRM > Calendário (ou CRM Kanban > visualização Calendário) > chips de tipo no cabeçalho do calendário
-- rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
-- gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: ao menos um funil; para ver reuniões/externos, caixa Google ou Microsoft com calendário ativo.
 - passos: 1. Abra o Calendário do CRM; 2. No cabeçalho, use os chips de tipo (Lembretes, WhatsApp, Previsões, Reuniões, Externos) para ligar/desligar cada camada; 3. Alterne a visão em Mês/Semana/Dia/Agenda; 4. Use Hoje e as setas para navegar; 5. Ajuste o escopo entre Meus e Todos.
 - gotchas: os chips são toggles independentes e ficam coloridos quando ativos; Externos aparece em estilo apagado/itálico e é só leitura; sem caixa com calendário conectado, Reuniões e Externos ficam vazios; o escopo Meus/Todos altera quais follow-ups aparecem.
-- nav_target: `crm_calendar_index`
 
-### Conectar WhatsApp Oficial (Cloud API)
+### conectar_whatsapp_oficial_cloud_api
+- titulo: Conectar WhatsApp Oficial (Cloud API)
+- rota: settings_inbox_new
 - intent: Como conecto o WhatsApp Oficial?; Como crio uma caixa do WhatsApp oficial (Cloud API/Meta)?; Quero atender no WhatsApp oficial; Onde ligo o WhatsApp Business API oficial?
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > WhatsApp Oficial
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha WhatsApp Oficial; faça o login/autorização da Meta (Embedded Signup) ou informe os dados da Cloud API; selecione o número aprovado; atribua agentes e finalize.
 - gotchas: WhatsApp Oficial (Cloud API da Meta) é DIFERENTE do WhatsApp API por QR Code: o oficial usa número aprovado pela Meta e exige templates aprovados para mensagens fora da janela de 24h.
-- nav_target: `settings_inbox_new`
 - highlight: `channel-whatsapp-oficial`
 
-### Conectar WhatsApp por QR Code (WhatsApp API)
+### conectar_whatsapp_por_qr_code_whatsapp_api
+- titulo: Conectar WhatsApp por QR Code (WhatsApp API)
+- rota: settings_inbox_new
 - intent: Como conecto o WhatsApp lendo um QR Code?; Como uso o WhatsApp API (não oficial)?; Conectar número de WhatsApp escaneando QR; WhatsApp via WAHA
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > WhatsApp API
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha WhatsApp API; informe modo/nome/número e crie a caixa; na tela de conexão aparece o QR Code; no celular abra WhatsApp > Aparelhos conectados > Conectar aparelho e escaneie; aguarde conectar e finalize.
 - gotchas: WhatsApp API por QR Code é DIFERENTE do WhatsApp Oficial: usa o número direto via QR (sem aprovação da Meta); o QR aparece na tela de conexão DEPOIS de criar a caixa (não no clique do tile); o WhatsApp dá cerca de 2 minutos e meio para ler (a tela mostra o tempo restante); se expirar, a tela mostra "O QR Code expirou" e o botão Gerar novo QR Code, sem recriar a caixa; leia pelo próprio WhatsApp (Aparelhos conectados), não pela câmera do celular; pode desconectar se o aparelho/sessão cair; se o tile não aparecer, o canal pode não estar habilitado nesta instalação.
-- nav_target: `settings_inbox_new`
 - highlight: `channel-whatsapp-api`
 
-### Conectar caixa de e-mail
+### conectar_caixa_de_e_mail
+- titulo: Conectar caixa de e-mail
+- rota: settings_inbox_new
 - intent: Como conecto um e-mail?; Como integro Gmail/Outlook?; Quero atender por e-mail; Conectar caixa de e-mail (IMAP/SMTP)
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > E-mail
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha E-mail; conecte via Gmail/Microsoft (OAuth) ou informe IMAP/SMTP; valide o envio/recebimento; atribua agentes e finalize.
 - gotchas: Para Google/Microsoft pode ser preciso reautorizar para conceder o escopo; verifique IMAP/SMTP e a identidade de remetente para o envio sair correto.
-- nav_target: `settings_inbox_new`
 - highlight: `channel-email`
 
-### Conectar Instagram
+### conectar_instagram
+- titulo: Conectar Instagram
+- rota: settings_inbox_new
 - intent: Como conecto o Instagram?; Quero atender DMs do Instagram; Conectar conta do Instagram
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > Instagram
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha Instagram; faça login e autorize a conta do Instagram (vinculada a uma página/Meta); selecione a conta; atribua agentes e finalize.
 - gotchas: A conta do Instagram precisa ser profissional e vinculada à Meta; mensagens dependem das permissões concedidas na autorização.
-- nav_target: `settings_inbox_new`
 - highlight: `channel-instagram`
 
-### Conectar página do Facebook
+### conectar_pagina_do_facebook
+- titulo: Conectar página do Facebook
+- rota: settings_inbox_new
 - intent: Como conecto o Facebook/Messenger?; Quero atender mensagens da página do Facebook; Conectar página do Facebook
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > Facebook
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha Facebook; faça login e autorize; selecione a página do Facebook; atribua agentes e finalize.
 - gotchas: É preciso ser administrador da página no Facebook e conceder as permissões de mensagens na autorização da Meta.
-- nav_target: `settings_inbox_new`
 - highlight: `channel-facebook`
 
-### Criar canal de chat ao vivo no site
+### criar_canal_de_chat_ao_vivo_no_site
+- titulo: Criar canal de chat ao vivo no site
+- rota: settings_inbox_new
 - intent: Como coloco o chat ao vivo no meu site?; Como crio um widget de site?; Conectar canal de website/live-chat
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > Site
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha Site; preencha nome e domínio do widget; ajuste cor/saudação; atribua agentes; finalize e copie o script para colar no seu site.
 - gotchas: O widget só aparece depois de colar o script no site; a última etapa mostra o código de instalação.
-- nav_target: `settings_inbox_new`
 - highlight: `channel-website`
 
-### Conectar canal de SMS
+### conectar_canal_de_sms
+- titulo: Conectar canal de SMS
+- rota: settings_inbox_new
 - intent: Como conecto SMS?; Quero atender por SMS; Conectar SMS com Twilio ou Bandwidth
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > SMS
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha SMS; selecione o provedor (Twilio ou Bandwidth) e informe as credenciais/número; atribua agentes e finalize.
 - gotchas: Exige conta no provedor (Twilio/Bandwidth) com número habilitado para SMS.
-- nav_target: `settings_inbox_new`
 - highlight: `channel-sms`
 
-### Conectar canal do Telegram
+### conectar_canal_do_telegram
+- titulo: Conectar canal do Telegram
+- rota: settings_inbox_new
 - intent: Como conecto o Telegram?; Quero atender pelo Telegram; Conectar bot do Telegram
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > Telegram
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: No Telegram crie um bot com o BotFather e copie o token; vá em Configurações > Caixas de entrada > Nova caixa; escolha Telegram; cole o token do bot; atribua agentes e finalize.
 - gotchas: O token vem do BotFather; sem o token correto o canal não conecta.
-- nav_target: `settings_inbox_new`
 - highlight: `channel-telegram`
 
-### Criar canal personalizado via API
+### criar_canal_personalizado_via_api
+- titulo: Criar canal personalizado via API
+- rota: settings_inbox_new
 - intent: Como crio um canal pela API?; Conectar canal personalizado; Quero integrar um canal próprio via API
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > API
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha API; informe nome e (opcional) webhook; finalize; use as credenciais/endpoints para integrar seu canal.
 - gotchas: O canal API é genérico: você envia/recebe mensagens pelos endpoints; precisa de desenvolvimento do seu lado.
-- nav_target: `settings_inbox_new`
 - highlight: `channel-api`
 
-### Diagnosticar conexão de canal (WhatsApp / e-mail / Instagram não conecta ou não recebe)
+### diagnosticar_conexao_de_canal_whatsapp_e_mail_instagram_nao_conecta_ou_nao_recebe
+- titulo: Diagnosticar conexão de canal (WhatsApp / e-mail / Instagram não conecta ou não recebe)
+- rota: settings_inbox_new
 - intent: Por que meu WhatsApp não conecta?; Por que não estou recebendo mensagens?; Minha caixa de e-mail parou de receber; Por que o Instagram não recebe mensagens?; Meu canal caiu ou desconectou; Diagnosticar conexão da caixa de entrada
 - onde_fica: Configurações > Caixas de entrada
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
+- diagnostic: `channel`
 - passos: O Guia lê o estado real das suas caixas e aponta o que está faltando (autorização expirada, credenciais incompletas, IMAP/SMTP desligado, caixa sem agente etc.). Siga o conserto indicado para a caixa citada, nas Configurações daquela caixa de entrada.
 - gotchas: o status em tempo real do WhatsApp API (QR Code) só aparece na tela de Conexão da caixa; reconectar/reautorizar é sempre feito pelo administrador.
-- diagnostic: `channel`
 - nav_target: `—`
 - highlight: `—`
 
-### Diagnosticar notificações (não estou recebendo notificações)
+### diagnosticar_notificacoes_nao_estou_recebendo_notificacoes
+- titulo: Diagnosticar notificações (não estou recebendo notificações)
+- rota: profile_settings_index
 - intent: Por que não recebo notificações?; Não chega notificação no navegador; Parei de receber e-mails de notificação; Não sou avisado de novas conversas; Diagnosticar notificações
 - onde_fica: Perfil > Configurações de notificação
-- rota: `profile_settings_index` - `/app/accounts/:accountId/profile/settings`
-- gate: papel `administrator` ou `agent` ou `custom_role`
+- diagnostic: `notifications`
 - passos: O Guia verifica suas preferências de notificação (push e e-mail), se há inscrição de push registrada no navegador e se o seu e-mail está confirmado, e indica exatamente o que ativar em Perfil > Configurações de notificação.
 - gotchas: o push do navegador exige permitir as notificações no navegador; e-mails de notificação só são enviados depois de confirmar o e-mail do usuário.
-- diagnostic: `notifications`
-- nav_target: `profile_settings_index`
 - highlight: `profile-update-basic`
 
-### Diagnosticar IA / agente (a IA não responde nas conversas)
+### diagnosticar_ia_agente_a_ia_nao_responde_nas_conversas
+- titulo: Diagnosticar IA / agente (a IA não responde nas conversas)
+- rota: autonomia_agents_index
 - intent: Por que a IA não responde?; Meu agente de IA não está respondendo; Por que o agente automático não atende os clientes?; O bot parou de responder; Diagnosticar agente de IA
 - onde_fica: Agentes de IA (Autonom.ia)
-- rota: `autonomia_agents_index` - `/app/accounts/:accountId/agents`
-- gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
+- diagnostic: `ai_agent`
 - passos: O Guia confere se os Agentes de IA estão habilitados na conta, se há chave de IA configurada, se existe um agente habilitado e ativo apto a atender o cliente (atuação Externo/Ambos) e se ele está conectado a uma caixa de entrada — e aponta o que falta.
 - gotchas: um agente interno (copiloto) nunca fala com o cliente, só ajuda o atendente; cada caixa de entrada só aceita um bot.
-- diagnostic: `ai_agent`
-- nav_target: `autonomia_agents_index`
 - highlight: `—`
 
-### Diagnosticar atribuição (conversas não são atribuídas a ninguém)
+### diagnosticar_atribuicao_conversas_nao_sao_atribuidas_a_ninguem
+- titulo: Diagnosticar atribuição (conversas não são atribuídas a ninguém)
+- rota: settings_inbox_new
 - intent: Por que as conversas não são atribuídas?; As conversas ficam sem responsável; A atribuição automática não está funcionando; Ninguém recebe as novas conversas; Diagnosticar roteamento de conversas
 - onde_fica: Configurações > Caixas de entrada > Colaboradores / Atribuição automática
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
+- diagnostic: `routing`
 - passos: O Guia verifica, por caixa, se a atribuição automática está ligada, se há agentes vinculados, se algum agente está online, se há limite por agente e se o horário de funcionamento está fora do expediente — e aponta o que ajustar nas Configurações da caixa.
 - gotchas: a atribuição automática só envia conversas para agentes 'Online'; fora do horário comercial a atribuição cai ou zera.
-- diagnostic: `routing`
 - nav_target: `—`
 - highlight: `—`
 
-### Diagnosticar calendário/reuniões (não consigo agendar)
+### diagnosticar_calendario_reunioes_nao_consigo_agendar
+- titulo: Diagnosticar calendário/reuniões (não consigo agendar)
+- rota: settings_inbox_new
 - intent: Por que não consigo agendar reunião?; O calendário não conecta; Os horários disponíveis não aparecem; Falha ao criar reunião; Diagnosticar calendário ou reuniões
 - onde_fica: Configurações > Caixas de entrada (e-mail Google/Microsoft)
-- rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
-- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
+- diagnostic: `calendar`
 - passos: O Guia confere se o recurso de reuniões está ativo na instalação, se há caixa de e-mail Google/Microsoft conectada por OAuth, se o calendário foi autorizado (escopo) e se os tokens de acesso estão presentes — e indica o que reconectar.
 - gotchas: só e-mail conectado via 'Entrar com Google/Microsoft' oferece calendário (IMAP/SMTP comum não); ativar o recurso na instalação é ajuste de servidor (administrador da plataforma).
-- diagnostic: `calendar`
 - nav_target: `—`
 - highlight: `—`

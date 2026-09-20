@@ -142,3 +142,11 @@ Practical checklist for any change impacting core logic or public APIs
 - Registre decisões, comandos de validação, resultados e bloqueios em `docs/audit/`.
 - Nunca registre prompts completos, tokens, secrets, credenciais ou dados de clientes.
 - Merge, deploy, produção, banco de produção, secrets, auth, billing e infraestrutura exigem aprovação explícita do Rodrigo.
+
+## Guia da Plataforma — o mapa é gerado, a explicação é escrita
+
+- `lib/operator_guide/guia-produto.md` e `app/javascript/dashboard/helper/guideRouteRegistry.js` são **arquivos gerados**. Não edite nenhum dos dois à mão: a próxima geração descarta a edição.
+- O que só nós sabemos — `onde_fica`, `intent`, `passos`, `gotchas` — fica em `lib/operator_guide/porques.md`, um bloco por fluxo. O cabeçalho do bloco é um nome curto e único; o campo `rota` aponta a tela no roteador. Vários fluxos podem apontar para a mesma tela.
+- A rota, o endereço e o gate (feature flag e papéis, inclusive funções personalizadas) saem do próprio roteador do painel. Mexeu em rota ou permissão, rode `pnpm guia:build` e envie o resultado junto.
+- `pnpm guia:check` falha quando o gerado está fora de dia. Rode antes de abrir PR que toque em rotas, menu ou explicações.
+- Tela nova sem bloco em `porques.md` aparece como "sem explicação" no relatório do build. Escrever esse bloco é trabalho humano, não do gerador.

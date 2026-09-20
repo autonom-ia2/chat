@@ -12,7 +12,11 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    include: ['app/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+    include: [
+      'app/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      // O gerador do mapa do Guia vive em scripts/ (#534) e tem teste próprio.
+      'scripts/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+    ],
     coverage: {
       reporter: ['lcov', 'text'],
       include: ['app/**/*.js', 'app/**/*.vue'],
