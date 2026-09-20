@@ -140,7 +140,6 @@
       },
       "TWILIO": {
         "TITLE": "Canal Twilio SMS/WhatsApp",
-        "DESC": "Integre o Twilio e comece a oferecer suporte a seus clientes por SMS ou WhatsApp.",
         "ACCOUNT_SID": {
           "LABEL": "SID da Conta",
           "PLACEHOLDER": "Por favor, insira o SID sua conta no Twilio",
@@ -182,14 +181,15 @@
           "PLACEHOLDER": "Por favor, insira o número de telefone do qual a mensagem será enviada.",
           "ERROR": "Por favor, forneça um número de telefone válido que comece com o símbolo \"+\" e não contenha espaços."
         },
+        "SUBMIT_BUTTON": "Criar canal Twilio",
+        "API": {
+          "ERROR_MESSAGE": "Não fomos capazes de autenticar as credenciais Twilio, por favor, tente novamente"
+        },
         "API_CALLBACK": {
           "TITLE": "URL de Callback",
           "SUBTITLE": "Você precisa configurar a URL de Callback de mensagem no Twilio com a URL mencionada aqui."
         },
-        "SUBMIT_BUTTON": "Criar canal Twilio",
-        "API": {
-          "ERROR_MESSAGE": "Não fomos capazes de autenticar as credenciais Twilio, por favor, tente novamente"
-        }
+        "DESC": "Integre o Twilio e comece a oferecer suporte a seus clientes por SMS ou WhatsApp."
       },
       "SMS": {
         "TITLE": "Canal SMS",
@@ -427,8 +427,12 @@
           "ACCESS_REQUEST": {
             "TITLE": "Configuração rápida com a Meta",
             "DESCRIPTION": "Conecte um novo número ou um número existente do aplicativo WhatsApp Business sem configuração manual. Para solicitar essa opção, informe à nossa equipe o que sua empresa faz, como você usará o WhatsApp e qual conta do Chatwoot precisa de acesso.",
-            "FOOTNOTE": "Analisaremos sua solicitação e informaremos se essa opção pode ser habilitada. Você também pode continuar com a configuração manual abaixo.",
-            "BUTTON": "Solicitar acesso"
+            "BUTTON": "Solicitar acesso",
+            "FORM_DESCRIPTION": "Conte o que a sua empresa faz e como pretende usar o WhatsApp. Enviar esse texto libera a configuração rápida para a sua conta.",
+            "USE_CASE_LABEL": "Como a empresa vai usar",
+            "USE_CASE_PLACEHOLDER": "Por exemplo: somos uma corretora de seguros e usamos o WhatsApp para tirar dúvidas de apólice e acompanhar renovações.",
+            "SUBMIT": "Enviar",
+            "ERROR": "Não foi possível liberar o acesso. Tente de novo."
           },
           "RESTRICTED_WARNING": "O cadastro integrado do WhatsApp está temporariamente indisponível devido a um problema na API da Meta, e não por uma falha no Chatwoot. Você pode utilizar a configuração manual para números compatíveis com a Cloud API. Estamos trabalhando em conjunto com a Meta para resolver a situação o mais rápido possível.",
           "STATUS_LINK": "Ver atualizações de status",
