@@ -18,6 +18,10 @@ RSpec.describe Autonomia::Guide::Chat do
 
   def preparar(recurso, conteudo)
     allow(Autonomia::Guide::Seed).to receive(:ready_agent_for).and_return(agente_ia)
+    # Sem fluxo de diagnóstico entre os melhores: aqui o assunto é leitura.
+    allow(Autonomia::Agents::Retriever).to receive(:new).and_return(
+      instance_double(Autonomia::Agents::Retriever, retrieve: [])
+    )
     allow(Autonomia::Guide::EscolhaDaConsulta).to receive(:new).and_return(
       instance_double(Autonomia::Guide::EscolhaDaConsulta, para: recurso)
     )
@@ -54,11 +58,18 @@ RSpec.describe Autonomia::Guide::Chat do
     expect(query).to include('WhatsApp')
   end
 
-  it 'não consulta nada quando a pergunta é de como fazer' do
-    expect(perguntar('Como eu crio um funil?')).not_to include('[O QUE A CONTA TEM')
+  # Guarda contra a volta do filtro de palavra. Duas vezes o Guia entendeu a
+  # pergunta e não foi buscar o dado porque ela não estava escrita do jeito que
+  # uma lista minha esperava. Quem decide é quem lê a pergunta.
+  it 'consulta mesmo quando a pergunta não usa "quais" nem "quantos"' do
+    query = perguntar('Me fala sobre minhas caixas', recurso: 'inboxes',
+                                                     conteudo: '[{"name":"WhatsApp"}]')
+
+    expect(query).to include('WhatsApp')
   end
 
-  it 'não inventa quando o modelo não acha recurso para a pergunta' do
+  # Quem diz "aqui não precisa de dado" é o modelo, devolvendo recurso nulo.
+  it 'não consulta nada quando o modelo diz que a pergunta não precisa de dado' do
     expect(perguntar('Quais funis eu tenho?', recurso: nil)).not_to include('[O QUE A CONTA TEM')
   end
 

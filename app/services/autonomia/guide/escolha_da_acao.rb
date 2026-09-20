@@ -32,13 +32,6 @@ class Autonomia::Guide::EscolhaDaAcao
     additionalProperties: false
   }.freeze
 
-  # Verbos de pedido. Pergunta não vira proposta de ação.
-  #
-  # O sufixo é livre (`\w*`) de propósito: fechar com `\b` exigiria que a
-  # palavra terminasse no radical, e "Configura o funil" nunca casava com
-  # `configur` — o pedido era ignorado sem ninguém perceber.
-  PEDIDO = /\b(cri[ae]|configur|lig[aue]|vincul|adicion|faz|fa[çc]a|monta|coloca)\w*/i
-
   def initialize(account:, user:, account_user: nil)
     @account = account
     @user = user
@@ -46,8 +39,11 @@ class Autonomia::Guide::EscolhaDaAcao
   end
 
   # Devolve { acao:, dados: } ou nil.
+  # Quem separa pedido de pergunta é o modelo, pela INSTRUCAO — não uma lista de
+  # verbos. A lista já deixou passar em silêncio "Configura o funil"; o que
+  # protege aqui é a permissão e o catálogo fechado, não o vocabulário.
   def para(pedido)
-    return nil unless pedido.to_s.match?(PEDIDO)
+    return nil if pedido.to_s.strip.blank?
     return nil unless administrador?
 
     credencial = ::Crm::Ai::CredentialResolver.new(account: @account).resolve

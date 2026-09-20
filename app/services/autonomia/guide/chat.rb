@@ -97,21 +97,6 @@ module Autonomia
         end
       end
 
-      # Sinais de que a mensagem é um RELATO DE PROBLEMA (e não um "como faço"). Só nesse caso vale ler o
-      # estado real — assim "Como ativo as notificações?" (how-to) nunca dispara diagnóstico, mas
-      # "Por que não recebo notificações?" dispara. Evita misturar diagnóstico com instrução.
-      def diagnostic_intent?
-        m = @message.to_s.downcase
-        return true if m.match?(/\b(por ?que|porqu[eê]|pq)\b/)
-        return true if m.match?(/diagn[óo]stic/)
-        return true if m.match?(/\b(parou|caiu|desconect\w*|sumiu|trav(ou|ando)|deixou de|n[ãa]o vai|com (erro|problema|falha))\b/)
-        # "não (estou/está/consigo) ... <verbo de falha>" — pega "não recebo", "não estou recebendo",
-        # "não consigo agendar", "não está conectando" etc., sem casar com how-to ("como ...", sem "não").
-        return true if m.match?(/n[ãa]o\s+(estou\s+|est[áa]\s+|consigo\s+|vou\s+)?\w*(funcion|conect|receb|aparec|atribu|cheg|respond|sincroniz|abr|carreg|envi|entreg|agend)/)
-
-        false
-      end
-
       # Checks que expõem estado de CONFIGURAÇÃO da conta → só para administrador. Notificações são
       # preferências do próprio usuário → liberadas a qualquer perfil.
       ADMIN_CHECKS = %w[channel routing ai_agent calendar].freeze
@@ -120,11 +105,14 @@ module Autonomia
         @account_user&.role.to_s == 'administrator'
       end
 
-      # Quando a mensagem é um relato de problema, procura nos melhores fluxos um de diagnóstico
-      # (`diagnostic:`) e roda a checagem read-only do estado real da conta.
+      # Procura nos melhores fluxos um de diagnóstico (`diagnostic:`) e roda a checagem read-only do
+      # estado real da conta.
+      #
+      # Não há filtro de palavra decidindo se a mensagem "é um relato de problema": quem seleciona é o
+      # próprio buscador, trazendo — ou não — um fluxo de diagnóstico para o assunto. Uma lista de
+      # sintomas escrita à mão deixaria de fora o sintoma escrito com outras palavras, e o Guia
+      # responderia pelo manual sem nunca olhar o estado real.
       def diagnostic_context(agent)
-        return nil unless diagnostic_intent?
-
         # Best-effort: se o retrieval falhar por INFRA (#14, RetrievalError), apenas pula o diagnóstico
         # (não derruba a Guia) — o Answerer abaixo trata a mesma falha no caminho gateado (handoff seguro).
         tops = begin
@@ -148,22 +136,16 @@ module Autonomia
         nil
       end
 
-      # Pergunta sobre o ESTADO da conta, não sobre como fazer algo: "quais funis
-      # eu tenho?", "quantas campanhas estão ativas?". Só nesse caso vale ler.
-      def leitura_intent?
-        m = @message.to_s.downcase
-        m.match?(/\b(quais|quantos|quantas|qual|tenho|temos|est[ãa]o|listar?|me mostra)\b/)
-      end
-
       # Qual recurso da plataforma responde a esta pergunta. Quem escolhe é quem
       # entendeu a pergunta — o modelo, a partir do catálogo derivado do roteador.
       #
-      # Antes isso dependia de um marcador escondido no fluxo do manual, e o Guia
-      # entendia a pergunta mas não ia buscar o dado porque o buscador trouxe
-      # outro fluxo. Foi o que fez "quantas caixas eu tenho" falhar em produção.
+      # NÃO existe filtro de palavra antes disto, de propósito. Já tentamos duas
+      # vezes: um marcador escondido no fluxo do manual, depois uma lista de
+      # palavras ("quais", "quantos"). As duas vezes o Guia entendeu a pergunta e
+      # mesmo assim não foi buscar o dado, porque a pergunta não estava escrita do
+      # jeito que a lista esperava. Quem decide se precisa de dado é quem lê a
+      # pergunta; o modelo devolve nulo quando não precisa.
       def leitura_context(_agent)
-        return nil unless leitura_intent?
-
         recurso = escolher_recurso(consulta.catalogo)
         return nil if recurso.blank?
 

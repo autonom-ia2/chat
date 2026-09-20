@@ -20,24 +20,28 @@ RSpec.describe Autonomia::Guide::EscolhaDaAcao do
     allow(cliente).to receive(:create).and_return({ text: json.to_json })
   end
 
-  describe 'quando nem chega ao modelo' do
-    it 'não trata pergunta como pedido de ação' do
-      modelo_devolve({ acao: 'criar_funil', nome: 'Comercial' })
-      expect(Crm::Ai::ResponsesClient).not_to receive(:new)
+  describe 'quem separa pergunta de pedido' do
+    # É o modelo, pela instrução — não uma lista de verbos minha. A lista já
+    # deixou passar em silêncio "Configura o funil".
+    it 'não propõe ação quando o modelo diz que era pergunta' do
+      modelo_devolve({ acao: nil })
 
       expect(escolha(admin).para('Como funciona o funil no CRM?')).to be_nil
     end
 
-    # O radical precisa casar com a palavra flexionada: "Configura", "Vincula",
-    # "Adiciona" são pedidos de verdade e não podem cair fora do gate.
-    it 'reconhece o verbo conjugado, não só o radical' do
+    # Guarda contra a volta do filtro de vocabulário: o pedido vale escrito de
+    # qualquer jeito, inclusive sem verbo de comando.
+    it 'reconhece o pedido escrito de qualquer jeito' do
       modelo_devolve({ acao: 'criar_funil', nome: 'Comercial' })
 
-      ['Configura um funil Comercial', 'Vincula a caixa ao funil', 'Adiciona a etiqueta VIP'].each do |pedido|
+      ['Configura um funil Comercial', 'Quero um funil chamado Comercial',
+       'Preciso de um funil Comercial', 'Bota aí um funil Comercial'].each do |pedido|
         expect(escolha(admin).para(pedido)).not_to be_nil, "o pedido \"#{pedido}\" não foi reconhecido"
       end
     end
+  end
 
+  describe 'a permissão, que continua valendo' do
     it 'não propõe ação para agente comum' do
       modelo_devolve({ acao: 'criar_funil', nome: 'Comercial' })
       agente, = create_crm_agent(account: conta)
