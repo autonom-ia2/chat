@@ -54,6 +54,7 @@ class Onboarding::Progress
       titulo: passo.titulo,
       por_que: passo.por_que,
       rota: passo.rota,
+      rota_params: passo.rota_params || {},
       alvo_destaque: passo.alvo_destaque,
       video: passo.video,
       artigo: passo.artigo,

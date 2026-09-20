@@ -1,6 +1,16 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (111 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (112 fluxos)
 
 Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil, gate, pré-requisitos, passos, gotchas, nav_target.
+
+### Ver os Primeiros passos
+- intent: Por onde eu comeco?; Onde vejo o que falta configurar na conta?; O que eu preciso fazer para a plataforma funcionar?; Cade a lista de primeiros passos?; Como sei se ja terminei a configuracao?
+- onde_fica: Menu lateral > Primeiros passos (e tambem a tela inicial da conta enquanto nao ha conversa aberta)
+- rota: `onboarding_first_steps` - `/app/accounts/:accountId/primeiros-passos`
+- gate: papel `administrator`
+- pre_requisitos: nenhum
+- passos: 1. Abra Primeiros passos no menu lateral; 2. Leia o passo em destaque, que e sempre o primeiro que ainda falta; 3. Clique em Fazer agora para ir direto a tela daquele passo; 4. Volte a lista e siga para o proximo.
+- gotchas: cada passo so fica Feito quando o estado real da conta muda, nunca por clique; passos opcionais trazem Deixar para depois e podem ser retomados; o passo em foco mostra os pre-requisitos externos (por exemplo, conta na OpenAI com credito); a lista some do centro da tela quando o essencial termina, mas continua no menu.
+- nav_target: `onboarding_first_steps`
 
 ### Criar caixa de entrada
 - intent: Como crio uma caixa de entrada?; Onde adiciono um novo canal?; Quero conectar um WhatsApp, email, site ou API.; Como comeco um inbox novo?

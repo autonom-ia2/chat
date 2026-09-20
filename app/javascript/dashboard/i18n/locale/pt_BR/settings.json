@@ -448,7 +448,8 @@
     "DOCS": "Ler documentos",
     "SECURITY": "Segurança",
     "CAPTAIN_AI": "Capitão",
-    "CONVERSATION_WORKFLOW": "Fluxo de Conversa"
+    "CONVERSATION_WORKFLOW": "Fluxo de Conversa",
+    "FIRST_STEPS": "Primeiros passos"
   },
   "DATA_IMPORTS": {
     "HEADER": "Dados",

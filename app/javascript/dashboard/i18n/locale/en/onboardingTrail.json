@@ -1,0 +1,18 @@
+{
+  "ONBOARDING_TRAIL": {
+    "TITLE": "First steps",
+    "SUBTITLE": "Follow the list and your operation is up. We say why each step matters and take you to the right screen.",
+    "DONE_TITLE": "Your CRM is working",
+    "DONE_SUBTITLE": "The essentials are done: you receive, reply and organize. What is left is fine tuning, at your own pace.",
+    "PROGRESS": "{feitos} of {total}",
+    "DO_IT": "Do it now",
+    "SKIP": "Leave for later",
+    "STUCK": "I am stuck",
+    "LOAD_ERROR": "We could not load your first steps. Refresh the page.",
+    "SKIP_ERROR": "We could not skip this step. Please try again.",
+    "STATUS": {
+      "DONE": "Done",
+      "SKIPPED": "Left for later"
+    }
+  }
+}

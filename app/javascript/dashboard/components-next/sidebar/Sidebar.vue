@@ -521,6 +521,19 @@ const reportRoutes = computed(() => newReportRoutes());
 
 const menuItems = computed(() => {
   return [
+    // Trilha de onboarding: fica no topo para quem administra, e continua
+    // acessível depois que a conta já está de pé.
+    ...(isAdministrator.value
+      ? [
+          {
+            name: 'FirstSteps',
+            label: t('SIDEBAR.FIRST_STEPS'),
+            icon: 'i-lucide-list-checks',
+            to: accountScopedRoute('onboarding_first_steps'),
+            activeOn: ['onboarding_first_steps'],
+          },
+        ]
+      : []),
     {
       name: 'Inbox',
       label: t('SIDEBAR.INBOX'),

@@ -1,0 +1,18 @@
+{
+  "ONBOARDING_TRAIL": {
+    "TITLE": "Primeiros passos",
+    "SUBTITLE": "Siga a lista e sua operação fica em pé. A gente mostra por que cada passo importa e leva você até a tela certa.",
+    "DONE_TITLE": "Seu CRM está funcionando",
+    "DONE_SUBTITLE": "O essencial está pronto: você recebe, responde e organiza. O que sobrou é ajuste fino, no seu tempo.",
+    "PROGRESS": "{feitos} de {total}",
+    "DO_IT": "Fazer agora",
+    "SKIP": "Deixar para depois",
+    "STUCK": "Estou travado",
+    "LOAD_ERROR": "Não foi possível carregar seus primeiros passos. Atualize a página.",
+    "SKIP_ERROR": "Não foi possível pular este passo. Tente de novo.",
+    "STATUS": {
+      "DONE": "Feito",
+      "SKIPPED": "Deixado para depois"
+    }
+  }
+}
