@@ -1638,6 +1638,16 @@
 - gotchas: entregues já inclui as lidas, então somar os dois conta o mesmo contato duas vezes; enviadas quer dizer aceita para entrega, não entregue no celular; ignoradas são contatos descartados antes do envio, quase sempre telefone ausente ou inválido, e é o número que vale olhar para limpar a base; campanhas enviadas antes desta tela existir aparecem sem dado, e isso não é erro.
 - nav_target: `campaigns_whatsapp_analytics`
 
+### como_o_cliente_recebe_a_cotacao
+- titulo: Como o cliente recebe os valores da cotação
+- rota: autonomia_insurance_agent
+- intent: Como o cliente recebe os preços?; O agente manda os valores conforme as seguradoras respondem?; O cliente recebe link ou arquivo?; Como envio a proposta de uma seguradora só?; O que muda quando a cotação é de empresa?
+- onde_fica: acontece na conversa do WhatsApp, não numa tela do painel
+- pre_requisitos: agente de cotação criado e conexão com a seguradora funcionando
+- passos: 1. O cliente pede a cotação pelo WhatsApp e responde o que o agente perguntar; 2. Quando a cotação termina, o comparativo chega como arquivo PDF na conversa; 3. Se o cliente escolher uma seguradora, ele recebe o documento daquela seguradora; 4. A equipe assume a conversa no horário configurado.
+- gotchas: os valores não saem sozinhos conforme cada seguradora responde, o comparativo chega quando a cotação inteira termina; o que vai para o cliente é o arquivo, nunca o link do portal, porque aquele endereço abre sem senha e traz o nome do segurado; a proposta de uma seguradora só é outro documento, pedido depois que o cliente escolhe, e não o comparativo; na cotação de empresa o condutor deixa de ser opcional, porque a empresa não dirige, e o motorista precisa ser pessoa física com vínculo informado.
+- nav_target: `autonomia_insurance_agent`
+
 ### _fora_do_guia
 - captain_: recurso do Chatwoot que esta instalação não usa
 - account_suspended: tela de sistema, não é caminho do cliente

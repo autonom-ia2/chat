@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (162 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (163 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1712,3 +1712,13 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Campanhas > WhatsApp Oficial; 2. Clique em ver análises; 3. Leia os números de público, enviadas, entregues, lidas, falhas e ignoradas; 4. Use as abas de status para filtrar; 5. Navegue pela lista para ver contato por contato.
 - gotchas: entregues já inclui as lidas, então somar os dois conta o mesmo contato duas vezes; enviadas quer dizer aceita para entrega, não entregue no celular; ignoradas são contatos descartados antes do envio, quase sempre telefone ausente ou inválido, e é o número que vale olhar para limpar a base; campanhas enviadas antes desta tela existir aparecem sem dado, e isso não é erro.
 - nav_target: `campaigns_whatsapp_analytics`
+
+### Como o cliente recebe os valores da cotação
+- intent: Como o cliente recebe os preços?; O agente manda os valores conforme as seguradoras respondem?; O cliente recebe link ou arquivo?; Como envio a proposta de uma seguradora só?; O que muda quando a cotação é de empresa?
+- onde_fica: acontece na conversa do WhatsApp, não numa tela do painel
+- rota: `autonomia_insurance_agent` - `/app/accounts/:accountId/autonomia/insurance/agent`
+- gate: papel `administrator` ou `insurance_view` ou `insurance_manage`
+- pre_requisitos: agente de cotação criado e conexão com a seguradora funcionando
+- passos: 1. O cliente pede a cotação pelo WhatsApp e responde o que o agente perguntar; 2. Quando a cotação termina, o comparativo chega como arquivo PDF na conversa; 3. Se o cliente escolher uma seguradora, ele recebe o documento daquela seguradora; 4. A equipe assume a conversa no horário configurado.
+- gotchas: os valores não saem sozinhos conforme cada seguradora responde, o comparativo chega quando a cotação inteira termina; o que vai para o cliente é o arquivo, nunca o link do portal, porque aquele endereço abre sem senha e traz o nome do segurado; a proposta de uma seguradora só é outro documento, pedido depois que o cliente escolhe, e não o comparativo; na cotação de empresa o condutor deixa de ser opcional, porque a empresa não dirige, e o motorista precisa ser pessoa física com vínculo informado.
+- nav_target: `autonomia_insurance_agent`
