@@ -33,6 +33,17 @@ RSpec.describe Integrations::Hook do
       expect(hook.settings['enabled']).to be false
     end
 
+    it 'keeps the AI off on later updates instead of forcing it back on' do
+      hook = build_hook({ 'api_key' => 'sk-valida' })
+      hook.save!
+      hook.update!(settings: { 'api_key' => 'sk-valida', 'enabled' => false })
+
+      hook.update!(settings: hook.settings.merge('api_key' => 'sk-outra'))
+
+      expect(hook.reload.settings['enabled']).to be false
+      expect(Crm::Ai::CredentialResolver.new(account: account.reload).resolve).to be_nil
+    end
+
     it 'refuses a key the OpenAI account rejects' do
       allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(false)
 
