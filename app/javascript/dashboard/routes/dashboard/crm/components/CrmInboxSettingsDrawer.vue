@@ -39,13 +39,19 @@ const sortedInboxes = computed(() =>
   )
 );
 
-const toForm = (setting = {}) => ({
-  crm_enabled: Boolean(setting.crm_enabled),
-  visibility_mode: setting.visibility_mode || 'all_inbox_cards',
-  auto_create_card: Boolean(setting.auto_create_card),
-  default_pipeline_id: setting.default_pipeline_id || '',
-  default_stage_id: setting.default_stage_id || '',
-});
+// Caixa ainda sem configuração nasce com a criação automática marcada: é o que
+// quase toda implantação quer, e era o passo que mais ficava para trás.
+// Configuração já salva mantém o que a pessoa escolheu.
+const toForm = (setting = {}) => {
+  const jaConfigurada = Boolean(setting.inbox_id);
+  return {
+    crm_enabled: Boolean(setting.crm_enabled),
+    visibility_mode: setting.visibility_mode || 'all_inbox_cards',
+    auto_create_card: jaConfigurada ? Boolean(setting.auto_create_card) : true,
+    default_pipeline_id: setting.default_pipeline_id || '',
+    default_stage_id: setting.default_stage_id || '',
+  };
+};
 
 const formFromSetting = inboxId =>
   toForm(settingByInboxId.value[Number(inboxId)]);
@@ -146,6 +152,40 @@ const onPipelineChange = (inbox, value) => {
 const onStageChange = (inbox, value) => {
   formFor(inbox).default_stage_id = value || '';
 };
+
+const nomeDoFunil = pipelineId => {
+  const pipeline = props.pipelines.find(
+    item => String(item.id) === String(pipelineId)
+  );
+  return pipeline?.name || '';
+};
+
+// Salvar aqui passa a mover a criação automática de cards para o funil
+// escolhido. Quando a caixa já alimentava outro funil, a pessoa precisa saber
+// disso antes de salvar, com os dois nomes na tela.
+const trocasPorInbox = computed(() =>
+  sortedInboxes.value.reduce((resultado, inbox) => {
+    const form = forms[inbox.id];
+    const anterior =
+      settingByInboxId.value[Number(inbox.id)]?.default_pipeline_id;
+    const atual = form?.default_pipeline_id;
+    const houveTroca =
+      form?.crm_enabled &&
+      anterior &&
+      atual &&
+      String(anterior) !== String(atual);
+
+    if (houveTroca) {
+      resultado[inbox.id] = {
+        de: nomeDoFunil(anterior),
+        para: nomeDoFunil(atual),
+      };
+    }
+    return resultado;
+  }, {})
+);
+
+const trocaDeFunil = inbox => trocasPorInbox.value[inbox.id] || null;
 
 const onCrmEnabledChange = inbox => {
   const form = formFor(inbox);
@@ -314,6 +354,24 @@ useKeyboardEvents({
                   @update:model-value="onStageChange(inbox, $event)"
                 />
               </div>
+
+              <p
+                v-if="trocaDeFunil(inbox)"
+                class="mb-0 flex items-start gap-2 rounded-lg bg-n-amber-3 px-3 py-2 text-sm text-n-slate-12"
+                role="status"
+              >
+                <span
+                  class="i-lucide-triangle-alert mt-0.5 size-4 shrink-0 text-n-amber-11"
+                />
+                <span>
+                  {{
+                    t('CRM_KANBAN.INBOX_SETTINGS.PIPELINE_SWITCH', {
+                      de: trocaDeFunil(inbox).de,
+                      para: trocaDeFunil(inbox).para,
+                    })
+                  }}
+                </span>
+              </p>
 
               <div class="flex items-end justify-between gap-3">
                 <label
