@@ -40,14 +40,26 @@ RSpec.describe Autonomia::Guide::Acoes do
   end
 
   describe 'antes de confirmar' do
-    # A frase pode suavizar; o pedido literal não. As duas coisas aparecem.
-    it 'mostra o pedido literal, não só a frase bonita', :aggregate_failures do
+    # A frase pode suavizar ou errar um valor; os valores exatos não. Os dois
+    # aparecem — mas em linguagem de gente, não em rota HTTP.
+    it 'mostra os valores que vão mudar, sem rota nem jargão', :aggregate_failures do
       texto = para(admin).descrever('POST crm/pipelines',
                                     { descricao: 'Criar o funil Comercial.', corpo: { name: 'Comercial' } })
 
       expect(texto[:frase]).to eq('Criar o funil Comercial.')
-      expect(texto[:detalhe]).to include("POST /api/v1/accounts/#{conta.id}/crm/pipelines")
-      expect(texto[:detalhe]).to include('Comercial')
+      expect(texto[:detalhe]).to eq('Nome: Comercial')
+    end
+
+    # Em 20/09/2026 a tela mostrava "POST /api/v1/accounts/16/crm/pipelines" para
+    # o usuário. Lixo técnico, e estrutura interna exposta à toa.
+    it 'nunca mostra endpoint, verbo HTTP ou JSON para quem usa', :aggregate_failures do
+      texto = para(admin).descrever('POST crm/pipelines',
+                                    { descricao: 'Criar o funil Comercial.', corpo: { name: 'Comercial' } })
+      tudo = texto.values.compact.join(' ')
+
+      expect(tudo).not_to include('/api/')
+      expect(tudo).not_to include('POST')
+      expect(tudo).not_to include('{')
     end
 
     it 'avisa quando a ação não tem volta' do

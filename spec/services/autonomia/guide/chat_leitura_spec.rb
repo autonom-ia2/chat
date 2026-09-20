@@ -59,6 +59,25 @@ RSpec.describe Autonomia::Guide::Chat do
     expect(query).to include('WhatsApp')
   end
 
+  # Em 20/09/2026 o Guia respondeu "não consigo criar o funil por você, porque o
+  # Guia não altera a conta" — com o botão Confirmar logo abaixo. Quem escreve o
+  # texto não sabia que a ação já tinha sido preparada.
+  it 'avisa quem escreve o texto que a ação já vai ser oferecida' do
+    allow(Autonomia::Guide::EscolhaDaAcao).to receive(:new).and_return(
+      instance_double(Autonomia::Guide::EscolhaDaAcao,
+                      para: { acao: 'POST crm/pipelines', dados: { corpo: { 'name' => 'Comercial' } } })
+    )
+    allow(Autonomia::Guide::Acoes).to receive(:new).and_return(
+      instance_double(Autonomia::Guide::Acoes,
+                      descrever: { frase: 'Criar o funil Comercial.', detalhe: 'Nome: Comercial', aviso: nil })
+    )
+
+    query = perguntar('cria um funil chamado Comercial')
+
+    expect(query).to include('AÇÃO JÁ PREPARADA')
+    expect(query).to include('NÃO diga que você não faz')
+  end
+
   # Guarda contra a volta do filtro de palavra. Duas vezes o Guia entendeu a
   # pergunta e não foi buscar o dado porque ela não estava escrita do jeito que
   # uma lista minha esperava. Quem decide é quem lê a pergunta.

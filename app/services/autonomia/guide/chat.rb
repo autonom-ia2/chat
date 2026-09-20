@@ -37,9 +37,13 @@ module Autonomia
         # #533 — pergunta sobre o que a conta TEM ("quais funis?", "quantas
         # campanhas?") é respondida com os dados, não com o manual.
         leituras = leitura_context(agent)
+        # A ação é decidida ANTES da redação. Se o Guia vai oferecer o botão, quem escreve o texto
+        # precisa saber — senão responde "não consigo fazer isso por você" com o Confirmar logo
+        # abaixo, que foi o que aconteceu em produção.
+        acao = acao_proposta
 
         result = ::Autonomia::Agents::Answerer.new(
-          agent: agent, query: role_scoped_query(diagnostics, leituras), history: sanitized_history,
+          agent: agent, query: role_scoped_query(diagnostics, leituras, acao), history: sanitized_history,
           allow_web_search: false # KB-only: o Guia responde só da nossa base, nunca de fonte externa
         ).answer
 
@@ -49,7 +53,7 @@ module Autonomia
         text = result.reply.to_s.strip
         return unavailable if text.blank?
 
-        Result.new(text: text, navigation: resolve_navigation(result), acao: acao_proposta,
+        Result.new(text: text, navigation: resolve_navigation(result), acao: acao,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
                    available: true, escalate: result.handoff.to_h[:should] == true)
@@ -63,13 +67,25 @@ module Autonomia
       # Injeta o PERFIL e a TELA ATUAL como CONTEXTO (dado, não fala), para a instrução adaptar a
       # resposta e só orientar o que o perfil pode fazer. O modelo nunca confia nisso para autorizar
       # — é só para a redação; o backend real (endpoints de domínio) é que aplica Pundit.
-      def role_scoped_query(diagnostics = nil, leituras = nil)
+      def role_scoped_query(diagnostics = nil, leituras = nil, acao = nil)
         role = @account_user&.role.presence || 'agent'
         ctx = "[CONTEXTO INTERNO (não é fala do usuário). Perfil do usuário: #{role}. " \
               "Tela atual: #{@route_context.presence || 'não informada'}. Adapte a resposta a este " \
               "perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o " \
               "perfil não for administrator, explique que é feito pelo administrador da conta.]"
-        "#{ctx}#{diagnostic_block(diagnostics)}#{leitura_block(leituras)}\n\n#{@message}"
+        "#{ctx}#{acao_block(acao)}#{diagnostic_block(diagnostics)}#{leitura_block(leituras)}\n\n#{@message}"
+      end
+
+      # O botão de confirmar JÁ vai aparecer abaixo da resposta. Sem este bloco, a base de
+      # conhecimento manda dizer que o Guia não altera a conta, e o texto desmente o próprio botão.
+      def acao_block(acao)
+        return '' if acao.blank?
+
+        "\n\n[AÇÃO JÁ PREPARADA (dado, não fala do usuário): o pedido dele virou uma ação pronta, e a " \
+          "tela vai mostrar, logo abaixo da sua resposta, o resumo \"#{acao[:descricao].to_h[:frase]}\" com " \
+          'os botões Confirmar e Agora não. NÃO diga que você não faz, não altera a conta ou que a pessoa ' \
+          'precisa fazer na mão: isso desmente o botão que ela está vendo. Responda em UMA frase curta ' \
+          'dizendo que é só confirmar ali embaixo. Não repita os valores nem descreva os passos da tela.]'
       end
 
       # O que a conta TEM, lido com a permissão de quem perguntou. Entra como dado,

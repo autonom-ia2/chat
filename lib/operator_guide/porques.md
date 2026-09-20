@@ -596,8 +596,8 @@
 - onde_fica: Widget/atalho global do Guia dentro do dashboard, quando habilitado
 - perfil: `administrator`, `agent` e custom roles podem perguntar ao Guia quando o recurso estiver habilitado para a conta. Se o usuario pedir uma tela bloqueada para o perfil dele, diga que o perfil atual nao tem acesso, explique o motivo e ofereca caminho alternativo ou orientacao para acionar um administrator.
 - pre_requisitos: usuario autenticado em uma conta ativa; Guia habilitado para a conta.
-- passos: 1. Pergunte em linguagem natural onde fica ou como fazer algo; 2. O Guia identifica seu perfil e as flags da conta; 3. Ele responde com o caminho no menu e os pre-requisitos; 4. Quando houver uma rota permitida, ele pode abrir a tela certa; 5. Para acoes sensiveis, ele orienta os passos, mas nao executa por voce.
-- gotchas: o Guia e read-only: nao cria, edita, envia, apaga, integra ou desfaz nada; ele nao deve revelar segredos nem burlar permissoes; rotas com parametros, como `:inboxId` ou `:agentId`, precisam de um item real escolhido antes da navegacao; se uma feature estiver desligada, o Guia deve explicar o gate em vez de prometer a tela.
+- passos: 1. Pergunte em linguagem natural onde fica ou como fazer algo; 2. O Guia identifica seu perfil e as flags da conta; 3. Ele responde com o caminho no menu e os pre-requisitos, consultando os dados da sua conta quando a pergunta for sobre o que voce tem; 4. Quando houver uma rota permitida, ele pode abrir a tela certa; 5. Se voce for administrador e pedir para ele fazer algo, ele monta o pedido e mostra o que vai acontecer: nada acontece ate voce confirmar na tela.
+- gotchas: o Guia le e executa sempre com a permissao de quem falou com ele, nunca alem dela; nenhuma acao acontece sem a confirmacao na tela, e agente comum nao executa nada; ele nao deve revelar segredos nem burlar permissoes; rotas com parametros, como `:inboxId` ou `:agentId`, precisam de um item real escolhido antes da navegacao; se uma feature estiver desligada, o Guia deve explicar o gate em vez de prometer a tela.
 - nav_target: —
 
 ### escalar_para_suporte_humano

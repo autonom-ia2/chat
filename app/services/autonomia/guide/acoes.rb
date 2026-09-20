@@ -70,16 +70,19 @@ class Autonomia::Guide::Acoes
   #
   # A frase em português vem de quem entendeu o pedido; o pedido literal vem
   # daqui. As duas coisas aparecem, porque a frase pode suavizar e o literal não.
+  # A pessoa precisa ver O QUE VAI ACONTECER, com os valores — não a rota HTTP.
+  # A primeira versão mostrava "POST /api/v1/accounts/16/crm/pipelines" na tela:
+  # lixo técnico para quem usa o produto, e estrutura interna exposta à toa.
+  #
+  # `montar_caminho` continua sendo chamado aqui de propósito: é ele que recusa
+  # ação sem o identificador, e essa recusa tem que acontecer ANTES do botão
+  # aparecer, não depois do clique.
   def descrever(acao, dados)
     garantir_permitida!(acao)
-    caminho = montar_caminho(acao, dados)
-    corpo = corpo_de(dados)
-
-    detalhe = ["#{verbo_de(acao)} #{caminho}"]
-    detalhe << JSON.generate(corpo) if corpo.present?
+    montar_caminho(acao, dados)
 
     { frase: dados[:descricao].presence || "#{verbo_de(acao)} #{recurso_de(acao)}",
-      detalhe: detalhe.join(' · '),
+      detalhe: valores_legiveis(corpo_de(dados)),
       aviso: (verbo_de(acao) == DESTRUTIVO ? 'Isto apaga o registro e não tem volta.' : nil) }
   end
 
@@ -138,6 +141,29 @@ class Autonomia::Guide::Acoes
 
   def corpo_de(dados)
     (dados[:corpo] || {}).to_h
+  end
+
+  # Os valores que vão mudar, em linguagem de gente: "Nome: Comercial". Sem isso
+  # a confirmação seria só a frase do modelo, que pode suavizar ou errar um valor
+  # — e a pessoa confirmaria sem ver o que de fato vai ser gravado.
+  def valores_legiveis(corpo)
+    return nil if corpo.blank?
+
+    corpo.filter_map do |campo, valor|
+      texto = valor.is_a?(Array) ? valor.join(', ') : valor.to_s
+      next if texto.blank?
+
+      "#{rotulo(campo)}: #{texto}"
+    end.join(' · ').presence
+  end
+
+  # Nome de campo da API vira etiqueta legível. Campo que não estiver aqui
+  # aparece com o próprio nome, sem underline — melhor do que esconder o valor.
+  ROTULOS = { 'name' => 'Nome', 'title' => 'Nome', 'description' => 'Descrição',
+              'email' => 'E-mail', 'phone_number' => 'Telefone', 'color' => 'Cor' }.freeze
+
+  def rotulo(campo)
+    ROTULOS[campo.to_s] || campo.to_s.tr('_', ' ').capitalize
   end
 
   def requisitar(verbo, caminho, corpo)
