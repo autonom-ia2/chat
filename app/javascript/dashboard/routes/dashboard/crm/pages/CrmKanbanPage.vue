@@ -856,6 +856,10 @@ const STAGE_DELETE_ERROR_KEYS = {
   'crm.stage_is_last': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_LAST_STAGE',
 };
 
+// Rótulo do filtro de campanha com a contagem, fora do template para não deixar
+// texto solto sem i18n na marcação.
+const campaignFilterLabel = campaign => `${campaign.label} (${campaign.count})`;
+
 const deleteStageErrorMessage = error => {
   const code = error?.response?.data?.error;
   return t(
@@ -2024,7 +2028,7 @@ onMounted(async () => {
                     "
                     @click="toggleCampaignFilter(campaign.value)"
                   >
-                    {{ campaign.label }} ({{ campaign.count }})
+                    {{ campaignFilterLabel(campaign) }}
                   </button>
                   <span
                     v-if="!campaignFilterOptions.length"
