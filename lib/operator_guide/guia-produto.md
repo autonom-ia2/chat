@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (112 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (163 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1212,3 +1212,513 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - diagnostic: `calendar`
 - nav_target: `—`
 - highlight: `—`
+
+### Ver o volume e os tempos de atendimento da conta
+- intent: Quantas conversas entraram neste mês?; Nosso tempo de primeira resposta está piorando?; Quanto tempo o cliente espera entre respostas?; Quantas conversas foram resolvidas no período?; Como exporto esses números para planilha?
+- onde_fica: Relatórios > Conversas
+- rota: `conversation_reports` - `/app/accounts/:accountId/reports/conversation`
+- gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- pre_requisitos: nenhum, mas só aparecem números se houver conversas no período escolhido
+- passos: 1. Abra Relatórios > Conversas; 2. Escolha o período no seletor de datas; 3. Ligue Horários de funcionamento se quiser descontar o tempo fora do expediente; 4. Compare os gráficos de conversas, mensagens, tempo de primeira resposta, tempo de resolução e tempo de espera do cliente; 5. Clique em Baixar relatórios de conversas para gerar o arquivo CSV.
+- gotchas: o filtro Agrupar por só aparece quando o período tem 30 dias ou mais, abaixo disso tudo é mostrado por dia; clicar numa barra abre a lista de conversas daquela barra, mas só para administrador e só em barra com valor maior que zero; tempo de primeira resposta e tempo de resolução são médias apenas das conversas que tiveram resposta ou resolução, por isso somam menos que o total de conversas; com Horários de funcionamento ligado, o arquivo baixado vem com nome terminando em business-hours.
+- nav_target: `conversation_reports`
+
+### Abrir o desempenho de um agente por dentro
+- intent: Por que o tempo de resposta desse agente subiu?; Quantas conversas essa pessoa resolveu no mês?; Em que dias ela atendeu mais?; Quais conversas entraram naquele pico do gráfico?; Como baixo isso em planilha?
+- onde_fica: Relatórios > Agentes > clicar no nome do agente
+- rota: `agent_reports_show` - `/app/accounts/:accountId/reports/agents/:id`
+- gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- pre_requisitos: o agente precisa existir e ter conversas atribuídas no período
+- passos: 1. Abra Relatórios > Agentes; 2. Clique no nome da pessoa na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
+- gotchas: o relatório de agente não tem gráfico de mensagens recebidas, porque mensagem do cliente não é atribuída a um agente; o botão de baixar gera o arquivo de todos os agentes do período, não apenas o da pessoa aberta na tela; trocar de agente pelo filtro do topo recarrega a tela inteira; ver as conversas por trás de uma barra é restrito a administrador.
+- nav_target: `agent_reports_show`
+
+### Abrir o desempenho de um canal por dentro
+- intent: O WhatsApp está demorando mais que o site para responder?; Quantas mensagens esse canal recebeu na semana?; Em que dia esse canal teve mais conversa?; Quais conversas geraram aquele pico?
+- onde_fica: Relatórios > Caixa de Entrada > clicar no nome da caixa
+- rota: `inbox_reports_show` - `/app/accounts/:accountId/reports/inboxes/:id`
+- gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- pre_requisitos: a caixa de entrada precisa existir e ter conversas no período
+- passos: 1. Abra Relatórios > Caixa de Entrada; 2. Clique no nome do canal na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
+- gotchas: o botão de baixar traz o arquivo de todas as caixas do período, não só a que está na tela; o filtro do topo troca de canal e recarrega tudo; os tempos médios consideram apenas conversas que tiveram primeira resposta ou resolução; abrir as conversas de uma barra é permitido apenas a administrador.
+- nav_target: `inbox_reports_show`
+
+### Abrir o desempenho de um time por dentro
+- intent: O time de suporte está resolvendo mais rápido que o comercial?; Quantas conversas esse time atendeu no mês?; O tempo de espera do cliente nesse time caiu?; Quais conversas estão por trás desse número?
+- onde_fica: Relatórios > Time > clicar no nome do time
+- rota: `team_reports_show` - `/app/accounts/:accountId/reports/teams/:id`
+- gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- pre_requisitos: o time precisa existir e ter conversas atribuídas a ele no período
+- passos: 1. Abra Relatórios > Time; 2. Clique no nome do time na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
+- gotchas: só entram conversas atribuídas ao time, então atendimento feito pela mesma pessoa fora do time não aparece aqui; o botão de baixar gera o arquivo de todos os times do período; trocar de time pelo filtro do topo substitui toda a tela; ver as conversas de uma barra é restrito a administrador.
+- nav_target: `team_reports_show`
+
+### Abrir o desempenho de uma etiqueta por dentro
+- intent: Quantas conversas tiveram essa etiqueta no mês?; Reclamações estão crescendo?; Conversas com essa etiqueta demoram mais para resolver?; Quais conversas receberam essa etiqueta naquele dia?
+- onde_fica: Relatórios > Etiquetas > clicar no nome da etiqueta
+- rota: `label_reports_show` - `/app/accounts/:accountId/reports/labels/:id`
+- gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- pre_requisitos: a etiqueta precisa estar criada e aplicada em conversas do período
+- passos: 1. Abra Relatórios > Etiquetas; 2. Clique no nome da etiqueta na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
+- gotchas: etiqueta criada mas nunca aplicada abre a tela zerada, e isso não é erro; o botão de baixar gera o arquivo de todas as etiquetas do período; trocar de etiqueta pelo filtro do topo recarrega a tela inteira; só administrador abre a lista de conversas por trás de uma barra.
+- nav_target: `label_reports_show`
+
+### Medir o quanto o robô resolve sozinho
+- intent: Quantas conversas o robô atendeu sem passar para ninguém?; Qual a taxa de transferência para os atendentes?; O robô está resolvendo mais do que no mês passado?; Quantas respostas o robô enviou?
+- onde_fica: Relatórios > Robôs
+- rota: `bot_reports` - `/app/accounts/:accountId/reports/bot`
+- gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- pre_requisitos: ter conversas atendidas por robô no período
+- passos: 1. Abra Relatórios > Robôs; 2. Escolha o período; 3. Leia os quadros de conversas, total de respostas, taxa de resolução e taxa de entrega; 4. Acompanhe a evolução nos gráficos de resolução e de transferências; 5. Clique numa barra para ver as conversas daquele dia.
+- gotchas: esta tela não tem o botão Horários de funcionamento, tudo é contado no dia inteiro, diferente das demais; também não tem botão de baixar, os números ficam só na tela; taxa de resolução e taxa de entrega aparecem como dois tracinhos quando o valor é zero; os quadros do topo usam o período inteiro e ignoram o agrupamento por semana ou mês, que vale só para os gráficos; taxa de entrega alta significa que o robô passou muita conversa para gente, o que costuma ser sinal de fluxo incompleto.
+- nav_target: `bot_reports`
+
+### Escolher como as conversas são distribuídas
+- intent: Onde eu configuro a distribuição automática de conversas?; Como escolher entre política de atribuição e capacidade do agente?; Onde fica a configuração de passagem da IA para uma pessoa?; Por que só aparece um card nessa tela?
+- onde_fica: Configurações > Atribuição de Agentes
+- rota: `assignment_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/index`
+- gate: feature flag `assignment_v2`; papel `administrator`
+- pre_requisitos: ser administrador da conta
+- passos: 1. Abra Configurações > Atribuição de Agentes; 2. Leia os cards e decida o que quer ajustar; 3. Clique em Política de atribuição para a ordem do rodízio, em Capacidade do agente para limitar quantas conversas cada pessoa aguenta, ou em Handoff da IA para a passagem da IA para uma pessoa.
+- gotchas: a tela mostra de um a três cards conforme o que a conta tem liberado; Política de atribuição aparece sempre, Capacidade do agente só com atribuição avançada, e Handoff da IA só com o CRM e a IA do CRM ligados; card que sumiu é liberação de recurso, não erro.
+- nav_target: `assignment_policy_index`
+
+### Ver e organizar as políticas de atribuição
+- intent: Quais políticas de atribuição já existem?; Quais caixas de entrada estão em cada política?; Como apago uma política que não uso mais?; Onde crio uma política nova?
+- onde_fica: Configurações > Atribuição de Agentes > Política de atribuição
+- rota: `agent_assignment_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/assignment`
+- gate: feature flag `assignment_v2`; papel `administrator`
+- pre_requisitos: ser administrador da conta
+- passos: 1. Abra Configurações > Atribuição de Agentes e clique em Política de atribuição; 2. Confira a ordem, a prioridade e as caixas de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
+- gotchas: cada caixa de entrada fica em uma política só, então a mesma caixa nunca aparece em duas linhas; excluir pede confirmação e não tem volta, e as caixas daquela política ficam sem regra de distribuição; conta nova mostra a lista vazia, o que é normal.
+- nav_target: `agent_assignment_policy_index`
+
+### Criar uma regra nova de distribuição de conversas
+- intent: Como crio uma política de atribuição do zero?; Qual a diferença entre rodízio e equilibrado?; Como evito que um agente receba conversa demais?; Por que o modo Equilibrado está bloqueado?
+- onde_fica: Configurações > Atribuição de Agentes > Política de atribuição > Nova política
+- rota: `agent_assignment_policy_create` - `/app/accounts/:accountId/settings/assignment-policy/assignment/create`
+- gate: feature flag `assignment_v2`; papel `administrator`
+- pre_requisitos: ser administrador da conta
+- passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Escolha a ordem de atribuição e a prioridade; 4. Ajuste a distribuição justa e o descarte de conversas inativas; 5. Clique em Criar política.
+- gotchas: nome e descrição são obrigatórios e o botão fica travado sem os dois; a política nasce com rodízio, 100 conversas por hora por agente e descarte de conversas paradas há mais de 7 dias; Equilibrado exige o plano com atribuição avançada; não dá para escolher as caixas de entrada aqui, só depois de salvar, na tela de edição, para onde o sistema leva sozinho.
+- nav_target: `agent_assignment_policy_create`
+
+### Ajustar uma política existente e ligar as caixas de entrada
+- intent: Como coloco uma caixa de entrada nessa política?; Como mudo o limite de conversas por agente?; Como tiro uma caixa de entrada da política?; Por que a caixa saiu da outra política quando eu vinculei aqui?
+- onde_fica: Configurações > Atribuição de Agentes > Política de atribuição > Alterar
+- rota: `agent_assignment_policy_edit` - `/app/accounts/:accountId/settings/assignment-policy/assignment/edit/:id`
+- gate: feature flag `assignment_v2`; papel `administrator`
+- pre_requisitos: ter uma política de atribuição já criada
+- passos: 1. Na lista, clique em Alterar na política desejada; 2. Ajuste ordem, prioridade, distribuição justa e descarte de inativas; 3. Clique em Atualizar política para gravar esses campos; 4. Em Caixas de entrada adicionadas, vincule e desvincule as caixas.
+- gotchas: esta é a única tela com a seção de caixas de entrada, e já vem preenchida com a política existente; uma caixa só pode estar em uma política, e vincular aqui desvincula da anterior, com aviso antes; vincular e desvincular caixa vale na hora, enquanto os demais campos só valem depois do botão Atualizar política; o intervalo de conversas inativas aceita de 1 hora a 999 dias, e em branco desliga o descarte.
+- nav_target: `agent_assignment_policy_edit`
+
+### Ver quanto cada pessoa aguenta de conversa
+- intent: Onde defino o limite de conversas por agente?; Quais políticas de capacidade já existem?; Quem está em cada política de capacidade?; Como apago uma política de capacidade?
+- onde_fica: Configurações > Atribuição de Agentes > Capacidade do agente
+- rota: `agent_capacity_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/capacity`
+- gate: feature flag `advanced_assignment`; papel `administrator`
+- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador
+- passos: 1. Abra Configurações > Atribuição de Agentes e clique em Capacidade do agente; 2. Confira os agentes e os limites de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
+- gotchas: a capacidade só muda a distribuição de verdade quando a política de atribuição da caixa está no modo Equilibrado, que também depende do plano; cada agente pertence a uma única política de capacidade; excluir pede confirmação e não tem volta.
+- nav_target: `agent_capacity_policy_index`
+
+### Criar uma regra de limite de conversas
+- intent: Como crio uma política de capacidade?; Como limito o número máximo de conversas por caixa?; Quais conversas não devem contar no limite do agente?; Onde adiciono os agentes nessa política?
+- onde_fica: Configurações > Atribuição de Agentes > Capacidade do agente > Nova política
+- rota: `agent_capacity_policy_create` - `/app/accounts/:accountId/settings/assignment-policy/capacity/create`
+- gate: feature flag `advanced_assignment`; papel `administrator`
+- pre_requisitos: ter atribuição avançada liberada no plano
+- passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Defina as regras de exclusão, escolhendo as etiquetas e o tempo que não contam na capacidade; 4. Clique em Criar política.
+- gotchas: a política nasce sem ninguém dentro, porque as seções de limite por caixa e de agentes só existem na tela de edição, para onde o sistema leva ao salvar; as etiquetas de exclusão precisam já existir na conta para poderem ser escolhidas.
+- nav_target: `agent_capacity_policy_create`
+
+### Colocar agentes e limites numa política de capacidade
+- intent: Como adiciono agentes a uma política de capacidade?; Como defino o máximo de conversas por caixa de entrada?; Como mudo a capacidade de uma pessoa específica?; Por que o agente saiu da outra política de capacidade?
+- onde_fica: Configurações > Atribuição de Agentes > Capacidade do agente > Alterar
+- rota: `agent_capacity_policy_edit` - `/app/accounts/:accountId/settings/assignment-policy/capacity/edit/:id`
+- gate: feature flag `advanced_assignment`; papel `administrator`
+- pre_requisitos: ter uma política de capacidade criada e os agentes cadastrados na conta
+- passos: 1. Na lista, clique em Alterar na política desejada; 2. Em limites por caixa de entrada, escolha a caixa e o máximo de conversas; 3. Em agentes atribuídos, use Adicionar agente; 4. Ajuste nome, descrição e regras de exclusão e clique em Atualizar política.
+- gotchas: todo agente entra com capacidade 20 por padrão, então ajuste se o time não for homogêneo; um agente só pode estar em uma política de capacidade, e vincular aqui tira ele da anterior; mexer em agente e em limite por caixa vale na hora, enquanto nome, descrição e exclusões só valem depois do botão Atualizar política.
+- nav_target: `agent_capacity_policy_edit`
+
+### Escolher o funil para configurar a passagem da IA
+- intent: Onde configuro a IA passando o atendimento para uma pessoa?; Em quais funis o handoff já está ligado?; Por que essa tela não aparece para mim?; Como reviso a passagem da IA de um funil específico?
+- onde_fica: Configurações > Handoff da IA (CRM)
+- rota: `crm_handoff_settings_index` - `/app/accounts/:accountId/settings/assignment-policy/handoff`
+- gate: feature flag `crm`; papel `administrator` ou `crm_manage_ai`
+- pre_requisitos: CRM Kanban e IA do CRM ligados, pelo menos um funil criado, e permissão de administrador
+- passos: 1. Abra Configurações > Handoff da IA (CRM); 2. Veja na etiqueta de cada funil se está ligado e em qual fluxo; 3. Clique no funil que quer configurar.
+- gotchas: aqui nada é configurado, é só a lista de escolha; a etiqueta reflete o padrão do funil, não as personalizações por etapa; com o CRM ou a IA do CRM desligados a plataforma devolve você à tela inicial sem avisar; sem funil criado a lista fica vazia.
+- nav_target: `crm_handoff_settings_index`
+
+### Definir quando e para quem a IA passa a conversa
+- intent: Como faço a IA chamar um humano no meio do atendimento?; Qual a diferença entre transferir direto e por convite?; O que acontece se ninguém pegar a conversa?; Como coloco uma regra diferente só em uma etapa do funil?; Como escolho quem recebe a conversa?
+- onde_fica: Configurações > Handoff da IA (CRM) > nome do funil
+- rota: `crm_handoff_settings_edit` - `/app/accounts/:accountId/settings/assignment-policy/handoff/:pipelineId`
+- gate: feature flag `crm`; papel `administrator` ou `crm_manage_ai`
+- pre_requisitos: um funil com etapas criadas, caixas vinculadas ao funil e agentes cadastrados
+- passos: 1. Escolha o funil no seletor do topo; 2. No padrão do funil, ligue a passagem para humano e escreva quando transferir; 3. Escolha direto ou convite e o destino; 4. Defina o tempo de espera e o que fazer se ninguém pegar; 5. Nas personalizações por etapa, deixe em Padrão o que herda e personalize onde a regra é diferente; 6. Salve.
+- gotchas: a passagem só acontece de verdade quando o funil está configurado E a caixa tem atendente como membro: caixa sem membro deixa a promessa de que alguém vai assumir sem ninguém para atribuir, e nada na tela avisa isso; salvar grava o padrão e todas as etapas de uma vez, inclusive etapa que você deixou pela metade; etapa marcada como Padrão herda e ignora o que estiver preenchido nela; no rodízio a equipe sai da caixa em que a conversa chegou; direto atribui na hora, a IA para de responder e só entrega para quem está online, enquanto convite notifica e a IA continua atendendo até alguém pegar; o tempo de espera padrão é 15 minutos, re-notificar avisa até 8 vezes e escalar exige escolher a pessoa.
+- nav_target: `crm_handoff_settings_edit`
+
+### Fechar conversas paradas e exigir campos na resolução
+- intent: Como fecho automaticamente conversa que ficou parada?; Como obrigo o agente a preencher campos antes de resolver?; Dá para avisar o cliente quando a conversa fecha sozinha?; Como marco com etiqueta as conversas fechadas automaticamente?
+- onde_fica: Configurações > Fluxo de Conversa
+- rota: `conversation_workflow_index` - `/app/accounts/:accountId/settings/conversation-workflow`
+- gate: papel `administrator`
+- pre_requisitos: ser administrador; para os campos obrigatórios, ter atributos personalizados de conversa já criados
+- passos: 1. Abra Configurações > Fluxo de Conversa; 2. Na resolução automática, defina a inatividade, a mensagem enviada ao cliente e a etiqueta aplicada; 3. Salve; 4. Em atributos obrigatórios, adicione os campos que o agente precisa preencher antes de resolver.
+- gotchas: as duas seções são independentes e cada uma depende de estar liberada na conta; a duração da resolução automática aceita de 10 minutos a 999 dias; a opção de pular conversas aguardando resposta do agente evita fechar quem está esperando você; só dá para exigir atributo de conversa que já existe, então crie o atributo antes.
+- nav_target: `conversation_workflow_index`
+
+### Acompanhar quanto a IA está custando
+- intent: Quanto gastei de IA esse mês?; Qual recurso de IA consome mais?; Como exporto o relatório de uso da IA?; Por que os valores apareceram em dólar?; Dá para ver o que foi conversado com a IA?
+- onde_fica: CRM > Gestão de IA
+- rota: `crm_ai_usage_index` - `/app/accounts/:accountId/crm/ai-usage`
+- gate: papel `administrator` ou `agent` ou `crm_view_reports`
+- pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM
+- passos: 1. Abra CRM > Gestão de IA; 2. Escolha o período entre hoje, semana e mês; 3. Leia os indicadores de gasto, usos, economia e custo médio; 4. Confira o gasto por recurso e o histórico; 5. Use baixar relatório para exportar o período.
+- gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo.
+- nav_target: `crm_ai_usage_index`
+
+### Ver o plano contratado e quanto está sendo cobrado
+- intent: Qual plano eu contratei?; Quanto eu pago por mês?; Quando vence a próxima cobrança?; O que compõe o valor da minha assinatura?; Minha assinatura está ativa?
+- onde_fica: Financeiro > Assinatura
+- rota: `autonomia_financial_subscription` - `/app/accounts/:accountId/financial/subscription`
+- gate: papel `administrator`
+- pre_requisitos: ser administrador da conta e ter um checkout já concluído
+- passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira o plano, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
+- gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador; sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
+- nav_target: `autonomia_financial_subscription`
+
+### Conferir faturas emitidas e o que já foi pago
+- intent: Tenho alguma fatura em aberto?; Onde baixo o documento da fatura?; Quando essa fatura venceu?; Meu pagamento foi registrado?; Quanto eu já paguei até agora?
+- onde_fica: Financeiro > Faturas
+- rota: `autonomia_financial_invoices` - `/app/accounts/:accountId/financial/invoices`
+- gate: papel `administrator`
+- pre_requisitos: ser administrador da conta
+- passos: 1. Abra Financeiro > Faturas; 2. Veja no topo o total em aberto, quantas estão pagas e quantos pagamentos existem; 3. Na tabela, olhe valor, status, vencimento e data de pagamento; 4. Use abrir fatura para ver o documento da cobrança; 5. Desça até pagamentos para conferir origem e data de cada um.
+- gotchas: a tela não cobra, não paga e não emite fatura, só mostra o que o sistema de cobrança registrou; o link de abrir fatura só existe quando a cobrança tem documento; o total em aberto soma pendentes e vencidas juntas, sem separar; a origem mostra o meio de pagamento e cai para manual quando o pagamento foi lançado à mão.
+- nav_target: `autonomia_financial_invoices`
+
+### Conectar pelo QR Code o WhatsApp que criaram para você
+- intent: Meu WhatsApp está conectado?; Como leio o QR Code para conectar?; Por que parei de receber mensagens?; Como reconecto meu número?; Onde vejo o status da minha conexão?
+- onde_fica: menu do seu perfil > Status Conexão
+- rota: `autonomia_invite_connection` - `/app/accounts/:accountId/autonomia/invite-connection`
+- gate: papel `administrator` ou `agent` ou `custom_role`
+- pre_requisitos: existir uma caixa de entrada criada por convite vinculada ao seu usuário, e estar com o celular em mãos
+- passos: 1. Abra o menu do seu perfil e clique em Status Conexão; 2. Veja a etiqueta de status ao lado do número; 3. Estando desconectado, gere um novo QR Code; 4. No celular, abra o WhatsApp em aparelhos conectados e toque em conectar um aparelho; 5. Aponte para o código e espere virar conectado.
+- gotchas: o item de menu só aparece para quem tem caixa criada por convite; leia o código pelo próprio WhatsApp, não pela câmera do celular; o QR expira em cerca de dois minutos e meio, então gere com o celular já na mão; a tela se atualiza sozinha, sem precisar recarregar; o número precisa ser o mesmo da caixa de entrada, ler com outro celular não conecta a caixa certa.
+- nav_target: `autonomia_invite_connection`
+
+### Procurar empresas por região e transformar em contato ou card
+- intent: Como acho empresas de um segmento na minha cidade?; Como priorizo quem ligar primeiro?; Como viro esse lead em contato?; Dá para criar card no CRM a partir da busca?
+- onde_fica: Prospecção > Buscar leads
+- rota: `autonomia_prospecting_search` - `/app/accounts/:accountId/autonomia/prospecting/search`
+- gate: papel `administrator` ou `prospecting_view` ou `prospecting_manage`
+- pre_requisitos: módulo de Prospecção habilitado e a chave de busca configurada em Configurações > Prospecção
+- passos: 1. Abra Prospecção > Buscar leads e clique em nova busca; 2. Escreva o segmento e a localização e escolha uma sugestão; 3. Defina a área, o limite e a forma de pesquisa; 4. Busque e ordene por maior prioridade; 5. Abra os detalhes de um lead para ver reputação e fatores de atenção; 6. Use criar contato, criar card, ou selecione vários e aplique em lote.
+- gotchas: sem a chave de busca configurada as sugestões não aparecem e a busca não devolve empresas; o mapa usa uma segunda chave e, sem ela, a busca funciona mas o mapa não abre; criar card exige um funil ativo configurado; a conta tem limite diário e mensal, e a busca para ao bater o limite; excluir uma busca do histórico não apaga os leads já salvos.
+- nav_target: `autonomia_prospecting_search`
+
+### Juntar leads em listas e preparar um público de campanha
+- intent: Como separo os leads por praça ou campanha?; Como adiciono leads a uma lista?; Como uso esses leads numa campanha?; Quantos leads da lista estão prontos para campanha?
+- onde_fica: Prospecção > Listas
+- rota: `autonomia_prospecting_lists` - `/app/accounts/:accountId/autonomia/prospecting/lists`
+- gate: papel `administrator` ou `prospecting_view` ou `prospecting_manage`
+- pre_requisitos: já ter leads salvos por uma busca de prospecção
+- passos: 1. Abra Prospecção > Listas e crie uma nova lista; 2. Dê um nome de campanha, praça ou segmento; 3. Selecione a lista para ver os leads e os números de prontos, contatos, CRM e bloqueados; 4. Busque e adicione leads; 5. Em campanha, dê nome ao público e crie o público.
+- gotchas: criar o público só gera o segmento por etiqueta, nada é disparado automaticamente e a campanha continua sendo você quem dispara; lead bloqueado por status ou consentimento entra na conta de bloqueados e fica de fora do público; a busca de leads disponíveis só mostra quem ainda não está na lista; remover um lead da lista não apaga o lead nem o contato criado a partir dele.
+- nav_target: `autonomia_prospecting_lists`
+
+### Ajustar chaves, limites e critérios de score da prospecção
+- intent: Onde coloco a chave do Google?; Por que o mapa não aparece na busca?; Como mudo o funil padrão dos cards?; Como limito quantas buscas podem ser feitas por dia?; Como mudo o peso do score dos leads?
+- onde_fica: Configurações > Prospecção
+- rota: `settings_prospecting_index` - `/app/accounts/:accountId/settings/prospecting`
+- gate: papel `administrator` ou `prospecting_manage`
+- pre_requisitos: ser administrador ou ter a permissão de gerenciar prospecção
+- passos: 1. Abra Configurações > Prospecção; 2. Na aba geral, cole a chave de busca de locais e a chave de exibição do mapa; 3. Defina o funil e a etapa padrão usados ao criar cards; 4. Ajuste limite por busca, cache e limites diário e mensal; 5. Na aba score, escolha um perfil ou mude para customizado para editar os pesos; 6. Salve.
+- gotchas: são duas chaves com funções diferentes, uma alimenta a busca e as sugestões, a outra só desenha o mapa; chave já gravada não é exibida de volta, e preencher o campo substitui a anterior; os pesos do score só ficam editáveis no modo customizado; a forma de pesquisa muda o sentido do score, priorizando quem tem lacunas no perfil ou quem já é mais estruturado.
+- nav_target: `autonomia_prospecting_settings`
+
+### Entrar na área de Cotação da corretora
+- intent: Onde fica a parte de seguros?; Como abro a cotação?; Por que o menu Cotação não aparece para mim?; O que existe dentro de Cotação?
+- onde_fica: Cotação
+- rota: `autonomia_insurance` - `/app/accounts/:accountId/autonomia/insurance`
+- gate: papel `administrator` ou `insurance_view` ou `insurance_manage`
+- pre_requisitos: módulo de Cotação habilitado para a conta
+- passos: 1. Clique em Cotação na barra lateral; 2. Você cai direto em Conexões; 3. Use as abas do topo para alternar entre Conexões e Agente.
+- gotchas: Cotação não é uma tela própria, é a porta de entrada que leva sempre para Conexões; o módulo depende de duas chaves ligadas, a da instalação e a da conta, e com qualquer uma desligada o item some do menu; só existem essas duas abas.
+- nav_target: `autonomia_insurance`
+
+### Ligar a conta da corretora e ver o que dá para cotar
+- intent: Como conecto a corretora?; Por que a cotação não está funcionando?; Quais produtos a minha conta cota hoje?; Por que uma seguradora não está cotando?; A senha fica guardada onde?
+- onde_fica: Cotação > Conexões
+- rota: `autonomia_insurance_connections` - `/app/accounts/:accountId/autonomia/insurance/connections`
+- gate: papel `administrator` ou `insurance_view` ou `insurance_manage`
+- pre_requisitos: usuário e senha da corretora no portal, e o módulo de Cotação habilitado
+- passos: 1. Abra Cotação > Conexões; 2. Preencha usuário e senha e conecte; 3. Espere o estado chegar em conectado; 4. Leia o veredito do topo, que diz quantos produtos estão prontos para cotar; 5. Confira produto a produto quantas seguradoras respondem; 6. Atualize os produtos quando a corretora habilitar algo novo.
+- gotchas: credencial recusada quer dizer que o portal negou o acesso, e o conserto é lá, não aqui; a verificação da sessão é periódica, então a tela mostra a última checagem e não o estado deste segundo; atualizar produtos leva cerca de meio minuto e a tela se atualiza sozinha; ramo que a corretora não tem habilitado no portal não aparece na lista; seguradora com credencial recusada simplesmente não cota, e o cliente nunca vê esse aviso.
+- nav_target: `autonomia_insurance_connections`
+
+### Criar o agente que cota com o cliente no WhatsApp
+- intent: Como crio o agente de cotação?; Dá para mudar o nome e o tom do agente?; O agente já sabe cotar sozinho?; Posso ter mais de um agente de cotação?; Onde edito o agente depois de criado?
+- onde_fica: Cotação > Agente
+- rota: `autonomia_insurance_agent` - `/app/accounts/:accountId/autonomia/insurance/agent`
+- gate: papel `administrator` ou `insurance_view` ou `insurance_manage`
+- pre_requisitos: conexão com a seguradora já funcionando e permissão de gerenciar o módulo de Cotação
+- passos: 1. Abra Cotação > Agente; 2. Clique em configurar e criar; 3. Informe o nome do agente e o nome da corretora; 4. Escreva o horário em que a sua equipe assume; 5. Escolha o comportamento, consultivo ou objetivo; 6. Crie o agente e siga editando em Meus agentes.
+- gotchas: é um agente de cotação por conta, e se já existir a tela mostra o que existe em vez de criar outro; nome do agente e da corretora são obrigatórios; o horário precisa ser texto simples de dias e horas; a jornada de cotação, os formulários e as regras de segurança são mantidos pela plataforma e não se editam aqui, você muda identidade, horário e comportamento; nos dois comportamentos o agente responde cobertura consultando as condições gerais, nunca de memória.
+- nav_target: `autonomia_insurance_agent`
+
+### Ligar a verificação em duas etapas da sua conta
+- intent: Como ativo a verificação em duas etapas?; Onde configuro o segundo fator do meu usuário?; O que acontece se eu perder o celular com o aplicativo?; Onde pego novos códigos de recuperação?; Como desligo a verificação em duas etapas?
+- onde_fica: Menu do usuário > Configurações do perfil > Autenticação em Dois Fatores
+- rota: `profile_settings_mfa` - `/app/accounts/:accountId/profile/mfa`
+- gate: papel `administrator` ou `agent` ou `custom_role`
+- pre_requisitos: um aplicativo autenticador no celular, e a senha atual, que é exigida para desligar
+- passos: 1. Abra Configurações do perfil; 2. Em Autenticação em Dois Fatores, clique em gerenciar; 3. Habilite a verificação; 4. Leia o QR Code no aplicativo, ou copie a chave se não conseguir escanear; 5. Digite o código de 6 dígitos e confirme; 6. Guarde os códigos de recuperação e finalize.
+- gotchas: os códigos de recuperação só aparecem uma vez, logo depois da verificação, e cada um serve para um único uso; perdendo o celular, entrar com um código de recuperação é a única saída sem ajuda externa, e perdendo o celular e os códigos só o suporte resolve; gerar novos códigos invalida todos os antigos na hora; para desligar, a plataforma pede a senha mais um código; se a verificação estiver desligada na instalação inteira, a tela nem abre.
+- nav_target: `profile_settings_mfa`
+
+### Ver o histórico de chamadas e ouvir gravações
+- intent: Onde vejo as ligações que entraram?; Como acho as chamadas perdidas?; Onde ouço a gravação de uma ligação?; Como vejo as chamadas de um agente específico?; Por que a tela de chamadas está vazia?
+- onde_fica: Chamadas
+- rota: `calls_dashboard_index` - `/app/accounts/:accountId/calls`
+- gate: papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- pre_requisitos: recurso de voz liberado na conta e uma caixa de entrada com voz habilitada
+- passos: 1. Abra Chamadas; 2. Use os atalhos de perdidas e sem resposta para ir ao que precisa de retorno; 3. Escolha entre recebidas, efetuadas ou em andamento; 4. Filtre por caixa de entrada, e por agente se você for administrador; 5. Ouça a gravação na linha da chamada, quando existir; 6. Clique no número da conversa para abrir o atendimento ligado a ela.
+- gotchas: sem canal de voz configurado a tela mostra o convite para configurar, e não uma lista vazia; quem não é administrador vê apenas as próprias chamadas, por isso o filtro de agente nem aparece; perdidas é chamada que entrou e ninguém atendeu, sem resposta é chamada que você fez e não atenderam; gravação só aparece se o provedor gravou aquela chamada; os filtros ficam no endereço da página, então o link copiado reabre a mesma visão.
+- nav_target: `calls_dashboard_index`
+
+### Ver quem está no site neste momento
+- intent: Quem está no meu site agora?; O que significa a lista Ativo em Contatos?; Por que meus contatos de WhatsApp não aparecem em Ativo?; Como falo com quem está navegando agora?
+- onde_fica: Contatos > Ativo
+- rota: `contacts_dashboard_active` - `/app/accounts/:accountId/contacts/active`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: canal de chat ao vivo instalado no site, que é o que informa presença
+- passos: 1. Abra Contatos; 2. Clique em Ativo; 3. Confira quem está presente agora; 4. Abra o contato para ver a ficha ou iniciar uma conversa; 5. Volte a todos os contatos quando quiser a base inteira.
+- gotchas: presença é medida em segundos, não em dias, então a lista muda sozinha o tempo todo e o contato sai dela pouco depois de fechar a página; quem fala por WhatsApp ou e-mail não aparece aqui mesmo tendo conversado há pouco, porque não há sessão aberta no site; lista vazia quase sempre significa ninguém no site, não erro; o botão de filtros do cabeçalho não funciona nesta visão.
+- nav_target: `contacts_dashboard_active`
+
+### Abrir a ficha de um contato e juntar cadastros repetidos
+- intent: Onde edito os dados de um cliente?; Como vejo todas as conversas que já tive com esta pessoa?; Como junto dois cadastros do mesmo cliente?; Onde bloqueio um contato?; Onde anoto informações sobre o cliente?
+- onde_fica: Contatos > clicar no contato
+- rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: contato já cadastrado
+- passos: 1. Abra Contatos e clique no contato; 2. Ajuste os dados à esquerda e salve; 3. Use as abas de atributos, histórico, notas, mídia e mesclar; 4. Em histórico, veja as conversas anteriores; 5. Em notas, registre o que a equipe precisa saber; 6. Para juntar cadastros repetidos, abra mesclar, escolha o contato principal e confirme.
+- gotchas: ao mesclar, o contato principal é o que sobrevive e o outro é excluído, com os dados do principal prevalecendo em caso de conflito, e não há desfazer; excluir contato é permanente; bloquear não apaga o contato, só impede novo contato; e-mail ou telefone repetido é recusado por já pertencer a outro cadastro; abrindo a ficha a partir de um segmento ou de uma etiqueta, a tela é a mesma e o voltar devolve para aquela lista.
+- nav_target: `contacts_edit`
+
+### Cadastrar empresas e achar a que você procura
+- intent: Onde cadastro uma empresa?; Como agrupo os contatos de uma mesma empresa?; Onde busco uma empresa pelo nome ou domínio?; Por que não vejo Empresas no menu?
+- onde_fica: Empresas
+- rota: `companies_dashboard_index` - `/app/accounts/:accountId/companies`
+- gate: feature flag `companies`; papel `administrator` ou `agent`
+- pre_requisitos: recurso de Empresas liberado na conta
+- passos: 1. Abra Empresas; 2. Busque pelo nome ou domínio; 3. Ajuste a ordenação; 4. Clique em adicionar empresa e preencha os dados; 5. Ao salvar, a plataforma abre a ficha da empresa criada.
+- gotchas: Empresas é liberado por conta, então pode simplesmente não aparecer no menu; criar a empresa não vincula contato nenhum, o vínculo é feito dentro da ficha ou pelo campo empresa do contato; busca e ordenação ficam no endereço da página, então dá para compartilhar o link já filtrado.
+- nav_target: `companies_dashboard_index`
+
+### Ver a empresa por dentro e vincular os contatos dela
+- intent: Como vinculo um contato a uma empresa?; Onde vejo as conversas dos contatos de uma empresa?; Como tiro um contato de uma empresa?; O que acontece com os contatos se eu excluir a empresa?
+- onde_fica: Empresas > clicar na empresa
+- rota: `companies_dashboard_show` - `/app/accounts/:accountId/companies/:companyId`
+- gate: feature flag `companies`; papel `administrator` ou `agent`
+- pre_requisitos: empresa cadastrada e contatos existentes para vincular
+- passos: 1. Abra Empresas e clique na empresa; 2. Ajuste nome, domínio, descrição e avatar e atualize; 3. Use as abas de histórico, notas e contatos; 4. Em contatos, adicione pesquisando e confirmando o vínculo; 5. Use remover para desvincular.
+- gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta.
+- nav_target: `companies_dashboard_show`
+
+### Abrir a Central de Ajuda no portal certo
+- intent: Onde fica a Central de Ajuda?; Por que abriu outro portal?; Como troco de portal?; Sumiu a Central de Ajuda do menu, e agora?
+- onde_fica: Central de Ajuda
+- rota: `portals_index` - `/app/accounts/:accountId/portals/:navigationPath`
+- gate: feature flag `help_center`; papel `administrator` ou `knowledge_base_manage`
+- pre_requisitos: recurso de Central de Ajuda liberado na conta, e permissão de gerenciar base de conhecimento
+- passos: 1. Clique em Central de Ajuda e escolha artigos, categorias, localidades ou configurações; 2. a tela abre o último portal e idioma que você usou; 3. se o portal lembrado não existir mais, ela abre o primeiro portal da conta.
+- gotchas: não é uma tela de verdade, é um redirecionamento, por isso o endereço muda sozinho; sem nenhum portal criado, ela leva direto à criação; a lembrança do último portal é de cada usuário, então dois colegas podem abrir portais diferentes pelo mesmo item do menu.
+- nav_target: `portals_index`
+
+### Criar o portal da central de ajuda
+- intent: Como crio uma central de ajuda?; O que é portal?; O que preencho para criar o portal?; Onde escolho o endereço do portal?
+- onde_fica: Central de Ajuda > Criar portal
+- rota: `portals_new` - `/app/accounts/:accountId/portals/new`
+- gate: feature flag `help_center`; papel `administrator` ou `knowledge_base_manage`
+- pre_requisitos: permissão de gerenciar base de conhecimento
+- passos: 1. Clique em criar portal; 2. preencha o nome; 3. confira o endereço, preenchido sozinho a partir do nome; 4. crie; 5. o portal abre já na lista de artigos.
+- gotchas: só existem dois campos aqui, e logo, cor, domínio e integrações ficam para depois, em configurações; o endereço só aceita letras, números e hífen; o portal nasce com inglês como idioma padrão, então adicione o português antes de escrever; mudar o endereço depois muda o link público.
+- nav_target: `portals_new`
+
+### Ajustar aparência, domínio e integrações do portal
+- intent: Como coloco meu domínio na central de ajuda?; Onde troco o logo e a cor?; Como ligo o chat ao vivo no portal?; Como coloco a medição de acesso?; Como excluo um portal?
+- onde_fica: Central de Ajuda > Configurações
+- rota: `portals_settings_index` - `/app/accounts/:accountId/portals/:portalSlug/settings`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal criado, e acesso ao painel de DNS para usar domínio próprio
+- passos: 1. Abra configurações e use as abas de geral, domínio, tema e integrações; 2. em geral ajuste logo, nome, textos e cor; 3. em domínio cadastre o seu endereço e aponte o registro indicado; 4. em tema escolha o leiaute e os links sociais; 5. em integrações ligue o chat ao vivo e as ferramentas de medição.
+- gotchas: trocar o endereço recarrega a tela no link novo e os antigos deixam de funcionar; excluir o portal pede o nome na confirmação e é permanente; sendo o último portal, a tela volta para a criação; dá para enviar as instruções de DNS por e-mail para quem cuida do site; campo de integração em branco desliga aquela integração.
+- nav_target: `portals_settings_index`
+
+### Cuidar dos idiomas do portal
+- intent: Como coloco a central de ajuda em português?; Como adiciono outro idioma?; O que é idioma em rascunho?; Como escolho o que aparece na página inicial do portal?
+- onde_fica: Central de Ajuda > Localidades
+- rota: `portals_locales_index` - `/app/accounts/:accountId/portals/:portalSlug/locales`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal criado
+- passos: 1. Abra localidades e veja o cartão de cada idioma; 2. adicione um idioma novo, escolhendo se entra publicado ou em rascunho; 3. use o menu do cartão para tornar padrão, publicar ou mover para rascunho; 4. localize o conteúdo daquele idioma; 5. escolha as categorias e artigos em destaque na página inicial.
+- gotchas: idioma em rascunho não aparece para o visitante, e serve para montar o conteúdo antes de abrir; o idioma padrão é o que abre para quem entra e não pode ir para rascunho; campo em branco herda o valor do idioma padrão; artigos e categorias são por idioma, e escrever em português não gera as versões nos outros.
+- nav_target: `portals_locales_index`
+
+### Ver, filtrar e organizar os artigos do portal
+- intent: Onde vejo todos os artigos?; Como acho um artigo específico?; Como publico vários artigos de uma vez?; Como mudo a ordem dos artigos dentro da categoria?; Onde estão meus rascunhos?
+- onde_fica: Central de Ajuda > Artigos
+- rota: `portals_articles_index` - `/app/accounts/:accountId/portals/:portalSlug/:locale/:categorySlug?/articles/:tab?`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal criado com pelo menos um idioma
+- passos: 1. Abra artigos; 2. escolha a aba de todos, meus, rascunho, publicado ou arquivado; 3. ajuste idioma e categoria; 4. busque pelo texto; 5. marque artigos para publicar, arquivar, mover de categoria ou excluir em lote.
+- gotchas: trocar o idioma limpa o filtro de categoria; arrastar para reordenar só existe dentro de uma categoria, e não funciona com busca ativa; a ação em lote pula artigos publicados que têm edições não publicadas e avisa quantos ignorou, menos quando a ação é publicar; excluir em lote é definitivo.
+- nav_target: `portals_articles_index`
+
+### Escrever um artigo do zero
+- intent: Como crio um artigo?; Em que categoria o artigo entra?; Como mudo o autor do artigo?; Escrevi o texto e não salvou, por quê?
+- onde_fica: Central de Ajuda > Artigos > Novo artigo
+- rota: `portals_articles_new` - `/app/accounts/:accountId/portals/:portalSlug/:locale/:categorySlug?/articles/new`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal com o idioma escolhido e pelo menos uma categoria nesse idioma
+- passos: 1. Clique em novo artigo; 2. escreva o título e clique fora do campo, o que cria o artigo como rascunho; 3. ajuste autor e categoria; 4. escreva o conteúdo; 5. a tela passa sozinha para a edição do artigo criado.
+- gotchas: nada é salvo enquanto o título estiver vazio, porque é ele que cria o artigo; entrando pela categoria, o artigo já nasce nela, senão cai na primeira da lista; o salvamento automático do conteúdo só começa depois que o artigo existe; havendo arquivo subindo, a criação espera terminar.
+- nav_target: `portals_articles_new`
+
+### Editar, revisar e publicar um artigo
+- intent: Editei o artigo e o site não mudou, por quê?; Como publico as alterações?; Como volto atrás numa edição?; Onde coloco título e descrição para busca?; Como vejo o artigo como o cliente vê?
+- onde_fica: Central de Ajuda > Artigos > clicar no artigo
+- rota: `portals_articles_edit` - `/app/accounts/:accountId/portals/:portalSlug/:locale/:categorySlug?/articles/:tab?/edit/:articleSlug`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: artigo já criado
+- passos: 1. Abra o artigo pela lista; 2. edite título e conteúdo, que salvam sozinhos; 3. pré-visualize para ver a página pública; 4. use o menu de status para publicar, voltar a rascunho ou arquivar; 5. em artigo publicado, publique as alterações, compare com o que está no ar ou descarte a edição.
+- gotchas: em artigo já publicado a edição fica guardada e não vai ao ar até você publicar as alterações, e é por isso que o site continua mostrando o texto antigo; mudar o status com alterações pendentes pergunta antes se aplica ou descarta; publicar fica bloqueado enquanto um salvamento ou envio de arquivo está em andamento; título e descrição para busca ficam no painel de propriedades, não no corpo do texto.
+- nav_target: `portals_articles_edit`
+
+### Criar e ordenar as categorias do portal
+- intent: Como agrupo os artigos por assunto?; Como crio uma categoria?; Como mudo a ordem das categorias no site?; Como renomeio ou excluo uma categoria?
+- onde_fica: Central de Ajuda > Categorias
+- rota: `portals_categories_index` - `/app/accounts/:accountId/portals/:portalSlug/:locale/categories`
+- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
+- pre_requisitos: portal criado com o idioma desejado
+- passos: 1. Abra categorias e escolha o idioma; 2. crie a categoria com nome, endereço, descrição e ícone; 3. arraste os cartões para definir a ordem no portal público; 4. clique numa categoria para ver e reordenar os artigos dela.
+- gotchas: categoria é por idioma, e criar em português não cria a equivalente nos outros; o endereço da categoria entra no link público; arrastar para reordenar não funciona com busca ativa; excluir pelo menu do cartão apaga na hora, sem tela de confirmação.
+- nav_target: `portals_categories_index`
+
+### Levar as conversas para o Slack
+- intent: Como coloco as conversas no Slack?; Dá para responder o cliente de dentro do Slack?; Por que não acho o Slack nas integrações?; Conectei o Slack e nada chega, o que falta?
+- onde_fica: Configurações > Integrações > Slack
+- rota: `settings_integrations_slack` - `/app/accounts/:accountId/settings/integrations/slack`
+- gate: feature flag `integrations`; papel `administrator`
+- pre_requisitos: ser administrador, e a credencial do Slack configurada pelo time da plataforma, senão o cartão nem aparece
+- passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Slack e conecte; 3. Autorize no seu espaço do Slack; 4. Escolha o canal; 5. Escolha entre sincronização nos dois sentidos e somente alertas.
+- gotchas: autorizar não basta, a integração fica inativa até você escolher um canal; para canal privado, adicione o aplicativo ao canal no Slack antes; na sincronização nos dois sentidos tudo que a equipe escrever na conversa do Slack vai para o cliente, e só vira nota interna com o prefixo note:; a resposta só sai com o nome do agente se o e-mail dele no Slack for o mesmo da plataforma; quando a conexão expira, a saída é excluir e conectar de novo.
+- nav_target: `settings_integrations_slack`
+
+### Conectar o Linear para abrir tarefas da conversa
+- intent: Onde conecto o Linear?; Como abro uma tarefa a partir de uma conversa?; O Linear não aparece nas integrações, por quê?; Como desconecto o Linear?
+- onde_fica: Configurações > Integrações > Linear
+- rota: `settings_integrations_linear` - `/app/accounts/:accountId/settings/integrations/linear`
+- gate: papel `administrator`
+- pre_requisitos: ser administrador, recurso liberado na conta e credencial configurada pelo time da plataforma
+- passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Linear; 3. Conecte; 4. Autorize dentro do Linear; 5. Confirme que a tela mostra conectado.
+- gotchas: são duas condições somadas para o cartão existir, recurso na conta e credencial da plataforma, e faltando uma não há nada a fazer pelo painel; a conta aceita uma conexão só; depois de conectado, o uso acontece dentro da conversa, não nesta tela; desconectar derruba os vínculos existentes.
+- nav_target: `settings_integrations_linear`
+
+### Conectar o Notion
+- intent: Como conecto o Notion?; Onde autorizo meu espaço do Notion?; Não encontro o Notion nas integrações; Como removo o acesso?
+- onde_fica: Configurações > Integrações > Notion
+- rota: `settings_integrations_notion` - `/app/accounts/:accountId/settings/integrations/notion`
+- gate: papel `administrator`
+- pre_requisitos: ser administrador, recurso liberado na conta e credencial configurada pelo time da plataforma
+- passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Notion; 3. Conecte; 4. Escolha o espaço de trabalho e autorize; 5. Confirme que aparece conectado.
+- gotchas: mesmo padrão do Linear, e se faltar recurso ou credencial o cartão some da lista; a conexão é da conta inteira, não por caixa de entrada; excluir remove o acesso ao espaço e derruba o que dependia dele.
+- nav_target: `settings_integrations_notion`
+
+### Conectar a loja Shopify
+- intent: Como conecto minha loja Shopify?; Qual endereço eu coloco para conectar a loja?; Deu erro ao voltar da Shopify, e agora?; Por que a Shopify não aparece nas integrações?
+- onde_fica: Configurações > Integrações > Shopify
+- rota: `settings_integrations_shopify` - `/app/accounts/:accountId/settings/integrations/shopify`
+- gate: feature flag `integrations`; papel `administrator`
+- pre_requisitos: ser administrador, a integração ligada na instalação e liberada na conta, e o endereço da loja no formato sualoja.myshopify.com
+- passos: 1. Abra Configurações > Integrações; 2. Clique no cartão da Shopify; 3. Conecte; 4. Digite o endereço da loja; 5. Conclua a autorização e volte.
+- gotchas: o campo só aceita endereço terminado em myshopify.com, e o domínio próprio da loja é recusado, mesmo sendo o que seus clientes usam; são três condições para o cartão aparecer, e sem elas o endereço direto dá página não encontrada; se a volta trouxer erro, a tela avisa e basta repetir.
+- nav_target: `settings_integrations_shopify`
+
+### Mostrar um sistema seu dentro da conversa
+- intent: Como mostro os dados do meu sistema dentro da conversa?; Onde cadastro um aplicativo no painel?; Dá para ver a apólice do cliente sem sair do atendimento?; Cadastrei o aplicativo e ele abre em branco, por quê?
+- onde_fica: Configurações > Integrações > Painel de Aplicativos
+- rota: `settings_integrations_dashboard_apps` - `/app/accounts/:accountId/settings/integrations/dashboard_apps`
+- gate: feature flag `integrations`; papel `administrator`
+- pre_requisitos: ser administrador e ter uma página publicada que possa ser aberta dentro de outra
+- passos: 1. Abra Configurações > Integrações; 2. Entre em Painel de Aplicativos; 3. Adicione um aplicativo; 4. Preencha o nome e o endereço da sua página; 5. Salve e confira numa conversa.
+- gotchas: nome e endereço válido são obrigatórios; a plataforma entrega o contexto da conversa à sua página por um aviso de janela, e se a sua página não escutar esse aviso ela abre em branco, parecendo quebrada, embora o cadastro esteja certo; excluir tira o aplicativo de todas as conversas na hora.
+- nav_target: `settings_integrations_dashboard_apps`
+
+### Ver os modelos de mensagem do WhatsApp
+- intent: Onde vejo os modelos do WhatsApp?; Como crio um modelo novo?; Meu modelo foi aprovado mas não aparece aqui, por quê?; Como vejo o modelo antes de usar numa campanha?
+- onde_fica: Configurações > Modelos
+- rota: `settings_templates` - `/app/accounts/:accountId/settings/templates`
+- gate: papel `administrator`
+- pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
+- passos: 1. Abra Configurações > Modelos; 2. Sincronize os modelos; 3. Filtre por caixa, idioma e tipo; 4. Busque pelo nome ou pelo texto; 5. Abra o modelo para ver status, categoria e caixas.
+- gotchas: esta tela só exibe, porque criar e editar modelo é sempre no provedor, e não há botão de criar aqui; sincronizar fica desligado sem nenhuma caixa de WhatsApp; a sincronização leva alguns minutos e a tela mostra a hora da última tentativa; respondendo só parte das caixas, aparece aviso de sincronização parcial e a lista fica incompleta; modelo ainda não enviado para aprovação não serve para campanha.
+- nav_target: `settings_templates`
+
+### Trazer contatos e conversas de outra ferramenta
+- intent: Como trago meus contatos da ferramenta antiga?; Dá para importar o histórico de conversas?; De quais sistemas eu consigo importar?; Posso rodar duas importações ao mesmo tempo?
+- onde_fica: Configurações > Dados > Importar
+- rota: `settings_data_imports` - `/app/accounts/:accountId/settings/data`
+- gate: feature flag `data_import`; papel `administrator`
+- pre_requisitos: ser administrador, recurso liberado na conta, e a chave de acesso do sistema de origem
+- passos: 1. Abra Configurações > Dados; 2. Clique em importar; 3. Escolha a fonte; 4. Dê um nome que você reconheça depois; 5. Cole a chave e, quando for o caso, o domínio; 6. Marque contatos, conversas ou os dois e importe.
+- gotchas: as fontes são apenas as duas listadas, e não existe envio de planilha nesta tela, porque o CSV de contatos fica em Contatos; a chave é testada antes e o botão só libera quando ela é aceita, então chave errada trava aqui e não no meio da carga; só uma importação roda por vez; a aba de exportar existe mas ainda não está disponível.
+- nav_target: `settings_data_imports`
+
+### Acompanhar uma importação e ver o que ficou de fora
+- intent: Como sei se a importação terminou?; Quantos contatos entraram de verdade?; O que deu erro na importação?; Por que alguns registros foram ignorados?
+- onde_fica: Configurações > Dados > clicar na importação
+- rota: `settings_data_import_show` - `/app/accounts/:accountId/settings/data/:dataImportId`
+- gate: feature flag `data_import`; papel `administrator`
+- pre_requisitos: uma importação já iniciada
+- passos: 1. Abra Configurações > Dados; 2. Clique na importação; 3. Leia os totais e o progresso; 4. Abra as seções de erros e de ignorados; 5. Baixe o arquivo de cada uma para conferir linha a linha; 6. Se precisar, tente novamente ou cancele.
+- gotchas: registro ignorado não é erro, é linha que a plataforma decidiu não trazer, e o motivo está no arquivo; as seções abrem sozinhas quando há algo dentro; a tela se atualiza enquanto a importação roda e para quando termina; cancelar encerra e não volta sozinha.
+- nav_target: `settings_data_import_show`
+
+### Escolher um modelo pronto de e-mail
+- intent: Onde estão os modelos prontos de e-mail?; Como aplico um modelo na minha campanha?; Dá para ver o modelo antes de usar?; Usar um modelo apaga o que eu já escrevi?
+- onde_fica: Campanhas > Campanhas de e-mail > abrir a campanha > galeria de modelos
+- rota: `campaigns_email_templates` - `/app/accounts/:accountId/campaigns/email_campaigns/:campaignId/templates`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: campanhas de e-mail liberadas na conta, uma campanha já criada e permissão de gerenciar campanhas
+- passos: 1. Abra Campanhas > Campanhas de e-mail; 2. Abra a campanha no editor; 3. Vá para a galeria de modelos; 4. Filtre pela categoria; 5. Pré-visualize e use o modelo.
+- gotchas: usar o modelo substitui o conteúdo atual da campanha, então quem já escreveu perde o que estava lá; sem permissão de gerenciar campanhas sobra só a pré-visualização; as miniaturas carregam conforme você rola; se o modelo não tiver conteúdo editável, a tela avisa e nada é aplicado.
+- nav_target: `campaigns_email_templates`
+
+### Ver o resultado de uma campanha de WhatsApp
+- intent: Quantas pessoas receberam a campanha?; Quantos leram a mensagem?; Por que alguns contatos foram ignorados?; A campanha já terminou de enviar?; Como vejo contato por contato o que aconteceu?
+- onde_fica: Campanhas > WhatsApp Oficial > Ver análises
+- rota: `campaigns_whatsapp_analytics` - `/app/accounts/:accountId/campaigns/whatsapp/:campaignId/analytics`
+- gate: feature flag `whatsapp_campaign`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: uma campanha de WhatsApp Oficial já enviada ou em envio
+- passos: 1. Abra Campanhas > WhatsApp Oficial; 2. Clique em ver análises; 3. Leia os números de público, enviadas, entregues, lidas, falhas e ignoradas; 4. Use as abas de status para filtrar; 5. Navegue pela lista para ver contato por contato.
+- gotchas: entregues já inclui as lidas, então somar os dois conta o mesmo contato duas vezes; enviadas quer dizer aceita para entrega, não entregue no celular; ignoradas são contatos descartados antes do envio, quase sempre telefone ausente ou inválido, e é o número que vale olhar para limpar a base; campanhas enviadas antes desta tela existir aparecem sem dado, e isso não é erro.
+- nav_target: `campaigns_whatsapp_analytics`
+
+### Como o cliente recebe os valores da cotação
+- intent: Como o cliente recebe os preços?; O agente manda os valores conforme as seguradoras respondem?; O cliente recebe link ou arquivo?; Como envio a proposta de uma seguradora só?; E se uma seguradora não responder?; Quanto tempo demora a cotação?
+- onde_fica: acontece na conversa do WhatsApp, não numa tela do painel
+- rota: `autonomia_insurance_agent` - `/app/accounts/:accountId/autonomia/insurance/agent`
+- gate: papel `administrator` ou `insurance_view` ou `insurance_manage`
+- pre_requisitos: agente de cotação criado e conexão com a seguradora funcionando
+- passos: 1. O cliente pede a cotação pelo WhatsApp e responde o que o agente perguntar; 2. A cotação fecha quando todas as seguradoras tiveram desfecho; 3. O comparativo chega como arquivo PDF na conversa, com o que respondeu; 4. Se o cliente pedir uma seguradora, ele recebe o documento daquela seguradora; 5. A equipe assume a conversa no horário configurado.
+- gotchas: os valores não saem conforme cada seguradora responde, o comparativo chega quando a cotação inteira termina, o que costuma levar de 1 a 2 minutos, e passando disso sai um aviso de espera escrito pelo agente, nunca uma lista de preços solta; o que vai ao cliente é o arquivo, nunca o link do portal, porque aquele endereço abre sem senha e traz o nome do segurado, e quando o arquivo falha nada é enviado no lugar; a proposta de uma seguradora é outro documento, gerado pela própria seguradora com o mesmo preço informado, e pedir duas seguradoras gera dois arquivos sem abrir cotação nova; seguradora que recusou não é anunciada ao cliente, e se ele perguntar o motivo sai por categoria, como veículo ou região, nunca o texto do portal; problema de credencial da corretora nunca chega ao cliente, ele aparece em Cotação > Conexões; na cotação de empresa o condutor deixa de ser opcional, precisa ser pessoa física com CPF e vínculo real, e a razão social não é perguntada, o sistema busca pelo CNPJ.
+- nav_target: `autonomia_insurance_agent`
