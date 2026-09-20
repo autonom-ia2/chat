@@ -84,6 +84,48 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     expect(conversa_viva.reload.assignee_id).to eq(agent.id)
   end
 
+  it 'entre duas conversas de pé, escolhe a de atividade mais recente' do
+    # Arrange — as duas abertas, que é o caso do dia a dia: o corretor não resolve a anterior e o
+    # cliente volta a escrever. Sem prender isto, qualquer ordem passaria nos outros testes.
+    conversa_antiga.update!(last_activity_at: 2.hours.ago)
+    conversa_viva.update!(last_activity_at: 1.minute.ago)
+    card = card_com(primaria: conversa_antiga, tambem: [conversa_viva])
+
+    # Act
+    escalar(card)
+
+    # Assert
+    expect(conversa_viva.reload.assignee_id).to eq(agent.id)
+    expect(conversa_antiga.reload.assignee_id).to be_nil
+  end
+
+  it 'pendente recente ganha de aberta antiga: quem manda é a atividade, não o estado' do
+    # Arrange — `pending` é a conversa que o bot ainda segura, e é onde o cliente está falando
+    conversa_antiga.update!(status: :open, last_activity_at: 3.hours.ago)
+    conversa_viva.update!(status: :pending, last_activity_at: 1.minute.ago)
+    card = card_com(primaria: conversa_antiga, tambem: [conversa_viva])
+
+    # Act
+    escalar(card)
+
+    # Assert
+    expect(conversa_viva.reload.assignee_id).to eq(agent.id)
+    expect(conversa_antiga.reload.assignee_id).to be_nil
+  end
+
+  it 'com atividade idêntica, a escolha é sempre a mesma' do
+    # Arrange — o empate existe e precisa ser determinístico: sem desempate, o responsável ia
+    # para uma conversa numa execução e para outra na seguinte
+    momento = 10.minutes.ago
+    conversa_antiga.update!(last_activity_at: momento)
+    conversa_viva.update!(last_activity_at: momento)
+    card = card_com(primaria: conversa_antiga, tambem: [conversa_viva])
+
+    # Act / Assert — dez leituras, uma resposta só
+    escolhas = Array.new(10) { card.reload.conversa_em_atendimento.id }
+    expect(escolhas.uniq).to eq([conversa_viva.id])
+  end
+
   it 'conversa viva já atribuída não é reatribuída' do
     # Arrange — quem já está com uma pessoa não volta para a fila
     conversa_antiga.update!(status: :resolved)

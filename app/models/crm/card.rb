@@ -124,15 +124,16 @@ class Crm::Card < ApplicationRecord
   # exemplo — tem de agir aqui, senão mexe numa conversa antiga que ninguém está lendo, enquanto
   # o cliente espera na conversa viva (issue #553).
   #
-  # Aberta antes de pendente, e a mais recente entre as abertas: `pending` é a conversa que o bot
-  # ainda segura. O `id` desempata, e não é detalhe: duas conversas do mesmo contato podem ter o
-  # mesmo `last_activity_at`, e sem o desempate a escolha mudava de uma execução para outra —
-  # numa delas o responsável ia para a conversa errada. Sem aberta nem pendente, a primária é o
-  # melhor palpite que existe.
+  # A MAIS RECENTE ENTRE AS QUE AINDA ESTÃO DE PÉ, aberta ou pendente. Quem decide é a atividade,
+  # não o estado: `pending` é a conversa que o bot ainda segura, e preferir `open` faria uma
+  # conversa antiga que ninguém resolveu ganhar daquela em que o cliente está falando agora.
+  # O `id` desempata, e não é enfeite: duas conversas do mesmo contato podem ter o mesmo
+  # `last_activity_at`, e sem ele a escolha mudava de uma execução para outra. Sem nenhuma de pé,
+  # a primária é o melhor palpite que existe.
   def conversa_em_atendimento
     linked_conversations
       .where(status: [Conversation.statuses[:open], Conversation.statuses[:pending]])
-      .order(Arel.sql('CASE status WHEN 0 THEN 0 ELSE 1 END'), last_activity_at: :desc, id: :desc)
+      .order(last_activity_at: :desc, id: :desc)
       .first || primary_conversation
   end
 
