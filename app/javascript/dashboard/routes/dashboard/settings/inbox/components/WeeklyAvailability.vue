@@ -52,6 +52,7 @@ export default {
       isBusinessHoursEnabled: false,
       unavailableMessage: '',
       timeZone: null,
+      timeZoneKey: 0,
       dayNames: {
         0: 'Sunday',
         1: 'Monday',
@@ -79,7 +80,13 @@ export default {
       },
       set(value) {
         const match = this.timeZones.find(tz => tz.value === value);
-        if (match) this.timeZone = match;
+        if (match) {
+          this.timeZone = match;
+          return;
+        }
+        // Clicar de novo na opção escolhida desmarca no ComboBox, mas a caixa
+        // precisa de um fuso: remonta o campo com o valor que continua valendo.
+        this.timeZoneKey += 1;
       },
     },
     isRichEditorEnabled() {
@@ -181,6 +188,7 @@ export default {
       :label="$t('INBOX_MGMT.BUSINESS_HOURS.TIMEZONE_LABEL')"
     >
       <ComboBox
+        :key="timeZoneKey"
         v-model="timeZoneValue"
         :options="timeZones"
         :placeholder="$t('INBOX_MGMT.BUSINESS_HOURS.DAY.CHOOSE')"

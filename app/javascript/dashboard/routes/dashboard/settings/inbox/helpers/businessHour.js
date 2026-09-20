@@ -151,12 +151,17 @@ export const timeZoneOptions = () => {
 // A lista não cobre todos os fusos válidos (UTC, por exemplo, que é o padrão da
 // coluna no banco). Sem isto, a tela não achava o fuso salvo e mostrava outro no
 // lugar — e salvar gravava esse outro por cima.
+// Rótulo legível para fuso fora do catálogo: 'UTC' ganha o deslocamento e o
+// resto perde o sublinhado do nome técnico.
+const timeZoneLabel = timeZone =>
+  timeZone === 'UTC' ? 'UTC (GMT+00:00)' : timeZone.replace(/_/g, ' ');
+
 export const timeZoneOptionsWith = timeZone => {
   const options = timeZoneOptions();
   if (!timeZone || options.some(option => option.value === timeZone)) {
     return options;
   }
-  return [{ label: timeZone, value: timeZone }, ...options];
+  return [{ label: timeZoneLabel(timeZone), value: timeZone }, ...options];
 };
 
 // Fuso sugerido para quem ainda não escolheu: o do próprio navegador, que para

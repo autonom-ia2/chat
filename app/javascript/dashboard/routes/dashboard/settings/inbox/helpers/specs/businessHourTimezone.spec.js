@@ -23,8 +23,15 @@ describe('timeZoneOptionsWith', () => {
 
     const options = timeZoneOptionsWith('UTC');
 
-    expect(options[0]).toEqual({ label: 'UTC', value: 'UTC' });
+    expect(options[0]).toEqual({ label: 'UTC (GMT+00:00)', value: 'UTC' });
     expect(options).toHaveLength(timeZoneOptions().length + 1);
+  });
+
+  it('makes the injected label readable', () => {
+    expect(timeZoneOptionsWith('America/Porto_Velho')[0]).toEqual({
+      label: 'America/Porto Velho',
+      value: 'America/Porto_Velho',
+    });
   });
 
   it('returns the plain list when there is no timezone yet', () => {

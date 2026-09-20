@@ -18,6 +18,15 @@ RSpec.describe Inbox do
       expect(inbox.timezone).to eq('America/Manaus')
     end
 
+    it 'UTC na criação vira o fuso da conta: o padrão da coluna não distingue escolha' do
+      account.update!(reporting_timezone: 'America/Manaus')
+
+      inbox = create(:inbox, account: account, timezone: 'UTC')
+
+      expect(inbox.timezone).to eq('America/Manaus')
+      expect(inbox.reload.update!(timezone: 'UTC')).to be true
+    end
+
     it 'respeita o fuso escolhido na criação' do
       inbox = create(:inbox, account: account, timezone: 'Europe/Lisbon')
 
