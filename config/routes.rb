@@ -77,6 +77,13 @@ Rails.application.routes.draw do
           resource :onboarding, only: [:update] do
             get :help_center_generation
           end
+          # Trilha de onboarding (épico #485): progresso pelo estado real da conta.
+          resources :onboarding_progress, only: [:index], path: 'onboarding/progress' do
+            member do
+              post :skip
+              post :resume
+            end
+          end
           resources :agents, only: [:index, :create, :update, :destroy] do
             post :bulk_create, on: :collection
           end
