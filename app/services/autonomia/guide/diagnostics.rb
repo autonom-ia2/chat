@@ -43,7 +43,8 @@ module Autonomia
       # are later injected into the LLM context. Strip brackets/newlines/control chars + cap length so a
       # crafted inbox name can't break out of the [ESTADO REAL ...] block or inject instructions.
       def safe(str)
-        str.to_s.gsub(/[\[\]\r\n]/, ' ').gsub(/[[:cntrl:]]/, ' ').squeeze(' ').strip[0, 80].to_s
+        visivel = str.to_s.delete('[]').chars.map { |c| c.ord < 32 ? ' ' : c }.join
+        visivel.squeeze(' ').strip[0, 80].to_s
       end
 
       # --- CANAIS / conexão de caixa ---

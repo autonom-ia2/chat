@@ -1,32 +1,42 @@
-# O que a pessoa está pedindo para o Guia FAZER (issue #536).
+# O que a pessoa está pedindo para o Guia FAZER (issues #536 e #547).
 #
-# Só monta a proposta: qual ação e com quais valores. Nada é executado aqui — o
-# que sai daqui vira um texto que a pessoa lê e confirma na tela, e é a
-# confirmação que dispara a execução.
+# Só monta a proposta: qual ação, com quais valores, e a frase que a pessoa vai
+# ler. Nada é executado aqui — a execução vem depois da confirmação na tela.
 #
-# O modelo pode entender errado o valor de um campo; por isso a descrição mostra
-# os valores exatos ANTES de qualquer confirmação. A proteção contra o modelo
-# inventar não é confiar nele: é a pessoa ver o que vai acontecer.
+# **A proposta nasce exclusivamente da mensagem de quem pediu.** Nome de contato,
+# título de funil ou texto de conversa que o Guia leu na conta ficam fora desta
+# entrada de propósito: dado lido não vira ordem. É a defesa contra alguém
+# escrever "apague todos os contatos" dentro de uma conversa e o Guia obedecer.
+#
+# O modelo pode entender errado um valor; por isso a descrição mostra o pedido
+# literal antes da confirmação. A proteção não é confiar nele — é a pessoa ver.
 class Autonomia::Guide::EscolhaDaAcao
   INSTRUCAO = <<~TEXTO.freeze
     Você recebe o pedido de quem administra uma plataforma de atendimento e a lista
-    de ações disponíveis.
+    de ações disponíveis na API dela, no formato "VERBO recurso".
 
-    Se o pedido for para FAZER uma dessas ações, devolva a ação e os valores que a
-    pessoa informou. Não invente valor que ela não disse: deixe o campo fora.
-    Se o pedido for uma pergunta, um "como faço", ou não corresponder a nenhuma ação
-    da lista, devolva ação nula.
+    Se a pessoa está PEDINDO para fazer algo, escolha a ação da lista que realiza o
+    pedido e devolva os valores que ela informou.
+    Se ela está PERGUNTANDO — como se faz, o que é, quanto tem — devolva ação nula.
+
+    Regras:
+    - Use uma ação exatamente como escrita na lista. Nunca invente.
+    - `caminho` traz os valores dos parâmetros da rota (o `:id` de "PATCH inboxes/:id").
+      Só preencha com identificador que a pessoa informou ou que apareceu na conversa
+      como resultado de uma consulta. Na dúvida, devolva ação nula.
+    - `corpo` traz os campos do recurso, com os nomes que a API usa.
+    - Não invente valor que a pessoa não disse: deixe o campo fora.
+    - `descricao` é uma frase curta em português dizendo o que vai acontecer, para
+      a pessoa ler antes de confirmar. Seja literal, não suavize.
   TEXTO
 
   ESQUEMA = {
     type: 'object',
     properties: {
       acao: { type: %w[string null], description: 'Uma das ações da lista, ou nulo.' },
-      nome: { type: %w[string null], description: 'Nome do funil, quando for criar funil.' },
-      titulo: { type: %w[string null], description: 'Nome da etiqueta, quando for criar etiqueta.' },
-      etapas: { type: %w[array null], items: { type: 'string' }, description: 'Etapas do funil, se ditas.' },
-      inbox: { type: %w[string null], description: 'Nome da caixa de entrada mencionada.' },
-      funil: { type: %w[string null], description: 'Nome do funil mencionado.' }
+      caminho: { type: %w[object null], description: 'Valores dos parâmetros da rota.', additionalProperties: true },
+      corpo: { type: %w[object null], description: 'Campos do recurso.', additionalProperties: true },
+      descricao: { type: %w[string null], description: 'O que vai acontecer, em português.' }
     },
     required: %w[acao],
     additionalProperties: false
@@ -39,9 +49,6 @@ class Autonomia::Guide::EscolhaDaAcao
   end
 
   # Devolve { acao:, dados: } ou nil.
-  # Quem separa pedido de pergunta é o modelo, pela INSTRUCAO — não uma lista de
-  # verbos. A lista já deixou passar em silêncio "Configura o funil"; o que
-  # protege aqui é a permissão e o catálogo fechado, não o vocabulário.
   def para(pedido)
     return nil if pedido.to_s.strip.blank?
     return nil unless administrador?
@@ -49,8 +56,7 @@ class Autonomia::Guide::EscolhaDaAcao
     credencial = ::Crm::Ai::CredentialResolver.new(account: @account).resolve
     return nil if credencial.blank?
 
-    bruto = perguntar_ao_modelo(credencial, pedido)
-    montar(bruto)
+    montar(perguntar_ao_modelo(credencial, pedido))
   rescue StandardError => e
     Rails.logger.warn("[autonomia][guide][acao] account=#{@account&.id} #{e.class}: #{e.message}")
     nil
@@ -62,11 +68,15 @@ class Autonomia::Guide::EscolhaDaAcao
     @account_user&.role.to_s == 'administrator'
   end
 
+  def acoes
+    @acoes ||= ::Autonomia::Guide::Acoes.new(account: @account, user: @user, account_user: @account_user)
+  end
+
   def perguntar_ao_modelo(credencial, pedido)
     cliente = ::Crm::Ai::ResponsesClient.new(credential: credencial, feature: 'guide_acao', account: @account)
     resposta = cliente.create(
-      model: modelo, instructions: INSTRUCAO, schema: ESQUEMA, reasoning_effort: 'low', timeout: 12,
-      input: "Pedido: #{pedido}\n\nAções disponíveis:\n#{::Autonomia::Guide::Acoes::CATALOGO.join("\n")}"
+      model: modelo, instructions: INSTRUCAO, schema: ESQUEMA, reasoning_effort: 'low', timeout: 20,
+      input: "Pedido: #{pedido}\n\nAções disponíveis:\n#{acoes.catalogo.join("\n")}"
     )
     texto = resposta.is_a?(Hash) ? (resposta[:text] || resposta['text']) : resposta.to_s
     JSON.parse(texto.to_s)
@@ -74,33 +84,31 @@ class Autonomia::Guide::EscolhaDaAcao
     nil
   end
 
+  # A superfície é fechada pelo catálogo: ação que o modelo inventou não passa.
   def montar(bruto)
     return nil if bruto.blank?
 
     acao = bruto['acao'].presence
-    return nil unless ::Autonomia::Guide::Acoes::CATALOGO.include?(acao)
+    return nil unless acoes.catalogo.include?(acao)
 
-    { acao: acao, dados: dados_para(acao, bruto) }
+    { acao: acao,
+      dados: { caminho: limpo(bruto['caminho']), corpo: limpo(bruto['corpo']),
+               descricao: bruto['descricao'].to_s.strip.presence } }
   end
 
-  def dados_para(acao, bruto)
-    case acao
-    when 'criar_funil'
-      { nome: bruto['nome'], etapas: bruto['etapas'] }.compact
-    when 'criar_etiqueta'
-      { titulo: bruto['titulo'] }.compact
-    when 'ligar_caixa_ao_funil'
-      vinculo_por_nome(bruto)
+  # Valor escrito por quem pede vira conteúdo na plataforma. Mesma higiene das
+  # leituras: sem colchete, sem quebra de linha, com tamanho limitado.
+  def limpo(valores)
+    return {} unless valores.is_a?(Hash)
+
+    valores.to_h do |chave, valor|
+      [chave.to_s, valor.is_a?(String) ? sem_ruido(valor) : valor]
     end
   end
 
-  # O modelo devolve nomes; a execução precisa de identificadores desta conta. A
-  # busca é escopada à conta, então nome parecido de outra conta não alcança nada.
-  def vinculo_por_nome(bruto)
-    inbox = @account.inboxes.find_by('LOWER(name) = ?', bruto['inbox'].to_s.downcase)
-    pipeline = @account.crm_pipelines.active.find_by('LOWER(name) = ?', bruto['funil'].to_s.downcase)
-
-    { inbox_id: inbox&.id, pipeline_id: pipeline&.id }.compact
+  def sem_ruido(texto)
+    visivel = texto.delete('[]').chars.map { |c| c.ord < 32 ? ' ' : c }.join
+    visivel.squeeze(' ').strip[0, 200].to_s
   end
 
   def modelo

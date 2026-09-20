@@ -27,7 +27,7 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   # #536 — o Guia PREPARA a ação e devolve o texto que a pessoa lê antes de
   # confirmar. Nada acontece aqui.
   def preparar_acao
-    descricao = acoes.descrever(params[:acao], params[:dados] || {})
+    descricao = acoes.descrever(params[:acao], dados_do_pedido)
     render json: { acao: params[:acao], descricao: descricao }
   rescue ::Autonomia::Guide::Acoes::Recusada => e
     render json: { error: e.message }, status: :unprocessable_entity
@@ -35,7 +35,7 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
 
   # Só chega aqui depois da confirmação explícita na tela.
   def executar_acao
-    resultado = acoes.executar(params[:acao], params[:dados] || {})
+    resultado = acoes.executar(params[:acao], dados_do_pedido)
     registrar(resultado)
     return render json: { error: resultado.mensagem }, status: :unprocessable_entity unless resultado.ok
 
@@ -45,6 +45,16 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   end
 
   private
+
+  # O corpo da ação é conteúdo livre (os campos do recurso), então não cabe strong
+  # params por campo: quem autoriza é o endpoint real, chamado com o token de quem
+  # pediu. Aqui só tiramos o invólucro do Rails.
+  def dados_do_pedido
+    bruto = params[:dados]
+    return {} if bruto.blank?
+
+    bruto.respond_to?(:to_unsafe_h) ? bruto.to_unsafe_h.deep_symbolize_keys : bruto.to_h.deep_symbolize_keys
+  end
 
   def acoes
     ::Autonomia::Guide::Acoes.new(account: Current.account, user: Current.user,
@@ -56,7 +66,7 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   def registrar(resultado)
     Rails.logger.info(
       "[autonomia][guide][acao] account=#{Current.account.id} user=#{Current.user.id} " \
-      "acao=#{params[:acao]} ok=#{resultado.ok} registro=#{resultado.registro&.id}"
+      "acao=#{params[:acao]} ok=#{resultado.ok} registro=#{resultado.registro}"
     )
   end
 

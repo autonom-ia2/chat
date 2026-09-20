@@ -20,8 +20,9 @@ class Autonomia::Guide::Consulta
   MAX_TEXTO = 6_000
 
   # Rotas que pedem identificador que o Guia não tem como adivinhar ficam fora do
-  # catálogo oferecido ao modelo: sem o id, a chamada só produziria erro.
-  PARAMETRO = /:([a-z_]+)/
+  # catálogo oferecido ao modelo: sem o id, a chamada só produziria erro. O
+  # parâmetro no roteador começa com dois pontos — basta procurar o caractere.
+  PARAMETRO = ':'.freeze
 
   def initialize(account:, user:, account_user: nil)
     @account = account
@@ -39,7 +40,7 @@ class Autonomia::Guide::Consulta
       next unless caminho.start_with?(PREFIXO)
 
       recurso = caminho.sub("#{PREFIXO}:account_id/", '')
-      next if recurso.blank? || recurso.match?(PARAMETRO)
+      next if recurso.blank? || recurso.include?(PARAMETRO)
 
       recurso
     end.uniq.sort

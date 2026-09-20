@@ -120,10 +120,10 @@ module Autonomia
         rescue ::Autonomia::Agents::Retriever::RetrievalError
           []
         end
-        entry = tops.find { |t| t.content.to_s.match?(/diagnostic:/i) }
+        entry = tops.find { |t| campo(t.content.to_s, 'diagnostic').present? }
         return nil if entry.nil?
 
-        check = entry.content.to_s[/diagnostic:\s*`?([a-z_]+)`?/i, 1]
+        check = campo(entry.content.to_s, 'diagnostic')
         return nil if check.blank?
         return nil if ADMIN_CHECKS.include?(check) && !admin?
 
@@ -203,12 +203,26 @@ module Autonomia
         return nil if top.nil?
 
         content = top[:content].to_s
-        route = content[/nav_target:\s*`?([a-z0-9_]+)`?/i, 1]
+        route = campo(content, 'nav_target')
         return nil if route.blank? || route == '—'
 
-        label = content[/^###\s*(.+)$/, 1].to_s.strip
-        highlight = content[/highlight:\s*`?([a-z0-9_-]+)`?/i, 1]
-        { route_name: route, label: label.presence, highlight: highlight.presence }
+        { route_name: route, label: titulo(content), highlight: campo(content, 'highlight') }
+      end
+
+      # O fluxo do KB é texto de campo por linha, escrito pelo nosso gerador:
+      # `nav_target: \`crm_index\``. Ler isso é separar linha e pegar o que vem
+      # depois dos dois pontos — não precisa de padrão, e padrão aqui já custou
+      # caro: uma rota com parâmetro foi comida por um deles.
+      def campo(conteudo, nome)
+        linha = conteudo.lines.find { |l| l.strip.downcase.start_with?("#{nome}:") }
+        return nil if linha.nil?
+
+        linha.strip.split(':', 2).last.to_s.delete('`').strip.presence
+      end
+
+      def titulo(conteudo)
+        linha = conteudo.lines.find { |l| l.start_with?('### ') }
+        linha.to_s.delete_prefix('### ').strip.presence
       end
 
       def unavailable

@@ -1,22 +1,46 @@
-# O Guia que faz, com confirmação (issue #536).
+# O Guia que faz a plataforma inteira, com confirmação (issues #536 e #547).
 #
-# O Guia NUNCA executa direto. Este catálogo tem duas metades por ação:
-# `descrever`, que devolve em português o que vai acontecer com os valores
-# exatos, e `executar`, que só roda depois de a pessoa confirmar na tela.
+# A primeira versão tinha três ações escritas à mão. Três ações nunca viram a
+# plataforma, do mesmo jeito que cinco assuntos nunca viraram cobertura de
+# leitura. Aqui o catálogo é DERIVADO das rotas de escrita da API da conta — as
+# mesmas que a interface usa quando você clica.
 #
-# Três regras que este arquivo não negocia:
+# O que sustenta isso não é uma lista minha, é o critério do Rodrigo: **o que a
+# pessoa pode fazer na tela, a IA pode fazer por ela; o que ela não pode, a IA
+# não pode.** A execução sai com o token de quem pediu, pelo mesmo endpoint da
+# interface, e herda Pundit, papel, funções personalizadas e isolamento de conta.
+# Nada de permissão reimplementada aqui.
 #
-# 1. A superfície é fechada. Só existe o que está em CATALOGO; pedido fora da
-#    lista é recusado, não interpretado.
-# 2. Autorização é herdada, não reescrita: cada ação passa pela policy do
-#    próprio domínio, com o contexto de quem pediu. Agente comum não executa
-#    nada desta fatia, mesmo pedindo de outro jeito.
-# 3. Nada que fale com cliente, gaste dinheiro ou mexa em acesso: sem campanha,
-#    sem faturamento, sem usuário e sem credencial de integração.
+# Três coisas que este arquivo não negocia:
+#
+# 1. **Nada executa sem confirmação.** `descrever` e `executar` são separados, e
+#    a descrição mostra o pedido literal antes de qualquer clique.
+# 2. **A proposta nasce só do que a pessoa escreveu.** Nome de contato, de funil
+#    ou texto de conversa que o Guia leu na conta entram como dado e nunca viram
+#    ordem — a montagem do pedido é feita em EscolhaDaAcao, a partir da mensagem.
+# 3. **Fora do alcance, por decisão do Rodrigo (20/09/2026):** nada que fale com
+#    cliente, mexa em dinheiro ou toque em acesso e credencial.
 class Autonomia::Guide::Acoes
   class Recusada < StandardError; end
 
-  CATALOGO = %w[criar_funil ligar_caixa_ao_funil criar_etiqueta].freeze
+  PREFIXO = '/api/v1/accounts/'.freeze
+  VERBOS = %w[POST PATCH PUT DELETE].freeze
+  DESTRUTIVO = 'DELETE'.freeze
+
+  # Áreas fora do alcance. Não é filtro de linguagem: é a lista de domínios que o
+  # Rodrigo decidiu não delegar. Comparação por segmento, não por padrão.
+  FORA = %w[
+    campaigns email_campaigns whatsapp_api_campaigns campaign_imports bulk_actions
+    integrations email_oauth_apps google microsoft notion instagram tiktok twitter callbacks
+    saml_settings custom_roles agents channels whatsapp waha_inboxes whatsapp_calls
+    billing subscriptions
+  ].freeze
+
+  # Falar com o cliente é falar com o cliente em qualquer nível e sob qualquer
+  # nome — `draft_messages`, `disable_whatsapp_api_campaigns`. Aqui a comparação
+  # é por pedaço do nome, de propósito: na dúvida fica de fora, e perder uma
+  # ação inofensiva custa menos que disparar mensagem para cliente por engano.
+  FORA_NO_NOME = %w[message campaign].freeze
 
   Resultado = Struct.new(:ok, :mensagem, :registro, keyword_init: true)
 
@@ -26,35 +50,67 @@ class Autonomia::Guide::Acoes
     @account_user = account_user || account&.account_users&.find_by(user_id: user&.id)
   end
 
-  # O texto que a pessoa lê ANTES de confirmar. Sem isso não há confirmação
-  # informada — e confirmação no escuro não é confirmação.
-  def descrever(acao, params)
-    garantir_permitida!(acao)
-    dados = normalizar(acao, params)
+  # O que o Guia pode fazer, em linguagem de rota: 'POST crm/pipelines',
+  # 'PATCH inboxes/:id', 'DELETE labels/:id'. Deriva do roteador, então nasce
+  # completo e cresce junto com a plataforma.
+  def catalogo
+    @catalogo ||= Rails.application.routes.routes.filter_map do |rota|
+      verbo = rota.verb.to_s
+      next unless VERBOS.include?(verbo)
 
-    case acao.to_s
-    when 'criar_funil'
-      "Criar o funil \"#{dados[:nome]}\" com as etapas #{dados[:etapas].join(', ')}."
-    when 'ligar_caixa_ao_funil'
-      descrever_vinculo(dados)
-    when 'criar_etiqueta'
-      "Criar a etiqueta \"#{dados[:titulo]}\"."
-    end
+      caminho = rota.path.spec.to_s.sub('(.:format)', '')
+      next unless caminho.start_with?(PREFIXO)
+
+      recurso = caminho.sub("#{PREFIXO}:account_id/", '')
+      next if recurso.blank? || fora_do_alcance?(recurso)
+
+      "#{verbo} #{recurso}"
+    end.uniq.sort
   end
 
-  def executar(acao, params)
+  # O texto que a pessoa lê ANTES de confirmar. Sem isso não há confirmação
+  # informada — e confirmação no escuro não é confirmação.
+  #
+  # A frase em português vem de quem entendeu o pedido; o pedido literal vem
+  # daqui. As duas coisas aparecem, porque a frase pode suavizar e o literal não.
+  def descrever(acao, dados)
     garantir_permitida!(acao)
-    dados = normalizar(acao, params)
+    caminho = montar_caminho(acao, dados)
+    corpo = corpo_de(dados)
 
-    ActiveRecord::Base.transaction { send("executar_#{acao}", dados) }
-  rescue ActiveRecord::RecordInvalid => e
-    Resultado.new(ok: false, mensagem: e.record.errors.full_messages.to_sentence)
+    linhas = [dados[:descricao].presence, "Pedido: #{verbo_de(acao)} #{caminho}"]
+    linhas << "Valores: #{JSON.generate(corpo)}" if corpo.present?
+    linhas << 'Isto apaga o registro e não tem volta.' if verbo_de(acao) == DESTRUTIVO
+    linhas.compact.join("\n")
+  end
+
+  # Só roda depois da confirmação. Vai pela API da conta, como o usuário: se a
+  # plataforma não deixa ele fazer, não deixa o Guia fazer.
+  def executar(acao, dados)
+    garantir_permitida!(acao)
+    resposta = requisitar(verbo_de(acao), montar_caminho(acao, dados), corpo_de(dados))
+
+    return Resultado.new(ok: true, mensagem: 'Pronto, feito.', registro: identificador(resposta)) if sucesso?(resposta)
+
+    Resultado.new(ok: false, mensagem: recusa_da_plataforma(resposta))
+  rescue Recusada
+    raise
+  rescue StandardError => e
+    Rails.logger.error("[autonomia][guide][acao] account=#{@account&.id} #{e.class}")
+    Resultado.new(ok: false, mensagem: 'Não consegui executar agora.')
   end
 
   private
 
+  def fora_do_alcance?(recurso)
+    segmentos = recurso.split('/')
+    return true if FORA.include?(segmentos.first)
+
+    segmentos.any? { |segmento| FORA_NO_NOME.any? { |proibido| segmento.include?(proibido) } }
+  end
+
   def garantir_permitida!(acao)
-    raise Recusada, 'Esta ação não existe no Guia.' unless CATALOGO.include?(acao.to_s)
+    raise Recusada, 'Isto o Guia não faz.' unless catalogo.include?(acao.to_s)
     raise Recusada, 'Só o administrador da conta faz isso.' unless administrador?
   end
 
@@ -62,78 +118,72 @@ class Autonomia::Guide::Acoes
     @account_user&.role.to_s == 'administrator'
   end
 
-  # Nome escrito por quem pede vira nome de funil, de etapa e de etiqueta. Mesma
-  # higiene das leituras: sem colchete, sem quebra de linha, com tamanho limitado.
-  def limpo(valor, tamanho = 60)
-    valor.to_s.gsub(/[\[\]\r\n]/, ' ').gsub(/[[:cntrl:]]/, ' ').squeeze(' ').strip[0, tamanho].to_s
+  def verbo_de(acao)
+    acao.to_s.split(' ', 2).first
   end
 
-  ETAPAS_PADRAO = ['Novo Lead', 'Em contato', 'Proposta', 'Fechado'].freeze
-
-  def normalizar(acao, params)
-    p = params.to_h.symbolize_keys
-
-    case acao.to_s
-    when 'criar_funil'
-      etapas = Array(p[:etapas]).map { |e| limpo(e, 40) }.reject(&:blank?)
-      { nome: limpo(p[:nome]), etapas: etapas.presence || ETAPAS_PADRAO }
-    when 'ligar_caixa_ao_funil'
-      { inbox_id: p[:inbox_id], pipeline_id: p[:pipeline_id], auto_create_card: p[:auto_create_card] != false }
-    when 'criar_etiqueta'
-      { titulo: limpo(p[:titulo], 40) }
-    end
+  def recurso_de(acao)
+    acao.to_s.split(' ', 2).last
   end
 
-  def descrever_vinculo(dados)
-    inbox = @account.inboxes.find_by(id: dados[:inbox_id])
-    pipeline = @account.crm_pipelines.find_by(id: dados[:pipeline_id])
-    raise Recusada, 'Não achei essa caixa ou esse funil nesta conta.' if inbox.nil? || pipeline.nil?
+  # Troca cada `:id` pelo valor que veio no pedido. Sem valor, não executa: uma
+  # rota com parâmetro em branco atingiria o registro errado ou nenhum.
+  def montar_caminho(acao, dados)
+    valores = (dados[:caminho] || {}).transform_keys(&:to_s)
 
-    criacao = dados[:auto_create_card] ? 'e os cards passam a nascer sozinhos' : 'sem criar cards automaticamente'
-    "Ligar a caixa \"#{limpo(inbox.name)}\" ao funil \"#{limpo(pipeline.name)}\", #{criacao}."
-  end
+    segmentos = recurso_de(acao).split('/').map do |segmento|
+      next segmento unless segmento.start_with?(':')
 
-  def autorizar!(registro, permissao)
-    contexto = { user: @user, account: @account, account_user: @account_user }
-    raise Recusada, 'Você não tem permissão para isso.' unless Pundit.policy!(contexto, registro).public_send(permissao)
-  end
+      chave = segmento.delete_prefix(':')
+      valor = valores[chave].to_s.strip
+      raise Recusada, "Faltou dizer qual #{chave}." if valor.blank?
 
-  def executar_criar_funil(dados)
-    raise Recusada, 'O funil precisa de um nome.' if dados[:nome].blank?
-
-    pipeline = @account.crm_pipelines.new(name: dados[:nome], created_by: @user, status: :active)
-    autorizar!(pipeline, :create?)
-    pipeline.save!
-    dados[:etapas].each_with_index do |etapa, posicao|
-      @account.crm_pipeline_stages.create!(pipeline: pipeline, name: etapa, position: posicao)
+      CGI.escape(valor)
     end
 
-    Resultado.new(ok: true, mensagem: "Funil \"#{pipeline.name}\" criado com #{dados[:etapas].size} etapas.",
-                  registro: pipeline)
+    "#{PREFIXO}#{@account.id}/#{segmentos.join('/')}"
   end
 
-  def executar_ligar_caixa_ao_funil(dados)
-    inbox = @account.inboxes.find_by(id: dados[:inbox_id])
-    pipeline = @account.crm_pipelines.find_by(id: dados[:pipeline_id])
-    raise Recusada, 'Não achei essa caixa ou esse funil nesta conta.' if inbox.nil? || pipeline.nil?
-
-    vinculo = @account.crm_pipeline_inboxes.find_or_initialize_by(pipeline_id: pipeline.id, inbox_id: inbox.id)
-    autorizar!(pipeline, :update?)
-    vinculo.auto_create_card = dados[:auto_create_card]
-    vinculo.created_by ||= @user
-    vinculo.save!
-
-    Resultado.new(ok: true, mensagem: "A caixa \"#{inbox.name}\" agora alimenta o funil \"#{pipeline.name}\".",
-                  registro: vinculo)
+  def corpo_de(dados)
+    (dados[:corpo] || {}).to_h
   end
 
-  def executar_criar_etiqueta(dados)
-    raise Recusada, 'A etiqueta precisa de um nome.' if dados[:titulo].blank?
+  def requisitar(verbo, caminho, corpo)
+    uri = URI.parse("http://127.0.0.1:#{porta}#{caminho}")
+    classe = { 'POST' => Net::HTTP::Post, 'PATCH' => Net::HTTP::Patch,
+               'PUT' => Net::HTTP::Put, 'DELETE' => Net::HTTP::Delete }.fetch(verbo)
 
-    label = @account.labels.new(title: dados[:titulo])
-    autorizar!(label, :create?)
-    label.save!
+    requisicao = classe.new(uri)
+    requisicao['api_access_token'] = @user.access_token.token
+    requisicao['Content-Type'] = 'application/json'
+    requisicao.body = JSON.generate(corpo) if corpo.present?
 
-    Resultado.new(ok: true, mensagem: "Etiqueta \"#{label.title}\" criada.", registro: label)
+    Net::HTTP.start(uri.hostname, uri.port, open_timeout: 2, read_timeout: 15) { |http| http.request(requisicao) }
+  end
+
+  def porta
+    ENV.fetch('PORT', 3000)
+  end
+
+  def sucesso?(resposta)
+    resposta.code.to_i.between?(200, 299)
+  end
+
+  # O erro que volta é o da própria plataforma, em vez de um texto meu: é ele que
+  # diz a verdade sobre o que faltou ou o que não foi permitido.
+  def recusa_da_plataforma(resposta)
+    dados = JSON.parse(resposta.body.to_s)
+    motivo = dados['message'] || dados['error'] || Array(dados['errors']).join(', ')
+    motivo.presence || "A plataforma respondeu #{resposta.code}."
+  rescue JSON::ParserError
+    "A plataforma respondeu #{resposta.code}."
+  end
+
+  def identificador(resposta)
+    dados = JSON.parse(resposta.body.to_s)
+    dados = dados['payload'] || dados
+    dados.is_a?(Hash) ? dados['id'] : nil
+  rescue JSON::ParserError
+    nil
   end
 end
