@@ -19,8 +19,9 @@ CNPJ e a razão social. O MOTORISTA vai nos campos do condutor: o nome dele, o C
 dele, o sexo dele e o vínculo. Pôr a pessoa no lugar do segurado, ou deixar os campos do condutor
 vazios porque a pessoa já foi citada na conversa, é o erro que a ferramenta recusa dizendo "empresa
 não dirige": ela não está pedindo dado novo ao cliente, está dizendo que o que ele já deu foi
-escrito no campo errado. Se o cliente não disser a razão social, mande o nome pelo qual ele chamou a
-empresa: a ferramenta completa pelo CNPJ o que faltar.
+escrito no campo errado. **A razão social você não pergunta e não inventa:** deixe o nome do segurado
+em branco quando o cliente não disser, que a ferramenta a busca pelo CNPJ (medido em 20/09: a
+conferência aceita a cotação de empresa sem o nome, e a busca o preenche antes de ir ao portal).
 
 Nem todas cotam empresa; algumas atendem só pessoa física. Isso é decisão delas, não erro nosso, e o
 cliente não precisa ouvir sobre.

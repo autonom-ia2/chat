@@ -278,6 +278,9 @@ module ManualDoEspecialistaDeAuto
     'O MOTORISTA vai nos campos do condutor' => lambda {
       %w[driver.name driver.document driver.birthDate driver.gender].all? { |n| campo(n) }
     },
+    # A razão social não é perguntada porque o campo é `derivado` — quem o preenche é a busca por CNPJ
+    # do adapter (adapters#68), e a conferência não cobra campo derivado.
+    'A razão social você não pergunta e não inventa' => -> { campo('insured.name')['origem'] == 'derivado' },
     'Zero-quilômetro tem campo próprio' => -> { campo('vehicle.isZeroKm') },
     'Estado civil não tem "não informado"' => -> { valores('insured.maritalStatus').values.none? { |v| v.match?(/não informado/i) } },
     'FLEX não é GASOLINA' => -> { (valores('vehicle.fuelType').values & %w[FLEX GASOLINA]).size == 2 },
@@ -428,7 +431,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # SÃO DOIS ARQUIVOS E DUAS ASSINATURAS (#525). Assinar só o do ramo deixaria o bloco comum — onde
   # agora moram a metade das promessas da tabela — livre para mudar sem revisão nenhuma.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('2a2b856d4375a90db35553cad4c6da8b')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('dd220156d8c155fb040b6918a5ee1f78')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
