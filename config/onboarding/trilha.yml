@@ -1,0 +1,178 @@
+# Trilha de onboarding do Chat2You — fonte única dos passos que o cliente novo
+# percorre. Alimenta a tela Primeiros passos, os artigos da Central de Ajuda, os
+# fluxos do Guia da Plataforma e os mini-tours. Épico #485.
+#
+# Regras:
+# - `verificacao` é o nome da regra no Onboarding::Progress; o passo só fica
+#   feito quando o estado real da conta muda, nunca por clique.
+# - `pulavel: true` só nos passos que a operação pode dispensar.
+# - `perfis` lista quem enxerga o passo na tela.
+# - `video` é o ID do roteiro no Estúdio HyperFrames; fica vazio até publicar.
+---
+passos:
+  - id: perfil
+    ordem: 0
+    titulo: Seu perfil e seus avisos
+    por_que: >-
+      Sem aviso no navegador você só descobre a mensagem do cliente quando abre
+      a plataforma.
+    rota: profile_settings_index
+    alvo_destaque: sidebar-profile-menu
+    verificacao: perfil_configurado
+    fluxos_guia:
+      - Configurar perfil e notificacoes
+    video: C01
+    artigo: primeiros-passos-perfil
+    pulavel: false
+    perfis: [administrator, agent]
+    pre_requisitos: []
+
+  - id: chave_ia
+    ordem: 1
+    titulo: Conectar a chave da OpenAI
+    por_que: >-
+      É a chave que liga o CRM com IA, os agentes e o Guia da Plataforma. Sem
+      ela, metade da plataforma fica parada.
+    rota: settings_applications_integration
+    alvo_destaque: integration-crm-kanban-ai
+    verificacao: chave_ia_conectada
+    fluxos_guia:
+      - Configurar a chave de IA da plataforma
+    video: C02
+    artigo: primeiros-passos-chave-openai
+    pulavel: false
+    perfis: [administrator]
+    pre_requisitos:
+      - Conta na OpenAI com crédito e cartão internacional
+
+  - id: canal
+    ordem: 2
+    titulo: Conectar um canal
+    por_que: >-
+      É por aqui que a conversa do cliente chega. Um canal já basta para
+      começar: WhatsApp oficial, WhatsApp por QR Code ou e-mail.
+    rota: settings_inbox_list
+    alvo_destaque: sidebar-inboxes
+    verificacao: canal_recebendo
+    fluxos_guia:
+      - Conectar WhatsApp Oficial (Cloud API da Meta)
+      - Conectar WhatsApp por QR Code (WhatsApp API)
+      - Conectar caixa de e-mail
+    video: C03
+    artigo: primeiros-passos-canal
+    pulavel: false
+    perfis: [administrator]
+    pre_requisitos:
+      - Número no WhatsApp Business, ou dados de SMTP e IMAP do e-mail
+
+  - id: primeira_resposta
+    ordem: 3
+    titulo: Responder a primeira conversa
+    por_que: >-
+      É o primeiro sinal de que tudo funciona: a mensagem chegou e a resposta
+      saiu pelo painel.
+    rota: home
+    alvo_destaque: sidebar-conversations
+    verificacao: primeira_resposta_enviada
+    fluxos_guia:
+      - Responder uma conversa
+    video: C08
+    artigo: primeiros-passos-primeira-resposta
+    pulavel: false
+    perfis: [administrator, agent]
+    pre_requisitos: []
+
+  - id: funil
+    ordem: 4
+    titulo: Montar o primeiro funil
+    por_que: >-
+      O funil organiza quem está cotando, quem está em proposta e quem fechou,
+      e é o que a IA usa para mover os cards.
+    rota: crm_kanban_index
+    alvo_destaque: crm-configure-inboxes
+    verificacao: funil_em_uso
+    fluxos_guia:
+      - Criar funil no CRM Kanban
+      - Configurar inboxes do CRM
+    video: C04
+    artigo: primeiros-passos-funil
+    pulavel: false
+    perfis: [administrator]
+    pre_requisitos:
+      - Chave da OpenAI conectada
+
+  - id: equipe
+    ordem: 5
+    titulo: Convidar quem vai atender
+    por_que: >-
+      Cada pessoa com o próprio acesso deixa claro quem falou com o cliente e
+      permite distribuir as conversas.
+    rota: agent_list
+    alvo_destaque: sidebar-agents
+    verificacao: equipe_convidada
+    fluxos_guia:
+      - Convidar agente
+      - Criar time
+    video: C10
+    artigo: primeiros-passos-equipe
+    pulavel: true
+    perfis: [administrator]
+    pre_requisitos: []
+
+  - id: agente_ia
+    ordem: 6
+    titulo: Criar o agente de IA
+    por_que: >-
+      O agente responde o cliente na hora e passa para uma pessoa quando o
+      assunto exige. Exige uma base de conhecimento preparada.
+    rota: autonomia_agents_index
+    alvo_destaque: sidebar-autonomia-agents
+    verificacao: agente_ia_publicado
+    fluxos_guia:
+      - Criar agente Autonom.ia
+      - Ligar agente a uma caixa de entrada
+    video: C06
+    artigo: primeiros-passos-agente-ia
+    pulavel: true
+    perfis: [administrator]
+    pre_requisitos:
+      - Base de conhecimento da empresa, de preferência em PDF
+      - Número separado do pessoal para o agente
+
+  - id: campanha
+    ordem: 7
+    titulo: Preparar a primeira campanha
+    por_que: >-
+      É onde mais se erra: disparo fora da janela de 24 horas ou em massa
+      derruba o número. Vem por último de propósito.
+    rota: campaigns_index
+    alvo_destaque: sidebar-campaigns
+    verificacao: campanha_criada
+    fluxos_guia:
+      - Criar campanha de WhatsApp
+      - Criar campanha de e-mail
+    video: C05
+    artigo: primeiros-passos-campanha
+    pulavel: false
+    perfis: [administrator]
+    pre_requisitos:
+      - Canal conectado e modelo de mensagem aprovado, no caso do WhatsApp oficial
+      - Domínio verificado, no caso de e-mail
+
+  - id: configuracoes
+    ordem: 8
+    titulo: Ajustar a conta ao seu jeito
+    por_que: >-
+      Etiquetas, respostas prontas e atributos deixam a operação do seu jeito e
+      alimentam relatórios úteis.
+    rota: labels_list
+    alvo_destaque: sidebar-settings
+    verificacao: configuracoes_iniciadas
+    fluxos_guia:
+      - Criar etiqueta
+      - Criar resposta pronta
+    video: C13
+    artigo: primeiros-passos-configuracoes
+    pulavel: true
+    perfis: [administrator]
+    pre_requisitos: []
