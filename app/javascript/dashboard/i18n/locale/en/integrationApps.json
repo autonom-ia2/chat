@@ -64,6 +64,27 @@
     },
     "SIDEBAR_DESCRIPTION": {
       "DIALOGFLOW": "Dialogflow is a natural language processing platform for building conversational interfaces. Integrating it with {installationName} lets bots handle queries first and transfer them to agents when needed. It helps qualify leads and reduce agent workload by answering FAQs. To add Dialogflow, create a Service Account in Google Console and share the credentials. Refer to the docs for details"
+    },
+    "START_HERE": "Start here",
+    "OPENAI_KEY_GUIDE": {
+      "TITLE": "How to create your OpenAI key",
+      "SUBTITLE": "The key is yours and lives in your OpenAI account. It takes about 5 minutes, and you pay them for usage directly.",
+      "STEPS": {
+        "ACCOUNT": "Create an account at platform.openai.com. That is the developer platform, not the ChatGPT website.",
+        "BILLING": "Under Billing, add between US$ 5 and US$ 10 with an international card. Without credit the key exists but never answers.",
+        "AUTO_RECHARGE": "Leave auto recharge off. You spend only what you added and decide when to top up.",
+        "CREATE_KEY": "Create a new key and choose no expiration. A key with an end date stops working on its own, mid conversation.",
+        "COPY_NOW": "Copy the key the moment it appears. OpenAI never shows it again: close the window and you have to create another one.",
+        "PASTE_HERE": "Come back here, click Connect and paste the key into the API Key field."
+      },
+      "WARNINGS": {
+        "SUBSCRIPTION": "A ChatGPT Plus subscription does not work here. They are separate charges: API credit is its own thing.",
+        "CARD": "Card declined? OpenAI only accepts cards enabled for international purchases. Ask your bank to turn that on."
+      },
+      "LINKS": {
+        "BILLING": "Open OpenAI Billing",
+        "KEYS": "Open the API keys page"
+      }
     }
   }
 }

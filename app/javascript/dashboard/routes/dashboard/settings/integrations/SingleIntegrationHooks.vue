@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useIntegrationHook } from 'dashboard/composables/useIntegrationHook';
 import { useBranding } from 'shared/composables/useBranding';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { isHookActive } from 'dashboard/helper/crmAiKey';
 
 const props = defineProps({
   integrationId: {
@@ -25,10 +26,7 @@ const connectedHook = computed(() => integration.value?.hooks?.[0]);
 // chave salva e sem IA. Só acontece em contas configuradas antes de conectar
 // passar a ligar a IA.
 const isHookInactive = computed(
-  () =>
-    Boolean(connectedHook.value) &&
-    (connectedHook.value.status === false ||
-      connectedHook.value.settings?.enabled === false)
+  () => Boolean(connectedHook.value) && !isHookActive(connectedHook.value)
 );
 
 const statusKey = computed(() =>

@@ -25,6 +25,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  highlighted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const getters = useStoreGetters();
@@ -50,7 +54,10 @@ const actionURL = computed(() =>
 
 <template>
   <div
-    class="flex flex-col flex-1 p-4 m-px outline outline-n-container outline-1 bg-n-card rounded-xl"
+    class="flex flex-col flex-1 p-4 m-px outline-1 bg-n-card rounded-xl"
+    :class="
+      highlighted ? 'outline outline-n-brand' : 'outline outline-n-container'
+    "
   >
     <div class="flex items-start justify-between">
       <div class="flex h-12 w-12 mb-2">
@@ -63,11 +70,19 @@ const actionURL = computed(() =>
           class="max-w-full rounded-md border border-n-weak shadow-sm hidden dark:block bg-n-alpha-3 dark:bg-n-alpha-2"
         />
       </div>
-      <Label
-        :label="integrationStatus"
-        :color="integrationStatusColor"
-        compact
-      />
+      <div class="flex items-center gap-2">
+        <Label
+          v-if="highlighted"
+          :label="$t('INTEGRATION_APPS.START_HERE')"
+          color="blue"
+          compact
+        />
+        <Label
+          :label="integrationStatus"
+          :color="integrationStatusColor"
+          compact
+        />
+      </div>
     </div>
     <div class="flex flex-col m-0 flex-1">
       <div
