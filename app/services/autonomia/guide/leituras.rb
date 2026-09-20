@@ -101,15 +101,20 @@ class Autonomia::Guide::Leituras
   end
 
   def funis
-    lista = @account.crm_pipelines.limit(LIMITE).to_a
+    lista = escopo(Crm::Pipeline).limit(LIMITE).to_a
     return ['A conta ainda não tem funil criado.'] if lista.empty?
 
-    lista.map { |pipeline| descrever_funil(pipeline) }
+    # Uma consulta para todos os vínculos, e não uma por funil.
+    vinculos = @account.crm_pipeline_inboxes
+                       .includes(:inbox)
+                       .where(pipeline_id: lista.map(&:id))
+                       .group_by(&:pipeline_id)
+
+    lista.map { |pipeline| descrever_funil(pipeline, vinculos[pipeline.id]) }
   end
 
-  def descrever_funil(pipeline)
-    vinculos = @account.crm_pipeline_inboxes.includes(:inbox).where(pipeline_id: pipeline.id).to_a
-    return "Funil \"#{safe(pipeline.name)}\": nenhuma caixa alimenta este funil." if vinculos.empty?
+  def descrever_funil(pipeline, vinculos)
+    return "Funil \"#{safe(pipeline.name)}\": nenhuma caixa alimenta este funil." if vinculos.blank?
 
     caixas = vinculos.map do |vinculo|
       estado = vinculo.auto_create_card? ? 'cria card sozinho' : 'sem criação automática'
@@ -119,12 +124,15 @@ class Autonomia::Guide::Leituras
   end
 
   def campanhas
-    lista = escopo(Campaign).limit(LIMITE).to_a
-    return ['A conta ainda não tem campanha criada.'] if lista.empty?
+    escopo_campanhas = escopo(Campaign)
+    total = escopo_campanhas.count
+    return ['A conta ainda não tem campanha criada.'] if total.zero?
 
-    ativas = lista.count(&:enabled?)
-    ["A conta tem #{lista.size} campanha(s), sendo #{ativas} ativa(s).",
-     *lista.first(5).map { |c| "Campanha \"#{safe(c.title)}\": #{c.enabled? ? 'ativa' : 'parada'}." }]
+    ativas = escopo_campanhas.where(enabled: true).count
+    lista = escopo_campanhas.limit(5).to_a
+
+    ["A conta tem #{total} campanha(s), sendo #{ativas} ativa(s).",
+     *lista.map { |c| "Campanha \"#{safe(c.title)}\": #{c.enabled? ? 'ativa' : 'parada'}." }]
   end
 
   def times
