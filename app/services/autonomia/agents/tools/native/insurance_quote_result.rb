@@ -87,14 +87,21 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     end
   end
 
-  # -> o texto ao modelo. O mesmo texto fica registrado no turno para a conferência da fala.
+  # -> o texto ao modelo. Para a conferência da fala fica registrada SÓ A PARTE DOS PREÇOS.
+  #
+  # O RESUMO DA ENTRADA NÃO ENTRA NA CONFERÊNCIA (achado da revisão da PR #518). A conferência
+  # autoriza a Lia a citar as seguradoras que aparecem nos dados do turno; o resumo cita a
+  # SEGURADORA ANTERIOR da renovação, que também cota. Com ela nos dados, a fala "a HDI não fez
+  # proposta" passaria sem nada que a sustentasse. Ao modelo o resumo vai inteiro; à conferência,
+  # só o que fala de preço.
   def call
     conversa = delivery&.conversation
     return ::Autonomia::Agents::Tools::Recusa.para_modelo(SEM_CONTEXTO, slug: self.class.slug, delivery: delivery, agente: agent) if conversa.nil?
 
-    texto = resposta(conversa)
-    delivery.registrar_resultado(dados_do_turno(texto))
-    texto
+    precos = resposta(conversa)
+    entrada = @resultado && !texto_sem_leitura ? entrada_da_cotacao : nil
+    delivery.registrar_resultado(dados_do_turno(precos))
+    [precos, entrada].compact.join("\n")
   end
 
   private
@@ -114,13 +121,18 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     sem_leitura = texto_sem_leitura
     return sem_leitura if sem_leitura
 
-    [(seguradora ? por_seguradora : geral), entrada_da_cotacao].compact.join("\n")
+    seguradora ? por_seguradora : geral
   end
 
   # -> o resumo da entrada da MESMA execução cujo resultado está sendo lido, ou nil (outro ramo,
   # execução sem argumentos).
+  # Falha aqui não pode custar os preços ao cliente (achado da revisão): sem resumo, o modelo segue
+  # com o que importa.
   def entrada_da_cotacao
     ::Autonomia::Insurance::EntradaDaCotacao.new(@resultado.run.arguments, schema: schema_de_auto).texto
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] resumo da entrada indisponível #{e.class}")
+    nil
   end
 
   # O nome de cada opção (a franquia, a seguradora anterior) sai do MESMO schema que montou o

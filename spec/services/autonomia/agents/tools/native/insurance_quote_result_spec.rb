@@ -82,7 +82,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     def ao_modelo(seguradora = nil, turno: delivery)
       super.tap do |texto|
         expect(Autonomia::Agents::ConferenciaDePrecos.valores(texto)).to be_empty
-        expect(turno.resultado_do_turno.texto).to end_with(texto)
+        # O turno ACUMULA as leituras, e o resumo da entrada não entra na conferência (PR #518): o que
+        # fica registrado termina com a parte dos PREÇOS desta leitura.
+        expect(turno.resultado_do_turno.texto).to end_with(texto.split("\nCom que dados esta cotação foi pedida").first)
       end
     end
 
@@ -271,7 +273,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(texto).not_to include(risco['text'])
     end
 
-    # O QUE A CONFERÊNCIA RECEBE: o texto que o modelo leu, todas as seguradoras da cotação e se o PDF já foi.
+    # O QUE A CONFERÊNCIA RECEBE: só a parte dos PREÇOS do texto que o modelo leu, todas as seguradoras da
+    # cotação e se o PDF já foi. O resumo da entrada fica de fora de propósito (revisão da PR #518): ele cita a
+    # seguradora ANTERIOR da renovação, e tê-la nos dados autorizaria a Lia a afirmar o desfecho dela.
     it 'registra no turno o texto, as seguradoras da cotação e o comparativo' do
       cotacao_com(status: 'done')
 
@@ -432,7 +436,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
 
       expect(texto).to start_with('2 seguradoras fizeram proposta nesta cotação.')
       expect(texto.split("\n").last).to eq(Autonomia::Insurance::EntradaDaCotacao::AUSENCIA)
-      expect(delivery.resultado_do_turno.texto).to eq(texto)
+      # O RESUMO NÃO VAI À CONFERÊNCIA (revisão da PR #518): ele cita a seguradora ANTERIOR da renovação, e
+      # tê-la nos dados do turno autorizaria a Lia a afirmar o desfecho dela sem nada que sustentasse.
+      registrado = delivery.resultado_do_turno.texto
+      expect(texto).to start_with(registrado)
+      expect(registrado).not_to include('Com que dados esta cotação foi pedida')
     end
 
     it 'também acompanha a pergunta por uma seguradora' do

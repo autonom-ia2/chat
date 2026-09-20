@@ -69,8 +69,12 @@ class Autonomia::Insurance::EntradaDaCotacao
 
   def entrada
     return @entrada if defined?(@entrada)
+    return @entrada = nil if @argumentos.blank?
 
-    input = ::Autonomia::Insurance::QuoteInput.new(produto: @argumentos['produto'], params: @argumentos,
+    # `produto` em branco é auto, como em `InsuranceQuote#produto`: sem isto, a cotação de auto que o
+    # modelo pediu sem nomear o produto ficaria sem resumo (achado da revisão da PR #518).
+    produto = @argumentos['produto'].to_s.strip.presence || ::Autonomia::Insurance::ResultadoDaCotacao.cotacao::AUTO
+    input = ::Autonomia::Insurance::QuoteInput.new(produto: produto, params: @argumentos,
                                                    dados: {}, commission_percent: nil)
     @entrada = input.auto? ? input.to_h : nil
   end
