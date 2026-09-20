@@ -129,3 +129,11 @@ Practical checklist for any change impacting core logic or public APIs
 - Módulo novo que é só de admin: gate com `AccountUser#permission_granted?('<modulo>_view' | '<modulo>_manage')`. No OSS responde `administrator?`; o EE soma as chaves da função, e `_manage` implica `_view`. Agente comum sem função continua sem acesso.
 - Checklist de uma chave nova: `CustomRole::PERMISSIONS`, policy/controller, módulo em `settings/customRoles/permissionMatrix.js`, i18n `CUSTOM_ROLE.MATRIX` (en + pt_BR), `meta.permissions` da rota, entrada do menu e `useCanManage('<modulo>_manage')` nos botões de escrita.
 - Nunca delegar por função: usuários, funções, integrações/webhooks/tokens, conta, faturamento, financeiro, segurança.
+
+## Guia da Plataforma — o mapa é gerado, a explicação é escrita
+
+- `lib/operator_guide/guia-produto.md` e `app/javascript/dashboard/helper/guideRouteRegistry.js` são **arquivos gerados**. Não edite nenhum dos dois à mão: a próxima geração descarta a edição.
+- O que só nós sabemos — `onde_fica`, `intent`, `passos`, `gotchas` — fica em `lib/operator_guide/porques.md`, um bloco por fluxo. O cabeçalho do bloco é um nome curto e único; o campo `rota` aponta a tela no roteador. Vários fluxos podem apontar para a mesma tela.
+- A rota, o endereço e o gate (feature flag e papéis, inclusive funções personalizadas) saem do próprio roteador do painel. Mexeu em rota ou permissão, rode `pnpm guia:build` e envie o resultado junto.
+- `pnpm guia:check` falha quando o gerado está fora de dia. Rode antes de abrir PR que toque em rotas, menu ou explicações.
+- Tela nova sem bloco em `porques.md` aparece como "sem explicação" no relatório do build. Escrever esse bloco é trabalho humano, não do gerador.
