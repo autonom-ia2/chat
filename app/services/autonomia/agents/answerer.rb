@@ -152,7 +152,8 @@ module Autonomia
       def conferencia_da_fala
         return nil unless @trust_instruction && @delivery && @agent.agent_type == 'insurance_quote'
 
-        ConferenciaDaFala.new(cotacao_no_inicio: ConferenciaDaFala.cotacao_correndo(@delivery.conversation&.id))
+        conversa = @delivery.conversation&.id
+        ConferenciaDaFala.new(conversa: conversa, cotacao_no_inicio: ConferenciaDaFala.cotacao_correndo(conversa))
       end
 
       # Se a fala dispara um sinal da `ConferenciaDaFala`, o modelo reescreve UMA vez, com as ferramentas do turno
