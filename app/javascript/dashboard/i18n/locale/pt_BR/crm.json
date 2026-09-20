@@ -1692,6 +1692,7 @@
       "CONFIRM": "Confirmar",
       "CANCEL": "Agora não",
       "CANCELLED": "Você cancelou esta ação.",
+      "RUNNING": "Fazendo agora…",
       "FAILED": "Não consegui fazer isso. Tente pela tela."
     }
   }

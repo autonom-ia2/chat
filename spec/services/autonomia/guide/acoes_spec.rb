@@ -63,19 +63,19 @@ RSpec.describe Autonomia::Guide::Acoes do
     end
 
     it 'avisa quando a ação não tem volta' do
-      texto = para(admin).descrever('DELETE labels/:id', { caminho: { id: 7 } })
+      texto = para(admin).descrever('DELETE labels/:id', { caminho: { id: 7 }, descricao: 'Apagar a etiqueta 7.' })
 
       expect(texto[:aviso]).to include('não tem volta')
     end
 
     it 'não inventa aviso em ação que não apaga nada' do
-      expect(para(admin).descrever('POST labels', { corpo: { title: 'VIP' } })[:aviso]).to be_nil
+      expect(para(admin).descrever('POST labels', { corpo: { title: 'VIP' }, descricao: 'Criar a etiqueta VIP.' })[:aviso]).to be_nil
     end
 
     it 'descrever não chama a plataforma' do
       expect(Net::HTTP).not_to receive(:start)
 
-      para(admin).descrever('POST labels', { corpo: { title: 'VIP' } })
+      para(admin).descrever('POST labels', { corpo: { title: 'VIP' }, descricao: 'Criar a etiqueta VIP.' })
     end
   end
 
@@ -95,7 +95,7 @@ RSpec.describe Autonomia::Guide::Acoes do
     it 'recusa agente comum já na descrição, antes de qualquer confirmação' do
       agente, = create_crm_agent(account: conta)
 
-      expect { para(agente).descrever('POST labels', { corpo: { title: 'x' } }) }
+      expect { para(agente).descrever('POST labels', { corpo: { title: 'x' }, descricao: 'Criar.' }) }
         .to raise_error(described_class::Recusada)
     end
 

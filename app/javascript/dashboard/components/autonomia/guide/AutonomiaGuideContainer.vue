@@ -267,25 +267,41 @@ watch(accountId, () => store.reset());
                 >
                   {{ item.acao.descricao.aviso }}
                 </p>
+                <!-- Cada estado tem o seu próprio ramo, nomeado. A primeira
+                     versão usava `v-else` para "cancelada", então o estado
+                     "executando" caía nele: quem clicava em Confirmar lia
+                     "Você cancelou esta ação" enquanto a ação rodava. -->
                 <div v-if="item.acaoEstado === 'aguardando'" class="flex gap-2">
                   <Button
                     :label="$t('AUTONOMIA_GUIDE.ACTION.CONFIRM')"
-                    sm
+                    class="min-h-11"
                     blue
-                    :is-loading="item.acaoEstado === 'executando'"
                     @click="confirmarAcao(item)"
                   />
                   <Button
                     :label="$t('AUTONOMIA_GUIDE.ACTION.CANCEL')"
-                    sm
+                    class="min-h-11"
                     slate
                     faded
                     @click="store.marcarAcao(item.id, 'cancelada')"
                   />
                 </div>
                 <p
+                  v-else-if="item.acaoEstado === 'executando'"
+                  class="flex items-center gap-2 mb-0 text-sm text-n-slate-11"
+                >
+                  <span class="i-svg-spinner size-4 shrink-0" />
+                  {{ $t('AUTONOMIA_GUIDE.ACTION.RUNNING') }}
+                </p>
+                <p
+                  v-else-if="item.acaoEstado === 'cancelada'"
+                  class="mb-0 text-sm text-n-slate-11"
+                >
+                  {{ $t('AUTONOMIA_GUIDE.ACTION.CANCELLED') }}
+                </p>
+                <p
                   v-else-if="item.acaoResultado"
-                  class="mb-0 text-sm font-medium"
+                  class="mb-0 text-sm font-medium break-words"
                   :class="
                     item.acaoEstado === 'feita'
                       ? 'text-n-teal-11'
@@ -293,9 +309,6 @@ watch(accountId, () => store.reset());
                   "
                 >
                   {{ item.acaoResultado }}
-                </p>
-                <p v-else class="mb-0 text-sm text-n-slate-11">
-                  {{ $t('AUTONOMIA_GUIDE.ACTION.CANCELLED') }}
                 </p>
               </div>
 

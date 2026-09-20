@@ -81,7 +81,12 @@ class Autonomia::Guide::Acoes
     garantir_permitida!(acao)
     montar_caminho(acao, dados)
 
-    { frase: dados[:descricao].presence || "#{verbo_de(acao)} #{recurso_de(acao)}",
+    # Sem frase não há confirmação informada. O esquema deixa a descrição
+    # anulável, e cair no verbo com a rota traria "POST crm/pipelines" de volta
+    # para a tela — o mesmo jargão, pela porta dos fundos. Melhor recusar.
+    raise Recusada, 'Não consegui explicar o que ia fazer, então não vou fazer.' if dados[:descricao].blank?
+
+    { frase: dados[:descricao],
       detalhe: valores_legiveis(corpo_de(dados)),
       aviso: (verbo_de(acao) == DESTRUTIVO ? 'Isto apaga o registro e não tem volta.' : nil) }
   end
