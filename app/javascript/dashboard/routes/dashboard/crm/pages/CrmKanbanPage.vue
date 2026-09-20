@@ -105,6 +105,8 @@ const pipelineDrawerStages = ref([]);
 const showInboxSettingsDrawer = ref(false);
 const showBookingProfilesDrawer = ref(false);
 const inboxSettings = ref([]);
+// Resultado do último salvamento de caixa, para a janela saber qual caixa salvou.
+const inboxSaveResult = ref(null);
 const inboxSettingStagesByPipeline = ref({});
 const dragSnapshot = ref(null);
 const loadError = ref('');
@@ -799,8 +801,18 @@ const saveInboxSetting = async payload => {
       item => Number(item.inbox_id) !== Number(setting.inbox_id)
     );
     inboxSettings.value = [...otherSettings, setting];
+    inboxSaveResult.value = {
+      inboxId: payload.inboxId,
+      ok: true,
+      at: Date.now(),
+    };
     useAlert(t('CRM_KANBAN.ALERTS.INBOX_SETTINGS_SAVED'));
   } catch {
+    inboxSaveResult.value = {
+      inboxId: payload.inboxId,
+      ok: false,
+      at: Date.now(),
+    };
     useAlert(t('CRM_KANBAN.ALERTS.INBOX_SETTINGS_SAVE_ERROR'));
   }
 };
@@ -843,6 +855,10 @@ const STAGE_DELETE_ERROR_KEYS = {
   'crm.stage_has_cards': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_HAS_CARDS',
   'crm.stage_is_last': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_LAST_STAGE',
 };
+
+// Rótulo do filtro de campanha com a contagem, fora do template para não deixar
+// texto solto sem i18n na marcação.
+const campaignFilterLabel = campaign => `${campaign.label} (${campaign.count})`;
 
 const deleteStageErrorMessage = error => {
   const code = error?.response?.data?.error;
@@ -2012,7 +2028,7 @@ onMounted(async () => {
                     "
                     @click="toggleCampaignFilter(campaign.value)"
                   >
-                    {{ campaign.label }} ({{ campaign.count }})
+                    {{ campaignFilterLabel(campaign) }}
                   </button>
                   <span
                     v-if="!campaignFilterOptions.length"
@@ -2518,8 +2534,8 @@ onMounted(async () => {
       :pipelines="pipelines"
       :stages-by-pipeline="inboxSettingStagesByPipeline"
       :is-loading="uiFlags.isFetchingInboxSettings"
-      :is-saving="uiFlags.isSavingInboxSetting"
       :is-loading-stages="uiFlags.isFetchingPipelineStages"
+      :save-result="inboxSaveResult"
       @save="saveInboxSetting"
       @load-pipeline-stages="loadPipelineStagesForSettings"
       @close="closeInboxSettingsDrawer"
