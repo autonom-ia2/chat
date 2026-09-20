@@ -48,10 +48,20 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # mantém — os do agente de cotação —: um especialista que a corretora criou com instrução própria
   # continua lendo a dele. O arquivo é lido cru: `builder_instrucao_do_especialista_spec` garante que ele
   # não tem variável para substituir.
-  # -> texto do arquivo, ou nil quando não é um especialista mantido.
+  # -> texto do bloco comum e do manual do ramo, ou nil quando não é um especialista mantido.
   def self.instrucao_mantida(specialist)
     dados = mantido(specialist)
-    dados && INSTRUCOES.join(dados[:arquivo]).read
+    dados && instrucao_do_especialista(dados[:arquivo])
+  end
+
+  # O MANUAL DO ESPECIALISTA SÃO DOIS ARQUIVOS (#525): o bloco comum primeiro, o manual do ramo
+  # depois. A regra que vale em qualquer ramo — o que ele devolve, as frases que o cliente lê, a
+  # precedência, a cobertura, o que fazer quando o cliente levanta um assunto pela metade — mora num
+  # arquivo só, para nascer certa nos ramos que vêm. O do ramo fica com o que só ele tem, e não
+  # revoga o comum: a ordem é o que estabelece isso, como em `Specialist#effective_instruction`.
+  # -> texto montado, na ordem em que o modelo o lê.
+  def self.instrucao_do_especialista(arquivo)
+    "#{INSTRUCOES.join(ARQUIVO_COMUM_DO_ESPECIALISTA).read}\n#{INSTRUCOES.join(arquivo).read}"
   end
 
   # A DESCRIÇÃO também: é o que o principal lê para decidir chamar o especialista (`openai_schema`),
@@ -150,6 +160,8 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # protege em `PROTECTED_CONFIG_KEYS`). O rollout de #380 preenche a dos agentes criados antes.
   ESCOLHAS_DA_CORRETORA = 'agente_de_cotacao'.freeze
   ARQUIVO_DO_PRINCIPAL = 'principal.md'.freeze
+  # O bloco que vale em qualquer ramo, colado antes do manual do ramo (ver `instrucao_do_especialista`).
+  ARQUIVO_COMUM_DO_ESPECIALISTA = 'comum_especialista.md'.freeze
   # Marcador no arquivo -> campo das escolhas.
   VARIAVEIS = { '$nomeAgente' => 'nome_agente', '$nomeCorretora' => 'nome_corretora',
                 '$horarioAtendimento' => 'horario', '$comportamento' => 'comportamento' }.freeze
@@ -241,7 +253,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
   def criar_especialista(agente, dados)
     ::Autonomia::Agents::Specialist.create!(
       agent: agente, account: @account, slug: dados[:slug], name: dados[:nome],
-      description: dados[:descricao], instruction: texto(dados[:arquivo]),
+      description: dados[:descricao], instruction: texto_do_especialista(dados[:arquivo]),
       tool_slugs: TOOLS_DO_ESPECIALISTA, enabled: true
     )
   end
@@ -251,6 +263,13 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # guardadas e do arquivo no deploy —, mas o retrato de nascimento fica fiel.
   def texto(arquivo)
     self.class.substituir(INSTRUCOES.join(arquivo).read, escolhas)
+  end
+
+  # O retrato de nascimento do especialista é o texto MONTADO (#525) — o mesmo que
+  # `instrucao_mantida` devolve no runtime. Gravar só o manual do ramo faria a coluna mentir sobre o
+  # que o modelo recebeu no dia da criação.
+  def texto_do_especialista(arquivo)
+    self.class.substituir(self.class.instrucao_do_especialista(arquivo), escolhas)
   end
 
   # As quatro escolhas, com as chaves que o jsonb devolve (string), para o Builder e o runtime lerem

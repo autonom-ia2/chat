@@ -8,7 +8,10 @@ require 'rails_helper'
 RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   let(:instrucoes) { Autonomia::Insurance::QuoteAgent::Builder::INSTRUCOES }
   let(:principal) { instrucoes.join('principal.md').read }
-  let(:especialista) { instrucoes.join('especialista_auto.md').read }
+  # O MANUAL MONTADO (#525): as duas frases que este exemplo guarda moraram no arquivo de auto até
+  # 20/09/2026 e passaram para o bloco comum, onde valem para qualquer ramo. Lendo só o arquivo de
+  # auto, a guarda sumiria junto com o texto.
+  let(:especialista) { described_class.instrucao_do_especialista('especialista_auto.md') }
   let(:descricoes) { Autonomia::Agents::Tools::Native::InsuranceQuote::Frases::DESCRICOES }
 
   it 'os dois manuais proíbem falar de custo, tentativa, abertura, sistema e processo interno' do
