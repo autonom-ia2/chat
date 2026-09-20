@@ -88,6 +88,26 @@ module ManualDoEspecialistaDeAuto
     'placa, CEP, modelo, ano' => lambda {
       %w[vehicle.plate vehicle.overnightZipCode vehicle.fipeCode vehicle.modelYear].all? { |n| campo(n) }
     },
+    # OS SINISTROS DA APÓLICE (#514). Em 11/09/2026, execução 8, a mesma apólice HDI em PDF trouxe
+    # `previousClaimsCount=1` — o especialista leu e mandou. Em 12/09 a #411 FECHOU a lista do que se
+    # extrai do documento ("os três dados da apólice e os do veículo"), para impedir a cópia das
+    # coberturas; os sinistros, que nunca tinham estado em lista nenhuma, saíram junto com elas. Em
+    # 19/09/2026, execução 38, mesma apólice ("Qtde Sinistros :1"), mesma renovação: companhia 657,
+    # bônus 9, número e vigência vieram, e `quotation.previousClaimsCount` saiu vazio. A lista volta a
+    # nomeá-los, nas duas frases em que ela aparece.
+    #
+    # AS DUAS ÂNCORAS E O QUE CADA UMA PROVA: há onde escrever os sinistros no formulário (senão a
+    # ordem seria impossível), o campo VIAJA na entrada (senão a leitura morreria no caminho), e
+    # mandá-los continua sendo OPCIONAL — a apólice de terceiro exige o contrário, três parágrafos
+    # abaixo, e uma exigência aqui proibiria aquela saída.
+    "a quantidade de\nsinistros da vigência anterior" => lambda {
+      campo('quotation.previousClaimsCount')['obrigatorio'] == false && grupos_da_entrada.include?('quotation') &&
+        entrada_de_auto('quotation' => { 'previousClaimsCount' => 1 }).dig('quotation', 'previousClaimsCount') == 1
+    },
+    "os três dados da apólice, o\nbônus, os sinistros e os do veículo" => lambda {
+      %w[quotation.previousInsurerCode quotation.previousPolicyNumber quotation.previousPolicyEndDate
+         quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n) }
+    },
     'sem marcar renovação, sem bônus e sem histórico de sinistros' => lambda {
       %w[quotation.isRenewal quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n)['obrigatorio'] == false }
     },
@@ -330,7 +350,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('b0a5a0c3d41ae4b555c66cd31e95cd78')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('4717aea7c2c167b1e1da45b58cd5510a')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do
