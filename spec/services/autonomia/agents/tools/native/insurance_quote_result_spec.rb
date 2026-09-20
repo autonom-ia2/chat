@@ -82,7 +82,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     def ao_modelo(seguradora = nil, turno: delivery)
       super.tap do |texto|
         expect(Autonomia::Agents::ConferenciaDePrecos.valores(texto)).to be_empty
-        expect(turno.resultado_do_turno.texto).to end_with(texto)
+        # O turno ACUMULA as leituras, e o resumo da entrada não entra na conferência (PR #518): o que
+        # fica registrado termina com a parte dos PREÇOS desta leitura.
+        expect(turno.resultado_do_turno.texto).to end_with(texto.split("\nCom que dados esta cotação foi pedida").first)
       end
     end
 
@@ -271,7 +273,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(texto).not_to include(risco['text'])
     end
 
-    # O QUE A CONFERÊNCIA RECEBE: o texto que o modelo leu, todas as seguradoras da cotação e se o PDF já foi.
+    # O QUE A CONFERÊNCIA RECEBE: só a parte dos PREÇOS do texto que o modelo leu, todas as seguradoras da
+    # cotação e se o PDF já foi. O resumo da entrada fica de fora de propósito (revisão da PR #518): ele cita a
+    # seguradora ANTERIOR da renovação, e tê-la nos dados autorizaria a Lia a afirmar o desfecho dela.
     it 'registra no turno o texto, as seguradoras da cotação e o comparativo' do
       cotacao_com(status: 'done')
 
@@ -366,6 +370,100 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
 
         expect(resultado.procurar(consulta)).to match_array(codigos)
       end
+    end
+  end
+
+  # COM QUE DADOS A COTAÇÃO FOI FEITA (#515). Em 19/09/2026 o cliente perguntou "o bônus da apólice foi
+  # considerado?" e a Lia escalou: a ferramenta devolvia desfechos e nenhuma palavra sobre a entrada.
+  describe 'o resumo da entrada da cotação' do
+    let(:renovacao) do
+      { 'produto' => 'auto', 'cep' => '01310-930', 'vehicle' => { 'plate' => 'ABC1D23' },
+        'quotation' => { 'isRenewal' => true, 'bonusClass' => 9, 'previousClaimsCount' => 1,
+                         'previousInsurerCode' => '657' } }
+    end
+
+    def conexao_com_schema
+      enable_test_encryption!
+      registro = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
+      registro.update!(status: 'ready')
+      registro.merge_metadata!('quote_schemas' => { 'auto' => Autonomia::Insurance::Connector::Mock::SCHEMA_AUTO })
+    end
+
+    def cotacao_pedida_com(argumentos, status: 'done')
+      run = cotacao_com(status: status)
+      run.update!(arguments: argumentos)
+      run
+    end
+
+    it 'a renovação chega ao modelo com bônus, seguradora anterior e sinistros' do
+      conexao_com_schema
+      cotacao_pedida_com(renovacao)
+
+      texto = ao_modelo
+
+      expect(texto).to include('Tipo de seguro: renovação de apólice anterior.')
+      expect(texto).to include('Classe de bônus: 9.')
+      expect(texto).to include('Seguradora anterior: HDI.')
+      expect(texto).to include('Sinistros na vigência anterior: 1.')
+    end
+
+    it 'o seguro novo chega como seguro novo, e o bônus como não informado' do
+      cotacao_pedida_com({ 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } })
+
+      texto = ao_modelo
+
+      expect(texto).to include('Tipo de seguro: seguro novo, sem marcar renovação.')
+      expect(texto).to include("Classe de bônus: #{Autonomia::Insurance::EntradaDaCotacao::SEM_INFORMACAO}")
+    end
+
+    # O RESUMO NÃO PODE ABRIR CRÉDITO DE PREÇO: a fala da Lia é conferida contra este texto
+    # (`ConferenciaDePrecos`), e um valor em reais aqui viraria valor que ela pode escrever.
+    it 'o resumo não acrescenta nenhum valor em reais ao que a Lia pode escrever' do
+      conexao_com_schema
+      cotacao_pedida_com(renovacao.merge('coverage' => { 'deductibleType' => 2, 'propertyDamage' => 100_000 }))
+
+      texto = ao_modelo
+
+      expect(texto).to include('Franquia: 100%.')
+      expect(Autonomia::Agents::ConferenciaDePrecos.valores(texto))
+        .to match_array(Autonomia::Agents::ConferenciaDePrecos.valores(texto.split('Com que dados').first))
+    end
+
+    it 'vem depois dos preços e fica registrado no turno para a conferência' do
+      cotacao_pedida_com(renovacao)
+
+      texto = ao_modelo
+
+      expect(texto).to start_with('2 seguradoras fizeram proposta nesta cotação.')
+      expect(texto.split("\n").last).to eq(Autonomia::Insurance::EntradaDaCotacao::AUSENCIA)
+      # O RESUMO NÃO VAI À CONFERÊNCIA (revisão da PR #518): ele cita a seguradora ANTERIOR da renovação, e
+      # tê-la nos dados do turno autorizaria a Lia a afirmar o desfecho dela sem nada que sustentasse.
+      registrado = delivery.resultado_do_turno.texto
+      expect(texto).to start_with(registrado)
+      expect(registrado).not_to include('Com que dados esta cotação foi pedida')
+    end
+
+    it 'também acompanha a pergunta por uma seguradora' do
+      cotacao_pedida_com(renovacao)
+
+      expect(ao_modelo('Porto')).to include('Classe de bônus: 9.')
+    end
+
+    # SEM COTAÇÃO, NADA MUDA: não há entrada para resumir, e os estados sem leitura seguem inteiros.
+    it 'sem cotação na conversa, o texto continua o mesmo' do
+      expect(ao_modelo).to eq(described_class::SEM_COTACAO)
+    end
+
+    it 'cotação que não chegou às seguradoras continua sem resumo' do
+      cotacao_pedida_com(renovacao, status: 'done').update!(handle: {})
+
+      expect(ao_modelo).to eq(described_class::NAO_CHEGOU)
+    end
+
+    it 'execução sem argumentos e ramo que não é auto não ganham resumo' do
+      cotacao_pedida_com({ 'produto' => 'bike', 'dados' => '{}' })
+
+      expect(ao_modelo).not_to include('Com que dados esta cotação foi pedida')
     end
   end
 

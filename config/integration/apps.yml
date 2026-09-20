@@ -65,12 +65,6 @@ crm_kanban_ai:
         'validation': '',
         'help': 'Optional. Defaults to https://api.openai.com',
       },
-      {
-        'label': 'Enable CRM Kanban AI',
-        'type': 'checkbox',
-        'name': 'enabled',
-        'validation': '',
-      },
     ]
   visible_properties: ['api_base', 'enabled']
 openai:

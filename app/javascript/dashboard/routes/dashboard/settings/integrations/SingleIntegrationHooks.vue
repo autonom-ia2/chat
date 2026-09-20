@@ -1,7 +1,9 @@
 <script setup>
+import { computed } from 'vue';
 import { useIntegrationHook } from 'dashboard/composables/useIntegrationHook';
 import { useBranding } from 'shared/composables/useBranding';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { isHookActive } from 'dashboard/helper/crmAiKey';
 
 const props = defineProps({
   integrationId: {
@@ -17,6 +19,21 @@ const { integration, hasConnectedHooks } = useIntegrationHook(
 );
 
 const { replaceInstallationName } = useBranding();
+
+const connectedHook = computed(() => integration.value?.hooks?.[0]);
+
+// Hook ligado mas com a IA desligada nas configurações: a conta fica com a
+// chave salva e sem IA. Só acontece em contas configuradas antes de conectar
+// passar a ligar a IA.
+const isHookInactive = computed(
+  () => Boolean(connectedHook.value) && !isHookActive(connectedHook.value)
+);
+
+const statusKey = computed(() =>
+  isHookInactive.value
+    ? 'INTEGRATION_APPS.STATUS.INACTIVE'
+    : 'INTEGRATION_APPS.STATUS.ACTIVE'
+);
 </script>
 
 <template>
@@ -38,8 +55,23 @@ const { replaceInstallationName } = useBranding();
         <h3 class="mb-1 text-heading-1 text-n-slate-12">
           {{ integration.name }}
         </h3>
-        <p class="text-n-slate-11 text-body-main">
+        <p class="mb-1 text-n-slate-11 text-body-main">
           {{ replaceInstallationName(integration.description) }}
+        </p>
+        <p
+          v-if="hasConnectedHooks"
+          class="mb-0 inline-flex items-center gap-1.5 text-sm font-medium"
+          :class="isHookInactive ? 'text-n-amber-11' : 'text-n-teal-11'"
+        >
+          <span
+            class="size-4"
+            :class="
+              isHookInactive
+                ? 'i-lucide-triangle-alert'
+                : 'i-lucide-circle-check'
+            "
+          />
+          {{ $t(statusKey) }}
         </p>
       </div>
       <div class="flex justify-center items-center mb-0 w-[15%]">

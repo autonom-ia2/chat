@@ -60,6 +60,8 @@ export const GUIDE_ROUTE_REGISTRY = new Set([
   'campaigns_sms_index',
   'campaigns_livechat_index',
   'campaigns_whatsapp_index',
+  // Epico #485 — onboarding assistido
+  'first_steps',
 ]);
 
 export const isGuideRoute = name => GUIDE_ROUTE_REGISTRY.has(name);

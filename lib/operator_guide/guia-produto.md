@@ -1,6 +1,16 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (111 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (112 fluxos)
 
 Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil, gate, pré-requisitos, passos, gotchas, nav_target.
+
+### Ver os Primeiros passos
+- intent: Por onde eu comeco?; Onde vejo o que falta configurar na conta?; O que eu preciso fazer para a plataforma funcionar?; Cade a lista de primeiros passos?; Como sei se ja terminei a configuracao?
+- onde_fica: Menu lateral > Primeiros passos (e tambem a tela inicial da conta enquanto nao ha conversa aberta)
+- rota: `first_steps` - `/app/accounts/:accountId/primeiros-passos`
+- gate: papel `administrator`
+- pre_requisitos: nenhum
+- passos: 1. Abra Primeiros passos no menu lateral; 2. Leia o passo em destaque, que e sempre o primeiro que ainda falta; 3. Clique em Fazer agora para ir direto a tela daquele passo; 4. Volte a lista e siga para o proximo.
+- gotchas: cada passo so fica Feito quando o estado real da conta muda, nunca por clique; passos opcionais trazem Deixar para depois e podem ser retomados; o passo em foco mostra os pre-requisitos externos (por exemplo, conta na OpenAI com credito); a lista some do centro da tela quando o essencial termina, mas continua no menu.
+- nav_target: `first_steps`
 
 ### Criar caixa de entrada
 - intent: Como crio uma caixa de entrada?; Onde adiciono um novo canal?; Quero conectar um WhatsApp, email, site ou API.; Como comeco um inbox novo?
@@ -39,7 +49,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil
 - gate: feature flag `inbox_management`; papel `administrator`
 - pre_requisitos: caixa criada
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Horario de atendimento; 3. Ative/ajuste os dias da semana; 4. Configure faixas de horario; 5. Salve.
-- gotchas: mensagens e automacoes podem considerar a disponibilidade da caixa; confira fuso horario e intervalos antes de salvar.
+- gotchas: mensagens e automacoes podem considerar a disponibilidade da caixa; conta nova nasce no fuso da operacao (America/Sao_Paulo por padrao) e a caixa herda esse fuso ao ser criada; a tela mostra o fuso realmente salvo, inclusive UTC; confira fuso horario e intervalos antes de salvar.
 - nav_target: `settings_inbox_show`
 
 ### Atribuir conversa
@@ -330,8 +340,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: `CRM_KANBAN_ENABLED=true`; permissão de administração CRM (`administrator` ou `crm_admin` para custom roles).
 - pre_requisitos: caixas já criadas quando o objetivo for vincular atendimento ao funil.
-- passos: Clique em Novo funil; defina nome, descrição e estágios; salve; use Editar funil para ajustar estágios, automações e caixas vinculadas; em Configurações da caixa, escolha comportamento padrão de criação/vínculo.
-- gotchas: deletar estágio abre confirmação e pode falhar se houver cards dependentes; caixa vinculada define defaults de cards criados a partir de conversas; arquivar funil não apaga cards.
+- passos: São duas paradas. 1. Clique em Novo funil, defina nome e estágios e salve — as descrições dos estágios já vêm prontas. 2. Abra Configurar inboxes, ligue o CRM na caixa, escolha o funil e a etapa de entrada e salve; isso já cria o vínculo entre a caixa e o funil, com a criação automática de cards ligada. Não é mais preciso voltar em Editar funil para vincular a caixa.
+- gotchas: a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Inbox e automação continua valendo para a caixa que alimenta mais de um funil; deletar estágio abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-pipeline`
 
@@ -518,7 +528,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil
 - gate: `AUTONOMIA_AGENTS_ENABLED=true`; conta com `autonomia_agents_enabled=true`; permissão `administrator`.
 - pre_requisitos: conta habilitada pelo gate isolado; credencial de IA quando a liberação for global por conta.
 - passos: Abra Agentes; revise os cards existentes; clique em Criar com IA; para abrir um agente existente, clique no card; use a aba Testar como entrada padrão do painel.
-- gotchas: backend de agentes é admin-only e retorna 404 quando o gate está off; a sidebar também esconde o grupo para não admins; o card mostra apenas `human_card`, não a instrução interna.
+- gotchas: o menu Agentes aparece assim que a chave da OpenAI é conectada em Integracoes, sem precisar recarregar a pagina; backend de agentes é admin-only e retorna 404 quando o gate está off; a sidebar também esconde o grupo para não admins; o card mostra apenas `human_card`, não a instrução interna.
 - nav_target: `autonomia_agents_index`
 - highlight: `agents-create`
 
@@ -589,8 +599,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil
 - perfil: `administrator` cadastra ou troca a chave da conta. `agent` nao cadastra chave; diga para pedir a um administrator. Custom role `crm_manage_ai` ou `crm_admin` pode ajustar a IA do funil no CRM quando a rota do CRM estiver liberada, mas nao acessa a tela de Integracoes; se nao puder, diga que a credencial precisa ser configurada por um administrator.
 - gate: feature flag `integrations`; `CRM_KANBAN_ENABLED=true`; `CRM_AI_ENABLED=true`; app de integracao `crm_kanban_ai` ativo; fallback de sistema usa `CAPTAIN_OPEN_AI_API_KEY` e `CAPTAIN_OPEN_AI_ENDPOINT` em `InstallationConfig`; Autonom.ia tambem exige `AUTONOMIA_AGENTS_ENABLED=true` e conta habilitada.
 - pre_requisitos: chave OpenAI valida; acesso de administrator; opcionalmente API Base URL quando nao usar `https://api.openai.com`.
-- passos: 1. Abra Configuracoes > Integracoes; 2. Entre em CRM Kanban AI; 3. Clique para configurar ou adicionar a integracao; 4. Preencha API Key, API Base URL se necessario e mantenha Enable CRM Kanban AI marcado; 5. Salve e depois abra CRM Kanban para configurar a IA por funil.
-- gotchas: a integracao generica `openai` nao e a mesma coisa que `crm_kanban_ai`; se ja existir um hook `crm_kanban_ai` vazio ou desativado, ele impede o fallback para a chave global de sistema; a chave global de fallback e configuracao de super-admin, nao da conta; a tela de IA do funil ajusta criterios/auto-move/follow-up, mas nao cria a credencial.
+- passos: 1. Abra Configuracoes > Integracoes; 2. Entre em CRM Kanban AI; 3. Clique para configurar ou adicionar a integracao; 4. Preencha API Key e, se precisar, API Base URL: conectar ja liga a IA, nao existe mais caixa Enable CRM Kanban AI no formulario; 5. Salve e depois abra CRM Kanban para configurar a IA por funil.
+- gotchas: depois de conectar, a tela da integracao mostra "Conectado e funcionando"; se mostrar "Conectado, mas desligado", a conta ficou com a IA desligada e e preciso desconectar e conectar de novo; chave recusada costuma ser chave errada, revogada ou conta OpenAI sem credito; a integracao generica `openai` nao e a mesma coisa que `crm_kanban_ai`; se ja existir um hook `crm_kanban_ai` vazio ou desativado, ele impede o fallback para a chave global de sistema; a chave global de fallback e configuracao de super-admin, nao da conta; a tela de IA do funil ajusta criterios/auto-move/follow-up, mas nao cria a credencial.
 - nav_target: `settings_applications_integration` com `integration_id=crm_kanban_ai`
 
 ### Primeiros passos numa conta nova
@@ -838,7 +848,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que ele precisa de permissao para gerenciar funis/configuracoes do CRM.
 - gate: `CRM_KANBAN_ENABLED=true`.
 - pre_requisitos: caixas de entrada criadas; funil e etapas existentes quando quiser definir padrao.
-- passos: 1. Abra CRM Kanban; 2. Clique em Configuracoes de inbox; 3. Ative CRM na caixa desejada; 4. Escolha visibilidade entre todos os cards da inbox ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e salve.
+- passos: 1. Abra CRM Kanban; 2. Clique em Configuracoes de inbox; 3. Ative CRM na caixa desejada; 4. Escolha visibilidade entre todos os cards da inbox ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
 - gotchas: se CRM ativo for desligado, a criacao automatica tambem e desligada; `assigned_only` muda a visibilidade de agentes; funil/etapa padrao precisam pertencer a mesma conta.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-configure-inboxes`

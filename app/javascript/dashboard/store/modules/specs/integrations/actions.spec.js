@@ -115,6 +115,49 @@ describe('#actions', () => {
     });
   });
 
+  describe('#createHook recarrega os sinalizadores da conta', () => {
+    it('recarrega a conta depois de conectar, para o menu aparecer sem F5', async () => {
+      const dispatch = vi.fn();
+      axios.post.mockResolvedValue({ data: { id: 'crm_kanban_ai' } });
+
+      await actions.createHook(
+        { commit, dispatch },
+        { app_id: 'crm_kanban_ai' }
+      );
+
+      expect(dispatch).toHaveBeenCalledWith(
+        'accounts/get',
+        { silent: true },
+        { root: true }
+      );
+    });
+
+    it('não derruba o salvamento se a recarga falhar', async () => {
+      const dispatch = vi.fn().mockRejectedValue(new Error('offline'));
+      axios.post.mockResolvedValue({ data: { id: 'crm_kanban_ai' } });
+
+      await expect(
+        actions.createHook({ commit, dispatch }, { app_id: 'crm_kanban_ai' })
+      ).resolves.toBeUndefined();
+    });
+
+    it('recarrega a conta depois de desconectar', async () => {
+      const dispatch = vi.fn();
+      axios.delete.mockResolvedValue({ data: {} });
+
+      await actions.deleteHook(
+        { commit, dispatch },
+        { appId: 'crm_kanban_ai', hookId: 3 }
+      );
+
+      expect(dispatch).toHaveBeenCalledWith(
+        'accounts/get',
+        { silent: true },
+        { root: true }
+      );
+    });
+  });
+
   describe('#deleteHook', () => {
     it('sends correct actions if API is success', async () => {
       let data = { appId: 'dialogflow', hookId: 2 };

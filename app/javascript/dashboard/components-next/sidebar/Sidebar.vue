@@ -1,5 +1,6 @@
 <script setup>
 import { h, ref, computed, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { provideSidebarContext, useSidebarResize } from './provider';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useConfig } from 'dashboard/composables/useConfig';
@@ -9,6 +10,7 @@ import { useBrandedSidebar } from 'dashboard/composables/useBrandedSidebar';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useSidebarKeyboardShortcuts } from './useSidebarKeyboardShortcuts';
+import { useScrollActiveItemIntoView } from 'dashboard/composables/useScrollActiveItemIntoView';
 import { vOnClickOutside } from '@vueuse/components';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useWindowSize, useEventListener } from '@vueuse/core';
@@ -284,6 +286,12 @@ const {
 // todo o branding (bg da sidebar, var CSS, classe .sidebar-branded) se desliga automaticamente.
 const { brandedColor: sidebarBackgroundColor } = useBrandedSidebar();
 const hasBrandedSidebar = computed(() => Boolean(sidebarBackgroundColor.value));
+const route = useRoute();
+const navRef = ref(null);
+// Grupo grande aberto (Configuracoes tem 17 itens) deixa o item ativo fora da
+// area visivel; sem isso o menu parece travado.
+useScrollActiveItemIntoView(navRef, () => route.fullPath);
+
 const sidebarStyle = computed(() => ({
   ...(isMobile.value ? {} : { width: `${sidebarWidth.value}px` }),
   ...(hasBrandedSidebar.value
@@ -513,6 +521,19 @@ const reportRoutes = computed(() => newReportRoutes());
 
 const menuItems = computed(() => {
   return [
+    // Trilha de onboarding: fica no topo para quem administra, e continua
+    // acessível depois que a conta já está de pé.
+    ...(isAdministrator.value
+      ? [
+          {
+            name: 'FirstSteps',
+            label: t('SIDEBAR.FIRST_STEPS'),
+            icon: 'i-lucide-list-checks',
+            to: accountScopedRoute('first_steps'),
+            activeOn: ['first_steps'],
+          },
+        ]
+      : []),
     {
       name: 'Inbox',
       label: t('SIDEBAR.INBOX'),
@@ -1419,7 +1440,8 @@ const menuItems = computed(() => {
       </div>
     </section>
     <nav
-      class="grid overflow-y-scroll flex-grow gap-2 pb-5 no-scrollbar min-w-0"
+      ref="navRef"
+      class="grid overflow-y-auto flex-grow gap-2 pb-5 sidebar-scrollbar min-w-0"
       :class="isEffectivelyCollapsed ? 'px-1' : 'px-2'"
     >
       <ul
@@ -1479,6 +1501,32 @@ const menuItems = computed(() => {
 </template>
 
 <style scoped>
+/* A lista de menus passa da altura da tela quando um grupo grande esta aberto.
+   A barra fina avisa que da para rolar; escondida, parecia travada. */
+.sidebar-scrollbar {
+  /* Espaço reservado para a barra: o conteúdo não pula quando um grupo abre. */
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--slate-6)) transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--slate-6));
+  border-radius: 3px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--slate-8));
+}
+
 .sidebar-branded {
   border-color: rgb(255 255 255 / 14%);
 }

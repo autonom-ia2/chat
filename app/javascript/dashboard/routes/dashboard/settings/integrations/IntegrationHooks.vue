@@ -5,15 +5,21 @@ import { useAlert } from 'dashboard/composables';
 import { useIntegrationHook } from 'dashboard/composables/useIntegrationHook';
 import NewHook from './NewHook.vue';
 import SingleIntegrationHooks from './SingleIntegrationHooks.vue';
+import OpenAiKeyGuide from './OpenAiKeyGuide.vue';
 import MultipleIntegrationHooks from './MultipleIntegrationHooks.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
+import {
+  CRM_AI_INTEGRATION_ID,
+  isCrmAiKeyPending,
+} from 'dashboard/helper/crmAiKey';
 
 export default {
   components: {
     NewHook,
     SingleIntegrationHooks,
     MultipleIntegrationHooks,
+    OpenAiKeyGuide,
     SettingsLayout,
     BaseSettingsHeader,
   },
@@ -56,6 +62,16 @@ export default {
     },
     showAddButton() {
       return this.showIntegrationHooks && this.isIntegrationMultiple;
+    },
+    // O passo a passo da OpenAI aparece enquanto a conta não tem a chave
+    // ligada. Com a chave no lugar ele vira ruído; quem for trocar a chave
+    // desconecta primeiro e o passo a passo volta.
+    showOpenAiKeyGuide() {
+      return (
+        this.integrationId === CRM_AI_INTEGRATION_ID &&
+        this.showIntegrationHooks &&
+        isCrmAiKeyPending(this.integration)
+      );
     },
     deleteTitle() {
       return this.isHookTypeInbox
@@ -135,6 +151,8 @@ export default {
             @delete="openDeletePopup"
           />
         </div>
+
+        <OpenAiKeyGuide v-if="showOpenAiKeyGuide" class="mb-4" />
 
         <div v-if="isIntegrationSingle">
           <SingleIntegrationHooks

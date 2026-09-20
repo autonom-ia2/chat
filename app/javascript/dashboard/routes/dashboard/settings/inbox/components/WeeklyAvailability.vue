@@ -10,15 +10,22 @@ import {
   timeSlotParse,
   timeSlotTransform,
   defaultTimeSlot,
-  timeZoneOptions,
+  timeZoneOptionsWith,
+  browserTimeZone,
 } from '../helpers/businessHour';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 
-const DEFAULT_TIMEZONE = {
-  label: 'Pacific Time (US & Canada) (GMT-07:00)',
-  value: 'America/Los_Angeles',
+// Sem fuso salvo, sugere o do navegador em vez de um fuso fixo dos EUA.
+const defaultTimeZone = options => {
+  const browser = browserTimeZone();
+  return (
+    options.find(option => option.value === browser) || {
+      label: browser,
+      value: browser,
+    }
+  );
 };
 
 export default {
@@ -44,7 +51,8 @@ export default {
     return {
       isBusinessHoursEnabled: false,
       unavailableMessage: '',
-      timeZone: DEFAULT_TIMEZONE,
+      timeZone: null,
+      timeZoneKey: 0,
       dayNames: {
         0: 'Sunday',
         1: 'Monday',
@@ -64,15 +72,21 @@ export default {
       return this.timeSlots.filter(slot => slot.from && !slot.valid).length > 0;
     },
     timeZones() {
-      return [...timeZoneOptions()];
+      return timeZoneOptionsWith(this.inbox?.timezone);
     },
     timeZoneValue: {
       get() {
-        return this.timeZone.value;
+        return this.timeZone?.value || '';
       },
       set(value) {
         const match = this.timeZones.find(tz => tz.value === value);
-        if (match) this.timeZone = match;
+        if (match) {
+          this.timeZone = match;
+          return;
+        }
+        // Clicar de novo na opção escolhida desmarca no ComboBox, mas a caixa
+        // precisa de um fuso: remonta o campo com o valor que continua valendo.
+        this.timeZoneKey += 1;
       },
     },
     isRichEditorEnabled() {
@@ -109,7 +123,7 @@ export default {
       this.timeSlots = slots;
       this.timeZone =
         this.timeZones.find(item => timeZone === item.value) ||
-        DEFAULT_TIMEZONE;
+        defaultTimeZone(this.timeZones);
     },
     onSlotUpdate(slotIndex, slotData) {
       this.timeSlots = this.timeSlots.map(item =>
@@ -124,7 +138,7 @@ export default {
           working_hours_enabled: this.isBusinessHoursEnabled,
           out_of_office_message: this.unavailableMessage,
           working_hours: timeSlotTransform(this.timeSlots),
-          timezone: this.timeZone.value,
+          timezone: this.timeZone?.value || browserTimeZone(),
           channel: {},
         };
         await this.$store.dispatch('inboxes/updateInbox', payload);
@@ -174,6 +188,7 @@ export default {
       :label="$t('INBOX_MGMT.BUSINESS_HOURS.TIMEZONE_LABEL')"
     >
       <ComboBox
+        :key="timeZoneKey"
         v-model="timeZoneValue"
         :options="timeZones"
         :placeholder="$t('INBOX_MGMT.BUSINESS_HOURS.DAY.CHOOSE')"

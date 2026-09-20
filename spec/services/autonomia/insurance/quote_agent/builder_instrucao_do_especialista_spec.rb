@@ -29,10 +29,33 @@ module FormularioDoEspecialista
     @expostos ||= Autonomia::Insurance::Parametros.new(SCHEMA).caminhos
   end
 
+  def garagem_de_casa
+    campo('vehicle.garageAtHome')
+  end
+
+  def portoes_no_dominio?
+    garagem_de_casa['valores'].values_at('1', '2').all? { |v| v.match?(/portão/i) }
+  end
+
   def campo(nome)
     raise "o formulário do especialista não expõe #{nome}" unless expostos.include?(nome)
 
     campos.fetch(nome) { raise "o schema do adapter não tem #{nome}" }
+  end
+
+  # Os campos de LISTA FECHADA que o modelo enxerga — a classe inteira de que fala a regra do
+  # assunto pela metade (#525), não um campo escolhido a dedo.
+  def de_lista_fechada
+    @de_lista_fechada ||= expostos.filter_map { |nome| campos[nome] }.select { |c| c['valores'].present? }
+  end
+
+  # A descrição COMO O MODELO A RECEBE (`Parametros`), não como ela está no schema: é nela que as
+  # opções da lista viajam, e é o que sustenta "as opções vêm sempre da própria ferramenta".
+  def descricao_no_formulario(nome)
+    grupo, folha = nome.split('.', 2)
+    Autonomia::Insurance::Parametros.de_auto(SCHEMA)
+                                    .find { |g| g['name'] == grupo }['properties']
+                                    .find { |p| p['name'] == folha }['description']
   end
 
   def valores(nome)
@@ -53,10 +76,23 @@ module FormularioDoEspecialista
   end
 end
 
+# DOIS ARQUIVOS, UM MANUAL (#525). O que o especialista lê é o bloco comum e, depois, o manual do
+# ramo — e é sobre esse TEXTO MONTADO que as âncoras valem. Ancorar só no arquivo de auto bastava
+# enquanto tudo morava nele; com a regra comum em outro arquivo, a mesma tabela passaria verde com o
+# bloco comum vazio, e a garantia se perderia justamente na mudança. O nome do arquivo do ramo vem
+# do `ESPECIALISTAS`, não repetido aqui: é a mesma entrada que o deploy entrega ao especialista.
+module ArquivosDoEspecialista
+  BUILDER = Autonomia::Insurance::QuoteAgent::Builder
+  DO_RAMO = BUILDER::ESPECIALISTAS.find { |e| e[:slug] == 'cotacao_auto' }.fetch(:arquivo)
+  RAMO = BUILDER::INSTRUCOES.join(DO_RAMO)
+  COMUM = BUILDER::INSTRUCOES.join(BUILDER::ARQUIVO_COMUM_DO_ESPECIALISTA)
+end
+
 module ManualDoEspecialistaDeAuto
   extend FormularioDoEspecialista
 
-  ARQUIVO = Autonomia::Insurance::QuoteAgent::Builder::INSTRUCOES.join('especialista_auto.md')
+  ARQUIVO = ArquivosDoEspecialista::RAMO
+  BLOCO_COMUM = ArquivosDoEspecialista::COMUM
   SCHEMA = FormularioDoEspecialista::SCHEMA
 
   # CADA PROMESSA, PELA FRASE EXATA, E O QUE A SUSTENTA. A frase é a âncora: se o texto mudar e a
@@ -87,6 +123,25 @@ module ManualDoEspecialistaDeAuto
     # renovação com bônus alheio — e o preço não se sustenta na emissão.
     'placa, CEP, modelo, ano' => lambda {
       %w[vehicle.plate vehicle.overnightZipCode vehicle.fipeCode vehicle.modelYear].all? { |n| campo(n) }
+    },
+    # OS SINISTROS DA APÓLICE (#514). Em 11/09/2026, execução 8, a mesma apólice HDI em PDF trouxe
+    # `previousClaimsCount=1` — o especialista leu e mandou. Em 12/09 a #411 FECHOU a lista do que se
+    # extrai do documento ("os três dados da apólice e os do veículo"), para impedir a cópia das
+    # coberturas; os sinistros, que nunca tinham estado em lista nenhuma, saíram junto com elas. Em
+    # 19/09/2026, execução 38, mesma apólice ("Qtde Sinistros :1"), mesma renovação: companhia 657,
+    # bônus 9, número e vigência vieram, e `quotation.previousClaimsCount` saiu vazio. A lista volta a
+    # nomeá-los, nas duas frases em que ela aparece.
+    #
+    # AS DUAS ÂNCORAS DOS SINISTROS: há onde escrevê-los, o campo VIAJA na entrada, e continua OPCIONAL.
+    # A EXCEÇÃO DO PORTÃO (CEO, 19/09/2026): campo opcional, e os dois valores da pergunta são os do domínio.
+    'o portão é eletrônico ou manual' => -> { garagem_de_casa['obrigatorio'] == false && portoes_no_dominio? },
+    "a quantidade de\nsinistros da vigência anterior" => lambda {
+      campo('quotation.previousClaimsCount')['obrigatorio'] == false && grupos_da_entrada.include?('quotation') &&
+        entrada_de_auto('quotation' => { 'previousClaimsCount' => 1 }).dig('quotation', 'previousClaimsCount') == 1
+    },
+    "os três dados da apólice, o\nbônus, os sinistros e os do veículo" => lambda {
+      %w[quotation.previousInsurerCode quotation.previousPolicyNumber quotation.previousPolicyEndDate
+         quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n) }
     },
     'sem marcar renovação, sem bônus e sem histórico de sinistros' => lambda {
       %w[quotation.isRenewal quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n)['obrigatorio'] == false }
@@ -228,6 +283,35 @@ module ManualDoEspecialistaDeAuto
   }.freeze
 end
 
+# A REGRA DA LISTA FECHADA (#525, decisão do CEO de 20/09/2026), em módulo próprio pelo mesmo motivo
+# que as frases: a tabela de cima só cresce, e engordá-la de novo a faria passar do teto de linhas.
+#
+# O PORTÃO ERA UM CASO; A REGRA É A CLASSE DELE, e por isso mora no bloco comum. Medido em
+# 20/09/2026: 31 dos 84 campos do formulário de auto têm lista fechada. Quando o cliente levanta o
+# assunto e a fala dele não determina a opção, o campo ia vazio e o preço saía sem um dado que ele
+# deu — provado na conversa 6980, em que "o carro fica na garagem" virou `vehicle.garageAtHome`
+# vazio.
+module PromessaDaListaFechada
+  extend FormularioDoEspecialista
+
+  # AS CAPACIDADES QUE A REGRA SUPÕE, conferidas no campo do caso de produção:
+  #   perguntar a opção só faz sentido se houver LISTA, com mais de uma opção nela;
+  #   "sem resposta, o campo vai em branco" só é legal enquanto o campo for OPCIONAL;
+  #   "as opções vêm sempre da própria ferramenta" só é verdade se elas chegarem ao modelo — e elas
+  #   chegam dentro da DESCRIÇÃO que o `Parametros` monta, não no `valores` cru, que ele não expõe.
+  # E a classe existe: mais de um campo exposto tem lista fechada. Se o formulário passasse a
+  # entregar as listas de outro jeito, ou se este campo virasse obrigatório, a regra precisaria ser
+  # reescrita — e este exemplo reprova antes.
+  PROMESSAS = {
+    'pergunte a opção antes de cotar' => lambda {
+      opcoes = garagem_de_casa['valores'].values
+
+      de_lista_fechada.size > 1 && opcoes.size > 1 && garagem_de_casa['obrigatorio'] == false &&
+        opcoes.all? { |opcao| descricao_no_formulario('vehicle.garageAtHome').include?(opcao) }
+    }
+  }.freeze
+end
+
 # AS PROMESSAS QUE A ENTREGA DAS FRASES ESCREVEU (12/09/2026), em módulo próprio pelo mesmo motivo
 # que o formulário mora separado: a tabela acima só cresce, e cada entrega que a engordasse no mesmo
 # módulo passaria do teto de linhas por um motivo que não é o dela.
@@ -275,7 +359,10 @@ module PromessasDasFrasesDoEspecialista
 end
 
 RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
-  let(:texto) { ManualDoEspecialistaDeAuto::ARQUIVO.read }
+  # O TEXTO QUE O MODELO LÊ, montado como em runtime (#525): bloco comum + manual do ramo.
+  let(:texto) { described_class.instrucao_do_especialista(ArquivosDoEspecialista::DO_RAMO) }
+  let(:comum) { ManualDoEspecialistaDeAuto::BLOCO_COMUM.read }
+  let(:do_ramo) { ManualDoEspecialistaDeAuto::ARQUIVO.read }
   let(:account) { create(:account) }
 
   def construir
@@ -288,6 +375,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
   describe 'promessa e capacidade (termos 2 e 4)' do
     ManualDoEspecialistaDeAuto::PROMESSAS
+      .merge(PromessaDaListaFechada::PROMESSAS)
       .merge(PromessasDasFrasesDoEspecialista::PROMESSAS).each do |frase, sustenta|
       it "«#{frase.tr("\n", ' ')}» tem o que a sustenta" do
         expect(texto).to include(frase)
@@ -329,16 +417,65 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # PROSA NÃO SE VERIFICA POR MÁQUINA: uma promessa nova escrita com outras palavras ("emita a apólice")
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
-  it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('b0a5a0c3d41ae4b555c66cd31e95cd78')
+  #
+  # SÃO DOIS ARQUIVOS E DUAS ASSINATURAS (#525). Assinar só o do ramo deixaria o bloco comum — onde
+  # agora moram a metade das promessas da tabela — livre para mudar sem revisão nenhuma.
+  it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('bbe16566d506012ac73fdcd742f6561d')
+  end
+
+  it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('61a9ff6849d7bb778b619e5020b18666')
+  end
+
+  # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer
+  # ramo mora num arquivo só, colado no começo do manual de cada ramo, para nascer certa nos dez
+  # ramos que vêm. O que estes exemplos guardam é a montagem: a ordem, a ausência de duplicata, o
+  # teto da coluna e as referências internas.
+  describe 'a montagem do manual' do
+    it 'é o bloco comum e depois o do ramo, nessa ordem' do
+      expect(texto).to start_with(comum)
+      expect(texto).to end_with(do_ramo)
+      expect(texto.index(comum)).to be < texto.index(do_ramo)
+    end
+
+    # O QUE MUDOU DE ARQUIVO SAIU DO OUTRO. Regra escrita nos dois lugares é regra que diverge na
+    # primeira correção — e, pior, ocupa o contexto do modelo duas vezes.
+    it 'não deixa nada do bloco comum duplicado no manual do ramo' do
+      paragrafos = comum.split(/\n{2,}/).map(&:strip).reject(&:empty?)
+      repetidos = paragrafos.select { |paragrafo| do_ramo.include?(paragrafo) }
+
+      expect(repetidos).to be_empty
+    end
+
+    # O TETO É DA COLUNA, e a criação falha com um erro de validação que não explica nada a quem
+    # clicou. Dois arquivos somados passam mais perto dele que um.
+    it 'cabe no teto do campo instruction' do
+      expect(texto.length).to be < Autonomia::Agents::Specialist::MAX_INSTRUCTION_LENGTH
+    end
+
+    # REFERÊNCIA QUEBRADA É INSTRUÇÃO QUEBRADA. Os dois textos se citam por seção (o comum por
+    # letra, o do ramo por número), e uma seção renumerada de um lado deixa o outro apontando para
+    # lugar nenhum — o modelo lê "§7" e não acha §7.
+    it 'não tem referência de seção sem destino' do
+      titulos = texto.scan(/^\#{2,3} ([A-Z0-9]+(?:\.\d+)?)\.? /).flatten
+      orfas = texto.scan(/§([A-Z0-9]+(?:\.\d+)?)/).flatten.uniq - titulos
+
+      expect(titulos).not_to be_empty
+      expect(orfas).to be_empty
+    end
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do
+    # É POR AQUI QUE O AGENTE 24 DA CONTA 16 RECEBE O BLOCO COMUM (#525): sem recriar, sem escrever
+    # no banco, sem rollout — a coluna continua sendo o retrato do nascimento, e quem monta o turno
+    # lê os dois arquivos do deploy.
     it 'o agente já criado recebe o texto novo sem ser recriado' do
       especialista = especialista_de_auto
       especialista.update!(instruction: 'manual velho, gravado no nascimento')
 
       expect(especialista.reload.effective_instruction).to eq(texto)
+      expect(especialista.effective_instruction).to start_with(comum)
     end
 
     it 'um agente criado do zero nasce com o mesmo texto, na coluna e no que roda' do

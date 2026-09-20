@@ -173,7 +173,8 @@
           "SLA_MISSED_FIRST_RESPONSE": "Uma conversa perde o SLA de primeira resposta",
           "SLA_MISSED_NEXT_RESPONSE": "Uma conversa perde o SLA da próxima resposta",
           "SLA_MISSED_RESOLUTION": "Uma conversa perde o SLA de resolução",
-          "CRM_FOLLOWUP_REMINDER": "Um lembrete de follow-up do CRM está vencido"
+          "CRM_FOLLOWUP_REMINDER": "Um lembrete de follow-up do CRM está vencido",
+          "CONVERSATION_HANDOFF_REQUEST": "Um cliente precisa de atendimento humano e a IA chama você"
         },
         "BROWSER_PERMISSION": "Ative notificações push em seu navegador para poder recebê-las"
       },
@@ -287,7 +288,8 @@
     "CODE": {
       "BUTTON_TEXT": "Copiar",
       "CODEPEN": "Abrir em CodePen",
-      "COPY_SUCCESSFUL": "Código copiado para área de transferência com sucesso"
+      "COPY_SUCCESSFUL": "Código copiado para área de transferência com sucesso",
+      "COPY_ERROR": "Não foi possível copiar. Tente de novo."
     },
     "SHOW_MORE_BLOCK": {
       "SHOW_MORE": "Mostrar Mais",
@@ -342,6 +344,13 @@
     "AGENTS_AUTONOMIA": "Agentes",
     "AGENTS_HUB": "Meus agentes",
     "AGENTS_BUILDER": "Construtor de agentes",
+    "PROSPECTING": "Prospecção",
+    "PROSPECTING_SEARCH": "Buscar leads",
+    "PROSPECTING_LISTS": "Listas",
+    "INSURANCE": "Cotação",
+    "INSURANCE_CONNECTIONS": "Conexões",
+    "INSURANCE_AGENT": "Agente",
+    "PROSPECTING_SETTINGS": "Configurações",
     "ACTIVE": "Ativo",
     "COMPANIES": "Empresas",
     "ALL_COMPANIES": "Todas as empresas",
@@ -439,7 +448,8 @@
     "DOCS": "Ler documentos",
     "SECURITY": "Segurança",
     "CAPTAIN_AI": "Capitão",
-    "CONVERSATION_WORKFLOW": "Fluxo de Conversa"
+    "CONVERSATION_WORKFLOW": "Fluxo de Conversa",
+    "FIRST_STEPS": "Primeiros passos"
   },
   "DATA_IMPORTS": {
     "HEADER": "Dados",

@@ -2,12 +2,12 @@
 import { mapGetters } from 'vuex';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import { useAccount } from 'dashboard/composables/useAccount';
-import OnboardingView from '../OnboardingView.vue';
+import FirstSteps from 'dashboard/components-next/onboarding/FirstSteps.vue';
 import EmptyStateMessage from './EmptyStateMessage.vue';
 
 export default {
   components: {
-    OnboardingView,
+    FirstSteps,
     EmptyStateMessage,
   },
   props: {
@@ -75,7 +75,7 @@ export default {
       v-if="!inboxesList.length && !uiFlags.isFetching && !loadingChatList"
       class="clearfix mx-auto"
     >
-      <OnboardingView v-if="isAdmin" />
+      <FirstSteps v-if="isAdmin" />
       <EmptyStateMessage v-else :message="$t('CONVERSATION.NO_INBOX_AGENT')" />
     </div>
     <!-- Show empty state images if not loading -->
