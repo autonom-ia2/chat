@@ -39,7 +39,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil
 - gate: feature flag `inbox_management`; papel `administrator`
 - pre_requisitos: caixa criada
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Horario de atendimento; 3. Ative/ajuste os dias da semana; 4. Configure faixas de horario; 5. Salve.
-- gotchas: mensagens e automacoes podem considerar a disponibilidade da caixa; confira fuso horario e intervalos antes de salvar.
+- gotchas: mensagens e automacoes podem considerar a disponibilidade da caixa; conta nova nasce no fuso da operacao (America/Sao_Paulo por padrao) e a caixa herda esse fuso ao ser criada; a tela mostra o fuso realmente salvo, inclusive UTC; confira fuso horario e intervalos antes de salvar.
 - nav_target: `settings_inbox_show`
 
 ### Atribuir conversa
