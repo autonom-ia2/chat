@@ -8,7 +8,7 @@ import FirstSteps from 'dashboard/components-next/onboarding/FirstSteps.vue';
 export const routes = [
   {
     path: frontendURL('accounts/:accountId/primeiros-passos'),
-    name: 'onboarding_first_steps',
+    name: 'first_steps',
     meta: {
       permissions: ['administrator'],
     },

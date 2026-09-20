@@ -529,8 +529,8 @@ const menuItems = computed(() => {
             name: 'FirstSteps',
             label: t('SIDEBAR.FIRST_STEPS'),
             icon: 'i-lucide-list-checks',
-            to: accountScopedRoute('onboarding_first_steps'),
-            activeOn: ['onboarding_first_steps'],
+            to: accountScopedRoute('first_steps'),
+            activeOn: ['first_steps'],
           },
         ]
       : []),
