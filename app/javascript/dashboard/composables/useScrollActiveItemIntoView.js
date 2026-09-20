@@ -1,4 +1,4 @@
-import { watch } from 'vue';
+import { watch, onScopeDispose } from 'vue';
 
 const MAX_FRAMES = 20;
 
@@ -50,6 +50,10 @@ export function useScrollActiveItemIntoView(containerRef, watchSource) {
     },
     { immediate: true, flush: 'post' }
   );
+
+  onScopeDispose(() => {
+    if (pendingFrame) cancelAnimationFrame(pendingFrame);
+  });
 
   return { scrollActiveIntoView };
 }

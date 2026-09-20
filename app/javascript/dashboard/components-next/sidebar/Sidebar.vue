@@ -1491,6 +1491,8 @@ const menuItems = computed(() => {
 /* A lista de menus passa da altura da tela quando um grupo grande esta aberto.
    A barra fina avisa que da para rolar; escondida, parecia travada. */
 .sidebar-scrollbar {
+  /* Espaço reservado para a barra: o conteúdo não pula quando um grupo abre. */
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--slate-6)) transparent;
 }
@@ -1508,7 +1510,7 @@ const menuItems = computed(() => {
   border-radius: 3px;
 }
 
-.sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgb(var(--slate-8));
 }
 
