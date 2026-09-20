@@ -1189,6 +1189,7 @@
       "DEFAULT_STAGE": "Default stage",
       "FIRST_STAGE": "First pipeline stage",
       "AUTO_CREATE": "Create card automatically",
+      "PIPELINE_SWITCH": "This inbox leaves the {de} pipeline and starts feeding {para}. Cards already in the previous pipeline stay where they are.",
       "SAVE": "Save",
       "SAVED": "Saved",
       "UNSAVED": "Unsaved changes in {count} inbox(es)",

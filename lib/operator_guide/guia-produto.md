@@ -340,8 +340,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: `CRM_KANBAN_ENABLED=true`; permissão de administração CRM (`administrator` ou `crm_admin` para custom roles).
 - pre_requisitos: caixas já criadas quando o objetivo for vincular atendimento ao funil.
-- passos: Clique em Novo funil; defina nome, descrição e estágios; salve; use Editar funil para ajustar estágios, automações e caixas vinculadas; em Configurações da caixa, escolha comportamento padrão de criação/vínculo.
-- gotchas: deletar estágio abre confirmação e pode falhar se houver cards dependentes; caixa vinculada define defaults de cards criados a partir de conversas; arquivar funil não apaga cards.
+- passos: São duas paradas. 1. Clique em Novo funil, defina nome e estágios e salve — as descrições dos estágios já vêm prontas. 2. Abra Configurar inboxes, ligue o CRM na caixa, escolha o funil e a etapa de entrada e salve; isso já cria o vínculo entre a caixa e o funil, com a criação automática de cards ligada. Não é mais preciso voltar em Editar funil para vincular a caixa.
+- gotchas: a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Inbox e automação continua valendo para a caixa que alimenta mais de um funil; deletar estágio abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-pipeline`
 

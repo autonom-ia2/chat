@@ -4,7 +4,8 @@ import CrmInboxSettingsDrawer from '../CrmInboxSettingsDrawer.vue';
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
-    t: (key, params) => (params ? `${key}|${params.count}` : key),
+    t: (key, params) =>
+      params ? `${key}|${Object.values(params).join(',')}` : key,
   }),
 }));
 
@@ -115,6 +116,85 @@ describe('CrmInboxSettingsDrawer', () => {
     expect(firstAfter.text()).not.toContain('CRM_KANBAN.INBOX_SETTINGS.SAVED');
     expect(crmToggle(firstAfter).element.checked).toBe(true);
     expect(saveButton(firstAfter).attributes('data-loading')).toBe('false');
+  });
+
+  // Issue #499: configurar a caixa passa a bastar, e a criação automática de
+  // cards vem marcada para a caixa que ainda não foi configurada.
+  const autoCreateToggle = section =>
+    section.findAll('input[type="checkbox"]')[1];
+
+  const PIPELINES = [
+    { id: 10, name: 'Funil Comercial' },
+    { id: 20, name: 'Funil de Suporte' },
+  ];
+
+  it('deixa a criação automática marcada na caixa ainda não configurada', () => {
+    const wrapper = mountDrawer({ settings: [] });
+    const [first] = sections(wrapper);
+
+    expect(autoCreateToggle(first).element.checked).toBe(true);
+  });
+
+  it('respeita a escolha de quem já configurou a caixa sem criação automática', () => {
+    const wrapper = mountDrawer({
+      settings: [
+        { inbox_id: 1, crm_enabled: true, auto_create_card: false },
+        SETTINGS[1],
+      ],
+    });
+    const [first] = sections(wrapper);
+
+    expect(autoCreateToggle(first).element.checked).toBe(false);
+  });
+
+  it('avisa a troca de funil na tela, nomeando de onde sai e para onde vai', async () => {
+    const wrapper = mountDrawer({
+      pipelines: PIPELINES,
+      settings: [
+        { inbox_id: 1, crm_enabled: true, default_pipeline_id: 10 },
+        SETTINGS[1],
+      ],
+    });
+
+    expect(wrapper.text()).not.toContain(
+      'CRM_KANBAN.INBOX_SETTINGS.PIPELINE_SWITCH'
+    );
+
+    wrapper.vm.forms[1].default_pipeline_id = 20;
+    await nextTick();
+
+    expect(wrapper.text()).toContain(
+      'CRM_KANBAN.INBOX_SETTINGS.PIPELINE_SWITCH|Funil Comercial,Funil de Suporte'
+    );
+  });
+
+  it('não avisa troca na caixa que está escolhendo o primeiro funil', async () => {
+    const wrapper = mountDrawer({ pipelines: PIPELINES, settings: [] });
+
+    wrapper.vm.forms[1].crm_enabled = true;
+    wrapper.vm.forms[1].default_pipeline_id = 10;
+    await nextTick();
+
+    expect(wrapper.text()).not.toContain(
+      'CRM_KANBAN.INBOX_SETTINGS.PIPELINE_SWITCH'
+    );
+  });
+
+  it('não avisa troca quando o CRM da caixa está desligado', async () => {
+    const wrapper = mountDrawer({
+      pipelines: PIPELINES,
+      settings: [
+        { inbox_id: 1, crm_enabled: false, default_pipeline_id: 10 },
+        SETTINGS[1],
+      ],
+    });
+
+    wrapper.vm.forms[1].default_pipeline_id = 20;
+    await nextTick();
+
+    expect(wrapper.text()).not.toContain(
+      'CRM_KANBAN.INBOX_SETTINGS.PIPELINE_SWITCH'
+    );
   });
 
   it('closes from the Done button', async () => {
