@@ -30,16 +30,51 @@ class Crm::InboxSettings::PipelineLinkSyncer
     @setting.crm_enabled? && @setting.default_pipeline_id.present?
   end
 
+  # Dois salvamentos simultâneos da mesma caixa acham o vínculo inexistente ao
+  # mesmo tempo e o segundo esbarra no índice único (conta, funil, caixa). Nesse
+  # caso o registro já existe: basta reabrir e atualizar.
+  #
+  # O insert vai num savepoint porque o controller já abriu transação: no
+  # Postgres, o erro derruba a transação inteira e o resgate seguinte falharia
+  # com "current transaction is aborted".
   def sincronizar_vinculo
-    vinculo = account.crm_pipeline_inboxes.find_or_initialize_by(
-      pipeline_id: @setting.default_pipeline_id,
-      inbox_id: @setting.inbox_id
-    )
+    existente = vinculo_existente
+    return gravar_vinculo(existente) if existente.present?
+
+    begin
+      ActiveRecord::Base.transaction(requires_new: true) { gravar_vinculo(novo_vinculo) }
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+      # A corrida aparece de dois jeitos: pela validação de unicidade do modelo
+      # ou pelo índice do banco, conforme o momento em que o outro salvamento
+      # gravou. Qualquer outra falha (etapa de outro funil, por exemplo) segue
+      # subindo — só tratamos o caso em que o vínculo passou a existir.
+      concorrente = vinculo_existente
+      raise e if concorrente.blank?
+
+      gravar_vinculo(concorrente)
+    end
+  end
+
+  def gravar_vinculo(vinculo)
     vinculo.default_stage_id = @setting.default_stage_id
     vinculo.auto_create_card = @setting.auto_create_card?
     vinculo.created_by ||= @user
     vinculo.save!
     vinculo
+  end
+
+  def novo_vinculo
+    account.crm_pipeline_inboxes.new(
+      pipeline_id: @setting.default_pipeline_id,
+      inbox_id: @setting.inbox_id
+    )
+  end
+
+  def vinculo_existente
+    account.crm_pipeline_inboxes.find_by(
+      pipeline_id: @setting.default_pipeline_id,
+      inbox_id: @setting.inbox_id
+    )
   end
 
   # Só na troca de funil. Fora dela, mexer nos outros vínculos apagaria o ajuste

@@ -100,6 +100,32 @@ RSpec.describe Crm::InboxSettings::PipelineLinkSyncer do
     expect(vinculo_de(pipeline).auto_create_card).to be(false)
   end
 
+  # Dois salvamentos simultâneos da mesma caixa: o segundo esbarra no índice
+  # único e precisa reaproveitar o vínculo recém-criado, não estourar 500.
+  it 'aproveita o vínculo criado por outro salvamento simultâneo' do
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    setting = configurar(pipeline: pipeline, stage: stage)
+    syncer = described_class.new(inbox_setting: setting, user: admin)
+
+    chamadas = 0
+    allow(account.crm_pipeline_inboxes).to receive(:find_by).and_wrap_original do |original, *args|
+      chamadas += 1
+      # Na primeira busca finge que não existe, e cria o vínculo por fora: é o
+      # que a requisição concorrente teria feito no meio do caminho.
+      if chamadas == 1
+        account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: false)
+        nil
+      else
+        original.call(*args)
+      end
+    end
+    allow(setting.account).to receive(:crm_pipeline_inboxes).and_return(account.crm_pipeline_inboxes)
+
+    expect { syncer.perform }.not_to raise_error
+    expect(account.crm_pipeline_inboxes.where(inbox_id: inbox.id).count).to eq(1)
+    expect(vinculo_de(pipeline).auto_create_card).to be(true)
+  end
+
   it 'não cria vínculo quando a caixa não tem funil padrão' do
     setting = configurar(pipeline: nil, stage: nil)
 

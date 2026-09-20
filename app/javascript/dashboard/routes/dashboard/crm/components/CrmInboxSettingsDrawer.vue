@@ -163,16 +163,29 @@ const nomeDoFunil = pipelineId => {
 // Salvar aqui passa a mover a criação automática de cards para o funil
 // escolhido. Quando a caixa já alimentava outro funil, a pessoa precisa saber
 // disso antes de salvar, com os dois nomes na tela.
-const trocaDeFunil = inbox => {
-  const anterior =
-    settingByInboxId.value[Number(inbox.id)]?.default_pipeline_id;
-  const atual = formFor(inbox).default_pipeline_id;
-  if (!anterior || !atual) return null;
-  if (String(anterior) === String(atual)) return null;
-  if (!formFor(inbox).crm_enabled) return null;
+const trocasPorInbox = computed(() =>
+  sortedInboxes.value.reduce((resultado, inbox) => {
+    const form = forms[inbox.id];
+    const anterior =
+      settingByInboxId.value[Number(inbox.id)]?.default_pipeline_id;
+    const atual = form?.default_pipeline_id;
+    const houveTroca =
+      form?.crm_enabled &&
+      anterior &&
+      atual &&
+      String(anterior) !== String(atual);
 
-  return { de: nomeDoFunil(anterior), para: nomeDoFunil(atual) };
-};
+    if (houveTroca) {
+      resultado[inbox.id] = {
+        de: nomeDoFunil(anterior),
+        para: nomeDoFunil(atual),
+      };
+    }
+    return resultado;
+  }, {})
+);
+
+const trocaDeFunil = inbox => trocasPorInbox.value[inbox.id] || null;
 
 const onCrmEnabledChange = inbox => {
   const form = formFor(inbox);
