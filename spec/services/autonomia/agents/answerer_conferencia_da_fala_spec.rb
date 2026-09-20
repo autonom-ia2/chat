@@ -43,9 +43,13 @@ RSpec.describe Autonomia::Agents::Answerer do
       .to_return(status: 200, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 
-  def fala(texto)
-    { reply: texto, confidence: 0.9, should_handoff: false, handoff_reason: nil, used_snippet_ids: [],
-      answered_from_knowledge: false }.to_json
+  def resposta_do_passo(passo)
+    fala(passo[:texto], escala: passo[:escala] == true)
+  end
+
+  def fala(texto, escala: false)
+    { reply: texto, confidence: 0.9, should_handoff: escala, handoff_reason: (escala ? 'cliente pediu' : nil),
+      used_snippet_ids: [], answered_from_knowledge: false }.to_json
   end
 
   # Cada chamada ao modelo leva a próxima entrada da fila: { texto:, chamada: (opcional), antes: (opcional) }.
@@ -62,7 +66,7 @@ RSpec.describe Autonomia::Agents::Answerer do
 
       passo[:antes]&.call
       executor.call([passo[:chamada]]) if passo[:chamada]
-      { text: fala(passo[:texto]) }
+      { text: resposta_do_passo(passo) }
     end
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     chamadas
@@ -77,11 +81,17 @@ RSpec.describe Autonomia::Agents::Answerer do
     chamada[:input].last[:content].first[:text]
   end
 
-  def cotacao_correndo
-    run = Autonomia::Agents::ToolRun.open!(
+  # A execução ACEITA no turno, como o especialista a abre: `pending` até o Responder promovê-la no fim do
+  # turno. É o estado em que uma cotação legítima está no momento da conferência.
+  def cotacao_aberta_no_turno
+    Autonomia::Agents::ToolRun.open!(
       agent: agente, slug: cotacao.slug, arguments: { 'produto' => 'auto', 'dados' => '{}' },
       scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id, origin_message_id: 77 }
     )
+  end
+
+  def cotacao_correndo
+    run = cotacao_aberta_no_turno
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
     run.reload
   end
@@ -170,11 +180,154 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(resultado.reply).to eq(ainda_correndo)
     end
 
-    it 'sem cotação correndo no começo do turno: não pede reescrita' do
-      chamadas = stub_do_modelo({ texto: ainda_correndo })
+    # ANTES DA #547 este exemplo afirmava o contrário: sem cotação nenhuma a fala saía como veio, e era
+    # exatamente o defeito medido na conversa 6983. Quem cobre o caso agora é o `:cotacao_prometida`.
+    it 'sem cotação nenhuma: quem dispara é a promessa sem cotação, não o fechamento' do
+      chamadas = stub_do_modelo({ texto: ainda_correndo }, { texto: 'Preciso do CEP para cotar.' })
 
       responder
 
+      expect(chamadas.size).to eq(2)
+      expect(pedido_de_reescrita(chamadas.last)).to include('não existe cotação correndo')
+      expect(pedido_de_reescrita(chamadas.last)).not_to include('terminou enquanto você respondia')
+    end
+  end
+
+  # PROMESSA DE COMPARATIVO SEM COTAÇÃO (#547). Medido em produção na conversa 6983, em 20/09/2026: o cliente
+  # mandou tudo, a Lia disse que o comparativo chegava, e nenhuma execução foi criada. Vinte minutos depois,
+  # cobrada, repetiu a promessa. O estado que desmente a fala aqui é a AUSÊNCIA de cotação.
+  describe 'promessa de comparativo sem cotação (#547)' do
+    let(:promessa) { 'Vou seguir com esses dados. O comparativo das seguradoras chega por aqui quando ficar pronto.' }
+
+    it 'sem cotação nenhuma, pede UMA reescrita, com ferramentas, dizendo para acionar a cotação agora' do
+      # Arrange
+      chamadas = stub_do_modelo({ texto: promessa },
+                                { texto: 'Estou cotando agora com as seguradoras.',
+                                  antes: -> { cotacao_aberta_no_turno } })
+
+      # Act
+      resultado = responder
+
+      # Assert
+      expect(chamadas.size).to eq(2)
+      expect(chamadas.last[:tools]).to be_present
+      expect(pedido_de_reescrita(chamadas.last)).to include('não existe cotação correndo')
+      expect(resultado.reply).to eq('Estou cotando agora com as seguradoras.')
+    end
+
+    it 'cotação aberta na própria reescrita: a reescrita publica e o sinal some' do
+      chamadas = stub_do_modelo({ texto: promessa },
+                                { texto: 'Já mandei cotar, o comparativo chega por aqui.',
+                                  antes: -> { cotacao_aberta_no_turno } })
+
+      resultado = responder
+
+      expect(chamadas.size).to eq(2)
+      expect(resultado.reply).to eq('Já mandei cotar, o comparativo chega por aqui.')
+    end
+
+    # O caso legítimo, e o motivo de a leitura ser refeita no momento da conferência: a execução aceita neste
+    # turno ainda está `pending` (só o Responder a promove), e uma leitura que só olhasse `correndo?` a perderia.
+    it 'cotação aceita neste turno (pending): promessa legítima, sem reescrita' do
+      cotacao_aberta_no_turno
+      chamadas = stub_do_modelo({ texto: promessa })
+
+      resultado = responder
+
+      expect(chamadas.size).to eq(1)
+      expect(resultado.reply).to eq(promessa)
+    end
+
+    it 'cotação correndo desde antes do turno: promessa legítima, sem reescrita' do
+      cotacao_correndo
+      chamadas = stub_do_modelo({ texto: promessa })
+
+      expect(responder.reply).to eq(promessa)
+      expect(chamadas.size).to eq(1)
+    end
+
+    it 'sem promessa de cotação: fala normal sai como veio' do
+      chamadas = stub_do_modelo({ texto: 'Me manda o CEP onde o carro dorme?' })
+
+      responder
+
+      expect(chamadas.size).to eq(1)
+    end
+  end
+
+  # VOCABULÁRIO INTERNO NA FALA AO CLIENTE (#547). "Vou passar para o especialista de seguro auto" saiu na mesma
+  # conversa 6983. Decisão do CEO em 20/09/2026: quem fala com o cliente é a Lia, e ele nunca ouve falar de
+  # especialista. A régua é o que o CLIENTE lê, e é por isso que "o sistema da seguradora" continua passando.
+  describe 'vocabulário interno na fala (#547)' do
+    it 'fala citando o especialista pede reescrita' do
+      chamadas = stub_do_modelo({ texto: 'Vou passar para o especialista de seguro auto seguir com os dados.' },
+                                { texto: 'Alguém da equipe assume daqui, com o que você já mandou.' })
+
+      resultado = responder
+
+      expect(chamadas.size).to eq(2)
+      expect(pedido_de_reescrita(chamadas.last)).to include('o cliente não conhece')
+      expect(resultado.reply).to eq('Alguém da equipe assume daqui, com o que você já mandou.')
+    end
+
+    it 'fala citando o fluxo interno pede reescrita' do
+      chamadas = stub_do_modelo({ texto: 'O fluxo de cotação não devolveu essa seguradora.' },
+                                { texto: 'Essa seguradora não deu retorno nesta cotação.' })
+
+      expect(responder.reply).to eq('Essa seguradora não deu retorno nesta cotação.')
+      expect(chamadas.size).to eq(2)
+    end
+
+    # "ferramenta" e "agente" saíram da lista: são palavras do mundo do cliente numa conversa de auto.
+    it 'fala de coleta com "ferramenta de trabalho" e "agente autorizado" sai como está' do
+      legitima = 'O carro é usado como ferramenta de trabalho? E você é agente autorizado de alguma frota?'
+      chamadas = stub_do_modelo({ texto: legitima })
+
+      expect(responder.reply).to eq(legitima)
+      expect(chamadas.size).to eq(1)
+    end
+
+    it '"sistema de rastreamento" e "sistema de alarme" saem como estão' do
+      legitima = 'O carro tem sistema de rastreamento ou sistema de alarme instalado?'
+      chamadas = stub_do_modelo({ texto: legitima })
+
+      expect(responder.reply).to eq(legitima)
+      expect(chamadas.size).to eq(1)
+    end
+
+    # O ACHADO DA REVISÃO: o pedido de reescrita leva só o texto, e o modelo devolve o schema inteiro. Sem
+    # preservar a escalada, o cliente lia "alguém assume" e ninguém assumia — a mesma dor da conversa 6983.
+    it 'reescrita de fala que escala não apaga a passagem para humano' do
+      chamadas = stub_do_modelo({ texto: 'Vou passar para o especialista de seguro auto.', escala: true },
+                                { texto: 'Alguém da equipe assume daqui.', escala: false })
+
+      resultado = responder
+      expect(resultado.reply).to eq('Alguém da equipe assume daqui.')
+      expect(resultado.handoff[:should]).to be(true)
+      expect(chamadas.size).to eq(2)
+    end
+
+    it '"o sistema da seguradora" não dispara: é coisa dela, não engrenagem nossa' do
+      legitima = 'O sistema da seguradora ainda não devolveu o número da proposta.'
+      chamadas = stub_do_modelo({ texto: legitima })
+
+      expect(responder.reply).to eq(legitima)
+      expect(chamadas.size).to eq(1)
+    end
+
+    it '"no nosso sistema" dispara' do
+      chamadas = stub_do_modelo({ texto: 'Deixei registrado no nosso sistema.' },
+                                { texto: 'Anotei aqui com você.' })
+
+      expect(responder.reply).to eq('Anotei aqui com você.')
+      expect(chamadas.size).to eq(2)
+    end
+
+    it '"modelo do veículo" não dispara: o falso positivo seria diário' do
+      legitima = 'Me confirma o modelo do veículo, por favor?'
+      chamadas = stub_do_modelo({ texto: legitima })
+
+      expect(responder.reply).to eq(legitima)
       expect(chamadas.size).to eq(1)
     end
   end

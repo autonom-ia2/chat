@@ -152,7 +152,8 @@ module Autonomia
       def conferencia_da_fala
         return nil unless @trust_instruction && @delivery && @agent.agent_type == 'insurance_quote'
 
-        ConferenciaDaFala.new(cotacao_no_inicio: ConferenciaDaFala.cotacao_correndo(@delivery.conversation&.id))
+        conversa = @delivery.conversation&.id
+        ConferenciaDaFala.new(conversa: conversa, cotacao_no_inicio: ConferenciaDaFala.cotacao_correndo(conversa))
       end
 
       # Se a fala dispara um sinal da `ConferenciaDaFala`, o modelo reescreve UMA vez, com as ferramentas do turno
@@ -168,7 +169,12 @@ module Autonomia
 
         restantes = sinais_da_fala(reescrita)
         registrar_fala('reescrita ainda dispara', restantes) if restantes.any?
-        reescrita
+        # A REESCRITA NÃO APAGA A ESCALADA (achado da revisão). O pedido leva só o TEXTO da fala, e o
+        # modelo devolve o schema inteiro: sem isto, uma fala que escalava voltava com `should_handoff`
+        # falso, o cliente lia "alguém assume" e ninguém assumia.
+        return reescrita unless parsed['should_handoff'] == true
+
+        reescrita.merge('should_handoff' => true, 'handoff_reason' => parsed['handoff_reason'])
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         registrar_fala("reescrita falhou #{e.class}", sinais)
         parsed
