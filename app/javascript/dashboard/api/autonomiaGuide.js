@@ -1,8 +1,9 @@
 /* global axios */
 import ApiClient from './ApiClient';
 
-// Guia da Plataforma — onboarding/suporte read-only, global (gated server-side by the account's
-// Autonomia eligibility = ENV master + the Kanban AI key).
+// Guia da Plataforma — onboarding/suporte global (gated server-side by the account's Autonomia
+// eligibility = ENV master + the Kanban AI key). `chat` apenas explica; `executarAcao` muda dados,
+// e só é chamado depois da confirmação explícita na tela.
 class AutonomiaGuideAPI extends ApiClient {
   constructor() {
     super('autonomia/guide', { accountScoped: true });

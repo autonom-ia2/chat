@@ -1679,21 +1679,32 @@
     "THINKING": "Thinking…",
     "HIGHLIGHT_HERE": "it's here",
     "RESET": "New chat",
-    "KICK_OFF": "Ask me where things are or how to do them on the platform — I'll explain and take you there.",
+    "KICK_OFF": "I explain where things are, look up your account data and, for admins, make changes once you confirm.",
     "GO_TO_SCREEN": "Go to screen",
     "UNAVAILABLE": "The guide is unavailable right now.",
+    "WITHHELD": "I am not confident enough to answer that without risking a wrong answer. Want me to pass this to support?",
     "ERROR": "Could not reach the guide. Try again.",
+    "SENDING": "I'm still answering your previous question.",
     "SUGGESTIONS": {
-      "KANBAN": "How do I create a pipeline in the CRM?",
+      "KANBAN": "Create a pipeline called Sales",
       "WHATSAPP": "Where do I set up a WhatsApp channel?",
-      "REPORTS": "Where do I see my reports?"
+      "REPORTS": "What pipelines do I have right now?"
     },
     "ACTION": {
       "CONFIRM": "Confirm",
-      "CANCEL": "Not now",
-      "CANCELLED": "You cancelled this action.",
+      "CANCEL": "Cancel",
+      "CANCELLED": "Cancelled. Nothing was changed.",
       "RUNNING": "Doing it now…",
-      "FAILED": "I could not do this. Try from the screen."
+      "FAILED": "I couldn't do that. You can do it from the screen.",
+      "FAILED_GENERIC": "I couldn't do that, and I can't tell why. You can do it from the screen.",
+      "LOST": "This action did run, but I can't show you the outcome here. Check the screen before asking again."
+    },
+    "A11Y": {
+      "PANEL": "Platform Guide",
+      "LOG": "Guide conversation",
+      "NEW_CONVERSATION": "Start a new chat",
+      "CLOSE": "Close the Guide",
+      "SEND": "Send message"
     }
   }
 }

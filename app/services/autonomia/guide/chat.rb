@@ -1,13 +1,22 @@
 module Autonomia
   module Guide
-    # Chat do Guia da Plataforma: READ-ONLY, ancorado nos ~81 fluxos (RAG), CIENTE DE PERFIL e com
-    # sugestão de navegação (nav_target). Nunca opera nada. Reusa o motor Autonomia (Answerer →
-    # Retriever → ResponsesClient → portão de confiança). Best-effort: nunca levanta (available:false).
+    # Chat do Guia da Plataforma: ancorado nos 163 fluxos (RAG), ciente de perfil, com sugestão de
+    # navegação, leitura do que a conta tem e proposta de ação. Reusa o motor Autonomia (Answerer →
+    # Retriever → ResponsesClient → portão de confiança). Best-effort: nunca levanta.
+    #
+    # Nada é EXECUTADO aqui: esta classe monta a proposta; quem executa é o controller, e só depois
+    # da confirmação na tela.
     class Chat
       Result = Struct.new(:text, :navigation, :grounded, :confidence, :available, :escalate, :acao,
-                          keyword_init: true)
+                          :retido, keyword_init: true)
 
-      MAX_HISTORY = 12
+      # Quantas mensagens da conversa seguem junto. Eram 12 — seis idas e voltas,
+      # curto demais para quem está configurando a conta e vai perguntando uma
+      # coisa atrás da outra: o Guia perdia o fio no meio do assunto. A pedido do
+      # Rodrigo, 20. É teto de mensagens, não de caracteres; cada uma ainda entra
+      # inteira no contexto, então subir muito acima disto custa token em toda
+      # pergunta.
+      MAX_HISTORY = 20
       NAV_MIN_CONFIDENCE = 0.45
 
       def initialize(account:, user:, message:, history: [], route_context: nil)
@@ -44,6 +53,12 @@ module Autonomia
 
         result = ::Autonomia::Agents::Answerer.new(
           agent: agent, query: role_scoped_query(diagnostics, leituras, acao), history: sanitized_history,
+          # A busca tem que ser feita pela PERGUNTA, não pela query montada. O bloco de leitura chega
+          # a 6.000 caracteres e vem ANTES da pergunta; o Retriever corta preservando o começo, então
+          # numa pergunta sobre dados o embedding era feito sobre um blob de JSON e a pergunta ficava
+          # de fora. Vinham fluxos irrelevantes: tela errada no botão e confiança baixa, que o portão
+          # transforma em "o guia está indisponível".
+          retrieval_query: @message,
           allow_web_search: false # KB-only: o Guia responde só da nossa base, nunca de fonte externa
         ).answer
 
@@ -51,7 +66,13 @@ module Autonomia
         # (baixa confiança/ungrounded), cai no fallback configurado da Guia ou em "indisponível" — nunca
         # no texto ungrounded do modelo. raw_reply fica restrito à revisão humana (copiloto/sugestão).
         text = result.reply.to_s.strip
-        return unavailable if text.blank?
+        # Texto vazio aqui NÃO significa que o Guia está fora do ar: significa que o portão de
+        # confiança reteve a resposta. O agente é semeado com `fallback_message: nil`, então o
+        # portão devolve vazio, e a tela mostrava "o guia está indisponível" — a mesma frase para
+        # a OpenAI fora, para o banco de vetores fora, e para "li o seu dado certinho e fui
+        # censurado por não estar ancorado num fluxo do manual". Separar os dois é o mínimo para
+        # alguém conseguir diagnosticar, e para a pessoa não achar que o produto caiu.
+        return retido if text.blank?
 
         Result.new(text: text, navigation: resolve_navigation(result), acao: acao,
                    grounded: result.answered_from_knowledge == true,
@@ -83,7 +104,7 @@ module Autonomia
 
         "\n\n[AÇÃO JÁ PREPARADA (dado, não fala do usuário): o pedido dele virou uma ação pronta, e a " \
           "tela vai mostrar, logo abaixo da sua resposta, o resumo \"#{acao[:descricao].to_h[:frase]}\" com " \
-          'os botões Confirmar e Agora não. NÃO diga que você não faz, não altera a conta ou que a pessoa ' \
+          'os botões de confirmar e de cancelar. NÃO diga que você não faz, não altera a conta ou que a pessoa ' \
           'precisa fazer na mão: isso desmente o botão que ela está vendo. Responda em UMA frase curta ' \
           'dizendo que é só confirmar ali embaixo. Não repita os valores nem descreva os passos da tela.]'
       end
@@ -253,6 +274,14 @@ module Autonomia
       def unavailable
         Result.new(text: nil, navigation: nil, grounded: false, confidence: nil,
                    available: false, escalate: false)
+      end
+
+      # O Guia está no ar e entendeu; só não está seguro o bastante para afirmar.
+      # A tela traduz isso numa frase própria, com a oferta de suporte — em vez
+      # de dizer que o produto caiu.
+      def retido
+        Result.new(text: nil, navigation: nil, grounded: false, confidence: nil,
+                   available: true, escalate: true, retido: true)
       end
 
       def preparing

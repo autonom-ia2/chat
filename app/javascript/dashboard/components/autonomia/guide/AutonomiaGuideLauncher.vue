@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -31,6 +31,19 @@ const toggleSidebar = () => {
     is_contact_sidebar_open: false,
   });
 };
+
+const launcherRef = ref(null);
+
+// O lançador some quando o painel abre e volta quando ele fecha, então
+// `false → true` é exatamente "o painel acabou de fechar": é aí que o foco
+// precisa voltar para cá, senão ele fica no nada e quem usa teclado recomeça
+// do topo da página. O watcher não roda na montagem, então carregar a página
+// com o painel fechado não rouba o foco de ninguém.
+watch(showLauncher, async visivel => {
+  if (!visivel) return;
+  await nextTick();
+  launcherRef.value?.$el?.focus();
+});
 </script>
 
 <template>
@@ -39,9 +52,11 @@ const toggleSidebar = () => {
       class="rounded-full bg-n-alpha-2 backdrop-blur-lg p-1 shadow hover:shadow-md"
     >
       <Button
+        ref="launcherRef"
         icon="i-lucide-life-buoy"
         no-animation
         :title="$t('AUTONOMIA_GUIDE.LAUNCHER')"
+        :aria-label="$t('AUTONOMIA_GUIDE.LAUNCHER')"
         class="!rounded-full !bg-n-solid-3 dark:!bg-n-alpha-2 !text-n-slate-12 text-xl transition-all duration-200 ease-out hover:brightness-110"
         lg
         @click="toggleSidebar"
