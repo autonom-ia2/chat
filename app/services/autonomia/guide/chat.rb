@@ -146,13 +146,13 @@ module Autonomia
       # jeito que a lista esperava. Quem decide se precisa de dado é quem lê a
       # pergunta; o modelo devolve nulo quando não precisa.
       def leitura_context(_agent)
-        recurso = escolher_recurso(consulta.catalogo)
-        return nil if recurso.blank?
+        escolha = escolher_recurso(consulta.catalogo)
+        return nil if escolha.blank?
 
-        conteudo = consulta.ler(recurso)
+        conteudo = consulta.ler(escolha[:recurso], escolha[:parametros])
         return nil if conteudo.blank?
 
-        ["Consultei #{recurso} nesta conta e recebi: #{conteudo}"]
+        ["Consultei #{escolha[:recurso]} nesta conta e recebi: #{conteudo}"]
       rescue StandardError => e
         Rails.logger.warn("[autonomia][guide][chat] leitura_context account=#{@account&.id} #{e.class}: #{e.message}")
         nil

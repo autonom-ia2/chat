@@ -23,7 +23,8 @@ RSpec.describe Autonomia::Guide::Chat do
       instance_double(Autonomia::Agents::Retriever, retrieve: [])
     )
     allow(Autonomia::Guide::EscolhaDaConsulta).to receive(:new).and_return(
-      instance_double(Autonomia::Guide::EscolhaDaConsulta, para: recurso)
+      instance_double(Autonomia::Guide::EscolhaDaConsulta,
+                      para: recurso.nil? ? nil : { recurso: recurso, parametros: {} })
     )
     allow(Autonomia::Guide::Consulta).to receive(:new).and_return(
       instance_double(Autonomia::Guide::Consulta, catalogo: ['inboxes'], ler: conteudo)

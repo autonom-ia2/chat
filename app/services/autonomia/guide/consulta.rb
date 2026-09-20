@@ -40,7 +40,7 @@ class Autonomia::Guide::Consulta
       next unless caminho.start_with?(PREFIXO)
 
       recurso = caminho.sub("#{PREFIXO}:account_id/", '')
-      next if recurso.blank? || recurso.include?(PARAMETRO)
+      next if recurso.blank?
 
       recurso
     end.uniq.sort
@@ -48,8 +48,12 @@ class Autonomia::Guide::Consulta
 
   # Executa a leitura como o usuário e devolve o corpo já enxuto, pronto para
   # virar contexto. Nunca levanta para o chamador: erro vira recusa explicada.
-  def ler(recurso, filtros = {})
-    caminho = validar!(recurso)
+  #
+  # `parametros` preenche o `:id` de rotas como 'contacts/:id'. Antes essas rotas
+  # ficavam fora do catálogo, e isso tirava 145 das 270 leituras da plataforma: o
+  # Guia listava suas caixas e não conseguia abrir nenhuma.
+  def ler(recurso, parametros = {}, filtros = {})
+    caminho = montar_caminho(recurso, parametros)
     resposta = requisitar(caminho, filtros)
 
     return "Não consegui ler #{recurso}: a plataforma respondeu #{resposta.code}." unless resposta.code.to_i == 200
@@ -64,11 +68,24 @@ class Autonomia::Guide::Consulta
 
   private
 
-  def validar!(recurso)
+  # O caminho é sempre montado com o id DESTA conta, e cada `:id` vira um
+  # segmento escapado — valor vindo do modelo nunca entra como pedaço de rota.
+  def montar_caminho(recurso, parametros)
     limpo = recurso.to_s.strip.delete_prefix('/')
     raise Recusada, 'Não sei consultar isso.' unless catalogo.include?(limpo)
 
-    "#{PREFIXO}#{@account.id}/#{limpo}"
+    valores = (parametros || {}).transform_keys(&:to_s)
+    segmentos = limpo.split('/').map do |segmento|
+      next segmento unless segmento.start_with?(PARAMETRO)
+
+      chave = segmento.delete_prefix(PARAMETRO)
+      valor = valores[chave].to_s.strip
+      raise Recusada, "Para isso eu preciso saber qual #{chave}." if valor.blank?
+
+      CGI.escape(valor)
+    end
+
+    "#{PREFIXO}#{@account.id}/#{segmentos.join('/')}"
   end
 
   # A chamada sai com o token do próprio usuário: é o mecanismo oficial da API e

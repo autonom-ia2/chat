@@ -17,12 +17,18 @@ class Autonomia::Guide::EscolhaDaConsulta
     Escolha O ÚNICO recurso que responde à pergunta, exatamente como escrito na lista.
     Se a pergunta for sobre COMO fazer algo, sobre uma tela, ou se nenhum recurso
     responder, devolva nulo. Nunca invente um recurso fora da lista.
+
+    Recurso com `:id` (como 'contacts/:id') lê UM item e exige o identificador em
+    `parametros`. Só escolha um desses quando o identificador tiver sido informado
+    pela pessoa ou tiver aparecido na conversa. Sem o identificador, prefira a rota
+    de lista, ou devolva nulo.
   TEXTO
 
   ESQUEMA = {
     type: 'object',
     properties: {
-      recurso: { type: %w[string null], description: 'Recurso exatamente como na lista, ou nulo.' }
+      recurso: { type: %w[string null], description: 'Recurso exatamente como na lista, ou nulo.' },
+      parametros: { type: %w[object null], description: 'Valores dos :id da rota.', additionalProperties: true }
     },
     required: ['recurso'],
     additionalProperties: false
@@ -33,8 +39,8 @@ class Autonomia::Guide::EscolhaDaConsulta
     @catalogo = catalogo
   end
 
-  # Devolve o nome do recurso, ou nil. Best-effort: qualquer falha vira nil, e o
-  # Guia responde pelo manual como sempre fez.
+  # Devolve { recurso:, parametros: }, ou nil. Best-effort: qualquer falha vira
+  # nil, e o Guia responde pelo manual como sempre fez.
   def para(pergunta)
     return nil if pergunta.to_s.strip.blank? || @catalogo.blank?
 
@@ -46,8 +52,7 @@ class Autonomia::Guide::EscolhaDaConsulta
       schema: ESQUEMA, reasoning_effort: 'low', timeout: 12
     )
 
-    escolhido = extrair(resposta)
-    @catalogo.include?(escolhido) ? escolhido : nil
+    extrair(resposta)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][guide][escolha] account=#{@account&.id} #{e.class}: #{e.message}")
     nil
@@ -67,10 +72,15 @@ class Autonomia::Guide::EscolhaDaConsulta
     "Pergunta: #{pergunta}\n\nRecursos disponíveis:\n#{@catalogo.join("\n")}"
   end
 
+  # A superfície é fechada aqui: recurso fora do catálogo é descartado.
   def extrair(resposta)
     bruto = resposta.is_a?(Hash) ? (resposta[:text] || resposta['text']) : resposta.to_s
     dados = JSON.parse(bruto.to_s)
-    dados['recurso'].presence
+    recurso = dados['recurso'].presence
+    return nil unless @catalogo.include?(recurso)
+
+    parametros = dados['parametros'].is_a?(Hash) ? dados['parametros'] : {}
+    { recurso: recurso, parametros: parametros }
   rescue JSON::ParserError
     nil
   end

@@ -27,24 +27,15 @@ RSpec.describe Autonomia::Guide::Acoes do
     # Lista escrita à mão nunca vira a plataforma: três ações não são a
     # plataforma, do mesmo jeito que cinco assuntos não eram a leitura.
     it 'nasce do roteador e cobre a plataforma inteira' do
-      expect(para(admin).catalogo.size).to be > 200
+      expect(para(admin).catalogo.size).to be > 400
       expect(para(admin).catalogo).to include('POST crm/pipelines', 'POST labels', 'PATCH inboxes/:id')
     end
 
-    # Decisão do Rodrigo em 20/09/2026: nada que fale com cliente, mexa em
-    # dinheiro ou toque em acesso e credencial.
-    it 'deixa de fora o que fala com o cliente' do
-      fora = para(admin).catalogo.select { |a| a.include?('campaigns') || a.include?('messages') }
-
-      expect(fora).to be_empty
-    end
-
-    it 'deixa de fora acesso, permissão e credencial de integração' do
-      fora = para(admin).catalogo.select do |a|
-        a.include?('custom_roles') || a.include?(' agents') || a.include?('integrations') || a.include?('saml')
-      end
-
-      expect(fora).to be_empty
+    # Decisão do Rodrigo em 20/09/2026: o administrador pede tudo que ele mesmo
+    # pode fazer na conta dele. Não há área bloqueada — o que protege é ele ler o
+    # pedido literal e confirmar, e a plataforma aplicar a permissão real.
+    it 'não esconde área nenhuma do administrador' do
+      expect(para(admin).catalogo).to include('POST campaigns', 'POST webhooks', 'DELETE inboxes/:id')
     end
   end
 
@@ -78,7 +69,7 @@ RSpec.describe Autonomia::Guide::Acoes do
 
   describe 'o que recusa' do
     it 'recusa ação fora do catálogo, em vez de tentar adivinhar' do
-      expect { para(admin).executar('POST campaigns', { corpo: {} }) }
+      expect { para(admin).executar('POST rota_que_nao_existe', { corpo: {} }) }
         .to raise_error(described_class::Recusada, /não faz/)
     end
 
@@ -106,7 +97,7 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(Net::HTTP).not_to receive(:start)
 
       begin
-        para(admin).executar('POST campaigns', {})
+        para(admin).executar('POST rota_que_nao_existe', {})
       rescue described_class::Recusada
         nil
       end

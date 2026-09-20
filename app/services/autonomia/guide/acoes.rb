@@ -27,20 +27,17 @@ class Autonomia::Guide::Acoes
   VERBOS = %w[POST PATCH PUT DELETE].freeze
   DESTRUTIVO = 'DELETE'.freeze
 
-  # Áreas fora do alcance. Não é filtro de linguagem: é a lista de domínios que o
-  # Rodrigo decidiu não delegar. Comparação por segmento, não por padrão.
-  FORA = %w[
-    campaigns email_campaigns whatsapp_api_campaigns campaign_imports bulk_actions
-    integrations email_oauth_apps google microsoft notion instagram tiktok twitter callbacks
-    saml_settings custom_roles agents channels whatsapp waha_inboxes whatsapp_calls
-    billing subscriptions
-  ].freeze
-
-  # Falar com o cliente é falar com o cliente em qualquer nível e sob qualquer
-  # nome — `draft_messages`, `disable_whatsapp_api_campaigns`. Aqui a comparação
-  # é por pedaço do nome, de propósito: na dúvida fica de fora, e perder uma
-  # ação inofensiva custa menos que disparar mensagem para cliente por engano.
-  FORA_NO_NOME = %w[message campaign].freeze
+  # NÃO existe lista de áreas bloqueadas, por decisão do Rodrigo em 20/09/2026:
+  # o administrador pode pedir tudo que ele mesmo pode fazer na conta dele.
+  #
+  # O que protege não é uma lista minha:
+  # - a pessoa lê o pedido literal e confirma antes de qualquer execução;
+  # - a execução vai com o token dela, então a plataforma aplica a permissão real;
+  # - o caminho é montado com o id da conta dela, sempre.
+  #
+  # Isto inclui disparar campanha (mensagem para cliente de verdade) e rotacionar
+  # credencial (pode derrubar integração em produção). Não há desfazer para
+  # nenhum dos dois: a tela de confirmação é a proteção.
 
   Resultado = Struct.new(:ok, :mensagem, :registro, keyword_init: true)
 
@@ -62,7 +59,7 @@ class Autonomia::Guide::Acoes
       next unless caminho.start_with?(PREFIXO)
 
       recurso = caminho.sub("#{PREFIXO}:account_id/", '')
-      next if recurso.blank? || fora_do_alcance?(recurso)
+      next if recurso.blank?
 
       "#{verbo} #{recurso}"
     end.uniq.sort
@@ -103,13 +100,6 @@ class Autonomia::Guide::Acoes
   end
 
   private
-
-  def fora_do_alcance?(recurso)
-    segmentos = recurso.split('/')
-    return true if FORA.include?(segmentos.first)
-
-    segmentos.any? { |segmento| FORA_NO_NOME.any? { |proibido| segmento.include?(proibido) } }
-  end
 
   def garantir_permitida!(acao)
     raise Recusada, 'Isto o Guia não faz.' unless catalogo.include?(acao.to_s)

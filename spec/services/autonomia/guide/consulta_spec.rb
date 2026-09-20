@@ -10,12 +10,14 @@ RSpec.describe Autonomia::Guide::Consulta do
     # Cobertura escrita à mão nunca vira cobertura da plataforma: o catálogo sai
     # do roteador, como o mapa do Guia.
     it 'nasce do roteador e cobre a plataforma, não uma lista escolhida' do
-      expect(consulta.catalogo.size).to be > 100
+      expect(consulta.catalogo.size).to be > 250
       expect(consulta.catalogo).to include('inboxes', 'labels', 'crm/pipelines', 'conversations', 'teams')
     end
 
-    it 'deixa de fora rota que exige um identificador que ninguém informou' do
-      expect(consulta.catalogo.none? { |r| r.include?(':') }).to be(true)
+    # Cortar as rotas com `:id` tirava metade da leitura da plataforma: o Guia
+    # listava as caixas e não conseguia abrir nenhuma.
+    it 'inclui a leitura de UM item, não só as listas' do
+      expect(consulta.catalogo).to include('contacts/:id', 'inboxes/:id')
     end
   end
 
@@ -28,6 +30,27 @@ RSpec.describe Autonomia::Guide::Consulta do
     it 'recusa tentativa de sair do caminho da conta' do
       expect(consulta.ler('../../../admin/users')).to include('Não sei consultar isso')
       expect(consulta.ler('/api/v1/accounts/999/inboxes')).to include('Não sei consultar isso')
+    end
+
+    it 'recusa ler UM item sem saber qual, em vez de chutar' do
+      expect(consulta.ler('contacts/:id')).to include('preciso saber qual id')
+    end
+
+    it 'não deixa o identificador sair da conta' do
+      capturada = nil
+      allow(Net::HTTP).to receive(:start) do |_host, _porta, _opcoes, &bloco|
+        http = instance_double(Net::HTTP)
+        allow(http).to receive(:request) do |req|
+          capturada = req
+          instance_double(Net::HTTPResponse, code: '200', body: '[]')
+        end
+        bloco.call(http)
+      end
+
+      consulta.ler('contacts/:id', { id: '../../999/contacts' })
+
+      expect(capturada.path).to start_with("/api/v1/accounts/#{conta.id}/contacts/")
+      expect(capturada.path).not_to include('999/contacts')
     end
 
     it 'não faz chamada nenhuma quando o recurso é recusado' do

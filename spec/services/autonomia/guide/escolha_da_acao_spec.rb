@@ -77,10 +77,12 @@ RSpec.describe Autonomia::Guide::EscolhaDaAcao do
       expect(escolha(admin).para('Apaga a conta toda')).to be_nil
     end
 
-    it 'descarta ação de área que não delegamos' do
-      modelo_devolve({ acao: 'POST campaigns' })
+    # Área nenhuma é escondida do administrador: campanha entra como qualquer
+    # outra, e o que segura é a confirmação, não uma lista minha.
+    it 'propõe até o que fala com cliente, para a pessoa confirmar' do
+      modelo_devolve({ acao: 'POST campaigns', corpo: { title: 'Black Friday' } })
 
-      expect(escolha(admin).para('Dispara uma campanha para todo mundo')).to be_nil
+      expect(escolha(admin).para('Cria a campanha Black Friday')[:acao]).to eq('POST campaigns')
     end
 
     # Nome escrito por quem pede vira conteúdo na plataforma e volta ao modelo na
