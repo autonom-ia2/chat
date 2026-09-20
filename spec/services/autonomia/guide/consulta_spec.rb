@@ -123,6 +123,18 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(consulta.ler('inboxes')).not_to include('NÃO afirme')
     end
 
+    # Medido em produção: uma caixa de entrada pesa ~3.000 bytes (43 campos).
+    # Com o orçamento antigo de 6.000 cabia UMA, e o Guia dizia "apareceu uma
+    # caixa" para quem tem três — honesto, porque avisava do corte, e inútil.
+    it 'cabe a conta real de quem tem várias caixas pesadas' do
+      pesadas = Array.new(3) { |i| { name: "Caixa #{i}", campos: 'x' * 2_900 } }
+      plataforma_responde('200', { payload: pesadas }.to_json)
+
+      resposta = consulta.ler('inboxes')
+
+      expect(resposta).to include('Caixa 0', 'Caixa 1', 'Caixa 2')
+    end
+
     # Um objeto cortado no meio vira uma lista que PARECE inteira: o modelo conta
     # o pedaço e responde "você tem 5 caixas" para quem tem 8. O corte é por
     # item, e o que ficou de fora é sempre dito.

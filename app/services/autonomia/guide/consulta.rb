@@ -17,7 +17,14 @@ class Autonomia::Guide::Consulta
 
   PREFIXO = '/api/v1/accounts/'.freeze
   MAX_ITENS = 25
-  MAX_TEXTO = 6_000
+
+  # Orçamento de texto de UMA leitura. Eram 6.000, dimensionados para recurso
+  # leve — etiqueta tem 92 bytes, funil 277, contato 693. Caixa de entrada tem
+  # 43 campos e pesa ~3.000, medidos em produção: cabia UMA, e o Guia respondia
+  # "apareceu uma caixa" para quem tem três. Honesto, porque ele avisa que
+  # cortou, e inútil. Em 16.000 cabem as três com folga, e um recurso pesado de
+  # verdade continua protegido pelo teto de itens.
+  MAX_TEXTO = 16_000
 
   # Rotas que pedem identificador que o Guia não tem como adivinhar ficam fora do
   # catálogo oferecido ao modelo: sem o id, a chamada só produziria erro. O
