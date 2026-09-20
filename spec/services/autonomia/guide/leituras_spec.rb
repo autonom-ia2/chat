@@ -64,6 +64,27 @@ RSpec.describe Autonomia::Guide::Leituras do
       expect(resultado).to include('cria card sozinho')
     end
 
+    # Funil arquivado não recebe card: contá-lo faria o Guia dizer que a conta
+    # tem mais funis do que ela opera.
+    it 'não lista funil arquivado' do
+      ativo, = create_crm_pipeline(account: conta, user: admin, name: 'Funil que vale')
+      arquivado, = create_crm_pipeline(account: conta, user: admin, name: 'Funil Teste')
+      arquivado.update!(status: :archived)
+
+      resultado = ler('funis', admin).join(' ')
+
+      expect(ativo.reload.status).to eq('active')
+      expect(resultado).to include('Funil que vale')
+      expect(resultado).not_to include('Funil Teste')
+    end
+
+    it 'diz que não há funil ativo quando todos estão arquivados' do
+      pipeline, = create_crm_pipeline(account: conta, user: admin)
+      pipeline.update!(status: :archived)
+
+      expect(ler('funis', admin)).to eq(['A conta ainda não tem funil ativo.'])
+    end
+
     it 'aponta o funil que não recebe de caixa nenhuma' do
       create_crm_pipeline(account: conta, user: admin, name: 'Funil órfão')
 

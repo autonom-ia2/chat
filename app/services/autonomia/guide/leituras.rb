@@ -100,9 +100,12 @@ class Autonomia::Guide::Leituras
     inbox.channel_type.to_s.split('::').last.presence || 'desconhecido'
   end
 
+  # Só funil ativo: arquivado não recebe card e não entra na conta que a pessoa
+  # faz de cabeça. Listá-lo faria o Guia dizer "você tem 4 funis" para quem opera
+  # com 3 — é o mesmo filtro que o CardSyncer usa para escolher o destino.
   def funis
-    lista = escopo(Crm::Pipeline).limit(LIMITE).to_a
-    return ['A conta ainda não tem funil criado.'] if lista.empty?
+    lista = escopo(Crm::Pipeline).active.limit(LIMITE).to_a
+    return ['A conta ainda não tem funil ativo.'] if lista.empty?
 
     # Uma consulta para todos os vínculos, e não uma por funil.
     vinculos = @account.crm_pipeline_inboxes
