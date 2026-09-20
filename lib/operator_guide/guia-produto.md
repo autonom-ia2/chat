@@ -518,7 +518,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota (route name), perfil
 - gate: `AUTONOMIA_AGENTS_ENABLED=true`; conta com `autonomia_agents_enabled=true`; permissão `administrator`.
 - pre_requisitos: conta habilitada pelo gate isolado; credencial de IA quando a liberação for global por conta.
 - passos: Abra Agentes; revise os cards existentes; clique em Criar com IA; para abrir um agente existente, clique no card; use a aba Testar como entrada padrão do painel.
-- gotchas: backend de agentes é admin-only e retorna 404 quando o gate está off; a sidebar também esconde o grupo para não admins; o card mostra apenas `human_card`, não a instrução interna.
+- gotchas: o menu Agentes aparece assim que a chave da OpenAI é conectada em Integracoes, sem precisar recarregar a pagina; backend de agentes é admin-only e retorna 404 quando o gate está off; a sidebar também esconde o grupo para não admins; o card mostra apenas `human_card`, não a instrução interna.
 - nav_target: `autonomia_agents_index`
 - highlight: `agents-create`
 

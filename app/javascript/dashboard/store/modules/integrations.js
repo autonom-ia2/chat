@@ -36,6 +36,18 @@ export const getters = {
   },
 };
 
+// Ligar ou desligar uma integração muda o que a conta libera: a chave da
+// OpenAI, por exemplo, destrava o menu Agentes e o Guia da Plataforma. Esses
+// sinalizadores vêm calculados no payload da conta, então sem recarregá-lo o
+// menu só aparecia depois de atualizar a página na mão.
+const refreshAccountFlags = async dispatch => {
+  try {
+    await dispatch('accounts/get', { silent: true }, { root: true });
+  } catch {
+    // A integração já foi salva; o menu aparece no próximo carregamento.
+  }
+};
+
 export const actions = {
   get: async ({ commit }) => {
     commit(types.default.SET_INTEGRATIONS_UI_FLAG, { isFetching: true });
@@ -113,23 +125,25 @@ export const actions = {
       throw new Error(error);
     }
   },
-  createHook: async ({ commit }, hookData) => {
+  createHook: async ({ commit, dispatch }, hookData) => {
     commit(types.default.SET_INTEGRATIONS_UI_FLAG, { isCreatingHook: true });
     try {
       const response = await IntegrationsAPI.createHook(hookData);
       commit(types.default.ADD_INTEGRATION_HOOKS, response.data);
       commit(types.default.SET_INTEGRATIONS_UI_FLAG, { isCreatingHook: false });
+      await refreshAccountFlags(dispatch);
     } catch (error) {
       commit(types.default.SET_INTEGRATIONS_UI_FLAG, { isCreatingHook: false });
       throw error;
     }
   },
-  deleteHook: async ({ commit }, { appId, hookId }) => {
+  deleteHook: async ({ commit, dispatch }, { appId, hookId }) => {
     commit(types.default.SET_INTEGRATIONS_UI_FLAG, { isDeletingHook: true });
     try {
       await IntegrationsAPI.deleteHook(hookId);
       commit(types.default.DELETE_INTEGRATION_HOOKS, { appId, hookId });
       commit(types.default.SET_INTEGRATIONS_UI_FLAG, { isDeletingHook: false });
+      await refreshAccountFlags(dispatch);
     } catch (error) {
       commit(types.default.SET_INTEGRATIONS_UI_FLAG, { isDeletingHook: false });
       throw new Error(error);
