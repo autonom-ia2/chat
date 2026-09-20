@@ -688,6 +688,22 @@ pt_BR:
         sent: 'E-mail de confirmação enviado.'
         already_confirmed: 'O usuário já está confirmado.'
   autonomia:
+    guide:
+      done: 'Pronto, feito.'
+      failed: 'Não consegui fazer isso agora.'
+      unknown_action: 'Isto o Guia não faz.'
+      admin_only: 'Só quem administra a conta pode fazer isso.'
+      missing_param: 'Para isso eu preciso saber qual %{campo}.'
+      no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
+      irreversible: 'Isto apaga o registro e não tem volta.'
+      fields:
+        id: 'Registro'
+        name: 'Nome'
+        title: 'Nome'
+        description: 'Descrição'
+        email: 'E-mail'
+        phone_number: 'Telefone'
+        color: 'Cor'
     faq:
       not_pending: 'Esta sugestão já foi revisada.'
       embedding_failed: 'Não foi possível adicionar esta FAQ à base: a credencial de IA está ausente ou falhou. Tente de novo.'

@@ -495,9 +495,9 @@
 - highlight: `campaign-imports-back-to-contacts`
 
 ### abrir_hub_de_agentes_autonom_ia
-- titulo: Abrir hub de Agentes Autonom.ia
+- titulo: Abrir hub de Agentes de IA
 - rota: autonomia_agents_index
-- intent: "Onde ficam meus agentes?"; "Como crio um agente Autonom.ia?"; "Por que não vejo o menu Agentes?"
+- intent: "Onde ficam meus agentes?"; "Como crio um agente de IA?"; "Por que não vejo o menu Agentes?"
 - onde_fica: Sidebar > Agentes > Meus agentes
 - pre_requisitos: conta habilitada pelo gate isolado; credencial de IA quando a liberação for global por conta.
 - passos: Abra Agentes; revise os cards existentes; clique em Criar com IA; para abrir um agente existente, clique no card; use a aba Testar como entrada padrão do painel.
@@ -561,7 +561,7 @@
 ### configurar_a_chave_de_ia_da_plataforma
 - titulo: Configurar a chave de IA da plataforma
 - rota: settings_applications_integration
-- intent: Onde coloco a chave da OpenAI?; Como habilito a IA do CRM Kanban?; Por que a IA da Autonom.ia nao funciona?; Onde configuro a IA da plataforma?
+- intent: Onde coloco a chave da OpenAI?; Como habilito a IA do CRM Kanban?; Por que a IA nao funciona nesta conta?; Onde configuro a IA da plataforma?
 - onde_fica: Configuracoes > Integracoes > CRM Kanban AI; depois CRM > CRM Kanban > editar funil > IA
 - perfil: `administrator` cadastra ou troca a chave da conta. `agent` nao cadastra chave; diga para pedir a um administrator. Custom role `crm_manage_ai` ou `crm_admin` pode ajustar a IA do funil no CRM quando a rota do CRM estiver liberada, mas nao acessa a tela de Integracoes; se nao puder, diga que a credencial precisa ser configurada por um administrator.
 - pre_requisitos: chave OpenAI valida; acesso de administrator; opcionalmente API Base URL quando nao usar `https://api.openai.com`.
@@ -574,9 +574,9 @@
 - rota: onboarding_account_details
 - intent: O que configurar primeiro numa conta nova?; Qual checklist inicial da plataforma?; Como comecar o onboarding?; Depois de criar a conta, para onde vou?
 - onde_fica: Onboarding inicial da conta; depois Sidebar > Configuracoes e Sidebar > CRM
-- perfil: `administrator` faz o checklist completo. `agent` e custom roles nao criam caixas, agentes, times ou configuracoes da conta; diga que eles podem ajustar perfil/notificacoes e pedir ao administrator para concluir o onboarding. Custom roles com permissoes operacionais podem usar as telas liberadas depois que a conta estiver configurada.
+- perfil: `administrator` faz o checklist completo. `agent` sem funcao personalizada nao cria caixas, agentes, times nem configuracoes da conta; diga que ele pode ajustar perfil/notificacoes e pedir ao administrator para concluir o onboarding. Funcao personalizada muda parte disso: `inbox_manage` cria caixa, `autonomia_manage` cria agente de IA. Nao diga a essas pessoas que so administrador faz — mostre a tela e deixe a permissao real decidir. Time e configuracoes gerais da conta continuam so do administrator.
 - pre_requisitos: nenhum; para conectar canais, ter credenciais do canal escolhido.
-- passos: 1. Complete os dados da conta, idioma, fuso e site no onboarding; 2. Crie a primeira caixa de entrada; 3. Convide agentes e associe-os a caixa; 4. Configure horario de atendimento e mensagens basicas da caixa; 5. Crie times ou filas se a operacao tiver mais de uma equipe; 6. Configure a chave de IA/CRM se a conta usar Kanban ou agentes Autonom.ia.
+- passos: 1. Complete os dados da conta, idioma, fuso e site no onboarding; 2. Crie a primeira caixa de entrada; 3. Convide agentes e associe-os a caixa; 4. Configure horario de atendimento e mensagens basicas da caixa; 5. Crie times ou filas se a operacao tiver mais de uma equipe; 6. Configure a chave de IA/CRM se a conta usar Kanban ou agentes de IA.
 - gotchas: sem agentes vinculados a caixa, usuarios podem nao ver conversas do canal; horario de atendimento fica dentro da caixa, nao nas configuracoes gerais; agents/custom roles veem menos itens na sidebar porque a navegacao respeita permissoes reais.
 - nav_target: `settings_inbox_new`
 
@@ -585,28 +585,28 @@
 - rota: settings_inbox_new
 - intent: Qual canal devo conectar?; Como conecto WhatsApp, Instagram ou email?; Onde crio live-chat do site?; Como comeco com Telegram ou API?
 - onde_fica: Configuracoes > Caixas de entrada > Nova caixa
-- perfil: `administrator` cria canais e conclui o wizard. `agent` e custom roles nao criam caixas; diga para pedir a um administrator e, se ja houver caixa criada, orientar apenas como acessar conversas permitidas.
+- perfil: `administrator` cria canais e conclui o wizard. Funcao personalizada com `inbox_manage` tambem cria: as telas do wizard aceitam `administrator` ou `inbox_manage`. `agent` sem essa funcao nao cria; diga para pedir a um administrator e, se ja houver caixa criada, orientar apenas como acessar conversas permitidas. O Guia nao monta a criacao para quem nao e administrator, mas isso e limite dele, nao da pessoa: ofereca o caminho na tela.
 - pre_requisitos: credenciais do provedor escolhido; para WhatsApp API, numero em formato `55DDNNNNNNNNN`; para Instagram, conta/authorization da Meta; para email, conta Google/Microsoft ou endereco para encaminhamento; para site, dominio do site; para Telegram, token do bot; para API, webhook opcional.
 - passos: 1. Abra Nova caixa e escolha o canal; 2. Para WhatsApp oficial, escolha Cloud/Twilio e siga a autorizacao ou configuracao manual; 3. Para WhatsApp API, informe modo humano ou IA, nome da caixa e telefone; 4. Para Instagram, autorize o perfil; para email, escolha Google, Microsoft ou encaminhamento; 5. Para site, Telegram ou API, preencha os campos do canal; 6. Adicione agentes e finalize o wizard.
 - gotchas: `settings_inboxes_page_channel` precisa do `sub_page` correto; WhatsApp API nesta fork e o conector WAHA, nao a campanha WhatsApp API; Instagram fica desabilitado se o app id nao estiver configurado; email via Google/Microsoft pode exigir credenciais OAuth; o passo de agentes usa `settings_inboxes_add_agents` e o final usa `settings_inbox_finish`.
 
 ### usar_o_proprio_guia_autonom_ia
-- titulo: Usar o proprio Guia Autonom.ia
+- titulo: Usar o proprio Guia da Plataforma
 - intent: O que o Guia faz?; Voce consegue me levar para uma tela?; O Guia pode configurar por mim?; Como pergunto onde fica uma funcao?
 - onde_fica: Widget/atalho global do Guia dentro do dashboard, quando habilitado
 - perfil: `administrator`, `agent` e custom roles podem perguntar ao Guia quando o recurso estiver habilitado para a conta. Se o usuario pedir uma tela bloqueada para o perfil dele, diga que o perfil atual nao tem acesso, explique o motivo e ofereca caminho alternativo ou orientacao para acionar um administrator.
 - pre_requisitos: usuario autenticado em uma conta ativa; Guia habilitado para a conta.
-- passos: 1. Pergunte em linguagem natural onde fica ou como fazer algo; 2. O Guia identifica seu perfil e as flags da conta; 3. Ele responde com o caminho no menu e os pre-requisitos; 4. Quando houver uma rota permitida, ele pode abrir a tela certa; 5. Para acoes sensiveis, ele orienta os passos, mas nao executa por voce.
-- gotchas: o Guia e read-only: nao cria, edita, envia, apaga, integra ou desfaz nada; ele nao deve revelar segredos nem burlar permissoes; rotas com parametros, como `:inboxId` ou `:agentId`, precisam de um item real escolhido antes da navegacao; se uma feature estiver desligada, o Guia deve explicar o gate em vez de prometer a tela.
+- passos: 1. Pergunte em linguagem natural onde fica ou como fazer algo; 2. O Guia identifica seu perfil e as flags da conta; 3. Ele responde com o caminho no menu e os pre-requisitos, consultando os dados da sua conta quando a pergunta for sobre o que voce tem; 4. Quando houver uma rota permitida, ele pode abrir a tela certa; 5. Se voce for administrador e pedir para ele fazer algo, ele monta o pedido e mostra o que vai acontecer: nada acontece ate voce confirmar na tela.
+- gotchas: o Guia le e executa sempre com a permissao de quem falou com ele, nunca alem dela; nenhuma acao acontece sem a confirmacao na tela; o Guia so executa para quem e administrador da conta, e isso e limite dele, nao veredito sobre a pessoa: quem tem funcao personalizada costuma poder fazer a mesma coisa clicando, entao para os demais perfis ele explica e leva ate a tela, onde a permissao real decide; alterar ou apagar registro existente exige saber qual registro e, e com o nome sozinho ele pergunta em vez de prometer; ele nao deve revelar segredos nem burlar permissoes; rotas com parametros, como `:inboxId` ou `:agentId`, precisam de um item real escolhido antes da navegacao; se uma feature estiver desligada, o Guia deve explicar o gate em vez de prometer a tela.
 - nav_target: —
 
 ### escalar_para_suporte_humano
 - titulo: Escalar para suporte humano
 - intent: Quando devo falar com suporte humano?; Como abro um chamado?; Onde contato o suporte?; O Guia nao resolveu, o que faco?
-- onde_fica: Menu do perfil/avatar > Contate o suporte, quando o item estiver disponivel; em white-label/custom branded, usar o canal de suporte definido pela operacao Autonom.ia
+- onde_fica: Menu do perfil/avatar > Contate o suporte, quando o item estiver disponivel; em white-label/custom branded, usar o canal de suporte definido por quem mantem a instalacao
 - perfil: `administrator`, `agent` e custom roles podem escalar quando o item estiver visivel. Se o item nao aparecer, diga que o atalho de suporte nao esta habilitado para esta instalacao/perfil e oriente usar o canal humano contratado ou pedir ao administrator/super-admin da plataforma.
 - pre_requisitos: usuario logado; widget de suporte instalado e configurado, ou canal externo de suporte informado pela operacao.
-- passos: 1. Tente primeiro pedir ao Guia o caminho, gate ou erro observado; 2. Escale se houver bloqueio de permissao, instabilidade, credencial externa, dado divergente ou erro que o Guia nao consegue resolver; 3. Abra o menu do perfil/avatar; 4. Clique em Contate o suporte se aparecer; 5. Informe conta, tela, horario aproximado, mensagem de erro e o que estava tentando fazer.
+- passos: 1. Tente primeiro pedir ao Guia o caminho, o gate ou o erro observado; 2. Antes de abrir chamado, peca ao Guia olhar: dado que parece divergente e credencial mal configurada ele le direto da conta, e para administrador ainda prepara a correcao para voce confirmar na tela; 3. Escale quando o Guia realmente nao conseguir: instabilidade da plataforma, erro que se repete depois da correcao, falha dentro do servico externo em si, ou bloqueio que so quem mantem a instalacao resolve; 4. Abra o menu do perfil/avatar; 5. Clique em Contate o suporte se aparecer; 6. Informe conta, tela, horario aproximado, mensagem de erro e o que estava tentando fazer.
 - gotchas: o Guia nao abre chamado por conta propria; em white-label o item nativo de suporte pode ficar escondido mesmo com a feature ligada; nao envie senhas, tokens, chaves OpenAI, credenciais de S3/SMTP ou dados sensiveis em texto aberto.
 - nav_target: —
 
@@ -1094,7 +1094,7 @@
 - titulo: Diagnosticar IA / agente (a IA não responde nas conversas)
 - rota: autonomia_agents_index
 - intent: Por que a IA não responde?; Meu agente de IA não está respondendo; Por que o agente automático não atende os clientes?; O bot parou de responder; Diagnosticar agente de IA
-- onde_fica: Agentes de IA (Autonom.ia)
+- onde_fica: Sidebar > Agentes
 - diagnostic: `ai_agent`
 - passos: O Guia confere se os Agentes de IA estão habilitados na conta, se há chave de IA configurada, se existe um agente habilitado e ativo apto a atender o cliente (atuação Externo/Ambos) e se ele está conectado a uma caixa de entrada — e aponta o que falta.
 - gotchas: um agente interno (copiloto) nunca fala com o cliente, só ajuda o atendente; cada caixa de entrada só aceita um bot.

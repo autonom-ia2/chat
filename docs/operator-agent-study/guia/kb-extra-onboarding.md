@@ -1,5 +1,13 @@
 # Guia Autonom.ia - KB extra onboarding e suporte
 
+> **Registro histórico — desenho da V1, read-only.** Este documento descreve o Guia
+> como ele foi desenhado em junho de 2026: só leitura, sem consultar os dados da conta
+> e sem executar nada. Esse desenho foi substituído pelas issues #533 (o Guia consulta
+> o que a conta tem, com a permissão de quem pergunta) e #536 (o Guia executa ações,
+> sempre com confirmação na tela). Fica como registro de decisão — não leia como
+> descrição do comportamento atual.
+
+
 Escopo: fluxos complementares de onboarding, meta-ajuda e suporte humano para o Guia Autonom.ia. Este arquivo e conhecimento global do produto, mantido por super-admin, e nao deve conter dados ou segredos de contas.
 
 Base de URL: as rotas do frontend usam `frontendURL(...)`, portanto os paths abaixo ja consideram o prefixo `/app`.

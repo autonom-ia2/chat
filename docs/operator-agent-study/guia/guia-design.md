@@ -1,5 +1,13 @@
 # Guia Autonom.ia - desenho técnico da fatia "Guia"
 
+> **Registro histórico — desenho da V1, read-only.** Este documento descreve o Guia
+> como ele foi desenhado em junho de 2026: só leitura, sem consultar os dados da conta
+> e sem executar nada. Esse desenho foi substituído pelas issues #533 (o Guia consulta
+> o que a conta tem, com a permissão de quem pergunta) e #536 (o Guia executa ações,
+> sempre com confirmação na tela). Fica como registro de decisão — não leia como
+> descrição do comportamento atual.
+
+
 Data: 2026-06-20.
 
 Escopo: desenhar um agente interno read-only que conhece a plataforma, responde "onde fica / como faço" em linguagem natural e pode levar o usuário para a tela correta. Este documento não implementa nada.

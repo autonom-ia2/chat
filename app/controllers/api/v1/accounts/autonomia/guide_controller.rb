@@ -20,7 +20,11 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
       confidence: result.confidence,
       available: result.available,
       escalate: result.escalate,
-      acao: result.acao
+      acao: result.acao,
+      # Resposta retida pelo portão de confiança ≠ Guia fora do ar. A tela
+      # precisa distinguir para não dizer que o produto caiu quando ele só não
+      # está seguro o bastante para afirmar.
+      retido: result.retido
     }
   end
 

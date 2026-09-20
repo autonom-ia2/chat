@@ -164,7 +164,7 @@
       "FACEBOOK_POST": "Post do Facebook",
       "UNKNOWN": "Origem desconhecida"
     },
-    "SUBTITLE": "Funis operacionais com cards próprios, independentes de conversa, contato ou inbox.",
+    "SUBTITLE": "Funis operacionais com cards próprios, independentes de conversa, contato ou inbox.",
     "META_SYNC_STATUS": {
       "LABEL_ACCEPTED": "Enviado",
       "LABEL_PENDING": "Enviando",
@@ -1679,20 +1679,32 @@
     "THINKING": "Pensando…",
     "HIGHLIGHT_HERE": "é aqui",
     "RESET": "Nova conversa",
-    "KICK_OFF": "Pergunte onde fica ou como fazer algo na plataforma — eu explico e te levo até a tela.",
+    "KICK_OFF": "Eu explico onde fica cada coisa, consulto os dados da sua conta e, para quem administra, faço mudanças depois da sua confirmação.",
     "GO_TO_SCREEN": "Ir para a tela",
     "UNAVAILABLE": "O guia está indisponível no momento.",
+    "WITHHELD": "Não tenho certeza suficiente para te responder isso sem arriscar errar. Quer que eu encaminhe para o suporte?",
     "ERROR": "Não foi possível falar com o guia. Tente novamente.",
+    "SENDING": "Ainda estou respondendo a pergunta anterior.",
     "SUGGESTIONS": {
-      "KANBAN": "Como crio um funil no CRM?",
+      "KANBAN": "Cria um funil chamado Comercial",
       "WHATSAPP": "Onde configuro um canal de WhatsApp?",
-      "REPORTS": "Onde vejo meus relatórios?"
+      "REPORTS": "Quais funis eu tenho hoje?"
     },
     "ACTION": {
       "CONFIRM": "Confirmar",
-      "CANCEL": "Agora não",
-      "CANCELLED": "Você cancelou esta ação.",
-      "FAILED": "Não consegui fazer isso. Tente pela tela."
+      "CANCEL": "Cancelar",
+      "CANCELLED": "Cancelado. Nada foi alterado.",
+      "RUNNING": "Fazendo agora…",
+      "FAILED": "Não consegui fazer isso. Você pode fazer direto na tela.",
+      "FAILED_GENERIC": "Não consegui fazer isso e não sei dizer o motivo. Você pode fazer direto na tela.",
+      "LOST": "Esta ação foi executada, mas não consegui mostrar o resultado aqui. Confira na tela antes de pedir de novo."
+    },
+    "A11Y": {
+      "PANEL": "Guia da Plataforma",
+      "LOG": "Conversa com o Guia",
+      "NEW_CONVERSATION": "Iniciar nova conversa",
+      "CLOSE": "Fechar o Guia",
+      "SEND": "Enviar mensagem"
     }
   }
 }

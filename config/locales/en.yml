@@ -458,6 +458,22 @@ en:
       short_description: 'Sync your contacts and conversations with LeadSquared CRM.'
       description: 'Sync your contacts and conversations with LeadSquared CRM. This integration automatically creates leads in LeadSquared when new contacts are added, and logs conversation activity to provide your sales team with complete context.'
   autonomia:
+    guide:
+      done: 'Done.'
+      failed: 'I could not do this right now.'
+      unknown_action: 'The Guide does not do that.'
+      admin_only: 'Only an account admin can do this.'
+      missing_param: 'I need to know which %{campo} first.'
+      no_description: 'I could not explain what I was about to do, so I will not do it.'
+      irreversible: 'This deletes the record and cannot be undone.'
+      fields:
+        id: 'Record'
+        name: 'Name'
+        title: 'Name'
+        description: 'Description'
+        email: 'Email'
+        phone_number: 'Phone'
+        color: 'Color'
     image_required: 'An image file is required.'
     image_invalid_type: 'Unsupported image type. Use PNG, JPEG, GIF, or WebP.'
     image_too_large: 'Image is too large. The maximum size is 5 MB.'
