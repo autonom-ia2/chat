@@ -98,11 +98,23 @@ class Autonomia::Guide::Consulta
   # a API devolveu.
   def resumir(corpo)
     dados = JSON.parse(corpo.to_s)
-    dados = dados['payload'] || dados['data'] || dados
-    dados = dados.first(MAX_ITENS) if dados.is_a?(Array)
+    total = dados.is_a?(Hash) ? dados.dig('meta', 'count') : nil
+    lista = dados.is_a?(Hash) ? (dados['payload'] || dados['data'] || dados) : dados
+    return JSON.generate(lista)[0, MAX_TEXTO] unless lista.is_a?(Array)
 
-    JSON.generate(dados)[0, MAX_TEXTO]
+    "#{JSON.generate(lista.first(MAX_ITENS))[0, MAX_TEXTO]}#{quantos(lista, total)}"
   rescue JSON::ParserError
     corpo.to_s[0, MAX_TEXTO]
+  end
+
+  # Cortar a lista sem dizer que cortou faz o modelo contar o pedaço e responder
+  # "você tem 25" para quem tem 300 — errado, com cara de certeza. Quando a
+  # plataforma informa o total, ele vai junto; quando não informa e a lista
+  # encheu, o Guia diz que não sabe o total em vez de inventar um.
+  def quantos(lista, total)
+    return " (total nesta conta: #{total})" if total.present?
+    return '' if lista.size < MAX_ITENS
+
+    " (acima estão os #{MAX_ITENS} primeiros; a plataforma não informou o total, então NÃO afirme quantos são)"
   end
 end

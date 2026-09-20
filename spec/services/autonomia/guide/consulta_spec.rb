@@ -97,6 +97,29 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(consulta.ler('inboxes').scan(/Caixa \d+/).size).to be <= described_class::MAX_ITENS
     end
 
+    # Cortar em silêncio faz o modelo contar o pedaço: "você tem 25" para quem
+    # tem 300. O total tem que sobreviver ao corte.
+    it 'leva o total junto quando a plataforma informa, mesmo cortando a lista' do
+      muitos = Array.new(100) { |i| { name: "Contato #{i}" } }
+      responder('200', { payload: muitos, meta: { count: 317 } }.to_json)
+
+      expect(consulta.ler('contacts')).to include('total nesta conta: 317')
+    end
+
+    it 'avisa que não sabe o total quando a plataforma não informa e a lista encheu' do
+      muitos = Array.new(100) { |i| { name: "Contato #{i}" } }
+      responder('200', { payload: muitos }.to_json)
+
+      expect(consulta.ler('contacts')).to include('NÃO afirme quantos são')
+    end
+
+    it 'não inventa aviso quando a lista cabe inteira' do
+      responder('200', { payload: [{ name: 'Comercial' }, { name: 'Suporte' }] }.to_json)
+
+      expect(consulta.ler('inboxes')).not_to include('total nesta conta')
+      expect(consulta.ler('inboxes')).not_to include('NÃO afirme')
+    end
+
     it 'não derruba a resposta quando a plataforma devolve algo inesperado' do
       allow(Net::HTTP).to receive(:start).and_raise(Errno::ECONNREFUSED)
 
