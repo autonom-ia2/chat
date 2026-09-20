@@ -20,6 +20,7 @@ class Integrations::Hook < ApplicationRecord
   attr_readonly :app_id, :account_id, :inbox_id, :hook_type
   before_validation :ensure_hook_type, on: :create
   before_validation :normalize_shopify_reference_id, if: :shopify?
+  before_validation :enable_crm_kanban_ai_by_default, if: :crm_kanban_ai?
   after_create :trigger_setup_if_crm
 
   # TODO: Remove guard once encryption keys become mandatory (target 3-4 releases out).
@@ -124,6 +125,14 @@ class Integrations::Hook < ApplicationRecord
 
   def normalize_shopify_reference_id
     self.reference_id = Shopify::ShopDomain.normalize(reference_id)
+  end
+
+  # Conectar a chave do CRM Kanban IA já liga a IA. Sem isso a conta ficava com
+  # a chave salva e a IA desligada em silêncio, e o resolvedor de credencial
+  # também não cai mais para a chave da instalação depois que o hook existe.
+  def enable_crm_kanban_ai_by_default
+    self.settings = settings.to_h
+    settings['enabled'] = true if settings['enabled'].nil?
   end
 
   def validate_settings_json_schema
