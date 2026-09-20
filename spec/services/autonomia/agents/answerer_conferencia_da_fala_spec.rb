@@ -43,9 +43,13 @@ RSpec.describe Autonomia::Agents::Answerer do
       .to_return(status: 200, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 
-  def fala(texto)
-    { reply: texto, confidence: 0.9, should_handoff: false, handoff_reason: nil, used_snippet_ids: [],
-      answered_from_knowledge: false }.to_json
+  def resposta_do_passo(passo)
+    fala(passo[:texto], escala: passo[:escala] == true)
+  end
+
+  def fala(texto, escala: false)
+    { reply: texto, confidence: 0.9, should_handoff: escala, handoff_reason: (escala ? 'cliente pediu' : nil),
+      used_snippet_ids: [], answered_from_knowledge: false }.to_json
   end
 
   # Cada chamada ao modelo leva a próxima entrada da fila: { texto:, chamada: (opcional), antes: (opcional) }.
@@ -62,7 +66,7 @@ RSpec.describe Autonomia::Agents::Answerer do
 
       passo[:antes]&.call
       executor.call([passo[:chamada]]) if passo[:chamada]
-      { text: fala(passo[:texto]) }
+      { text: resposta_do_passo(passo) }
     end
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     chamadas
@@ -266,11 +270,40 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(resultado.reply).to eq('Alguém da equipe assume daqui, com o que você já mandou.')
     end
 
-    it 'fala citando ferramenta pede reescrita' do
-      chamadas = stub_do_modelo({ texto: 'A ferramenta de cotação não devolveu essa seguradora.' },
+    it 'fala citando o fluxo interno pede reescrita' do
+      chamadas = stub_do_modelo({ texto: 'O fluxo de cotação não devolveu essa seguradora.' },
                                 { texto: 'Essa seguradora não deu retorno nesta cotação.' })
 
       expect(responder.reply).to eq('Essa seguradora não deu retorno nesta cotação.')
+      expect(chamadas.size).to eq(2)
+    end
+
+    # "ferramenta" e "agente" saíram da lista: são palavras do mundo do cliente numa conversa de auto.
+    it 'fala de coleta com "ferramenta de trabalho" e "agente autorizado" sai como está' do
+      legitima = 'O carro é usado como ferramenta de trabalho? E você é agente autorizado de alguma frota?'
+      chamadas = stub_do_modelo({ texto: legitima })
+
+      expect(responder.reply).to eq(legitima)
+      expect(chamadas.size).to eq(1)
+    end
+
+    it '"sistema de rastreamento" e "sistema de alarme" saem como estão' do
+      legitima = 'O carro tem sistema de rastreamento ou sistema de alarme instalado?'
+      chamadas = stub_do_modelo({ texto: legitima })
+
+      expect(responder.reply).to eq(legitima)
+      expect(chamadas.size).to eq(1)
+    end
+
+    # O ACHADO DA REVISÃO: o pedido de reescrita leva só o texto, e o modelo devolve o schema inteiro. Sem
+    # preservar a escalada, o cliente lia "alguém assume" e ninguém assumia — a mesma dor da conversa 6983.
+    it 'reescrita de fala que escala não apaga a passagem para humano' do
+      chamadas = stub_do_modelo({ texto: 'Vou passar para o especialista de seguro auto.', escala: true },
+                                { texto: 'Alguém da equipe assume daqui.', escala: false })
+
+      resultado = responder
+      expect(resultado.reply).to eq('Alguém da equipe assume daqui.')
+      expect(resultado.handoff[:should]).to be(true)
       expect(chamadas.size).to eq(2)
     end
 

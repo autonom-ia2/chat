@@ -169,7 +169,12 @@ module Autonomia
 
         restantes = sinais_da_fala(reescrita)
         registrar_fala('reescrita ainda dispara', restantes) if restantes.any?
-        reescrita
+        # A REESCRITA NÃO APAGA A ESCALADA (achado da revisão). O pedido leva só o TEXTO da fala, e o
+        # modelo devolve o schema inteiro: sem isto, uma fala que escalava voltava com `should_handoff`
+        # falso, o cliente lia "alguém assume" e ninguém assumia.
+        return reescrita unless parsed['should_handoff'] == true
+
+        reescrita.merge('should_handoff' => true, 'handoff_reason' => parsed['handoff_reason'])
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         registrar_fala("reescrita falhou #{e.class}", sinais)
         parsed

@@ -34,7 +34,9 @@ class Autonomia::Agents::ConferenciaDaFala
   # mesma frase ("o comparativo chega por aqui") é legítima com cotação correndo e é promessa vazia sem nenhuma.
   PROMESSA_DE_COTACAO = (AINDA_CORRENDO + [
     /\b(?:vou|irei|vamos)\s+(?:\S+\s+){0,3}?(?:cotar|cota[çc][ãa]o)\b/i,
-    /\b(?:pre[çc]os|op[çc][õo]es|valores)\b[^.!?\n]{0,40}\b(?:chegam?|chegar[ãa]?o?|saem|sair[ãa]o|ficam?\s+pront[oa]s?)\b/i
+    /\b(?:pre[çc]os|op[çc][õo]es|valores)\b[^.!?\n]{0,40}\b(?:chegam?|chegar[ãa]?o?|saem|sair[ãa]o|ficam?\s+pront[oa]s?)\b/i,
+    # A mesma promessa escrita do outro jeito (achado da revisão): "te mando as opções assim que sair".
+    /\b(?:te|lhe)\s+(?:mando|trago|passo|envio|retorno\s+com)\b[^.!?\n]{0,40}\b(?:pre[çc]os|op[çc][õo]es|valores|comparativo|resultado|cota[çc][ãa]o)\b/i
   ]).freeze
 
   # VOCABULÁRIO INTERNO NA FALA AO CLIENTE (#547). A engrenagem é nossa: quem fala com ele é a Lia, do começo ao
@@ -45,13 +47,14 @@ class Autonomia::Agents::ConferenciaDaFala
   #   - "sistema": quase sempre o nosso. A exceção real é o sistema DA SEGURADORA, que é coisa dela e o cliente
   #     entende assim; só ela fica de fora, pelo lookahead.
   # "modelo" ficou FORA de propósito: em auto é o modelo do veículo, e o falso positivo seria diário.
+  # "ferramenta" e "agente" saíram da lista (achado da revisão): "essa ferramenta de trabalho fica no carro?"
+  # e "você é agente autorizado?" são falas legítimas de coleta, e o ganho delas não paga o falso positivo.
   VOCABULARIO_INTERNO = [
     /\bespecialistas?\b/i,
-    /\bferramentas?\b/i,
     /\bfluxos?\b/i,
     /\bprompts?\b/i,
-    /\bagentes?\b/i,
-    /\bsistemas?\b(?!\s+d[ao]s?\s+segurador)/i
+    # "sistema de rastreamento", "de alarme" e o sistema DA SEGURADORA são do mundo do cliente; o resto é nosso.
+    /\bsistemas?\b(?!\s+(?:d[ao]s?\s+segurador|de\s+(?:rastreamento|rastreio|alarme|antifurto|seguran[çc]a|prote[çc][ãa]o)))/i
   ].freeze
 
   # -> a execução de `cotar_seguro` que corre agora na conversa, ou nil. Lida no começo do turno, antes do modelo.
