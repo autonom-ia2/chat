@@ -78,10 +78,12 @@ class Autonomia::Guide::Acoes
     caminho = montar_caminho(acao, dados)
     corpo = corpo_de(dados)
 
-    linhas = [dados[:descricao].presence, "Pedido: #{verbo_de(acao)} #{caminho}"]
-    linhas << "Valores: #{JSON.generate(corpo)}" if corpo.present?
-    linhas << 'Isto apaga o registro e não tem volta.' if verbo_de(acao) == DESTRUTIVO
-    linhas.compact.join("\n")
+    detalhe = ["#{verbo_de(acao)} #{caminho}"]
+    detalhe << JSON.generate(corpo) if corpo.present?
+
+    { frase: dados[:descricao].presence || "#{verbo_de(acao)} #{recurso_de(acao)}",
+      detalhe: detalhe.join(' · '),
+      aviso: (verbo_de(acao) == DESTRUTIVO ? 'Isto apaga o registro e não tem volta.' : nil) }
   end
 
   # Só roda depois da confirmação. Vai pela API da conta, como o usuário: se a

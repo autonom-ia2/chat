@@ -254,7 +254,18 @@ watch(accountId, () => store.reset());
                 class="rounded-lg border border-n-weak bg-n-alpha-1 p-3 flex flex-col gap-2"
               >
                 <p class="mb-0 text-sm text-n-slate-12">
-                  {{ item.acao.descricao }}
+                  {{ item.acao.descricao.frase }}
+                </p>
+                <!-- O pedido literal, sempre visível: a frase acima pode
+                     suavizar, isto não. É o que torna a confirmação informada. -->
+                <p class="mb-0 text-xs break-words text-n-slate-11">
+                  {{ item.acao.descricao.detalhe }}
+                </p>
+                <p
+                  v-if="item.acao.descricao.aviso"
+                  class="mb-0 text-xs font-medium text-n-ruby-11"
+                >
+                  {{ item.acao.descricao.aviso }}
                 </p>
                 <div v-if="item.acaoEstado === 'aguardando'" class="flex gap-2">
                   <Button

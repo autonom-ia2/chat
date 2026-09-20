@@ -49,19 +49,24 @@ RSpec.describe Autonomia::Guide::Acoes do
   end
 
   describe 'antes de confirmar' do
-    it 'mostra o pedido literal, não só a frase bonita' do
+    # A frase pode suavizar; o pedido literal não. As duas coisas aparecem.
+    it 'mostra o pedido literal, não só a frase bonita', :aggregate_failures do
       texto = para(admin).descrever('POST crm/pipelines',
                                     { descricao: 'Criar o funil Comercial.', corpo: { name: 'Comercial' } })
 
-      expect(texto).to include('Criar o funil Comercial.')
-      expect(texto).to include("POST /api/v1/accounts/#{conta.id}/crm/pipelines")
-      expect(texto).to include('Comercial')
+      expect(texto[:frase]).to eq('Criar o funil Comercial.')
+      expect(texto[:detalhe]).to include("POST /api/v1/accounts/#{conta.id}/crm/pipelines")
+      expect(texto[:detalhe]).to include('Comercial')
     end
 
     it 'avisa quando a ação não tem volta' do
       texto = para(admin).descrever('DELETE labels/:id', { caminho: { id: 7 } })
 
-      expect(texto).to include('não tem volta')
+      expect(texto[:aviso]).to include('não tem volta')
+    end
+
+    it 'não inventa aviso em ação que não apaga nada' do
+      expect(para(admin).descrever('POST labels', { corpo: { title: 'VIP' } })[:aviso]).to be_nil
     end
 
     it 'descrever não chama a plataforma' do
