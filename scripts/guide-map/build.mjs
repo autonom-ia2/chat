@@ -103,18 +103,30 @@ export const lerRotas = async () => {
 // do bloco é o nome curto do fluxo. A tela vem no campo `rota`.
 export const lerPorques = texto => {
   const blocos = texto.split(/^(?=### )/m).filter(b => b.startsWith('### '));
-  return Object.fromEntries(
-    blocos.map(bloco => {
-      const linhas = bloco.split('\n');
-      const chave = linhas[0].replace(/^###\s*/, '').trim();
-      const campos = {};
-      linhas.slice(1).forEach(linha => {
-        const encontrado = linha.match(/^- ([a-z_]+):\s*(.*)$/);
-        if (encontrado) campos[encontrado[1]] = encontrado[2].trim();
-      });
-      return [chave, campos];
-    })
-  );
+  const fluxos = {};
+  const repetidos = [];
+
+  blocos.forEach(bloco => {
+    const linhas = bloco.split('\n');
+    const chave = linhas[0].replace(/^###\s*/, '').trim();
+    if (fluxos[chave]) repetidos.push(chave);
+    const campos = {};
+    linhas.slice(1).forEach(linha => {
+      const encontrado = linha.match(/^- ([a-z_]+):\s*(.*)$/);
+      if (encontrado) campos[encontrado[1]] = encontrado[2].trim();
+    });
+    fluxos[chave] = campos;
+  });
+
+  // Copiar um bloco e esquecer de renomear é o erro que este formato convida, e o
+  // efeito seria um fluxo sumir do Guia sem ninguém notar.
+  if (repetidos.length) {
+    throw new Error(
+      `porques.md tem blocos repetidos: ${repetidos.join(', ')}. Cada fluxo precisa de um nome próprio.`
+    );
+  }
+
+  return fluxos;
 };
 
 const descreverPorta = rota => {
@@ -142,8 +154,15 @@ const montarFluxo = (chave, humano, rota) => {
   campo('passos', humano.passos);
   campo('gotchas', humano.gotchas);
   campo('diagnostic', humano.diagnostic);
-  const alvo = (humano.nav_target || rota?.nome || chave).replace(/`/g, '');
-  linhas.push(`- nav_target: \`${alvo}\``);
+  // nav_target escrito à mão sai literal: ele carrega coisas que o gerador não
+  // inventaria — o parâmetro de uma tela (`integration_id=...`) ou um travessão,
+  // que quer dizer "este fluxo não leva a lugar nenhum". Encrasar por conta
+  // própria transformaria o travessão num nome de rota.
+  if (humano.nav_target) {
+    linhas.push(`- nav_target: ${humano.nav_target}`);
+  } else {
+    linhas.push(`- nav_target: \`${rota?.nome || chave}\``);
+  }
   campo('highlight', humano.highlight);
   return linhas.join('\n');
 };

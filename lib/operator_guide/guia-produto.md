@@ -601,7 +601,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: chave OpenAI valida; acesso de administrator; opcionalmente API Base URL quando nao usar `https://api.openai.com`.
 - passos: 1. Abra Configuracoes > Integracoes; 2. Entre em CRM Kanban AI; 3. Clique para configurar ou adicionar a integracao; 4. Preencha API Key e, se precisar, API Base URL: conectar ja liga a IA, nao existe mais caixa Enable CRM Kanban AI no formulario; 5. Salve e depois abra CRM Kanban para configurar a IA por funil.
 - gotchas: depois de conectar, a tela da integracao mostra "Conectado e funcionando"; se mostrar "Conectado, mas desligado", a conta ficou com a IA desligada e e preciso desconectar e conectar de novo; chave recusada costuma ser chave errada, revogada ou conta OpenAI sem credito; a integracao generica `openai` nao e a mesma coisa que `crm_kanban_ai`; se ja existir um hook `crm_kanban_ai` vazio ou desativado, ele impede o fallback para a chave global de sistema; a chave global de fallback e configuracao de super-admin, nao da conta; a tela de IA do funil ajusta criterios/auto-move/follow-up, mas nao cria a credencial.
-- nav_target: `settings_applications_integration com integration_id=crm_kanban_ai`
+- nav_target: `settings_applications_integration` com `integration_id=crm_kanban_ai`
 
 ### Primeiros passos numa conta nova
 - intent: O que configurar primeiro numa conta nova?; Qual checklist inicial da plataforma?; Como comecar o onboarding?; Depois de criar a conta, para onde vou?
@@ -632,7 +632,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: usuario autenticado em uma conta ativa; Guia habilitado para a conta.
 - passos: 1. Pergunte em linguagem natural onde fica ou como fazer algo; 2. O Guia identifica seu perfil e as flags da conta; 3. Ele responde com o caminho no menu e os pre-requisitos; 4. Quando houver uma rota permitida, ele pode abrir a tela certa; 5. Para acoes sensiveis, ele orienta os passos, mas nao executa por voce.
 - gotchas: o Guia e read-only: nao cria, edita, envia, apaga, integra ou desfaz nada; ele nao deve revelar segredos nem burlar permissoes; rotas com parametros, como `:inboxId` ou `:agentId`, precisam de um item real escolhido antes da navegacao; se uma feature estiver desligada, o Guia deve explicar o gate em vez de prometer a tela.
-- nav_target: `—`
+- nav_target: —
 
 ### Escalar para suporte humano
 - intent: Quando devo falar com suporte humano?; Como abro um chamado?; Onde contato o suporte?; O Guia nao resolveu, o que faco?
@@ -641,7 +641,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: usuario logado; widget de suporte instalado e configurado, ou canal externo de suporte informado pela operacao.
 - passos: 1. Tente primeiro pedir ao Guia o caminho, gate ou erro observado; 2. Escale se houver bloqueio de permissao, instabilidade, credencial externa, dado divergente ou erro que o Guia nao consegue resolver; 3. Abra o menu do perfil/avatar; 4. Clique em Contate o suporte se aparecer; 5. Informe conta, tela, horario aproximado, mensagem de erro e o que estava tentando fazer.
 - gotchas: o Guia nao abre chamado por conta propria; em white-label o item nativo de suporte pode ficar escondido mesmo com a feature ligada; nao envie senhas, tokens, chaves OpenAI, credenciais de S3/SMTP ou dados sensiveis em texto aberto.
-- nav_target: `—`
+- nav_target: —
 
 ### Gerenciar Central de Ajuda
 - intent: Onde fica a Central de Ajuda?; Como crio artigo ou categoria?; Como mudo idioma do portal?; Onde configuro portal de help center?
