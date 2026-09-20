@@ -16,15 +16,20 @@ vi.mock('shared/composables/useBranding', () => ({
   useBranding: () => ({ replaceInstallationName: texto => texto }),
 }));
 
-const integracao = (id, hooks = []) => ({
+// `enabled` é o que o backend responde para esta integração: o
+// CredentialResolver, que aceita a chave da conta ou a da instalação.
+const integracao = (id, { enabled = false, hooks = [] } = {}) => ({
   id,
   name: `Nome ${id}`,
   description: `Descrição ${id}`,
-  enabled: hooks.length > 0,
+  enabled,
   hooks,
 });
 
-const HOOK_LIGADO = [{ id: 1, status: true, settings: { enabled: true } }];
+const COM_CHAVE = {
+  enabled: true,
+  hooks: [{ id: 1, status: true, settings: { enabled: true } }],
+};
 
 const montar = async integracoes => {
   lista.value = integracoes;
@@ -68,7 +73,7 @@ describe('Index das integrações', () => {
     const wrapper = await montar([
       integracao('webhook'),
       integracao('slack'),
-      integracao('crm_kanban_ai', HOOK_LIGADO),
+      integracao('crm_kanban_ai', COM_CHAVE),
     ]);
 
     expect(idsNaTela(wrapper)).toEqual(['webhook', 'slack', 'crm_kanban_ai']);
@@ -78,13 +83,24 @@ describe('Index das integrações', () => {
   it('volta a destacar quando o hook existe mas a IA está desligada', async () => {
     const wrapper = await montar([
       integracao('webhook'),
-      integracao('crm_kanban_ai', [
-        { id: 1, status: true, settings: { enabled: false } },
-      ]),
+      integracao('crm_kanban_ai', {
+        enabled: false,
+        hooks: [{ id: 1, status: true, settings: { enabled: false } }],
+      }),
     ]);
 
     expect(idsNaTela(wrapper)[0]).toBe('crm_kanban_ai');
     expect(destaqueDe(wrapper, 'crm_kanban_ai')).toBe('true');
+  });
+
+  it('não pede chave na conta que roda com a chave da instalação', async () => {
+    const wrapper = await montar([
+      integracao('webhook'),
+      integracao('crm_kanban_ai', { enabled: true, hooks: [] }),
+    ]);
+
+    expect(idsNaTela(wrapper)).toEqual(['webhook', 'crm_kanban_ai']);
+    expect(destaqueDe(wrapper, 'crm_kanban_ai')).toBe('false');
   });
 
   it('não destaca nenhuma outra integração', async () => {

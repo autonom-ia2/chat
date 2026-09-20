@@ -30,27 +30,39 @@ describe('crmAiKey', () => {
     });
   });
 
+  // `enabled` vem do backend e, para esta integração, é o CredentialResolver:
+  // vale tanto a chave da conta quanto a da instalação.
   describe('isCrmAiKeyPending', () => {
-    it('a conta precisa da chave quando não há hook', () => {
-      expect(isCrmAiKeyPending({ id: 'crm_kanban_ai', hooks: [] })).toBe(true);
-    });
-
-    it('a conta precisa da chave quando o hook está desligado', () => {
+    it('a conta precisa da chave quando o backend diz que não há credencial', () => {
       expect(
-        isCrmAiKeyPending({
-          id: 'crm_kanban_ai',
-          hooks: [{ status: true, settings: { enabled: false } }],
-        })
+        isCrmAiKeyPending({ id: 'crm_kanban_ai', enabled: false, hooks: [] })
       ).toBe(true);
     });
 
-    it('a conta não precisa mais da chave com o hook ligado', () => {
+    it('a conta não precisa da chave quando o backend diz que há credencial', () => {
       expect(
         isCrmAiKeyPending({
           id: 'crm_kanban_ai',
+          enabled: true,
           hooks: [{ status: true, settings: { enabled: true } }],
         })
       ).toBe(false);
+    });
+
+    it('não pede chave na conta que usa a chave da instalação, sem hook próprio', () => {
+      expect(
+        isCrmAiKeyPending({ id: 'crm_kanban_ai', enabled: true, hooks: [] })
+      ).toBe(false);
+    });
+
+    it('pede chave quando o hook existe mas o backend não resolveu credencial', () => {
+      expect(
+        isCrmAiKeyPending({
+          id: 'crm_kanban_ai',
+          enabled: false,
+          hooks: [{ status: true, settings: { enabled: false } }],
+        })
+      ).toBe(true);
     });
 
     it('trata integração ausente como pendente, em vez de estourar', () => {
