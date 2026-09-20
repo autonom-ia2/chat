@@ -429,11 +429,11 @@ export function responseFor(url, method, state) {
             click: Math.round(delivered * 0.08),
           };
         })
-      : [0, 1, 2].map(i => ({
-          bucket: `2026-09-${14 + i}T00:00:00Z`,
-          delivered: 120 + i * 40,
-          open: 65 + i * 20,
-          click: 10 + i * 5,
+      : Array.from({ length: 14 }, (_, index) => ({
+          bucket: `2026-09-${String(6 + index).padStart(2, '0')}T00:00:00Z`,
+          delivered: 120 + ((index * 37) % 220),
+          open: 50 + ((index * 17) % 95),
+          click: 8 + ((index * 7) % 34),
         }));
     return ok({ delivery_mode: deliveryMode, series });
   }

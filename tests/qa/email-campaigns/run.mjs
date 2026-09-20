@@ -1092,6 +1092,53 @@ try {
         (await dailyTicks.count()) <= 7,
         'Daily timeline exposes too many x-axis labels'
       );
+      const dailyPoints = timelineSection.locator(
+        '.cw-viz-line__series[data-series-id="delivered"] .cw-viz-line__point-group'
+      );
+      assert(
+        (await dailyPoints.count()) === 14,
+        `Expected 14 daily delivery points, got ${await dailyPoints.count()}`
+      );
+
+      const dailyChart = timelineSection.locator('[data-timeline-chart]');
+      await dailyChart.evaluate(element => {
+        element.style.width = '320px';
+      });
+      await page.waitForTimeout(150);
+
+      const narrowDailyTicks = timelineSection.locator(
+        '.cw-viz-line__x-tick:not(.hidden)'
+      );
+      const narrowDailyGeometry = await narrowDailyTicks
+        .locator('.cw-viz-line__axis-label--x')
+        .evaluateAll(labels =>
+          labels.map(label => {
+            const rect = label.getBoundingClientRect();
+            return { left: rect.left, right: rect.right, width: rect.width };
+          })
+        );
+      assert(
+        narrowDailyGeometry.length >= 2,
+        `Dense daily timeline hid all labels: ${JSON.stringify(narrowDailyGeometry)}`
+      );
+      assert(
+        narrowDailyGeometry.every(
+          (label, index) =>
+            index === 0 ||
+            label.left >= narrowDailyGeometry[index - 1].right + 6
+        ),
+        `Dense daily labels overlap at 320px: ${JSON.stringify(narrowDailyGeometry)}`
+      );
+      assert(
+        (await dailyPoints.count()) === 14,
+        'Daily resize removed data points'
+      );
+
+      await dailyChart.evaluate(element => {
+        element.style.width = '';
+      });
+      await page.waitForTimeout(150);
+
       const hoverTarget = timelineSection
         .locator('.cw-viz-line__point-group[data-point-index="1"]')
         .first();
@@ -1208,10 +1255,15 @@ try {
         )
         .allTextContents();
       assert(
-        restoredLabels.every(label => label.trim() && !label.includes('…')),
+        restoredLabels.length >= 2 &&
+          restoredLabels.every(label => label.trim() && !label.includes('…')),
         `Hourly labels did not recover after resize: ${JSON.stringify(
           restoredLabels
         )}`
+      );
+      assert(
+        (await hourlyPoints.count()) === 24,
+        'Hourly points changed after restoring chart width'
       );
 
       const pathStyles = await timelineSection
@@ -1249,7 +1301,7 @@ try {
       );
 
       const focusPoint = hourlyPoints.nth(14);
-      await focusPoint.hover();
+      await focusPoint.focus();
       const tooltip = timelineSection.getByRole('tooltip').first();
       await tooltip.waitFor({ state: 'visible' });
       assert(
@@ -1272,7 +1324,8 @@ try {
         `Timeline tooltip labels are truncated: ${JSON.stringify(tooltipLabels)}`
       );
       await shot('timeline-hour', timelineSection, { sequence: false });
-      await page.mouse.move(0, 0);
+      await focusPoint.blur();
+      await tooltip.waitFor({ state: 'hidden' });
 
       await requestAfter('/timeline', () => dayButton.click());
       await settle();

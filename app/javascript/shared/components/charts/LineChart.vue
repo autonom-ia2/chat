@@ -93,9 +93,45 @@ let frameTwo;
 const chartResetKey = computed(() =>
   props.xTickLabels.length ? 'custom-x-labels' : 'native-x-labels'
 );
+const managesXLabels = computed(
+  () => props.xTickLabels.length > 0 || props.xLabelStride > 1
+);
+
+const hideOverlappingXTicks = ticks => {
+  const measured = [...ticks]
+    .filter(tick => !tick.classList.contains('hidden'))
+    .map(tick => {
+      const text = tick.querySelector('text');
+      const rect = text?.getBoundingClientRect?.();
+      return rect?.width > 0 ? { tick, rect } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.rect.left - b.rect.left);
+
+  if (measured.length <= 2) return;
+
+  const minimumGap = 8;
+  const last = measured.at(-1);
+  let previous = measured[0];
+
+  measured.slice(1, -1).forEach(current => {
+    const overlapsPrevious =
+      previous.rect.right + minimumGap > current.rect.left;
+    const overlapsLast = current.rect.right + minimumGap > last.rect.left;
+
+    if (overlapsPrevious || overlapsLast) {
+      current.tick.classList.add('hidden');
+      return;
+    }
+
+    previous = current;
+  });
+};
 
 const applyXLabelStride = async () => {
   await nextTick();
+  if (!managesXLabels.value) return;
+
   const root = chart.value?.$el || chart.value;
   const ticks = root?.querySelectorAll?.('.cw-viz-line__x-tick') || [];
   const stride = Math.max(Math.floor(props.xLabelStride || 1), 1);
@@ -110,6 +146,8 @@ const applyXLabelStride = async () => {
       text.textContent = String(label);
     }
   });
+
+  hideOverlappingXTicks(ticks);
 };
 
 const cancelScheduledLabels = () => {
@@ -137,6 +175,8 @@ const scheduleXLabels = () => {
 };
 
 onMounted(async () => {
+  if (!managesXLabels.value) return;
+
   await applyXLabelStride();
   if (typeof ResizeObserver !== 'undefined' && container.value) {
     resizeObserver = new ResizeObserver(scheduleXLabels);

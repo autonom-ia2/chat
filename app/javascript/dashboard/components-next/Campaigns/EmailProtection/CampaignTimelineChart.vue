@@ -56,6 +56,7 @@ const formatBucket = value => {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
+      minute: '2-digit',
     }).format(date);
   }
 
@@ -149,8 +150,11 @@ const collection = computed(() => ({
 
 const xLabelStride = computed(() => {
   if (props.series.length <= 1) return 1;
-  const desiredLabels = props.interval === 'hour' ? 3 : 7;
-  return Math.max(Math.ceil(props.series.length / desiredLabels), 1);
+  const desiredVisibleLabels = props.interval === 'hour' ? 4 : 7;
+  return Math.max(
+    Math.ceil((props.series.length - 1) / (desiredVisibleLabels - 1)),
+    1
+  );
 });
 
 const showDeliveryHint = computed(

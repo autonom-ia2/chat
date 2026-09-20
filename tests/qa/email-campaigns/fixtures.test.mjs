@@ -116,10 +116,9 @@ for (const [scenario, mode, confirmed, direct] of [
       state
     ).json.payload;
     assert.equal(timeline.delivery_mode, mode);
-    assert.deepEqual(
-      timeline.series.map(row => row.delivered),
-      [120, 160, 200]
-    );
+    assert.equal(timeline.series.length, 14);
+    assert.equal(timeline.series[0].bucket, '2026-09-06T00:00:00Z');
+    assert.equal(timeline.series.at(-1).bucket, '2026-09-19T00:00:00Z');
     const hourlyTimeline = responseFor(
       new URL(`${origin}/reports/4361/timeline?interval=hour`),
       'GET',

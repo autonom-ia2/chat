@@ -95,6 +95,7 @@ describe('CampaignTimelineChart.vue', () => {
 
     const chart = wrapper.findComponent(LineChart);
     expect(chart.props('collection').labels).toHaveLength(24);
+    expect(chart.props('collection').labels[0]).toMatch(/:00/);
     expect(chart.props('collection').datasets[0].data).toHaveLength(24);
     expect(chart.props('xLabelStride')).toBe(8);
     expect(chart.props('pointRadius')).toBe(3);
