@@ -4,7 +4,7 @@ module Autonomia
     # sugestão de navegação (nav_target). Nunca opera nada. Reusa o motor Autonomia (Answerer →
     # Retriever → ResponsesClient → portão de confiança). Best-effort: nunca levanta (available:false).
     class Chat
-      Result = Struct.new(:text, :navigation, :grounded, :confidence, :available, :escalate,
+      Result = Struct.new(:text, :navigation, :grounded, :confidence, :available, :escalate, :acao,
                           keyword_init: true)
 
       MAX_HISTORY = 12
@@ -49,7 +49,7 @@ module Autonomia
         text = result.reply.to_s.strip
         return unavailable if text.blank?
 
-        Result.new(text: text, navigation: resolve_navigation(result),
+        Result.new(text: text, navigation: resolve_navigation(result), acao: acao_proposta,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
                    available: true, escalate: result.handoff.to_h[:should] == true)
@@ -173,6 +173,21 @@ module Autonomia
         ["Consultei #{recurso} nesta conta e recebi: #{conteudo}"]
       rescue StandardError => e
         Rails.logger.warn("[autonomia][guide][chat] leitura_context account=#{@account&.id} #{e.class}: #{e.message}")
+        nil
+      end
+
+      # O pedido de FAZER vira proposta: ação, valores e o texto que a pessoa lê
+      # antes de confirmar. Nada é executado aqui.
+      def acao_proposta
+        escolha = ::Autonomia::Guide::EscolhaDaAcao.new(
+          account: @account, user: @user, account_user: @account_user
+        ).para(@message)
+        return nil if escolha.blank?
+
+        acoes = ::Autonomia::Guide::Acoes.new(account: @account, user: @user, account_user: @account_user)
+        { nome: escolha[:acao], dados: escolha[:dados], descricao: acoes.descrever(escolha[:acao], escolha[:dados]) }
+      rescue ::Autonomia::Guide::Acoes::Recusada, StandardError => e
+        Rails.logger.warn("[autonomia][guide][chat] acao_proposta account=#{@account&.id} #{e.class}")
         nil
       end
 

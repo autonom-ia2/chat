@@ -18,12 +18,20 @@ const addUserMessage = content => {
   return record;
 };
 
-const addAssistantMessage = ({ content, navigation = null } = {}) => {
+const addAssistantMessage = ({
+  content,
+  navigation = null,
+  acao = null,
+} = {}) => {
   const record = {
     id: nextId,
     message_type: 'assistant',
     message: { content },
     navigation,
+    // Ação proposta: fica aguardando confirmação e guarda o desfecho depois.
+    acao,
+    acaoEstado: acao ? 'aguardando' : null,
+    acaoResultado: null,
   };
   nextId += 1;
   state.messages.push(record);
@@ -47,6 +55,12 @@ export const useAutonomiaGuideStore = () => ({
   messages: readonly(state).messages,
   addUserMessage,
   addAssistantMessage,
+  marcarAcao: (id, estado, resultado = null) => {
+    const registro = state.messages.find(m => m.id === id);
+    if (!registro) return;
+    registro.acaoEstado = estado;
+    registro.acaoResultado = resultado;
+  },
   reset,
   toHistory,
 });

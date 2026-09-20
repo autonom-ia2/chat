@@ -19,7 +19,8 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
       grounded: result.grounded,
       confidence: result.confidence,
       available: result.available,
-      escalate: result.escalate
+      escalate: result.escalate,
+      acao: result.acao
     }
   end
 
