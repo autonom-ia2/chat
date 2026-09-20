@@ -175,7 +175,7 @@
       "SAVED": "Primeira mensagem salva.",
       "STARTERS": "Perguntas sugeridas",
       "APPROVED_SUMMARY": "{count} materiais aprovados · confiança {pct}%",
-      "TEST_FIRST": "Testar antes",
+      "TEST_OPTIONAL": "Testar",
       "CONNECT_TITLE": "Conectar a uma caixa",
       "INTERNAL_TITLE": "Agente interno (copiloto da equipe)",
       "INTERNAL_HINT": "Este agente ajuda sua equipe dentro das conversas e nunca fala com o cliente, então não há caixa para conectar.",
@@ -183,7 +183,8 @@
       "CONNECT_ACTIVATE": "Conectar e ativar",
       "ACTIVATE_INTERNAL": "Ativar copiloto",
       "ACTIVATED_INTERNAL": "Copiloto ativado! Abra qualquer conversa e encontre-o na barra lateral direita.",
-      "BACK": "Voltar"
+      "BACK": "Voltar",
+      "TEST_FIRST": "Testar antes"
     },
     "PANEL": {
       "LOADING": "Carregando agente…",
@@ -195,6 +196,13 @@
         "CHANNELS": "Canais",
         "PERFORMANCE": "Desempenho",
         "TUNE": "Ajustar"
+      },
+      "STATUS_CONTROL": {
+        "PAUSE": "Pausar",
+        "ACTIVATE": "Ativar",
+        "PAUSED": "Agente pausado",
+        "ACTIVATED": "Agente ativado",
+        "ERROR": "Não foi possível mudar o estado do agente. Tente de novo."
       }
     },
     "TEST": {
@@ -263,6 +271,10 @@
       "ADD_ERROR": "Não foi possível adicionar esse conhecimento. Tente novamente.",
       "REMOVE_ERROR": "Não foi possível remover esse item. Tente novamente.",
       "RESYNC_ERROR": "Não foi possível sincronizar esse item novamente. Tente novamente.",
+      "REMOVE_CONFIRM_TITLE": "Remover este material?",
+      "REMOVE_CONFIRM_DESC": "\"{name}\" e os trechos já indexados saem da base de conhecimento do agente. Não dá para desfazer.",
+      "REMOVE_CONFIRM_BUTTON": "Remover",
+      "REMOVE_SUCCESS": "Material removido.",
       "STATUS": {
         "IN_PROGRESS": "Processando",
         "READY": "Pronto",
@@ -415,7 +427,23 @@
       },
       "CONFIDENCE_LOW": "Baixa (transfere pouco)",
       "CONFIDENCE_HIGH": "Alta (transfere com frequência)",
-      "CONFIDENCE_HINT": "Abaixo de {pct}% de confiança, o agente transfere a conversa para um humano em vez de arriscar."
+      "CONFIDENCE_HINT": "Abaixo de {pct}% de confiança, o agente transfere a conversa para um humano em vez de arriscar.",
+      "HISTORY": {
+        "TITLE": "Histórico da instrução",
+        "HINT": "Toda atualização automática e toda edição manual ficam salvas. Se algo sair errado, volte para uma versão anterior.",
+        "LOADING": "Carregando histórico…",
+        "EMPTY": "Ainda não há versões.",
+        "META": "{date} · {author}",
+        "RESTORE": "Restaurar",
+        "REASON": {
+          "KB_REFRESH": "Atualização da base de conhecimento",
+          "MANUAL_EDIT": "Edição manual",
+          "ROLLBACK": "Versão restaurada"
+        },
+        "LOAD_ERROR": "Não foi possível carregar o histórico da instrução.",
+        "RESTORE_SUCCESS": "Instrução restaurada.",
+        "RESTORE_ERROR": "Não foi possível restaurar esta versão. Tente de novo."
+      }
     },
     "PERFORMANCE": {
       "RANGE": {
