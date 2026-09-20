@@ -29,6 +29,14 @@ module FormularioDoEspecialista
     @expostos ||= Autonomia::Insurance::Parametros.new(SCHEMA).caminhos
   end
 
+  def garagem_de_casa
+    campo('vehicle.garageAtHome')
+  end
+
+  def portoes_no_dominio?
+    garagem_de_casa['valores'].values_at('1', '2').all? { |v| v.match?(/portão/i) }
+  end
+
   def campo(nome)
     raise "o formulário do especialista não expõe #{nome}" unless expostos.include?(nome)
 
@@ -87,6 +95,25 @@ module ManualDoEspecialistaDeAuto
     # renovação com bônus alheio — e o preço não se sustenta na emissão.
     'placa, CEP, modelo, ano' => lambda {
       %w[vehicle.plate vehicle.overnightZipCode vehicle.fipeCode vehicle.modelYear].all? { |n| campo(n) }
+    },
+    # OS SINISTROS DA APÓLICE (#514). Em 11/09/2026, execução 8, a mesma apólice HDI em PDF trouxe
+    # `previousClaimsCount=1` — o especialista leu e mandou. Em 12/09 a #411 FECHOU a lista do que se
+    # extrai do documento ("os três dados da apólice e os do veículo"), para impedir a cópia das
+    # coberturas; os sinistros, que nunca tinham estado em lista nenhuma, saíram junto com elas. Em
+    # 19/09/2026, execução 38, mesma apólice ("Qtde Sinistros :1"), mesma renovação: companhia 657,
+    # bônus 9, número e vigência vieram, e `quotation.previousClaimsCount` saiu vazio. A lista volta a
+    # nomeá-los, nas duas frases em que ela aparece.
+    #
+    # AS DUAS ÂNCORAS DOS SINISTROS: há onde escrevê-los, o campo VIAJA na entrada, e continua OPCIONAL.
+    # A EXCEÇÃO DO PORTÃO (CEO, 19/09/2026): campo opcional, e os dois valores da pergunta são os do domínio.
+    'o portão é eletrônico ou manual' => -> { garagem_de_casa['obrigatorio'] == false && portoes_no_dominio? },
+    "a quantidade de\nsinistros da vigência anterior" => lambda {
+      campo('quotation.previousClaimsCount')['obrigatorio'] == false && grupos_da_entrada.include?('quotation') &&
+        entrada_de_auto('quotation' => { 'previousClaimsCount' => 1 }).dig('quotation', 'previousClaimsCount') == 1
+    },
+    "os três dados da apólice, o\nbônus, os sinistros e os do veículo" => lambda {
+      %w[quotation.previousInsurerCode quotation.previousPolicyNumber quotation.previousPolicyEndDate
+         quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n) }
     },
     'sem marcar renovação, sem bônus e sem histórico de sinistros' => lambda {
       %w[quotation.isRenewal quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n)['obrigatorio'] == false }
@@ -330,7 +357,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
   it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('b0a5a0c3d41ae4b555c66cd31e95cd78')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('421d77ee404116f0bb54293aa44fae89')
   end
 
   describe 'quem roda lê o manual do deploy (termos 5 e 6)' do

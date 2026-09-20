@@ -3,6 +3,10 @@
 # Ferramenta SÍNCRONA do principal. Lê, no instante da pergunta, o que a cotação mais nova da conversa guardou
 # por seguradora (`Insurance::ResultadoDaCotacao`), e não chama o portal.
 #
+# DEVOLVE TAMBÉM A ENTRADA (#515): o resumo, em português, dos dados com que aquela cotação foi pedida
+# (`Insurance::EntradaDaCotacao`). Sem ele a Lia sabia o desfecho de cada seguradora e não sabia o que tinha
+# sido enviado — em 19/09/2026 ela escalou um "o bônus da apólice foi considerado?" que a entrada respondia.
+#
 # DEVOLVE OS DADOS AO MODELO, e quem escreve ao cliente é a Lia (decisão do CEO, 18/09/2026): por seguradora,
 # o nome, o valor com o período e o parcelamento, ou o desfecho e a categoria do motivo (`veiculo`, `regiao` ou
 # nenhuma) de quem não fez proposta. Nunca texto do portal. O que ela devolveu fica registrado no turno
@@ -63,9 +67,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
 
     def description
       'Mostra o resultado da cotação desta conversa, com o que as seguradoras já responderam, sem cotar de ' \
-        'novo. Use quando o cliente pedir para ver os preços outra vez, perguntar quanto deu uma seguradora ' \
-        'ou perguntar se uma seguradora fez proposta. Devolve os preços e o que cada seguradora respondeu, para você ' \
-        'escrever a resposta.'
+        'novo. Use quando o cliente pedir para ver os preços outra vez, perguntar quanto deu uma seguradora, ' \
+        'perguntar se uma seguradora fez proposta ou perguntar COM QUE DADOS a cotação foi feita (se o bônus ' \
+        'da apólice entrou, qual franquia, qual CEP, se tem carro reserva). Devolve os preços, o que cada ' \
+        'seguradora respondeu e um resumo da entrada com que a cotação foi pedida, para você escrever a resposta.'
     end
 
     def params
@@ -82,14 +87,21 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     end
   end
 
-  # -> o texto ao modelo. O mesmo texto fica registrado no turno para a conferência da fala.
+  # -> o texto ao modelo. Para a conferência da fala fica registrada SÓ A PARTE DOS PREÇOS.
+  #
+  # O RESUMO DA ENTRADA NÃO ENTRA NA CONFERÊNCIA (achado da revisão da PR #518). A conferência
+  # autoriza a Lia a citar as seguradoras que aparecem nos dados do turno; o resumo cita a
+  # SEGURADORA ANTERIOR da renovação, que também cota. Com ela nos dados, a fala "a HDI não fez
+  # proposta" passaria sem nada que a sustentasse. Ao modelo o resumo vai inteiro; à conferência,
+  # só o que fala de preço.
   def call
     conversa = delivery&.conversation
     return ::Autonomia::Agents::Tools::Recusa.para_modelo(SEM_CONTEXTO, slug: self.class.slug, delivery: delivery, agente: agent) if conversa.nil?
 
-    texto = resposta(conversa)
-    delivery.registrar_resultado(dados_do_turno(texto))
-    texto
+    precos = resposta(conversa)
+    entrada = @resultado && !texto_sem_leitura ? entrada_da_cotacao : nil
+    delivery.registrar_resultado(dados_do_turno(precos))
+    [precos, entrada].compact.join("\n")
   end
 
   private
@@ -98,11 +110,41 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     params['seguradora'].to_s.strip.presence
   end
 
+  # O RESUMO DA ENTRADA VEM JUNTO DOS PREÇOS (#515). Em 19/09/2026 o cliente perguntou "o bônus da
+  # apólice foi considerado?" e a Lia escalou: ela via o desfecho de cada seguradora e não via com que
+  # dados a cotação tinha sido pedida. Não vai nos estados em que não há cotação a ler (`texto_sem_leitura`):
+  # lá o assunto é outro, e o resumo de um pedido que não chegou ao portal confundiria.
   def resposta(conversa)
     @resultado = Resultado.da_conversa(conversa.id)
     return SEM_COTACAO if @resultado.nil?
 
-    texto_sem_leitura || (seguradora ? por_seguradora : geral)
+    sem_leitura = texto_sem_leitura
+    return sem_leitura if sem_leitura
+
+    seguradora ? por_seguradora : geral
+  end
+
+  # -> o resumo da entrada da MESMA execução cujo resultado está sendo lido, ou nil (outro ramo,
+  # execução sem argumentos).
+  # Falha aqui não pode custar os preços ao cliente (achado da revisão): sem resumo, o modelo segue
+  # com o que importa.
+  def entrada_da_cotacao
+    ::Autonomia::Insurance::EntradaDaCotacao.new(@resultado.run.arguments, schema: schema_de_auto).texto
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] resumo da entrada indisponível #{e.class}")
+    nil
+  end
+
+  # O nome de cada opção (a franquia, a seguradora anterior) sai do MESMO schema que montou o
+  # formulário do especialista: o que o adapter entregou na sincronização e está guardado na conexão
+  # (`VehicleLookup` já lê o tipo do veículo assim). Só o GUARDADO — esta ferramenta é síncrona e o
+  # cliente está esperando; buscar no adapter aqui custaria até 10 s de espera por um nome. Sem
+  # schema, a opção entra sem nome, e nunca como código.
+  def schema_de_auto
+    ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:ready?)&.quote_schema(Resultado.cotacao::AUTO)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] schema de auto indisponível no resultado #{e.class}")
+    nil
   end
 
   # O que a conferência precisa: o texto que o modelo recebeu, o nome de toda seguradora da cotação e se o
