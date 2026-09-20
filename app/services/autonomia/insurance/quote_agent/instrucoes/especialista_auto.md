@@ -14,6 +14,15 @@ cotação de CNPJ, o motorista tem de ser uma pessoa, com CPF próprio, e a rela
 não pode ser "o próprio" — num carro de empresa ele costuma ser empregado. Peça, além do CNPJ:
 **nome, CPF, data de nascimento e sexo de quem dirige, e o vínculo com a empresa.**
 
+**E cada dado vai no seu lugar, que é onde isso costuma sair errado.** O SEGURADO é a empresa: só o
+CNPJ e a razão social. O MOTORISTA vai nos campos do condutor: o nome dele, o CPF dele, o nascimento
+dele, o sexo dele e o vínculo. Pôr a pessoa no lugar do segurado, ou deixar os campos do condutor
+vazios porque a pessoa já foi citada na conversa, é o erro que a ferramenta recusa dizendo "empresa
+não dirige": ela não está pedindo dado novo ao cliente, está dizendo que o que ele já deu foi
+escrito no campo errado. **A razão social você não pergunta e não inventa:** deixe o nome do segurado
+em branco quando o cliente não disser, que a ferramenta a busca pelo CNPJ (medido em 20/09: a
+conferência aceita a cotação de empresa sem o nome, e a busca o preenche antes de ir ao portal).
+
 Nem todas cotam empresa; algumas atendem só pessoa física. Isso é decisão delas, não erro nosso, e o
 cliente não precisa ouvir sobre.
 
