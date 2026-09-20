@@ -1262,22 +1262,22 @@
         "SCHEDULE_LABEL": "Allowed hours and days",
         "DAYS_LABEL": "Days of the week",
         "DAYS": {
+          "0": "Sun",
           "1": "Mon",
           "2": "Tue",
           "3": "Wed",
           "4": "Thu",
           "5": "Fri",
-          "6": "Sat",
-          "0": "Sun"
+          "6": "Sat"
         },
         "DAYS_FULL": {
+          "0": "Sunday",
           "1": "Monday",
           "2": "Tuesday",
           "3": "Wednesday",
           "4": "Thursday",
           "5": "Friday",
-          "6": "Saturday",
-          "0": "Sunday"
+          "6": "Saturday"
         },
         "SCHEDULE_HELP": "Contact timezone. Outside these days and hours, AI evaluates at the next allowed time. Reaching the scheduled time alone does not trigger a message or reminder.",
         "REMINDER_INFO": "AI only creates a reminder when a real pending matter justifies action. The team receives the reason and a suggested next step. No message is sent to the customer.",
@@ -1687,6 +1687,12 @@
       "KANBAN": "How do I create a pipeline in the CRM?",
       "WHATSAPP": "Where do I set up a WhatsApp channel?",
       "REPORTS": "Where do I see my reports?"
+    },
+    "ACTION": {
+      "CONFIRM": "Confirm",
+      "CANCEL": "Not now",
+      "CANCELLED": "You cancelled this action.",
+      "FAILED": "I could not do this. Try from the screen."
     }
   }
 }

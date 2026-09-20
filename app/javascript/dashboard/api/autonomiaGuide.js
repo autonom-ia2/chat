@@ -17,6 +17,12 @@ class AutonomiaGuideAPI extends ApiClient {
       route_context: routeContext,
     });
   }
+
+  // Só é chamado depois da confirmação explícita na tela. O backend recusa o que
+  // estiver fora do catálogo de ações e o que a pessoa não puder fazer.
+  executarAcao({ acao, dados } = {}) {
+    return axios.post(`${this.url}/acoes/executar`, { acao, dados });
+  }
 }
 
 export default new AutonomiaGuideAPI();

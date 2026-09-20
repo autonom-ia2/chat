@@ -347,6 +347,8 @@ Rails.application.routes.draw do
             post 'conversations/:conversation_id/copilot', to: 'conversation_copilot#create'
             # Guia da Plataforma — onboarding/suporte read-only, global/auto-on por conta elegível.
             post 'guide/chat', to: 'guide#chat'
+            post 'guide/acoes/preparar', to: 'guide#preparar_acao'
+            post 'guide/acoes/executar', to: 'guide#executar_acao'
             resource :invite_connection, only: [:show] do
               get ':inbox_id/connection', action: :connection
               post ':inbox_id/reconnect', action: :reconnect

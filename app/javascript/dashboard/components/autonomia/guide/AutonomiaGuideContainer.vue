@@ -147,6 +147,26 @@ const navigateTo = nav => {
   }
 };
 
+// A execução acontece aqui, e só aqui: depois de a pessoa ler a descrição e
+// clicar em confirmar. O backend recusa de novo o que estiver fora do catálogo.
+const confirmarAcao = async item => {
+  store.marcarAcao(item.id, 'executando');
+  try {
+    const { data } = await AutonomiaGuideAPI.executarAcao({
+      acao: item.acao.nome,
+      dados: item.acao.dados,
+    });
+    store.marcarAcao(item.id, 'feita', data.mensagem);
+  } catch (error) {
+    const motivo = error?.response?.data?.error;
+    store.marcarAcao(
+      item.id,
+      'falhou',
+      motivo || t('AUTONOMIA_GUIDE.ACTION.FAILED')
+    );
+  }
+};
+
 const requestReply = async (requestAccount, message) => {
   try {
     const { data } = await AutonomiaGuideAPI.chat({
@@ -159,6 +179,7 @@ const requestReply = async (requestAccount, message) => {
       store.addAssistantMessage({
         content: data.text,
         navigation: data.navigation || null,
+        acao: data.acao || null,
       });
     } else {
       store.addAssistantMessage({ content: '' });
@@ -226,17 +247,71 @@ watch(accountId, () => store.reset());
                 :is-last-message="index === messages.length - 1"
                 :sender-name="$t('AUTONOMIA_GUIDE.TITLE')"
               />
+              <!-- Ação proposta: a pessoa lê o que vai acontecer, com os valores,
+                   e só então confirma. Nada executa antes disso. -->
+              <div
+                v-if="item.acao"
+                class="rounded-lg border border-n-weak bg-n-alpha-1 p-3 flex flex-col gap-2"
+              >
+                <p class="mb-0 text-sm text-n-slate-12">
+                  {{ item.acao.descricao.frase }}
+                </p>
+                <!-- O pedido literal, sempre visível: a frase acima pode
+                     suavizar, isto não. É o que torna a confirmação informada. -->
+                <p class="mb-0 text-xs break-words text-n-slate-11">
+                  {{ item.acao.descricao.detalhe }}
+                </p>
+                <p
+                  v-if="item.acao.descricao.aviso"
+                  class="mb-0 text-xs font-medium text-n-ruby-11"
+                >
+                  {{ item.acao.descricao.aviso }}
+                </p>
+                <div v-if="item.acaoEstado === 'aguardando'" class="flex gap-2">
+                  <Button
+                    :label="$t('AUTONOMIA_GUIDE.ACTION.CONFIRM')"
+                    sm
+                    blue
+                    :is-loading="item.acaoEstado === 'executando'"
+                    @click="confirmarAcao(item)"
+                  />
+                  <Button
+                    :label="$t('AUTONOMIA_GUIDE.ACTION.CANCEL')"
+                    sm
+                    slate
+                    faded
+                    @click="store.marcarAcao(item.id, 'cancelada')"
+                  />
+                </div>
+                <p
+                  v-else-if="item.acaoResultado"
+                  class="mb-0 text-sm font-medium"
+                  :class="
+                    item.acaoEstado === 'feita'
+                      ? 'text-n-teal-11'
+                      : 'text-n-ruby-11'
+                  "
+                >
+                  {{ item.acaoResultado }}
+                </p>
+                <p v-else class="mb-0 text-sm text-n-slate-11">
+                  {{ $t('AUTONOMIA_GUIDE.ACTION.CANCELLED') }}
+                </p>
+              </div>
+
+              <!-- O rótulo vinha do título do fluxo, escrito para o manual e
+                   longo demais para um painel estreito: ele estourava a largura
+                   e levava a seta junto, deixando o botão com cara de texto
+                   solto. Agora é frase curta e fixa, e o que sobrar é cortado. -->
               <Button
                 v-if="navLocation(item.navigation)"
-                :label="
-                  item.navigation.label || $t('AUTONOMIA_GUIDE.GO_TO_SCREEN')
-                "
+                :label="$t('AUTONOMIA_GUIDE.GO_TO_SCREEN')"
                 icon="i-lucide-arrow-right"
                 trailing-icon
                 sm
-                slate
+                blue
                 faded
-                class="self-start"
+                class="self-start max-w-full [&>span]:truncate"
                 @click="navigateTo(item.navigation)"
               />
             </div>

@@ -24,6 +24,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: ter credenciais/dados do canal escolhido quando o canal exigir
 - passos: 1. Abra Configuracoes; 2. Entre em Caixas de entrada; 3. Clique em adicionar nova caixa; 4. Escolha o tipo de canal; 5. Preencha os dados e avance para agentes/finalizacao.
 - gotchas: cada canal pede dados diferentes; canais sociais/email podem exigir autorizacao externa; a etapa final pode mostrar webhook, script ou instrucoes de DNS.
+- leitura: caixas
 - nav_target: `settings_inbox_new`
 
 ### Editar configuracoes da caixa
@@ -34,6 +35,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: caixa de entrada ja criada
 - passos: 1. Abra Configuracoes; 2. Entre em Caixas de entrada; 3. Selecione a caixa; 4. Use as abas de configuracao; 5. Atualize os campos necessarios e salve.
 - gotchas: a rota usa `:tab?`; abas como `configuration`, `collaborators`, `business-hours` e `inbox-settings` aparecem conforme o tipo de canal.
+- leitura: caixas
 - nav_target: `settings_inbox_show`
 
 ### Gerenciar agentes da caixa
@@ -54,6 +56,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: caixa criada
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Horario de atendimento; 3. Ative/ajuste os dias da semana; 4. Configure faixas de horario; 5. Salve.
 - gotchas: mensagens e automacoes podem considerar a disponibilidade da caixa; conta nova nasce no fuso da operacao (America/Sao_Paulo por padrao) e a caixa herda esse fuso ao ser criada; a tela mostra o fuso realmente salvo, inclusive UTC; confira fuso horario e intervalos antes de salvar.
+- leitura: horario
 - nav_target: `settings_inbox_show`
 
 ### Atribuir conversa
@@ -336,7 +339,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
 - passos: Abra **CRM Kanban**; selecione o funil; use busca, prioridade e follow-up na barra; abra **Filtros** (caixa, responsável, time, estágio, valor, card parado, tipo de vínculo); alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
 - gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips e podem esconder cards.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 - highlight: `crm-filters`
 
@@ -360,7 +362,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: funil e estágio existentes; contato opcional, mas recomendado para histórico e follow-ups.
 - passos: Clique em Novo card; preencha título, estágio, valor, prioridade e previsão; busque ou vincule contato; selecione dono, time e caixa quando necessário; salve.
 - gotchas: cards sem conversa são "standalone" e podem sumir se o filtro "vinculado" estiver ativo; valores são tratados em centavos no backend e exibidos formatados; a caixa influencia visibilidade para agentes.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-card`
 
@@ -372,7 +373,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: card existente em funil ativo.
 - passos: Arraste o card entre colunas no Kanban ou abra o drawer; ajuste estágio e responsável; para fechar, use ações de ganhar ou perder; informe valor ganho ou motivo da perda quando solicitado; reabra pelo mesmo drawer quando aplicável.
 - gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder e arquivar não deletam contato nem conversa.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 
 ### Criar follow-ups e lembretes no CRM
@@ -383,7 +383,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: card existente; para follow-up de mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
 - passos: Abra o card; entre em Follow-ups; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; salve; conclua ou cancele pelo card ou calendário.
 - gotchas: sem conversa vinculada não há snooze/envio automático; WhatsApp fora da janela pode exigir template; lembretes vencidos aparecem por popup e no filtro de follow-up.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 
 ### Usar o card CRM a partir de uma conversa
@@ -394,7 +393,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: conversa existente; a caixa pode ter auto-criação de card configurada em CRM > Configurações da caixa.
 - passos: Abra a conversa; procure o bloco/ação de CRM; crie ou abra o card vinculado; revise contato, responsável e estágio; use o link do card para navegar ao CRM.
 - gotchas: se a caixa estiver configurada para não criar card automaticamente, o card não aparece sozinho; em caixas "assigned only", visibilidade pode depender de atribuição/participação; cards standalone não têm conversa para abrir.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 
 ### Configurar SLA do CRM
@@ -785,7 +783,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: funil ja criado; etapas do funil definidas; para auto-move, criterios de IA por etapa bem descritos.
 - passos: 1. Abra CRM Kanban; 2. Selecione o funil; 3. Clique em Editar funil; 4. No bloco IA do funil, habilite IA, auto-move, callback e/ou follow-up automatico; 5. Preencha criterios por etapa, handoff e horarios de envio; 6. Clique em Salvar IA ou Salvar funil.
 - gotchas: o painel so aparece ao editar um funil existente; auto-move depende de criterios por etapa; callback tem modos "so lembrar", "enviar mensagem" ou "ambos"; follow-up automatico envia mensagens, entao deve ser ligado com cuidado.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 
 ### Usar sugestoes e resumo por IA no card do CRM
@@ -797,7 +794,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: card existente; para resumo, card precisa estar vinculado a uma conversa visivel ao usuario.
 - passos: 1. Abra o card; 2. Veja o painel Sugestao de estagio; 3. Clique em Analisar agora quando quiser reavaliar; 4. Aceite para mover o card ou dispense a sugestao; 5. No painel Resumo da conversa por IA, use Atualizar quando precisar regenerar.
 - gotchas: se a IA ficar abaixo do limiar, a tela mostra que nao encontrou etapa adequada; resumo nao aparece para card sem conversa; aceitar sugestao move o card de etapa.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 
 ### Conectar ou autorizar calendario em uma caixa de e-mail
@@ -856,7 +852,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: caixas de entrada criadas; funil e etapas existentes quando quiser definir padrao.
 - passos: 1. Abra CRM Kanban; 2. Clique em Configuracoes de inbox; 3. Ative CRM na caixa desejada; 4. Escolha visibilidade entre todos os cards da inbox ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
 - gotchas: se CRM ativo for desligado, a criacao automatica tambem e desligada; `assigned_only` muda a visibilidade de agentes; funil/etapa padrao precisam pertencer a mesma conta.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 - highlight: `crm-configure-inboxes`
 
@@ -869,7 +864,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: funil salvo; etapa existente; agentes disponiveis quando a acao for atribuir responsavel.
 - passos: 1. Abra Editar funil; 2. Na etapa desejada, clique no icone de automacoes; 3. Crie uma regra e escolha gatilho de entrada ou saida; 4. Adicione passos como Criar follow-up, Atribuir responsavel ou Mover estagio; 5. Defina atraso e parametros; 6. Salve a regra.
 - gotchas: automacoes so aparecem para etapas ja salvas; regras podem encadear movimentos, entao evite loops; follow-ups criados pela automacao aparecem no card e no calendario.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 
 ### Salvar e compartilhar visoes da lista do CRM
@@ -881,7 +875,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: funil selecionado; modo Lista aberto; filtros, colunas, ordenacao, agrupamento ou densidade ajustados.
 - passos: 1. Abra o CRM em modo Lista; 2. Ajuste filtros, colunas e ordenacao; 3. Clique no botao de visoes salvas; 4. Crie uma nova visao; 5. Escolha visibilidade privada, time ou conta; 6. Aplique a visao quando quiser restaurar a configuracao.
 - gotchas: visoes privadas aparecem so para o dono; visoes de time/conta aparecem para outros usuarios com acesso ao CRM; a visao salva captura configuracao da lista, nao altera cards.
-- leitura: funis
 - nav_target: `crm_kanban_index`
 
 ### Ordenar e filtrar status da lista de conversas
