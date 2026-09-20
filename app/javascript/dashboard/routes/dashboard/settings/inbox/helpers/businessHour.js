@@ -147,3 +147,24 @@ export const timeZoneOptions = () => {
     value: timeZoneData[key],
   }));
 };
+
+// A lista não cobre todos os fusos válidos (UTC, por exemplo, que é o padrão da
+// coluna no banco). Sem isto, a tela não achava o fuso salvo e mostrava outro no
+// lugar — e salvar gravava esse outro por cima.
+export const timeZoneOptionsWith = timeZone => {
+  const options = timeZoneOptions();
+  if (!timeZone || options.some(option => option.value === timeZone)) {
+    return options;
+  }
+  return [{ label: timeZone, value: timeZone }, ...options];
+};
+
+// Fuso sugerido para quem ainda não escolheu: o do próprio navegador, que para
+// o time no Brasil é o horário de Brasília.
+export const browserTimeZone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+};

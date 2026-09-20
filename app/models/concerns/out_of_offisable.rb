@@ -17,6 +17,21 @@ module OutOfOffisable
   included do
     has_many :working_hours, dependent: :destroy_async
     after_create :create_default_working_hours
+    # Caixa nova nasce no fuso da operação (o da conta, ou o padrão configurável)
+    # e não no UTC da coluna: horário de atendimento, follow-up e SLA usam este
+    # valor, e um cliente brasileiro não percebe que está horas adiantado.
+    before_validation :apply_default_timezone, on: :create
+  end
+
+  # 'UTC' é o padrão da coluna: só entra aqui quem não escolheu fuso nenhum.
+  # Quem quiser UTC de propósito escolhe na tela de horário de atendimento.
+  def apply_default_timezone
+    return if timezone.present? && timezone != 'UTC'
+
+    inherited = account&.reporting_timezone.presence
+    return if inherited.blank?
+
+    self.timezone = inherited
   end
 
   def out_of_office?
