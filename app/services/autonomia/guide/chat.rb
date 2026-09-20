@@ -225,15 +225,24 @@ module Autonomia
         { route_name: route, label: titulo(content), highlight: campo(content, 'highlight') }
       end
 
-      # O fluxo do KB é texto de campo por linha, escrito pelo nosso gerador:
-      # `nav_target: \`crm_index\``. Ler isso é separar linha e pegar o que vem
-      # depois dos dois pontos — não precisa de padrão, e padrão aqui já custou
-      # caro: uma rota com parâmetro foi comida por um deles.
+      # O gerador escreve cada campo como ITEM DE LISTA:
+      #   - nav_target: `crm_kanban_index`
+      # O traço faz parte do formato (scripts/guide-map/build.mjs) e é cobrado
+      # pelo teste do registro no front. A primeira versão deste método ancorava
+      # em "nav_target:" no começo da linha e devolvia nil nos 163 blocos — o
+      # botão de navegação, o destaque e o diagnóstico morreram juntos, calados.
+      # O comentário que eu escrevi virou a especificação no lugar do arquivo.
+      MARCADOR_DE_LISTA = '- '.freeze
+
       def campo(conteudo, nome)
-        linha = conteudo.lines.find { |l| l.strip.downcase.start_with?("#{nome}:") }
+        prefixo = "#{nome}:"
+        linha = conteudo.lines
+                        .map { |l| l.strip.delete_prefix(MARCADOR_DE_LISTA).lstrip }
+                        .find { |l| l.downcase.start_with?(prefixo) }
         return nil if linha.nil?
 
-        linha.strip.split(':', 2).last.to_s.delete('`').strip.presence
+        # Fatia por posição, não por separador: valor que contenha ':' sobrevive.
+        linha[prefixo.length..].to_s.delete('`').strip.presence
       end
 
       def titulo(conteudo)
