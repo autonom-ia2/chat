@@ -24,14 +24,30 @@ class Autonomia::Guide::EscolhaDaConsulta
     de lista, ou devolva nulo.
   TEXTO
 
+  # O cliente espera { name:, schema: } e manda `strict: true` para a OpenAI. No
+  # modo estrito toda propriedade entra em `required`, todo objeto fecha com
+  # `additionalProperties: false`, e não existe objeto de chave livre — por isso
+  # os parâmetros vêm como lista de pares, não como mapa.
   ESQUEMA = {
-    type: 'object',
-    properties: {
-      recurso: { type: %w[string null], description: 'Recurso exatamente como na lista, ou nulo.' },
-      parametros: { type: %w[object null], description: 'Valores dos :id da rota.', additionalProperties: true }
-    },
-    required: ['recurso'],
-    additionalProperties: false
+    name: 'guia_consulta',
+    schema: {
+      type: 'object',
+      properties: {
+        recurso: { type: %w[string null], description: 'Recurso exatamente como na lista, ou nulo.' },
+        parametros: {
+          type: %w[array null],
+          description: 'Um item por parâmetro da rota. Ex.: chave "id", valor "42".',
+          items: {
+            type: 'object',
+            properties: { chave: { type: 'string' }, valor: { type: 'string' } },
+            required: %w[chave valor],
+            additionalProperties: false
+          }
+        }
+      },
+      required: %w[recurso parametros],
+      additionalProperties: false
+    }
   }.freeze
 
   def initialize(account:, catalogo:)
@@ -64,8 +80,11 @@ class Autonomia::Guide::EscolhaDaConsulta
     ::Crm::Ai::ResponsesClient.new(credential: credencial, feature: 'guide_consulta', account: @account)
   end
 
+  # O mesmo modelo que o CRM usa para classificar. Antes isto perguntava por um
+  # `default_model` que NUNCA existiu, então caía sempre no fallback gpt-4.1-mini
+  # — um modelo que recusa o `reasoning.effort` que este cliente sempre envia.
   def modelo
-    ::Crm::Ai::Config.respond_to?(:default_model) ? ::Crm::Ai::Config.default_model : 'gpt-4.1-mini'
+    ::Crm::Ai::Config::MODEL_CLASSIFY
   end
 
   def entrada(pergunta)
@@ -79,9 +98,20 @@ class Autonomia::Guide::EscolhaDaConsulta
     recurso = dados['recurso'].presence
     return nil unless @catalogo.include?(recurso)
 
-    parametros = dados['parametros'].is_a?(Hash) ? dados['parametros'] : {}
-    { recurso: recurso, parametros: parametros }
+    { recurso: recurso, parametros: pares_para_mapa(dados['parametros']) }
   rescue JSON::ParserError
     nil
+  end
+
+  # A lista de pares que o modo estrito exige vira o mapa que a Consulta usa.
+  def pares_para_mapa(pares)
+    return {} unless pares.is_a?(Array)
+
+    pares.each_with_object({}) do |par, mapa|
+      next unless par.is_a?(Hash)
+
+      chave = par['chave'].to_s
+      mapa[chave] = par['valor'] if chave.present?
+    end
   end
 end
