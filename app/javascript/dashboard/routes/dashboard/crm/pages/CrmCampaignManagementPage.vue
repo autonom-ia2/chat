@@ -14,7 +14,6 @@ import {
   deliveryKey,
   reputationDenominator,
   hasActiveEmailWork,
-  localeTag,
   displayStatusLabel,
 } from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
 import { useEmailReportRefresh } from 'dashboard/components-next/Campaigns/EmailProtection/useEmailReportRefresh';
@@ -23,7 +22,7 @@ import { useAlert } from 'dashboard/composables';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import EmailCampaignReportsAPI from 'dashboard/api/emailCampaignReports';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
-import LineChart from 'shared/components/charts/LineChart.vue';
+import CampaignTimelineChart from 'dashboard/components-next/Campaigns/EmailProtection/CampaignTimelineChart.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import FilterSelect from 'dashboard/components-next/filter/inputs/FilterSelect.vue';
@@ -242,50 +241,6 @@ const comparisonRows = computed(() =>
   }))
 );
 
-const formatBucket = value => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  if (timelineInterval.value === 'hour') {
-    return new Intl.DateTimeFormat(localeTag(locale.value), {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  }
-  return new Intl.DateTimeFormat(localeTag(locale.value), {
-    day: '2-digit',
-    month: 'short',
-  }).format(date);
-};
-
-const timelineCollection = computed(() => ({
-  labels: timeline.value.map(bucket => formatBucket(bucket.bucket)),
-  datasets: [
-    {
-      label: deliveryLabel(timelineSource.value),
-      data: timeline.value.map(bucket => bucket.delivered ?? null),
-      borderColor: '#16a34a',
-      backgroundColor: '#16a34a',
-      tension: 0.2,
-    },
-    {
-      label: `${t('CAMPAIGN_MANAGEMENT.KPIS.OPENED')} (${t('CAMPAIGN_MANAGEMENT.APPROXIMATE')})`,
-      data: timeline.value.map(bucket => bucket.open ?? null),
-      borderColor: '#2563eb',
-      backgroundColor: '#2563eb',
-      tension: 0.2,
-    },
-    {
-      label: t('CAMPAIGN_MANAGEMENT.KPIS.CLICKED'),
-      data: timeline.value.map(bucket => bucket.click ?? null),
-      borderColor: '#7c3aed',
-      backgroundColor: '#7c3aed',
-      tension: 0.2,
-    },
-  ],
-}));
-
 const fetchReports = async () => {
   if (!emailReportsEnabled.value) return;
   hasError.value = false;
@@ -380,11 +335,6 @@ useEmailReportRefresh(
   () =>
     campaigns.value.some(hasActiveEmailWork) || hasActiveEmailWork(health.value)
 );
-
-const intervalOptions = computed(() => [
-  { id: 'day', label: t('CAMPAIGN_MANAGEMENT.TIMELINE.INTERVAL.DAY') },
-  { id: 'hour', label: t('CAMPAIGN_MANAGEMENT.TIMELINE.INTERVAL.HOUR') },
-]);
 
 const openRateApproxHeader = computed(
   () =>
@@ -823,57 +773,14 @@ onMounted(() => {
           </section>
 
           <template v-if="selectedCampaignId">
-            <section
-              class="flex flex-col gap-3 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-            >
-              <div class="flex items-center justify-between gap-3">
-                <h3 class="m-0 text-sm font-semibold text-n-slate-12">
-                  {{ t('CAMPAIGN_MANAGEMENT.TIMELINE.TITLE') }}
-                </h3>
-                <div class="flex gap-1">
-                  <button
-                    v-for="option in intervalOptions"
-                    :key="option.id"
-                    class="px-2 py-1 text-xs font-medium border rounded-lg border-n-weak"
-                    :class="
-                      timelineInterval === option.id
-                        ? 'bg-n-alpha-2 text-n-slate-12'
-                        : 'bg-n-alpha-black1 text-n-slate-11'
-                    "
-                    @click="setTimelineInterval(option.id)"
-                  >
-                    {{ option.label }}
-                  </button>
-                </div>
-              </div>
-              <p v-if="timelineLoading" class="m-0 text-sm text-n-slate-11">
-                {{ t(`${NS}.LOADING`) }}
-              </p>
-              <p
-                v-else-if="timelineError"
-                role="alert"
-                class="m-0 text-sm text-n-ruby-11"
-              >
-                {{ t(`${NS}.ERROR`) }}
-              </p>
-              <p
-                v-else-if="!timeline.length"
-                class="m-0 text-sm text-n-slate-11"
-              >
-                {{ t('CAMPAIGN_MANAGEMENT.TIMELINE.EMPTY') }}
-              </p>
-              <template v-else>
-                <div class="h-64">
-                  <LineChart :collection="timelineCollection" />
-                </div>
-                <p
-                  v-if="deliveryKey(timelineSource) !== 'delivered'"
-                  class="m-0 text-xs text-n-slate-11"
-                >
-                  {{ t(`${NS}.DELIVERY_HINT`) }}
-                </p>
-              </template>
-            </section>
+            <CampaignTimelineChart
+              :series="timeline"
+              :source="timelineSource"
+              :interval="timelineInterval"
+              :loading="timelineLoading"
+              :error="timelineError"
+              @update:interval="setTimelineInterval"
+            />
 
             <section
               class="flex flex-col gap-3 p-5 border rounded-xl border-n-weak bg-n-solid-1"
