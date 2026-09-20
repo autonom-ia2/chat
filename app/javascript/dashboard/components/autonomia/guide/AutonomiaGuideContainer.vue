@@ -226,17 +226,19 @@ watch(accountId, () => store.reset());
                 :is-last-message="index === messages.length - 1"
                 :sender-name="$t('AUTONOMIA_GUIDE.TITLE')"
               />
+              <!-- O rótulo vinha do título do fluxo, escrito para o manual e
+                   longo demais para um painel estreito: ele estourava a largura
+                   e levava a seta junto, deixando o botão com cara de texto
+                   solto. Agora é frase curta e fixa, e o que sobrar é cortado. -->
               <Button
                 v-if="navLocation(item.navigation)"
-                :label="
-                  item.navigation.label || $t('AUTONOMIA_GUIDE.GO_TO_SCREEN')
-                "
+                :label="$t('AUTONOMIA_GUIDE.GO_TO_SCREEN')"
                 icon="i-lucide-arrow-right"
                 trailing-icon
                 sm
-                slate
+                blue
                 faded
-                class="self-start"
+                class="self-start max-w-full [&>span]:truncate"
                 @click="navigateTo(item.navigation)"
               />
             </div>

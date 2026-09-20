@@ -155,26 +155,34 @@ module Autonomia
         m.match?(/\b(quais|quantos|quantas|qual|tenho|temos|est[ãa]o|listar?|me mostra)\b/)
       end
 
-      # O fluxo recuperado do KB declara o assunto que vale ler (`leitura: funis`),
-      # do mesmo jeito que já declara `diagnostic:`. Sem declaração, não lê nada.
-      def leitura_context(agent)
+      # Qual recurso da plataforma responde a esta pergunta. Quem escolhe é quem
+      # entendeu a pergunta — o modelo, a partir do catálogo derivado do roteador.
+      #
+      # Antes isso dependia de um marcador escondido no fluxo do manual, e o Guia
+      # entendia a pergunta mas não ia buscar o dado porque o buscador trouxe
+      # outro fluxo. Foi o que fez "quantas caixas eu tenho" falhar em produção.
+      def leitura_context(_agent)
         return nil unless leitura_intent?
 
-        tops = begin
-          ::Autonomia::Agents::Retriever.new(agent: agent).retrieve(@message, top_k: 3)
-        rescue ::Autonomia::Agents::Retriever::RetrievalError
-          []
-        end
-        entry = tops.find { |t| t.content.to_s.match?(/leitura:/i) }
-        return nil if entry.nil?
+        recurso = escolher_recurso(consulta.catalogo)
+        return nil if recurso.blank?
 
-        assunto = entry.content.to_s[/leitura:\s*`?([a-z_]+)`?/i, 1]
-        return nil if assunto.blank?
+        conteudo = consulta.ler(recurso)
+        return nil if conteudo.blank?
 
-        ::Autonomia::Guide::Leituras.run(assunto, account: @account, user: @user, account_user: @account_user)
+        ["Consultei #{recurso} nesta conta e recebi: #{conteudo}"]
       rescue StandardError => e
         Rails.logger.warn("[autonomia][guide][chat] leitura_context account=#{@account&.id} #{e.class}: #{e.message}")
         nil
+      end
+
+      def consulta
+        @consulta ||= ::Autonomia::Guide::Consulta.new(account: @account, user: @user,
+                                                       account_user: @account_user)
+      end
+
+      def escolher_recurso(catalogo)
+        ::Autonomia::Guide::EscolhaDaConsulta.new(account: @account, catalogo: catalogo).para(@message)
       end
 
       def sanitized_history
