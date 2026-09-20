@@ -129,6 +129,21 @@ export const lerPorques = texto => {
   return fluxos;
 };
 
+// Telas que não são do produto para o cliente — recurso do Chatwoot que não
+// usamos, tela de sistema, casca de roteamento. Declaradas no bloco
+// `_fora_do_guia`, uma por linha, com o motivo escrito ao lado.
+const FORA_DO_GUIA = '_fora_do_guia';
+
+const foraDoGuia = (humanos, nome) => {
+  const bloco = humanos[FORA_DO_GUIA];
+  if (!bloco) return false;
+
+  return Object.entries(bloco).some(([chave, _motivo]) => {
+    if (chave === nome) return true;
+    return chave.endsWith('_') && nome.startsWith(chave);
+  });
+};
+
 const descreverPorta = rota => {
   const partes = [];
   if (rota.flag) partes.push(`feature flag \`${rota.flag}\``);
@@ -234,14 +249,27 @@ export const construir = async ({ escrever = true } = {}) => {
   const semRota = [];
   const rotasExplicadas = new Set();
   Object.entries(humanos).forEach(([chave, humano]) => {
+    if (chave === FORA_DO_GUIA) return;
     const rota = porNome.get(humano.rota);
     if (rota) rotasExplicadas.add(rota.nome);
     else semRota.push(chave);
     fluxos.push(montarFluxo(chave, humano, rota));
   });
 
+  // Um fluxo explica mais de uma tela quando elas são etapas do mesmo caminho
+  // (o assistente de criar caixa) ou a mesma tela filtrada (conversas por time,
+  // por etiqueta). `cobre:` declara isso, para não inventar fluxo por rota.
+  Object.values(humanos).forEach(humano => {
+    (humano.cobre || '')
+      .split(',')
+      .map(nome => nome.trim())
+      .filter(Boolean)
+      .forEach(nome => rotasExplicadas.add(nome));
+  });
+
   const semExplicacao = rotas
     .filter(rota => !rotasExplicadas.has(rota.nome))
+    .filter(rota => !foraDoGuia(humanos, rota.nome))
     .map(rota => rota.nome);
 
   // Exigências de feature que o roteador não declara, escritas no bloco do fluxo.
