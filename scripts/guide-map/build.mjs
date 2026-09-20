@@ -162,22 +162,46 @@ const montarKb = fluxos =>
     '',
   ].join('\n');
 
-const montarRegistry = rotas =>
-  [
+const montarRegistry = (rotas, featuresEscritas = {}) => {
+  const nomes = [...new Set(rotas.map(rota => rota.nome))].sort();
+
+  // Nem toda exigência está no `meta` da rota: algumas telas checam a feature num
+  // `beforeEnter` ou dentro do componente, e o roteador não conta isso. Para essas,
+  // a exigência é declarada no bloco do fluxo em porques.md (`- feature: sla`).
+  const features = new Map(
+    rotas.filter(rota => rota.flag).map(rota => [rota.nome, rota.flag])
+  );
+  Object.entries(featuresEscritas).forEach(([nome, flag]) => {
+    if (nomes.includes(nome)) features.set(nome, flag);
+  });
+  const comFlag = [...features.entries()].sort((a, b) =>
+    a[0].localeCompare(b[0])
+  );
+
+  return [
     '// Guia da Plataforma — rotas para onde ele pode levar o usuário.',
     '//',
     '// ARQUIVO GERADO por `pnpm guia:build` a partir do roteador do painel. Não edite à mão.',
     '// Defesa em profundidade: o Guia só sugere navegação a partir do mapa, e o painel só',
     '// navega se o nome estiver AQUI E resolver no roteador E a pessoa tiver permissão.',
     'export const GUIDE_ROUTE_REGISTRY = new Set([',
-    ...rotas.map(nome => `  '${nome}',`),
+    ...nomes.map(nome => `  '${nome}',`),
     ']);',
     '',
+    '// Telas que dependem de uma feature: sem ela ligada na conta, o Guia não oferece o',
+    '// botão — o backend negaria a tela e a pessoa cairia num beco.',
+    'export const GUIDE_ROUTE_FEATURES = {',
+    ...comFlag.map(([nome, flag]) => `  ${nome}: '${flag}',`),
+    '};',
+    '',
     'export const isGuideRoute = name => GUIDE_ROUTE_REGISTRY.has(name);',
+    '',
+    'export const guideRouteFeature = name => GUIDE_ROUTE_FEATURES[name] || null;',
     '',
     'export default GUIDE_ROUTE_REGISTRY;',
     '',
   ].join('\n');
+};
 
 export const construir = async ({ escrever = true } = {}) => {
   const rotas = await lerRotas();
@@ -200,8 +224,15 @@ export const construir = async ({ escrever = true } = {}) => {
     .filter(rota => !rotasExplicadas.has(rota.nome))
     .map(rota => rota.nome);
 
+  // Exigências de feature que o roteador não declara, escritas no bloco do fluxo.
+  const featuresEscritas = Object.fromEntries(
+    Object.values(humanos)
+      .filter(humano => humano.feature && humano.rota)
+      .map(humano => [humano.rota, humano.feature])
+  );
+
   const kb = montarKb(fluxos);
-  const registry = montarRegistry([...new Set(rotas.map(x => x.nome))].sort());
+  const registry = montarRegistry(rotas, featuresEscritas);
   if (escrever) {
     fs.writeFileSync(r(SAIDA_KB), kb);
     fs.writeFileSync(r(SAIDA_REGISTRY), registry);

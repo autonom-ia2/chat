@@ -291,6 +291,7 @@
 ### consultar_relatorio_de_sla
 - titulo: Consultar relatorio de SLA
 - rota: sla_reports
+- feature: sla
 - intent: Onde vejo SLA?; Como acompanho violacoes de SLA?; Onde consulto conversas com prazo vencido?
 - onde_fica: Relatorios > SLA
 - pre_requisitos: SLA configurado e aplicado a conversas; dados de atendimento no periodo escolhido
@@ -358,6 +359,7 @@
 ### configurar_sla_do_crm
 - titulo: Configurar SLA do CRM
 - rota: crm_sla_index
+- feature: sla
 - intent: "Onde configuro SLA do CRM?"; "Como defino horários de atendimento?"; "Por que a página de SLA está bloqueada?"
 - onde_fica: Sidebar > CRM > CRM SLA
 - pre_requisitos: funis e caixas para associar políticas e agendas.

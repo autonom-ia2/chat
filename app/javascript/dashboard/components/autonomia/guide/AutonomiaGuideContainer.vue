@@ -11,9 +11,11 @@ import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
 import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
 import { useAutonomiaGuideStore } from 'dashboard/store/modules/autonomiaGuide';
-import { isGuideRoute } from 'dashboard/helper/guideRouteRegistry';
+import {
+  isGuideRoute,
+  guideRouteFeature,
+} from 'dashboard/helper/guideRouteRegistry';
 import { useGuideHighlight } from 'dashboard/store/modules/guideHighlight';
-import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import SidebarActionsHeader from 'dashboard/components-next/SidebarActionsHeader.vue';
 import CopilotInput from 'dashboard/components-next/copilot/CopilotInput.vue';
@@ -37,12 +39,10 @@ const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
 
-// Guide routes that require an account feature flag — skipped (no button) when the feature is off,
-// so the guide never offers an SLA screen that the backend gates with a 404.
-const GUIDE_ROUTE_FEATURE = {
-  crm_sla_index: FEATURE_FLAGS.SLA,
-  sla_reports: FEATURE_FLAGS.SLA,
-};
+// Tela que exige feature da conta não ganha botão quando a feature está desligada:
+// o Guia nunca oferece uma tela que o backend nega. A relação tela→feature é
+// gerada junto com o mapa (#534) — mantê-la à mão deixava de fora toda feature
+// que alguém esquecesse de listar.
 const { width: windowWidth } = useWindowSize();
 
 const store = useAutonomiaGuideStore();
@@ -114,7 +114,7 @@ const handleHeaderAction = action => {
 // NO button instead of a dead one). The route guards still enforce the user's permission on push.
 const navLocation = nav => {
   if (!nav?.route_name || !isGuideRoute(nav.route_name)) return null;
-  const requiredFeature = GUIDE_ROUTE_FEATURE[nav.route_name];
+  const requiredFeature = guideRouteFeature(nav.route_name);
   if (
     requiredFeature &&
     !isFeatureEnabledonAccount.value(accountId.value, requiredFeature)
