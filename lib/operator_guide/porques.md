@@ -204,6 +204,7 @@
 ### criar_e_editar_times
 - titulo: Criar e editar times
 - rota: settings_teams_new
+- leitura: times
 - intent: Como crio um time?; Onde adiciono agentes a uma equipe?; Como edito membros de um time?
 - onde_fica: Configuracoes > Times
 - pre_requisitos: agentes ativos para adicionar ao time
@@ -302,6 +303,7 @@
 ### abrir_o_crm_kanban_e_filtrar_oportunidades
 - titulo: Abrir o CRM Kanban e filtrar oportunidades
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Onde vejo o CRM?"; "Como filtro oportunidades?"; "Onde vejo as oportunidades ganhas ou perdidas?"; "Onde vejo o que perdi / o que ganhei?"; "Como alterno entre Kanban, lista e calendário?"
 - onde_fica: Sidebar > CRM > CRM Kanban
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
@@ -312,6 +314,7 @@
 ### criar_funis_estagios_e_conectar_caixas_ao_crm
 - titulo: Criar funis, estágios e conectar caixas ao CRM
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Novo funil ou Editar funil; também CRM Kanban > Configurações da caixa
 - pre_requisitos: caixas já criadas quando o objetivo for vincular atendimento ao funil.
@@ -322,6 +325,7 @@
 ### criar_card_ou_oportunidade_no_crm
 - titulo: Criar card ou oportunidade no CRM
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Como crio uma oportunidade?"; "Como adiciono um card no funil?"; "Como associo contato, caixa e responsável?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Novo card
 - pre_requisitos: funil e estágio existentes; contato opcional, mas recomendado para histórico e follow-ups.
@@ -332,6 +336,7 @@
 ### mover_card_ganhar_perder_ou_reabrir_oportunidade
 - titulo: Mover card, ganhar, perder ou reabrir oportunidade
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Como movo uma oportunidade de estágio?"; "Como marco como ganha?"; "Como reabro um negócio perdido?"
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card
 - pre_requisitos: card existente em funil ativo.
@@ -341,6 +346,7 @@
 ### criar_follow_ups_e_lembretes_no_crm
 - titulo: Criar follow-ups e lembretes no CRM
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Como crio um lembrete?"; "Como programo follow-up de WhatsApp?"; "Como vejo follow-ups atrasados?"
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Follow-ups; ou CRM > CRM Calendar > clique no dia
 - pre_requisitos: card existente; para follow-up de mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
@@ -350,6 +356,7 @@
 ### usar_o_card_crm_a_partir_de_uma_conversa
 - titulo: Usar o card CRM a partir de uma conversa
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Onde está o card CRM desta conversa?"; "Como vinculo atendimento a uma oportunidade?"; "Por que não vejo card no painel da conversa?"
 - onde_fica: Conversas > abrir conversa > botão/card CRM no painel lateral; depois CRM > CRM Kanban
 - pre_requisitos: conversa existente; a caixa pode ter auto-criação de card configurada em CRM > Configurações da caixa.
@@ -454,6 +461,7 @@
 ### criar_campanha_whatsapp_api
 - titulo: Criar campanha WhatsApp API
 - rota: campaigns_whatsapp_api_index
+- leitura: campanhas
 - intent: "Como disparo campanha pelo WhatsApp API?"; "Onde escolho rótulos de audiência?"; "Como pauso ou cancelo?"
 - onde_fica: Sidebar > Campanhas > WhatsApp API
 - pre_requisitos: caixa elegível de WhatsApp API; rótulos de contato para audiência; template ou mensagem/mídia.
@@ -713,6 +721,7 @@
 ### configurar_ia_do_crm_por_funil
 - titulo: Configurar IA do CRM por funil
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Como ligo a IA de um funil?"; "Onde configuro auto follow-up do CRM?"; "Como a IA decide mover cards de etapa?"; "Como ativo deteccao de callback?"
 - onde_fica: Sidebar > CRM > CRM Kanban > selecionar funil > Editar funil > IA do funil
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_ai`/`crm_admin`; se o perfil nao puder, diga que ele pode visualizar o CRM quando tiver acesso, mas precisa de permissao de IA do CRM para alterar essas configuracoes.
@@ -723,6 +732,7 @@
 ### usar_sugestoes_e_resumo_por_ia_no_card_do_crm
 - titulo: Usar sugestoes e resumo por IA no card do CRM
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Como peco para a IA analisar um card?"; "Onde aceito a etapa sugerida pela IA?"; "Como vejo resumo da conversa no card?"
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card > paineis de IA no drawer do card
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_ai`/`crm_admin` para analisar, aceitar, dispensar e atualizar resumo; custom role apenas com `crm_view` pode ser orientada a visualizar o card, mas nao a executar acoes de IA.
@@ -776,6 +786,7 @@
 ### configurar_crm_por_caixa_de_entrada
 - titulo: Configurar CRM por caixa de entrada
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Como faco conversas virarem cards automaticamente?"; "Como defino funil padrao por inbox?"; "Como restringo cards da caixa para o agente atribuido?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Configuracoes de inbox
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que ele precisa de permissao para gerenciar funis/configuracoes do CRM.
@@ -787,6 +798,7 @@
 ### criar_automacoes_por_etapa_do_funil
 - titulo: Criar automacoes por etapa do funil
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Como automatizo uma etapa do CRM?"; "Como criar follow-up ao mover card?"; "Como atribuir responsavel automaticamente quando entrar numa etapa?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Editar funil > etapa > icone de automacoes
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que automacoes de etapa fazem parte da gestao de funis.
@@ -797,6 +809,7 @@
 ### salvar_e_compartilhar_visoes_da_lista_do_crm
 - titulo: Salvar e compartilhar visoes da lista do CRM
 - rota: crm_kanban_index
+- leitura: funis
 - intent: "Como salvo uma visualizacao do CRM?"; "Como compartilhar filtros e colunas da lista?"; "Onde aplico uma visao salva?"
 - onde_fica: Sidebar > CRM > CRM Kanban > alternar para Lista > botao de visoes salvas
 - perfil: `administrator`, `agent` ou custom role com `crm_view`; se o perfil nao puder, diga que ele precisa ao menos de acesso de visualizacao do CRM. Somente dono da visao ou administrador edita/exclui uma visao existente.

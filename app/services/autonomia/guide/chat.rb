@@ -34,9 +34,12 @@ module Autonomia
         # V3: se o melhor fluxo recuperado é de diagnóstico (campo `diagnostic:`), lê o ESTADO REAL da
         # conta (read-only) e injeta como contexto — o Answerer explica com base no estado, não inventa.
         diagnostics = diagnostic_context(agent)
+        # #533 — pergunta sobre o que a conta TEM ("quais funis?", "quantas
+        # campanhas?") é respondida com os dados, não com o manual.
+        leituras = leitura_context(agent)
 
         result = ::Autonomia::Agents::Answerer.new(
-          agent: agent, query: role_scoped_query(diagnostics), history: sanitized_history,
+          agent: agent, query: role_scoped_query(diagnostics, leituras), history: sanitized_history,
           allow_web_search: false # KB-only: o Guia responde só da nossa base, nunca de fonte externa
         ).answer
 
@@ -60,13 +63,23 @@ module Autonomia
       # Injeta o PERFIL e a TELA ATUAL como CONTEXTO (dado, não fala), para a instrução adaptar a
       # resposta e só orientar o que o perfil pode fazer. O modelo nunca confia nisso para autorizar
       # — é só para a redação; o backend real (endpoints de domínio) é que aplica Pundit.
-      def role_scoped_query(diagnostics = nil)
+      def role_scoped_query(diagnostics = nil, leituras = nil)
         role = @account_user&.role.presence || 'agent'
         ctx = "[CONTEXTO INTERNO (não é fala do usuário). Perfil do usuário: #{role}. " \
               "Tela atual: #{@route_context.presence || 'não informada'}. Adapte a resposta a este " \
               "perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o " \
               "perfil não for administrator, explique que é feito pelo administrador da conta.]"
-        "#{ctx}#{diagnostic_block(diagnostics)}\n\n#{@message}"
+        "#{ctx}#{diagnostic_block(diagnostics)}#{leitura_block(leituras)}\n\n#{@message}"
+      end
+
+      # O que a conta TEM, lido com a permissão de quem perguntou. Entra como dado,
+      # nunca como instrução — os nomes vêm limpos de Leituras#safe.
+      def leitura_block(leituras)
+        return '' if leituras.blank?
+
+        items = leituras.map { |linha| "- #{linha}" }.join("\n")
+        "\n\n[O QUE A CONTA TEM (leitura só-leitura, já filtrada pela permissão de quem perguntou — " \
+          "responda com base EXATAMENTE nestes itens; não invente nem complete a lista):\n#{items}]"
       end
 
       # Bloco de ESTADO REAL (dado, não fala). O modelo deve responder baseado nestes achados de leitura.
@@ -132,6 +145,35 @@ module Autonomia
         { check: check, findings: findings }
       rescue StandardError => e
         Rails.logger.warn("[autonomia][guide][chat] diagnostic_context account=#{@account&.id} #{e.class}: #{e.message}")
+        nil
+      end
+
+      # Pergunta sobre o ESTADO da conta, não sobre como fazer algo: "quais funis
+      # eu tenho?", "quantas campanhas estão ativas?". Só nesse caso vale ler.
+      def leitura_intent?
+        m = @message.to_s.downcase
+        m.match?(/\b(quais|quantos|quantas|qual|tenho|temos|est[ãa]o|listar?|me mostra)\b/)
+      end
+
+      # O fluxo recuperado do KB declara o assunto que vale ler (`leitura: funis`),
+      # do mesmo jeito que já declara `diagnostic:`. Sem declaração, não lê nada.
+      def leitura_context(agent)
+        return nil unless leitura_intent?
+
+        tops = begin
+          ::Autonomia::Agents::Retriever.new(agent: agent).retrieve(@message, top_k: 3)
+        rescue ::Autonomia::Agents::Retriever::RetrievalError
+          []
+        end
+        entry = tops.find { |t| t.content.to_s.match?(/leitura:/i) }
+        return nil if entry.nil?
+
+        assunto = entry.content.to_s[/leitura:\s*`?([a-z_]+)`?/i, 1]
+        return nil if assunto.blank?
+
+        ::Autonomia::Guide::Leituras.run(assunto, account: @account, user: @user, account_user: @account_user)
+      rescue StandardError => e
+        Rails.logger.warn("[autonomia][guide][chat] leitura_context account=#{@account&.id} #{e.class}: #{e.message}")
         nil
       end
 

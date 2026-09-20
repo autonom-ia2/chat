@@ -154,6 +154,7 @@ const montarFluxo = (chave, humano, rota) => {
   campo('passos', humano.passos);
   campo('gotchas', humano.gotchas);
   campo('diagnostic', humano.diagnostic);
+  campo('leitura', humano.leitura);
   // nav_target escrito à mão sai literal: ele carrega coisas que o gerador não
   // inventaria — o parâmetro de uma tela (`integration_id=...`) ou um travessão,
   // que quer dizer "este fluxo não leva a lugar nenhum". Encrasar por conta
