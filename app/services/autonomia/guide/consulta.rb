@@ -366,15 +366,15 @@ class Autonomia::Guide::Consulta
     # — contar a amostra — voltando por outra porta.
     cortou = mostrados < na_pagina
     if total.present?
-      return " (total nesta conta: #{total})" unless cortou
+      return " [NOTA INTERNA, não repita: são #{total} no total desta conta.]" unless cortou
 
-      return " (total nesta conta: #{total}, mas só #{mostrados} couberam aqui; " \
-             'os outros ficaram de fora desta lista)'
+      return " [NOTA INTERNA, não repita: são #{total} no total, e só #{mostrados} couberam nesta " \
+             'lista. Diga o total e que está mostrando uma parte.]'
     end
 
     if cortou
-      return " (a plataforma entregou #{na_pagina} e mostrei #{mostrados}; o resto ficou de fora, " \
-             'então NÃO afirme quantos são)'
+      return " [NOTA INTERNA, não repita: vieram #{na_pagina} e mostrei #{mostrados}; o resto ficou " \
+             'de fora. NÃO afirme um total.]'
     end
 
     # Aqui a lista veio inteira do jeito que a plataforma entregou, e ela não
@@ -385,7 +385,12 @@ class Autonomia::Guide::Consulta
     #
     # O certo é dizer o que se sabe — quantos vieram — sem mandar tratar isso
     # como o total da conta. Quem lê decide como dizer.
-    " (a plataforma entregou #{mostrados} e estão todos acima; ela não informou o total, " \
-      'então diga quantos vieram, sem afirmar que é tudo o que existe)'
+    # A marca [NOTA INTERNA, não repita] existe porque o modelo estava PAPAGAIANDO
+    # este texto na tela: a pessoa perguntava quantas caixas tinha e ouvia "a
+    # consulta retornou 3; a plataforma não informou o total". Ela não fez
+    # consulta nenhuma, fez uma pergunta — e "plataforma não informou" é a minha
+    # encanação aparecendo na conversa dela.
+    " [NOTA INTERNA, não repita: vieram #{mostrados} e estão todos aqui. Diga quantos são; se " \
+      'achar que a conta pode ter mais, diga que podem existir outros fora desta lista.]'
   end
 end

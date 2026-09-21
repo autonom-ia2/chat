@@ -112,7 +112,7 @@ RSpec.describe Autonomia::Guide::Consulta do
       plataforma_responde('200',
                           { payload: Array.new(100) { |i| { name: "Contato #{i}" } }, meta: { count: 317 } }.to_json)
 
-      expect(consulta.ler('contacts')).to include('total nesta conta: 317')
+      expect(consulta.ler('contacts')).to include('317 no total')
     end
 
     # Sem o total da plataforma, ninguém aqui sabe se a lista veio inteira ou se
@@ -120,7 +120,7 @@ RSpec.describe Autonomia::Guide::Consulta do
     it 'responde com o número recebido quando a plataforma não informa o total' do
       plataforma_responde('200', { payload: Array.new(100) { |i| { name: "Contato #{i}" } } }.to_json)
 
-      expect(consulta.ler('contacts')).to include('diga quantos vieram')
+      expect(consulta.ler('contacts')).to include('Diga quantos são')
     end
 
     # Quando o corte é NOSSO, a frase tem que ser outra: sobrou coisa de fora.
@@ -138,7 +138,7 @@ RSpec.describe Autonomia::Guide::Consulta do
     it 'não inventa aviso quando a lista cabe inteira', :aggregate_failures do
       plataforma_responde('200', { payload: [{ name: 'Comercial' }, { name: 'Suporte' }] }.to_json)
 
-      expect(consulta.ler('inboxes')).not_to include('total nesta conta')
+      expect(consulta.ler('inboxes')).not_to include('no total desta conta')
       expect(consulta.ler('inboxes')).not_to include('NÃO afirme')
     end
 
@@ -202,7 +202,7 @@ RSpec.describe Autonomia::Guide::Consulta do
 
       resposta = consulta.ler('inboxes')
 
-      expect { JSON.parse(resposta[0, resposta.rindex(']') + 1]) }.not_to raise_error
+      expect { JSON.parse(resposta.split(' [NOTA INTERNA').first) }.not_to raise_error
     end
   end
 end

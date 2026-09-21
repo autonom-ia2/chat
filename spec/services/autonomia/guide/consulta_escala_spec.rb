@@ -58,7 +58,7 @@ RSpec.describe Autonomia::Guide::Consulta do
     resposta = consulta.ler('contacts')
 
     expect(resposta).to include('Contato 0')
-    expect(resposta).to include('total nesta conta').or include('NÃO afirme quantos são')
+    expect(resposta).to include('no total').or include('NÃO afirme um total')
   end
 
   # O que sustenta tudo acima: a lista manda o que identifica, e o detalhe de um
@@ -95,7 +95,7 @@ RSpec.describe Autonomia::Guide::Consulta do
     # — enxugar, cortar por item, avisar — deixa de acontecer.
     expect(resposta).to start_with('[')
     expect(resposta.length).to be <= described_class::MAX_TEXTO
-    expect { JSON.parse(resposta[0, resposta.rindex(']') + 1]) }.not_to raise_error
+    expect { JSON.parse(resposta.split(' [NOTA INTERNA').first) }.not_to raise_error
   end
 
   # Regra §6 do Rodrigo: credencial nunca sai em mensagem. O corte por forma não
@@ -184,7 +184,7 @@ RSpec.describe Autonomia::Guide::Consulta do
   it 'usa o total da plataforma quando ela informa, mesmo aninhado' do
     resposta = consulta.ler('notifications')
 
-    expect(resposta).to include('total nesta conta')
+    expect(resposta).to include('no total desta conta')
   end
 
   it 'responde com o número recebido quando a plataforma não informa o total', :aggregate_failures do
@@ -192,8 +192,8 @@ RSpec.describe Autonomia::Guide::Consulta do
 
     resposta = consulta.ler('labels')
 
-    expect(resposta).to include('diga quantos vieram')
-    expect(resposta).not_to include('NÃO afirme quantos são')
+    expect(resposta).to include('Diga quantos são')
+    expect(resposta).not_to include('NÃO afirme um total')
   end
 
   # Único caso vivo de lista embrulhada dentro de outra chave
