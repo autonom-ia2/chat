@@ -71,7 +71,7 @@ RSpec.describe Autonomia::Guide::Consulta do
 
     # Campos que o enxugamento da lista tiraria: só sobrevivem se o item não
     # passou por ele. Comparar tamanho com a lista não pegava a regressão.
-    expect(item).to include('working_hours')
+    expect(item).to include('"working_hours":[')
     expect(item).to include('Detalhada')
   end
 
@@ -95,32 +95,87 @@ RSpec.describe Autonomia::Guide::Consulta do
     # — enxugar, cortar por item, avisar — deixa de acontecer.
     expect(resposta).to start_with('[')
     expect(resposta.length).to be <= described_class::MAX_TEXTO
-    expect { JSON.parse(resposta.split(' (').first) }.not_to raise_error
+    expect { JSON.parse(resposta[0, resposta.rindex(']') + 1]) }.not_to raise_error
   end
 
   # Regra §6 do Rodrigo: credencial nunca sai em mensagem. O corte por forma não
   # pega isto — um token é uma string curta, igualzinha a um nome de caixa.
   it 'nunca manda segredo da conta, nem na lista nem no item', :aggregate_failures do
     caixa = create_crm_inbox(account: conta, name: 'Com segredo', members: [admin])
+    # O segredo que vazava não estava no topo: a chave da API de uma caixa de
+    # WhatsApp mora DENTRO de `provider_config`. Na lista o objeto aninhado caía
+    # por forma; no item único ia inteiro.
+    # Criar o canal dispara sincronização de modelos e webhook na Meta; aqui o
+    # que interessa é o `provider_config` gravado, não a integração. Por isso o
+    # canal é montado e gravado sem validação nem callbacks externos.
+    # rubocop:disable Rails/SkipsModelValidations -- gravar sem validar é o ponto:
+    # queremos o provider_config no banco sem falar com a Meta.
+    conta.whatsapp_channels.insert!(
+      { phone_number: '+5511999990000', provider: 'whatsapp_cloud',
+        provider_config: { 'api_key' => 'CHAVE-QUE-NAO-PODE-SAIR', 'phone_number_id' => '123' },
+        message_templates: [], message_templates_last_updated: Time.current,
+        created_at: Time.current, updated_at: Time.current }
+    )
+    # rubocop:enable Rails/SkipsModelValidations
+    canal = conta.whatsapp_channels.last
+    com_provedor = conta.inboxes.create!(name: 'WhatsApp', channel: canal)
 
-    lista = consulta.ler('inboxes')
-    item = consulta.ler('inboxes/:id', { id: caixa.id })
+    respostas = [consulta.ler('inboxes'),
+                 consulta.ler('inboxes/:id', { id: caixa.id }),
+                 consulta.ler('inboxes/:id', { id: com_provedor.id })]
 
-    [lista, item].each do |resposta|
+    respostas.each do |resposta|
       expect(resposta).not_to include('hmac_token')
       expect(resposta).not_to include('inbox_identifier')
-      expect(resposta).not_to include(caixa.channel.identifier.to_s) if caixa.channel.respond_to?(:identifier)
+      expect(resposta).not_to include('CHAVE-QUE-NAO-PODE-SAIR')
     end
   end
 
-  # A plataforma pagina, e cada recurso pagina de um jeito. Sem o total dela,
-  # ninguém aqui sabe se a lista veio inteira — então o Guia tem que dizer isso,
-  # em vez de deixar o modelo contar a página como se fosse o todo.
-  it 'avisa quando não sabe o total, mesmo com a lista abaixo do teto' do
+  # A conversa só é útil com o nome de quem está do outro lado, e esse nome mora
+  # aninhado (`meta.sender.name`). O corte por forma jogava o `meta` inteiro
+  # fora: a lista vinha só com id e status, anônima.
+  it 'traz o nome de quem está na conversa' do
+    caixa = create_crm_inbox(account: conta, name: 'Atendimento', members: [admin])
+    contato = conta.contacts.create!(name: 'Joana Cliente', phone_number: '+5511988887777')
+    inbox_contato = ContactInbox.create!(contact: contato, inbox: caixa, source_id: SecureRandom.uuid)
+    conta.conversations.create!(inbox: caixa, contact: contato, contact_inbox: inbox_contato)
+
+    expect(consulta.ler('conversations')).to include('Joana Cliente')
+  end
+
+  # A plataforma pagina, e cada recurso pagina de um jeito. Quando ela informa o
+  # total, o Guia usa. Quando não informa, ele diz quantos recebeu — sem se
+  # recusar a responder, que foi o erro que eu cometi ao consertar isto.
+  it 'usa o total da plataforma quando ela informa, mesmo aninhado' do
+    resposta = consulta.ler('notifications')
+
+    expect(resposta).to include('total nesta conta')
+  end
+
+  it 'responde com o número recebido quando a plataforma não informa o total', :aggregate_failures do
     5.times { |i| conta.labels.create!(title: "etiqueta#{i}") }
 
     resposta = consulta.ler('labels')
 
-    expect(resposta).to include('NÃO afirme quantos são').or include('não que este é o total')
+    expect(resposta).to include('responda com esse número')
+    expect(resposta).not_to include('NÃO afirme quantos são')
+  end
+
+  # Único caso vivo de lista embrulhada dentro de outra chave
+  # (`{"payload":{"webhooks":[...]}}`). Sem teste, qualquer mexida no
+  # desembrulho o quebra em silêncio.
+  it 'lê webhooks, que vêm embrulhados dentro de outra chave' do
+    conta.webhooks.create!(url: 'https://exemplo.invalid/hook', webhook_type: :account_type)
+
+    expect(consulta.ler('webhooks')).to start_with('[')
+  end
+
+  # Negativa de permissão nesta aplicação chega como 401, não 403. Antes isso
+  # caía no erro genérico e quem não tinha acesso ouvia "tente de novo".
+  it 'diz que é falta de acesso quando o perfil não alcança o recurso' do
+    agente, = create_crm_agent(account: conta)
+    como_agente = described_class.new(account: conta, user: agente)
+
+    expect(como_agente.ler('webhooks')).to include('não tem acesso a isto')
   end
 end

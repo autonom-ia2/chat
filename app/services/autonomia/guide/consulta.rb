@@ -112,7 +112,12 @@ class Autonomia::Guide::Consulta
     when '404' then "Isto não está disponível nesta conta: #{recurso}."
     # Ligado, mas fora do alcance do perfil de quem perguntou. Dizer que "não
     # está disponível" faria a pessoa achar que precisa contratar o que já tem.
-    when '403' then "O perfil de quem perguntou não tem acesso a isto: #{recurso}."
+    #
+    # 401 está aqui porque é o que esta aplicação devolve quando o Pundit nega:
+    # `render_unauthorized` responde `:unauthorized`. Eu tinha tratado só o 403,
+    # que nunca chega — e negativa de permissão caía no genérico, fazendo quem
+    # não tem acesso ouvir "deu erro, tente de novo".
+    when '401', '403' then "O perfil de quem perguntou não tem acesso a isto: #{recurso}."
     else "Não consegui ler #{recurso} agora."
     end
   end
@@ -190,8 +195,19 @@ class Autonomia::Guide::Consulta
   end
 
   # Quando a plataforma informa o total, ele sobrevive ao corte da amostra.
+  #
+  # Procura no mesmo nível em que a lista foi encontrada, não só no topo: em
+  # notificações e conversas o `meta` mora dentro de `data`, e eu estava jogando
+  # fora um total que a plataforma tinha dado. E a chave nem sempre é `count` —
+  # conversas chamam de `all_count`.
   def total_de(dados)
-    dados.is_a?(Hash) ? dados.dig('meta', 'count') : nil
+    return nil unless dados.is_a?(Hash)
+
+    meta = dados['meta']
+    return meta['count'] || meta['all_count'] if meta.is_a?(Hash)
+
+    interno = dados['payload'] || dados['data']
+    interno.is_a?(Hash) ? total_de(interno) : nil
   end
 
   # Numa LISTA o que importa é distinguir um item do outro; o detalhe de um item
@@ -210,14 +226,39 @@ class Autonomia::Guide::Consulta
   def enxuto(item)
     return item unless item.is_a?(Hash)
 
-    sem_segredos(item).select { |_campo, valor| identifica?(valor) }
+    achatado(sem_segredos(item)).select { |_campo, valor| identifica?(valor) }
   end
 
-  # Vale em lista e em item único: o nome do campo é o que denuncia o segredo.
-  def sem_segredos(dados)
-    return dados unless dados.is_a?(Hash)
+  # Nome de gente costuma morar aninhado. Numa conversa, quem é o cliente está
+  # em `meta.sender.name`, e o corte por forma jogava o `meta` inteiro fora: a
+  # lista de conversas chegava sem nome nenhum, só id e status — inútil para
+  # "quais conversas eu tenho".
+  #
+  # Então os valores simples que estão a até dois níveis sobem para o topo, com
+  # o caminho no nome (`meta.sender.name`). Continua sendo corte por forma: não
+  # há lista de campos por recurso, e o que não é valor simples segue de fora.
+  NIVEIS_ACHATADOS = 2
 
-    dados.reject { |campo, _valor| segredo?(campo) }
+  def achatado(item, nivel = 0)
+    item.each_with_object({}) do |(campo, valor), plano|
+      if valor.is_a?(Hash) && nivel < NIVEIS_ACHATADOS
+        achatado(valor, nivel + 1).each { |interno, v| plano["#{campo}.#{interno}"] = v }
+      else
+        plano[campo.to_s] = valor
+      end
+    end
+  end
+
+  # Vale em lista e em item único, e desce até o fim: na lista o Hash aninhado
+  # cai por forma, mas no item único ele vai inteiro — e era ali que o
+  # `provider_config` de uma caixa de WhatsApp levava a chave da API junto.
+  # Segredo escondido dentro de um objeto continua sendo segredo.
+  def sem_segredos(dados)
+    case dados
+    when Hash then dados.reject { |campo, _| segredo?(campo) }.transform_values { |valor| sem_segredos(valor) }
+    when Array then dados.map { |valor| sem_segredos(valor) }
+    else dados
+    end
   end
 
   def segredo?(campo)
@@ -261,7 +302,12 @@ class Autonomia::Guide::Consulta
              'então NÃO afirme quantos são)'
     end
 
-    " (a plataforma entregou #{mostrados} e estão todos acima; ela não informou o total e pode " \
-      'paginar, então diga quantos recebeu, não que este é o total da conta)'
+    # Aqui a lista veio inteira, do jeito que a plataforma entregou. A versão
+    # anterior mandava "não diga que este é o total", e com isso o Guia se
+    # recusava a responder "quantas caixas eu tenho" — a pergunta que é a razão
+    # de existir da leitura. O honesto é dar o número e ressalvar a paginação,
+    # não proibir a resposta.
+    " (a plataforma entregou #{mostrados} e estão todos acima; responda com esse número e, " \
+      'se a conta for grande, ressalve que pode haver mais páginas)'
   end
 end

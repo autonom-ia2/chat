@@ -117,10 +117,10 @@ RSpec.describe Autonomia::Guide::Consulta do
 
     # Sem o total da plataforma, ninguém aqui sabe se a lista veio inteira ou se
     # é uma página. O Guia diz quantos recebeu e proíbe tratar isso como total.
-    it 'avisa que não sabe o total quando a plataforma não informa' do
+    it 'responde com o número recebido quando a plataforma não informa o total' do
       plataforma_responde('200', { payload: Array.new(100) { |i| { name: "Contato #{i}" } } }.to_json)
 
-      expect(consulta.ler('contacts')).to include('não que este é o total')
+      expect(consulta.ler('contacts')).to include('responda com esse número')
     end
 
     # Quando o corte é NOSSO, a frase tem que ser outra: sobrou coisa de fora.
@@ -156,16 +156,18 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(resposta).not_to include('NÃO afirme quantos são')
     end
 
-    # O que some no enxugamento é o que não distingue um item do outro. O detalhe
-    # continua disponível: a leitura de UM item não passa por aqui.
-    it 'tira do item da lista o que não identifica nada', :aggregate_failures do
-      plataforma_responde('200', { payload: [{ name: 'Comercial', config: { chave: 'v' },
-                                               vazio: nil, texto: 'z' * 300 }] }.to_json)
+    # O que some é o que não distingue um item do outro: vazio e texto longo.
+    # O valor simples que está aninhado SOBE, com o caminho no nome — é assim
+    # que o nome do cliente (`meta.sender.name`) sobrevive numa conversa.
+    it 'tira o que não identifica e sobe o que identifica', :aggregate_failures do
+      plataforma_responde('200', { payload: [{ name: 'Comercial', meta: { sender: { name: 'Joana' } },
+                                               vazio: nil, texto: 'z' * 500 }] }.to_json)
 
       resposta = consulta.ler('inboxes')
 
       expect(resposta).to include('Comercial')
-      expect(resposta).not_to include('chave')
+      expect(resposta).to include('Joana')
+      expect(resposta).not_to include('vazio')
       expect(resposta).not_to include('z' * 401)
     end
 
