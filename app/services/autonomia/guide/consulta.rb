@@ -41,12 +41,16 @@ class Autonomia::Guide::Consulta
   # caracteres.
   MAX_TEXTO = 100_000
 
-  # Campo de texto acima disto é conteúdo longo, não identificação. O limite é
-  # folgado de propósito: com 80 caracteres, a resposta pronta perdia o próprio
-  # texto e a avaliação perdia o comentário do cliente — e esses dois recursos
-  # não têm rota de item, então o conteúdo ficava inalcançável. Quem controla o
-  # volume é o orçamento total, que corta por item inteiro.
-  MAX_TEXTO_DE_CAMPO = 400
+  # Dois mil, a pedido do Rodrigo em 21/09/2026, pelo mesmo critério dos outros
+  # tetos: resposta completa vale mais do que lista enxuta. Com 400, a listagem
+  # entregava nome e status e jogava fora o que o cliente escreveu — quem
+  # perguntasse "o que estão reclamando" recebia uma lista muda.
+  #
+  # Não é ilimitado porque um campo sozinho não pode comer o item inteiro: com
+  # o teto por item em 5.000, dois mil deixa passar a mensagem típica e ainda
+  # sobra espaço para o que identifica o registro. Campo maior que isso é anexo
+  # ou histórico, e se pede lendo o item.
+  MAX_TEXTO_DE_CAMPO = 2_000
 
   # Segredo NUNCA sai daqui, em lista ou em item.
   #

@@ -125,7 +125,7 @@ RSpec.describe Autonomia::Guide::Consulta do
 
     # Quando o corte é NOSSO, a frase tem que ser outra: sobrou coisa de fora.
     it 'diz quando foi ele que cortou, e quanto ficou de fora' do
-      # Item grande feito de campos pequenos: campo acima de 400 cai sozinho, e
+      # Item grande feito de campos pequenos: campo acima do teto cai sozinho, e
       # o que precisa estourar aqui é o orçamento da LISTA, não o do campo.
       gordos = Array.new(100) do |i|
         { name: "Contato #{i}" }.merge((1..20).to_h { |n| ["nota#{n}", 'x' * 300] })
@@ -165,14 +165,14 @@ RSpec.describe Autonomia::Guide::Consulta do
     # que o nome do cliente (`meta.sender.name`) sobrevive numa conversa.
     it 'tira o que não identifica e sobe o que identifica', :aggregate_failures do
       plataforma_responde('200', { payload: [{ name: 'Comercial', meta: { sender: { name: 'Joana' } },
-                                               vazio: nil, texto: 'z' * 500 }] }.to_json)
+                                               vazio: nil, texto: 'z' * 2_500 }] }.to_json)
 
       resposta = consulta.ler('inboxes')
 
       expect(resposta).to include('Comercial')
       expect(resposta).to include('Joana')
       expect(resposta).not_to include('vazio')
-      expect(resposta).not_to include('z' * 401)
+      expect(resposta).not_to include('z' * 2_001)
     end
 
     # Um card do CRM traz cliente, funil e caixa em objetos aninhados. Com o
