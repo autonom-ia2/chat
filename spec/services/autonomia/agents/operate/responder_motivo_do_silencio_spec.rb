@@ -86,14 +86,40 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(registros.join).to include('motivo=vazio')
   end
 
-  it 'o registro não leva texto do cliente nem da resposta' do
+  it 'o turno que o humano assumiu no meio é registrado como não elegível, e não como falha' do
+    # Arrange — responsável na conversa derruba a elegibilidade antes mesmo da chamada de IA
+    conversation.update!(assignee: create(:user, account: account))
+
+    # Act
+    resultado, registros = silenciar_e_ler_log
+
+    # Assert — o turno tinha o que dizer; calou porque deixou de ser nosso
+    expect(resultado.status).to eq(:silenced)
+    expect(registros.join).to include('motivo=nao_elegivel')
+  end
+
+  it 'o turno que responde não registra silêncio nenhum' do
+    # Arrange — sem isto, logar em todo turno passaria despercebido e inflaria a contagem
+    responde_com(reply: 'Boa tarde. Me diga a placa e eu já cotó.')
+
+    # Act
+    resultado, registros = silenciar_e_ler_log
+
+    # Assert
+    expect(resultado.status).to eq(:replied)
+    expect(registros).to be_empty
+  end
+
+  it 'o registro é só os dois ids e o rótulo, nada do que foi escrito' do
     # Arrange — o motivo é rótulo nosso, de lista fechada
     responde_com(reply: 'conversation_closed_for_now')
 
     # Act
     _resultado, registros = silenciar_e_ler_log
 
-    # Assert
-    expect(registros.join).to match(/motivo=(sinal|ia_falhou|vazio)$/)
+    # Assert — linha inteira, não só o fim dela: texto enfiado no meio também reprovaria
+    expect(registros).to eq(
+      ["[autonomia][operate] silencio agent=#{agent.id} conv=#{conversation.id} motivo=sinal"]
+    )
   end
 end

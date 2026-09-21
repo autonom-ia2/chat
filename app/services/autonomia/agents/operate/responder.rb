@@ -52,7 +52,7 @@ module Autonomia
           # Entre o debounce e este ponto um humano pode ter assumido a conversa (ou o agente foi
           # desligado/movido de caixa) — sem esta guarda o custo da geração já teria sido pago à toa.
           # O recheck autoritativo pós-IA (dentro do lock, em classic_deliver/deliver_*) PERMANECE.
-          return Result.silenced unless still_eligible?
+          return silencio_por_inelegibilidade unless still_eligible?
 
           # PORTA DE ENGAJAMENTO (#284 · Entrega 2a): público-alvo + horário de atuação, avaliada ANTES
           # da chamada cara de IA. Config vazia -> nil -> segue exatamente como antes.
@@ -201,7 +201,7 @@ module Autonomia
         def classic_deliver(result)
           outcome = @conversation.with_lock do
             if !still_eligible?
-              Result.silenced
+              silencio_por_inelegibilidade
             elsif already_replied?
               Result.replied(nil)
             else
@@ -232,7 +232,7 @@ module Autonomia
           audio = synthesize_audio(result.reply) # fora do lock; nil em falha
           outcome = @conversation.with_lock do
             if !still_eligible?
-              Result.silenced
+              silencio_por_inelegibilidade
             elsif already_replied?
               Result.replied(nil)
             elsif audio.present?
@@ -293,7 +293,7 @@ module Autonomia
         # vivem no ChunkedDeliveryJob. NÃO posta nada de forma síncrona.
         def deliver_humanized(result)
           return Result.replied(nil) if already_replied?      # um settle anterior já entregou
-          return Result.silenced unless still_eligible?       # humano assumiu durante a IA -> não posta
+          return silencio_por_inelegibilidade unless still_eligible? # humano assumiu durante a IA -> não posta
 
           chunks = ::Autonomia::Agents::Operate::ReplyChunker.call(result.reply)
           # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
@@ -332,19 +332,16 @@ module Autonomia
           ).answer
         end
 
-        # O turno não vai falar: sinal de silêncio da instrução, falha de IA, ou resposta vazia.
-        def no_usable_reply?(result)
-          motivo_do_silencio(result).present?
-        end
-
         # QUAL DOS SILÊNCIOS, e por que isto existe. Os três caminhos terminavam no mesmo `silenced`,
         # sem nada que os separasse: perguntado em 21/09/2026 quantas vezes a instrução mandou calar
         # de propósito, não havia como responder — só dava para inferir por mensagem de cliente sem
         # resposta, que mistura os três. Rótulo nosso, de lista fechada, nunca texto do cliente.
         #
-        #   `sinal`    — a instrução decidiu calar (a pessoa só reconheceu, ou veio robô).
-        #   `ia_falhou`— a IA não devolveu resultado.
-        #   `vazio`    — devolveu, mas sem texto utilizável.
+        #   `sinal`        — a instrução decidiu calar (a pessoa só reconheceu, ou veio robô).
+        #   `ia_falhou`    — a IA não devolveu resultado.
+        #   `vazio`        — devolveu, mas sem texto utilizável.
+        #   `nao_elegivel` — o turno tinha o que dizer e não disse: um humano assumiu (ou o agente
+        #                    saiu do ar) durante a chamada de IA, e o texto foi descartado.
         def motivo_do_silencio(result)
           return 'sinal' if silence_signal?(result)
           return 'ia_falhou' if result.nil?
@@ -355,10 +352,24 @@ module Autonomia
 
         # Silêncio, mas SEM abandonar o que a ferramenta assíncrona já aceitou dentro do turno: o
         # cliente pediu a consulta e vai receber o aviso e o resultado pelo job.
-        def silence_with_async(_result, motivo = 'desconhecido')
-          Rails.logger.info("[autonomia][operate] silencio agent=#{@agent.id} conv=#{@conversation.id} motivo=#{motivo}")
+        def silence_with_async(_result, motivo)
+          registrar_silencio(motivo)
           dispatch_async(replied: false)
           Result.silenced
+        end
+
+        # O turno mudo porque deixou de ser nosso: humano assumiu, agente desligado, conversa movida.
+        # Não despacha assíncrono nem posta — só deixa o rastro, para que este motivo não se confunda
+        # com os outros três na contagem.
+        def silencio_por_inelegibilidade
+          registrar_silencio('nao_elegivel')
+          Result.silenced
+        end
+
+        # O único lugar que escreve a linha. Campos: dois ids nossos e um rótulo de lista fechada —
+        # nada do que o cliente escreveu, nada do que o modelo respondeu.
+        def registrar_silencio(motivo)
+          Rails.logger.info("[autonomia][operate] silencio agent=#{@agent.id} conv=#{@conversation.id} motivo=#{motivo}")
         end
 
         # CONTEXTO DE ENTREGA (#313). Só existe no atendimento — é o que autoriza uma ferramenta

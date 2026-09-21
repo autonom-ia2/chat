@@ -204,6 +204,22 @@ module ManualDoPrincipal
       docs.map { |d| d[:name] } == ['apolice.pdf'] && docs.first[:text].present? &&
         textos.any? { |t| t.include?('usa a apólice do fulano') } &&
         textos.any? { |t| t.include?('<documento nome="apolice.pdf" enviado_em="') }
+    },
+    # PROCURAR NA CONVERSA ANTES DE PERGUNTAR (#569). Até 21/09/2026 este bloco mandava o contrário:
+    # "peça exatamente aqueles dados à pessoa". Em 18/09, conversa do Ricardo Menezes, o especialista
+    # devolveu "faltam nome do titular, data de nascimento do titular, sexo do titular" e a Lia
+    # repassou os três, com esses nomes, para alguém que já os tinha escrito. A regra nova está aqui,
+    # no instante da ação; a explicação inteira está na §4.2.
+    #
+    # O QUE SUSTENTA, e por que são os dois lados: a §4.2 precisa existir no MESMO arquivo, senão
+    # este bloco aponta para uma seção que ninguém escreveu; e o manual do especialista precisa
+    # carregar a mesma regra, porque quem vê a conversa primeiro é ele (`Materia#mensagens` entrega
+    # conversa e documentos junto do pedido). Corrigir só o repasse deixaria a origem intacta.
+    'procure primeiro na conversa (seção 4.2)' => lambda {
+      principal_texto = ARQUIVO.read
+      principal_texto.include?('### 4.2 O que a pessoa já te deu') &&
+        principal_texto.include?('Isso vale inclusive quando o especialista disser que falta um dado') &&
+        manual_do_especialista_de_auto.include?('Antes disso, procure na conversa.')
     }
   }.freeze
 end
@@ -491,7 +507,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # 12/09/2026: com o parágrafo da #415 (`6cc2e90d…` -> `7c83a38a…`) e de novo com a correção do P2
   # do Codex (`7c83a38a…` -> `730b22a3…`), que trocou "em todo pedido" por "em todo pedido que você
   # souber" e tirou a afirmação falsa de que o especialista só sabe pelo bilhete. As duas mudanças
-  # são o efeito esperado desta guarda.
+  # são o efeito esperado desta guarda. Em 21/09/2026 mudou uma terceira vez (`730b22a3…` ->
+  # `fc7b4b84…`), com a #569: "peça exatamente aqueles dados à pessoa" virou "procure primeiro na
+  # conversa", e a promessa nova entrou na tabela com as duas pontas que a sustentam.
   #
   # A ENTREGA 8 NÃO COLIDIA COM A ASSINATURA ANTERIOR, medido e não suposto: mesclado o
   # `origin/pr-399` de 12/09 (`ade5ca58db`) na árvore da #403, a #399 mexe na §5 ANTES deste bloco —
@@ -509,7 +527,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('730b22a3c58a716b8be34cccb5fd4aec')
+      expect(Digest::MD5.hexdigest(secao)).to eq('fc7b4b8414e1dbe32e545888ee943749')
     end
 
     it 'não introduz variável para substituir' do
