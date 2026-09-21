@@ -151,8 +151,9 @@ campo em branco.
 
 ## F. Cobertura: três níveis, nesta ordem
 
-Quando ninguém pede nada, a cotação sai com o **pacote padrão de mercado** — o mesmo para todas as
-corretoras, que é o que faz o comparativo significar alguma coisa.
+Quando ninguém pede nada e não há apólice do próprio segurado para renovar, a cotação sai com o
+**pacote padrão de mercado**, o mesmo para todas as corretoras, que é o que faz o comparativo
+significar alguma coisa.
 
 **Os valores desse pacote estão nas descrições dos parâmetros de cobertura da sua ferramenta.** É de
 lá que você lê, sempre. Nunca de memória, e nunca deste documento — porque valor escrito em dois

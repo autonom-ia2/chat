@@ -263,7 +263,12 @@ module ManualDoEspecialistaDeAuto
     '**A apólice anterior do próprio segurado desta cotação, numa renovação.**' => lambda {
       cobertura = expostos.select { |nome| nome.start_with?('coverage.') } + ['vehicle.referencedValuePercent']
       com_lista = %w[coverage.assistance24h coverage.glassCoverage coverage.rentalCarType coverage.deductibleType]
-      cobertura.size > 1 && cobertura.all? { |n| campo(n)['obrigatorio'] == false } && com_lista.all? { |n| valores(n).any? }
+      # A descrição do parâmetro é a instrução mais perto da ação: "Só preencha se ele pediu" nos limites
+      # de terceiros e no APP desmentia esta regra e deixava a apólice de fora (revisão da #584).
+      copiaveis = %w[coverage.propertyDamage coverage.bodilyInjury coverage.moralDamage coverage.deathAccident
+                     coverage.disabilityAccident vehicle.referencedValuePercent]
+      cobertura.size > 1 && cobertura.all? { |n| campo(n)['obrigatorio'] == false } && com_lista.all? { |n| valores(n).any? } &&
+        copiaveis.all? { |n| campo(n)['descricao'].to_s.include?('renovação do próprio segurado') }
     },
     # MEXER DEPOIS precisa existir: o grupo `coverage` chega ao envio. Fora da entrada, o pedido de
     # cobertura que o cliente já fez não teria por onde viajar na primeira cotação — e o ajuste que
@@ -452,13 +457,14 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # PR depois da medição que isolou a assistência "600" como a causa de 12/09 (`7d77d86d…`, `5e14b86b…`), e
   # com a regra de que a assistência também vem da apólice, traduzida para o nível. E de novo depois da
   # revisão (`a9164a59…`, `514aaa3b…`): a §D deixa de dizer que documento não é pedido, a conferência
-  # promete só a assistência, e "renovação dele" vira "do segurado desta cotação".
+  # promete só a assistência, e "renovação dele" vira "do segurado desta cotação". E na segunda revisão
+  # (`0aa8a0bd…`): a abertura da §F deixa de dizer que sem pedido sai o pacote, quando há apólice a renovar.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
     expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('a9164a59205cf893741b478e059ba584')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('514aaa3ba7b1c38c5a0339b002159f17')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('0aa8a0bd604f2ae2ab1c33062d59c0db')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

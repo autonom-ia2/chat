@@ -179,7 +179,7 @@
       "tipo": "numero",
       "origem": "cliente",
       "obrigatorio": false,
-      "descricao": "Percentual da tabela FIPE em que o veículo é cotado. Sem pedido do cliente, a tabela cheia é o padrão. Valores: 75=75 %; 80=80 %; 85=85 %; 90=90 %; 95=95 %; 100=100 %; 105=105 %; 110=110 %.",
+      "descricao": "Percentual da tabela FIPE em que o veículo é cotado. Vale o que ele pediu ou, na renovação do próprio segurado, o percentual da apólice que vence. Sem nenhum dos dois, a tabela cheia é o padrão. Valores: 75=75 %; 80=80 %; 85=85 %; 90=90 %; 95=95 %; 100=100 %; 105=105 %; 110=110 %.",
       "valores": {
         "75": "75 %",
         "80": "80 %",
@@ -692,35 +692,35 @@
       "tipo": "numero",
       "origem": "escolha",
       "obrigatorio": false,
-      "descricao": "DANOS MATERIAIS a terceiros, em reais. O cliente diz 'DM', 'danos materiais', 'danos a terceiros'. Só preencha se ele pediu um valor."
+      "descricao": "DANOS MATERIAIS a terceiros, em reais. O cliente diz 'DM', 'danos materiais', 'danos a terceiros'. Preencha com o valor que ele pediu ou, na renovação do próprio segurado, com o da apólice que vence. Sem nenhum dos dois, deixe em branco e vale o pacote."
     },
     {
       "campo": "coverage.bodilyInjury",
       "tipo": "numero",
       "origem": "escolha",
       "obrigatorio": false,
-      "descricao": "DANOS CORPORAIS a terceiros, em reais. O cliente diz 'DC', 'danos corporais', 'danos pessoais'. Só preencha se ele pediu."
+      "descricao": "DANOS CORPORAIS a terceiros, em reais. O cliente diz 'DC', 'danos corporais', 'danos pessoais'. Preencha com o valor que ele pediu ou, na renovação do próprio segurado, com o da apólice que vence. Sem nenhum dos dois, deixe em branco e vale o pacote."
     },
     {
       "campo": "coverage.moralDamage",
       "tipo": "numero",
       "origem": "escolha",
       "obrigatorio": false,
-      "descricao": "DANOS MORAIS a terceiros, em reais. Só preencha se ele pediu."
+      "descricao": "DANOS MORAIS a terceiros, em reais. Preencha com o valor que ele pediu ou, na renovação do próprio segurado, com o da apólice que vence. Sem nenhum dos dois, deixe em branco e vale o pacote."
     },
     {
       "campo": "coverage.deathAccident",
       "tipo": "numero",
       "origem": "escolha",
       "obrigatorio": false,
-      "descricao": "Morte por acidente (APP), em reais. Só preencha se ele pediu."
+      "descricao": "Morte por acidente (APP), em reais. Preencha com o valor que ele pediu ou, na renovação do próprio segurado, com o da apólice que vence. Sem nenhum dos dois, deixe em branco e vale o pacote."
     },
     {
       "campo": "coverage.disabilityAccident",
       "tipo": "numero",
       "origem": "escolha",
       "obrigatorio": false,
-      "descricao": "Invalidez por acidente (APP), em reais. Só preencha se ele pediu."
+      "descricao": "Invalidez por acidente (APP), em reais. Preencha com o valor que ele pediu ou, na renovação do próprio segurado, com o da apólice que vence. Sem nenhum dos dois, deixe em branco e vale o pacote."
     },
     {
       "campo": "coverage.newValueCoverage",
