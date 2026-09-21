@@ -787,7 +787,7 @@
       "tipo": "numero",
       "origem": "escolha",
       "obrigatorio": false,
-      "descricao": "Assistência 24 horas: o NÍVEL do plano, e não a quilometragem nem um valor. A apólice escreve o nome do plano e os quilômetros de reboque; leve para o nível que corresponde a ele, e pergunte ao cliente quando não for evidente. Em branco sai o nível básico. Valores: 0=não contratar; 1=completa; 2=intermediária; 4=básica.",
+      "descricao": "Assistência 24 horas: o NÍVEL do plano, e não a quilometragem nem um valor. A apólice escreve o nome do plano e os quilômetros de reboque; leve para o nível que cobre no mínimo o que ele tem; plano acima de todos os níveis vai para o maior. Em branco sai o nível básico. Valores: 0=não contratar; 1=completa; 2=intermediária; 4=básica.",
       "valores": {
         "0": "não contratar",
         "1": "completa",

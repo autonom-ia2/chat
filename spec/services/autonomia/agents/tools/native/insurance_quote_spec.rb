@@ -94,6 +94,37 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(texto).to be_nil
     end
 
+    # O VALOR RECUSADO VAI PARA O REGISTRO (#585): só o das coberturas, e o do documento nunca.
+    it 'entrega ao registro o valor das coberturas recusadas, e só delas' do
+      ready_connection
+      connector = Autonomia::Insurance::Connector.client
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      problemas = [{ 'campo' => 'coverage.assistance24h', 'severidade' => 'erro', 'motivo' => '2000 não existe' },
+                   { 'campo' => 'insured.document', 'severidade' => 'erro', 'motivo' => 'CPF inválido' }]
+      allow(connector).to receive(:quote_validate).and_return('valido' => false, 'problemas' => problemas)
+
+      conferencia = tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }, 'cpf' => '04297912678',
+                         'coverage' => { 'assistance24h' => 2000 }).precheck
+
+      expect(conferencia.recusados).to eq('coverage.assistance24h' => 2000)
+    end
+
+    # Um caminho de campo que desce além de um valor não pode levantar: a exceção cairia no `rescue` do
+    # `precheck`, e a conferência aceitaria a cotação paga com o valor inválido (revisão da #586).
+    it 'recusa mesmo quando o campo recusado desce além de um valor, sem levantar' do
+      ready_connection
+      connector = Autonomia::Insurance::Connector.client
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      problemas = [{ 'campo' => 'coverage.assistance24h.nivel', 'severidade' => 'erro', 'motivo' => 'fora da lista' }]
+      allow(connector).to receive(:quote_validate).and_return('valido' => false, 'problemas' => problemas)
+
+      conferencia = tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }, 'cpf' => '04297912678',
+                         'coverage' => { 'assistance24h' => 1 }).precheck
+
+      expect(conferencia.motivo).to eq('faltam_dados')
+      expect(conferencia.recusados).to eq('coverage.assistance24h.nivel' => nil)
+    end
+
     # Conferência é conferência, não portão: se ela cair, a cotação segue.
     it 'deixa passar quando a conferencia cai' do
       ready_connection

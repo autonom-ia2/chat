@@ -10,6 +10,9 @@ class Autonomia::Agents::Tools::Bound
   AsyncConfig = ::Autonomia::Agents::Tools::AsyncConfig
 
   MAX_OUTPUT_CHARS = 8_000
+  # Recusas que querem dizer "a conversa já tem uma execução" (#585): o `Delivery` guarda o fato, e o
+  # especialista conta ao principal que a cotação existe, em vez de "nada abriu".
+  EXECUCAO_EXISTENTE = %w[execucao_ja_aberta_neste_turno execucao_ja_em_andamento].freeze
 
   # Cortar em silêncio entrega ao modelo um pedaço que PARECE inteiro — o mesmo
   # defeito que fazia o Guia contar a amostra como se fosse o total. Cortando,
@@ -83,8 +86,9 @@ class Autonomia::Agents::Tools::Bound
   private
 
   # ASSÍNCRONA: não executa nada aqui. Registra a execução como `pending` e devolve ao modelo uma
-  # confirmação curta, para ele avisar o cliente na MESMA resposta — a rodada de ferramentas é única
-  # (`ResponsesClient#create_with_tool_executor` faz a segunda chamada sem `tools`).
+  # confirmação curta, para ele avisar o cliente na MESMA resposta. Depois da última rodada de
+  # ferramentas, `ResponsesClient#create_with_tool_executor` faz a ida final sem `tools` (o especialista
+  # de cotação tem seis rodadas, #585; os demais agentes, uma).
   #
   # Fica em `pending` de propósito: quem promove para `running` e enfileira é o Responder, DEPOIS de
   # a entrega do turno começar. Se o turno morrer (a segunda chamada ao modelo estoura, ou a
@@ -123,6 +127,7 @@ class Autonomia::Agents::Tools::Bound
   # `{ error: ... }` neste arquivo: `recusa_guarda_spec` reprova quem escrever um. Antes, o agente
   # recusava e não deixava rastro nenhum; em 08/09/2026 uma cotação não abriu e ninguém soube por quê.
   def recusar(codigo, delivery, detalhe: nil)
+    delivery.marcar_cotacao_existente if EXECUCAO_EXISTENTE.include?(codigo) && delivery.respond_to?(:marcar_cotacao_existente)
     ::Autonomia::Agents::Tools::Recusa.para_modelo(codigo, slug: slug, delivery: delivery,
                                                            agente: @agent, detalhe: detalhe)
   end
@@ -134,6 +139,7 @@ class Autonomia::Agents::Tools::Bound
   def recusar_pela_conferencia(conferencia, delivery)
     ::Autonomia::Agents::Tools::Recusa.registrar(
       conferencia.try(:motivo) || 'conferencia_recusou', slug: slug, agente: @agent, faltando: conferencia.try(:faltando),
+                                                         recusados: conferencia.try(:recusados),
                                                          conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(delivery)
     )
     conferencia.to_s
@@ -154,6 +160,7 @@ class Autonomia::Agents::Tools::Bound
   # (entrega 6), com o motivo próprio. NENHUMA linha aqui lê a frase do cliente: quem distingue
   # "e aí?" de "quero mudar a franquia" é o modelo; o código compara dados, e dado diferente abre.
   def recusar_pela_repeticao(run, delivery)
+    delivery.marcar_cotacao_existente
     ::Autonomia::Agents::Tools::Recusa.registrar(
       ::Autonomia::Agents::Tools::PedidoRepetido::MOTIVO, slug: slug, agente: @agent, onde: 'aceite',
                                                           conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(delivery)

@@ -320,7 +320,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }
       },
-      'insurance_quote.rb#precheck#4' => {
+      'recusas.rb#conferencia_do_que_falta#1' => {
         espera: { motivo: 'faltam_dados', slug: 'cotar_seguro', faltando: /[a-zA-Z.,]*insured\.document[a-zA-Z.,]*/ },
         dispara: lambda {
           ready_connection
@@ -363,7 +363,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       # Ramo que o adapter não tem: recusa na conferência (nenhuma execução aberta) e no envio.
-      'insurance_quote.rb#precheck#5' => {
+      'insurance_quote.rb#precheck#4' => {
         espera: { motivo: 'ramo_desconhecido', slug: 'cotar_seguro', faltando: 'produto' },
         dispara: lambda {
           ready_connection

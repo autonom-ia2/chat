@@ -120,6 +120,28 @@ RSpec.describe Crm::Ai::ResponsesClient do
     expect(corpos.last[:tools]).to be_nil
   end
 
+  # O ORÇAMENTO É DE QUEM CHAMA (chat#585, decisão do Rodrigo em 21/09/2026: "não pode ter timeout" no
+  # especialista). O padrão de 180 s continua para o Guia; o especialista pede um orçamento que cobre
+  # todas as rodadas dele, e o que limita passa a ser a rodada, não o relógio.
+  it 'respeita o orçamento de tempo de quem chama, maior que o padrão', :aggregate_failures do
+    corpos = responder_com([pedindo_ferramenta, pedindo_ferramenta, respondendo])
+    leituras = 0
+    allow(Process).to receive(:clock_gettime).with(Process::CLOCK_MONOTONIC) do
+      leituras += 1
+      leituras <= 4 ? 0.0 : described_class::MAX_SEGUNDOS_DE_FERRAMENTA + 1.0
+    end
+
+    cliente.create_with_tool_executor(model: 'm', instructions: 'i', input: 'oi', schema: nil,
+                                      tools: ferramentas, max_rodadas: 6,
+                                      max_segundos: described_class::MAX_SEGUNDOS_DE_FERRAMENTA * 4) do |_calls|
+      [{ type: 'function_call_output', call_id: 'c1', output: 'ok' }]
+    end
+
+    # O relógio passou dos 180 s padrão, e mesmo assim a segunda rodada saiu com ferramenta.
+    expect(corpos.size).to eq(3)
+    expect(corpos[1][:tools]).to be_present
+  end
+
   it 'responde direto quando o modelo não pede ferramenta nenhuma' do
     corpos = responder_com([respondendo])
 

@@ -76,6 +76,11 @@ module Autonomia::Agents::Tools::Recusa
   CAMPO = /\A[a-z][A-Za-z0-9_]{0,39}(\.[a-z][A-Za-z0-9_]{0,39}){0,5}\z/
   DETALHE = /\A[1-5]\d{2}\z/
   MAX_CAMPOS = 20
+  # O VALOR RECUSADO DE UMA COBERTURA (#585): só de campo `coverage.`, só com forma de código — dígitos
+  # e letras, até este tamanho. Em 21/09/2026 a assistência foi recusada e a linha dizia só o nome do
+  # campo; não houve como saber o que o especialista mandou. Valor de cobertura não é dado do cliente.
+  COBERTURA = 'coverage.'.freeze
+  MAX_VALOR = 20
 
   module_function
 
@@ -90,7 +95,7 @@ module Autonomia::Agents::Tools::Recusa
     Rails.logger.info(
       "#{PREFIXO} slug=#{codigo(slug)} conversa=#{Integer(conversa, exception: false) || '-'} agente=#{agente&.id || '-'} " \
       "conta=#{agente&.account_id || '-'} onde=#{codigo(extra.fetch(:onde, 'turno'))} motivo=#{motivo} " \
-      "faltando=#{campos(extra[:faltando])} detalhe=#{detalhe(extra[:detalhe])} " \
+      "faltando=#{campos(extra[:faltando])} detalhe=#{detalhe(extra[:detalhe])} #{recusados(extra[:recusados])}" \
       "descricao=\"#{MOTIVOS.fetch(motivo, SEM_DESCRICAO)}\""
     )
     nil
@@ -136,6 +141,19 @@ module Autonomia::Agents::Tools::Recusa
   def campos(itens)
     nomes = Array(itens).map { |item| item.to_s.match?(CAMPO) ? item.to_s : '?' }.uniq.first(MAX_CAMPOS)
     nomes.empty? ? '-' : nomes.join(',')
+  end
+
+  # `recusados=campo=valor,…␠`, ou nada: sem valor recusado a linha fica como sempre foi.
+  def recusados(pares)
+    itens = pares.to_h.select { |campo, _| campo.to_s.start_with?(COBERTURA) && campo.to_s.match?(CAMPO) }
+                 .first(MAX_CAMPOS).map { |campo, valor| "#{campo}=#{valor_de_cobertura(valor)}" }
+    itens.empty? ? '' : "recusados=#{itens.join(',')} "
+  end
+
+  def valor_de_cobertura(valor)
+    texto = valor.to_s
+    codigo = texto.present? && texto.length <= MAX_VALOR && texto.each_char.all? { |c| c.between?('0', '9') || c.downcase != c.upcase }
+    codigo ? texto : '?'
   end
 
   def detalhe(valor, vazio: '-')

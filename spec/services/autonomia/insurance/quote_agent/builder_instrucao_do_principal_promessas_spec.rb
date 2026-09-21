@@ -219,6 +219,14 @@ module ManualDoPrincipal
     # este bloco aponta para uma seção que ninguém escreveu; e o manual do especialista precisa
     # carregar a mesma regra, porque quem vê a conversa primeiro é ele (`Materia#mensagens` entrega
     # conversa e documentos junto do pedido). Corrigir só o repasse deixaria a origem intacta.
+    # QUEM DIZ SE A COTAÇÃO ABRIU É O SISTEMA (#585). Em 21/09/2026 a Lia disse "Vou seguir com…" sem
+    # cotação aberta: ela só conhecia a prosa do especialista. A frase do manual nomeia a linha que o
+    # `Runner` acrescenta; se o nome mudar de um lado só, a regra aponta para uma linha que não existe.
+    'Se a cotação abriu, quem diz é o sistema.' => lambda {
+      runner = Autonomia::Agents::Specialists::Runner
+      nome = 'SITUAÇÃO DA COTAÇÃO'
+      ARQUIVO.read.include?(nome) && runner::COTACAO_ABERTA.start_with?(nome) && runner::COTACAO_NAO_ABERTA.start_with?(nome)
+    },
     'procure primeiro na conversa (seção 4.2)' => lambda {
       principal_texto = ARQUIVO.read
       principal_texto.include?('### 4.2 O que a pessoa já te deu') &&
@@ -535,7 +543,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('8ab8e63de7c4015070df5670bbad627b')
+      expect(Digest::MD5.hexdigest(secao)).to eq('b5984308e7a859ae70524869e2448ddf')
     end
 
     it 'não introduz variável para substituir' do

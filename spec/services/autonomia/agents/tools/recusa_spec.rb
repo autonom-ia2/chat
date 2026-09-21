@@ -93,6 +93,40 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
     expect(linha).to include("motivo=motivo_novo faltando=- detalhe=- descricao=\"#{described_class::SEM_DESCRICAO}\"")
   end
 
+  # O VALOR RECUSADO DE UMA COBERTURA (#585). Em 21/09/2026 a conferência recusou a assistência e a linha
+  # dizia só o nome do campo: não houve como saber o que o especialista mandou. Valor de cobertura não é
+  # dado do cliente — é um código ou um valor de lista —, e só ele entra; campo fora de `coverage.` nunca.
+  describe 'o valor recusado de uma cobertura' do
+    it 'registra o valor de cada cobertura recusada' do
+      described_class.registrar('faltam_dados', slug: 'cotar_seguro', agente: agent, faltando: %w[coverage.assistance24h],
+                                                recusados: { 'coverage.assistance24h' => 2000, 'coverage.rentalCarType' => 'completa' })
+
+      expect(linha).to include('detalhe=- recusados=coverage.assistance24h=2000,coverage.rentalCarType=completa descricao=')
+    end
+
+    it 'nunca registra o valor de um campo que não é cobertura' do
+      described_class.registrar('faltam_dados', slug: 'cotar_seguro', agente: agent,
+                                                recusados: { 'insured.document' => '04297912678' })
+
+      expect(linha).not_to include('04297912678')
+      expect(linha).not_to include('recusados=')
+    end
+
+    it 'troca por ? o valor que não tem forma de código: texto livre, longo ou com sinal' do
+      described_class.registrar('faltam_dados', slug: 'cotar_seguro', agente: agent,
+                                                recusados: { 'coverage.assistance24h' => 'meu cpf é 042.979.126-78',
+                                                             'coverage.glassCoverage' => 'x' * 30 })
+
+      expect(linha).to include('recusados=coverage.assistance24h=?,coverage.glassCoverage=? descricao=')
+    end
+
+    it 'sem valor recusado a linha fica como sempre foi' do
+      described_class.registrar('faltam_dados', slug: 'cotar_seguro', agente: agent, faltando: %w[insured.document])
+
+      expect(linha).not_to include('recusados=')
+    end
+  end
+
   # O nome que o modelo pediu é o diagnóstico quando a ferramenta existe (pediu `cotar_seguro` sem
   # tê-la), e é texto livre — que pode repetir o cliente — quando não existe em lugar nenhum.
   describe '.slug_conhecido' do

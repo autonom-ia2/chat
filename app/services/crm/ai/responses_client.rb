@@ -15,14 +15,17 @@ module Crm
       # dois protegem coisas diferentes. O teto de rodadas impede laço infinito;
       # este impede que um modelo lento segure uma thread do Sidekiq por minutos.
       #
-      # 180 segundos, por decisão do Rodrigo em 21/09/2026. Só é seguro porque o
-      # único chamador com mais de uma rodada — o Guia — roda num job (#572). Na
+      # 180 segundos, por decisão do Rodrigo em 21/09/2026. Só é seguro porque os
+      # chamadores com mais de uma rodada — o Guia (#572) e o especialista de
+      # cotação (#585, seis rodadas e orçamento próprio) — rodam num job. Na
       # requisição, o `rack-timeout` de produção mata tudo aos 15s, e este número
       # não teria efeito nenhum além de trocar resposta por erro 500. Os demais
       # agentes usam UMA rodada, e para eles este teto nunca chega a ser checado.
       #
       # Ele impede que uma rodada NOVA comece; a que já começou termina — e a
       # ida final vai sempre sem ferramenta, então o laço termina de qualquer jeito.
+      # É o PADRÃO: quem roda num job e precisa de mais passa `max_segundos:` (o
+      # especialista de cotação, chat#585, que não pode ter rodada cortada pelo relógio).
       MAX_SEGUNDOS_DE_FERRAMENTA = 180
 
       # feature/account/pipeline são OPCIONAIS e só servem à telemetria de consumo (Gestão IA):
@@ -60,7 +63,7 @@ module Crm
       # A última rodada SEMPRE vai sem ferramenta — é isso que garante que o laço
       # termina, mesmo com um modelo que insista em chamar.
       def create_with_tool_executor(model:, instructions:, input:, schema:, reasoning_effort: 'low', tools: nil,
-                                    timeout: 120, max_rodadas: 1)
+                                    timeout: 120, max_rodadas: 1, max_segundos: MAX_SEGUNDOS_DE_FERRAMENTA)
         unless block_given? && tools.present?
           return create(model: model, instructions: instructions, input: input, schema: schema,
                         reasoning_effort: reasoning_effort, tools: tools, timeout: timeout)
@@ -71,7 +74,7 @@ module Crm
         comeco = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
         max_rodadas.to_i.clamp(1, MAX_RODADAS_DE_FERRAMENTA).times do
-          break if tempo_esgotado?(comeco)
+          break if tempo_esgotado?(comeco, max_segundos)
 
           payload, started_at = rodada(model, instructions, conversa, schema, reasoning_effort, tools, timeout)
           usadas |= tools_used(payload)
@@ -133,8 +136,8 @@ module Crm
 
       # O laço já gastou o orçamento de tempo? Medido em relógio monotônico, que
       # não anda para trás com ajuste de hora do sistema.
-      def tempo_esgotado?(comeco)
-        (Process.clock_gettime(Process::CLOCK_MONOTONIC) - comeco) > MAX_SEGUNDOS_DE_FERRAMENTA
+      def tempo_esgotado?(comeco, max_segundos)
+        (Process.clock_gettime(Process::CLOCK_MONOTONIC) - comeco) > max_segundos
       end
 
       # UMA ida ao modelo com as ferramentas na mesa. -> [payload, started_at].

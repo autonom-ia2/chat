@@ -107,6 +107,17 @@ module ManualDoEspecialistaDeAuto
       cotacao.instance_methods.include?(:precheck) &&
         Autonomia::Insurance::Connector::Mock.instance_methods.include?(:quote_validate)
     },
+    # A RECUSA DE VALOR É CORRIGIDA NO TURNO (#585): só é cumprível se o texto que volta ao modelo traz
+    # os aceitos que o adapter escreveu, e se ele volta DENTRO do turno (a conferência, não o `start`).
+    '**Valor fora da lista, com os aceitos na própria recusa, é você quem troca:**' => lambda {
+      motivo = '2000 não existe nesta cobertura. Os aceitos são: 1 (completa), 4 (básica).'
+      texto = cotacao.allocate.send(:conferencia_para_o_modelo, [{ 'campo' => 'coverage.assistance24h', 'motivo' => motivo }])
+      texto.include?(motivo) && cotacao.instance_methods.include?(:precheck)
+    },
+    # QUEM DIZ SE A COTAÇÃO ABRIU É O SISTEMA (#585): a frase que o `Runner` acrescenta ao principal.
+    '**Enquanto a cotação não abrir, não diga que está cuidando dela.**' => lambda {
+      Autonomia::Agents::Specialists::Runner::COTACAO_NAO_ABERTA.include?('Não diga ao cliente que vai cotar')
+    },
     'basta mandar o PDF, que você tira tudo de lá' => -> { Autonomia::Agents::Specialists::Materia::MAX_DOCUMENTOS.positive? },
     'Cada parâmetro da ferramenta de cotação traz, escrito nele' => lambda {
       folhas = Autonomia::Insurance::Parametros.de_auto(SCHEMA).flat_map { |g| g['properties'] || [g] }
@@ -279,6 +290,15 @@ module ManualDoEspecialistaDeAuto
     # só é cumprível se a ferramenta publica os níveis.
     '**Todas as coberturas da apólice, inclusive as que não são valor em reais' => lambda {
       %w[coverage.assistance24h coverage.glassCoverage coverage.rentalCarType].all? { |n| valores(n).any? }
+    },
+    # SUBIR PARA A OPÇÃO QUE COBRE (regra do CEO, 21/09/2026, #585): "a primeira acima" e "a maior" só se
+    # cumprem se a ferramenta publica as opções de cada cobertura de lista, com o rótulo que diz o tamanho.
+    '**Todo valor tem de existir na sua ferramenta, e quem renova quer no mínimo o que já tem.**' => lambda {
+      %w[coverage.assistance24h coverage.glassCoverage coverage.rentalCarType coverage.deductibleType]
+        .all? { |n| valores(n).any? && valores(n).values.all?(&:present?) }
+    },
+    "plano acima de todos os níveis (premium, VIP, um\nreboque mais longo do que os níveis dizem) vai para o maior" => lambda {
+      valores('coverage.assistance24h').size > 1
     },
     'Renovação garantida' => -> { campo('quotation.isGuaranteedRenewal') },
     'Nunca chute a seguradora anterior' => -> { valores('quotation.previousInsurerCode').any? },
@@ -459,12 +479,15 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # revisão (`a9164a59…`, `514aaa3b…`): a §D deixa de dizer que documento não é pedido, a conferência
   # promete só a assistência, e "renovação dele" vira "do segurado desta cotação". E na segunda revisão
   # (`0aa8a0bd…`): a abertura da §F deixa de dizer que sem pedido sai o pacote, quando há apólice a renovar.
+  # E pela #585 (`48cdeaf4…`, `3f9cee18…`): a renovação sobe para a opção que cobre em vez de
+  # perguntar, a recusa de valor fora da lista é corrigida no turno, e sem cotação aberta não se diz que cuida dela.
+  # Na revisão (`e30d3715…`): o item 8 do que nunca se faz deixa de mandar perguntar, e campo ≠ valor.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('a9164a59205cf893741b478e059ba584')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('e30d37153bd956c90614bc3a0220fe0a')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('0aa8a0bd604f2ae2ab1c33062d59c0db')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('3f9cee18ab5536bcf408b5696460a307')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer
