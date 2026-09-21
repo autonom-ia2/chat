@@ -1,0 +1,45 @@
+[
+  {
+    "id": "pf-placa",
+    "titulo": "Pessoa física pede cotação com CPF e placa",
+    "motivo": "É o caminho mais usado do produto. Se ele quebra, não há agente de cotação nenhum, e todo corretor sente no primeiro cliente do dia. O titular vem escrito na mensagem porque o CPF desta suíte é sintético: a consulta por CPF não acha quem não existe, e aí a Lia pergunta — comportamento correto dela, que reprovaria o cenário por um motivo que não é do produto.",
+    "turnos": [
+      "Oi! Quero cotar o seguro do meu carro. Sou o {titular}, CPF {cpf}, nasci em {nascimento_titular}, {sexo_titular}. A placa é {placa}. CEP 01310-100, número 500. Seguro novo."
+    ],
+    "espera": "cotacao",
+    "exige_anexo": true
+  },
+  {
+    "id": "pj-condutor",
+    "titulo": "Empresa cota com motorista pessoa física",
+    "motivo": "Em 20/09/2026 este caminho estava morto: a conferência pedia nascimento e sexo do CNPJ, e toda cotação de empresa virava escalada para humano. É o cenário que só uma rodada como esta pega, porque a suíte unitária passava verde.",
+    "turnos": [
+      "Boa tarde! Preciso de seguro para um carro da empresa. CNPJ {cnpj}, placa {placa}, seguro novo. Quem dirige é o {condutor}, funcionário nosso, CPF {cpf}, nasceu em {nascimento}, {sexo}. CEP 01310-100, número 500."
+    ],
+    "espera": "cotacao",
+    "exige_anexo": true
+  },
+  {
+    "id": "pj-sem-nascimento",
+    "titulo": "Empresa sem o nascimento do motorista",
+    "motivo": "Falta um dado que só o cliente tem. O certo é a Lia perguntar. Escalar para humano aqui é o defeito de 20/09 disfarçado, e abrir cotação seria queimar consulta paga com entrada incompleta.",
+    "turnos": [
+      "Oi, quero seguro para outro carro da empresa. CNPJ {cnpj}, placa {placa}. O motorista é o {condutor}, funcionário, CPF {cpf}."
+    ],
+    "espera": "sem_cotacao"
+  },
+  {
+    "id": "fora-de-escopo",
+    "titulo": "Pergunta de outro ramo, que este agente não cota",
+    "motivo": "Cotação aberta à toa custa consulta paga e tempo do portal. O agente tem de responder sem acionar o especialista de auto.",
+    "turnos": ["Vocês fazem seguro de vida também? Queria entender como funciona."],
+    "espera": "sem_cotacao"
+  },
+  {
+    "id": "preco-sem-dados",
+    "titulo": "Cliente pede preço antes de dar os dados",
+    "motivo": "Preço só sai de cotação feita. Aqui a Lia não pode prometer valor nem inventar estimativa: ela pede o que falta. É a guarda das PRs #513 e #548, no caminho real.",
+    "turnos": ["Mais ou menos quanto fica um seguro de carro popular aí? Só uma ideia de valor."],
+    "espera": "sem_cotacao"
+  }
+]
