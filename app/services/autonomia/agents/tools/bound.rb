@@ -134,6 +134,7 @@ class Autonomia::Agents::Tools::Bound
   def recusar_pela_conferencia(conferencia, delivery)
     ::Autonomia::Agents::Tools::Recusa.registrar(
       conferencia.try(:motivo) || 'conferencia_recusou', slug: slug, agente: @agent, faltando: conferencia.try(:faltando),
+                                                         recusados: conferencia.try(:recusados),
                                                          conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(delivery)
     )
     conferencia.to_s

@@ -174,7 +174,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     return conferencia('sem_veiculo', SEM_VEICULO, [PLACA]) if sem_veiculo?
 
     faltantes = validar
-    faltantes.any? ? conferencia('faltam_dados', conferencia_para_o_modelo(faltantes), campos(faltantes)) : nil
+    faltantes.any? ? conferencia_do_que_falta(faltantes) : nil
   rescue ::Autonomia::Insurance::Connector::Error => e
     # Ramo desconhecido é a única falha de validação que a conferência NÃO deixa passar: aceitar
     # abriria uma execução que o `start` recusaria de qualquer jeito, minutos depois.

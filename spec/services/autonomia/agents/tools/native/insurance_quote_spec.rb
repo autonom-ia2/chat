@@ -94,6 +94,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(texto).to be_nil
     end
 
+    # O VALOR RECUSADO VAI PARA O REGISTRO (#585): só o das coberturas, e o do documento nunca.
+    it 'entrega ao registro o valor das coberturas recusadas, e só delas' do
+      ready_connection
+      connector = Autonomia::Insurance::Connector.client
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      problemas = [{ 'campo' => 'coverage.assistance24h', 'severidade' => 'erro', 'motivo' => '2000 não existe' },
+                   { 'campo' => 'insured.document', 'severidade' => 'erro', 'motivo' => 'CPF inválido' }]
+      allow(connector).to receive(:quote_validate).and_return('valido' => false, 'problemas' => problemas)
+
+      conferencia = tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }, 'cpf' => '04297912678',
+                         'coverage' => { 'assistance24h' => 2000 }).precheck
+
+      expect(conferencia.recusados).to eq('coverage.assistance24h' => 2000)
+    end
+
     # Conferência é conferência, não portão: se ela cair, a cotação segue.
     it 'deixa passar quando a conferencia cai' do
       ready_connection

@@ -102,8 +102,20 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
     { 'pedido' => texto, 'motivo' => motivo, 'faltando' => faltando }
   end
 
-  def conferencia(motivo, texto, faltando)
-    ::Autonomia::Agents::Tools::Native::Conferencia.new(texto: texto, faltando: faltando, motivo: motivo)
+  def conferencia(motivo, texto, faltando, recusados: {})
+    ::Autonomia::Agents::Tools::Native::Conferencia.new(texto: texto, faltando: faltando, motivo: motivo, recusados: recusados)
+  end
+
+  def conferencia_do_que_falta(faltantes)
+    conferencia('faltam_dados', conferencia_para_o_modelo(faltantes), campos(faltantes), recusados: recusados(faltantes))
+  end
+
+  # O valor que a entrada levou em cada COBERTURA recusada (#585), para o registro dizer o que foi mandado.
+  def recusados(faltantes)
+    faltantes.filter_map do |problema|
+      campo = problema['campo'].to_s
+      [campo, entrada.to_h.dig(*campo.split('.'))] if campo.start_with?('coverage.')
+    end.to_h
   end
 
   def campos(faltantes)

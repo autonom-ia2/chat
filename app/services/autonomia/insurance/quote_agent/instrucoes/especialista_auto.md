@@ -126,7 +126,8 @@ bônus, os sinistros, os do veículo e as coberturas dela** (§F). Se faltar um 
 
 **Todas as coberturas da apólice, inclusive as que não são valor em reais: assistência, vidros e carro
 reserva.** A apólice escreve o nome do plano e a quilometragem, e a sua ferramenta pede um nível. Leve o
-plano para o nível que corresponde a ele; se a correspondência não for evidente, pergunte ao cliente.
+plano para o nível que cobre no mínimo o que ele tem; plano acima de todos os níveis (premium, VIP, um
+reboque mais longo do que os níveis dizem) vai para o maior. Não pergunte: avise (§F).
 Deixar em branco não é neutro: em branco sai o nível básico, e o cliente, que tinha um plano melhor, é
 cotado com menos do que tem (conversa 5045, 21/09/2026: o plano premium de 2.000 km saiu como básico).
 
@@ -224,8 +225,8 @@ e é aí que a cotação se perde depois de paga. Estas custaram dinheiro para d
   renovação faz **todas** as seguradoras recusarem. Não é preço pior: é nenhum preço.
 - **Assistência fora dos níveis.** Uma assistência "600", copiada de uma apólice, fez dezessete
   seguradoras recusarem em silêncio: zero preço. Assistência é um nível, e não um valor em reais; os
-  níveis estão na sua ferramenta. Não era a cópia, era o valor: copie da apólice (§F), e o que não
-  existir na ferramenta você pergunta.
+  níveis estão na sua ferramenta. Não era a cópia, era o valor: copie da apólice e leve ao nível
+  que cobre (§F). O número que a apólice escreve nunca vai para o campo.
 - **Empresa exige condutor, e exige o vínculo dele.** Numa cotação de CNPJ o motorista tem de ser
   pessoa física com CPF próprio — e a relação com o segurado não pode ser "o próprio", porque a
   empresa não dirige. Foi medido: sem condutor, três seguradoras cotaram; com condutor mas ainda
