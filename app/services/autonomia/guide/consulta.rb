@@ -226,7 +226,30 @@ class Autonomia::Guide::Consulta
   def enxuto(item)
     return item unless item.is_a?(Hash)
 
-    achatado(sem_segredos(item)).select { |_campo, valor| identifica?(valor) }
+    cabe_no_item(achatado(sem_segredos(item)).select { |_campo, valor| identifica?(valor) })
+  end
+
+  # Teto por item, para um recurso gordo não comer a lista inteira. Achatar o
+  # aninhado trouxe o nome do cliente na conversa — que é o ponto —, mas trouxe
+  # junto o texto da última mensagem: a conversa foi de ~400 para ~1.975
+  # caracteres, e sete de vinte e cinco ficavam de fora da lista.
+  #
+  # Quando o item estoura, os campos MAIS LONGOS saem primeiro. Continua sendo
+  # corte por forma: campo longo é conteúdo, campo curto identifica. Nome,
+  # status e identificador sobrevivem; o corpo da mensagem, não.
+  MAX_TEXTO_DE_ITEM = 800
+
+  def cabe_no_item(item)
+    return item if JSON.generate(item).length <= MAX_TEXTO_DE_ITEM
+
+    por_tamanho = item.sort_by { |campo, valor| -"#{campo}#{valor}".length }
+    sobrando = item.dup
+    por_tamanho.each_key do |campo|
+      break if JSON.generate(sobrando).length <= MAX_TEXTO_DE_ITEM
+
+      sobrando.delete(campo)
+    end
+    sobrando
   end
 
   # Nome de gente costuma morar aninhado. Numa conversa, quem é o cliente está
@@ -295,19 +318,32 @@ class Autonomia::Guide::Consulta
   # era um proxy errado: subi o teto de 25 para 100 e o aviso sumiu sozinho,
   # fazendo o Guia entregar 25 de 30 avaliações como se fossem todas.
   def quantos(mostrados, na_pagina, total)
-    return " (total nesta conta: #{total})" if total.present?
+    # Total e corte NUNCA se excluem. A versão anterior devolvia o total e
+    # engolia o aviso: com 25 conversas na conta e 18 cabendo, o modelo ouvia
+    # "total: 25", listava 18 e ninguém sabia das outras 7. É o defeito original
+    # — contar a amostra — voltando por outra porta.
+    cortou = mostrados < na_pagina
+    if total.present?
+      return " (total nesta conta: #{total})" unless cortou
 
-    if mostrados < na_pagina
+      return " (total nesta conta: #{total}, mas só #{mostrados} couberam aqui; " \
+             'os outros ficaram de fora desta lista)'
+    end
+
+    if cortou
       return " (a plataforma entregou #{na_pagina} e mostrei #{mostrados}; o resto ficou de fora, " \
              'então NÃO afirme quantos são)'
     end
 
-    # Aqui a lista veio inteira, do jeito que a plataforma entregou. A versão
-    # anterior mandava "não diga que este é o total", e com isso o Guia se
-    # recusava a responder "quantas caixas eu tenho" — a pergunta que é a razão
-    # de existir da leitura. O honesto é dar o número e ressalvar a paginação,
-    # não proibir a resposta.
-    " (a plataforma entregou #{mostrados} e estão todos acima; responda com esse número e, " \
-      'se a conta for grande, ressalve que pode haver mais páginas)'
+    # Aqui a lista veio inteira do jeito que a plataforma entregou, e ela não
+    # disse quantos existem. Duas versões anteriores erraram nas duas pontas:
+    # uma proibia responder (e o Guia se recusava a dizer quantas caixas a
+    # pessoa tem), a outra MANDAVA afirmar (e ele dizia "25" para quem tinha 30,
+    # porque a plataforma tinha paginado sem avisar).
+    #
+    # O certo é dizer o que se sabe — quantos vieram — sem mandar tratar isso
+    # como o total da conta. Quem lê decide como dizer.
+    " (a plataforma entregou #{mostrados} e estão todos acima; ela não informou o total, " \
+      'então diga quantos vieram, sem afirmar que é tudo o que existe)'
   end
 end

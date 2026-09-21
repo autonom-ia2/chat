@@ -120,7 +120,7 @@ RSpec.describe Autonomia::Guide::Consulta do
     it 'responde com o número recebido quando a plataforma não informa o total' do
       plataforma_responde('200', { payload: Array.new(100) { |i| { name: "Contato #{i}" } } }.to_json)
 
-      expect(consulta.ler('contacts')).to include('responda com esse número')
+      expect(consulta.ler('contacts')).to include('diga quantos vieram')
     end
 
     # Quando o corte é NOSSO, a frase tem que ser outra: sobrou coisa de fora.

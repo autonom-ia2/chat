@@ -143,6 +143,27 @@ RSpec.describe Autonomia::Guide::Consulta do
     expect(consulta.ler('conversations')).to include('Joana Cliente')
   end
 
+  # Trazer o aninhado trouxe junto o texto da última mensagem, e a conversa
+  # quintuplicou de tamanho: uma página cheia deixava sete de fora. O teto por
+  # item resolve mantendo o que identifica e descartando o conteúdo.
+  it 'cabe uma página cheia de conversas com mensagem', :aggregate_failures do
+    caixa = create_crm_inbox(account: conta, name: 'Atendimento', members: [admin])
+    25.times do |i|
+      contato = conta.contacts.create!(name: "Cliente #{i}", phone_number: "+5511977770#{format('%03d', i)}")
+      inbox_contato = ContactInbox.create!(contact: contato, inbox: caixa, source_id: SecureRandom.uuid)
+      conversa = conta.conversations.create!(inbox: caixa, contact: contato, contact_inbox: inbox_contato)
+      conversa.messages.create!(account: conta, inbox: caixa, message_type: :incoming,
+                                content: "Bom dia, #{('preciso de ajuda com o meu pedido. ' * 12)}")
+    end
+
+    resposta = consulta.ler('conversations')
+
+    # Todas as 25, com o nome de cada cliente, e sem aviso de corte nosso.
+    expect(resposta).to include('Cliente 0')
+    expect(resposta).to include('Cliente 24')
+    expect(resposta).not_to include('ficaram de fora')
+  end
+
   # A plataforma pagina, e cada recurso pagina de um jeito. Quando ela informa o
   # total, o Guia usa. Quando não informa, ele diz quantos recebeu — sem se
   # recusar a responder, que foi o erro que eu cometi ao consertar isto.
@@ -157,7 +178,7 @@ RSpec.describe Autonomia::Guide::Consulta do
 
     resposta = consulta.ler('labels')
 
-    expect(resposta).to include('responda com esse número')
+    expect(resposta).to include('diga quantos vieram')
     expect(resposta).not_to include('NÃO afirme quantos são')
   end
 
