@@ -94,6 +94,14 @@ class Autonomia::Agents::Tools::Bound
     refusal = async_refusal(delivery)
     return recusar(refusal, delivery) if refusal
 
+    # SEM `operador`, de propósito (#568). A assíncrona não executa aqui: ela é
+    # aceita, e a execução acontece depois, noutro processo, reconstruída do
+    # registro no banco (`AsyncRunJob`: `native.new(agent:, params:, run:)`).
+    # `operador` é um objeto do TURNO — a pessoa logada, com a sessão dela — e
+    # não sobrevive a essa travessia. Passá-lo aqui faria a ferramenta enxergar
+    # quem pediu no aceite e perder no momento de agir: falha silenciosa, só
+    # que mais tarde e mais difícil de achar. Ferramenta que precisa da pessoa
+    # tem que ser síncrona.
     ferramenta = @native.new(agent: @agent, params: args, delivery: delivery)
     antecipado = precheck_native(ferramenta)
     return recusar_pela_conferencia(antecipado, delivery) if antecipado
