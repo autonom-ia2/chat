@@ -25,7 +25,6 @@ RSpec.describe Autonomia::Guide::Consulta do
 
     expect(resposta).to include('Caixa 0')
     expect(resposta).to include('Caixa 39')
-    expect(resposta).not_to include('NÃO afirme quantos são')
     # Todas as 40, não 39: quem responde "quantas eu tenho" conta o que recebeu.
     expect(resposta.scan('"name"').size).to eq(40)
   end
@@ -38,7 +37,6 @@ RSpec.describe Autonomia::Guide::Consulta do
     end
 
     expect(resposta).to include('Funil 0', 'Funil 39')
-    expect(resposta).not_to include('NÃO afirme quantos são')
   end
 
   # Recurso desligado na conta responde 404. Isso NÃO pode virar "a plataforma
@@ -66,12 +64,63 @@ RSpec.describe Autonomia::Guide::Consulta do
   # O que sustenta tudo acima: a lista manda o que identifica, e o detalhe de um
   # item se pede pelo item. Se esta leitura vier enxuta, a de lista não tem como
   # ser o lugar do detalhe — e o desenho inteiro cai.
-  it 'a leitura de UM item continua vindo inteira' do
+  it 'a leitura de UM item continua vindo inteira', :aggregate_failures do
     caixa = create_crm_inbox(account: conta, name: 'Detalhada', members: [admin])
+
+    item = consulta.ler('inboxes/:id', { id: caixa.id })
+
+    # Campos que o enxugamento da lista tiraria: só sobrevivem se o item não
+    # passou por ele. Comparar tamanho com a lista não pegava a regressão.
+    expect(item).to include('working_hours')
+    expect(item).to include('Detalhada')
+  end
+
+  # Conversa é o recurso mais pesado e mais perguntado, e vem embrulhado em dois
+  # níveis: `data: { meta:, payload: [...] }`. Desembrulhar um nível só fazia a
+  # lista cair no caminho do item único — sem enxugar, sem corte por item e sem
+  # aviso: a partir de umas doze conversas o modelo recebia um JSON partido no
+  # meio achando que estava inteiro.
+  it 'lê conversas sem entregar JSON partido em silêncio', :aggregate_failures do
+    caixa = create_crm_inbox(account: conta, name: 'Atendimento', members: [admin])
+    30.times do
+      contato = conta.contacts.create!(name: 'Cliente', phone_number: "+5511#{rand(100_000_000..999_999_999)}")
+      inbox_contato = ContactInbox.create!(contact: contato, inbox: caixa, source_id: SecureRandom.uuid)
+      conta.conversations.create!(inbox: caixa, contact: contato, contact_inbox: inbox_contato)
+    end
+
+    resposta = consulta.ler('conversations')
+
+    # Tem que chegar como LISTA. Se o desembrulho parar no primeiro nível, isto
+    # vira o objeto `{"meta":...,"payload":[...]}` e todo o tratamento de lista
+    # — enxugar, cortar por item, avisar — deixa de acontecer.
+    expect(resposta).to start_with('[')
+    expect(resposta.length).to be <= described_class::MAX_TEXTO
+    expect { JSON.parse(resposta.split(' (').first) }.not_to raise_error
+  end
+
+  # Regra §6 do Rodrigo: credencial nunca sai em mensagem. O corte por forma não
+  # pega isto — um token é uma string curta, igualzinha a um nome de caixa.
+  it 'nunca manda segredo da conta, nem na lista nem no item', :aggregate_failures do
+    caixa = create_crm_inbox(account: conta, name: 'Com segredo', members: [admin])
 
     lista = consulta.ler('inboxes')
     item = consulta.ler('inboxes/:id', { id: caixa.id })
 
-    expect(item.length).to be > (lista.length / 2)
+    [lista, item].each do |resposta|
+      expect(resposta).not_to include('hmac_token')
+      expect(resposta).not_to include('inbox_identifier')
+      expect(resposta).not_to include(caixa.channel.identifier.to_s) if caixa.channel.respond_to?(:identifier)
+    end
+  end
+
+  # A plataforma pagina, e cada recurso pagina de um jeito. Sem o total dela,
+  # ninguém aqui sabe se a lista veio inteira — então o Guia tem que dizer isso,
+  # em vez de deixar o modelo contar a página como se fosse o todo.
+  it 'avisa quando não sabe o total, mesmo com a lista abaixo do teto' do
+    5.times { |i| conta.labels.create!(title: "etiqueta#{i}") }
+
+    resposta = consulta.ler('labels')
+
+    expect(resposta).to include('NÃO afirme quantos são').or include('não que este é o total')
   end
 end

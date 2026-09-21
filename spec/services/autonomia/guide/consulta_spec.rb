@@ -96,7 +96,7 @@ RSpec.describe Autonomia::Guide::Consulta do
 
       resposta = consulta.ler('inboxes')
 
-      expect(resposta).to include('não está disponível nesta conta')
+      expect(resposta).to include('não tem acesso a isto')
       expect(resposta).not_to include('403')
     end
 
@@ -115,10 +115,20 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(consulta.ler('contacts')).to include('total nesta conta: 317')
     end
 
-    it 'avisa que não sabe o total quando a plataforma não informa e a lista encheu' do
+    # Sem o total da plataforma, ninguém aqui sabe se a lista veio inteira ou se
+    # é uma página. O Guia diz quantos recebeu e proíbe tratar isso como total.
+    it 'avisa que não sabe o total quando a plataforma não informa' do
       plataforma_responde('200', { payload: Array.new(100) { |i| { name: "Contato #{i}" } } }.to_json)
 
-      expect(consulta.ler('contacts')).to include('NÃO afirme quantos são')
+      expect(consulta.ler('contacts')).to include('não que este é o total')
+    end
+
+    # Quando o corte é NOSSO, a frase tem que ser outra: sobrou coisa de fora.
+    it 'diz quando foi ele que cortou, e quanto ficou de fora' do
+      gordos = Array.new(100) { |i| { name: "Contato #{i}", nota: 'x' * 390 } }
+      plataforma_responde('200', { payload: gordos }.to_json)
+
+      expect(consulta.ler('contacts')).to include('o resto ficou de fora')
     end
 
     it 'não inventa aviso quando a lista cabe inteira', :aggregate_failures do
@@ -156,7 +166,7 @@ RSpec.describe Autonomia::Guide::Consulta do
 
       expect(resposta).to include('Comercial')
       expect(resposta).not_to include('chave')
-      expect(resposta).not_to include('zzz')
+      expect(resposta).not_to include('z' * 401)
     end
 
     # Um objeto cortado no meio vira uma lista que PARECE inteira: o modelo conta

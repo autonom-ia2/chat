@@ -30,9 +30,26 @@ class Autonomia::Guide::Consulta
   MAX_ITENS = 100
   MAX_TEXTO = 40_000
 
-  # Campo de texto acima disto é conteúdo, não identificação: numa LISTA ele só
-  # ocupa espaço. Quem quiser o conteúdo pede o item.
-  MAX_TEXTO_DE_CAMPO = 80
+  # Campo de texto acima disto é conteúdo longo, não identificação. O limite é
+  # folgado de propósito: com 80 caracteres, a resposta pronta perdia o próprio
+  # texto e a avaliação perdia o comentário do cliente — e esses dois recursos
+  # não têm rota de item, então o conteúdo ficava inalcançável. Quem controla o
+  # volume é o orçamento total, que corta por item inteiro.
+  MAX_TEXTO_DE_CAMPO = 400
+
+  # Segredo NUNCA sai daqui, em lista ou em item.
+  #
+  # O corte deste arquivo é por forma, e segredo é justamente o caso em que a
+  # forma não denuncia nada: `hmac_token`, `imap_password`, `smtp_password` e o
+  # `secret` de webhook são strings curtas, iguaizinhas a um nome de caixa. Iam
+  # inteiros para o modelo. Aqui o nome é a única coisa que importa, então a
+  # lista é por nome mesmo — e vale para qualquer recurso dos 270.
+  SEGREDOS = %w[
+    secret hmac_token inbox_identifier
+    password imap_password smtp_password
+    token access_token auth_token refresh_token api_key apikey
+    private_key client_secret signing_key webhook_secret
+  ].freeze
 
   # Rotas que pedem identificador que o Guia não tem como adivinhar ficam fora do
   # catálogo oferecido ao modelo: sem o id, a chamada só produziria erro. O
@@ -89,9 +106,15 @@ class Autonomia::Guide::Consulta
   # perfil dela não alcança. Os outros são falha nossa, e o número fica no log.
   def indisponivel(recurso, codigo)
     Rails.logger.warn("[autonomia][guide][consulta] account=#{@account&.id} recurso=#{recurso} http=#{codigo}")
-    return "Isto não está disponível nesta conta: #{recurso}." if %w[403 404].include?(codigo.to_s)
 
-    "Não consegui ler #{recurso} agora."
+    case codigo.to_s
+    # Recurso desligado na conta.
+    when '404' then "Isto não está disponível nesta conta: #{recurso}."
+    # Ligado, mas fora do alcance do perfil de quem perguntou. Dizer que "não
+    # está disponível" faria a pessoa achar que precisa contratar o que já tem.
+    when '403' then "O perfil de quem perguntou não tem acesso a isto: #{recurso}."
+    else "Não consegui ler #{recurso} agora."
+    end
   end
 
   # O caminho é sempre montado com o id DESTA conta, e cada `:id` vira um
@@ -128,7 +151,7 @@ class Autonomia::Guide::Consulta
   def resumir(corpo)
     dados = JSON.parse(corpo.to_s)
     lista = lista_de(dados)
-    return JSON.generate(lista)[0, MAX_TEXTO] unless lista.is_a?(Array)
+    return item_unico(lista) unless lista.is_a?(Array)
 
     mostrados = cabem(lista.map { |item| enxuto(item) })
     "#{JSON.generate(mostrados)}#{quantos(mostrados.size, lista.size, total_de(dados))}"
@@ -136,12 +159,34 @@ class Autonomia::Guide::Consulta
     corpo.to_s[0, MAX_TEXTO]
   end
 
-  # A API embrulha a lista de jeitos diferentes conforme o recurso; leitura de um
-  # item vem solta. O que não for lista segue inteiro — é o detalhe pedido.
+  # O que não é lista é o detalhe de um item: vai inteiro, menos os segredos.
+  # Se ainda assim estourar, o corte é por caractere e por isso PRECISA avisar —
+  # calado, ele entrega ao modelo um JSON partido no meio que parece completo.
+  def item_unico(dados)
+    texto = JSON.generate(sem_segredos(dados))
+    return texto if texto.length <= MAX_TEXTO
+
+    "#{texto[0, MAX_TEXTO]} (esta resposta foi cortada no meio; NÃO afirme totais nem trate a lista " \
+      'acima como completa)'
+  end
+
+  # A API embrulha a lista de jeitos diferentes conforme o recurso, e às vezes em
+  # mais de um nível: conversas vêm como `data: { meta:, payload: [...] }`.
+  # Desembrulhar um nível só fazia conversas e notificações caírem no caminho do
+  # item único — sem enxugar, sem corte por item e sem aviso. A partir de umas
+  # doze conversas o modelo recebia um JSON partido achando que estava inteiro.
   def lista_de(dados)
     return dados unless dados.is_a?(Hash)
 
-    dados['payload'] || dados['data'] || dados
+    interno = dados['payload'] || dados['data']
+    return dados if interno.nil?
+    return interno.values.first if uma_lista_embrulhada?(interno)
+
+    lista_de(interno)
+  end
+
+  def uma_lista_embrulhada?(interno)
+    interno.is_a?(Hash) && interno.size == 1 && interno.values.first.is_a?(Array)
   end
 
   # Quando a plataforma informa o total, ele sobrevive ao corte da amostra.
@@ -165,7 +210,19 @@ class Autonomia::Guide::Consulta
   def enxuto(item)
     return item unless item.is_a?(Hash)
 
-    item.select { |_campo, valor| identifica?(valor) }
+    sem_segredos(item).select { |_campo, valor| identifica?(valor) }
+  end
+
+  # Vale em lista e em item único: o nome do campo é o que denuncia o segredo.
+  def sem_segredos(dados)
+    return dados unless dados.is_a?(Hash)
+
+    dados.reject { |campo, _valor| segredo?(campo) }
+  end
+
+  def segredo?(campo)
+    nome = campo.to_s.downcase
+    SEGREDOS.any? { |proibido| nome == proibido || nome.end_with?("_#{proibido}") }
   end
 
   def identifica?(valor)
@@ -190,11 +247,21 @@ class Autonomia::Guide::Consulta
   # Cortar sem dizer que cortou faz o modelo contar o pedaço. Quando a plataforma
   # informa o total, ele vai junto; quando não informa e sobrou coisa de fora, o
   # Guia diz que não sabe o total em vez de inventar um.
+  # Quando a plataforma informa o total, ele vai junto e o modelo pode contar.
+  # Quando NÃO informa, o silêncio é proibido: a lista pode ser uma página — a
+  # API pagina de 15, de 25, depende do recurso — e ninguém aqui tem como saber
+  # o tamanho da página. Usar o nosso teto de itens como sinal de "veio inteira"
+  # era um proxy errado: subi o teto de 25 para 100 e o aviso sumiu sozinho,
+  # fazendo o Guia entregar 25 de 30 avaliações como se fossem todas.
   def quantos(mostrados, na_pagina, total)
     return " (total nesta conta: #{total})" if total.present?
-    return '' if mostrados == na_pagina && na_pagina < MAX_ITENS
 
-    " (acima estão #{mostrados} itens; a plataforma não informou o total e a lista foi cortada, " \
-      'então NÃO afirme quantos são)'
+    if mostrados < na_pagina
+      return " (a plataforma entregou #{na_pagina} e mostrei #{mostrados}; o resto ficou de fora, " \
+             'então NÃO afirme quantos são)'
+    end
+
+    " (a plataforma entregou #{mostrados} e estão todos acima; ela não informou o total e pode " \
+      'paginar, então diga quantos recebeu, não que este é o total da conta)'
   end
 end
