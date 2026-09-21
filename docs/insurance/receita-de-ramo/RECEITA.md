@@ -91,6 +91,16 @@ O filtro de seguradoras do adapter descarta seguradora que cota (modo B10). O ov
 quais seguradoras o portal oferece para o ramo na tela, compare com as que o caminho do produto acionou, e leve a
 correção para o caminho do produto se a lista divergir.
 
+**Endereço do imóvel: a consulta de CEP é a do portal.** Medido em 21/09/2026 com 20 CEPs (capitais, interior,
+cidades de CEP único e um inexistente), a consulta que auto já usa (`GET /calculo/cep`, `lookupCep` em
+`http/quote.ts`) achou 19 de 19 CEPs válidos, entre 141 e 507 ms. O ViaCEP achou 16 de 19 e falhou numa capital.
+Três consequências para o ramo:
+- O logradouro vem no formato do portal, com a faixa de numeração ("Avenida Paulista - de 612 A 1510 - Lado Par").
+  Confira na leitura de volta, e na proposta impressa, como ele sai.
+- Cidade de CEP único volta sem rua, no portal e no ViaCEP: o especialista pergunta a rua ao cliente.
+- CEP inexistente não volta vazio: o portal responde erro 502 depois de uns 3 segundos. O adapter tem de tratar isso
+  como "confirme o CEP com o cliente", e não como portal fora do ar.
+
 Técnica que resolve ramo novo quando o corpo não é conhecido: cotar pela tela do portal, pegar o id na
 URL de resultado, ler pela API e copiar o corpo exato (`ramos-nao-auto.md`, seção 4). **Cuidado:** a
 leitura de volta traz a senha da corretora em cada seguradora, em texto claro. Use os scripts do
