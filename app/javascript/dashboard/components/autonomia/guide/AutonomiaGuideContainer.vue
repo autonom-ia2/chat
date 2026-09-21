@@ -198,15 +198,50 @@ const confirmarAcao = async item => {
   }
 };
 
+// #572 — o Guia responde num job, e a tela busca a resposta. Antes ela vinha da
+// própria requisição, que o servidor mata aos 15 segundos: pergunta que pedia
+// duas leituras morria com erro 500.
+//
+// O tempo total de busca fica acima do teto de trabalho do Guia (180s no
+// servidor), para a tela nunca desistir de uma resposta que ainda vai chegar.
+const ESPERA_ENTRE_BUSCAS_MS = 1500;
+const MAX_BUSCAS = 140;
+const PENDENTE = 'pending';
+const PRONTO = 'done';
+
+const esperar = ms =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+
+// Recursiva, e não um laço: cada busca espera a anterior, e a próxima só sai
+// depois do intervalo — nunca duas no ar ao mesmo tempo.
+const buscarResposta = async (id, tentativa = 0) => {
+  if (tentativa >= MAX_BUSCAS) return { status: 'failed' };
+  await esperar(ESPERA_ENTRE_BUSCAS_MS);
+  const { data } = await AutonomiaGuideAPI.resposta(id);
+  if (data.status !== PENDENTE) return data;
+  return buscarResposta(id, tentativa + 1);
+};
+
+// A falha fica ESCRITA na conversa. Antes era um aviso que sumia sozinho em
+// poucos segundos: quem olhava para a tela depois via a pergunta sem resposta
+// nenhuma, e não tinha como saber que devia tentar de novo.
+const avisarFalha = () =>
+  store.addAssistantMessage({ content: t('AUTONOMIA_GUIDE.ERROR') });
+
 const requestReply = async (requestAccount, message) => {
   try {
-    const { data } = await AutonomiaGuideAPI.chat({
+    const { data: pedido } = await AutonomiaGuideAPI.chat({
       message,
       history: store.toHistory(),
       routeContext: route.name,
     });
+    const data = await buscarResposta(pedido.id);
     if (accountId.value !== requestAccount) return;
-    if (data.available && data.text) {
+    if (data.status !== PRONTO) {
+      avisarFalha();
+    } else if (data.available && data.text) {
       store.addAssistantMessage({
         content: data.text,
         navigation: data.navigation || null,
@@ -222,7 +257,7 @@ const requestReply = async (requestAccount, message) => {
     }
   } catch {
     if (accountId.value !== requestAccount) return;
-    useAlert(t('AUTONOMIA_GUIDE.ERROR'));
+    avisarFalha();
   } finally {
     isSending.value = false;
   }

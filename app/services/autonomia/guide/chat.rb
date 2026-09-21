@@ -22,12 +22,13 @@ module Autonomia
       # Quantas idas ao modelo podem sair COM ferramenta (#568). Dez, por decisão
       # do Rodrigo em 21/09/2026 — o número que ele já operava no n8n.
       #
-      # É TETO, não promessa: quem manda na prática é o orçamento de tempo do
-      # cliente, e hoje ele é curto porque esta rota é síncrona e o
-      # `rack-timeout` mata a requisição aos 15s. Cabem uma ou duas rodadas.
+      # Só é possível porque esta classe roda num JOB (`Autonomia::Guide::ChatJob`,
+      # #572), e não na requisição. Na requisição o `rack-timeout` de produção
+      # mata tudo aos 15 segundos, e cada ida ao modelo leva de 3 a 5: medido em
+      # 21/09/2026, duas leituras já davam erro 500.
       #
-      # As dez passam a valer quando o chat do Guia virar job com busca na tela (#572).
-      # O número já está aqui para não ser esquecido nessa hora.
+      # Se alguém voltar a chamar isto de dentro de uma requisição, este número
+      # tem que cair para 1 — senão o Guia volta a morrer em pergunta aberta.
       MAX_RODADAS = 10
 
       def initialize(account:, user:, message:, history: [], route_context: nil)
