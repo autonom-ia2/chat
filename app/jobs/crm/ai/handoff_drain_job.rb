@@ -33,7 +33,12 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   # (reentrante). O recheck de assignee_id sob lock fecha a brecha de self-assign
   # humano entre a query do cron e a tentativa de atribuição.
   def drain(card)
-    conversation = card.primary_conversation
+    # A MESMA CONVERSA QUE O EXECUTOR VAI ATRIBUIR, e não a primária do card (issue #553). São
+    # duas coisas nesta linha: a trava abaixo só serializa contra o self-assign humano se travar
+    # a linha que vai ser escrita; e o recheck de `assignee_id` lido na conversa errada apagava o
+    # marcador de espera para sempre — cliente que pediu humano de madrugada, quando ninguém
+    # estava online, nunca mais era atendido, porque a primária tinha um responsável antigo.
+    conversation = card.conversa_em_atendimento
     return clear_handoff_hold!(card) if conversation.blank?
 
     conversation.with_lock do

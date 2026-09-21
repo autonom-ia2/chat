@@ -117,6 +117,26 @@ class Crm::Card < ApplicationRecord
     contact_id.blank? && conversation_id.blank? && inbox_id.blank?
   end
 
+  # A CONVERSA EM QUE O CLIENTE ESTÁ AGORA, que não é a primária depois da primeira.
+  #
+  # O card é do contato e a primária fica fixada na conversa que o criou; toda conversa nova
+  # entra como secundária. Quem precisa agir sobre o atendimento — passar para uma pessoa, por
+  # exemplo — tem de agir aqui, senão mexe numa conversa antiga que ninguém está lendo, enquanto
+  # o cliente espera na conversa viva (issue #553).
+  #
+  # A MAIS RECENTE ENTRE AS QUE AINDA ESTÃO DE PÉ, aberta ou pendente. Quem decide é a atividade,
+  # não o estado: `pending` é a conversa que o bot ainda segura, e preferir `open` faria uma
+  # conversa antiga que ninguém resolveu ganhar daquela em que o cliente está falando agora.
+  # O `id` desempata, e não é enfeite: duas conversas do mesmo contato podem ter o mesmo
+  # `last_activity_at`, e sem ele a escolha mudava de uma execução para outra. Sem nenhuma de pé,
+  # a primária é o melhor palpite que existe.
+  def conversa_em_atendimento
+    linked_conversations
+      .where(status: [Conversation.statuses[:open], Conversation.statuses[:pending]])
+      .order(last_activity_at: :desc, id: :desc)
+      .first || primary_conversation
+  end
+
   # Real-time "responsible" for the card, derived (never a stored snapshot):
   #   1. human assignee of the linked conversation (or owner for standalone) -> agent
   #   2. otherwise the active AgentBot connected to the inbox -> bot

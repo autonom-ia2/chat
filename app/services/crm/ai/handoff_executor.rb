@@ -13,7 +13,13 @@ module Crm
         @card = card
         @handoff = normalize(handoff)
         @trigger = trigger
-        @conversation = card.primary_conversation
+        # A CONVERSA VIVA, e não a primária do card. Até 20/09/2026 esta linha lia
+        # `card.primary_conversation`: com card por contato, a primária é a primeira conversa
+        # dele, e o responsável ia parar lá enquanto o cliente esperava na conversa nova, que
+        # ficava aberta e sem dono. Pior, quando a primária já tinha responsável antigo, a guarda
+        # `already_assigned` dava o handoff por feito sem ter feito nada — foi o que aconteceu na
+        # conta 16, com 4 das 5 escaladas de 30 dias sem ninguém atribuído (issue #553).
+        @conversation = card.conversa_em_atendimento
       end
 
       def perform
