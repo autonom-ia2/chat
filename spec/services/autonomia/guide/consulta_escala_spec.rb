@@ -94,7 +94,7 @@ RSpec.describe Autonomia::Guide::Consulta do
     # vira o objeto `{"meta":...,"payload":[...]}` e todo o tratamento de lista
     # — enxugar, cortar por item, avisar — deixa de acontecer.
     expect(resposta).to start_with('[')
-    expect(resposta.length).to be <= described_class::MAX_TEXTO
+    expect(resposta.length).to be <= Autonomia::Guide::Resumo::MAX_TEXTO
     expect { JSON.parse(resposta.split(' [NOTA INTERNA').first) }.not_to raise_error
   end
 
@@ -129,6 +129,57 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(resposta).not_to include('inbox_identifier')
       expect(resposta).not_to include('CHAVE-QUE-NAO-PODE-SAIR')
     end
+  end
+
+  # A CAUSA-RAIZ da #568, com registros de verdade no banco.
+  #
+  # O serializador de conversa embute a última mensagem. O achatamento antigo
+  # não distinguia um VALOR aninhado (o nome do cliente, que se quer) de um
+  # REGISTRO aninhado (a mensagem inteira, com o remetente dela e o texto
+  # duplicado em dois campos) — e trazia os dois. Medido em produção: 2.700
+  # caracteres por conversa, 61% vindos desse único registro. O modelo recebia
+  # 67 mil caracteres e respondia "o que você precisa fazer na plataforma?".
+  #
+  # Este teste falha se o registro embutido voltar para dentro do item.
+  it 'não arrasta a última mensagem inteira para dentro da conversa', :aggregate_failures do
+    caixa = create_crm_inbox(account: conta, name: 'Atendimento', members: [admin])
+    contato = conta.contacts.create!(name: 'Joana Cliente', phone_number: '+5511988887777')
+    inbox_contato = ContactInbox.create!(contact: contato, inbox: caixa, source_id: SecureRandom.uuid)
+    conversa = conta.conversations.create!(inbox: caixa, contact: contato, contact_inbox: inbox_contato)
+    conversa.messages.create!(account: conta, inbox: caixa, message_type: :incoming,
+                              content: 'PALAVRA-QUE-SO-EXISTE-NA-MENSAGEM')
+
+    resposta = consulta.ler('conversations')
+    # Só os ITENS: as notas citam os nomes dos campos de propósito, para o
+    # modelo saber o que pedir na rodada seguinte.
+    itens = resposta.split(' [NOTA INTERNA').first
+
+    # O que identifica a conversa continua vindo...
+    expect(itens).to include('Joana Cliente')
+    # ...e o registro embutido inteiro, não.
+    expect(itens).not_to include('PALAVRA-QUE-SO-EXISTE-NA-MENSAGEM')
+    expect(itens).not_to include('processed_message_content')
+    # ...mas ele é OFERECIDO, senão o conteúdo ficaria inalcançável.
+    expect(resposta).to include('last_non_activity_message.content')
+  end
+
+  # O outro lado da mesma moeda: o que foi tirado do padrão continua alcançável,
+  # porque agora quem lê a pergunta pede o campo. Sem isto, "o que estão
+  # reclamando" viraria uma lista muda — e aí eu teria trocado um defeito por
+  # outro.
+  it 'entrega o conteúdo da mensagem quando pedem por campos', :aggregate_failures do
+    caixa = create_crm_inbox(account: conta, name: 'Atendimento', members: [admin])
+    contato = conta.contacts.create!(name: 'Joana Cliente', phone_number: '+5511988887777')
+    inbox_contato = ContactInbox.create!(contact: contato, inbox: caixa, source_id: SecureRandom.uuid)
+    conversa = conta.conversations.create!(inbox: caixa, contact: contato, contact_inbox: inbox_contato)
+    conversa.messages.create!(account: conta, inbox: caixa, message_type: :incoming,
+                              content: 'PALAVRA-QUE-SO-EXISTE-NA-MENSAGEM')
+
+    resposta = consulta.ler('conversations', {}, {},
+                            campos: ['meta.sender.name', 'last_non_activity_message.content'])
+
+    expect(resposta).to include('PALAVRA-QUE-SO-EXISTE-NA-MENSAGEM')
+    expect(resposta).to include('Joana Cliente')
   end
 
   # A conversa só é útil com o nome de quem está do outro lado, e esse nome mora

@@ -6,6 +6,12 @@ module Crm
     class ResponsesClient
       class Error < StandardError; end
 
+      # Teto duro de rodadas COM ferramenta, acima do que qualquer chamador pede.
+      # Cada rodada é mais uma ida ao modelo — tempo de resposta e custo — e o
+      # painel do Guia é requisição síncrona, com o Puma em modo single. O teto
+      # existe para um modelo insistente não segurar uma thread indefinidamente.
+      MAX_RODADAS_DE_FERRAMENTA = 6
+
       # feature/account/pipeline são OPCIONAIS e só servem à telemetria de consumo (Gestão IA):
       # quando ambos feature+account estão presentes, cada chamada bem-sucedida grava 1 evento de uso
       # (só metadados — nunca prompt/resposta). Sem eles, comportamento idêntico ao anterior.
@@ -28,39 +34,44 @@ module Crm
         parse_response(response, model: model, requested_tools: tools, started_at: started_at, reasoning_effort: reasoning_effort)
       end
 
-      # Single-step custom tool loop for Autonom.ia agents. The first response may request one
-      # or more `function_call` items; the caller executes them server-side and returns compact
-      # outputs. We then ask the model for the final structured answer without offering another
-      # custom-tool round, keeping the MVP bounded and predictable.
+      # O laço de ferramentas dos agentes Autonom.ia. O modelo pede uma ou mais
+      # `function_call`, quem chamou executa do nosso lado e devolve saídas curtas.
+      #
+      # `max_rodadas` é quantas idas ao modelo podem SAIR COM FERRAMENTA. Uma — o
+      # padrão — é o comportamento histórico: chama, executa, e a última ida vai
+      # sem ferramenta, então o modelo é obrigado a responder com o que tem.
+      #
+      # Acima de uma, ele pode olhar o que a ferramenta devolveu e chamar de
+      # novo: outra página, outros campos, outro recurso. É o que o Guia da
+      # Plataforma precisa (#568) e o que a esteira anterior não conseguia fazer.
+      # A última rodada SEMPRE vai sem ferramenta — é isso que garante que o laço
+      # termina, mesmo com um modelo que insista em chamar.
       def create_with_tool_executor(model:, instructions:, input:, schema:, reasoning_effort: 'low', tools: nil,
-                                    timeout: 120)
-        return create(model: model, instructions: instructions, input: input, schema: schema,
-                      reasoning_effort: reasoning_effort, tools: tools, timeout: timeout) unless block_given? && tools.present?
+                                    timeout: 120, max_rodadas: 1)
+        unless block_given? && tools.present?
+          return create(model: model, instructions: instructions, input: input, schema: schema,
+                        reasoning_effort: reasoning_effort, tools: tools, timeout: timeout)
+        end
 
-        first_started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        first_body = base_body(model, instructions, input, schema, reasoning_effort, tools).merge(store: false)
-        first_response = post_responses(first_body, timeout: timeout, operation: 'responses.create',
-                                                    started_at: first_started_at)
-        first_payload = parse_raw(first_response, operation: 'responses.create', model: model,
-                                                  started_at: first_started_at)
-        first_used = tools_used(first_payload)
-        log_call(model, tools, first_used, first_started_at)
-        record_usage(first_payload['usage'], model, reasoning_effort, first_started_at)
+        conversa = normalize_input(input)
+        usadas = []
 
-        calls = function_calls(first_payload)
-        return parse_response_payload(first_payload, model: model, requested_tools: tools, started_at: first_started_at,
-                                                     reasoning_effort: reasoning_effort) if calls.empty?
+        max_rodadas.to_i.clamp(1, MAX_RODADAS_DE_FERRAMENTA).times do
+          payload, started_at = rodada(model, instructions, conversa, schema, reasoning_effort, tools, timeout)
+          usadas |= tools_used(payload)
+          log_call(model, tools, usadas, started_at)
+          record_usage(payload['usage'], model, reasoning_effort, started_at)
 
-        tool_outputs = yield(calls)
-        second_input = normalize_input(input) + Array(first_payload['output']) + Array(tool_outputs)
-        second_started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        second_body = base_body(model, instructions, second_input, schema, reasoning_effort, nil).merge(store: false)
-        second_response = post_responses(second_body, timeout: timeout, operation: 'responses.create.tool_result',
-                                                      started_at: second_started_at)
-        result = parse_response(second_response, model: model, requested_tools: tools,
-                                                 started_at: second_started_at, reasoning_effort: reasoning_effort)
-        result[:tools_used] = (Array(result[:tools_used]) + first_used).uniq
-        result
+          calls = function_calls(payload)
+          return respondido(payload, model, tools, started_at, reasoning_effort, usadas) if calls.empty?
+
+          conversa += Array(payload['output']) + Array(yield(calls))
+        end
+
+        # Acabaram as rodadas com ferramenta e ele ainda queria chamar. A última
+        # ida vai SEM ferramenta: ou ele responde com o que já leu, ou diz que
+        # não conseguiu — nunca fica girando.
+        fechamento(model, instructions, conversa, schema, reasoning_effort, tools, timeout, usadas)
       end
 
       # Background mode: a OpenAI aceita o pedido e processa do lado dela; retorna na hora um
@@ -103,6 +114,34 @@ module Crm
       end
 
       private
+
+      # UMA ida ao modelo com as ferramentas na mesa. -> [payload, started_at].
+      def rodada(model, instructions, conversa, schema, reasoning_effort, tools, timeout)
+        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        body = base_body(model, instructions, conversa, schema, reasoning_effort, tools).merge(store: false)
+        response = post_responses(body, timeout: timeout, operation: 'responses.create', started_at: started_at)
+        [parse_raw(response, operation: 'responses.create', model: model, started_at: started_at), started_at]
+      end
+
+      # O modelo parou de pedir ferramenta e respondeu: é esta a resposta.
+      def respondido(payload, model, tools, started_at, reasoning_effort, usadas)
+        resultado = parse_response_payload(payload, model: model, requested_tools: tools,
+                                                    started_at: started_at, reasoning_effort: reasoning_effort)
+        resultado[:tools_used] = (Array(resultado[:tools_used]) + usadas).uniq
+        resultado
+      end
+
+      # A ida final, sem ferramenta no corpo: o modelo responde com o que já tem.
+      def fechamento(model, instructions, conversa, schema, reasoning_effort, tools, timeout, usadas)
+        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        body = base_body(model, instructions, conversa, schema, reasoning_effort, nil).merge(store: false)
+        response = post_responses(body, timeout: timeout, operation: 'responses.create.tool_result',
+                                        started_at: started_at)
+        resultado = parse_response(response, model: model, requested_tools: tools,
+                                             started_at: started_at, reasoning_effort: reasoning_effort)
+        resultado[:tools_used] = (Array(resultado[:tools_used]) + usadas).uniq
+        resultado
+      end
 
       def base_body(model, instructions, input, schema, reasoning_effort, tools = nil)
         body = {
@@ -202,7 +241,7 @@ module Crm
         end
 
         parse_response_payload(response.parsed_response, model: model, requested_tools: requested_tools,
-                                                        started_at: started_at, reasoning_effort: reasoning_effort)
+                                                         started_at: started_at, reasoning_effort: reasoning_effort)
       end
 
       def parse_response_payload(payload, model: nil, requested_tools: nil, started_at: nil, reasoning_effort: nil)

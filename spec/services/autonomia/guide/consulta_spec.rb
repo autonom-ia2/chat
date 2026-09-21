@@ -103,7 +103,7 @@ RSpec.describe Autonomia::Guide::Consulta do
     it 'corta lista longa para não estourar o contexto' do
       plataforma_responde('200', { payload: Array.new(100) { |i| { name: "Caixa #{i}" } } }.to_json)
 
-      expect(consulta.ler('inboxes').scan('"name"').size).to be <= described_class::MAX_ITENS
+      expect(consulta.ler('inboxes').scan('"name"').size).to be <= Autonomia::Guide::Resumo::MAX_ITENS
     end
 
     # Cortar em silêncio faz o modelo contar o pedaço: "você tem 25" para quem
@@ -192,12 +192,13 @@ RSpec.describe Autonomia::Guide::Consulta do
       plataforma_responde('200', { payload: [{ name: 'Comercial', meta: { sender: { name: 'Joana' } },
                                                vazio: nil, texto: 'z' * 2_500 }] }.to_json)
 
-      resposta = consulta.ler('inboxes')
+      # Só os ITENS: a nota de campos disponíveis cita os nomes de propósito.
+      itens = consulta.ler('inboxes').split(' [NOTA INTERNA').first
 
-      expect(resposta).to include('Comercial')
-      expect(resposta).to include('Joana')
-      expect(resposta).not_to include('vazio')
-      expect(resposta).not_to include('z' * 2_001)
+      expect(itens).to include('Comercial')
+      expect(itens).to include('Joana')
+      expect(itens).not_to include('vazio')
+      expect(itens).not_to include('z' * 2_001)
     end
 
     # Um card do CRM traz cliente, funil e caixa em objetos aninhados. Com o

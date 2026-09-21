@@ -237,11 +237,15 @@ class Autonomia::Agents::Tools::Native::Base
   # PADRÃO `nil`, e quem o lê hoje é a COTAÇÃO (`InsuranceQuote::Fecho`). Quem não o usa não muda de
   # comportamento — nenhuma nativa sobrescreve `initialize`, e `base_contrato_de_nivel_spec`
   # percorre o catálogo inteiro para provar isso.
-  def initialize(agent:, params: {}, delivery: nil, run: nil)
+  # `operador` é QUEM está pedindo, quando a ferramenta age em nome de uma
+  # pessoa e não do agente (#568, Guia da Plataforma). Nulo nas demais: o
+  # atendimento fala com o cliente, que não tem permissão dentro da conta.
+  def initialize(agent:, params: {}, delivery: nil, run: nil, operador: nil)
     @agent = agent
     @params = params.to_h.deep_stringify_keys
     @delivery = delivery
     @run = run
+    @operador = operador
   end
 
   # -> String. NUNCA levanta: quem chama é o executor de ferramentas do turno.

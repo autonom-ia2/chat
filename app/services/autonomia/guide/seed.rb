@@ -15,6 +15,11 @@ module Autonomia
       INSTRUCTION_PATH = Rails.root.join('lib/operator_guide/guia-instrucao.md')
       LOCK_NS = 4_242 # namespace do advisory lock (1 guia por conta, anti-corrida no lazy seed)
 
+      # As ferramentas que o Guia usa para ler a conta e propor mudança nela
+      # (#568). Ficam no config canônico, então a cura reasserta: ninguém desliga
+      # por acidente, e nenhum agente de conta as herda.
+      FERRAMENTAS = %w[ler_da_conta propor_acao].freeze
+
       # Elegibilidade = Autonomia habilitada (ENV master + conta) E uma credencial de IA resolvível
       # (a "chave do Kanban" — `crm_kanban_ai` hook, ou a credencial de sistema). Sem credencial o
       # Guia não funcionaria (embedding/resposta falham), então fica inerte: nada é criado.
@@ -153,7 +158,7 @@ module Autonomia
           mode: :manual, status: :active, enabled: false, actuation: :internal,
           instruction: File.read(INSTRUCTION_PATH), scaffold: GUIDE_SCAFFOLD,
           config: { 'system_key' => SYSTEM_KEY, 'hidden_from_hub' => true,
-                    'guide_kb_version' => nil }
+                    'native_tool_slugs' => FERRAMENTAS, 'guide_kb_version' => nil }
         )
       end
 
@@ -168,7 +173,8 @@ module Autonomia
           instruction: File.read(INSTRUCTION_PATH), scaffold: GUIDE_SCAFFOLD,
           tone: nil, handoff_rule: nil, fallback_message: nil, greeting: nil,
           human_card: nil, starter_questions: [],
-          config: { 'system_key' => SYSTEM_KEY, 'hidden_from_hub' => true }
+          config: { 'system_key' => SYSTEM_KEY, 'hidden_from_hub' => true,
+                    'native_tool_slugs' => FERRAMENTAS }
         )
       end
 
