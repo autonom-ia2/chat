@@ -67,7 +67,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote::Frases do
     it 'as descricoes sao o texto revisado: mudou? releia a lista acima e assine aqui' do
       assinatura = Digest::MD5.hexdigest(JSON.generate([described_class::DESCRICOES, described_class::DESCRICAO_DO_NO]))
 
-      expect(assinatura).to eq('c0ad4e6d377e1da48af64ac063f0ab37')
+      expect(assinatura).to eq('dc16fb75a901695df0953d7b5153ab05')
     end
   end
 

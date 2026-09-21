@@ -60,13 +60,13 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
                      'quem faz o primeiro seguro, e com a classe de bônus da apólice atual você refaz a cotação.',
     comparativo_legenda: 'Acompanha o arquivo com as opções que você encontrou para ela, e quase sempre é a última mensagem desta ' \
                          'cotação. Fale do que ela tem nas mãos agora e do que pode fazer com isso, como quem entrega um trabalho feito ' \
-                         'para ela, e não do arquivo nem de como ele foi feito.',
+                         'para ela, e não do arquivo nem de como ele foi feito. Não ofereça nada que você não faz por aqui.',
     comparativo_reserva: 'Vai guardada com o arquivo e aparece quando ele não pode ser mostrado como anexo. O mesmo sentido da legenda, ' \
                          'dito de outro jeito. Não escreva link nem endereço de site.',
     falta_dado: 'Falta alguma coisa para você cotar e não dá para dizer o quê. Peça ajuda como uma pessoa pediria, sem soar como erro de ' \
                 'sistema.',
     pedido_do_que_falta: 'Abre o pedido do que ainda falta para você cotar. Os itens entram logo depois da sua frase, então não os ' \
-                         'escreva. Fale como quem está quase lá junto com ela, não como formulário. Termine com dois pontos.',
+                         'escreva. Fale como quem está resolvendo isso junto com ela, não como formulário. Termine com dois pontos.',
     sem_veiculo: 'Você ainda não sabe qual é o carro dela. Peça a placa, ou o chassi se ele ainda não tiver placa, do jeito que você ' \
                  'pediria a alguém no WhatsApp.',
     ramo_desconhecido: 'A pessoa pediu um seguro que a corretora não cota por aqui. O que a corretora cota entra logo depois da sua ' \
@@ -90,14 +90,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
   # tinham era impessoal ("a cotação está em andamento", "o comparativo está pronto"): processo sem
   # sujeito, que é o jeito de sistema falar. A Gabriela, a IA do Rodrigo que já soa como gente, diz o
   # que ELA vai fazer. É isso que o nó pede antes de tudo.
-  DESCRICAO_DO_NO = 'As frases que o CLIENTE vai ler durante esta cotação. Quem fala nelas é você, a mesma pessoa que está conversando ' \
-                    'com ele, e ele não sabe que existe um especialista por trás. Escreva na primeira pessoa, com você fazendo as coisas ' \
-                    'por ele, e nunca como processo sem sujeito: gente não diz que algo foi concluído ou está em andamento, diz o que fez ' \
-                    'e o que vai fazer. Escreva como alguém da corretora escreveria no WhatsApp para um cliente: curto, direto, caloroso ' \
-                    'sem exagero. As descrições abaixo dizem o momento de cada frase, não as palavras; não copie palavra delas. Escreva ' \
-                    'todas as doze, em português do Brasil, e duas nunca podem ser iguais. Em nenhuma escreva número, quantidade, valor, ' \
-                    'prazo ou nome de seguradora. Não use travessão nem acento grave. Cada frase sai sozinha numa mensagem, então precisa ' \
-                    'fazer sentido sem as outras.'.freeze
+  DESCRICAO_DO_NO = 'As frases que a PESSOA vai ler durante esta cotação. Quem fala nelas é você, a mesma pessoa que está conversando com ' \
+                    'ela, e ela não sabe que existe um especialista por trás. Escreva na primeira pessoa, com você fazendo as coisas por ' \
+                    'ela, e nunca como processo sem sujeito: gente não diz que algo foi concluído ou está em andamento, diz o que fez e o ' \
+                    'que vai fazer. O que você fez nunca inclui dizer que o pedido já chegou às seguradoras: isso você não sabe. Escreva ' \
+                    'como alguém da corretora escreveria no WhatsApp para quem atende: curto, direto, caloroso sem exagero. As descrições ' \
+                    'abaixo dizem o momento de cada frase, não as palavras; não copie palavra delas. Escreva todas as doze, em português ' \
+                    'do Brasil, e duas nunca podem ser iguais. Em nenhuma escreva número, quantidade, valor, prazo ou nome de seguradora. ' \
+                    'Não use travessão nem acento grave. Cada frase sai sozinha numa mensagem, então precisa fazer sentido sem as outras.'.freeze
 
   module_function
 
