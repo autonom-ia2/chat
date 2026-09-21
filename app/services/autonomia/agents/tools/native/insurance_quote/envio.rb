@@ -50,8 +50,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Envio
     ausentes = campos_ausentes(e)
     raise EntradaRecusada, ausentes if ausentes.present?
     raise if NAO_ENVIOU.include?(e.kind)
+    # A INVOCAÇÃO RECUSADA NÃO É INCERTEZA. Quando o próprio serviço recusa a chamada (throttle,
+    # permissão, 5xx dele), o adapter não chega a rodar e o portal não é tocado: nada foi cotado.
+    # Tratar isso como "pode ter cotado" queimava as duas tentativas em segundos e mandava o
+    # cliente para a fila — foi o que aconteceu em 20/09/2026, com o adapter registrando zero
+    # erros no mesmo minuto. Aqui a exceção sobe como falha comum, a intenção volta atrás, e a
+    # execução tenta de novo com o intervalo normal.
+    raise if e.nao_chegou_a_rodar?
 
-    raise ::Autonomia::Agents::Tools::Native::EnvioIncerto, e.kind
+    raise ::Autonomia::Agents::Tools::Native::EnvioIncerto, e.etiqueta
   rescue StandardError => e
     raise ::Autonomia::Agents::Tools::Native::EnvioIncerto, e.class.name
   end

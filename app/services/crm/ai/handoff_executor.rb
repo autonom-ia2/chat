@@ -42,6 +42,7 @@ module Crm
 
         return skip('assignment_failed') unless assign!(agent)
 
+        registrar('handed_off', agente: agent)
         Result.new(status: :handed_off, assignee: agent)
       end
 
@@ -175,6 +176,7 @@ module Crm
 
           stamp_handoff_metadata!(invited: true, invited_agent: agent)
           log_activity!(agent, event_type: 'ai_handoff_invite')
+          registrar('invited', agente: agent)
           outcome = Result.new(status: :invited, assignee: agent)
         end
         outcome || skip('invite_failed')
@@ -282,7 +284,32 @@ module Crm
         ).perform
       end
 
+      # TODA SAÍDA DESTE SERVIÇO DEIXA UMA LINHA, e é por isso que ela existe.
+      #
+      # Em 21/09/2026 uma escalada em produção terminou na conversa errada e não havia UMA linha
+      # de log em todo o caminho: sobrou reconstruir a decisão por consulta ao banco, sem saber
+      # qual conversa o executor tinha escolhido nem por que parou. Todos os campos abaixo são
+      # nossos — ids e rótulos de lista fechada, nunca texto do cliente ou do modelo.
+      def registrar(desfecho, agente: nil, motivo: nil)
+        Rails.logger.info(
+          "[crm][handoff] card=#{@card.id} conversa=#{@conversation&.id} " \
+          "primaria=#{@card.conversation_id} vivas=#{conversas_vivas} " \
+          "modo=#{settings[:handoff_mode]} gatilho=#{@trigger} desfecho=#{desfecho} " \
+          "agente=#{agente&.id || '-'} motivo=#{motivo || '-'}"
+        )
+      end
+
+      # AS VIVAS SÃO AS DE PÉ, e não todas as ligadas ao card. `linked_conversations` cru conta
+      # resolvida e fechada junto; num log criado para diagnosticar "a escalada foi para a conversa
+      # errada", um número que mente é pior do que número nenhum.
+      def conversas_vivas
+        @card.linked_conversations
+             .where(status: [Conversation.statuses[:open], Conversation.statuses[:pending]])
+             .count
+      end
+
       def skip(reason)
+        registrar('skipped', motivo: reason)
         Result.new(status: :skipped, error: reason)
       end
 
@@ -296,6 +323,7 @@ module Crm
 
       def hold_online
         stamp_handoff_hold!
+        registrar('held_online', motivo: 'no_online_agent')
         Result.new(status: :held_online, error: 'no_online_agent')
       end
 

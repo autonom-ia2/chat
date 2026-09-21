@@ -394,7 +394,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           rodar_job(cotacao, arguments: { 'produto' => 'bike', 'dados' => dados.to_json })
         }
       },
-      'async_run_job.rb#registrar_recusa#1' => {
+      'telemetria_do_envio.rb#recusa_do_start#1' => {
         espera: { motivo: 'faltam_dados', onde: 'envio', faltando: 'insured.document' },
         dispara: lambda {
           rodar_job(build_async_tool(handle: { 'pedido' => 'Preciso do CPF do titular.', 'motivo' => 'faltam_dados',
