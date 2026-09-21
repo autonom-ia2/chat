@@ -19,11 +19,15 @@ module Autonomia
       MAX_HISTORY = 20
       NAV_MIN_CONFIDENCE = 0.45
 
-      # Quantas idas ao modelo podem sair COM ferramenta (#568). Quatro cobrem o
-      # caso composto — "quantos negócios e quem responde por cada um?" são duas
-      # leituras — e o caso paginado, em que ele lê a lista e pede a página
-      # seguinte. A ida final sempre vai sem ferramenta, então o laço termina.
-      MAX_RODADAS = 4
+      # Quantas idas ao modelo podem sair COM ferramenta (#568). Dez, por decisão
+      # do Rodrigo em 21/09/2026 — o número que ele já operava no n8n.
+      #
+      # Cobre com folga o caso composto ("quantos negócios e quem responde por
+      # cada um?" são duas leituras) e o paginado (lista, página 2, página 3...).
+      # Quem de fato protege a thread do painel, que é síncrona, é o orçamento de
+      # TEMPO do cliente — rodada é teto de repetição, não de duração. A ida
+      # final sempre vai sem ferramenta, então o laço termina de qualquer jeito.
+      MAX_RODADAS = 10
 
       def initialize(account:, user:, message:, history: [], route_context: nil)
         @account = account
@@ -62,9 +66,8 @@ module Autonomia
           # #568 — QUEM está perguntando. É com a permissão dela que as ferramentas
           # leem a conta e preparam a mudança; não existe permissão "do agente".
           operador: contexto,
-          # Ler, olhar o que voltou e ler de novo. Quatro rodadas cobrem o caso
-          # composto (duas leituras) e o caso paginado (lista + página seguinte)
-          # com folga; a última ida sempre vai sem ferramenta, então o laço termina.
+          # Ler, olhar o que voltou e ler de novo, até dez vezes — e sempre
+          # dentro do orçamento de tempo do cliente.
           max_rodadas: MAX_RODADAS
         ).answer
 

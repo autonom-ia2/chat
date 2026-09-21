@@ -7,10 +7,25 @@ module Crm
       class Error < StandardError; end
 
       # Teto duro de rodadas COM ferramenta, acima do que qualquer chamador pede.
-      # Cada rodada é mais uma ida ao modelo — tempo de resposta e custo — e o
-      # painel do Guia é requisição síncrona, com o Puma em modo single. O teto
-      # existe para um modelo insistente não segurar uma thread indefinidamente.
-      MAX_RODADAS_DE_FERRAMENTA = 6
+      # Dez, por decisão do Rodrigo em 21/09/2026 — número que ele já operava em
+      # produção no n8n com resultado bom.
+      MAX_RODADAS_DE_FERRAMENTA = 10
+
+      # Orçamento de TEMPO do laço, e ele não é redundante com o de rodadas: os
+      # dois protegem coisas diferentes.
+      #
+      # O teto de rodadas impede laço infinito. Ele NÃO protege a thread: cada
+      # rodada é uma chamada HTTP com 120s de teto, então dez rodadas lentas são
+      # vinte minutos segurando uma thread. O painel do Guia é requisição
+      # síncrona e o Puma roda em modo single com 5 threads — em 21/09/2026 duas
+      # threads presas numa chamada do próprio Guia congelaram o painel inteiro
+      # para todo mundo.
+      #
+      # Noventa segundos é mais do que qualquer pergunta honesta precisa (uma
+      # rodada típica leva de 5 a 15s, então cabem de seis a dez) e bem abaixo
+      # do ponto em que a pessoa desiste e recarrega a página. Estourando, a
+      # última ida vai sem ferramenta e ele responde com o que já leu.
+      MAX_SEGUNDOS_DE_FERRAMENTA = 90
 
       # feature/account/pipeline são OPCIONAIS e só servem à telemetria de consumo (Gestão IA):
       # quando ambos feature+account estão presentes, cada chamada bem-sucedida grava 1 evento de uso
@@ -55,8 +70,11 @@ module Crm
 
         conversa = normalize_input(input)
         usadas = []
+        comeco = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
         max_rodadas.to_i.clamp(1, MAX_RODADAS_DE_FERRAMENTA).times do
+          break if tempo_esgotado?(comeco)
+
           payload, started_at = rodada(model, instructions, conversa, schema, reasoning_effort, tools, timeout)
           usadas |= tools_used(payload)
           log_call(model, tools, usadas, started_at)
@@ -68,7 +86,7 @@ module Crm
           conversa += Array(payload['output']) + Array(yield(calls))
         end
 
-        # Acabaram as rodadas com ferramenta e ele ainda queria chamar. A última
+        # Acabaram as rodadas (ou o tempo) e ele ainda queria chamar. A última
         # ida vai SEM ferramenta: ou ele responde com o que já leu, ou diz que
         # não conseguiu — nunca fica girando.
         fechamento(model, instructions, conversa, schema, reasoning_effort, tools, timeout, usadas)
@@ -114,6 +132,12 @@ module Crm
       end
 
       private
+
+      # O laço já gastou o orçamento de tempo? Medido em relógio monotônico, que
+      # não anda para trás com ajuste de hora do sistema.
+      def tempo_esgotado?(comeco)
+        (Process.clock_gettime(Process::CLOCK_MONOTONIC) - comeco) > MAX_SEGUNDOS_DE_FERRAMENTA
+      end
 
       # UMA ida ao modelo com as ferramentas na mesa. -> [payload, started_at].
       def rodada(model, instructions, conversa, schema, reasoning_effort, tools, timeout)

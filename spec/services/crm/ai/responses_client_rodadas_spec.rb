@@ -93,6 +93,33 @@ RSpec.describe Crm::Ai::ResponsesClient do
     expect(corpos.size).to eq(described_class::MAX_RODADAS_DE_FERRAMENTA + 1)
   end
 
+  # O teto de rodadas impede laço infinito; ele NÃO protege a thread. Dez
+  # rodadas lentas, a 120s de teto cada, são vinte minutos segurando uma das
+  # cinco threads do Puma — e o painel do Guia é requisição síncrona. Estourando
+  # o tempo, a última ida vai sem ferramenta e ele responde com o que já leu.
+  it 'para de chamar ferramenta quando estoura o orçamento de tempo', :aggregate_failures do
+    corpos = responder_com([pedindo_ferramenta, respondendo])
+    # O relógio fica parado durante a primeira rodada (quatro leituras: o marco
+    # inicial, a checagem, o início da chamada e o log) e depois salta para além
+    # do orçamento inteiro — como se aquela rodada tivesse demorado demais.
+    leituras = 0
+    allow(Process).to receive(:clock_gettime).with(Process::CLOCK_MONOTONIC) do
+      leituras += 1
+      leituras <= 4 ? 0.0 : described_class::MAX_SEGUNDOS_DE_FERRAMENTA + 1.0
+    end
+
+    cliente.create_with_tool_executor(model: 'm', instructions: 'i', input: 'oi', schema: nil,
+                                      tools: ferramentas, max_rodadas: 10) do |_calls|
+      [{ type: 'function_call_output', call_id: 'c1', output: 'ok' }]
+    end
+
+    # Pediram DEZ rodadas e só uma saiu com ferramenta: quem parou foi o tempo,
+    # não o teto de repetição. O fechamento vai sem ferramenta, como sempre.
+    expect(corpos.size).to eq(2)
+    expect(corpos.first[:tools]).to be_present
+    expect(corpos.last[:tools]).to be_nil
+  end
+
   it 'responde direto quando o modelo não pede ferramenta nenhuma' do
     corpos = responder_com([respondendo])
 
