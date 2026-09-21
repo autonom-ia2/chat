@@ -191,11 +191,21 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   def tentar_start(run, tool, intencao)
     tool.start
   rescue ::Autonomia::Agents::Tools::Native::EnvioIncerto => e
-    Rails.logger.warn("[autonomia][tool][async] envio incerto run=#{run.id} slug=#{run.slug} intencao=#{intencao} motivo=#{e.motivo}")
+    registrar_falha_do_start(run, intencao, 'envio incerto', e.motivo)
     raise
-  rescue StandardError
+  rescue StandardError => e
+    # A FALHA COMUM TAMBÉM VAI PARA O LOG, e é ela que faltava: uma cotação que não saiu por
+    # recusa do serviço sumia sem linha nenhuma, e o diagnóstico virava adivinhação (20/09/2026).
+    registrar_falha_do_start(run, intencao, 'start falhou', ::Autonomia::Agents::Tools::Rotulo.de(e))
     anotar_intencao!(run, atual: intencao, para: intencao - 1)
     raise
+  end
+
+  # Só rótulo NOSSO no motivo: a `etiqueta` do connector é categoria e porta, e o resto é a classe
+  # da exceção. Nunca a mensagem, que pode carregar requisição assinada ou texto do portal.
+  def registrar_falha_do_start(run, intencao, o_que, motivo)
+    Rails.logger.warn("[autonomia][tool][async] #{o_que} run=#{run.id} slug=#{run.slug} " \
+                      "intencao=#{intencao} motivo=#{motivo}")
   end
 
   # O NÚMERO, guardado pela mesma intenção. Se não grava, outro processo passou na frente ou a

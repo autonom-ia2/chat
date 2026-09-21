@@ -95,17 +95,17 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   private
 
   def invoke(path, payload, read_timeout: READ_TIMEOUT)
-    raise error(:config, 'INSURANCE_CONNECTOR_FUNCTION ausente') if function_name.blank?
+    raise error(:config, 'INSURANCE_CONNECTOR_FUNCTION ausente', causa: :sem_configuracao) if function_name.blank?
 
     response = perform(build_event(path, payload), read_timeout)
     parse(response, path)
   rescue Autonomia::Insurance::Connector::Error
     raise
   rescue Net::OpenTimeout, Net::ReadTimeout
-    raise error(:timeout, "connector timeout em #{path}")
+    raise error(:timeout, "connector timeout em #{path}", causa: :timeout)
   rescue StandardError => e
     # Nunca repassar a mensagem: pode conter a requisição assinada (credencial temporária).
-    raise error(:unavailable, "connector indisponível (#{e.class.name})")
+    raise error(:unavailable, "connector indisponível (#{e.class.name})", causa: :excecao_local)
   end
 
   # Evento no formato Function URL (payload v2) — o mesmo handler serve os dois caminhos.
@@ -209,20 +209,21 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     payload = json_or_nil(outer['body'])
 
     return normalize_keys(payload) if inner_code == 200 && payload.is_a?(Hash)
-    raise error(:protocol, "resposta inesperada do connector em #{path}") if inner_code == 200
+    raise error(:protocol, "resposta inesperada do connector em #{path}", causa: :resposta_ilegivel) if inner_code == 200
 
     raise error(KIND_BY_STATUS.fetch(inner_code, :unavailable),
-                business_message(payload) || "connector HTTP #{inner_code}", business_details(payload))
+                business_message(payload) || "connector HTTP #{inner_code}", business_details(payload),
+                causa: :status_do_handler)
   end
 
   # Camada de infraestrutura: a chamada foi aceita e o handler chegou a rodar?
   def unwrap_invocation(response)
     code = response.code.to_i
-    raise error(KIND_BY_STATUS.fetch(code, :unavailable), "connector invoke HTTP #{code}") unless code == 200
+    raise error(KIND_BY_STATUS.fetch(code, :unavailable), "connector invoke HTTP #{code}", causa: :invoke_recusado) unless code == 200
 
     outer = json_or_nil(response.body)
-    raise error(:unavailable, 'connector sem resposta') unless outer.is_a?(Hash)
-    raise error(:unavailable, "connector falhou (#{outer['errorType']})") if outer['errorType'].present?
+    raise error(:unavailable, 'connector sem resposta', causa: :resposta_ilegivel) unless outer.is_a?(Hash)
+    raise error(:unavailable, "connector falhou (#{outer['errorType']})", causa: :handler_quebrou) if outer['errorType'].present?
 
     outer
   end
@@ -246,8 +247,8 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     nil
   end
 
-  def error(kind, message, details = {})
-    Autonomia::Insurance::Connector::Error.new(kind, message, details)
+  def error(kind, message, details = {}, causa: nil)
+    Autonomia::Insurance::Connector::Error.new(kind, message, details, causa: causa)
   end
 
   def invoke_uri
