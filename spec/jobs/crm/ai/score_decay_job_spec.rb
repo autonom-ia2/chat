@@ -112,6 +112,30 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     expect(card.reload.score).to be < 60
   end
 
+  # Producao 21/09: o job morria a cada rodada com PG::GroupingError. Message tem
+  # `default_scope { order(created_at: :asc) }` e esse ORDER BY vazava para a consulta agregada por
+  # conversa, que o Postgres recusa. Nenhum card decaia enquanto existisse conversa vinculada.
+  it 'anchors the decay on the newest message of the linked conversation' do
+    conversation = create(:conversation, account: account)
+    card = account.crm_cards.create!(
+      pipeline: pipeline, stage: stage, title: 'Com conversa', currency: 'BRL', score: 60,
+      conversation_id: conversation.id,
+      metadata: { 'ai' => { 'score' => { 'value' => 60, 'source' => 'ai', 'signals' => signals,
+                                         'calculated_at' => Time.current.iso8601 } } }
+    )
+    create(:message, account: account, conversation: conversation, inbox: conversation.inbox,
+                     created_at: 40.days.ago)
+    newest = create(:message, account: account, conversation: conversation, inbox: conversation.inbox,
+                              created_at: 20.days.ago)
+
+    expect { described_class.perform_now }.not_to raise_error
+
+    card.reload
+    expect(card.score).to be < 60
+    expect(Time.zone.parse(card.metadata.dig('ai', 'score', 'decay_anchor_at')))
+      .to be_within(1.second).of(newest.created_at)
+  end
+
   it 'keeps processing the batch when one card raises a database error' do
     broken_card = create_card(score: 60)
     healthy_card = create_card(score: 60)

@@ -72,7 +72,10 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
     all_ids = by_card.values.flatten.compact.uniq
     return fallback_by_card if all_ids.empty?
 
-    per_conversation = Message.chat.where(conversation_id: all_ids).group(:conversation_id).maximum(:created_at)
+    # `reorder(nil)` derruba o `default_scope { order(created_at: :asc) }` do Message: sem isso o
+    # ORDER BY sobra na consulta agregada e o Postgres recusa o GROUP BY (PG::GroupingError).
+    per_conversation = Message.chat.where(conversation_id: all_ids)
+                              .reorder(nil).group(:conversation_id).maximum(:created_at)
     by_card.each_with_object(fallback_by_card) do |(card_id, ids), result|
       result[card_id] = [result[card_id], ids.filter_map { |id| per_conversation[id] }.max].compact.max
     end
