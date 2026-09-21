@@ -140,6 +140,31 @@ describe('AutonomiaGuideContainer', () => {
     );
   });
 
+  // Painel fora da tela não quer mais a resposta. Sem isto a tela seguia
+  // consultando o servidor por até três minutos, à toa (achado da revisão).
+  it('stops asking once the panel is gone', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'pending' },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'me fala sobre minhas conversas');
+    await esperarUmaBusca();
+    await flushPromises();
+    const antes = AutonomiaGuideAPI.resposta.mock.calls.length;
+
+    wrapper.unmount();
+    wrapper = null;
+    await esperarUmaBusca();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(antes).toBe(1);
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledTimes(1);
+  });
+
   // Antes a falha era um aviso que sumia em segundos: quem voltava a olhar
   // via a pergunta sem resposta nenhuma. Agora ela fica escrita na conversa.
   it('writes the failure into the thread when the guide fails', async () => {

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -214,14 +214,25 @@ const esperar = ms =>
     setTimeout(resolve, ms);
   });
 
+// Quem desmonta o painel não quer mais a resposta.
+let desmontado = false;
+onBeforeUnmount(() => {
+  desmontado = true;
+});
+
 // Recursiva, e não um laço: cada busca espera a anterior, e a próxima só sai
 // depois do intervalo — nunca duas no ar ao mesmo tempo.
-const buscarResposta = async (id, tentativa = 0) => {
+//
+// Para sozinha quando a resposta deixou de interessar: o painel saiu da tela,
+// ou a pessoa trocou de conta. Sem isso a tela seguia consultando por até três
+// minutos uma resposta que não ia mostrar a ninguém. -> null quando parou.
+const buscarResposta = async (id, requestAccount, tentativa = 0) => {
   if (tentativa >= MAX_BUSCAS) return { status: 'failed' };
   await esperar(ESPERA_ENTRE_BUSCAS_MS);
+  if (desmontado || accountId.value !== requestAccount) return null;
   const { data } = await AutonomiaGuideAPI.resposta(id);
   if (data.status !== PENDENTE) return data;
-  return buscarResposta(id, tentativa + 1);
+  return buscarResposta(id, requestAccount, tentativa + 1);
 };
 
 // A falha fica ESCRITA na conversa. Antes era um aviso que sumia sozinho em
@@ -237,8 +248,8 @@ const requestReply = async (requestAccount, message) => {
       history: store.toHistory(),
       routeContext: route.name,
     });
-    const data = await buscarResposta(pedido.id);
-    if (accountId.value !== requestAccount) return;
+    const data = await buscarResposta(pedido.id, requestAccount);
+    if (!data || accountId.value !== requestAccount) return;
     if (data.status !== PRONTO) {
       avisarFalha();
     } else if (data.available && data.text) {
