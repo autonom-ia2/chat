@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -198,15 +198,61 @@ const confirmarAcao = async item => {
   }
 };
 
+// #572 — o Guia responde num job, e a tela busca a resposta. Antes ela vinha da
+// própria requisição, que o servidor mata aos 15 segundos: pergunta que pedia
+// duas leituras morria com erro 500.
+//
+// O tempo total de busca fica acima do teto de trabalho do Guia (180s no
+// servidor), para a tela nunca desistir de uma resposta que ainda vai chegar.
+const ESPERA_ENTRE_BUSCAS_MS = 1500;
+const MAX_BUSCAS = 140;
+const PENDENTE = 'pending';
+const PRONTO = 'done';
+
+const esperar = ms =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+
+// Quem desmonta o painel não quer mais a resposta.
+let desmontado = false;
+onBeforeUnmount(() => {
+  desmontado = true;
+});
+
+// Recursiva, e não um laço: cada busca espera a anterior, e a próxima só sai
+// depois do intervalo — nunca duas no ar ao mesmo tempo.
+//
+// Para sozinha quando a resposta deixou de interessar: o painel saiu da tela,
+// ou a pessoa trocou de conta. Sem isso a tela seguia consultando por até três
+// minutos uma resposta que não ia mostrar a ninguém. -> null quando parou.
+const buscarResposta = async (id, requestAccount, tentativa = 0) => {
+  if (tentativa >= MAX_BUSCAS) return { status: 'failed' };
+  await esperar(ESPERA_ENTRE_BUSCAS_MS);
+  if (desmontado || accountId.value !== requestAccount) return null;
+  const { data } = await AutonomiaGuideAPI.resposta(id);
+  if (data.status !== PENDENTE) return data;
+  return buscarResposta(id, requestAccount, tentativa + 1);
+};
+
+// A falha fica ESCRITA na conversa. Antes era um aviso que sumia sozinho em
+// poucos segundos: quem olhava para a tela depois via a pergunta sem resposta
+// nenhuma, e não tinha como saber que devia tentar de novo.
+const avisarFalha = () =>
+  store.addAssistantMessage({ content: t('AUTONOMIA_GUIDE.ERROR') });
+
 const requestReply = async (requestAccount, message) => {
   try {
-    const { data } = await AutonomiaGuideAPI.chat({
+    const { data: pedido } = await AutonomiaGuideAPI.chat({
       message,
       history: store.toHistory(),
       routeContext: route.name,
     });
-    if (accountId.value !== requestAccount) return;
-    if (data.available && data.text) {
+    const data = await buscarResposta(pedido.id, requestAccount);
+    if (!data || accountId.value !== requestAccount) return;
+    if (data.status !== PRONTO) {
+      avisarFalha();
+    } else if (data.available && data.text) {
       store.addAssistantMessage({
         content: data.text,
         navigation: data.navigation || null,
@@ -222,7 +268,7 @@ const requestReply = async (requestAccount, message) => {
     }
   } catch {
     if (accountId.value !== requestAccount) return;
-    useAlert(t('AUTONOMIA_GUIDE.ERROR'));
+    avisarFalha();
   } finally {
     isSending.value = false;
   }

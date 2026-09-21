@@ -33,8 +33,25 @@ vi.mock('dashboard/composables/store', () => ({
   },
 }));
 vi.mock('dashboard/api/autonomiaGuide', () => ({
-  default: { chat: vi.fn(), executarAcao: vi.fn() },
+  default: { chat: vi.fn(), resposta: vi.fn(), executarAcao: vi.fn() },
 }));
+
+// #572 — a pergunta abre um pedido, e a resposta se busca depois.
+const pedidoAberto = () =>
+  AutonomiaGuideAPI.chat.mockResolvedValue({
+    data: { id: 'pedido-1', status: 'pending' },
+  });
+
+// A tela espera entre uma busca e outra; o relógio de teste anda por ela.
+const esperarUmaBusca = () => vi.advanceTimersByTimeAsync(1500);
+
+const perguntar = async (wrapper, texto) => {
+  const textarea = wrapper.find('textarea');
+  await textarea.setValue(texto);
+  await textarea.trigger('keydown', { key: 'Enter' });
+  await flushPromises();
+  return textarea;
+};
 
 const ACAO = {
   nome: 'criar_funil',
@@ -68,32 +85,114 @@ const comAcaoProposta = () => {
 describe('AutonomiaGuideContainer', () => {
   let wrapper;
 
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
   afterEach(() => {
     wrapper?.unmount();
     useAutonomiaGuideStore().reset();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it('clears the input as soon as the question enters the thread', async () => {
-    let resolveChat;
-    AutonomiaGuideAPI.chat.mockReturnValue(
-      new Promise(resolve => {
-        resolveChat = resolve;
-      })
-    );
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Assim.' },
+    });
     wrapper = mountGuide();
-    const textarea = wrapper.find('textarea');
 
-    await textarea.setValue('Como crio um funil?');
-    await textarea.trigger('keydown', { key: 'Enter' });
-    await flushPromises();
+    const textarea = await perguntar(wrapper, 'Como crio um funil?');
 
     expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
     expect(textarea.element.value).toBe('');
 
-    resolveChat({ data: { available: true, text: 'Assim.' } });
+    await esperarUmaBusca();
     await flushPromises();
     expect(useAutonomiaGuideStore().messages).toHaveLength(2);
+  });
+
+  // O Guia pode ler várias vezes antes de responder. Enquanto pensa, o pedido
+  // está pendente, e a tela tem que continuar buscando — não desistir na
+  // primeira nem mostrar resposta vazia.
+  it('keeps asking while the guide is still working', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta
+      .mockResolvedValueOnce({ data: { status: 'pending' } })
+      .mockResolvedValueOnce({
+        data: { status: 'done', available: true, text: 'Você tem 48.' },
+      });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'quantas conversas abertas eu tenho?');
+    await esperarUmaBusca();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledTimes(2);
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledWith('pedido-1');
+    // Pelo store: o texto da resposta é renderizado por `v-dompurify-html`, que
+    // o teste substitui por uma diretiva vazia.
+    expect(useAutonomiaGuideStore().messages[1].message.content).toBe(
+      'Você tem 48.'
+    );
+  });
+
+  // Painel fora da tela não quer mais a resposta. Sem isto a tela seguia
+  // consultando o servidor por até três minutos, à toa (achado da revisão).
+  it('stops asking once the panel is gone', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'pending' },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'me fala sobre minhas conversas');
+    await esperarUmaBusca();
+    await flushPromises();
+    const antes = AutonomiaGuideAPI.resposta.mock.calls.length;
+
+    wrapper.unmount();
+    wrapper = null;
+    await esperarUmaBusca();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(antes).toBe(1);
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledTimes(1);
+  });
+
+  // Antes a falha era um aviso que sumia em segundos: quem voltava a olhar
+  // via a pergunta sem resposta nenhuma. Agora ela fica escrita na conversa.
+  it('writes the failure into the thread when the guide fails', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'failed' },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'me fala sobre minhas conversas');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    const { messages } = useAutonomiaGuideStore();
+    expect(messages).toHaveLength(2);
+    expect(messages[1].message.content).toBe('AUTONOMIA_GUIDE.ERROR');
+  });
+
+  it('writes the failure into the thread when the question never gets through', async () => {
+    AutonomiaGuideAPI.chat.mockRejectedValue(new Error('rede'));
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'oi');
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages[1].message.content).toBe(
+      'AUTONOMIA_GUIDE.ERROR'
+    );
   });
 
   it('keeps the text and warns when a reply is still loading', async () => {

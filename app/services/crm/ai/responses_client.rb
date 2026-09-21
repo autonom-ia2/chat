@@ -13,27 +13,17 @@ module Crm
 
       # Orçamento de TEMPO do laço, e ele não é redundante com o de rodadas: os
       # dois protegem coisas diferentes. O teto de rodadas impede laço infinito;
-      # este impede que a requisição do usuário morra no meio.
+      # este impede que um modelo lento segure uma thread do Sidekiq por minutos.
       #
-      # OITO SEGUNDOS, e o número não é escolha de gosto — é o que sobra.
-      # Medido em produção em 21/09/2026:
+      # 180 segundos, por decisão do Rodrigo em 21/09/2026. Só é seguro porque o
+      # único chamador com mais de uma rodada — o Guia — roda num job (#572). Na
+      # requisição, o `rack-timeout` de produção mata tudo aos 15s, e este número
+      # não teria efeito nenhum além de trocar resposta por erro 500. Os demais
+      # agentes usam UMA rodada, e para eles este teto nunca chega a ser checado.
       #
-      #   - `rack-timeout` mata QUALQUER requisição aos 15s
-      #     (`ENV.fetch("RACK_TIMEOUT_SERVICE_TIMEOUT", 15)`, e a variável está
-      #     vazia nas duas stacks);
-      #   - uma pergunta ao Guia leva hoje de 7 a 12 segundos.
-      #
-      # Ou seja: o produto já vive a 80% do teto. O orçamento aqui impede que
-      # uma rodada NOVA comece, mas não interrompe a que já começou, então a
-      # conta tem que fechar com folga: 8s de laço + a ida final (~5s) ≈ 13s,
-      # abaixo dos 15.
-      #
-      # É por isso que `MAX_RODADAS` (dez) é teto e não promessa: na prática
-      # cabem uma ou duas rodadas. As dez passam a valer quando o chat do Guia
-      # sair da requisição e virar job com busca na tela (#572), como o construtor
-      # de e-mail já faz — e é lá que este número sobe para 180. Enquanto isso,
-      # subir daqui só troca "resposta curta" por "erro na tela".
-      MAX_SEGUNDOS_DE_FERRAMENTA = 8
+      # Ele impede que uma rodada NOVA comece; a que já começou termina — e a
+      # ida final vai sempre sem ferramenta, então o laço termina de qualquer jeito.
+      MAX_SEGUNDOS_DE_FERRAMENTA = 180
 
       # feature/account/pipeline são OPCIONAIS e só servem à telemetria de consumo (Gestão IA):
       # quando ambos feature+account estão presentes, cada chamada bem-sucedida grava 1 evento de uso
