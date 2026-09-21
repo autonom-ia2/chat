@@ -66,7 +66,8 @@ module Autonomia
           # mesmo, com `replied: false`, para que o próprio job avise o cliente de que a consulta
           # começou. Descartar aqui deixaria o cliente sem cotação e sem explicação.
           # Sem texto utilizável (falha de IA / resposta vazia) -> SILÊNCIO, sem fallback de sistema.
-          return silence_with_async(result) if no_usable_reply?(result)
+          motivo = motivo_do_silencio(result)
+          return silence_with_async(result, motivo) if motivo.present?
 
           outcome = deliver(result)
           dispatch_async(replied: outcome.status == :replied)
@@ -333,12 +334,29 @@ module Autonomia
 
         # O turno não vai falar: sinal de silêncio da instrução, falha de IA, ou resposta vazia.
         def no_usable_reply?(result)
-          silence_signal?(result) || result.nil? || result.reply.to_s.strip.blank?
+          motivo_do_silencio(result).present?
+        end
+
+        # QUAL DOS SILÊNCIOS, e por que isto existe. Os três caminhos terminavam no mesmo `silenced`,
+        # sem nada que os separasse: perguntado em 21/09/2026 quantas vezes a instrução mandou calar
+        # de propósito, não havia como responder — só dava para inferir por mensagem de cliente sem
+        # resposta, que mistura os três. Rótulo nosso, de lista fechada, nunca texto do cliente.
+        #
+        #   `sinal`    — a instrução decidiu calar (a pessoa só reconheceu, ou veio robô).
+        #   `ia_falhou`— a IA não devolveu resultado.
+        #   `vazio`    — devolveu, mas sem texto utilizável.
+        def motivo_do_silencio(result)
+          return 'sinal' if silence_signal?(result)
+          return 'ia_falhou' if result.nil?
+          return 'vazio' if result.reply.to_s.strip.blank?
+
+          nil
         end
 
         # Silêncio, mas SEM abandonar o que a ferramenta assíncrona já aceitou dentro do turno: o
         # cliente pediu a consulta e vai receber o aviso e o resultado pelo job.
-        def silence_with_async(_result)
+        def silence_with_async(_result, motivo = 'desconhecido')
+          Rails.logger.info("[autonomia][operate] silencio agent=#{@agent.id} conv=#{@conversation.id} motivo=#{motivo}")
           dispatch_async(replied: false)
           Result.silenced
         end
