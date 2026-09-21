@@ -56,7 +56,7 @@ module Crm::Cards::SharedFilters
     return cards unless RESPONSIBLE_KINDS.include?(kind)
 
     scoped = cards
-             .joins('LEFT JOIN conversations ON conversations.id = crm_cards.conversation_id')
+             .joins(Crm::Cards::ConversaEmAtendimentoSql.join)
              .joins('LEFT JOIN agent_bot_inboxes ON agent_bot_inboxes.inbox_id = ' \
                     'COALESCE(conversations.inbox_id, crm_cards.inbox_id) AND agent_bot_inboxes.status = 0')
     case kind
@@ -117,11 +117,11 @@ module Crm::Cards::SharedFilters
 
   private
 
-  # A human is responsible when the linked conversation has an assignee, or (for cards
-  # without a linked conversation) when an owner is set. Mirrors Crm::Card#responsible_descriptor.
+  # A human is responsible when the conversation in service has an assignee, or (for cards
+  # without any conversation) when an owner is set. Mirrors Crm::Card#responsible_descriptor.
   def human_responsible_sql
-    '(crm_cards.conversation_id IS NOT NULL AND conversations.assignee_id IS NOT NULL) OR ' \
-      '(crm_cards.conversation_id IS NULL AND crm_cards.owner_id IS NOT NULL)'
+    '(conversations.id IS NOT NULL AND conversations.assignee_id IS NOT NULL) OR ' \
+      '(conversations.id IS NULL AND crm_cards.owner_id IS NOT NULL)'
   end
 
   def parse_stage_ids
