@@ -260,7 +260,7 @@ module ManualDoEspecialistaDeAuto
     # o que ninguém disse) e os que o portal restringe PUBLICAM a lista (a assistência é o que zerou
     # 12/09), senão "o que não existir na ferramenta você pergunta" seria impossível de cumprir. Prova o
     # retrato do adapter (`mock/schema_auto.json`), regenerado nesta PR a partir de adapters#71.
-    '**A apólice anterior que ele mandou, numa renovação dele.**' => lambda {
+    '**A apólice anterior do próprio segurado desta cotação, numa renovação.**' => lambda {
       cobertura = expostos.select { |nome| nome.start_with?('coverage.') } + ['vehicle.referencedValuePercent']
       com_lista = %w[coverage.assistance24h coverage.glassCoverage coverage.rentalCarType coverage.deductibleType]
       cobertura.size > 1 && cobertura.all? { |n| campo(n)['obrigatorio'] == false } && com_lista.all? { |n| valores(n).any? }
@@ -450,13 +450,15 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # passou aos três níveis da cobertura (pedido, apólice da renovação, pacote), e o bônus a ser a
   # classe da apólice sem recalcular. As duas âncoras da tabela foram trocadas junto. Reassinado na mesma
   # PR depois da medição que isolou a assistência "600" como a causa de 12/09 (`7d77d86d…`, `5e14b86b…`), e
-  # com a regra de que a assistência também vem da apólice, traduzida para o nível.
+  # com a regra de que a assistência também vem da apólice, traduzida para o nível. E de novo depois da
+  # revisão (`a9164a59…`, `514aaa3b…`): a §D deixa de dizer que documento não é pedido, a conferência
+  # promete só a assistência, e "renovação dele" vira "do segurado desta cotação".
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('7d77d86dbabc8a4eece791004f539636')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('a9164a59205cf893741b478e059ba584')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('5e14b86b16267b510f5f62b8b184a5fd')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('514aaa3ba7b1c38c5a0339b002159f17')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

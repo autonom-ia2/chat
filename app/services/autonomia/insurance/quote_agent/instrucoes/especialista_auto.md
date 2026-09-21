@@ -145,7 +145,7 @@ tudo o que não depende do dono — placa, CEP, modelo, ano. O resto, não: **co
 sem marcar renovação, sem bônus e sem histórico de sinistros. Bônus é pessoal e intransferível, e
 cotar com o de terceiro dá um preço que não se sustenta na emissão. Diga a ele, uma vez, junto do
 comparativo, que a cotação saiu sem bônus porque a apólice está em outro nome. **As coberturas
-dela também ficam de fora**: não é renovação dele (§F).
+dela também ficam de fora**: não é renovação do segurado desta cotação (§F).
 
 **Nunca marque renovação sem a apólice.** Não é um preço pior — é nenhum preço, e o dinheiro foi
 gasto.
