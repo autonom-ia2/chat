@@ -112,7 +112,7 @@ RSpec.describe Autonomia::Guide::Consulta do
       plataforma_responde('200',
                           { payload: Array.new(100) { |i| { name: "Contato #{i}" } }, meta: { count: 317 } }.to_json)
 
-      expect(consulta.ler('contacts')).to include('total nesta conta: 317')
+      expect(consulta.ler('contacts')).to include('317 no total')
     end
 
     # Sem o total da plataforma, ninguém aqui sabe se a lista veio inteira ou se
@@ -120,7 +120,32 @@ RSpec.describe Autonomia::Guide::Consulta do
     it 'responde com o número recebido quando a plataforma não informa o total' do
       plataforma_responde('200', { payload: Array.new(100) { |i| { name: "Contato #{i}" } } }.to_json)
 
-      expect(consulta.ler('contacts')).to include('diga quantos vieram')
+      expect(consulta.ler('contacts')).to include('Diga quantos são')
+    end
+
+    # Cada recurso chama o total dele de um jeito. Com só `count` e `all_count`,
+    # artigos e portais diziam "não sei quantos" com o número na mão.
+    it 'entende o total com qualquer um dos nomes que a plataforma usa', :aggregate_failures do
+      { 'articles_count' => 57, 'portals_count' => 9, 'total_count' => 31 }.each do |chave, valor|
+        plataforma_responde('200', { payload: [{ name: 'x' }], meta: { chave => valor } }.to_json)
+
+        expect(consulta.ler('portals')).to include("#{valor} no total")
+      end
+    end
+
+    # Tirar o segredo de dentro de um objeto deixava a casca vazia no lugar. Na
+    # LISTA isso não aparece, porque objeto aninhado já cai por forma — o
+    # desperdício estava na leitura de UM item, que vai inteira.
+    it 'não deixa casca vazia onde tirou o segredo, na leitura de um item', :aggregate_failures do
+      item = { 'id' => 1, 'name' => 'Caixa', 'config' => { 'api_key' => 'x' },
+               'outros' => { 'api_key' => 'y', 'cor' => 'azul' } }
+      plataforma_responde('200', item.to_json)
+
+      resposta = consulta.ler('inboxes/:id', { id: 1 })
+
+      expect(resposta).not_to include('"config"')
+      expect(resposta).to include('azul')
+      expect(resposta).not_to include('api_key')
     end
 
     # Quando o corte é NOSSO, a frase tem que ser outra: sobrou coisa de fora.
@@ -138,7 +163,7 @@ RSpec.describe Autonomia::Guide::Consulta do
     it 'não inventa aviso quando a lista cabe inteira', :aggregate_failures do
       plataforma_responde('200', { payload: [{ name: 'Comercial' }, { name: 'Suporte' }] }.to_json)
 
-      expect(consulta.ler('inboxes')).not_to include('total nesta conta')
+      expect(consulta.ler('inboxes')).not_to include('no total desta conta')
       expect(consulta.ler('inboxes')).not_to include('NÃO afirme')
     end
 
@@ -202,7 +227,7 @@ RSpec.describe Autonomia::Guide::Consulta do
 
       resposta = consulta.ler('inboxes')
 
-      expect { JSON.parse(resposta[0, resposta.rindex(']') + 1]) }.not_to raise_error
+      expect { JSON.parse(resposta.split(' [NOTA INTERNA').first) }.not_to raise_error
     end
   end
 end

@@ -71,6 +71,11 @@ class Autonomia::Guide::Consulta
   # parâmetro no roteador começa com dois pontos — basta procurar o caractere.
   PARAMETRO = ':'.freeze
 
+  # Como cada recurso chama o total dele. Eram só `count` e `all_count`, e com
+  # isso artigos, portais e mais seis telas diziam "não sei quantos" com o
+  # número na mão — a plataforma informava, e eu não entendia a palavra.
+  CHAVES_DE_TOTAL = %w[count all_count total_count articles_count portals_count].freeze
+
   def initialize(account:, user:, account_user: nil)
     @account = account
     @user = user
@@ -109,7 +114,14 @@ class Autonomia::Guide::Consulta
   rescue Recusada => e
     e.message
   rescue StandardError => e
-    Rails.logger.error("[autonomia][guide][consulta] account=#{@account&.id} recurso=#{recurso} #{e.class}")
+    # A mensagem e o começo da pilha vão junto de propósito. Em 21/09/2026 este
+    # log registrou só a classe, e um `NoMethodError` de uma linha — `each_key`
+    # num Array — derrubou a leitura de conversas inteira disfarçado de "não
+    # consegui ler agora". Custou uma rodada inteira de revisão para achar.
+    Rails.logger.error(
+      "[autonomia][guide][consulta] account=#{@account&.id} recurso=#{recurso} #{e.class}: #{e.message}\n" \
+      "#{Array(e.backtrace).first(5).join("\n")}"
+    )
     "Não consegui ler #{recurso} agora."
   end
 
@@ -219,7 +231,7 @@ class Autonomia::Guide::Consulta
     return nil unless dados.is_a?(Hash)
 
     meta = dados['meta']
-    return meta['count'] || meta['all_count'] if meta.is_a?(Hash)
+    return CHAVES_DE_TOTAL.filter_map { |chave| meta[chave] }.first if meta.is_a?(Hash)
 
     interno = dados['payload'] || dados['data']
     interno.is_a?(Hash) ? total_de(interno) : nil
@@ -320,9 +332,21 @@ class Autonomia::Guide::Consulta
   # Segredo escondido dentro de um objeto continua sendo segredo.
   def sem_segredos(dados)
     case dados
-    when Hash then dados.reject { |campo, _| segredo?(campo) }.transform_values { |valor| sem_segredos(valor) }
+    when Hash then limpo_de_cascas(dados.reject { |campo, _| segredo?(campo) })
     when Array then dados.map { |valor| sem_segredos(valor) }
     else dados
+    end
+  end
+
+  # Tirar o segredo de dentro de um objeto deixava a casca: `{"config":{}}`,
+  # `{"lista":[{},{}]}`. Não vaza nada, mas na leitura de UM item é token gasto
+  # com objeto que não diz mais nada. Some junto com o que estava lá dentro.
+  def limpo_de_cascas(dados)
+    dados.each_with_object({}) do |(campo, valor), limpo|
+      tratado = sem_segredos(valor)
+      next if (tratado.is_a?(Hash) || tratado.is_a?(Array)) && tratado.empty? && valor.present?
+
+      limpo[campo] = tratado
     end
   end
 
@@ -366,15 +390,15 @@ class Autonomia::Guide::Consulta
     # — contar a amostra — voltando por outra porta.
     cortou = mostrados < na_pagina
     if total.present?
-      return " (total nesta conta: #{total})" unless cortou
+      return " [NOTA INTERNA, não repita: são #{total} no total desta conta.]" unless cortou
 
-      return " (total nesta conta: #{total}, mas só #{mostrados} couberam aqui; " \
-             'os outros ficaram de fora desta lista)'
+      return " [NOTA INTERNA, não repita: são #{total} no total, e só #{mostrados} couberam nesta " \
+             'lista. Diga o total e que está mostrando uma parte.]'
     end
 
     if cortou
-      return " (a plataforma entregou #{na_pagina} e mostrei #{mostrados}; o resto ficou de fora, " \
-             'então NÃO afirme quantos são)'
+      return " [NOTA INTERNA, não repita: vieram #{na_pagina} e mostrei #{mostrados}; o resto ficou " \
+             'de fora. NÃO afirme um total.]'
     end
 
     # Aqui a lista veio inteira do jeito que a plataforma entregou, e ela não
@@ -385,7 +409,12 @@ class Autonomia::Guide::Consulta
     #
     # O certo é dizer o que se sabe — quantos vieram — sem mandar tratar isso
     # como o total da conta. Quem lê decide como dizer.
-    " (a plataforma entregou #{mostrados} e estão todos acima; ela não informou o total, " \
-      'então diga quantos vieram, sem afirmar que é tudo o que existe)'
+    # A marca [NOTA INTERNA, não repita] existe porque o modelo estava PAPAGAIANDO
+    # este texto na tela: a pessoa perguntava quantas caixas tinha e ouvia "a
+    # consulta retornou 3; a plataforma não informou o total". Ela não fez
+    # consulta nenhuma, fez uma pergunta — e "plataforma não informou" é a minha
+    # encanação aparecendo na conversa dela.
+    " [NOTA INTERNA, não repita: vieram #{mostrados} e estão todos aqui. Diga quantos são; se " \
+      'achar que a conta pode ter mais, diga que podem existir outros fora desta lista.]'
   end
 end
