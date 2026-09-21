@@ -17,14 +17,11 @@ class Autonomia::Guide::Consulta
 
   PREFIXO = '/api/v1/accounts/'.freeze
   MAX_ITENS = 25
-
-  # Orçamento de texto de UMA leitura. Eram 6.000, dimensionados para recurso
-  # leve — etiqueta tem 92 bytes, funil 277, contato 693. Caixa de entrada tem
-  # 43 campos e pesa ~3.000, medidos em produção: cabia UMA, e o Guia respondia
-  # "apareceu uma caixa" para quem tem três. Honesto, porque ele avisa que
-  # cortou, e inútil. Em 16.000 cabem as três com folga, e um recurso pesado de
-  # verdade continua protegido pelo teto de itens.
   MAX_TEXTO = 16_000
+
+  # Campo de texto acima disto é conteúdo, não identificação: numa LISTA ele só
+  # ocupa espaço. Quem quiser o conteúdo pede o item.
+  MAX_TEXTO_DE_CAMPO = 80
 
   # Rotas que pedem identificador que o Guia não tem como adivinhar ficam fora do
   # catálogo oferecido ao modelo: sem o id, a chamada só produziria erro. O
@@ -112,10 +109,37 @@ class Autonomia::Guide::Consulta
     lista = dados.is_a?(Hash) ? (dados['payload'] || dados['data'] || dados) : dados
     return JSON.generate(lista)[0, MAX_TEXTO] unless lista.is_a?(Array)
 
-    mostrados = cabem(lista)
+    enxutos = lista.map { |item| enxuto(item) }
+    mostrados = cabem(enxutos)
     "#{JSON.generate(mostrados)}#{quantos(mostrados.size, lista.size, total)}"
   rescue JSON::ParserError
     corpo.to_s[0, MAX_TEXTO]
+  end
+
+  # Numa LISTA o que importa é distinguir um item do outro; o detalhe de um item
+  # se pede pelo item — e isso funciona, porque as rotas com `:id` estão no
+  # catálogo. Sem isto, uma caixa de entrada ia inteira com seus 43 campos
+  # (~3.000 bytes medidos em produção) e três caixas já estouravam o orçamento:
+  # o Guia respondia "apareceu uma caixa" para quem tem três.
+  #
+  # O corte é por FORMA, não por nome de campo: fora nulo, vazio, aninhado e
+  # texto longo. Uma lista de campos por recurso apodreceria a cada campo novo
+  # da plataforma, e teria que ser escrita 270 vezes. Assim, uma caixa cai para
+  # ~645 bytes mantendo nome, tipo de canal, telefone, fuso e as chaves de
+  # configuração — e cabem 20 caixas onde cabia uma.
+  #
+  # Leitura de UM item não passa por aqui: lá o detalhe é o ponto.
+  def enxuto(item)
+    return item unless item.is_a?(Hash)
+
+    item.select { |_campo, valor| identifica?(valor) }
+  end
+
+  def identifica?(valor)
+    return false if valor.blank? && valor != false
+    return false if valor.is_a?(Hash) || valor.is_a?(Array)
+
+    !(valor.is_a?(String) && valor.length > MAX_TEXTO_DE_CAMPO)
   end
 
   # Corta por ITEM, nunca por caractere. Cortar o texto no meio de um objeto

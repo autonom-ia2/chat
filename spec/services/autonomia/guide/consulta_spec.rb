@@ -123,16 +123,35 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(consulta.ler('inboxes')).not_to include('NÃO afirme')
     end
 
-    # Medido em produção: uma caixa de entrada pesa ~3.000 bytes (43 campos).
-    # Com o orçamento antigo de 6.000 cabia UMA, e o Guia dizia "apareceu uma
-    # caixa" para quem tem três — honesto, porque avisava do corte, e inútil.
-    it 'cabe a conta real de quem tem várias caixas pesadas' do
-      pesadas = Array.new(3) { |i| { name: "Caixa #{i}", campos: 'x' * 2_900 } }
+    # Medido em produção: uma caixa de entrada pesa ~3.000 bytes em 43 campos.
+    # Com o orçamento antigo cabia UMA, e o Guia dizia "apareceu uma caixa" para
+    # quem tem três. Aumentar o orçamento só adiava o problema para quem tem
+    # dez; o que resolve é não mandar o que não identifica nada.
+    it 'cabe a conta de quem tem muitas caixas pesadas', :aggregate_failures do
+      pesadas = Array.new(20) do |i|
+        { id: i, name: "Caixa #{i}", channel_type: 'Channel::Whatsapp', phone_number: "+55119#{i}",
+          provider_config: { api_key: 'segredo', webhook: 'x' }, greeting_message: 'y' * 300,
+          business_name: nil, medium: '' }
+      end
       plataforma_responde('200', { payload: pesadas }.to_json)
 
       resposta = consulta.ler('inboxes')
 
-      expect(resposta).to include('Caixa 0', 'Caixa 1', 'Caixa 2')
+      expect(resposta).to include('Caixa 0', 'Caixa 19')
+      expect(resposta).not_to include('NÃO afirme quantos são')
+    end
+
+    # O que some no enxugamento é o que não distingue um item do outro. O detalhe
+    # continua disponível: a leitura de UM item não passa por aqui.
+    it 'tira do item da lista o que não identifica nada', :aggregate_failures do
+      plataforma_responde('200', { payload: [{ name: 'Comercial', config: { chave: 'v' },
+                                               vazio: nil, texto: 'z' * 300 }] }.to_json)
+
+      resposta = consulta.ler('inboxes')
+
+      expect(resposta).to include('Comercial')
+      expect(resposta).not_to include('chave')
+      expect(resposta).not_to include('zzz')
     end
 
     # Um objeto cortado no meio vira uma lista que PARECE inteira: o modelo conta
