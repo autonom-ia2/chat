@@ -242,9 +242,20 @@ class Autonomia::Guide::Consulta
   def cabe_no_item(item)
     return item if JSON.generate(item).length <= MAX_TEXTO_DE_ITEM
 
-    por_tamanho = item.sort_by { |campo, valor| -"#{campo}#{valor}".length }
     sobrando = item.dup
-    por_tamanho.each_key do |campo|
+    # Quem sai primeiro é o que veio de DENTRO de um objeto aninhado, não o
+    # campo mais longo. Só por tamanho, o nome de um contato — "Maria Aparecida
+    # dos Santos Albuquerque de Oliveira Nascimento Filha" — saía antes de vinte
+    # e cinco atributos curtos e irrelevantes. Medido: o nome sumia da lista.
+    #
+    # O campo de topo é a identidade do registro; o achatado é contexto que veio
+    # junto. Dentro de cada grupo, o mais longo sai primeiro, e o nome do campo
+    # desempata: `sort_by` no MRI não é estável, e sem desempate a mesma conta
+    # responderia diferente em duas leituras.
+    ordem = item.keys.sort_by do |campo|
+      [campo.to_s.include?(CAMINHO_ACHATADO) ? 0 : 1, -"#{campo}#{item[campo]}".length, campo.to_s]
+    end
+    ordem.each do |campo|
       break if JSON.generate(sobrando).length <= MAX_TEXTO_DE_ITEM
 
       sobrando.delete(campo)
@@ -260,12 +271,14 @@ class Autonomia::Guide::Consulta
   # Então os valores simples que estão a até dois níveis sobem para o topo, com
   # o caminho no nome (`meta.sender.name`). Continua sendo corte por forma: não
   # há lista de campos por recurso, e o que não é valor simples segue de fora.
+  # O ponto marca de onde o valor veio: `meta.sender.name` nasceu aninhado.
+  CAMINHO_ACHATADO = %(.).freeze
   NIVEIS_ACHATADOS = 2
 
   def achatado(item, nivel = 0)
     item.each_with_object({}) do |(campo, valor), plano|
       if valor.is_a?(Hash) && nivel < NIVEIS_ACHATADOS
-        achatado(valor, nivel + 1).each { |interno, v| plano["#{campo}.#{interno}"] = v }
+        achatado(valor, nivel + 1).each { |interno, v| plano["#{campo}#{CAMINHO_ACHATADO}#{interno}"] = v }
       else
         plano[campo.to_s] = valor
       end

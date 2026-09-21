@@ -164,6 +164,20 @@ RSpec.describe Autonomia::Guide::Consulta do
     expect(resposta).not_to include('ficaram de fora')
   end
 
+  # O teto por item corta o que veio de dentro de objeto aninhado antes do que é
+  # do próprio registro. Só por tamanho, o nome de um contato sairia antes de
+  # vinte e cinco atributos curtos — medido, o nome sumia da lista.
+  it 'não deixa o teto por item comer o nome do registro', :aggregate_failures do
+    conta.contacts.create!(name: 'Maria Aparecida dos Santos Albuquerque de Oliveira Nascimento Filha',
+                           phone_number: '+5511911112222', email: 'maria@exemplo.com',
+                           custom_attributes: (1..25).to_h { |n| ["campo#{n}", "valor#{n}"] })
+
+    resposta = consulta.ler('contacts')
+
+    expect(resposta).to include('Maria Aparecida')
+    expect(resposta).to include('+5511911112222')
+  end
+
   # A plataforma pagina, e cada recurso pagina de um jeito. Quando ela informa o
   # total, o Guia usa. Quando não informa, ele diz quantos recebeu — sem se
   # recusar a responder, que foi o erro que eu cometi ao consertar isto.
