@@ -12,6 +12,32 @@ RSpec.describe Autonomia::Agents::InstructionVersion, type: :model do
     )
   end
 
+  # O HISTÓRICO GUARDA O QUE O AGENTE ACEITA (21/09/2026). O agente declara instrução de até
+  # `Agent::MAX_INSTRUCTION_LENGTH`; a versão não declarava nada e herdava o teto genérico de texto do
+  # `ApplicationRecord` (20.000). Instrução entre os dois era salva no agente e perdida no histórico, com um
+  # erro só no log. Apareceu quando a instrução do Agente de Cotação passou de 20.000 caracteres.
+  describe 'o tamanho da instrucao guardada' do
+    it 'guarda uma instrucao maior que o teto generico de texto, ate o teto do agente' do
+      # Arrange
+      longa = 'a' * Autonomia::Agents::Agent::MAX_INSTRUCTION_LENGTH
+      agent.update!(instruction: longa)
+
+      # Act
+      version = agent.record_instruction_version!(reason: 'manual_edit', created_by: user)
+
+      # Assert
+      expect(version).to be_persisted
+      expect(version.instruction.length).to eq(Autonomia::Agents::Agent::MAX_INSTRUCTION_LENGTH)
+    end
+
+    it 'recusa acima do teto do agente' do
+      versao = described_class.new(agent: agent, account: account, reason: 'manual_edit', instruction_hash: 'x',
+                                   instruction: 'a' * (Autonomia::Agents::Agent::MAX_INSTRUCTION_LENGTH + 1))
+
+      expect(versao).not_to be_valid
+    end
+  end
+
   describe '#record_instruction_version!' do
     it 'creates a version row snapshotting the current instruction, reason and author' do
       # Act

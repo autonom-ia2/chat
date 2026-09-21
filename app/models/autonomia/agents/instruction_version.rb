@@ -34,7 +34,10 @@ class Autonomia::Agents::InstructionVersion < ApplicationRecord
   belongs_to :account
   belongs_to :created_by, class_name: 'User', optional: true
 
-  validates :instruction, presence: true
+  # O HISTÓRICO GUARDA TUDO O QUE O AGENTE ACEITA. Sem limite declarado, esta coluna herdava o teto
+  # genérico de texto do `ApplicationRecord` (20.000), menor que o do agente: instrução entre os dois era
+  # salva no agente e perdida no histórico, com um erro só no log.
+  validates :instruction, presence: true, length: { maximum: Autonomia::Agents::Agent::MAX_INSTRUCTION_LENGTH }
   validates :instruction_hash, presence: true
   validates :reason, presence: true
 end
