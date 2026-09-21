@@ -89,10 +89,15 @@ RSpec.describe Autonomia::Guide::Consulta do
   end
 
   describe 'o resumo da resposta' do
-    it 'explica quando a plataforma nega, em vez de inventar resposta' do
+    # Explica, mas em português de gente: o número do status fica no log, não na
+    # tela de quem está tentando trabalhar.
+    it 'explica quando a plataforma nega, sem mostrar o código', :aggregate_failures do
       plataforma_responde('403', '{}')
 
-      expect(consulta.ler('inboxes')).to include('respondeu 403')
+      resposta = consulta.ler('inboxes')
+
+      expect(resposta).to include('não tem acesso a isto')
+      expect(resposta).not_to include('403')
     end
 
     it 'corta lista longa para não estourar o contexto' do
@@ -110,10 +115,24 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(consulta.ler('contacts')).to include('total nesta conta: 317')
     end
 
-    it 'avisa que não sabe o total quando a plataforma não informa e a lista encheu' do
+    # Sem o total da plataforma, ninguém aqui sabe se a lista veio inteira ou se
+    # é uma página. O Guia diz quantos recebeu e proíbe tratar isso como total.
+    it 'responde com o número recebido quando a plataforma não informa o total' do
       plataforma_responde('200', { payload: Array.new(100) { |i| { name: "Contato #{i}" } } }.to_json)
 
-      expect(consulta.ler('contacts')).to include('NÃO afirme quantos são')
+      expect(consulta.ler('contacts')).to include('diga quantos vieram')
+    end
+
+    # Quando o corte é NOSSO, a frase tem que ser outra: sobrou coisa de fora.
+    it 'diz quando foi ele que cortou, e quanto ficou de fora' do
+      # Item grande feito de campos pequenos: campo acima do teto cai sozinho, e
+      # o que precisa estourar aqui é o orçamento da LISTA, não o do campo.
+      gordos = Array.new(100) do |i|
+        { name: "Contato #{i}" }.merge((1..20).to_h { |n| ["nota#{n}", 'x' * 300] })
+      end
+      plataforma_responde('200', { payload: gordos }.to_json)
+
+      expect(consulta.ler('contacts')).to include('o resto ficou de fora')
     end
 
     it 'não inventa aviso quando a lista cabe inteira', :aggregate_failures do
@@ -121,6 +140,57 @@ RSpec.describe Autonomia::Guide::Consulta do
 
       expect(consulta.ler('inboxes')).not_to include('total nesta conta')
       expect(consulta.ler('inboxes')).not_to include('NÃO afirme')
+    end
+
+    # Medido em produção: uma caixa de entrada pesa ~3.000 bytes em 43 campos.
+    # Com o orçamento antigo cabia UMA, e o Guia dizia "apareceu uma caixa" para
+    # quem tem três. Aumentar o orçamento só adiava o problema para quem tem
+    # dez; o que resolve é não mandar o que não identifica nada.
+    it 'cabe a conta de quem tem muitas caixas pesadas', :aggregate_failures do
+      pesadas = Array.new(20) do |i|
+        { id: i, name: "Caixa #{i}", channel_type: 'Channel::Whatsapp', phone_number: "+55119#{i}",
+          provider_config: { api_key: 'segredo', webhook: 'x' }, greeting_message: 'y' * 300,
+          business_name: nil, medium: '' }
+      end
+      plataforma_responde('200', { payload: pesadas }.to_json)
+
+      resposta = consulta.ler('inboxes')
+
+      expect(resposta).to include('Caixa 0', 'Caixa 19')
+      expect(resposta).not_to include('NÃO afirme quantos são')
+    end
+
+    # O que some é o que não distingue um item do outro: vazio e texto longo.
+    # O valor simples que está aninhado SOBE, com o caminho no nome — é assim
+    # que o nome do cliente (`meta.sender.name`) sobrevive numa conversa.
+    it 'tira o que não identifica e sobe o que identifica', :aggregate_failures do
+      plataforma_responde('200', { payload: [{ name: 'Comercial', meta: { sender: { name: 'Joana' } },
+                                               vazio: nil, texto: 'z' * 2_500 }] }.to_json)
+
+      resposta = consulta.ler('inboxes')
+
+      expect(resposta).to include('Comercial')
+      expect(resposta).to include('Joana')
+      expect(resposta).not_to include('vazio')
+      expect(resposta).not_to include('z' * 2_001)
+    end
+
+    # Um card do CRM traz cliente, funil e caixa em objetos aninhados. Com o
+    # teto por item em 800 ele estourava por dezesseis caracteres e perdia os
+    # três nomes de uma vez: "quais negócios eu tenho" respondia títulos soltos,
+    # sem cliente e sem funil.
+    it 'mantém cliente, funil e caixa num card do CRM', :aggregate_failures do
+      card = { 'id' => 1, 'title' => 'Negócio grande', 'description' => 'x' * 120,
+               'contact' => { 'id' => 9, 'name' => 'João Pedro da Silva Santos' },
+               'inbox' => { 'id' => 3, 'name' => 'Caixa Comercial WhatsApp' },
+               'pipeline' => { 'id' => 2, 'name' => 'Funil de Vendas Novo' } }
+      plataforma_responde('200', { payload: [card] }.to_json)
+
+      resposta = consulta.ler('crm/cards')
+
+      expect(resposta).to include('João Pedro')
+      expect(resposta).to include('Caixa Comercial')
+      expect(resposta).to include('Funil de Vendas')
     end
 
     # Um objeto cortado no meio vira uma lista que PARECE inteira: o modelo conta
