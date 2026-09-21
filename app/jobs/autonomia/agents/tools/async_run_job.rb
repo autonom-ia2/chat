@@ -18,6 +18,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
 
   AsyncConfig = ::Autonomia::Agents::Tools::AsyncConfig
   ToolRun = ::Autonomia::Agents::ToolRun
+  Telemetria = ::Autonomia::Agents::Tools::TelemetriaDoEnvio
 
   # Marca nossa, gravada no handle junto com o que a ferramenta devolveu. É ela que diz "já
   # submeti" — não o conteúdo do handle. Sem isso, uma ferramenta que devolvesse nil ou {} faria a
@@ -112,18 +113,9 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     retry_or_fail(run, native, attempt)
   end
 
-  # A SEGUNDA PORTA DE RECUSA (entrega 6): a conferência do turno passou (ou caiu) e a validação do
-  # `start` recusou. A ferramenta devolve handle com `pedido` — o contrato que `poll` já reconhece —
-  # e é AQUI, não nela, que se sabe a conversa e o agente. Registrar nunca derruba a execução: a
-  # entrega do pedido ao cliente vale mais que a nossa linha de log.
+  # A SEGUNDA PORTA DE RECUSA (entrega 6) mora na telemetria junto com as outras linhas do envio.
   def registrar_recusa(run, handle)
-    handle = handle.to_h.deep_stringify_keys if handle.is_a?(Hash)
-    return unless handle.is_a?(Hash) && handle['pedido'].present?
-
-    ::Autonomia::Agents::Tools::Recusa.registrar(handle['motivo'], slug: run.slug, conversa: run.conversation_id,
-                                                                   agente: run.agent, faltando: handle['faltando'], onde: 'envio')
-  rescue StandardError => e
-    Rails.logger.warn("[autonomia][tool][async] registro de recusa falhou run=#{run.id} #{e.class}")
+    Telemetria.recusa_do_start(run: run, handle: handle)
   end
 
   # A ORDEM QUE PROTEGE O DINHEIRO (entrega 5; era a janela #337). Entre `tool.start` e o registro do
@@ -191,21 +183,15 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   def tentar_start(run, tool, intencao)
     tool.start
   rescue ::Autonomia::Agents::Tools::Native::EnvioIncerto => e
-    registrar_falha_do_start(run, intencao, 'envio incerto', e.motivo)
+    Telemetria.falha_do_start(run: run, intencao: intencao, o_que: 'envio incerto', motivo: e.motivo)
     raise
   rescue StandardError => e
-    # A FALHA COMUM TAMBÉM VAI PARA O LOG, e é ela que faltava: uma cotação que não saiu por
-    # recusa do serviço sumia sem linha nenhuma, e o diagnóstico virava adivinhação (20/09/2026).
-    registrar_falha_do_start(run, intencao, 'start falhou', ::Autonomia::Agents::Tools::Rotulo.de(e))
+    # A FALHA COMUM TAMBÉM VAI PARA O LOG: sem esta linha, a cotação que não saiu por recusa do
+    # serviço sumia sem rastro e o diagnóstico virava adivinhação (20/09/2026).
+    Telemetria.falha_do_start(run: run, intencao: intencao, o_que: 'start falhou',
+                              motivo: Telemetria.rotulo(e))
     anotar_intencao!(run, atual: intencao, para: intencao - 1)
     raise
-  end
-
-  # Só rótulo NOSSO no motivo: a `etiqueta` do connector é categoria e porta, e o resto é a classe
-  # da exceção. Nunca a mensagem, que pode carregar requisição assinada ou texto do portal.
-  def registrar_falha_do_start(run, intencao, o_que, motivo)
-    Rails.logger.warn("[autonomia][tool][async] #{o_que} run=#{run.id} slug=#{run.slug} " \
-                      "intencao=#{intencao} motivo=#{motivo}")
   end
 
   # O NÚMERO, guardado pela mesma intenção. Se não grava, outro processo passou na frente ou a

@@ -293,10 +293,19 @@ module Crm
       def registrar(desfecho, agente: nil, motivo: nil)
         Rails.logger.info(
           "[crm][handoff] card=#{@card.id} conversa=#{@conversation&.id} " \
-          "primaria=#{@card.conversation_id} vivas=#{@card.linked_conversations.count} " \
+          "primaria=#{@card.conversation_id} vivas=#{conversas_vivas} " \
           "modo=#{settings[:handoff_mode]} gatilho=#{@trigger} desfecho=#{desfecho} " \
           "agente=#{agente&.id || '-'} motivo=#{motivo || '-'}"
         )
+      end
+
+      # AS VIVAS SÃO AS DE PÉ, e não todas as ligadas ao card. `linked_conversations` cru conta
+      # resolvida e fechada junto; num log criado para diagnosticar "a escalada foi para a conversa
+      # errada", um número que mente é pior do que número nenhum.
+      def conversas_vivas
+        @card.linked_conversations
+             .where(status: [Conversation.statuses[:open], Conversation.statuses[:pending]])
+             .count
       end
 
       def skip(reason)

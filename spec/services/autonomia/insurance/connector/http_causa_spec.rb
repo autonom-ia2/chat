@@ -71,4 +71,20 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
     expect(erro.etiqueta).not_to include('abc123')
     expect(erro.etiqueta).to eq('unavailable/status_do_handler')
   end
+
+  # A PREMISSA QUE SUSTENTA `NAO_CHEGOU_A_RODAR`, travada aqui porque é invisível no ponto onde é
+  # usada. `invoke_recusado` só significa "o adapter não rodou" enquanto o transporte for a API de
+  # invocação do Lambda: nela, erro do handler volta 200 com `errorType`, e não-200 é sempre
+  # pré-execução (documentado em Invoke: "error codes are reserved for errors that prevent your
+  # function from executing"). Ponha um Function URL, um API Gateway ou um ALB na frente e o
+  # não-200 passa a ser o status DO HANDLER: um 502 do portal viraria dezenas de cotações reais no
+  # portal do corretor, porque a execução deixaria de gastar tentativa.
+  it 'o transporte continua sendo a API de invocação, que é o que torna a recusa confiável' do
+    # Arrange / Act
+    destino = described_class.new.send(:invoke_uri).to_s
+
+    # Assert
+    expect(destino).to start_with('https://lambda.us-east-1.amazonaws.com/2015-03-31/functions/')
+    expect(destino).to end_with('/invocations')
+  end
 end

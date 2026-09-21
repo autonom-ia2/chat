@@ -61,7 +61,7 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
 
       expect(saidas.size).to be >= minimo_conhecido
       expect(saidas.map(&:id)).to include('bound.rb#execute#1', 'bound.rb#async_refusal#2', 'insurance_quote.rb#start#2',
-                                          'async_run_job.rb#registrar_recusa#1', 'insurance_capabilities.rb#call#1')
+                                          'telemetria_do_envio.rb#recusa_do_start#1', 'insurance_capabilities.rb#call#1')
       expect(saidas.map(&:id).uniq.size).to eq(saidas.size)
     end
   end
