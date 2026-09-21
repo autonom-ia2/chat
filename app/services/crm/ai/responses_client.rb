@@ -12,20 +12,28 @@ module Crm
       MAX_RODADAS_DE_FERRAMENTA = 10
 
       # Orçamento de TEMPO do laço, e ele não é redundante com o de rodadas: os
-      # dois protegem coisas diferentes.
+      # dois protegem coisas diferentes. O teto de rodadas impede laço infinito;
+      # este impede que a requisição do usuário morra no meio.
       #
-      # O teto de rodadas impede laço infinito. Ele NÃO protege a thread: cada
-      # rodada é uma chamada HTTP com 120s de teto, então dez rodadas lentas são
-      # vinte minutos segurando uma thread. O painel do Guia é requisição
-      # síncrona e o Puma roda em modo single com 5 threads — em 21/09/2026 duas
-      # threads presas numa chamada do próprio Guia congelaram o painel inteiro
-      # para todo mundo.
+      # OITO SEGUNDOS, e o número não é escolha de gosto — é o que sobra.
+      # Medido em produção em 21/09/2026:
       #
-      # Noventa segundos é mais do que qualquer pergunta honesta precisa (uma
-      # rodada típica leva de 5 a 15s, então cabem de seis a dez) e bem abaixo
-      # do ponto em que a pessoa desiste e recarrega a página. Estourando, a
-      # última ida vai sem ferramenta e ele responde com o que já leu.
-      MAX_SEGUNDOS_DE_FERRAMENTA = 90
+      #   - `rack-timeout` mata QUALQUER requisição aos 15s
+      #     (`ENV.fetch("RACK_TIMEOUT_SERVICE_TIMEOUT", 15)`, e a variável está
+      #     vazia nas duas stacks);
+      #   - uma pergunta ao Guia leva hoje de 7 a 12 segundos.
+      #
+      # Ou seja: o produto já vive a 80% do teto. O orçamento aqui impede que
+      # uma rodada NOVA comece, mas não interrompe a que já começou, então a
+      # conta tem que fechar com folga: 8s de laço + a ida final (~5s) ≈ 13s,
+      # abaixo dos 15.
+      #
+      # É por isso que `MAX_RODADAS` (dez) é teto e não promessa: na prática
+      # cabem uma ou duas rodadas. As dez passam a valer quando o chat do Guia
+      # sair da requisição e virar job com busca na tela (#572), como o construtor
+      # de e-mail já faz — e é lá que este número sobe para 180. Enquanto isso,
+      # subir daqui só troca "resposta curta" por "erro na tela".
+      MAX_SEGUNDOS_DE_FERRAMENTA = 8
 
       # feature/account/pipeline são OPCIONAIS e só servem à telemetria de consumo (Gestão IA):
       # quando ambos feature+account estão presentes, cada chamada bem-sucedida grava 1 evento de uso

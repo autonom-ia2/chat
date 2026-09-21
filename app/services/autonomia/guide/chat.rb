@@ -22,11 +22,12 @@ module Autonomia
       # Quantas idas ao modelo podem sair COM ferramenta (#568). Dez, por decisão
       # do Rodrigo em 21/09/2026 — o número que ele já operava no n8n.
       #
-      # Cobre com folga o caso composto ("quantos negócios e quem responde por
-      # cada um?" são duas leituras) e o paginado (lista, página 2, página 3...).
-      # Quem de fato protege a thread do painel, que é síncrona, é o orçamento de
-      # TEMPO do cliente — rodada é teto de repetição, não de duração. A ida
-      # final sempre vai sem ferramenta, então o laço termina de qualquer jeito.
+      # É TETO, não promessa: quem manda na prática é o orçamento de tempo do
+      # cliente, e hoje ele é curto porque esta rota é síncrona e o
+      # `rack-timeout` mata a requisição aos 15s. Cabem uma ou duas rodadas.
+      #
+      # As dez passam a valer quando o chat do Guia virar job com busca na tela (#572).
+      # O número já está aqui para não ser esquecido nessa hora.
       MAX_RODADAS = 10
 
       def initialize(account:, user:, message:, history: [], route_context: nil)
