@@ -43,7 +43,11 @@ class Crm::Ai::HandoffEscalationJob < ApplicationJob
   # stamp_escalation! rodava sobre metadata carregado fora de lock e podia perder o
   # write de um job concorrente (expiry marcando expired_at, p.ex.).
   def escalate(card, settings)
-    conversation = card.primary_conversation
+    # A CONVERSA VIVA, e não a primária do card. O convite saiu na conversa em que o cliente
+    # está falando (#553); escalar na primária punha o supervisor numa conversa antiga que
+    # ninguém está lendo, e a guarda `assignee_id.present?` abaixo lia o responsável errado —
+    # escalava por cima de quem já tinha pegado a conversa de verdade (issue #556).
+    conversation = card.conversa_em_atendimento
     return if conversation.blank?
 
     conversation.with_lock do
@@ -81,7 +85,9 @@ class Crm::Ai::HandoffEscalationJob < ApplicationJob
   # (claim do slot) e notifica DEPOIS do lock — corrida concorrente relê fresh e cai no
   # renotify_due? (renotified_at recém-gravado), sem notificação dupla.
   def renotify(card, _settings)
-    conversation = card.primary_conversation
+    # Mesma conversa do convite original (issue #556): re-notificar apontando para a primária
+    # mandava o agente para uma conversa antiga, enquanto o cliente esperava na viva.
+    conversation = card.conversa_em_atendimento
     return if conversation.blank?
 
     result = nil
