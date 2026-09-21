@@ -86,7 +86,7 @@ export const nadaMudou = ({ entraram, blocosSemTela, cobreSemTela }) =>
 
 // Cada campo mora numa linha só: é assim que o gerador lê o arquivo. Quebra de
 // linha no meio do texto da IA faria o resto do campo sumir do Guia.
-const numaLinha = texto =>
+export const numaLinha = texto =>
   String(texto || '')
     .split('\n')
     .map(parte => parte.trim())
@@ -322,7 +322,7 @@ export const corpoDoPr = ({ commit, mudancas, rascunhos }) => {
 
 // O registro que foi para o ar no deploy anterior. Ele é um módulo JS gerado;
 // importar é mais seguro do que tentar ler o texto dele.
-const lerRegistroDe = async commit => {
+export const lerRegistroDe = async commit => {
   let fonte;
   try {
     fonte = execFileSync('git', ['show', `${commit}:${REGISTRY}`], {
@@ -389,7 +389,7 @@ const codigoDoComponente = (linhas, trecho, arquivo) => {
 
 // Onde a tela é declarada no roteador, e o componente que ela abre. É o melhor
 // retrato da tela que o código oferece sem subir a aplicação.
-const contextoDaTela = nome => {
+export const contextoDaTela = nome => {
   const marca = `name: '${nome}'`;
   const arquivo = arquivosDeRotas().find(caminho =>
     fs.readFileSync(caminho, 'utf8').includes(marca)
@@ -411,7 +411,7 @@ const contextoDaTela = nome => {
 };
 
 // Dois blocos de verdade, para a IA copiar o estilo e não o conteúdo.
-const exemplosDoPorques = humanosTexto =>
+export const exemplosDoPorques = humanosTexto =>
   humanosTexto
     .split(`\n${CABECALHO}`)
     .filter(bloco => !bloco.startsWith(FORA_DO_GUIA))
@@ -422,7 +422,7 @@ const exemplosDoPorques = humanosTexto =>
 // ---------------------------------------------------------------------------
 // Execução
 
-const avisarGitHub = (nome, valor) => {
+export const avisarGitHub = (nome, valor) => {
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `${nome}=${valor}\n`);
   }
