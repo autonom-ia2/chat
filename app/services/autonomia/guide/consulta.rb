@@ -71,6 +71,11 @@ class Autonomia::Guide::Consulta
   # parâmetro no roteador começa com dois pontos — basta procurar o caractere.
   PARAMETRO = ':'.freeze
 
+  # Como cada recurso chama o total dele. Eram só `count` e `all_count`, e com
+  # isso artigos, portais e mais seis telas diziam "não sei quantos" com o
+  # número na mão — a plataforma informava, e eu não entendia a palavra.
+  CHAVES_DE_TOTAL = %w[count all_count total_count articles_count portals_count].freeze
+
   def initialize(account:, user:, account_user: nil)
     @account = account
     @user = user
@@ -109,7 +114,14 @@ class Autonomia::Guide::Consulta
   rescue Recusada => e
     e.message
   rescue StandardError => e
-    Rails.logger.error("[autonomia][guide][consulta] account=#{@account&.id} recurso=#{recurso} #{e.class}")
+    # A mensagem e o começo da pilha vão junto de propósito. Em 21/09/2026 este
+    # log registrou só a classe, e um `NoMethodError` de uma linha — `each_key`
+    # num Array — derrubou a leitura de conversas inteira disfarçado de "não
+    # consegui ler agora". Custou uma rodada inteira de revisão para achar.
+    Rails.logger.error(
+      "[autonomia][guide][consulta] account=#{@account&.id} recurso=#{recurso} #{e.class}: #{e.message}\n" \
+      "#{Array(e.backtrace).first(5).join("\n")}"
+    )
     "Não consegui ler #{recurso} agora."
   end
 
@@ -219,7 +231,7 @@ class Autonomia::Guide::Consulta
     return nil unless dados.is_a?(Hash)
 
     meta = dados['meta']
-    return meta['count'] || meta['all_count'] if meta.is_a?(Hash)
+    return CHAVES_DE_TOTAL.filter_map { |chave| meta[chave] }.first if meta.is_a?(Hash)
 
     interno = dados['payload'] || dados['data']
     interno.is_a?(Hash) ? total_de(interno) : nil
@@ -320,9 +332,21 @@ class Autonomia::Guide::Consulta
   # Segredo escondido dentro de um objeto continua sendo segredo.
   def sem_segredos(dados)
     case dados
-    when Hash then dados.reject { |campo, _| segredo?(campo) }.transform_values { |valor| sem_segredos(valor) }
+    when Hash then limpo_de_cascas(dados.reject { |campo, _| segredo?(campo) })
     when Array then dados.map { |valor| sem_segredos(valor) }
     else dados
+    end
+  end
+
+  # Tirar o segredo de dentro de um objeto deixava a casca: `{"config":{}}`,
+  # `{"lista":[{},{}]}`. Não vaza nada, mas na leitura de UM item é token gasto
+  # com objeto que não diz mais nada. Some junto com o que estava lá dentro.
+  def limpo_de_cascas(dados)
+    dados.each_with_object({}) do |(campo, valor), limpo|
+      tratado = sem_segredos(valor)
+      next if (tratado.is_a?(Hash) || tratado.is_a?(Array)) && tratado.empty? && valor.present?
+
+      limpo[campo] = tratado
     end
   end
 

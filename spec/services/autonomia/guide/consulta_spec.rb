@@ -123,6 +123,31 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(consulta.ler('contacts')).to include('Diga quantos são')
     end
 
+    # Cada recurso chama o total dele de um jeito. Com só `count` e `all_count`,
+    # artigos e portais diziam "não sei quantos" com o número na mão.
+    it 'entende o total com qualquer um dos nomes que a plataforma usa', :aggregate_failures do
+      { 'articles_count' => 57, 'portals_count' => 9, 'total_count' => 31 }.each do |chave, valor|
+        plataforma_responde('200', { payload: [{ name: 'x' }], meta: { chave => valor } }.to_json)
+
+        expect(consulta.ler('portals')).to include("#{valor} no total")
+      end
+    end
+
+    # Tirar o segredo de dentro de um objeto deixava a casca vazia no lugar. Na
+    # LISTA isso não aparece, porque objeto aninhado já cai por forma — o
+    # desperdício estava na leitura de UM item, que vai inteira.
+    it 'não deixa casca vazia onde tirou o segredo, na leitura de um item', :aggregate_failures do
+      item = { 'id' => 1, 'name' => 'Caixa', 'config' => { 'api_key' => 'x' },
+               'outros' => { 'api_key' => 'y', 'cor' => 'azul' } }
+      plataforma_responde('200', item.to_json)
+
+      resposta = consulta.ler('inboxes/:id', { id: 1 })
+
+      expect(resposta).not_to include('"config"')
+      expect(resposta).to include('azul')
+      expect(resposta).not_to include('api_key')
+    end
+
     # Quando o corte é NOSSO, a frase tem que ser outra: sobrou coisa de fora.
     it 'diz quando foi ele que cortou, e quanto ficou de fora' do
       # Item grande feito de campos pequenos: campo acima do teto cai sozinho, e
