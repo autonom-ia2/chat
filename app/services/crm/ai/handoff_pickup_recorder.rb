@@ -24,14 +24,30 @@ class Crm::Ai::HandoffPickupRecorder
 
   private
 
-  # Pré-filtro barato: cards cuja conversa primária é esta e que tiveram convite R3
+  # Pré-filtro barato: cards ligados a esta conversa e que tiveram convite R3
   # (invited_at). NÃO exclui os já pegos — o earliest-wins mora no recheck sob lock
   # (senão um snapshot posterior que gravasse primeiro barraria o anterior aqui).
   # r2_direct/atribuição manual normal não gravam invited_at → excluídos.
   def invited_cards
-    Crm::Card.where(conversation_id: @conversation.id).select do |card|
+    cards_linked_to_conversation.select do |card|
       card_handoff(card)['invited_at'].present?
     end
+  end
+
+  # QUALQUER card ligado a esta conversa, e não só aquele em que ela é a PRIMÁRIA.
+  # O card é do contato: a primária fica fixada na primeira conversa dele e toda conversa
+  # nova entra como secundária em crm_card_conversations. Desde a #553 o convite vai para a
+  # conversa viva, que costuma ser uma secundária — procurando só por `conversation_id` não
+  # se achava card nenhum e o ciclo nunca fechava. O corretor sentia isso em três lugares:
+  # badge "aguardando pega" preso no kanban, escalada em cima de quem já tinha pegado, e o
+  # cooldown de 6h segurando o próximo pedido do cliente (issue #556).
+  def cards_linked_to_conversation
+    Crm::Card.where(conversation_id: @conversation.id)
+             .or(Crm::Card.where(id: linked_card_ids))
+  end
+
+  def linked_card_ids
+    Crm::CardConversation.where(conversation_id: @conversation.id).select(:card_id)
   end
 
   def card_handoff(card)
