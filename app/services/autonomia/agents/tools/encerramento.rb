@@ -287,12 +287,22 @@ class Autonomia::Agents::Tools::Encerramento
   end
 
   # A FRASE DE QUEM TERMINOU (`concluir`). Resultado guardado que não chegou: a frase de que ele pode pedir os
-  # valores. Resultado confirmado pela ferramenta (`resultado_entregue?`): o fecho de quem tem resultado — sem
-  # perguntar se sobrou algo, porque essa frase não diz que algo ficou pelo caminho. Contador zero: a frase de
-  # falha. Entrega aceita que não é resultado (a pergunta pelo dado que falta) ou execução sem agente: nil.
+  # valores. Resultado confirmado pela ferramenta (`resultado_entregue?`): nada, a legenda do comparativo já
+  # foi a última palavra. Contador zero: a frase de falha. Entrega aceita que não é resultado (a pergunta
+  # pelo dado que falta) ou execução sem agente: nil.
+  # QUEM TERMINOU COM O COMPARATIVO NA MÃO NÃO RECEBE FECHO (decisão do CEO, 21/09/2026). A legenda
+  # sai com o PDF e o fecho saía um segundo depois dizendo a mesma coisa: "Segue o comparativo da
+  # cotação do seu carro." e, colado, "A busca foi concluída e o comparativo está pronto para você."
+  # (conversa 6984, execução 49). A segunda mensagem não contava nada que a primeira não tivesse
+  # contado, e é o tipo de redundância que denuncia máquina. Quem termina com resultado entregue fica
+  # com a legenda como última palavra.
+  #
+  # O FECHO CONTINUA onde ele diz algo novo: no encerramento por prazo (`parcial`), em que parte das
+  # seguradoras ficou sem resposta e ele oferece retomar. E `closing_message` continua em
+  # `FRASES_DE_FECHO`, porque a execução aberta antes deste deploy pode tê-lo recebido.
   def conclusao
     return frase(:valores_message) if valores_a_pedir?
-    return frase(:closing_message) if resultado_entregue?
+    return nil if resultado_entregue?
     return frase(:failure_message) if @run.delivered_count.zero?
 
     nil

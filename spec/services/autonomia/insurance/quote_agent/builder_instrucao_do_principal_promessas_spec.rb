@@ -124,7 +124,11 @@ module ManualDoPrincipal
     # cotação PODE ser reaberta (só se houver nova chamada assíncrona aceita — pedido igual é recusado
     # como repetido) e a frase da instrução vira mentira. Escolher só a consulta é CONDUTA, e se
     # prova na conversa real (§7 da auditoria), não aqui.
-    'a cotação continua correndo' => -> { !CONDICOES_GERAIS.async? && COTACAO.async? },
+    #
+    # A FRASE MUDOU DE VOZ EM 21/09/2026, A PROMESSA NÃO. Era "a cotação continua correndo, o comparativo
+    # chega aqui quando ela terminar", e a Lia a devolveu quase igual ao cliente: "O comparativo chega por
+    # aqui assim que ficar pronto" (conversa 6984). Processo sem sujeito; agora é ela quem continua.
+    'você continua com a cotação dela' => -> { !CONDICOES_GERAIS.async? && COTACAO.async? },
     # Perguntar de qual seguradora é a dúvida não é capricho: o parâmetro é obrigatório no schema, e
     # sem ele a ferramenta recusa antes de consultar (`condicoes_sem_seguradora`).
     'Se ela não disse de qual seguradora' => lambda {
@@ -474,7 +478,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
   # PROSA NÃO SE VERIFICA POR MÁQUINA — e a tabela `PROMESSAS` só vê o que ESTÁ escrito, nunca o que
   # foi acrescentado entre uma âncora e outra. O md5 da §7.1 é a assinatura da revisão: mudou uma
-  # letra da seção, estes exemplos reprovam, e quem os atualiza revisa `PROMESSAS` junto.
+  # letra da seção, estes exemplos reprovam, e quem os atualiza revisa `PROMESSAS` junto. Reassinado em
+  # 21/09/2026 (`b5bbc4c0…` -> `99684ba9…`): a promessa de que a cotação segue virou fala da Lia na
+  # primeira pessoa, e a âncora da tabela foi trocada junto.
   describe 'a §7.1 é o texto revisado' do
     let(:secao) { ManualDoPrincipal.secao_duvida(texto) }
 
@@ -490,7 +496,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('b5bbc4c00099a879ea0877b5a09da28e')
+      expect(Digest::MD5.hexdigest(secao)).to eq('99684ba9321da3426761f66dff96a9fb')
     end
 
     # O ARQUIVO É LIDO COM AS ESCOLHAS SUBSTITUÍDAS (#380): a §7.1 não pode trazer marcador novo.
@@ -509,7 +515,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # souber" e tirou a afirmação falsa de que o especialista só sabe pelo bilhete. As duas mudanças
   # são o efeito esperado desta guarda. Em 21/09/2026 mudou uma terceira vez (`730b22a3…` ->
   # `fc7b4b84…`), com a #569: "peça exatamente aqueles dados à pessoa" virou "procure primeiro na
-  # conversa", e a promessa nova entrou na tabela com as duas pontas que a sustentam.
+  # conversa", e a promessa nova entrou na tabela com as duas pontas que a sustentam. E uma quarta, no
+  # mesmo dia (`fc7b4b84…` -> `8ab8e63d…`): "Parafraseie, não reinterprete" virou "o fato é dele, a voz
+  # é sua". Parafrasear fazia a Lia herdar a voz do especialista; é conduta, não promete capacidade.
   #
   # A ENTREGA 8 NÃO COLIDIA COM A ASSINATURA ANTERIOR, medido e não suposto: mesclado o
   # `origin/pr-399` de 12/09 (`ade5ca58db`) na árvore da #403, a #399 mexe na §5 ANTES deste bloco —
@@ -527,7 +535,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('fc7b4b8414e1dbe32e545888ee943749')
+      expect(Digest::MD5.hexdigest(secao)).to eq('8ab8e63de7c4015070df5670bbad627b')
     end
 
     it 'não introduz variável para substituir' do

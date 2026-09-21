@@ -44,38 +44,60 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
 
   # O que o especialista lê para escrever cada frase. É instrução de agente: sem crase (o modelo a
   # copia para o WhatsApp) e sem travessão (idem).
+  #
+  # DIREÇÃO, NÃO RÓTULO DE CAMPO (21/09/2026). Até aqui cada descrição dizia o que o SLOT era ("Frase que
+  # encerra a busca para quem já recebeu o comparativo"), e o modelo preenchia slot com voz de slot: "A
+  # busca foi concluída e o comparativo está pronto para você." Ele devolveu a nossa palavra. Agora cada
+  # uma descreve o MOMENTO do ponto de vista da pessoa e o que ela precisa ouvir ali; as palavras são dele.
+  # Nenhuma traz frase de exemplo, de propósito: exemplo é copiado inteiro, e sai igual para todo cliente.
+  # Quem entende como uma pessoa fala é o modelo; o que ele precisa de nós é saber onde está e com quem fala.
   DESCRICOES = {
-    espera: 'Frase que diz que você está cuidando do pedido e que volta assim que tiver notícia. Ela pode ' \
-            'sair logo no começo, ou depois de alguns minutos se a cotação demorar: não afirme que o ' \
-            'pedido já foi, nem que ainda não foi, enviado às seguradoras.',
-    aviso_sem_bonus: 'Aviso que sai junto do comparativo quando a renovação foi cotada sem a classe de ' \
-                     'bônus: diga que estes preços são os de quem faz o primeiro seguro, e que com a ' \
-                     'classe de bônus da apólice atual você refaz a cotação.',
-    comparativo_legenda: 'Legenda curta que sai junto do arquivo PDF com o comparativo.',
-    comparativo_reserva: 'Frase curta sobre o comparativo em PDF, guardada junto do arquivo. Não escreva ' \
-                         'link nem endereço de site.',
-    falta_dado: 'Frase para quando falta uma informação e não há como dizer qual.',
-    pedido_do_que_falta: 'Frase que abre o pedido dos dados que faltam. Não escreva os dados: a lista ' \
-                         'deles é acrescentada depois da sua frase. Termine com dois pontos.',
-    sem_veiculo: 'Frase que pede a placa do veículo, ou o chassi quando ele ainda não tem placa.',
-    ramo_desconhecido: 'Frase que diz que você não cota esse tipo de seguro por aqui. Não liste os ' \
-                       'ramos: a lista do que a corretora cota é acrescentada depois da sua frase.',
-    falhou: 'Frase para quando não deu para fazer a cotação agora, e um atendente vai retomar.',
-    incerto: 'Frase para quando não deu para saber se o pedido chegou às seguradoras, e um atendente ' \
-             'vai conferir.',
-    fecho_com_resultado: 'Frase que encerra a busca para quem já recebeu o comparativo. Não diga que ' \
-                         'alguma seguradora deixou de responder.',
-    valores_na_conversa: 'Frase para quando a cotação trouxe preços e o comparativo em PDF não pôde ser ' \
-                         'enviado: diga que a pessoa pode pedir os valores aqui mesmo, na conversa.'
+    espera: 'A pessoa acabou de te passar o que você precisava, e às vezes esta frase sai de novo se a cotação demorar. Ela quer saber ' \
+            'que você pegou o pedido dela e está nisso. Diga o que você está fazendo por ela, na primeira pessoa, e que volta quando ' \
+            'tiver o que mostrar. Não afirme que o pedido já chegou às seguradoras, nem que ainda não chegou.',
+    aviso_sem_bonus: 'Vai junto das opções quando a pessoa está renovando e você cotou sem a classe de bônus da apólice dela. Ela vai ' \
+                     'estranhar os preços, e precisa entender o porquê do jeito que você explicaria a um cliente: esses são os preços de ' \
+                     'quem faz o primeiro seguro, e com a classe de bônus da apólice atual você refaz a cotação.',
+    comparativo_legenda: 'Acompanha o arquivo com as opções que você encontrou para ela, e quase sempre é a última mensagem desta ' \
+                         'cotação. Fale do que ela tem nas mãos agora e do que pode fazer com isso, como quem entrega um trabalho feito ' \
+                         'para ela, e não do arquivo nem de como ele foi feito. Não ofereça nada que você não faz por aqui.',
+    comparativo_reserva: 'Vai guardada com o arquivo e aparece quando ele não pode ser mostrado como anexo. O mesmo sentido da legenda, ' \
+                         'dito de outro jeito. Não escreva link nem endereço de site.',
+    falta_dado: 'Falta alguma coisa para você cotar e não dá para dizer o quê. Peça ajuda como uma pessoa pediria, sem soar como erro de ' \
+                'sistema.',
+    pedido_do_que_falta: 'Abre o pedido do que ainda falta para você cotar. Os itens entram logo depois da sua frase, então não os ' \
+                         'escreva. Fale como quem está resolvendo isso junto com ela, não como formulário. Termine com dois pontos.',
+    sem_veiculo: 'Você ainda não sabe qual é o carro dela. Peça a placa, ou o chassi se ele ainda não tiver placa, do jeito que você ' \
+                 'pediria a alguém no WhatsApp.',
+    ramo_desconhecido: 'A pessoa pediu um seguro que a corretora não cota por aqui. O que a corretora cota entra logo depois da sua ' \
+                       'frase, então não o liste. Diga que esse você não consegue por aqui sem soar como recusa de sistema, e deixe a ' \
+                       'porta aberta para o que dá.',
+    falhou: 'Você não conseguiu fazer a cotação agora, e alguém da equipe vai assumir daqui. Diga isso com honestidade e sem drama, na ' \
+            'primeira pessoa.',
+    incerto: 'Você não tem certeza se o pedido chegou às seguradoras, e alguém da equipe vai conferir e retomar. Diga o que você sabe e o ' \
+             'que vai acontecer, sem esconder a dúvida e sem alarmar.',
+    fecho_com_resultado: 'O tempo desta cotação acabou depois que ela já recebeu opções. Ela precisa saber que o que recebeu é o que tem, ' \
+                         'e o que pode fazer agora: você refaz a cotação ou chama alguém da equipe. Não diga que alguma resposta ficou ' \
+                         'faltando.',
+    valores_na_conversa: 'Você tem os preços, mas o arquivo com as opções não pôde ser enviado. Diga que os valores estão com você e que ' \
+                         'ela pode te pedir aqui mesmo.'
   }.freeze
 
   # O que o modelo lê no nó inteiro. As proibições ficam AQUI, e não repetidas em cada folha: é o
   # texto que ele lê uma vez antes de escrever as doze.
-  DESCRICAO_DO_NO = 'As frases que o CLIENTE vai ler em cada momento desta cotação, com as SUAS ' \
-                    'palavras. Escreva todas as doze, curtas, em português do Brasil, no tom da ' \
-                    'conversa. Em nenhuma delas escreva número, quantidade, valor, prazo ou nome de ' \
-                    'seguradora. Não use travessão nem acento grave. Cada frase sai sozinha numa ' \
-                    'mensagem, então ela precisa fazer sentido sem as outras.'.freeze
+  #
+  # QUEM FALA É VOCÊ, E A PESSOA NÃO SABE QUE EXISTE ESPECIALISTA (21/09/2026). A voz que as frases
+  # tinham era impessoal ("a cotação está em andamento", "o comparativo está pronto"): processo sem
+  # sujeito, que é o jeito de sistema falar. A Gabriela, a IA do Rodrigo que já soa como gente, diz o
+  # que ELA vai fazer. É isso que o nó pede antes de tudo.
+  DESCRICAO_DO_NO = 'As frases que a PESSOA vai ler durante esta cotação. Quem fala nelas é você, a mesma pessoa que está conversando com ' \
+                    'ela, e ela não sabe que existe um especialista por trás. Escreva na primeira pessoa, com você fazendo as coisas por ' \
+                    'ela, e nunca como processo sem sujeito: gente não diz que algo foi concluído ou está em andamento, diz o que fez e o ' \
+                    'que vai fazer. O que você fez nunca inclui dizer que o pedido já chegou às seguradoras: isso você não sabe. Escreva ' \
+                    'como alguém da corretora escreveria no WhatsApp para quem atende: curto, direto, caloroso sem exagero. As descrições ' \
+                    'abaixo dizem o momento de cada frase, não as palavras; não copie palavra delas. Escreva todas as doze, em português ' \
+                    'do Brasil, e duas nunca podem ser iguais. Em nenhuma escreva número, quantidade, valor, prazo ou nome de seguradora. ' \
+                    'Não use travessão nem acento grave. Cada frase sai sozinha numa mensagem, então precisa fazer sentido sem as outras.'.freeze
 
   module_function
 

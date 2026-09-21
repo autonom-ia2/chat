@@ -46,12 +46,28 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote::Frases do
     # P1-5: `Declaracao::ACEITA` manda o modelo NÃO afirmar que a cotação já foi às seguradoras, e o
     # aviso de espera sai ANTES de `tool.start`, que tem cinco caminhos de recusa. A descrição do
     # papel não pode pedir o contrário do que o aceite proíbe, e a constante não pode afirmá-lo.
-    it 'a espera nao manda afirmar um envio que ainda nao aconteceu' do
+    it 'a constante de espera nao afirma um envio que ainda nao aconteceu' do
       cotacao = Autonomia::Agents::Tools::Native::InsuranceQuote
 
-      expect(described_class::DESCRICOES[:espera]).to include('não afirme que o pedido já foi')
       expect(cotacao::Declaracao::ESPERANDO).not_to include('seguradoras')
       expect(cotacao::Declaracao::ACEITA).to include('NÃO afirme que já foi')
+    end
+
+    # AS DESCRIÇÕES SÃO PROSA PARA O MODELO, E PROSA NÃO SE CONFERE POR PALAVRA (21/09/2026). Até aqui dois
+    # exemplos exigiam trechos exatos delas e passavam um regex de pedaços de palavra por cima; reescrita a
+    # mesma regra com outras palavras, eles reprovavam, e uma frase ruim com as palavras certas passaria. O
+    # que a máquina faz é o que ela sabe fazer: NÃO DEIXAR O TEXTO MUDAR SEM ALGUÉM RELER. Mudou uma letra,
+    # este exemplo reprova, e quem reassina confere, lendo, que continua valendo:
+    #
+    #   - a espera não manda afirmar que o pedido chegou às seguradoras (`Declaracao::ACEITA`: o aviso sai
+    #     antes de `tool.start`, que tem cinco caminhos de recusa);
+    #   - falhou e incerto dizem que alguém da equipe assume, sem custo, tentativa, abertura nem sistema;
+    #   - nenhuma pede número, valor, prazo ou nome de seguradora;
+    #   - nenhuma traz frase de exemplo para o modelo copiar, e quem fala é ele, na primeira pessoa.
+    it 'as descricoes sao o texto revisado: mudou? releia a lista acima e assine aqui' do
+      assinatura = Digest::MD5.hexdigest(JSON.generate([described_class::DESCRICOES, described_class::DESCRICAO_DO_NO]))
+
+      expect(assinatura).to eq('dc16fb75a901695df0953d7b5153ab05')
     end
   end
 
