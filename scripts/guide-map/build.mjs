@@ -25,16 +25,29 @@ const SAIDA_REGISTRY = 'app/javascript/dashboard/helper/guideRouteRegistry.js';
 // Campos que o código sabe e o arquivo humano não repete.
 const CAMPOS_GERADOS = ['rota', 'gate'];
 
+// A partir do Node 21 o próprio Node traz um `navigator` global SÓ DE LEITURA
+// (tem getter, não tem setter). Atribuir por cima quebra com "Cannot set
+// property navigator of #<Object> which has only a getter". Foi assim que o modo
+// aprendiz (#537) morreu na primeira execução no CI, que roda Node 24, depois de
+// passar em todo teste local com Node 20. `defineProperty` substitui o getter, e
+// o Node permite porque ele é `configurable`.
+const definirGlobal = (nome, valor) =>
+  Object.defineProperty(globalThis, nome, {
+    value: valor,
+    configurable: true,
+    writable: true,
+  });
+
 // Alguns módulos da árvore de rotas tocam `window` ao serem importados. O gerador
 // roda com o mesmo DOM de mentira que os testes já usam.
-const prepararJanela = () => {
+export const prepararJanela = () => {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', {
     url: 'https://local.test/',
   });
-  globalThis.window = dom.window;
-  globalThis.document = dom.window.document;
-  globalThis.navigator = dom.window.navigator;
-  globalThis.location = dom.window.location;
+  definirGlobal('window', dom.window);
+  definirGlobal('document', dom.window.document);
+  definirGlobal('navigator', dom.window.navigator);
+  definirGlobal('location', dom.window.location);
 };
 
 // O gerador quer as ROTAS, não a interface: componentes e estilos viram casca vazia.
