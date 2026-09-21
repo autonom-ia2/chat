@@ -14,9 +14,13 @@ Uso:
 Configuração, toda por variável de ambiente (nenhum segredo neste diretório):
     WAHA_API_KEY      chave do WAHA            (obrigatória; costuma vir do credentials.env)
     SMOKE_WAHA_HOST   host do WAHA             (padrão https://wa-hub.autonomia.site)
-    SMOKE_SESSAO      número da sessão da Lia  (padrão 5511937016094)
-    SMOKE_CHAT_ID     chat do cliente de teste (padrão 555196569128@c.us)
+    SMOKE_SESSAO      sessão WAHA do CLIENTE de teste, que manda as mensagens
+                      (padrão 5511937016094)
+    SMOKE_CHAT_ID     chat de destino, o WhatsApp da Lia (padrão 555196569128@c.us)
     SMOKE_INBOX       caixa da Lia no Chatwoot (padrão 57)
+    SMOKE_TELEFONE    telefone do contato de teste como o Chatwoot o grava
+                      (padrão +SMOKE_SESSAO). É por ele que o cenário acha a CONVERSA em
+                      que caiu: a caixa da Lia atende outros corretores ao mesmo tempo.
     SMOKE_PSQL        comando que roda SQL em produção e devolve linhas
                       (padrão ~/ops/agente-cotacao/onda-a/psql-prod.sh)
     SMOKE_PLACAS      placas reais, separadas por vírgula. O portal consulta a placa de
@@ -44,6 +48,7 @@ WAHA_HOST = os.environ.get("SMOKE_WAHA_HOST", "https://wa-hub.autonomia.site")
 SESSAO = os.environ.get("SMOKE_SESSAO", "5511937016094")
 CHAT_ID = os.environ.get("SMOKE_CHAT_ID", "555196569128@c.us")
 INBOX = os.environ.get("SMOKE_INBOX", "57")
+TELEFONE = os.environ.get("SMOKE_TELEFONE", f"+{SESSAO}")
 PSQL = os.environ.get(
     "SMOKE_PSQL", str(Path.home() / "ops/agente-cotacao/onda-a/psql-prod.sh")
 )
@@ -56,9 +61,19 @@ ABERTURA_S = int(os.environ.get("SMOKE_ABERTURA_S", "180"))
 DESFECHO_S = int(os.environ.get("SMOKE_DESFECHO_S", "420"))
 SILENCIO_S = int(os.environ.get("SMOKE_SILENCIO_S", "120"))
 ENTRE_TURNOS_S = int(os.environ.get("SMOKE_ENTRE_TURNOS_S", "25"))
+# A entrega é ADIADA em pedaços pela cadeia humanizada do turno: em produção o comparativo
+# chegou 120 s DEPOIS do `updated_at` da execução. Por isso ela também se espera, como todo o
+# resto — conferir uma vez, sem espera, reprovaria uma entrega que estava a caminho.
+ENTREGA_S = int(os.environ.get("SMOKE_ENTREGA_S", "300"))
+# A mensagem do cliente tem de virar linha em `messages` antes de qualquer medição: é ela que
+# diz em QUE CONVERSA o cenário caiu.
+CONVERSA_S = int(os.environ.get("SMOKE_CONVERSA_S", "120"))
 PASSO_S = 10
 
-HANDED_OFF = 1  # autonomia_agent_events.event_type
+# `AgentEvent::HANDOFF_TYPES` = handed_off(1), skipped_audience(2), skipped_schedule(3). Olhar só
+# o 1 deixa passar a conversa entregue a humano pela porta de engajamento — rodar a suíte fora do
+# horário do agente é exatamente isso, e a suíte não veria.
+HANDOFF_TYPES = (1, 2, 3)
 
 
 class Falha(Exception):
@@ -146,10 +161,15 @@ def sql(consulta: str) -> list[list[str]]:
     return [linha.split("|") for linha in saida.stdout.strip().splitlines() if linha.strip()]
 
 def um_numero(consulta: str) -> int:
+    """Um número, ou erro. Devolver 0 quando a saída vem vazia é o pior que este arquivo podia
+    fazer: 0 em `marcar()` faz `execucoes_novas` enxergar o histórico inteiro, e o cenário passa
+    na hora por uma cotação de ontem, sem relação nenhuma com o deploy. Consulta que não devolveu
+    número é a suíte cega, e a suíte cega para."""
     linhas = sql(consulta)
-    if not linhas or not linhas[0][0].strip():
-        return 0
-    return int(linhas[0][0])
+    bruto = linhas[0][0].strip() if linhas and linhas[0] else ""
+    if not bruto.lstrip("-").isdigit():
+        raise Falha(f"a consulta não devolveu número ({bruto!r}): {consulta[:120]}")
+    return int(bruto)
 
 
 def enviar(texto: str) -> None:
@@ -199,36 +219,89 @@ def marcar() -> Marca:
     )
 
 
-def execucoes_novas(marca: Marca) -> list[dict[str, str]]:
+def conversa_do_cenario(marca: Marca) -> int | None:
+    """A CONVERSA em que este cenário caiu — sem ela não há veredito honesto.
+
+    Medir por caixa credita ao cenário o que é de outra pessoa: a caixa da Lia atende vários
+    corretores, e em sete dias teve 12 conversas de 3 contatos, com 22 execuções de cotação em 9
+    conversas diferentes. Um anexo do vizinho satisfaria `exige_anexo`, e a execução do vizinho
+    seria lida como "a cotação abriu".
+
+    A conversa também não pode ser fixa: o Chatwoot abre conversa NOVA quando a anterior foi
+    resolvida (o contato de teste já tem 10 na caixa). Então ela é descoberta a cada cenário — é
+    a conversa da primeira mensagem do contato de teste depois da marca."""
+
+    def chegou():
+        linhas = sql(
+            "select m.conversation_id from messages m "
+            "join conversations c on c.id = m.conversation_id "
+            "join contacts ct on ct.id = c.contact_id "
+            f"where c.inbox_id = {INBOX} and m.id > {marca.mensagem} and m.message_type = 0 "
+            f"and ct.phone_number = '{TELEFONE}' order by m.id limit 1;"
+        )
+        return int(linhas[0][0]) if linhas and linhas[0][0].strip() else None
+
+    return esperar(chegou, CONVERSA_S, "mensagem do cliente na caixa da Lia")
+
+
+def execucoes_novas(marca: Marca, conversa: int) -> list[dict[str, str]]:
     linhas = sql(
-        "select r.id, r.slug, r.status, coalesce(r.failure_code,'-'), r.delivered_count "
-        "from autonomia_agent_tool_runs r join conversations c on c.id = r.conversation_id "
-        f"where c.inbox_id = {INBOX} and r.id > {marca.execucao} order by r.id;"
+        "select r.id, r.slug, r.status, coalesce(r.failure_code,'-'), r.delivered_count, "
+        "r.execution_key from autonomia_agent_tool_runs r "
+        f"where r.conversation_id = {conversa} and r.id > {marca.execucao} order by r.id;"
     )
     return [
-        {"id": l[0], "slug": l[1], "status": l[2], "falha": l[3], "entregas": l[4]}
+        {"id": l[0], "slug": l[1], "status": l[2], "falha": l[3], "entregas": l[4], "chave": l[5]}
         for l in linhas
-        if len(l) >= 5
+        if len(l) >= 6
     ]
 
 
-def respostas_novas(marca: Marca) -> list[dict[str, str]]:
+def respostas_novas(marca: Marca, conversa: int) -> list[dict[str, str]]:
     linhas = sql(
         "select m.id, case m.message_type when 0 then 'cliente' else 'lia' end, "
         "case when exists (select 1 from attachments a where a.message_id = m.id) "
-        "then 'anexo' else '-' end "
-        "from messages m join conversations c on c.id = m.conversation_id "
-        f"where c.inbox_id = {INBOX} and m.id > {marca.mensagem} "
+        "then 'anexo' else '-' end from messages m "
+        f"where m.conversation_id = {conversa} and m.id > {marca.mensagem} "
         "and m.message_type in (0,1) and m.private = false order by m.id;"
     )
     return [{"id": l[0], "quem": l[1], "anexo": l[2]} for l in linhas if len(l) >= 3]
 
 
-def escalou(marca: Marca) -> bool:
+def entregou(marca: Marca, conversa: int, chave: str, com_anexo: bool) -> bool:
+    """A entrega DESTA execução virou mensagem na conversa?
+
+    `delivered_count` não responde isso, e o próprio produto avisa (`tools/native/base.rb`): ele
+    conta QUALQUER item aceito para publicação, inclusive a pergunta pelo dado que falta. Em
+    produção existem as execuções 45 e 34, `done` com `delivered_count = 1`, cuja única entrega
+    foi "Para concluir sua cotação, me informe..." — nenhum anexo, nenhum preço.
+
+    A ligação exata entre mensagem e execução é o token que o publicador carimba:
+    `autonomia_async_token` começa com a `execution_key` da execução. Comparar por LIKE no texto
+    da coluna (e não por `->>`) é obrigatório: em produção `content_attributes` está gravada como
+    STRING JSON, e o operador de chave devolveria nulo para toda linha."""
+    if not chave or not set(chave) <= set("0123456789abcdefABCDEF-"):
+        raise Falha(f"execution_key fora do formato esperado: {chave!r}")
+    anexo = (
+        "and exists (select 1 from attachments a where a.message_id = m.id) " if com_anexo else ""
+    )
+    return (
+        um_numero(
+            "select count(*) from messages m "
+            f"where m.conversation_id = {conversa} and m.id > {marca.mensagem} "
+            f"and m.content_attributes::text like '%{chave}%' {anexo};"
+        )
+        > 0
+    )
+
+
+def escalou(marca: Marca, conversa: int) -> bool:
+    tipos = ",".join(str(t) for t in HANDOFF_TYPES)
     return (
         um_numero(
             "select count(*) from autonomia_agent_events "
-            f"where id > {marca.evento} and event_type = {HANDED_OFF};"
+            f"where id > {marca.evento} and conversation_id = {conversa} "
+            f"and event_type in ({tipos});"
         )
         > 0
     )
@@ -257,9 +330,9 @@ class Resultado:
     evidencia: dict[str, object] = field(default_factory=dict)
 
 
-def rodar_cotacao(marca: Marca) -> Resultado:
+def rodar_cotacao(marca: Marca, conversa: int, exige_anexo: bool) -> Resultado:
     def abriu():
-        novas = [e for e in execucoes_novas(marca) if e["slug"] == "cotar_seguro"]
+        novas = [e for e in execucoes_novas(marca, conversa) if e["slug"] == "cotar_seguro"]
         return novas[0] if novas else None
 
     execucao = esperar(abriu, ABERTURA_S, "execução criada")
@@ -267,7 +340,7 @@ def rodar_cotacao(marca: Marca) -> Resultado:
         return Resultado("", False, ["nenhuma execução de cotação foi criada"], {})
 
     def terminou():
-        atual = [e for e in execucoes_novas(marca) if e["id"] == execucao["id"]]
+        atual = [e for e in execucoes_novas(marca, conversa) if e["id"] == execucao["id"]]
         pronto = atual and atual[0]["status"] not in ("pending", "running")
         return atual[0] if pronto else None
 
@@ -278,38 +351,60 @@ def rodar_cotacao(marca: Marca) -> Resultado:
     motivos = []
     if final["status"] != "done":
         motivos.append(f"execução terminou em {final['status']} ({final['falha']})")
-    if int(final["entregas"]) < 1:
-        motivos.append("cotação concluída sem nada entregue ao cliente")
-    if escalou(marca):
+
+    prova = "comparativo em PDF" if exige_anexo else "entrega desta execução"
+    chegou = esperar(
+        lambda: entregou(marca, conversa, final["chave"], exige_anexo),
+        ENTREGA_S,
+        f"{prova} na conversa",
+    )
+    if not chegou:
+        motivos.append(f"a execução terminou e o {prova} não chegou ao cliente")
+
+    if escalou(marca, conversa):
         motivos.append("a conversa foi escalada para humano")
     return Resultado(
         "",
         not motivos,
         motivos,
-        {"execucao": final["id"], "status": final["status"], "entregas": final["entregas"]},
+        # `entregas` é o `delivered_count`, que fica como EVIDÊNCIA e não como veredito: ele conta
+        # até a pergunta pelo dado que falta. Quem decide é `chegou`.
+        {
+            "execucao": final["id"],
+            "conversa": conversa,
+            "status": final["status"],
+            "entregas": final["entregas"],
+            "entrega_na_conversa": bool(chegou),
+        },
     )
 
 
-def rodar_sem_cotacao(marca: Marca) -> Resultado:
+def rodar_sem_cotacao(marca: Marca, conversa: int) -> Resultado:
     """Aqui o certo é o agente conversar. Espero o silêncio de execução: se nasceu
     cotação, o cenário reprova, e a espera inteira é necessária para não aprovar cedo
     demais uma cotação que ia nascer no segundo seguinte."""
     time.sleep(SILENCIO_S)
     motivos = []
-    execucoes = execucoes_novas(marca)
+    execucoes = execucoes_novas(marca, conversa)
     if execucoes:
         quais = ", ".join(f"{e['slug']}#{e['id']}" for e in execucoes)
         motivos.append(f"abriu execução que não devia: {quais}")
-    if not [m for m in respostas_novas(marca) if m["quem"] == "lia"]:
+    if not [m for m in respostas_novas(marca, conversa) if m["quem"] == "lia"]:
         motivos.append("o cliente ficou sem resposta")
-    if escalou(marca):
+    if escalou(marca, conversa):
         motivos.append("a conversa foi escalada para humano em vez de perguntar")
-    return Resultado("", not motivos, motivos, {"execucoes": len(execucoes)})
+    return Resultado("", not motivos, motivos, {"execucoes": len(execucoes), "conversa": conversa})
 
 
 def rodar(cenario: dict, indice: int) -> Resultado:
     print(f"\n[{cenario['id']}] {cenario['titulo']}")
     print(f"      por quê: {cenario['motivo']}")
+    espera_cotacao = cenario["espera"] == "cotacao"
+    exige_anexo = bool(cenario.get("exige_anexo"))
+    if exige_anexo and not espera_cotacao:
+        raise Falha(
+            f"cenário {cenario['id']} exige anexo sem esperar cotação: não há o que entregar"
+        )
     dados = dados_do_cenario(indice)
     marca = marcar()
 
@@ -319,16 +414,21 @@ def rodar(cenario: dict, indice: int) -> Resultado:
         if numero < len(cenario["turnos"]):
             time.sleep(ENTRE_TURNOS_S)
 
+    conversa = conversa_do_cenario(marca)
+    if conversa is None:
+        return Resultado(
+            cenario["id"],
+            False,
+            ["a mensagem do cliente não virou conversa na caixa da Lia"],
+            {"placa": dados["placa"]},
+        )
+
     resultado = (
-        rodar_cotacao(marca) if cenario["espera"] == "cotacao" else rodar_sem_cotacao(marca)
+        rodar_cotacao(marca, conversa, exige_anexo)
+        if espera_cotacao
+        else rodar_sem_cotacao(marca, conversa)
     )
     resultado.cenario = cenario["id"]
-
-    if resultado.passou and cenario.get("exige_anexo"):
-        if not [m for m in respostas_novas(marca) if m["anexo"] == "anexo"]:
-            resultado.passou = False
-            resultado.motivos.append("o comparativo em PDF não chegou ao cliente")
-
     resultado.evidencia["placa"] = dados["placa"]
     return resultado
 
@@ -344,11 +444,23 @@ def main() -> int:
         for c in cenarios:
             print(f"{c['id']:24} {c['titulo']}")
         return 0
+    # O ÍNDICE É O DO ARQUIVO, e continua sendo com `--so`: é ele que escolhe a placa e a pessoa.
+    # Reindexar a lista filtrada faria `--so` rodar com placa e condutor DIFERENTES da rodada
+    # cheia — justo no comando que o README manda usar para reproduzir uma falha.
+    numerados = list(enumerate(cenarios))
     if argumentos.so:
-        cenarios = [c for c in cenarios if c["id"] == argumentos.so]
-        if not cenarios:
+        numerados = [(i, c) for i, c in numerados if c["id"] == argumentos.so]
+        if not numerados:
             print(f"não existe cenário com id {argumentos.so}", file=sys.stderr)
             return 2
+
+    if not TELEFONE.startswith("+") or not TELEFONE[1:].isdigit():
+        print(
+            f"SMOKE_TELEFONE precisa ser o telefone do contato de teste em formato +55…, e veio "
+            f"{TELEFONE!r}. É por ele que cada cenário acha a conversa em que caiu.",
+            file=sys.stderr,
+        )
+        return 2
 
     if not PLACAS:
         print(
@@ -358,9 +470,9 @@ def main() -> int:
         )
         return 2
 
-    print(f"caixa {INBOX} · {len(cenarios)} cenário(s) · cada cotação real custa consulta paga")
+    print(f"caixa {INBOX} · {len(numerados)} cenário(s) · cada cotação real custa consulta paga")
     resultados = []
-    for indice, cenario in enumerate(cenarios):
+    for indice, cenario in numerados:
         try:
             resultados.append(rodar(cenario, indice))
         except Falha as erro:
