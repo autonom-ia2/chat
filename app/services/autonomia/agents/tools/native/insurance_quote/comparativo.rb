@@ -89,11 +89,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
     concluir_passada([], handle)
   end
 
-  # `done`, com `Fecho::CONCLUSAO_KEY` no handle (ver `Fecho#resta_entregar?`) e, quando o comparativo
-  # desta execução já foi assumido pelo publicador, `PDF_SENT_KEY` — gravada aqui, e não na emissão.
+  # `done` e, quando o comparativo desta execução já foi assumido pelo publicador, `PDF_SENT_KEY` —
+  # gravada aqui, e não na emissão.
   def concluir_passada(deliveries, handle)
-    marcas = { self.class::CONCLUSAO_KEY => true }
-    marcas[self.class::PDF_SENT_KEY] = true if comparativo_assumido?(handle)
+    marcas = comparativo_assumido?(handle) ? { self.class::PDF_SENT_KEY => true } : {}
     progress_class.done(deliveries: deliveries, handle: handle.merge(marcas))
   end
 

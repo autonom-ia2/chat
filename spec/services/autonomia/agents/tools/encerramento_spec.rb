@@ -404,23 +404,26 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       described_class.new(run: run, native: tool, &publicador).concluir
     end
 
-    it 'com resultado confirmado pela ferramenta, publica o fecho de quem tem resultado' do
+    # QUEM TERMINOU COM O COMPARATIVO NA MÃO NÃO RECEBE FECHO (decisão do CEO, 21/09/2026): a legenda saiu
+    # com o PDF, e o fecho colado nela repetia a mesma notícia. A última palavra é a legenda.
+    it 'com resultado confirmado pela ferramenta, nao publica fecho: a legenda ja foi a ultima palavra' do
       run = execucao(entregas: 1)
       tool = build_async_tool(resultado: true)
 
       concluir(run, tool)
 
-      expect(bot_contents).to eq([tool.closing_message])
+      expect(bot_contents).to be_empty
     end
 
-    # O `done` não pergunta se SOBROU algo: o fecho de quem terminou não diz que algo ficou pelo caminho.
-    it 'nao depende de a ferramenta dizer que sobrou algo' do
+    # Com ou sem algo por entregar, o `done` de quem tem resultado cala: o fecho que oferece retomar é o do
+    # encerramento por prazo, não o daqui.
+    it 'nao publica fecho nem quando a ferramenta diz que sobrou algo' do
       run = execucao(entregas: 1)
-      tool = build_async_tool(resultado: true, resta: false)
+      tool = build_async_tool(resultado: true, resta: true)
 
       concluir(run, tool)
 
-      expect(bot_contents).to eq([tool.closing_message])
+      expect(bot_contents).to be_empty
     end
 
     it 'com resultado guardado que nao chegou, publica a frase de que pode ser pedido' do
@@ -432,13 +435,15 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       expect(bot_contents).to eq([tool.valores_message])
     end
 
-    it 'com resultado confirmado e contador zero, publica o fecho de quem tem resultado' do
+    # O CONTADOR ZERO NÃO VIRA "NÃO CONSEGUI" para quem tem o comparativo: o resultado confirmado pela
+    # ferramenta vem antes do contador, e é ele que cala a frase de falha.
+    it 'com resultado confirmado e contador zero, nao publica a frase de falha' do
       run = execucao
       tool = build_async_tool(resultado: true)
 
       concluir(run, tool)
 
-      expect(bot_contents).to eq([tool.closing_message])
+      expect(bot_contents).to be_empty
     end
 
     it 'sem nada aceito, publica a frase de falha' do
@@ -472,14 +477,15 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       expect(bot_contents).to eq(['não consegui concluir a consulta'])
     end
 
-    it 'duas conclusoes na mesma linha publicam um fecho so' do
-      run = execucao(entregas: 1)
-      tool = build_async_tool(resultado: true)
+    # A idempotência continua provada pelo desfecho que ainda sai no `done`: o de quem não recebeu nada.
+    it 'duas conclusoes na mesma linha publicam um desfecho so' do
+      run = execucao
+      tool = build_async_tool
 
       concluir(run, tool)
       concluir(run.reload, tool)
 
-      expect(bot_contents).to eq([tool.closing_message])
+      expect(bot_contents).to eq(['não consegui concluir a consulta'])
     end
 
     # AO CONTRÁRIO DO ENCERRAMENTO, A CONCLUSÃO DEIXA SUBIR: quem chama é o motor, que trata a passada

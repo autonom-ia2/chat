@@ -216,7 +216,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
     DesfalquesDoEspecialista::NOMES.each do |desfalque|
       describe "com #{desfalque}" do
-        it 'toda seguradora com desfecho e preco entregue: o done diz o fecho de quem tem resultado' do
+        it 'toda seguradora com desfecho e preco entregue: a legenda do comparativo e a ultima palavra' do
           stub_request(:get, url).to_return(status: 200, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
           portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
           run = execucao(desfalque)
@@ -225,7 +225,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
           expect(run.status).to eq('done')
           expect(ultima_palavra).to be_present
-          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+          expect(ultima_palavra).to eq(described_class::Frases.de(run.arguments)[:comparativo_legenda])
         end
 
         it 'toda seguradora recusou: o done diz a frase de falha' do
@@ -264,7 +264,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           expect(conversation.messages.reload.map(&:content).join).not_to include(url)
         end
 
-        it 'a passada done que morreu antes do desfecho: o varredor diz o fecho' do
+        it 'a passada done que morreu depois do comparativo: o varredor nao acrescenta nada' do
           stub_request(:get, url).to_return(status: 200, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
           portal('partial', [offer('43', 'Ezze', 2050.40), recusa('3')])
           run = execucao(desfalque)
@@ -276,7 +276,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
           expect(run.reload.status).to eq('failed')
-          expect(ultima_palavra).to eq(described_class.closing_message(run.arguments))
+          expect(ultima_palavra).to eq(described_class::Frases.de(run.arguments)[:comparativo_legenda])
         end
 
         it 'a linha abandonada esperando nova tentativa do comparativo: o varredor diz que os valores podem ser pedidos' do
@@ -357,7 +357,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
     DesfalquesDoEspecialista::NOMES.each do |desfalque|
       describe "com #{desfalque}" do
-        it 'a primeira leitura com todas com desfecho pede a confirmacao logo, e o done seguinte diz o fecho' do
+        it 'a primeira leitura com todas com desfecho pede a confirmacao logo, e o done seguinte deixa a legenda como ultima palavra' do
           register_async_tool(described_class)
           allow(mock).to receive(:quote_result)
             .and_return({ 'quote_id' => 'q-1:1', 'status' => 'partial', 'offers' => [offer('43', 'Ezze', 2050.40), recusa('3')] })
@@ -369,7 +369,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
           expect(confirmacao[:at]).to be_within(2).of(3.seconds.from_now.to_f)
           expect(run.reload.status).to eq('done')
-          expect(palavras_do_bot.last).to eq(described_class.closing_message(run.arguments))
+          expect(palavras_do_bot.last).to eq(described_class::Frases.de(run.arguments)[:comparativo_legenda])
         end
 
         # A ferramenta da Lia lê a cotação cuja chamada teve este desfalque: o que ela devolve ao modelo são os dados

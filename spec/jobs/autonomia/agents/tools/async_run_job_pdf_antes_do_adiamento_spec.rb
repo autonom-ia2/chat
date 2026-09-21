@@ -182,10 +182,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       passada(run, proxima)
       drenar_publicacoes_adiadas
 
-      # Assert 2 — PDF e fecho, nesta ordem
+      # Assert 2 — o PDF, e nenhum fecho depois dele
       expect(mock).to have_received(:quote_proposal).twice
       expect(anexos.size).to eq(1)
-      expect(conteudos.last(2)).to eq([cotacao::Comparativo::LEGENDA, fecho])
+      expect(conteudos).not_to include(fecho)
       expect(conteudos.join).not_to include(url)
       expect(run.status).to eq('done')
     end
@@ -208,7 +208,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   end
 
   describe 'sonda B: o prazo vence depois de um download recusado, com tentativa sobrando' do
-    it 'o encerramento por prazo pede o PDF de novo, e sai um fecho so, depois dele' do
+    it 'o encerramento por prazo pede o PDF de novo, e ele e a ultima palavra' do
       # Arrange — as passadas seguem até a primeira tentativa do comparativo, cujo download falha
       run = cotacao_submetida
       stub_request(:get, url).to_return(pdf_nao_encontrado, pdf_ok)
@@ -228,13 +228,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
       expect(mock).to have_received(:quote_proposal).twice
       expect(anexos.size).to eq(1)
-      expect(conteudos.last(2)).to eq([cotacao::Comparativo::LEGENDA, fecho])
-      expect(conteudos.count(fecho)).to eq(1)
+      expect(conteudos.last).to eq(cotacao::Comparativo::LEGENDA)
+      expect(conteudos).not_to include(fecho)
     end
 
     # CADA PEDIDO AO PORTAL DEVOLVE OUTRA URL: a identidade gravada no handle é a da tentativa que falhou, e
     # o fecho só se encadeia ao PDF do encerramento pela entrega que o próprio encerramento adiou.
-    it 'com a cadeia aberta, o PDF do encerramento sai adiado e o fecho sai depois dele' do
+    it 'com a cadeia aberta, o PDF do encerramento sai adiado, e nenhum fecho depois dele' do
       # Arrange
       run = cotacao_submetida(cadeia_aberta: true)
       outra_url = 'https://exemplo.test/comparativo-mock-2.pdf'
@@ -253,8 +253,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Assert
       expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
       expect(anexos.size).to eq(1)
-      expect(conteudos.count(fecho)).to eq(1)
-      expect(conteudos.index(fecho)).to be > conteudos.index(cotacao::Comparativo::LEGENDA)
+      expect(conteudos).not_to include(fecho)
     end
   end
 
@@ -283,7 +282,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   end
 
   describe 'sonda E: o preço recusado pelo publicador e o PDF aceito na passada que fecha' do
-    it 'o PDF chegou ao cliente, e o fecho de quem tem resultado sai' do
+    it 'o PDF chegou ao cliente, e ele e a ultima palavra' do
       # Arrange — a publicação do lote de preços cai
       run = cotacao_submetida
       stub_request(:get, url).to_return(pdf_ok)
@@ -305,12 +304,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(run.status).to eq('done')
-      expect(conteudos).to eq([cotacao::Comparativo::LEGENDA, fecho])
+      expect(conteudos).to eq([cotacao::Comparativo::LEGENDA])
     end
   end
 
-  describe 'sonda V: o fecho adiado nunca sai antes do PDF' do
-    it 'com a passada morta antes do finish! e o varredor antes dos adiados: PDF e um fecho, nesta ordem' do
+  describe 'sonda V: quem terminou com o comparativo nao recebe fecho, nem antes nem depois do PDF' do
+    it 'com a passada morta antes do finish! e o varredor antes dos adiados: o PDF, e nenhum fecho' do
       # Arrange — toda passada do motor morre antes do `finish!`, seja qual for a que fecha a cotação
       run = cotacao_submetida(cadeia_aberta: true)
       stub_request(:get, url).to_return(pdf_ok)
@@ -329,12 +328,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(antes_dos_adiados).not_to include(fecho)
-      expect(conteudos.count(fecho)).to eq(1)
+      expect(conteudos).not_to include(fecho)
       expect(anexos.size).to eq(1)
-      expect(conteudos.index(fecho)).to be > conteudos.index(cotacao::Comparativo::LEGENDA)
     end
 
-    it 'pelo motor, com a cadeia aberta e o job do fecho pego antes do job do PDF: o fecho sai depois do PDF' do
+    it 'pelo motor, com a cadeia aberta e os jobs adiados pegos na ordem inversa: so o PDF, nenhum fecho' do
       # Arrange
       run = cotacao_submetida(cadeia_aberta: true)
       stub_request(:get, url).to_return(pdf_ok)
@@ -347,8 +345,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       drenar_publicacoes_adiadas(inversa: true)
 
       # Assert
-      expect(conteudos.count(fecho)).to eq(1)
-      expect(conteudos.index(fecho)).to be > conteudos.index(cotacao::Comparativo::LEGENDA)
+      expect(conteudos).not_to include(fecho)
     end
   end
 
@@ -381,6 +378,30 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Assert
       expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
       expect(ordem).to eq(%w[pdf fecho])
+    end
+
+    # O CASO EM QUE O FECHO AINDA EXISTE, E É POR ELE QUE A ORDEM IMPORTA (21/09/2026). Desde que quem
+    # termina com o comparativo não recebe fecho, o fecho de quem tem resultado só sai quando sobrou algo de
+    # verdade: o prazo venceu com seguradora ainda sem resposta. É o caso natural de produção, sem falha de
+    # banco nenhuma, e ele precisa da mesma garantia: o fecho nunca chega antes do PDF que ele encerra.
+    it 'o prazo com seguradora ainda sem resposta: o PDF sai, e o fecho vem depois dele' do
+      # Arrange — duas cotaram, a terceira nunca responde
+      run = cotacao_submetida(cadeia_aberta: true)
+      stub_request(:get, url).to_return(pdf_ok)
+      portal_responde('running', leitura_inicial)
+      passada(run, 1)
+      portal_responde('partial', [oferta('8', 'quoted', 2119.18), oferta('20', 'quoted', 2323.17), oferta('47', 'running')])
+      passada(run, 2)
+
+      # Act — o prazo vence; o job do fecho é pego antes do job do PDF em cada tique
+      run.update!(expires_at: 1.second.ago)
+      passada(run, 3)
+      drenar_passo_a_passo(primeiro: 'fecho')
+
+      # Assert
+      expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
+      expect(ordem.count('fecho')).to eq(1)
+      expect(ordem.index('fecho')).to be > ordem.index('pdf')
     end
   end
 
@@ -418,7 +439,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
         # Assert
         expect(mock).to have_received(:quote_proposal).once
         expect(anexos.size).to eq(1)
-        expect(conteudos.count(fecho)).to eq(1)
+        expect(conteudos).not_to include(fecho)
         expect(run.reload.status).to eq('done')
       end
     end
@@ -444,8 +465,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
       expect(mock).to have_received(:quote_proposal).twice
       expect(anexos.size).to eq(1)
-      expect(conteudos.count(fecho)).to eq(1)
-      expect(conteudos.index(fecho)).to be > conteudos.index(cotacao::Comparativo::LEGENDA)
+      expect(conteudos).not_to include(fecho)
     end
 
     it 'vencido com o teto de tentativas esgotado: o encerramento nao pede mais, e diz que os valores podem ser pedidos' do

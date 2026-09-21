@@ -12,7 +12,6 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # 20/09/2026 e passaram para o bloco comum, onde valem para qualquer ramo. Lendo só o arquivo de
   # auto, a guarda sumiria junto com o texto.
   let(:especialista) { described_class.instrucao_do_especialista('especialista_auto.md') }
-  let(:descricoes) { Autonomia::Agents::Tools::Native::InsuranceQuote::Frases::DESCRICOES }
 
   it 'os dois manuais proíbem falar de custo, tentativa, abertura, sistema e processo interno' do
     expect(principal[/## 4\. Como você fala.*?(?=\n## \d)/m])
@@ -33,10 +32,6 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     expect(principal).not_to include('Posso pedir para um especialista entrar')
   end
 
-  it 'as descrições dos desfechos falhou e incerto não carregam vocabulário interno e mantêm o atendente' do
-    %i[falhou incerto].each do |papel|
-      expect(descricoes[papel]).not_to match(/abert|sistema|tentativ|custo|conclu/i)
-      expect(descricoes[papel]).to include('um atendente vai')
-    end
-  end
+  # As descrições dos desfechos `falhou` e `incerto` não são mais conferidas aqui por pedaço de palavra: quem
+  # as guarda é a assinatura em `frases_spec`, que obriga a reler a prosa inteira a cada mudança.
 end
