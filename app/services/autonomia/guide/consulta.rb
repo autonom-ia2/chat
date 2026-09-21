@@ -237,7 +237,13 @@ class Autonomia::Guide::Consulta
   # Quando o item estoura, os campos MAIS LONGOS saem primeiro. Continua sendo
   # corte por forma: campo longo é conteúdo, campo curto identifica. Nome,
   # status e identificador sobrevivem; o corpo da mensagem, não.
-  MAX_TEXTO_DE_ITEM = 800
+  #
+  # Mil, não oitocentos, porque oitocentos foi medido curto demais: um card do
+  # CRM real dá 816 caracteres — estoura por dezesseis — e perdia o nome do
+  # cliente, do funil e da caixa de uma vez. Uma campanha perdia o nome da
+  # caixa. O custo é zero na prática: vinte e cinco conversas dão ~19.000, num
+  # orçamento de 40.000.
+  MAX_TEXTO_DE_ITEM = 1_000
 
   def cabe_no_item(item)
     return item if JSON.generate(item).length <= MAX_TEXTO_DE_ITEM
@@ -255,6 +261,10 @@ class Autonomia::Guide::Consulta
     ordem = item.keys.sort_by do |campo|
       [campo.to_s.include?(CAMINHO_ACHATADO) ? 0 : 1, -"#{campo}#{item[campo]}".length, campo.to_s]
     end
+    # `ordem` é um Array de CHAVES, não um Hash. O `rubocop -A` já reescreveu
+    # este laço para `each_key` uma vez, método que Array não tem: o crash
+    # derrubou a leitura de conversas inteira e ficou escondido atrás de um
+    # rescue genérico. Não deixe a autocorreção mexer aqui de novo.
     ordem.each do |campo|
       break if JSON.generate(sobrando).length <= MAX_TEXTO_DE_ITEM
 

@@ -171,6 +171,24 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect(resposta).not_to include('z' * 401)
     end
 
+    # Um card do CRM traz cliente, funil e caixa em objetos aninhados. Com o
+    # teto por item em 800 ele estourava por dezesseis caracteres e perdia os
+    # três nomes de uma vez: "quais negócios eu tenho" respondia títulos soltos,
+    # sem cliente e sem funil.
+    it 'mantém cliente, funil e caixa num card do CRM', :aggregate_failures do
+      card = { 'id' => 1, 'title' => 'Negócio grande', 'description' => 'x' * 120,
+               'contact' => { 'id' => 9, 'name' => 'João Pedro da Silva Santos' },
+               'inbox' => { 'id' => 3, 'name' => 'Caixa Comercial WhatsApp' },
+               'pipeline' => { 'id' => 2, 'name' => 'Funil de Vendas Novo' } }
+      plataforma_responde('200', { payload: [card] }.to_json)
+
+      resposta = consulta.ler('crm/cards')
+
+      expect(resposta).to include('João Pedro')
+      expect(resposta).to include('Caixa Comercial')
+      expect(resposta).to include('Funil de Vendas')
+    end
+
     # Um objeto cortado no meio vira uma lista que PARECE inteira: o modelo conta
     # o pedaço e responde "você tem 5 caixas" para quem tem 8. O corte é por
     # item, e o que ficou de fora é sempre dito.
