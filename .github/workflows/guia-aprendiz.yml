@@ -4,7 +4,9 @@
 # anterior. Se entrou tela nova sem explicação, a IA escreve o rascunho do
 # "porquê" e ele chega como Pull Request. Nada vai para o Guia sem o merge.
 #
-# Sem mudança no mapa: nenhum PR, nenhum aviso.
+# Sem mudança no mapa: nenhum PR, nenhum aviso. Se algo impedir o rascunho —
+# segredo ausente, OpenAI fora do ar, permissão do Actions desligada —, o job fica
+# VERMELHO com a mensagem do motivo. Silêncio é só para "não há o que dizer".
 #
 # Precisa de duas coisas no repositório, que são configuração e não código:
 #   - o segredo OPENAI_API_KEY (Settings > Secrets and variables > Actions);

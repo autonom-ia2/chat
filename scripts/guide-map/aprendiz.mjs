@@ -218,27 +218,37 @@ export const pedirRascunho = async ({
     .filter(linha => linha !== null)
     .join('\n');
 
-  const resposta = await buscar(ENDPOINT, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${chave}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: modelo,
-      instructions: INSTRUCOES,
-      input: entrada,
-      reasoning: { effort: 'medium' },
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'rascunho_da_tela',
-          schema: ESQUEMA,
-          strict: true,
-        },
+  // Rede caída não pode virar só "fetch failed" e um stack trace no log do CI:
+  // quem abre o job vermelho precisa ler qual tela e o que aconteceu (achado da
+  // revisão da #579).
+  let resposta;
+  try {
+    resposta = await buscar(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${chave}`,
+        'Content-Type': 'application/json',
       },
-    }),
-  });
+      body: JSON.stringify({
+        model: modelo,
+        instructions: INSTRUCOES,
+        input: entrada,
+        reasoning: { effort: 'medium' },
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'rascunho_da_tela',
+            schema: ESQUEMA,
+            strict: true,
+          },
+        },
+      }),
+    });
+  } catch (erro) {
+    throw new Error(
+      `não consegui falar com a OpenAI para o rascunho de ${tela.nome}: ${erro.message}`
+    );
+  }
 
   // A chave nunca vai para a mensagem de erro — só o que a OpenAI disse.
   if (!resposta.ok) {
@@ -248,7 +258,13 @@ export const pedirRascunho = async ({
     );
   }
 
-  return JSON.parse(textoDaResposta(await resposta.json()));
+  const texto = textoDaResposta(await resposta.json());
+  if (!texto) {
+    throw new Error(
+      `a OpenAI respondeu sem rascunho para ${tela.nome} (resposta vazia ou recusada)`
+    );
+  }
+  return JSON.parse(texto);
 };
 
 // ---------------------------------------------------------------------------

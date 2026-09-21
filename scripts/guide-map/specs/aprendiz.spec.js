@@ -325,6 +325,40 @@ describe('o pedido à IA', () => {
   });
 });
 
+describe('quando a IA não responde', () => {
+  const pedir = buscar =>
+    pedirRascunho({
+      tela: tela('crm_relatorios'),
+      contexto: 'código',
+      exemplos: 'exemplo',
+      chave: 'sk-segredo-que-nao-pode-vazar',
+      buscar,
+    });
+
+  // Achado da revisão da #579: rede caída virava só "fetch failed" e um stack
+  // trace no log do CI, sem dizer de qual tela era.
+  it('diz qual tela e o que aconteceu quando a rede cai', async () => {
+    const falha = pedir(async () => {
+      throw new TypeError('fetch failed');
+    });
+
+    await expect(falha).rejects.toThrow('crm_relatorios');
+    await expect(falha).rejects.toThrow('fetch failed');
+    await expect(falha).rejects.not.toThrow('sk-segredo');
+  });
+
+  // Sem isto, `JSON.parse('')` estouraria com "Unexpected end of JSON input".
+  it('diz que veio vazio quando a IA recusa ou não escreve nada', async () => {
+    const falha = pedir(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ output: [] }),
+    }));
+
+    await expect(falha).rejects.toThrow('sem rascunho para crm_relatorios');
+  });
+});
+
 describe('o Pull Request', () => {
   const mudancas = {
     entraram: [tela('crm_relatorios')],
