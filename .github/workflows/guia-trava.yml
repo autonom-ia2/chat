@@ -1,0 +1,99 @@
+# Trava do Guia da Plataforma no Pull Request (issue #535).
+#
+# PR que cria tela nova sem explicação no porques.md não passa. A IA escreve o
+# rascunho de cada bloco num comentário do próprio PR, e a trava libera quando
+# uma pessoa põe a explicação no arquivo — ou declara a tela fora do Guia, ou
+# dispensa com o rótulo `guia-nao-se-aplica` e o motivo no corpo do PR.
+#
+# Roda em TODO PR, de propósito. Para a trava barrar de verdade, este check
+# precisa ser obrigatório nas regras do `main`; e check obrigatório que não roda
+# deixa o PR preso em "aguardando status" para sempre. Então ele sempre roda, e
+# responde em segundos quando o PR não mexe em rotas nem no Guia.
+name: Guia - trava
+
+on:
+  pull_request:
+    # `labeled`, `unlabeled` e `edited`: pôr o rótulo de dispensa ou escrever o
+    # motivo no corpo do PR tem que reavaliar a trava sem precisar de push.
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
+
+# Um push novo no mesmo PR torna a avaliação anterior inútil.
+concurrency:
+  group: guia-trava-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  trava:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # O mapa da base do PR é lido do histórico.
+          fetch-depth: 0
+
+      - id: escopo
+        name: O PR mexe em rotas ou no Guia?
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mexe=false
+          while IFS= read -r arquivo; do
+            case "$arquivo" in
+              app/javascript/dashboard/routes/*|lib/operator_guide/*|app/javascript/dashboard/helper/guideRouteRegistry.js)
+                mexe=true ;;
+            esac
+          done < <(git diff --name-only "$BASE"...HEAD)
+          echo "mexe=$mexe" >> "$GITHUB_OUTPUT"
+          [ "$mexe" = true ] || echo 'O PR não mexe em rotas nem no Guia: nada a conferir.'
+
+      - if: steps.escopo.outputs.mexe == 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.escopo.outputs.mexe == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - if: steps.escopo.outputs.mexe == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: O mapa do Guia está em dia com o roteador?
+        if: steps.escopo.outputs.mexe == 'true'
+        run: node scripts/guide-map/check.mjs
+
+      - id: trava
+        name: Toda tela nova tem explicação?
+        if: steps.escopo.outputs.mexe == 'true'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Texto de quem abriu o PR: entra como variável, nunca dentro do script.
+          PR_BODY: ${{ github.event.pull_request.body }}
+          ROTULOS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          COMENTARIO: ${{ runner.temp }}/comentario-da-trava.md
+        run: node scripts/guide-map/trava.mjs
+
+      - name: Comentar no PR
+        if: steps.trava.outputs.comentario == 'novo' || steps.trava.outputs.comentario == 'resolvido'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          COMENTARIO: ${{ runner.temp }}/comentario-da-trava.md
+          SITUACAO: ${{ steps.trava.outputs.comentario }}
+        run: |
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+                 --jq '.[] | select(.body | contains("<!-- guia-trava -->")) | .id' | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@"$COMENTARIO" > /dev/null
+          elif [ "$SITUACAO" = novo ]; then
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@"$COMENTARIO" > /dev/null
+          fi
+
+      - name: Barrar o merge
+        if: steps.trava.outputs.bloqueia == 'true'
+        run: |
+          echo 'Tela nova sem explicação no Guia. O que fazer está no comentário deste PR.'
+          exit 1
