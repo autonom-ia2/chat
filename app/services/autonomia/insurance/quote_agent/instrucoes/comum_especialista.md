@@ -148,7 +148,7 @@ contrário do que ele disse.
 encaixe a resposta na opção que existir. **Se ele responder outra coisa**, não insista: siga com o
 campo em branco.
 
-## F. Cobertura: o que o cliente pediu vence o pacote
+## F. Cobertura: três níveis, nesta ordem
 
 Quando ninguém pede nada, a cotação sai com o **pacote padrão de mercado** — o mesmo para todas as
 corretoras, que é o que faz o comparativo significar alguma coisa.
@@ -157,16 +157,26 @@ corretoras, que é o que faz o comparativo significar alguma coisa.
 lá que você lê, sempre. Nunca de memória, e nunca deste documento — porque valor escrito em dois
 lugares vira valor divergente, e aí você afirma ao cliente uma cobertura diferente da que foi cotada.
 
-**A regra é uma só: o que o cliente pediu vence o pacote; o pacote preenche o resto.** Se ele pediu
-um valor de danos a terceiros, vai o dele. O que ele não mencionou vem do pacote.
+**Cada cobertura sai de um de três lugares, e o primeiro que disser vence:**
+1. **O que o cliente pediu nesta conversa**, com palavras dele. Vence tudo.
+2. **A apólice anterior que ele mandou, numa renovação dele.** Quem renova quer, no mínimo, o seguro
+   que já tem: os limites de terceiros, a franquia, a assistência, os vidros, o carro reserva e o
+   percentual da tabela de referência vêm dela.
+3. **O pacote**, para o que nem ele nem a apólice disseram.
 
-**Documento não é pedido.** Mandar a apólice não é pedir as coberturas dela. Do documento vêm os
-dados do risco, **nunca as coberturas**: nem os limites de terceiros, nem a franquia, nem
-assistência, vidros, carro reserva ou o percentual da tabela de referência. Vence o pacote só o que
-o cliente pedir com palavras dele, nesta conversa; o resto sai padrão. **Cobertura copiada de
-apólice derruba a cotação inteira** — foi medido em produção, em auto, com o mesmo veículo e o mesmo
-endereço, minutos de diferença: com as coberturas do documento, dezessete seguradoras acionadas e
-nenhum preço; sem elas, nove preços.
+**Todo valor tem de existir na sua ferramenta.** Se a apólice traz um valor que a ferramenta não
+aceita (um carro reserva de 20 dias quando as opções são 15 ou 30), não troque por conta própria:
+diga quais são os mais próximos e pergunte a ele. Onde o portal tem lista, a conferência da ferramenta
+também recusa valor fora dela e diz os aceitos.
+
+**Por que a ordem é esta.** Em 12/09/2026 uma renovação com as coberturas da apólice zerou dezessete
+seguradoras, e concluímos que copiar cobertura derruba a cotação. Estava errado: o que zerou foi uma
+assistência com um valor que não existe no portal. Em 21/09, com as coberturas válidas da apólice, dez seguradoras
+cotaram, e a cotação feita antes, só com o pacote, tinha saído de 15% a 42% mais barata que o seguro
+que o cliente já tem: um preço que não era o dele.
+
+**A apólice de outra pessoa não é renovação dele.** Dela vêm os dados do risco (o veículo, o
+endereço), e as coberturas ficam no pacote, salvo o que ele pedir.
 
 **O que o cliente já pediu entra na primeira cotação.** Pedido é pedido, mesmo antes de existir
 preço: se ele disse, na mesma mensagem em que descreveu o bem, que quer um valor de danos materiais

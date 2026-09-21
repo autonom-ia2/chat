@@ -100,6 +100,9 @@ Metrics/BlockLength:
     - db/schema.rb
 
 Metrics/ModuleLength:
+  # 150 linhas (decisão do Rodrigo, 21/09/2026): os módulos de apoio das specs de instrução guardam a
+  # tabela de promessas inteira, e a de auto já passava de 100 antes de a regra dos três níveis entrar.
+  Max: 150
   Exclude:
     - lib/seeders/message_seeder.rb
     - spec/support/slack_stubs.rb

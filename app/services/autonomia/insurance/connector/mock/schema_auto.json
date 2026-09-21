@@ -7,7 +7,7 @@
       "tipo": "texto",
       "origem": "derivado",
       "obrigatorio": true,
-      "descricao": "Nome completo do segurado. Em empresa, a razão social. Se o cliente não disse, deixe em branco — o sistema busca pelo documento."
+      "descricao": "Nome completo do segurado. Em empresa, a razão social. Se o cliente não disse, deixe em branco — o sistema busca pelo documento, CPF ou CNPJ."
     },
     {
       "campo": "insured.document",
@@ -21,14 +21,14 @@
       "tipo": "texto",
       "origem": "derivado",
       "obrigatorio": true,
-      "descricao": "Data de nascimento do segurado, AAAA-MM-DD. Não pergunte: o sistema busca pelo CPF."
+      "descricao": "Data de nascimento do segurado, AAAA-MM-DD. Nunca é pergunta: com CPF o sistema busca, e em empresa o sistema copia a do condutor — CNPJ não tem nascimento."
     },
     {
       "campo": "insured.gender",
       "tipo": "texto",
       "origem": "derivado",
       "obrigatorio": true,
-      "descricao": "Sexo do segurado. Não pergunte: o sistema busca pelo CPF. Valores: F=Feminino; M=Masculino.",
+      "descricao": "Sexo do segurado. Nunca é pergunta: com CPF o sistema busca, e em empresa o sistema copia o do condutor. Valores: F=Feminino; M=Masculino.",
       "valores": {
         "F": "Feminino",
         "M": "Masculino"
@@ -295,7 +295,12 @@
       "tipo": "numero",
       "origem": "cliente",
       "obrigatorio": false,
-      "descricao": "Com que frequência o veículo é usado. OBRIGATÓRIO EM MOTO."
+      "descricao": "Com que frequência o veículo é usado. OBRIGATÓRIO EM MOTO. O cliente diz 'todo dia', 'só no fim de semana', 'umas duas vezes por semana' — traduza para a opção; se ficar ambíguo ('de vez em quando', 'pouco'), pergunte a frequência. Valores: 0=Todos os dias; 1=Finais de semana e feriados; 2=Até duas vezes por semana.",
+      "valores": {
+        "0": "Todos os dias",
+        "1": "Finais de semana e feriados",
+        "2": "Até duas vezes por semana"
+      }
     },
     {
       "campo": "vehicle.hasGasKit",
@@ -411,36 +416,36 @@
       "tipo": "texto",
       "origem": "cliente",
       "obrigatorio": false,
-      "condicional_a": "driver",
-      "descricao": "Nome de quem DIRIGE, quando não é o segurado. OBRIGATÓRIO em cotação de empresa — a empresa não dirige."
+      "descricao": "Nome de quem DIRIGE, quando não é o segurado. OBRIGATÓRIO em cotação de empresa — a empresa não dirige.",
+      "condicional_a": "driver"
     },
     {
       "campo": "driver.document",
       "tipo": "texto",
       "origem": "cliente",
       "obrigatorio": false,
-      "condicional_a": "driver",
-      "descricao": "CPF de quem dirige. Em empresa nunca pode ser o CNPJ."
+      "descricao": "CPF de quem dirige. Em empresa nunca pode ser o CNPJ.",
+      "condicional_a": "driver"
     },
     {
       "campo": "driver.birthDate",
       "tipo": "texto",
       "origem": "cliente",
       "obrigatorio": false,
-      "condicional_a": "driver",
-      "descricao": "Data de nascimento do condutor, AAAA-MM-DD."
+      "descricao": "Data de nascimento do condutor, AAAA-MM-DD. Em empresa é obrigatória: o segurado é o CNPJ, e é daqui que sai o nascimento que o portal exige.",
+      "condicional_a": "driver"
     },
     {
       "campo": "driver.gender",
       "tipo": "texto",
       "origem": "cliente",
       "obrigatorio": false,
-      "condicional_a": "driver",
-      "descricao": "Sexo do condutor. Valores: F=Feminino; M=Masculino.",
+      "descricao": "Sexo do condutor. Em empresa é obrigatório: é daqui que sai o sexo que o portal exige do segurado. Valores: F=Feminino; M=Masculino.",
       "valores": {
         "F": "Feminino",
         "M": "Masculino"
-      }
+      },
+      "condicional_a": "driver"
     },
     {
       "campo": "driver.maritalStatus",
@@ -468,7 +473,7 @@
       "tipo": "numero",
       "origem": "cliente",
       "obrigatorio": false,
-      "descricao": "Vínculo do condutor com o segurado. Em cotação de EMPRESA nunca pode ser o próprio — carro de empresa costuma ser dirigido por empregado. Valores: 0=Sem perfil; 1=Próprio; 2=Cônjuge; 3=Filho(a); 4=Outros; 5=Empregado(a); 12=Pai/Mãe; 13=Irmão(a); 14=Proprietário.",
+      "descricao": "Vínculo do condutor com o segurado. Em cotação de EMPRESA nunca pode ser o próprio: carro de empresa é dirigido por empregado(a). Se o cliente não disse qual é o vínculo, deixe em branco — em empresa isso vale por empregado(a), e em pessoa física, pelo próprio. Valores: 0=Sem perfil; 1=Próprio; 2=Cônjuge; 3=Filho(a); 4=Outros; 5=Empregado(a); 12=Pai/Mãe; 13=Irmão(a); 14=Proprietário.",
       "valores": {
         "0": "Sem perfil",
         "1": "Próprio",
@@ -493,7 +498,12 @@
       "tipo": "numero",
       "origem": "cliente",
       "obrigatorio": false,
-      "descricao": "Período predominante de circulação do caminhão."
+      "descricao": "Período predominante de circulação do caminhão: de dia, de noite ou indeterminado. OBRIGATÓRIO EM CAMINHÃO — pergunte. Valores: 1=Diurno; 2=Noturno; 3=Indeterminado.",
+      "valores": {
+        "1": "Diurno",
+        "2": "Noturno",
+        "3": "Indeterminado"
+      }
     },
     {
       "campo": "truck.bodyType",
@@ -777,7 +787,13 @@
       "tipo": "numero",
       "origem": "escolha",
       "obrigatorio": false,
-      "descricao": "Assistência 24 horas: a faixa de quilometragem de reboque."
+      "descricao": "Assistência 24 horas: a faixa de quilometragem de reboque. Valores: 0=não contratar; 1=completa; 2=intermediária; 4=básica.",
+      "valores": {
+        "0": "não contratar",
+        "1": "completa",
+        "2": "intermediária",
+        "4": "básica"
+      }
     },
     {
       "campo": "quotation.startsAt",
@@ -805,7 +821,7 @@
       "tipo": "numero",
       "origem": "cliente",
       "obrigatorio": false,
-      "descricao": "Classe de bônus. Vem da apólice anterior. Não converta percentual de cabeça."
+      "descricao": "Classe de bônus exatamente como está escrita na apólice que vence. Não recalcule: a seguradora aplica sozinha o ano a mais e os sinistros que você informar no campo de sinistros, e descontar aqui conta o sinistro duas vezes. Não converta percentual de cabeça."
     },
     {
       "campo": "quotation.previousClaimsCount",
