@@ -28,7 +28,18 @@ class Autonomia::Guide::Consulta
   # total. Esse é o comportamento certo: melhor dizer "não sei quantos" do que
   # dizer um número errado.
   MAX_ITENS = 100
-  MAX_TEXTO = 40_000
+  # 100.000, por decisão do Rodrigo em 21/09/2026. O critério que ele fixou não
+  # é custo — a chave de IA é do cliente — e sim **resposta certa e completa**.
+  # Então estes tetos existem para o Guia não estourar o contexto do modelo, e
+  # não para economizar: na dúvida entre cortar e mandar, mande.
+  #
+  # Vem junto com o teto por item em 5.000: item mais gordo exige orçamento
+  # maior, senão o ganho de detalhe vira perda de itens. Medido com 25 conversas
+  # reais — item de 5.000 com orçamento de 40.000 derrubava sete da lista.
+  #
+  # Continua sendo TETO, não custo fixo: uma conta com três caixas gasta ~1.700
+  # caracteres.
+  MAX_TEXTO = 100_000
 
   # Campo de texto acima disto é conteúdo longo, não identificação. O limite é
   # folgado de propósito: com 80 caracteres, a resposta pronta perdia o próprio
@@ -238,12 +249,16 @@ class Autonomia::Guide::Consulta
   # corte por forma: campo longo é conteúdo, campo curto identifica. Nome,
   # status e identificador sobrevivem; o corpo da mensagem, não.
   #
-  # Mil, não oitocentos, porque oitocentos foi medido curto demais: um card do
-  # CRM real dá 816 caracteres — estoura por dezesseis — e perdia o nome do
-  # cliente, do funil e da caixa de uma vez. Uma campanha perdia o nome da
-  # caixa. O custo é zero na prática: vinte e cinco conversas dão ~19.000, num
-  # orçamento de 40.000.
-  MAX_TEXTO_DE_ITEM = 1_000
+  # Cinco mil, por decisão do Rodrigo em 21/09/2026. O caminho até aqui, para
+  # quem for mexer: oitocentos foi medido curto demais (um card do CRM real dá
+  # 816 e perdia o nome do cliente, do funil e da caixa de uma vez); mil
+  # resolvia os casos medidos; cinco mil é a escolha dele de deixar o item vir
+  # praticamente inteiro.
+  #
+  # O número NÃO é independente do orçamento total: subir este sem subir aquele
+  # troca detalhe por itens perdidos. Medido com 25 conversas reais — item de
+  # 5.000 com orçamento de 40.000 derrubava sete conversas da lista.
+  MAX_TEXTO_DE_ITEM = 5_000
 
   def cabe_no_item(item)
     return item if JSON.generate(item).length <= MAX_TEXTO_DE_ITEM

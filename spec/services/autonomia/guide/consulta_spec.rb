@@ -125,7 +125,11 @@ RSpec.describe Autonomia::Guide::Consulta do
 
     # Quando o corte é NOSSO, a frase tem que ser outra: sobrou coisa de fora.
     it 'diz quando foi ele que cortou, e quanto ficou de fora' do
-      gordos = Array.new(100) { |i| { name: "Contato #{i}", nota: 'x' * 390 } }
+      # Item grande feito de campos pequenos: campo acima de 400 cai sozinho, e
+      # o que precisa estourar aqui é o orçamento da LISTA, não o do campo.
+      gordos = Array.new(100) do |i|
+        { name: "Contato #{i}" }.merge((1..20).to_h { |n| ["nota#{n}", 'x' * 300] })
+      end
       plataforma_responde('200', { payload: gordos }.to_json)
 
       expect(consulta.ler('contacts')).to include('o resto ficou de fora')
