@@ -37,6 +37,8 @@ const translationKeys = {
   'teammember:destroy': `AUDIT_LOGS.TEAM_MEMBER.REMOVE`,
   'account:update': `AUDIT_LOGS.ACCOUNT.EDIT`,
   'conversation:destroy': `AUDIT_LOGS.CONVERSATION.DELETE`,
+  // Ação feita pelo Guia da Plataforma, depois da confirmação na tela (#536).
+  'account:guide_action': `AUDIT_LOGS.GUIDE.ACTION`,
   'message:destroy': `AUDIT_LOGS.MESSAGE.DELETE`,
 };
 
@@ -178,6 +180,12 @@ export function generateTranslationPayload(auditLogItem, agentList) {
   if (auditableType === 'message' && action === 'destroy') {
     translationPayload.conversationId =
       auditLogItem.audited_changes?.display_id;
+  }
+
+  // A frase que a pessoa leu e confirmou no cartão do Guia — é ela que diz o
+  // que mudou, em português, sem rota nem jargão.
+  if (auditableType === 'account' && action === 'guide_action') {
+    translationPayload.frase = auditLogItem.audited_changes?.frase || '';
   }
 
   if (auditableType === 'accountuser') {

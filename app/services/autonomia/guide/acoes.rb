@@ -97,7 +97,11 @@ class Autonomia::Guide::Acoes
     garantir_permitida!(acao)
     resposta = requisitar(verbo_de(acao), montar_caminho(acao, dados), corpo_de(dados))
 
-    return Resultado.new(ok: true, mensagem: traduzir('done'), registro: identificador(resposta)) if sucesso?(resposta)
+    if sucesso?(resposta)
+      registro = identificador(resposta)
+      auditar(acao, dados, registro)
+      return Resultado.new(ok: true, mensagem: traduzir('done'), registro: registro)
+    end
 
     Resultado.new(ok: false, mensagem: recusa_da_plataforma(resposta) || traduzir('failed'))
   rescue Recusada
@@ -195,6 +199,34 @@ class Autonomia::Guide::Acoes
 
   def sucesso?(resposta)
     resposta.codigo.to_i.between?(200, 299)
+  end
+
+  AUDITORIA = 'guide_action'.freeze
+
+  # Quem fez, o quê, quando — e que foi PELO GUIA (#536). Vai para a mesma trilha
+  # da tela de Auditoria da conta, não para um lugar novo.
+  #
+  # Antes isto era só uma linha de log. Em 21/09/2026 apareceu na conta 16 uma
+  # etiqueta criada às 06:01 e ninguém conseguiu saber por quem: o log morava na
+  # máquina que o deploy trocou. A auditoria mora no banco.
+  #
+  # A trilha que o `audited` monta sozinho não servia: ela só cobre alguns models
+  # (caixa, time, automação…) e deixa de fora justamente o que o Guia mais cria —
+  # etiqueta, funil do CRM. Aqui o registro vale para as 468 ações.
+  #
+  # A ação JÁ ACONTECEU quando isto roda. Se gravar a auditoria falhar, a pessoa
+  # não pode ouvir que não deu certo — deu. O erro vai inteiro para o log.
+  def auditar(acao, dados, registro)
+    Audited.audit_class.create!(
+      auditable: @account, user: @user, action: AUDITORIA,
+      comment: dados[:descricao].to_s,
+      audited_changes: { 'acao' => acao.to_s, 'frase' => dados[:descricao].to_s, 'registro' => registro }
+    )
+  rescue StandardError => e
+    Rails.logger.error(
+      "[autonomia][guide][auditoria] account=#{@account&.id} user=#{@user&.id} acao=#{acao} " \
+      "#{e.class}: #{e.message}"
+    )
   end
 
   # O erro que volta é o da própria plataforma: é ele que diz a verdade sobre o

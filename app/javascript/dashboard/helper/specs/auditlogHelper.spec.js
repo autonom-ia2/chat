@@ -155,6 +155,28 @@ describe('Helper functions', () => {
       });
     });
 
+    // #536 — a frase que a pessoa confirmou no cartão do Guia é o que a linha
+    // da Auditoria mostra; sem ela a linha diria só "fez pelo Guia".
+    it('should carry the confirmed sentence of a Platform Guide action', () => {
+      const auditLogItem = {
+        auditable_type: 'Account',
+        action: 'guide_action',
+        user_id: 1,
+        auditable_id: 16,
+        audited_changes: {
+          frase: 'Criar a etiqueta vip.',
+          acao: 'POST labels',
+        },
+      };
+
+      const payload = generateTranslationPayload(auditLogItem, agentList);
+      expect(payload).toEqual({
+        agentName: 'Agent 1',
+        id: 16,
+        frase: 'Criar a etiqueta vip.',
+      });
+    });
+
     it('should handle generic case like Team create', () => {
       const auditLogItem = {
         auditable_type: 'Team',
@@ -210,6 +232,21 @@ describe('Helper functions', () => {
 
       const logActionKey = generateLogActionKey(auditLogItem);
       expect(logActionKey).toEqual('AUDIT_LOGS.MESSAGE.DELETE');
+    });
+
+    // Sem a chave, a tela desenha a linha EM BRANCO: o registro existe e
+    // ninguém consegue ler.
+    it('should generate the key of a Platform Guide action', () => {
+      const auditLogItem = {
+        auditable_type: 'Account',
+        action: 'guide_action',
+        user_id: 1,
+        auditable_id: 16,
+      };
+
+      expect(generateLogActionKey(auditLogItem)).toEqual(
+        'AUDIT_LOGS.GUIDE.ACTION'
+      );
     });
 
     it('should generate correct action key when updating a deleted user', () => {

@@ -104,6 +104,9 @@
     "CONVERSATION": {
       "DELETE": "{agentName} excluiu a conversa #{id}"
     },
+    "GUIDE": {
+      "ACTION": "{agentName} fez pelo Guia da Plataforma: {frase}"
+    },
     "MESSAGE": {
       "DELETE": "{agentName} excluiu uma mensagem na conversa #{conversationId}"
     }
