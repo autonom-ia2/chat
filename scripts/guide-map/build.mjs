@@ -291,6 +291,10 @@ export const construir = async ({ escrever = true } = {}) => {
     registry,
     fluxos: fluxos.length,
     rotas: rotas.length,
+    // As telas em si, e não só a contagem: o modo aprendiz (#537) compara o
+    // mapa de dois deploys e precisa saber quais entraram e quais saíram.
+    telas: rotas,
+    humanos,
     semExplicacao,
     semRota,
   };

@@ -166,4 +166,44 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(para(admin).executar('POST labels', { corpo: { title: 'vip' } }).ok).to be(false)
     end
   end
+
+  # #536 — quem fez, o quê, quando, e que foi PELO GUIA. Em 21/09/2026 uma
+  # etiqueta apareceu na conta 16 e ninguém soube dizer quem criou: o registro
+  # era uma linha de log numa máquina que o deploy trocou.
+  describe 'o registro na auditoria da conta' do
+    def auditorias
+      conta.associated_audits.where(action: described_class::AUDITORIA)
+    end
+
+    # Etiqueta de propósito: ela NÃO é auditada pelo `audited`. Se o registro
+    # dependesse da trilha automática, este teste pegaria o buraco.
+    it 'grava quem fez e o que confirmou, na trilha que a tela de Auditoria lê', :aggregate_failures do
+      para(admin).executar('POST labels', { corpo: { title: 'vip' }, descricao: 'Criar a etiqueta vip.' })
+
+      registro = auditorias.sole
+      expect(registro.user).to eq(admin)
+      expect(registro.username).to eq(admin.email)
+      expect(registro.audited_changes['frase']).to eq('Criar a etiqueta vip.')
+      expect(registro.audited_changes['acao']).to eq('POST labels')
+      expect(registro.audited_changes['registro']).to eq(conta.labels.find_by(title: 'vip').id)
+    end
+
+    # O que não aconteceu não vira registro de que aconteceu.
+    it 'não grava nada quando a plataforma recusa' do
+      para(admin).executar('DELETE labels/:id', { caminho: { id: 999_999 }, descricao: 'Apagar a etiqueta x.' })
+
+      expect(auditorias).to be_empty
+    end
+
+    # Quando a auditoria roda, a ação JÁ aconteceu. Falhar em registrar não
+    # pode virar "não deu certo" para quem pediu — deu.
+    it 'não desmente a ação quando a gravação da auditoria falha', :aggregate_failures do
+      allow(Audited.audit_class).to receive(:create!).and_raise(ActiveRecord::StatementInvalid, 'caiu')
+
+      resultado = para(admin).executar('POST labels', { corpo: { title: 'vip' }, descricao: 'Criar a etiqueta vip.' })
+
+      expect(resultado.ok).to be(true)
+      expect(conta.labels.find_by(title: 'vip')).to be_present
+    end
+  end
 end

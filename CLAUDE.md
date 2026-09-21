@@ -136,4 +136,4 @@ Practical checklist for any change impacting core logic or public APIs
 - O que só nós sabemos — `onde_fica`, `intent`, `passos`, `gotchas` — fica em `lib/operator_guide/porques.md`, um bloco por fluxo. O cabeçalho do bloco é um nome curto e único; o campo `rota` aponta a tela no roteador. Vários fluxos podem apontar para a mesma tela.
 - A rota, o endereço e o gate (feature flag e papéis, inclusive funções personalizadas) saem do próprio roteador do painel. Mexeu em rota ou permissão, rode `pnpm guia:build` e envie o resultado junto.
 - `pnpm guia:check` falha quando o gerado está fora de dia. Rode antes de abrir PR que toque em rotas, menu ou explicações.
-- Tela nova sem bloco em `porques.md` aparece como "sem explicação" no relatório do build. Escrever esse bloco é trabalho humano, não do gerador.
+- Tela nova sem bloco em `porques.md` aparece como "sem explicação" no relatório do build. Depois do merge, o **modo aprendiz** (`.github/workflows/guia-aprendiz.yml`, #537) pede à IA o rascunho do bloco e abre um PR com ele. O rascunho é ponto de partida: quem revisa corrige e decide o merge — nada entra no Guia sem isso. Sem tela nova, o aprendiz fica calado.

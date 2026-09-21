@@ -1,0 +1,77 @@
+# Modo aprendiz do Guia da Plataforma (issue #537).
+#
+# A cada merge no main que mexe em rotas, compara o mapa do Guia com o do deploy
+# anterior. Se entrou tela nova sem explicação, a IA escreve o rascunho do
+# "porquê" e ele chega como Pull Request. Nada vai para o Guia sem o merge.
+#
+# Sem mudança no mapa: nenhum PR, nenhum aviso. Se algo impedir o rascunho —
+# segredo ausente, OpenAI fora do ar, permissão do Actions desligada —, o job fica
+# VERMELHO com a mensagem do motivo. Silêncio é só para "não há o que dizer".
+#
+# Precisa de duas coisas no repositório, que são configuração e não código:
+#   - o segredo OPENAI_API_KEY (Settings > Secrets and variables > Actions);
+#   - "Allow GitHub Actions to create and approve pull requests" ligado
+#     (Settings > Actions > General). Sem isso o GitHub recusa abrir o PR.
+name: Guia - modo aprendiz
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/javascript/dashboard/routes/**'
+      - 'app/javascript/dashboard/helper/guideRouteRegistry.js'
+  workflow_dispatch:
+    inputs:
+      antes:
+        description: Commit do deploy anterior, para comparar o mapa
+        required: true
+
+# Dois merges seguidos não podem abrir dois rascunhos da mesma mudança.
+concurrency:
+  group: guia-aprendiz
+  cancel-in-progress: false
+
+jobs:
+  rascunho:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # O mapa do deploy anterior é lido do histórico.
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - id: aprendiz
+        name: Comparar o mapa e escrever o rascunho
+        run: node scripts/guide-map/aprendiz.mjs
+        env:
+          ANTES: ${{ inputs.antes || github.event.before }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CORPO_DO_PR: ${{ runner.temp }}/corpo-do-pr.md
+
+      - name: Abrir o Pull Request do rascunho
+        if: steps.aprendiz.outputs.mudou == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CORPO_DO_PR: ${{ runner.temp }}/corpo-do-pr.md
+        run: |
+          curto="${GITHUB_SHA::7}"
+          ramo="guia/aprendiz-${curto}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$ramo"
+          git add lib/operator_guide/porques.md lib/operator_guide/guia-produto.md \
+                  app/javascript/dashboard/helper/guideRouteRegistry.js
+          git commit -m "docs(guia): rascunho do modo aprendiz para ${curto}"
+          git push origin "$ramo"
+          gh pr create --base main --head "$ramo" \
+            --title "Guia: rascunho do que mudou na plataforma (${curto})" \
+            --body-file "$CORPO_DO_PR"
