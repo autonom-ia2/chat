@@ -16,8 +16,19 @@ class Autonomia::Guide::Consulta
   class Recusada < StandardError; end
 
   PREFIXO = '/api/v1/accounts/'.freeze
-  MAX_ITENS = 25
-  MAX_TEXTO = 16_000
+  # Tetos medidos, não escolhidos no chute. Com a lista enxuta, uma caixa de
+  # entrada real ocupa ~555 caracteres: 40 caixas dão ~22.000. Os tetos abaixo
+  # cabem isso com folga e ainda cobrem 100 etiquetas, times ou funis.
+  #
+  # São TETO, não custo fixo: uma conta com três caixas gasta ~1.700
+  # caracteres. Só paga o tamanho quem tem o tamanho.
+  #
+  # Recurso que cresce sem limite — contato, conversa — continua batendo no
+  # teto, e aí o Guia diz que cortou em vez de contar a amostra como se fosse o
+  # total. Esse é o comportamento certo: melhor dizer "não sei quantos" do que
+  # dizer um número errado.
+  MAX_ITENS = 100
+  MAX_TEXTO = 40_000
 
   # Campo de texto acima disto é conteúdo, não identificação: numa LISTA ele só
   # ocupa espaço. Quem quiser o conteúdo pede o item.
@@ -60,7 +71,7 @@ class Autonomia::Guide::Consulta
     caminho = montar_caminho(recurso, parametros)
     resposta = requisitar(caminho, filtros)
 
-    return "Não consegui ler #{recurso}: a plataforma respondeu #{resposta.codigo}." unless resposta.codigo.to_i == 200
+    return indisponivel(recurso, resposta.codigo) unless resposta.codigo.to_i == 200
 
     resumir(resposta.corpo)
   rescue Recusada => e
@@ -71,6 +82,17 @@ class Autonomia::Guide::Consulta
   end
 
   private
+
+  # Isto vira texto que o modelo repassa para a pessoa, então não pode ser um
+  # número de status HTTP. 404 e 403 aqui quase sempre significam a mesma coisa
+  # para quem está perguntando: o recurso não está ligado nesta conta, ou o
+  # perfil dela não alcança. Os outros são falha nossa, e o número fica no log.
+  def indisponivel(recurso, codigo)
+    Rails.logger.warn("[autonomia][guide][consulta] account=#{@account&.id} recurso=#{recurso} http=#{codigo}")
+    return "Isto não está disponível nesta conta: #{recurso}." if %w[403 404].include?(codigo.to_s)
+
+    "Não consegui ler #{recurso} agora."
+  end
 
   # O caminho é sempre montado com o id DESTA conta, e cada `:id` vira um
   # segmento escapado — valor vindo do modelo nunca entra como pedaço de rota.
@@ -105,15 +127,26 @@ class Autonomia::Guide::Consulta
   # a API devolveu.
   def resumir(corpo)
     dados = JSON.parse(corpo.to_s)
-    total = dados.is_a?(Hash) ? dados.dig('meta', 'count') : nil
-    lista = dados.is_a?(Hash) ? (dados['payload'] || dados['data'] || dados) : dados
+    lista = lista_de(dados)
     return JSON.generate(lista)[0, MAX_TEXTO] unless lista.is_a?(Array)
 
-    enxutos = lista.map { |item| enxuto(item) }
-    mostrados = cabem(enxutos)
-    "#{JSON.generate(mostrados)}#{quantos(mostrados.size, lista.size, total)}"
+    mostrados = cabem(lista.map { |item| enxuto(item) })
+    "#{JSON.generate(mostrados)}#{quantos(mostrados.size, lista.size, total_de(dados))}"
   rescue JSON::ParserError
     corpo.to_s[0, MAX_TEXTO]
+  end
+
+  # A API embrulha a lista de jeitos diferentes conforme o recurso; leitura de um
+  # item vem solta. O que não for lista segue inteiro — é o detalhe pedido.
+  def lista_de(dados)
+    return dados unless dados.is_a?(Hash)
+
+    dados['payload'] || dados['data'] || dados
+  end
+
+  # Quando a plataforma informa o total, ele sobrevive ao corte da amostra.
+  def total_de(dados)
+    dados.is_a?(Hash) ? dados.dig('meta', 'count') : nil
   end
 
   # Numa LISTA o que importa é distinguir um item do outro; o detalhe de um item

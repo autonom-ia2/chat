@@ -89,10 +89,15 @@ RSpec.describe Autonomia::Guide::Consulta do
   end
 
   describe 'o resumo da resposta' do
-    it 'explica quando a plataforma nega, em vez de inventar resposta' do
+    # Explica, mas em português de gente: o número do status fica no log, não na
+    # tela de quem está tentando trabalhar.
+    it 'explica quando a plataforma nega, sem mostrar o código', :aggregate_failures do
       plataforma_responde('403', '{}')
 
-      expect(consulta.ler('inboxes')).to include('respondeu 403')
+      resposta = consulta.ler('inboxes')
+
+      expect(resposta).to include('não está disponível nesta conta')
+      expect(resposta).not_to include('403')
     end
 
     it 'corta lista longa para não estourar o contexto' do
