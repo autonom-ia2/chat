@@ -430,12 +430,15 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   #
   # SÃO DOIS ARQUIVOS E DUAS ASSINATURAS (#525). Assinar só o do ramo deixaria o bloco comum — onde
   # agora moram a metade das promessas da tabela — livre para mudar sem revisão nenhuma.
+  #
+  # MUDOU EM 21/09/2026 (`61a9ff68…` -> `03e9adf4…`), #569: o "Faltam dados" do §B passou a mandar
+  # procurar na conversa antes de pedir — ele já a recebe, e pedia o que estava na frente dele.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
     expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('dd220156d8c155fb040b6918a5ee1f78')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('61a9ff6849d7bb778b619e5020b18666')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('03e9adf4301a6cccb4c436f8c1fbcb4e')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer
