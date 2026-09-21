@@ -132,5 +132,18 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
       expect(output.length).to eq(described_class::MAX_OUTPUT_CHARS)
     end
+
+    # Corte em silêncio entrega ao modelo um pedaço que parece inteiro. É o
+    # mesmo defeito que fazia o Guia contar a amostra como se fosse o total.
+    it 'says that it cut, instead of handing back a piece that looks whole' do
+      native = Class.new(Autonomia::Agents::Tools::Native::Base) do
+        def self.slug = 'ferramenta_de_teste'
+        def self.description = 'teste'
+        def call = 'a' * 20_000
+      end
+      output = described_class.new(agent: agent, native: native).execute({ 'arguments' => '{}' })
+
+      expect(output).to end_with(described_class::AVISO_DE_CORTE)
+    end
   end
 end

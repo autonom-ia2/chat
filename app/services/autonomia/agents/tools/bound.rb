@@ -11,6 +11,12 @@ class Autonomia::Agents::Tools::Bound
 
   MAX_OUTPUT_CHARS = 8_000
 
+  # Cortar em silêncio entrega ao modelo um pedaço que PARECE inteiro — o mesmo
+  # defeito que fazia o Guia contar a amostra como se fosse o total. Cortando,
+  # ele precisa saber que cortou, e o aviso cabe dentro do teto.
+  AVISO_DE_CORTE = ' […cortado por tamanho: o que veio acima está incompleto. Peça de novo, mais ' \
+                   'específico, em vez de tratar isto como a resposta inteira.]'.freeze
+
   # Todas as ferramentas ligadas a este agente, na ordem: primeiro as cadastradas (por id),
   # depois as nativas (na ordem do catálogo).
   def self.for_agent(agent)
@@ -49,16 +55,29 @@ class Autonomia::Agents::Tools::Bound
   #
   # `delivery` é o contexto do turno de atendimento (conversa + vínculo do agente). Vem por CHAMADA
   # e não pela construção, para funcionar igual no caminho do principal e no do especialista.
-  def execute(call, delivery: nil)
+  # `operador` é quem está pedindo, quando a ferramenta age em nome de uma pessoa (#568).
+  def execute(call, delivery: nil, operador: nil)
     args = JSON.parse(call['arguments'].presence || '{}')
     output = if async?
                accept_async(args, delivery)
              else
-               native? ? run_native(args, delivery) : run_http(args, delivery)
+               native? ? run_native(args, delivery, operador) : run_http(args, delivery)
              end
-    output.to_s.truncate(MAX_OUTPUT_CHARS)
+    cabendo(output)
   rescue JSON::ParserError
     recusar('invalid_tool_arguments', delivery)
+  end
+
+  # Cortar a saída em silêncio entrega ao modelo um JSON partido que parece
+  # inteiro — o mesmo defeito que fazia o Guia contar a amostra como se fosse o
+  # total. Cortando, ele precisa saber que cortou.
+  def cabendo(output)
+    texto = output.to_s
+    return texto if texto.length <= MAX_OUTPUT_CHARS
+
+    # O aviso entra DENTRO do teto, não depois dele: o teto existe para uma
+    # ferramenta não comer o contexto, e um aviso que o estoura desmente o teto.
+    "#{texto[0, MAX_OUTPUT_CHARS - AVISO_DE_CORTE.length]}#{AVISO_DE_CORTE}"
   end
 
   private
@@ -75,6 +94,14 @@ class Autonomia::Agents::Tools::Bound
     refusal = async_refusal(delivery)
     return recusar(refusal, delivery) if refusal
 
+    # SEM `operador`, de propósito (#568). A assíncrona não executa aqui: ela é
+    # aceita, e a execução acontece depois, noutro processo, reconstruída do
+    # registro no banco (`AsyncRunJob`: `native.new(agent:, params:, run:)`).
+    # `operador` é um objeto do TURNO — a pessoa logada, com a sessão dela — e
+    # não sobrevive a essa travessia. Passá-lo aqui faria a ferramenta enxergar
+    # quem pediu no aceite e perder no momento de agir: falha silenciosa, só
+    # que mais tarde e mais difícil de achar. Ferramenta que precisa da pessoa
+    # tem que ser síncrona.
     ferramenta = @native.new(agent: @agent, params: args, delivery: delivery)
     antecipado = precheck_native(ferramenta)
     return recusar_pela_conferencia(antecipado, delivery) if antecipado
@@ -193,8 +220,8 @@ class Autonomia::Agents::Tools::Bound
 
   # A nativa carrega credencial e assinatura; a mensagem da exceção pode conter requisição assinada.
   # Por isso o rescue é largo e a saída é um código, nunca `e.message`.
-  def run_native(args, delivery)
-    @native.new(agent: @agent, params: args, delivery: delivery).call
+  def run_native(args, delivery, operador = nil)
+    @native.new(agent: @agent, params: args, delivery: delivery, operador: operador).call
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] native failed slug=#{slug} #{e.class}")
     recusar('tool_execution_error', delivery)

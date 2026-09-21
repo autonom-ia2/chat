@@ -63,7 +63,8 @@ module Autonomia
       ].freeze
 
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
-                     trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil)
+                     trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
+                     operador: nil, max_rodadas: 1)
         @agent = agent
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
@@ -88,6 +89,16 @@ module Autonomia
         # ferramenta ASSÍNCRONA ser aceita — sem ele a ferramenta continua no catálogo (o Testar
         # precisa mostrar o mesmo agente da produção) mas recusa o disparo com erro nomeado.
         @delivery = delivery
+        # QUEM está pedindo (#568). Só o Guia usa: as ferramentas dele leem e
+        # mudam a conta com a permissão da pessoa logada, não com a do agente.
+        @operador = operador
+        # Quantas idas ao modelo PODEM usar ferramenta. Uma — o padrão — é o
+        # comportamento de sempre: chama, executa, e a resposta final vem sem
+        # ferramenta. O Guia pede mais porque precisa olhar o que voltou e ler de
+        # novo (outra página, outros campos, outro recurso). O default fica em 1
+        # de propósito: subir isso para o Agente de Cotação, cujas ferramentas
+        # são caras e assíncronas, é decisão que exige medição própria.
+        @max_rodadas = max_rodadas
       end
 
       # -> Autonomia::Agents::AnswerResult
@@ -239,7 +250,8 @@ module Autonomia
           input: @prompt.input,
           schema: PromptBuilder::ANSWER_SCHEMA,
           reasoning_effort: Config::ANSWERER_REASONING_EFFORT,
-          tools: answer_tools
+          tools: answer_tools,
+          max_rodadas: @max_rodadas
         ) { |calls| execute_tool_calls(calls) }
         parsed = JSON.parse(raw[:text])
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
@@ -297,7 +309,7 @@ module Autonomia
         return run_specialist(specialist, call) if specialist.present?
 
         tool = tools_by_slug[name]
-        return tool.execute(call, delivery: @delivery) if tool.present?
+        return tool.execute(call, delivery: @delivery, operador: @operador) if tool.present?
 
         Tools::Recusa.para_modelo('tool_not_available', slug: Tools::Recusa.slug_conhecido(name, @agent),
                                                         delivery: @delivery, agente: @agent)

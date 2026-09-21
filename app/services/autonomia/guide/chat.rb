@@ -19,6 +19,17 @@ module Autonomia
       MAX_HISTORY = 20
       NAV_MIN_CONFIDENCE = 0.45
 
+      # Quantas idas ao modelo podem sair COM ferramenta (#568). Dez, por decisão
+      # do Rodrigo em 21/09/2026 — o número que ele já operava no n8n.
+      #
+      # É TETO, não promessa: quem manda na prática é o orçamento de tempo do
+      # cliente, e hoje ele é curto porque esta rota é síncrona e o
+      # `rack-timeout` mata a requisição aos 15s. Cabem uma ou duas rodadas.
+      #
+      # As dez passam a valer quando o chat do Guia virar job com busca na tela (#572).
+      # O número já está aqui para não ser esquecido nessa hora.
+      MAX_RODADAS = 10
+
       def initialize(account:, user:, message:, history: [], route_context: nil)
         @account = account
         @user = user
@@ -43,24 +54,28 @@ module Autonomia
         # V3: se o melhor fluxo recuperado é de diagnóstico (campo `diagnostic:`), lê o ESTADO REAL da
         # conta (read-only) e injeta como contexto — o Answerer explica com base no estado, não inventa.
         diagnostics = diagnostic_context(agent)
-        # #533 — pergunta sobre o que a conta TEM ("quais funis?", "quantas
-        # campanhas?") é respondida com os dados, não com o manual.
-        leituras = leitura_context(agent)
-        # A ação é decidida ANTES da redação. Se o Guia vai oferecer o botão, quem escreve o texto
-        # precisa saber — senão responde "não consigo fazer isso por você" com o Confirmar logo
-        # abaixo, que foi o que aconteceu em produção.
-        acao = acao_proposta
 
         result = ::Autonomia::Agents::Answerer.new(
-          agent: agent, query: role_scoped_query(diagnostics, leituras, acao), history: sanitized_history,
-          # A busca tem que ser feita pela PERGUNTA, não pela query montada. O bloco de leitura chega
-          # a 6.000 caracteres e vem ANTES da pergunta; o Retriever corta preservando o começo, então
-          # numa pergunta sobre dados o embedding era feito sobre um blob de JSON e a pergunta ficava
-          # de fora. Vinham fluxos irrelevantes: tela errada no botão e confiança baixa, que o portão
-          # transforma em "o guia está indisponível".
+          agent: agent, query: role_scoped_query(diagnostics), history: sanitized_history,
+          # A busca tem que ser feita pela PERGUNTA, não pela query montada. O catálogo de leitura
+          # tem 7.589 caracteres e vem ANTES da pergunta; o Retriever corta preservando o começo,
+          # então o embedding sairia do catálogo e a pergunta ficaria de fora. Vinham fluxos
+          # irrelevantes: tela errada no botão e confiança baixa, que o portão transforma em
+          # "o guia está indisponível".
           retrieval_query: @message,
-          allow_web_search: false # KB-only: o Guia responde só da nossa base, nunca de fonte externa
+          allow_web_search: false, # KB-only: o Guia responde só da nossa base, nunca de fonte externa
+          # #568 — QUEM está perguntando. É com a permissão dela que as ferramentas
+          # leem a conta e preparam a mudança; não existe permissão "do agente".
+          operador: contexto,
+          # Ler, olhar o que voltou e ler de novo, até dez vezes — e sempre
+          # dentro do orçamento de tempo do cliente.
+          max_rodadas: MAX_RODADAS
         ).answer
+
+        # A proposta nasce DENTRO da ferramenta, durante a redação — por isso é
+        # lida depois. É o que acabou com o texto discordando do botão: quem
+        # escreve a resposta é quem propôs a ação.
+        acao = contexto.proposta
 
         # #13 — NÃO servir `raw_reply` (texto PRÉ-portão) ao usuário: quando o portão retém a resposta
         # (baixa confiança/ungrounded), cai no fallback configurado da Guia ou em "indisponível" — nunca
@@ -88,35 +103,27 @@ module Autonomia
       # Injeta o PERFIL e a TELA ATUAL como CONTEXTO (dado, não fala), para a instrução adaptar a
       # resposta e só orientar o que o perfil pode fazer. O modelo nunca confia nisso para autorizar
       # — é só para a redação; o backend real (endpoints de domínio) é que aplica Pundit.
-      def role_scoped_query(diagnostics = nil, leituras = nil, acao = nil)
+      def role_scoped_query(diagnostics = nil)
         role = @account_user&.role.presence || 'agent'
         ctx = "[CONTEXTO INTERNO (não é fala do usuário). Perfil do usuário: #{role}. " \
               "Tela atual: #{@route_context.presence || 'não informada'}. Adapte a resposta a este " \
               "perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o " \
               "perfil não for administrator, explique que é feito pelo administrador da conta.]"
-        "#{ctx}#{acao_block(acao)}#{diagnostic_block(diagnostics)}#{leitura_block(leituras)}\n\n#{@message}"
+        "#{ctx}#{catalogos}#{diagnostic_block(diagnostics)}\n\n#{@message}"
       end
 
-      # O botão de confirmar JÁ vai aparecer abaixo da resposta. Sem este bloco, a base de
-      # conhecimento manda dizer que o Guia não altera a conta, e o texto desmente o próprio botão.
-      def acao_block(acao)
-        return '' if acao.blank?
-
-        "\n\n[AÇÃO JÁ PREPARADA (dado, não fala do usuário): o pedido dele virou uma ação pronta, e a " \
-          "tela vai mostrar, logo abaixo da sua resposta, o resumo \"#{acao[:descricao].to_h[:frase]}\" com " \
-          'os botões de confirmar e de cancelar. NÃO diga que você não faz, não altera a conta ou que a pessoa ' \
-          'precisa fazer na mão: isso desmente o botão que ela está vendo. Responda em UMA frase curta ' \
-          'dizendo que é só confirmar ali embaixo. Não repita os valores nem descreva os passos da tela.]'
-      end
-
-      # O que a conta TEM, lido com a permissão de quem perguntou. Entra como dado,
-      # nunca como instrução — os nomes vêm limpos de Leituras#safe.
-      def leitura_block(leituras)
-        return '' if leituras.blank?
-
-        items = leituras.map { |linha| "- #{linha}" }.join("\n")
-        "\n\n[O QUE A CONTA TEM (leitura só-leitura, já filtrada pela permissão de quem perguntou — " \
-          "responda com base EXATAMENTE nestes itens; não invente nem complete a lista):\n#{items}]"
+      # O MAPA do que as ferramentas alcançam, para o modelo saber o que pedir.
+      # Sai do roteador: nasce completo e cresce junto com a plataforma.
+      #
+      # Só o de LEITURA entra aqui, e a medida é o motivo: o catálogo de leitura
+      # tem 7.589 caracteres e o de escrita, 16.245. Os dois somados seriam
+      # quase 24 mil em TODA pergunta — um terço do bloco que, medido em
+      # 21/09/2026, fez o modelo perder a pergunta de vista. O nome da rota de
+      # escrita ele deduz da de leitura (o verbo é um dos quatro), e quando
+      # errar a ferramenta responde com as ações daquele recurso.
+      def catalogos
+        "\n\n[RECURSOS QUE VOCÊ PODE LER com `ler_da_conta` (dado, não fala do usuário): " \
+          "#{contexto.consulta.catalogo.join(', ')}]"
       end
 
       # Bloco de ESTADO REAL (dado, não fala). O modelo deve responder baseado nestes achados de leitura.
@@ -173,50 +180,9 @@ module Autonomia
         nil
       end
 
-      # Qual recurso da plataforma responde a esta pergunta. Quem escolhe é quem
-      # entendeu a pergunta — o modelo, a partir do catálogo derivado do roteador.
-      #
-      # NÃO existe filtro de palavra antes disto, de propósito. Já tentamos duas
-      # vezes: um marcador escondido no fluxo do manual, depois uma lista de
-      # palavras ("quais", "quantos"). As duas vezes o Guia entendeu a pergunta e
-      # mesmo assim não foi buscar o dado, porque a pergunta não estava escrita do
-      # jeito que a lista esperava. Quem decide se precisa de dado é quem lê a
-      # pergunta; o modelo devolve nulo quando não precisa.
-      def leitura_context(_agent)
-        escolha = escolher_recurso(consulta.catalogo)
-        return nil if escolha.blank?
-
-        conteudo = consulta.ler(escolha[:recurso], escolha[:parametros])
-        return nil if conteudo.blank?
-
-        ["Consultei #{escolha[:recurso]} nesta conta e recebi: #{conteudo}"]
-      rescue StandardError => e
-        Rails.logger.warn("[autonomia][guide][chat] leitura_context account=#{@account&.id} #{e.class}: #{e.message}")
-        nil
-      end
-
-      # O pedido de FAZER vira proposta: ação, valores e o texto que a pessoa lê
-      # antes de confirmar. Nada é executado aqui.
-      def acao_proposta
-        escolha = ::Autonomia::Guide::EscolhaDaAcao.new(
-          account: @account, user: @user, account_user: @account_user
-        ).para(@message)
-        return nil if escolha.blank?
-
-        acoes = ::Autonomia::Guide::Acoes.new(account: @account, user: @user, account_user: @account_user)
-        { nome: escolha[:acao], dados: escolha[:dados], descricao: acoes.descrever(escolha[:acao], escolha[:dados]) }
-      rescue ::Autonomia::Guide::Acoes::Recusada, StandardError => e
-        Rails.logger.warn("[autonomia][guide][chat] acao_proposta account=#{@account&.id} #{e.class}")
-        nil
-      end
-
-      def consulta
-        @consulta ||= ::Autonomia::Guide::Consulta.new(account: @account, user: @user,
+      def contexto
+        @contexto ||= ::Autonomia::Guide::Contexto.new(account: @account, user: @user,
                                                        account_user: @account_user)
-      end
-
-      def escolher_recurso(catalogo)
-        ::Autonomia::Guide::EscolhaDaConsulta.new(account: @account, catalogo: catalogo).para(@message)
       end
 
       def sanitized_history

@@ -19,7 +19,12 @@ module Autonomia::Agents::Tools::Registry
     # A proposta de uma seguradora só, em PDF, sobre a mesma cotação (entrega 8b, #459): não cota.
     Autonomia::Agents::Tools::Native::InsuranceQuoteProposal,
     Autonomia::Agents::Tools::Native::VehicleLookup,
-    Autonomia::Agents::Tools::Native::InsuranceGeneralConditions
+    Autonomia::Agents::Tools::Native::InsuranceGeneralConditions,
+    # Guia da Plataforma (#568): ler a conta e propor mudança nela, com a
+    # permissão de quem está logado. Ligadas só no agente do Guia, que o `Seed`
+    # semeia — nenhum agente de conta as enxerga.
+    Autonomia::Agents::Tools::Native::GuiaLeitura,
+    Autonomia::Agents::Tools::Native::GuiaAcao
   ].freeze
 
   module_function
