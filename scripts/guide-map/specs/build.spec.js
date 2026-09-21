@@ -1,7 +1,7 @@
 // @vitest-environment node
 // O gerador roda no Node (usa Vite por dentro); o jsdom padrão da suíte quebra o
 // esbuild que o Vite carrega.
-import { lerPorques } from '../build.mjs';
+import { lerPorques, prepararJanela } from '../build.mjs';
 
 // O gerador lê o arquivo humano (porques.md). Estes testes cobrem o que dá errado
 // escrevendo à mão — e o que não pode ser reformatado pelo caminho.
@@ -38,5 +38,44 @@ describe('leitura das explicações escritas à mão', () => {
 `);
 
     expect(Object.keys(fluxos)).toEqual(['criar_funil']);
+  });
+});
+
+// O CI roda Node 24, que já traz um `navigator` global SÓ DE LEITURA. O gerador
+// passava em todo teste local (Node 20) e morria na primeira execução no CI.
+// Este teste monta o `navigator` do jeito que o Node 24 monta — getter, sem
+// setter —, então pega a regressão em qualquer versão do Node.
+describe('o navegador de mentira do gerador', () => {
+  // `prepararJanela` troca os QUATRO globais; devolver só o `navigator` deixaria
+  // um jsdom velho em `window`, `document` e `location` para o próximo teste
+  // deste arquivo (achado da revisão da #581).
+  const GLOBAIS = ['window', 'document', 'navigator', 'location'];
+  const originais = Object.fromEntries(
+    GLOBAIS.map(nome => [
+      nome,
+      Object.getOwnPropertyDescriptor(globalThis, nome),
+    ])
+  );
+
+  afterEach(() => {
+    GLOBAIS.forEach(nome => {
+      if (originais[nome]) {
+        Object.defineProperty(globalThis, nome, originais[nome]);
+      } else {
+        delete globalThis[nome];
+      }
+    });
+  });
+
+  it('substitui o navigator só de leitura que o Node 21+ já traz', () => {
+    Object.defineProperty(globalThis, 'navigator', {
+      get: () => ({ doNode: true }),
+      configurable: true,
+      enumerable: true,
+    });
+
+    expect(() => prepararJanela()).not.toThrow();
+    expect(globalThis.navigator.doNode).toBeUndefined();
+    expect(globalThis.navigator.userAgent).toContain('jsdom');
   });
 });
