@@ -75,8 +75,12 @@ jobs:
           COMENTARIO: ${{ runner.temp }}/comentario-da-trava.md
         run: node scripts/guide-map/trava.mjs
 
+      # O comentário é AJUDA; quem barra é o último passo. Em PR vindo de fork o
+      # GitHub não deixa o workflow comentar — sem `continue-on-error`, um PR que
+      # a trava decidiu liberar ficaria vermelho por causa do comentário.
       - name: Comentar no PR
         if: steps.trava.outputs.comentario == 'novo' || steps.trava.outputs.comentario == 'resolvido'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -84,8 +88,11 @@ jobs:
           COMENTARIO: ${{ runner.temp }}/comentario-da-trava.md
           SITUACAO: ${{ steps.trava.outputs.comentario }}
         run: |
+          # Só o comentário do PRÓPRIO bot: uma pessoa que cite a marca num
+          # comentário dela não pode ter o texto sobrescrito.
           id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
-                 --jq '.[] | select(.body | contains("<!-- guia-trava -->")) | .id' | head -n 1)
+                 --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- guia-trava -->"))) | .id' \
+               | head -n 1)
           if [ -n "$id" ]; then
             gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@"$COMENTARIO" > /dev/null
           elif [ "$SITUACAO" = novo ]; then

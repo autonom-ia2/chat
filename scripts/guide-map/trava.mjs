@@ -140,7 +140,7 @@ const rascunhar = async (novas, chave) => {
     if (!chave) {
       rascunhos.push({
         tela,
-        erro: 'o segredo OPENAI_API_KEY não está disponível neste PR (PR de fork não recebe segredos).',
+        erro: 'a chave da IA não chegou a este job (PR vindo de fork não recebe segredos). A trava continua valendo: use uma das três saídas acima.',
       });
     } else {
       try {
