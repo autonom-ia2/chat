@@ -95,7 +95,9 @@ yarn-debug.log*
 .claude/settings.local.json
 .cursor
 .codex/
-.claude/
+.claude/*
+# As skills do projeto são versionadas: a receita do especialista de ramo mora aqui.
+!.claude/skills/
 CLAUDE.local.md
 
 # Histoire deployment
