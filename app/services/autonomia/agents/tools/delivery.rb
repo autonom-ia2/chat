@@ -36,6 +36,17 @@ class Autonomia::Agents::Tools::Delivery
     @runs.any?
   end
 
+  # A COTAÇÃO JÁ EXISTE (#585): a ferramenta assíncrona foi recusada neste turno porque a conversa já
+  # tem uma execução — pedido repetido, em andamento ou aberta neste turno. Quem conta ao principal é o
+  # `Specialists::Runner`: sem isto, "nada abriu agora" viraria "não há cotação", e há.
+  def marcar_cotacao_existente
+    @cotacao_existente = true
+  end
+
+  def cotacao_existente?
+    @cotacao_existente == true
+  end
+
   # O QUE `ver_resultado_da_cotacao` DEVOLVEU AO MODELO NESTE TURNO (fatia 3 do #420), como
   # `ConferenciaDePrecos::Dados`. O `Answerer` confere a fala contra isto antes de ela sair. Duas chamadas
   # no mesmo turno somam.

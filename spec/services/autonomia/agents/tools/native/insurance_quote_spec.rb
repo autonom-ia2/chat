@@ -109,6 +109,22 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(conferencia.recusados).to eq('coverage.assistance24h' => 2000)
     end
 
+    # Um caminho de campo que desce além de um valor não pode levantar: a exceção cairia no `rescue` do
+    # `precheck`, e a conferência aceitaria a cotação paga com o valor inválido (revisão da #586).
+    it 'recusa mesmo quando o campo recusado desce além de um valor, sem levantar' do
+      ready_connection
+      connector = Autonomia::Insurance::Connector.client
+      allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+      problemas = [{ 'campo' => 'coverage.assistance24h.nivel', 'severidade' => 'erro', 'motivo' => 'fora da lista' }]
+      allow(connector).to receive(:quote_validate).and_return('valido' => false, 'problemas' => problemas)
+
+      conferencia = tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }, 'cpf' => '04297912678',
+                         'coverage' => { 'assistance24h' => 1 }).precheck
+
+      expect(conferencia.motivo).to eq('faltam_dados')
+      expect(conferencia.recusados).to eq('coverage.assistance24h.nivel' => nil)
+    end
+
     # Conferência é conferência, não portão: se ela cair, a cotação segue.
     it 'deixa passar quando a conferencia cai' do
       ready_connection

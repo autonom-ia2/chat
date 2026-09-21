@@ -31,9 +31,13 @@ class Autonomia::Agents::Specialists::Runner
   MAX_TOOL_OUTPUT_CHARS = 8_000
   # RODADAS DE FERRAMENTA POR TURNO (#585). Com uma só — o padrão do cliente —, a recusa da conferência
   # chegava na ida de FECHAMENTO, já sem ferramenta: o especialista sabia a troca e não podia chamar de
-  # novo, e em 21/09/2026 isso virou "vou seguir" sem cotação. Três cobrem consultar a placa, cotar e
-  # corrigir uma recusa. O teto de tempo do cliente e a guarda de uma execução por turno continuam valendo.
-  RODADAS_DE_FERRAMENTA = 3
+  # novo, e em 21/09/2026 isso virou "vou seguir" sem cotação. Seis, por decisão do Rodrigo no mesmo dia,
+  # e SEM o relógio cortar nenhuma: o orçamento cobre cada rodada no teto de uma chamada. O que limita é a
+  # rodada; a guarda de uma execução por turno continua impedindo duas cotações. Roda no ReplyJob, fora
+  # de requisição web.
+  RODADAS_DE_FERRAMENTA = 6
+  SEGUNDOS_POR_CHAMADA = 120
+  SEGUNDOS_DE_FERRAMENTA = RODADAS_DE_FERRAMENTA * SEGUNDOS_POR_CHAMADA
   FEATURE = 'agente_especialista'.freeze
   INDISPONIVEL = 'Especialista indisponível no momento.'.freeze
 
@@ -46,6 +50,8 @@ class Autonomia::Agents::Specialists::Runner
   COTACAO_NAO_ABERTA = 'SITUAÇÃO DA COTAÇÃO, dita pelo sistema: nenhuma cotação foi aberta nesta consulta. ' \
                        'Não diga ao cliente que vai cotar, que está cuidando da cotação nem que vai seguir com ela. ' \
                        'Diga o que falta, faça a pergunta, ou conte que ainda não foi possível cotar.'.freeze
+  COTACAO_EXISTENTE = 'SITUAÇÃO DA COTAÇÃO, dita pelo sistema: nenhuma cotação nova foi aberta nesta consulta porque ' \
+                      'esta conversa já tem uma, em andamento ou concluída. Fale dela; não diga que abriu outra.'.freeze
 
   # `history` e `documents` são o que o PRINCIPAL recebeu neste turno (entrega 1): a conversa
   # pública e os PDFs anexados agora. O especialista os lê ANTES do bilhete — é o que faz o CPF que
@@ -94,7 +100,9 @@ class Autonomia::Agents::Specialists::Runner
       schema: RESULT_SCHEMA,
       reasoning_effort: Autonomia::Agents::Config::ANSWERER_REASONING_EFFORT,
       tools: tool_schemas,
-      max_rodadas: RODADAS_DE_FERRAMENTA
+      timeout: SEGUNDOS_POR_CHAMADA,
+      max_rodadas: RODADAS_DE_FERRAMENTA,
+      max_segundos: SEGUNDOS_DE_FERRAMENTA
     ) { |calls| execute_tool_calls(calls) }
     parsed = JSON.parse(raw[:text])
     parsed.is_a?(Hash) ? parsed : nil
@@ -157,8 +165,14 @@ class Autonomia::Agents::Specialists::Runner
   def com_situacao(texto)
     return texto unless @tentou_cotar
 
-    abriu = @delivery&.runs&.size.to_i > @abertas_antes.to_i
-    [texto, abriu ? COTACAO_ABERTA : COTACAO_NAO_ABERTA].join(' ')
+    [texto, situacao].join(' ')
+  end
+
+  def situacao
+    return COTACAO_ABERTA if @delivery&.runs&.size.to_i > @abertas_antes.to_i
+    return COTACAO_EXISTENTE if @delivery.try(:cotacao_existente?)
+
+    COTACAO_NAO_ABERTA
   end
 
   # Junta resposta e pendências numa string só — o principal recebe texto, não estrutura.

@@ -481,8 +481,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # (`0aa8a0bd…`): a abertura da §F deixa de dizer que sem pedido sai o pacote, quando há apólice a renovar.
   # E pela #585 (`48cdeaf4…`, `3f9cee18…`): a renovação sobe para a opção que cobre em vez de
   # perguntar, a recusa de valor fora da lista é corrigida no turno, e sem cotação aberta não se diz que cuida dela.
+  # Na revisão (`e30d3715…`): o item 8 do que nunca se faz deixa de mandar perguntar, e campo ≠ valor.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('48cdeaf4e75be1477d445f05616be43a')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('e30d37153bd956c90614bc3a0220fe0a')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do

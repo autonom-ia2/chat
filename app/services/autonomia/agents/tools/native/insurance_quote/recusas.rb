@@ -114,7 +114,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
   def recusados(faltantes)
     faltantes.filter_map do |problema|
       campo = problema['campo'].to_s
-      [campo, entrada.to_h.dig(*campo.split('.'))] if campo.start_with?('coverage.')
+      # Descida que não levanta: um nível que não é Hash vira nil. Uma exceção aqui cairia no `rescue` do
+      # `precheck`, e a conferência aceitaria uma cotação paga com valor inválido.
+      [campo, campo.split('.').reduce(entrada.to_h) { |nivel, chave| nivel.is_a?(Hash) ? nivel[chave] : nil }] if campo.start_with?('coverage.')
     end.to_h
   end
 

@@ -84,7 +84,8 @@ RSpec.describe Autonomia::Agents::Specialists::Runner do
   # MAIS DE UMA RODADA (#585). Com `max_rodadas: 1` — o padrão do cliente — a recusa da conferência
   # chegava ao especialista na ida de FECHAMENTO, já sem ferramenta: ele sabia a troca ("deve ser usada a
   # completa") e não tinha como chamar de novo. Foi a cadeia de 21/09. Medido com o modelo real: 0 de 3
-  # correções no turno com uma rodada.
+  # correções no turno com uma rodada. Seis, e sem o relógio cortar nenhuma, por decisão do Rodrigo em
+  # 21/09/2026: cada rodada pode levar o teto de uma chamada (120 s), e o orçamento cobre as seis.
   it 'o especialista tem rodadas para corrigir uma recusa e chamar de novo no mesmo turno' do
     ferramenta(nil)
     modelo(rodadas: 0)
@@ -92,8 +93,24 @@ RSpec.describe Autonomia::Agents::Specialists::Runner do
     consultar
 
     expect(Crm::Ai::ResponsesClient.new(credential: 'x')).to have_received(:create_with_tool_executor)
-      .with(hash_including(max_rodadas: described_class::RODADAS_DE_FERRAMENTA))
-    expect(described_class::RODADAS_DE_FERRAMENTA).to be >= 3
+      .with(hash_including(max_rodadas: 6, max_segundos: 6 * 120, timeout: 120))
+  end
+
+  # A COTAÇÃO JÁ EXISTE (revisão da #586): o cliente pergunta "e aí, saiu?", o especialista chama a
+  # cotação de novo e é recusado por ela já estar aberta. Dizer "nenhuma cotação foi aberta" seria falso:
+  # existe uma, e é dela que a Lia fala.
+  it 'recusada porque a cotação já existe: o principal fica sabendo que existe, e não que falhou' do
+    ferramenta(nil)
+    modelo(rodadas: 1)
+    consultar
+    delivery.runs.first.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+
+    retry_turn = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 7)
+    saida = described_class.new(specialist: specialist, request: 'e aí, saiu?', delivery: retry_turn).call
+
+    expect(retry_turn.runs).to be_empty
+    expect(saida).to end_with(described_class::COTACAO_EXISTENTE)
+    expect(saida).not_to include(described_class::COTACAO_NAO_ABERTA)
   end
 
   # O VALOR RECUSADO CHEGA AO REGISTRO (#585): a conferência o entrega, e é o `Bound` que o leva à linha.
