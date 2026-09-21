@@ -139,9 +139,9 @@ module ManualDoEspecialistaDeAuto
       campo('quotation.previousClaimsCount')['obrigatorio'] == false && grupos_da_entrada.include?('quotation') &&
         entrada_de_auto('quotation' => { 'previousClaimsCount' => 1 }).dig('quotation', 'previousClaimsCount') == 1
     },
-    "os três dados da apólice, o\nbônus, os sinistros e os do veículo" => lambda {
+    "os três dados da apólice, o\nbônus, os sinistros, os do veículo e as coberturas dela" => lambda {
       %w[quotation.previousInsurerCode quotation.previousPolicyNumber quotation.previousPolicyEndDate
-         quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n) }
+         quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n) } && grupos_da_entrada.include?('coverage')
     },
     'sem marcar renovação, sem bônus e sem histórico de sinistros' => lambda {
       %w[quotation.isRenewal quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n)['obrigatorio'] == false }
@@ -253,15 +253,33 @@ module ManualDoEspecialistaDeAuto
     # Os 17 campos que a lambda confere — 16 `coverage.*` e o `vehicle.referencedValuePercent` —
     # saem de lá com `obrigatorio: false`, iguais ao retrato. A lacuna (ninguém refaz essa comparação
     # sozinho, e o retrato já está velho em dois campos de outro grupo) está registrada na #412.
-    'Documento não é pedido' => lambda {
-      cobertura = expostos.grep(/\Acoverage\./) + ['vehicle.referencedValuePercent']
-
-      cobertura.size > 1 && cobertura.all? { |nome| campo(nome)['obrigatorio'] == false }
+    # OS TRÊS NÍVEIS DA COBERTURA (CEO, 21/09/2026): o pedido do cliente, a apólice anterior dele na
+    # renovação, o pacote. Até aqui esta âncora sustentava o contrário, "Documento não é pedido" (#411,
+    # 12/09), tirado de uma cotação que zerou por VALOR fora da lista e foi lida como "copiar zera". O
+    # que a regra nova exige: os campos de cobertura continuam opcionais (senão não haveria pacote para
+    # o que ninguém disse) e os que o portal restringe PUBLICAM a lista (a assistência é o que zerou
+    # 12/09), senão "o que não existir na ferramenta você pergunta" seria impossível de cumprir. Prova o
+    # retrato do adapter (`mock/schema_auto.json`), regenerado nesta PR a partir de adapters#71.
+    '**A apólice anterior do próprio segurado desta cotação, numa renovação.**' => lambda {
+      cobertura = expostos.select { |nome| nome.start_with?('coverage.') } + ['vehicle.referencedValuePercent']
+      com_lista = %w[coverage.assistance24h coverage.glassCoverage coverage.rentalCarType coverage.deductibleType]
+      # A descrição do parâmetro é a instrução mais perto da ação: "Só preencha se ele pediu" nos limites
+      # de terceiros e no APP desmentia esta regra e deixava a apólice de fora (revisão da #584).
+      copiaveis = %w[coverage.propertyDamage coverage.bodilyInjury coverage.moralDamage coverage.deathAccident
+                     coverage.disabilityAccident vehicle.referencedValuePercent]
+      cobertura.size > 1 && cobertura.all? { |n| campo(n)['obrigatorio'] == false } && com_lista.all? { |n| valores(n).any? } &&
+        copiaveis.all? { |n| campo(n)['descricao'].to_s.include?('renovação do próprio segurado') }
     },
     # MEXER DEPOIS precisa existir: o grupo `coverage` chega ao envio. Fora da entrada, o pedido de
     # cobertura que o cliente já fez não teria por onde viajar na primeira cotação — e o ajuste que
     # ele pedir depois do primeiro preço seria adiado para nunca.
     'O que o cliente já pediu entra na primeira cotação' => -> { grupos_da_entrada.include?('coverage') },
+    # A ASSISTÊNCIA QUE FICOU PARA TRÁS (conversa 5045, 21/09/2026): a apólice tinha o plano premium de
+    # 2.000 km e a cotação saiu com o básico, porque o campo ficou em branco. "Leve o plano para o nível"
+    # só é cumprível se a ferramenta publica os níveis.
+    '**Todas as coberturas da apólice, inclusive as que não são valor em reais' => lambda {
+      %w[coverage.assistance24h coverage.glassCoverage coverage.rentalCarType].all? { |n| valores(n).any? }
+    },
     'Renovação garantida' => -> { campo('quotation.isGuaranteedRenewal') },
     'Nunca chute a seguradora anterior' => -> { valores('quotation.previousInsurerCode').any? },
     'A mesma seguradora tem dois códigos' => -> { campo('quotation.previousInsurerCode')['descricao'].include?('DIFERENTE') },
@@ -433,12 +451,20 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   #
   # MUDOU EM 21/09/2026 (`61a9ff68…` -> `03e9adf4…`), #569: o "Faltam dados" do §B passou a mandar
   # procurar na conversa antes de pedir — ele já a recebe, e pedia o que estava na frente dele.
+  # E de novo no mesmo dia (`03e9adf4…` -> `968d3dc4…`, e o do ramo `dd220156…` -> `3862b9ab…`): a §F
+  # passou aos três níveis da cobertura (pedido, apólice da renovação, pacote), e o bônus a ser a
+  # classe da apólice sem recalcular. As duas âncoras da tabela foram trocadas junto. Reassinado na mesma
+  # PR depois da medição que isolou a assistência "600" como a causa de 12/09 (`7d77d86d…`, `5e14b86b…`), e
+  # com a regra de que a assistência também vem da apólice, traduzida para o nível. E de novo depois da
+  # revisão (`a9164a59…`, `514aaa3b…`): a §D deixa de dizer que documento não é pedido, a conferência
+  # promete só a assistência, e "renovação dele" vira "do segurado desta cotação". E na segunda revisão
+  # (`0aa8a0bd…`): a abertura da §F deixa de dizer que sem pedido sai o pacote, quando há apólice a renovar.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('dd220156d8c155fb040b6918a5ee1f78')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('a9164a59205cf893741b478e059ba584')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('03e9adf4301a6cccb4c436f8c1fbcb4e')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('0aa8a0bd604f2ae2ab1c33062d59c0db')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer
