@@ -46,11 +46,25 @@ describe('leitura das explicações escritas à mão', () => {
 // Este teste monta o `navigator` do jeito que o Node 24 monta — getter, sem
 // setter —, então pega a regressão em qualquer versão do Node.
 describe('o navegador de mentira do gerador', () => {
-  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  // `prepararJanela` troca os QUATRO globais; devolver só o `navigator` deixaria
+  // um jsdom velho em `window`, `document` e `location` para o próximo teste
+  // deste arquivo (achado da revisão da #581).
+  const GLOBAIS = ['window', 'document', 'navigator', 'location'];
+  const originais = Object.fromEntries(
+    GLOBAIS.map(nome => [
+      nome,
+      Object.getOwnPropertyDescriptor(globalThis, nome),
+    ])
+  );
 
   afterEach(() => {
-    if (original) Object.defineProperty(globalThis, 'navigator', original);
-    else delete globalThis.navigator;
+    GLOBAIS.forEach(nome => {
+      if (originais[nome]) {
+        Object.defineProperty(globalThis, nome, originais[nome]);
+      } else {
+        delete globalThis[nome];
+      }
+    });
   });
 
   it('substitui o navigator só de leitura que o Node 21+ já traz', () => {
