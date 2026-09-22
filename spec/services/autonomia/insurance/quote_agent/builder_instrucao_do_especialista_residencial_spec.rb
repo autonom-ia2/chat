@@ -85,8 +85,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
 
     # Escrito em 22/09/2026 (chat#323, fase 5): o manual de auto como molde, com o mínimo de residencial.
+    # Revisão da #604 (`9541d859…` -> `422430a6…`): "cote direto" deixa de citar a rodada única de ferramentas.
     it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('9541d859130dcc9871977d468cd09e04')
+      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('422430a6207a25f917a1092e76eaa36f')
     end
   end
 end

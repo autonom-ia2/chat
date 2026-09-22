@@ -48,6 +48,26 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
       expect(described_class.disponivel?(residencial)).to be(true)
     end
+
+    # Revisão da chat#604: o healthcheck, a sincronização e o `degraded` duram segundos ou não tiram auto; tirar
+    # residencial neles fazia a Lia dizer que a corretora não cota o ramo no meio da cotação.
+    %w[authenticating discovering degraded].each do |status|
+      it "residencial continua atendendo com a conexão em #{status}" do
+        conectar([{ 'product' => 'residencial', 'enabled' => true }])
+        Autonomia::Insurance::Connection.for_account(account).first.update!(status: status)
+
+        expect(described_class.disponivel?(residencial)).to be(true)
+      end
+    end
+
+    %w[auth_required offline].each do |status|
+      it "residencial sai com a conexão fora do ar (#{status})" do
+        conectar([{ 'product' => 'residencial', 'enabled' => true }])
+        Autonomia::Insurance::Connection.for_account(account).first.update!(status: status)
+
+        expect(described_class.disponivel?(residencial)).to be(false)
+      end
+    end
   end
 
   describe 'o que a Lia vê' do

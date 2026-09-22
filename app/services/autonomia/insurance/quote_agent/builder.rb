@@ -179,9 +179,15 @@ class Autonomia::Insurance::QuoteAgent::Builder
     false
   end
 
-  # Os produtos da conexão pronta da conta, como o último levantamento os deixou.
+  # Os produtos da conexão da conta, como o último levantamento os deixou. A PRONTA primeiro; sem ela, a que está
+  # só de passagem (revisão da chat#604): o healthcheck põe toda conexão em `authenticating` a cada 30 minutos, a
+  # sincronização em `discovering`, e em `degraded` auto segue cotando. Tirar residencial nessas janelas fazia a
+  # Lia dizer que a corretora não cota o ramo. Só a conexão fora do ar de verdade tira o ramo, pela mesma lista
+  # do envio (`CONEXAO_FORA_DO_AR`).
   def self.produtos_da_conta(account)
-    conexao = ::Autonomia::Insurance::Connection.for_account(account).find(&:ready?)
+    conexoes = ::Autonomia::Insurance::Connection.for_account(account)
+    fora_do_ar = ::Autonomia::Agents::Tools::Native::InsuranceQuote::CONEXAO_FORA_DO_AR
+    conexao = conexoes.find(&:ready?) || conexoes.find { |c| fora_do_ar.exclude?(c.status) }
     Array(conexao&.capabilities&.dig('products'))
   end
 
