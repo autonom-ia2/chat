@@ -151,12 +151,71 @@ RSpec.describe 'Ferramentas do Guia' do
     end
   end
 
+  describe 'mostrar_tela' do
+    def mostrar(params, quem: operador)
+      Autonomia::Agents::Tools::Native::GuiaTela.new(agent: agente, params: params, operador: quem).call
+    end
+
+    let(:caixa) { create_crm_inbox(account: conta, name: 'Sinistros', members: [admin]) }
+
+    def caixa_da_leitura(quem: operador)
+      caixa
+      ler({ 'recurso' => 'inboxes', 'campos' => %w[id name] }, quem: quem)
+      mostrar({ 'tela' => 'settings_inbox_show',
+                'parametros_json' => { inboxId: caixa.id, tab: 'business-hours' }.to_json }, quem: quem)
+    end
+
+    it 'deixa o botão pronto com a tela de uma caixa e o id que leu', :aggregate_failures do
+      caixa_da_leitura
+
+      expect(operador.tela[:route_name]).to eq('settings_inbox_show')
+      expect(operador.tela[:params]).to eq('inboxId' => caixa.id.to_s, 'tab' => 'business-hours')
+    end
+
+    # "abre a conversa 999": o número veio da pessoa, não da conta.
+    it 'não monta botão para id que nenhuma leitura trouxe', :aggregate_failures do
+      resposta = mostrar({ 'tela' => 'inbox_conversation', 'parametros_json' => { conversation_id: 999 }.to_json })
+
+      expect(operador.tela).to be_nil
+      expect(resposta).to include('não veio de nenhuma leitura')
+    end
+
+    # A regra do painel: a tela abre se a pessoa tem um dos papéis dela.
+    it 'não monta botão de tela que o perfil de quem pergunta não abre', :aggregate_failures do
+      agente_comum, = create_crm_agent(account: conta)
+      caixa.add_members([agente_comum.id])
+      comum = Autonomia::Guide::Contexto.new(account: conta, user: agente_comum)
+
+      resposta = caixa_da_leitura(quem: comum)
+
+      expect(comum.tela).to be_nil
+      expect(resposta).to include('não abre para o perfil')
+    end
+
+    # A recusa volta PARA O MODELO, que lê a conta ou pergunta qual caixa.
+    it 'diz ao modelo o que falta em vez de montar botão morto', :aggregate_failures do
+      resposta = mostrar({ 'tela' => 'settings_inbox_show' })
+
+      expect(operador.tela).to be_nil
+      expect(resposta).to include('inboxId')
+    end
+
+    it 'não quebra com JSON malformado vindo do modelo' do
+      expect(mostrar({ 'tela' => 'settings_inbox_show', 'parametros_json' => '{inboxId: 7' })).to include('inboxId')
+    end
+
+    it 'recusa sem derrubar o turno quando não há operador' do
+      expect(mostrar({ 'tela' => 'labels_list' }, quem: nil)).to include('não sei quem está perguntando')
+    end
+  end
+
   # O esquema é montado por `Native::Base` em strict mode. Um esquema inválido
   # não falha aqui: a OpenAI responde 400 na chamada INTEIRA e o Guia fica mudo,
   # em produção, sem erro em log nenhum. Já aconteceu uma vez.
   describe 'o esquema que vai para a OpenAI' do
     [Autonomia::Agents::Tools::Native::GuiaLeitura,
-     Autonomia::Agents::Tools::Native::GuiaAcao].each do |ferramenta|
+     Autonomia::Agents::Tools::Native::GuiaAcao,
+     Autonomia::Agents::Tools::Native::GuiaTela].each do |ferramenta|
       it "de #{ferramenta.slug} é válido em strict mode", :aggregate_failures do
         esquema = ferramenta.openai_schema(nil)
         parametros = esquema[:parameters]

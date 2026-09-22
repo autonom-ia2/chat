@@ -90,7 +90,7 @@ module Autonomia
         # alguém conseguir diagnosticar, e para a pessoa não achar que o produto caiu.
         return retido if text.blank?
 
-        Result.new(text: text, navigation: resolve_navigation(result), acao: acao,
+        Result.new(text: text, navigation: navegacao(result), acao: acao,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
                    available: true, escalate: result.handoff.to_h[:should] == true)
@@ -194,6 +194,15 @@ module Autonomia
 
           { role: role, content: content }
         end
+      end
+
+      # A tela do botão (#590). Vale primeiro a que o modelo escolheu com `mostrar_tela`: é a única
+      # que sabe QUAL caixa, conversa ou agente, porque ele leu a conta. Quando ele não escolhe
+      # nenhuma, fica a do fluxo do manual — que leva à tela geral, como antes.
+      def navegacao(result)
+        return nil if result.handoff.to_h[:should] == true
+
+        contexto.tela || resolve_navigation(result)
       end
 
       # Sugestão de navegação extraída do MELHOR fluxo recuperado (campo nav_target do KB). Só sugere

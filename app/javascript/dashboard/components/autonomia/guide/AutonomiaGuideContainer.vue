@@ -18,6 +18,7 @@ import {
   isGuideRoute,
   guideRouteFeature,
 } from 'dashboard/helper/guideRouteRegistry';
+import { guideRouteParams } from 'dashboard/helper/guideNavigation';
 import { useGuideHighlight } from 'dashboard/store/modules/guideHighlight';
 
 import GuideHeader from './GuideHeader.vue';
@@ -111,8 +112,9 @@ const handleClickOutside = () => {
 
 // Resolve a backend `navigation` to a real router location, or null. Defense-in-depth: the route must
 // be in the guide allow-list AND resolve cleanly (router.resolve THROWS on a missing required param,
-// so routes needing ids we don't have — e.g. a specific inbox/conversation — return null and render
-// NO button instead of a dead one). The route guards still enforce the user's permission on push.
+// so a screen of ONE record without its id renders NO button instead of a dead one). The ids come
+// from the model, which read the account (#590). The route guards still enforce the user's
+// permission on push.
 const navLocation = nav => {
   if (!nav?.route_name || !isGuideRoute(nav.route_name)) return null;
   const requiredFeature = guideRouteFeature(nav.route_name);
@@ -123,7 +125,10 @@ const navLocation = nav => {
     return null; // feature off → no button (backend would 404 the screen)
   }
   try {
-    const target = accountScopedRoute(nav.route_name);
+    const target = accountScopedRoute(
+      nav.route_name,
+      guideRouteParams(nav.params)
+    );
     const resolved = router.resolve(target);
     return resolved?.matched?.length ? target : null;
   } catch {
