@@ -96,11 +96,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::CepLookup do
       expect(consultar('1234')).to end_with('O CEP tem 8 dígitos, e o informado não tem. Confirme o CEP com o cliente.')
     end
 
-    it 'validacao sem a lista de perguntas: pede para confirmar o CEP, e nao cala' do
+    # Revisão da #597: o 401 do portal com envelope de erro chega como `validation` SEM `perguntas`. Não é culpa do
+    # CEP; pedir para reconfirmar um CEP certo vira laço. Sem a lista de perguntas, é consulta indisponível.
+    it 'validacao sem a lista de perguntas: consulta indisponivel, sem pedir para reconfirmar o CEP' do
       ready_connection
       allow(connector).to receive(:cep_lookup).and_raise(Autonomia::Insurance::Connector::Error.new(:validation, 'x'))
 
-      expect(consultar('01310100')).to end_with('antes de seguir: Confirme o CEP do imóvel com o cliente.')
+      texto = consultar('01310100')
+
+      expect(texto).to start_with('Não deu para consultar este CEP agora.')
+      expect(texto).not_to include('Confirme o CEP')
     end
   end
 

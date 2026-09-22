@@ -67,7 +67,10 @@ class Autonomia::Agents::Tools::Native::CepLookup < Autonomia::Agents::Tools::Na
 
     descrever(consulta)
   rescue ::Autonomia::Insurance::Connector::Error => e
-    return perguntar(e.details) if e.kind == :validation
+    # SÓ É PERGUNTA O QUE O ADAPTER DECLARA COMO PERGUNTA (`details.perguntas`). Uma `validation` sem ela (o 401
+    # do portal com envelope de erro chega assim) não é culpa do CEP: pedir para o cliente reconfirmar um CEP certo,
+    # e de novo a cada tentativa, é o laço que a revisão da chat#597 apontou.
+    return perguntar(e.details) if pergunta?(e)
 
     Rails.logger.warn("[autonomia][insurance] consulta de CEP falhou account=#{account.id} #{e.etiqueta}")
     recusar('consulta_de_cep_indisponivel', INDISPONIVEL)
@@ -83,10 +86,18 @@ class Autonomia::Agents::Tools::Native::CepLookup < Autonomia::Agents::Tools::Na
   # As perguntas do adapter, com o motivo que ele escreveu para o modelo. O registro leva só os NOMES dos
   # campos (`cep`, `logradouro`, `bairro`), nunca o CEP.
   def perguntar(detalhes)
-    perguntas = Array(detalhes.to_h['perguntas']).select { |p| p.is_a?(Hash) }
+    perguntas = perguntas_de(detalhes)
     motivos = perguntas.map { |p| p['motivo'].to_s.strip.upcase_first }.compact_blank
     texto = [SEM_ENDERECO, *(motivos.presence || [PERGUNTA_PADRAO])].join(' ')
     recusar('cep_sem_endereco', texto, faltando: perguntas.map { |p| p['campo'].to_s })
+  end
+
+  def pergunta?(erro)
+    erro.kind == :validation && perguntas_de(erro.details).any?
+  end
+
+  def perguntas_de(detalhes)
+    Array(detalhes.to_h['perguntas']).select { |p| p.is_a?(Hash) }
   end
 
   def connection
