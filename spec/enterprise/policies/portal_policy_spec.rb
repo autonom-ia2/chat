@@ -18,13 +18,8 @@ RSpec.describe 'Enterprise::PortalPolicy', type: :policy do
     { user: agent_with_role, account: account, account_user: agent_with_role_account_user }
   end
 
-  permissions :update?, :edit?, :logo? do
-    context 'when agent with knowledge_base_manage permission' do
-      it { expect(portal_policy).to permit(agent_with_role_context, portal) }
-    end
-  end
-
-  permissions :create?, :destroy? do
+  # A Central de Ajuda é só leitura: a função knowledge_base_manage não escreve mais (#501).
+  permissions :update?, :edit?, :logo?, :create?, :destroy?, :archive?, :send_instructions? do
     context 'when agent with knowledge_base_manage permission' do
       it { expect(portal_policy).not_to permit(agent_with_role_context, portal) }
     end

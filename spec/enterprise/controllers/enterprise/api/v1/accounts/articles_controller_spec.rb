@@ -51,15 +51,15 @@ RSpec.describe 'Enterprise Articles API', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'returns success for agents with knowledge_base_manage permission' do
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles",
-             params: article_params,
-             headers: agent_with_role.create_new_auth_token,
-             as: :json
+      it 'does not allow agents with knowledge_base_manage permission to create an article' do
+        expect do
+          post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles",
+               params: article_params,
+               headers: agent_with_role.create_new_auth_token,
+               as: :json
+        end.not_to change(Article, :count)
 
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['title']).to eq('New Article')
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
@@ -75,42 +75,44 @@ RSpec.describe 'Enterprise Articles API', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'returns success for agents with knowledge_base_manage permission' do
+      it 'does not allow agents with knowledge_base_manage permission to update an article' do
         put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
             params: article_params,
             headers: agent_with_role.create_new_auth_token,
             as: :json
 
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['title']).to eq('Updated Article')
+        expect(response).to have_http_status(:unauthorized)
+        expect(article.reload.title).not_to eq('Updated Article')
       end
     end
   end
 
   describe 'DELETE /api/v1/accounts/:account_id/portals/:portal_slug/articles/:id' do
     context 'when it is an authenticated user' do
-      it 'returns success for agents with knowledge_base_manage permission' do
-        delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
-               headers: agent_with_role.create_new_auth_token,
-               as: :json
+      it 'does not allow agents with knowledge_base_manage permission to delete an article' do
+        expect do
+          delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
+                 headers: agent_with_role.create_new_auth_token,
+                 as: :json
+        end.not_to change(Article, :count)
 
-        expect(response).to have_http_status(:success)
-        expect(Article.find_by(id: article.id)).to be_nil
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
 
   describe 'POST /api/v1/accounts/:account_id/portals/:portal_slug/articles/reorder' do
     context 'when it is an authenticated user' do
-      it 'returns success for agents with knowledge_base_manage permission' do
+      it 'does not allow agents with knowledge_base_manage permission to reorder articles' do
+        original_position = article.position
+
         post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/reorder",
              params: { positions_hash: { article.id => 20 } },
              headers: agent_with_role.create_new_auth_token,
              as: :json
 
-        expect(response).to have_http_status(:success)
-        expect(article.reload.position).to eq(20)
+        expect(response).to have_http_status(:unauthorized)
+        expect(article.reload.position).to eq(original_position)
       end
     end
   end

@@ -8,7 +8,7 @@ import { buildPortalURL } from 'dashboard/helper/portalHelper';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 
-const emit = defineEmits(['close', 'createPortal']);
+const emit = defineEmits(['close']);
 
 const { t } = useI18n();
 const route = useRoute();
@@ -72,11 +72,6 @@ const handlePortalChange = async portal => {
   });
 };
 
-const openCreatePortalDialog = () => {
-  emit('createPortal');
-  emit('close');
-};
-
 const onClickPreviewPortal = () => {
   window.open(portalLink.value, '_blank');
 };
@@ -116,18 +111,7 @@ const redirectToPortalHomePage = () => {
             @click="onClickPreviewPortal"
           />
         </div>
-        <p class="text-sm text-n-slate-11">
-          {{ t('HELP_CENTER.PORTAL_SWITCHER.CREATE_PORTAL') }}
-        </p>
       </div>
-      <Button
-        :label="t('HELP_CENTER.PORTAL_SWITCHER.NEW_PORTAL')"
-        color="slate"
-        icon="i-lucide-plus"
-        size="sm"
-        class="!bg-n-alpha-2 hover:!bg-n-alpha-3"
-        @click="openCreatePortalDialog"
-      />
     </div>
     <div
       v-if="portals.length > 0"

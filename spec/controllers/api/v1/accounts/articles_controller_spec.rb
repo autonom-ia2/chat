@@ -17,7 +17,7 @@ RSpec.describe 'Api::V1::Accounts::Articles', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'creates article' do
+      it 'does not allow administrators to create an article' do
         article_params = {
           article: {
             category_id: category.id,
@@ -30,147 +30,14 @@ RSpec.describe 'Api::V1::Accounts::Articles', type: :request do
             position: 3
           }
         }
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles",
-             params: article_params,
-             headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['title']).to eql('MyTitle')
-        expect(json_response['payload']['status']).to eql('published')
-        expect(json_response['payload']['position']).to be(3)
-      end
 
-      it 'rejects a cross-account author without exposing their details' do
-        foreign_user = create(:user, account: create(:account), role: :agent)
-        article_params = {
-          article: {
-            category_id: category.id,
-            title: 'MyTitle',
-            slug: 'my-title',
-            content: 'This is my content.',
-            status: :published,
-            author_id: foreign_user.id
-          }
-        }
         expect do
           post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles",
                params: article_params,
                headers: admin.create_new_auth_token
         end.not_to(change { portal.articles.count })
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.parsed_body).to eq('error' => 'Invalid author ID')
-        expect(response.body).not_to include(foreign_user.email)
-      end
-
-      it 'rejects a malformed author_id without raising' do
-        [%w[3 4], ' 3 ', '3abc'].each do |bad_author_id|
-          post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles",
-               params: { article: { title: 'MyTitle', slug: 'my-title', content: 'This is my content.', author_id: bad_author_id } },
-               headers: admin.create_new_auth_token,
-               as: :json
-
-          expect(response).to have_http_status(:unprocessable_entity)
-          expect(response.parsed_body).to eq('error' => 'Invalid author ID')
-        end
-      end
-
-      it 'creates article even if category is not provided' do
-        article_params = {
-          article: {
-            category_id: nil,
-            description: 'test description',
-            title: 'MyTitle',
-            slug: 'my-title',
-            content: 'This is my content.',
-            status: :published,
-            author_id: agent.id,
-            position: 3
-          }
-        }
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles",
-             params: article_params,
-             headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['title']).to eql('MyTitle')
-        expect(json_response['payload']['status']).to eql('published')
-        expect(json_response['payload']['position']).to be(3)
-      end
-
-      it 'creates article as draft when status is not provided' do
-        article_params = {
-          article: {
-            category_id: category.id,
-            description: 'test description',
-            title: 'DraftTitle',
-            slug: 'draft-title',
-            content: 'This is my draft content.',
-            author_id: agent.id
-          }
-        }
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles",
-             params: article_params,
-             headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['title']).to eql('DraftTitle')
-        expect(json_response['payload']['status']).to eql('draft')
-      end
-
-      it 'associate to the root article' do
-        root_article = create(:article, category: category, slug: 'root-article', portal: portal, account_id: account.id, author_id: agent.id,
-                                        associated_article_id: nil)
-        parent_article = create(:article, category: category, slug: 'parent-article', portal: portal, account_id: account.id, author_id: agent.id,
-                                          associated_article_id: root_article.id)
-
-        article_params = {
-          article: {
-            category_id: category.id,
-            description: 'test description',
-            title: 'MyTitle',
-            slug: 'MyTitle',
-            content: 'This is my content.',
-            status: :published,
-            author_id: agent.id,
-            associated_article_id: parent_article.id
-          }
-        }
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles",
-             params: article_params,
-             headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['title']).to eql('MyTitle')
-
-        category = Article.find(json_response['payload']['id'])
-        expect(category.associated_article_id).to eql(root_article.id)
-      end
-
-      it 'associate to the current parent article' do
-        parent_article = create(:article, category: category, portal: portal, account_id: account.id, author_id: agent.id, associated_article_id: nil)
-
-        article_params = {
-          article: {
-            category_id: category.id,
-            description: 'test description',
-            title: 'MyTitle',
-            slug: 'MyTitle',
-            content: 'This is my content.',
-            status: :published,
-            author_id: agent.id,
-            associated_article_id: parent_article.id
-          }
-        }
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles",
-             params: article_params,
-             headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['title']).to eql('MyTitle')
-
-        category = Article.find(json_response['payload']['id'])
-        expect(category.associated_article_id).to eql(parent_article.id)
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
@@ -184,7 +51,7 @@ RSpec.describe 'Api::V1::Accounts::Articles', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'updates article' do
+      it 'does not allow administrators to update an article' do
         article_params = {
           article: {
             title: 'MyTitle2',
@@ -199,60 +66,9 @@ RSpec.describe 'Api::V1::Accounts::Articles', type: :request do
         put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
             params: article_params,
             headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['title']).to eql(article_params[:article][:title])
-        expect(json_response['payload']['status']).to eql(article_params[:article][:status])
-        expect(json_response['payload']['position']).to eql(article_params[:article][:position])
-      end
 
-      it 'ignores a cross-account author while updating other attributes' do
-        foreign_user = create(:user, account: create(:account), role: :agent)
-
-        put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
-            params: { article: { title: 'Updated title', author_id: foreign_user.id } },
-            headers: admin.create_new_auth_token
-
-        expect(response).to have_http_status(:success)
-        expect(response.parsed_body.dig('payload', 'title')).to eq('Updated title')
-        expect(response.parsed_body.dig('payload', 'author', 'id')).to eq(agent.id)
-        expect(response.body).not_to include(foreign_user.email)
-        expect(article.reload.author_id).to eq(agent.id)
-      end
-
-      it 'allows editing an article whose author is no longer an account member' do
-        foreign_user = create(:user, account: create(:account), role: :agent)
-        article.update!(author_id: foreign_user.id)
-
-        put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
-            params: { article: { title: 'Updated title', author_id: foreign_user.id } },
-            headers: admin.create_new_auth_token
-
-        expect(response).to have_http_status(:success)
-        expect(article.reload.title).to eq('Updated title')
-      end
-
-      it 'stages draft-only fields without bumping updated_at' do
-        expect do
-          put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
-              params: { article: { draft_title: 'Draft title', draft_content: 'Draft body' } },
-              headers: admin.create_new_auth_token
-        end.not_to(change { article.reload.updated_at })
-
-        expect(response).to have_http_status(:success)
-        expect(article.draft_title).to eq('Draft title')
-        expect(article.draft_content).to eq('Draft body')
-      end
-
-      it 'rejects an over-length draft without persisting it' do
-        expect do
-          put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
-              params: { article: { draft_content: 'a' * 20_001 } },
-              headers: admin.create_new_auth_token
-        end.not_to(change { article.reload.draft_content })
-
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.parsed_body['message']).to include('too long')
+        expect(response).to have_http_status(:unauthorized)
+        expect(article.reload.title).not_to eql(article_params[:article][:title])
       end
     end
   end
@@ -266,12 +82,13 @@ RSpec.describe 'Api::V1::Accounts::Articles', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'deletes category' do
-        delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
-               headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:success)
-        deleted_article = Article.find_by(id: article.id)
-        expect(deleted_article).to be_nil
+      it 'does not allow administrators to delete an article' do
+        expect do
+          delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/#{article.id}",
+                 headers: admin.create_new_auth_token
+        end.not_to change(Article, :count)
+
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
@@ -296,14 +113,15 @@ RSpec.describe 'Api::V1::Accounts::Articles', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'reorders articles' do
+      it 'does not allow administrators to reorder articles' do
+        original_position = article.position
+
         post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/reorder",
              params: { positions_hash: positions_hash },
              headers: admin.create_new_auth_token
 
-        expect(response).to have_http_status(:success)
-        expect(article.reload.position).to eq(20)
-        expect(article_2.reload.position).to eq(10)
+        expect(response).to have_http_status(:unauthorized)
+        expect(article.reload.position).to eq(original_position)
       end
     end
   end

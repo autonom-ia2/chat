@@ -22,9 +22,20 @@ RSpec.describe CategoryPolicy, type: :policy do
     end
   end
 
-  permissions :update?, :show?, :edit?, :create?, :destroy? do
+  permissions :show? do
     context 'when administrator' do
       it { expect(category_policy).to permit(administrator_context, category) }
+    end
+
+    context 'when agent' do
+      it { expect(category_policy).not_to permit(agent_context, category) }
+    end
+  end
+
+  # A Central de Ajuda é só leitura: nem o administrador escreve (#501).
+  permissions :update?, :edit?, :create?, :destroy?, :reorder? do
+    context 'when administrator' do
+      it { expect(category_policy).not_to permit(administrator_context, category) }
     end
 
     context 'when agent' do

@@ -8,7 +8,6 @@ RSpec.describe 'Article Bulk Actions API', type: :request do
   let!(:category) { create(:category, portal: portal, account: account, locale: 'en', slug: 'getting-started') }
   let!(:article_one) { create(:article, category: category, portal: portal, account: account, author: admin, status: :draft) }
   let!(:article_two) { create(:article, category: category, portal: portal, account: account, author: admin, status: :draft) }
-  let!(:article_three) { create(:article, category: category, portal: portal, account: account, author: admin, status: :published) }
 
   let(:base_url) { "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/articles/bulk_actions" }
 
@@ -33,55 +32,15 @@ RSpec.describe 'Article Bulk Actions API', type: :request do
     end
 
     context 'when authenticated as admin' do
-      it 'publishes multiple articles' do
+      it 'does not allow administrators to update article status' do
         patch update_status_url,
               headers: admin.create_new_auth_token,
               params: { ids: [article_one.id, article_two.id], status: 'published' },
               as: :json
 
-        expect(response).to have_http_status(:ok)
-        expect(article_one.reload.status).to eq('published')
-        expect(article_two.reload.status).to eq('published')
-      end
-
-      it 'archives multiple articles' do
-        patch update_status_url,
-              headers: admin.create_new_auth_token,
-              params: { ids: [article_one.id, article_three.id], status: 'archived' },
-              as: :json
-
-        expect(response).to have_http_status(:ok)
-        expect(article_one.reload.status).to eq('archived')
-        expect(article_three.reload.status).to eq('archived')
-      end
-
-      it 'sets articles to draft' do
-        patch update_status_url,
-              headers: admin.create_new_auth_token,
-              params: { ids: [article_three.id], status: 'draft' },
-              as: :json
-
-        expect(response).to have_http_status(:ok)
-        expect(article_three.reload.status).to eq('draft')
-      end
-
-      it 'does not affect articles not in the list' do
-        patch update_status_url,
-              headers: admin.create_new_auth_token,
-              params: { ids: [article_one.id], status: 'published' },
-              as: :json
-
-        expect(article_one.reload.status).to eq('published')
-        expect(article_three.reload.status).to eq('published')
-      end
-
-      it 'returns unprocessable entity when no articles found' do
-        patch update_status_url,
-              headers: admin.create_new_auth_token,
-              params: { ids: [0], status: 'published' },
-              as: :json
-
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unauthorized)
+        expect(article_one.reload.status).to eq('draft')
+        expect(article_two.reload.status).to eq('draft')
       end
     end
   end
@@ -107,34 +66,15 @@ RSpec.describe 'Article Bulk Actions API', type: :request do
     end
 
     context 'when authenticated as admin' do
-      it 'deletes multiple articles' do
+      it 'does not allow administrators to delete articles' do
         expect do
           delete destroy_url,
                  headers: admin.create_new_auth_token,
                  params: { ids: [article_one.id, article_two.id] },
                  as: :json
-        end.to change(Article, :count).by(-2)
+        end.not_to change(Article, :count)
 
-        expect(response).to have_http_status(:ok)
-      end
-
-      it 'does not delete articles not in the list' do
-        delete destroy_url,
-               headers: admin.create_new_auth_token,
-               params: { ids: [article_one.id] },
-               as: :json
-
-        expect(Article.exists?(article_one.id)).to be(false)
-        expect(Article.exists?(article_three.id)).to be(true)
-      end
-
-      it 'returns unprocessable entity when no articles found' do
-        delete destroy_url,
-               headers: admin.create_new_auth_token,
-               params: { ids: [0] },
-               as: :json
-
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
