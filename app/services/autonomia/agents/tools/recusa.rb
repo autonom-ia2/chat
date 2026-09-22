@@ -67,7 +67,12 @@ module Autonomia::Agents::Tools::Recusa
     'conexao_indisponivel' => 'a corretora está sem conexão pronta com o portal de cotação',
     'formulario_indisponivel' => 'auto sem formulário: a conexão não tem o schema do adapter, e a ferramenta não tinha onde receber o veículo',
     'placa_invalida' => 'a placa informada não tem o formato de uma placa',
-    'consulta_de_placa_indisponivel' => 'o portal não respondeu à consulta de placa'
+    'consulta_de_placa_indisponivel' => 'o portal não respondeu à consulta de placa',
+    # autonomia-adapters#87: a consulta de CEP do imóvel, com as três saídas dela.
+    'cep_invalido' => 'o CEP informado veio vazio',
+    'cep_sem_endereco' => 'a consulta de CEP não trouxe o endereço completo e devolveu o que perguntar ao cliente ' \
+                          '(CEP fora do formato, inexistente ou de cidade de CEP único)',
+    'consulta_de_cep_indisponivel' => 'o portal não respondeu à consulta de CEP'
   }.freeze
   SEM_DESCRICAO = 'motivo fora do catálogo: falta a frase em MOTIVOS'.freeze
   DESCONHECIDA = 'desconhecida'.freeze

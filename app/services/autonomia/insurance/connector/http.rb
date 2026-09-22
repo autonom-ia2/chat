@@ -78,6 +78,14 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     invoke("/v1/#{provider}/vehicle/lookup", { session: session, plate: plate }, read_timeout: CONFERENCIA_TIMEOUT)
   end
 
+  # A CONSULTA DE CEP, gratuita e sem cálculo (autonomia-adapters#87): rua, bairro, cidade e UF do CEP
+  # do imóvel. Com sessão e com o teto curto da conferência, como a de placa: ela roda dentro do turno.
+  # O CEP inexistente custa ao adapter duas idas de ~3 s ao portal (a repetição do 502) e cabe no teto.
+  # O que o portal não responde inteiro volta como `validation` com `details['perguntas']`.
+  def cep_lookup(provider:, session:, cep:)
+    invoke("/v1/#{provider}/cep/lookup", { session: session, cep: cep }, read_timeout: CONFERENCIA_TIMEOUT)
+  end
+
   # A COTAÇÃO COMO O PORTAL A GRAVOU (entrega 2, termo 8): a leitura de volta que prova que um campo
   # atravessou. Nomes do portal, sem dado da pessoa.
   def quote_read(provider:, session:, quote_id:)

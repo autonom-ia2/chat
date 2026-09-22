@@ -25,19 +25,48 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # retorno na mão e conhece o ramo. A Lia repassa. Enviar a proposta de uma seguradora continua dela: é ação,
   # não conferência.
   TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais enviar_proposta_da_seguradora].freeze
-  TOOLS_DO_ESPECIALISTA = %w[consultar_placa cotar_seguro ver_resultado_da_cotacao].freeze
-  TODAS_AS_TOOLS = (TOOLS_DO_PRINCIPAL + TOOLS_DO_ESPECIALISTA).freeze
+  # O que TODO especialista de ramo tem: cotar e ler o resultado.
+  TOOLS_DE_TODO_ESPECIALISTA = %w[cotar_seguro ver_resultado_da_cotacao].freeze
+  # A CONSULTA GRATUITA QUE ANTECEDE A COTAÇÃO É DO RAMO, e não de todo especialista (autonomia-adapters#87).
+  # Placa só existe onde há veículo; CEP do imóvel, só onde há imóvel. Uma lista única dava a placa ao
+  # especialista de residencial e daria o CEP ao de auto, que não tem o que fazer com ele e passaria a ler
+  # uma ferramenta a mais a cada turno. O vínculo é DADO: o especialista de residencial, quando entrar em
+  # `ESPECIALISTAS` (fase 5 da receita), recebe `consultar_cep` por esta tabela, sem nenhuma linha de código.
+  CONSULTAS_DO_RAMO = {
+    'auto' => %w[consultar_placa],
+    'residencial' => %w[consultar_cep]
+  }.freeze
 
   # O primeiro (e por enquanto único) especialista. Cada ramo novo entra aqui com o seu arquivo de
   # instrução — e nada mais precisa mudar.
   # `ramo` é o produto do adapter cujo formulário o especialista vê na ferramenta de cotação
   # (`Declaracao.params_for`, chat#591): um formulário por especialista, e não um com todos os ramos,
   # que multiplicaria o que o modelo lê a cada turno. O de residencial entra com a fase 5 da receita.
+  # O `ramo` também decide a consulta que ele recebe (`CONSULTAS_DO_RAMO`).
   ESPECIALISTAS = [
     { slug: 'cotacao_auto', ramo: 'auto', nome: 'Cotação de automóvel', arquivo: 'especialista_auto.md',
       descricao: 'Cota seguro de automóvel, moto e caminhão, para pessoa física e para empresa. Use ' \
                  'quando o cliente pedir preço de seguro de carro, moto ou caminhão.' }
   ].freeze
+
+  # AS FERRAMENTAS DE UM ESPECIALISTA: a consulta do ramo dele primeiro, depois as de todo especialista. Em
+  # auto é `consultar_placa cotar_seguro ver_resultado_da_cotacao`, a mesma lista, na mesma ordem, de antes
+  # de #87 (`builder_ferramentas_por_ramo_spec`).
+  # -> Array de slugs.
+  def self.ferramentas_do_especialista(dados)
+    CONSULTAS_DO_RAMO.fetch(dados[:ramo], []) + TOOLS_DE_TODO_ESPECIALISTA
+  end
+
+  # AS DE TODOS OS ESPECIALISTAS, sem repetir: é o que o agente precisa TER no catálogo para que cada
+  # especialista encontre as suas (ver `TOOLS_DO_PRINCIPAL` acima: o que está fora do catálogo não existe
+  # para ninguém). Com só o de auto, `consultar_cep` fica fora do agente, e o principal nem a vê.
+  # -> Array de slugs.
+  def self.ferramentas_dos_especialistas(especialistas = ESPECIALISTAS)
+    especialistas.flat_map { |dados| ferramentas_do_especialista(dados) }.uniq
+  end
+
+  TOOLS_DO_ESPECIALISTA = ferramentas_dos_especialistas.freeze
+  TODAS_AS_TOOLS = (TOOLS_DO_PRINCIPAL + TOOLS_DO_ESPECIALISTA).freeze
 
   # Teto do que a corretora escreve. `nome_agente` já é limitado pela coluna (string, 255), mas
   # `nome_corretora` NÃO VAI PARA COLUNA NENHUMA — ele só é colado dentro da instrução. Sem teto
@@ -77,21 +106,22 @@ class Autonomia::Insurance::QuoteAgent::Builder
   end
 
   # AS FERRAMENTAS QUE VALEM SÃO AS DO DEPLOY (fatia 2 do #420), no molde de `instrucao_mantida`.
-  # `criar_agente` grava `TODAS_AS_TOOLS` em `native_tool_slugs` e `criar_especialista` grava
-  # `TOOLS_DO_ESPECIALISTA` em `tool_slugs`, só no nascimento: em 11/09/2026 `consultar_placa` chegou ao
-  # agente 24 por escrita no banco de produção. Quem monta o turno (`Agent#ferramentas_nativas`,
+  # `criar_agente` grava `TODAS_AS_TOOLS` em `native_tool_slugs` e `criar_especialista` grava as do
+  # ramo (`ferramentas_do_especialista`) em `tool_slugs`, só no nascimento: em 11/09/2026
+  # `consultar_placa` chegou ao agente 24 por escrita no banco de produção. Quem monta o turno (`Agent#ferramentas_nativas`,
   # `Specialist#ferramentas_do_sistema`) lê daqui; as colunas ficam como retrato do nascimento.
   # -> `TODAS_AS_TOOLS` para o Agente de Cotação, nil para os demais.
   def self.ferramentas_mantidas(agent)
     agent&.agent_type == 'insurance_quote' ? TODAS_AS_TOOLS : nil
   end
 
-  # -> `TOOLS_DO_ESPECIALISTA` para um especialista mantido, nil para os demais. A reserva que esconde as
-  # ferramentas do especialista do principal (`Answerer#enabled_agent_tools`) vem daqui: com só a lista do
-  # agente mantida, uma ferramenta nova do especialista apareceria para o principal até alguém escrever a
-  # coluna do especialista.
+  # -> as ferramentas DESTE especialista mantido (`ferramentas_do_especialista`, pelo ramo dele), nil para
+  # os demais. A reserva que esconde as ferramentas do especialista do principal (`Answerer#enabled_agent_tools`)
+  # vem daqui: com só a lista do agente mantida, uma ferramenta nova do especialista apareceria para o
+  # principal até alguém escrever a coluna do especialista.
   def self.ferramentas_mantidas_do_especialista(specialist)
-    mantido(specialist) ? TOOLS_DO_ESPECIALISTA : nil
+    dados = mantido(specialist)
+    dados && ferramentas_do_especialista(dados)
   end
 
   # AS RODADAS DA LIA NO TURNO (chat#585, decisão do CEO em 22/09/2026: até seis entre o principal e o especialista).
@@ -280,7 +310,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
     ::Autonomia::Agents::Specialist.create!(
       agent: agente, account: @account, slug: dados[:slug], name: dados[:nome],
       description: dados[:descricao], instruction: texto_do_especialista(dados[:arquivo]),
-      tool_slugs: TOOLS_DO_ESPECIALISTA, enabled: true
+      tool_slugs: self.class.ferramentas_do_especialista(dados), enabled: true
     )
   end
 
