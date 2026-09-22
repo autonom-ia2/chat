@@ -141,5 +141,20 @@ RSpec.describe Autonomia::Insurance::EntradaDaCotacao do
     it 'não escreve valor em reais: o valor a segurar fica fora' do
       expect(resumo_residencial(minimo)).not_to include('400', 'R$')
     end
+
+    # Revisão da #605: o número vindo solto (`numero`) é o que o adapter usa, e não o padrão.
+    it 'o número dado solto aparece como o número do imóvel' do
+      solto = minimo.merge('numero' => '55', 'configuracoes' => minimo['configuracoes'].except('imovelNumero'))
+
+      expect(resumo_residencial(solto)).to include('Número do imóvel: 55.')
+    end
+  end
+
+  # Revisão da #605: em auto a ausência continua "sem informação", mesmo que o schema traga padrão.
+  it 'auto não usa o padrão do schema' do
+    com_padrao = schema.merge('campos' => schema['campos'].map { |c| c['campo'] == 'coverage.glassCoverage' ? c.merge('padrao' => '1') : c })
+
+    expect(resumo({ 'produto' => 'auto', 'cep' => '01310-930' }, com_schema: com_padrao))
+      .to include("Vidros: #{described_class::SEM_INFORMACAO}")
   end
 end

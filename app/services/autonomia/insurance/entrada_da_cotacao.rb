@@ -65,6 +65,9 @@ class Autonomia::Insurance::EntradaDaCotacao
   RESIDENCIAL = 'residencial'.freeze
   CAMPOS_POR_PRODUTO = { AUTO => CAMPOS, RESIDENCIAL => CAMPOS_DE_RESIDENCIAL }.freeze
   PADRAO = 'o padrão, porque o cliente não informou.'.freeze
+  # O adapter monta o número do imóvel com o do segurado quando o do imóvel não vem (`enderecoDoImovel`); o resumo lê
+  # do mesmo jeito, ou diria "padrão" para o número que o cliente deu (revisão da #605).
+  ONDE_O_ADAPTER_TAMBEM_LE = { 'configuracoes.imovelNumero' => 'segurado.numero' }.freeze
   # Os grupos em que o formulário dos ramos põe o que o modelo escreveu, os mesmos que o adapter lê.
   GRUPOS_DOS_RAMOS = %w[segurado configuracoes].freeze
 
@@ -153,6 +156,10 @@ class Autonomia::Insurance::EntradaDaCotacao
 
   def em(caminho)
     grupo, campo = caminho.split('.')
-    entrada[grupo].to_h[campo]
+    valor = entrada[grupo].to_h[campo]
+    return valor unless valor.nil? || valor == ''
+
+    alternativo = ONDE_O_ADAPTER_TAMBEM_LE[caminho]
+    alternativo && em(alternativo)
   end
 end
