@@ -276,7 +276,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         %w[bike auto].each do |ramo|
           post "/super_admin/accounts/#{account.id}/toggle_insurance_ramo", params: { ramo: ramo, enabled: true }
 
-          expect(flash[:alert]).to eq("Ramo desconhecido: #{ramo}")
+          expect(flash[:alert]).to eq("Ramo desconhecido")
           expect(Autonomia::Insurance::Config.ramo_liberado?(account.reload, ramo)).to be false
         end
       end

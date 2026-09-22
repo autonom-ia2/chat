@@ -101,7 +101,10 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
   def toggle_insurance_ramo
     ramo = params[:ramo].to_s
     unless Autonomia::Insurance::QuoteAgent::Builder.ramos_liberaveis.include?(ramo)
-      return redirect_back(fallback_location: [namespace, requested_resource], alert: "Ramo desconhecido: #{ramo}")
+      # O valor recebido não volta na mensagem: o painel mostra o flash sem escapar (revisão da #604).
+      # rubocop:disable Rails/I18nLocaleTexts
+      return redirect_back(fallback_location: [namespace, requested_resource], alert: 'Ramo desconhecido')
+      # rubocop:enable Rails/I18nLocaleTexts
     end
 
     enabled = ActiveModel::Type::Boolean.new.cast(params[:enabled])
