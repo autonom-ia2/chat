@@ -9,8 +9,10 @@
 #     `MAX_DEPENDENCY_DEFERRALS`: a conclusão sai depois do PDF, e o desfecho não passa na frente do "estou
 #     cuidando".
 #
-# FALHA DO TURNO (IA falhou, resposta vazia, sinal de silêncio): UMA nova tentativa, com espera. Falhou de novo:
-# o atendente é avisado pela notificação do Chatwoot (`bot_handoff!`) e por uma NOTA PRIVADA com o evento.
+# FALHA DO TURNO (IA falhou, resposta vazia): UMA nova tentativa, com espera. Falhou de novo: o atendente é
+# avisado pela notificação do Chatwoot (`bot_handoff!`) e por uma NOTA PRIVADA com o evento. O SINAL DE SILÊNCIO
+# não é falha: é a Lia decidindo não falar (a pessoa se despediu, por exemplo). Só a nota privada, sem escalar
+# (revisão da chat#588).
 # Conversa com humano no comando, ou agente que deixou de poder falar: o modelo não roda, só a nota privada.
 # Nunca frase pronta ao cliente.
 #
@@ -35,6 +37,9 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
     conversation = run.conversation
     passo = { adiamentos: adiamentos.to_i, tentativa: tentativa.to_i, depois_de: Array(depois_de).map(&:to_s) }
     return adiar(evento, passo) if esperar?(evento, conversation, passo)
+    return anotar(run, tipo, 'comeco_superado') if comeco_superado?(evento, conversation)
+
+    evento = sem_o_arquivo(evento, conversation, passo)
     return anotar(run, tipo, 'ja_publicado') if evento.publicado?(conversation)
 
     falar(evento, conversation, passo)
@@ -58,6 +63,7 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
                                                                     evento: evento).perform
     return anotar(evento.run, evento.tipo, 'falou') if resultado.status == :replied
     return aviso(evento).notar('inelegivel') if resultado.error == 'nao_elegivel'
+    return aviso(evento).notar('silencio') if resultado.error == 'sinal'
 
     tentar_de_novo_ou_escalar(evento, agent_inbox, passo, resultado.error)
   end
@@ -91,9 +97,36 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
     comeco_sem_palavra?(evento.run, conversation) || arquivo_a_caminho?(evento.run, conversation, passo[:depois_de])
   end
 
+  # O "ESTOU CUIDANDO" DEPOIS DO RESULTADO NÃO SAI (revisão da chat#588). O começo que atrasou (nova tentativa,
+  # fila) não fala se o desfecho já falou ou se algum arquivo aceito já chegou à conversa. Só DISPARADO não basta:
+  # o fecho espera a palavra do começo (`comeco_sem_palavra?`), e os dois esperariam um pelo outro.
+  def comeco_superado?(evento, conversation)
+    evento.comeco? && resultado_na_conversa?(evento.run, conversation)
+  end
+
+  def resultado_na_conversa?(run, conversation)
+    fecho = run.handle.to_h[::Autonomia::Agents::Tools::Evento::FECHO_KEY].presence
+    return true if fecho && ::Autonomia::Agents::Tools::Evento.new(run: run, tipo: fecho).publicado?(conversation)
+
+    aceitos(run).any? { |token| ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, token).present? }
+  end
+
+  # O COMPARATIVO QUE NÃO CHEGOU NÃO É AFIRMADO (revisão da chat#588). Estourado o teto de espera com o arquivo
+  # ainda ausente, a conclusão fala como resultado guardado: a Lia não diz "o PDF acima" sem PDF nenhum.
+  def sem_o_arquivo(evento, conversation, passo)
+    return evento unless evento.tipo == 'concluida' && arquivo_a_caminho?(evento.run, conversation, passo[:depois_de])
+
+    ::Autonomia::Agents::Tools::Evento.new(run: evento.run, tipo: 'valores_guardados')
+  end
+
+  def aceitos(run)
+    Array(run.handle.to_h[::Autonomia::Agents::Tools::EntregaAceita::CHAVE]).map(&:to_s)
+  end
+
   # O evento de começo foi disparado e ainda não tem mensagem (pública ou a nota ao atendente).
   def comeco_sem_palavra?(run, conversation)
     return false if run.handle.to_h[::Autonomia::Agents::Tools::Evento::COMECO_KEY].blank?
+    return false if resultado_na_conversa?(run, conversation)
 
     !::Autonomia::Agents::Tools::Evento.new(run: run, tipo: ::Autonomia::Agents::Tools::Evento::COMECO).publicado?(conversation)
   end
@@ -101,7 +134,7 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
   # Algum arquivo que o publicador aceitou (a lista do aceite, `Tools::EntregaAceita`, e o que veio em
   # `depois_de`) ainda não é mensagem.
   def arquivo_a_caminho?(run, conversation, depois_de)
-    (Array(run.handle.to_h[::Autonomia::Agents::Tools::EntregaAceita::CHAVE]).map(&:to_s) | depois_de).any? do |token|
+    (aceitos(run) | depois_de).any? do |token|
       ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, token).nil?
     end
   end

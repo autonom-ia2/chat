@@ -149,16 +149,28 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
       expect(espera).to be_within(2).of(described_class::ESPERA_DA_NOVA_TENTATIVA.from_now.to_f)
     end
 
-    %w[vazio sinal].each do |motivo|
-      it "resposta #{motivo}: nova tentativa, nada postado" do
-        lia_responde(motivo == 'vazio' ? '   ' : 'conversation_closed_for_now')
-        run = execucao
+    it 'resposta vazia: nova tentativa, nada postado' do
+      lia_responde('   ')
+      run = execucao
 
-        described_class.new.perform(run.id, 'concluida')
+      described_class.new.perform(run.id, 'concluida')
 
-        expect(mensagens).to be_empty
-        expect(reagendados).to eq([[run.id, 'concluida', 0, 1, []]])
-      end
+      expect(mensagens).to be_empty
+      expect(reagendados).to eq([[run.id, 'concluida', 0, 1, []]])
+    end
+
+    # O SINAL DE SILÊNCIO É DECISÃO, não falha (revisão da chat#588): sem nova tentativa e sem handoff, só a nota.
+    it 'sinal de silencio: nada publico, so a nota privada, sem nova tentativa nem handoff' do
+      lia_responde('conversation_closed_for_now')
+      conversation.update!(ai_assignee: agent_bot, status: :pending)
+      run = execucao
+
+      described_class.new.perform(run.id, 'concluida')
+
+      expect(publicas).to be_empty
+      expect(privadas.count).to eq(1)
+      expect(reagendados).to be_empty
+      expect(conversation.reload.status).to eq('pending')
     end
 
     # FALHOU DE NOVO: o atendente é avisado pela notificação do Chatwoot (`bot_handoff!`, sob o lock, com o
@@ -279,7 +291,9 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
       expect(publicas.last.content_attributes[evento::CHAVE]).to eq("#{run.id}:concluida")
     end
 
-    it 'o arquivo de depois_de tambem segura, e no teto o turno fala sem ele' do
+    # NO TETO, SEM O ARQUIVO, a conclusão fala como resultado guardado: a Lia não afirma o PDF que não chegou
+    # (revisão da chat#588).
+    it 'o arquivo de depois_de tambem segura, e no teto o turno fala sem ele, como resultado guardado' do
       run = execucao
       token = run.delivery_token('arquivo:https://x.test/d.pdf')
 
@@ -287,7 +301,46 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
       expect(mensagens).to be_empty
 
       described_class.new.perform(run.id, 'concluida', Autonomia::Agents::Tools::AsyncConfig::MAX_DEPENDENCY_DEFERRALS, 0, [token])
-      expect(publicas.count).to eq(1)
+      expect(publicas.sole.content_attributes[evento::CHAVE]).to eq("#{run.id}:valores_guardados")
+      expect(queries_da_lia.last).to include('fatos do dublê: valores_guardados')
+    end
+
+    # O "ESTOU CUIDANDO" QUE ATRASOU não sai depois do resultado (revisão da chat#588).
+    it 'o comeco nao fala depois que o desfecho ja falou' do
+      run = execucao
+      evento.disparar(run, 'cotacao_comecou')
+      evento.disparar(run.reload, 'falhou')
+      described_class.new.perform(run.id, 'falhou', Autonomia::Agents::Tools::AsyncConfig::MAX_DEPENDENCY_DEFERRALS)
+
+      described_class.new.perform(run.id, 'cotacao_comecou')
+
+      expect(publicas.map { |m| m.content_attributes[evento::CHAVE] }).to eq(["#{run.id}:falhou"])
+    end
+
+    it 'o fecho nao espera um comeco que ja foi superado por arquivo na conversa' do
+      run = execucao
+      evento.disparar(run, 'cotacao_comecou')
+      evento.disparar(run.reload, 'concluida')
+      token = run.delivery_token('arquivo:https://x.test/f.pdf')
+      run.registrar_entrega_aceita!(token)
+      create(:message, conversation: conversation, account: account, inbox: inbox, message_type: :outgoing, sender: agent_bot,
+                       content: nil, content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => token })
+
+      described_class.new.perform(run.id, 'concluida')
+
+      expect(publicas.where.not(content: nil).sole.content_attributes[evento::CHAVE]).to eq("#{run.id}:concluida")
+    end
+
+    it 'o comeco nao fala depois que um arquivo aceito ja chegou a conversa' do
+      run = execucao
+      token = run.delivery_token('arquivo:https://x.test/e.pdf')
+      run.registrar_entrega_aceita!(token)
+      create(:message, conversation: conversation, account: account, inbox: inbox, message_type: :outgoing, sender: agent_bot,
+                       content: nil, content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => token })
+
+      described_class.new.perform(run.id, 'cotacao_comecou')
+
+      expect(publicas.where('content_attributes::text LIKE ?', "%#{evento::CHAVE}%")).to be_empty
     end
   end
 end
