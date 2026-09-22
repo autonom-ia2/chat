@@ -111,12 +111,16 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     it 'a lista do Agente de Cotação é a do deploy, com a ferramenta de resultado no especialista' do
       expect(described_class::TOOLS_DO_ESPECIALISTA).to include('ver_resultado_da_cotacao')
       expect(described_class::TOOLS_DO_PRINCIPAL).not_to include('ver_resultado_da_cotacao')
-      expect(described_class.ferramentas_mantidas(construir)).to eq(described_class::TODAS_AS_TOOLS)
+      # Só auto atende nesta conta (a conexão não tem residencial): a lista é a de antes, sem a consulta de CEP.
+      expect(described_class.ferramentas_mantidas(construir))
+        .to eq(described_class::TOOLS_DO_PRINCIPAL + %w[consultar_placa cotar_seguro ver_resultado_da_cotacao])
     end
 
     it 'a reserva do especialista mantido é a do deploy' do
-      expect(described_class.ferramentas_mantidas_do_especialista(construir.specialists.first))
-        .to eq(described_class::TOOLS_DO_ESPECIALISTA)
+      # A do ramo dele: a consulta do ramo mais as de todo especialista (`ferramentas_do_especialista`).
+      auto = construir.specialists.find_by!(slug: 'cotacao_auto')
+      expect(described_class.ferramentas_mantidas_do_especialista(auto))
+        .to eq(%w[consultar_placa cotar_seguro ver_resultado_da_cotacao])
     end
 
     it 'agente e especialista que não são do Agente de Cotação não têm lista mantida' do

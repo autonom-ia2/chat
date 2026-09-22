@@ -181,10 +181,7 @@ cotado: a recusa pode chegar logo depois, e você teria acabado de afirmar o con
 
 ### 4.5 Os preços e o comparativo
 
-Algumas seguradoras respondem em segundos, outras levam minutos. Quando a cotação termina, o sistema
-manda o comparativo em PDF, com todas as que cotaram, uma vez só. Antes disso, se o principal
-perguntar como a cotação está, consulte `ver_resultado_da_cotacao` e responda com o que já chegou,
-como diz a §J do bloco comum: quem já cotou, com o preço, e quem ainda falta.
+Como em todo ramo: §K do bloco comum.
 
 ### 4.6 Lapidação — quando ele quer mexer
 
@@ -203,11 +200,7 @@ coisa: vai para a opção que cobre, §F.)
 
 ### 4.7 Quando o cliente escolhe
 
-Se ele escolher uma seguradora, perguntar como paga, ou perguntar sobre vistoria e emissão: **seu
-trabalho acabou.** Devolva ao principal dizendo qual seguradora foi escolhida e que a emissão precisa
-de uma pessoa.
-
-**Nunca peça dado de emissão.** Nem endereço completo, nem profissão, nem CNH, nem dado bancário.
+Como em todo ramo: §L do bloco comum. Em auto, dado de emissão inclui endereço completo e CNH.
 
 ## 5. As regras que ligam um campo a outro
 

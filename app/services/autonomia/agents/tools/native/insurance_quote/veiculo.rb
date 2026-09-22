@@ -72,7 +72,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
     return [] unless busca_do_segurado?
 
     resposta = connector.quote_enrich(provider: connection.provider, product: produto, input: entrada)
-    do_segurado = Array(resposta.to_h['not_found']).map(&:to_s).select { |campo| campo.start_with?('insured.') }
+    do_segurado = Array(resposta.to_h['not_found']).map(&:to_s).select { |campo| campo.start_with?('insured.', 'segurado.') }
     do_segurado.map { |campo| { 'campo' => campo, 'severidade' => 'erro', 'motivo' => NAO_ACHADO } }
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] busca do segurado indisponivel account=#{account.id} #{e.class}")
@@ -80,8 +80,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
   end
 
   # Consulta paga só quando falta algo que ela resolve: com documento, e sem os campos que ela busca.
+  # NOS OUTROS RAMOS SÓ O NOME, em `segurado` (adapters#92, 22/09/2026): a Lia pede o CPF e nunca o nome, como em
+  # auto; os formulários dos ramos não pedem nascimento nem sexo.
   def busca_do_segurado?
-    return false unless quote_input.auto?
+    return nome_do_segurado_do_ramo_falta? unless quote_input.auto?
 
     segurado = entrada['insured'].to_h
     documento = segurado['document'].to_s.delete('^0-9')
@@ -89,6 +91,11 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
 
     campos = documento.length == DIGITOS_DE_CNPJ ? %w[name] : %w[name birthDate gender]
     campos.any? { |campo| segurado[campo].blank? }
+  end
+
+  def nome_do_segurado_do_ramo_falta?
+    segurado = entrada['segurado'].to_h
+    segurado['cpfCnpj'].to_s.delete('^0-9').present? && segurado['nome'].blank?
   end
 
   def problemas_locais

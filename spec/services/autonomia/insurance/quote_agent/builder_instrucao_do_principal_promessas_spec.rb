@@ -242,9 +242,10 @@ end
 # Lia e virou a §J do bloco comum do especialista, e as promessas vieram junto — a tabela é a mesma, lida do arquivo
 # novo. No manual da Lia fica só o bloco que manda a pergunta para ele (`o bloco do resultado da §5`, abaixo).
 module ManualDoPrincipalResultado
-  # Da §J até o fim do bloco comum (é a última seção). Assinado pelo mesmo motivo dos outros blocos: a frase-âncora
+  # Da §J até a §K (o comparativo, desde chat#323). Assinado pelo mesmo motivo dos outros blocos: a frase-âncora
   # não vê o que for escrito ao lado dela.
-  SECAO = /## J\. O resultado da cotação.*\z/m
+  INICIO_DA_SECAO = '## J. O resultado da cotação'.freeze
+  INICIO_DA_SEGUINTE = "\n## K.".freeze
   ARQUIVO = Autonomia::Insurance::QuoteAgent::Builder::INSTRUCOES.join('comum_especialista.md')
   RESULTADO = Autonomia::Agents::Tools::Native::InsuranceQuoteResult
   COTACAO = Autonomia::Agents::Tools::Native::InsuranceQuote
@@ -254,8 +255,13 @@ module ManualDoPrincipalResultado
 
   module_function
 
+  # A §J vai até a próxima seção (a §K, do comparativo, desde chat#323) ou até o fim do bloco.
   def secao(texto)
-    texto[SECAO]
+    inicio = texto.index(INICIO_DA_SECAO)
+    return nil if inicio.nil?
+
+    fim = texto.index(INICIO_DA_SEGUINTE, inicio)
+    fim ? texto[inicio...fim] : texto[inicio..]
   end
 
   # UMA CONVERSA COM UMA COTAÇÃO ENCERRADA: Porto cotou, Sancor recusou pelo tipo do veículo. A conta NÃO tem
