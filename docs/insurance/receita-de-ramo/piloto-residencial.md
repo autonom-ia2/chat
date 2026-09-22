@@ -65,3 +65,31 @@ os quinze campos de origem `cliente` do schema de residencial.
    conversa.
 7. Investigar a recusa da Mapfre pelo tipo de verba.
 8. Separar instabilidade da seguradora, dado nosso errado e recusa de risco.
+
+## Fase 1, rodada 2 — 22/09/2026
+
+Pelo caminho do produto, com os itens 1 a 5 acima feitos (autonom-ia2/autonomia-adapters#77, com a par
+autonom-ia2/chat#589): o adapter completa o endereço do imóvel pela consulta de CEP do portal, e o que é pergunta ao
+cliente volta em `details.perguntas` no 422 do `quote/start`. Entrada como o chat2you monta: CPF, nome, CEP e número.
+Dados fictícios novos, conta de **teste** do portal, que agora oferece 11 seguradoras em residencial.
+
+| Cenário | Esperado | Aconteceu | Com preço |
+|---|---|---|---|
+| R1: simples, como o produto manda | cota, com o endereço da consulta | cotou; o portal gravou rua, bairro, cidade e UF da consulta de CEP | 5 de 11 (R$ 166,03 a R$ 407,22, total) |
+| R2: cidade de CEP único | pergunta a rua | 422 com `perguntas` para rua e bairro em 13 s; nenhum cálculo no portal | pergunta |
+| R3: CEP inexistente | confirme o CEP | 422 com `perguntas` para o CEP em 21 s (dois 502 na consulta) | pergunta |
+| R4: inquilino, apartamento, alarme monitorado | cota, e os campos atravessam | cotou; inquilino, alarme, complemento gravados; o número não saiu repetido na linha | 5 de 11 (R$ 170,69 a R$ 394,78) |
+
+**A fase 1 passou**: cotação pelo caminho do produto, lida de volta, com preço.
+
+### O que as recusas de R1 e R4 mostram (fase 2 e cadastro)
+
+- **Mapfre**, de novo, "O tipo de verba selecionado não está disponível": é o pacote que o adapter manda (item 7).
+- **Unimed**: "Desmoronamento, para contratação desta cobertura é necessário enviar para Análise Técnica". Outra
+  cobertura do pacote padrão que custa uma seguradora.
+- **Porto Seguro**: "Endereço não encontrado para o CEP informado", nos dois CEPs, mesmo com o endereço gravado. A
+  Porto parece consultar outra base; a investigar.
+- **Liberty**: "Login ou senha incorreta" na conta de teste. Cadastro, não código.
+- **Bradesco**: nome não corresponde ao CPF, e CPF não cadastrado. Esperado com dado fictício; em produção é dado real.
+- **Mitsui**: instabilidade. Entra no item 8 (separar instabilidade de recusa).
+- Cada cotação levou cerca de 7 minutos no laço do script; o fechamento do produto ainda é o de auto (fase 6).
