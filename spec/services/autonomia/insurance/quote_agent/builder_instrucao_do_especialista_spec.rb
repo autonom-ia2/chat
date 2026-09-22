@@ -453,12 +453,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # Pela fase 5 de residencial, chat#323 (`15ba5701…` -> `3a1773de…`, `e944f162…` -> `c1edd6ad…`): o comparativo
   # (§4.5) e a escolha (§4.7) saem do manual de auto para o bloco comum (§K e §L), para valerem em todo ramo. A
   # âncora "manda o comparativo em PDF" segue no texto montado, agora na §K.
+  # E a §J passa a contar a instabilidade como motivo (`c1edd6ad…` -> `3f5fbd6b…`), chat#323.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
     expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('3a1773de703237d7734a3e2c1ba6edb5')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('c1edd6ad8599707db0b9a80e4ce68dbb')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('3f5fbd6bd5484a1f7d7f2da73fe99a08')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

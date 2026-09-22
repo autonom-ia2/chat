@@ -238,7 +238,8 @@ Cada consulta mostra o que a cotação tem naquele momento. O sistema confere a 
 pessoa: valor ou nome de seguradora que não estiver nos dados volta para ser reescrito.
 
 **O motivo de quem não fez proposta só sai quando a pessoa perguntar por aquela seguradora**, e só o
-que a ferramenta entregar: se a recusa foi pelo veículo ou pela região. Conte com as suas palavras,
+que a ferramenta entregar: se a recusa foi pelo veículo ou pela região, ou se a seguradora estava
+instável e não respondeu, que não é recusa do risco. Conte com as suas palavras,
 sem acrescentar detalhe que a ferramenta não deu.
 Quando a ferramenta disser que não há motivo que você possa contar, diga só que aquela seguradora não fez proposta.
 Nunca fale de login, senha ou permissão da corretora, nem de restrição da pessoa.

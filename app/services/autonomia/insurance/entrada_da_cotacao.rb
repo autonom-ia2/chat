@@ -48,6 +48,26 @@ class Autonomia::Insurance::EntradaDaCotacao
     ['coverage.assistance24h', 'Assistência 24 horas', :lista]
   ].freeze
 
+  # RESIDENCIAL (chat#323, 22/09/2026): o que o cliente pergunta sobre o imóvel cotado. Com os dados mínimos, quase
+  # tudo aqui vale o padrão quando ele não disse, e a linha diz qual (`padrao` do schema), em vez de "sem
+  # informação": o padrão foi enviado. FICAM DE FORA o valor a segurar e as coberturas, que são reais (ver acima), e
+  # a construção, que o adapter deduz do tipo quando o cliente não disse, e cujo padrão do schema não é o enviado.
+  CAMPOS_DE_RESIDENCIAL = [
+    ['segurado.cep', 'CEP do imóvel', :numero],
+    ['configuracoes.imovelNumero', 'Número do imóvel', :numero],
+    ['configuracoes.imovelTipoResidencia', 'Tipo do imóvel', :lista],
+    ['configuracoes.imovelObjetoSegurado', 'O que o seguro protege', :lista],
+    ['configuracoes.imovelUso', 'Uso do imóvel', :lista],
+    ['configuracoes.seguradoProprietario', 'Dono do imóvel', :sim_nao],
+    ['configuracoes.zonaRural', 'Zona rural', :sim_nao],
+    ['configuracoes.areaRisco', 'Área de risco', :sim_nao]
+  ].freeze
+  RESIDENCIAL = 'residencial'.freeze
+  CAMPOS_POR_PRODUTO = { AUTO => CAMPOS, RESIDENCIAL => CAMPOS_DE_RESIDENCIAL }.freeze
+  PADRAO = 'o padrão, porque o cliente não informou.'.freeze
+  # Os grupos em que o formulário dos ramos põe o que o modelo escreveu, os mesmos que o adapter lê.
+  GRUPOS_DOS_RAMOS = %w[segurado configuracoes].freeze
+
   # `argumentos` é o `ToolRun#arguments` da execução de `cotar_seguro`; `schema` é o que o adapter
   # entregou na sincronização da conexão (`Connection#quote_schema`), ou nil.
   def initialize(argumentos, schema: nil)
@@ -55,14 +75,13 @@ class Autonomia::Insurance::EntradaDaCotacao
     @schema = schema.to_h
   end
 
-  # -> o texto ao modelo, ou nil quando não há entrada de auto para resumir (outro ramo, ou execução
-  # sem argumentos). Só auto: nos demais ramos os campos vivem dentro de `dados`, com os nomes do
-  # ramo, e não há lista de rótulos que os traduza.
+  # -> o texto ao modelo, ou nil quando não há entrada para resumir (ramo sem lista de rótulos em
+  # `CAMPOS_POR_PRODUTO`, ou execução sem argumentos).
   def texto
     return nil if entrada.nil?
 
-    [ABERTURA, tipo_de_seguro, *CAMPOS.map { |caminho, rotulo, forma| linha(caminho, rotulo, forma) },
-     AUSENCIA].join("\n")
+    linhas = CAMPOS_POR_PRODUTO.fetch(produto).map { |caminho, rotulo, forma| linha(caminho, rotulo, forma) }
+    [ABERTURA, (tipo_de_seguro if produto == AUTO), *linhas, AUSENCIA].compact.join("\n")
   end
 
   private
@@ -71,12 +90,27 @@ class Autonomia::Insurance::EntradaDaCotacao
     return @entrada if defined?(@entrada)
     return @entrada = nil if @argumentos.blank?
 
-    # `produto` em branco é auto, como em `InsuranceQuote#produto`: sem isto, a cotação de auto que o
-    # modelo pediu sem nomear o produto ficaria sem resumo (achado da revisão da PR #518).
-    produto = @argumentos['produto'].to_s.strip.presence || ::Autonomia::Insurance::ResultadoDaCotacao.cotacao::AUTO
-    input = ::Autonomia::Insurance::QuoteInput.new(produto: produto, params: @argumentos,
-                                                   dados: {}, commission_percent: nil)
-    @entrada = input.auto? ? input.to_h : nil
+    return @entrada = nil unless CAMPOS_POR_PRODUTO.key?(produto)
+
+    # Nos ramos, o que o modelo mandou em `dados` (texto JSON) conta como no envio.
+    input = ::Autonomia::Insurance::QuoteInput.new(produto: produto, params: @argumentos, dados: dados,
+                                                   commission_percent: nil, grupos_do_ramo: GRUPOS_DOS_RAMOS)
+    @entrada = input.to_h
+  end
+
+  # `produto` em branco é auto, como em `InsuranceQuote#produto`: sem isto, a cotação de auto que o
+  # modelo pediu sem nomear o produto ficaria sem resumo (achado da revisão da PR #518).
+  def produto
+    @argumentos['produto'].to_s.strip.presence || ::Autonomia::Insurance::ResultadoDaCotacao.cotacao::AUTO
+  end
+
+  def dados
+    return {} if produto == AUTO
+
+    valor = @argumentos['dados']
+    valor.is_a?(String) ? JSON.parse(valor) : valor.to_h
+  rescue JSON::ParserError
+    {}
   end
 
   # A AUSÊNCIA AQUI TEM SIGNIFICADO, e é o que o cliente pergunta primeiro: sem `isRenewal` o pedido
@@ -87,9 +121,19 @@ class Autonomia::Insurance::EntradaDaCotacao
 
   def linha(caminho, rotulo, forma)
     valor = em(caminho)
-    return "#{rotulo}: #{SEM_INFORMACAO}" if valor.nil? || valor == ''
+    return "#{rotulo}: #{escrito(forma, caminho, valor)}" unless valor.nil? || valor == ''
 
-    "#{rotulo}: #{escrito(forma, caminho, valor)}"
+    padrao = padrao_de(caminho)
+    return "#{rotulo}: #{SEM_INFORMACAO}" if padrao.nil?
+
+    "#{rotulo}: #{escrito(forma, caminho, padrao).delete_suffix('.')}, #{PADRAO}"
+  end
+
+  # O padrão do schema, só nos ramos: em auto a ausência tem o significado de sempre ("sem informação").
+  def padrao_de(caminho)
+    return nil if produto == AUTO
+
+    Array(@schema['campos']).find { |c| c.to_h['campo'] == caminho }.to_h['padrao']
   end
 
   def escrito(forma, caminho, valor)

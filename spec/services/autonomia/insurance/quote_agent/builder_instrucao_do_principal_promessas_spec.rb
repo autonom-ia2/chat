@@ -362,9 +362,10 @@ module ManualDoPrincipalResultado
       motivo = RESULTADO::MOTIVOS.fetch(MOTIVO::VEICULO)
       consultar(nil).first.exclude?(motivo) && consultar('Sancor').first.include?(motivo)
     },
-    # A ferramenta entrega uma de duas categorias, escritas pelo código.
-    'que a ferramenta entregar: se a recusa foi pelo veículo ou pela região.' => lambda {
-      MOTIVO::CATEGORIAS == [MOTIVO::VEICULO, MOTIVO::REGIAO] && RESULTADO::MOTIVOS.keys == MOTIVO::CATEGORIAS
+    # A ferramenta entrega uma de três categorias, escritas pelo código.
+    # A instabilidade entrou em chat#323: vem do `kind` `passageiro` do conector, sem ler o texto.
+    "que a ferramenta entregar: se a recusa foi pelo veículo ou pela região, ou se a seguradora estava\ninstável" => lambda {
+      MOTIVO::CATEGORIAS == [MOTIVO::VEICULO, MOTIVO::REGIAO, MOTIVO::INSTABILIDADE] && RESULTADO::MOTIVOS.keys == MOTIVO::CATEGORIAS
     },
     # O texto do portal não chega ao modelo: não há detalhe a acrescentar além da categoria.
     'sem acrescentar detalhe que a ferramenta não deu.' => lambda {
@@ -373,7 +374,7 @@ module ManualDoPrincipalResultado
     },
     'Quando a ferramenta disser que não há motivo que você possa contar' => lambda {
       RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
-        MOTIVO.categoria('kind' => 'passageiro', 'text' => MOTIVO_DO_VEICULO).nil?
+        MOTIVO.categoria('kind' => 'outro', 'text' => MOTIVO_DO_VEICULO).nil?
     },
     # O molde fechado do motivo não tem palavra de conta nem da pessoa: com qualquer uma delas, o texto vai ao genérico.
     'Nunca fale de login, senha ou permissão da corretora, nem de restrição da pessoa.' => lambda {
@@ -605,7 +606,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('f288a41b420cba940196b620b03cf87d')
+      expect(Digest::MD5.hexdigest(secao)).to eq('7856af4704670779528dd0401dda2f42')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do
