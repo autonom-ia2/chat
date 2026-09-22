@@ -115,12 +115,16 @@ class Autonomia::Agents::Tools::Native::Base
     # o formulário. As demais ignoram, e `params_for` cai na lista fixa da classe.
     # `especialista` também: quem monta o turno de um especialista (`Specialist#tools`) diz qual é, e
     # a cotação usa isso para dar a cada especialista o formulário do ramo dele (chat#591).
+    #
+    # A DESCRIÇÃO SAI DOS PARÂMETROS QUE VÃO AO MODELO (revisão da chat#592): as duas coisas que ele lê sobre a
+    # ferramenta não podem se contradizer, e a regra mais perto da ação vence. Montadas uma da outra, não há como.
     def openai_schema(agent = nil, especialista: nil)
+      parametros = params_for(agent, especialista: especialista)
       {
         type: 'function',
         name: slug,
-        description: description,
-        parameters: objeto(params_for(agent, especialista: especialista)),
+        description: description_for(parametros),
+        parameters: objeto(parametros),
         strict: true
       }
     end
@@ -128,6 +132,11 @@ class Autonomia::Agents::Tools::Native::Base
     # Os parâmetros DE UMA CONTA (e de um especialista). O padrão é a lista fixa da classe.
     def params_for(_agent, **)
       params
+    end
+
+    # A descrição para ESTES parâmetros. O padrão é a fixa da classe.
+    def description_for(_parametros)
+      description
     end
 
     # UM OBJETO EM STRICT MODE: todas as chaves em `required`, `additionalProperties: false`, e o

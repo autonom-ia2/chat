@@ -46,6 +46,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
               'outros ramos, informe o que o cliente já deu em `dados`; se faltar algo, a ' \
               'ferramenta responde exatamente o que perguntar, sem consumir cotação.'.freeze
 
+  # A DESCRIÇÃO DO ESPECIALISTA DE UM RAMO COM FORMULÁRIO (revisão da chat#592). Ele não recebe `dados`, e a
+  # DESCRICAO acima mandaria escrever nele: o modelo tentaria um campo que não existe, ou hesitaria. Esta diz o que o
+  # formulário dele é, sem nome de campo digitado aqui.
+  DESCRICAO_COM_FORMULARIO = 'Cota o seguro deste ramo nas seguradoras que esta corretora atende. Preencha os ' \
+                             'blocos com o que o cliente contou, cada campo explicado nele; rua, bairro e cidade ' \
+                             'o sistema busca pelo CEP. O que ninguém disse fica nulo. Se faltar algo, a ' \
+                             'ferramenta responde exatamente o que perguntar, sem consumir cotação.'.freeze
+
   # NÃO PROMETA O QUE AINDA NÃO ACONTECEU. Este texto volta ao modelo em `Bound#accept_async`, que
   # roda ANTES de qualquer conferência: nada foi enviado a seguradora nenhuma ainda, e o pedido pode
   # ser recusado logo em seguida por falta de dado, por conexão fora do ar ou por prazo. Quando ele
@@ -83,6 +91,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
 
     def description
       DESCRICAO
+    end
+
+    # Sem `dados` entre os parâmetros, o formulário é o do ramo: a descrição não pode mandar o modelo escrever nele.
+    # Auto sempre leva `dados` (COMUNS), então a descrição de auto não muda.
+    def description_for(parametros)
+      parametros.any? { |param| param['name'] == 'dados' } ? DESCRICAO : DESCRICAO_COM_FORMULARIO
     end
 
     def params

@@ -86,6 +86,30 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(do_principal[:parameters][:properties].keys).to include('vehicle', 'dados')
     end
 
+    # A DESCRIÇÃO SAI DOS PARÂMETROS (revisão da #592): o especialista com formulário não recebe `dados`, e a
+    # descrição não pode mandar escrever nele. A do principal (auto) é a de sempre, byte a byte.
+    it 'a descrição da ferramenta acompanha o formulário: sem dados, ela não fala em dados' do
+      do_especialista = described_class.openai_schema(lia, especialista: com_especialista_de_residencial)
+      do_principal = described_class.openai_schema(lia)
+
+      expect(do_especialista[:description]).to eq(described_class::DESCRICAO_COM_FORMULARIO)
+      expect(do_especialista[:description]).not_to include('dados')
+      expect(do_principal[:description]).to eq(described_class::DESCRICAO)
+    end
+
+    it 'formulário do ramo recusado volta ao dados, e a descrição volta à que fala dele' do
+      quebrado = schema_residencial.merge('campos' => schema_residencial['campos'] +
+        [{ 'campo' => 'configuracoes.novo', 'tipo' => 'texto', 'origem' => 'cliente' }])
+      Autonomia::Insurance::Connection.for_account(account).first
+                                      .update!(metadata: { 'quote_schemas' => { 'residencial' => quebrado } })
+      allow(Rails.logger).to receive(:error)
+
+      schema = described_class.openai_schema(lia, especialista: com_especialista_de_residencial)
+
+      expect(schema[:parameters][:properties].keys).to include('dados')
+      expect(schema[:description]).to eq(described_class::DESCRICAO)
+    end
+
     it 'passa no modo strict: toda chave em required, opcional pelo tipo com null, enum aceitando null' do
       schema = described_class.openai_schema(lia, especialista: com_especialista_de_residencial)[:parameters]
       configuracoes = schema[:properties]['configuracoes']
