@@ -67,7 +67,7 @@ class Autonomia::Guide::Consulta
   # estourar esse limite corta JSON no meio.
   def ler(recurso, parametros = {}, filtros = {}, campos: nil, teto: TETO_PADRAO)
     caminho = montar_caminho(recurso, parametros)
-    resposta = requisitar(caminho, filtros)
+    resposta = requisitar(caminho, filtros, sobras(recurso, parametros))
 
     return indisponivel(recurso, resposta.codigo) unless resposta.codigo.to_i == 200
 
@@ -133,8 +133,24 @@ class Autonomia::Guide::Consulta
   # A chamada sai com o token do próprio usuário: é o mecanismo oficial da API e
   # é o que garante que a resposta seja exatamente a que ele receberia na tela.
   # O token nunca é registrado em log.
-  def requisitar(caminho, filtros)
+  def requisitar(caminho, filtros, sobras)
     ::Autonomia::Guide::ChamadaInterna.new(user: @user)
-                                      .chamar(:get, caminho, filtros: filtros.slice(*%w[status page sort]).compact)
+                                      .chamar(:get, caminho, filtros: sobras.merge(filtros.slice(*%w[status page sort]).compact))
+  end
+
+  # O parâmetro que não preenche um `:` do caminho segue como filtro da leitura,
+  # do jeito que o painel manda: o kanban lê `?pipeline_id=`. Antes ele era
+  # jogado fora calado (#593) — o Guia pediu o kanban do funil 10, recebeu o do
+  # funil 8, e não tinha como saber. Só valor simples; o caminho continua
+  # sendo montado com o id desta conta.
+  def sobras(recurso, parametros)
+    (parametros || {}).transform_keys(&:to_s).except(*do_caminho(recurso))
+                      .select { |_chave, valor| valor.is_a?(String) || valor.is_a?(Integer) }
+                      .transform_values(&:to_s)
+  end
+
+  def do_caminho(recurso)
+    recurso.to_s.split('/').select { |segmento| segmento.start_with?(PARAMETRO) }
+           .map { |segmento| segmento.delete_prefix(PARAMETRO) }
   end
 end

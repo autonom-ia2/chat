@@ -83,6 +83,7 @@ class Autonomia::Guide::Resumo
     # O orçamento é do TEXTO INTEIRO, e as notas fazem parte dele. Sem descontar
     # as duas, a resposta estoura o teto de saída da ferramenta e o `Bound`
     # corta o fim — justamente onde mora o total.
+    catalogo ||= campos_inexistentes(limpos, campos)
     mostrados = cabem(escolhidos(limpos, campos), teto - catalogo.to_s.length - MARGEM_DA_NOTA)
 
     "#{JSON.generate(mostrados)}#{quantos(mostrados.size, lista.size, total_de(dados))}#{catalogo}"
@@ -101,6 +102,22 @@ class Autonomia::Guide::Resumo
   # um campo sozinho não pode comer a lista.
   def pedidos(item, campos)
     cabe_no_item(achatado(item).slice(*Array(campos).map(&:to_s)))
+  end
+
+  # Campo pedido que o recurso não tem não pode sumir calado (#593). Medido em
+  # 22/09/2026: pedindo `id` e `name` às caixas de um funil — que têm
+  # `inbox.name`, não `name` —, cada item voltou só com `{"id":7}`, o id da
+  # LIGAÇÃO. A caixa WhatsApp Comercial também tinha id 7, e o Guia afirmou a
+  # um cliente que ela estava no funil errado.
+  def campos_inexistentes(limpos, campos)
+    return nil if limpos.empty?
+
+    existentes = limpos.flat_map { |item| achatado(item).keys }.uniq
+    ausentes = Array(campos).map(&:to_s) - existentes
+    return nil if ausentes.empty?
+
+    " [NOTA INTERNA, não repita: estes campos NÃO existem neste recurso e não vieram: #{ausentes.join(', ')}. " \
+      "Os que existem são: #{existentes.join(', ')}. Não tire conclusão do que faltou: leia de novo com os nomes certos.]"
   end
 
   # O que mais existe neste recurso, para quem chamou poder pedir na próxima.
