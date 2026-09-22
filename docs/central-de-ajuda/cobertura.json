@@ -1,0 +1,1771 @@
+{
+  "telas": [
+    {
+      "rota": "account_overview_reports",
+      "assuntos": [
+        "11.1-onde-ficam-os-relatorios",
+        "11.2-visao-geral-numeros-ao-vivo",
+        "11.3-visao-geral-status-agente",
+        "11.4-visao-geral-mapas-de-calor",
+        "11.5-visao-geral-tabelas-agentes-times"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "account_suspended",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Tela de sistema (conta suspensa) — não é jornada de produto. Já listada como fora no Guia da Plataforma (lib/operator_guide/porques.md, bloco _fora_do_guia)."
+    },
+    {
+      "rota": "agent_assignment_policy_create",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Nenhum assunto do estudo cita a tela de política de atribuição de conversas (fila/round-robin). Item de menu só aparece com advanced_assignment ligada."
+    },
+    {
+      "rota": "agent_assignment_policy_edit",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Idem: ajustar política existente e ligar caixas — sem cobertura."
+    },
+    {
+      "rota": "agent_assignment_policy_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Idem: listar e organizar políticas de atribuição — sem cobertura."
+    },
+    {
+      "rota": "agent_bots",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Robôs nativos do Chatwoot (webhook bots) — feature ligada por padrão (AGENT_BOTS=true), zero menção no estudo. É o terceiro produto chamado 'robô/agente' na plataforma (ver Contatos 11.17 'Relatórios do Bot', que cita o resultado sem nunca apresentar a tela de configuração)."
+    },
+    {
+      "rota": "agent_capacity_policy_create",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Política de limite de conversas por agente — sem cobertura."
+    },
+    {
+      "rota": "agent_capacity_policy_edit",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Idem — sem cobertura."
+    },
+    {
+      "rota": "agent_capacity_policy_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Idem — sem cobertura."
+    },
+    {
+      "rota": "agent_list",
+      "assuntos": [
+        "02.1-agente-e-pessoa",
+        "02.2-ler-a-lista",
+        "02.3-convidar-pessoa",
+        "02.4-escolher-a-funcao",
+        "02.5-caixas-no-convite",
+        "02.6-caixa-whatsapp-no-convite",
+        "02.7-o-que-acontece-depois-do-convite",
+        "02.8-link-manual-e-reconvite",
+        "02.10-editar-agente",
+        "02.11-redefinir-senha",
+        "02.12-horario-de-atendimento-sla",
+        "02.13-remover-agente",
+        "02.14-quem-ve-o-que",
+        "02.17-aplicar-funcao-personalizada"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "agent_reports",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Rota-casca de agrupamento (settings/reports/reports.routes.js) sem path/componente próprio; o conteúdo real está em agent_reports_index e agent_reports_show."
+    },
+    {
+      "rota": "agent_reports_index",
+      "assuntos": [
+        "11.12-visao-geral-de-agentes",
+        "11.6-filtro-de-periodo"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "agent_reports_show",
+      "assuntos": [
+        "11.12-visao-geral-de-agentes",
+        "11.10-seta-de-tendencia"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "assignment_policy_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Tela-hub 'Atribuição de Agentes' (cartões Atribuição / Capacidade / Handoff da IA). Só o terceiro cartão (Handoff) é ensinado, via 08.29-08.33, mas o capítulo 08 não diz que a porta de entrada é esta tela."
+    },
+    {
+      "rota": "attributes_list",
+      "assuntos": [
+        "07.12-criar-atributo-personalizado",
+        "07.14-atributos-sw-preenchidos-pela-ia"
+      ],
+      "situacao": "coberta",
+      "nota": "Cobre só a aba 'Contato'. A mesma tela tem aba 'Conversas' (atributo customizado de conversa) e não é mencionada em nenhum assunto — ver lacuna."
+    },
+    {
+      "rota": "auditlogs_list",
+      "assuntos": [
+        "02.20-auditoria-de-mudancas"
+      ],
+      "situacao": "coberta",
+      "nota": "02.20 trata a tela como truque ('descobrir quem convidou quem'); não ensina a ler/filtrar a Auditoria como tela própria."
+    },
+    {
+      "rota": "automation_list",
+      "assuntos": [
+        "03.16-time-em-automacao"
+      ],
+      "situacao": "coberta",
+      "nota": "Cobertura fraca: 03.16 só ensina a condição 'Nome do Time' dentro de Automação; ninguém ensina a criar uma regra do zero (evento, condições, ações). Ver lacuna 'Automação: criar regra do zero'."
+    },
+    {
+      "rota": "autonomia_agent_panel",
+      "assuntos": [
+        "09.13-publicar-agente-externo",
+        "09.14-publicar-agente-interno",
+        "09.15-painel-do-agente-e-estados",
+        "09.16-aba-testar",
+        "09.17-aba-conhecimento",
+        "09.18-aba-canais",
+        "09.19-aba-desempenho",
+        "09.20-ajustar-configuracoes-rapidas",
+        "09.21-transferir-para-humano-e-limite-de-confianca",
+        "09.22-ajustar-com-ia-x-modo-avancado",
+        "09.23-historico-da-instrucao",
+        "09.24-pausar-reativar-apagar"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "autonomia_agents_builder",
+      "assuntos": [
+        "09.3-decidir-externo-ou-interno",
+        "09.4-decidir-com-base-ou-sem-base",
+        "09.5-escolher-o-tipo-de-agente",
+        "09.6-etapa-envie-a-base",
+        "09.7-entrevista-do-construtor",
+        "09.8-anexar-arquivos-e-links-na-conversa",
+        "09.9-ler-o-parecer-de-cada-material",
+        "09.10-formatos-e-limites-dos-materiais",
+        "09.11-finalizar-a-construcao",
+        "09.12-revisar-o-agente"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "autonomia_agents_index",
+      "assuntos": [
+        "09.1-onde-ficam-os-agentes-de-ia",
+        "09.2-ler-a-tela-meus-agentes"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "autonomia_financial_invoices",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura. Onde o cliente vê o que paga — nenhum subcapítulo conecta com o custo de IA citado o tempo todo no capítulo 04/08."
+    },
+    {
+      "rota": "autonomia_financial_subscription",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura. Plano contratado e valor cobrado."
+    },
+    {
+      "rota": "autonomia_insurance",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Redirecionamento puro (autonomia.routes.js), sem componente — sempre encaminha para autonomia_insurance_connections (mesma tela)."
+    },
+    {
+      "rota": "autonomia_insurance_agent",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura no estudo (id 284). O Guia da Plataforma (porques.md) já tem um bloco extenso e correto sobre esta tela ('como_o_cliente_recebe_a_cotacao') — é conteúdo pronto para adaptar, só não foi puxado para o estudo."
+    },
+    {
+      "rota": "autonomia_insurance_connections",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — ligar a conta da corretora e ver o que dá para cotar."
+    },
+    {
+      "rota": "autonomia_invite_connection",
+      "assuntos": [
+        "02.9-convidado-conecta-whatsapp"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "autonomia_prospecting_lists",
+      "assuntos": [
+        "09.28-prospeccao-listas-e-publico-de-campanha"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "autonomia_prospecting_search",
+      "assuntos": [
+        "09.26-prospeccao-montar-uma-busca",
+        "09.27-prospeccao-trabalhar-os-resultados"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "autonomia_prospecting_settings",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Redirecionamento puro (autonomia.routes.js), sem componente — sempre encaminha para settings_prospecting_index (mesma tela)."
+    },
+    {
+      "rota": "billing_settings_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura ('Cobrança', nativo Chatwoot) — plano, assentos, portal de cobrança. Coexiste e se confunde com Financeiro (Autonomia)."
+    },
+    {
+      "rota": "bot_reports",
+      "assuntos": [
+        "11.17-relatorios-do-bot"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "calls_dashboard_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura do histórico/gravações de chamadas como tela própria (05.18 só cobre a aba 'Chamadas' dentro da caixa de WhatsApp Oficial, não este dashboard)."
+    },
+    {
+      "rota": "campaigns_email_builder",
+      "assuntos": [
+        "10.13-criar-email-com-ia",
+        "10.14-editor-email-blocos",
+        "10.15-placeholders-personalizacao",
+        "10.16-enviar-teste"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "campaigns_email_index",
+      "assuntos": [
+        "10.11-nova-campanha-email-remetente",
+        "10.12-escolher-ponto-de-partida",
+        "10.17-destinatarios-email",
+        "10.18-enviar-ou-agendar-email",
+        "10.19-gerir-campanhas-email"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "campaigns_email_sender_index",
+      "assuntos": [
+        "10.9-dominio-envio-adicionar",
+        "10.10-dominio-envio-verificar"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "campaigns_email_templates",
+      "assuntos": [
+        "10.20-modelos-email",
+        "10.12-escolher-ponto-de-partida"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "campaigns_livechat_index",
+      "assuntos": [
+        "10.1-mapa-de-campanhas",
+        "10.2-campanha-chat-ao-vivo"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "campaigns_one_off_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Redirecionamento puro (campaigns.routes.js), sem componente — sempre encaminha para campaigns_sms_index."
+    },
+    {
+      "rota": "campaigns_ongoing_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Redirecionamento puro (campaigns.routes.js), sem componente — sempre encaminha para campaigns_livechat_index."
+    },
+    {
+      "rota": "campaigns_sms_index",
+      "assuntos": [
+        "10.3-campanha-sms",
+        "10.1-mapa-de-campanhas"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "campaigns_whatsapp_analytics",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura no estudo. O Guia da Plataforma já tem bloco pronto ('ver_resultado_da_campanha_de_whatsapp') com gotchas detalhados (entregues x lidas, ignoradas) — outro caso de conteúdo já escrito no Guia e não puxado para a Central."
+    },
+    {
+      "rota": "campaigns_whatsapp_api_index",
+      "assuntos": [
+        "10.5-campanha-whatsapp-api-criar",
+        "10.6-campanha-whatsapp-api-acompanhar",
+        "10.1-mapa-de-campanhas"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "campaigns_whatsapp_index",
+      "assuntos": [
+        "10.4-campanha-whatsapp-oficial",
+        "10.1-mapa-de-campanhas"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "canned_list",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura. 06.14 ensina a USAR resposta pronta com '/', ninguém ensina a criar/editar/apagar. É também a tela padrão de Configurações para quem não é administrador."
+    },
+    {
+      "rota": "captain_assistants_create_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_documents_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_faq_suggestions",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_guardrails_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_guidelines_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_inboxes_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_overview_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_playground_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_responses_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_scenarios_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_settings_audience_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_settings_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_settings_schedule_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_settings_system_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_settings_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_tools_index",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "companies_dashboard_index",
+      "assuntos": [
+        "07.24-empresas-lista-e-cadastro"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "companies_dashboard_show",
+      "assuntos": [
+        "07.25-empresas-vincular-contatos-e-usar"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "contacts_campaign_imports",
+      "assuntos": [
+        "07.20-base-campanha-enviar-e-validar",
+        "07.21-base-campanha-confirmar-lotes-e-desfazer",
+        "10.7-importar-base-campanha",
+        "10.8-historico-bases-campanha"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "contacts_dashboard_active",
+      "assuntos": [
+        "07.1-onde-ficam-os-contatos"
+      ],
+      "situacao": "coberta",
+      "nota": "07.1 lista a visão 'Ativo' mas não explica o que a diferencia de 'Todos os Contatos' (achado já registrado no autodiagnóstico do estudo de 08/09)."
+    },
+    {
+      "rota": "contacts_dashboard_index",
+      "assuntos": [
+        "07.1-onde-ficam-os-contatos",
+        "07.2-ler-a-lista-e-paginar",
+        "07.3-ordenar-a-lista",
+        "07.4-buscar-um-contato",
+        "07.5-criar-contato",
+        "07.15-filtrar-contatos",
+        "07.17-acoes-em-massa",
+        "07.18-importar-csv",
+        "07.19-exportar-csv"
+      ],
+      "situacao": "coberta",
+      "nota": "07.3 (ordenação) referencia a ordenação da lista; o padrão mudou em 15/09/2026 (commit 3d7ca0ec0b, pós-estudo) — ver 'obsoletos'."
+    },
+    {
+      "rota": "contacts_dashboard_labels_index",
+      "assuntos": [
+        "07.1-onde-ficam-os-contatos"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "contacts_dashboard_segments_index",
+      "assuntos": [
+        "07.16-salvar-segmento",
+        "07.1-onde-ficam-os-contatos"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "contacts_edit",
+      "assuntos": [
+        "07.6-editar-contato-e-foto",
+        "07.7-etiquetas-do-contato",
+        "07.8-bloquear-contato",
+        "07.9-notas-do-contato",
+        "07.10-conversas-anteriores",
+        "07.11-midia-do-contato",
+        "07.13-preencher-atributos-no-contato",
+        "07.22-mesclar-contatos-duplicados",
+        "07.23-excluir-contato",
+        "07.26-referencia-campos-do-contato"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "contacts_edit_label",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Mesma tela de contacts_edit (componente ContactManageView); variante de rota alcançada a partir de Contatos > Etiquetas, sem UI própria."
+    },
+    {
+      "rota": "contacts_edit_segment",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Mesma tela de contacts_edit (componente ContactManageView); variante de rota alcançada a partir de Contatos > Segmentos, sem UI própria."
+    },
+    {
+      "rota": "conversation_mentions",
+      "assuntos": [
+        "06.7-mencoes-participantes"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "conversation_participating",
+      "assuntos": [
+        "06.7-mencoes-participantes"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "conversation_reports",
+      "assuntos": [
+        "11.9-relatorio-de-conversas",
+        "11.6-filtro-de-periodo",
+        "11.7-agrupar-por",
+        "11.8-horarios-de-funcionamento",
+        "11.10-seta-de-tendencia",
+        "11.11-o-que-cada-metrica-conta",
+        "11.19-baixar-relatorios-csv",
+        "11.20-colunas-de-cada-csv",
+        "11.21-compartilhar-link-do-relatorio",
+        "11.22-mensagens-e-telas-vazias"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "conversation_through_inbox",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Mesma tela de inbox_conversation (componente ConversationView com uma conversa aberta); variante de rota alcançada a partir de uma caixa específica, sem UI própria."
+    },
+    {
+      "rota": "conversation_through_mentions",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de Menções, sem UI própria."
+    },
+    {
+      "rota": "conversation_through_participating",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de Participantes, sem UI própria."
+    },
+    {
+      "rota": "conversation_through_unattended",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de Não atendidas, sem UI própria."
+    },
+    {
+      "rota": "conversation_unattended",
+      "assuntos": [
+        "06.8-nao-atendidas"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "conversation_workflow_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura. Regras e campos obrigatórios para resolver conversa — efeito visível na janela 'Resolver conversa' do capítulo 06 (06.19), sem explicar a causa."
+    },
+    {
+      "rota": "conversations_through_folders",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de uma Pasta salva, sem UI própria."
+    },
+    {
+      "rota": "conversations_through_label",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de uma Etiqueta, sem UI própria."
+    },
+    {
+      "rota": "conversations_through_team",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de um Time, sem UI própria."
+    },
+    {
+      "rota": "crm_ai_usage_index",
+      "assuntos": [
+        "08.46-gestao-de-ia",
+        "08.47-gestao-de-ia-recursos",
+        "04.13-gestao-de-ia",
+        "04.14-economia-automatica",
+        "04.15-baixar-relatorio-de-uso"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "crm_calendar_index",
+      "assuntos": [
+        "08.35-calendario-navegar",
+        "08.36-calendario-acoes",
+        "08.37-agendar-reuniao",
+        "08.38-detalhes-da-reuniao",
+        "08.39-pagina-publica-agendamento"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "crm_campaign_management_index",
+      "assuntos": [
+        "10.21-gestao-campanhas-indicadores",
+        "10.22-gestao-campanhas-detalhe",
+        "10.23-links-rastreaveis-qr",
+        "08.40-links-rastreaveis"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "crm_dashboard_index",
+      "assuntos": [
+        "08.44-dashboard-kpis",
+        "08.45-dashboard-secoes"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "crm_handoff_settings_edit",
+      "assuntos": [
+        "08.30-handoff-gatilho",
+        "08.31-handoff-destino",
+        "08.32-handoff-plano-b",
+        "08.33-handoff-por-etapa"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "crm_handoff_settings_index",
+      "assuntos": [
+        "08.29-handoff-conceito",
+        "08.33-handoff-por-etapa"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "crm_integration_tokens_index",
+      "assuntos": [
+        "08.51-tokens-integracao"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "crm_kanban_index",
+      "assuntos": [
+        "08.1-mapa-do-crm",
+        "08.2-criar-funil",
+        "08.3-meta-mensal",
+        "08.4-vincular-inbox-ao-funil",
+        "08.5-configurar-inboxes",
+        "08.6-ler-o-quadro",
+        "08.7-criar-card-manual",
+        "08.8-mover-card",
+        "08.9-gaveta-do-card",
+        "08.10-timeline-do-card",
+        "08.11-ganhar-perder-reabrir",
+        "08.12-arquivar",
+        "08.13-follow-up-manual",
+        "08.14-follow-up-envio-automatico",
+        "08.15-lembrete-vencido",
+        "08.16-filtros",
+        "08.17-visao-lista",
+        "08.18-edicao-rapida-lista",
+        "08.19-abas-resultado",
+        "08.20-acoes-em-massa",
+        "08.21-views-salvas",
+        "08.22-ia-do-funil-ligar",
+        "08.23-sugestao-vs-automove",
+        "08.24-sugestao-no-card",
+        "08.25-extracao-de-campos",
+        "08.26-lembrete-de-retorno",
+        "08.27-followup-automatico-config",
+        "08.28-followup-automatico-acompanhar",
+        "08.34-automacoes-do-estagio",
+        "08.41-origem-do-lead",
+        "08.42-conversoes-meta",
+        "08.43-conversoes-google",
+        "03.19-filtrar-crm-por-time"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "crm_sla_index",
+      "assuntos": [
+        "08.48-sla-politicas",
+        "08.49-sla-calendarios"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "csat_reports",
+      "assuntos": [
+        "11.15-csat-indicadores",
+        "11.16-csat-filtros-e-tabela"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "custom_roles_list",
+      "assuntos": [
+        "02.15-criar-funcao-personalizada",
+        "02.16-permissoes-uma-a-uma",
+        "02.18-editar-excluir-funcao"
+      ],
+      "situacao": "coberta",
+      "nota": "02.16 é referência de 20/09 (véspera do estudo); as permissões novas de Prospecção, Cotação, Autonomia, Campanhas e Conexões (commits fc1c912db7 e 920263697f, ambos pós-estudo) não estão na lista — ver 'obsoletos'."
+    },
+    {
+      "rota": "first_steps",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Cobertura quase nula (só uma referência tangencial em 04.11). Mudou de comportamento após o estudo: passou a ser 'porta de entrada da conta' (commits 06a03cbb51, acd53a12e7, 0dc9894053, todos pós-08/09) — ver 'obsoletos'/mudanças."
+    },
+    {
+      "rota": "folder_conversations",
+      "assuntos": [
+        "06.28-pastas-filtros-salvos"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "general_settings_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura. É a PRIMEIRA tela que um administrador vê ao clicar em Configurações (settings.routes.js redireciona para cá). Nome da conta, idioma, domínio, resolução automática de conversa e transcrição de áudio ficam sem dono."
+    },
+    {
+      "rota": "home",
+      "assuntos": [
+        "06.1-abrir-conversas",
+        "06.2-ler-card-lista",
+        "06.3-abas-responsavel",
+        "06.4-filtro-status",
+        "06.5-ordenar-fila",
+        "06.6-visao-por-canal-time-etiqueta",
+        "06.9-layout-lista",
+        "06.25-menu-botao-direito-card",
+        "06.26-acoes-em-massa",
+        "06.27-filtros-avancados",
+        "06.28-pastas-filtros-salvos",
+        "06.33-atalhos-teclado"
+      ],
+      "situacao": "coberta",
+      "nota": "'Iniciar nova conversa' está listado como fluxo desta tela no roteador, mas nenhum assunto do estudo ensina a compor uma conversa nova (botão ao lado da busca) — ver lacuna."
+    },
+    {
+      "rota": "inbox_conversation",
+      "assuntos": [
+        "01.8-ligar-assinatura-na-conversa",
+        "03.10-atribuir-time-na-conversa",
+        "03.11-atribuir-time-em-lote",
+        "03.12-atalhos-atribuir-time",
+        "03.15-mencionar-time-nota-privada",
+        "06.10-cabecalho-conversa",
+        "06.11-responder-conversa",
+        "06.12-quando-nao-da-para-responder",
+        "06.13-nota-privada-mencao",
+        "06.14-respostas-prontas-atalhos",
+        "06.15-assinatura-mensagem",
+        "06.16-anexos-e-audio",
+        "06.17-atribuir-conversa",
+        "06.18-assumir-conversa-da-ia",
+        "06.19-status-resolver-pendente-reabrir",
+        "06.20-adiar-conversa",
+        "06.21-prioridade-conversa",
+        "06.22-etiquetas-conversa",
+        "06.23-participantes-conversa",
+        "06.24-executar-macro",
+        "06.30-copiloto-painel-conversa",
+        "06.31-copiloto-autonomia-chat",
+        "06.32-limites-por-canal",
+        "09.25-copiloto-interno-na-conversa",
+        "05.11-janela-24-horas",
+        "08.50-crm-na-conversa"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "inbox_dashboard",
+      "assuntos": [
+        "06.6-visao-por-canal-time-etiqueta"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "inbox_reports",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Rota-casca de agrupamento sem path/componente próprio; o conteúdo real está em inbox_reports_index e inbox_reports_show."
+    },
+    {
+      "rota": "inbox_reports_index",
+      "assuntos": [
+        "11.13-caixa-de-entrada-e-time",
+        "11.6-filtro-de-periodo"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "inbox_reports_show",
+      "assuntos": [
+        "11.13-caixa-de-entrada-e-time"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "inbox_view",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura. Primeiro item do menu lateral ('Caixa de Entrada') — é a central de NOTIFICAÇÕES, homônima e frequentemente confundida com 'Caixas de Entrada' (canais) e com a tela de Conversas (home)."
+    },
+    {
+      "rota": "inbox_view_conversation",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — variante de inbox_view com uma notificação aberta."
+    },
+    {
+      "rota": "label_conversations",
+      "assuntos": [
+        "06.6-visao-por-canal-time-etiqueta"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "label_reports",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Rota-casca de agrupamento sem path/componente próprio; o conteúdo real está em label_reports_index e label_reports_show."
+    },
+    {
+      "rota": "label_reports_index",
+      "assuntos": [
+        "11.14-visao-geral-das-etiquetas",
+        "11.6-filtro-de-periodo"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "label_reports_show",
+      "assuntos": [
+        "11.14-visao-geral-das-etiquetas"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "labels_list",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura da tela de gestão de etiquetas (criar, cor, editar, excluir). Etiqueta é usada em 4 capítulos diferentes (06, 07, 11 e no roteador) mas nunca ensinada na origem."
+    },
+    {
+      "rota": "labels_wrapper",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Redirecionamento puro (settings/labels/labels.routes.js), sem componente próprio; sempre encaminha para labels_list. Já listada como fora no Guia."
+    },
+    {
+      "rota": "macros_edit",
+      "assuntos": [
+        "03.17-time-em-macro"
+      ],
+      "situacao": "coberta",
+      "nota": "Cobertura fraca: mesma observação de macros_new."
+    },
+    {
+      "rota": "macros_new",
+      "assuntos": [
+        "03.17-time-em-macro"
+      ],
+      "situacao": "coberta",
+      "nota": "Cobertura fraca: só a menção de 03.17 ('criar/editar macro'), sem passo a passo. Ver lacuna 'Macros: criar e editar'."
+    },
+    {
+      "rota": "macros_wrapper",
+      "assuntos": [
+        "03.17-time-em-macro",
+        "06.24-executar-macro",
+        "03.20-tabela-onde-o-time-aparece"
+      ],
+      "situacao": "coberta",
+      "nota": "Cobertura fraca/indireta: só usar macro na conversa (06.24) e time em macro (03.17). Ninguém ensina a criar/editar a macro em si. ATENÇÃO: o Guia da Plataforma (porques.md linha ~1650) lista macros_wrapper em '_fora_do_guia' como 'casca de roteamento, não é tela' — isso está desatualizado: no código atual (settings/macros/macros.routes.js:17-30) essa rota renderiza Macros/Index.vue diretamente, é a tela real da lista de Macros. Precisa correção no Guia."
+    },
+    {
+      "rota": "no_accounts",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Tela de sistema (usuário sem conta vinculada) — não é jornada de produto. Já listada como fora no Guia (porques.md)."
+    },
+    {
+      "rota": "onboarding_account_details",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura. Tela de 'Seus detalhes'/'Detalhes da empresa' do primeiro acesso."
+    },
+    {
+      "rota": "onboarding_inbox_setup",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura. Etapa 2 do onboarding (escolher/criar a primeira caixa). O Guia da Plataforma marca esta rota como 'fora do painel' (não recebe o widget de ajuda contextual), mas a Central de Ajuda (material de leitura) deveria cobrir a jornada de primeiro acesso mesmo assim — são produtos diferentes com propósitos diferentes."
+    },
+    {
+      "rota": "portals_articles_edit",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — editor de artigo do Portal (Central de Ajuda voltada ao CLIENTE do Chat2You)."
+    },
+    {
+      "rota": "portals_articles_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — lista/filtra artigos do portal."
+    },
+    {
+      "rota": "portals_articles_new",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — escrever artigo do zero."
+    },
+    {
+      "rota": "portals_categories_articles_edit",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — mesma tela de portals_articles_edit, alcançada por categoria."
+    },
+    {
+      "rota": "portals_categories_articles_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — mesma tela de portals_articles_index, alcançada por categoria."
+    },
+    {
+      "rota": "portals_categories_articles_new",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — mesma tela de portals_articles_new, alcançada por categoria."
+    },
+    {
+      "rota": "portals_categories_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — criar/ordenar categorias do portal."
+    },
+    {
+      "rota": "portals_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — hub de gestão da Central de Ajuda (portal) do cliente final."
+    },
+    {
+      "rota": "portals_locales_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — idiomas do portal."
+    },
+    {
+      "rota": "portals_new",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — criar o portal."
+    },
+    {
+      "rota": "portals_settings_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — aparência, domínio e integrações do portal."
+    },
+    {
+      "rota": "profile_settings",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Rota-casca de layout (component: SettingsWrapper, settings/profile/profile.routes.js) sem path próprio; o conteúdo real está em profile_settings_index e profile_settings_mfa."
+    },
+    {
+      "rota": "profile_settings_index",
+      "assuntos": [
+        "01.1-onde-ficam-as-configuracoes-do-perfil",
+        "01.4-foto-do-perfil",
+        "01.5-nome-e-nome-de-exibicao",
+        "01.6-trocar-o-email-de-acesso",
+        "01.7-criar-assinatura-de-mensagens",
+        "01.9-tecla-de-envio",
+        "01.10-idioma-preferido",
+        "01.11-tamanho-da-fonte",
+        "01.13-preferencias-de-notificacao",
+        "01.14-liberar-notificacoes-no-navegador",
+        "01.15-alertas-de-audio",
+        "01.16-sessoes-ativas",
+        "01.17-trocar-a-senha",
+        "01.19-token-de-acesso-pessoal",
+        "01.22-referencia-campos-e-limites"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "profile_settings_mfa",
+      "assuntos": [
+        "01.18-verificacao-em-duas-etapas"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "search",
+      "assuntos": [
+        "06.29-buscar-conversas-mensagens"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "security_settings_index",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura ('Segurança', SAML SSO). Vale ao menos explicar por que existe e como não se confunde com o SSO Autonom.ia."
+    },
+    {
+      "rota": "settings_applications",
+      "assuntos": [
+        "04.1-abrir-integracoes",
+        "04.2-ler-o-cartao",
+        "04.3-o-que-aparece-na-lista",
+        "04.4-desambiguacao-agentes-e-openai",
+        "04.20-cartao-openai-antigo",
+        "04.19-integracoes-de-terceiros"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_applications_integration",
+      "assuntos": [
+        "04.5-abrir-crm-kanban-ia",
+        "04.6-preencher-o-formulario",
+        "04.7-salvar-e-validacao",
+        "04.8-o-que-a-chave-liga",
+        "04.9-trocar-ou-remover-a-chave",
+        "04.10-chave-da-conta-x-chave-da-plataforma",
+        "04.11-diagnostico-ia-parou",
+        "04.12-o-que-passa-a-custar"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_data_import_show",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura no estudo (id 284), mas o Guia da Plataforma já tem bloco pronto ('acompanhar_uma_importacao') — conteúdo existente não puxado para a Central."
+    },
+    {
+      "rota": "settings_data_imports",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura no estudo (id 284), mas o Guia já tem bloco pronto ('trazer_contatos_de_outra_ferramenta') — mesma situação."
+    },
+    {
+      "rota": "settings_home",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Redirecionamento puro (settings/settings.routes.js) — decide a primeira tela de Configurações conforme papel/permissão do usuário, sem UI própria."
+    },
+    {
+      "rota": "settings_inbox_finish",
+      "assuntos": [
+        "05.6-webhook-na-meta"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_inbox_list",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura da lista de caixas já criadas (distinta do assistente de criação, settings_inbox_new, e da configuração de uma caixa, settings_inbox_show)."
+    },
+    {
+      "rota": "settings_inbox_new",
+      "assuntos": [
+        "05.1-oficial-ou-api",
+        "05.2-pre-requisitos",
+        "05.3-onde-fica-e-provedor",
+        "05.4-cadastro-incorporado",
+        "05.5-configuracao-manual",
+        "05.18-chamadas-de-voz"
+      ],
+      "situacao": "coberta",
+      "nota": "Cobre só o fluxo WhatsApp Oficial. A mesma tela cria os outros 12 canais (WhatsApp API/WAHA, E-mail, Site, Instagram, Facebook, SMS, API, Telegram, Line, TikTok, Voz) e nenhum tem subcapítulo — ver lacuna 'Criar caixa: os outros canais'."
+    },
+    {
+      "rota": "settings_inbox_show",
+      "assuntos": [
+        "05.6-webhook-na-meta",
+        "05.7-agentes-da-caixa",
+        "05.8-abas-da-caixa",
+        "05.9-saude-da-conta",
+        "05.10-aba-configuracao",
+        "05.15-horario-de-funcionamento",
+        "05.16-saudacao-do-canal",
+        "05.17-reconectar",
+        "05.18-chamadas-de-voz",
+        "02.12-horario-de-atendimento-sla",
+        "02.19-acesso-a-caixa-nao-vem-do-papel"
+      ],
+      "situacao": "coberta",
+      "nota": "Cobre as abas Configuração, Agentes, Saúde da conta, Horário e Chamadas — todas na chave WhatsApp Oficial. As abas CSAT (ligar a pesquisa), Configuração do Bot e Formulário Chat-Pré/Construtor de Widget (exclusivas de outros tipos de canal) não são mencionadas."
+    },
+    {
+      "rota": "settings_inboxes_add_agents",
+      "assuntos": [
+        "05.7-agentes-da-caixa"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_inboxes_page_channel",
+      "assuntos": [
+        "05.4-cadastro-incorporado",
+        "05.5-configuracao-manual"
+      ],
+      "situacao": "coberta",
+      "nota": "Cobre só o formulário do WhatsApp Oficial (Cloud API). Os formulários dos demais canais — WhatsApp API/WAHA (QR Code), E-mail (IMAP/SMTP), Site (widget) — não têm subcapítulo."
+    },
+    {
+      "rota": "settings_integrations_crm_n8n",
+      "assuntos": [
+        "04.18-n8n-conexoes-do-crm"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_integrations_dashboard_apps",
+      "assuntos": [
+        "04.17-painel-de-aplicativos"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_integrations_linear",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — 04.19 só cita Dialogflow/Tradutor do Google/Dyte."
+    },
+    {
+      "rota": "settings_integrations_notion",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — idem."
+    },
+    {
+      "rota": "settings_integrations_shopify",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — idem."
+    },
+    {
+      "rota": "settings_integrations_slack",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura — idem. É a integração com maior potencial de uso diário (espelha conversa em canal do Slack)."
+    },
+    {
+      "rota": "settings_integrations_webhook",
+      "assuntos": [
+        "04.16-webhooks"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_prospecting_index",
+      "assuntos": [
+        "09.29-prospeccao-configuracoes"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_teams_add_agents",
+      "assuntos": [
+        "03.5-adicionar-agentes"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_teams_edit",
+      "assuntos": [
+        "03.7-editar-detalhes",
+        "03.4-atribuicao-automatica"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_teams_edit_finish",
+      "assuntos": [],
+      "situacao": "lacuna",
+      "nota": "Zero cobertura. Etapa de confirmação após editar os agentes de um time (distinta de settings_teams_finish, que é a mesma etapa no fluxo de CRIAR)."
+    },
+    {
+      "rota": "settings_teams_edit_members",
+      "assuntos": [
+        "03.8-alterar-membros",
+        "03.14-time-da-acesso-a-conversas"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_teams_finish",
+      "assuntos": [
+        "03.6-finalizar-criacao"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_teams_list",
+      "assuntos": [
+        "03.1-o-que-e-um-time",
+        "03.2-tela-de-times",
+        "03.9-excluir-time",
+        "03.20-tabela-onde-o-time-aparece"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_teams_new",
+      "assuntos": [
+        "03.3-criar-time-nome-descricao",
+        "03.4-atribuicao-automatica"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "settings_templates",
+      "assuntos": [
+        "05.12-enviar-modelo",
+        "05.13-quais-modelos-aparecem",
+        "05.14-variaveis-do-modelo"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "sla_reports",
+      "assuntos": [
+        "11.18-relatorios-sla"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "team_conversations",
+      "assuntos": [
+        "03.13-conversas-do-meu-time",
+        "06.6-visao-por-canal-time-etiqueta"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "team_reports",
+      "assuntos": [],
+      "situacao": "fora",
+      "nota": "Rota-casca de agrupamento sem path/componente próprio; o conteúdo real está em team_reports_index e team_reports_show."
+    },
+    {
+      "rota": "team_reports_index",
+      "assuntos": [
+        "11.13-caixa-de-entrada-e-time",
+        "11.6-filtro-de-periodo"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    },
+    {
+      "rota": "team_reports_show",
+      "assuntos": [
+        "11.13-caixa-de-entrada-e-time",
+        "03.18-relatorios-por-time"
+      ],
+      "situacao": "coberta",
+      "nota": null
+    }
+  ],
+  "funcionalidades_sem_tela": [
+    {
+      "nome": "Menu do perfil na barra lateral (status Online/Ocupado/Offline, tema claro/escuro, atalhos de teclado, encerrar sessão, marcar offline automático)",
+      "coberta": true,
+      "assuntos": [
+        "01.2-definir-disponibilidade",
+        "01.3-marcar-offline-automaticamente",
+        "01.12-tema-claro-escuro",
+        "01.20-atalhos-de-teclado",
+        "01.21-encerrar-sessao"
+      ],
+      "capitulo_sugerido": "01 — Configurações pessoais"
+    },
+    {
+      "nome": "Guia da Plataforma (painel flutuante de ajuda contextual da Autonom.ia, presente em qualquer tela)",
+      "coberta": false,
+      "assuntos": [],
+      "capitulo_sugerido": "00 — Mapa e vocabulário (ou abertura do capítulo 01): 'quando você não souber onde fica algo'."
+    },
+    {
+      "nome": "Handoff automático da IA para humano na conversa (o agente de IA chama alguém e o comportamento visível no atendimento)",
+      "coberta": true,
+      "assuntos": [
+        "06.18-assumir-conversa-da-ia",
+        "08.29-handoff-conceito",
+        "08.30-handoff-gatilho",
+        "08.31-handoff-destino",
+        "08.32-handoff-plano-b",
+        "08.33-handoff-por-etapa",
+        "09.13-publicar-agente-externo",
+        "09.14-publicar-agente-interno",
+        "09.21-transferir-para-humano-e-limite-de-confianca"
+      ],
+      "capitulo_sugerido": "08 — CRM / 09 — Agentes de IA (já coberto, sem lacuna nova)."
+    },
+    {
+      "nome": "Jornada de cotação de seguros no WhatsApp (o agente de IA cotando com o cliente, comparativo em PDF, recusa de seguradora)",
+      "coberta": false,
+      "assuntos": [],
+      "capitulo_sugerido": "Capítulo novo: Cotação de seguros. Conteúdo já redigido no Guia da Plataforma (porques.md, bloco 'como_o_cliente_recebe_a_cotacao') — falta só entrar no estudo/Central."
+    },
+    {
+      "nome": "Notificações por e-mail e push: o que cada evento realmente dispara (além da tela de preferências)",
+      "coberta": false,
+      "assuntos": [],
+      "capitulo_sugerido": "01 — Configurações pessoais, ao lado de 01.13/01.14 — falta o 'onde eu leio o que já chegou' (tela inbox_view)."
+    },
+    {
+      "nome": "Automações (Configurações → Automação): criar uma regra do zero",
+      "coberta": false,
+      "assuntos": [],
+      "capitulo_sugerido": "Capítulo novo: Automação e Macros."
+    },
+    {
+      "nome": "Convite e ciclo de vida do agente (papel de pessoa, não de robô)",
+      "coberta": true,
+      "assuntos": [
+        "02.1-agente-e-pessoa",
+        "02.3-convidar-pessoa",
+        "02.4-escolher-a-funcao",
+        "02.5-caixas-no-convite",
+        "02.6-caixa-whatsapp-no-convite",
+        "02.7-o-que-acontece-depois-do-convite",
+        "02.8-link-manual-e-reconvite"
+      ],
+      "capitulo_sugerido": "02 — Configurações → Agentes (já coberto)."
+    },
+    {
+      "nome": "Primeiros passos / onboarding da conta (primeiro acesso, tela 'Seus detalhes', tela Primeiros Passos como porta de entrada)",
+      "coberta": false,
+      "assuntos": [],
+      "capitulo_sugerido": "Capítulo novo: Primeiros passos. Mudou de comportamento após o estudo (ver 'obsoletos')."
+    },
+    {
+      "nome": "Busca de comandos / paleta de comandos (Cmd/Ctrl+K, atalho de teclado em qualquer tela)",
+      "coberta": false,
+      "assuntos": [],
+      "capitulo_sugerido": "06 — Tela de conversas, junto de 06.33 (atalhos de teclado). Hoje só é citada de raspão em 03.12."
+    },
+    {
+      "nome": "Trocar de conta / criar nova conta (seletor de contas no topo da barra lateral)",
+      "coberta": false,
+      "assuntos": [],
+      "capitulo_sugerido": "01 — Configurações pessoais ou capítulo novo de conta."
+    },
+    {
+      "nome": "Iniciar uma conversa do zero (botão de compor, ao lado da busca)",
+      "coberta": false,
+      "assuntos": [],
+      "capitulo_sugerido": "06 — Tela de conversas. O roteador lista 'Iniciar nova conversa' como fluxo da tela home, mas nenhum assunto ensina o passo a passo."
+    }
+  ],
+  "obsoletos": [
+    {
+      "id": "02.16-permissoes-uma-a-uma",
+      "motivo": "A referência de 'o que cada permissão de função personalizada libera' ficou incompleta: a matriz de permissões ganhou categorias novas (Prospecção, Cotação, Autonomia, Campanhas, Conexões) depois do estudo.",
+      "prova": "commits fc1c912db7 'feat(custom-roles): permissões de Prospecção, Cotação e configurações' e 920263697f 'feat(custom-roles): matriz Ver/Editar e permissões para Autonomia, Campanhas e Conexões', ambos posteriores a 2026-09-08."
+    },
+    {
+      "id": "07.3-ordenar-a-lista",
+      "motivo": "O comportamento PADRÃO da ordenação de Contatos mudou: antes ordenava por atividade mais ANTIGA primeiro (o que causava timeout em contas grandes), agora ordena por atividade mais RECENTE primeiro. O título/local do assunto continua correto, mas se o texto descrever o padrão antigo precisa de ajuste.",
+      "prova": "commit 3d7ca0ec0b 'fix(contacts): default the contacts list to most recent activity first (#15827)', 2026-09-15 (pós-estudo) — muda DEFAULT_SORT em app/javascript/dashboard/routes/dashboard/contacts/pages/ContactsIndex.vue."
+    },
+    {
+      "id": "08.4-vincular-inbox-ao-funil",
+      "motivo": "O texto provavelmente descreve o fluxo antigo de vínculo caixa-funil; um saneamento pós-estudo mudou a mecânica (dois salvamentos simultâneos e o card passou a nascer só configurando o inbox, sem etapa extra).",
+      "prova": "commits ee5d02af3d 'feat(crm): configurar inbox passa a bastar para o card nascer' e 21235ec0e9 'fix(crm): dois salvamentos simultâneos não derrubam o vínculo do funil', ambos posteriores a 2026-09-08."
+    },
+    {
+      "id": "04.7-salvar-e-validacao",
+      "motivo": "'O que acontece ao salvar' (chave CRM Kanban IA) pode estar desatualizado: um bug corrigido depois do estudo fazia a chave salvar sem ligar a IA de fato.",
+      "prova": "commit 8618f93d7d 'fix(crm): conectar a chave do CRM Kanban IA já liga a IA', posterior a 2026-09-08."
+    }
+  ],
+  "lacunas": [
+    {
+      "descricao": "Capítulo Financeiro inteiro ausente: Assinatura (autonomia_financial_subscription), Faturas (autonomia_financial_invoices) e Cobrança nativa do Chatwoot (billing_settings_index) — nenhuma tem subcapítulo, e são item de menu de primeiro nível só para administrador.",
+      "capitulo_sugerido": "Capítulo novo: 12 — Financeiro (Assinatura, Faturas e Cobrança)",
+      "prioridade": "P1",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/financial/financial.routes.js; app/javascript/dashboard/routes/dashboard/settings/billing/billing.routes.js; zero ocorrência de 'billing'/'fatura'/'assinatura' em assuntos-estudo.json"
+    },
+    {
+      "descricao": "Cotação de seguros (Autonomia Insurance) sem nenhum assunto no estudo: criar o agente que cota, ligar a conta da corretora, e a jornada completa no WhatsApp (comparativo em PDF, recusa de seguradora). O Guia da Plataforma já tem o conteúdo pronto para esta última parte.",
+      "capitulo_sugerido": "Capítulo novo: Cotação de seguros",
+      "prioridade": "P1",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/autonomia/autonomia.routes.js (autonomia_insurance_agent, autonomia_insurance_connections); lib/operator_guide/porques.md, bloco 'como_o_cliente_recebe_a_cotacao'"
+    },
+    {
+      "descricao": "Configurações → Conta ('Configurações gerais') sem cobertura — é a PRIMEIRA tela que um administrador vê ao entrar em Configurações. Nome da conta, idioma, domínio, resolução automática de conversas e transcrição de áudio ficam sem dono.",
+      "capitulo_sugerido": "Capítulo novo: 13 — Configurações da conta (ou bloco de abertura do capítulo 02)",
+      "prioridade": "P1",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/settings/account/account.routes.js (general_settings_index); settings.routes.js redireciona o administrador para cá"
+    },
+    {
+      "descricao": "Criação de caixa de entrada dos outros 12 canais (WhatsApp API/WAHA, E-mail, Site, Instagram, Facebook, SMS, API, Telegram, Line, TikTok, Voz) — o capítulo 05 só ensina WhatsApp Oficial. WhatsApp API (WAHA) é o canal mais usado desta stack e não tem um único subcapítulo.",
+      "capitulo_sugerido": "Capítulo novo: 14 — Caixas de entrada: os outros canais",
+      "prioridade": "P1",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/settings/inbox/ChannelList.vue:29-110; settings_inbox_new e settings_inboxes_page_channel cobrem só o ramo WhatsApp Oficial nos assuntos do estudo"
+    },
+    {
+      "descricao": "Central de Ajuda (Portais do cliente final): Artigos, Categorias, Localidades e Configurações do portal — menu de topo inteiro, ligado por padrão, sem nenhuma menção no estudo. 10 telas afetadas.",
+      "capitulo_sugerido": "Capítulo novo: 15 — Central de Ajuda (Portais)",
+      "prioridade": "P1",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/helpcenter/helpcenter.routes.js; featureFlag HELP_CENTER default true em config/features.yml"
+    },
+    {
+      "descricao": "Automação (criar regra do zero) e Macros (criar/editar) — ambos citados de passagem (uso do 'time' em automação/macro, executar macro) mas nunca ensinados como tela própria.",
+      "capitulo_sugerido": "Capítulo novo: 16 — Automação e Macros",
+      "prioridade": "P1",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/settings/automation/automation.routes.js; settings/macros/macros.routes.js"
+    },
+    {
+      "descricao": "Etiquetas (Configurações → Etiquetas): criar, escolher cor, editar, excluir — usada em 4 capítulos diferentes (conversa, contato, relatório, roteador) mas nunca ensinada na origem.",
+      "capitulo_sugerido": "02 — Configurações → Agentes (bloco irmão) ou capítulo novo de configurações",
+      "prioridade": "P2",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/settings/labels/labels.routes.js (labels_list)"
+    },
+    {
+      "descricao": "Respostas Prontas (Configurações → Respostas Prontas): criar/editar/apagar. 06.14 só ensina a USAR com '/'. É também a tela padrão de Configurações para quem não é administrador.",
+      "capitulo_sugerido": "06 — Tela de conversas (ao lado de 06.14) ou capítulo novo de configurações",
+      "prioridade": "P2",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/settings/canned/canned.routes.js (canned_list); settings.routes.js redireciona não-administrador para cá"
+    },
+    {
+      "descricao": "'Caixa de Entrada' (inbox_view/inbox_view_conversation) — primeiro item do menu lateral, é a central de NOTIFICAÇÕES, homônima e facilmente confundida com 'Caixas de Entrada' (canais) e com a tela de Conversas.",
+      "capitulo_sugerido": "06 — Tela de conversas, como subcapítulo inicial de desambiguação",
+      "prioridade": "P1",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/inbox/routes.js (inbox_view, inbox_view_conversation)"
+    },
+    {
+      "descricao": "'Robôs' (Agent Bots nativos do Chatwoot) — ligado por padrão, é o terceiro produto chamado 'robô/agente' na plataforma (junto de Agentes-pessoas do cap. 02 e Agentes de IA Autonomia do cap. 09). 11.17 já lê 'Relatórios do Bot' sem nunca apresentar a tela.",
+      "capitulo_sugerido": "09 — Agentes de IA, como bloco de desambiguação, ou capítulo novo de configurações",
+      "prioridade": "P2",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/settings/agentBots/agentBot.routes.js (agent_bots), featureFlag AGENT_BOTS default true"
+    },
+    {
+      "descricao": "Atribuição de Agentes (Política de atribuição e Política de capacidade) — tela-hub e 6 sub-telas sem cobertura; só o card 'Handoff da IA' (mesma tela) é ensinado via capítulo 08.",
+      "capitulo_sugerido": "03 — Configurações → Times (par natural de 03.4) ou capítulo novo",
+      "prioridade": "P2",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/settings/assignmentPolicy/assignmentPolicy.routes.js"
+    },
+    {
+      "descricao": "Primeiros passos / onboarding da conta: primeiro acesso (SSO Autonom.ia com auto-redirect), 'Seus detalhes'/'Detalhes da empresa', e a tela Primeiros Passos — que passou a ser a PORTA DE ENTRADA da conta depois do estudo.",
+      "capitulo_sugerido": "Capítulo novo: 01 (bis) — Primeiros passos, antes do atual capítulo 01",
+      "prioridade": "P1",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/onboarding/; commits 06a03cbb51, acd53a12e7, 0dc9894053 (pós-08/09) sobre first_steps como porta de entrada"
+    },
+    {
+      "descricao": "Segurança (SAML SSO nativo do Chatwoot) e Auditoria como telas próprias — hoje só citadas de raspão.",
+      "capitulo_sugerido": "02 — Configurações → Agentes, blocos finais, ou capítulo novo de configurações",
+      "prioridade": "P3",
+      "evidencia": "settings/security/security.routes.js (security_settings_index); settings/auditlogs/audit.routes.js (auditlogs_list)"
+    },
+    {
+      "descricao": "Ligar o CSAT na caixa de entrada: o capítulo 11 ensina a LER o relatório de CSAT (11.15/11.16) mas nunca a HABILITAR a pesquisa — sem isso o relatório fica vazio para sempre.",
+      "capitulo_sugerido": "11 — Relatórios, como subcapítulo antes de 11.15, ou 05 — Caixa de entrada",
+      "prioridade": "P2",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/settings/inbox/Settings.vue, aba 'csat'"
+    },
+    {
+      "descricao": "Integrações com tela própria fora do capítulo 04: Slack, Linear, Notion, Shopify. 04.19 só cita Dialogflow/Tradutor do Google/Dyte.",
+      "capitulo_sugerido": "04 — Integrações, ampliar 04.19",
+      "prioridade": "P2",
+      "evidencia": "settings/integrations/integrations.routes.js (settings_integrations_slack/linear/notion/shopify)"
+    },
+    {
+      "descricao": "Importação de dados de outra ferramenta (Configurações → Dados): a tela e o acompanhamento da importação já têm conteúdo pronto no Guia da Plataforma, mas nenhum assunto do estudo (284 ids) os cobre.",
+      "capitulo_sugerido": "07 — Contatos ou capítulo novo de configurações",
+      "prioridade": "P2",
+      "evidencia": "settings/data/data.routes.js (settings_data_imports, settings_data_import_show); lib/operator_guide/porques.md blocos 'trazer_contatos_de_outra_ferramenta' e 'acompanhar_uma_importacao'"
+    },
+    {
+      "descricao": "Ver resultado de uma campanha de WhatsApp Oficial (campaigns_whatsapp_analytics) e histórico de chamadas (calls_dashboard_index) — ambos sem assunto no estudo; o primeiro já tem conteúdo pronto no Guia.",
+      "capitulo_sugerido": "10 — Campanhas (analytics) / capítulo novo (chamadas)",
+      "prioridade": "P2",
+      "evidencia": "campaigns.routes.js (campaigns_whatsapp_analytics); calls/routes.js (calls_dashboard_index); lib/operator_guide/porques.md bloco 'ver_resultado_da_campanha_de_whatsapp'"
+    },
+    {
+      "descricao": "Guia da Plataforma (painel flutuante) e paleta de comandos (Cmd/Ctrl+K) — ambos presentes em qualquer tela, nenhum tem subcapítulo próprio no estudo.",
+      "capitulo_sugerido": "00 — Mapa e vocabulário / 01 — Configurações pessoais",
+      "prioridade": "P2",
+      "evidencia": "app/javascript/dashboard/routes/dashboard/Dashboard.vue (AutonomiaGuideLauncher, CommandBar)"
+    }
+  ],
+  "fora": [
+    {
+      "rota": "account_suspended",
+      "motivo": "Tela de sistema (conta suspensa) — não é jornada de produto. Já listada como fora no Guia da Plataforma (lib/operator_guide/porques.md, bloco _fora_do_guia)."
+    },
+    {
+      "rota": "no_accounts",
+      "motivo": "Tela de sistema (usuário sem conta vinculada) — não é jornada de produto. Já listada como fora no Guia (porques.md)."
+    },
+    {
+      "rota": "labels_wrapper",
+      "motivo": "Redirecionamento puro (settings/labels/labels.routes.js), sem componente próprio; sempre encaminha para labels_list. Já listada como fora no Guia."
+    },
+    {
+      "rota": "settings_home",
+      "motivo": "Redirecionamento puro (settings/settings.routes.js) — decide a primeira tela de Configurações conforme papel/permissão do usuário, sem UI própria."
+    },
+    {
+      "rota": "profile_settings",
+      "motivo": "Rota-casca de layout (component: SettingsWrapper, settings/profile/profile.routes.js) sem path próprio; o conteúdo real está em profile_settings_index e profile_settings_mfa."
+    },
+    {
+      "rota": "agent_reports",
+      "motivo": "Rota-casca de agrupamento (settings/reports/reports.routes.js) sem path/componente próprio; o conteúdo real está em agent_reports_index e agent_reports_show."
+    },
+    {
+      "rota": "inbox_reports",
+      "motivo": "Rota-casca de agrupamento sem path/componente próprio; o conteúdo real está em inbox_reports_index e inbox_reports_show."
+    },
+    {
+      "rota": "label_reports",
+      "motivo": "Rota-casca de agrupamento sem path/componente próprio; o conteúdo real está em label_reports_index e label_reports_show."
+    },
+    {
+      "rota": "team_reports",
+      "motivo": "Rota-casca de agrupamento sem path/componente próprio; o conteúdo real está em team_reports_index e team_reports_show."
+    },
+    {
+      "rota": "campaigns_one_off_index",
+      "motivo": "Redirecionamento puro (campaigns.routes.js), sem componente — sempre encaminha para campaigns_sms_index."
+    },
+    {
+      "rota": "campaigns_ongoing_index",
+      "motivo": "Redirecionamento puro (campaigns.routes.js), sem componente — sempre encaminha para campaigns_livechat_index."
+    },
+    {
+      "rota": "autonomia_prospecting_settings",
+      "motivo": "Redirecionamento puro (autonomia.routes.js), sem componente — sempre encaminha para settings_prospecting_index (mesma tela)."
+    },
+    {
+      "rota": "autonomia_insurance",
+      "motivo": "Redirecionamento puro (autonomia.routes.js), sem componente — sempre encaminha para autonomia_insurance_connections (mesma tela)."
+    },
+    {
+      "rota": "contacts_edit_label",
+      "motivo": "Mesma tela de contacts_edit (componente ContactManageView); variante de rota alcançada a partir de Contatos > Etiquetas, sem UI própria."
+    },
+    {
+      "rota": "contacts_edit_segment",
+      "motivo": "Mesma tela de contacts_edit (componente ContactManageView); variante de rota alcançada a partir de Contatos > Segmentos, sem UI própria."
+    },
+    {
+      "rota": "conversation_through_inbox",
+      "motivo": "Mesma tela de inbox_conversation (componente ConversationView com uma conversa aberta); variante de rota alcançada a partir de uma caixa específica, sem UI própria."
+    },
+    {
+      "rota": "conversation_through_mentions",
+      "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de Menções, sem UI própria."
+    },
+    {
+      "rota": "conversation_through_participating",
+      "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de Participantes, sem UI própria."
+    },
+    {
+      "rota": "conversation_through_unattended",
+      "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de Não atendidas, sem UI própria."
+    },
+    {
+      "rota": "conversations_through_folders",
+      "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de uma Pasta salva, sem UI própria."
+    },
+    {
+      "rota": "conversations_through_label",
+      "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de uma Etiqueta, sem UI própria."
+    },
+    {
+      "rota": "conversations_through_team",
+      "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de um Time, sem UI própria."
+    },
+    {
+      "rota": "captain_assistants_create_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_documents_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_faq_suggestions",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_guardrails_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_guidelines_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_inboxes_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_overview_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_playground_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_responses_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_scenarios_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_settings_audience_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_settings_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_settings_schedule_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_assistants_settings_system_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_settings_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    },
+    {
+      "rota": "captain_tools_index",
+      "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+    }
+  ]
+}

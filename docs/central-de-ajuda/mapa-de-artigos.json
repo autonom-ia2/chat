@@ -1,0 +1,4134 @@
+{
+ "capitulos": [
+  {
+   "id": "00",
+   "titulo": "Comece por aqui",
+   "artigos": [
+    {
+     "id": "00.01",
+     "titulo": "Seu primeiro acesso e a tela Primeiros passos",
+     "para_que_serve": "Entender como entrar pela primeira vez e para que serve a tela que guia a conta nova.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "first_steps",
+      "onboarding_account_details",
+      "onboarding_inbox_setup"
+     ],
+     "me_leve_ate_la": {
+      "rota": "first_steps",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [
+      "Tela Primeiros passos com a lista dos 9 passos e o passo em destaque no topo"
+     ],
+     "fontes": [
+      "porques: Ver os Primeiros passos",
+      "porques: Primeiros passos numa conta nova"
+     ],
+     "revisar": false,
+     "nota": "Cobre também onboarding_account_details ('Seus detalhes') e onboarding_inbox_setup (etapa 2 do assistente de primeiro acesso), sem assunto correspondente no estudo de 08/09 — first_steps mudou de papel depois do estudo (virou porta de entrada da conta; ver cobertura.md)."
+    },
+    {
+     "id": "00.02",
+     "titulo": "Passo 1 — Seu perfil e seus avisos",
+     "para_que_serve": "Concluir o primeiro passo da trilha: identidade pessoal e notificações.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "01.1-onde-ficam-as-configuracoes-do-perfil",
+      "01.13-preferencias-de-notificacao",
+      "01.14-liberar-notificacoes-no-navegador"
+     ],
+     "rotas": [
+      "profile_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "profile_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [
+      "Passo 'Seu perfil e seus avisos' em destaque na tela Primeiros passos"
+     ],
+     "fontes": [
+      "porques: Ajustar perfil e notificacoes"
+     ],
+     "revisar": false,
+     "nota": "Detalhe completo de cada campo fica no capítulo 02."
+    },
+    {
+     "id": "00.03",
+     "titulo": "Passo 2 — Conectar a chave da OpenAI",
+     "para_que_serve": "Concluir o passo que liga o CRM com IA, os agentes e o Guia da Plataforma.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "04.5-abrir-crm-kanban-ia",
+      "04.6-preencher-o-formulario",
+      "04.8-o-que-a-chave-liga"
+     ],
+     "rotas": [
+      "settings_applications_integration"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_applications",
+      "destaque": null
+     },
+     "requer": "integrations",
+     "prints": [],
+     "fontes": [
+      "porques: Configurar a chave de IA da plataforma"
+     ],
+     "revisar": false,
+     "nota": "Detalhe completo fica no capítulo 06."
+    },
+    {
+     "id": "00.04",
+     "titulo": "Passo 3 — Conectar um canal",
+     "para_que_serve": "Concluir o passo que faz a primeira conversa do cliente chegar ao painel.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "05.1-oficial-ou-api"
+     ],
+     "rotas": [
+      "settings_inbox_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inbox_list",
+      "destaque": null
+     },
+     "requer": "inbox_management",
+     "prints": [],
+     "fontes": [
+      "porques: Conectar WhatsApp Oficial (Cloud API)",
+      "porques: Conectar WhatsApp por QR Code (WhatsApp API)",
+      "porques: Conectar caixa de e-mail"
+     ],
+     "revisar": false,
+     "nota": "Detalhe completo de cada canal fica no capítulo 07."
+    },
+    {
+     "id": "00.05",
+     "titulo": "Passo 4 — Responder a primeira conversa",
+     "para_que_serve": "Concluir o passo que confirma que o atendimento está funcionando de ponta a ponta.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "06.11-responder-conversa"
+     ],
+     "rotas": [
+      "home"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Detalhe completo fica no capítulo 08."
+    },
+    {
+     "id": "00.06",
+     "titulo": "Passo 5 — Montar o primeiro funil",
+     "para_que_serve": "Concluir o passo que organiza o CRM e alimenta a IA do funil.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.2-criar-funil",
+      "08.4-vincular-inbox-ao-funil",
+      "08.5-configurar-inboxes"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": "crm-configure-inboxes"
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Criar funis, estágios e conectar caixas ao CRM"
+     ],
+     "revisar": true,
+     "nota": "08.4 está marcado obsoleto no estudo: a mecânica de vínculo caixa↔funil mudou depois de 08/09 (commits ee5d02af3d e 21235ec0e9) — configurar o inbox passa a bastar para o card nascer. Detalhe completo fica no capítulo 10."
+    },
+    {
+     "id": "00.07",
+     "titulo": "Passo 6 — Convidar quem vai atender",
+     "para_que_serve": "Concluir o passo que dá acesso individual a cada pessoa do time.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "02.3-convidar-pessoa",
+      "03.3-criar-time-nome-descricao"
+     ],
+     "rotas": [
+      "agent_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "agent_list",
+      "destaque": null
+     },
+     "requer": "agent_management",
+     "prints": [],
+     "fontes": [
+      "porques: Convidar e gerenciar agentes",
+      "porques: Criar e editar times"
+     ],
+     "revisar": false,
+     "nota": "Passo pulável. Detalhe completo fica nos capítulos 04 e 05."
+    },
+    {
+     "id": "00.08",
+     "titulo": "Passo 7 — Criar o agente de IA",
+     "para_que_serve": "Concluir o passo que coloca um agente de IA respondendo pelo WhatsApp ou como copiloto.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.3-decidir-externo-ou-interno",
+      "09.13-publicar-agente-externo"
+     ],
+     "rotas": [
+      "autonomia_agents_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [
+      "porques: Criar agente externo com base de conhecimento",
+      "porques: Conectar ou desconectar agente de uma caixa"
+     ],
+     "revisar": false,
+     "nota": "Passo pulável, exige base de conhecimento e número separado do pessoal. Detalhe completo no capítulo 11."
+    },
+    {
+     "id": "00.09",
+     "titulo": "Passo 8 — Preparar a primeira campanha",
+     "para_que_serve": "Concluir o passo mais arriscado da trilha: disparar sem derrubar o número.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.4-campanha-whatsapp-oficial",
+      "10.11-nova-campanha-email-remetente"
+     ],
+     "rotas": [
+      "campaigns_whatsapp_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_whatsapp_index",
+      "destaque": null
+     },
+     "requer": "whatsapp_campaign",
+     "prints": [],
+     "fontes": [
+      "porques: Criar campanha WhatsApp Oficial",
+      "porques: Criar campanha de e-mail e importar base"
+     ],
+     "revisar": false,
+     "nota": "config/onboarding/trilha.yml aponta este passo para a rota 'campaigns_index', que não existe no roteador atual (não há rota unificada de Campanhas, só uma por tipo de canal — achado já registrado em cobertura.md). Usamos campaigns_whatsapp_index como destino válido mais próximo; vale corrigir a trilha. Ver também capítulo 18 sobre o risco de bloqueio do número."
+    },
+    {
+     "id": "00.10",
+     "titulo": "Passo 9 — Ajustar a conta ao seu jeito",
+     "para_que_serve": "Concluir o passo final: etiquetas e respostas prontas que organizam a operação.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "labels_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "labels_list",
+      "destaque": null
+     },
+     "requer": "labels",
+     "prints": [],
+     "fontes": [
+      "porques: Gerenciar catalogo de etiquetas",
+      "porques: Criar respostas prontas"
+     ],
+     "revisar": false,
+     "nota": "Passo pulável. Cobre também Configurações → Respostas Prontas (canned_list). Detalhe completo no capítulo 12."
+    }
+   ]
+  },
+  {
+   "id": "01",
+   "titulo": "Mapa e vocabulário",
+   "artigos": [
+    {
+     "id": "01.01",
+     "titulo": "O mapa do menu lateral: onde fica cada coisa",
+     "para_que_serve": "Dar ao leitor uma visão geral da barra lateral antes de entrar nos detalhes de cada tela.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "01.02",
+     "titulo": "Os dois sentidos de 'Agentes' na plataforma",
+     "para_que_serve": "Distinguir Agentes-pessoas (capítulo 04) de Agentes de IA (capítulo 11) na primeira confusão que todo mundo tem.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "04.4-desambiguacao-agentes-e-openai",
+      "02.1-agente-e-pessoa"
+     ],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Detalhe de cada tela fica nos capítulos 04, 06 e 11."
+    },
+    {
+     "id": "01.03",
+     "titulo": "Os dois sentidos de 'Caixa de Entrada'",
+     "para_que_serve": "Distinguir 'Caixas de Entrada' (os canais, capítulo 07) de 'Caixa de Entrada' (a central de notificações, capítulo 08).",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "A central de notificações (inbox_view) é tratada em detalhe no capítulo 08."
+    },
+    {
+     "id": "01.04",
+     "titulo": "Os copilotos da plataforma",
+     "para_que_serve": "Diferenciar o Copiloto do CRM (resumir/sugerir resposta) do 'Copiloto Autonom.ia' da conversa, que é o nome que aparece na tela (conversar com um agente interno).",
+     "publico": "atendente",
+     "prioridade": "P2",
+     "assuntos": [
+      "06.30-copiloto-painel-conversa",
+      "06.31-copiloto-autonomia-chat",
+      "09.25-copiloto-interno-na-conversa"
+     ],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Detalhe de uso fica no capítulo 08 (artigo sobre o Copiloto na conversa)."
+    },
+    {
+     "id": "01.05",
+     "titulo": "O Guia da Plataforma: pedir ajuda sem sair da tela",
+     "para_que_serve": "Apresentar o painel flutuante de ajuda contextual, presente em qualquer tela.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Usar o proprio Guia da Plataforma"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "01.06",
+     "titulo": "Buscar tudo: a busca e a paleta de comandos",
+     "para_que_serve": "Usar o ícone de busca (ou tecla '/') e a busca de comandos do teclado para achar qualquer coisa rápido.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "06.29-buscar-conversas-mensagens",
+      "03.12-atalhos-atribuir-time"
+     ],
+     "rotas": [
+      "search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "search",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Usar busca global"
+     ],
+     "revisar": false,
+     "nota": "03.12 cita a busca de comandos de passagem; aqui ela ganha explicação própria."
+    },
+    {
+     "id": "01.07",
+     "titulo": "Como usar a Central de Ajuda",
+     "para_que_serve": "Ensinar o leitor a navegar, buscar e encontrar artigos dentro desta própria Central de Ajuda.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [
+      "Página inicial da Central de Ajuda com a busca e as categorias"
+     ],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    }
+   ]
+  },
+  {
+   "id": "02",
+   "titulo": "Configurações pessoais",
+   "artigos": [
+    {
+     "id": "02.01",
+     "titulo": "Onde ficam suas configurações pessoais",
+     "para_que_serve": "Abrir o menu do próprio perfil e chegar em Configurações do Perfil sem procurar.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "01.1-onde-ficam-as-configuracoes-do-perfil"
+     ],
+     "rotas": [
+      "profile_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "profile_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ajustar perfil e notificacoes"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "02.02",
+     "titulo": "Sua identidade: nome, nome de exibição e foto",
+     "para_que_serve": "Escolher como você aparece para o cliente e para o time.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "01.4-foto-do-perfil",
+      "01.5-nome-e-nome-de-exibicao"
+     ],
+     "rotas": [
+      "profile_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "profile_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "02.03",
+     "titulo": "Seu e-mail, sua senha e o login único",
+     "para_que_serve": "Entender os dois jeitos de entrar na plataforma e por que trocar a senha local quase nunca faz efeito.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "01.6-trocar-o-email-de-acesso",
+      "01.17-trocar-a-senha"
+     ],
+     "rotas": [
+      "profile_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "profile_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Ver também capítulo 18 sobre o SSO e a senha local."
+    },
+    {
+     "id": "02.04",
+     "titulo": "Sua assinatura de mensagens",
+     "para_que_serve": "Escrever a assinatura e saber ligá-la ou desligá-la dentro da conversa.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "01.7-criar-assinatura-de-mensagens",
+      "01.8-ligar-assinatura-na-conversa"
+     ],
+     "rotas": [
+      "profile_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "profile_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "02.05",
+     "titulo": "Como você escreve e como o painel aparece",
+     "para_que_serve": "Ajustar tecla de envio, idioma, tamanho da fonte e tema (claro, escuro ou do sistema).",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "01.9-tecla-de-envio",
+      "01.10-idioma-preferido",
+      "01.11-tamanho-da-fonte",
+      "01.12-tema-claro-escuro"
+     ],
+     "rotas": [
+      "profile_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "profile_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "02.06",
+     "titulo": "Sua disponibilidade e os avisos que você recebe",
+     "para_que_serve": "Escolher o próprio status (Online/Ocupado/Offline) e o que dispara e-mail, som ou notificação no navegador.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "01.2-definir-disponibilidade",
+      "01.3-marcar-offline-automaticamente",
+      "01.13-preferencias-de-notificacao",
+      "01.14-liberar-notificacoes-no-navegador",
+      "01.15-alertas-de-audio"
+     ],
+     "rotas": [
+      "profile_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "profile_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "O status também decide se você entra no rodízio de atribuição automática."
+    },
+    {
+     "id": "02.07",
+     "titulo": "Segurança da conta: sessões ativas, verificação em duas etapas e trocar de conta",
+     "para_que_serve": "Ver de onde a conta está aberta, ligar a verificação em duas etapas e trocar entre contas.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "01.16-sessoes-ativas",
+      "01.18-verificacao-em-duas-etapas"
+     ],
+     "rotas": [
+      "profile_settings_index",
+      "profile_settings_mfa"
+     ],
+     "me_leve_ate_la": {
+      "rota": "profile_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Cobre também o seletor de contas no topo da barra lateral (funcionalidade sem tela própria, listada em cobertura.json/funcionalidades_sem_tela). Verificação em duas etapas: ligada nas duas stacks (Chatwoot.mfa_enabled? = true em 22/09/2026); conferir como convive com o login único antes de escrever."
+    },
+    {
+     "id": "02.08",
+     "titulo": "Referência: token de acesso, atalhos e sair com segurança",
+     "para_que_serve": "Consultar o token pessoal de API, os atalhos de teclado, como sair e os limites de cada campo do perfil.",
+     "publico": "ambos",
+     "prioridade": "P3",
+     "assuntos": [
+      "01.19-token-de-acesso-pessoal",
+      "01.20-atalhos-de-teclado",
+      "01.21-encerrar-sessao",
+      "01.22-referencia-campos-e-limites"
+     ],
+     "rotas": [
+      "profile_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "profile_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    }
+   ]
+  },
+  {
+   "id": "03",
+   "titulo": "Configurações da conta",
+   "artigos": [
+    {
+     "id": "03.01",
+     "titulo": "Ajustar os dados gerais da conta",
+     "para_que_serve": "Ajustar nome da conta, idioma padrão, domínio, resolução automática de conversa e transcrição de áudio.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "general_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "general_settings_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ajustar configuracoes da conta"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo de 08/09 — é a primeira tela que um administrador vê ao abrir Configurações."
+    },
+    {
+     "id": "03.02",
+     "titulo": "Segurança da conta: SAML SSO",
+     "para_que_serve": "Explicar por que a tela Segurança existe e como ela não se confunde com o login único da plataforma.",
+     "publico": "admin",
+     "prioridade": "P3",
+     "assuntos": [],
+     "rotas": [
+      "security_settings_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "security_settings_index",
+      "destaque": null
+     },
+     "requer": "saml",
+     "prints": [],
+     "fontes": [
+      "porques: Configurar seguranca da conta e do usuario"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "03.03",
+     "titulo": "Auditoria: quem convidou quem e quem mudou o quê",
+     "para_que_serve": "Usar a Auditoria para rastrear convites e mudanças de papel na conta.",
+     "publico": "admin",
+     "prioridade": "P3",
+     "assuntos": [
+      "02.20-auditoria-de-mudancas"
+     ],
+     "rotas": [
+      "auditlogs_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "auditlogs_list",
+      "destaque": null
+     },
+     "requer": "audit_logs",
+     "prints": [],
+     "fontes": [
+      "porques: Consultar logs de auditoria"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "03.04",
+     "titulo": "Trazer contatos de outra ferramenta e acompanhar a importação",
+     "para_que_serve": "Subir uma base de outra ferramenta e acompanhar o que entrou e o que ficou de fora.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "settings_data_imports",
+      "settings_data_import_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_data_imports",
+      "destaque": null
+     },
+     "requer": "data_import",
+     "prints": [],
+     "fontes": [
+      "porques: Trazer contatos e conversas de outra ferramenta",
+      "porques: Acompanhar uma importação e ver o que ficou de fora"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo, mas o Guia da Plataforma já tinha o conteúdo pronto — só precisou ser portado."
+    }
+   ]
+  },
+  {
+   "id": "04",
+   "titulo": "Agentes (as pessoas do time) e Funções personalizadas",
+   "artigos": [
+    {
+     "id": "04.01",
+     "titulo": "'Agente' aqui é gente: a tela Agentes e como ler a lista",
+     "para_que_serve": "Entender que Configurações → Agentes trata dos usuários humanos e ler cada linha da lista.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "02.1-agente-e-pessoa",
+      "02.2-ler-a-lista"
+     ],
+     "rotas": [
+      "agent_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "agent_list",
+      "destaque": null
+     },
+     "requer": "agent_management",
+     "prints": [],
+     "fontes": [
+      "porques: Convidar e gerenciar agentes"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "04.02",
+     "titulo": "Convidar uma pessoa para o time",
+     "para_que_serve": "Preencher o convite: nome, função, caixas de entrada e (se for o caso) uma caixa WhatsApp API nova.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "02.3-convidar-pessoa",
+      "02.4-escolher-a-funcao",
+      "02.5-caixas-no-convite",
+      "02.6-caixa-whatsapp-no-convite"
+     ],
+     "rotas": [
+      "agent_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "agent_list",
+      "destaque": null
+     },
+     "requer": "agent_management",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "04.03",
+     "titulo": "O que acontece depois que você convida",
+     "para_que_serve": "Entender o prazo do convite, o link manual, o reconvite e o que o convidado vê ao entrar pela primeira vez.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "02.7-o-que-acontece-depois-do-convite",
+      "02.8-link-manual-e-reconvite",
+      "02.9-convidado-conecta-whatsapp"
+     ],
+     "rotas": [
+      "agent_list",
+      "autonomia_invite_connection"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_invite_connection",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Conectar pelo QR Code o WhatsApp que criaram para você"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "04.04",
+     "titulo": "Editar, redefinir senha e definir horário (SLA) de um agente",
+     "para_que_serve": "Ajustar nome, papel e disponibilidade de um colega, redefinir a senha dele e montar o horário individual de SLA.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "02.10-editar-agente",
+      "02.11-redefinir-senha",
+      "02.12-horario-de-atendimento-sla"
+     ],
+     "rotas": [
+      "agent_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "agent_list",
+      "destaque": null
+     },
+     "requer": "agent_management",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "04.05",
+     "titulo": "Remover uma pessoa do time e o que cada papel vê",
+     "para_que_serve": "Remover um agente com segurança e consultar a tabela de referência do que Administrador e Agente enxergam.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "02.13-remover-agente",
+      "02.14-quem-ve-o-que"
+     ],
+     "rotas": [
+      "agent_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "agent_list",
+      "destaque": null
+     },
+     "requer": "agent_management",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "04.06",
+     "titulo": "Criar, aplicar e editar uma função personalizada",
+     "para_que_serve": "Montar uma função com o conjunto exato de permissões, aplicar a um agente e saber o que não mexer.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "02.15-criar-funcao-personalizada",
+      "02.16-permissoes-uma-a-uma",
+      "02.17-aplicar-funcao-personalizada",
+      "02.18-editar-excluir-funcao"
+     ],
+     "rotas": [
+      "custom_roles_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "custom_roles_list",
+      "destaque": null
+     },
+     "requer": "custom_roles",
+     "prints": [],
+     "fontes": [],
+     "revisar": true,
+     "nota": "02.16 está marcado obsoleto no estudo: a matriz de permissões ganhou categorias novas (Prospecção, Cotação, Autonomia, Campanhas, Conexões) depois de 08/09 (commits fc1c912db7 e 920263697f)."
+    },
+    {
+     "id": "04.07",
+     "titulo": "A regra que mais confunde: papel não dá acesso à caixa",
+     "para_que_serve": "Entender que estar em Agentes não faz a pessoa enxergar conversas — o acesso vem da aba Agentes de cada caixa.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "02.19-acesso-a-caixa-nao-vem-do-papel"
+     ],
+     "rotas": [
+      "settings_inbox_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    }
+   ]
+  },
+  {
+   "id": "05",
+   "titulo": "Times e Atribuição de agentes",
+   "artigos": [
+    {
+     "id": "05.01",
+     "titulo": "O que é um Time e a tela de Times",
+     "para_que_serve": "Entender quando vale criar um time e ler a lista com busca e contador.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "03.1-o-que-e-um-time",
+      "03.2-tela-de-times"
+     ],
+     "rotas": [
+      "settings_teams_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_teams_list",
+      "destaque": null
+     },
+     "requer": "team_management",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "05.02",
+     "titulo": "Criar um time",
+     "para_que_serve": "Criar um time do zero: nome, descrição, atribuição automática e as pessoas iniciais.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "03.3-criar-time-nome-descricao",
+      "03.4-atribuicao-automatica",
+      "03.5-adicionar-agentes",
+      "03.6-finalizar-criacao"
+     ],
+     "rotas": [
+      "settings_teams_new",
+      "settings_teams_add_agents",
+      "settings_teams_finish"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_teams_new",
+      "destaque": null
+     },
+     "requer": "team_management",
+     "prints": [],
+     "fontes": [
+      "porques: Criar e editar times"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "05.03",
+     "titulo": "Editar um time: detalhes e membros",
+     "para_que_serve": "Corrigir nome e descrição, ligar/desligar atribuição automática e atualizar quem está no time.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "03.7-editar-detalhes",
+      "03.8-alterar-membros"
+     ],
+     "rotas": [
+      "settings_teams_edit",
+      "settings_teams_edit_members",
+      "settings_teams_edit_finish"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "settings_teams_edit_finish é a etapa de confirmação ao editar agentes de um time já existente (distinta de settings_teams_finish, do fluxo de criar) — zero cobertura no estudo."
+    },
+    {
+     "id": "05.04",
+     "titulo": "Excluir um time sem perder conversa",
+     "para_que_serve": "Excluir um time com segurança, sabendo o que acontece com as conversas que estavam nele.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "03.9-excluir-time"
+     ],
+     "rotas": [
+      "settings_teams_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_teams_list",
+      "destaque": null
+     },
+     "requer": "team_management",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "05.05",
+     "titulo": "Atribuir e ver conversas por time",
+     "para_que_serve": "Mandar (ou tirar) o time de uma conversa, em lote ou por atalho, e ver a fila do seu time.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "03.10-atribuir-time-na-conversa",
+      "03.11-atribuir-time-em-lote",
+      "03.12-atalhos-atribuir-time",
+      "03.13-conversas-do-meu-time",
+      "03.14-time-da-acesso-a-conversas",
+      "03.15-mencionar-time-nota-privada"
+     ],
+     "rotas": [
+      "inbox_conversation",
+      "team_conversations"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Atribuir conversa"
+     ],
+     "revisar": false,
+     "nota": "Botão leva à lista de conversas: a tela é de UMA conversa, e o artigo não sabe qual."
+    },
+    {
+     "id": "05.06",
+     "titulo": "Usar o time em Automação, Macros e Relatórios",
+     "para_que_serve": "Montar regra e macro com o time e acompanhar o desempenho por time nos relatórios e no CRM.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "03.16-time-em-automacao",
+      "03.17-time-em-macro",
+      "03.18-relatorios-por-time",
+      "03.19-filtrar-crm-por-time",
+      "03.20-tabela-onde-o-time-aparece"
+     ],
+     "rotas": [
+      "automation_list",
+      "macros_wrapper"
+     ],
+     "me_leve_ate_la": {
+      "rota": "automation_list",
+      "destaque": null
+     },
+     "requer": "automations",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "A criação da regra/macro em si é ensinada no capítulo 12; aqui o foco é o campo Time."
+    },
+    {
+     "id": "05.07",
+     "titulo": "Escolher como as conversas são distribuídas: atribuição e capacidade",
+     "para_que_serve": "Abrir a tela-hub de Atribuição de Agentes e criar políticas de distribuição e de limite de conversas por pessoa.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "assignment_policy_index",
+      "agent_assignment_policy_index",
+      "agent_assignment_policy_create",
+      "agent_assignment_policy_edit",
+      "agent_capacity_policy_index",
+      "agent_capacity_policy_create",
+      "agent_capacity_policy_edit"
+     ],
+     "me_leve_ate_la": {
+      "rota": "assignment_policy_index",
+      "destaque": null
+     },
+     "requer": "assignment_v2",
+     "prints": [],
+     "fontes": [
+      "porques: Escolher como as conversas são distribuídas",
+      "porques: Ver e organizar as políticas de atribuição",
+      "porques: Criar uma regra nova de distribuição de conversas",
+      "porques: Ajustar uma política existente e ligar as caixas de entrada",
+      "porques: Ver quanto cada pessoa aguenta de conversa",
+      "porques: Criar uma regra de limite de conversas",
+      "porques: Colocar agentes e limites numa política de capacidade"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo. Só o terceiro cartão da mesma tela-hub (Handoff da IA) era ensinado, via capítulo 10 — o capítulo 08 original nunca dizia que a porta de entrada é esta tela."
+    }
+   ]
+  },
+  {
+   "id": "06",
+   "titulo": "Integrações e a chave da OpenAI",
+   "artigos": [
+    {
+     "id": "06.01",
+     "titulo": "Abrir Integrações e ler um cartão",
+     "para_que_serve": "Entender por que só o administrador vê o menu Integrações, o que cada selo do cartão significa e não confundir Agentes com OpenAI.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "04.1-abrir-integracoes",
+      "04.2-ler-o-cartao",
+      "04.3-o-que-aparece-na-lista",
+      "04.4-desambiguacao-agentes-e-openai"
+     ],
+     "rotas": [
+      "settings_applications"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_applications",
+      "destaque": null
+     },
+     "requer": "integrations",
+     "prints": [],
+     "fontes": [
+      "porques: Gerenciar integracoes"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "06.02",
+     "titulo": "Conectar a chave da OpenAI (CRM Kanban IA)",
+     "para_que_serve": "Preencher o formulário da chave e entender o que acontece ao salvar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "04.5-abrir-crm-kanban-ia",
+      "04.6-preencher-o-formulario",
+      "04.7-salvar-e-validacao"
+     ],
+     "rotas": [
+      "settings_applications_integration"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_applications",
+      "destaque": null
+     },
+     "requer": "integrations",
+     "prints": [],
+     "fontes": [
+      "porques: Configurar a chave de IA da plataforma"
+     ],
+     "revisar": true,
+     "nota": "04.7 está marcado obsoleto no estudo: um bug corrigido depois de 08/09 fazia a chave salvar sem de fato ligar a IA (commit 8618f93d7d)."
+    },
+    {
+     "id": "06.03",
+     "titulo": "Tudo que essa chave liga — e o que passa a custar",
+     "para_que_serve": "Entender que uma única credencial alimenta CRM, Agentes de IA, Copiloto, Guia e e-mail, e quem paga por isso.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "04.8-o-que-a-chave-liga",
+      "04.12-o-que-passa-a-custar"
+     ],
+     "rotas": [
+      "settings_applications_integration"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_applications",
+      "destaque": null
+     },
+     "requer": "integrations",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "06.04",
+     "titulo": "Trocar a chave e o diagnóstico 'a IA parou'",
+     "para_que_serve": "Substituir a chave, entender a prioridade entre chave da conta e chave da plataforma, e seguir o roteiro de checagem.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "04.9-trocar-ou-remover-a-chave",
+      "04.10-chave-da-conta-x-chave-da-plataforma",
+      "04.11-diagnostico-ia-parou"
+     ],
+     "rotas": [
+      "settings_applications_integration"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_applications",
+      "destaque": null
+     },
+     "requer": "integrations",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "06.05",
+     "titulo": "Webhooks e Painel de Aplicativos",
+     "para_que_serve": "Avisar outro sistema quando algo acontece e embutir uma tela própria dentro da conversa.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "04.16-webhooks",
+      "04.17-painel-de-aplicativos"
+     ],
+     "rotas": [
+      "settings_integrations_webhook",
+      "settings_integrations_dashboard_apps"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_integrations_webhook",
+      "destaque": null
+     },
+     "requer": "integrations",
+     "prints": [],
+     "fontes": [
+      "porques: Criar webhooks",
+      "porques: Gerenciar aplicacoes e dashboard apps"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "06.06",
+     "titulo": "n8n e integrações de terceiros",
+     "para_que_serve": "Automatizar o funil por fora com n8n e reconhecer Dialogflow, Tradutor do Google e Dyte.",
+     "publico": "admin",
+     "prioridade": "P3",
+     "assuntos": [
+      "04.18-n8n-conexoes-do-crm",
+      "04.19-integracoes-de-terceiros",
+      "04.20-cartao-openai-antigo"
+     ],
+     "rotas": [
+      "settings_integrations_crm_n8n"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_integrations_crm_n8n",
+      "destaque": null
+     },
+     "requer": "integrations",
+     "prints": [],
+     "fontes": [
+      "porques: Configurar integracao CRM com n8n"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "06.07",
+     "titulo": "Conectar Slack, Linear, Notion e a loja Shopify",
+     "para_que_serve": "Levar as conversas para o Slack e ligar Linear, Notion e Shopify à conta.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "settings_integrations_slack",
+      "settings_integrations_linear",
+      "settings_integrations_notion",
+      "settings_integrations_shopify"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_integrations_slack",
+      "destaque": null
+     },
+     "requer": "integrations",
+     "prints": [],
+     "fontes": [
+      "porques: Levar as conversas para o Slack",
+      "porques: Conectar o Linear para abrir tarefas da conversa",
+      "porques: Conectar o Notion",
+      "porques: Conectar a loja Shopify"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo — 04.19 só citava Dialogflow/Tradutor/Dyte."
+    }
+   ]
+  },
+  {
+   "id": "07",
+   "titulo": "Caixas de entrada (todos os canais) e pesquisa de satisfação",
+   "artigos": [
+    {
+     "id": "07.01",
+     "titulo": "WhatsApp Oficial ou WhatsApp API: qual caixa criar",
+     "para_que_serve": "Escolher entre os dois cartões de WhatsApp e reunir o que precisa ter em mãos antes de começar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "05.1-oficial-ou-api",
+      "05.2-pre-requisitos"
+     ],
+     "rotas": [
+      "settings_inbox_new"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inbox_new",
+      "destaque": null
+     },
+     "requer": "inbox_management",
+     "prints": [],
+     "fontes": [
+      "porques: Visao geral dos canais"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "07.02",
+     "titulo": "Criar a caixa de WhatsApp Oficial: cadastro incorporado ou manual",
+     "para_que_serve": "Conectar o número pela Meta em poucos cliques, ou preencher os cinco campos manuais e concluir o webhook.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "05.3-onde-fica-e-provedor",
+      "05.4-cadastro-incorporado",
+      "05.5-configuracao-manual",
+      "05.6-webhook-na-meta"
+     ],
+     "rotas": [
+      "settings_inbox_new",
+      "settings_inbox_finish",
+      "settings_inboxes_page_channel"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inbox_new",
+      "destaque": null
+     },
+     "requer": "inbox_management",
+     "prints": [],
+     "fontes": [
+      "porques: Conectar WhatsApp Oficial (Cloud API)"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "07.03",
+     "titulo": "Colocar atendentes e ler as abas da caixa",
+     "para_que_serve": "Escolher quem atende nessa caixa e saber, de bate-pronto, em qual aba está cada ajuste.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "05.7-agentes-da-caixa",
+      "05.8-abas-da-caixa"
+     ],
+     "rotas": [
+      "settings_inboxes_add_agents",
+      "settings_inbox_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inbox_new",
+      "destaque": null
+     },
+     "requer": "inbox_management",
+     "prints": [],
+     "fontes": [
+      "porques: Gerenciar agentes da caixa"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "07.04",
+     "titulo": "Saúde da conta e aba Configuração",
+     "para_que_serve": "Interpretar os indicadores da Meta e usar os botões de manutenção: sincronizar modelos, trocar a chave, reconectar.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "05.9-saude-da-conta",
+      "05.10-aba-configuracao",
+      "05.17-reconectar"
+     ],
+     "rotas": [
+      "settings_inbox_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Editar configuracoes da caixa"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "07.05",
+     "titulo": "A janela de 24 horas e o envio de modelos aprovados",
+     "para_que_serve": "Entender por que o campo de resposta trava e reabrir a conversa com um modelo aprovado.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "05.11-janela-24-horas",
+      "05.12-enviar-modelo",
+      "05.13-quais-modelos-aparecem",
+      "05.14-variaveis-do-modelo"
+     ],
+     "rotas": [
+      "inbox_conversation",
+      "settings_templates"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_templates",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ver os modelos de mensagem do WhatsApp"
+     ],
+     "revisar": false,
+     "nota": "Ver também capítulo 18 sobre a janela de 24 horas como conceito."
+    },
+    {
+     "id": "07.06",
+     "titulo": "Horário de funcionamento, saudação e chamadas de voz",
+     "para_que_serve": "Definir dias e horas de atendimento da caixa, ligar a saudação automática e o recurso de chamadas.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "05.15-horario-de-funcionamento",
+      "05.16-saudacao-do-canal",
+      "05.18-chamadas-de-voz"
+     ],
+     "rotas": [
+      "settings_inbox_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Definir horario de atendimento da caixa"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "07.07",
+     "titulo": "A lista de caixas de entrada já criadas",
+     "para_que_serve": "Ver todas as caixas da conta num só lugar, distinta do assistente de criação e da configuração de uma caixa.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "settings_inbox_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inbox_list",
+      "destaque": null
+     },
+     "requer": "inbox_management",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo."
+    },
+    {
+     "id": "07.08",
+     "titulo": "Criar uma caixa de WhatsApp API (QR Code / WAHA)",
+     "para_que_serve": "Conectar o WhatsApp não oficial lendo um QR Code — o canal mais usado desta stack.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "settings_inbox_new"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inbox_new",
+      "destaque": null
+     },
+     "requer": "inbox_management",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo — é pré-requisito de conteúdo já ensinado (convite com caixa WhatsApp API, campanhas de WhatsApp API) sem que ninguém explique como criar a caixa em si."
+    },
+    {
+     "id": "07.09",
+     "titulo": "Criar uma caixa de e-mail ou de site (chat ao vivo)",
+     "para_que_serve": "Configurar IMAP/SMTP para a caixa de e-mail e instalar o widget do site.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "settings_inbox_new"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inbox_new",
+      "destaque": null
+     },
+     "requer": "inbox_management",
+     "prints": [],
+     "fontes": [
+      "porques: Configurar widget do site"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo."
+    },
+    {
+     "id": "07.10",
+     "titulo": "Criar uma caixa dos outros canais",
+     "para_que_serve": "Conectar Instagram, Facebook, SMS, Telegram, API própria, Line ou TikTok.",
+     "publico": "admin",
+     "prioridade": "P3",
+     "assuntos": [],
+     "rotas": [
+      "settings_inbox_new"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inbox_new",
+      "destaque": null
+     },
+     "requer": "inbox_management",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo — 12 canais existem na tela de criação, o índice original só ensinava um."
+    },
+    {
+     "id": "07.11",
+     "titulo": "Ligar a pesquisa de satisfação (CSAT) na caixa",
+     "para_que_serve": "Habilitar a pesquisa de CSAT — sem isso, o relatório do capítulo 14 fica vazio para sempre.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "settings_inbox_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Configurar CSAT da caixa"
+     ],
+     "revisar": false,
+     "nota": "O capítulo 14 ensina a LER o relatório de CSAT, mas nenhum assunto do estudo ensinava a HABILITAR a pesquisa."
+    }
+   ]
+  },
+  {
+   "id": "08",
+   "titulo": "Conversas (inclui Chamadas)",
+   "artigos": [
+    {
+     "id": "08.01",
+     "titulo": "Abrir a tela de Conversas: áreas, cards e layout",
+     "para_que_serve": "Entender as três áreas da tela, ler um card sem abrir a conversa e alternar o layout — inclui iniciar uma conversa do zero.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "06.1-abrir-conversas",
+      "06.2-ler-card-lista",
+      "06.9-layout-lista"
+     ],
+     "rotas": [
+      "home"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Iniciar nova conversa"
+     ],
+     "revisar": false,
+     "nota": "Cobre também 'Iniciar uma conversa do zero' (botão Compor), funcionalidade sem assunto no estudo."
+    },
+    {
+     "id": "08.02",
+     "titulo": "Escolher a fila certa: Minhas, Não atribuídas, Todos e Não atendidas",
+     "para_que_serve": "Escolher entre as abas de responsável e a fila de resgate de conversas não atendidas.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "06.3-abas-responsavel",
+      "06.8-nao-atendidas"
+     ],
+     "rotas": [
+      "conversation_unattended"
+     ],
+     "me_leve_ate_la": {
+      "rota": "conversation_unattended",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ver conversas nao atendidas"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "08.03",
+     "titulo": "Filtrar, ordenar e ver por canal, time ou etiqueta",
+     "para_que_serve": "Trocar o status exibido, ordenar a fila e sair da visão geral para um canal, time ou etiqueta específicos.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "06.4-filtro-status",
+      "06.5-ordenar-fila",
+      "06.6-visao-por-canal-time-etiqueta"
+     ],
+     "rotas": [
+      "home",
+      "inbox_dashboard",
+      "label_conversations"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ordenar e filtrar status da lista de conversas"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "08.04",
+     "titulo": "Menções, Participantes e a Caixa de Entrada (notificações)",
+     "para_que_serve": "Achar conversas em que você foi mencionado ou que acompanha, e entender a central de notificações homônima.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "06.7-mencoes-participantes"
+     ],
+     "rotas": [
+      "conversation_mentions",
+      "conversation_participating",
+      "inbox_view",
+      "inbox_view_conversation"
+     ],
+     "me_leve_ate_la": {
+      "rota": "conversation_mentions",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ver conversas com mencoes"
+     ],
+     "revisar": false,
+     "nota": "inbox_view/inbox_view_conversation eram lacuna no estudo: é o primeiro item do menu lateral ('Caixa de Entrada'), a central de NOTIFICAÇÕES, homônima e fácil de confundir com 'Caixas de Entrada' (canais, capítulo 07) e com a própria tela de Conversas."
+    },
+    {
+     "id": "08.05",
+     "titulo": "Cabeçalho, resposta e assinatura na conversa",
+     "para_que_serve": "Ler o cabeçalho da conversa aberta, escrever a resposta e controlar se a assinatura entra automaticamente.",
+     "publico": "atendente",
+     "prioridade": "P1",
+     "assuntos": [
+      "06.10-cabecalho-conversa",
+      "06.11-responder-conversa",
+      "06.15-assinatura-mensagem"
+     ],
+     "rotas": [
+      "inbox_conversation"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Atribuir conversa"
+     ],
+     "revisar": false,
+     "nota": "Botão leva à lista de conversas: a tela é de UMA conversa, e o artigo não sabe qual."
+    },
+    {
+     "id": "08.06",
+     "titulo": "Quando o produto bloqueia a resposta",
+     "para_que_serve": "Reconhecer o bloqueio da janela de 24h e de caixas de API, e saber a saída (modelo ou nota privada).",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "06.12-quando-nao-da-para-responder"
+     ],
+     "rotas": [
+      "inbox_conversation"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Ver também capítulo 18 sobre a janela de 24 horas como conceito. Botão leva à lista de conversas: a tela é de UMA conversa, e o artigo não sabe qual."
+    },
+    {
+     "id": "08.07",
+     "titulo": "Nota privada, @menção e resposta pronta pelo teclado",
+     "para_que_serve": "Registrar um recado interno, chamar um colega com @ e inserir resposta pronta com '/'.",
+     "publico": "atendente",
+     "prioridade": "P1",
+     "assuntos": [
+      "06.13-nota-privada-mencao",
+      "06.14-respostas-prontas-atalhos"
+     ],
+     "rotas": [
+      "inbox_conversation"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Criar/editar a resposta pronta em si fica no capítulo 12. Botão leva à lista de conversas: a tela é de UMA conversa, e o artigo não sabe qual."
+    },
+    {
+     "id": "08.08",
+     "titulo": "Anexar arquivo e gravar áudio",
+     "para_que_serve": "Enviar arquivo, imagem ou áudio gravado na hora, respeitando o limite de tamanho do canal.",
+     "publico": "atendente",
+     "prioridade": "P2",
+     "assuntos": [
+      "06.16-anexos-e-audio"
+     ],
+     "rotas": [
+      "inbox_conversation"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Botão leva à lista de conversas: a tela é de UMA conversa, e o artigo não sabe qual."
+    },
+    {
+     "id": "08.09",
+     "titulo": "Atribuir, assumir da IA, resolver e adiar a conversa",
+     "para_que_serve": "Passar a conversa para a pessoa ou time certo, assumir de um agente de IA, resolver, deixar pendente ou adiar.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "06.17-atribuir-conversa",
+      "06.18-assumir-conversa-da-ia",
+      "06.19-status-resolver-pendente-reabrir",
+      "06.20-adiar-conversa"
+     ],
+     "rotas": [
+      "inbox_conversation",
+      "conversation_workflow_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "conversation_workflow_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Resolver conversa",
+      "porques: Adiar conversa",
+      "porques: Fechar conversas paradas e exigir campos na resolução"
+     ],
+     "revisar": false,
+     "nota": "Cobre também conversation_workflow_index (Fluxo de Conversa): as regras e campos obrigatórios que explicam por que o botão Resolver às vezes pede mais dados. Zero cobertura no estudo."
+    },
+    {
+     "id": "08.10",
+     "titulo": "Prioridade, etiquetas, participantes e macro na conversa",
+     "para_que_serve": "Marcar a prioridade, etiquetar, entrar como participante e rodar uma macro na conversa aberta.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "06.21-prioridade-conversa",
+      "06.22-etiquetas-conversa",
+      "06.23-participantes-conversa",
+      "06.24-executar-macro"
+     ],
+     "rotas": [
+      "inbox_conversation"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Criar/editar a macro em si fica no capítulo 12. Botão leva à lista de conversas: a tela é de UMA conversa, e o artigo não sabe qual."
+    },
+    {
+     "id": "08.11",
+     "titulo": "Ações rápidas: botão direito, seleção em massa, filtros avançados e pastas",
+     "para_que_serve": "Agir sem abrir a conversa, selecionar várias de uma vez, montar um filtro avançado e salvá-lo como pasta.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "06.25-menu-botao-direito-card",
+      "06.26-acoes-em-massa",
+      "06.27-filtros-avancados",
+      "06.28-pastas-filtros-salvos"
+     ],
+     "rotas": [
+      "folder_conversations"
+     ],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Filtrar conversas",
+      "porques: Usar visoes customizadas de conversas"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "08.12",
+     "titulo": "Buscar contato, conversa ou mensagem",
+     "para_que_serve": "Achar uma conversa antiga pelo número, e-mail, telefone ou trecho de mensagem.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "06.29-buscar-conversas-mensagens"
+     ],
+     "rotas": [
+      "search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "search",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "A busca global também é apresentada no capítulo 01; aqui o foco é o uso dentro do atendimento."
+    },
+    {
+     "id": "08.13",
+     "titulo": "Usar o Copiloto na conversa",
+     "para_que_serve": "Resumir, sugerir resposta e conversar com um agente interno sem sair do atendimento.",
+     "publico": "atendente",
+     "prioridade": "P2",
+     "assuntos": [
+      "06.30-copiloto-painel-conversa",
+      "06.31-copiloto-autonomia-chat",
+      "09.25-copiloto-interno-na-conversa"
+     ],
+     "rotas": [
+      "inbox_conversation"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Usar Copiloto Autonom.ia na conversa"
+     ],
+     "revisar": false,
+     "nota": "Botão leva à lista de conversas: a tela é de UMA conversa, e o artigo não sabe qual."
+    },
+    {
+     "id": "08.14",
+     "titulo": "Referência: limites por canal e atalhos de teclado",
+     "para_que_serve": "Consultar o limite de caracteres de cada canal e os atalhos que aceleram o atendimento.",
+     "publico": "atendente",
+     "prioridade": "P3",
+     "assuntos": [
+      "06.32-limites-por-canal",
+      "06.33-atalhos-teclado"
+     ],
+     "rotas": [
+      "inbox_conversation"
+     ],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Botão leva à lista de conversas: a tela é de UMA conversa, e o artigo não sabe qual."
+    },
+    {
+     "id": "08.15",
+     "titulo": "Ver o histórico de chamadas e ouvir gravações",
+     "para_que_serve": "Abrir o painel de chamadas de voz recebidas e feitas pelo número oficial, e ouvir as gravações.",
+     "publico": "admin",
+     "prioridade": "P3",
+     "assuntos": [],
+     "rotas": [
+      "calls_dashboard_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "calls_dashboard_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ver o histórico de chamadas e ouvir gravações"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo — distinto da aba 'Chamadas' de uma caixa (capítulo 07), que é sobre ligar o recurso."
+    }
+   ]
+  },
+  {
+   "id": "09",
+   "titulo": "Contatos e Empresas",
+   "artigos": [
+    {
+     "id": "09.01",
+     "titulo": "Onde ficam os contatos e como ler a lista",
+     "para_que_serve": "Diferenciar Todos os Contatos, Ativo, Segmentos e Marcado com, e navegar entre páginas.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "07.1-onde-ficam-os-contatos",
+      "07.2-ler-a-lista-e-paginar",
+      "07.3-ordenar-a-lista"
+     ],
+     "rotas": [
+      "contacts_dashboard_index",
+      "contacts_dashboard_active",
+      "contacts_dashboard_labels_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_dashboard_index",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [
+      "porques: Ordenar lista de contatos"
+     ],
+     "revisar": true,
+     "nota": "07.3 está marcado obsoleto no estudo: o padrão de ordenação mudou de 'atividade mais antiga primeiro' para 'mais recente primeiro' (commit 3d7ca0ec0b, 15/09/2026, pós-estudo)."
+    },
+    {
+     "id": "09.02",
+     "titulo": "Buscar e filtrar contatos, salvar segmento",
+     "para_que_serve": "Achar um contato específico, montar um filtro com várias condições e salvá-lo como segmento fixo.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "07.4-buscar-um-contato",
+      "07.15-filtrar-contatos",
+      "07.16-salvar-segmento"
+     ],
+     "rotas": [
+      "contacts_dashboard_segments_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_dashboard_index",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [
+      "porques: Filtrar contatos",
+      "porques: Criar segmento de contatos"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "09.03",
+     "titulo": "Criar e editar um contato",
+     "para_que_serve": "Cadastrar um contato do zero e depois corrigir dados, trocar ou remover a foto.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "07.5-criar-contato",
+      "07.6-editar-contato-e-foto"
+     ],
+     "rotas": [
+      "contacts_dashboard_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_dashboard_index",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [
+      "porques: Criar contato"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "09.04",
+     "titulo": "Etiquetas, bloqueio e notas do contato",
+     "para_que_serve": "Etiquetar, bloquear um contato indesejado e registrar notas internas na ficha.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "07.7-etiquetas-do-contato",
+      "07.8-bloquear-contato",
+      "07.9-notas-do-contato"
+     ],
+     "rotas": [
+      "contacts_edit"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_dashboard_index",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [
+      "porques: Aplicar etiquetas em contatos"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "09.05",
+     "titulo": "Histórico de conversas e mídia do contato",
+     "para_que_serve": "Consultar as conversas passadas e encontrar rapidamente uma foto, comprovante ou PDF já enviado.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "07.10-conversas-anteriores",
+      "07.11-midia-do-contato"
+     ],
+     "rotas": [
+      "contacts_edit"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_dashboard_index",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "09.06",
+     "titulo": "Preencher atributos personalizados na ficha do contato",
+     "para_que_serve": "Preencher na ficha os campos próprios da conta e entender os campos sw_ que a IA preenche sozinha. Criar o campo fica no 12.05.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "07.12-criar-atributo-personalizado",
+      "07.13-preencher-atributos-no-contato",
+      "07.14-atributos-sw-preenchidos-pela-ia"
+     ],
+     "rotas": [
+      "attributes_list",
+      "contacts_edit"
+     ],
+     "me_leve_ate_la": {
+      "rota": "attributes_list",
+      "destaque": null
+     },
+     "requer": "custom_attributes",
+     "prints": [],
+     "fontes": [
+      "porques: Gerenciar atributos customizados"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "09.07",
+     "titulo": "Ações em massa, importar/exportar CSV e Base Campanha",
+     "para_que_serve": "Selecionar vários contatos de uma vez, importar ou exportar por CSV, e subir uma base de campanha em lotes.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "07.17-acoes-em-massa",
+      "07.18-importar-csv",
+      "07.19-exportar-csv",
+      "07.20-base-campanha-enviar-e-validar",
+      "07.21-base-campanha-confirmar-lotes-e-desfazer"
+     ],
+     "rotas": [
+      "contacts_dashboard_index",
+      "contacts_campaign_imports"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_campaign_imports",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [
+      "porques: Importar contatos por CSV",
+      "porques: Importar base de campanha em Contatos",
+      "porques: Confirmar importação, baixar CSVs e desfazer rótulos"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "09.08",
+     "titulo": "Mesclar e excluir contatos",
+     "para_que_serve": "Juntar dois cadastros duplicados sabendo qual sobrevive, e excluir um contato de vez.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "07.22-mesclar-contatos-duplicados",
+      "07.23-excluir-contato"
+     ],
+     "rotas": [
+      "contacts_edit"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_dashboard_index",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [
+      "porques: Abrir a ficha de um contato e juntar cadastros repetidos"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "09.09",
+     "titulo": "Empresas: cadastro, edição e vínculo com contatos",
+     "para_que_serve": "Cadastrar e editar uma empresa, e usar as abas de Atributos, Contatos, Histórico e Notas.",
+     "publico": "ambos",
+     "prioridade": "P3",
+     "assuntos": [
+      "07.24-empresas-lista-e-cadastro",
+      "07.25-empresas-vincular-contatos-e-usar"
+     ],
+     "rotas": [
+      "companies_dashboard_index",
+      "companies_dashboard_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "companies_dashboard_index",
+      "destaque": null
+     },
+     "requer": "companies",
+     "prints": [],
+     "fontes": [
+      "porques: Cadastrar empresas e achar a que você procura",
+      "porques: Ver a empresa por dentro e vincular os contatos dela"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "09.10",
+     "titulo": "Referência: todos os campos de um contato",
+     "para_que_serve": "Consultar a lista completa de campos, o que é obrigatório e por quais dá para buscar, filtrar e ordenar.",
+     "publico": "ambos",
+     "prioridade": "P3",
+     "assuntos": [
+      "07.26-referencia-campos-do-contato"
+     ],
+     "rotas": [
+      "contacts_edit"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_dashboard_index",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    }
+   ]
+  },
+  {
+   "id": "10",
+   "titulo": "CRM",
+   "artigos": [
+    {
+     "id": "10.01",
+     "titulo": "O menu CRM e criar o primeiro funil",
+     "para_que_serve": "Saber qual das seis telas do CRM abrir, criar o funil, a meta mensal, ligar caixas e as automações do estágio.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.1-mapa-do-crm",
+      "08.2-criar-funil",
+      "08.3-meta-mensal",
+      "08.4-vincular-inbox-ao-funil",
+      "08.5-configurar-inboxes",
+      "08.34-automacoes-do-estagio"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Abrir o CRM Kanban e filtrar oportunidades",
+      "porques: Criar funis, estágios e conectar caixas ao CRM"
+     ],
+     "revisar": true,
+     "nota": "08.4 está marcado obsoleto no estudo: a mecânica de vínculo caixa↔funil mudou depois de 08/09 (commits ee5d02af3d e 21235ec0e9)."
+    },
+    {
+     "id": "10.02",
+     "titulo": "Ler o quadro Kanban e criar um card na mão",
+     "para_que_serve": "Interpretar colunas, contadores e selos do card, e registrar uma oportunidade que não nasceu de conversa.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.6-ler-o-quadro",
+      "08.7-criar-card-manual"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Criar card ou oportunidade no CRM"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.03",
+     "titulo": "Mover card, a gaveta e a timeline",
+     "para_que_serve": "Arrastar entre etapas, abrir as cinco abas da gaveta e reconstituir o histórico na timeline.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.8-mover-card",
+      "08.9-gaveta-do-card",
+      "08.10-timeline-do-card"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Mover card, ganhar, perder ou reabrir oportunidade"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.04",
+     "titulo": "Ganhar, perder, reabrir e arquivar",
+     "para_que_serve": "Fechar o card com valor no ganho ou motivo na perda, reabrir quando preciso, e arquivar o que saiu do fluxo.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.11-ganhar-perder-reabrir",
+      "08.12-arquivar"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.05",
+     "titulo": "Follow-up manual e automático",
+     "para_que_serve": "Agendar um lembrete ou snooze, configurar envio automático e resolver o aviso de follow-up vencido.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.13-follow-up-manual",
+      "08.14-follow-up-envio-automatico",
+      "08.15-lembrete-vencido"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Criar follow-ups e lembretes no CRM"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.06",
+     "titulo": "Filtrar o quadro e trabalhar na Visão Lista",
+     "para_que_serve": "Montar a visão que precisa, trocar para a lista, editar direto na célula e salvar visualizações.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "08.16-filtros",
+      "08.17-visao-lista",
+      "08.18-edicao-rapida-lista",
+      "08.19-abas-resultado",
+      "08.20-acoes-em-massa",
+      "08.21-views-salvas"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Salvar e compartilhar visoes da lista do CRM"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.07",
+     "titulo": "IA do funil: ligar, critérios e extração de campos",
+     "para_que_serve": "Ligar a IA do funil, escrever os critérios de cada etapa e deixar a IA preencher campos personalizados.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.22-ia-do-funil-ligar",
+      "08.23-sugestao-vs-automove",
+      "08.25-extracao-de-campos"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Configurar IA do CRM por funil"
+     ],
+     "revisar": false,
+     "nota": "Ver também capítulo 18 sobre a descrição da etapa como instrução para a IA."
+    },
+    {
+     "id": "10.08",
+     "titulo": "Aceitar a sugestão da IA e o lembrete de retorno",
+     "para_que_serve": "Resolver a sugestão de estágio pendente no card e ligar o callback automático quando o cliente pede retorno.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "08.24-sugestao-no-card",
+      "08.26-lembrete-de-retorno"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Usar sugestoes e resumo por IA no card do CRM"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.09",
+     "titulo": "Follow-up automático da IA",
+     "para_que_serve": "Configurar toques, intervalos e janela silenciosa, e acompanhar o ciclo no card.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.27-followup-automatico-config",
+      "08.28-followup-automatico-acompanhar"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.10",
+     "titulo": "Handoff da IA: conceito, gatilho, destino e por etapa",
+     "para_que_serve": "Escolher entre 'Direto' e 'Convite', escrever o gatilho, o destino e personalizar por etapa do funil.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.29-handoff-conceito",
+      "08.30-handoff-gatilho",
+      "08.31-handoff-destino",
+      "08.32-handoff-plano-b",
+      "08.33-handoff-por-etapa"
+     ],
+     "rotas": [
+      "crm_handoff_settings_index",
+      "crm_handoff_settings_edit"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_handoff_settings_index",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [
+      "porques: Escolher o funil para configurar a passagem da IA",
+      "porques: Definir quando e para quem a IA passa a conversa"
+     ],
+     "revisar": false,
+     "nota": "Ver também capítulo 18 sobre 'Direto' x 'Convite' como conceito."
+    },
+    {
+     "id": "10.11",
+     "titulo": "Calendário do CRM e agendar reunião",
+     "para_que_serve": "Navegar no calendário, criar lembrete rápido e agendar reunião pelo card, com convite e link de vídeo.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "08.35-calendario-navegar",
+      "08.36-calendario-acoes",
+      "08.37-agendar-reuniao",
+      "08.38-detalhes-da-reuniao",
+      "08.39-pagina-publica-agendamento"
+     ],
+     "rotas": [
+      "crm_calendar_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_calendar_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Usar calendário CRM e agendar reunião",
+      "porques: Configurar link público de agendamento"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.12",
+     "titulo": "Origem do lead e conversões para Meta e Google Ads",
+     "para_que_serve": "Ler o selo de origem do card e ligar o envio de conversões para Meta Ads e Google Ads.",
+     "publico": "admin",
+     "prioridade": "P3",
+     "assuntos": [
+      "08.41-origem-do-lead",
+      "08.42-conversoes-meta",
+      "08.43-conversoes-google"
+     ],
+     "rotas": [
+      "crm_kanban_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_kanban_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.13",
+     "titulo": "Dashboard do CRM: KPIs e seções",
+     "para_que_serve": "Ler os números do funil no período certo e usar os blocos para achar gargalo e avaliar a IA.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.44-dashboard-kpis",
+      "08.45-dashboard-secoes"
+     ],
+     "rotas": [
+      "crm_dashboard_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_dashboard_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ver dashboard CRM e métricas de funil"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.14",
+     "titulo": "Gestão de IA do CRM: quanto está custando",
+     "para_que_serve": "Acompanhar o gasto de IA por período e por recurso, entender a 'Economia automática' e baixar o relatório de uso.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "04.13-gestao-de-ia",
+      "04.14-economia-automatica",
+      "04.15-baixar-relatorio-de-uso",
+      "08.46-gestao-de-ia",
+      "08.47-gestao-de-ia-recursos"
+     ],
+     "rotas": [
+      "crm_ai_usage_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_ai_usage_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Acompanhar quanto a IA está custando"
+     ],
+     "revisar": false,
+     "nota": "Absorveu o antigo 06.05 (mesma tela, no menu CRM)."
+    },
+    {
+     "id": "10.15",
+     "titulo": "SLA do CRM: políticas e calendários",
+     "para_que_serve": "Criar a política de tempo de resposta e resolução, e o calendário de atendimento que ela usa para contar o tempo.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "08.48-sla-politicas",
+      "08.49-sla-calendarios"
+     ],
+     "rotas": [
+      "crm_sla_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_sla_index",
+      "destaque": null
+     },
+     "requer": "sla",
+     "prints": [],
+     "fontes": [
+      "porques: Configurar SLA do CRM"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.16",
+     "titulo": "Trabalhar o CRM na conversa e tokens de integração",
+     "para_que_serve": "Criar ou reaproveitar um card sem sair da conversa, e gerar um token para um sistema externo acessar a API do CRM.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "08.50-crm-na-conversa",
+      "08.51-tokens-integracao"
+     ],
+     "rotas": [
+      "crm_integration_tokens_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_integration_tokens_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Usar o card CRM a partir de uma conversa",
+      "porques: Gerenciar tokens de integracao do CRM"
+     ],
+     "revisar": false,
+     "nota": null
+    }
+   ]
+  },
+  {
+   "id": "11",
+   "titulo": "Agentes de IA e Robôs",
+   "artigos": [
+    {
+     "id": "11.01",
+     "titulo": "Onde ficam os agentes de IA e como ler Meus agentes",
+     "para_que_serve": "Abrir o menu Agentes (os agentes de IA) e interpretar um card: nome, estado, canais e botões.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "09.1-onde-ficam-os-agentes-de-ia",
+      "09.2-ler-a-tela-meus-agentes"
+     ],
+     "rotas": [
+      "autonomia_agents_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [
+      "porques: Abrir hub de Agentes de IA"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.02",
+     "titulo": "Decidir externo ou interno, com base ou sem base",
+     "para_que_serve": "Escolher se o agente fala com o cliente ou só ajuda a equipe, se aprende com documentos, e o ponto de partida.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "09.3-decidir-externo-ou-interno",
+      "09.4-decidir-com-base-ou-sem-base",
+      "09.5-escolher-o-tipo-de-agente"
+     ],
+     "rotas": [
+      "autonomia_agents_builder"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_builder",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [
+      "porques: Criar agente externo com base de conhecimento",
+      "porques: Criar agente interno ou sem base"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.03",
+     "titulo": "Enviar a base de conhecimento e a entrevista do Construtor",
+     "para_que_serve": "Subir os materiais iniciais e conduzir a conversa que monta o agente, anexando arquivos e links.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "09.6-etapa-envie-a-base",
+      "09.7-entrevista-do-construtor",
+      "09.8-anexar-arquivos-e-links-na-conversa"
+     ],
+     "rotas": [
+      "autonomia_agents_builder"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_builder",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Ver também capítulo 18 sobre não usar o agente no número pessoal."
+    },
+    {
+     "id": "11.04",
+     "titulo": "Ler o parecer de cada material",
+     "para_que_serve": "Interpretar Pronto, Revisar e Falha ao ler, e consultar formatos e limites aceitos.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.9-ler-o-parecer-de-cada-material",
+      "09.10-formatos-e-limites-dos-materiais"
+     ],
+     "rotas": [
+      "autonomia_agents_builder"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_builder",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.05",
+     "titulo": "Fechar a construção e revisar o agente",
+     "para_que_serve": "Encerrar a entrevista no momento certo e conferir primeira mensagem, perguntas e materiais antes de publicar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "09.11-finalizar-a-construcao",
+      "09.12-revisar-o-agente"
+     ],
+     "rotas": [
+      "autonomia_agents_builder"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_builder",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.06",
+     "titulo": "Publicar um agente externo ou interno",
+     "para_que_serve": "Conectar o agente a uma caixa para atender de verdade, ou ativar como copiloto da equipe.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "09.13-publicar-agente-externo",
+      "09.14-publicar-agente-interno"
+     ],
+     "rotas": [
+      "autonomia_agent_panel"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [
+      "porques: Conectar ou desconectar agente de uma caixa"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.07",
+     "titulo": "O painel do agente: abas e estados",
+     "para_que_serve": "Circular pelas abas do agente, entender Rascunho/Ativo/Pausado e testar sem risco.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "09.15-painel-do-agente-e-estados",
+      "09.16-aba-testar"
+     ],
+     "rotas": [
+      "autonomia_agent_panel"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [
+      "porques: Testar, acompanhar e ajustar agente"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.08",
+     "titulo": "Aba Conhecimento e aba Canais",
+     "para_que_serve": "Manter a base do agente viva depois de publicado, e conectar/desconectar caixas de entrada.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "09.17-aba-conhecimento",
+      "09.18-aba-canais"
+     ],
+     "rotas": [
+      "autonomia_agent_panel"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [
+      "porques: Atualizar conhecimento e fontes do agente"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.09",
+     "titulo": "Aba Desempenho e configurações rápidas",
+     "para_que_serve": "Ler as métricas de 7/30 dias e mudar imagem, atuação, mensagens e tom sem refazer o agente.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.19-aba-desempenho",
+      "09.20-ajustar-configuracoes-rapidas"
+     ],
+     "rotas": [
+      "autonomia_agent_panel"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.10",
+     "titulo": "Quando o agente chama um humano e como ajustar a instrução",
+     "para_que_serve": "Configurar a transferência e o limite de confiança, e escolher entre ajustar com IA ou escrever a instrução.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "09.21-transferir-para-humano-e-limite-de-confianca",
+      "09.22-ajustar-com-ia-x-modo-avancado",
+      "09.23-historico-da-instrucao"
+     ],
+     "rotas": [
+      "autonomia_agent_panel"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.11",
+     "titulo": "Pausar, reativar, apagar e usar como copiloto",
+     "para_que_serve": "Tirar o agente do ar, colocá-lo de volta, removê-lo em definitivo, ou usar o interno como copiloto na conversa.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "09.24-pausar-reativar-apagar",
+      "09.25-copiloto-interno-na-conversa"
+     ],
+     "rotas": [
+      "autonomia_agent_panel"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "11.12",
+     "titulo": "Robôs (integração por webhook): o terceiro 'agente' da plataforma",
+     "para_que_serve": "Reconhecer os Robôs, ligados em todas as contas, e não confundir com as pessoas do time nem com os agentes de IA.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "agent_bots"
+     ],
+     "me_leve_ate_la": {
+      "rota": "agent_bots",
+      "destaque": null
+     },
+     "requer": "agent_bots",
+     "prints": [],
+     "fontes": [
+      "porques: Gerenciar agent bots nativos"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo — 11.17-relatorios-do-bot (capítulo 14) já lia o resultado sem nunca apresentar a tela de configuração."
+    }
+   ]
+  },
+  {
+   "id": "12",
+   "titulo": "Automação, Macros, Etiquetas, Respostas prontas e Atributos",
+   "artigos": [
+    {
+     "id": "12.01",
+     "titulo": "Criar uma regra de Automação do zero",
+     "para_que_serve": "Montar uma regra completa: evento, condições e ações — do zero, não só a condição de time.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "03.16-time-em-automacao"
+     ],
+     "rotas": [
+      "automation_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "automation_list",
+      "destaque": null
+     },
+     "requer": "automations",
+     "prints": [],
+     "fontes": [
+      "porques: Criar automacoes"
+     ],
+     "revisar": false,
+     "nota": "Cobertura fraca no estudo: 03.16 só ensinava a condição 'Nome do Time'; ninguém ensinava a criar a regra do zero."
+    },
+    {
+     "id": "12.02",
+     "titulo": "Criar e editar uma Macro",
+     "para_que_serve": "Montar um conjunto de ações prontas (etiquetar, atribuir, resolver, mandar mensagem) para rodar com um clique.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "03.17-time-em-macro",
+      "06.24-executar-macro"
+     ],
+     "rotas": [
+      "macros_new",
+      "macros_edit",
+      "macros_wrapper"
+     ],
+     "me_leve_ate_la": {
+      "rota": "macros_wrapper",
+      "destaque": null
+     },
+     "requer": "macros",
+     "prints": [],
+     "fontes": [
+      "porques: Criar macros"
+     ],
+     "revisar": false,
+     "nota": "macros_wrapper renderiza Macros/Index.vue diretamente (é a tela real da lista) — o Guia da Plataforma listava essa rota como casca de roteamento; achado colateral da auditoria de cobertura a corrigir."
+    },
+    {
+     "id": "12.03",
+     "titulo": "Criar e organizar Etiquetas",
+     "para_que_serve": "Criar uma etiqueta, escolher a cor, editar e excluir — usada em conversa, contato e relatório.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "labels_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "labels_list",
+      "destaque": null
+     },
+     "requer": "labels",
+     "prints": [],
+     "fontes": [
+      "porques: Gerenciar catalogo de etiquetas"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo, apesar de a etiqueta ser usada em 4 capítulos diferentes."
+    },
+    {
+     "id": "12.04",
+     "titulo": "Criar e editar Respostas Prontas",
+     "para_que_serve": "Criar, editar e apagar uma resposta pronta. O uso com '/' dentro da conversa fica no 08.07.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "canned_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "canned_list",
+      "destaque": null
+     },
+     "requer": "canned_responses",
+     "prints": [],
+     "fontes": [
+      "porques: Criar respostas prontas"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo. É também a tela padrão de Configurações para quem não é administrador."
+    },
+    {
+     "id": "12.05",
+     "titulo": "Atributos personalizados: contato e conversa",
+     "para_que_serve": "Criar um campo próprio de contato ou de conversa na mesma tela de Atributos Personalizados.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "07.12-criar-atributo-personalizado",
+      "07.14-atributos-sw-preenchidos-pela-ia"
+     ],
+     "rotas": [
+      "attributes_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "attributes_list",
+      "destaque": null
+     },
+     "requer": "custom_attributes",
+     "prints": [],
+     "fontes": [
+      "porques: Gerenciar atributos customizados"
+     ],
+     "revisar": false,
+     "nota": "A aba 'Contato' era coberta no estudo; a aba 'Conversas' da mesma tela, não."
+    }
+   ]
+  },
+  {
+   "id": "13",
+   "titulo": "Campanhas",
+   "artigos": [
+    {
+     "id": "13.01",
+     "titulo": "Os cinco tipos de campanha: qual usar",
+     "para_que_serve": "Reconhecer e-mail, WhatsApp Oficial, WhatsApp API, Chat ao vivo e SMS, e escolher o certo para o objetivo.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.1-mapa-de-campanhas",
+      "10.2-campanha-chat-ao-vivo",
+      "10.3-campanha-sms"
+     ],
+     "rotas": [
+      "campaigns_livechat_index",
+      "campaigns_sms_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_livechat_index",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Criar campanha de chat ao vivo",
+      "porques: Criar campanha SMS"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.02",
+     "titulo": "Criar uma campanha de WhatsApp Oficial",
+     "para_que_serve": "Disparar um modelo aprovado pela Meta para um público por etiquetas, com data e hora marcadas.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "10.4-campanha-whatsapp-oficial"
+     ],
+     "rotas": [
+      "campaigns_whatsapp_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_whatsapp_index",
+      "destaque": null
+     },
+     "requer": "whatsapp_campaign",
+     "prints": [],
+     "fontes": [
+      "porques: Criar campanha WhatsApp Oficial"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.03",
+     "titulo": "Criar e acompanhar uma campanha de WhatsApp API",
+     "para_que_serve": "Montar e agendar um disparo pelo WhatsApp não oficial, e acompanhar, pausar ou cancelar no meio do envio.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.5-campanha-whatsapp-api-criar",
+      "10.6-campanha-whatsapp-api-acompanhar"
+     ],
+     "rotas": [
+      "campaigns_whatsapp_api_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_whatsapp_api_index",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Criar campanha WhatsApp API"
+     ],
+     "revisar": false,
+     "nota": "Ver também capítulo 18 sobre o risco de bloqueio no disparo em massa."
+    },
+    {
+     "id": "13.04",
+     "titulo": "Importar, confirmar e desfazer uma base de campanha",
+     "para_que_serve": "Subir uma planilha de nome + celular, validar, confirmar em lotes e desfazer quando precisar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.7-importar-base-campanha",
+      "10.8-historico-bases-campanha"
+     ],
+     "rotas": [
+      "contacts_campaign_imports"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_campaign_imports",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [
+      "porques: Ver histórico de importações de campanha"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.05",
+     "titulo": "Adicionar e verificar um domínio de envio de e-mail",
+     "para_que_serve": "Cadastrar o domínio próprio e conferir o DNS (DKIM, SPF, DMARC) até ele verificar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.9-dominio-envio-adicionar",
+      "10.10-dominio-envio-verificar"
+     ],
+     "rotas": [
+      "campaigns_email_sender_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_email_sender_index",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Criar e verificar identidade de remetente de e-mail"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.06",
+     "titulo": "Criar a campanha de e-mail e escolher como montar",
+     "para_que_serve": "Abrir a campanha preenchendo remetente e lista, e decidir entre IA, modelo pronto ou começar do zero.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.11-nova-campanha-email-remetente",
+      "10.12-escolher-ponto-de-partida"
+     ],
+     "rotas": [
+      "campaigns_email_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_email_index",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Criar campanha de e-mail e importar base"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.07",
+     "titulo": "Criar o e-mail com IA e montar no editor",
+     "para_que_serve": "Escrever um briefing para a IA montar o e-mail, e ajustar blocos, cor e link no editor.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.13-criar-email-com-ia",
+      "10.14-editor-email-blocos"
+     ],
+     "rotas": [
+      "campaigns_email_builder"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_email_index",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Montar e-mail com editor, IA e templates"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.08",
+     "titulo": "Placeholders, teste e modelos de e-mail",
+     "para_que_serve": "Personalizar com os dados da planilha, enviar um teste antes de disparar, e usar/salvar modelos.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.15-placeholders-personalizacao",
+      "10.16-enviar-teste",
+      "10.20-modelos-email"
+     ],
+     "rotas": [
+      "campaigns_email_builder",
+      "campaigns_email_templates"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_email_index",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Escolher um modelo pronto de e-mail"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.09",
+     "titulo": "Destinatários, envio e gestão da campanha de e-mail",
+     "para_que_serve": "Gerenciar destinatários, enviar ou agendar, e pausar/retomar/duplicar/excluir uma campanha já criada.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.17-destinatarios-email",
+      "10.18-enviar-ou-agendar-email",
+      "10.19-gerir-campanhas-email"
+     ],
+     "rotas": [
+      "campaigns_email_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_email_index",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Gerenciar destinatários, agendar e enviar campanha de e-mail"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.10",
+     "titulo": "Ler os indicadores em Gestão de campanhas",
+     "para_que_serve": "Entender os sete números do topo (enviados, entregues, abertos, clicados, descadastros, bounces, spam).",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "10.21-gestao-campanhas-indicadores",
+      "08.40-links-rastreaveis"
+     ],
+     "rotas": [
+      "crm_campaign_management_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_campaign_management_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ver gestão e relatório de campanhas de e-mail"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.11",
+     "titulo": "Analisar uma campanha e usar links rastreáveis",
+     "para_que_serve": "Ver a linha do tempo e os cliques por link de uma campanha, e criar link/QR rastreável por vendedor ou loja.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "10.22-gestao-campanhas-detalhe",
+      "10.23-links-rastreaveis-qr"
+     ],
+     "rotas": [
+      "crm_campaign_management_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_campaign_management_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.12",
+     "titulo": "Ver o resultado de uma campanha de WhatsApp Oficial",
+     "para_que_serve": "Ler entregues x lidas x ignoradas de uma campanha de WhatsApp Oficial já disparada.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_whatsapp_analytics"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_whatsapp_index",
+      "destaque": null
+     },
+     "requer": "whatsapp_campaign",
+     "prints": [],
+     "fontes": [
+      "porques: Ver o resultado de uma campanha de WhatsApp"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo, mas o Guia da Plataforma já tinha o conteúdo pronto — só precisou ser portado."
+    }
+   ]
+  },
+  {
+   "id": "14",
+   "titulo": "Relatórios",
+   "artigos": [
+    {
+     "id": "14.01",
+     "titulo": "Onde ficam os relatórios e quem consegue abrir",
+     "para_que_serve": "Encontrar o menu Relatórios e entender por que um atendente comum não vê esse menu.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "11.1-onde-ficam-os-relatorios"
+     ],
+     "rotas": [
+      "account_overview_reports"
+     ],
+     "me_leve_ate_la": {
+      "rota": "account_overview_reports",
+      "destaque": null
+     },
+     "requer": "reports",
+     "prints": [],
+     "fontes": [
+      "porques: Ver relatorios"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "14.02",
+     "titulo": "Visão geral: números ao vivo, status, calor e tabelas",
+     "para_que_serve": "Ler os quatro números em tempo real, o status do time, os mapas de calor e as tabelas por agente e por time.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "11.2-visao-geral-numeros-ao-vivo",
+      "11.3-visao-geral-status-agente",
+      "11.4-visao-geral-mapas-de-calor",
+      "11.5-visao-geral-tabelas-agentes-times"
+     ],
+     "rotas": [
+      "account_overview_reports"
+     ],
+     "me_leve_ate_la": {
+      "rota": "account_overview_reports",
+      "destaque": null
+     },
+     "requer": "reports",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "14.03",
+     "titulo": "Escolher o período e agrupar por dia, semana ou mês",
+     "para_que_serve": "Usar os atalhos de data, agrupar o gráfico e entender a chave 'Horários de funcionamento'.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "11.6-filtro-de-periodo",
+      "11.7-agrupar-por",
+      "11.8-horarios-de-funcionamento"
+     ],
+     "rotas": [
+      "conversation_reports"
+     ],
+     "me_leve_ate_la": {
+      "rota": "conversation_reports",
+      "destaque": null
+     },
+     "requer": "reports",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "14.04",
+     "titulo": "Relatório de Conversas: os sete gráficos e a seta de tendência",
+     "para_que_serve": "Navegar os sete blocos do relatório de Conversas e interpretar a comparação com o período anterior.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "11.9-relatorio-de-conversas",
+      "11.10-seta-de-tendencia"
+     ],
+     "rotas": [
+      "conversation_reports"
+     ],
+     "me_leve_ate_la": {
+      "rota": "conversation_reports",
+      "destaque": null
+     },
+     "requer": "reports",
+     "prints": [],
+     "fontes": [
+      "porques: Ver o volume e os tempos de atendimento da conta"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "14.05",
+     "titulo": "Referência: o que cada métrica realmente conta",
+     "para_que_serve": "Consultar a definição de cada métrica para parar de comparar números que medem coisas diferentes.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "11.11-o-que-cada-metrica-conta"
+     ],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "14.06",
+     "titulo": "Visão Geral de Agentes, Caixa de Entrada e Time",
+     "para_que_serve": "Comparar o time na tabela, abrir o detalhe de um agente, de uma caixa e de um time.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "11.12-visao-geral-de-agentes",
+      "11.13-caixa-de-entrada-e-time"
+     ],
+     "rotas": [
+      "agent_reports_index",
+      "agent_reports_show",
+      "inbox_reports_index",
+      "inbox_reports_show",
+      "team_reports_index",
+      "team_reports_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "agent_reports_index",
+      "destaque": null
+     },
+     "requer": "reports",
+     "prints": [],
+     "fontes": [
+      "porques: Abrir o desempenho de um agente por dentro",
+      "porques: Abrir o desempenho de um canal por dentro",
+      "porques: Abrir o desempenho de um time por dentro"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "14.07",
+     "titulo": "Visão Geral das Etiquetas",
+     "para_que_serve": "Usar o relatório por etiqueta para medir assunto/motivo de contato, sabendo que a soma nunca bate.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "11.14-visao-geral-das-etiquetas"
+     ],
+     "rotas": [
+      "label_reports_index",
+      "label_reports_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "label_reports_index",
+      "destaque": null
+     },
+     "requer": "reports",
+     "prints": [],
+     "fontes": [
+      "porques: Abrir o desempenho de uma etiqueta por dentro"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "14.08",
+     "titulo": "CSAT: indicadores, filtros e tabela",
+     "para_que_serve": "Ler os três indicadores de satisfação e filtrar as respostas por agente, caixa, time e nota.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "11.15-csat-indicadores",
+      "11.16-csat-filtros-e-tabela"
+     ],
+     "rotas": [
+      "csat_reports"
+     ],
+     "me_leve_ate_la": {
+      "rota": "csat_reports",
+      "destaque": null
+     },
+     "requer": "reports",
+     "prints": [],
+     "fontes": [
+      "porques: Baixar relatório de CSAT"
+     ],
+     "revisar": false,
+     "nota": "Ligar a pesquisa de CSAT na caixa fica no capítulo 07."
+    },
+    {
+     "id": "14.09",
+     "titulo": "Relatórios do Bot e de SLA",
+     "para_que_serve": "Ler as métricas de robô (Agent Bots) e a taxa de acerto/violações de SLA.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "11.17-relatorios-do-bot",
+      "11.18-relatorios-sla"
+     ],
+     "rotas": [
+      "bot_reports",
+      "sla_reports"
+     ],
+     "me_leve_ate_la": {
+      "rota": "bot_reports",
+      "destaque": null
+     },
+     "requer": "reports",
+     "prints": [],
+     "fontes": [
+      "porques: Medir o quanto o robô resolve sozinho",
+      "porques: Consultar relatório de SLA"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "14.10",
+     "titulo": "Baixar, compartilhar e o que fazer com telas vazias",
+     "para_que_serve": "Exportar qualquer relatório em CSV, compartilhar pelo link e distinguir 'sem dado' de erro de verdade.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "11.19-baixar-relatorios-csv",
+      "11.20-colunas-de-cada-csv",
+      "11.21-compartilhar-link-do-relatorio",
+      "11.22-mensagens-e-telas-vazias"
+     ],
+     "rotas": [
+      "conversation_reports"
+     ],
+     "me_leve_ate_la": {
+      "rota": "conversation_reports",
+      "destaque": null
+     },
+     "requer": "reports",
+     "prints": [],
+     "fontes": [
+      "porques: Baixar relatório de agentes",
+      "porques: Baixar relatório de caixas",
+      "porques: Baixar relatório de times",
+      "porques: Baixar relatório de etiquetas"
+     ],
+     "revisar": false,
+     "nota": null
+    }
+   ]
+  },
+  {
+   "id": "15",
+   "titulo": "Cotação de seguros",
+   "artigos": [
+    {
+     "id": "15.01",
+     "titulo": "Entrar na área de Cotação e ligar a conta da corretora",
+     "para_que_serve": "Abrir a área de Cotação e conectar a conta da corretora para ver o que dá para cotar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_insurance_connections"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_insurance_connections",
+      "destaque": null
+     },
+     "requer": "autonomia_insurance",
+     "prints": [],
+     "fontes": [
+      "porques: Entrar na área de Cotação da corretora",
+      "porques: Ligar a conta da corretora e ver o que dá para cotar"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo (id 284). autonomia_insurance é redirecionamento puro para esta mesma tela."
+    },
+    {
+     "id": "15.02",
+     "titulo": "Criar o agente que cota com o cliente no WhatsApp",
+     "para_que_serve": "Montar o agente de IA especializado em cotação de seguros.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_insurance_agent"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_insurance_agent",
+      "destaque": null
+     },
+     "requer": "autonomia_insurance",
+     "prints": [],
+     "fontes": [
+      "porques: Criar o agente que cota com o cliente no WhatsApp"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo."
+    },
+    {
+     "id": "15.03",
+     "titulo": "Como o cliente recebe os valores da cotação",
+     "para_que_serve": "Entender a jornada completa no WhatsApp: comparativo em PDF, recusa de seguradora e o que o cliente vê.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_insurance_agent"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_insurance_agent",
+      "destaque": null
+     },
+     "requer": "autonomia_insurance",
+     "prints": [],
+     "fontes": [
+      "porques: Como o cliente recebe os valores da cotação"
+     ],
+     "revisar": false,
+     "nota": "Conteúdo já redigido no Guia da Plataforma (porques.md, bloco 'como_o_cliente_recebe_a_cotacao') — portado para a Central, não escrito do zero."
+    }
+   ]
+  },
+  {
+   "id": "16",
+   "titulo": "Prospecção",
+   "artigos": [
+    {
+     "id": "16.01",
+     "titulo": "Montar e rodar uma busca de leads",
+     "para_que_serve": "Configurar termo, localização, área e limite, e executar a primeira busca.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.26-prospeccao-montar-uma-busca"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Procurar empresas por região e transformar em contato ou card"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.02",
+     "titulo": "Trabalhar os resultados: enriquecer, contato, card, CSV",
+     "para_que_serve": "Transformar um resultado de busca em contato, card do CRM ou planilha.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.27-prospeccao-trabalhar-os-resultados"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.03",
+     "titulo": "Listas de leads e público de campanha",
+     "para_que_serve": "Organizar leads em listas e gerar um público etiquetado para usar numa campanha existente.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.28-prospeccao-listas-e-publico-de-campanha"
+     ],
+     "rotas": [
+      "autonomia_prospecting_lists"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_lists",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Juntar leads em listas e preparar um público de campanha"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.04",
+     "titulo": "Configurações da Prospecção",
+     "para_que_serve": "Consultar o que precisa estar configurado para a Prospecção funcionar: chaves do Google, enriquecimento e score.",
+     "publico": "admin",
+     "prioridade": "P3",
+     "assuntos": [
+      "09.29-prospeccao-configuracoes"
+     ],
+     "rotas": [
+      "settings_prospecting_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_prospecting_index",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Ajustar chaves, limites e critérios de score da prospecção"
+     ],
+     "revisar": false,
+     "nota": null
+    }
+   ]
+  },
+  {
+   "id": "17",
+   "titulo": "Financeiro",
+   "artigos": [
+    {
+     "id": "17.01",
+     "titulo": "Ver o plano contratado e quanto está sendo cobrado",
+     "para_que_serve": "Abrir a tela de Assinatura e entender o plano e o valor cobrado.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_financial_subscription"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_financial_subscription",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ver o plano contratado e quanto está sendo cobrado"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo — item de menu de primeiro nível, só para administrador."
+    },
+    {
+     "id": "17.02",
+     "titulo": "Conferir faturas emitidas e o que já foi pago",
+     "para_que_serve": "Abrir a tela de Faturas e conferir o histórico de cobrança.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_financial_invoices"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_financial_invoices",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Conferir faturas emitidas e o que já foi pago"
+     ],
+     "revisar": false,
+     "nota": "Zero cobertura no estudo."
+    }
+   ]
+  },
+  {
+   "id": "18",
+   "titulo": "Entenda os conceitos",
+   "artigos": [
+    {
+     "id": "18.01",
+     "titulo": "A janela de 24 horas do WhatsApp",
+     "para_que_serve": "Explicar por que existe a janela de 24 horas e o que ela trava no atendimento e nas campanhas.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "05.11-janela-24-horas"
+     ],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Conceito transversal; o efeito prático é ensinado nos capítulos 07, 08 e 13."
+    },
+    {
+     "id": "18.02",
+     "titulo": "Disparo em massa e o risco de bloqueio do número",
+     "para_que_serve": "Explicar por que disparar fora da janela de 24 horas ou em volume alto pode derrubar o número do WhatsApp.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Regra invisível registrada no 'por_que' do passo 'campanha' da trilha de onboarding (config/onboarding/trilha.yml): 'é onde mais se erra'."
+    },
+    {
+     "id": "18.03",
+     "titulo": "O que custa quando a IA responde",
+     "para_que_serve": "Explicar quem paga, por qual modelo, e o que dispara consumo sem ninguém clicar em nada.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "04.12-o-que-passa-a-custar",
+      "04.8-o-que-a-chave-liga"
+     ],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Detalhe operacional nos capítulos 06 e 10."
+    },
+    {
+     "id": "18.04",
+     "titulo": "API oficial x API não oficial do WhatsApp: o que muda de verdade",
+     "para_que_serve": "Explicar a diferença entre WhatsApp Oficial (Cloud API da Meta) e WhatsApp API (WAHA/QR Code).",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "05.1-oficial-ou-api"
+     ],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Detalhe de criação de cada canal no capítulo 07."
+    },
+    {
+     "id": "18.05",
+     "titulo": "A descrição da etapa é instrução para a IA, não só um rótulo",
+     "para_que_serve": "Explicar que o texto de cada etapa do funil é lido pela IA para decidir quando mover um card.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.22-ia-do-funil-ligar"
+     ],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Detalhe de configuração no capítulo 10."
+    },
+    {
+     "id": "18.06",
+     "titulo": "Não use o agente de IA no número pessoal",
+     "para_que_serve": "Explicar por que o agente de IA precisa de um número separado do WhatsApp pessoal de quem atende.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Regra invisível registrada no pré-requisito do passo 'agente_ia' da trilha de onboarding (config/onboarding/trilha.yml): 'Número separado do pessoal para o agente'."
+    },
+    {
+     "id": "18.07",
+     "titulo": "Login único (SSO) e por que a senha local quase nunca vale",
+     "para_que_serve": "Explicar que a entrada na plataforma é pelo login único, com redirecionamento automático, e onde a senha local ainda funciona.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "01.17-trocar-a-senha"
+     ],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Achado registrado nas armadilhas do estudo de 08/09 (capítulo 01): trocar a senha em Configurações do Perfil raramente tem efeito, porque o login é redirecionado para a Autonom.ia; a senha local só vale em /app/login/local."
+    }
+   ]
+  }
+ ],
+ "fora": [
+  {
+   "rota": "account_suspended",
+   "motivo": "Tela de sistema (conta suspensa) — não é jornada de produto. Já listada como fora no Guia da Plataforma (lib/operator_guide/porques.md, bloco _fora_do_guia)."
+  },
+  {
+   "rota": "no_accounts",
+   "motivo": "Tela de sistema (usuário sem conta vinculada) — não é jornada de produto. Já listada como fora no Guia (porques.md)."
+  },
+  {
+   "rota": "labels_wrapper",
+   "motivo": "Redirecionamento puro (settings/labels/labels.routes.js), sem componente próprio; sempre encaminha para labels_list. Já listada como fora no Guia."
+  },
+  {
+   "rota": "settings_home",
+   "motivo": "Redirecionamento puro (settings/settings.routes.js) — decide a primeira tela de Configurações conforme papel/permissão do usuário, sem UI própria."
+  },
+  {
+   "rota": "profile_settings",
+   "motivo": "Rota-casca de layout (component: SettingsWrapper, settings/profile/profile.routes.js) sem path próprio; o conteúdo real está em profile_settings_index e profile_settings_mfa."
+  },
+  {
+   "rota": "agent_reports",
+   "motivo": "Rota-casca de agrupamento (settings/reports/reports.routes.js) sem path/componente próprio; o conteúdo real está em agent_reports_index e agent_reports_show."
+  },
+  {
+   "rota": "inbox_reports",
+   "motivo": "Rota-casca de agrupamento sem path/componente próprio; o conteúdo real está em inbox_reports_index e inbox_reports_show."
+  },
+  {
+   "rota": "label_reports",
+   "motivo": "Rota-casca de agrupamento sem path/componente próprio; o conteúdo real está em label_reports_index e label_reports_show."
+  },
+  {
+   "rota": "team_reports",
+   "motivo": "Rota-casca de agrupamento sem path/componente próprio; o conteúdo real está em team_reports_index e team_reports_show."
+  },
+  {
+   "rota": "campaigns_one_off_index",
+   "motivo": "Redirecionamento puro (campaigns.routes.js), sem componente — sempre encaminha para campaigns_sms_index."
+  },
+  {
+   "rota": "campaigns_ongoing_index",
+   "motivo": "Redirecionamento puro (campaigns.routes.js), sem componente — sempre encaminha para campaigns_livechat_index."
+  },
+  {
+   "rota": "autonomia_prospecting_settings",
+   "motivo": "Redirecionamento puro (autonomia.routes.js), sem componente — sempre encaminha para settings_prospecting_index (mesma tela)."
+  },
+  {
+   "rota": "autonomia_insurance",
+   "motivo": "Redirecionamento puro (autonomia.routes.js), sem componente — sempre encaminha para autonomia_insurance_connections (mesma tela)."
+  },
+  {
+   "rota": "contacts_edit_label",
+   "motivo": "Mesma tela de contacts_edit (componente ContactManageView); variante de rota alcançada a partir de Contatos > Etiquetas, sem UI própria."
+  },
+  {
+   "rota": "contacts_edit_segment",
+   "motivo": "Mesma tela de contacts_edit (componente ContactManageView); variante de rota alcançada a partir de Contatos > Segmentos, sem UI própria."
+  },
+  {
+   "rota": "conversation_through_inbox",
+   "motivo": "Mesma tela de inbox_conversation (componente ConversationView com uma conversa aberta); variante de rota alcançada a partir de uma caixa específica, sem UI própria."
+  },
+  {
+   "rota": "conversation_through_mentions",
+   "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de Menções, sem UI própria."
+  },
+  {
+   "rota": "conversation_through_participating",
+   "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de Participantes, sem UI própria."
+  },
+  {
+   "rota": "conversation_through_unattended",
+   "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de Não atendidas, sem UI própria."
+  },
+  {
+   "rota": "conversations_through_folders",
+   "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de uma Pasta salva, sem UI própria."
+  },
+  {
+   "rota": "conversations_through_label",
+   "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de uma Etiqueta, sem UI própria."
+  },
+  {
+   "rota": "conversations_through_team",
+   "motivo": "Mesma tela de inbox_conversation; variante de rota alcançada a partir de um Time, sem UI própria."
+  },
+  {
+   "rota": "captain_assistants_create_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_documents_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_faq_suggestions",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_guardrails_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_guidelines_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_inboxes_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_overview_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_playground_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_responses_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_scenarios_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_settings_audience_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_settings_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_settings_schedule_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_assistants_settings_system_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_settings_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "captain_tools_index",
+   "motivo": "Recurso nativo do Chatwoot (\"Captain\"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como \"recurso que esta instalação não usa\" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional."
+  },
+  {
+   "rota": "portals_index",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_new",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_settings_index",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_locales_index",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_categories_index",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_articles_index",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_articles_new",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_articles_edit",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_categories_articles_index",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_categories_articles_new",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "portals_categories_articles_edit",
+   "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "billing_settings_index",
+   "motivo": "Tela 'Cobrança' nativa: só aparece em instalação CLOUD (billing.routes.js:26, installationTypes). As duas stacks não são CLOUD (ChatwootApp.chatwoot_cloud? = false, conferido em produção em 22/09/2026); o cliente nunca a vê."
+  }
+ ]
+}
