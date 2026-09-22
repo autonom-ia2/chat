@@ -25,6 +25,9 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
   # A espera antes da segunda tentativa: a falha de IA mais comum aqui é passageira (limite de taxa, timeout).
   ESPERA_DA_NOVA_TENTATIVA = 30.seconds
   TENTATIVAS = 2
+  # A conclusão sem o arquivo sai com a marca de `valores_guardados` (`sem_o_arquivo`): o retry, ou o começo
+  # atrasado, precisa reconhecer as duas marcas (revisão da chat#588).
+  MARCAS_DO_TIPO = { 'concluida' => %w[concluida valores_guardados] }.freeze
 
   def perform(run_id, tipo, adiamentos = 0, tentativa = 0, depois_de = [])
     run = ::Autonomia::Agents::ToolRun.find_by(id: run_id)
@@ -38,14 +41,18 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
     passo = { adiamentos: adiamentos.to_i, tentativa: tentativa.to_i, depois_de: Array(depois_de).map(&:to_s) }
     return adiar(evento, passo) if esperar?(evento, conversation, passo)
     return anotar(run, tipo, 'comeco_superado') if comeco_superado?(evento, conversation)
+    return anotar(run, tipo, 'ja_publicado') if ja_falou?(run, tipo, conversation)
 
-    evento = sem_o_arquivo(evento, conversation, passo)
-    return anotar(run, tipo, 'ja_publicado') if evento.publicado?(conversation)
-
-    falar(evento, conversation, passo)
+    falar(sem_o_arquivo(evento, conversation, passo), conversation, passo)
   end
 
   private
+
+  def ja_falou?(run, tipo, conversation)
+    MARCAS_DO_TIPO.fetch(tipo.to_s, [tipo.to_s]).any? do |marca|
+      ::Autonomia::Agents::Tools::Evento.new(run: run, tipo: marca).publicado?(conversation)
+    end
+  end
 
   # -> por que este evento não aciona turno nenhum, ou nil.
   def sem_turno(evento)
@@ -106,7 +113,7 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
 
   def resultado_na_conversa?(run, conversation)
     fecho = run.handle.to_h[::Autonomia::Agents::Tools::Evento::FECHO_KEY].presence
-    return true if fecho && ::Autonomia::Agents::Tools::Evento.new(run: run, tipo: fecho).publicado?(conversation)
+    return true if fecho && ja_falou?(run, fecho, conversation)
 
     aceitos(run).any? { |token| ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, token).present? }
   end

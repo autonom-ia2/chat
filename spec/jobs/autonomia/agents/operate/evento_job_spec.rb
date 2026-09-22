@@ -168,7 +168,7 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
       described_class.new.perform(run.id, 'concluida')
 
       expect(publicas).to be_empty
-      expect(privadas.count).to eq(1)
+      expect(privadas.sole.content).to include('decidiu não falar')
       expect(reagendados).to be_empty
       expect(conversation.reload.status).to eq('pending')
     end
@@ -303,6 +303,18 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
       described_class.new.perform(run.id, 'concluida', Autonomia::Agents::Tools::AsyncConfig::MAX_DEPENDENCY_DEFERRALS, 0, [token])
       expect(publicas.sole.content_attributes[evento::CHAVE]).to eq("#{run.id}:valores_guardados")
       expect(queries_da_lia.last).to include('fatos do dublê: valores_guardados')
+    end
+
+    it 'o retry da conclusao que saiu sem o arquivo nao fala de novo quando o arquivo chega' do
+      run = execucao
+      token = run.delivery_token('arquivo:https://x.test/g.pdf')
+      described_class.new.perform(run.id, 'concluida', Autonomia::Agents::Tools::AsyncConfig::MAX_DEPENDENCY_DEFERRALS, 0, [token])
+      create(:message, conversation: conversation, account: account, inbox: inbox, message_type: :outgoing, sender: agent_bot,
+                       content: nil, content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => token })
+
+      described_class.new.perform(run.id, 'concluida', 0, 0, [token])
+
+      expect(publicas.where.not(content: nil).count).to eq(1)
     end
 
     # O "ESTOU CUIDANDO" QUE ATRASOU não sai depois do resultado (revisão da chat#588).

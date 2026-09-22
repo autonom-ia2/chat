@@ -15,6 +15,7 @@ class Autonomia::Agents::Operate::AvisoAoAtendente
   MOTIVOS = {
     'inelegivel' => 'A IA não falou com o cliente sobre isto: a conversa está com um atendente, ou o agente não pode ' \
                     'responder agora.',
+    'silencio' => 'A IA decidiu não falar com o cliente sobre isto agora. Confira a conversa se precisar retomar.',
     'ia_falhou' => 'A IA tentou falar com o cliente sobre isto duas vezes e não conseguiu. A conversa foi passada para a ' \
                    'equipe.'
   }.freeze
