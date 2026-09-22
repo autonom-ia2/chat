@@ -40,8 +40,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # encerra é `AsyncRunJob#fail_run`, e o encerramento pede o comparativo mais uma vez quando ainda há
   # tentativa sobrando (`Fecho#closing_deliveries`).
   TETO_DE_TENTATIVAS = 3
-  # As esperas antes de pedir o comparativo de novo ao portal (`com_novas_tentativas`), em segundos.
-  ESPERAS_DO_COMPARATIVO = [20, 40].freeze
+  # As esperas antes de pedir o comparativo de novo ao portal (`com_novas_tentativas`), em segundos. Uma só: com
+  # duas chamadas de até 65 s, o encerramento cabe na folga do varredor (`ReapStaleRunsJob::GRACE`).
+  ESPERAS_DO_COMPARATIVO = [20].freeze
   PORTAL_LENTO = %i[timeout unavailable].freeze
 
   private

@@ -324,7 +324,7 @@ module ManualDoEspecialistaDeAuto
     'FLEX não é GASOLINA' => -> { (valores('vehicle.fuelType').values & %w[FLEX GASOLINA]).size == 2 },
     'Garagem em casa não tem opção "0"' => -> { valores('vehicle.garageAtHome').any? && !valores('vehicle.garageAtHome').key?('0') },
     'Quilometragem é faixa, não número livre' => -> { valores('vehicle.monthlyMileageBand').any? },
-    'No fim, o comparativo' => -> { cotacao.private_instance_methods.include?(:gerar_comparativo) },
+    'manda o comparativo em PDF' => -> { cotacao.private_instance_methods.include?(:gerar_comparativo) },
     'a resposta está nas condições gerais: ferramenta dele' => lambda {
       Autonomia::Insurance::QuoteAgent::Builder::TOOLS_DO_PRINCIPAL.include?('consultar_condicoes_gerais')
     }
@@ -485,11 +485,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # de contradizê-la (quem conta a recusa, o que é dúvida de contrato, recusa da conferência não é falha).
   # Na revisão (`e30d3715…`): o item 8 do que nunca se faz deixa de mandar perguntar, e campo ≠ valor.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('e30d37153bd956c90614bc3a0220fe0a')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('15ba570112d87605ed680461718b51c7')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('16d1790acc400248deb1c623d893fa80')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('9bb27e67b83fd62b010c5c9ef69fb312')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

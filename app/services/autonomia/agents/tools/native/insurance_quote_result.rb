@@ -149,8 +149,11 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
 
   # O que a conferência precisa: o texto que o modelo recebeu, o nome de toda seguradora da cotação e se o
   # comparativo já foi entregue.
+  # O que cada seguradora cotou vai à parte (`coberturas`): o valor de cobertura pode ser citado, mas não como preço.
   def dados_do_turno(texto)
-    ::Autonomia::Agents::ConferenciaDePrecos::Dados.new(texto: texto, seguradoras: @resultado&.nomes.to_a,
+    coberturas = Array(@coberturas)
+    ::Autonomia::Agents::ConferenciaDePrecos::Dados.new(texto: texto.lines.map(&:chomp).reject { |linha| coberturas.include?(linha) }.join("\n"),
+                                                        seguradoras: @resultado&.nomes.to_a, coberturas: coberturas,
                                                         comparativo: @resultado&.comparativo_enviado? || false)
   end
 
@@ -203,8 +206,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   end
 
   # O que o modelo lê sobre UMA seguradora. `motivo:` falso tira a categoria de quem não fez proposta;
-  # `cobertura:` verdadeiro acrescenta, NA MESMA LINHA, o que ela cotou (chat#585) — é pela linha da seguradora
-  # que a conferência da fala autoriza cada valor, e só a pergunta por seguradora a pede.
+  # `cobertura:` verdadeiro acrescenta, na linha seguinte, o que ela cotou (chat#585), e só a pergunta por
+  # seguradora a pede. A conferência recebe essa linha à parte (`dados_do_turno`).
   def fala(codigo, motivo: true, cobertura: false)
     nome = @resultado.nome(codigo)
     case @resultado.desfecho(codigo)
@@ -216,6 +219,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
 
   def com_preco(nome, codigo, cobertura)
     cotou = cobertura ? @resultado.cobertura(codigo) : nil
-    ["#{nome} fez proposta: #{@resultado.preco(codigo)}.", ("O que #{nome} cotou: #{cotou}." if cotou)].compact.join(' ')
+    linha = "O que #{nome} cotou: #{cotou}." if cotou
+    (@coberturas ||= []) << linha if linha
+    ["#{nome} fez proposta: #{@resultado.preco(codigo)}.", linha].compact.join("\n")
   end
 end

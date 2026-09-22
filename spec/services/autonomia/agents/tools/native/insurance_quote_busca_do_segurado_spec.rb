@@ -78,6 +78,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     expect(precheck(so_cpf)).to be_nil
   end
 
+  # A busca é paga: com outro dado faltando, a conferência pede esse dado primeiro e não busca (revisão da chat#587).
+  it 'com outro dado faltando, não busca' do
+    allow(connector).to receive(:quote_enrich)
+
+    precheck(so_cpf.except('cep'))
+
+    expect(connector).not_to have_received(:quote_enrich)
+  end
+
   it 'sem documento, não busca: pedir o documento é da validação' do
     allow(connector).to receive(:quote_enrich)
 

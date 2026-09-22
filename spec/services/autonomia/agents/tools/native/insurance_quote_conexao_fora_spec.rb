@@ -31,6 +31,24 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     expect(conferencia.to_s).to include('não foi aberta')
   end
 
+  %w[auth_required human_required not_configured].each do |status|
+    it "conexão em #{status}: também recusa" do
+      conexao(status)
+
+      expect(described_class.new(agent: agent, params: params).precheck&.motivo).to eq('conexao_indisponivel')
+    end
+  end
+
+  # Estados de passagem duram segundos (o healthcheck sondando o portal, a sincronização): recusar ali mandaria
+  # chamar alguém com a conexão boa (revisão da chat#587). O envio tenta de novo.
+  (Autonomia::Insurance::Connection::TRANSIENT_STATUSES + %w[ready degraded]).each do |status|
+    it "conexão em #{status}: não recusa por conexão" do
+      conexao(status)
+
+      expect(described_class.new(agent: agent, params: params).precheck&.motivo).not_to eq('conexao_indisponivel')
+    end
+  end
+
   it 'sem conexão nenhuma, também' do
     expect(described_class.new(agent: agent, params: params).precheck.motivo).to eq('conexao_indisponivel')
   end

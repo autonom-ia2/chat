@@ -399,10 +399,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       end
     end
 
-    # A frase sobre recotar existe porque a §7.1 proíbe as DUAS coisas — acionar o especialista e
-    # mandar cotar de novo. Sem ela o texto proibiria só metade.
-    it 'proíbe as duas coisas: acionar o especialista e recotar' do
-      expect(texto).to include('não acione o especialista e não mande cotar de novo')
+    # A §7.1 proíbe recotar, manda a dúvida GERAL de cobertura às condições gerais e a pergunta sobre o que uma
+    # seguradora cotou ao especialista, dono do resultado (revisão da chat#587).
+    it 'proíbe recotar e separa a dúvida geral da pergunta sobre o resultado' do
+      expect(texto).to include('não mande cotar de novo: consulte `consultar_condicoes_gerais`')
+      expect(texto).to include('o que uma seguradora cotou nesta cotação')
     end
   end
 
@@ -520,7 +521,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('8fa84828cf2b52fc943783952792262f')
+      expect(Digest::MD5.hexdigest(secao)).to eq('befd61f21f2bf7f8dd7713e2c67b3253')
     end
 
     # O ARQUIVO É LIDO COM AS ESCOLHAS SUBSTITUÍDAS (#380): a §7.1 não pode trazer marcador novo.

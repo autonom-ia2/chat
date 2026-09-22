@@ -56,25 +56,37 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(guardado['20']).not_to have_key('cobertura')
     end
 
-    it 'a consulta por seguradora mostra o que ela cotou, na mesma linha do preço, com os valores escritos' do
+    it 'a consulta por seguradora mostra o que ela cotou, logo depois do preço, com os valores escritos' do
       cotacao_com([cotou('20', 'Suhai', 2890.73, suhai_cotou)])
 
-      linha = ao_modelo('Suhai').lines.find { |l| l.start_with?('Suhai') }
+      linha = ao_modelo('Suhai').lines.find { |l| l.start_with?('O que Suhai cotou') }
 
       expect(linha).to include('carro reserva: Não', 'vidros: Não', 'assistência: Assistência 24 horas - Plano 2 - 500km')
       expect(linha).to include('danos materiais: R$ 500.000,00', 'danos morais: R$ 20.000,00', 'franquia: 50% da Obrigatória')
       expect(linha).to include('valor da franquia: R$ 5.795,00', 'tabela FIPE: 100%', 'despesas extraordinárias: não')
-      expect(linha).to include('R$ 2.890,73')
+      expect(ao_modelo('Suhai')).to include('Suhai fez proposta: R$ 2.890,73')
     end
 
-    # A conferência autoriza cada valor pela linha da seguradora nos dados do turno: o valor da cobertura
-    # que o especialista repassar precisa estar lá, senão a fala volta para reescrever.
-    it 'os valores da cobertura entram nos dados que a conferência da fala usa' do
+    # A conferência recebe o que a seguradora cotou À PARTE do preço (revisão da chat#587): a franquia pode ser
+    # citada, mas "a Suhai ficou em R$ 500.000,00 no total" é o limite de danos escrito como preço.
+    it 'a cobertura vai à conferência separada do preço' do
       cotacao_com([cotou('20', 'Suhai', 2890.73, suhai_cotou)])
 
       ao_modelo('Suhai')
+      dados = delivery.resultado_do_turno
 
-      expect(Autonomia::Agents::ConferenciaDePrecos.valores(delivery.resultado_do_turno.texto)).to include(50_000_000, 289_073)
+      expect(Autonomia::Agents::ConferenciaDePrecos.valores(dados.texto)).to eq([289_073])
+      expect(Autonomia::Agents::ConferenciaDePrecos.valores(dados.coberturas.join)).to include(50_000_000, 579_500)
+    end
+
+    it 'a fala pode citar a franquia, mas não o valor de cobertura como preço' do
+      cotacao_com([cotou('20', 'Suhai', 2890.73, suhai_cotou)])
+      ao_modelo('Suhai')
+      conferencia = Autonomia::Agents::ConferenciaDePrecos.new(delivery.resultado_do_turno)
+
+      expect(conferencia.publicavel('A franquia da Suhai é de R$ 5.795,00.') { raise 'reescrita' }).to eq('A franquia da Suhai é de R$ 5.795,00.')
+      expect(conferencia.publicavel('A Suhai ficou em R$ 500.000,00 no total.') { nil })
+        .not_to include('500.000')
     end
 
     it 'a lista geral não carrega a cobertura de todas: ela é da pergunta por seguradora' do

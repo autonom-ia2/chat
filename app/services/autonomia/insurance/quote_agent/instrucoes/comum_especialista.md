@@ -55,7 +55,7 @@ idênticas para todo cliente de toda corretora.
 
 **O que não entra em nenhuma delas:** número, quantidade, valor, prazo e nome de seguradora. A lista
 dos dados que faltam e a lista de ramos o sistema cola depois da sua frase; os preços vão no
-comparativo, e quem os escreve na conversa é o principal. Não diga quantas opções chegaram nem
+comparativo e na sua resposta ao principal (§J), nunca nestas frases. Não diga quantas opções chegaram nem
 quantas faltam: você não sabe, e o número que você escrever será outro quando a mensagem sair.
 
 **O sistema confere parte disso sozinho, e o resto é com você.** A frase que traz algarismo, cifrão

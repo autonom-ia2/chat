@@ -39,9 +39,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
   # `vehicle` e não tinha onde escrever a placa. Recusar por `sem_veiculo` aqui mandaria pedir ao
   # cliente o que a ferramenta é que não pôde receber. `schema_da_conexao` tenta buscar de novo
   # antes de desistir: só é indisponível o que segue indisponível.
-  # -> a conta tem uma conexão pronta com o portal? Sem ela, toda cotação morre no envio (chat#585).
-  def conexao_pronta?
-    ::Autonomia::Insurance::Connection.for_account(account).any?(&:ready?)
+  # -> a conexão com o portal está fora e não volta sozinha? Aí toda cotação morre no envio (chat#585). Os estados
+  # de passagem (o healthcheck sondando o portal, a sincronização) duram segundos e não recusam: o envio tenta de
+  # novo (revisão da chat#587).
+  CONEXAO_FORA_DO_AR = %w[not_configured auth_required human_required offline].freeze
+  def conexao_fora?
+    ::Autonomia::Insurance::Connection.for_account(account).all? { |conexao| CONEXAO_FORA_DO_AR.include?(conexao.status) }
   end
 
   def sem_formulario?

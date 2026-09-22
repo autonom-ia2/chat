@@ -53,13 +53,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     chamadas = 0
     allow(connector).to receive(:quote_proposal) do
       chamadas += 1
-      chamadas < 3 ? raise(erro(:timeout)) : url
+      chamadas < 2 ? raise(erro(:timeout)) : url
     end
 
     entregas = ferramenta.closing_deliveries(handle_com_preco)
 
     expect(entregas.size).to eq(1)
-    expect(chamadas).to eq(3)
+    expect(chamadas).to eq(2)
     expect(esperas).to eq(described_class::ESPERAS_DO_COMPARATIVO)
   end
 
