@@ -36,7 +36,7 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **02.04** — Sua assinatura de mensagens. Escrever a assinatura e saber ligá-la ou desligá-la dentro da conversa.
 - **02.05** — Como você escreve e como o painel aparece. Ajustar tecla de envio, idioma, tamanho da fonte e tema (claro, escuro ou do sistema).
 - **02.06** — Sua disponibilidade e os avisos que você recebe. Escolher o próprio status (Online/Ocupado/Offline) e o que dispara e-mail, som ou notificação no navegador.
-- **02.07** — Segurança da conta: sessões ativas, verificação em duas etapas e trocar de conta. Ver de onde a conta está aberta, ligar a verificação em duas etapas e trocar entre contas.
+- **02.07** — Segurança da conta: sessões ativas e trocar de conta. Ver de onde a conta está aberta, desconectar o que não reconhece e trocar entre contas.
 - **02.08** — Referência: token de acesso, atalhos e sair com segurança. Consultar o token pessoal de API, os atalhos de teclado, como sair e os limites de cada campo do perfil.
 
 ## 03 — Configurações da conta (4 artigos)

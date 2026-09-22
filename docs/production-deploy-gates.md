@@ -45,3 +45,6 @@ de um deploy com migration, tirar snapshot manual do RDS.
 O corpo blue-green, as verificações de saúde e o rollback permanecem
 inalterados. Esta política separa a aprovação de merge da decisão operacional de
 alterar AWS, ECR, EC2, ALB e SSM.
+
+Onde moram as variáveis de ambiente de produção, e o que não pode sumir delas:
+[production-env-secrets.md](production-env-secrets.md).

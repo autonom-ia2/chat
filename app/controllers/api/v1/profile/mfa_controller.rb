@@ -35,6 +35,9 @@ class Api::V1::Profile::MfaController < Api::BaseController
 
   def check_mfa_feature_available
     return if Chatwoot.mfa_enabled?
+    # Quem já ligou a verificação continua podendo consultá-la e desligá-la, mesmo onde a
+    # plataforma deixou de oferecê-la (login único automático).
+    return if Chatwoot.encryption_configured? && current_user.mfa_enabled?
 
     render json: {
       error: I18n.t('errors.mfa.feature_unavailable')

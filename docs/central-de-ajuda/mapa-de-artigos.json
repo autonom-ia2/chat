@@ -544,8 +544,8 @@
     },
     {
      "id": "02.07",
-     "titulo": "Segurança da conta: sessões ativas, verificação em duas etapas e trocar de conta",
-     "para_que_serve": "Ver de onde a conta está aberta, ligar a verificação em duas etapas e trocar entre contas.",
+     "titulo": "Segurança da conta: sessões ativas e trocar de conta",
+     "para_que_serve": "Ver de onde a conta está aberta, desconectar o que não reconhece e trocar entre contas.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
@@ -564,7 +564,7 @@
      "prints": [],
      "fontes": [],
      "revisar": false,
-     "nota": "Cobre também o seletor de contas no topo da barra lateral (funcionalidade sem tela própria, listada em cobertura.json/funcionalidades_sem_tela). Verificação em duas etapas: ligada nas duas stacks (Chatwoot.mfa_enabled? = true em 22/09/2026); conferir como convive com o login único antes de escrever."
+     "nota": "Cobre também o seletor de contas no topo da barra lateral. A verificação em duas etapas não aparece nas stacks com login único automático (Chatwoot.mfa_enabled?, config/application.rb)."
     },
     {
      "id": "02.08",
