@@ -32,7 +32,7 @@ RSpec.describe Autonomia::Insurance::QuoteInput do
   it 'toda folha do formulário chega à entrada, no caminho em que o adapter a lê' do
     montada = entrada(params_completos)
 
-    expect(parametros.caminhos.size).to eq(18)
+    expect(parametros.caminhos.size).to eq(31)
     parametros.caminhos.each do |caminho|
       expect(montada.dig(*caminho.split('.'))).not_to be_nil, "#{caminho} declarado e não enviado"
     end

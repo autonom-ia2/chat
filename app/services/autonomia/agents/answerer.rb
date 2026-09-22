@@ -291,8 +291,13 @@ module Autonomia
         end
       end
 
+      # SÓ OS QUE ATENDEM NESTA CONTA (`Builder.disponivel?`): o especialista de um ramo que a corretora não cota
+      # fica fora da lista da Lia, e não reserva nada. As ferramentas dele também ficam fora do catálogo do agente
+      # (`Builder.ferramentas_mantidas`), e por isso a consulta de CEP não aparece para a Lia sem residencial.
       def enabled_specialists
-        @enabled_specialists ||= @agent.specialists.enabled.order(:id).to_a
+        @enabled_specialists ||= @agent.specialists.enabled.order(:id).select do |specialist|
+          ::Autonomia::Insurance::QuoteAgent::Builder.disponivel?(specialist)
+        end
       end
 
       def execute_tool_calls(calls)

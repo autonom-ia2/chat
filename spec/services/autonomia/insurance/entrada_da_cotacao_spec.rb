@@ -91,7 +91,7 @@ RSpec.describe Autonomia::Insurance::EntradaDaCotacao do
   end
 
   describe 'quando não há resumo' do
-    it 'ramo que não é auto não tem resumo' do
+    it 'ramo sem lista de rótulos não tem resumo' do
       expect(resumo({ 'produto' => 'bike', 'dados' => '{"configuracoes":{"marca":"Caloi"}}' })).to be_nil
     end
 
@@ -99,5 +99,62 @@ RSpec.describe Autonomia::Insurance::EntradaDaCotacao do
       expect(resumo({})).to be_nil
       expect(resumo(nil)).to be_nil
     end
+  end
+
+  # RESIDENCIAL (chat#323): o que o cliente pergunta sobre o imóvel cotado. O que ele não disse foi enviado com o
+  # padrão, e a linha diz qual: "sem informação" seria falso.
+  describe 'residencial' do
+    let(:schema_residencial) { Autonomia::Insurance::Connector::Mock::SCHEMA_RESIDENCIAL }
+    let(:minimo) do
+      { 'produto' => 'residencial', 'cpf' => '52998224725', 'cep' => '01310-100',
+        'configuracoes' => { 'imovelNumero' => '742', 'imovelTipoResidencia' => 3,
+                             'isDanosIncendioRaioExplosao' => 400_000 } }
+    end
+
+    def resumo_residencial(argumentos)
+      resumo(argumentos, com_schema: schema_residencial)
+    end
+
+    it 'mostra o imóvel, com o nome das opções' do
+      texto = resumo_residencial(minimo)
+
+      expect(texto).to include('CEP do imóvel: 01310100.', 'Número do imóvel: 742.', 'Tipo do imóvel: Apartamento.')
+      expect(texto).not_to include('renovação', 'seguro novo')
+    end
+
+    it 'o que o cliente não disse aparece como o padrão enviado, e não como ausente' do
+      texto = resumo_residencial(minimo)
+
+      expect(texto).to include("Uso do imóvel: Habitual, #{described_class::PADRAO}")
+      expect(texto).to include("Dono do imóvel: sim, #{described_class::PADRAO}")
+      expect(texto).to include("Zona rural: não, #{described_class::PADRAO}")
+    end
+
+    it 'o que o cliente disse vence o padrão, também quando veio em dados' do
+      dito = minimo.merge('configuracoes' => minimo['configuracoes'].merge('imovelUso' => 2),
+                          'dados' => '{"configuracoes":{"seguradoProprietario":false}}')
+      texto = resumo_residencial(dito)
+
+      expect(texto).to include('Uso do imóvel: Veraneio.', 'Dono do imóvel: não.')
+    end
+
+    it 'não escreve valor em reais: o valor a segurar fica fora' do
+      expect(resumo_residencial(minimo)).not_to include('400', 'R$')
+    end
+
+    # Revisão da #605: o número vindo solto (`numero`) é o que o adapter usa, e não o padrão.
+    it 'o número dado solto aparece como o número do imóvel' do
+      solto = minimo.merge('numero' => '55', 'configuracoes' => minimo['configuracoes'].except('imovelNumero'))
+
+      expect(resumo_residencial(solto)).to include('Número do imóvel: 55.')
+    end
+  end
+
+  # Revisão da #605: em auto a ausência continua "sem informação", mesmo que o schema traga padrão.
+  it 'auto não usa o padrão do schema' do
+    com_padrao = schema.merge('campos' => schema['campos'].map { |c| c['campo'] == 'coverage.glassCoverage' ? c.merge('padrao' => '1') : c })
+
+    expect(resumo({ 'produto' => 'auto', 'cep' => '01310-930' }, com_schema: com_padrao))
+      .to include("Vidros: #{described_class::SEM_INFORMACAO}")
   end
 end

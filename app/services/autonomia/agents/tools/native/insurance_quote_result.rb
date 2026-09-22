@@ -8,7 +8,7 @@
 # sido enviado — em 19/09/2026 ela escalou um "o bônus da apólice foi considerado?" que a entrada respondia.
 #
 # DEVOLVE OS DADOS AO MODELO, e quem escreve ao cliente é a Lia (decisão do CEO, 18/09/2026): por seguradora,
-# o nome, o valor com o período e o parcelamento, ou o desfecho e a categoria do motivo (`veiculo`, `regiao` ou
+# o nome, o valor com o período e o parcelamento, ou o desfecho e a categoria do motivo (`veiculo`, `regiao`, `instabilidade` ou
 # nenhuma) de quem não fez proposta. Nunca texto do portal. O que ela devolveu fica registrado no turno
 # (`Tools::Delivery#registrar_resultado`), e o `Answerer` confere a fala contra isso antes de ela sair
 # (`ConferenciaDePrecos`).
@@ -52,7 +52,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     Motivo::VEICULO => 'Categoria do motivo: veiculo. A recusa foi pelo veículo cotado, e não se sabe qual ' \
                        'característica: conte com as suas palavras que ela não aceitou o veículo, sem acrescentar detalhe.',
     Motivo::REGIAO => 'Categoria do motivo: regiao. A recusa foi pela região, e não se sabe mais que isso: conte com ' \
-                      'as suas palavras que ela não atende a região, sem acrescentar detalhe.'
+                      'as suas palavras que ela não atende a região, sem acrescentar detalhe.',
+    Motivo::INSTABILIDADE => 'Categoria do motivo: instabilidade. A seguradora estava instável e não respondeu nesta ' \
+                             'cotação; não foi recusa do risco. Conte com as suas palavras que ela não conseguiu ' \
+                             'responder agora, sem prometer que ela vai cotar depois e sem acrescentar detalhe.'
   }.freeze
   SEM_MOTIVO = 'Categoria do motivo: nenhuma. Não há motivo que você possa contar: diga só que ela não fez proposta.'.freeze
 
@@ -129,7 +132,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   # Falha aqui não pode custar os preços ao cliente (achado da revisão): sem resumo, o modelo segue
   # com o que importa.
   def entrada_da_cotacao
-    ::Autonomia::Insurance::EntradaDaCotacao.new(@resultado.run.arguments, schema: schema_de_auto).texto
+    ::Autonomia::Insurance::EntradaDaCotacao.new(@resultado.run.arguments, schema: schema_do_produto).texto
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] resumo da entrada indisponível #{e.class}")
     nil
@@ -139,11 +142,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   # formulário do especialista: o que o adapter entregou na sincronização e está guardado na conexão
   # (`VehicleLookup` já lê o tipo do veículo assim). Só o GUARDADO — esta ferramenta é síncrona e o
   # cliente está esperando; buscar no adapter aqui custaria até 10 s de espera por um nome. Sem
-  # schema, a opção entra sem nome, e nunca como código.
-  def schema_de_auto
-    ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:ready?)&.quote_schema(Resultado.cotacao::AUTO)
+  # schema, a opção entra sem nome, e nunca como código. O schema é o do produto desta cotação (residencial também
+  # tem resumo, chat#323); `produto` em branco é auto.
+  def schema_do_produto
+    produto = @resultado.run.arguments.to_h.stringify_keys['produto'].to_s.strip.presence || Resultado.cotacao::AUTO
+    ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:ready?)&.quote_schema(produto)
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][insurance] schema de auto indisponível no resultado #{e.class}")
+    Rails.logger.warn("[autonomia][insurance] schema indisponível no resultado #{e.class}")
     nil
   end
 

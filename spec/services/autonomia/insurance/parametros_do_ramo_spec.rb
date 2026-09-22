@@ -24,10 +24,12 @@ RSpec.describe Autonomia::Insurance::Parametros do
     fora = schema['campos'].reject { |c| c['origem'] == 'cliente' }.map { |c| c['campo'] }
 
     expect(folhas.keys).to match_array(do_cliente.map { |c| c['campo'] })
-    expect(folhas.size).to eq(18)
+    # 18 de antes, mais zona rural e área de risco e as 12 coberturas que o cliente pode pedir, menos o nome, que
+    # vem do CPF (adapters#86 e #92): 31.
+    expect(folhas.size).to eq(31)
     # O valor a segurar é pergunta ao cliente desde adapters#80.
     expect(folhas).to have_key('configuracoes.isDanosIncendioRaioExplosao')
-    expect(fora).to include('configuracoes.imovelLogradouro', 'configuracoes.areaRisco')
+    expect(fora).to include('configuracoes.imovelLogradouro', 'segurado.nome')
     expect(folhas.keys & fora).to be_empty
   end
 
@@ -47,7 +49,7 @@ RSpec.describe Autonomia::Insurance::Parametros do
     expect(uso['enum']).to eq([1, 2, 3])
     expect(folhas.values.count { |p| p.key?('enum') }).to eq(schema['campos'].count { |c| c['valores'].present? })
     expect(folhas.values).to all(include('required' => false))
-    expect(folhas.fetch('segurado.nome')).not_to have_key('enum')
+    expect(folhas.fetch('segurado.cpfCnpj')).not_to have_key('enum')
   end
 
   # Código com zero à esquerda ("08") é o número 8, e não 8.0: `Integer` sem base lê "08" como octal inválido e o

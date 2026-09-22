@@ -60,10 +60,18 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
       expect(guardado.to_json).not_to include(risco['text'])
     end
 
-    it 'guarda sem proposta e sem motivo quando o kind não é risco' do
-      guardado = described_class.unir({}, [recusou('19', 'Sancor', reason: risco.merge('kind' => 'passageiro'))])
+    it 'guarda sem proposta e sem motivo quando o kind não é risco nem passageiro' do
+      guardado = described_class.unir({}, [recusou('19', 'Sancor', reason: risco.merge('kind' => 'outro'))])
 
       expect(guardado['19']).to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta')
+    end
+
+    # chat#323: a seguradora instável guarda a categoria, sem o texto do portal.
+    it 'guarda a instabilidade quando o kind é passageiro' do
+      guardado = described_class.unir({}, [recusou('19', 'Sancor', reason: risco.merge('kind' => 'passageiro'))])
+
+      expect(guardado['19']).to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta', 'motivo' => 'instabilidade')
+      expect(guardado.to_json).not_to include(risco['text'])
     end
 
     it 'guarda sem proposta e sem motivo quando o texto de risco tem termo de conta' do

@@ -94,4 +94,39 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
     expect(connector).not_to have_received(:quote_enrich)
   end
+
+  # NOS OUTROS RAMOS, SÓ O NOME (adapters#92, 22/09/2026): a Lia pede o CPF e nunca o nome, como em auto. A busca
+  # roda com o documento e sem o nome, e o que ela não acha vira pergunta, pelo `segurado.nome`.
+  describe 'em residencial' do
+    let(:residencial) do
+      { 'produto' => 'residencial', 'cpf' => '04297912678', 'cep' => '01310-100',
+        'dados' => { 'configuracoes' => { 'imovelNumero' => '742', 'imovelTipoResidencia' => 3,
+                                          'isDanosIncendioRaioExplosao' => 400_000 } }.to_json }
+    end
+
+    it 'pergunta o nome quando a busca não o acha' do
+      allow(connector).to receive(:quote_enrich).and_return('input' => {}, 'not_found' => ['segurado.nome'])
+
+      conferencia = precheck(residencial)
+
+      expect(conferencia.motivo).to eq('faltam_dados')
+      expect(conferencia.faltando).to eq(['segurado.nome'])
+    end
+
+    it 'achou o nome: segue sem perguntar, e o nome achado não vai ao modelo' do
+      allow(connector).to receive(:quote_enrich)
+        .and_return('input' => { 'segurado' => { 'nome' => 'FULANA DE TAL' } }, 'not_found' => [])
+
+      expect(precheck(residencial)).to be_nil
+      expect(connector).to have_received(:quote_enrich).with(hash_including(product: 'residencial'))
+    end
+
+    it 'com o nome informado, não busca' do
+      allow(connector).to receive(:quote_enrich)
+
+      precheck(residencial.merge('nome' => 'Fulana de Tal'))
+
+      expect(connector).not_to have_received(:quote_enrich)
+    end
+  end
 end

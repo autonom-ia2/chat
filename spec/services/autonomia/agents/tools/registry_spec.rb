@@ -54,7 +54,7 @@ RSpec.describe Autonomia::Agents::Tools::Registry do
                                            enabled: true, instruction: 'Cote.', config: { 'native_tool_slugs' => ['cotar_seguro'] })
     described_class.all.each { |tool| allow(tool).to receive(:available_for?).and_return(true) }
 
-    expect(described_class.for_agent(lia).map(&:slug)).to eq(Autonomia::Insurance::QuoteAgent::Builder::TODAS_AS_TOOLS)
+    expect(described_class.for_agent(lia).map(&:slug)).to eq(Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(lia))
     expect(lia.reload.native_tool_slugs).to eq(['cotar_seguro'])
   end
 end
