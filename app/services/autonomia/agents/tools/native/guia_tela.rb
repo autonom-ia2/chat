@@ -40,7 +40,7 @@ class Autonomia::Agents::Tools::Native::GuiaTela < Autonomia::Agents::Tools::Nat
 
     destino = telas.destino(@params['tela'], parametros, @params['destaque'],
                             permissoes: Array(@operador.account_user&.permissions))
-    nao_lidos = destino[:params].select { |nome, valor| id?(nome) && !@operador.leu?(valor) }
+    nao_lidos = @operador.nao_lidos(destino[:params])
     return sem_leitura(nao_lidos) if nao_lidos.any?
 
     @operador.mostrar(destino)
@@ -53,12 +53,6 @@ class Autonomia::Agents::Tools::Native::GuiaTela < Autonomia::Agents::Tools::Nat
 
   def telas
     ::Autonomia::Guide::Telas.padrao
-  end
-
-  # `:inboxId`, `:conversation_id`, `:id` apontam um registro; `:tab` e
-  # `:label` não. É o nome que o roteador dá ao parâmetro, não texto de gente.
-  def id?(nome)
-    nome == 'id' || nome.end_with?('Id') || nome.end_with?('_id')
   end
 
   def sem_leitura(nao_lidos)

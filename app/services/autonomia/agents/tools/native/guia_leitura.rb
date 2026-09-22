@@ -62,8 +62,11 @@ class Autonomia::Agents::Tools::Native::GuiaLeitura < Autonomia::Agents::Tools::
 
     lido = @operador.consulta.ler(@params['recurso'].to_s, parametros, filtros,
                                   campos: campos, teto: TETO)
-    # O botão de UM registro confere o id contra o que foi lido (#590).
-    @operador.lido(lido)
+    # O botão de UM registro confere o id contra o que foi lido (#590), e o
+    # portão de confiança sabe que a resposta se apoia na conta (#593). Só conta
+    # leitura que devolveu dados — lista vazia inclusive, que é o que sustenta
+    # "não encontrei". Recusa e falha voltam em texto, não em JSON.
+    @operador.lido(lido) if lido.start_with?('[', '{')
     lido
   end
 

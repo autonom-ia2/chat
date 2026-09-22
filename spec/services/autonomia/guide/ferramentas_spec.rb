@@ -55,6 +55,16 @@ RSpec.describe 'Ferramentas do Guia' do
       expect(ler({ 'recurso' => 'admin/users' })).to include('Não sei consultar isso')
     end
 
+    # #593 — o portão aceita a resposta que se apoia na conta. Leitura recusada
+    # ou que falhou não é apoio de nada.
+    it 'marca que leu a conta só quando a leitura trouxe dados', :aggregate_failures do
+      ler({ 'recurso' => 'admin/users' })
+      expect(operador.leu_a_conta?).to be(false)
+
+      ler({ 'recurso' => 'labels' })
+      expect(operador.leu_a_conta?).to be(true)
+    end
+
     # Testar e playground não têm ninguém logado. Sem saber de quem é a
     # permissão, a ferramenta não inventa uma: recusa com frase que o modelo lê.
     it 'recusa sem derrubar o turno quando não há operador' do
@@ -148,6 +158,33 @@ RSpec.describe 'Ferramentas do Guia' do
 
     it 'recusa sem derrubar o turno quando não há operador' do
       expect(propor(pedido, quem: nil)).to include('não sei quem está pedindo')
+    end
+
+    # #593 — "apaga a caixa do instagram": o nome se resolve LENDO a conta, e o
+    # id da proposta tem que ser o que a leitura trouxe.
+    describe 'apagar pelo nome' do
+      let!(:caixa) { create_crm_inbox(account: conta, name: 'Instagram Loja', members: [admin]) }
+      let(:apagar) do
+        { 'acao' => 'DELETE inboxes/:id', 'descricao' => 'Apagar a caixa Instagram Loja.',
+          'caminho_json' => { id: caixa.id }.to_json }
+      end
+
+      it 'propõe com o id que a leitura trouxe, sem apagar nada', :aggregate_failures do
+        ler({ 'recurso' => 'inboxes', 'campos' => %w[id name] })
+
+        propor(apagar)
+
+        expect(operador.proposta[:nome]).to eq('DELETE inboxes/:id')
+        expect(operador.proposta[:dados][:caminho]).to eq(id: caixa.id)
+        expect(conta.inboxes.exists?(caixa.id)).to be(true)
+      end
+
+      it 'não propõe com id que nenhuma leitura trouxe', :aggregate_failures do
+        resposta = propor(apagar)
+
+        expect(operador.proposta).to be_nil
+        expect(resposta).to include('não veio de nenhuma leitura')
+      end
     end
   end
 

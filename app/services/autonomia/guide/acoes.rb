@@ -23,7 +23,6 @@
 class Autonomia::Guide::Acoes
   class Recusada < StandardError; end
 
-  PREFIXO = '/api/v1/accounts/'.freeze
   VERBOS = %w[POST PATCH PUT DELETE].freeze
   DESTRUTIVO = 'DELETE'.freeze
 
@@ -55,13 +54,8 @@ class Autonomia::Guide::Acoes
       verbo = rota.verb.to_s
       next unless VERBOS.include?(verbo)
 
-      caminho = rota.path.spec.to_s.sub('(.:format)', '')
-      next unless caminho.start_with?(PREFIXO)
-
-      recurso = caminho.sub("#{PREFIXO}:account_id/", '')
-      next if recurso.blank?
-
-      "#{verbo} #{recurso}"
+      recurso = ::Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))
+      "#{verbo} #{recurso}" if recurso
     end.uniq.sort
   end
 
@@ -151,7 +145,7 @@ class Autonomia::Guide::Acoes
       CGI.escape(valor)
     end
 
-    "#{PREFIXO}#{@account.id}/#{segmentos.join('/')}"
+    ::Autonomia::Guide::Rotas.caminho(@account.id, segmentos)
   end
 
   def corpo_de(dados)
