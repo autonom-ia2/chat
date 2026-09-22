@@ -351,3 +351,6 @@ Conferido contra o código e contra produção (só leitura, as duas stacks):
 - **Referências erradas:** 12.04 citava um "06.14" que não existe; a nota do Captain dizia
   "capítulo 09" para os agentes de IA, que são o 11.
 - **Total:** 157 artigos, 142 com botão, 51 telas fora.
+- **Campo `requer` (decisão do Rodrigo):** cada artigo do `.json` diz o recurso de que depende,
+  tirado do portão da tela do botão. 88 artigos dependem de um recurso; 69 valem para todos. A
+  tela de leitura e o Guia escondem o artigo das contas que não têm o recurso.

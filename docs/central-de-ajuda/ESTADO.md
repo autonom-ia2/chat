@@ -43,6 +43,13 @@ Apoio, na mesma pasta:
   ("inserir artigo") nem ao Copilot. Quem a usa é o **Guia** (ferramenta `ler_da_central`
   e botão "Ler o artigo completo"). Registrado na #501.
 - **Custo:** todo agente em **Sonnet 5**. Nunca Opus para agente.
+- **Campo `requer` (22/09):** cada artigo diz o recurso de que depende; a tela de leitura e o
+  Guia escondem o artigo das contas que não têm o recurso. Motivo: em produção, Empresas está
+  ligado em 2 de 21 contas, Importação em 2, Prospecção em 3, Cotação em 1, Agentes de IA em 14.
+- **A Central fica aberta para todas as contas durante a construção (22/09).** Nada de esconder
+  até ficar pronta: o cliente que clicar já vê a Central sendo montada. O que precisa, e antes de
+  tudo, é **travar a edição**: hoje o recurso está ligado nas 21 contas e qualquer administrador
+  consegue criar portal e artigo.
 
 ## Próximos passos, em ordem
 
@@ -62,7 +69,8 @@ Apoio, na mesma pasta:
 7. **#501 (código):** configuração do portal da Plataforma; tela de leitura no painel;
    "Central de Ajuda" na barra lateral leva a ela; editor fechado; link "Docs" do menu do
    perfil aponta para ela; **bloqueios** (nenhuma caixa ligada ao portal da Plataforma e
-   Copilot ignorando esse portal). Tudo desligado até o conteúdo estar pronto.
+   Copilot ignorando esse portal); esconder artigo cujo `requer` a conta não tem. **Visível
+   desde já**, sem esperar o conteúdo. A trava de edição vem primeiro, em PR próprio.
 8. **#502 (código):** publicação automática do repositório para os portais das duas
    stacks. Slug com prefixo fixo: o slug de artigo é único no banco inteiro.
 9. **Issue nova:** o Guia lendo a Central (`ler_da_central` + botão "Ler o artigo completo").

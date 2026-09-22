@@ -33,6 +33,7 @@ prioridade: P1            # P1 | P2 | P3
 me_leve_ate_la:           # omita se o artigo não tem uma tela
   rota: profile_settings_index
   destaque: null          # só um valor que existe como `highlight` no guia-produto.md
+requer: null              # recurso que a conta precisa ter; vem do mapa, não invente
 assuntos: ["01.2-definir-disponibilidade", "01.3-marcar-offline-automaticamente"]
 conferido_em: "2026-09-22"
 evidencias:               # arquivo:linha de CADA fato do texto, conferido no código de hoje
@@ -54,6 +55,11 @@ Seções nesta ordem, com estes títulos exatos:
    do jeito que a pessoa descreveria, e depois diz a causa e a saída.
    Ex.: "**A conversa não chega para você.** Seu status está Offline…"
 5. `## Veja também` — 2 ou 3 artigos, pelo id: `- [02.04] Sua assinatura de mensagens`.
+
+O campo `requer` vem pronto do `mapa-de-artigos.json`: é o portão da tela do botão (a
+feature da conta em `GUIDE_ROUTE_FEATURES`, ou `autonomia_agents`, `autonomia_prospecting`,
+`autonomia_insurance`). Quando a conta não tem o recurso, a tela de leitura e o Guia escondem o
+artigo. Por isso o texto **não** diz "se a sua conta tiver…": quem lê, tem.
 
 O botão **Me leve até lá** não vai no texto: ele sai do cabeçalho (`me_leve_ate_la`) e a
 tela de leitura o desenha. Nunca escreva "clique aqui" nem cole endereço de tela.
@@ -150,6 +156,7 @@ sem cor de marca.
 - [ ] Nomes de botão e menu iguais aos do `pt_BR`.
 - [ ] Nenhuma marca, nenhum dado real, nenhum "a verificar" no texto.
 - [ ] `me_leve_ate_la.rota` existe no `guideRouteRegistry.js`; destaque existe ou é null.
+- [ ] `requer` igual ao do mapa.
 - [ ] Prints: no máximo 2, cada um com especificação.
 - [ ] 150 a 600 palavras.
 - [ ] Um leigo, lendo só este artigo, consegue fazer a tarefa.

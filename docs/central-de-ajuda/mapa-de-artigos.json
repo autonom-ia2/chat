@@ -20,6 +20,7 @@
       "rota": "first_steps",
       "destaque": null
      },
+     "requer": null,
      "prints": [
       "Tela Primeiros passos com a lista dos 9 passos e o passo em destaque no topo"
      ],
@@ -48,6 +49,7 @@
       "rota": "profile_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [
       "Passo 'Seu perfil e seus avisos' em destaque na tela Primeiros passos"
      ],
@@ -75,6 +77,7 @@
       "rota": "settings_applications",
       "destaque": null
      },
+     "requer": "integrations",
      "prints": [],
      "fontes": [
       "porques: Configurar a chave de IA da plataforma"
@@ -98,6 +101,7 @@
       "rota": "settings_inbox_list",
       "destaque": null
      },
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [
       "porques: Conectar WhatsApp Oficial (Cloud API)",
@@ -123,6 +127,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -146,6 +151,7 @@
       "rota": "crm_kanban_index",
       "destaque": "crm-configure-inboxes"
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Criar funis, estágios e conectar caixas ao CRM"
@@ -170,6 +176,7 @@
       "rota": "agent_list",
       "destaque": null
      },
+     "requer": "agent_management",
      "prints": [],
      "fontes": [
       "porques: Convidar e gerenciar agentes",
@@ -195,6 +202,7 @@
       "rota": "autonomia_agents_index",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [
       "porques: Criar agente externo com base de conhecimento",
@@ -220,6 +228,7 @@
       "rota": "campaigns_whatsapp_index",
       "destaque": null
      },
+     "requer": "whatsapp_campaign",
      "prints": [],
      "fontes": [
       "porques: Criar campanha WhatsApp Oficial",
@@ -242,6 +251,7 @@
       "rota": "labels_list",
       "destaque": null
      },
+     "requer": "labels",
      "prints": [],
      "fontes": [
       "porques: Gerenciar catalogo de etiquetas",
@@ -265,6 +275,7 @@
      "assuntos": [],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -282,6 +293,7 @@
      ],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -296,6 +308,7 @@
      "assuntos": [],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -314,6 +327,7 @@
      ],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -328,6 +342,7 @@
      "assuntos": [],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Usar o proprio Guia da Plataforma"
@@ -352,6 +367,7 @@
       "rota": "search",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Usar busca global"
@@ -368,6 +384,7 @@
      "assuntos": [],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [
       "Página inicial da Central de Ajuda com a busca e as categorias"
      ],
@@ -397,6 +414,7 @@
       "rota": "profile_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ajustar perfil e notificacoes"
@@ -421,6 +439,7 @@
       "rota": "profile_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -443,6 +462,7 @@
       "rota": "profile_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -465,6 +485,7 @@
       "rota": "profile_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -489,6 +510,7 @@
       "rota": "profile_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -514,6 +536,7 @@
       "rota": "profile_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -537,6 +560,7 @@
       "rota": "profile_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -561,6 +585,7 @@
       "rota": "profile_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -586,6 +611,7 @@
       "rota": "general_settings_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ajustar configuracoes da conta"
@@ -607,6 +633,7 @@
       "rota": "security_settings_index",
       "destaque": null
      },
+     "requer": "saml",
      "prints": [],
      "fontes": [
       "porques: Configurar seguranca da conta e do usuario"
@@ -630,6 +657,7 @@
       "rota": "auditlogs_list",
       "destaque": null
      },
+     "requer": "audit_logs",
      "prints": [],
      "fontes": [
       "porques: Consultar logs de auditoria"
@@ -652,6 +680,7 @@
       "rota": "settings_data_imports",
       "destaque": null
      },
+     "requer": "data_import",
      "prints": [],
      "fontes": [
       "porques: Trazer contatos e conversas de outra ferramenta",
@@ -683,6 +712,7 @@
       "rota": "agent_list",
       "destaque": null
      },
+     "requer": "agent_management",
      "prints": [],
      "fontes": [
       "porques: Convidar e gerenciar agentes"
@@ -709,6 +739,7 @@
       "rota": "agent_list",
       "destaque": null
      },
+     "requer": "agent_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -733,6 +764,7 @@
       "rota": "autonomia_invite_connection",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Conectar pelo QR Code o WhatsApp que criaram para você"
@@ -758,6 +790,7 @@
       "rota": "agent_list",
       "destaque": null
      },
+     "requer": "agent_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -780,6 +813,7 @@
       "rota": "agent_list",
       "destaque": null
      },
+     "requer": "agent_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -804,6 +838,7 @@
       "rota": "custom_roles_list",
       "destaque": null
      },
+     "requer": "custom_roles",
      "prints": [],
      "fontes": [],
      "revisar": true,
@@ -825,6 +860,7 @@
       "rota": "settings_home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -853,6 +889,7 @@
       "rota": "settings_teams_list",
       "destaque": null
      },
+     "requer": "team_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -879,6 +916,7 @@
       "rota": "settings_teams_new",
       "destaque": null
      },
+     "requer": "team_management",
      "prints": [],
      "fontes": [
       "porques: Criar e editar times"
@@ -905,6 +943,7 @@
       "rota": "settings_home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -926,6 +965,7 @@
       "rota": "settings_teams_list",
       "destaque": null
      },
+     "requer": "team_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -953,6 +993,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Atribuir conversa"
@@ -981,6 +1022,7 @@
       "rota": "automation_list",
       "destaque": null
      },
+     "requer": "automations",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1006,6 +1048,7 @@
       "rota": "assignment_policy_index",
       "destaque": null
      },
+     "requer": "assignment_v2",
      "prints": [],
      "fontes": [
       "porques: Escolher como as conversas são distribuídas",
@@ -1044,6 +1087,7 @@
       "rota": "settings_applications",
       "destaque": null
      },
+     "requer": "integrations",
      "prints": [],
      "fontes": [
       "porques: Gerenciar integracoes"
@@ -1069,6 +1113,7 @@
       "rota": "settings_applications",
       "destaque": null
      },
+     "requer": "integrations",
      "prints": [],
      "fontes": [
       "porques: Configurar a chave de IA da plataforma"
@@ -1093,6 +1138,7 @@
       "rota": "settings_applications",
       "destaque": null
      },
+     "requer": "integrations",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1116,6 +1162,7 @@
       "rota": "settings_applications",
       "destaque": null
      },
+     "requer": "integrations",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1139,6 +1186,7 @@
       "rota": "settings_integrations_webhook",
       "destaque": null
      },
+     "requer": "integrations",
      "prints": [],
      "fontes": [
       "porques: Criar webhooks",
@@ -1165,6 +1213,7 @@
       "rota": "settings_integrations_crm_n8n",
       "destaque": null
      },
+     "requer": "integrations",
      "prints": [],
      "fontes": [
       "porques: Configurar integracao CRM com n8n"
@@ -1189,6 +1238,7 @@
       "rota": "settings_integrations_slack",
       "destaque": null
      },
+     "requer": "integrations",
      "prints": [],
      "fontes": [
       "porques: Levar as conversas para o Slack",
@@ -1222,6 +1272,7 @@
       "rota": "settings_inbox_new",
       "destaque": null
      },
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [
       "porques: Visao geral dos canais"
@@ -1250,6 +1301,7 @@
       "rota": "settings_inbox_new",
       "destaque": null
      },
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [
       "porques: Conectar WhatsApp Oficial (Cloud API)"
@@ -1275,6 +1327,7 @@
       "rota": "settings_inbox_new",
       "destaque": null
      },
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [
       "porques: Gerenciar agentes da caixa"
@@ -1300,6 +1353,7 @@
       "rota": "settings_home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Editar configuracoes da caixa"
@@ -1327,6 +1381,7 @@
       "rota": "settings_templates",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ver os modelos de mensagem do WhatsApp"
@@ -1352,6 +1407,7 @@
       "rota": "settings_home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Definir horario de atendimento da caixa"
@@ -1373,6 +1429,7 @@
       "rota": "settings_inbox_list",
       "destaque": null
      },
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1392,6 +1449,7 @@
       "rota": "settings_inbox_new",
       "destaque": null
      },
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1411,6 +1469,7 @@
       "rota": "settings_inbox_new",
       "destaque": null
      },
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [
       "porques: Configurar widget do site"
@@ -1432,6 +1491,7 @@
       "rota": "settings_inbox_new",
       "destaque": null
      },
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1451,6 +1511,7 @@
       "rota": "settings_home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Configurar CSAT da caixa"
@@ -1482,6 +1543,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Iniciar nova conversa"
@@ -1506,6 +1568,7 @@
       "rota": "conversation_unattended",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ver conversas nao atendidas"
@@ -1533,6 +1596,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ordenar e filtrar status da lista de conversas"
@@ -1559,6 +1623,7 @@
       "rota": "conversation_mentions",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ver conversas com mencoes"
@@ -1584,6 +1649,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Atribuir conversa"
@@ -1607,6 +1673,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1629,6 +1696,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1650,6 +1718,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1675,6 +1744,7 @@
       "rota": "conversation_workflow_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Resolver conversa",
@@ -1703,6 +1773,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1724,6 +1795,7 @@
       "folder_conversations"
      ],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Filtrar conversas",
@@ -1748,6 +1820,7 @@
       "rota": "search",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1771,6 +1844,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Usar Copiloto Autonom.ia na conversa"
@@ -1795,6 +1869,7 @@
       "rota": "home",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1814,6 +1889,7 @@
       "rota": "calls_dashboard_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ver o histórico de chamadas e ouvir gravações"
@@ -1847,6 +1923,7 @@
       "rota": "contacts_dashboard_index",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [
       "porques: Ordenar lista de contatos"
@@ -1872,6 +1949,7 @@
       "rota": "contacts_dashboard_index",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [
       "porques: Filtrar contatos",
@@ -1897,6 +1975,7 @@
       "rota": "contacts_dashboard_index",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [
       "porques: Criar contato"
@@ -1922,6 +2001,7 @@
       "rota": "contacts_dashboard_index",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [
       "porques: Aplicar etiquetas em contatos"
@@ -1946,6 +2026,7 @@
       "rota": "contacts_dashboard_index",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1970,6 +2051,7 @@
       "rota": "attributes_list",
       "destaque": null
      },
+     "requer": "custom_attributes",
      "prints": [],
      "fontes": [
       "porques: Gerenciar atributos customizados"
@@ -1998,6 +2080,7 @@
       "rota": "contacts_campaign_imports",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [
       "porques: Importar contatos por CSV",
@@ -2024,6 +2107,7 @@
       "rota": "contacts_dashboard_index",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [
       "porques: Abrir a ficha de um contato e juntar cadastros repetidos"
@@ -2049,6 +2133,7 @@
       "rota": "companies_dashboard_index",
       "destaque": null
      },
+     "requer": "companies",
      "prints": [],
      "fontes": [
       "porques: Cadastrar empresas e achar a que você procura",
@@ -2073,6 +2158,7 @@
       "rota": "contacts_dashboard_index",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2105,6 +2191,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Abrir o CRM Kanban e filtrar oportunidades",
@@ -2130,6 +2217,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Criar card ou oportunidade no CRM"
@@ -2155,6 +2243,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Mover card, ganhar, perder ou reabrir oportunidade"
@@ -2179,6 +2268,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2202,6 +2292,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Criar follow-ups e lembretes no CRM"
@@ -2230,6 +2321,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Salvar e compartilhar visoes da lista do CRM"
@@ -2255,6 +2347,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Configurar IA do CRM por funil"
@@ -2279,6 +2372,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Usar sugestoes e resumo por IA no card do CRM"
@@ -2303,6 +2397,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2329,6 +2424,7 @@
       "rota": "crm_handoff_settings_index",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [
       "porques: Escolher o funil para configurar a passagem da IA",
@@ -2357,6 +2453,7 @@
       "rota": "crm_calendar_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Usar calendário CRM e agendar reunião",
@@ -2383,6 +2480,7 @@
       "rota": "crm_kanban_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2405,6 +2503,7 @@
       "rota": "crm_dashboard_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ver dashboard CRM e métricas de funil"
@@ -2432,6 +2531,7 @@
       "rota": "crm_ai_usage_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Acompanhar quanto a IA está custando"
@@ -2456,6 +2556,7 @@
       "rota": "crm_sla_index",
       "destaque": null
      },
+     "requer": "sla",
      "prints": [],
      "fontes": [
       "porques: Configurar SLA do CRM"
@@ -2480,6 +2581,7 @@
       "rota": "crm_integration_tokens_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Usar o card CRM a partir de uma conversa",
@@ -2511,6 +2613,7 @@
       "rota": "autonomia_agents_index",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [
       "porques: Abrir hub de Agentes de IA"
@@ -2536,6 +2639,7 @@
       "rota": "autonomia_agents_builder",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [
       "porques: Criar agente externo com base de conhecimento",
@@ -2562,6 +2666,7 @@
       "rota": "autonomia_agents_builder",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2584,6 +2689,7 @@
       "rota": "autonomia_agents_builder",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2606,6 +2712,7 @@
       "rota": "autonomia_agents_builder",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2628,6 +2735,7 @@
       "rota": "autonomia_agents_index",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [
       "porques: Conectar ou desconectar agente de uma caixa"
@@ -2652,6 +2760,7 @@
       "rota": "autonomia_agents_index",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [
       "porques: Testar, acompanhar e ajustar agente"
@@ -2676,6 +2785,7 @@
       "rota": "autonomia_agents_index",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [
       "porques: Atualizar conhecimento e fontes do agente"
@@ -2700,6 +2810,7 @@
       "rota": "autonomia_agents_index",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2723,6 +2834,7 @@
       "rota": "autonomia_agents_index",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2745,6 +2857,7 @@
       "rota": "autonomia_agents_index",
       "destaque": null
      },
+     "requer": "autonomia_agents",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -2764,6 +2877,7 @@
       "rota": "agent_bots",
       "destaque": null
      },
+     "requer": "agent_bots",
      "prints": [],
      "fontes": [
       "porques: Gerenciar agent bots nativos"
@@ -2793,6 +2907,7 @@
       "rota": "automation_list",
       "destaque": null
      },
+     "requer": "automations",
      "prints": [],
      "fontes": [
       "porques: Criar automacoes"
@@ -2819,6 +2934,7 @@
       "rota": "macros_wrapper",
       "destaque": null
      },
+     "requer": "macros",
      "prints": [],
      "fontes": [
       "porques: Criar macros"
@@ -2840,6 +2956,7 @@
       "rota": "labels_list",
       "destaque": null
      },
+     "requer": "labels",
      "prints": [],
      "fontes": [
       "porques: Gerenciar catalogo de etiquetas"
@@ -2861,6 +2978,7 @@
       "rota": "canned_list",
       "destaque": null
      },
+     "requer": "canned_responses",
      "prints": [],
      "fontes": [
       "porques: Criar respostas prontas"
@@ -2885,6 +3003,7 @@
       "rota": "attributes_list",
       "destaque": null
      },
+     "requer": "custom_attributes",
      "prints": [],
      "fontes": [
       "porques: Gerenciar atributos customizados"
@@ -2917,6 +3036,7 @@
       "rota": "campaigns_livechat_index",
       "destaque": null
      },
+     "requer": "campaigns",
      "prints": [],
      "fontes": [
       "porques: Criar campanha de chat ao vivo",
@@ -2941,6 +3061,7 @@
       "rota": "campaigns_whatsapp_index",
       "destaque": null
      },
+     "requer": "whatsapp_campaign",
      "prints": [],
      "fontes": [
       "porques: Criar campanha WhatsApp Oficial"
@@ -2965,6 +3086,7 @@
       "rota": "campaigns_whatsapp_api_index",
       "destaque": null
      },
+     "requer": "campaigns",
      "prints": [],
      "fontes": [
       "porques: Criar campanha WhatsApp API"
@@ -2989,6 +3111,7 @@
       "rota": "contacts_campaign_imports",
       "destaque": null
      },
+     "requer": "crm",
      "prints": [],
      "fontes": [
       "porques: Ver histórico de importações de campanha"
@@ -3013,6 +3136,7 @@
       "rota": "campaigns_email_sender_index",
       "destaque": null
      },
+     "requer": "campaigns",
      "prints": [],
      "fontes": [
       "porques: Criar e verificar identidade de remetente de e-mail"
@@ -3037,6 +3161,7 @@
       "rota": "campaigns_email_index",
       "destaque": null
      },
+     "requer": "campaigns",
      "prints": [],
      "fontes": [
       "porques: Criar campanha de e-mail e importar base"
@@ -3061,6 +3186,7 @@
       "rota": "campaigns_email_index",
       "destaque": null
      },
+     "requer": "campaigns",
      "prints": [],
      "fontes": [
       "porques: Montar e-mail com editor, IA e templates"
@@ -3087,6 +3213,7 @@
       "rota": "campaigns_email_index",
       "destaque": null
      },
+     "requer": "campaigns",
      "prints": [],
      "fontes": [
       "porques: Escolher um modelo pronto de e-mail"
@@ -3112,6 +3239,7 @@
       "rota": "campaigns_email_index",
       "destaque": null
      },
+     "requer": "campaigns",
      "prints": [],
      "fontes": [
       "porques: Gerenciar destinatários, agendar e enviar campanha de e-mail"
@@ -3136,6 +3264,7 @@
       "rota": "crm_campaign_management_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ver gestão e relatório de campanhas de e-mail"
@@ -3160,6 +3289,7 @@
       "rota": "crm_campaign_management_index",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3179,6 +3309,7 @@
       "rota": "campaigns_whatsapp_index",
       "destaque": null
      },
+     "requer": "whatsapp_campaign",
      "prints": [],
      "fontes": [
       "porques: Ver o resultado de uma campanha de WhatsApp"
@@ -3208,6 +3339,7 @@
       "rota": "account_overview_reports",
       "destaque": null
      },
+     "requer": "reports",
      "prints": [],
      "fontes": [
       "porques: Ver relatorios"
@@ -3234,6 +3366,7 @@
       "rota": "account_overview_reports",
       "destaque": null
      },
+     "requer": "reports",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3257,6 +3390,7 @@
       "rota": "conversation_reports",
       "destaque": null
      },
+     "requer": "reports",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3279,6 +3413,7 @@
       "rota": "conversation_reports",
       "destaque": null
      },
+     "requer": "reports",
      "prints": [],
      "fontes": [
       "porques: Ver o volume e os tempos de atendimento da conta"
@@ -3297,6 +3432,7 @@
      ],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3324,6 +3460,7 @@
       "rota": "agent_reports_index",
       "destaque": null
      },
+     "requer": "reports",
      "prints": [],
      "fontes": [
       "porques: Abrir o desempenho de um agente por dentro",
@@ -3350,6 +3487,7 @@
       "rota": "label_reports_index",
       "destaque": null
      },
+     "requer": "reports",
      "prints": [],
      "fontes": [
       "porques: Abrir o desempenho de uma etiqueta por dentro"
@@ -3374,6 +3512,7 @@
       "rota": "csat_reports",
       "destaque": null
      },
+     "requer": "reports",
      "prints": [],
      "fontes": [
       "porques: Baixar relatório de CSAT"
@@ -3399,6 +3538,7 @@
       "rota": "bot_reports",
       "destaque": null
      },
+     "requer": "reports",
      "prints": [],
      "fontes": [
       "porques: Medir o quanto o robô resolve sozinho",
@@ -3426,6 +3566,7 @@
       "rota": "conversation_reports",
       "destaque": null
      },
+     "requer": "reports",
      "prints": [],
      "fontes": [
       "porques: Baixar relatório de agentes",
@@ -3456,6 +3597,7 @@
       "rota": "autonomia_insurance_connections",
       "destaque": null
      },
+     "requer": "autonomia_insurance",
      "prints": [],
      "fontes": [
       "porques: Entrar na área de Cotação da corretora",
@@ -3478,6 +3620,7 @@
       "rota": "autonomia_insurance_agent",
       "destaque": null
      },
+     "requer": "autonomia_insurance",
      "prints": [],
      "fontes": [
       "porques: Criar o agente que cota com o cliente no WhatsApp"
@@ -3499,6 +3642,7 @@
       "rota": "autonomia_insurance_agent",
       "destaque": null
      },
+     "requer": "autonomia_insurance",
      "prints": [],
      "fontes": [
       "porques: Como o cliente recebe os valores da cotação"
@@ -3528,6 +3672,7 @@
       "rota": "autonomia_prospecting_search",
       "destaque": null
      },
+     "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
       "porques: Procurar empresas por região e transformar em contato ou card"
@@ -3551,6 +3696,7 @@
       "rota": "autonomia_prospecting_search",
       "destaque": null
      },
+     "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3572,6 +3718,7 @@
       "rota": "autonomia_prospecting_lists",
       "destaque": null
      },
+     "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
       "porques: Juntar leads em listas e preparar um público de campanha"
@@ -3595,6 +3742,7 @@
       "rota": "settings_prospecting_index",
       "destaque": null
      },
+     "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
       "porques: Ajustar chaves, limites e critérios de score da prospecção"
@@ -3622,6 +3770,7 @@
       "rota": "autonomia_financial_subscription",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Ver o plano contratado e quanto está sendo cobrado"
@@ -3643,6 +3792,7 @@
       "rota": "autonomia_financial_invoices",
       "destaque": null
      },
+     "requer": null,
      "prints": [],
      "fontes": [
       "porques: Conferir faturas emitidas e o que já foi pago"
@@ -3667,6 +3817,7 @@
      ],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3681,6 +3832,7 @@
      "assuntos": [],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3698,6 +3850,7 @@
      ],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3714,6 +3867,7 @@
      ],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3730,6 +3884,7 @@
      ],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3744,6 +3899,7 @@
      "assuntos": [],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -3760,6 +3916,7 @@
      ],
      "rotas": [],
      "me_leve_ate_la": null,
+     "requer": null,
      "prints": [],
      "fontes": [],
      "revisar": false,
