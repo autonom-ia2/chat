@@ -47,8 +47,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Envio
   def chamar_portal(open_session, pedido)
     connector.quote_start(session: open_session, **pedido)
   rescue ::Autonomia::Insurance::Connector::Error => e
-    ausentes = campos_ausentes(e)
-    raise EntradaRecusada, ausentes if ausentes.present?
+    perguntas = perguntas_ao_cliente(e)
+    raise EntradaRecusada, perguntas if perguntas.present?
     raise if NAO_ENVIOU.include?(e.kind)
     # A INVOCAÇÃO RECUSADA NÃO É INCERTEZA. Quando o próprio serviço recusa a chamada (throttle,
     # permissão, 5xx dele), o adapter não chega a rodar e o portal não é tocado: nada foi cotado.
@@ -63,13 +63,27 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Envio
     raise ::Autonomia::Agents::Tools::Native::EnvioIncerto, e.class.name
   end
 
-  # SÓ CAMPO AUSENTE vira pergunta ao cliente (achado da revisão da PR #472). Um erro de FORMATO ("placa com
-  # 7 caracteres") pediria de novo um dado que o cliente já deu, e o modelo tende a reenviar igual: laço.
-  # Esses seguem o caminho de antes.
-  def campos_ausentes(erro)
+  # O QUE VIRA PERGUNTA AO CLIENTE, e só isso: o campo ausente (`Required`, achado da revisão da PR #472) e o que
+  # o adapter declara como pergunta em `details.perguntas` (adapters#76: rua de cidade de CEP único, CEP que não
+  # existe, documento que o portal recusou). Um erro de FORMATO fora dessas duas listas pediria de novo um dado que o
+  # cliente já deu, e o modelo tende a reenviar igual: laço. Esses seguem o caminho de antes.
+  # -> "campo: motivo", o formato de `issues` que `recusa_da_entrada` lê.
+  def perguntas_ao_cliente(erro)
     return [] unless erro.kind == :validation
 
-    Array(erro.details.to_h.stringify_keys['issues']).map(&:to_s).select { |issue| issue.split(':', 2)[1].to_s.strip == 'Required' }
+    details = erro.details.to_h.stringify_keys
+    ausentes = Array(details['issues']).map(&:to_s).select { |issue| issue.split(':', 2)[1].to_s.strip == 'Required' }
+    declaradas = Array(details['perguntas']).filter_map { |pergunta| pergunta_declarada(pergunta) }
+    (ausentes + declaradas).uniq
+  end
+
+  # Uma pergunta de `details.perguntas`: `{ campo, motivo }`. Sem campo não há o que perguntar.
+  def pergunta_declarada(pergunta)
+    return unless pergunta.is_a?(Hash)
+
+    pergunta = pergunta.stringify_keys
+    campo = pergunta['campo'].to_s.strip
+    "#{campo}: #{pergunta['motivo'].to_s.strip.presence || 'Required'}" if campo.present?
   end
 
   # A MESMA RECUSA DA CONFERÊNCIA (`validar`), com o que falta e sem nova tentativa.
