@@ -1,0 +1,19 @@
+<section class="main-content__body">
+  <hr/>
+  <p class="font-medium">Autonomia Insurance / Ramos além de auto</p>
+  <p>
+    Each line turns on the quote specialist of one insurance line for this account. It only answers when the
+    account's AGGER connection also has the line enabled. Auto is always on.
+  </p>
+  <% Autonomia::Insurance::QuoteAgent::Builder.ramos_liberaveis.each do |ramo| %>
+    <% liberado = Autonomia::Insurance::Config.ramo_liberado?(page.resource, ramo) %>
+    <%= form_for([:toggle_insurance_ramo, namespace, page.resource], method: :post, html: { class: "form" }) do |f| %>
+      <div class="form-actions">
+        <p><%= ramo.capitalize %>: <strong><%= liberado ? 'Enabled' : 'Disabled' %></strong></p>
+        <%= hidden_field_tag :ramo, ramo %>
+        <%= hidden_field_tag :enabled, (!liberado).to_s %>
+        <%= f.submit(liberado ? "Disable #{ramo}" : "Enable #{ramo}") %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

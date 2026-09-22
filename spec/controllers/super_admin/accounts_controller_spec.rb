@@ -248,6 +248,41 @@ RSpec.describe 'Super Admin accounts API', type: :request do
     end
   end
 
+  # O RAMO ALÉM DE AUTO, LIGADO CONTA A CONTA (chat#323): residencial primeiro na conta de teste.
+  describe 'POST /super_admin/accounts/{account_id}/toggle_insurance_ramo' do
+    def liberado?
+      Autonomia::Insurance::Config.ramo_liberado?(account.reload, 'residencial')
+    end
+
+    it 'sem login não libera' do
+      post "/super_admin/accounts/#{account.id}/toggle_insurance_ramo", params: { ramo: 'residencial', enabled: true }
+
+      expect(liberado?).to be false
+    end
+
+    context 'when it is an authenticated user' do
+      before { sign_in(super_admin, scope: :super_admin) }
+
+      it 'libera e bloqueia residencial na conta' do
+        post "/super_admin/accounts/#{account.id}/toggle_insurance_ramo", params: { ramo: 'residencial', enabled: true }
+        expect(flash[:notice]).to eq('Autonomia Insurance residencial enabled')
+        expect(liberado?).to be true
+
+        post "/super_admin/accounts/#{account.id}/toggle_insurance_ramo", params: { ramo: 'residencial', enabled: false }
+        expect(liberado?).to be false
+      end
+
+      it 'recusa ramo que nenhum especialista mantido tem, e auto' do
+        %w[bike auto].each do |ramo|
+          post "/super_admin/accounts/#{account.id}/toggle_insurance_ramo", params: { ramo: ramo, enabled: true }
+
+          expect(flash[:alert]).to eq("Ramo desconhecido: #{ramo}")
+          expect(Autonomia::Insurance::Config.ramo_liberado?(account.reload, ramo)).to be false
+        end
+      end
+    end
+  end
+
   describe 'POST /super_admin/accounts/{account_id}/toggle_prospecting' do
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do

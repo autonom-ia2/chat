@@ -16,7 +16,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true', INSURANCE_QUOTING_ENABLED: 'true') { example.run }
   end
 
-  before { enable_test_encryption! }
+  # O SuperAdmin liberou residencial nesta conta; o exemplo que prova a trava da liberação desfaz isto.
+  before do
+    enable_test_encryption!
+    Autonomia::Insurance::Config.liberar_ramo!(account, 'residencial')
+  end
 
   def conectar(produtos)
     Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
@@ -41,6 +45,15 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       conectar([{ 'product' => 'auto', 'enabled' => true }, { 'product' => 'residencial', 'enabled' => false }])
 
       expect(described_class.disponivel?(residencial)).to be(false)
+    end
+
+    # A liberação por conta (decisão do CEO, 22/09/2026): ligar residencial primeiro só na conta de teste.
+    it 'residencial não atende sem a liberação do SuperAdmin, mesmo com a conexão cotando o ramo' do
+      conectar([{ 'product' => 'residencial', 'enabled' => true }])
+      Autonomia::Insurance::Config.bloquear_ramo!(account, 'residencial')
+
+      expect(described_class.disponivel?(residencial)).to be(false)
+      expect(o_que_a_lia_ve).not_to include(residencial.function_name, 'consultar_cep')
     end
 
     it 'residencial atende quando a conexão tem o ramo habilitado' do

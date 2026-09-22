@@ -59,6 +59,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       agente = construir
       expect(Autonomia::Agents::Tools::Registry.for_agent(agente).map(&:slug)).not_to include('consultar_cep')
 
+      Autonomia::Insurance::Config.liberar_ramo!(account, 'residencial')
       Autonomia::Insurance::Connection.for_account(account).first
                                       .update!(capabilities: { 'products' => [{ 'product' => 'residencial', 'enabled' => true }] })
       expect(Autonomia::Agents::Tools::Registry.for_agent(agente.reload).map(&:slug)).to include('consultar_cep')

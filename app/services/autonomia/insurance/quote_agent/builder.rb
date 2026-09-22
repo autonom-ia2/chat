@@ -167,8 +167,17 @@ class Autonomia::Insurance::QuoteAgent::Builder
   end
 
   # -> true quando o especialista de `ESPECIALISTAS` descrito por `dados` atende nesta conta.
+  # Fora de auto, duas chaves: o SuperAdmin liberou o ramo na conta (`Insurance::Config.ramo_liberado?`, para ligar
+  # primeiro na conta de teste) e a conexão tem o ramo habilitado.
   def self.atende?(account, dados)
-    dados[:ramo] == 'auto' || ramo_habilitado?(account, dados[:ramo])
+    return true if dados[:ramo] == 'auto'
+
+    ::Autonomia::Insurance::Config.ramo_liberado?(account, dados[:ramo]) && ramo_habilitado?(account, dados[:ramo])
+  end
+
+  # Os ramos que o SuperAdmin pode liberar por conta: os dos especialistas mantidos, fora auto.
+  def self.ramos_liberaveis
+    ESPECIALISTAS.pluck(:ramo) - ['auto']
   end
 
   # Falha ao ler a conexão tira o ramo do turno, e não o turno inteiro: auto continua atendendo.
