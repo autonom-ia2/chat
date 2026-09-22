@@ -46,6 +46,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
               'outros ramos, informe o que o cliente já deu em `dados`; se faltar algo, a ' \
               'ferramenta responde exatamente o que perguntar, sem consumir cotação.'.freeze
 
+  # A DESCRIÇÃO DO ESPECIALISTA DE UM RAMO COM FORMULÁRIO (revisão da chat#592). Ele não recebe `dados`, e a
+  # DESCRICAO acima mandaria escrever nele: o modelo tentaria um campo que não existe, ou hesitaria. Esta diz o que o
+  # formulário dele é, sem nome de campo digitado aqui.
+  DESCRICAO_COM_FORMULARIO = 'Cota o seguro deste ramo nas seguradoras que esta corretora atende. Preencha os ' \
+                             'blocos com o que o cliente contou, cada campo explicado nele; rua, bairro e cidade ' \
+                             'o sistema busca pelo CEP. O que ninguém disse fica nulo. Se faltar algo, a ' \
+                             'ferramenta responde exatamente o que perguntar, sem consumir cotação.'.freeze
+
   # NÃO PROMETA O QUE AINDA NÃO ACONTECEU. Este texto volta ao modelo em `Bound#accept_async`, que
   # roda ANTES de qualquer conferência: nada foi enviado a seguradora nenhuma ainda, e o pedido pode
   # ser recusado logo em seguida por falta de dado, por conexão fora do ar ou por prazo. Quando ele
@@ -85,6 +93,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
       DESCRICAO
     end
 
+    # Sem `dados` entre os parâmetros, o formulário é o do ramo: a descrição não pode mandar o modelo escrever nele.
+    # Auto sempre leva `dados` (COMUNS), então a descrição de auto não muda.
+    def description_for(parametros)
+      parametros.any? { |param| param['name'] == 'dados' } ? DESCRICAO : DESCRICAO_COM_FORMULARIO
+    end
+
     def params
       COMUNS
     end
@@ -95,15 +109,45 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
     # na sincronização e agora) TAMBÉM fica só o comum — e a própria ferramenta recusa auto com
     # `formulario_indisponivel` (`Veiculo#sem_formulario?`), em vez de cobrar placa do cliente por
     # um bloco que o modelo nunca recebeu.
-    def params_for(agent)
-      params + ::Autonomia::Insurance::Parametros.de_auto(schema_de_auto(agent))
+    #
+    # UM FORMULÁRIO POR ESPECIALISTA (chat#591, decisão da receita de ramo, fase 2). O ramo vem do
+    # especialista que monta o turno (`Builder.ramo_do_especialista`, a chave `ramo` de
+    # `ESPECIALISTAS`), e não do que o modelo escreve em `produto`: o formulário existe antes de o
+    # modelo escrever qualquer coisa. Sem especialista, ou num que a Autonom.ia não mantém, o ramo é
+    # auto, e o formulário é o de sempre. Um formulário com todos os ramos multiplicaria o que o
+    # modelo lê a cada turno por onze.
+    def params_for(agent, especialista: nil)
+      ramo = ::Autonomia::Insurance::QuoteAgent::Builder.ramo_do_especialista(especialista) || self::AUTO
+      return params + ::Autonomia::Insurance::Parametros.de_auto(schema_de_auto(agent)) if ramo == self::AUTO
+
+      formulario = formulario_do_ramo(agent, ramo)
+      # Com o formulário, `dados` sai: ele é o JSON solto que o formulário substitui, e a instrução
+      # dele ("mande {} na primeira vez") é a rodada a mais que a fase 2 existe para tirar. Sem o
+      # formulário, fica, e o ramo cota pelo caminho de antes.
+      formulario.empty? ? params : params.reject { |param| param['name'] == 'dados' } + formulario
+    end
+
+    # CAMPO SEM DESCRIÇÃO QUEBRA, NÃO SOME. O formulário inteiro é recusado (`FormularioInvalido`), e
+    # não só o campo: um formulário sem o campo esconderia do modelo um dado que o adapter pede, e
+    # ninguém veria. Recusado, o ramo volta ao `dados` e o erro fica no log com o ramo e os campos.
+    # Levantar daqui derrubaria a montagem do turno inteiro, e o especialista ficaria mudo (modo A8).
+    # Quem pega antes da produção é a `parametros_do_ramo_spec`, sobre o schema gerado do adapter.
+    def formulario_do_ramo(agent, ramo)
+      ::Autonomia::Insurance::Parametros.do_ramo(schema_do_ramo(agent, ramo))
+    rescue ::Autonomia::Insurance::Parametros::FormularioInvalido => e
+      Rails.logger.error("[autonomia][insurance] formulario do ramo recusado: #{e.message}")
+      []
     end
 
     def schema_de_auto(agent)
+      schema_do_ramo(agent, self::AUTO)
+    end
+
+    def schema_do_ramo(agent, produto)
       return nil if agent.nil?
 
       connection = ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:ready?)
-      connection && schema_da_conexao(connection)
+      connection && schema_da_conexao(connection, produto)
     end
 
     # O schema guardado na conexão ou, faltando, o que o adapter responder AGORA — e fica guardado.
@@ -112,16 +156,16 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
     # custo é de 10 s de LEITURA por tentativa (`CONFERENCIA_TIMEOUT`, sem contar conexão e lock), e
     # num mesmo atendimento sem schema há até duas: na montagem do formulário e na conferência
     # (`Veiculo#sem_formulario?`). Só enquanto não há schema guardado.
-    def schema_da_conexao(connection)
-      connection.quote_schema(self::AUTO) || buscar_e_guardar_schema(connection)
+    def schema_da_conexao(connection, produto = self::AUTO)
+      connection.quote_schema(produto) || buscar_e_guardar_schema(connection, produto)
     rescue StandardError => e
-      Rails.logger.warn("[autonomia][insurance] schema de auto indisponivel connection=#{connection.id} #{e.class}")
+      Rails.logger.warn("[autonomia][insurance] schema de #{produto} indisponivel connection=#{connection.id} #{e.class}")
       nil
     end
 
-    def buscar_e_guardar_schema(connection)
-      schema = ::Autonomia::Insurance::Connector.client.quote_schema(provider: connection.provider, product: self::AUTO)
-      connection.merge_metadata!('quote_schemas' => connection.metadata.to_h['quote_schemas'].to_h.merge(self::AUTO => schema))
+    def buscar_e_guardar_schema(connection, produto)
+      schema = ::Autonomia::Insurance::Connector.client.quote_schema(provider: connection.provider, product: produto)
+      connection.merge_metadata!('quote_schemas' => connection.metadata.to_h['quote_schemas'].to_h.merge(produto => schema))
       schema
     end
 

@@ -14,6 +14,9 @@ class Autonomia::Insurance::Connections::Sync
   # Ela nao e falha do corretor e nao pede nada dele: pede que a gente abra outra sessao.
   SESSAO_PERDIDA = 'session_lost'.freeze
 
+  # O formulário que a varredura busca sempre, com o ramo ativo ou não (`produtos_do_mapa`).
+  AUTO = 'auto'.freeze
+
   # `last_error` vai para a tela: sem e-mail (login da corretora) e sem token do portal.
   EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/
   LONG_TOKEN = /[A-Za-z0-9_\-.]{32,}/
@@ -154,7 +157,7 @@ class Autonomia::Insurance::Connections::Sync
     map = @connector.capabilities(provider: @connection.provider, session: session)
     raise ::Autonomia::Insurance::Connector::Error.new(:protocol, 'capabilities payload is not a hash') unless map.is_a?(Hash)
 
-    schemas = quote_schemas
+    schemas = quote_schemas(map)
 
     # DENTRO DO LOCK, com a linha recarregada: as duas chamadas acima levam segundos, e nesse tempo
     # o polling de cotação escreve `insurers_pending_auth` no mesmo jsonb (`merge_metadata!`).
@@ -171,16 +174,30 @@ class Autonomia::Insurance::Connections::Sync
     end
   end
 
-  # O FORMULÁRIO DE AUTO vem junto da varredura (entrega 2): é o `quote/schema` do adapter, guardado
-  # na conexão para a ferramenta montar os parâmetros do especialista sem chamada por turno.
-  # -> { produto => schema } do que o adapter respondeu AGORA; vazio quando não respondeu — e aí
-  # fica o que a linha já tinha (mesclado por produto em `com_schemas`): um formulário velho é
+  # O FORMULÁRIO DE CADA RAMO vem junto da varredura (entrega 2 para auto; chat#591 para os outros):
+  # é o `quote/schema` do adapter, guardado na conexão para a ferramenta montar os parâmetros do
+  # especialista sem chamada por turno.
+  # -> { produto => schema } do que o adapter respondeu AGORA. Produto que não respondeu fica de fora,
+  # e aí fica o que a linha já tinha (mesclado por produto em `com_schemas`): um formulário velho é
   # melhor que nenhum, e a próxima sincronização tenta de novo.
-  def quote_schemas
-    { 'auto' => @connector.quote_schema(provider: @connection.provider, product: 'auto') }
-  rescue StandardError => e
-    Rails.logger.warn("[autonomia][insurance] quote_schema indisponivel na sincronizacao connection=#{@connection.id} #{e.class}")
-    {}
+  #
+  # CUSTO: uma chamada por produto, sem sessão e sem portal (o schema é do código do adapter), cada
+  # uma com o teto de leitura da conferência. Roda no `ScanJob`, fora de requisição web.
+  def quote_schemas(map)
+    produtos_do_mapa(map).each_with_object({}) do |produto, schemas|
+      schemas[produto] = @connector.quote_schema(provider: @connection.provider, product: produto)
+    rescue StandardError => e
+      Rails.logger.warn("[autonomia][insurance] quote_schema indisponivel na sincronizacao connection=#{@connection.id} " \
+                        "produto=#{produto} #{e.class}")
+    end
+  end
+
+  # Os ramos ATIVOS no mapa que a varredura acabou de ler (o mesmo filtro de
+  # `consultar_produtos_cotacao`), mais auto sempre: auto é o formulário padrão da ferramenta, e
+  # até a chat#591 era buscado em toda sincronização, com o ramo ativo ou não.
+  def produtos_do_mapa(map)
+    ativos = Array(map['products']).select { |produto| produto.is_a?(Hash) && produto['enabled'] }
+    ([AUTO] + ativos.map { |produto| produto['product'].to_s }).compact_blank.uniq
   end
 
   # Mesclado POR PRODUTO sobre o que a linha tem agora: adapter mudo num produto não apaga o outro.

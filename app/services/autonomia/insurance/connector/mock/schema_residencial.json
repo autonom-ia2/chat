@@ -1,0 +1,225 @@
+{
+  "product": "residencial",
+  "ramo": "2",
+  "campos": [
+    {
+      "campo": "segurado.nome",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "descricao": "Nome completo de quem contrata o seguro, como está no documento. Em empresa, a razão social. Se o cliente deu só o primeiro nome, peça o nome completo."
+    },
+    {
+      "campo": "segurado.cpfCnpj",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "descricao": "CPF de quem contrata o seguro, ou o CNPJ quando quem contrata é uma empresa. Só os números. Tem de ser o documento do titular do seguro, e não o de outra pessoa que apareceu na conversa."
+    },
+    {
+      "campo": "configuracoes.imovelCep",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.imovelLogradouro",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.imovelNumero",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": "100",
+      "descricao": "Número do imóvel no endereço, do jeito que o cliente disse, com letra se tiver. Rua, bairro e cidade o sistema busca pelo CEP: não pergunte por eles."
+    },
+    {
+      "campo": "configuracoes.imovelComplemento",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "padrao": "",
+      "descricao": "Complemento do endereço do imóvel: apartamento, bloco, torre, casa dentro de vila ou de condomínio. É opcional em casa: casa de rua costuma não ter, e quando o cliente diz que a casa não tem, deixe vazio e não pergunte de novo. Em apartamento o portal exige o complemento, então pergunte o número do apartamento e o bloco, se houver."
+    },
+    {
+      "campo": "configuracoes.imovelBairro",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.imovelCidade",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.imovelUF",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.endereco",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ", 100 ,  - ,  - "
+    },
+    {
+      "campo": "configuracoes.imovelUso",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": 1,
+      "descricao": "Como o imóvel é usado. Habitual quando alguém mora lá o ano todo, o cliente ou a família dele (\"moro lá\", \"é minha casa\", \"mora lá o ano todo\", \"meus pais moram lá\"). Veraneio quando é casa de temporada, usada em férias e fins de semana (\"casa de praia\", \"sítio de fim de semana\", \"casa de campo\"). Desocupado quando ninguém mora lá agora (\"está vazio\", \"fechado para vender\", \"esperando inquilino\"). Se o cliente fala do imóvel onde mora, é habitual; imóvel alugado para outra pessoa, com alguém morando lá, também é habitual. Na dúvida, pergunte: não marque habitual por padrão num imóvel de temporada ou vazio. Valores: 1=Habitual; 2=Veraneio; 3=Desocupado.",
+      "valores": {
+        "1": "Habitual",
+        "2": "Veraneio",
+        "3": "Desocupado"
+      }
+    },
+    {
+      "campo": "configuracoes.imovelTipoResidencia",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": 1,
+      "descricao": "Tipo do imóvel. Casa de rua, sobrado ou casa em vila sem portaria é casa. Casa dentro de condomínio fechado, com portaria ou muro comum, é casa em condomínio fechado. Apartamento, cobertura, flat ou kitnet em prédio é apartamento, e aí peça também o complemento. Se o cliente disse só \"casa\", pergunte se fica em condomínio fechado. Valores: 1=Casa; 2=Casa em condomínio Fechado; 3=Apartamento.",
+      "valores": {
+        "1": "Casa",
+        "2": "Casa em condomínio Fechado",
+        "3": "Apartamento"
+      }
+    },
+    {
+      "campo": "configuracoes.imovelConstrucao",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": 1,
+      "descricao": "Do que o imóvel é feito, pela régua do mercado: o que conta é o material das paredes externas e, entre superior e sólida, o piso e a estrutura do telhado. Superior: paredes, pisos, colunas e estrutura do telhado de material que não pega fogo, como concreto, laje e metal, com a fiação embutida ou protegida; é o caso de apartamento em prédio de concreto (\"moro em prédio\", \"é apartamento\"). Sólida: paredes externas de tijolo, bloco ou concreto, sem revestimento de madeira, mas com piso ou estrutura do telhado de madeira; é o caso da casa de tijolo com telhado de madeira e telha. Mista: até um quarto das paredes externas de madeira ou outro material que pega fogo (\"parte da casa é de madeira\"). Inferior: mais de um quarto das paredes externas de material que pega fogo, como casa de madeira, chalé, taipa ou pau a pique. Parede de isopainel com núcleo de isopor ou poliuretano conta como material que pega fogo. Se o cliente não falou do material: apartamento em prédio é superior, casa de alvenaria é sólida; se ele citou madeira em qualquer parte da casa, pergunte quanto das paredes de fora é de madeira. Valores: 1=Sólida; 2=Mista; 3=Inferior; 4=Superior.",
+      "valores": {
+        "1": "Sólida",
+        "2": "Mista",
+        "3": "Inferior",
+        "4": "Superior"
+      }
+    },
+    {
+      "campo": "configuracoes.imovelObjetoSegurado",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": 3,
+      "descricao": "O que o seguro protege. Prédio é a construção: paredes, telhado, instalações. Conteúdo são os bens de dentro: móveis, eletrodomésticos, eletrônicos, roupas. Prédio e conteúdo é o padrão para todo mundo, dono ou inquilino: é o que vale quando o cliente não disse outra coisa, e não é preciso perguntar. Só prédio quando o seguro é para o aluguel: o imóvel do cliente está alugado para outra pessoa, e ele quer segurar só a construção (\"é para o apartamento que eu alugo\", \"quero segurar a casa que está alugada\"). Só conteúdo apenas quando o cliente pede explicitamente para segurar só as coisas dele (\"quero segurar só os meus móveis\", \"só o que tem dentro\"). Morar de aluguel, sozinho, não muda o padrão. Valores: 1=Prédio; 2=Conteúdo; 3=Prédio + Conteúdo.",
+      "valores": {
+        "1": "Prédio",
+        "2": "Conteúdo",
+        "3": "Prédio + Conteúdo"
+      }
+    },
+    {
+      "campo": "configuracoes.imovelPatrimonioHistorico",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": false,
+      "descricao": "true quando o imóvel é tombado ou reconhecido como patrimônio histórico (\"é tombado\", \"casarão histórico\", \"não posso mexer na fachada\"). Se ninguém falou disso, false."
+    },
+    {
+      "campo": "configuracoes.imovelPossuiAlarme",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": false,
+      "descricao": "true quando o imóvel tem alarme (\"tem alarme\", \"a sirene toca se abrir a porta\"). Sem menção a alarme, false: nunca marque equipamento que o cliente não confirmou."
+    },
+    {
+      "campo": "configuracoes.imovelPossuiAlarmeMonitorado",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": false,
+      "descricao": "true quando o alarme é monitorado por uma empresa, que recebe o aviso e manda alguém (\"alarme ligado na central\", \"tem monitoramento\"). Alarme que só toca no local não é monitorado. Sem menção, false."
+    },
+    {
+      "campo": "configuracoes.imovelPossuiCercaEletrica",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": false,
+      "descricao": "true quando o imóvel tem cerca elétrica no muro (\"cerca elétrica\", \"choque no muro\"). Concertina ou arame farpado sem choque não é cerca elétrica. Sem menção, false."
+    },
+    {
+      "campo": "configuracoes.imovelPossuiCircuitoFechado",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": false,
+      "descricao": "true quando há câmeras de segurança gravando o imóvel (\"tem câmera\", \"circuito de TV\", \"CFTV\"). Sem menção, false."
+    },
+    {
+      "campo": "configuracoes.imovelPossuiGrades",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": false,
+      "descricao": "true quando as janelas ou portas de acesso têm grades (\"janela com grade\", \"portão de grade\"). Sem menção, false."
+    },
+    {
+      "campo": "configuracoes.imovelPossuiPorteiroEletronico",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": false,
+      "descricao": "true quando a entrada tem porteiro eletrônico ou interfone com abertura remota do portão (\"interfone\", \"porteiro eletrônico\"). Sem menção, false."
+    },
+    {
+      "campo": "configuracoes.imovelPossuiVigilancia24hs",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": false,
+      "descricao": "true quando há vigilância de pessoas o dia inteiro: portaria dia e noite, vigia ou ronda (\"portaria vinte e quatro horas\", \"tem segurança na rua\"). Câmera sozinha não é vigilância. Sem menção, false."
+    },
+    {
+      "campo": "configuracoes.seguradoProprietario",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": true,
+      "descricao": "true quando quem contrata é dono do imóvel; false quando mora de aluguel (\"sou inquilino\", \"moro de aluguel\", \"pago aluguel\"). Quem é dono e aluga o imóvel para outra pessoa continua proprietário: true. Se o cliente não disse, pergunte se o imóvel é dele ou se ele mora de aluguel. Ser dono ou inquilino não decide o que o seguro protege: nos dois casos o padrão é prédio e conteúdo."
+    },
+    {
+      "campo": "configuracoes.areaRisco",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.zonaRural",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.isDanosIncendioRaioExplosao",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": 200000,
+      "descricao": "Valor que o cliente quer segurar, em reais, só o número. Pergunte de forma simples quanto ele quer segurar, e aceite valor aproximado ou redondo (\"uns 300 mil\" é 300000). Só explique como chegar no número se ele pedir ajuda. No padrão, prédio e conteúdo, o valor é o custo de reconstruir o imóvel, sem o terreno, porque terreno não pega fogo, somado ao valor das coisas de dentro. Para quem mora de aluguel e segura só o que é dele, é quanto valem as coisas dele. Não faça conta por ele nem desconte nada do que ele disse: o valor é o que o cliente responder."
+    }
+  ]
+}

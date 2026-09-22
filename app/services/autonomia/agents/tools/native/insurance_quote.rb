@@ -304,8 +304,20 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # cada campo novo mexer no arquivo errado.
   def quote_input
     @quote_input ||= ::Autonomia::Insurance::QuoteInput.new(
-      produto: produto, params: params, dados: dados, commission_percent: commission_percent
+      produto: produto, params: params, dados: dados, commission_percent: commission_percent,
+      grupos_do_ramo: grupos_do_ramo
     )
+  end
+
+  # OS GRUPOS DO FORMULÁRIO DO RAMO, lidos do schema que a conexão GUARDA (chat#591). Sem chamada ao
+  # adapter aqui: o formulário que o modelo recebeu foi montado deste mesmo schema, e quem o busca
+  # quando falta é a montagem (`Declaracao#schema_da_conexao`). Sem schema guardado não houve
+  # formulário, e o que o modelo escreveu está em `dados`.
+  def grupos_do_ramo
+    return [] if produto == AUTO
+
+    schema = ::Autonomia::Insurance::Connection.for_account(account).find(&:ready?)&.quote_schema(produto)
+    ::Autonomia::Insurance::Parametros.new(schema, ramo: true).nomes_dos_grupos
   end
 
   # `nil` quando o JSON não presta — diferente de `{}`, que é "o cliente ainda não disse nada" e é

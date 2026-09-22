@@ -113,19 +113,30 @@ class Autonomia::Agents::Tools::Native::Base
     # `agent` é opcional: a ferramenta que monta o formulário a partir do que a CONTA conectou
     # (entrega 2 do Agente de Cotação — os ~90 campos de auto vêm do adapter) precisa saber de quem é
     # o formulário. As demais ignoram, e `params_for` cai na lista fixa da classe.
-    def openai_schema(agent = nil)
+    # `especialista` também: quem monta o turno de um especialista (`Specialist#tools`) diz qual é, e
+    # a cotação usa isso para dar a cada especialista o formulário do ramo dele (chat#591).
+    #
+    # A DESCRIÇÃO SAI DOS PARÂMETROS QUE VÃO AO MODELO (revisão da chat#592): as duas coisas que ele lê sobre a
+    # ferramenta não podem se contradizer, e a regra mais perto da ação vence. Montadas uma da outra, não há como.
+    def openai_schema(agent = nil, especialista: nil)
+      parametros = params_for(agent, especialista: especialista)
       {
         type: 'function',
         name: slug,
-        description: description,
-        parameters: objeto(params_for(agent)),
+        description: description_for(parametros),
+        parameters: objeto(parametros),
         strict: true
       }
     end
 
-    # Os parâmetros DE UMA CONTA. O padrão é a lista fixa da classe.
-    def params_for(_agent)
+    # Os parâmetros DE UMA CONTA (e de um especialista). O padrão é a lista fixa da classe.
+    def params_for(_agent, **)
       params
+    end
+
+    # A descrição para ESTES parâmetros. O padrão é a fixa da classe.
+    def description_for(_parametros)
+      description
     end
 
     # UM OBJETO EM STRICT MODE: todas as chaves em `required`, `additionalProperties: false`, e o
@@ -159,12 +170,15 @@ class Autonomia::Agents::Tools::Native::Base
                { 'type' => 'array', 'items' => { 'type' => param['items'] || 'string' },
                  'description' => param['description'] }.compact
              else
-               param.slice('type', 'description')
+               param.slice('type', 'description', 'enum')
              end
       return base unless param['required'] == false
 
       chave = base.key?(:type) ? :type : 'type'
-      base.merge(chave => [base[chave], 'null'])
+      anulavel = base.merge(chave => [base[chave], 'null'])
+      # O `enum` restringe o valor por conta própria: sem `null` na lista, o `null` que o tipo aceita
+      # seria recusado pelo próprio `enum`, e o opcional deixaria de ser opcional (chat#591).
+      anulavel['enum'] ? anulavel.merge('enum' => anulavel['enum'] + [nil]) : anulavel
     end
   end
 

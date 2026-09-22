@@ -96,6 +96,62 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
     end
   end
 
+  # CHAT#591: a varredura guarda o schema de CADA ramo ativo no mapa da corretora, não só o de auto —
+  # é dele que sai o formulário do especialista de cada ramo. Uma chamada por produto.
+  describe 'o schema de cada ramo ativo na varredura' do
+    def produto(slug, enabled:)
+      { 'product' => slug, 'enabled' => enabled, 'insurers' => [] }
+    end
+
+    def connector_com_mapa(produtos, &)
+      dobro = instance_double(Autonomia::Insurance::Connector::Mock,
+                              open_session: { 'platform' => 'agger', 'data' => { 'token' => 'x' },
+                                              'expires_at' => 3.hours.from_now.utc.iso8601 },
+                              connection_status: { 'status' => 'ready', 'account_label' => 'CORRETORA X' },
+                              capabilities: { 'products' => produtos, 'scanned_at' => Time.current.iso8601 })
+      allow(dobro).to receive(:quote_schema, &)
+      dobro
+    end
+
+    it 'busca uma vez cada ramo ativo, e auto sempre; ramo desligado não é buscado' do
+      connector = connector_com_mapa([produto('residencial', enabled: true), produto('vida', enabled: true),
+                                      produto('bike', enabled: false)]) { |product:, **| { 'campos' => [{ 'campo' => "#{product}.x" }] } }
+      conexao = connection
+
+      described_class.new(conexao, connector: connector).call
+
+      expect(conexao.reload.metadata['quote_schemas'].keys).to match_array(%w[auto residencial vida])
+      expect(conexao.quote_schema('residencial')).to eq('campos' => [{ 'campo' => 'residencial.x' }])
+      %w[auto residencial vida].each do |slug|
+        expect(connector).to have_received(:quote_schema).with(provider: 'agger', product: slug).once
+      end
+      expect(connector).not_to have_received(:quote_schema).with(provider: 'agger', product: 'bike')
+    end
+
+    it 'adapter mudo num ramo não apaga o schema guardado dele nem impede os outros' do
+      conexao = connection
+      conexao.update!(metadata: { 'quote_schemas' => { 'vida' => { 'campos' => [{ 'campo' => 'antigo' }] } } })
+      connector = connector_com_mapa([produto('residencial', enabled: true), produto('vida', enabled: true)]) do |product:, **|
+        raise Autonomia::Insurance::Connector::Error.new(:unavailable, 'mudo') if product == 'vida'
+
+        { 'campos' => [{ 'campo' => "#{product}.novo" }] }
+      end
+
+      described_class.new(conexao, connector: connector).call
+
+      expect(conexao.reload.status).to eq('ready')
+      expect(conexao.quote_schema('vida')).to eq('campos' => [{ 'campo' => 'antigo' }])
+      expect(conexao.quote_schema('residencial')).to eq('campos' => [{ 'campo' => 'residencial.novo' }])
+    end
+
+    it 'com o mock, guarda o schema de residencial gerado do adapter, e vida (que o mock não tem) fica de fora' do
+      conexao = described_class.new(connection, connector: Autonomia::Insurance::Connector::Mock.new).call
+
+      expect(conexao.quote_schema('residencial')['campos']).to eq(Autonomia::Insurance::Connector::Mock::SCHEMA_RESIDENCIAL['campos'])
+      expect(conexao.metadata['quote_schemas'].keys).to match_array(%w[auto residencial])
+    end
+  end
+
   it 'keeps the reason when the portal answers with a degraded status' do
     # Arrange
     connector = connector_answering({ 'status' => 'degraded',
