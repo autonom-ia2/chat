@@ -158,6 +158,28 @@ RSpec.describe 'MFA API', type: :request do
         user.generate_backup_codes!
       end
 
+      context 'when the platform no longer offers 2FA (login único automático)' do
+        before { allow(Chatwoot).to receive(:mfa_enabled?).and_return(false) }
+
+        it 'still lets the user disable the 2FA they already had' do
+          delete '/api/v1/profile/mfa',
+                 params: { password: 'Test@123456', otp_code: user.current_otp },
+                 headers: user.create_new_auth_token,
+                 as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(user.reload.otp_required_for_login).to be_falsey
+        end
+
+        it 'does not let a user without 2FA turn it on' do
+          other = create(:user, account: account)
+          post '/api/v1/profile/mfa', headers: other.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:forbidden)
+          expect(other.reload.otp_secret).to be_nil
+        end
+      end
+
       context 'with valid password and OTP' do
         it 'disables 2FA successfully' do
           otp_code = user.current_otp

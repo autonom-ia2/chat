@@ -21,6 +21,12 @@ RSpec.describe Chatwoot, '.mfa_enabled?' do
     end
   end
 
+  it 'só considera o login único automático quando o valor é exatamente true, como o painel' do
+    with_modified_env(chaves.merge('AUTONOMIA_SSO_AUTO_REDIRECT' => '1')) do
+      expect(described_class.mfa_enabled?).to be(true)
+    end
+  end
+
   it 'fica desligado sem as chaves de criptografia' do
     with_modified_env('ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY' => nil, 'AUTONOMIA_SSO_AUTO_REDIRECT' => nil) do
       expect(described_class.mfa_enabled?).to be(false)
