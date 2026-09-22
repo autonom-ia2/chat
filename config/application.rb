@@ -112,7 +112,10 @@ module Chatwoot
       ENV['ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT'].present?
   end
 
+  # Com o login único automático (AUTONOMIA_SSO_AUTO_REDIRECT), a entrada não passa pela
+  # verificação em duas etapas local, e quem entra assim não tem senha para desligá-la depois.
+  # Oferecer a verificação nesse caso não protege ninguém e ainda pode prender a pessoa.
   def self.mfa_enabled?
-    encryption_configured?
+    encryption_configured? && !ActiveModel::Type::Boolean.new.cast(ENV.fetch('AUTONOMIA_SSO_AUTO_REDIRECT', false))
   end
 end
