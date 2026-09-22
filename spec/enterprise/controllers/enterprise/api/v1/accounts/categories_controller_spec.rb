@@ -60,15 +60,15 @@ RSpec.describe 'Enterprise Categories API', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'returns success for agents with knowledge_base_manage permission' do
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
-             params: category_params,
-             headers: agent_with_role.create_new_auth_token,
-             as: :json
+      it 'does not allow agents with knowledge_base_manage permission to create a category' do
+        expect do
+          post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
+               params: category_params,
+               headers: agent_with_role.create_new_auth_token,
+               as: :json
+        end.not_to change(Category, :count)
 
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['name']).to eq('New Category')
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
@@ -84,41 +84,44 @@ RSpec.describe 'Enterprise Categories API', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'returns success for agents with knowledge_base_manage permission' do
+      it 'does not allow agents with knowledge_base_manage permission to update a category' do
         put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/#{category.id}",
             params: category_params,
             headers: agent_with_role.create_new_auth_token,
             as: :json
 
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        expect(json_response['payload']['name']).to eq('Updated Category')
+        expect(response).to have_http_status(:unauthorized)
+        expect(category.reload.name).to eq('category')
       end
     end
   end
 
   describe 'DELETE /api/v1/accounts/:account_id/portals/:portal_slug/categories/:id' do
     context 'when it is an authenticated user' do
-      it 'returns success for agents with knowledge_base_manage permission' do
-        delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/#{category.id}",
-               headers: agent_with_role.create_new_auth_token,
-               as: :json
+      it 'does not allow agents with knowledge_base_manage permission to delete a category' do
+        expect do
+          delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/#{category.id}",
+                 headers: agent_with_role.create_new_auth_token,
+                 as: :json
+        end.not_to change(Category, :count)
 
-        expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
 
   describe 'POST /api/v1/accounts/:account_id/portals/:portal_slug/categories/reorder' do
     context 'when it is an authenticated user' do
-      it 'returns success for agents with knowledge_base_manage permission' do
+      it 'does not allow agents with knowledge_base_manage permission to reorder categories' do
+        original_position = category.position
+
         post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/reorder",
              params: { positions_hash: { category.id => 20 } },
              headers: agent_with_role.create_new_auth_token,
              as: :json
 
-        expect(response).to have_http_status(:success)
-        expect(category.reload.position).to eq(20)
+        expect(response).to have_http_status(:unauthorized)
+        expect(category.reload.position).to eq(original_position)
       end
 
       it 'returns not found for invalid portal slug' do

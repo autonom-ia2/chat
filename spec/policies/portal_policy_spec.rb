@@ -23,9 +23,10 @@ RSpec.describe PortalPolicy, type: :policy do
     end
   end
 
-  permissions :update?, :edit?, :create?, :destroy?, :logo? do
+  # A Central de Ajuda é só leitura: nem o administrador escreve (#501).
+  permissions :update?, :edit?, :create?, :destroy?, :archive?, :logo?, :send_instructions? do
     context 'when administrator' do
-      it { expect(portal_policy).to permit(administrator_context, portal) }
+      it { expect(portal_policy).not_to permit(administrator_context, portal) }
     end
 
     context 'when agent' do

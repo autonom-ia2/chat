@@ -22,9 +22,20 @@ RSpec.describe ArticlePolicy, type: :policy do
     end
   end
 
-  permissions :update?, :show?, :edit?, :create?, :destroy?, :reorder? do
+  permissions :show? do
     context 'when administrator' do
       it { expect(article_policy).to permit(administrator_context, article) }
+    end
+
+    context 'when agent' do
+      it { expect(article_policy).not_to permit(agent_context, article) }
+    end
+  end
+
+  # A Central de Ajuda é só leitura: nem o administrador escreve (#501).
+  permissions :update?, :edit?, :create?, :destroy?, :reorder? do
+    context 'when administrator' do
+      it { expect(article_policy).not_to permit(administrator_context, article) }
     end
 
     context 'when agent' do

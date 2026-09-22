@@ -40,93 +40,14 @@ RSpec.describe 'Api::V1::Accounts::Categories', type: :request do
         }
       end
 
-      let!(:category_params_2) do
-        {
-          category: {
-            name: 'test_category_2',
-            description: 'test_description_2',
-            position: 6,
-            locale: 'es',
-            slug: 'test_category_2',
-            parent_category_id: category.id,
-            associated_category_id: category_to_associate.id,
-            related_category_ids: [related_category_1.id, related_category_2.id]
-          }
-        }
-      end
+      it 'does not allow administrators to create a category' do
+        expect do
+          post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
+               params: category_params,
+               headers: admin.create_new_auth_token
+        end.not_to change(Category, :count)
 
-      it 'creates category' do
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
-             params: category_params,
-             headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:success)
-
-        json_response = response.parsed_body
-
-        expect(json_response['payload']['related_categories'][0]['id']).to eql(related_category_1.id)
-        expect(json_response['payload']['related_categories'][1]['id']).to eql(related_category_2.id)
-        expect(json_response['payload']['parent_category']['id']).to eql(category.id)
-        expect(json_response['payload']['root_category']['id']).to eql(category_to_associate.id)
-        expect(category.reload.sub_category_ids).to eql([Category.last.id])
-        expect(category_to_associate.reload.associated_category_ids).to eql([Category.last.id])
-      end
-
-      it 'creates multiple sub_categories under one parent_category' do
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
-             params: category_params,
-             headers: admin.create_new_auth_token
-
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
-             params: category_params_2,
-             headers: admin.create_new_auth_token
-
-        expect(response).to have_http_status(:success)
-        expect(category.reload.sub_category_ids).to eql(Category.last(2).pluck(:id))
-      end
-
-      it 'creates multiple associated_categories with one category' do
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
-             params: category_params,
-             headers: admin.create_new_auth_token
-
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
-             params: category_params_2,
-             headers: admin.create_new_auth_token
-
-        expect(response).to have_http_status(:success)
-        expect(category_to_associate.reload.associated_category_ids).to eql(Category.last(2).pluck(:id))
-      end
-
-      it 'will throw an error on locale, category_id uniqueness' do
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
-             params: category_params,
-             headers: admin.create_new_auth_token
-
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
-             params: category_params,
-             headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:unprocessable_entity)
-        json_response = response.parsed_body
-        expect(json_response['message']).to eql('Locale should be unique in the category and portal')
-      end
-
-      it 'will throw an error slug presence' do
-        category_params = {
-          category: {
-            name: 'test_category',
-            description: 'test_description',
-            position: 1,
-            locale: 'es'
-          }
-        }
-
-        post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories",
-             params: category_params,
-             headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:unprocessable_entity)
-        json_response = response.parsed_body
-
-        expect(json_response['message']).to eql("Slug can't be blank")
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
@@ -140,7 +61,7 @@ RSpec.describe 'Api::V1::Accounts::Categories', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'updates category' do
+      it 'does not allow administrators to update a category' do
         category_params = {
           category: {
             name: 'test_category_2',
@@ -152,68 +73,13 @@ RSpec.describe 'Api::V1::Accounts::Categories', type: :request do
         }
 
         expect(category.name).not_to eql(category_params[:category][:name])
-        expect(category.related_categories).to be_empty
-        expect(category.parent_category).to be_nil
 
         put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/#{category.id}",
             params: category_params,
             headers: admin.create_new_auth_token
 
-        json_response = response.parsed_body
-
-        expect(json_response['payload']['name']).to eql(category_params[:category][:name])
-        expect(json_response['payload']['related_categories'][0]['id']).to eql(related_category_1.id)
-        expect(json_response['payload']['parent_category']['id']).to eql(related_category_2.id)
-        expect(related_category_2.reload.sub_category_ids).to eql([category.id])
-      end
-
-      it 'updates related categories' do
-        category_params = {
-          category: {
-            related_category_ids: [related_category_1.id]
-          }
-        }
-        category.related_categories << related_category_2
-        category.save!
-
-        expect(category.related_category_ids).to eq([related_category_2.id])
-
-        put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/#{category.id}",
-            params: category_params,
-            headers: admin.create_new_auth_token
-
-        expect(response).to have_http_status(:success)
-
-        json_response = response.parsed_body
-
-        expect(json_response['payload']['name']).to eql(category.name)
-        expect(json_response['payload']['related_categories'][0]['id']).to eql(related_category_1.id)
-        expect(category.reload.related_category_ids).to eq([related_category_1.id])
-        expect(related_category_1.reload.related_category_ids).to be_empty
-        expect(json_response['payload']['position']).to eql(category.position)
-      end
-
-      # [category_1, category_2] !== [category_2, category_1]
-      it 'update reverse associations for related categories' do
-        category.related_categories << related_category_2
-        category.save!
-
-        expect(category.related_category_ids).to eq([related_category_2.id])
-
-        category_params = {
-          category: {
-            related_category_ids: [category.id]
-          }
-        }
-
-        put "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/#{related_category_2.id}",
-            params: category_params,
-            headers: admin.create_new_auth_token
-
-        expect(response).to have_http_status(:success)
-
-        expect(category.reload.related_category_ids).to eq([related_category_2.id])
-        expect(related_category_2.reload.related_category_ids).to eq([category.id])
+        expect(response).to have_http_status(:unauthorized)
+        expect(category.reload.name).not_to eql(category_params[:category][:name])
       end
     end
   end
@@ -227,12 +93,13 @@ RSpec.describe 'Api::V1::Accounts::Categories', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'deletes category' do
-        delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/#{category.id}",
-               headers: admin.create_new_auth_token
-        expect(response).to have_http_status(:success)
-        deleted_category = Category.find_by(id: category.id)
-        expect(deleted_category).to be_nil
+      it 'does not allow administrators to delete a category' do
+        expect do
+          delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/#{category.id}",
+                 headers: admin.create_new_auth_token
+        end.not_to change(Category, :count)
+
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
@@ -256,16 +123,15 @@ RSpec.describe 'Api::V1::Accounts::Categories', type: :request do
     end
 
     context 'when it is an authenticated user' do
-      it 'reorders categories' do
+      it 'does not allow administrators to reorder categories' do
+        original_position = category.position
+
         post "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/categories/reorder",
              params: { positions_hash: positions_hash },
              headers: admin.create_new_auth_token
 
-        expect(response).to have_http_status(:success)
-        expect(category.reload.position).to eq(40)
-        expect(category_to_associate.reload.position).to eq(10)
-        expect(related_category_1.reload.position).to eq(30)
-        expect(related_category_2.reload.position).to eq(20)
+        expect(response).to have_http_status(:unauthorized)
+        expect(category.reload.position).to eq(original_position)
       end
 
       it 'returns not found when portal does not exist' do
