@@ -253,9 +253,11 @@ RSpec.describe Autonomia::Guide::Consulta do
 
       expect(resposta).to include('NÃO existem neste recurso e não vieram: name')
       expect(resposta).to include('inbox.name')
+      # O aviso não come o espaço dos dados: o item continua vindo.
+      expect(JSON.parse(resposta.split(' [NOTA INTERNA').first)).to eq([{ 'id' => conta.crm_pipeline_inboxes.last.id }])
     end
 
-    it 'não inventa aviso quando todos os campos pedidos existem' do
+    it 'não inventa aviso quando todos os campos pedidos existem', :aggregate_failures do
       caixa = create_crm_inbox(account: conta, name: 'Email Renovação', members: [admin])
       conta.crm_pipeline_inboxes.create!(pipeline: renovacoes, inbox: caixa, created_by: admin)
 
@@ -263,6 +265,8 @@ RSpec.describe Autonomia::Guide::Consulta do
                               campos: %w[inbox_id inbox.name])
 
       expect(resposta).not_to include('NÃO existem')
+      expect(JSON.parse(resposta.split(' [NOTA INTERNA').first))
+        .to eq([{ 'inbox_id' => caixa.id, 'inbox.name' => 'Email Renovação' }])
     end
 
     # O kanban lê `?pipeline_id=`. Antes o parâmetro era jogado fora e vinha o
