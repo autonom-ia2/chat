@@ -5,7 +5,8 @@
 # e perguntar isso a quem mora na Av. Faria Lima é perguntar à toa. Até 22/09/2026 só o adapter via o
 # endereço, dentro do envio da cotação: o especialista cotava sem saber a rua. Agora ele consulta o
 # CEP que o cliente deu, recebe rua, bairro, cidade e UF, e deduz pelo endereço e pela conversa; só
-# pergunta quando o endereço indica (estrada, sítio, beira de rio, cidade pequena).
+# pergunta quando o endereço indica (estrada, sítio, beira de rio). Cidade pequena NÃO é sinal: costuma ter CEP
+# único, e o modelo perguntaria "mora num sítio?" a quem mora no centro (revisão da adapters#86).
 #
 # Gratuita no portal e síncrona: roda no turno, com o modelo esperando, e por isso só com a sessão que
 # já está viva (`with_live_session`), como a de placa. O que a consulta não responde inteiro (CEP que
@@ -23,8 +24,8 @@ class Autonomia::Agents::Tools::Native::CepLookup < Autonomia::Agents::Tools::Na
   # O que o especialista faz com o endereço. É a regra do piloto: deduzir, e perguntar só com indício.
   DEDUCAO = 'Com este endereço e com o que o cliente já contou, deduza se o imóvel fica em zona rural ou em ' \
             'área de risco (beira de rio, encosta, morro). Só pergunte isso ao cliente quando houver indício: ' \
-            'estrada, sítio, chácara, fazenda ou zona rural no endereço, imóvel perto de rio, encosta ou morro, ' \
-            'ou cidade pequena. Endereço urbano comum não pede essa pergunta.'.freeze
+            'estrada, sítio, chácara, fazenda ou zona rural no endereço, imóvel perto de rio, encosta ou morro. ' \
+            'Endereço urbano comum não pede essa pergunta, nem o de cidade pequena, que costuma ter CEP único.'.freeze
   SEM_ENDERECO = 'A consulta deste CEP não trouxe o endereço completo, e sem ele não há como deduzir zona rural ' \
                  'nem área de risco. Não invente o endereço. O que perguntar ao cliente antes de seguir:'.freeze
   # Recusa de validação sem a lista de perguntas (o adapter sempre a manda; isto é o que o modelo lê se

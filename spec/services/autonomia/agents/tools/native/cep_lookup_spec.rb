@@ -49,8 +49,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::CepLookup do
         'Endereço do CEP 01310100: Avenida Paulista - de 612 A 1510 - Lado Par, bairro Bela Vista, São Paulo, SP. ' \
         'Com este endereço e com o que o cliente já contou, deduza se o imóvel fica em zona rural ou em área de ' \
         'risco (beira de rio, encosta, morro). Só pergunte isso ao cliente quando houver indício: estrada, sítio, ' \
-        'chácara, fazenda ou zona rural no endereço, imóvel perto de rio, encosta ou morro, ou cidade pequena. ' \
-        'Endereço urbano comum não pede essa pergunta.'
+        'chácara, fazenda ou zona rural no endereço, imóvel perto de rio, encosta ou morro. ' \
+        'Endereço urbano comum não pede essa pergunta, nem o de cidade pequena, que costuma ter CEP único.'
       )
     end
 
