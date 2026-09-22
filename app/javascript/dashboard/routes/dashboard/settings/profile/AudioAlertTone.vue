@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import Icon from 'next/icon/Icon.vue';
 import * as Sentry from '@sentry/vue';
-import FormSelect from 'v3/components/Form/Select.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
   value: {
@@ -63,30 +63,20 @@ const playAudio = async () => {
 </script>
 
 <template>
-  <div class="flex items-center gap-2">
-    <FormSelect
-      v-model="selectedValue"
-      name="alertTone"
-      spacing="compact"
-      class="flex-grow"
-      :value="selectedValue"
-      :options="alertTones"
-      :label="label"
-    >
-      <option
-        v-for="tone in alertTones"
-        :key="tone.label"
-        :value="tone.value"
-        :selected="tone.value === selectedValue"
-      >
-        {{ tone.label }}
-      </option>
-    </FormSelect>
+  <div class="flex items-end gap-2">
+    <div class="flex flex-col flex-grow gap-1">
+      <span class="text-sm font-medium text-n-slate-12">{{ label }}</span>
+      <ChoiceSelect
+        v-model="selectedValue"
+        :options="alertTones"
+        :aria-label="label"
+      />
+    </div>
     <button
       v-tooltip.top="
         $t('PROFILE_SETTINGS.FORM.AUDIO_NOTIFICATIONS_SECTION.PLAY')
       "
-      class="border-0 shadow-sm outline-none flex justify-center items-center size-10 appearance-none rounded-xl ring-n-weak ring-1 ring-inset focus:ring-2 focus:ring-inset focus:ring-n-brand flex-shrink-0 mt-[1.75rem]"
+      class="border-0 shadow-sm outline-none flex justify-center items-center appearance-none rounded-xl ring-n-weak ring-1 ring-inset focus:ring-2 focus:ring-inset focus:ring-n-brand flex-shrink-0 size-11"
       @click="playAudio"
     >
       <Icon icon="i-lucide-volume-2" />

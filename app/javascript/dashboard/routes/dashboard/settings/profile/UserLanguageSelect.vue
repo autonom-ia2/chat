@@ -6,7 +6,7 @@ import { useConfig } from 'dashboard/composables/useConfig';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 
-import FormSelect from 'v3/components/Form/Select.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 defineProps({
   label: { type: String, default: '' },
@@ -64,6 +64,13 @@ const updateLanguage = async languageCode => {
   }
 };
 
+const choiceOptions = computed(() =>
+  languageOptions.value.map(option => ({
+    value: option.iso_639_1_code,
+    label: option.name,
+  }))
+);
+
 const selectedValue = computed({
   get: () => currentLanguage.value,
   set: value => {
@@ -82,22 +89,10 @@ const selectedValue = computed({
         {{ description }}
       </p>
     </div>
-    <FormSelect
+    <ChoiceSelect
       v-model="selectedValue"
-      name="language"
-      spacing="compact"
-      class="min-w-28 mt-px"
-      :options="languageOptions"
-      label=""
-    >
-      <option
-        v-for="option in languageOptions"
-        :key="option.iso_639_1_code || 'default'"
-        :value="option.iso_639_1_code"
-        :selected="option.iso_639_1_code === selectedValue"
-      >
-        {{ option.name }}
-      </option>
-    </FormSelect>
+      :options="choiceOptions"
+      :aria-label="label"
+    />
   </div>
 </template>

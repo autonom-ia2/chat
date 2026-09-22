@@ -41,6 +41,12 @@
   - Always use Tailwind utility classes  
 - **Colors**: Refer to `tailwind.config.js` for color definitions
 
+## Escolha única: sem `<select>` nativo (regra do Rodrigo, 18/09/2026)
+
+- Nunca use `<select>` nativo em tela de produto (nem `v3/components/Form/Select.vue` nem `components-next/select/Select.vue`, que renderizam um por baixo). A lista nativa ignora o design system e muda de navegador para navegador.
+- Use `components-next/choice-select/ChoiceSelect.vue`: teclado do padrão WAI-ARIA *select-only combobox* (`dashboard/helper/choiceKeys.js`), leitor de tela e alvo de toque de 44 px.
+- Ao tocar numa tela que ainda tenha `<select>`, troque todos os dela.
+
 ## General Guidelines
 
 - MVP focus: Least code change, happy-path only
