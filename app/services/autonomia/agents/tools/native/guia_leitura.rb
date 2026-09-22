@@ -59,8 +59,11 @@ class Autonomia::Agents::Tools::Native::GuiaLeitura < Autonomia::Agents::Tools::
   def call
     return recusa_sem_contexto if @operador.nil?
 
-    @operador.consulta.ler(@params['recurso'].to_s, parametros, filtros,
-                           campos: campos, teto: TETO)
+    lido = @operador.consulta.ler(@params['recurso'].to_s, parametros, filtros,
+                                  campos: campos, teto: TETO)
+    # O botão de UM registro confere o id contra o que foi lido (#590).
+    @operador.lido(lido)
+    lido
   end
 
   private

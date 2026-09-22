@@ -20,11 +20,12 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::InsuranceQuoteProposal,
     Autonomia::Agents::Tools::Native::VehicleLookup,
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions,
-    # Guia da Plataforma (#568): ler a conta e propor mudança nela, com a
-    # permissão de quem está logado. Ligadas só no agente do Guia, que o `Seed`
-    # semeia — nenhum agente de conta as enxerga.
+    # Guia da Plataforma (#568, #590): ler a conta, propor mudança nela e levar
+    # a pessoa até a tela, com a permissão de quem está logado. Ligadas só no
+    # agente do Guia, que o `Seed` semeia — nenhum agente de conta as enxerga.
     Autonomia::Agents::Tools::Native::GuiaLeitura,
-    Autonomia::Agents::Tools::Native::GuiaAcao
+    Autonomia::Agents::Tools::Native::GuiaAcao,
+    Autonomia::Agents::Tools::Native::GuiaTela
   ].freeze
 
   module_function

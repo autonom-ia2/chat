@@ -59,4 +59,30 @@ RSpec.describe Autonomia::Guide::Chat do
       expect(chat.send(:resolve_navigation, resultado(confianca: 0.1))).to be_nil
     end
   end
+
+  # #590 — a tela que o modelo escolheu é a única que sabe QUAL registro.
+  describe 'a tela do botão' do
+    def resultado(handoff: {})
+      instance_double(Autonomia::Agents::AnswerResult, confidence: 0.9, handoff: handoff,
+                                                       used_knowledge: [{ content: "### #{bloco_do_funil}" }])
+    end
+
+    let(:escolhida) { { route_name: 'settings_inbox_show', params: { 'inboxId' => '7' }, highlight: nil } }
+
+    it 'é a que o modelo escolheu, quando ele escolheu' do
+      chat.send(:contexto).mostrar(escolhida)
+
+      expect(chat.send(:navegacao, resultado)).to eq(escolhida)
+    end
+
+    it 'é a do fluxo do manual, quando ele não escolheu nenhuma' do
+      expect(chat.send(:navegacao, resultado)[:route_name]).to eq('crm_kanban_index')
+    end
+
+    it 'não existe quando a conversa vai para um humano' do
+      chat.send(:contexto).mostrar(escolhida)
+
+      expect(chat.send(:navegacao, resultado(handoff: { should: true }))).to be_nil
+    end
+  end
 end
