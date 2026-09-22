@@ -25,8 +25,8 @@ Cabeçalho obrigatório:
 
 ```yaml
 ---
-id: "02.03"
-titulo: "Definir se você está disponível para receber conversas"
+id: "02.06"
+titulo: "Sua disponibilidade e os avisos que você recebe"
 capitulo: "02"
 publico: ambos            # admin | atendente | ambos
 prioridade: P1            # P1 | P2 | P3
@@ -53,12 +53,19 @@ Seções nesta ordem, com estes títulos exatos:
 4. `## O que dá errado` — lista de armadilhas reais. Cada item começa pelo **sintoma**,
    do jeito que a pessoa descreveria, e depois diz a causa e a saída.
    Ex.: "**A conversa não chega para você.** Seu status está Offline…"
-5. `## Veja também` — 2 ou 3 artigos, pelo id: `- [02.07] Criar a sua assinatura`.
+5. `## Veja também` — 2 ou 3 artigos, pelo id: `- [02.04] Sua assinatura de mensagens`.
 
 O botão **Me leve até lá** não vai no texto: ele sai do cabeçalho (`me_leve_ate_la`) e a
 tela de leitura o desenha. Nunca escreva "clique aqui" nem cole endereço de tela.
 
 Tamanho: 150 a 600 palavras. Se passou disso, o artigo é dois.
+
+Duas exceções:
+- **Capítulo 00 (a trilha de Primeiros passos):** artigo curto, até 250 palavras. Diz o que o
+  passo pede e por que vem nessa ordem, e manda para o artigo completo em `Veja também`. Não
+  repete o passo a passo que já está no outro capítulo.
+- **Artigos "Referência"** (02.08, 08.14, 09.10, 14.05): podem passar de 600 palavras quando o
+  grosso é tabela. "Como faz" vira "Como consultar".
 
 ## 4. Tom
 
@@ -71,6 +78,9 @@ Tamanho: 150 a 600 palavras. Se passou disso, o artigo é dois.
   confira lá, não invente.
 - Nada de marca: diga "a plataforma". Não escreva Chat2You, Hub2You, Autonom.ia nem
   Chatwoot — o mesmo texto é publicado para marcas diferentes.
+  **Exceção:** quando o rótulo da própria tela traz a marca (ex.: **Copiloto Autonom.ia**,
+  **Entrar com Autonomia**), cite o rótulo exatamente como aparece, em negrito. A pessoa
+  precisa reconhecer o botão. Nunca use a marca fora do rótulo.
 - Sem emoji, sem exclamação de propaganda, sem "simples e fácil".
 
 ## 5. Vocabulário que confunde (use sempre assim)
@@ -112,13 +122,13 @@ Tamanho: 150 a 600 palavras. Se passou disso, o artigo é dois.
 Quem escreve **não tira print**: descreve. No passo em que o print ajuda, escreva:
 
 ```
-![PRINT 02.03-a: Menu da foto aberto, com o seletor de Disponibilidade em destaque](prints/02.03-a.png)
+![PRINT 02.06-a: Menu da foto aberto, com o seletor de Disponibilidade em destaque](prints/02.06-a.png)
 ```
 
 e, no fim do arquivo, a especificação para o roteiro de captura:
 
 ```
-<!-- PRINT 02.03-a
+<!-- PRINT 02.06-a
 rota: profile_settings_index (ou o caminho de cliques)
 estado: menu da foto aberto; status Online
 destaque: seletor de Disponibilidade

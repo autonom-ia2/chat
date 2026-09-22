@@ -1,9 +1,9 @@
-# Mapa dos artigos — Central de Ajuda "Plataforma" do Chat2You
+# Mapa dos artigos — Central de Ajuda "Plataforma"
 
 Storyboard da Fase 0: define quais artigos existem, antes de qualquer texto ser escrito.
 Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-ajuda/estudo/2026-09-08-apuracao.json` (284 assuntos), `docs/central-de-ajuda/cobertura.json`/`.md` (165 telas), `lib/operator_guide/porques.md` (164 fluxos já escritos no Guia da Plataforma), `config/onboarding/trilha.yml` (9 passos) e `app/javascript/dashboard/helper/guideRouteRegistry.js` (rotas válidas para "Me leve até lá").
 
-**Total: 159 artigos em 19 capítulos.**
+**Total: 157 artigos em 19 capítulos.** (159 na primeira versão; ajuste de 22/09 no fim deste arquivo.)
 
 ## 00 — Comece por aqui (10 artigos)
 
@@ -23,7 +23,7 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **01.01** — O mapa do menu lateral: onde fica cada coisa. Dar ao leitor uma visão geral da barra lateral antes de entrar nos detalhes de cada tela.
 - **01.02** — Os dois sentidos de 'Agentes' na plataforma. Distinguir Agentes-pessoas (capítulo 04) de Agentes de IA (capítulo 11) na primeira confusão que todo mundo tem.
 - **01.03** — Os dois sentidos de 'Caixa de Entrada'. Distinguir 'Caixas de Entrada' (os canais, capítulo 07) de 'Caixa de Entrada' (a central de notificações, capítulo 08).
-- **01.04** — Os copilotos da plataforma. Diferenciar o Copiloto do CRM (resumir/sugerir resposta) do Copiloto Autonom.ia (conversar com um agente interno).
+- **01.04** — Os copilotos da plataforma. Diferenciar o Copiloto do CRM (resumir/sugerir resposta) do 'Copiloto Autonom.ia' da conversa, que é o nome que aparece na tela (conversar com um agente interno).
 - **01.05** — O Guia da Plataforma: pedir ajuda sem sair da tela. Apresentar o painel flutuante de ajuda contextual, presente em qualquer tela.
 - **01.06** — Buscar tudo: a busca e a paleta de comandos. Usar o ícone de busca (ou tecla '/') e a busca de comandos do teclado para achar qualquer coisa rápido.
 - **01.07** — Como usar a Central de Ajuda. Ensinar o leitor a navegar, buscar e encontrar artigos dentro desta própria Central de Ajuda.
@@ -32,17 +32,17 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 
 - **02.01** — Onde ficam suas configurações pessoais. Abrir o menu do próprio perfil e chegar em Configurações do Perfil sem procurar.
 - **02.02** — Sua identidade: nome, nome de exibição e foto. Escolher como você aparece para o cliente e para o time.
-- **02.03** — Seu e-mail, sua senha e o login único da Autonom.ia. Entender os dois jeitos de entrar no Chat2You e por que trocar a senha local quase nunca faz efeito.
+- **02.03** — Seu e-mail, sua senha e o login único. Entender os dois jeitos de entrar na plataforma e por que trocar a senha local quase nunca faz efeito.
 - **02.04** — Sua assinatura de mensagens. Escrever a assinatura e saber ligá-la ou desligá-la dentro da conversa.
 - **02.05** — Como você escreve e como o painel aparece. Ajustar tecla de envio, idioma, tamanho da fonte e tema (claro, escuro ou do sistema).
 - **02.06** — Sua disponibilidade e os avisos que você recebe. Escolher o próprio status (Online/Ocupado/Offline) e o que dispara e-mail, som ou notificação no navegador.
-- **02.07** — Segurança da conta: sessões ativas, verificação em duas etapas e trocar de conta. Ver de onde a conta está aberta, entender a verificação em duas etapas (hoje indisponível) e trocar entre contas.
+- **02.07** — Segurança da conta: sessões ativas, verificação em duas etapas e trocar de conta. Ver de onde a conta está aberta, ligar a verificação em duas etapas e trocar entre contas.
 - **02.08** — Referência: token de acesso, atalhos e sair com segurança. Consultar o token pessoal de API, os atalhos de teclado, como sair e os limites de cada campo do perfil.
 
 ## 03 — Configurações da conta (4 artigos)
 
 - **03.01** — Ajustar os dados gerais da conta. Ajustar nome da conta, idioma padrão, domínio, resolução automática de conversa e transcrição de áudio.
-- **03.02** — Segurança da conta: SAML SSO. Explicar por que a tela Segurança existe e como ela não se confunde com o SSO da Autonom.ia.
+- **03.02** — Segurança da conta: SAML SSO. Explicar por que a tela Segurança existe e como ela não se confunde com o login único da plataforma.
 - **03.03** — Auditoria: quem convidou quem e quem mudou o quê. Usar a Auditoria para rastrear convites e mudanças de papel na conta.
 - **03.04** — Trazer contatos de outra ferramenta e acompanhar a importação. Subir uma base de outra ferramenta e acompanhar o que entrou e o que ficou de fora.
 
@@ -66,16 +66,15 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **05.06** — Usar o time em Automação, Macros e Relatórios. Montar regra e macro com o time e acompanhar o desempenho por time nos relatórios e no CRM.
 - **05.07** — Escolher como as conversas são distribuídas: atribuição e capacidade. Abrir a tela-hub de Atribuição de Agentes e criar políticas de distribuição e de limite de conversas por pessoa.
 
-## 06 — Integrações e a chave da OpenAI (8 artigos)
+## 06 — Integrações e a chave da OpenAI (7 artigos)
 
 - **06.01** — Abrir Integrações e ler um cartão. Entender por que só o administrador vê o menu Integrações, o que cada selo do cartão significa e não confundir Agentes com OpenAI.
 - **06.02** — Conectar a chave da OpenAI (CRM Kanban IA) ⚠️ revisar. Preencher o formulário da chave e entender o que acontece ao salvar.
 - **06.03** — Tudo que essa chave liga — e o que passa a custar. Entender que uma única credencial alimenta CRM, Agentes de IA, Copiloto, Guia e e-mail, e quem paga por isso.
 - **06.04** — Trocar a chave e o diagnóstico 'a IA parou'. Substituir a chave, entender a prioridade entre chave da conta e chave da plataforma, e seguir o roteiro de checagem.
-- **06.05** — Acompanhar o gasto em Gestão de IA. Ler os indicadores de consumo, entender a 'Economia automática' e baixar o relatório de uso.
-- **06.06** — Webhooks e Painel de Aplicativos. Avisar outro sistema quando algo acontece e embutir uma tela própria dentro da conversa.
-- **06.07** — n8n e integrações de terceiros. Automatizar o funil por fora com n8n e reconhecer Dialogflow, Tradutor do Google e Dyte.
-- **06.08** — Conectar Slack, Linear, Notion e a loja Shopify. Levar as conversas para o Slack e ligar Linear, Notion e Shopify à conta.
+- **06.05** — Webhooks e Painel de Aplicativos. Avisar outro sistema quando algo acontece e embutir uma tela própria dentro da conversa.
+- **06.06** — n8n e integrações de terceiros. Automatizar o funil por fora com n8n e reconhecer Dialogflow, Tradutor do Google e Dyte.
+- **06.07** — Conectar Slack, Linear, Notion e a loja Shopify. Levar as conversas para o Slack e ligar Linear, Notion e Shopify à conta.
 
 ## 07 — Caixas de entrada (todos os canais) e pesquisa de satisfação (11 artigos)
 
@@ -116,7 +115,7 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **09.03** — Criar e editar um contato. Cadastrar um contato do zero e depois corrigir dados, trocar ou remover a foto.
 - **09.04** — Etiquetas, bloqueio e notas do contato. Etiquetar, bloquear um contato indesejado e registrar notas internas na ficha.
 - **09.05** — Histórico de conversas e mídia do contato. Consultar as conversas passadas e encontrar rapidamente uma foto, comprovante ou PDF já enviado.
-- **09.06** — Atributos personalizados: criar e preencher. Criar um campo próprio de contato, preenchê-lo na ficha e entender os campos sw_ que a IA preenche sozinha.
+- **09.06** — Preencher atributos personalizados na ficha do contato. Preencher na ficha os campos próprios da conta e entender os campos sw_ que a IA preenche sozinha. Criar o campo fica no 12.05.
 - **09.07** — Ações em massa, importar/exportar CSV e Base Campanha. Selecionar vários contatos de uma vez, importar ou exportar por CSV, e subir uma base de campanha em lotes.
 - **09.08** — Mesclar e excluir contatos. Juntar dois cadastros duplicados sabendo qual sobrevive, e excluir um contato de vez.
 - **09.09** — Empresas: cadastro, edição e vínculo com contatos. Cadastrar e editar uma empresa, e usar as abas de Atributos, Contatos, Histórico e Notas.
@@ -137,13 +136,13 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **10.11** — Calendário do CRM e agendar reunião. Navegar no calendário, criar lembrete rápido e agendar reunião pelo card, com convite e link de vídeo.
 - **10.12** — Origem do lead e conversões para Meta e Google Ads. Ler o selo de origem do card e ligar o envio de conversões para Meta Ads e Google Ads.
 - **10.13** — Dashboard do CRM: KPIs e seções. Ler os números do funil no período certo e usar os blocos para achar gargalo e avaliar a IA.
-- **10.14** — Gestão de IA do CRM: quanto está custando. Acompanhar o gasto de IA por período e por recurso, ligando cada linha de custo ao produto que a gerou.
+- **10.14** — Gestão de IA do CRM: quanto está custando. Acompanhar o gasto de IA por período e por recurso, entender a 'Economia automática' e baixar o relatório de uso.
 - **10.15** — SLA do CRM: políticas e calendários. Criar a política de tempo de resposta e resolução, e o calendário de atendimento que ela usa para contar o tempo.
 - **10.16** — Trabalhar o CRM na conversa e tokens de integração. Criar ou reaproveitar um card sem sair da conversa, e gerar um token para um sistema externo acessar a API do CRM.
 
 ## 11 — Agentes de IA e Robôs (12 artigos)
 
-- **11.01** — Onde ficam os agentes de IA e como ler Meus agentes. Abrir o menu Agentes da Autonom.ia e interpretar um card: nome, estado, canais e botões.
+- **11.01** — Onde ficam os agentes de IA e como ler Meus agentes. Abrir o menu Agentes (os agentes de IA) e interpretar um card: nome, estado, canais e botões.
 - **11.02** — Decidir externo ou interno, com base ou sem base. Escolher se o agente fala com o cliente ou só ajuda a equipe, se aprende com documentos, e o ponto de partida.
 - **11.03** — Enviar a base de conhecimento e a entrevista do Construtor. Subir os materiais iniciais e conduzir a conversa que monta o agente, anexando arquivos e links.
 - **11.04** — Ler o parecer de cada material. Interpretar Pronto, Revisar e Falha ao ler, e consultar formatos e limites aceitos.
@@ -154,14 +153,14 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **11.09** — Aba Desempenho e configurações rápidas. Ler as métricas de 7/30 dias e mudar imagem, atuação, mensagens e tom sem refazer o agente.
 - **11.10** — Quando o agente chama um humano e como ajustar a instrução. Configurar a transferência e o limite de confiança, e escolher entre ajustar com IA ou escrever a instrução.
 - **11.11** — Pausar, reativar, apagar e usar como copiloto. Tirar o agente do ar, colocá-lo de volta, removê-lo em definitivo, ou usar o interno como copiloto na conversa.
-- **11.12** — Robôs nativos (Agent Bots): o terceiro 'agente' da plataforma. Reconhecer os Agent Bots do Chatwoot, ligados por padrão, e não confundir com Agentes-pessoas nem Agentes de IA.
+- **11.12** — Robôs (integração por webhook): o terceiro 'agente' da plataforma. Reconhecer os Robôs, ligados em todas as contas, e não confundir com as pessoas do time nem com os agentes de IA.
 
 ## 12 — Automação, Macros, Etiquetas, Respostas prontas e Atributos (5 artigos)
 
 - **12.01** — Criar uma regra de Automação do zero. Montar uma regra completa: evento, condições e ações — do zero, não só a condição de time.
 - **12.02** — Criar e editar uma Macro. Montar um conjunto de ações prontas (etiquetar, atribuir, resolver, mandar mensagem) para rodar com um clique.
 - **12.03** — Criar e organizar Etiquetas. Criar uma etiqueta, escolher a cor, editar e excluir — usada em conversa, contato e relatório.
-- **12.04** — Criar e editar Respostas Prontas. Criar, editar e apagar uma resposta pronta — 06.14 só ensinava a usar com '/'.
+- **12.04** — Criar e editar Respostas Prontas. Criar, editar e apagar uma resposta pronta. O uso com '/' dentro da conversa fica no 08.07.
 - **12.05** — Atributos personalizados: contato e conversa. Criar um campo próprio de contato ou de conversa na mesma tela de Atributos Personalizados.
 
 ## 13 — Campanhas (12 artigos)
@@ -205,11 +204,10 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **16.03** — Listas de leads e público de campanha. Organizar leads em listas e gerar um público etiquetado para usar numa campanha existente.
 - **16.04** — Configurações da Prospecção. Consultar o que precisa estar configurado para a Prospecção funcionar: chaves do Google, enriquecimento e score.
 
-## 17 — Financeiro (3 artigos)
+## 17 — Financeiro (2 artigos)
 
 - **17.01** — Ver o plano contratado e quanto está sendo cobrado. Abrir a tela de Assinatura e entender o plano e o valor cobrado.
 - **17.02** — Conferir faturas emitidas e o que já foi pago. Abrir a tela de Faturas e conferir o histórico de cobrança.
-- **17.03** — Cobrança nativa do Chatwoot: plano e assentos. Explicar a tela 'Cobrança' nativa do Chatwoot e como ela coexiste (e se confunde) com o Financeiro da Autonom.ia.
 
 ## 18 — Entenda os conceitos (7 artigos)
 
@@ -219,11 +217,11 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **18.04** — API oficial x API não oficial do WhatsApp: o que muda de verdade. Explicar a diferença entre WhatsApp Oficial (Cloud API da Meta) e WhatsApp API (WAHA/QR Code).
 - **18.05** — A descrição da etapa é instrução para a IA, não só um rótulo. Explicar que o texto de cada etapa do funil é lido pela IA para decidir quando mover um card.
 - **18.06** — Não use o agente de IA no número pessoal. Explicar por que o agente de IA precisa de um número separado do WhatsApp pessoal de quem atende.
-- **18.07** — Login único (SSO) e por que a senha local quase nunca vale. Explicar que o Chat2You entra pelo login da Autonom.ia com redirecionamento automático, e onde a senha local ainda funciona.
+- **18.07** — Login único (SSO) e por que a senha local quase nunca vale. Explicar que a entrada na plataforma é pelo login único, com redirecionamento automático, e onde a senha local ainda funciona.
 
 ## Fora da Central
 
-50 telas ficam de fora, com justificativa (Captain desligado, telas de sistema, redirecionamentos puros, rotas-casca de agrupamento, variantes técnicas da mesma tela, e o editor de Portais da Central de Ajuda — decisão de produto desta tarefa).
+51 telas ficam de fora, com justificativa (Captain desligado, a Cobrança nativa, que só existe em instalação CLOUD, telas de sistema, redirecionamentos puros, rotas-casca de agrupamento, variantes técnicas da mesma tela, e o editor de Portais da Central de Ajuda — decisão de produto desta tarefa).
 
 - `account_suspended`
   — Tela de sistema (conta suspensa) — não é jornada de produto. Já listada como fora no Guia da Plataforma (lib/operator_guide/porques.md, bloco _fora_do_guia).
@@ -292,7 +290,10 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
   — Mesma tela de inbox_conversation; variante de rota alcançada a partir de um Time, sem UI própria.
 
 - `captain_assistants_create_index`, `captain_assistants_documents_index`, `captain_assistants_faq_suggestions`, `captain_assistants_guardrails_index`, `captain_assistants_guidelines_index`, `captain_assistants_inboxes_index`, `captain_assistants_index`, `captain_assistants_overview_index`, `captain_assistants_playground_index`, `captain_assistants_responses_index`, `captain_assistants_scenarios_index`, `captain_assistants_settings_audience_index`, `captain_assistants_settings_index`, `captain_assistants_settings_schedule_index`, `captain_assistants_settings_system_index`, `captain_settings_index`, `captain_tools_index`
-  — Recurso nativo do Chatwoot ("Captain"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como "recurso que esta instalação não usa" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (Autonomia, capítulo 09) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional.
+  — Recurso nativo do Chatwoot ("Captain"), desligado por padrão nesta instalação (config/features.yml: captain_integration=false, captain_integration_v2=false). O Guia da Plataforma já marca as rotas captain_ como "recurso que esta instalação não usa" (lib/operator_guide/porques.md:1646). O Chat2You tem sistema próprio de Agentes de IA (capítulo 11) que cobre esse espaço — incluir Captain confundiria o usuário com dois produtos de IA conversacional.
+
+- `billing_settings_index`
+  — Tela 'Cobrança' nativa: só aparece em instalação CLOUD (`billing.routes.js:26`). As duas stacks não são CLOUD (`ChatwootApp.chatwoot_cloud?` = false, conferido em produção em 22/09/2026): o cliente nunca a vê.
 
 - `portals_index`, `portals_new`, `portals_settings_index`, `portals_locales_index`, `portals_categories_index`, `portals_articles_index`, `portals_articles_new`, `portals_articles_edit`, `portals_categories_articles_index`, `portals_categories_articles_new`, `portals_categories_articles_edit`
   — Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01.
@@ -329,7 +330,24 @@ Todas as 11 estão cobertas: o menu do perfil e o convite de agente já tinham a
 Conferido por script, contra o código (`guideRouteRegistry.js`, `guideHighlightRegistry.js` e o roteador):
 
 - **159 artigos**, ids únicos; **126/126 telas** a cobrir e **284/284 assuntos** do estudo em algum artigo; nenhuma rota inválida; nada de Captain.
-- **Botão "Me leve até lá":** o mapa original deixava 84 artigos sem botão, porque só punha o botão no primeiro artigo de cada tela. Corrigido: **144 de 159** artigos agora têm botão. Quando a tela é de UM registro (um contato, um agente, uma campanha, uma conversa), o botão leva à lista de onde ele se escolhe. Os 15 sem botão são vocabulário (01), conceitos (18), a referência de métricas (14.05) e 08.11.
+- **Botão "Me leve até lá":** o mapa original deixava 84 artigos sem botão, porque só punha o botão no primeiro artigo de cada tela. Corrigido: **144 de 159** artigos passaram a ter botão (hoje **142 de 157**, depois do ajuste abaixo). Quando a tela é de UM registro (um contato, um agente, uma campanha, uma conversa), o botão leva à lista de onde ele se escolhe. Os 15 sem botão são vocabulário (01), conceitos (18), a referência de métricas (14.05) e 08.11.
 - **Destaques:** 8 dos 9 destaques propostos não existiam no código (`sidebar-*`, `integration-crm-kanban-ai`) e foram removidos. Destaque só vale se estiver em `guideHighlightRegistry.js`.
 - **Captain:** fora da Central por decisão do Rodrigo; desligado nas 21 contas das duas stacks (conferido em produção).
 - **Editor de portais (`portals_*`):** fora; a Central é só leitura. Entra um artigo "Como usar a Central de Ajuda" no capítulo 01.
+
+## Ajuste de 22/09/2026, antes da aprovação
+
+Conferido contra o código e contra produção (só leitura, as duas stacks):
+
+- **17.03 saiu.** A tela Cobrança nativa só existe em instalação CLOUD, e nenhuma das stacks é.
+- **06.05 fundiu no 10.14.** Gestão de IA é uma tela só, e ela fica no menu CRM
+  (`Sidebar.vue:953-955`). O capítulo 06 foi renumerado (06.06-06.08 viraram 06.05-06.07).
+- **09.06 x 12.05:** criar o campo fica no 12.05; o 09.06 ficou só com preencher na ficha e os
+  campos `sw_`.
+- **02.07:** a verificação em duas etapas **está ligada** nas duas stacks
+  (`Chatwoot.mfa_enabled?` = true). O mapa dizia "hoje indisponível".
+- **Marca fora do texto:** 02.03, 03.02, 11.01, 11.12 e 18.07 falavam em Chat2You, Autonom.ia ou
+  Chatwoot. O 01.04 cita "Copiloto Autonom.ia" entre aspas porque é o rótulo que aparece na tela.
+- **Referências erradas:** 12.04 citava um "06.14" que não existe; a nota do Captain dizia
+  "capítulo 09" para os agentes de IA, que são o 11.
+- **Total:** 157 artigos, 142 com botão, 51 telas fora.

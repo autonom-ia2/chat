@@ -10,8 +10,8 @@
 O PR é só documentação e não dispara deploy.
 
 Aprovar em #598:
-1. `mapa-de-artigos.md` / `.json`: **159 artigos em 19 capítulos**. A prova de cobertura
-   está no fim: 126/126 telas, 284/284 assuntos, 11/11 funcionalidades sem tela, 144/159
+1. `mapa-de-artigos.md` / `.json`: **157 artigos em 19 capítulos** (ajustado em 22/09: saíram 17.03 e 06.05). A prova de cobertura
+   está no fim: 126/126 telas, 284/284 assuntos, 11/11 funcionalidades sem tela, 142/157
    com botão.
 2. `kit-do-escritor.md`: formato, tom, vocabulário, regra de verdade, prints, checklist.
 

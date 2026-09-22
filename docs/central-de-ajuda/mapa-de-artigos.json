@@ -304,7 +304,7 @@
     {
      "id": "01.04",
      "titulo": "Os copilotos da plataforma",
-     "para_que_serve": "Diferenciar o Copiloto do CRM (resumir/sugerir resposta) do Copiloto Autonom.ia (conversar com um agente interno).",
+     "para_que_serve": "Diferenciar o Copiloto do CRM (resumir/sugerir resposta) do 'Copiloto Autonom.ia' da conversa, que é o nome que aparece na tela (conversar com um agente interno).",
      "publico": "atendente",
      "prioridade": "P2",
      "assuntos": [
@@ -428,8 +428,8 @@
     },
     {
      "id": "02.03",
-     "titulo": "Seu e-mail, sua senha e o login único da Autonom.ia",
-     "para_que_serve": "Entender os dois jeitos de entrar no Chat2You e por que trocar a senha local quase nunca faz efeito.",
+     "titulo": "Seu e-mail, sua senha e o login único",
+     "para_que_serve": "Entender os dois jeitos de entrar na plataforma e por que trocar a senha local quase nunca faz efeito.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
@@ -522,7 +522,7 @@
     {
      "id": "02.07",
      "titulo": "Segurança da conta: sessões ativas, verificação em duas etapas e trocar de conta",
-     "para_que_serve": "Ver de onde a conta está aberta, entender a verificação em duas etapas (hoje indisponível) e trocar entre contas.",
+     "para_que_serve": "Ver de onde a conta está aberta, ligar a verificação em duas etapas e trocar entre contas.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
@@ -540,7 +540,7 @@
      "prints": [],
      "fontes": [],
      "revisar": false,
-     "nota": "Cobre também o seletor de contas no topo da barra lateral (funcionalidade sem tela própria, listada em cobertura.json/funcionalidades_sem_tela)."
+     "nota": "Cobre também o seletor de contas no topo da barra lateral (funcionalidade sem tela própria, listada em cobertura.json/funcionalidades_sem_tela). Verificação em duas etapas: ligada nas duas stacks (Chatwoot.mfa_enabled? = true em 22/09/2026); conferir como convive com o login único antes de escrever."
     },
     {
      "id": "02.08",
@@ -596,7 +596,7 @@
     {
      "id": "03.02",
      "titulo": "Segurança da conta: SAML SSO",
-     "para_que_serve": "Explicar por que a tela Segurança existe e como ela não se confunde com o SSO da Autonom.ia.",
+     "para_que_serve": "Explicar por que a tela Segurança existe e como ela não se confunde com o login único da plataforma.",
      "publico": "admin",
      "prioridade": "P3",
      "assuntos": [],
@@ -1123,31 +1123,6 @@
     },
     {
      "id": "06.05",
-     "titulo": "Acompanhar o gasto em Gestão de IA",
-     "para_que_serve": "Ler os indicadores de consumo, entender a 'Economia automática' e baixar o relatório de uso.",
-     "publico": "ambos",
-     "prioridade": "P1",
-     "assuntos": [
-      "04.13-gestao-de-ia",
-      "04.14-economia-automatica",
-      "04.15-baixar-relatorio-de-uso"
-     ],
-     "rotas": [
-      "crm_ai_usage_index"
-     ],
-     "me_leve_ate_la": {
-      "rota": "crm_ai_usage_index",
-      "destaque": null
-     },
-     "prints": [],
-     "fontes": [
-      "porques: Acompanhar quanto a IA está custando"
-     ],
-     "revisar": false,
-     "nota": null
-    },
-    {
-     "id": "06.06",
      "titulo": "Webhooks e Painel de Aplicativos",
      "para_que_serve": "Avisar outro sistema quando algo acontece e embutir uma tela própria dentro da conversa.",
      "publico": "admin",
@@ -1173,7 +1148,7 @@
      "nota": null
     },
     {
-     "id": "06.07",
+     "id": "06.06",
      "titulo": "n8n e integrações de terceiros",
      "para_que_serve": "Automatizar o funil por fora com n8n e reconhecer Dialogflow, Tradutor do Google e Dyte.",
      "publico": "admin",
@@ -1198,7 +1173,7 @@
      "nota": null
     },
     {
-     "id": "06.08",
+     "id": "06.07",
      "titulo": "Conectar Slack, Linear, Notion e a loja Shopify",
      "para_que_serve": "Levar as conversas para o Slack e ligar Linear, Notion e Shopify à conta.",
      "publico": "admin",
@@ -1978,8 +1953,8 @@
     },
     {
      "id": "09.06",
-     "titulo": "Atributos personalizados: criar e preencher",
-     "para_que_serve": "Criar um campo próprio de contato, preenchê-lo na ficha e entender os campos sw_ que a IA preenche sozinha.",
+     "titulo": "Preencher atributos personalizados na ficha do contato",
+     "para_que_serve": "Preencher na ficha os campos próprios da conta e entender os campos sw_ que a IA preenche sozinha. Criar o campo fica no 12.05.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [
@@ -2440,10 +2415,13 @@
     {
      "id": "10.14",
      "titulo": "Gestão de IA do CRM: quanto está custando",
-     "para_que_serve": "Acompanhar o gasto de IA por período e por recurso, ligando cada linha de custo ao produto que a gerou.",
-     "publico": "admin",
+     "para_que_serve": "Acompanhar o gasto de IA por período e por recurso, entender a 'Economia automática' e baixar o relatório de uso.",
+     "publico": "ambos",
      "prioridade": "P1",
      "assuntos": [
+      "04.13-gestao-de-ia",
+      "04.14-economia-automatica",
+      "04.15-baixar-relatorio-de-uso",
       "08.46-gestao-de-ia",
       "08.47-gestao-de-ia-recursos"
      ],
@@ -2455,9 +2433,11 @@
       "destaque": null
      },
      "prints": [],
-     "fontes": [],
+     "fontes": [
+      "porques: Acompanhar quanto a IA está custando"
+     ],
      "revisar": false,
-     "nota": "Mesma tela do artigo 06.05; aqui sob a ótica do CRM."
+     "nota": "Absorveu o antigo 06.05 (mesma tela, no menu CRM)."
     },
     {
      "id": "10.15",
@@ -2517,7 +2497,7 @@
     {
      "id": "11.01",
      "titulo": "Onde ficam os agentes de IA e como ler Meus agentes",
-     "para_que_serve": "Abrir o menu Agentes da Autonom.ia e interpretar um card: nome, estado, canais e botões.",
+     "para_que_serve": "Abrir o menu Agentes (os agentes de IA) e interpretar um card: nome, estado, canais e botões.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [
@@ -2772,8 +2752,8 @@
     },
     {
      "id": "11.12",
-     "titulo": "Robôs nativos (Agent Bots): o terceiro 'agente' da plataforma",
-     "para_que_serve": "Reconhecer os Agent Bots do Chatwoot, ligados por padrão, e não confundir com Agentes-pessoas nem Agentes de IA.",
+     "titulo": "Robôs (integração por webhook): o terceiro 'agente' da plataforma",
+     "para_que_serve": "Reconhecer os Robôs, ligados em todas as contas, e não confundir com as pessoas do time nem com os agentes de IA.",
      "publico": "admin",
      "prioridade": "P2",
      "assuntos": [],
@@ -2870,7 +2850,7 @@
     {
      "id": "12.04",
      "titulo": "Criar e editar Respostas Prontas",
-     "para_que_serve": "Criar, editar e apagar uma resposta pronta — 06.14 só ensinava a usar com '/'.",
+     "para_que_serve": "Criar, editar e apagar uma resposta pronta. O uso com '/' dentro da conversa fica no 08.07.",
      "publico": "admin",
      "prioridade": "P2",
      "assuntos": [],
@@ -3669,27 +3649,6 @@
      ],
      "revisar": false,
      "nota": "Zero cobertura no estudo."
-    },
-    {
-     "id": "17.03",
-     "titulo": "Cobrança nativa do Chatwoot: plano e assentos",
-     "para_que_serve": "Explicar a tela 'Cobrança' nativa do Chatwoot e como ela coexiste (e se confunde) com o Financeiro da Autonom.ia.",
-     "publico": "admin",
-     "prioridade": "P2",
-     "assuntos": [],
-     "rotas": [
-      "billing_settings_index"
-     ],
-     "me_leve_ate_la": {
-      "rota": "billing_settings_index",
-      "destaque": null
-     },
-     "prints": [],
-     "fontes": [
-      "porques: Ver plano e cobranca"
-     ],
-     "revisar": false,
-     "nota": "Zero cobertura no estudo."
     }
    ]
   },
@@ -3793,7 +3752,7 @@
     {
      "id": "18.07",
      "titulo": "Login único (SSO) e por que a senha local quase nunca vale",
-     "para_que_serve": "Explicar que o Chat2You entra pelo login da Autonom.ia com redirecionamento automático, e onde a senha local ainda funciona.",
+     "para_que_serve": "Explicar que a entrada na plataforma é pelo login único, com redirecionamento automático, e onde a senha local ainda funciona.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
@@ -4009,6 +3968,10 @@
   {
    "rota": "portals_categories_articles_edit",
    "motivo": "Decisão de produto (instrução da tarefa): o editor de portais da Central de Ajuda sai do escopo — a Central é nossa, só leitura para o cliente final. cobertura.json classificava esta rota como 'lacuna' (conteúdo faltando), mas a decisão tomada foi não criar capítulo de Central de Ajuda/Portais; criamos apenas 1 artigo 'Como usar a Central de Ajuda' no capítulo 01."
+  },
+  {
+   "rota": "billing_settings_index",
+   "motivo": "Tela 'Cobrança' nativa: só aparece em instalação CLOUD (billing.routes.js:26, installationTypes). As duas stacks não são CLOUD (ChatwootApp.chatwoot_cloud? = false, conferido em produção em 22/09/2026); o cliente nunca a vê."
   }
  ]
 }
