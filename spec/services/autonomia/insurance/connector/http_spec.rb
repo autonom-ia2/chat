@@ -178,6 +178,27 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
       .to raise_error(an_object_having_attributes(kind: :validation, details: {}))
   end
 
+  # O CONTRATO DAS PERGUNTAS (adapters#76), com o corpo EXATO que o handler do adapter devolve: `details.perguntas`
+  # atravessa o conector sem normalização, e o envio da cotação o transforma em pergunta ao cliente.
+  it 'keeps details.perguntas as the adapter sends it, and the quote turns it into a question' do
+    motivo = 'este CEP é de cidade de CEP único e não traz o nome da rua. Pergunte ao cliente o nome da rua do imóvel.'
+    corpo = { 'error' => 'validation', 'message' => 'endereco do imovel incompleto',
+              'failure' => { 'cause' => 'request_invalid', 'actor' => 'autonomia', 'layer' => 'risk', 'retryable' => false },
+              'details' => { 'issues' => ["segurado.logradouro: #{motivo}"],
+                             'perguntas' => [{ 'campo' => 'segurado.logradouro', 'motivo' => motivo }] } }
+    stub_invoke(inner_status: 422, inner_body: corpo.to_json)
+
+    erro = begin
+      described_class.new.connection_status(**with_session)
+    rescue Autonomia::Insurance::Connector::Error => e
+      e
+    end
+
+    expect(erro.details['perguntas']).to eq([{ 'campo' => 'segurado.logradouro', 'motivo' => motivo }])
+    envio = Autonomia::Agents::Tools::Native::InsuranceQuote.allocate
+    expect(envio.send(:perguntas_ao_cliente, erro)).to eq(["segurado.logradouro: #{motivo}"])
+  end
+
   it 'treats a lambda runtime failure as unavailable' do
     stub_invoke(inner_status: 200, inner_body: '{}', outer_body: { 'errorType' => 'Runtime.ExitError' }.to_json)
 
