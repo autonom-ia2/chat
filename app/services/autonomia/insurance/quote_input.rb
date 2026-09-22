@@ -13,11 +13,15 @@
 class Autonomia::Insurance::QuoteInput
   AUTO = 'auto'.freeze
 
-  def initialize(produto:, params:, dados:, commission_percent:)
+  # `grupos_do_ramo`: os grupos que o formulário do ramo declara (`Parametros#nomes_dos_grupos`), que
+  # é de onde `de_ramo` lê o que o modelo escreveu em campos. Vazio quando o ramo não tem formulário:
+  # aí só o `dados` conta, como antes da chat#591.
+  def initialize(produto:, params:, dados:, commission_percent:, grupos_do_ramo: [])
     @produto = produto
     @params = params
     @dados = dados
     @commission_percent = commission_percent
+    @grupos_do_ramo = grupos_do_ramo
   end
 
   def to_h
@@ -79,9 +83,16 @@ class Autonomia::Insurance::QuoteInput
   # parâmetro, e o portal recusaria uma cotação que tinha tudo. `compact_blank` é o que separa
   # "informou outro valor" de "mandou a chave vazia".
   def de_ramo
-    base = @dados.to_h
+    base = @dados.to_h.merge(do_formulario) { |_, do_json, do_campo| do_json.to_h.merge(do_campo) }
     informado = segurado_dos_parametros.merge(base['segurado'].to_h.compact_blank)
     informado.any? ? base.merge('segurado' => informado) : base
+  end
+
+  # O FORMULÁRIO DO RAMO (chat#591): cada grupo vai como veio, no caminho em que o adapter o lê
+  # (`segurado`, `configuracoes`), como os de auto. Vence o `dados` campo a campo quando os dois
+  # trazem o mesmo, porque é o contrato declarado; `nil` e vazio saem, `false` e `0` ficam.
+  def do_formulario
+    @grupos_do_ramo.index_with { |grupo| sem_vazios(@params[grupo]) }.reject { |_, valor| valor.empty? }
   end
 
   # Os nomes que `SeguradoDaCotacao` usa no adapter — `cpfCnpj`, e não `document`.

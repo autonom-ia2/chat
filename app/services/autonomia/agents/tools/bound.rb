@@ -22,26 +22,30 @@ class Autonomia::Agents::Tools::Bound
 
   # Todas as ferramentas ligadas a este agente, na ordem: primeiro as cadastradas (por id),
   # depois as nativas (na ordem do catálogo).
-  def self.for_agent(agent)
+  # `especialista` é quem vai usar o catálogo, quando é um especialista (`Specialist#tools`); o
+  # principal (`Answerer`) monta sem ele.
+  def self.for_agent(agent, especialista: nil)
     records = agent.tools.enabled.order(:id).map { |record| new(record: record, agent: agent) }
     natives = Autonomia::Agents::Tools::Registry.for_agent(agent)
-                                                .map { |klass| new(native: klass, agent: agent) }
+                                                .map { |klass| new(native: klass, agent: agent, especialista: especialista) }
     records + natives
   end
 
-  def initialize(agent:, record: nil, native: nil)
+  def initialize(agent:, record: nil, native: nil, especialista: nil)
     @agent = agent
     @record = record
     @native = native
+    @especialista = especialista
   end
 
   def slug
     (@record&.slug || @native&.slug).to_s
   end
 
-  # A nativa recebe o agente: o formulário de cotação é montado a partir do que a conta conectou.
+  # A nativa recebe o agente: o formulário de cotação é montado a partir do que a conta conectou. E
+  # o especialista: cada um vê o formulário do seu ramo (chat#591).
   def openai_schema
-    @record ? @record.openai_schema : @native.openai_schema(@agent)
+    @record ? @record.openai_schema : @native.openai_schema(@agent, especialista: @especialista)
   end
 
   def native?

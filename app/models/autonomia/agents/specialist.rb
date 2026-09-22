@@ -142,7 +142,7 @@ class Autonomia::Agents::Specialist < ApplicationRecord
     # Memoizado: o runner consulta esta lista uma vez por turno, mas `for_agent` faz consulta ao
     # banco e monta o catálogo de nativas — não há motivo para refazer isso a cada chamada.
     @tools ||= begin
-      by_slug = Autonomia::Agents::Tools::Bound.for_agent(agent).index_by(&:slug)
+      by_slug = Autonomia::Agents::Tools::Bound.for_agent(agent, especialista: self).index_by(&:slug)
       encontradas = slugs.filter_map { |slug| by_slug[slug.to_s] }
       avisar_descartadas(slugs, by_slug.keys, encontradas)
       encontradas

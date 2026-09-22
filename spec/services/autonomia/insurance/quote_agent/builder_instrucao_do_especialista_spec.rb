@@ -206,6 +206,8 @@ module ManualDoEspecialistaDeAuto
     # do contato —, então não há por onde o interlocutor sobrescrever o segurado. Se essa assinatura
     # ganhasse o contato, ou se a renovação deixasse de acompanhar um segurado diferente de quem
     # digita, o texto estaria mandando recusar o caso legítimo.
+    # (chat#591: `grupos_do_ramo` entrou na assinatura. São os nomes de grupo do schema do adapter,
+    # guardado na conexão; também não vem da conversa nem do contato.)
     'Compare o titular da apólice com o SEGURADO DESTA COTAÇÃO' => lambda {
       renovacao = { 'isRenewal' => true, 'bonusClass' => 9, 'previousInsurerCode' => '4',
                     'previousPolicyNumber' => '01.142.431.056070' }
@@ -213,7 +215,7 @@ module ManualDoEspecialistaDeAuto
                                 'quotation' => renovacao)
 
       Autonomia::Insurance::QuoteInput.instance_method(:initialize).parameters.map(&:last) ==
-        %i[produto params dados commission_percent] &&
+        %i[produto params dados commission_percent grupos_do_ramo] &&
         entrada.dig('insured', 'document') == '31847290511' &&
         entrada.dig('insured', 'name') == 'Ana Paula Ribeiro' &&
         entrada['quotation'] == renovacao &&

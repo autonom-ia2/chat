@@ -113,18 +113,20 @@ class Autonomia::Agents::Tools::Native::Base
     # `agent` é opcional: a ferramenta que monta o formulário a partir do que a CONTA conectou
     # (entrega 2 do Agente de Cotação — os ~90 campos de auto vêm do adapter) precisa saber de quem é
     # o formulário. As demais ignoram, e `params_for` cai na lista fixa da classe.
-    def openai_schema(agent = nil)
+    # `especialista` também: quem monta o turno de um especialista (`Specialist#tools`) diz qual é, e
+    # a cotação usa isso para dar a cada especialista o formulário do ramo dele (chat#591).
+    def openai_schema(agent = nil, especialista: nil)
       {
         type: 'function',
         name: slug,
         description: description,
-        parameters: objeto(params_for(agent)),
+        parameters: objeto(params_for(agent, especialista: especialista)),
         strict: true
       }
     end
 
-    # Os parâmetros DE UMA CONTA. O padrão é a lista fixa da classe.
-    def params_for(_agent)
+    # Os parâmetros DE UMA CONTA (e de um especialista). O padrão é a lista fixa da classe.
+    def params_for(_agent, **)
       params
     end
 
@@ -159,12 +161,15 @@ class Autonomia::Agents::Tools::Native::Base
                { 'type' => 'array', 'items' => { 'type' => param['items'] || 'string' },
                  'description' => param['description'] }.compact
              else
-               param.slice('type', 'description')
+               param.slice('type', 'description', 'enum')
              end
       return base unless param['required'] == false
 
       chave = base.key?(:type) ? :type : 'type'
-      base.merge(chave => [base[chave], 'null'])
+      anulavel = base.merge(chave => [base[chave], 'null'])
+      # O `enum` restringe o valor por conta própria: sem `null` na lista, o `null` que o tipo aceita
+      # seria recusado pelo próprio `enum`, e o opcional deixaria de ser opcional (chat#591).
+      anulavel['enum'] ? anulavel.merge('enum' => anulavel['enum'] + [nil]) : anulavel
     end
   end
 

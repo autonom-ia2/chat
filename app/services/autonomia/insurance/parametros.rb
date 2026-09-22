@@ -12,7 +12,22 @@
 # entrada (`QuoteInput#de_auto`) ser mecânica: o grupo vai como veio, sem tradução, sem lista de
 # nomes para envelhecer. A guarda de travessia (termo 4) confere que todo campo declarado aqui
 # chega ao envio.
+#
+# O FORMULÁRIO DE UM RAMO QUE NÃO É AUTO (chat#591, fase 2 do piloto de residencial) sai da mesma
+# classe, por `do_ramo`, com três diferenças, e nenhuma delas é nome de campo:
+#   só a origem `cliente` vira parâmetro: `derivado` o adapter busca, `escolha` tem padrão seguro. O
+#     agente que pergunta tudo o que o formulário tem é o defeito que a adapters#34 nomeia;
+#   `valores` viram `enum`: o modelo escolhe da lista em vez de escrever o rótulo;
+#   o formulário RECUSA MONTAR quando um campo de cliente vem sem descrição, com crase ou travessão na
+#     descrição, fora de grupo, ou com valores que não cabem no tipo (`FormularioInvalido`). Campo novo
+#     no adapter sem descrição quebra, não some; o que acontece depois está em `Declaracao#formulario_do_ramo`.
+# Auto continua em `de_auto` como era: ele expõe as três origens, e o manual do especialista de auto
+# foi escrito contando com isso.
 class Autonomia::Insurance::Parametros
+  # O schema de um ramo que não dá para oferecer ao modelo. A mensagem traz ramo e caminho dos
+  # campos, nunca valor de nada.
+  class FormularioInvalido < StandardError; end
+
   # O rótulo de cada grupo do adapter. Grupo novo no adapter sem rótulo aqui entra mesmo assim
   # (com um rótulo genérico) — o campo não pode sumir em silêncio — e a spec avisa.
   GRUPOS = {
@@ -42,8 +57,20 @@ class Autonomia::Insurance::Parametros
     new(schema).grupos
   end
 
-  def initialize(schema)
+  # -> o formulário de um ramo que não é auto; vazio sem schema. Levanta `FormularioInvalido`.
+  def self.do_ramo(schema)
+    new(schema, ramo: true).tap(&:conferir!).grupos
+  end
+
+  # O que a crase e o travessão fazem numa descrição: o modelo os copia para o WhatsApp (modos de
+  # falha C5 e "nada de travessão de IA"). Método de string, sem regex.
+  PROIBIDOS_NA_DESCRICAO = ['`', '—', '–'].freeze
+  ORIGEM_DO_CLIENTE = 'cliente'.freeze
+
+  def initialize(schema, ramo: false)
     @campos = Array(schema.to_h['campos']).map { |campo| campo.to_h.deep_stringify_keys }
+    @ramo = ramo
+    @nome_do_ramo = schema.to_h['product'] || schema.to_h['ramo']
   end
 
   # Um `object` por grupo; campo de RAIZ do adapter (sem ponto) entra plano, com o nome dele — a
@@ -66,14 +93,62 @@ class Autonomia::Insurance::Parametros
     expostos.pluck('campo')
   end
 
+  # Os grupos (a raiz de cada caminho) que o formulário declara: é o que `QuoteInput#de_ramo` leva do
+  # que o modelo escreveu para a entrada, sem lista de nomes digitada aqui.
+  def nomes_dos_grupos
+    caminhos.map { |caminho| caminho.split('.', 2).first }.uniq
+  end
+
+  # Todos os defeitos juntos na mensagem: quem corrige o adapter vê a lista inteira de uma vez, e
+  # não um campo por rodada.
+  def conferir!
+    defeitos = expostos.filter_map { |campo| defeito(campo) }
+    return if defeitos.empty?
+
+    raise FormularioInvalido, "ramo #{@nome_do_ramo}: #{defeitos.join('; ')}"
+  end
+
   private
 
   def expostos
     @expostos ||= @campos.reject { |campo| NAO_EXPOSTOS.include?(campo['campo']) }
+                         .select { |campo| !@ramo || campo['origem'] == ORIGEM_DO_CLIENTE }
+  end
+
+  # CAMPO FORA DE GRUPO NÃO EXISTE NUM RAMO: o adapter lê os campos do ramo de `segurado` e de
+  # `configuracoes` (`contratoGenerico`). Um campo de cliente sem ponto seria declarado ao modelo e
+  # descartado pelo adapter; por isso recusa em vez de entrar.
+  def defeito(campo)
+    caminho = campo['campo'].to_s
+    descricao = campo['descricao'].to_s
+    return "#{caminho} fora de grupo" unless caminho.include?('.')
+    return "#{caminho} sem descricao" if descricao.strip.empty?
+    return "#{caminho} com crase ou travessao na descricao" if PROIBIDOS_NA_DESCRICAO.any? { |sinal| descricao.include?(sinal) }
+
+    "#{caminho} com valores fora do tipo" if campo['valores'].present? && enum(campo).nil?
   end
 
   def folha(campo)
-    { 'name' => campo['campo'].split('.', 2).last, 'type' => TIPOS.fetch(campo['tipo'], 'string'),
-      'required' => false, 'description' => campo['descricao'].to_s }
+    base = { 'name' => campo['campo'].split('.', 2).last, 'type' => TIPOS.fetch(campo['tipo'], 'string'),
+             'required' => false, 'description' => campo['descricao'].to_s }
+    return base unless @ramo && campo['valores'].present?
+
+    base.merge('enum' => enum(campo))
+  end
+
+  # As CHAVES de `valores` são o que o adapter aceita; o rótulo de cada uma já está na descrição. Em
+  # campo numérico vai o número, em texto o texto. Outro tipo com valores, ou chave que não é número
+  # num campo numérico: nil, e `defeito` recusa o formulário.
+  def enum(campo)
+    chaves = campo['valores'].to_h.keys.map(&:to_s)
+    case TIPOS.fetch(campo['tipo'], 'string')
+    when 'string' then chaves
+    when 'number' then numeros(chaves)
+    end
+  end
+
+  def numeros(chaves)
+    convertidos = chaves.map { |chave| Integer(chave, exception: false) || Float(chave, exception: false) }
+    convertidos.all? ? convertidos : nil
   end
 end

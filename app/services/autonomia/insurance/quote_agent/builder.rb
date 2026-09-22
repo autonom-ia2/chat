@@ -30,8 +30,11 @@ class Autonomia::Insurance::QuoteAgent::Builder
 
   # O primeiro (e por enquanto único) especialista. Cada ramo novo entra aqui com o seu arquivo de
   # instrução — e nada mais precisa mudar.
+  # `ramo` é o produto do adapter cujo formulário o especialista vê na ferramenta de cotação
+  # (`Declaracao.params_for`, chat#591): um formulário por especialista, e não um com todos os ramos,
+  # que multiplicaria o que o modelo lê a cada turno. O de residencial entra com a fase 5 da receita.
   ESPECIALISTAS = [
-    { slug: 'cotacao_auto', nome: 'Cotação de automóvel', arquivo: 'especialista_auto.md',
+    { slug: 'cotacao_auto', ramo: 'auto', nome: 'Cotação de automóvel', arquivo: 'especialista_auto.md',
       descricao: 'Cota seguro de automóvel, moto e caminhão, para pessoa física e para empresa. Use ' \
                  'quando o cliente pedir preço de seguro de carro, moto ou caminhão.' }
   ].freeze
@@ -102,6 +105,13 @@ class Autonomia::Insurance::QuoteAgent::Builder
 
     espera = ::Autonomia::Agents::Specialists::Runner::SEGUNDOS_DE_FERRAMENTA + ::Autonomia::Agents::Specialists::Runner::SEGUNDOS_POR_CHAMADA
     { max_rodadas: RODADAS_DA_LIA, max_segundos: RODADAS_DA_LIA * espera }
+  end
+
+  # O RAMO DO FORMULÁRIO que este especialista vê na cotação. nil sem especialista (o principal, uma
+  # conta com a ferramenta ligada direto no agente) ou quando ele não é um que a Autonom.ia mantém: a
+  # ferramenta então fica com o formulário de auto, como sempre foi.
+  def self.ramo_do_especialista(specialist)
+    specialist && mantido(specialist)&.dig(:ramo)
   end
 
   # A entrada de `ESPECIALISTAS` deste especialista, quando é um que a Autonom.ia mantém.
