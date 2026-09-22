@@ -507,9 +507,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(conteudos).to eq([cotacao.valores_message(run.arguments)])
     end
 
-    it 'vencido com tentativa sobrando e o portal fora: o encerramento pede uma vez, e diz que os valores podem ser pedidos' do
+    # O ENCERRAMENTO INSISTE (chat#585): sem passada seguinte, a falha do portal ganha outra chance na mesma passada,
+    # com espera (`ESPERAS_DO_COMPARATIVO`). Portal fora nas três: diz que os valores podem ser pedidos.
+    it 'vencido com tentativa sobrando e o portal fora: o encerramento insiste, e diz que os valores podem ser pedidos' do
       # Arrange
       run = cotacao_submetida
+      allow_any_instance_of(cotacao).to receive(:esperar_o_portal) # rubocop:disable RSpec/AnyInstance
       allow(mock).to receive(:quote_proposal).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, '504'))
       proxima = ate_fechar(run)
       expect(run.status).to eq('running')
@@ -520,7 +523,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(run).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(mock).to have_received(:quote_proposal).twice
+      expect(mock).to have_received(:quote_proposal).exactly(1 + 1 + cotacao::ESPERAS_DO_COMPARATIVO.size).times
       expect(anexos).to be_empty
       expect(conteudos).to eq([cotacao.valores_message(run.arguments)])
     end

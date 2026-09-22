@@ -105,6 +105,11 @@ class Autonomia::Insurance::ResultadoDaCotacao
     [premio.resumo, premio.detalhe].compact.join(', ')
   end
 
+  # -> o que esta seguradora cotou, em português para o modelo (`CoberturaDevolvida#texto`), ou nil (chat#585).
+  def cobertura(codigo)
+    ::Autonomia::Insurance::CoberturaDevolvida.texto(entrada(codigo)['cobertura'])
+  end
+
   # -> o nome de toda seguradora desta cotação, como o item o escreve.
   def nomes
     entradas.keys.map { |codigo| nome(codigo) }.compact_blank

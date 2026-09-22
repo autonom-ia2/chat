@@ -62,6 +62,7 @@ module Autonomia::Agents::Tools::Recusa
                                              '(Testar, Copiloto, playground)',
     # Entrega 2: sem veículo não há o que cotar; a consulta de placa tem as duas saídas dela.
     'sem_veiculo' => 'auto sem placa, chassi nem código FIPE: não há veículo para cotar',
+    'conexao_indisponivel' => 'a corretora está sem conexão pronta com o portal de cotação',
     'formulario_indisponivel' => 'auto sem formulário: a conexão não tem o schema do adapter, e a ferramenta não tinha onde receber o veículo',
     'placa_invalida' => 'a placa informada não tem o formato de uma placa',
     'consulta_de_placa_indisponivel' => 'o portal não respondeu à consulta de placa'

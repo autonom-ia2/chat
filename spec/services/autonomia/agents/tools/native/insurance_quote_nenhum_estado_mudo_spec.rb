@@ -292,8 +292,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           expect(ultima_palavra).to eq(described_class.valores_message(run.arguments))
         end
 
-        # O SINAL DE VIDA (fatia 3 do #420): passados dois minutos sem terminar, sai UMA vez a frase de espera.
-        it 'a cotacao que passa de dois minutos sem terminar diz uma vez que continua cuidando' do
+        # SEM SINAL DE VIDA (chat#585, decisão do CEO em 22/09/2026): a cotação que passa de dois minutos não fala
+        # sozinha. Quem pergunta é respondido pela Lia, pelo especialista e o resultado parcial.
+        it 'a cotacao que passa de dois minutos sem terminar nao fala sozinha' do
           portal('running', [offer('43', 'Ezze', 2050.40)])
           run = execucao(desfalque)
           run.update_columns(created_at: 121.seconds.ago) # rubocop:disable Rails/SkipsModelValidations
@@ -301,8 +302,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           passadas(run, 5, 6)
 
           expect(run.status).to eq('running')
-          expect(conversation.messages.reload.where(sender_type: 'AgentBot').map(&:content))
-            .to eq([described_class.waiting_message(run.arguments)])
+          expect(conversation.messages.reload.where(sender_type: 'AgentBot').map(&:content)).to be_empty
         end
       end
     end

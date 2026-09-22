@@ -82,7 +82,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   def closing_deliveries(handle, trabalho_novo: true)
     return [] unless trabalho_novo && comparativo_por_tentar?(handle.to_h)
 
-    entrega = gerar_comparativo(handle.to_h)
+    entrega = gerar_comparativo(handle.to_h, insistir: true)
     return [] if entrega.nil?
 
     gravar_na_linha { run.merge_handle!(marcas_do_comparativo(entrega)) } if run

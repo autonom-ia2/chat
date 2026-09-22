@@ -182,7 +182,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     codigos = @resultado.procurar(seguradora)
     return @resultado.correndo? ? NAO_ENCONTRADA_AINDA : NAO_ENCONTRADA if codigos.empty?
 
-    partes = [contagem(@resultado.com_preco.size), *codigos.map { |codigo| fala(codigo) }]
+    partes = [contagem(@resultado.com_preco.size), *codigos.map { |codigo| fala(codigo, cobertura: true) }]
     partes += avisos if @resultado.com_preco(codigos).any?
     partes.join("\n")
   end
@@ -202,13 +202,20 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     "#{total} #{total == 1 ? 'seguradora fez' : 'seguradoras fizeram'} proposta #{quando}."
   end
 
-  # O que o modelo lê sobre UMA seguradora. `motivo:` falso tira a categoria de quem não fez proposta.
-  def fala(codigo, motivo: true)
+  # O que o modelo lê sobre UMA seguradora. `motivo:` falso tira a categoria de quem não fez proposta;
+  # `cobertura:` verdadeiro acrescenta, NA MESMA LINHA, o que ela cotou (chat#585) — é pela linha da seguradora
+  # que a conferência da fala autoriza cada valor, e só a pergunta por seguradora a pede.
+  def fala(codigo, motivo: true, cobertura: false)
     nome = @resultado.nome(codigo)
     case @resultado.desfecho(codigo)
-    when Guardado::COM_PRECO then "#{nome} fez proposta: #{@resultado.preco(codigo)}."
+    when Guardado::COM_PRECO then com_preco(nome, codigo, cobertura)
     when Guardado::AGUARDANDO then "#{nome} ainda não respondeu, e a cotação continua correndo."
     else ["#{nome} não fez proposta nesta cotação.", (MOTIVOS.fetch(@resultado.motivo(codigo), SEM_MOTIVO) if motivo)].compact.join(' ')
     end
+  end
+
+  def com_preco(nome, codigo, cobertura)
+    cotou = cobertura ? @resultado.cobertura(codigo) : nil
+    ["#{nome} fez proposta: #{@resultado.preco(codigo)}.", ("O que #{nome} cotou: #{cotou}." if cotou)].compact.join(' ')
   end
 end

@@ -20,9 +20,12 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # o que pertence ao especialista é o `Answerer#enabled_agent_tools`, em runtime. Deixar a de
   # cotação fora daqui não a reserva — APAGA: o catálogo do turno vem de `Tools::Bound.for_agent`,
   # e o `Specialist#tools` filtra ESSE catálogo. Fora dele o especialista roda sem ferramenta.
-  TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais ver_resultado_da_cotacao
-                          enviar_proposta_da_seguradora].freeze
-  TOOLS_DO_ESPECIALISTA = %w[consultar_placa cotar_seguro].freeze
+  # O RESULTADO É DO ESPECIALISTA (chat#585, decisão do CEO em 22/09/2026): perguntas sobre a cotação — preço,
+  # andamento, o que cada seguradora cotou, por que veio diferente do pedido — vão a ele, que tem o pedido e o
+  # retorno na mão e conhece o ramo. A Lia repassa. Enviar a proposta de uma seguradora continua dela: é ação,
+  # não conferência.
+  TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais enviar_proposta_da_seguradora].freeze
+  TOOLS_DO_ESPECIALISTA = %w[consultar_placa cotar_seguro ver_resultado_da_cotacao].freeze
   TODAS_AS_TOOLS = (TOOLS_DO_PRINCIPAL + TOOLS_DO_ESPECIALISTA).freeze
 
   # O primeiro (e por enquanto único) especialista. Cada ramo novo entra aqui com o seu arquivo de
@@ -86,6 +89,19 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # coluna do especialista.
   def self.ferramentas_mantidas_do_especialista(specialist)
     mantido(specialist) ? TOOLS_DO_ESPECIALISTA : nil
+  end
+
+  # AS RODADAS DA LIA NO TURNO (chat#585, decisão do CEO em 22/09/2026: até seis entre o principal e o especialista).
+  # Com uma, a Lia não chamava o especialista de novo no mesmo turno — o CPF que estava na conversa, a pergunta que
+  # ele devolveu — e o manual manda fazer isso. O orçamento de tempo cobre cada rodada esperando um especialista
+  # inteiro: o que limita é a rodada, e o relógio não corta nenhuma. Roda no `ReplyJob`, fora de requisição web.
+  # -> kwargs para o `Answerer`: seis rodadas no Agente de Cotação, a rodada única de sempre nos demais.
+  RODADAS_DA_LIA = 6
+  def self.rodadas_do_turno(agent)
+    return { max_rodadas: 1, max_segundos: nil } unless agent&.agent_type == 'insurance_quote'
+
+    espera = ::Autonomia::Agents::Specialists::Runner::SEGUNDOS_DE_FERRAMENTA + ::Autonomia::Agents::Specialists::Runner::SEGUNDOS_POR_CHAMADA
+    { max_rodadas: RODADAS_DA_LIA, max_segundos: RODADAS_DA_LIA * espera }
   end
 
   # A entrada de `ESPECIALISTAS` deste especialista, quando é um que a Autonom.ia mantém.

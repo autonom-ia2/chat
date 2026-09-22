@@ -328,7 +328,8 @@ module Autonomia
             images: media.images,
             documents: media.documents,
             trust_instruction: true,
-            delivery: delivery
+            delivery: delivery,
+            **::Autonomia::Insurance::QuoteAgent::Builder.rodadas_do_turno(@agent)
           ).answer
         end
 

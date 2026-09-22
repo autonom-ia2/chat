@@ -107,9 +107,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
   # AS LISTAS DE FERRAMENTAS SÃO AS DO DEPLOY (fatia 2 do #420), no molde de `instrucao_mantida`.
   describe 'as ferramentas mantidas' do
-    it 'a lista do Agente de Cotação é a do deploy, com a ferramenta de resultado da Lia no principal' do
-      expect(described_class::TOOLS_DO_PRINCIPAL).to include('ver_resultado_da_cotacao')
-      expect(described_class::TOOLS_DO_ESPECIALISTA).not_to include('ver_resultado_da_cotacao')
+    # O RESULTADO É DO ESPECIALISTA desde a #585 (decisão do CEO em 22/09/2026).
+    it 'a lista do Agente de Cotação é a do deploy, com a ferramenta de resultado no especialista' do
+      expect(described_class::TOOLS_DO_ESPECIALISTA).to include('ver_resultado_da_cotacao')
+      expect(described_class::TOOLS_DO_PRINCIPAL).not_to include('ver_resultado_da_cotacao')
       expect(described_class.ferramentas_mantidas(construir)).to eq(described_class::TODAS_AS_TOOLS)
     end
 
@@ -140,7 +141,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       especialista = agente.specialists.find_by(slug: 'cotacao_auto')
       expect(especialista).to be_present
       expect(especialista.enabled).to be(true)
-      expect(especialista.tool_slugs).to eq(%w[consultar_placa cotar_seguro])
+      expect(especialista.tool_slugs).to eq(%w[consultar_placa cotar_seguro ver_resultado_da_cotacao])
     end
 
     # O EXEMPLO QUE FALTAVA. `tool_slugs` é só uma lista de strings: ela pode citar uma ferramenta

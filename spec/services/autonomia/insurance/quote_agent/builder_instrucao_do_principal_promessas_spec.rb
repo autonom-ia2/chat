@@ -238,10 +238,14 @@ end
 
 # O BLOCO DA FERRAMENTA DE RESULTADO DA §5 (fatia 2 do #420): o bloco, a conversa que exercita as promessas e
 # a tabela de promessas. Módulo próprio, ao lado de `ManualDoPrincipal`, para não passar do teto de linhas.
+# O RESULTADO DA COTAÇÃO É DO ESPECIALISTA desde a #585 (decisão do CEO em 22/09/2026): o bloco saiu do manual da
+# Lia e virou a §J do bloco comum do especialista, e as promessas vieram junto — a tabela é a mesma, lida do arquivo
+# novo. No manual da Lia fica só o bloco que manda a pergunta para ele (`o bloco do resultado da §5`, abaixo).
 module ManualDoPrincipalResultado
-  # Do título até o subtítulo seguinte. Assinado pelo mesmo motivo dos outros dois blocos: a frase-âncora
+  # Da §J até o fim do bloco comum (é a última seção). Assinado pelo mesmo motivo dos outros blocos: a frase-âncora
   # não vê o que for escrito ao lado dela.
-  SECAO = /### `ver_resultado_da_cotacao`.*?(?=\n### )/m
+  SECAO = /## J\. O resultado da cotação.*\z/m
+  ARQUIVO = Autonomia::Insurance::QuoteAgent::Builder::INSTRUCOES.join('comum_especialista.md')
   RESULTADO = Autonomia::Agents::Tools::Native::InsuranceQuoteResult
   COTACAO = Autonomia::Agents::Tools::Native::InsuranceQuote
   BUILDER = Autonomia::Insurance::QuoteAgent::Builder
@@ -256,18 +260,18 @@ module ManualDoPrincipalResultado
 
   # UMA CONVERSA COM UMA COTAÇÃO ENCERRADA: Porto cotou, Sancor recusou pelo tipo do veículo. A conta NÃO tem
   # conexão com o portal, de propósito: a ferramenta de resultado responde sem ela.
-  def conversa_com_cotacao
+  def conversa_com_cotacao(status: 'done', cobertura: nil)
     account = FactoryBot.create(:account, internal_attributes: { 'autonomia_insurance_enabled' => true })
     inbox = FactoryBot.create(:inbox, account: account)
     conversation = FactoryBot.create(:conversation, account: account, inbox: inbox)
     agent = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'custom',
                                              status: :active, enabled: true, instruction: 'Atenda.')
     ofertas = [{ 'insurer' => { 'code' => '8', 'name' => 'Porto Seguro' }, 'status' => 'quoted',
-                 'premium' => { 'amount' => 2119.18, 'basis' => 'total' } },
+                 'premium' => { 'amount' => 2119.18, 'basis' => 'total' }, 'coverage' => cobertura }.compact,
                { 'insurer' => { 'code' => '19', 'name' => 'Sancor' }, 'status' => 'declined',
                  'reason' => { 'kind' => 'risco', 'text' => MOTIVO_DO_VEICULO } }]
     guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas)
-    Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: COTACAO.slug, status: 'done',
+    Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: COTACAO.slug, status: status,
                                        conversation_id: conversation.id, execution_key: SecureRandom.uuid, arguments: {},
                                        handle: { 'quote_id' => 'q-1:1', COTACAO::RESULTADO_KEY => guardado })
     [agent, conversation]
@@ -287,9 +291,9 @@ module ManualDoPrincipalResultado
 
   # CADA PROMESSA DO BLOCO, PELA FRASE EXATA, E O QUE A SUSTENTA.
   PROMESSAS = {
-    # A ferramenta é do principal e responde sem o portal: a conta desta conversa não tem conexão nenhuma.
-    'O que a cotação desta conversa já recebeu das seguradoras, sem cotar de novo.' => lambda {
-      BUILDER::TOOLS_DO_PRINCIPAL.include?(RESULTADO.slug) && BUILDER::TOOLS_DO_ESPECIALISTA.exclude?(RESULTADO.slug) &&
+    # A ferramenta é do especialista e responde sem o portal: a conta desta conversa não tem conexão nenhuma.
+    'o que a cotação desta conversa já recebeu das seguradoras, sem cotar de novo.' => lambda {
+      BUILDER::TOOLS_DO_ESPECIALISTA.include?(RESULTADO.slug) && BUILDER::TOOLS_DO_PRINCIPAL.exclude?(RESULTADO.slug) &&
         consultar('Sancor').first.include?('Sancor não fez proposta')
     },
     # Um parâmetro só, e a procura acha mais de uma seguradora no mesmo texto.
@@ -301,7 +305,7 @@ module ManualDoPrincipalResultado
     # Pedir os preços não abre execução: a ferramenta é síncrona e do principal, e nenhuma cotação nova é aberta.
     'Pedir os preços não é pedir outra cotação' => lambda {
       consultar(nil)
-      !RESULTADO.async? && BUILDER::TOOLS_DO_PRINCIPAL.include?(RESULTADO.slug) &&
+      !RESULTADO.async? && BUILDER::TOOLS_DO_ESPECIALISTA.include?(RESULTADO.slug) &&
         Autonomia::Agents::ToolRun.where(slug: [RESULTADO.slug]).none?
     },
     # A ferramenta devolve ao modelo o valor com o período, e o registra no turno para a conferência (fatia 3).
@@ -315,8 +319,20 @@ module ManualDoPrincipalResultado
     'O período vai sempre junto do valor' => -> { consultar(nil).first.include?('R$ 2.119,18 no total') },
     # A lista que a ferramenta devolve já separa os períodos (`QuoteOffers#quoted`), e o texto ao modelo repete a regra.
     'Nunca ordene um valor por mês contra um valor total pelo número cru' => -> { RESULTADO::COMO_ESCREVER.include?('Não ordene') },
+    # O PEDIDO E O RETORNO (#585): por seguradora, a ferramenta devolve o que ela cotou (adapters#75), e o resumo do
+    # que foi pedido vem junto (#515). Os dois fatos estão na mão de quem responde.
+    '**O pedido e o que voltou são dois fatos.**' => lambda {
+      cotou = { 'rental_car' => 'Não', 'property_damage' => 300_000 }
+      consultar('Porto', conversa_com_cotacao(cobertura: cotou)).first.include?('O que Porto Seguro cotou: carro reserva: Não') &&
+        RESULTADO.private_instance_methods.include?(:entrada_da_cotacao)
+    },
+    # O "E AÍ?" (#585): com a cotação correndo, o resultado parcial diz quem já cotou e por quanto, e que há mais a chegar.
+    '**Com a cotação correndo, diga o que já chegou:**' => lambda {
+      ao_modelo, = consultar(nil, conversa_com_cotacao(status: 'running'))
+      ao_modelo.include?('Porto Seguro fez proposta: R$ 2.119,18 no total') && ao_modelo.include?(RESULTADO::AINDA_CORRENDO)
+    },
     # A conferência existe e não deixa valor que não está nos dados passar.
-    'O sistema confere a sua resposta' => lambda {
+    'O sistema confere a resposta que chega à' => lambda {
       _, turno = consultar(nil)
       Autonomia::Agents::Answerer.private_instance_methods.include?(:conferir_precos) &&
         Autonomia::Agents::ConferenciaDePrecos.new(turno).publicavel('Porto Seguro: R$ 1.999,00.') { nil } ==
@@ -349,12 +365,12 @@ module ManualDoPrincipalResultado
       consultar('Sancor').first.exclude?(MOTIVO_DO_VEICULO) &&
         RESULTADO::MOTIVOS.values.all? { |texto| texto.include?('sem acrescentar detalhe') }
     },
-    "Quando a ferramenta disser que não há motivo que\nvocê possa contar" => lambda {
+    'Quando a ferramenta disser que não há motivo que você possa contar' => lambda {
       RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
         MOTIVO.categoria('kind' => 'passageiro', 'text' => MOTIVO_DO_VEICULO).nil?
     },
     # O molde fechado do motivo não tem palavra de conta nem da pessoa: com qualquer uma delas, o texto vai ao genérico.
-    "Nunca fale de login, senha ou\npermissão da corretora, nem de restrição da pessoa." => lambda {
+    'Nunca fale de login, senha ou permissão da corretora, nem de restrição da pessoa.' => lambda {
       moldes = MOTIVO::MOLDES.values.map { |molde| molde[:palavras] }
       %w[login senha permissao segurado condutor restricao].none? { |palavra| moldes.any? { |palavras| palavras.include?(palavra) } } &&
         ['faça login', 'senha vencida', 'sem permissão', 'segurado com restrição'].all? do |termo|
@@ -423,7 +439,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     it 'todo slug do catálogo que aparece no texto está em TOOLS_DO_PRINCIPAL' do
       citadas = Autonomia::Agents::Tools::Registry.slugs.select { |slug| texto.include?(slug) }
 
-      expect(citadas).to include('consultar_condicoes_gerais', 'ver_resultado_da_cotacao')
+      expect(citadas).to include('consultar_condicoes_gerais')
       expect(citadas - described_class::TOOLS_DO_PRINCIPAL).to be_empty
     end
 
@@ -504,7 +520,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('99684ba9321da3426761f66dff96a9fb')
+      expect(Digest::MD5.hexdigest(secao)).to eq('8fa84828cf2b52fc943783952792262f')
     end
 
     # O ARQUIVO É LIDO COM AS ESCOLHAS SUBSTITUÍDAS (#380): a §7.1 não pode trazer marcador novo.
@@ -552,28 +568,37 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
   end
 
-  # O BLOCO DA FERRAMENTA DE RESULTADO (fatia 2 do #420): promessa por frase exata e assinatura por md5.
-  # Nasceu ANTES do "### Os especialistas de ramo", e é por isso que a assinatura daquele bloco não mudou.
-  describe 'promessa e capacidade da ferramenta de resultado da §5 (fatia 2 do #420)' do
-    let(:secao) { ManualDoPrincipalResultado.secao(texto) }
+  # O BLOCO DA FERRAMENTA DE RESULTADO (fatia 2 do #420), hoje a §J do bloco comum do especialista (#585): promessa
+  # por frase exata e assinatura por md5.
+  describe 'promessa e capacidade da ferramenta de resultado, na §J do especialista (#585)' do
+    let(:comum) { ManualDoPrincipalResultado::ARQUIVO.read }
+    let(:secao) { ManualDoPrincipalResultado.secao(comum) }
 
     ManualDoPrincipalResultado::PROMESSAS.each do |frase, sustenta|
       it "«#{frase.tr("\n", ' ')}» tem o que a sustenta" do
-        expect(ManualDoPrincipalResultado.secao(texto)).to include(frase)
+        expect(ManualDoPrincipalResultado.secao(ManualDoPrincipalResultado::ARQUIVO.read)).to include(frase)
         expect(sustenta.call).to be_truthy
       end
     end
 
-    it 'está no arquivo, antes do bloco dos especialistas, e é extraído inteiro' do
+    it 'está no bloco comum do especialista e é extraído inteiro' do
       expect(secao).to be_present
-      expect(secao).to start_with('### `ver_resultado_da_cotacao`')
+      expect(secao).to start_with('## J. O resultado da cotação')
       expect(secao).to end_with("permissão da corretora, nem de restrição da pessoa.\n")
-      expect(texto.index(secao)).to be < texto.index('### Os especialistas de ramo')
+    end
+
+    # O que ficou no manual da Lia: a pergunta sobre a cotação vai ao especialista. Só é cumprível porque a
+    # ferramenta é dele e está escondida dela.
+    it 'o manual da Lia manda a pergunta sobre a cotação ao especialista, que é quem tem a ferramenta' do
+      expect(texto).to include('Tudo o que a pessoa perguntar sobre a cotação desta conversa vai ao especialista')
+      expect(texto).not_to include('ver_resultado_da_cotacao')
+      expect(described_class::TOOLS_DO_ESPECIALISTA).to include('ver_resultado_da_cotacao')
+      expect(described_class::TOOLS_DO_PRINCIPAL).not_to include('ver_resultado_da_cotacao')
     end
 
     it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('9d7fa68356107d16adee94eb60121c70')
+      expect(Digest::MD5.hexdigest(secao)).to eq('f288a41b420cba940196b620b03cf87d')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do
@@ -582,8 +607,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(secao.scan(/\$[a-zA-Z]+/)).to be_empty
     end
 
-    it 'diz quantas ferramentas a Lia tem, contando a nova' do
-      expect(texto).to include('Você tem cinco.')
+    it 'diz quantas ferramentas a Lia tem, sem a de resultado' do
+      expect(texto).to include('Você tem quatro.')
+      expect(described_class::TOOLS_DO_PRINCIPAL.size + 1).to eq(4) # mais a consulta ao especialista
     end
   end
 
