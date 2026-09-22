@@ -61,6 +61,12 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     invoke("/v1/#{provider}/quote/schema", { product: product }, read_timeout: CONFERENCIA_TIMEOUT)
   end
 
+  # A BUSCA DO SEGURADO ANTES DE COTAR (chat#585, adapters#75): nome, nascimento e sexo pelo CPF (a razão social
+  # pelo CNPJ), com o que não foi achado em `notFound`. Sem sessão do portal, com o teto da conferência.
+  def quote_enrich(provider:, product:, input:)
+    invoke("/v1/#{provider}/quote/enrich", { product: product, input: input }, read_timeout: CONFERENCIA_TIMEOUT)
+  end
+
   def quote_validate(provider:, product:, input:)
     invoke("/v1/#{provider}/quote/validate", { product: product, input: input },
            read_timeout: CONFERENCIA_TIMEOUT)

@@ -289,4 +289,14 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(runs.map(&:pedido)).to all(be_nil)
     end
   end
+
+  describe 'o texto do pedido repetido' do
+    # O "E AÍ?" (22/09/2026, conversa display 83): o especialista tentou cotar de novo, recebeu este texto e
+    # respondeu "ainda sendo preparadas" sem dizer quem já tinha cotado. O texto manda consultar o resultado.
+    it 'manda consultar o resultado antes de falar do andamento' do
+      run = Autonomia::Agents::ToolRun.new(status: 'running', created_at: 2.minutes.ago)
+
+      expect(Autonomia::Agents::Tools::PedidoRepetido.new(run).to_s).to include('ver_resultado_da_cotacao')
+    end
+  end
 end

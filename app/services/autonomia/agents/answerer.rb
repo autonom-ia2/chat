@@ -64,7 +64,7 @@ module Autonomia
 
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
-                     operador: nil, max_rodadas: 1)
+                     operador: nil, max_rodadas: 1, max_segundos: nil)
         @agent = agent
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
@@ -99,6 +99,7 @@ module Autonomia
         # de propósito: subir isso para o Agente de Cotação, cujas ferramentas
         # são caras e assíncronas, é decisão que exige medição própria.
         @max_rodadas = max_rodadas
+        @max_segundos = max_segundos
       end
 
       # -> Autonomia::Agents::AnswerResult
@@ -251,7 +252,8 @@ module Autonomia
           schema: PromptBuilder::ANSWER_SCHEMA,
           reasoning_effort: Config::ANSWERER_REASONING_EFFORT,
           tools: answer_tools,
-          max_rodadas: @max_rodadas
+          max_rodadas: @max_rodadas,
+          **{ max_segundos: @max_segundos }.compact
         ) { |calls| execute_tool_calls(calls) }
         parsed = JSON.parse(raw[:text])
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.

@@ -1,10 +1,12 @@
 require 'rails_helper'
 
-# A LIA VÊ O RESULTADO DA COTAÇÃO E ESCREVE OS PREÇOS, PELO CAMINHO REAL (fatias 2 e 3 do #420).
+# A LIA ESCREVE OS PREÇOS QUE O ESPECIALISTA LEU, PELO CAMINHO REAL (fatias 2 e 3 do #420; chat#585).
 #
 # O agente é o que o `Builder` cria (principal + especialista de auto), o catálogo do turno é o do `Answerer`, o turno
-# é o do `Operate::Responder`. A ferramenta devolve os dados ao modelo, a Lia escreve, e o código confere a fala antes
-# de ela sair (`ConferenciaDePrecos`). Dublados: o modelo (devolve a chamada de função, a fala e, quando pedida, a
+# é o do `Operate::Responder`. Desde a #585 a ferramenta de resultado é do ESPECIALISTA (decisão do CEO em 22/09/2026):
+# a Lia consulta o especialista, ele lê o resultado com a ferramenta real, e o que ela devolveu fica no MESMO turno —
+# é por isso que a conferência da fala da Lia (`ConferenciaDePrecos`) continua valendo. Dublados: o modelo dos dois
+# (a Lia chama o especialista; o especialista chama a ferramenta e repassa o que leu; a fala e, quando pedida, a
 # reescrita) e nada mais. Os dados são sintéticos.
 RSpec.describe Autonomia::Agents::Answerer do
   let(:account) do
@@ -79,23 +81,51 @@ RSpec.describe Autonomia::Agents::Answerer do
       used_snippet_ids: [], answered_from_knowledge: false }.to_json
   end
 
-  # O modelo dublado: recebe o catálogo e devolve as chamadas de função da rodada (uma, ou várias em
-  # `chamadas`); `capturado` guarda o que ele recebeu.
+  # Os modelos dublados, separados pelo esquema da resposta: o ESPECIALISTA (`Runner::RESULT_SCHEMA`) recebe o
+  # catálogo dele, executa as chamadas da rodada (uma, ou várias em `chamadas`) e repassa o que leu; a LIA recebe o
+  # catálogo dela e, havendo chamadas, consulta o especialista. `capturado` guarda o que cada um recebeu, e
+  # `outputs` é o que a ferramenta devolveu ao especialista.
   # `reescrita`: o Hash que o modelo devolve quando a conferência pede a reescrita, ou a exceção da chamada.
   def modelo(function_call: nil, chamadas: nil, texto: 'Aqui estão as opções que chegaram.', reescrita: nil)
-    capturado = { tools: nil, outputs: nil, reescritas: [] }
+    capturado = { tools: nil, tools_do_especialista: nil, outputs: nil, reescritas: [] }
     lista = chamadas || [function_call].compact
     resolver = instance_double(Crm::Ai::CredentialResolver, resolve: 'ai-credential')
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
     client = instance_double(Crm::Ai::ResponsesClient)
     allow(client).to receive(:create_with_tool_executor) do |**kwargs, &executor|
-      capturado[:tools] = Array(kwargs[:tools]).filter_map { |tool| tool[:name] }
-      capturado[:outputs] = executor.call(lista) if lista.any? && executor
+      nomes = Array(kwargs[:tools]).filter_map { |tool| tool[:name] }
+      next especialista(capturado, nomes, lista, executor) if do_especialista?(kwargs)
+
+      lia(capturado, nomes, lista, executor)
       { text: fala(texto) }
     end
     dublar_reescrita(client, capturado, reescrita)
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     capturado
+  end
+
+  def do_especialista?(kwargs)
+    kwargs.dig(:schema, :name) == Autonomia::Agents::Specialists::Runner::RESULT_SCHEMA[:name]
+  end
+
+  def lia(capturado, nomes, lista, executor)
+    capturado[:tools] = nomes
+    return unless lista.any? && executor
+
+    consulta = consulta_ao_especialista
+    # Sem o especialista (desligado), a Lia tem a ferramenta e a chama direto.
+    nomes.include?(consulta['name']) ? executor.call([consulta]) : capturado[:outputs] = executor.call(lista)
+  end
+
+  def especialista(capturado, nomes, lista, executor)
+    capturado[:tools_do_especialista] = nomes
+    capturado[:outputs] = executor.call(lista) if lista.any? && executor
+    { text: { resposta: Array(capturado[:outputs]).pluck(:output).join("\n"), dados_faltando: [] }.to_json }
+  end
+
+  def consulta_ao_especialista
+    { 'name' => agente.specialists.first.function_name, 'call_id' => 'e1',
+      'arguments' => { Autonomia::Agents::Specialist::REQUEST_PARAM => 'o cliente quer ver os preços da cotação' }.to_json }
   end
 
   # A chamada de reescrita que a conferência de preços faz (`ResponsesClient#create`).
@@ -123,14 +153,15 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   describe 'o catálogo do turno' do
-    it 'a ferramenta é do principal, e o especialista não a recebe' do
-      capturado = modelo
+    it 'a ferramenta é do especialista, e a Lia não a recebe' do
+      capturado = modelo(function_call: chamada)
 
       responder
 
-      expect(capturado[:tools]).to include(slug, 'consultar_condicoes_gerais')
-      expect(capturado[:tools]).not_to include('cotar_seguro', 'consultar_placa')
-      expect(agente.specialists.first.tools.map(&:slug)).to contain_exactly('consultar_placa', 'cotar_seguro')
+      expect(capturado[:tools]).to include('consultar_condicoes_gerais', 'enviar_proposta_da_seguradora')
+      expect(capturado[:tools]).not_to include(slug, 'cotar_seguro', 'consultar_placa')
+      expect(capturado[:tools_do_especialista]).to include(slug)
+      expect(agente.specialists.first.tools.map(&:slug)).to contain_exactly('consultar_placa', 'cotar_seguro', slug)
     end
 
     # O AGENTE 24 EM PRODUÇÃO tem a lista gravada em 11/09/2026, sem a ferramenta nova. Ela chega pela lista
@@ -139,11 +170,11 @@ RSpec.describe Autonomia::Agents::Answerer do
       antiga = %w[consultar_produtos_cotacao consultar_condicoes_gerais cotar_seguro consultar_placa]
       agente.update!(config: agente.config.merge('native_tool_slugs' => antiga))
       config_antes = agente.reload.config
-      capturado = modelo
+      capturado = modelo(function_call: chamada)
 
       responder
 
-      expect(capturado[:tools]).to include(slug)
+      expect(capturado[:tools_do_especialista]).to include(slug)
       expect(agente.reload.config).to eq(config_antes)
     end
 
@@ -156,8 +187,8 @@ RSpec.describe Autonomia::Agents::Answerer do
 
       responder
 
-      expect(capturado[:tools]).not_to include('consultar_placa', 'cotar_seguro')
-      expect(especialista.reload.tools.map(&:slug)).to contain_exactly('consultar_placa', 'cotar_seguro')
+      expect(capturado[:tools]).not_to include('consultar_placa', 'cotar_seguro', slug)
+      expect(especialista.reload.tools.map(&:slug)).to contain_exactly('consultar_placa', 'cotar_seguro', slug)
     end
 
     # COM O ESPECIALISTA DESLIGADO não há reserva: o principal recebe tudo, como já acontecia antes desta

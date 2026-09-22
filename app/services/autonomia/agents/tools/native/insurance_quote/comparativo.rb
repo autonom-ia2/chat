@@ -40,6 +40,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # encerra é `AsyncRunJob#fail_run`, e o encerramento pede o comparativo mais uma vez quando ainda há
   # tentativa sobrando (`Fecho#closing_deliveries`).
   TETO_DE_TENTATIVAS = 3
+  # As esperas antes de pedir o comparativo de novo ao portal (`com_novas_tentativas`), em segundos. Uma só: com
+  # duas chamadas de até 65 s, o encerramento cabe na folga do varredor (`ReapStaleRunsJob::GRACE`).
+  ESPERAS_DO_COMPARATIVO = [20].freeze
+  PORTAL_LENTO = %i[timeout unavailable].freeze
 
   private
 
@@ -127,16 +131,42 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # UM PEDIDO DO COMPARATIVO AO PORTAL. -> a entrega de arquivo na forma serializada, ou nil quando a
   # geração falha, quando o portal não devolve URL ou quando a URL não cabe na forma. Nunca levanta:
   # os preços já chegaram, e um PDF que não sai não pode apagá-los.
-  def gerar_comparativo(handle)
-    proposal = sessions.with_fresh_session do |open_session|
-      connector.quote_proposal(provider: connection.provider, session: open_session,
-                               quote_id: handle['quote_id'])
+  # `insistir:` é do FECHAMENTO (`Fecho#closing_deliveries`), que não tem passada seguinte: lá a falha do portal
+  # ganha outra chance na mesma passada (`com_novas_tentativas`). A passada que conclui (`fechar`) já tenta de novo
+  # na passada seguinte, com teto (`TETO_DE_TENTATIVAS`), e não insiste aqui.
+  def gerar_comparativo(handle, insistir: false)
+    proposal = com_novas_tentativas(insistir) do
+      sessions.with_fresh_session do |open_session|
+        connector.quote_proposal(provider: connection.provider, session: open_session,
+                                 quote_id: handle['quote_id'])
+      end
     end
     url = proposal.to_h['url'].presence
     url && entrega_do_comparativo(url, handle)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] comparativo falhou account=#{account.id} #{e.class}")
     nil
+  end
+
+  # O PORTAL LENTO GANHA OUTRA CHANCE (chat#585). Em 21 e 22/09/2026 duas cotações com 8 e 9 preços fecharam por
+  # prazo e o cliente recebeu "os valores estão comigo" no lugar do PDF: o gerador do portal (`/calculo/print`)
+  # falhou na única tentativa. Pedido de novo minutos depois, o mesmo PDF saiu. Só tempo e portal fora são
+  # tentados de novo — recusa de validação não melhora esperando —, e a espera roda no job, fora do turno.
+  def com_novas_tentativas(insistir)
+    esperas = insistir ? self.class::ESPERAS_DO_COMPARATIVO.dup : []
+    begin
+      yield
+    rescue ::Autonomia::Insurance::Connector::Error => e
+      espera = self.class::PORTAL_LENTO.include?(e.kind) ? esperas.shift : nil
+      raise if espera.nil?
+
+      esperar_o_portal(espera)
+      retry
+    end
+  end
+
+  def esperar_o_portal(segundos)
+    sleep(segundos)
   end
 
   # A URL VEM DE FORA e a forma da entrega de arquivo pode recusá-la (o adapter só garante que é uma

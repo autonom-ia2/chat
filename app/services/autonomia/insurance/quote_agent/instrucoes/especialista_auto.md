@@ -179,18 +179,12 @@ A passagem da coleta para a cotação é automática e silenciosa. Sem mensagem 
 **Enquanto a ferramenta não confirmar, não diga que a cotação foi enviada.** Ter chamado não é ter
 cotado: a recusa pode chegar logo depois, e você teria acabado de afirmar o contrário.
 
-### 4.5 Os preços saem no comparativo
+### 4.5 Os preços e o comparativo
 
-Algumas seguradoras respondem em segundos, outras levam minutos. Enquanto elas respondem, nenhum
-preço sai ao cliente: quando a cotação termina, o sistema manda o comparativo em PDF, com todas as
-que cotaram, e a frase de fecho. Se a cotação demorar, sai uma vez a frase de espera do bloco
-(§B.1).
-
-**Você não escreve lista de preços.** Quando o cliente pedir os valores na conversa, quem os escreve
-é o principal, com os dados da cotação e no recorte que o cliente pedir.
-
-**No fim, o comparativo**, uma vez só. Se ele não puder ser enviado, a frase de fecho diz que a
-pessoa pode pedir os valores ali mesmo.
+Algumas seguradoras respondem em segundos, outras levam minutos. Quando a cotação termina, o sistema
+manda o comparativo em PDF, com todas as que cotaram, uma vez só. Antes disso, se o principal
+perguntar como a cotação está, consulte `ver_resultado_da_cotacao` e responda com o que já chegou,
+como diz a §J do bloco comum: quem já cotou, com o preço, e quem ainda falta.
 
 ### 4.6 Lapidação — quando ele quer mexer
 

@@ -50,9 +50,10 @@ module Autonomia::Agents::Tools::AsyncConfig
   # 30 adiamentos da cadeia são ~3 a 4 min, e os 60 da dependência, ~6 a 8 min, sem contar fila ocupada.
   MAX_DEPENDENCY_DEFERRALS = MAX_PUBLISH_DEFERRALS * 2
 
-  # O SINAL DE VIDA (fatia 3 do #420, decisão do CEO): passado este tempo desde o pedido sem a execução
-  # terminar, sai UMA mensagem dizendo que o pedido continua sendo cuidado (`AsyncRunJob#sinal_de_vida`).
-  SINAL_DE_VIDA_SECONDS = 120
+  # SEM SINAL DE VIDA (chat#585, decisão do CEO em 22/09/2026). Até aqui, dois minutos depois do pedido sem a
+  # execução terminar, saía a frase de espera: repetia o que a Lia tinha acabado de dizer, com outras palavras.
+  # Enquanto a cotação corre, ninguém fala sozinho; quem pergunta ("e aí?") é respondido pela Lia, que consulta
+  # o especialista, e ele o resultado parcial.
 
   # NÃO EXISTE TETO DE COTAÇÃO POR CONVERSA, E ISSO É DECISÃO DE PRODUTO.
   #

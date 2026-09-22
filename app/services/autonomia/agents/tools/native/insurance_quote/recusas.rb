@@ -63,6 +63,11 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
   SEM_FORMULARIO = 'O formulário de auto desta conta não está disponível agora (a conexão da ' \
                    'corretora não entregou os campos). Não peça mais dados ao cliente: diga que ' \
                    'não consegue cotar neste momento e encaminhe para um atendente.'.freeze
+  # CONEXÃO FORA (chat#585): em 21/09/2026 a conexão ficou offline por nove horas ("Sessões lotadas" no portal) e a
+  # cotação pedida nesse intervalo era aceita para morrer depois de 23 tentativas. Recusada antes, nada é aberto.
+  CONEXAO_FORA = 'A corretora está sem conexão com o portal de cotação neste momento, e a cotação não foi aberta. ' \
+                 'Não peça mais dados ao cliente e não diga que vai cotar: diga que não consegue cotar agora, sem ' \
+                 'falar de portal, login ou sistema, e ofereça chamar uma pessoa da equipe.'.freeze
   LISTA = { two_words_connector: ' e ', last_word_connector: ' e ' }.freeze
 
   # A FRASE É DO ESPECIALISTA, A LISTA É DO CÓDIGO. Sem rótulo nenhum a traduzir, sai o papel

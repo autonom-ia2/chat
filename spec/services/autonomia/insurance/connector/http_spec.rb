@@ -208,4 +208,33 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
         expect(error.message).not_to include('segredo')
       end
   end
+
+  # O CONTRATO COM O ADAPTER, PELA NORMALIZAÇÃO DE VERDADE (22/09/2026). A primeira versão desta entrega lia `notFound` e
+  # `rentalCar` — as chaves como o adapter as escreve — e os specs dublavam a mesma forma: tudo verde, e na sonda real a
+  # busca do segurado e a cobertura sumiam em silêncio, porque o `Connector::Http` normaliza a resposta inteira para
+  # snake_case. Aqui a resposta entra NA FORMA DO ADAPTER e passa pelo `normalize_keys` do conector real.
+  describe 'o contrato com o adapter, pela normalização de verdade' do
+    def pela_normalizacao(resposta_do_adapter)
+      described_class.new.send(:normalize_keys, resposta_do_adapter)
+    end
+
+    it 'a cobertura escrita pelo adapter chega inteira ao que o especialista lê' do
+      resultado = pela_normalizacao(
+        'offers' => [{ 'insurer' => { 'code' => '20', 'name' => 'Suhai' }, 'status' => 'quoted',
+                       'premium' => { 'amount' => 2890.73, 'currency' => 'BRL', 'basis' => 'total' },
+                       'coverage' => { 'rentalCar' => 'Não', 'propertyDamage' => 500_000, 'deductibleAmount' => 5795 } }]
+      )
+
+      guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir({}, resultado['offers'])
+      texto = Autonomia::Insurance::CoberturaDevolvida.texto(guardado['20']['cobertura'])
+
+      expect(texto).to include('carro reserva: Não', 'danos materiais: R$ 500.000,00', 'valor da franquia: R$ 5.795,00')
+    end
+
+    it 'o que a busca do segurado não achou chega como a conferência lê' do
+      resposta = pela_normalizacao('input' => {}, 'notFound' => %w[insured.birthDate insured.gender])
+
+      expect(resposta['not_found']).to eq(%w[insured.birthDate insured.gender])
+    end
+  end
 end

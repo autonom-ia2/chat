@@ -293,7 +293,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           rodar_job(cotacao, arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } })
         }
       },
-      'insurance_quote.rb#precheck#1' => {
+      'insurance_quote.rb#recusa_de_entrada#1' => {
         espera: { motivo: 'json_invalido', slug: 'cotar_seguro', faltando: 'dados' },
         dispara: lambda {
           ready_connection
@@ -301,7 +301,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
                                       delivery: delivery)
         }
       },
-      'insurance_quote.rb#precheck#2' => {
+      # Sem conexão pronta (chat#585): recusa na conferência, e nada é aberto.
+      'insurance_quote.rb#recusa_de_entrada#2' => {
+        espera: { motivo: 'conexao_indisponivel', slug: 'cotar_seguro' },
+        dispara: lambda {
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'auto', cpf: '04297912678' }.to_json },
+                                      delivery: delivery)
+          expect(Autonomia::Agents::ToolRun.count).to be_zero
+        }
+      },
+      'insurance_quote.rb#recusa_de_entrada#3' => {
         espera: { motivo: 'formulario_indisponivel', slug: 'cotar_seguro' },
         dispara: lambda {
           ready_connection
@@ -311,7 +320,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }
       },
-      'insurance_quote.rb#precheck#3' => {
+      'insurance_quote.rb#recusa_de_entrada#4' => {
         espera: { motivo: 'sem_veiculo', slug: 'cotar_seguro', faltando: 'vehicle.plate' },
         dispara: lambda {
           ready_connection
@@ -363,7 +372,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       # Ramo que o adapter não tem: recusa na conferência (nenhuma execução aberta) e no envio.
-      'insurance_quote.rb#precheck#4' => {
+      'insurance_quote.rb#precheck#1' => {
         espera: { motivo: 'ramo_desconhecido', slug: 'cotar_seguro', faltando: 'produto' },
         dispara: lambda {
           ready_connection

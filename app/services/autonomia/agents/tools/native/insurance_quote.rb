@@ -169,12 +169,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # Devolve a `Conferencia` inteira, não só a frase: o registro de recusa (entrega 6) precisa saber
   # QUAIS campos faltaram, e a frase em português já traduziu os nomes.
   def precheck
-    return conferencia('json_invalido', PEDIDO_DE_JSON, ['dados']) if dados.nil?
-    return conferencia('formulario_indisponivel', SEM_FORMULARIO, []) if sem_formulario?
-    return conferencia('sem_veiculo', SEM_VEICULO, [PLACA]) if sem_veiculo?
-
-    faltantes = validar
-    faltantes.any? ? conferencia_do_que_falta(faltantes) : nil
+    recusa_de_entrada || conferencia_dos_dados
   rescue ::Autonomia::Insurance::Connector::Error => e
     # Ramo desconhecido é a única falha de validação que a conferência NÃO deixa passar: aceitar
     # abriria uma execução que o `start` recusaria de qualquer jeito, minutos depois.
@@ -185,6 +180,22 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] conferencia indisponivel account=#{account.id} #{e.class}")
     nil
+  end
+
+  # O que impede a cotação antes de olhar os dados: sem JSON, sem conexão, sem formulário, sem veículo.
+  def recusa_de_entrada
+    return conferencia('json_invalido', PEDIDO_DE_JSON, ['dados']) if dados.nil?
+    return conferencia('conexao_indisponivel', CONEXAO_FORA, []) if conexao_fora?
+    return conferencia('formulario_indisponivel', SEM_FORMULARIO, []) if sem_formulario?
+
+    conferencia('sem_veiculo', SEM_VEICULO, [PLACA]) if sem_veiculo?
+  end
+
+  # A busca do segurado é paga: só roda quando o resto já está completo (revisão da chat#587).
+  def conferencia_dos_dados
+    faltantes = validar
+    faltantes = segurado_nao_achado if faltantes.empty?
+    faltantes.any? ? conferencia_do_que_falta(faltantes) : nil
   end
 
   # -> Tools::Progress. Uma consulta. Só entrega quem AINDA NÃO foi entregue.

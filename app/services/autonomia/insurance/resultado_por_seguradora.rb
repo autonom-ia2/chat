@@ -5,7 +5,8 @@
 # `Insurance::ResultadoDaCotacao`), sem ir ao portal.
 #
 # Uma entrada por código de seguradora, sempre com o nome:
-#   - com preço:    { 'nome', 'desfecho' => 'com_preco', 'premio' => { amount, basis, installments } }
+#   - com preço:    { 'nome', 'desfecho' => 'com_preco', 'premio' => { amount, basis, installments } }, mais
+#                   'cobertura' => o que a seguradora cotou (`CoberturaDevolvida`, chat#585) quando a oferta traz;
 #   - sem proposta: { 'nome', 'desfecho' => 'sem_proposta' }, mais 'motivo' => 'veiculo' ou 'regiao' só quando
 #                   `MotivoDaRecusa.categoria` classifica o motivo; o texto do portal nunca é guardado;
 #   - sem desfecho: { 'nome', 'desfecho' => 'aguardando' }.
@@ -49,12 +50,16 @@ module Autonomia::Insurance::ResultadoPorSeguradora
 
   def entrada(oferta)
     nome = oferta.dig('insurer', 'name').to_s
-    if ::Autonomia::Insurance::QuoteOffers.cotada?(oferta)
-      return { 'nome' => nome, 'desfecho' => COM_PRECO, 'premio' => oferta['premium'].slice(*CAMPOS_DO_PREMIO) }
-    end
+    return com_preco(nome, oferta) if ::Autonomia::Insurance::QuoteOffers.cotada?(oferta)
     return sem_proposta(nome, oferta) if SEM_PRECO.include?(oferta['status'])
 
     { 'nome' => nome, 'desfecho' => AGUARDANDO }
+  end
+
+  def com_preco(nome, oferta)
+    entrada = { 'nome' => nome, 'desfecho' => COM_PRECO, 'premio' => oferta['premium'].slice(*CAMPOS_DO_PREMIO) }
+    cobertura = ::Autonomia::Insurance::CoberturaDevolvida.guardavel(oferta['coverage'])
+    cobertura ? entrada.merge('cobertura' => cobertura) : entrada
   end
 
   # A entrada sem proposta, com a categoria do motivo só quando a oferta não é `auth_required` e a regra classifica.

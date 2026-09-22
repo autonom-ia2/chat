@@ -26,7 +26,8 @@ class Autonomia::Agents::Tools::PedidoRepetido
 
   def to_s
     "Este pedido tem exatamente os mesmos dados da consulta que #{estado}. Não abri outra. " \
-      'Responda ao cliente sobre o andamento com as suas palavras, sem vocabulário de sistema. ' \
+      'Para falar do andamento ou dos preços, consulte antes ver_resultado_da_cotacao: ele diz quem já cotou, ' \
+      'por quanto, e quem ainda falta. Responda com isso, com as suas palavras e sem vocabulário de sistema. ' \
       'Se ele mudou algum dado, refaça a chamada com o dado novo — dado diferente abre consulta nova.'
   end
 

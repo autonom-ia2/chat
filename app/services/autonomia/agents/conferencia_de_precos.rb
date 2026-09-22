@@ -15,13 +15,14 @@
 class Autonomia::Agents::ConferenciaDePrecos
   # O que a ferramenta devolveu ao modelo neste turno: `texto` é a saída dela, `seguradoras` o nome de toda
   # seguradora da cotação (é por eles que se acha a citação na fala), `comparativo` diz se o PDF já foi
-  # entregue ao cliente. Duas chamadas no mesmo turno somam (`+`).
-  Dados = Struct.new(:texto, :seguradoras, :comparativo, keyword_init: true) do
+  # entregue ao cliente. `coberturas` são as linhas do que cada seguradora cotou (chat#585): valores que a fala
+  # pode citar, mas nunca como preço (`trocados`). Duas chamadas no mesmo turno somam (`+`).
+  Dados = Struct.new(:texto, :seguradoras, :comparativo, :coberturas, keyword_init: true) do
     def +(other)
       return self if other.nil?
 
       Dados.new(texto: [texto, other.texto].compact.join("\n"), seguradoras: (seguradoras | other.seguradoras),
-                comparativo: comparativo || other.comparativo)
+                comparativo: comparativo || other.comparativo, coberturas: Array(coberturas) + Array(other.coberturas))
     end
   end
 
@@ -103,7 +104,7 @@ class Autonomia::Agents::ConferenciaDePrecos
       next [] if nomes.empty? || valores.empty?
 
       linhas = linhas_de(nomes)
-      fora = valores - linhas.flat_map { |linha| self.class.valores(linha) }
+      fora = valores - linhas.flat_map { |linha| self.class.valores(linha) } - de_cobertura(trecho, nomes)
       nomes.one? && periodo_trocado?(trecho, linhas.join(' ')) ? fora + [:periodo] : fora
     end
   end
@@ -111,6 +112,15 @@ class Autonomia::Agents::ConferenciaDePrecos
   # As linhas dos dados do turno que citam alguma destas seguradoras (uma linha por seguradora).
   def linhas_de(nomes)
     @dados.texto.to_s.lines.select { |linha| citadas(linha).intersect?(nomes) }
+  end
+
+  # O VALOR DE COBERTURA NÃO É PREÇO (revisão da chat#587). A franquia ou o limite de danos que a seguradora cotou
+  # pode ser citado; no trecho que fala de período de preço ("no total", "por mês"), não: "a Suhai ficou em
+  # R$ 500.000,00 no total" é o limite de danos materiais escrito como preço.
+  def de_cobertura(trecho, nomes)
+    return [] if trecho.match?(PERIODO_MES) || trecho.match?(PERIODO_TOTAL)
+
+    Array(@dados.coberturas).select { |linha| citadas(linha).intersect?(nomes) }.flat_map { |linha| self.class.valores(linha) }
   end
 
   # O trecho diz "por mês" onde o dado é total, ou "no total" onde o dado é por mês.
@@ -125,7 +135,7 @@ class Autonomia::Agents::ConferenciaDePrecos
   end
 
   def permitidos
-    @permitidos ||= self.class.valores(@dados.texto)
+    @permitidos ||= self.class.valores([@dados.texto, *Array(@dados.coberturas)].join("\n"))
   end
 
   # As seguradoras da cotação que o texto cita: todas as palavras que distinguem o nome estão no texto
@@ -145,10 +155,14 @@ class Autonomia::Agents::ConferenciaDePrecos
               'diga que você não conseguiu escrever os valores agora e que ele pode pedir de novo'
             end
     "A sua resposta tem #{divergencias.size} valor(es) ou nome(s) de seguradora que não estão nos dados que " \
-      "ver_resultado_da_cotacao devolveu neste turno. Os dados são estes:\n#{@dados.texto}\n\n" \
+      "ver_resultado_da_cotacao devolveu neste turno. Os dados são estes:\n#{dados_por_extenso}\n\n" \
       'Reescreva a resposta ao cliente em reply, com cada valor e cada nome de seguradora exatamente como ' \
       'estão nos dados e o período junto de cada valor. Em reply_sem_valores, escreva a mesma resposta sem ' \
       "nenhum valor em reais: #{lugar}. Sem travessão."
+  end
+
+  def dados_por_extenso
+    [@dados.texto, *Array(@dados.coberturas)].join("\n")
   end
 
   def recuo(motivo)

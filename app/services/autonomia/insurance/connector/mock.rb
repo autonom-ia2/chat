@@ -95,6 +95,14 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     { 'platform' => provider, 'product' => product.to_s, **schema }
   end
 
+  # A busca do segurado (chat#585): o mock acha tudo — quem precisar do "não achado" dubla este método.
+  # Produto desconhecido é recusado como no adapter real.
+  def quote_enrich(provider:, product:, input:)
+    require_provider!(provider)
+    require_produto!(product)
+    { 'input' => input, 'not_found' => [] }
+  end
+
   # Recusa o que o schema exige e não veio. Não imita a checagem de domínio do adapter real (a troca
   # de tabela entre `seguradoraAnteriorId` e `seguradoraCodes`): o mock ensina a FORMA da resposta, e
   # fingir que conhece os códigos do portal seria a mesma mentira que o snake_case de 04/09.

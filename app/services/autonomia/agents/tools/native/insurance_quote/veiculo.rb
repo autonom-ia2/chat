@@ -8,6 +8,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
 
   PLACA = 'vehicle.plate'.freeze
   ZERO_KM = 'vehicle.isZeroKm'.freeze
+  # O motivo que o modelo lê para o campo que a busca do segurado não achou (`segurado_nao_achado`). Sem valor nenhum.
+  NAO_ACHADO = 'não foi achado pelo documento informado; pergunte ao cliente.'.freeze
+  DIGITOS_DE_CNPJ = 14
   IDENTIFICADORES_DO_VEICULO = %w[plate chassis fipeCode].freeze
 
   private
@@ -36,6 +39,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
   # `vehicle` e não tinha onde escrever a placa. Recusar por `sem_veiculo` aqui mandaria pedir ao
   # cliente o que a ferramenta é que não pôde receber. `schema_da_conexao` tenta buscar de novo
   # antes de desistir: só é indisponível o que segue indisponível.
+  # -> a conexão com o portal está fora e não volta sozinha? Aí toda cotação morre no envio (chat#585). Os estados
+  # de passagem (o healthcheck sondando o portal, a sincronização) duram segundos e não recusam: o envio tenta de
+  # novo (revisão da chat#587).
+  CONEXAO_FORA_DO_AR = %w[not_configured auth_required human_required offline].freeze
+  def conexao_fora?
+    ::Autonomia::Insurance::Connection.for_account(account).all? { |conexao| CONEXAO_FORA_DO_AR.include?(conexao.status) }
+  end
+
   def sem_formulario?
     quote_input.auto? && self.class.schema_da_conexao(connection).blank?
   end
@@ -47,6 +58,39 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
   # de cara certa. Entra na conferência como um problema a mais, no formato do adapter
   # (`campo`/`severidade`/`motivo`): o código compara o ano com o calendário; quem pergunta é o modelo.
   # -> lista de problemas, vazia quando não há.
+  # A BUSCA DO SEGURADO ANTES DA PROMESSA (chat#585). Nome, nascimento e sexo (a razão social, em empresa) são
+  # buscados pelo documento só no envio, depois de o especialista dizer que cotou; quando a busca não acha a pessoa,
+  # a cotação voltava pedindo o que tinha sido dado por resolvido (versão 7 da prova de 21/09/2026). A conferência
+  # faz a mesma busca (`quote/enrich`) e o que ela não achou vira pergunta, antes.
+  #
+  # SÓ `not_found` É USADO (LGPD, revisão da adapters#75; o adapter escreve `notFound`, e o `Connector::Http`
+  # normaliza para snake_case): o que a busca achou nunca volta ao modelo — quem digitasse
+  # o CPF de outra pessoa ouviria o nome e o nascimento dela. O envio busca de novo, no adapter, e esse é o custo de
+  # uma consulta a mais quando o modelo não trouxe os três. Conferência, não portão: falha aqui é nada a perguntar.
+  # -> problemas no formato da validação, um por campo não achado.
+  def segurado_nao_achado
+    return [] unless busca_do_segurado?
+
+    resposta = connector.quote_enrich(provider: connection.provider, product: produto, input: entrada)
+    do_segurado = Array(resposta.to_h['not_found']).map(&:to_s).select { |campo| campo.start_with?('insured.') }
+    do_segurado.map { |campo| { 'campo' => campo, 'severidade' => 'erro', 'motivo' => NAO_ACHADO } }
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][insurance] busca do segurado indisponivel account=#{account.id} #{e.class}")
+    []
+  end
+
+  # Consulta paga só quando falta algo que ela resolve: com documento, e sem os campos que ela busca.
+  def busca_do_segurado?
+    return false unless quote_input.auto?
+
+    segurado = entrada['insured'].to_h
+    documento = segurado['document'].to_s.delete('^0-9')
+    return false if documento.empty?
+
+    campos = documento.length == DIGITOS_DE_CNPJ ? %w[name] : %w[name birthDate gender]
+    campos.any? { |campo| segurado[campo].blank? }
+  end
+
   def problemas_locais
     [problema_de_zero_km].compact
   end
