@@ -119,8 +119,8 @@
       "tipo": "numero",
       "origem": "cliente",
       "obrigatorio": true,
-      "padrao": 1,
-      "descricao": "O que o seguro protege. Prédio é a construção: paredes, telhado, instalações. Conteúdo são os bens de dentro: móveis, eletrodomésticos, eletrônicos, roupas. Quem mora de aluguel costuma segurar só o conteúdo, porque o prédio é do dono; se o contrato de aluguel exige seguro do imóvel, é prédio ou prédio e conteúdo. Quem é dono e aluga o imóvel para outra pessoa segura o prédio. Quando não ficou claro o que a pessoa quer proteger, pergunte se é só o imóvel ou também o que tem dentro. Valores: 1=Prédio; 2=Conteúdo; 3=Prédio + Conteúdo.",
+      "padrao": 3,
+      "descricao": "O que o seguro protege. Prédio é a construção: paredes, telhado, instalações. Conteúdo são os bens de dentro: móveis, eletrodomésticos, eletrônicos, roupas. Prédio e conteúdo é o padrão para todo mundo, dono ou inquilino: é o que vale quando o cliente não disse outra coisa, e não é preciso perguntar. Só prédio quando o seguro é para o aluguel: o imóvel do cliente está alugado para outra pessoa, e ele quer segurar só a construção (\"é para o apartamento que eu alugo\", \"quero segurar a casa que está alugada\"). Só conteúdo apenas quando o cliente pede explicitamente para segurar só as coisas dele (\"quero segurar só os meus móveis\", \"só o que tem dentro\"). Morar de aluguel, sozinho, não muda o padrão. Valores: 1=Prédio; 2=Conteúdo; 3=Prédio + Conteúdo.",
       "valores": {
         "1": "Prédio",
         "2": "Conteúdo",
@@ -197,7 +197,7 @@
       "origem": "cliente",
       "obrigatorio": true,
       "padrao": true,
-      "descricao": "true quando quem contrata é dono do imóvel; false quando mora de aluguel (\"sou inquilino\", \"moro de aluguel\", \"pago aluguel\"). Quem é dono e aluga o imóvel para outra pessoa continua proprietário: true. Se o cliente não disse, pergunte se o imóvel é dele ou se ele mora de aluguel."
+      "descricao": "true quando quem contrata é dono do imóvel; false quando mora de aluguel (\"sou inquilino\", \"moro de aluguel\", \"pago aluguel\"). Quem é dono e aluga o imóvel para outra pessoa continua proprietário: true. Se o cliente não disse, pergunte se o imóvel é dele ou se ele mora de aluguel. Ser dono ou inquilino não decide o que o seguro protege: nos dois casos o padrão é prédio e conteúdo."
     },
     {
       "campo": "configuracoes.areaRisco",
@@ -212,6 +212,14 @@
       "origem": "escolha",
       "obrigatorio": false,
       "padrao": false
+    },
+    {
+      "campo": "configuracoes.isDanosIncendioRaioExplosao",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": 200000,
+      "descricao": "Valor que o cliente quer segurar, em reais, só o número. Pergunte de forma simples quanto ele quer segurar, e aceite valor aproximado ou redondo (\"uns 300 mil\" é 300000). Só explique como chegar no número se ele pedir ajuda. No padrão, prédio e conteúdo, o valor é o custo de reconstruir o imóvel, sem o terreno, porque terreno não pega fogo, somado ao valor das coisas de dentro. Para quem mora de aluguel e segura só o que é dele, é quanto valem as coisas dele. Não faça conta por ele nem desconte nada do que ele disse: o valor é o que o cliente responder."
     }
   ]
 }

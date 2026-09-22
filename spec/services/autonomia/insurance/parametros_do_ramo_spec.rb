@@ -24,7 +24,9 @@ RSpec.describe Autonomia::Insurance::Parametros do
     fora = schema['campos'].reject { |c| c['origem'] == 'cliente' }.map { |c| c['campo'] }
 
     expect(folhas.keys).to match_array(do_cliente.map { |c| c['campo'] })
-    expect(folhas.size).to eq(17)
+    expect(folhas.size).to eq(18)
+    # O valor a segurar é pergunta ao cliente desde adapters#80.
+    expect(folhas).to have_key('configuracoes.isDanosIncendioRaioExplosao')
     expect(fora).to include('configuracoes.imovelLogradouro', 'configuracoes.areaRisco')
     expect(folhas.keys & fora).to be_empty
   end
