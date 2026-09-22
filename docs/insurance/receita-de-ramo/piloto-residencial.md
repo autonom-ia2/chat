@@ -93,3 +93,25 @@ Dados fictícios novos, conta de **teste** do portal, que agora oferece 11 segur
 - **Bradesco**: nome não corresponde ao CPF, e CPF não cadastrado. Esperado com dado fictício; em produção é dado real.
 - **Mitsui**: instabilidade. Entra no item 8 (separar instabilidade de recusa).
 - Cada cotação levou cerca de 7 minutos no laço do script; o fechamento do produto ainda é o de auto (fase 6).
+
+## Fase 2, pacote de coberturas — 22/09/2026
+
+Objetivo do Rodrigo: as coberturas-padrão precisam funcionar em todas as seguradoras. O mecanismo de ajuste por
+seguradora do portal (`valoresAjusteSeguradora`) só serve para profissão e atividade, então o caminho é um pacote
+único por objeto segurado. Conta de teste, 11 seguradoras, mesmo imóvel em BH; a rodada final com CPF real (não
+guardado).
+
+| Objeto | Pacote | Com preço | Quem ainda recusa, e por quê |
+|---|---|---|---|
+| 3, prédio + conteúdo (padrão) | atual | 7 de 11 | Unimed: desmoronamento exige análise técnica |
+| 3, prédio + conteúdo (padrão) | **sem desmoronamento** | **10 de 11** | Mitsui: "instabilidade" nas 12 rodadas do dia (adapters#81) |
+| 1, só prédio (seguro para o aluguel) | sem roubo, desmoronamento e equipamentos | 7 de 11 | Mapfre não oferece só prédio (verba); Allianz erro interno uma vez |
+| 2, só conteúdo (pedido explícito) | sem vendaval, impacto de veículo, vazamento, aluguel e desmoronamento | 6 de 11 | Mapfre e Tokio não oferecem só conteúdo (verba) |
+
+Também: a Porto recusava só prédio por "subtração de bens" (roubo no pacote) e passou a cotar sem ele; a Liberty
+cotou com CPF real (o "senha incorreta" vinha do CPF fictício); a Bradesco só cota com o nome exatamente como na
+Receita (adapters#82) e devolveu o prêmio com forma de pagamento desconhecida (adapters#83).
+
+**Decisões do Rodrigo:** padrão 3 para todos; 1 quando o seguro é para o aluguel; 2 só quando pedido. O valor a
+segurar vira pergunta obrigatória e simples, conduzida pelo especialista; o custo de reconstruir (sem o terreno) só
+é explicado se o cliente pedir ajuda. Construção pela régua em `autonomia-adapters/docs/agger/tipos-de-construcao.md`.
