@@ -69,7 +69,7 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
 
   # O SCHEMA DE RESIDENCIAL TAMBÉM É O DO ADAPTER, gerado (chat#591): saída de
   #   (no autonomia-adapters) pnpm exec tsx src/cli/main.ts agger quote schema residencial
-  # sem credencial e sem rede, no commit 8d75b91 da branch `feat/residencial-descricoes`
+  # sem credencial e sem rede, no commit 0a32ad0 da branch `fix/construcao-pela-tabela` (adapters#80)
   # (autonomia-adapters#79), a que publica `descricao` nos 17 campos de cliente e `valores` nos
   # quatro códigos. As chaves já saem como o `Http` as entrega (nenhuma é camelCase). Regenerar
   # quando o adapter mudar; a mesma lacuna de envelhecimento do de auto (#412) vale aqui.

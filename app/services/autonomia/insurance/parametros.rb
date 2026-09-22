@@ -148,7 +148,7 @@ class Autonomia::Insurance::Parametros
   end
 
   def numeros(chaves)
-    convertidos = chaves.map { |chave| Integer(chave, exception: false) || Float(chave, exception: false) }
+    convertidos = chaves.map { |chave| Integer(chave, 10, exception: false) || Float(chave, exception: false) }
     convertidos.all? ? convertidos : nil
   end
 end

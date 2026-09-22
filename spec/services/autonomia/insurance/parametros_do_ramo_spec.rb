@@ -48,6 +48,14 @@ RSpec.describe Autonomia::Insurance::Parametros do
     expect(folhas.fetch('segurado.nome')).not_to have_key('enum')
   end
 
+  # Código com zero à esquerda ("08") é o número 8, e não 8.0: `Integer` sem base lê "08" como octal inválido e o
+  # código ia ao adapter como decimal (revisão da #592).
+  it 'código numérico com zero à esquerda vira o inteiro' do
+    uso = described_class.new({}).send(:numeros, %w[01 08 10])
+
+    expect(uso).to eq([1, 8, 10])
+  end
+
   it 'os grupos são os do adapter, com o rótulo genérico: nenhum nome de grupo digitado aqui' do
     expect(grupos.map { |g| g['name'] }).to eq(%w[segurado configuracoes])
     expect(grupos.map { |g| g['description'] }).to eq(['Campos de segurado.', 'Campos de configuracoes.'])
