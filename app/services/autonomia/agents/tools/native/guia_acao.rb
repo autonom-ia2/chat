@@ -44,6 +44,9 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
 
     dados = { caminho: objeto('caminho_json'), corpo: objeto('corpo_json'),
               descricao: @params['descricao'].to_s }
+    nao_lidos = @operador.nao_lidos(dados[:caminho])
+    return sem_leitura(nao_lidos) if nao_lidos.any?
+
     descricao = @operador.acoes.descrever(@params['acao'].to_s, dados)
     @operador.propor(nome: @params['acao'].to_s, dados: dados, descricao: descricao)
 
@@ -88,6 +91,15 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
     "Proposta preparada. A tela já está mostrando \"#{descricao[:frase]}\" com os botões de confirmar e " \
       'cancelar logo abaixo da sua resposta. Responda em UMA frase curta dizendo que é só confirmar ali ' \
       'embaixo; não repita os valores e não diga que você não faz alterações.'
+  end
+
+  # Alterar ou apagar aponta para UM registro, e o id dele sai de uma leitura da
+  # conta — nunca de um número chutado ou digitado. É o que troca a antiga regra
+  # "com o nome sozinho eu não aponto" (#593): o nome se resolve lendo.
+  def sem_leitura(nao_lidos)
+    "Não preparei a ação: #{nao_lidos.map { |nome, valor| "#{nome} #{valor}" }.join(', ')} não veio de nenhuma " \
+      'leitura da conta nesta conversa. Leia a conta, ache o registro pelo nome que a pessoa disse e use o id ' \
+      'que veio; se houver mais de um, pergunte qual; se não houver, diga que não existe.'
   end
 
   def recusa_sem_contexto

@@ -63,4 +63,22 @@ class Autonomia::Guide::Contexto
     marcas = FIM_DO_VALOR.flat_map { |fim| ["\"id\":#{valor}#{fim}", "\"id\":\"#{valor}\"#{fim}"] }
     Array(@leituras).any? { |texto| marcas.any? { |marca| texto.include?(marca) } }
   end
+
+  # Os ids de `parametros` que nenhuma leitura deste turno trouxe. Vale para o
+  # botão de tela (#590) e para a proposta de ação (#593): apagar "a caixa do
+  # Instagram" precisa do id que a leitura achou, nunca de um número chutado.
+  # `:inboxId`, `:conversation_id`, `:id` apontam registro; `:tab` e `:label`
+  # não. É o nome que o roteador dá ao parâmetro, não texto de gente.
+  def nao_lidos(parametros)
+    parametros.to_h.select do |nome, valor|
+      nome = nome.to_s
+      (nome == 'id' || nome.end_with?('Id') || nome.end_with?('_id')) && !leu?(valor)
+    end
+  end
+
+  # O Guia leu dados da conta neste turno. É o que ancora "não encontrei o
+  # contato Pedro": não é falta de conhecimento, é o que a conta tem (#593).
+  def leu_a_conta?
+    Array(@leituras).any?
+  end
 end

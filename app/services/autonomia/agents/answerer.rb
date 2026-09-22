@@ -374,6 +374,10 @@ module Autonomia
         # do handoff? — instância é por-resposta, sem estado entre chamadas.
         @unanchored_business_claim = unanchored_business_claim?(parsed, used, reply_present, grounded_by_instruction)
         return self_conf unless reply_present # recusa/handoff: deixa o portão agir com o self-report
+        # Guia que leu a conta neste turno responde a partir dela: "não encontrei o Pedro" depois de ler
+        # os contatos é o que a conta tem, não falta de conhecimento. Sem isto o piso do "não achei"
+        # (0.29) retinha a resposta certa (#593). Agente de atendimento não tem `operador`: nada muda.
+        return self_conf if leu_a_conta?
 
         # Recusa em banda (injeção/fora-de-escopo): reply presente, mas o modelo NÃO afirma ter respondido do
         # conhecimento (answered_from_knowledge=false) e não é "não achei". NÃO rebaixar — preservaria o portão de
@@ -465,7 +469,12 @@ module Autonomia
       # <= 0.5 tornaria só o rebaixamento inócuo).
       def unanchored_business_claim?(parsed, used, reply_present, grounded_by_instruction)
         reply_present && parsed['answered_from_knowledge'] != true &&
-          !grounded_by_instruction && used.empty? && business_claim?(parsed)
+          !grounded_by_instruction && used.empty? && !leu_a_conta? && business_claim?(parsed)
+      end
+
+      # Fato lido da conta neste turno é base, como um trecho do conhecimento (#593).
+      def leu_a_conta?
+        @operador.present? && @operador.leu_a_conta?
       end
 
       # Reply que AFIRMA fato do próprio negócio (1ª pessoa, entidade-sujeito + verbo assertivo,
