@@ -45,10 +45,16 @@ RSpec.describe Autonomia::Insurance::MotivoDaRecusa do
   end
 
   describe 'o kind decide antes do texto' do
-    %w[passageiro credencial outro].each do |kind|
+    %w[credencial outro].each do |kind|
       it "o kind #{kind} com um texto que o molde aceitaria sai genérico" do
         expect(categoria('Tipo de veículo não aceito.', kind: kind)).to be_nil
       end
+    end
+
+    # chat#323: a seguradora instável não recusou o risco, e a Lia não pode dizer só que ela não fez proposta.
+    it 'o kind passageiro é instabilidade, com qualquer texto e sem ler o texto' do
+      expect(categoria('Tipo de veículo não aceito.', kind: 'passageiro')).to eq(described_class::INSTABILIDADE)
+      expect(described_class.categoria('kind' => 'passageiro')).to eq(described_class::INSTABILIDADE)
     end
 
     it 'motivo sem kind, sem texto, com texto que não é String ou que não é Hash sai genérico' do

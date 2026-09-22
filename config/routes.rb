@@ -1068,6 +1068,7 @@ Rails.application.routes.draw do
         post :reset_cache, on: :member
         post :toggle_prospecting, on: :member
         post :toggle_insurance, on: :member
+        post :toggle_insurance_ramo, on: :member
       end
       resources :prospecting_scoring_profiles, except: [:show]
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do

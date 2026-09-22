@@ -96,6 +96,28 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     )
   end
 
+  # O RAMO ALÉM DE AUTO, LIGADO CONTA A CONTA (chat#323). Só os ramos dos especialistas mantidos: outro valor não
+  # entra na lista, para a conta não guardar um ramo que nenhum especialista lê.
+  def toggle_insurance_ramo
+    ramo = params[:ramo].to_s
+    unless Autonomia::Insurance::QuoteAgent::Builder.ramos_liberaveis.include?(ramo)
+      # O valor recebido não volta na mensagem: o painel mostra o flash sem escapar (revisão da #604).
+      # rubocop:disable Rails/I18nLocaleTexts
+      return redirect_back(fallback_location: [namespace, requested_resource], alert: 'Ramo desconhecido')
+      # rubocop:enable Rails/I18nLocaleTexts
+    end
+
+    enabled = ActiveModel::Type::Boolean.new.cast(params[:enabled])
+    if enabled
+      Autonomia::Insurance::Config.liberar_ramo!(requested_resource, ramo)
+    else
+      Autonomia::Insurance::Config.bloquear_ramo!(requested_resource, ramo)
+    end
+
+    redirect_back(fallback_location: [namespace, requested_resource],
+                  notice: "Autonomia Insurance #{ramo} #{enabled ? 'enabled' : 'disabled'}")
+  end
+
   def destroy
     account = Account.find(params[:id])
 

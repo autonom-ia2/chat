@@ -5,9 +5,8 @@
     {
       "campo": "segurado.nome",
       "tipo": "texto",
-      "origem": "cliente",
-      "obrigatorio": true,
-      "descricao": "Nome completo de quem contrata o seguro, como está no documento. Em empresa, a razão social. Se o cliente deu só o primeiro nome, peça o nome completo."
+      "origem": "derivado",
+      "obrigatorio": false
     },
     {
       "campo": "segurado.cpfCnpj",
@@ -78,9 +77,9 @@
       "campo": "configuracoes.imovelUso",
       "tipo": "numero",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": 1,
-      "descricao": "Como o imóvel é usado. Habitual quando alguém mora lá o ano todo, o cliente ou a família dele (\"moro lá\", \"é minha casa\", \"mora lá o ano todo\", \"meus pais moram lá\"). Veraneio quando é casa de temporada, usada em férias e fins de semana (\"casa de praia\", \"sítio de fim de semana\", \"casa de campo\"). Desocupado quando ninguém mora lá agora (\"está vazio\", \"fechado para vender\", \"esperando inquilino\"). Se o cliente fala do imóvel onde mora, é habitual; imóvel alugado para outra pessoa, com alguém morando lá, também é habitual. Na dúvida, pergunte: não marque habitual por padrão num imóvel de temporada ou vazio. Valores: 1=Habitual; 2=Veraneio; 3=Desocupado.",
+      "descricao": "Como o imóvel é usado. Habitual quando alguém mora lá o ano todo, o cliente ou a família dele (\"moro lá\", \"é minha casa\", \"meus pais moram lá\"); imóvel alugado para outra pessoa, com alguém morando lá, também é habitual. Veraneio quando é casa de temporada, usada em férias e fins de semana (\"casa de praia\", \"sítio de fim de semana\", \"casa de campo\"). Desocupado quando ninguém mora lá agora (\"está vazio\", \"fechado para vender\", \"esperando inquilino\"). Não pergunte: sem o cliente dizer nada, vale habitual, e deixe nulo. Se ele falar de temporada ou de imóvel vazio, preencha pelo que ele disse. Valores: 1=Habitual; 2=Veraneio; 3=Desocupado.",
       "valores": {
         "1": "Habitual",
         "2": "Veraneio",
@@ -93,7 +92,7 @@
       "origem": "cliente",
       "obrigatorio": true,
       "padrao": 1,
-      "descricao": "Tipo do imóvel. Casa de rua, sobrado ou casa em vila sem portaria é casa. Casa dentro de condomínio fechado, com portaria ou muro comum, é casa em condomínio fechado. Apartamento, cobertura, flat ou kitnet em prédio é apartamento, e aí peça também o complemento. Se o cliente disse só \"casa\", pergunte se fica em condomínio fechado. Valores: 1=Casa; 2=Casa em condomínio Fechado; 3=Apartamento.",
+      "descricao": "Tipo do imóvel. Casa de rua, sobrado ou casa em vila sem portaria é casa. Casa dentro de condomínio fechado, com portaria ou muro comum, é casa em condomínio fechado. Apartamento, cobertura, flat ou kitnet em prédio é apartamento, e aí o complemento também é preciso. Se o cliente ainda não disse, pergunte na mesma mensagem em que confirma o endereço: se é casa, casa em condomínio fechado ou apartamento, e o número; se for apartamento, o complemento. Valores: 1=Casa; 2=Casa em condomínio Fechado; 3=Apartamento.",
       "valores": {
         "1": "Casa",
         "2": "Casa em condomínio Fechado",
@@ -104,9 +103,9 @@
       "campo": "configuracoes.imovelConstrucao",
       "tipo": "numero",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": 1,
-      "descricao": "Do que o imóvel é feito, pela régua do mercado: o que conta é o material das paredes externas e, entre superior e sólida, o piso e a estrutura do telhado. Superior: paredes, pisos, colunas e estrutura do telhado de material que não pega fogo, como concreto, laje e metal, com a fiação embutida ou protegida; é o caso de apartamento em prédio de concreto (\"moro em prédio\", \"é apartamento\"). Sólida: paredes externas de tijolo, bloco ou concreto, sem revestimento de madeira, mas com piso ou estrutura do telhado de madeira; é o caso da casa de tijolo com telhado de madeira e telha. Mista: até um quarto das paredes externas de madeira ou outro material que pega fogo (\"parte da casa é de madeira\"). Inferior: mais de um quarto das paredes externas de material que pega fogo, como casa de madeira, chalé, taipa ou pau a pique. Parede de isopainel com núcleo de isopor ou poliuretano conta como material que pega fogo. Se o cliente não falou do material: apartamento em prédio é superior, casa de alvenaria é sólida; se ele citou madeira em qualquer parte da casa, pergunte quanto das paredes de fora é de madeira. Valores: 1=Sólida; 2=Mista; 3=Inferior; 4=Superior.",
+      "descricao": "Do que o imóvel é feito, pela régua do mercado. Não pergunte: sem o cliente dizer nada, o sistema usa superior para apartamento e sólida para casa, e deixe nulo. Preencha só quando o cliente falar do material. Superior: paredes, pisos, colunas e estrutura do telhado de material que não pega fogo, como concreto, laje e metal. Sólida: paredes externas de tijolo, bloco ou concreto, com piso ou estrutura do telhado de madeira. Mista: até um quarto das paredes externas de madeira ou outro material que pega fogo (\"parte da casa é de madeira\"). Inferior: mais de um quarto das paredes externas de material que pega fogo, como casa de madeira, chalé, taipa ou pau a pique. Parede de isopainel com núcleo de isopor ou poliuretano conta como material que pega fogo. Se o cliente citou madeira em qualquer parte da casa, pergunte quanto das paredes de fora é de madeira. Valores: 1=Sólida; 2=Mista; 3=Inferior; 4=Superior.",
       "valores": {
         "1": "Sólida",
         "2": "Mista",
@@ -118,7 +117,7 @@
       "campo": "configuracoes.imovelObjetoSegurado",
       "tipo": "numero",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": 3,
       "descricao": "O que o seguro protege. Prédio é a construção: paredes, telhado, instalações. Conteúdo são os bens de dentro: móveis, eletrodomésticos, eletrônicos, roupas. Prédio e conteúdo é o padrão para todo mundo, dono ou inquilino: é o que vale quando o cliente não disse outra coisa, e não é preciso perguntar. Só prédio quando o seguro é para o aluguel: o imóvel do cliente está alugado para outra pessoa, e ele quer segurar só a construção (\"é para o apartamento que eu alugo\", \"quero segurar a casa que está alugada\"). Só conteúdo apenas quando o cliente pede explicitamente para segurar só as coisas dele (\"quero segurar só os meus móveis\", \"só o que tem dentro\"). Morar de aluguel, sozinho, não muda o padrão. Valores: 1=Prédio; 2=Conteúdo; 3=Prédio + Conteúdo.",
       "valores": {
@@ -131,7 +130,7 @@
       "campo": "configuracoes.imovelPatrimonioHistorico",
       "tipo": "booleano",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": false,
       "descricao": "true quando o imóvel é tombado ou reconhecido como patrimônio histórico (\"é tombado\", \"casarão histórico\", \"não posso mexer na fachada\"). Se ninguém falou disso, false."
     },
@@ -139,7 +138,7 @@
       "campo": "configuracoes.imovelPossuiAlarme",
       "tipo": "booleano",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": false,
       "descricao": "true quando o imóvel tem alarme (\"tem alarme\", \"a sirene toca se abrir a porta\"). Sem menção a alarme, false: nunca marque equipamento que o cliente não confirmou."
     },
@@ -147,7 +146,7 @@
       "campo": "configuracoes.imovelPossuiAlarmeMonitorado",
       "tipo": "booleano",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": false,
       "descricao": "true quando o alarme é monitorado por uma empresa, que recebe o aviso e manda alguém (\"alarme ligado na central\", \"tem monitoramento\"). Alarme que só toca no local não é monitorado. Sem menção, false."
     },
@@ -155,7 +154,7 @@
       "campo": "configuracoes.imovelPossuiCercaEletrica",
       "tipo": "booleano",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": false,
       "descricao": "true quando o imóvel tem cerca elétrica no muro (\"cerca elétrica\", \"choque no muro\"). Concertina ou arame farpado sem choque não é cerca elétrica. Sem menção, false."
     },
@@ -163,7 +162,7 @@
       "campo": "configuracoes.imovelPossuiCircuitoFechado",
       "tipo": "booleano",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": false,
       "descricao": "true quando há câmeras de segurança gravando o imóvel (\"tem câmera\", \"circuito de TV\", \"CFTV\"). Sem menção, false."
     },
@@ -171,7 +170,7 @@
       "campo": "configuracoes.imovelPossuiGrades",
       "tipo": "booleano",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": false,
       "descricao": "true quando as janelas ou portas de acesso têm grades (\"janela com grade\", \"portão de grade\"). Sem menção, false."
     },
@@ -179,7 +178,7 @@
       "campo": "configuracoes.imovelPossuiPorteiroEletronico",
       "tipo": "booleano",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": false,
       "descricao": "true quando a entrada tem porteiro eletrônico ou interfone com abertura remota do portão (\"interfone\", \"porteiro eletrônico\"). Sem menção, false."
     },
@@ -187,7 +186,7 @@
       "campo": "configuracoes.imovelPossuiVigilancia24hs",
       "tipo": "booleano",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": false,
       "descricao": "true quando há vigilância de pessoas o dia inteiro: portaria dia e noite, vigia ou ronda (\"portaria vinte e quatro horas\", \"tem segurança na rua\"). Câmera sozinha não é vigilância. Sem menção, false."
     },
@@ -195,23 +194,25 @@
       "campo": "configuracoes.seguradoProprietario",
       "tipo": "booleano",
       "origem": "cliente",
-      "obrigatorio": true,
+      "obrigatorio": false,
       "padrao": true,
-      "descricao": "true quando quem contrata é dono do imóvel; false quando mora de aluguel (\"sou inquilino\", \"moro de aluguel\", \"pago aluguel\"). Quem é dono e aluga o imóvel para outra pessoa continua proprietário: true. Se o cliente não disse, pergunte se o imóvel é dele ou se ele mora de aluguel. Ser dono ou inquilino não decide o que o seguro protege: nos dois casos o padrão é prédio e conteúdo."
+      "descricao": "true quando quem contrata é dono do imóvel; false quando mora de aluguel (\"sou inquilino\", \"moro de aluguel\", \"pago aluguel\"). Quem é dono e aluga o imóvel para outra pessoa continua proprietário: true. Não pergunte: sem o cliente dizer, vale dono, e deixe nulo. Ser dono ou inquilino não decide o que o seguro protege: nos dois casos o padrão é prédio e conteúdo."
     },
     {
       "campo": "configuracoes.areaRisco",
       "tipo": "booleano",
-      "origem": "escolha",
+      "origem": "cliente",
       "obrigatorio": false,
-      "padrao": false
+      "padrao": false,
+      "descricao": "true quando o imóvel fica em área de risco: beira de rio ou córrego, encosta, morro, lugar que alaga ou onde a terra desliza (\"a casa fica na beira do rio\", \"é no morro\"). O padrão é false. Em endereço urbano comum não pergunte. Pergunte só quando o endereço que a consulta de CEP devolve (rua, bairro e cidade) ou a conversa indicar: beira de rio, encosta, morro."
     },
     {
       "campo": "configuracoes.zonaRural",
       "tipo": "booleano",
-      "origem": "escolha",
+      "origem": "cliente",
       "obrigatorio": false,
-      "padrao": false
+      "padrao": false,
+      "descricao": "true quando o imóvel fica em zona rural, fora da cidade: sítio, chácara, fazenda, casa em estrada de terra (\"moro num sítio\", \"é uma chácara\", \"fica na roça\"). O padrão é false. Em endereço urbano comum não pergunte. Pergunte só quando o endereço que a consulta de CEP devolve (rua, bairro e cidade) ou a conversa indicar: estrada, sítio, chácara, fazenda, zona rural no endereço."
     },
     {
       "campo": "configuracoes.isDanosIncendioRaioExplosao",
@@ -220,6 +221,90 @@
       "obrigatorio": true,
       "padrao": 200000,
       "descricao": "Valor que o cliente quer segurar, em reais, só o número. Pergunte de forma simples quanto ele quer segurar, e aceite valor aproximado ou redondo (\"uns 300 mil\" é 300000). Só explique como chegar no número se ele pedir ajuda. No padrão, prédio e conteúdo, o valor é o custo de reconstruir o imóvel, sem o terreno, porque terreno não pega fogo, somado ao valor das coisas de dentro. Para quem mora de aluguel e segura só o que é dele, é quanto valem as coisas dele. Não faça conta por ele nem desconte nada do que ele disse: o valor é o que o cliente responder."
+    },
+    {
+      "campo": "configuracoes.isDanosEletricos",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Danos elétricos: aparelhos e fiação queimados por raio, curto-circuito ou pico de energia. \"Quero 50 mil de danos elétricos\" é 50000. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosRoubo",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Roubo e furto com arrombamento dos bens de dentro do imóvel (\"quero cobertura de roubo\"). Não existe em seguro só do prédio, que é só a construção. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosEquipamentosEletronicos",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Equipamentos eletrônicos: danos a aparelhos como computador, notebook, TV e videogame que ficam no imóvel. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosVendaval",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Vendaval, furacão, ciclone, tornado e granizo: estragos no imóvel por vento forte ou chuva de pedra. O portal soma este valor ao de impacto de veículos numa cobertura só. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosImpactoVeiculo",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Impacto de veículos: carro ou caminhão que bate no imóvel, no muro ou no portão. O portal soma este valor ao de vendaval numa cobertura só. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosVazamentoTanquesTubulacoes",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Vazamento de tanques e tubulações: estrago por água que vaza de cano, caixa d'água ou aquecedor. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosAluguel",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Perda ou pagamento de aluguel: o aluguel que o dono deixa de receber, ou que o morador passa a pagar em outro lugar, enquanto o imóvel é consertado depois de um estrago coberto. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosDesmoronamento",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Desmoronamento: queda de paredes, teto ou do imóvel. Fica fora do padrão porque há seguradora que exige análise técnica para ela. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosAlagamento",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Alagamento e inundação: água de chuva, rio ou enchente que entra no imóvel (\"quero cobertura de alagamento\"). Fica fora do padrão porque há seguradora que não aceita. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosRegistrosDocumentos",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Recomposição de registros e documentos: o custo de refazer documentos e papéis estragados por um evento coberto. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.responsabilidadeCivil",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Responsabilidade civil familiar: danos que o cliente ou a família causam a outras pessoas, como um vazamento que estraga o apartamento de baixo ou um vaso que cai da janela. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
+    },
+    {
+      "campo": "configuracoes.isDanosMorais",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Danos morais: indenização por dano moral a outras pessoas, ligada à responsabilidade civil; só existe com responsabilidade civil contratada. Não pergunte por esta cobertura. Se o cliente não pediu esta cobertura, deixe nulo; 0 só quando ele pedir para tirá-la. Quando ele pedir um valor, em reais, só o número."
     }
   ]
 }

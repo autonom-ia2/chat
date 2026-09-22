@@ -42,6 +42,37 @@ module Autonomia::Insurance::Config
     account
   end
 
+  # OS RAMOS ALÉM DE AUTO, LIGADOS CONTA A CONTA (chat#323, decisão do CEO em 22/09/2026). O especialista de um ramo
+  # novo existe em todo agente de cotação, e só atende onde o SuperAdmin liberou o ramo nesta lista (e a conexão da
+  # conta o tem habilitado, `QuoteAgent::Builder.atende?`). É o que permite ligar residencial primeiro na conta de
+  # teste, conversar com a Lia de verdade, e só depois nas corretoras. Auto não passa por aqui.
+  RAMOS_KEY = 'autonomia_insurance_ramos_liberados'
+
+  def self.ramo_liberado?(account, ramo)
+    return false if account.blank?
+
+    Array(account.internal_attributes.to_h[RAMOS_KEY]).include?(ramo.to_s)
+  end
+
+  def self.liberar_ramo!(account, ramo)
+    atualizar_ramos!(account, ramos_liberados(account) | [ramo.to_s])
+  end
+
+  def self.bloquear_ramo!(account, ramo)
+    atualizar_ramos!(account, ramos_liberados(account) - [ramo.to_s])
+  end
+
+  def self.ramos_liberados(account)
+    Array(account.internal_attributes.to_h[RAMOS_KEY]).map(&:to_s)
+  end
+
+  def self.atualizar_ramos!(account, ramos)
+    account.internal_attributes = account.internal_attributes.to_h.merge(RAMOS_KEY => ramos)
+    account.save!
+    account
+  end
+  private_class_method :atualizar_ramos!
+
   def self.update_internal_attribute!(account, enabled)
     account.internal_attributes = account.internal_attributes.to_h.merge(INTERNAL_ATTR_KEY => enabled)
     account.save!

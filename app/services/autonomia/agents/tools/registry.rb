@@ -19,6 +19,9 @@ module Autonomia::Agents::Tools::Registry
     # A proposta de uma seguradora só, em PDF, sobre a mesma cotação (entrega 8b, #459): não cota.
     Autonomia::Agents::Tools::Native::InsuranceQuoteProposal,
     Autonomia::Agents::Tools::Native::VehicleLookup,
+    # A consulta de CEP do imóvel (autonomia-adapters#87): no catálogo desde já, e só o especialista de
+    # ramo com imóvel a recebe (`QuoteAgent::Builder::CONSULTAS_DO_RAMO`).
+    Autonomia::Agents::Tools::Native::CepLookup,
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions,
     # Guia da Plataforma (#568, #590): ler a conta, propor mudança nela e levar
     # a pessoa até a tela, com a permissão de quem está logado. Ligadas só no

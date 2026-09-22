@@ -25,19 +25,56 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # retorno na mão e conhece o ramo. A Lia repassa. Enviar a proposta de uma seguradora continua dela: é ação,
   # não conferência.
   TOOLS_DO_PRINCIPAL = %w[consultar_produtos_cotacao consultar_condicoes_gerais enviar_proposta_da_seguradora].freeze
-  TOOLS_DO_ESPECIALISTA = %w[consultar_placa cotar_seguro ver_resultado_da_cotacao].freeze
-  TODAS_AS_TOOLS = (TOOLS_DO_PRINCIPAL + TOOLS_DO_ESPECIALISTA).freeze
+  # O que TODO especialista de ramo tem: cotar e ler o resultado.
+  TOOLS_DE_TODO_ESPECIALISTA = %w[cotar_seguro ver_resultado_da_cotacao].freeze
+  # A CONSULTA GRATUITA QUE ANTECEDE A COTAÇÃO É DO RAMO, e não de todo especialista (autonomia-adapters#87).
+  # Placa só existe onde há veículo; CEP do imóvel, só onde há imóvel. Uma lista única dava a placa ao
+  # especialista de residencial e daria o CEP ao de auto, que não tem o que fazer com ele e passaria a ler
+  # uma ferramenta a mais a cada turno. O vínculo é DADO: o especialista de residencial, quando entrar em
+  # `ESPECIALISTAS` (fase 5 da receita), recebe `consultar_cep` por esta tabela, sem nenhuma linha de código.
+  CONSULTAS_DO_RAMO = {
+    'auto' => %w[consultar_placa],
+    'residencial' => %w[consultar_cep]
+  }.freeze
 
   # O primeiro (e por enquanto único) especialista. Cada ramo novo entra aqui com o seu arquivo de
   # instrução — e nada mais precisa mudar.
   # `ramo` é o produto do adapter cujo formulário o especialista vê na ferramenta de cotação
   # (`Declaracao.params_for`, chat#591): um formulário por especialista, e não um com todos os ramos,
   # que multiplicaria o que o modelo lê a cada turno. O de residencial entra com a fase 5 da receita.
+  # O `ramo` também decide a consulta que ele recebe (`CONSULTAS_DO_RAMO`).
+  #
+  # RESIDENCIAL (fase 5 do piloto, chat#323, 22/09/2026) nasce com a jornada de auto: o mínimo, o que se busca
+  # sozinho, o comparativo e a escolha. Ele só atende onde a corretora cota residencial (`disponivel?`): o
+  # especialista existe em todo agente, e a Lia só o enxerga quando a conexão da conta tem o ramo habilitado.
   ESPECIALISTAS = [
     { slug: 'cotacao_auto', ramo: 'auto', nome: 'Cotação de automóvel', arquivo: 'especialista_auto.md',
       descricao: 'Cota seguro de automóvel, moto e caminhão, para pessoa física e para empresa. Use ' \
-                 'quando o cliente pedir preço de seguro de carro, moto ou caminhão.' }
+                 'quando o cliente pedir preço de seguro de carro, moto ou caminhão.' },
+    { slug: 'cotacao_residencial', ramo: 'residencial', nome: 'Cotação residencial', arquivo: 'especialista_residencial.md',
+      descricao: 'Cota seguro residencial de casa, casa em condomínio e apartamento, para quem mora, para quem ' \
+                 'aluga o imóvel a outra pessoa e para quem mora de aluguel. Use quando o cliente pedir preço ' \
+                 'de seguro da casa, do apartamento ou das coisas de dentro.' }
   ].freeze
+
+  # AS FERRAMENTAS DE UM ESPECIALISTA: a consulta do ramo dele primeiro, depois as de todo especialista. Em
+  # auto é `consultar_placa cotar_seguro ver_resultado_da_cotacao`, a mesma lista, na mesma ordem, de antes
+  # de #87 (`builder_ferramentas_por_ramo_spec`).
+  # -> Array de slugs.
+  def self.ferramentas_do_especialista(dados)
+    CONSULTAS_DO_RAMO.fetch(dados[:ramo], []) + TOOLS_DE_TODO_ESPECIALISTA
+  end
+
+  # AS DE TODOS OS ESPECIALISTAS, sem repetir: é o que o agente precisa TER no catálogo para que cada
+  # especialista encontre as suas (ver `TOOLS_DO_PRINCIPAL` acima: o que está fora do catálogo não existe
+  # para ninguém). Com só o de auto, `consultar_cep` fica fora do agente, e o principal nem a vê.
+  # -> Array de slugs.
+  def self.ferramentas_dos_especialistas(especialistas = ESPECIALISTAS)
+    especialistas.flat_map { |dados| ferramentas_do_especialista(dados) }.uniq
+  end
+
+  TOOLS_DO_ESPECIALISTA = ferramentas_dos_especialistas.freeze
+  TODAS_AS_TOOLS = (TOOLS_DO_PRINCIPAL + TOOLS_DO_ESPECIALISTA).freeze
 
   # Teto do que a corretora escreve. `nome_agente` já é limitado pela coluna (string, 255), mas
   # `nome_corretora` NÃO VAI PARA COLUNA NENHUMA — ele só é colado dentro da instrução. Sem teto
@@ -77,21 +114,26 @@ class Autonomia::Insurance::QuoteAgent::Builder
   end
 
   # AS FERRAMENTAS QUE VALEM SÃO AS DO DEPLOY (fatia 2 do #420), no molde de `instrucao_mantida`.
-  # `criar_agente` grava `TODAS_AS_TOOLS` em `native_tool_slugs` e `criar_especialista` grava
-  # `TOOLS_DO_ESPECIALISTA` em `tool_slugs`, só no nascimento: em 11/09/2026 `consultar_placa` chegou ao
-  # agente 24 por escrita no banco de produção. Quem monta o turno (`Agent#ferramentas_nativas`,
+  # `criar_agente` grava `TODAS_AS_TOOLS` em `native_tool_slugs` e `criar_especialista` grava as do
+  # ramo (`ferramentas_do_especialista`) em `tool_slugs`, só no nascimento: em 11/09/2026
+  # `consultar_placa` chegou ao agente 24 por escrita no banco de produção. Quem monta o turno (`Agent#ferramentas_nativas`,
   # `Specialist#ferramentas_do_sistema`) lê daqui; as colunas ficam como retrato do nascimento.
-  # -> `TODAS_AS_TOOLS` para o Agente de Cotação, nil para os demais.
+  # SÓ AS DOS ESPECIALISTAS QUE ATENDEM NESTA CONTA (fase 5 de residencial): a consulta de CEP fica fora do
+  # catálogo onde a corretora não cota residencial, e a Lia nunca a vê. Com só auto atendendo, a lista é a de antes.
+  # -> as do principal e as dos especialistas que atendem, para o Agente de Cotação; nil para os demais.
   def self.ferramentas_mantidas(agent)
-    agent&.agent_type == 'insurance_quote' ? TODAS_AS_TOOLS : nil
+    return nil unless agent&.agent_type == 'insurance_quote'
+
+    TOOLS_DO_PRINCIPAL + ferramentas_dos_especialistas(ESPECIALISTAS.select { |dados| atende?(agent.account, dados) })
   end
 
-  # -> `TOOLS_DO_ESPECIALISTA` para um especialista mantido, nil para os demais. A reserva que esconde as
-  # ferramentas do especialista do principal (`Answerer#enabled_agent_tools`) vem daqui: com só a lista do
-  # agente mantida, uma ferramenta nova do especialista apareceria para o principal até alguém escrever a
-  # coluna do especialista.
+  # -> as ferramentas DESTE especialista mantido (`ferramentas_do_especialista`, pelo ramo dele), nil para
+  # os demais. A reserva que esconde as ferramentas do especialista do principal (`Answerer#enabled_agent_tools`)
+  # vem daqui: com só a lista do agente mantida, uma ferramenta nova do especialista apareceria para o
+  # principal até alguém escrever a coluna do especialista.
   def self.ferramentas_mantidas_do_especialista(specialist)
-    mantido(specialist) ? TOOLS_DO_ESPECIALISTA : nil
+    dados = mantido(specialist)
+    dados && ferramentas_do_especialista(dados)
   end
 
   # AS RODADAS DA LIA NO TURNO (chat#585, decisão do CEO em 22/09/2026: até seis entre o principal e o especialista).
@@ -112,6 +154,50 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # ferramenta então fica com o formulário de auto, como sempre foi.
   def self.ramo_do_especialista(specialist)
     specialist && mantido(specialist)&.dig(:ramo)
+  end
+
+  # O ESPECIALISTA ATENDE NESTA CONTA? Auto sempre, como desde o início. Os outros ramos só quando a conexão
+  # pronta da conta tem o produto habilitado (`capabilities['products']`, a mesma lista que
+  # `consultar_produtos_cotacao` lê): a Lia não pode chamar um especialista cuja cotação o adapter recusaria, nem
+  # dizer "atendemos" e depois "não atendemos". Especialista que a Autonom.ia não mantém segue o `enabled` dele.
+  # -> true quando a Lia pode chamar este especialista.
+  def self.disponivel?(specialist)
+    dados = mantido(specialist)
+    dados.nil? || atende?(specialist.account, dados)
+  end
+
+  # -> true quando o especialista de `ESPECIALISTAS` descrito por `dados` atende nesta conta.
+  # Fora de auto, duas chaves: o SuperAdmin liberou o ramo na conta (`Insurance::Config.ramo_liberado?`, para ligar
+  # primeiro na conta de teste) e a conexão tem o ramo habilitado.
+  def self.atende?(account, dados)
+    return true if dados[:ramo] == 'auto'
+
+    ::Autonomia::Insurance::Config.ramo_liberado?(account, dados[:ramo]) && ramo_habilitado?(account, dados[:ramo])
+  end
+
+  # Os ramos que o SuperAdmin pode liberar por conta: os dos especialistas mantidos, fora auto.
+  def self.ramos_liberaveis
+    ESPECIALISTAS.pluck(:ramo) - ['auto']
+  end
+
+  # Falha ao ler a conexão tira o ramo do turno, e não o turno inteiro: auto continua atendendo.
+  def self.ramo_habilitado?(account, ramo)
+    produtos_da_conta(account).any? { |produto| produto['product'] == ramo && produto['enabled'] }
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][quote_agent] ramo indisponivel account=#{account&.id} ramo=#{ramo} #{e.class}")
+    false
+  end
+
+  # Os produtos da conexão da conta, como o último levantamento os deixou. A PRONTA primeiro; sem ela, a que está
+  # só de passagem (revisão da chat#604): o healthcheck põe toda conexão em `authenticating` a cada 30 minutos, a
+  # sincronização em `discovering`, e em `degraded` auto segue cotando. Tirar residencial nessas janelas fazia a
+  # Lia dizer que a corretora não cota o ramo. Só a conexão fora do ar de verdade tira o ramo, pela mesma lista
+  # do envio (`CONEXAO_FORA_DO_AR`).
+  def self.produtos_da_conta(account)
+    conexoes = ::Autonomia::Insurance::Connection.for_account(account)
+    fora_do_ar = ::Autonomia::Agents::Tools::Native::InsuranceQuote::CONEXAO_FORA_DO_AR
+    conexao = conexoes.find(&:ready?) || conexoes.find { |c| fora_do_ar.exclude?(c.status) }
+    Array(conexao&.capabilities&.dig('products'))
   end
 
   # A entrada de `ESPECIALISTAS` deste especialista, quando é um que a Autonom.ia mantém.
@@ -280,7 +366,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
     ::Autonomia::Agents::Specialist.create!(
       agent: agente, account: @account, slug: dados[:slug], name: dados[:nome],
       description: dados[:descricao], instruction: texto_do_especialista(dados[:arquivo]),
-      tool_slugs: TOOLS_DO_ESPECIALISTA, enabled: true
+      tool_slugs: self.class.ferramentas_do_especialista(dados), enabled: true
     )
   end
 

@@ -1,0 +1,18 @@
+{
+  "urbano": {
+    "statusCode": 200,
+    "body": "{\"cep\":\"01310100\",\"logradouro\":\"Avenida Paulista - de 612 A 1510 - Lado Par\",\"bairro\":\"Bela Vista\",\"cidade\":\"São Paulo\",\"uf\":\"SP\"}"
+  },
+  "inexistente": {
+    "statusCode": 422,
+    "body": "{\"error\":\"validation\",\"message\":\"CEP nao encontrado pelo portal\",\"failure\":{\"cause\":\"request_invalid\",\"actor\":\"autonomia\",\"layer\":\"risk\",\"retryable\":false},\"details\":{\"issues\":[\"cep: o portal não encontrou este CEP. Confirme o CEP com o cliente.\"],\"perguntas\":[{\"campo\":\"cep\",\"motivo\":\"o portal não encontrou este CEP. Confirme o CEP com o cliente.\"}]}}"
+  },
+  "cep_unico": {
+    "statusCode": 422,
+    "body": "{\"error\":\"validation\",\"message\":\"endereco do CEP incompleto\",\"failure\":{\"cause\":\"request_invalid\",\"actor\":\"autonomia\",\"layer\":\"risk\",\"retryable\":false},\"details\":{\"issues\":[\"logradouro: este CEP é de cidade de CEP único e não traz o nome da rua. Pergunte ao cliente o nome da rua do imóvel.\",\"bairro: este CEP é de cidade de CEP único e não traz o bairro. Pergunte ao cliente o bairro do imóvel.\"],\"perguntas\":[{\"campo\":\"logradouro\",\"motivo\":\"este CEP é de cidade de CEP único e não traz o nome da rua. Pergunte ao cliente o nome da rua do imóvel.\"},{\"campo\":\"bairro\",\"motivo\":\"este CEP é de cidade de CEP único e não traz o bairro. Pergunte ao cliente o bairro do imóvel.\"}]}}"
+  },
+  "portal_fora": {
+    "statusCode": 502,
+    "body": "{\"error\":\"unavailable\",\"message\":\"GET https://api.multicalculo.net/calculo/cep?cep=01310100 -> 503\",\"failure\":{\"cause\":\"portal_unavailable\",\"actor\":\"nobody\",\"layer\":\"platform_auth\",\"retryable\":true}}"
+  }
+}

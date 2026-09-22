@@ -35,6 +35,7 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
   let(:call) { { 'name' => tool.slug, 'arguments' => '{"cpf":"000"}', 'call_id' => 'c1' } }
   let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
   let(:placa) { Autonomia::Agents::Tools::Native::VehicleLookup }
+  let(:consulta_de_cep) { Autonomia::Agents::Tools::Native::CepLookup }
   let(:linhas) { [] }
 
   around do |example|
@@ -378,6 +379,43 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
           allow(connector).to receive(:vehicle_lookup).and_raise(Autonomia::Insurance::Connector::Error.new(:unavailable, 'mudo'))
           bound_para(placa).execute({ 'name' => 'consultar_placa', 'arguments' => { placa: 'ABC1D23' }.to_json }, delivery: delivery)
+        }
+      },
+      # A consulta de CEP (autonomia-adapters#87): CEP vazio, sem sessão viva no turno, portal mudo, e o
+      # CEP que o portal não conhece, que volta com a pergunta ao cliente (o mock responde como o adapter).
+      'cep_lookup.rb#call#1' => {
+        espera: { motivo: 'cep_invalido', slug: 'consultar_cep' },
+        dispara: lambda {
+          ready_connection
+          bound_para(consulta_de_cep).execute({ 'name' => 'consultar_cep', 'arguments' => { cep: '' }.to_json },
+                                              delivery: delivery)
+        }
+      },
+      'cep_lookup.rb#call#2' => {
+        espera: { motivo: 'consulta_de_cep_indisponivel', slug: 'consultar_cep' },
+        dispara: lambda {
+          ready_connection.forget_session!
+          bound_para(consulta_de_cep).execute({ 'name' => 'consultar_cep', 'arguments' => { cep: '01310100' }.to_json },
+                                              delivery: delivery)
+        }
+      },
+      'cep_lookup.rb#call#3' => {
+        espera: { motivo: 'consulta_de_cep_indisponivel', slug: 'consultar_cep' },
+        dispara: lambda {
+          ready_connection
+          connector = Autonomia::Insurance::Connector.client
+          allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+          allow(connector).to receive(:cep_lookup).and_raise(Autonomia::Insurance::Connector::Error.new(:unavailable, 'mudo'))
+          bound_para(consulta_de_cep).execute({ 'name' => 'consultar_cep', 'arguments' => { cep: '01310100' }.to_json },
+                                              delivery: delivery)
+        }
+      },
+      'cep_lookup.rb#perguntar#1' => {
+        espera: { motivo: 'cep_sem_endereco', slug: 'consultar_cep', faltando: 'cep' },
+        dispara: lambda {
+          ready_connection
+          bound_para(consulta_de_cep).execute({ 'name' => 'consultar_cep', 'arguments' => { cep: '99999999' }.to_json },
+                                              delivery: delivery)
         }
       },
       # Ramo que o adapter não tem: recusa na conferência (nenhuma execução aberta) e no envio.

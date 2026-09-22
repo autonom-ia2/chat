@@ -63,7 +63,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(described_class.params_for(lia)).to eq(de_sempre)
       expect(described_class.params_for(lia, especialista: especialista('cotacao_auto'))).to eq(de_sempre)
       expect(described_class.params_for(lia, especialista: proprio)).to eq(de_sempre)
-      expect(builder::ESPECIALISTAS.pluck(:ramo)).to eq(['auto'])
+      expect(builder::ESPECIALISTAS.pluck(:ramo)).to eq(%w[auto residencial])
     end
   end
 
@@ -72,7 +72,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       params = described_class.params_for(lia, especialista: com_especialista_de_residencial)
 
       expect(nomes(params)).to eq(nomes(described_class.params) - ['dados'] + %w[segurado configuracoes])
-      expect(params.flat_map { |p| Array(p['properties']) }.size).to eq(18)
+      expect(params.flat_map { |p| Array(p['properties']) }.size).to eq(31)
     end
 
     it 'chega ao modelo pelo catálogo do especialista (Specialist#tools), e o do principal segue o de auto' do

@@ -13,11 +13,19 @@
 #      servem para a pessoa e para a cobertura; na da região, CEP, localidade, região, circulação ou pernoite.
 # Em qualquer outro caso devolve nil, e a Lia diz só que a seguradora não fez proposta. Na dúvida, nil: o erro
 # aceitável é o genérico.
+#
+# A INSTABILIDADE NÃO LÊ TEXTO (chat#323, 22/09/2026). Quem classifica é o conector: `kind` `passageiro` é a
+# seguradora fora do ar ou instável ("A seguradora está apresentando instabilidade no momento", a Mitsui o dia todo
+# nas rodadas de residencial). Até aqui ela caía no genérico, e a Lia dizia só que a seguradora não fez proposta,
+# como se ela tivesse olhado o risco e recusado. É a categoria que o cliente mais ouve, e a única que não fala do
+# risco dele.
 module Autonomia::Insurance::MotivoDaRecusa
   KIND_PERMITIDO = 'risco'.freeze
+  KIND_PASSAGEIRO = 'passageiro'.freeze
   VEICULO = 'veiculo'.freeze
   REGIAO = 'regiao'.freeze
-  CATEGORIAS = [VEICULO, REGIAO].freeze
+  INSTABILIDADE = 'instabilidade'.freeze
+  CATEGORIAS = [VEICULO, REGIAO, INSTABILIDADE].freeze
 
   # Palavras de função e de recusa, das duas categorias.
   COMUNS = %w[a o as os ao aos de do da dos das e em no na nos nas para por pelo pela com este esta esse essa neste
@@ -45,8 +53,10 @@ module Autonomia::Insurance::MotivoDaRecusa
 
   module_function
 
-  # -> `VEICULO` ou `REGIAO`, ou nil (o genérico).
+  # -> `VEICULO`, `REGIAO` ou `INSTABILIDADE`, ou nil (o genérico).
   def categoria(reason)
+    return INSTABILIDADE if reason.is_a?(Hash) && reason['kind'] == KIND_PASSAGEIRO
+
     palavras = palavras_de(reason)
     return nil if palavras.blank?
 

@@ -73,7 +73,8 @@ RSpec.describe 'Autonomia Insurance Quote Agent API', type: :request do
       expect(response).to have_http_status(:created)
       agente = Autonomia::Agents::Agent.find_by(account: account, agent_type: 'insurance_quote')
       expect(agente.name).to eq('Mia')
-      expect(agente.specialists.count).to eq(1)
+      # Auto e residencial nascem juntos (chat#323); residencial só atende onde a conexão tem o ramo.
+      expect(agente.specialists.pluck(:slug)).to eq(%w[cotacao_auto cotacao_residencial])
       expect(agente.instruction).to include('Corretora Exemplo')
     end
 

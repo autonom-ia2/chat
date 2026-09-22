@@ -3,6 +3,8 @@
 # `motivo_da_recusa_spec`, `resultado_por_seguradora_spec` e `insurance_quote_result_spec`.
 module TextosDoMotivo
   VEICULO = Autonomia::Insurance::MotivoDaRecusa::VEICULO
+  # chat#323: a instabilidade vem do `kind` `passageiro` do conector, sem ler o texto.
+  INSTABILIDADE = Autonomia::Insurance::MotivoDaRecusa::INSTABILIDADE
 
   # As 39 mensagens do corpus do conector (`autonomia-adapters`, `origin/main` `ad4372a597`,
   # `test/fixtures/agger/motivos-de-recusa.sanitized.json`): `textoLimpo`, o `kind` e o status que o conector dá a cada
@@ -15,9 +17,9 @@ module TextosDoMotivo
     ['O veículo não possui aceitação para a categoria tarifária informada.', 'risco', 'declined', VEICULO],
     ['Após análise dos dados do veículo, região de circulação e critérios internos de aceitação, estamos declinando o ' \
      'risco deste orçamento.', 'risco', 'declined', nil],
-    ['O sistema de cálculo está indisponível, tente novamente em alguns instantes.', 'passageiro', 'declined', nil],
-    ['Serviço indisponível, tente novamente mais tarde', 'passageiro', 'declined', nil],
-    ['Houve uma instabilidade ao realizar o cálculo nesta seguradora, tente novamente em breve.', 'passageiro', 'declined', nil],
+    ['O sistema de cálculo está indisponível, tente novamente em alguns instantes.', 'passageiro', 'declined', INSTABILIDADE],
+    ['Serviço indisponível, tente novamente mais tarde', 'passageiro', 'declined', INSTABILIDADE],
+    ['Houve uma instabilidade ao realizar o cálculo nesta seguradora, tente novamente em breve.', 'passageiro', 'declined', INSTABILIDADE],
     ['Usuário não possui acesso a funcionalidade. Por favor, verifique suas permissões no site da seguradora.', 'credencial',
      'auth_required', nil],
     ['Login ou senha incorreta. Confira suas credenciais de acesso.', 'credencial', 'auth_required', nil],
@@ -38,7 +40,7 @@ module TextosDoMotivo
      'outro', 'declined', nil],
     ['LMI COB RC OBRIGATORIA PARA DANO MORAL', 'outro', 'declined', nil],
     ['Houve um erro ao realizar este cálculo.', 'outro', 'declined', nil],
-    ['Não foi possível recuperar o valor dessa cotação. Por favor, tente novamente mais tarde.', 'passageiro', 'declined', nil],
+    ['Não foi possível recuperar o valor dessa cotação. Por favor, tente novamente mais tarde.', 'passageiro', 'declined', INSTABILIDADE],
     ['O valor do capital segurado deve ser entre R$100,00 e R$1.000,00, limitado a 250 vezes o capital segurado da cobertura',
      'outro', 'declined', nil],
     ['Profissão deve ser especificada corretamente para que o cálculo prossiga.', 'outro', 'declined', nil],
