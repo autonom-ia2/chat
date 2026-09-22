@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import FormSelect from 'v3/components/Form/Select.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { useFontSize } from 'dashboard/composables/useFontSize';
 
 const props = defineProps({
@@ -40,23 +40,10 @@ const selectedValue = computed({
         {{ description }}
       </p>
     </div>
-    <FormSelect
+    <ChoiceSelect
       v-model="selectedValue"
-      name="fontSize"
-      spacing="compact"
-      class="min-w-28 mt-px"
-      :value="selectedValue"
       :options="fontSizeOptions"
-      label=""
-    >
-      <option
-        v-for="option in fontSizeOptions"
-        :key="option.value"
-        :value="option.value"
-        :selected="option.value === selectedValue"
-      >
-        {{ option.label }}
-      </option>
-    </FormSelect>
+      :aria-label="label"
+    />
   </div>
 </template>
