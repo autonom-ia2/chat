@@ -134,11 +134,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     proposta.to_h['url'].presence
   end
 
-  # SEM LEGENDA E SEM RESERVA, de propósito: a frase é da Lia, e esta entrega nunca é serializada (vai da
-  # ferramenta ao publicador no mesmo processo), então não passa pela forma que exige as duas
-  # (`EntregaDeArquivo#valida?`). O publicador baixa, grava e anexa; o download que falha não publica nada.
+  # SEM LEGENDA, como todo arquivo do motor desde a PR C: a frase é da Lia. O publicador baixa, grava e anexa; o
+  # download que falha não publica nada.
   def publicar(url, nome)
-    arquivo = Arquivo.new(url: url, nome: nome_do_arquivo(nome), legenda: nil, reserva: nil)
+    arquivo = Arquivo.new(url: url, nome: nome_do_arquivo(nome))
     ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run_da_cotacao).publish!(arquivo)
   end
 

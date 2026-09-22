@@ -89,28 +89,14 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # nil quando não. Gravada a cada consulta; `finished?` a compara com a leitura seguinte.
   LEITURA_ASSENTADA_KEY = 'leitura_assentada'.freeze
   # Renovação cotada sem a classe de bônus. Viaja no handle porque quem decide isso é o `start`, e
-  # quem conta ao cliente é a legenda do comparativo (`Comparativo#legenda_do_comparativo`), minutos depois.
+  # quem conta ao cliente é a Lia, minutos depois, com o fato no evento de desfecho (`Eventos`).
   SEM_BONUS_KEY = 'renovacao_sem_bonus'.freeze
   # Por seguradora, POR QUE o preço saiu sem período (entrega 13, termo 1): o motivo do adapter, que
   # nomeia o campo do portal que faltou ou veio ambíguo. Fica no handle da execução, consultável
   # depois em `autonomia_agent_tool_runs.handle->'preco_sem_periodo'`, sem reabrir a cotação.
   SEM_PERIODO_KEY = 'preco_sem_periodo'.freeze
-  # Sai na legenda do comparativo, e só em renovação de auto sem classe de bônus. Não promete
-  # desconto nem percentual: o quanto o bônus abate é decisão de cada seguradora, e prometer número
-  # aqui vira preço que a emissão desmente. Diz o que é verdade — existe preço melhor, e ele depende
-  # de um dado que está na apólice do cliente.
-  #
-  # PERDEU O "(É UM NÚMERO DE 0 A 10)" em 12/09/2026, e não por estilo: a decisão do CEO tirou
-  # número de toda frase que o cliente lê, e esta é a CONSTANTE DE RECUO do papel `aviso_sem_bonus` —
-  # um recuo que publicasse dígito faria a regra valer para o modelo e não para nós. O que se perde
-  # é a dica de qual é a cara do dado na apólice; o que se ganha é a regra sem exceção. O travessão
-  # também saiu, pelo mesmo motivo.
-  AVISO_SEM_BONUS = 'Importante: cotei sem a classe de bônus da sua apólice atual, então estes ' \
-                    'preços são os de quem está fazendo o primeiro seguro. Se você conferir a ' \
-                    'classe de bônus na apólice e me disser, eu refaço a cotação: com bônus ' \
-                    'costuma sair melhor.'.freeze
-
   include Declaracao
+  include Eventos
   include Recusas
   include Envio
   include Veiculo
@@ -126,22 +112,20 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # RAMO QUE O ADAPTER NÃO TEM É RECUSA, NÃO FALHA. `produto` é escrito pelo modelo; antes, um ramo
   # desconhecido levantava aqui a cada passada, o job tentava 60 vezes por 7 minutos e fechava em
   # `tool_failed` — o cliente esperava tudo isso por "não consegui", e nada dizia o motivo.
-  # AS FRASES SÃO DO ESPECIALISTA (12/09/2026). Cada recusa daqui vira uma `delivery`, que vai
-  # direto ao cliente: o texto é o do papel correspondente, escrito por ele no pedido, com recuo
-  # para a constante quando a frase não passa na peneira.
+  # CADA RECUSA VIRA EVENTO (PR C): o `poll` a devolve como `done` com o evento, e quem fala é a Lia.
   def start
-    return recusa('json_invalido', frases[:falta_dado], faltando: ['dados']) if dados.nil?
-    return recusa('formulario_indisponivel', frases[:falhou], faltando: []) if sem_formulario?
-    return recusa('sem_veiculo', frases[:sem_veiculo], faltando: [PLACA]) if sem_veiculo?
+    return recusa('json_invalido', faltando: ['dados']) if dados.nil?
+    return recusa('formulario_indisponivel', faltando: []) if sem_formulario?
+    return recusa('sem_veiculo', faltando: [PLACA]) if sem_veiculo?
 
     faltantes = validar
-    return recusa('faltam_dados', pedido_do_que_falta(faltantes), faltando: campos(faltantes)) if faltantes.any?
+    return recusa('faltam_dados', faltando: campos(faltantes), problemas: faltantes) if faltantes.any?
 
     submeter
   rescue ::Autonomia::Insurance::Connector::Error => e
     raise unless e.kind == :not_implemented
 
-    recusa('ramo_desconhecido', ramo_desconhecido_ao_cliente, faltando: ['produto'])
+    recusa('ramo_desconhecido', faltando: ['produto'])
   rescue Envio::EntradaRecusada => e
     # Falta dado que o cliente tem, e não há o que tentar de novo (#470): recusa, não falha passageira.
     recusa_da_entrada(e)
@@ -198,9 +182,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     faltantes.any? ? conferencia_do_que_falta(faltantes) : nil
   end
 
-  # -> Tools::Progress. Uma consulta. Só entrega quem AINDA NÃO foi entregue.
+  # -> Tools::Progress. Uma consulta. A recusa do envio (e a de uma execução da versão anterior, com o texto em
+  # `pedido`, que não é reaproveitado) volta como `done` com o evento.
   def poll(handle:, attempt:)
-    return progress_class.done(deliveries: [handle['pedido']], handle: handle) if handle['pedido']
+    return progress_class.done(handle: handle, evento: evento_da_recusa(handle)) if recusa?(handle)
 
     quote_id = handle['quote_id']
     return progress_class.failed('sem_id_de_cotacao') if quote_id.blank?

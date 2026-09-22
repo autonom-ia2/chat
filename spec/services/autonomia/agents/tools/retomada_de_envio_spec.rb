@@ -29,8 +29,9 @@ RSpec.describe Autonomia::Agents::Tools::RetomadaDeEnvio do
   # de volta — LIDA DO BANCO, como o varredor a lê (`marcadas`): a instância do `let` carrega o
   # `display_id` que o banco atribui, e `lock!` recusa registro com mudança não persistida.
   def mensagem_pendente
+    stub_arquivo
     fila_recusa_o_envio
-    expect(Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish('cotação pronta')).to be_blocked
+    expect(Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(arquivo_de_teste)).to be_blocked
     fila_volta
     Message.find(conversation.messages.where(sender_type: 'AgentBot').sole.id).tap do |mensagem|
       expect(Autonomia::Agents::Tools::PendenciaDeEnvio).to be_pendente(mensagem)

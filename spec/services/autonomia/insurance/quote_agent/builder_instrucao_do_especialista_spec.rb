@@ -360,52 +360,6 @@ module PromessaDaListaFechada
   }.freeze
 end
 
-# AS PROMESSAS QUE A ENTREGA DAS FRASES ESCREVEU (12/09/2026), em módulo próprio pelo mesmo motivo
-# que o formulário mora separado: a tabela acima só cresce, e cada entrega que a engordasse no mesmo
-# módulo passaria do teto de linhas por um motivo que não é o dela.
-module PromessasDasFrasesDoEspecialista
-  FRASES = Autonomia::Agents::Tools::Native::InsuranceQuote::Frases
-  PENEIRA = Autonomia::Agents::Tools::TextoAoCliente
-
-  PROMESSAS = {
-    # O manual só pode pedir que o especialista escreva as frases do cliente porque a ferramenta tem
-    # ONDE recebê-las: o nó de doze folhas no formulário. Tire o nó dos parâmetros e a §2.1 vira
-    # ordem impossível — ele escreveria num campo inexistente e o cliente leria o texto fixo de
-    # sempre, sem ninguém reclamar.
-    'Quem escreve essas frases é você' => lambda {
-      Autonomia::Agents::Tools::Native::InsuranceQuote.params.any? { |p| p['name'] == FRASES::NO } &&
-        FRASES::ORDEM.size == 12
-    },
-    # A OUTRA METADE: o manual afirma que a frase proibida é trocada por um texto padrão, e não que
-    # ela some. Só é verdade porque TODA constante de recuo passa pela própria peneira — uma que não
-    # passasse publicaria o que o texto acabou de proibir.
-    'põe um texto padrão no lugar' => lambda {
-      FRASES.constantes.size == FRASES::ORDEM.size &&
-        FRASES.constantes.values.all? { |texto| PENEIRA.vetar(texto) == texto }
-    },
-    # A FRONTEIRA DITA COM HONESTIDADE, E PROVADA NOS DOIS SENTIDOS (rodada de correção, 12/09/2026).
-    # O manual afirmava "frase com qualquer um deles é descartada", e três dos cinco itens da
-    # proibição do CEO não têm guarda: contagem por extenso, prazo por extenso e nome de seguradora
-    # atravessam a peneira e chegam ao cliente. Quem garante esses três é o MODELO, então é no manual
-    # DELE que isso precisa estar escrito. A âncora prende o texto; a lambda prova que ele é verdade
-    # — construída a guarda um dia, esta promessa cai e obriga a reescrever o manual junto.
-    'não enxerga contagem por extenso, prazo por extenso nem nome de seguradora' => lambda {
-      ['Chegaram três opções:', 'Volto em cinco minutos.', 'A Porto respondeu.']
-        .all? { |frase| PENEIRA.vetar(frase) == frase }
-    },
-    # A REGRA DE VOZ DO TRAVESSÃO TEM GUARDA NOS DOIS LADOS: a peneira reprova a frase do modelo que
-    # o traga, e a depuração o troca no texto já composto (o nome da seguradora vem do portal).
-    'Não use travessão em nada que chegue ao cliente' => lambda {
-      PENEIRA.vetar('Segue o comparativo — com tudo').nil? &&
-        PENEIRA.depurar('Porto — Cia', teto: 100) == 'Porto - Cia'
-    },
-    # O RECUO QUE SAI NO LUGAR DA FRASE TAMBÉM SEGUE A REGRA: nenhuma constante de recuo leva travessão.
-    'use dois pontos, vírgula ou ponto final' => lambda {
-      FRASES.constantes.values.none? { |texto| texto.match?(/[—–]/) }
-    }
-  }.freeze
-end
-
 RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # O TEXTO QUE O MODELO LÊ, montado como em runtime (#525): bloco comum + manual do ramo.
   let(:texto) { described_class.instrucao_do_especialista(ArquivosDoEspecialista::DO_RAMO) }
@@ -423,12 +377,20 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
   describe 'promessa e capacidade (termos 2 e 4)' do
     ManualDoEspecialistaDeAuto::PROMESSAS
-      .merge(PromessaDaListaFechada::PROMESSAS)
-      .merge(PromessasDasFrasesDoEspecialista::PROMESSAS).each do |frase, sustenta|
+      .merge(PromessaDaListaFechada::PROMESSAS).each do |frase, sustenta|
       it "«#{frase.tr("\n", ' ')}» tem o que a sustenta" do
         expect(texto).to include(frase)
         expect(sustenta.call).to be_truthy
       end
+    end
+
+    # AS FRASES AO CLIENTE NÃO SÃO MAIS DELE (PR C). O manual pedia doze frases num bloco da ferramenta, e o
+    # motor as publicava; agora quem fala nos eventos da cotação é a Lia. Nem o manual pede o bloco, nem a
+    # ferramenta o recebe: uma metade sem a outra seria ordem impossível ou campo que ninguém preenche.
+    it 'não pede frases ao cliente, e a ferramenta não tem onde recebê-las' do
+      expect(texto).not_to include('frases do bloco')
+      expect(texto).not_to include('bloco de frases')
+      expect(Autonomia::Agents::Tools::Native::InsuranceQuote.params.pluck('name')).not_to include('frases_ao_cliente')
     end
 
     # O especialista só cita, como sua, ferramenta que tem. Qualquer outro slug do catálogo no texto
@@ -484,12 +446,14 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # Pela #585 do resultado (`16d1790a…`): a §J recebe o resultado da cotação, que era da Lia; §G, §H e §I deixam
   # de contradizê-la (quem conta a recusa, o que é dúvida de contrato, recusa da conferência não é falha).
   # Na revisão (`e30d3715…`): o item 8 do que nunca se faz deixa de mandar perguntar, e campo ≠ valor.
+  # Pela PR C (`9bb27e67…` -> `e944f162…`): sai a §B.1 (as doze frases que o especialista escrevia para o motor
+  # publicar), e a pontuação passa a ser a §B.1; quem fala nos eventos da cotação é a Lia.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
     expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('15ba570112d87605ed680461718b51c7')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('9bb27e67b83fd62b010c5c9ef69fb312')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('e944f1629ec26380c556ac336b928853')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

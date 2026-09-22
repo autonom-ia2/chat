@@ -83,66 +83,13 @@ class Autonomia::Agents::Tools::Native::Base
         'nesta conversa em instantes. Não invente valores nem prazos.'
     end
 
-    # O fecho quando acabou o prazo e ALGO já tinha sido entregue. Não é a mensagem de falha: dizer
-    # "não consegui" a quem acabou de receber preço é desmentir o que ele está lendo.
-    # DE CLASSE, como `accepted_message` (lido pelo `Bound`) e `waiting_message`/`failure_message`
-    # (publicados pelo job): o fecho sai mesmo quando o agente já não existe e não há instância. A ferramenta que o redefinir como
-    # método de INSTÂNCIA está escrevendo uma frase que nunca sai — foi o caso da cotação até
-    # 10/09/2026 (entrega 4), e `contrato_de_nivel_spec` reprova isso.
-    #
-    # NENHUMA FERRAMENTA A PUBLICA HOJE (12/09/2026). Na cotação quem fala neste estado passou a ser
-    # `closing_message`, e ela era a única a chegar aqui: `Encerramento#parcial` é o único caminho que
-    # publicava este papel, e ele não o pede mais. O que sobra dela é a PERGUNTA — `FRASES_DE_FECHO`
-    # continua perguntando por este texto, porque é ele que a versão anterior publicou nas execuções
-    # abertas antes do deploy. Uma ferramenta assíncrona nova que queira fecho parcial a redefine e
-    # passa a publicá-la; nenhuma faz isso agora.
-    def partial_message(_arguments = nil)
-      'Algumas consultas não responderam a tempo. O que chegou está aqui em cima.'
-    end
-
-    # O FECHO DE QUEM JÁ TEM RESULTADO, sem contar o que faltou. Nasceu em 12/09/2026 junto com a
-    # decisão de não dizer ao cliente quantas consultas ficaram pelo caminho: esse número é de quem
-    # opera, e já está no Super Admin. O estado continua falando — calar quem recebeu resultado e
-    # ficou esperando o resto é o defeito que a entrega 8 corrigiu.
-    def closing_message(_arguments = nil)
-      'Encerrei a consulta por aqui. Se precisar, um atendente continua com você.'
-    end
-
-    # OS QUATRO TEXTOS ABAIXO RECEBEM `arguments`, e o padrão os IGNORA. É o `ToolRun#arguments` da
-    # execução: a ferramenta que deixa o agente escrever as frases do cliente (a cotação, desde
-    # 12/09/2026) as resolve a partir dele, e o motor não precisa saber de qual ferramenta se trata.
-    # Quem não usa devolve a mesma frase de sempre.
-
-    # Texto que o CÓDIGO publica quando o turno não avisou o cliente (o modelo ficou em silêncio,
-    # a IA falhou, a porta de engajamento fechou). O aviso não pode depender de o modelo lembrar.
-    def waiting_message(_arguments = nil)
-      'Estou consultando agora. Assim que tiver o resultado, mando aqui.'
-    end
-
-    # Texto que o CÓDIGO publica quando a execução falha ou estoura o prazo. É escrito por nós, e
-    # não pela ferramenta, de propósito: a mensagem de uma exceção pode carregar requisição assinada
-    # ou texto vindo do portal, e isso não pode chegar ao cliente.
-    def failure_message(_arguments = nil)
-      'Não consegui concluir a consulta agora. Um atendente vai retomar daqui.'
-    end
-
-    # Texto que o CÓDIGO publica quando a execução acaba sem se saber se o trabalho foi feito
-    # (entrega 5): o job decidiu submeter e o número nunca chegou — o processo morreu, ou o portal
-    # ficou mudo. Não é a frase de falha: "não consegui" afirmaria o que não se sabe.
-    def uncertain_message(_arguments = nil)
-      'Não consegui confirmar o resultado da consulta. Um atendente vai conferir e retomar daqui.'
-    end
-
-    # O FECHO DE QUEM TEM RESULTADO GUARDADO QUE NÃO CHEGOU A ELE (fatia 3 do #420): ele pode pedir aqui
-    # mesmo. Publicado pelo encerramento quando `resultado_a_pedir?` responde verdade.
-    def valores_message(_arguments = nil)
-      'O resultado ficou guardado comigo. Se quiser, me peça aqui mesmo.'
-    end
-
-    # -> os papéis cujo texto de recuo aparece nesta mensagem. O publicador registra cada um no log.
-    # A ferramenta que não deixa o agente escrever as frases não tem recuo: [] por padrão.
-    def recuos_em(_texto)
-      []
+    # OS FATOS DE UM EVENTO DESTA EXECUÇÃO, para o MODELO (PR C, `Tools::Evento`). Nenhuma frase ao cliente sai
+    # daqui: o motor dispara o evento, e a Lia fala num turno de modelo, com a voz dela, a partir da descrição do
+    # tipo e destes fatos. DE CLASSE, e a partir da LINHA (`run`): o evento de falha sai mesmo quando o agente já
+    # não existe e não há instância. -> texto para o modelo, ou nil (a descrição do tipo basta). Nunca dado
+    # pessoal achado por busca de documento.
+    def fatos_do_evento(_tipo, _run)
+      nil
     end
 
     # O HANDLE DESTA EXECUÇÃO TEM RESULTADO GUARDADO? (fatia 2 do #420.) Lido por
@@ -309,7 +256,7 @@ class Autonomia::Agents::Tools::Native::Base
   # fecho reflete o que o cliente realmente tem. O que JÁ está pronto — um arquivo que a ferramenta
   # guardou no handle — sai pelos dois caminhos; a cotação não tem nada assim (o comparativo só
   # existe depois de uma chamada ao portal), então pelo varredor ela entrega [] e só fecha.
-  # -> Array de textos para o cliente. Vazio por padrão.
+  # -> Array de entregas de ARQUIVO. Vazio por padrão.
   def closing_deliveries(_handle, trabalho_novo: true) # rubocop:disable Lint/UnusedMethodArgument
     []
   end
@@ -317,9 +264,8 @@ class Autonomia::Agents::Tools::Native::Base
   # O CLIENTE JÁ TEM RESULTADO DESTA EXECUÇÃO? (entrega 8.)
   #
   # `ToolRun#delivered_count` não responde isso: ele conta QUALQUER item aceito para publicação,
-  # inclusive um aviso e inclusive a pergunta pelo dado que falta (a cotação devolve `handle['pedido']`
-  # como entrega). Quem sabe distinguir resultado de recado é a ferramenta, não o motor — e é por esta
-  # pergunta que o fecho decide entre a frase parcial e o silêncio.
+  # inclusive as entregas legadas de antes da PR C. Quem sabe distinguir resultado de recado é a ferramenta,
+  # não o motor — e é por esta pergunta que o encerramento escolhe o evento de desfecho.
   #
   # A RESPOSTA É SOBRE O ACEITE, NÃO SOBRE A EMISSÃO: o handle da ferramenta só sabe o que ela
   # tentou entregar, e avança mesmo quando a publicação é recusada. É para esta pergunta que a
@@ -332,16 +278,16 @@ class Autonomia::Agents::Tools::Native::Base
   end
 
   # O RESULTADO EXISTE E NÃO CHEGOU AO CLIENTE? (fatia 3 do #420.) Verdade quando a ferramenta guardou
-  # resultado e nenhuma entrega dele foi aceita: o fecho diz que ele pode pedir aqui mesmo
-  # (`valores_message`). -> false por padrão.
+  # resultado e nenhuma entrega dele foi aceita: o desfecho é `valores_guardados`, e a Lia diz que ele pode
+  # pedir aqui mesmo. -> false por padrão.
   def resultado_a_pedir?(_handle)
     false
   end
 
   # E SOBROU ALGO POR ENTREGAR? (entrega 8.) Perguntado DEPOIS das entregas do
-  # encerramento: a frase parcial diz que algo ficou pelo caminho, e dizê-la a quem recebeu tudo o
+  # encerramento: o desfecho por prazo diz que algo ficou pelo caminho, e dizê-lo a quem recebeu tudo o
   # que pediu é mentir.
-  # -> false por padrão: sem sobra conhecida, o fecho parcial não sai.
+  # -> false por padrão: sem sobra conhecida, o desfecho é `concluida`.
   def resta_entregar?(_handle)
     false
   end

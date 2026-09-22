@@ -22,7 +22,7 @@
 # LINHA (`run`), que é o que ela já recebe para montar a identidade de cada entrega.
 #
 # QUEM REGISTRA É QUEM PUBLICA: o motor (`AsyncRunJob#deliver`) e o encerramento
-# (`Tools::Encerramento#publicar_uma`). O aviso de espera e as frases de fecho NÃO passam por aqui
+# (`Tools::Encerramento#publicar_uma`). Os eventos (`Tools::Evento`) e a fala da Lia NÃO passam por aqui
 # — elas não são entrega da ferramenta, e o fecho idempotente continua perguntando pela mensagem
 # (ver `Tools::EntregaPublicada`).
 module Autonomia::Agents::Tools::EntregaAceita

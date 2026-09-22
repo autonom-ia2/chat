@@ -310,8 +310,8 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     mesclar(scope, adicionar: adicionar, remover: remover)
   end
 
-  # Registra que uma ENTREGA DA FERRAMENTA foi aceita para publicação (publicada ou adiada). O aviso
-  # de espera e a frase de falha NÃO passam por aqui — é o que permite saber, no fim, se o cliente
+  # Registra que uma ENTREGA DA FERRAMENTA foi aceita para publicação (publicada ou adiada). Os eventos
+  # e a fala da Lia sobre eles NÃO passam por aqui — é o que permite saber, no fim, se o cliente
   # recebeu algum resultado de verdade.
   def record_delivery!
     self.class.where(id: id).update_all('delivered_count = delivered_count + 1, updated_at = NOW()') # rubocop:disable Rails/SkipsModelValidations

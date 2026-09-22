@@ -111,8 +111,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     expect(conferencia.motivo).to eq('sem_veiculo')
     expect(conferencia.to_s).to include('encaminhe para um atendente')
     expect(conferencia.faltando).to eq(['vehicle.plate'])
-    expect(envio['motivo']).to eq('sem_veiculo')
-    expect(envio['pedido']).to eq(described_class::SEM_VEICULO_CLIENTE)
+    expect(envio['recusa']).to eq('sem_veiculo')
+    expect(envio).not_to have_key('pedido')
   end
 
   it 'auto sem formulário na conexão e adapter mudo recusa por indisponibilidade, sem cobrar placa do cliente' do
@@ -128,8 +128,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     expect(conferencia.to_s).to include('encaminhe para um atendente')
     expect(conferencia.to_s).not_to include('placa')
     expect(conferencia.faltando).to eq([])
-    expect(envio['motivo']).to eq('formulario_indisponivel')
-    expect(envio['pedido']).to eq(described_class::FALHOU)
+    expect(envio['recusa']).to eq('formulario_indisponivel')
+    expect(envio).not_to have_key('pedido')
     expect(record.reload.quote_schema('auto')).to be_nil
   end
 
@@ -159,8 +159,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     expect(conferencia.motivo).to eq('faltam_dados')
     expect(conferencia.to_s).to include(Date.current.year.to_s, 'Onix 1.0', 'zero-quilômetro', 'vehicle.isZeroKm —')
     expect(conferencia.faltando).to eq(['vehicle.isZeroKm'])
-    expect(envio['motivo']).to eq('faltam_dados')
-    expect(envio['pedido']).to include('se o veículo é zero-quilômetro')
+    expect(envio['recusa']).to eq('faltam_dados')
+    expect(described_class.fatos_do_evento('falta_dado', Autonomia::Agents::ToolRun.new(handle: envio)))
+      .to include('vehicle.isZeroKm (se o veículo é zero-quilômetro)')
     expect(resolvido).to be_nil
     expect(usado).to be_nil
   end

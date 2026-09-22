@@ -9,8 +9,8 @@
 # humanizada do turno está em curso (até 90 s), a publicação volta `deferred` e a mensagem ainda
 # não existe. Quem decide o fecho pela ausência da mensagem nessa janela cala para um cliente que
 # vai receber os preços segundos depois — foi o defeito da rodada 3 da entrega 8a. Aqui a pergunta
-# é outra, e tem um consumidor só: a IDEMPOTÊNCIA do fecho (`Tools::Encerramento`), que precisa
-# saber se AQUELA frase já está na conversa antes de escolher outra.
+# é outra: o publicador (a dedupe), a ferramenta (o comparativo já está na conversa?) e o turno de evento
+# (o arquivo aceito já é mensagem?) precisam saber se AQUELA entrega já está na conversa.
 #
 # Duas perguntas, uma identidade só. `token_de` é a IDENTIDADE que uma entrega TERÁ como mensagem, e
 # mora aqui porque quem pergunta precisa montá-la ANTES de a mensagem existir: a ferramenta a grava
@@ -38,13 +38,10 @@ module Autonomia::Agents::Tools::EntregaPublicada
 
   # A identidade que ESTA entrega tem (ou terá) como mensagem desta execução. A entrega de ARQUIVO
   # responde por si (`EntregaDeArquivo#identidade`: derivada só da URL, a mesma como anexo e como o
-  # link de reserva que versões anteriores publicavam); o texto responde por si mesmo, aparado
-  # como o publicador o apara antes de postar. nil sem execução — sem `execution_key` não há token,
-  # e quem não tem token não afirma nada.
-  #
-  # As duas formas que só existem depois do publicador (rodada 2 da fatia 1 do PDF rápido): o arquivo já
-  # gravado responde pelo token que carrega (`ArquivoGravado`, calculado sobre a entrega de arquivo
-  # original), e o texto encadeado responde pelo texto (`EntregaEncadeada`).
+  # link de reserva que versões anteriores publicavam); o arquivo já gravado responde pelo token que
+  # carrega (`ArquivoGravado`, calculado sobre a entrega de arquivo original). O que não é arquivo — o texto
+  # de uma versão anterior à PR C, que o publicador descarta — responde pelo próprio texto aparado, e nunca
+  # vira mensagem. nil sem execução: sem `execution_key` não há token, e quem não tem token não afirma nada.
   def token_de(run, entrega)
     return nil if run.blank?
 
@@ -52,8 +49,7 @@ module Autonomia::Agents::Tools::EntregaPublicada
     return gravado.token if gravado
 
     arquivo = ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega)
-    encadeada = ::Autonomia::Agents::Tools::EntregaEncadeada.de(entrega)
-    run.delivery_token(arquivo&.identidade || encadeada&.texto || entrega.to_s.strip)
+    run.delivery_token(arquivo&.identidade || entrega.to_s.strip)
   end
 
   # -> esta entrega já é uma mensagem na conversa E SEM PENDÊNCIA DE ENVIO conhecida?
@@ -64,10 +60,8 @@ module Autonomia::Agents::Tools::EntregaPublicada
   # `AsyncPublisher#retomar` faz — achar a mensagem pelo token e reemitir o envio, sob o lock, sem
   # duplicar a mensagem.
   #
-  # Por isso a pendência responde "ainda não": quem pergunta é o fecho idempotente
-  # (`Tools::Encerramento#fecho_publicado?`), e publicar de novo nesse estado é exatamente o certo
-  # — a dedupe por conteúdo do publicador encontra a mesma mensagem e retoma o envio dela. Dizer
-  # "já saiu" deixaria o fecho no banco e o cliente sem nenhuma palavra.
+  # Por isso a pendência responde "ainda não": publicar de novo nesse estado é exatamente o certo — a
+  # dedupe do publicador encontra a mesma mensagem e retoma o envio dela.
   #
   # `para` NÃO filtra a pendência, de propósito: quem quer a MENSAGEM (o publicador, para retomá-la)
   # precisa dela justamente quando ela está pendente.

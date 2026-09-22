@@ -40,6 +40,8 @@ module Autonomia::Agents::Tools::Recusa
     'async_indisponivel_nesta_superficie' => 'não há conversa para receber o resultado (Testar, Copiloto, playground)',
     'async_desligado' => 'a ferramenta assíncrona está desligada nesta conta ou na instalação',
     'execucao_ja_aberta_neste_turno' => 'este turno já abriu esta execução; é retry, não pedido novo',
+    # PR C: o turno acionado por um evento da cotação fala com a pessoa, mas não abre cotação que ela não pediu.
+    'turno_de_evento' => 'o turno foi acionado por um aviso do sistema sobre a cotação, e não abre cotação nova',
     'execucao_ja_em_andamento' => 'duas aceitações correram e esta perdeu para o índice único',
     'conferencia_recusou' => 'a conferência da própria ferramenta recusou o pedido',
     'faltam_dados' => 'a conferência encontrou dado obrigatório faltando',

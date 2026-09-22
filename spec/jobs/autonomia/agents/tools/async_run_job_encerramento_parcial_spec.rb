@@ -13,6 +13,9 @@ require 'rails_helper'
 # `start`/`poll` — e lê o que o job publicou na conversa: o comparativo e a frase, nesta ordem.
 # Desfazer a correção (voltar `partial_message` para a instância) faz este exemplo falhar — provado
 # por mutação em 10/09/2026.
+#
+# DESDE A PR C o desfecho é um EVENTO (`eventos_disparados`), e o comparativo sai sem legenda: quem fala é a
+# Lia, num turno próprio. O que este arquivo trava é o TIPO do desfecho em cada estado, pelas duas portas.
 RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:account) do
     create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
@@ -58,12 +61,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   end
 
   def comparativo_do_portal
-    Autonomia::Agents::Tools::EntregaDeArquivo.new(
-      url: 'https://exemplo.test/comparativo-mock.pdf',
-      nome: 'Comparativo de seguro, placa ABC1D23.pdf',
-      legenda: cotacao::Comparativo::LEGENDA,
-      reserva: "#{cotacao::Comparativo::RESERVA}\nhttps://exemplo.test/comparativo-mock.pdf"
-    )
+    Autonomia::Agents::Tools::EntregaDeArquivo.new(url: 'https://exemplo.test/comparativo-mock.pdf',
+                                                   nome: 'Comparativo de seguro, placa ABC1D23.pdf')
   end
 
   def stub_comparativo_pdf
@@ -71,17 +70,27 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       .to_return(status: 200, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
   end
 
-  # PUBLICA PELO CAMINHO REAL (o mesmo publicador do motor) e devolve o TOKEN da entrega. Levanta se
-  # a publicação não entrar: um Arrange que mente sobre o que o cliente recebeu não prova nada.
+  # O ARQUIVO SAI PELO CAMINHO REAL (o mesmo publicador do motor); o PREÇO EM TEXTO é o que a versão anterior
+  # deixou na conversa (desde a PR C o publicador não publica texto): a mensagem com o token dela. Devolve o
+  # TOKEN da entrega. Levanta se o arquivo não entrar: um Arrange que mente sobre o que o cliente recebeu não
+  # prova nada.
   #
   # `registrar:` é o que o motor faz no ACEITE (`Tools::EntregaAceita`). FALSO reproduz a linha que
   # atravessou o deploy: a publicação aconteceu na versão anterior, que não registrava nada.
   def publicar!(run, entrega, registrar: true)
-    resultado = Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega)
+    token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
+    resultado = if entrega.is_a?(String)
+                  create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                                   sender: agent_bot, content: entrega,
+                                   content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => token })
+                  Autonomia::Agents::Tools::AsyncPublisher::Result.new(status: :published)
+                else
+                  Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(entrega)
+                end
     raise "o Arrange nao publicou a entrega: #{resultado.status}" unless resultado.published?
 
     Autonomia::Agents::Tools::EntregaAceita.registrar(run, entrega, resultado) if registrar
-    Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
+    token
   end
 
   def abrir_execucao(expires_at: 1.minute.ago, cadeia: 0, origem: nil)
@@ -212,29 +221,30 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
   # O que o cliente já tinha na tela ANTES do encerramento, nesse estado.
   def tela_de_quem_recebeu_tudo
-    [preco_ao_cliente, cotacao::Comparativo::LEGENDA]
+    [preco_ao_cliente, nil]
   end
 
-  # A FRASE PARCIAL NÃO SAI PARA QUEM RECEBEU TUDO, PELAS DUAS PORTAS DE ENCERRAMENTO.
+  # O DESFECHO DO PRAZO NÃO SAI PARA QUEM RECEBEU TUDO, PELAS DUAS PORTAS DE ENCERRAMENTO.
   #
   # O fecho da cotação afirmava "sempre sobra, por construção", e a construção mentia: com
   # `comparativo_enviado` no handle, o cliente tem os preços E o comparativo, e "algumas seguradoras
-  # não responderam a tempo" descreve uma tela que ele não está vendo. O silêncio é a resposta certa
-  # — ele já tem tudo, e não há nada de novo a dizer.
-  it 'a cotacao que ja entregou tudo fecha em silencio quando o prazo estoura' do
+  # não responderam a tempo" descreve uma tela que ele não está vendo. O desfecho é a CONCLUSÃO: desde a PR C
+  # o PDF saiu sem legenda, e é a Lia quem fala depois dele.
+  it 'a cotacao que ja entregou tudo conclui, sem o desfecho do prazo, quando o prazo estoura' do
     # Arrange
     run = cotacao_fechada_no_portal_com_a_linha_abandonada
 
     # Act — a porta do MOTOR (`fail_run`)
     described_class.new.perform(run.id, 5)
 
-    # Assert — nem frase parcial, nem comparativo repetido, nem chamada nova ao portal: a tela do
-    # cliente é a mesma de antes do encerramento
+    # Assert — nem comparativo repetido, nem chamada nova ao portal: a tela do cliente é a mesma de antes do
+    # encerramento, e o desfecho é a conclusão
     expect(bot_contents).to eq(tela_de_quem_recebeu_tudo)
+    expect(eventos_disparados(run)).to eq(['concluida'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
-  it 'o varredor tambem fecha em silencio a cotacao que ja entregou tudo' do
+  it 'o varredor tambem conclui a cotacao que ja entregou tudo' do
     # Arrange
     run = cotacao_fechada_no_portal_com_a_linha_abandonada
     run.update!(expires_at: 10.minutes.ago)
@@ -244,13 +254,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     # Assert
     expect(bot_contents).to eq(tela_de_quem_recebeu_tudo)
+    expect(eventos_disparados(run)).to eq(['concluida'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
   # SEM LOTE DE PREÇO, O PRAZO PEDE O COMPARATIVO PARA QUEM TEM PREÇO GUARDADO (fatia 3 do #420). A consulta não
   # publicou nada, o contador está em zero, e ainda assim o cliente recebe o comparativo e o fecho de quem tem
   # resultado: exigir um lote aceito deixaria toda cotação que acaba pelo prazo sem PDF.
-  it 'a cotacao com preco guardado e nada na tela recebe o comparativo e o fecho quando o prazo estoura' do
+  it 'a cotacao com preco guardado e nada na tela recebe o comparativo e o desfecho do prazo quando ele estoura' do
     run = cotacao_com_preco_guardado_e_nada_publicado
     expect(bot_contents).to be_empty
     run.update!(expires_at: 1.minute.ago)
@@ -258,19 +269,21 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     described_class.new.perform(run.id, 5)
 
-    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
+    expect(bot_contents).to eq([nil])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
-  # E O PDF QUE NÃO SAI NO ENCERRAMENTO: o fecho diz que os valores podem ser pedidos na conversa.
-  it 'a cotacao com preco guardado cujo comparativo nao sai no prazo diz que os valores podem ser pedidos' do
+  # E O PDF QUE NÃO SAI NO ENCERRAMENTO: o desfecho é o dos valores guardados.
+  it 'a cotacao com preco guardado cujo comparativo nao sai no prazo termina com os valores guardados' do
     run = cotacao_com_preco_guardado_e_nada_publicado
     run.update!(expires_at: 1.minute.ago)
     stub_request(:get, 'https://exemplo.test/comparativo-mock.pdf').to_return(status: 404, body: 'x')
 
     described_class.new.perform(run.id, 5)
 
-    expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
+    expect(bot_contents).to be_empty
+    expect(eventos_disparados(run)).to eq(['valores_guardados'])
   end
 
   # NÃO-REGRESSÃO DA COTAÇÃO (Codex, P2). O `fail_run` deixou de filtrar por `delivered_count` e
@@ -286,9 +299,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     described_class.new.perform(run.id, 5)
 
-    # Assert — uma mensagem só, a de falha; nada do comparativo
-    expect(bot_contents).to eq([cotacao.failure_message])
-    expect(bot_contents).not_to include(cotacao::Comparativo::LEGENDA)
+    # Assert — nenhuma mensagem, o evento de falha; nada do comparativo
+    expect(bot_contents).to be_empty
+    expect(eventos_disparados(run)).to eq(['falhou'])
     expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
     expect(run.reload).to have_attributes(status: 'failed', delivered_count: 0)
   end
@@ -308,7 +321,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::FECHO_COM_RESULTADO])
+    expect(bot_contents).to eq([preco_ao_cliente])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
@@ -325,7 +339,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # prova legada, e só quando a nova está AUSENTE do handle. Guardado assim, o fallback alcança só
   # a linha legada — qualquer execução posterior ao deploy que emita preço grava a chave —, então
   # ele não reabre a frase falsa que a rodada 1 corrigiu.
-  it 'a execucao que atravessou o deploy recebe o comparativo E o fecho' do
+  it 'a execucao que atravessou o deploy recebe o comparativo E o desfecho' do
     # Arrange — handle da versão anterior, preço na tela do cliente
     run = cotacao_da_janela_do_deploy
     stub_comparativo_pdf
@@ -333,8 +347,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     described_class.new.perform(run.id, 5)
 
-    # Assert — o comparativo sai, e o fecho é o de quem tem preço e ficou faltando coisa
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
+    # Assert — o comparativo sai, e o desfecho é o de quem tem preço e ficou faltando coisa
+    expect(bot_contents).to eq([preco_ao_cliente, nil])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
@@ -374,8 +389,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
-    # Assert — sem comparativo (o PDF do `mock` nem está stubbado aqui), com o fecho de quem tem preço
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::FECHO_COM_RESULTADO])
+    # Assert — sem comparativo (o PDF do `mock` nem está stubbado aqui), com o desfecho de quem tem preço
+    expect(bot_contents).to eq([preco_ao_cliente])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
@@ -390,7 +406,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # O gatilho é o adiamento NORMAL (até 90 s), não uma avaria: a passada que entrega o preço com a
   # cadeia aberta e a passada seguinte, que encontra o prazo vencido, ficam a um intervalo de
   # distância uma da outra.
-  it 'a entrega ADIADA conta como resultado: o cliente recebe comparativo e fecho' do
+  it 'a entrega ADIADA conta como resultado: o cliente recebe o comparativo e o desfecho e disparado' do
     # Arrange — cadeia do turno em curso (um pedaço esperado, nenhum postado) e cotação respondendo
     run = abrir_execucao(expires_at: 3.minutes.from_now, cadeia: 1, origem: 4242)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'produto' => 'auto',
@@ -412,8 +428,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     expect(bot_contents).to eq(['deixa eu consultar aqui'])
     drenar_publicacoes_adiadas
 
-    # Assert — o comparativo adiado e o fecho encadeado a ele, nesta ordem
-    expect(bot_contents.drop(1)).to eq([cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
+    # Assert — o comparativo adiado sai, sem texto; o desfecho foi disparado (o turno da Lia espera o arquivo)
+    expect(bot_contents.drop(1)).to eq([nil])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
@@ -438,8 +455,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run.update!(expires_at: 1.minute.ago)
     described_class.new.perform(run.id, 5)
 
-    # Assert — o cliente continua com o preço antigo, e recebe o comparativo e o fecho dele
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
+    # Assert — o cliente continua com o preço antigo, e recebe o comparativo e o desfecho dele
+    expect(bot_contents).to eq([preco_ao_cliente, nil])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
   end
 
@@ -455,7 +473,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # stubbado aqui, então qualquer pedido de comparativo acrescentaria o link de reserva à lista.
   # DESDE A FATIA 3 DO #420 o preço guardado basta para o comparativo sair no prazo: o cliente sem nada na tela
   # recebe o PDF e o fecho de quem tem resultado, e não a frase de falha sobre uma cotação que deu preço.
-  it 'a linha legada sem aceite nenhum recebe o comparativo e o fecho' do
+  it 'a linha legada sem aceite nenhum recebe o comparativo e o desfecho' do
     # Arrange
     run = cotacao_legada_sem_aceite_nenhum
     stub_comparativo_pdf
@@ -464,7 +482,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert
-    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
+    expect(bot_contents).to eq([nil])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado', delivered_count: 0)
   end
 
@@ -474,7 +493,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # `delivered_count` — zero nesta linha, o que já leva à frase de falha. O exemplo fica como trava
   # da PORTA (o estado existe em produção e ela tem de continuar honesta), não como prova da
   # correção: quem a prova é o exemplo do motor, acima.
-  it 'o varredor fecha a linha legada sem aceite nenhum dizendo que os valores podem ser pedidos' do
+  it 'o varredor fecha a linha legada sem aceite nenhum com os valores guardados' do
     # Arrange
     run = cotacao_legada_sem_aceite_nenhum
     run.update!(expires_at: 10.minutes.ago)
@@ -483,11 +502,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert
-    expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
+    expect(bot_contents).to be_empty
+    expect(eventos_disparados(run)).to eq(['valores_guardados'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
-  it 'publica o fecho de quem tem resultado quando o prazo estoura com preço ja entregue' do
+  it 'dispara o desfecho de quem tem resultado quando o prazo estoura com preço ja entregue' do
     # Arrange — o comparativo do conector `mock` responde como PDF (entrega 11: sai como arquivo)
     run = cotacao_com_preco_entregue_e_prazo_vencido
     stub_comparativo_pdf
@@ -495,23 +515,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     described_class.new.perform(run.id, 5)
 
-    # Assert — o preço que o cliente já tinha, depois o comparativo (o que ainda vale entregar) e
-    # por fim o fecho DA COTAÇÃO
-    expect(bot_contents).to eq([preco_ao_cliente, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
-    # O FECHO É O DA COTAÇÃO, e não o genérico do `Base` — o defeito da entrega 4 era esse. E
-    # ele não conta ao cliente quantas seguradoras ficaram pelo caminho (decisão do CEO,
-    # 12/09/2026): esse número é de quem opera, e já está no Super Admin.
-    expect(bot_contents.last).not_to eq(Autonomia::Agents::Tools::Native::Base.closing_message)
-    expect(bot_contents.join(' ')).not_to include('consultas')
-    expect(bot_contents.last).not_to include('não responderam')
+    # Assert — o preço que o cliente já tinha, depois o comparativo (o que ainda vale entregar), sem texto, e o
+    # desfecho DA COTAÇÃO para a Lia falar: nenhuma frase genérica nossa, nenhuma contagem de seguradoras.
+    expect(bot_contents).to eq([preco_ao_cliente, nil])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(run.reload.status).to eq('failed')
   end
 
-  # AS FRASES DO ESPECIALISTA PELO CAMINHO DO MOTOR (12/09/2026). Os dois textos que o motor publica
-  # sem instância — o aviso de espera na primeira passada e o fecho no encerramento — passam a ser
-  # resolvidos a partir dos ARGUMENTOS da execução. Sem os argumentos viajando até lá, o cliente
-  # continua lendo a constante e o especialista escreve para ninguém.
-  describe 'as frases do especialista nos textos que o motor publica' do
+  # A EXECUÇÃO QUE TRAZ AS FRASES DO ESPECIALISTA NOS ARGUMENTOS (aberta antes da PR C) segue pelo caminho novo:
+  # nenhuma das frases escritas no pedido chega ao cliente pelo motor; o começo e o desfecho são eventos.
+  describe 'a execucao antiga, com as frases do especialista nos argumentos' do
     let(:escritas) do
       { 'espera' => 'Já pedi os preços e volto aqui assim que tiver notícia.',
         'fecho_com_resultado' => 'Fechei a busca por aqui. Posso retomar quando você quiser.' }
@@ -528,15 +541,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       run
     end
 
-    it 'o aviso de espera sai com a frase que o especialista escreveu' do
+    it 'o comeco e um evento, e a frase de espera escrita no pedido nao sai' do
       run = abrir_com_frases(expires_at: 5.minutes.from_now, notificar: true)
 
       described_class.new.perform(run.id, 0)
 
-      expect(bot_contents.first).to eq(escritas['espera'])
+      expect(eventos_disparados(run)).to eq(['cotacao_comecou'])
+      expect(bot_contents).not_to include(escritas['espera'])
     end
 
-    it 'o fecho de quem tem resultado sai com a frase que o especialista escreveu' do
+    it 'o desfecho e um evento, e a frase de fecho escrita no pedido nao sai' do
       run = abrir_com_frases(expires_at: 1.minute.ago)
       stub_comparativo_pdf
       publicar!(run, preco_ao_cliente)
@@ -547,7 +561,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       described_class.new.perform(run.id, 5)
 
-      expect(bot_contents.last).to eq(escritas['fecho_com_resultado'])
+      expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
+      expect(bot_contents).to eq([preco_ao_cliente, nil])
     end
   end
 end

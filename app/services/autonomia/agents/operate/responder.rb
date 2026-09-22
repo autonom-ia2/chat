@@ -382,7 +382,7 @@ module Autonomia
         end
 
         # Promove as execuções aceitas no turno e as enfileira. `replied` diz se o turno vai entregar
-        # texto ao cliente: quando não vai, o job assume o aviso de espera.
+        # texto ao cliente: quando não vai, o job dispara o evento de começo (`Tools::Evento`), e a Lia avisa.
         def dispatch_async(replied:)
           return unless @delivery&.any_runs?
 

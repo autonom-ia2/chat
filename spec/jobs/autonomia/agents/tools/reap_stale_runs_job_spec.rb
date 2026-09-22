@@ -29,7 +29,11 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     conversation.reload.messages.where(sender_type: 'AgentBot').order(:id).map(&:content)
   end
 
-  it 'closes an abandoned run and tells the customer, instead of leaving it waiting forever' do
+  def bot_arquivos
+    conversation.reload.messages.where(sender_type: 'AgentBot').order(:id).flat_map { |m| m.attachments.map { |a| a.file.filename.to_s } }
+  end
+
+  it 'closes an abandoned run and fires the failure event, instead of leaving it waiting forever' do
     # Arrange — execução viva cujo prazo venceu com folga e cujo job nunca mais rodou
     register_async_tool(build_async_tool)
     run = open_run
@@ -40,7 +44,8 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
 
     # Assert
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
-    expect(bot_contents).to eq(['não consegui concluir a consulta'])
+    expect(bot_contents).to be_empty
+    expect(eventos_disparados(run)).to eq(['falhou'])
   end
 
   # QUEM JÁ RECEBEU ALGO E AINDA TEM ALGO POR RECEBER LÊ O FECHO PARCIAL, não o silêncio nem "não
@@ -50,9 +55,9 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
   #
   # QUEM RESPONDE AS DUAS PERGUNTAS É A FERRAMENTA (entrega 8): `delivered_count` positivo
   # sozinho não diz que houve resultado nem que sobrou algo — ver o exemplo seguinte.
-  it 'fecha com a frase parcial quando o cliente ja recebeu uma entrega e algo ficou por entregar' do
+  it 'fecha com o evento do prazo quando o cliente ja recebeu uma entrega e algo ficou por entregar' do
     # Arrange
-    tool = register_async_tool(build_async_tool(resultado: true, resta: true))
+    register_async_tool(build_async_tool(resultado: true, resta: true))
     run = open_run
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 10.minutes.ago)
     run.record_delivery!
@@ -62,8 +67,8 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
 
     # Assert
     expect(run.reload.status).to eq('failed')
-    expect(bot_contents).to eq([tool.closing_message])
-    expect(bot_contents.join(' ')).not_to include('não consegui')
+    expect(bot_contents).to be_empty
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
   end
 
   # E O CONTADOR SOZINHO NÃO COMPRA A FRASE (entrega 8). `delivered_count` conta qualquer item
@@ -84,6 +89,7 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     # Assert
     expect(run.reload.status).to eq('failed')
     expect(bot_contents).to be_empty
+    expect(eventos_disparados(run)).to be_empty
   end
 
   # O VARREDOR OFERECE O ENCERRAMENTO À FERRAMENTA (entrega 8). Ele fecha a linha quando a corrente
@@ -94,15 +100,17 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
   # `fail_run`. A ordem importa: primeiro o que vale entregar, depois o fecho.
   it 'entrega o que a ferramenta ainda tinha antes de publicar o fecho' do
     # Arrange
-    tool = register_async_tool(build_async_tool(closing: ['o arquivo que ficou pronto'], resultado: true, resta: true))
+    stub_arquivo
+    register_async_tool(build_async_tool(closing: [arquivo_de_teste], resultado: true, resta: true))
     run = open_run
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 10.minutes.ago)
 
     # Act
     described_class.new.perform
 
-    # Assert — o arquivo primeiro, o fecho parcial depois (algo chegou agora)
-    expect(bot_contents).to eq(['o arquivo que ficou pronto', tool.closing_message])
+    # Assert — o arquivo, sem texto, e o evento de desfecho (algo chegou agora)
+    expect(bot_arquivos).to eq(['Entrega de teste.pdf'])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end
 
@@ -117,7 +125,7 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     tool = build_async_tool
     tool.define_method(:closing_deliveries) do |_handle, trabalho_novo: true|
       visto << trabalho_novo
-      trabalho_novo ? ['o comparativo que o portal ainda geraria'] : []
+      trabalho_novo ? [arquivo_de_teste] : []
     end
     register_async_tool(tool)
     run = open_run
@@ -128,7 +136,8 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
 
     # Assert
     expect(visto).to eq([false])
-    expect(bot_contents).to eq(['não consegui concluir a consulta'])
+    expect(bot_contents).to be_empty
+    expect(eventos_disparados(run)).to eq(['falhou'])
   end
 
   it 'leaves a run alone while it is still within its deadline plus the grace window' do
@@ -247,7 +256,8 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     # -> a mensagem marcada pela primeira tentativa (fila recusando o envio), com a fila já de volta.
     def mensagem_pendente
       fila_recusa_o_envio
-      expect(publisher.publish('cotação pronta')).to be_blocked
+      stub_arquivo
+      expect(publisher.publish(arquivo_de_teste)).to be_blocked
       fila_volta
       conversation.messages.where(sender_type: 'AgentBot').sole.tap do |mensagem|
         expect(mensagem.content_attributes).to include('autonomia_envio_pendente' => true, 'autonomia_tool_run_id' => run.id)

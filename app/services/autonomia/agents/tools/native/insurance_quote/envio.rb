@@ -72,14 +72,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Envio
     Array(erro.details.to_h.stringify_keys['issues']).map(&:to_s).select { |issue| issue.split(':', 2)[1].to_s.strip == 'Required' }
   end
 
-  # A MESMA RECUSA DA CONFERÊNCIA (`validar`), com o pedido do que falta e sem nova tentativa.
+  # A MESMA RECUSA DA CONFERÊNCIA (`validar`), com o que falta e sem nova tentativa.
   # "insured.birthDate: Required" vira { 'campo' => 'insured.birthDate', 'motivo' => 'Required' }, o
-  # formato que `pedido_do_que_falta` e `campos` leem. Campo sem rótulo conhecido sai na frase genérica.
+  # formato que `campos` e os fatos do evento (`Eventos`) leem.
   def recusa_da_entrada(erro)
     faltantes = erro.issues.map do |issue|
       campo, motivo = issue.split(':', 2).map(&:strip)
       { 'campo' => campo, 'motivo' => motivo }
     end
-    recusa('faltam_dados', pedido_do_que_falta(faltantes), faltando: campos(faltantes))
+    recusa('faltam_dados', faltando: campos(faltantes), problemas: faltantes)
   end
 end

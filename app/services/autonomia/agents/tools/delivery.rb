@@ -14,17 +14,26 @@
 # SEM contexto (Testar, Copiloto, playground) a ferramenta continua no catálogo e devolve erro
 # nomeado. Sumir do catálogo faria o Testar mentir sobre o agente de produção.
 class Autonomia::Agents::Tools::Delivery
-  attr_reader :conversation, :agent_inbox, :origin_message_id, :runs
+  attr_reader :conversation, :agent_inbox, :origin_message_id, :runs, :evento
 
   # `origin_message_id` é a mensagem do cliente que abriu o turno. Ela entra na execução no momento
   # da criação (e não na promoção) porque é a chave que distingue um PEDIDO NOVO de um RETRY do
   # mesmo turno: o `ReplyJob` pode reexecutar o settle e refazer a chamada ao modelo, e sem essa
   # chave a segunda passada abriria uma cotação nova no portal.
-  def initialize(conversation:, agent_inbox:, origin_message_id: nil)
+  #
+  # `evento` é o tipo do evento da cotação que acionou este turno (`Operate::ResponderAoEvento`, PR C), ou nil no
+  # turno de uma mensagem do cliente. Com ele a ferramenta assíncrona recusa abrir execução nova
+  # (`Bound#async_refusal`): um aviso do sistema não é pedido da pessoa.
+  def initialize(conversation:, agent_inbox:, origin_message_id: nil, evento: nil)
     @conversation = conversation
     @agent_inbox = agent_inbox
     @origin_message_id = origin_message_id
+    @evento = evento
     @runs = []
+  end
+
+  def turno_de_evento?
+    @evento.present?
   end
 
   def register(run)

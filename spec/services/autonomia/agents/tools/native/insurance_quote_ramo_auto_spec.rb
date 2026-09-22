@@ -185,27 +185,23 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       end
     end
 
-    # O AVISO SAI NA LEGENDA DO COMPARATIVO (fatia 3 do #420): o primeiro lote de preços, que o levava, não existe
-    # mais. O comparativo sai uma vez, e o aviso com ele.
+    # O AVISO VIRA FATO DO EVENTO DE DESFECHO (PR C): o comparativo sai sem legenda, e a Lia conta à pessoa, na
+    # voz dela, que a renovação foi cotada sem a classe de bônus.
     describe 'aviso de renovação sem bônus' do
-      def legenda(sem_bonus)
-        ready_connection
-        resultado = { 'status' => 'completed',
-                      'offers' => [{ 'status' => 'quoted', 'insurer' => { 'code' => '1', 'name' => 'Ezze' },
-                                     'premium' => { 'amount' => 2050.4 } }] }
-        connector = conector_pronto(quote_result: resultado, quote_proposal: { 'url' => 'https://arquivos.exemplo.test/c.pdf' })
-        allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
-        handle = { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => [], described_class::SEM_BONUS_KEY => sem_bonus }
-
-        Autonomia::Agents::Tools::EntregaDeArquivo.de(tool.poll(handle: handle, attempt: 1).deliveries.sole).legenda
+      def fatos(tipo, sem_bonus)
+        run = Autonomia::Agents::ToolRun.new(handle: { 'quote_id' => 'abc:1', described_class::SEM_BONUS_KEY => sem_bonus })
+        described_class.fatos_do_evento(tipo, run)
       end
 
-      it 'sai na legenda do comparativo' do
-        expect(legenda(true)).to include('classe de bônus')
+      it 'vai nos fatos da conclusao, dos valores guardados e do prazo' do
+        %w[concluida valores_guardados encerrada_por_prazo].each do |tipo|
+          expect(fatos(tipo, true)).to include('classe de bônus')
+        end
       end
 
-      it 'não avisa quando a renovação veio com bônus' do
-        expect(legenda(false)).not_to include('classe de bônus')
+      it 'não vai quando a renovação veio com bônus, nem nos desfechos sem resultado' do
+        expect(fatos('concluida', false)).not_to include('classe de bônus')
+        expect(fatos('falhou', true)).not_to include('classe de bônus')
       end
     end
 
@@ -323,12 +319,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       progress = tool.poll(handle: { 'quote_id' => 'abc:1' }, attempt: 4)
 
       # Assert — o PDF é o que o cliente leva adiante. Desde a entrega
-      # 11 ele sai como ARQUIVO (a forma serializada de `EntregaDeArquivo`). Desde a fatia 1 do PDF
-      # rápido (13/09/2026) a reserva não carrega o link do portal: a URL fica só em `url`.
+      # 11 ele sai como ARQUIVO (a forma serializada de `EntregaDeArquivo`); desde a PR C, sem texto: a URL fica
+      # só em `url`, e quem fala junto dele é a Lia.
       comparativo = Autonomia::Agents::Tools::EntregaDeArquivo.de(progress.deliveries.last)
-      expect(comparativo.legenda).to include('Comparativo com todas as opções')
       expect(comparativo.url).to eq('https://exemplo.test/comparativo.pdf')
-      expect(comparativo.reserva).not_to include('https://exemplo.test/comparativo.pdf')
+      expect(progress.deliveries.last['arquivo'].keys).to eq(%w[url nome])
       # A emissão conta a tentativa e não grava a sentinela de enviado (rodada 2 da fatia 1 do PDF rápido):
       # o arquivo ainda vai ser baixado pelo publicador.
       expect(progress.handle[described_class::Comparativo::TENTATIVAS_KEY]).to eq(1)

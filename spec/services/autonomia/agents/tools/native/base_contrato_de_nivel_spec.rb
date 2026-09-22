@@ -2,8 +2,8 @@ require 'rails_helper'
 
 # O NÍVEL DE CADA MÉTODO DO CONTRATO DA FERRAMENTA NATIVA (entrega 4).
 #
-# O contrato tem métodos de CLASSE (os textos que o job publica sem instância: `accepted_message`,
-# `waiting_message`, `failure_message`, `partial_message`, `uncertain_message`) e métodos de
+# O contrato tem métodos de CLASSE (o texto que o `Bound` devolve ao modelo, `accepted_message`, e os fatos
+# dos eventos que o motor dispara sem instância, `fatos_do_evento` — PR C) e métodos de
 # INSTÂNCIA (os que precisam de conexão e parâmetros: `precheck`, `closing_deliveries`, `pedido`,
 # `call`, `start`, `poll`). Definir um
 # deles no nível errado não dá erro: dá uma frase que nunca sai, ou um default que ninguém chama.
@@ -27,21 +27,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   # `ToolRun#resultado_obtido?`) entrou na fatia 2 do #420: quem pergunta tem a linha, não a ferramenta montada.
   let(:textos_de_classe) do
     %i[slug tool_name description params available_for? async? openai_schema
-       accepted_message waiting_message failure_message partial_message uncertain_message
-       closing_message resultado_guardado?]
+       accepted_message fatos_do_evento resultado_guardado?]
   end
   # O que o `Bound` e o job chamam NA INSTÂNCIA (`resultado_entregue?` e `resta_entregar?` são as
   # duas perguntas que o `Tools::Encerramento` faz à ferramenta antes de escolher o fecho).
   let(:trabalho_de_instancia) do
     %i[precheck closing_deliveries resultado_entregue? resta_entregar? pedido call start poll]
   end
-  # Os textos que saem para o cliente ou para o modelo: precisam ser frases, não só existir.
-  # `closing_message` entrou nesta lista com a entrega das frases do especialista: ela é o desfecho de
-  # quem TEM resultado, e nasceu da mesma família que em 08/09/2026 foi declarada na instância e nunca
-  # rodou — o cliente leu o texto genérico do `Base`. Declará-la na instância passa a reprovar aqui.
-  let(:frases) do
-    %i[accepted_message waiting_message failure_message partial_message uncertain_message closing_message]
-  end
+  # O texto que sai para o modelo: precisa ser frase, não só existir. As frases ao CLIENTE saíram do contrato
+  # na PR C: o motor dispara eventos, e quem fala é a Lia.
+  let(:frases) { %i[accepted_message] }
 
   Autonomia::Agents::Tools::Registry.all.each do |ferramenta|
     describe ferramenta.name do
@@ -98,6 +93,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     end
 
     expect(crua.resultado_guardado?({ 'resultado_por_seguradora' => { '8' => { 'desfecho' => 'com_preco' } } })).to be(false)
+  end
+
+  # SEM FRASE AO CLIENTE NO CONTRATO (PR C): nenhuma nativa responde pelos textos que o motor publicava, e os
+  # fatos de um evento, sem ferramenta que os escreva, são nil (a descrição do tipo basta ao modelo).
+  it 'o contrato nao tem mais frase ao cliente, e os fatos sao nil por padrao' do
+    antigas = %i[waiting_message failure_message partial_message uncertain_message closing_message valores_message recuos_em]
+
+    Autonomia::Agents::Tools::Registry.all.each do |ferramenta|
+      antigas.each { |metodo| expect(ferramenta).not_to respond_to(metodo), "#{ferramenta}.#{metodo} voltou" }
+    end
+    expect(described_class.fatos_do_evento('falhou', nil)).to be_nil
   end
 
   # O CONSTRUTOR GANHOU `run:` COM PADRÃO `nil` (entrega 8a): é o motor que passa a entregá-lo
