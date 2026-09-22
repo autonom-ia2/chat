@@ -7,12 +7,12 @@ module AsyncToolHelper
   # é assim que se testa "parcial no 1º, final no 2º".
   # `precheck` aceita texto (o que o modelo recebe no lugar do aceite) ou um callable — que pode
   # levantar, para exercitar "conferência caiu, aceita mesmo assim".
-  # rubocop:disable Metrics/ParameterLists, Metrics/MethodLength, Metrics/AbcSize -- é um construtor de dublê:
+  # rubocop:disable Metrics/ParameterLists, Metrics/MethodLength -- é um construtor de dublê:
   # cada parâmetro é um comportamento que algum exemplo precisa ligar isoladamente.
-  # `resultado` e `resta` são as DUAS perguntas do fecho parcial (entrega 8). O
-  # padrão é o do `Base` — false, false —, e é ele que faz a ferramenta genérica fechar em SILÊNCIO
+  # `resultado` e `resta` são as DUAS perguntas do desfecho com resultado (entrega 8). O
+  # padrão é o do `Base` — false, false —, e é ele que faz a ferramenta genérica fechar SEM evento de resultado
   # em vez de afirmar que algo ficou pelo caminho. `a_pedir` é o resultado guardado que não chegou ao cliente
-  # (fatia 3 do #420), e o fecho diz então que ele pode pedir aqui (`valores_message`).
+  # (fatia 3 do #420), e o desfecho é então `valores_guardados`.
   def build_async_tool(slug: 'consultar_cotacao', handle: { 'id' => 'cot-1' }, poll: nil,
                        start_error: nil, poll_error: nil, precheck: nil, closing: nil,
                        resultado: false, resta: false, a_pedir: false)
@@ -21,14 +21,8 @@ module AsyncToolHelper
       define_singleton_method(:description) { 'Ferramenta assíncrona de teste.' }
       define_singleton_method(:async?) { true }
       define_singleton_method(:accepted_message) { 'aceito: consulta iniciada' }
-      # OS QUATRO TEXTOS DE CLASSE RECEBEM `arguments` DESDE 12/09/2026 (a ferramenta que deixa o
-      # agente escrever o que o cliente lê os resolve a partir dele). Este dublê ignora, como fazem
-      # todas as nativas menos a cotação — é justamente isso que o contrato precisa permitir.
-      define_singleton_method(:waiting_message) { |_arguments = nil| 'estou consultando agora' }
-      define_singleton_method(:failure_message) { |_arguments = nil| 'não consegui concluir a consulta' }
-      define_singleton_method(:uncertain_message) { |_arguments = nil| 'não consegui confirmar o envio' }
-      define_singleton_method(:closing_message) { |_arguments = nil| 'encerrei a consulta por aqui' }
-      define_singleton_method(:valores_message) { |_arguments = nil| 'o resultado está comigo, é só pedir' }
+      # Os fatos de um evento, para o modelo (PR C). O dublê responde com o tipo, para o exemplo ver que chegou.
+      define_singleton_method(:fatos_do_evento) { |tipo, _run| "fatos do dublê: #{tipo}" }
 
       # A conferência do turno: devolve texto ao modelo (e nenhuma execução é aberta) ou nil.
       define_method(:precheck) { precheck.respond_to?(:call) ? precheck.call : precheck }
@@ -57,7 +51,54 @@ module AsyncToolHelper
       end
     end
   end
-  # rubocop:enable Metrics/ParameterLists, Metrics/MethodLength, Metrics/AbcSize
+  # rubocop:enable Metrics/ParameterLists, Metrics/MethodLength
+
+  # UMA ENTREGA DE ARQUIVO de teste, na forma serializada (PR C: o motor só publica arquivo). O download é do
+  # exemplo: `stub_arquivo` responde a URL com um PDF de verdade.
+  def arquivo_de_teste(url = 'https://arquivos.exemplo.test/entrega-1.pdf', nome: 'Entrega de teste.pdf')
+    ::Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: nome).to_h
+  end
+
+  def stub_arquivo(url = 'https://arquivos.exemplo.test/entrega-1.pdf', status: 200)
+    host = URI.parse(url).host
+    allow(Resolv).to receive(:getaddresses).and_call_original
+    allow(Resolv).to receive(:getaddresses).with(host).and_return(['93.184.216.34'])
+    stub_request(:get, url).to_return(status: status, body: "%PDF-1.4\n%%EOF\n", headers: { 'Content-Type' => 'application/pdf' })
+  end
+
+  # Os tipos dos eventos que esta execução disparou (PR C): os `EventoJob` enfileirados para ela, na ordem.
+  def eventos_disparados(run)
+    enqueued_jobs.select { |job| job[:job] == ::Autonomia::Agents::Operate::EventoJob && job[:args].first == run.id }
+                 .map { |job| job[:args].second }
+  end
+
+  # O MODELO DA LIA, DUBLADO (PR C): toda chamada ao `Answerer` devolve esta fala. `nil` é a IA que falhou.
+  # Guarda as queries que recebeu em `@queries_da_lia`, para o exemplo ver a nota do sistema.
+  def lia_responde(fala = 'fala da Lia')
+    @queries_da_lia = []
+    allow(::Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
+      @queries_da_lia << kwargs[:query]
+      instance_double(::Autonomia::Agents::Answerer, answer: resposta_da_lia(fala))
+    end
+  end
+
+  def queries_da_lia
+    @queries_da_lia
+  end
+
+  def resposta_da_lia(fala)
+    ::Autonomia::Agents::AnswerResult.new(reply: fala, confidence: 0.9, handoff: { should: false, reason: nil },
+                                          raw_reply: fala, error: fala.nil? ? 'ai_unavailable' : nil)
+  end
+
+  # UM TIQUE DOS TURNOS DE EVENTO: cada `EventoJob` enfileirado roda uma vez, com os argumentos dele; o que adiar
+  # volta para a fila. -> quantos rodaram.
+  def rodar_eventos
+    jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |job| job[:job] == ::Autonomia::Agents::Operate::EventoJob }
+    ActiveJob::Base.queue_adapter.enqueued_jobs.reject! { |job| jobs.any? { |rodando| rodando.equal?(job) } }
+    jobs.each { |job| ::Autonomia::Agents::Operate::EventoJob.new.perform(*job[:args]) }
+    jobs.size
+  end
 
   # Faz o catálogo devolver esta ferramenta para o slug dela (e nada para os outros).
   def register_async_tool(tool)

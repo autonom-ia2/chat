@@ -95,38 +95,39 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
   end
 
-  describe 'as frases do especialista no caminho real' do
+  # A EXECUÇÃO ABERTA ANTES DA PR C traz o nó `frases_ao_cliente` nos argumentos. Ele não é lido por ninguém: o
+  # comparativo sai sem legenda, a recusa vira evento sem texto, e nada que o especialista escreveu ali chega ao
+  # cliente pelo motor.
+  describe 'a execucao antiga, com as frases do especialista nos argumentos' do
     let(:params) do
       super().merge('frases_ao_cliente' => { 'comparativo_legenda' => 'Aqui está o comparativo completo.',
-                                             'sem_veiculo' => 'Me manda a placa do carro, por favor.' })
+                                             'sem_veiculo' => 'Me manda a placa do carro, por favor.',
+                                             'ramo_desconhecido' => 'Esse eu não coto por aqui.' })
     end
 
-    it 'a legenda do comparativo e a frase que o especialista escreveu' do
+    it 'o comparativo sai sem a legenda que o especialista escreveu' do
       allow(connector).to receive(:quote_proposal).and_return({ 'url' => 'https://arquivos.exemplo.test/c-9.pdf' })
 
       entrega = poll([offer('43', 'Ezze', 2050.40)], status: 'completed').deliveries.sole
 
-      expect(Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega).legenda).to eq('Aqui está o comparativo completo.')
+      expect(entrega.to_s).not_to include('Aqui está o comparativo completo.')
+      expect(entrega['arquivo'].keys).to eq(%w[url nome])
     end
 
-    it 'recusa sem veiculo com a frase que o especialista escreveu' do
+    it 'a recusa sem veiculo vira o motivo, sem a frase do especialista' do
       sem_placa = described_class.new(agent: agent, params: params.merge('vehicle' => {}), run: run)
 
-      expect(sem_placa.start['pedido']).to eq('Me manda a placa do carro, por favor.')
+      expect(sem_placa.start).to include('recusa' => 'sem_veiculo')
+      expect(sem_placa.start.to_s).not_to include('Me manda a placa')
     end
 
-    # A LISTA DE RAMOS CONTINUA DO CÓDIGO: o especialista escreve a abertura, e a lista é colada.
-    it 'recusa ramo desconhecido com a frase do especialista mais a lista de ramos do codigo' do
-      erro = Autonomia::Insurance::Connector::Error.new(:not_implemented, 'sem ramo')
-      allow(connector).to receive(:quote_validate).and_raise(erro)
-      com_frase = described_class.new(
-        agent: agent, params: params.merge('produto' => 'nautico',
-                                           'frases_ao_cliente' => { 'ramo_desconhecido' => 'Esse eu não coto por aqui.' }),
-        run: run
-      )
+    it 'a recusa de ramo desconhecido vira o motivo, e a lista de ramos fica nos fatos do modelo' do
+      allow(connector).to receive(:quote_validate).and_raise(Autonomia::Insurance::Connector::Error.new(:not_implemented, 'sem ramo'))
+      handle = described_class.new(agent: agent, params: params.merge('produto' => 'nautico'), run: run).start
 
-      expect(com_frase.start['pedido'])
-        .to eq("Esse eu não coto por aqui. #{described_class::Recusas::RAMOS_QUE_COTO}")
+      expect(handle).to include('recusa' => 'ramo_desconhecido')
+      expect(handle.to_s).not_to include('Esse eu não coto')
+      expect(described_class.fatos_do_evento('ramo_desconhecido', Autonomia::Agents::ToolRun.new(handle: handle))).to include('bicicleta')
     end
   end
 end

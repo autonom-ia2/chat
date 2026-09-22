@@ -9,10 +9,13 @@
 #
 # O `advance` CAPTURA o `StandardError` do trabalho e o encaminha para nova tentativa ou desfecho.
 # Deixar o Sidekiq reexecutar refaria o `start`; aqui uma falha ou é uma nova tentativa controlada
-# (dentro do prazo) ou é o fim com mensagem honesta ao cliente. Silêncio nunca é opção: o cliente
-# está esperando. O que está fora do `advance` (as guardas de `stop?`, o aviso de espera) e uma falha
+# (dentro do prazo) ou é o fim com um desfecho honesto ao cliente. Silêncio nunca é opção: o cliente
+# está esperando. O que está fora do `advance` (as guardas de `stop?`) e uma falha
 # dentro do próprio tratamento (`retry_or_fail`) podem propagar; e o sinal de desligamento
 # (`Sidekiq::Shutdown`, um `Interrupt`) passa, de propósito — ver `tentar_start`.
+#
+# O MOTOR SÓ PUBLICA ARQUIVO (PR C). Onde ele publicaria texto — o aviso de que começou, a recusa do envio, o
+# desfecho —, ele dispara um EVENTO (`Tools::Evento`), e quem fala com o cliente é a Lia, num turno de modelo.
 class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   queue_as :medium
 
@@ -53,7 +56,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     native = ::Autonomia::Agents::Tools::Registry.find(run.slug)
     return if stop?(run, native, attempt.to_i)
 
-    notify_start(run, native)
+    notify_start(run, attempt.to_i)
     advance(run, native, attempt.to_i)
   end
 
@@ -79,18 +82,20 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     true
   end
 
-  # Aviso de espera escrito pelo CÓDIGO, publicado só quando o turno ficou em silêncio (o
-  # modelo emitiu o sinal de silêncio, a IA falhou, ou a porta de engajamento fechou). Sem
-  # isto, o cliente que se despede na mesma mensagem em que pede a cotação recebe zero
-  # confirmação e, um minuto depois, uma cotação caindo do nada.
+  # O TURNO FICOU EM SILÊNCIO (o modelo emitiu o sinal de silêncio, a IA falhou, ou a porta de engajamento
+  # fechou) e a consulta começa agora: o evento de começo, e a Lia diz à pessoa que pegou o pedido. Sem isto, o
+  # cliente que se despede na mesma mensagem em que pede a cotação recebe zero confirmação e, um minuto depois,
+  # uma cotação caindo do nada.
   #
-  # A FRASE PODE SER DO AGENTE, e por isso os argumentos da execução vão junto: a ferramenta que
-  # deixa o especialista escrever o que o cliente lê (a cotação) a resolve a partir deles; as
-  # demais ignoram o parâmetro e devolvem a de sempre.
-  def notify_start(run, native)
-    return unless run.notify_customer && run.sequence.zero?
+  # SÓ NA PRIMEIRA PASSADA, e só sem mensagem publicada: a execução que atravessou o deploy já recebeu o aviso de
+  # espera da versão anterior (`sequence` positivo) e não ganha um segundo. O slot do evento segura o retry.
+  # Cortesia: o que levantar aqui vira log e a passada segue — a cotação vale mais que o aviso.
+  def notify_start(run, attempt)
+    return unless run.notify_customer && run.sequence.zero? && attempt.zero?
 
-    publish(run, native.waiting_message(run.arguments))
+    ::Autonomia::Agents::Tools::Evento.disparar(run, ::Autonomia::Agents::Tools::Evento::COMECO)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool][async] evento de começo falhou run=#{run.id} #{e.class}")
   end
 
   # Submete (primeira passada) ou consulta (demais). A ferramenta é instanciada a cada
@@ -104,7 +109,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     Rails.logger.warn("[autonomia][tool][async] run=#{run.id} slug=#{run.slug} passada abandonada: #{e.message}")
   rescue StandardError => e
     # NUNCA ecoar e.message: a exceção pode carregar requisição assinada ou texto vindo do
-    # portal. Só a classe vai ao log; ao cliente vai a NOSSA frase.
+    # portal. Só a classe vai ao log; ao cliente vai o que a Lia disser sobre o desfecho.
     Rails.logger.warn("[autonomia][tool][async] run=#{run.id} slug=#{run.slug} #{e.class}")
     retry_or_fail(run, native, attempt)
   end
@@ -206,7 +211,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     if progress.nil? || progress.failed?
       fail_run(run, native, progress&.failure_code)
     elsif progress.done? && !arquivo_recusado?(resultados)
-      finish_done(run, native)
+      finish_done(run, native, progress.evento)
     else
       reschedule(run, attempt, curto: progress.confirmar_logo?)
     end
@@ -218,26 +223,24 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # Desde 13/09/2026 o publicador não manda o link no lugar do arquivo que não baixou, e é por aqui que
   # esse download chega à nova tentativa.
   #
-  # SÓ ARQUIVO: a entrega de texto recusada não segura o `done`. A cotação devolve a pergunta pelo
-  # dado que falta em toda passada (`poll` com `handle['pedido']`), e reagendá-la repetiria a mesma
-  # recusa até o prazo, onde hoje a execução encerra com a frase de falha.
+  # Desde a PR C toda entrega é arquivo (`Progress` descarta o texto); a pergunta continua pela forma, por
+  # cinto: o que não é entrega de arquivo não segura o `done`.
   def arquivo_recusado?(resultados)
     resultados.any? do |entrega, resultado|
       ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega) && !resultado.aceita?
     end
   end
 
-  # Entrega da FERRAMENTA (não o aviso, não a frase de falha). Conta como entregue tanto a publicada
-  # quanto a ADIADA — a adiada fica com o `AsyncPublishJob`, e tratá-la como "nada entregue" faria o
-  # desfecho publicar "não consegui concluir" ao lado da cotação que estava a caminho. O job adiado ainda
+  # Entrega da FERRAMENTA (um arquivo). Conta como entregue tanto a publicada quanto a ADIADA — a adiada fica
+  # com o `AsyncPublishJob`, e tratá-la como "nada entregue" faria o desfecho sair como falha ao lado do
+  # arquivo que estava a caminho. O job adiado ainda
   # pode recusá-la depois (autorização caída, erro de banco), e nada aqui fica sabendo; o que a rodada 2
   # da fatia 1 do PDF rápido tirou desse caminho foi o download, que o publicador faz antes de adiar.
-  # `entrega` é texto ou a forma serializada de uma entrega de arquivo (o comparativo, entrega 11).
+  # `entrega` é a forma serializada de uma entrega de arquivo (o comparativo, entrega 11).
   #
   # DUAS ANOTAÇÕES, A MESMA PERGUNTA (entrega 8a): o contador diz QUANTAS entregas o publicador
-  # aceitou, e o registro do aceite (`Tools::EntregaAceita`) diz QUAIS. O contador não basta para o
-  # fecho — ele soma qualquer item aceito, inclusive a pergunta pelo dado que falta —, e as duas
-  # anotações acontecem no ACEITE, não na emissão: o handle da ferramenta só vai ao banco no
+  # aceitou, e o registro do aceite (`Tools::EntregaAceita`) diz QUAIS. As duas anotações acontecem no ACEITE,
+  # não na emissão: o handle da ferramenta só vai ao banco no
   # `record_attempt!` seguinte.
   def deliver(run, entrega)
     result = ::Autonomia::Agents::Tools::EntregaAceita.registrar(run, entrega, publish(run, entrega))
@@ -245,17 +248,14 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     result
   end
 
-  # TERMINOU (`done`): o desfecho sai por `Tools::Encerramento#concluir` e só então a linha fecha.
-  # Ele publica a frase de falha quando nada foi aceito (o que este método publicava antes da fatia 1
-  # do PDF rápido) e, desde 13/09/2026, o fecho de quem tem resultado quando a ferramenta confirma o
-  # resultado — as cotações reais de 12/09/2026 receberam esse fecho pelo encerramento por prazo, e
-  # com a fatia o `done` passa a ser o caminho de quem tem todas as seguradoras com desfecho. Nas duas
-  # frases, a mesma pergunta à conversa do encerramento (`fecho_publicado?`) antes de publicar.
+  # TERMINOU (`done`): o evento de desfecho sai por `Tools::Encerramento#concluir` e só então a linha fecha. O
+  # evento que a própria consulta trouxe (a recusa do envio, `Progress#evento`) tem precedência; sem ele, o
+  # encerramento escolhe pelo que o cliente tem em mãos.
   #
   # `run.reload` pelo mesmo motivo de `fail_run`: a decisão lê o contador e a lista do aceite do banco.
-  def finish_done(run, native)
+  def finish_done(run, native, evento = nil)
     run.reload
-    ::Autonomia::Agents::Tools::Encerramento.new(run: run, native: native) { |entrega| publish(run, entrega) }.concluir
+    ::Autonomia::Agents::Tools::Encerramento.new(run: run, native: native) { |entrega| publish(run, entrega) }.concluir(evento)
     run.finish!('done')
   end
 
@@ -267,15 +267,13 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # consegui" ao lado de um PDF que existia.
   #
   # Agora o encerramento é SEMPRE oferecido à ferramenta, e o filtro mora nela, que é quem sabe o que
-  # tem em mãos. PARA A COTAÇÃO NADA MUDA no que sai: `closing_deliveries` não pede comparativo sem preço
-  # aceito (`InsuranceQuote::Fecho`), então a execução que morre sem preço nenhum continua
-  # fechando com a frase de falha e sem pedir nada ao portal — travado por exemplo pelo caminho real
-  # em `async_run_job_encerramento_parcial_spec`.
+  # tem em mãos: `closing_deliveries` não pede comparativo sem preço (`InsuranceQuote::Fecho`), então a
+  # execução que morre sem preço nenhum fecha com o evento de falha e sem pedir nada ao portal.
   #
   # Quem acaba com intenção anotada e sem número (entrega 5) fica marcado para a lista do corretor,
   # seja qual for o código do desfecho: prazo esgotado ou terceira intenção, a cotação pode existir.
   # Quem marca é o `finish!`, no mesmo comando que encerra — uma intenção anotada por outro processo
-  # no meio não escapa. Aqui só se RECARREGA: a frase ao cliente sai do estado do banco, não de uma
+  # no meio não escapa. Aqui só se RECARREGA: o evento de desfecho sai do estado do banco, não de uma
   # leitura velha (um objeto que ainda diz "intenção sem número" quando outro processo já registrou).
   def fail_run(run, native, code)
     run.reload
@@ -284,9 +282,8 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   # O ENCERRAMENTO É UM SÓ, e mora em `Tools::Encerramento` (entrega 8): a mesma sequência — adquirir
-  # a marca, oferecer as entregas à ferramenta, publicar o fecho — vale para o VARREDOR, que fecha a
-  # linha quando ESTA corrente de jobs se rompe. Ele ficava com metade dela, e o cliente lia "não
-  # consegui" com o arquivo pronto parado no handle.
+  # a marca, oferecer as entregas à ferramenta, disparar o evento de desfecho — vale para o VARREDOR, que fecha
+  # a linha quando ESTA corrente de jobs se rompe.
   #
   # Aqui a publicação ESPERA a cadeia de entrega humanizada do turno e re-agenda a adiada — é o que
   # `publish` faz, e é por isso que quem publica é quem chama.
@@ -308,7 +305,7 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     native.new(agent: run.agent, params: run.arguments, run: run)
   end
 
-  # Parada por decisão do operador: sem mensagem ao cliente. Publicar aqui seria furar exatamente o
+  # Parada por decisão do operador: sem evento e sem mensagem ao cliente. Falar aqui seria furar exatamente o
   # gate que mandou parar.
   def block_run(run)
     run.finish!('blocked', failure_code: 'nao_autorizado')
@@ -329,9 +326,8 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   end
 
   # A publicação é ADIADA enquanto a entrega humanizada do turno ainda está em curso —
-  # publicar no meio dela entregaria a cotação antes da frase que a promete — ou enquanto a entrega de
-  # que um texto encadeado depende não é mensagem. O job adiado carrega a forma que o publicador devolve
-  # em `adiada`: para a entrega de arquivo é o arquivo já gravado (`ArquivoGravado`), sem a URL do portal.
+  # publicar no meio dela entregaria o arquivo antes da frase que o promete. O job adiado carrega a forma que o
+  # publicador devolve em `adiada`: o arquivo já gravado (`ArquivoGravado`), sem a URL do portal.
   def publish(run, entrega)
     result = ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(entrega)
     if result.deferred?
@@ -368,8 +364,11 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
   # `merge_handle!` (que grava `autonomia_closed` e cala o encerramento seguinte) e
   # `registrar_entrega_aceita!` (que forja um aceite) — medido na rodada 7, e a fachada estreita que
   # fecharia isso é a issue #419, pré-requisito da 8b.
+  #
+  # OS SLOTS DOS EVENTOS (PR C, `Tools::Evento`) também: quem os adquire é o motor, e a ferramenta nunca os vê.
   MARCAS = [SUBMITTED_KEY, CLOSED_KEY, ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA, ToolRun::PEDIDO,
-            ToolRun::ENCERRADA_EM, ToolRun::ENTREGAS_ACEITAS].freeze
+            ToolRun::ENCERRADA_EM, ToolRun::ENTREGAS_ACEITAS, ::Autonomia::Agents::Tools::Evento::COMECO_KEY,
+            ::Autonomia::Agents::Tools::Evento::FECHO_KEY].freeze
   MARCAS_DE_INTENCAO = [ToolRun::INTENCOES, ToolRun::POSSIVELMENTE_DUPLICADA].freeze
 
   # O handle da FERRAMENTA, sem as nossas marcas: ela não precisa conhecer o nosso controle — nem

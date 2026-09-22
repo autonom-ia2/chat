@@ -65,15 +65,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     expect(entrega.url).to eq('https://arquivos.exemplo.test/comparativo-9.pdf')
   end
 
-  # A RESERVA NÃO CARREGA O LINK (fatia 1 do PDF rápido, 13/09/2026). A URL do portal não tem
-  # assinatura, leva o nome do segurado no caminho e baixa sem autenticação; o publicador deixou de
-  # mandá-la ao cliente quando o arquivo falha, e a forma deixou de copiá-la para um texto. A reserva
-  # continua na forma (a validação dela e a chave `comparativo_reserva` do pedido não mudaram).
-  it 'mantem a legenda e a reserva, sem o link do portal em nenhuma das duas' do
+  # SEM LEGENDA E SEM RESERVA (PR C). O arquivo sai sozinho; quem fala junto dele é a Lia, no evento de conclusão.
+  # A URL do portal fica só em `url`, de onde o publicador baixa: não viaja como texto nenhum.
+  it 'sai so com a url e o nome, sem texto ao cliente' do
     entrega = comparativo(tool)
 
-    expect(entrega.legenda).to eq('Comparativo com todas as opções.')
-    expect(entrega.reserva).to eq('Comparativo com todas as opções:')
+    expect(entrega.to_h['arquivo'].keys).to eq(%w[url nome])
   end
 
   it 'nao poe no nome nada alem do que o cliente ja ve' do

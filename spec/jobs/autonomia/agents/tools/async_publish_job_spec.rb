@@ -1,8 +1,9 @@
 require 'rails_helper'
 
-# OS DOIS TETOS DO `AsyncPublishJob` (rodada 2 da fatia 1 do PDF rápido, 13/09/2026). A cadeia do turno
-# deixa de ser esperada em `MAX_PUBLISH_DEFERRALS`; a entrega de que um texto encadeado depende, em
-# `MAX_DEPENDENCY_DEFERRALS`. O job reenfileira a forma que o publicador devolveu em `adiada`.
+# O TETO DO `AsyncPublishJob`: a cadeia do turno deixa de ser esperada em `MAX_PUBLISH_DEFERRALS`, e o job
+# reenfileira a forma que o publicador devolveu em `adiada`. SÓ ARQUIVO desde a PR C: o texto encadeado (o fecho
+# que esperava o PDF) e o texto solto que um job da versão anterior carregue são descartados, e nada chega ao
+# cliente por eles.
 RSpec.describe Autonomia::Agents::Tools::AsyncPublishJob, type: :job do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:inbox) { create(:inbox, account: account) }
@@ -22,12 +23,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublishJob, type: :job do
                               .tap { |r| r.promote!(expected_chunks: 2, notify_customer: false, expires_at: 3.minutes.from_now) }
   end
   let(:config) { Autonomia::Agents::Tools::AsyncConfig }
-  let(:dependencia) { run.delivery_token('arquivo:https://arquivos.exemplo.test/comparativo.pdf') }
-  let(:fecho) { Autonomia::Agents::Tools::EntregaEncadeada.forma('Encerrei a busca.', depois_de: dependencia) }
+  # O fecho encadeado que a versão anterior enfileirava para esperar o PDF.
+  let(:encadeado_antigo) do
+    { 'encadeada' => { 'texto' => 'Encerrei a busca.', 'depois_de' => [run.delivery_token('arquivo:https://x.test/c.pdf')] } }
+  end
 
   around do |example|
     with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run }
   end
+
+  before { stub_arquivo }
 
   def bot_messages = conversation.messages.reload.where(sender_type: 'AgentBot')
 
@@ -36,30 +41,30 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublishJob, type: :job do
                    .map { |job| ActiveJob::Arguments.deserialize(job['arguments']) }
   end
 
-  it 'com a cadeia no teto e sem a dependencia, reenfileira o texto encadeado com mais um adiamento' do
-    # Act
-    described_class.new.perform(run.id, fecho, config::MAX_PUBLISH_DEFERRALS)
+  it 'com a cadeia aberta abaixo do teto, reenfileira o arquivo ja gravado com mais um adiamento' do
+    described_class.new.perform(run.id, arquivo_de_teste, 0)
 
-    # Assert
     expect(bot_messages).to be_empty
-    expect(reenfileirados).to eq([[run.id, fecho, config::MAX_PUBLISH_DEFERRALS + 1]])
+    expect(reenfileirados.sole.first).to eq(run.id)
+    expect(reenfileirados.sole.second).to include('arquivo_gravado')
+    expect(reenfileirados.sole.last).to eq(1)
   end
 
-  it 'no teto da dependencia, publica o texto encadeado sem ela' do
-    # Act
-    described_class.new.perform(run.id, fecho, config::MAX_DEPENDENCY_DEFERRALS)
+  it 'no teto da cadeia, publica o arquivo, sem texto' do
+    described_class.new.perform(run.id, arquivo_de_teste, config::MAX_PUBLISH_DEFERRALS)
 
-    # Assert
-    expect(bot_messages.sole.content).to eq('Encerrei a busca.')
+    expect(bot_messages.sole.content).to be_blank
+    expect(bot_messages.sole.attachments.size).to eq(1)
     expect(reenfileirados).to be_empty
   end
 
-  it 'um texto comum sai no teto da cadeia, sem esperar o teto da dependencia' do
-    # Act
+  # A EXECUÇÃO QUE ATRAVESSOU O DEPLOY: o job adiado pela versão anterior traz o fecho encadeado, ou um texto
+  # solto. Nenhum dos dois sai, e nenhum é reenfileirado.
+  it 'descarta o fecho encadeado e o texto que um job da versao anterior carrega' do
+    described_class.new.perform(run.id, encadeado_antigo, config::MAX_DEPENDENCY_DEFERRALS)
     described_class.new.perform(run.id, 'encontrei 3 opções', config::MAX_PUBLISH_DEFERRALS)
 
-    # Assert
-    expect(bot_messages.sole.content).to eq('encontrei 3 opções')
+    expect(bot_messages).to be_empty
     expect(reenfileirados).to be_empty
   end
 end

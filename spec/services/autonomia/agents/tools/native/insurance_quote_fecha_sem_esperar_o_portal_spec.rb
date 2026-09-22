@@ -247,14 +247,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
 
     # O LINK DO PORTAL NÃO VIAJA COMO TEXTO DE CLIENTE: a URL fica só no campo `url`, de onde o
-    # publicador baixa. A reserva continua na forma (a chave `comparativo_reserva` do pedido não mudou),
-    # sem o link.
-    it 'a reserva da entrega de arquivo nao carrega o link' do
+    # publicador baixa. Desde a PR C a forma não tem texto nenhum.
+    it 'a entrega de arquivo so carrega a url e o nome' do
       entrega = pdf_de(consultar('partial', com_desfecho, depois_de_uma_leitura('8', '47', '11')))
 
-      expect(entrega.reserva).to be_present
-      expect(entrega.reserva).not_to include(url)
-      expect(entrega.legenda).not_to include(url)
+      expect(entrega.to_h['arquivo'].keys).to eq(%w[url nome])
+      expect(entrega.url).to eq(url)
     end
 
     # O `done` DEVOLVIDO NÃO É SOBRA (21/09/2026). Quem termina com o comparativo não recebe fecho, e o

@@ -53,6 +53,15 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     conversation.messages.reload.where(sender_type: 'AgentBot').order(:id).map(&:content)
   end
 
+  # O slot do evento de desfecho (PR C) tampouco diz algo sobre intenção ou número: sai da comparação também.
+  def slot = Autonomia::Agents::Tools::Evento::FECHO_KEY
+
+  # O desfecho, desde a PR C, é o EVENTO que a execução disparou; nenhuma frase nossa vai à conversa.
+  def desfecho(run)
+    expect(bot_contents).to be_empty
+    eventos_disparados(run)
+  end
+
   def abrir
     runs.open!(agent: agent, slug: 'consultar_cotacao', arguments: { 'placa' => 'ABC1D23' },
                scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
@@ -136,7 +145,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(chamadas).to eq(0)
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'envio_incerto')
       expect(run.handle).to include(duplicada => true)
-      expect(bot_contents).to eq(['não consegui confirmar o envio'])
+      expect(desfecho(run)).to eq(['incerta'])
       expect(described_class).not_to have_been_enqueued
     end
   end
@@ -223,8 +232,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       expect(chamadas).to eq(2)
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'envio_incerto')
-      expect(run.handle.except(encerrada, fechada)).to eq(intencoes => 2, duplicada => true)
-      expect(bot_contents).to eq(['não consegui confirmar o envio'])
+      expect(run.handle.except(encerrada, fechada, slot)).to eq(intencoes => 2, duplicada => true)
+      expect(desfecho(run)).to eq(['incerta'])
     end
 
     it 'quando o prazo estoura com intencao sem numero, marca e diz que nao ha confirmacao' do
@@ -239,7 +248,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Assert
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
       expect(runs.possivelmente_duplicadas).to eq([run])
-      expect(bot_contents).to eq(['não consegui confirmar o envio'])
+      expect(desfecho(run)).to eq(['incerta'])
     end
   end
 
@@ -342,19 +351,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     end
 
     it 'intencao anotada entre a marcacao do desfecho e o finish: o desfecho marca mesmo assim' do
-      # Arrange — A chega ao desfecho com intenção zero (nada a marcar); B anota 0→1 enquanto A publica
+      # Arrange — A chega ao desfecho com intenção zero (nada a marcar); B anota 0→1 enquanto A dispara o evento
       run = execucao
       run.update!(expires_at: 1.minute.ago)
       linha = runs
       register_async_tool(build_async_tool)
-      publicador = Autonomia::Agents::Tools::AsyncPublisher
-      allow(publicador).to receive(:new).and_wrap_original do |original, **kwargs|
-        original.call(**kwargs).tap do |instancia|
-          allow(instancia).to receive(:publish).and_wrap_original do |publicar, *args|
-            linha.find(run.id).merge_handle!({ intencoes => 1 }, intencao: 0)
-            publicar.call(*args)
-          end
-        end
+      allow(Autonomia::Agents::Tools::Evento).to receive(:disparar).and_wrap_original do |disparar, *args|
+        linha.find(run.id).merge_handle!({ intencoes => 1 }, intencao: 0)
+        disparar.call(*args)
       end
 
       # Act
@@ -362,7 +366,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert — o `finish!` marca no mesmo comando que encerra; a anotação seguinte perde pelo status
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(run.handle.except(encerrada, fechada)).to eq(intencoes => 1, duplicada => true)
+      expect(run.handle.except(encerrada, fechada, slot)).to eq(intencoes => 1, duplicada => true)
       expect(runs.possivelmente_duplicadas).to eq([run])
       expect(run.merge_handle!({ intencoes => 2 }, intencao: 1)).to be(false)
     end
@@ -382,11 +386,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Act
       described_class.new.perform(run.id, 1)
 
-      # Assert — o número fica, a marca não entra, e a frase é a de falha (o banco diz que há número)
+      # Assert — o número fica, a marca não entra, e o desfecho é a falha (o banco diz que há número)
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(run.handle.except(encerrada, fechada)).to eq(intencoes => 1, submetido => true, 'id' => 'cot-A')
+      expect(run.handle.except(encerrada, fechada, slot)).to eq(intencoes => 1, submetido => true, 'id' => 'cot-A')
       expect(runs.possivelmente_duplicadas).to be_empty
-      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+      expect(desfecho(run)).to eq(['falhou'])
     end
   end
 
@@ -439,7 +443,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       tool = build_async_tool
       tool.define_method(:closing_deliveries) do |_handle, **|
         fechamentos += 1
-        ['comparativo']
+        [arquivo_de_teste]
       end
       register_async_tool(tool)
       allow(Autonomia::Agents::Tools::Registry).to receive(:find) do |slug|
@@ -470,7 +474,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Assert
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
       expect(runs.possivelmente_duplicadas).to eq([run])
-      expect(bot_contents).to eq(['não consegui confirmar o envio'])
+      expect(desfecho(run)).to eq(['incerta'])
     end
 
     it 'nao marca a abandonada que nem chegou a anotar intencao' do
@@ -481,10 +485,10 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
       expect(runs.possivelmente_duplicadas).to be_empty
-      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+      expect(desfecho(run)).to eq(['falhou'])
     end
 
-    it 'recarrega antes de decidir: preco entregue enquanto ele varria fica sem "nao consegui"' do
+    it 'recarrega antes de decidir: preco entregue enquanto ele varria fica sem a falha' do
       # Arrange — a linha veio da consulta sem entrega; UM poll entrega UM preço antes de o varredor
       # chegar nela. O dublê entrega na PRIMEIRA chamada ao catálogo e só nela: `Registry.find` é
       # chamado mais de uma vez por passada (o publicador remonta a ferramenta a cada mensagem), e
@@ -503,14 +507,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Act
       Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
-      # Assert — o que importa é a FRASE: quem acabou de receber preço não lê "não consegui". Desde a
+      # Assert — o que importa é o DESFECHO: quem acabou de receber preço não recebe a falha. Desde a
       # entrega 8 o varredor fecha pelo mesmo `Tools::Encerramento` do motor, e o fecho de
       # quem já recebeu algo — e ainda tem algo por receber, que é o que esta ferramenta responde
-      # desde a entrega 8 — é o PARCIAL. A MAGNITUDE EXATA importa: `be_positive`
+      # desde a entrega 8 — é o do PRAZO. A MAGNITUDE EXATA importa: `be_positive`
       # passava com o contador inflado, que é o defeito da issue #402.
       expect(run.reload).to have_attributes(status: 'failed', delivered_count: 1)
-      expect(bot_contents).to eq([tool.closing_message])
-      expect(bot_contents.join(' ')).not_to include('não consegui')
+      expect(desfecho(run)).to eq(['encerrada_por_prazo'])
     end
 
     it 'nao marca a abandonada que tem numero: a cotacao esta registrada' do
@@ -522,7 +525,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       expect(run.reload.status).to eq('failed')
       expect(runs.possivelmente_duplicadas).to be_empty
-      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+      expect(desfecho(run)).to eq(['falhou'])
     end
   end
 end

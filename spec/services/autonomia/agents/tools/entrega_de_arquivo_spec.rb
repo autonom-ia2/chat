@@ -11,9 +11,7 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
   let(:url) { 'https://arquivos.exemplo.test/comparativo-9.pdf' }
   let(:entrega) do
-    described_class.new(url: url, nome: 'Comparativo de seguro, placa ABC1D23.pdf',
-                        legenda: 'Comparativo com todas as opções.',
-                        reserva: "Comparativo com todas as opções:\n#{url}")
+    described_class.new(url: url, nome: 'Comparativo de seguro, placa ABC1D23.pdf')
   end
   let(:pdf) { "%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n" }
   let(:cabecalho_pdf) { { 'Content-Type' => 'application/pdf' } }
@@ -28,14 +26,13 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
   describe '.de' do
     it 'reconhece o proprio objeto e a forma serializada dele, e nada mais' do
       expect(described_class.de(entrega)).to be(entrega)
-      expect(described_class.de(entrega.to_h)).to have_attributes(url: url, nome: entrega.nome,
-                                                                  legenda: entrega.legenda, reserva: entrega.reserva)
+      expect(described_class.de(entrega.to_h)).to have_attributes(url: url, nome: entrega.nome)
       expect(described_class.de('texto comum')).to be_nil
       expect(described_class.de({ 'outra' => 'coisa' })).to be_nil
       expect(described_class.de(nil)).to be_nil
     end
 
-    it 'recusa a forma sem os quatro campos, sem https, ou com nome que nao e de PDF' do
+    it 'recusa a forma sem url ou nome, sem https, ou com nome que nao e de PDF' do
       base = entrega.to_h[described_class::CHAVE]
 
       expect(described_class.de(described_class::CHAVE => base.except('nome'))).to be_nil
@@ -43,7 +40,6 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       expect(described_class.de(described_class::CHAVE => base.merge('url' => 'ftp://x.test/x.pdf'))).to be_nil
       expect(described_class.de(described_class::CHAVE => base.merge('nome' => 'comparativo.exe'))).to be_nil
       expect(described_class.de(described_class::CHAVE => base.merge('nome' => '../fora.pdf'))).to be_nil
-      expect(described_class.de(described_class::CHAVE => base.merge('reserva' => ' '))).to be_nil
     end
   end
 
@@ -52,18 +48,13 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
   describe '#defeito' do
     it 'e nil na forma valida, e o campo que reprovou nas outras' do
       expect(entrega.defeito).to be_nil
-      expect(described_class.new(url: 'http://inseguro.test/x.pdf', nome: entrega.nome, legenda: entrega.legenda,
-                                 reserva: entrega.reserva).defeito).to eq('url')
-      expect(described_class.new(url: url, nome: 'comparativo.exe', legenda: entrega.legenda,
-                                 reserva: entrega.reserva).defeito).to eq('nome')
-      expect(described_class.new(url: url, nome: entrega.nome, legenda: ' ', reserva: entrega.reserva).defeito).to eq('legenda')
-      expect(described_class.new(url: url, nome: entrega.nome, legenda: entrega.legenda, reserva: nil).defeito).to eq('reserva')
+      expect(described_class.new(url: 'http://inseguro.test/x.pdf', nome: entrega.nome).defeito).to eq('url')
+      expect(described_class.new(url: url, nome: 'comparativo.exe').defeito).to eq('nome')
     end
   end
 
   it 'serializa com chaves de texto, porque atravessa os argumentos de um job' do
-    expect(entrega.to_h).to eq(described_class::CHAVE => { 'url' => url, 'nome' => entrega.nome,
-                                                           'legenda' => entrega.legenda, 'reserva' => entrega.reserva })
+    expect(entrega.to_h).to eq(described_class::CHAVE => { 'url' => url, 'nome' => entrega.nome })
     expect(ActiveJob::Arguments.deserialize(ActiveJob::Arguments.serialize([entrega.to_h])).first).to eq(entrega.to_h)
   end
 
@@ -72,7 +63,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
   end
 
   # O QUE SAI É O BLOB já gravado no armazenamento (`#gravar`): o download e a gravação acontecem
-  # ANTES de existir mensagem, para a falha de qualquer um dos dois cair na mesma reserva (o link).
+  # ANTES de existir mensagem, para a falha de qualquer um dos dois ter o mesmo destino: nada é publicado.
   describe '#gravar' do
     def recusa(motivo, causa: nil)
       raise_error(described_class::Indisponivel) do |e|
@@ -207,8 +198,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
       # worker sendo usado para ler o que não deve (rodada 6, 11/09/2026). Nada é pedido ao destino.
       describe 'o endereco' do
         it 'recusa o IPv4 privado' do
-          privada = described_class.new(url: 'https://10.0.0.7/comparativo-9.pdf', nome: entrega.nome,
-                                        legenda: entrega.legenda, reserva: entrega.reserva)
+          privada = described_class.new(url: 'https://10.0.0.7/comparativo-9.pdf', nome: entrega.nome)
           stub_request(:get, privada.url).to_return(status: 200, body: pdf, headers: cabecalho_pdf)
 
           expect { privada.gravar(run_id: 42) }.to recusa('url_insegura')
@@ -216,8 +206,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         end
 
         it 'recusa o IPv6 privado' do
-          privada = described_class.new(url: 'https://[fd00::1]/comparativo-9.pdf', nome: entrega.nome,
-                                        legenda: entrega.legenda, reserva: entrega.reserva)
+          privada = described_class.new(url: 'https://[fd00::1]/comparativo-9.pdf', nome: entrega.nome)
           stub_request(:get, privada.url).to_return(status: 200, body: pdf, headers: cabecalho_pdf)
 
           expect { privada.gravar(run_id: 42) }.to recusa('url_insegura')
@@ -239,7 +228,7 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
     # deixa o SafeFetch falar com a máquina local, pelo mesmo `Fetcher`), com o WebMock desligado.
     describe 'o corpo e o tempo, no socket' do
       let(:local) do
-        described_class.new(url: servidor.url('/comparativo-9.pdf'), nome: entrega.nome, legenda: entrega.legenda, reserva: entrega.reserva)
+        described_class.new(url: servidor.url('/comparativo-9.pdf'), nome: entrega.nome)
       end
 
       after { servidor.parar }

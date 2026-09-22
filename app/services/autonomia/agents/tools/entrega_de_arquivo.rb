@@ -19,11 +19,10 @@
 # publicado fazendo qualquer retry virar duplicado (rodada 3 de revisão, 11/09/2026). Gravando
 # antes, a falha do armazenamento é `Indisponivel` como a do download, e tem o mesmo destino.
 #
-# A RESERVA continua na forma e continua obrigatória (`defeito`), e desde a fatia 1 do PDF rápido
-# (13/09/2026) o publicador não a publica: quando o download ou a gravação falham, nada sai
-# (`AsyncPublisher#sem_arquivo`). Até essa data a reserva levava o link do portal ao cliente. Ela
-# fica na forma porque a versão anterior do publicador exige o campo — uma entrega serializada por
-# esta versão e publicada depois de um rollback seria descartada sem ele.
+# SEM LEGENDA E SEM RESERVA (PR C). O arquivo sai sozinho na conversa; o que a pessoa lê junto dele é a Lia
+# quem escreve, no turno do evento que vem DEPOIS do arquivo (`Tools::Evento`). A forma serializada por uma
+# versão anterior ainda traz as duas chaves: são ignoradas. Quando o download ou a gravação falham, nada sai
+# (`AsyncPublisher#sem_arquivo`).
 class Autonomia::Agents::Tools::EntregaDeArquivo
   CHAVE = 'arquivo'.freeze
   # Um comparativo de auto tem dezenas de KB; o teto é folga de cem vezes, não medida. Existe para o
@@ -97,7 +96,7 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     end
   end
 
-  attr_reader :url, :nome, :legenda, :reserva
+  attr_reader :url, :nome
 
   # -> a entrega, quando `valor` é uma (o objeto ou a forma serializada dele, válida); nil para
   # qualquer outra coisa — texto comum, Hash de outra forma, forma incompleta.
@@ -108,7 +107,7 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     forma = valor.deep_stringify_keys[CHAVE]
     return nil unless forma.is_a?(Hash)
 
-    entrega = new(url: forma['url'], nome: forma['nome'], legenda: forma['legenda'], reserva: forma['reserva'])
+    entrega = new(url: forma['url'], nome: forma['nome'])
     entrega.valida? ? entrega : nil
   end
 
@@ -157,35 +156,31 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
                        .order(:created_at).limit(limite)
   end
 
-  def initialize(url:, nome:, legenda:, reserva:)
+  def initialize(url:, nome:)
     @url = url.to_s.strip
     @nome = nome.to_s.strip
-    @legenda = legenda.to_s.strip
-    @reserva = reserva.to_s.strip
   end
 
   def valida?
     defeito.nil?
   end
 
-  # O CAMPO que reprova a forma, como código curto ('url', 'nome', 'legenda', 'reserva'), ou nil
-  # quando a forma é válida. É o que vai ao log de quem recusa a forma (a ferramenta) ou descarta
-  # (o publicador): o nome do campo, nunca o valor — a URL e os textos são dados de fora.
+  # O CAMPO que reprova a forma, como código curto ('url', 'nome'), ou nil quando a forma é válida. É o que
+  # vai ao log de quem recusa a forma (a ferramenta) ou descarta (o publicador): o nome do campo, nunca o
+  # valor — a URL é dado de fora.
   def defeito
     return 'url' unless url.match?(URL_SEGURA)
-    return 'nome' unless nome.match?(NOME_DE_PDF)
-    return 'legenda' if legenda.blank?
 
-    'reserva' if reserva.blank?
+    'nome' unless nome.match?(NOME_DE_PDF)
   end
 
   def to_h
-    { CHAVE => { 'url' => url, 'nome' => nome, 'legenda' => legenda, 'reserva' => reserva } }
+    { CHAVE => { 'url' => url, 'nome' => nome } }
   end
 
-  # A identidade da entrega, para o token de publicação: derivada só da URL, e por isso a MESMA como
-  # arquivo e como a reserva que versões anteriores publicavam. Um retry que encontra a mensagem de uma
-  # delas no ar não publica outra por cima.
+  # A identidade da entrega, para o token de publicação: derivada só da URL, e por isso a MESMA que as versões
+  # anteriores gravaram (com legenda e reserva). Um retry que encontra a mensagem de uma delas no ar não
+  # publica outra por cima.
   def identidade
     "arquivo:#{url}"
   end

@@ -4,7 +4,7 @@ require 'rails_helper'
 # responde na conversa sem travar worker e sem duplicar mensagem". Cada exemplo cobre um failure
 # mode desse desenho — submeter sem segurar o worker, entregar parcial e final em ordem, avisar
 # quando o turno ficou em silêncio, desistir no prazo, e NUNCA deixar texto de exceção chegar ao
-# cliente.
+# cliente. Desde a PR C o motor só publica ARQUIVO: onde ele falaria, dispara um EVENTO, e a Lia fala.
 RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:inbox) { create(:inbox, account: account) }
@@ -19,6 +19,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   end
 
   around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run } }
+
+  before { %w[parcial final cotacao um_preco comparativo tres_opcoes cot21 x].each { |nome| stub_arquivo(pdf_url(nome)) } }
+
+  def pdf_url(nome) = "https://arquivos.exemplo.test/#{nome}.pdf"
+
+  # Uma entrega da ferramenta: um PDF de teste com este nome.
+  def pdf(nome) = arquivo_de_teste(pdf_url(nome), nome: "#{nome}.pdf")
 
   def progress
     Autonomia::Agents::Tools::Progress
@@ -57,6 +64,11 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     bot_messages.map(&:content)
   end
 
+  # Os arquivos que chegaram à conversa, pelo nome (a entrega sai sem texto).
+  def bot_arquivos
+    bot_messages.flat_map { |message| message.attachments.map { |anexo| anexo.file.filename.to_s } }
+  end
+
   def async_attribute(key)
     bot_messages.map { |message| message.content_attributes.to_h[key] }
   end
@@ -87,7 +99,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   describe 'polling passes' do
     it 'publishes a partial delivery and keeps polling' do
       # Arrange
-      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['parcial'])))
+      register_async_tool(build_async_tool(poll: progress.running(deliveries: [pdf('parcial')])))
       run = submitted_run
 
       # Act
@@ -95,26 +107,27 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(described_class).to have_been_enqueued.with(run.id, 2)
-      expect(bot_contents).to eq(['parcial'])
+      expect(bot_arquivos).to eq(['parcial.pdf'])
       expect(run.reload).to have_attributes(status: 'running', sequence: 1)
     end
 
     it 'publishes the final delivery and closes the run as done' do
       # Arrange
-      register_async_tool(build_async_tool(poll: progress.done(deliveries: ['final'])))
+      register_async_tool(build_async_tool(poll: progress.done(deliveries: [pdf('final')])))
       run = submitted_run
 
       # Act
       described_class.new.perform(run.id, 1)
 
       # Assert
-      expect(bot_contents).to eq(['final'])
+      expect(bot_arquivos).to eq(['final.pdf'])
+      expect(bot_contents).to all(be_blank)
       expect(run.reload).to have_attributes(status: 'done', failure_code: nil)
     end
 
     it 'delivers the partial and then the final as two distinct messages, in order, with sequence tokens 0 and 1' do
       # Arrange — parcial nas primeiras consultas, final depois.
-      poll = ->(attempt) { attempt < 2 ? progress.running(deliveries: ['parcial']) : progress.done(deliveries: ['final']) }
+      poll = ->(attempt) { attempt < 2 ? progress.running(deliveries: [pdf('parcial')]) : progress.done(deliveries: [pdf('final')]) }
       register_async_tool(build_async_tool(poll: poll))
       run = create_run
 
@@ -124,14 +137,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, 2)
 
       # Assert
-      expect(bot_contents).to eq(%w[parcial final])
+      expect(bot_arquivos).to eq(%w[parcial.pdf final.pdf])
       expect(async_attribute('autonomia_async_token'))
-        .to eq([run.delivery_token('parcial'), run.delivery_token('final')])
+        .to eq([pdf('parcial'), pdf('final')].map { |entrega| Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega) })
       expect(async_attribute('autonomia_async_sequence')).to eq([0, 1])
       expect(run.reload).to have_attributes(status: 'done', sequence: 2)
     end
 
-    it 'publishes our own failure text and records the failure code when the tool reports a failure' do
+    it 'dispara o evento de falha, sem texto nosso, e registra o codigo quando a ferramenta falha' do
       # Arrange
       register_async_tool(build_async_tool(poll: progress.failed('portal_indisponivel')))
       run = submitted_run
@@ -140,7 +153,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, 1)
 
       # Assert
-      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+      expect(bot_messages).to be_empty
+      expect(eventos_disparados(run)).to eq(['falhou'])
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'portal_indisponivel')
     end
   end
@@ -148,35 +162,37 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   # As três guardas que a revisão adversarial trouxe (#313). Cada uma entrega mensagem errada ou
   # custo real ao cliente quando falta.
   describe 'outcome guards' do
-    it 'does not contradict a delivered quote with the failure text' do
+    it 'does not contradict a delivered quote with the failure event' do
       # Arrange — a consulta entrega o resultado E fecha na mesma passada
-      register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: ['3 opções: R$ 1.200'])))
+      register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: [pdf('cotacao')])))
       run = submitted_run
 
       # Act
       described_class.new.perform(run.id, 1)
 
-      # Assert — só a cotação; nada de "não consegui concluir" ao lado dela
-      expect(bot_contents).to eq(['3 opções: R$ 1.200'])
+      # Assert — só a cotação; nada de falha ao lado dela
+      expect(bot_arquivos).to eq(['cotacao.pdf'])
+      expect(eventos_disparados(run)).not_to include('falhou')
       expect(run.reload).to have_attributes(status: 'done', delivered_count: 1)
     end
 
-    it 'closes with an honest message when the waiting notice was the only thing sent' do
-      # Arrange — avisou o cliente e terminou sem nenhuma entrega
+    it 'closes with the failure event when nothing was delivered' do
+      # Arrange — o turno ficou mudo e a execução terminou sem nenhuma entrega
       register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: [])))
       run = submitted_run(notify_customer: true)
 
       # Act
       described_class.new.perform(run.id, 1)
 
-      # Assert — o aviso avançou a sequência, mas não conta como entrega: o desfecho tem de sair
-      expect(bot_contents).to eq(['estou consultando agora', 'não consegui concluir a consulta'])
+      # Assert — sem entrega, o desfecho tem de sair: o evento de falha, e a Lia fala
+      expect(bot_messages).to be_empty
+      expect(eventos_disparados(run)).to eq(['falhou'])
       expect(run.reload).to have_attributes(status: 'done', delivered_count: 0)
     end
 
     it 'stops calling the portal when the operator turns the agent off mid-flight' do
       # Arrange — execução viva, agente desligado depois do disparo
-      register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: ['tarde demais'])))
+      register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: [pdf('x')])))
       run = submitted_run
       agent.update!(enabled: false)
 
@@ -197,9 +213,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # O QUE SE PERDE JÁ ERA RECUSADO: apagado o agente, os vínculos caem com ele
     # (`dependent: :destroy`), e o publicador recusa qualquer mensagem desta execução — a última
     # asserção é essa prova, e é o que torna a mudança invisível para o cliente.
-    it 'com o agente apagado, fecha em silencio — e nem a frase da main chegaria' do
+    it 'com o agente apagado, fecha sem evento de resultado — e nem a frase da main chegaria' do
       # Arrange — o cliente recebeu um preço e o agente some antes da passada seguinte
-      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['um preco']),
+      register_async_tool(build_async_tool(poll: progress.running(deliveries: [pdf('um_preco')]),
                                            resultado: true, resta: true))
       run = submitted_run
       described_class.new.perform(run.id, 1)
@@ -209,31 +225,59 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, 2)
 
       # Assert
-      expect(bot_contents).to eq(['um preco'])
+      expect(bot_arquivos).to eq(['um_preco.pdf'])
+      expect(eventos_disparados(run)).to be_empty
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'agente_indisponivel',
                                             delivered_count: 1)
-      expect(Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!('qualquer palavra'))
+      expect(Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(pdf('x')))
         .to be_blocked
     end
   end
 
   describe 'waiting notice' do
-    it 'publishes the waiting message on the very first pass when the turn stayed silent' do
+    it 'dispara o evento de comeco na primeira passada quando o turno ficou em silencio, sem texto nosso' do
       # Arrange
-      register_async_tool(build_async_tool(poll: progress.done(deliveries: ['final'])))
+      register_async_tool(build_async_tool(poll: progress.done(deliveries: [pdf('final')])))
       run = create_run(notify_customer: true)
 
-      # Act / Assert — o aviso vem ANTES de qualquer outra coisa (a submissão nem publica).
+      # Act / Assert — o evento vem ANTES de qualquer outra coisa (a submissão nem publica).
       described_class.new.perform(run.id, 0)
-      expect(bot_contents).to eq(['estou consultando agora'])
+      expect(eventos_disparados(run)).to eq(['cotacao_comecou'])
+      expect(bot_messages).to be_empty
 
       described_class.new.perform(run.id, 1)
-      expect(bot_contents).to eq(['estou consultando agora', 'final'])
+      expect(bot_arquivos).to eq(['final.pdf'])
+      expect(eventos_disparados(run)).to eq(['cotacao_comecou'])
+    end
+
+    # O RETRY DA PRIMEIRA PASSADA (o Sidekiq reexecuta o job) encontra o slot tomado.
+    it 'o retry da primeira passada nao dispara o comeco de novo' do
+      register_async_tool(build_async_tool(poll: progress.running))
+      run = create_run(notify_customer: true)
+
+      described_class.new.perform(run.id, 0)
+      run.reload.update_columns(handle: run.handle.except(described_class::SUBMITTED_KEY)) # rubocop:disable Rails/SkipsModelValidations
+      described_class.new.perform(run.id, 0)
+
+      expect(eventos_disparados(run)).to eq(['cotacao_comecou'])
+    end
+
+    # A EXECUÇÃO QUE ATRAVESSOU O DEPLOY já recebeu o aviso de espera da versão anterior (a sequência avançou):
+    # nenhum começo a mais, nem nas passadas seguintes.
+    it 'a execucao que atravessou o deploy com o aviso antigo publicado nao dispara o comeco' do
+      register_async_tool(build_async_tool(poll: progress.running))
+      run = create_run(notify_customer: true)
+      run.advance_sequence!(0)
+
+      described_class.new.perform(run.id, 0)
+      described_class.new.perform(run.id, 1)
+
+      expect(eventos_disparados(run)).to be_empty
     end
 
     it 'stays quiet when the turn already told the customer' do
       # Arrange
-      register_async_tool(build_async_tool(poll: progress.done(deliveries: ['final'])))
+      register_async_tool(build_async_tool(poll: progress.done(deliveries: [pdf('final')])))
       run = create_run(notify_customer: false)
 
       # Act
@@ -241,13 +285,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(bot_messages).to be_empty
+      expect(eventos_disparados(run)).to be_empty
     end
   end
 
   describe 'giving up' do
-    it 'gives up with our failure text when the wall-clock deadline is already past' do
+    it 'gives up with the failure event when the wall-clock deadline is already past' do
       # Arrange
-      register_async_tool(build_async_tool(poll: progress.done(deliveries: ['final'])))
+      register_async_tool(build_async_tool(poll: progress.done(deliveries: [pdf('final')])))
       run = create_run(expires_at: 1.minute.ago)
 
       # Act
@@ -255,13 +300,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(described_class).not_to have_been_enqueued
-      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+      expect(bot_messages).to be_empty
+      expect(eventos_disparados(run)).to eq(['falhou'])
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
     end
 
     it 'gives up when the attempt ceiling is reached, even inside the deadline' do
       # Arrange
-      register_async_tool(build_async_tool(poll: progress.done(deliveries: ['final'])))
+      register_async_tool(build_async_tool(poll: progress.done(deliveries: [pdf('final')])))
       run = submitted_run
 
       # Act
@@ -269,7 +315,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(described_class).not_to have_been_enqueued
-      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+      expect(bot_messages).to be_empty
+      expect(eventos_disparados(run)).to eq(['falhou'])
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
     end
 
@@ -282,8 +329,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # A ferramenta responde as duas perguntas do fecho (entrega 8): entregou resultado e ainda
       # tinha algo por chegar — é isso que faz o fecho ser o de quem tem resultado.
       register_async_tool(
-        build_async_tool(poll: progress.running(deliveries: ['primeiros precos']),
-                         closing: ['Comparativo: https://portal.exemplo.test/c.pdf'],
+        build_async_tool(poll: progress.running(deliveries: [pdf('parcial')]),
+                         closing: [pdf('comparativo')],
                          resultado: true, resta: true)
       )
       run = submitted_run
@@ -293,23 +340,21 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
 
       # Assert
-      expect(bot_contents.last(2))
-        .to eq(['Comparativo: https://portal.exemplo.test/c.pdf', 'encerrei a consulta por aqui'])
-      expect(bot_contents).not_to include('não consegui concluir a consulta')
+      expect(bot_arquivos.last).to eq('comparativo.pdf')
+      expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
     end
 
     # Dizer "não consegui" a quem acabou de receber preço desmente o que ele está lendo.
-    it 'nao usa o texto de falha quando algo ja foi entregue' do
-      register_async_tool(build_async_tool(poll: progress.running(deliveries: ['um preco']),
+    it 'nao dispara a falha quando algo ja foi entregue' do
+      register_async_tool(build_async_tool(poll: progress.running(deliveries: [pdf('um_preco')]),
                                            resultado: true, resta: true))
       run = submitted_run
       described_class.new.perform(run.id, 0)
 
       described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
 
-      expect(bot_contents).not_to include('não consegui concluir a consulta')
-      expect(bot_contents.last).to eq('encerrei a consulta por aqui')
+      expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     end
 
     # Encerramento é cortesia sobre um caminho que já deu errado: falhar aqui apagaria o registro
@@ -321,7 +366,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # resposta quem já tinha recebido preço.
     it 'registra o desfecho, e ainda fecha com o cliente, se o encerramento quebrar' do
       register_async_tool(
-        build_async_tool(poll: progress.running(deliveries: ['um preco']),
+        build_async_tool(poll: progress.running(deliveries: [pdf('um_preco')]),
                          closing: -> { raise 'comparativo fora do ar' },
                          resultado: true, resta: true)
       )
@@ -331,7 +376,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       described_class.new.perform(run.id, async_config::MAX_ATTEMPTS)
 
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'prazo_esgotado')
-      expect(bot_contents.last).to eq('encerrei a consulta por aqui')
+      expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     end
 
     # O RETRY DO SIDEKIQ NÃO PODE REPUBLICAR O COMPARATIVO. O encerramento publica e só depois
@@ -345,7 +390,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # contra o retry continua sendo raciocínio, no mesmo molde do `SUBMITTED_KEY` deste arquivo.
     it 'grava a marca de encerrado' do
       register_async_tool(
-        build_async_tool(poll: progress.running(deliveries: ['um preco']), closing: ['Comparativo: url'])
+        build_async_tool(poll: progress.running(deliveries: [pdf('um_preco')]), closing: [pdf('comparativo')])
       )
       run = submitted_run
       described_class.new.perform(run.id, 0)
@@ -391,9 +436,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Act
       expect { described_class.new.perform(run.id, async_config::MAX_ATTEMPTS - 1) }.not_to raise_error
 
-      # Assert — o cliente lê a NOSSA frase, nunca a da exceção.
-      expect(bot_contents).to eq(['não consegui concluir a consulta'])
-      expect(bot_contents.join(' ')).not_to include('segredo')
+      # Assert — o desfecho é o evento de falha; o texto da exceção não chega a lugar nenhum.
+      expect(bot_messages).to be_empty
+      expect(eventos_disparados(run)).to eq(['falhou'])
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'tool_failed')
     end
 
@@ -414,7 +459,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   describe 'no-op and idempotency' do
     it 'does nothing for a run that already finished or does not exist' do
       # Arrange
-      register_async_tool(build_async_tool(poll: progress.done(deliveries: ['final'])))
+      register_async_tool(build_async_tool(poll: progress.done(deliveries: [pdf('final')])))
       run = submitted_run
       run.finish!('done')
 
@@ -429,22 +474,22 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     it 'does not duplicate the published delivery when the same attempt runs twice' do
       # Arrange
-      register_async_tool(build_async_tool(poll: progress.done(deliveries: ['final'])))
+      register_async_tool(build_async_tool(poll: progress.done(deliveries: [pdf('final')])))
       run = submitted_run
 
       # Act / Assert — 1ª execução publica.
       described_class.new.perform(run.id, 1)
-      expect(bot_contents).to eq(['final'])
+      expect(bot_arquivos).to eq(['final.pdf'])
 
       # O retry do Sidekiq reexecuta o MESMO job: o guarda de status barra.
       described_class.new.perform(run.id, 1)
-      expect(bot_contents).to eq(['final'])
+      expect(bot_arquivos).to eq(['final.pdf'])
 
       # E mesmo forçando a linha de volta a `running` com a sequência ainda em 0 (o job morreu depois
       # de postar e antes de avançar), é o token da entrega que impede a segunda mensagem.
       run.update_columns(status: 'running', sequence: 0) # rubocop:disable Rails/SkipsModelValidations
       described_class.new.perform(run.id, 1)
-      expect(bot_contents).to eq(['final'])
+      expect(bot_arquivos).to eq(['final.pdf'])
     end
   end
 
@@ -483,7 +528,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Arrange — a vigésima primeira, já aceita e promovida, como o Responder a deixa.
       intervalo_sem_as_vinte = async_config.interval_for(agent, 0)
       vinte_execucoes_encerradas_na_ultima_hora
-      register_async_tool(build_async_tool(handle: { 'id' => 'cot-21' }, poll: progress.done(deliveries: ['final'])))
+      register_async_tool(build_async_tool(handle: { 'id' => 'cot-21' }, poll: progress.done(deliveries: [pdf('final')])))
       run = create_run
 
       # Act — a passada de submissão (a chamada paga) e a de consulta.
@@ -501,7 +546,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(described_class).to have_been_enqueued.with(run.id, 1)
       expect(reagendada[:at]).to be_within(2).of(intervalo_sem_as_vinte.from_now.to_f)
       expect(run.reload).to have_attributes(status: 'done', failure_code: nil)
-      expect(bot_contents).to eq(['final'])
+      expect(bot_arquivos).to eq(['final.pdf'])
     end
   end
 
@@ -513,7 +558,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Arrange
       started = Time.current
       poll = lambda do |_attempt|
-        Time.current - started >= 60 ? progress.done(deliveries: ['3 opções encontradas']) : progress.running
+        Time.current - started >= 60 ? progress.done(deliveries: [pdf('tres_opcoes')]) : progress.running
       end
       register_async_tool(build_async_tool(poll: poll))
       run = create_run(expires_at: 10.minutes.from_now)
@@ -533,7 +578,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert — UMA mensagem, depois de mais de 60s de espera fora do worker.
       expect(waited).to be >= 60
-      expect(bot_contents).to eq(['3 opções encontradas'])
+      expect(bot_arquivos).to eq(['tres_opcoes.pdf'])
       expect(run.reload.status).to eq('done')
     end
   end

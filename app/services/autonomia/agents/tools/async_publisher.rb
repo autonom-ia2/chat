@@ -6,6 +6,11 @@
 # — quem publica sem checar kill-switch da conta, estado do agente e allowlist de piloto acaba
 # falando com cliente real a partir de um agente que já foi desligado.
 #
+# SÓ ARQUIVO (PR C). Texto que chegue aqui — de uma execução que atravessou o deploy, de um `AsyncPublishJob`
+# enfileirado pela versão anterior, de uma ferramenta que ainda devolva frase — é descartado e registrado: o que
+# o cliente lê sobre a cotação é a Lia quem escreve, num turno acionado por evento (`Tools::Evento`). O anexo
+# sai SEM legenda.
+#
 # OITO decisões que este arquivo carrega:
 #
 # 1. NUNCA carimba `autonomia_reply_to_message_id`. O `already_replied?` do Responder é um regex
@@ -16,7 +21,7 @@
 #    apresentar; o cliente não recebe o robô falando por cima de quem já está atendendo.
 #
 # 3. ESPERA a cadeia de entrega humanizada drenar. Aquela cadeia pode durar até 90s encadeando até 5
-#    mensagens; publicar no meio dela entrega "encontrei 3 opções" antes de "deixa eu consultar", e
+#    mensagens; publicar no meio dela entrega o arquivo antes de "deixa eu consultar", e
 #    ainda quebra a janela de mídia do turno seguinte (um outgoing entre duas incoming muda o que
 #    `current_turn_incoming` considera turno atual).
 #
@@ -67,7 +72,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
 
   # Motivos de não-publicação, devolvidos a quem chamou (o job decide se re-agenda ou encerra).
   # `adiada` só vem com `deferred`: a forma serializada que quem adia deve pôr nos argumentos do
-  # `AsyncPublishJob` — para a entrega de arquivo é o `ArquivoGravado`, sem a URL do portal.
+  # `AsyncPublishJob` — o `ArquivoGravado`, sem a URL do portal.
   Result = Struct.new(:status, :message, :adiada, keyword_init: true) do
     def published? = status == :published
     def deferred? = status == :deferred
@@ -77,42 +82,39 @@ class Autonomia::Agents::Tools::AsyncPublisher
     # O PUBLICADOR ASSUMIU ESTA ENTREGA? Imediata ou adiada. É o que o contador da linha
     # (`record_delivery!`) e o registro do aceite (`Tools::EntregaAceita`) contam, e é a pergunta que o
     # encerramento faz por entrega. A adiada ainda depende do `AsyncPublishJob`, que pode recusá-la
-    # depois (autorização, banco); para a entrega de arquivo, desde a rodada 2 da fatia 1 do PDF rápido,
-    # o arquivo já está baixado e gravado quando ela volta adiada.
+    # depois (autorização, banco); desde a rodada 2 da fatia 1 do PDF rápido o arquivo já está baixado e
+    # gravado quando ela volta adiada.
     def aceita? = published? || deferred?
   end
 
-  # O que vira UMA mensagem na conversa: o texto, o token de idempotência (a identidade da entrega)
-  # e, na entrega de arquivo, o anexo — o `signed_id` do blob já gravado no armazenamento.
-  Corpo = Struct.new(:texto, :token, :anexo, keyword_init: true)
+  # O que vira UMA mensagem na conversa: o token de idempotência (a identidade da entrega) e o anexo — o
+  # `signed_id` do blob já gravado no armazenamento. Sem anexo, o corpo só pergunta pela mensagem que já existe.
+  Corpo = Struct.new(:token, :anexo, keyword_init: true)
 
   def initialize(run:)
     @run = run
   end
 
   # -> Result. NUNCA levanta: falhar em publicar não pode derrubar a execução inteira.
-  # `entrega` é um texto, uma entrega de arquivo (`EntregaDeArquivo`, com a URL de onde baixar), um
-  # arquivo já gravado (`ArquivoGravado`, a forma que atravessa o adiamento) ou um texto encadeado
-  # (`EntregaEncadeada`). O QUE NÃO É NENHUMA DELAS (um Hash de outra forma, uma forma que a validação
-  # recusa) é descartado AQUI, registrado: o encerramento (`closing_deliveries`) não passa pelo
-  # `Progress`, e sem esta guarda o `to_s` do Hash chegava ao cliente como mensagem, literal (rodada 2
-  # de revisão, 11/09/2026).
+  # `entrega` é uma entrega de arquivo (`EntregaDeArquivo`, com a URL de onde baixar) ou um arquivo já
+  # gravado (`ArquivoGravado`, a forma que atravessa o adiamento). O QUE NÃO É NENHUMA DELAS — texto,
+  # inclusive o de uma execução ou de um job adiado da versão anterior à PR C, um Hash de outra forma, uma
+  # forma que a validação recusa — é descartado AQUI, registrado, e nada chega ao cliente.
   #
   # A ENTREGA DE ARQUIVO É BAIXADA E GRAVADA ANTES DE A PUBLICAÇÃO SER ADIADA (`publicar_arquivo`,
   # rodada 2 da fatia 1 do PDF rápido): quem chama sabe, no mesmo resultado, se o arquivo existe.
   #
-  # `wait_for_chain` espera a cadeia humanizada do turno; `wait_for_dependency` espera a entrega de que
-  # um texto encadeado depende. Os dois são desligados pelo `AsyncPublishJob` nos tetos da `AsyncConfig`.
-  def publish(entrega, wait_for_chain: true, wait_for_dependency: true)
+  # `wait_for_chain` espera a cadeia humanizada do turno; o `AsyncPublishJob` o desliga no teto da `AsyncConfig`.
+  def publish(entrega, wait_for_chain: true)
     forma = forma_de(entrega)
     return forma if forma.is_a?(Result)
 
     conversation = authorized_conversation
     return recusar_na_entrada(forma) if conversation.blank?
     return publicar_arquivo(conversation, forma, wait_for_chain) if forma.is_a?(::Autonomia::Agents::Tools::EntregaDeArquivo)
-    return adiar(forma) if esperar?(conversation, forma, wait_for_chain, wait_for_dependency)
+    return adiar(forma) if wait_for_chain && ::Autonomia::Agents::Tools::CadeiaDoTurno.aberta?(@run, conversation)
 
-    entregar(conversation, forma)
+    publicar_gravado(conversation, forma)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] publish failed run=#{@run.id} #{e.class}")
     Result.new(status: :blocked)
@@ -120,57 +122,33 @@ class Autonomia::Agents::Tools::AsyncPublisher
 
   # Publica SEM esperar a cadeia de chunks drenar. Último recurso, usado quando o teto de adiamentos
   # estourou: mensagem fora de ordem é ruim, mensagem que nunca chega é pior — e uma cadeia que não
-  # termina (o cliente escreveu no meio e ela foi abortada) travaria a entrega para sempre. O texto
-  # encadeado continua esperando a entrega de que depende (`wait_for_dependency` fica ligado).
+  # termina (o cliente escreveu no meio e ela foi abortada) travaria a entrega para sempre.
   def publish!(entrega)
     publish(entrega, wait_for_chain: false)
   end
 
   private
 
-  # -> a forma que se publica (texto aparado, `EntregaDeArquivo`, `ArquivoGravado` desta execução ou
-  # `EntregaEncadeada`), ou o `Result` de quando não há o que publicar. Texto em branco sai calado
-  # (`skipped`); o que não é forma nenhuma sai REGISTRADO — é uma entrega que alguém montou errado.
+  # -> a forma que se publica (`EntregaDeArquivo` ou `ArquivoGravado` desta execução), ou o `Result` de quando
+  # não há o que publicar: o que não é arquivo sai REGISTRADO.
   def forma_de(entrega)
-    forma = ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega) || ::Autonomia::Agents::Tools::ArquivoGravado.de(entrega) ||
-            ::Autonomia::Agents::Tools::EntregaEncadeada.de(entrega)
-    return texto_de(entrega) if forma.nil?
-
-    recusa_da_forma(entrega, forma) || forma
-  end
-
-  # -> o `Result` da forma que não se publica, ou nil: o arquivo gravado que não é desta execução sai
-  # registrado; o texto encadeado em branco sai calado (`skipped`).
-  def recusa_da_forma(entrega, forma)
+    forma = ::Autonomia::Agents::Tools::EntregaDeArquivo.de(entrega) || ::Autonomia::Agents::Tools::ArquivoGravado.de(entrega)
+    return descartar(entrega) if forma.nil?
     return descartar(entrega) if forma.is_a?(::Autonomia::Agents::Tools::ArquivoGravado) && !forma.valida_para?(@run)
 
-    Result.new(status: :skipped) if forma.is_a?(::Autonomia::Agents::Tools::EntregaEncadeada) && forma.texto.blank?
+    forma
   end
 
-  def texto_de(entrega)
-    return descartar(entrega) unless entrega.is_a?(String)
-
-    entrega.strip.presence || Result.new(status: :skipped)
-  end
-
-  # Só a CLASSE vai ao log: o conteúdo de uma entrega que não é entrega pode ser qualquer coisa.
+  # Só a CLASSE vai ao log: o conteúdo de uma entrega que não é arquivo pode ser qualquer coisa — inclusive
+  # uma frase pronta de uma versão anterior, que não sai mais.
   def descartar(entrega)
-    Rails.logger.warn("[autonomia][tool][async] entrega descartada run=#{@run.id}: não é texto nem arquivo (#{entrega.class.name})")
+    Rails.logger.warn("[autonomia][tool][async] entrega descartada run=#{@run.id}: o motor só publica arquivo (#{entrega.class.name})")
     Result.new(status: :skipped)
-  end
-
-  # -> esta publicação espera? A cadeia humanizada do turno aberta (quando `wait_for_chain`), ou, para o
-  # texto encadeado, algum token de que ele depende ainda sem mensagem (quando `wait_for_dependency`).
-  def esperar?(conversation, forma, wait_for_chain, wait_for_dependency)
-    return true if wait_for_chain && humanized_chain_open?(conversation)
-    return false unless wait_for_dependency && forma.is_a?(::Autonomia::Agents::Tools::EntregaEncadeada)
-
-    forma.depois_de.any? { |token| ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, token).nil? }
   end
 
   # `deferred`, com a forma que o `AsyncPublishJob` deve carregar.
   def adiar(forma)
-    Result.new(status: :deferred, adiada: forma.is_a?(String) ? forma : forma.to_h)
+    Result.new(status: :deferred, adiada: forma.to_h)
   end
 
   # A conversa em que esta execução AINDA pode publicar, ou nil. É a conferência de ENTRADA: barra
@@ -179,7 +157,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
   #
   # Execução morta (supersedida por um pedido novo, descartada com o turno, ou barrada pelo gate da
   # conta) não publica: uma entrega adiada de uma cotação que o cliente já corrigiu sairia até 90s
-  # depois, e ele receberia dois preços conflitantes. NÃO basta exigir `running?` — a entrega final
+  # depois, e ele receberia dois resultados conflitantes. NÃO basta exigir `running?` — a entrega final
   # legítima é publicada e a linha fechada logo em seguida, então uma republicação adiada
   # encontraria a linha já `done`.
   def authorized_conversation
@@ -190,35 +168,20 @@ class Autonomia::Agents::Tools::AsyncPublisher
     conversation
   end
 
-  # Há uma cadeia de entrega humanizada em curso para o turno que originou esta execução? A cadeia
-  # carimba `autonomia_chunk_token` = "<reply_to>:<índice>"; se o ÚLTIMO índice esperado ainda não
-  # apareceu, ela não terminou.
+  # Há uma cadeia de entrega humanizada em curso para o turno que originou esta execução? A pergunta mora em
+  # `Tools::CadeiaDoTurno`, que o turno de evento também faz.
   def humanized_chain_open?(conversation)
-    expected = @run.expected_chunks.to_i
-    # `expected == 1` TAMBÉM espera: um pedaço único não foi postado, está agendado com atraso de até
-    # 15s. Só `0` (caminho clássico e de voz, que postam de forma síncrona antes do despacho) dispensa.
-    return false if expected < 1 || @run.origin_message_id.blank?
-
-    !chunk_posted?(conversation, expected - 1)
+    ::Autonomia::Agents::Tools::CadeiaDoTurno.aberta?(@run, conversation)
   end
 
-  def chunk_posted?(conversation, index)
-    token = "#{@run.origin_message_id}:#{index}"
-    conversation.messages.outgoing.where(sender_type: 'AgentBot')
-                .where('content_attributes::text LIKE ?', "%#{token}%")
-                .any? { |message| message.content_attributes.to_h['autonomia_chunk_token'].to_s == token }
-  end
-
-  # Publica sob lock da conversa, com idempotência pelo CONTEÚDO da entrega — retry do Sidekiq, ou
-  # consulta que reemite a mesma lista, encontra a mensagem já postada e não duplica. O bloco do lock
+  # Publica sob lock da conversa, com idempotência pela IDENTIDADE da entrega — retry do Sidekiq, ou
+  # consulta que reemite a mesma entrega, encontra a mensagem já postada e não duplica. O bloco do lock
   # só delega (`publicar_sob_lock`): um `return` dentro dele mudaria o destino da transação.
   #
-  # A leitura da sequência e o avanço ficam DENTRO do lock: dois publicadores concorrentes (duas
-  # entregas parciais adiadas com o mesmo atraso, duas threads da fila) liam o mesmo número, e o
-  # segundo via a posição ocupada, descartava o texto e ainda devolvia sucesso — a segunda cotação
-  # sumia sem ninguém notar.
+  # A leitura da sequência e o avanço ficam DENTRO do lock: dois publicadores concorrentes liam o mesmo
+  # número, e o segundo via a posição ocupada, descartava a entrega e ainda devolvia sucesso.
   #
-  # `corpo.token` é a identidade da entrega (o texto, por padrão; a URL, na entrega de arquivo).
+  # `corpo.token` é a identidade da entrega (a URL, na entrega de arquivo).
   #
   # O QUE LEVANTA DEPOIS DO COMMIT (um `after_commit` da mensagem que ESTA chamada criou e que FICOU
   # no banco) é reconciliado pelo envio (`reconciliar`); o que levanta antes, ou com a transação
@@ -238,7 +201,7 @@ class Autonomia::Agents::Tools::AsyncPublisher
   end
 
   # -> a mensagem criada, o `Result` da entrega que JÁ estava lá (retry, ou consulta que reemite a
-  # mesma lista — retomada aqui mesmo, sob o lock, decisão 8), ou o motivo da recusa. A AUTORIZAÇÃO É
+  # mesma entrega — retomada aqui mesmo, sob o lock, decisão 8), ou o motivo da recusa. A AUTORIZAÇÃO É
   # RECONFERIDA AQUI, sob o lock e sem cache (`AutorizacaoDaExecucao`): `dead?` relido do banco e o
   # vínculo recalculado sobre a conversa que o lock acabou de recarregar — conta habilitada, agente
   # ligado e ativo, allowlist, mesma caixa. É esta conferência, não a da entrada, que autoriza a mensagem.
@@ -249,29 +212,15 @@ class Autonomia::Agents::Tools::AsyncPublisher
     sequence = @run.sequence
     existente = ::Autonomia::Agents::Tools::EntregaPublicada.para(conversation, corpo.token)
     return retomar(existente) if existente
-    # O corpo sem texto E sem anexo é o de `sem_arquivo`: ele só pergunta pela mensagem que já existe. O anexo
-    # sem legenda é a proposta de uma seguradora (entrega 8b): a frase que acompanha é da Lia.
-    return Result.new(status: :blocked) if corpo.texto.blank? && corpo.anexo.blank?
+    # O corpo sem anexo é o de `sem_arquivo`: ele só pergunta pela mensagem que já existe.
+    return Result.new(status: :blocked) if corpo.anexo.blank?
 
     mensagem = build_message!(conversation, agent_inbox, sequence, corpo)
-    # Só avança quando uma mensagem NOVA entrou: como a idempotência é pelo conteúdo, o duplicado
+    # Só avança quando uma mensagem NOVA entrou: como a idempotência é pela identidade, o duplicado
     # não ocupa posição nenhuma, e avançar nele faria o contador mentir sobre quantas mensagens a
     # execução publicou.
     @run.advance_sequence!(sequence)
-    registrar_recuos(corpo.texto)
     mensagem
-  end
-
-  # O TEXTO DE RESERVA QUE SAIU FICA NO LOG (fatia 3 do #420): a execução, a ferramenta e o papel de cada
-  # recuo que a mensagem nova leva (`Native::Base.recuos_em`). O recuo é a rede para quando a frase do
-  # agente falha; sem este registro, ninguém sabe quantas vezes ele fala no lugar do agente. Roda dentro
-  # do lock, depois de a mensagem existir: não levanta, porque levantar ali desfaria a mensagem.
-  def registrar_recuos(texto)
-    Array(::Autonomia::Agents::Tools::Registry.find(@run.slug)&.recuos_em(texto)).each do |papel|
-      Rails.logger.warn("[autonomia][recuo] run=#{@run.id} slug=#{@run.slug} papel=#{papel}")
-    end
-  rescue StandardError => e
-    Rails.logger.warn("[autonomia][recuo] registro falhou run=#{@run.id} #{e.class}")
   end
 
   def resultado(publicado)
@@ -311,37 +260,27 @@ class Autonomia::Agents::Tools::AsyncPublisher
     @retomada ||= ::Autonomia::Agents::Tools::RetomadaDeEnvio.new(run: @run)
   end
 
-  # A publicação que não espera mais: o arquivo já gravado é anexado (`Arquivos#publicar_gravado`); o
-  # texto, e o texto encadeado, viram uma mensagem com o token do texto.
-  def entregar(conversation, forma)
-    return publicar_gravado(conversation, forma) if forma.is_a?(::Autonomia::Agents::Tools::ArquivoGravado)
-
-    texto = forma.is_a?(::Autonomia::Agents::Tools::EntregaEncadeada) ? forma.texto : forma
-    post(conversation, Corpo.new(texto: texto, token: token_de(texto)))
-  end
-
   # A IDENTIDADE DA ENTREGA VEM DE `Tools::EntregaPublicada`, e não daqui. Ela é a mesma pergunta
-  # que o fecho faz ao banco ("esta entrega virou mensagem?"), e uma segunda definição — texto
-  # aparado aqui, texto cru lá — faria o fecho procurar por uma mensagem que nunca existiu.
+  # que o fecho faz ao banco ("esta entrega virou mensagem?"), e uma segunda definição faria quem pergunta
+  # procurar por uma mensagem que nunca existiu.
   def token_de(entrega)
     ::Autonomia::Agents::Tools::EntregaPublicada.token_de(@run, entrega)
   end
 
+  # O ANEXO SAI SEM TEXTO (PR C): quem fala junto do arquivo é a Lia, no turno do evento que vem depois dele.
   def build_message!(conversation, agent_inbox, sequence, corpo)
     Messages::MessageBuilder.new(
       nil, conversation,
       ActionController::Parameters.new(
-        content: corpo.texto,
-        attachments: [corpo.anexo].compact.presence,
+        content: nil,
+        attachments: [corpo.anexo],
         # Com responsável na conversa a entrega vira NOTA PRIVADA: quem fala com o cliente é a
         # pessoa que assumiu, e ela precisa do dado — não do robô por cima dela.
         message_type: 'outgoing', sender_type: 'AgentBot',
         sender_id: agent_inbox.agent_bot_id, private: conversation.assignee_id.present?,
         # A CHAVE DO TOKEN VEM DA CONSTANTE, como o valor já vinha (`token_de`). Escrever o literal
-        # aqui e ler pela constante em `EntregaPublicada` são DUAS definições da mesma identidade —
-        # a classe de defeito que esta entrega corrigiu para o valor, intacta na chave: renomear a
-        # constante faria o leitor procurar uma chave que o escritor nunca grava, e a pergunta "já
-        # chegou?" passaria a responder "não" para toda entrega.
+        # aqui e ler pela constante em `EntregaPublicada` são DUAS definições da mesma identidade:
+        # renomear a constante faria o leitor procurar uma chave que o escritor nunca grava.
         content_attributes: {
           'autonomia_agent_id' => agent_inbox.agent.id,
           ::Autonomia::Agents::Tools::EntregaPublicada::CHAVE => corpo.token,

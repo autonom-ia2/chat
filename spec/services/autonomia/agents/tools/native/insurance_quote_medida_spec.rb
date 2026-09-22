@@ -184,7 +184,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
 
     # A RECUSA DO `start` PASSA PELO JOB E GANHA A MARCA `autonomia_submitted` — o retorno do `start`
-    # foi registrado, mesmo sendo "não fiz". A linha fica `{pedido, motivo, faltando, intenção 1,
+    # foi registrado, mesmo sendo "não fiz". A linha fica `{recusa, faltando, problemas, intenção 1,
     # submitted}` sem `quote_id`, e a medida tem de ler ZERO cotações dela: contar seria cobrar por
     # trabalho que não houve. Aqui a recusa é REAL (`dados` ilegível), sem dublê e sem portal.
     it 'nao conta como cotação a recusa do start, que o job grava com a marca de submetido' do
@@ -203,7 +203,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       # Assert — a linha real da recusa: marca de submetido, intenção anotada, nenhum número.
       handle = run.reload.handle
       expect(handle).to include(Autonomia::Agents::Tools::AsyncRunJob::SUBMITTED_KEY => true,
-                                Autonomia::Agents::ToolRun::INTENCOES => 1, 'motivo' => 'json_invalido')
+                                Autonomia::Agents::ToolRun::INTENCOES => 1, 'recusa' => 'json_invalido')
       expect(handle).not_to have_key('quote_id')
       expect(run.status).to eq('done')
       expect(Autonomia::Insurance::Medida.new(conta: account, inicio: nil, fim: nil).call)

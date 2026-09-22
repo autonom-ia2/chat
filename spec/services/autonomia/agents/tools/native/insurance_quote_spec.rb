@@ -30,6 +30,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     described_class.new(agent: agent, params: params)
   end
 
+  # Os fatos que o modelo lê no evento da recusa (PR C), a partir do handle que o `start` devolveu.
+  def fatos(tipo, handle)
+    described_class.fatos_do_evento(tipo, Autonomia::Agents::ToolRun.new(handle: handle))
+  end
+
   def offer(code, name, status, amount = nil)
     base = { 'insurer' => { 'code' => code, 'name' => name }, 'status' => status }
     return base unless amount
@@ -55,15 +60,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       resultado = tool('produto' => 'bike', 'dados' => '{}').start
 
       # Assert
-      expect(resultado['motivo']).to eq('faltam_dados')
-      # O `pedido` VAI PARA O CLIENTE (`Progress` chama deliveries de "textos destinados ao
-      # cliente"). Esta linha exigia `configuracoes.valorMercado` no texto — o teste consagrando o
-      # vazamento que levou `insured.document` a um WhatsApp em 08/09/2026. Campo de ramo não tem
-      # rótulo que dê para escrever sem adivinhar, então a frase fica genérica e quem pergunta é o
-      # modelo no turno seguinte.
-      expect(resultado['pedido']).not_to include('configuracoes.valorMercado')
-      expect(resultado['pedido']).not_to include('chame a ferramenta')
-      expect(resultado['pedido']).to include('nome do titular')
+      expect(resultado['recusa']).to eq('faltam_dados')
+      # DESDE A PR C A RECUSA NÃO LEVA TEXTO AO CLIENTE: o handle traz o motivo e os problemas, e quem pergunta
+      # é a Lia, a partir dos fatos do evento (para o MODELO: o nome do campo e o rótulo que o código conhece).
+      expect(resultado).not_to have_key('pedido')
+      expect(fatos('falta_dado', resultado)).to include('nome do titular')
     end
 
     # A CONFERÊNCIA DENTRO DO TURNO. É ela que faz a diferença entre pedir o CPF e anunciar uma
@@ -144,8 +145,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       resultado = tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }).start
 
       # Assert — e o handle leva os NOMES dos campos para o job registrar a recusa (entrega 6)
-      expect(resultado['pedido']).to include('CPF do titular')
-      expect(resultado['pedido']).not_to include('insured.document')
+      expect(fatos('falta_dado', resultado)).to include('insured.document (CPF do titular)')
+      expect(resultado).not_to have_key('pedido')
       expect(resultado['faltando']).to include('insured.document')
     end
 
@@ -262,17 +263,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       ready_connection
       resultado = tool('produto' => 'bike', 'dados' => '{marca: Caloi').start
 
-      expect(resultado['motivo']).to eq('json_invalido')
+      expect(resultado['recusa']).to eq('json_invalido')
     end
 
     it 'trata JSON que nao e objeto como invalido' do
       ready_connection
-      expect(tool('produto' => 'bike', 'dados' => '[1,2]').start['motivo']).to eq('json_invalido')
+      expect(tool('produto' => 'bike', 'dados' => '[1,2]').start['recusa']).to eq('json_invalido')
     end
 
     it 'aceita dados vazios como primeira tentativa, e nao como erro' do
       ready_connection
-      expect(tool('produto' => 'bike', 'dados' => '').start['motivo']).to eq('faltam_dados')
+      expect(tool('produto' => 'bike', 'dados' => '').start['recusa']).to eq('faltam_dados')
     end
 
     # `dados` é escrito por um modelo de linguagem: nem o formato nem o tamanho são garantidos. O
@@ -281,7 +282,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       ready_connection
       gigante = { lixo: 'x' * described_class::MAX_DADOS_BYTES }.to_json
 
-      expect(tool('produto' => 'bike', 'dados' => gigante).start['motivo']).to eq('json_invalido')
+      expect(tool('produto' => 'bike', 'dados' => gigante).start['recusa']).to eq('json_invalido')
     end
 
     # Antes levantava, o job tentava 60 vezes por 7 minutos e o cliente esperava tudo isso por um
@@ -291,9 +292,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       resultado = tool('produto' => 'drone', 'dados' => '{}').start
 
-      expect(resultado['motivo']).to eq('ramo_desconhecido')
+      expect(resultado['recusa']).to eq('ramo_desconhecido')
       expect(resultado['faltando']).to eq(['produto'])
-      expect(resultado['pedido']).to include('automóvel')
+      expect(fatos('ramo_desconhecido', resultado)).to include('automóvel')
       expect(tool('produto' => 'drone', 'dados' => '{}').precheck.motivo).to eq('ramo_desconhecido')
     end
   end
@@ -370,11 +371,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       resultado = cotar
 
-      expect(resultado['motivo']).to eq('faltam_dados')
+      expect(resultado['recusa']).to eq('faltam_dados')
       expect(resultado['faltando']).to eq(%w[insured.birthDate insured.gender])
-      expect(resultado['pedido']).to eq(
-        "#{described_class::PEDIDO_DO_QUE_FALTA} data de nascimento do titular e sexo do titular."
-      )
+      expect(resultado['problemas']).to eq([{ 'campo' => 'insured.birthDate', 'motivo' => 'Required' },
+                                            { 'campo' => 'insured.gender', 'motivo' => 'Required' }])
+      expect(fatos('falta_dado', resultado)).to include('data de nascimento do titular', 'sexo do titular')
       expect(resultado).not_to have_key('quote_id')
       expect(connector).to have_received(:quote_start).once
     end
@@ -429,16 +430,35 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
   end
 
-  # A recusa vira ENTREGA, e não falha. `failed` mandaria a mensagem genérica de erro e a conversa
+  # A recusa vira EVENTO (PR C), e não falha. `failed` mandaria o evento genérico de falha e a conversa
   # morreria sem ninguém saber o que faltava.
   describe '#poll' do
-    it 'entrega o pedido do que falta na primeira passada' do
+    it 'devolve a recusa como done com o evento, sem entrega' do
       ready_connection
       progresso = tool('produto' => 'bike', 'dados' => '{}')
-                  .poll(handle: { 'pedido' => 'faltam X e Y' }, attempt: 1)
+                  .poll(handle: { 'recusa' => 'faltam_dados', 'faltando' => ['x'] }, attempt: 1)
 
-      expect(progresso.deliveries).to eq(['faltam X e Y'])
+      expect(progresso.deliveries).to be_empty
+      expect(progresso.evento).to eq('falta_dado')
       expect(progresso.status).to eq(:done)
+    end
+
+    # A EXECUÇÃO QUE ATRAVESSOU O DEPLOY traz o texto velho em `pedido`: ele não é reaproveitado.
+    it 'a recusa de uma execucao anterior a PR C vira o mesmo evento, sem o texto antigo' do
+      ready_connection
+      progresso = tool('produto' => 'bike', 'dados' => '{}')
+                  .poll(handle: { 'pedido' => 'faltam X e Y', 'motivo' => 'sem_veiculo', 'faltando' => ['vehicle.plate'] }, attempt: 1)
+
+      expect(progresso.deliveries).to be_empty
+      expect(progresso.evento).to eq('falta_dado')
+    end
+
+    it 'o motivo de cada recusa vira o seu evento' do
+      ready_connection
+      evento = ->(motivo) { tool('produto' => 'bike', 'dados' => '{}').poll(handle: { 'recusa' => motivo }, attempt: 1).evento }
+
+      expect(%w[faltam_dados json_invalido sem_veiculo ramo_desconhecido formulario_indisponivel outro].map(&evento))
+        .to eq(%w[falta_dado falta_dado falta_dado ramo_desconhecido falhou falhou])
     end
 
     it 'falha sem id de cotacao' do

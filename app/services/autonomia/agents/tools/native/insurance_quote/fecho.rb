@@ -113,8 +113,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Fecho
   end
 
   # HÁ PREÇO GUARDADO E NENHUM RESULTADO CHEGOU AO CLIENTE (fatia 3 do #420): o comparativo falhou nas
-  # tentativas, ou a execução acabou antes dele. O encerramento diz então que ele pode pedir os valores
-  # na conversa (`valores_message`), em vez da frase de falha ou do silêncio.
+  # tentativas, ou a execução acabou antes dele. O encerramento dispara então `valores_guardados`, e a Lia diz
+  # que ele pode pedir os valores na conversa, em vez da falha ou do silêncio.
   def resultado_a_pedir?(handle)
     handle = handle.to_h
     Array(handle[self.class::DELIVERED_KEY]).any? && !resultado_entregue?(handle)

@@ -91,8 +91,10 @@ RSpec.describe Autonomia::Agents::ConferenciaDePrecos do
     end
 
     it 'os recuos não levam valor, nome de seguradora nem travessão' do
+      # A peneira das frases do especialista (`TextoAoCliente`) saiu na PR C; a regra continua, conferida aqui.
       [described_class::RECUO_COM_COMPARATIVO, described_class::RECUO_SEM_COMPARATIVO].each do |recuo|
-        expect(Autonomia::Agents::Tools::TextoAoCliente.vetar(recuo)).to eq(recuo)
+        expect(recuo).not_to include('R$', '—', '–', '`')
+        expect(recuo.each_char.none? { |caractere| caractere.between?('0', '9') }).to be(true)
       end
     end
   end

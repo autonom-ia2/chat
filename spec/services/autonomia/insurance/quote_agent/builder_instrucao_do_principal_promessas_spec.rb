@@ -644,4 +644,36 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(secao.scan(/\$[a-zA-Z]+/)).to be_empty
     end
   end
+
+  # QUANDO QUEM AVISA É O SISTEMA (§14, PR C): o turno que um evento da cotação aciona. O manual diz como agir em
+  # cada evento, sem frase de exemplo; o que o sustenta é o turno de evento de verdade: a nota do sistema começa
+  # pelo cabeçalho que o manual cita, e a ferramenta de cotação recusa abrir cotação nesse turno.
+  describe 'a §14, o turno acionado por um evento da cotação' do
+    let(:secao) { texto[texto.index('## 14. Quando quem avisa é o sistema')..] }
+
+    it 'o cabeçalho que o manual cita é o da nota do sistema, e o turno não abre cotação' do
+      expect(secao).to include('AVISO DO SISTEMA SOBRE A COTAÇÃO')
+      nota = Autonomia::Agents::Tools::Evento.new(run: Autonomia::Agents::ToolRun.new(id: 1, slug: 'cotar_seguro', handle: {}),
+                                                  tipo: 'falhou').nota_do_sistema
+      expect(nota).to start_with('AVISO DO SISTEMA SOBRE A COTAÇÃO')
+      expect(secao).to include('não cote de novo por causa dele')
+      expect(Autonomia::Agents::Tools::Recusa::MOTIVOS).to have_key('turno_de_evento')
+    end
+
+    it 'cobre os desfechos que o motor dispara, e manda o preço ao especialista' do
+      expect(secao).to include('**Começou:**', '**Falta dado:**', '**Tipo de seguro que não se faz aqui:**',
+                               '**Terminou, com o comparativo acima:**', '**Terminou, com os valores guardados:**',
+                               '**Não deu certo, ou não se sabe se deu:**')
+      expect(secao).to include('peça ao especialista; nunca de memória')
+    end
+
+    it 'mudou? revise este bloco e assine aqui' do
+      expect(Digest::MD5.hexdigest(secao)).to eq('2b8bf39d75c43028decde5a4a2771cf4')
+    end
+
+    it 'não traz frase de exemplo, travessão, valor em reais nem variável' do
+      expect(secao).not_to include('*"', '—', '–', 'R$')
+      expect(secao.scan(/\$[a-zA-Z]+/)).to be_empty
+    end
+  end
 end

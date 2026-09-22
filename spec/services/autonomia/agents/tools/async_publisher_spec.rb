@@ -28,6 +28,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     end
   end
 
+  # O publicador só publica ARQUIVO (PR C): os exemplos do contrato publicam um PDF de teste.
+  before { stub_arquivo }
+
   # Promove a execução para `running` (é o que o dispatcher faz no fim do turno). Sem promoção não
   # existe entrega: o publicador só é chamado a partir de uma execução viva.
   def promote(origin_message_id: nil, expected_chunks: 0)
@@ -59,7 +62,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       conversation.update!(inbox: other_inbox)
 
       # Act
-      result = described_class.new(run: run).publish('cotação pronta')
+      result = described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert
       expect(result).to be_blocked
@@ -76,7 +79,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       run.update!(status: 'superseded')
 
       # Act
-      result = described_class.new(run: run).publish('cotação do carro ERRADO: R$ 1.200')
+      result = described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert
       expect(result).to be_blocked
@@ -92,16 +95,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       promote(origin_message_id: 4242, expected_chunks: 1)
 
       # Act
-      before_chunk = described_class.new(run: run).publish('cotação pronta')
+      before_chunk = described_class.new(run: run).publish(arquivo_de_teste)
       create(:message, account: account, conversation: conversation, message_type: :outgoing,
                        sender: agent_bot, content: 'deixa eu consultar aqui',
                        content_attributes: { 'autonomia_chunk_token' => '4242:0' })
-      after_chunk = described_class.new(run: run).publish('cotação pronta')
+      after_chunk = described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert
       expect(before_chunk).to be_deferred
       expect(after_chunk).to be_published
-      expect(bot_messages.order(:id).last.content).to eq('cotação pronta')
+      expect(bot_messages.order(:id).last.attachments.size).to eq(1)
     end
   end
 
@@ -109,15 +112,16 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     it 'posts an outgoing AgentBot message stamped with the delivery token and advances the sequence' do
       # Arrange
       promote
-      token = run.delivery_token('encontrei 3 opções de cotação')
+      token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, arquivo_de_teste)
 
       # Act
-      result = described_class.new(run: run).publish('encontrei 3 opções de cotação')
+      result = described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert
       expect(result).to be_published
       message = bot_messages.last
-      expect(message.content).to eq('encontrei 3 opções de cotação')
+      expect(message.content).to be_blank
+      expect(message.attachments.sole.file.filename.to_s).to eq('Entrega de teste.pdf')
       expect(message.message_type).to eq('outgoing')
       expect(message.content_attributes['autonomia_async_token']).to eq(token)
       expect(message.content_attributes['autonomia_async_slug']).to eq('consultar_cotacao')
@@ -130,7 +134,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       promote(origin_message_id: origin.id)
 
       # Act
-      described_class.new(run: run).publish('cotação pronta')
+      described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert: o `already_replied?` do Responder é um regex sobre esse carimbo — herdá-lo faria a
       # resposta real do turno ser descartada em silêncio.
@@ -139,16 +143,20 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(attributes.keys).to include('autonomia_async_token')
     end
 
-    it 'returns skipped and posts nothing when the text is blank' do
+    # O MOTOR SÓ PUBLICA ARQUIVO (PR C): texto — em branco ou não, de uma execução ou de um job da versão
+    # anterior — é descartado, registrado, e nenhuma mensagem nasce dele.
+    it 'descarta texto, registrado, e nao posta nada' do
       # Arrange
       promote
+      allow(Rails.logger).to receive(:warn)
 
       # Act
-      result = described_class.new(run: run).publish('   ')
+      resultados = ['encontrei 3 opções de cotação', '   '].map { |texto| described_class.new(run: run).publish(texto) }
 
       # Assert
-      expect(result.status).to eq(:skipped)
+      expect(resultados.map(&:status)).to eq(%i[skipped skipped])
       expect(bot_messages.count).to eq(0)
+      expect(Rails.logger).to have_received(:warn).with(/entrega descartada run=#{run.id}: o motor só publica arquivo \(String\)/).twice
     end
   end
 
@@ -160,8 +168,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       stale_run = Autonomia::Agents::ToolRun.find(run.id)
 
       # Act
-      first = described_class.new(run: run).publish('cotação: 3 opções')
-      second = described_class.new(run: stale_run).publish('cotação: 3 opções')
+      first = described_class.new(run: run).publish(arquivo_de_teste)
+      second = described_class.new(run: stale_run).publish(arquivo_de_teste)
 
       # Assert
       expect(first).to be_published
@@ -181,13 +189,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       conversation.update!(assignee: assignee)
 
       # Act
-      result = described_class.new(run: run).publish('cotação pronta para o corretor')
+      result = described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert
       expect(result).to be_published
       message = bot_messages.last
       expect(message.private).to be(true)
-      expect(message.content).to eq('cotação pronta para o corretor')
+      expect(message.attachments.size).to eq(1)
     end
   end
 
@@ -198,7 +206,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       agent.update!(enabled: false)
 
       # Act
-      result = described_class.new(run: run).publish('cotação pronta')
+      result = described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert
       expect(result).to be_blocked
@@ -211,7 +219,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       account.update!(internal_attributes: { 'autonomia_agents_enabled' => false })
 
       # Act
-      result = described_class.new(run: run).publish('cotação pronta')
+      result = described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert
       expect(result).to be_blocked
@@ -235,7 +243,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       promote(origin_message_id: origin.id, expected_chunks: 3)
 
       # Act
-      result = described_class.new(run: run).publish('encontrei 3 opções')
+      result = described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert
       expect(result).to be_deferred
@@ -249,7 +257,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       post_last_chunk
 
       # Act
-      result = described_class.new(run: run).publish('encontrei 3 opções')
+      result = described_class.new(run: run).publish(arquivo_de_teste)
 
       # Assert
       expect(result).to be_published
@@ -262,7 +270,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       promote(origin_message_id: origin.id, expected_chunks: 3)
 
       # Act
-      result = described_class.new(run: run).publish!('encontrei 3 opções')
+      result = described_class.new(run: run).publish!(arquivo_de_teste)
 
       # Assert
       expect(result).to be_published
@@ -271,76 +279,19 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     end
   end
 
-  # O TEXTO ENCADEADO (rodadas 2 e 3 da fatia 1 do PDF rápido, 13/09/2026): o fecho que só pode sair depois
-  # das entregas aceitas que ainda não são mensagem. Ele espera a MENSAGEM de cada token de que depende, e não
-  # a cadeia do turno.
-  describe 'texto encadeado a outra entrega' do
-    let(:dependencia) { run.delivery_token('arquivo:https://arquivos.exemplo.test/comparativo.pdf') }
-    let(:fecho) { Autonomia::Agents::Tools::EntregaEncadeada.forma('Encerrei a busca.', depois_de: dependencia) }
+  # O TEXTO ENCADEADO SAIU (PR C): o fecho que esperava o PDF é, agora, o evento de desfecho, e a Lia fala depois
+  # do arquivo. A forma que um job da versão anterior ainda carregue é descartada, com ou sem a dependência.
+  it 'descarta o texto encadeado da versao anterior, mesmo com a dependencia ja publicada' do
+    promote
+    dependencia = run.delivery_token('arquivo:https://arquivos.exemplo.test/comparativo.pdf')
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: agent_bot,
+                     content: nil, content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => dependencia })
+    encadeado = { 'encadeada' => { 'texto' => 'Encerrei a busca.', 'depois_de' => [dependencia] } }
 
-    def publicar_a_dependencia
-      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: agent_bot,
-                       content: 'Comparativo com todas as opções.',
-                       content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => dependencia })
-    end
+    result = described_class.new(run: run).publish!(encadeado)
 
-    it 'adia enquanto a entrega de que depende nao e mensagem, e sai depois dela' do
-      # Arrange
-      promote
-
-      # Act
-      antes = described_class.new(run: run).publish(fecho)
-      publicar_a_dependencia
-      depois = described_class.new(run: run).publish(antes.adiada)
-
-      # Assert
-      expect(antes).to be_deferred
-      adiada = Autonomia::Agents::Tools::EntregaEncadeada.de(antes.adiada)
-      expect([adiada.texto, adiada.depois_de]).to eq(['Encerrei a busca.', [dependencia]])
-      expect(depois).to be_published
-      expect(bot_messages.order(:id).pluck(:content)).to eq(['Comparativo com todas as opções.', 'Encerrei a busca.'])
-      expect(bot_messages.order(:id).last.content_attributes[Autonomia::Agents::Tools::EntregaPublicada::CHAVE])
-        .to eq(run.delivery_token('Encerrei a busca.'))
-    end
-
-    # DEPENDE DE TODAS (rodada 3): o lote de preços adiado e o comparativo; basta uma sem mensagem para esperar.
-    it 'com duas entregas a caminho, adia enquanto qualquer uma nao e mensagem, e sai depois das duas' do
-      # Arrange
-      promote
-      precos = 'Mais opções: R$ 1.500,00'
-      a_caminho = [dependencia, run.delivery_token(precos)]
-      fecho_das_duas = Autonomia::Agents::Tools::EntregaEncadeada.forma('Encerrei a busca.', depois_de: a_caminho)
-      publicar_a_dependencia
-
-      # Act
-      com_uma = described_class.new(run: run).publish(fecho_das_duas)
-      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: agent_bot,
-                       content: precos, content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => run.delivery_token(precos) })
-      com_as_duas = described_class.new(run: run).publish(com_uma.adiada)
-
-      # Assert
-      expect(com_uma).to be_deferred
-      expect(com_as_duas).to be_published
-      expect(bot_messages.order(:id).pluck(:content).last).to eq('Encerrei a busca.')
-    end
-
-    it 'publish! ignora a cadeia do turno, mas continua esperando a entrega de que o texto depende' do
-      promote(origin_message_id: 77, expected_chunks: 2)
-
-      result = described_class.new(run: run).publish!(fecho)
-
-      expect(result).to be_deferred
-      expect(bot_messages).to be_empty
-    end
-
-    it 'sem esperar a dependencia (o teto do job), o texto sai sem ela' do
-      promote(origin_message_id: 77, expected_chunks: 2)
-
-      result = described_class.new(run: run).publish(fecho, wait_for_chain: false, wait_for_dependency: false)
-
-      expect(result).to be_published
-      expect(bot_messages.sole.content).to eq('Encerrei a busca.')
-    end
+    expect(result).to be_skipped
+    expect(bot_messages.count).to eq(1)
   end
 
   # A RETOMADA DA PENDÊNCIA ACONTECE SOB O LOCK (rodada 9, P2 do Codex). Até a rodada 8 a tentativa
@@ -382,7 +333,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
     # -> a mensagem marcada, deixada por uma primeira tentativa com a fila recusando o envio.
     def mensagem_pendente(publisher)
       fila_recusa_o_envio
-      expect(publisher.publish('cotação pronta')).to be_blocked
+      expect(publisher.publish(arquivo_de_teste)).to be_blocked
       fila_volta
       bot_messages.sole.tap { |mensagem| expect(marca_de_pendencia(mensagem)).to be(true) }
     end
@@ -395,7 +346,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       conversa_com_concorrente(ao_entrar: outra_tentativa_resolve(mensagem))
 
       # Act
-      result = publisher.publish('cotação pronta')
+      result = publisher.publish(arquivo_de_teste)
 
       # Assert — UM job (o do concorrente), a marca limpa, e a entrega dada como publicada
       expect(result).to be_published
@@ -412,7 +363,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       conversa_com_concorrente(depois: outra_tentativa_resolve(mensagem))
 
       # Act
-      result = publisher.publish('cotação pronta')
+      result = publisher.publish(arquivo_de_teste)
 
       # Assert — UM job (o desta tentativa), a marca limpa
       expect(result).to be_published
@@ -432,7 +383,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       conversa_com_concorrente(ao_sair: -> { na_fila_ao_sair = enqueued_jobs.count { |job| job[:job] == SendReplyJob } })
 
       # Act
-      publisher.publish('cotação pronta')
+      publisher.publish(arquivo_de_teste)
 
       # Assert
       expect(na_fila_ao_sair).to eq(1)
@@ -440,14 +391,12 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
   end
 
   # A ENTREGA DE ARQUIVO (entrega 11): o comparativo em PDF vai como ANEXO da mensagem, com o nome
-  # que o cliente vai procurar depois. Quando o download falha, vai o texto de reserva com o link —
-  # o mesmo de antes —, registrado, e nunca em silêncio. A identidade é uma só nos dois caminhos.
+  # que o cliente vai procurar depois, e SEM TEXTO (PR C): quem fala junto dele é a Lia, no evento que vem
+  # depois. Quando o download falha, nada é publicado, e o motivo vai ao log.
   describe 'entrega de arquivo' do
     let(:url) { 'https://arquivos.exemplo.test/comparativo-9.pdf' }
     let(:arquivo) do
-      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: 'Comparativo de seguro, placa ABC1D23.pdf',
-                                                     legenda: 'Comparativo com todas as opções.',
-                                                     reserva: "Comparativo com todas as opções:\n#{url}")
+      Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: 'Comparativo de seguro, placa ABC1D23.pdf')
     end
     let(:pdf) { "%PDF-1.4\n%%EOF\n" }
 
@@ -478,7 +427,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
     end
 
-    it 'poe a legenda sem link na mensagem, com o token da identidade do arquivo' do
+    it 'publica o anexo sem texto, com o token da identidade do arquivo' do
       # Arrange
       promote
       stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
@@ -488,8 +437,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
 
       # Assert
       mensagem = bot_messages.sole
-      expect(mensagem.content).to eq('Comparativo com todas as opções.')
-      expect(mensagem.content).not_to include('http')
+      expect(mensagem.content).to be_blank
       expect(mensagem.content_attributes['autonomia_async_token']).to eq(run.delivery_token(arquivo.identidade))
       expect(run.reload.sequence).to eq(1)
     end
@@ -675,7 +623,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
         .with(a_string_matching(/blob sem dono nao agendado run=#{run.id} blob=\d+ causa=Errno::ECONNREFUSED/))
     end
 
-    # O QUE NÃO É TEXTO NEM ARQUIVO NÃO VIRA MENSAGEM. O encerramento (`closing_deliveries`) não passa
+    # O QUE NÃO É ARQUIVO NÃO VIRA MENSAGEM. O encerramento (`closing_deliveries`) não passa
     # pelo `Progress`, então a guarda tem de existir onde a mensagem é criada: um Hash inválido
     # chegava ao cliente como `{"arquivo" => {...}}` literal (rodada 2, P2).
     it 'descarta, registrado e sem mensagem, um Hash que nao e entrega de arquivo' do
@@ -693,7 +641,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
       expect(bot_messages.count).to eq(0)
       expect(run.reload.sequence).to eq(0)
       expect(Rails.logger).to have_received(:warn)
-        .with(a_string_matching(/entrega descartada run=#{run.id}: não é texto nem arquivo \(Hash\)/)).twice
+        .with(a_string_matching(/entrega descartada run=#{run.id}: o motor só publica arquivo \(Hash\)/)).twice
     end
 
     # O ARQUIVO É BAIXADO E GRAVADO ANTES DE ADIAR (rodada 2 da fatia 1 do PDF rápido, 13/09/2026). Até
@@ -741,7 +689,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
 
       # Assert
       expect(result).to be_published
-      expect(bot_messages.where.not(content: 'um pedaço').sole.attachments.sole.file.download).to eq(pdf)
+      expect(bot_messages.order(:id).last.attachments.sole.file.download).to eq(pdf)
       expect(a_request(:get, url)).to have_been_made.once
       expect(ActiveStorage::PurgeJob).not_to have_been_enqueued
     end
@@ -752,8 +700,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncPublisher do
                                                  conversation_id: conversation.id, execution_key: SecureRandom.uuid)
       blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(pdf), filename: 'x.pdf',
                                                     metadata: Autonomia::Agents::Tools::EntregaDeArquivo.marca(run_id: outra.id))
-      forma = Autonomia::Agents::Tools::ArquivoGravado.new(blob_assinado: blob.signed_id, legenda: 'Comparativo',
-                                                           token: run.delivery_token('arquivo:x')).to_h
+      forma = Autonomia::Agents::Tools::ArquivoGravado.new(blob_assinado: blob.signed_id, token: run.delivery_token('arquivo:x')).to_h
 
       result = described_class.new(run: run).publish(forma)
 

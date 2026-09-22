@@ -29,7 +29,7 @@ module Autonomia::Agents::Tools::AsyncPublisher::Arquivos
   def publicar_arquivo(conversation, arquivo, wait_for_chain)
     token = token_de(arquivo)
     blob = arquivo.gravar(run_id: @run.id)
-    gravado = ::Autonomia::Agents::Tools::ArquivoGravado.new(blob_assinado: blob.signed_id, legenda: arquivo.legenda, token: token)
+    gravado = ::Autonomia::Agents::Tools::ArquivoGravado.new(blob_assinado: blob.signed_id, token: token)
     cadeia_aberta = wait_for_chain && humanized_chain_open?(conversation)
     # Daqui em diante o blob é de quem recebe a forma: o adiamento ou `publicar_gravado`, que tem a
     # própria limpeza.
@@ -45,7 +45,7 @@ module Autonomia::Agents::Tools::AsyncPublisher::Arquivos
     agendar_limpeza_do_blob(blob) if blob && !repassado
   end
 
-  # O arquivo já gravado: anexa o blob a uma mensagem com a legenda e o token. `blob` é o que
+  # O arquivo já gravado: anexa o blob a uma mensagem sem texto, com o token. `blob` é o que
   # `publicar_arquivo` acabou de gravar, ou o que a forma adiada aponta (`ArquivoGravado#blob`, nil quando
   # a assinatura não confere, o blob sumiu ou não é desta execução — aí vai a `sem_arquivo`).
   def publicar_gravado(conversation, gravado, blob = gravado.blob(@run))
@@ -67,7 +67,7 @@ module Autonomia::Agents::Tools::AsyncPublisher::Arquivos
   # `sem_arquivo`, registrada com a classe da causa (rodada 6, 11/09/2026). Se `sem_arquivo` também
   # levantar, sobe para o `publish`, que devolve `blocked`.
   def publicar_anexo(conversation, gravado, blob)
-    resultado = post(conversation, self.class::Corpo.new(texto: gravado.legenda, token: gravado.token, anexo: blob.signed_id))
+    resultado = post(conversation, self.class::Corpo.new(token: gravado.token, anexo: blob.signed_id))
     [resultado, resultado.message.present? || blob.attachments.exists?]
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] anexo falhou run=#{@run.id} causa=#{e.class}; nao publicado")
@@ -76,11 +76,11 @@ module Autonomia::Agents::Tools::AsyncPublisher::Arquivos
 
   # O ARQUIVO QUE NÃO PÔDE SER PUBLICADO: nenhuma mensagem nova, e o link do portal NÃO vai no lugar
   # (fatia 1 do PDF rápido — a URL não tem assinatura, leva o nome do segurado no caminho e baixa sem
-  # autenticação). Passa pelo mesmo `post` — lock, autorização, busca pelo token — com um corpo SEM TEXTO,
+  # autenticação). Passa pelo mesmo `post` — lock, autorização, busca pelo token — com um corpo SEM ANEXO,
   # que `publicar_sob_lock` nunca transforma em mensagem: se a mensagem com este token já está na conversa,
   # devolve o que `retomar` devolver; se não está, `blocked`.
   def sem_arquivo(conversation, token)
-    post(conversation, self.class::Corpo.new(texto: nil, token: token))
+    post(conversation, self.class::Corpo.new(token: token))
   end
 
   # A execução não pode mais publicar (conferência de entrada, `authorized_conversation`). -> `blocked`.

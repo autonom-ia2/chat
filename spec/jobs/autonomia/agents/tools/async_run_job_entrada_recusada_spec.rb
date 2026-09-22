@@ -5,7 +5,7 @@ require 'rails_helper'
 # Em 19/09/2026 a consulta de CPF não achou a pessoa, o `quote/start` recusou a entrada (faltavam
 # nascimento e sexo) e o job leu isso como falha passageira: 15 tentativas em 7 minutos, prazo
 # esgotado e "um atendente vai continuar". O adapter confere a entrada antes do `calcularV2`, então
-# nada foi cotado; o que falta é pergunta ao cliente, feita uma vez.
+# nada foi cotado; o que falta é pergunta ao cliente, feita uma vez — pela Lia, no evento `falta_dado` (PR C).
 RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:account) do
     create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
@@ -52,19 +52,22 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run
   end
 
-  it 'vira o pedido do que falta, entregue uma vez, sem nova chamada ao portal' do
+  it 'vira o evento do que falta, uma vez, sem nova chamada ao portal e sem texto nosso' do
     run = execucao
 
     described_class.new.perform(run.id, 0)
-    expect(run.reload.handle).to include('motivo' => 'faltam_dados',
+    expect(run.reload.handle).to include('recusa' => 'faltam_dados',
                                          'faltando' => %w[insured.birthDate insured.gender])
     expect(run.handle).not_to have_key(Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA)
 
     described_class.new.perform(run.id, 1)
+    described_class.new.perform(run.id, 2)
 
     expect(run.reload.status).to eq('done')
     expect(mock).to have_received(:quote_start).once
-    textos = conversation.messages.reload.where(sender_type: 'AgentBot').map(&:content)
-    expect(textos.join("\n")).to include('data de nascimento do titular e sexo do titular')
+    expect(conversation.messages.reload.where(sender_type: 'AgentBot')).to be_empty
+    expect(eventos_disparados(run)).to eq(['falta_dado'])
+    fatos = Autonomia::Agents::Tools::Evento.new(run: run, tipo: 'falta_dado').fatos
+    expect(fatos).to include('data de nascimento do titular', 'sexo do titular')
   end
 end

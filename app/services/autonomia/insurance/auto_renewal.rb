@@ -20,8 +20,8 @@ class Autonomia::Insurance::AutoRenewal
     @quotation['bonusClass']
   end
 
-  # Renovação sem a classe de bônus: cota como quem faz o primeiro seguro. O aviso ao cliente é
-  # da ferramenta (`AVISO_SEM_BONUS`); aqui é só o fato.
+  # Renovação sem a classe de bônus: cota como quem faz o primeiro seguro. O fato vai ao modelo no evento de
+  # desfecho da cotação (`InsuranceQuote::Eventos::SEM_BONUS`); aqui é só o fato.
   def sem_bonus?
     renovacao? && bonus.nil?
   end

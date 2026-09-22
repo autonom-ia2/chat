@@ -218,7 +218,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'async_desligado' },
         dispara: -> { with_modified_env(AI_AGENT_ASYNC_TOOLS: 'false') { bound.execute(call, delivery: delivery) } }
       },
+      # O TURNO DE UM EVENTO DA COTAÇÃO (PR C) não abre cotação: o especialista chama a ferramenta, e ela recusa.
       'bound.rb#async_refusal#3' => {
+        espera: { motivo: 'turno_de_evento' },
+        dispara: lambda {
+          evento = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, evento: 'concluida')
+          bound.execute(call, delivery: evento)
+          expect(Autonomia::Agents::ToolRun.count).to be_zero
+        }
+      },
+      'bound.rb#async_refusal#4' => {
         espera: { motivo: 'execucao_ja_aberta_neste_turno' },
         dispara: lambda {
           bound.execute(call, delivery: delivery)
@@ -406,8 +415,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
       'telemetria_do_envio.rb#recusa_do_start#1' => {
         espera: { motivo: 'faltam_dados', onde: 'envio', faltando: 'insured.document' },
         dispara: lambda {
-          rodar_job(build_async_tool(handle: { 'pedido' => 'Preciso do CPF do titular.', 'motivo' => 'faltam_dados',
-                                               'faltando' => ['insured.document'] }))
+          rodar_job(build_async_tool(handle: { 'recusa' => 'faltam_dados', 'faltando' => ['insured.document'] }))
         }
       },
       # As ferramentas SÍNCRONAS de verdade: a de ramos, em JSON; a de condições gerais, em prosa.
@@ -482,15 +490,15 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     expect(linhas).to be_empty
   end
 
-  # O registro é cortesia sobre um caminho que já deu errado: se ele falhar, o pedido ao cliente
-  # continua seguindo (o handle é gravado e o `poll` entrega).
+  # O registro é cortesia sobre um caminho que já deu errado: se ele falhar, a recusa continua seguindo (o handle
+  # é gravado e o `poll` a devolve como evento).
   it 'nao derruba a execucao quando o registro do envio falha' do
     allow(described_class).to receive(:registrar).and_raise(IOError, 'disco cheio')
-    recusada = build_async_tool(handle: { 'pedido' => 'Preciso do CPF.', 'motivo' => 'faltam_dados', 'faltando' => ['x'] })
+    recusada = build_async_tool(handle: { 'recusa' => 'faltam_dados', 'faltando' => ['x'] })
 
     run = run_promovida(register_async_tool(recusada))
     expect { Autonomia::Agents::Tools::AsyncRunJob.new.perform(run.id, 0) }.not_to raise_error
 
-    expect(run.reload.handle).to include('pedido' => 'Preciso do CPF.')
+    expect(run.reload.handle).to include('recusa' => 'faltam_dados')
   end
 end

@@ -10,7 +10,8 @@ require 'rails_helper'
 # Estes exemplos rodam o motor de verdade sobre a ferramenta de cotação de verdade, com o conector
 # `mock` respondendo, passada a passada, a FORMA que o portal real respondeu (dados sintéticos), o
 # publicador de verdade e o download do PDF pelo WebMock. O que se lê é a conversa, como o cliente a
-# leria, e a linha da execução, como os leitores de status a leem.
+# leria, e a linha da execução, como os leitores de status a leem. Desde a PR C o PDF sai SEM LEGENDA e o
+# desfecho é um EVENTO (`eventos_disparados`): quem fala depois do arquivo é a Lia, num turno próprio.
 RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:account) do
     create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
@@ -125,11 +126,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     bot_messages.map(&:content)
   end
 
-  def fecho
-    cotacao::FECHO_COM_RESULTADO
-  end
-
-  it 'encerra quando toda seguradora tem desfecho, com o portal ainda partial: comparativo e done, sem fecho colado nele' do
+  it 'encerra quando toda seguradora tem desfecho, com o portal ainda partial: comparativo sem texto, done, e o evento de conclusao' do
     # Arrange
     run = cotacao_submetida
     ate_todas_com_desfecho(run)
@@ -139,8 +136,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     portal_responde('partial', leitura_com_todas_com_desfecho)
     passada(run, 4)
 
-    # Assert — a conversa
-    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA])
+    # Assert — a conversa: o PDF sozinho, e a Lia fala depois dele
+    expect(bot_contents).to eq([nil])
+    expect(eventos_disparados(run)).to eq(['concluida'])
     expect(bot_messages.first.attachments.sole.file.download).to eq(pdf)
     expect(bot_contents.join).not_to include(url)
     # Assert — a linha
@@ -170,7 +168,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       .to include(cotacoes: 1, seguradoras_acionadas: 5, seguradoras_com_preco: 2, cotacoes_sem_medida: 0)
   end
 
-  it 'o comparativo que o portal nao gera na primeira vez sai na passada seguinte, e fica como a ultima palavra' do
+  it 'o comparativo que o portal nao gera na primeira vez sai na passada seguinte, com o evento de conclusao depois' do
     # Arrange
     run = cotacao_submetida
     ate_todas_com_desfecho(run)
@@ -191,7 +189,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     passada(run, 5)
 
     # Assert 2
-    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA])
+    expect(bot_contents).to eq([nil])
+    expect(eventos_disparados(run)).to eq(['concluida'])
     expect(run.status).to eq('done')
   end
 
@@ -217,8 +216,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     passada(run, 5)
 
     # Assert 2 — o arquivo, e o link em lugar nenhum
-    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA])
-    expect(bot_contents.join).not_to include(url)
+    expect(bot_contents).to eq([nil])
+    expect(eventos_disparados(run)).to eq(['concluida'])
     expect(run.status).to eq('done')
     expect(mock).to have_received(:quote_proposal).twice
   end
@@ -246,14 +245,15 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert — um PDF só, e um pedido só ao portal
-    expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA])
+    expect(bot_contents).to eq([nil])
+    expect(eventos_disparados(run)).to eq(['concluida'])
     expect(bot_messages.flat_map(&:attachments).size).to eq(1)
     expect(mock).to have_received(:quote_proposal).once
     expect(run.reload.status).to eq('done')
   end
 
   describe 'esgotado o teto de tentativas do comparativo' do
-    it 'com o portal sem gerar o PDF, conclui sem comparativo, sem link e com o fecho' do
+    it 'com o portal sem gerar o PDF, conclui sem comparativo, sem link e com os valores guardados' do
       # Arrange
       run = cotacao_submetida
       ate_todas_com_desfecho(run)
@@ -263,13 +263,14 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       # Act
       [4, 5, 6].each { |tentativa| passada(run, tentativa) }
 
-      # Assert — sem comparativo e sem lote, o fecho diz que os valores podem ser pedidos na conversa
-      expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
+      # Assert — sem comparativo e sem lote, o evento diz que os valores estão guardados; a Lia fala
+      expect(bot_contents).to be_empty
+      expect(eventos_disparados(run)).to eq(['valores_guardados'])
       expect(run.status).to eq('done')
       expect(mock).to have_received(:quote_proposal).exactly(3).times
     end
 
-    it 'com o download sempre falhando, conclui sem comparativo, sem link e com o fecho' do
+    it 'com o download sempre falhando, conclui sem comparativo, sem link e com os valores guardados' do
       # Arrange
       run = cotacao_submetida
       ate_todas_com_desfecho(run)
@@ -280,48 +281,35 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       [4, 5, 6, 7].each { |tentativa| passada(run, tentativa) }
 
       # Assert
-      expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
-      expect(bot_contents.join).not_to include(url)
+      expect(bot_contents).to be_empty
+      expect(eventos_disparados(run)).to eq(['valores_guardados'])
       expect(run.status).to eq('done')
       expect(mock).to have_received(:quote_proposal).exactly(3).times
     end
   end
 
-  # NUNCA DOIS DESFECHOS. O `done` pergunta à conversa por cada frase de fecho possível desta execução
-  # (`Tools::Encerramento#fecho_publicado?`), como o encerramento já perguntava.
+  # NUNCA DOIS DESFECHOS. O slot do evento de fecho é um só por execução (`Tools::Evento::FECHO_KEY`): a porta que
+  # chega depois (o `done` depois do varredor, ou o contrário) não dispara outro.
   describe 'o desfecho no caminho done' do
-    it 'nao publica um segundo desfecho quando o fecho desta execucao ja esta na conversa' do
-      # Arrange — o fecho já publicado por outra porta (o varredor cruzando com o motor)
+    it 'nao dispara um segundo desfecho quando o slot desta execucao ja foi tomado' do
+      # Arrange — o desfecho já disparado por outra porta (o varredor cruzando com o motor)
       run = cotacao_submetida
       ate_todas_com_desfecho(run)
       pdf_responde(pdf_ok)
-      Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(cotacao.closing_message(run.arguments))
+      run.merge_handle!({ Autonomia::Agents::Tools::Evento::FECHO_KEY => 'encerrada_por_prazo' })
       portal_responde('partial', leitura_com_todas_com_desfecho)
 
       # Act
       passada(run, 4)
 
       # Assert
-      expect(bot_contents).to eq([fecho, cotacao::Comparativo::LEGENDA])
+      expect(bot_contents).to eq([nil])
+      expect(eventos_disparados(run)).to be_empty
       expect(run.status).to eq('done')
     end
 
-    # A FRASE QUE UMA VERSÃO ANTERIOR PUBLICAVA também conta (`FRASES_DE_FECHO` guarda a constante
-    # parcial para isso): a linha que atravessa o deploy não recebe o fecho novo ao lado do antigo.
-    it 'nao publica o fecho novo ao lado da frase parcial que a versao anterior publicou' do
-      run = cotacao_submetida
-      ate_todas_com_desfecho(run)
-      pdf_responde(pdf_ok)
-      Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish!(cotacao::PARCIAL)
-      portal_responde('partial', leitura_com_todas_com_desfecho)
-
-      passada(run, 4)
-
-      expect(bot_contents).to eq([cotacao::PARCIAL, cotacao::Comparativo::LEGENDA])
-    end
-
-    # TODAS RECUSARAM: nenhum preço, nenhum comparativo, e a frase de falha — sem esperar o prazo.
-    it 'com todas recusando, conclui com a frase de falha' do
+    # TODAS RECUSARAM: nenhum preço, nenhum comparativo, e o evento de falha — sem esperar o prazo.
+    it 'com todas recusando, conclui com o evento de falha' do
       run = cotacao_submetida
       portal_responde('running', leitura_inicial)
       passada(run, 1)
@@ -331,7 +319,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       passada(run, 3)
 
-      expect(bot_contents).to eq([cotacao.failure_message])
+      expect(bot_contents).to be_empty
+      expect(eventos_disparados(run)).to eq(['falhou'])
       expect(run).to have_attributes(status: 'done', delivered_count: 0)
       expect(mock).not_to have_received(:quote_proposal)
     end
@@ -339,16 +328,19 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
   # A LINHA EM VOO NO DEPLOY: o handle é o que a versão anterior grava depois da segunda consulta —
   # preço publicado e aceito, a identidade dele, a lista de acionadas —, sem a chave de tentativas do
-  # comparativo. A primeira passada desta versão encerra com o PDF e um desfecho só.
-  it 'a linha que atravessou o deploy conclui com o comparativo como ultima palavra' do
+  # comparativo. A primeira passada desta versão encerra com o PDF e um desfecho só: o evento de conclusão.
+  it 'a linha que atravessou o deploy conclui com o comparativo e o evento de conclusao' do
     # Arrange
     run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: cotacao.slug,
                                            arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } },
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
     texto = "Primeiros preços:\n\n• *Seguradora 8*: R$ 2.119,18 no total"
-    publicado = Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(texto)
-    Autonomia::Agents::Tools::EntregaAceita.registrar(run, texto, publicado)
+    # O lote de preços como a versão anterior o deixou: a mensagem com o token, o aceite e o contador.
+    token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: agent_bot,
+                     content: texto, content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => token })
+    run.registrar_entrega_aceita!(token)
     run.record_delivery!
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'q-1:1', 'produto' => 'auto',
                                   cotacao::DELIVERED_KEY => %w[8], cotacao::ACIONADAS_KEY => %w[11 19 20 47 8],
@@ -363,14 +355,15 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     passada(run, 8)
 
     # Assert
-    expect(bot_contents).to eq([texto, cotacao::Comparativo::LEGENDA])
+    expect(bot_contents).to eq([texto, nil])
+    expect(eventos_disparados(run)).to eq(['concluida'])
     expect(run.status).to eq('done')
   end
 
   # O VARREDOR, NO MEIO DE UMA NOVA TENTATIVA: a corrente de jobs morreu depois de a passada gravar o
   # portal fechado e a primeira tentativa do comparativo. Ele não pede o PDF (não começa trabalho
-  # novo) e, sem comparativo nem lote de preço (fatia 3 do #420), diz que os valores podem ser pedidos.
-  it 'o varredor fecha a linha abandonada esperando nova tentativa dizendo que os valores podem ser pedidos' do
+  # novo) e, sem comparativo nem lote de preço (fatia 3 do #420), o desfecho é o dos valores guardados.
+  it 'o varredor fecha a linha abandonada esperando nova tentativa com os valores guardados' do
     # Arrange
     run = cotacao_submetida
     ate_todas_com_desfecho(run)
@@ -382,18 +375,19 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
-    # Assert — sem comparativo, o fecho diz que os valores podem ser pedidos na conversa
-    expect(bot_contents).to eq([cotacao.valores_message(run.arguments)])
+    # Assert — sem comparativo, o evento dos valores guardados
+    expect(bot_contents).to be_empty
+    expect(eventos_disparados(run)).to eq(['valores_guardados'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
     expect(mock).to have_received(:quote_proposal).once
   end
 
   # A MORTE ENTRE GRAVAR O `done` E FECHAR A LINHA (um deploy: 25 s de shutdown do Sidekiq). A passada
-  # persistiu o handle com o portal fechado e o comparativo aceito. Até 21/09/2026 o varredor publicava
-  # ali o fecho que o `done` não chegou a publicar; desde que quem termina com o comparativo não recebe
-  # fecho, o varredor chega ao mesmo silêncio que o `done`, e a legenda fica como a última palavra.
+  # persistiu o handle com o portal fechado e o comparativo aceito. Desde a PR C o PDF sai sem legenda, e o
+  # desfecho de quem tem o comparativo é o evento de conclusão: o varredor o dispara no lugar do `done` que
+  # não chegou a dispará-lo, uma vez só.
   describe 'a passada done que morre antes do desfecho' do
-    it 'o varredor nao publica fecho: a legenda continua sendo a ultima palavra' do
+    it 'o varredor dispara a conclusao que o done nao chegou a disparar' do
       # Arrange — a passada grava o handle e morre antes de `finish_done`
       run = cotacao_submetida
       ate_todas_com_desfecho(run)
@@ -402,18 +396,20 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       morre = described_class.new
       allow(morre).to receive(:finish_done)
       morre.perform(run.id, 4)
-      expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA])
+      expect(bot_contents).to eq([nil])
+      expect(eventos_disparados(run)).to be_empty
       run.update!(expires_at: 10.minutes.ago)
 
       # Act
       Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
       # Assert
-      expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA])
+      expect(bot_contents).to eq([nil])
+      expect(eventos_disparados(run)).to eq(['concluida'])
       expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
     end
 
-    it 'o varredor nao acrescenta nada depois da legenda que o done publicou antes de morrer' do
+    it 'o varredor nao dispara um segundo desfecho depois da conclusao que o done disparou antes de morrer' do
       # Arrange — o comparativo sai e a passada morre antes do `finish!`
       run = cotacao_submetida
       ate_todas_com_desfecho(run)
@@ -423,20 +419,21 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       allow(Autonomia::Agents::ToolRun).to receive(:find_by).with(id: run.id).and_return(run)
       allow(run).to receive(:finish!).and_return(false)
       described_class.new.perform(run.id, 4)
-      expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA])
+      expect(eventos_disparados(run)).to eq(['concluida'])
       Autonomia::Agents::ToolRun.where(id: run.id).update_all(expires_at: 10.minutes.ago) # rubocop:disable Rails/SkipsModelValidations
 
       # Act
       Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
-      # Assert — nada depois da legenda, nem "não consegui", e a linha fechada pelo varredor
-      expect(bot_contents).to eq([cotacao::Comparativo::LEGENDA])
+      # Assert — o PDF, um desfecho só, e a linha fechada pelo varredor
+      expect(bot_contents).to eq([nil])
+      expect(eventos_disparados(run)).to eq(['concluida'])
       expect(Autonomia::Agents::ToolRun.find(run.id)).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
     end
   end
 
-  # A REGRA DO MOTOR, COM UMA FERRAMENTA QUALQUER: só a entrega de ARQUIVO recusada segura o `done`.
-  # A de texto recusada (a pergunta pelo dado que falta é devolvida em toda passada) encerra como antes.
+  # A REGRA DO MOTOR, COM UMA FERRAMENTA QUALQUER: a entrega de ARQUIVO recusada segura o `done`. Texto não é
+  # entrega desde a PR C: o `Progress` o descarta, e a passada encerra com o evento.
   describe 'o motor, com uma ferramenta qualquer' do
     def execucao_generica
       run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: 'consultar_cotacao', arguments: {},
@@ -448,8 +445,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     it 'a passada done cuja entrega de arquivo o publicador recusou e reagendada, e nao encerra' do
       # Arrange
-      forma = Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: 'arquivo.pdf', legenda: 'segue o arquivo',
-                                                             reserva: 'segue').to_h
+      forma = Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: 'arquivo.pdf').to_h
       register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: [forma])))
       pdf_responde(pdf_nao_encontrado)
       run = execucao_generica
@@ -463,48 +459,42 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(bot_contents).to be_empty
     end
 
-    # A PUBLICAÇÃO DO DESFECHO QUE LEVANTA não fecha a linha: a passada é tratada como falha e tentada
-    # de novo, como acontecia antes desta fatia quando a publicação do `finish_done` levantava (o
-    # enfileiramento da publicação adiada, com o Redis fora). A passada seguinte publica um desfecho só.
-    #
-    # Desde 21/09/2026 quem termina com resultado não recebe fecho, então a cobaia é o desfecho que o
-    # `done` ainda publica: a frase de falha de quem não recebeu nada. A proteção é a mesma.
-    it 'o desfecho cuja publicacao levanta nao fecha a linha, e a passada seguinte o publica uma vez' do
+    # O DESFECHO QUE NÃO ENTRA NA FILA não fecha a linha: a passada é tratada como falha e tentada de novo
+    # (`Encerramento#concluir` deixa subir, e o slot volta). A passada seguinte dispara um desfecho só.
+    it 'o desfecho que nao entra na fila nao fecha a linha, e a passada seguinte o dispara uma vez' do
       # Arrange
       register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: [])))
       run = execucao_generica
-      primeiro = described_class.new
-      allow(primeiro).to receive(:publish).and_wrap_original do |original, execucao, entrega|
-        raise Redis::CannotConnectError, 'redis fora' if entrega == 'não consegui concluir a consulta'
+      fila = Autonomia::Agents::Operate::EventoJob
+      chamadas = 0
+      allow(fila).to receive(:perform_later).and_wrap_original do |original, *args|
+        chamadas += 1
+        raise Redis::CannotConnectError, 'redis fora' if chamadas == 1
 
-        original.call(execucao, entrega)
+        original.call(*args)
       end
 
       # Act 1
-      primeiro.perform(run.id, 1)
+      passada(run, 1)
 
-      # Assert 1 — o desfecho não saiu, e a linha segue viva e reagendada
-      expect(bot_contents).to be_empty
-      expect(run.reload.status).to eq('running')
+      # Assert 1 — o desfecho não saiu, e a linha segue viva e reagendada, com o slot livre
+      expect(eventos_disparados(run)).to be_empty
+      expect(run.status).to eq('running')
+      expect(run.handle).not_to have_key(Autonomia::Agents::Tools::Evento::FECHO_KEY)
       expect(described_class).to have_been_enqueued.with(run.id, 2)
 
       # Act 2
       passada(run, 2)
 
       # Assert 2
-      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+      expect(eventos_disparados(run)).to eq(['falhou'])
+      expect(bot_contents).to be_empty
       expect(run.status).to eq('done')
     end
 
-    it 'a passada done cuja entrega de texto o publicador recusou encerra como antes' do
+    it 'a passada done que so trouxe texto encerra com o evento de falha, e o texto nao sai' do
       # Arrange
       register_async_tool(build_async_tool(poll: Autonomia::Agents::Tools::Progress.done(deliveries: ['me diga a placa'])))
-      original = Messages::MessageBuilder.method(:new)
-      allow(Messages::MessageBuilder).to receive(:new) do |*args|
-        raise ActiveRecord::StatementInvalid, 'canal fora' if args[2][:content].to_s.include?('placa')
-
-        original.call(*args)
-      end
       run = execucao_generica
 
       # Act
@@ -512,7 +502,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
       # Assert
       expect(run.status).to eq('done')
-      expect(bot_contents).to eq(['não consegui concluir a consulta'])
+      expect(bot_contents).to be_empty
+      expect(eventos_disparados(run)).to eq(['falhou'])
     end
   end
 end

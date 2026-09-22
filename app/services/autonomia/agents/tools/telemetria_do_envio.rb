@@ -21,14 +21,14 @@ module Autonomia::Agents::Tools::TelemetriaDoEnvio
   end
 
   # A SEGUNDA PORTA DE RECUSA (entrega 6): a conferência do turno passou (ou caiu) e a validação
-  # do `start` recusou. A ferramenta devolve handle com `pedido` — o contrato que `poll` já
+  # do `start` recusou. A ferramenta devolve handle com `recusa` (o motivo) — o contrato que `poll` já
   # reconhece — e é aqui, não nela, que se sabe a conversa e o agente. Registrar nunca derruba a
-  # execução: a entrega do pedido ao cliente vale mais que a nossa linha de log.
+  # execução: o evento da recusa vale mais que a nossa linha de log.
   def self.recusa_do_start(run:, handle:)
     handle = handle.to_h.deep_stringify_keys if handle.is_a?(Hash)
-    return unless handle.is_a?(Hash) && handle['pedido'].present?
+    return unless handle.is_a?(Hash) && handle['recusa'].present?
 
-    ::Autonomia::Agents::Tools::Recusa.registrar(handle['motivo'], slug: run.slug, conversa: run.conversation_id,
+    ::Autonomia::Agents::Tools::Recusa.registrar(handle['recusa'], slug: run.slug, conversa: run.conversation_id,
                                                                    agente: run.agent, faltando: handle['faltando'],
                                                                    onde: 'envio')
   rescue StandardError => e

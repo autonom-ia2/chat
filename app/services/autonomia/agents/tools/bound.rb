@@ -192,6 +192,8 @@ class Autonomia::Agents::Tools::Bound
   # entende que não vai acontecer e explica ao cliente com as próprias palavras.
   def async_refusal(delivery)
     return 'async_indisponivel_nesta_superficie' if delivery&.conversation.blank?
+    # O TURNO DE UM EVENTO DA COTAÇÃO NÃO ABRE COTAÇÃO (PR C): quem o acionou foi o sistema, não a pessoa.
+    return 'turno_de_evento' if delivery.try(:turno_de_evento?)
     return 'async_desligado' unless AsyncConfig.enabled?(@agent)
     return 'execucao_ja_aberta_neste_turno' if turn_already_opened?(delivery)
 

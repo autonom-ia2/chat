@@ -2,9 +2,9 @@
 #
 # Até 11/09/2026 o comparativo saía como texto com o link do portal. Quem está no WhatsApp espera o
 # arquivo: um link é uma aba, um arquivo é o que ele guarda e reencaminha. A ferramenta continua
-# sem baixar nada — ela não conhece conversa nem mensagem —: entrega a URL que o portal gerou, o
-# NOME que o arquivo vai ter e a legenda que sai com ele, e o publicador (`AsyncPublisher`) baixa na
-# hora de publicar.
+# sem baixar nada — ela não conhece conversa nem mensagem —: entrega a URL que o portal gerou e o
+# NOME que o arquivo vai ter, e o publicador (`AsyncPublisher`) baixa na hora de publicar. O arquivo sai SEM
+# legenda (PR C): quem fala junto dele é a Lia, no turno do evento de conclusão, que vem depois do PDF.
 #
 # O LINK DO PORTAL NÃO VAI AO CLIENTE (fatia 1 do PDF rápido, 13/09/2026). A URL do portal não tem
 # assinatura, leva o nome do segurado no caminho e baixa com HTTP 200 sem autenticação. Até essa data,
@@ -19,12 +19,6 @@
 module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   extend ActiveSupport::Concern
 
-  # As duas constantes de RECUO dos papéis `comparativo_legenda` e `comparativo_reserva`: em
-  # produção quem as escreve é o especialista, no pedido (`InsuranceQuote::Frases`).
-  LEGENDA = 'Comparativo com todas as opções.'.freeze
-  # A frase da reserva continua existindo: é a constante de recuo do papel `comparativo_reserva`, que
-  # continua no pedido, e a forma da entrega de arquivo exige uma reserva. Ela não é publicada.
-  RESERVA = 'Comparativo com todas as opções:'.freeze
   NOME = 'Comparativo de seguro'.freeze
   # Quantas vezes esta execução já pediu o comparativo ao portal na passada que fecha a cotação. Contado
   # por `fechar` antes de cada pedido; vai à linha junto da identidade do comparativo emitido, ou no
@@ -142,7 +136,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
       end
     end
     url = proposal.to_h['url'].presence
-    url && entrega_do_comparativo(url, handle)
+    url && entrega_do_comparativo(url)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] comparativo falhou account=#{account.id} #{e.class}")
     nil
@@ -173,28 +167,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Comparativo
   # URL; https não é promessa dele). Recusada, devolve nil — o comparativo não saiu — e o defeito vai
   # ao log pelo nome do campo, nunca pelo valor.
   #
-  # A URL SÓ ENTRA EM `url`, de onde o publicador baixa. A legenda e a reserva são as frases do
-  # especialista depuradas pela mesma função da saída (`depurar`), sem o link. A identidade de uma
-  # entrega de arquivo é `"arquivo:#{url}"` (`EntregaDeArquivo#identidade`): legenda e reserva não a
-  # alteram.
-  def entrega_do_comparativo(url, handle)
-    entrega = ::Autonomia::Agents::Tools::EntregaDeArquivo.new(
-      url: url, nome: nome_do_comparativo, legenda: depurar(legenda_do_comparativo(handle)).to_s,
-      reserva: depurar(frases[:comparativo_reserva]).to_s
-    )
+  # A URL SÓ ENTRA EM `url`, de onde o publicador baixa. A identidade de uma entrega de arquivo é
+  # `"arquivo:#{url}"` (`EntregaDeArquivo#identidade`).
+  def entrega_do_comparativo(url)
+    entrega = ::Autonomia::Agents::Tools::EntregaDeArquivo.new(url: url, nome: nome_do_comparativo)
     return entrega.to_h if entrega.valida?
 
     Rails.logger.warn("[autonomia][insurance] comparativo sem forma de arquivo account=#{account.id} " \
                       "defeito=#{entrega.defeito}; nao sai")
     nil
-  end
-
-  # A LEGENDA LEVA O AVISO DA RENOVAÇÃO SEM BÔNUS (fatia 3 do #420): ele saía junto do primeiro lote de
-  # preços, que deixou de existir, e o comparativo é agora o que leva os preços ao cliente.
-  def legenda_do_comparativo(handle)
-    return frases[:comparativo_legenda] if handle[self.class::SEM_BONUS_KEY].blank?
-
-    "#{frases[:comparativo_legenda]}\n\n#{frases[:aviso_sem_bonus]}"
   end
 
   # O NOME DIZ O QUE O ARQUIVO É, para o cliente achá-lo depois (termo 5): "Comparativo de seguro,

@@ -11,6 +11,10 @@ require 'rails_helper'
 # nome do segurado no caminho e baixa sem autenticação. Até essa data, o download que falhava mandava
 # o texto com o link; agora é um comparativo que não saiu, e os exemplos de falha abaixo afirmam a
 # ausência do link e o que acontece no lugar dele.
+#
+# DESDE A PR C o arquivo sai SEM LEGENDA e o desfecho é um EVENTO: o que se lê depois do PDF é a Lia, num
+# turno próprio. O preço em texto da versão anterior (o lote de preços) só existe nas execuções que
+# atravessaram o deploy, e é assim que ele entra aqui: criado como a versão anterior o deixou na conversa.
 RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   let(:account) do
     create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
@@ -66,25 +70,20 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run
   end
 
-  # PUBLICA PELO CAMINHO REAL E PASSA PELO ACEITE, como o motor faz (`AsyncRunJob#deliver`), e
-  # devolve o TOKEN da entrega. Levanta se a publicação não entrar: um Arrange que mente sobre o que
-  # o cliente recebeu não prova nada.
-  #
-  # O ACEITE É O PONTO (rodada 5): o encerramento só pede o comparativo a quem TEM preço na tela, e
-  # a pergunta é ao aceite — a identidade emitida (`PRECOS_KEY`) cruzada com a lista que o publicador
-  # escreve ao assumir a entrega. Publicar direto, sem registrar o aceite e sem a cobertura
-  # `preco_legado`, fazia os dois exemplos do comparativo passarem pela PROVA LEGADA (`entregues`
-  # não vazio) em vez do cruzamento que dizem exercitar.
-  def publicar_e_aceitar!(run, entrega)
-    publicador = Autonomia::Agents::Tools::AsyncPublisher.new(run: run)
-    resultado = Autonomia::Agents::Tools::EntregaAceita.registrar(run, entrega, publicador.publish(entrega))
-    raise "o Arrange nao publicou a entrega: #{resultado.status}" unless resultado.published?
-
+  # O PREÇO QUE A VERSÃO ANTERIOR PUBLICOU E TEVE ACEITO: a mensagem com o token dela, o aceite na linha e o
+  # contador, como o motor de então deixava. Devolve o TOKEN. O ACEITE É O PONTO (rodada 5): o encerramento só
+  # pede o comparativo a quem TEM preço na tela, e a pergunta é ao aceite — a identidade emitida (`PRECOS_KEY`)
+  # cruzada com a lista que o publicador escreveu ao assumir a entrega.
+  def publicar_e_aceitar!(run, texto)
+    token = Autonomia::Agents::Tools::EntregaPublicada.token_de(run, texto)
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: agent_bot,
+                     content: texto, content_attributes: { Autonomia::Agents::Tools::EntregaPublicada::CHAVE => token })
+    run.registrar_entrega_aceita!(token)
     run.record_delivery!
-    Autonomia::Agents::Tools::EntregaPublicada.token_de(run, entrega)
+    token
   end
 
-  it 'entrega o comparativo como anexo, nomeado pela placa, e depois o fecho' do
+  it 'entrega o comparativo como anexo sem texto, nomeado pela placa, e depois o evento de desfecho' do
     # Arrange
     run = cotacao_com_preco_publicado_e_prazo_vencido
     stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
@@ -92,13 +91,13 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     described_class.new.perform(run.id, 5)
 
-    # Assert — o preço, o arquivo (legenda sem link), o fecho
-    expect(bot_messages.map(&:content)).to eq([preco, cotacao::Comparativo::LEGENDA, cotacao::FECHO_COM_RESULTADO])
+    # Assert — o preço, o arquivo (sem texto), e o evento de desfecho: quem fala depois do PDF é a Lia
+    expect(bot_messages.map(&:content)).to eq([preco, nil])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     anexo = bot_messages.second.attachments.sole
     expect(anexo.file_type).to eq('file')
     expect(anexo.file.filename.to_s).to eq('Comparativo de seguro, placa ABC1D23.pdf')
     expect(anexo.file).to have_attributes(content_type: 'application/pdf', download: pdf)
-    expect(bot_messages.map(&:content).join).not_to include(url)
     expect(run.reload.status).to eq('failed')
     # O blob anexado nunca vai para a limpeza (rodada 5): o `download` acima ainda funcionaria com
     # o `PurgeJob` só enfileirado, então a afirmação é sobre a fila.
@@ -106,7 +105,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   end
 
   # O 404 do armazenamento do portal (XML de `BlobNotFound`), pela porta do prazo. O link não sai, o
-  # preço que já saiu fica, a entrega não conta, e o fecho de quem tem resultado sai do mesmo jeito.
+  # preço que já saiu fica, a entrega não conta, e o desfecho de quem tem resultado sai do mesmo jeito.
   it 'nao manda o link quando o download falha, sem apagar o preco que ja saiu' do
     # Arrange
     run = cotacao_com_preco_publicado_e_prazo_vencido
@@ -118,8 +117,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     described_class.new.perform(run.id, 5)
 
     # Assert
-    expect(bot_messages.map(&:content)).to eq([preco, cotacao::FECHO_COM_RESULTADO])
-    expect(bot_messages.map(&:content).join).not_to include(url)
+    expect(bot_messages.map(&:content)).to eq([preco])
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
     expect(run.reload.delivered_count).to eq(entregues_antes)
     expect(run.status).to eq('failed')
@@ -141,8 +140,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-0:1',
                                   cotacao::DELIVERED_KEY => %w[8 3 55 999], 'produto' => 'auto' })
-    Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
-    run.record_delivery!
+    publicar_e_aceitar!(run, preco)
 
     # Act
     described_class.new.perform(run.id, 1)
@@ -162,8 +160,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     described_class.new.perform(run.id, 5)
 
-    expect(bot_messages.map(&:content)).to eq([preco, cotacao::FECHO_COM_RESULTADO])
+    expect(bot_messages.map(&:content)).to eq([preco])
     expect(bot_messages.flat_map(&:attachments)).to be_empty
+    expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
   end
 
   # A FALHA DO ANEXO DEPOIS DE UM DOWNLOAD BOM, pelo caminho da consulta (rodada 3, P2). O arquivo é
@@ -178,8 +177,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
     run.record_attempt!(handle: { described_class::SUBMITTED_KEY => true, 'quote_id' => 'mock-0:1',
                                   cotacao::DELIVERED_KEY => %w[8 3 55 999], 'produto' => 'auto' })
-    Autonomia::Agents::Tools::AsyncPublisher.new(run: run).publish(preco)
-    run.record_delivery!
+    publicar_e_aceitar!(run, preco)
     stub_request(:get, url).to_return(status: 200, body: pdf, headers: { 'Content-Type' => 'application/pdf' })
     allow(ActiveStorage::Blob.service).to receive(:upload).and_raise(Errno::ECONNREFUSED)
 

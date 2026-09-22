@@ -61,61 +61,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
            'conferência", "processando", "em análise", "não há dados disponíveis" — e não invente ' \
            'valores, prazos nem nomes de seguradora.'.freeze
 
-  # O AVISO DE ESPERA SAI ANTES DE O PEDIDO SAIR. `AsyncRunJob#notify_start` o publica na primeira
-  # passada, ANTES de `advance` chamar `tool.start` — que tem cinco caminhos de recusa (JSON
-  # inválido, formulário indisponível, sem veículo, falta dado, ramo desconhecido). Até 12/09/2026
-  # ele dizia "Estou consultando as seguradoras agora", que é exatamente o que `ACEITA` proíbe ao
-  # modelo duas linhas acima: afirmar um envio que ainda não aconteceu. Diz o que é verdade naquele
-  # instante — o pedido foi recebido e está sendo cuidado.
-  ESPERANDO = 'Já estou cuidando do seu pedido. Volto aqui assim que tiver notícia.'.freeze
-
-  FALHOU = 'Não consegui concluir a cotação agora. Um atendente vai retomar daqui.'.freeze
-
-  # O FECHO DE QUEM JÁ TEM PREÇO NA TELA e cuja execução acabou sem fechar. Ele substitui a
-  # `PARCIAL` (decisão do CEO, 12/09/2026): aquela contava ao cliente a nossa mecânica de leque —
-  # quantas seguradoras não responderam —, e esse número é do corretor, que já o tem no Super Admin
-  # ("Seguradoras acionadas" e "Com preço"). O ESTADO continua falando: calar quem recebeu preços e
-  # ficou esperando o resto é o defeito de 08/09/2026 pela outra ponta.
-  FECHO_COM_RESULTADO = 'Encerrei a busca de preços por aqui. Se quiser, posso retomar a cotação ' \
-                        'ou chamar um atendente.'.freeze
-
-  # NÃO SAI MAIS AO CLIENTE, E CONTINUA AQUI POR UM MOTIVO SÓ: a execução que ATRAVESSA O DEPLOY. A
-  # identidade de uma entrega é o SHA do texto (`ToolRun#delivery_token`), e é por ela que o fecho
-  # pergunta se já publicou (`Tools::Encerramento#fecho_publicado?`). A execução aberta antes do
-  # deploy recebeu ESTE texto da versão antiga; tirá-lo do conjunto de perguntas faria esta versão
-  # publicar um segundo desfecho ao lado do primeiro, um contradizendo o outro. É proteção de
-  # roll-forward, não de rollback — a volta atrás leva este arquivo junto, e com ele a pergunta.
-  # Quem fala neste estado agora é `FECHO_COM_RESULTADO`.
-  PARCIAL = 'Algumas seguradoras não responderam a tempo. Os preços acima são os que chegaram.'.freeze
-
-  # O FECHO DE QUEM TEM PREÇO E NÃO RECEBEU O COMPARATIVO (fatia 3 do #420): o PDF falhou nas três
-  # tentativas, ou a execução acabou antes dele. Os preços estão guardados e a Lia os escreve quando o
-  # cliente pede (`ver_resultado_da_cotacao`); a frase diz isso, sem valor nenhum.
-  VALORES_NA_CONVERSA = 'Os valores de cada seguradora estão guardados comigo. Se quiser, me peça aqui ' \
-                        'mesmo que eu te passo.'.freeze
-
-  # O desfecho de quem pode ter uma cotação aberta no portal sem que a gente saiba o número
-  # (entrega 5): o job decidiu submeter e o número nunca chegou. Não diz "não consegui" — a cotação
-  # pode estar pronta lá. Diz o que é verdade.
-  INCERTO = 'Não consegui confirmar se a cotação foi aberta nas seguradoras. Um atendente vai ' \
-            'conferir e retomar daqui.'.freeze
-
-  private
-
-  # AS FRASES DESTA EXECUÇÃO, resolvidas UMA vez. `Frases.de` é função pura dos argumentos da
-  # chamada: a mesma resposta em toda passada, em todo processo e também fora da instância (o motor
-  # publica o aviso de espera pela classe, o encerramento publica o fecho sem agente). Nada é
-  # persistido no handle, e é isso que evita a armadilha do `record_attempt!` regravando uma cópia
-  # velha.
-  def frases
-    @frases ||= ::Autonomia::Agents::Tools::Native::InsuranceQuote::Frases.de(params)
-  end
-
-  # O texto na forma em que ele vai sair, pela MESMA função que o `Progress` aplica na saída — é
-  # sobre ela que a identidade da entrega é calculada. nil quando não sobrou texto.
-  def depurar(texto)
-    ::Autonomia::Agents::Tools::Progress.entregavel(texto.to_s)
-  end
+  # AS FRASES AO CLIENTE SAÍRAM DAQUI (PR C). Havia seis constantes de desfecho e o nó `frases_ao_cliente`, em que
+  # o especialista escrevia no pedido as doze frases que o motor publicava. Agora o motor dispara um evento e a
+  # Lia fala num turno de modelo (`Tools::Evento`); o que esta ferramenta diz é para o MODELO (`Eventos`).
 
   # `module ClassMethods` em vez de `class_methods do`: mesmo efeito no concern, e um módulo não
   # tem o teto de linhas de bloco — o catálogo de textos cresce a cada ramo.
@@ -137,11 +85,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
       DESCRICAO
     end
 
-    # OS COMUNS MAIS O NÓ DAS FRASES. É método, e não uma constante somada a `COMUNS`, porque
-    # `Frases` mora dentro desta classe: montar a lista na carga do arquivo pediria o nó antes de a
-    # classe existir.
     def params
-      COMUNS + [::Autonomia::Agents::Tools::Native::InsuranceQuote::Frases.parametro]
+      COMUNS
     end
 
     # O FORMULÁRIO DE UMA CONTA: os campos comuns a todo ramo + os de auto, gerados do schema que o
@@ -192,48 +137,6 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
 
     def accepted_message
       ACEITA
-    end
-
-    # OS TEXTOS QUE O MOTOR PUBLICA SEM INSTÂNCIA passam a ser escritos pelo especialista no
-    # pedido (decisão do CEO, 12/09/2026). `arguments` é o `ToolRun#arguments` — os mesmos
-    # argumentos com que a ferramenta foi chamada —, e `Frases.de` é função pura deles: sem
-    # argumentos, ou com uma frase que a peneira reprova, sai a constante de recuo desta classe.
-    # É por isso que o fecho continua saindo com o agente já apagado.
-    def waiting_message(arguments = nil)
-      frases(arguments)[:espera]
-    end
-
-    def failure_message(arguments = nil)
-      frases(arguments)[:falhou]
-    end
-
-    # Continua devolvendo a constante, e só ela: esta frase não sai mais ao cliente e existe para o
-    # conjunto de perguntas da execução que atravessa o deploy (ver `PARCIAL`).
-    def partial_message(_arguments = nil)
-      PARCIAL
-    end
-
-    def uncertain_message(arguments = nil)
-      frases(arguments)[:incerto]
-    end
-
-    def closing_message(arguments = nil)
-      frases(arguments)[:fecho_com_resultado]
-    end
-
-    def valores_message(arguments = nil)
-      frases(arguments)[:valores_na_conversa]
-    end
-
-    # -> os papéis cujo texto de recuo está nesta mensagem (`Frases.recuos_em`), para o registro no log.
-    def recuos_em(texto)
-      ::Autonomia::Agents::Tools::Native::InsuranceQuote::Frases.recuos_em(texto)
-    end
-
-    private
-
-    def frases(arguments)
-      ::Autonomia::Agents::Tools::Native::InsuranceQuote::Frases.de(arguments)
     end
   end
 end
