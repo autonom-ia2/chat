@@ -5,22 +5,14 @@
 
 ## Onde estamos
 
-**Fase 0 concluída e aguardando aprovação do Rodrigo**, no PR **#598**, branch
-`docs/502-central-fase-0` (worktree `~/dev/worktrees/chat2you/502-central-fase-0`).
-O PR é só documentação e não dispara deploy.
-
-Aprovar em #598:
-1. `mapa-de-artigos.md` / `.json`: **157 artigos em 19 capítulos** (ajustado em 22/09: saíram 17.03 e 06.05). A prova de cobertura
-   está no fim: 126/126 telas, 284/284 assuntos, 11/11 funcionalidades sem tela, 142/157
-   com botão.
-2. `kit-do-escritor.md`: formato, tom, vocabulário, regra de verdade, prints, checklist.
-
-Apoio, na mesma pasta:
-- `estudo/2026-09-08-apuracao.json`: estudo de 08/09 (14 agentes, 284 assuntos, 1.156
-  armadilhas, 1.637 evidências de código), recuperado de
-  `~/.claude/projects/.../workflows/wf_e6acc683-dbe.json`;
-- `pesquisa-central-do-chatwoot.md`;
-- `cobertura.md` / `.json`.
+22/09/2026:
+- **#598** (mapa de 157 artigos, kit, campo `requer`) e **#600** (capítulo 02, exemplo-ouro
+  aprovado pelo Rodrigo) estão no main.
+- **#599** no ar: a Central é só leitura para todas as contas (conferido em produção).
+- **#602** no ar: sem verificação em duas etapas onde a entrada é pelo login único; runbook
+  das chaves em `docs/production-env-secrets.md`. **#603** no ar: seletor acessível no perfil.
+- **Ensaio do exército feito no capítulo 05** (7 artigos), neste PR. Mapa corrigido: 5 botões
+  apontavam para `settings_home` (fora do escopo). Roteiro de prints: `pnpm central:prints`.
 
 ## Decisões do Rodrigo (não reabrir)
 
@@ -53,29 +45,25 @@ Apoio, na mesma pasta:
 
 ## Próximos passos, em ordem
 
-1. **Rodrigo aprova o #598** (mapa e kit). Pode pedir ajuste: o `.json` é a fonte, e o
-   `.md` descreve.
-2. **Exemplo-ouro:** escrever à mão o capítulo **02 Configurações pessoais** (8 artigos),
-   com os prints e os botões, reaproveitando o capítulo 1 do playbook de 09/09
-   (artefato https://claude.ai/artifact/AEf1koykddcv1R654nrc43, cópia local em
-   `~/.claude/projects/-Users-rodrigosilva-dev-projetos-noindex-chat2you/a9e1eafb-5894-4277-af99-55ee38fe4e69/tool-results/artifact-4aca57e3-1788947096-62f3.html`).
-   Tudo reconferido no código de hoje. Rodrigo aprova o tom e o formato.
-3. **Roteiro de captura de prints** (script, conta de teste local).
-4. **Ensaio do exército:** 1 escritor + 3 revisores (fatos no código, didática pelo kit,
-   coerência) no capítulo **05 Times**. Comparar com o ouro e ajustar o kit.
-5. **Exército:** um escritor Sonnet 5 por capítulo restante, em paralelo, e depois 3
-   revisores por capítulo. Por último, a leitura final e PRs por lote.
-6. **Capítulo 18 (conceitos)** é escrito com o Rodrigo, não pelo exército.
-7. **#501 (código):** configuração do portal da Plataforma; tela de leitura no painel;
-   "Central de Ajuda" na barra lateral leva a ela; editor fechado; link "Docs" do menu do
-   perfil aponta para ela; **bloqueios** (nenhuma caixa ligada ao portal da Plataforma e
-   Copilot ignorando esse portal); esconder artigo cujo `requer` a conta não tem. **Visível
-   desde já**, sem esperar o conteúdo. A trava de edição vem primeiro, em PR próprio.
-8. **#502 (código):** publicação automática do repositório para os portais das duas
-   stacks. Slug com prefixo fixo: o slug de artigo é único no banco inteiro.
-9. **Issue nova:** o Guia lendo a Central (`ler_da_central` + botão "Ler o artigo completo").
-10. **Ligar** nas duas stacks, com o OK do Rodrigo (é configuração de produção), e conferir
-    numa conta de cliente de cada stack.
+1. **Rodrigo lê o capítulo 05** (ensaio) e diz se o exército pode sair.
+2. **Exército**, um capítulo por escritor Sonnet 5, em lotes de 3 a 4 capítulos por vez
+   (custo e revisão sob controle). Processo validado no ensaio:
+   1. escritor lê kit + capítulo 02 + mapa + estudo + `porques.md` e escreve;
+   2. três revisores em paralelo: **fatos** (um por artigo, confere cada frase no código),
+      **didática** (kit + ouro), **coerência** (mapa, links, outros capítulos);
+   3. o mesmo escritor aplica as três revisões numa rodada;
+   4. o editor (sessão principal) confere por script e lê os artigos mais densos.
+   O revisor de fatos tem de gravar o relatório em arquivo (no ensaio ele não gravou).
+3. **Capítulo 18 (conceitos)** é escrito com o Rodrigo, não pelo exército.
+4. **Prints:** captura por script na conta de teste local (precisa do painel local no ar),
+   a partir de `docs/central-de-ajuda/prints/roteiro.json`.
+5. **#501 (código):** tela de leitura no painel; "Central de Ajuda" na barra lateral leva a
+   ela; esconder artigo cujo `requer` a conta não tem; link "Docs" do menu do perfil;
+   bloqueios (nenhuma caixa ligada ao portal da Plataforma, Copilot ignorando esse portal).
+6. **#502 (código):** publicação automática do repositório para os portais das duas stacks.
+   Slug com prefixo fixo: o slug de artigo é único no banco inteiro.
+7. **Issue nova:** o Guia lendo a Central (`ler_da_central` + botão "Ler o artigo completo").
+8. **Ligar** nas duas stacks, com o OK do Rodrigo, e conferir numa conta de cada stack.
 
 ## Ambiente de teste real local (para prints e para testar o Guia)
 

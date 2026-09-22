@@ -354,3 +354,6 @@ Conferido contra o código e contra produção (só leitura, as duas stacks):
 - **Campo `requer` (decisão do Rodrigo):** cada artigo do `.json` diz o recurso de que depende,
   tirado do portão da tela do botão. 88 artigos dependem de um recurso; 69 valem para todos. A
   tela de leitura e o Guia escondem o artigo das contas que não têm o recurso.
+- **Botões corrigidos no ensaio do capítulo 05:** 04.07, 07.04, 07.06 e 07.11 apontavam para
+  `settings_home`, que é só redirecionamento e está fora da Central; agora levam à lista de
+  caixas de entrada (`settings_inbox_list`). O 05.03 leva à lista de times.

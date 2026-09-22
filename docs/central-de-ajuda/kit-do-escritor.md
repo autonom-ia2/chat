@@ -64,7 +64,8 @@ artigo. Por isso o texto **não** diz "se a sua conta tiver…": quem lê, tem.
 O botão **Me leve até lá** não vai no texto: ele sai do cabeçalho (`me_leve_ate_la`) e a
 tela de leitura o desenha. Nunca escreva "clique aqui" nem cole endereço de tela.
 
-Tamanho: 150 a 600 palavras. Se passou disso, o artigo é dois.
+Tamanho: 150 a 600 palavras; o normal é **350 a 450**, como no capítulo 02. Se passou de
+600, o artigo é dois.
 
 Duas exceções:
 - **Capítulo 00 (a trilha de Primeiros passos):** artigo curto, até 250 palavras. Diz o que o
@@ -74,6 +75,16 @@ Duas exceções:
   grosso é tabela. "Como faz" vira "Como consultar".
 
 ## 4. Tom
+
+Lições do ensaio do capítulo 05 (22/09/2026), onde o escritor acertou os fatos e errou o
+tom:
+
+- **"O que é" define a coisa, não a tela.** Ruim: "Atribuição de Agentes é a tela onde...".
+  Bom: "A distribuição automática entrega cada conversa nova a uma pessoa do atendimento,
+  sem ninguém precisar escolher." A tela aparece em "Como faz".
+- **Passo numerado é uma ação.** "O modo Equilibrado fica bloqueado sem o plano" não é passo:
+  vai para "O que dá errado" ou vira frase depois da lista.
+- **Frase de até 25 palavras**, sem cadeia de travessões e parênteses. Quebre em duas.
 
 - Frase curta. Uma ideia por frase. Voz ativa. "Você", nunca "o usuário".
 - Português do Brasil, com acento. Sem inglês quando existe palavra em português.
