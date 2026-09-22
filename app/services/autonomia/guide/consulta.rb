@@ -15,8 +15,6 @@
 class Autonomia::Guide::Consulta
   class Recusada < StandardError; end
 
-  PREFIXO = '/api/v1/accounts/'.freeze
-
   # Rotas que pedem identificador que o Guia não tem como adivinhar ficam fora do
   # catálogo oferecido ao modelo: sem o id, a chamada só produziria erro. O
   # parâmetro no roteador começa com dois pontos — basta procurar o caractere.
@@ -39,13 +37,7 @@ class Autonomia::Guide::Consulta
     @catalogo ||= Rails.application.routes.routes.filter_map do |rota|
       next unless rota.verb.to_s == 'GET'
 
-      caminho = rota.path.spec.to_s.sub('(.:format)', '')
-      next unless caminho.start_with?(PREFIXO)
-
-      recurso = caminho.sub("#{PREFIXO}:account_id/", '')
-      next if recurso.blank?
-
-      recurso
+      ::Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))
     end.uniq.sort
   end
 
@@ -127,7 +119,7 @@ class Autonomia::Guide::Consulta
       CGI.escape(valor)
     end
 
-    "#{PREFIXO}#{@account.id}/#{segmentos.join('/')}"
+    ::Autonomia::Guide::Rotas.caminho(@account.id, segmentos)
   end
 
   # A chamada sai com o token do próprio usuário: é o mecanismo oficial da API e
