@@ -437,7 +437,7 @@
      ],
      "me_leve_ate_la": {
       "rota": "profile_settings_index",
-      "destaque": null
+      "destaque": "profile-update-basic"
      },
      "requer": null,
      "prints": [],
@@ -460,7 +460,7 @@
      ],
      "me_leve_ate_la": {
       "rota": "profile_settings_index",
-      "destaque": null
+      "destaque": "profile-change-password"
      },
      "requer": null,
      "prints": [],
@@ -583,7 +583,7 @@
      ],
      "me_leve_ate_la": {
       "rota": "profile_settings_index",
-      "destaque": null
+      "destaque": "profile-copy-access-token"
      },
      "requer": null,
      "prints": [],
