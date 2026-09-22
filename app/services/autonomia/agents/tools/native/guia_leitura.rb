@@ -42,7 +42,8 @@ class Autonomia::Agents::Tools::Native::GuiaLeitura < Autonomia::Agents::Tools::
         # como texto JSON, e o que é fixo vem como campo próprio.
         { 'name' => 'parametros_json', 'type' => 'string', 'required' => false,
           'description' => 'Preenche os ":id" da rota, como objeto JSON. Para "contacts/:id", ' \
-                           '{"id":"123"}. Deixe vazio quando a rota não tiver ":".' },
+                           '{"id":"123"}. O que não for ":" da rota vai como filtro da leitura, do jeito que ' \
+                           'a tela manda: para "crm/kanban", {"pipeline_id":"10"} traz o funil 10.' },
         { 'name' => 'status', 'type' => 'string', 'required' => false,
           'description' => 'Filtra a listagem por situação, quando o recurso aceitar (ex.: "open", "resolved").' },
         { 'name' => 'pagina', 'type' => 'string', 'required' => false,

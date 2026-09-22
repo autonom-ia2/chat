@@ -231,4 +231,52 @@ RSpec.describe Autonomia::Guide::Consulta do
       expect { JSON.parse(resposta.split(' [NOTA INTERNA').first) }.not_to raise_error
     end
   end
+
+  # #593 — em 22/09/2026 o Guia disse a um cliente que a caixa WhatsApp Comercial
+  # estava no funil Renovações. Não foi o modelo inventando: duas leituras
+  # devolveram dado errado sem avisar. Os dois casos aqui são os de verdade,
+  # contra a aplicação.
+  describe 'nada some calado da leitura' do
+    around { |exemplo| with_modified_env(CRM_KANBAN_ENABLED: 'true') { exemplo.run } }
+
+    let(:auto) { create_crm_pipeline(account: conta, user: admin, name: 'Seguro Auto').first }
+    let(:renovacoes) { create_crm_pipeline(account: conta, user: admin, name: 'Renovações').first }
+
+    # Pedindo `name` às caixas de um funil (que têm `inbox.name`), o item voltava
+    # só com `{"id":N}` — o id da LIGAÇÃO, que o modelo tomou pelo da caixa.
+    it 'avisa qual campo pedido não existe e quais existem', :aggregate_failures do
+      caixa = create_crm_inbox(account: conta, name: 'Email Renovação', members: [admin])
+      conta.crm_pipeline_inboxes.create!(pipeline: renovacoes, inbox: caixa, created_by: admin)
+
+      resposta = consulta.ler('crm/pipelines/:pipeline_id/inboxes', { 'pipeline_id' => renovacoes.id }, {},
+                              campos: %w[id name])
+
+      expect(resposta).to include('NÃO existem neste recurso e não vieram: name')
+      expect(resposta).to include('inbox.name')
+      # O aviso não come o espaço dos dados: o item continua vindo.
+      expect(JSON.parse(resposta.split(' [NOTA INTERNA').first)).to eq([{ 'id' => conta.crm_pipeline_inboxes.last.id }])
+    end
+
+    it 'não inventa aviso quando todos os campos pedidos existem', :aggregate_failures do
+      caixa = create_crm_inbox(account: conta, name: 'Email Renovação', members: [admin])
+      conta.crm_pipeline_inboxes.create!(pipeline: renovacoes, inbox: caixa, created_by: admin)
+
+      resposta = consulta.ler('crm/pipelines/:pipeline_id/inboxes', { 'pipeline_id' => renovacoes.id }, {},
+                              campos: %w[inbox_id inbox.name])
+
+      expect(resposta).not_to include('NÃO existem')
+      expect(JSON.parse(resposta.split(' [NOTA INTERNA').first))
+        .to eq([{ 'inbox_id' => caixa.id, 'inbox.name' => 'Email Renovação' }])
+    end
+
+    # O kanban lê `?pipeline_id=`. Antes o parâmetro era jogado fora e vinha o
+    # funil padrão — o Guia pediu o 10 e recebeu o 8.
+    it 'leva o parâmetro que não é do caminho como filtro, e traz o funil pedido', :aggregate_failures do
+      auto
+      resposta = consulta.ler('crm/kanban', { 'pipeline_id' => renovacoes.id })
+
+      expect(resposta).to include('Renovações')
+      expect(resposta).not_to include('Seguro Auto')
+    end
+  end
 end
