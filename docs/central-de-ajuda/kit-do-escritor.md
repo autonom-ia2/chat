@@ -105,6 +105,9 @@ Duas exceções:
 - **Todo fato é conferido no código de hoje.** O estudo de 08/09 e o `porques.md` são
   ponto de partida, não prova. Para cada fato do texto, abra o arquivo, confirme, e
   registre `arquivo:linha` em `evidencias`.
+- A prova é o código **que a tela usa**, não um parecido. Siga o `import` a partir da tela.
+  Ex.: o limite de imagem da assinatura é 4 MB (`WootWriter/Editor.vue:127`), não os 40 MB
+  do editor da conversa (`FileHelper.js:4`) — o estudo de 08/09 errou por isso.
 - Não confirmou? **Não escreva.** Nada de "a verificar" no texto publicado. Se o fato é
   importante e só se confirma olhando a tela, escreva no fim do arquivo, fora do texto:
   `<!-- CONFIRMAR NA TELA: ... -->` — o revisor ou o Rodrigo resolve.
