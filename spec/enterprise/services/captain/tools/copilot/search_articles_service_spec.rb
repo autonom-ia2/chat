@@ -87,6 +87,16 @@ RSpec.describe Captain::Tools::Copilot::SearchArticlesService do
         expect(result).to include(article2.to_llm_text)
       end
 
+      it 'ignores the platform help center portal' do
+        plataforma = create(:portal, account: account, slug: 'plataforma')
+        create(:article, account: account, portal: plataforma, author: user, title: 'Test Article da plataforma')
+
+        result = service.execute(query: 'Test', category_id: nil, status: nil)
+
+        expect(result).to include('Total number of articles: 2')
+        expect(result).not_to include('Test Article da plataforma')
+      end
+
       context 'when filtered by category' do
         let(:category) { create(:category, slug: 'test-category', portal: portal, account: account) }
         let!(:article3) { create(:article, account: account, portal: portal, author: user, category: category, title: 'Test Article 3') }

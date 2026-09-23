@@ -36,10 +36,11 @@ class Autonomia::CentralDeAjuda::ArtigoFonte
     @conteudo ||= linkar(sem_prints_ausentes(sem_comentarios(corpo))).strip
   end
 
-  # O primeiro parágrafo de "O que é": a frase que responde a pergunta sozinha (kit, seção 7).
+  # O primeiro parágrafo de "O que é": a frase que responde a pergunta sozinha (kit, seção 7). Sai como
+  # texto simples, sem negrito nem código, porque aparece em lista e em resultado de busca.
   def descricao
     secao = conteudo.split('## O que é', 2).last.to_s.split('## ', 2).first.to_s
-    secao.strip.split("\n\n").first.to_s.tr("\n", ' ').squeeze(' ')
+    texto_simples(secao.strip.split("\n\n").first.to_s.tr("\n", ' ').squeeze(' '))
   end
 
   def meta
@@ -63,6 +64,21 @@ class Autonomia::CentralDeAjuda::ArtigoFonte
     raise FormatoInvalido, "#{caminho}: cabeçalho não é um mapa" unless cabecalho.is_a?(Hash)
 
     [cabecalho, texto[(fim + 5)..]]
+  end
+
+  # "[Título](plataforma-02-04)" vira "Título"; negrito e código perdem a marcação.
+  def texto_simples(texto)
+    saida = +''
+    resto = texto
+    while (abre = resto.index('['))
+      meio = resto.index('](', abre)
+      fecha = meio && resto.index(')', meio)
+      break unless fecha
+
+      saida << resto[0...abre] << resto[(abre + 1)...meio]
+      resto = resto[(fecha + 1)..]
+    end
+    (saida << resto).delete('*`')
   end
 
   def sem_comentarios(texto)

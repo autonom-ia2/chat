@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (163 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (155 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -649,16 +649,15 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: o Guia nao abre chamado por conta propria; em white-label o item nativo de suporte pode ficar escondido mesmo com a feature ligada; nao envie senhas, tokens, chaves OpenAI, credenciais de S3/SMTP ou dados sensiveis em texto aberto.
 - nav_target: —
 
-### Gerenciar Central de Ajuda
-- intent: Onde fica a Central de Ajuda?; Como crio artigo ou categoria?; Como mudo idioma do portal?; Onde configuro portal de help center?
-- onde_fica: Sidebar > Central de Ajuda > Artigos, Categorias, Idiomas ou Configuracoes
-- rota: `portals_index` - `/app/accounts/:accountId/portals/:navigationPath`
-- gate: feature flag `help_center`; papel `administrator` ou `knowledge_base_manage`
-- perfil: `administrator`, `agent` ou custom role com `knowledge_base_manage` acessam as rotas de conteudo liberadas pela meta; criar o primeiro portal (`portals_new`) exige `administrator` ou custom role com `knowledge_base_manage`. Se o perfil nao puder, diga que a Central de Ajuda nao esta liberada para aquele usuario e oriente pedir permissao `knowledge_base_manage` ou acesso de administrador.
-- pre_requisitos: para editar conteudo, portal existente; para publicar em varios idiomas, locales adicionados ao portal
-- passos: 1. Abra Central de Ajuda na sidebar; 2. Entre em Artigos para listar, criar, editar, publicar ou filtrar por status; 3. Use Categorias para organizar artigos; 4. Use Idiomas para gerenciar locales do portal; 5. Use Configuracoes para nome, slug, dominio/widget e ajustes do portal.
-- gotchas: se nao houver portal, a tela redireciona para `portals_new`; agentes sem permissao de criacao podem precisar de um admin para criar o primeiro portal; a sidebar usa `portals_index` com `navigationPath`, mas a tela final cai nas rotas `portals_*`; dominio customizado/SSL so faz polling em Cloud.
-- nav_target: `portals_index`
+### Ler a Central de Ajuda
+- intent: Onde fica a Central de Ajuda?; Tem um manual da plataforma?; Onde aprendo a usar a plataforma?; Como acho um artigo de ajuda?; Onde fica a documentacao?; Como aumento a letra da Central de Ajuda?
+- onde_fica: Menu lateral > Central de Ajuda (tambem no menu da sua foto > Central de Ajuda)
+- rota: `central_de_ajuda` - `/app/accounts/:accountId/central-de-ajuda`
+- gate: papel `administrator` ou `agent` ou `custom_role`
+- pre_requisitos: nenhum
+- passos: 1. Abra Central de Ajuda no menu lateral; 2. Escreva na busca o que voce quer fazer, ou abra um assunto em Todos os assuntos; 3. Clique no artigo; 4. Use Me leve ate la para abrir a tela certa com o botao destacado; 5. Use A- e A+ para mudar o tamanho da letra.
+- gotchas: cada pessoa ve so os artigos dos recursos que a conta tem, e artigo de configuracao aparece so para administrador; o botao Me leve ate la some quando a tela nao existe para a conta; a letra escolhida vale em todos os aparelhos; os artigos sao da plataforma e ninguem edita pelo painel; logo depois de uma atualizacao da plataforma, a Central pode levar alguns minutos para mostrar o texto novo.
+- nav_target: `central_de_ajuda`
 
 ### Gerenciar catalogo de etiquetas
 - intent: Onde crio uma etiqueta nova?; Como edito cor ou nome de uma label?; Como escondo etiqueta da sidebar?; Onde apago uma etiqueta?
@@ -1525,86 +1524,6 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Empresas e clique na empresa; 2. Ajuste nome, domínio, descrição e avatar e atualize; 3. Use as abas de histórico, notas e contatos; 4. Em contatos, adicione pesquisando e confirmando o vínculo; 5. Use remover para desvincular.
 - gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta.
 - nav_target: `companies_dashboard_show`
-
-### Abrir a Central de Ajuda no portal certo
-- intent: Onde fica a Central de Ajuda?; Por que abriu outro portal?; Como troco de portal?; Sumiu a Central de Ajuda do menu, e agora?
-- onde_fica: Central de Ajuda
-- rota: `portals_index` - `/app/accounts/:accountId/portals/:navigationPath`
-- gate: feature flag `help_center`; papel `administrator` ou `knowledge_base_manage`
-- pre_requisitos: recurso de Central de Ajuda liberado na conta, e permissão de gerenciar base de conhecimento
-- passos: 1. Clique em Central de Ajuda e escolha artigos, categorias, localidades ou configurações; 2. a tela abre o último portal e idioma que você usou; 3. se o portal lembrado não existir mais, ela abre o primeiro portal da conta.
-- gotchas: não é uma tela de verdade, é um redirecionamento, por isso o endereço muda sozinho; sem nenhum portal criado, ela leva direto à criação; a lembrança do último portal é de cada usuário, então dois colegas podem abrir portais diferentes pelo mesmo item do menu.
-- nav_target: `portals_index`
-
-### Criar o portal da central de ajuda
-- intent: Como crio uma central de ajuda?; O que é portal?; O que preencho para criar o portal?; Onde escolho o endereço do portal?
-- onde_fica: Central de Ajuda > Criar portal
-- rota: `portals_new` - `/app/accounts/:accountId/portals/new`
-- gate: feature flag `help_center`; papel `administrator` ou `knowledge_base_manage`
-- pre_requisitos: permissão de gerenciar base de conhecimento
-- passos: 1. Clique em criar portal; 2. preencha o nome; 3. confira o endereço, preenchido sozinho a partir do nome; 4. crie; 5. o portal abre já na lista de artigos.
-- gotchas: só existem dois campos aqui, e logo, cor, domínio e integrações ficam para depois, em configurações; o endereço só aceita letras, números e hífen; o portal nasce com inglês como idioma padrão, então adicione o português antes de escrever; mudar o endereço depois muda o link público.
-- nav_target: `portals_new`
-
-### Ajustar aparência, domínio e integrações do portal
-- intent: Como coloco meu domínio na central de ajuda?; Onde troco o logo e a cor?; Como ligo o chat ao vivo no portal?; Como coloco a medição de acesso?; Como excluo um portal?
-- onde_fica: Central de Ajuda > Configurações
-- rota: `portals_settings_index` - `/app/accounts/:accountId/portals/:portalSlug/settings`
-- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
-- pre_requisitos: portal criado, e acesso ao painel de DNS para usar domínio próprio
-- passos: 1. Abra configurações e use as abas de geral, domínio, tema e integrações; 2. em geral ajuste logo, nome, textos e cor; 3. em domínio cadastre o seu endereço e aponte o registro indicado; 4. em tema escolha o leiaute e os links sociais; 5. em integrações ligue o chat ao vivo e as ferramentas de medição.
-- gotchas: trocar o endereço recarrega a tela no link novo e os antigos deixam de funcionar; excluir o portal pede o nome na confirmação e é permanente; sendo o último portal, a tela volta para a criação; dá para enviar as instruções de DNS por e-mail para quem cuida do site; campo de integração em branco desliga aquela integração.
-- nav_target: `portals_settings_index`
-
-### Cuidar dos idiomas do portal
-- intent: Como coloco a central de ajuda em português?; Como adiciono outro idioma?; O que é idioma em rascunho?; Como escolho o que aparece na página inicial do portal?
-- onde_fica: Central de Ajuda > Localidades
-- rota: `portals_locales_index` - `/app/accounts/:accountId/portals/:portalSlug/locales`
-- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
-- pre_requisitos: portal criado
-- passos: 1. Abra localidades e veja o cartão de cada idioma; 2. adicione um idioma novo, escolhendo se entra publicado ou em rascunho; 3. use o menu do cartão para tornar padrão, publicar ou mover para rascunho; 4. localize o conteúdo daquele idioma; 5. escolha as categorias e artigos em destaque na página inicial.
-- gotchas: idioma em rascunho não aparece para o visitante, e serve para montar o conteúdo antes de abrir; o idioma padrão é o que abre para quem entra e não pode ir para rascunho; campo em branco herda o valor do idioma padrão; artigos e categorias são por idioma, e escrever em português não gera as versões nos outros.
-- nav_target: `portals_locales_index`
-
-### Ver, filtrar e organizar os artigos do portal
-- intent: Onde vejo todos os artigos?; Como acho um artigo específico?; Como publico vários artigos de uma vez?; Como mudo a ordem dos artigos dentro da categoria?; Onde estão meus rascunhos?
-- onde_fica: Central de Ajuda > Artigos
-- rota: `portals_articles_index` - `/app/accounts/:accountId/portals/:portalSlug/:locale/:categorySlug?/articles/:tab?`
-- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
-- pre_requisitos: portal criado com pelo menos um idioma
-- passos: 1. Abra artigos; 2. escolha a aba de todos, meus, rascunho, publicado ou arquivado; 3. ajuste idioma e categoria; 4. busque pelo texto; 5. marque artigos para publicar, arquivar, mover de categoria ou excluir em lote.
-- gotchas: trocar o idioma limpa o filtro de categoria; arrastar para reordenar só existe dentro de uma categoria, e não funciona com busca ativa; a ação em lote pula artigos publicados que têm edições não publicadas e avisa quantos ignorou, menos quando a ação é publicar; excluir em lote é definitivo.
-- nav_target: `portals_articles_index`
-
-### Escrever um artigo do zero
-- intent: Como crio um artigo?; Em que categoria o artigo entra?; Como mudo o autor do artigo?; Escrevi o texto e não salvou, por quê?
-- onde_fica: Central de Ajuda > Artigos > Novo artigo
-- rota: `portals_articles_new` - `/app/accounts/:accountId/portals/:portalSlug/:locale/:categorySlug?/articles/new`
-- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
-- pre_requisitos: portal com o idioma escolhido e pelo menos uma categoria nesse idioma
-- passos: 1. Clique em novo artigo; 2. escreva o título e clique fora do campo, o que cria o artigo como rascunho; 3. ajuste autor e categoria; 4. escreva o conteúdo; 5. a tela passa sozinha para a edição do artigo criado.
-- gotchas: nada é salvo enquanto o título estiver vazio, porque é ele que cria o artigo; entrando pela categoria, o artigo já nasce nela, senão cai na primeira da lista; o salvamento automático do conteúdo só começa depois que o artigo existe; havendo arquivo subindo, a criação espera terminar.
-- nav_target: `portals_articles_new`
-
-### Editar, revisar e publicar um artigo
-- intent: Editei o artigo e o site não mudou, por quê?; Como publico as alterações?; Como volto atrás numa edição?; Onde coloco título e descrição para busca?; Como vejo o artigo como o cliente vê?
-- onde_fica: Central de Ajuda > Artigos > clicar no artigo
-- rota: `portals_articles_edit` - `/app/accounts/:accountId/portals/:portalSlug/:locale/:categorySlug?/articles/:tab?/edit/:articleSlug`
-- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
-- pre_requisitos: artigo já criado
-- passos: 1. Abra o artigo pela lista; 2. edite título e conteúdo, que salvam sozinhos; 3. pré-visualize para ver a página pública; 4. use o menu de status para publicar, voltar a rascunho ou arquivar; 5. em artigo publicado, publique as alterações, compare com o que está no ar ou descarte a edição.
-- gotchas: em artigo já publicado a edição fica guardada e não vai ao ar até você publicar as alterações, e é por isso que o site continua mostrando o texto antigo; mudar o status com alterações pendentes pergunta antes se aplica ou descarta; publicar fica bloqueado enquanto um salvamento ou envio de arquivo está em andamento; título e descrição para busca ficam no painel de propriedades, não no corpo do texto.
-- nav_target: `portals_articles_edit`
-
-### Criar e ordenar as categorias do portal
-- intent: Como agrupo os artigos por assunto?; Como crio uma categoria?; Como mudo a ordem das categorias no site?; Como renomeio ou excluo uma categoria?
-- onde_fica: Central de Ajuda > Categorias
-- rota: `portals_categories_index` - `/app/accounts/:accountId/portals/:portalSlug/:locale/categories`
-- gate: feature flag `help_center`; papel `administrator` ou `agent` ou `knowledge_base_manage` ou `knowledge_base_view`
-- pre_requisitos: portal criado com o idioma desejado
-- passos: 1. Abra categorias e escolha o idioma; 2. crie a categoria com nome, endereço, descrição e ícone; 3. arraste os cartões para definir a ordem no portal público; 4. clique numa categoria para ver e reordenar os artigos dela.
-- gotchas: categoria é por idioma, e criar em português não cria a equivalente nos outros; o endereço da categoria entra no link público; arrastar para reordenar não funciona com busca ativa; excluir pelo menu do cartão apaga na hora, sem tela de confirmação.
-- nav_target: `portals_categories_index`
 
 ### Levar as conversas para o Slack
 - intent: Como coloco as conversas no Slack?; Dá para responder o cliente de dentro do Slack?; Por que não acho o Slack nas integrações?; Conectei o Slack e nada chega, o que falta?

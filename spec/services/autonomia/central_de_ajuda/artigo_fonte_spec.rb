@@ -94,6 +94,13 @@ RSpec.describe Autonomia::CentralDeAjuda::ArtigoFonte do
     expect(fonte.descricao).to eq('A disponibilidade diz se você recebe conversas. Ela vale por conta.')
   end
 
+  it 'tira negrito, código e link da descrição' do
+    File.write(caminho, texto.sub('A disponibilidade diz se você recebe conversas.',
+                                  'A **disponibilidade** do `status` segue o [02.04].'))
+
+    expect(fonte.descricao).to eq('A disponibilidade do status segue o Sua assinatura. Ela vale por conta.')
+  end
+
   it 'guarda em meta os campos do cabeçalho que a tela de leitura usa, com o sha' do
     expect(fonte.meta).to include(
       'id' => '02.06', 'publico' => 'ambos', 'requer' => nil,

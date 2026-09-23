@@ -11,6 +11,8 @@ module Enterprise::Concerns::Inbox
     has_many :conversation_outcomes, dependent: :destroy_async
 
     before_create :ensure_create_permitted
+    # Caixa só se liga a portal da própria conta, e nunca ao da plataforma (#501).
+    include ::PortalDaCaixa
   end
 
   def ensure_create_permitted

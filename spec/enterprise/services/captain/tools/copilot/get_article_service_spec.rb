@@ -78,6 +78,15 @@ RSpec.describe Captain::Tools::Copilot::GetArticleService do
       end
     end
 
+    context 'when the article belongs to the platform help center' do
+      it 'returns not found message' do
+        plataforma = create(:portal, account: account, slug: 'plataforma')
+        artigo = create(:article, account: account, portal: plataforma, author: user)
+
+        expect(service.execute(article_id: artigo.id)).to eq('Article not found')
+      end
+    end
+
     context 'when article exists' do
       let(:portal) { create(:portal, account: account) }
       let(:article) { create(:article, account: account, portal: portal, author: user, title: 'Test Article', content: 'Content') }

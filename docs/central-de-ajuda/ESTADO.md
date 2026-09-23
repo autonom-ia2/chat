@@ -7,10 +7,14 @@ voltar.
 ## Onde estamos
 
 23/09/2026:
-- **161 de 162 artigos escritos** em `lib/central_de_ajuda/`. O #607 (exército, 149 artigos) está
-  no `main`. O capítulo 18 (12 artigos de conceito) foi escrito com o Rodrigo a partir das
-  reuniões de implantação e conferido no código.
-- **Falta:** 01.07 "Como usar a Central de Ajuda", depois da tela de leitura (#501).
+- **162 de 162 artigos escritos** em `lib/central_de_ajuda/`. O 01.07 "Como usar a Central de
+  Ajuda" entrou junto com a tela de leitura (#501).
+- **Publicação no ar (#610, 23/09):** portal `plataforma` na conta 1 das duas stacks, 19 capítulos,
+  161 artigos, conferido em produção. Roda sozinha a cada deploy.
+- **Tela de leitura (#501):** tela nossa no painel (`central_de_ajuda`), com busca, "Comece por
+  aqui", assuntos, artigo com "Me leve até lá" e destaque, A-/A+ guardado no perfil, links entre
+  artigos, anterior/próximo e "Pergunte ao Guia". Filtro por recurso e por papel no servidor.
+  Barra lateral e menu da foto levam a ela. O Guia deixou de ensinar o editor de portais.
 - **CONFIRMAR NA TELA** (resolver com os prints): 06.02, 08.09, 10.05, 10.08, 13.05, 15.01,
   15.02 (textos de tela); 10.12 (a ajuda do Dataset ID promete derivar da conexão do WhatsApp e
   o código não faz). O 10.07 foi resolvido pelo capítulo 18: o texto por etapa que a IA lê é o
@@ -104,6 +108,11 @@ bundle exec rails runner -e development <script>`. Cada pergunta ao Guia gasta a
 OpenAI do Rodrigo: diagnosticar sem modelo primeiro e rodar poucas perguntas.
 
 ## Pendências fora da Central
+
+- **Paleta de comandos quebra o painel em modo de desenvolvimento:** `useGoToCommandHotKeys.js`
+  aponta para `sla_list`, mas as rotas de SLA não são carregadas no fork. Em produção só gera erro no
+  console; em dev, o Vue relança e a tela para de redesenhar. Achado ao testar a #501, não corrigido.
+- **`Inbox` passa do limite de tamanho do rubocop** (177 de 175 linhas já no `main`).
 
 - **Ruleset `trava` no `main`:** ação do Rodrigo (Settings → Rules). Sem isso a trava do
   Guia avisa, mas não impede o merge.

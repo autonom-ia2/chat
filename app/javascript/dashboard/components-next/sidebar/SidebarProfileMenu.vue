@@ -114,12 +114,10 @@ const menuItems = computed(() => {
     },
     {
       show: true,
-      showOnCustomBrandedInstance: false,
+      showOnCustomBrandedInstance: true,
       label: t('SIDEBAR_ITEMS.DOCS'),
-      icon: 'i-lucide-book',
-      link: 'https://www.chatwoot.com/hc/user-guide/en',
-      nativeLink: true,
-      target: '_blank',
+      icon: 'i-lucide-library-big',
+      link: { name: 'central_de_ajuda' },
     },
     {
       show: true,

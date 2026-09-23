@@ -416,4 +416,27 @@ RSpec.describe Inbox do
       end
     end
   end
+
+  describe 'portal da caixa' do
+    let(:inbox) { create(:inbox) }
+
+    it 'aceita portal da própria conta' do
+      inbox.portal = create(:portal, account: inbox.account)
+
+      expect(inbox).to be_valid
+    end
+
+    it 'recusa portal de outra conta' do
+      inbox.portal = create(:portal)
+
+      expect(inbox).not_to be_valid
+      expect(inbox.errors[:portal_id]).to be_present
+    end
+
+    it 'recusa o portal da Central de Ajuda da plataforma, mesmo sendo da própria conta' do
+      inbox.portal = create(:portal, account: inbox.account, slug: 'plataforma')
+
+      expect(inbox).not_to be_valid
+    end
+  end
 end

@@ -382,12 +382,15 @@
      "publico": "ambos",
      "prioridade": "P1",
      "assuntos": [],
-     "rotas": [],
-     "me_leve_ate_la": null,
-     "requer": null,
-     "prints": [
-      "Página inicial da Central de Ajuda com a busca e as categorias"
+     "rotas": [
+      "central_de_ajuda"
      ],
+     "me_leve_ate_la": {
+      "rota": "central_de_ajuda",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
      "fontes": [],
      "revisar": false,
      "nota": null

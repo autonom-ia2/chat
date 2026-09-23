@@ -1106,6 +1106,57 @@
       "FROM_DOCUMENT": "A partir do documento",
       "NO_CONTENT": "Nenhum conteúdo gerado disponível. Envie um documento PDF para começar.",
       "LOADING": "Carregando conteúdo gerado..."
+    },
+    "CENTRAL_DE_AJUDA": {
+      "TITULO": "Central de Ajuda",
+      "SUBTITULO": "Aprenda a usar a plataforma no seu ritmo. Cada artigo tem um botão que leva você até a tela certa.",
+      "BUSCA": {
+        "ROTULO": "Buscar na Central de Ajuda",
+        "PLACEHOLDER": "O que você quer fazer?",
+        "DICA": "Exemplos: conectar o WhatsApp, trocar a senha, criar um funil.",
+        "RESULTADOS": "{count} artigo encontrado | {count} artigos encontrados",
+        "NADA": "Nenhum artigo com essas palavras. Tente outras palavras ou pergunte ao Guia.",
+        "LIMPAR": "Limpar a busca",
+        "BUSCANDO": "Buscando…",
+        "ERRO": "A busca não respondeu. Tente de novo."
+      },
+      "COMECE": {
+        "TITULO": "Comece por aqui",
+        "SUBTITULO": "Os primeiros passos, na ordem certa."
+      },
+      "ASSUNTOS": "Todos os assuntos",
+      "ARTIGOS_NO_CAPITULO": "{count} artigo | {count} artigos",
+      "PREPARANDO": {
+        "TITULO": "Estamos preparando a Central de Ajuda",
+        "TEXTO": "Os artigos aparecem aqui em alguns minutos. Volte daqui a pouco."
+      },
+      "ERRO": {
+        "TEXTO": "Não foi possível abrir a Central de Ajuda agora.",
+        "TENTAR": "Tentar de novo"
+      },
+      "ARTIGO": {
+        "VOLTAR": "Central de Ajuda",
+        "ME_LEVE": "Me leve até lá",
+        "ME_LEVE_AJUDA": "Abre a tela certa e mostra onde clicar.",
+        "ANTERIOR": "Anterior",
+        "PROXIMO": "Próximo",
+        "ATUALIZADO": "Atualizado em {data}",
+        "NAO_ENCONTRADO": "Este artigo não existe ou não vale para a sua conta.",
+        "AJUDA_TITULO": "Não resolveu?",
+        "AJUDA_TEXTO": "O Guia da Plataforma responde na hora, aqui mesmo no painel.",
+        "PERGUNTE": "Pergunte ao Guia"
+      },
+      "LETRA": {
+        "ROTULO": "Tamanho da letra",
+        "ATUAL": "Letra {tamanho}",
+        "NOMES": {
+          "normal": "normal",
+          "grande": "grande",
+          "maior": "maior"
+        },
+        "DIMINUIR": "Diminuir a letra",
+        "AUMENTAR": "Aumentar a letra"
+      }
     }
   }
 }
