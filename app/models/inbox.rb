@@ -41,7 +41,6 @@
 
 class Inbox < ApplicationRecord
   include Reportable
-  include PortalDaCaixa
   include Avatarable
   include OutOfOffisable
   include AccountCacheRevalidator
