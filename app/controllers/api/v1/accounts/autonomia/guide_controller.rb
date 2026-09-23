@@ -28,7 +28,8 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
 
   # O estado do pedido e, quando pronto, a resposta — com os mesmos campos que a
   # tela sempre recebeu: text, navigation, grounded, confidence, available,
-  # escalate, acao e retido.
+  # escalate, acao, retido e artigo (o artigo da Central que o Guia leu, para o
+  # botão "Ler o artigo completo").
   #
   # Pedido de outra pessoa responde 404, igual a pedido que não existe: a
   # resposta foi montada com a permissão de quem perguntou.
