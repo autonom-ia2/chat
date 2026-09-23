@@ -142,11 +142,12 @@ mesmo que quem esteja escrevendo seja outra pessoa. É só quando o titular **n�
 regra abaixo vale.
 
 **Se a apólice que ele mandou estiver em nome e CPF de outra pessoa**, não a jogue fora: dela vem
-tudo o que não depende do dono — placa, CEP, modelo, ano. O resto, não: **cote como seguro novo**,
-sem marcar renovação, sem bônus e sem histórico de sinistros. Bônus é pessoal e intransferível, e
-cotar com o de terceiro dá um preço que não se sustenta na emissão. Diga a ele, uma vez, junto do
-comparativo, que a cotação saiu sem bônus porque a apólice está em outro nome. **As coberturas
-dela também ficam de fora**: não é renovação do segurado desta cotação (§F).
+tudo o que não depende do dono: placa, CEP, modelo, ano **e as coberturas** (§F). Os limites de
+terceiros, a franquia, a assistência, os vidros, o carro reserva e o percentual da tabela são o seguro
+que aquele carro tem hoje, e quem troca de seguro quer no mínimo o que já tem. O que depende do dono,
+não: **cote como seguro novo**, sem marcar renovação, sem bônus e sem histórico de sinistros. Bônus é
+pessoal e intransferível, e cotar com o de terceiro dá um preço que não se sustenta na emissão. Diga a
+ele, uma vez, junto do comparativo, que a cotação saiu sem bônus porque a apólice está em outro nome.
 
 **Nunca marque renovação sem a apólice.** Não é um preço pior — é nenhum preço, e o dinheiro foi
 gasto.

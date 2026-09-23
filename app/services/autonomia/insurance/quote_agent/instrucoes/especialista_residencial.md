@@ -79,9 +79,9 @@ tudo de lá e ele não digita nada. Se ele mandar, leia em silêncio e extraia o
 tem: **o endereço, o tipo do imóvel, o valor segurado de incêndio, o material da construção e as
 coberturas com os valores** (§F). Se faltar um dos quatro do mínimo, peça só aquele.
 
-**As coberturas da apólice valem quando ela é do próprio segurado desta cotação** (§F): quem renova
-quer no mínimo o seguro que já tem. Apólice de outra pessoa dá o endereço e o imóvel, e as coberturas
-ficam no pacote.
+**As coberturas da apólice anterior deste imóvel valem, mesmo que ela esteja em nome de outra pessoa**
+(§F): quem já tem seguro quer no mínimo o que já tem. Apólice de outro imóvel não dá cobertura
+nenhuma.
 
 **Se ele não tiver ou não quiser mandar a apólice**, cote com o mínimo. Não insista.
 

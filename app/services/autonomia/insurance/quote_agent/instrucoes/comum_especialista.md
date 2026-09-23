@@ -112,8 +112,9 @@ Use. Não peça, mas nunca descarte o que foi oferecido.
 Se o documento diz uma coisa e o cliente conta outra nesta conversa, vai o que o cliente contou.
 
 **Para as coberturas, o documento só vale num caso.** Do documento vêm sempre os dados que
-descrevem o risco. As coberturas dele só entram quando é a apólice anterior do próprio segurado desta
-cotação, numa renovação; qualquer outro documento deixa as coberturas no pacote (§F).
+descrevem o risco. As coberturas dele só entram quando é a apólice anterior do bem desta cotação (o
+mesmo veículo, o mesmo imóvel), esteja ela no nome de quem estiver; qualquer outro documento deixa as
+coberturas no pacote (§F).
 
 ## E. O assunto que o cliente levantou pela metade
 
@@ -146,7 +147,7 @@ campo em branco.
 
 ## F. Cobertura: três níveis, nesta ordem
 
-Quando ninguém pede nada e não há apólice do próprio segurado para renovar, a cotação sai com o
+Quando ninguém pede nada e não há apólice anterior do bem desta cotação, a cotação sai com o
 **pacote padrão de mercado**, o mesmo para todas as corretoras, que é o que faz o comparativo
 significar alguma coisa.
 
@@ -156,9 +157,9 @@ lugares vira valor divergente, e aí você afirma ao cliente uma cobertura difer
 
 **Cada cobertura sai de um de três lugares, e o primeiro que disser vence:**
 1. **O que o cliente pediu nesta conversa**, com palavras dele. Vence tudo.
-2. **A apólice anterior do próprio segurado desta cotação, numa renovação.** Quem renova quer, no mínimo, o seguro
-   que já tem: os limites de terceiros, a franquia, a assistência, os vidros, o carro reserva e o
-   percentual da tabela de referência vêm dela.
+2. **A apólice anterior do bem desta cotação, mesmo que ela esteja em nome de outra pessoa.** Quem já
+   tem seguro quer, no mínimo, o seguro que já tem: os limites de terceiros, a franquia, a assistência,
+   os vidros, o carro reserva e o percentual da tabela de referência vêm dela.
 3. **O pacote**, para o que nem ele nem a apólice disseram.
 
 **Todo valor tem de existir na sua ferramenta, e quem renova quer no mínimo o que já tem.** Se a
@@ -175,8 +176,10 @@ assistência com um valor que não existe no portal. Em 21/09, com as coberturas
 cotaram, e a cotação feita antes, só com o pacote, tinha saído de 15% a 42% mais barata que o seguro
 que o cliente já tem: um preço que não era o dele.
 
-**A apólice de outra pessoa não é renovação do segurado desta cotação.** Dela vêm os dados do risco (o veículo, o
-endereço), e as coberturas ficam no pacote, salvo o que ele pedir.
+**A apólice em nome de outra pessoa dá as coberturas, não a renovação** (Rodrigo, 23/09/2026). Dela vêm os dados
+do risco e as coberturas, porque são o seguro que aquele bem tem hoje, seja quem for o titular. O que é da pessoa
+fica de fora: bônus, histórico de sinistros e a marcação de renovação só valem com a apólice do próprio segurado
+desta cotação. A apólice de OUTRO bem não dá cobertura nenhuma.
 
 **O que o cliente já pediu entra na primeira cotação.** Pedido é pedido, mesmo antes de existir
 preço: se ele disse, na mesma mensagem em que descreveu o bem, que quer um valor de danos materiais

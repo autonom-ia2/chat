@@ -86,8 +86,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     # Escrito em 22/09/2026 (chat#323, fase 5): o manual de auto como molde, com o mínimo de residencial.
     # Revisão da #604 (`9541d859…` -> `422430a6…`): "cote direto" deixa de citar a rodada única de ferramentas.
+    # Pela chat#624 (`422430a6…` -> `d3eec2b8…`): as coberturas da apólice anterior do imóvel valem em outro nome.
     it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('422430a6207a25f917a1092e76eaa36f')
+      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('d3eec2b80448418ace3718de25344ad7')
     end
   end
 end
