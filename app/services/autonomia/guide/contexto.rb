@@ -13,7 +13,7 @@
 # nada: ela descreve, deixa a proposta neste objeto, e quem monta a resposta lê
 # daqui para a tela mostrar o Confirmar. Nada toca o banco antes do clique.
 class Autonomia::Guide::Contexto
-  attr_reader :account, :user, :account_user, :proposta, :tela
+  attr_reader :account, :user, :account_user, :proposta, :tela, :artigo
 
   def initialize(account:, user:, account_user: nil)
     @account = account
@@ -45,6 +45,13 @@ class Autonomia::Guide::Contexto
   # última que o modelo escolheu (#590).
   def mostrar(destino)
     @tela = destino
+  end
+
+  # UM artigo da Central por turno, pela mesma regra (#617): o botão "ler o
+  # artigo completo" mostra um artigo só. Fica o último que `ler_da_central`
+  # leu, se o modelo ler mais de um.
+  def artigo_lido(ref:, titulo:)
+    @artigo = { ref: ref, titulo: titulo }
   end
 
   # O que as leituras deste turno devolveram. O botão de UM registro só leva a

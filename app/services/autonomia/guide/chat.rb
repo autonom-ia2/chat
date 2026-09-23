@@ -8,7 +8,7 @@ module Autonomia
     # da confirmação na tela.
     class Chat
       Result = Struct.new(:text, :navigation, :grounded, :confidence, :available, :escalate, :acao,
-                          :retido, keyword_init: true)
+                          :retido, :artigo, keyword_init: true)
 
       # Quantas mensagens da conversa seguem junto. Eram 12 — seis idas e voltas,
       # curto demais para quem está configurando a conta e vai perguntando uma
@@ -90,7 +90,7 @@ module Autonomia
         # alguém conseguir diagnosticar, e para a pessoa não achar que o produto caiu.
         return retido if text.blank?
 
-        Result.new(text: text, navigation: navegacao(result), acao: acao,
+        Result.new(text: text, navigation: navegacao(result), acao: acao, artigo: contexto.artigo,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
                    available: true, escalate: result.handoff.to_h[:should] == true)

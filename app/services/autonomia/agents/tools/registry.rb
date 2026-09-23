@@ -28,7 +28,11 @@ module Autonomia::Agents::Tools::Registry
     # agente do Guia, que o `Seed` semeia — nenhum agente de conta as enxerga.
     Autonomia::Agents::Tools::Native::GuiaLeitura,
     Autonomia::Agents::Tools::Native::GuiaAcao,
-    Autonomia::Agents::Tools::Native::GuiaTela
+    Autonomia::Agents::Tools::Native::GuiaTela,
+    # A Central de Ajuda (#617): o passo a passo escrito para a própria
+    # pessoa, na língua da tela — melhor fonte que o manual interno para
+    # "como eu faço X".
+    Autonomia::Agents::Tools::Native::GuiaCentral
   ].freeze
 
   module_function

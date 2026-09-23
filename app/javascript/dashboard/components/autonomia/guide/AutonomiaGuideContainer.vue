@@ -124,6 +124,17 @@ const navigateTo = nav => {
   }
 };
 
+// O botão "ler o artigo completo" (#617) não passa pela guarda de rota da
+// tela (`destino`/`isGuideRoute`): ele não é uma tela DA CONTA que a permissão
+// de alguém restrinja, é o mesmo artigo que a ferramenta já leu com a
+// permissão de quem perguntou. Abre sempre que o Guia leu um.
+const abrirArtigo = artigo => {
+  router.push({
+    name: 'central_de_ajuda_artigo',
+    params: { accountId: accountId.value, ref: artigo.ref },
+  });
+};
+
 // O cartão da ação é o único lugar onde o desfecho aparece. Quando ele já não
 // existe — a pessoa trocou de conta ou clicou em "Nova conversa" durante os
 // segundos da execução —, a ação JÁ rodou no servidor e o resultado não pode
@@ -232,6 +243,7 @@ const requestReply = async (requestAccount, message) => {
         content: data.text,
         navigation: data.navigation || null,
         acao: data.acao || null,
+        artigo: data.artigo || null,
       });
     } else if (data.retido) {
       // O Guia está no ar e entendeu — só não está seguro o bastante para
@@ -411,20 +423,39 @@ watch(accountId, () => store.reset());
                 </div>
               </div>
 
-              <!-- O rótulo vinha do título do fluxo, escrito para o manual e
-                   longo demais para um painel estreito: ele estourava a largura
-                   e levava a seta junto, deixando o botão com cara de texto
-                   solto. Agora é frase curta e fixa, e o que sobrar é cortado. -->
-              <Button
-                v-if="navLocation(item.navigation)"
-                :label="$t('AUTONOMIA_GUIDE.GO_TO_SCREEN')"
-                icon="i-lucide-arrow-right"
-                trailing-icon
-                blue
-                faded
-                class="self-start max-w-full min-h-11 [&>span]:truncate"
-                @click="navigateTo(item.navigation)"
-              />
+              <div
+                v-if="navLocation(item.navigation) || item.artigo"
+                class="flex flex-wrap gap-2"
+              >
+                <!-- O rótulo vinha do título do fluxo, escrito para o manual
+                     e longo demais para um painel estreito: ele estourava a
+                     largura e levava a seta junto, deixando o botão com cara
+                     de texto solto. Agora é frase curta e fixa, e o que
+                     sobrar é cortado. -->
+                <Button
+                  v-if="navLocation(item.navigation)"
+                  :label="$t('AUTONOMIA_GUIDE.GO_TO_SCREEN')"
+                  icon="i-lucide-arrow-right"
+                  trailing-icon
+                  blue
+                  faded
+                  class="max-w-full min-h-11 [&>span]:truncate"
+                  @click="navigateTo(item.navigation)"
+                />
+                <!-- Botão secundário, separado do de navegação: ele não leva
+                     a lugar nenhum da conta, abre o artigo que a ferramenta
+                     leu (#617). -->
+                <Button
+                  v-if="item.artigo"
+                  :label="$t('AUTONOMIA_GUIDE.READ_ARTICLE')"
+                  icon="i-lucide-book-open"
+                  trailing-icon
+                  slate
+                  faded
+                  class="max-w-full min-h-11 [&>span]:truncate"
+                  @click="abrirArtigo(item.artigo)"
+                />
+              </div>
             </div>
           </template>
           <CopilotLoader

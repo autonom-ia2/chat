@@ -9,9 +9,12 @@ import {
 import AutonomiaGuideContainer from '../AutonomiaGuideContainer.vue';
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
+// Espião estável: `useRouter()` roda de novo a cada teste, e um `vi.fn()`
+// novo a cada chamada não deixaria como afirmar QUAL rota o clique pediu.
+const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ name: 'home' }),
-  useRouter: () => ({ resolve: () => ({ matched: [] }), push: vi.fn() }),
+  useRouter: () => ({ resolve: () => ({ matched: [] }), push: routerPush }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useAccount', () => ({
@@ -79,6 +82,17 @@ const findByLabel = (wrapper, chave) =>
 const comAcaoProposta = () => {
   const store = useAutonomiaGuideStore();
   store.addAssistantMessage({ content: 'Posso criar para você.', acao: ACAO });
+  return store;
+};
+
+const ARTIGO = { ref: '02-04', titulo: 'Conectar o WhatsApp' };
+
+const comArtigoLido = () => {
+  const store = useAutonomiaGuideStore();
+  store.addAssistantMessage({
+    content: 'É em Configurações > Canais.',
+    artigo: ARTIGO,
+  });
   return store;
 };
 
@@ -300,6 +314,60 @@ describe('AutonomiaGuideContainer', () => {
     await flushPromises();
 
     expect(AutonomiaGuideAPI.executarAcao).toHaveBeenCalledOnce();
+  });
+
+  // #617 — o artigo que a Central de Ajuda leu ganha um segundo botão,
+  // separado do "Ir para a tela": ele abre o artigo inteiro, não navega.
+  it('shows a button to read the full article when the guide read one', async () => {
+    comArtigoLido();
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.READ_ARTICLE')).toBeTruthy();
+  });
+
+  it('does not show the article button when the guide read no article', async () => {
+    const store = useAutonomiaGuideStore();
+    store.addAssistantMessage({ content: 'Oi, tudo bem?' });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.READ_ARTICLE')).toBeFalsy();
+  });
+
+  it('navigates to the full article, scoped to the account, on click', async () => {
+    comArtigoLido();
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.READ_ARTICLE').trigger('click');
+
+    expect(routerPush).toHaveBeenCalledWith({
+      name: 'central_de_ajuda_artigo',
+      params: { accountId: 1, ref: '02-04' },
+    });
+  });
+
+  // A pergunta "como eu faço X" pode trazer artigo junto com a resposta; a
+  // tela precisa guardar isso no registro, do mesmo jeito que já guarda
+  // `navigation` e `acao`.
+  it('carries the article the guide read into the thread', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: {
+        status: 'done',
+        available: true,
+        text: 'É em Configurações > Canais.',
+        artigo: ARTIGO,
+      },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'como conecto o whatsapp?');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages[1].artigo).toEqual(ARTIGO);
   });
 
   it('names the panel and the message region for screen readers', async () => {
