@@ -197,7 +197,7 @@ module Autonomia
 
         # O que a fala diz, a própria Lia declara na resposta (`leitura_da_fala`); a conferência cruza com o estado.
         @conferencia_da_fala.sinais(parsed['leitura_da_fala'], ferramentas_no_turno: @ferramentas_no_turno.to_i,
-                                             escalou: parsed['should_handoff'] == true)
+                                                               escalou: parsed['should_handoff'] == true)
       end
 
       def registrar_fala(motivo, sinais)
