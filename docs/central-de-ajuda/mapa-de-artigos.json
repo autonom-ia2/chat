@@ -383,7 +383,8 @@
      "prioridade": "P1",
      "assuntos": [],
      "rotas": [
-      "central_de_ajuda"
+      "central_de_ajuda",
+      "central_de_ajuda_artigo"
      ],
      "me_leve_ate_la": {
       "rota": "central_de_ajuda",
@@ -393,7 +394,7 @@
      "prints": [],
      "fontes": [],
      "revisar": false,
-     "nota": null
+     "nota": "Cobre também central_de_ajuda_artigo (a tela de leitura de um artigo): é a própria Central em uso, não um fluxo à parte."
     }
    ]
   },
