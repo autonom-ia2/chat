@@ -50,14 +50,23 @@ describe('separarArtigo — cabeçalho YAML e corpo', () => {
 
   it('recusa arquivo sem cabeçalho', () => {
     expect(() => separarArtigo('sem cabeçalho aqui', 'teste.md')).toThrow(
-      /sem cabeçalho/
+      'sem cabeçalho'
     );
   });
 
   it('recusa cabeçalho sem fechamento', () => {
     expect(() => separarArtigo('---\nid: "00.01"\n', 'teste.md')).toThrow(
-      /sem fechamento/
+      'sem fechamento'
     );
+  });
+
+  it('recusa cabeçalho vazio ou que não é um mapa, como a publicação em Ruby', () => {
+    expect(() => separarArtigo('---\n\n---\nCorpo\n', 'vazio.md')).toThrow(
+      'vazio.md: cabeçalho não é um mapa'
+    );
+    expect(() =>
+      separarArtigo('---\ntitulo\n---\nCorpo\n', 'texto.md')
+    ).toThrow('texto.md: cabeçalho não é um mapa');
   });
 });
 
@@ -148,6 +157,33 @@ describe('referenciasQuebradas — [dd.dd] que não existe no mapa', () => {
     const idsDoMapa = new Set(['00.01']);
 
     expect(referenciasQuebradas(artigos, idsDoMapa)).toEqual([]);
+  });
+
+  it('acha [dd.dd] no fim do texto e dentro de colchete duplo, como a publicação', () => {
+    const artigos = [
+      artigo({
+        id: '00.01',
+        rota: 'tela_a',
+        corpo: 'Veja [[98.98]] e [99.99]',
+      }),
+    ];
+
+    expect(referenciasQuebradas(artigos, new Set(['00.01']))).toEqual([
+      { artigo: '00.01-artigo.md', referencia: '98.98' },
+      { artigo: '00.01-artigo.md', referencia: '99.99' },
+    ]);
+  });
+
+  it('ignora número que não tem o formato dd.dd', () => {
+    const artigos = [
+      artigo({
+        id: '00.01',
+        rota: 'tela_a',
+        corpo: 'Veja [2.04], [02.4] e [ab.cd].',
+      }),
+    ];
+
+    expect(referenciasQuebradas(artigos, new Set(['00.01']))).toEqual([]);
   });
 
   it('[02.04] que existe no mapa não é quebrada', () => {

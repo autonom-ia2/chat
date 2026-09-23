@@ -45,6 +45,13 @@ export const separarArtigo = (texto, identificacao) => {
     throw new Error(`${identificacao}: cabeçalho sem fechamento`);
   }
   const cabecalho = parseYaml(texto.slice(INICIO_CABECALHO.length, fim));
+  const eMapa =
+    cabecalho !== null &&
+    typeof cabecalho === 'object' &&
+    !Array.isArray(cabecalho);
+  if (!eMapa) {
+    throw new Error(`${identificacao}: cabeçalho não é um mapa`);
+  }
   const corpo = texto.slice(fim + FIM_CABECALHO.length);
   return { cabecalho, corpo };
 };
