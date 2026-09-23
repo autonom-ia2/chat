@@ -67,7 +67,7 @@ RSpec.describe Autonomia::Agents::Answerer do
   def cotacao_da_conversa(ofertas, status: 'done', criada: 5.minutes.ago, handle: nil)
     Autonomia::Agents::ToolRun.create!(
       account: account, agent: agente, slug: cotacao.slug, status: status, conversation_id: conversation.id,
-      agent_inbox_id: agent_inbox.id, execution_key: SecureRandom.uuid, arguments: {}, created_at: criada,
+      agent_inbox_id: agent_inbox.id, execution_key: SecureRandom.uuid, arguments: {}, created_at: criada, faixa: 'auto',
       handle: handle || { 'quote_id' => 'q-1:1', cotacao::RESULTADO_KEY => Autonomia::Insurance::ResultadoPorSeguradora.unir({}, ofertas) }
     )
   end

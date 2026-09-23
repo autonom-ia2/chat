@@ -454,12 +454,16 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # (§4.5) e a escolha (§4.7) saem do manual de auto para o bloco comum (§K e §L), para valerem em todo ramo. A
   # âncora "manda o comparativo em PDF" segue no texto montado, agora na §K.
   # E a §J passa a contar a instabilidade como motivo (`c1edd6ad…` -> `3f5fbd6b…`), chat#323.
+  # Pelo teste em produção de 23/09/2026 (`3a1773de…` -> `090cf8d4…`, `3f5fbd6b…` -> `14864776…`): o veículo que o cliente
+  # aponta vence a cotação anterior (§4.2 de auto); no bloco comum, a cotação aberta devolve só o que o principal não
+  # sabe (sem repetir os dados nem frase ao cliente), mudança só conta como feita depois de cotada, e CPF é de um só.
+  # Na revisão da chat#608 (`14864776…` -> `6c645afa…`): o parágrafo do CPF nomeia os papéis (quem escreve, o titular).
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('3a1773de703237d7734a3e2c1ba6edb5')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('090cf8d4b09cdcb4400996d63e2c79d7')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('3f5fbd6bd5484a1f7d7f2da73fe99a08')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('6c645afab34c643017d74e7c6da274c4')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

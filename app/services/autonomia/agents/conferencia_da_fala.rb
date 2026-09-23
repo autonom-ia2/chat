@@ -13,54 +13,40 @@
 #     foram criadas. Aqui o que desmente a fala é a AUSÊNCIA de cotação, não o fechamento dela.
 #   - #547: ela mostra ao cliente a engrenagem que é nossa ("vou passar para o especialista de seguro auto").
 #
-# O código só confere. Quem reescreve é o modelo, uma vez, com as ferramentas do turno à mão (o `Answerer`).
+# O QUE A FALA DIZ, QUEM DECLARA É A PRÓPRIA LIA (23/09/2026). Até aqui eram listas de regex, e a regra do Rodrigo
+# proíbe interpretar linguagem com lista de palavra. Na mesma resposta em que escreve ao cliente, ela marca quatro
+# sim ou não sobre o que escreveu (`leitura_da_fala`, no `SCHEMA_DA_RESPOSTA`), sem chamada nem agente a mais. Este
+# arquivo só cruza a declaração com o ESTADO do turno: se alguma ferramenta rodou, se há cotação viva, se a que
+# corria fechou (o que ela não tem como saber enquanto escreve). Quem reescreve é o modelo, uma vez, com as
+# ferramentas do turno à mão (o `Answerer`).
 class Autonomia::Agents::ConferenciaDaFala
-  # Promessa de ação futura que depende de consulta: "vou confirmar nas condições", "deixa eu verificar",
-  # "já te retorno", "assim que eu consultar".
-  PROMESSA = [
-    /\b(?:vou|irei|deixa\s+eu|deix[ae]-me)\s+(?:\S+\s+){0,2}?(?:confirmar|verificar|consultar|checar|conferir|pesquisar)\b/i,
-    /\b(?:vou|deixa\s+eu)\s+dar\s+uma\s+olhada\b/i,
-    /\b(?:j[áa]\s+(?:te\s+|lhe\s+)?(?:retorno|volto|respondo)|(?:te|lhe)\s+retorno|volto\s+(?:j[áa]|logo|em\s+seguida))\b/i,
-    /\bassim\s+que\s+(?:eu\s+)?(?:confirmar|verificar|consultar|checar)\b/i
-  ].freeze
+  # As perguntas que a Lia responde sobre a própria fala. A descrição de cada campo é a pergunta: "não" é sempre
+  # uma resposta possível.
+  PERGUNTAS = {
+    'promete_verificar_depois' =>
+      'Sua mensagem promete consultar, verificar, confirmar ou responder algo DEPOIS, em vez de responder agora? ' \
+      'Não conta dizer que o resultado de uma cotação já em andamento chega depois.',
+    'diz_que_cotacao_ainda_corre' =>
+      'Sua mensagem diz que a cotação ainda está em andamento, ou que o comparativo ou o resultado dela ainda vai chegar?',
+    'promete_cotacao_ou_comparativo' =>
+      'Sua mensagem diz que vai cotar, ou que opções, preços, comparativo ou resultado de cotação vão chegar ao cliente?',
+    'mostra_engrenagem' =>
+      'Sua mensagem mostra ao cliente a engrenagem interna do atendimento: especialista, fluxo, prompt, ferramenta ou ' \
+      'agente como parte do atendimento, ou o "nosso sistema"? Não conta o que é do mundo do cliente (o sistema da ' \
+      'seguradora, sistema de alarme ou rastreamento, ferramenta de trabalho, agente autorizado, o modelo do carro), ' \
+      'nem se apresentar como assistente virtual ou IA.'
+  }.freeze
 
-  # A fala afirma que a cotação ainda corre ou que o comparativo ainda vai chegar.
-  AINDA_CORRENDO = [
-    /\bcota[çc][ãa]o\b[^.!?\n]{0,30}\b(?:continua|segue|ainda)\b[^.!?\n]{0,20}\b(?:correndo|andamento|rodando)\b/i,
-    /\bcomparativo\b[^.!?\n]{0,40}\b(?:chega|chegar|chegar[áa]|vai\s+chegar|sai|sair[áa]|vai\s+sair|ficar?\s+pronto)\b/i
-  ].freeze
-
-  # A fala promete ao cliente uma cotação ou um comparativo que ainda vai chegar. Inclui `AINDA_CORRENDO`: a
-  # mesma frase ("o comparativo chega por aqui") é legítima com cotação correndo e é promessa vazia sem nenhuma.
-  PROMESSA_DE_COTACAO = (AINDA_CORRENDO + [
-    /\b(?:vou|irei|vamos)\s+(?:\S+\s+){0,3}?(?:cotar|cota[çc][ãa]o)\b/i,
-    /\b(?:pre[çc]os|op[çc][õo]es|valores)\b[^.!?\n]{0,40}\b(?:chegam?|chegar[ãa]?o?|saem|sair[ãa]o|ficam?\s+pront[oa]s?)\b/i,
-    # A mesma promessa escrita do outro jeito (achado da revisão): "te mando as opções assim que sair".
-    /\b(?:te|lhe)\s+(?:mando|trago|passo|envio|retorno\s+com)\b[^.!?\n]{0,40}\b(?:pre[çc]os|op[çc][õo]es|valores|comparativo|resultado|cota[çc][ãa]o)\b/i
-  ]).freeze
-
-  # VOCABULÁRIO INTERNO NA FALA AO CLIENTE (#547). A engrenagem é nossa: quem fala com ele é a Lia, do começo ao
-  # fim. A régua é o que o CLIENTE lê, então a lista é curta e cada entrada tem o motivo:
-  #   - "especialista": decisão do CEO em 20/09/2026. Ele não sabe que existe especialista de ramo, e a passagem
-  #     para um humano é decisão dela, dita nas palavras dela.
-  #   - "ferramenta", "fluxo", "prompt", "agente": jargão nosso, sem uso legítimo numa conversa de seguro.
-  #   - "sistema": quase sempre o nosso. A exceção real é o sistema DA SEGURADORA, que é coisa dela e o cliente
-  #     entende assim; só ela fica de fora, pelo lookahead.
-  # "modelo" ficou FORA de propósito: em auto é o modelo do veículo, e o falso positivo seria diário.
-  # "ferramenta" e "agente" saíram da lista (achado da revisão): "essa ferramenta de trabalho fica no carro?"
-  # e "você é agente autorizado?" são falas legítimas de coleta, e o ganho delas não paga o falso positivo.
-  VOCABULARIO_INTERNO = [
-    /\bespecialistas?\b/i,
-    /\bfluxos?\b/i,
-    /\bprompts?\b/i,
-    # "sistema de rastreamento", "de alarme" e o sistema DA SEGURADORA são do mundo do cliente; o resto é nosso.
-    /\bsistemas?\b(?!\s+(?:d[ao]s?\s+segurador|de\s+(?:rastreamento|rastreio|alarme|antifurto|seguran[çc]a|prote[çc][ãa]o)))/i
-  ].freeze
-
-  # -> a execução de `cotar_seguro` que corre agora na conversa, ou nil. Lida no começo do turno, antes do modelo.
-  def self.cotacao_correndo(conversation_id)
-    leitura = ::Autonomia::Insurance::ResultadoDaCotacao.da_conversa(conversation_id)
-    leitura&.correndo? ? leitura.run : nil
+  # O schema da resposta do agente de cotação: o de todo agente mais a declaração sobre a fala. Os outros agentes
+  # seguem com o `PromptBuilder::ANSWER_SCHEMA`.
+  SCHEMA_DA_RESPOSTA = begin
+    base = ::Autonomia::Agents::PromptBuilder::ANSWER_SCHEMA
+    leitura = { type: 'object', additionalProperties: false, required: PERGUNTAS.keys,
+                description: 'Sobre a mensagem que você escreveu em reply: responda com sim ou não, pelo sentido.',
+                properties: PERGUNTAS.transform_values { |pergunta| { type: 'boolean', description: pergunta } } }
+    { name: 'autonomia_agent_answer_cotacao',
+      schema: base[:schema].merge(properties: base[:schema][:properties].merge(leitura_da_fala: leitura),
+                                  required: base[:schema][:required] + ['leitura_da_fala']) }.freeze
   end
 
   def initialize(conversa:, cotacao_no_inicio:)
@@ -69,16 +55,17 @@ class Autonomia::Agents::ConferenciaDaFala
   end
 
   # -> os sinais que a fala dispara (`:promessa`, `:cotacao_fechada`, `:cotacao_prometida`,
-  # `:vocabulario_interno`); vazio quando ela pode sair como está.
+  # `:vocabulario_interno`); vazio quando ela pode sair como está. `leitura` é a declaração da Lia sobre a fala
+  # (`leitura_da_fala` da resposta); sem ela, nenhum sinal sai.
   # Com escalada a promessa não fica pendurada: quem segue é o atendente. Vale para as duas promessas, pela
   # mesma razão. O vocabulário não: é justamente ao escalar que "o especialista" escapa.
-  def sinais(reply, ferramentas_no_turno:, escalou: false)
-    texto = reply.to_s
-    fechada = casa?(texto, AINDA_CORRENDO) && fechou_no_turno?
-    [(:promessa if promessa?(texto, ferramentas_no_turno, escalou)),
+  def sinais(leitura, ferramentas_no_turno:, escalou: false)
+    leitura = leitura.to_h
+    fechada = leitura['diz_que_cotacao_ainda_corre'] == true && fechou_no_turno?
+    [(:promessa if promessa?(leitura, ferramentas_no_turno, escalou)),
      (:cotacao_fechada if fechada),
-     (:cotacao_prometida if prometida?(texto, escalou, fechada)),
-     (:vocabulario_interno if casa?(texto, VOCABULARIO_INTERNO))].compact
+     (:cotacao_prometida if prometida?(leitura, escalou, fechada)),
+     (:vocabulario_interno if leitura['mostra_engrenagem'] == true)].compact
   end
 
   # -> o pedido de reescrita ao modelo para estes sinais.
@@ -91,21 +78,30 @@ class Autonomia::Agents::ConferenciaDaFala
     (partes + ['Reescreva a resposta ao cliente em reply, mantendo o resto do que ela diz. Sem travessão.']).join("\n\n")
   end
 
+  # -> a execução de `cotar_seguro` que corre agora na conversa, de qualquer produto, ou nil. Lida no começo do
+  # turno, antes do modelo.
+  def self.cotacao_correndo(conversation_id)
+    ::Autonomia::Insurance::ResultadoDaCotacao.correndo_na_conversa(conversation_id)&.run
+  end
+
   private
 
   # #510: promete consultar depois e nenhuma ferramenta rodou no turno.
-  def promessa?(texto, ferramentas_no_turno, escalou)
-    !escalou && ferramentas_no_turno.zero? && casa?(texto, PROMESSA)
+  # A promessa sobre uma cotação que CORRE não fica pendurada: o resultado chega sozinho (revisão de 23/09/2026).
+  # Sem esta guarda, "te mando o comparativo assim que sair" pedia reescrita, e a reescrita podia cotar de novo e
+  # trocar a cotação que já corria.
+  def promessa?(leitura, ferramentas_no_turno, escalou)
+    return false if escalou || !ferramentas_no_turno.zero? || leitura['promete_verificar_depois'] != true
+
+    sobre_a_cotacao = leitura['promete_cotacao_ou_comparativo'] == true || leitura['diz_que_cotacao_ainda_corre'] == true
+    !(sobre_a_cotacao && !sem_cotacao_viva?)
   end
 
   # #547: promete a cotação ou o comparativo e não há cotação nenhuma viva. A que fechou neste turno já é
   # `:cotacao_fechada`, que diz outra coisa ao modelo; os dois sinais nunca saem juntos.
-  def prometida?(texto, escalou, fechada)
-    !escalou && !fechada && casa?(texto, PROMESSA_DE_COTACAO) && sem_cotacao_viva? && !fechou_no_turno?
-  end
-
-  def casa?(texto, padroes)
-    padroes.any? { |re| texto.match?(re) }
+  def prometida?(leitura, escalou, fechada)
+    promete = leitura['promete_cotacao_ou_comparativo'] == true || leitura['diz_que_cotacao_ainda_corre'] == true
+    !escalou && !fechada && promete && sem_cotacao_viva? && !fechou_no_turno?
   end
 
   def pedido_da_promessa
@@ -150,8 +146,11 @@ class Autonomia::Agents::ConferenciaDaFala
 
   # A cotação que corria no começo do turno parou de correr, e não por ter sido trocada ou descartada (um pedido
   # novo no turno troca a execução, e aí a nova é que corre).
+  # Com outra cotação da conversa ainda correndo (auto e residencial juntos), "ainda está saindo" pode ser dela: o
+  # sinal não sai, para não mandar a Lia dizer que o outro seguro terminou (revisão da chat#608).
   def fechou_no_turno?
     return false if @cotacao_no_inicio.nil?
+    return false if ::Autonomia::Insurance::ResultadoDaCotacao.correndo_na_conversa(@conversa).present?
 
     run = leitura_final.run
     ::Autonomia::Insurance::ResultadoDaCotacao::FORA.exclude?(run.status) && !leitura_final.correndo?

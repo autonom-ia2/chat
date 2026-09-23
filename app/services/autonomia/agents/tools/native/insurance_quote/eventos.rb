@@ -11,8 +11,9 @@
 module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
   extend ActiveSupport::Concern
 
-  # O motivo da recusa do envio -> o tipo do evento. Formulário indisponível não é dado que a pessoa deve: é a
-  # equipe que retoma, e o evento é `falhou`. Motivo fora da tabela também.
+  # O motivo da recusa do envio -> o tipo do evento. Formulário indisponível não é dado que a pessoa deve: o evento é
+  # `falhou`, com fatos próprios (`SEM_FORMULARIO`), porque pedir de novo daria a mesma recusa. Motivo fora da tabela
+  # também é `falhou`.
   EVENTO_DA_RECUSA = {
     'faltam_dados' => 'falta_dado', 'json_invalido' => 'falta_dado', 'sem_veiculo' => 'falta_dado',
     'ramo_desconhecido' => 'ramo_desconhecido', 'formulario_indisponivel' => 'falhou'
@@ -25,13 +26,26 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
                    'acima. Os valores de cada seguradora estão com o especialista, que os lê sem cotar de novo.',
     'valores_guardados' => 'A cotação terminou com preços, mas o comparativo em PDF não pôde ser enviado. Os valores de cada ' \
                            'seguradora estão guardados com o especialista, e a pessoa pode pedi-los aqui mesmo.',
-    'falhou' => 'A cotação não pôde ser concluída agora. Alguém da equipe vai continuar o atendimento; não há prazo para isso.',
-    'incerta' => 'Não foi possível confirmar se o pedido chegou às seguradoras. Alguém da equipe vai conferir e retomar; não há ' \
-                 'prazo para isso.',
-    'encerrada_por_prazo' => 'O tempo desta cotação acabou depois de a pessoa já ter recebido opções. O que ela recebeu é o que ' \
-                             'há; dá para refazer a cotação ou chamar alguém da equipe. Quantas seguradoras não responderam é ' \
-                             'dado da equipe, não da pessoa.'
+    # O QUE DEU ERRADO VAI PARA A EQUIPE (decisão do CEO, 23/09/2026). A passagem é do CRM: o gatilho do funil é a
+    # própria fala da Lia de que vai encaminhar para alguém da equipe, e aí o CRM atribui a conversa. O prazo esgotado
+    # com o comparativo entregue não é erro: a pessoa tem as opções de quem respondeu.
+    'falhou' => 'A cotação não pôde ser concluída agora, e nenhuma opção chegou à pessoa. Diga que vai encaminhar para ' \
+                'alguém da equipe continuar, sem prazo e sem narrar o que falhou.',
+    # A INCERTA NÃO OFERECE REFAZER (revisão da chat#608): a cotação pode existir e já ter sido paga no portal, e o
+    # pedido novo não é barrado como repetido (a execução fecha sem entrega). Não se sabe se deu: não se diz que não deu.
+    'incerta' => 'Não foi possível confirmar se o pedido chegou às seguradoras, e nenhuma opção chegou à pessoa até ' \
+                 'agora. Diga que não conseguiu confirmar e que vai encaminhar para alguém da equipe conferir, sem afirmar ' \
+                 'que não deu, sem oferecer cotar de novo e sem prazo.',
+    'encerrada_por_prazo' => 'A cotação terminou, e o comparativo em PDF com as opções de quem respondeu já está nesta ' \
+                             'conversa. Uma ou mais seguradoras não responderam dentro do tempo e ficaram de fora: foi ' \
+                             'instabilidade delas, não recusa do risco, e não é motivo para refazer. Os valores de ' \
+                             'cada seguradora estão com o especialista, que os lê sem cotar de novo.'
   }.freeze
+
+  # FORMULÁRIO INDISPONÍVEL (revisão da chat#608): pedir de novo daria a mesma recusa, então não se oferece.
+  SEM_FORMULARIO = 'A cotação não pôde ser aberta agora: o formulário deste tipo de seguro não está disponível. Nenhuma ' \
+                   'opção chegou à pessoa. Não ofereça cotar de novo agora: diga que vai encaminhar para alguém da ' \
+                   'equipe continuar, sem prazo.'.freeze
 
   # Só em renovação de auto cotada sem a classe de bônus. Sem número e sem promessa de desconto: o quanto o bônus
   # abate é decisão de cada seguradora.
@@ -44,17 +58,27 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
   FALTA_PREFIXO = 'A cotação não foi aberta: falta dado que a pessoa precisa dar. O que a conferência apontou:'.freeze
 
   class_methods do
-    # -> os fatos do evento `tipo` desta execução, para o modelo (`Native::Base.fatos_do_evento`).
+    # -> os fatos do evento `tipo` desta execução, para o modelo (`Native::Base.fatos_do_evento`), começando pelo
+    # produto: com auto e residencial na mesma conversa, a Lia precisa saber de qual seguro é a notícia.
     def fatos_do_evento(tipo, run)
-      handle = run.handle.to_h
-      case tipo.to_s
-      when 'falta_dado' then fatos_da_falta(handle)
-      when 'ramo_desconhecido' then "A cotação não foi aberta. #{self::RAMO_DESCONHECIDO}"
-      else [FATOS[tipo.to_s], (SEM_BONUS if COM_SEM_BONUS.include?(tipo.to_s) && handle[self::SEM_BONUS_KEY].present?)].compact.join(' ')
-      end
+      "Cotação de #{run.faixa.presence || self::AUTO}. #{fatos_do_tipo(tipo.to_s, run.handle.to_h)}"
     end
 
     private
+
+    def fatos_do_tipo(tipo, handle)
+      case tipo
+      when 'falta_dado' then fatos_da_falta(handle)
+      when 'ramo_desconhecido' then "A cotação não foi aberta. #{self::RAMO_DESCONHECIDO}"
+      when 'falhou' then fatos_da_falha(handle)
+      else [FATOS[tipo], (SEM_BONUS if COM_SEM_BONUS.include?(tipo) && handle[self::SEM_BONUS_KEY].present?)].compact.join(' ')
+      end
+    end
+
+    # Formulário indisponível recusaria de novo: não se oferece pedir outra vez.
+    def fatos_da_falha(handle)
+      (handle['recusa'] || handle['motivo']).to_s == 'formulario_indisponivel' ? SEM_FORMULARIO : FATOS['falhou']
+    end
 
     # A recusa desta versão traz os `problemas` (campo e motivo, como a conferência os produz); a da versão
     # anterior à PR C só traz os nomes em `faltando`, e o texto velho em `pedido`, que não é reaproveitado.

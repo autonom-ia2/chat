@@ -27,7 +27,12 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
   TENTATIVAS = 2
   # A conclusão sem o arquivo sai com a marca de `valores_guardados` (`sem_o_arquivo`): o retry, ou o começo
   # atrasado, precisa reconhecer as duas marcas (revisão da chat#588).
-  MARCAS_DO_TIPO = { 'concluida' => %w[concluida valores_guardados] }.freeze
+  MARCAS_DO_TIPO = {
+    'concluida' => %w[concluida valores_guardados],
+    'encerrada_por_prazo' => %w[encerrada_por_prazo valores_guardados]
+  }.freeze
+  # Os desfechos cujo fato afirma o comparativo na conversa (`sem_o_arquivo`).
+  COM_O_ARQUIVO = %w[concluida encerrada_por_prazo].freeze
 
   def perform(run_id, tipo, adiamentos = 0, tentativa = 0, depois_de = [])
     run = ::Autonomia::Agents::ToolRun.find_by(id: run_id)
@@ -120,8 +125,9 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
 
   # O COMPARATIVO QUE NÃO CHEGOU NÃO É AFIRMADO (revisão da chat#588). Estourado o teto de espera com o arquivo
   # ainda ausente, a conclusão fala como resultado guardado: a Lia não diz "o PDF acima" sem PDF nenhum.
+  # Vale também para o fim pelo prazo (23/09/2026), cujo fato afirma o comparativo na conversa (`COM_O_ARQUIVO`).
   def sem_o_arquivo(evento, conversation, passo)
-    return evento unless evento.tipo == 'concluida' && arquivo_a_caminho?(evento.run, conversation, passo[:depois_de])
+    return evento unless COM_O_ARQUIVO.include?(evento.tipo) && arquivo_a_caminho?(evento.run, conversation, passo[:depois_de])
 
     ::Autonomia::Agents::Tools::Evento.new(run: evento.run, tipo: 'valores_guardados')
   end

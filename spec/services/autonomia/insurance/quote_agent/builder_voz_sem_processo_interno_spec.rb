@@ -24,7 +24,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
   # O CLIENTE NUNCA OUVE FALAR DE ESPECIALISTA (decisão do CEO em 20/09/2026, #547). Na conversa 6983 a Lia
   # escreveu "vou passar para o especialista de seguro auto": o especialista é engrenagem nossa, e quem fala
-  # com o cliente é ela. A guarda na fala (`ConferenciaDaFala::VOCABULARIO_INTERNO`) pede a reescrita; esta
+  # com o cliente é ela. A guarda na fala (`ConferenciaDaFala`, com a leitura do modelo) pede a reescrita; esta
   # linha tira o vocabulário da origem, inclusive da frase que a §6 dava de exemplo ao cliente.
   it 'o manual do principal diz que o cliente nunca ouve falar de especialista' do
     expect(principal[/## 4\. Como você fala.*?(?=\n## \d)/m])

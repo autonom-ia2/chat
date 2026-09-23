@@ -15,10 +15,10 @@ RSpec.describe Autonomia::Agents::ToolRun do
   end
 
   def open_run(slug: 'consultar_cotacao', conversation_id: conversation.id, arguments: { placa: 'ABC1D23' },
-               origin_message_id: 4242)
+               origin_message_id: 4242, faixa: '')
     described_class.open!(agent: agent, slug: slug, arguments: arguments,
                           scope: { conversation_id: conversation_id, agent_inbox_id: agent_inbox.id,
-                                   origin_message_id: origin_message_id })
+                                   origin_message_id: origin_message_id, faixa: faixa })
   end
 
   def promote(run, expires_at: 2.minutes.from_now)
@@ -52,6 +52,43 @@ RSpec.describe Autonomia::Agents::ToolRun do
       expect(first.reload.status).to eq('superseded')
       expect(second.status).to eq('pending')
       expect(described_class.active.for_conversation(conversation.id).pluck(:id)).to eq([second.id])
+    end
+
+    # 23/09/2026, conversa 7057: o pedido do apartamento trocou a cotação do carro, que já tinha 8 preços.
+    it 'não troca a execução viva de outra faixa: auto e residencial correm juntos na mesma conversa' do
+      # Arrange
+      auto = promote(open_run(slug: 'cotar_seguro', faixa: 'auto'))
+
+      # Act
+      residencial = open_run(slug: 'cotar_seguro', faixa: 'residencial', arguments: { produto: 'residencial' })
+      outro_auto = open_run(slug: 'cotar_seguro', faixa: 'auto', origin_message_id: 4343)
+
+      # Assert
+      expect(residencial.reload.status).to eq('pending')
+      expect(auto.reload.status).to eq('superseded')
+      expect(described_class.active.for_conversation(conversation.id).pluck(:faixa)).to contain_exactly('auto', 'residencial')
+      expect(outro_auto.faixa).to eq('auto')
+    end
+
+    it 'o banco aceita uma execução viva por faixa e recusa a segunda da mesma faixa' do
+      # Arrange
+      base = { account: account, agent: agent, conversation_id: conversation.id, slug: 'cotar_seguro',
+               status: 'running', execution_key: SecureRandom.uuid }
+      described_class.create!(base.merge(faixa: 'auto'))
+      described_class.create!(base.merge(faixa: 'residencial', execution_key: SecureRandom.uuid))
+
+      # Act / Assert
+      expect { described_class.create!(base.merge(faixa: 'auto', execution_key: SecureRandom.uuid)) }
+        .to raise_error(ActiveRecord::RecordNotUnique)
+    end
+
+    it 'a chave do lock separa as faixas e mantém a de sempre para ferramenta sem faixa' do
+      sem_faixa = described_class.chave_do_lock(1, 'cotar_seguro')
+
+      expect(described_class.chave_do_lock(1, 'cotar_seguro', '')).to eq(sem_faixa)
+      expect(described_class.chave_do_lock(1, 'cotar_seguro', 'auto')).not_to eq(sem_faixa)
+      expect(described_class.chave_do_lock(1, 'cotar_seguro', 'auto'))
+        .not_to eq(described_class.chave_do_lock(1, 'cotar_seguro', 'residencial'))
     end
 
     it 'lets the database reject a second active run for the same conversation and tool' do

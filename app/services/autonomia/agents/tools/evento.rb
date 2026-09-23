@@ -35,9 +35,9 @@ class Autonomia::Agents::Tools::Evento
     'ramo_desconhecido' => 'a consulta não foi aberta porque o tipo de seguro pedido não é feito por aqui.',
     'concluida' => 'a consulta terminou, e o resultado acabou de ser enviado nesta conversa.',
     'valores_guardados' => 'a consulta terminou com resultado, mas o arquivo não pôde ser enviado; o resultado está guardado.',
-    'falhou' => 'a consulta não pôde ser concluída, e alguém da equipe vai continuar o atendimento.',
-    'incerta' => 'não foi possível confirmar se a consulta chegou a ser feita, e alguém da equipe vai conferir.',
-    'encerrada_por_prazo' => 'o tempo da consulta acabou depois de a pessoa já ter recebido resultado.'
+    'falhou' => 'a consulta não pôde ser concluída, e nada chegou à pessoa.',
+    'incerta' => 'não foi possível confirmar se a consulta chegou a ser feita, e nada chegou à pessoa.',
+    'encerrada_por_prazo' => 'a consulta terminou pelo tempo, e a pessoa já recebeu o resultado de quem respondeu.'
   }.freeze
 
   attr_reader :run, :tipo

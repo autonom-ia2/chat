@@ -115,7 +115,8 @@ class Autonomia::Agents::Specialists::Runner
   # e o modelo é quem decide se faz — a conversa e os anexos entram como dado, cercados.
   def entrada
     materia = Autonomia::Agents::Specialists::Materia.new(delivery: @delivery, history: @history,
-                                                          documents: @documents, agent: @specialist.agent)
+                                                          documents: @documents, agent: @specialist.agent,
+                                                          faixa: ::Autonomia::Insurance::QuoteAgent::Builder.ramo_do_especialista(@specialist))
     pedido = "PEDIDO DO ATENDENTE:\n#{Autonomia::Agents::Config.truncate_text(@request, MAX_REQUEST_CHARS)}"
     materia.mensagens + [Autonomia::Agents::PromptParts::Mensagem.montar('user', pedido)]
   end

@@ -73,6 +73,25 @@ RSpec.describe Autonomia::Agents::Specialists::Runner do
       entrada
     end
 
+    # 23/09/2026: o especialista de residencial recota a partir da cotação da casa, mesmo com a do carro mais nova.
+    it 'a base da recotação é a do ramo do especialista, pela faixa que o Runner passa' do
+      agent.update_column(:agent_type, 'insurance_quote') # rubocop:disable Rails/SkipsModelValidations -- o agente mantido nasce pelo Builder; aqui só o tipo importa
+      specialist.update!(slug: 'cotacao_residencial')
+      inbox = create(:inbox, account: account)
+      conversa = create(:conversation, account: account, inbox: inbox, assignee: nil)
+      [['residencial', 'Casa', 2.hours.ago], ['auto', 'Carro', 1.hour.ago]].each do |faixa, nome, quando|
+        Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: 'cotar_seguro', status: 'done', faixa: faixa,
+                                           conversation_id: conversa.id, execution_key: SecureRandom.uuid,
+                                           arguments: { 'nome' => nome }, handle: { 'quote_id' => 'q' }, created_at: quando)
+      end
+      turno = Autonomia::Agents::Tools::Delivery.new(conversation: conversa, agent_inbox: nil, origin_message_id: 1)
+
+      base = entrada_recebida(delivery: turno).map { |m| m[:content].first[:text] }.find { |t| t.include?('ÚLTIMA COTAÇÃO') }
+
+      expect(base).to include('Casa')
+      expect(base).not_to include('Carro')
+    end
+
     it 'a conversa vem antes do bilhete, e o bilhete e a ultima palavra' do
       entrada = entrada_recebida(history: historico)
       textos = entrada.map { |m| m[:content].first[:text] }

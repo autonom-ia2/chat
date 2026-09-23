@@ -201,12 +201,17 @@ class Autonomia::Agents::Tools::Native::Base
   # `operador` é QUEM está pedindo, quando a ferramenta age em nome de uma
   # pessoa e não do agente (#568, Guia da Plataforma). Nulo nas demais: o
   # atendimento fala com o cliente, que não tem permissão dentro da conta.
-  def initialize(agent:, params: {}, delivery: nil, run: nil, operador: nil)
+  # `especialista`: quem chamou, quando foi um especialista (`Specialists::Runner`). A ferramenta de resultado o usa
+  # para ler a cotação do ramo dele, e não a mais nova da conversa, que pode ser de outro ramo.
+  # Seis palavras-chave, todas opcionais menos o agente: é o contrato que o motor, o turno e o varredor já usam, e
+  # agrupá-las num objeto só esconderia qual das três portas passa o quê.
+  def initialize(agent:, params: {}, delivery: nil, run: nil, operador: nil, especialista: nil) # rubocop:disable Metrics/ParameterLists
     @agent = agent
     @params = params.to_h.deep_stringify_keys
     @delivery = delivery
     @run = run
     @operador = operador
+    @especialista = especialista
   end
 
   # -> String. NUNCA levanta: quem chama é o executor de ferramentas do turno.
@@ -256,6 +261,12 @@ class Autonomia::Agents::Tools::Native::Base
   # -> String curta, ou nil quando não há como saber (conferência indisponível): nil nunca barra.
   def pedido
     nil
+  end
+
+  # A FAIXA DA EXECUÇÃO (migration 20260923090000): o que separa dois trabalhos desta ferramenta que não se
+  # substituem na mesma conversa. Vazia por padrão: uma execução viva por conversa. A de cotação responde o produto.
+  def faixa
+    ''
   end
 
   # O QUE AINDA VALE ENTREGAR QUANDO A EXECUÇÃO ACABA SEM FECHAR. Em 08/09/2026 uma cotação
@@ -308,7 +319,7 @@ class Autonomia::Agents::Tools::Native::Base
 
   private
 
-  attr_reader :agent, :params, :delivery, :run
+  attr_reader :agent, :params, :delivery, :run, :especialista
 
   def account
     agent.account

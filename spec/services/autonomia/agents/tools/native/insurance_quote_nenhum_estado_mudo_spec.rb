@@ -410,11 +410,35 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(described_class.params.pluck('name')).not_to include('frases_ao_cliente')
     end
 
-    it 'o desfecho por prazo nao conta ao modelo quantas seguradoras ficaram pelo caminho como fato para a pessoa' do
+    # 23/09/2026: o prazo com o comparativo entregue não é falha. Sem número, sem "refazer ou chamar a equipe".
+    it 'o desfecho por prazo nao conta quantas seguradoras ficaram de fora, nem oferece refazer ou atendente' do
       texto = described_class.fatos_do_evento('encerrada_por_prazo', Autonomia::Agents::ToolRun.new(handle: {}))
 
       expect(texto).not_to match(/[0-9]/)
-      expect(texto).to include('dado da equipe')
+      expect(texto).to include('comparativo em PDF', 'instabilidade delas', 'não é motivo para refazer')
+      expect(texto).not_to include('equipe')
+    end
+
+    def fatos(tipo, handle: {}, faixa: '')
+      described_class.fatos_do_evento(tipo, Autonomia::Agents::ToolRun.new(handle: handle, faixa: faixa))
+    end
+
+    # O QUE DEU ERRADO VAI PARA A EQUIPE (decisão do CEO, 23/09/2026): a fala de encaminhar é o gatilho do handoff do
+    # CRM. Nenhum deles oferece cotar de novo: a incerta pode já ter cotado (e pago) no portal, e o formulário
+    # indisponível recusaria de novo.
+    it 'falha, incerteza e formulário indisponível encaminham para a equipe, sem oferecer cotar de novo' do
+      formulario = fatos('falhou', handle: { 'recusa' => 'formulario_indisponivel' })
+      [fatos('falhou'), fatos('incerta'), formulario].each do |texto|
+        expect(texto).to include('encaminhar para alguém da equipe')
+        expect(texto).not_to include('dá para pedir de novo')
+      end
+      expect(fatos('incerta')).to include('não conseguiu confirmar', 'sem oferecer cotar de novo')
+      expect(formulario).to include('Não ofereça cotar de novo')
+    end
+
+    it 'os fatos dizem de qual seguro é a notícia' do
+      expect(fatos('falhou', faixa: 'residencial')).to start_with('Cotação de residencial. ')
+      expect(fatos('concluida')).to start_with('Cotação de auto. ')
     end
   end
 end

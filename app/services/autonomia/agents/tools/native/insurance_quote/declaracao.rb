@@ -63,11 +63,16 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
   # conferência" — e o modelo devolveu ao cliente "a cotação está em conferência e não há preços
   # disponíveis neste momento". Vocabulário de sistema posto na boca dele, que é exatamente o que a
   # instrução do agente proíbe em §4. Ele obedeceu o exemplo, não a regra.
-  ACEITA = 'Você recebeu o pedido e já está cuidando dele. Diga isso ao cliente com as SUAS ' \
-           'palavras, e que você volta aqui assim que tiver notícia. NÃO afirme que já foi ' \
-           'enviada às seguradoras (ainda não foi), não use vocabulário de sistema — "em ' \
-           'conferência", "processando", "em análise", "não há dados disponíveis" — e não invente ' \
-           'valores, prazos nem nomes de seguradora.'.freeze
+  #
+  # NEM O QUE DIZER AO CLIENTE (23/09/2026). A versão anterior mandava "diga ao cliente que está cuidando e que volta
+  # aqui assim que tiver notícia". O especialista, que não fala com o cliente, escrevia essa frase para a Lia, e ela a
+  # repassava com os dados do pedido: "Peguei o seguro do carro, placa tal, no CEP tal. Volto com as opções por aqui",
+  # igual a cada cotação da conversa. Agora o texto diz o FATO e o que devolver ao atendente; a fala é dela.
+  ACEITA = 'A cotação abriu e está sendo feita. O resultado chega sozinho nesta conversa, sem ninguém pedir. ' \
+           'Devolva ao atendente só o que ele ainda não sabe e o cliente precisa ouvir: uma troca que você fez, ' \
+           'uma ressalva, algo que ficou de fora. Não repita os dados do pedido, não escreva frase pronta para o ' \
+           'cliente e não afirme que já chegou às seguradoras (ainda não chegou). Sem vocabulário de sistema ' \
+           '("em conferência", "processando", "em análise") e sem inventar valor, prazo ou nome de seguradora.'.freeze
 
   # AS FRASES AO CLIENTE SAÍRAM DAQUI (PR C). Havia seis constantes de desfecho e o nó `frases_ao_cliente`, em que
   # o especialista escrevia no pedido as doze frases que o motor publicava. Agora o motor dispara um evento e a

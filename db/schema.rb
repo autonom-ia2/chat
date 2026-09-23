@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_22_200000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_23_090000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -517,9 +517,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_22_200000) do
     t.string "failure_code"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "faixa", default: "", null: false
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
-    t.index ["conversation_id", "slug"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
+    t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying])::text[]))"
     t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true
   end
 
