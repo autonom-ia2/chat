@@ -81,13 +81,13 @@ RSpec.describe Autonomia::CentralDeAjuda::ArtigoFonte do
     expect(fonte.conteudo).to start_with('## O que é')
   end
 
-  it 'publica o print que existe, apontando para a pasta pública' do
+  it 'publica o print que existe, na pasta pública e com a legenda como texto alternativo' do
     prints = dir.join('prints')
     FileUtils.mkdir_p(prints)
     File.write(prints.join('02.06-a.png'), 'png')
     stub_const("#{described_class}::PASTA_PRINTS", prints)
 
-    expect(fonte.conteudo).to include('![PRINT 02.06-a: Menu da foto](/central-de-ajuda/prints/02.06-a.png)')
+    expect(fonte.conteudo).to include('![Menu da foto](/central-de-ajuda/prints/02.06-a.png)')
   end
 
   it 'usa o primeiro parágrafo de "O que é" como descrição' do
