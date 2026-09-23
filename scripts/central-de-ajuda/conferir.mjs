@@ -211,14 +211,76 @@ export const idDivergenteDoArquivo = artigos =>
     .map(artigo => artigo.arquivo);
 
 // ---------------------------------------------------------------------------
+// Evidências: `caminho:linha | trecho`, conferidas contra o código de hoje.
+//
+// O trecho é o que prova que a evidência ainda vale — a linha pode mudar de número
+// (revisão de código alheia à Central) sem que o fato deixe de ser verdade; só quando
+// o TRECHO some do arquivo é que o artigo precisa de revisão (kit do escritor, seção 6).
+
+// Separação sem regex (regra do projeto): indexOf(' | ') acha o fim de "caminho:linha";
+// lastIndexOf(':') dentro dessa parte acha o número, mesmo que o trecho tenha ":" dentro.
+export const analisarEvidencia = linha => {
+  const separador = linha.indexOf(' | ');
+  if (separador === -1) return null;
+
+  const local = linha.slice(0, separador);
+  const trecho = linha.slice(separador + 3);
+  const doisPontos = local.lastIndexOf(':');
+  if (doisPontos === -1) return null;
+
+  const caminho = local.slice(0, doisPontos);
+  const numero = Number(local.slice(doisPontos + 1));
+  if (!caminho || !trecho || !Number.isInteger(numero) || numero <= 0) return null;
+
+  return { caminho, numero, trecho };
+};
+
+const situacaoDaEvidencia = (evidencia, raiz) => {
+  const analisada = analisarEvidencia(evidencia);
+  if (!analisada) return { situacao: 'malformada', evidencia };
+
+  const { caminho, numero, trecho } = analisada;
+  const absoluto = r(raiz, caminho);
+  if (!fs.existsSync(absoluto)) {
+    return { situacao: 'arquivo_ausente', caminho, numero, trecho };
+  }
+
+  const linhas = fs.readFileSync(absoluto, 'utf8').split('\n');
+  if ((linhas[numero - 1] || '').trim() === trecho) {
+    return { situacao: 'ok', caminho, numero, trecho };
+  }
+
+  const novaLinha = linhas.findIndex(linha => linha.trim() === trecho);
+  if (novaLinha !== -1) {
+    return { situacao: 'linha_mudou', caminho, numero, trecho, novaLinha: novaLinha + 1 };
+  }
+
+  return { situacao: 'trecho_sumiu', caminho, numero, trecho };
+};
+
+// Uma linha por evidência do artigo, com a situação dela contra o arquivo-fonte.
+export const evidenciasDoArtigo = (artigo, raiz) =>
+  (artigo.cabecalho.evidencias || []).map(evidencia => ({
+    artigo: artigo.arquivo,
+    ...situacaoDaEvidencia(evidencia, raiz),
+  }));
+
+// ---------------------------------------------------------------------------
 // Junta tudo
 
 const listar = (titulo, itens, formatar = String) =>
   itens.length ? [titulo, ...itens.map(item => `  - ${formatar(item)}`)] : [];
 
-export const conferir = ({ artigos, mapa, registro, humanos }) => {
+export const conferir = ({ artigos, mapa, registro, humanos, raiz = process.cwd() }) => {
   const idsDoMapa = new Set(artigosDoMapa(mapa).keys());
   const cobertas = telasCobertas(mapa, artigos);
+
+  const evidencias = artigos.flatMap(artigo => evidenciasDoArtigo(artigo, raiz));
+  const evidenciasMalformadas = evidencias.filter(e => e.situacao === 'malformada');
+  const evidenciasParaRevisao = evidencias.filter(
+    e => e.situacao === 'arquivo_ausente' || e.situacao === 'trecho_sumiu'
+  );
+  const evidenciasComLinhaMudada = evidencias.filter(e => e.situacao === 'linha_mudou');
 
   const problemas = [
     ...listar(
@@ -240,11 +302,33 @@ export const conferir = ({ artigos, mapa, registro, humanos }) => {
       'Id do cabeçalho diferente do nome do arquivo:',
       idDivergenteDoArquivo(artigos)
     ),
+    ...listar(
+      'Evidência mal formada (não separa em "caminho:linha | trecho"):',
+      evidenciasMalformadas,
+      e => `${e.artigo}: ${e.evidencia}`
+    ),
+  ];
+
+  // Evidência sumida é sinal de que o FATO pode ter mudado, não prova disso — por
+  // isso é aviso local, e não falha o `central:check`. Quem decide se isso barra o
+  // PR é a trava (scripts/central-de-ajuda/trava.mjs, #614 etapa B).
+  const avisos = [
+    ...listar(
+      'Evidência para revisão (o trecho sumiu do arquivo, ou o arquivo foi apagado):',
+      evidenciasParaRevisao,
+      e => `${e.artigo}: ${e.caminho}:${e.numero}`
+    ),
+    ...listar(
+      'Evidência mudou de linha no arquivo-fonte (só aviso, o trecho continua valendo):',
+      evidenciasComLinhaMudada,
+      e => `${e.artigo}: ${e.caminho}:${e.numero} → :${e.novaLinha}`
+    ),
   ];
 
   return {
     ok: problemas.length === 0,
     problemas,
+    avisos,
     artigos: artigos.length,
     telas: cobertas.size,
   };
@@ -257,7 +341,9 @@ export const conferir = ({ artigos, mapa, registro, humanos }) => {
 // "type": "module", e importar o .js original por file:// dispara o aviso
 // MODULE_TYPELESS_PACKAGE_JSON do Node (mesma solução de lerRegistroDe, em
 // scripts/guide-map/aprendiz.mjs).
-const carregarRegistro = async raiz => {
+// Exportada para scripts/central-de-ajuda/trava.mjs (#614, etapa B) reaproveitar a
+// leitura do registro atual, em vez de duplicar a solução do arquivo .js sem "type": "module".
+export const carregarRegistro = async raiz => {
   const conteudo = fs.readFileSync(r(raiz, REGISTRY), 'utf8');
   const temporario = path.join(
     os.tmpdir(),
@@ -279,7 +365,12 @@ const main = async () => {
   const humanos = lerPorques(fs.readFileSync(r(raiz, PORQUES), 'utf8'));
   const registro = await carregarRegistro(raiz);
 
-  const resultado = conferir({ artigos, mapa, registro, humanos });
+  const resultado = conferir({ artigos, mapa, registro, humanos, raiz });
+
+  if (resultado.avisos.length) {
+    console.warn('Avisos (não falham o check local — a trava do PR decide):');
+    resultado.avisos.forEach(linha => console.warn(linha));
+  }
 
   if (!resultado.ok) {
     console.error('Central de Ajuda fora de dia:');

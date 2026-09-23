@@ -1,6 +1,7 @@
 // @vitest-environment node
 // Confere a Central de Ajuda "Plataforma" contra o Guia da Plataforma (#614). Fixtures em
-// string/objeto, no estilo de scripts/guide-map/specs/build.spec.js — sem tocar disco aqui.
+// string/objeto, no estilo de scripts/guide-map/specs/build.spec.js — sem tocar disco aqui,
+// exceto nos testes de evidência, que precisam de um arquivo-fonte de verdade para conferir.
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -14,6 +15,8 @@ import {
   artigosSemMapa,
   mapaSemArquivo,
   idDivergenteDoArquivo,
+  analisarEvidencia,
+  evidenciasDoArtigo,
   conferir,
 } from '../conferir.mjs';
 
@@ -273,5 +276,160 @@ describe('conferir — junta todos os problemas', () => {
 
     expect(resultado.ok).toBe(false);
     expect(resultado.problemas.join('\n')).toContain('tela_sem_artigo');
+  });
+});
+
+describe('analisarEvidencia — separa caminho:linha | trecho sem regex', () => {
+  it("separa com indexOf(' | ') e lastIndexOf(':')", () => {
+    expect(analisarEvidencia('app/models/user.rb:12 | def nome')).toEqual({
+      caminho: 'app/models/user.rb',
+      numero: 12,
+      trecho: 'def nome',
+    });
+  });
+
+  // O trecho pode ter ":" dentro (ex.: um objeto JS) — lastIndexOf no lado do
+  // caminho:linha, não no texto inteiro, é o que evita cortar errado.
+  it('não se confunde com dois pontos dentro do trecho', () => {
+    expect(analisarEvidencia('app/foo.js:8 | const x = { a: 1 };')).toEqual({
+      caminho: 'app/foo.js',
+      numero: 8,
+      trecho: 'const x = { a: 1 };',
+    });
+  });
+
+  it('devolve null quando falta o separador " | "', () => {
+    expect(analisarEvidencia('app/models/user.rb:12')).toBeNull();
+  });
+
+  it('devolve null quando falta o número da linha', () => {
+    expect(analisarEvidencia('app/models/user.rb | def nome')).toBeNull();
+  });
+
+  it('devolve null quando o trecho está vazio', () => {
+    expect(analisarEvidencia('app/models/user.rb:12 | ')).toBeNull();
+  });
+});
+
+describe('evidenciasDoArtigo — cada evidência contra o arquivo-fonte de hoje', () => {
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'central-evidencias-'));
+  const fonte = path.join(raiz, 'app/models/user.rb');
+
+  beforeAll(() => {
+    fs.mkdirSync(path.dirname(fonte), { recursive: true });
+    fs.writeFileSync(
+      fonte,
+      ['class User', '  def nome', '    @nome', '  end', 'end', ''].join('\n')
+    );
+  });
+
+  afterAll(() => fs.rmSync(raiz, { recursive: true, force: true }));
+
+  it('trecho na mesma linha declarada: ok', () => {
+    const art = artigo({ id: '00.01', rota: 'tela_a' });
+    art.cabecalho.evidencias = ['app/models/user.rb:2 | def nome'];
+
+    expect(evidenciasDoArtigo(art, raiz)).toEqual([
+      {
+        artigo: art.arquivo,
+        situacao: 'ok',
+        caminho: 'app/models/user.rb',
+        numero: 2,
+        trecho: 'def nome',
+      },
+    ]);
+  });
+
+  it('trecho existe mas mudou de linha: aviso, não problema', () => {
+    const art = artigo({ id: '00.01', rota: 'tela_a' });
+    art.cabecalho.evidencias = ['app/models/user.rb:1 | def nome'];
+
+    expect(evidenciasDoArtigo(art, raiz)).toEqual([
+      {
+        artigo: art.arquivo,
+        situacao: 'linha_mudou',
+        caminho: 'app/models/user.rb',
+        numero: 1,
+        trecho: 'def nome',
+        novaLinha: 2,
+      },
+    ]);
+  });
+
+  it('trecho sumiu do arquivo: para revisão', () => {
+    const art = artigo({ id: '00.01', rota: 'tela_a' });
+    art.cabecalho.evidencias = ['app/models/user.rb:2 | def nao_existe_mais'];
+
+    expect(evidenciasDoArtigo(art, raiz)[0].situacao).toBe('trecho_sumiu');
+  });
+
+  it('arquivo apagado: para revisão', () => {
+    const art = artigo({ id: '00.01', rota: 'tela_a' });
+    art.cabecalho.evidencias = ['app/models/sumiu.rb:2 | def nome'];
+
+    expect(evidenciasDoArtigo(art, raiz)[0].situacao).toBe('arquivo_ausente');
+  });
+
+  it('evidência mal formada aparece marcada, sem derrubar o resto', () => {
+    const art = artigo({ id: '00.01', rota: 'tela_a' });
+    art.cabecalho.evidencias = ['app/models/user.rb:2'];
+
+    expect(evidenciasDoArtigo(art, raiz)[0].situacao).toBe('malformada');
+  });
+
+  it('artigo sem evidências não quebra', () => {
+    const art = artigo({ id: '00.01', rota: 'tela_a' });
+
+    expect(evidenciasDoArtigo(art, raiz)).toEqual([]);
+  });
+});
+
+describe('conferir — evidências entram como aviso, exceto malformada', () => {
+  const raiz = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'central-evidencias-conferir-')
+  );
+  const fonte = path.join(raiz, 'app/models/user.rb');
+
+  beforeAll(() => {
+    fs.mkdirSync(path.dirname(fonte), { recursive: true });
+    fs.writeFileSync(fonte, ['class User', '  def nome', 'end', ''].join('\n'));
+  });
+
+  afterAll(() => fs.rmSync(raiz, { recursive: true, force: true }));
+
+  it('evidência que sumiu vira aviso, e ok continua true', () => {
+    const art = artigo({ id: '00.01', rota: 'tela_a' });
+    art.cabecalho.evidencias = ['app/models/user.rb:2 | def nao_existe_mais'];
+    const mapa = mapaCom([artigoDoMapa({ id: '00.01', rotas: ['tela_a'] })]);
+    const registro = new Set(['tela_a']);
+
+    const resultado = conferir({
+      artigos: [art],
+      mapa,
+      registro,
+      humanos: {},
+      raiz,
+    });
+
+    expect(resultado.ok).toBe(true);
+    expect(resultado.avisos.join('\n')).toContain('user.rb:2');
+  });
+
+  it('evidência mal formada vira problema e falha o check', () => {
+    const art = artigo({ id: '00.01', rota: 'tela_a' });
+    art.cabecalho.evidencias = ['app/models/user.rb:2'];
+    const mapa = mapaCom([artigoDoMapa({ id: '00.01', rotas: ['tela_a'] })]);
+    const registro = new Set(['tela_a']);
+
+    const resultado = conferir({
+      artigos: [art],
+      mapa,
+      registro,
+      humanos: {},
+      raiz,
+    });
+
+    expect(resultado.ok).toBe(false);
+    expect(resultado.problemas.join('\n')).toContain('mal formada');
   });
 });
