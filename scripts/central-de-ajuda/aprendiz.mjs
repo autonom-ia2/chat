@@ -160,7 +160,8 @@ const CAMPOS_ARTIGO = [
 // O capítulo só pode ser um dos que já existem no mapa — nada de "99" nem "a revisar"
 // inventado: sem opção que sirva, o robô não escreve o artigo (fica para a próxima vez
 // que alguém escrever esse capítulo à mão, ou para revisão direta do Rodrigo).
-const esquemaArtigo = idsDosCapitulos => ({
+// O mesmo vale para o "Veja também": só ids que existem, senão o PR do robô nasce com link quebrado.
+const esquemaArtigo = (idsDosCapitulos, idsDosArtigos) => ({
   type: 'object',
   additionalProperties: false,
   required: ['capitulo', ...CAMPOS_ARTIGO, 'veja_tambem', 'duvidas'],
@@ -173,7 +174,7 @@ const esquemaArtigo = idsDosCapitulos => ({
     por_que_importa: { type: 'string' },
     como_faz: { type: 'string' },
     o_que_da_errado: { type: 'string' },
-    veja_tambem: { type: 'array', items: { type: 'string' } },
+    veja_tambem: { type: 'array', items: { type: 'string', enum: idsDosArtigos } },
     duvidas: { type: 'string' },
   },
 });
@@ -185,6 +186,7 @@ export const pedirArtigoAoGpt = ({
   blocoPorques,
   kit,
   capitulos,
+  idsDosArtigos,
   chave,
   modelo,
   buscar,
@@ -210,7 +212,10 @@ export const pedirArtigoAoGpt = ({
   return pedirAoGpt({
     instrucoes: kit,
     entrada,
-    esquema: esquemaArtigo(capitulos.map(cap => cap.id)),
+    esquema: esquemaArtigo(
+      capitulos.map(cap => cap.id),
+      idsDosArtigos
+    ),
     nome: 'artigo_da_central',
     chave,
     modelo,
@@ -250,11 +255,13 @@ const exemplosDeArtigos = artigos =>
 
 // Artigo cujas rotas sumiram TODAS do registro — e nenhuma delas está em `_fora_do_guia`:
 // uma rota que só foi reclassificada (tela de sistema, redirecionamento) não é uma rota
-// removida do produto, é a mesma tela com outro rótulo.
-export const artigosParaRemover = ({ mapa, atualRegistro, humanos }) =>
+// removida do produto, é a mesma tela com outro rótulo. E só conta rota que sumiu NESTE push
+// (estava em `antesRegistro`): a que já tinha sumido antes é assunto do PR daquele push.
+export const artigosParaRemover = ({ mapa, antesRegistro, atualRegistro, humanos }) =>
   todosArtigos(mapa).filter(artigo => {
     const rotas = artigo.rotas || [];
     if (!rotas.length) return false;
+    if (!rotas.some(rota => antesRegistro.has(rota))) return false;
     const todasSumiram = rotas.every(rota => !atualRegistro.has(rota));
     if (!todasSumiram) return false;
     return !rotas.some(rota => foraDoGuia(humanos, rota));
@@ -469,20 +476,18 @@ const jsonDoCommit = (commit, caminho) => {
   }
 };
 
-const arquivosAlteradosNoPush = commit => {
-  try {
-    return new Set(
-      execFileSync('git', ['diff', '--name-only', `${commit}`, 'HEAD'], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      })
-        .split('\n')
-        .filter(Boolean)
-    );
-  } catch {
-    return new Set();
-  }
-};
+// `--no-renames`: arquivo renomeado aparece pelo nome antigo também, e a evidência que o
+// cita não fica de fora. Sem try/catch: se o git falhar, o job fica vermelho com o motivo,
+// em vez de pular a conferência calado.
+const arquivosAlteradosNoPush = commit =>
+  new Set(
+    execFileSync('git', ['diff', '--name-only', '--no-renames', `${commit}`, 'HEAD'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+      .split('\n')
+      .filter(Boolean)
+  );
 
 const rascunharArtigoNovo = async ({ nomeDaRota, mapa, artigos, porquesTexto, kitTexto, chave, modelo }) => {
   const tela = { nome: nomeDaRota, caminho: `rota: ${nomeDaRota}` };
@@ -494,6 +499,7 @@ const rascunharArtigoNovo = async ({ nomeDaRota, mapa, artigos, porquesTexto, ki
     blocoPorques: blocoDoPorquesPara(porquesTexto, nomeDaRota),
     kit: kitTexto,
     capitulos,
+    idsDosArtigos: todosArtigos(mapa).map(artigo => artigo.id),
     chave,
     modelo,
   });
@@ -529,7 +535,7 @@ const executar = async () => {
   const novas = telasNovasSemArtigo({ antes: antesRegistro, atual: atualRegistro, cobertas });
 
   // (b) artigos removidos
-  const removidos = artigosParaRemover({ mapa, atualRegistro, humanos });
+  const removidos = artigosParaRemover({ mapa, antesRegistro, atualRegistro, humanos });
   const idsRemovidos = new Set(removidos.map(a => a.id));
 
   // (c) evidência quebrada só em arquivo alterado neste push, em artigo que NÃO foi removido

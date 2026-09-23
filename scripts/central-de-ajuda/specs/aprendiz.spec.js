@@ -161,6 +161,7 @@ describe('pedirArtigoAoGpt — o capítulo só pode ser um dos que já existem',
         { id: '10', titulo: 'CRM' },
         { id: '02', titulo: 'Configurações' },
       ],
+      idsDosArtigos: ['02.04', '10.01'],
       chave: 'sk-teste',
       buscar,
     });
@@ -169,6 +170,9 @@ describe('pedirArtigoAoGpt — o capítulo só pode ser um dos que já existem',
       '10',
       '02',
     ]);
+    expect(
+      enviado.text.format.schema.properties.veja_tambem.items.enum
+    ).toEqual(['02.04', '10.01']);
     expect(enviado.text.format.name).toBe('artigo_da_central');
     expect(enviado.instructions).toBe('texto do kit');
   });
@@ -186,11 +190,33 @@ describe('artigosParaRemover — todas as rotas sumiram, e nenhuma está em _for
 
     const resultado = artigosParaRemover({
       mapa,
+      antesRegistro: new Set(['tela_velha', 'tela_b']),
       atualRegistro: new Set(['tela_b']),
       humanos: {},
     });
 
     expect(resultado.map(a => a.id)).toEqual(['02.01']);
+  });
+
+  // A rota já tinha sumido antes deste push: o PR daquela remoção é outro. Sem isto,
+  // cada push seguinte abriria um PR novo para o mesmo artigo.
+  it('não acha de novo quando a rota já tinha sumido antes deste push', () => {
+    const mapa = mapaCom([
+      {
+        id: '02',
+        titulo: 'Cap',
+        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_velha'] })],
+      },
+    ]);
+
+    const resultado = artigosParaRemover({
+      mapa,
+      antesRegistro: new Set(['tela_b']),
+      atualRegistro: new Set(['tela_b']),
+      humanos: {},
+    });
+
+    expect(resultado).toEqual([]);
   });
 
   it('não acha quando ainda sobrou alguma rota (limpeza parcial foi removida desta etapa)', () => {
@@ -204,6 +230,7 @@ describe('artigosParaRemover — todas as rotas sumiram, e nenhuma está em _for
 
     const resultado = artigosParaRemover({
       mapa,
+      antesRegistro: new Set(['tela_a', 'tela_b']),
       atualRegistro: new Set(['tela_a']),
       humanos: {},
     });
@@ -224,6 +251,7 @@ describe('artigosParaRemover — todas as rotas sumiram, e nenhuma está em _for
 
     const resultado = artigosParaRemover({
       mapa,
+      antesRegistro: new Set(['tela_sistema']),
       atualRegistro: new Set([]),
       humanos: { _fora_do_guia: { tela_sistema: 'redirecionamento puro' } },
     });

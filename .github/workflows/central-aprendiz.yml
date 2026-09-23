@@ -44,17 +44,20 @@ jobs:
             echo "existe=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Qualquer PR deste ramo, aberto, fechado ou mergeado, encerra o assunto: PR fechado
+      # foi decisão de alguém e não se reabre sozinho.
       - id: pr_do_ramo
-        name: Esse ramo já tem PR aberto?
+        name: Esse ramo já teve PR?
         if: steps.ramo.outputs.existe == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          RAMO: ${{ steps.ramo.outputs.ramo }}
         run: |
-          numero=$(gh pr list --head "${{ steps.ramo.outputs.ramo }}" --state open --json number --jq '.[0].number // empty')
+          numero=$(gh pr list --head "$RAMO" --state all --json number --jq '.[0].number // empty')
           if [ -n "$numero" ]; then
-            echo "aberto=true" >> "$GITHUB_OUTPUT"
+            echo "teve=true" >> "$GITHUB_OUTPUT"
           else
-            echo "aberto=false" >> "$GITHUB_OUTPUT"
+            echo "teve=false" >> "$GITHUB_OUTPUT"
           fi
 
       - if: steps.ramo.outputs.existe == 'false'
@@ -93,15 +96,14 @@ jobs:
             --title "Central: rascunho do que mudou na plataforma (${GITHUB_SHA::7})" \
             --body-file "$CORPO_DO_PR"
 
-      # Ramo órfão: já existe (uma execução anterior escreveu e enviou o ramo) mas não tem
-      # PR aberto — alguém fechou sem merge, ou o passo de abrir o PR falhou depois do
-      # push. O conteúdo do ramo já está certo; só falta o PR.
+      # Ramo órfão: uma execução anterior enviou o ramo, mas o passo de abrir o PR falhou
+      # depois do push. O conteúdo do ramo já está certo; só falta o PR.
       - name: Abrir o Pull Request de um ramo órfão
-        if: steps.ramo.outputs.existe == 'true' && steps.pr_do_ramo.outputs.aberto == 'false'
+        if: steps.ramo.outputs.existe == 'true' && steps.pr_do_ramo.outputs.teve == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           RAMO: ${{ steps.ramo.outputs.ramo }}
         run: |
           gh pr create --base main --head "$RAMO" \
             --title "Central: rascunho do que mudou na plataforma (${GITHUB_SHA::7})" \
-            --body "Rascunho do ramo \`$RAMO\`, aberto de novo automaticamente: o PR anterior deste ramo foi fechado sem merge, ou não chegou a ser criado da primeira vez."
+            --body "Rascunho do ramo \`$RAMO\`: o PR não chegou a ser criado na primeira execução."
