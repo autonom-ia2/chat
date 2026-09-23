@@ -33,6 +33,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
     # O único problema que o chat2you levanta sozinho (`Veiculo#problema_de_zero_km`).
     'vehicle.isZeroKm' => 'se o veículo é zero-quilômetro'
   }.freeze
+  # SEM O NOME DO BEM NÃO HÁ COMO SABER QUAL COTAÇÃO É (chat#612): em branco, a cotação cairia calada na faixa do ramo,
+  # e dois bens no mesmo turno virariam um. Recusa grátis, antes do portal. Texto para o MODELO.
+  SEM_ITEM = 'Falta o nome do bem desta cotação em item: o carro pelo modelo, o imóvel pelo que o distingue. Se o ' \
+             'bem já tem cotação nesta conversa, repita o nome dele. Chame de novo com item preenchido.'.freeze
   # SEM PLACA, CHASSI OU FIPE NÃO HÁ VEÍCULO PARA COTAR (entrega 2, termo 10). Texto para o MODELO: na
   # conferência e nos fatos do evento `falta_dado`.
   SEM_VEICULO = 'Não dá para cotar sem identificar o veículo: peça a placa. Se for zero-quilômetro ' \

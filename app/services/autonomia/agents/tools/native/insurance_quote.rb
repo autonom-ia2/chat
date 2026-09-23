@@ -168,6 +168,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
   # O que impede a cotação antes de olhar os dados: sem JSON, sem conexão, sem formulário, sem veículo.
   def recusa_de_entrada
+    return conferencia('sem_item', SEM_ITEM, ['item']) if params['item'].to_s.squish.empty?
     return conferencia('json_invalido', PEDIDO_DE_JSON, ['dados']) if dados.nil?
     return conferencia('conexao_indisponivel', CONEXAO_FORA, []) if conexao_fora?
     return conferencia('formulario_indisponivel', SEM_FORMULARIO, []) if sem_formulario?
@@ -196,10 +197,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     build_progress(result, handle, attempt)
   end
 
-  # A FAIXA É O PRODUTO: a cotação de residencial não troca a de auto que corre na mesma conversa. Pública, porque
-  # o `Bound` a lê no aceite.
+  # A FAIXA É O PRODUTO MAIS O BEM (`Insurance::Faixa`, chat#612): a cotação do apartamento não troca a do carro, e a
+  # do segundo carro não troca a do primeiro. Pública, porque o `Bound` a lê no aceite.
   def faixa
-    produto
+    ::Autonomia::Insurance::Faixa.de(produto, params['item'])
   end
 
   private

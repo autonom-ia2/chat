@@ -67,7 +67,8 @@ RSpec.describe Autonomia::Agents::Specialists::Runner do
     saida = consultar
 
     expect(delivery.runs.size).to eq(1)
-    expect(saida).to end_with(described_class::COTACAO_ABERTA)
+    bem = Autonomia::Insurance::Faixa.descricao(delivery.runs.first)
+    expect(saida).to include(described_class::COTACAO_ABERTA, "Bens com cotação aberta: #{bem}.")
     expect(saida).not_to include(described_class::COTACAO_NAO_ABERTA)
   end
 
@@ -78,7 +79,8 @@ RSpec.describe Autonomia::Agents::Specialists::Runner do
     saida = consultar
 
     expect(delivery.runs.size).to eq(1)
-    expect(saida).to end_with(described_class::COTACAO_ABERTA)
+    bem = Autonomia::Insurance::Faixa.descricao(delivery.runs.first)
+    expect(saida).to include(described_class::COTACAO_ABERTA, "Bens com cotação aberta: #{bem}.")
   end
 
   # MAIS DE UMA RODADA (#585). Com `max_rodadas: 1` — o padrão do cliente — a recusa da conferência

@@ -74,7 +74,7 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
     end
 
     def base(mensagens)
-      textos(mensagens).find { |texto| texto.include?('ÚLTIMA COTAÇÃO DESTA CONVERSA') }
+      textos(mensagens).find { |texto| texto.include?('ÚLTIMAS COTAÇÕES DESTA CONVERSA') }
     end
 
     it 'entra a entrada da mais recente que chegou ao portal, sem as frases ao cliente, com a data e a regra' do
@@ -88,7 +88,7 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
       texto = base(described_class.new(delivery: delivery, history: historico).mensagens)
 
       expect(texto).to include('18/09/2026', 'Rodrigo', '88010400', 'deductible',
-                               'parta desta entrada e mude só o que ele pediu agora')
+                               'parta da', 'entrada dele, mude só o que o cliente pediu agora')
       expect(texto).not_to include('William')
       expect(texto).not_to include('Recusada')
       expect(texto).not_to include('frases_ao_cliente')
@@ -101,7 +101,7 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
       mensagens = described_class.new(delivery: delivery, history: historico, documents: [{ name: 'a.pdf', text: 'x' }]).mensagens
 
       expect(textos(mensagens)[-2]).to include('DOCUMENTOS ANEXADOS PELO CLIENTE')
-      expect(textos(mensagens).last).to include('ÚLTIMA COTAÇÃO DESTA CONVERSA')
+      expect(textos(mensagens).last).to include('ÚLTIMAS COTAÇÕES DESTA CONVERSA')
     end
 
     it 'o texto do cliente nao fecha a cerca da base' do
@@ -124,6 +124,16 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
       expect(do_auto).to include('Carro')
       expect(do_auto).not_to include('Casa')
       expect(da_casa).to include('Casa')
+    end
+
+    # Revisão da chat#615: o cliente corrige um dado com a cotação correndo; o especialista precisa ver o nome do bem.
+    it 'a cotação em andamento entra na base, marcada como em andamento, com o nome do bem' do
+      cotacao({ 'produto' => 'auto', 'item' => 'Nivus', 'cep' => '30140071' }, handle: {}, feita_em: 1.minute.ago, status: 'running',
+                                                                               faixa: 'auto:nivus')
+
+      texto = base(described_class.new(delivery: delivery, faixa: 'auto').mensagens)
+
+      expect(texto).to include('situacao="em andamento"', '"item":"Nivus"')
     end
 
     it 'sem cotacao que chegou ao portal nesta conversa, nada muda' do

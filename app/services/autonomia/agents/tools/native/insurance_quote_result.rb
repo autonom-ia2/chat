@@ -115,19 +115,16 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     params['seguradora'].to_s.strip.presence
   end
 
-  def produto
-    Resultado.produto_pedido(params, especialista)
-  end
-
-  # Com auto e residencial na mesma conversa, a Lia precisa saber de qual seguro é esta leitura e que o outro existe:
-  # em 23/09/2026 ela leu a cotação nova do apartamento e disse que o carro "ainda não tem preços".
+  # Com mais de um bem cotado na conversa, quem lê precisa saber de qual é esta leitura e que os outros existem: em
+  # 23/09/2026 a Lia leu a cotação nova do apartamento e disse que o carro "ainda não tem preços".
   def outros_produtos(conversa)
     produtos = Resultado.produtos(conversa.id)
     return nil if produtos.size < 2
 
     atual = @resultado.run.faixa.presence || Resultado.cotacao::AUTO
-    outros = (produtos - [atual]).join(' e ')
-    "Esta é a cotação de #{atual}. A conversa também tem cotação de #{outros}: para ver, chame de novo com produto #{outros}."
+    outros = (produtos - [atual]).join('; ')
+    "Esta é a cotação de #{atual}. A conversa também tem cotação de: #{outros}. Para ver outra, chame de novo com " \
+      'produto igual ao nome dela.'
   end
 
   # O RESUMO DA ENTRADA VEM JUNTO DOS PREÇOS (#515). Em 19/09/2026 o cliente perguntou "o bônus da
@@ -135,10 +132,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   # dados a cotação tinha sido pedida. Não vai nos estados em que não há cotação a ler (`texto_sem_leitura`):
   # lá o assunto é outro, e o resumo de um pedido que não chegou ao portal confundiria.
   def resposta(conversa)
-    qual = Resultado.qual_produto(conversa.id, params, especialista)
-    return qual if qual
+    escolha = Resultado.escolha(conversa.id, params, especialista)
+    return escolha.pergunta if escolha.pergunta
 
-    @resultado = Resultado.da_conversa(conversa.id, faixa: produto)
+    @resultado = Resultado.da_conversa(conversa.id, faixa: escolha.faixa)
     return SEM_COTACAO if @resultado.nil?
 
     sem_leitura = texto_sem_leitura

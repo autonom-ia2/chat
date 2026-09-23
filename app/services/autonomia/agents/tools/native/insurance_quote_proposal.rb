@@ -80,10 +80,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     conversa = delivery&.conversation
     return error(SEM_CONTEXTO) if conversa.nil?
 
-    qual = Resultado.qual_produto(conversa.id, params, especialista, exigir: true)
-    return qual if qual
+    escolha = Resultado.escolha(conversa.id, params, especialista, exigir: true)
+    return escolha.pergunta if escolha.pergunta
 
-    @resultado = Resultado.da_conversa(conversa.id, faixa: Resultado.produto_pedido(params, especialista))
+    @resultado = Resultado.da_conversa(conversa.id, faixa: escolha.faixa)
     return SEM_COTACAO if @resultado.nil?
 
     codigos = @resultado.procurar(params['seguradora'].to_s)

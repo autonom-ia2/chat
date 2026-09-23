@@ -170,10 +170,19 @@ class Autonomia::Agents::Specialists::Runner
   end
 
   def situacao
-    return COTACAO_ABERTA if @delivery&.runs&.size.to_i > @abertas_antes.to_i
+    novas = @delivery&.runs.to_a.drop(@abertas_antes.to_i)
+    return cotacao_aberta(novas) if novas.any?
     return COTACAO_EXISTENTE if @delivery.try(:cotacao_existente?)
 
     COTACAO_NAO_ABERTA
+  end
+
+  # OS BENS QUE ABRIRAM (revisão da chat#615): com dois carros pedidos e um barrado por falta de dado, "a cotação foi
+  # aberta" fazia a Lia prometer os dois. A lista diz quais abriram; o bem que não está nela não foi cotado.
+  def cotacao_aberta(novas)
+    bens = novas.map { |run| ::Autonomia::Insurance::Faixa.descricao(run) }.join('; ')
+    "#{COTACAO_ABERTA} Bens com cotação aberta: #{bens}. Bem pedido que não está nesta lista não foi cotado: não diga " \
+      'ao cliente que ele está sendo cotado.'
   end
 
   # Junta resposta e pendências numa string só — o principal recebe texto, não estrutura.

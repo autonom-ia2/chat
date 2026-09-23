@@ -126,7 +126,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
 
       ao_modelo = pedir('Usebens')
 
-      expect(ao_modelo).to include('Esta conversa tem cotação de residencial e auto')
+      expect(ao_modelo).to include('Esta conversa tem cotação de: residencial; auto')
       expect(mensagens_do_bot).to be_empty
       expect(connector).not_to have_received(:quote_proposal)
     end

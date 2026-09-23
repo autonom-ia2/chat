@@ -15,6 +15,13 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
       'description' => 'Ramo a cotar: auto, residencial, condominio, empresarial, ' \
                        'fianca_locaticia, viagem, acidentes_pessoais, vida, vida_global, celular ' \
                        'ou bike.' },
+    # O BEM DESTA COTAÇÃO (chat#612). Cada bem é uma cotação, e elas correm em paralelo. Quem decide se o pedido é o
+    # mesmo bem (recotar, corrigir) ou outro é o modelo, pelo nome que ele dá: nenhum código compara placa ou endereço.
+    { 'name' => 'item', 'type' => 'string',
+      'description' => 'Nome curto do bem desta cotação, como o cliente o chama: o carro pelo modelo (a placa só se ' \
+                       'houver dois do mesmo modelo), o imóvel pelo que o distingue. Para recotar ou corrigir um bem ' \
+                       'que já tem cotação nesta conversa, repita exatamente o nome que ele já tem; bem diferente, nome ' \
+                       'novo. Dois bens são duas chamadas, cada uma com o seu nome.' },
     { 'name' => 'cpf', 'type' => 'string', 'required' => false,
       'description' => 'CPF ou CNPJ do segurado, só números ou formatado.' },
     { 'name' => 'nome', 'type' => 'string', 'required' => false,

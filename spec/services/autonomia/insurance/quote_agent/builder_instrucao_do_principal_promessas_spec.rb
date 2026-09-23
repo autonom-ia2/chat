@@ -240,6 +240,14 @@ module ManualDoPrincipal
       cotacao = Autonomia::Agents::Tools::Native::InsuranceQuote
       cotacao.async? && Autonomia::Agents::Tools::Evento::TIPOS.include?('concluida') &&
         cotacao.accepted_message.include?('O resultado chega sozinho nesta conversa')
+    },
+    # VÁRIOS BENS DE UMA VEZ (chat#612): cada bem tem a sua faixa, e o especialista cota os bens em rodadas no mesmo
+    # turno. Pedir tudo de uma vez não troca um bem pelo outro.
+    'Não cote um e deixe o outro para depois.' => lambda {
+      faixa = Autonomia::Insurance::Faixa
+      faixa.de('auto', 'Nivus') != faixa.de('auto', 'Onix') &&
+        Autonomia::Agents::Tools::Native::InsuranceQuote.params.any? { |p| p['name'] == 'item' } &&
+        Autonomia::Agents::Specialists::Runner::RODADAS_DE_FERRAMENTA > 1
     }
   }.freeze
 end
@@ -574,9 +582,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
 
     # 23/09/2026 (`b5984308…` -> `eeba4c92…`): a cotação que abre não pede recibo; não repetir não é mudar o fato.
+    # Pela chat#612 (`eeba4c92…` -> `a7b67a0e…`): vários bens de uma vez, e a confirmação nomeia os bens.
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('eeba4c928a71501de6bf6fa57eb6c494')
+      expect(Digest::MD5.hexdigest(secao)).to eq('a7b67a0e2399ebf5e36ae91983667692')
     end
 
     it 'não introduz variável para substituir' do
