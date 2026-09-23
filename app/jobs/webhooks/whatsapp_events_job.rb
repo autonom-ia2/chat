@@ -1,5 +1,18 @@
 class Webhooks::WhatsappEventsJob < MutexApplicationJob
-  queue_as :low
+  # A MENSAGEM DO CLIENTE NA MEDIUM, O RESTO NA LOW (Autonom.ia, 23/09/2026). As filas sao de prioridade estrita:
+  # na `low`, a mensagem que chega esperava as consultas de cotacao e as respostas do agente, que estao na `medium`.
+  # Recibo de entrega, historico e sincronizacao de contatos continuam na `low`: uma campanha grande de outra conta
+  # nao pode passar na frente da resposta de ninguem.
+  queue_as do
+    self.class.mensagem_do_cliente?(arguments.first) ? :medium : :low
+  end
+
+  def self.mensagem_do_cliente?(params)
+    return false unless params.respond_to?(:to_h)
+
+    changes = Array(params.to_h.with_indifferent_access[:entry]).flat_map { |entry| Array(entry.to_h.with_indifferent_access[:changes]) }
+    changes.any? { |change| change[:field] == 'messages' && change.dig(:value, :messages).present? }
+  end
 
   # Generous on purpose: a history chunk can carry many threads/messages, and this lock must
   # cover the whole import so a concurrent redelivery of the same chunk (Meta retries on

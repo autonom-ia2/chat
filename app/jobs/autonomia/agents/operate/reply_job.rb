@@ -18,7 +18,10 @@ module Autonomia
       # gravado com `update_column` (sem callbacks) -> NUNCA re-dispara MESSAGE_CREATED nem
       # observers. A resposta outgoing do bot não é incoming, logo nunca volta a este job.
       class ReplyJob < ApplicationJob
-        queue_as :low
+        # MEDIUM, NÃO LOW (Rodrigo, 23/09/2026): as filas do Sidekiq são de prioridade estrita, e a `low` só anda
+        # com as de cima vazias. Com várias cotações em curso, a `medium` (as consultas da cotação) quase nunca
+        # esvazia, e a resposta da Lia ao cliente esperava atrás delas.
+        queue_as :medium
 
         DEBOUNCE_KEY = 'autonomia_debounce'.freeze
 

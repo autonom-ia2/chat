@@ -157,6 +157,11 @@ jobs:
               # A flag existia so na VPS legada e nao veio na migracao para a AWS: sem ela a
               # agenda perde o "+ Novo > Reuniao" e o botao "Pagina de agendamento".
               "CRM_CALENDAR_MEETINGS_ENABLED": "true",
+              # 30 threads no worker (Rodrigo, 23/09/2026): com 10, vinte clientes cotando juntos
+              # esperavam fila — um turno da Lia segura uma thread por ate 28 s e a abertura da
+              # cotacao por ate 24 s. O pool do banco acompanha (`config/database.yml`); o RDS
+              # aceita 79 conexoes e o pior caso, no deploy com as duas instancias, fica em ~50.
+              "SIDEKIQ_CONCURRENCY": "30",
           }
 
           lines = path.read_text().splitlines()
@@ -360,7 +365,7 @@ jobs:
           EnvironmentFile=/opt/chatwoot/runtime.env
           ExecStartPre=-/usr/bin/docker rm -f chatwoot-worker
           ExecStart=/usr/bin/docker run --rm --name chatwoot-worker --env-file /opt/chatwoot/.env $IMAGE_URI bundle exec sidekiq -C config/sidekiq.yml
-          ExecStop=/usr/bin/docker stop chatwoot-worker
+          ExecStop=/usr/bin/docker stop -t 30 chatwoot-worker
 
           [Install]
           WantedBy=multi-user.target
@@ -710,17 +715,8 @@ jobs:
             --listener-arn "$listener_arn" \
             --default-actions "Type=forward,TargetGroupArn=$previous_tg_arn"
 
-          previous_command_id=$(aws ssm send-command \
-            --instance-ids "$previous_instance_id" \
-            --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
-            --query 'Command.CommandId' \
-            --output text)
-
-          aws ssm wait command-executed \
-            --command-id "$previous_command_id" \
-            --instance-id "$previous_instance_id"
-
+          # O WORKER ATUAL PARA ANTES DE O ANTERIOR SUBIR, na mesma ordem do deploy: com 30 threads em
+          # cada, os dois juntos abririam ~60 conexoes no RDS (que aceita 79) mais as das webs.
           current_command_id=$(aws ssm send-command \
             --instance-ids "$current_instance_id" \
             --document-name AWS-RunShellScript \
@@ -731,6 +727,17 @@ jobs:
           aws ssm wait command-executed \
             --command-id "$current_command_id" \
             --instance-id "$current_instance_id"
+
+          previous_command_id=$(aws ssm send-command \
+            --instance-ids "$previous_instance_id" \
+            --document-name AWS-RunShellScript \
+            --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
+            --query 'Command.CommandId' \
+            --output text)
+
+          aws ssm wait command-executed \
+            --command-id "$previous_command_id" \
+            --instance-id "$previous_instance_id"
 
       - name: Verify public SSO redirect after rollback
         run: |
