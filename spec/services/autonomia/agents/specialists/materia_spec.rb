@@ -74,7 +74,7 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
     end
 
     def base(mensagens)
-      textos(mensagens).find { |texto| texto.include?('ÚLTIMA COTAÇÃO DESTA CONVERSA') }
+      textos(mensagens).find { |texto| texto.include?('ÚLTIMAS COTAÇÕES DESTA CONVERSA') }
     end
 
     it 'entra a entrada da mais recente que chegou ao portal, sem as frases ao cliente, com a data e a regra' do
@@ -88,7 +88,7 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
       texto = base(described_class.new(delivery: delivery, history: historico).mensagens)
 
       expect(texto).to include('18/09/2026', 'Rodrigo', '88010400', 'deductible',
-                               'parta desta entrada e mude só o que ele pediu agora')
+                               'parta da', 'entrada dele, mude só o que o cliente pediu agora')
       expect(texto).not_to include('William')
       expect(texto).not_to include('Recusada')
       expect(texto).not_to include('frases_ao_cliente')
@@ -101,7 +101,7 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
       mensagens = described_class.new(delivery: delivery, history: historico, documents: [{ name: 'a.pdf', text: 'x' }]).mensagens
 
       expect(textos(mensagens)[-2]).to include('DOCUMENTOS ANEXADOS PELO CLIENTE')
-      expect(textos(mensagens).last).to include('ÚLTIMA COTAÇÃO DESTA CONVERSA')
+      expect(textos(mensagens).last).to include('ÚLTIMAS COTAÇÕES DESTA CONVERSA')
     end
 
     it 'o texto do cliente nao fecha a cerca da base' do

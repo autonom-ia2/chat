@@ -86,7 +86,7 @@ RSpec.describe Autonomia::Agents::Specialists::Runner do
       end
       turno = Autonomia::Agents::Tools::Delivery.new(conversation: conversa, agent_inbox: nil, origin_message_id: 1)
 
-      base = entrada_recebida(delivery: turno).map { |m| m[:content].first[:text] }.find { |t| t.include?('ÚLTIMA COTAÇÃO') }
+      base = entrada_recebida(delivery: turno).map { |m| m[:content].first[:text] }.find { |t| t.include?('ÚLTIMAS COTAÇÕES') }
 
       expect(base).to include('Casa')
       expect(base).not_to include('Carro')

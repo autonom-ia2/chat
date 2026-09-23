@@ -485,7 +485,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
 
       expect(texto).to include('Tokio Marine fez proposta')
       expect(texto).not_to include('Porto Seguro')
-      expect(texto).to include('Esta é a cotação de residencial. A conversa também tem cotação de auto')
+      expect(texto).to include('Esta é a cotação de residencial. A conversa também tem cotação de: auto')
     end
 
     it 'com produto lê a daquele produto, mesmo não sendo a mais nova' do
@@ -493,7 +493,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
 
       expect(texto).to include(preco(porto))
       expect(texto).not_to include('Tokio')
-      expect(texto).to include('A conversa também tem cotação de residencial')
+      expect(texto).to include('A conversa também tem cotação de: residencial')
     end
 
     it 'chamada pelo especialista, lê a do ramo dele sem precisar do produto' do
@@ -520,7 +520,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     it 'produto fora dos que a conversa tem: devolve a lista, sem afirmar que não há cotação' do
       texto = described_class.new(agent: agent, params: { 'seguradora' => nil, 'produto' => 'carro' }, delivery: delivery).call
 
-      expect(texto).to include('Esta conversa tem cotação de residencial e auto')
+      expect(texto).to include('Esta conversa tem cotação de: residencial; auto')
       expect(texto).not_to include(described_class::SEM_COTACAO)
     end
 

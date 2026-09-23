@@ -142,6 +142,31 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     end
   end
 
+  # POR BEM (chat#612): o cliente cota dois carros. Quem diz se é o mesmo bem é o nome que o modelo dá (`item`).
+  describe 'dois bens do mesmo ramo' do
+    let(:outro_carro) { { 'cpf' => '04297912678', 'vehicle' => { 'plate' => 'XYZ9A87' }, 'cep' => '01310100' } }
+
+    it 'dois carros com nomes diferentes correm juntos, e o mesmo turno abre os dois' do
+      pedir(auto.merge('item' => 'Nivus ABC1D23'), turno: 1)
+      runs.last.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+
+      segundo = pedir(outro_carro.merge('item' => 'Onix XYZ9A87'), turno: 1)
+
+      expect(segundo).to eq(cotacao.accepted_message)
+      expect(runs.active.pluck(:faixa)).to contain_exactly('auto:nivus abc1d23', 'auto:onix xyz9a87')
+    end
+
+    it 'recotar um bem pelo mesmo nome troca só aquele bem' do
+      nivus = consulta_existente(auto.merge('item' => 'Nivus ABC1D23'))
+      pedir(outro_carro.merge('item' => 'Onix XYZ9A87'), turno: 2)
+
+      pedir(auto.merge('item' => 'nivus  abc1d23', 'numero' => '10'), turno: 3)
+
+      expect(nivus.reload.status).to eq('superseded')
+      expect(runs.active.pluck(:faixa)).to contain_exactly('auto:nivus abc1d23', 'auto:onix xyz9a87')
+    end
+  end
+
   describe 'a comparacao e sobre a entrada normalizada, nao sobre o cru' do
     it 'o padrao escrito por extenso e o mesmo pedido que o padrao omitido (bike)' do
       # Arrange — o cru difere: a segunda chamada escreve o padrão que a primeira omitiu

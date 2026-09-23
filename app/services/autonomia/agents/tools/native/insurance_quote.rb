@@ -196,10 +196,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     build_progress(result, handle, attempt)
   end
 
-  # A FAIXA É O PRODUTO: a cotação de residencial não troca a de auto que corre na mesma conversa. Pública, porque
-  # o `Bound` a lê no aceite.
+  # A FAIXA É O PRODUTO MAIS O BEM (`Insurance::Faixa`, chat#612): a cotação do apartamento não troca a do carro, e a
+  # do segundo carro não troca a do primeiro. Pública, porque o `Bound` a lê no aceite.
   def faixa
-    produto
+    ::Autonomia::Insurance::Faixa.de(produto, params['item'])
   end
 
   private

@@ -23,7 +23,7 @@ RSpec.describe Autonomia::Insurance::ResultadoDaCotacao do
 
     expect(described_class.da_conversa(conversation.id, faixa: 'auto').run).to eq(auto)
     expect(described_class.da_conversa(conversation.id).run).to eq(casa)
-    expect(described_class.ultima_cotada(conversation.id, faixa: 'auto')).to eq(auto)
+    expect(described_class.ultimas_cotadas(conversation.id, ramo: 'auto')).to eq([auto])
   end
 
   it 'a que corre é achada mesmo quando a mais nova já fechou' do
@@ -48,13 +48,68 @@ RSpec.describe Autonomia::Insurance::ResultadoDaCotacao do
     expect(described_class.produtos(conversation.id)).to eq(%w[residencial auto])
   end
 
-  it 'o produto pedido vence o do especialista, e o do especialista vale quando não há pedido' do
-    especialista = instance_double(Autonomia::Agents::Specialist)
-    allow(Autonomia::Insurance::QuoteAgent::Builder).to receive(:ramo_do_especialista).and_return(nil)
-    allow(Autonomia::Insurance::QuoteAgent::Builder).to receive(:ramo_do_especialista).with(especialista).and_return('residencial')
+  # POR BEM (chat#612): dois carros e um apartamento na mesma conversa.
+  describe 'a escolha do bem' do
+    let(:especialista) { instance_double(Autonomia::Agents::Specialist) }
 
-    expect(described_class.produto_pedido({ 'produto' => ' Auto ' }, especialista)).to eq('auto')
-    expect(described_class.produto_pedido({ 'produto' => nil }, especialista)).to eq('residencial')
-    expect(described_class.produto_pedido({}, nil)).to be_nil
+    before do
+      allow(Autonomia::Insurance::QuoteAgent::Builder).to receive(:ramo_do_especialista).and_return(nil)
+      allow(Autonomia::Insurance::QuoteAgent::Builder).to receive(:ramo_do_especialista).with(especialista).and_return('auto')
+      cotacao(faixa: 'auto:nivus fvu2f42', status: 'done', criada: 3.hours.ago)
+      cotacao(faixa: 'auto:onix abc1d23', status: 'done', criada: 2.hours.ago)
+      cotacao(faixa: 'residencial:apartamento paulista', status: 'done', criada: 1.hour.ago)
+    end
+
+    def escolha(params, quem = nil, exigir: false)
+      described_class.escolha(conversation.id, params, quem, exigir: exigir)
+    end
+
+    it 'o nome exato do bem lê aquele bem, sem pergunta' do
+      expect(escolha({ 'produto' => ' Auto:Nivus  FVU2F42 ' }).to_h).to eq(faixa: 'auto:nivus fvu2f42', pergunta: nil)
+    end
+
+    it 'só o ramo lê o bem quando ele é o único do ramo' do
+      expect(escolha({ 'produto' => 'residencial' }).faixa).to eq('residencial:apartamento paulista')
+    end
+
+    it 'só o ramo com dois bens pergunta qual, listando os do ramo' do
+      resultado = escolha({ 'produto' => 'auto' })
+
+      expect(resultado.faixa).to be_nil
+      expect(resultado.pergunta).to include('auto:onix abc1d23; auto:nivus fvu2f42')
+      expect(resultado.pergunta).not_to include('residencial')
+    end
+
+    it 'o que não casa com nada pergunta, com a lista inteira, em vez de dizer que não há cotação' do
+      resultado = escolha({ 'produto' => 'carro' })
+
+      expect(resultado.faixa).to be_nil
+      expect(resultado.pergunta).to include('residencial:apartamento paulista; auto:onix abc1d23; auto:nivus fvu2f42')
+    end
+
+    it 'sem nada dito, o ramo do especialista decide, pela mesma regra' do
+      expect(escolha({}, especialista).pergunta).to include('auto:onix abc1d23')
+    end
+
+    it 'o especialista de um ramo sem bem na conversa lê o ramo, e não pergunta pelos bens dos outros ramos' do
+      de_bike = instance_double(Autonomia::Agents::Specialist)
+      allow(Autonomia::Insurance::QuoteAgent::Builder).to receive(:ramo_do_especialista).with(de_bike).and_return('bike')
+
+      expect(escolha({}, de_bike).to_h).to eq(faixa: 'bike', pergunta: nil)
+    end
+
+    it 'sem nada dito e sem especialista, a mais nova; a leitura que exige o bem pergunta' do
+      expect(escolha({}).to_h).to eq(faixa: nil, pergunta: nil)
+      expect(escolha({}, exigir: true).pergunta).to include('Esta conversa tem cotação de:')
+    end
+
+    it 'as bases de recotação são uma por bem do ramo' do
+      cotacao(faixa: 'auto:nivus fvu2f42', status: 'done', criada: 30.minutes.ago)
+
+      bases = described_class.ultimas_cotadas(conversation.id, ramo: 'auto')
+
+      expect(bases.map(&:faixa)).to eq(['auto:nivus fvu2f42', 'auto:onix abc1d23'])
+      expect(bases.first.created_at).to be > 1.hour.ago
+    end
   end
 end

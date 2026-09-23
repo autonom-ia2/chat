@@ -59,9 +59,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
 
   class_methods do
     # -> os fatos do evento `tipo` desta execução, para o modelo (`Native::Base.fatos_do_evento`), começando pelo
-    # produto: com auto e residencial na mesma conversa, a Lia precisa saber de qual seguro é a notícia.
+    # seguro e pelo bem (chat#612): com vários bens cotados na conversa, a Lia precisa saber de qual é a notícia.
     def fatos_do_evento(tipo, run)
-      "Cotação de #{run.faixa.presence || self::AUTO}. #{fatos_do_tipo(tipo.to_s, run.handle.to_h)}"
+      "Cotação de #{::Autonomia::Insurance::Faixa.descricao(run)}. #{fatos_do_tipo(tipo.to_s, run.handle.to_h)}"
     end
 
     private
