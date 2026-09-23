@@ -39,7 +39,14 @@ class Autonomia::CentralDeAjuda::Publicador
   def self.calcular_versao
     arquivos = Dir[FONTE.join('*/*.md')]
     conteudo = arquivos.map { |f| "#{f.delete_prefix(FONTE.to_s)}\0#{File.read(f)}" }.join("\0")
-    Digest::SHA256.hexdigest("#{VERSAO_DO_PUBLICADOR}\0#{File.read(MAPA)}\0#{conteudo}")[0, 16]
+    Digest::SHA256.hexdigest("#{VERSAO_DO_PUBLICADOR}\0#{File.read(MAPA)}\0#{conteudo}\0#{midia}")[0, 16]
+  end
+
+  # Prints e vídeos entram no conteúdo e no meta do artigo sem mudar o texto: um deploy só com mídia nova
+  # também precisa republicar. Nome e tamanho bastam (ler dezenas de MB a cada subida, não).
+  def self.midia
+    pastas = [::Autonomia::CentralDeAjuda::ArtigoFonte::PASTA_PRINTS, ::Autonomia::CentralDeAjuda::ArtigoFonte::PASTA_VIDEOS]
+    pastas.flat_map { |pasta| Dir[pasta.join('*')] }.sort.map { |f| "#{File.basename(f)}:#{File.size(f)}" }.join("\0")
   end
 
   def self.chave_publicado = "autonomia:central_de_ajuda:publicado:#{versao}"

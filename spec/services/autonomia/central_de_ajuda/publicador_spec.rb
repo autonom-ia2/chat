@@ -138,6 +138,25 @@ RSpec.describe Autonomia::CentralDeAjuda::Publicador do
     expect(movido.position).to eq(20)
   end
 
+  # Vídeo e print mudam o que a publicação grava (meta e conteúdo) sem mudar o texto do artigo: sem entrar
+  # na versão, um deploy só com mídia nova não republica nada (aconteceu no #629).
+  it 'muda a versão quando entra ou muda um vídeo ou um print, para republicar' do
+    videos = raiz.join('videos')
+    prints = raiz.join('prints')
+    FileUtils.mkdir_p([videos, prints])
+    stub_const('Autonomia::CentralDeAjuda::ArtigoFonte::PASTA_VIDEOS', videos)
+    stub_const('Autonomia::CentralDeAjuda::ArtigoFonte::PASTA_PRINTS', prints)
+
+    sem_midia = described_class.calcular_versao
+    File.write(videos.join('02.01.mp4'), 'video')
+    com_video = described_class.calcular_versao
+    File.write(prints.join('02.01-a.png'), 'print')
+    com_print = described_class.calcular_versao
+    File.write(videos.join('02.01.mp4'), 'video regravado')
+
+    expect([sem_midia, com_video, com_print, described_class.calcular_versao].uniq.size).to eq(4)
+  end
+
   it 'desiste sem publicar quando outra publicação segura o lock' do
     # Outra sessão do Postgres, como a outra instância do blue/green (os testes dividem a mesma conexão).
     cfg = ActiveRecord::Base.connection_db_config.configuration_hash
