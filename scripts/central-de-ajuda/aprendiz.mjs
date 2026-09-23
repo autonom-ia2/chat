@@ -257,15 +257,18 @@ const exemplosDeArtigos = artigos =>
 // uma rota que só foi reclassificada (tela de sistema, redirecionamento) não é uma rota
 // removida do produto, é a mesma tela com outro rótulo. E só conta rota que sumiu NESTE push
 // (estava em `antesRegistro`): a que já tinha sumido antes é assunto do PR daquele push.
-export const artigosParaRemover = ({ mapa, antesRegistro, atualRegistro, humanos }) =>
-  todosArtigos(mapa).filter(artigo => {
+export const artigosParaRemover = ({ mapa, antesRegistro, atualRegistro, humanos }) => {
+  // lerRegistroDe devolve lista; carregarRegistro, Set. Aceita os dois, como telasNovasSemArtigo.
+  const antes = new Set(antesRegistro);
+  return todosArtigos(mapa).filter(artigo => {
     const rotas = artigo.rotas || [];
     if (!rotas.length) return false;
-    if (!rotas.some(rota => antesRegistro.has(rota))) return false;
+    if (!rotas.some(rota => antes.has(rota))) return false;
     const todasSumiram = rotas.every(rota => !atualRegistro.has(rota));
     if (!todasSumiram) return false;
     return !rotas.some(rota => foraDoGuia(humanos, rota));
   });
+};
 
 export const removerArtigoDoMapa = (mapa, id) => ({
   ...mapa,

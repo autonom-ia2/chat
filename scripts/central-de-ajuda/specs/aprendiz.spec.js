@@ -200,6 +200,27 @@ describe('artigosParaRemover — todas as rotas sumiram, e nenhuma está em _for
 
   // A rota já tinha sumido antes deste push: o PR daquela remoção é outro. Sem isto,
   // cada push seguinte abriria um PR novo para o mesmo artigo.
+  // Em produção o registro de antes vem de lerRegistroDe, que devolve uma LISTA, não um Set
+  // (o primeiro run do aprendiz caiu com "antesRegistro.has is not a function").
+  it('aceita o registro de antes como lista, do jeito que lerRegistroDe devolve', () => {
+    const mapa = mapaCom([
+      {
+        id: '02',
+        titulo: 'Cap',
+        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_velha'] })],
+      },
+    ]);
+
+    const resultado = artigosParaRemover({
+      mapa,
+      antesRegistro: ['tela_velha', 'tela_b'],
+      atualRegistro: new Set(['tela_b']),
+      humanos: {},
+    });
+
+    expect(resultado.map(a => a.id)).toEqual(['02.01']);
+  });
+
   it('não acha de novo quando a rota já tinha sumido antes deste push', () => {
     const mapa = mapaCom([
       {
