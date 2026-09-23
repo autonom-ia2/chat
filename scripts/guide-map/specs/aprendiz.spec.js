@@ -6,6 +6,7 @@ import {
   nadaMudou,
   montarBloco,
   aplicarNoPorques,
+  pedirAoGpt,
   pedirRascunho,
   corpoDoPr,
 } from '../aprendiz.mjs';
@@ -268,7 +269,99 @@ describe('a escrita no porques.md', () => {
   });
 });
 
-describe('o pedido à IA', () => {
+describe('pedirAoGpt — chamada genérica à OpenAI, extraída de pedirRascunho (#614)', () => {
+  const resposta = (status, corpo) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => corpo,
+  });
+
+  const saidaDaIa = objeto => ({
+    output: [
+      {
+        type: 'message',
+        content: [{ type: 'output_text', text: JSON.stringify(objeto) }],
+      },
+    ],
+  });
+
+  // Reaproveitada pela Central (#614, etapa C) para pedir o rascunho de um artigo —
+  // o esquema e as instruções mudam, o mecanismo de chamada não.
+  it('pede no formato fechado, com o nome dado, e devolve o objeto', async () => {
+    let enviado;
+    const buscar = async (_url, opcoes) => {
+      enviado = JSON.parse(opcoes.body);
+      return resposta(200, saidaDaIa({ titulo: 'Artigo' }));
+    };
+
+    const objeto = await pedirAoGpt({
+      instrucoes: 'escreva um artigo',
+      entrada: 'tela: central_de_ajuda',
+      esquema: { type: 'object', properties: { titulo: { type: 'string' } } },
+      nome: 'artigo_da_central',
+      chave: 'sk-teste',
+      buscar,
+    });
+
+    expect(objeto.titulo).toBe('Artigo');
+    expect(enviado.instructions).toBe('escreva um artigo');
+    // O nome do esquema é usado como veio — fixo, sem espaço, descreve a FORMA da
+    // resposta (não o caso de uso); quem chama é responsável por passar um id válido.
+    expect(enviado.text.format.name).toBe('artigo_da_central');
+    expect(enviado.text.format.strict).toBe(true);
+  });
+
+  it('falha dizendo o nome do esquema, sem nunca mostrar a chave', async () => {
+    const buscar = async () =>
+      resposta(401, { error: { message: 'Incorrect API key provided' } });
+
+    const falha = pedirAoGpt({
+      instrucoes: 'x',
+      entrada: 'y',
+      esquema: {},
+      nome: 'artigo_da_central',
+      chave: 'sk-segredo-que-nao-pode-vazar',
+      buscar,
+    });
+
+    await expect(falha).rejects.toThrow('HTTP 401');
+    await expect(falha).rejects.not.toThrow('sk-segredo');
+  });
+
+  it('diz o que aconteceu quando a rede cai, sem nunca mostrar a chave', async () => {
+    const falha = pedirAoGpt({
+      instrucoes: 'x',
+      entrada: 'y',
+      esquema: {},
+      nome: 'artigo_da_central',
+      chave: 'sk-segredo-que-nao-pode-vazar',
+      buscar: async () => {
+        throw new TypeError('fetch failed');
+      },
+    });
+
+    await expect(falha).rejects.toThrow('artigo_da_central');
+    await expect(falha).rejects.toThrow('fetch failed');
+    await expect(falha).rejects.not.toThrow('sk-segredo');
+  });
+
+  it('diz que veio vazio quando a IA recusa ou não escreve nada', async () => {
+    const falha = pedirAoGpt({
+      instrucoes: 'x',
+      entrada: 'y',
+      esquema: {},
+      nome: 'artigo_da_central',
+      chave: 'sk-teste',
+      buscar: async () => resposta(200, { output: [] }),
+    });
+
+    await expect(falha).rejects.toThrow(
+      'sem artigo_da_central (resposta vazia ou recusada)'
+    );
+  });
+});
+
+describe('o pedido à IA (pedirRascunho — usa pedirAoGpt por baixo)', () => {
   const resposta = (status, corpo) => ({
     ok: status >= 200 && status < 300,
     status,

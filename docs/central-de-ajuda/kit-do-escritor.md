@@ -36,10 +36,18 @@ me_leve_ate_la:           # omita se o artigo não tem uma tela
 requer: null              # recurso que a conta precisa ter; vem do mapa, não invente
 assuntos: ["01.2-definir-disponibilidade", "01.3-marcar-offline-automaticamente"]
 conferido_em: "2026-09-22"
-evidencias:               # arquivo:linha de CADA fato do texto, conferido no código de hoje
-  - app/javascript/dashboard/components-next/sidebar/SidebarProfileMenu.vue:206
+evidencias:                # caminho:linha | trecho de CADA fato do texto (#614)
+  - "app/javascript/dashboard/components-next/sidebar/SidebarProfileMenu.vue:206 | <template v-for=\"item in allowedMenuItems\" :key=\"item.label\">"
 ---
 ```
+
+Cada evidência é `caminho:linha | trecho`, com o trecho entre aspas (`JSON.stringify` — vira
+YAML válido mesmo com aspas ou `:` dentro do próprio trecho). O trecho é o conteúdo da linha
+apontada, sem espaço nas pontas — é ele, não o número, que prova o fato: código é revisado por
+outros motivos o tempo todo, e a linha desloca. `pnpm central:check` confere se o trecho ainda
+existe no arquivo; se só o número mudou, é aviso; se o trecho sumiu (ou o arquivo foi apagado),
+o artigo entra para revisão. Escreva a evidência à mão, copiando a linha exata do arquivo — não
+invente o trecho.
 
 ## 3. A estrutura, sempre igual
 
