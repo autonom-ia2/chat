@@ -104,10 +104,15 @@ class Autonomia::CentralDeAjuda::ArtigoFonte
     inicio = linha.index('](prints/')
     return if inicio.nil?
 
+    # "PRINT 02.06-a: Menu da foto" é a marca de quem escreve; quem lê (e o leitor de tela) fica só com a legenda.
+    marca = linha.index(MARCA_PRINT)
+    _codigo, legenda = linha[(marca + MARCA_PRINT.length)...inicio].split(': ', 2)
+    raise FormatoInvalido, "#{caminho}: print sem legenda (#{linha.strip})" if legenda.blank?
+
     arquivo = File.basename(linha[(inicio + 9)..].split(')').first.to_s)
     return unless arquivo.present? && File.exist?(PASTA_PRINTS.join(arquivo))
 
-    linha.sub('](prints/', "](#{URL_PRINTS}")
+    "#{linha[0...marca]}![#{legenda}](#{URL_PRINTS}#{arquivo})"
   end
 
   # Troca cada `[dd.dd]` por `[Título](plataforma-dd-dd)`. Numa linha de "Veja também" (`- [02.04] Título`),

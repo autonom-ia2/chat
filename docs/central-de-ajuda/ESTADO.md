@@ -8,17 +8,21 @@ voltar.
 
 23/09/2026:
 - **162 de 162 artigos escritos** em `lib/central_de_ajuda/`. O 01.07 "Como usar a Central de
-  Ajuda" entrou junto com a tela de leitura (#501).
+  Ajuda" entrou junto com a tela de leitura (#501, no ar em 23/09).
 - **Publicação no ar (#610, 23/09):** portal `plataforma` na conta 1 das duas stacks, 19 capítulos,
   161 artigos, conferido em produção. Roda sozinha a cada deploy.
 - **Tela de leitura (#501):** tela nossa no painel (`central_de_ajuda`), com busca, "Comece por
   aqui", assuntos, artigo com "Me leve até lá" e destaque, A-/A+ guardado no perfil, links entre
   artigos, anterior/próximo e "Pergunte ao Guia". Filtro por recurso e por papel no servidor.
   Barra lateral e menu da foto levam a ela. O Guia deixou de ensinar o editor de portais.
-- **CONFIRMAR NA TELA** (resolver com os prints): 06.02, 08.09, 10.05, 10.08, 13.05, 15.01,
-  15.02 (textos de tela); 10.12 (a ajuda do Dataset ID promete derivar da conexão do WhatsApp e
-  o código não faz). O 10.07 foi resolvido pelo capítulo 18: o texto por etapa que a IA lê é o
-  **critério**, e a etapa não tem outra descrição na tela.
+- **Prints (23/09):** os 5 do roteiro estão em `public/central-de-ajuda/prints/`, tirados da conta
+  de teste local, com recorte e moldura azul. A publicação usa a legenda como texto alternativo, e
+  a tela de leitura põe fundo cinza em volta do print para ele não parecer a tela de verdade.
+- **CONFIRMAR NA TELA resolvidos (23/09)**, todos pelo código: 06.02, 08.09, 10.05, 10.08, 13.05,
+  15.01 e 15.02 já estavam certos. O 10.12 ganhou um aviso: a dica ao lado do campo Dataset ID
+  manda deixá-lo vazio, mas nada o preenche sozinho, e vazio o envio para a Meta é pulado.
+- **Rótulo da aba de nota:** a tela diz **Mensagem Privada**. O conceito continua "nota privada";
+  onde o artigo cita a aba, usa o nome da tela (02.04, 02.08, 05.05, 07.05).
 - Falas do Rodrigo no 18.02 e no 18.03 (limite de 20 contatos por disparo no WhatsApp API;
   "sem taxa em cima"; "o funil custa pouco por mês") confirmadas por ele em 23/09.
 - **Lacunas achadas no capítulo 11** (recurso sem artigo próprio): **Público-alvo** e **Horário
@@ -93,8 +97,7 @@ vídeo de trajeto no topo, aviso "isso não apaga nada" antes das ações que as
    a ela; filtro do `requer` no servidor; bloqueios (esconder os botões de editar, que já não
    funcionam; nenhuma caixa ligada ao portal da Plataforma; Copilot ignorando esse portal); link
    "Docs" do menu do perfil. Depois, o 01.07.
-4. **Prints e vídeos:** captura por script na conta de teste local; resolver os CONFIRMAR NA
-   TELA na mesma passada.
+4. **Vídeos de trajeto:** storyboard-modelo para o Rodrigo aprovar, depois produzir no HyperFrames.
 5. **Atualização automática** da Central (trava, aprendiz, checagem de provas e rótulos).
 6. **Issue nova:** o Guia lendo a Central (`ler_da_central` + botão "Ler o artigo completo").
 7. **Ligar** nas duas stacks, com o OK do Rodrigo, e conferir numa conta de cada stack.
@@ -113,6 +116,11 @@ OpenAI do Rodrigo: diagnosticar sem modelo primeiro e rodar poucas perguntas.
   aponta para `sla_list`, mas as rotas de SLA não são carregadas no fork. Em produção só gera erro no
   console; em dev, o Vue relança e a tela para de redesenhar. Achado ao testar a #501, não corrigido.
 - **`Inbox` passa do limite de tamanho do rubocop** (177 de 175 linhas já no `main`).
+- **Dica errada na tela do funil:** `META_SYNC_DATASET_HELP` manda deixar o Dataset ID vazio para
+  "derivar da conexão do WhatsApp", mas `Crm::MetaCapi::DispatchJob#resolve_credentials` só lê o
+  campo salvo; vazio, o envio pula por `missing_credentials` sem aviso. Achado ao escrever o 10.12.
+- **`INSURANCE.*` só existe em `en/insurance.json`** (escrito em português). Funciona porque o
+  `fallbackLocale` fica travado em `en`; quebra se alguém criar um `pt_BR/insurance.json` parcial.
 
 - **Ruleset `trava` no `main`:** ação do Rodrigo (Settings → Rules). Sem isso a trava do
   Guia avisa, mas não impede o merge.
