@@ -23,6 +23,15 @@ describe('o motivo da dispensa, no corpo do PR', () => {
     expect(motivoDaDispensa(corpo)).toBe('tela interna de depuração');
   });
 
+  // Reaproveitada pela trava da Central (#614, etapa B).
+  it('aceita uma marca diferente, sem afetar o padrão do Guia', () => {
+    const corpo = 'Central não se aplica: tela de sistema';
+
+    expect(motivoDaDispensa(corpo, 'central não se aplica:')).toBe(
+      'tela de sistema'
+    );
+  });
+
   it('não depende de maiúscula na marca', () => {
     expect(motivoDaDispensa('GUIA NÃO SE APLICA: só para suporte')).toBe(
       'só para suporte'
@@ -90,6 +99,24 @@ describe('a decisão da trava', () => {
         corpo: 'Guia não se aplica: tela só de depuração',
       }).bloqueia
     ).toBe(true);
+  });
+
+  // Reaproveitada pela trava da Central (#614, etapa B): rótulo e marca do motivo
+  // são parâmetros, com os valores do Guia como padrão — para não duplicar a decisão.
+  it('aceita rótulo e marca do motivo diferentes, sem afetar o padrão do Guia', () => {
+    expect(
+      decidir({
+        novas: [tela('sem_artigo')],
+        rotulos: ['central-nao-se-aplica'],
+        corpo: 'Central não se aplica: redirecionamento puro',
+        rotulo: 'central-nao-se-aplica',
+        marca: 'central não se aplica:',
+      })
+    ).toEqual({
+      bloqueia: false,
+      situacao: 'dispensada',
+      motivo: 'redirecionamento puro',
+    });
   });
 });
 

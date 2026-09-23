@@ -17,6 +17,7 @@
 //   2. declarar a tela no bloco `_fora_do_guia`, com o motivo (definitivo);
 //   3. rótulo `guia-nao-se-aplica` no PR, com o motivo escrito no corpo dele.
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 import { construir } from './build.mjs';
 import {
   mudancasDoMapa,
@@ -42,21 +43,31 @@ const PORQUES = 'lib/operator_guide/porques.md';
 // ---------------------------------------------------------------------------
 // Decisão
 
-export const motivoDaDispensa = corpo => {
+// `marca` é parâmetro (com a marca do Guia como padrão) para a trava da Central
+// (#614, etapa B) reaproveitar a mesma leitura, com o texto dela.
+export const motivoDaDispensa = (corpo, marca = MARCA_DO_MOTIVO) => {
   const linha = String(corpo || '')
     .split('\n')
     .map(texto => texto.trim())
-    .find(texto => texto.toLowerCase().startsWith(MARCA_DO_MOTIVO));
+    .find(texto => texto.toLowerCase().startsWith(marca));
   if (!linha) return null;
-  const motivo = linha.slice(MARCA_DO_MOTIVO.length).trim();
+  const motivo = linha.slice(marca.length).trim();
   return motivo || null;
 };
 
-export const decidir = ({ novas, rotulos, corpo }) => {
+// `rotulo` e `marca` são parâmetros pelo mesmo motivo: a trava da Central usa
+// `central-nao-se-aplica` e "central não se aplica:" em vez dos valores do Guia.
+export const decidir = ({
+  novas,
+  rotulos,
+  corpo,
+  rotulo = ROTULO_DISPENSA,
+  marca = MARCA_DO_MOTIVO,
+}) => {
   if (!novas.length) return { bloqueia: false, situacao: 'em_dia' };
 
-  if (rotulos.includes(ROTULO_DISPENSA)) {
-    const motivo = motivoDaDispensa(corpo);
+  if (rotulos.includes(rotulo)) {
+    const motivo = motivoDaDispensa(corpo, marca);
     // Dispensa sem motivo é só um botão de desligar a trava. O motivo escrito
     // é o que deixa rastro de por que aquela tela ficou fora do Guia.
     if (!motivo) return { bloqueia: true, situacao: 'dispensa_sem_motivo' };
@@ -208,6 +219,10 @@ const executar = async () => {
   );
 };
 
-if (process.argv[1] && process.argv[1].endsWith('trava.mjs')) {
+// Comparação pela URL do módulo, não só pelo sufixo do nome do arquivo: desde o #614
+// (etapa B), scripts/central-de-ajuda/trava.mjs importa este módulo e tem o MESMO nome de
+// arquivo — um `endsWith('trava.mjs')` disparava este `executar()` também quando quem
+// rodava era o outro script.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await executar();
 }
