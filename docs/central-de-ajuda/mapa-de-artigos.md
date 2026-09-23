@@ -3,7 +3,7 @@
 Storyboard da Fase 0: define quais artigos existem, antes de qualquer texto ser escrito.
 Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-ajuda/estudo/2026-09-08-apuracao.json` (284 assuntos), `docs/central-de-ajuda/cobertura.json`/`.md` (165 telas), `lib/operator_guide/porques.md` (164 fluxos já escritos no Guia da Plataforma), `config/onboarding/trilha.yml` (9 passos) e `app/javascript/dashboard/helper/guideRouteRegistry.js` (rotas válidas para "Me leve até lá").
 
-**Total: 157 artigos em 19 capítulos.** (159 na primeira versão; ajuste de 22/09 no fim deste arquivo.)
+**Total: 162 artigos em 19 capítulos.** (159 na primeira versão; ajustes de 22/09 e 23/09 no fim deste arquivo.)
 
 ## 00 — Comece por aqui (10 artigos)
 
@@ -209,15 +209,20 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **17.01** — Ver o plano contratado e quanto está sendo cobrado. Abrir a tela de Assinatura e entender o plano e o valor cobrado.
 - **17.02** — Conferir faturas emitidas e o que já foi pago. Abrir a tela de Faturas e conferir o histórico de cobrança.
 
-## 18 — Entenda os conceitos (7 artigos)
+## 18 — Entenda os conceitos (12 artigos)
 
-- **18.01** — A janela de 24 horas do WhatsApp. Explicar por que existe a janela de 24 horas e o que ela trava no atendimento e nas campanhas.
-- **18.02** — Disparo em massa e o risco de bloqueio do número. Explicar por que disparar fora da janela de 24 horas ou em volume alto pode derrubar o número do WhatsApp.
-- **18.03** — O que custa quando a IA responde. Explicar quem paga, por qual modelo, e o que dispara consumo sem ninguém clicar em nada.
-- **18.04** — API oficial x API não oficial do WhatsApp: o que muda de verdade. Explicar a diferença entre WhatsApp Oficial (Cloud API da Meta) e WhatsApp API (WAHA/QR Code).
-- **18.05** — A descrição da etapa é instrução para a IA, não só um rótulo. Explicar que o texto de cada etapa do funil é lido pela IA para decidir quando mover um card.
-- **18.06** — Não use o agente de IA no número pessoal. Explicar por que o agente de IA precisa de um número separado do WhatsApp pessoal de quem atende.
-- **18.07** — Login único (SSO) e por que a senha local quase nunca vale. Explicar que a entrada na plataforma é pelo login único, com redirecionamento automático, e onde a senha local ainda funciona.
+- **18.01** — A janela de 24 horas do WhatsApp: por que a conversa trava. Explicar por que existe a janela de 24 horas e o que ela trava no atendimento e nas campanhas.
+- **18.02** — Disparo em massa e o risco de perder o número. Explicar por que disparar fora da janela de 24 horas ou em volume alto pode derrubar o número do WhatsApp.
+- **18.03** — O que custa quando a IA trabalha, e quem paga. Explicar quem paga, por qual modelo, e o que dispara consumo sem ninguém clicar em nada.
+- **18.04** — WhatsApp Oficial e WhatsApp API: o que muda de verdade. Explicar a diferença entre WhatsApp Oficial (Cloud API da Meta) e WhatsApp API (WAHA/QR Code).
+- **18.05** — O critério de cada etapa é a instrução que a IA do funil segue. Explicar que o critério de cada etapa, no painel IA do funil, é lido pela IA para decidir quando mover um card.
+- **18.06** — Não coloque o agente de IA no seu número pessoal. Explicar por que o agente de IA precisa de um número separado do WhatsApp pessoal de quem atende.
+- **18.07** — Cada pessoa com o seu acesso: por que não dividir o login. Explicar por que cada pessoa do time precisa do próprio acesso: atribuição, autoria, relatórios, distribuição e o que cada papel vê.
+- **18.08** — A IA sugere, você decide: quando o card anda sozinho e o que é o score. Explicar os três níveis de certeza da IA do funil (move, sugere, não faz nada) e o score de 0 a 100 como termômetro do lead.
+- **18.09** — Instrução é comportamento, não roteiro: como orientar o agente de IA. Explicar que a instrução do agente descreve jeito de atender, e que o que ele precisa saber vai na base de conhecimento.
+- **18.10** — O primeiro agente vai errar: teste antes e solte aos poucos. Explicar como colocar um agente no ar em etapas: aba Testar, caixa ou público de teste, marcar Resposta errada, e só então todos.
+- **18.11** — Quem responde: a IA ou uma pessoa, e como a conversa passa de uma para a outra. Explicar a regra de quem responde (sem responsável, a IA; com responsável, a pessoa) e os três jeitos de a conversa passar da IA para o time.
+- **18.12** — A IA só sabe o que está escrito na conversa. Explicar que a IA lê só as mensagens trocadas com o cliente e os campos do card e do contato, e como registrar o que aconteceu fora.
 
 ## Fora da Central
 
@@ -357,3 +362,16 @@ Conferido contra o código e contra produção (só leitura, as duas stacks):
 - **Botões corrigidos no ensaio do capítulo 05:** 04.07, 07.04, 07.06 e 07.11 apontavam para
   `settings_home`, que é só redirecionamento e está fora da Central; agora levam à lista de
   caixas de entrada (`settings_inbox_list`). O 05.03 leva à lista de times.
+
+## Ajuste de 23/09/2026: capítulo 18 escrito com o Rodrigo
+
+Tirado das reuniões de implantação (Fireflies) e conferido no código:
+
+- **18.05** passou a falar em **critério** da etapa: é o texto do painel **IA do funil** que a IA
+  lê (`metadata['ai_criteria']`). A "descrição" da etapa não aparece na tela.
+- **18.07** mudou de assunto. Nenhuma reunião falava de login único; a dúvida real era dividir o
+  acesso entre duas pessoas. Senha e login único seguem no 02.03.
+- **Cinco conceitos novos (18.08 a 18.12):** a IA sugere x move e o score; instrução é
+  comportamento; o primeiro agente vai errar; quem responde, a IA ou uma pessoa; a IA só sabe o
+  que está escrito na conversa.
+- **Total:** 162 artigos.
