@@ -9,8 +9,16 @@ voltar.
 23/09/2026:
 - **162 de 162 artigos escritos** em `lib/central_de_ajuda/`. O 01.07 "Como usar a Central de
   Ajuda" entrou junto com a tela de leitura (#501, no ar em 23/09).
-- **Publicação no ar (#610, 23/09):** portal `plataforma` na conta 1 das duas stacks, 19 capítulos,
-  161 artigos, conferido em produção. Roda sozinha a cada deploy.
+- **Tudo no ar nas duas stacks (23/09, conferido em produção):** portal `plataforma` na conta 1,
+  19 capítulos, 162 artigos, tela de leitura, prints (#613), vídeo piloto no 02.04 (#620), o Guia
+  lendo a Central (#618, #617) e a atualização automática (#616, #619, #622, #614).
+- **O Guia lê a Central (#618):** em "como faço X", o Guia consulta o artigo (`ler_da_central`),
+  responde curto com as palavras da tela e mostra "Ler o artigo completo". Pergunta sobre dado da
+  conta continua com `ler_da_conta`. Testado com o modelo real, nos dois casos.
+- **A Central se atualiza sozinha (#619):** a trava no PR roda `central:check` (tela nova sem
+  artigo barra). Depois do merge, o `Central - modo aprendiz` olha só o que mudou naquele push e
+  abre PR com rascunho do GPT (tela nova), remoção (tela que saiu) e `revisar: true` (trecho de
+  código citado que sumiu, ou rótulo de botão que mudou). Nada é reescrito sozinho.
 - **Tela de leitura (#501):** tela nossa no painel (`central_de_ajuda`), com busca, "Comece por
   aqui", assuntos, artigo com "Me leve até lá" e destaque, A-/A+ guardado no perfil, links entre
   artigos, anterior/próximo e "Pergunte ao Guia". Filtro por recurso e por papel no servidor.
@@ -92,18 +100,12 @@ vídeo de trajeto no topo, aviso "isso não apaga nada" antes das ações que as
 
 ## Próximos passos, em ordem
 
-1. **Capítulo 18** — PR de texto, sem deploy; Rodrigo confirma os pontos marcados.
-2. **#502 (código, PR aberto):** `Autonomia::CentralDeAjuda::Publicador` publica o repositório no
-   portal, artigo por artigo, arquivando sem apagar; roda na subida do Sidekiq (a cada deploy) e na
-   leitura da Central; `rails central_de_ajuda:publicar` publica na hora. Slug `plataforma-02-06`.
-3. **#501 (código):** tela de leitura nossa no painel; "Central de Ajuda" na barra lateral leva
-   a ela; filtro do `requer` no servidor; bloqueios (esconder os botões de editar, que já não
-   funcionam; nenhuma caixa ligada ao portal da Plataforma; Copilot ignorando esse portal); link
-   "Docs" do menu do perfil. Depois, o 01.07.
-4. **Vídeos de trajeto:** storyboard-modelo para o Rodrigo aprovar, depois produzir no HyperFrames.
-5. **Atualização automática** da Central (trava, aprendiz, checagem de provas e rótulos).
-6. **Issue nova:** o Guia lendo a Central (`ler_da_central` + botão "Ler o artigo completo").
-7. **Ligar** nas duas stacks, com o OK do Rodrigo, e conferir numa conta de cada stack.
+1. **Mais vídeos de trajeto:** um roteiro por artigo em `scripts/central-de-ajuda/trajetos/`,
+   começando pelos artigos de P1 com passo a passo longo. O modelo aprovado é o do 02.04.
+2. **Lacunas do capítulo 11** (acima): Público-alvo, Horário de atuação, Resposta errada e a aba Testar.
+3. **Funções personalizadas e artigos de administrador:** hoje quem tem função personalizada não vê
+   artigo `publico: admin` (lado seguro, decisão do Rodrigo em 23/09). Liberar por módulo seria
+   issue própria.
 
 ## Ambiente de teste real local (para prints e para testar o Guia)
 
@@ -125,8 +127,11 @@ OpenAI do Rodrigo: diagnosticar sem modelo primeiro e rodar poucas perguntas.
 - **`INSURANCE.*` só existe em `en/insurance.json`** (escrito em português). Funciona porque o
   `fallbackLocale` fica travado em `en`; quebra se alguém criar um `pt_BR/insurance.json` parcial.
 
-- **Ruleset `trava` no `main`:** ação do Rodrigo (Settings → Rules). Sem isso a trava do
-  Guia avisa, mas não impede o merge.
+- **Ruleset `trava` no `main`:** ação do Rodrigo (Settings → Rules), agora com os dois jobs,
+  `trava` (Guia) e `central`. Sem isso as duas travas avisam, mas não impedem o merge.
+- **O lint do projeto não olha `.mjs`:** `eslint` sem `--ext` só confere `.js` e `.vue`. Os
+  scripts de `scripts/guide-map/` e `scripts/central-de-ajuda/` nunca foram checados, nem no CI;
+  com `--ext .mjs` aparecem dezenas de erros antigos (`no-console`, prettier).
 - **Robô que abre PR:** depende do segredo `OPENAI_API_KEY` no GitHub e de "Allow GitHub
   Actions to create and approve pull requests" ligado.
 - **O Guia está lento:** 18 a 41 s por resposta em produção. Não dá erro (o limite do job é
