@@ -6,6 +6,7 @@
 class Autonomia::CentralDeAjuda::Leitura
   PESOS_DA_BUSCA = { titulo: 5, descricao: 2, conteudo: 1 }.freeze
   LIMITE_DA_BUSCA = 8
+  MENOR_PALAVRA = 3 # "a", "do", "eu" aparecem dentro de qualquer texto e não distinguem artigo nenhum
   PONTUACAO = '?!.,;:()"\'“”'.freeze
 
   # Recursos do `requer` que não são feature flag da conta: cada um tem o seu próprio portão.
@@ -50,14 +51,17 @@ class Autonomia::CentralDeAjuda::Leitura
     [anterior, lista[indice + 1]].map { |vizinho| vizinho && resumo(vizinho) }
   end
 
-  # Busca por palavras: todas precisam aparecer no artigo; título pesa mais que descrição, que pesa
-  # mais que o texto. Sem acento e sem maiúscula, dos dois lados.
+  # Busca por palavras, sem acento e sem maiúscula dos dois lados. Com até duas palavras, o artigo precisa
+  # ter todas; com mais, a maioria: quem escreve uma frase inteira não fica sem resultado por causa de uma
+  # palavra que o texto não usa. Na frente, quem tem mais palavras; depois, título pesa mais que descrição,
+  # que pesa mais que o texto. Pergunta em linguagem natural é trabalho do Guia, não desta busca.
   def buscar(termo)
-    palavras = normalizar(termo).split.uniq
+    palavras = palavras_da_busca(termo)
     return [] if palavras.empty?
 
-    pontuados(palavras).sort_by { |pontos, artigo| [-pontos, artigos.index(artigo)] }
-                       .first(LIMITE_DA_BUSCA).map { |_, artigo| resumo(artigo) }
+    minimo = palavras.size <= 2 ? palavras.size : (palavras.size / 2.0).ceil
+    pontuados(palavras, minimo).sort_by { |achadas, pontos, ordem, _| [-achadas, -pontos, ordem] }
+                               .first(LIMITE_DA_BUSCA).map { |*, artigo| resumo(artigo) }
   end
 
   def resumo(artigo)
@@ -85,13 +89,21 @@ class Autonomia::CentralDeAjuda::Leitura
 
   def capitulo_id(categoria) = categoria&.slug.to_s.delete_prefix('capitulo-')
 
-  # [pontos, artigo] de cada artigo que tem todas as palavras em algum campo.
-  def pontuados(palavras)
-    artigos.filter_map do |artigo|
-      campos = campos_normalizados(artigo)
-      next unless palavras.all? { |palavra| campos.values.any? { |texto| texto.include?(palavra) } }
+  # Palavras curtas saem, a menos que a busca só tenha palavras curtas.
+  def palavras_da_busca(termo)
+    todas = normalizar(termo).split.uniq
+    longas = todas.select { |palavra| palavra.length >= MENOR_PALAVRA }
+    longas.presence || todas
+  end
 
-      [pontuacao(campos, palavras), artigo]
+  # [palavras achadas, pontos, ordem na Central, artigo] de cada artigo com pelo menos `minimo` palavras.
+  def pontuados(palavras, minimo)
+    artigos.each_with_index.filter_map do |artigo, ordem|
+      campos = campos_normalizados(artigo)
+      achadas = palavras.select { |palavra| campos.values.any? { |texto| texto.include?(palavra) } }
+      next if achadas.size < minimo
+
+      [achadas.size, pontuacao(campos, achadas), ordem, artigo]
     end
   end
 

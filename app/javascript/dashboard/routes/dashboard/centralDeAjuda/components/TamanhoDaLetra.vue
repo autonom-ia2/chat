@@ -4,15 +4,23 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import { useTamanhoDaLetra } from '../composables/useTamanhoDaLetra';
 
 const { t } = useI18n();
-const { podeDiminuir, podeAumentar, diminuir, aumentar } = useTamanhoDaLetra();
+const { tamanho, podeDiminuir, podeAumentar, diminuir, aumentar } =
+  useTamanhoDaLetra();
 </script>
 
 <template>
   <div
     role="group"
     :aria-label="t('HELP_CENTER.CENTRAL_DE_AJUDA.LETRA.ROTULO')"
-    class="flex items-center gap-1"
+    class="flex items-center gap-2"
   >
+    <span class="text-sm text-n-slate-11" aria-live="polite">
+      {{
+        t('HELP_CENTER.CENTRAL_DE_AJUDA.LETRA.ATUAL', {
+          tamanho: t(`HELP_CENTER.CENTRAL_DE_AJUDA.LETRA.NOMES.${tamanho}`),
+        })
+      }}
+    </span>
     <Button
       size="lg"
       color="slate"

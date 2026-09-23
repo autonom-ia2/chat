@@ -26,6 +26,8 @@ const carregando = ref(true);
 const naoEncontrado = ref(false);
 const erro = ref(false);
 const topo = ref(null);
+const titulo = ref(null);
+let ultimoPedido = 0;
 
 const accountId = computed(() => store.getters.getCurrentAccountId);
 const guiaDisponivel = computed(
@@ -48,21 +50,30 @@ const atualizadoEm = computed(() =>
     : ''
 );
 
+// Quem clica rápido em "Próximo" dispara pedidos em sequência: só o último vale.
 const carregar = async ref_ => {
+  ultimoPedido += 1;
+  const pedido = ultimoPedido;
   carregando.value = true;
   naoEncontrado.value = false;
   erro.value = false;
   try {
     const { data } = await CentralDeAjudaAPI.artigo(ref_);
+    if (pedido !== ultimoPedido) return;
     artigo.value = data;
   } catch (e) {
+    if (pedido !== ultimoPedido) return;
     artigo.value = null;
     if (e?.response?.status === 404) naoEncontrado.value = true;
     else erro.value = true;
   } finally {
-    carregando.value = false;
-    await nextTick();
-    topo.value?.scrollIntoView?.({ block: 'start' });
+    if (pedido === ultimoPedido) {
+      carregando.value = false;
+      await nextTick();
+      topo.value?.scrollIntoView?.({ block: 'start' });
+      // O leitor de tela anuncia o artigo novo, e o teclado segue dele.
+      titulo.value?.focus?.();
+    }
   }
 };
 
@@ -137,7 +148,11 @@ const rotaDoArtigo = vizinho => ({
 
       <template v-else-if="artigo">
         <header class="flex flex-col gap-5">
-          <h1 class="mb-0 text-3xl font-semibold leading-tight text-n-slate-12">
+          <h1
+            ref="titulo"
+            tabindex="-1"
+            class="mb-0 text-3xl font-semibold leading-tight text-n-slate-12 outline-none"
+          >
             {{ artigo.titulo }}
           </h1>
           <div class="flex flex-wrap items-center justify-between gap-4">

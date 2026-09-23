@@ -1118,6 +1118,7 @@
         "RESULTADOS": "{count} article found | {count} articles found",
         "NADA": "No article with these words. Try other words or ask the Guide.",
         "LIMPAR": "Clear search",
+        "BUSCANDO": "Searching…",
         "ERRO": "The search did not respond. Try again."
       },
       "COMECE": {
@@ -1148,6 +1149,12 @@
       },
       "LETRA": {
         "ROTULO": "Text size",
+        "ATUAL": "{tamanho} text",
+        "NOMES": {
+          "normal": "Normal",
+          "grande": "Large",
+          "maior": "Larger"
+        },
         "DIMINUIR": "Smaller text",
         "AUMENTAR": "Larger text"
       }

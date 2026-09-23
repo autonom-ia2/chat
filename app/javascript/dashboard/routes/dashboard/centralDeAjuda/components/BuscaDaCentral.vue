@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { watchDebounced } from '@vueuse/core';
 import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import Button from 'dashboard/components-next/button/Button.vue';
+import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 
 defineProps({
   guiaDisponivel: { type: Boolean, default: false },
@@ -22,11 +23,17 @@ const termo = ref('');
 const resultados = ref([]);
 const buscando = ref(false);
 const erro = ref(false);
+const campo = ref(null);
 let ultimaBusca = 0;
 
 const temTermo = computed(() => termo.value.trim().length > 0);
 watch(temTermo, valor => {
   ativa.value = valor;
+});
+// Mostra "Buscando…" já na tecla, sem esperar o intervalo da busca: a lista antiga não fica na tela
+// fingindo ser a resposta nova.
+watch(termo, texto => {
+  if (texto.trim()) buscando.value = true;
 });
 
 const buscar = async texto => {
@@ -62,6 +69,7 @@ const abrirPrimeiro = () => {
 const limpar = () => {
   termo.value = '';
   resultados.value = [];
+  campo.value?.focus();
 };
 </script>
 
@@ -77,6 +85,7 @@ const limpar = () => {
       />
       <input
         id="busca-central"
+        ref="campo"
         v-model="termo"
         type="text"
         inputmode="search"
@@ -99,7 +108,7 @@ const limpar = () => {
     </div>
 
     <p
-      v-if="!temTermo"
+      v-show="!temTermo"
       id="busca-central-dica"
       class="mb-0 -mt-1 ltr:pl-1 rtl:pr-1 text-sm text-n-slate-11"
     >
@@ -107,7 +116,10 @@ const limpar = () => {
     </p>
 
     <p class="sr-only" aria-live="polite">
-      <template v-if="temTermo && !buscando">
+      <template v-if="temTermo && buscando">
+        {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.BUSCANDO') }}
+      </template>
+      <template v-else-if="temTermo">
         {{
           t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.RESULTADOS', resultados.length)
         }}
@@ -117,6 +129,14 @@ const limpar = () => {
     <p v-if="temTermo && erro" class="mb-0 text-base text-n-ruby-11">
       {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.ERRO') }}
     </p>
+
+    <div
+      v-else-if="temTermo && buscando"
+      class="flex items-center gap-3 px-1 py-4 text-base text-n-slate-11"
+    >
+      <Spinner />
+      {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.BUSCANDO') }}
+    </div>
 
     <ul
       v-else-if="temTermo && resultados.length"
@@ -137,7 +157,7 @@ const limpar = () => {
     </ul>
 
     <div
-      v-else-if="temTermo && !buscando"
+      v-else-if="temTermo"
       class="flex flex-wrap items-center gap-3 rounded-xl bg-n-alpha-1 px-5 py-4"
     >
       <p class="mb-0 text-base text-n-slate-11">

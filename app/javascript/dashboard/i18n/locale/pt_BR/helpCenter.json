@@ -1117,6 +1117,7 @@
         "RESULTADOS": "{count} artigo encontrado | {count} artigos encontrados",
         "NADA": "Nenhum artigo com essas palavras. Tente outras palavras ou pergunte ao Guia.",
         "LIMPAR": "Limpar a busca",
+        "BUSCANDO": "Buscando…",
         "ERRO": "A busca não respondeu. Tente de novo."
       },
       "COMECE": {
@@ -1147,6 +1148,12 @@
       },
       "LETRA": {
         "ROTULO": "Tamanho da letra",
+        "ATUAL": "Letra {tamanho}",
+        "NOMES": {
+          "normal": "normal",
+          "grande": "grande",
+          "maior": "maior"
+        },
         "DIMINUIR": "Diminuir a letra",
         "AUMENTAR": "Aumentar a letra"
       }

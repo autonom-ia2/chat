@@ -114,10 +114,22 @@ RSpec.describe 'Central de Ajuda (leitura)', type: :request do
       expect(corpo['resultados'].pluck('ref')).to eq(%w[18-01 02-04])
     end
 
-    it 'exige todas as palavras' do
+    it 'exige as duas palavras quando são duas' do
       corpo = get_json('/busca', agente, termo: 'janela cotação?')
 
       expect(corpo['resultados'].pluck('ref')).to eq(%w[18-01])
+    end
+
+    it 'aceita frase inteira: basta a maioria das palavras, e quem tem mais vem antes' do
+      corpo = get_json('/busca', agente, termo: 'como eu troco a foto do perfil')
+
+      expect(corpo['resultados'].first['ref']).to eq('02-02')
+    end
+
+    it 'não acha nada quando a frase não bate com a maioria das palavras' do
+      corpo = get_json('/busca', agente, termo: 'boleto vencido segunda via')
+
+      expect(corpo['resultados']).to eq([])
     end
 
     it 'devolve lista vazia para busca vazia' do

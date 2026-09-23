@@ -116,7 +116,7 @@ const menuItems = computed(() => {
       show: true,
       showOnCustomBrandedInstance: true,
       label: t('SIDEBAR_ITEMS.DOCS'),
-      icon: 'i-lucide-book',
+      icon: 'i-lucide-library-big',
       link: { name: 'central_de_ajuda' },
     },
     {

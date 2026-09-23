@@ -120,6 +120,16 @@ onMounted(carregar);
         <p class="mb-0 text-base text-n-slate-11">
           {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.PREPARANDO.TEXTO') }}
         </p>
+        <Button
+          v-if="guiaDisponivel"
+          size="lg"
+          color="blue"
+          variant="faded"
+          icon="i-lucide-life-buoy"
+          class="min-h-11 mt-2"
+          :label="t('HELP_CENTER.CENTRAL_DE_AJUDA.ARTIGO.PERGUNTE')"
+          @click="perguntarAoGuia"
+        />
       </div>
 
       <template v-else-if="!buscando">
@@ -195,7 +205,7 @@ onMounted(carregar);
                   <span class="text-lg font-medium text-n-slate-12">
                     {{ capitulo.titulo }}
                   </span>
-                  <span class="text-sm text-n-slate-11">
+                  <span class="text-base text-n-slate-11">
                     {{
                       t(
                         'HELP_CENTER.CENTRAL_DE_AJUDA.ARTIGOS_NO_CAPITULO',
@@ -215,7 +225,7 @@ onMounted(carregar);
                 />
               </button>
               <ul
-                v-if="abertos.has(capitulo.id)"
+                v-show="abertos.has(capitulo.id)"
                 :id="`capitulo-${capitulo.id}`"
                 class="m-0 p-0 list-none border-t border-n-weak"
               >
@@ -231,7 +241,7 @@ onMounted(carregar);
                     <span class="text-base font-medium text-n-slate-12">
                       {{ artigo.titulo }}
                     </span>
-                    <span class="text-sm text-n-slate-11">
+                    <span class="text-base text-n-slate-11">
                       {{ artigo.descricao }}
                     </span>
                   </router-link>

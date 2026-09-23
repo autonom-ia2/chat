@@ -8,7 +8,7 @@ class CentralDeAjudaAPI extends ApiClient {
   }
 
   artigo(ref) {
-    return axios.get(`${this.url}/${ref}`);
+    return axios.get(`${this.url}/${encodeURIComponent(ref)}`);
   }
 
   buscar(termo) {
