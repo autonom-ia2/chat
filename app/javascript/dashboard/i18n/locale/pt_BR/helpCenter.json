@@ -1144,7 +1144,9 @@
         "NAO_ENCONTRADO": "Este artigo não existe ou não vale para a sua conta.",
         "AJUDA_TITULO": "Não resolveu?",
         "AJUDA_TEXTO": "O Guia da Plataforma responde na hora, aqui mesmo no painel.",
-        "PERGUNTE": "Pergunte ao Guia"
+        "PERGUNTE": "Pergunte ao Guia",
+        "VIDEO": "Veja o caminho em vídeo",
+        "VIDEO_LEGENDA": "Português"
       },
       "LETRA": {
         "ROTULO": "Tamanho da letra",

@@ -10,6 +10,7 @@ import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ConteudoDoArtigo from '../components/ConteudoDoArtigo.vue';
+import VideoDoTrajeto from '../components/VideoDoTrajeto.vue';
 import TamanhoDaLetra from '../components/TamanhoDaLetra.vue';
 import { useTamanhoDaLetra } from '../composables/useTamanhoDaLetra';
 
@@ -172,6 +173,8 @@ const rotaDoArtigo = vizinho => ({
             <TamanhoDaLetra class="ltr:ml-auto rtl:mr-auto" />
           </div>
         </header>
+
+        <VideoDoTrajeto v-if="artigo.video" :video="artigo.video" />
 
         <ConteudoDoArtigo
           :conteudo="artigo.conteudo"

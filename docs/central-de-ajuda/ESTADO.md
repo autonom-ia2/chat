@@ -31,6 +31,7 @@ voltar.
   declara o assunto da aba **Testar**, mas não explica o que ela mostra (Confiança,
   Conhecimento utilizado, aviso de transferência).
 - Roteiro de prints: `pnpm central:prints`.
+- Vídeo de trajeto (piloto 02.04, 23/09): `node scripts/central-de-ajuda/gravar-trajeto.mjs <id>`, com o painel local no ar, grava pelo roteiro de `scripts/central-de-ajuda/trajetos/<id>.mjs` e gera `.mp4`, `.vtt` e `.jpg` em `public/central-de-ajuda/videos/`. Sem voz, sem marca, tema claro, legenda em texto que segue o A-/A+. A gravação falha se aparecer marca no recorte. A publicação acha o vídeo pelo id, e a tela mostra-o no alto do artigo, sem autoplay.
 - Conferência da Central (#614): `pnpm central:check`. Falha com tela do Guia sem artigo, link
   `[dd.dd]` quebrado, `me_leve_ate_la` diferente do mapa, e artigo e mapa desalinhados.
 - No ar: #599 (Central só leitura), #602 (sem 2FA com login único), #603 (seletor acessível).

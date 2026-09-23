@@ -1145,7 +1145,9 @@
         "NAO_ENCONTRADO": "This article does not exist or does not apply to your account.",
         "AJUDA_TITULO": "Still stuck?",
         "AJUDA_TEXTO": "The Platform Guide answers right away, here in the dashboard.",
-        "PERGUNTE": "Ask the Guide"
+        "PERGUNTE": "Ask the Guide",
+        "VIDEO": "Watch the path on video",
+        "VIDEO_LEGENDA": "Portuguese"
       },
       "LETRA": {
         "ROTULO": "Text size",
