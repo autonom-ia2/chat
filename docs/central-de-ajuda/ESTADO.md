@@ -32,8 +32,9 @@ voltar.
 - **A fonte é o repositório** (`lib/central_de_ajuda/<cap>/<id>-<slug>.md`), publicada
   automaticamente nas duas stacks após o deploy, como o seed do Guia. Ninguém edita à mão
   no portal: o editor de portais fecha para todos.
-- **Portal da Plataforma:** conta **16** (Hub2You) e conta **1** (Autonomia). Sem domínio
-  próprio e sem DNS.
+- **Portal da Plataforma:** um por instalação, slug `plataforma`, sem domínio próprio e sem DNS.
+  Sem variável de ambiente (23/09): mora na conta que já o tem ou, na primeira publicação, na conta
+  mais antiga da instalação. A tela de leitura mostra a Central a todas as contas.
 - **Tela de leitura nossa, dentro do painel (23/09).** Substitui a ideia de embutir a página
   pública `/hc/...`. Motivo: a página pública não sabe em que conta a pessoa está, então o
   "Me leve até lá" não tem para onde levar, o destaque não acende, o Guia não abre e o filtro
@@ -81,9 +82,9 @@ vídeo de trajeto no topo, aviso "isso não apaga nada" antes das ações que as
 ## Próximos passos, em ordem
 
 1. **Capítulo 18** — PR de texto, sem deploy; Rodrigo confirma os pontos marcados.
-2. **#502 (código):** publicação automática do repositório para os portais das duas stacks, com
-   job lazy versionado por hash (como o seed do Guia), artigo por artigo, arquivando sem apagar.
-   Slug com prefixo fixo: o slug de artigo é único no banco inteiro.
+2. **#502 (código, PR aberto):** `Autonomia::CentralDeAjuda::Publicador` publica o repositório no
+   portal, artigo por artigo, arquivando sem apagar; roda na subida do Sidekiq (a cada deploy) e na
+   leitura da Central; `rails central_de_ajuda:publicar` publica na hora. Slug `plataforma-02-06`.
 3. **#501 (código):** tela de leitura nossa no painel; "Central de Ajuda" na barra lateral leva
    a ela; filtro do `requer` no servidor; bloqueios (esconder os botões de editar, que já não
    funcionam; nenhuma caixa ligada ao portal da Plataforma; Copilot ignorando esse portal); link
