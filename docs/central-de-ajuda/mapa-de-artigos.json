@@ -3808,7 +3808,7 @@
    "artigos": [
     {
      "id": "18.01",
-     "titulo": "A janela de 24 horas do WhatsApp",
+     "titulo": "A janela de 24 horas do WhatsApp: por que a conversa trava",
      "para_que_serve": "Explicar por que existe a janela de 24 horas e o que ela trava no atendimento e nas campanhas.",
      "publico": "ambos",
      "prioridade": "P1",
@@ -3825,7 +3825,7 @@
     },
     {
      "id": "18.02",
-     "titulo": "Disparo em massa e o risco de bloqueio do número",
+     "titulo": "Disparo em massa e o risco de perder o número",
      "para_que_serve": "Explicar por que disparar fora da janela de 24 horas ou em volume alto pode derrubar o número do WhatsApp.",
      "publico": "admin",
      "prioridade": "P1",
@@ -3840,7 +3840,7 @@
     },
     {
      "id": "18.03",
-     "titulo": "O que custa quando a IA responde",
+     "titulo": "O que custa quando a IA trabalha, e quem paga",
      "para_que_serve": "Explicar quem paga, por qual modelo, e o que dispara consumo sem ninguém clicar em nada.",
      "publico": "admin",
      "prioridade": "P1",
@@ -3858,7 +3858,7 @@
     },
     {
      "id": "18.04",
-     "titulo": "API oficial x API não oficial do WhatsApp: o que muda de verdade",
+     "titulo": "WhatsApp Oficial e WhatsApp API: o que muda de verdade",
      "para_que_serve": "Explicar a diferença entre WhatsApp Oficial (Cloud API da Meta) e WhatsApp API (WAHA/QR Code).",
      "publico": "admin",
      "prioridade": "P1",
@@ -3875,8 +3875,8 @@
     },
     {
      "id": "18.05",
-     "titulo": "A descrição da etapa é instrução para a IA, não só um rótulo",
-     "para_que_serve": "Explicar que o texto de cada etapa do funil é lido pela IA para decidir quando mover um card.",
+     "titulo": "O critério de cada etapa é a instrução que a IA do funil segue",
+     "para_que_serve": "Explicar que o critério de cada etapa, no painel IA do funil, é lido pela IA para decidir quando mover um card.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [
@@ -3892,7 +3892,7 @@
     },
     {
      "id": "18.06",
-     "titulo": "Não use o agente de IA no número pessoal",
+     "titulo": "Não coloque o agente de IA no seu número pessoal",
      "para_que_serve": "Explicar por que o agente de IA precisa de um número separado do WhatsApp pessoal de quem atende.",
      "publico": "admin",
      "prioridade": "P1",
@@ -3907,8 +3907,8 @@
     },
     {
      "id": "18.07",
-     "titulo": "Login único (SSO) e por que a senha local quase nunca vale",
-     "para_que_serve": "Explicar que a entrada na plataforma é pelo login único, com redirecionamento automático, e onde a senha local ainda funciona.",
+     "titulo": "Cada pessoa com o seu acesso: por que não dividir o login",
+     "para_que_serve": "Explicar por que cada pessoa do time precisa do próprio acesso: atribuição, autoria, relatórios, distribuição e o que cada papel vê.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
@@ -3920,7 +3920,84 @@
      "prints": [],
      "fontes": [],
      "revisar": false,
-     "nota": "Achado registrado nas armadilhas do estudo de 08/09 (capítulo 01): trocar a senha em Configurações do Perfil raramente tem efeito, porque o login é redirecionado para a Autonom.ia; a senha local só vale em /app/login/local."
+     "nota": "Reescrito em 23/09 com o Rodrigo: nenhuma reunião de implantação falava de login único; a dúvida real dos clientes era dividir o acesso. Senha e login único ficam no 02.03."
+    },
+    {
+     "id": "18.08",
+     "titulo": "A IA sugere, você decide: quando o card anda sozinho e o que é o score",
+     "para_que_serve": "Explicar os três níveis de certeza da IA do funil (move, sugere, não faz nada) e o score de 0 a 100 como termômetro do lead.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "08.23-sugestao-vs-automove"
+     ],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Conceito novo de 23/09, tirado das reuniões de implantação do Rodrigo."
+    },
+    {
+     "id": "18.09",
+     "titulo": "Instrução é comportamento, não roteiro: como orientar o agente de IA",
+     "para_que_serve": "Explicar que a instrução do agente descreve jeito de atender, e que o que ele precisa saber vai na base de conhecimento.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Conceito novo de 23/09, tirado das reuniões de implantação do Rodrigo."
+    },
+    {
+     "id": "18.10",
+     "titulo": "O primeiro agente vai errar: teste antes e solte aos poucos",
+     "para_que_serve": "Explicar como colocar um agente no ar em etapas: aba Testar, caixa ou público de teste, marcar Resposta errada, e só então todos.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Conceito novo de 23/09, tirado das reuniões de implantação do Rodrigo."
+    },
+    {
+     "id": "18.11",
+     "titulo": "Quem responde: a IA ou uma pessoa, e como a conversa passa de uma para a outra",
+     "para_que_serve": "Explicar a regra de quem responde (sem responsável, a IA; com responsável, a pessoa) e os três jeitos de a conversa passar da IA para o time.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Conceito novo de 23/09, tirado das reuniões de implantação do Rodrigo."
+    },
+    {
+     "id": "18.12",
+     "titulo": "A IA só sabe o que está escrito na conversa",
+     "para_que_serve": "Explicar que a IA lê só as mensagens trocadas com o cliente e os campos do card e do contato, e como registrar o que aconteceu fora.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": null,
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Conceito novo de 23/09, tirado das reuniões de implantação do Rodrigo."
     }
    ]
   }
