@@ -76,6 +76,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   # PAROU DE CHEGAR RESPOSTA (chat#612, 23/09/2026): o residencial esperava os 7 min do prazo por uma seguradora
   # instável, com as outras respondidas no primeiro minuto. Com preço e nada novo há `SEM_NOVIDADE`, encerra.
   describe 'quando parou de chegar resposta' do
+    let(:params) { { 'produto' => 'residencial' } }
     let(:com_uma_aguardando) { [oferta('8', 'quoted', 2119.18), oferta('13', 'running')] }
     let(:resultado_anterior) do
       Autonomia::Insurance::ResultadoPorSeguradora.unir({}, com_uma_aguardando)
@@ -91,6 +92,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
       expect(progresso).to be_done
       expect(pdf_de(progresso).url).to eq(url)
+    end
+
+    # Revisão da chat#612: em auto o silêncio não diz que acabou (3 de 6 cotaram em ~35 s, as outras até os 392 s).
+    it 'em auto, parado com preço, segue esperando: o limite só vale onde foi medido' do
+      auto = described_class.new(agent: agent, params: { 'produto' => 'auto' }, run: run)
+      allow(connector).to receive(:quote_result).and_return({ 'quote_id' => 'abc:1', 'status' => 'partial', 'offers' => com_uma_aguardando })
+
+      progresso = auto.poll(handle: aguardando_desde(described_class::SEM_NOVIDADE.ago - 1.second), attempt: 5)
+
+      expect(progresso).not_to be_done
     end
 
     it 'com novidade recente, segue esperando' do

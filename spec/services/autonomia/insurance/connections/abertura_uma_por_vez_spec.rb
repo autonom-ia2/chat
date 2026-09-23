@@ -28,21 +28,41 @@ RSpec.describe Autonomia::Insurance::Connections::AberturaUmaPorVez do
   it 'segura a vez enquanto a abertura corre e a devolve no fim, mesmo quando a abertura levanta' do
     durante = nil
 
-    expect { described_class.call(connection) { (durante = travada_por_outro?) && raise('x') } }.to raise_error(RuntimeError)
+    expect { described_class.call(connection, pedido_em: Time.current) { (durante = travada_por_outro?) && raise('x') } }
+      .to raise_error(RuntimeError)
 
     expect(durante).to be(true)
     expect(travada_por_outro?).to be(false)
   end
 
-  it 'com a vez presa por outro além do limite, segue sem ela e deixa no log' do
-    stub_const("#{described_class}::ESPERA_MAXIMA", 0.3.seconds)
-    stub_const("#{described_class}::INTERVALO", 0.1)
+  it 'com a vez presa por outro, não abre e levanta sem dormir: o motor reagenda' do
+    outro_processo.exec(sql('pg_advisory_lock'))
+    abriu = false
+
+    expect { described_class.call(connection, pedido_em: 10.seconds.ago) { abriu = true } }
+      .to raise_error(described_class::SemAVez)
+
+    expect(abriu).to be(false)
+  end
+
+  it 'com a vez presa e o pedido mais velho que o limite, segue sem ela e deixa no log' do
     outro_processo.exec(sql('pg_advisory_lock'))
     allow(Rails.logger).to receive(:warn)
 
-    executou = described_class.call(connection) { :abriu }
+    executou = described_class.call(connection, pedido_em: described_class::ESPERA_MAXIMA.ago - 1.second) { :abriu }
 
     expect(executou).to eq(:abriu)
     expect(Rails.logger).to have_received(:warn).with(/abertura sem a vez connection=#{connection.id}/)
+  end
+
+  it 'sem o instante do pedido não há quem reagende: segue sem a vez' do
+    outro_processo.exec(sql('pg_advisory_lock'))
+
+    expect(described_class.call(connection, pedido_em: nil) { :abriu }).to eq(:abriu)
+  end
+
+  it 'sem a vez é falha comum para o motor, antes da chamada paga (não é envio incerto)' do
+    expect(described_class::SemAVez.ancestors).to include(StandardError)
+    expect(described_class::SemAVez.ancestors).not_to include(Autonomia::Agents::Tools::Native::EnvioIncerto)
   end
 end

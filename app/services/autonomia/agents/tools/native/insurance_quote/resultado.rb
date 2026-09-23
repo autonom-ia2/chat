@@ -14,6 +14,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
   # quem ficou aguardando conta como instabilidade (`ResultadoDaCotacao#motivo`), e o comparativo sai.
   NOVIDADE_KEY = 'ultima_novidade_em'.freeze
   SEM_NOVIDADE = 150.seconds
+  # O LIMITE SÓ VALE ONDE FOI MEDIDO (revisão da chat#612). Em auto o silêncio não diz que acabou: numa cotação real
+  # de 04/09, 3 de 6 seguradoras cotaram em ~35 s e as outras vieram até os 392 s (`AsyncConfig`). Fechar ali
+  # entregaria o comparativo sem a opção que ainda vinha.
+  FECHAM_SEM_NOVIDADE = [::Autonomia::Insurance::EntradaDaCotacao::RESIDENCIAL].freeze
 
   class_methods do
     # -> este handle tem ao menos uma seguradora com preço guardado? Lido sem instância por
@@ -57,6 +61,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
 
   # -> a cotação já tem preço e nenhuma seguradora mudou de desfecho há `SEM_NOVIDADE`? (`next_handle` desta passada)
   def parou_de_chegar?(handle)
+    return false unless FECHAM_SEM_NOVIDADE.include?(produto)
+
     novidade = handle[NOVIDADE_KEY].presence && Time.zone.parse(handle[NOVIDADE_KEY])
     Array(handle[self.class::DELIVERED_KEY]).any? && novidade.present? && novidade <= SEM_NOVIDADE.ago
   end

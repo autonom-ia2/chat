@@ -55,8 +55,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
   # A CONCLUSÃO COM SEGURADORA AGUARDANDO (chat#612): a cotação parou de receber resposta e fechou com o que tinha
   # (`Resultado#parou_de_chegar?`). No `encerrada_por_prazo` o próprio fato já diz isso.
   FICARAM_DE_FORA = {
-    'concluida' => 'Uma ou mais seguradoras não responderam e ficaram de fora do comparativo: foi instabilidade delas, ' \
-                   'não recusa do risco, e não é motivo para refazer.'
+    'concluida' => 'Uma ou mais seguradoras não responderam a tempo e ficaram de fora do comparativo. Não foi recusa do risco.'
   }.freeze
 
   FALTA_JSON = 'A cotação não foi aberta: os dados do ramo que o especialista mandou não puderam ser lidos. Confira com o ' \
