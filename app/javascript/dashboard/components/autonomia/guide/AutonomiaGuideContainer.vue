@@ -3,7 +3,6 @@ import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
-import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useWindowSize, useEventListener } from '@vueuse/core';
@@ -14,12 +13,7 @@ import {
   useAutonomiaGuideStore,
   motivoUtilizavel,
 } from 'dashboard/store/modules/autonomiaGuide';
-import {
-  isGuideRoute,
-  guideRouteFeature,
-} from 'dashboard/helper/guideRouteRegistry';
-import { guideRouteParams } from 'dashboard/helper/guideNavigation';
-import { useGuideHighlight } from 'dashboard/store/modules/guideHighlight';
+import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
 
 import GuideHeader from './GuideHeader.vue';
 import GuideComposer from './GuideComposer.vue';
@@ -37,13 +31,9 @@ import Button from 'dashboard/components-next/button/Button.vue';
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const { accountScopedRoute } = useAccount();
 const { uiSettings, updateUISettings } = useUISettings();
 const currentAccount = useMapGetter('accounts/getAccount');
 const accountId = useMapGetter('getCurrentAccountId');
-const isFeatureEnabledonAccount = useMapGetter(
-  'accounts/isFeatureEnabledonAccount'
-);
 
 // Tela que exige feature da conta não ganha botão quando a feature está desligada:
 // o Guia nunca oferece uma tela que o backend nega. A relação tela→feature é
@@ -53,7 +43,7 @@ const { width: windowWidth } = useWindowSize();
 
 const store = useAutonomiaGuideStore();
 const { messages } = store;
-const guideHighlight = useGuideHighlight();
+const { destino, acender } = useLevarAteLa();
 
 const isSending = ref(false);
 const chatContainer = ref(null);
@@ -115,26 +105,7 @@ const handleClickOutside = () => {
 // so a screen of ONE record without its id renders NO button instead of a dead one). The ids come
 // from the model, which read the account (#590). The route guards still enforce the user's
 // permission on push.
-const navLocation = nav => {
-  if (!nav?.route_name || !isGuideRoute(nav.route_name)) return null;
-  const requiredFeature = guideRouteFeature(nav.route_name);
-  if (
-    requiredFeature &&
-    !isFeatureEnabledonAccount.value(accountId.value, requiredFeature)
-  ) {
-    return null; // feature off → no button (backend would 404 the screen)
-  }
-  try {
-    const target = accountScopedRoute(
-      nav.route_name,
-      guideRouteParams(nav.params)
-    );
-    const resolved = router.resolve(target);
-    return resolved?.matched?.length ? target : null;
-  } catch {
-    return null; // unknown route or missing required param
-  }
-};
+const navLocation = nav => destino(nav?.route_name, nav?.params);
 
 // Esta função não age sobre nada: só move a pessoa até a tela e (V2) destaca o
 // elemento de lá. Quem executa ação é `confirmarAcao`, mais abaixo.
@@ -146,9 +117,8 @@ const navigateTo = nav => {
     // Close the chat panel so the highlighted element is fully visible (the right-docked panel would
     // otherwise cover right-aligned action buttons). Trigger AFTER the close transition so the element
     // is at its final position. The thread is preserved — reopening the Guia shows it again.
-    const anchor = nav.highlight;
     closePanel();
-    setTimeout(() => guideHighlight.show(anchor), 320);
+    acender(nav.highlight);
   } else if (isSmallScreen.value) {
     closePanel();
   }

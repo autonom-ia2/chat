@@ -1107,6 +1107,50 @@
       "FROM_DOCUMENT": "From document",
       "NO_CONTENT": "No generated content available. Upload a PDF document to get started.",
       "LOADING": "Loading generated content..."
+    },
+    "CENTRAL_DE_AJUDA": {
+      "TITULO": "Help Center",
+      "SUBTITULO": "Learn to use the platform at your own pace. Each article has a button that takes you to the right screen.",
+      "BUSCA": {
+        "ROTULO": "Search the Help Center",
+        "PLACEHOLDER": "What do you want to do?",
+        "DICA": "Examples: connect WhatsApp, change the password, create a pipeline.",
+        "RESULTADOS": "{count} article found | {count} articles found",
+        "NADA": "No article with these words. Try other words or ask the Guide.",
+        "LIMPAR": "Clear search",
+        "ERRO": "The search did not respond. Try again."
+      },
+      "COMECE": {
+        "TITULO": "Start here",
+        "SUBTITULO": "The first steps, in the right order."
+      },
+      "ASSUNTOS": "All topics",
+      "ARTIGOS_NO_CAPITULO": "{count} article | {count} articles",
+      "PREPARANDO": {
+        "TITULO": "We are preparing the Help Center",
+        "TEXTO": "Articles show up here in a few minutes. Come back shortly."
+      },
+      "ERRO": {
+        "TEXTO": "Could not open the Help Center right now.",
+        "TENTAR": "Try again"
+      },
+      "ARTIGO": {
+        "VOLTAR": "Help Center",
+        "ME_LEVE": "Take me there",
+        "ME_LEVE_AJUDA": "Opens the right screen and shows where to click.",
+        "ANTERIOR": "Previous",
+        "PROXIMO": "Next",
+        "ATUALIZADO": "Updated on {data}",
+        "NAO_ENCONTRADO": "This article does not exist or does not apply to your account.",
+        "AJUDA_TITULO": "Still stuck?",
+        "AJUDA_TEXTO": "The Platform Guide answers right away, here in the dashboard.",
+        "PERGUNTE": "Ask the Guide"
+      },
+      "LETRA": {
+        "ROTULO": "Text size",
+        "DIMINUIR": "Smaller text",
+        "AUMENTAR": "Larger text"
+      }
     }
   }
 }

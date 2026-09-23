@@ -6,7 +6,7 @@ class Captain::Tools::Copilot::GetArticleService < Captain::Tools::BaseTool
   param :article_id, type: :number, desc: 'The ID of the article to retrieve', required: true
 
   def execute(article_id:)
-    article = Article.find_by(id: article_id, account_id: @assistant.account_id)
+    article = Article.fora_da_plataforma.find_by(id: article_id, account_id: @assistant.account_id)
     return 'Article not found' if article.nil?
 
     article.to_llm_text

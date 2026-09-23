@@ -80,6 +80,8 @@ class Article < ApplicationRecord
   scope :order_by_updated_at, -> { reorder(updated_at: :desc) }
   scope :order_by_position, -> { reorder(position: :asc) }
   scope :order_by_views, -> { reorder(views: :desc) }
+  # A Central de Ajuda da plataforma (portal "plataforma") não chega ao Copilot (#501).
+  scope :fora_da_plataforma, -> { where.not(portal_id: Portal.where(slug: 'plataforma').select(:id)) }
 
   # TODO: if text search slows down https://www.postgresql.org/docs/current/textsearch-features.html#TEXTSEARCH-UPDATE-TRIGGERS
   # - the A, B and C are for weightage. See: https://github.com/Casecommons/pg_search#weighting

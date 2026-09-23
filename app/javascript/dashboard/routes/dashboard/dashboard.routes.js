@@ -9,6 +9,7 @@ import { routes as autonomiaRoutes } from './autonomia/autonomia.routes';
 import { routes as companyRoutes } from './companies/routes';
 import { routes as inboxRoutes } from './inbox/routes';
 import { routes as firstStepsRoutes } from './onboarding/firstSteps.routes';
+import { routes as centralDeAjudaRoutes } from './centralDeAjuda/centralDeAjuda.routes';
 import { frontendURL } from '../../helper/URLHelper';
 import helpcenterRoutes from './helpcenter/helpcenter.routes';
 import campaignsRoutes from './campaigns/campaigns.routes';
@@ -39,6 +40,7 @@ export default {
         ...helpcenterRoutes.routes,
         ...campaignsRoutes.routes,
         ...firstStepsRoutes,
+        ...centralDeAjudaRoutes,
       ],
     },
     {
