@@ -67,7 +67,7 @@
       "tipo": "texto",
       "origem": "cliente",
       "obrigatorio": false,
-      "descricao": "Data da primeira habilitação do segurado, AAAA-MM-DD. Vale o que ele informou ou, na apólice anterior do próprio segurado desta cotação, a data da primeira habilitação; se a apólice traz só o tempo de habilitação em anos, use hoje menos esses anos. Habilitação é da pessoa: apólice em nome de outra pessoa não dá este dado. Sem nenhum dos dois, deixe em branco: o tempo de habilitação sai da idade."
+      "descricao": "Data da primeira habilitação do segurado, AAAA-MM-DD. Vale o que ele informou ou, na apólice anterior do próprio segurado desta cotação quando ele é o condutor principal dela, a data da primeira habilitação; se a apólice traz só o tempo de habilitação em anos, use hoje menos esses anos. Habilitação é da pessoa: apólice em nome de outra pessoa não dá este dado. Sem nenhum dos dois, deixe em branco: o tempo de habilitação sai da idade."
     },
     {
       "campo": "insured.isPcd",
