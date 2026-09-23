@@ -31,7 +31,16 @@ RSpec.describe Webhooks::WhatsappEventsJob do
   it 'enqueues the job' do
     expect { job.perform_later(params) }.to have_enqueued_job(described_class)
       .with(params)
-      .on_queue('medium')
+      .on_queue('low')
+  end
+
+  # A mensagem do cliente vai na medium, junto da resposta do agente; recibo de entrega fica na low (Autonom.ia).
+  it 'enfileira a mensagem do cliente na medium e o recibo de entrega na low' do
+    mensagem = params.deep_merge(entry: [{ changes: [{ field: 'messages', value: { messages: [{ from: '5511999999999', id: 'wamid.1' }] } }] }])
+    recibo = params.deep_merge(entry: [{ changes: [{ field: 'messages', value: { statuses: [{ id: 'wamid.1', status: 'read' }] } }] }])
+
+    expect { job.perform_later(mensagem) }.to have_enqueued_job(described_class).on_queue('medium')
+    expect { job.perform_later(recibo) }.to have_enqueued_job(described_class).on_queue('low')
   end
 
   context 'when whatsapp_cloud provider' do
