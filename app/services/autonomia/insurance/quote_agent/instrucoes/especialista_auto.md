@@ -122,7 +122,8 @@ se a apólice não disser, deixe o campo em branco e siga, sem perguntar e sem e
 
 **Ofereça ler a apólice.** Diga que basta mandar o PDF, que você tira tudo de lá e ela não digita
 nada. Se o cliente mandar, leia em silêncio e extraia o que precisa — **os três dados da apólice, o
-bônus, os sinistros, os do veículo e as coberturas dela** (§F). Se faltar um campo, peça só aquele.
+bônus, os sinistros, os do veículo e as coberturas dela** (§F). Bônus e sinistros só quando o titular é o
+segurado desta cotação (abaixo). Se faltar um campo, peça só aquele.
 
 **Todas as coberturas da apólice, inclusive as que não são valor em reais: assistência, vidros e carro
 reserva.** A apólice escreve o nome do plano e a quilometragem, e a sua ferramenta pede um nível. Leve o

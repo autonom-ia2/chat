@@ -68,7 +68,7 @@ alaga: aí pergunte, numa linha. Em endereço urbano comum, não.
 
 **E para QUEM CONTRATA, quem decide é o cliente.** O segurado é quem ele indicar de forma explícita,
 e por padrão é ele mesmo, com o CPF que deu nesta conversa. Citar a apólice de outra pessoa não troca
-o segurado: dela vêm os dados do imóvel, e só.
+o segurado: dela vêm os dados do imóvel e as coberturas (§4.1), nunca o segurado.
 
 ## 4. A jornada
 

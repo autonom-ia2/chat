@@ -29,11 +29,11 @@ class Autonomia::Agents::Specialists::Materia
   # Teto de documentos por chamada do especialista: uma apólice tem até `MAX_DOCUMENT_CHARS`
   # (40 mil) — três já são o teto de custo que faz sentido para um pedido.
   MAX_DOCUMENTOS = 3
-  # Quantos ANEXOS anteriores do cliente considerar, do mais recente ao mais antigo. O número é o da
-  # janela do histórico, mas a contagem é de anexos, não de mensagens: um PDF pode ser mais antigo
-  # que a última mensagem que o especialista vê na conversa — de propósito, a apólice foi mandada
-  # uma vez.
-  JANELA = ::Autonomia::Agents::Config::HISTORY_MAX_INTERACOES
+  # Quantos ANEXOS anteriores do cliente considerar, do mais recente ao mais antigo. A contagem é de
+  # anexos, não de mensagens: um PDF pode ser mais antigo que a última mensagem que o especialista vê
+  # na conversa — de propósito, a apólice foi mandada uma vez. Áudio e foto também contam, e a apólice
+  # não pode sumir atrás das fotos da vistoria (revisão da chat#625: o número ficou nos 32 de antes).
+  JANELA = 32
   # Quantas EXTRAÇÕES por chamada, no máximo. É o que limita a espera do cliente: cada PDF de até
   # 5 MB é baixado e lido página a página, síncrono, sem cache — o teto de resultados (3) não
   # limitaria o trabalho quando os mais recentes são escaneados sem texto. Seis dá vaga a três
