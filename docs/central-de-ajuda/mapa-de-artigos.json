@@ -857,10 +857,10 @@
       "settings_inbox_show"
      ],
      "me_leve_ate_la": {
-      "rota": "settings_home",
+      "rota": "settings_inbox_list",
       "destaque": null
      },
-     "requer": null,
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -940,10 +940,10 @@
       "settings_teams_edit_finish"
      ],
      "me_leve_ate_la": {
-      "rota": "settings_home",
+      "rota": "settings_teams_list",
       "destaque": null
      },
-     "requer": null,
+     "requer": "team_management",
      "prints": [],
      "fontes": [],
      "revisar": false,
@@ -1350,10 +1350,10 @@
       "settings_inbox_show"
      ],
      "me_leve_ate_la": {
-      "rota": "settings_home",
+      "rota": "settings_inbox_list",
       "destaque": null
      },
-     "requer": null,
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [
       "porques: Editar configuracoes da caixa"
@@ -1404,10 +1404,10 @@
       "settings_inbox_show"
      ],
      "me_leve_ate_la": {
-      "rota": "settings_home",
+      "rota": "settings_inbox_list",
       "destaque": null
      },
-     "requer": null,
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [
       "porques: Definir horario de atendimento da caixa"
@@ -1508,10 +1508,10 @@
       "settings_inbox_show"
      ],
      "me_leve_ate_la": {
-      "rota": "settings_home",
+      "rota": "settings_inbox_list",
       "destaque": null
      },
-     "requer": null,
+     "requer": "inbox_management",
      "prints": [],
      "fontes": [
       "porques: Configurar CSAT da caixa"

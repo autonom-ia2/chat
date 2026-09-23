@@ -1,0 +1,22 @@
+[
+  {
+    "id": "02.01-a",
+    "rota": "qualquer tela do painel (ex.: dashboard)",
+    "estado": "menu da foto aberto; status Online",
+    "destaque": "item Configurações do Perfil",
+    "recorte": "só o menu aberto e o rodapé da barra lateral, sem o logo",
+    "legenda": "Menu da foto aberto no rodapé da barra lateral, com Configurações do Perfil em destaque",
+    "artigo": "lib/central_de_ajuda/02/02.01-onde-ficam-suas-configuracoes-pessoais.md",
+    "arquivo": "prints/02.01-a.png"
+  },
+  {
+    "id": "02.04-a",
+    "rota": "inbox_conversation (uma conversa de WhatsApp da conta de teste)",
+    "estado": "caixa de resposta em modo Responder; assinatura desligada; mouse sobre o ícone",
+    "destaque": "ícone de assinatura e a dica Ativar assinatura",
+    "recorte": "só o rodapé da caixa de resposta",
+    "legenda": "Rodapé da caixa de resposta com o ícone de assinatura e a dica Ativar assinatura",
+    "artigo": "lib/central_de_ajuda/02/02.04-sua-assinatura-de-mensagens.md",
+    "arquivo": "prints/02.04-a.png"
+  }
+]

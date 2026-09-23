@@ -5,6 +5,7 @@
   "scripts": {
     "guia:build": "node scripts/guide-map/build.mjs",
     "guia:check": "node scripts/guide-map/check.mjs",
+    "central:prints": "node scripts/central-de-ajuda/roteiro-prints.mjs",
     "eslint": "eslint app/**/*.{js,vue}",
     "eslint:fix": "eslint app/**/*.{js,vue} --fix",
     "test": "TZ=UTC vitest --no-watch --no-cache --no-coverage --logHeapUsage",
