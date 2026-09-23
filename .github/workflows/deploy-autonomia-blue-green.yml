@@ -21,6 +21,7 @@ on:
       - '!*.md'
       - '!**/*.md'
       - 'lib/operator_guide/**'
+      - 'lib/central_de_ajuda/**'
       - 'config/onboarding/**'
   workflow_dispatch:
     inputs:
