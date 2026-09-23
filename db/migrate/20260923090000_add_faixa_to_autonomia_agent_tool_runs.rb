@@ -25,8 +25,17 @@ class AddFaixaToAutonomiaAgentToolRuns < ActiveRecord::Migration[7.2]
                                                                              name: 'idx_autonomia_tool_runs_active'
   end
 
+  # A volta devolve o índice de uma execução viva por (conversa, ferramenta). Com auto e residencial vivos na mesma
+  # conversa ele não seria criado: fica a mais nova, e a outra é trocada, como o `open!` de antes faria.
   def down
     remove_index :autonomia_agent_tool_runs, name: 'idx_autonomia_tool_runs_active'
+    execute(<<~SQL.squish)
+      UPDATE autonomia_agent_tool_runs r SET status = 'superseded', updated_at = now()
+      WHERE r.status IN ('pending', 'running') AND EXISTS (
+        SELECT 1 FROM autonomia_agent_tool_runs n
+        WHERE n.conversation_id = r.conversation_id AND n.slug = r.slug AND n.status IN ('pending', 'running')
+          AND (n.created_at, n.id) > (r.created_at, r.id))
+    SQL
     add_index :autonomia_agent_tool_runs, [:conversation_id, :slug], unique: true,
                                                                      where: "status IN ('pending', 'running')",
                                                                      name: 'idx_autonomia_tool_runs_active'

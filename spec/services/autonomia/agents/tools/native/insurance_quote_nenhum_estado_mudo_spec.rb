@@ -419,13 +419,28 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(texto).not_to include('equipe')
     end
 
+    def fatos(tipo, handle: {}, faixa: '')
+      described_class.fatos_do_evento(tipo, Autonomia::Agents::ToolRun.new(handle: handle, faixa: faixa))
+    end
+
     it 'falha e incerteza não prometem atendente: a passagem para uma pessoa não está ligada' do
       %w[falhou incerta].each do |tipo|
-        texto = described_class.fatos_do_evento(tipo, Autonomia::Agents::ToolRun.new(handle: {}))
-
-        expect(texto).to include('dá para pedir de novo', 'não prometa atendente')
-        expect(texto).not_to include('vai continuar', 'vai conferir')
+        expect(fatos(tipo)).to include('não prometa atendente')
+        expect(fatos(tipo)).not_to include('vai continuar', 'vai conferir')
       end
+    end
+
+    # Revisão da chat#608: só a falha comum oferece pedir de novo. A incerta pode já ter cotado (e pago) no portal,
+    # e o formulário indisponível recusaria de novo.
+    it 'só a falha comum oferece pedir de novo' do
+      expect(fatos('falhou')).to include('dá para pedir de novo')
+      expect(fatos('incerta')).to include('não conseguiu confirmar', 'sem oferecer cotar de novo')
+      expect(fatos('falhou', handle: { 'recusa' => 'formulario_indisponivel' })).to include('Não ofereça cotar de novo')
+    end
+
+    it 'os fatos dizem de qual seguro é a notícia' do
+      expect(fatos('falhou', faixa: 'residencial')).to start_with('Cotação de residencial. ')
+      expect(fatos('concluida')).to start_with('Cotação de auto. ')
     end
   end
 end

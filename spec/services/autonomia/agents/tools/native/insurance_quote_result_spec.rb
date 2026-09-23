@@ -516,6 +516,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(texto).to include(preco(porto))
     end
 
+    # Revisão da chat#608: "carro" não é faixa. Ler nada diria "não há cotação", o que é falso.
+    it 'produto fora dos que a conversa tem: devolve a lista, sem afirmar que não há cotação' do
+      texto = described_class.new(agent: agent, params: { 'seguradora' => nil, 'produto' => 'carro' }, delivery: delivery).call
+
+      expect(texto).to include('Esta conversa tem cotação de residencial e auto')
+      expect(texto).not_to include(described_class::SEM_COTACAO)
+    end
+
     it 'com um produto só na conversa, não fala de outro' do
       Autonomia::Agents::ToolRun.where(faixa: 'residencial').delete_all
 

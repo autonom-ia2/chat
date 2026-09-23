@@ -685,8 +685,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     # 23/09/2026 (`2b8bf39d…` -> `cc80f26b…`): "Começou" sem verbo para copiar; o prazo com comparativo não oferece
     # refazer; falha e incerteza sem promessa de equipe, que a passagem para uma pessoa não está ligada.
+    # Na revisão da chat#608 (`cc80f26b…` -> `1fce6d0b…`): "Começou" remete à §5 em vez de ditar o que dizer, e a
+    # falha só oferece pedir de novo quando o aviso disser que dá (a incerta pode já ter sido paga).
     it 'mudou? revise este bloco e assine aqui' do
-      expect(Digest::MD5.hexdigest(secao)).to eq('cc80f26b62a7b50b65163759f35eb06a')
+      expect(Digest::MD5.hexdigest(secao)).to eq('1fce6d0bb21a9fd7f81d6fa1dae50cd3')
     end
 
     it 'não traz frase de exemplo, travessão, valor em reais nem variável' do

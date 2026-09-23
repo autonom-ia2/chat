@@ -119,6 +119,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
       expect(mensagens_do_bot.sole.attachments.sole.file.filename.to_s).to eq('Proposta Usebens, placa HIK9383.pdf')
     end
 
+    # Revisão da chat#608: sem produto, com os dois na conversa, a mais nova podia ser o outro seguro.
+    it 'sem produto e com dois seguros na conversa, pergunta qual e não manda arquivo' do
+      cotacao_da_conversa.update!(created_at: 1.hour.ago)
+      cotacao_da_conversa(argumentos: { 'produto' => 'residencial' })
+
+      ao_modelo = pedir('Usebens')
+
+      expect(ao_modelo).to include('Esta conversa tem cotação de residencial e auto')
+      expect(mensagens_do_bot).to be_empty
+      expect(connector).not_to have_received(:quote_proposal)
+    end
+
     it 'duas seguradoras são duas chamadas: dois arquivos, e nenhuma cotação nova é aberta' do
       cotacao_da_conversa
 

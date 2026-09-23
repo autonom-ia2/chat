@@ -11,8 +11,9 @@
 module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
   extend ActiveSupport::Concern
 
-  # O motivo da recusa do envio -> o tipo do evento. Formulário indisponível não é dado que a pessoa deve: é a
-  # equipe que retoma, e o evento é `falhou`. Motivo fora da tabela também.
+  # O motivo da recusa do envio -> o tipo do evento. Formulário indisponível não é dado que a pessoa deve: o evento é
+  # `falhou`, com fatos próprios (`SEM_FORMULARIO`), porque pedir de novo daria a mesma recusa. Motivo fora da tabela
+  # também é `falhou`.
   EVENTO_DA_RECUSA = {
     'faltam_dados' => 'falta_dado', 'json_invalido' => 'falta_dado', 'sem_veiculo' => 'falta_dado',
     'ramo_desconhecido' => 'ramo_desconhecido', 'formulario_indisponivel' => 'falhou'
@@ -31,14 +32,21 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
     # não foi.
     'falhou' => 'A cotação não pôde ser concluída agora, e nenhuma opção chegou à pessoa. Se ela quiser, dá para pedir ' \
                 'de novo nesta conversa. Ninguém da equipe foi acionado: não prometa atendente nem prazo.',
-    'incerta' => 'Não foi possível confirmar se o pedido chegou às seguradoras, e nenhuma opção chegou à pessoa. Se ela ' \
-                 'quiser, dá para pedir de novo nesta conversa. Ninguém da equipe foi acionado: não prometa atendente ' \
-                 'nem prazo.',
+    # A INCERTA NÃO OFERECE REFAZER (revisão da chat#608): a cotação pode existir e já ter sido paga no portal, e o
+    # pedido novo não é barrado como repetido (a execução fecha sem entrega). Não se sabe se deu: não se diz que não deu.
+    'incerta' => 'Não foi possível confirmar se o pedido chegou às seguradoras, e nenhuma opção chegou à pessoa até ' \
+                 'agora. Diga que não conseguiu confirmar, sem afirmar que não deu e sem oferecer cotar de novo. Ninguém ' \
+                 'da equipe foi acionado: não prometa atendente nem prazo.',
     'encerrada_por_prazo' => 'A cotação terminou, e o comparativo em PDF com as opções de quem respondeu já está nesta ' \
                              'conversa. Uma ou mais seguradoras não responderam dentro do tempo e ficaram de fora: foi ' \
                              'instabilidade delas, não recusa do risco, e não é motivo para refazer. Os valores de ' \
                              'cada seguradora estão com o especialista, que os lê sem cotar de novo.'
   }.freeze
+
+  # FORMULÁRIO INDISPONÍVEL (revisão da chat#608): pedir de novo daria a mesma recusa, então não se oferece.
+  SEM_FORMULARIO = 'A cotação não pôde ser aberta agora: o formulário deste tipo de seguro não está disponível. Nenhuma ' \
+                   'opção chegou à pessoa. Não ofereça cotar de novo agora, e ninguém da equipe foi acionado: não ' \
+                   'prometa atendente nem prazo.'.freeze
 
   # Só em renovação de auto cotada sem a classe de bônus. Sem número e sem promessa de desconto: o quanto o bônus
   # abate é decisão de cada seguradora.
@@ -51,17 +59,27 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
   FALTA_PREFIXO = 'A cotação não foi aberta: falta dado que a pessoa precisa dar. O que a conferência apontou:'.freeze
 
   class_methods do
-    # -> os fatos do evento `tipo` desta execução, para o modelo (`Native::Base.fatos_do_evento`).
+    # -> os fatos do evento `tipo` desta execução, para o modelo (`Native::Base.fatos_do_evento`), começando pelo
+    # produto: com auto e residencial na mesma conversa, a Lia precisa saber de qual seguro é a notícia.
     def fatos_do_evento(tipo, run)
-      handle = run.handle.to_h
-      case tipo.to_s
-      when 'falta_dado' then fatos_da_falta(handle)
-      when 'ramo_desconhecido' then "A cotação não foi aberta. #{self::RAMO_DESCONHECIDO}"
-      else [FATOS[tipo.to_s], (SEM_BONUS if COM_SEM_BONUS.include?(tipo.to_s) && handle[self::SEM_BONUS_KEY].present?)].compact.join(' ')
-      end
+      "Cotação de #{run.faixa.presence || self::AUTO}. #{fatos_do_tipo(tipo.to_s, run.handle.to_h)}"
     end
 
     private
+
+    def fatos_do_tipo(tipo, handle)
+      case tipo
+      when 'falta_dado' then fatos_da_falta(handle)
+      when 'ramo_desconhecido' then "A cotação não foi aberta. #{self::RAMO_DESCONHECIDO}"
+      when 'falhou' then fatos_da_falha(handle)
+      else [FATOS[tipo], (SEM_BONUS if COM_SEM_BONUS.include?(tipo) && handle[self::SEM_BONUS_KEY].present?)].compact.join(' ')
+      end
+    end
+
+    # Formulário indisponível recusaria de novo: não se oferece pedir outra vez.
+    def fatos_da_falha(handle)
+      (handle['recusa'] || handle['motivo']).to_s == 'formulario_indisponivel' ? SEM_FORMULARIO : FATOS['falhou']
+    end
 
     # A recusa desta versão traz os `problemas` (campo e motivo, como a conferência os produz); a da versão
     # anterior à PR C só traz os nomes em `faltando`, e o texto velho em `pedido`, que não é reaproveitado.

@@ -16,7 +16,7 @@ class Autonomia::Insurance::ResultadoDaCotacao
   # com auto e residencial na mesma conversa, é ele que diz de qual seguro o cliente fala.
   PARAM_PRODUTO = { 'name' => 'produto', 'type' => 'string', 'required' => false,
                     'description' => 'De qual seguro o cliente fala, quando a conversa tem mais de um: auto ou residencial. ' \
-                                     'null para o mais recente.' }.freeze
+                                     'null quando a conversa só tem um.' }.freeze
 
   def self.cotacao
     ::Autonomia::Agents::Tools::Native::InsuranceQuote
@@ -74,6 +74,21 @@ class Autonomia::Insurance::ResultadoDaCotacao
   def self.produto_pedido(params, especialista)
     params.to_h['produto'].to_s.strip.downcase.presence ||
       ::Autonomia::Insurance::QuoteAgent::Builder.ramo_do_especialista(especialista)
+  end
+
+  # O TEXTO AO MODELO QUANDO O PRODUTO NÃO DECIDE A LEITURA (revisão da chat#608), ou nil quando decide:
+  #   - `produto` escrito fora dos que a conversa tem ("carro", "automovel"): ler nada diria "não há cotação", falso;
+  #   - `exigir` (a proposta) e nenhum produto dito numa conversa com mais de um: a mais nova pode ser do outro
+  #     seguro, e o PDF sairia trocado.
+  def self.qual_produto(conversation_id, params, especialista, exigir: false)
+    lista = produtos(conversation_id)
+    dito = params.to_h['produto'].to_s.strip.downcase.presence
+    fora = dito && lista.any? && lista.exclude?(dito)
+    ambiguo = exigir && produto_pedido(params, especialista).nil? && lista.size > 1
+    return nil unless fora || ambiguo
+
+    "Esta conversa tem cotação de #{lista.join(' e ')}. Chame de novo com produto igual a um desses; se não " \
+      'ficou claro de qual seguro o cliente fala, pergunte a ele.'
   end
 
   # -> as palavras que distinguem um texto: sem acento, em minúsculas, sem repetir e sem `PALAVRAS_VAZIAS`.

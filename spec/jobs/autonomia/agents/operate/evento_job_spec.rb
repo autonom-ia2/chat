@@ -305,6 +305,16 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
       expect(queries_da_lia.last).to include('fatos do dublê: valores_guardados')
     end
 
+    # 23/09/2026 (revisão da chat#608): o fato do fim pelo prazo também afirma o comparativo na conversa.
+    it 'o fim pelo prazo sem o arquivo, no teto, tambem fala como resultado guardado' do
+      run = execucao
+      token = run.delivery_token('arquivo:https://x.test/p.pdf')
+
+      described_class.new.perform(run.id, 'encerrada_por_prazo', Autonomia::Agents::Tools::AsyncConfig::MAX_DEPENDENCY_DEFERRALS, 0, [token])
+
+      expect(publicas.sole.content_attributes[evento::CHAVE]).to eq("#{run.id}:valores_guardados")
+    end
+
     it 'o retry da conclusao que saiu sem o arquivo nao fala de novo quando o arquivo chega' do
       run = execucao
       token = run.delivery_token('arquivo:https://x.test/g.pdf')

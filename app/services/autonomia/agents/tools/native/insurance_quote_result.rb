@@ -28,9 +28,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   NAO_CHEGOU = 'A última cotação desta conversa não chegou às seguradoras, e não há preço dela para mostrar. ' \
                'Não invente preço nem seguradora.'.freeze
   ENVIO_INCERTO = 'Não se confirmou se a última cotação desta conversa chegou às seguradoras, e não há preço dela ' \
-                  'para mostrar. Se o cliente quiser, a cotação pode ser pedida de novo. Não invente preço nem seguradora.'.freeze
+                  'para mostrar. Diga que não conseguiu confirmar, sem oferecer cotar de novo, e não invente preço nem seguradora.'.freeze
   SEM_RESULTADO = 'O resultado da cotação desta conversa não ficou guardado para consulta. Não invente preço ' \
-                  'nem seguradora; se o cliente quiser ver os preços de novo, a cotação pode ser refeita.'.freeze
+                  'nem seguradora, e não ofereça cotar de novo só para rever preços.'.freeze
   SEM_PRECO_AINDA = 'A cotação ainda está correndo e nenhum preço chegou até agora. Não invente preço nem ' \
                     'seguradora.'.freeze
   SEM_PRECO = 'Nenhuma seguradora fez proposta nesta cotação. Não invente preço nem seguradora.'.freeze
@@ -134,6 +134,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   # dados a cotação tinha sido pedida. Não vai nos estados em que não há cotação a ler (`texto_sem_leitura`):
   # lá o assunto é outro, e o resumo de um pedido que não chegou ao portal confundiria.
   def resposta(conversa)
+    qual = Resultado.qual_produto(conversa.id, params, especialista)
+    return qual if qual
+
     @resultado = Resultado.da_conversa(conversa.id, faixa: produto)
     return SEM_COTACAO if @resultado.nil?
 

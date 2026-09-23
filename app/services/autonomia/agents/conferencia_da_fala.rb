@@ -150,8 +150,11 @@ class Autonomia::Agents::ConferenciaDaFala
 
   # A cotação que corria no começo do turno parou de correr, e não por ter sido trocada ou descartada (um pedido
   # novo no turno troca a execução, e aí a nova é que corre).
+  # Com outra cotação da conversa ainda correndo (auto e residencial juntos), "ainda está saindo" pode ser dela: o
+  # sinal não sai, para não mandar a Lia dizer que o outro seguro terminou (revisão da chat#608).
   def fechou_no_turno?
     return false if @cotacao_no_inicio.nil?
+    return false if ::Autonomia::Insurance::ResultadoDaCotacao.correndo_na_conversa(@conversa).present?
 
     run = leitura_final.run
     ::Autonomia::Insurance::ResultadoDaCotacao::FORA.exclude?(run.status) && !leitura_final.correndo?
