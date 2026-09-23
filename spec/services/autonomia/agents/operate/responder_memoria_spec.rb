@@ -57,12 +57,13 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   end
 
   # O TETO DE CARACTERES NÃO CORTA ANTES DAS 25 (revisão da #625). Medido na conversa 7057 em 23/09/2026: 25
-  # interações são 84 mensagens e 8,7 mil caracteres (média 103, maior 605). Aqui, folgado: o agente escreve 600 por
-  # mensagem, o cliente 150, e a primeira interação continua no que vai ao modelo.
+  # interações são 84 mensagens e 8,7 mil caracteres (média 103, maior 605). Aqui, no ritmo real (três mensagens do
+  # agente por interação) e com quatro vezes a média: 400 por mensagem do agente, 150 do cliente, ~34 mil no total.
+  # A primeira interação continua no que vai ao modelo.
   it 'com mensagens do tamanho real, as 25 interações cabem no teto de caracteres do histórico' do
     config::HISTORY_MAX_INTERACOES.times do |n|
       mensagem(:incoming, "cliente #{n} #{'x' * 150}", n * 4)
-      2.times { |i| mensagem(:outgoing, "agente #{n}.#{i} #{'y' * 600}", (n * 4) + i + 1) }
+      3.times { |i| mensagem(:outgoing, "agente #{n}.#{i} #{'y' * 400}", (n * 4) + i + 1) }
     end
 
     enviado = Autonomia::Agents::PromptParts::Historico.capar(historico)

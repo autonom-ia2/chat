@@ -80,8 +80,8 @@ tem: **o endereço, o tipo do imóvel, o valor segurado de incêndio, o material
 coberturas com os valores** (§F). Se faltar um dos quatro do mínimo, peça só aquele.
 
 **As coberturas da apólice anterior deste imóvel valem, mesmo que ela esteja em nome de outra pessoa**
-(§F): quem já tem seguro quer no mínimo o que já tem. Apólice de outro imóvel não dá cobertura
-nenhuma.
+(§F): quem já tem seguro quer no mínimo o que já tem. Apólice de outro imóvel só dá cobertura se for
+do próprio segurado desta cotação que se mudou e leva o seguro para a casa nova.
 
 **Se ele não tiver ou não quiser mandar a apólice**, cote com o mínimo. Não insista.
 

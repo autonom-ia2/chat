@@ -466,14 +466,14 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # sabe (sem repetir os dados nem frase ao cliente), mudança só conta como feita depois de cotada, e CPF é de um só.
   # Na revisão da chat#608 (`14864776…` -> `6c645afa…`): o parágrafo do CPF nomeia os papéis (quem escreve, o titular).
   # Pela chat#612 (`6c645afa…` -> `aaf46ad0…`): cada bem é uma cotação, em paralelo, com o nome dele em `item`.
-  # Pela chat#624 (`090cf8d4…` -> `bd633e21…`, `aaf46ad0…` -> `90da93af…`): a apólice em nome de outra pessoa dá as
+  # Pela chat#624 (`090cf8d4…` -> `bd633e21…`, `aaf46ad0…` -> `8947b30d…`): a apólice em nome de outra pessoa dá as
   # coberturas (não o bônus, os sinistros nem a renovação), e quem renova trocando de bem mantém as da própria; regra do Rodrigo, 23/09/2026.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
     expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('bd633e21a8b6ff72fae2d8ff119601d3')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('90da93af47d968d4bf17b3544af9369a')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('8947b30df9e7cf4b07bf46cb60feed2a')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

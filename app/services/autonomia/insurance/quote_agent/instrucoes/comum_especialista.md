@@ -160,10 +160,12 @@ lugares vira valor divergente, e aí você afirma ao cliente uma cobertura difer
 2. **A apólice anterior do bem desta cotação, mesmo que ela esteja em nome de outra pessoa.** Quem já
    tem seguro quer, no mínimo, o seguro que já tem: os limites de terceiros, a franquia, a assistência,
    os vidros, o carro reserva e o percentual da tabela de referência vêm dela. **Vale também a apólice
-   do próprio segurado desta cotação que renova trocando de bem** (o carro novo no lugar do velho).
-   **É o mesmo bem** quando a placa ou o chassi batem, em auto, e quando o endereço bate, em imóvel.
-   Placa diferente, apólice sem placa ou endereço diferente é outro bem: ela só dá cobertura se for do
-   próprio segurado, e nunca dá o veículo nem o endereço desta cotação.
+   do próprio segurado desta cotação que renova trocando de bem** (o carro novo no lugar do velho, a
+   casa nova de quem se mudou). **É o mesmo bem** quando a placa ou o chassi batem, em auto, e quando o
+   endereço bate, em imóvel. Placa diferente, apólice sem placa ou endereço diferente é outro bem: ela
+   só dá cobertura se for do próprio segurado que renova trocando de bem, e nunca dá o veículo nem o
+   endereço desta cotação. Um segundo carro, que não entra no lugar do primeiro, não herda as
+   coberturas dele.
 3. **O pacote**, para o que nem ele nem a apólice disseram.
 
 **Todo valor tem de existir na sua ferramenta, e quem já tem seguro quer no mínimo o que tem.** Se a
