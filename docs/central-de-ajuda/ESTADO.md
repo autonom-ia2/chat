@@ -31,6 +31,8 @@ voltar.
   declara o assunto da aba **Testar**, mas não explica o que ela mostra (Confiança,
   Conhecimento utilizado, aviso de transferência).
 - Roteiro de prints: `pnpm central:prints`.
+- Conferência da Central (#614): `pnpm central:check`. Falha com tela do Guia sem artigo, link
+  `[dd.dd]` quebrado, `me_leve_ate_la` diferente do mapa, e artigo e mapa desalinhados.
 - No ar: #599 (Central só leitura), #602 (sem 2FA com login único), #603 (seletor acessível).
 
 ## Decisões do Rodrigo (não reabrir)

@@ -147,7 +147,9 @@ export const lerPorques = texto => {
 // `_fora_do_guia`, uma por linha, com o motivo escrito ao lado.
 const FORA_DO_GUIA = '_fora_do_guia';
 
-const foraDoGuia = (humanos, nome) => {
+// Exportada para o conferir.mjs da Central de Ajuda (#614) reaproveitar — mesmo critério
+// de "tela fora do Guia" usado aqui, sem duplicar a regra.
+export const foraDoGuia = (humanos, nome) => {
   const bloco = humanos[FORA_DO_GUIA];
   if (!bloco) return false;
 
