@@ -52,6 +52,11 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
   SEM_BONUS = 'Esta renovação foi cotada sem a classe de bônus da apólice atual: os preços são os de quem faz o primeiro ' \
               'seguro. Com a classe de bônus, que está na apólice, a cotação pode ser refeita, e costuma sair melhor.'.freeze
   COM_SEM_BONUS = %w[concluida valores_guardados encerrada_por_prazo].freeze
+  # A CONCLUSÃO COM SEGURADORA AGUARDANDO (chat#612): a cotação parou de receber resposta e fechou com o que tinha
+  # (`Resultado#parou_de_chegar?`). No `encerrada_por_prazo` o próprio fato já diz isso.
+  FICARAM_DE_FORA = {
+    'concluida' => 'Uma ou mais seguradoras não responderam a tempo e ficaram de fora do comparativo. Não foi recusa do risco.'
+  }.freeze
 
   FALTA_JSON = 'A cotação não foi aberta: os dados do ramo que o especialista mandou não puderam ser lidos. Confira com o ' \
                'especialista o que falta e pergunte à pessoa só o que ninguém disse ainda.'.freeze
@@ -71,7 +76,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
       when 'falta_dado' then fatos_da_falta(handle)
       when 'ramo_desconhecido' then "A cotação não foi aberta. #{self::RAMO_DESCONHECIDO}"
       when 'falhou' then fatos_da_falha(handle)
-      else [FATOS[tipo], (SEM_BONUS if COM_SEM_BONUS.include?(tipo) && handle[self::SEM_BONUS_KEY].present?)].compact.join(' ')
+      else [FATOS[tipo], (SEM_BONUS if COM_SEM_BONUS.include?(tipo) && handle[self::SEM_BONUS_KEY].present?),
+            (FICARAM_DE_FORA[tipo] if seguradora_aguardando?(handle))].compact.join(' ')
       end
     end
 
@@ -98,8 +104,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
     end
 
     def campo_com_rotulo(campo)
-      rotulo = self::ROTULOS[campo.to_s]
-      rotulo ? "#{campo} (#{rotulo})" : campo.to_s
+      self::ROTULOS[campo.to_s] ? "#{campo} (#{self::ROTULOS[campo.to_s]})" : campo.to_s
     end
   end
 

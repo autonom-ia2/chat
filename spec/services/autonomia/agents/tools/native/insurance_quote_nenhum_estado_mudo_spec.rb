@@ -436,6 +436,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(formulario).to include('Não ofereça cotar de novo')
     end
 
+    # chat#612: a cotação que fechou porque parou de chegar resposta conta à Lia quem ficou de fora.
+    it 'a conclusão com seguradora aguardando diz que ela ficou de fora; sem ninguém aguardando, não' do
+      aguardando = { described_class::RESULTADO_KEY => { '13' => { 'nome' => 'Mitsui', 'desfecho' => 'aguardando' } } }
+      todas = { described_class::RESULTADO_KEY => { '8' => { 'nome' => 'Porto', 'desfecho' => 'com_preco' } } }
+
+      expect(fatos('concluida', handle: aguardando)).to include(described_class::FICARAM_DE_FORA['concluida'])
+      expect(fatos('concluida', handle: todas)).not_to include(described_class::FICARAM_DE_FORA['concluida'])
+    end
+
     it 'os fatos dizem de qual seguro é a notícia' do
       expect(fatos('falhou', faixa: 'residencial')).to start_with('Cotação de residencial. ')
       expect(fatos('concluida')).to start_with('Cotação de auto. ')
