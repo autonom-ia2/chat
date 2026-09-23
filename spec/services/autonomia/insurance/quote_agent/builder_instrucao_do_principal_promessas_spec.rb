@@ -232,6 +232,14 @@ module ManualDoPrincipal
       principal_texto.include?('### 4.2 O que a pessoa já te deu') &&
         principal_texto.include?('Isso vale inclusive quando o especialista disser que falta um dado') &&
         manual_do_especialista_de_auto.include?('Antes disso, procure na conversa.')
+    },
+    # AS OPÇÕES CHEGAM SOZINHAS (23/09/2026): a cotação é assíncrona, o motor publica o comparativo e dispara o
+    # desfecho sem a pessoa pedir, e o aceite que o especialista lê diz o mesmo. É o que permite à Lia não prometer
+    # "volto com as opções por aqui" a cada cotação.
+    'elas chegam sozinhas nesta conversa.' => lambda {
+      cotacao = Autonomia::Agents::Tools::Native::InsuranceQuote
+      cotacao.async? && Autonomia::Agents::Tools::Evento::TIPOS.include?('concluida') &&
+        cotacao.accepted_message.include?('O resultado chega sozinho nesta conversa')
     }
   }.freeze
 end
@@ -302,10 +310,10 @@ module ManualDoPrincipalResultado
       BUILDER::TOOLS_DO_ESPECIALISTA.include?(RESULTADO.slug) && BUILDER::TOOLS_DO_PRINCIPAL.exclude?(RESULTADO.slug) &&
         consultar('Sancor').first.include?('Sancor não fez proposta')
     },
-    # Um parâmetro só, e a procura acha mais de uma seguradora no mesmo texto.
+    # Um campo só para as seguradoras, e a procura acha mais de uma no mesmo texto.
     'escreva todos os nomes no mesmo campo, numa chamada só.' => lambda {
       ao_modelo, = consultar('Sancor e Porto')
-      RESULTADO.openai_schema[:parameters][:required] == ['seguradora'] &&
+      RESULTADO.openai_schema[:parameters][:required].include?('seguradora') &&
         ao_modelo.include?('Porto Seguro fez proposta') && ao_modelo.include?('Sancor não fez proposta')
     },
     # Pedir os preços não abre execução: a ferramenta é síncrona e do principal, e nenhuma cotação nova é aberta.
@@ -565,9 +573,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(secao).to end_with("a corretora não atende esse seguro e ofereça o que ela atende.\n")
     end
 
+    # 23/09/2026 (`b5984308…` -> `eeba4c92…`): a cotação que abre não pede recibo; não repetir não é mudar o fato.
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('b5984308e7a859ae70524869e2448ddf')
+      expect(Digest::MD5.hexdigest(secao)).to eq('eeba4c928a71501de6bf6fa57eb6c494')
     end
 
     it 'não introduz variável para substituir' do
@@ -674,8 +683,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(secao).to include('peça ao especialista; nunca de memória')
     end
 
+    # 23/09/2026 (`2b8bf39d…` -> `cc80f26b…`): "Começou" sem verbo para copiar; o prazo com comparativo não oferece
+    # refazer; falha e incerteza sem promessa de equipe, que a passagem para uma pessoa não está ligada.
     it 'mudou? revise este bloco e assine aqui' do
-      expect(Digest::MD5.hexdigest(secao)).to eq('2b8bf39d75c43028decde5a4a2771cf4')
+      expect(Digest::MD5.hexdigest(secao)).to eq('cc80f26b62a7b50b65163759f35eb06a')
     end
 
     it 'não traz frase de exemplo, travessão, valor em reais nem variável' do

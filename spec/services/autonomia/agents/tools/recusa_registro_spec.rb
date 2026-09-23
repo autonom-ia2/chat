@@ -162,20 +162,21 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'invalid_tool_arguments' },
         dispara: -> { bound.execute(call.merge('arguments' => 'nao-e-json'), delivery: delivery) }
       },
-      # As três razões de `async_refusal` saem por esta chamada; cada `return` tem o seu gatilho abaixo.
+      # As três razões de `async_refusal` saem por esta chamada; cada `return` tem o seu gatilho abaixo. A #2 (o retry
+      # do turno, por faixa) tem o gatilho junto das de `async_refusal`, onde morava antes da faixa.
       'bound.rb#accept_async#1' => {
         espera: { motivo: 'async_indisponivel_nesta_superficie', conversa: '-' },
         dispara: -> { bound.execute(call) }
       },
       # O caminho real: a segunda inserção perde para o índice único e `open!` resgata `RecordNotUnique`.
-      'bound.rb#accept_async#2' => {
+      'bound.rb#accept_async#3' => {
         espera: { motivo: 'execucao_ja_em_andamento' },
         dispara: lambda {
           allow(Autonomia::Agents::ToolRun).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique, 'idx_active')
           bound.execute(call, delivery: delivery)
         }
       },
-      'bound.rb#accept_async#3' => {
+      'bound.rb#accept_async#4' => {
         espera: { motivo: 'tool_execution_error' },
         dispara: lambda {
           allow(Autonomia::Agents::ToolRun).to receive(:open!).and_raise('X-Amz-Signature=abc')
@@ -228,7 +229,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }
       },
-      'bound.rb#async_refusal#4' => {
+      'bound.rb#accept_async#2' => {
         espera: { motivo: 'execucao_ja_aberta_neste_turno' },
         dispara: lambda {
           bound.execute(call, delivery: delivery)

@@ -111,10 +111,13 @@ class Autonomia::Agents::Tools::Bound
     # que mais tarde e mais difícil de achar. Ferramenta que precisa da pessoa
     # tem que ser síncrona.
     ferramenta = @native.new(agent: @agent, params: args, delivery: delivery)
+    faixa = ferramenta.faixa.to_s
+    return recusar('execucao_ja_aberta_neste_turno', delivery) if turn_already_opened?(delivery, faixa)
+
     antecipado = precheck_native(ferramenta)
     return recusar_pela_conferencia(antecipado, delivery) if antecipado
 
-    run, repetida = abrir(args, pedido_native(ferramenta), delivery)
+    run, repetida = abrir(args, pedido_native(ferramenta), delivery, faixa)
     return recusar_pela_repeticao(repetida, delivery) if repetida
     return recusar('execucao_ja_em_andamento', delivery) if run.blank?
 
@@ -150,11 +153,11 @@ class Autonomia::Agents::Tools::Bound
   end
 
   # Compara com a última consulta e abre, na mesma seção crítica (entrega 10): -> [run, repetida].
-  def abrir(args, pedido, delivery)
+  def abrir(args, pedido, delivery, faixa)
     ::Autonomia::Agents::ToolRun.abrir_ou_repetida(
       agent: @agent, slug: slug, arguments: args, pedido: pedido,
       scope: { conversation_id: delivery.conversation.id, agent_inbox_id: delivery.agent_inbox&.id,
-               origin_message_id: delivery.origin_message_id }
+               origin_message_id: delivery.origin_message_id, faixa: faixa }
     )
   end
 
@@ -199,17 +202,17 @@ class Autonomia::Agents::Tools::Bound
     # O TURNO DE UM EVENTO DA COTAÇÃO NÃO ABRE COTAÇÃO (PR C): quem o acionou foi o sistema, não a pessoa.
     return 'turno_de_evento' if delivery.try(:turno_de_evento?)
     return 'async_desligado' unless AsyncConfig.enabled?(@agent)
-    return 'execucao_ja_aberta_neste_turno' if turn_already_opened?(delivery)
 
     nil
   end
 
   # Retry do turno (o settle do ReplyJob reexecutou e o modelo pediu a mesma ferramenta de novo):
   # não abre outra. Uma mensagem NOVA do cliente tem outro `origin_message_id` e passa — e aí o
-  # supersede do `open!` é o comportamento certo, porque o pedido mudou.
-  def turn_already_opened?(delivery)
+  # supersede do `open!` é o comportamento certo, porque o pedido mudou. Por faixa: no mesmo turno a
+  # cotação de auto e a de residencial abrem as duas.
+  def turn_already_opened?(delivery, faixa)
     ::Autonomia::Agents::ToolRun.opened_for_turn?(delivery.conversation.id, slug,
-                                                  delivery.origin_message_id)
+                                                  delivery.origin_message_id, faixa)
   end
 
   def run_http(args, delivery)
@@ -234,7 +237,7 @@ class Autonomia::Agents::Tools::Bound
   # A nativa carrega credencial e assinatura; a mensagem da exceção pode conter requisição assinada.
   # Por isso o rescue é largo e a saída é um código, nunca `e.message`.
   def run_native(args, delivery, operador = nil)
-    @native.new(agent: @agent, params: args, delivery: delivery, operador: operador).call
+    @native.new(agent: @agent, params: args, delivery: delivery, operador: operador, especialista: @especialista).call
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] native failed slug=#{slug} #{e.class}")
     recusar('tool_execution_error', delivery)

@@ -71,9 +71,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   describe 'ver_resultado_da_cotacao' do
     let(:schema) { Autonomia::Agents::Tools::Native::InsuranceQuoteResult.openai_schema }
 
-    it 'declara seguradora como string ou null, presente em required, sem anyOf, e nenhuma outra propriedade' do
-      expect(schema[:parameters][:properties].keys).to eq(['seguradora'])
-      expect(schema[:parameters][:required]).to eq(['seguradora'])
+    it 'declara seguradora e produto como string ou null, presentes em required, sem anyOf, e nenhuma outra propriedade' do
+      expect(schema[:parameters][:properties].keys).to eq(%w[seguradora produto])
+      expect(schema[:parameters][:required]).to eq(%w[seguradora produto])
+      expect(schema[:parameters][:properties]['produto']['type']).to match_array(%w[string null])
       expect(schema[:parameters][:properties]['seguradora']['type']).to match_array(%w[string null])
       expect(schema[:parameters][:properties]['seguradora']).not_to have_key('anyOf')
       expect(schema.to_json).not_to include('anyOf')

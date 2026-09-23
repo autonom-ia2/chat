@@ -8,6 +8,7 @@
 #  delivered_count    :integer          default(0), not null
 #  expected_chunks    :integer          default(0), not null
 #  expires_at         :datetime
+#  faixa              :string           default(""), not null
 #  failure_code       :string
 #  handle             :jsonb            not null
 #  notify_customer    :boolean          default(FALSE), not null
@@ -26,7 +27,7 @@
 # Indexes
 #
 #  idx_autonomia_tool_runs_account_slug   (account_id,slug,created_at)
-#  idx_autonomia_tool_runs_active         (conversation_id,slug) UNIQUE WHERE status IN ('pending','running')
+#  idx_autonomia_tool_runs_active         (conversation_id,slug,faixa) UNIQUE WHERE status IN ('pending','running')
 #  idx_autonomia_tool_runs_conversation   (conversation_id,created_at)
 #  idx_autonomia_tool_runs_execution_key  (execution_key) UNIQUE
 #
@@ -42,10 +43,14 @@
 # parede, e o argumento que o modelo montou — que fica AQUI e não no payload do job, porque no Redis
 # ele sobreviveria no dead set, visível em /monitoring/sidekiq, sem TTL controlado por nós.
 #
-# UMA execução viva por (conversa, ferramenta), garantido por índice único parcial. Chamada nova
+# UMA execução viva por (conversa, ferramenta, faixa), garantido por índice único parcial. Chamada nova
 # SUPERSEDE a anterior em vez de coexistir com ela: o cliente que corrige um dado no meio da conversa
 # ("na verdade é 2019") não pode acabar com duas cotações concorrentes e dois preços conflitantes.
 # É o mesmo last-writer-wins que o namespace já usa no debounce, no sync_token e no build_token.
+#
+# A FAIXA separa trabalhos da mesma ferramenta que não se substituem (23/09/2026): em `cotar_seguro`, o produto. O
+# pedido do apartamento não troca a cotação do carro que corre na mesma conversa; ferramenta sem faixa grava vazio e
+# segue com uma execução viva por conversa.
 class Autonomia::Agents::ToolRun < ApplicationRecord
   self.table_name = 'autonomia_agent_tool_runs'
 
@@ -103,19 +108,24 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
 
   # Abre uma execução para (conversa, ferramenta), substituindo a que estiver viva.
   #
-  # `scope` = { conversation_id:, agent_inbox_id:, origin_message_id: }. A mensagem de origem entra
-  # aqui, na criação, porque é a chave que separa um PEDIDO NOVO de um RETRY do mesmo turno.
+  # `scope` = { conversation_id:, agent_inbox_id:, origin_message_id:, faixa: }. A mensagem de origem entra
+  # aqui, na criação, porque é a chave que separa um PEDIDO NOVO de um RETRY do mesmo turno. A faixa é opcional
+  # (vazia quando a ferramenta não tem).
   # `pedido` é a identidade do pedido (entrega 10), gravada como marca do handle; nil quando a
   # conferência não pôde dizer (o conferente não é portão).
   #
   # Duas escritas numa transação: supersede a anterior e insere a nova. O índice único parcial é
   # quem garante de verdade — duas chamadas concorrentes fazem a segunda estourar `RecordNotUnique`,
   # e aí devolvemos nil em vez de mentir para o modelo dizendo que aceitamos.
+  #
+  # A FAIXA separa o que não se substitui (migration 20260923090000): em `cotar_seguro`, o produto. O pedido de
+  # residencial não troca a cotação de auto que está correndo na mesma conversa; um auto novo troca o auto.
   def self.open!(agent:, slug:, arguments:, scope:, pedido: nil)
+    faixa = scope[:faixa].to_s
     transaction(requires_new: true) do
-      active.for_conversation(scope[:conversation_id]).where(slug: slug)
+      active.for_conversation(scope[:conversation_id]).where(slug: slug, faixa: faixa)
             .update_all(status: 'superseded', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-      create!(account: agent.account, agent: agent, slug: slug, status: 'pending',
+      create!(account: agent.account, agent: agent, slug: slug, faixa: faixa, status: 'pending',
               conversation_id: scope[:conversation_id], agent_inbox_id: scope[:agent_inbox_id],
               origin_message_id: scope[:origin_message_id], handle: pedido ? { PEDIDO => pedido } : {},
               execution_key: SecureRandom.uuid, arguments: arguments.to_h.deep_stringify_keys)
@@ -130,23 +140,25 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # foi promovido e submetido há duas cotações no portal. A conferência (HTTP) fica fora da seção.
   # -> [execução aberta, nil] ou [nil, execução repetida]; [nil, nil] quando o índice único recusou.
   def self.abrir_ou_repetida(agent:, slug:, arguments:, scope:, pedido: nil)
+    faixa = scope[:faixa].to_s
     transaction do
-      travar!(scope[:conversation_id], slug)
-      repetida = pedido_repetido(scope[:conversation_id], slug, pedido)
+      travar!(scope[:conversation_id], slug, faixa)
+      repetida = pedido_repetido(scope[:conversation_id], slug, pedido, faixa)
       next [nil, repetida] if repetida
 
       [open!(agent: agent, slug: slug, arguments: arguments, scope: scope, pedido: pedido), nil]
     end
   end
 
-  # Lock consultivo, liberado no fim da transação. UMA chave de 64 bits derivada do par
-  # (conversa, ferramenta): a variante de dois argumentos exige `int4`, e o id da conversa é bigint.
-  def self.travar!(conversation_id, slug)
-    connection.execute(sanitize_sql_array(['SELECT pg_advisory_xact_lock(?)', chave_do_lock(conversation_id, slug)]))
+  # Lock consultivo, liberado no fim da transação. UMA chave de 64 bits derivada de (conversa, ferramenta, faixa):
+  # a variante de dois argumentos exige `int4`, e o id da conversa é bigint. Faixa vazia dá a chave de antes.
+  def self.travar!(conversation_id, slug, faixa = '')
+    connection.execute(sanitize_sql_array(['SELECT pg_advisory_xact_lock(?)', chave_do_lock(conversation_id, slug, faixa)]))
   end
 
-  def self.chave_do_lock(conversation_id, slug)
-    Digest::SHA256.digest("#{conversation_id.to_i}:#{slug}")[0, 8].unpack1('q>')
+  def self.chave_do_lock(conversation_id, slug, faixa = '')
+    base = "#{conversation_id.to_i}:#{slug}"
+    Digest::SHA256.digest(faixa.to_s.empty? ? base : "#{base}:#{faixa}")[0, 8].unpack1('q>')
   end
 
   # A ÚLTIMA execução desta ferramenta na conversa, se ela AINDA CONTA como pedido feito e tem os
@@ -159,10 +171,10 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # morreu entre o aceite e o despacho precisa reabrir — contá-la travaria a cotação por uma órfã.
   # Isto vale mesmo com dois turnos da conversa vivos ao mesmo tempo (IA em andamento quando chega
   # mensagem nova): o custo é uma linha supersedida, nunca duas cotações. -> a execução, ou nil.
-  def self.pedido_repetido(conversation_id, slug, pedido)
+  def self.pedido_repetido(conversation_id, slug, pedido, faixa = '')
     return nil if pedido.blank?
 
-    ultima = for_conversation(conversation_id).where(slug: slug).order(created_at: :desc).first
+    ultima = for_conversation(conversation_id).where(slug: slug, faixa: faixa.to_s).order(created_at: :desc).first
     ultima if ultima&.conta_como_pedido? && ultima.pedido == pedido
   end
 
@@ -196,14 +208,16 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # reexecutar o settle e refazer a chamada ao modelo, e sem esta guarda a segunda passada
   # superseder a primeira e abriria uma cotação nova no portal — sem duplicar mensagem, mas
   # duplicando o custo e o registro na seguradora.
-  def self.opened_for_turn?(conversation_id, slug, origin_message_id)
+  # Por faixa: o mesmo turno pode abrir o auto e o residencial (a Lia chama os dois especialistas), e abrir um
+  # não é o retry do outro.
+  def self.opened_for_turn?(conversation_id, slug, origin_message_id, faixa = '')
     return false if origin_message_id.blank?
 
     # `pending` órfã NÃO conta: se o worker morreu entre o aceite e o despacho (um deploy basta —
     # o Sidekiq desta instalação tem `:timeout: 25`), a linha ficou parada e ninguém vai executá-la.
     # Contá-la faria o retry do turno recusar a ferramenta e a cotação nunca aconteceria.
     for_conversation(conversation_id).where.not(status: %w[pending discarded blocked])
-                                     .exists?(slug: slug, origin_message_id: origin_message_id)
+                                     .exists?(slug: slug, faixa: faixa.to_s, origin_message_id: origin_message_id)
   end
 
   def active?
@@ -250,7 +264,7 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # Sem isto, B supersedia uma execução já promovida e possivelmente submetida ao portal.
   def promote!(expected_chunks:, notify_customer:, expires_at:)
     self.class.transaction do
-      self.class.travar!(conversation_id, slug)
+      self.class.travar!(conversation_id, slug, faixa)
       guarded_update('pending', status: 'running', expected_chunks: expected_chunks.to_i,
                                 notify_customer: notify_customer, expires_at: expires_at)
     end

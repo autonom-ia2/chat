@@ -58,7 +58,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
     Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: cotacao.slug, status: status,
                                        conversation_id: conversation.id, execution_key: SecureRandom.uuid,
                                        agent_inbox_id: agent_inbox.id, arguments: argumentos,
-                                       handle: { 'quote_id' => 'q-1:1', cotacao::RESULTADO_KEY => guardado })
+                                       handle: { 'quote_id' => 'q-1:1', cotacao::RESULTADO_KEY => guardado }, faixa: argumentos['produto'] || 'auto')
   end
 
   def pedir(seguradora, turno: delivery)
@@ -107,6 +107,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
       pedir('Usebens')
 
       expect(mensagens_do_bot.sole.attachments.sole.file.filename.to_s).to eq('Proposta Usebens, residencial.pdf')
+    end
+
+    # 23/09/2026: carro e apartamento na mesma conversa. O produto escolhe a cotação, mesmo não sendo a mais nova.
+    it 'com o produto, a proposta sai da cotação daquele produto' do
+      cotacao_da_conversa.update!(created_at: 1.hour.ago)
+      cotacao_da_conversa(argumentos: { 'produto' => 'residencial' })
+
+      described_class.new(agent: agent, params: { 'seguradora' => 'Usebens', 'produto' => 'auto' }, delivery: delivery).call
+
+      expect(mensagens_do_bot.sole.attachments.sole.file.filename.to_s).to eq('Proposta Usebens, placa HIK9383.pdf')
     end
 
     it 'duas seguradoras são duas chamadas: dois arquivos, e nenhuma cotação nova é aberta' do

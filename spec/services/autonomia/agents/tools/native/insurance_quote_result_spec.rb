@@ -40,12 +40,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   end
 
   # Uma execução de `cotar_seguro` da conversa, com o resultado guardado destas ofertas (ou sem a chave).
-  def cotacao_com(status:, ofertas: ofertas_padrao, guardado: true, handle: {}, criada: Time.current)
+  # `linha`: `criada:` (agora, por padrão) e `faixa:` (auto, por padrão).
+  def cotacao_com(status:, ofertas: ofertas_padrao, guardado: true, handle: {}, **linha)
     base = { 'quote_id' => 'q-1:1' }
     base[cotacao::RESULTADO_KEY] = guardar.unir({}, ofertas) if guardado
     Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: cotacao.slug, status: status,
                                        conversation_id: conversation.id, execution_key: SecureRandom.uuid,
-                                       arguments: {}, handle: base.merge(handle), created_at: criada)
+                                       arguments: {}, handle: base.merge(handle), created_at: linha.fetch(:criada, Time.current),
+                                       faixa: linha.fetch(:faixa, 'auto'))
   end
 
   # -> o que o modelo lê nesta chamada, no turno de `turno` (a `delivery` do exemplo, por padrão).
@@ -196,12 +198,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       end
     end
 
-    it 'seguradora ainda sem desfecho: ainda não respondeu enquanto corre; não fez proposta depois de encerrada' do
+    it 'seguradora ainda sem desfecho: ainda não respondeu enquanto corre; não fez proposta por instabilidade depois de encerrada' do
       run = cotacao_com(status: 'running', ofertas: [correndo('47', 'Justos'), recusou('19', 'Sancor')])
       expect(ao_modelo('Justos')).to include('Justos ainda não respondeu, e a cotação continua correndo.')
 
       run.update!(status: 'failed')
-      expect(ao_modelo('Justos')).to include("Justos não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}")
+      # Não respondeu a tempo é instabilidade dela, não recusa (23/09/2026, a Mitsui do residencial).
+      expect(ao_modelo('Justos')).to include("Justos não fez proposta nesta cotação. #{described_class::MOTIVOS.fetch('instabilidade')}")
     end
 
     it 'o portal já fechou: quem ficou sem desfecho não fez proposta, mesmo com a execução viva' do
@@ -467,13 +470,67 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     end
   end
 
+  # AUTO E RESIDENCIAL NA MESMA CONVERSA (23/09/2026, conversa 7057): a Lia leu a cotação nova do apartamento e disse
+  # que o carro "ainda não tem preços". Cada produto se lê pelo seu, e a leitura avisa que o outro existe.
+  describe 'dois produtos na mesma conversa' do
+    let(:residencial) { [cotou('31', 'Tokio Marine', 480.0)] }
+
+    before do
+      cotacao_com(status: 'done', criada: 5.minutes.ago)
+      cotacao_com(status: 'running', ofertas: residencial, faixa: 'residencial')
+    end
+
+    it 'sem produto lê a mais nova e avisa que a conversa também tem a do outro' do
+      texto = ao_modelo
+
+      expect(texto).to include('Tokio Marine fez proposta')
+      expect(texto).not_to include('Porto Seguro')
+      expect(texto).to include('Esta é a cotação de residencial. A conversa também tem cotação de auto')
+    end
+
+    it 'com produto lê a daquele produto, mesmo não sendo a mais nova' do
+      texto = described_class.new(agent: agent, params: { 'seguradora' => nil, 'produto' => 'Auto' }, delivery: delivery).call
+
+      expect(texto).to include(preco(porto))
+      expect(texto).not_to include('Tokio')
+      expect(texto).to include('A conversa também tem cotação de residencial')
+    end
+
+    it 'chamada pelo especialista, lê a do ramo dele sem precisar do produto' do
+      especialista = instance_double(Autonomia::Agents::Specialist)
+      allow(Autonomia::Insurance::QuoteAgent::Builder).to receive(:ramo_do_especialista).with(especialista).and_return('auto')
+
+      texto = described_class.new(agent: agent, params: { 'seguradora' => nil }, delivery: delivery, especialista: especialista).call
+
+      expect(texto).to include(preco(porto))
+    end
+
+    it 'pelo Bound do especialista, o especialista chega à ferramenta' do
+      especialista = instance_double(Autonomia::Agents::Specialist)
+      allow(Autonomia::Insurance::QuoteAgent::Builder).to receive(:ramo_do_especialista).and_return(nil)
+      allow(Autonomia::Insurance::QuoteAgent::Builder).to receive(:ramo_do_especialista).with(especialista).and_return('auto')
+      bound = Autonomia::Agents::Tools::Bound.new(agent: agent, native: described_class, especialista: especialista)
+
+      texto = bound.execute({ 'arguments' => { 'seguradora' => nil }.to_json }, delivery: delivery)
+
+      expect(texto).to include(preco(porto))
+    end
+
+    it 'com um produto só na conversa, não fala de outro' do
+      Autonomia::Agents::ToolRun.where(faixa: 'residencial').delete_all
+
+      expect(ao_modelo).not_to include('também tem cotação')
+    end
+  end
+
   describe 'o schema' do
     let(:schema) { described_class.openai_schema }
 
-    it 'tem um parâmetro só, seguradora, opcional pelo tipo e presente em required, sem anyOf' do
-      expect(schema[:parameters][:properties].keys).to eq(['seguradora'])
-      expect(schema[:parameters][:required]).to eq(['seguradora'])
+    it 'tem seguradora e produto, os dois opcionais pelo tipo e presentes em required, sem anyOf' do
+      expect(schema[:parameters][:properties].keys).to eq(%w[seguradora produto])
+      expect(schema[:parameters][:required]).to eq(%w[seguradora produto])
       expect(schema[:parameters][:properties]['seguradora']['type']).to match_array(%w[string null])
+      expect(schema[:parameters][:properties]['produto']['type']).to match_array(%w[string null])
       expect(schema.to_json).not_to include('anyOf')
       expect(schema[:strict]).to be(true)
       expect(schema[:parameters][:additionalProperties]).to be(false)

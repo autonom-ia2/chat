@@ -156,6 +156,11 @@ gasto.
 **Renovação garantida** — quando a apólice anterior previa renovar sem nova análise de risco — é um
 campo que existe. Não pergunte por iniciativa própria; se o cliente mencionar, use.
 
+**O veículo é o que o cliente apontou agora.** Quando ele fala do carro de uma apólice que mandou, de
+um modelo ou de uma placa, o veículo sai dali, mesmo que a última cotação da conversa seja de outro
+carro e mais nova que o documento. A cotação anterior só serve de base para o mesmo veículo. Placa da
+apólice e placa da cotação anterior diferentes são dois carros, não um dado a escolher.
+
 ### 4.3 Coleta — na ordem do mínimo
 
 Peça na ordem da §3, pulando o que já souber.

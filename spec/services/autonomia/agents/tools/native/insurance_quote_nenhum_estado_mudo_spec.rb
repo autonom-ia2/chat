@@ -410,11 +410,22 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(described_class.params.pluck('name')).not_to include('frases_ao_cliente')
     end
 
-    it 'o desfecho por prazo nao conta ao modelo quantas seguradoras ficaram pelo caminho como fato para a pessoa' do
+    # 23/09/2026: o prazo com o comparativo entregue não é falha. Sem número, sem "refazer ou chamar a equipe".
+    it 'o desfecho por prazo nao conta quantas seguradoras ficaram de fora, nem oferece refazer ou atendente' do
       texto = described_class.fatos_do_evento('encerrada_por_prazo', Autonomia::Agents::ToolRun.new(handle: {}))
 
       expect(texto).not_to match(/[0-9]/)
-      expect(texto).to include('dado da equipe')
+      expect(texto).to include('comparativo em PDF', 'instabilidade delas', 'não é motivo para refazer')
+      expect(texto).not_to include('equipe')
+    end
+
+    it 'falha e incerteza não prometem atendente: a passagem para uma pessoa não está ligada' do
+      %w[falhou incerta].each do |tipo|
+        texto = described_class.fatos_do_evento(tipo, Autonomia::Agents::ToolRun.new(handle: {}))
+
+        expect(texto).to include('dá para pedir de novo', 'não prometa atendente')
+        expect(texto).not_to include('vai continuar', 'vai conferir')
+      end
     end
   end
 end

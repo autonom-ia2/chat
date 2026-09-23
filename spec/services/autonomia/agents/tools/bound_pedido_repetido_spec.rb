@@ -106,6 +106,42 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     end
   end
 
+  # A FAIXA (23/09/2026, conversa 7057): o pedido do apartamento trocou a cotação do carro, que já tinha 8 preços, e o
+  # cliente nunca recebeu o comparativo dela. Produto diferente é outro trabalho, e os dois correm juntos.
+  describe 'produto diferente na mesma conversa' do
+    it 'abre ao lado da cotação que corre, sem trocá-la' do
+      carro = consulta_existente(auto)
+
+      saida = pedir({ 'produto' => 'bike', 'dados' => bike_dados.to_json }, turno: 2)
+
+      expect(saida).to eq(cotacao.accepted_message)
+      expect(carro.reload.status).to eq('running')
+      expect(runs.active.pluck(:faixa)).to contain_exactly('auto', 'bike')
+    end
+
+    it 'o pedido repetido compara com a última do MESMO produto, não com a mais nova da conversa' do
+      consulta_existente(auto)
+      pedir({ 'produto' => 'bike', 'dados' => bike_dados.to_json }, turno: 2)
+
+      saida = pedir(auto, turno: 3)
+
+      expect(saida).to include('já está em andamento nesta conversa')
+      expect(runs.where(faixa: 'auto').count).to eq(1)
+    end
+
+    it 'o mesmo turno abre os dois produtos; o retry do turno continua recusado dentro de cada um' do
+      pedir(auto, turno: 1)
+      runs.last.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+
+      bike = pedir({ 'produto' => 'bike', 'dados' => bike_dados.to_json }, turno: 1)
+      de_novo = pedir(auto.merge('numero' => '10'), turno: 1)
+
+      expect(bike).to eq(cotacao.accepted_message)
+      expect(de_novo).to include('execucao_ja_aberta_neste_turno')
+      expect(runs.pluck(:faixa)).to contain_exactly('auto', 'bike')
+    end
+  end
+
   describe 'a comparacao e sobre a entrada normalizada, nao sobre o cru' do
     it 'o padrao escrito por extenso e o mesmo pedido que o padrao omitido (bike)' do
       # Arrange — o cru difere: a segunda chamada escreve o padrão que a primeira omitiu
@@ -232,7 +268,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
   # que escreve; a exclusão entre sessões é do banco.
   describe 'comparacao, abertura e promocao na mesma secao critica' do
     let(:escritas) { /pg_advisory_xact_lock|INSERT INTO "autonomia_agent_tool_runs"|UPDATE "autonomia_agent_tool_runs"/ }
-    let(:chave) { Autonomia::Agents::ToolRun.chave_do_lock(conversation.id, 'cotar_seguro').to_s }
+    let(:chave) { Autonomia::Agents::ToolRun.chave_do_lock(conversation.id, 'cotar_seguro', 'auto').to_s }
 
     def comandos_de
       comandos = []

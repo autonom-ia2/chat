@@ -196,6 +196,12 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     build_progress(result, handle, attempt)
   end
 
+  # A FAIXA É O PRODUTO: a cotação de residencial não troca a de auto que corre na mesma conversa. Pública, porque
+  # o `Bound` a lê no aceite.
+  def faixa
+    produto
+  end
+
   private
 
   # O QUE FALTA, PERGUNTADO DE GRAÇA. Só `erro` vira pedido: `aviso` fala de tabela possivelmente

@@ -66,10 +66,11 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
   describe 'a entrada da ultima cotacao desta conversa' do
     let(:slug) { Autonomia::Agents::Tools::Native::InsuranceQuote.slug }
 
-    def cotacao(argumentos, handle:, feita_em:, status: 'done', conversa: conversation)
+    # `linha`: `conversa:` (a do exemplo, por padrão) e `faixa:` (auto, por padrão).
+    def cotacao(argumentos, handle:, feita_em:, status: 'done', **linha)
       Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: slug, status: status,
-                                         conversation_id: conversa.id, execution_key: SecureRandom.uuid,
-                                         arguments: argumentos, handle: handle, created_at: feita_em)
+                                         conversation_id: linha.fetch(:conversa, conversation).id, execution_key: SecureRandom.uuid,
+                                         arguments: argumentos, handle: handle, created_at: feita_em, faixa: linha.fetch(:faixa, 'auto'))
     end
 
     def base(mensagens)
@@ -109,6 +110,20 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
       texto = base(described_class.new(delivery: delivery).mensagens)
 
       expect(texto.scan('</cotacao_anterior>').size).to eq(1)
+    end
+
+    # 23/09/2026: o carro e o apartamento na mesma conversa. A base da recotação do carro é a do carro.
+    it 'a base é a da faixa do especialista, não a do outro seguro cotado depois' do
+      cotacao({ 'produto' => 'auto', 'nome' => 'Carro' }, handle: { 'quote_id' => 'q-1' }, feita_em: 2.hours.ago)
+      cotacao({ 'produto' => 'residencial', 'nome' => 'Casa' }, handle: { 'quote_id' => 'q-2' }, feita_em: 1.hour.ago,
+                                                                faixa: 'residencial')
+
+      do_auto = base(described_class.new(delivery: delivery, faixa: 'auto').mensagens)
+      da_casa = base(described_class.new(delivery: delivery, faixa: 'residencial').mensagens)
+
+      expect(do_auto).to include('Carro')
+      expect(do_auto).not_to include('Casa')
+      expect(da_casa).to include('Casa')
     end
 
     it 'sem cotacao que chegou ao portal nesta conversa, nada muda' do

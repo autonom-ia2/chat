@@ -65,7 +65,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
 
     def params
       [{ 'name' => 'seguradora', 'type' => 'string',
-         'description' => 'Nome da seguradora que o cliente pediu, como ele escreveu.' }]
+         'description' => 'Nome da seguradora que o cliente pediu, como ele escreveu.' },
+       Resultado::PARAM_PRODUTO]
     end
 
     # Pede o PDF ao portal: exige o módulo de seguros e a conexão pronta, como a cotação.
@@ -79,7 +80,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     conversa = delivery&.conversation
     return error(SEM_CONTEXTO) if conversa.nil?
 
-    @resultado = Resultado.da_conversa(conversa.id)
+    @resultado = Resultado.da_conversa(conversa.id, faixa: Resultado.produto_pedido(params, especialista))
     return SEM_COTACAO if @resultado.nil?
 
     codigos = @resultado.procurar(params['seguradora'].to_s)

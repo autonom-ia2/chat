@@ -25,12 +25,19 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
                    'acima. Os valores de cada seguradora estão com o especialista, que os lê sem cotar de novo.',
     'valores_guardados' => 'A cotação terminou com preços, mas o comparativo em PDF não pôde ser enviado. Os valores de cada ' \
                            'seguradora estão guardados com o especialista, e a pessoa pode pedi-los aqui mesmo.',
-    'falhou' => 'A cotação não pôde ser concluída agora. Alguém da equipe vai continuar o atendimento; não há prazo para isso.',
-    'incerta' => 'Não foi possível confirmar se o pedido chegou às seguradoras. Alguém da equipe vai conferir e retomar; não há ' \
-                 'prazo para isso.',
-    'encerrada_por_prazo' => 'O tempo desta cotação acabou depois de a pessoa já ter recebido opções. O que ela recebeu é o que ' \
-                             'há; dá para refazer a cotação ou chamar alguém da equipe. Quantas seguradoras não responderam é ' \
-                             'dado da equipe, não da pessoa.'
+    # SEM PROMESSA DE EQUIPE (23/09/2026). A passagem para uma pessoa ainda não está ligada em produção: "alguém da
+    # equipe vai continuar" era promessa que ninguém cumpria. E o prazo esgotado com o comparativo entregue não é falha:
+    # a pessoa tem as opções de quem respondeu, e oferecer "refazer ou chamar a equipe" era tratar como falha o que
+    # não foi.
+    'falhou' => 'A cotação não pôde ser concluída agora, e nenhuma opção chegou à pessoa. Se ela quiser, dá para pedir ' \
+                'de novo nesta conversa. Ninguém da equipe foi acionado: não prometa atendente nem prazo.',
+    'incerta' => 'Não foi possível confirmar se o pedido chegou às seguradoras, e nenhuma opção chegou à pessoa. Se ela ' \
+                 'quiser, dá para pedir de novo nesta conversa. Ninguém da equipe foi acionado: não prometa atendente ' \
+                 'nem prazo.',
+    'encerrada_por_prazo' => 'A cotação terminou, e o comparativo em PDF com as opções de quem respondeu já está nesta ' \
+                             'conversa. Uma ou mais seguradoras não responderam dentro do tempo e ficaram de fora: foi ' \
+                             'instabilidade delas, não recusa do risco, e não é motivo para refazer. Os valores de ' \
+                             'cada seguradora estão com o especialista, que os lê sem cotar de novo.'
   }.freeze
 
   # Só em renovação de auto cotada sem a classe de bônus. Sem número e sem promessa de desconto: o quanto o bônus

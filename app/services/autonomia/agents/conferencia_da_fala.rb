@@ -57,10 +57,10 @@ class Autonomia::Agents::ConferenciaDaFala
     /\bsistemas?\b(?!\s+(?:d[ao]s?\s+segurador|de\s+(?:rastreamento|rastreio|alarme|antifurto|seguran[çc]a|prote[çc][ãa]o)))/i
   ].freeze
 
-  # -> a execução de `cotar_seguro` que corre agora na conversa, ou nil. Lida no começo do turno, antes do modelo.
+  # -> a execução de `cotar_seguro` que corre agora na conversa, de qualquer produto, ou nil. Lida no começo do
+  # turno, antes do modelo.
   def self.cotacao_correndo(conversation_id)
-    leitura = ::Autonomia::Insurance::ResultadoDaCotacao.da_conversa(conversation_id)
-    leitura&.correndo? ? leitura.run : nil
+    ::Autonomia::Insurance::ResultadoDaCotacao.correndo_na_conversa(conversation_id)&.run
   end
 
   def initialize(conversa:, cotacao_no_inicio:)

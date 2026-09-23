@@ -1,4 +1,5 @@
-# A LEITURA DO RESULTADO QUE A COTAÇÃO MAIS NOVA DE UMA CONVERSA GUARDOU (fatia 2 do #420).
+# A LEITURA DO RESULTADO QUE A COTAÇÃO MAIS NOVA DE UMA CONVERSA GUARDOU (fatia 2 do #420), por produto quando a
+# conversa cota mais de um (a faixa da execução, teste em produção de 23/09/2026).
 #
 # Quem usa é a ferramenta da Lia (`Native::InsuranceQuoteResult`). Tudo aqui lê o banco: o handle da
 # execução de `cotar_seguro`, gravado por `InsuranceQuote::Resultado` em toda consulta ao portal.
@@ -11,34 +12,68 @@ class Autonomia::Insurance::ResultadoDaCotacao
   FORA = %w[superseded discarded blocked pending].freeze
   # As palavras que não distinguem uma seguradora de outra no nome ("Porto Seguro", "Sancor Seguros").
   PALAVRAS_VAZIAS = %w[a o as os e de da do das dos seguro seguros seguradora seguradoras cia companhia sa].freeze
+  # O parâmetro das ferramentas da Lia que leem a cotação (`ver_resultado_da_cotacao`, `enviar_proposta_da_seguradora`):
+  # com auto e residencial na mesma conversa, é ele que diz de qual seguro o cliente fala.
+  PARAM_PRODUTO = { 'name' => 'produto', 'type' => 'string', 'required' => false,
+                    'description' => 'De qual seguro o cliente fala, quando a conversa tem mais de um: auto ou residencial. ' \
+                                     'null para o mais recente.' }.freeze
 
   def self.cotacao
     ::Autonomia::Agents::Tools::Native::InsuranceQuote
   end
 
-  # -> a execução de `cotar_seguro` mais nova da conversa, fora de `FORA`, ou nil.
-  def self.execucao_mais_nova(conversation_id)
-    return nil if conversation_id.blank?
-
-    ::Autonomia::Agents::ToolRun.for_conversation(conversation_id).where(slug: cotacao.slug)
-                                .where.not(status: FORA).order(created_at: :desc, id: :desc).first
+  # -> as execuções de `cotar_seguro` da conversa; só as da `faixa` (o produto) quando ela vem. Sem faixa, todas:
+  # quem lê sem saber o produto fica com a mais nova, como antes de residencial correr ao lado de auto.
+  def self.execucoes(conversation_id, faixa: nil)
+    runs = ::Autonomia::Agents::ToolRun.for_conversation(conversation_id).where(slug: cotacao.slug)
+    faixa.present? ? runs.where(faixa: faixa.to_s) : runs
   end
 
-  # -> a execução de `cotar_seguro` mais nova da conversa que recebeu o número no portal (`#cotou?`), em
-  # qualquer estado, ou nil. É a BASE de uma recotação (#465): a entrada que de fato foi cotada. Uma trocada
-  # por pedido novo depois de cotar conta; a recusada no `start`, que nunca chegou ao portal, não.
-  def self.ultima_cotada(conversation_id)
+  # -> a execução de `cotar_seguro` mais nova da conversa (da `faixa`, quando vem), fora de `FORA`, ou nil.
+  def self.execucao_mais_nova(conversation_id, faixa: nil)
     return nil if conversation_id.blank?
 
-    ::Autonomia::Agents::ToolRun.for_conversation(conversation_id).where(slug: cotacao.slug)
-                                .where("COALESCE(handle ->> 'quote_id', '') <> ''")
-                                .order(created_at: :desc, id: :desc).first
+    execucoes(conversation_id, faixa: faixa).where.not(status: FORA).order(created_at: :desc, id: :desc).first
   end
 
-  # -> a leitura da cotação mais nova da conversa, ou nil quando não há.
-  def self.da_conversa(conversation_id)
-    run = execucao_mais_nova(conversation_id)
+  # -> a execução de `cotar_seguro` mais nova da conversa (da `faixa`, quando vem) que recebeu o número no portal
+  # (`#cotou?`), em qualquer estado, ou nil. É a BASE de uma recotação (#465): a entrada que de fato foi cotada.
+  # Uma trocada por pedido novo depois de cotar conta; a recusada no `start`, que nunca chegou ao portal, não.
+  def self.ultima_cotada(conversation_id, faixa: nil)
+    return nil if conversation_id.blank?
+
+    execucoes(conversation_id, faixa: faixa).where("COALESCE(handle ->> 'quote_id', '') <> ''")
+                                            .order(created_at: :desc, id: :desc).first
+  end
+
+  # -> a leitura da cotação mais nova da conversa (da `faixa`, quando vem), ou nil quando não há.
+  def self.da_conversa(conversation_id, faixa: nil)
+    run = execucao_mais_nova(conversation_id, faixa: faixa)
     run && new(run)
+  end
+
+  # -> a leitura da cotação mais nova que ainda corre na conversa, de qualquer produto, ou nil. Com auto e
+  # residencial juntos, a mais nova pode já ter fechado enquanto a outra ainda recebe resposta.
+  def self.correndo_na_conversa(conversation_id)
+    return nil if conversation_id.blank?
+
+    execucoes(conversation_id).where(status: 'running').order(created_at: :desc, id: :desc)
+                              .map { |run| new(run) }.find(&:correndo?)
+  end
+
+  # -> os produtos (faixas) com cotação na conversa, fora de `FORA`, do mais novo ao mais antigo.
+  def self.produtos(conversation_id)
+    return [] if conversation_id.blank?
+
+    execucoes(conversation_id).where.not(status: FORA).order(created_at: :desc, id: :desc)
+                              .pluck(:faixa).compact_blank.uniq
+  end
+
+  # -> o produto de que a ferramenta fala: o que o modelo pediu em `produto`; sem ele, o do especialista que chama (a
+  # cotação de residencial para o especialista de residencial); sem os dois, nil, e vale a mais nova da conversa.
+  def self.produto_pedido(params, especialista)
+    params.to_h['produto'].to_s.strip.downcase.presence ||
+      ::Autonomia::Insurance::QuoteAgent::Builder.ramo_do_especialista(especialista)
   end
 
   # -> as palavras que distinguem um texto: sem acento, em minúsculas, sem repetir e sem `PALAVRAS_VAZIAS`.
@@ -130,13 +165,15 @@ class Autonomia::Insurance::ResultadoDaCotacao
 
   # -> o desfecho guardado; `aguardando` responde `sem_proposta` quando a cotação não corre mais.
   def desfecho(codigo)
-    guardado = entrada(codigo)['desfecho']
-    guardado == Guardado::AGUARDANDO && !correndo? ? Guardado::SEM_PROPOSTA : guardado
+    nao_respondeu_a_tempo?(codigo) ? Guardado::SEM_PROPOSTA : entrada(codigo)['desfecho']
   end
 
   # -> a categoria do motivo guardada (`MotivoDaRecusa::CATEGORIAS`), ou nil. O que foi guardado fora dessas
-  # categorias não conta como motivo.
+  # categorias não conta como motivo. A seguradora que ainda aguardava quando a cotação acabou não respondeu a
+  # tempo: é instabilidade dela, não recusa do risco (23/09/2026, a Mitsui do residencial).
   def motivo(codigo)
+    return ::Autonomia::Insurance::MotivoDaRecusa::INSTABILIDADE if nao_respondeu_a_tempo?(codigo)
+
     guardado = entrada(codigo)['motivo']
     ::Autonomia::Insurance::MotivoDaRecusa::CATEGORIAS.include?(guardado) ? guardado : nil
   end
@@ -159,6 +196,10 @@ class Autonomia::Insurance::ResultadoDaCotacao
 
   def cotacao
     self.class.cotacao
+  end
+
+  def nao_respondeu_a_tempo?(codigo)
+    entrada(codigo)['desfecho'] == Guardado::AGUARDANDO && !correndo?
   end
 
   def entradas

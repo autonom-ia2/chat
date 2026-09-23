@@ -28,9 +28,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   NAO_CHEGOU = 'A última cotação desta conversa não chegou às seguradoras, e não há preço dela para mostrar. ' \
                'Não invente preço nem seguradora.'.freeze
   ENVIO_INCERTO = 'Não se confirmou se a última cotação desta conversa chegou às seguradoras, e não há preço dela ' \
-                  'para mostrar; um atendente vai conferir. Não invente preço nem seguradora.'.freeze
+                  'para mostrar. Se o cliente quiser, a cotação pode ser pedida de novo. Não invente preço nem seguradora.'.freeze
   SEM_RESULTADO = 'O resultado da cotação desta conversa não ficou guardado para consulta. Não invente preço ' \
-                  'nem seguradora; se o cliente quiser ver os preços de novo, ofereça chamar um atendente.'.freeze
+                  'nem seguradora; se o cliente quiser ver os preços de novo, a cotação pode ser refeita.'.freeze
   SEM_PRECO_AINDA = 'A cotação ainda está correndo e nenhum preço chegou até agora. Não invente preço nem ' \
                     'seguradora.'.freeze
   SEM_PRECO = 'Nenhuma seguradora fez proposta nesta cotação. Não invente preço nem seguradora.'.freeze
@@ -79,7 +79,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     def params
       [{ 'name' => 'seguradora', 'type' => 'string', 'required' => false,
          'description' => 'Nome da seguradora que o cliente perguntou, como ele escreveu. Mais de uma: todos ' \
-                          'os nomes neste mesmo campo. null para o resultado inteiro.' }]
+                          'os nomes neste mesmo campo. null para o resultado inteiro.' },
+       Resultado::PARAM_PRODUTO]
     end
 
     # Sem o módulo de seguros ligado não há cotação a consultar. Não exige conexão pronta: lê o banco.
@@ -113,18 +114,33 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     params['seguradora'].to_s.strip.presence
   end
 
+  def produto
+    Resultado.produto_pedido(params, especialista)
+  end
+
+  # Com auto e residencial na mesma conversa, a Lia precisa saber de qual seguro é esta leitura e que o outro existe:
+  # em 23/09/2026 ela leu a cotação nova do apartamento e disse que o carro "ainda não tem preços".
+  def outros_produtos(conversa)
+    produtos = Resultado.produtos(conversa.id)
+    return nil if produtos.size < 2
+
+    atual = @resultado.run.faixa.presence || Resultado.cotacao::AUTO
+    outros = (produtos - [atual]).join(' e ')
+    "Esta é a cotação de #{atual}. A conversa também tem cotação de #{outros}: para ver, chame de novo com produto #{outros}."
+  end
+
   # O RESUMO DA ENTRADA VEM JUNTO DOS PREÇOS (#515). Em 19/09/2026 o cliente perguntou "o bônus da
   # apólice foi considerado?" e a Lia escalou: ela via o desfecho de cada seguradora e não via com que
   # dados a cotação tinha sido pedida. Não vai nos estados em que não há cotação a ler (`texto_sem_leitura`):
   # lá o assunto é outro, e o resumo de um pedido que não chegou ao portal confundiria.
   def resposta(conversa)
-    @resultado = Resultado.da_conversa(conversa.id)
+    @resultado = Resultado.da_conversa(conversa.id, faixa: produto)
     return SEM_COTACAO if @resultado.nil?
 
     sem_leitura = texto_sem_leitura
     return sem_leitura if sem_leitura
 
-    seguradora ? por_seguradora : geral
+    [(seguradora ? por_seguradora : geral), outros_produtos(conversa)].compact.join("\n")
   end
 
   # -> o resumo da entrada da MESMA execução cujo resultado está sendo lido, ou nil (outro ramo,
