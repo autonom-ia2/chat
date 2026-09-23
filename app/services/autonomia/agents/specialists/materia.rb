@@ -33,7 +33,7 @@ class Autonomia::Agents::Specialists::Materia
   # janela do histórico, mas a contagem é de anexos, não de mensagens: um PDF pode ser mais antigo
   # que a última mensagem que o especialista vê na conversa — de propósito, a apólice foi mandada
   # uma vez.
-  JANELA = ::Autonomia::Agents::Config::HISTORY_MAX_TURNS * 2
+  JANELA = ::Autonomia::Agents::Config::HISTORY_MAX_INTERACOES
   # Quantas EXTRAÇÕES por chamada, no máximo. É o que limita a espera do cliente: cada PDF de até
   # 5 MB é baixado e lido página a página, síncrono, sem cache — o teto de resultados (3) não
   # limitaria o trabalho quando os mais recentes são escaneados sem texto. Seis dá vaga a três

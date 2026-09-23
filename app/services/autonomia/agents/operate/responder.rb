@@ -474,24 +474,31 @@ module Autonomia
           Array(window).select(&:incoming?)
         end
 
-        # history = N últimas mensagens públicas (≤ HISTORY_MAX_TURNS pares), em ordem
-        # cronológica, mapeadas para o formato do Answerer: incoming -> user,
-        # outgoing -> assistant. Activity/private já são excluídas pelo scope `chat`.
+        # history = a janela de `recent_messages`, em ordem cronológica, mapeada para o formato do
+        # Answerer: incoming -> user, outgoing -> assistant. Activity/private já são excluídas pelo
+        # scope `chat`.
         def history
           recent_messages.map do |message|
             { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s }
           end
         end
 
-        # Mensagens públicas, não-activity, mais recentes -> mais antigas no banco;
-        # devolvidas em ordem cronológica (ascendente). Limite generoso (pares*2).
+        # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`
+        # mensagens do cliente em diante (chat#625), com tudo o que o agente respondeu no meio, sob o teto
+        # `HISTORY_MAX_MESSAGES` (as mais recentes ficam).
         def recent_messages
-          @recent_messages ||= @conversation.messages
-                                            .chat
-                                            .reorder(created_at: :desc)
-                                            .limit(::Autonomia::Agents::Config::HISTORY_MAX_TURNS * 2)
-                                            .to_a
-                                            .reverse
+          @recent_messages ||= janela_do_historico.reorder(created_at: :desc)
+                                                  .limit(::Autonomia::Agents::Config::HISTORY_MAX_MESSAGES)
+                                                  .to_a
+                                                  .reverse
+        end
+
+        def janela_do_historico
+          chat = @conversation.messages.chat
+          desde = chat.incoming.reorder(created_at: :desc)
+                      .offset(::Autonomia::Agents::Config::HISTORY_MAX_INTERACOES - 1)
+                      .pick(:created_at)
+          desde ? chat.where(created_at: desde..) : chat
         end
 
         # Caminho CANÔNICO channel-agnóstico (= Crm::FollowUps::MessageSender): a entrega
