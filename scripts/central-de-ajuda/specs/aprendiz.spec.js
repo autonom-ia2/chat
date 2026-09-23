@@ -1,20 +1,28 @@
 // @vitest-environment node
-// O modo aprendiz da Central de Ajuda "Plataforma" (#614, etapa C): depois do merge,
-// compara o registro do deploy anterior com o de agora e abre UM PR com o que mudou.
-// Fixtures em string/objeto — sem tocar disco, no estilo dos outros specs deste módulo.
+// O modo aprendiz da Central de Ajuda "Plataforma" (#614): a cada push, compara o
+// registro de ANTES desse push com o de agora e abre UM PR com o que precisa de atenção.
+// Fixtures em string/objeto; os testes de limpeza em disco usam um diretório temporário
+// de verdade (a função relê o arquivo do disco a cada edição — não dá para simular isso
+// só com objeto em memória).
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import {
-  proximoIdDoCapitulo,
-  artigosParaRemover,
-  artigosParaLimparRotas,
-  removerReferenciasVejaTambem,
-  removerArtigoDoMapa,
-  limparRotasNoMapa,
-  paresAntigoNovoPorChave,
-  substituirValorEmArtigos,
-  corrigirEvidenciasDeLinha,
+  substituir,
+  telasNovasSemArtigo,
   montarEntradaDoMapa,
   montarArtigoMarkdown,
   pedirArtigoAoGpt,
+  artigosParaRemover,
+  removerArtigoDoMapa,
+  removerReferenciasVejaTambem,
+  limparVejaTambemDeTodos,
+  marcarParaRevisao,
+  evidenciasQuebradasNoPush,
+  valoresI18n,
+  valoresRemovidosDoI18n,
+  valoresCitadosEmArtigos,
+  houveMudancaRelevante,
   corpoDoPr,
 } from '../aprendiz.mjs';
 
@@ -37,228 +45,39 @@ const artigoDoMapa = (over = {}) => ({
   ...over,
 });
 
-describe('proximoIdDoCapitulo — próximo id livre dentro do capítulo', () => {
-  it('sobe 1 a partir do maior id existente', () => {
-    const mapa = mapaCom([
-      {
-        id: '02',
-        titulo: 'Cap',
-        artigos: [artigoDoMapa({ id: '02.01' }), artigoDoMapa({ id: '02.08' })],
-      },
-    ]);
+describe('substituir — troca sem interpretar $& e afins (String.replace não é seguro)', () => {
+  it('troca o trecho, mesmo com "$" no texto novo', () => {
+    const texto = 'Preço: X.';
 
-    expect(proximoIdDoCapitulo(mapa, '02')).toBe('02.09');
+    expect(substituir(texto, 'X', 'R$ 100 ($& não é capturado)')).toBe(
+      'Preço: R$ 100 ($& não é capturado).'
+    );
   });
 
-  it('capítulo sem artigo nenhum começa em .01', () => {
-    const mapa = mapaCom([{ id: '05', titulo: 'Cap', artigos: [] }]);
-
-    expect(proximoIdDoCapitulo(mapa, '05')).toBe('05.01');
-  });
-
-  it('preenche com zero à esquerda até dois dígitos', () => {
-    const mapa = mapaCom([
-      { id: '00', titulo: 'Cap', artigos: [artigoDoMapa({ id: '00.09' })] },
-    ]);
-
-    expect(proximoIdDoCapitulo(mapa, '00')).toBe('00.10');
+  it('devolve o texto original quando não acha o trecho', () => {
+    expect(substituir('abc', 'zzz', 'novo')).toBe('abc');
   });
 });
 
-describe('artigosParaRemover — artigo cujas rotas sumiram TODAS do registro', () => {
-  it('acha o artigo quando nenhuma rota dele sobrou', () => {
-    const mapa = mapaCom([
-      {
-        id: '02',
-        titulo: 'Cap',
-        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_velha'] })],
-      },
-    ]);
-
-    const resultado = artigosParaRemover({
-      mapa,
-      atualRegistro: new Set(['tela_b']),
+describe('telasNovasSemArtigo — telas que entraram NESTE push e ainda não têm artigo', () => {
+  it('tela nova e sem cobertura aparece', () => {
+    const resultado = telasNovasSemArtigo({
+      antes: ['inbox_list'],
+      atual: new Set(['inbox_list', 'crm_relatorios']),
+      cobertas: new Set(['inbox_list']),
     });
 
-    expect(resultado.map(a => a.id)).toEqual(['02.01']);
+    expect(resultado).toEqual(['crm_relatorios']);
   });
 
-  it('não acha quando ainda sobrou alguma rota', () => {
-    const mapa = mapaCom([
-      {
-        id: '02',
-        titulo: 'Cap',
-        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_a', 'tela_b'] })],
-      },
-    ]);
-
-    const resultado = artigosParaRemover({
-      mapa,
-      atualRegistro: new Set(['tela_a']),
+  it('tela antiga sem artigo não conta como nova', () => {
+    const resultado = telasNovasSemArtigo({
+      antes: ['inbox_list', 'tela_antiga'],
+      atual: new Set(['inbox_list', 'tela_antiga']),
+      cobertas: new Set(['inbox_list']),
     });
 
     expect(resultado).toEqual([]);
-  });
-});
-
-describe('artigosParaLimparRotas — artigo que perdeu ALGUMA rota, não todas', () => {
-  it('lista a rota que sumiu, sem contar o artigo inteiro como removido', () => {
-    const mapa = mapaCom([
-      {
-        id: '02',
-        titulo: 'Cap',
-        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_a', 'tela_b'] })],
-      },
-    ]);
-
-    const resultado = artigosParaLimparRotas({
-      mapa,
-      atualRegistro: new Set(['tela_a']),
-    });
-
-    expect(resultado).toEqual([
-      { artigo: mapa.capitulos[0].artigos[0], rotasQuePerderam: ['tela_b'] },
-    ]);
-  });
-
-  it('artigo que perdeu todas as rotas não entra aqui (é artigosParaRemover)', () => {
-    const mapa = mapaCom([
-      {
-        id: '02',
-        titulo: 'Cap',
-        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_a'] })],
-      },
-    ]);
-
-    const resultado = artigosParaLimparRotas({
-      mapa,
-      atualRegistro: new Set([]),
-    });
-
-    expect(resultado).toEqual([]);
-  });
-});
-
-describe('removerReferenciasVejaTambem — tira a linha do "Veja também", reporta o resto', () => {
-  it('tira a linha "- [id] Título" inteira', () => {
-    const corpo = [
-      '## Veja também',
-      '',
-      '- [02.01] Outro artigo',
-      '- [02.09] Artigo removido',
-    ].join('\n');
-
-    const { corpo: novo, citacoesNoMeio } = removerReferenciasVejaTambem(
-      corpo,
-      '02.09'
-    );
-
-    expect(novo).not.toContain('02.09');
-    expect(novo).toContain('- [02.01] Outro artigo');
-    expect(citacoesNoMeio).toEqual([]);
-  });
-
-  it('cita no meio do texto vai para a lista, sem editar a frase', () => {
-    const corpo = 'Antes de tudo, veja [02.09] para entender o contexto.';
-
-    const { corpo: novo, citacoesNoMeio } = removerReferenciasVejaTambem(
-      corpo,
-      '02.09'
-    );
-
-    expect(novo).toBe(corpo);
-    expect(citacoesNoMeio).toEqual([
-      'Antes de tudo, veja [02.09] para entender o contexto.',
-    ]);
-  });
-});
-
-describe('removerArtigoDoMapa / limparRotasNoMapa — mudança imutável no mapa', () => {
-  it('tira o artigo do capítulo, sem mexer nos outros', () => {
-    const mapa = mapaCom([
-      {
-        id: '02',
-        titulo: 'Cap',
-        artigos: [artigoDoMapa({ id: '02.01' }), artigoDoMapa({ id: '02.02' })],
-      },
-    ]);
-
-    const novo = removerArtigoDoMapa(mapa, '02.01');
-
-    expect(novo.capitulos[0].artigos.map(a => a.id)).toEqual(['02.02']);
-    expect(mapa.capitulos[0].artigos).toHaveLength(2); // original intacto
-  });
-
-  it('tira só a rota que sumiu, mantendo as outras', () => {
-    const mapa = mapaCom([
-      {
-        id: '02',
-        titulo: 'Cap',
-        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_a', 'tela_b'] })],
-      },
-    ]);
-
-    const novo = limparRotasNoMapa(mapa, '02.01', ['tela_b']);
-
-    expect(novo.capitulos[0].artigos[0].rotas).toEqual(['tela_a']);
-  });
-});
-
-describe('paresAntigoNovoPorChave — mesmo caminho no JSON, valor diferente', () => {
-  it('acha o par quando a MESMA chave muda de valor', () => {
-    const antes = { BUTTON: { SAVE: 'Salvar' } };
-    const depois = { BUTTON: { SAVE: 'Salvar alterações' } };
-
-    expect(paresAntigoNovoPorChave(antes, depois)).toEqual([
-      { antigo: 'Salvar', novo: 'Salvar alterações' },
-    ]);
-  });
-
-  it('não acha par quando o valor é igual', () => {
-    expect(paresAntigoNovoPorChave({ A: 'Texto' }, { A: 'Texto' })).toEqual([]);
-  });
-
-  it('não acha par quando a chave sumiu (isso é "saiu", não "mudou")', () => {
-    expect(paresAntigoNovoPorChave({ A: 'Texto' }, {})).toEqual([]);
-  });
-});
-
-describe('substituirValorEmArtigos — troca **antigo** por **novo** no corpo', () => {
-  it('troca só nos artigos que citam o valor antigo', () => {
-    const artigos = [
-      { arquivo: 'a.md', corpo: 'Clique em **Salvar**.' },
-      { arquivo: 'b.md', corpo: 'Nada aqui.' },
-    ];
-
-    const alterados = substituirValorEmArtigos(artigos, [
-      { antigo: 'Salvar', novo: 'Salvar alterações' },
-    ]);
-
-    expect(alterados).toEqual([
-      { arquivo: 'a.md', corpo: 'Clique em **Salvar alterações**.' },
-    ]);
-  });
-});
-
-describe('corrigirEvidenciasDeLinha — número novo, trecho igual', () => {
-  it('troca só a linha da evidência que mudou de número', () => {
-    const texto = [
-      'evidencias:',
-      '  - "app/models/user.rb:1 | def nome"',
-      '  - "app/models/user.rb:9 | def outro"',
-    ].join('\n');
-
-    const novo = corrigirEvidenciasDeLinha(texto, [
-      {
-        caminho: 'app/models/user.rb',
-        numero: 1,
-        trecho: 'def nome',
-        novaLinha: 2,
-      },
-    ]);
-
-    expect(novo).toContain('"app/models/user.rb:2 | def nome"');
-    expect(novo).toContain('"app/models/user.rb:9 | def outro"');
   });
 });
 
@@ -281,19 +100,13 @@ describe('montarEntradaDoMapa / montarArtigoMarkdown — o rascunho novo', () =>
   };
 
   it('a entrada do mapa vem com revisar: true e a rota certa', () => {
-    const entrada = montarEntradaDoMapa({
-      id: '10.17',
-      tela,
-      rascunho,
-      requer: null,
-    });
+    const entrada = montarEntradaDoMapa({ id: '10.17', tela, rascunho });
 
     expect(entrada).toMatchObject({
       id: '10.17',
       titulo: 'Relatórios do CRM',
       rotas: ['crm_relatorios'],
       me_leve_ate_la: { rota: 'crm_relatorios', destaque: null },
-      requer: null,
       revisar: true,
     });
   });
@@ -304,7 +117,6 @@ describe('montarEntradaDoMapa / montarArtigoMarkdown — o rascunho novo', () =>
       capitulo: '10',
       tela,
       rascunho,
-      requer: null,
     });
 
     expect(md).toContain('id: "10.17"');
@@ -317,7 +129,7 @@ describe('montarEntradaDoMapa / montarArtigoMarkdown — o rascunho novo', () =>
   });
 });
 
-describe('pedirArtigoAoGpt — usa pedirAoGpt (mesmo mecanismo do Guia)', () => {
+describe('pedirArtigoAoGpt — o capítulo só pode ser um dos que já existem', () => {
   const resposta = (status, corpo) => ({
     ok: status >= 200 && status < 300,
     status,
@@ -332,36 +144,7 @@ describe('pedirArtigoAoGpt — usa pedirAoGpt (mesmo mecanismo do Guia)', () => 
     ],
   });
 
-  it('manda o kit como instrução e devolve o rascunho', async () => {
-    let enviado;
-    const buscar = async (_url, opcoes) => {
-      enviado = JSON.parse(opcoes.body);
-      return resposta(
-        200,
-        saidaDaIa({ titulo: 'Relatórios do CRM', duvidas: '' })
-      );
-    };
-
-    const rascunho = await pedirArtigoAoGpt({
-      tela: { nome: 'crm_relatorios', caminho: '/x' },
-      contexto: 'código da tela',
-      exemplos: 'dois artigos de exemplo',
-      blocoPorques: 'bloco do porques.md',
-      kit: 'texto do kit do escritor',
-      capitulos: [{ id: '10', titulo: 'CRM' }],
-      chave: 'sk-teste',
-      buscar,
-    });
-
-    expect(rascunho.titulo).toBe('Relatórios do CRM');
-    expect(enviado.instructions).toBe('texto do kit do escritor');
-    expect(enviado.input).toContain('crm_relatorios');
-    expect(enviado.input).toContain('10 - CRM');
-    expect(enviado.text.format.strict).toBe(true);
-  });
-
-  // A IA só escolhe entre os capítulos que já existem (ou "99" — nunca inventa numeração).
-  it('restringe o capítulo aos que existem no mapa, mais "99"', async () => {
+  it('restringe o capítulo ao enum dos que existem no mapa — nada de "99"', async () => {
     let enviado;
     const buscar = async (_url, opcoes) => {
       enviado = JSON.parse(opcoes.body);
@@ -373,7 +156,7 @@ describe('pedirArtigoAoGpt — usa pedirAoGpt (mesmo mecanismo do Guia)', () => 
       contexto: 'x',
       exemplos: 'x',
       blocoPorques: null,
-      kit: 'x',
+      kit: 'texto do kit',
       capitulos: [
         { id: '10', titulo: 'CRM' },
         { id: '02', titulo: 'Configurações' },
@@ -385,8 +168,327 @@ describe('pedirArtigoAoGpt — usa pedirAoGpt (mesmo mecanismo do Guia)', () => 
     expect(enviado.text.format.schema.properties.capitulo.enum).toEqual([
       '10',
       '02',
-      '99',
     ]);
+    expect(enviado.text.format.name).toBe('artigo_da_central');
+    expect(enviado.instructions).toBe('texto do kit');
+  });
+});
+
+describe('artigosParaRemover — todas as rotas sumiram, e nenhuma está em _fora_do_guia', () => {
+  it('acha o artigo quando nenhuma rota dele sobrou', () => {
+    const mapa = mapaCom([
+      {
+        id: '02',
+        titulo: 'Cap',
+        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_velha'] })],
+      },
+    ]);
+
+    const resultado = artigosParaRemover({
+      mapa,
+      atualRegistro: new Set(['tela_b']),
+      humanos: {},
+    });
+
+    expect(resultado.map(a => a.id)).toEqual(['02.01']);
+  });
+
+  it('não acha quando ainda sobrou alguma rota (limpeza parcial foi removida desta etapa)', () => {
+    const mapa = mapaCom([
+      {
+        id: '02',
+        titulo: 'Cap',
+        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_a', 'tela_b'] })],
+      },
+    ]);
+
+    const resultado = artigosParaRemover({
+      mapa,
+      atualRegistro: new Set(['tela_a']),
+      humanos: {},
+    });
+
+    expect(resultado).toEqual([]);
+  });
+
+  // A rota não sumiu do produto — só foi reclassificada fora do Guia (tela de sistema,
+  // redirecionamento). Tratar como "removida" apagaria um artigo que ainda vale.
+  it('não acha quando a rota que sumiu está declarada em _fora_do_guia', () => {
+    const mapa = mapaCom([
+      {
+        id: '02',
+        titulo: 'Cap',
+        artigos: [artigoDoMapa({ id: '02.01', rotas: ['tela_sistema'] })],
+      },
+    ]);
+
+    const resultado = artigosParaRemover({
+      mapa,
+      atualRegistro: new Set([]),
+      humanos: { _fora_do_guia: { tela_sistema: 'redirecionamento puro' } },
+    });
+
+    expect(resultado).toEqual([]);
+  });
+});
+
+describe('removerArtigoDoMapa — tira o artigo, sem mexer nos outros', () => {
+  it('tira só o id pedido', () => {
+    const mapa = mapaCom([
+      {
+        id: '02',
+        titulo: 'Cap',
+        artigos: [artigoDoMapa({ id: '02.01' }), artigoDoMapa({ id: '02.02' })],
+      },
+    ]);
+
+    const novo = removerArtigoDoMapa(mapa, '02.01');
+
+    expect(novo.capitulos[0].artigos.map(a => a.id)).toEqual(['02.02']);
+    expect(mapa.capitulos[0].artigos).toHaveLength(2); // original intacto
+  });
+});
+
+describe('removerReferenciasVejaTambem — tira a linha, reporta o resto', () => {
+  it('tira a linha "- [id] Título" inteira', () => {
+    const corpo = [
+      '## Veja também',
+      '',
+      '- [02.01] Outro',
+      '- [02.09] Removido',
+    ].join('\n');
+
+    const { corpo: novo, citacoesNoMeio } = removerReferenciasVejaTambem(
+      corpo,
+      '02.09'
+    );
+
+    expect(novo).not.toContain('02.09');
+    expect(novo).toContain('- [02.01] Outro');
+    expect(citacoesNoMeio).toEqual([]);
+  });
+
+  it('cita no meio do texto vai para a lista, sem editar a frase', () => {
+    const corpo = 'Antes de tudo, veja [02.09] para entender o contexto.';
+
+    const { corpo: novo, citacoesNoMeio } = removerReferenciasVejaTambem(
+      corpo,
+      '02.09'
+    );
+
+    expect(novo).toBe(corpo);
+    expect(citacoesNoMeio).toEqual([corpo]);
+  });
+});
+
+describe('limparVejaTambemDeTodos — relê o disco a cada edição, dois artigos, sem ENOENT', () => {
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'central-aprendiz-veja-'));
+
+  const artigoTexto = (id, corpoExtra) =>
+    [
+      '---',
+      `id: "${id}"`,
+      'titulo: "Teste"',
+      '---',
+      '## Veja também',
+      '',
+      '- [02.09] Removido',
+      '- [02.10] Também removido',
+      corpoExtra || '',
+    ].join('\n');
+
+  beforeAll(() => {
+    fs.mkdirSync(path.join(raiz, 'lib/central_de_ajuda/02'), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(raiz, 'lib/central_de_ajuda/02/02.01-b.md'),
+      artigoTexto('02.01')
+    );
+    fs.writeFileSync(
+      path.join(raiz, 'lib/central_de_ajuda/02/02.02-c.md'),
+      artigoTexto('02.02', 'Veja [02.09] no meio da frase também.')
+    );
+  });
+
+  afterAll(() => fs.rmSync(raiz, { recursive: true, force: true }));
+
+  it('limpa os dois ids removidos nos dois artigos, sem quebrar em arquivo inexistente', () => {
+    const artigosRestantes = [
+      { arquivo: '02.01-b.md', caminho: 'lib/central_de_ajuda/02/02.01-b.md' },
+      { arquivo: '02.02-c.md', caminho: 'lib/central_de_ajuda/02/02.02-c.md' },
+      {
+        arquivo: 'nao-existe.md',
+        caminho: 'lib/central_de_ajuda/02/nao-existe.md',
+      },
+    ];
+
+    const citacoesNoMeio = limparVejaTambemDeTodos(
+      artigosRestantes,
+      ['02.09', '02.10'],
+      raiz
+    );
+
+    const textoB = fs.readFileSync(
+      path.join(raiz, 'lib/central_de_ajuda/02/02.01-b.md'),
+      'utf8'
+    );
+    const textoC = fs.readFileSync(
+      path.join(raiz, 'lib/central_de_ajuda/02/02.02-c.md'),
+      'utf8'
+    );
+
+    expect(textoB).not.toContain('[02.09]');
+    expect(textoB).not.toContain('[02.10]');
+    expect(textoC).not.toContain('- [02.09]');
+    expect(textoC).not.toContain('- [02.10]');
+    // A citação no meio da frase, em 02.02-c.md, não foi editada e foi reportada.
+    expect(textoC).toContain('Veja [02.09] no meio da frase também.');
+    expect(citacoesNoMeio).toEqual([{ id: '02.09', arquivo: '02.02-c.md' }]);
+  });
+});
+
+describe('marcarParaRevisao — revisar: true + nota, junta motivos do mesmo artigo', () => {
+  it('marca revisar e grava a nota', () => {
+    const mapa = mapaCom([
+      {
+        id: '02',
+        titulo: 'Cap',
+        artigos: [artigoDoMapa({ id: '02.01', revisar: false, nota: null })],
+      },
+    ]);
+
+    const novo = marcarParaRevisao(
+      mapa,
+      '02.01',
+      'evidência sumiu: app/foo.rb:12'
+    );
+
+    expect(novo.capitulos[0].artigos[0]).toMatchObject({
+      revisar: true,
+      nota: 'evidência sumiu: app/foo.rb:12',
+    });
+  });
+
+  it('junta o motivo novo ao motivo já marcado, sem perder o anterior', () => {
+    const mapa = mapaCom([
+      {
+        id: '02',
+        titulo: 'Cap',
+        artigos: [
+          artigoDoMapa({ id: '02.01', revisar: true, nota: 'primeiro motivo' }),
+        ],
+      },
+    ]);
+
+    const novo = marcarParaRevisao(mapa, '02.01', 'segundo motivo');
+
+    expect(novo.capitulos[0].artigos[0].nota).toBe(
+      'primeiro motivo; segundo motivo'
+    );
+  });
+});
+
+describe('evidenciasQuebradasNoPush — só a que aponta para arquivo alterado neste push', () => {
+  const raiz = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'central-aprendiz-evidencia-')
+  );
+
+  beforeAll(() => {
+    fs.mkdirSync(path.join(raiz, 'app/models'), { recursive: true });
+    fs.writeFileSync(
+      path.join(raiz, 'app/models/user.rb'),
+      'class User\nend\n'
+    );
+  });
+
+  afterAll(() => fs.rmSync(raiz, { recursive: true, force: true }));
+
+  const artigo = evidencias => ({
+    arquivo: '00.01-artigo.md',
+    cabecalho: { id: '00.01', evidencias },
+  });
+
+  it('trecho sumiu, e o arquivo ESTÁ na lista de alterados: entra', () => {
+    const artigos = [artigo(['app/models/user.rb:2 | def nome_antigo'])];
+
+    const resultado = evidenciasQuebradasNoPush({
+      artigos,
+      raiz,
+      arquivosAlterados: new Set(['app/models/user.rb']),
+    });
+
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].situacao).toBe('trecho_sumiu');
+  });
+
+  it('trecho sumiu, mas o arquivo NÃO está na lista de alterados: não entra', () => {
+    const artigos = [artigo(['app/models/user.rb:2 | def nome_antigo'])];
+
+    const resultado = evidenciasQuebradasNoPush({
+      artigos,
+      raiz,
+      arquivosAlterados: new Set(['app/outro.rb']),
+    });
+
+    expect(resultado).toEqual([]);
+  });
+});
+
+describe('valoresI18n / valoresRemovidosDoI18n / valoresCitadosEmArtigos', () => {
+  it('valoresI18n pega string aninhada, ignora número e booleano', () => {
+    expect(valoresI18n({ A: { B: 'Texto' }, C: 1, D: true })).toEqual([
+      'Texto',
+    ]);
+  });
+
+  it('valoresRemovidosDoI18n: some de todos os arquivos', () => {
+    const antes = [{ A: 'Texto antigo' }, { B: 'Outro' }];
+    const depois = [{ A: 'Texto novo' }, { B: 'Outro' }];
+
+    expect(valoresRemovidosDoI18n(antes, depois)).toEqual(['Texto antigo']);
+  });
+
+  it('valoresRemovidosDoI18n: só mudou de arquivo não conta como saiu', () => {
+    const antes = [{ A: 'Texto' }, { B: 'Outro' }];
+    const depois = [{ A: 'Outro' }, { B: 'Texto' }];
+
+    expect(valoresRemovidosDoI18n(antes, depois)).toEqual([]);
+  });
+
+  it('valoresCitadosEmArtigos: só quem cita em negrito entra', () => {
+    const artigos = [
+      { arquivo: 'a.md', corpo: 'Clique em **Salvar alterações**.' },
+      { arquivo: 'b.md', corpo: 'Nada aqui.' },
+    ];
+
+    expect(
+      valoresCitadosEmArtigos(['Salvar alterações', 'Sem uso'], artigos)
+    ).toEqual([{ valor: 'Salvar alterações', artigos: ['a.md'] }]);
+  });
+});
+
+describe('houveMudancaRelevante — nada relevante, sem escrita', () => {
+  it('tudo vazio: false', () => {
+    expect(
+      houveMudancaRelevante({
+        novas: [],
+        removidos: [],
+        evidenciasQuebradas: [],
+        i18nCitado: [],
+      })
+    ).toBe(false);
+  });
+
+  it('qualquer uma não-vazia: true', () => {
+    expect(
+      houveMudancaRelevante({
+        novas: [],
+        removidos: [{ id: '02.01' }],
+        evidenciasQuebradas: [],
+        i18nCitado: [],
+      })
+    ).toBe(true);
   });
 });
 
@@ -396,10 +498,9 @@ describe('corpoDoPr — o corpo do Pull Request do robô', () => {
       commit: 'abc1234',
       rascunhos: [],
       removidos: [],
-      limpezasDeRotas: [],
-      i18nMudou: [],
-      i18nSaiuCitado: [],
-      paraRevisao: [],
+      citacoesNoMeio: [],
+      paraRevisaoPorEvidencia: [],
+      paraRevisaoPorI18n: [],
     });
 
     expect(corpo).toContain(
@@ -407,32 +508,57 @@ describe('corpoDoPr — o corpo do Pull Request do robô', () => {
     );
   });
 
-  it('lista rascunho novo, remoção e revisão pendente', () => {
+  it('avisa sobre renomeação quando há rascunho novo E remoção juntos', () => {
     const corpo = corpoDoPr({
       commit: 'abc1234',
       rascunhos: [
         {
           id: '10.17',
           tela: { nome: 'crm_relatorios' },
-          rascunho: { duvidas: 'não sei quem vê' },
+          rascunho: { duvidas: '' },
         },
       ],
       removidos: [{ id: '02.09', titulo: 'Tela antiga' }],
-      limpezasDeRotas: [{ id: '05.02', rotasQuePerderam: ['tela_b'] }],
-      i18nMudou: [{ antigo: 'Salvar', novo: 'Salvar alterações' }],
-      i18nSaiuCitado: [{ valor: 'Texto sumido', artigos: ['02.04-a.md'] }],
-      paraRevisao: [
-        { artigo: '02.06-a.md', caminho: 'app/models/user.rb', numero: 12 },
+      citacoesNoMeio: [],
+      paraRevisaoPorEvidencia: [],
+      paraRevisaoPorI18n: [],
+    });
+
+    expect(corpo).toContain('renomeação');
+    expect(corpo).toContain('junte à mão');
+  });
+
+  it('lista citação no meio do texto com o nome do artigo onde está', () => {
+    const corpo = corpoDoPr({
+      commit: 'abc1234',
+      rascunhos: [],
+      removidos: [{ id: '02.09', titulo: 'Tela antiga' }],
+      citacoesNoMeio: [{ id: '02.09', arquivo: '05.02-b.md' }],
+      paraRevisaoPorEvidencia: [],
+      paraRevisaoPorI18n: [],
+    });
+
+    expect(corpo).toContain('02.09');
+    expect(corpo).toContain('05.02-b.md');
+  });
+
+  it('lista revisão por evidência e por i18n', () => {
+    const corpo = corpoDoPr({
+      commit: 'abc1234',
+      rascunhos: [],
+      removidos: [],
+      citacoesNoMeio: [],
+      paraRevisaoPorEvidencia: [
+        { id: '02.06', motivo: 'evidência sumiu: app/models/user.rb:12' },
+      ],
+      paraRevisaoPorI18n: [
+        { id: '02.04', motivo: 'texto de tela "Salvar" saiu do i18n' },
       ],
     });
 
-    expect(corpo).toContain('10.17');
-    expect(corpo).toContain('não sei quem vê');
-    expect(corpo).toContain('02.09');
-    expect(corpo).toContain('05.02');
-    expect(corpo).toContain('tela_b');
-    expect(corpo).toContain('Salvar alterações');
-    expect(corpo).toContain('Texto sumido');
-    expect(corpo).toContain('02.06-a.md');
+    expect(corpo).toContain('02.06');
+    expect(corpo).toContain('app/models/user.rb:12');
+    expect(corpo).toContain('02.04');
+    expect(corpo).toContain('Salvar');
   });
 });

@@ -1,9 +1,9 @@
-# Modo aprendiz da Central de Ajuda "Plataforma" (#614, etapa C).
+# Modo aprendiz da Central de Ajuda "Plataforma" (#614).
 #
-# A cada push no main, compara o registro da plataforma com o do deploy anterior. Se algo
-# relevante mudou — tela nova sem artigo, tela removida, valor de i18n trocado ou saído,
-# evidência que sumiu ou mudou de linha —, abre UM Pull Request com o rascunho. Nada vai
-# ao ar sem o merge desse PR.
+# A cada push no main, compara o registro da plataforma com o de ANTES desse push. Se algo
+# relevante mudou — tela nova sem artigo, tela removida, evidência que sumiu (em arquivo
+# alterado neste push) ou valor de i18n citado que saiu de vez —, abre UM Pull Request com
+# o rascunho. Nada vai ao ar sem o merge desse PR.
 #
 # Sem filtro de `paths`: ao contrário da trava (que só roda quando o diff toca um caminho
 # específico), o aprendiz decide sozinho, no script, se há algo relevante — porque ele
@@ -17,13 +17,8 @@ on:
   workflow_dispatch:
     inputs:
       antes:
-        description: Commit do deploy anterior, para comparar o registro
+        description: Commit de ANTES deste push, para comparar o registro
         required: true
-
-# Dois pushes seguidos não podem abrir dois rascunhos da mesma mudança.
-concurrency:
-  group: central-aprendiz
-  cancel-in-progress: false
 
 jobs:
   rascunho:
@@ -34,45 +29,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # O registro do deploy anterior é lido do histórico.
+          # O registro de antes deste push é lido do histórico.
           fetch-depth: 0
 
       - id: ramo
-        name: O ramo deste deploy já tem um PR aberto?
-        env:
-          ANTES: ${{ inputs.antes || github.event.before }}
+        name: O ramo deste push já existe no remoto?
         run: |
           curto="${GITHUB_SHA::7}"
           ramo="central/aprendiz-${curto}"
           echo "ramo=$ramo" >> "$GITHUB_OUTPUT"
           if git ls-remote --exit-code --heads origin "$ramo" > /dev/null 2>&1; then
-            echo "pula=true" >> "$GITHUB_OUTPUT"
-            echo "O ramo $ramo já existe no remoto: nada a fazer."
+            echo "existe=true" >> "$GITHUB_OUTPUT"
           else
-            echo "pula=false" >> "$GITHUB_OUTPUT"
+            echo "existe=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - if: steps.ramo.outputs.pula == 'false'
+      - id: pr_do_ramo
+        name: Esse ramo já tem PR aberto?
+        if: steps.ramo.outputs.existe == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          numero=$(gh pr list --head "${{ steps.ramo.outputs.ramo }}" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$numero" ]; then
+            echo "aberto=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "aberto=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.ramo.outputs.existe == 'false'
         uses: pnpm/action-setup@v4
-      - if: steps.ramo.outputs.pula == 'false'
+      - if: steps.ramo.outputs.existe == 'false'
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-      - if: steps.ramo.outputs.pula == 'false'
+      - if: steps.ramo.outputs.existe == 'false'
         run: pnpm install --frozen-lockfile
 
       - id: aprendiz
         name: Comparar o registro e escrever o rascunho
-        if: steps.ramo.outputs.pula == 'false'
+        if: steps.ramo.outputs.existe == 'false'
         run: node scripts/central-de-ajuda/aprendiz.mjs
         env:
           ANTES: ${{ inputs.antes || github.event.before }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CORPO_DO_PR: ${{ runner.temp }}/corpo-do-pr-central.md
 
-      - name: Abrir o Pull Request do rascunho
-        if: steps.ramo.outputs.pula == 'false' && steps.aprendiz.outputs.mudou == 'true'
+      - name: Criar o ramo e abrir o Pull Request do rascunho
+        if: steps.ramo.outputs.existe == 'false' && steps.aprendiz.outputs.mudou == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RAMO: ${{ steps.ramo.outputs.ramo }}
@@ -87,3 +92,16 @@ jobs:
           gh pr create --base main --head "$RAMO" \
             --title "Central: rascunho do que mudou na plataforma (${GITHUB_SHA::7})" \
             --body-file "$CORPO_DO_PR"
+
+      # Ramo órfão: já existe (uma execução anterior escreveu e enviou o ramo) mas não tem
+      # PR aberto — alguém fechou sem merge, ou o passo de abrir o PR falhou depois do
+      # push. O conteúdo do ramo já está certo; só falta o PR.
+      - name: Abrir o Pull Request de um ramo órfão
+        if: steps.ramo.outputs.existe == 'true' && steps.pr_do_ramo.outputs.aberto == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAMO: ${{ steps.ramo.outputs.ramo }}
+        run: |
+          gh pr create --base main --head "$RAMO" \
+            --title "Central: rascunho do que mudou na plataforma (${GITHUB_SHA::7})" \
+            --body "Rascunho do ramo \`$RAMO\`, aberto de novo automaticamente: o PR anterior deste ramo foi fechado sem merge, ou não chegou a ser criado da primeira vez."

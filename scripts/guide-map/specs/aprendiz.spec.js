@@ -298,20 +298,20 @@ describe('pedirAoGpt — chamada genérica à OpenAI, extraída de pedirRascunho
       instrucoes: 'escreva um artigo',
       entrada: 'tela: central_de_ajuda',
       esquema: { type: 'object', properties: { titulo: { type: 'string' } } },
-      nome: 'artigo de central_de_ajuda',
+      nome: 'artigo_da_central',
       chave: 'sk-teste',
       buscar,
     });
 
     expect(objeto.titulo).toBe('Artigo');
     expect(enviado.instructions).toBe('escreva um artigo');
-    // O nome do esquema não pode ter espaço (exigência da OpenAI) — "artigo de X" vira
-    // "artigo_de_X"; a mensagem de erro (outro teste) continua legível, com o espaço.
-    expect(enviado.text.format.name).toBe('artigo_de_central_de_ajuda');
+    // O nome do esquema é usado como veio — fixo, sem espaço, descreve a FORMA da
+    // resposta (não o caso de uso); quem chama é responsável por passar um id válido.
+    expect(enviado.text.format.name).toBe('artigo_da_central');
     expect(enviado.text.format.strict).toBe(true);
   });
 
-  it('falha dizendo o nome do que foi pedido, sem nunca mostrar a chave', async () => {
+  it('falha dizendo o nome do esquema, sem nunca mostrar a chave', async () => {
     const buscar = async () =>
       resposta(401, { error: { message: 'Incorrect API key provided' } });
 
@@ -319,7 +319,7 @@ describe('pedirAoGpt — chamada genérica à OpenAI, extraída de pedirRascunho
       instrucoes: 'x',
       entrada: 'y',
       esquema: {},
-      nome: 'artigo de central_de_ajuda',
+      nome: 'artigo_da_central',
       chave: 'sk-segredo-que-nao-pode-vazar',
       buscar,
     });
@@ -333,14 +333,14 @@ describe('pedirAoGpt — chamada genérica à OpenAI, extraída de pedirRascunho
       instrucoes: 'x',
       entrada: 'y',
       esquema: {},
-      nome: 'artigo de central_de_ajuda',
+      nome: 'artigo_da_central',
       chave: 'sk-segredo-que-nao-pode-vazar',
       buscar: async () => {
         throw new TypeError('fetch failed');
       },
     });
 
-    await expect(falha).rejects.toThrow('artigo de central_de_ajuda');
+    await expect(falha).rejects.toThrow('artigo_da_central');
     await expect(falha).rejects.toThrow('fetch failed');
     await expect(falha).rejects.not.toThrow('sk-segredo');
   });
@@ -350,13 +350,13 @@ describe('pedirAoGpt — chamada genérica à OpenAI, extraída de pedirRascunho
       instrucoes: 'x',
       entrada: 'y',
       esquema: {},
-      nome: 'artigo de central_de_ajuda',
+      nome: 'artigo_da_central',
       chave: 'sk-teste',
       buscar: async () => resposta(200, { output: [] }),
     });
 
     await expect(falha).rejects.toThrow(
-      'sem artigo de central_de_ajuda (resposta vazia ou recusada)'
+      'sem artigo_da_central (resposta vazia ou recusada)'
     );
   });
 });

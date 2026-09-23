@@ -105,12 +105,13 @@ jobs:
           echo 'Tela nova sem explicação no Guia. O que fazer está no comentário deste PR.'
           exit 1
 
-  # Trava da Central de Ajuda "Plataforma" (#614, etapa B). A decisão do Rodrigo: a
-  # Central segue o Guia — tela nova sem artigo barra o PR, com a mesma lógica de
-  # dispensa (rótulo + motivo no corpo), só que com rótulo e marca próprios. Job
-  # separado do `trava` acima: não mexe nele, e os dois sempre rodam, pelo mesmo
-  # motivo do comentário no topo deste arquivo (check obrigatório não pode ficar
-  # esperando um `if` de PR que nunca dispara o job).
+  # Trava da Central de Ajuda "Plataforma" (#614). Roda `central:check`
+  # (scripts/central-de-ajuda/conferir.mjs) contra o PR: se falhar, barra o merge e
+  # comenta o que fazer — escrever o artigo que falta, ou declarar a tela fora do produto
+  # em `mapa.fora`. Sem dispensa por rótulo: rótulo sem motivo escrito não deixa rastro de
+  # por que a tela ficou fora. Job separado do `trava` acima: não mexe nele, e os dois
+  # sempre rodam, pelo mesmo motivo do comentário no topo deste arquivo (check obrigatório
+  # não pode ficar esperando um `if` de PR que nunca dispara o job).
   central:
     runs-on: ubuntu-latest
     permissions:
@@ -123,19 +124,19 @@ jobs:
           fetch-depth: 0
 
       - id: escopo
-        name: O PR mexe na Central, no mapa dela ou no que ela cita?
+        name: O PR mexe na Central, no mapa dela ou nas rotas?
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           mexe=false
           while IFS= read -r arquivo; do
             case "$arquivo" in
-              app/javascript/dashboard/routes/*|app/javascript/dashboard/helper/guideRouteRegistry.js|lib/central_de_ajuda/*|docs/central-de-ajuda/mapa-de-artigos.json|app/javascript/dashboard/i18n/locale/pt_BR/*|app/javascript/dashboard/i18n/locale/en/insurance.json|app/javascript/dashboard/i18n/locale/en/prospecting.json)
+              app/javascript/dashboard/routes/*|app/javascript/dashboard/helper/guideRouteRegistry.js|lib/central_de_ajuda/*|docs/central-de-ajuda/mapa-de-artigos.json)
                 mexe=true ;;
             esac
           done < <(git diff --name-only "$BASE"...HEAD)
           echo "mexe=$mexe" >> "$GITHUB_OUTPUT"
-          [ "$mexe" = true ] || echo 'O PR não mexe na Central nem no que ela cita: nada a conferir.'
+          [ "$mexe" = true ] || echo 'O PR não mexe na Central nem nas rotas: nada a conferir.'
 
       - if: steps.escopo.outputs.mexe == 'true'
         uses: pnpm/action-setup@v4
@@ -148,13 +149,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - id: central
-        name: Toda tela nova tem artigo, e a estrutura está em dia?
+        name: A Central está em dia com o Guia? (central:check)
         if: steps.escopo.outputs.mexe == 'true'
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          # Texto de quem abriu o PR: entra como variável, nunca dentro do script.
-          PR_BODY: ${{ github.event.pull_request.body }}
-          ROTULOS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           COMENTARIO: ${{ runner.temp }}/comentario-da-trava-central.md
         run: node scripts/central-de-ajuda/trava.mjs
 
@@ -181,5 +178,5 @@ jobs:
       - name: Barrar o merge
         if: steps.central.outputs.bloqueia == 'true'
         run: |
-          echo 'Tela nova sem artigo na Central, ou estrutura quebrada. O que fazer está no comentário deste PR.'
+          echo 'A Central de Ajuda está fora de dia. O que fazer está no comentário deste PR.'
           exit 1

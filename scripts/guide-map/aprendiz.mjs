@@ -195,16 +195,12 @@ const textoDaResposta = dados =>
     .map(parte => parte.text)
     .join('');
 
-// Nome do esquema JSON: a OpenAI não aceita espaço nesse campo. `nome` (para as mensagens
-// de erro, que leem melhor com espaço) e o nome do esquema são a mesma ideia com formatos
-// diferentes — sem regex: troca de espaço por "_" com split/join.
-const nomeDoEsquema = nome => nome.split(' ').join('_');
-
 // Chamada genérica à OpenAI, em Responses API com saída em JSON Schema fechado — extraída
 // daqui (#614, etapa C) para a Central de Ajuda reaproveitar o mesmo mecanismo ao pedir o
-// rascunho de um ARTIGO, com instruções e esquema próprios. `nome` identifica o que foi
-// pedido nas três mensagens de erro (rede caída, HTTP não-ok, resposta vazia) — quem lê o
-// log do CI precisa saber o quê e de qual tela/artigo, nunca a chave (achado da #579).
+// rascunho de um ARTIGO, com instruções e esquema próprios. `nome` é o nome do esquema —
+// fixo por chamador (ex.: sempre `rascunho_da_tela` para o Guia), nunca derivado do que
+// está sendo pedido: a OpenAI usa esse campo para identificar a FORMA da resposta, não o
+// caso de uso, e variá-lo por tela não tem efeito nenhum além de confundir.
 export const pedirAoGpt = async ({
   instrucoes,
   entrada,
@@ -230,7 +226,7 @@ export const pedirAoGpt = async ({
         text: {
           format: {
             type: 'json_schema',
-            name: nomeDoEsquema(nome),
+            name: nome,
             schema: esquema,
             strict: true,
           },
@@ -279,15 +275,25 @@ export const pedirRascunho = async ({
     .filter(linha => linha !== null)
     .join('\n');
 
-  return pedirAoGpt({
-    instrucoes: INSTRUCOES,
-    entrada,
-    esquema: ESQUEMA,
-    nome: `rascunho para ${tela.nome}`,
-    chave,
-    modelo,
-    buscar,
-  });
+  try {
+    return await pedirAoGpt({
+      instrucoes: INSTRUCOES,
+      entrada,
+      esquema: ESQUEMA,
+      nome: 'rascunho_da_tela',
+      chave,
+      modelo,
+      buscar,
+    });
+  } catch (erro) {
+    // O nome do esquema é fixo — pedirAoGpt não sabe de qual TELA se trata, e é isso que
+    // quem lê o log do CI precisa (achado da #579). "Resposta vazia" reconstrói o texto de
+    // sempre; os outros casos só ganham a tela ao final, sem perder o detalhe original.
+    if (erro.message.includes('resposta vazia ou recusada')) {
+      throw new Error(`a OpenAI respondeu sem rascunho para ${tela.nome} (resposta vazia ou recusada)`);
+    }
+    throw new Error(`${erro.message} (tela: ${tela.nome})`);
+  }
 };
 
 // ---------------------------------------------------------------------------
