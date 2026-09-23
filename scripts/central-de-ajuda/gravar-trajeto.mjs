@@ -182,18 +182,21 @@ async function gravar(roteiro) {
   console.log(`[${roteiro.id}] preparando conta de teste…`);
   if (roteiro.preparar) await roteiro.preparar({ rodarRails });
 
-  console.log(`[${roteiro.id}] gerando login local (sem imprimir token)…`);
-  const login = await criarLoginHtml({
-    contaId: roteiro.login.contaId,
-    usuarioNome: roteiro.login.usuarioNome,
-    baseUrl: roteiro.baseUrl,
-  });
-
   console.log(`[${roteiro.id}] subindo Chrome headless…`);
   const chrome = await abrirChromeHeadless();
   const pastaBruta = mkdtempSync(join(tmpdir(), 'gravar-trajeto-frames-'));
+  // O html de login nasce dentro do try: qualquer falha daqui em diante passa pelo
+  // finally, e o link de uso único nunca fica esquecido em public/.
+  let login;
 
   try {
+    console.log(`[${roteiro.id}] gerando login local (sem imprimir token)…`);
+    login = await criarLoginHtml({
+      contaId: roteiro.login.contaId,
+      usuarioNome: roteiro.login.usuarioNome,
+      baseUrl: roteiro.baseUrl,
+    });
+
     const cliente = await conectarPagina(chrome.porta);
     await cliente.enviar('Page.enable');
     await cliente.enviar('Emulation.setDeviceMetricsOverride', {
@@ -288,7 +291,7 @@ async function gravar(roteiro) {
     return { frames: framesFinal, cenasGravadas, pastaBruta };
   } finally {
     chrome.encerrar();
-    apagarLoginHtml(login.caminhoAbsoluto);
+    if (login) apagarLoginHtml(login.caminhoAbsoluto);
   }
 }
 

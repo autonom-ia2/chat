@@ -80,7 +80,7 @@ usuaria.user_sessions.destroy_all
 usuaria.update!(tokens: {})
 
 link = usuaria.generate_sso_link
-link = "${baseUrl}" + link unless link.start_with?("http")
+link = ${JSON.stringify(baseUrl)} + link unless link.start_with?("http")
 
 html = "<!doctype html><meta charset=\\"utf-8\\"><script>location.replace(" + link.to_json + ")</script>"
 File.write(${JSON.stringify(caminhoAbsoluto)}, html)

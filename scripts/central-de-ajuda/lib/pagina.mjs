@@ -118,11 +118,6 @@ const SCRIPT_INJETADO = `
       });
       return true;
     },
-    focar: function (spec) {
-      var el = encontrarElemento(spec);
-      if (el && typeof el.focus === 'function') el.focus();
-      return !!el;
-    },
   };
 })();
 `;
@@ -178,15 +173,6 @@ export async function destacarEAcharRetangulo(cliente, alvo, opcoesAchar) {
   return retangulo;
 }
 
-export async function rolarAte(cliente, alvo) {
-  await achar(cliente, alvo);
-  await cliente.enviar('Runtime.evaluate', {
-    expression: `window.__gravacao.rolarAte(${JSON.stringify(alvo)})`,
-  });
-  await new Promise(resolve => {
-    setTimeout(resolve, 150);
-  });
-}
 
 // --- mouse ---
 
