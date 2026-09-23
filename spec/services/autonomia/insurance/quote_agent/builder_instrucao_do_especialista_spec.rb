@@ -154,8 +154,12 @@ module ManualDoEspecialistaDeAuto
       %w[quotation.previousInsurerCode quotation.previousPolicyNumber quotation.previousPolicyEndDate
          quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n) } && grupos_da_entrada.include?('coverage')
     },
+    # E a descrição de cada um diz o mesmo (revisão da #624): "true quando o cliente JÁ TEM seguro", sozinho, com a
+    # apólice em nome da esposa, marcava renovação e mandava o bônus dela.
     'sem marcar renovação, sem bônus e sem histórico de sinistros' => lambda {
-      %w[quotation.isRenewal quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n)['obrigatorio'] == false }
+      %w[quotation.isRenewal quotation.bonusClass quotation.previousClaimsCount].all? do |n|
+        campo(n)['obrigatorio'] == false && campo(n)['descricao'].to_s.include?('em nome de outra pessoa')
+      end
     },
     # O AVISO SÓ É VERDADE SE A AUSÊNCIA FOR AUSÊNCIA: não marcar renovação e não mandar bônus tem de
     # significar seguro novo sem bônus, não um padrão preenchido em silêncio. O aviso automático da
@@ -273,7 +277,10 @@ module ManualDoEspecialistaDeAuto
     # o que ninguém disse) e os que o portal restringe PUBLICAM a lista (a assistência é o que zerou
     # 12/09), senão "o que não existir na ferramenta você pergunta" seria impossível de cumprir. Prova o
     # retrato do adapter (`mock/schema_auto.json`), regenerado nesta PR a partir de adapters#71.
-    '**A apólice anterior do próprio segurado desta cotação, numa renovação.**' => lambda {
+    # A APÓLICE EM OUTRO NOME TAMBÉM DÁ AS COBERTURAS (Rodrigo, 23/09/2026, #624): o Nivus com a apólice em nome de
+    # outra pessoa saiu com o pacote, não com os 200 mil de danos da apólice. A frase e a descrição dos campos mudam
+    # juntas (adapters, mesma regra): uma sem a outra é a contradição que o modelo resolve pelo lado errado.
+    '**A apólice anterior do bem desta cotação, mesmo que ela esteja em nome de outra pessoa.**' => lambda {
       cobertura = expostos.select { |nome| nome.start_with?('coverage.') } + ['vehicle.referencedValuePercent']
       com_lista = %w[coverage.assistance24h coverage.glassCoverage coverage.rentalCarType coverage.deductibleType]
       # A descrição do parâmetro é a instrução mais perto da ação: "Só preencha se ele pediu" nos limites
@@ -281,7 +288,7 @@ module ManualDoEspecialistaDeAuto
       copiaveis = %w[coverage.propertyDamage coverage.bodilyInjury coverage.moralDamage coverage.deathAccident
                      coverage.disabilityAccident vehicle.referencedValuePercent]
       cobertura.size > 1 && cobertura.all? { |n| campo(n)['obrigatorio'] == false } && com_lista.all? { |n| valores(n).any? } &&
-        copiaveis.all? { |n| campo(n)['descricao'].to_s.include?('renovação do próprio segurado') }
+        copiaveis.all? { |n| campo(n)['descricao'].to_s.include?('mesmo que ela esteja em nome de outra pessoa') }
     },
     # MEXER DEPOIS precisa existir: o grupo `coverage` chega ao envio. Fora da entrada, o pedido de
     # cobertura que o cliente já fez não teria por onde viajar na primeira cotação — e o ajuste que
@@ -295,7 +302,7 @@ module ManualDoEspecialistaDeAuto
     },
     # SUBIR PARA A OPÇÃO QUE COBRE (regra do CEO, 21/09/2026, #585): "a primeira acima" e "a maior" só se
     # cumprem se a ferramenta publica as opções de cada cobertura de lista, com o rótulo que diz o tamanho.
-    '**Todo valor tem de existir na sua ferramenta, e quem renova quer no mínimo o que já tem.**' => lambda {
+    '**Todo valor tem de existir na sua ferramenta, e quem já tem seguro quer no mínimo o que tem.**' => lambda {
       %w[coverage.assistance24h coverage.glassCoverage coverage.rentalCarType coverage.deductibleType]
         .all? { |n| valores(n).any? && valores(n).values.all?(&:present?) }
     },
@@ -459,12 +466,14 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # sabe (sem repetir os dados nem frase ao cliente), mudança só conta como feita depois de cotada, e CPF é de um só.
   # Na revisão da chat#608 (`14864776…` -> `6c645afa…`): o parágrafo do CPF nomeia os papéis (quem escreve, o titular).
   # Pela chat#612 (`6c645afa…` -> `aaf46ad0…`): cada bem é uma cotação, em paralelo, com o nome dele em `item`.
+  # Pela chat#624 (`090cf8d4…` -> `bd633e21…`, `aaf46ad0…` -> `8947b30d…`): a apólice em nome de outra pessoa dá as
+  # coberturas (não o bônus, os sinistros nem a renovação), e quem renova trocando de bem mantém as da própria; regra do Rodrigo, 23/09/2026.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('090cf8d4b09cdcb4400996d63e2c79d7')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('bd633e21a8b6ff72fae2d8ff119601d3')
   end
 
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('aaf46ad0865bc5d2a26f9671726c0508')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('8947b30df9e7cf4b07bf46cb60feed2a')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

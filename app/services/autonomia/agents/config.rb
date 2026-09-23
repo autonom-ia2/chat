@@ -176,7 +176,13 @@ module Autonomia
       # Compat: specs/call-sites legados que referenciam SIMILARITY_MAX_DISTANCE passam a ler o
       # patamar de match forte (rótulo), NÃO um cutoff que descarta.
       SIMILARITY_MAX_DISTANCE = RETRIEVAL_STRONG_MATCH
-      HISTORY_MAX_TURNS = 16 # pares user/assistant no prompt (Bloco A: 10→16, mais contexto de conversa)
+      # A MEMÓRIA DA CONVERSA CONTA INTERAÇÕES DO CLIENTE (chat#625, 23/09/2026): as últimas
+      # `HISTORY_MAX_INTERACOES` mensagens dele e tudo o que veio depois. Contar mensagens enganava: cada
+      # pedido gera umas três do agente (texto, PDF, aviso), e as 32 de antes eram ~10 interações — o CPF
+      # dado no começo da conversa sumia. `HISTORY_MAX_MESSAGES` é só o teto de segurança da lista; o de
+      # custo é `MAX_HISTORY_TOTAL_CHARS`, abaixo, que não mudou.
+      HISTORY_MAX_INTERACOES = 25
+      HISTORY_MAX_MESSAGES = 150
 
       # TETOS DE CARACTERES (C1 — custo de IA). Sem teto, um texto colado gigante do usuário ou um
       # histórico de mensagens enormes infla o input do LLM a cada turno (tokens = custo). Valores com

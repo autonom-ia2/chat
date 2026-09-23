@@ -268,7 +268,7 @@ module Autonomia
         TEXT
       end
 
-      # Últimos HISTORY_MAX_TURNS pares (user/assistant) -> mensagens normalizadas, sob os tetos de
+      # O histórico recebido (user/assistant) -> mensagens normalizadas, sob os tetos de
       # custo (C1). A regra mora em `PromptParts::Historico` (entrega 1): o especialista lê a conversa
       # sob o MESMO teto.
       def history_messages

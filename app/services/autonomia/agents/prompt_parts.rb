@@ -18,7 +18,7 @@ module Autonomia::Agents::PromptParts
     end
   end
 
-  # O HISTÓRICO SOB TETO (C1): últimos `HISTORY_MAX_TURNS` pares, cada item capado em
+  # O HISTÓRICO SOB TETO (C1): no máximo `HISTORY_MAX_MESSAGES` itens, cada um capado em
   # `MAX_HISTORY_ITEM_CHARS`, e o conjunto em `MAX_HISTORY_TOTAL_CHARS` — percorrido do MAIS RECENTE
   # ao mais antigo; quando o próximo (mais antigo) não cabe, para. O que sai é o mais antigo: a
   # conversa não pode crescer até quebrar ou até ficar cara.
@@ -28,7 +28,7 @@ module Autonomia::Agents::PromptParts
     # -> [{ role: 'user'|'assistant', content: String }], em ordem cronológica.
     def capar(items)
       config = ::Autonomia::Agents::Config
-      normalizados = Array(items).filter_map { |item| normalizar(item) }.last(config::HISTORY_MAX_TURNS * 2)
+      normalizados = Array(items).filter_map { |item| normalizar(item) }.last(config::HISTORY_MAX_MESSAGES)
       budget = config::MAX_HISTORY_TOTAL_CHARS
       kept = []
       normalizados.reverse_each do |item|
