@@ -1,13 +1,14 @@
 require 'rails_helper'
 
-# As duas ferramentas do Guia (#568), contra a aplicação de verdade.
+# As quatro ferramentas do Guia (#568, #590, #617), contra a aplicação de verdade.
 #
 # Nada aqui dubla a pilha: a leitura passa por rota, autenticação, controller e
-# Pundit, e a ação passa por `Acoes`. É o que sustenta o critério do Rodrigo —
-# o que a pessoa vê na tela, a IA vê; o que ela não pode fazer, a IA não faz.
-# São duas classes irmãs, e o que importa é o par: ler e propor, com a mesma
-# pessoa e o mesmo contexto. Separar em dois arquivos duplicaria o cenário
-# inteiro para testar metade dele.
+# Pundit, a ação passa por `Acoes`, e a Central de Ajuda passa pelos mesmos
+# filtros de papel e recurso que a tela usa. É o que sustenta o critério do
+# Rodrigo — o que a pessoa vê na tela, a IA vê; o que ela não pode fazer, a IA
+# não faz. São classes irmãs, e o que importa é o conjunto: com a mesma pessoa
+# e o mesmo contexto. Separar em arquivos duplicaria o cenário inteiro para
+# testar uma fração dele.
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe 'Ferramentas do Guia' do
   let(:conta_e_admin) { create_account_and_user }
@@ -20,6 +21,7 @@ RSpec.describe 'Ferramentas do Guia' do
     )
   end
   let(:operador) { Autonomia::Guide::Contexto.new(account: conta, user: admin) }
+  let(:portal_central) { create(:portal, slug: 'plataforma', account: conta) }
 
   def ler(params, quem: operador)
     Autonomia::Agents::Tools::Native::GuiaLeitura.new(agent: agente, params: params, operador: quem).call
@@ -27,6 +29,18 @@ RSpec.describe 'Ferramentas do Guia' do
 
   def propor(params, quem: operador)
     Autonomia::Agents::Tools::Native::GuiaAcao.new(agent: agente, params: params, operador: quem).call
+  end
+
+  def ler_central(params, quem: operador)
+    Autonomia::Agents::Tools::Native::GuiaCentral.new(agent: agente, params: params, operador: quem).call
+  end
+
+  # `central` carrega o que a meta tem além do id — hoje só `publico` e
+  # `requer` — para o helper não crescer um parâmetro por chave nova.
+  def artigo_central(id:, titulo:, descricao: 'Como fazer.', conteudo: 'Passo 1. Passo 2.', central: {})
+    create(:article, account: conta, portal: portal_central, slug: "plataforma-#{id.tr('.', '-')}",
+                     title: titulo, description: descricao, content: conteudo, status: :published,
+                     meta: { 'central' => { 'id' => id }.merge(central) })
   end
 
   describe 'ler_da_conta' do
@@ -246,13 +260,84 @@ RSpec.describe 'Ferramentas do Guia' do
     end
   end
 
+  describe 'ler_da_central' do
+    it 'devolve título, ref e o corpo do artigo, pela referência' do
+      artigo_central(id: '02.04', titulo: 'Conectar o WhatsApp', conteudo: 'Vá em Canais e clique em Novo canal.')
+
+      resposta = ler_central({ 'ref' => '02-04' })
+
+      expect(resposta).to include('02-04', 'Conectar o WhatsApp', 'Vá em Canais e clique em Novo canal.')
+    end
+
+    # "02-04" (o formato do botão/rota) e "02.04" (o formato do id interno)
+    # têm que achar o mesmo artigo.
+    it 'aceita a referência nos dois formatos' do
+      artigo_central(id: '02.04', titulo: 'Conectar o WhatsApp')
+
+      expect(ler_central({ 'ref' => '02-04' })).to include('Conectar o WhatsApp')
+      expect(ler_central({ 'ref' => '02.04' })).to include('Conectar o WhatsApp')
+    end
+
+    it 'na busca por termo, devolve a lista de resultados e o corpo do primeiro', :aggregate_failures do
+      artigo_central(id: '02.04', titulo: 'Conectar o WhatsApp', descricao: 'Como ligar um canal de WhatsApp.',
+                     conteudo: 'Vá em Canais e clique em Novo canal.')
+
+      resposta = ler_central({ 'termo' => 'conectar whatsapp' })
+
+      expect(resposta).to include('02-04', 'Conectar o WhatsApp', 'Vá em Canais e clique em Novo canal.')
+    end
+
+    # O modelo precisa saber, sem ambiguidade, que a busca não achou nada —
+    # senão ele responde como se tivesse achado (a mesma lição do #568).
+    it 'diz claramente quando o termo não acha nada' do
+      expect(ler_central({ 'termo' => 'xurupita completamente inexistente' })).to include('Não encontrei')
+    end
+
+    it 'diz claramente quando a referência não existe' do
+      expect(ler_central({ 'ref' => '99.99' })).to include('Não encontrei')
+    end
+
+    # A mesma regra da tela: artigo de configuração não aparece para quem só atende.
+    it 'não traz artigo de administrador para quem só atende' do
+      artigo_central(id: '02.05', titulo: 'Configurar faturamento', central: { 'publico' => 'admin' })
+      agente_comum, = create_crm_agent(account: conta)
+      comum = Autonomia::Guide::Contexto.new(account: conta, user: agente_comum)
+
+      expect(ler_central({ 'ref' => '02-05' }, quem: comum)).to include('Não encontrei')
+    end
+
+    it 'não traz artigo cujo recurso está desligado na conta' do
+      artigo_central(id: '02.06', titulo: 'Macros da conta', central: { 'requer' => 'macros' })
+
+      expect(ler_central({ 'ref' => '02-06' })).to include('Não encontrei')
+    end
+
+    it 'recusa sem derrubar o turno quando não há operador' do
+      expect(ler_central({ 'ref' => '02.04' }, quem: nil)).to include('não sei qual é a conta')
+    end
+
+    # O botão "ler o artigo completo" (#617) lê daqui — mesma regra da tela e
+    # da proposta: fica o último artigo lido no turno.
+    it 'guarda o artigo lido no contexto, e o último quando lê mais de um', :aggregate_failures do
+      artigo_central(id: '02.04', titulo: 'Conectar o WhatsApp')
+      artigo_central(id: '02.05', titulo: 'Conectar o Instagram')
+
+      ler_central({ 'ref' => '02.04' })
+      expect(operador.artigo).to eq(ref: '02-04', titulo: 'Conectar o WhatsApp')
+
+      ler_central({ 'ref' => '02.05' })
+      expect(operador.artigo).to eq(ref: '02-05', titulo: 'Conectar o Instagram')
+    end
+  end
+
   # O esquema é montado por `Native::Base` em strict mode. Um esquema inválido
   # não falha aqui: a OpenAI responde 400 na chamada INTEIRA e o Guia fica mudo,
   # em produção, sem erro em log nenhum. Já aconteceu uma vez.
   describe 'o esquema que vai para a OpenAI' do
     [Autonomia::Agents::Tools::Native::GuiaLeitura,
      Autonomia::Agents::Tools::Native::GuiaAcao,
-     Autonomia::Agents::Tools::Native::GuiaTela].each do |ferramenta|
+     Autonomia::Agents::Tools::Native::GuiaTela,
+     Autonomia::Agents::Tools::Native::GuiaCentral].each do |ferramenta|
       it "de #{ferramenta.slug} é válido em strict mode", :aggregate_failures do
         esquema = ferramenta.openai_schema(nil)
         parametros = esquema[:parameters]

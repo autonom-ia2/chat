@@ -61,6 +61,7 @@ const addAssistantMessage = ({
   content,
   navigation = null,
   acao = null,
+  artigo = null,
 } = {}) => {
   const record = {
     id: nextId,
@@ -71,6 +72,9 @@ const addAssistantMessage = ({
     acao,
     acaoEstado: acao ? 'aguardando' : null,
     acaoResultado: null,
+    // O artigo da Central que o Guia leu (#617): o botão "ler o artigo
+    // completo" abre exatamente este.
+    artigo,
   };
   nextId += 1;
   state.messages.push(record);
