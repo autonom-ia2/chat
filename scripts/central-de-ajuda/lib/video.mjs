@@ -200,8 +200,18 @@ export async function codificarVideoFinal({
   return { bytes: size, crf: tentativas[tentativas.length - 1].crf };
 }
 
-export async function gerarPoster(mp4, posterJpg) {
-  await rodarFfmpeg(['-i', mp4, '-frames:v', '1', '-q:v', '3', posterJpg]);
+// `tempoSegundos` (opcional): a capa é o primeiro quadro do VÍDEO FINAL
+// (pôster), não o primeiro quadro capturado — sem seek, o quadro 0 quase
+// sempre pega a tela ainda em "Carregando..." (dados da conta chegando,
+// gráfico montando), porque a cena de abertura só fica "pronta" visualmente
+// perto do fim dela, não no instante em que a gravação começa. O padrão
+// (0) mantém o comportamento de antes para quem não passar o argumento.
+export async function gerarPoster(mp4, posterJpg, tempoSegundos = 0) {
+  const args =
+    tempoSegundos > 0
+      ? ['-ss', String(tempoSegundos), '-i', mp4, '-frames:v', '1', '-q:v', '3', posterJpg]
+      : ['-i', mp4, '-frames:v', '1', '-q:v', '3', posterJpg];
+  await rodarFfmpeg(args);
 }
 
 function tempoVtt(ms) {

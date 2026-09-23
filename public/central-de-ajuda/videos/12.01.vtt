@@ -1,0 +1,65 @@
+WEBVTT
+
+1
+00:00:00.001 --> 00:00:01.206
+Criar uma regra de automação
+
+2
+00:00:01.206 --> 00:00:04.435
+Abra Configurações no menu lateral
+
+3
+00:00:04.435 --> 00:00:07.592
+Clique em Automação
+
+4
+00:00:07.592 --> 00:00:10.746
+Clique em Criar Automação
+
+5
+00:00:10.747 --> 00:00:13.086
+Escreva o nome da regra
+
+6
+00:00:13.086 --> 00:00:16.123
+Escreva a descrição
+
+7
+00:00:16.123 --> 00:00:17.597
+Escolha o evento Conversa Criada
+
+8
+00:00:17.597 --> 00:00:19.947
+Abra o campo da condição
+
+9
+00:00:19.947 --> 00:00:22.805
+Escolha Assunto do e-mail
+
+10
+00:00:22.805 --> 00:00:24.631
+Escreva um valor que não existe
+
+11
+00:00:24.631 --> 00:00:26.989
+Abra o campo da ação
+
+12
+00:00:26.989 --> 00:00:29.873
+Escolha Adicionar uma Etiqueta
+
+13
+00:00:29.873 --> 00:00:32.274
+Abra o campo da etiqueta
+
+14
+00:00:32.274 --> 00:00:35.434
+Escolha a etiqueta sinistro
+
+15
+00:00:35.434 --> 00:00:38.576
+Clique em Criar
+
+16
+00:00:38.576 --> 00:00:39.779
+Pronto
