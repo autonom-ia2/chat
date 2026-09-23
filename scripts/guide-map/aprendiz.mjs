@@ -195,6 +195,67 @@ const textoDaResposta = dados =>
     .map(parte => parte.text)
     .join('');
 
+// Nome do esquema JSON: a OpenAI não aceita espaço nesse campo. `nome` (para as mensagens
+// de erro, que leem melhor com espaço) e o nome do esquema são a mesma ideia com formatos
+// diferentes — sem regex: troca de espaço por "_" com split/join.
+const nomeDoEsquema = nome => nome.split(' ').join('_');
+
+// Chamada genérica à OpenAI, em Responses API com saída em JSON Schema fechado — extraída
+// daqui (#614, etapa C) para a Central de Ajuda reaproveitar o mesmo mecanismo ao pedir o
+// rascunho de um ARTIGO, com instruções e esquema próprios. `nome` identifica o que foi
+// pedido nas três mensagens de erro (rede caída, HTTP não-ok, resposta vazia) — quem lê o
+// log do CI precisa saber o quê e de qual tela/artigo, nunca a chave (achado da #579).
+export const pedirAoGpt = async ({
+  instrucoes,
+  entrada,
+  esquema,
+  nome,
+  chave,
+  modelo = MODELO_PADRAO,
+  buscar = fetch,
+}) => {
+  let resposta;
+  try {
+    resposta = await buscar(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${chave}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelo,
+        instructions: instrucoes,
+        input: entrada,
+        reasoning: { effort: 'medium' },
+        text: {
+          format: {
+            type: 'json_schema',
+            name: nomeDoEsquema(nome),
+            schema: esquema,
+            strict: true,
+          },
+        },
+      }),
+    });
+  } catch (erro) {
+    throw new Error(`não consegui falar com a OpenAI (${nome}): ${erro.message}`);
+  }
+
+  // A chave nunca vai para a mensagem de erro — só o que a OpenAI disse.
+  if (!resposta.ok) {
+    const corpo = await resposta.json().catch(() => ({}));
+    throw new Error(
+      `a OpenAI recusou (${nome}) (HTTP ${resposta.status}): ${corpo?.error?.message || 'sem detalhe'}`
+    );
+  }
+
+  const texto = textoDaResposta(await resposta.json());
+  if (!texto) {
+    throw new Error(`a OpenAI respondeu sem ${nome} (resposta vazia ou recusada)`);
+  }
+  return JSON.parse(texto);
+};
+
 export const pedirRascunho = async ({
   tela,
   contexto,
@@ -218,53 +279,15 @@ export const pedirRascunho = async ({
     .filter(linha => linha !== null)
     .join('\n');
 
-  // Rede caída não pode virar só "fetch failed" e um stack trace no log do CI:
-  // quem abre o job vermelho precisa ler qual tela e o que aconteceu (achado da
-  // revisão da #579).
-  let resposta;
-  try {
-    resposta = await buscar(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${chave}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelo,
-        instructions: INSTRUCOES,
-        input: entrada,
-        reasoning: { effort: 'medium' },
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'rascunho_da_tela',
-            schema: ESQUEMA,
-            strict: true,
-          },
-        },
-      }),
-    });
-  } catch (erro) {
-    throw new Error(
-      `não consegui falar com a OpenAI para o rascunho de ${tela.nome}: ${erro.message}`
-    );
-  }
-
-  // A chave nunca vai para a mensagem de erro — só o que a OpenAI disse.
-  if (!resposta.ok) {
-    const corpo = await resposta.json().catch(() => ({}));
-    throw new Error(
-      `a OpenAI recusou o rascunho de ${tela.nome} (HTTP ${resposta.status}): ${corpo?.error?.message || 'sem detalhe'}`
-    );
-  }
-
-  const texto = textoDaResposta(await resposta.json());
-  if (!texto) {
-    throw new Error(
-      `a OpenAI respondeu sem rascunho para ${tela.nome} (resposta vazia ou recusada)`
-    );
-  }
-  return JSON.parse(texto);
+  return pedirAoGpt({
+    instrucoes: INSTRUCOES,
+    entrada,
+    esquema: ESQUEMA,
+    nome: `rascunho para ${tela.nome}`,
+    chave,
+    modelo,
+    buscar,
+  });
 };
 
 // ---------------------------------------------------------------------------
@@ -512,6 +535,10 @@ const executar = async () => {
   return avisarGitHub('mudou', 'true');
 };
 
-if (process.argv[1] && process.argv[1].endsWith('aprendiz.mjs')) {
+// Comparação pela URL do módulo, não só pelo sufixo do nome do arquivo: desde o #614
+// (etapa C), scripts/central-de-ajuda/aprendiz.mjs importa este módulo e tem o MESMO nome
+// de arquivo — um `endsWith('aprendiz.mjs')` disparava este `executar()` também quando
+// quem rodava era o outro script (mesmo problema achado em trava.mjs, etapa B).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await executar();
 }
