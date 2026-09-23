@@ -165,18 +165,6 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
       expect(described_class).to have_been_enqueued.with(run.id, 1)
     end
 
-    # chat#612: a abertura sem a vez da conexão não dorme no worker; volta atrás e tenta de novo em segundos.
-    it 'sem a vez da conexao, volta a intencao atras e reagenda, sem segurar o worker' do
-      run = execucao
-      register_async_tool(ferramenta_com_start { raise Autonomia::Insurance::Connections::AberturaUmaPorVez::SemAVez })
-
-      described_class.new.perform(run.id, 0)
-
-      expect(run.reload.handle).to eq({})
-      expect(run.status).to eq('running')
-      expect(described_class).to have_been_enqueued.with(run.id, 1)
-    end
-
     it 'volta de 2 para 1 e MANTEM a marca: a primeira chamada segue incerta' do
       # Arrange — a primeira chamada ficou sem resposta; a segunda o portal recusou com certeza
       run = execucao(handle: { intencoes => 1 })

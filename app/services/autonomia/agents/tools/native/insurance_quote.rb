@@ -235,10 +235,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # mas a fronteira não pode depender disso.
   def submeter
     pedido = { provider: connection.provider, product: produto, input: entrada }
-    # Uma abertura por vez nesta conexão (`AberturaUmaPorVez`, chat#612): as conferências de login não viram rajada.
-    quote_id = ::Autonomia::Insurance::Connections::AberturaUmaPorVez.call(connection, pedido_em: run&.created_at) do
-      sessions.with_fresh_session { |open_session| enviar(open_session, pedido) }
-    end
+    quote_id = sessions.with_fresh_session { |open_session| enviar(open_session, pedido) }
     { 'quote_id' => quote_id, DELIVERED_KEY => [], 'produto' => produto,
       SEM_BONUS_KEY => quote_input.auto? && quote_input.renewal.sem_bonus? }
   end
