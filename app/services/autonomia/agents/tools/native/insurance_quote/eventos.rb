@@ -26,17 +26,16 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
                    'acima. Os valores de cada seguradora estão com o especialista, que os lê sem cotar de novo.',
     'valores_guardados' => 'A cotação terminou com preços, mas o comparativo em PDF não pôde ser enviado. Os valores de cada ' \
                            'seguradora estão guardados com o especialista, e a pessoa pode pedi-los aqui mesmo.',
-    # SEM PROMESSA DE EQUIPE (23/09/2026). A passagem para uma pessoa ainda não está ligada em produção: "alguém da
-    # equipe vai continuar" era promessa que ninguém cumpria. E o prazo esgotado com o comparativo entregue não é falha:
-    # a pessoa tem as opções de quem respondeu, e oferecer "refazer ou chamar a equipe" era tratar como falha o que
-    # não foi.
-    'falhou' => 'A cotação não pôde ser concluída agora, e nenhuma opção chegou à pessoa. Se ela quiser, dá para pedir ' \
-                'de novo nesta conversa. Ninguém da equipe foi acionado: não prometa atendente nem prazo.',
+    # O QUE DEU ERRADO VAI PARA A EQUIPE (decisão do CEO, 23/09/2026). A passagem é do CRM: o gatilho do funil é a
+    # própria fala da Lia de que vai encaminhar para alguém da equipe, e aí o CRM atribui a conversa. O prazo esgotado
+    # com o comparativo entregue não é erro: a pessoa tem as opções de quem respondeu.
+    'falhou' => 'A cotação não pôde ser concluída agora, e nenhuma opção chegou à pessoa. Diga que vai encaminhar para ' \
+                'alguém da equipe continuar, sem prazo e sem narrar o que falhou.',
     # A INCERTA NÃO OFERECE REFAZER (revisão da chat#608): a cotação pode existir e já ter sido paga no portal, e o
     # pedido novo não é barrado como repetido (a execução fecha sem entrega). Não se sabe se deu: não se diz que não deu.
     'incerta' => 'Não foi possível confirmar se o pedido chegou às seguradoras, e nenhuma opção chegou à pessoa até ' \
-                 'agora. Diga que não conseguiu confirmar, sem afirmar que não deu e sem oferecer cotar de novo. Ninguém ' \
-                 'da equipe foi acionado: não prometa atendente nem prazo.',
+                 'agora. Diga que não conseguiu confirmar e que vai encaminhar para alguém da equipe conferir, sem afirmar ' \
+                 'que não deu, sem oferecer cotar de novo e sem prazo.',
     'encerrada_por_prazo' => 'A cotação terminou, e o comparativo em PDF com as opções de quem respondeu já está nesta ' \
                              'conversa. Uma ou mais seguradoras não responderam dentro do tempo e ficaram de fora: foi ' \
                              'instabilidade delas, não recusa do risco, e não é motivo para refazer. Os valores de ' \
@@ -45,8 +44,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
 
   # FORMULÁRIO INDISPONÍVEL (revisão da chat#608): pedir de novo daria a mesma recusa, então não se oferece.
   SEM_FORMULARIO = 'A cotação não pôde ser aberta agora: o formulário deste tipo de seguro não está disponível. Nenhuma ' \
-                   'opção chegou à pessoa. Não ofereça cotar de novo agora, e ninguém da equipe foi acionado: não ' \
-                   'prometa atendente nem prazo.'.freeze
+                   'opção chegou à pessoa. Não ofereça cotar de novo agora: diga que vai encaminhar para alguém da ' \
+                   'equipe continuar, sem prazo.'.freeze
 
   # Só em renovação de auto cotada sem a classe de bônus. Sem número e sem promessa de desconto: o quanto o bônus
   # abate é decisão de cada seguradora.

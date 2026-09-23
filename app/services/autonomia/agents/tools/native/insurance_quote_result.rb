@@ -28,7 +28,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   NAO_CHEGOU = 'A última cotação desta conversa não chegou às seguradoras, e não há preço dela para mostrar. ' \
                'Não invente preço nem seguradora.'.freeze
   ENVIO_INCERTO = 'Não se confirmou se a última cotação desta conversa chegou às seguradoras, e não há preço dela ' \
-                  'para mostrar. Diga que não conseguiu confirmar, sem oferecer cotar de novo, e não invente preço nem seguradora.'.freeze
+                  'para mostrar. Diga que não conseguiu confirmar e que vai encaminhar para alguém da equipe conferir, sem ' \
+                  'oferecer cotar de novo, e não invente preço nem seguradora.'.freeze
   SEM_RESULTADO = 'O resultado da cotação desta conversa não ficou guardado para consulta. Não invente preço ' \
                   'nem seguradora, e não ofereça cotar de novo só para rever preços.'.freeze
   SEM_PRECO_AINDA = 'A cotação ainda está correndo e nenhum preço chegou até agora. Não invente preço nem ' \

@@ -687,8 +687,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # refazer; falha e incerteza sem promessa de equipe, que a passagem para uma pessoa não está ligada.
     # Na revisão da chat#608 (`cc80f26b…` -> `1fce6d0b…`): "Começou" remete à §5 em vez de ditar o que dizer, e a
     # falha só oferece pedir de novo quando o aviso disser que dá (a incerta pode já ter sido paga).
+    # Decisão do CEO de 23/09/2026 (`1fce6d0b…` -> `2d658211…`): o que deu errado vai para a equipe. A passagem é do
+    # CRM (handoff por funil, gatilho na fala da agente de que vai encaminhar), ativa na conta 16.
     it 'mudou? revise este bloco e assine aqui' do
-      expect(Digest::MD5.hexdigest(secao)).to eq('1fce6d0bb21a9fd7f81d6fa1dae50cd3')
+      expect(Digest::MD5.hexdigest(secao)).to eq('2d6582110494a2d78d05d9bdc51cb4e2')
     end
 
     it 'não traz frase de exemplo, travessão, valor em reais nem variável' do

@@ -423,19 +423,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       described_class.fatos_do_evento(tipo, Autonomia::Agents::ToolRun.new(handle: handle, faixa: faixa))
     end
 
-    it 'falha e incerteza não prometem atendente: a passagem para uma pessoa não está ligada' do
-      %w[falhou incerta].each do |tipo|
-        expect(fatos(tipo)).to include('não prometa atendente')
-        expect(fatos(tipo)).not_to include('vai continuar', 'vai conferir')
+    # O QUE DEU ERRADO VAI PARA A EQUIPE (decisão do CEO, 23/09/2026): a fala de encaminhar é o gatilho do handoff do
+    # CRM. Nenhum deles oferece cotar de novo: a incerta pode já ter cotado (e pago) no portal, e o formulário
+    # indisponível recusaria de novo.
+    it 'falha, incerteza e formulário indisponível encaminham para a equipe, sem oferecer cotar de novo' do
+      formulario = fatos('falhou', handle: { 'recusa' => 'formulario_indisponivel' })
+      [fatos('falhou'), fatos('incerta'), formulario].each do |texto|
+        expect(texto).to include('encaminhar para alguém da equipe')
+        expect(texto).not_to include('dá para pedir de novo')
       end
-    end
-
-    # Revisão da chat#608: só a falha comum oferece pedir de novo. A incerta pode já ter cotado (e pago) no portal,
-    # e o formulário indisponível recusaria de novo.
-    it 'só a falha comum oferece pedir de novo' do
-      expect(fatos('falhou')).to include('dá para pedir de novo')
       expect(fatos('incerta')).to include('não conseguiu confirmar', 'sem oferecer cotar de novo')
-      expect(fatos('falhou', handle: { 'recusa' => 'formulario_indisponivel' })).to include('Não ofereça cotar de novo')
+      expect(formulario).to include('Não ofereça cotar de novo')
     end
 
     it 'os fatos dizem de qual seguro é a notícia' do
