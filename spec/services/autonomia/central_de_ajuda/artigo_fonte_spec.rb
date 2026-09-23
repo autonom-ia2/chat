@@ -90,6 +90,16 @@ RSpec.describe Autonomia::CentralDeAjuda::ArtigoFonte do
     expect(fonte.conteudo).to include('![Menu da foto](/central-de-ajuda/prints/02.06-a.png)')
   end
 
+  it 'recusa print sem legenda, para o leitor de tela não ler só o código do print' do
+    prints = dir.join('prints')
+    FileUtils.mkdir_p(prints)
+    File.write(prints.join('02.06-a.png'), 'png')
+    stub_const("#{described_class}::PASTA_PRINTS", prints)
+    File.write(caminho, texto.sub('![PRINT 02.06-a: Menu da foto]', '![PRINT 02.06-a]'))
+
+    expect { fonte.conteudo }.to raise_error(described_class::FormatoInvalido, a_string_including('print sem legenda'))
+  end
+
   it 'usa o primeiro parágrafo de "O que é" como descrição' do
     expect(fonte.descricao).to eq('A disponibilidade diz se você recebe conversas. Ela vale por conta.')
   end
