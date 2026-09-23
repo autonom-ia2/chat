@@ -19,7 +19,8 @@ RSpec.describe 'Central de Ajuda (leitura)', type: :request do
                      title: titulo, description: "Sobre #{titulo}", content: opcoes.fetch(:texto, 'Texto do artigo.'),
                      status: opcoes.fetch(:status, :published), locale: 'pt_BR', position: id.split('.').last.to_i * 10,
                      meta: { 'central' => { 'id' => id, 'publico' => opcoes.fetch(:publico, 'ambos'), 'requer' => opcoes[:requer],
-                                            'me_leve_ate_la' => { 'rota' => 'profile_settings_index', 'destaque' => nil } } })
+                                            'me_leve_ate_la' => { 'rota' => 'profile_settings_index', 'destaque' => nil },
+                                            'video' => opcoes[:video] } })
   end
 
   before do
@@ -90,6 +91,15 @@ RSpec.describe 'Central de Ajuda (leitura)', type: :request do
       expect(corpo['conteudo']).to include('Troque a foto do perfil.')
       expect(corpo['anterior']).to include('ref' => '02-01')
       expect(corpo['proximo']).to include('ref' => '02-04')
+    end
+
+    it 'devolve o vídeo do trajeto quando o artigo tem um, e nada quando não tem' do
+      video = { 'arquivo' => '/central-de-ajuda/videos/02.01.mp4', 'legenda' => '/central-de-ajuda/videos/02.01.vtt',
+                'poster' => '/central-de-ajuda/videos/02.01.jpg' }
+      Article.find_by(slug: 'plataforma-02-01').tap { |a| a.update!(meta: a.meta.deep_merge('central' => { 'video' => video })) }
+
+      expect(get_json('/02-01', agente)['video']).to eq(video)
+      expect(get_json('/02-02', agente)['video']).to be_nil
     end
 
     it 'não entrega artigo que a pessoa não pode ler' do

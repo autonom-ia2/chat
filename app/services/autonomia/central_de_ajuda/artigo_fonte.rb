@@ -10,6 +10,9 @@ class Autonomia::CentralDeAjuda::ArtigoFonte
   PASTA_PRINTS = Rails.public_path.join('central-de-ajuda/prints')
   URL_PRINTS = '/central-de-ajuda/prints/'.freeze
   MARCA_PRINT = '![PRINT '.freeze
+  # Vídeo curto de trajeto: `<id>.mp4`, com a legenda em `<id>.vtt` e o pôster em `<id>.jpg`.
+  PASTA_VIDEOS = Rails.public_path.join('central-de-ajuda/videos')
+  URL_VIDEOS = '/central-de-ajuda/videos/'.freeze
   CAMPOS_META = %w[id capitulo publico prioridade requer me_leve_ate_la assuntos conferido_em].freeze
 
   class FormatoInvalido < StandardError; end
@@ -44,15 +47,26 @@ class Autonomia::CentralDeAjuda::ArtigoFonte
   end
 
   def meta
-    cabecalho.slice(*CAMPOS_META).merge('sha' => sha)
+    cabecalho.slice(*CAMPOS_META).merge('video' => video, 'sha' => sha)
+  end
+
+  # Só entra no sha quando existe: artigo sem vídeo mantém o sha de antes e não é republicado à toa.
+  def video
+    return unless File.exist?(PASTA_VIDEOS.join("#{id}.mp4"))
+
+    { 'arquivo' => "#{URL_VIDEOS}#{id}.mp4", 'legenda' => arquivo_de_video('vtt'), 'poster' => arquivo_de_video('jpg') }
   end
 
   # Muda quando muda qualquer coisa que a publicação grava: evita update (e updated_at falso) sem mudança.
   def sha
-    @sha ||= Digest::SHA256.hexdigest([titulo, conteudo, descricao, cabecalho.slice(*CAMPOS_META).to_json].join("\0"))[0, 16]
+    @sha ||= Digest::SHA256.hexdigest([titulo, conteudo, descricao, cabecalho.slice(*CAMPOS_META).to_json, video&.to_json].compact.join("\0"))[0, 16]
   end
 
   private
+
+  def arquivo_de_video(extensao)
+    "#{URL_VIDEOS}#{id}.#{extensao}" if File.exist?(PASTA_VIDEOS.join("#{id}.#{extensao}"))
+  end
 
   def separar(texto)
     raise FormatoInvalido, "#{caminho}: sem cabeçalho" unless texto.start_with?("---\n")

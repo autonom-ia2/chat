@@ -43,6 +43,10 @@ public/assets/*.js.gz
 public/assets/secretField*
 public/assets/.sprockets-manifest-*.json
 
+# Html de login local de um único uso (scripts/central-de-ajuda/gravar-trajeto.mjs);
+# se o script cair no meio, o arquivo não pode sobreviver nem ser commitado.
+public/__entrar_*
+
 # VIM files
 *.swp
 *.swo

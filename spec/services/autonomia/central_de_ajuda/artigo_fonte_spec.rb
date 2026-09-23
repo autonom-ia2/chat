@@ -100,6 +100,21 @@ RSpec.describe Autonomia::CentralDeAjuda::ArtigoFonte do
     expect { fonte.conteudo }.to raise_error(described_class::FormatoInvalido, a_string_including('print sem legenda'))
   end
 
+  it 'guarda em meta o vídeo do trajeto que existe na pasta pública, com legenda e pôster, e muda o sha' do
+    videos = dir.join('videos')
+    FileUtils.mkdir_p(videos)
+    stub_const("#{described_class}::PASTA_VIDEOS", videos)
+    sem_video = fonte.sha
+    expect(fonte.meta['video']).to be_nil
+
+    %w[mp4 vtt jpg].each { |ext| File.write(videos.join("02.06.#{ext}"), ext) }
+
+    expect(fonte.meta['video']).to eq('arquivo' => '/central-de-ajuda/videos/02.06.mp4',
+                                      'legenda' => '/central-de-ajuda/videos/02.06.vtt',
+                                      'poster' => '/central-de-ajuda/videos/02.06.jpg')
+    expect(fonte.sha).not_to eq(sem_video)
+  end
+
   it 'usa o primeiro parágrafo de "O que é" como descrição' do
     expect(fonte.descricao).to eq('A disponibilidade diz se você recebe conversas. Ela vale por conta.')
   end

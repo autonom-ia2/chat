@@ -15,6 +15,7 @@ class Api::V1::Accounts::CentralDeAjudaController < Api::V1::Accounts::BaseContr
     render json: leitura.resumo(artigo).merge(
       conteudo: artigo.content,
       me_leve_ate_la: leitura.central(artigo)['me_leve_ate_la'],
+      video: leitura.central(artigo)['video'],
       anterior: anterior, proximo: proximo,
       atualizado_em: artigo.updated_at
     )
