@@ -150,6 +150,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(resultado['faltando']).to include('insured.document')
     end
 
+    # chat#612: a abertura espera a vez da conexão, para as conferências de login no portal não virarem rajada.
+    it 'abre a cotação dentro da vez da conexão' do
+      ready_connection
+      allow(Autonomia::Insurance::Connections::AberturaUmaPorVez).to receive(:call).and_call_original
+      dados = { segurado: { nome: 'Fulano', cpfCnpj: '04297912678' },
+                configuracoes: { marca: 'Caloi', valorMercado: 8000, numeroSerie: 'SN-1' } }.to_json
+
+      tool('produto' => 'bike', 'dados' => dados).start
+
+      expect(Autonomia::Insurance::Connections::AberturaUmaPorVez).to have_received(:call).once
+    end
+
     it 'cota quando a entrada esta completa' do
       # Arrange
       ready_connection

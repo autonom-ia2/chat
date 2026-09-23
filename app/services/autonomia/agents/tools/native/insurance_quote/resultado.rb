@@ -8,12 +8,25 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
   # consulta. É chave da FERRAMENTA: não está em `AsyncRunJob::MARCAS`, então viaja no handle que a
   # ferramenta recebe e é regravada pelo `record_attempt!` do fim da passada, como `seguradoras_acionadas`.
   RESULTADO_KEY = 'resultado_por_seguradora'.freeze
+  # QUANDO CHEGOU A ÚLTIMA NOVIDADE (chat#612): o instante da última consulta em que alguma seguradora mudou de
+  # desfecho. O residencial esperava os 7 min do prazo inteiros por uma seguradora instável (a Mitsui), com as outras
+  # nove respondidas no primeiro minuto. Com preço na mão e nada novo há `SEM_NOVIDADE`, a cotação se dá por fechada:
+  # quem ficou aguardando conta como instabilidade (`ResultadoDaCotacao#motivo`), e o comparativo sai.
+  NOVIDADE_KEY = 'ultima_novidade_em'.freeze
+  SEM_NOVIDADE = 150.seconds
 
   class_methods do
     # -> este handle tem ao menos uma seguradora com preço guardado? Lido sem instância por
     # `ToolRun#resultado_obtido?`.
     def resultado_guardado?(handle)
       ::Autonomia::Insurance::ResultadoPorSeguradora.com_preco?(handle.to_h[RESULTADO_KEY])
+    end
+
+    # -> alguma seguradora deste handle ficou aguardando resposta? Lido sem instância pelos fatos do evento
+    # (`Eventos`, chat#612): a cotação que parou de receber resposta fecha com ela de fora.
+    def seguradora_aguardando?(handle)
+      aguardando = ::Autonomia::Insurance::ResultadoPorSeguradora::AGUARDANDO
+      handle.to_h[RESULTADO_KEY].to_h.values.any? { |item| item.to_h['desfecho'] == aguardando }
     end
   end
 
@@ -23,14 +36,29 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
   # seguradora com as ofertas desta leitura, a união dos códigos de quem cotou (`DELIVERED_KEY`) e, quando
   # há, o motivo de cada preço sem período (`SEM_PERIODO_KEY`, acumulado entre consultas).
   def marcas_da_leitura(result, leitura, handle)
+    resultado = ::Autonomia::Insurance::ResultadoPorSeguradora.unir(handle[RESULTADO_KEY], result.to_h['offers'])
     marcas = { self.class::ACIONADAS_KEY => acionadas(leitura, handle),
                self.class::LEITURA_ASSENTADA_KEY => leitura.assentada,
-               RESULTADO_KEY => ::Autonomia::Insurance::ResultadoPorSeguradora.unir(handle[RESULTADO_KEY], result.to_h['offers']),
+               RESULTADO_KEY => resultado, NOVIDADE_KEY => novidade_em(handle, resultado),
                self.class::DELIVERED_KEY => cotaram(leitura, handle) }
     sem_periodo = leitura.sem_periodo
     return marcas if sem_periodo.empty?
 
     marcas.merge(self.class::SEM_PERIODO_KEY => handle[self.class::SEM_PERIODO_KEY].to_h.merge(sem_periodo))
+  end
+
+  # O instante desta consulta quando ela mudou o desfecho de alguma seguradora (ou é a primeira); senão, o de antes.
+  def novidade_em(handle, resultado)
+    desfechos = ->(guardado) { guardado.to_h.transform_values { |entrada| entrada.to_h['desfecho'] } }
+    return handle[NOVIDADE_KEY] if handle[NOVIDADE_KEY].present? && desfechos.call(handle[RESULTADO_KEY]) == desfechos.call(resultado)
+
+    Time.current.iso8601
+  end
+
+  # -> a cotação já tem preço e nenhuma seguradora mudou de desfecho há `SEM_NOVIDADE`? (`next_handle` desta passada)
+  def parou_de_chegar?(handle)
+    novidade = handle[NOVIDADE_KEY].presence && Time.zone.parse(handle[NOVIDADE_KEY])
+    Array(handle[self.class::DELIVERED_KEY]).any? && novidade.present? && novidade <= SEM_NOVIDADE.ago
   end
 
   def cotaram(leitura, handle)

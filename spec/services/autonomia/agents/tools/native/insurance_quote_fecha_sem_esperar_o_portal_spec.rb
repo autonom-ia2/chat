@@ -73,6 +73,49 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     arquivo.de(progresso.deliveries.last)
   end
 
+  # PAROU DE CHEGAR RESPOSTA (chat#612, 23/09/2026): o residencial esperava os 7 min do prazo por uma seguradora
+  # instável, com as outras respondidas no primeiro minuto. Com preço e nada novo há `SEM_NOVIDADE`, encerra.
+  describe 'quando parou de chegar resposta' do
+    let(:com_uma_aguardando) { [oferta('8', 'quoted', 2119.18), oferta('13', 'running')] }
+    let(:resultado_anterior) do
+      Autonomia::Insurance::ResultadoPorSeguradora.unir({}, com_uma_aguardando)
+    end
+
+    def aguardando_desde(momento, entregues: ['8'])
+      { 'quote_id' => 'abc:1', described_class::DELIVERED_KEY => entregues, described_class::ACIONADAS_KEY => %w[8 13],
+        described_class::RESULTADO_KEY => resultado_anterior, described_class::NOVIDADE_KEY => momento.iso8601 }
+    end
+
+    it 'com preço e nada novo há mais que o limite, encerra e entrega o comparativo' do
+      progresso = consultar('partial', com_uma_aguardando, aguardando_desde(described_class::SEM_NOVIDADE.ago - 1.second))
+
+      expect(progresso).to be_done
+      expect(pdf_de(progresso).url).to eq(url)
+    end
+
+    it 'com novidade recente, segue esperando' do
+      progresso = consultar('partial', com_uma_aguardando, aguardando_desde(10.seconds.ago))
+
+      expect(progresso).not_to be_done
+    end
+
+    it 'sem preço nenhum, segue esperando mesmo parado' do
+      progresso = consultar('partial', com_uma_aguardando.drop(1),
+                            aguardando_desde(described_class::SEM_NOVIDADE.ago - 1.second, entregues: []))
+
+      expect(progresso).not_to be_done
+    end
+
+    it 'a leitura que muda um desfecho renova o instante da novidade' do
+      antes = (described_class::SEM_NOVIDADE.ago - 1.second).iso8601
+      respondeu = [oferta('8', 'quoted', 2119.18), oferta('13', 'declined')]
+
+      progresso = consultar('partial', respondeu, aguardando_desde(Time.zone.parse(antes)))
+
+      expect(progresso.handle[described_class::NOVIDADE_KEY]).not_to eq(antes)
+    end
+  end
+
   describe 'quando a cotação encerra' do
     it 'encerra com o portal ainda partial quando toda seguradora ja tem desfecho, e entrega o comparativo' do
       # Act

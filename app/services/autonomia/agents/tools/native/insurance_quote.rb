@@ -235,7 +235,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # mas a fronteira não pode depender disso.
   def submeter
     pedido = { provider: connection.provider, product: produto, input: entrada }
-    quote_id = sessions.with_fresh_session { |open_session| enviar(open_session, pedido) }
+    # Uma abertura por vez nesta conexão (`AberturaUmaPorVez`, chat#612): as conferências de login não viram rajada.
+    quote_id = ::Autonomia::Insurance::Connections::AberturaUmaPorVez.call(connection) do
+      sessions.with_fresh_session { |open_session| enviar(open_session, pedido) }
+    end
     { 'quote_id' => quote_id, DELIVERED_KEY => [], 'produto' => produto,
       SEM_BONUS_KEY => quote_input.auto? && quote_input.renewal.sem_bonus? }
   end
@@ -254,7 +257,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
     handle = marcar_preco_legado(handle, handle[DELIVERED_KEY])
     next_handle = handle.merge(marcas_da_leitura(result, leitura, handle))
 
-    return em_andamento(next_handle, leitura, handle) unless finished?(result, leitura, handle)
+    return em_andamento(next_handle, leitura, handle) unless finished?(result, leitura, handle) || parou_de_chegar?(next_handle)
 
     # A COTAÇÃO FECHOU, e isso se grava por si: é o fato que separa "ainda tem seguradora por
     # responder" de "é isto que havia", e ele não pode depender de o comparativo ter saído.
