@@ -29,9 +29,16 @@ import {
   destacarEAcharRetangulo,
   moverCursor,
   clicar,
+  arrastar,
   digitarLinhas,
+  limparCampo,
+  definirValor,
+  selecionar,
+  anexarArquivo,
   verificarSemMarca,
+  desfocarMarcasVisiveis,
   esperarTexto,
+  esperarSemCarregando,
 } from './lib/pagina.mjs';
 import { rodarRails, criarLoginHtml, apagarLoginHtml } from './lib/login.mjs';
 import {
@@ -50,6 +57,9 @@ const LARGURA_CSS = 1280;
 const ALTURA_CSS = 800;
 const PAUSA_ANTES_MS = 1200; // "1,2 s parado antes de cada clique"
 const PAUSA_DEPOIS_MS = 800; // "0,8 s parado depois do clique"
+// Regra do Rodrigo: zoom > 2,5x deixa o recorte ilegível (um roteiro pediu
+// 16x). O motor trava aqui, não confia no roteiro para respeitar sozinho.
+const ZOOM_MAXIMO = 2.5;
 
 function esperar(ms) {
   return new Promise(resolve => {
@@ -101,7 +111,13 @@ async function registrarSegmento(cliente, segmentos, zoom, legenda, dados) {
 async function executarCena(cliente, cena, contexto) {
   const agora = () => Date.now() - contexto.tInicioGravacao;
   const tInicio = agora();
-  const zoom = cena.zoom || 1;
+  const zoomPedido = cena.zoom || 1;
+  if (zoomPedido > ZOOM_MAXIMO) {
+    console.warn(
+      `  [aviso] cena "${cena.legenda}" pediu zoom ${zoomPedido}x — travado em ${ZOOM_MAXIMO}x (fica ilegível acima disso)`
+    );
+  }
+  const zoom = Math.min(zoomPedido, ZOOM_MAXIMO);
   const segmentos = [];
   const registrar = dados =>
     registrarSegmento(cliente, segmentos, zoom, cena.legenda, dados);
@@ -123,6 +139,29 @@ async function executarCena(cliente, cena, contexto) {
     await clicar(cliente, retangulo.centroX, retangulo.centroY);
     const tClique = agora();
     segmentos[segmentos.length - 1].tFim = tClique;
+
+    // Opcional: um clique que abre uma rota nunca visitada nesta gravação
+    // (comum em telas com poucas visitas, ex. Vite em dev) pode demorar
+    // segundos para compilar — bem mais que o retry padrão de remedição do
+    // alvo logo abaixo. `aguardarTextoDepois` no roteiro espera um texto da
+    // tela de destino aparecer antes de seguir, do mesmo jeito que a ação
+    // "ir para" já faz com `aguardarTexto`. Sem essa chave no roteiro, o
+    // comportamento é idêntico ao de antes.
+    if (cena.aguardarTextoDepois) {
+      // 30s de orçamento: com várias gravações rodando ao mesmo tempo (cada
+      // uma com seu Chrome headless + rails runner), a CPU/rede compartilhada
+      // deixa a primeira visita a uma rota nova bem mais lenta do que numa
+      // sessão isolada — 15s já se mostrou curto sob essa carga.
+      await esperarTexto(cliente, cena.aguardarTextoDepois, {
+        tentativas: 150,
+        intervaloMs: 200,
+      });
+    }
+    // Depois de qualquer clique (pode ter trocado de tela): espera sumir
+    // "Carregando..." antes de medir/registrar o depois. Sem custo quando
+    // não tem nada carregando — a primeira checagem já sai negativa.
+    await esperarSemCarregando(cliente);
+    if (contexto.desfocarMarca) await desfocarMarcasVisiveis(cliente);
 
     let retanguloDepois = retangulo;
     try {
@@ -152,9 +191,70 @@ async function executarCena(cliente, cena, contexto) {
     await moverCursor(cliente, retangulo.centroX, retangulo.centroY);
     await clicar(cliente, retangulo.centroX, retangulo.centroY);
     await esperar(300);
+    // Opcional: `cena.limparAntes: true` apaga o valor padrão de um campo
+    // (input/textarea) antes de digitar — ex. o nome do funil no CRM Kanban
+    // já nasce preenchido. Sem essa chave, comportamento igual a sempre.
+    if (cena.limparAntes) await limparCampo(cliente);
     await digitarLinhas(cliente, cena.texto);
     await esperar(400);
     await registrar({ tInicio, tFim: agora(), retanguloCss: retangulo });
+  } else if (cena.acao === 'definirValor') {
+    // Para campos que Input.insertText não preenche direito (ex.
+    // input[type="datetime-local"|"date"|"color"|"range"]): clica no alvo
+    // e escreve o valor pelo setter nativo, não por digitação simulada.
+    const retangulo = await destacarEAcharRetangulo(cliente, cena.alvo);
+    await moverCursor(cliente, retangulo.centroX, retangulo.centroY);
+    await clicar(cliente, retangulo.centroX, retangulo.centroY);
+    await esperar(200);
+    await definirValor(cliente, cena.valor);
+    await esperar(300);
+    await registrar({ tInicio, tFim: agora(), retanguloCss: retangulo });
+  } else if (cena.acao === 'selecionar') {
+    // <option> de um <select> nativo não tem retângulo de layout próprio —
+    // clica no <select> (como "digitar" clica no campo) e escolhe a opção
+    // por valor ou por texto visível, sem simular clique num <option>.
+    const retangulo = await destacarEAcharRetangulo(cliente, cena.alvo);
+    await moverCursor(cliente, retangulo.centroX, retangulo.centroY);
+    await clicar(cliente, retangulo.centroX, retangulo.centroY);
+    await esperar(200);
+    await selecionar(cliente, cena.valor);
+    await esperar(300);
+    await registrar({ tInicio, tFim: agora(), retanguloCss: retangulo });
+  } else if (cena.acao === 'anexarArquivo') {
+    // cena.alvo é o botão/label VISÍVEL que abre o seletor de arquivo (é
+    // nele que o cursor e o destaque aparecem); cena.seletorArquivo é o
+    // seletor CSS do <input type="file"> de verdade, que pode estar
+    // escondido — anexarArquivo() usa DOM.setFileInputFiles nele, não um
+    // clique simulado.
+    const retangulo = await destacarEAcharRetangulo(cliente, cena.alvo);
+    await moverCursor(cliente, retangulo.centroX, retangulo.centroY);
+    await esperar(cena.pausaAntesMs ?? PAUSA_ANTES_MS);
+    await anexarArquivo(cliente, cena.seletorArquivo, cena.arquivo);
+    await esperar(cena.pausaDepoisMs ?? PAUSA_DEPOIS_MS);
+    await registrar({ tInicio, tFim: agora(), retanguloCss: retangulo });
+  } else if (cena.acao === 'arrastar') {
+    // Move um card entre colunas do Kanban (vuedraggable/sortable.js):
+    // pressiona no alvo, arrasta até `cena.destino` (mesma forma de um
+    // alvo) e solta lá. Registra dois segmentos, como "mover e clicar" —
+    // um de antes do arrasto (alvo de origem) e um de depois (destino).
+    const origem = await destacarEAcharRetangulo(cliente, cena.alvo);
+    await moverCursor(cliente, origem.centroX, origem.centroY);
+    await esperar(cena.pausaAntesMs ?? PAUSA_ANTES_MS);
+    await registrar({ tInicio, tFim: null, retanguloCss: origem });
+
+    const destino = await destacarEAcharRetangulo(cliente, cena.destino);
+    const tSolta = agora();
+    segmentos[segmentos.length - 1].tFim = tSolta;
+    await arrastar(
+      cliente,
+      origem.centroX,
+      origem.centroY,
+      destino.centroX,
+      destino.centroY,
+      cena.duracaoArrastoMs ?? 900
+    );
+    await esperar(cena.pausaDepoisMs ?? PAUSA_DEPOIS_MS);
+    await registrar({ tInicio: tSolta, tFim: agora(), retanguloCss: destino });
   } else if (cena.acao === 'ir para') {
     // Troca de rota client-side (history + popstate), não um Page.navigate:
     // um reload de página inteira reinicia a SPA e passa ~1s com a tela
@@ -168,7 +268,16 @@ async function executarCena(cliente, cena, contexto) {
     });
     // Só corta a cena quando o conteúdo de destino já carregou de verdade —
     // sem isso o quadro pega a lista vazia com "Carregando...".
-    if (cena.aguardarTexto) await esperarTexto(cliente, cena.aguardarTexto);
+    // Mesmo orçamento de 30s de aguardarTextoDepois, pelo mesmo motivo
+    // (várias gravações competindo por CPU ao mesmo tempo).
+    if (cena.aguardarTexto) {
+      await esperarTexto(cliente, cena.aguardarTexto, {
+        tentativas: 150,
+        intervaloMs: 200,
+      });
+    }
+    await esperarSemCarregando(cliente);
+    if (contexto.desfocarMarca) await desfocarMarcasVisiveis(cliente);
     await esperar(cena.duracaoMs ?? 900);
     await registrar({ tInicio, tFim: agora(), retanguloCss: null });
   } else {
@@ -227,8 +336,24 @@ async function gravar(roteiro) {
     // chegando) — sem essa folga, o primeiro quadro gravado (o pôster) pega
     // o spinner no lugar da tela de verdade.
     await esperar(1500);
+    // Mesma ideia, mas para qualquer texto "Carregando..." que ainda esteja
+    // visível (ex. "Carregando dados do gráfico…") — a folga fixa acima não
+    // garante isso; essa checagem sim. Orçamento bem maior que o padrão
+    // (30s, não 10s) só aqui: é o único lugar em que esperar mais NÃO
+    // alonga o vídeo — a gravação ainda nem começou, então cada segundo
+    // gasto aqui é um segundo a mais de garantia pro pôster, não um
+    // segundo a mais de vídeo. Telas de relatório com gráfico (dado real
+    // buscado à parte, não só o boot da SPA) podem passar dos 10s
+    // (confirmado no 14.03: o pôster saía preso em "Carregando dados do
+    // gráfico…" mesmo já capturando o fim da 1ª cena, porque a página só
+    // termina de carregar depois disso).
+    await esperarSemCarregando(cliente, { tentativas: 150, intervaloMs: 200 });
 
     await injetar(cliente);
+    // Desfoca marca que esteja colada no próprio texto do pôster (o
+    // primeiro quadro do vídeo) — `export const desfocarMarca = false` no
+    // roteiro desliga isso, se algum dia precisar.
+    if (roteiro.desfocarMarca !== false) await desfocarMarcasVisiveis(cliente);
 
     let indiceFrame = 0;
     const frames = [];
@@ -258,7 +383,11 @@ async function gravar(roteiro) {
     });
 
     console.log(`[${roteiro.id}] gravando ${roteiro.cenas.length} cenas…`);
-    const contexto = { tInicioGravacao, baseUrl: roteiro.baseUrl };
+    const contexto = {
+      tInicioGravacao,
+      baseUrl: roteiro.baseUrl,
+      desfocarMarca: roteiro.desfocarMarca !== false,
+    };
     const cenasGravadas = [];
     // eslint-disable-next-line no-restricted-syntax -- sequencial de propósito
     for (const cena of roteiro.cenas) {
@@ -343,7 +472,16 @@ async function montarVideo(roteiro, { frames, cenasGravadas }) {
     cenas: segmentosParaFfmpeg,
     saidaMp4,
   });
-  await gerarPoster(saidaMp4, saidaJpg);
+  // Capa = fim da cena de abertura, 0,1s antes da legenda trocar: a tela já
+  // carregou (spinner/"Carregando..." sumiram) e ainda é o ponto de
+  // partida do vídeo, não o meio de uma ação.
+  // Capa = fim do vídeo (a cena "Pronto", com o resultado na tela): mostra aonde o vídeo
+  // leva. O começo é quase sempre a mesma tela depois do login e deixava as capas iguais.
+  const tempoCapaSegundos = Math.max(
+    0,
+    (cenasGravadas.at(-1).tFim - 200) / 1000
+  );
+  await gerarPoster(saidaMp4, saidaJpg, tempoCapaSegundos);
   gerarVtt(cenasGravadas, saidaVtt);
 
   rmSync(pastaSegmentos, { recursive: true, force: true });
@@ -371,6 +509,9 @@ async function main() {
     baseUrl: modulo.baseUrl,
     preparar: modulo.preparar,
     cenas: modulo.cenas,
+    // Opcional: `export const desfocarMarca = false` desliga o desfoque
+    // automático de marca (ligado por padrão em todo roteiro).
+    desfocarMarca: modulo.desfocarMarca,
   };
   if (
     !roteiro.id ||
