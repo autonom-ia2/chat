@@ -5,14 +5,18 @@
 
 ## Onde estamos
 
-22/09/2026:
-- **#598** (mapa de 157 artigos, kit, campo `requer`) e **#600** (capítulo 02, exemplo-ouro
-  aprovado pelo Rodrigo) estão no main.
-- **#599** no ar: a Central é só leitura para todas as contas (conferido em produção).
-- **#602** no ar: sem verificação em duas etapas onde a entrada é pelo login único; runbook
-  das chaves em `docs/production-env-secrets.md`. **#603** no ar: seletor acessível no perfil.
-- **Ensaio do exército feito no capítulo 05** (7 artigos), neste PR. Mapa corrigido: 5 botões
-  apontavam para `settings_home` (fora do escopo). Roteiro de prints: `pnpm central:prints`.
+23/09/2026:
+- **Exército concluído.** 149 dos 157 artigos escritos em `lib/central_de_ajuda/`, no PR **#607**
+  (um commit por lote). Cada capítulo passou por escritor Sonnet 5, três revisores (fatos,
+  didática, coerência), rodada de correção e revisão final do editor (checagem por script de
+  estrutura, provas `arquivo:linha`, cabeçalho x mapa, links e tamanho; leitura dos densos).
+- **Faltam:** 01.07 "Como usar a Central de Ajuda" (depois da tela de leitura, #501) e o
+  capítulo 18, escrito com o Rodrigo.
+- **CONFIRMAR NA TELA** (resolver com os prints): 06.02, 08.09, 10.05, 10.08, 13.05, 15.01,
+  15.02 (textos de tela); 10.07 (depende do capítulo 18); 10.12 (a ajuda do Dataset ID promete
+  derivar da conexão do WhatsApp e o código não faz).
+- Roteiro de prints: `pnpm central:prints` (5 prints pedidos hoje).
+- No ar: #599 (Central só leitura), #602 (sem 2FA com login único), #603 (seletor acessível).
 
 ## Decisões do Rodrigo (não reabrir)
 
@@ -45,25 +49,17 @@
 
 ## Próximos passos, em ordem
 
-1. **Rodrigo lê o capítulo 05** (ensaio) e diz se o exército pode sair.
-2. **Exército**, um capítulo por escritor Sonnet 5, em lotes de 3 a 4 capítulos por vez
-   (custo e revisão sob controle). Processo validado no ensaio:
-   1. escritor lê kit + capítulo 02 + mapa + estudo + `porques.md` e escreve;
-   2. três revisores em paralelo: **fatos** (um por artigo, confere cada frase no código),
-      **didática** (kit + ouro), **coerência** (mapa, links, outros capítulos);
-   3. o mesmo escritor aplica as três revisões numa rodada;
-   4. o editor (sessão principal) confere por script e lê os artigos mais densos.
-   O revisor de fatos tem de gravar o relatório em arquivo (no ensaio ele não gravou).
-3. **Capítulo 18 (conceitos)** é escrito com o Rodrigo, não pelo exército.
-4. **Prints:** captura por script na conta de teste local (precisa do painel local no ar),
-   a partir de `docs/central-de-ajuda/prints/roteiro.json`.
-5. **#501 (código):** tela de leitura no painel; "Central de Ajuda" na barra lateral leva a
-   ela; esconder artigo cujo `requer` a conta não tem; link "Docs" do menu do perfil;
-   bloqueios (nenhuma caixa ligada ao portal da Plataforma, Copilot ignorando esse portal).
-6. **#502 (código):** publicação automática do repositório para os portais das duas stacks.
+1. **Rodrigo lê e aprova o #607** (merge não dispara deploy: só `lib/central_de_ajuda/` e docs).
+2. **Capítulo 18 (conceitos)** com o Rodrigo.
+3. **#501 (código):** tela de leitura no painel; "Central de Ajuda" na barra lateral leva a ela;
+   esconder artigo cujo `requer` a conta não tem; link "Docs" do menu do perfil; bloqueios
+   (nenhuma caixa ligada ao portal da Plataforma, Copilot ignorando esse portal). Depois, o 01.07.
+4. **#502 (código):** publicação automática do repositório para os portais das duas stacks.
    Slug com prefixo fixo: o slug de artigo é único no banco inteiro.
-7. **Issue nova:** o Guia lendo a Central (`ler_da_central` + botão "Ler o artigo completo").
-8. **Ligar** nas duas stacks, com o OK do Rodrigo, e conferir numa conta de cada stack.
+5. **Prints:** captura por script na conta de teste local, a partir do roteiro; resolver os
+   CONFIRMAR NA TELA na mesma passada.
+6. **Issue nova:** o Guia lendo a Central (`ler_da_central` + botão "Ler o artigo completo").
+7. **Ligar** nas duas stacks, com o OK do Rodrigo, e conferir numa conta de cada stack.
 
 ## Ambiente de teste real local (para prints e para testar o Guia)
 

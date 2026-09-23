@@ -41,7 +41,7 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 
 ## 03 — Configurações da conta (4 artigos)
 
-- **03.01** — Ajustar os dados gerais da conta. Ajustar nome da conta, idioma padrão, domínio, resolução automática de conversa e transcrição de áudio.
+- **03.01** — Ajustar os dados gerais da conta. Ajustar nome da conta, idioma padrão, domínio e transcrição de áudio. A resolução automática de conversa fica em outra tela (08.09).
 - **03.02** — Segurança da conta: SAML SSO. Explicar por que a tela Segurança existe e como ela não se confunde com o login único da plataforma.
 - **03.03** — Auditoria: quem convidou quem e quem mudou o quê. Usar a Auditoria para rastrear convites e mudanças de papel na conta.
 - **03.04** — Trazer contatos de outra ferramenta e acompanhar a importação. Subir uma base de outra ferramenta e acompanhar o que entrou e o que ficou de fora.

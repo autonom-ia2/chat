@@ -600,7 +600,7 @@
     {
      "id": "03.01",
      "titulo": "Ajustar os dados gerais da conta",
-     "para_que_serve": "Ajustar nome da conta, idioma padrão, domínio, resolução automática de conversa e transcrição de áudio.",
+     "para_que_serve": "Ajustar nome da conta, idioma padrão, domínio e transcrição de áudio. A resolução automática de conversa fica em outra tela (08.09).",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [],
