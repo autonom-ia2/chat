@@ -15,9 +15,8 @@ voltar.
   15.02 (textos de tela); 10.12 (a ajuda do Dataset ID promete derivar da conexão do WhatsApp e
   o código não faz). O 10.07 foi resolvido pelo capítulo 18: o texto por etapa que a IA lê é o
   **critério**, e a etapa não tem outra descrição na tela.
-- **CONFIRMAR COM O RODRIGO** (fatos da Meta ou orientação dele, fora do código): 18.02 (limite
-  de 20 contatos por disparo no WhatsApp API; o limite de mensagens comerciais sobe com o uso),
-  18.03 ("sem taxa em cima", "o funil custa pouco por mês").
+- Falas do Rodrigo no 18.02 e no 18.03 (limite de 20 contatos por disparo no WhatsApp API;
+  "sem taxa em cima"; "o funil custa pouco por mês") confirmadas por ele em 23/09.
 - **Lacunas achadas no capítulo 11** (recurso sem artigo próprio): **Público-alvo** e **Horário
   de atuação** do agente de IA (aba **Ajustar**) e a opção **Resposta errada** no menu de uma
   mensagem do agente. O capítulo 18 cita os dois; falta o passo a passo no 11. O 11.07
