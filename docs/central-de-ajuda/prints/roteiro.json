@@ -1,5 +1,25 @@
 [
   {
+    "id": "00.01-a",
+    "rota": "first_steps",
+    "estado": "conta com alguns passos feitos e outros pendentes; primeiro passo pendente em foco",
+    "destaque": "card do passo em foco, com os botões Fazer agora e Estou travado",
+    "recorte": "a lista de passos, sem o cabeçalho de progresso",
+    "legenda": "Tela Primeiros passos com a lista dos 9 passos e o passo em destaque no topo",
+    "artigo": "lib/central_de_ajuda/00/00.01-seu-primeiro-acesso-e-a-tela-primeiros-passos.md",
+    "arquivo": "prints/00.01-a.png"
+  },
+  {
+    "id": "00.02-a",
+    "rota": "first_steps",
+    "estado": "conta nova, passo \"Seu perfil e seus avisos\" pendente e em foco",
+    "destaque": "card do passo, com o botão Fazer agora",
+    "recorte": "o card do passo, sem o restante da lista",
+    "legenda": "Passo \"Seu perfil e seus avisos\" em destaque na tela Primeiros passos",
+    "artigo": "lib/central_de_ajuda/00/00.02-passo-1-seu-perfil-e-seus-avisos.md",
+    "arquivo": "prints/00.02-a.png"
+  },
+  {
     "id": "02.01-a",
     "rota": "qualquer tela do painel (ex.: dashboard)",
     "estado": "menu da foto aberto; status Online",
@@ -18,5 +38,15 @@
     "legenda": "Rodapé da caixa de resposta com o ícone de assinatura e a dica Ativar assinatura",
     "artigo": "lib/central_de_ajuda/02/02.04-sua-assinatura-de-mensagens.md",
     "arquivo": "prints/02.04-a.png"
+  },
+  {
+    "id": "08.05-a",
+    "rota": "home (abrir qualquer conversa)",
+    "estado": "cabeçalho da conversa visível, conta com mais de uma caixa de entrada",
+    "destaque": "número da conversa (#) clicável e nome do canal ao lado",
+    "recorte": "só a área do cabeçalho",
+    "legenda": "Cabeçalho da conversa com o número clicável e o nome do canal ao lado",
+    "artigo": "lib/central_de_ajuda/08/08.05-cabecalho-resposta-e-assinatura-na-conversa.md",
+    "arquivo": "prints/08.05-a.png"
   }
 ]
