@@ -8,5 +8,7 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob do
     expect(described_class.queue_name).to eq('medium')
     expect(Autonomia::Agents::Operate::ChunkedDeliveryJob.queue_name).to eq('medium')
     expect(Autonomia::Agents::Tools::AsyncRunJob.queue_name).to eq('medium')
+    # A entrada da mensagem do cliente também: na low ela esperava tudo isso.
+    expect(Webhooks::WhatsappEventsJob.queue_name).to eq('medium')
   end
 end

@@ -1,5 +1,7 @@
 class Webhooks::WhatsappEventsJob < MutexApplicationJob
-  queue_as :low
+  # MEDIUM (Autonom.ia, 23/09/2026): e a entrada da mensagem do cliente. Na `low`, de prioridade estrita, ela
+  # esperava as consultas de cotacao e as respostas do agente, que agora estao na `medium`.
+  queue_as :medium
 
   # Generous on purpose: a history chunk can carry many threads/messages, and this lock must
   # cover the whole import so a concurrent redelivery of the same chunk (Meta retries on
