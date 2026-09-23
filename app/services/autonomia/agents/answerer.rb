@@ -195,8 +195,9 @@ module Autonomia
       def sinais_da_fala(parsed)
         return [] if @conferencia_da_fala.nil? || parsed.nil?
 
-        @conferencia_da_fala.sinais(parsed['reply'], ferramentas_no_turno: @ferramentas_no_turno.to_i,
-                                                     escalou: parsed['should_handoff'] == true)
+        # O que a fala diz, a própria Lia declara na resposta (`leitura_da_fala`); a conferência cruza com o estado.
+        @conferencia_da_fala.sinais(parsed['leitura_da_fala'], ferramentas_no_turno: @ferramentas_no_turno.to_i,
+                                             escalou: parsed['should_handoff'] == true)
       end
 
       def registrar_fala(motivo, sinais)
@@ -209,7 +210,7 @@ module Autonomia
         input = @prompt.input + [PromptParts::Mensagem.montar('assistant', reply), PromptParts::Mensagem.montar('user', pedido)]
         raw = @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL, instructions: @prompt.instructions, input: input,
-          schema: PromptBuilder::ANSWER_SCHEMA, reasoning_effort: Config::ANSWERER_REASONING_EFFORT, tools: answer_tools
+          schema: schema_da_resposta, reasoning_effort: Config::ANSWERER_REASONING_EFFORT, tools: answer_tools
         ) { |calls| execute_tool_calls(calls) }
         JSON.parse(raw[:text])
       end
@@ -249,7 +250,7 @@ module Autonomia
           model: Config::ANSWERER_MODEL,
           instructions: @prompt.instructions,
           input: @prompt.input,
-          schema: PromptBuilder::ANSWER_SCHEMA,
+          schema: schema_da_resposta,
           reasoning_effort: Config::ANSWERER_REASONING_EFFORT,
           tools: answer_tools,
           max_rodadas: @max_rodadas,
@@ -259,6 +260,11 @@ module Autonomia
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError
         nil # NÃO logar e.message (pode ecoar o prompt). error code curto fica no AnswerResult.
+      end
+
+      # O agente de cotação declara, na própria resposta, o que a fala diz (`ConferenciaDaFala::SCHEMA_DA_RESPOSTA`).
+      def schema_da_resposta
+        @conferencia_da_fala ? ConferenciaDaFala::SCHEMA_DA_RESPOSTA : PromptBuilder::ANSWER_SCHEMA
       end
 
       def answer_tools

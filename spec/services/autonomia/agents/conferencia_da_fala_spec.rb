@@ -11,7 +11,7 @@ RSpec.describe Autonomia::Agents::ConferenciaDaFala do
     Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'custom',
                                      status: :active, enabled: true, instruction: 'Atenda.')
   end
-  let(:fala) { 'A cotação do carro continua correndo, já te aviso.' }
+  let(:fala) { { 'diz_que_cotacao_ainda_corre' => true } }
 
   def cotacao(faixa, criada:)
     Autonomia::Agents::ToolRun.create!(account: account, agent: agent, slug: 'cotar_seguro', status: 'running', faixa: faixa,
@@ -40,5 +40,32 @@ RSpec.describe Autonomia::Agents::ConferenciaDaFala do
     cotacao('residencial', criada: 1.hour.ago)
 
     expect(sinais { |run| fecha(run) }).not_to include(:cotacao_fechada)
+  end
+
+  it 'a fala que não fala da cotação não dispara o sinal, mesmo com a cotação fechada no turno' do
+    cotacao('auto', criada: 1.hour.ago)
+    no_inicio = described_class.cotacao_correndo(conversa.id)
+    fecha(no_inicio)
+
+    sinais = described_class.new(conversa: conversa.id, cotacao_no_inicio: no_inicio).sinais({}, ferramentas_no_turno: 0)
+
+    expect(sinais).to be_empty
+  end
+
+  it '"a cotação ainda corre" sem cotação nenhuma é promessa sem cotação' do
+    sinais = described_class.new(conversa: conversa.id, cotacao_no_inicio: nil).sinais(fala, ferramentas_no_turno: 0)
+
+    expect(sinais).to eq([:cotacao_prometida])
+  end
+
+  # Revisão de 23/09/2026: "te mando o comparativo assim que sair" com a cotação correndo não é promessa vazia.
+  it 'promessa sobre a cotação que corre não pede reescrita; sem cotação, pede' do
+    leitura = { 'promete_verificar_depois' => true, 'promete_cotacao_ou_comparativo' => true }
+    conferencia = described_class.new(conversa: conversa.id, cotacao_no_inicio: nil)
+
+    expect(conferencia.sinais(leitura, ferramentas_no_turno: 0)).to eq([:promessa, :cotacao_prometida])
+    cotacao('auto', criada: 1.minute.ago)
+    expect(conferencia.sinais(leitura, ferramentas_no_turno: 0)).to be_empty
+    expect(conferencia.sinais({ 'promete_verificar_depois' => true }, ferramentas_no_turno: 0)).to eq([:promessa])
   end
 end

@@ -24,6 +24,8 @@ RSpec.describe Autonomia::Agents::Answerer do
     Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 78)
   end
   let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
+  # O que a Lia declara sobre cada fala (texto -> perguntas com sim). Cada bloco declara o seu; o resto é "não".
+  let(:leituras) { {} }
   let(:chamada_da_cg) do
     { 'name' => 'consultar_condicoes_gerais', 'call_id' => 'cg1',
       'arguments' => { 'seguradora' => 'Zurich', 'pergunta' => 'Cobre enchente?', 'ramo' => 'Automóvel' }.to_json }
@@ -44,12 +46,16 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   def resposta_do_passo(passo)
-    fala(passo[:texto], escala: passo[:escala] == true)
+    resposta = JSON.parse(fala(passo[:texto], escala: passo[:escala] == true))
+    (passo[:sem_leitura] ? resposta.except('leitura_da_fala') : resposta).to_json
   end
 
+  # A resposta leva a declaração da Lia sobre a própria fala (`leitura_da_fala`): o que `leituras` diz daquele texto.
   def fala(texto, escala: false)
+    lidas = leituras.fetch(texto, [])
     { reply: texto, confidence: 0.9, should_handoff: escala, handoff_reason: (escala ? 'cliente pediu' : nil),
-      used_snippet_ids: [], answered_from_knowledge: false }.to_json
+      used_snippet_ids: [], answered_from_knowledge: false,
+      leitura_da_fala: Autonomia::Agents::ConferenciaDaFala::PERGUNTAS.keys.index_with { |chave| lidas.include?(chave) } }.to_json
   end
 
   # Cada chamada ao modelo leva a próxima entrada da fila: { texto:, chamada: (opcional), antes: (opcional) }.
@@ -103,6 +109,11 @@ RSpec.describe Autonomia::Agents::Answerer do
 
   describe 'promessa de consultar depois (#510)' do
     let(:promessa) { 'Vou confirmar nas condições da Zurich se a proposta cobre enchente.' }
+    let(:leituras) do
+      { promessa => %w[promete_verificar_depois],
+        'Consultei e vou confirmar com você o resto depois.' => %w[promete_verificar_depois],
+        'Deixa eu verificar e já te retorno.' => %w[promete_verificar_depois] }
+    end
 
     it 'sem ferramenta no turno, pede UMA reescrita, com ferramentas, e a reescrita pode consultar' do
       # Arrange
@@ -156,6 +167,7 @@ RSpec.describe Autonomia::Agents::Answerer do
 
   describe 'cotação que fecha durante o turno (#511)' do
     let(:ainda_correndo) { 'A cotação continua correndo, e o comparativo chega por aqui quando terminar.' }
+    let(:leituras) { { ainda_correndo => %w[diz_que_cotacao_ainda_corre promete_cotacao_ou_comparativo] } }
 
     it 'fechada durante o turno e fala "ainda correndo": pede reescrita dizendo que o comparativo já foi entregue' do
       run = cotacao_correndo
@@ -198,6 +210,10 @@ RSpec.describe Autonomia::Agents::Answerer do
   # cobrada, repetiu a promessa. O estado que desmente a fala aqui é a AUSÊNCIA de cotação.
   describe 'promessa de comparativo sem cotação (#547)' do
     let(:promessa) { 'Vou seguir com esses dados. O comparativo das seguradoras chega por aqui quando ficar pronto.' }
+    let(:leituras) do
+      { promessa => %w[promete_cotacao_ou_comparativo],
+        'Já mandei cotar, o comparativo chega por aqui.' => %w[promete_cotacao_ou_comparativo] }
+    end
 
     it 'sem cotação nenhuma, pede UMA reescrita, com ferramentas, dizendo para acionar a cotação agora' do
       # Arrange
@@ -259,6 +275,13 @@ RSpec.describe Autonomia::Agents::Answerer do
   # conversa 6983. Decisão do CEO em 20/09/2026: quem fala com o cliente é a Lia, e ele nunca ouve falar de
   # especialista. A régua é o que o CLIENTE lê, e é por isso que "o sistema da seguradora" continua passando.
   describe 'vocabulário interno na fala (#547)' do
+    let(:leituras) do
+      { 'Vou passar para o especialista de seguro auto seguir com os dados.' => %w[mostra_engrenagem],
+        'O fluxo de cotação não devolveu essa seguradora.' => %w[mostra_engrenagem],
+        'Vou passar para o especialista de seguro auto.' => %w[mostra_engrenagem],
+        'Deixei registrado no nosso sistema.' => %w[mostra_engrenagem] }
+    end
+
     it 'fala citando o especialista pede reescrita' do
       chamadas = stub_do_modelo({ texto: 'Vou passar para o especialista de seguro auto seguir com os dados.' },
                                 { texto: 'Alguém da equipe assume daqui, com o que você já mandou.' })
@@ -278,21 +301,22 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(chamadas.size).to eq(2)
     end
 
-    # "ferramenta" e "agente" saíram da lista: são palavras do mundo do cliente numa conversa de auto.
-    it 'fala de coleta com "ferramenta de trabalho" e "agente autorizado" sai como está' do
-      legitima = 'O carro é usado como ferramenta de trabalho? E você é agente autorizado de alguma frota?'
-      chamadas = stub_do_modelo({ texto: legitima })
+    it '"no nosso sistema" dispara' do
+      chamadas = stub_do_modelo({ texto: 'Deixei registrado no nosso sistema.' },
+                                { texto: 'Anotei aqui com você.' })
 
-      expect(responder.reply).to eq(legitima)
-      expect(chamadas.size).to eq(1)
+      expect(responder.reply).to eq('Anotei aqui com você.')
+      expect(chamadas.size).to eq(2)
     end
 
-    it '"sistema de rastreamento" e "sistema de alarme" saem como estão' do
-      legitima = 'O carro tem sistema de rastreamento ou sistema de alarme instalado?'
-      chamadas = stub_do_modelo({ texto: legitima })
+    # O QUE É DO MUNDO DO CLIENTE NÃO É ENGRENAGEM: "ferramenta de trabalho", "agente autorizado", "sistema de
+    # alarme", o sistema da seguradora, o modelo do carro, a Lia se apresentar como assistente virtual. Quem distingue
+    # é a Lia, ao declarar; a pergunta que ela responde carrega essas exceções.
+    it 'a pergunta que a Lia responde carrega as exceções do mundo do cliente' do
+      pergunta = Autonomia::Agents::ConferenciaDaFala::PERGUNTAS['mostra_engrenagem']
 
-      expect(responder.reply).to eq(legitima)
-      expect(chamadas.size).to eq(1)
+      expect(pergunta).to include('sistema da seguradora', 'sistema de alarme', 'ferramenta de trabalho',
+                                  'agente autorizado', 'modelo do carro', 'assistente virtual')
     end
 
     # O ACHADO DA REVISÃO: o pedido de reescrita leva só o texto, e o modelo devolve o schema inteiro. Sem
@@ -306,29 +330,27 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(resultado.handoff[:should]).to be(true)
       expect(chamadas.size).to eq(2)
     end
+  end
 
-    it '"o sistema da seguradora" não dispara: é coisa dela, não engrenagem nossa' do
-      legitima = 'O sistema da seguradora ainda não devolveu o número da proposta.'
-      chamadas = stub_do_modelo({ texto: legitima })
+  # A DECLARAÇÃO VAI NA MESMA RESPOSTA: o agente de cotação responde com o schema que tem `leitura_da_fala`, na
+  # primeira resposta e na reescrita. Sem chamada a mais ao modelo.
+  it 'o agente de cotação responde com a declaração sobre a fala, sem chamada a mais' do
+    chamadas = stub_do_modelo({ texto: 'Me manda o CEP onde o carro dorme?' })
 
-      expect(responder.reply).to eq(legitima)
-      expect(chamadas.size).to eq(1)
-    end
+    responder
 
-    it '"no nosso sistema" dispara' do
-      chamadas = stub_do_modelo({ texto: 'Deixei registrado no nosso sistema.' },
-                                { texto: 'Anotei aqui com você.' })
+    expect(chamadas.map { |c| c[:schema] }).to eq([Autonomia::Agents::ConferenciaDaFala::SCHEMA_DA_RESPOSTA])
+    esquema = Autonomia::Agents::ConferenciaDaFala::SCHEMA_DA_RESPOSTA[:schema]
+    expect(esquema[:required]).to include('leitura_da_fala')
+    expect(esquema[:properties][:leitura_da_fala][:required]).to eq(Autonomia::Agents::ConferenciaDaFala::PERGUNTAS.keys)
+    expect(Autonomia::Agents::PromptBuilder::ANSWER_SCHEMA[:schema][:properties]).not_to have_key(:leitura_da_fala)
+  end
 
-      expect(responder.reply).to eq('Anotei aqui com você.')
-      expect(chamadas.size).to eq(2)
-    end
+  # SEM DECLARAÇÃO NÃO HÁ SINAL: o conferente não é portão, e a fala sai como veio.
+  it 'resposta sem a declaração sai como veio' do
+    chamadas = stub_do_modelo({ texto: 'Vou passar para o especialista.', sem_leitura: true })
 
-    it '"modelo do veículo" não dispara: o falso positivo seria diário' do
-      legitima = 'Me confirma o modelo do veículo, por favor?'
-      chamadas = stub_do_modelo({ texto: legitima })
-
-      expect(responder.reply).to eq(legitima)
-      expect(chamadas.size).to eq(1)
-    end
+    expect(responder.reply).to eq('Vou passar para o especialista.')
+    expect(chamadas.size).to eq(1)
   end
 end
