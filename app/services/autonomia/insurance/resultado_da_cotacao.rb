@@ -37,13 +37,16 @@ class Autonomia::Insurance::ResultadoDaCotacao
     execucoes(conversation_id, faixa: faixa).where.not(status: FORA).order(created_at: :desc, id: :desc).first
   end
 
-  # -> as execuções mais novas que chegaram ao portal (`#cotou?`), UMA POR BEM do `ramo` (chat#612), da mais nova à mais
-  # antiga, no máximo `limite`. São as BASES de recotação que o especialista do ramo lê (`Specialists::Materia`). Sem
-  # ramo (especialista que a Autonom.ia não mantém), todos os bens.
+  # -> as execuções mais novas que chegaram ao portal (`#cotou?`) ou ainda estão abertas (aceitas ou correndo), UMA POR
+  # BEM do `ramo` (chat#612), da mais nova à mais antiga, no máximo `limite`. A aberta entra porque o cliente corrige
+  # um dado enquanto ela corre, e o especialista precisa ver o nome que deu ao bem (revisão da chat#615). São as BASES
+  # de recotação que o especialista do ramo lê (`Specialists::Materia`). Sem ramo (especialista que a Autonom.ia não
+  # mantém), todos os bens.
   def self.ultimas_cotadas(conversation_id, ramo:, limite: 5)
     return [] if conversation_id.blank?
 
-    execucoes(conversation_id).where("COALESCE(handle ->> 'quote_id', '') <> ''").order(created_at: :desc, id: :desc)
+    execucoes(conversation_id).where("status IN ('pending', 'running') OR COALESCE(handle ->> 'quote_id', '') <> ''")
+                              .order(created_at: :desc, id: :desc)
                               .select { |run| ramo.blank? || ::Autonomia::Insurance::Faixa.do_ramo?(run.faixa, ramo) }
                               .uniq(&:faixa).first(limite)
   end
@@ -63,11 +66,15 @@ class Autonomia::Insurance::ResultadoDaCotacao
                               .map { |run| new(run) }.find(&:correndo?)
   end
 
-  # -> os produtos (faixas) com cotação na conversa, fora de `FORA`, do mais novo ao mais antigo.
+  # -> as faixas (produto e bem) com cotação na conversa, fora de `FORA`, do mais novo ao mais antigo. Só as que chegaram
+  # ao portal ou ainda correm (revisão da chat#615): a recusada antes do portal não é cotação a ler, e na lista faria o
+  # modelo escolher um bem sem preço nenhum.
   def self.produtos(conversation_id)
     return [] if conversation_id.blank?
 
-    execucoes(conversation_id).where.not(status: FORA).order(created_at: :desc, id: :desc)
+    execucoes(conversation_id).where.not(status: FORA)
+                              .where("status = 'running' OR COALESCE(handle ->> 'quote_id', '') <> ''")
+                              .order(created_at: :desc, id: :desc)
                               .pluck(:faixa).compact_blank.uniq
   end
 
@@ -93,13 +100,22 @@ class Autonomia::Insurance::ResultadoDaCotacao
   end
 
   # `sem_bem`: a faixa a ler quando o ramo não tem bem nenhum na lista (a leitura então diz que não há cotação).
+  #
+  # O RAMO SOZINHO NUNCA CASA EXATO (revisão da chat#615): "auto" é também a faixa das cotações de antes dos nomes, e
+  # casá-la exato leria a cotação velha ao lado da nova do mesmo carro. A velha só é candidata quando o ramo não tem
+  # nenhuma com nome.
   def self.escolher(lista, pedido, sem_bem: nil)
-    return Escolha.new(pedido, nil) if lista.include?(pedido)
+    return Escolha.new(pedido, nil) if ::Autonomia::Insurance::Faixa.com_bem?(pedido) && lista.include?(pedido)
 
-    do_ramo = lista.select { |faixa| ::Autonomia::Insurance::Faixa.do_ramo?(faixa, pedido) }
+    do_ramo = candidatas_do_ramo(lista, pedido)
     return Escolha.new(do_ramo.first, nil) if do_ramo.one?
 
     sem_um_bem(do_ramo.presence || (sem_bem ? [] : lista), sem_bem || pedido)
+  end
+
+  def self.candidatas_do_ramo(lista, ramo)
+    todas = lista.select { |faixa| ::Autonomia::Insurance::Faixa.do_ramo?(faixa, ramo) }
+    todas.select { |faixa| ::Autonomia::Insurance::Faixa.com_bem?(faixa) }.presence || todas
   end
 
   # Mais de um candidato: pergunta qual. Nenhum: lê `faixa` (o ramo sem bem, e a leitura diz que não há cotação).
@@ -111,7 +127,7 @@ class Autonomia::Insurance::ResultadoDaCotacao
     "Esta conversa tem cotação de: #{lista.join('; ')}. Chame de novo com produto igual a um desses; se não ficou " \
       'claro de qual o cliente fala, pergunte a ele.'
   end
-  private_class_method :escolher, :sem_um_bem, :pergunta
+  private_class_method :escolher, :candidatas_do_ramo, :sem_um_bem, :pergunta
 
   # -> as palavras que distinguem um texto: sem acento, em minúsculas, sem repetir e sem `PALAVRAS_VAZIAS`.
   def self.palavras(texto)

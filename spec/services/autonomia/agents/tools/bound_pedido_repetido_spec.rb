@@ -56,7 +56,8 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
   end
 
   def pedir(args, turno:)
-    bound.execute({ 'name' => 'cotar_seguro', 'call_id' => "c#{turno}", 'arguments' => args.to_json }, delivery: mensagem(turno))
+    argumentos = { 'item' => 'Bem de teste' }.merge(args)
+    bound.execute({ 'name' => 'cotar_seguro', 'call_id' => "c#{turno}", 'arguments' => argumentos.to_json }, delivery: mensagem(turno))
   end
 
   # A consulta que já existe: aberta numa mensagem anterior e promovida (o Responder faz isso no fim
@@ -116,7 +117,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
       expect(saida).to eq(cotacao.accepted_message)
       expect(carro.reload.status).to eq('running')
-      expect(runs.active.pluck(:faixa)).to contain_exactly('auto', 'bike')
+      expect(runs.active.pluck(:faixa)).to contain_exactly('auto:bem de teste', 'bike:bem de teste')
     end
 
     it 'o pedido repetido compara com a última do MESMO produto, não com a mais nova da conversa' do
@@ -126,7 +127,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       saida = pedir(auto, turno: 3)
 
       expect(saida).to include('já está em andamento nesta conversa')
-      expect(runs.where(faixa: 'auto').count).to eq(1)
+      expect(runs.where(faixa: 'auto:bem de teste').count).to eq(1)
     end
 
     it 'o mesmo turno abre os dois produtos; o retry do turno continua recusado dentro de cada um' do
@@ -138,7 +139,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
       expect(bike).to eq(cotacao.accepted_message)
       expect(de_novo).to include('execucao_ja_aberta_neste_turno')
-      expect(runs.pluck(:faixa)).to contain_exactly('auto', 'bike')
+      expect(runs.pluck(:faixa)).to contain_exactly('auto:bem de teste', 'bike:bem de teste')
     end
   end
 
@@ -154,6 +155,30 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
       expect(segundo).to eq(cotacao.accepted_message)
       expect(runs.active.pluck(:faixa)).to contain_exactly('auto:nivus abc1d23', 'auto:onix xyz9a87')
+    end
+
+    # Revisão da chat#615: o nome é do modelo e pode mudar; os mesmos dados são o mesmo pedido.
+    it 'os mesmos dados com outro nome, noutra mensagem, não abrem outra cotação' do
+      consulta_existente(auto.merge('item' => 'Nivus ABC1D23'))
+
+      saida = pedir(auto.merge('item' => 'VW Nivus'), turno: 2)
+
+      expect(saida).to include('já está em andamento nesta conversa')
+      expect(runs.count).to eq(1)
+    end
+
+    # Voltar aos dados de uma cotação que já não é a última do bem abre outra: a leitura mostraria a do meio.
+    it 'voltar aos dados de antes do mesmo bem abre cotação nova, porque a última do bem é outra' do
+      nivus = auto.merge('item' => 'Nivus')
+      consulta_existente(nivus, entregues: 1, desfecho: 'done')
+      pedir(nivus.merge('numero' => '10'), turno: 2)
+      runs.order(:id).last.tap do |run|
+        run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+        run.record_delivery!
+        run.finish!('done')
+      end
+
+      expect(pedir(nivus, turno: 3)).to eq(cotacao.accepted_message)
     end
 
     it 'recotar um bem pelo mesmo nome troca só aquele bem' do
@@ -293,7 +318,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
   # que escreve; a exclusão entre sessões é do banco.
   describe 'comparacao, abertura e promocao na mesma secao critica' do
     let(:escritas) { /pg_advisory_xact_lock|INSERT INTO "autonomia_agent_tool_runs"|UPDATE "autonomia_agent_tool_runs"/ }
-    let(:chave) { Autonomia::Agents::ToolRun.chave_do_lock(conversation.id, 'cotar_seguro', 'auto').to_s }
+    let(:chave) { Autonomia::Agents::ToolRun.chave_do_lock(conversation.id, 'cotar_seguro', 'auto:bem de teste').to_s }
 
     def comandos_de
       comandos = []

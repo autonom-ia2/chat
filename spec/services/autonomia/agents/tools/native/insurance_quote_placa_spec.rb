@@ -29,11 +29,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   # Sem `delivery` é a instância do JOB (`AsyncRunJob#advance`); com `delivery` é a do TURNO
   # (`Bound#accept_async`). É por isso que a ferramenta sabe onde está.
   def tool(params)
-    described_class.new(agent: agent, params: params)
+    described_class.new(agent: agent, params: { 'item' => 'Carro' }.merge(params))
   end
 
   def tool_no_turno(params)
-    described_class.new(agent: agent, params: params, delivery: instance_double(Autonomia::Agents::Tools::Delivery))
+    described_class.new(agent: agent, params: { 'item' => 'Carro' }.merge(params), delivery: instance_double(Autonomia::Agents::Tools::Delivery))
   end
 
   def conector_real

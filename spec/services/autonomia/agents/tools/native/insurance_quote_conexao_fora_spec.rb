@@ -12,7 +12,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'custom', status: :active,
                                      enabled: true, instruction: 'Atenda.')
   end
-  let(:params) { { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }, 'cpf' => '04297912678', 'cep' => '31110-210' } }
+  let(:params) { { 'produto' => 'auto', 'item' => 'Carro', 'vehicle' => { 'plate' => 'ABC1D23' }, 'cpf' => '04297912678', 'cep' => '31110-210' } }
 
   around { |example| with_modified_env(INSURANCE_QUOTING_ENABLED: 'true') { example.run } }
 

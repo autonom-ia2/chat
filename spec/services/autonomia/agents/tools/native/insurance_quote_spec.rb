@@ -27,7 +27,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   def tool(params)
-    described_class.new(agent: agent, params: params)
+    described_class.new(agent: agent, params: { 'item' => 'Bem de teste' }.merge(params))
   end
 
   # Os fatos que o modelo lê no evento da recusa (PR C), a partir do handle que o `start` devolveu.

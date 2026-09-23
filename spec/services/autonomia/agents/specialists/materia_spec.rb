@@ -126,6 +126,16 @@ RSpec.describe Autonomia::Agents::Specialists::Materia do
       expect(da_casa).to include('Casa')
     end
 
+    # Revisão da chat#615: o cliente corrige um dado com a cotação correndo; o especialista precisa ver o nome do bem.
+    it 'a cotação em andamento entra na base, marcada como em andamento, com o nome do bem' do
+      cotacao({ 'produto' => 'auto', 'item' => 'Nivus', 'cep' => '30140071' }, handle: {}, feita_em: 1.minute.ago, status: 'running',
+                                                                               faixa: 'auto:nivus')
+
+      texto = base(described_class.new(delivery: delivery, faixa: 'auto').mensagens)
+
+      expect(texto).to include('situacao="em andamento"', '"item":"Nivus"')
+    end
+
     it 'sem cotacao que chegou ao portal nesta conversa, nada muda' do
       cotacao({ 'produto' => 'auto', 'nome' => 'Recusada' }, handle: {}, feita_em: 1.hour.ago, status: 'failed')
       cotacao({ 'nome' => 'De outra conversa' }, handle: { 'quote_id' => 'q-9' }, feita_em: 1.hour.ago,

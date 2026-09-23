@@ -32,7 +32,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   def precheck(params)
-    described_class.new(agent: agent, params: params).precheck
+    described_class.new(agent: agent, params: { 'item' => 'Bem de teste' }.merge(params)).precheck
   end
 
   it 'pergunta antes o que a busca pelo documento não achou' do

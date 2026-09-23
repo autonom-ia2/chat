@@ -171,11 +171,21 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # morreu entre o aceite e o despacho precisa reabrir — contá-la travaria a cotação por uma órfã.
   # Isto vale mesmo com dois turnos da conversa vivos ao mesmo tempo (IA em andamento quando chega
   # mensagem nova): o custo é uma linha supersedida, nunca duas cotações. -> a execução, ou nil.
+  #
+  # NO RAMO INTEIRO, NÃO SÓ NA FAIXA (revisão da chat#615). O nome do bem é do modelo, e ele pode escrevê-lo diferente
+  # no retry do turno ou no "e aí?". Os mesmos dados são o mesmo pedido, seja qual for o nome: vale a execução mais nova
+  # do ramo com este pedido, desde que ela ainda seja a última do bem dela (senão a leitura mostraria outra).
   def self.pedido_repetido(conversation_id, slug, pedido, faixa = '')
     return nil if pedido.blank?
 
-    ultima = for_conversation(conversation_id).where(slug: slug, faixa: faixa.to_s).order(created_at: :desc).first
-    ultima if ultima&.conta_como_pedido? && ultima.pedido == pedido
+    ramo = ::Autonomia::Insurance::Faixa.ramo(faixa)
+    mesma = for_conversation(conversation_id).where(slug: slug).where('handle ->> ? = ?', PEDIDO, pedido)
+                                             .order(created_at: :desc, id: :desc)
+                                             .find { |run| ::Autonomia::Insurance::Faixa.ramo(run.faixa) == ramo }
+    return nil unless mesma&.conta_como_pedido?
+
+    ultima_do_bem = for_conversation(conversation_id).where(slug: slug, faixa: mesma.faixa).order(created_at: :desc, id: :desc).first
+    mesma if ultima_do_bem == mesma
   end
 
   def pedido

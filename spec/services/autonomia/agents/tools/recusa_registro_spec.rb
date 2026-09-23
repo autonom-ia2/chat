@@ -169,18 +169,31 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: -> { bound.execute(call) }
       },
       # O caminho real: a segunda inserção perde para o índice único e `open!` resgata `RecordNotUnique`.
-      'bound.rb#accept_async#3' => {
+      'bound.rb#abrir_e_registrar#2' => {
         espera: { motivo: 'execucao_ja_em_andamento' },
         dispara: lambda {
           allow(Autonomia::Agents::ToolRun).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique, 'idx_active')
           bound.execute(call, delivery: delivery)
         }
       },
-      'bound.rb#accept_async#4' => {
+      'bound.rb#accept_async#3' => {
         espera: { motivo: 'tool_execution_error' },
         dispara: lambda {
           allow(Autonomia::Agents::ToolRun).to receive(:open!).and_raise('X-Amz-Signature=abc')
           bound.execute(call, delivery: delivery)
+        }
+      },
+      # O MESMO PEDIDO COM OUTRO NOME NO MESMO TURNO (revisão da chat#615): os dados decidem, não o nome do bem.
+      'bound.rb#abrir_e_registrar#1' => {
+        espera: { motivo: 'execucao_ja_aberta_neste_turno', slug: 'cotar_seguro' },
+        dispara: lambda {
+          ready_connection
+          dados = { 'cpf' => '04297912678', 'vehicle' => { 'plate' => 'ABC1D23' }, 'cep' => '30130000' }
+          ['Nivus', 'VW Nivus'].each_with_index do |nome, i|
+            chamada = { 'name' => 'cotar_seguro', 'call_id' => "n#{i}", 'arguments' => dados.merge('item' => nome).to_json }
+            bound_para(cotacao).execute(chamada, delivery: delivery)
+          end
+          expect(delivery.runs.size).to eq(1)
         }
       },
       # "E aí, saiu?" (entrega 10): o mesmo pedido, noutra mensagem, com a consulta ainda rodando.
@@ -189,7 +202,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           ready_connection
           chamada = { 'name' => 'cotar_seguro', 'call_id' => 'c2',
-                      'arguments' => '{"cpf":"04297912678","vehicle":{"plate":"ABC1D23"},"cep":"30130000"}' }
+                      'arguments' => '{"item":"Carro","cpf":"04297912678","vehicle":{"plate":"ABC1D23"},"cep":"30130000"}' }
           bound_para(cotacao).execute(chamada, delivery: delivery)
           delivery.runs.last.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
           outra = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox,
@@ -304,38 +317,48 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           rodar_job(cotacao, arguments: { 'produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' } })
         }
       },
+      # SEM O NOME DO BEM (chat#612): recusa grátis, e nada é aberto.
       'insurance_quote.rb#recusa_de_entrada#1' => {
-        espera: { motivo: 'json_invalido', slug: 'cotar_seguro', faltando: 'dados' },
+        espera: { motivo: 'sem_item', slug: 'cotar_seguro', faltando: 'item' },
         dispara: lambda {
           ready_connection
-          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'bike', dados: '{marca: Caloi' }.to_json },
-                                      delivery: delivery)
-        }
-      },
-      # Sem conexão pronta (chat#585): recusa na conferência, e nada é aberto.
-      'insurance_quote.rb#recusa_de_entrada#2' => {
-        espera: { motivo: 'conexao_indisponivel', slug: 'cotar_seguro' },
-        dispara: lambda {
           bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'auto', cpf: '04297912678' }.to_json },
                                       delivery: delivery)
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }
       },
-      'insurance_quote.rb#recusa_de_entrada#3' => {
-        espera: { motivo: 'formulario_indisponivel', slug: 'cotar_seguro' },
+      'insurance_quote.rb#recusa_de_entrada#2' => {
+        espera: { motivo: 'json_invalido', slug: 'cotar_seguro', faltando: 'dados' },
         dispara: lambda {
           ready_connection
-          adapter_sem_schema
-          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'auto', cpf: '04297912678' }.to_json },
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { item: 'Bem', produto: 'bike', dados: '{marca: Caloi' }.to_json },
+                                      delivery: delivery)
+        }
+      },
+      # Sem conexão pronta (chat#585): recusa na conferência, e nada é aberto.
+      'insurance_quote.rb#recusa_de_entrada#3' => {
+        espera: { motivo: 'conexao_indisponivel', slug: 'cotar_seguro' },
+        dispara: lambda {
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { item: 'Bem', produto: 'auto', cpf: '04297912678' }.to_json },
                                       delivery: delivery)
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }
       },
       'insurance_quote.rb#recusa_de_entrada#4' => {
+        espera: { motivo: 'formulario_indisponivel', slug: 'cotar_seguro' },
+        dispara: lambda {
+          ready_connection
+          adapter_sem_schema
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { item: 'Bem', produto: 'auto', cpf: '04297912678' }.to_json },
+                                      delivery: delivery)
+          expect(Autonomia::Agents::ToolRun.count).to be_zero
+        }
+      },
+      'insurance_quote.rb#recusa_de_entrada#5' => {
         espera: { motivo: 'sem_veiculo', slug: 'cotar_seguro', faltando: 'vehicle.plate' },
         dispara: lambda {
           ready_connection
-          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'auto', cpf: '04297912678' }.to_json },
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { item: 'Bem', produto: 'auto', cpf: '04297912678' }.to_json },
                                       delivery: delivery)
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }
@@ -345,7 +368,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           ready_connection
           bound_para(cotacao).execute({ 'name' => 'cotar_seguro',
-                                        'arguments' => { produto: 'auto', vehicle: { plate: 'ABC1D23' } }.to_json },
+                                        'arguments' => { item: 'Carro', produto: 'auto', vehicle: { plate: 'ABC1D23' } }.to_json },
                                       delivery: delivery)
         }
       },
@@ -424,7 +447,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'ramo_desconhecido', slug: 'cotar_seguro', faltando: 'produto' },
         dispara: lambda {
           ready_connection
-          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { produto: 'drone', dados: '{}' }.to_json },
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { item: 'Bem', produto: 'drone', dados: '{}' }.to_json },
                                       delivery: delivery)
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }

@@ -440,7 +440,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(fatos('falhou', faixa: 'residencial')).to start_with('Cotação de residencial. ')
       expect(fatos('concluida')).to start_with('Cotação de auto. ')
       com_bem = Autonomia::Agents::ToolRun.new(handle: {}, faixa: 'auto:nivus fvu2f42', arguments: { 'item' => 'Nivus FVU2F42' })
-      expect(described_class.fatos_do_evento('concluida', com_bem)).to start_with('Cotação de auto, Nivus FVU2F42. ')
+      expect(described_class.fatos_do_evento('concluida', com_bem)).to start_with('Cotação de auto, Nivus FVU2F42 (produto: auto:nivus fvu2f42). ')
     end
   end
 end

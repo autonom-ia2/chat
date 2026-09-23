@@ -117,12 +117,7 @@ class Autonomia::Agents::Tools::Bound
     antecipado = precheck_native(ferramenta)
     return recusar_pela_conferencia(antecipado, delivery) if antecipado
 
-    run, repetida = abrir(args, pedido_native(ferramenta), delivery, faixa)
-    return recusar_pela_repeticao(repetida, delivery) if repetida
-    return recusar('execucao_ja_em_andamento', delivery) if run.blank?
-
-    delivery.register(run)
-    @native.accepted_message
+    abrir_e_registrar(args, pedido_native(ferramenta), delivery, faixa)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] async accept failed slug=#{slug} #{e.class}")
     recusar('tool_execution_error', delivery)
@@ -150,6 +145,19 @@ class Autonomia::Agents::Tools::Bound
                                                          conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(delivery)
     )
     conferencia.to_s
+  end
+
+  # O MESMO PEDIDO COM OUTRO NOME NO TURNO recusa; o repetido de outra mensagem também; o que o índice recusou, idem.
+  # Aberta, a execução fica registrada no turno e o modelo lê o aceite.
+  def abrir_e_registrar(args, pedido, delivery, faixa)
+    return recusar('execucao_ja_aberta_neste_turno', delivery) if mesmo_pedido_no_turno?(delivery, faixa, pedido)
+
+    run, repetida = abrir(args, pedido, delivery, faixa)
+    return recusar_pela_repeticao(repetida, delivery) if repetida
+    return recusar('execucao_ja_em_andamento', delivery) if run.blank?
+
+    delivery.register(run)
+    @native.accepted_message
   end
 
   # Compara com a última consulta e abre, na mesma seção crítica (entrega 10): -> [run, repetida].
@@ -213,6 +221,16 @@ class Autonomia::Agents::Tools::Bound
   def turn_already_opened?(delivery, faixa)
     ::Autonomia::Agents::ToolRun.opened_for_turn?(delivery.conversation.id, slug,
                                                   delivery.origin_message_id, faixa)
+  end
+
+  # O MESMO PEDIDO COM OUTRO NOME, NO MESMO TURNO (revisão da chat#615): o modelo chamou duas vezes com os mesmos dados
+  # e nomes diferentes para o bem. Os dados decidem (`pedido`, o digest que o adapter devolveu), nunca o nome. Lê as
+  # execuções que ESTE turno abriu, em memória: a `pending` daqui é deste turno, e não uma órfã de outro processo.
+  def mesmo_pedido_no_turno?(delivery, faixa, pedido)
+    return false if pedido.blank?
+
+    ramo = ::Autonomia::Insurance::Faixa.ramo(faixa)
+    delivery.runs.any? { |run| run.slug == slug && run.pedido == pedido && ::Autonomia::Insurance::Faixa.ramo(run.faixa) == ramo }
   end
 
   def run_http(args, delivery)

@@ -25,15 +25,21 @@ module Autonomia::Insurance::Faixa
     faixa.to_s.split(SEPARADOR, 2).first.to_s
   end
 
+  # -> a faixa tem nome de bem? As de antes da chat#612 têm só o ramo.
+  def com_bem?(faixa)
+    faixa.to_s.include?(SEPARADOR)
+  end
+
   # -> a faixa é do ramo? (a do próprio ramo, sem bem, também é)
   def do_ramo?(faixa, ramo)
     ramo.present? && (faixa.to_s == ramo.to_s || faixa.to_s.start_with?("#{ramo}#{SEPARADOR}"))
   end
 
-  # -> como a cotação aparece ao modelo num aviso: o ramo e, havendo, o nome do bem como o modelo o escreveu ("auto,
-  # Nivus FVU2F42").
+  # -> como a cotação aparece ao modelo (aviso, situação): o ramo e, havendo, o nome do bem como o modelo o escreveu e o
+  # identificador que o parâmetro `produto` das leituras aceita ("auto, Nivus (produto: auto:nivus)").
   def descricao(run)
     item = run.arguments.to_h.stringify_keys['item'].to_s.squish.presence
-    [ramo(run.faixa).presence || 'auto', item].compact.join(', ')
+    ramo = ramo(run.faixa).presence || 'auto'
+    item ? "#{ramo}, #{item} (produto: #{run.faixa})" : ramo
   end
 end

@@ -103,6 +103,21 @@ RSpec.describe Autonomia::Insurance::ResultadoDaCotacao do
       expect(escolha({}, exigir: true).pergunta).to include('Esta conversa tem cotação de:')
     end
 
+    # Revisão da chat#615: a faixa só com o ramo é de antes dos nomes; ao lado de uma com nome, ela não é lida.
+    it 'o ramo pedido não lê a cotação antiga sem nome quando há cotação com nome do ramo' do
+      Autonomia::Agents::ToolRun.where(faixa: 'auto:onix abc1d23').delete_all
+      cotacao(faixa: 'auto', status: 'done', criada: 5.hours.ago)
+
+      expect(escolha({ 'produto' => 'auto' }).faixa).to eq('auto:nivus fvu2f42')
+      expect(escolha({}, especialista).faixa).to eq('auto:nivus fvu2f42')
+    end
+
+    it 'a execução que nunca chegou ao portal nem corre não entra na lista' do
+      cotacao(faixa: 'auto:recusada', status: 'done', criada: 1.minute.ago, handle: {})
+
+      expect(described_class.produtos(conversation.id)).not_to include('auto:recusada')
+    end
+
     it 'as bases de recotação são uma por bem do ramo' do
       cotacao(faixa: 'auto:nivus fvu2f42', status: 'done', criada: 30.minutes.ago)
 

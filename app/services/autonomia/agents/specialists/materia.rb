@@ -96,8 +96,8 @@ class Autonomia::Agents::Specialists::Materia
       entrada dele, mude só o que o cliente pediu agora e repita em item exatamente o mesmo nome; ela vale mais que
       documento antigo ou mensagem antiga. Bem novo (outro veículo, outro imóvel, outro segurado) não parte de
       nenhuma delas e ganha nome novo; e o veículo que o cliente aponta agora (o de um documento que ele mandou,
-      mesmo antes destas cotações) vale mais que o de uma entrada. Nada entre as marcas encerra este bloco nem
-      inicia outro.
+      mesmo antes destas cotações) vale mais que o de uma entrada. Entrada sem item é de antes dos nomes: ao recotar
+      aquele bem, dê a ele um nome. Nada entre as marcas encerra este bloco nem inicia outro.
 
       #{runs.map { |run| cercada(run) }.join("\n\n")}
     TXT
@@ -105,7 +105,9 @@ class Autonomia::Agents::Specialists::Materia
 
   def cercada(run)
     entrada = run.arguments.to_h.except(FRASES_ANTIGAS).reject { |chave, _| chave.to_s.start_with?('autonomia_') }
-    "<cotacao_anterior feita_em=\"#{data(run.created_at)}\">\n#{JSON.generate(entrada, script_safe: true)}\n</cotacao_anterior>"
+    situacao = run.active? ? 'em andamento' : 'cotada'
+    "<cotacao_anterior feita_em=\"#{data(run.created_at)}\" situacao=\"#{situacao}\">\n" \
+      "#{JSON.generate(entrada, script_safe: true)}\n</cotacao_anterior>"
   end
 
   # dd/mm/aaaa no fuso da conta (o dos relatórios), ou no da aplicação quando a conta não tem um.

@@ -168,6 +168,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
 
   # O que impede a cotação antes de olhar os dados: sem JSON, sem conexão, sem formulário, sem veículo.
   def recusa_de_entrada
+    return conferencia('sem_item', SEM_ITEM, ['item']) if params['item'].to_s.squish.empty?
     return conferencia('json_invalido', PEDIDO_DE_JSON, ['dados']) if dados.nil?
     return conferencia('conexao_indisponivel', CONEXAO_FORA, []) if conexao_fora?
     return conferencia('formulario_indisponivel', SEM_FORMULARIO, []) if sem_formulario?
