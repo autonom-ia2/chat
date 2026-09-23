@@ -15,7 +15,9 @@ module Autonomia
       #
       # SEGURANÇA/IP: só o texto destinado ao cliente vai à mensagem; nada de instruction/prompt.
       class ChunkedDeliveryJob < ApplicationJob
-        queue_as :low
+        # MEDIUM, junto do `ReplyJob` (Rodrigo, 23/09/2026): a entrega em pedaços é a mesma resposta ao cliente,
+        # e na `low` ela esperava atrás das consultas de cotação.
+        queue_as :medium
 
         def perform(conversation_id, agent_inbox_id, reply_to_message_id, chunks, index = 0, meta = {})
           conversation = Conversation.find_by(id: conversation_id)
