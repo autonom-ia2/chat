@@ -3195,8 +3195,8 @@
      "fontes": [
       "porques: Montar e-mail com editor, IA e templates"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "o vídeo clica em \"Comecar com IA\", \"Como voce quer comecar?\", que saiu do i18n"
     },
     {
      "id": "13.08",
