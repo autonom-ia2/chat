@@ -21,7 +21,7 @@ defineEmits(['update:modelValue']);
       :aria-label="ariaLabel"
       :invalid="hasError"
       compact
-      class="w-56"
+      class="w-full max-w-56"
       :class="{ 'animate-shake': hasError }"
       @update:model-value="value => $emit('update:modelValue', value)"
     />

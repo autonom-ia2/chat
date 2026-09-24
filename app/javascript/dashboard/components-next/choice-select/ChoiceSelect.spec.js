@@ -138,7 +138,37 @@ describe('ChoiceSelect', () => {
       options: [{ value: 'x', label: 'Xis' }],
       placeholder: 'Escolha',
     });
-    expect(wrapper.get('[role="combobox"]').text()).toBe('Escolha');
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(trigger.text()).toBe('Escolha');
+    expect(trigger.get('span').classes()).toContain('text-n-slate-10');
+  });
+
+  // Dentro de <label>, o clique na lista não pode ser repassado ao botão:
+  // o navegador reabriria a lista logo depois da escolha.
+  it('cancela a ação padrão do clique na lista para não reabrir dentro de label', async () => {
+    const label = document.createElement('label');
+    document.body.appendChild(label);
+    wrapper = mount(ChoiceSelect, {
+      props: { options, modelValue: 'pt_BR', ariaLabel: 'Idioma preferido' },
+      attachTo: label,
+    });
+    await wrapper.get('[role="combobox"]').trigger('click');
+
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    wrapper.findAll('[role="option"]')[2].element.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(wrapper.emitted('change')).toEqual([['es']]);
+
+    const listClick = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
+    wrapper.get('[role="listbox"]').element.dispatchEvent(listClick);
+    expect(listClick.defaultPrevented).toBe(true);
+
+    wrapper.unmount();
+    wrapper = null;
+    label.remove();
   });
 
   it('agrupa as opções com rótulo de grupo acessível', async () => {

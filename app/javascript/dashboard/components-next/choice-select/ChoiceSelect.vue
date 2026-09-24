@@ -235,13 +235,16 @@ onClickOutside(root, () => {
       @keydown="onKeydown"
       @blur="onBlur"
     >
-      <span class="truncate">{{ selectedLabel }}</span>
+      <span class="truncate" :class="{ 'text-n-slate-10': selected < 0 }">
+        {{ selectedLabel }}
+      </span>
       <span
         class="flex-shrink-0 size-4 text-n-slate-11"
         :class="isOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
         aria-hidden="true"
       />
     </button>
+    <!-- click.prevent: dentro de <label>, o navegador repassaria o clique ao botão e reabriria a lista. -->
     <ul
       v-show="isOpen"
       :id="listId"
@@ -251,6 +254,7 @@ onClickOutside(root, () => {
       tabindex="-1"
       class="absolute z-50 w-full py-1 mb-0 overflow-y-auto rounded-lg shadow-lg max-h-80 bg-n-solid-2 outline outline-1 outline-n-container"
       :class="opensUpward ? 'bottom-full mb-1' : 'top-full mt-1'"
+      @click.prevent
     >
       <li
         v-for="(section, sectionIndex) in sections"
@@ -287,7 +291,7 @@ onClickOutside(root, () => {
             }"
             @pointerdown.prevent
             @pointermove="active = index"
-            @click="commit(index)"
+            @click.prevent="commit(index)"
           >
             <span class="truncate">{{ option.label }}</span>
             <span
