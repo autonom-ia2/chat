@@ -47,6 +47,90 @@ RSpec.describe Enterprise::AuditLog do
     end
   end
 
+  # #644 — antes, search_by_user só olhava para quem fez a ação (audits.user_id
+  # / audits.username). Buscar pelo nome de quem foi convidado, promovido ou
+  # adicionado a um time/caixa não retornava nada.
+  describe '.search_by_user' do
+    let(:author) { create(:user, name: 'Lia Admin', email: 'lia@example.com') }
+
+    it 'still finds by the author (username, name or email) — regressão' do
+      audit = described_class.create!(auditable: inbox, action: 'update', user: author, associated: account)
+
+      expect(described_class.search_by_user('Lia').pluck(:id)).to contain_exactly(audit.id)
+      expect(described_class.search_by_user('lia@example.com').pluck(:id)).to contain_exactly(audit.id)
+      expect(described_class.search_by_user('nobody-matches-this')).to be_empty
+    end
+
+    it 'finds the invitee of an AccountUser create by name or email' do
+      invitee = create(:user, name: 'Marcos Andrade', email: 'marcos@example.com')
+      audit = described_class.create!(
+        auditable_type: 'AccountUser', auditable_id: 999, action: 'create',
+        user: author, associated: account,
+        audited_changes: { 'user_id' => invitee.id, 'role' => 0 }
+      )
+
+      expect(described_class.search_by_user('Marcos').pluck(:id)).to contain_exactly(audit.id)
+      expect(described_class.search_by_user('marcos@example.com').pluck(:id)).to contain_exactly(audit.id)
+    end
+
+    it 'finds the affected agent of an AccountUser role/availability update, whose ' \
+       'user_id is not in the diff' do
+      affected = create(:user, name: 'Marcos Andrade')
+      account_user = create(:account_user, account: account, user: affected, role: 'agent')
+      audit = described_class.create!(
+        auditable_type: 'AccountUser', auditable_id: account_user.id, action: 'update',
+        user: author, associated: account,
+        audited_changes: { 'role' => [0, 1] }
+      )
+
+      # O create do account_user acima também gera um audit (o convite) que cita
+      # Marcos; aqui só importa que o update, sem user_id no diff, apareça.
+      expect(described_class.search_by_user('Marcos').pluck(:id)).to include(audit.id)
+    end
+
+    it 'does not blow up when the AccountUser of an update was since deleted' do
+      audit = described_class.create!(
+        auditable_type: 'AccountUser', auditable_id: 424_242, action: 'update',
+        user: author, associated: account,
+        audited_changes: { 'role' => [0, 1] }
+      )
+
+      expect(described_class.search_by_user('Marcos').pluck(:id)).not_to include(audit.id)
+      expect(described_class.search_by_user('Lia').pluck(:id)).to contain_exactly(audit.id)
+    end
+
+    it 'finds the member added to an inbox' do
+      member = create(:user, name: 'Marcos Andrade')
+      audit = described_class.create!(
+        auditable_type: 'InboxMember', auditable_id: 1, action: 'create',
+        user: author, associated: account,
+        audited_changes: { 'id' => 1, 'inbox_id' => inbox.id, 'user_id' => member.id }
+      )
+
+      expect(described_class.search_by_user('Marcos').pluck(:id)).to contain_exactly(audit.id)
+    end
+
+    it 'finds the member removed from a team' do
+      member = create(:user, name: 'Marcos Andrade')
+      team = create(:team, account: account)
+      audit = described_class.create!(
+        auditable_type: 'TeamMember', auditable_id: 1, action: 'destroy',
+        user: author, associated: account,
+        audited_changes: { 'id' => 1, 'team_id' => team.id, 'user_id' => member.id }
+      )
+
+      expect(described_class.search_by_user('Marcos').pluck(:id)).to contain_exactly(audit.id)
+    end
+
+    it 'does not match an unrelated agent, even if that agent authored other audits' do
+      unrelated = create(:user, name: 'Unrelated Person')
+      create(:account_user, account: account, user: unrelated, role: 'agent')
+      described_class.create!(auditable: inbox, action: 'update', user: unrelated, associated: account)
+
+      expect(described_class.search_by_user('Marcos Andrade')).to be_empty
+    end
+  end
+
   describe '#masked_remote_address' do
     it 'masks the last octet of an IPv4 address' do
       expect(described_class.new(remote_address: '203.0.113.42').masked_remote_address).to eq('203.0.113.x')

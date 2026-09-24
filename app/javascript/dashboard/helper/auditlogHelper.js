@@ -1,12 +1,21 @@
+// Chaves de tradução, não texto — quem exibe a frase (generateLogText, em
+// Index.vue) resolve cada uma com t() antes de montar a frase. Guardar o
+// texto em inglês aqui era a causa raiz da frase sair "metade em inglês"
+// (#644): o template já era traduzido, mas esses valores entravam crus.
 const roleMapping = {
-  0: 'agent',
-  1: 'administrator',
+  0: 'AUDIT_LOGS.ROLES.AGENT',
+  1: 'AUDIT_LOGS.ROLES.ADMINISTRATOR',
 };
 
 const availabilityMapping = {
-  0: 'online',
-  1: 'offline',
-  2: 'busy',
+  0: 'AUDIT_LOGS.AVAILABILITY_STATUSES.ONLINE',
+  1: 'AUDIT_LOGS.AVAILABILITY_STATUSES.OFFLINE',
+  2: 'AUDIT_LOGS.AVAILABILITY_STATUSES.BUSY',
+};
+
+const fieldNameMapping = {
+  role: 'AUDIT_LOGS.FIELDS.ROLE',
+  availability: 'AUDIT_LOGS.FIELDS.AVAILABILITY',
 };
 
 const translationKeys = {
@@ -55,13 +64,13 @@ export function extractChangedAccountUserValues(auditedChanges) {
 
   // Check roles
   if (auditedChanges.role && auditedChanges.role.length) {
-    changes.push('role');
+    changes.push(fieldNameMapping.role);
     values.push(roleMapping[extractAttrChange(auditedChanges.role)]);
   }
 
   // Check availability
   if (auditedChanges.availability && auditedChanges.availability.length) {
-    changes.push('availability');
+    changes.push(fieldNameMapping.availability);
     values.push(
       availabilityMapping[extractAttrChange(auditedChanges.availability)]
     );
@@ -88,7 +97,8 @@ function handleAccountUserCreate(auditLogItem, translationPayload, agentList) {
   );
 
   const roleKey = auditLogItem.audited_changes.role;
-  translationPayload.role = roleMapping[roleKey] || 'unknown'; // 'unknown' as a fallback in case an unrecognized key is provided
+  // 'AUDIT_LOGS.ROLES.UNKNOWN' como fallback se vier uma chave não reconhecida
+  translationPayload.role = roleMapping[roleKey] || 'AUDIT_LOGS.ROLES.UNKNOWN';
 
   return translationPayload;
 }
@@ -219,6 +229,26 @@ function getAccountUserUpdateSuffix(auditLogItem) {
     ? ':self'
     : ':other';
 }
+
+// payload.role/attributes/values chegam como chaves de i18n (ver
+// roleMapping/availabilityMapping/fieldNameMapping acima), não como texto —
+// resolve cada uma com t() antes de montar a frase. Guardar o texto em
+// inglês nesses campos era a causa raiz da frase sair "metade em inglês"
+// (#644): o template já era traduzido, mas os valores entravam crus.
+export const translateLogPayload = (payload, t) => {
+  const translateKey = key => (key ? t(key) : key);
+  const translateAndJoin = value => {
+    if (!Array.isArray(value)) return translateKey(value);
+    return value.map(item => translateKey(item)).join(', ');
+  };
+
+  return {
+    ...payload,
+    role: translateKey(payload.role),
+    attributes: translateAndJoin(payload.attributes),
+    values: translateAndJoin(payload.values),
+  };
+};
 
 export const generateLogActionKey = auditLogItem => {
   const auditableType = auditLogItem.auditable_type.toLowerCase();
