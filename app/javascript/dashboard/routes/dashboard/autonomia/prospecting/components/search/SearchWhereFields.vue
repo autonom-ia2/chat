@@ -11,6 +11,7 @@ const {
   locationSuggestions,
   confirmedLocation,
   selectedLocationLabel,
+  locationError,
   handleLocationInput,
   confirmLocationSuggestion,
 } = useProspectingSearchContext();
@@ -76,6 +77,9 @@ const combinedLocationSuggestions = computed(() => {
         {{ selectedLocationLabel }}
       </span>
     </div>
+    <p v-if="locationError" role="alert" class="text-xs text-n-ruby-11">
+      {{ locationError }}
+    </p>
     <div
       v-if="combinedLocationSuggestions.length && !confirmedLocation"
       class="overflow-hidden rounded-md border border-n-weak bg-n-solid-1"

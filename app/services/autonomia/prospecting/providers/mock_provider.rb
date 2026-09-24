@@ -19,13 +19,17 @@ class Autonomia::Prospecting::Providers::MockProvider
     'Alameda Santos'
   ].freeze
 
-  def initialize(query:, location:, radius:, area_type: 'radius', area_config: {}, limit:)
+  NEIGHBORHOODS = ['Centro', 'Jardim America', 'Vila Nova', 'Bela Vista', 'Santa Cruz', 'Boa Vista'].freeze
+
+  def initialize(query:, location:, radius:, limit:, area_type: 'radius', area_config: {},
+                 country: Autonomia::Prospecting::SearchCountry::DEFAULT)
     @query = query.to_s.strip
     @location = location.to_s.strip
     @radius = radius.to_i
     @area_type = area_type.to_s
     @area_config = area_config.to_h.deep_stringify_keys
     @limit = limit.to_i
+    @country = Autonomia::Prospecting::SearchCountry.normalize(country) || Autonomia::Prospecting::SearchCountry::DEFAULT
   end
 
   def search
@@ -58,43 +62,56 @@ class Autonomia::Prospecting::Providers::MockProvider
       phone: "+55 11 9#{phone_suffix}",
       website: "https://#{slug(name)}.example.com",
       address: address_for(seed),
+      neighborhood: NEIGHBORHOODS[seed[29..30].to_i(16) % NEIGHBORHOODS.size],
       city: city,
       state: state,
-      country: 'BR',
+      country: @country,
       latitude: latitude(seed),
       longitude: longitude(seed),
       rating: rating(seed),
       reviews_count: seed[21..24].to_i(16) % 450,
-      category: category,
+      category: category
+    }.merge(place_signals(seed))
+  end
+
+  # Mesmo contrato do Google Places: fotos e horário no raw_payload e os sinais derivados deles.
+  def place_signals(seed)
+    photos = mock_photos(seed)
+    open_now = seed[25..26].to_i(16).even?
+    {
       raw_payload: {
         mock_seed: seed,
         query: @query,
         location: @location,
         radius: @radius,
-        photos: mock_photos(seed),
+        photos: photos,
         currentOpeningHours: {
-          openNow: seed[25..26].to_i(16).even?
+          openNow: open_now
         }
-      }
+      },
+      has_photos: photos.any?,
+      photo_count: photos.size,
+      open_now: open_now,
+      has_opening_hours: true
     }
   end
 
   def business_prefix(index)
-    [
-      'Alpha',
-      'Norte',
-      'Prime',
-      'Central',
-      'Nova',
-      'Atlas',
-      'Viva',
-      'Ponto'
+    %w[
+      Alpha
+      Norte
+      Prime
+      Central
+      Nova
+      Atlas
+      Viva
+      Ponto
     ][index % 8]
   end
 
   def address_for(seed)
     street = STREETS[seed[10..11].to_i(16) % STREETS.size]
-    number = seed[12..14].to_i(16) % 900 + 100
+    number = (seed[12..14].to_i(16) % 900) + 100
     "#{street}, #{number}"
   end
 
@@ -109,7 +126,7 @@ class Autonomia::Prospecting::Providers::MockProvider
     center = configured_center
     return radial_coordinate(seed, center, :lat) if center.present?
 
-    (-23.7 + (seed[15..18].to_i(16) % 5000) / 10_000.0).round(6)
+    (-23.7 + ((seed[15..18].to_i(16) % 5000) / 10_000.0)).round(6)
   end
 
   def longitude(seed)
@@ -118,11 +135,11 @@ class Autonomia::Prospecting::Providers::MockProvider
     center = configured_center
     return radial_coordinate(seed, center, :lng) if center.present?
 
-    (-46.8 + (seed[19..22].to_i(16) % 5000) / 10_000.0).round(6)
+    (-46.8 + ((seed[19..22].to_i(16) % 5000) / 10_000.0)).round(6)
   end
 
   def rating(seed)
-    (3.5 + (seed[23..24].to_i(16) % 16) / 10.0).round(2)
+    (3.5 + ((seed[23..24].to_i(16) % 16) / 10.0)).round(2)
   end
 
   def mock_photos(seed)

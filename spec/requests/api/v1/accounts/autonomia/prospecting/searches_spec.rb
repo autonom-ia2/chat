@@ -116,6 +116,7 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
   it 'returns Google location details for a selected place' do
     with_modified_env('GOOGLE_PLACES_API_KEY' => 'secret-key') do
       stub_request(:get, 'https://places.googleapis.com/v1/places/places/divinopolis')
+        .with(query: { languageCode: 'pt-BR', regionCode: 'BR' })
         .to_return(
           status: 200,
           body: {
@@ -136,6 +137,88 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
         'latitude' => -20.1446,
         'longitude' => -44.8912
       )
+    end
+  end
+
+  # Local no país da conta e erro do Google visível, em português (#677, E1 frente C).
+  describe 'ações de local' do
+    let(:autocomplete_url) { 'https://places.googleapis.com/v1/places:autocomplete' }
+    let(:details_url) { 'https://places.googleapis.com/v1/places/places/lisboa' }
+
+    around { |example| with_modified_env('GOOGLE_PLACES_API_KEY' => 'secret-key') { example.run } }
+
+    def suggestions(query = 'Lisb')
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/location_suggestions",
+          params: { query: query }, headers: auth_headers(admin)
+    end
+
+    def details(place_id = 'places/lisboa')
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/location_details",
+          params: { place_id: place_id }, headers: auth_headers(admin)
+    end
+
+    def google_error(status, google_status)
+      { status: status, body: { error: { code: status, message: 'texto do Google', status: google_status } }.to_json }
+    end
+
+    it 'restringe as sugestões ao país da conta e pede no idioma dele' do
+      Autonomia::Prospecting::Setting.for_account(account).update!(search_country: 'PT')
+      stub_request(:post, autocomplete_url).to_return(status: 200, body: { suggestions: [] }.to_json)
+
+      suggestions
+
+      expect(
+        a_request(:post, autocomplete_url).with do |request|
+          JSON.parse(request.body).slice('includedRegionCodes', 'languageCode', 'regionCode') ==
+            { 'includedRegionCodes' => ['pt'], 'languageCode' => 'pt-PT', 'regionCode' => 'PT' }
+        end
+      ).to have_been_made
+    end
+
+    it 'pede o detalhe do local no idioma e na região da conta' do
+      Autonomia::Prospecting::Setting.for_account(account).update!(search_country: 'PT')
+      stub_request(:get, details_url).with(query: { languageCode: 'pt-PT', regionCode: 'PT' })
+                                     .to_return(status: 200, body: { id: 'places/lisboa', formattedAddress: 'Lisboa, Portugal' }.to_json)
+
+      details
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.dig('payload', 'label')).to eq('Lisboa, Portugal')
+    end
+
+    it 'mostra o erro do Google nas sugestões em vez de devolver lista vazia' do
+      stub_request(:post, autocomplete_url).to_return(google_error(403, 'PERMISSION_DENIED'))
+
+      suggestions
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('A busca no Google está indisponível no momento. Fale com o suporte.')
+      expect(response.body).not_to include('texto do Google')
+    end
+
+    it 'avisa quando o Google não conhece o local escolhido' do
+      stub_request(:get, details_url).with(query: hash_including({})).to_return(google_error(404, 'NOT_FOUND'))
+
+      details
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('O Google não encontrou esse local. Escolha outra sugestão da lista.')
+    end
+
+    it 'avisa quando o Google não responde a tempo' do
+      stub_request(:post, autocomplete_url).to_timeout
+
+      suggestions
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('O Google não respondeu a tempo. Tente de novo em alguns minutos.')
+    end
+
+    it 'pede um local da lista quando o detalhe vem sem place_id' do
+      details('')
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('Escolha um local da lista de sugestões.')
     end
   end
 

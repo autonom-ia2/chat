@@ -1,5 +1,6 @@
 // Pedaço do pedido da busca que pertence à frente de local, país e endereço
-// (#677, E1): location, radius, area_type, area_config e location_* no metadata.
+// (#677, E1): location, radius, area_type, area_config e location_* no metadata,
+// e o tipo de decisor (decision_maker_type, Proprietário por padrão).
 import {
   bakerySearch,
   choose,
@@ -52,6 +53,7 @@ describe('Pedido da busca · frente de local', () => {
         location_longitude: LOCATION_DETAILS.longitude,
         location_label: LOCATION_DETAILS.label,
         filters: { auto_expand_radius: false },
+        decision_maker_type: 'owner',
       },
     });
     expect(payload.area_config).not.toHaveProperty('bounds');

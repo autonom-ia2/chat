@@ -220,6 +220,69 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
       end
     end
 
+    describe 'país e endereço (#677, E1 frente C)' do
+      let(:google_place_with_address) do
+        google_place.merge(
+          'googleMapsUri' => 'https://maps.google.com/?cid=1',
+          'regularOpeningHours' => { 'weekdayDescriptions' => ['segunda-feira: 08:00 – 18:00'] },
+          'addressComponents' => [
+            { 'longText' => 'Centro', 'shortText' => 'Centro', 'types' => %w[sublocality_level_1 sublocality] },
+            { 'longText' => 'Curitiba', 'shortText' => 'Curitiba', 'types' => ['locality'] },
+            { 'longText' => 'Paraná', 'shortText' => 'PR', 'types' => ['administrative_area_level_1'] },
+            { 'longText' => 'Brasil', 'shortText' => 'BR', 'types' => ['country'] }
+          ]
+        )
+      end
+
+      it 'chama o Google com o país e o idioma da conta' do
+        use_google_places!(search_country: 'PT')
+        stub_google_places([google_place])
+
+        run_search(query: 'clinica', location: 'Lisboa', requested_limit: 1)
+
+        expect(
+          a_request(:post, google_endpoint).with do |request|
+            JSON.parse(request.body).slice('regionCode', 'languageCode') == { 'regionCode' => 'PT', 'languageCode' => 'pt-PT' }
+          end
+        ).to have_been_made.once
+      end
+
+      it 'grava endereço estruturado, link do Maps e sinais do lugar no lead' do
+        use_google_places!
+        stub_google_places([google_place_with_address])
+
+        lead = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 1).leads.first.reload
+
+        expect(
+          lead.slice(:neighborhood, :city, :state, :country, :google_maps_uri, :has_photos, :photo_count, :open_now, :has_opening_hours)
+        ).to eq(
+          'neighborhood' => 'Centro', 'city' => 'Curitiba', 'state' => 'PR', 'country' => 'BR',
+          'google_maps_uri' => 'https://maps.google.com/?cid=1', 'has_photos' => true, 'photo_count' => 1,
+          'open_now' => true, 'has_opening_hours' => true
+        )
+      end
+
+      it 'grava o país da conta no lead do provider mock' do
+        setting.update!(search_country: 'MX')
+
+        lead = run_search(query: 'dentista', location: 'Monterrey', requested_limit: 1).leads.first
+
+        expect(lead.reload.country).to eq('MX')
+      end
+
+      it 'não reaproveita o cache de uma busca igual feita com outro país' do
+        setting.update!(cache_ttl_seconds: 3600)
+        params = { query: 'padaria', location: 'Centro', requested_limit: 1 }
+
+        run_search(params)
+        setting.update!(search_country: 'PT')
+        second = run_search(params)
+
+        expect(second.search).not_to be_cached
+        expect(second.leads.first.reload.country).to eq('PT')
+      end
+    end
+
     describe 'filtros avançados' do
       it 'has_website yes mantém só quem tem site e no mantém só quem não tem' do
         stub_mock_provider(places)
@@ -257,6 +320,46 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
 
         expect(by_reviews.leads.map(&:name)).to contain_exactly('Alfa Odonto', 'Gama Odonto')
         expect(by_rank.leads.map(&:name)).to contain_exactly('Alfa Odonto', 'Beta Odonto')
+      end
+
+      # Os providers passaram a devolver has_photos e open_now (#677, E1 frente C): os filtros que zeravam tudo agora
+      # separam quem tem de quem não tem.
+      it 'has_photos yes mantém só quem tem foto no payload do provider mock' do
+        params = { query: 'dentista', location: 'Curitiba, PR', radius: 1000, area_type: 'radius', area_config: {}, limit: 8 }
+        with_photos = mock_provider_class.new(**params).search.count { |place| place.dig(:raw_payload, :photos).present? }
+        expect(with_photos).to be_between(1, 7)
+
+        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { has_photos: 'yes' })
+
+        expect(result.leads.size).to eq(with_photos)
+        expect(result.leads.map(&:has_photos)).to all(be(true))
+      end
+
+      it 'has_photos no mantém só quem não tem foto' do
+        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { has_photos: 'no' })
+
+        expect(result.leads).to be_present
+        expect(result.leads.map(&:has_photos)).to all(be(false))
+      end
+
+      # Como no Orth, aberto agora só tem a opção "sim" (frente B): outro valor não filtra.
+      it 'open_now yes mantém só abertos e no não filtra' do
+        yes_result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { open_now: 'yes' })
+        no_result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { open_now: 'no' })
+
+        expect(yes_result.leads.map(&:open_now)).to be_present.and all(be(true))
+        expect(no_result.leads.map(&:open_now)).to include(true, false)
+      end
+
+      it 'no Google Places, has_photos yes e open_now yes mantêm um lugar aberto e com foto' do
+        use_google_places!
+        stub_google_places([google_place])
+
+        with_photos = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 1, advanced_filters: { has_photos: 'yes' })
+        open_now = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 1, advanced_filters: { open_now: 'yes' })
+
+        expect(with_photos.leads.map(&:provider_place_id)).to eq(['places/google-1'])
+        expect(open_now.leads.map(&:provider_place_id)).to eq(['places/google-1'])
       end
     end
 

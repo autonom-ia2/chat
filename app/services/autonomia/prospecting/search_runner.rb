@@ -66,6 +66,7 @@ class Autonomia::Prospecting::SearchRunner
     raise ActiveRecord::RecordInvalid.new(search_with_error(:query, "can't be blank")) if query.blank?
     raise UnsupportedProviderError, 'Unsupported prospecting provider' unless %w[mock google_places].include?(provider_name)
     raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, 'must be greater than 0')) if requested_limit <= 0
+
     validate_google_places! if provider_name == 'google_places'
 
     return if requested_limit <= MAX_REQUESTED_LIMIT
@@ -103,7 +104,8 @@ class Autonomia::Prospecting::SearchRunner
         area_config: area_config_value,
         limit: requested_limit,
         api_key: @setting.google_places_api_key,
-        account_id: @account.id
+        account_id: @account.id,
+        country: search_country
       )
     else
       Autonomia::Prospecting::Providers::MockProvider.new(
@@ -112,9 +114,15 @@ class Autonomia::Prospecting::SearchRunner
         radius: radius_value,
         area_type: area_type,
         area_config: area_config_value,
-        limit: requested_limit
+        limit: requested_limit,
+        country: search_country
       )
     end
+  end
+
+  # País da conta (#677): o Google busca e escreve o endereço nele, e o lead sem país no endereço fica com ele.
+  def search_country
+    @search_country ||= @setting.search_country
   end
 
   def search_provider_results
@@ -225,7 +233,7 @@ class Autonomia::Prospecting::SearchRunner
     return [] if leads.blank?
 
     ranked = leads.map do |lead|
-      raw_priority = lead.score.to_f * priority_multiplier(lead) - priority_penalty(lead)
+      raw_priority = (lead.score.to_f * priority_multiplier(lead)) - priority_penalty(lead)
       { lead: lead, raw_priority: raw_priority }
     end
 
@@ -602,11 +610,11 @@ class Autonomia::Prospecting::SearchRunner
       categories: categories,
       metadata: metadata.merge(crm_target_metadata)
                         .merge(scoring_metadata).merge(
-        'lead_ids' => leads.map(&:id),
-        'results_count' => leads.size,
-        'cached_from_search_id' => search.id,
-        'search_filters' => search_filters
-      )
+                          'lead_ids' => leads.map(&:id),
+                          'results_count' => leads.size,
+                          'cached_from_search_id' => search.id,
+                          'search_filters' => search_filters
+                        )
     )
 
     Result.new(search: cached_search, leads: leads)
@@ -626,6 +634,7 @@ class Autonomia::Prospecting::SearchRunner
         JSON.generate(advanced_filters),
         requested_limit,
         search_score_mode,
+        search_country,
         @setting.scoring_mode,
         @setting.scoring_profile_id,
         @setting.active_scoring_weights.sort.to_h

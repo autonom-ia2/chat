@@ -60,6 +60,7 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
   validates :scoring_mode, inclusion: { in: %w[profile custom] }
   validates :account_id, uniqueness: true
   validate :search_score_mode_must_be_supported
+  validate :search_country_must_be_supported
   validate :custom_scoring_weights_must_be_supported_numbers
   validate :default_crm_records_must_belong_to_account
 
@@ -105,6 +106,22 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
     self.metadata = metadata.to_h.merge('search_score_mode' => normalized_search_score_mode(value))
   end
 
+  # País da busca no Google (#677). Sem escolha é o Brasil; valor gravado fora da lista também, com aviso no log.
+  def search_country
+    stored = metadata.to_h['search_country']
+    return Autonomia::Prospecting::SearchCountry::DEFAULT if stored.blank?
+
+    country = Autonomia::Prospecting::SearchCountry.normalize(stored)
+    return country if country
+
+    Rails.logger.warn("[Prospecting::Setting] search_country_invalid_stored account_id=#{account_id} search_country=#{stored}")
+    Autonomia::Prospecting::SearchCountry::DEFAULT
+  end
+
+  def search_country=(value)
+    self.metadata = metadata.to_h.merge('search_country' => value.to_s.strip.upcase)
+  end
+
   private
 
   # Só ENV: GOOGLE_PLACES_API_KEY e GOOGLE_MAPS_BROWSER_API_KEY, e BIGDATACORP_USER/BIGDATACORP_PASSWORD quando entrarem.
@@ -138,6 +155,13 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
     return if %w[gbp general].include?(search_score_mode)
 
     errors.add(:metadata, 'search_score_mode must be gbp or general')
+  end
+
+  def search_country_must_be_supported
+    stored = metadata.to_h['search_country']
+    return if stored.blank? || Autonomia::Prospecting::SearchCountry.normalize(stored)
+
+    errors.add(:base, I18n.t('autonomia.prospecting.errors.invalid_search_country'))
   end
 
   def normalized_search_score_mode(value)
