@@ -9,8 +9,7 @@ require 'rails_helper'
 #   horário cadastrado: A B C F G H têm regularOpeningHours; D E não têm
 #   nota:               A 4.7, B 4.2, C 3.9, D sem nota, E 4.5, F 4.8, G 5.0, H 4.4
 #
-# has_photos, open_now e has_opening_hours vêm do provider (contrato #677: o dono é a frente C). Até a frente C entrar,
-# os exemplos que dependem deles ficam pendentes; quando ela entrar e eles passarem, o RSpec acusa e o pending sai.
+# has_photos, open_now e has_opening_hours vêm do provider (contrato #677: o dono é a frente C).
 RSpec.describe Autonomia::Prospecting::SearchRunner do
   around { |example| with_modified_env('GOOGLE_PLACES_API_KEY' => 'chave-da-plataforma') { example.run } }
 
@@ -42,17 +41,17 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
   end
 
   describe 'fotos' do
-    it 'has_photos yes mantém só os 5 com foto', pending: 'atributos do contrato no GooglePlacesProvider (frente C, #677)' do
+    it 'has_photos yes mantém só os 5 com foto' do
       expect(names_with(has_photos: 'yes')).to eq(exemplos('A', 'B', 'E', 'F', 'H'))
     end
 
-    it 'has_photos no mantém só os 3 sem foto', pending: 'atributos do contrato no GooglePlacesProvider (frente C, #677)' do
+    it 'has_photos no mantém só os 3 sem foto' do
       expect(names_with(has_photos: 'no')).to eq(exemplos('C', 'D', 'G'))
     end
   end
 
   describe 'aberto agora' do
-    it 'open_now yes mantém só os 4 com openNow=true', pending: 'atributos do contrato no GooglePlacesProvider (frente C, #677)' do
+    it 'open_now yes mantém só os 4 com openNow=true' do
       expect(names_with(open_now: 'yes')).to eq(exemplos('A', 'C', 'G', 'H'))
     end
 
@@ -63,8 +62,7 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
   end
 
   describe 'tem horário' do
-    it 'has_opening_hours yes mantém só os 6 com horário cadastrado',
-       pending: 'atributos do contrato no GooglePlacesProvider (frente C, #677)' do
+    it 'has_opening_hours yes mantém só os 6 com horário cadastrado' do
       expect(names_with(has_opening_hours: 'yes')).to eq(exemplos('A', 'B', 'C', 'F', 'G', 'H'))
     end
   end
@@ -99,7 +97,7 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
     expect { names_with(has_photos: 'yes') }.to raise_error(KeyError, /has_photos/)
   end
 
-  it 'combina filtros de fontes diferentes', pending: 'atributos do contrato no GooglePlacesProvider (frente C, #677)' do
+  it 'combina filtros de fontes diferentes' do
     expect(names_with(has_photos: 'yes', open_now: 'yes', rating_min: '4.5')).to eq(exemplos('A'))
   end
 end
