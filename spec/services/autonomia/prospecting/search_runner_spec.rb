@@ -258,45 +258,6 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
         expect(by_reviews.leads.map(&:name)).to contain_exactly('Alfa Odonto', 'Gama Odonto')
         expect(by_rank.leads.map(&:name)).to contain_exactly('Alfa Odonto', 'Beta Odonto')
       end
-
-      it 'has_photos yes zera o resultado mesmo com fotos no payload do provider mock' do
-        # DIVERGE: has_photos deve olhar as fotos do lugar (raw_payload.photos); o provider nunca grava :has_photos.
-        params = { query: 'dentista', location: 'Curitiba, PR', radius: 1000, area_type: 'radius', area_config: {}, limit: 8 }
-        raw_places = mock_provider_class.new(**params).search
-        expect(raw_places.count { |place| place.dig(:raw_payload, :photos).present? }).to be_positive
-
-        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { has_photos: 'yes' })
-
-        expect(result.leads).to be_empty
-      end
-
-      it 'has_photos no deixa passar todos, inclusive quem tem foto' do
-        # DIVERGE: has_photos no deve manter só quem não tem foto.
-        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { has_photos: 'no' })
-
-        expect(result.leads.size).to eq(8)
-      end
-
-      it 'open_now yes e no zeram o resultado porque o provider nunca grava :open_now' do
-        # DIVERGE: open_now deve ler currentOpeningHours.openNow do lugar; yes mantém abertos, no mantém fechados.
-        yes_result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { open_now: 'yes' })
-        no_result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { open_now: 'no' })
-
-        expect(yes_result.leads).to be_empty
-        expect(no_result.leads).to be_empty
-      end
-
-      it 'no Google Places, has_photos yes e open_now yes descartam um lugar aberto e com foto' do
-        # DIVERGE: o lugar tem photos e currentOpeningHours.openNow=true; os dois filtros deveriam mantê-lo.
-        use_google_places!
-        stub_google_places([google_place])
-
-        with_photos = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 1, advanced_filters: { has_photos: 'yes' })
-        open_now = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 1, advanced_filters: { open_now: 'yes' })
-
-        expect(with_photos.leads).to be_empty
-        expect(open_now.leads).to be_empty
-      end
     end
 
     describe 'limite pedido' do

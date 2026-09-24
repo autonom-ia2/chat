@@ -16,6 +16,13 @@ import {
   openResultFilters,
   sunLead,
 } from './support/searchPageHarness';
+import {
+  DRAWER,
+  applyFilters,
+  checkYesOnly,
+  rankInput,
+  reviewsMinInput,
+} from './support/filtersHelpers';
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
@@ -33,8 +40,6 @@ vi.mock('dashboard/api/autonomiaProspecting', async () =>
 vi.mock('dashboard/api/crmKanban', async () =>
   (await import('./support/searchPageMocks')).crmKanbanApiMock()
 );
-
-const numberFilterInputs = wrapper => wrapper.findAll('input[type="number"]');
 
 describe('ProspectingSearchPage · resultados', () => {
   beforeEach(() => {
@@ -133,13 +138,12 @@ describe('ProspectingSearchPage · resultados', () => {
       'yes',
       ['Padaria Sol', 'Confeitaria Lua'],
     ],
-    ['PROSPECTING.SEARCH.FIELDS.OPEN_NOW', 'yes', ['Padaria Sol']],
-    ['PROSPECTING.SEARCH.FIELDS.OPEN_NOW', 'no', ['Pão Quente']],
   ])('refina localmente por %s = %s', async (field, value, expected) => {
     const wrapper = await mountSearchPage();
     await openResultFilters(wrapper);
 
     await choose(wrapper, field, value);
+    await applyFilters(wrapper);
 
     expect(leadNames(wrapper)).toEqual(expected);
     expect(
@@ -147,22 +151,56 @@ describe('ProspectingSearchPage · resultados', () => {
     ).toBe('1');
   });
 
+  // Mudou de propósito (frente B): "aberto agora" virou caixa única "sim", como
+  // no Orth; o "não" deixou de existir.
+  it('refina localmente por aberto agora = sim', async () => {
+    const wrapper = await mountSearchPage();
+    await openResultFilters(wrapper);
+
+    await checkYesOnly(wrapper, 'OPEN_NOW');
+    await applyFilters(wrapper);
+
+    expect(leadNames(wrapper)).toEqual(['Padaria Sol']);
+  });
+
+  // Mudou de propósito (frente B): mínimo e máximo de avaliação viraram
+  // operador + estrelas; a posição máxima virou a alça direita da faixa 1 a 40.
   it.each([
-    [0, '4', ['Padaria Sol', 'Confeitaria Lua']],
-    [1, '4', ['Pão Quente']],
-    [2, '100', ['Padaria Sol', 'Pão Quente']],
-    [3, '5', ['Padaria Sol', 'Pão Quente']],
+    ['above', 4, ['Padaria Sol', 'Confeitaria Lua']],
+    ['below', 4, ['Pão Quente']],
   ])(
-    'refina localmente pelo campo numérico %i = %s',
-    async (index, value, expected) => {
+    'refina localmente pela avaliação %s de %s',
+    async (operator, value, expected) => {
       const wrapper = await mountSearchPage();
       await openResultFilters(wrapper);
 
-      await numberFilterInputs(wrapper)[index].setValue(value);
+      await choose(wrapper, `${DRAWER}.RATING.OPERATOR`, operator);
+      await choose(wrapper, `${DRAWER}.RATING.VALUE`, value);
+      await applyFilters(wrapper);
 
       expect(leadNames(wrapper)).toEqual(expected);
     }
   );
+
+  it('refina localmente pelo mínimo de avaliações', async () => {
+    const wrapper = await mountSearchPage();
+    await openResultFilters(wrapper);
+
+    await reviewsMinInput(wrapper).setValue('100');
+    await applyFilters(wrapper);
+
+    expect(leadNames(wrapper)).toEqual(['Padaria Sol', 'Pão Quente']);
+  });
+
+  it('refina localmente pela posição máxima no Google', async () => {
+    const wrapper = await mountSearchPage();
+    await openResultFilters(wrapper);
+
+    await rankInput(wrapper, 'MAX_ARIA').setValue('5');
+    await applyFilters(wrapper);
+
+    expect(leadNames(wrapper)).toEqual(['Padaria Sol', 'Pão Quente']);
+  });
 
   it('refino local não chama a API, soma filtros no contador e acusa quando nada sobra', async () => {
     const wrapper = await mountSearchPage();
@@ -171,6 +209,7 @@ describe('ProspectingSearchPage · resultados', () => {
 
     await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.HAS_SITE', 'no');
     await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.HAS_PHONE', 'no');
+    await applyFilters(wrapper);
 
     expect(leadCards(wrapper)).toHaveLength(0);
     expect(wrapper.text()).toContain('PROSPECTING.QUALITY.NO_STATUS_RESULTS');
@@ -203,6 +242,7 @@ describe('ProspectingSearchPage · resultados', () => {
     await openResultFilters(wrapper);
 
     await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.HAS_PHONE', 'yes');
+    await applyFilters(wrapper);
 
     expect(
       wrapper

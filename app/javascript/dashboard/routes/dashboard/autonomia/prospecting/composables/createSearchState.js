@@ -68,13 +68,10 @@ const createForms = settings => {
 
 const createLeadDerived = state => {
   const filteredLeads = computed(() =>
-    filterLeadsByAdvancedFilters(state.leads.value, state.advancedFilters.value)
+    filterLeadsByAdvancedFilters(state.leads.value, state.resultFilters.value)
   );
   const sortedLeads = computed(() =>
     sortLeads(filteredLeads.value, state.sortKey.value)
-  );
-  const activeAdvancedFiltersCount = computed(() =>
-    activeAdvancedLeadFiltersCount(state.advancedFilters.value)
   );
 
   return {
@@ -91,8 +88,9 @@ const createLeadDerived = state => {
       const ids = new Set(state.selectedLeadIds.value.map(Number));
       return sortedLeads.value.filter(lead => ids.has(Number(lead.id)));
     }),
-    activeAdvancedFiltersCount,
-    activeFiltersCount: computed(() => activeAdvancedFiltersCount.value),
+    activeFiltersCount: computed(() =>
+      activeAdvancedLeadFiltersCount(state.resultFilters.value)
+    ),
   };
 };
 

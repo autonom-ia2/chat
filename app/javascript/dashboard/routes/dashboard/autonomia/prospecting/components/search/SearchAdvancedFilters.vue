@@ -1,133 +1,81 @@
 <script setup>
-import { computed } from 'vue';
+// Filtros do formulário de nova busca: um botão com a contagem e a gaveta
+// lateral dos 4 grupos. Só o que for aplicado vai no pedido; fechar sem
+// aplicar descarta o rascunho. O refino da busca aberta é outro estado.
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import LeadFiltersPanel from './filters/LeadFiltersPanel.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
-import { yesNoAnyOptions } from '../../utils/searchChoices';
+import { activeAdvancedLeadFiltersCount } from '../../utils/advancedLeadFilters';
 
 const { t } = useI18n();
-const { advancedFilters, activeAdvancedFiltersCount } =
-  useProspectingSearchContext();
+const { formFilters } = useProspectingSearchContext();
 
-const yesNoAnyChoices = computed(() => yesNoAnyOptions(t));
+const isOpen = ref(false);
+const activeCount = computed(() =>
+  activeAdvancedLeadFiltersCount(formFilters.value)
+);
+
+const applyFilters = next => {
+  formFilters.value = next;
+  isOpen.value = false;
+};
 </script>
 
 <template>
-  <details class="rounded-md border border-n-weak bg-n-solid-2 px-3 py-2">
-    <summary
-      class="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-n-slate-12"
-    >
-      <span class="inline-flex items-center gap-2">
+  <div class="rounded-md border border-n-weak bg-n-solid-2 px-3 py-2">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <button
+        type="button"
+        class="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-n-slate-12"
+        @click="isOpen = true"
+      >
         <span class="i-lucide-sliders-horizontal size-4" />
-        {{ t('PROSPECTING.SEARCH.SECTIONS.ADVANCED') }}
-      </span>
+        {{ t('PROSPECTING.SEARCH.FILTER_DRAWER.OPEN') }}
+      </button>
       <span
-        v-if="activeAdvancedFiltersCount"
+        v-if="activeCount"
         class="rounded-full bg-n-brand px-2 py-0.5 text-[11px] font-semibold text-white"
       >
-        {{
-          t('PROSPECTING.SEARCH.ACTIVE_FILTERS', {
-            count: activeAdvancedFiltersCount,
-          })
-        }}
+        {{ t('PROSPECTING.SEARCH.ACTIVE_FILTERS', { count: activeCount }) }}
       </span>
-    </summary>
-    <p class="mt-2 text-xs text-n-slate-10">
+    </div>
+    <p class="mt-1 text-xs text-n-slate-10">
       {{ t('PROSPECTING.SEARCH.ADVANCED_FILTERS_HINT') }}
     </p>
-    <div class="mt-3 grid gap-3 sm:grid-cols-2">
-      <label class="grid gap-1">
-        <span class="text-xs font-medium text-n-slate-11">
-          {{ t('PROSPECTING.SEARCH.FIELDS.HAS_SITE') }}
-        </span>
-        <ChoiceSelect
-          v-model="advancedFilters.has_website"
-          compact
-          :options="yesNoAnyChoices"
-          :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_SITE')"
-        />
-      </label>
-      <label class="grid gap-1">
-        <span class="text-xs font-medium text-n-slate-11">
-          {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE') }}
-        </span>
-        <ChoiceSelect
-          v-model="advancedFilters.has_phone"
-          compact
-          :options="yesNoAnyChoices"
-          :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE')"
-        />
-      </label>
-      <label class="grid gap-1">
-        <span class="text-xs font-medium text-n-slate-11">
-          {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS') }}
-        </span>
-        <ChoiceSelect
-          v-model="advancedFilters.has_photos"
-          compact
-          :options="yesNoAnyChoices"
-          :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS')"
-        />
-      </label>
-      <label class="grid gap-1">
-        <span class="text-xs font-medium text-n-slate-11">
-          {{ t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW') }}
-        </span>
-        <ChoiceSelect
-          v-model="advancedFilters.open_now"
-          compact
-          :options="yesNoAnyChoices"
-          :aria-label="t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW')"
-        />
-      </label>
-      <label class="grid gap-1">
-        <span class="text-xs font-medium text-n-slate-11">
-          {{ t('PROSPECTING.SEARCH.FIELDS.RATING_MIN') }}
-        </span>
-        <input
-          v-model="advancedFilters.rating_min"
-          type="number"
-          min="0"
-          max="5"
-          step="0.1"
-          class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
-        />
-      </label>
-      <label class="grid gap-1">
-        <span class="text-xs font-medium text-n-slate-11">
-          {{ t('PROSPECTING.SEARCH.FIELDS.RATING_MAX') }}
-        </span>
-        <input
-          v-model="advancedFilters.rating_max"
-          type="number"
-          min="0"
-          max="5"
-          step="0.1"
-          class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
-        />
-      </label>
-      <label class="grid gap-1">
-        <span class="text-xs font-medium text-n-slate-11">
-          {{ t('PROSPECTING.SEARCH.FIELDS.REVIEWS_MIN') }}
-        </span>
-        <input
-          v-model="advancedFilters.reviews_min"
-          type="number"
-          min="0"
-          class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
-        />
-      </label>
-      <label class="grid gap-1">
-        <span class="text-xs font-medium text-n-slate-11">
-          {{ t('PROSPECTING.SEARCH.FIELDS.SEARCH_RANK_MAX') }}
-        </span>
-        <input
-          v-model="advancedFilters.search_rank_max"
-          type="number"
-          min="1"
-          class="h-9 rounded-md border border-n-weak bg-n-solid-1 px-2 text-sm text-n-slate-12"
-        />
-      </label>
+
+    <div
+      v-if="isOpen"
+      class="fixed inset-0 z-40 bg-n-slate-12/30"
+      @click.self="isOpen = false"
+      @keydown.esc="isOpen = false"
+    >
+      <aside
+        role="dialog"
+        aria-modal="true"
+        :aria-label="t('PROSPECTING.SEARCH.FILTER_DRAWER.TITLE')"
+        class="ml-auto flex h-full w-full max-w-xl flex-col overflow-hidden border-l border-n-weak bg-n-solid-1 shadow-xl"
+      >
+        <header
+          class="flex items-center justify-between gap-3 border-b border-n-weak px-5 py-4"
+        >
+          <h2 class="text-base font-semibold text-n-slate-12">
+            {{ t('PROSPECTING.SEARCH.FILTER_DRAWER.TITLE') }}
+          </h2>
+          <button
+            type="button"
+            class="flex size-11 items-center justify-center rounded-md text-n-slate-11 hover:bg-n-solid-2"
+            :title="t('PROSPECTING.SEARCH.FILTER_DRAWER.CLOSE')"
+            :aria-label="t('PROSPECTING.SEARCH.FILTER_DRAWER.CLOSE')"
+            @click="isOpen = false"
+          >
+            <span class="i-lucide-x size-4" />
+          </button>
+        </header>
+        <div class="min-h-0 flex-1 overflow-y-auto p-5">
+          <LeadFiltersPanel :filters="formFilters" @apply="applyFilters" />
+        </div>
+      </aside>
     </div>
-  </details>
+  </div>
 </template>
