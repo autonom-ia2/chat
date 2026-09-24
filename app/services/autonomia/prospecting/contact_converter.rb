@@ -59,11 +59,7 @@ class Autonomia::Prospecting::ContactConverter
   end
 
   def normalized_phone
-    @normalized_phone ||= begin
-      digits = @lead.phone.to_s.gsub(/\D/, '')
-      phone = digits.present? ? "+#{digits}" : nil
-      phone&.match?(/\A\+[1-9]\d{1,14}\z/) ? phone : nil
-    end
+    @normalized_phone ||= Autonomia::Prospecting::PhoneContract.e164(@lead.phone, region: Autonomia::Prospecting::PhoneContract.region_for(@account))
   end
 
   def prospecting_identifier

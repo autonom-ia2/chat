@@ -49,4 +49,23 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
     expect(result.created).to be(false)
     expect(result.contact).to eq(contact)
   end
+
+  describe 'telefone do contato pela tabela compartilhada com o front' do
+    ProspectingPhoneContractCases.all.each do |item|
+      it "#{item['caso']}: #{item['raw'].inspect} grava #{item['e164'].inspect}" do
+        ProspectingPhoneContractCases.apply_region!(account, item['region'])
+        lead.update!(phone: item['raw'])
+
+        result = described_class.new(lead: lead, user: user).perform
+
+        expect(result.contact.phone_number).to eq(item['e164'])
+      end
+    end
+
+    it 'não confunde número nacional com DDI: (11) 3333-4444 vira +551133334444, não +1133334444' do
+      lead.update!(phone: '(11) 3333-4444')
+
+      expect(described_class.new(lead: lead, user: user).perform.contact.phone_number).to eq('+551133334444')
+    end
+  end
 end

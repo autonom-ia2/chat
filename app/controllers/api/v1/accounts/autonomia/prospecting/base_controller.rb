@@ -33,7 +33,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
       whatsapp_verification_status: status,
       whatsapp_verified: status == 'verified',
       whatsapp_phone: phone,
-      whatsapp_url: status == 'verified' && phone.present? ? "https://wa.me/#{phone.gsub(/\D/, '')}" : nil
+      whatsapp_url: whatsapp_url(status, phone)
     }
   end
 
@@ -61,14 +61,19 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     }
   end
 
+  def whatsapp_url(status, phone)
+    return unless status == 'verified'
+
+    digits = ::Autonomia::Prospecting::PhoneContract.parse(phone, region: phone_region)&.digits
+    digits && "https://wa.me/#{digits}"
+  end
+
   def normalized_lead_phone(lead)
-    digits = lead.phone.to_s.gsub(/\D/, '')
-    return if digits.blank?
+    ::Autonomia::Prospecting::PhoneContract.e164(lead.phone, region: phone_region)
+  end
 
-    # Local BR numbers (10–11 digits, no "+" and no "55") get the country code; everything else is kept.
-    needs_country_code = !lead.phone.to_s.strip.start_with?('+') && !digits.start_with?('55') && digits.length.in?([10, 11])
-    phone = needs_country_code ? "+55#{digits}" : "+#{digits}"
-
-    phone.match?(/\A\+[1-9]\d{7,14}\z/) ? phone : nil
+  # País da busca da conta (settings.metadata['search_country']), lido uma vez por requisição.
+  def phone_region
+    @phone_region ||= ::Autonomia::Prospecting::PhoneContract.region_for(Current.account)
   end
 end
