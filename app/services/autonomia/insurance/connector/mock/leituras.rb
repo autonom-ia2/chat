@@ -46,6 +46,34 @@ module Autonomia::Insurance::Connector::Mock::Leituras
                                        'Pergunte ao cliente o bairro do imóvel.' }
   ].freeze
 
+  # A busca de atividade (chat#641): duas seguradoras acham o termo, uma não acha nada. Termo curto é pergunta, e
+  # produto sem busca é recusado, como no adapter real.
+  def atividade_lookup(provider:, session:, product:, termos:)
+    require_provider!(provider)
+    require_session!(session)
+    raise ::Autonomia::Insurance::Connector::Error.new(:validation, "#{product} sem busca de atividade") unless product == 'empresarial'
+
+    validos = Array(termos).map { |termo| termo.to_s.strip }.select { |termo| termo.length >= 3 }
+    if validos.empty?
+      raise ::Autonomia::Insurance::Connector::Error.new(
+        :validation, 'termos de atividade fora do formato',
+        { 'perguntas' => [{ 'campo' => 'termos', 'motivo' => 'mande de 1 a 3 termos de busca com pelo menos 3 letras.' }] }
+      )
+    end
+
+    { 'por_termo' => validos.map { |termo| { 'termo' => termo, 'por_seguradora' => atividades_do_mock(termo) } } }
+  end
+
+  def atividades_do_mock(termo)
+    [
+      { 'insurer_code' => '8', 'insurer_name' => 'Porto Seguro',
+        'opcoes' => [{ 'key' => '484', 'value' => "#{termo.upcase} - TERREO/SOBRADO" },
+                     { 'key' => '487', 'value' => "#{termo.upcase} - A PARTIR DO PRIMEIRO ANDAR" }] },
+      { 'insurer_code' => '4', 'insurer_name' => 'Hdi', 'opcoes' => [{ 'key' => '700160', 'value' => termo.upcase }] },
+      { 'insurer_code' => '7', 'insurer_name' => 'Zurich', 'opcoes' => [] }
+    ]
+  end
+
   def cep_lookup(provider:, session:, cep:)
     require_provider!(provider)
     require_session!(session)

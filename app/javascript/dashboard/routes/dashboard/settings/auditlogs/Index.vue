@@ -19,6 +19,7 @@ import AuditLogFilters from './components/AuditLogFilters.vue';
 import {
   generateTranslationPayload,
   generateLogActionKey,
+  translateLogPayload,
   auditLogFiltersFromQuery,
   buildAuditLogRouteQuery,
 } from 'dashboard/helper/auditlogHelper';
@@ -85,16 +86,7 @@ const clearFilters = () => {
 const generateLogText = auditLogItem => {
   const payload = generateTranslationPayload(auditLogItem, agentList.value);
   const translationKey = generateLogActionKey(auditLogItem);
-
-  const joinIfArray = value => {
-    return Array.isArray(value) ? value.join(', ') : value;
-  };
-
-  const mergedPayload = {
-    ...payload,
-    attributes: joinIfArray(payload.attributes),
-    values: joinIfArray(payload.values),
-  };
+  const mergedPayload = translateLogPayload(payload, t);
   return t(translationKey, mergedPayload);
 };
 

@@ -85,7 +85,17 @@ class Autonomia::Insurance::QuoteInput
   def de_ramo
     base = @dados.to_h.merge(do_formulario) { |_, do_json, do_campo| do_json.to_h.merge(do_campo) }
     informado = segurado_dos_parametros.merge(base['segurado'].to_h.compact_blank)
-    informado.any? ? base.merge('segurado' => informado) : base
+    base = base.merge('segurado' => informado) if informado.any?
+    atividades.any? ? base.merge('atividades' => atividades) : base
+  end
+
+  # A ATIVIDADE ESCOLHIDA EM CADA SEGURADORA (empresarial, chat#641), como o adapter lê: fora de `configuracoes`,
+  # no topo da entrada. Só o item com os três campos preenchidos vai; seguradora sem escolha fica de fora.
+  def atividades
+    @atividades ||= Array(@params['atividades']).filter_map do |item|
+      escolha = item.to_h.stringify_keys.slice('seguradora', 'key', 'value').transform_values { |valor| valor.to_s.strip }
+      escolha if escolha.size == 3 && escolha.values.all?(&:present?)
+    end
   end
 
   # O FORMULÁRIO DO RAMO (chat#591): cada grupo vai como veio, no caminho em que o adapter o lê

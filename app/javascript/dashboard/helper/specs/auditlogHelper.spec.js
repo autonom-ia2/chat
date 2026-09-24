@@ -2,6 +2,7 @@ import {
   extractChangedAccountUserValues,
   generateTranslationPayload,
   generateLogActionKey,
+  translateLogPayload,
   auditLogFiltersFromQuery,
   buildAuditLogRouteQuery,
 } from '../auditlogHelper'; // import the functions
@@ -14,35 +15,41 @@ describe('Helper functions', () => {
   ];
 
   describe('extractChangedAccountUserValues', () => {
-    it('should correctly extract values when role is changed', () => {
+    it('should correctly extract i18n keys when role is changed', () => {
       const changes = {
         role: [0, 1],
       };
       const { changes: extractedChanges, values } =
         extractChangedAccountUserValues(changes);
-      expect(extractedChanges).toEqual(['role']);
-      expect(values).toEqual(['administrator']);
+      expect(extractedChanges).toEqual(['AUDIT_LOGS.FIELDS.ROLE']);
+      expect(values).toEqual(['AUDIT_LOGS.ROLES.ADMINISTRATOR']);
     });
 
-    it('should correctly extract values when availability is changed', () => {
+    it('should correctly extract i18n keys when availability is changed', () => {
       const changes = {
         availability: [0, 2],
       };
       const { changes: extractedChanges, values } =
         extractChangedAccountUserValues(changes);
-      expect(extractedChanges).toEqual(['availability']);
-      expect(values).toEqual(['busy']);
+      expect(extractedChanges).toEqual(['AUDIT_LOGS.FIELDS.AVAILABILITY']);
+      expect(values).toEqual(['AUDIT_LOGS.AVAILABILITY_STATUSES.BUSY']);
     });
 
-    it('should correctly extract values when both are changed', () => {
+    it('should correctly extract i18n keys when both are changed', () => {
       const changes = {
         role: [1, 0],
         availability: [1, 2],
       };
       const { changes: extractedChanges, values } =
         extractChangedAccountUserValues(changes);
-      expect(extractedChanges).toEqual(['role', 'availability']);
-      expect(values).toEqual(['agent', 'busy']);
+      expect(extractedChanges).toEqual([
+        'AUDIT_LOGS.FIELDS.ROLE',
+        'AUDIT_LOGS.FIELDS.AVAILABILITY',
+      ]);
+      expect(values).toEqual([
+        'AUDIT_LOGS.ROLES.AGENT',
+        'AUDIT_LOGS.AVAILABILITY_STATUSES.BUSY',
+      ]);
     });
   });
 
@@ -64,7 +71,7 @@ describe('Helper functions', () => {
         agentName: 'Agent 1',
         id: 123,
         invitee: 'Agent 2',
-        role: 'administrator',
+        role: 'AUDIT_LOGS.ROLES.ADMINISTRATOR',
       });
     });
 
@@ -89,8 +96,14 @@ describe('Helper functions', () => {
         agentName: 'Agent 1',
         id: 123,
         user: 'Agent 3',
-        attributes: ['role', 'availability'],
-        values: ['agent', 'busy'],
+        attributes: [
+          'AUDIT_LOGS.FIELDS.ROLE',
+          'AUDIT_LOGS.FIELDS.AVAILABILITY',
+        ],
+        values: [
+          'AUDIT_LOGS.ROLES.AGENT',
+          'AUDIT_LOGS.AVAILABILITY_STATUSES.BUSY',
+        ],
       });
     });
 
@@ -189,6 +202,68 @@ describe('Helper functions', () => {
       expect(payload).toEqual({
         agentName: 'Agent 1',
         id: 456,
+      });
+    });
+  });
+
+  describe('translateLogPayload', () => {
+    // Um "dicionário" fake: devolve o próprio texto em português para cada
+    // chave, como o i18n real faria — sem depender do vue-i18n no teste.
+    const fakeTranslations = {
+      'AUDIT_LOGS.FIELDS.ROLE': 'papel',
+      'AUDIT_LOGS.FIELDS.AVAILABILITY': 'disponibilidade',
+      'AUDIT_LOGS.ROLES.AGENT': 'Agente',
+      'AUDIT_LOGS.ROLES.ADMINISTRATOR': 'Administrador',
+      'AUDIT_LOGS.AVAILABILITY_STATUSES.BUSY': 'ocupado',
+    };
+    const t = key => fakeTranslations[key] || key;
+
+    it('translates a single role value', () => {
+      const payload = {
+        agentName: 'Lia Admin',
+        role: 'AUDIT_LOGS.ROLES.AGENT',
+      };
+      expect(translateLogPayload(payload, t)).toEqual({
+        agentName: 'Lia Admin',
+        role: 'Agente',
+        attributes: undefined,
+        values: undefined,
+      });
+    });
+
+    it('translates and joins attributes/values arrays', () => {
+      const payload = {
+        agentName: 'Lia Admin',
+        attributes: [
+          'AUDIT_LOGS.FIELDS.ROLE',
+          'AUDIT_LOGS.FIELDS.AVAILABILITY',
+        ],
+        values: [
+          'AUDIT_LOGS.ROLES.ADMINISTRATOR',
+          'AUDIT_LOGS.AVAILABILITY_STATUSES.BUSY',
+        ],
+      };
+      expect(translateLogPayload(payload, t)).toEqual({
+        agentName: 'Lia Admin',
+        role: undefined,
+        attributes: 'papel, disponibilidade',
+        values: 'Administrador, ocupado',
+      });
+    });
+
+    it('leaves non-key fields untouched', () => {
+      const payload = {
+        agentName: 'Lia Admin',
+        id: 42,
+        user: 'Marcos Andrade',
+      };
+      expect(translateLogPayload(payload, t)).toEqual({
+        agentName: 'Lia Admin',
+        id: 42,
+        user: 'Marcos Andrade',
+        role: undefined,
+        attributes: undefined,
+        values: undefined,
       });
     });
   });

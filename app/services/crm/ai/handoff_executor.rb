@@ -182,6 +182,8 @@ module Crm
           registrar('invited', agente: agent)
           outcome = Result.new(status: :invited, assignee: agent)
         end
+        # Fora da trava e da transação do card (revisão da chat#665): um erro ao postar não pode desfazer o convite.
+        ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation) if outcome&.status == :invited
         outcome || skip('invite_failed')
       end
 
@@ -212,6 +214,8 @@ module Crm
         @conversation.bot_handoff!
         # Agente Autonom.ia na caixa? Registra o handoff no histórico dele (aba Desempenho). Best-effort.
         ::Autonomia::Agents::Operate::EventLogger.handed_off_by_inbox(conversation: @conversation, reason: 'human_requested')
+        # O que as ferramentas não conseguiram fazer, para quem assume (conversa 7057). Best-effort.
+        ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation)
         true
       end
 

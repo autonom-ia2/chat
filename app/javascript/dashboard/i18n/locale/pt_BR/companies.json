@@ -32,7 +32,7 @@
     "CREATE": {
       "TITLE": "Adicionar detalhes da empresa",
       "ACTIONS": {
-        "SAVE": "Adicionar empresa"
+        "SAVE": "Salvar empresa"
       },
       "MESSAGES": {
         "SUCCESS": "Empresa criada.",

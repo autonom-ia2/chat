@@ -12,6 +12,10 @@ vi.mock('dashboard/composables/useCanManage', async () => {
 });
 
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: api }));
+vi.mock('shared/composables/useBranding', async () => {
+  const { ref } = await import('vue');
+  return { useBranding: () => ({ installationName: ref('Hub2You') }) };
+});
 
 const push = vi.hoisted(() => vi.fn());
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));

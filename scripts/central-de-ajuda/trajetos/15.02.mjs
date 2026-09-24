@@ -1,8 +1,7 @@
 // Roteiro do vídeo de trajeto do artigo 15.02 — "Criar o agente que cota
 // com o cliente no WhatsApp". Rótulos conferidos em
-// app/javascript/dashboard/i18n/locale/en/insurance.json (INSURANCE.AGENT
-// — o texto do arquivo já é em pt_BR; é o locale usado nesta instalação
-// para essa tela).
+// app/javascript/dashboard/i18n/locale/pt_BR/insurance.json (INSURANCE.AGENT).
+// A gravação precisa de usuária com locale pt_BR (em en os rótulos mudam).
 //
 // Trajeto: Cotação → aba Agente → Configurar e criar → nome do agente,
 // nome da corretora, horário, comportamento → Criar agente. Criação
@@ -11,9 +10,9 @@
 // fora — só a página inicial de Conexões (aba Conexões, não usada aqui)
 // fala com o AGGER.
 //
-// Marca no próprio texto da tela: a nota "mantidos pela Autonom.ia" e a
-// descrição "Um agente Autonom.ia especializado..." ficam sempre visíveis
-// nesta aba (não dá para recortar o zoom para fora). O motor desfoca esse
+// Marca no próprio texto da tela: desde a #649 a nota e a descrição usam o
+// nome da instalação ({installationName}, via useBranding), que fica sempre
+// visível nesta aba (não dá para recortar o zoom para fora). O motor desfoca esse
 // texto automaticamente (desfocarMarcasVisiveis, ligado por padrão) — não
 // precisa de nada extra aqui.
 

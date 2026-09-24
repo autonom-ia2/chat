@@ -1,0 +1,203 @@
+{
+  "product": "empresarial",
+  "ramo": "18",
+  "campos": [
+    {
+      "campo": "segurado.nome",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false
+    },
+    {
+      "campo": "segurado.cpfCnpj",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "descricao": "CPF de quem contrata o seguro, ou o CNPJ quando quem contrata é uma empresa. Só os números. Tem de ser o documento do titular do seguro, e não o de outra pessoa que apareceu na conversa."
+    },
+    {
+      "campo": "configuracoes.imovelCep",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.imovelLogradouro",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.imovelNumero",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": "100",
+      "descricao": "Número do imóvel da empresa no endereço, do jeito que o cliente disse, com letra se tiver. Rua, bairro e cidade o sistema busca pelo CEP: não pergunte por eles."
+    },
+    {
+      "campo": "configuracoes.imovelComplemento",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "padrao": "",
+      "descricao": "Complemento do endereço da empresa: sala, loja, andar, bloco. Opcional: quando o cliente diz que não tem, deixe vazio e não pergunte de novo."
+    },
+    {
+      "campo": "configuracoes.imovelBairro",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.imovelCidade",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.imovelUF",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ""
+    },
+    {
+      "campo": "configuracoes.endereco",
+      "tipo": "texto",
+      "origem": "derivado",
+      "obrigatorio": false,
+      "padrao": ", 100 ,  - ,  - "
+    },
+    {
+      "campo": "configuracoes.imovelUso",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": 1
+    },
+    {
+      "campo": "configuracoes.imovelTipoResidencia",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": 1
+    },
+    {
+      "campo": "configuracoes.imovelConstrucao",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": 1
+    },
+    {
+      "campo": "configuracoes.imovelObjetoSegurado",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "padrao": 3,
+      "descricao": "O que o seguro protege no local da empresa. Prédio e conteúdo quando o cliente é dono do imóvel e quer proteger também o que está dentro (\"a loja e as mercadorias\", \"tudo\"). Só o prédio quando ele quer proteger a construção e não o que está dentro. Só o conteúdo quando o imóvel é alugado e ele quer proteger o que é dele lá dentro (\"sou inquilino\", \"o ponto é alugado\", \"só as máquinas e o estoque\"). Sem o cliente dizer, vale prédio e conteúdo para quem é dono, e só o conteúdo para quem aluga. Valores: 1=Prédio; 2=Conteúdo; 3=Prédio + Conteúdo.",
+      "valores": {
+        "1": "Prédio",
+        "2": "Conteúdo",
+        "3": "Prédio + Conteúdo"
+      }
+    },
+    {
+      "campo": "configuracoes.imovelPatrimonioHistorico",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.imovelPossuiAlarme",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.imovelPossuiAlarmeMonitorado",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.imovelPossuiCercaEletrica",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.imovelPossuiCircuitoFechado",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.imovelPossuiGrades",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.imovelPossuiPorteiroEletronico",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.imovelPossuiVigilancia24hs",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.seguradoProprietario",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": true
+    },
+    {
+      "campo": "configuracoes.areaRisco",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.zonaRural",
+      "tipo": "booleano",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": false
+    },
+    {
+      "campo": "configuracoes.imovelLocalizacao",
+      "tipo": "numero",
+      "origem": "escolha",
+      "obrigatorio": false,
+      "padrao": 2
+    },
+    {
+      "campo": "configuracoes.isDanosIncendioRaioExplosao",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": true,
+      "padrao": 200000,
+      "descricao": "Quanto vale o que a empresa quer proteger no local, em reais: a construção, o que está dentro, ou os dois, conforme o que o cliente escolheu proteger. Aceite o valor aproximado do jeito que ele disser (\"uns 500 mil\"). É obrigatório: se ele não disse, pergunte quanto vale, e se não souber, peça uma estimativa."
+    }
+  ]
+}

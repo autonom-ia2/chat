@@ -470,8 +470,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # coberturas (não o bônus, os sinistros nem a renovação), e quem renova trocando de bem mantém as da própria; regra do Rodrigo, 23/09/2026.
   # Pela chat#638 (`bd633e21…` -> `e14321b7…`): a pessoa vem do cliente; do documento sai só o CPF dela, pelo nome que ele
   # disse, antes de ser pedido.
+  # Pela chat#641 (`e14321b7…` -> `6af397c7…`): pedido de outro ramo volta ao principal com o nome do ramo, e não
+  # como caso para uma pessoa; com três ramos no ar, o principal leva a quem cota.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('e14321b745e2e95ad9f3f57050e78907')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('6af397c7ef9e03bd1ba1a3963e928f9c')
   end
 
   # chat#612 (23/09/2026): a §G e a §J não contam recusa nem motivo ao cliente; só a instabilidade.

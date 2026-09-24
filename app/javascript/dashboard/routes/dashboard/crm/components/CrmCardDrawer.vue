@@ -9,6 +9,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import PhoneNumberInput from 'dashboard/components-next/phonenumberinput/PhoneNumberInput.vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
+import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import ContactAPI from 'dashboard/api/contacts';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
@@ -54,7 +55,7 @@ const emit = defineEmits([
   'scheduleMeeting',
 ]);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { originFromCampaigns, humanizedOriginLabel, formatOriginTitle } =
   useCrmOrigin();
 
@@ -1024,7 +1025,7 @@ const describeActivity = activity => {
       ACTIVITY_TONE_CLASSES[meta.tone] || ACTIVITY_TONE_CLASSES.neutral,
     actor: activityActor(activity),
     detail: activityDetail(activity),
-    relativeTime: relativeTimeFromISO(activity.created_at),
+    relativeTime: relativeTimeFromISO(activity.created_at, locale.value),
   };
 };
 
@@ -1140,6 +1141,10 @@ useKeyboardEvents({
     allowOnFocusedInput: true,
   },
 });
+
+// #646 — a gaveta cobre o mesmo canto (`fixed ... right-0`) do lançador do
+// Guia; sinaliza que está aberta para ele se desviar do rodapé Cancelar/Salvar.
+useFixedPanelPresence(computed(() => props.show));
 </script>
 
 <template>

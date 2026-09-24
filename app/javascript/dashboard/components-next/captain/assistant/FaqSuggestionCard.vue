@@ -23,7 +23,7 @@ const emit = defineEmits(['approve', 'dismiss', 'review']);
 
 const exactTimestamp = useExactTimestamp();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const sourceLabel = computed(() =>
   t('CAPTAIN.FAQ_SUGGESTIONS.SOURCE_COUNT', {
@@ -32,7 +32,10 @@ const sourceLabel = computed(() =>
 );
 
 const updatedAt = computed(() =>
-  dynamicTime(props.suggestion.updated_at || props.suggestion.created_at)
+  dynamicTime(
+    props.suggestion.updated_at || props.suggestion.created_at,
+    locale.value
+  )
 );
 
 const language = computed(() =>
