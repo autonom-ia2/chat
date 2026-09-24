@@ -373,6 +373,11 @@ versões tem esse teto, menor que o do agente. Ficou vermelho na `main` sem ning
 `instruction_version_spec.rb`, **na #578, aberta em 21/09**; na `main` ainda não há guarda. *Outro ramo:* **sim, cada manual de ramo aumenta a instrução.** *Fonte:*
 21/09. *Origem:* teste.
 
+**F8. Medir o que já estava descoberto.** Treze cotações de empresarial em 24/09 bateram na atividade por
+seguradora, no pacote e em campos que o ramo não tem, tudo já levantado na colheita de 04/09 (`agger-descoberta`).
+*Pega:* a Fase 1 começa lendo a descoberta. *Outro ramo:* sim. *Fonte:* MEM `procurar-descoberta-antes-de-medir.md`
+(24/09). *Origem:* produção.
+
 ---
 
 ## O que as fontes não cobrem fora de auto

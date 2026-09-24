@@ -102,6 +102,12 @@ ler é de graça e não disputa nada. Dado de cliente fictício **novo** a cada 
 
 ## Fase 1 — O adapter cota o ramo, provado por leitura de volta
 
+**Antes de qualquer cotação, leia o que já foi descoberto.** A colheita de 04/09/2026 levantou, do código do portal e
+da API ao vivo, o formulário de residencial, vida e empresarial: payload, campos obrigatórios, mínimos para cotar,
+pacote de coberturas, tabelas de código e armadilhas (`~/dev/projetos.noindex/agger-descoberta/ramos/<ramo>/*-campos.json`
+e o README ao lado). Em 24/09 treze cotações de empresarial redescobriram o que estava lá (modo F8). Meça só o que a
+descoberta não responde.
+
 Antes de mexer no chat2you, prove a ponta que custa dinheiro.
 
 **Toca produção e custa cotação paga: aprovação do Rodrigo para a rodada**, a não ser que ela já tenha sido
