@@ -64,8 +64,6 @@ class Enterprise::AuditLog < Audited::Audit
   # ou o agente cujo papel mudou (AccountUser) e o membro de caixa/time. O
   # afetado vem do user_id gravado no diff; no update de AccountUser o diff não
   # traz user_id, então ele sai do próprio AccountUser auditado.
-  AFFECTED_USER_TYPES = %w[AccountUser InboxMember TeamMember].freeze
-
   scope :search_by_user, lambda { |query|
     term = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
     joins("LEFT JOIN users ON users.id = audits.user_id AND audits.user_type = 'User'")
@@ -73,7 +71,7 @@ class Enterprise::AuditLog < Audited::Audit
         LEFT JOIN account_users affected_account_users
           ON audits.auditable_type = 'AccountUser' AND affected_account_users.id = audits.auditable_id
         LEFT JOIN users affected_users
-          ON audits.auditable_type IN (#{AFFECTED_USER_TYPES.map { |type| connection.quote(type) }.join(', ')})
+          ON audits.auditable_type IN ('AccountUser', 'InboxMember', 'TeamMember')
           AND affected_users.id = COALESCE(
             CASE WHEN jsonb_typeof(audits.audited_changes -> 'user_id') = 'number'
               THEN (audits.audited_changes ->> 'user_id')::bigint END,

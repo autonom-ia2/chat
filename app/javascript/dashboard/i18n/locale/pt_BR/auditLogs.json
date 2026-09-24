@@ -73,10 +73,10 @@
       "DELETE": "{agentName} excluiu uma regra de automação (#{id})"
     },
     "ACCOUNT_USER": {
-      "ADD": "{agentName} Convidou {invitee} para sua conta como {role}",
+      "ADD": "{agentName} convidou {invitee} para a conta como {role}",
       "EDIT": {
-        "SELF": "{agentName} Alterou seu {attributes} para {values}",
-        "OTHER": "{agentName} Alterou {attributes} de {user} para {values}",
+        "SELF": "{agentName} alterou {attributes} da própria conta para {values}",
+        "OTHER": "{agentName} alterou {attributes} de {user} para {values}",
         "DELETED": "{agentName} alterou {attributes} de um usuário excluído para {values}"
       }
     },
