@@ -8,6 +8,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import PhoneNumberInput from 'dashboard/components-next/phonenumberinput/PhoneNumberInput.vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
+import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import ContactAPI from 'dashboard/api/contacts';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
@@ -1095,6 +1096,10 @@ useKeyboardEvents({
     allowOnFocusedInput: true,
   },
 });
+
+// #646 — a gaveta cobre o mesmo canto (`fixed ... right-0`) do lançador do
+// Guia; sinaliza que está aberta para ele se desviar do rodapé Cancelar/Salvar.
+useFixedPanelPresence(computed(() => props.show));
 </script>
 
 <template>
