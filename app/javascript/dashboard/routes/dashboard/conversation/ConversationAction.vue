@@ -473,7 +473,7 @@ export default {
       </div>
 
       <div v-if="crmPipelineOptions.length" class="grid gap-2">
-        <div class="grid gap-1">
+        <label class="grid gap-1">
           <span class="text-xs font-medium text-n-slate-11">
             {{ $t('CRM_KANBAN.CONVERSATION.PIPELINE') }}
           </span>
@@ -481,11 +481,12 @@ export default {
             v-model="crmPipelineId"
             :options="crmPipelineOptions"
             :aria-label="$t('CRM_KANBAN.CONVERSATION.PIPELINE')"
+            compact
             class="w-full"
           />
-        </div>
+        </label>
 
-        <div class="grid gap-1">
+        <label class="grid gap-1">
           <span class="text-xs font-medium text-n-slate-11">
             {{ $t('CRM_KANBAN.CONVERSATION.STAGE') }}
           </span>
@@ -494,9 +495,10 @@ export default {
             :options="crmStageOptions"
             :aria-label="$t('CRM_KANBAN.CONVERSATION.STAGE')"
             :disabled="crmIsLoadingStages"
+            compact
             class="w-full"
           />
-        </div>
+        </label>
 
         <NextButton
           :label="$t('CRM_KANBAN.CONVERSATION.CREATE_CARD')"
