@@ -181,16 +181,30 @@ describe('Busca · grade de jogadas', () => {
     });
   });
 
-  it('trocar o modo com jogada de outro modo limpa a jogada', async () => {
+  // A tela diz "Sem jogada": o filtro da jogada que saiu não pode seguir no pedido.
+  it('trocar o modo com jogada de outro modo limpa a jogada e os filtros dela', async () => {
     const wrapper = await openForm();
-    await choosePreset(wrapper, 'PROVA_SOCIAL');
+    await choose(wrapper, SCORE_MODE, 'gbp');
+    await choosePreset(wrapper, 'VENDER_SITE');
+
+    await choose(wrapper, SCORE_MODE, 'general');
+
+    expect(pressedPreset(wrapper)).toEqual([NO_PRESET]);
+    expect(wrapper.text()).not.toContain(ACTIVE_FILTERS);
+    const payload = await submitMinimalSearch(wrapper);
+    expect(payload.metadata.preset_id).toBeNull();
+    expect(payload.metadata.score_mode).toBe('general');
+    expect(payload.metadata.advanced_filters.has_website).toBe('');
+  });
+
+  it('trocar o modo sem jogada mantém filtro posto à mão', async () => {
+    const wrapper = await openForm();
+    await setFormReviewsMin(wrapper, '7');
 
     await choose(wrapper, SCORE_MODE, 'gbp');
 
-    expect(pressedPreset(wrapper)).toEqual([NO_PRESET]);
     const payload = await submitMinimalSearch(wrapper);
-    expect(payload.metadata.preset_id).toBeNull();
-    expect(payload.metadata.score_mode).toBe('gbp');
+    expect(payload.metadata.advanced_filters.reviews_min).toBe(7);
   });
 
   it('clicar de novo na jogada ou em Sem jogada limpa a jogada e os filtros dela', async () => {
@@ -214,15 +228,17 @@ describe('Busca · grade de jogadas', () => {
     });
   });
 
-  it('Sem jogada sem jogada marcada não apaga filtro posto à mão', async () => {
+  // Como no Orth (JogadasGrid chama onSelect(null) e os filtros voltam ao padrão).
+  it('Sem jogada sempre volta os filtros ao padrão, mesmo sem jogada marcada', async () => {
     const wrapper = await openForm();
     await setFormReviewsMin(wrapper, '7');
 
     await presetButton(wrapper, NO_PRESET).trigger('click');
     await flushPromises();
 
+    expect(wrapper.text()).not.toContain(ACTIVE_FILTERS);
     const payload = await submitMinimalSearch(wrapper);
-    expect(payload.metadata.advanced_filters.reviews_min).toBe(7);
+    expect(payload.metadata.advanced_filters.reviews_min).toBe('');
   });
 
   it('escolher jogada não mexe nos resultados abertos', async () => {

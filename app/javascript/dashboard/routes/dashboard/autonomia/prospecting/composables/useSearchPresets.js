@@ -2,7 +2,9 @@
 // formulário e as regras que desmarcam a jogada (#677).
 //   - escolher jogada só vale com o formulário de nova busca aberto;
 //   - filtros que deixam de ser os da jogada desmarcam a jogada e ficam;
-//   - trocar o modo desmarca a jogada que não é do modo novo.
+//   - "Sem jogada" sempre volta os filtros ao padrão, como no Orth;
+//   - trocar o modo desmarca a jogada que não é do modo novo e tira os filtros
+//     dela (jogada marcada quer dizer filtros iguais aos dela).
 // Os filtros do formulário (formFilters, vão no pedido) e o refino da busca
 // aberta (resultFilters) são estados separados (frente B). A jogada do
 // formulário segue formFilters; a jogada da busca aberta segue resultFilters.
@@ -48,7 +50,6 @@ export const useSearchPresets = state => {
   const openSearchPreset = computed(() => findPreset(openSearchPresetId.value));
 
   const clearFormPreset = () => {
-    if (!form.value.preset_id) return;
     form.value.preset_id = null;
     formFilters.value = defaultAdvancedLeadFilters();
   };
@@ -89,7 +90,7 @@ export const useSearchPresets = state => {
     () => form.value.score_mode,
     scoreMode => {
       const preset = findPreset(form.value.preset_id);
-      if (preset && preset.scoreMode !== scoreMode) form.value.preset_id = null;
+      if (preset && preset.scoreMode !== scoreMode) clearFormPreset();
     }
   );
 
