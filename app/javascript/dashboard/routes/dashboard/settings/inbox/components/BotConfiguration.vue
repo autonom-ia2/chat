@@ -98,6 +98,7 @@ export default {
       >
         <SelectInput
           v-model="selectedAgentBotId"
+          :aria-label="$t('AGENT_BOTS.BOT_CONFIGURATION.TITLE')"
           :placeholder="$t('AGENT_BOTS.BOT_CONFIGURATION.SELECT_PLACEHOLDER')"
           :options="agentBots.map(bot => ({ value: bot.id, label: bot.name }))"
         />

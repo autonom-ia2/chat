@@ -6,6 +6,32 @@ const PAGE = 10;
 const clamp = (value, count) =>
   Math.min(Math.max(value, 0), Math.max(count - 1, 0));
 
+// Primeira opção habilitada a partir de `from`, andando `step` (1 ou -1).
+const enabledFrom = (disabled, from, step, count) => {
+  for (let index = from; index >= 0 && index < count; index += step) {
+    if (!disabled[index]) return index;
+  }
+  return -1;
+};
+
+// Habilitada mais próxima de `target`, preferindo a direção do movimento;
+// sem nenhuma, fica em `current`.
+const nearestEnabled = (disabled, target, step, count, current) => {
+  const ahead = enabledFrom(disabled, target, step, count);
+  if (ahead >= 0) return ahead;
+  const behind = enabledFrom(disabled, target, -step, count);
+  return behind >= 0 ? behind : current;
+};
+
+// Validador das props: toda opção tem `value` e `label`.
+export const isChoiceList = options =>
+  options.every(option => 'value' in option && 'label' in option);
+
+// Mesma comparação do v-model do <select> nativo (looseEqual do Vue para
+// valores simples): 5 e '5' são a mesma escolha; null só casa com null.
+export const sameChoice = (a, b) =>
+  a === b || (a != null && b != null && String(a) === String(b));
+
 export const choiceKeyAction = ({
   key,
   altKey = false,
@@ -13,17 +39,31 @@ export const choiceKeyAction = ({
   active,
   selected,
   count,
+  disabled = [],
 }) => {
   if (count === 0) return { type: 'none' };
-  const start = selected >= 0 ? selected : 0;
+  const firstEnabled = Math.max(enabledFrom(disabled, 0, 1, count), 0);
+  const lastEnabled = enabledFrom(disabled, count - 1, -1, count);
+  const end = lastEnabled >= 0 ? lastEnabled : count - 1;
+  const start = selected >= 0 ? selected : firstEnabled;
   if (!open) {
     if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(key))
       return { type: 'open', active: start };
-    if (key === 'Home') return { type: 'open', active: 0 };
-    if (key === 'End') return { type: 'open', active: count - 1 };
+    if (key === 'Home') return { type: 'open', active: firstEnabled };
+    if (key === 'End') return { type: 'open', active: end };
     return { type: 'none' };
   }
   const current = active >= 0 ? active : start;
+  const moveTo = (target, step) => ({
+    type: 'move',
+    active: nearestEnabled(
+      disabled,
+      clamp(target, count),
+      step,
+      count,
+      current
+    ),
+  });
   if (key === 'ArrowUp' && altKey)
     return { type: 'commit', active: current, keepDefault: false };
   if (key === 'Enter' || key === ' ')
@@ -31,16 +71,18 @@ export const choiceKeyAction = ({
   if (key === 'Tab')
     return { type: 'commit', active: current, keepDefault: true };
   if (key === 'Escape') return { type: 'close' };
-  if (key === 'ArrowDown')
-    return { type: 'move', active: clamp(current + 1, count) };
-  if (key === 'ArrowUp')
-    return { type: 'move', active: clamp(current - 1, count) };
-  if (key === 'PageDown')
-    return { type: 'move', active: clamp(current + PAGE, count) };
-  if (key === 'PageUp')
-    return { type: 'move', active: clamp(current - PAGE, count) };
-  if (key === 'Home') return { type: 'move', active: 0 };
-  if (key === 'End') return { type: 'move', active: count - 1 };
+  if (key === 'ArrowDown') {
+    const next = enabledFrom(disabled, current + 1, 1, count);
+    return { type: 'move', active: next >= 0 ? next : current };
+  }
+  if (key === 'ArrowUp') {
+    const previous = enabledFrom(disabled, current - 1, -1, count);
+    return { type: 'move', active: previous >= 0 ? previous : current };
+  }
+  if (key === 'PageDown') return moveTo(current + PAGE, -1);
+  if (key === 'PageUp') return moveTo(current - PAGE, 1);
+  if (key === 'Home') return { type: 'move', active: firstEnabled };
+  if (key === 'End') return { type: 'move', active: end };
   return { type: 'none' };
 };
 

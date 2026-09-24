@@ -196,6 +196,7 @@ watch(
       <Select
         v-model="unknownContact"
         :options="UNKNOWN_CONTACT_OPTIONS"
+        :aria-label="t('AGENTS.AUDIENCE.UNKNOWN_CONTACT.LABEL')"
         class="w-full"
       />
       <p class="m-0 text-xs text-n-slate-10">

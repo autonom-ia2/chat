@@ -180,6 +180,9 @@ export default {
           </div>
           <NextSelect
             v-model="fromTime"
+            :aria-label="
+              $t('INBOX_MGMT.BUSINESS_HOURS.DAY.OPENS_AT', { day: dayName })
+            "
             :groups="fromTimeSlots"
             :placeholder="$t('INBOX_MGMT.BUSINESS_HOURS.DAY.CHOOSE')"
             :disabled="isOpenAllDay"
@@ -189,6 +192,9 @@ export default {
           </div>
           <NextSelect
             v-model="toTime"
+            :aria-label="
+              $t('INBOX_MGMT.BUSINESS_HOURS.DAY.CLOSES_AT', { day: dayName })
+            "
             :groups="toTimeSlots"
             :placeholder="$t('INBOX_MGMT.BUSINESS_HOURS.DAY.CHOOSE')"
             :disabled="isOpenAllDay"

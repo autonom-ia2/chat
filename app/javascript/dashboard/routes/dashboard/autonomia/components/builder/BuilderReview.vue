@@ -237,7 +237,8 @@ const onConnect = () => {
           </label>
           <Select
             v-model="selectedInbox"
-            class="!w-full [&_select]:w-full"
+            class="!w-full"
+            :aria-label="t('AGENTS.REVIEW.SELECT_INBOX')"
             :options="inboxOptions"
             :placeholder="t('AGENTS.REVIEW.SELECT_INBOX')"
             :disabled="!inboxOptions.length"

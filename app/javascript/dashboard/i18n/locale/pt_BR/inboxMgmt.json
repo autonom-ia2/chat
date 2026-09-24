@@ -1394,7 +1394,9 @@
         "ENABLE": "Permitir a disponibilidade para este dia",
         "UNAVAILABLE": "Indisponível",
         "VALIDATION_ERROR": "Hora inicial deve ser antes de hora de fechamento.",
-        "CHOOSE": "Selecione"
+        "CHOOSE": "Selecione",
+        "OPENS_AT": "Horário de abertura de {day}",
+        "CLOSES_AT": "Horário de fechamento de {day}"
       },
       "ALL_DAY": "O dia todo"
     },

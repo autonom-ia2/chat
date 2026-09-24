@@ -40,6 +40,11 @@ const DialogStub = {
   `,
 };
 
+// O jsdom não implementa rolagem; o ChoiceSelect rola até a opção ativa.
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
+
 const mountDialog = () =>
   mount(NewImportDialog, {
     props: { show: true },
@@ -68,7 +73,11 @@ describe('NewImportDialog', () => {
 
   it('validates and creates a Freshdesk import with its domain', async () => {
     const wrapper = mountDialog();
-    await wrapper.find('select').setValue('freshdesk');
+    await wrapper.get('[role="combobox"]').trigger('click');
+    const freshdesk = wrapper
+      .findAll('[role="option"]')
+      .find(option => option.text() === 'Freshdesk');
+    await freshdesk.trigger('click');
     await nextTick();
 
     const domainInput = wrapper.find(
