@@ -53,6 +53,20 @@
       "ERROR_MESSAGE": "Não foi possível conectar ao servidor Woot, por favor tente novamente mais tarde"
     },
     "DEFAULT_USER": "Sistema",
+    "FIELDS": {
+      "ROLE": "papel",
+      "AVAILABILITY": "disponibilidade"
+    },
+    "ROLES": {
+      "AGENT": "Agente",
+      "ADMINISTRATOR": "Administrador",
+      "UNKNOWN": "desconhecido"
+    },
+    "AVAILABILITY_STATUSES": {
+      "ONLINE": "online",
+      "OFFLINE": "offline",
+      "BUSY": "ocupado"
+    },
     "AUTOMATION_RULE": {
       "ADD": "{agentName} nova regra de automação criada (#{id})",
       "EDIT": "{agentName} atualizou regra de automação (#{id})",

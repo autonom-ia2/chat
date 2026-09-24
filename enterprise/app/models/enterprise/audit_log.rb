@@ -60,10 +60,31 @@ class Enterprise::AuditLog < Audited::Audit
   scope :with_auditable_types, ->(types) { where(auditable_type: types) }
   scope :created_after, ->(time) { where(created_at: time..) }
   scope :created_before, ->(time) { where(created_at: ..time) }
+  # Busca por quem fez a ação (autor) e pela pessoa afetada (#644): o convidado
+  # ou o agente cujo papel mudou (AccountUser) e o membro de caixa/time. O
+  # afetado vem do user_id gravado no diff; no update de AccountUser o diff não
+  # traz user_id, então ele sai do próprio AccountUser auditado.
+  AFFECTED_USER_TYPES = %w[AccountUser InboxMember TeamMember].freeze
+
   scope :search_by_user, lambda { |query|
     term = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
     joins("LEFT JOIN users ON users.id = audits.user_id AND audits.user_type = 'User'")
-      .where('audits.username ILIKE :term OR users.name ILIKE :term OR users.email ILIKE :term', term: term)
+      .joins(<<~SQL.squish)
+        LEFT JOIN account_users affected_account_users
+          ON audits.auditable_type = 'AccountUser' AND affected_account_users.id = audits.auditable_id
+        LEFT JOIN users affected_users
+          ON audits.auditable_type IN (#{AFFECTED_USER_TYPES.map { |type| connection.quote(type) }.join(', ')})
+          AND affected_users.id = COALESCE(
+            CASE WHEN jsonb_typeof(audits.audited_changes -> 'user_id') = 'number'
+              THEN (audits.audited_changes ->> 'user_id')::bigint END,
+            affected_account_users.user_id
+          )
+      SQL
+      .where(
+        'audits.username ILIKE :term OR users.name ILIKE :term OR users.email ILIKE :term ' \
+        'OR affected_users.name ILIKE :term OR affected_users.email ILIKE :term',
+        term: term
+      )
   }
 
   private
