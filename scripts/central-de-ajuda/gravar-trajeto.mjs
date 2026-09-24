@@ -34,6 +34,7 @@ import {
   limparCampo,
   definirValor,
   selecionar,
+  acharOpcaoDoCombobox,
   anexarArquivo,
   verificarSemMarca,
   desfocarMarcasVisiveis,
@@ -95,6 +96,16 @@ async function esperarAppPronto(cliente, tentativas = 220) {
 // seria conferido contra a tela "de depois do clique", com coordenadas de
 // uma tela checando o conteúdo de outra. Por isso cada segmento se
 // registra E se confere no mesmo passo, não em lote no fim da cena.
+// Retângulo que cobre dois (campo + opção escolhida), para o recorte com zoom
+// mostrar os dois na cena do seletor.
+function uniaoDeRetangulos(a, b) {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  const width = Math.max(a.x + a.width, b.x + b.width) - x;
+  const height = Math.max(a.y + a.height, b.y + b.height) - y;
+  return { x, y, width, height, centroX: x + width / 2, centroY: y + height / 2 };
+}
+
 async function registrarSegmento(cliente, segmentos, zoom, legenda, dados) {
   const recorteCss = calcularRecorte({
     retanguloCss: dados.retanguloCss,
@@ -210,16 +221,27 @@ async function executarCena(cliente, cena, contexto) {
     await esperar(300);
     await registrar({ tInicio, tFim: agora(), retanguloCss: retangulo });
   } else if (cena.acao === 'selecionar') {
-    // <option> de um <select> nativo não tem retângulo de layout próprio —
-    // clica no <select> (como "digitar" clica no campo) e escolhe a opção
-    // por valor ou por texto visível, sem simular clique num <option>.
+    // Clica no campo. No seletor do painel (combobox) a lista abre: o cursor
+    // vai até a opção e clica nela, e o recorte cobre o campo e a opção. No
+    // <select> nativo (fora do painel) o <option> não tem retângulo próprio:
+    // escolhe por valor ou texto pelo setter, sem simular clique no <option>.
     const retangulo = await destacarEAcharRetangulo(cliente, cena.alvo);
     await moverCursor(cliente, retangulo.centroX, retangulo.centroY);
     await clicar(cliente, retangulo.centroX, retangulo.centroY);
     await esperar(200);
-    await selecionar(cliente, cena.valor);
-    await esperar(300);
-    await registrar({ tInicio, tFim: agora(), retanguloCss: retangulo });
+    const opcao = await acharOpcaoDoCombobox(cliente, cena.valor);
+    if (opcao) {
+      await esperar(PAUSA_DEPOIS_MS);
+      await moverCursor(cliente, opcao.centroX, opcao.centroY);
+      await esperar(cena.pausaAntesMs ?? PAUSA_ANTES_MS);
+      await clicar(cliente, opcao.centroX, opcao.centroY);
+      await esperar(PAUSA_DEPOIS_MS);
+      await registrar({ tInicio, tFim: agora(), retanguloCss: uniaoDeRetangulos(retangulo, opcao) });
+    } else {
+      await selecionar(cliente, cena.valor);
+      await esperar(300);
+      await registrar({ tInicio, tFim: agora(), retanguloCss: retangulo });
+    }
   } else if (cena.acao === 'anexarArquivo') {
     // cena.alvo é o botão/label VISÍVEL que abre o seletor de arquivo (é
     // nele que o cursor e o destaque aparecem); cena.seletorArquivo é o

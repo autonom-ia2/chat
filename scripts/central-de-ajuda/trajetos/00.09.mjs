@@ -66,7 +66,7 @@ export const cenas = [
     // usa a ação "selecionar" em vez de "mover e clicar".
     legenda: 'Escolha o domínio de envio',
     acao: 'selecionar',
-    alvo: { seletor: 'select' },
+    alvo: { seletor: '[role="combobox"][aria-label="Domínio de envio"]' },
     valor: 'ses:1',
     zoom: 1.8,
   },

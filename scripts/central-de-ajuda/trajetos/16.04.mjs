@@ -56,7 +56,7 @@ export const cenas = [
   {
     legenda: 'Escolha o Funil CRM padrão',
     acao: 'selecionar',
-    alvo: { seletor: 'select' },
+    alvo: { seletor: '[role="combobox"][aria-label="Funil CRM padrão"]' },
     valor: 'Funil Comercial',
     zoom: 1.8,
   },

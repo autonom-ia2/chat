@@ -470,6 +470,63 @@ export async function selecionar(cliente, valorOuTexto) {
   return Boolean(result.value);
 }
 
+// Seletor do painel (ChoiceSelect, role="combobox"; o painel não tem mais
+// <select> nativo, #652): depois do clique no campo a lista abre de verdade,
+// então o vídeo mostra a lista e o cursor clica na opção, como uma pessoa.
+// Acha a opção pelo data-value (valor) ou pelo texto visível e devolve o
+// retângulo dela. Devolve null quando o foco não está num combobox — aí o
+// alvo é um <select> nativo e vale selecionar(). Opção inexistente é erro.
+export async function acharOpcaoDoCombobox(
+  cliente,
+  valorOuTexto,
+  { tentativas = 20, intervaloMs = 100 } = {}
+) {
+  for (let i = 0; i < tentativas; i += 1) {
+    const { result } = await cliente.enviar('Runtime.evaluate', {
+      expression: `
+        (function () {
+          var campo = document.activeElement;
+          if (!campo || campo.getAttribute('role') !== 'combobox') return null;
+          var lista = document.getElementById(campo.getAttribute('aria-controls'));
+          if (!lista) return { pronta: false };
+          var alvo = ${JSON.stringify(valorOuTexto)};
+          var opcao = Array.prototype.find.call(
+            lista.querySelectorAll('[role="option"]'),
+            function (o) {
+              return o.dataset.value === alvo || o.textContent.trim() === alvo;
+            }
+          );
+          if (!opcao) return { pronta: true, achou: false };
+          opcao.scrollIntoView({ block: 'nearest' });
+          var r = opcao.getBoundingClientRect();
+          if (!r.width || !r.height) return { pronta: false };
+          return {
+            pronta: true,
+            achou: true,
+            x: r.left,
+            y: r.top,
+            width: r.width,
+            height: r.height,
+            centroX: r.left + r.width / 2,
+            centroY: r.top + r.height / 2,
+          };
+        })()
+      `,
+      returnByValue: true,
+    });
+    const achado = result.value;
+    if (achado === null) return null;
+    if (achado.pronta && !achado.achou) {
+      throw new Error(`Opção não encontrada no seletor: ${valorOuTexto}`);
+    }
+    if (achado.achou) return achado;
+    await new Promise(resolve => {
+      setTimeout(resolve, intervaloMs);
+    });
+  }
+  throw new Error(`A lista do seletor não abriu para escolher: ${valorOuTexto}`);
+}
+
 // Anexa um arquivo local a um <input type="file"> — mesmo escondido atrás
 // de um botão/label visível (padrão comum: o botão dispara input.click(),
 // e o input real fica com display:none ou 1x1px). Não dá para simular o
