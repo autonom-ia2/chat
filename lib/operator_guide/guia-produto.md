@@ -1432,7 +1432,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `prospecting_manage`
 - pre_requisitos: ser administrador ou ter a permissão de gerenciar prospecção
 - passos: 1. Abra Configurações > Prospecção; 2. Na aba geral, confira se as chaves da plataforma estão prontas, se a pesquisa está liberada e se há aviso de IA; 3. Defina o funil e a etapa padrão usados ao criar cards; 4. Ajuste o cache; 5. Na aba score, escolha um perfil ou mude para customizado para editar os pesos; 6. Salve.
-- gotchas: a conta não cola chave do Google nem ajusta limite: as chaves são da plataforma e quem configura é o suporte; a pesquisa de empresa e decisor, que libera o botão Enriquecer, também é ligada pelo suporte, conta a conta; a IA da prospecção usa só a chave da integração CRM Kanban AI da conta, nunca a da plataforma, e a tela avisa quando ela falta; os pesos do score só ficam editáveis no modo customizado; a forma de pesquisa muda o sentido do score, priorizando quem tem lacunas no perfil ou quem já é mais estruturado.
+- gotchas: a conta não cola chave do Google nem ajusta limite: as chaves são da plataforma e quem configura é o suporte; a pesquisa de empresa e decisor, que libera o botão Enriquecer, também é ligada pelo suporte, conta a conta; a IA da prospecção usa só a chave da integração CRM Kanban AI da conta, nunca a da plataforma, e a tela avisa quando ela falta, mas só com a pesquisa liberada, porque sem a pesquisa a IA não roda; os pesos do score só ficam editáveis no modo customizado; a forma de pesquisa muda o sentido do score, priorizando quem tem lacunas no perfil ou quem já é mais estruturado.
 - nav_target: `autonomia_prospecting_settings`
 
 ### Entrar na área de Cotação da corretora

@@ -107,7 +107,8 @@ describe('ProspectingSettingsPage', () => {
     expect(texto).not.toContain('PROSPECTING.AI_CREDENTIAL.MISSING_TITLE');
   });
 
-  it('avisa quando faltam as chaves, a pesquisa e a credencial de IA do Kanban, com o caminho para configurar', async () => {
+  // Sem a pesquisa liberada pelo superadmin a IA nunca roda, e o aviso só confundiria.
+  it('avisa quando faltam as chaves e a pesquisa, sem aviso de IA com a pesquisa desligada', async () => {
     const wrapper = await montar({
       platform_google_places_configured: false,
       google_maps_browser_api_key: null,
@@ -118,6 +119,18 @@ describe('ProspectingSettingsPage', () => {
     const texto = wrapper.text();
     expect(texto).toContain('PROSPECTING.SETTINGS.PLATFORM.KEYS_MISSING');
     expect(texto).toContain('PROSPECTING.SETTINGS.PLATFORM.RESEARCH_DISABLED');
+    expect(texto).not.toContain('PROSPECTING.AI_CREDENTIAL.MISSING_TITLE');
+  });
+
+  it('avisa da credencial de IA do Kanban com a pesquisa ligada, com o caminho para configurar', async () => {
+    const wrapper = await montar({
+      platform_google_places_configured: true,
+      google_maps_browser_api_key: 'chave-publica',
+      research_enabled: true,
+      ai_credential_configured: false,
+    });
+
+    const texto = wrapper.text();
     expect(texto).toContain('PROSPECTING.AI_CREDENTIAL.MISSING_TITLE');
     expect(texto).toContain('PROSPECTING.AI_CREDENTIAL.CONFIGURE');
     expect(JSON.parse(wrapper.find('.link').attributes('data-to'))).toEqual({

@@ -63,14 +63,32 @@ const abrirNovaBusca = async wrapper => {
 describe('ProspectingSearchPage', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('mostra o aviso de IA quando a conta não tem credencial do Kanban', async () => {
-    const wrapper = await montar({ ai_credential_configured: false });
+  it('mostra o aviso de IA quando a pesquisa está ligada e a conta não tem credencial do Kanban', async () => {
+    const wrapper = await montar({
+      research_enabled: true,
+      ai_credential_configured: false,
+    });
 
     expect(wrapper.text()).toContain('PROSPECTING.AI_CREDENTIAL.MISSING_TITLE');
   });
 
+  // Sem a pesquisa liberada pelo superadmin a IA nunca roda, e o aviso só confundiria.
+  it('não mostra o aviso de IA quando a pesquisa está desligada, mesmo sem credencial', async () => {
+    const wrapper = await montar({
+      research_enabled: false,
+      ai_credential_configured: false,
+    });
+
+    expect(wrapper.text()).not.toContain(
+      'PROSPECTING.AI_CREDENTIAL.MISSING_TITLE'
+    );
+  });
+
   it('não mostra o aviso quando a credencial existe', async () => {
-    const wrapper = await montar({ ai_credential_configured: true });
+    const wrapper = await montar({
+      research_enabled: true,
+      ai_credential_configured: true,
+    });
 
     expect(wrapper.text()).not.toContain(
       'PROSPECTING.AI_CREDENTIAL.MISSING_TITLE'

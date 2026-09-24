@@ -1074,7 +1074,10 @@ onMounted(async () => {
         class="mb-4"
       />
       <ProspectingAiCredentialNotice
-        v-if="settings?.ai_credential_configured === false"
+        v-if="
+          settings?.research_enabled &&
+          settings?.ai_credential_configured === false
+        "
         class="mb-4"
       />
       <form

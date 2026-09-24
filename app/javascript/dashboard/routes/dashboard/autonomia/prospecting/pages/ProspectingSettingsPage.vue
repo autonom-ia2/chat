@@ -352,7 +352,9 @@ onMounted(fetchSettings);
           <ProspectingMockProviderNotice v-if="settings.mock_provider" />
 
           <ProspectingAiCredentialNotice
-            v-if="!settings.ai_credential_configured"
+            v-if="
+              settings.research_enabled && !settings.ai_credential_configured
+            "
           />
 
           <label class="grid gap-1 md:w-1/3">
