@@ -431,22 +431,24 @@ onMounted(async () => {
         </p>
       </div>
       <div v-if="hasPipelines" class="flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2 text-sm text-n-slate-11">
-          <span>{{ t('CRM_KANBAN.DASHBOARD.PIPELINE_LABEL') }}</span>
+        <label class="flex items-center gap-2 text-sm text-n-slate-11">
+          {{ t('CRM_KANBAN.DASHBOARD.PIPELINE_LABEL') }}
           <ChoiceSelect
             v-model="selectedPipelineId"
             :options="pipelineChoices"
             :aria-label="t('CRM_KANBAN.DASHBOARD.PIPELINE_LABEL')"
+            compact
           />
-        </div>
-        <div class="flex items-center gap-2 text-sm text-n-slate-11">
-          <span>{{ t('CRM_KANBAN.DASHBOARD.PERIOD_LABEL') }}</span>
+        </label>
+        <label class="flex items-center gap-2 text-sm text-n-slate-11">
+          {{ t('CRM_KANBAN.DASHBOARD.PERIOD_LABEL') }}
           <ChoiceSelect
             v-model="selectedPeriodKey"
             :options="periodChoices"
             :aria-label="t('CRM_KANBAN.DASHBOARD.PERIOD_LABEL')"
+            compact
           />
-        </div>
+        </label>
         <Button
           icon="i-lucide-refresh-cw"
           slate

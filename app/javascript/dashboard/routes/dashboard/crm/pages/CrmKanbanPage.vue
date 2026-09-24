@@ -1779,7 +1779,7 @@ onMounted(async () => {
            high-frequency selects + Filters popover + clear, with New card pushed
            to the right. Keeps the header band to just the title + global actions. -->
       <div class="flex flex-wrap items-end gap-3">
-        <div v-if="viewMode !== 'calendar'" class="grid gap-1">
+        <label v-if="viewMode !== 'calendar'" class="grid gap-1">
           <span class="text-xs font-medium text-n-slate-11">
             {{ t('CRM_KANBAN.FILTERS.PIPELINE') }}
           </span>
@@ -1790,7 +1790,7 @@ onMounted(async () => {
             :disabled="!hasPipelines"
             class="w-44"
           />
-        </div>
+        </label>
 
         <Button
           v-if="
@@ -1855,85 +1855,85 @@ onMounted(async () => {
                 {{ t('CRM_KANBAN.FILTERS.PANEL_TITLE') }}
               </p>
 
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.INBOX') }}
                 </span>
                 <ChoiceSelect
                   v-model="filters.inboxId"
-                  teleport
                   :options="inboxChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.INBOX')"
+                  compact
                   class="w-full"
                 />
-              </div>
+              </label>
 
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.OWNER') }}
                 </span>
                 <ChoiceSelect
                   v-model="filters.ownerId"
-                  teleport
                   :options="ownerChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.OWNER')"
+                  compact
                   class="w-full"
                 />
-              </div>
+              </label>
 
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.PRIORITY') }}
                 </span>
                 <ChoiceSelect
                   v-model="filters.priority"
-                  teleport
                   :options="priorityChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.PRIORITY')"
+                  compact
                   class="w-full"
                   @change="applyFilters"
                 />
-              </div>
+              </label>
 
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.FOLLOW_UP') }}
                 </span>
                 <ChoiceSelect
                   v-model="filters.followUpStatus"
-                  teleport
                   :options="followUpStatusChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.FOLLOW_UP')"
+                  compact
                   class="w-full"
                   @change="applyFilters"
                 />
-              </div>
+              </label>
 
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.RESPONSIBLE') }}
                 </span>
                 <ChoiceSelect
                   v-model="filters.responsibleKind"
-                  teleport
                   :options="responsibleChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.RESPONSIBLE')"
+                  compact
                   class="w-full"
                 />
-              </div>
+              </label>
 
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.TEAM') }}
                 </span>
                 <ChoiceSelect
                   v-model="filters.teamId"
-                  teleport
                   :options="teamChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.TEAM')"
+                  compact
                   class="w-full"
                 />
-              </div>
+              </label>
 
               <div class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
@@ -2054,31 +2054,31 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.STALE') }}
                 </span>
                 <ChoiceSelect
                   v-model="filters.staleDays"
-                  teleport
                   :options="staleChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.STALE')"
+                  compact
                   class="w-full"
                 />
-              </div>
+              </label>
 
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.LINKED') }}
                 </span>
                 <ChoiceSelect
                   v-model="filters.standalone"
-                  teleport
                   :options="linkedChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.LINKED')"
+                  compact
                   class="w-full"
                 />
-              </div>
+              </label>
 
               <label
                 v-if="canManageAi"
@@ -2092,18 +2092,18 @@ onMounted(async () => {
                 {{ t('CRM_KANBAN.FILTERS.AI_PENDING') }}
               </label>
 
-              <div v-if="viewMode === 'list'" class="grid gap-1">
+              <label v-if="viewMode === 'list'" class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.RESULT') }}
                 </span>
                 <ChoiceSelect
                   v-model="filters.result"
-                  teleport
                   :options="resultChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.RESULT')"
+                  compact
                   class="w-full"
                 />
-              </div>
+              </label>
 
               <div class="flex items-center justify-between gap-2 pt-1">
                 <Button
@@ -2533,7 +2533,6 @@ onMounted(async () => {
         </span>
         <ChoiceSelect
           v-model="deleteStageTargetId"
-          teleport
           :options="deleteStageChoices"
           :placeholder="t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_PLACEHOLDER')"
           :aria-label="t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_LABEL')"

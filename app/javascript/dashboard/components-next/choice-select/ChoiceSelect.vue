@@ -2,6 +2,11 @@
 // Escolha única do produto. Não usamos <select> nativo: a lista dele ignora o design
 // system e muda de navegador para navegador. Teclado segue o padrão WAI-ARIA
 // "select-only combobox" (dashboard/helper/choiceKeys.js). Portado do ChoiceSelect do Bio.
+//
+// A lista é um popover manual (Popover API): fica na camada do topo, acima de
+// modal <dialog> e fora do corte de overflow das seções, e continua no DOM do
+// componente — dentro do dialog, então não fica inerte. A posição é fixa,
+// calculada do botão. Sem Popover API (jsdom), o v-show cuida da visibilidade.
 import { computed, nextTick, ref, useId, useTemplateRef, watch } from 'vue';
 import { onClickOutside, useEventListener } from '@vueuse/core';
 import {
@@ -31,12 +36,9 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   invalid: { type: Boolean, default: false },
   // Altura menor para barras de filtro; a área de toque continua com 44 px.
+  // Fora do compacto, a raiz tem largura mínima (min-w-40), como o select
+  // nativo, que não encolhe até o texto escolhido.
   compact: { type: Boolean, default: false },
-  // Dentro de modal ou popover com rolagem, a lista absoluta é recortada pelo
-  // contêiner. Com `teleport`, ela vai para o body em posição fixa e passa por
-  // cima dele, como a do select nativo. Não use dentro de <dialog> aberto com
-  // showModal(): fora dele a página fica inerte e abaixo da camada do diálogo.
-  teleport: { type: Boolean, default: false },
 });
 
 // Como o @change do select nativo: só quando a escolha muda, já com o
@@ -66,9 +68,7 @@ const list = useTemplateRef('list');
 
 const isOpen = ref(false);
 const active = ref(-1);
-const opensUpward = ref(false);
-const floatingStyle = ref({});
-const listDirection = ref('ltr');
+const listStyle = ref({});
 const typed = { text: '', at: 0, from: -1 };
 
 // Seções da lista: um grupo por <optgroup>, ou uma seção sem rótulo.
@@ -104,38 +104,38 @@ const selectedLabel = computed(
   () => flatOptions.value[selected.value]?.label ?? props.placeholder
 );
 
-// Posição fixa, colada no gatilho, para a lista levada ao body.
-const placeFloating = (rect, below) => {
-  const room = opensUpward.value ? rect.top : below;
-  const vertical = opensUpward.value
-    ? { bottom: `${window.innerHeight - rect.top + LIST_GAP}px` }
-    : { top: `${rect.bottom + LIST_GAP}px` };
-  const maxHeight = Math.min(
+// Coordenadas da lista (position: fixed), a partir do botão. Largura mínima é a
+// do botão; opções mais longas alargam a lista até a borda da tela. A altura é
+// limitada ao espaço do lado escolhido: a lista fixa não volta rolando a página,
+// então o que passasse da tela ficaria inalcançável.
+const place = () => {
+  const rect = trigger.value?.getBoundingClientRect();
+  if (!rect) return;
+  const below = window.innerHeight - rect.bottom;
+  const spaceBelow = below - LIST_GAP - VIEWPORT_MARGIN;
+  const spaceAbove = rect.top - LIST_GAP - VIEWPORT_MARGIN;
+  const needed = Math.min(
     LIST_MAX_HEIGHT,
-    room - LIST_GAP - VIEWPORT_MARGIN
+    flatOptions.value.length * OPTION_HEIGHT
   );
-  floatingStyle.value = {
-    ...vertical,
+  // Abre para cima só quando não cabe embaixo e há mais espaço em cima.
+  const opensUpward = spaceBelow < needed && spaceAbove > spaceBelow;
+  const space = opensUpward ? spaceAbove : spaceBelow;
+  // Uma opção inteira no mínimo, mesmo em tela minúscula.
+  const maxHeight = Math.max(OPTION_HEIGHT, Math.min(LIST_MAX_HEIGHT, space));
+  listStyle.value = {
     left: `${rect.left}px`,
-    width: `${rect.width}px`,
+    minWidth: `${rect.width}px`,
+    maxWidth: `${window.innerWidth - rect.left - VIEWPORT_MARGIN}px`,
     maxHeight: `${maxHeight}px`,
+    ...(opensUpward
+      ? { bottom: `${window.innerHeight - rect.top + LIST_GAP}px` }
+      : { top: `${rect.bottom + LIST_GAP}px` }),
   };
-  // Fora do #app[dir], a lista herda a direção do gatilho.
-  listDirection.value = window.getComputedStyle(trigger.value).direction;
 };
 
 const show = index => {
-  const rect = trigger.value?.getBoundingClientRect();
-  if (rect) {
-    const below = window.innerHeight - rect.bottom;
-    const needed = Math.min(
-      LIST_MAX_HEIGHT,
-      flatOptions.value.length * OPTION_HEIGHT
-    );
-    // Abre para cima só quando não cabe embaixo e há mais espaço em cima.
-    opensUpward.value = below < needed && rect.top > below;
-    if (props.teleport) placeFloating(rect, below);
-  }
+  place();
   active.value = index;
   isOpen.value = true;
 };
@@ -226,10 +226,7 @@ const onKeydown = event => {
 };
 
 const onBlur = event => {
-  const target = event.relatedTarget;
-  if (!isOpen.value) return;
-  if (root.value?.contains(target) || list.value?.contains(target)) return;
-  close(false);
+  if (isOpen.value && !root.value?.contains(event.relatedTarget)) close(false);
 };
 
 watch([isOpen, active], async () => {
@@ -240,6 +237,29 @@ watch([isOpen, active], async () => {
     ?.scrollIntoView({ block: 'nearest' });
 });
 
+watch(
+  isOpen,
+  open => {
+    if (open) list.value?.showPopover?.();
+    else list.value?.hidePopover?.();
+  },
+  { flush: 'post' }
+);
+
+// Enquanto aberta, a lista acompanha o botão em qualquer rolagem (capture pega
+// a das seções internas) e no redimensionamento. A rolagem da própria lista não
+// move o botão.
+const openWindow = () => (isOpen.value ? window : null);
+useEventListener(
+  openWindow,
+  'scroll',
+  event => {
+    if (event.target !== list.value) place();
+  },
+  { capture: true, passive: true }
+);
+useEventListener(openWindow, 'resize', place, { passive: true });
+
 onClickOutside(
   root,
   () => {
@@ -247,23 +267,10 @@ onClickOutside(
   },
   { ignore: [list] }
 );
-
-// A lista fixa não acompanha a rolagem da página; fecha, como o select nativo.
-const closeFloating = event => {
-  if (!props.teleport || !isOpen.value) return;
-  if (event.target instanceof Node && list.value?.contains(event.target))
-    return;
-  close(false);
-};
-useEventListener(window, 'scroll', closeFloating, {
-  capture: true,
-  passive: true,
-});
-useEventListener(window, 'resize', closeFloating);
 </script>
 
 <template>
-  <div ref="root" class="relative" :class="{ 'min-w-40': !compact }">
+  <div ref="root" :class="{ 'min-w-40': !compact }">
     <button
       ref="trigger"
       type="button"
@@ -277,11 +284,13 @@ useEventListener(window, 'resize', closeFloating);
       "
       :aria-invalid="invalid || undefined"
       :disabled="disabled"
-      class="relative flex items-center justify-between w-full gap-2 rounded-lg text-start bg-n-surface-1 text-n-slate-12 outline outline-1 -outline-offset-1 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+      class="relative flex items-center justify-between w-full gap-2 rounded-lg text-start bg-n-surface-1 text-n-slate-12 outline outline-1 -outline-offset-1 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60 before:absolute before:inset-x-0"
       :class="[
+        // Altura dos campos do design system (h-10; compacto h-8). O
+        // pseudo-elemento leva a área de toque a 44 px nos dois.
         compact
-          ? 'min-h-8 px-2 text-xs before:absolute before:inset-x-0 before:-inset-y-1.5'
-          : 'min-h-11 px-3 text-sm',
+          ? 'h-8 px-2 text-xs before:-inset-y-1.5'
+          : 'h-10 px-3 text-sm before:-inset-y-0.5',
         invalid
           ? 'outline-n-ruby-9 focus-visible:outline-n-ruby-9'
           : 'outline-n-weak hover:enabled:outline-n-slate-6 focus-visible:outline-n-brand',
@@ -297,75 +306,64 @@ useEventListener(window, 'resize', closeFloating);
         aria-hidden="true"
       />
     </button>
-    <!-- data-popover-content: o Popover não trata o clique na lista levada ao body como clique fora. -->
-    <Teleport to="body" :disabled="!teleport">
-      <ul
-        v-show="isOpen"
-        :id="listId"
-        ref="list"
-        role="listbox"
-        :aria-label="ariaLabel"
-        tabindex="-1"
-        :dir="teleport ? listDirection : undefined"
-        :data-popover-content="teleport || undefined"
-        :style="teleport ? floatingStyle : undefined"
-        class="py-1 mb-0 overflow-y-auto rounded-lg shadow-lg max-h-80 bg-n-solid-2 outline outline-1 outline-n-container"
-        :class="
-          teleport
-            ? 'fixed z-[9999]'
-            : [
-                'absolute z-50 w-full',
-                opensUpward ? 'bottom-full mb-1' : 'top-full mt-1',
-              ]
-        "
+    <ul
+      v-show="isOpen"
+      :id="listId"
+      ref="list"
+      role="listbox"
+      :aria-label="ariaLabel"
+      tabindex="-1"
+      popover="manual"
+      class="fixed z-50 px-0 py-1 m-0 overflow-y-auto border-0 rounded-lg shadow-lg inset-auto max-h-80 bg-n-solid-2 text-n-slate-12 outline outline-1 outline-n-container"
+      :style="listStyle"
+      @click.prevent
+    >
+      <li
+        v-for="(section, sectionIndex) in sections"
+        :key="sectionIndex"
+        role="none"
       >
-        <li
-          v-for="(section, sectionIndex) in sections"
-          :key="sectionIndex"
-          role="none"
+        <div
+          v-if="section.label"
+          :id="groupLabelId(sectionIndex)"
+          class="px-3 pt-2 pb-1 text-xs font-medium text-n-slate-10"
         >
-          <div
-            v-if="section.label"
-            :id="groupLabelId(sectionIndex)"
-            class="px-3 pt-2 pb-1 text-xs font-medium text-n-slate-10"
+          {{ section.label }}
+        </div>
+        <ul
+          :role="section.label ? 'group' : 'none'"
+          :aria-labelledby="
+            section.label ? groupLabelId(sectionIndex) : undefined
+          "
+          class="p-0 m-0 list-none"
+        >
+          <li
+            v-for="{ option, index } in section.items"
+            :id="optionId(index)"
+            :key="index"
+            role="option"
+            :aria-selected="index === selected"
+            :aria-disabled="option.disabled || undefined"
+            class="flex items-center justify-between gap-2 px-3 text-sm min-h-11"
+            :class="{
+              'bg-n-alpha-2': index === active,
+              'font-medium': index === selected,
+              'cursor-pointer text-n-slate-12': !option.disabled,
+              'cursor-not-allowed text-n-slate-10': option.disabled,
+            }"
+            @pointerdown.prevent
+            @pointermove="active = index"
+            @click="commit(index)"
           >
-            {{ section.label }}
-          </div>
-          <ul
-            :role="section.label ? 'group' : 'none'"
-            :aria-labelledby="
-              section.label ? groupLabelId(sectionIndex) : undefined
-            "
-            class="p-0 m-0 list-none"
-          >
-            <li
-              v-for="{ option, index } in section.items"
-              :id="optionId(index)"
-              :key="index"
-              role="option"
-              :aria-selected="index === selected"
-              :aria-disabled="option.disabled || undefined"
-              class="flex items-center justify-between gap-2 px-3 text-sm min-h-11"
-              :class="{
-                'bg-n-alpha-2': index === active,
-                'font-medium': index === selected,
-                'cursor-pointer text-n-slate-12': !option.disabled,
-                'cursor-not-allowed text-n-slate-10': option.disabled,
-              }"
-              @pointerdown.prevent
-              @pointermove="active = index"
-              @click="commit(index)"
-            >
-              <span class="truncate">{{ option.label }}</span>
-              <span
-                v-if="index === selected"
-                class="flex-shrink-0 i-lucide-check size-4 text-n-slate-11"
-                aria-hidden="true"
-              />
-            </li>
-          </ul>
-        </li>
-      </ul>
-    </Teleport>
+            <span class="truncate">{{ option.label }}</span>
+            <span
+              v-if="index === selected"
+              class="flex-shrink-0 i-lucide-check size-4 text-n-slate-11"
+              aria-hidden="true"
+            />
+          </li>
+        </ul>
+      </li>
+    </ul>
   </div>
 </template>
