@@ -6,7 +6,6 @@ class Autonomia::Prospecting::SearchRunner
   LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
   # Teto de produto do pedido (#683). O provider pode devolver menos: a paginação do Google é da E2.
   MAX_REQUESTED_LIMIT = 60
-  DEFAULT_DECISION_MAKER_TYPE = 'owner'.freeze
 
   Result = Struct.new(:search, :leads, keyword_init: true)
 
@@ -560,7 +559,7 @@ class Autonomia::Prospecting::SearchRunner
         metadata['scoring_profile_id'].presence || @setting.scoring_profile_id
     }.compact.merge(
       'preset_id' => search_preset_id,
-      'decision_maker_type' => metadata['decision_maker_type'].presence || DEFAULT_DECISION_MAKER_TYPE
+      'decision_maker_type' => Autonomia::Prospecting::DecisionMakerType.normalize(metadata['decision_maker_type'])
     )
   end
 

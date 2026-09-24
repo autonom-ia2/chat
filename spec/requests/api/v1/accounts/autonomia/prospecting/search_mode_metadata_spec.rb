@@ -20,20 +20,32 @@ RSpec.describe 'Autonomia prospecting search mode metadata', type: :request do
   end
 
   it 'grava a jogada e o tipo de decisor e devolve nos três payloads' do
-    create_search(score_mode: 'gbp', preset_id: 'vender-site', decision_maker_type: 'manager')
+    create_search(score_mode: 'gbp', preset_id: 'vender-site', decision_maker_type: 'owner')
 
     expect(response).to have_http_status(:created)
     created = response.parsed_body.dig('payload', 'search')
-    expect(created).to include('preset_id' => 'vender-site', 'decision_maker_type' => 'manager', 'score_mode' => 'gbp')
+    expect(created).to include('preset_id' => 'vender-site', 'decision_maker_type' => 'owner', 'score_mode' => 'gbp')
 
     search = account.autonomia_prospecting_searches.last
-    expect(search.metadata).to include('preset_id' => 'vender-site', 'decision_maker_type' => 'manager')
+    expect(search.metadata).to include('preset_id' => 'vender-site', 'decision_maker_type' => 'owner')
 
     get "#{searches_path}/#{search.id}", headers: auth_headers(admin)
-    expect(response.parsed_body['payload']).to include('preset_id' => 'vender-site', 'decision_maker_type' => 'manager')
+    expect(response.parsed_body['payload']).to include('preset_id' => 'vender-site', 'decision_maker_type' => 'owner')
 
     get searches_path, headers: auth_headers(admin)
     expect(response.parsed_body['payload'].first).to include('preset_id' => 'vender-site')
+  end
+
+  # O catálogo é da frente C (DecisionMakerType): perfil "em breve" ou desconhecido vira proprietário no servidor,
+  # porque desabilitar na tela não impede quem chama a API direto.
+  it 'grava proprietário quando o decisor pedido está em breve ou não existe' do
+    %w[ceo manager].each do |decision_maker_type|
+      create_search(score_mode: 'gbp', decision_maker_type: decision_maker_type)
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body.dig('payload', 'search', 'decision_maker_type')).to eq('owner')
+      expect(account.autonomia_prospecting_searches.last.metadata['decision_maker_type']).to eq('owner')
+    end
   end
 
   it 'sem jogada grava preset_id nulo e decisor proprietário' do

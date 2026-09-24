@@ -175,7 +175,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     payload['scoring_profile_id'] = search.metadata.to_h['scoring_profile_id']
     payload['preset_id'] = search.metadata.to_h['preset_id']
     payload['decision_maker_type'] =
-      search.metadata.to_h['decision_maker_type'].presence || ::Autonomia::Prospecting::SearchRunner::DEFAULT_DECISION_MAKER_TYPE
+      search.metadata.to_h['decision_maker_type'].presence || ::Autonomia::Prospecting::DecisionMakerType::DEFAULT
     payload['summary'] = {
       results_count: payload['results_count'],
       contact_count: payload['contact_count'],
