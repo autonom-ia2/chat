@@ -20,7 +20,7 @@ const props = defineProps({
 
 const exactTimestamp = useExactTimestamp();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const store = useStore();
 const { isCloudFeatureEnabled, isOnChatwootCloud } = useAccount();
 const { formatMessage } = useMessageFormatter();
@@ -162,7 +162,7 @@ const saveReviewNotes = async () => {
             }"
             class="text-sm text-n-slate-10"
           >
-            {{ dynamicTime(response.review_notes_updated_at) }}
+            {{ dynamicTime(response.review_notes_updated_at, locale) }}
           </span>
         </div>
       </div>

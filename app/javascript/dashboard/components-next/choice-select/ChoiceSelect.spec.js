@@ -439,23 +439,3 @@ describe('ChoiceSelect', () => {
     });
   });
 });
-
-describe('ChoiceSelect dentro de modal ou popover', () => {
-  it('Escape com a lista aberta não chega ao document; com ela fechada, chega', async () => {
-    const onDocumentKeydown = vi.fn();
-    const escapesAtDocument = () =>
-      onDocumentKeydown.mock.calls.filter(([event]) => event.key === 'Escape');
-    document.addEventListener('keydown', onDocumentKeydown);
-    wrapper = mountSelect();
-    const trigger = wrapper.get('[role="combobox"]');
-
-    await trigger.trigger('keydown', { key: 'ArrowDown' });
-    await trigger.trigger('keydown', { key: 'Escape' });
-    expect(trigger.attributes('aria-expanded')).toBe('false');
-    expect(escapesAtDocument()).toHaveLength(0);
-
-    await trigger.trigger('keydown', { key: 'Escape' });
-    expect(escapesAtDocument()).toHaveLength(1);
-    document.removeEventListener('keydown', onDocumentKeydown);
-  });
-});

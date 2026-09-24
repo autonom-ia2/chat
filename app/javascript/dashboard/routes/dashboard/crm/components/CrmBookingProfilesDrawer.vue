@@ -7,6 +7,7 @@ import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
+import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -241,6 +242,10 @@ useKeyboardEvents({
     allowOnFocusedInput: true,
   },
 });
+
+// #646 — a gaveta cobre o mesmo canto (`fixed ... right-0`) do lançador do
+// Guia; sinaliza que está aberta para ele se desviar do botão Salvar.
+useFixedPanelPresence(computed(() => props.show));
 </script>
 
 <template>

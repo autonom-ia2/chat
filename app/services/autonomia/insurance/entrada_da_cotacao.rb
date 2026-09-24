@@ -63,7 +63,16 @@ class Autonomia::Insurance::EntradaDaCotacao
     ['configuracoes.areaRisco', 'Área de risco', :sim_nao]
   ].freeze
   RESIDENCIAL = 'residencial'.freeze
-  CAMPOS_POR_PRODUTO = { AUTO => CAMPOS, RESIDENCIAL => CAMPOS_DE_RESIDENCIAL }.freeze
+  # EMPRESARIAL (chat#641): o local e o que o seguro protege. A atividade vai por seguradora, com o nome de cada
+  # lista, e o cliente não pergunta por ela; o valor a segurar é real e fica de fora pela regra acima.
+  CAMPOS_DE_EMPRESARIAL = [
+    ['segurado.cep', 'CEP do local da empresa', :numero],
+    ['configuracoes.imovelNumero', 'Número do local', :numero],
+    ['configuracoes.imovelObjetoSegurado', 'O que o seguro protege', :lista]
+  ].freeze
+  EMPRESARIAL = 'empresarial'.freeze
+  CAMPOS_POR_PRODUTO = { AUTO => CAMPOS, RESIDENCIAL => CAMPOS_DE_RESIDENCIAL,
+                         EMPRESARIAL => CAMPOS_DE_EMPRESARIAL }.freeze
   PADRAO = 'o padrão, porque o cliente não informou.'.freeze
   # O adapter monta o número do imóvel com o do segurado quando o do imóvel não vem (`enderecoDoImovel`); o resumo lê
   # do mesmo jeito, ou diria "padrão" para o número que o cliente deu (revisão da #605).

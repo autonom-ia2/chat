@@ -34,7 +34,7 @@ const exactTimestamp = useExactTimestamp();
 const noteContentRef = useTemplateRef('noteContentRef');
 const needsCollapse = ref(false);
 const [isExpanded, toggleExpanded] = useToggle();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { formatMessage } = useMessageFormatter();
 
 const handleDelete = () => {
@@ -76,7 +76,7 @@ onMounted(() => {
               }"
               class="font-medium text-n-slate-12"
             >
-              {{ dynamicTime(note.createdAt) }}
+              {{ dynamicTime(note.createdAt, locale) }}
             </span>
           </span>
         </div>

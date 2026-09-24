@@ -21,7 +21,7 @@ const emit = defineEmits(['showCompany']);
 
 const exactTimestamp = useExactTimestamp();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const onClickViewDetails = () => emit('showCompany', props.id);
 
@@ -37,7 +37,7 @@ const contactsCountLabel = computed(() =>
 
 const formattedLastActivityAt = computed(() => {
   if (!props.lastActivityAt) return '';
-  return dynamicTime(props.lastActivityAt);
+  return dynamicTime(props.lastActivityAt, locale.value);
 });
 </script>
 

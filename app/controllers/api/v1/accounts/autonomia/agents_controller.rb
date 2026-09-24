@@ -12,7 +12,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   SCAFFOLD
 
   def index
-    @agents = agents_scope.with_attached_avatar.order(created_at: :desc)
+    @agents = agents_scope.with_attached_avatar.includes(:agent_inboxes).order(created_at: :desc)
   end
 
   def show; end

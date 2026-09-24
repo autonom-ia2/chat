@@ -34,7 +34,9 @@ class Autonomia::Insurance::QuoteAgent::Builder
   # `ESPECIALISTAS` (fase 5 da receita), recebe `consultar_cep` por esta tabela, sem nenhuma linha de código.
   CONSULTAS_DO_RAMO = {
     'auto' => %w[consultar_placa],
-    'residencial' => %w[consultar_cep]
+    'residencial' => %w[consultar_cep],
+    # Empresarial (chat#641): o CEP do imóvel da empresa e a atividade dela, por seguradora.
+    'empresarial' => %w[consultar_cep buscar_atividade]
   }.freeze
 
   # O primeiro (e por enquanto único) especialista. Cada ramo novo entra aqui com o seu arquivo de
@@ -54,7 +56,13 @@ class Autonomia::Insurance::QuoteAgent::Builder
     { slug: 'cotacao_residencial', ramo: 'residencial', nome: 'Cotação residencial', arquivo: 'especialista_residencial.md',
       descricao: 'Cota seguro residencial de casa, casa em condomínio e apartamento, para quem mora, para quem ' \
                  'aluga o imóvel a outra pessoa e para quem mora de aluguel. Use quando o cliente pedir preço ' \
-                 'de seguro da casa, do apartamento ou das coisas de dentro.' }
+                 'de seguro da casa, do apartamento ou das coisas de dentro.' },
+    # EMPRESARIAL (chat#641, 24/09/2026): o terceiro ramo, da receita v2. Mesma jornada de auto e residencial; o que é
+    # só dele é a atividade da empresa, escolhida na lista de cada seguradora.
+    { slug: 'cotacao_empresarial', ramo: 'empresarial', nome: 'Cotação empresarial', arquivo: 'especialista_empresarial.md',
+      descricao: 'Cota seguro empresarial do local de uma empresa: loja, escritório, consultório, oficina, depósito e ' \
+                 'outros comércios e serviços, o prédio, o que está dentro, ou os dois. Use quando o cliente pedir ' \
+                 'preço de seguro da empresa, da loja, do escritório ou do negócio dele.' }
   ].freeze
 
   # AS FERRAMENTAS DE UM ESPECIALISTA: a consulta do ramo dele primeiro, depois as de todo especialista. Em

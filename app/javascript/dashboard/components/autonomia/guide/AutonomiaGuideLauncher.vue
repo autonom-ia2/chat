@@ -4,12 +4,16 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useMapGetter } from 'dashboard/composables/store';
+import { isFixedPanelOpen } from 'dashboard/composables/useFixedPanelState';
 
 // V1 — global launcher for the "Guia da Plataforma" (onboarding/suporte). GLOBAL: shows on every
 // screen (including conversations) for EVERY role (admin + atendente) — the guide is role-aware.
 // Gate = `autonomia_guide_available` (the backend's EXACT eligibility: master ENV + account flag +
 // a resolvable AI credential), so the launcher never appears when the guide would be unavailable.
 // Own uiSetting key (is_autonomia_guide_panel_open). Sits above the copilot launcher.
+// #646 — a fixed panel (e.g. CrmCardDrawer) can share this same bottom-right corner;
+// `isFixedPanelOpen` lifts the launcher above that panel's footer instead of letting
+// it cover the footer's buttons.
 const { uiSettings, updateUISettings } = useUISettings();
 const currentAccount = useMapGetter('accounts/getAccount');
 const accountId = useMapGetter('getCurrentAccountId');
@@ -47,7 +51,11 @@ watch(showLauncher, async visivel => {
 </script>
 
 <template>
-  <div v-if="showLauncher" class="fixed bottom-4 ltr:right-4 rtl:left-4 z-50">
+  <div
+    v-if="showLauncher"
+    class="fixed ltr:right-4 rtl:left-4 z-50 transition-[bottom] duration-200 ease-out"
+    :class="isFixedPanelOpen ? 'bottom-24' : 'bottom-4'"
+  >
     <ButtonGroup
       class="rounded-full bg-n-alpha-2 backdrop-blur-lg p-1 shadow hover:shadow-md"
     >
