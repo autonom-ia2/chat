@@ -176,6 +176,7 @@ const onMiniDatePick = value => {
           :model-value="pipelineId"
           :options="pipelines"
           :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
+          compact
           class="w-44 shrink-0"
           @change="v => emit('update:pipelineId', String(v))"
         />
