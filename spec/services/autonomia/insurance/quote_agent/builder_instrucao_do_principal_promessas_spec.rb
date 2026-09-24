@@ -689,6 +689,16 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(secao).to include('peça ao especialista; nunca de memória')
     end
 
+    # Conversa 7057 (24/09/2026): sem o PDF, a Lia busca os valores e os manda. O aviso do sistema e o manual dizem o
+    # mesmo; se um dissesse "ela pode pedir", a regra mais perto da ação venceria, e a pessoa ficaria sem os preços.
+    it 'sem o comparativo, manda os valores na mesma mensagem, e o aviso diz o mesmo' do
+      expect(secao).to include('peça ao especialista os valores agora e mande a ela as opções')
+      expect(secao).not_to include('ela pode pedir aqui')
+      fato = Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos::FATOS['valores_guardados']
+      expect(fato).to include('Consulte agora o especialista', 'mande à pessoa nesta resposta')
+      expect(fato).not_to include('pode pedi-los')
+    end
+
     # 23/09/2026 (`2b8bf39d…` -> `cc80f26b…`): "Começou" sem verbo para copiar; o prazo com comparativo não oferece
     # refazer; falha e incerteza sem promessa de equipe, que a passagem para uma pessoa não está ligada.
     # Na revisão da chat#608 (`cc80f26b…` -> `1fce6d0b…`): "Começou" remete à §5 em vez de ditar o que dizer, e a
@@ -697,8 +707,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # CRM (handoff por funil, gatilho na fala da agente de que vai encaminhar), ativa na conta 16.
     # chat#612/#634 (`2d658211…` -> `619d4562…`): "nenhuma trouxe proposta" encaminha à equipe, sem motivo nem recusa.
     # chat#638 (`619d4562…` -> `0530a8a6…`): o comparativo não fala de quem ficou de fora, nem por prazo.
+    # Conversa 7057, 24/09/2026 (`0530a8a6…` -> `dac25b9f…`): sem o PDF, a Lia pede os valores ao especialista e os manda
+    # na mesma mensagem, em vez de dizer à pessoa que ela pode pedir.
     it 'mudou? revise este bloco e assine aqui' do
-      expect(Digest::MD5.hexdigest(secao)).to eq('0530a8a6f18cbb5fbe63bbed258fa40a')
+      expect(Digest::MD5.hexdigest(secao)).to eq('dac25b9fa6dd9aff4bfe4dfb30d3c0a5')
     end
 
     it 'não traz frase de exemplo, travessão, valor em reais nem variável' do
