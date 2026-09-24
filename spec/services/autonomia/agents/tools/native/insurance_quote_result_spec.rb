@@ -162,7 +162,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     end
 
     # NENHUM TEXTO DO PORTAL CHEGA AO MODELO: o corpus do conector, no kind e no status que ele dá, os textos das
-    # revisões e as sondas da revisão da sétima rodada. O modelo lê uma de duas falas fechadas: a instabilidade ou a genérica.
+    # revisões e as sondas da revisão da sétima rodada. O modelo lê uma fala fechada só, seja qual for o motivo (chat#638).
     it 'o modelo nunca recebe texto do portal, em nenhuma mensagem do corpus, das revisões nem das sondas' do
       genericos = TextosDoMotivo::CONTA + TextosDoMotivo::PESSOA + TextosDoMotivo::REVISOES + SondasDoMotivo::REVISAO_7
       linhas = TextosDoMotivo::CORPUS.map { |linha| linha.first(3) } + genericos.map { |texto| [texto, 'risco', 'declined'] }
@@ -174,9 +174,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
         ao_modelo("Seguradora #{i}").split("\n").last.delete_prefix("Seguradora #{i} não fez proposta nesta cotação. ")
       end
 
-      expect(falas.uniq - [described_class::SEM_MOTIVO, *described_class::MOTIVOS.values]).to be_empty
-      expect(linhas.each_with_index.select { |(texto, _, _), i| falas[i].include?(texto) }).to be_empty
-      expect(falas.last(genericos.size)).to all(eq(described_class::SEM_MOTIVO))
+      expect(falas).to all(eq(described_class::SEM_MOTIVO))
     end
 
     it 'seguradora que recusou a credencial: não fez proposta, sem motivo e sem palavra de conta' do
@@ -188,25 +186,24 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(texto.downcase).not_to match(/login|senha|permiss|credencia|acesso|corretor/)
     end
 
-    # A LEITURA SÓ ACEITA AS CATEGORIAS: um motivo guardado em outra forma não chega ao modelo.
-    it 'motivo guardado fora das categorias não chega ao modelo' do
-      ['conta', { 'kind' => 'risco', 'text' => 'Senha expirou. Declinando cálculo.' }].each do |guardado|
+    # NENHUM MOTIVO GUARDADO CHEGA AO MODELO, nem a instabilidade nem o que viesse em outra forma (chat#638).
+    it 'motivo guardado, em qualquer forma, não chega ao modelo' do
+      ['instabilidade', 'conta', { 'kind' => 'risco', 'text' => 'Senha expirou. Declinando cálculo.' }].each do |guardado|
         entrada = { 'nome' => 'Sancor', 'desfecho' => 'sem_proposta', 'motivo' => guardado }
         Autonomia::Agents::ToolRun.where(slug: cotacao.slug).delete_all
         cotacao_com(status: 'done', guardado: false, handle: { cotacao::RESULTADO_KEY => { '19' => entrada } })
 
-        expect(Autonomia::Insurance::ResultadoDaCotacao.da_conversa(conversation.id).motivo('19')).to be_nil
-        expect(ao_modelo('sancor')).to include("Sancor não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}")
+        expect(ao_modelo('sancor')).to end_with("Sancor não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}")
       end
     end
 
-    it 'seguradora ainda sem desfecho: ainda não respondeu enquanto corre; não fez proposta por instabilidade depois de encerrada' do
+    it 'seguradora ainda sem desfecho: ainda não respondeu enquanto corre; depois de encerrada, só não fez proposta' do
       run = cotacao_com(status: 'running', ofertas: [correndo('47', 'Justos'), recusou('19', 'Sancor')])
       expect(ao_modelo('Justos')).to include('Justos ainda não respondeu, e a cotação continua correndo.')
 
       run.update!(status: 'failed')
-      # Não respondeu a tempo é instabilidade dela, não recusa (23/09/2026, a Mitsui do residencial).
-      expect(ao_modelo('Justos')).to include("Justos não fez proposta nesta cotação. #{described_class::MOTIVOS.fetch('instabilidade')}")
+      # Não respondeu a tempo não é assunto do cliente (chat#638): a mesma fala de quem não trouxe proposta.
+      expect(ao_modelo('Justos')).to include("Justos não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}")
     end
 
     it 'o portal já fechou: quem ficou sem desfecho não fez proposta, mesmo com a execução viva' do

@@ -11,7 +11,7 @@
 #                   classifica, e 'texto_da_recusa' => o que a seguradora escreveu, quando ela recusou o risco
 #                   (chat#612, 23/09/2026: vai para a equipe numa nota interna, nunca para o cliente nem para o modelo);
 #   - sem desfecho: { 'nome', 'desfecho' => 'aguardando' }.
-# `auth_required` (credencial da corretora) vira sem proposta e nunca guarda motivo.
+# `auth_required` (credencial da corretora) vira sem proposta, com a marca `credencial` para a nota da equipe e nada mais.
 module Autonomia::Insurance::ResultadoPorSeguradora
   COM_PRECO = 'com_preco'.freeze
   SEM_PROPOSTA = 'sem_proposta'.freeze
@@ -27,6 +27,9 @@ module Autonomia::Insurance::ResultadoPorSeguradora
   # Os status de oferta sem preço que são desfecho da seguradora (`QuoteOffers::DESFECHOS` sem `quoted`).
   SEM_PRECO = %w[declined auth_required error].freeze
   CREDENCIAL = 'auth_required'.freeze
+  # A CONTA DA CORRETORA RECUSADA NO PORTAL (revisão da chat#639): só uma marca, sem texto, e só a nota da equipe a lê.
+  # É o motivo que a corretora mais consegue resolver, e o cliente nunca ouve falar dele.
+  CONTA_DA_CORRETORA = 'credencial'.freeze
   # O texto da recusa: só de oferta `declined` cujo motivo o conector classificou como do risco ou outro. A conta da
   # corretora (`credencial`) e a seguradora fora do ar (`passageiro`) não são recusa do risco e não guardam texto.
   TEXTO = 'texto_da_recusa'.freeze
@@ -80,7 +83,7 @@ module Autonomia::Insurance::ResultadoPorSeguradora
   # A entrada sem proposta, com a categoria do motivo só quando a oferta não é `auth_required` e a regra classifica.
   def sem_proposta(nome, oferta)
     entrada = { 'nome' => nome, 'desfecho' => SEM_PROPOSTA }
-    return entrada if oferta['status'] == CREDENCIAL
+    return entrada.merge(CONTA_DA_CORRETORA => true) if credencial?(oferta)
 
     categoria = ::Autonomia::Insurance::MotivoDaRecusa.categoria(oferta['reason'])
     entrada = entrada.merge('motivo' => categoria) if categoria
@@ -97,6 +100,11 @@ module Autonomia::Insurance::ResultadoPorSeguradora
     return unless texto.is_a?(String) && texto.valid_encoding?
 
     texto.squish.truncate(MAX_TEXTO).presence
+  end
+
+  def credencial?(oferta)
+    reason = oferta['reason']
+    oferta['status'] == CREDENCIAL || (reason.is_a?(Hash) && reason['kind'] == CONTA_DA_CORRETORA)
   end
 
   def desfecho(entrada)

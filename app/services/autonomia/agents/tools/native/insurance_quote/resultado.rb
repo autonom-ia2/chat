@@ -11,7 +11,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
   # QUANDO CHEGOU A ÚLTIMA NOVIDADE (chat#612): o instante da última consulta em que alguma seguradora mudou de
   # desfecho. O residencial esperava os 7 min do prazo inteiros por uma seguradora instável (a Mitsui), com as outras
   # nove respondidas no primeiro minuto. Com preço na mão e nada novo há `SEM_NOVIDADE`, a cotação se dá por fechada:
-  # quem ficou aguardando conta como instabilidade (`ResultadoDaCotacao#motivo`), e o comparativo sai.
+  # quem ficou aguardando entra na nota da equipe como sem resposta (`NotaDaEquipe`), e o comparativo sai.
   NOVIDADE_KEY = 'ultima_novidade_em'.freeze
   SEM_NOVIDADE = 150.seconds
   # O LIMITE SÓ VALE ONDE FOI MEDIDO (revisão da chat#612). Em auto o silêncio não diz que acabou: numa cotação real
@@ -24,13 +24,6 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
     # `ToolRun#resultado_obtido?`.
     def resultado_guardado?(handle)
       ::Autonomia::Insurance::ResultadoPorSeguradora.com_preco?(handle.to_h[RESULTADO_KEY])
-    end
-
-    # -> alguma seguradora deste handle ficou aguardando resposta? Lido sem instância pelos fatos do evento
-    # (`Eventos`, chat#612): a cotação que parou de receber resposta fecha com ela de fora.
-    def seguradora_aguardando?(handle)
-      aguardando = ::Autonomia::Insurance::ResultadoPorSeguradora::AGUARDANDO
-      handle.to_h[RESULTADO_KEY].to_h.values.any? { |item| item.to_h['desfecho'] == aguardando }
     end
   end
 

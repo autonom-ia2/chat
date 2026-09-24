@@ -6,7 +6,7 @@
 # equipe, numa nota interna (`InsuranceQuote::NotaDaEquipe`). A lista de palavras saiu junto.
 #
 # A INSTABILIDADE CONTINUA (chat#323, 22/09/2026). Quem classifica é o conector: `kind` `passageiro` é a seguradora
-# fora do ar ou instável. Não é recusa do risco, e é a única categoria que a Lia conta ao cliente.
+# fora do ar ou instável. Não é recusa do risco. Desde a chat#638 nem ela vai ao cliente: só à nota da equipe.
 module Autonomia::Insurance::MotivoDaRecusa
   KIND_PASSAGEIRO = 'passageiro'.freeze
   INSTABILIDADE = 'instabilidade'.freeze

@@ -127,7 +127,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     expect(confirmacao - inicio).to eq(3.0)
     expect(run.status).to eq('done')
-    expect(conversation.messages.reload.where(sender_type: 'AgentBot').count).to eq(1)
+    expect(conversation.messages.reload.where(sender_type: 'AgentBot', private: false).count).to eq(1)
   end
 
   it 'a confirmação curta respeita a progressão configurada no agente' do

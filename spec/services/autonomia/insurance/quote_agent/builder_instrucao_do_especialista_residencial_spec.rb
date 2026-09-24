@@ -88,8 +88,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # Revisão da #604 (`9541d859…` -> `422430a6…`): "cote direto" deixa de citar a rodada única de ferramentas.
     # Pela chat#624 (`422430a6…` -> `bf7a1534…`): as coberturas da apólice anterior do imóvel valem em outro nome;
     # a apólice de outra pessoa dá o imóvel e as coberturas, nunca o segurado.
+    # Pela chat#638 (`bf7a1534…` -> `209fc264…`): o CPF da pessoa que o cliente indicou, quando um documento ou uma
+    # cotação da conversa o traz com o nome que o cliente disse, vale sem pergunta (a conversa 7150 perguntou o CPF que
+    # tinha na mão); só pelo parentesco, ou com dois CPFs do mesmo nome, pergunta.
     it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('bf7a153487e0d578615ecb1770b61bad')
+      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('209fc2648e730dd2fe4d704010bdb6fd')
     end
   end
 end

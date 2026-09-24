@@ -377,17 +377,13 @@ module ManualDoPrincipalResultado
     '**De quem não fez proposta, diga só que ela não trouxe proposta desta vez**' => lambda {
       consultar(nil).first.exclude?(RESULTADO::SEM_MOTIVO) && consultar('Sancor').first.include?(RESULTADO::SEM_MOTIVO)
     },
-    # A LIA NÃO FALA DE RECUSA DO RISCO (chat#612): a única categoria é a instabilidade, o texto do portal não chega ao
-    # modelo, e a nota interna leva o texto para a equipe.
-    'Nunca fale de recusa, de risco, de aceitação nem de motivo: o que a seguradora escreveu fica com a equipe.' => lambda {
-      MOTIVO::CATEGORIAS == [MOTIVO::INSTABILIDADE] && RESULTADO::MOTIVOS.keys == MOTIVO::CATEGORIAS &&
-        consultar('Sancor').first.exclude?(MOTIVO_DO_VEICULO) && RESULTADO::SEM_MOTIVO.include?('sem falar de recusa') &&
-        COTACAO.method_defined?(:nota_da_equipe)
-    },
-    # A instabilidade vem do `kind` `passageiro` do conector, sem ler o texto (chat#323).
-    'sem acrescentar detalhe que a ferramenta não deu.' => lambda {
-      MOTIVO.categoria('kind' => 'passageiro') == MOTIVO::INSTABILIDADE &&
-        RESULTADO::MOTIVOS.values.all? { |texto| texto.include?('sem acrescentar detalhe') }
+    # A LIA NÃO FALA DE QUEM FICOU SEM PROPOSTA (chat#612 e #638): a fala é uma só, o texto do portal não chega ao
+    # modelo, e nenhum motivo guardado (nem a instabilidade) vira fala.
+    # O motivo de cada uma vai para a nota interna da equipe, com a instabilidade que o conector apontou.
+    'Nunca fale de recusa, de risco, de aceitação, de prazo, de instabilidade nem de motivo' => lambda {
+      !RESULTADO.const_defined?(:MOTIVOS, false) && consultar('Sancor').first.exclude?(MOTIVO_DO_VEICULO) &&
+        RESULTADO::SEM_MOTIVO.include?('de prazo nem de instabilidade') && COTACAO.method_defined?(:nota_da_equipe) &&
+        MOTIVO.categoria('kind' => 'passageiro') == MOTIVO::INSTABILIDADE && COTACAO::INSTAVEL.present?
     },
     'Quando a ferramenta disser que não há motivo que você possa contar' => lambda {
       RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
@@ -624,7 +620,8 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # chat#612 (23/09/2026): de quem não fez proposta, só que não trouxe proposta desta vez; o motivo fica com a equipe.
     it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('d9b6c6c157479f8049ad9dfd458fc031')
+      # chat#638 (`d9b6c6c1…` -> `507f2eab…`): nem instabilidade nem prazo; o motivo de cada uma fica com a equipe.
+      expect(Digest::MD5.hexdigest(secao)).to eq('507f2eaba198568f334deda33fa13327')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do
@@ -699,8 +696,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # Decisão do CEO de 23/09/2026 (`1fce6d0b…` -> `2d658211…`): o que deu errado vai para a equipe. A passagem é do
     # CRM (handoff por funil, gatilho na fala da agente de que vai encaminhar), ativa na conta 16.
     # chat#612/#634 (`2d658211…` -> `619d4562…`): "nenhuma trouxe proposta" encaminha à equipe, sem motivo nem recusa.
+    # chat#638 (`619d4562…` -> `0530a8a6…`): o comparativo não fala de quem ficou de fora, nem por prazo.
     it 'mudou? revise este bloco e assine aqui' do
-      expect(Digest::MD5.hexdigest(secao)).to eq('619d45623ec387bf4f2ddb5a14b2c230')
+      expect(Digest::MD5.hexdigest(secao)).to eq('0530a8a6f18cbb5fbe63bbed258fa40a')
     end
 
     it 'não traz frase de exemplo, travessão, valor em reais nem variável' do
