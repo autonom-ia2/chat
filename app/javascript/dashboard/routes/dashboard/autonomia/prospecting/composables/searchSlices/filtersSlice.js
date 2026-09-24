@@ -1,5 +1,8 @@
-// Frente de filtros e ordenação: filtros avançados e a ordem dos resultados.
-// Nova busca zera os filtros e mantém a ordenação da busca que estava aberta.
+// Frente de filtros e ordenação. São dois estados separados: os filtros do
+// formulário de nova busca (vão no pedido) e o refino da busca aberta (filtra
+// os leads já carregados). Mexer num não muda o outro.
+// Nova busca zera os filtros do formulário e mantém a ordenação da busca
+// aberta; reabrir uma busca restaura o refino e a ordem salvos nela.
 import { ref } from 'vue';
 import { defaultAdvancedLeadFilters } from '../../utils/advancedLeadFilters';
 
@@ -7,22 +10,23 @@ const DEFAULT_SORT_KEY = 'priority_desc';
 
 export const filtersSlice = {
   createState: () => ({
-    advancedFilters: ref(defaultAdvancedLeadFilters()),
+    formFilters: ref(defaultAdvancedLeadFilters()),
+    resultFilters: ref(defaultAdvancedLeadFilters()),
     sortKey: ref(DEFAULT_SORT_KEY),
   }),
-  reset: ({ advancedFilters }) => {
-    advancedFilters.value = defaultAdvancedLeadFilters();
+  reset: ({ formFilters }) => {
+    formFilters.value = defaultAdvancedLeadFilters();
   },
-  restore: ({ advancedFilters, sortKey }, search) => {
-    advancedFilters.value = {
+  restore: ({ resultFilters, sortKey }, search) => {
+    resultFilters.value = {
       ...defaultAdvancedLeadFilters(),
       ...(search?.advanced_filters || {}),
     };
     sortKey.value = search?.sort_key || DEFAULT_SORT_KEY;
   },
-  toPayload: ({ advancedFilters, sortKey }) => ({
+  toPayload: ({ formFilters, sortKey }) => ({
     metadata: {
-      advanced_filters: advancedFilters.value,
+      advanced_filters: formFilters.value,
       sort_key: sortKey.value,
     },
   }),

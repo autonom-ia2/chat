@@ -12,6 +12,11 @@ import {
   openNewSearchForm,
   submitMinimalSearch,
 } from '../support/searchFormHelpers';
+import {
+  applyFilters,
+  checkYesOnly,
+  openFormFilters,
+} from '../support/filtersHelpers';
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
@@ -33,22 +38,33 @@ const EMPTY_ADVANCED_FILTERS = {
   has_phone: '',
   has_photos: '',
   open_now: '',
+  has_opening_hours: '',
   rating_min: '',
   rating_max: '',
   reviews_min: '',
+  outside_top: '',
   search_rank_max: '',
 };
 
 describe('Pedido da busca · frente de filtros e ordenação', () => {
-  it('manda os filtros avançados escolhidos no formulário', async () => {
+  // Mudou de propósito (frente B): o filtro vai no pedido só depois de aplicado
+  // na gaveta, e "aberto agora" só tem a opção sim, como no Orth.
+  it('manda os filtros avançados aplicados na gaveta do formulário', async () => {
     const wrapper = await openNewSearchForm();
-    await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.OPEN_NOW', 'no');
+    await openFormFilters(wrapper);
+    await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS', 'no');
+    await checkYesOnly(wrapper, 'OPEN_NOW');
+    await applyFilters(wrapper);
     await flushPromises();
 
     const payload = await submitMinimalSearch(wrapper);
 
     expect(payload.metadata).toMatchObject({
-      advanced_filters: { ...EMPTY_ADVANCED_FILTERS, open_now: 'no' },
+      advanced_filters: {
+        ...EMPTY_ADVANCED_FILTERS,
+        has_photos: 'no',
+        open_now: 'yes',
+      },
       sort_key: 'priority_desc',
     });
   });

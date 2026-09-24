@@ -155,6 +155,55 @@
         "YES": "Sim",
         "NO": "Não"
       },
+      "FILTER_DRAWER": {
+        "TITLE": "Filtros avançados",
+        "OPEN": "Filtros avançados",
+        "CLOSE": "Fechar filtros",
+        "APPLY": "Aplicar",
+        "CLEAR_ALL": "Limpar tudo",
+        "GROUP_COUNT": "{count} filtros ativos",
+        "HAS": "Tem",
+        "HAS_NOT": "Não tem",
+        "REVIEWS_PLACEHOLDER": "ex: 10",
+        "OPEN_NOW": "Aberto agora",
+        "HAS_OPENING_HOURS": "Tem horário",
+        "YES": "Sim",
+        "GROUPS": {
+          "PAIN": {
+            "TITLE": "Dor do lead",
+            "SUBTITLE": "O que falta no Google que você vende"
+          },
+          "QUALIFICATION": {
+            "TITLE": "Qualificação mínima",
+            "SUBTITLE": "Corta empresa fantasma e sem volume"
+          },
+          "VISIBILITY": {
+            "TITLE": "Visibilidade no Google",
+            "SUBTITLE": "Quando você vende SEO"
+          },
+          "OPERATIONAL": {
+            "TITLE": "Operacional",
+            "SUBTITLE": "O que precisa para contatar"
+          }
+        },
+        "RATING": {
+          "LABEL": "Avaliação",
+          "OPERATOR": "Operador da avaliação",
+          "VALUE": "Estrelas da avaliação",
+          "ANY": "Qualquer",
+          "ABOVE": "Acima de",
+          "BELOW": "Abaixo de",
+          "VALUE_PLACEHOLDER": "Estrelas",
+          "STARS": "{value} estrelas"
+        },
+        "RANK": {
+          "LABEL": "Posição no Google",
+          "ANY": "{min} a {max} (qualquer)",
+          "RANGE": "{min} a {max}",
+          "MIN_ARIA": "Posição mínima no Google",
+          "MAX_ARIA": "Posição máxima no Google"
+        }
+      },
       "SCORE_MODES": {
         "GBP": "Google Meu Negócio",
         "GENERAL": "Geral"

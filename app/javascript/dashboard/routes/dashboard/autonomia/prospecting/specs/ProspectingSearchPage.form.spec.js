@@ -17,6 +17,12 @@ import {
   toggleNewSearch,
   waitLocationDebounce,
 } from './support/searchPageHarness';
+import {
+  DRAWER,
+  applyFilters,
+  openFormFilters,
+  rankInput,
+} from './support/filtersHelpers';
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
@@ -50,8 +56,6 @@ const radiusInput = wrapper => wrapper.find('input[min="0.1"]');
 const limitInput = wrapper => wrapper.find('input[max="60"]');
 const autoExpandInput = wrapper => wrapper.find('form input[type="checkbox"]');
 const submitButton = wrapper => wrapper.find('button[type="submit"]');
-const advancedNumberInputs = wrapper =>
-  wrapper.find('details').findAll('input[type="number"]');
 
 const openFormWithoutHistory = async (options = {}) => {
   const wrapper = await mountSearchPage({ searches: [], ...options });
@@ -261,25 +265,28 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
     expect(wrapper.findComponent(MapStub).exists()).toBe(false);
   });
 
-  it('mostra o total de filtros avançados ativos', async () => {
+  // Mudou de propósito (frente B): os filtros estão numa gaveta com rascunho, a
+  // contagem só muda depois de "Aplicar" e "aberto agora" virou caixa "sim".
+  it('mostra o total de filtros avançados aplicados', async () => {
     const wrapper = await openFormWithoutHistory();
-    expect(wrapper.find('details summary').text()).not.toContain(
-      'PROSPECTING.SEARCH.ACTIVE_FILTERS'
-    );
+    expect(wrapper.text()).not.toContain('PROSPECTING.SEARCH.ACTIVE_FILTERS');
 
+    await openFormFilters(wrapper);
     await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.HAS_SITE', 'no');
-    await advancedNumberInputs(wrapper)[0].setValue('4');
-
-    expect(wrapper.find('details summary').text()).toContain(
-      'PROSPECTING.SEARCH.ACTIVE_FILTERS'
-    );
+    await choose(wrapper, `${DRAWER}.RATING.OPERATOR`, 'above');
+    await choose(wrapper, `${DRAWER}.RATING.VALUE`, 4);
     expect(
-      ['HAS_SITE', 'HAS_PHONE', 'HAS_PHOTOS', 'OPEN_NOW'].map(field =>
+      ['HAS_SITE', 'HAS_PHONE', 'HAS_PHOTOS'].map(field =>
         choiceSelect(wrapper, `PROSPECTING.SEARCH.FIELDS.${field}`)
           .props('options')
           .map(option => option.value)
       )
-    ).toEqual(Array(4).fill(['', 'yes', 'no']));
+    ).toEqual(Array(3).fill(['', 'yes', 'no']));
+    expect(wrapper.text()).not.toContain('PROSPECTING.SEARCH.ACTIVE_FILTERS');
+
+    await applyFilters(wrapper);
+
+    expect(wrapper.text()).toContain('PROSPECTING.SEARCH.ACTIVE_FILTERS');
   });
 
   it('envia o payload exato da busca por raio', async () => {
@@ -294,9 +301,12 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
     await limitInput(wrapper).setValue('30');
     await autoExpandInput(wrapper).setValue(true);
     await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.SCORE_MODE', 'gbp');
+    await openFormFilters(wrapper);
     await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.HAS_SITE', 'yes');
-    await advancedNumberInputs(wrapper)[0].setValue('4');
-    await advancedNumberInputs(wrapper)[3].setValue('10');
+    await choose(wrapper, `${DRAWER}.RATING.OPERATOR`, 'above');
+    await choose(wrapper, `${DRAWER}.RATING.VALUE`, 4);
+    await rankInput(wrapper, 'MAX_ARIA').setValue('10');
+    await applyFilters(wrapper);
 
     await wrapper.find('form').trigger('submit');
     await flushPromises();
@@ -327,9 +337,11 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
           has_phone: '',
           has_photos: '',
           open_now: '',
+          has_opening_hours: '',
           rating_min: 4,
           rating_max: '',
           reviews_min: '',
+          outside_top: '',
           search_rank_max: 10,
         },
         sort_key: 'priority_desc',
@@ -430,6 +442,7 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
     });
 
     await toggleNewSearch(wrapper);
+    await openFormFilters(wrapper);
     expect(
       choiceSelect(wrapper, 'PROSPECTING.SEARCH.FIELDS.HAS_PHONE').props(
         'modelValue'
