@@ -1,6 +1,4 @@
 class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
-  AUTOCOMPLETE_ENDPOINT = 'https://places.googleapis.com/v1/places:autocomplete'.freeze
-  PLACE_DETAILS_ENDPOINT = 'https://places.googleapis.com/v1/places'.freeze
   DEFAULT_PER_PAGE = 20
   MAX_PER_PAGE = 50
 
@@ -15,32 +13,27 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     }
   end
 
+  # Local no país da conta (#677). Erro do Google chega à tela em português, em vez de lista vazia calada.
   def location_suggestions
     query = params[:query].to_s.strip
     return render json: { payload: [] } if query.length < 3
 
     return render json: { payload: [] } unless setting.google_places_configured?
 
-    render json: { payload: google_place_predictions(query, setting.google_places_api_key) }
-  rescue StandardError => e
-    Rails.logger.warn(
-      "[Autonomia::Prospecting] location_suggestions failed account_id=#{Current.account&.id} error=#{e.class.name}: #{e.message}"
-    )
-    render json: { payload: [] }
+    render json: { payload: places_location.suggestions(query) }
+  rescue ::Autonomia::Prospecting::SearchRunner::ProviderError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def location_details
     place_id = params[:place_id].to_s.strip
-    return render json: { payload: {} } if place_id.blank?
+    return render json: { error: I18n.t('autonomia.prospecting.errors.location_required') }, status: :unprocessable_entity if place_id.blank?
 
     return render json: { payload: {} } unless setting.google_places_configured?
 
-    render json: { payload: google_place_details(place_id, setting.google_places_api_key) }
-  rescue StandardError => e
-    Rails.logger.warn(
-      "[Autonomia::Prospecting] location_details failed account_id=#{Current.account&.id} error=#{e.class.name}: #{e.message}"
-    )
-    render json: { payload: {} }
+    render json: { payload: places_location.details(place_id) }
+  rescue ::Autonomia::Prospecting::SearchRunner::ProviderError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def show
@@ -119,80 +112,10 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     params.require(:search).permit(:crm_pipeline_id, :crm_stage_id)
   end
 
-  def google_place_predictions(query, api_key)
-    uri = URI(AUTOCOMPLETE_ENDPOINT)
-    request = Net::HTTP::Post.new(uri)
-    request['Content-Type'] = 'application/json'
-    request['X-Goog-Api-Key'] = api_key
-    request['X-Goog-FieldMask'] = [
-      'suggestions.placePrediction.text',
-      'suggestions.placePrediction.placeId'
-    ].join(',')
-    request.body = {
-      input: query,
-      includedPrimaryTypes: [
-        'locality',
-        'sublocality',
-        'administrative_area_level_2'
-      ]
-    }.to_json
-
-    response = Net::HTTP.start(
-      uri.hostname,
-      uri.port,
-      use_ssl: true,
-      read_timeout: 8
-    ) do |http|
-      http.request(request)
-    end
-    unless response.is_a?(Net::HTTPSuccess)
-      Rails.logger.warn(
-        "[Autonomia::Prospecting] Google Places autocomplete failed account_id=#{Current.account&.id} status=#{response.code} body=#{response.body.to_s.truncate(500)}"
-      )
-      return []
-    end
-
-    Array(JSON.parse(response.body)['suggestions'])
-      .filter_map do |item|
-        prediction = item['placePrediction']
-        text = prediction&.dig('text', 'text')
-        place_id = prediction&.dig('placeId')
-        next if text.blank? || place_id.blank?
-
-        { text: text, place_id: place_id }
-      end
-      .uniq { |item| item[:place_id] }
-      .first(8)
-  end
-
-  def google_place_details(place_id, api_key)
-    uri = URI("#{PLACE_DETAILS_ENDPOINT}/#{place_id}")
-    request = Net::HTTP::Get.new(uri)
-    request['X-Goog-Api-Key'] = api_key
-    request['X-Goog-FieldMask'] = 'id,displayName,formattedAddress,location'
-
-    response = Net::HTTP.start(
-      uri.hostname,
-      uri.port,
-      use_ssl: true,
-      read_timeout: 8
-    ) do |http|
-      http.request(request)
-    end
-    unless response.is_a?(Net::HTTPSuccess)
-      Rails.logger.warn(
-        "[Autonomia::Prospecting] Google Places details failed account_id=#{Current.account&.id} status=#{response.code} body=#{response.body.to_s.truncate(500)}"
-      )
-      return {}
-    end
-
-    body = JSON.parse(response.body)
-    {
-      place_id: body['id'],
-      label: body['formattedAddress'].presence || body.dig('displayName', 'text'),
-      latitude: body.dig('location', 'latitude'),
-      longitude: body.dig('location', 'longitude')
-    }
+  def places_location
+    ::Autonomia::Prospecting::Providers::GooglePlacesLocation.new(
+      api_key: setting.google_places_api_key, country: setting.search_country, account_id: Current.account.id
+    )
   end
 
   def search_settings_metadata
