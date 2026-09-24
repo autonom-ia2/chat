@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 
 // The parent pipeline drawer still passes :inboxes, but the AI now picks the
@@ -14,6 +15,18 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+
+const callbackModeOptions = computed(() => [
+  {
+    value: 'reminder',
+    label: t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_REMINDER'),
+  },
+  {
+    value: 'message',
+    label: t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_MESSAGE'),
+  },
+  { value: 'both', label: t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_BOTH') },
+]);
 
 const isLoading = ref(false);
 const isSaving = ref(false);
@@ -305,20 +318,12 @@ watch(
         <span class="text-xs text-n-slate-11">
           {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE') }}
         </span>
-        <select
+        <ChoiceSelect
           v-model="form.callbackMode"
-          class="reset-base w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-        >
-          <option value="reminder">
-            {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_REMINDER') }}
-          </option>
-          <option value="message">
-            {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_MESSAGE') }}
-          </option>
-          <option value="both">
-            {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_BOTH') }}
-          </option>
-        </select>
+          :options="callbackModeOptions"
+          :aria-label="t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE')"
+          class="w-full"
+        />
       </label>
 
       <label class="grid gap-1">

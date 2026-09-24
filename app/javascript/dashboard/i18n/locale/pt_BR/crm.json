@@ -1023,6 +1023,7 @@
       "REWRITE": "Reescrever",
       "REFINE": "Refinar",
       "REFINE_PLACEHOLDER": "ex.: deixe mais curto",
+      "TONE": "Tom",
       "TONE_PROFESSIONAL": "Profissional",
       "TONE_CASUAL": "Casual",
       "TONE_FRIENDLY": "Amigável",
@@ -1606,6 +1607,7 @@
         }
       }
     },
+    "TIME_UNIT_LABEL": "Unidade de tempo de {metric}",
     "TIME_UNITS": {
       "MINUTES": "Minutos",
       "HOURS": "Horas",

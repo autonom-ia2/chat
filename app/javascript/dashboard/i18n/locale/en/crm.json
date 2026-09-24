@@ -1023,6 +1023,7 @@
       "REWRITE": "Rewrite",
       "REFINE": "Refine",
       "REFINE_PLACEHOLDER": "e.g. make it shorter",
+      "TONE": "Tone",
       "TONE_PROFESSIONAL": "Professional",
       "TONE_CASUAL": "Casual",
       "TONE_FRIENDLY": "Friendly",
@@ -1606,6 +1607,7 @@
         }
       }
     },
+    "TIME_UNIT_LABEL": "Time unit for {metric}",
     "TIME_UNITS": {
       "MINUTES": "Minutes",
       "HOURS": "Hours",

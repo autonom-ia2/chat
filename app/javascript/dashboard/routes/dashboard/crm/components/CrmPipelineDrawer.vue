@@ -7,6 +7,7 @@ import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import CrmGoogleConversionFeedAPI from 'dashboard/api/crmGoogleConversionFeed';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmStageAutomationsPanel from './CrmStageAutomationsPanel.vue';
 import CrmAiSettingsPanel from './CrmAiSettingsPanel.vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
@@ -149,6 +150,17 @@ const linkedInboxes = computed(() =>
   props.inboxes.filter(inbox => linkedInboxIds.value.includes(Number(inbox.id)))
 );
 const stageOptions = computed(() => form.stages.filter(stage => stage.id));
+const inboxChoices = computed(() => [
+  { value: '', label: t('CRM_KANBAN.PIPELINE_DRAWER.SELECT_INBOX') },
+  ...availableInboxes.value.map(inbox => ({
+    value: inbox.id,
+    label: inbox.name,
+  })),
+]);
+const entryStageChoices = computed(() => [
+  { value: '', label: t('CRM_KANBAN.PIPELINE_DRAWER.FIRST_STAGE') },
+  ...stageOptions.value.map(stage => ({ value: stage.id, label: stage.name })),
+]);
 const canAddPipelineInbox = computed(
   () => isEditing.value && props.pipeline?.id && newPipelineInbox.inboxId
 );
@@ -538,18 +550,14 @@ useKeyboardEvents({
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('CRM_KANBAN.PIPELINE_DRAWER.META_STAGE_TYPE') }}
                   </span>
-                  <select
+                  <ChoiceSelect
                     v-model="stage.funnel_stage_type"
-                    class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                  >
-                    <option
-                      v-for="option in funnelStageTypeOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </option>
-                  </select>
+                    :options="funnelStageTypeOptions"
+                    :aria-label="
+                      t('CRM_KANBAN.PIPELINE_DRAWER.META_STAGE_TYPE')
+                    "
+                    class="w-full"
+                  />
                 </label>
                 <div class="flex items-end justify-end gap-1">
                   <Button
@@ -892,43 +900,25 @@ useKeyboardEvents({
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('CRM_KANBAN.PIPELINE_DRAWER.INBOX') }}
                   </span>
-                  <select
+                  <ChoiceSelect
                     v-model="newPipelineInbox.inboxId"
-                    class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                    :options="inboxChoices"
+                    :aria-label="t('CRM_KANBAN.PIPELINE_DRAWER.INBOX')"
                     :disabled="availableInboxes.length === 0"
-                  >
-                    <option value="">
-                      {{ t('CRM_KANBAN.PIPELINE_DRAWER.SELECT_INBOX') }}
-                    </option>
-                    <option
-                      v-for="inbox in availableInboxes"
-                      :key="inbox.id"
-                      :value="inbox.id"
-                    >
-                      {{ inbox.name }}
-                    </option>
-                  </select>
+                    class="w-full"
+                  />
                 </label>
 
                 <label class="grid gap-1">
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('CRM_KANBAN.PIPELINE_DRAWER.ENTRY_STAGE') }}
                   </span>
-                  <select
+                  <ChoiceSelect
                     v-model="newPipelineInbox.defaultStageId"
-                    class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                  >
-                    <option value="">
-                      {{ t('CRM_KANBAN.PIPELINE_DRAWER.FIRST_STAGE') }}
-                    </option>
-                    <option
-                      v-for="stage in stageOptions"
-                      :key="stage.id"
-                      :value="stage.id"
-                    >
-                      {{ stage.name }}
-                    </option>
-                  </select>
+                    :options="entryStageChoices"
+                    :aria-label="t('CRM_KANBAN.PIPELINE_DRAWER.ENTRY_STAGE')"
+                    class="w-full"
+                  />
                 </label>
               </div>
 
