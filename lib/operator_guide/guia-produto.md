@@ -1410,9 +1410,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Prospecção > Buscar leads
 - rota: `autonomia_prospecting_search` - `/app/accounts/:accountId/autonomia/prospecting/search`
 - gate: papel `administrator` ou `prospecting_view` ou `prospecting_manage`
-- pre_requisitos: módulo de Prospecção habilitado e a chave de busca configurada em Configurações > Prospecção
+- pre_requisitos: módulo de Prospecção habilitado pelo suporte; a chave do Google é da plataforma, a conta não cola chave
 - passos: 1. Abra Prospecção > Buscar leads e clique em nova busca; 2. Escreva o segmento e a localização e escolha uma sugestão; 3. Defina a área, o limite e a forma de pesquisa; 4. Busque e ordene por maior prioridade; 5. Abra os detalhes de um lead para ver reputação e fatores de atenção; 6. Use criar contato, criar card, ou selecione vários e aplique em lote.
-- gotchas: sem a chave de busca configurada as sugestões não aparecem e a busca não devolve empresas; o mapa usa uma segunda chave e, sem ela, a busca funciona mas o mapa não abre; criar card exige um funil ativo configurado; a conta tem limite diário e mensal, e a busca para ao bater o limite; excluir uma busca do histórico não apaga os leads já salvos.
+- gotchas: a busca aceita até 60 resultados por pedido, mas o Google ainda devolve no máximo 20 por busca; não há limite diário nem mensal; sem a chave de plataforma configurada pelo suporte, as sugestões não aparecem e a busca não roda; o mapa usa uma segunda chave de plataforma e, sem ela, a busca funciona mas o mapa não abre; o botão Enriquecer só libera com a pesquisa liberada pelo suporte; sem a chave de IA da integração CRM Kanban AI, a tela avisa e o enriquecimento traz só o que está no site; criar card exige um funil ativo configurado; excluir uma busca do histórico não apaga os leads já salvos.
 - nav_target: `autonomia_prospecting_search`
 
 ### Juntar leads em listas e preparar um público de campanha
@@ -1425,14 +1425,14 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: criar o público só gera o segmento por etiqueta, nada é disparado automaticamente e a campanha continua sendo você quem dispara; lead bloqueado por status ou consentimento entra na conta de bloqueados e fica de fora do público; a busca de leads disponíveis só mostra quem ainda não está na lista; remover um lead da lista não apaga o lead nem o contato criado a partir dele.
 - nav_target: `autonomia_prospecting_lists`
 
-### Ajustar chaves, limites e critérios de score da prospecção
-- intent: Onde coloco a chave do Google?; Por que o mapa não aparece na busca?; Como mudo o funil padrão dos cards?; Como limito quantas buscas podem ser feitas por dia?; Como mudo o peso do score dos leads?
+### Ajustar funil padrão, cache e critérios de score da prospecção
+- intent: Onde coloco a chave do Google?; Por que o mapa não aparece na busca?; Por que o botão Enriquecer está desligado?; Como mudo o funil padrão dos cards?; Como mudo o peso do score dos leads?
 - onde_fica: Configurações > Prospecção
 - rota: `settings_prospecting_index` - `/app/accounts/:accountId/settings/prospecting`
 - gate: papel `administrator` ou `prospecting_manage`
 - pre_requisitos: ser administrador ou ter a permissão de gerenciar prospecção
-- passos: 1. Abra Configurações > Prospecção; 2. Na aba geral, cole a chave de busca de locais e a chave de exibição do mapa; 3. Defina o funil e a etapa padrão usados ao criar cards; 4. Ajuste limite por busca, cache e limites diário e mensal; 5. Na aba score, escolha um perfil ou mude para customizado para editar os pesos; 6. Salve.
-- gotchas: são duas chaves com funções diferentes, uma alimenta a busca e as sugestões, a outra só desenha o mapa; chave já gravada não é exibida de volta, e preencher o campo substitui a anterior; os pesos do score só ficam editáveis no modo customizado; a forma de pesquisa muda o sentido do score, priorizando quem tem lacunas no perfil ou quem já é mais estruturado.
+- passos: 1. Abra Configurações > Prospecção; 2. Na aba geral, confira se as chaves da plataforma estão prontas, se a pesquisa está liberada e se há aviso de IA; 3. Defina o funil e a etapa padrão usados ao criar cards; 4. Ajuste o cache; 5. Na aba score, escolha um perfil ou mude para customizado para editar os pesos; 6. Salve.
+- gotchas: a conta não cola chave do Google nem ajusta limite: as chaves são da plataforma e quem configura é o suporte; a pesquisa de empresa e decisor, que libera o botão Enriquecer, também é ligada pelo suporte, conta a conta; a IA da prospecção usa só a chave da integração CRM Kanban AI da conta, nunca a da plataforma, e a tela avisa quando ela falta; os pesos do score só ficam editáveis no modo customizado; a forma de pesquisa muda o sentido do score, priorizando quem tem lacunas no perfil ou quem já é mais estruturado.
 - nav_target: `autonomia_prospecting_settings`
 
 ### Entrar na área de Cotação da corretora
