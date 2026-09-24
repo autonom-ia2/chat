@@ -1682,7 +1682,7 @@
     "KICK_OFF": "Eu explico onde fica cada coisa, consulto os dados da sua conta e, para quem administra, faço mudanças depois da sua confirmação.",
     "GO_TO_SCREEN": "Ir para a tela",
     "GO_TO_SCREEN_NAMED": "Ir para: {rotulo}",
-    "GO_TO_SECTION": "Ir para",
+    "GO_TO_SCREEN_NUMBERED": "Ir para a tela {numero}",
     "READ_ARTICLE": "Ler o artigo completo",
     "READ_ARTICLE_NAMED": "Ler: {titulo}",
     "READ_SECTION": "Para ler com calma",

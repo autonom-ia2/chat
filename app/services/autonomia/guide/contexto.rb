@@ -53,11 +53,16 @@ class Autonomia::Guide::Contexto
   # sobrescrevia as outras (#590) — uma pergunta com várias partes só ganhava
   # o botão da última tela, e as outras três chamadas de `mostrar_tela`
   # desapareciam caladas.
+  #
+  # Devolve se ENTROU ou não (revisão #637 do PR): a ferramenta lê isso para
+  # avisar o modelo quando descarta — repetida ou além da 5ª —, em vez de
+  # responder "Pronto" para um botão que não existe.
   def mostrar(destino)
-    return if @telas.size >= MAX_ITENS
-    return if @telas.any? { |item| item[:route_name] == destino[:route_name] && item[:params] == destino[:params] }
+    return false if @telas.size >= MAX_ITENS
+    return false if @telas.any? { |item| item[:route_name] == destino[:route_name] && item[:params] == destino[:params] }
 
     @telas << destino
+    true
   end
 
   # A primeira tela do turno. Existe para quem ainda lê o campo singular

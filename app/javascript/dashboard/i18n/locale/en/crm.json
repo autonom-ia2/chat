@@ -1682,7 +1682,7 @@
     "KICK_OFF": "I explain where things are, look up your account data and, for admins, make changes once you confirm.",
     "GO_TO_SCREEN": "Go to screen",
     "GO_TO_SCREEN_NAMED": "Go to: {rotulo}",
-    "GO_TO_SECTION": "Go to",
+    "GO_TO_SCREEN_NUMBERED": "Go to screen {numero}",
     "READ_ARTICLE": "Read the full article",
     "READ_ARTICLE_NAMED": "Read: {titulo}",
     "READ_SECTION": "To read later",

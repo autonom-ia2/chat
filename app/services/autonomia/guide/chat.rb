@@ -213,11 +213,6 @@ module Autonomia
         fallback ? [fallback] : []
       end
 
-      # Mantido para quem lia a tela ÚNICA do turno (specs e o campo singular do Result).
-      def navegacao(result)
-        navegacoes(result).first
-      end
-
       # Sugestão de navegação extraída do MELHOR fluxo recuperado (campo nav_target do KB). Só sugere
       # quando ancorado + confiante + sem escala. A AUTORIDADE final de "pode navegar" é o FE (valida
       # route name no registry + permissão da rota). Aqui é só candidato.

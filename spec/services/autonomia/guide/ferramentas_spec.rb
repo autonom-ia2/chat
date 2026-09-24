@@ -278,10 +278,41 @@ RSpec.describe 'Ferramentas do Guia' do
       expect(operador.tela[:rotulo].length).to eq(40)
     end
 
+    # Quebra de linha e espaço repetido — o modelo às vezes manda assim — viram
+    # um espaço só, não vazam pro botão.
+    it 'troca quebra de linha e espaço repetido por um espaço só' do
+      mostrar({ 'tela' => 'labels_list', 'rotulo' => "Etiquetas\n  do   WhatsApp" })
+
+      expect(operador.tela[:rotulo]).to eq('Etiquetas do WhatsApp')
+    end
+
     it 'sem rótulo do modelo, o botão fica sem nome' do
       mostrar({ 'tela' => 'labels_list' })
 
       expect(operador.tela[:rotulo]).to be_nil
+    end
+
+    # Revisão #637 do PR: antes disto a ferramenta dizia "Pronto" mesmo quando
+    # `Contexto` descartava a tela — repetida ou além da 5ª —, e o modelo achava
+    # que o botão existia quando não existia nenhum novo.
+    it 'avisa o modelo em vez de dizer "Pronto" quando a tela é repetida', :aggregate_failures do
+      mostrar({ 'tela' => 'labels_list' })
+      resposta = mostrar({ 'tela' => 'labels_list' })
+
+      expect(operador.telas.size).to eq(1)
+      expect(resposta).not_to include('Pronto')
+      expect(resposta).to include('já tem botão')
+    end
+
+    it 'avisa o modelo em vez de dizer "Pronto" depois da 5ª tela', :aggregate_failures do
+      %w[labels_list settings_inbox_new first_steps home contacts_dashboard_index].each do |tela|
+        mostrar({ 'tela' => tela })
+      end
+      resposta = mostrar({ 'tela' => 'custom_roles_list' })
+
+      expect(operador.telas.size).to eq(5)
+      expect(resposta).not_to include('Pronto')
+      expect(resposta).to include('cinco vezes')
     end
   end
 
