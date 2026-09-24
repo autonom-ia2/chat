@@ -67,6 +67,25 @@ describe('Busca · faixa de posição que o Google alcança', () => {
     expect(rankInput(wrapper, 'MIN_ARIA').element.value).toBe('20');
   });
 
+  // Antes o aviso só existia dentro da gaveta, e a busca voltava 422 sem a
+  // pessoa ver a faixa. O filtro não muda sozinho: a Quantidade pode estar no
+  // meio da digitação.
+  it('diminuir a Quantidade depois de aplicar a faixa avisa fora da gaveta', async () => {
+    const reachWarning = wrapper =>
+      wrapper.find('[data-test="rank-reach-warning"]');
+    const wrapper = await openNewSearchForm();
+    await setQuantityAndOpenFilters(wrapper, 20);
+    await dragMinRankTo(wrapper, 20);
+    await applyFilters(wrapper);
+    expect(reachWarning(wrapper).exists()).toBe(false);
+
+    await quantityInput(wrapper).setValue('10');
+
+    expect(reachWarning(wrapper).text()).toContain(`${DRAWER}.RANK.REACH`);
+    await quantityInput(wrapper).setValue('20');
+    expect(reachWarning(wrapper).exists()).toBe(false);
+  });
+
   it('no provider fictício o teto é a própria Quantidade', async () => {
     const wrapper = await openNewSearchForm({
       settings: settingsFixture({ mock_provider: true }),

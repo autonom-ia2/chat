@@ -29,6 +29,13 @@ const rankReach = computed(() =>
   })
 );
 
+// Quantidade diminuída depois de aplicar a faixa: o início aplicado passa do
+// que o Google alcança e o motor recusaria a busca. Avisa fora da gaveta, sem
+// mexer no filtro (a Quantidade pode estar no meio da digitação).
+const isRankOutOfReach = computed(
+  () => Number(formFilters.value.outside_top || 0) >= rankReach.value
+);
+
 const applyFilters = next => {
   formFilters.value = next;
   isOpen.value = false;
@@ -55,6 +62,16 @@ const applyFilters = next => {
     </div>
     <p class="mt-1 text-xs text-n-slate-10">
       {{ t('PROSPECTING.SEARCH.ADVANCED_FILTERS_HINT') }}
+    </p>
+    <p
+      v-if="isRankOutOfReach"
+      data-test="rank-reach-warning"
+      role="alert"
+      class="mt-1 text-xs font-medium text-n-ruby-11"
+    >
+      {{
+        t('PROSPECTING.SEARCH.FILTER_DRAWER.RANK.REACH', { limit: rankReach })
+      }}
     </p>
 
     <div
