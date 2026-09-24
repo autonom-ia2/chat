@@ -174,6 +174,9 @@ const saveTool = async () => {
 };
 
 const deleteTool = async tool => {
+  // Confirmação simples que já existia; trocar por diálogo do design system
+  // fica fora do #652 (que só troca os <select> nativos).
+  // eslint-disable-next-line no-alert
   if (!window.confirm(t('AGENTS.TOOLS.DELETE_CONFIRM'))) return;
   await AutonomiaAgentsAPI.deleteTool(props.agentId, tool.id);
   useAlert(t('AGENTS.TOOLS.DELETE_SUCCESS'));
@@ -276,7 +279,12 @@ onMounted(loadTools);
                 </span>
               </div>
               <p class="mt-1 text-xs text-n-slate-10">
-                {{ tool.slug }} · {{ tool.http_method }}
+                {{
+                  t('AGENTS.TOOLS.SLUG_METHOD', {
+                    slug: tool.slug,
+                    method: tool.http_method,
+                  })
+                }}
               </p>
               <p class="mt-2 text-sm text-n-slate-11">
                 {{ tool.description }}
@@ -307,11 +315,9 @@ onMounted(loadTools);
             </div>
           </div>
         </article>
-        <pre
-          v-if="testResult"
-          class="p-3 overflow-auto text-xs border rounded-lg max-h-52 border-n-weak bg-n-alpha-1 text-n-slate-11"
-          >{{ testResult }}</pre
-        >
+        <!-- <pre> preserva espaços; formatado, o fechamento quebraria o lint -->
+        <!-- prettier-ignore -->
+        <pre v-if="testResult" class="p-3 overflow-auto text-xs border rounded-lg max-h-52 border-n-weak bg-n-alpha-1 text-n-slate-11">{{ testResult }}</pre>
       </div>
     </div>
 

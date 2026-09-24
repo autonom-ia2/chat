@@ -251,6 +251,7 @@
       "SAVE_SUCCESS": "Tool saved.",
       "SAVE_ERROR": "We couldn't save this tool.",
       "DELETE_CONFIRM": "Remove this tool?",
+      "SLUG_METHOD": "{slug} · {method}",
       "DELETE_SUCCESS": "Tool removed.",
       "TEST_SUCCESS": "Tool executed.",
       "TEST_ERROR": "We couldn't execute this tool."

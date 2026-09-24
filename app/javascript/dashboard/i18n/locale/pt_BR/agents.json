@@ -251,6 +251,7 @@
       "SAVE_SUCCESS": "Ferramenta salva.",
       "SAVE_ERROR": "Não foi possível salvar a ferramenta.",
       "DELETE_CONFIRM": "Remover esta ferramenta?",
+      "SLUG_METHOD": "{slug} · {method}",
       "DELETE_SUCCESS": "Ferramenta removida.",
       "TEST_SUCCESS": "Ferramenta executada.",
       "TEST_ERROR": "Não foi possível executar a ferramenta."

@@ -476,8 +476,13 @@ onMounted(fetchSettings);
                 {{ t('PROSPECTING.SETTINGS.USAGE_DAILY') }}
               </span>
               <p class="text-sm text-n-slate-12">
-                {{ settings.usage?.daily_used || 0 }} /
-                {{ form.daily_limit || t('PROSPECTING.SETTINGS.UNLIMITED') }}
+                {{
+                  t('PROSPECTING.SETTINGS.USAGE_OF', {
+                    used: settings.usage?.daily_used || 0,
+                    limit:
+                      form.daily_limit || t('PROSPECTING.SETTINGS.UNLIMITED'),
+                  })
+                }}
               </p>
             </div>
             <div>
@@ -485,8 +490,13 @@ onMounted(fetchSettings);
                 {{ t('PROSPECTING.SETTINGS.USAGE_MONTHLY') }}
               </span>
               <p class="text-sm text-n-slate-12">
-                {{ settings.usage?.monthly_used || 0 }} /
-                {{ form.monthly_limit || t('PROSPECTING.SETTINGS.UNLIMITED') }}
+                {{
+                  t('PROSPECTING.SETTINGS.USAGE_OF', {
+                    used: settings.usage?.monthly_used || 0,
+                    limit:
+                      form.monthly_limit || t('PROSPECTING.SETTINGS.UNLIMITED'),
+                  })
+                }}
               </p>
             </div>
           </div>
