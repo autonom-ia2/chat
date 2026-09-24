@@ -180,9 +180,10 @@ module Crm
           stamp_handoff_metadata!(invited: true, invited_agent: agent)
           log_activity!(agent, event_type: 'ai_handoff_invite')
           registrar('invited', agente: agent)
-          ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation)
           outcome = Result.new(status: :invited, assignee: agent)
         end
+        # Fora da trava e da transação do card (revisão da chat#665): um erro ao postar não pode desfazer o convite.
+        ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation) if outcome&.status == :invited
         outcome || skip('invite_failed')
       end
 

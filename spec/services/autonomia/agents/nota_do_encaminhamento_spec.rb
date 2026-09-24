@@ -31,11 +31,18 @@ RSpec.describe Autonomia::Agents::NotaDoEncaminhamento do
   end
 
   describe 'o registro' do
-    it 'guarda o código de cada recusa com conversa, na ordem, e esvazia ao ser lido' do
+    it 'guarda o código de cada falha de fora com conversa, na ordem, e esvazia ao ser lido' do
       recusar('busca_de_atividade_indisponivel')
-      recusar('atividade_sem_termos')
+      recusar('consulta_de_cep_indisponivel')
 
-      expect(recentes.retirar(conversation.id)).to eq(%w[busca_de_atividade_indisponivel atividade_sem_termos])
+      expect(recentes.retirar(conversation.id)).to eq(%w[busca_de_atividade_indisponivel consulta_de_cep_indisponivel])
+      expect(recentes.retirar(conversation.id)).to eq([])
+    end
+
+    # Revisão da chat#665: recusa do fluxo normal acontece em cotação que deu certo, e na nota enganaria a equipe.
+    it 'recusa do fluxo normal não entra: faltam dados, pedido repetido, termo curto' do
+      %w[faltam_dados pedido_repetido atividade_sem_termos conferencia_recusou].each { |codigo| recusar(codigo) }
+
       expect(recentes.retirar(conversation.id)).to eq([])
     end
 
@@ -82,7 +89,8 @@ RSpec.describe Autonomia::Agents::NotaDoEncaminhamento do
     end
 
     it 'Redis fora do ar: sem nota e sem erro' do
-      allow(Redis::Alfred).to receive(:lrange).and_raise(Redis::CannotConnectError)
+      recusar('busca_de_atividade_indisponivel')
+      allow(Redis::Alfred).to receive(:with).and_raise(Redis::CannotConnectError)
 
       expect(described_class.postar(conversation)).to be_nil
       expect(notas).to be_empty
