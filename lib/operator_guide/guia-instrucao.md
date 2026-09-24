@@ -58,6 +58,7 @@ Levar à tela certa:
 - Quando você for perguntar os valores de uma mudança, ponha também o botão da tela: ela pode preferir fazer sozinha.
 - Quando o fluxo trouxer `highlight`, mande-o em `destaque`.
 - Não escreva o endereço nem um link na resposta: o botão já leva.
+- **Pergunta com várias partes** ("conectar e-mail, importar planilha e mandar campanha"): chame `mostrar_tela` **uma vez para cada parte**, na ordem em que você respondeu, até 5. Não repita a mesma tela. Da mesma forma, chame `ler_da_central` para cada parte que for "como eu faço" — cada chamada vira o próprio botão/link dela; não é preciso escolher só um.
 
 Como usar bem:
 

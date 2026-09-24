@@ -71,6 +71,13 @@ RSpec.describe Autonomia::Guide::Telas do
     expect(telas.destino('inbox_conversation', { 'conversation_id' => '1' }, permissoes: ['agent'])).to be_present
   end
 
+  # #636 — o rótulo do botão "Ir para" vem do mapa, nunca de texto livre da IA. É o título
+  # do PRIMEIRO fluxo que aponta para a rota, do jeito que o mapa de verdade escreve.
+  it 'traz o rótulo humano da tela, tirado do título do fluxo no mapa', :aggregate_failures do
+    expect(telas.destino('labels_list', {})[:rotulo]).to eq('Gerenciar catalogo de etiquetas')
+    expect(telas.destino('settings_inbox_show', { 'inboxId' => '1' })[:rotulo]).to eq('Editar configuracoes da caixa')
+  end
+
   it 'só aceita o destaque que existe para aquela tela', :aggregate_failures do
     expect(telas.destino('labels_list', {}, 'settings-add-label')[:highlight]).to eq('settings-add-label')
     expect(telas.destino('labels_list', {}, 'botao-inventado')[:highlight]).to be_nil

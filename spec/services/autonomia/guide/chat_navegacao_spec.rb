@@ -51,6 +51,12 @@ RSpec.describe Autonomia::Guide::Chat do
       expect(chat.send(:resolve_navigation, resultado)[:route_name]).to eq('crm_kanban_index')
     end
 
+    # #636 — o rótulo do botão vem do título do fluxo no mapa, não de texto
+    # solto que a IA escreveria.
+    it 'traz o rótulo do título do fluxo' do
+      expect(chat.send(:resolve_navigation, resultado)[:rotulo]).to eq('Criar funis, estágios e conectar caixas ao CRM')
+    end
+
     it 'não sugere tela quando a conversa vai para um humano' do
       expect(chat.send(:resolve_navigation, resultado(handoff: { should: true }))).to be_nil
     end
@@ -83,6 +89,16 @@ RSpec.describe Autonomia::Guide::Chat do
       chat.send(:contexto).mostrar(escolhida)
 
       expect(chat.send(:navegacao, resultado(handoff: { should: true }))).to be_nil
+    end
+
+    # #636 — pergunta com várias partes: cada `mostrar_tela` do modelo vira um
+    # item de `navegacoes`, na ordem em que ele chamou.
+    it 'traz todas as telas que o modelo escolheu, na ordem' do
+      segunda = { route_name: 'labels_list', params: {}, highlight: nil }
+      chat.send(:contexto).mostrar(escolhida)
+      chat.send(:contexto).mostrar(segunda)
+
+      expect(chat.send(:navegacoes, resultado)).to eq([escolhida, segunda])
     end
   end
 end

@@ -258,6 +258,16 @@ RSpec.describe 'Ferramentas do Guia' do
     it 'recusa sem derrubar o turno quando não há operador' do
       expect(mostrar({ 'tela' => 'labels_list' }, quem: nil)).to include('não sei quem está perguntando')
     end
+
+    # #636 — pergunta com várias partes chama `mostrar_tela` mais de uma vez, e
+    # cada chamada tem que ganhar o próprio botão, com o rótulo da tela.
+    it 'empilha uma tela por chamada, cada uma com o rótulo do mapa', :aggregate_failures do
+      mostrar({ 'tela' => 'labels_list' })
+      mostrar({ 'tela' => 'settings_inbox_new' })
+
+      expect(operador.telas.map { |t| t[:route_name] }).to eq(%w[labels_list settings_inbox_new])
+      expect(operador.telas.map { |t| t[:rotulo] }).to all(be_present)
+    end
   end
 
   describe 'ler_da_central' do
@@ -316,9 +326,12 @@ RSpec.describe 'Ferramentas do Guia' do
       expect(ler_central({ 'ref' => '02.04' }, quem: nil)).to include('não sei qual é a conta')
     end
 
-    # O botão "ler o artigo completo" (#617) lê daqui — mesma regra da tela e
-    # da proposta: fica o último artigo lido no turno.
-    it 'guarda o artigo lido no contexto, e o último quando lê mais de um', :aggregate_failures do
+    # O botão "ler o artigo completo" (#617) lê daqui. Até a #636, só UM artigo
+    # sobrevivia por turno, e o último vencia. Agora `ler_da_central` empilha
+    # os artigos numa lista, na ordem de leitura — uma pergunta com várias
+    # partes ("como conecto o WhatsApp e como conecto o Instagram") ganha um
+    # link por artigo, não só o último.
+    it 'guarda os artigos lidos no contexto, na ordem de leitura', :aggregate_failures do
       artigo_central(id: '02.04', titulo: 'Conectar o WhatsApp')
       artigo_central(id: '02.05', titulo: 'Conectar o Instagram')
 
@@ -326,7 +339,11 @@ RSpec.describe 'Ferramentas do Guia' do
       expect(operador.artigo).to eq(ref: '02-04', titulo: 'Conectar o WhatsApp')
 
       ler_central({ 'ref' => '02.05' })
-      expect(operador.artigo).to eq(ref: '02-05', titulo: 'Conectar o Instagram')
+      expect(operador.artigos).to eq([{ ref: '02-04', titulo: 'Conectar o WhatsApp' },
+                                      { ref: '02-05', titulo: 'Conectar o Instagram' }])
+      # O campo singular, mantido para o front antigo durante o deploy (#636),
+      # é o PRIMEIRO da lista — não o último como antes.
+      expect(operador.artigo).to eq(ref: '02-04', titulo: 'Conectar o WhatsApp')
     end
   end
 

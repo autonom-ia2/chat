@@ -57,24 +57,36 @@ const addUserMessage = content => {
   return record;
 };
 
+// O backend manda `navigations`/`artigos` (listas, #636). Durante o deploy blue/green, um pedido
+// pode ser respondido por uma instância que ainda só manda o campo singular antigo (`navigation`/
+// `artigo`) — a tela recebe as duas formas e nunca perde o botão por causa disso. Sem regex: é
+// só "a lista veio e tem item" ou "sobrou o singular".
+const paraLista = (lista, unico) => {
+  if (Array.isArray(lista) && lista.length) return lista;
+  return unico ? [unico] : [];
+};
+
 const addAssistantMessage = ({
   content,
   navigation = null,
+  navigations = null,
   acao = null,
   artigo = null,
+  artigos = null,
 } = {}) => {
   const record = {
     id: nextId,
     message_type: 'assistant',
     message: { content },
-    navigation,
+    // As telas que o Guia escolheu, na ordem em que escolheu (#590, #636).
+    navigations: paraLista(navigations, navigation),
     // Ação proposta: fica aguardando confirmação e guarda o desfecho depois.
     acao,
     acaoEstado: acao ? 'aguardando' : null,
     acaoResultado: null,
-    // O artigo da Central que o Guia leu (#617): o botão "ler o artigo
-    // completo" abre exatamente este.
-    artigo,
+    // Os artigos da Central que o Guia leu, na ordem de leitura (#617, #636):
+    // o link "Ler" de cada um abre o artigo completo dele.
+    artigos: paraLista(artigos, artigo),
   };
   nextId += 1;
   state.messages.push(record);
