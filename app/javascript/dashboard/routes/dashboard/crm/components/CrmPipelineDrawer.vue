@@ -10,6 +10,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import CrmStageAutomationsPanel from './CrmStageAutomationsPanel.vue';
 import CrmAiSettingsPanel from './CrmAiSettingsPanel.vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
+import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import { useCrmPermissions } from '../composables/useCrmPermissions';
 
 const props = defineProps({
@@ -405,6 +406,10 @@ useKeyboardEvents({
     allowOnFocusedInput: true,
   },
 });
+
+// #646 — a gaveta cobre o mesmo canto (`fixed ... right-0`) do lançador do
+// Guia; sinaliza que está aberta para ele se desviar do rodapé Cancelar/Salvar.
+useFixedPanelPresence(computed(() => props.show));
 </script>
 
 <template>
