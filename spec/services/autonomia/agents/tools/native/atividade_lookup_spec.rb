@@ -81,10 +81,28 @@ RSpec.describe Autonomia::Agents::Tools::Native::AtividadeLookup do
     end
   end
 
+  # PELO CONECTOR REAL (24/09/2026): o mock e a ferramenta falavam camelCase e concordavam entre si, enquanto o `Http`
+  # entrega snake_case; a busca de verdade daria "nenhuma seguradora". Aqui o corpo é o do adapter, byte a byte na forma.
+  it 'pelo conector HTTP, com a resposta na forma do adapter, lista as opcoes de cada seguradora' do
+    ready_connection
+    stub_const('ENV', ENV.to_h.merge('INSURANCE_CONNECTOR_FUNCTION' => 'adapters-test', 'AWS_REGION' => 'us-east-1'))
+    allow(Aws::InstanceProfileCredentials).to receive(:new).and_return(Aws::Credentials.new('AKIAEXEMPLO', 'segredo'))
+    do_adapter = { 'porTermo' => [{ 'termo' => 'escritorio', 'porSeguradora' => [
+      { 'insurerCode' => '8', 'insurerName' => 'Porto Seguro', 'opcoes' => [{ 'key' => '484', 'value' => 'ESCRITORIOS' }] }
+    ] }] }
+    stub_request(:post, 'https://lambda.us-east-1.amazonaws.com/2015-03-31/functions/adapters-test/invocations').to_return(
+      status: 200, headers: { 'Content-Type' => 'application/json' },
+      body: { 'statusCode' => 200, 'body' => do_adapter.to_json }.to_json
+    )
+    allow(Autonomia::Insurance::Connector).to receive(:client).and_return(Autonomia::Insurance::Connector::Http.new)
+
+    expect(buscar(%w[escritorio])).to start_with("Termo \"escritorio\":\n- Porto Seguro (seguradora 8): key 484, value ESCRITORIOS")
+  end
+
   it 'nenhuma seguradora com opcao: busca de novo, e depois encaminha, sem perguntar em laco' do
     ready_connection
     allow(connector).to receive(:atividade_lookup)
-      .and_return({ 'porTermo' => [{ 'termo' => 'xyz', 'porSeguradora' => [{ 'insurerCode' => '8', 'opcoes' => [] }] }] })
+      .and_return({ 'por_termo' => [{ 'termo' => 'xyz', 'por_seguradora' => [{ 'insurer_code' => '8', 'opcoes' => [] }] }] })
 
     expect(buscar(%w[xyz])).to eq(described_class::NADA_ACHADO)
     expect(described_class::NADA_ACHADO)

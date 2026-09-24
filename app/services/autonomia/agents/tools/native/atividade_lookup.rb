@@ -88,7 +88,7 @@ class Autonomia::Agents::Tools::Native::AtividadeLookup < Autonomia::Agents::Too
   end
 
   def descrever(busca)
-    blocos = Array(busca.to_h['porTermo']).filter_map { |termo| bloco(termo) }
+    blocos = Array(busca.to_h['por_termo']).filter_map { |termo| bloco(termo) }
     return NADA_ACHADO if blocos.empty?
 
     [*blocos, COMO_ESCOLHER].join("\n\n")
@@ -96,11 +96,11 @@ class Autonomia::Agents::Tools::Native::AtividadeLookup < Autonomia::Agents::Too
 
   # Um termo: as seguradoras com opção, uma linha por opção. Seguradora sem opção não aparece.
   def bloco(termo)
-    com_opcao = Array(termo['porSeguradora']).select { |seg| Array(seg['opcoes']).any? }
+    com_opcao = Array(termo['por_seguradora']).select { |seg| Array(seg['opcoes']).any? }
     return nil if com_opcao.empty?
 
     linhas = com_opcao.flat_map do |seg|
-      Array(seg['opcoes']).map { |op| "- #{seg['insurerName']} (seguradora #{seg['insurerCode']}): key #{op['key']}, value #{op['value']}" }
+      Array(seg['opcoes']).map { |op| "- #{seg['insurer_name']} (seguradora #{seg['insurer_code']}): key #{op['key']}, value #{op['value']}" }
     end
     ["Termo \"#{termo['termo']}\":", *linhas].join("\n")
   end
