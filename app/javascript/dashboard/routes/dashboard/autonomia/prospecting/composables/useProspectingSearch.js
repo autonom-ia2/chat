@@ -14,6 +14,7 @@ import { useSearchForm } from './useSearchForm';
 import { useSearchHistory } from './useSearchHistory';
 import { useSearchLeads } from './useSearchLeads';
 import { useSearchLocation } from './useSearchLocation';
+import { useSearchPresets } from './useSearchPresets';
 
 const PROSPECTING_SEARCH_KEY = Symbol('prospectingSearch');
 
@@ -34,6 +35,7 @@ export const useProspectingSearch = () => {
   });
 
   const location = useSearchLocation(state);
+  const presets = useSearchPresets(state);
 
   const context = mergeDisjoint(
     { canManage },
@@ -42,7 +44,8 @@ export const useProspectingSearch = () => {
     leadActions,
     history,
     searchForm,
-    location
+    location,
+    presets
   );
   provide(PROSPECTING_SEARCH_KEY, context);
 
