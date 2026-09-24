@@ -1,5 +1,8 @@
 <script>
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+
 export default {
+  components: { ChoiceSelect },
   props: {
     selectedValue: {
       type: String,
@@ -24,6 +27,20 @@ export default {
       activeValue: this.selectedValue,
     };
   },
+  computed: {
+    choices() {
+      return this.items.map(value => ({
+        value,
+        // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
+        label: this.$t(`${this.pathPrefix}.${value}.TEXT`),
+      }));
+    },
+    choiceLabel() {
+      return this.type === 'status'
+        ? this.$t('CHAT_LIST.CHAT_SORT.STATUS')
+        : this.$t('CHAT_LIST.CHAT_SORT.ORDER_BY');
+    },
+  },
   methods: {
     onTabChange() {
       if (this.type === 'status') {
@@ -38,13 +55,12 @@ export default {
 </script>
 
 <template>
-  <select
+  <ChoiceSelect
     v-model="activeValue"
-    class="w-32 h-6 py-0 pl-2 pr-6 mx-1 my-0 text-xs border border-solid bg-n-slate-3 dark:bg-n-solid-3 border-n-weak dark:border-n-weak text-n-slate-12"
+    :options="choices"
+    :aria-label="choiceLabel"
+    compact
+    class="w-32 mx-1"
     @change="onTabChange()"
-  >
-    <option v-for="value in items" :key="value" :value="value">
-      {{ $t(`${pathPrefix}.${value}.TEXT`) }}
-    </option>
-  </select>
+  />
 </template>

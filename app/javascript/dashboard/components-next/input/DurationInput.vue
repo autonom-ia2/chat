@@ -1,6 +1,7 @@
 <script setup>
 import { computed, watch } from 'vue';
 import Input from './Input.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { useI18n } from 'vue-i18n';
 import { DURATION_UNITS } from './constants';
 
@@ -19,6 +20,12 @@ const unit = defineModel('unit', {
     return Object.values(DURATION_UNITS).includes(value);
   },
 });
+
+const unitChoices = computed(() => [
+  { value: DURATION_UNITS.MINUTES, label: t('DURATION_INPUT.MINUTES') },
+  { value: DURATION_UNITS.HOURS, label: t('DURATION_INPUT.HOURS') },
+  { value: DURATION_UNITS.DAYS, label: t('DURATION_INPUT.DAYS') },
+]);
 
 const convertToMinutes = newValue => {
   if (unit.value === DURATION_UNITS.MINUTES) {
@@ -79,19 +86,11 @@ watch(unit, () => {
     @blur="normalizeDuration"
     @keydown.enter="normalizeDuration"
   />
-  <select
+  <ChoiceSelect
     v-model="unit"
+    :options="unitChoices"
+    :aria-label="t('DURATION_INPUT.UNIT')"
     :disabled="disabled"
-    class="mb-0 text-sm disabled:outline-n-weak disabled:opacity-40"
-  >
-    <option :value="DURATION_UNITS.MINUTES">
-      {{ t('DURATION_INPUT.MINUTES') }}
-    </option>
-    <option :value="DURATION_UNITS.HOURS">
-      {{ t('DURATION_INPUT.HOURS') }}
-    </option>
-    <option :value="DURATION_UNITS.DAYS">
-      {{ t('DURATION_INPUT.DAYS') }}
-    </option>
-  </select>
+    class="shrink-0"
+  />
 </template>

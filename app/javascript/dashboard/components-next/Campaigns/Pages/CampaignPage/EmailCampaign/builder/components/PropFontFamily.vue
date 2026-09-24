@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
   // grapesjs-mjml Typography 'font-family' Property instance or undefined.
@@ -14,6 +16,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['change']);
+
+const { t } = useI18n();
 
 // Email-safe web fonts.
 const FONTS = [
@@ -49,22 +53,23 @@ const options = computed(() =>
     ? FONTS
     : [currentFamily.value, ...FONTS]
 );
+const choices = computed(() =>
+  options.value.map(font => ({ value: font, label: font }))
+);
 const selected = computed(() => matched.value ?? currentFamily.value);
 
-const onChange = event => {
-  emit('change', props.property, event.target.value);
+const onChange = value => {
+  emit('change', props.property, value);
 };
 </script>
 
 <template>
-  <select
-    :value="selected"
+  <ChoiceSelect
+    :model-value="selected"
+    :options="choices"
+    :aria-label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PROPS.TEXT.FONT_FAMILY')"
     :disabled="!property"
-    class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-n-weak bg-n-alpha-black1 text-n-slate-12 focus:outline-none focus:border-n-brand disabled:opacity-50"
+    class="w-full"
     @change="onChange"
-  >
-    <option v-for="font in options" :key="font" :value="font">
-      {{ font }}
-    </option>
-  </select>
+  />
 </template>

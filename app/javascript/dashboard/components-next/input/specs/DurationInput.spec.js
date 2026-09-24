@@ -25,6 +25,7 @@ const mountDurationInput = ({ initialValue = null } = {}) => {
           :max="100"
         />
         <output data-testid="duration">{{ duration }}</output>
+        <output data-testid="unit">{{ unit }}</output>
         <output data-testid="submitted-duration">
           {{ submittedDuration }}
         </output>
@@ -36,6 +37,10 @@ const mountDurationInput = ({ initialValue = null } = {}) => {
 };
 
 describe('DurationInput', () => {
+  beforeAll(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
   it('allows a multi-digit value to be typed before enforcing the minimum', async () => {
     const wrapper = mountDurationInput();
     const input = wrapper.get('input');
@@ -72,5 +77,26 @@ describe('DurationInput', () => {
     expect(wrapper.get('[data-testid="submitted-duration"]').text()).toBe(
       '100'
     );
+  });
+
+  it('switches the unit through the choice list and rounds the duration to it', async () => {
+    const wrapper = mountDurationInput({ initialValue: 90 });
+
+    await wrapper.get('[role="combobox"]').trigger('click');
+    const options = wrapper.findAll('[role="option"]');
+    expect(options).toHaveLength(3);
+    await options[1].trigger('click');
+
+    expect(wrapper.get('[data-testid="unit"]').text()).toBe('hours');
+    expect(wrapper.get('[data-testid="duration"]').text()).toBe('60');
+    expect(wrapper.get('input').element.value).toBe('1');
+  });
+
+  it('disables the unit choice together with the duration', () => {
+    const wrapper = mount(DurationInput, { props: { disabled: true } });
+
+    expect(
+      wrapper.get('[role="combobox"]').attributes('disabled')
+    ).toBeDefined();
   });
 });

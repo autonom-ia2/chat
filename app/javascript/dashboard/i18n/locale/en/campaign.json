@@ -774,6 +774,7 @@
           "VIDEO_LINK_PLACEHOLDER": "Paste a YouTube or Vimeo URL",
           "VIDEO_LINK_ADD": "Add",
           "ASSET_DESCRIPTION_PLACEHOLDER": "What is this asset? E.g. customer testimonial video",
+          "ASSET_ROLE_LABEL": "Asset role",
           "KIND_IMAGE": "Image",
           "KIND_PDF": "PDF",
           "KIND_VIDEO": "Video",
