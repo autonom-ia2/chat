@@ -35,8 +35,6 @@ const booleanFilterMatches = (value, filterValue) => {
 const onlyYesFilterMatches = (value, filterValue) =>
   filterValue !== 'yes' || value === true;
 
-const hasOpeningHours = lead => Boolean(lead.opening_hours_summary?.length);
-
 // "Acima de" descarta quem não tem nota; "abaixo de" deixa passar.
 const ratingMatches = (lead, filters) => {
   const rating = numberOrNull(lead.rating);
@@ -71,7 +69,7 @@ const leadMatches = (lead, filters) =>
   booleanFilterMatches(lead.phone, filters.has_phone) &&
   booleanFilterMatches(lead.has_photos, filters.has_photos) &&
   onlyYesFilterMatches(lead.open_now, filters.open_now) &&
-  onlyYesFilterMatches(hasOpeningHours(lead), filters.has_opening_hours) &&
+  onlyYesFilterMatches(lead.has_opening_hours, filters.has_opening_hours) &&
   ratingMatches(lead, filters) &&
   reviewsMatch(lead, filters) &&
   rankMatches(lead, filters);

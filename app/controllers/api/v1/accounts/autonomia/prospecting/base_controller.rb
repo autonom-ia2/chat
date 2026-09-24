@@ -46,8 +46,15 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
       has_photos: Array(raw_payload['photos']).present?,
       open_now: current_hours.key?('openNow') ? current_hours['openNow'] : nil,
       opening_hours_summary: Array(current_hours['weekdayDescriptions']).presence ||
-        Array(regular_hours['weekdayDescriptions']).presence
+        Array(regular_hours['weekdayDescriptions']).presence,
+      has_opening_hours: opening_hours_registered?(lead, regular_hours)
     }
+  end
+
+  # Mesmo valor que o motor filtra (coluna gravada pelo provider, #677). Lead gravado antes da coluna usa a regra do
+  # provider sobre o payload guardado: horário cadastrado é ter regularOpeningHours.
+  def opening_hours_registered?(lead, regular_hours)
+    lead.has_opening_hours.nil? ? regular_hours.present? : lead.has_opening_hours
   end
 
   def reviews_payload(lead)

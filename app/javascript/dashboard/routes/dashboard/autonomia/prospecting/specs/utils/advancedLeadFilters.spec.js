@@ -13,7 +13,7 @@ const lead = (name, extra = {}) => ({
   phone: '+5541999990000',
   has_photos: true,
   open_now: true,
-  opening_hours_summary: ['segunda-feira: 08:00 – 18:00'],
+  has_opening_hours: true,
   rating: 4.5,
   reviews_count: 50,
   search_rank: 1,
@@ -23,7 +23,7 @@ const lead = (name, extra = {}) => ({
 const LEADS = [
   lead('A'),
   lead('B', { has_photos: false, open_now: false, search_rank: 4 }),
-  lead('C', { open_now: null, opening_hours_summary: null, search_rank: 7 }),
+  lead('C', { open_now: null, has_opening_hours: false, search_rank: 7 }),
   lead('D', { rating: null, search_rank: 12 }),
   lead('E', { rating: 3.9, search_rank: 40 }),
 ];

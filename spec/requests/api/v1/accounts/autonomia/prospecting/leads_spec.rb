@@ -113,6 +113,28 @@ RSpec.describe 'Autonomia prospecting leads API', type: :request do
     end
   end
 
+  # "Tem horário" do refino na tela usa o mesmo valor que o motor filtrou (#677).
+  describe 'horário cadastrado no payload' do
+    def opening_hours_flag
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/leads/#{lead.id}", headers: auth_headers(admin)
+      response.parsed_body.dig('payload', 'has_opening_hours')
+    end
+
+    it 'devolve a coluna gravada pelo provider' do
+      lead.update!(has_opening_hours: true)
+
+      expect(opening_hours_flag).to be(true)
+    end
+
+    it 'em lead gravado antes da coluna, usa regularOpeningHours do payload guardado' do
+      lead.update!(raw_payload: { 'regularOpeningHours' => { 'weekdayDescriptions' => ['segunda-feira: 08:00'] } })
+      expect(opening_hours_flag).to be(true)
+
+      lead.update!(raw_payload: { 'currentOpeningHours' => { 'openNow' => true } })
+      expect(opening_hours_flag).to be(false)
+    end
+  end
+
   def auth_headers(user)
     { 'api_access_token' => user.access_token.token }
   end

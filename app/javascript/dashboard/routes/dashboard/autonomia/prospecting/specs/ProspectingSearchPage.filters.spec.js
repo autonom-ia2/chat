@@ -145,13 +145,18 @@ describe('ProspectingSearchPage · gaveta de filtros', () => {
         11: {
           search: bakerySearch(),
           leads: [
-            sunLead({ opening_hours_summary: ['segunda-feira: 08:00'] }),
-            sunLead({ id: 104, name: 'Sem Horário', open_now: true }),
+            sunLead({ has_opening_hours: true }),
+            sunLead({
+              id: 104,
+              name: 'Sem Horário',
+              open_now: true,
+              has_opening_hours: false,
+            }),
             sunLead({
               id: 105,
               name: 'Fechada',
               open_now: false,
-              opening_hours_summary: ['segunda-feira: 08:00'],
+              has_opening_hours: true,
             }),
           ],
         },
