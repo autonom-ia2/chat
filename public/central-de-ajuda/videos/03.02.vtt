@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.604
+Configurar o SAML SSO da conta
+
+2
+00:00:02.604 --> 00:00:03.839
+Abra Configurações, Segurança
+
+3
+00:00:03.839 --> 00:00:06.967
+Ligue a chave do SAML SSO
+
+4
+00:00:06.967 --> 00:00:08.823
+Preencha a SSO URL
+
+5
+00:00:08.823 --> 00:00:10.661
+Preencha o ID da Entidade
+
+6
+00:00:10.661 --> 00:00:13.488
+Cole o Certificado de assinatura
+
+7
+00:00:13.488 --> 00:00:16.091
+Pronto
