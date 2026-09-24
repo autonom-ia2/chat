@@ -29,9 +29,9 @@ const unitOptions = computed(() => [
   { value: 'Days', label: t('CRM_SLA.TIME_UNITS.DAYS') },
 ]);
 
-// Same height as the unit ChoiceSelect (44 px) so the two line up.
+// Same height as the unit ChoiceSelect (h-10) so the two line up.
 const fieldClass =
-  'reset-base box-border h-11 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand';
+  'reset-base box-border h-10 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand';
 
 const dirty = ref(false);
 
