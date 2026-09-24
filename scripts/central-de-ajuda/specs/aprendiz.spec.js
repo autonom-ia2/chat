@@ -23,6 +23,8 @@ import {
   valoresRemovidosDoI18n,
   valoresCitadosEmArtigos,
   houveMudancaRelevante,
+  roteirosQueCitam,
+  midiaParaRefazer,
   corpoDoPr,
 } from '../aprendiz.mjs';
 
@@ -539,6 +541,75 @@ describe('houveMudancaRelevante — nada relevante, sem escrita', () => {
       })
     ).toBe(true);
   });
+
+  it('só o roteiro de um vídeo cita o texto que saiu: true', () => {
+    expect(
+      houveMudancaRelevante({
+        novas: [],
+        removidos: [],
+        evidenciasQuebradas: [],
+        i18nCitado: [],
+        roteirosAfetados: [{ id: '02.04', valores: ['Salvar'] }],
+      })
+    ).toBe(true);
+  });
+});
+
+describe('roteirosQueCitam — o vídeo clica num texto que saiu do i18n', () => {
+  const roteiros = [
+    { id: '02.04', texto: "alvo: { texto: 'Configurações do Perfil' }," },
+    { id: '02.05', texto: 'alvo: { texto: "Salvar alterações" },' },
+    { id: '02.06', texto: "legenda: 'Abra Configurações do Perfil agora'," },
+  ];
+
+  it('acha o texto entre aspas simples ou duplas, só inteiro', () => {
+    expect(
+      roteirosQueCitam(
+        ['Configurações do Perfil', 'Salvar alterações', 'Sem uso'],
+        roteiros
+      )
+    ).toEqual([
+      { id: '02.04', valores: ['Configurações do Perfil'] },
+      { id: '02.05', valores: ['Salvar alterações'] },
+    ]);
+  });
+
+  it('nada removido: nenhum roteiro', () => {
+    expect(roteirosQueCitam([], roteiros)).toEqual([]);
+  });
+});
+
+describe('midiaParaRefazer — vídeo e print de artigo marcado para revisão', () => {
+  it('lista o vídeo de quem tem vídeo e os prints de quem tem print', () => {
+    expect(
+      midiaParaRefazer({
+        revisados: ['02.04', '02.06', '05.01'],
+        comVideo: new Set(['02.04', '05.01']),
+        arquivosDePrint: [
+          '02.04-a.png',
+          '02.04-b.png',
+          '02.06-a.png',
+          '02.40-a.png',
+        ],
+      })
+    ).toEqual({
+      videos: ['02.04', '05.01'],
+      prints: [
+        { id: '02.04', arquivos: ['02.04-a.png', '02.04-b.png'] },
+        { id: '02.06', arquivos: ['02.06-a.png'] },
+      ],
+    });
+  });
+
+  it('sem artigo revisado: nada a refazer', () => {
+    expect(
+      midiaParaRefazer({
+        revisados: [],
+        comVideo: new Set(['02.04']),
+        arquivosDePrint: ['02.04-a.png'],
+      })
+    ).toEqual({ videos: [], prints: [] });
+  });
 });
 
 describe('corpoDoPr — o corpo do Pull Request do robô', () => {
@@ -609,5 +680,46 @@ describe('corpoDoPr — o corpo do Pull Request do robô', () => {
     expect(corpo).toContain('app/models/user.rb:12');
     expect(corpo).toContain('02.04');
     expect(corpo).toContain('Salvar');
+  });
+
+  it('lista roteiro afetado e a mídia a refazer, com o comando de gravar', () => {
+    const corpo = corpoDoPr({
+      commit: 'abc1234',
+      rascunhos: [],
+      removidos: [],
+      citacoesNoMeio: [],
+      paraRevisaoPorEvidencia: [],
+      paraRevisaoPorI18n: [],
+      paraRevisaoPorRoteiro: [
+        {
+          id: '02.05',
+          motivo: 'o vídeo clica em "Salvar alterações", que saiu do i18n',
+        },
+      ],
+      midia: {
+        videos: ['02.05'],
+        prints: [{ id: '02.05', arquivos: ['02.05-a.png'] }],
+      },
+    });
+
+    expect(corpo).toContain('o vídeo clica em "Salvar alterações"');
+    expect(corpo).toContain(
+      'node scripts/central-de-ajuda/gravar-trajeto.mjs 02.05'
+    );
+    expect(corpo).toContain('scripts/central-de-ajuda/trajetos/02.05.mjs');
+    expect(corpo).toContain('02.05-a.png');
+  });
+
+  it('sem mídia a refazer, não fala de vídeo', () => {
+    const corpo = corpoDoPr({
+      commit: 'abc1234',
+      rascunhos: [],
+      removidos: [],
+      citacoesNoMeio: [],
+      paraRevisaoPorEvidencia: [],
+      paraRevisaoPorI18n: [],
+    });
+
+    expect(corpo).not.toContain('gravar-trajeto');
   });
 });

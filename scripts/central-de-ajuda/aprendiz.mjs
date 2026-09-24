@@ -19,6 +19,9 @@
 //   (d) i18n: só chave alterada ou removida NESTE push, cujo valor antigo não existe mais
 //       em lugar nenhum do i18n e aparece em **negrito** em algum artigo. O artigo ganha
 //       `revisar: true` e uma nota.
+//   (e) vídeo: roteiro (trajetos/<id>.mjs) que clica num valor de i18n que saiu neste push
+//       também marca o artigo. E, de todo artigo marcado em (c), (d) ou (e), o PR lista o
+//       vídeo e os prints a refazer, com o comando de gravação — o robô não grava.
 //
 // Nada é reescrito automaticamente por conta própria — sem troca de texto, sem correção
 // de número de linha, sem limpar rota parcial: tudo isso é sinal de que o artigo pode
@@ -46,6 +49,9 @@ const r = p => path.resolve(raiz, p);
 const MAPA = 'docs/central-de-ajuda/mapa-de-artigos.json';
 const PORQUES = 'lib/operator_guide/porques.md';
 const KIT = 'docs/central-de-ajuda/kit-do-escritor.md';
+const PASTA_TRAJETOS = 'scripts/central-de-ajuda/trajetos';
+const PASTA_VIDEOS = 'public/central-de-ajuda/videos';
+const PASTA_PRINTS = 'public/central-de-ajuda/prints';
 const CAMINHOS_I18N_PT_BR = 'app/javascript/dashboard/i18n/locale/pt_BR';
 const CAMINHOS_I18N_EXTRA = [
   'app/javascript/dashboard/i18n/locale/en/insurance.json',
@@ -377,12 +383,46 @@ export const valoresCitadosEmArtigos = (valores, artigos) =>
     .filter(item => item.artigos.length > 0);
 
 // ---------------------------------------------------------------------------
+// (e) Vídeo e print desatualizados
+//
+// O roteiro de um vídeo (trajetos/<id>.mjs) acha o botão pelo texto da tela. Se esse texto
+// saiu do i18n, a próxima gravação quebra e o vídeo no ar mostra uma tela que não existe
+// mais — mesmo que o artigo não cite o texto em negrito. Procura o valor inteiro entre
+// aspas, como o roteiro escreve o texto (includes, sem regex).
+export const roteirosQueCitam = (valores, roteiros) =>
+  roteiros
+    .map(({ id, texto }) => ({
+      id,
+      valores: valores.filter(valor =>
+        [`'${valor}'`, `"${valor}"`].some(forma => texto.includes(forma))
+      ),
+    }))
+    .filter(roteiro => roteiro.valores.length > 0);
+
+// O vídeo e os prints de um artigo marcado para revisão podem mostrar a tela antiga. Nada
+// disso se refaz no CI (a gravação precisa do painel local com dados de exemplo): o PR só
+// diz o que refazer e com qual comando.
+export const midiaParaRefazer = ({ revisados, comVideo, arquivosDePrint }) => ({
+  videos: revisados.filter(id => comVideo.has(id)),
+  prints: revisados
+    .map(id => ({ id, arquivos: arquivosDePrint.filter(nome => nome.startsWith(`${id}-`)) }))
+    .filter(item => item.arquivos.length > 0),
+});
+
+// ---------------------------------------------------------------------------
 // Só escreve quando há algo de verdade — nunca um commit vazio.
-export const houveMudancaRelevante = ({ novas, removidos, evidenciasQuebradas, i18nCitado }) =>
+export const houveMudancaRelevante = ({
+  novas,
+  removidos,
+  evidenciasQuebradas,
+  i18nCitado,
+  roteirosAfetados = [],
+}) =>
   novas.length > 0 ||
   removidos.length > 0 ||
   evidenciasQuebradas.length > 0 ||
-  i18nCitado.length > 0;
+  i18nCitado.length > 0 ||
+  roteirosAfetados.length > 0;
 
 // ---------------------------------------------------------------------------
 // O corpo do Pull Request
@@ -394,6 +434,8 @@ export const corpoDoPr = ({
   citacoesNoMeio,
   paraRevisaoPorEvidencia,
   paraRevisaoPorI18n,
+  paraRevisaoPorRoteiro = [],
+  midia = { videos: [], prints: [] },
 }) => {
   const partes = [
     `Rascunho do **modo aprendiz da Central** (#614): o registro da plataforma mudou no push de \`${commit || 'local'}\`.`,
@@ -444,6 +486,28 @@ export const corpoDoPr = ({
     paraRevisaoPorI18n.forEach(({ id, motivo }) => partes.push(`- \`${id}\`: ${motivo}`));
   }
 
+  if (paraRevisaoPorRoteiro.length) {
+    partes.push('', '## Roteiro de vídeo clica num texto que saiu do i18n neste push');
+    paraRevisaoPorRoteiro.forEach(({ id, motivo }) => partes.push(`- \`${id}\`: ${motivo}`));
+  }
+
+  if (midia.videos.length || midia.prints.length) {
+    partes.push(
+      '',
+      '## Vídeos e prints para refazer',
+      '',
+      'O que está no ar continua valendo até ser refeito. Grava-se no painel local, com os dados de exemplo (ver `docs/central-de-ajuda/ESTADO.md`) — o robô não grava.'
+    );
+    midia.videos.forEach(id =>
+      partes.push(
+        `- vídeo \`${id}\`: confira o roteiro \`scripts/central-de-ajuda/trajetos/${id}.mjs\` e regrave com \`node scripts/central-de-ajuda/gravar-trajeto.mjs ${id}\``
+      )
+    );
+    midia.prints.forEach(({ id, arquivos }) =>
+      partes.push(`- prints \`${id}\`: ${arquivos.map(nome => `\`${nome}\``).join(', ')}`)
+    );
+  }
+
   return `${partes.join('\n')}\n`;
 };
 
@@ -457,6 +521,16 @@ const arquivosI18n = () => {
     .map(nome => path.join(CAMINHOS_I18N_PT_BR, nome));
   return [...doPtBr, ...CAMINHOS_I18N_EXTRA];
 };
+
+// Os ids ("02.04") dos arquivos de uma pasta com a extensão dada.
+const idsDaPasta = (pasta, extensao) =>
+  fs.existsSync(r(pasta))
+    ? fs
+        .readdirSync(r(pasta))
+        .filter(nome => nome.endsWith(extensao))
+        .map(nome => nome.slice(0, -extensao.length))
+        .sort()
+    : [];
 
 const jsonDoDisco = caminho => {
   if (!fs.existsSync(r(caminho))) return {};
@@ -557,7 +631,17 @@ const executar = async () => {
   const artigosNaoRemovidos = artigos.filter(a => !idsRemovidos.has(a.cabecalho.id));
   const i18nCitado = valoresCitadosEmArtigos(removidosDoI18n, artigosNaoRemovidos);
 
-  if (!houveMudancaRelevante({ novas, removidos, evidenciasQuebradas, i18nCitado })) {
+  // (e) roteiro de vídeo que clica num valor de i18n que saiu — só de artigo que está no mapa
+  // e não foi removido: sem artigo para marcar, o PR nasceria sem diff e o commit falharia.
+  const idsNoMapa = new Set(todosArtigos(mapa).map(artigo => artigo.id));
+  const roteiros = idsDaPasta(PASTA_TRAJETOS, '.mjs')
+    .filter(id => idsNoMapa.has(id) && !idsRemovidos.has(id))
+    .map(id => ({ id, texto: fs.readFileSync(r(path.join(PASTA_TRAJETOS, `${id}.mjs`)), 'utf8') }));
+  const roteirosAfetados = roteirosQueCitam(removidosDoI18n, roteiros);
+
+  if (
+    !houveMudancaRelevante({ novas, removidos, evidenciasQuebradas, i18nCitado, roteirosAfetados })
+  ) {
     console.log('Nada para revisar: nenhuma mudança relevante desde o push anterior.');
     return avisarGitHub('mudou', 'false');
   }
@@ -645,6 +729,25 @@ const executar = async () => {
     motivo: motivos.join('; '),
   }));
 
+  // --- (e) marca para revisão quem tem roteiro de vídeo quebrado, e lista a mídia a refazer ---
+  const paraRevisaoPorRoteiro = roteirosAfetados.map(({ id, valores }) => {
+    const motivo = `o vídeo clica em ${valores.map(valor => `"${valor}"`).join(', ')}, que saiu do i18n`;
+    mapa = marcarParaRevisao(mapa, id, motivo);
+    return { id, motivo };
+  });
+  const revisados = [
+    ...new Set(
+      [...paraRevisaoPorEvidencia, ...paraRevisaoPorI18n, ...paraRevisaoPorRoteiro].map(
+        item => item.id
+      )
+    ),
+  ].sort();
+  const midia = midiaParaRefazer({
+    revisados,
+    comVideo: new Set(idsDaPasta(PASTA_VIDEOS, '.mp4')),
+    arquivosDePrint: fs.existsSync(r(PASTA_PRINTS)) ? fs.readdirSync(r(PASTA_PRINTS)).sort() : [],
+  });
+
   fs.writeFileSync(r(MAPA), JSON.stringify(mapa, null, 1));
 
   fs.writeFileSync(
@@ -656,12 +759,15 @@ const executar = async () => {
       citacoesNoMeio,
       paraRevisaoPorEvidencia,
       paraRevisaoPorI18n,
+      paraRevisaoPorRoteiro,
+      midia,
     })
   );
 
   console.log(
     `Rascunho pronto: ${rascunhos.length} artigo(s) novo(s), ${removidos.length} removido(s), ` +
-      `${paraRevisaoPorEvidencia.length} para revisão por evidência, ${paraRevisaoPorI18n.length} por i18n.`
+      `${paraRevisaoPorEvidencia.length} para revisão por evidência, ${paraRevisaoPorI18n.length} por i18n, ` +
+      `${paraRevisaoPorRoteiro.length} por roteiro de vídeo; ${midia.videos.length} vídeo(s) a refazer.`
   );
   return avisarGitHub('mudou', 'true');
 };
