@@ -109,6 +109,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
         :sort_key,
         :score_mode,
         :scoring_profile_id,
+        :preset_id,
+        :decision_maker_type,
         advanced_filters: {},
         filters: [:auto_expand_radius]
       ]
@@ -248,6 +250,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     payload['sort_key'] = search.metadata.to_h['sort_key']
     payload['score_mode'] = search.metadata.to_h['score_mode']
     payload['scoring_profile_id'] = search.metadata.to_h['scoring_profile_id']
+    payload['preset_id'] = search.metadata.to_h['preset_id']
+    payload['decision_maker_type'] =
+      search.metadata.to_h['decision_maker_type'].presence || ::Autonomia::Prospecting::SearchRunner::DEFAULT_DECISION_MAKER_TYPE
     payload['summary'] = {
       results_count: payload['results_count'],
       contact_count: payload['contact_count'],
