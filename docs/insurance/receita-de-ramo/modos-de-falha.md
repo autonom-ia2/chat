@@ -378,6 +378,23 @@ seguradora, no pacote e em campos que o ramo não tem, tudo já levantado na col
 *Pega:* a Fase 1 começa lendo a descoberta. *Outro ramo:* sim. *Fonte:* MEM `procurar-descoberta-antes-de-medir.md`
 (24/09). *Origem:* produção.
 
+**F9. Provar a cotação e declarar pronto.** O empresarial foi ao ar com cotação provada e sem prova do comparativo, da
+proposta de uma seguradora e da busca real pelo conector. No primeiro teste real (conversa 7057, 24/09), três
+defeitos que a receita já mandava provar: busca de atividade com 18 s contra 10 s de teto e chaves em camelCase
+lidas de um conector snake_case; pacote medido só com 400 mil de incêndio (a RC Operações de 100 mil passou de 50%
+com 150 mil, e 0 de 9 cotaram); comparativo vazio ("no quoted insurer to print") e, depois, "Internal Server Error"
+por campos que a tela do portal manda e o corpo não (`isGuardaVeiculo` como objeto, pavimentação, local do
+estabelecimento, valor de novo). *Pega:* antes do deploy, uma rodada real pelo produto com **o PDF do comparativo e
+a proposta de uma seguradora gerados** e o valor de incêndio variado (mínimo, típico, alto); ferramenta nova
+testada pelo `Connector::Http` com o corpo do adapter, e a latência do caso máximo medida contra o teto. *Outro
+ramo:* sim. *Fonte:* chat#665, #692; adapters#99, #100, #101 (24/09). *Origem:* produção.
+
+**F10. Mensagem de erro do portal tratada como ruído.** "Cannot read property 'valor' of undefined" junto do prêmio
+era o portal lendo `isGuardaVeiculo.valor`, objeto que a tela manda e nós não. Tratar como ruído fez o preço
+aparecer e escondeu o corpo incompleto até o PDF quebrar. *Pega:* mensagem do portal com cara de exceção de código
+(`Cannot read property`, `undefined`) é campo faltando: comparar o corpo gravado com os padrões da tela na
+descoberta antes de aceitar a mensagem. *Outro ramo:* sim. *Fonte:* adapters#101 (24/09). *Origem:* produção.
+
 ---
 
 ## O que as fontes não cobrem fora de auto
