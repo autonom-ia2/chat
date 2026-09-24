@@ -27,6 +27,9 @@ class Crm::ConversationObserverListener < BaseListener
     conversation, = extract_conversation_and_account(event)
     return if conversation&.id.blank?
 
+    # A devolução à IA é carimbada ANTES da avaliação que esta mesma mudança enfileira (chat#632): sem o carimbo, a
+    # avaliação relia a fala antiga do agente e passava a conversa à equipe de novo.
+    registrar_devolucao(conversation, event)
     Crm::SyncConversationCardJob.perform_later(conversation.id)
     enqueue_handoff_pickup(conversation, event)
   end
@@ -60,6 +63,16 @@ class Crm::ConversationObserverListener < BaseListener
   end
 
   private
+
+  # Falha ao carimbar não pode custar a sincronização do card nem o registro de quem pegou o convite, que vêm logo
+  # depois: fica no log.
+  def registrar_devolucao(conversation, event)
+    return unless Crm::Ai::Config.enabled?
+
+    Crm::Ai::DevolucaoAIa.registrar!(conversation, event.timestamp)
+  rescue StandardError => e
+    Rails.logger.warn("[crm][handoff] devolução não carimbada conversa=#{conversation.id} #{e.class}")
+  end
 
   # Telemetria de pega do convite R3 (só quando IA está ligada; o job é no-op
   # barato se não houver convite pendente). Passa snapshot do evento (assignee +

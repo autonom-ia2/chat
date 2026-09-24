@@ -63,7 +63,10 @@ module Crm
         {
           status: conversation.status,
           assigned_to_human: conversation.assignee_id.present?,
-          last_human_agent_at: last_human_agent_at&.iso8601
+          last_human_agent_at: last_human_agent_at&.iso8601,
+          # Quando um humano devolveu a conversa à IA depois de uma passagem (DevolucaoAIa). O que foi dito antes
+          # disso já foi atendido por gente e não pede humano de novo.
+          returned_to_ai_at: DevolucaoAIa.em(@card, @card.conversa_em_atendimento)&.iso8601
         }
       end
 

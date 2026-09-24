@@ -229,16 +229,22 @@ module Crm
         (@card.metadata || {}).fetch('ai', {}).to_h
       end
 
+      # RELÊ O CARD ANTES DE GRAVAR (revisão da chat#633): a avaliação leva de 15 a 25 s esperando o modelo, e gravar o
+      # metadata lido no começo apagava o que chegou nesse meio tempo — o carimbo da devolução à IA
+      # (`DevolucaoAIa`), e com ele a guarda que impede a passagem de reatribuir a conversa devolvida.
       def touch_evaluation_metadata(classification)
-        metadata = (@card.metadata || {}).deep_dup
-        metadata['ai'] = (metadata['ai'] || {}).merge(
-          'last_evaluated_at' => Time.current.iso8601,
-          'last_model_used' => classification[:model_used],
-          'last_trigger' => @trigger
-        )
-        attributes = { metadata: metadata }
-        apply_ai_value!(metadata['ai'], classification[:value], attributes)
-        @card.update!(attributes)
+        # `with_lock` relê o card do banco (lock!), com o carimbo que chegou durante a avaliação.
+        @card.with_lock do
+          metadata = (@card.metadata || {}).deep_dup
+          metadata['ai'] = (metadata['ai'] || {}).merge(
+            'last_evaluated_at' => Time.current.iso8601,
+            'last_model_used' => classification[:model_used],
+            'last_trigger' => @trigger
+          )
+          attributes = { metadata: metadata }
+          apply_ai_value!(metadata['ai'], classification[:value], attributes)
+          @card.update!(attributes)
+        end
       end
 
       # Auto-fill the deal value detected in the conversation, writing value_cents
