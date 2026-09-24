@@ -121,7 +121,7 @@ export const cenas = [
   {
     legenda: 'Defina o Limite de resultados',
     acao: 'digitar',
-    alvo: { seletor: 'input[max="50"]' },
+    alvo: { seletor: 'input[max="60"]' },
     limparAntes: true,
     texto: ['30'],
     zoom: 1.8,
