@@ -24,8 +24,11 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
                          'seguradoras vão responder, e o resultado chega nesta conversa quando ficar pronto.',
     'concluida' => 'A cotação terminou, e o comparativo em PDF com as opções acabou de ser enviado nesta conversa, logo ' \
                    'acima. Os valores de cada seguradora estão com o especialista, que os lê sem cotar de novo.',
-    'valores_guardados' => 'A cotação terminou com preços, mas o comparativo em PDF não pôde ser enviado. Os valores de cada ' \
-                           'seguradora estão guardados com o especialista, e a pessoa pode pedi-los aqui mesmo.',
+    # A LIA RESOLVE SOZINHA (conversa 7057, 24/09/2026): sem o PDF ela mandava a pessoa pedir os valores, e a pessoa
+    # ficava sem o que pediu. O turno de evento pode consultar o especialista (`ResponderAoEvento`), e é isso que ela faz.
+    'valores_guardados' => 'A cotação terminou com preços, mas o comparativo em PDF não pôde ser enviado. Consulte agora o ' \
+                           'especialista do ramo, que lê os valores sem cotar de novo, e mande à pessoa nesta resposta as ' \
+                           'opções com seguradora e preço, como ele devolver. Não fale do PDF nem peça que ela peça.',
     # O QUE DEU ERRADO VAI PARA A EQUIPE (decisão do CEO, 23/09/2026). A passagem é do CRM: o gatilho do funil é a
     # própria fala da Lia de que vai encaminhar para alguém da equipe, e aí o CRM atribui a conversa. O prazo esgotado
     # com o comparativo entregue não é erro: a pessoa tem as opções de quem respondeu.
