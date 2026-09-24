@@ -37,7 +37,7 @@
       "LOCATION_HINT": "Use uma região clara para melhorar o retorno do Google Places.",
       "AUTOCOMPLETE_HINT": "Sugestões do Google aparecem quando a chave está configurada.",
       "AUTOCOMPLETE_READY_HINT": "Digite e selecione uma localização sugerida.",
-      "AUTOCOMPLETE_DISABLED_HINT": "Configure a chave do Google Places para ativar sugestões.",
+      "AUTOCOMPLETE_DISABLED_HINT": "As sugestões do Google ainda não estão disponíveis na plataforma.",
       "SUGGESTING_LOCATIONS": "Buscando sugestões...",
       "LOCATION_CONFIRMED": "Localização confirmada.",
       "SEARCH_SUMMARY_HINT": "Confira os parâmetros antes de executar.",
@@ -73,7 +73,7 @@
       "ENRICHED": "Enriquecido",
       "ENRICHING": "Enriquecendo...",
       "ENRICHMENT_COMPLETED": "Lead enriquecido.",
-      "ENRICHMENT_DISABLED": "Habilite enriquecimento nas configurações de prospecção.",
+      "ENRICHMENT_DISABLED": "A pesquisa de empresa não está liberada para esta conta. Fale com o suporte.",
       "ENRICHMENT_NO_SITE": "Este lead não possui site para enriquecimento.",
       "ENRICHMENT_TITLE": "Enriquecimento",
       "ENRICHMENT_SUMMARY": "Resumo retornado",
@@ -106,7 +106,7 @@
       "MAP_HINT": "Visualização da região e dos leads encontrados.",
       "MAP_PREVIEW": "Preview do mapa",
       "MAP_NO_COORDINATES": "Os leads desta busca ainda não possuem coordenadas para posicionar marcadores.",
-      "MAP_API_KEY_MISSING": "Configure a chave browser do Google Maps para exibir o mapa.",
+      "MAP_API_KEY_MISSING": "O mapa ainda não está disponível na plataforma.",
       "MAP_LOAD_ERROR": "Não foi possível carregar o mapa.",
       "ADVANCED_FILTERS_HINT": "Os filtros abaixo são aplicados antes de salvar cada lead retornado pela busca.",
       "SCORE_MODE_GBP_HINT": "Prioriza empresas com lacunas no Google Meu Negócio.",
@@ -297,18 +297,12 @@
     },
     "SETTINGS": {
       "TITLE": "Prospecção",
-      "DESCRIPTION": "Configure as chaves, limites, cache, funil padrão e critérios de score usados nas buscas de leads.",
+      "DESCRIPTION": "Configure o funil padrão, o cache e os critérios de score usados nas buscas de leads.",
       "ENABLED": "Habilitado",
       "DISABLED": "Desabilitado",
       "SAVE": "Salvar",
       "SAVING": "Salvando...",
       "SAVED": "Configurações salvas.",
-      "API_KEY_CONFIGURED": "Chave configurada. Preencha para substituir.",
-      "API_KEY_EMPTY": "Cole a chave de busca do Google",
-      "MAPS_API_KEY_EMPTY": "Cole a chave do mapa",
-      "GOOGLE_PLACES_API_KEY_HINT": "Usada para buscar sugestões de cidade ou região e consultar empresas no Google.",
-      "GOOGLE_MAPS_BROWSER_API_KEY_HINT": "Usada para mostrar o mapa e os pontos dos leads na tela.",
-      "ENRICHMENT_ENABLED_HINT": "Permite enriquecer manualmente cada lead a partir do site e da IA interna configurada na conta.",
       "SCORING_TITLE": "Score e priorização",
       "SCORING_HINT": "Escolha um perfil global definido pelo superadmin ou personalize os pesos desta conta.",
       "SEARCH_SCORE_MODE_GBP_HINT": "Score alto indica lacunas no Google Meu Negócio: sem site, poucas avaliações, baixa atividade ou perfil incompleto.",
@@ -351,24 +345,32 @@
         "query_relevance": "Relevância da busca"
       },
       "FIELDS": {
-        "PROVIDER": "Provider",
-        "PROVIDER_ENABLED": "Provider habilitado",
-        "GOOGLE_PLACES_API_KEY": "Chave para busca de locais",
-        "GOOGLE_MAPS_BROWSER_API_KEY": "Chave para exibir mapa",
-        "CLEAR_PLACES_API_KEY": "Limpar chave de busca",
-        "CLEAR_MAPS_BROWSER_API_KEY": "Limpar chave do mapa",
         "CRM_PIPELINE": "Funil CRM padrão",
         "CRM_STAGE": "Etapa CRM padrão",
         "SCORING_MODE": "Modo de score",
         "SEARCH_SCORE_MODE": "Forma padrão de pesquisa",
         "SCORING_PROFILE": "Perfil de score",
-        "DEFAULT_LIMIT": "Limite padrão",
-        "MAX_RESULTS": "Limite por busca",
-        "CACHE_TTL": "Cache TTL",
-        "ENRICHMENT_ENABLED": "Enriquecimento manual",
-        "DAILY_LIMIT": "Limite diário",
-        "MONTHLY_LIMIT": "Limite mensal"
+        "CACHE_TTL": "Cache TTL"
+      },
+      "PLATFORM": {
+        "KEYS_TITLE": "Chaves do Google",
+        "KEYS_READY": "Chaves da plataforma configuradas.",
+        "KEYS_MISSING": "As chaves da plataforma ainda não foram configuradas. A busca no Google fica indisponível até o suporte configurar.",
+        "KEYS_MOCK": "Esta conta ainda está no modo de demonstração: a busca não usa o Google.",
+        "MAP_KEY_MISSING": "O mapa ainda não está disponível na plataforma. A busca funciona normalmente.",
+        "RESEARCH_TITLE": "Pesquisa de empresa e decisor",
+        "RESEARCH_ENABLED": "Pesquisa liberada pelo superadmin para esta conta.",
+        "RESEARCH_DISABLED": "Pesquisa não liberada para esta conta. Fale com o suporte para contratar."
       }
+    },
+    "MOCK_PROVIDER": {
+      "TITLE": "Modo de demonstração",
+      "DESCRIPTION": "A busca desta conta devolve empresas fictícias, não resultados do Google. Fale com o suporte para ativar a busca real."
+    },
+    "AI_CREDENTIAL": {
+      "MISSING_TITLE": "Sem chave de IA do Kanban CRM",
+      "MISSING_DESCRIPTION": "A IA da prospecção usa só a chave da integração CRM Kanban AI desta conta. Sem ela, o enriquecimento traz apenas o que está no site do lead, sem resumo nem decisor.",
+      "CONFIGURE": "Configurar em Configurações > Integrações > CRM Kanban AI"
     }
   }
 }

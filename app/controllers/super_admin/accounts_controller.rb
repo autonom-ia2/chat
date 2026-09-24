@@ -81,6 +81,23 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     )
   end
 
+  # A PESQUISA DE EMPRESA E DECISOR (chat#683): enriquecimento por site hoje, pesquisa da E3 depois. Só o
+  # superadmin liga, porque roda em chave nossa de plataforma.
+  def toggle_prospecting_research
+    enabled = ActiveModel::Type::Boolean.new.cast(params[:enabled])
+
+    if enabled
+      Autonomia::Prospecting::Config.enable_research_for!(requested_resource)
+    else
+      Autonomia::Prospecting::Config.disable_research_for!(requested_resource)
+    end
+
+    redirect_back(
+      fallback_location: [namespace, requested_resource],
+      notice: "Prospecting research #{enabled ? 'enabled' : 'disabled'}"
+    )
+  end
+
   def toggle_insurance
     enabled = ActiveModel::Type::Boolean.new.cast(params[:enabled])
 

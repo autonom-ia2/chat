@@ -35,11 +35,10 @@ class Autonomia::Prospecting::LeadEnricher
   def initialize(lead:, user:)
     @lead = lead
     @user = user
-    @setting = Autonomia::Prospecting::Setting.for_account(lead.account)
   end
 
   def perform
-    raise Error, 'prospecting.enrichment.disabled' unless @setting.enrichment_enabled?
+    raise Error, 'prospecting.enrichment.disabled' unless research_allowed?
 
     @lead.update!(
       enrichment_status: 'running',
@@ -61,6 +60,11 @@ class Autonomia::Prospecting::LeadEnricher
 
   private
 
+  # O enriquecimento é pesquisa: só roda com o módulo e a pesquisa ligados pelo superadmin (#683).
+  def research_allowed?
+    Autonomia::Prospecting::Config.enabled?(@lead.account) && Autonomia::Prospecting::Config.research_enabled?(@lead.account)
+  end
+
   def scrape_website
     return {} if @lead.website.blank?
 
@@ -68,7 +72,7 @@ class Autonomia::Prospecting::LeadEnricher
   end
 
   def enrich_with_ai(scraped_data)
-    credential = Crm::Ai::CredentialResolver.new(account: @lead.account).resolve
+    credential = Autonomia::Prospecting::AiCredential.new(account: @lead.account).resolve
     return {} if credential.blank?
 
     raw = Crm::Ai::ResponsesClient.new(

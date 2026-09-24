@@ -10,6 +10,8 @@ import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.v
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ProspectingGoogleMap from '../components/ProspectingGoogleMap.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
+import ProspectingAiCredentialNotice from '../components/ProspectingAiCredentialNotice.vue';
+import ProspectingMockProviderNotice from '../components/ProspectingMockProviderNotice.vue';
 import {
   activeAdvancedLeadFiltersCount,
   defaultAdvancedLeadFilters,
@@ -232,7 +234,7 @@ const autocompleteHint = computed(() => {
     return t('PROSPECTING.SEARCH.LOCATION_CONFIRMED');
   }
 
-  return settings.value?.has_google_places_api_key
+  return settings.value?.platform_google_places_configured
     ? t('PROSPECTING.SEARCH.AUTOCOMPLETE_READY_HINT')
     : t('PROSPECTING.SEARCH.AUTOCOMPLETE_DISABLED_HINT');
 });
@@ -258,7 +260,7 @@ const leadPriorityTheme = lead => {
 };
 const leadSignals = lead => leadPrioritySignals(lead);
 const googleMapsApiKey = computed(
-  () => settings.value?.google_maps_api_key || ''
+  () => settings.value?.google_maps_browser_api_key || ''
 );
 const scoreComponentLabel = key => {
   const labels = {
@@ -1067,6 +1069,17 @@ onMounted(async () => {
     <section
       class="flex min-h-0 w-full flex-1 flex-col overflow-hidden px-6 py-5"
     >
+      <ProspectingMockProviderNotice
+        v-if="settings?.mock_provider"
+        class="mb-4"
+      />
+      <ProspectingAiCredentialNotice
+        v-if="
+          settings?.research_enabled &&
+          settings?.ai_credential_configured === false
+        "
+        class="mb-4"
+      />
       <form
         v-if="showNewSearch"
         class="min-h-0 overflow-y-auto rounded-lg border border-n-weak bg-n-solid-1"
@@ -1218,7 +1231,7 @@ onMounted(async () => {
                     v-model="form.requested_limit"
                     type="number"
                     min="1"
-                    max="50"
+                    max="60"
                     class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
                   />
                 </label>
@@ -2014,13 +2027,13 @@ onMounted(async () => {
                       :disabled="
                         isLeadEnriched(lead) ||
                         enrichingLeadId === lead.id ||
-                        !settings?.enrichment_enabled ||
+                        !settings?.research_enabled ||
                         !lead.website
                       "
                       :title="
                         isLeadEnriched(lead)
                           ? t('PROSPECTING.SEARCH.ENRICHED')
-                          : !settings?.enrichment_enabled
+                          : !settings?.research_enabled
                             ? t('PROSPECTING.SEARCH.ENRICHMENT_DISABLED')
                             : !lead.website
                               ? t('PROSPECTING.SEARCH.ENRICHMENT_NO_SITE')

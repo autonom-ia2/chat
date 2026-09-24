@@ -503,6 +503,12 @@ en:
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."
+    # Em português também aqui, como insurance.errors: a Prospecção é produto brasileiro e o texto não pode cair em
+    # inglês para conta com locale en.
+    prospecting:
+      errors:
+        google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'
+        google_busy: 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.'
   captain:
     copilot_message_required: Message is required
     copilot_error: 'Please connect an assistant to this inbox to use Copilot'

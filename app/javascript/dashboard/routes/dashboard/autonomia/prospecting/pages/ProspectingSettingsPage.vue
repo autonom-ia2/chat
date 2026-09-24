@@ -6,6 +6,8 @@ import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import BaseSettingsHeader from '../../../settings/components/BaseSettingsHeader.vue';
+import ProspectingAiCredentialNotice from '../components/ProspectingAiCredentialNotice.vue';
+import ProspectingMockProviderNotice from '../components/ProspectingMockProviderNotice.vue';
 
 const { t } = useI18n();
 
@@ -29,17 +31,9 @@ const scoringWeightKeys = [
   'query_relevance',
 ];
 const form = ref({
-  default_limit: 20,
-  max_results_per_search: 20,
-  daily_limit: '',
-  monthly_limit: '',
   cache_ttl_seconds: 86400,
   default_crm_pipeline_id: '',
   default_crm_stage_id: '',
-  google_places_api_key: '',
-  clear_google_places_api_key: false,
-  google_maps_browser_api_key: '',
-  clear_google_maps_browser_api_key: false,
   search_score_mode: 'gbp',
   scoring_profile_option: '',
   scoring_profile_id: '',
@@ -53,6 +47,22 @@ const form = ref({
     google_rank: 5,
     query_relevance: 5,
   },
+});
+
+// Chave pronta só vale quando a conta busca no Google: em mock, a busca devolve
+// empresas inventadas e a tela não pode dizer que usa a chave da plataforma.
+const keysReady = computed(
+  () =>
+    Boolean(settings.value?.platform_google_places_configured) &&
+    !settings.value?.mock_provider
+);
+const keysStatusText = computed(() => {
+  if (settings.value?.mock_provider) {
+    return t('PROSPECTING.SETTINGS.PLATFORM.KEYS_MOCK');
+  }
+  return keysReady.value
+    ? t('PROSPECTING.SETTINGS.PLATFORM.KEYS_READY')
+    : t('PROSPECTING.SETTINGS.PLATFORM.KEYS_MISSING');
 });
 
 const pipelineChoices = computed(() => [
@@ -112,18 +122,9 @@ const syncForm = payload => {
     scoringProfiles.value.find(profile => profile.default) ||
     scoringProfiles.value[0];
   form.value = {
-    default_limit: payload.default_limit || 20,
-    max_results_per_search: payload.max_results_per_search || 20,
-    daily_limit: payload.daily_limit || '',
-    monthly_limit: payload.monthly_limit || '',
     cache_ttl_seconds: payload.cache_ttl_seconds || 86400,
-    enrichment_enabled: Boolean(payload.enrichment_enabled),
     default_crm_pipeline_id: payload.default_crm_pipeline_id || '',
     default_crm_stage_id: payload.default_crm_stage_id || '',
-    google_places_api_key: '',
-    clear_google_places_api_key: false,
-    google_maps_browser_api_key: '',
-    clear_google_maps_browser_api_key: false,
     search_score_mode: payload.search_score_mode || 'gbp',
     scoring_profile_option:
       payload.scoring_mode === 'custom'
@@ -185,18 +186,7 @@ const saveSettings = async () => {
 
   try {
     const { data } = await AutonomiaProspectingAPI.updateSettings({
-      provider: 'google_places',
-      provider_enabled: true,
-      default_limit: Number(form.value.default_limit),
-      max_results_per_search: Number(form.value.max_results_per_search),
-      daily_limit: form.value.daily_limit
-        ? Number(form.value.daily_limit)
-        : null,
-      monthly_limit: form.value.monthly_limit
-        ? Number(form.value.monthly_limit)
-        : null,
       cache_ttl_seconds: Number(form.value.cache_ttl_seconds),
-      enrichment_enabled: form.value.enrichment_enabled,
       default_crm_pipeline_id: form.value.default_crm_pipeline_id || null,
       default_crm_stage_id: form.value.default_crm_stage_id || null,
       search_score_mode: form.value.search_score_mode || 'gbp',
@@ -208,11 +198,6 @@ const saveSettings = async () => {
         weights[key] = Number(form.value.custom_scoring_weights[key] || 0);
         return weights;
       }, {}),
-      google_places_api_key: form.value.google_places_api_key,
-      clear_google_places_api_key: form.value.clear_google_places_api_key,
-      google_maps_browser_api_key: form.value.google_maps_browser_api_key,
-      clear_google_maps_browser_api_key:
-        form.value.clear_google_maps_browser_api_key,
     });
     syncForm(data.payload || {});
     useAlert(t('PROSPECTING.SETTINGS.SAVED'));
@@ -221,16 +206,6 @@ const saveSettings = async () => {
   } finally {
     isSaving.value = false;
   }
-};
-
-const clearGooglePlacesApiKey = () => {
-  form.value.google_places_api_key = '';
-  form.value.clear_google_places_api_key = true;
-};
-
-const clearGoogleMapsBrowserApiKey = () => {
-  form.value.google_maps_browser_api_key = '';
-  form.value.clear_google_maps_browser_api_key = true;
 };
 
 onMounted(fetchSettings);
@@ -314,158 +289,84 @@ onMounted(fetchSettings);
             </label>
           </div>
 
-          <div class="grid gap-3 md:grid-cols-2">
-            <div class="grid gap-2 rounded-md border border-n-weak p-3">
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('PROSPECTING.SETTINGS.FIELDS.GOOGLE_PLACES_API_KEY') }}
-                </span>
-                <span class="flex gap-2">
-                  <input
-                    v-model="form.google_places_api_key"
-                    type="password"
-                    autocomplete="off"
-                    class="h-10 min-w-0 flex-1 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
-                    :placeholder="
-                      settings.has_google_places_api_key
-                        ? t('PROSPECTING.SETTINGS.API_KEY_CONFIGURED')
-                        : t('PROSPECTING.SETTINGS.API_KEY_EMPTY')
-                    "
-                  />
-                  <button
-                    v-if="settings.has_google_places_api_key"
-                    type="button"
-                    class="flex size-10 shrink-0 items-center justify-center rounded-md border border-n-weak text-n-slate-11 hover:bg-n-solid-2"
-                    :title="
-                      t('PROSPECTING.SETTINGS.FIELDS.CLEAR_PLACES_API_KEY')
-                    "
-                    @click="clearGooglePlacesApiKey"
-                  >
-                    <span class="i-lucide-eraser size-4" />
-                  </button>
-                </span>
-              </label>
-
-              <p class="text-xs text-n-slate-10">
-                {{ t('PROSPECTING.SETTINGS.GOOGLE_PLACES_API_KEY_HINT') }}
-              </p>
-            </div>
-
-            <div class="grid gap-2 rounded-md border border-n-weak p-3">
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{
-                    t('PROSPECTING.SETTINGS.FIELDS.GOOGLE_MAPS_BROWSER_API_KEY')
-                  }}
-                </span>
-                <span class="flex gap-2">
-                  <input
-                    v-model="form.google_maps_browser_api_key"
-                    type="password"
-                    autocomplete="off"
-                    class="h-10 min-w-0 flex-1 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
-                    :placeholder="
-                      settings.has_google_maps_browser_api_key
-                        ? t('PROSPECTING.SETTINGS.API_KEY_CONFIGURED')
-                        : t('PROSPECTING.SETTINGS.MAPS_API_KEY_EMPTY')
-                    "
-                  />
-                  <button
-                    v-if="settings.has_google_maps_browser_api_key"
-                    type="button"
-                    class="flex size-10 shrink-0 items-center justify-center rounded-md border border-n-weak text-n-slate-11 hover:bg-n-solid-2"
-                    :title="
-                      t(
-                        'PROSPECTING.SETTINGS.FIELDS.CLEAR_MAPS_BROWSER_API_KEY'
-                      )
-                    "
-                    @click="clearGoogleMapsBrowserApiKey"
-                  >
-                    <span class="i-lucide-eraser size-4" />
-                  </button>
-                </span>
-              </label>
-
-              <p class="text-xs text-n-slate-10">
-                {{ t('PROSPECTING.SETTINGS.GOOGLE_MAPS_BROWSER_API_KEY_HINT') }}
-              </p>
-            </div>
-          </div>
-
-          <div class="grid gap-3 md:grid-cols-5">
-            <label class="grid gap-1">
-              <span class="text-xs font-medium text-n-slate-11">
-                {{ t('PROSPECTING.SETTINGS.FIELDS.DEFAULT_LIMIT') }}
-              </span>
-              <input
-                v-model="form.default_limit"
-                type="number"
-                min="1"
-                class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
-              />
-            </label>
-            <label class="grid gap-1">
-              <span class="text-xs font-medium text-n-slate-11">
-                {{ t('PROSPECTING.SETTINGS.FIELDS.MAX_RESULTS') }}
-              </span>
-              <input
-                v-model="form.max_results_per_search"
-                type="number"
-                min="1"
-                class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
-              />
-            </label>
-            <label class="grid gap-1">
-              <span class="text-xs font-medium text-n-slate-11">
-                {{ t('PROSPECTING.SETTINGS.FIELDS.CACHE_TTL') }}
-              </span>
-              <input
-                v-model="form.cache_ttl_seconds"
-                type="number"
-                min="0"
-                class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
-              />
-            </label>
-            <label class="grid gap-1">
-              <span class="text-xs font-medium text-n-slate-11">
-                {{ t('PROSPECTING.SETTINGS.FIELDS.DAILY_LIMIT') }}
-              </span>
-              <input
-                v-model="form.daily_limit"
-                type="number"
-                min="1"
-                class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
-              />
-            </label>
-            <label class="grid gap-1">
-              <span class="text-xs font-medium text-n-slate-11">
-                {{ t('PROSPECTING.SETTINGS.FIELDS.MONTHLY_LIMIT') }}
-              </span>
-              <input
-                v-model="form.monthly_limit"
-                type="number"
-                min="1"
-                class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
-              />
-            </label>
-          </div>
-
-          <label
-            class="flex items-start gap-3 rounded-md border border-n-weak bg-n-solid-2 p-3"
+          <div
+            class="grid gap-3 rounded-md border border-n-weak bg-n-solid-2 p-3 md:grid-cols-2"
           >
-            <input
-              v-model="form.enrichment_enabled"
-              type="checkbox"
-              class="mt-1 size-4"
-            />
-            <span class="grid gap-1">
-              <span class="text-sm font-medium text-n-slate-12">
-                {{ t('PROSPECTING.SETTINGS.FIELDS.ENRICHMENT_ENABLED') }}
+            <div class="grid gap-1">
+              <span class="text-xs font-medium text-n-slate-11">
+                {{ t('PROSPECTING.SETTINGS.PLATFORM.KEYS_TITLE') }}
               </span>
-              <span class="text-xs text-n-slate-10">
-                {{ t('PROSPECTING.SETTINGS.ENRICHMENT_ENABLED_HINT') }}
+              <p
+                class="flex items-center gap-2 text-sm"
+                :class="keysReady ? 'text-n-teal-11' : 'text-n-amber-11'"
+              >
+                <span
+                  class="size-4 shrink-0"
+                  :class="
+                    keysReady
+                      ? 'i-lucide-circle-check'
+                      : 'i-lucide-triangle-alert'
+                  "
+                />
+                {{ keysStatusText }}
+              </p>
+              <p
+                v-if="
+                  settings.platform_google_places_configured &&
+                  !settings.google_maps_browser_api_key
+                "
+                class="text-xs text-n-slate-10"
+              >
+                {{ t('PROSPECTING.SETTINGS.PLATFORM.MAP_KEY_MISSING') }}
+              </p>
+            </div>
+            <div class="grid gap-1">
+              <span class="text-xs font-medium text-n-slate-11">
+                {{ t('PROSPECTING.SETTINGS.PLATFORM.RESEARCH_TITLE') }}
               </span>
+              <p
+                class="flex items-center gap-2 text-sm"
+                :class="
+                  settings.research_enabled
+                    ? 'text-n-teal-11'
+                    : 'text-n-slate-11'
+                "
+              >
+                <span
+                  class="size-4 shrink-0"
+                  :class="
+                    settings.research_enabled
+                      ? 'i-lucide-circle-check'
+                      : 'i-lucide-circle-minus'
+                  "
+                />
+                {{
+                  settings.research_enabled
+                    ? t('PROSPECTING.SETTINGS.PLATFORM.RESEARCH_ENABLED')
+                    : t('PROSPECTING.SETTINGS.PLATFORM.RESEARCH_DISABLED')
+                }}
+              </p>
+            </div>
+          </div>
+
+          <ProspectingMockProviderNotice v-if="settings.mock_provider" />
+
+          <ProspectingAiCredentialNotice
+            v-if="
+              settings.research_enabled && !settings.ai_credential_configured
+            "
+          />
+
+          <label class="grid gap-1 md:w-1/3">
+            <span class="text-xs font-medium text-n-slate-11">
+              {{ t('PROSPECTING.SETTINGS.FIELDS.CACHE_TTL') }}
             </span>
+            <input
+              v-model="form.cache_ttl_seconds"
+              type="number"
+              min="0"
+              class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
+            />
           </label>
 
           <div
@@ -479,8 +380,7 @@ onMounted(fetchSettings);
                 {{
                   t('PROSPECTING.SETTINGS.USAGE_OF', {
                     used: settings.usage?.daily_used || 0,
-                    limit:
-                      form.daily_limit || t('PROSPECTING.SETTINGS.UNLIMITED'),
+                    limit: t('PROSPECTING.SETTINGS.UNLIMITED'),
                   })
                 }}
               </p>
@@ -493,8 +393,7 @@ onMounted(fetchSettings);
                 {{
                   t('PROSPECTING.SETTINGS.USAGE_OF', {
                     used: settings.usage?.monthly_used || 0,
-                    limit:
-                      form.monthly_limit || t('PROSPECTING.SETTINGS.UNLIMITED'),
+                    limit: t('PROSPECTING.SETTINGS.UNLIMITED'),
                   })
                 }}
               </p>

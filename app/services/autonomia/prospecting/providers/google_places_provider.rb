@@ -20,10 +20,16 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     'places.currentOpeningHours.weekdayDescriptions',
     'places.regularOpeningHours.weekdayDescriptions'
   ].join(',').freeze
+  # Teto do Google por chamada. Pedido maior só chega com a paginação da E2.
+  MAX_RESULTS_PER_REQUEST = 20
+  # A chave é da plataforma (#683): o texto do Google fala do nosso projeto no Google Cloud. Ele fica no log do
+  # servidor, e o cliente recebe um destes, em português, pelo i18n do backend.
+  UNAVAILABLE_MESSAGE_KEY = 'autonomia.prospecting.errors.google_unavailable'.freeze
+  BUSY_MESSAGE_KEY = 'autonomia.prospecting.errors.google_busy'.freeze
 
   attr_reader :api_units
 
-  def initialize(query:, location:, radius:, area_type: 'radius', area_config: {}, limit:, api_key:)
+  def initialize(query:, location:, radius:, area_type: 'radius', area_config: {}, limit:, api_key:, account_id: nil)
     @query = query.to_s.strip
     @location = location.to_s.strip
     @radius = radius.to_i
@@ -31,6 +37,7 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     @area_config = area_config.to_h.deep_stringify_keys
     @limit = limit.to_i
     @api_key = api_key.to_s
+    @account_id = account_id
     @api_units = 0
   end
 
@@ -57,7 +64,7 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   def request_body
     {
       textQuery: [@query, @location].compact_blank.join(' '),
-      maxResultCount: [@limit, 20].min,
+      maxResultCount: [@limit, MAX_RESULTS_PER_REQUEST].min,
       languageCode: 'pt-BR',
       regionCode: 'BR'
     }.merge(location_bias_payload)
@@ -113,9 +120,18 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   end
 
   def provider_error(response)
-    body = JSON.parse(response.body) rescue {}
-    message = body.dig('error', 'message').presence || "Google Places returned HTTP #{response.code}"
-    Autonomia::Prospecting::SearchRunner::ProviderError.new(message)
+    google_message = google_error_message(response).presence || 'sem mensagem'
+    Rails.logger.warn(
+      "[Prospecting::GooglePlaces] account_id=#{@account_id} status=#{response.code} google_message=#{google_message}"
+    )
+    message_key = response.code.to_i == 429 ? BUSY_MESSAGE_KEY : UNAVAILABLE_MESSAGE_KEY
+    Autonomia::Prospecting::SearchRunner::ProviderError.new(I18n.t(message_key))
+  end
+
+  def google_error_message(response)
+    JSON.parse(response.body.to_s).dig('error', 'message')
+  rescue JSON::ParserError
+    nil
   end
 
   def lead_for(place)

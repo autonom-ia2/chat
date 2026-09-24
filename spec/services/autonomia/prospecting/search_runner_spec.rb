@@ -4,6 +4,9 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
   let(:account) { create(:account) }
   let(:user) { create(:user, :administrator, account: account) }
 
+  # O google_places virou o provider padrão (#683); estes testes exercitam o motor com o provider mock.
+  before { Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'mock') }
+
   it 'creates a completed search and persists mock leads' do
     result = described_class.new(
       account: account,
@@ -58,6 +61,7 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
     params = { query: 'academia', location: 'Rio de Janeiro, RJ', requested_limit: 1 }
     other_account = create(:account)
     other_user = create(:user, :administrator, account: other_account)
+    Autonomia::Prospecting::Setting.for_account(other_account).update!(provider: 'mock')
 
     described_class.new(account: account, user: user, params: params).perform
     described_class.new(account: other_account, user: other_user, params: params).perform
@@ -66,55 +70,46 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
     expect(other_account.autonomia_prospecting_leads.count).to eq(1)
   end
 
-  it 'rejects limits over account settings' do
+  it 'ignores max_results_per_search from the account' do
     Autonomia::Prospecting::Setting.for_account(account).update!(max_results_per_search: 2)
 
-    expect do
-      described_class.new(
-        account: account,
-        user: user,
-        params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 3 }
-      ).perform
-    end.to raise_error(ActiveRecord::RecordInvalid, /less than or equal to 2/)
-  end
-
-  it 'rejects google places when account key is missing' do
-    Autonomia::Prospecting::Setting.for_account(account).update!(
-      provider: 'google_places',
-      provider_enabled: true
-    )
-
-    expect do
-      described_class.new(
-        account: account,
-        user: user,
-        params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 1, provider: 'google_places' }
-      ).perform
-    end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, /API key/)
-  end
-
-  it 'rejects google places when daily usage limit is exhausted' do
-    Autonomia::Prospecting::Setting.for_account(account).update!(
-      provider: 'google_places',
-      provider_enabled: true,
-      google_places_api_key: 'secret-key',
-      daily_limit: 1
-    )
-    Autonomia::Prospecting::Search.create!(
+    result = described_class.new(
       account: account,
       user: user,
-      query: 'padaria',
-      requested_limit: 1,
-      consumed_api_units: 1
-    )
+      params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 3 }
+    ).perform
+
+    expect(result.leads.size).to eq(3)
+  end
+
+  it 'rejects google places when the platform key is missing, even with a key saved on the account' do
+    Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'google_places', google_places_api_key: 'chave-da-conta')
 
     expect do
-      described_class.new(
-        account: account,
-        user: user,
-        params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 1 }
-      ).perform
-    end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, /Daily limit/)
+      with_modified_env('GOOGLE_PLACES_API_KEY' => nil) do
+        described_class.new(
+          account: account,
+          user: user,
+          params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 1 }
+        ).perform
+      end
+    end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, /platform API key/)
+  end
+
+  # A chave da plataforma vem só do ambiente (#683): uma InstallationConfig homônima apareceria no superadmin.
+  it 'ignores an InstallationConfig with the platform key name: the key comes only from the environment' do
+    InstallationConfig.where(name: 'GOOGLE_PLACES_API_KEY').first_or_create!(value: 'chave-no-banco')
+    Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'google_places')
+
+    expect do
+      with_modified_env('GOOGLE_PLACES_API_KEY' => nil) do
+        described_class.new(
+          account: account,
+          user: user,
+          params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 1 }
+        ).perform
+      end
+    end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, /platform API key/)
   end
 
   it 'stores the default CRM target in new searches' do
@@ -145,5 +140,376 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
     expect(second.search).to be_cached
     expect(second.leads.map(&:id)).to eq(first.leads.map(&:id))
     expect(second.search.consumed_api_units).to eq(0)
+  end
+
+  # Caracterização do motor (#683). Os casos que eram DIVERGE e a E0 corrigiu
+  # foram invertidos para o comportamento novo; o DIVERGE que resta é de outra etapa.
+  describe 'caracterização do motor (#683)' do
+    around { |example| with_modified_env('GOOGLE_PLACES_API_KEY' => 'chave-da-plataforma') { example.run } }
+
+    let(:setting) { Autonomia::Prospecting::Setting.for_account(account) }
+    let(:mock_provider_class) { Autonomia::Prospecting::Providers::MockProvider }
+    let(:google_endpoint) { Autonomia::Prospecting::Providers::GooglePlacesProvider::ENDPOINT }
+    let(:places) do
+      [
+        { provider: 'mock', provider_place_id: 'places/a', name: 'Alfa Odonto', phone: '+5541999990001',
+          website: 'https://alfa.example.com', rating: 4.8, reviews_count: 120, raw_payload: {} },
+        { provider: 'mock', provider_place_id: 'places/b', name: 'Beta Odonto', phone: nil,
+          website: nil, rating: 3.9, reviews_count: 5, raw_payload: {} },
+        { provider: 'mock', provider_place_id: 'places/c', name: 'Gama Odonto', phone: '+5541999990003',
+          website: 'https://gama.example.com', rating: nil, reviews_count: 40, raw_payload: {} }
+      ]
+    end
+    let(:google_place) do
+      {
+        'id' => 'places/google-1',
+        'displayName' => { 'text' => 'Clinica Aberta' },
+        'formattedAddress' => 'Rua A, 10 - Centro, Curitiba - PR, Brasil',
+        'internationalPhoneNumber' => '+55 41 3333-0000',
+        'websiteUri' => 'https://clinicaaberta.example.com',
+        'rating' => 4.7,
+        'userRatingCount' => 80,
+        'types' => ['dentist'],
+        'photos' => [{ 'name' => 'places/google-1/photos/1' }],
+        'currentOpeningHours' => { 'openNow' => true }
+      }
+    end
+
+    def run_search(params)
+      described_class.new(account: account, user: user, params: params).perform
+    end
+
+    def stub_mock_provider(results)
+      allow(mock_provider_class).to receive(:new).and_return(instance_double(mock_provider_class, search: results))
+    end
+
+    def stub_google_places(places_payload, api_key: 'chave-da-plataforma')
+      stub_request(:post, google_endpoint)
+        .with(headers: { 'X-Goog-Api-Key' => api_key })
+        .to_return(status: 200, body: { places: places_payload }.to_json, headers: { 'Content-Type' => 'application/json' })
+    end
+
+    # A chave da plataforma vem do ambiente (around no topo deste describe); aqui só a conta passa para o Google.
+    def use_google_places!(**extra)
+      setting.update!(provider: 'google_places', **extra)
+    end
+
+    describe 'provider padrão' do
+      it 'cria a configuração de conta nova com google_places' do
+        expect(Autonomia::Prospecting::Setting.for_account(create(:account)).provider).to eq('google_places')
+      end
+
+      it 'busca no Google com provider_enabled desligado na conta quando a chave de plataforma existe' do
+        use_google_places!(provider_enabled: false)
+        stub_google_places([google_place])
+
+        expect(run_search(query: 'hotel', location: 'Curitiba, PR', requested_limit: 1).search).to be_completed
+      end
+
+      it 'chama o Google Places com a chave da plataforma, não com a gravada na conta' do
+        use_google_places!(google_places_api_key: 'chave-da-conta')
+        stub_google_places([google_place])
+
+        result = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 1)
+
+        expect(result.search).to be_completed
+        expect(result.search.consumed_api_units).to eq(1)
+        expect(result.leads.map(&:provider_place_id)).to eq(['places/google-1'])
+        expect(a_request(:post, google_endpoint).with(headers: { 'X-Goog-Api-Key' => 'chave-da-plataforma' })).to have_been_made.once
+        expect(a_request(:post, google_endpoint).with(headers: { 'X-Goog-Api-Key' => 'chave-da-conta' })).not_to have_been_made
+      end
+    end
+
+    describe 'filtros avançados' do
+      it 'has_website yes mantém só quem tem site e no mantém só quem não tem' do
+        stub_mock_provider(places)
+
+        with_site = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 3,
+                               advanced_filters: { has_website: 'yes' })
+        without_site = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 3,
+                                  advanced_filters: { has_website: 'no' })
+
+        expect(with_site.leads.map(&:name)).to contain_exactly('Alfa Odonto', 'Gama Odonto')
+        expect(without_site.leads.map(&:name)).to contain_exactly('Beta Odonto')
+      end
+
+      it 'has_phone yes mantém só quem tem telefone' do
+        stub_mock_provider(places)
+
+        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 3, advanced_filters: { has_phone: 'yes' })
+
+        expect(result.leads.map(&:name)).to contain_exactly('Alfa Odonto', 'Gama Odonto')
+      end
+
+      it 'rating_min descarta quem está abaixo e quem não tem nota' do
+        stub_mock_provider(places)
+
+        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 3, advanced_filters: { rating_min: '4.0' })
+
+        expect(result.leads.map(&:name)).to contain_exactly('Alfa Odonto')
+      end
+
+      it 'reviews_min e search_rank_max cortam por avaliações e posição no Google' do
+        stub_mock_provider(places)
+
+        by_reviews = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 3, advanced_filters: { reviews_min: '40' })
+        by_rank = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 3, advanced_filters: { search_rank_max: '2' })
+
+        expect(by_reviews.leads.map(&:name)).to contain_exactly('Alfa Odonto', 'Gama Odonto')
+        expect(by_rank.leads.map(&:name)).to contain_exactly('Alfa Odonto', 'Beta Odonto')
+      end
+
+      it 'has_photos yes zera o resultado mesmo com fotos no payload do provider mock' do
+        # DIVERGE: has_photos deve olhar as fotos do lugar (raw_payload.photos); o provider nunca grava :has_photos.
+        params = { query: 'dentista', location: 'Curitiba, PR', radius: 1000, area_type: 'radius', area_config: {}, limit: 8 }
+        raw_places = mock_provider_class.new(**params).search
+        expect(raw_places.count { |place| place.dig(:raw_payload, :photos).present? }).to be_positive
+
+        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { has_photos: 'yes' })
+
+        expect(result.leads).to be_empty
+      end
+
+      it 'has_photos no deixa passar todos, inclusive quem tem foto' do
+        # DIVERGE: has_photos no deve manter só quem não tem foto.
+        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { has_photos: 'no' })
+
+        expect(result.leads.size).to eq(8)
+      end
+
+      it 'open_now yes e no zeram o resultado porque o provider nunca grava :open_now' do
+        # DIVERGE: open_now deve ler currentOpeningHours.openNow do lugar; yes mantém abertos, no mantém fechados.
+        yes_result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { open_now: 'yes' })
+        no_result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { open_now: 'no' })
+
+        expect(yes_result.leads).to be_empty
+        expect(no_result.leads).to be_empty
+      end
+
+      it 'no Google Places, has_photos yes e open_now yes descartam um lugar aberto e com foto' do
+        # DIVERGE: o lugar tem photos e currentOpeningHours.openNow=true; os dois filtros deveriam mantê-lo.
+        use_google_places!
+        stub_google_places([google_place])
+
+        with_photos = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 1, advanced_filters: { has_photos: 'yes' })
+        open_now = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 1, advanced_filters: { open_now: 'yes' })
+
+        expect(with_photos.leads).to be_empty
+        expect(open_now.leads).to be_empty
+      end
+    end
+
+    describe 'limite pedido' do
+      it 'usa o default_limit da conta quando o pedido não traz limite' do
+        result = run_search(query: 'padaria', location: 'Curitiba, PR')
+
+        expect(result.search.requested_limit).to eq(20)
+        expect(result.leads.size).to eq(20)
+      end
+
+      it 'aceita limit como sinônimo de requested_limit' do
+        result = run_search(query: 'padaria', location: 'Curitiba, PR', limit: 2)
+
+        expect(result.search.requested_limit).to eq(2)
+      end
+
+      it 'recusa limite zero' do
+        expect { run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 0) }
+          .to raise_error(ActiveRecord::RecordInvalid, /greater than 0/)
+      end
+
+      it 'aceita 21 e 60 com o max_results_per_search padrão de 20 e recusa 61' do
+        expect(setting.max_results_per_search).to eq(20)
+
+        expect(run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 21).leads.size).to eq(21)
+        expect(run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 60).leads.size).to eq(60)
+        expect { run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 61) }
+          .to raise_error(ActiveRecord::RecordInvalid, /less than or equal to 60/)
+      end
+
+      it 'pede no máximo 20 resultados ao Google Places num pedido de 60' do
+        use_google_places!
+        stub_google_places([google_place])
+
+        run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 60)
+
+        expect(a_request(:post, google_endpoint).with { |req| JSON.parse(req.body)['maxResultCount'] == 20 }).to have_been_made.once
+      end
+
+      it 'não expande o raio num pedido de 60 quando o primeiro raio já traz os 20 que o Google entrega' do
+        use_google_places!
+        twenty_places = Array.new(20) { |index| google_place.merge('id' => "places/google-#{index}") }
+        stub_google_places(twenty_places)
+
+        result = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 60, radius: 1000,
+                            filters: { auto_expand_radius: true })
+
+        expect(a_request(:post, google_endpoint)).to have_been_made.once
+        expect(result.search.consumed_api_units).to eq(1)
+        expect(result.search.radius).to eq(1000)
+        expect(result.search.metadata['radius_expanded']).to be(false)
+        expect(result.leads.size).to eq(20)
+      end
+    end
+
+    describe 'limites de consumo' do
+      before do
+        use_google_places!
+        stub_google_places([google_place])
+      end
+
+      it 'segue com o monthly_limit do mês já consumido' do
+        setting.update!(monthly_limit: 2)
+        Autonomia::Prospecting::Search.create!(account: account, user: user, query: 'padaria', requested_limit: 1, consumed_api_units: 2)
+
+        expect(run_search(query: 'hotel', location: 'Curitiba, PR', requested_limit: 1).search).to be_completed
+      end
+
+      it 'segue com o daily_limit estourado e a expansão automática de raio ligada' do
+        setting.update!(daily_limit: 1)
+        Autonomia::Prospecting::Search.create!(account: account, user: user, query: 'padaria', requested_limit: 1, consumed_api_units: 1)
+
+        result = run_search(query: 'hotel', location: 'Curitiba, PR', requested_limit: 2, filters: { auto_expand_radius: true })
+
+        expect(result.search).to be_completed
+        expect(result.search.consumed_api_units).to eq(3)
+      end
+
+      it 'não trava o provider mock, que não consome unidade' do
+        setting.update!(provider: 'mock', daily_limit: 1, monthly_limit: 1)
+        Autonomia::Prospecting::Search.create!(account: account, user: user, query: 'padaria', requested_limit: 1, consumed_api_units: 5)
+
+        expect(run_search(query: 'hotel', location: 'Curitiba, PR', requested_limit: 1).search).to be_completed
+      end
+
+      it 'serve do cache sem chamar o Google de novo' do
+        setting.update!(daily_limit: 1, cache_ttl_seconds: 3600)
+        params = { query: 'clinica', location: 'Curitiba, PR', requested_limit: 1 }
+
+        first = run_search(params)
+        second = run_search(params)
+
+        expect(first.search).to be_completed
+        expect(second.search).to be_cached
+        expect(a_request(:post, google_endpoint)).to have_been_made.once
+      end
+    end
+
+    describe 'cache' do
+      let(:params) { { query: 'padaria', location: 'Curitiba, PR', requested_limit: 2 } }
+
+      it 'está ligado por padrão, com validade de 24 horas' do
+        expect(setting.cache_ttl_seconds).to eq(86_400)
+
+        first = run_search(params)
+        second = run_search(params)
+
+        expect(second.search).to be_cached
+        expect(second.search.metadata['cached_from_search_id']).to eq(first.search.id)
+      end
+
+      it 'não usa cache com cache_ttl_seconds zero' do
+        setting.update!(cache_ttl_seconds: 0)
+
+        run_search(params)
+        second = run_search(params)
+
+        expect(second.search).to be_completed
+        expect(second.search.cache_expires_at).to be_nil
+      end
+
+      it 'não serve uma busca que falhou como cache: a repetição roda o provider de novo' do
+        failing_provider = instance_double(mock_provider_class)
+        allow(failing_provider).to receive(:search).and_raise(StandardError, 'provider fora do ar')
+        allow(mock_provider_class).to receive(:new).and_return(failing_provider)
+
+        expect { run_search(params) }.to raise_error(StandardError, 'provider fora do ar')
+        failed_search = account.autonomia_prospecting_searches.order(:id).last
+        expect(failed_search).to be_failed
+        expect(failed_search.metadata['error']).to eq('provider fora do ar')
+
+        allow(mock_provider_class).to receive(:new).and_call_original
+        second = run_search(params)
+
+        expect(second.search).to be_completed
+        expect(second.search.metadata).not_to have_key('cached_from_search_id')
+        expect(second.leads.size).to eq(2)
+      end
+    end
+
+    describe 'upsert do lead' do
+      it 'atualiza o lead do mesmo lugar, move para a busca nova e preserva o metadata antigo' do
+        stub_mock_provider([places.first])
+        first = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 1)
+        lead = first.leads.first
+        lead.update!(metadata: lead.metadata.merge('whatsapp_verification' => { 'status' => 'verified' }))
+
+        stub_mock_provider([places.first.merge(name: 'Alfa Odonto Renovada')])
+        second = run_search(query: 'dentista sorriso', location: 'Curitiba, PR', requested_limit: 1)
+
+        expect(account.autonomia_prospecting_leads.count).to eq(1)
+        expect(lead.reload.name).to eq('Alfa Odonto Renovada')
+        expect(lead.prospect_search_id).to eq(second.search.id)
+        expect(lead.metadata.dig('whatsapp_verification', 'status')).to eq('verified')
+      end
+
+      it 'deduplica pelo telefone quando o lugar não tem provider_place_id' do
+        stub_mock_provider([places.first.merge(provider_place_id: nil)])
+
+        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 1)
+
+        expect(result.leads.first.dedupe_key).to eq('mock:+5541999990001')
+      end
+
+      it 'reaproveita o lead quando outra busca grava o mesmo lugar entre a leitura e o insert' do
+        stub_mock_provider([places.first])
+        competitor_saved = false
+        allow(Autonomia::Prospecting::Lead).to receive(:new).and_wrap_original do |original, *args, &block|
+          unless competitor_saved
+            competitor_saved = true
+            original.call(account: account, provider: 'mock', provider_place_id: 'places/a', name: 'Gravado pela outra busca').save!
+          end
+          original.call(*args, &block)
+        end
+
+        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 1)
+
+        expect(result.search).to be_completed
+        expect(account.autonomia_prospecting_leads.count).to eq(1)
+        expect(result.leads.first.name).to eq('Alfa Odonto')
+        expect(result.leads.first.prospect_search_id).to eq(result.search.id)
+      end
+
+      it 'reaproveita o lead quando o banco recusa o insert pelo índice único (corrida real)' do
+        stub_mock_provider([places.first])
+        competitor_saved = false
+        # A outra busca grava depois da validação desta: o INSERT de verdade bate no índice único do Postgres.
+        # O lead é criado dentro do runner, então só any_instance alcança o save! dele; o insert_all! é a outra busca.
+        # rubocop:disable RSpec/AnyInstance, Rails/SkipsModelValidations
+        allow_any_instance_of(Autonomia::Prospecting::Lead).to receive(:save!).and_wrap_original do |original, *args|
+          next original.call(*args) if competitor_saved
+
+          competitor_saved = true
+          Autonomia::Prospecting::Lead.insert_all!([{ account_id: account.id, provider: 'mock', provider_place_id: 'places/a',
+                                                      dedupe_key: 'mock:places/a', name: 'Gravado pela outra busca',
+                                                      created_at: Time.current, updated_at: Time.current }])
+          original.call(validate: false)
+        end
+        # rubocop:enable RSpec/AnyInstance, Rails/SkipsModelValidations
+
+        result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 1)
+
+        expect(result.search).to be_completed
+        expect(account.autonomia_prospecting_leads.count).to eq(1)
+        expect(result.leads.first.name).to eq('Alfa Odonto')
+      end
+
+      it 'não engole erro de validação que não é corrida' do
+        stub_mock_provider([places.first.merge(name: nil)])
+
+        expect { run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 1) }
+          .to raise_error(ActiveRecord::RecordInvalid, /Name can't be blank/)
+      end
+    end
   end
 end

@@ -13,7 +13,7 @@
 #  max_results_per_search      :integer          default(20), not null
 #  metadata                    :jsonb            not null
 #  monthly_limit               :integer
-#  provider                    :string           default("mock"), not null
+#  provider                    :string           default("google_places"), not null
 #  provider_enabled            :boolean          default(FALSE), not null
 #  scoring_mode                :string           default("profile"), not null
 #  created_at                  :datetime         not null
@@ -69,6 +69,16 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
     find_or_create_by!(account: account)
   end
 
+  # As chaves do Google são da plataforma (#683) e vêm só de variável de ambiente, que em produção sai do SSM.
+  # Não aparecem em tela nenhuma, nem no superadmin. As colunas homônimas ficam no banco, mas deixam de ser lidas.
+  def google_places_api_key
+    platform_config('GOOGLE_PLACES_API_KEY')
+  end
+
+  def google_maps_browser_api_key
+    platform_config('GOOGLE_MAPS_BROWSER_API_KEY')
+  end
+
   def google_places_configured?
     google_places_api_key.present?
   end
@@ -96,6 +106,12 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
   end
 
   private
+
+  # Só ENV: GOOGLE_PLACES_API_KEY e GOOGLE_MAPS_BROWSER_API_KEY, e BIGDATACORP_USER/BIGDATACORP_PASSWORD quando entrarem.
+  # Nada de InstallationConfig nem GlobalConfigService: este copia a variável para o banco, e ela apareceria no superadmin.
+  def platform_config(name)
+    ENV.fetch(name, nil).presence
+  end
 
   def normalize_scoring_configuration
     self.scoring_mode = scoring_mode.presence || 'profile'

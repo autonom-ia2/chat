@@ -721,3 +721,7 @@ pt_BR:
           - 'Não quero te passar uma informação imprecisa. Vou encaminhar seu atendimento para alguém do nosso time continuar com você.'
           - 'Essa resposta precisa de uma conferência do nosso time. Vou direcionar seu atendimento para um humano seguir com você.'
           - 'Para manter a resposta segura, vou trazer alguém do nosso time para continuar por aqui.'
+    prospecting:
+      errors:
+        google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'
+        google_busy: 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.'

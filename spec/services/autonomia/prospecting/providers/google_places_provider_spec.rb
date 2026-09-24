@@ -43,12 +43,51 @@ RSpec.describe Autonomia::Prospecting::Providers::GooglePlacesProvider do
     )
   end
 
-  it 'raises provider errors with Google message' do
-    stub_request(:post, 'https://places.googleapis.com/v1/places:searchText')
-      .to_return(status: 403, body: { error: { message: 'API key invalid' } }.to_json)
+  # A chave é da plataforma (#683): o texto do Google fala do nosso projeto no Google Cloud e não chega ao cliente.
+  describe 'erro do Google' do
+    let(:provider) do
+      described_class.new(query: 'restaurante', location: 'Sao Paulo', radius: 5000, limit: 1, api_key: 'chave', account_id: 42)
+    end
+    let(:service_disabled) do
+      'Places API (New) has not been used in project 123456789 before or it is disabled. Enable it by visiting ' \
+        'https://console.developers.google.com/apis/api/places.googleapis.com/overview?project=123456789'
+    end
+    let(:indisponivel) { 'A busca no Google está indisponível no momento. Fale com o suporte.' }
+    let(:sobrecarregado) { 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.' }
 
-    provider = described_class.new(query: 'restaurante', location: 'Sao Paulo', radius: 5000, limit: 1, api_key: 'bad-key')
+    def stub_google_error(status, message)
+      stub_request(:post, described_class::ENDPOINT).to_return(status: status, body: { error: { message: message } }.to_json)
+    end
 
-    expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, /API key invalid/)
+    it 'devolve texto nosso no 403 e registra a mensagem do Google só no log do servidor' do
+      stub_google_error(403, service_disabled)
+      allow(Rails.logger).to receive(:warn)
+
+      expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError) { |error|
+        expect(error.message).to eq(indisponivel)
+        expect(error.message).not_to include('project')
+      }
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('account_id=42', 'status=403', 'project 123456789'))
+    end
+
+    it 'diferencia cota estourada (429) de indisponível' do
+      stub_google_error(429, 'Quota exceeded for quota metric')
+
+      expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, sobrecarregado)
+    end
+
+    it 'não repassa chave vencida (400) ao cliente' do
+      stub_google_error(400, 'API key expired. Please renew the API key.')
+
+      expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, indisponivel)
+    end
+
+    it 'responde em português também para conta com locale pt_BR' do
+      stub_google_error(403, service_disabled)
+
+      I18n.with_locale(:pt_BR) do
+        expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, indisponivel)
+      end
+    end
   end
 end
