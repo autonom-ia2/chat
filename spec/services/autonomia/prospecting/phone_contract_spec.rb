@@ -46,8 +46,7 @@ RSpec.describe Autonomia::Prospecting::PhoneContract do
     end
 
     it 'volta para BR quando o país guardado é desconhecido' do
-      setting = Autonomia::Prospecting::Setting.for_account(account)
-      setting.update!(metadata: setting.metadata.to_h.merge('search_country' => 'XX'))
+      ProspectingPhoneContractCases.apply_region!(account, 'XX')
 
       expect(described_class.region_for(account)).to eq('BR')
     end

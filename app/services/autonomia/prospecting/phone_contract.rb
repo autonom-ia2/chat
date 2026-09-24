@@ -40,7 +40,7 @@ module Autonomia::Prospecting::PhoneContract
 
   def region_for(account)
     setting = Autonomia::Prospecting::Setting.find_by(account: account)
-    normalize_region(setting&.metadata.to_h['search_country'])
+    normalize_region(setting&.search_country)
   end
 
   def normalize_region(region)
