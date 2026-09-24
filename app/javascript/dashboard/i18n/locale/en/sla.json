@@ -77,7 +77,8 @@
         "PLACEHOLDER": "Only during business hours"
       },
       "THRESHOLD_TIME": {
-        "INVALID_FORMAT_ERROR": "Threshold should be a number and greater than zero"
+        "INVALID_FORMAT_ERROR": "Threshold should be a number and greater than zero",
+        "UNIT": "Time unit"
       },
       "EDIT": "Edit",
       "CREATE": "Create",

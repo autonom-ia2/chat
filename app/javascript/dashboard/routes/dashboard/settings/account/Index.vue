@@ -11,6 +11,7 @@ import WithLabel from 'v3/components/Form/WithLabel.vue';
 import NextInput from 'next/input/Input.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import AccountId from './components/AccountId.vue';
 import BuildInfo from './components/BuildInfo.vue';
 import AccountDelete from './components/AccountDelete.vue';
@@ -28,6 +29,7 @@ export default {
     SectionLayout,
     WithLabel,
     NextInput,
+    ChoiceSelect,
   },
   setup() {
     const { updateUISettings, uiSettings } = useUISettings();
@@ -73,6 +75,12 @@ export default {
       return enabledLanguages.sort((l1, l2) =>
         l1.iso_639_1_code.localeCompare(l2.iso_639_1_code)
       );
+    },
+    languageChoices() {
+      return this.languagesSortedByCode.map(lang => ({
+        value: lang.iso_639_1_code,
+        label: lang.name,
+      }));
     },
     isUpdating() {
       return this.uiFlags.isUpdating;
@@ -190,15 +198,13 @@ export default {
             :label="$t('GENERAL_SETTINGS.FORM.LANGUAGE.LABEL')"
             :error-message="$t('GENERAL_SETTINGS.FORM.LANGUAGE.ERROR')"
           >
-            <select v-model="locale" class="!mb-0 text-sm">
-              <option
-                v-for="lang in languagesSortedByCode"
-                :key="lang.iso_639_1_code"
-                :value="lang.iso_639_1_code"
-              >
-                {{ lang.name }}
-              </option>
-            </select>
+            <ChoiceSelect
+              v-model="locale"
+              :options="languageChoices"
+              :aria-label="$t('GENERAL_SETTINGS.FORM.LANGUAGE.LABEL')"
+              :invalid="v$.locale.$error"
+              class="w-full"
+            />
           </WithLabel>
           <WithLabel
             v-if="featureCustomReplyDomainEnabled"

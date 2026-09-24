@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import { useVuelidate } from '@vuelidate/core';
 import { required, email } from '@vuelidate/validators';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import CrmScheduleEditor from 'dashboard/routes/dashboard/crm/components/sla/CrmScheduleEditor.vue';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
@@ -101,6 +102,10 @@ const roles = computed(() => {
 
   return [...defaultRoles, ...customRoles];
 });
+
+const roleChoices = computed(() =>
+  roles.value.map(role => ({ value: role.id, label: role.label }))
+);
 
 const selectedRole = computed(() =>
   roles.value.find(
@@ -255,11 +260,15 @@ const addAgent = async () => {
       <div class="w-full">
         <label :class="{ error: v$.selectedRoleId.$error }">
           {{ $t('AGENT_MGMT.ADD.FORM.AGENT_TYPE.LABEL') }}
-          <select v-model="selectedRoleId" @change="v$.selectedRoleId.$touch">
-            <option v-for="role in roles" :key="role.id" :value="role.id">
-              {{ role.label }}
-            </option>
-          </select>
+          <ChoiceSelect
+            v-model="selectedRoleId"
+            :options="roleChoices"
+            :aria-label="$t('AGENT_MGMT.ADD.FORM.AGENT_TYPE.LABEL')"
+            :invalid="v$.selectedRoleId.$error"
+            class="w-full"
+            :class="v$.selectedRoleId.$error ? 'mb-1' : 'mb-4'"
+            @change="v$.selectedRoleId.$touch"
+          />
           <span v-if="v$.selectedRoleId.$error" class="message">
             {{ $t('AGENT_MGMT.ADD.FORM.AGENT_TYPE.ERROR') }}
           </span>

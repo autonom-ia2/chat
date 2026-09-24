@@ -15,6 +15,7 @@ const getPipelineInboxes = vi.fn(() =>
 const updateAiSettings = vi.fn(() =>
   Promise.resolve({ data: { payload: {} } })
 );
+const routerPush = vi.fn();
 
 vi.mock('dashboard/api/crmKanban', () => ({
   default: {
@@ -27,7 +28,7 @@ vi.mock('dashboard/api/crmKanban', () => ({
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { pipelineId: '1' } }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: routerPush }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: () => {} }));
 vi.mock('dashboard/composables/store', () => ({
@@ -111,5 +112,40 @@ describe('CrmHandoffEditPage handoff fields', () => {
     const [, body] = updateAiSettings.mock.calls[0];
     expect(body.ai_settings.handoff.escalation_action).toBe('escalate');
     expect(body.ai_settings.handoff.escalation_user_id).toBe(7);
+  });
+});
+
+describe('CrmHandoffEditPage pipeline switch', () => {
+  beforeAll(() => {
+    // jsdom não implementa rolagem; o ChoiceSelect rola a opção ativa.
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  it('navigates to the pipeline chosen in the combobox', async () => {
+    getPipelines.mockResolvedValueOnce({
+      data: {
+        payload: [
+          { id: 1, name: 'Funil Comercial' },
+          { id: 2, name: 'Funil Pós-venda' },
+        ],
+      },
+    });
+    const wrapper = mountPage({ enabled: true });
+    await flushPromises();
+
+    const combobox = wrapper.get('[role="combobox"]');
+    expect(combobox.attributes('aria-label')).toBe(
+      'CRM_KANBAN.FILTERS.PIPELINE'
+    );
+    await combobox.trigger('click');
+    const option = wrapper
+      .findAll('[role="option"]')
+      .find(item => item.text() === 'Funil Pós-venda');
+    await option.trigger('click');
+
+    expect(routerPush).toHaveBeenCalledWith({
+      name: 'crm_handoff_settings_edit',
+      params: { pipelineId: 2 },
+    });
   });
 });

@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import { useBranding } from 'shared/composables/useBranding';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
   hasConnectedAChannel: {
@@ -22,6 +23,17 @@ const { replaceInstallationName } = useBranding();
 
 const selectedChannelId = ref('');
 const availableChannels = ref([]);
+
+const channelChoices = computed(() => [
+  {
+    value: '',
+    label: t('INTEGRATION_SETTINGS.SLACK.SELECT_CHANNEL.OPTION_LABEL'),
+  },
+  ...availableChannels.value.map(channel => ({
+    value: channel.id,
+    label: `#${channel.name}`,
+  })),
+]);
 
 const uiFlags = computed(() => store.getters['integrations/getUIFlags']);
 
@@ -89,21 +101,15 @@ const updateIntegration = async () => {
         {{ $t('INTEGRATION_SETTINGS.SLACK.SELECT_CHANNEL.BUTTON_TEXT') }}
       </Button>
       <div v-else class="inline-flex">
-        <select
+        <ChoiceSelect
           v-model="selectedChannelId"
-          class="h-8 py-1 mr-4 text-xs leading-4 border border-n-amber-10"
-        >
-          <option value="">
-            {{ $t('INTEGRATION_SETTINGS.SLACK.SELECT_CHANNEL.OPTION_LABEL') }}
-          </option>
-          <option
-            v-for="channel in availableChannels"
-            :key="channel.id"
-            :value="channel.id"
-          >
-            #{{ channel.name }}
-          </option>
-        </select>
+          :options="channelChoices"
+          :aria-label="
+            t('INTEGRATION_SETTINGS.SLACK.SELECT_CHANNEL.OPTION_LABEL')
+          "
+          compact
+          class="w-56 mr-4"
+        />
         <Button
           teal
           sm

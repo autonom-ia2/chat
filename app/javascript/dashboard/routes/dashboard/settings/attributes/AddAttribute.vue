@@ -9,11 +9,13 @@ import { ATTRIBUTE_MODELS, ATTRIBUTE_TYPES } from './constants';
 
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 export default {
   components: {
     NextButton,
     TagInput,
+    ChoiceSelect,
   },
   props: {
     onClose: {
@@ -59,11 +61,20 @@ export default {
         option: this.$t(`ATTRIBUTES_MGMT.ATTRIBUTE_MODELS.${item.key}`),
       }));
     },
+    modelChoices() {
+      return this.models.map(model => ({
+        value: model.id,
+        label: model.option,
+      }));
+    },
     types() {
       return ATTRIBUTE_TYPES.map(item => ({
         ...item,
         option: this.$t(`ATTRIBUTES_MGMT.ATTRIBUTE_TYPES.${item.key}`),
       }));
+    },
+    typeChoices() {
+      return this.types.map(type => ({ value: type.id, label: type.option }));
     },
     isTagInputEmpty() {
       return this.isAttributeTypeList && this.values.length === 0;
@@ -169,11 +180,14 @@ export default {
         <div class="w-full">
           <label :class="{ error: v$.attributeModel.$error }">
             {{ $t('ATTRIBUTES_MGMT.ADD.FORM.MODEL.LABEL') }}
-            <select v-model="attributeModel">
-              <option v-for="model in models" :key="model.id" :value="model.id">
-                {{ model.option }}
-              </option>
-            </select>
+            <ChoiceSelect
+              v-model="attributeModel"
+              :options="modelChoices"
+              :aria-label="$t('ATTRIBUTES_MGMT.ADD.FORM.MODEL.LABEL')"
+              :invalid="v$.attributeModel.$error"
+              class="w-full"
+              :class="v$.attributeModel.$error ? 'mb-1' : 'mb-4'"
+            />
             <span v-if="v$.attributeModel.$error" class="message">
               {{ $t('ATTRIBUTES_MGMT.ADD.FORM.MODEL.ERROR') }}
             </span>
@@ -216,11 +230,14 @@ export default {
           </label>
           <label :class="{ error: v$.attributeType.$error }">
             {{ $t('ATTRIBUTES_MGMT.ADD.FORM.TYPE.LABEL') }}
-            <select v-model="attributeType">
-              <option v-for="type in types" :key="type.id" :value="type.id">
-                {{ type.option }}
-              </option>
-            </select>
+            <ChoiceSelect
+              v-model="attributeType"
+              :options="typeChoices"
+              :aria-label="$t('ATTRIBUTES_MGMT.ADD.FORM.TYPE.LABEL')"
+              :invalid="v$.attributeType.$error"
+              class="w-full"
+              :class="v$.attributeType.$error ? 'mb-1' : 'mb-4'"
+            />
             <span v-if="v$.attributeType.$error" class="message">
               {{ $t('ATTRIBUTES_MGMT.ADD.FORM.TYPE.ERROR') }}
             </span>
