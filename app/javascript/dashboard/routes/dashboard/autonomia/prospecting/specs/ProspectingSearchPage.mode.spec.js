@@ -255,6 +255,57 @@ describe('Busca · grade de jogadas', () => {
   });
 });
 
+// Como no Orth (FiltersDrawerV2): o cabeçalho diz a jogada base e o modo.
+describe('Busca · base da gaveta de filtros', () => {
+  const filtersBase = wrapper => wrapper.find('[data-test="filters-base"]');
+  const MODE_GBP = 'PROSPECTING.SEARCH.SCORE_MODES.GBP';
+  const MODE_GENERAL = 'PROSPECTING.SEARCH.SCORE_MODES.GENERAL';
+
+  it('na nova busca mostra a jogada escolhida e o modo do formulário', async () => {
+    const wrapper = await openForm();
+    await choose(wrapper, SCORE_MODE, 'gbp');
+    await choosePreset(wrapper, 'GESTAO_REVIEWS');
+
+    await openFormFilters(wrapper);
+
+    expect(filtersBase(wrapper).text()).toContain(
+      'PROSPECTING.SEARCH.FILTER_DRAWER.BASE_PRESET'
+    );
+    expect(filtersBase(wrapper).text()).toContain(PRESET('GESTAO_REVIEWS'));
+    expect(filtersBase(wrapper).text()).toContain(MODE_GBP);
+  });
+
+  it('na nova busca sem jogada mostra Sem jogada e o modo', async () => {
+    const wrapper = await openForm();
+
+    await openFormFilters(wrapper);
+
+    expect(filtersBase(wrapper).text()).toContain(NO_PRESET);
+    expect(filtersBase(wrapper).text()).toContain(MODE_GENERAL);
+  });
+
+  it('no refino da busca aberta mostra a jogada e o modo daquela busca', async () => {
+    const wrapper = await mountSearchPage({
+      payloads: {
+        ...defaultPayloads(),
+        11: {
+          ...defaultPayloads()[11],
+          search: bakerySearch({
+            score_mode: 'gbp',
+            preset_id: 'vender-site',
+            advanced_filters: { has_website: 'no' },
+          }),
+        },
+      },
+    });
+
+    await openResultFilters(wrapper);
+
+    expect(filtersBase(wrapper).text()).toContain(PRESET('VENDER_SITE'));
+    expect(filtersBase(wrapper).text()).toContain(MODE_GBP);
+  });
+});
+
 describe('Busca · jogada no histórico e ao reabrir', () => {
   const presetPayloads = () => ({
     ...defaultPayloads(),

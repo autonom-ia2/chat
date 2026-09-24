@@ -249,6 +249,8 @@
       },
       "FILTER_DRAWER": {
         "TITLE": "Filtros avançados",
+        "BASE_PRESET": "Jogada base:",
+        "BASE_MODE": "Modo:",
         "OPEN": "Filtros avançados",
         "CLOSE": "Fechar filtros",
         "APPLY": "Aplicar",

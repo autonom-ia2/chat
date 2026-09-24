@@ -4,12 +4,14 @@
 // aplicar descarta o rascunho. O refino da busca aberta é outro estado.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import FiltersBaseLine from './filters/FiltersBaseLine.vue';
 import LeadFiltersPanel from './filters/LeadFiltersPanel.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import {
   activeAdvancedLeadFiltersCount,
   reachableRankLimit,
 } from '../../utils/advancedLeadFilters';
+import { findPreset } from '../../utils/searchPresets';
 
 const { t } = useI18n();
 const { formFilters, form, settings } = useProspectingSearchContext();
@@ -18,6 +20,7 @@ const isOpen = ref(false);
 const activeCount = computed(() =>
   activeAdvancedLeadFiltersCount(formFilters.value)
 );
+const formPreset = computed(() => findPreset(form.value.preset_id));
 // A faixa de posição não começa depois do que o Google devolve nesta busca.
 const rankReach = computed(() =>
   reachableRankLimit({
@@ -69,9 +72,15 @@ const applyFilters = next => {
         <header
           class="flex items-center justify-between gap-3 border-b border-n-weak px-5 py-4"
         >
-          <h2 class="text-base font-semibold text-n-slate-12">
-            {{ t('PROSPECTING.SEARCH.FILTER_DRAWER.TITLE') }}
-          </h2>
+          <div class="grid gap-1">
+            <h2 class="text-base font-semibold text-n-slate-12">
+              {{ t('PROSPECTING.SEARCH.FILTER_DRAWER.TITLE') }}
+            </h2>
+            <FiltersBaseLine
+              :preset="formPreset"
+              :score-mode="form.score_mode"
+            />
+          </div>
           <button
             type="button"
             class="flex size-11 items-center justify-center rounded-md text-n-slate-11 hover:bg-n-solid-2"

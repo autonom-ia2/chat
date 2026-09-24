@@ -5,11 +5,18 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import FiltersBaseLine from './filters/FiltersBaseLine.vue';
 import LeadFiltersPanel from './filters/LeadFiltersPanel.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 
 const { t } = useI18n();
-const { sortKey, resultFilters, showFilters } = useProspectingSearchContext();
+const {
+  sortKey,
+  resultFilters,
+  showFilters,
+  openSearchPreset,
+  currentScoreMode,
+} = useProspectingSearchContext();
 
 const sortChoices = computed(() => [
   { value: 'priority_desc', label: t('PROSPECTING.SEARCH.SORT.PRIORITY_DESC') },
@@ -42,6 +49,10 @@ const applyFilters = next => {
         :aria-label="t('PROSPECTING.SEARCH.FIELDS.SORT')"
       />
     </label>
+    <FiltersBaseLine
+      :preset="openSearchPreset"
+      :score-mode="currentScoreMode"
+    />
     <LeadFiltersPanel :filters="resultFilters" @apply="applyFilters" />
   </div>
 </template>
