@@ -117,6 +117,50 @@ RSpec.describe 'Autonomia prospecting settings API', type: :request do
     end
   end
 
+  # País da busca por conta (#677, E1 frente C): Brasil por padrão, lista de países do Orth.
+  describe 'search_country' do
+    it 'devolve Brasil e a lista de países quando a conta nunca escolheu' do
+      get settings_url, headers: auth_headers(admin)
+
+      payload = response.parsed_body['payload']
+      expect(payload['search_country']).to eq('BR')
+      expect(payload['search_countries']).to eq(Autonomia::Prospecting::SearchCountry::ALLOWED)
+    end
+
+    it 'aceita o país no PUT, com a mesma permissão dos outros campos' do
+      patch settings_url, params: { settings: { search_country: 'pt' } }, headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.dig('payload', 'search_country')).to eq('PT')
+      expect(Autonomia::Prospecting::Setting.for_account(account).search_country).to eq('PT')
+    end
+
+    it 'recusa país fora da lista com mensagem em português' do
+      patch settings_url, params: { settings: { search_country: 'ZZ' } }, headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('Escolha um país da lista.')
+      expect(Autonomia::Prospecting::Setting.for_account(account).search_country).to eq('BR')
+    end
+
+    it 'mantém o país quando o PUT não fala dele' do
+      Autonomia::Prospecting::Setting.for_account(account).update!(search_country: 'MX')
+
+      patch settings_url, params: { settings: { cache_ttl_seconds: 600 } }, headers: auth_headers(admin)
+
+      expect(response.parsed_body.dig('payload', 'search_country')).to eq('MX')
+    end
+
+    it 'não deixa agente sem permissão trocar o país' do
+      agent = create(:user, account: account, role: :agent)
+
+      patch settings_url, params: { settings: { search_country: 'PT' } }, headers: auth_headers(agent)
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(Autonomia::Prospecting::Setting.for_account(account).search_country).to eq('BR')
+    end
+  end
+
   def auth_headers(user)
     { 'api_access_token' => user.access_token.token }
   end
