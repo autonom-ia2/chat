@@ -9,12 +9,13 @@ const options = [
 
 let wrapper;
 
-const mountSelect = (modelValue = 'pt_BR') =>
+const mountSelect = (modelValue = 'pt_BR', extra = {}) =>
   mount(ChoiceSelect, {
     props: {
       options,
       modelValue,
       ariaLabel: 'Idioma preferido',
+      ...extra,
       'onUpdate:modelValue': value => wrapper.setProps({ modelValue: value }),
     },
     attachTo: document.body,
@@ -76,5 +77,102 @@ describe('ChoiceSelect', () => {
     const trigger = wrapper.get('[role="combobox"]');
     await trigger.trigger('keydown', { key: 'e' });
     expect(trigger.attributes('aria-activedescendant')).toMatch(/option-2$/);
+  });
+
+  it('emite change com o valor novo depois de atualizar o modelo', async () => {
+    wrapper = mountSelect();
+    await wrapper.get('[role="combobox"]').trigger('click');
+    await wrapper.findAll('[role="option"]')[2].trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toEqual([['es']]);
+    expect(wrapper.emitted('change')).toEqual([['es']]);
+  });
+
+  it('não escolhe opção desabilitada e a anuncia como desabilitada', async () => {
+    wrapper = mountSelect('pt_BR', {
+      options: [
+        { value: 'a', label: 'Alfa' },
+        { value: 'b', label: 'Beta', disabled: true },
+        { value: 'c', label: 'Gama' },
+      ],
+      modelValue: 'a',
+    });
+    const trigger = wrapper.get('[role="combobox"]');
+    await trigger.trigger('click');
+    const optionEls = wrapper.findAll('[role="option"]');
+    expect(optionEls[1].attributes('aria-disabled')).toBe('true');
+    await optionEls[1].trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+
+    await trigger.trigger('keydown', { key: 'ArrowDown' });
+    expect(trigger.attributes('aria-activedescendant')).toMatch(/option-2$/);
+  });
+
+  it('aceita valor numérico, null e booleano como o select nativo', async () => {
+    wrapper = mountSelect(null, {
+      options: [
+        { value: null, label: 'Ninguém' },
+        { value: 7, label: 'Ana' },
+      ],
+    });
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(trigger.text()).toBe('Ninguém');
+    await trigger.trigger('click');
+    await wrapper.findAll('[role="option"]')[1].trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toEqual([[7]]);
+
+    await wrapper.setProps({ modelValue: '7' });
+    expect(trigger.text()).toBe('Ana');
+
+    await wrapper.setProps({
+      options: [
+        { value: true, label: 'Ligado' },
+        { value: false, label: 'Desligado' },
+      ],
+      modelValue: false,
+    });
+    expect(trigger.text()).toBe('Desligado');
+  });
+
+  it('mostra o placeholder quando nenhuma opção corresponde', () => {
+    wrapper = mountSelect('', {
+      options: [{ value: 'x', label: 'Xis' }],
+      placeholder: 'Escolha',
+    });
+    expect(wrapper.get('[role="combobox"]').text()).toBe('Escolha');
+  });
+
+  it('agrupa as opções com rótulo de grupo acessível', async () => {
+    wrapper = mountSelect('09:00', {
+      options: [],
+      groups: [
+        { label: 'Manhã', options: [{ value: '09:00', label: '09:00' }] },
+        { label: 'Tarde', options: [{ value: '14:00', label: '14:00' }] },
+      ],
+    });
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(trigger.text()).toBe('09:00');
+    const groupEls = wrapper.findAll('[role="group"]');
+    expect(groupEls).toHaveLength(2);
+    const labelId = groupEls[1].attributes('aria-labelledby');
+    expect(wrapper.get(`[id="${labelId}"]`).text()).toBe('Tarde');
+
+    await trigger.trigger('keydown', { key: 'ArrowDown' });
+    await trigger.trigger('keydown', { key: 'ArrowDown' });
+    await trigger.trigger('keydown', { key: 'Enter' });
+    expect(wrapper.emitted('update:modelValue')).toEqual([['14:00']]);
+  });
+
+  it('marca inválido e desabilitado para leitor de tela', () => {
+    wrapper = mountSelect('pt_BR', { invalid: true, disabled: true });
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(trigger.attributes('aria-invalid')).toBe('true');
+    expect(trigger.attributes('disabled')).toBeDefined();
+  });
+
+  it('versão compacta mantém área de toque de 44 px', () => {
+    wrapper = mountSelect('pt_BR', { compact: true });
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(trigger.classes()).toContain('min-h-8');
+    expect(trigger.classes()).toContain('before:-inset-y-1.5');
   });
 });
