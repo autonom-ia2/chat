@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaAgentsAPI from 'dashboard/api/autonomia/agents';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
   agentId: {
@@ -12,6 +13,15 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+
+// Valores técnicos da chamada HTTP e do schema: o rótulo é o próprio valor.
+const HTTP_METHOD_CHOICES = ['GET', 'POST'].map(value => ({
+  value,
+  label: value,
+}));
+const PARAM_TYPE_CHOICES = ['string', 'number', 'integer', 'boolean'].map(
+  value => ({ value, label: value })
+);
 
 const tools = ref([]);
 const isLoading = ref(false);
@@ -145,7 +155,11 @@ const saveTool = async () => {
   isSaving.value = true;
   try {
     if (isEditing.value) {
-      await AutonomiaAgentsAPI.updateTool(props.agentId, editingId.value, payload());
+      await AutonomiaAgentsAPI.updateTool(
+        props.agentId,
+        editingId.value,
+        payload()
+      );
     } else {
       await AutonomiaAgentsAPI.createTool(props.agentId, payload());
     }
@@ -160,6 +174,9 @@ const saveTool = async () => {
 };
 
 const deleteTool = async tool => {
+  // Confirmação simples que já existia; trocar por diálogo do design system
+  // fica fora do #652 (que só troca os <select> nativos).
+  // eslint-disable-next-line no-alert
   if (!window.confirm(t('AGENTS.TOOLS.DELETE_CONFIRM'))) return;
   await AutonomiaAgentsAPI.deleteTool(props.agentId, tool.id);
   useAlert(t('AGENTS.TOOLS.DELETE_SUCCESS'));
@@ -262,7 +279,12 @@ onMounted(loadTools);
                 </span>
               </div>
               <p class="mt-1 text-xs text-n-slate-10">
-                {{ tool.slug }} · {{ tool.http_method }}
+                {{
+                  t('AGENTS.TOOLS.SLUG_METHOD', {
+                    slug: tool.slug,
+                    method: tool.http_method,
+                  })
+                }}
               </p>
               <p class="mt-2 text-sm text-n-slate-11">
                 {{ tool.description }}
@@ -293,10 +315,9 @@ onMounted(loadTools);
             </div>
           </div>
         </article>
-        <pre
-          v-if="testResult"
-          class="p-3 overflow-auto text-xs border rounded-lg max-h-52 border-n-weak bg-n-alpha-1 text-n-slate-11"
-        >{{ testResult }}</pre>
+        <!-- <pre> preserva espaços; formatado, o fechamento quebraria o lint -->
+        <!-- prettier-ignore -->
+        <pre v-if="testResult" class="p-3 overflow-auto text-xs border rounded-lg max-h-52 border-n-weak bg-n-alpha-1 text-n-slate-11">{{ testResult }}</pre>
       </div>
     </div>
 
@@ -366,16 +387,18 @@ onMounted(loadTools);
               required
             />
           </label>
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-[120px_minmax(0,1fr)]">
+          <div
+            class="grid grid-cols-1 gap-3 sm:grid-cols-[160px_minmax(0,1fr)]"
+          >
             <label class="block min-w-0 space-y-1 text-sm">
-              <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.METHOD') }}</span>
-              <select
+              <span class="text-n-slate-11">{{
+                t('AGENTS.TOOLS.METHOD')
+              }}</span>
+              <ChoiceSelect
                 v-model="form.http_method"
-                class="w-full min-h-10 px-3 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-              >
-                <option>GET</option>
-                <option>POST</option>
-              </select>
+                :options="HTTP_METHOD_CHOICES"
+                :aria-label="t('AGENTS.TOOLS.METHOD')"
+              />
             </label>
             <label class="block min-w-0 space-y-1 text-sm">
               <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.URL') }}</span>
@@ -416,12 +439,12 @@ onMounted(loadTools);
               <input
                 v-model="header.key"
                 class="min-w-0 min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-                placeholder="x-api-key"
+                :placeholder="t('AGENTS.TOOLS.HEADER_KEY_PLACEHOLDER')"
               />
               <input
                 v-model="header.value"
                 class="min-w-0 min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-                placeholder="valor"
+                :placeholder="t('AGENTS.TOOLS.HEADER_VALUE_PLACEHOLDER')"
               />
               <label
                 class="inline-flex items-center min-h-9 gap-1 text-xs text-n-slate-11"
@@ -460,17 +483,14 @@ onMounted(loadTools);
               <input
                 v-model="param.name"
                 class="min-w-0 min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-                placeholder="q"
+                :placeholder="t('AGENTS.TOOLS.PARAM_NAME_PLACEHOLDER')"
               />
-              <select
+              <ChoiceSelect
                 v-model="param.type"
-                class="min-w-0 min-h-9 px-2 text-sm border rounded-lg outline-none border-n-weak bg-n-solid-1 text-n-slate-12 focus:border-n-brand"
-              >
-                <option>string</option>
-                <option>number</option>
-                <option>integer</option>
-                <option>boolean</option>
-              </select>
+                :options="PARAM_TYPE_CHOICES"
+                compact
+                :aria-label="t('AGENTS.TOOLS.PARAM_TYPE')"
+              />
               <label
                 class="inline-flex items-center min-h-9 gap-1 text-xs text-n-slate-11"
               >

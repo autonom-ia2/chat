@@ -240,6 +240,10 @@
       "SECRET": "secret",
       "REQUIRED": "required",
       "PARAM_DESCRIPTION": "Description for the AI",
+      "PARAM_TYPE": "Parameter type",
+      "PARAM_NAME_PLACEHOLDER": "q",
+      "HEADER_KEY_PLACEHOLDER": "x-api-key",
+      "HEADER_VALUE_PLACEHOLDER": "value",
       "ACTIVE": "Tool enabled",
       "ADD": "Add",
       "CANCEL": "Cancel",
@@ -247,6 +251,7 @@
       "SAVE_SUCCESS": "Tool saved.",
       "SAVE_ERROR": "We couldn't save this tool.",
       "DELETE_CONFIRM": "Remove this tool?",
+      "SLUG_METHOD": "{slug} · {method}",
       "DELETE_SUCCESS": "Tool removed.",
       "TEST_SUCCESS": "Tool executed.",
       "TEST_ERROR": "We couldn't execute this tool."

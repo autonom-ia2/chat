@@ -321,6 +321,7 @@
       "CRM_EMPTY": "Nenhum funil padrão",
       "CRM_STAGE_EMPTY": "Nenhuma etapa padrão",
       "USAGE_DAILY": "Consumo diário",
+      "USAGE_OF": "{used} / {limit}",
       "USAGE_MONTHLY": "Consumo mensal",
       "UNLIMITED": "sem limite",
       "TABS": {

@@ -7,6 +7,7 @@ import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CampaignsAPI from 'dashboard/api/campaigns';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
 import {
   activeAdvancedLeadFiltersCount,
@@ -130,6 +131,18 @@ const availableCampaigns = computed(() =>
       campaign.campaign_status === 'active'
   )
 );
+const campaignChoices = computed(() => [
+  { value: '', label: t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_ONLY_LABEL') },
+  ...availableCampaigns.value.map(campaign => ({
+    value: campaign.id,
+    label: campaign.title,
+  })),
+]);
+const yesNoAnyChoices = computed(() => [
+  { value: '', label: t('PROSPECTING.SEARCH.FILTERS.ANY') },
+  { value: 'yes', label: t('PROSPECTING.SEARCH.FILTERS.YES') },
+  { value: 'no', label: t('PROSPECTING.SEARCH.FILTERS.NO') },
+]);
 const currentCampaignSegment = computed(
   () => selectedList.value?.campaign_segment || null
 );
@@ -746,39 +759,23 @@ onMounted(loadPage);
                       <span class="text-xs font-medium text-n-slate-11">
                         {{ t('PROSPECTING.SEARCH.FIELDS.HAS_SITE') }}
                       </span>
-                      <select
+                      <ChoiceSelect
                         v-model="listAdvancedFilters.has_website"
-                        class="h-9 rounded-md border border-n-weak bg-n-solid-2 px-2 text-sm text-n-slate-12"
-                      >
-                        <option value="">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
-                        </option>
-                        <option value="yes">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
-                        </option>
-                        <option value="no">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
-                        </option>
-                      </select>
+                        compact
+                        :options="yesNoAnyChoices"
+                        :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_SITE')"
+                      />
                     </label>
                     <label class="grid gap-1">
                       <span class="text-xs font-medium text-n-slate-11">
                         {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE') }}
                       </span>
-                      <select
+                      <ChoiceSelect
                         v-model="listAdvancedFilters.has_phone"
-                        class="h-9 rounded-md border border-n-weak bg-n-solid-2 px-2 text-sm text-n-slate-12"
-                      >
-                        <option value="">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
-                        </option>
-                        <option value="yes">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
-                        </option>
-                        <option value="no">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
-                        </option>
-                      </select>
+                        compact
+                        :options="yesNoAnyChoices"
+                        :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE')"
+                      />
                     </label>
                   </div>
                   <div class="grid gap-2 sm:grid-cols-2">
@@ -786,39 +783,23 @@ onMounted(loadPage);
                       <span class="text-xs font-medium text-n-slate-11">
                         {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS') }}
                       </span>
-                      <select
+                      <ChoiceSelect
                         v-model="listAdvancedFilters.has_photos"
-                        class="h-9 rounded-md border border-n-weak bg-n-solid-2 px-2 text-sm text-n-slate-12"
-                      >
-                        <option value="">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
-                        </option>
-                        <option value="yes">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
-                        </option>
-                        <option value="no">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
-                        </option>
-                      </select>
+                        compact
+                        :options="yesNoAnyChoices"
+                        :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS')"
+                      />
                     </label>
                     <label class="grid gap-1">
                       <span class="text-xs font-medium text-n-slate-11">
                         {{ t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW') }}
                       </span>
-                      <select
+                      <ChoiceSelect
                         v-model="listAdvancedFilters.open_now"
-                        class="h-9 rounded-md border border-n-weak bg-n-solid-2 px-2 text-sm text-n-slate-12"
-                      >
-                        <option value="">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
-                        </option>
-                        <option value="yes">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
-                        </option>
-                        <option value="no">
-                          {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
-                        </option>
-                      </select>
+                        compact
+                        :options="yesNoAnyChoices"
+                        :aria-label="t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW')"
+                      />
                     </label>
                   </div>
                   <div class="grid gap-2 sm:grid-cols-2">
@@ -1352,39 +1333,23 @@ onMounted(loadPage);
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('PROSPECTING.SEARCH.FIELDS.HAS_SITE') }}
                   </span>
-                  <select
+                  <ChoiceSelect
                     v-model="addLeadAdvancedFilters.has_website"
-                    class="h-9 rounded-md border border-n-weak bg-n-solid-2 px-2 text-sm text-n-slate-12"
-                  >
-                    <option value="">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
-                    </option>
-                    <option value="yes">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
-                    </option>
-                    <option value="no">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
-                    </option>
-                  </select>
+                    compact
+                    :options="yesNoAnyChoices"
+                    :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_SITE')"
+                  />
                 </label>
                 <label class="grid gap-1">
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE') }}
                   </span>
-                  <select
+                  <ChoiceSelect
                     v-model="addLeadAdvancedFilters.has_phone"
-                    class="h-9 rounded-md border border-n-weak bg-n-solid-2 px-2 text-sm text-n-slate-12"
-                  >
-                    <option value="">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
-                    </option>
-                    <option value="yes">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
-                    </option>
-                    <option value="no">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
-                    </option>
-                  </select>
+                    compact
+                    :options="yesNoAnyChoices"
+                    :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE')"
+                  />
                 </label>
               </div>
               <div class="grid gap-2 sm:grid-cols-2">
@@ -1392,39 +1357,23 @@ onMounted(loadPage);
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS') }}
                   </span>
-                  <select
+                  <ChoiceSelect
                     v-model="addLeadAdvancedFilters.has_photos"
-                    class="h-9 rounded-md border border-n-weak bg-n-solid-2 px-2 text-sm text-n-slate-12"
-                  >
-                    <option value="">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
-                    </option>
-                    <option value="yes">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
-                    </option>
-                    <option value="no">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
-                    </option>
-                  </select>
+                    compact
+                    :options="yesNoAnyChoices"
+                    :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS')"
+                  />
                 </label>
                 <label class="grid gap-1">
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW') }}
                   </span>
-                  <select
+                  <ChoiceSelect
                     v-model="addLeadAdvancedFilters.open_now"
-                    class="h-9 rounded-md border border-n-weak bg-n-solid-2 px-2 text-sm text-n-slate-12"
-                  >
-                    <option value="">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.ANY') }}
-                    </option>
-                    <option value="yes">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.YES') }}
-                    </option>
-                    <option value="no">
-                      {{ t('PROSPECTING.SEARCH.FILTERS.NO') }}
-                    </option>
-                  </select>
+                    compact
+                    :options="yesNoAnyChoices"
+                    :aria-label="t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW')"
+                  />
                 </label>
               </div>
               <div class="grid gap-2 sm:grid-cols-2">
@@ -1714,30 +1663,16 @@ onMounted(loadPage);
               :placeholder="selectedList?.name"
             />
           </div>
-          <div class="grid content-start gap-1">
-            <label
-              for="prospecting-campaign-id"
-              class="text-xs font-medium text-n-slate-11"
-            >
+          <label class="grid content-start gap-1">
+            <span class="text-xs font-medium text-n-slate-11">
               {{ t('PROSPECTING.LISTS.FIELDS.CAMPAIGN') }}
-            </label>
-            <select
-              id="prospecting-campaign-id"
+            </span>
+            <ChoiceSelect
               v-model="campaignSegmentForm.campaign_id"
-              class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-2 text-sm text-n-slate-12"
-            >
-              <option value="">
-                {{ t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_ONLY_LABEL') }}
-              </option>
-              <option
-                v-for="campaign in availableCampaigns"
-                :key="campaign.id"
-                :value="campaign.id"
-              >
-                {{ campaign.title }}
-              </option>
-            </select>
-          </div>
+              :options="campaignChoices"
+              :aria-label="t('PROSPECTING.LISTS.FIELDS.CAMPAIGN')"
+            />
+          </label>
         </div>
         <p class="text-xs text-n-slate-10">
           {{ t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_HINT') }}

@@ -240,6 +240,10 @@
       "SECRET": "segredo",
       "REQUIRED": "obrigatório",
       "PARAM_DESCRIPTION": "Descrição para a IA",
+      "PARAM_TYPE": "Tipo do parâmetro",
+      "PARAM_NAME_PLACEHOLDER": "q",
+      "HEADER_KEY_PLACEHOLDER": "x-api-key",
+      "HEADER_VALUE_PLACEHOLDER": "valor",
       "ACTIVE": "Ferramenta ativa",
       "ADD": "Adicionar",
       "CANCEL": "Cancelar",
@@ -247,6 +251,7 @@
       "SAVE_SUCCESS": "Ferramenta salva.",
       "SAVE_ERROR": "Não foi possível salvar a ferramenta.",
       "DELETE_CONFIRM": "Remover esta ferramenta?",
+      "SLUG_METHOD": "{slug} · {method}",
       "DELETE_SUCCESS": "Ferramenta removida.",
       "TEST_SUCCESS": "Ferramenta executada.",
       "TEST_ERROR": "Não foi possível executar a ferramenta."
