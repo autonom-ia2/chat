@@ -1099,7 +1099,7 @@
         "SEARCH_PLACEHOLDER": "Pesquisar..."
       },
       "SYNC_STATUS": {
-        "SYNCED": "última atualização em {time}",
+        "SYNCED": "última atualização {time}",
         "SYNCING": "atualizando...",
         "STALE_SYNC": "atualização travada",
         "FAILED": "Falha ao sincronizar",

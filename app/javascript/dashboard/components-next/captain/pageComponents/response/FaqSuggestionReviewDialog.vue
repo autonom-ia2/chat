@@ -28,7 +28,7 @@ const exactTimestamp = useExactTimestamp();
 
 const TOOLTIP_CONTAINER = 'dialog[open]';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const store = useStore();
 const dialogRef = ref(null);
@@ -294,7 +294,7 @@ defineExpose({ dialogRef });
               }"
               class="text-xs text-n-slate-10"
             >
-              {{ dynamicTime(observation.created_at) }}
+              {{ dynamicTime(observation.created_at, locale) }}
             </span>
           </button>
         </div>

@@ -8,6 +8,7 @@ import {
   formatDistanceToNow,
   differenceInDays,
 } from 'date-fns';
+import { dateFnsLocaleFor } from './dateFnsLocale';
 
 /**
  * Formats a Unix timestamp into a human-readable time format.
@@ -54,24 +55,33 @@ export const relativeDayTimestamp = (time, yesterdayLabel) => {
 
 /**
  * Converts a Unix timestamp to a relative time string (e.g., 3 hours ago).
+ * Without a locale the text stays in English, which is what shortTimestamp parses.
  * @param {number} time - Unix timestamp.
+ * @param {string} [locale] - User locale code (e.g. 'pt_BR').
  * @returns {string} Relative time string.
  */
-export const dynamicTime = time => {
+export const dynamicTime = (time, locale) => {
   const unixTime = fromUnixTime(time);
-  return formatDistanceToNow(unixTime, { addSuffix: true });
+  return formatDistanceToNow(unixTime, {
+    addSuffix: true,
+    locale: dateFnsLocaleFor(locale),
+  });
 };
 
 /**
  * Formats an ISO 8601 timestamp into a relative, human-readable distance from now.
  * @param {string} isoTime - ISO 8601 timestamp (e.g. '2026-06-09T12:00:00Z').
+ * @param {string} [locale] - User locale code (e.g. 'pt_BR').
  * @returns {string} Relative time string (e.g. 'about 2 hours ago'), or '' when invalid.
  */
-export const relativeTimeFromISO = isoTime => {
+export const relativeTimeFromISO = (isoTime, locale) => {
   if (!isoTime) return '';
   const date = new Date(isoTime);
   if (Number.isNaN(date.getTime())) return '';
-  return formatDistanceToNow(date, { addSuffix: true });
+  return formatDistanceToNow(date, {
+    addSuffix: true,
+    locale: dateFnsLocaleFor(locale),
+  });
 };
 
 /**

@@ -24,7 +24,7 @@ const emit = defineEmits(['goToContactsList']);
 
 const exactTimestamp = useExactTimestamp();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const store = useStore();
 
 const confirmDeleteContactDialogRef = ref(null);
@@ -52,13 +52,13 @@ onMounted(() => {
 
 const createdAt = computed(() => {
   return contactData.value?.createdAt
-    ? dynamicTime(contactData.value.createdAt)
+    ? dynamicTime(contactData.value.createdAt, locale.value)
     : '';
 });
 
 const lastActivityAt = computed(() => {
   return contactData.value?.lastActivityAt
-    ? dynamicTime(contactData.value.lastActivityAt)
+    ? dynamicTime(contactData.value.lastActivityAt, locale.value)
     : '';
 });
 

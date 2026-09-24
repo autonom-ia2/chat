@@ -35,7 +35,7 @@ const exactTimestamp = useExactTimestamp();
 
 const { checkPermissions } = usePolicy();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const [showActionsDropdown, toggleDropdown] = useToggle();
 
@@ -69,7 +69,9 @@ const menuItems = computed(() => {
   return allOptions;
 });
 
-const lastUpdatedAt = computed(() => dynamicTime(props.updatedAt));
+const lastUpdatedAt = computed(() =>
+  dynamicTime(props.updatedAt, locale.value)
+);
 
 const handleAction = ({ action, value }) => {
   toggleDropdown(false);
