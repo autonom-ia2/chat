@@ -6,6 +6,7 @@ import DatePicker from 'vue-datepicker-next';
 import Button from 'dashboard/components-next/button/Button.vue';
 import TabBar from 'dashboard/components-next/tabbar/TabBar.vue';
 import Popover from 'dashboard/components-next/popover/Popover.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmCalendarCallbackToggle from './CrmCalendarCallbackToggle.vue';
 import { periodTitle } from './calendarEvents.js';
 
@@ -169,17 +170,15 @@ const onMiniDatePick = value => {
     <div class="flex flex-wrap items-center justify-between gap-3">
       <!-- Left: funil + today + chevrons + title -->
       <div class="flex items-center gap-2">
-        <select
+        <!-- String(v): o select nativo emitia o value do DOM, sempre texto. -->
+        <ChoiceSelect
           v-if="pipelines.length"
-          class="reset-base !mb-0 h-9 w-44 shrink-0 truncate rounded-lg border-0 bg-n-alpha-black2 px-2.5 text-sm font-medium text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-          :value="pipelineId"
+          :model-value="pipelineId"
+          :options="pipelines"
           :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
-          @change="emit('update:pipelineId', $event.target.value)"
-        >
-          <option v-for="p in pipelines" :key="p.value" :value="p.value">
-            {{ p.label }}
-          </option>
-        </select>
+          class="w-44 shrink-0"
+          @change="v => emit('update:pipelineId', String(v))"
+        />
         <Button
           variant="outline"
           color="slate"
