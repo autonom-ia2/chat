@@ -3012,8 +3012,8 @@
      "fontes": [
       "porques: Gerenciar atributos customizados"
      ],
-     "revisar": false,
-     "nota": "A aba 'Contato' era coberta no estudo; a aba 'Conversas' da mesma tela, não."
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/settings/attributes/EditAttribute.vue:203"
     }
    ]
   },
