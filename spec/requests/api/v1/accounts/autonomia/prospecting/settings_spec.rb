@@ -81,6 +81,23 @@ RSpec.describe 'Autonomia prospecting settings API', type: :request do
     expect(payload['ai_credential_configured']).to be(false)
   end
 
+  # Conta cuja linha nasceu em mock antes da E0 recebe lead fictício mesmo com a chave da plataforma pronta. A tela
+  # precisa saber disso para não mostrar o selo de chaves prontas (#683).
+  it 'reports the mock provider read-only, so the screen does not claim the platform keys are in use' do
+    InstallationConfig.create!(name: 'GOOGLE_PLACES_API_KEY', value: 'chave-de-servidor')
+    Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'mock')
+
+    get settings_url, headers: auth_headers(admin)
+    mock_payload = response.parsed_body['payload']
+    Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'google_places')
+    get settings_url, headers: auth_headers(admin)
+    google_payload = response.parsed_body['payload']
+
+    expect(mock_payload.slice('platform_google_places_configured', 'mock_provider'))
+      .to eq('platform_google_places_configured' => true, 'mock_provider' => true)
+    expect(google_payload['mock_provider']).to be(false)
+  end
+
   def auth_headers(user)
     { 'api_access_token' => user.access_token.token }
   end

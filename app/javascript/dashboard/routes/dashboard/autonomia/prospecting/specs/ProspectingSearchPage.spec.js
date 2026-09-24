@@ -99,6 +99,20 @@ describe('ProspectingSearchPage', () => {
     );
   });
 
+  it('avisa na busca que a conta está no provider fictício', async () => {
+    const comMock = await montar({
+      ai_credential_configured: true,
+      mock_provider: true,
+    });
+    const semMock = await montar({
+      ai_credential_configured: true,
+      mock_provider: false,
+    });
+
+    expect(comMock.text()).toContain('PROSPECTING.MOCK_PROVIDER.TITLE');
+    expect(semMock.text()).not.toContain('PROSPECTING.MOCK_PROVIDER.TITLE');
+  });
+
   it('passa ao mapa a chave de navegador da plataforma', async () => {
     const busca = {
       id: 7,

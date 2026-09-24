@@ -356,11 +356,16 @@
         "KEYS_TITLE": "Chaves do Google",
         "KEYS_READY": "Chaves da plataforma configuradas. A busca usa a chave da Autonomia, sem custo para a conta.",
         "KEYS_MISSING": "As chaves da plataforma ainda não foram configuradas. A busca no Google fica indisponível até o suporte configurar.",
+        "KEYS_MOCK": "Esta conta ainda está no modo de demonstração: a busca não usa o Google.",
         "MAP_KEY_MISSING": "O mapa ainda não está disponível na plataforma. A busca funciona normalmente.",
         "RESEARCH_TITLE": "Pesquisa de empresa e decisor",
         "RESEARCH_ENABLED": "Pesquisa liberada pelo superadmin para esta conta.",
         "RESEARCH_DISABLED": "Pesquisa não liberada para esta conta. Fale com o suporte para contratar."
       }
+    },
+    "MOCK_PROVIDER": {
+      "TITLE": "Modo de demonstração",
+      "DESCRIPTION": "A busca desta conta devolve empresas fictícias, não resultados do Google. Fale com o suporte para ativar a busca real."
     },
     "AI_CREDENTIAL": {
       "MISSING_TITLE": "Sem chave de IA do Kanban CRM",

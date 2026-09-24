@@ -126,6 +126,20 @@ describe('ProspectingSettingsPage', () => {
     });
   });
 
+  it('não afirma chaves prontas quando a conta ainda está no provider fictício', async () => {
+    const wrapper = await montar({
+      platform_google_places_configured: true,
+      mock_provider: true,
+      research_enabled: true,
+      ai_credential_configured: true,
+    });
+
+    const texto = wrapper.text();
+    expect(texto).not.toContain('PROSPECTING.SETTINGS.PLATFORM.KEYS_READY');
+    expect(texto).toContain('PROSPECTING.SETTINGS.PLATFORM.KEYS_MOCK');
+    expect(texto).toContain('PROSPECTING.MOCK_PROVIDER.TITLE');
+  });
+
   it('avisa que o mapa falta quando só a chave de busca está pronta', async () => {
     const wrapper = await montar({
       platform_google_places_configured: true,

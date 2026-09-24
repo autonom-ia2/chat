@@ -46,6 +46,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
       ]
     ).merge(
       platform_google_places_configured: current_setting.google_places_configured?,
+      # Linha que nasceu em mock antes da E0 continua em lead fictício; a tela avisa em vez de mostrar chaves prontas.
+      mock_provider: current_setting.provider == 'mock',
       google_maps_browser_api_key: current_setting.google_maps_browser_api_key,
       research_enabled: ::Autonomia::Prospecting::Config.research_enabled?(Current.account),
       ai_credential_configured: ::Autonomia::Prospecting::AiCredential.new(account: Current.account).configured?,

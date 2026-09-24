@@ -7,6 +7,7 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import BaseSettingsHeader from '../../../settings/components/BaseSettingsHeader.vue';
 import ProspectingAiCredentialNotice from '../components/ProspectingAiCredentialNotice.vue';
+import ProspectingMockProviderNotice from '../components/ProspectingMockProviderNotice.vue';
 
 const { t } = useI18n();
 
@@ -46,6 +47,22 @@ const form = ref({
     google_rank: 5,
     query_relevance: 5,
   },
+});
+
+// Chave pronta só vale quando a conta busca no Google: em mock, a busca devolve
+// empresas inventadas e a tela não pode dizer que usa a chave da plataforma.
+const keysReady = computed(
+  () =>
+    Boolean(settings.value?.platform_google_places_configured) &&
+    !settings.value?.mock_provider
+);
+const keysStatusText = computed(() => {
+  if (settings.value?.mock_provider) {
+    return t('PROSPECTING.SETTINGS.PLATFORM.KEYS_MOCK');
+  }
+  return keysReady.value
+    ? t('PROSPECTING.SETTINGS.PLATFORM.KEYS_READY')
+    : t('PROSPECTING.SETTINGS.PLATFORM.KEYS_MISSING');
 });
 
 const pipelineChoices = computed(() => [
@@ -281,25 +298,17 @@ onMounted(fetchSettings);
               </span>
               <p
                 class="flex items-center gap-2 text-sm"
-                :class="
-                  settings.platform_google_places_configured
-                    ? 'text-n-teal-11'
-                    : 'text-n-amber-11'
-                "
+                :class="keysReady ? 'text-n-teal-11' : 'text-n-amber-11'"
               >
                 <span
                   class="size-4 shrink-0"
                   :class="
-                    settings.platform_google_places_configured
+                    keysReady
                       ? 'i-lucide-circle-check'
                       : 'i-lucide-triangle-alert'
                   "
                 />
-                {{
-                  settings.platform_google_places_configured
-                    ? t('PROSPECTING.SETTINGS.PLATFORM.KEYS_READY')
-                    : t('PROSPECTING.SETTINGS.PLATFORM.KEYS_MISSING')
-                }}
+                {{ keysStatusText }}
               </p>
               <p
                 v-if="
@@ -339,6 +348,8 @@ onMounted(fetchSettings);
               </p>
             </div>
           </div>
+
+          <ProspectingMockProviderNotice v-if="settings.mock_provider" />
 
           <ProspectingAiCredentialNotice
             v-if="!settings.ai_credential_configured"

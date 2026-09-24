@@ -11,6 +11,7 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import ProspectingGoogleMap from '../components/ProspectingGoogleMap.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
 import ProspectingAiCredentialNotice from '../components/ProspectingAiCredentialNotice.vue';
+import ProspectingMockProviderNotice from '../components/ProspectingMockProviderNotice.vue';
 import {
   activeAdvancedLeadFiltersCount,
   defaultAdvancedLeadFilters,
@@ -1068,6 +1069,10 @@ onMounted(async () => {
     <section
       class="flex min-h-0 w-full flex-1 flex-col overflow-hidden px-6 py-5"
     >
+      <ProspectingMockProviderNotice
+        v-if="settings?.mock_provider"
+        class="mb-4"
+      />
       <ProspectingAiCredentialNotice
         v-if="settings?.ai_credential_configured === false"
         class="mb-4"
