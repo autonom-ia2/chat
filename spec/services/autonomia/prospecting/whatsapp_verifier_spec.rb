@@ -91,11 +91,35 @@ RSpec.describe Autonomia::Prospecting::WhatsappVerifier do
     context 'with DDD 55 sem código do país' do
       let(:phone) { '(55) 99988-7766' }
 
-      it 'confunde o DDD com o código do Brasil e consulta um número errado' do
-        # DIVERGE: celular de DDD 55 (RS) sem +55 deve virar +5555999887766.
-        stub_check(phone: '+55999887766', body: { numberExists: false })
+      it 'lê o 55 como DDD (RS) e consulta +5555999887766' do
+        stub_check(phone: '+5555999887766', body: { numberExists: true })
 
-        expect(verify.phone).to eq('+55999887766')
+        result = verify
+
+        expect(result.phone).to eq('+5555999887766')
+        expect(result.chat_id).to eq('5555999887766@c.us')
+      end
+    end
+
+    describe 'tabela compartilhada com o front' do
+      ProspectingPhoneContractCases.all.each do |item|
+        context "with #{item['caso']}" do
+          let(:phone) { item['raw'] }
+
+          before { ProspectingPhoneContractCases.apply_region!(account, item['region']) }
+
+          if item['e164']
+            it "consulta o WAHA com #{item['e164']}" do
+              stub_check(phone: item['e164'], body: { numberExists: false })
+
+              expect(verify.phone).to eq(item['e164'])
+            end
+          else
+            it 'trata como telefone ausente' do
+              expect { verify }.to raise_error(described_class::Error, 'prospecting.whatsapp.phone_missing')
+            end
+          end
+        end
       end
     end
 

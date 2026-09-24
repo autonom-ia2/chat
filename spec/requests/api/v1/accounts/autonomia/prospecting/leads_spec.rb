@@ -85,6 +85,34 @@ RSpec.describe 'Autonomia prospecting leads API', type: :request do
     expect(lead.reload).to be_discarded
   end
 
+  describe 'telefone de WhatsApp no payload pela tabela compartilhada com o front' do
+    def show_lead
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/leads/#{lead.id}", headers: auth_headers(admin)
+      response.parsed_body['payload']
+    end
+
+    ProspectingPhoneContractCases.all.each do |item|
+      it "#{item['caso']}: #{item['raw'].inspect} devolve #{item['e164'].inspect}" do
+        ProspectingPhoneContractCases.apply_region!(account, item['region'])
+        lead.update!(phone: item['raw'])
+
+        payload = show_lead
+
+        expect(payload['whatsapp_phone']).to eq(item['e164'])
+        expect(payload['whatsapp_url']).to be_nil
+      end
+    end
+
+    it 'monta o link do WhatsApp verificado a partir do número gravado na verificação' do
+      lead.update!(phone: '(55) 99988-7766', metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+5555999887766' } })
+
+      payload = show_lead
+
+      expect(payload['whatsapp_verified']).to be(true)
+      expect(payload['whatsapp_url']).to eq('https://wa.me/5555999887766')
+    end
+  end
+
   def auth_headers(user)
     { 'api_access_token' => user.access_token.token }
   end

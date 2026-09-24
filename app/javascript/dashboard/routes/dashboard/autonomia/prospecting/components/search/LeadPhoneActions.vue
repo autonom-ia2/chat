@@ -1,6 +1,7 @@
 <script setup>
 // Frente de telefone: botões de WhatsApp (com a verificação em andamento) e
 // ligar, no rodapé do card do lead.
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import {
@@ -9,13 +10,15 @@ import {
   leadPhoneUrl,
   leadWhatsAppUrl,
 } from '../../utils/leadPhone';
+import { phoneRegionFromSettings } from '../../utils/phoneContract';
 
 defineProps({
   lead: { type: Object, required: true },
 });
 
 const { t } = useI18n();
-const { isWhatsAppChecking } = useProspectingSearchContext();
+const { isWhatsAppChecking, settings } = useProspectingSearchContext();
+const phoneRegion = computed(() => phoneRegionFromSettings(settings.value));
 </script>
 
 <template>
@@ -30,9 +33,11 @@ const { isWhatsAppChecking } = useProspectingSearchContext();
   </span>
   <a
     v-else-if="
-      lead.phone && !isWhatsAppUnavailable(lead) && leadWhatsAppUrl(lead)
+      lead.phone &&
+      !isWhatsAppUnavailable(lead) &&
+      leadWhatsAppUrl(lead, phoneRegion)
     "
-    :href="leadWhatsAppUrl(lead)"
+    :href="leadWhatsAppUrl(lead, phoneRegion)"
     target="_blank"
     rel="noopener noreferrer"
     class="inline-flex h-8 items-center gap-1 rounded-md px-3 text-xs font-semibold transition-colors"
@@ -53,8 +58,8 @@ const { isWhatsAppChecking } = useProspectingSearchContext();
     {{ t('PROSPECTING.SEARCH.NO_WHATSAPP') }}
   </span>
   <a
-    v-if="leadPhoneUrl(lead)"
-    :href="leadPhoneUrl(lead)"
+    v-if="leadPhoneUrl(lead, phoneRegion)"
+    :href="leadPhoneUrl(lead, phoneRegion)"
     class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-3 text-xs font-semibold text-n-slate-12 transition-colors hover:bg-n-solid-2"
   >
     <span class="i-lucide-phone size-3.5" />
