@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import PhoneNumberInput from 'dashboard/components-next/phonenumberinput/PhoneNumberInput.vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
@@ -149,6 +150,22 @@ const priorityOptions = computed(() => [
   { value: 'high', label: t('CRM_KANBAN.PRIORITY.HIGH') },
   { value: 'urgent', label: t('CRM_KANBAN.PRIORITY.URGENT') },
 ]);
+const withEmptyChoice = (label, options) => [{ value: '', label }, ...options];
+const inboxChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.DRAWER.NO_INBOX'), inboxOptions.value)
+);
+const ownerChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.DRAWER.USE_CURRENT_USER'), agentOptions.value)
+);
+const contactChoices = computed(() =>
+  withEmptyChoice(
+    t('CRM_KANBAN.DRAWER.NO_CONTACT'),
+    contactResults.value.map(contact => ({
+      value: contact.id,
+      label: contact.name || contact.phone_number,
+    }))
+  )
+);
 const detailTabs = computed(() => [
   { id: 'summary', label: t('CRM_KANBAN.DRAWER.TAB_SUMMARY') },
   { id: 'contact', label: t('CRM_KANBAN.DRAWER.TAB_CONTACT') },
@@ -221,6 +238,34 @@ const nativeWhatsappTemplateOptions = computed(() =>
     label: `${template.name} (${template.language})`,
   }))
 );
+const whatsappApiTemplateChoices = computed(() =>
+  withEmptyChoice(
+    t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_PLACEHOLDER'),
+    whatsappApiTemplateOptions.value
+  )
+);
+const nativeWhatsappTemplateChoices = computed(() =>
+  withEmptyChoice(
+    t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_PLACEHOLDER'),
+    nativeWhatsappTemplateOptions.value
+  )
+);
+const followUpModeChoices = computed(() => [
+  {
+    value: 'reminder_only',
+    label: t('CRM_KANBAN.FOLLOW_UP_MODE.REMINDER_ONLY'),
+  },
+  {
+    value: 'snooze_conversation',
+    label: t('CRM_KANBAN.FOLLOW_UP_MODE.SNOOZE_CONVERSATION'),
+    disabled: !canSnoozeConversation.value,
+  },
+  {
+    value: 'auto_send_message',
+    label: t('CRM_KANBAN.FOLLOW_UP_MODE.AUTO_SEND_MESSAGE'),
+    disabled: !canAutoSendMessage.value,
+  },
+]);
 const activeFollowUps = computed(() =>
   props.followUps.filter(
     followUp => followUp.status === 'pending' || followUp.status === 'overdue'
@@ -442,7 +487,7 @@ const onContactSelected = () => {
 // re-run resetForm mid-edit, wiping the title/contact/follow-up fields being typed.
 // props.card is kept because the parent only rebinds selectedCard on explicit flows
 // (open, then shallow->detailed hydration) — never from realtime — so it does not
-// churn and its change must still re-hydrate the form. Stage <select> options bind
+// churn and its change must still re-hydrate the form. Stage choice options bind
 // to props.stages directly, so they stay live without a reset.
 watch(
   () => [props.show, props.card],
@@ -1365,22 +1410,13 @@ useFixedPanelPresence(computed(() => props.show));
               <span class="text-heading-3 text-n-slate-12">
                 {{ t('CRM_KANBAN.DRAWER.CONTACT') }}
               </span>
-              <select
+              <ChoiceSelect
                 v-model="form.contactId"
-                class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                :options="contactChoices"
+                :aria-label="t('CRM_KANBAN.DRAWER.CONTACT')"
+                class="w-full"
                 @change="onContactSelected"
-              >
-                <option value="">
-                  {{ t('CRM_KANBAN.DRAWER.NO_CONTACT') }}
-                </option>
-                <option
-                  v-for="contact in contactResults"
-                  :key="contact.id"
-                  :value="contact.id"
-                >
-                  {{ contact.name || contact.phone_number }}
-                </option>
-              </select>
+              />
             </label>
 
             <p
@@ -1395,18 +1431,12 @@ useFixedPanelPresence(computed(() => props.show));
             <span class="text-heading-3 text-n-slate-12">
               {{ t('CRM_KANBAN.DRAWER.STAGE') }}
             </span>
-            <select
+            <ChoiceSelect
               v-model="form.stageId"
-              class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-            >
-              <option
-                v-for="stage in stageOptions"
-                :key="stage.value"
-                :value="stage.value"
-              >
-                {{ stage.label }}
-              </option>
-            </select>
+              :options="stageOptions"
+              :aria-label="t('CRM_KANBAN.DRAWER.STAGE')"
+              class="w-full"
+            />
           </label>
 
           <div class="grid grid-cols-2 gap-3">
@@ -1432,18 +1462,12 @@ useFixedPanelPresence(computed(() => props.show));
               <span class="text-heading-3 text-n-slate-12">
                 {{ t('CRM_KANBAN.DRAWER.PRIORITY') }}
               </span>
-              <select
+              <ChoiceSelect
                 v-model="form.priority"
-                class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-              >
-                <option
-                  v-for="priority in priorityOptions"
-                  :key="priority.value"
-                  :value="priority.value"
-                >
-                  {{ priority.label }}
-                </option>
-              </select>
+                :options="priorityOptions"
+                :aria-label="t('CRM_KANBAN.DRAWER.PRIORITY')"
+                class="w-full"
+              />
             </label>
             <Input
               v-model="form.expectedCloseAt"
@@ -1456,21 +1480,12 @@ useFixedPanelPresence(computed(() => props.show));
             <span class="text-heading-3 text-n-slate-12">
               {{ t('CRM_KANBAN.DRAWER.INBOX') }}
             </span>
-            <select
+            <ChoiceSelect
               v-model="form.inboxId"
-              class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-            >
-              <option value="">
-                {{ t('CRM_KANBAN.DRAWER.NO_INBOX') }}
-              </option>
-              <option
-                v-for="inbox in inboxOptions"
-                :key="inbox.value"
-                :value="inbox.value"
-              >
-                {{ inbox.label }}
-              </option>
-            </select>
+              :options="inboxChoices"
+              :aria-label="t('CRM_KANBAN.DRAWER.INBOX')"
+              class="w-full"
+            />
           </label>
 
           <label
@@ -1480,21 +1495,12 @@ useFixedPanelPresence(computed(() => props.show));
             <span class="text-heading-3 text-n-slate-12">
               {{ t('CRM_KANBAN.DRAWER.OWNER') }}
             </span>
-            <select
+            <ChoiceSelect
               v-model="form.ownerId"
-              class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-            >
-              <option value="">
-                {{ t('CRM_KANBAN.DRAWER.USE_CURRENT_USER') }}
-              </option>
-              <option
-                v-for="agent in agentOptions"
-                :key="agent.value"
-                :value="agent.value"
-              >
-                {{ agent.label }}
-              </option>
-            </select>
+              :options="ownerChoices"
+              :aria-label="t('CRM_KANBAN.DRAWER.OWNER')"
+              class="w-full"
+            />
           </label>
         </div>
 
@@ -1724,26 +1730,12 @@ useFixedPanelPresence(computed(() => props.show));
               <span class="text-heading-3 text-n-slate-12">
                 {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE') }}
               </span>
-              <select
+              <ChoiceSelect
                 v-model="followUpForm.automationMode"
-                class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-              >
-                <option value="reminder_only">
-                  {{ t('CRM_KANBAN.FOLLOW_UP_MODE.REMINDER_ONLY') }}
-                </option>
-                <option
-                  value="snooze_conversation"
-                  :disabled="!canSnoozeConversation"
-                >
-                  {{ t('CRM_KANBAN.FOLLOW_UP_MODE.SNOOZE_CONVERSATION') }}
-                </option>
-                <option
-                  value="auto_send_message"
-                  :disabled="!canAutoSendMessage"
-                >
-                  {{ t('CRM_KANBAN.FOLLOW_UP_MODE.AUTO_SEND_MESSAGE') }}
-                </option>
-              </select>
+                :options="followUpModeChoices"
+                :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE')"
+                class="w-full"
+              />
               <span
                 v-if="!canSnoozeConversation"
                 class="text-xs text-n-slate-10"
@@ -1793,21 +1785,12 @@ useFixedPanelPresence(computed(() => props.show));
                 <span class="text-heading-3 text-n-slate-12">
                   {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="followUpForm.whatsappApiTemplateId"
-                  class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-surface-2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_PLACEHOLDER') }}
-                  </option>
-                  <option
-                    v-for="option in whatsappApiTemplateOptions"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
+                  :options="whatsappApiTemplateChoices"
+                  :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
+                  class="w-full"
+                />
                 <span
                   v-if="isLoadingWhatsappTemplates"
                   class="text-xs text-n-slate-10"
@@ -1823,22 +1806,13 @@ useFixedPanelPresence(computed(() => props.show));
                 <span class="text-heading-3 text-n-slate-12">
                   {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="followUpForm.nativeTemplateKey"
-                  class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-surface-2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                  :options="nativeWhatsappTemplateChoices"
+                  :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
+                  class="w-full"
                   @change="onNativeTemplateSelected"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_PLACEHOLDER') }}
-                  </option>
-                  <option
-                    v-for="option in nativeWhatsappTemplateOptions"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
+                />
                 <span
                   v-if="!nativeWhatsappTemplateOptions.length"
                   class="text-xs text-n-slate-10"

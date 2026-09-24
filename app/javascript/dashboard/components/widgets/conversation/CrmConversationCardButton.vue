@@ -5,6 +5,7 @@ import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 
 const props = defineProps({
@@ -167,37 +168,25 @@ watch(pipelineId, newPipelineId => {
           <span class="text-xs font-medium text-n-slate-11">
             {{ t('CRM_KANBAN.CONVERSATION.PIPELINE') }}
           </span>
-          <select
+          <ChoiceSelect
             v-model="pipelineId"
-            class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-          >
-            <option
-              v-for="pipeline in pipelineOptions"
-              :key="pipeline.value"
-              :value="pipeline.value"
-            >
-              {{ pipeline.label }}
-            </option>
-          </select>
+            :options="pipelineOptions"
+            :aria-label="t('CRM_KANBAN.CONVERSATION.PIPELINE')"
+            class="w-full"
+          />
         </label>
 
         <label class="grid gap-1">
           <span class="text-xs font-medium text-n-slate-11">
             {{ t('CRM_KANBAN.CONVERSATION.STAGE') }}
           </span>
-          <select
+          <ChoiceSelect
             v-model="stageId"
-            class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+            :options="stageOptions"
+            :aria-label="t('CRM_KANBAN.CONVERSATION.STAGE')"
             :disabled="isLoadingStages"
-          >
-            <option
-              v-for="stage in stageOptions"
-              :key="stage.value"
-              :value="stage.value"
-            >
-              {{ stage.label }}
-            </option>
-          </select>
+            class="w-full"
+          />
         </label>
 
         <NextButton
