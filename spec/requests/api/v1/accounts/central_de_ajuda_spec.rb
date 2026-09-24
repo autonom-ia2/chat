@@ -53,6 +53,13 @@ RSpec.describe 'Central de Ajuda (leitura)', type: :request do
       expect(Autonomia::CentralDeAjuda::Publicador).to have_received(:garantir_async)
     end
 
+    # #697 — o Guia sugere, ao abrir, os artigos da tela em que a pessoa está.
+    it 'diz em cada artigo a tela que ele explica' do
+      corpo = get_json('', agente)
+
+      expect(corpo['capitulos'].first['artigos'].first['rota']).to eq('profile_settings_index')
+    end
+
     it 'mostra ao administrador os artigos de administrador' do
       corpo = get_json('', admin)
 

@@ -44,6 +44,7 @@ const mountLauncher = () =>
 describe('AutonomiaGuideLauncher', () => {
   beforeEach(() => {
     uiSettingsRef.value = { is_autonomia_guide_panel_open: false };
+    window.sessionStorage.clear();
   });
 
   afterEach(() => {
@@ -107,5 +108,49 @@ describe('AutonomiaGuideLauncher', () => {
     launcher.unmount();
     painelA.unmount();
     painelB.unmount();
+  });
+
+  // #697 — no computador a entrada é a da barra lateral; aqui fica só a bolinha do celular.
+  describe('bolinha do celular', () => {
+    it('só aparece em tela pequena', () => {
+      const wrapper = mountLauncher();
+      expect(wrapper.find('.fixed').classes()).toContain('md:hidden');
+      wrapper.unmount();
+    });
+
+    it('tem nome acessível e nenhum balão', () => {
+      const wrapper = mountLauncher();
+      expect(wrapper.get('[data-guia-abrir]').attributes('aria-label')).toBe(
+        'AUTONOMIA_GUIDE.LAUNCHER_LABEL'
+      );
+      expect(wrapper.find('[data-guia-intro]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('mostra o ponto até a primeira abertura', () => {
+      const wrapper = mountLauncher();
+      expect(wrapper.find('[data-guia-ponto]').exists()).toBe(true);
+      wrapper.unmount();
+      uiSettingsRef.value = {
+        is_autonomia_guide_panel_open: false,
+        autonomia_guide_opened: true,
+      };
+      const depois = mountLauncher();
+      expect(depois.find('[data-guia-ponto]').exists()).toBe(false);
+      depois.unmount();
+    });
+
+    it('abrir o Guia grava que a pessoa já conhece', async () => {
+      const wrapper = mountLauncher();
+      await wrapper.get('[data-guia-abrir]').trigger('click');
+      expect(updateUISettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_autonomia_guide_panel_open: true,
+          autonomia_guide_intro_seen: true,
+          autonomia_guide_opened: true,
+        })
+      );
+      wrapper.unmount();
+    });
   });
 });

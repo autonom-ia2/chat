@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
+import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import {
   useAutonomiaGuideStore,
   motivoUtilizavel,
@@ -11,9 +12,12 @@ import AutonomiaGuideContainer from '../AutonomiaGuideContainer.vue';
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 // Espião estável: `useRouter()` roda de novo a cada teste, e um `vi.fn()`
 // novo a cada chamada não deixaria como afirmar QUAL rota o clique pediu.
-const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
+const { routerPush, rotaAtual } = vi.hoisted(() => ({
+  routerPush: vi.fn(),
+  rotaAtual: { name: 'home' },
+}));
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ name: 'home' }),
+  useRoute: () => rotaAtual,
   // Rota real do registro do Guia (ex.: 'labels_list'): resolve de verdade, para os testes de
   // navegação (#636) poderem afirmar que o clique leva ao alvo certo.
   useRouter: () => ({ resolve: () => ({ matched: [{}] }), push: routerPush }),
@@ -40,6 +44,10 @@ vi.mock('dashboard/composables/store', () => ({
     // na conta (#636 usa rotas reais do registro, e a maioria tem `gate` de feature).
     return ref(() => true);
   },
+}));
+// #697 — sugestões da tela aberta, a partir dos artigos da Central.
+vi.mock('dashboard/api/centralDeAjuda', () => ({
+  default: { get: vi.fn(() => Promise.resolve({ data: { capitulos: [] } })) },
 }));
 vi.mock('dashboard/api/autonomiaGuide', () => ({
   default: { chat: vi.fn(), resposta: vi.fn(), executarAcao: vi.fn() },
@@ -595,5 +603,86 @@ describe('motivoUtilizavel', () => {
     expect(motivoUtilizavel(undefined)).toBe('');
     expect(motivoUtilizavel('   ')).toBe('');
     expect(motivoUtilizavel('x'.repeat(200))).toBe('');
+  });
+});
+
+describe('AutonomiaGuideContainer — sugestões da tela aberta (#697)', () => {
+  let wrapper;
+
+  const centralCom = artigos =>
+    CentralDeAjudaAPI.get.mockResolvedValueOnce({
+      data: { capitulos: [{ id: '09', titulo: 'Contatos', artigos }] },
+    });
+  const textosDasSugestoes = w =>
+    w.findAll('[data-sugestao]').map(botao => botao.text());
+
+  afterEach(() => {
+    wrapper?.unmount();
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    rotaAtual.name = 'home';
+  });
+
+  it('mostra os artigos da Central sobre a tela aberta, no máximo 3', async () => {
+    rotaAtual.name = 'companies_dashboard_index';
+    centralCom([
+      {
+        ref: '09-09',
+        titulo: 'Empresas: cadastro',
+        rota: 'companies_dashboard_index',
+      },
+      { ref: '09-01', titulo: 'Contatos', rota: 'contacts_dashboard_index' },
+      {
+        ref: '09-10',
+        titulo: 'Vincular contato',
+        rota: 'companies_dashboard_index',
+      },
+      {
+        ref: '09-11',
+        titulo: 'Editar empresa',
+        rota: 'companies_dashboard_index',
+      },
+      {
+        ref: '09-12',
+        titulo: 'Excluir empresa',
+        rota: 'companies_dashboard_index',
+      },
+    ]);
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(textosDasSugestoes(wrapper)).toEqual([
+      'Empresas: cadastro',
+      'Vincular contato',
+      'Editar empresa',
+    ]);
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.SUGGESTIONS_THIS_SCREEN');
+  });
+
+  it('sem artigo da tela, mantém as sugestões gerais', async () => {
+    rotaAtual.name = 'home';
+    centralCom([
+      { ref: '09-01', titulo: 'Contatos', rota: 'contacts_dashboard_index' },
+    ]);
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(textosDasSugestoes(wrapper)).toEqual([
+      'AUTONOMIA_GUIDE.SUGGESTIONS.KANBAN',
+      'AUTONOMIA_GUIDE.SUGGESTIONS.WHATSAPP',
+      'AUTONOMIA_GUIDE.SUGGESTIONS.REPORTS',
+    ]);
+  });
+
+  it('se a Central não responde, mantém as sugestões gerais', async () => {
+    rotaAtual.name = 'companies_dashboard_index';
+    CentralDeAjudaAPI.get.mockRejectedValueOnce(new Error('rede'));
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(textosDasSugestoes(wrapper)).toHaveLength(3);
+    expect(textosDasSugestoes(wrapper)[0]).toBe(
+      'AUTONOMIA_GUIDE.SUGGESTIONS.KANBAN'
+    );
   });
 });
