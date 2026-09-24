@@ -72,6 +72,30 @@ describe('ChoiceSelect', () => {
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
 
+  it('Esc com a lista aberta não chega aos atalhos da página', async () => {
+    wrapper = mountSelect();
+    const onDocumentKeydown = vi.fn();
+    document.addEventListener('keydown', onDocumentKeydown);
+    const escapes = () =>
+      onDocumentKeydown.mock.calls.filter(([event]) => event.key === 'Escape');
+    const trigger = wrapper.get('[role="combobox"]');
+    await trigger.trigger('keydown', { key: 'ArrowDown' });
+    await trigger.trigger('keydown', { key: 'Escape' });
+    expect(escapes()).toHaveLength(0);
+
+    await trigger.trigger('keydown', { key: 'Escape' });
+    expect(escapes()).toHaveLength(1);
+    document.removeEventListener('keydown', onDocumentKeydown);
+  });
+
+  it('cancela o clique na opção para um label em volta não reabrir a lista', async () => {
+    wrapper = mountSelect();
+    await wrapper.get('[role="combobox"]').trigger('click');
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    wrapper.findAll('[role="option"]')[2].element.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+  });
+
   it('acha a opção digitando o começo, sem acento', async () => {
     wrapper = mountSelect();
     const trigger = wrapper.get('[role="combobox"]');
