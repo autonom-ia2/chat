@@ -93,4 +93,12 @@ describe('useBranding', () => {
       expect(result).toBe('Welcome to My-Company & Co.');
     });
   });
+
+  describe('installationName', () => {
+    it('exposes the installation name from global config', () => {
+      const { installationName } = useBranding();
+
+      expect(installationName.value).toBe('MyCompany');
+    });
+  });
 });
