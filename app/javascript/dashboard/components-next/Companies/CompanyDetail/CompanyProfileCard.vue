@@ -18,7 +18,7 @@ const props = defineProps({
 
 const exactTimestamp = useExactTimestamp();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const companiesStore = useCompaniesStore();
 
 const form = reactive({ name: '', domain: '', description: '' });
@@ -52,14 +52,14 @@ const summary = computed(() => {
     createdAt && {
       key: 'createdAt',
       label: t('COMPANIES.DETAIL.PROFILE.CREATED_AT', {
-        date: dynamicTime(createdAt),
+        date: dynamicTime(createdAt, locale.value),
       }),
       exactTime: exactTimestamp(createdAt),
     },
     lastActivityAt && {
       key: 'lastActivityAt',
       label: t('COMPANIES.DETAIL.PROFILE.LAST_ACTIVE', {
-        date: dynamicTime(lastActivityAt),
+        date: dynamicTime(lastActivityAt, locale.value),
       }),
       exactTime: exactTimestamp(lastActivityAt),
     },

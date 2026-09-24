@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import countries from 'shared/constants/countries';
 import { dynamicTime } from 'shared/helpers/timeHelper';
@@ -44,6 +45,8 @@ const props = defineProps({
   },
 });
 
+const { locale } = useI18n();
+
 const exactTimestamp = useExactTimestamp();
 
 const navigateTo = computed(() => {
@@ -59,7 +62,7 @@ const countriesMap = computed(() => {
 
 const updatedAtTime = computed(() => {
   if (!props.updatedAt) return '';
-  return dynamicTime(props.updatedAt);
+  return dynamicTime(props.updatedAt, locale.value);
 });
 
 const countryDetails = computed(() => {
