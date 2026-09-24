@@ -81,12 +81,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::AtividadeLookup do
     end
   end
 
-  it 'nenhuma seguradora com opcao: manda buscar de novo ou perguntar, sem inventar' do
+  it 'nenhuma seguradora com opcao: busca de novo, e depois encaminha, sem perguntar em laco' do
     ready_connection
     allow(connector).to receive(:atividade_lookup)
       .and_return({ 'porTermo' => [{ 'termo' => 'xyz', 'porSeguradora' => [{ 'insurerCode' => '8', 'opcoes' => [] }] }] })
 
     expect(buscar(%w[xyz])).to eq(described_class::NADA_ACHADO)
+    expect(described_class::NADA_ACHADO)
+      .to include('Busque de novo com outro termo', 'não pergunte de novo', 'encaminhar para alguém da equipe')
   end
 
   describe 'recusas' do
@@ -113,6 +115,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::AtividadeLookup do
       expect(buscar(%w[escritorio])).to eq(described_class::INDISPONIVEL)
       expect(Rails.logger).to have_received(:warn).with(a_string_including('busca de atividade falhou'))
       expect(Rails.logger).not_to have_received(:warn).with(a_string_including('escritorio'))
+    end
+
+    # Revisão da chat#654, como na consulta de CEP: validation sem perguntas (o 401 do portal com envelope) não é
+    # culpa do termo.
+    it 'recusa de validacao sem perguntas: indisponivel, e nao pede outro termo' do
+      ready_connection
+      allow(connector).to receive(:atividade_lookup)
+        .and_raise(Autonomia::Insurance::Connector::Error.new(:validation, 'envelope de erro'))
+
+      expect(buscar(%w[escritorio])).to eq(described_class::INDISPONIVEL)
     end
 
     it 'sessao sem resposta: indisponivel' do

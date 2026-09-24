@@ -23,9 +23,13 @@ class Autonomia::Agents::Tools::Native::AtividadeLookup < Autonomia::Agents::Too
                   'pergunte uma vez se é térreo ou andar. Seguradora sem opção que corresponda com segurança: busque ' \
                   'de novo com outro termo (um sinônimo, o nome mais genérico da atividade); se ainda assim nenhuma ' \
                   'corresponder, deixe essa seguradora de fora. Nunca escolha uma atividade diferente da do cliente ' \
-                  'só para a seguradora cotar.'.freeze
-  NADA_ACHADO = 'Nenhuma seguradora tem opção para estes termos. Busque de novo com outro termo, mais genérico, ' \
-                'ou pergunte ao cliente, com outras palavras, o que a empresa faz.'.freeze
+                  'só para a seguradora cotar. Se nenhuma seguradora ficar com opção, não cote: diga que vai ' \
+                  'encaminhar para alguém da equipe.'.freeze
+  # A SAÍDA DO BECO (revisão da chat#654): sem ela, a atividade que nenhuma seguradora lista virava pergunta ao cliente
+  # em laço. Uma segunda busca, e depois a equipe, como na busca indisponível.
+  NADA_ACHADO = 'Nenhuma seguradora tem opção para estes termos. Busque de novo com outro termo, mais genérico. Se ' \
+                'já buscou com outro termo e ainda nenhuma seguradora tem a atividade do cliente, não cote e não ' \
+                'pergunte de novo o que a empresa faz: diga que vai encaminhar para alguém da equipe.'.freeze
 
   class << self
     def slug
@@ -62,13 +66,20 @@ class Autonomia::Agents::Tools::Native::AtividadeLookup < Autonomia::Agents::Too
 
     descrever(busca)
   rescue ::Autonomia::Insurance::Connector::Error => e
-    return recusar('atividade_sem_termos', SEM_TERMOS) if e.kind == :validation
+    # SÓ É TERMO RUIM O QUE O ADAPTER DECLARA COMO PERGUNTA (`details.perguntas`), como na consulta de CEP. Uma
+    # `validation` sem ela (o 401 do portal com envelope de erro chega assim) não é culpa do termo, e pedir outro
+    # faria o cliente ouvir de novo a pergunta sobre a empresa.
+    return recusar('atividade_sem_termos', SEM_TERMOS) if termo_recusado?(e)
 
     Rails.logger.warn("[autonomia][insurance] busca de atividade falhou account=#{account.id} #{e.etiqueta}")
     recusar('busca_de_atividade_indisponivel', INDISPONIVEL)
   end
 
   private
+
+  def termo_recusado?(erro)
+    erro.kind == :validation && Array(erro.details.to_h['perguntas']).any?
+  end
 
   def buscar(termos)
     sessions.with_live_session do |session|

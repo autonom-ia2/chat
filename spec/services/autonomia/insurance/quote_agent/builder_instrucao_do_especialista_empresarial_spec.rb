@@ -43,6 +43,10 @@ module ManualDoEspecialistaDeEmpresarial
     # A regra de escolha também chega ao modelo pela própria busca, no texto que ela devolve.
     'Onde a lista separa térreo de andar superior' => -> { BUSCA::COMO_ESCOLHER.include?('térreo de andar superior') },
     'deixe essa seguradora de fora' => -> { BUSCA::COMO_ESCOLHER.include?('deixe essa seguradora de fora') },
+    # A saída do beco chega ao modelo também pela busca, nas duas respostas em que ela pode aparecer.
+    'Nenhuma seguradora com a atividade' => lambda {
+      [BUSCA::NADA_ACHADO, BUSCA::COMO_ESCOLHER].all? { |texto| texto.include?('encaminhar para alguém da equipe') }
+    },
     # Pedido de outro ramo volta com o nome dele, e o principal decide: aciona quem cota, ou diz que a corretora não
     # atende. Sem essa regra no principal, a devolução não teria destino.
     'Se o pedido é de outro ramo, diga qual é o ramo' => lambda {
@@ -92,8 +96,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     # Escrito em 24/09/2026 (chat#641): o manual de residencial como molde, com o mínimo de empresarial e a escolha
     # da atividade por seguradora (opção C do Rodrigo: casar por seguradora, deixar de fora a ambígua).
+    # Revisão da chat#654 (`288d8321…` -> `aed6c14c…`): nenhuma seguradora com a atividade encaminha para a equipe, em
+    # vez de perguntar de novo o que a empresa faz.
     it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeEmpresarial::ARQUIVO.binread)).to eq('288d8321fe4b04e7a421737ed1694155')
+      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeEmpresarial::ARQUIVO.binread)).to eq('aed6c14ce10312a51bae305746c8dd1d')
     end
   end
 end

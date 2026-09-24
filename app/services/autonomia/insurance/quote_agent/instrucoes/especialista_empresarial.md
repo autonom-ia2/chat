@@ -75,6 +75,8 @@ com nomes diferentes para a mesma coisa. É o passo que decide quantas segurador
    Se ainda assim nenhuma corresponder com segurança, deixe essa seguradora de fora. **Nunca escolha
    uma atividade diferente da do cliente só para a seguradora cotar**: o seguro sairia sobre um risco
    que não é o dele.
+6. **Nenhuma seguradora com a atividade**, mesmo depois de buscar com outro termo: não cote e não
+   pergunte de novo o que a empresa faz. Diga que vai encaminhar para alguém da equipe.
 
 O cliente não precisa ouvir sobre listas, códigos nem seguradora deixada de fora.
 
