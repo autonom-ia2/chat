@@ -336,7 +336,9 @@ onClickOutside(
       @keydown="onKeydown"
       @blur="onBlur"
     >
-      <span class="truncate">{{ selectedLabel }}</span>
+      <span class="truncate" :class="{ 'text-n-slate-10': selected < 0 }">
+        {{ selectedLabel }}
+      </span>
       <span
         class="flex-shrink-0 size-4 text-n-slate-11"
         :class="isOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"

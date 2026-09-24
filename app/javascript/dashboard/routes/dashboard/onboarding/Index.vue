@@ -270,6 +270,7 @@ const handleSubmit = async () => {
         >
           <OnboardingFormSelect
             v-model="userRole"
+            :aria-label="t('ONBOARDING_NEXT.FIELDS.YOUR_ROLE')"
             :has-error="showErrorOnFields && v$.userRole.$error"
             :options="USER_ROLE_OPTIONS"
             :placeholder="t('ONBOARDING_NEXT.PLACEHOLDERS.SELECT_ROLE')"
@@ -366,6 +367,7 @@ const handleSubmit = async () => {
           >
             <OnboardingFormSelect
               v-model="locale"
+              :aria-label="t('ONBOARDING_NEXT.FIELDS.LANGUAGE')"
               :has-error="showErrorOnFields && v$.locale.$error"
               :options="languageOptions"
             />
@@ -376,6 +378,7 @@ const handleSubmit = async () => {
           >
             <OnboardingFormSelect
               v-model="timezone"
+              :aria-label="t('ONBOARDING_NEXT.FIELDS.TIMEZONE')"
               :has-error="showErrorOnFields && v$.timezone.$error"
               :options="timezoneOptions"
               :placeholder="t('ONBOARDING_NEXT.PLACEHOLDERS.SELECT_TIMEZONE')"
@@ -387,6 +390,7 @@ const handleSubmit = async () => {
           >
             <OnboardingFormSelect
               v-model="industry"
+              :aria-label="t('ONBOARDING_NEXT.FIELDS.INDUSTRY')"
               :has-error="showErrorOnFields && v$.industry.$error"
               :options="INDUSTRY_OPTIONS"
               :placeholder="t('ONBOARDING_NEXT.PLACEHOLDERS.SELECT_INDUSTRY')"
@@ -398,6 +402,7 @@ const handleSubmit = async () => {
           >
             <OnboardingFormSelect
               v-model="companySize"
+              :aria-label="t('ONBOARDING_NEXT.FIELDS.COMPANY_SIZE')"
               :has-error="showErrorOnFields && v$.companySize.$error"
               :options="COMPANY_SIZE_OPTIONS"
               :placeholder="
@@ -411,6 +416,7 @@ const handleSubmit = async () => {
           >
             <OnboardingFormSelect
               v-model="referralSource"
+              :aria-label="t('ONBOARDING_NEXT.FIELDS.REFERRAL_SOURCE')"
               :has-error="showErrorOnFields && v$.referralSource.$error"
               :options="REFERRAL_SOURCE_OPTIONS"
               :placeholder="

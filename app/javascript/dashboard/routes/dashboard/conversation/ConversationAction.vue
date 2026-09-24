@@ -15,9 +15,11 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import CrmConversationStageBadge from './CrmConversationStageBadge.vue';
 import CrmCopilotPanel from 'dashboard/routes/dashboard/crm/components/CrmCopilotPanel.vue';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 export default {
   components: {
+    ChoiceSelect,
     ContactDetailsItem,
     MultiselectDropdown,
     ConversationLabels,
@@ -475,37 +477,27 @@ export default {
           <span class="text-xs font-medium text-n-slate-11">
             {{ $t('CRM_KANBAN.CONVERSATION.PIPELINE') }}
           </span>
-          <select
+          <ChoiceSelect
             v-model="crmPipelineId"
-            class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-          >
-            <option
-              v-for="pipeline in crmPipelineOptions"
-              :key="pipeline.value"
-              :value="pipeline.value"
-            >
-              {{ pipeline.label }}
-            </option>
-          </select>
+            :options="crmPipelineOptions"
+            :aria-label="$t('CRM_KANBAN.CONVERSATION.PIPELINE')"
+            compact
+            class="w-full"
+          />
         </label>
 
         <label class="grid gap-1">
           <span class="text-xs font-medium text-n-slate-11">
             {{ $t('CRM_KANBAN.CONVERSATION.STAGE') }}
           </span>
-          <select
+          <ChoiceSelect
             v-model="crmStageId"
-            class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+            :options="crmStageOptions"
+            :aria-label="$t('CRM_KANBAN.CONVERSATION.STAGE')"
             :disabled="crmIsLoadingStages"
-          >
-            <option
-              v-for="stage in crmStageOptions"
-              :key="stage.value"
-              :value="stage.value"
-            >
-              {{ stage.label }}
-            </option>
-          </select>
+            compact
+            class="w-full"
+          />
         </label>
 
         <NextButton

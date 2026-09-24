@@ -7,6 +7,7 @@ import EmailCampaignAssetsAPI from 'dashboard/api/emailCampaignAssets';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
   campaignId: {
@@ -37,6 +38,12 @@ const tk = key => {
 const chipLabel = key => `{{ ${key} }}`;
 
 const ROLE_OPTIONS = ['logo', 'product', 'banner', 'testimonial', 'other'];
+const roleChoices = computed(() =>
+  ROLE_OPTIONS.map(role => ({
+    value: role,
+    label: tk(`ROLE_${role.toUpperCase()}`),
+  }))
+);
 
 const brief = ref('');
 const assets = ref([]); // { id, kind, url, signedId, videoUrl, posterUrl, provider, description, role }
@@ -480,18 +487,12 @@ const generate = async () => {
                     class="flex-1 min-w-0"
                     :placeholder="tk('ASSET_DESCRIPTION_PLACEHOLDER')"
                   />
-                  <select
+                  <ChoiceSelect
                     v-model="asset.role"
-                    class="px-2 py-1 text-sm border rounded-md outline-none text-n-slate-12 bg-n-alpha-2 border-n-weak focus:border-n-brand"
-                  >
-                    <option
-                      v-for="role in ROLE_OPTIONS"
-                      :key="role"
-                      :value="role"
-                    >
-                      {{ tk('ROLE_' + role.toUpperCase()) }}
-                    </option>
-                  </select>
+                    :options="roleChoices"
+                    :aria-label="tk('ASSET_ROLE_LABEL')"
+                    class="shrink-0"
+                  />
                 </div>
               </div>
             </div>

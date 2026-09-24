@@ -84,9 +84,7 @@ onMounted(() => {
         }}
       </label>
 
-      <div
-        class="flex items-center gap-2 flex-1 [&>select]:!bg-n-alpha-2 [&>select]:!outline-none [&>select]:hover:brightness-110"
-      >
+      <div class="flex items-center gap-2 flex-1">
         <!-- allow 10 mins to 999 days (in minutes) -->
         <DurationInput
           v-model:model-value="windowInMinutes"

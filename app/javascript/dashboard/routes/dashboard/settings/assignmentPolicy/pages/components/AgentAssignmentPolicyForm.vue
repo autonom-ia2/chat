@@ -287,9 +287,7 @@ defineExpose({
             {{ t(`${BASE_KEY}.FORM.EXCLUDE_OLDER_THAN.DESCRIPTION`) }}
           </p>
         </div>
-        <div
-          class="flex items-center gap-2 [&>select]:!bg-n-alpha-2 [&>select]:!outline-none [&>select]:hover:brightness-110"
-        >
+        <div class="flex items-center gap-2">
           <DurationInput
             v-model:unit="exclusionUnit"
             v-model:model-value="excludeOlderThanMinutes"

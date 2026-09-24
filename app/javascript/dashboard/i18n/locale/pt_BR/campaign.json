@@ -792,6 +792,7 @@
           "VIDEO_LINK_PLACEHOLDER": "Cole uma URL do YouTube ou Vimeo",
           "VIDEO_LINK_ADD": "Adicionar",
           "ASSET_DESCRIPTION_PLACEHOLDER": "O que é este recurso? Ex.: vídeo de depoimento do cliente",
+          "ASSET_ROLE_LABEL": "Função do recurso",
           "KIND_IMAGE": "Imagem",
           "KIND_PDF": "PDF",
           "KIND_VIDEO": "Vídeo",

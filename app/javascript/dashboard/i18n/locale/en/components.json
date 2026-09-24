@@ -48,7 +48,8 @@
     "MINUTES": "Minutes",
     "HOURS": "Hours",
     "DAYS": "Days",
-    "PLACEHOLDER": "Enter duration"
+    "PLACEHOLDER": "Enter duration",
+    "UNIT": "Unit"
   },
   "CHANNEL_SELECTOR": {
     "COMING_SOON": "Coming Soon!"
