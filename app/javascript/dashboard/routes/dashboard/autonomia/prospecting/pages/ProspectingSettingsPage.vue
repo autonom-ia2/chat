@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import BaseSettingsHeader from '../../../settings/components/BaseSettingsHeader.vue';
 
 const { t } = useI18n();
@@ -54,6 +55,34 @@ const form = ref({
   },
 });
 
+const pipelineChoices = computed(() => [
+  { value: '', label: t('PROSPECTING.SETTINGS.CRM_EMPTY') },
+  ...crmPipelines.value.map(pipeline => ({
+    value: pipeline.id,
+    label: pipeline.name,
+  })),
+]);
+const stageChoices = computed(() => [
+  { value: '', label: t('PROSPECTING.SETTINGS.CRM_STAGE_EMPTY') },
+  ...crmStages.value.map(stage => ({ value: stage.id, label: stage.name })),
+]);
+const searchScoreModeChoices = computed(() => [
+  { value: 'gbp', label: t('PROSPECTING.SETTINGS.SEARCH_SCORE_MODES.GBP') },
+  {
+    value: 'general',
+    label: t('PROSPECTING.SETTINGS.SEARCH_SCORE_MODES.GENERAL'),
+  },
+]);
+const scoringProfileChoices = computed(() => [
+  ...scoringProfiles.value.map(profile => ({
+    value: profile.id,
+    label: profile.name,
+  })),
+  {
+    value: CUSTOM_SCORING_PROFILE_VALUE,
+    label: t('PROSPECTING.SETTINGS.SCORING_PROFILE_CUSTOM'),
+  },
+]);
 const selectedScoringProfile = computed(() =>
   scoringProfiles.value.find(
     profile => Number(profile.id) === Number(form.value.scoring_profile_option)
@@ -260,49 +289,29 @@ onMounted(fetchSettings);
 
         <div v-show="activeSettingsTab === 'general'" class="grid gap-4">
           <div class="grid gap-3 md:grid-cols-2">
-            <label class="grid gap-1">
+            <div class="grid gap-1">
               <span class="text-xs font-medium text-n-slate-11">
                 {{ t('PROSPECTING.SETTINGS.FIELDS.CRM_PIPELINE') }}
               </span>
-              <select
+              <ChoiceSelect
                 v-model="form.default_crm_pipeline_id"
-                class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
+                :options="pipelineChoices"
+                :aria-label="t('PROSPECTING.SETTINGS.FIELDS.CRM_PIPELINE')"
                 @change="fetchCrmStages(form.default_crm_pipeline_id)"
-              >
-                <option value="">
-                  {{ t('PROSPECTING.SETTINGS.CRM_EMPTY') }}
-                </option>
-                <option
-                  v-for="pipeline in crmPipelines"
-                  :key="pipeline.id"
-                  :value="pipeline.id"
-                >
-                  {{ pipeline.name }}
-                </option>
-              </select>
-            </label>
+              />
+            </div>
 
-            <label class="grid gap-1">
+            <div class="grid gap-1">
               <span class="text-xs font-medium text-n-slate-11">
                 {{ t('PROSPECTING.SETTINGS.FIELDS.CRM_STAGE') }}
               </span>
-              <select
+              <ChoiceSelect
                 v-model="form.default_crm_stage_id"
-                class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
+                :options="stageChoices"
+                :aria-label="t('PROSPECTING.SETTINGS.FIELDS.CRM_STAGE')"
                 :disabled="!crmStages.length"
-              >
-                <option value="">
-                  {{ t('PROSPECTING.SETTINGS.CRM_STAGE_EMPTY') }}
-                </option>
-                <option
-                  v-for="stage in crmStages"
-                  :key="stage.id"
-                  :value="stage.id"
-                >
-                  {{ stage.name }}
-                </option>
-              </select>
-            </label>
+              />
+            </div>
           </div>
 
           <div class="grid gap-3 md:grid-cols-2">
@@ -515,22 +524,18 @@ onMounted(fetchSettings);
             </div>
 
             <div class="mt-4 grid gap-3 md:grid-cols-2">
-              <label class="grid gap-1">
+              <div class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('PROSPECTING.SETTINGS.FIELDS.SEARCH_SCORE_MODE') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="form.search_score_mode"
-                  class="h-10 rounded-md border border-n-weak bg-n-solid-1 px-3 text-sm text-n-slate-12"
-                >
-                  <option value="gbp">
-                    {{ t('PROSPECTING.SETTINGS.SEARCH_SCORE_MODES.GBP') }}
-                  </option>
-                  <option value="general">
-                    {{ t('PROSPECTING.SETTINGS.SEARCH_SCORE_MODES.GENERAL') }}
-                  </option>
-                </select>
-              </label>
+                  :options="searchScoreModeChoices"
+                  :aria-label="
+                    t('PROSPECTING.SETTINGS.FIELDS.SEARCH_SCORE_MODE')
+                  "
+                />
+              </div>
               <div
                 class="rounded-md border border-n-weak bg-n-solid-1 px-3 py-2 text-xs leading-relaxed text-n-slate-10"
               >
@@ -542,26 +547,16 @@ onMounted(fetchSettings);
               </div>
             </div>
 
-            <label class="mt-4 grid gap-1">
+            <div class="mt-4 grid gap-1">
               <span class="text-xs font-medium text-n-slate-11">
                 {{ t('PROSPECTING.SETTINGS.FIELDS.SCORING_PROFILE') }}
               </span>
-              <select
+              <ChoiceSelect
                 v-model="form.scoring_profile_option"
-                class="h-10 rounded-md border border-n-weak bg-n-solid-1 px-3 text-sm text-n-slate-12"
-              >
-                <option
-                  v-for="profile in scoringProfiles"
-                  :key="profile.id"
-                  :value="profile.id"
-                >
-                  {{ profile.name }}
-                </option>
-                <option :value="CUSTOM_SCORING_PROFILE_VALUE">
-                  {{ t('PROSPECTING.SETTINGS.SCORING_PROFILE_CUSTOM') }}
-                </option>
-              </select>
-            </label>
+                :options="scoringProfileChoices"
+                :aria-label="t('PROSPECTING.SETTINGS.FIELDS.SCORING_PROFILE')"
+              />
+            </div>
           </div>
 
           <div
