@@ -1,0 +1,260 @@
+{
+  "places": [
+    {
+      "id": "ChIJfiltroA0000000000000001",
+      "types": ["bakery", "cafe", "food", "point_of_interest", "store", "establishment"],
+      "nationalPhoneNumber": "(41) 3000-0001",
+      "internationalPhoneNumber": "+55 41 3000-0001",
+      "formattedAddress": "R. Exemplo Um, 100 - Centro, Curitiba - PR, 80000-001, Brasil",
+      "location": { "latitude": -25.4284, "longitude": -49.2733 },
+      "rating": 4.7,
+      "websiteUri": "https://padaria-a.example.com.br/",
+      "userRatingCount": 812,
+      "displayName": { "text": "Padaria Exemplo A", "languageCode": "pt" },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 06:00 – 20:00",
+          "terça-feira: 06:00 – 20:00",
+          "quarta-feira: 06:00 – 20:00",
+          "quinta-feira: 06:00 – 20:00",
+          "sexta-feira: 06:00 – 20:00",
+          "sábado: 06:00 – 14:00",
+          "domingo: Fechado"
+        ]
+      },
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 06:00 – 20:00",
+          "terça-feira: 06:00 – 20:00",
+          "quarta-feira: 06:00 – 20:00",
+          "quinta-feira: 06:00 – 20:00",
+          "sexta-feira: 06:00 – 20:00",
+          "sábado: 06:00 – 14:00",
+          "domingo: Fechado"
+        ]
+      },
+      "photos": [
+        { "name": "places/ChIJfiltroA0000000000000001/photos/AF1QipA1", "widthPx": 4032, "heightPx": 3024 },
+        { "name": "places/ChIJfiltroA0000000000000001/photos/AF1QipA2", "widthPx": 1080, "heightPx": 1080 },
+        { "name": "places/ChIJfiltroA0000000000000001/photos/AF1QipA3", "widthPx": 3000, "heightPx": 4000 }
+      ]
+    },
+    {
+      "id": "ChIJfiltroB0000000000000002",
+      "types": ["bakery", "food", "point_of_interest", "store", "establishment"],
+      "nationalPhoneNumber": "(41) 3000-0002",
+      "internationalPhoneNumber": "+55 41 3000-0002",
+      "formattedAddress": "Av. Exemplo Dois, 200 - Batel, Curitiba - PR, 80000-002, Brasil",
+      "location": { "latitude": -25.4411, "longitude": -49.2877 },
+      "rating": 4.2,
+      "userRatingCount": 143,
+      "displayName": { "text": "Padaria Exemplo B", "languageCode": "pt" },
+      "currentOpeningHours": {
+        "openNow": false,
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 12:00",
+          "terça-feira: 07:00 – 12:00",
+          "quarta-feira: 07:00 – 12:00",
+          "quinta-feira: 07:00 – 12:00",
+          "sexta-feira: 07:00 – 12:00",
+          "sábado: Fechado",
+          "domingo: Fechado"
+        ]
+      },
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 12:00",
+          "terça-feira: 07:00 – 12:00",
+          "quarta-feira: 07:00 – 12:00",
+          "quinta-feira: 07:00 – 12:00",
+          "sexta-feira: 07:00 – 12:00",
+          "sábado: Fechado",
+          "domingo: Fechado"
+        ]
+      },
+      "photos": [
+        { "name": "places/ChIJfiltroB0000000000000002/photos/AF1QipB1", "widthPx": 1920, "heightPx": 1080 }
+      ]
+    },
+    {
+      "id": "ChIJfiltroC0000000000000003",
+      "types": ["bakery", "food", "point_of_interest", "store", "establishment"],
+      "nationalPhoneNumber": "(41) 99000-0003",
+      "internationalPhoneNumber": "+55 41 99000-0003",
+      "formattedAddress": "R. Exemplo Três, 300 - Água Verde, Curitiba - PR, 80000-003, Brasil",
+      "location": { "latitude": -25.4507, "longitude": -49.2811 },
+      "rating": 3.9,
+      "userRatingCount": 27,
+      "displayName": { "text": "Padaria Exemplo C", "languageCode": "pt" },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      },
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      }
+    },
+    {
+      "id": "ChIJfiltroD0000000000000004",
+      "types": ["bakery", "food", "point_of_interest", "establishment"],
+      "formattedAddress": "R. Exemplo Quatro, 400 - Rebouças, Curitiba - PR, 80000-004, Brasil",
+      "location": { "latitude": -25.4402, "longitude": -49.2598 },
+      "displayName": { "text": "Padaria Exemplo D", "languageCode": "pt" }
+    },
+    {
+      "id": "ChIJfiltroE0000000000000005",
+      "types": ["bakery", "cafe", "food", "point_of_interest", "store", "establishment"],
+      "nationalPhoneNumber": "(41) 3000-0005",
+      "internationalPhoneNumber": "+55 41 3000-0005",
+      "formattedAddress": "R. Exemplo Cinco, 500 - Mercês, Curitiba - PR, 80000-005, Brasil",
+      "location": { "latitude": -25.4231, "longitude": -49.2912 },
+      "rating": 4.5,
+      "websiteUri": "https://www.instagram.com/padariaexemploe/",
+      "userRatingCount": 64,
+      "displayName": { "text": "Padaria Exemplo E", "languageCode": "pt" },
+      "photos": [
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE1", "widthPx": 4000, "heightPx": 3000 },
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE2", "widthPx": 4000, "heightPx": 3000 },
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE3", "widthPx": 4000, "heightPx": 3000 },
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE4", "widthPx": 4000, "heightPx": 3000 },
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE5", "widthPx": 4000, "heightPx": 3000 },
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE6", "widthPx": 4000, "heightPx": 3000 },
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE7", "widthPx": 4000, "heightPx": 3000 },
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE8", "widthPx": 4000, "heightPx": 3000 },
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE9", "widthPx": 4000, "heightPx": 3000 },
+        { "name": "places/ChIJfiltroE0000000000000005/photos/AF1QipE10", "widthPx": 4000, "heightPx": 3000 }
+      ]
+    },
+    {
+      "id": "ChIJfiltroF0000000000000006",
+      "types": ["bakery", "food", "point_of_interest", "store", "establishment"],
+      "nationalPhoneNumber": "(41) 3000-0006",
+      "internationalPhoneNumber": "+55 41 3000-0006",
+      "formattedAddress": "Al. Exemplo Seis, 600 - Bigorrilho, Curitiba - PR, 80000-006, Brasil",
+      "location": { "latitude": -25.4344, "longitude": -49.2951 },
+      "rating": 4.8,
+      "websiteUri": "https://padaria-f.example.com.br/",
+      "userRatingCount": 356,
+      "displayName": { "text": "Padaria Exemplo F", "languageCode": "pt" },
+      "currentOpeningHours": {
+        "openNow": false,
+        "weekdayDescriptions": [
+          "segunda-feira: Fechado",
+          "terça-feira: 08:00 – 18:00",
+          "quarta-feira: 08:00 – 18:00",
+          "quinta-feira: 08:00 – 18:00",
+          "sexta-feira: 08:00 – 18:00",
+          "sábado: 08:00 – 13:00",
+          "domingo: 08:00 – 12:00"
+        ]
+      },
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: Fechado",
+          "terça-feira: 08:00 – 18:00",
+          "quarta-feira: 08:00 – 18:00",
+          "quinta-feira: 08:00 – 18:00",
+          "sexta-feira: 08:00 – 18:00",
+          "sábado: 08:00 – 13:00",
+          "domingo: 08:00 – 12:00"
+        ]
+      },
+      "photos": [
+        { "name": "places/ChIJfiltroF0000000000000006/photos/AF1QipF1", "widthPx": 3024, "heightPx": 4032 },
+        { "name": "places/ChIJfiltroF0000000000000006/photos/AF1QipF2", "widthPx": 3024, "heightPx": 4032 }
+      ]
+    },
+    {
+      "id": "ChIJfiltroG0000000000000007",
+      "types": ["bakery", "food", "point_of_interest", "store", "establishment"],
+      "nationalPhoneNumber": "(41) 99000-0007",
+      "internationalPhoneNumber": "+55 41 99000-0007",
+      "formattedAddress": "R. Exemplo Sete, 700 - Portão, Curitiba - PR, 80000-007, Brasil",
+      "location": { "latitude": -25.4755, "longitude": -49.2917 },
+      "rating": 5,
+      "userRatingCount": 3,
+      "displayName": { "text": "Padaria Exemplo G", "languageCode": "pt" },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 06:30 – 19:30",
+          "terça-feira: 06:30 – 19:30",
+          "quarta-feira: 06:30 – 19:30",
+          "quinta-feira: 06:30 – 19:30",
+          "sexta-feira: 06:30 – 19:30",
+          "sábado: 06:30 – 19:30",
+          "domingo: 06:30 – 12:00"
+        ]
+      },
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 06:30 – 19:30",
+          "terça-feira: 06:30 – 19:30",
+          "quarta-feira: 06:30 – 19:30",
+          "quinta-feira: 06:30 – 19:30",
+          "sexta-feira: 06:30 – 19:30",
+          "sábado: 06:30 – 19:30",
+          "domingo: 06:30 – 12:00"
+        ]
+      }
+    },
+    {
+      "id": "ChIJfiltroH0000000000000008",
+      "types": ["bakery", "cafe", "food", "point_of_interest", "store", "establishment"],
+      "nationalPhoneNumber": "(41) 3000-0008",
+      "internationalPhoneNumber": "+55 41 3000-0008",
+      "formattedAddress": "R. Exemplo Oito, 800 - Juvevê, Curitiba - PR, 80000-008, Brasil",
+      "location": { "latitude": -25.4177, "longitude": -49.2601 },
+      "rating": 4.4,
+      "websiteUri": "https://padaria-h.example.com.br/",
+      "userRatingCount": 511,
+      "displayName": { "text": "Padaria Exemplo H", "languageCode": "pt" },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 06:00 – 21:00",
+          "terça-feira: 06:00 – 21:00",
+          "quarta-feira: 06:00 – 21:00",
+          "quinta-feira: 06:00 – 21:00",
+          "sexta-feira: 06:00 – 21:00",
+          "sábado: 06:00 – 21:00",
+          "domingo: 06:00 – 21:00"
+        ]
+      },
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 06:00 – 21:00",
+          "terça-feira: 06:00 – 21:00",
+          "quarta-feira: 06:00 – 21:00",
+          "quinta-feira: 06:00 – 21:00",
+          "sexta-feira: 06:00 – 21:00",
+          "sábado: 06:00 – 21:00",
+          "domingo: 06:00 – 21:00"
+        ]
+      },
+      "photos": [
+        { "name": "places/ChIJfiltroH0000000000000008/photos/AF1QipH1", "widthPx": 1600, "heightPx": 1200 },
+        { "name": "places/ChIJfiltroH0000000000000008/photos/AF1QipH2", "widthPx": 1600, "heightPx": 1200 },
+        { "name": "places/ChIJfiltroH0000000000000008/photos/AF1QipH3", "widthPx": 1600, "heightPx": 1200 },
+        { "name": "places/ChIJfiltroH0000000000000008/photos/AF1QipH4", "widthPx": 1600, "heightPx": 1200 }
+      ]
+    }
+  ]
+}

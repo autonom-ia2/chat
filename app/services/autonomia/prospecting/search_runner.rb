@@ -334,26 +334,57 @@ class Autonomia::Prospecting::SearchRunner
     end
   end
 
+  # Chaves e regras da gaveta de filtros do Orth (search-filters.ts). has_photos, open_now e has_opening_hours são
+  # atributos que o provider entrega (contrato #677); sem eles o filtro ativo falha alto em vez de zerar a busca.
   def advanced_filter_matches?(attributes, google_rank)
-    return false unless boolean_filter_matches?(attributes[:website], advanced_filters['has_website'])
-    return false unless boolean_filter_matches?(attributes[:phone], advanced_filters['has_phone'])
-    return false unless boolean_filter_matches?(attributes[:has_photos], advanced_filters['has_photos'])
-    return false unless optional_boolean_filter_matches?(attributes[:open_now], advanced_filters['open_now'])
+    presence_filters_match?(attributes) && rating_filters_match?(attributes) && rank_filters_match?(google_rank) &&
+      reviews_filter_matches?(attributes)
+  end
 
+  def presence_filters_match?(attributes)
+    boolean_filter_matches?(attributes[:website], advanced_filters['has_website']) &&
+      boolean_filter_matches?(attributes[:phone], advanced_filters['has_phone']) &&
+      photos_filter_matches?(attributes) &&
+      only_yes_filter_matches?(attributes, :open_now) &&
+      only_yes_filter_matches?(attributes, :has_opening_hours)
+  end
+
+  # "Acima de" descarta quem não tem nota; "abaixo de" deixa passar, como no Orth.
+  def rating_filters_match?(attributes)
     rating = number_or_nil(attributes[:rating])
     rating_min = number_or_nil(advanced_filters['rating_min'])
     return false if rating_min && (rating.nil? || rating < rating_min)
 
     rating_max = number_or_nil(advanced_filters['rating_max'])
-    return false if rating_max && (rating.nil? || rating > rating_max)
+    !(rating_max && rating && rating > rating_max)
+  end
 
-    reviews_min = number_or_nil(advanced_filters['reviews_min'])
-    return false if reviews_min && attributes[:reviews_count].to_i < reviews_min
+  # Faixa da posição no Google: outside_top corta as N primeiras, search_rank_max corta depois da N-ésima.
+  def rank_filters_match?(google_rank)
+    outside_top = number_or_nil(advanced_filters['outside_top'])
+    return false if outside_top && google_rank <= outside_top
 
     search_rank_max = number_or_nil(advanced_filters['search_rank_max'])
-    return false if search_rank_max && google_rank > search_rank_max
+    !(search_rank_max && google_rank > search_rank_max)
+  end
 
-    true
+  def reviews_filter_matches?(attributes)
+    reviews_min = number_or_nil(advanced_filters['reviews_min'])
+    !(reviews_min && attributes[:reviews_count].to_i < reviews_min)
+  end
+
+  def photos_filter_matches?(attributes)
+    filter_value = advanced_filters['has_photos']
+    return true if filter_value.blank?
+
+    attributes.fetch(:has_photos) == (filter_value == 'yes')
+  end
+
+  # Aberto agora e tem horário só têm a opção "sim", como no Orth. Outro valor não filtra.
+  def only_yes_filter_matches?(attributes, key)
+    return true unless advanced_filters[key.to_s] == 'yes'
+
+    attributes.fetch(key) == true
   end
 
   def advanced_filtered_attributes_count(attributes)
@@ -366,13 +397,6 @@ class Autonomia::Prospecting::SearchRunner
     return true if filter_value.blank?
 
     filter_value == 'yes' ? value.present? : value.blank?
-  end
-
-  def optional_boolean_filter_matches?(value, filter_value)
-    return true if filter_value.blank?
-    return false if value.nil?
-
-    filter_value == 'yes' ? value == true : value == false
   end
 
   def number_or_nil(value)
