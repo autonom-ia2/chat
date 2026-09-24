@@ -3727,8 +3727,8 @@
      "fontes": [
       "porques: Juntar leads em listas e preparar um público de campanha"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/pages/ProspectingListsPage.vue:1730"
     },
     {
      "id": "16.04",
@@ -3751,8 +3751,8 @@
      "fontes": [
       "porques: Ajustar chaves, limites e critérios de score da prospecção"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/pages/ProspectingSettingsPage.vue:560"
     }
    ]
   },
