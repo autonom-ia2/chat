@@ -1,0 +1,41 @@
+WEBVTT
+
+1
+00:00:00.001 --> 00:00:02.043
+Webhooks e Painel de Aplicativos
+
+2
+00:00:02.043 --> 00:00:05.205
+Clique em Adicionar novo Webhook
+
+3
+00:00:05.205 --> 00:00:07.047
+Informe a URL do Webhook
+
+4
+00:00:07.047 --> 00:00:09.058
+Dê um nome ao webhook
+
+5
+00:00:09.058 --> 00:00:12.176
+Marque os eventos que quer assinar
+
+6
+00:00:12.176 --> 00:00:18.514
+Clique em Criar webhook
+
+7
+00:00:18.514 --> 00:00:20.711
+Copie o Segredo agora
+
+8
+00:00:20.711 --> 00:00:27.083
+Clique em Concluído
+
+9
+00:00:27.083 --> 00:00:28.704
+Painel de Aplicativos mostra sua tela na conversa
+
+10
+00:00:28.704 --> 00:00:31.072
+Pronto
