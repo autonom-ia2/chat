@@ -86,11 +86,29 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
     Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'google_places', google_places_api_key: 'chave-da-conta')
 
     expect do
-      described_class.new(
-        account: account,
-        user: user,
-        params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 1 }
-      ).perform
+      with_modified_env('GOOGLE_PLACES_API_KEY' => nil) do
+        described_class.new(
+          account: account,
+          user: user,
+          params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 1 }
+        ).perform
+      end
+    end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, /platform API key/)
+  end
+
+  # A chave da plataforma vem só do ambiente (#683): uma InstallationConfig homônima apareceria no superadmin.
+  it 'ignores an InstallationConfig with the platform key name: the key comes only from the environment' do
+    InstallationConfig.where(name: 'GOOGLE_PLACES_API_KEY').first_or_create!(value: 'chave-no-banco')
+    Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'google_places')
+
+    expect do
+      with_modified_env('GOOGLE_PLACES_API_KEY' => nil) do
+        described_class.new(
+          account: account,
+          user: user,
+          params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 1 }
+        ).perform
+      end
     end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, /platform API key/)
   end
 
@@ -127,6 +145,8 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
   # Caracterização do motor (#683). Os casos que eram DIVERGE e a E0 corrigiu
   # foram invertidos para o comportamento novo; o DIVERGE que resta é de outra etapa.
   describe 'caracterização do motor (#683)' do
+    around { |example| with_modified_env('GOOGLE_PLACES_API_KEY' => 'chave-da-plataforma') { example.run } }
+
     let(:setting) { Autonomia::Prospecting::Setting.for_account(account) }
     let(:mock_provider_class) { Autonomia::Prospecting::Providers::MockProvider }
     let(:google_endpoint) { Autonomia::Prospecting::Providers::GooglePlacesProvider::ENDPOINT }
@@ -169,8 +189,8 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
         .to_return(status: 200, body: { places: places_payload }.to_json, headers: { 'Content-Type' => 'application/json' })
     end
 
+    # A chave da plataforma vem do ambiente (around no topo deste describe); aqui só a conta passa para o Google.
     def use_google_places!(**extra)
-      InstallationConfig.where(name: 'GOOGLE_PLACES_API_KEY').first_or_create!(value: 'chave-da-plataforma')
       setting.update!(provider: 'google_places', **extra)
     end
 

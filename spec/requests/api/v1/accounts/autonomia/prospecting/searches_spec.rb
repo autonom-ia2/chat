@@ -86,55 +86,57 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
   end
 
   it 'returns Google location suggestions without exposing the API key' do
-    InstallationConfig.where(name: 'GOOGLE_PLACES_API_KEY').first_or_create!(value: 'secret-key')
-    stub_request(:post, 'https://places.googleapis.com/v1/places:autocomplete')
-      .to_return(
-        status: 200,
-        body: {
-          suggestions: [
-            {
-              placePrediction: {
-                placeId: 'places/divinopolis',
-                text: { text: 'Divinopolis, MG, Brasil' }
+    with_modified_env('GOOGLE_PLACES_API_KEY' => 'secret-key') do
+      stub_request(:post, 'https://places.googleapis.com/v1/places:autocomplete')
+        .to_return(
+          status: 200,
+          body: {
+            suggestions: [
+              {
+                placePrediction: {
+                  placeId: 'places/divinopolis',
+                  text: { text: 'Divinopolis, MG, Brasil' }
+                }
               }
-            }
-          ]
-        }.to_json
+            ]
+          }.to_json
+        )
+
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/location_suggestions",
+          params: { query: 'Divino' },
+          headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']).to contain_exactly(
+        { 'text' => 'Divinopolis, MG, Brasil', 'place_id' => 'places/divinopolis' }
       )
-
-    get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/location_suggestions",
-        params: { query: 'Divino' },
-        headers: auth_headers(admin)
-
-    expect(response).to have_http_status(:ok)
-    expect(response.parsed_body['payload']).to contain_exactly(
-      { 'text' => 'Divinopolis, MG, Brasil', 'place_id' => 'places/divinopolis' }
-    )
+    end
   end
 
   it 'returns Google location details for a selected place' do
-    InstallationConfig.where(name: 'GOOGLE_PLACES_API_KEY').first_or_create!(value: 'secret-key')
-    stub_request(:get, 'https://places.googleapis.com/v1/places/places/divinopolis')
-      .to_return(
-        status: 200,
-        body: {
-          id: 'places/divinopolis',
-          formattedAddress: 'Divinopolis, MG, Brasil',
-          location: { latitude: -20.1446, longitude: -44.8912 }
-        }.to_json
+    with_modified_env('GOOGLE_PLACES_API_KEY' => 'secret-key') do
+      stub_request(:get, 'https://places.googleapis.com/v1/places/places/divinopolis')
+        .to_return(
+          status: 200,
+          body: {
+            id: 'places/divinopolis',
+            formattedAddress: 'Divinopolis, MG, Brasil',
+            location: { latitude: -20.1446, longitude: -44.8912 }
+          }.to_json
+        )
+
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/location_details",
+          params: { place_id: 'places/divinopolis' },
+          headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']).to include(
+        'place_id' => 'places/divinopolis',
+        'label' => 'Divinopolis, MG, Brasil',
+        'latitude' => -20.1446,
+        'longitude' => -44.8912
       )
-
-    get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/location_details",
-        params: { place_id: 'places/divinopolis' },
-        headers: auth_headers(admin)
-
-    expect(response).to have_http_status(:ok)
-    expect(response.parsed_body['payload']).to include(
-      'place_id' => 'places/divinopolis',
-      'label' => 'Divinopolis, MG, Brasil',
-      'latitude' => -20.1446,
-      'longitude' => -44.8912
-    )
+    end
   end
 
   it 'accepts a 60-result search and rejects 61 with 422' do
@@ -153,15 +155,17 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
   end
 
   it 'does not suggest locations with a key saved only on the account' do
-    Autonomia::Prospecting::Setting.for_account(account).update!(google_places_api_key: 'chave-antiga-da-conta')
+    with_modified_env('GOOGLE_PLACES_API_KEY' => nil) do
+      Autonomia::Prospecting::Setting.for_account(account).update!(google_places_api_key: 'chave-antiga-da-conta')
 
-    get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/location_suggestions",
-        params: { query: 'Divino' },
-        headers: auth_headers(admin)
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/location_suggestions",
+          params: { query: 'Divino' },
+          headers: auth_headers(admin)
 
-    expect(response).to have_http_status(:ok)
-    expect(response.parsed_body['payload']).to eq([])
-    expect(a_request(:post, 'https://places.googleapis.com/v1/places:autocomplete')).not_to have_been_made
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']).to eq([])
+      expect(a_request(:post, 'https://places.googleapis.com/v1/places:autocomplete')).not_to have_been_made
+    end
   end
 
   it 'deletes a recent search without deleting its leads' do

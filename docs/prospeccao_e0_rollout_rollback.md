@@ -2,9 +2,11 @@
 
 ## O que muda
 
-- Chaves do Google e da BigDataCorp passam a ser da plataforma, em `InstallationConfig`:
+- Chaves do Google e da BigDataCorp passam a ser da plataforma e vêm **só de variável de ambiente**:
   `GOOGLE_PLACES_API_KEY` e `BIGDATACORP_PASSWORD`/`BIGDATACORP_USER` (segredos) e `GOOGLE_MAPS_BROWSER_API_KEY`
-  (chave pública de navegador, restrita por domínio). Superadmin → Settings → Prospecting.
+  (chave pública de navegador, restrita por domínio). Não aparecem em tela nenhuma, nem no superadmin: o código lê
+  `ENV` direto, sem `InstallationConfig` e sem `GlobalConfigService` (que copiaria a variável para o banco e a
+  mostraria no superadmin). Em produção, as variáveis saem do parâmetro SSM `/chatwoot/prod/env` de cada stack.
 - A conta não grava mais chave, provider, limites nem `enrichment_enabled` pela API. As colunas ficam no banco e
   deixam de ser lidas.
 - Sem trava de consumo: `max_results_per_search`, `daily_limit` e `monthly_limit` deixam de valer. O pedido vai até
@@ -108,7 +110,7 @@ ORDER BY account_id;
 
 Guardar a saída no host de produção, no caminho que o runbook de deploy define. A segunda lista diz quem hoje busca
 no Google com chave própria: depois do deploy essa chave deixa de ser lida, e essas contas dependem da chave da
-plataforma (ver "Janela entre o deploy e as chaves").
+plataforma (ver "Chaves no SSM").
 
 Anotar também a hora exata do deploy de cada stack (UTC): ela separa, na volta, as linhas criadas pela versão nova.
 
@@ -156,30 +158,88 @@ aws rds describe-db-instances --profile hub2you --region us-east-1 --query 'DBIn
 
 A instância do ensaio tem que ter sumido da lista. Sem o log da restauração e o da troca, nas duas stacks, não sobe.
 
+## Chaves no SSM (antes do merge, nas duas stacks)
+
+As chaves entram no parâmetro `/chatwoot/prod/env` (SecureString) de **cada** stack **antes do merge**. O deploy
+blue-green monta o `.env` da instância nova a partir desse parâmetro (`deploy-*-blue-green.yml`, `ENV_PARAMETER`), então
+a versão nova já nasce com as chaves. A instância que está no ar não relê o parâmetro, e a versão anterior ignora as
+quatro variáveis: acrescentá-las antes não muda nada em produção.
+
+As quatro variáveis: `GOOGLE_PLACES_API_KEY`, `GOOGLE_MAPS_BROWSER_API_KEY`, `BIGDATACORP_USER`,
+`BIGDATACORP_PASSWORD`. Os valores vêm do cofre de segredos. **Nunca** escrever valor de chave neste runbook, em
+issue, em PR, em log ou no chat.
+
+Mudança cirúrgica, como manda `docs/production-env-secrets.md`: ler, acrescentar as linhas, gravar e comparar o
+conjunto de chaves. Nunca reescrever o parâmetro do zero. Em cada stack, com o prefixo `aws` da tabela acima
+(exemplo com o da hub2you):
+
+```sh
+umask 077
+BKP="$TMPDIR/chatwoot_env_pre_prospeccao_e0_$(date -u +%Y%m%dT%H%M%SZ)"
+
+# 1. Versão atual (só o número, sem valor): é a versão de volta
+aws ssm get-parameter --profile hub2you --region us-east-1 \
+  --name /chatwoot/prod/env --query Parameter.Version --output text
+
+# 2. Backup do valor atual em arquivo 600, fora do repositório. Não imprimir na tela
+aws ssm get-parameter --profile hub2you --region us-east-1 \
+  --name /chatwoot/prod/env --with-decryption --query Parameter.Value --output text > "$BKP.env"
+cp "$BKP.env" "$BKP.novo.env"
+
+# 3. Nenhuma das quatro pode existir ainda (esperado: 0)
+grep -c -E '^(GOOGLE_PLACES_API_KEY|GOOGLE_MAPS_BROWSER_API_KEY|BIGDATACORP_USER|BIGDATACORP_PASSWORD)=' "$BKP.novo.env"
+```
+
+4. Abrir `"$BKP.novo.env"` num editor e acrescentar, no fim, as quatro linhas `NOME=valor`, colando o valor do cofre.
+   Nada de `echo` com valor: fica no histórico do shell.
+5. Conferir a contagem de variáveis, só pelos nomes:
+
+   ```sh
+   cut -d= -f1 "$BKP.env"      | grep -v '^#' | grep -v '^$' | sort > "$BKP.nomes.antes"
+   cut -d= -f1 "$BKP.novo.env" | grep -v '^#' | grep -v '^$' | sort > "$BKP.nomes.depois"
+   wc -l < "$BKP.nomes.antes"; wc -l < "$BKP.nomes.depois"   # depois = antes + 4
+   comm -23 "$BKP.nomes.antes" "$BKP.nomes.depois"           # tem que sair vazio: nenhuma variável sumiu
+   comm -13 "$BKP.nomes.antes" "$BKP.nomes.depois"           # tem que sair só as quatro novas
+   ```
+
+   Se a contagem não subir exatamente 4, ou se alguma variável sumir, **abortar**: não gravar.
+6. Gravar e conferir de novo, lendo do SSM:
+
+   ```sh
+   aws ssm put-parameter --profile hub2you --region us-east-1 \
+     --name /chatwoot/prod/env --type SecureString --value "file://$BKP.novo.env" --overwrite
+   aws ssm get-parameter --profile hub2you --region us-east-1 \
+     --name /chatwoot/prod/env --with-decryption --query Parameter.Value --output text \
+     | cut -d= -f1 | grep -v '^#' | grep -v '^$' | sort | diff - "$BKP.nomes.depois" && echo IGUAL
+   ```
+
+   Anotar a versão nova (`--query Parameter.Version`). Sem `IGUAL`, restaurar pela volta abaixo.
+
+**Volta das chaves**: gravar de novo o valor da versão anotada no item 1. O deploy cria uma versão nova do parâmetro
+a cada rodada, então a volta é pelo número anotado, nunca por "a versão anterior à atual":
+
+```sh
+aws ssm get-parameter --profile hub2you --region us-east-1 \
+  --name "/chatwoot/prod/env:<versao_do_item_1>" --with-decryption --query Parameter.Value --output text > "$BKP.volta.env"
+aws ssm put-parameter --profile hub2you --region us-east-1 \
+  --name /chatwoot/prod/env --type SecureString --value "file://$BKP.volta.env" --overwrite
+```
+
+Conferir que a lista de nomes voltou a ser igual a `"$BKP.nomes.antes"`. A volta só vale para instância nova: a que
+já está no ar continua com o `.env` com que subiu, até o próximo deploy. Depois da busca de prova (ou da volta),
+apagar os arquivos `"$BKP"*`: eles guardam todos os segredos da stack.
+
+Sem as chaves no parâmetro, a versão nova sobe sem elas: conta em `google_places` recebe **422** "Google Places
+platform API key is not configured" em toda busca (inclusive as contas da lista de chave própria da foto do passo 2,
+porque a versão nova não lê mais a chave da conta) e o mapa da tela de busca não aparece. Por isso as chaves vêm antes
+do merge.
+
 ## Subida, nesta ordem, em cada stack
 
-O grupo **Prospecting** só aparece no superadmin depois do deploy, porque é a versão nova que o cria. Não dá para
-cadastrar as chaves antes.
-
-1. **Deploy** pelo runbook do projeto. Anotar a hora (UTC).
-2. **Cadastro imediato das chaves**, logo que o healthcheck passar: Superadmin → Settings → Prospecting,
-   `GOOGLE_PLACES_API_KEY` e `GOOGLE_MAPS_BROWSER_API_KEY` (e as da BigDataCorp, se já houver). Cada stack tem o seu
-   superadmin e o seu banco: cadastrar nas duas.
+1. **Chaves no SSM** (seção acima), antes do merge.
+2. **Deploy** pelo runbook do projeto. Anotar a hora (UTC).
 3. **Troca das contas `mock`** (seção abaixo), passo obrigatório.
 4. **Busca de prova** (seção "Depois de subir").
-
-### Janela entre o deploy e as chaves
-
-Entre o passo 1 e o passo 2, a plataforma não tem chave do Google:
-
-- conta em `google_places` sem chave de plataforma recebe **422** "Google Places platform API key is not
-  configured" em toda busca. Isso inclui as contas da lista de chave própria da foto do passo 2, porque a versão
-  nova não lê mais a chave da conta;
-- o mapa da tela de busca não aparece (falta `GOOGLE_MAPS_BROWSER_API_KEY`);
-- conta ainda em `mock` continua recebendo lead fictício, sem erro.
-
-Por isso o passo 2 vem colado no 1, e a troca do passo 3 só depois dele: trocar uma conta para `google_places` antes
-das chaves só a leva para o 422.
 
 ## Troca das contas `mock`
 
@@ -188,7 +248,7 @@ migration não troca o provider de quem já tem configuração: sem este passo, 
 recebendo lead fictício, e as telas mostram o aviso "Modo de demonstração" (`mock_provider` no GET de settings) no
 lugar do selo de chaves prontas.
 
-É escrita em produção: **aguarda o OK final do Rodrigo no momento do deploy**, depois do cadastro das chaves.
+É escrita em produção: **aguarda o OK final do Rodrigo no momento do deploy**, com as chaves já no parâmetro SSM e a versão nova no ar.
 
 ```sql
 -- Antes: quem vai ser trocado. Guardar a lista de ids (é a :ids_trocados da volta)
@@ -289,5 +349,5 @@ sessões, então nada de `db:rollback STEP=2`: a volta é por versão.
    ```
 
 As colunas antigas continuam no banco com o valor que tinham, então a versão anterior volta a ler chave, limites e
-`enrichment_enabled` da conta como antes. A chave nova em `internal_attributes` e as linhas de `InstallationConfig`
-são ignoradas pela versão anterior.
+`enrichment_enabled` da conta como antes. A chave nova em `internal_attributes` e as quatro variáveis do
+parâmetro SSM são ignoradas pela versão anterior; tirá-las do parâmetro é a "Volta das chaves", à parte.

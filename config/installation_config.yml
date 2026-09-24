@@ -238,28 +238,6 @@
   type: number
 # End of Captain Config
 
-# MARK: Prospecting Config
-- name: GOOGLE_PLACES_API_KEY
-  display_title: 'Google Places API Key'
-  description: 'Server-side key used by every account that has Prospecting enabled to search places on Google.'
-  locked: false
-  type: secret
-- name: GOOGLE_MAPS_BROWSER_API_KEY
-  display_title: 'Google Maps Browser API Key'
-  description: 'Public browser key used to draw the Prospecting map. Restrict it by domain in the Google Cloud console.'
-  locked: false
-- name: BIGDATACORP_USER
-  display_title: 'BigDataCorp User'
-  description: 'Access user for the BigDataCorp company and decision maker research.'
-  locked: false
-  type: secret
-- name: BIGDATACORP_PASSWORD
-  display_title: 'BigDataCorp Password'
-  description: 'Access password for the BigDataCorp company and decision maker research.'
-  locked: false
-  type: secret
-# End of Prospecting Config
-
 # ------- Context.dev Config ------- #
 - name: CONTEXT_DEV_API_KEY
   display_title: 'Context.dev API Key'

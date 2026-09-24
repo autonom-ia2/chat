@@ -50,52 +50,71 @@ RSpec.describe 'Autonomia prospecting settings API', type: :request do
   end
 
   it 'returns the platform state read-only, without the server Places key' do
-    InstallationConfig.create!(name: 'GOOGLE_PLACES_API_KEY', value: 'chave-de-servidor')
-    InstallationConfig.create!(name: 'GOOGLE_MAPS_BROWSER_API_KEY', value: 'chave-de-navegador')
-    Autonomia::Prospecting::Config.enable_research_for!(account)
-    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account, settings: { 'api_key' => 'chave-ia' })
+    with_modified_env('GOOGLE_PLACES_API_KEY' => 'chave-de-servidor', 'GOOGLE_MAPS_BROWSER_API_KEY' => 'chave-de-navegador') do
+      Autonomia::Prospecting::Config.enable_research_for!(account)
+      create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account, settings: { 'api_key' => 'chave-ia' })
 
-    get settings_url, headers: auth_headers(admin)
+      get settings_url, headers: auth_headers(admin)
 
-    expect(response).to have_http_status(:ok)
-    payload = response.parsed_body['payload']
-    expect(payload.slice('platform_google_places_configured', 'google_maps_browser_api_key', 'research_enabled', 'ai_credential_configured'))
-      .to eq('platform_google_places_configured' => true, 'google_maps_browser_api_key' => 'chave-de-navegador',
-             'research_enabled' => true, 'ai_credential_configured' => true)
-    expect(response.body).not_to include('chave-de-servidor')
-    expect(response.body).not_to include('chave-ia')
-    expect(payload.keys).not_to include('provider', 'provider_enabled', 'max_results_per_search', 'daily_limit', 'monthly_limit',
-                                        'enrichment_enabled', 'google_places_api_key', 'has_google_places_api_key')
+      expect(response).to have_http_status(:ok)
+      payload = response.parsed_body['payload']
+      expect(payload.slice('platform_google_places_configured', 'google_maps_browser_api_key', 'research_enabled', 'ai_credential_configured'))
+        .to eq('platform_google_places_configured' => true, 'google_maps_browser_api_key' => 'chave-de-navegador',
+               'research_enabled' => true, 'ai_credential_configured' => true)
+      expect(response.body).not_to include('chave-de-servidor')
+      expect(response.body).not_to include('chave-ia')
+      expect(payload.keys).not_to include('provider', 'provider_enabled', 'max_results_per_search', 'daily_limit', 'monthly_limit',
+                                          'enrichment_enabled', 'google_places_api_key', 'has_google_places_api_key')
+    end
   end
 
   it 'reports missing platform keys and missing Kanban AI credential even with the system key' do
-    InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').first_or_create!(value: 'chave-do-sistema')
-    Autonomia::Prospecting::Setting.for_account(account).update!(google_places_api_key: 'chave-antiga-da-conta')
+    with_modified_env('GOOGLE_PLACES_API_KEY' => nil, 'GOOGLE_MAPS_BROWSER_API_KEY' => nil) do
+      InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').first_or_create!(value: 'chave-do-sistema')
+      Autonomia::Prospecting::Setting.for_account(account).update!(google_places_api_key: 'chave-antiga-da-conta')
 
-    get settings_url, headers: auth_headers(admin)
+      get settings_url, headers: auth_headers(admin)
 
-    payload = response.parsed_body['payload']
-    expect(payload['platform_google_places_configured']).to be(false)
-    expect(payload['google_maps_browser_api_key']).to be_nil
-    expect(payload['research_enabled']).to be(false)
-    expect(payload['ai_credential_configured']).to be(false)
+      payload = response.parsed_body['payload']
+      expect(payload['platform_google_places_configured']).to be(false)
+      expect(payload['google_maps_browser_api_key']).to be_nil
+      expect(payload['research_enabled']).to be(false)
+      expect(payload['ai_credential_configured']).to be(false)
+    end
+  end
+
+  # As chaves da plataforma vêm só do ambiente (#683). Uma InstallationConfig homônima apareceria no superadmin,
+  # então não pode valer como chave.
+  it 'does not read platform keys from an InstallationConfig with the same name' do
+    with_modified_env('GOOGLE_PLACES_API_KEY' => nil, 'GOOGLE_MAPS_BROWSER_API_KEY' => nil) do
+      InstallationConfig.where(name: 'GOOGLE_PLACES_API_KEY').first_or_create!(value: 'chave-de-servidor-no-banco')
+      InstallationConfig.where(name: 'GOOGLE_MAPS_BROWSER_API_KEY').first_or_create!(value: 'chave-de-navegador-no-banco')
+
+      get settings_url, headers: auth_headers(admin)
+
+      payload = response.parsed_body['payload']
+      expect(payload['platform_google_places_configured']).to be(false)
+      expect(payload['google_maps_browser_api_key']).to be_nil
+      expect(response.body).not_to include('no-banco')
+    end
   end
 
   # Conta cuja linha nasceu em mock antes da E0 recebe lead fictício mesmo com a chave da plataforma pronta. A tela
   # precisa saber disso para não mostrar o selo de chaves prontas (#683).
   it 'reports the mock provider read-only, so the screen does not claim the platform keys are in use' do
-    InstallationConfig.create!(name: 'GOOGLE_PLACES_API_KEY', value: 'chave-de-servidor')
-    Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'mock')
+    with_modified_env('GOOGLE_PLACES_API_KEY' => 'chave-de-servidor') do
+      Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'mock')
 
-    get settings_url, headers: auth_headers(admin)
-    mock_payload = response.parsed_body['payload']
-    Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'google_places')
-    get settings_url, headers: auth_headers(admin)
-    google_payload = response.parsed_body['payload']
+      get settings_url, headers: auth_headers(admin)
+      mock_payload = response.parsed_body['payload']
+      Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'google_places')
+      get settings_url, headers: auth_headers(admin)
+      google_payload = response.parsed_body['payload']
 
-    expect(mock_payload.slice('platform_google_places_configured', 'mock_provider'))
-      .to eq('platform_google_places_configured' => true, 'mock_provider' => true)
-    expect(google_payload['mock_provider']).to be(false)
+      expect(mock_payload.slice('platform_google_places_configured', 'mock_provider'))
+        .to eq('platform_google_places_configured' => true, 'mock_provider' => true)
+      expect(google_payload['mock_provider']).to be(false)
+    end
   end
 
   def auth_headers(user)

@@ -15,7 +15,7 @@ vi.mock('dashboard/api/crmKanban', () => ({
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
-// Campos que a E0 (#683) tirou da conta: são da plataforma e do superadmin.
+// Campos que a E0 (#683) tirou da conta: são da plataforma. As chaves vêm só de variável de ambiente, fora de qualquer tela.
 const CAMPOS_REMOVIDOS = [
   'google_places_api_key',
   'google_maps_browser_api_key',
