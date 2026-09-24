@@ -198,7 +198,7 @@ export const cenas = [
   {
     legenda: 'Escolha a Atuação',
     acao: 'selecionar',
-    alvo: { seletor: 'select' },
+    alvo: { seletor: '[role="combobox"][aria-label="Atuação"]' },
     valor: 'external',
     zoom: 1.8,
   },

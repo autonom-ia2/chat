@@ -264,6 +264,21 @@ describe('ChoiceSelect', () => {
     expect(trigger.classes()).not.toContain('h-10');
   });
 
+  it('expõe o valor de cada opção em data-value (motor de vídeo da Central)', async () => {
+    wrapper = mountSelect('pt_BR', {
+      options: [
+        { value: null, label: 'Ninguém' },
+        { value: 7, label: 'Ana' },
+        { value: 'ses:1', label: 'desnorteada.test' },
+      ],
+    });
+    await wrapper.get('[role="combobox"]').trigger('click');
+    const valores = wrapper
+      .findAll('[role="option"]')
+      .map(option => option.attributes('data-value'));
+    expect(valores).toEqual(['null', '7', 'ses:1']);
+  });
+
   it('opções da lista continuam com 44 px', async () => {
     wrapper = mountSelect();
     await wrapper.get('[role="combobox"]').trigger('click');
