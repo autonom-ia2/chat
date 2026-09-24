@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import ProspectingGoogleMap from '../ProspectingGoogleMap.vue';
 import SearchWhereFields from './SearchWhereFields.vue';
+import SearchAreaFields from './SearchAreaFields.vue';
 import SearchModeFields from './SearchModeFields.vue';
 import SearchQuantityFields from './SearchQuantityFields.vue';
 import SearchAdvancedFilters from './SearchAdvancedFilters.vue';
@@ -59,6 +60,7 @@ const {
       <div class="grid content-start gap-5">
         <div class="grid gap-4">
           <SearchWhereFields />
+          <SearchAreaFields />
           <SearchModeFields />
           <SearchQuantityFields />
           <SearchAdvancedFilters />
