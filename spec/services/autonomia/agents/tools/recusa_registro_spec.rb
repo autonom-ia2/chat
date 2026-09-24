@@ -66,6 +66,12 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     record
   end
 
+  # A busca de atividade do empresarial (chat#641), pelo mesmo caminho das outras ferramentas.
+  def buscar_atividade(termos)
+    bound_para(Autonomia::Agents::Tools::Native::AtividadeLookup)
+      .execute({ 'name' => 'buscar_atividade', 'arguments' => { termos: termos }.to_json }, delivery: delivery)
+  end
+
   def bound_para(native)
     Autonomia::Agents::Tools::Bound.new(agent: agent, native: native)
   end
@@ -440,6 +446,39 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           ready_connection
           bound_para(consulta_de_cep).execute({ 'name' => 'consultar_cep', 'arguments' => { cep: '99999999' }.to_json },
                                               delivery: delivery)
+        }
+      },
+      # A busca de atividade do empresarial (chat#641): sem termo, sem sessão viva, termo que o adapter recusa
+      # como pergunta, e portal mudo.
+      'atividade_lookup.rb#call#1' => {
+        espera: { motivo: 'atividade_sem_termos', slug: 'buscar_atividade' },
+        dispara: lambda {
+          ready_connection
+          buscar_atividade([])
+        }
+      },
+      'atividade_lookup.rb#call#2' => {
+        espera: { motivo: 'busca_de_atividade_indisponivel', slug: 'buscar_atividade' },
+        dispara: lambda {
+          ready_connection.forget_session!
+          buscar_atividade(['escritorio'])
+        }
+      },
+      'atividade_lookup.rb#call#3' => {
+        espera: { motivo: 'atividade_sem_termos', slug: 'buscar_atividade' },
+        dispara: lambda {
+          ready_connection
+          buscar_atividade(['ab'])
+        }
+      },
+      'atividade_lookup.rb#call#4' => {
+        espera: { motivo: 'busca_de_atividade_indisponivel', slug: 'buscar_atividade' },
+        dispara: lambda {
+          ready_connection
+          connector = Autonomia::Insurance::Connector.client
+          allow(Autonomia::Insurance::Connector).to receive(:client).and_return(connector)
+          allow(connector).to receive(:atividade_lookup).and_raise(Autonomia::Insurance::Connector::Error.new(:unavailable, 'mudo'))
+          buscar_atividade(['escritorio'])
         }
       },
       # Ramo que o adapter não tem: recusa na conferência (nenhuma execução aberta) e no envio.

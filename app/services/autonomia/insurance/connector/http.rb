@@ -86,6 +86,12 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     invoke("/v1/#{provider}/cep/lookup", { session: session, cep: cep }, read_timeout: CONFERENCIA_TIMEOUT)
   end
 
+  # AS OPÇÕES DE ATIVIDADE DE CADA SEGURADORA (empresarial, chat#641): grátis, sem cálculo, de 1 a 3 termos.
+  def atividade_lookup(provider:, session:, product:, termos:)
+    invoke("/v1/#{provider}/atividade/lookup", { session: session, product: product, termos: termos },
+           read_timeout: CONFERENCIA_TIMEOUT)
+  end
+
   # A COTAÇÃO COMO O PORTAL A GRAVOU (entrega 2, termo 8): a leitura de volta que prova que um campo
   # atravessou. Nomes do portal, sem dado da pessoa.
   def quote_read(provider:, session:, quote_id:)
