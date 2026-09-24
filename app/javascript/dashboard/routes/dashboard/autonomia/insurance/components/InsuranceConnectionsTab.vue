@@ -8,6 +8,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import InsuranceStatusBadge from './InsuranceStatusBadge.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useBranding } from 'shared/composables/useBranding';
 import {
   CONNECTION_STATES,
   asksBrokerAction,
@@ -25,6 +26,9 @@ import {
 // `te` = "translation exists". Necessário porque o segundo argumento de `t()` não funciona como
 // valor padrão: com a chave ausente, o vue-i18n devolve a própria chave.
 const { t, te } = useI18n();
+// Nome da instalação (Hub2You numa stack, Autonomia na outra): nenhuma marca fixa no texto.
+const { installationName } = useBranding();
+const brand = computed(() => ({ installationName: installationName.value }));
 const canManage = useCanManage('insurance_manage');
 
 const connection = ref(buildConnection());
@@ -245,7 +249,7 @@ const UNHEALTHY_STATES = [
 ];
 const failureText = computed(() => {
   if (!failure.value && !UNHEALTHY_STATES.includes(status.value)) return '';
-  return t(failureMessageKey(failure.value));
+  return t(failureMessageKey(failure.value), brand.value);
 });
 const pendingInsurers = computed(
   () => connection.value.insurers_pending_auth ?? null
@@ -519,7 +523,7 @@ onUnmounted(pararAcompanhamento);
         class="flex items-start gap-3 px-4 py-3 rounded-lg bg-n-amber-2 text-n-amber-12 text-sm"
       >
         <span class="i-lucide-lock size-4 mt-0.5 shrink-0" />
-        <p>{{ t('INSURANCE.CONNECTION.ENCRYPTION_UNAVAILABLE') }}</p>
+        <p>{{ t('INSURANCE.CONNECTION.ENCRYPTION_UNAVAILABLE', brand) }}</p>
       </div>
 
       <section
@@ -845,7 +849,10 @@ onUnmounted(pararAcompanhamento);
                 <span class="text-n-slate-12">
                   {{
                     row.label ||
-                    t(`INSURANCE.CONNECTION.LAYERS.${row.key.toUpperCase()}`)
+                    t(
+                      `INSURANCE.CONNECTION.LAYERS.${row.key.toUpperCase()}`,
+                      brand
+                    )
                   }}
                 </span>
                 <span v-if="row.detail" class="text-xs text-n-slate-11">
@@ -1028,7 +1035,7 @@ onUnmounted(pararAcompanhamento);
           }}
         </p>
         <p class="px-5 py-3 text-xs border-t text-n-slate-11 border-n-weak">
-          {{ t('INSURANCE.CAPABILITIES.FOOTER') }}
+          {{ t('INSURANCE.CAPABILITIES.FOOTER', brand) }}
         </p>
       </section>
     </template>
