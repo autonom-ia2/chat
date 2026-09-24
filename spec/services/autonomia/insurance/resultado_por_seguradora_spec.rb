@@ -138,6 +138,17 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
   end
 
   describe 'a união entre leituras' do
+    # Revisão da chat#634: a recusa que chega primeiro sem texto (ou gravada antes desta versão) não esconde o texto
+    # que vem depois, e a nota da equipe não sai sem aquela seguradora.
+    it 'a recusa que agora traz o texto substitui a guardada sem ele, e não o contrário' do
+      sem_texto = described_class.unir({}, [recusou('19', 'Sancor', status: 'error')])
+      com_texto = described_class.unir(sem_texto, [recusou('19', 'Sancor', reason: risco)])
+      depois = described_class.unir(com_texto, [recusou('19', 'Sancor', status: 'error')])
+
+      expect(com_texto['19']).to include('texto_da_recusa' => risco['text'])
+      expect(depois['19']).to include('texto_da_recusa' => risco['text'])
+    end
+
     it 'mantém a seguradora que a leitura nova não listou' do
       primeira = described_class.unir({}, [cotou('8', 'Porto Seguro', 2119.18), recusou('19', 'Sancor', reason: risco)])
 

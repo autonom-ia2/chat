@@ -205,8 +205,8 @@ qualquer mudança que ele pedir: isso é lapidação, não pacote novo.
 
 ## G. O que nunca vai para o cliente
 
-- Seguradora que **recusou o risco** — ele pediu preço, não auditoria, e a recusa fala do risco
-  dele. Só se ele perguntar, e aí o motivo é o que a ferramenta de resultado entregar (§J).
+- Seguradora que **não trouxe proposta** — ele pediu preço, não auditoria. Só se ele perguntar, e aí
+  só que ela não trouxe proposta desta vez, sem recusa e sem motivo (§J).
 - Seguradora que recusou por **problema de credencial da corretora** — nunca, nem se perguntado. É
   problema nosso.
 

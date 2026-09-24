@@ -39,7 +39,15 @@ module Autonomia::Insurance::ResultadoPorSeguradora
   # -> as entradas guardadas unidas com as desta leitura. Código que esta leitura não listou continua.
   def unir(guardado, ofertas)
     anterior = guardado.is_a?(Hash) ? guardado : {}
-    anterior.merge(entradas(ofertas)) { |_codigo, velha, nova| precedencia(nova) > precedencia(velha) ? nova : velha }
+    anterior.merge(entradas(ofertas)) { |_codigo, velha, nova| fica_a_nova?(velha, nova) ? nova : velha }
+  end
+
+  # Desfecho maior vence. No empate fica a guardada, salvo a recusa que agora traz o texto e antes não trazia (revisão
+  # da chat#634): sem ele, a nota da equipe sai sem aquela seguradora.
+  def fica_a_nova?(velha, nova)
+    return precedencia(nova) > precedencia(velha) if precedencia(nova) != precedencia(velha)
+
+    desfecho(nova) == SEM_PROPOSTA && nova.key?(TEXTO) && !velha.key?(TEXTO)
   end
 
   # -> há ao menos uma seguradora com preço guardado?

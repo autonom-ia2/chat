@@ -698,8 +698,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # falha só oferece pedir de novo quando o aviso disser que dá (a incerta pode já ter sido paga).
     # Decisão do CEO de 23/09/2026 (`1fce6d0b…` -> `2d658211…`): o que deu errado vai para a equipe. A passagem é do
     # CRM (handoff por funil, gatilho na fala da agente de que vai encaminhar), ativa na conta 16.
+    # chat#612/#634 (`2d658211…` -> `619d4562…`): "nenhuma trouxe proposta" encaminha à equipe, sem motivo nem recusa.
     it 'mudou? revise este bloco e assine aqui' do
-      expect(Digest::MD5.hexdigest(secao)).to eq('2d6582110494a2d78d05d9bdc51cb4e2')
+      expect(Digest::MD5.hexdigest(secao)).to eq('619d45623ec387bf4f2ddb5a14b2c230')
     end
 
     it 'não traz frase de exemplo, travessão, valor em reais nem variável' do

@@ -9,8 +9,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::NotaDaEquipe
 
   Guardado = ::Autonomia::Insurance::ResultadoPorSeguradora
 
-  CABECALHO = 'Recusas da cotação de %<cotacao>s (execução %<run>s). A IA não contou o motivo ao cliente: disse só que ' \
-              'a seguradora não trouxe proposta desta vez. O que cada uma escreveu no portal:'.freeze
+  CABECALHO = 'Recusas da cotação de %<cotacao>s (execução %<run>s). A IA não conta o motivo ao cliente. O que cada ' \
+              'seguradora escreveu no portal:'.freeze
 
   # -> nenhuma seguradora trouxe preço, e ao menos uma recusou escrevendo o motivo? Então o desfecho é
   # `sem_aceitacao`: nada falhou, e a Lia não diz que a cotação não pôde ser feita.
