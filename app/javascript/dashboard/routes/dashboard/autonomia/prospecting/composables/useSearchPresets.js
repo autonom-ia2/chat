@@ -3,9 +3,9 @@
 //   - escolher jogada só vale com o formulário de nova busca aberto;
 //   - filtros que deixam de ser os da jogada desmarcam a jogada e ficam;
 //   - trocar o modo desmarca a jogada que não é do modo novo.
-// Os filtros avançados são um estado só para o formulário e para o refino dos
-// resultados; com o formulário aberto a regra vale para a jogada do
-// formulário, fora dele para a jogada da busca aberta.
+// Os filtros do formulário (formFilters, vão no pedido) e o refino da busca
+// aberta (resultFilters) são estados separados (frente B). A jogada do
+// formulário segue formFilters; a jogada da busca aberta segue resultFilters.
 import { computed, watch } from 'vue';
 import { defaultAdvancedLeadFilters } from '../utils/advancedLeadFilters';
 import {
@@ -16,12 +16,18 @@ import {
 } from '../utils/searchPresets';
 import { DEFAULT_SCORE_MODE } from './searchSlices/modeSlice';
 
+const diverges = (presetId, filters) => {
+  const preset = findPreset(presetId);
+  return Boolean(preset) && !filtersMatchPreset(filters, preset);
+};
+
 export const useSearchPresets = state => {
   const {
     form,
     settings,
     showNewSearch,
-    advancedFilters,
+    formFilters,
+    resultFilters,
     openSearchScoreMode,
     openSearchPresetId,
   } = state;
@@ -44,7 +50,7 @@ export const useSearchPresets = state => {
   const clearFormPreset = () => {
     if (!form.value.preset_id) return;
     form.value.preset_id = null;
-    advancedFilters.value = defaultAdvancedLeadFilters();
+    formFilters.value = defaultAdvancedLeadFilters();
   };
 
   // Clicar na jogada marcada, ou em "Sem jogada", volta à busca livre.
@@ -58,24 +64,23 @@ export const useSearchPresets = state => {
     }
 
     form.value.preset_id = preset.id;
-    advancedFilters.value = presetFilters(preset);
-  };
-
-  const diverges = presetId => {
-    const preset = findPreset(presetId);
-    return (
-      Boolean(preset) && !filtersMatchPreset(advancedFilters.value, preset)
-    );
+    formFilters.value = presetFilters(preset);
   };
 
   watch(
-    advancedFilters,
-    () => {
-      if (showNewSearch.value) {
-        if (diverges(form.value.preset_id)) form.value.preset_id = null;
-        return;
+    formFilters,
+    filters => {
+      if (diverges(form.value.preset_id, filters)) form.value.preset_id = null;
+    },
+    { deep: true }
+  );
+
+  watch(
+    resultFilters,
+    filters => {
+      if (diverges(openSearchPresetId.value, filters)) {
+        openSearchPresetId.value = null;
       }
-      if (diverges(openSearchPresetId.value)) openSearchPresetId.value = null;
     },
     { deep: true }
   );

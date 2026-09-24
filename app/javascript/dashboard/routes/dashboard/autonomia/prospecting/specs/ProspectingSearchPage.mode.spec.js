@@ -14,6 +14,11 @@ import {
   toggleNewSearch,
 } from './support/searchPageHarness';
 import { submitMinimalSearch } from './support/searchFormHelpers';
+import {
+  applyFilters,
+  openFormFilters,
+  reviewsMinInput,
+} from './support/filtersHelpers';
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
@@ -48,15 +53,18 @@ const pressedPreset = wrapper =>
     .filter(button => button.attributes('aria-pressed') === 'true')
     .map(button => button.find('strong').text());
 
-// Campo numérico dos filtros avançados pelo rótulo, dentro de um contêiner.
-const numberField = (container, labelKey) =>
-  container
-    .findAll('label')
-    .find(label => label.text().includes(labelKey))
-    .find('input[type="number"]');
+const ACTIVE_FILTERS = 'PROSPECTING.SEARCH.ACTIVE_FILTERS';
 
-const formFilterField = (wrapper, labelKey) =>
-  numberField(wrapper.find('details'), labelKey);
+// Os filtros só mudam depois de Aplicar na gaveta (frente B).
+const applyReviewsMin = async (wrapper, value) => {
+  await reviewsMinInput(wrapper).setValue(value);
+  await applyFilters(wrapper);
+};
+
+const setFormReviewsMin = async (wrapper, value) => {
+  await openFormFilters(wrapper);
+  await applyReviewsMin(wrapper, value);
+};
 
 const choosePreset = async (wrapper, key) => {
   await presetButton(wrapper, PRESET(key)).trigger('click');
@@ -140,10 +148,10 @@ describe('Busca · grade de jogadas', () => {
 
     await choosePreset(wrapper, 'MERCADO_MADURO');
     expect(pressedPreset(wrapper)).toEqual([PRESET('MERCADO_MADURO')]);
-    expect(
-      formFilterField(wrapper, 'PROSPECTING.SEARCH.FIELDS.RATING_MIN').element
-        .value
-    ).toBe('4');
+    await openFormFilters(wrapper);
+    expect(reviewsMinInput(wrapper).element.value).toBe('20');
+    await applyFilters(wrapper);
+    expect(pressedPreset(wrapper)).toEqual([PRESET('MERCADO_MADURO')]);
 
     const payload = await submitMinimalSearch(wrapper);
 
@@ -159,16 +167,10 @@ describe('Busca · grade de jogadas', () => {
     const wrapper = await openForm();
     await choosePreset(wrapper, 'MERCADO_MADURO');
 
-    await formFilterField(
-      wrapper,
-      'PROSPECTING.SEARCH.FIELDS.REVIEWS_MIN'
-    ).setValue('20');
+    await setFormReviewsMin(wrapper, '20');
     expect(pressedPreset(wrapper)).toEqual([PRESET('MERCADO_MADURO')]);
 
-    await formFilterField(
-      wrapper,
-      'PROSPECTING.SEARCH.FIELDS.REVIEWS_MIN'
-    ).setValue('50');
+    await setFormReviewsMin(wrapper, '50');
     expect(pressedPreset(wrapper)).toEqual([NO_PRESET]);
 
     const payload = await submitMinimalSearch(wrapper);
@@ -194,13 +196,11 @@ describe('Busca · grade de jogadas', () => {
   it('clicar de novo na jogada ou em Sem jogada limpa a jogada e os filtros dela', async () => {
     const wrapper = await openForm();
     await choosePreset(wrapper, 'PROVA_SOCIAL');
+    expect(wrapper.text()).toContain(ACTIVE_FILTERS);
 
     await choosePreset(wrapper, 'PROVA_SOCIAL');
     expect(pressedPreset(wrapper)).toEqual([NO_PRESET]);
-    expect(
-      formFilterField(wrapper, 'PROSPECTING.SEARCH.FIELDS.RATING_MIN').element
-        .value
-    ).toBe('');
+    expect(wrapper.text()).not.toContain(ACTIVE_FILTERS);
 
     await choosePreset(wrapper, 'PRESENCA_DIGITAL');
     await presetButton(wrapper, NO_PRESET).trigger('click');
@@ -216,10 +216,7 @@ describe('Busca · grade de jogadas', () => {
 
   it('Sem jogada sem jogada marcada não apaga filtro posto à mão', async () => {
     const wrapper = await openForm();
-    await formFilterField(
-      wrapper,
-      'PROSPECTING.SEARCH.FIELDS.REVIEWS_MIN'
-    ).setValue('7');
+    await setFormReviewsMin(wrapper, '7');
 
     await presetButton(wrapper, NO_PRESET).trigger('click');
     await flushPromises();
@@ -281,11 +278,7 @@ describe('Busca · jogada no histórico e ao reabrir', () => {
     const wrapper = await mountSearchPage({ payloads: presetPayloads() });
     await openResultFilters(wrapper);
 
-    const popover = wrapper.find('div.absolute.right-0.top-11');
-    await numberField(popover, 'PROSPECTING.SEARCH.FIELDS.RATING_MIN').setValue(
-      '3'
-    );
-    await flushPromises();
+    await applyReviewsMin(wrapper, '3');
 
     expect(openSearchPresetChip(wrapper).exists()).toBe(false);
   });
