@@ -187,7 +187,8 @@ watch(
         {{ $t('DATA_IMPORTS.DRAWER.SOURCE') }}
         <Select
           v-model="sourceProvider"
-          class="!w-full [&>select]:w-full"
+          class="!w-full"
+          :aria-label="$t('DATA_IMPORTS.DRAWER.SOURCE')"
           :options="sourceOptions"
         />
       </label>

@@ -322,7 +322,8 @@ const submit = async ({ openEditor = false } = {}) => {
         </label>
         <Select
           v-model="state.sender"
-          class="w-full [&>select]:w-full"
+          class="w-full"
+          :aria-label="t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.SENDER_LABEL')"
           :options="senderOptions"
           :disabled="!hasSenderOption"
           :placeholder="t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.SENDER_PLACEHOLDER')"

@@ -1005,6 +1005,7 @@ export default {
             >
               <SelectInput
                 v-model="selectedPortalSlug"
+                :aria-label="$t('INBOX_MGMT.HELP_CENTER.LABEL')"
                 :placeholder="$t('INBOX_MGMT.HELP_CENTER.PLACEHOLDER')"
                 :options="[
                   { value: '', label: $t('INBOX_MGMT.HELP_CENTER.NONE') },
@@ -1149,6 +1150,11 @@ export default {
                     </label>
                     <SelectInput
                       v-model="widgetBubblePosition"
+                      :aria-label="
+                        $t(
+                          'INBOX_MGMT.WIDGET_BUILDER.WIDGET_OPTIONS.WIDGET_BUBBLE_POSITION_LABEL'
+                        )
+                      "
                       :options="[
                         {
                           label: $t(
@@ -1163,7 +1169,6 @@ export default {
                           value: 'right',
                         },
                       ]"
-                      class="[&>select]:!p-0 min-w-16 [&>select]:!outline-none"
                     />
                   </div>
                   <div class="h-3 w-px bg-n-weak rounded-lg" />
@@ -1177,6 +1182,11 @@ export default {
                     </label>
                     <SelectInput
                       v-model="widgetBubbleType"
+                      :aria-label="
+                        $t(
+                          'INBOX_MGMT.WIDGET_BUILDER.WIDGET_OPTIONS.WIDGET_BUBBLE_TYPE_LABEL'
+                        )
+                      "
                       :options="[
                         {
                           label: $t(
@@ -1191,7 +1201,6 @@ export default {
                           value: 'expanded_bubble',
                         },
                       ]"
-                      class="[&>select]:!p-0 min-w-16 [&>select]:!outline-none"
                     />
                   </div>
                 </div>
@@ -1222,6 +1231,9 @@ export default {
               >
                 <SelectInput
                   v-model="replyTime"
+                  :aria-label="
+                    $t('INBOX_MGMT.ADD.WEBSITE_CHANNEL.REPLY_TIME.TITLE')
+                  "
                   :options="[
                     {
                       value: 'in_a_few_minutes',

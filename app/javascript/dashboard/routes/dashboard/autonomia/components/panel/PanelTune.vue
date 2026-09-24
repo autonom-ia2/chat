@@ -465,6 +465,7 @@ onMounted(loadHistory);
         <Select
           v-model="form.actuation"
           :options="ACTUATION_OPTIONS"
+          :aria-label="t('AGENTS.TUNE.ACTUATION_LABEL')"
           class="w-full"
         />
         <p class="text-xs text-n-slate-10">
@@ -487,7 +488,12 @@ onMounted(loadHistory);
         <label class="text-sm font-medium text-n-slate-12">
           {{ t('AGENTS.TUNE.TONE') }}
         </label>
-        <Select v-model="form.tone" :options="TONE_OPTIONS" class="w-full" />
+        <Select
+          v-model="form.tone"
+          :options="TONE_OPTIONS"
+          :aria-label="t('AGENTS.TUNE.TONE')"
+          class="w-full"
+        />
       </div>
 
       <div class="flex flex-col gap-1">
@@ -497,6 +503,7 @@ onMounted(loadHistory);
         <Select
           v-model="form.handoff_strategy"
           :options="HANDOFF_OPTIONS"
+          :aria-label="t('AGENTS.TUNE.HANDOFF_STRATEGY')"
           class="w-full"
         />
       </div>

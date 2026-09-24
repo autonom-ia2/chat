@@ -88,7 +88,10 @@ defineExpose({ open, close });
         </label>
         <Select
           v-model="form.reportReason"
-          class="!w-full [&>select]:w-full"
+          class="!w-full"
+          :aria-label="
+            t('CONVERSATION.CONTEXT_MENU.REPORT_MESSAGE.PROBLEM_TYPE')
+          "
           :options="reasonOptions"
           :placeholder="
             t(

@@ -1499,7 +1499,9 @@
         "ENABLE": "Enable availability for this day",
         "UNAVAILABLE": "Unavailable",
         "VALIDATION_ERROR": "Starting time should be before closing time.",
-        "CHOOSE": "Choose"
+        "CHOOSE": "Choose",
+        "OPENS_AT": "Opening time on {day}",
+        "CLOSES_AT": "Closing time on {day}"
       },
       "ALL_DAY": "All-Day"
     },

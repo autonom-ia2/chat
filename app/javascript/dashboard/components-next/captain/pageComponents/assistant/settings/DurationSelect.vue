@@ -79,14 +79,12 @@ const minuteOptions = computed(() =>
       :options="hourOptions"
       :error="error"
       :aria-label="hoursAriaLabel"
-      class="[&>select]:min-w-24"
     />
     <Select
       v-model="minutes"
       :options="minuteOptions"
       :error="error"
       :aria-label="minutesAriaLabel"
-      class="[&>select]:min-w-28"
     />
   </div>
 </template>
