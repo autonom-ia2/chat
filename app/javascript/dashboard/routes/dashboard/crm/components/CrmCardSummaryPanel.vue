@@ -14,7 +14,7 @@ const props = defineProps({
   aiEnabled: { type: Boolean, default: false },
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 // Hydrate directly from the detail payload's typed ai_summary (Wave A). The
 // backend strips it when the conversation is not visible to the user.
@@ -29,7 +29,7 @@ const hasConversation = computed(() =>
 const hasSummary = computed(() => Boolean(summary.value?.text));
 const lastUpdated = computed(() =>
   summary.value?.generated_at
-    ? relativeTimeFromISO(summary.value.generated_at)
+    ? relativeTimeFromISO(summary.value.generated_at, locale.value)
     : ''
 );
 

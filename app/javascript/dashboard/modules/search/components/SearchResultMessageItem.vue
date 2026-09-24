@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
@@ -44,6 +45,8 @@ const props = defineProps({
   },
 });
 
+const { locale } = useI18n();
+
 const exactTimestamp = useExactTimestamp();
 
 const { inbox } = useInbox(props.inboxId);
@@ -61,7 +64,7 @@ const navigateTo = computed(() => {
 
 const createdAtTime = computed(() => {
   if (!props.createdAt) return '';
-  return dynamicTime(props.createdAt);
+  return dynamicTime(props.createdAt, locale.value);
 });
 
 const inboxName = computed(() => inbox.value?.name);

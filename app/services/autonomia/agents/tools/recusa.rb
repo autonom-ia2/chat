@@ -73,7 +73,9 @@ module Autonomia::Agents::Tools::Recusa
     'cep_invalido' => 'o CEP informado veio vazio',
     'cep_sem_endereco' => 'a consulta de CEP não trouxe o endereço completo e devolveu o que perguntar ao cliente ' \
                           '(CEP fora do formato, inexistente ou de cidade de CEP único)',
-    'consulta_de_cep_indisponivel' => 'o portal não respondeu à consulta de CEP'
+    'consulta_de_cep_indisponivel' => 'o portal não respondeu à consulta de CEP',
+    'atividade_sem_termos' => 'a busca de atividade veio sem termo de busca utilizável',
+    'busca_de_atividade_indisponivel' => 'o portal não respondeu à busca de atividade'
   }.freeze
   SEM_DESCRICAO = 'motivo fora do catálogo: falta a frase em MOTIVOS'.freeze
   DESCONHECIDA = 'desconhecida'.freeze
@@ -107,6 +109,8 @@ module Autonomia::Agents::Tools::Recusa
       "faltando=#{campos(extra[:faltando])} detalhe=#{detalhe(extra[:detalhe])} #{recusados(extra[:recusados])}" \
       "descricao=\"#{MOTIVOS.fetch(motivo, SEM_DESCRICAO)}\""
     )
+    # E para a equipe, se a conversa for encaminhada (`NotaDoEncaminhamento`): só o código, nunca dado do cliente.
+    ::Autonomia::Agents::Tools::RecusasRecentes.anotar(Integer(conversa, exception: false), motivo)
     nil
   rescue StandardError
     # Sem logger não há para onde avisar; e a recusa ao modelo vale mais que a nossa linha.

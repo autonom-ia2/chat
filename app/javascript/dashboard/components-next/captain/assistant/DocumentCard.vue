@@ -103,7 +103,7 @@ const exactTimestamp = useExactTimestamp();
 
 const { checkPermissions } = usePolicy();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const [showActionsDropdown, toggleDropdown] = useToggle();
 const modelValue = computed({
@@ -152,7 +152,9 @@ const menuItems = computed(() => {
   return allOptions;
 });
 
-const createdAtLabel = computed(() => dynamicTime(props.createdAt));
+const createdAtLabel = computed(() =>
+  dynamicTime(props.createdAt, locale.value)
+);
 const responsesCountLabel = computed(() =>
   t('CAPTAIN.DOCUMENTS.FAQ_COUNT', { n: props.responsesCount })
 );

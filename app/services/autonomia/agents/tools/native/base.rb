@@ -162,13 +162,18 @@ class Autonomia::Agents::Tools::Native::Base
       raise NomeDeParametroDuplicado, "#{slug}: #{repetidos.join(', ')}"
     end
 
+    # O item de uma lista: um tipo simples (`'string'`), ou um OBJETO com `properties`, montado no mesmo strict mode
+    # que o resto (a atividade por seguradora do empresarial, chat#641).
+    def itens(item)
+      item.is_a?(Hash) ? objeto(Array(item['properties'])) : { 'type' => item || 'string' }
+    end
+
     def propriedade(param)
       base = case param['type']
              when 'object'
                objeto(Array(param['properties'])).merge(description: param['description']).compact
              when 'array'
-               { 'type' => 'array', 'items' => { 'type' => param['items'] || 'string' },
-                 'description' => param['description'] }.compact
+               { 'type' => 'array', 'items' => itens(param['items']), 'description' => param['description'] }.compact
              else
                param.slice('type', 'description', 'enum')
              end

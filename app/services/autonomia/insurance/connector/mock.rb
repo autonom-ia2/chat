@@ -74,10 +74,14 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
   # quatro códigos. As chaves já saem como o `Http` as entrega (nenhuma é camelCase). Regenerar
   # quando o adapter mudar; a mesma lacuna de envelhecimento do de auto (#412) vale aqui.
   SCHEMA_RESIDENCIAL = JSON.parse(File.read(File.expand_path('mock/schema_residencial.json', __dir__))).freeze
+  # O DE EMPRESARIAL, gerado do adapter (chat#641) na branch `feat/ramo-empresarial` (adapters, commit 9b06ec5), com
+  # `AggerAdapter#quoteSchema('empresarial')`, sem credencial e sem rede. Regenerar quando o adapter mudar.
+  SCHEMA_EMPRESARIAL = JSON.parse(File.read(File.expand_path('mock/schema_empresarial.json', __dir__))).freeze
 
   SCHEMAS = {
     'auto' => SCHEMA_AUTO.slice('ramo', 'campos'),
     'residencial' => SCHEMA_RESIDENCIAL.slice('ramo', 'campos'),
+    'empresarial' => SCHEMA_EMPRESARIAL.slice('ramo', 'campos'),
     # O CAMINHO ONDE O VALOR É ESCRITO, e não o nome solto. O adapter lê os campos do ramo de
     # `entrada.configuracoes`, e o segurado de `entrada.segurado`. Enquanto o mock declarava `marca`,
     # ele aprovava uma entrada que o portal ignora e reprovava a que ele aceita.

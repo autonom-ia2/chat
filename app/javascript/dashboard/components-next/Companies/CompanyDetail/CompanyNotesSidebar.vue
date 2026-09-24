@@ -25,7 +25,7 @@ const exactTimestamp = useExactTimestamp();
 
 const route = useRoute();
 const router = useRouter();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { formatMessage } = useMessageFormatter();
 const currentUser = useMapGetter('getCurrentUser');
 
@@ -93,7 +93,7 @@ const openContact = contactId => {
                   }"
                   class="font-medium text-n-slate-11"
                 >
-                  {{ dynamicTime(note.createdAt) }}
+                  {{ dynamicTime(note.createdAt, locale) }}
                 </span>
               </span>
             </div>

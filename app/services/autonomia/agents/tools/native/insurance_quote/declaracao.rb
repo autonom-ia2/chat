@@ -128,6 +128,21 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
     # modelo escrever qualquer coisa. Sem especialista, ou num que a Autonom.ia não mantém, o ramo é
     # auto, e o formulário é o de sempre. Um formulário com todos os ramos multiplicaria o que o
     # modelo lê a cada turno por onze.
+    # OS RAMOS EM QUE A SEGURADORA SÓ CALCULA COM A ATIVIDADE ESCOLHIDA NA LISTA DELA (chat#641). A atividade não
+    # é campo do formulário do adapter (vive fora de `configuracoes`): ela entra aqui, como lista de objetos.
+    RAMOS_COM_ATIVIDADE = %w[empresarial].freeze
+    ATIVIDADES = {
+      'name' => 'atividades', 'type' => 'array',
+      'description' => 'A atividade da empresa escolhida em cada seguradora, a partir da busca de atividade. Uma ' \
+                       'entrada por seguradora escolhida, com seguradora, key e value exatamente como a busca ' \
+                       'devolveu. Seguradora sem opção que corresponda fica de fora da lista.',
+      'items' => { 'properties' => [
+        { 'name' => 'seguradora', 'type' => 'string', 'description' => 'O código da seguradora, como a busca devolveu.' },
+        { 'name' => 'key', 'type' => 'string', 'description' => 'A key da opção escolhida, como a busca devolveu.' },
+        { 'name' => 'value', 'type' => 'string', 'description' => 'O value da opção escolhida, como a busca devolveu.' }
+      ] }
+    }.freeze
+
     def params_for(agent, especialista: nil)
       ramo = ::Autonomia::Insurance::QuoteAgent::Builder.ramo_do_especialista(especialista) || self::AUTO
       return params + ::Autonomia::Insurance::Parametros.de_auto(schema_de_auto(agent)) if ramo == self::AUTO
@@ -136,7 +151,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
       # Com o formulário, `dados` sai: ele é o JSON solto que o formulário substitui, e a instrução
       # dele ("mande {} na primeira vez") é a rodada a mais que a fase 2 existe para tirar. Sem o
       # formulário, fica, e o ramo cota pelo caminho de antes.
-      formulario.empty? ? params : params.reject { |param| param['name'] == 'dados' } + formulario
+      base = formulario.empty? ? params : params.reject { |param| param['name'] == 'dados' } + formulario
+      RAMOS_COM_ATIVIDADE.include?(ramo) ? base + [ATIVIDADES] : base
     end
 
     # CAMPO SEM DESCRIÇÃO QUEBRA, NÃO SOME. O formulário inteiro é recusado (`FormularioInvalido`), e

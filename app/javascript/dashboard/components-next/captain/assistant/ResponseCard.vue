@@ -82,7 +82,7 @@ const emit = defineEmits([
 
 const exactTimestamp = useExactTimestamp();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { checkPermissions } = usePolicy();
 
 const [showActionsDropdown, toggleDropdown] = useToggle();
@@ -123,7 +123,7 @@ const menuItems = computed(() => [
 ]);
 
 const timestamp = computed(() =>
-  dynamicTime(props.updatedAt || props.createdAt)
+  dynamicTime(props.updatedAt || props.createdAt, locale.value)
 );
 const canManage = computed(() => checkPermissions(['administrator']));
 const hasConversationUsage = computed(

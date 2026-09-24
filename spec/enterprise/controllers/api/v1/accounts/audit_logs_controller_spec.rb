@@ -147,10 +147,17 @@ RSpec.describe 'Enterprise Audit API', type: :request do
         expect(json_response['audit_logs'].pluck('id')).to include(sign_in_audit.id)
       end
 
+      # create(:user, account:) gera o audit de AccountUser (Jane/John entrando
+      # na conta); desde #644 a busca acha também a pessoa afetada.
+      def account_user_audit_id(user)
+        account_user = AccountUser.find_by!(account: account, user: user)
+        Enterprise::AuditLog.find_by!(auditable_type: 'AccountUser', auditable_id: account_user.id, action: 'create').id
+      end
+
       it 'searches by user email' do
         json_response = fetch_audit_logs(q: 'jane@')
 
-        expect(json_response['audit_logs'].pluck('id')).to eq([inbox_audit.id])
+        expect(json_response['audit_logs'].pluck('id')).to contain_exactly(inbox_audit.id, account_user_audit_id(jane))
       end
 
       it 'searches by current email for audits written before an email change' do
@@ -159,14 +166,14 @@ RSpec.describe 'Enterprise Audit API', type: :request do
 
         json_response = fetch_audit_logs(q: 'renamed@')
 
-        expect(json_response['audit_logs'].pluck('id')).to eq([inbox_audit.id])
+        expect(json_response['audit_logs'].pluck('id')).to contain_exactly(inbox_audit.id, account_user_audit_id(jane))
       end
 
       it 'searches by user name' do
         json_response = fetch_audit_logs(q: 'smith')
 
-        expect(json_response['audit_logs'].pluck('id')).to eq([sign_in_audit.id])
-        expect(json_response['total_entries']).to eq(1)
+        expect(json_response['audit_logs'].pluck('id')).to contain_exactly(sign_in_audit.id, account_user_audit_id(john))
+        expect(json_response['total_entries']).to eq(2)
       end
 
       it 'filters by created_at window' do

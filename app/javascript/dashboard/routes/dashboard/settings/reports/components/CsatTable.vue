@@ -30,7 +30,7 @@ const { pageIndex } = defineProps({
 });
 
 const emit = defineEmits(['pageChange']);
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { isCloudFeatureEnabled, isOnChatwootCloud } = useAccount();
 const csatResponses = useMapGetter('csat/getCSATResponses');
 
@@ -65,7 +65,7 @@ const tableData = computed(() => {
     feedbackText: response.feedback_message || '',
     conversationId: response.conversation_id,
     csatReviewNotes: response.csat_review_notes,
-    createdAgo: dynamicTime(response.created_at),
+    createdAgo: dynamicTime(response.created_at, locale.value),
     createdAt: messageStamp(response.created_at, 'LLL d yyyy, h:mm a'),
     _original: response,
   }));

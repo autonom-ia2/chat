@@ -12,8 +12,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   let(:do_especialista_de_residencial) { %w[consultar_cep cotar_seguro ver_resultado_da_cotacao] }
   let(:do_agente) do
     %w[consultar_produtos_cotacao consultar_condicoes_gerais enviar_proposta_da_seguradora
-       consultar_placa cotar_seguro ver_resultado_da_cotacao consultar_cep]
+       consultar_placa cotar_seguro ver_resultado_da_cotacao consultar_cep buscar_atividade]
   end
+  let(:do_especialista_de_empresarial) { %w[consultar_cep buscar_atividade cotar_seguro ver_resultado_da_cotacao] }
 
   around do |example|
     with_modified_env(INSURANCE_QUOTING_ENABLED: 'true') { example.run }
@@ -48,7 +49,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(do_residencial.ferramentas_do_sistema).to eq(do_especialista_de_residencial)
     end
 
-    it 'o agente nasce com a consulta de CEP, uma vez so, e as comuns nao se repetem' do
+    it 'o agente nasce com a consulta de CEP e a busca de atividade, uma vez so, e as comuns nao se repetem' do
       expect(described_class::TODAS_AS_TOOLS).to eq(do_agente)
       expect(construir.native_tool_slugs).to eq(do_agente)
     end
@@ -62,9 +63,34 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       Autonomia::Insurance::Config.liberar_ramo!(account, 'residencial')
       Autonomia::Insurance::Connection.for_account(account).first
                                       .update!(capabilities: { 'products' => [{ 'product' => 'residencial', 'enabled' => true }] })
-      expect(Autonomia::Agents::Tools::Registry.for_agent(agente.reload).map(&:slug)).to include('consultar_cep')
+      catalogo = Autonomia::Agents::Tools::Registry.for_agent(agente.reload).map(&:slug)
+      expect(catalogo).to include('consultar_cep')
+      expect(catalogo).not_to include('buscar_atividade')
       expect(agente.specialists.find_by!(slug: 'cotacao_residencial').tools.map(&:slug))
         .to eq(do_especialista_de_residencial)
+    end
+  end
+
+  # EMPRESARIAL (chat#641): o CEP do local e a busca de atividade por seguradora; a busca só entra no catálogo onde
+  # a corretora cota empresarial.
+  describe 'empresarial' do
+    it 'nasce com a consulta de CEP e a busca de atividade, e nao a de placa' do
+      do_empresarial = construir.specialists.find_by!(slug: 'cotacao_empresarial')
+
+      expect(do_empresarial.tool_slugs).to eq(do_especialista_de_empresarial)
+      expect(do_empresarial.ferramentas_do_sistema).to eq(do_especialista_de_empresarial)
+    end
+
+    it 'o catalogo do turno so tem a busca de atividade onde a corretora cota empresarial' do
+      agente = construir
+      expect(Autonomia::Agents::Tools::Registry.for_agent(agente).map(&:slug)).not_to include('buscar_atividade')
+
+      Autonomia::Insurance::Config.liberar_ramo!(account, 'empresarial')
+      Autonomia::Insurance::Connection.for_account(account).first
+                                      .update!(capabilities: { 'products' => [{ 'product' => 'empresarial', 'enabled' => true }] })
+      expect(Autonomia::Agents::Tools::Registry.for_agent(agente.reload).map(&:slug)).to include('buscar_atividade', 'consultar_cep')
+      expect(agente.specialists.find_by!(slug: 'cotacao_empresarial').tools.map(&:slug))
+        .to eq(do_especialista_de_empresarial)
     end
   end
 end

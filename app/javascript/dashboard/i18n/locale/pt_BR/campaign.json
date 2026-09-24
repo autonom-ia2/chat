@@ -591,7 +591,7 @@
         "BASE_IMPORTING": "Importando lista…",
         "BASE_IMPORT_RESULT": "{count} contatos importados.",
         "BASE_IMPORT_COLUMNS": "Colunas detectadas: {columns}",
-        "BASE_IMPORT_ERROR": "Nao foi possivel importar a lista. A campanha foi salva como rascunho.",
+        "BASE_IMPORT_ERROR": "Não foi possível importar a lista. A campanha foi salva como rascunho.",
         "CREATE_AND_OPEN": "Criar e abrir no editor",
         "SAVE_DRAFT": "Salvar rascunho"
       },
@@ -813,18 +813,18 @@
         }
       },
       "WELCOME": {
-        "TITLE": "Como voce quer comecar?",
-        "SUBTITLE": "Escolha um ponto de partida. Voce pode mudar tudo depois no editor.",
+        "TITLE": "Como você quer começar?",
+        "SUBTITLE": "Escolha um ponto de partida. Você pode mudar tudo depois no editor.",
         "AI_TITLE": "Criar com IA",
         "AI_SUBTITLE": "Descreva sua campanha e deixe a IA montar usando sua lista de contatos.",
         "AI_BADGE": "Recomendado",
-        "AI_CTA": "Comecar com IA",
+        "AI_CTA": "Começar com IA",
         "TEMPLATE_TITLE": "Escolher um modelo",
         "TEMPLATE_SUBTITLE": "Comece de um design pronto e ajuste.",
         "TEMPLATE_CTA": "Ver modelos",
-        "BLANK_TITLE": "Comecar do zero",
+        "BLANK_TITLE": "Começar do zero",
         "BLANK_SUBTITLE": "Monte seu e-mail bloco a bloco em uma tela em branco.",
-        "BLANK_CTA": "Comecar do zero"
+        "BLANK_CTA": "Começar do zero"
       },
       "GALLERY": {
         "TITLE": "Escolha um modelo",

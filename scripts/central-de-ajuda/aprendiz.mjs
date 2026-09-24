@@ -54,7 +54,6 @@ const PASTA_VIDEOS = 'public/central-de-ajuda/videos';
 const PASTA_PRINTS = 'public/central-de-ajuda/prints';
 const CAMINHOS_I18N_PT_BR = 'app/javascript/dashboard/i18n/locale/pt_BR';
 const CAMINHOS_I18N_EXTRA = [
-  'app/javascript/dashboard/i18n/locale/en/insurance.json',
   'app/javascript/dashboard/i18n/locale/en/prospecting.json',
 ];
 
