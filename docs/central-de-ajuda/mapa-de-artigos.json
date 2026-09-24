@@ -347,8 +347,8 @@
      "fontes": [
       "porques: Usar o proprio Guia da Plataforma"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/components/autonomia/guide/AutonomiaGuideLauncher.vue:50"
     },
     {
      "id": "01.06",
