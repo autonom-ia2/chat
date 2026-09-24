@@ -6,6 +6,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import PageHeader from '../../SettingsSubPageHeader.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
 import Editor from 'dashboard/components-next/Editor/Editor.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 export default {
   components: {
@@ -13,6 +14,7 @@ export default {
     GreetingsEditor,
     NextButton,
     Editor,
+    ChoiceSelect,
   },
   data() {
     return {
@@ -26,6 +28,22 @@ export default {
     };
   },
   computed: {
+    greetingChoices() {
+      return [
+        {
+          value: true,
+          label: this.$t(
+            'INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_GREETING_TOGGLE.ENABLED'
+          ),
+        },
+        {
+          value: false,
+          label: this.$t(
+            'INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_GREETING_TOGGLE.DISABLED'
+          ),
+        },
+      ];
+    },
     ...mapGetters({
       uiFlags: 'inboxes/getUIFlags',
     }),
@@ -151,22 +169,14 @@ export default {
 
       <label class="w-full">
         {{ $t('INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_GREETING_TOGGLE.LABEL') }}
-        <select v-model="greetingEnabled">
-          <option :value="true">
-            {{
-              $t(
-                'INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_GREETING_TOGGLE.ENABLED'
-              )
-            }}
-          </option>
-          <option :value="false">
-            {{
-              $t(
-                'INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_GREETING_TOGGLE.DISABLED'
-              )
-            }}
-          </option>
-        </select>
+        <ChoiceSelect
+          v-model="greetingEnabled"
+          :options="greetingChoices"
+          :aria-label="
+            $t('INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_GREETING_TOGGLE.LABEL')
+          "
+          class="w-full mb-1"
+        />
         <p class="help-text">
           {{
             $t(

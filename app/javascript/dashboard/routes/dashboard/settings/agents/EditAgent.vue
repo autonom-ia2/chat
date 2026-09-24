@@ -6,6 +6,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Auth from '../../../../api/auth';
 import wootConstants from 'dashboard/constants/globals';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
@@ -139,6 +140,10 @@ const roles = computed(() => {
   return [...defaultRoles, ...customRoles];
 });
 
+const roleChoices = computed(() =>
+  roles.value.map(role => ({ value: role.id, label: role.label }))
+);
+
 const selectedRole = computed(() =>
   roles.value.find(
     role =>
@@ -154,11 +159,11 @@ const statusList = computed(() => {
   ];
 });
 
-const availabilityStatuses = computed(() =>
+// O status atual continua escolhível, como antes (nada desabilitava a opção).
+const availabilityChoices = computed(() =>
   statusList.value.map((statusLabel, index) => ({
     label: statusLabel,
     value: AVAILABILITY_STATUS_KEYS[index],
-    disabled: props.availability === AVAILABILITY_STATUS_KEYS[index],
   }))
 );
 
@@ -217,11 +222,15 @@ const resetPassword = async () => {
       <div class="w-full">
         <label :class="{ error: v$.selectedRoleId.$error }">
           {{ $t('AGENT_MGMT.EDIT.FORM.AGENT_TYPE.LABEL') }}
-          <select v-model="selectedRoleId" @change="v$.selectedRoleId.$touch">
-            <option v-for="role in roles" :key="role.id" :value="role.id">
-              {{ role.label }}
-            </option>
-          </select>
+          <ChoiceSelect
+            v-model="selectedRoleId"
+            :options="roleChoices"
+            :aria-label="$t('AGENT_MGMT.EDIT.FORM.AGENT_TYPE.LABEL')"
+            :invalid="v$.selectedRoleId.$error"
+            class="w-full"
+            :class="v$.selectedRoleId.$error ? 'mb-1' : 'mb-4'"
+            @change="v$.selectedRoleId.$touch"
+          />
           <span v-if="v$.selectedRoleId.$error" class="message">
             {{ $t('AGENT_MGMT.EDIT.FORM.AGENT_TYPE.ERROR') }}
           </span>
@@ -231,18 +240,15 @@ const resetPassword = async () => {
       <div class="w-full">
         <label :class="{ error: v$.agentAvailability.$error }">
           {{ $t('PROFILE_SETTINGS.FORM.AVAILABILITY.LABEL') }}
-          <select
+          <ChoiceSelect
             v-model="agentAvailability"
+            :options="availabilityChoices"
+            :aria-label="$t('PROFILE_SETTINGS.FORM.AVAILABILITY.LABEL')"
+            :invalid="v$.agentAvailability.$error"
+            class="w-full"
+            :class="v$.agentAvailability.$error ? 'mb-1' : 'mb-4'"
             @change="v$.agentAvailability.$touch"
-          >
-            <option
-              v-for="status in availabilityStatuses"
-              :key="status.value"
-              :value="status.value"
-            >
-              {{ status.label }}
-            </option>
-          </select>
+          />
           <span v-if="v$.agentAvailability.$error" class="message">
             {{ $t('AGENT_MGMT.EDIT.FORM.AGENT_AVAILABILITY.ERROR') }}
           </span>

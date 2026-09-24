@@ -77,7 +77,8 @@
         "PLACEHOLDER": "Apenas durante o horário comercial"
       },
       "THRESHOLD_TIME": {
-        "INVALID_FORMAT_ERROR": "O limite deve ser um número e maior que zero"
+        "INVALID_FORMAT_ERROR": "O limite deve ser um número e maior que zero",
+        "UNIT": "Unidade de tempo"
       },
       "EDIT": "Alterar",
       "CREATE": "Criar",

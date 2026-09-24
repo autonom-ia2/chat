@@ -6,11 +6,13 @@ import { getRegexp, normalizeRegexPattern } from 'shared/helpers/Validators';
 import { ATTRIBUTE_TYPES } from './constants';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 export default {
   components: {
     NextButton,
     TagInput,
+    ChoiceSelect,
   },
   props: {
     selectedAttribute: {
@@ -57,6 +59,9 @@ export default {
         ...item,
         option: this.$t(`ATTRIBUTES_MGMT.ATTRIBUTE_TYPES.${item.key}`),
       }));
+    },
+    typeChoices() {
+      return this.types.map(type => ({ value: type.id, label: type.option }));
     },
     setAttributeListValue() {
       return this.selectedAttribute.attribute_values || [];
@@ -200,11 +205,15 @@ export default {
         </label>
         <label :class="{ error: v$.attributeType.$error }">
           {{ $t('ATTRIBUTES_MGMT.ADD.FORM.TYPE.LABEL') }}
-          <select v-model="attributeType" disabled>
-            <option v-for="type in types" :key="type.id" :value="type.id">
-              {{ type.option }}
-            </option>
-          </select>
+          <ChoiceSelect
+            v-model="attributeType"
+            :options="typeChoices"
+            :aria-label="$t('ATTRIBUTES_MGMT.ADD.FORM.TYPE.LABEL')"
+            :invalid="v$.attributeType.$error"
+            disabled
+            class="w-full"
+            :class="v$.attributeType.$error ? 'mb-1' : 'mb-4'"
+          />
           <span v-if="v$.attributeType.$error" class="message">
             {{ $t('ATTRIBUTES_MGMT.ADD.FORM.TYPE.ERROR') }}
           </span>

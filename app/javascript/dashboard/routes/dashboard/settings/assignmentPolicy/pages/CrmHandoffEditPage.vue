@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import SettingsLayout from 'dashboard/routes/dashboard/settings/SettingsLayout.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import HandoffRuleFields from './components/HandoffRuleFields.vue';
@@ -163,8 +164,15 @@ const saveSettings = async () => {
   }
 };
 
-const switchPipeline = event => {
-  const id = Number(event.target.value);
+const pipelineChoices = computed(() =>
+  pipelines.value.map(pipeline => ({
+    value: pipeline.id,
+    label: pipeline.name,
+  }))
+);
+
+const switchPipeline = value => {
+  const id = Number(value);
   if (!id || id === pipelineId.value) return;
   router.push({
     name: 'crm_handoff_settings_edit',
@@ -209,19 +217,13 @@ watch(
 
       <div v-else class="grid max-w-3xl gap-5 pt-4">
         <div class="flex flex-wrap items-center gap-3">
-          <select
-            :value="pipelineId"
-            class="reset-base max-w-64 rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm font-medium text-n-slate-12 outline outline-1 outline-n-strong"
+          <ChoiceSelect
+            :model-value="pipelineId"
+            :options="pipelineChoices"
+            :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
+            class="w-full max-w-64"
             @change="switchPipeline"
-          >
-            <option
-              v-for="pipeline in pipelines"
-              :key="pipeline.id"
-              :value="pipeline.id"
-            >
-              {{ pipeline.name }}
-            </option>
-          </select>
+          />
           <div
             v-if="pipelineInboxes.length"
             class="flex flex-wrap items-center gap-1.5"

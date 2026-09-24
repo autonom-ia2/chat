@@ -1,8 +1,9 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
-defineProps({
+const props = defineProps({
   agentOptions: { type: Array, default: () => [] },
 });
 
@@ -39,6 +40,20 @@ const pickupThresholdMinutes = computed({
       (minutes > 0 ? Math.round(minutes) : 1) * 60;
   },
 });
+
+const personChoices = computed(() => [
+  { value: null, label: t('CRM_KANBAN.HANDOFF_SETTINGS.PERSON_NONE') },
+  ...props.agentOptions.map(agent => ({
+    value: agent.value,
+    label: agent.label,
+  })),
+]);
+const modeChoices = computed(() =>
+  SELECTOR_MODES.map(mode => ({
+    value: mode,
+    label: t(`CRM_KANBAN.AI_SETTINGS.HANDOFF.MODE_${mode.toUpperCase()}`),
+  }))
+);
 
 const optionLabel = option =>
   t(`CRM_KANBAN.HANDOFF_SETTINGS.${OPTION_KEYS[option]}`);
@@ -175,37 +190,24 @@ const setAction = option => {
           class="mt-1 flex items-center gap-2 text-xs text-n-slate-11"
         >
           {{ t('CRM_KANBAN.HANDOFF_SETTINGS.POOL_USER_SELECT') }}
-          <select
+          <ChoiceSelect
             v-model="form.pool_id"
-            class="reset-base max-w-56 rounded-lg border-0 bg-n-surface-2 px-2 py-1.5 text-xs text-n-slate-12 outline outline-1 outline-n-weak"
-          >
-            <option :value="null">
-              {{ t('CRM_KANBAN.HANDOFF_SETTINGS.PERSON_NONE') }}
-            </option>
-            <option
-              v-for="agent in agentOptions"
-              :key="agent.value"
-              :value="agent.value"
-            >
-              {{ agent.label }}
-            </option>
-          </select>
+            :options="personChoices"
+            :aria-label="t('CRM_KANBAN.HANDOFF_SETTINGS.POOL_USER_SELECT')"
+            class="w-full max-w-56"
+          />
         </label>
         <label
           v-else
           class="mt-1 flex items-center gap-2 text-xs text-n-slate-11"
         >
           {{ t('CRM_KANBAN.AI_SETTINGS.HANDOFF.MODE') }}
-          <select
+          <ChoiceSelect
             v-model="form.mode"
-            class="reset-base rounded-lg border-0 bg-n-surface-2 px-2 py-1.5 text-xs text-n-slate-12 outline outline-1 outline-n-weak"
-          >
-            <option v-for="mode in SELECTOR_MODES" :key="mode" :value="mode">
-              {{
-                t(`CRM_KANBAN.AI_SETTINGS.HANDOFF.MODE_${mode.toUpperCase()}`)
-              }}
-            </option>
-          </select>
+            :options="modeChoices"
+            :aria-label="t('CRM_KANBAN.AI_SETTINGS.HANDOFF.MODE')"
+            class="w-full"
+          />
         </label>
       </div>
 
@@ -297,21 +299,12 @@ const setAction = option => {
           class="mt-1 flex items-center gap-2 text-xs text-n-slate-11"
         >
           {{ t('CRM_KANBAN.HANDOFF_SETTINGS.ESCALATION_USER') }}
-          <select
+          <ChoiceSelect
             v-model="form.escalation_user_id"
-            class="reset-base max-w-56 rounded-lg border-0 bg-n-surface-2 px-2 py-1.5 text-xs text-n-slate-12 outline outline-1 outline-n-weak"
-          >
-            <option :value="null">
-              {{ t('CRM_KANBAN.HANDOFF_SETTINGS.PERSON_NONE') }}
-            </option>
-            <option
-              v-for="agent in agentOptions"
-              :key="agent.value"
-              :value="agent.value"
-            >
-              {{ agent.label }}
-            </option>
-          </select>
+            :options="personChoices"
+            :aria-label="t('CRM_KANBAN.HANDOFF_SETTINGS.ESCALATION_USER')"
+            class="w-full max-w-56"
+          />
         </label>
       </div>
     </template>

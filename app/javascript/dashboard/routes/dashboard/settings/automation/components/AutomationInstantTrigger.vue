@@ -2,6 +2,7 @@
 import { computed, useTemplateRef } from 'vue';
 import ConditionRow from 'dashboard/components-next/filter/ConditionRow.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
   events: {
@@ -39,6 +40,10 @@ const conditions = defineModel('conditions', { type: Array, required: true });
 
 const conditionsRef = useTemplateRef('conditionsRef');
 
+const eventChoices = computed(() =>
+  props.events.map(event => ({ value: event.key, label: event.value }))
+);
+
 const hasConditionErrors = computed(() =>
   Object.keys(props.errors).some(key => key.startsWith('condition_'))
 );
@@ -60,11 +65,15 @@ defineExpose({ validate, resetValidation });
     <div>
       <label :class="{ error: errors.event_name }">
         {{ $t('AUTOMATION.ADD.FORM.EVENT.LABEL') }}
-        <select v-model="eventName" class="m-0" @change="onEventChange()">
-          <option v-for="event in events" :key="event.key" :value="event.key">
-            {{ event.value }}
-          </option>
-        </select>
+        <ChoiceSelect
+          v-model="eventName"
+          :options="eventChoices"
+          :aria-label="$t('AUTOMATION.ADD.FORM.EVENT.LABEL')"
+          :invalid="Boolean(errors.event_name)"
+          class="w-full"
+          :class="{ 'mb-1': errors.event_name }"
+          @change="onEventChange()"
+        />
         <span v-if="errors.event_name" class="message">
           {{ $t('AUTOMATION.ADD.FORM.EVENT.ERROR') }}
         </span>

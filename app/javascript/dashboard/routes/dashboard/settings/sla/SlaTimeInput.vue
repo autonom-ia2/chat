@@ -1,8 +1,12 @@
 <script>
 import validations from './validations';
 import { useVuelidate } from '@vuelidate/core';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 export default {
+  components: {
+    ChoiceSelect,
+  },
   props: {
     threshold: {
       type: Number,
@@ -29,15 +33,17 @@ export default {
     return {
       thresholdTime: this.threshold || '',
       thresholdUnitValue: this.thresholdUnit,
-      options: [
-        { value: 'Minutes', label: 'minutes' },
-        { value: 'Hours', label: 'hours' },
-        { value: 'Days', label: 'days' },
-      ],
     };
   },
   validations,
   computed: {
+    options() {
+      return [
+        { value: 'Minutes', label: this.$t('CRM_SLA.TIME_UNITS.MINUTES') },
+        { value: 'Hours', label: this.$t('CRM_SLA.TIME_UNITS.HOURS') },
+        { value: 'Days', label: this.$t('CRM_SLA.TIME_UNITS.DAYS') },
+      ];
+    },
     thresholdTimeErrorMessage() {
       let errorMessage = '';
       if (this.v$.thresholdTime.$error) {
@@ -102,19 +108,12 @@ export default {
     />
     <!-- the mt-7 handles the label offset -->
     <div class="mt-7">
-      <select
+      <ChoiceSelect
         v-model="thresholdUnitValue"
-        class="px-4 py-1.5 min-w-[6.5rem] h-10 text-sm font-medium border-0 rounded-xl hover:cursor-pointer pr-7"
+        :options="options"
+        :aria-label="$t('SLA.FORM.THRESHOLD_TIME.UNIT')"
         @change="onThresholdUnitChange"
-      >
-        <option
-          v-for="(option, index) in options"
-          :key="index"
-          :value="option.value"
-        >
-          {{ option.label }}
-        </option>
-      </select>
+      />
     </div>
   </div>
 </template>

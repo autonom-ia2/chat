@@ -1,5 +1,10 @@
 <script>
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+
 export default {
+  components: {
+    ChoiceSelect,
+  },
   props: {
     label: {
       type: String,
@@ -23,23 +28,29 @@ export default {
       value: this.selected,
     };
   },
+  computed: {
+    // As opções não tinham :value, então o valor era o próprio texto.
+    choices() {
+      return this.options.map(option => ({
+        value: option.value,
+        label: option.value,
+      }));
+    },
+  },
 };
 </script>
 
 <template>
   <div>
-    <label for="dropdown-select">
+    <label>
       {{ label }}
     </label>
-    <select
-      id="dropdown-select"
+    <ChoiceSelect
       v-model="value"
-      name="dropdown-select"
+      :options="choices"
+      :aria-label="label"
+      class="w-full mb-4"
       @change="action(value)"
-    >
-      <option v-for="option in options" :key="option.key">
-        {{ option.value }}
-      </option>
-    </select>
+    />
   </div>
 </template>
