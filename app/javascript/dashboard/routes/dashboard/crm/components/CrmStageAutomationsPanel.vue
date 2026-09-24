@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
   stage: { type: Object, required: true },
@@ -176,6 +177,22 @@ const actionLabel = value => {
   return map[value] || value;
 };
 
+const triggerChoices = computed(() =>
+  ['on_enter', 'on_exit'].map(value => ({ value, label: triggerLabel(value) }))
+);
+const actionChoices = computed(() =>
+  ['create_follow_up', 'assign_owner', 'move_stage'].map(value => ({
+    value,
+    label: actionLabel(value),
+  }))
+);
+const ownerChoices = computed(() =>
+  agentOptions.value.map(agent => ({ value: agent.id, label: agent.name }))
+);
+const targetStageChoices = computed(() =>
+  stageOptions.value.map(stage => ({ value: stage.id, label: stage.name }))
+);
+
 watch(
   () => [props.expanded, props.stage?.id],
   () => {
@@ -232,11 +249,12 @@ watch(
             {{ automation.name }}
           </p>
           <p class="mb-0 truncate text-[11px] text-n-slate-10">
-            {{ triggerLabel(automation.trigger_event) }}
-            ·
             {{
-              t('CRM_KANBAN.STAGE_AUTOMATIONS.STEPS_COUNT', {
-                count: automation.steps?.length || 0,
+              t('CRM_KANBAN.STAGE_AUTOMATIONS.SUMMARY', {
+                trigger: triggerLabel(automation.trigger_event),
+                steps: t('CRM_KANBAN.STAGE_AUTOMATIONS.STEPS_COUNT', {
+                  count: automation.steps?.length || 0,
+                }),
               })
             }}
           </p>
@@ -290,17 +308,12 @@ watch(
           <span class="text-xs font-medium text-n-slate-11">
             {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.TRIGGER') }}
           </span>
-          <select
+          <ChoiceSelect
             v-model="draft.trigger_event"
-            class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-          >
-            <option value="on_enter">
-              {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.TRIGGER_ENTER') }}
-            </option>
-            <option value="on_exit">
-              {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.TRIGGER_EXIT') }}
-            </option>
-          </select>
+            :options="triggerChoices"
+            :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.TRIGGER')"
+            class="w-full"
+          />
         </label>
         <label class="flex items-end gap-2 pb-1 text-sm text-n-slate-12">
           <input
@@ -366,21 +379,13 @@ watch(
               <span class="text-[11px] text-n-slate-10">
                 {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.ACTION') }}
               </span>
-              <select
+              <ChoiceSelect
                 v-model="step.action_type"
-                class="reset-base !mb-0 h-9 w-full min-w-0 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm outline outline-1 outline-n-weak"
+                :options="actionChoices"
+                :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.ACTION')"
+                class="w-full min-w-0"
                 @change="onActionTypeChange(step)"
-              >
-                <option value="create_follow_up">
-                  {{ actionLabel('create_follow_up') }}
-                </option>
-                <option value="assign_owner">
-                  {{ actionLabel('assign_owner') }}
-                </option>
-                <option value="move_stage">
-                  {{ actionLabel('move_stage') }}
-                </option>
-              </select>
+              />
             </label>
           </div>
 
@@ -416,18 +421,11 @@ watch(
               <span class="text-[11px] text-n-slate-10">
                 {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.OWNER') }}
               </span>
-              <select
+              <ChoiceSelect
                 v-model="step.action_config.owner_id"
-                class="reset-base h-9 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm outline outline-1 outline-n-weak"
-              >
-                <option
-                  v-for="agent in agentOptions"
-                  :key="agent.id"
-                  :value="agent.id"
-                >
-                  {{ agent.name }}
-                </option>
-              </select>
+                :options="ownerChoices"
+                :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.OWNER')"
+              />
             </label>
           </template>
 
@@ -436,18 +434,11 @@ watch(
               <span class="text-[11px] text-n-slate-10">
                 {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.TARGET_STAGE') }}
               </span>
-              <select
+              <ChoiceSelect
                 v-model="step.action_config.target_stage_id"
-                class="reset-base h-9 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm outline outline-1 outline-n-weak"
-              >
-                <option
-                  v-for="stageOption in stageOptions"
-                  :key="stageOption.id"
-                  :value="stageOption.id"
-                >
-                  {{ stageOption.name }}
-                </option>
-              </select>
+                :options="targetStageChoices"
+                :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.TARGET_STAGE')"
+              />
             </label>
           </template>
         </div>

@@ -2,6 +2,7 @@
  * Composable for branding-related utilities
  * Provides methods to customize text with installation-specific branding
  */
+import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store.js';
 
 export function useBranding() {
@@ -21,7 +22,10 @@ export function useBranding() {
     return text.replace(/chatwoot/gi, installationName);
   };
 
+  const installationName = computed(() => globalConfig.value?.installationName);
+
   return {
+    installationName,
     replaceInstallationName,
   };
 }

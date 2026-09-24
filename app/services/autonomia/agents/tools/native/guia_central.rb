@@ -70,7 +70,7 @@ class Autonomia::Agents::Tools::Native::GuiaCentral < Autonomia::Agents::Tools::
     artigo = leitura.artigo(ref)
     return "Não encontrei nenhum artigo da Central de Ajuda com a referência \"#{ref}\"." if artigo.nil?
 
-    registrar(artigo)
+    guardar_artigo_lido(artigo)
     formatar(artigo)
   end
 
@@ -92,12 +92,14 @@ class Autonomia::Agents::Tools::Native::GuiaCentral < Autonomia::Agents::Tools::
     "Resultados na Central de Ajuda:\n#{linhas.join("\n")}"
   end
 
-  def registrar(artigo)
+  # Não se chama `registrar`: esse nome é de saída de recusa para a varredura
+  # (spec/support/varredura_de_recusas.rb, REGISTRADORES), e aqui não há recusa.
+  def guardar_artigo_lido(artigo)
     resumo = leitura.resumo(artigo)
     @operador.artigo_lido(ref: resumo[:ref], titulo: resumo[:titulo])
   end
 
-  # Só formata e corta pelo teto — não registra nada (ver `registrar`).
+  # Só formata e corta pelo teto — não registra nada (ver `guardar_artigo_lido`).
   def formatar(artigo)
     resumo = leitura.resumo(artigo)
     cabendo("Artigo #{resumo[:ref]} — #{resumo[:titulo]}\n\n#{artigo.content}")

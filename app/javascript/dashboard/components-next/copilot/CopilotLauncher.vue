@@ -6,6 +6,7 @@ import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useMapGetter } from 'dashboard/composables/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { isFixedPanelOpen } from 'dashboard/composables/useFixedPanelState';
 const route = useRoute();
 
 const { uiSettings, updateUISettings } = useUISettings();
@@ -52,7 +53,8 @@ const toggleSidebar = () => {
 <template>
   <div
     v-if="showCopilotLauncher"
-    class="fixed bottom-4 ltr:right-4 rtl:left-4 z-50"
+    class="fixed ltr:right-4 rtl:left-4 z-50 transition-[bottom] duration-200 ease-out"
+    :class="isFixedPanelOpen ? 'bottom-24' : 'bottom-4'"
   >
     <ButtonGroup
       class="rounded-full bg-n-alpha-2 backdrop-blur-lg p-1 shadow hover:shadow-md"

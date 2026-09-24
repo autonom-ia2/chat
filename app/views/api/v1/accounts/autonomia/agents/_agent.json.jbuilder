@@ -31,6 +31,9 @@ json.topic_map Array(agent.topic_map)
 json.knowledge_confidence agent.knowledge_confidence
 json.knowledge_summary agent.knowledge_summary
 json.enabled agent.enabled
+# #647 — canais (inboxes) ligados ao agente, lido pelo cartão. `size` usa o preload da listagem
+# (index, sem N+1) e só faz um COUNT no detalhe.
+json.channels_count agent.agent_inboxes.size
 # IP oculto: `scaffold` JAMAIS é exposto. `instruction` só aparece em modo manual (texto do
 # próprio usuário, visível); em modo guiado a instrução é gerada pelo Construtor e permanece oculta.
 json.instruction agent.instruction if agent.manual?

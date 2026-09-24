@@ -150,6 +150,34 @@ RSpec.describe Autonomia::Insurance::EntradaDaCotacao do
     end
   end
 
+  # EMPRESARIAL (chat#641): o local e o que o seguro protege. O que o cliente não disse vai com o padrão, e a
+  # linha diz qual; o valor a segurar e a atividade ficam de fora.
+  describe 'empresarial' do
+    let(:minimo) do
+      { 'produto' => 'empresarial', 'cpf' => '11222333000181', 'cep' => '01310-100',
+        'configuracoes' => { 'imovelNumero' => '1540', 'isDanosIncendioRaioExplosao' => 400_000 },
+        'atividades' => [{ 'seguradora' => '8', 'key' => '484', 'value' => 'ESCRITORIO' }] }
+    end
+
+    def resumo_empresarial(argumentos)
+      resumo(argumentos, com_schema: Autonomia::Insurance::Connector::Mock::SCHEMA_EMPRESARIAL)
+    end
+
+    it 'mostra o local e o que o seguro protege, com o padrão quando o cliente não disse' do
+      texto = resumo_empresarial(minimo)
+
+      expect(texto).to include('CEP do local da empresa: 01310100.', 'Número do local: 1540.',
+                               "O que o seguro protege: Prédio + Conteúdo, #{described_class::PADRAO}")
+      expect(texto).not_to include('400', 'R$', 'ESCRITORIO', '484')
+    end
+
+    it 'o que o cliente disse vence o padrão' do
+      so_conteudo = minimo.merge('configuracoes' => minimo['configuracoes'].merge('imovelObjetoSegurado' => 2))
+
+      expect(resumo_empresarial(so_conteudo)).to include('O que o seguro protege: Conteúdo.')
+    end
+  end
+
   # Revisão da #605: em auto a ausência continua "sem informação", mesmo que o schema traga padrão.
   it 'auto não usa o padrão do schema' do
     com_padrao = schema.merge('campos' => schema['campos'].map { |c| c['campo'] == 'coverage.glassCoverage' ? c.merge('padrao' => '1') : c })

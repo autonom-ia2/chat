@@ -6,6 +6,7 @@ import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import AutonomiaCopilotAPI from 'dashboard/api/autonomiaCopilot';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
   conversationId: { type: [Number, String], required: true },
@@ -13,11 +14,17 @@ const props = defineProps({
 
 const { t } = useI18n();
 
-const TONES = ['professional', 'casual', 'friendly', 'confident', 'direct'];
 const loadingTask = ref('');
 const result = ref('');
 const tone = ref('professional');
 const refineText = ref('');
+const toneOptions = computed(() => [
+  { value: 'professional', label: t('CRM_KANBAN.COPILOT.TONE_PROFESSIONAL') },
+  { value: 'casual', label: t('CRM_KANBAN.COPILOT.TONE_CASUAL') },
+  { value: 'friendly', label: t('CRM_KANBAN.COPILOT.TONE_FRIENDLY') },
+  { value: 'confident', label: t('CRM_KANBAN.COPILOT.TONE_CONFIDENT') },
+  { value: 'direct', label: t('CRM_KANBAN.COPILOT.TONE_DIRECT') },
+]);
 
 const isLoading = computed(() => !!loadingTask.value);
 
@@ -103,14 +110,13 @@ const insert = () => {
           xs
           @click="insert"
         />
-        <select
+        <ChoiceSelect
           v-model="tone"
-          class="reset-base !mb-0 h-8 rounded-lg border-0 bg-n-alpha-black2 px-2 text-xs text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-        >
-          <option v-for="toneCode in TONES" :key="toneCode" :value="toneCode">
-            {{ t('CRM_KANBAN.COPILOT.TONE_' + toneCode.toUpperCase()) }}
-          </option>
-        </select>
+          :options="toneOptions"
+          :aria-label="t('CRM_KANBAN.COPILOT.TONE')"
+          compact
+          class="w-32"
+        />
         <Button
           :label="t('CRM_KANBAN.COPILOT.REWRITE')"
           icon="i-lucide-wand-2"

@@ -34,7 +34,11 @@ Rails.application.configure do
 
   config.active_job.queue_adapter = :sidekiq
 
-  Rails.application.routes.default_url_options = { host: ENV['FRONTEND_URL'] }
+  # Sem FRONTEND_URL, url_helpers como rails_blob_url levantam
+  # ActionController::UrlGenerationError (Chamadas, Mídia). Produção/staging
+  # continuam exigindo a variável (config/environments/production.rb e
+  # staging.rb não têm esse fallback).
+  Rails.application.routes.default_url_options = { host: ENV.fetch('FRONTEND_URL', 'http://localhost:3000') }
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log

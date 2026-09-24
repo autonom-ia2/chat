@@ -14,7 +14,7 @@ import InsuranceConnectionsTab from './InsuranceConnectionsTab.vue';
 // o `not.toContain` passava sem nunca ter renderizado a frase.
 //
 // Regra deste arquivo: asserção em português, sobre a string que aparece na tela.
-withFullI18n();
+withFullI18n('pt_BR');
 
 const api = vi.hoisted(() => ({
   getConnection: vi.fn(),
@@ -30,6 +30,11 @@ vi.mock('dashboard/composables/useCanManage', async () => {
 
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: api }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// A marca vem da instalação (Hub2You numa stack, Autonomia na outra), nunca do texto.
+vi.mock('shared/composables/useBranding', async () => {
+  const { ref } = await import('vue');
+  return { useBranding: () => ({ installationName: ref('Hub2You') }) };
+});
 
 const seguradora = (code, name, refused = false) => ({
   code,
@@ -520,7 +525,7 @@ describe('o texto que a aba Conexões escreve', () => {
       // Bloco de verificação
       'Como isto foi verificado',
       'Cada camada tem prova própria',
-      'O serviço da Autonom.ia responde',
+      'O serviço da Hub2You responde',
       'Verificado agora, junto com a sessão.',
       'A conta abre sessão no AGGER',
       'Verificamos a cada 30 minutos.',
@@ -536,7 +541,7 @@ describe('o texto que a aba Conexões escreve', () => {
       'sem seguradora respondendo',
       // Rodapé
       'Produto que a corretora não tem habilitado no AGGER não aparece aqui.',
-      'a Autonom.ia lê o que a sua conta já pode vender',
+      'a Hub2You lê o que a sua conta já pode vender',
     ].forEach(frase => expect(texto).toContain(frase));
   });
 
@@ -636,6 +641,21 @@ describe('o texto que a aba Conexões escreve', () => {
     expect(texto).toContain(
       'Produto que a corretora não tem habilitado no AGGER não aparece aqui.'
     );
+  });
+
+  // Os avisos que pedem ação do "nosso time" nomeiam a instalação, não uma marca fixa.
+  it('os avisos citam o nome da instalacao, nunca uma marca fixa', async () => {
+    const base = conexao([]);
+    const wrapper = await montar({
+      ...base,
+      status: 'human_required',
+      encryption_available: false,
+      failure: { cause: 'misconfigured' },
+    });
+    const texto = wrapper.text();
+    expect(texto).toContain('até o time da Hub2You ativar a criptografia');
+    expect(texto).toContain('O time da Hub2You precisa ajustar.');
+    expect(texto).not.toContain('Autonom');
   });
 
   // Nenhuma chave crua pode vazar para a tela: se uma faltar no JSON, o corretor lê
