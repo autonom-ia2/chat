@@ -1084,13 +1084,13 @@ onMounted(loadPage);
                     :disabled="
                       isLeadEnriched(lead) ||
                       enrichingLeadId === lead.id ||
-                      !settings?.enrichment_enabled ||
+                      !settings?.research_enabled ||
                       !lead.website
                     "
                     :title="
                       isLeadEnriched(lead)
                         ? t('PROSPECTING.SEARCH.ENRICHED')
-                        : !settings?.enrichment_enabled
+                        : !settings?.research_enabled
                           ? t('PROSPECTING.SEARCH.ENRICHMENT_DISABLED')
                           : !lead.website
                             ? t('PROSPECTING.SEARCH.ENRICHMENT_NO_SITE')
