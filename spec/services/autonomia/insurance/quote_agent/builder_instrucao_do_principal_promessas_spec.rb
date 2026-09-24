@@ -379,14 +379,11 @@ module ManualDoPrincipalResultado
     },
     # A LIA NÃO FALA DE QUEM FICOU SEM PROPOSTA (chat#612 e #638): a fala é uma só, o texto do portal não chega ao
     # modelo, e nenhum motivo guardado (nem a instabilidade) vira fala.
+    # O motivo de cada uma vai para a nota interna da equipe, com a instabilidade que o conector apontou.
     'Nunca fale de recusa, de risco, de aceitação, de prazo, de instabilidade nem de motivo' => lambda {
       !RESULTADO.const_defined?(:MOTIVOS, false) && consultar('Sancor').first.exclude?(MOTIVO_DO_VEICULO) &&
-        RESULTADO::SEM_MOTIVO.include?('de prazo nem de instabilidade')
-    },
-    # O motivo de cada uma vai para a nota interna da equipe, com a instabilidade que o conector apontou.
-    'detalhe que a ferramenta não deu: o motivo de cada uma fica com a equipe.' => lambda {
-      COTACAO.method_defined?(:nota_da_equipe) && MOTIVO.categoria('kind' => 'passageiro') == MOTIVO::INSTABILIDADE &&
-        COTACAO::INSTAVEL.present?
+        RESULTADO::SEM_MOTIVO.include?('de prazo nem de instabilidade') && COTACAO.method_defined?(:nota_da_equipe) &&
+        MOTIVO.categoria('kind' => 'passageiro') == MOTIVO::INSTABILIDADE && COTACAO::INSTAVEL.present?
     },
     'Quando a ferramenta disser que não há motivo que você possa contar' => lambda {
       RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
@@ -623,8 +620,8 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # chat#612 (23/09/2026): de quem não fez proposta, só que não trouxe proposta desta vez; o motivo fica com a equipe.
     it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      # chat#638 (`d9b6c6c1…` -> `6296284d…`): nem instabilidade nem prazo; o motivo de cada uma fica com a equipe.
-      expect(Digest::MD5.hexdigest(secao)).to eq('6296284d1305383a90ccacbba44382a5')
+      # chat#638 (`d9b6c6c1…` -> `507f2eab…`): nem instabilidade nem prazo; o motivo de cada uma fica com a equipe.
+      expect(Digest::MD5.hexdigest(secao)).to eq('507f2eaba198568f334deda33fa13327')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do

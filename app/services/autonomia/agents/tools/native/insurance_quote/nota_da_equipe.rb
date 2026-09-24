@@ -16,6 +16,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::NotaDaEquipe
   RECUSOU = 'recusou e escreveu no portal: "%<texto>s"'.freeze
   INSTAVEL = 'estava instável no portal e não respondeu'.freeze
   SEM_RESPOSTA = 'não respondeu até o fim da cotação'.freeze
+  CREDENCIAL = 'o portal recusou a credencial da corretora nesta seguradora'.freeze
   SEM_MOTIVO = 'não trouxe proposta, e o portal não disse por quê'.freeze
 
   # -> nenhuma seguradora trouxe preço, e ao menos uma recusou escrevendo o motivo? Então o desfecho é
@@ -50,6 +51,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::NotaDaEquipe
     return format(RECUSOU, texto: entrada[Guardado::TEXTO]) if recusa_escrita?(entrada)
     return SEM_RESPOSTA if entrada['desfecho'] == Guardado::AGUARDANDO
     return INSTAVEL if entrada['motivo'] == ::Autonomia::Insurance::MotivoDaRecusa::INSTABILIDADE
+    return CREDENCIAL if entrada[Guardado::CONTA_DA_CORRETORA]
 
     SEM_MOTIVO
   end

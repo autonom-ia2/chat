@@ -663,9 +663,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       _, progresso = polling_com([offer('5', 'Allianz', 'auth_required'),
                                   offer('8', 'Porto', 'quoted', 1200.0)])
 
-      # Assert — nada é publicado, e a credencial não vira motivo guardado
+      # Assert — nada é publicado, e a credencial não vira motivo: só a marca que a nota da equipe lê (chat#639)
       expect(progresso.deliveries).to be_empty
-      expect(progresso.handle[described_class::RESULTADO_KEY]['5']).to eq('nome' => 'Allianz', 'desfecho' => 'sem_proposta')
+      guardado = progresso.handle[described_class::RESULTADO_KEY]['5']
+      expect(guardado).to eq('nome' => 'Allianz', 'desfecho' => 'sem_proposta', 'credencial' => true)
     end
 
     it 'limpa o registro quando as seguradoras voltam a cotar' do

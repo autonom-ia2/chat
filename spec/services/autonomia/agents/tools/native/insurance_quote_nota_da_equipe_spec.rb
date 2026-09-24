@@ -74,7 +74,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(linhas.drop(1)).to contain_exactly(
         "- Sancor: #{format(described_class::RECUSOU, texto: veiculo)}",
         "- Zurich: #{format(described_class::RECUSOU, texto: 'Tipo de veículo não aceito.')}",
-        "- Mitsui: #{described_class::INSTAVEL}", "- Hdi: #{described_class::SEM_MOTIVO}",
+        "- Mitsui: #{described_class::INSTAVEL}", "- Hdi: #{described_class::CREDENCIAL}",
         "- Justos: #{described_class::SEM_RESPOSTA}"
       )
     end

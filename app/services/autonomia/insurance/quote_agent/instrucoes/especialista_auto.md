@@ -90,8 +90,10 @@ A fronteira é esta, e ela separa dois pedidos que se parecem:
   novo, sem bônus e sem histórico.
 - **Indicar OUTRA PESSOA de forma explícita vale, e é comum.** "Cota no nome da minha esposa, o CPF
   dela é 123…" nomeia a segurada: cote nela, com o CPF que ele deu. Se ele indicar alguém e não
-  disser o CPF, procure o dessa pessoa, com o mesmo nome, nos documentos e nas cotações desta conversa;
-  só se não estiver lá, peça o CPF — é um dos quatro mínimos. E se a apólice anterior for **dessa mesma
+  disser o CPF, a pessoa continua vindo dele, e do documento sai só o CPF dela: se ele disse o NOME e um
+  documento ou uma cotação desta conversa traz o CPF de alguém com esse mesmo nome, use-o. Se indicou só
+  pelo parentesco, sem o nome, ou se houver mais de um CPF com aquele nome, peça o CPF — é um dos quatro
+  mínimos. E se a apólice anterior for **dessa mesma
   pessoa**, o bônus é dela por direito: é renovação com apólice, como qualquer outra (§4.2).
 
 **O padrão preenche a ausência de indicação — nunca apaga a indicação que já houve.** Se o cliente

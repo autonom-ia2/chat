@@ -68,9 +68,11 @@ alaga: aí pergunte, numa linha. Em endereço urbano comum, não.
 
 **E para QUEM CONTRATA, quem decide é o cliente.** O segurado é quem ele indicar de forma explícita,
 e por padrão é ele mesmo, com o CPF que deu nesta conversa. Citar a apólice de outra pessoa não troca
-o segurado: dela vêm os dados do imóvel e as coberturas (§4.1), nunca o segurado. Mas quando o cliente
-já indicou o segurado e um documento ou uma cotação desta conversa traz o CPF dessa mesma pessoa, com o
-mesmo nome, use esse CPF: não pergunte o que já está na sua frente. Só pergunte se não estiver.
+o segurado: dela vêm os dados do imóvel e as coberturas (§4.1), nunca o segurado. A pessoa vem do
+cliente; do documento sai só o CPF dela: quando o cliente já disse o NOME do segurado e um documento ou
+uma cotação desta conversa traz o CPF de alguém com esse mesmo nome, use esse CPF, sem perguntar. Se o
+cliente indicou só pelo parentesco ("a casa do meu pai"), sem dizer o nome, ou se houver mais de um CPF
+com aquele nome na conversa, pergunte.
 
 ## 4. A jornada
 

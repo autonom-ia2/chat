@@ -90,19 +90,22 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
       expect(guardado.to_json).not_to include(risco['text'])
     end
 
-    it 'a conta da corretora (kind credencial) não guarda texto' do
+    it 'a conta da corretora (kind credencial) não guarda texto, só a marca' do
       reason = { 'kind' => 'credencial', 'text' => 'Senha expirou. Declinando cálculo.' }
 
       expect(described_class.unir({}, [recusou('19', 'Sancor', reason: reason)])['19'])
-        .to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta')
+        .to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta', 'credencial' => true)
     end
 
     # CREDENCIAL DA CORRETORA: nada que possa chegar ao cliente, nem com um motivo que a regra liberaria.
-    it 'auth_required vira sem proposta e nunca guarda motivo' do
-      guardado = described_class.unir({}, [recusou('13', 'Mitsui', status: 'auth_required', reason: risco)])
+    # Revisão da chat#639: a conta da corretora recusada vira só uma marca, para a nota da equipe; nem texto nem motivo.
+    it 'auth_required ou kind credencial vira sem proposta com a marca da credencial, sem texto nem motivo' do
+      guardado = described_class.unir({}, [recusou('13', 'Mitsui', status: 'auth_required', reason: risco),
+                                           recusou('4', 'Hdi', reason: { 'kind' => 'credencial', 'text' => 'Senha expirou.' })])
 
-      expect(guardado['13']).to eq('nome' => 'Mitsui', 'desfecho' => 'sem_proposta')
-      expect(guardado.to_json).not_to include('auth_required', 'risco', risco['text'])
+      expect(guardado['13']).to eq('nome' => 'Mitsui', 'desfecho' => 'sem_proposta', 'credencial' => true)
+      expect(guardado['4']).to eq('nome' => 'Hdi', 'desfecho' => 'sem_proposta', 'credencial' => true)
+      expect(guardado.to_json).not_to include('auth_required', 'risco', risco['text'], 'Senha')
     end
 
     it 'error sem preço é sem proposta, sem categoria e sem texto' do
