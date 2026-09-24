@@ -373,32 +373,31 @@ module ManualDoPrincipalResultado
       antes == RESULTADO::NAO_ENCONTRADA && depois.include?('Allianz fez proposta: R$ 2.402,55 no total') &&
         Autonomia::Agents::ToolRun.where(slug: RESULTADO.slug).none?
     },
-    # O motivo só chega ao modelo quando o pedido nomeia a seguradora: o resultado inteiro não o traz.
-    'O motivo de quem não fez proposta só sai quando a pessoa perguntar por aquela seguradora' => lambda {
-      motivo = RESULTADO::MOTIVOS.fetch(MOTIVO::VEICULO)
-      consultar(nil).first.exclude?(motivo) && consultar('Sancor').first.include?(motivo)
+    # Quem não fez proposta só aparece, com a fala fechada, quando o pedido nomeia a seguradora.
+    '**De quem não fez proposta, diga só que ela não trouxe proposta desta vez**' => lambda {
+      consultar(nil).first.exclude?(RESULTADO::SEM_MOTIVO) && consultar('Sancor').first.include?(RESULTADO::SEM_MOTIVO)
     },
-    # A ferramenta entrega uma de três categorias, escritas pelo código.
-    # A instabilidade entrou em chat#323: vem do `kind` `passageiro` do conector, sem ler o texto.
-    "que a ferramenta entregar: se a recusa foi pelo veículo ou pela região, ou se a seguradora estava\ninstável" => lambda {
-      MOTIVO::CATEGORIAS == [MOTIVO::VEICULO, MOTIVO::REGIAO, MOTIVO::INSTABILIDADE] && RESULTADO::MOTIVOS.keys == MOTIVO::CATEGORIAS
+    # A LIA NÃO FALA DE RECUSA DO RISCO (chat#612): a única categoria é a instabilidade, o texto do portal não chega ao
+    # modelo, e a nota interna leva o texto para a equipe.
+    'Nunca fale de recusa, de risco, de aceitação nem de motivo: o que a seguradora escreveu fica com a equipe.' => lambda {
+      MOTIVO::CATEGORIAS == [MOTIVO::INSTABILIDADE] && RESULTADO::MOTIVOS.keys == MOTIVO::CATEGORIAS &&
+        consultar('Sancor').first.exclude?(MOTIVO_DO_VEICULO) && RESULTADO::SEM_MOTIVO.include?('sem falar de recusa') &&
+        COTACAO.method_defined?(:nota_da_equipe)
     },
-    # O texto do portal não chega ao modelo: não há detalhe a acrescentar além da categoria.
+    # A instabilidade vem do `kind` `passageiro` do conector, sem ler o texto (chat#323).
     'sem acrescentar detalhe que a ferramenta não deu.' => lambda {
-      consultar('Sancor').first.exclude?(MOTIVO_DO_VEICULO) &&
+      MOTIVO.categoria('kind' => 'passageiro') == MOTIVO::INSTABILIDADE &&
         RESULTADO::MOTIVOS.values.all? { |texto| texto.include?('sem acrescentar detalhe') }
     },
     'Quando a ferramenta disser que não há motivo que você possa contar' => lambda {
       RESULTADO::SEM_MOTIVO.include?('Não há motivo que você possa contar') &&
-        MOTIVO.categoria('kind' => 'outro', 'text' => MOTIVO_DO_VEICULO).nil?
+        MOTIVO.categoria('kind' => 'risco', 'text' => MOTIVO_DO_VEICULO).nil?
     },
-    # O molde fechado do motivo não tem palavra de conta nem da pessoa: com qualquer uma delas, o texto vai ao genérico.
+    # Nenhum texto do portal vira categoria: login, senha e restrição da pessoa caem no genérico.
     'Nunca fale de login, senha ou permissão da corretora, nem de restrição da pessoa.' => lambda {
-      moldes = MOTIVO::MOLDES.values.map { |molde| molde[:palavras] }
-      %w[login senha permissao segurado condutor restricao].none? { |palavra| moldes.any? { |palavras| palavras.include?(palavra) } } &&
-        ['faça login', 'senha vencida', 'sem permissão', 'segurado com restrição'].all? do |termo|
-          MOTIVO.categoria('kind' => 'risco', 'text' => "Tipo de veículo não aceito, #{termo}.").nil?
-        end
+      ['faça login', 'senha vencida', 'sem permissão', 'segurado com restrição'].all? do |termo|
+        MOTIVO.categoria('kind' => 'risco', 'text' => "Tipo de veículo não aceito, #{termo}.").nil?
+      end
     }
   }.freeze
 end
@@ -622,9 +621,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(described_class::TOOLS_DO_PRINCIPAL).not_to include('ver_resultado_da_cotacao')
     end
 
+    # chat#612 (23/09/2026): de quem não fez proposta, só que não trouxe proposta desta vez; o motivo fica com a equipe.
     it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('7856af4704670779528dd0401dda2f42')
+      expect(Digest::MD5.hexdigest(secao)).to eq('d9b6c6c157479f8049ad9dfd458fc031')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do

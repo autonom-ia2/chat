@@ -23,9 +23,9 @@ class Autonomia::Agents::Tools::Evento
 
   COMECO = 'cotacao_comecou'.freeze
   # A lista fechada. `falta_dado` e `ramo_desconhecido` são as recusas do envio; `concluida`, `valores_guardados`,
-  # `falhou`, `incerta` e `encerrada_por_prazo` são os desfechos que `Tools::Encerramento` escolhe.
+  # `falhou`, `incerta`, `encerrada_por_prazo` e `sem_aceitacao` são os desfechos que `Tools::Encerramento` escolhe.
   TIPOS = [COMECO, 'falta_dado', 'ramo_desconhecido', 'concluida', 'valores_guardados', 'falhou', 'incerta',
-           'encerrada_por_prazo'].freeze
+           'encerrada_por_prazo', 'sem_aceitacao'].freeze
 
   # O que o modelo lê sobre cada tipo, antes dos fatos da ferramenta. Texto para o MODELO: nenhuma palavra daqui
   # chega ao cliente como está.
@@ -37,7 +37,9 @@ class Autonomia::Agents::Tools::Evento
     'valores_guardados' => 'a consulta terminou com resultado, mas o arquivo não pôde ser enviado; o resultado está guardado.',
     'falhou' => 'a consulta não pôde ser concluída, e nada chegou à pessoa.',
     'incerta' => 'não foi possível confirmar se a consulta chegou a ser feita, e nada chegou à pessoa.',
-    'encerrada_por_prazo' => 'a consulta terminou pelo tempo, e a pessoa já recebeu o resultado de quem respondeu.'
+    'encerrada_por_prazo' => 'a consulta terminou pelo tempo, e a pessoa já recebeu o resultado de quem respondeu.',
+    # chat#612: nada falhou; nenhuma seguradora trouxe proposta. O motivo fica com a equipe (`Tools::NotaInterna`).
+    'sem_aceitacao' => 'a consulta terminou e nenhuma seguradora trouxe proposta; nada chegou à pessoa.'
   }.freeze
 
   attr_reader :run, :tipo

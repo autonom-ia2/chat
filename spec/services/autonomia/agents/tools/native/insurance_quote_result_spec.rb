@@ -142,25 +142,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(ao_modelo).to eq(described_class::SEM_PRECO)
     end
 
-    it 'seguradora sem proposta, com o motivo do veículo: quantas cotaram, o nome e a categoria' do
+    # A LIA NÃO FALA DE RECUSA DO RISCO (chat#612, decisão do CEO de 23/09/2026): nem pelo texto guardado para a equipe,
+    # nem por categoria.
+    it 'seguradora que recusou o risco: quantas cotaram, o nome e que ela não trouxe proposta, sem motivo' do
       cotacao_com(status: 'done')
 
       texto = ao_modelo('Sancor')
 
       expect(texto.split("\n")).to eq(['2 seguradoras fizeram proposta nesta cotação.',
-                                       "Sancor não fez proposta nesta cotação. #{described_class::MOTIVOS.fetch('veiculo')}"])
-      expect(texto).to include('Categoria do motivo: veiculo.')
+                                       "Sancor não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}"])
       expect(texto).not_to include(risco['text'])
     end
 
-    it 'seguradora recusada pela região: a categoria da região' do
+    it 'o texto que a região deixou também não chega ao modelo' do
       cotacao_com(status: 'done', ofertas: [recusou('19', 'Sancor', reason: { 'kind' => 'risco', 'text' => 'CEP sem aceitação.' })])
 
-      expect(ao_modelo('Sancor')).to include("Sancor não fez proposta nesta cotação. #{described_class::MOTIVOS.fetch('regiao')}")
+      expect(ao_modelo('Sancor')).to end_with("Sancor não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}")
+      expect(ao_modelo('Sancor')).not_to include('CEP')
     end
 
     # NENHUM TEXTO DO PORTAL CHEGA AO MODELO: o corpus do conector, no kind e no status que ele dá, os textos das
-    # revisões e as sondas da revisão da sétima rodada. O modelo lê uma de três falas fechadas; conta e pessoa, a genérica.
+    # revisões e as sondas da revisão da sétima rodada. O modelo lê uma de duas falas fechadas: a instabilidade ou a genérica.
     it 'o modelo nunca recebe texto do portal, em nenhuma mensagem do corpus, das revisões nem das sondas' do
       genericos = TextosDoMotivo::CONTA + TextosDoMotivo::PESSOA + TextosDoMotivo::REVISOES + SondasDoMotivo::REVISAO_7
       linhas = TextosDoMotivo::CORPUS.map { |linha| linha.first(3) } + genericos.map { |texto| [texto, 'risco', 'declined'] }
@@ -235,7 +237,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
                                        'Sancor não fez proposta nesta cotação.', described_class::AINDA_CORRENDO,
                                        described_class::COMO_ESCREVER])
       expect(texto).to include('Porto Seguro fez proposta: R$ 2.119,18 no total, ou 10x de R$ 211,92.')
-      expect(texto).not_to include(described_class::MOTIVOS.fetch('veiculo'))
+      expect(texto).not_to include(described_class::SEM_MOTIVO)
     end
 
     it 'a mensal diz por mês, sem parcelamento, e vem depois dos totais' do
@@ -267,12 +269,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(texto).not_to include('Allianz')
     end
 
-    it 'uma com preço e uma sem proposta no mesmo pedido: o preço de uma e a categoria da outra' do
+    it 'uma com preço e uma sem proposta no mesmo pedido: o preço de uma e, da outra, só que não trouxe proposta' do
       cotacao_com(status: 'done')
 
       texto = ao_modelo('Sancor e Porto')
 
-      expect(texto).to include(preco(porto), 'Sancor não fez proposta nesta cotação.', described_class::MOTIVOS.fetch('veiculo'))
+      expect(texto).to include(preco(porto), 'Sancor não fez proposta nesta cotação.', described_class::SEM_MOTIVO)
       expect(texto).not_to include(risco['text'])
     end
 

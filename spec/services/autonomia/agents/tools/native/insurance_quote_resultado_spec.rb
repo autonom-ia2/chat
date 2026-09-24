@@ -59,7 +59,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(primeira.handle[chave].transform_values { |e| e['desfecho'] }).to eq('8' => 'com_preco', '47' => 'aguardando')
       expect(segunda.handle[chave]).to eq(
         '8' => { 'nome' => 'Seguradora 8', 'desfecho' => 'com_preco', 'premio' => { 'amount' => 2119.18, 'basis' => 'total' } },
-        '47' => { 'nome' => 'Seguradora 47', 'desfecho' => 'sem_proposta', 'motivo' => 'veiculo' },
+        '47' => { 'nome' => 'Seguradora 47', 'desfecho' => 'sem_proposta', 'texto_da_recusa' => risco['text'] },
         '11' => { 'nome' => 'Seguradora 11', 'desfecho' => 'sem_proposta' }
       )
     end

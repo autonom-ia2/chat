@@ -317,6 +317,18 @@ class Autonomia::Agents::Tools::Native::Base
     false
   end
 
+  # NINGUÉM ACEITOU? (chat#612, 23/09/2026.) Nada falhou: nenhuma seguradora trouxe preço, e alguma recusou o pedido.
+  # O desfecho é `sem_aceitacao`, e não `falhou`. -> false por padrão.
+  def sem_aceitacao?(_handle)
+    false
+  end
+
+  # O QUE A EQUIPE PRECISA SABER DESTA EXECUÇÃO e o cliente não ouve (chat#612): vira nota interna da conversa no fecho
+  # (`Tools::NotaInterna`). -> nil por padrão.
+  def nota_da_equipe(_handle)
+    nil
+  end
+
   private
 
   attr_reader :agent, :params, :delivery, :run, :especialista
