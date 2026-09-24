@@ -8,6 +8,8 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import BaseSettingsHeader from '../../../settings/components/BaseSettingsHeader.vue';
 import ProspectingAiCredentialNotice from '../components/ProspectingAiCredentialNotice.vue';
 import ProspectingMockProviderNotice from '../components/ProspectingMockProviderNotice.vue';
+import ProspectingSearchCountryField from '../components/ProspectingSearchCountryField.vue';
+import { DEFAULT_SEARCH_COUNTRY } from '../utils/searchCountries';
 
 const { t } = useI18n();
 
@@ -35,6 +37,7 @@ const form = ref({
   default_crm_pipeline_id: '',
   default_crm_stage_id: '',
   search_score_mode: 'gbp',
+  search_country: DEFAULT_SEARCH_COUNTRY,
   scoring_profile_option: '',
   scoring_profile_id: '',
   custom_scoring_weights: {
@@ -126,6 +129,7 @@ const syncForm = payload => {
     default_crm_pipeline_id: payload.default_crm_pipeline_id || '',
     default_crm_stage_id: payload.default_crm_stage_id || '',
     search_score_mode: payload.search_score_mode || 'gbp',
+    search_country: payload.search_country || DEFAULT_SEARCH_COUNTRY,
     scoring_profile_option:
       payload.scoring_mode === 'custom'
         ? CUSTOM_SCORING_PROFILE_VALUE
@@ -190,6 +194,7 @@ const saveSettings = async () => {
       default_crm_pipeline_id: form.value.default_crm_pipeline_id || null,
       default_crm_stage_id: form.value.default_crm_stage_id || null,
       search_score_mode: form.value.search_score_mode || 'gbp',
+      search_country: form.value.search_country,
       scoring_mode: isCustomScoringProfile.value ? 'custom' : 'profile',
       scoring_profile_id: isCustomScoringProfile.value
         ? null
@@ -288,6 +293,11 @@ onMounted(fetchSettings);
               />
             </label>
           </div>
+
+          <ProspectingSearchCountryField
+            v-model="form.search_country"
+            :countries="settings.search_countries || []"
+          />
 
           <div
             class="grid gap-3 rounded-md border border-n-weak bg-n-solid-2 p-3 md:grid-cols-2"

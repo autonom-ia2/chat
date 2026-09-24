@@ -3,6 +3,60 @@
     "STATES": {
       "LOADING": "Loading..."
     },
+    "SEARCH_COUNTRY": {
+      "LABEL": "País da busca",
+      "HINT": "O Google procura cidades, endereços e empresas neste país. O idioma das telas não muda.",
+      "DEFAULT_HINT": "Sem escolha, a busca é no Brasil.",
+      "COUNTRIES": {
+        "BR": "Brasil",
+        "PT": "Portugal",
+        "US": "Estados Unidos",
+        "FR": "França",
+        "ES": "Espanha",
+        "DE": "Alemanha",
+        "IT": "Itália",
+        "GB": "Reino Unido",
+        "MX": "México",
+        "AR": "Argentina",
+        "CL": "Chile",
+        "CO": "Colômbia",
+        "PE": "Peru",
+        "EC": "Equador",
+        "PY": "Paraguai",
+        "UY": "Uruguai",
+        "AT": "Áustria",
+        "IE": "Irlanda",
+        "IN": "Índia"
+      },
+      "GROUPS": {
+        "SOUTH_AMERICA": "América do Sul",
+        "NORTH_AMERICA": "América do Norte e Central",
+        "EUROPE": "Europa",
+        "ASIA": "Ásia",
+        "OTHER": "Outros"
+      }
+    },
+    "DECISION_MAKER": {
+      "LABEL": "Tipo de decisor",
+      "COMING_SOON": "{label} (em breve)",
+      "TYPES": {
+        "OWNER": "Proprietário",
+        "CEO": "CEO",
+        "COMMERCIAL": "Comercial",
+        "FINANCIAL": "Financeiro",
+        "MARKETING": "Marketing",
+        "HR": "RH",
+        "OPERATIONS": "Operações",
+        "TECHNOLOGY": "Tecnologia",
+        "LEGAL": "Jurídico",
+        "COMPLIANCE": "Compliance",
+        "RISK": "Riscos"
+      }
+    },
+    "LOCATION_ERRORS": {
+      "SUGGESTIONS": "Não foi possível buscar sugestões de local agora. Tente de novo em instantes.",
+      "DETAILS": "Não foi possível confirmar este local agora. Escolha a sugestão de novo."
+    },
     "ERRORS": {
       "LOAD_SEARCHES": "Could not load prospect searches.",
       "LOAD_SEARCH": "Could not load this prospect search.",
