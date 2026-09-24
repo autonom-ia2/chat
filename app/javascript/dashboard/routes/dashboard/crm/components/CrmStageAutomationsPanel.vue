@@ -249,11 +249,12 @@ watch(
             {{ automation.name }}
           </p>
           <p class="mb-0 truncate text-[11px] text-n-slate-10">
-            {{ triggerLabel(automation.trigger_event) }}
-            ·
             {{
-              t('CRM_KANBAN.STAGE_AUTOMATIONS.STEPS_COUNT', {
-                count: automation.steps?.length || 0,
+              t('CRM_KANBAN.STAGE_AUTOMATIONS.SUMMARY', {
+                trigger: triggerLabel(automation.trigger_event),
+                steps: t('CRM_KANBAN.STAGE_AUTOMATIONS.STEPS_COUNT', {
+                  count: automation.steps?.length || 0,
+                }),
               })
             }}
           </p>

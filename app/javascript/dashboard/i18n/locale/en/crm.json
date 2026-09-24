@@ -1160,6 +1160,7 @@
       "ENABLED": "Enabled",
       "DISABLED": "Disabled",
       "STEPS_COUNT": "{count} step(s)",
+      "SUMMARY": "{trigger} · {steps}",
       "SEQUENCE": "Action sequence",
       "ADD_STEP": "Add step",
       "STEP_LABEL": "Step {count}",

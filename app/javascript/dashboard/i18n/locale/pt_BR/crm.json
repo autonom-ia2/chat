@@ -1159,6 +1159,7 @@
       "ENABLED": "Ativa",
       "DISABLED": "Inativa",
       "STEPS_COUNT": "{count} passo(s)",
+      "SUMMARY": "{trigger} · {steps}",
       "SEQUENCE": "Sequência de ações",
       "ADD_STEP": "Adicionar passo",
       "STEP_LABEL": "Passo {count}",
