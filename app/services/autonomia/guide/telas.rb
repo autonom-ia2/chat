@@ -47,7 +47,7 @@ class Autonomia::Guide::Telas
     conferir_obrigatorios(tela, valores)
 
     { route_name: nome.to_s, params: valores.slice(*(tela[:obrigatorios] + tela[:opcionais])),
-      highlight: tela[:destaques].include?(destaque.to_s) ? destaque.to_s : nil, rotulo: tela[:rotulo] }
+      highlight: tela[:destaques].include?(destaque.to_s) ? destaque.to_s : nil }
   end
 
   # As telas de UM registro que moram logo abaixo desta no endereço: a lista de
@@ -96,24 +96,21 @@ class Autonomia::Guide::Telas
   # `scripts/guide-map/build.mjs` escreve:
   #   - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
   #   - highlight: `settings-add-label`
-  # Vários fluxos apontam para a mesma tela; os destaques de todos valem para ela. O RÓTULO (#636)
-  # é o título do PRIMEIRO fluxo que aponta para a tela — não há campo "nome da tela" no mapa, e
-  # inventar um texto livre aqui seria a IA descrevendo a tela com as próprias palavras, o que o
-  # plano da #636 proíbe. O título vem do próprio manual, gerado do roteador.
+  # Vários fluxos apontam para a mesma tela; os destaques de todos valem para ela.
+  #
+  # SEM rótulo tirado daqui (correção #636, 24/09/2026): o mapa é gerado sem acento
+  # ("Gerenciar catalogo de etiquetas") e o título do PRIMEIRO fluxo descreve uma AÇÃO, não a tela —
+  # "Criar contato" apareceu como rótulo numa pergunta de IMPORTAR contatos. O nome humano da tela,
+  # com acento, vem do parâmetro opcional `rotulo` que o próprio modelo manda em `mostrar_tela`.
   def ler(mapa)
     mapa.split("\n### ").drop(1).each_with_object({}) do |bloco, telas|
       nome, endereco = campo(bloco, 'rota').to_s.delete('`').split(' - ', 2).map(&:strip)
       next if nome.blank? || endereco.blank?
 
-      tela = telas[nome] ||= parametros_do(endereco).merge(destaques: [], papeis: papeis_do(campo(bloco, 'gate')),
-                                                           rotulo: titulo(bloco))
+      tela = telas[nome] ||= parametros_do(endereco).merge(destaques: [], papeis: papeis_do(campo(bloco, 'gate')))
       destaque = campo(bloco, 'highlight').to_s.delete('`').strip
       tela[:destaques] |= [destaque] if destaque.present?
     end
-  end
-
-  def titulo(bloco)
-    bloco.lines.first.to_s.strip.presence
   end
 
   # O gate que o gerador escreve a partir do `meta.permissions` da rota:

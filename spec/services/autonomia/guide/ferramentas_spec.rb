@@ -260,13 +260,28 @@ RSpec.describe 'Ferramentas do Guia' do
     end
 
     # #636 — pergunta com várias partes chama `mostrar_tela` mais de uma vez, e
-    # cada chamada tem que ganhar o próprio botão, com o rótulo da tela.
-    it 'empilha uma tela por chamada, cada uma com o rótulo do mapa', :aggregate_failures do
+    # cada chamada tem que ganhar o próprio botão.
+    it 'empilha uma tela por chamada, na ordem em que o modelo chamou', :aggregate_failures do
       mostrar({ 'tela' => 'labels_list' })
       mostrar({ 'tela' => 'settings_inbox_new' })
 
       expect(operador.telas.map { |t| t[:route_name] }).to eq(%w[labels_list settings_inbox_new])
-      expect(operador.telas.map { |t| t[:rotulo] }).to all(be_present)
+    end
+
+    # Correção #636 (24/09/2026): o mapa é gerado sem acento e o título do fluxo descreve uma AÇÃO,
+    # não a tela — "Criar contato" apareceu numa pergunta de IMPORTAR contatos. Agora o rótulo vem
+    # de um parâmetro opcional que o PRÓPRIO MODELO manda, nunca do mapa.
+    it 'usa o rótulo que o modelo mandou, limpo e cortado em 40 caracteres', :aggregate_failures do
+      mostrar({ 'tela' => 'labels_list', 'rotulo' => '  Etiquetas do WhatsApp Business Oficial e tal  ' })
+
+      expect(operador.tela[:rotulo]).to eq('Etiquetas do WhatsApp Business Oficial e')
+      expect(operador.tela[:rotulo].length).to eq(40)
+    end
+
+    it 'sem rótulo do modelo, o botão fica sem nome' do
+      mostrar({ 'tela' => 'labels_list' })
+
+      expect(operador.tela[:rotulo]).to be_nil
     end
   end
 
@@ -295,6 +310,21 @@ RSpec.describe 'Ferramentas do Guia' do
       resposta = ler_central({ 'termo' => 'conectar whatsapp' })
 
       expect(resposta).to include('02-04', 'Conectar o WhatsApp', 'Vá em Canais e clique em Novo canal.')
+    end
+
+    # Achado na bateria real de 24/09/2026: a busca por termo registrava o
+    # PRIMEIRO resultado como artigo lido, e o primeiro resultado nem sempre é
+    # o artigo certo (ex.: "criar etiqueta" trouxe "Criar e editar uma Macro").
+    # A busca por termo é só para o modelo LER a lista; quem escolhe o artigo
+    # certo é o modelo, chamando de novo com `ref` — só essa chamada registra.
+    it 'não registra o primeiro resultado da busca por termo como artigo lido', :aggregate_failures do
+      artigo_central(id: '03.02', titulo: 'Criar uma etiqueta', descricao: 'Como criar etiqueta.')
+
+      ler_central({ 'termo' => 'criar etiqueta' })
+      expect(operador.artigos).to eq([])
+
+      ler_central({ 'ref' => '03.02' })
+      expect(operador.artigos).to eq([{ ref: '03-02', titulo: 'Criar uma etiqueta' }])
     end
 
     # O modelo precisa saber, sem ambiguidade, que a busca não achou nada —

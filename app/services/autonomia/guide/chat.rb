@@ -232,7 +232,12 @@ module Autonomia
         route = campo(content, 'nav_target')
         return nil if route.blank? || route == '—'
 
-        { route_name: route, rotulo: titulo(content), highlight: campo(content, 'highlight') }
+        # Sem `rotulo`: o mapa (`guia-produto.md`) é gerado sem acento, e o título do fluxo descreve
+        # uma AÇÃO ("Criar contato"), não o nome da tela — medido em 24/09/2026, uma pergunta de
+        # importar contatos ganhava o botão "Criar contato". O rótulo humano só existe quando o
+        # MODELO manda um em `mostrar_tela` (#636); este é o caminho de reserva, sem `mostrar_tela`
+        # nenhum — cai no rótulo genérico "Ir para a tela".
+        { route_name: route, highlight: campo(content, 'highlight') }
       end
 
       # O gerador escreve cada campo como ITEM DE LISTA:
@@ -253,11 +258,6 @@ module Autonomia
 
         # Fatia por posição, não por separador: valor que contenha ':' sobrevive.
         linha[prefixo.length..].to_s.delete('`').strip.presence
-      end
-
-      def titulo(conteudo)
-        linha = conteudo.lines.find { |l| l.start_with?('### ') }
-        linha.to_s.delete_prefix('### ').strip.presence
       end
 
       def unavailable

@@ -71,11 +71,12 @@ RSpec.describe Autonomia::Guide::Telas do
     expect(telas.destino('inbox_conversation', { 'conversation_id' => '1' }, permissoes: ['agent'])).to be_present
   end
 
-  # #636 — o rótulo do botão "Ir para" vem do mapa, nunca de texto livre da IA. É o título
-  # do PRIMEIRO fluxo que aponta para a rota, do jeito que o mapa de verdade escreve.
-  it 'traz o rótulo humano da tela, tirado do título do fluxo no mapa', :aggregate_failures do
-    expect(telas.destino('labels_list', {})[:rotulo]).to eq('Gerenciar catalogo de etiquetas')
-    expect(telas.destino('settings_inbox_show', { 'inboxId' => '1' })[:rotulo]).to eq('Editar configuracoes da caixa')
+  # Correção #636 (24/09/2026): o mapa é gerado sem acento e o título do primeiro fluxo descreve
+  # uma AÇÃO ("Criar contato"), não o nome da tela — apareceu numa pergunta de IMPORTAR contatos.
+  # `destino` não tira rótulo nenhum do mapa; quem dá o nome humano é o parâmetro `rotulo` que o
+  # próprio modelo manda em `mostrar_tela` (coberto em `ferramentas_spec.rb`).
+  it 'não tira rótulo do mapa' do
+    expect(telas.destino('labels_list', {})).not_to have_key(:rotulo)
   end
 
   it 'só aceita o destaque que existe para aquela tela', :aggregate_failures do

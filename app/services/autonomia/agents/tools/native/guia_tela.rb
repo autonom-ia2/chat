@@ -30,10 +30,17 @@ class Autonomia::Agents::Tools::Native::GuiaTela < Autonomia::Agents::Tools::Nat
                            'O id da conta não precisa. Deixe vazio quando o endereço não tiver ":".' },
         { 'name' => 'destaque', 'type' => 'string', 'required' => false,
           'description' => 'O campo "highlight" do fluxo, quando houver: o elemento da tela que fica ' \
-                           'em destaque depois do clique.' }
+                           'em destaque depois do clique.' },
+        { 'name' => 'rotulo', 'type' => 'string', 'required' => false,
+          'description' => 'O nome curto da tela, como a pessoa vê no menu — com acento (ex.: "Caixas ' \
+                           'de entrada", "Contatos", "Campanhas de WhatsApp Oficial"). Até 40 ' \
+                           'caracteres. Sem isto, o botão vem sem nome ("Ir para a tela").' }
       ]
     end
   end
+
+  # Nome curto do menu, não frase: acima disso corta.
+  MAX_ROTULO = 40
 
   def call
     return recusa_sem_contexto if @operador.nil?
@@ -43,13 +50,21 @@ class Autonomia::Agents::Tools::Native::GuiaTela < Autonomia::Agents::Tools::Nat
     nao_lidos = @operador.nao_lidos(destino[:params])
     return sem_leitura(nao_lidos) if nao_lidos.any?
 
-    @operador.mostrar(destino)
+    @operador.mostrar(destino.merge(rotulo: rotulo))
     "Pronto: o botão para a tela já aparece logo abaixo da sua resposta. Não escreva o endereço nem um link.#{registros}"
   rescue ::Autonomia::Guide::Telas::Recusada => e
     e.message
   end
 
   private
+
+  # Limpo (sem espaço nas pontas) e cortado em 40 — o resto é o que a Central
+  # já fazia ao mostrar rótulo de menu, aqui é a mesma régua. `nil` quando o
+  # modelo não mandou nada: o front cai no rótulo genérico (#636).
+  def rotulo
+    texto = @params['rotulo'].to_s.strip
+    texto.present? ? texto[0, MAX_ROTULO] : nil
+  end
 
   def telas
     ::Autonomia::Guide::Telas.padrao

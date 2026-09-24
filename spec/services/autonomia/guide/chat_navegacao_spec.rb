@@ -51,10 +51,11 @@ RSpec.describe Autonomia::Guide::Chat do
       expect(chat.send(:resolve_navigation, resultado)[:route_name]).to eq('crm_kanban_index')
     end
 
-    # #636 — o rótulo do botão vem do título do fluxo no mapa, não de texto
-    # solto que a IA escreveria.
-    it 'traz o rótulo do título do fluxo' do
-      expect(chat.send(:resolve_navigation, resultado)[:rotulo]).to eq('Criar funis, estágios e conectar caixas ao CRM')
+    # #636 (correção 24/09/2026) — este caminho de reserva não tem `mostrar_tela` nenhum do modelo,
+    # e o título do fluxo no mapa descreve uma ação, não o nome da tela ("Criar contato" numa
+    # pergunta de importar). Sem rótulo aqui, o botão cai no genérico "Ir para a tela".
+    it 'não traz rótulo — cai no genérico "Ir para a tela"' do
+      expect(chat.send(:resolve_navigation, resultado)[:rotulo]).to be_nil
     end
 
     it 'não sugere tela quando a conversa vai para um humano' do
