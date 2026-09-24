@@ -79,6 +79,25 @@ RSpec.describe Autonomia::Prospecting::Providers::GooglePlacesProvider do
     end
   end
 
+  # Falha de rede nunca sai crua: sem uma linha aqui, o controller responde 500 com o texto do Rails em inglês.
+  [
+    Net::OpenTimeout, Net::ReadTimeout, Timeout::Error, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET,
+    Errno::ETIMEDOUT, Errno::EHOSTUNREACH, Errno::ENETUNREACH, OpenSSL::SSL::SSLError
+  ].each do |network_error|
+    it "traduz a falha de rede #{network_error.name}" do
+      stub_request(:post, described_class::ENDPOINT).to_raise(network_error)
+
+      expect_message(sem_resposta)
+    end
+  end
+
+  it 'cobre todos os erros de rede do mapa' do
+    expect(Autonomia::Prospecting::GoogleErrorMessage::NETWORK_ERRORS).to contain_exactly(
+      HTTParty::Error, SocketError, Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT,
+      Errno::EHOSTUNREACH, Errno::ENETUNREACH, OpenSSL::SSL::SSLError
+    )
+  end
+
   it 'cobre todos os motivos de configuração do mapa' do
     expect(Autonomia::Prospecting::GoogleErrorMessage::CONFIGURATION_REASONS).to contain_exactly(
       'API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_SERVICE_BLOCKED', 'SERVICE_DISABLED'

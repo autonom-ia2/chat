@@ -32,7 +32,11 @@ module Autonomia::Prospecting::GoogleErrorMessage
   # de quem busca.
   CONFIGURATION_REASONS = %w[API_KEY_INVALID API_KEY_EXPIRED API_KEY_SERVICE_BLOCKED SERVICE_DISABLED].freeze
 
-  NETWORK_ERRORS = [HTTParty::Error, SocketError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, Errno::ECONNRESET].freeze
+  # Timeout::Error cobre Net::OpenTimeout e Net::ReadTimeout. Classe fora daqui escapa crua e vira 500 em inglês.
+  NETWORK_ERRORS = [
+    HTTParty::Error, SocketError, Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT,
+    Errno::EHOSTUNREACH, Errno::ENETUNREACH, OpenSSL::SSL::SSLError
+  ].freeze
 
   module_function
 
