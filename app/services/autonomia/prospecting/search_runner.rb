@@ -102,7 +102,8 @@ class Autonomia::Prospecting::SearchRunner
         area_config: area_config_value,
         limit: requested_limit,
         api_key: @setting.google_places_api_key,
-        account_id: @account.id
+        account_id: @account.id,
+        country: search_country
       )
     else
       Autonomia::Prospecting::Providers::MockProvider.new(
@@ -111,9 +112,15 @@ class Autonomia::Prospecting::SearchRunner
         radius: radius_value,
         area_type: area_type,
         area_config: area_config_value,
-        limit: requested_limit
+        limit: requested_limit,
+        country: search_country
       )
     end
+  end
+
+  # País da conta (#677): o Google busca e escreve o endereço nele, e o lead sem país no endereço fica com ele.
+  def search_country
+    @search_country ||= @setting.search_country
   end
 
   def search_provider_results
@@ -588,6 +595,7 @@ class Autonomia::Prospecting::SearchRunner
         JSON.generate(advanced_filters),
         requested_limit,
         search_score_mode,
+        search_country,
         @setting.scoring_mode,
         @setting.scoring_profile_id,
         @setting.active_scoring_weights.sort.to_h

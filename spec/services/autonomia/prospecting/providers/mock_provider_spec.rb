@@ -25,4 +25,27 @@ RSpec.describe Autonomia::Prospecting::Providers::MockProvider do
 
     expect(provider.search).to eq([])
   end
+
+  # Mesmo contrato do Google Places (#677, E1 frente C): o motor e os filtros leem estes atributos dos dois providers.
+  it 'devolve os sinais do lugar coerentes com o payload simulado' do
+    leads = described_class.new(query: 'dentista', location: 'Curitiba, PR', radius: 1000, limit: 8).search
+
+    leads.each do |lead|
+      photos = lead.dig(:raw_payload, :photos)
+      expect(lead).to include(
+        has_photos: photos.present?,
+        photo_count: photos.size,
+        open_now: lead.dig(:raw_payload, :currentOpeningHours, :openNow),
+        has_opening_hours: true
+      )
+      expect(lead[:neighborhood]).to be_present
+    end
+    expect(leads.map { |lead| lead[:has_photos] }.uniq).to contain_exactly(true, false)
+  end
+
+  it 'grava o país da busca no lead' do
+    lead = described_class.new(query: 'dentista', location: 'Lisboa', radius: 1000, limit: 1, country: 'PT').search.first
+
+    expect(lead[:country]).to eq('PT')
+  end
 end
