@@ -722,6 +722,8 @@ pt_BR:
           - 'Essa resposta precisa de uma conferência do nosso time. Vou direcionar seu atendimento para um humano seguir com você.'
           - 'Para manter a resposta segura, vou trazer alguém do nosso time para continuar por aqui.'
     prospecting:
+      presets:
+        invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
       errors:
         google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'
         google_busy: 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.'

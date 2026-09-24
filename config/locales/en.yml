@@ -506,6 +506,8 @@ en:
     # Em português também aqui, como insurance.errors: a Prospecção é produto brasileiro e o texto não pode cair em
     # inglês para conta com locale en.
     prospecting:
+      presets:
+        invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
       errors:
         google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'
         google_busy: 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.'

@@ -2,6 +2,8 @@
 import { useI18n } from 'vue-i18n';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import * as formatters from '../../utils/searchFormatters';
+import { findPreset } from '../../utils/searchPresets';
+import SearchPresetChip from './SearchPresetChip.vue';
 
 const { t } = useI18n();
 const {
@@ -21,6 +23,7 @@ const {
 
 const formatSearchArea = search => formatters.formatSearchArea(search, t);
 const formatRelativeTime = value => formatters.formatRelativeTime(value, t);
+const searchPreset = search => findPreset(search.preset_id);
 </script>
 
 <template>
@@ -81,6 +84,11 @@ const formatRelativeTime = value => formatters.formatRelativeTime(value, t);
               <p class="block w-full truncate text-xs text-n-slate-10">
                 {{ `${search.location} · ${formatSearchArea(search)}` }}
               </p>
+              <SearchPresetChip
+                v-if="searchPreset(search)"
+                class="mt-1"
+                :preset="searchPreset(search)"
+              />
             </div>
             <span
               class="shrink-0 rounded-md bg-n-solid-3 px-2 py-1 text-xs text-n-slate-11"

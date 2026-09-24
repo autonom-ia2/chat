@@ -334,6 +334,7 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
         },
         sort_key: 'priority_desc',
         score_mode: 'gbp',
+        preset_id: null,
         scoring_profile_id: 9,
       },
     });

@@ -6,6 +6,7 @@ class Autonomia::Prospecting::SearchRunner
   LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
   # Teto de produto do pedido (#683). O provider pode devolver menos: a paginação do Google é da E2.
   MAX_REQUESTED_LIMIT = 60
+  DEFAULT_DECISION_MAKER_TYPE = 'owner'.freeze
 
   Result = Struct.new(:search, :leads, keyword_init: true)
 
@@ -518,12 +519,25 @@ class Autonomia::Prospecting::SearchRunner
     }.compact
   end
 
+  # Modo, jogada e decisor da busca (#677). A jogada é gravada mesmo nula, para
+  # sobrescrever o valor cru do pedido depois de validada contra o modo.
   def scoring_metadata
     {
       'score_mode' => search_score_mode,
       'scoring_profile_id' =>
         metadata['scoring_profile_id'].presence || @setting.scoring_profile_id
-    }.compact
+    }.compact.merge(
+      'preset_id' => search_preset_id,
+      'decision_maker_type' => metadata['decision_maker_type'].presence || DEFAULT_DECISION_MAKER_TYPE
+    )
+  end
+
+  def search_preset_id
+    preset_id = metadata['preset_id'].presence
+    return if preset_id.nil?
+    return preset_id.to_s if Autonomia::Prospecting::SearchPresets.valid_for_mode?(preset_id, search_score_mode)
+
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.presets.invalid'))
   end
 
   def search_score_mode

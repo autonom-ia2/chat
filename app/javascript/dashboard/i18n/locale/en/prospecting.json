@@ -144,6 +144,44 @@
       "TIME_MINUTES_AGO": "há {count}min",
       "TIME_HOURS_AGO": "há {count}h",
       "TIME_DAYS_AGO": "há {count}d",
+      "MODE_BADGE": {
+        "GBP": "Modo: GMN (atacar lacunas)",
+        "GENERAL": "Modo: Geral (qualificar leads)",
+        "GBP_TOOLTIP": "Modo GMN: a busca prioriza empresas com lacunas no Google Meu Negócio, que viram oportunidade comercial.",
+        "GENERAL_TOOLTIP": "Modo Geral: a busca prioriza empresas qualificadas, bem estruturadas no Google."
+      },
+      "PRESETS": {
+        "TITLE": "Sua jogada",
+        "HINT": "Escolha a estratégia. Ela define os filtros base e o tipo de lead que a busca vai trazer. Opcional.",
+        "NONE_NAME": "Sem jogada",
+        "NONE_PITCH": "Busca livre",
+        "ITEMS": {
+          "VENDER_SITE": {
+            "NAME": "Vender site",
+            "PITCH": "Empresas sem site no Google"
+          },
+          "GESTAO_REVIEWS": {
+            "NAME": "Gestão de avaliações",
+            "PITCH": "Avaliação fraca, volume relevante"
+          },
+          "OTIMIZACAO_GBP": {
+            "NAME": "Otimização GMN",
+            "PITCH": "Maduras, mas com lacuna no perfil"
+          },
+          "PROVA_SOCIAL": {
+            "NAME": "Prova social",
+            "PITCH": "Empresas bem avaliadas, boa reputação"
+          },
+          "MERCADO_MADURO": {
+            "NAME": "Mercado maduro",
+            "PITCH": "Volume e nota saudáveis"
+          },
+          "PRESENCA_DIGITAL": {
+            "NAME": "Presença digital",
+            "PITCH": "Site, telefone e perfil completo"
+          }
+        }
+      },
       "SECTIONS": {
         "WHERE": "Onde buscar",
         "DECIDER": "Decisor e quantidade",

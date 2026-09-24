@@ -33,6 +33,14 @@ describe('Pedido da busca · frente de modo', () => {
     });
   });
 
+  it('sem jogada escolhida manda preset_id nulo', async () => {
+    const wrapper = await openNewSearchForm();
+
+    const payload = await submitMinimalSearch(wrapper);
+
+    expect(payload.metadata).toHaveProperty('preset_id', null);
+  });
+
   it('manda o modo escolhido no formulário', async () => {
     const wrapper = await openNewSearchForm();
     await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.SCORE_MODE', 'gbp');

@@ -5,6 +5,7 @@ import ProspectingAiCredentialNotice from '../components/ProspectingAiCredential
 import ProspectingMockProviderNotice from '../components/ProspectingMockProviderNotice.vue';
 import SearchForm from '../components/search/SearchForm.vue';
 import SearchHistory from '../components/search/SearchHistory.vue';
+import SearchModeBadge from '../components/search/SearchModeBadge.vue';
 import SearchResults from '../components/search/SearchResults.vue';
 import SearchConfigModal from '../components/search/SearchConfigModal.vue';
 import LeadDetailDrawer from '../components/search/LeadDetailDrawer.vue';
@@ -31,9 +32,12 @@ const {
       class="flex flex-col gap-3 border-b border-n-weak px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
     >
       <div>
-        <h1 class="text-xl font-semibold text-n-slate-12">
-          {{ t('PROSPECTING.SEARCH.TITLE') }}
-        </h1>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h1 class="text-xl font-semibold text-n-slate-12">
+            {{ t('PROSPECTING.SEARCH.TITLE') }}
+          </h1>
+          <SearchModeBadge />
+        </div>
         <p class="mt-1 text-sm text-n-slate-10">
           {{ t('PROSPECTING.SEARCH.SUBTITLE') }}
         </p>
