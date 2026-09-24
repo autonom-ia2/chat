@@ -2,8 +2,13 @@
 // Escolha única do produto. Não usamos <select> nativo: a lista dele ignora o design
 // system e muda de navegador para navegador. Teclado segue o padrão WAI-ARIA
 // "select-only combobox" (dashboard/helper/choiceKeys.js). Portado do ChoiceSelect do Bio.
+//
+// A lista é um popover manual (Popover API): fica na camada do topo, acima de
+// modal <dialog> e fora do corte de overflow das seções, e continua no DOM do
+// componente — dentro do dialog, então não fica inerte. A posição é fixa,
+// calculada do botão. Sem Popover API (jsdom), o v-show cuida da visibilidade.
 import { computed, nextTick, ref, useId, useTemplateRef, watch } from 'vue';
-import { onClickOutside } from '@vueuse/core';
+import { onClickOutside, useEventListener } from '@vueuse/core';
 import {
   choiceKeyAction,
   isChoiceList,
@@ -31,6 +36,8 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   invalid: { type: Boolean, default: false },
   // Altura menor para barras de filtro; a área de toque continua com 44 px.
+  // Fora do compacto, a raiz tem largura mínima (min-w-40), como o select
+  // nativo, que não encolhe até o texto escolhido.
   compact: { type: Boolean, default: false },
 });
 
@@ -47,6 +54,8 @@ const modelValue = defineModel({
 const TYPEAHEAD_MS = 600;
 const LIST_MAX_HEIGHT = 320;
 const OPTION_HEIGHT = 44;
+const LIST_GAP = 4;
+const VIEWPORT_MARGIN = 8;
 
 const id = useId();
 const listId = `${id}-list`;
@@ -59,7 +68,7 @@ const list = useTemplateRef('list');
 
 const isOpen = ref(false);
 const active = ref(-1);
-const opensUpward = ref(false);
+const listStyle = ref({});
 const typed = { text: '', at: 0, from: -1 };
 
 // Seções da lista: um grupo por <optgroup>, ou uma seção sem rótulo.
@@ -95,17 +104,38 @@ const selectedLabel = computed(
   () => flatOptions.value[selected.value]?.label ?? props.placeholder
 );
 
-const show = index => {
+// Coordenadas da lista (position: fixed), a partir do botão. Largura mínima é a
+// do botão; opções mais longas alargam a lista até a borda da tela. A altura é
+// limitada ao espaço do lado escolhido: a lista fixa não volta rolando a página,
+// então o que passasse da tela ficaria inalcançável.
+const place = () => {
   const rect = trigger.value?.getBoundingClientRect();
-  if (rect) {
-    const below = window.innerHeight - rect.bottom;
-    const needed = Math.min(
-      LIST_MAX_HEIGHT,
-      flatOptions.value.length * OPTION_HEIGHT
-    );
-    // Abre para cima só quando não cabe embaixo e há mais espaço em cima.
-    opensUpward.value = below < needed && rect.top > below;
-  }
+  if (!rect) return;
+  const below = window.innerHeight - rect.bottom;
+  const spaceBelow = below - LIST_GAP - VIEWPORT_MARGIN;
+  const spaceAbove = rect.top - LIST_GAP - VIEWPORT_MARGIN;
+  const needed = Math.min(
+    LIST_MAX_HEIGHT,
+    flatOptions.value.length * OPTION_HEIGHT
+  );
+  // Abre para cima só quando não cabe embaixo e há mais espaço em cima.
+  const opensUpward = spaceBelow < needed && spaceAbove > spaceBelow;
+  const space = opensUpward ? spaceAbove : spaceBelow;
+  // Uma opção inteira no mínimo, mesmo em tela minúscula.
+  const maxHeight = Math.max(OPTION_HEIGHT, Math.min(LIST_MAX_HEIGHT, space));
+  listStyle.value = {
+    left: `${rect.left}px`,
+    minWidth: `${rect.width}px`,
+    maxWidth: `${window.innerWidth - rect.left - VIEWPORT_MARGIN}px`,
+    maxHeight: `${maxHeight}px`,
+    ...(opensUpward
+      ? { bottom: `${window.innerHeight - rect.top + LIST_GAP}px` }
+      : { top: `${rect.bottom + LIST_GAP}px` }),
+  };
+};
+
+const show = index => {
+  place();
   active.value = index;
   isOpen.value = true;
 };
@@ -202,13 +232,40 @@ watch([isOpen, active], async () => {
     ?.scrollIntoView({ block: 'nearest' });
 });
 
-onClickOutside(root, () => {
-  if (isOpen.value) close(false);
-});
+watch(
+  isOpen,
+  open => {
+    if (open) list.value?.showPopover?.();
+    else list.value?.hidePopover?.();
+  },
+  { flush: 'post' }
+);
+
+// Enquanto aberta, a lista acompanha o botão em qualquer rolagem (capture pega
+// a das seções internas) e no redimensionamento. A rolagem da própria lista não
+// move o botão.
+const openWindow = () => (isOpen.value ? window : null);
+useEventListener(
+  openWindow,
+  'scroll',
+  event => {
+    if (event.target !== list.value) place();
+  },
+  { capture: true, passive: true }
+);
+useEventListener(openWindow, 'resize', place, { passive: true });
+
+onClickOutside(
+  root,
+  () => {
+    if (isOpen.value) close(false);
+  },
+  { ignore: [list] }
+);
 </script>
 
 <template>
-  <div ref="root" class="relative" :class="{ 'min-w-40': !compact }">
+  <div ref="root" :class="{ 'min-w-40': !compact }">
     <button
       ref="trigger"
       type="button"
@@ -222,11 +279,13 @@ onClickOutside(root, () => {
       "
       :aria-invalid="invalid || undefined"
       :disabled="disabled"
-      class="relative flex items-center justify-between w-full gap-2 rounded-lg text-start bg-n-surface-1 text-n-slate-12 outline outline-1 -outline-offset-1 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+      class="relative flex items-center justify-between w-full gap-2 rounded-lg text-start bg-n-surface-1 text-n-slate-12 outline outline-1 -outline-offset-1 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60 before:absolute before:inset-x-0"
       :class="[
+        // Altura dos campos do design system (h-10; compacto h-8). O
+        // pseudo-elemento leva a área de toque a 44 px nos dois.
         compact
-          ? 'min-h-8 px-2 text-xs before:absolute before:inset-x-0 before:-inset-y-1.5'
-          : 'min-h-11 px-3 text-sm',
+          ? 'h-8 px-2 text-xs before:-inset-y-1.5'
+          : 'h-10 px-3 text-sm before:-inset-y-0.5',
         invalid
           ? 'outline-n-ruby-9 focus-visible:outline-n-ruby-9'
           : 'outline-n-weak hover:enabled:outline-n-slate-6 focus-visible:outline-n-brand',
@@ -244,7 +303,6 @@ onClickOutside(root, () => {
         aria-hidden="true"
       />
     </button>
-    <!-- click.prevent: dentro de <label>, o navegador repassaria o clique ao botão e reabriria a lista. -->
     <ul
       v-show="isOpen"
       :id="listId"
@@ -252,8 +310,9 @@ onClickOutside(root, () => {
       role="listbox"
       :aria-label="ariaLabel"
       tabindex="-1"
-      class="absolute z-50 w-full py-1 mb-0 overflow-y-auto rounded-lg shadow-lg max-h-80 bg-n-solid-2 outline outline-1 outline-n-container"
-      :class="opensUpward ? 'bottom-full mb-1' : 'top-full mt-1'"
+      popover="manual"
+      class="fixed z-50 px-0 py-1 m-0 overflow-y-auto border-0 rounded-lg shadow-lg inset-auto max-h-80 bg-n-solid-2 text-n-slate-12 outline outline-1 outline-n-container"
+      :style="listStyle"
       @click.prevent
     >
       <li
@@ -291,7 +350,7 @@ onClickOutside(root, () => {
             }"
             @pointerdown.prevent
             @pointermove="active = index"
-            @click.prevent="commit(index)"
+            @click="commit(index)"
           >
             <span class="truncate">{{ option.label }}</span>
             <span
