@@ -162,6 +162,33 @@ describe('ChoiceSelect', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([['14:00']]);
   });
 
+  // Dentro de <label>, o Chromium repassa ao botão o clique que não for
+  // cancelado, e a lista reabria depois de cada escolha com mouse. O jsdom não
+  // repassa (trata o listbox com tabindex como interativo), então o teste
+  // confere o cancelamento, que é o que impede o repasse no navegador.
+  it('cancela o clique na lista para um <label> em volta não reabrir', async () => {
+    wrapper = mountSelect();
+    const trigger = wrapper.get('[role="combobox"]');
+    await trigger.trigger('click');
+
+    const optionClick = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
+    wrapper.findAll('[role="option"]')[2].element.dispatchEvent(optionClick);
+    const listClick = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
+    wrapper.get('[role="listbox"]').element.dispatchEvent(listClick);
+    await wrapper.vm.$nextTick();
+
+    expect(optionClick.defaultPrevented).toBe(true);
+    expect(listClick.defaultPrevented).toBe(true);
+    expect(wrapper.emitted('update:modelValue')).toEqual([['es']]);
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+  });
+
   it('marca inválido e desabilitado para leitor de tela', () => {
     wrapper = mountSelect('pt_BR', { invalid: true, disabled: true });
     const trigger = wrapper.get('[role="combobox"]');

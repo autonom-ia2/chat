@@ -242,6 +242,7 @@ onClickOutside(root, () => {
         aria-hidden="true"
       />
     </button>
+    <!-- prevent: dentro de <label>, o clique não cancelado volta ao botão e reabre a lista -->
     <ul
       v-show="isOpen"
       :id="listId"
@@ -251,6 +252,7 @@ onClickOutside(root, () => {
       tabindex="-1"
       class="absolute z-50 w-full py-1 mb-0 overflow-y-auto rounded-lg shadow-lg max-h-80 bg-n-solid-2 outline outline-1 outline-n-container"
       :class="opensUpward ? 'bottom-full mb-1' : 'top-full mt-1'"
+      @click.prevent
     >
       <li
         v-for="(section, sectionIndex) in sections"
