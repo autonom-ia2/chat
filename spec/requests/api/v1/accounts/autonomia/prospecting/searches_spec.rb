@@ -6,6 +6,8 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
 
   before do
     Autonomia::Prospecting::Config.enable_for!(account)
+    # google_places virou o padrão (#683); a busca destes testes roda no provider mock.
+    Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'mock')
   end
 
   it 'runs a mock search for account administrators' do
@@ -84,9 +86,7 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
   end
 
   it 'returns Google location suggestions without exposing the API key' do
-    Autonomia::Prospecting::Setting.for_account(account).update!(
-      google_places_api_key: 'secret-key'
-    )
+    InstallationConfig.where(name: 'GOOGLE_PLACES_API_KEY').first_or_create!(value: 'secret-key')
     stub_request(:post, 'https://places.googleapis.com/v1/places:autocomplete')
       .to_return(
         status: 200,
@@ -113,9 +113,7 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
   end
 
   it 'returns Google location details for a selected place' do
-    Autonomia::Prospecting::Setting.for_account(account).update!(
-      google_places_api_key: 'secret-key'
-    )
+    InstallationConfig.where(name: 'GOOGLE_PLACES_API_KEY').first_or_create!(value: 'secret-key')
     stub_request(:get, 'https://places.googleapis.com/v1/places/places/divinopolis')
       .to_return(
         status: 200,
@@ -137,6 +135,33 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
       'latitude' => -20.1446,
       'longitude' => -44.8912
     )
+  end
+
+  it 'accepts a 60-result search and rejects 61 with 422' do
+    post "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches",
+         params: { search: { query: 'padaria', location: 'Curitiba, PR', requested_limit: 60 } },
+         headers: auth_headers(admin)
+
+    expect(response).to have_http_status(:created)
+    expect(response.parsed_body.dig('payload', 'leads').size).to eq(60)
+
+    post "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches",
+         params: { search: { query: 'padaria', location: 'Curitiba, PR', requested_limit: 61 } },
+         headers: auth_headers(admin)
+
+    expect(response).to have_http_status(:unprocessable_entity)
+  end
+
+  it 'does not suggest locations with a key saved only on the account' do
+    Autonomia::Prospecting::Setting.for_account(account).update!(google_places_api_key: 'chave-antiga-da-conta')
+
+    get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/location_suggestions",
+        params: { query: 'Divino' },
+        headers: auth_headers(admin)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['payload']).to eq([])
+    expect(a_request(:post, 'https://places.googleapis.com/v1/places:autocomplete')).not_to have_been_made
   end
 
   it 'deletes a recent search without deleting its leads' do

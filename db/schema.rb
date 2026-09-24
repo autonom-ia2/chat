@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_24_150000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_25_100100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -727,7 +727,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_24_150000) do
   create_table "autonomia_prospecting_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.boolean "provider_enabled", default: false, null: false
-    t.string "provider", default: "mock", null: false
+    t.string "provider", default: "google_places", null: false
     t.integer "default_limit", default: 20, null: false
     t.integer "max_results_per_search", default: 20, null: false
     t.integer "daily_limit"

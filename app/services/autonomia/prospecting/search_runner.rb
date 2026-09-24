@@ -4,6 +4,8 @@ require 'json'
 class Autonomia::Prospecting::SearchRunner
   AREA_TYPES = %w[radius viewport].freeze
   LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
+  # Teto de produto do pedido (#683). O provider pode devolver menos: a paginação do Google é da E2.
+  MAX_REQUESTED_LIMIT = 60
 
   Result = Struct.new(:search, :leads, keyword_init: true)
 
@@ -21,7 +23,6 @@ class Autonomia::Prospecting::SearchRunner
     validate!
     cached = cached_result
     return cached if cached
-    validate_usage_limits!
 
     search = create_search!
     leads = []
@@ -68,11 +69,9 @@ class Autonomia::Prospecting::SearchRunner
     raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, 'must be greater than 0')) if requested_limit <= 0
     validate_google_places! if provider_name == 'google_places'
 
-    return if requested_limit <= @setting.max_results_per_search
+    return if requested_limit <= MAX_REQUESTED_LIMIT
 
-    raise ActiveRecord::RecordInvalid.new(
-      search_with_error(:requested_limit, "must be less than or equal to #{@setting.max_results_per_search}")
-    )
+    raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, "must be less than or equal to #{MAX_REQUESTED_LIMIT}"))
   end
 
   def create_search!
@@ -147,17 +146,38 @@ class Autonomia::Prospecting::SearchRunner
   end
 
   def validate_google_places!
-    raise ProviderError, 'Google Places provider is disabled for this account' unless @setting.provider_enabled?
-    raise ProviderError, 'Google Places API key is not configured for this account' unless @setting.google_places_configured?
+    raise ProviderError, 'Google Places platform API key is not configured' unless @setting.google_places_configured?
   end
 
+  # Duas buscas sobre o mesmo lugar podem ler "não existe" ao mesmo tempo. Quem perde a corrida no índice único
+  # relê o lead que a outra gravou e atualiza em cima dele. O savepoint impede que o insert recusado aborte a
+  # transação da busca inteira (#683).
   def upsert_lead!(search, attributes, google_rank:)
     dedupe_key = dedupe_key_for(attributes)
+    retried = false
+    begin
+      Autonomia::Prospecting::Lead.transaction(requires_new: true) { save_lead!(search, attributes, dedupe_key, google_rank) }
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+      raise if retried || !lost_race?(e)
+
+      retried = true
+      retry
+    end
+  end
+
+  def lost_race?(error)
+    error.is_a?(ActiveRecord::RecordNotUnique) || error.record.errors.of_kind?(:dedupe_key, :taken)
+  end
+
+  def save_lead!(search, attributes, dedupe_key, google_rank)
     lead = find_existing_lead(attributes, dedupe_key) || Autonomia::Prospecting::Lead.new(account: @account)
     scoring_attributes = score_for(attributes, google_rank)
     lead_metadata = lead.metadata.to_h.merge(attributes[:metadata].to_h)
+    # Pelo id, não pelo objeto: com o objeto, o inverse_of põe o lead em search.leads, e o lead recusado na corrida
+    # (ou inválido) ficaria ali e derrubaria o save! da própria busca.
     lead.assign_attributes(
-      attributes.merge(scoring_attributes).merge(search: search, dedupe_key: dedupe_key, search_rank: google_rank, metadata: lead_metadata)
+      attributes.merge(scoring_attributes).merge(prospect_search_id: search.id, dedupe_key: dedupe_key, search_rank: google_rank,
+                                                 metadata: lead_metadata)
     )
     lead.save!
     lead
@@ -500,7 +520,9 @@ class Autonomia::Prospecting::SearchRunner
   def cached_result
     return if @setting.cache_ttl_seconds.to_i <= 0
 
+    # Só busca concluída serve de cache: a que falhou nasceu com a mesma impressão digital e devolveria vazio (#683).
     search = Autonomia::Prospecting::Search
+             .completed
              .where(account: @account, provider: provider_name, cache_fingerprint: cache_fingerprint)
              .where('cache_expires_at > ?', Time.current)
              .order(created_at: :desc)
@@ -567,34 +589,6 @@ class Autonomia::Prospecting::SearchRunner
     search = Autonomia::Prospecting::Search.new
     search.errors.add(attribute, message)
     search
-  end
-
-  def validate_usage_limits!
-    return if estimated_api_units.zero?
-
-    validate_usage_limit!(:daily_limit, Time.current.beginning_of_day)
-    validate_usage_limit!(:monthly_limit, Time.current.beginning_of_month)
-  end
-
-  def validate_usage_limit!(limit_attribute, period_start)
-    limit = @setting.public_send(limit_attribute).to_i
-    return if limit <= 0
-
-    usage = Autonomia::Prospecting::Search
-            .where(account: @account)
-            .where('created_at >= ?', period_start)
-            .sum(:consumed_api_units)
-    return if usage + estimated_api_units <= limit
-
-    raise ProviderError, "#{limit_attribute.to_s.humanize} exceeded for prospecting"
-  end
-
-  def estimated_api_units
-    @estimated_api_units ||= if provider_name == 'google_places'
-                               auto_expand_radius? ? expansion_radii.size : 1
-                             else
-                               0
-                             end
   end
 
   def crm_pipeline_id

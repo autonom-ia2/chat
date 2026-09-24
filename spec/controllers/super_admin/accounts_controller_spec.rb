@@ -314,6 +314,42 @@ RSpec.describe 'Super Admin accounts API', type: :request do
     end
   end
 
+  describe 'POST /super_admin/accounts/{account_id}/toggle_prospecting_research' do
+    context 'when it is an unauthenticated user' do
+      it 'returns unauthorized and keeps research off' do
+        post "/super_admin/accounts/#{account.id}/toggle_prospecting_research", params: { enabled: true }
+
+        expect(response).to have_http_status(:redirect)
+        expect(Autonomia::Prospecting::Config.research_enabled?(account.reload)).to be false
+      end
+    end
+
+    context 'when it is an authenticated user' do
+      before { sign_in(super_admin, scope: :super_admin) }
+
+      it 'enables and disables research without touching the prospecting module' do
+        Autonomia::Prospecting::Config.enable_for!(account)
+
+        post "/super_admin/accounts/#{account.id}/toggle_prospecting_research", params: { enabled: true }
+        expect(flash[:notice]).to eq('Prospecting research enabled')
+        expect(Autonomia::Prospecting::Config.research_enabled?(account.reload)).to be true
+
+        post "/super_admin/accounts/#{account.id}/toggle_prospecting_research", params: { enabled: false }
+        expect(flash[:notice]).to eq('Prospecting research disabled')
+        expect(Autonomia::Prospecting::Config.research_enabled?(account.reload)).to be false
+        expect(Autonomia::Prospecting::Config.enabled?(account)).to be true
+      end
+
+      it 'shows the research switch next to the prospecting switch on the account page' do
+        get "/super_admin/accounts/#{account.id}"
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include('Enable Autonomia Prospecting', 'Enable Prospecting research')
+        expect(response.body).to include("/super_admin/accounts/#{account.id}/toggle_prospecting_research")
+      end
+    end
+  end
+
   describe 'DELETE /super_admin/accounts/{account_id}' do
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do

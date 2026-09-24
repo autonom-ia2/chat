@@ -53,6 +53,12 @@ captain:
   enabled: true
   icon: 'icon-captain'
   config_key: 'captain'
+prospecting:
+  name: 'Prospecting'
+  description: 'Platform keys for Prospecting: Google Places, Google Maps and BigDataCorp.'
+  enabled: true
+  icon: 'icon-dashboard-line'
+  config_key: 'prospecting'
 
 # ------- Communication Channels ------- #
 live_chat:

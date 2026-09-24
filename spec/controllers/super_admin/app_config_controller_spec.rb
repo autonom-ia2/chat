@@ -95,6 +95,48 @@ RSpec.describe 'Super Admin Application Config API', type: :request do
         expect(flash[:alert]).to be_blank
         expect(GlobalConfig.get('SHOPIFY_PARTNER_API_VERSION')['SHOPIFY_PARTNER_API_VERSION']).to eq('2026-10')
       end
+
+      it 'saves the Prospecting platform keys and ignores keys from other groups' do
+        sign_in(super_admin, scope: :super_admin)
+
+        post '/super_admin/app_config?config=prospecting',
+             params: {
+               app_config: {
+                 GOOGLE_PLACES_API_KEY: 'chave-places',
+                 GOOGLE_MAPS_BROWSER_API_KEY: 'chave-navegador',
+                 BIGDATACORP_USER: 'usuario-bdc',
+                 BIGDATACORP_PASSWORD: 'senha-bdc',
+                 FB_APP_ID: 'fora-do-grupo'
+               }
+             }
+
+        expect(response).to redirect_to(super_admin_settings_path)
+        expect(InstallationConfig.find_by(name: 'GOOGLE_PLACES_API_KEY').value).to eq('chave-places')
+        expect(InstallationConfig.find_by(name: 'GOOGLE_MAPS_BROWSER_API_KEY').value).to eq('chave-navegador')
+        expect(InstallationConfig.find_by(name: 'BIGDATACORP_USER').value).to eq('usuario-bdc')
+        expect(InstallationConfig.find_by(name: 'BIGDATACORP_PASSWORD').value).to eq('senha-bdc')
+        expect(InstallationConfig.find_by(name: 'FB_APP_ID')).to be_nil
+      end
+    end
+  end
+
+  describe 'GET /super_admin/app_config?config=prospecting' do
+    it 'shows the four Prospecting platform fields' do
+      sign_in(super_admin, scope: :super_admin)
+
+      get '/super_admin/app_config?config=prospecting'
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('GOOGLE_PLACES_API_KEY', 'GOOGLE_MAPS_BROWSER_API_KEY', 'BIGDATACORP_USER', 'BIGDATACORP_PASSWORD')
+    end
+
+    it 'lists Prospecting in the settings page with a link to its configuration' do
+      sign_in(super_admin, scope: :super_admin)
+
+      get '/super_admin/settings'
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('Prospecting', super_admin_app_config_path(config: 'prospecting'))
     end
   end
 end

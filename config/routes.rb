@@ -1071,6 +1071,7 @@ Rails.application.routes.draw do
         post :seed, on: :member
         post :reset_cache, on: :member
         post :toggle_prospecting, on: :member
+        post :toggle_prospecting_research, on: :member
         post :toggle_insurance, on: :member
         post :toggle_insurance_ramo, on: :member
       end

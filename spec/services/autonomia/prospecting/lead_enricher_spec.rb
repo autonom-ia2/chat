@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# Caracterização do enriquecimento antes da E0 (#683). Cada teste afirma o que
-# o código faz HOJE; o comentário DIVERGE marca o que a E0 vai mudar.
+# Caracterização do enriquecimento (#683). Os casos DIVERGE que a E0 corrigiu foram
+# invertidos: interruptor no superadmin e IA só na credencial do Kanban da conta.
 RSpec.describe Autonomia::Prospecting::LeadEnricher do
   let(:account) { create(:account) }
   let(:user) { create(:user, :administrator, account: account) }
@@ -44,7 +44,8 @@ RSpec.describe Autonomia::Prospecting::LeadEnricher do
   end
 
   before do
-    setting.update!(enrichment_enabled: true)
+    Autonomia::Prospecting::Config.enable_for!(account)
+    Autonomia::Prospecting::Config.enable_research_for!(account)
     InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').destroy_all
     allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
     allow(Autonomia::Prospecting::WebsiteScraper).to receive(:new).and_return(scraper)
@@ -62,8 +63,8 @@ RSpec.describe Autonomia::Prospecting::LeadEnricher do
   end
 
   describe 'interruptor' do
-    it 'recusa com enrichment_enabled desligado e marca o lead como falho' do
-      setting.update!(enrichment_enabled: false)
+    it 'recusa com a pesquisa desligada pelo superadmin e marca o lead como falho' do
+      Autonomia::Prospecting::Config.disable_research_for!(account)
 
       expect { enrich }.to raise_error(described_class::Error, 'prospecting.enrichment.disabled')
       expect(lead.reload).to be_enrichment_failed
@@ -71,26 +72,33 @@ RSpec.describe Autonomia::Prospecting::LeadEnricher do
       expect(Autonomia::Prospecting::WebsiteScraper).not_to have_received(:new)
     end
 
-    it 'roda com o módulo de prospecção desligado na conta' do
-      # DIVERGE: o enriquecimento só roda com o módulo ligado E a pesquisa liberada pelo superadmin
-      # (Config.research_enabled?); enrichment_enabled deixa de ser o interruptor.
-      expect(Autonomia::Prospecting::Config.enabled?(account)).to be(false)
+    it 'recusa com o módulo de prospecção desligado na conta, mesmo com a pesquisa ligada' do
+      Autonomia::Prospecting::Config.disable_for!(account)
 
+      expect { enrich }.to raise_error(described_class::Error, 'prospecting.enrichment.disabled')
+      expect(Autonomia::Prospecting::WebsiteScraper).not_to have_received(:new)
+    end
+
+    it 'ignora enrichment_enabled da conta: ligado não libera sem a pesquisa, desligado não trava com ela' do
+      setting.update!(enrichment_enabled: true)
+      Autonomia::Prospecting::Config.disable_research_for!(account)
+      expect { enrich }.to raise_error(described_class::Error, 'prospecting.enrichment.disabled')
+
+      setting.update!(enrichment_enabled: false)
+      Autonomia::Prospecting::Config.enable_research_for!(account)
       expect(enrich).to be_enrichment_completed
     end
   end
 
   describe 'credencial de IA' do
-    it 'usa a chave do sistema quando a conta não tem hook crm_kanban_ai' do
-      # DIVERGE: a prospecção usa só a credencial do hook crm_kanban_ai; sem hook, não chama a IA
-      # mesmo existindo CAPTAIN_OPEN_AI_API_KEY.
+    it 'não chama a IA sem hook crm_kanban_ai, mesmo existindo a chave do sistema' do
       InstallationConfig.create!(name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-do-sistema')
 
       result = enrich
 
-      expect(Crm::Ai::ResponsesClient).to have_received(:new)
-        .with(hash_including(credential: hash_including(api_key: 'chave-do-sistema', source: :system)))
-      expect(result.enrichment_source).to eq('site_and_autonomia_ai')
+      expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+      expect(result).to be_enrichment_completed
+      expect(result.enrichment_source).to eq('site')
     end
 
     it 'usa a chave do hook crm_kanban_ai da conta quando ele existe' do
