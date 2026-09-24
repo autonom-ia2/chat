@@ -149,6 +149,10 @@ const yesNoAnyChoices = computed(() => [
   { value: 'yes', label: t('PROSPECTING.SEARCH.FILTERS.YES') },
   { value: 'no', label: t('PROSPECTING.SEARCH.FILTERS.NO') },
 ]);
+// Aberto agora só filtra por "sim", como no Orth e no motor (#677): "não" não existe.
+const yesAnyChoices = computed(() =>
+  yesNoAnyChoices.value.filter(choice => choice.value !== 'no')
+);
 const currentCampaignSegment = computed(
   () => selectedList.value?.campaign_segment || null
 );
@@ -787,7 +791,7 @@ onMounted(loadPage);
                       <ChoiceSelect
                         v-model="listAdvancedFilters.open_now"
                         compact
-                        :options="yesNoAnyChoices"
+                        :options="yesAnyChoices"
                         :aria-label="t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW')"
                       />
                     </label>
@@ -1361,7 +1365,7 @@ onMounted(loadPage);
                   <ChoiceSelect
                     v-model="addLeadAdvancedFilters.open_now"
                     compact
-                    :options="yesNoAnyChoices"
+                    :options="yesAnyChoices"
                     :aria-label="t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW')"
                   />
                 </label>
