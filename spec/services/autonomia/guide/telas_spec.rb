@@ -71,6 +71,16 @@ RSpec.describe Autonomia::Guide::Telas do
     expect(telas.destino('inbox_conversation', { 'conversation_id' => '1' }, permissoes: ['agent'])).to be_present
   end
 
+  # Correção #636 (24/09/2026, revisão #637): o mapa é gerado sem acento e o título do primeiro
+  # fluxo descreve uma AÇÃO ("Criar contato"), não o nome da tela — apareceu numa pergunta de
+  # IMPORTAR contatos. `destino` não tira rótulo nenhum do mapa; quem dá o nome humano é o
+  # parâmetro `rotulo` que o próprio modelo manda em `mostrar_tela` (coberto em `ferramentas_spec.rb`).
+  # A asserção é o hash INTEIRO — só as três chaves que `destino` sempre devolveu —, não só a
+  # ausência de `:rotulo`: se alguém reintroduzir a extração do mapa, o teste pega o valor errado.
+  it 'devolve só rota, parâmetros e destaque — sem rótulo nenhum tirado do mapa' do
+    expect(telas.destino('labels_list', {})).to eq(route_name: 'labels_list', params: {}, highlight: nil)
+  end
+
   it 'só aceita o destaque que existe para aquela tela', :aggregate_failures do
     expect(telas.destino('labels_list', {}, 'settings-add-label')[:highlight]).to eq('settings-add-label')
     expect(telas.destino('labels_list', {}, 'botao-inventado')[:highlight]).to be_nil

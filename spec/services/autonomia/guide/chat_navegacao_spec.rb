@@ -51,6 +51,15 @@ RSpec.describe Autonomia::Guide::Chat do
       expect(chat.send(:resolve_navigation, resultado)[:route_name]).to eq('crm_kanban_index')
     end
 
+    # #636 (correção 24/09/2026, revisão #637) — este caminho de reserva não tem `mostrar_tela`
+    # nenhum do modelo, e o título do fluxo no mapa descreve uma ação, não o nome da tela ("Criar
+    # contato" apareceu numa pergunta de importar). A asserção é o hash INTEIRO, não só a ausência
+    # de `:rotulo` — se alguém emendar outro campo de volta (como o `label:` antigo), o teste pega.
+    it 'não traz rótulo — cai no genérico "Ir para a tela" — e só traz rota e destaque' do
+      expect(chat.send(:resolve_navigation, resultado))
+        .to eq(route_name: 'crm_kanban_index', highlight: 'crm-new-pipeline')
+    end
+
     it 'não sugere tela quando a conversa vai para um humano' do
       expect(chat.send(:resolve_navigation, resultado(handoff: { should: true }))).to be_nil
     end
@@ -72,17 +81,27 @@ RSpec.describe Autonomia::Guide::Chat do
     it 'é a que o modelo escolheu, quando ele escolheu' do
       chat.send(:contexto).mostrar(escolhida)
 
-      expect(chat.send(:navegacao, resultado)).to eq(escolhida)
+      expect(chat.send(:navegacoes, resultado).first).to eq(escolhida)
     end
 
     it 'é a do fluxo do manual, quando ele não escolheu nenhuma' do
-      expect(chat.send(:navegacao, resultado)[:route_name]).to eq('crm_kanban_index')
+      expect(chat.send(:navegacoes, resultado).first[:route_name]).to eq('crm_kanban_index')
     end
 
     it 'não existe quando a conversa vai para um humano' do
       chat.send(:contexto).mostrar(escolhida)
 
-      expect(chat.send(:navegacao, resultado(handoff: { should: true }))).to be_nil
+      expect(chat.send(:navegacoes, resultado(handoff: { should: true })).first).to be_nil
+    end
+
+    # #636 — pergunta com várias partes: cada `mostrar_tela` do modelo vira um
+    # item de `navegacoes`, na ordem em que ele chamou.
+    it 'traz todas as telas que o modelo escolheu, na ordem' do
+      segunda = { route_name: 'labels_list', params: {}, highlight: nil }
+      chat.send(:contexto).mostrar(escolhida)
+      chat.send(:contexto).mostrar(segunda)
+
+      expect(chat.send(:navegacoes, resultado)).to eq([escolhida, segunda])
     end
   end
 end

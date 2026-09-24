@@ -107,6 +107,35 @@ const handleClickOutside = () => {
 // permission on push.
 const navLocation = nav => destino(nav?.route_name, nav?.params);
 
+// #636 — até 5 telas por resposta, na ordem em que o Guia escolheu. O store já normaliza
+// `navigations` (lista nova ou singular antigo, embrulhado) — aqui só falta filtrar pelas que o
+// roteador resolve de verdade (mesma defesa de `navLocation`, item a item).
+//
+// Calculado UMA VEZ por mensagem (revisão #637 do PR), não a cada leitura do template: o `v-for`
+// do template chama isto várias vezes por render (no `v-if` do bloco, de novo em cada botão, nos
+// dois layouts), e recalcular `router.resolve` a cada chamada é trabalho repetido à toa. A chave é
+// o próprio objeto do registro — imutável depois de criado — e ele nunca muda de conta no meio da
+// vida (troca de conta reseta o thread inteiro, `watch(accountId, () => store.reset())`).
+const telasValidasCache = new WeakMap();
+const telasValidas = item => {
+  if (telasValidasCache.has(item)) return telasValidasCache.get(item);
+
+  const valor = (item.navigations || [])
+    .map(nav => ({ nav, alvo: navLocation(nav) }))
+    .filter(entrada => entrada.alvo);
+  telasValidasCache.set(item, valor);
+  return valor;
+};
+
+// Duas aparências (#636). Com no máximo uma tela e um artigo, o painel fica como sempre foi: um
+// botão de cada, rótulo fixo. Com mais de um item em qualquer lista, vira duas seções — "Ir
+// para" (botões) e "Para ler com calma" (links) — uma entrada por item, com o nome dela.
+const layoutMultiplo = item =>
+  telasValidas(item).length > 1 || (item.artigos || []).length > 1;
+
+const chaveDaTela = nav =>
+  `${nav.route_name}:${JSON.stringify(nav.params || {})}`;
+
 // Esta função não age sobre nada: só move a pessoa até a tela e (V2) destaca o
 // elemento de lá. Quem executa ação é `confirmarAcao`, mais abaixo.
 const navigateTo = nav => {
@@ -242,8 +271,10 @@ const requestReply = async (requestAccount, message) => {
       store.addAssistantMessage({
         content: data.text,
         navigation: data.navigation || null,
+        navigations: data.navigations || null,
         acao: data.acao || null,
         artigo: data.artigo || null,
+        artigos: data.artigos || null,
       });
     } else if (data.retido) {
       // O Guia está no ar e entendeu — só não está seguro o bastante para
@@ -423,8 +454,65 @@ watch(accountId, () => store.reset());
                 </div>
               </div>
 
+              <!-- Uma pergunta com várias partes ganha um botão por tela e um link por artigo
+                   (#636). Com no máximo uma tela e um artigo, fica exatamente como antes — um
+                   botão de cada, rótulo curto e fixo, que não estoura a largura do painel. Com
+                   mais de um item numa lista, os botões de tela ficam soltos (o texto de cada um
+                   já diz "Ir para", repetir isso num título de seção seria redundante — revisão
+                   #637); só os links de artigo ganham título, porque "Ler: {título}" sozinho não
+                   deixa óbvio que a lista inteira é "para ler depois". -->
+              <div v-if="layoutMultiplo(item)" class="flex flex-col gap-3">
+                <div
+                  v-if="telasValidas(item).length"
+                  class="flex flex-wrap gap-2"
+                >
+                  <Button
+                    v-for="(entrada, indice) in telasValidas(item)"
+                    :key="chaveDaTela(entrada.nav)"
+                    :label="
+                      entrada.nav.rotulo
+                        ? $t('AUTONOMIA_GUIDE.GO_TO_SCREEN_NAMED', {
+                            rotulo: entrada.nav.rotulo,
+                          })
+                        : $t('AUTONOMIA_GUIDE.GO_TO_SCREEN_NUMBERED', {
+                            numero: indice + 1,
+                          })
+                    "
+                    icon="i-lucide-arrow-right"
+                    trailing-icon
+                    blue
+                    faded
+                    class="max-w-full min-h-11 [&>span]:truncate"
+                    @click="navigateTo(entrada.nav)"
+                  />
+                </div>
+                <div
+                  v-if="(item.artigos || []).length"
+                  class="flex flex-col gap-1"
+                >
+                  <p class="mb-0 text-xs font-medium text-n-slate-11">
+                    {{ $t('AUTONOMIA_GUIDE.READ_SECTION') }}
+                  </p>
+                  <Button
+                    v-for="artigoItem in item.artigos"
+                    :key="artigoItem.ref"
+                    :label="
+                      $t('AUTONOMIA_GUIDE.READ_ARTICLE_NAMED', {
+                        titulo: artigoItem.titulo,
+                      })
+                    "
+                    link
+                    teal
+                    justify="start"
+                    class="max-w-full min-h-11 [&>span]:truncate"
+                    @click="abrirArtigo(artigoItem)"
+                  />
+                </div>
+              </div>
               <div
-                v-if="navLocation(item.navigation) || item.artigo"
+                v-else-if="
+                  telasValidas(item).length || (item.artigos || []).length
+                "
                 class="flex flex-wrap gap-2"
               >
                 <!-- O rótulo vinha do título do fluxo, escrito para o manual
@@ -433,27 +521,27 @@ watch(accountId, () => store.reset());
                      de texto solto. Agora é frase curta e fixa, e o que
                      sobrar é cortado. -->
                 <Button
-                  v-if="navLocation(item.navigation)"
+                  v-if="telasValidas(item).length"
                   :label="$t('AUTONOMIA_GUIDE.GO_TO_SCREEN')"
                   icon="i-lucide-arrow-right"
                   trailing-icon
                   blue
                   faded
                   class="max-w-full min-h-11 [&>span]:truncate"
-                  @click="navigateTo(item.navigation)"
+                  @click="navigateTo(telasValidas(item)[0].nav)"
                 />
                 <!-- Botão secundário, separado do de navegação: ele não leva
                      a lugar nenhum da conta, abre o artigo que a ferramenta
                      leu (#617). -->
                 <Button
-                  v-if="item.artigo"
+                  v-if="(item.artigos || []).length"
                   :label="$t('AUTONOMIA_GUIDE.READ_ARTICLE')"
                   icon="i-lucide-book-open"
                   trailing-icon
                   slate
                   faded
                   class="max-w-full min-h-11 [&>span]:truncate"
-                  @click="abrirArtigo(item.artigo)"
+                  @click="abrirArtigo(item.artigos[0])"
                 />
               </div>
             </div>

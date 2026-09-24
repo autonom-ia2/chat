@@ -14,11 +14,15 @@ vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ name: 'home' }),
-  useRouter: () => ({ resolve: () => ({ matched: [] }), push: routerPush }),
+  // Rota real do registro do Guia (ex.: 'labels_list'): resolve de verdade, para os testes de
+  // navegação (#636) poderem afirmar que o clique leva ao alvo certo.
+  useRouter: () => ({ resolve: () => ({ matched: [{}] }), push: routerPush }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useAccount', () => ({
-  useAccount: () => ({ accountScopedRoute: name => ({ name }) }),
+  useAccount: () => ({
+    accountScopedRoute: (name, params) => ({ name, params }),
+  }),
 }));
 vi.mock('dashboard/composables/useUISettings', () => ({
   useUISettings: () => ({
@@ -32,7 +36,9 @@ vi.mock('dashboard/composables/store', () => ({
       return ref(() => ({ autonomia_guide_available: true }));
     }
     if (getter === 'getCurrentAccountId') return ref(1);
-    return ref(() => false);
+    // `accounts/isFeatureEnabledonAccount`: as telas usadas nestes testes exigem recurso ligado
+    // na conta (#636 usa rotas reais do registro, e a maioria tem `gate` de feature).
+    return ref(() => true);
   },
 }));
 vi.mock('dashboard/api/autonomiaGuide', () => ({
@@ -65,19 +71,43 @@ const ACAO = {
   },
 };
 
-const mountGuide = () =>
+// `t` é substituível (revisão #637 do PR): a maioria dos testes só precisa da CHAVE de volta, mas
+// o teste de interpolação do rótulo (`AUTONOMIA_GUIDE.GO_TO_SCREEN_NAMED`) precisa do texto FINAL,
+// com `{rotulo}`/`{titulo}`/`{numero}` substituídos — senão duas chaves diferentes ("Ir para: X" e
+// "Ir para a tela 2") virariam a mesma string e o teste não provaria nada.
+const mountGuide = ({ t = key => key } = {}) =>
   mount(AutonomiaGuideContainer, {
     attachTo: document.body,
     global: {
-      mocks: { $t: key => key },
+      mocks: { $t: t },
       directives: { onClickOutside: {}, dompurifyHtml: {} },
     },
   });
 
-// Os botões do cartão de ação são renderizados pelo Button compartilhado, que
-// põe o rótulo num <span>. Com o $t de teste o rótulo é a própria chave.
+// Sem regex (proibido neste repositório): troca `{nome}` pelo valor via split/join.
+const interpolar = (modelo, params) =>
+  Object.entries(params || {}).reduce(
+    (texto, [nome, valor]) => texto.split(`{${nome}}`).join(String(valor)),
+    modelo
+  );
+
+// As MESMAS strings de `app/javascript/dashboard/i18n/locale/pt_BR/crm.json`, só para as chaves
+// que os testes de interpolação usam — duplicar aqui é o preço de testar o texto final sem montar
+// o vue-i18n de verdade.
+const MENSAGENS_PT = {
+  'AUTONOMIA_GUIDE.GO_TO_SCREEN_NAMED': 'Ir para: {rotulo}',
+  'AUTONOMIA_GUIDE.GO_TO_SCREEN_NUMBERED': 'Ir para a tela {numero}',
+  'AUTONOMIA_GUIDE.READ_ARTICLE_NAMED': 'Ler: {titulo}',
+};
+
+const tComInterpolacao = (chave, params) =>
+  interpolar(MENSAGENS_PT[chave] || chave, params);
+
+// Comparação EXATA, não `includes` (revisão #637 do PR): com `includes`, o botão
+// "AUTONOMIA_GUIDE.GO_TO_SCREEN_NAMED" passaria também num `findByLabel(wrapper,
+// 'AUTONOMIA_GUIDE.GO_TO_SCREEN')" — são chaves diferentes, e o teste não pegaria o rótulo trocado.
 const findByLabel = (wrapper, chave) =>
-  wrapper.findAll('button').find(botao => botao.text().includes(chave));
+  wrapper.findAll('button').find(botao => botao.text() === chave);
 
 const comAcaoProposta = () => {
   const store = useAutonomiaGuideStore();
@@ -350,8 +380,10 @@ describe('AutonomiaGuideContainer', () => {
 
   // A pergunta "como eu faço X" pode trazer artigo junto com a resposta; a
   // tela precisa guardar isso no registro, do mesmo jeito que já guarda
-  // `navigation` e `acao`.
-  it('carries the article the guide read into the thread', async () => {
+  // `navigation` e `acao`. Aqui o backend só manda o campo SINGULAR antigo
+  // (sem `artigos`) — o caso de uma instância do deploy blue/green que ainda
+  // não subiu a mudança da #636 — e a tela não pode perder o artigo por isso.
+  it('carries the article the guide read into the thread, even from the old singular field', async () => {
     pedidoAberto();
     AutonomiaGuideAPI.resposta.mockResolvedValue({
       data: {
@@ -367,7 +399,156 @@ describe('AutonomiaGuideContainer', () => {
     await esperarUmaBusca();
     await flushPromises();
 
-    expect(useAutonomiaGuideStore().messages[1].artigo).toEqual(ARTIGO);
+    expect(useAutonomiaGuideStore().messages[1].artigos).toEqual([ARTIGO]);
+  });
+
+  // #636 — pergunta com várias partes ganha um botão "Ir para" por tela e um
+  // link "Ler" por artigo, em duas seções separadas. Rotas reais do registro
+  // do Guia, sem parâmetro, para não depender de `useLevarAteLa` resolver id.
+  const TELA_A = {
+    route_name: 'labels_list',
+    params: {},
+    highlight: null,
+    rotulo: 'Etiquetas',
+  };
+  const TELA_B = {
+    route_name: 'settings_inbox_new',
+    params: {},
+    highlight: null,
+    rotulo: 'Nova caixa',
+  };
+  const TELA_C = {
+    route_name: 'first_steps',
+    params: {},
+    highlight: null,
+    rotulo: 'Primeiros passos',
+  };
+  const ARTIGO_B = { ref: '02-05', titulo: 'Conectar o Instagram' };
+  // O modelo não mandou `rotulo` nesta: o botão cai no numerado, não no genérico repetido.
+  const TELA_SEM_ROTULO = {
+    route_name: 'settings_inbox_new',
+    params: {},
+    highlight: null,
+    rotulo: null,
+  };
+
+  it('shows one "Ir para" button per screen and one "Ler" link per article, with more than one of each', async () => {
+    const store = useAutonomiaGuideStore();
+    store.addAssistantMessage({
+      content: 'Aqui estão os passos.',
+      navigations: [TELA_A, TELA_B, TELA_C],
+      artigos: [ARTIGO, ARTIGO_B],
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    // Revisão #637 do PR: sem título de seção para os botões de tela — o texto de
+    // cada botão já diz "Ir para", repetir isso acima deles seria redundante.
+    expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.GO_TO_SECTION');
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.READ_SECTION');
+    const irPara = wrapper
+      .findAll('button')
+      .filter(b => b.text().includes('AUTONOMIA_GUIDE.GO_TO_SCREEN_NAMED'));
+    const ler = wrapper
+      .findAll('button')
+      .filter(b => b.text().includes('AUTONOMIA_GUIDE.READ_ARTICLE_NAMED'));
+
+    expect(irPara).toHaveLength(3);
+    expect(ler).toHaveLength(2);
+  });
+
+  it('looks just like before with a single screen and a single article', async () => {
+    const store = useAutonomiaGuideStore();
+    store.addAssistantMessage({
+      content: 'Aqui está.',
+      navigations: [TELA_A],
+      artigos: [ARTIGO],
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.READ_SECTION');
+    expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.GO_TO_SCREEN')).toBeTruthy();
+    expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.READ_ARTICLE')).toBeTruthy();
+  });
+
+  // Backend antigo (deploy blue/green, #636): manda só o campo singular
+  // `navigation`, sem `navigations`. O store embrulha, e o botão tem que
+  // aparecer do mesmo jeito.
+  it('turns an old-shape response with only the singular `navigation` field into a button', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: {
+        status: 'done',
+        available: true,
+        text: 'É em Configurações > Etiquetas.',
+        navigation: TELA_A,
+      },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'onde ficam as etiquetas?');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.GO_TO_SCREEN')).toBeTruthy();
+  });
+
+  // Revisão #637 do PR: o rótulo chega no botão de verdade, interpolado — não
+  // só a chave de tradução. Sem rótulo (TELA_B), o botão fica numerado pela
+  // posição entre as telas VÁLIDAS, não pela posição na lista original.
+  it('shows the screen label on the "Ir para" button, interpolated, and numbers the ones without a label', async () => {
+    const store = useAutonomiaGuideStore();
+    store.addAssistantMessage({
+      content: 'Aqui.',
+      navigations: [TELA_A, TELA_SEM_ROTULO],
+    });
+    wrapper = mountGuide({ t: tComInterpolacao });
+    await flushPromises();
+
+    expect(findByLabel(wrapper, 'Ir para: Etiquetas')).toBeTruthy();
+    expect(findByLabel(wrapper, 'Ir para a tela 2')).toBeTruthy();
+  });
+
+  // Exercita o filtro de `telasValidas`: uma rota que o roteador recusa (fora
+  // do registro do Guia) não vira botão nem quebra as outras.
+  it('drops a screen the router refuses to resolve, keeping the valid ones', async () => {
+    const recusada = {
+      route_name: 'rota_que_nao_existe_no_guia',
+      params: {},
+      highlight: null,
+      rotulo: 'Fantasma',
+    };
+    const store = useAutonomiaGuideStore();
+    store.addAssistantMessage({
+      content: 'Aqui.',
+      navigations: [TELA_A, recusada],
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.GO_TO_SCREEN')).toBeTruthy();
+    expect(wrapper.text()).not.toContain('Fantasma');
+  });
+
+  it('navigates to the screen behind the clicked "Ir para" button', async () => {
+    const store = useAutonomiaGuideStore();
+    store.addAssistantMessage({
+      content: 'Aqui.',
+      navigations: [TELA_A, TELA_B],
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    const botoes = wrapper
+      .findAll('button')
+      .filter(b => b.text().includes('AUTONOMIA_GUIDE.GO_TO_SCREEN_NAMED'));
+    await botoes[1].trigger('click');
+
+    expect(routerPush).toHaveBeenCalledWith({
+      name: 'settings_inbox_new',
+      params: {},
+    });
   });
 
   it('names the panel and the message region for screen readers', async () => {

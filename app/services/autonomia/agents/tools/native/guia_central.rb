@@ -27,7 +27,10 @@ class Autonomia::Agents::Tools::Native::GuiaCentral < Autonomia::Agents::Tools::
         'quando a pergunta for "como eu faço X": procure primeiro aqui, antes de responder pelo que ' \
         'você já sabe. Informe "ref" quando já souber qual artigo (de uma busca anterior ou dos ' \
         'fluxos que você recebeu); informe "termo" para buscar pelo que a pessoa perguntou. A busca ' \
-        'por termo já devolve o corpo do artigo mais relevante, para economizar uma chamada.'
+        'por termo devolve a LISTA de resultados e o corpo do primeiro, só para você ler rápido — ' \
+        'ele nem sempre é o artigo certo. Depois de buscar, chame de novo com o "ref" do artigo da ' \
+        'lista que responde aquela parte da pergunta: só essa chamada por "ref" vira o link "Ler o ' \
+        'artigo" que a pessoa vê.'
     end
 
     def params
@@ -60,13 +63,22 @@ class Autonomia::Agents::Tools::Native::GuiaCentral < Autonomia::Agents::Tools::
     @leitura ||= ::Autonomia::CentralDeAjuda::Leitura.new(account: @operador.account, account_user: @operador.account_user)
   end
 
+  # Só a leitura por REF regista o artigo no contexto (o que vira o link "Ler o
+  # artigo" na tela, #617, #636). É a única chamada em que o modelo escolheu o
+  # artigo — pela ref de uma busca anterior ou dos fluxos que recebeu.
   def por_ref(ref)
     artigo = leitura.artigo(ref)
     return "Não encontrei nenhum artigo da Central de Ajuda com a referência \"#{ref}\"." if artigo.nil?
 
+    registrar(artigo)
     formatar(artigo)
   end
 
+  # A busca por termo NÃO registra nada (medido na bateria real de 24/09/2026:
+  # "criar etiqueta" trazia como primeiro resultado "Criar e editar uma Macro",
+  # e esse virava o link errado). Ela só mostra a lista e o corpo do primeiro
+  # PARA O MODELO LER — quem escolhe o artigo certo da lista é o modelo,
+  # chamando de novo com `ref`.
   def por_termo(termo)
     resumos = leitura.buscar(termo)
     return "Não encontrei nada na Central de Ajuda para \"#{termo}\". Responda pelo que você já sabe." if resumos.empty?
@@ -80,11 +92,14 @@ class Autonomia::Agents::Tools::Native::GuiaCentral < Autonomia::Agents::Tools::
     "Resultados na Central de Ajuda:\n#{linhas.join("\n")}"
   end
 
-  # Guarda o artigo no contexto do turno (mesma regra da tela e da proposta:
-  # #590, #568 — vale o último lido) e devolve o corpo, dentro do teto.
-  def formatar(artigo)
+  def registrar(artigo)
     resumo = leitura.resumo(artigo)
     @operador.artigo_lido(ref: resumo[:ref], titulo: resumo[:titulo])
+  end
+
+  # Só formata e corta pelo teto — não registra nada (ver `registrar`).
+  def formatar(artigo)
+    resumo = leitura.resumo(artigo)
     cabendo("Artigo #{resumo[:ref]} — #{resumo[:titulo]}\n\n#{artigo.content}")
   end
 

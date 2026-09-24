@@ -96,7 +96,9 @@ class Autonomia::Guide::Telas
   # `scripts/guide-map/build.mjs` escreve:
   #   - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
   #   - highlight: `settings-add-label`
-  # Vários fluxos apontam para a mesma tela; os destaques de todos valem para ela.
+  # Vários fluxos apontam para a mesma tela; os destaques de todos valem para ela. Não tira rótulo
+  # daqui: o nome humano da tela vem do parâmetro opcional `rotulo` que o modelo manda em
+  # `mostrar_tela` (#636) — o mapa não tem um "nome da tela" confiável.
   def ler(mapa)
     mapa.split("\n### ").drop(1).each_with_object({}) do |bloco, telas|
       nome, endereco = campo(bloco, 'rota').to_s.delete('`').split(' - ', 2).map(&:strip)

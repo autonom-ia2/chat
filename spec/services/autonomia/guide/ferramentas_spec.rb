@@ -258,6 +258,62 @@ RSpec.describe 'Ferramentas do Guia' do
     it 'recusa sem derrubar o turno quando não há operador' do
       expect(mostrar({ 'tela' => 'labels_list' }, quem: nil)).to include('não sei quem está perguntando')
     end
+
+    # #636 — pergunta com várias partes chama `mostrar_tela` mais de uma vez, e
+    # cada chamada tem que ganhar o próprio botão.
+    it 'empilha uma tela por chamada, na ordem em que o modelo chamou', :aggregate_failures do
+      mostrar({ 'tela' => 'labels_list' })
+      mostrar({ 'tela' => 'settings_inbox_new' })
+
+      expect(operador.telas.map { |t| t[:route_name] }).to eq(%w[labels_list settings_inbox_new])
+    end
+
+    # Correção #636 (24/09/2026): o mapa é gerado sem acento e o título do fluxo descreve uma AÇÃO,
+    # não a tela — "Criar contato" apareceu numa pergunta de IMPORTAR contatos. Agora o rótulo vem
+    # de um parâmetro opcional que o PRÓPRIO MODELO manda, nunca do mapa.
+    it 'usa o rótulo que o modelo mandou, limpo e cortado em 40 caracteres', :aggregate_failures do
+      mostrar({ 'tela' => 'labels_list', 'rotulo' => '  Etiquetas do WhatsApp Business Oficial e tal  ' })
+
+      expect(operador.tela[:rotulo]).to eq('Etiquetas do WhatsApp Business Oficial e')
+      expect(operador.tela[:rotulo].length).to eq(40)
+    end
+
+    # Quebra de linha e espaço repetido — o modelo às vezes manda assim — viram
+    # um espaço só, não vazam pro botão.
+    it 'troca quebra de linha e espaço repetido por um espaço só' do
+      mostrar({ 'tela' => 'labels_list', 'rotulo' => "Etiquetas\n  do   WhatsApp" })
+
+      expect(operador.tela[:rotulo]).to eq('Etiquetas do WhatsApp')
+    end
+
+    it 'sem rótulo do modelo, o botão fica sem nome' do
+      mostrar({ 'tela' => 'labels_list' })
+
+      expect(operador.tela[:rotulo]).to be_nil
+    end
+
+    # Revisão #637 do PR: antes disto a ferramenta dizia "Pronto" mesmo quando
+    # `Contexto` descartava a tela — repetida ou além da 5ª —, e o modelo achava
+    # que o botão existia quando não existia nenhum novo.
+    it 'avisa o modelo em vez de dizer "Pronto" quando a tela é repetida', :aggregate_failures do
+      mostrar({ 'tela' => 'labels_list' })
+      resposta = mostrar({ 'tela' => 'labels_list' })
+
+      expect(operador.telas.size).to eq(1)
+      expect(resposta).not_to include('Pronto')
+      expect(resposta).to include('já tem botão')
+    end
+
+    it 'avisa o modelo em vez de dizer "Pronto" depois da 5ª tela', :aggregate_failures do
+      %w[labels_list settings_inbox_new first_steps home contacts_dashboard_index].each do |tela|
+        mostrar({ 'tela' => tela })
+      end
+      resposta = mostrar({ 'tela' => 'custom_roles_list' })
+
+      expect(operador.telas.size).to eq(5)
+      expect(resposta).not_to include('Pronto')
+      expect(resposta).to include('cinco vezes')
+    end
   end
 
   describe 'ler_da_central' do
@@ -285,6 +341,21 @@ RSpec.describe 'Ferramentas do Guia' do
       resposta = ler_central({ 'termo' => 'conectar whatsapp' })
 
       expect(resposta).to include('02-04', 'Conectar o WhatsApp', 'Vá em Canais e clique em Novo canal.')
+    end
+
+    # Achado na bateria real de 24/09/2026: a busca por termo registrava o
+    # PRIMEIRO resultado como artigo lido, e o primeiro resultado nem sempre é
+    # o artigo certo (ex.: "criar etiqueta" trouxe "Criar e editar uma Macro").
+    # A busca por termo é só para o modelo LER a lista; quem escolhe o artigo
+    # certo é o modelo, chamando de novo com `ref` — só essa chamada registra.
+    it 'não registra o primeiro resultado da busca por termo como artigo lido', :aggregate_failures do
+      artigo_central(id: '03.02', titulo: 'Criar uma etiqueta', descricao: 'Como criar etiqueta.')
+
+      ler_central({ 'termo' => 'criar etiqueta' })
+      expect(operador.artigos).to eq([])
+
+      ler_central({ 'ref' => '03.02' })
+      expect(operador.artigos).to eq([{ ref: '03-02', titulo: 'Criar uma etiqueta' }])
     end
 
     # O modelo precisa saber, sem ambiguidade, que a busca não achou nada —
@@ -316,9 +387,12 @@ RSpec.describe 'Ferramentas do Guia' do
       expect(ler_central({ 'ref' => '02.04' }, quem: nil)).to include('não sei qual é a conta')
     end
 
-    # O botão "ler o artigo completo" (#617) lê daqui — mesma regra da tela e
-    # da proposta: fica o último artigo lido no turno.
-    it 'guarda o artigo lido no contexto, e o último quando lê mais de um', :aggregate_failures do
+    # O botão "ler o artigo completo" (#617) lê daqui. Até a #636, só UM artigo
+    # sobrevivia por turno, e o último vencia. Agora `ler_da_central` empilha
+    # os artigos numa lista, na ordem de leitura — uma pergunta com várias
+    # partes ("como conecto o WhatsApp e como conecto o Instagram") ganha um
+    # link por artigo, não só o último.
+    it 'guarda os artigos lidos no contexto, na ordem de leitura', :aggregate_failures do
       artigo_central(id: '02.04', titulo: 'Conectar o WhatsApp')
       artigo_central(id: '02.05', titulo: 'Conectar o Instagram')
 
@@ -326,7 +400,11 @@ RSpec.describe 'Ferramentas do Guia' do
       expect(operador.artigo).to eq(ref: '02-04', titulo: 'Conectar o WhatsApp')
 
       ler_central({ 'ref' => '02.05' })
-      expect(operador.artigo).to eq(ref: '02-05', titulo: 'Conectar o Instagram')
+      expect(operador.artigos).to eq([{ ref: '02-04', titulo: 'Conectar o WhatsApp' },
+                                      { ref: '02-05', titulo: 'Conectar o Instagram' }])
+      # O campo singular, mantido para o front antigo durante o deploy (#636),
+      # é o PRIMEIRO da lista — não o último como antes.
+      expect(operador.artigo).to eq(ref: '02-04', titulo: 'Conectar o WhatsApp')
     end
   end
 

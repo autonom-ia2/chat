@@ -13,12 +13,19 @@
 # nada: ela descreve, deixa a proposta neste objeto, e quem monta a resposta lê
 # daqui para a tela mostrar o Confirmar. Nada toca o banco antes do clique.
 class Autonomia::Guide::Contexto
-  attr_reader :account, :user, :account_user, :proposta, :tela, :artigo
+  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos
+
+  # Até 5 telas e 5 artigos por turno (#636). Cinco porque é mais do que uma
+  # pergunta com várias partes precisa na prática, e um painel estreito não
+  # tem espaço para uma lista maior de botões.
+  MAX_ITENS = 5
 
   def initialize(account:, user:, account_user: nil)
     @account = account
     @user = user
     @account_user = account_user || account&.account_users&.find_by(user_id: user&.id)
+    @telas = []
+    @artigos = []
   end
 
   def administrador?
@@ -41,17 +48,42 @@ class Autonomia::Guide::Contexto
     @proposta = { nome: nome, dados: dados, descricao: descricao }
   end
 
-  # UMA tela por turno, pelo mesmo motivo: a resposta tem um botão só. Fica a
-  # última que o modelo escolheu (#590).
+  # Até 5 telas por turno, na ordem em que o modelo chamou `mostrar_tela`, sem
+  # repetir rota+parâmetros (#636). Antes era UMA por turno, e a última
+  # sobrescrevia as outras (#590) — uma pergunta com várias partes só ganhava
+  # o botão da última tela, e as outras três chamadas de `mostrar_tela`
+  # desapareciam caladas.
+  #
+  # Devolve se ENTROU ou não (revisão #637 do PR): a ferramenta lê isso para
+  # avisar o modelo quando descarta — repetida ou além da 5ª —, em vez de
+  # responder "Pronto" para um botão que não existe.
   def mostrar(destino)
-    @tela = destino
+    return false if @telas.size >= MAX_ITENS
+    return false if @telas.any? { |item| item[:route_name] == destino[:route_name] && item[:params] == destino[:params] }
+
+    @telas << destino
+    true
   end
 
-  # UM artigo da Central por turno, pela mesma regra (#617): o botão "ler o
-  # artigo completo" mostra um artigo só. Fica o último que `ler_da_central`
-  # leu, se o modelo ler mais de um.
+  # A primeira tela do turno. Existe para quem ainda lê o campo singular
+  # (`navigation`) durante o deploy — o front antigo não sabe de uma lista.
+  def tela
+    @telas.first
+  end
+
+  # Até 5 artigos por turno, na ordem em que `ler_da_central` leu, sem repetir
+  # a referência (#636). Antes era UM por turno e o último vencia (#617).
   def artigo_lido(ref:, titulo:)
-    @artigo = { ref: ref, titulo: titulo }
+    return if @artigos.size >= MAX_ITENS
+    return if @artigos.any? { |item| item[:ref] == ref }
+
+    @artigos << { ref: ref, titulo: titulo }
+  end
+
+  # O primeiro artigo do turno. Mesmo motivo do `tela` acima: compatibilidade
+  # com o campo singular (`artigo`) enquanto o front antigo existir.
+  def artigo
+    @artigos.first
   end
 
   # O que as leituras deste turno devolveram. O botão de UM registro só leva a

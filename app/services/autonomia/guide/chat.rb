@@ -7,8 +7,11 @@ module Autonomia
     # Nada é EXECUTADO aqui: esta classe monta a proposta; quem executa é o controller, e só depois
     # da confirmação na tela.
     class Chat
-      Result = Struct.new(:text, :navigation, :grounded, :confidence, :available, :escalate, :acao,
-                          :retido, :artigo, keyword_init: true)
+      # `navigation`/`artigo` (singular) ficam pelo blue/green do deploy (#636): um pedido aberto
+      # antes do deploy e lido depois — ou o contrário — não pode cair num campo que sumiu. São
+      # sempre o PRIMEIRO item de `navigations`/`artigos`. O front novo lê as listas.
+      Result = Struct.new(:text, :navigation, :navigations, :grounded, :confidence, :available, :escalate,
+                          :acao, :retido, :artigo, :artigos, keyword_init: true)
 
       # Quantas mensagens da conversa seguem junto. Eram 12 — seis idas e voltas,
       # curto demais para quem está configurando a conta e vai perguntando uma
@@ -90,7 +93,9 @@ module Autonomia
         # alguém conseguir diagnosticar, e para a pessoa não achar que o produto caiu.
         return retido if text.blank?
 
-        Result.new(text: text, navigation: navegacao(result), acao: acao, artigo: contexto.artigo,
+        navs = navegacoes(result)
+        Result.new(text: text, navigation: navs.first, navigations: navs, acao: acao,
+                   artigo: contexto.artigos.first, artigos: contexto.artigos,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
                    available: true, escalate: result.handoff.to_h[:should] == true)
@@ -196,13 +201,16 @@ module Autonomia
         end
       end
 
-      # A tela do botão (#590). Vale primeiro a que o modelo escolheu com `mostrar_tela`: é a única
-      # que sabe QUAL caixa, conversa ou agente, porque ele leu a conta. Quando ele não escolhe
-      # nenhuma, fica a do fluxo do manual — que leva à tela geral, como antes.
-      def navegacao(result)
-        return nil if result.handoff.to_h[:should] == true
+      # As telas dos botões (#590, #636). Valem as que o modelo escolheu com `mostrar_tela` — até
+      # 5, na ordem em que ele chamou: são as únicas que sabem QUAL caixa, conversa ou agente,
+      # porque ele leu a conta. Quando ele não escolhe nenhuma, fica a do fluxo do manual — que
+      # leva à tela geral, como antes.
+      def navegacoes(result)
+        return [] if result.handoff.to_h[:should] == true
+        return contexto.telas if contexto.telas.any?
 
-        contexto.tela || resolve_navigation(result)
+        fallback = resolve_navigation(result)
+        fallback ? [fallback] : []
       end
 
       # Sugestão de navegação extraída do MELHOR fluxo recuperado (campo nav_target do KB). Só sugere
@@ -219,7 +227,12 @@ module Autonomia
         route = campo(content, 'nav_target')
         return nil if route.blank? || route == '—'
 
-        { route_name: route, label: titulo(content), highlight: campo(content, 'highlight') }
+        # Sem `rotulo`: o mapa (`guia-produto.md`) é gerado sem acento, e o título do fluxo descreve
+        # uma AÇÃO ("Criar contato"), não o nome da tela — medido em 24/09/2026, uma pergunta de
+        # importar contatos ganhava o botão "Criar contato". O rótulo humano só existe quando o
+        # MODELO manda um em `mostrar_tela` (#636); este é o caminho de reserva, sem `mostrar_tela`
+        # nenhum — cai no rótulo genérico "Ir para a tela".
+        { route_name: route, highlight: campo(content, 'highlight') }
       end
 
       # O gerador escreve cada campo como ITEM DE LISTA:
@@ -240,11 +253,6 @@ module Autonomia
 
         # Fatia por posição, não por separador: valor que contenha ':' sobrevive.
         linha[prefixo.length..].to_s.delete('`').strip.presence
-      end
-
-      def titulo(conteudo)
-        linha = conteudo.lines.find { |l| l.start_with?('### ') }
-        linha.to_s.delete_prefix('### ').strip.presence
       end
 
       def unavailable
