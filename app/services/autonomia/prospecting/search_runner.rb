@@ -154,7 +154,7 @@ class Autonomia::Prospecting::SearchRunner
                    else
                      0
                    end
-      break if advanced_filtered_attributes_count(last_attributes) >= expansion_target
+      break if advanced_filtered_attributes_count(last_attributes) >= expansion_goal
     end
 
     {
@@ -170,6 +170,16 @@ class Autonomia::Prospecting::SearchRunner
     return requested_limit unless provider_name == 'google_places'
 
     [requested_limit, Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS_PER_REQUEST].min
+  end
+
+  # A faixa de posição corta as mesmas posições em qualquer raio, então o que ela tira não é falta que raio maior
+  # resolva. Sem descontar, a meta nunca era alcançada e a busca expandia sempre até 4x, com 3 chamadas pagas (#677).
+  def expansion_goal
+    outside_top = number_or_nil(advanced_filters['outside_top']).to_i
+    search_rank_max = number_or_nil(advanced_filters['search_rank_max'])
+    last_rank = search_rank_max ? [expansion_target, search_rank_max.to_i].min : expansion_target
+
+    last_rank - outside_top
   end
 
   # Falta de chave é da plataforma, não de quem busca: o detalhe vai para o log e a pessoa lê a frase em português.

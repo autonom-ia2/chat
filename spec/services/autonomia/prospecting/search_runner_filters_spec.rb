@@ -85,6 +85,42 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
     it 'outside_top com search_rank_max fica só com a janela escolhida' do
       expect(names_with(outside_top: '3', search_rank_max: '6')).to eq(exemplos('D', 'E', 'F'))
     end
+
+    # A faixa corta posições em qualquer raio. Contá-las como falta fazia a busca expandir até 4x e pagar 3 chamadas.
+    context 'with auto_expand_radius (expandir raio automaticamente)' do
+      def expanded_search(advanced_filters)
+        described_class.new(
+          account: account,
+          user: user,
+          params: { query: 'padaria', location: 'Curitiba, PR', radius: 1000, requested_limit: 8,
+                    filters: { auto_expand_radius: true }, advanced_filters: advanced_filters }
+        ).perform.search
+      end
+
+      it 'não expande quando só a alça da esquerda tira posições' do
+        search = expanded_search(outside_top: '2')
+
+        expect(a_request(:post, google_endpoint)).to have_been_made.once
+        expect(search.radius).to eq(1000)
+        expect(search.metadata['radius_expanded']).to be(false)
+        expect(search.metadata['results_count']).to eq(6)
+      end
+
+      it 'não expande quando só a alça da direita tira posições' do
+        search = expanded_search(search_rank_max: '5')
+
+        expect(a_request(:post, google_endpoint)).to have_been_made.once
+        expect(search.radius).to eq(1000)
+        expect(search.metadata['results_count']).to eq(5)
+      end
+
+      it 'continua expandindo quando um filtro de atributo deixa a janela incompleta' do
+        search = expanded_search(outside_top: '2', has_photos: 'yes')
+
+        expect(a_request(:post, google_endpoint)).to have_been_made.times(3)
+        expect(search.radius).to eq(4000)
+      end
+    end
   end
 
   # Sem o atributo, o filtro não tem como decidir. Antes ele descartava tudo em silêncio; agora a busca falha e aparece.
