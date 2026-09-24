@@ -3681,8 +3681,8 @@
      "fontes": [
       "porques: Procurar empresas por região e transformar em contato ou card"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/pages/ProspectingSearchPage.vue:1135; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/pages/ProspectingSearchPage.vue:1139"
     },
     {
      "id": "16.02",
