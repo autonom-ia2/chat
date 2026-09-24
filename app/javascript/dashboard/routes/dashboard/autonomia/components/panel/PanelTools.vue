@@ -384,7 +384,7 @@ onMounted(loadTools);
           <div
             class="grid grid-cols-1 gap-3 sm:grid-cols-[160px_minmax(0,1fr)]"
           >
-            <div class="block min-w-0 space-y-1 text-sm">
+            <label class="block min-w-0 space-y-1 text-sm">
               <span class="text-n-slate-11">{{
                 t('AGENTS.TOOLS.METHOD')
               }}</span>
@@ -393,7 +393,7 @@ onMounted(loadTools);
                 :options="HTTP_METHOD_CHOICES"
                 :aria-label="t('AGENTS.TOOLS.METHOD')"
               />
-            </div>
+            </label>
             <label class="block min-w-0 space-y-1 text-sm">
               <span class="text-n-slate-11">{{ t('AGENTS.TOOLS.URL') }}</span>
               <input
@@ -472,7 +472,7 @@ onMounted(loadTools);
             <div
               v-for="(param, index) in form.param_schema"
               :key="`param-${index}`"
-              class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_160px_auto_auto]"
+              class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_120px_auto_auto]"
             >
               <input
                 v-model="param.name"
@@ -482,6 +482,7 @@ onMounted(loadTools);
               <ChoiceSelect
                 v-model="param.type"
                 :options="PARAM_TYPE_CHOICES"
+                compact
                 :aria-label="t('AGENTS.TOOLS.PARAM_TYPE')"
               />
               <label

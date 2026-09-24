@@ -755,48 +755,52 @@ onMounted(loadPage);
                   class="absolute right-0 top-11 z-30 grid w-[22rem] gap-3 rounded-md border border-n-weak bg-n-solid-1 p-3 shadow-lg"
                 >
                   <div class="grid gap-2 sm:grid-cols-2">
-                    <div class="grid gap-1">
+                    <label class="grid gap-1">
                       <span class="text-xs font-medium text-n-slate-11">
                         {{ t('PROSPECTING.SEARCH.FIELDS.HAS_SITE') }}
                       </span>
                       <ChoiceSelect
                         v-model="listAdvancedFilters.has_website"
+                        compact
                         :options="yesNoAnyChoices"
                         :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_SITE')"
                       />
-                    </div>
-                    <div class="grid gap-1">
+                    </label>
+                    <label class="grid gap-1">
                       <span class="text-xs font-medium text-n-slate-11">
                         {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE') }}
                       </span>
                       <ChoiceSelect
                         v-model="listAdvancedFilters.has_phone"
+                        compact
                         :options="yesNoAnyChoices"
                         :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE')"
                       />
-                    </div>
+                    </label>
                   </div>
                   <div class="grid gap-2 sm:grid-cols-2">
-                    <div class="grid gap-1">
+                    <label class="grid gap-1">
                       <span class="text-xs font-medium text-n-slate-11">
                         {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS') }}
                       </span>
                       <ChoiceSelect
                         v-model="listAdvancedFilters.has_photos"
+                        compact
                         :options="yesNoAnyChoices"
                         :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS')"
                       />
-                    </div>
-                    <div class="grid gap-1">
+                    </label>
+                    <label class="grid gap-1">
                       <span class="text-xs font-medium text-n-slate-11">
                         {{ t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW') }}
                       </span>
                       <ChoiceSelect
                         v-model="listAdvancedFilters.open_now"
+                        compact
                         :options="yesNoAnyChoices"
                         :aria-label="t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW')"
                       />
-                    </div>
+                    </label>
                   </div>
                   <div class="grid gap-2 sm:grid-cols-2">
                     <label class="grid gap-1">
@@ -1325,48 +1329,52 @@ onMounted(loadPage);
               class="absolute right-0 top-11 z-30 grid w-[22rem] gap-3 rounded-md border border-n-weak bg-n-solid-1 p-3 shadow-lg"
             >
               <div class="grid gap-2 sm:grid-cols-2">
-                <div class="grid gap-1">
+                <label class="grid gap-1">
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('PROSPECTING.SEARCH.FIELDS.HAS_SITE') }}
                   </span>
                   <ChoiceSelect
                     v-model="addLeadAdvancedFilters.has_website"
+                    compact
                     :options="yesNoAnyChoices"
                     :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_SITE')"
                   />
-                </div>
-                <div class="grid gap-1">
+                </label>
+                <label class="grid gap-1">
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE') }}
                   </span>
                   <ChoiceSelect
                     v-model="addLeadAdvancedFilters.has_phone"
+                    compact
                     :options="yesNoAnyChoices"
                     :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHONE')"
                   />
-                </div>
+                </label>
               </div>
               <div class="grid gap-2 sm:grid-cols-2">
-                <div class="grid gap-1">
+                <label class="grid gap-1">
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS') }}
                   </span>
                   <ChoiceSelect
                     v-model="addLeadAdvancedFilters.has_photos"
+                    compact
                     :options="yesNoAnyChoices"
                     :aria-label="t('PROSPECTING.SEARCH.FIELDS.HAS_PHOTOS')"
                   />
-                </div>
-                <div class="grid gap-1">
+                </label>
+                <label class="grid gap-1">
                   <span class="text-xs font-medium text-n-slate-11">
                     {{ t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW') }}
                   </span>
                   <ChoiceSelect
                     v-model="addLeadAdvancedFilters.open_now"
+                    compact
                     :options="yesNoAnyChoices"
                     :aria-label="t('PROSPECTING.SEARCH.FIELDS.OPEN_NOW')"
                   />
-                </div>
+                </label>
               </div>
               <div class="grid gap-2 sm:grid-cols-2">
                 <label class="grid gap-1">
@@ -1655,7 +1663,7 @@ onMounted(loadPage);
               :placeholder="selectedList?.name"
             />
           </div>
-          <div class="grid content-start gap-1">
+          <label class="grid content-start gap-1">
             <span class="text-xs font-medium text-n-slate-11">
               {{ t('PROSPECTING.LISTS.FIELDS.CAMPAIGN') }}
             </span>
@@ -1664,7 +1672,7 @@ onMounted(loadPage);
               :options="campaignChoices"
               :aria-label="t('PROSPECTING.LISTS.FIELDS.CAMPAIGN')"
             />
-          </div>
+          </label>
         </div>
         <p class="text-xs text-n-slate-10">
           {{ t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_HINT') }}

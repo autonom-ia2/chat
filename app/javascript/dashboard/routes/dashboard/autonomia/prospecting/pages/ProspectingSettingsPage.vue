@@ -289,7 +289,7 @@ onMounted(fetchSettings);
 
         <div v-show="activeSettingsTab === 'general'" class="grid gap-4">
           <div class="grid gap-3 md:grid-cols-2">
-            <div class="grid gap-1">
+            <label class="grid gap-1">
               <span class="text-xs font-medium text-n-slate-11">
                 {{ t('PROSPECTING.SETTINGS.FIELDS.CRM_PIPELINE') }}
               </span>
@@ -299,9 +299,9 @@ onMounted(fetchSettings);
                 :aria-label="t('PROSPECTING.SETTINGS.FIELDS.CRM_PIPELINE')"
                 @change="fetchCrmStages(form.default_crm_pipeline_id)"
               />
-            </div>
+            </label>
 
-            <div class="grid gap-1">
+            <label class="grid gap-1">
               <span class="text-xs font-medium text-n-slate-11">
                 {{ t('PROSPECTING.SETTINGS.FIELDS.CRM_STAGE') }}
               </span>
@@ -311,7 +311,7 @@ onMounted(fetchSettings);
                 :aria-label="t('PROSPECTING.SETTINGS.FIELDS.CRM_STAGE')"
                 :disabled="!crmStages.length"
               />
-            </div>
+            </label>
           </div>
 
           <div class="grid gap-3 md:grid-cols-2">
@@ -524,7 +524,7 @@ onMounted(fetchSettings);
             </div>
 
             <div class="mt-4 grid gap-3 md:grid-cols-2">
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('PROSPECTING.SETTINGS.FIELDS.SEARCH_SCORE_MODE') }}
                 </span>
@@ -535,7 +535,7 @@ onMounted(fetchSettings);
                     t('PROSPECTING.SETTINGS.FIELDS.SEARCH_SCORE_MODE')
                   "
                 />
-              </div>
+              </label>
               <div
                 class="rounded-md border border-n-weak bg-n-solid-1 px-3 py-2 text-xs leading-relaxed text-n-slate-10"
               >
@@ -547,7 +547,7 @@ onMounted(fetchSettings);
               </div>
             </div>
 
-            <div class="mt-4 grid gap-1">
+            <label class="mt-4 grid gap-1">
               <span class="text-xs font-medium text-n-slate-11">
                 {{ t('PROSPECTING.SETTINGS.FIELDS.SCORING_PROFILE') }}
               </span>
@@ -556,7 +556,7 @@ onMounted(fetchSettings);
                 :options="scoringProfileChoices"
                 :aria-label="t('PROSPECTING.SETTINGS.FIELDS.SCORING_PROFILE')"
               />
-            </div>
+            </label>
           </div>
 
           <div
