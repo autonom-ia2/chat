@@ -1,3 +1,4 @@
+import { defineComponent } from 'vue';
 import { mount } from '@vue/test-utils';
 import ChoiceSelect from './ChoiceSelect.vue';
 
@@ -169,10 +170,161 @@ describe('ChoiceSelect', () => {
     expect(trigger.attributes('disabled')).toBeDefined();
   });
 
-  it('versão compacta mantém área de toque de 44 px', () => {
+  it('não impõe largura mínima: quem usa define a largura', () => {
+    wrapper = mountSelect();
+    expect(wrapper.classes()).not.toContain('min-w-40');
+  });
+
+  it('altura padrão de 40 px como os campos, área de toque de 44 px', () => {
+    wrapper = mountSelect();
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(trigger.classes()).toContain('h-10');
+    expect(trigger.classes()).toContain('before:-inset-y-0.5');
+    expect(trigger.classes()).not.toContain('min-h-11');
+  });
+
+  it('versão compacta de 32 px mantém área de toque de 44 px', () => {
     wrapper = mountSelect('pt_BR', { compact: true });
     const trigger = wrapper.get('[role="combobox"]');
-    expect(trigger.classes()).toContain('min-h-8');
+    expect(trigger.classes()).toContain('h-8');
     expect(trigger.classes()).toContain('before:-inset-y-1.5');
+    expect(trigger.classes()).not.toContain('h-10');
+  });
+
+  it('opções da lista continuam com 44 px', async () => {
+    wrapper = mountSelect();
+    await wrapper.get('[role="combobox"]').trigger('click');
+    expect(wrapper.findAll('[role="option"]')[0].classes()).toContain(
+      'min-h-11'
+    );
+  });
+
+  describe('lista na camada do topo (Popover API)', () => {
+    const { showPopover, hidePopover } = HTMLElement.prototype;
+
+    beforeEach(() => {
+      HTMLElement.prototype.showPopover = vi.fn();
+      HTMLElement.prototype.hidePopover = vi.fn();
+    });
+
+    afterEach(() => {
+      HTMLElement.prototype.showPopover = showPopover;
+      HTMLElement.prototype.hidePopover = hidePopover;
+    });
+
+    it('mostra a lista como popover ao abrir e esconde ao fechar', async () => {
+      wrapper = mountSelect();
+      const list = wrapper.get('[role="listbox"]');
+      expect(list.attributes('popover')).toBe('manual');
+
+      await wrapper.get('[role="combobox"]').trigger('click');
+      expect(HTMLElement.prototype.showPopover).toHaveBeenCalledTimes(1);
+      expect(HTMLElement.prototype.showPopover.mock.contexts[0]).toBe(
+        list.element
+      );
+
+      await wrapper
+        .get('[role="combobox"]')
+        .trigger('keydown', { key: 'Escape' });
+      expect(HTMLElement.prototype.hidePopover).toHaveBeenCalledTimes(1);
+      expect(HTMLElement.prototype.hidePopover.mock.contexts[0]).toBe(
+        list.element
+      );
+    });
+
+    it('posiciona a lista pelo botão, com a largura mínima dele', async () => {
+      wrapper = mountSelect();
+      const trigger = wrapper.get('[role="combobox"]');
+      trigger.element.getBoundingClientRect = () => ({
+        top: 100,
+        bottom: 140,
+        left: 30,
+        right: 230,
+        width: 200,
+        height: 40,
+      });
+      await trigger.trigger('click');
+      const { style } = wrapper.get('[role="listbox"]').element;
+      expect(style.top).toBe('144px');
+      expect(style.left).toBe('30px');
+      expect(style.minWidth).toBe('200px');
+    });
+  });
+
+  it('sem Popover API, abre e fecha sem erro', async () => {
+    expect(HTMLElement.prototype.showPopover).toBeUndefined();
+    wrapper = mountSelect();
+    await wrapper.get('[role="combobox"]').trigger('click');
+    expect(wrapper.get('[role="listbox"]').isVisible()).toBe(true);
+    await wrapper.findAll('[role="option"]')[2].trigger('click');
+    expect(wrapper.get('[role="listbox"]').isVisible()).toBe(false);
+    expect(wrapper.emitted('update:modelValue')).toEqual([['es']]);
+  });
+
+  it('clique fora fecha; clique na lista não conta como fora', async () => {
+    wrapper = mountSelect();
+    const trigger = wrapper.get('[role="combobox"]');
+    await trigger.trigger('click');
+    const list = wrapper.get('[role="listbox"]');
+    await list.trigger('pointerdown');
+    await list.trigger('click');
+    expect(trigger.attributes('aria-expanded')).toBe('true');
+
+    // O onClickOutside ignora cliques no mesmo ciclo do anterior.
+    await new Promise(resolve => {
+      setTimeout(resolve);
+    });
+    const outside = document.createElement('div');
+    document.body.appendChild(outside);
+    outside.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await wrapper.vm.$nextTick();
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+    outside.remove();
+  });
+
+  describe('dentro de <label>', () => {
+    let host;
+    const mountInLabel = () => {
+      const Host = defineComponent({
+        components: { ChoiceSelect },
+        data: () => ({ value: 'pt_BR', options, rotulo: 'Idioma' }),
+        template: `
+          <label>
+            <span class="rotulo">{{ rotulo }}</span>
+            <ChoiceSelect v-model="value" :options="options" aria-label="Idioma" />
+          </label>`,
+      });
+      host = mount(Host, { attachTo: document.body });
+    };
+
+    afterEach(() => host?.unmount());
+
+    it('clicar numa opção seleciona e não reabre a lista', async () => {
+      mountInLabel();
+      const trigger = host.get('[role="combobox"]');
+      await trigger.trigger('click');
+      expect(trigger.attributes('aria-expanded')).toBe('true');
+
+      // O jsdom trata a lista (tabindex) como conteúdo interativo e não ativa o
+      // label; o Chrome ativa. O contrato é o clique sair cancelado.
+      const click = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+      });
+      host.findAll('[role="option"]')[2].element.dispatchEvent(click);
+      await host.vm.$nextTick();
+      expect(click.defaultPrevented).toBe(true);
+      expect(host.vm.value).toBe('es');
+      expect(trigger.attributes('aria-expanded')).toBe('false');
+    });
+
+    it('clicar no texto do rótulo abre a lista, como no select', async () => {
+      mountInLabel();
+      await host.get('.rotulo').trigger('click');
+      expect(host.get('[role="combobox"]').attributes('aria-expanded')).toBe(
+        'true'
+      );
+    });
   });
 });
