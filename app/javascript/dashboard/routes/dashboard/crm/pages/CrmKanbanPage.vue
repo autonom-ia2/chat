@@ -1861,6 +1861,7 @@ onMounted(async () => {
                 </span>
                 <ChoiceSelect
                   v-model="filters.inboxId"
+                  teleport
                   :options="inboxChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.INBOX')"
                   class="w-full"
@@ -1873,6 +1874,7 @@ onMounted(async () => {
                 </span>
                 <ChoiceSelect
                   v-model="filters.ownerId"
+                  teleport
                   :options="ownerChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.OWNER')"
                   class="w-full"
@@ -1885,6 +1887,7 @@ onMounted(async () => {
                 </span>
                 <ChoiceSelect
                   v-model="filters.priority"
+                  teleport
                   :options="priorityChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.PRIORITY')"
                   class="w-full"
@@ -1898,6 +1901,7 @@ onMounted(async () => {
                 </span>
                 <ChoiceSelect
                   v-model="filters.followUpStatus"
+                  teleport
                   :options="followUpStatusChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.FOLLOW_UP')"
                   class="w-full"
@@ -1911,6 +1915,7 @@ onMounted(async () => {
                 </span>
                 <ChoiceSelect
                   v-model="filters.responsibleKind"
+                  teleport
                   :options="responsibleChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.RESPONSIBLE')"
                   class="w-full"
@@ -1923,6 +1928,7 @@ onMounted(async () => {
                 </span>
                 <ChoiceSelect
                   v-model="filters.teamId"
+                  teleport
                   :options="teamChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.TEAM')"
                   class="w-full"
@@ -2054,6 +2060,7 @@ onMounted(async () => {
                 </span>
                 <ChoiceSelect
                   v-model="filters.staleDays"
+                  teleport
                   :options="staleChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.STALE')"
                   class="w-full"
@@ -2066,6 +2073,7 @@ onMounted(async () => {
                 </span>
                 <ChoiceSelect
                   v-model="filters.standalone"
+                  teleport
                   :options="linkedChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.LINKED')"
                   class="w-full"
@@ -2090,6 +2098,7 @@ onMounted(async () => {
                 </span>
                 <ChoiceSelect
                   v-model="filters.result"
+                  teleport
                   :options="resultChoices"
                   :aria-label="t('CRM_KANBAN.FILTERS.RESULT')"
                   class="w-full"
@@ -2524,6 +2533,7 @@ onMounted(async () => {
         </span>
         <ChoiceSelect
           v-model="deleteStageTargetId"
+          teleport
           :options="deleteStageChoices"
           :placeholder="t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_PLACEHOLDER')"
           :aria-label="t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_LABEL')"

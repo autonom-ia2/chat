@@ -3,7 +3,7 @@
 // system e muda de navegador para navegador. Teclado segue o padrão WAI-ARIA
 // "select-only combobox" (dashboard/helper/choiceKeys.js). Portado do ChoiceSelect do Bio.
 import { computed, nextTick, ref, useId, useTemplateRef, watch } from 'vue';
-import { onClickOutside } from '@vueuse/core';
+import { onClickOutside, useEventListener } from '@vueuse/core';
 import {
   choiceKeyAction,
   isChoiceList,
@@ -32,6 +32,11 @@ const props = defineProps({
   invalid: { type: Boolean, default: false },
   // Altura menor para barras de filtro; a área de toque continua com 44 px.
   compact: { type: Boolean, default: false },
+  // Dentro de modal ou popover com rolagem, a lista absoluta é recortada pelo
+  // contêiner. Com `teleport`, ela vai para o body em posição fixa e passa por
+  // cima dele, como a do select nativo. Não use dentro de <dialog> aberto com
+  // showModal(): fora dele a página fica inerte e abaixo da camada do diálogo.
+  teleport: { type: Boolean, default: false },
 });
 
 // Como o @change do select nativo: só quando a escolha muda, já com o
@@ -47,6 +52,8 @@ const modelValue = defineModel({
 const TYPEAHEAD_MS = 600;
 const LIST_MAX_HEIGHT = 320;
 const OPTION_HEIGHT = 44;
+const LIST_GAP = 4;
+const VIEWPORT_MARGIN = 8;
 
 const id = useId();
 const listId = `${id}-list`;
@@ -60,6 +67,8 @@ const list = useTemplateRef('list');
 const isOpen = ref(false);
 const active = ref(-1);
 const opensUpward = ref(false);
+const floatingStyle = ref({});
+const listDirection = ref('ltr');
 const typed = { text: '', at: 0, from: -1 };
 
 // Seções da lista: um grupo por <optgroup>, ou uma seção sem rótulo.
@@ -95,6 +104,26 @@ const selectedLabel = computed(
   () => flatOptions.value[selected.value]?.label ?? props.placeholder
 );
 
+// Posição fixa, colada no gatilho, para a lista levada ao body.
+const placeFloating = (rect, below) => {
+  const room = opensUpward.value ? rect.top : below;
+  const vertical = opensUpward.value
+    ? { bottom: `${window.innerHeight - rect.top + LIST_GAP}px` }
+    : { top: `${rect.bottom + LIST_GAP}px` };
+  const maxHeight = Math.min(
+    LIST_MAX_HEIGHT,
+    room - LIST_GAP - VIEWPORT_MARGIN
+  );
+  floatingStyle.value = {
+    ...vertical,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+    maxHeight: `${maxHeight}px`,
+  };
+  // Fora do #app[dir], a lista herda a direção do gatilho.
+  listDirection.value = window.getComputedStyle(trigger.value).direction;
+};
+
 const show = index => {
   const rect = trigger.value?.getBoundingClientRect();
   if (rect) {
@@ -105,6 +134,7 @@ const show = index => {
     );
     // Abre para cima só quando não cabe embaixo e há mais espaço em cima.
     opensUpward.value = below < needed && rect.top > below;
+    if (props.teleport) placeFloating(rect, below);
   }
   active.value = index;
   isOpen.value = true;
@@ -187,11 +217,19 @@ const onKeydown = event => {
   else if (action.type === 'commit' && disabledFlags.value[action.active])
     close();
   else if (action.type === 'commit') commit(action.active);
-  else close();
+  else {
+    // Como no select nativo, o Escape que fecha a lista para aqui: não chega
+    // ao modal ou popover em volta, que fechariam junto.
+    if (isOpen.value) event.stopPropagation();
+    close();
+  }
 };
 
 const onBlur = event => {
-  if (isOpen.value && !root.value?.contains(event.relatedTarget)) close(false);
+  const target = event.relatedTarget;
+  if (!isOpen.value) return;
+  if (root.value?.contains(target) || list.value?.contains(target)) return;
+  close(false);
 };
 
 watch([isOpen, active], async () => {
@@ -202,9 +240,26 @@ watch([isOpen, active], async () => {
     ?.scrollIntoView({ block: 'nearest' });
 });
 
-onClickOutside(root, () => {
-  if (isOpen.value) close(false);
+onClickOutside(
+  root,
+  () => {
+    if (isOpen.value) close(false);
+  },
+  { ignore: [list] }
+);
+
+// A lista fixa não acompanha a rolagem da página; fecha, como o select nativo.
+const closeFloating = event => {
+  if (!props.teleport || !isOpen.value) return;
+  if (event.target instanceof Node && list.value?.contains(event.target))
+    return;
+  close(false);
+};
+useEventListener(window, 'scroll', closeFloating, {
+  capture: true,
+  passive: true,
 });
+useEventListener(window, 'resize', closeFloating);
 </script>
 
 <template>
@@ -242,62 +297,75 @@ onClickOutside(root, () => {
         aria-hidden="true"
       />
     </button>
-    <ul
-      v-show="isOpen"
-      :id="listId"
-      ref="list"
-      role="listbox"
-      :aria-label="ariaLabel"
-      tabindex="-1"
-      class="absolute z-50 w-full py-1 mb-0 overflow-y-auto rounded-lg shadow-lg max-h-80 bg-n-solid-2 outline outline-1 outline-n-container"
-      :class="opensUpward ? 'bottom-full mb-1' : 'top-full mt-1'"
-    >
-      <li
-        v-for="(section, sectionIndex) in sections"
-        :key="sectionIndex"
-        role="none"
+    <!-- data-popover-content: o Popover não trata o clique na lista levada ao body como clique fora. -->
+    <Teleport to="body" :disabled="!teleport">
+      <ul
+        v-show="isOpen"
+        :id="listId"
+        ref="list"
+        role="listbox"
+        :aria-label="ariaLabel"
+        tabindex="-1"
+        :dir="teleport ? listDirection : undefined"
+        :data-popover-content="teleport || undefined"
+        :style="teleport ? floatingStyle : undefined"
+        class="py-1 mb-0 overflow-y-auto rounded-lg shadow-lg max-h-80 bg-n-solid-2 outline outline-1 outline-n-container"
+        :class="
+          teleport
+            ? 'fixed z-[9999]'
+            : [
+                'absolute z-50 w-full',
+                opensUpward ? 'bottom-full mb-1' : 'top-full mt-1',
+              ]
+        "
       >
-        <div
-          v-if="section.label"
-          :id="groupLabelId(sectionIndex)"
-          class="px-3 pt-2 pb-1 text-xs font-medium text-n-slate-10"
+        <li
+          v-for="(section, sectionIndex) in sections"
+          :key="sectionIndex"
+          role="none"
         >
-          {{ section.label }}
-        </div>
-        <ul
-          :role="section.label ? 'group' : 'none'"
-          :aria-labelledby="
-            section.label ? groupLabelId(sectionIndex) : undefined
-          "
-          class="p-0 m-0 list-none"
-        >
-          <li
-            v-for="{ option, index } in section.items"
-            :id="optionId(index)"
-            :key="index"
-            role="option"
-            :aria-selected="index === selected"
-            :aria-disabled="option.disabled || undefined"
-            class="flex items-center justify-between gap-2 px-3 text-sm min-h-11"
-            :class="{
-              'bg-n-alpha-2': index === active,
-              'font-medium': index === selected,
-              'cursor-pointer text-n-slate-12': !option.disabled,
-              'cursor-not-allowed text-n-slate-10': option.disabled,
-            }"
-            @pointerdown.prevent
-            @pointermove="active = index"
-            @click="commit(index)"
+          <div
+            v-if="section.label"
+            :id="groupLabelId(sectionIndex)"
+            class="px-3 pt-2 pb-1 text-xs font-medium text-n-slate-10"
           >
-            <span class="truncate">{{ option.label }}</span>
-            <span
-              v-if="index === selected"
-              class="flex-shrink-0 i-lucide-check size-4 text-n-slate-11"
-              aria-hidden="true"
-            />
-          </li>
-        </ul>
-      </li>
-    </ul>
+            {{ section.label }}
+          </div>
+          <ul
+            :role="section.label ? 'group' : 'none'"
+            :aria-labelledby="
+              section.label ? groupLabelId(sectionIndex) : undefined
+            "
+            class="p-0 m-0 list-none"
+          >
+            <li
+              v-for="{ option, index } in section.items"
+              :id="optionId(index)"
+              :key="index"
+              role="option"
+              :aria-selected="index === selected"
+              :aria-disabled="option.disabled || undefined"
+              class="flex items-center justify-between gap-2 px-3 text-sm min-h-11"
+              :class="{
+                'bg-n-alpha-2': index === active,
+                'font-medium': index === selected,
+                'cursor-pointer text-n-slate-12': !option.disabled,
+                'cursor-not-allowed text-n-slate-10': option.disabled,
+              }"
+              @pointerdown.prevent
+              @pointermove="active = index"
+              @click="commit(index)"
+            >
+              <span class="truncate">{{ option.label }}</span>
+              <span
+                v-if="index === selected"
+                class="flex-shrink-0 i-lucide-check size-4 text-n-slate-11"
+                aria-hidden="true"
+              />
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </Teleport>
   </div>
 </template>

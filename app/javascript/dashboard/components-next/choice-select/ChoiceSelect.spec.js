@@ -176,3 +176,54 @@ describe('ChoiceSelect', () => {
     expect(trigger.classes()).toContain('before:-inset-y-1.5');
   });
 });
+
+describe('ChoiceSelect dentro de modal ou popover', () => {
+  it('Escape com a lista aberta não chega ao document; com ela fechada, chega', async () => {
+    const onDocumentKeydown = vi.fn();
+    const escapesAtDocument = () =>
+      onDocumentKeydown.mock.calls.filter(([event]) => event.key === 'Escape');
+    document.addEventListener('keydown', onDocumentKeydown);
+    wrapper = mountSelect();
+    const trigger = wrapper.get('[role="combobox"]');
+
+    await trigger.trigger('keydown', { key: 'ArrowDown' });
+    await trigger.trigger('keydown', { key: 'Escape' });
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+    expect(escapesAtDocument()).toHaveLength(0);
+
+    await trigger.trigger('keydown', { key: 'Escape' });
+    expect(escapesAtDocument()).toHaveLength(1);
+    document.removeEventListener('keydown', onDocumentKeydown);
+  });
+
+  it('com teleport, a lista vai para o body em posição fixa e escolhe normalmente', async () => {
+    wrapper = mountSelect('pt_BR', { teleport: true });
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(wrapper.find('[role="listbox"]').exists()).toBe(false);
+
+    await trigger.trigger('click');
+    const listEl = document.body.querySelector('[role="listbox"]');
+    expect(listEl.parentElement).toBe(document.body);
+    expect(listEl.classList).toContain('fixed');
+    expect(listEl.hasAttribute('data-popover-content')).toBe(true);
+    expect(trigger.attributes('aria-controls')).toBe(listEl.id);
+
+    listEl.querySelectorAll('[role="option"]')[2].click();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('update:modelValue')).toEqual([['es']]);
+    expect(wrapper.emitted('change')).toEqual([['es']]);
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+  });
+
+  it('com teleport, fecha a lista quando a página rola', async () => {
+    wrapper = mountSelect('pt_BR', { teleport: true });
+    const trigger = wrapper.get('[role="combobox"]');
+    await trigger.trigger('click');
+    expect(trigger.attributes('aria-expanded')).toBe('true');
+
+    window.dispatchEvent(new Event('scroll'));
+    await wrapper.vm.$nextTick();
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
+});
