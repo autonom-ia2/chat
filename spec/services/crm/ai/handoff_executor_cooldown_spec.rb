@@ -16,10 +16,6 @@ RSpec.describe Crm::Ai::HandoffExecutor do
 
   before do
     allow(Rails.configuration.dispatcher).to receive(:dispatch)
-    # O PEDIDO NOVO depois da devolucao (chat#612): sem mensagem nova desde a devolucao, a passagem nao volta
-    # (`devolvida_sem_pedido_novo`, handoff_executor_devolucao_spec). Aqui o gatilho aconteceu de novo.
-    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
-                     content: 'quero falar com uma pessoa', created_at: 1.minute.ago)
     allow(OnlineStatusTracker).to receive(:get_available_users).with(account.id).and_return({})
     allow(Crm::Ai::HandoffInviter).to receive(:new).and_return(instance_double(Crm::Ai::HandoffInviter, perform: true))
   end

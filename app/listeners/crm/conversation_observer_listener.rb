@@ -27,6 +27,9 @@ class Crm::ConversationObserverListener < BaseListener
     conversation, = extract_conversation_and_account(event)
     return if conversation&.id.blank?
 
+    # A devolução à IA é carimbada ANTES da avaliação que esta mesma mudança enfileira (chat#632): sem o carimbo, a
+    # avaliação relia a fala antiga do agente e passava a conversa à equipe de novo.
+    Crm::Ai::DevolucaoAIa.registrar!(conversation, event.timestamp) if Crm::Ai::Config.enabled?
     Crm::SyncConversationCardJob.perform_later(conversation.id)
     enqueue_handoff_pickup(conversation, event)
   end
