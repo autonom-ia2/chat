@@ -11,6 +11,8 @@
 # Só vale para a passagem direta: no convite a conversa nunca foi de ninguém, então não há o que devolver.
 module Crm::Ai::DevolucaoAIa
   CHAVE = 'returned_to_ai_at'.freeze
+  # A conversa devolvida: o carimbo é do card, e um card pode ter várias conversas (revisão da #633).
+  CONVERSA = 'returned_conversation_id'.freeze
   # Quantas mensagens depois da devolução olhar procurando um pedido novo: passando disso, com certeza há um.
   LIMITE = 50
 
@@ -20,21 +22,28 @@ module Crm::Ai::DevolucaoAIa
   def registrar!(conversation, momento)
     return if conversation.assignee_id.present?
 
-    Crm::Card.where(account_id: conversation.account_id)
-             .joins(:card_conversations).where(crm_card_conversations: { conversation_id: conversation.id })
-             .find_each { |card| carimbar!(card, momento) }
+    # Pelo vínculo e pela conversa primária: card antigo pode ter a conversa só em `crm_cards.conversation_id`.
+    Crm::Card.where(account_id: conversation.account_id).left_joins(:card_conversations)
+             .where('crm_card_conversations.conversation_id = :id OR crm_cards.conversation_id = :id', id: conversation.id)
+             .distinct.find_each { |card| carimbar!(card, conversation, momento) }
   end
 
   # -> o instante em que a conversa voltou para a IA, ou nil (sem devolução depois da última passagem direta).
   def em(card, conversation)
-    return if conversation.blank? || conversation.assignee_id.present?
-
     ai = ai_de(card)
-    return if ai['last_handoff_mode'] == 'invite'
+    return unless devolvida_esta?(ai, conversation)
 
     devolvida = instante(ai[CHAVE])
     passagem = instante(ai['last_handoff_at'])
     devolvida if devolvida && passagem && devolvida >= passagem
+  end
+
+  # -> o carimbo pode valer para esta conversa: ela está sem responsável, a passagem foi direta e foi ela a devolvida.
+  def devolvida_esta?(meta, conversation)
+    return false if conversation.blank? || conversation.assignee_id.present?
+    return false if meta['last_handoff_mode'] == 'invite'
+
+    meta[CONVERSA].blank? || meta[CONVERSA].to_i == conversation.id
   end
 
   # -> devolvida e, desde então, nem o cliente nem o agente de IA escreveram nada?
@@ -51,11 +60,11 @@ module Crm::Ai::DevolucaoAIa
     message.incoming? || message.sender_type == 'AgentBot'
   end
 
-  def carimbar!(card, momento)
+  def carimbar!(card, conversation, momento)
     ai = ai_de(card)
     return if ai['last_handoff_at'].blank? || ai['last_handoff_mode'] == 'invite'
 
-    card.update!(metadata: (card.metadata || {}).deep_merge('ai' => { CHAVE => momento.iso8601 }))
+    card.update!(metadata: (card.metadata || {}).deep_merge('ai' => { CHAVE => momento.iso8601, CONVERSA => conversation.id }))
   end
 
   def ai_de(card)

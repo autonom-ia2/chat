@@ -128,6 +128,31 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     expect(Crm::Ai::ContextBuilder.new(card: card.reload).perform[:conversation_state][:returned_to_ai_at]).to be_nil
   end
 
+  it 'o carimbo é da conversa devolvida: outra conversa do mesmo card não é bloqueada por ele' do
+    card = devolvido(build_card)
+    outra = create_crm_conversation(account: account, inbox: inbox, contact: contact)
+
+    expect(Crm::Ai::DevolucaoAIa.em(card, outra)).to be_nil
+  end
+
+  it 'card ligado só pela conversa primária também é carimbado' do
+    card = build_card
+    Crm::CardConversation.where(card: card).delete_all
+
+    expect(devolvido(card).metadata.dig('ai', Crm::Ai::DevolucaoAIa::CHAVE)).to be_present
+  end
+
+  it 'a avaliação que já estava rodando não apaga o carimbo gravado enquanto ela esperava o modelo' do
+    card = build_card
+    avaliacao = Crm::Ai::Evaluator.new(card: Crm::Card.find(card.id))
+    Crm::Ai::DevolucaoAIa.registrar!(conversation, devolucao)
+
+    avaliacao.send(:touch_evaluation_metadata, { model_used: 'modelo' })
+
+    expect(card.reload.metadata.dig('ai', Crm::Ai::DevolucaoAIa::CHAVE)).to be_present
+    expect(card.metadata.dig('ai', 'last_model_used')).to eq('modelo')
+  end
+
   it 'a desatribuição carimba a devolução antes de enfileirar a avaliação do card' do
     card = build_card
     evento = Events::Base.new('assignee.changed', Time.zone.now, conversation: conversation)
