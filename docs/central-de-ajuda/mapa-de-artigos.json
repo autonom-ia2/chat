@@ -2301,8 +2301,8 @@
      "fontes": [
       "porques: Criar follow-ups e lembretes no CRM"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue:1722"
     },
     {
      "id": "10.06",
