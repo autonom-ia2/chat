@@ -631,9 +631,11 @@ const executar = async () => {
   const artigosNaoRemovidos = artigos.filter(a => !idsRemovidos.has(a.cabecalho.id));
   const i18nCitado = valoresCitadosEmArtigos(removidosDoI18n, artigosNaoRemovidos);
 
-  // (e) roteiro de vídeo (de artigo não removido) que clica num valor de i18n que saiu
+  // (e) roteiro de vídeo que clica num valor de i18n que saiu — só de artigo que está no mapa
+  // e não foi removido: sem artigo para marcar, o PR nasceria sem diff e o commit falharia.
+  const idsNoMapa = new Set(todosArtigos(mapa).map(artigo => artigo.id));
   const roteiros = idsDaPasta(PASTA_TRAJETOS, '.mjs')
-    .filter(id => !idsRemovidos.has(id))
+    .filter(id => idsNoMapa.has(id) && !idsRemovidos.has(id))
     .map(id => ({ id, texto: fs.readFileSync(r(path.join(PASTA_TRAJETOS, `${id}.mjs`)), 'utf8') }));
   const roteirosAfetados = roteirosQueCitam(removidosDoI18n, roteiros);
 

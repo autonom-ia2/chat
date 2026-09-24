@@ -19,6 +19,10 @@ voltar.
   artigo barra). Depois do merge, o `Central - modo aprendiz` olha só o que mudou naquele push e
   abre PR com rascunho do GPT (tela nova), remoção (tela que saiu) e `revisar: true` (trecho de
   código citado que sumiu, ou rótulo de botão que mudou). Nada é reescrito sozinho.
+  Vídeo e print também: se o roteiro de um vídeo clica num texto que saiu do i18n, o artigo é
+  marcado; e, para todo artigo marcado, o PR lista o vídeo e os prints a refazer, com o comando
+  `gravar-trajeto.mjs <id>`. A gravação é local (painel de dev com dados de exemplo), não no CI.
+  Primeiro PR real do robô: #627 (24/09).
 - **Tela de leitura (#501):** tela nossa no painel (`central_de_ajuda`), com busca, "Comece por
   aqui", assuntos, artigo com "Me leve até lá" e destaque, A-/A+ guardado no perfil, links entre
   artigos, anterior/próximo e "Pergunte ao Guia". Filtro por recurso e por papel no servidor.
