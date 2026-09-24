@@ -6,6 +6,7 @@ import {
   messageStamp,
   messageTimestamp,
   relativeDayTimestamp,
+  relativeTimeFromISO,
   shortTimestamp,
 } from 'shared/helpers/timeHelper';
 
@@ -69,6 +70,33 @@ describe('#dynamicTime', () => {
   it('returns correct value', () => {
     Date.now = vi.fn(() => new Date(Date.UTC(2023, 1, 14)).valueOf());
     expect(dynamicTime(1612971343)).toEqual('about 2 years ago');
+  });
+
+  it('uses the user locale when given', () => {
+    const fourHoursAgo = Date.UTC(2023, 4, 4, 20) / 1000;
+    expect(dynamicTime(fourHoursAgo, 'pt_BR')).toEqual('há cerca de 4 horas');
+    expect(dynamicTime(fourHoursAgo, 'es')).toEqual(
+      'hace alrededor de 4 horas'
+    );
+  });
+
+  it('falls back to English for a locale date-fns does not have', () => {
+    const fourHoursAgo = Date.UTC(2023, 4, 4, 20) / 1000;
+    expect(dynamicTime(fourHoursAgo, 'am')).toEqual('about 4 hours ago');
+  });
+});
+
+describe('#relativeTimeFromISO', () => {
+  it('uses the user locale when given', () => {
+    expect(relativeTimeFromISO('2023-05-04T20:00:00Z', 'pt_BR')).toEqual(
+      'há cerca de 4 horas'
+    );
+  });
+
+  it('stays in English without a locale', () => {
+    expect(relativeTimeFromISO('2023-05-04T20:00:00Z')).toEqual(
+      'about 4 hours ago'
+    );
   });
 });
 

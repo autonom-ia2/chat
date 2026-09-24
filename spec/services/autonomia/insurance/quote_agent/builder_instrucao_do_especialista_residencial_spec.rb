@@ -91,8 +91,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # Pela chat#638 (`bf7a1534…` -> `209fc264…`): o CPF da pessoa que o cliente indicou, quando um documento ou uma
     # cotação da conversa o traz com o nome que o cliente disse, vale sem pergunta (a conversa 7150 perguntou o CPF que
     # tinha na mão); só pelo parentesco, ou com dois CPFs do mesmo nome, pergunta.
+    # Pela chat#641 (`209fc264…` -> `18bfb6a9…`): imóvel de negócio é empresarial, e volta ao principal com o nome do
+    # ramo, e não como caso para uma pessoa.
     it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('209fc2648e730dd2fe4d704010bdb6fd')
+      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('18bfb6a9c782078f80da58d0b2be7c24')
     end
   end
 end

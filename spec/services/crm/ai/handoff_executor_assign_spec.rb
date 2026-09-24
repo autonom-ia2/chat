@@ -56,4 +56,14 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     event = Autonomia::Agents::AgentEvent.handed_off.find_by(conversation_id: conversation.id)
     expect(event).to have_attributes(autonomia_agent_id: autonomia_agent.id, handoff_reason: 'human_requested')
   end
+
+  # Conversa 7057 (24/09/2026): o encaminhamento do CRM leva à equipe o que as ferramentas não conseguiram fazer.
+  it 'posts the team note with the recent tool refusals when it hands off' do
+    card = build_card
+    allow(Autonomia::Agents::NotaDoEncaminhamento).to receive(:postar)
+
+    described_class.new(card: card, handoff: { intent: 'transferir', reason: 'cliente pediu humano' }).perform
+
+    expect(Autonomia::Agents::NotaDoEncaminhamento).to have_received(:postar).with(conversation).once
+  end
 end

@@ -8,7 +8,7 @@
 // gerar os dois eventos pelo `preparar`, com o model direto, dentro de
 // `Enterprise::AuditLog.as_user(admin)` (mesmo helper que o controller usa
 // em produção) para o autor ficar correto:
-//   1. cria o AccountUser na primeira vez (dispara o evento "Convidou ...
+//   1. cria o AccountUser na primeira vez (dispara o evento "convidou ...
 //      como agent" — fica pra sempre no histórico, não precisa recriar);
 //   2. alterna o papel dele (agent → administrator → agent de volta) a
 //      cada rodada, com o ATOR sendo a admin logada e o AFETADO sendo o

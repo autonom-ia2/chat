@@ -81,7 +81,7 @@ const emit = defineEmits([
 
 const exactTimestamp = useExactTimestamp();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const [showActionsDropdown, toggleDropdown] = useToggle();
 
@@ -172,7 +172,7 @@ const authorThumbnailSrc = computed(() => {
 });
 
 const lastUpdatedAt = computed(() => {
-  return dynamicTime(props.updatedAt);
+  return dynamicTime(props.updatedAt, locale.value);
 });
 
 const handleArticleAction = ({ action, value }) => {

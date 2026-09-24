@@ -95,7 +95,7 @@ const emit = defineEmits([
   'pageChange',
 ]);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const isCompact = computed(() => props.columnState?.density === 'compact');
 
@@ -363,7 +363,7 @@ const followUpClass = card => {
 const relativeDate = value => {
   const d = toDate(value);
   if (!d) return t('CRM_KANBAN.FOLLOW_UP_FILTER.NONE');
-  return relativeTimeFromISO(d.toISOString());
+  return relativeTimeFromISO(d.toISOString(), locale.value);
 };
 
 const contactSubtitle = card =>

@@ -1,190 +1,190 @@
 {
   "INSURANCE": {
-    "TITLE": "Cotação",
-    "SUBTITLE": "Conecte a conta AGGER da corretora e ligue o Agente de Cotação às suas caixas de entrada.",
+    "TITLE": "Quoting",
+    "SUBTITLE": "Connect the brokerage's AGGER account and link the Quoting Agent to your inboxes.",
     "TABS": {
-      "CONNECTIONS": "Conexões",
-      "AGENT": "Agente"
+      "CONNECTIONS": "Connections",
+      "AGENT": "Agent"
     },
     "CONNECTION": {
       "PROVIDER_AGGER": "AGGER · Aggilizador",
-      "SESSION_AUTHENTICATED": "Autenticada",
-      "SESSION_PENDING": "Aguardando autenticação",
+      "SESSION_AUTHENTICATED": "Authenticated",
+      "SESSION_PENDING": "Waiting for authentication",
       "STATES": {
-        "NOT_CONFIGURED": "Não configurado",
-        "PROVISIONING": "Preparando",
-        "AUTHENTICATING": "Autenticando",
-        "DISCOVERING": "Descobrindo produtos",
-        "READY": "Conectado",
-        "DEGRADED": "Conectado com alertas",
-        "AUTH_REQUIRED": "Credencial recusada",
-        "HUMAN_REQUIRED": "Precisa de atenção",
-        "OFFLINE": "Desconectado"
+        "NOT_CONFIGURED": "Not configured",
+        "PROVISIONING": "Preparing",
+        "AUTHENTICATING": "Authenticating",
+        "DISCOVERING": "Discovering products",
+        "READY": "Connected",
+        "DEGRADED": "Connected with warnings",
+        "AUTH_REQUIRED": "Credential rejected",
+        "HUMAN_REQUIRED": "Needs attention",
+        "OFFLINE": "Disconnected"
       },
       "FIELDS": {
-        "ACCOUNT": "Conta",
-        "SESSION": "Sessão",
-        "LAST_HEALTHCHECK": "Última verificação",
-        "LAST_SCAN": "Última descoberta"
+        "ACCOUNT": "Account",
+        "SESSION": "Session",
+        "LAST_HEALTHCHECK": "Last check",
+        "LAST_SCAN": "Last discovery"
       },
       "FORM": {
-        "INTRO": "Informe o acesso da corretora ao AGGER. A senha é guardada de forma segura e usada só para manter a sessão de cotação.",
-        "USERNAME": "Usuário AGGER",
+        "INTRO": "Enter the brokerage's AGGER login. The password is stored securely and used only to keep the quoting session alive.",
+        "USERNAME": "AGGER user",
         "USERNAME_PLACEHOLDER": "corretora{'@'}exemplo.com.br",
-        "PASSWORD": "Senha",
+        "PASSWORD": "Password",
         "PASSWORD_PLACEHOLDER": "••••••••",
-        "REQUIRED": "Preencha usuário e senha para conectar.",
-        "SECURITY_NOTE": "A senha nunca é exibida de novo nem enviada para o agente de IA."
+        "REQUIRED": "Fill in user and password to connect.",
+        "SECURITY_NOTE": "The password is never shown again nor sent to the AI agent."
       },
       "ACTIONS": {
-        "CONNECT": "Conectar AGGER",
-        "RECONNECT": "Reconectar",
-        "RESCAN": "Atualizar produtos",
-        "DISCONNECT": "Desconectar",
-        "RETRY": "Tentar de novo"
+        "CONNECT": "Connect AGGER",
+        "RECONNECT": "Reconnect",
+        "RESCAN": "Refresh products",
+        "DISCONNECT": "Disconnect",
+        "RETRY": "Try again"
       },
-      "ENCRYPTION_UNAVAILABLE": "Esta instalação ainda não tem o cofre de credenciais configurado. A senha do AGGER não pode ser guardada até o time da Autonom.ia ativar a criptografia.",
+      "ENCRYPTION_UNAVAILABLE": "This installation does not have the credential vault configured yet. The AGGER password cannot be stored until the {installationName} team enables encryption.",
       "ERRORS": {
-        "LOAD": "Não foi possível carregar o estado da conexão.",
-        "GENERIC": "Não foi possível concluir a ação. Tente novamente."
+        "LOAD": "Could not load the connection status.",
+        "GENERIC": "Could not complete the action. Please try again."
       },
       "ALERTS": {
-        "CONNECTED": "Conexão com o AGGER atualizada.",
-        "RECONNECTED": "Sessão renovada.",
-        "RESCANNED": "Buscando os produtos e seguradoras no AGGER. Leva cerca de meio minuto e a tela atualiza sozinha.",
-        "DISCONNECTED": "Conexão removida."
+        "CONNECTED": "AGGER connection updated.",
+        "RECONNECTED": "Session renewed.",
+        "RESCANNED": "Fetching products and insurers from AGGER. It takes about half a minute and the screen refreshes on its own.",
+        "DISCONNECTED": "Connection removed."
       },
-      "VERIFIED_AT": "em {at}, {check}",
-      "VERIFIED_AT_PLAIN": "em {at}",
-      "NOT_VERIFIED": "ainda não verificado",
+      "VERIFIED_AT": "on {at}, {check}",
+      "VERIFIED_AT_PLAIN": "on {at}",
+      "NOT_VERIFIED": "not verified yet",
       "EVIDENCE": {
-        "LOGIN": "entrando no portal",
-        "SESSION_PROBE": "consultando o cadastro da corretora",
-        "CAPABILITY_SCAN": "listando produtos e seguradoras",
-        "NONE": "sem consulta ao portal"
+        "LOGIN": "signing in to the portal",
+        "SESSION_PROBE": "checking the brokerage's registration",
+        "CAPABILITY_SCAN": "listing products and insurers",
+        "NONE": "no portal lookup"
       },
       "FAILURES": {
-        "CREDENTIAL_REJECTED": "O AGGER recusou este acesso. Confira o usuário e a senha da corretora no portal e conecte de novo — a senha pode ter sido trocada ou o acesso revogado.",
-        "SESSION_LOST": "A sessão no AGGER caiu e estamos abrindo outra. Sua senha está certa e não precisa ser trocada.",
-        "PORTAL_UNAVAILABLE": "O AGGER não respondeu. É indisponibilidade do portal, não do seu acesso; voltamos a tentar sozinhos.",
-        "PORTAL_TIMEOUT": "O AGGER demorou demais para responder. Não é problema do seu acesso; voltamos a tentar sozinhos.",
-        "INTEGRATION_OUTDATED": "O AGGER mudou algo que a nossa integração ainda não acompanha. O time da Autonom.ia já foi avisado — não há nada a fazer do seu lado.",
-        "REQUEST_INVALID": "A consulta que enviamos ao AGGER estava incorreta. É problema nosso e já foi registrado.",
-        "NOT_SUPPORTED": "Esta operação ainda não é suportada pela integração.",
-        "MISCONFIGURED": "A integração está sem uma configuração obrigatória. O time da Autonom.ia precisa ajustar.",
-        "UNKNOWN": "A conexão não está saudável e o motivo não foi registrado — provavelmente ela foi verificada por uma versão anterior. Clique em Reconectar para que o motivo seja identificado."
+        "CREDENTIAL_REJECTED": "AGGER rejected this login. Check the brokerage's user and password on the portal and connect again — the password may have changed or access may have been revoked.",
+        "SESSION_LOST": "The AGGER session dropped and we are opening a new one. Your password is correct and does not need to change.",
+        "PORTAL_UNAVAILABLE": "AGGER did not respond. The portal is unavailable, not your access; we will retry on our own.",
+        "PORTAL_TIMEOUT": "AGGER took too long to respond. It is not a problem with your access; we will retry on our own.",
+        "INTEGRATION_OUTDATED": "AGGER changed something our integration does not support yet. The {installationName} team has been notified — there is nothing for you to do.",
+        "REQUEST_INVALID": "The request we sent to AGGER was invalid. It is our problem and has been logged.",
+        "NOT_SUPPORTED": "This operation is not supported by the integration yet.",
+        "MISCONFIGURED": "The integration is missing a required setting. The {installationName} team needs to fix it.",
+        "UNKNOWN": "The connection is not healthy and the reason was not recorded — it was probably checked by an earlier version. Click Reconnect so the reason can be identified."
       },
       "LAYERS": {
-        "SUBTITLE": "Cada camada tem prova própria. O que ninguém olhou aparece como não verificado.",
-        "RUNTIME": "O serviço da Autonom.ia responde",
-        "RUNTIME_DETAIL": "Verificado agora, junto com a sessão.",
-        "PLATFORM_AUTH": "A conta abre sessão no AGGER",
-        "PLATFORM_AUTH_DETAIL": "Login aceito pelo portal em {at}. Verificamos a cada 30 minutos.",
-        "INSURER_AUTH": "Credenciais nas seguradoras",
-        "INSURER_AUTH_COUNT": "Credenciais nas seguradoras — {count} recusada | Credenciais nas seguradoras — {count} recusadas",
-        "PRODUCT_SUPPORT": "Ramo suportado pela integração",
-        "RISK": "Risco aceito pela seguradora",
+        "SUBTITLE": "Each layer has its own proof. What nobody checked shows as not verified.",
+        "RUNTIME": "The {installationName} service responds",
+        "RUNTIME_DETAIL": "Verified now, together with the session.",
+        "PLATFORM_AUTH": "The account opens a session on AGGER",
+        "PLATFORM_AUTH_DETAIL": "Login accepted by the portal on {at}. We check every 30 minutes.",
+        "INSURER_AUTH": "Insurer credentials",
+        "INSURER_AUTH_COUNT": "Insurer credentials — {count} rejected | Insurer credentials — {count} rejected",
+        "PRODUCT_SUPPORT": "Line supported by the integration",
+        "RISK": "Risk accepted by the insurer",
         "STATE": {
-          "OK": "verificado",
-          "FAILED": "falhou",
-          "PENDING": "aguardando credencial",
-          "UNKNOWN": "não verificado"
+          "OK": "verified",
+          "FAILED": "failed",
+          "PENDING": "waiting for credential",
+          "UNKNOWN": "not verified"
         },
-        "DISCLOSURE": "Como isto foi verificado",
-        "INSURER_AUTH_OK": "A única foi conferida no portal e passou. | As {total} foram conferidas uma a uma no portal e passaram.",
-        "INSURER_AUTH_FAILED": "{names} não aceitou o acesso da corretora (login ou permissão). | {names} não aceitaram o acesso da corretora (login ou permissão).",
-        "INSURER_AUTH_REST": "Nenhuma outra seguradora da conta passou. | A outra seguradora da conta passou. | As outras {count} seguradoras da conta passaram.",
-        "FROM_SCAN": "conferido na descoberta de {at}"
+        "DISCLOSURE": "How this was verified",
+        "INSURER_AUTH_OK": "The only one was checked on the portal and passed. | All {total} were checked one by one on the portal and passed.",
+        "INSURER_AUTH_FAILED": "{names} did not accept the brokerage's access (login or permission). | {names} did not accept the brokerage's access (login or permission).",
+        "INSURER_AUTH_REST": "No other insurer on the account passed. | The other insurer on the account passed. | The other {count} insurers on the account passed.",
+        "FROM_SCAN": "checked in the discovery of {at}"
       },
       "INSURERS_PENDING": {
-        "TITLE": "Seguradoras com credencial pendente",
-        "BODY": "{count} seguradora não aceitou o acesso que a corretora cadastrou no AGGER (login ou permissão), vista na cotação de {at}. Ela não cota até o acesso ser corrigido no AGGER ou no site da seguradora, e isso nunca é mostrado ao cliente. | {count} seguradoras não aceitaram o acesso que a corretora cadastrou no AGGER (login ou permissão), vistas na cotação de {at}. Elas não cotam até o acesso ser corrigido no AGGER ou no site da seguradora, e isso nunca é mostrado ao cliente."
+        "TITLE": "Insurers with pending credentials",
+        "BODY": "{count} insurer did not accept the access the brokerage registered on AGGER (login or permission), seen in the quote of {at}. It will not quote until the access is fixed on AGGER or on the insurer's site, and this is never shown to the customer. | {count} insurers did not accept the access the brokerage registered on AGGER (login or permission), seen in the quote of {at}. They will not quote until the access is fixed on AGGER or on the insurer's site, and this is never shown to the customer."
       },
       "VERDICT": {
-        "READY": "Pronta para cotar {count} produtos",
-        "READY_ONE": "Pronta para cotar 1 produto",
-        "NOT_READY": "Não está cotando",
-        "WORKING": "Verificando com o AGGER…"
+        "READY": "Ready to quote {count} products",
+        "READY_ONE": "Ready to quote 1 product",
+        "NOT_READY": "Not quoting",
+        "WORKING": "Checking with AGGER…"
       }
     },
     "CAPABILITIES": {
-      "TITLE": "O que esta conta cota hoje",
-      "SUBTITLE": "Lido do AGGER em {at}. Cada produto mostra quantas seguradoras respondem por ele.",
-      "SUBTITLE_NO_SCAN": "Cada produto mostra quantas seguradoras respondem por ele.",
-      "INFERRED_HINT": "Nome deduzido das coberturas; ainda não confirmado no portal.",
-      "HIDDEN_PRODUCTS": "{count} ramo que esta conta ainda não tem habilitado no AGGER não aparece aqui. | {count} ramos que esta conta ainda não tem habilitados no AGGER não aparecem aqui.",
-      "INSURERS_OF_TOTAL": "{ready} de {total} seguradora | {ready} de {total} seguradoras",
-      "INSURERS_ALL": "{total} seguradora | {total} seguradoras",
-      "MONEY_LEFT": "{names} está fora por credencial recusada — uma seguradora a menos em cada cotação de {product}. | {names} estão fora por credencial recusada — {count} seguradoras a menos em cada cotação de {product}.",
-      "NO_INSURERS": "Nenhuma seguradora responde por este produto hoje.",
-      "EMPTY": "Esta conta não tem nenhum produto habilitado no AGGER.",
-      "UNNAMED_BRANCH": "Ramo {ramo}",
-      "LEGEND_QUOTING": "cotando",
-      "LEGEND_PENDING": "alguma seguradora aguardando credencial",
-      "LEGEND_NONE": "sem seguradora respondendo",
-      "FOOTER": "Produto que a corretora não tem habilitado no AGGER não aparece aqui. Para habilitar, fale com a AGGER — a Autonom.ia lê o que a sua conta já pode vender."
+      "TITLE": "What this account quotes today",
+      "SUBTITLE": "Read from AGGER on {at}. Each product shows how many insurers respond for it.",
+      "SUBTITLE_NO_SCAN": "Each product shows how many insurers respond for it.",
+      "INFERRED_HINT": "Name inferred from the coverages; not confirmed on the portal yet.",
+      "HIDDEN_PRODUCTS": "{count} line this account does not have enabled on AGGER yet is not shown here. | {count} lines this account does not have enabled on AGGER yet are not shown here.",
+      "INSURERS_OF_TOTAL": "{ready} of {total} insurer | {ready} of {total} insurers",
+      "INSURERS_ALL": "{total} insurer | {total} insurers",
+      "MONEY_LEFT": "{names} is out due to a rejected credential — one insurer fewer in every {product} quote. | {names} are out due to rejected credentials — {count} insurers fewer in every {product} quote.",
+      "NO_INSURERS": "No insurer responds for this product today.",
+      "EMPTY": "This account has no product enabled on AGGER.",
+      "UNNAMED_BRANCH": "Line {ramo}",
+      "LEGEND_QUOTING": "quoting",
+      "LEGEND_PENDING": "some insurer waiting for credential",
+      "LEGEND_NONE": "no insurer responding",
+      "FOOTER": "Products the brokerage does not have enabled on AGGER are not shown here. To enable one, contact AGGER — {installationName} reads what your account can already sell."
     },
     "PRODUCTS": {
-      "AUTO": "Automóvel",
-      "RESIDENCIAL": "Residencial",
-      "RC_PROFISSIONAL": "RC Profissional",
-      "EMPRESARIAL": "Empresarial",
-      "VIDA": "Vida",
-      "VIAGEM": "Viagem",
-      "CONDOMINIO": "Condomínio",
-      "FIANCA_LOCATICIA": "Aluguel",
-      "ACIDENTES_PESSOAIS": "Acidentes pessoais",
-      "VIDA_GLOBAL": "Vida em grupo",
-      "CELULAR": "Celular",
+      "AUTO": "Auto",
+      "RESIDENCIAL": "Home",
+      "RC_PROFISSIONAL": "Professional liability",
+      "EMPRESARIAL": "Business",
+      "VIDA": "Life",
+      "VIAGEM": "Travel",
+      "CONDOMINIO": "Condominium",
+      "FIANCA_LOCATICIA": "Rent guarantee",
+      "ACIDENTES_PESSOAIS": "Personal accident",
+      "VIDA_GLOBAL": "Group life",
+      "CELULAR": "Mobile phone",
       "BIKE": "Bike"
     },
     "AGENT": {
-      "TITLE": "Agente de Cotação",
-      "DESCRIPTION": "Um agente Autonom.ia especializado, já treinado em seguros, que conversa com o cliente, coleta o que falta, cota nas seguradoras disponíveis da sua conta AGGER e envia a proposta. Você personaliza só a identidade, o tom e o conhecimento da corretora.",
+      "TITLE": "Quoting Agent",
+      "DESCRIPTION": "A specialized {installationName} agent, already trained in insurance, that talks to the customer, collects what is missing, quotes with the insurers available on your AGGER account and sends the proposal. You customize only the brokerage's identity, tone and knowledge.",
       "PILLARS": {
-        "COLLECT": "Identifica o ramo e coleta somente os dados necessários",
-        "QUOTE": "Cota nas seguradoras da sua conta AGGER e devolve os preços",
-        "EXPLAIN": "Responde cobertura consultando as condições gerais, nunca de memória",
-        "HANDOFF": "Passa para a sua equipe quando o cliente decide fechar"
+        "COLLECT": "Identifies the line and collects only the data needed",
+        "QUOTE": "Quotes with the insurers on your AGGER account and returns the prices",
+        "EXPLAIN": "Answers coverage questions by checking the policy terms, never from memory",
+        "HANDOFF": "Hands over to your team when the customer decides to close"
       },
-      "LOCKED_NOTE": "A jornada de cotação, os formulários do AGGER e as regras de segurança são mantidos pela Autonom.ia. Você define a identidade, o horário e o comportamento — e acrescenta o que a sua corretora tem de próprio.",
+      "LOCKED_NOTE": "The quoting journey, the AGGER forms and the safety rules are maintained by {installationName}. You define the identity, the hours and the behavior — and add what is specific to your brokerage.",
       "ACTIONS": {
-        "CREATE": "Criar Agente de Cotação",
-        "OPEN_AGENTS": "Ver meus agentes",
-        "CONFIGURE": "Configurar e criar",
-        "OPEN_AGENT": "Abrir o agente",
-        "CANCEL": "Cancelar",
-        "SUBMIT": "Criar agente"
+        "CREATE": "Create Quoting Agent",
+        "OPEN_AGENTS": "See my agents",
+        "CONFIGURE": "Configure and create",
+        "OPEN_AGENT": "Open the agent",
+        "CANCEL": "Cancel",
+        "SUBMIT": "Create agent"
       },
       "FORM": {
-        "TITLE": "Como o seu agente se apresenta",
-        "SUBTITLE": "Quatro respostas. O resto já vem pronto.",
-        "NAME_LABEL": "Nome do agente",
-        "NAME_HINT": "É assim que ele se apresenta ao cliente.",
+        "TITLE": "How your agent introduces itself",
+        "SUBTITLE": "Four answers. Everything else comes ready.",
+        "NAME_LABEL": "Agent name",
+        "NAME_HINT": "This is how it introduces itself to the customer.",
         "NAME_PLACEHOLDER": "Mia",
-        "BROKER_LABEL": "Nome da corretora",
-        "BROKER_HINT": "A corretora que ele representa na conversa.",
-        "BROKER_PLACEHOLDER": "Corretora Exemplo",
-        "HOURS_LABEL": "Horário de atendimento",
-        "HOURS_HINT": "Quando a sua equipe assume. Fora disso, o agente avisa que retornam no próximo dia útil.",
-        "HOURS_PLACEHOLDER": "de segunda a sexta, das 09h às 18h",
-        "BEHAVIOR_LABEL": "Comportamento",
-        "BEHAVIOR_HINT": "Quando o agente explica cobertura. Nos dois casos ele nunca responde de memória.",
-        "BEHAVIOR_CONSULTIVO": "Consultivo",
-        "BEHAVIOR_CONSULTIVO_HINT": "Explica o que o cliente vai receber antes de cotar.",
-        "BEHAVIOR_OBJETIVO": "Objetivo",
-        "BEHAVIOR_OBJETIVO_HINT": "Cota primeiro. Explica se perguntarem."
+        "BROKER_LABEL": "Brokerage name",
+        "BROKER_HINT": "The brokerage it represents in the conversation.",
+        "BROKER_PLACEHOLDER": "Example Brokerage",
+        "HOURS_LABEL": "Business hours",
+        "HOURS_HINT": "When your team takes over. Outside these hours, the agent says they will reply on the next business day.",
+        "HOURS_PLACEHOLDER": "Monday to Friday, 9am to 6pm",
+        "BEHAVIOR_LABEL": "Behavior",
+        "BEHAVIOR_HINT": "When the agent explains coverage. In both cases it never answers from memory.",
+        "BEHAVIOR_CONSULTIVO": "Consultative",
+        "BEHAVIOR_CONSULTIVO_HINT": "Explains what the customer will get before quoting.",
+        "BEHAVIOR_OBJETIVO": "Direct",
+        "BEHAVIOR_OBJETIVO_HINT": "Quotes first. Explains if asked."
       },
       "EXISTING": {
-        "TITLE": "O seu Agente de Cotação já existe",
-        "BRANCHES": "Cota: {ramos}",
-        "NOTE": "Um por conta. Para mudar o nome ou o comportamento, edite o agente."
+        "TITLE": "Your Quoting Agent already exists",
+        "BRANCHES": "Quotes: {ramos}",
+        "NOTE": "One per account. To change the name or the behavior, edit the agent."
       },
       "ERRORS": {
-        "NOME_INVALIDO": "Confira o nome do agente e o da corretora.",
-        "HORARIO_INVALIDO": "Confira o horário de atendimento: escreva só os dias e as horas, sem marcador de variável.",
-        "COMPORTAMENTO_INVALIDO": "Escolha um comportamento.",
-        "GENERIC": "Não consegui criar o agente agora. Tente de novo em instantes."
+        "NOME_INVALIDO": "Check the agent name and the brokerage name.",
+        "HORARIO_INVALIDO": "Check the business hours: write only the days and times, without variable markers.",
+        "COMPORTAMENTO_INVALIDO": "Choose a behavior.",
+        "GENERIC": "Could not create the agent right now. Please try again shortly."
       }
     }
   }

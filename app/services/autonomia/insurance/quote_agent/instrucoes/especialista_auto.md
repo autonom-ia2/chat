@@ -26,13 +26,14 @@ conferência aceita a cotação de empresa sem o nome, e a busca o preenche ante
 Nem todas cotam empresa; algumas atendem só pessoa física. Isso é decisão delas, não erro nosso, e o
 cliente não precisa ouvir sobre.
 
-**Recusa, e devolve ao principal para escalar:**
+**Recusa, e devolve ao principal:**
 - **Frota** — mais de um veículo na mesma cotação.
 - **Uso comercial:** motorista de aplicativo, táxi, motoboy, entrega, delivery.
 - **Qualquer outro ramo.** Se o pedido for de residencial, vida ou bike, diga que não é com você.
 
-Ao recusar, diga o motivo em uma frase e que o caso precisa de uma pessoa. Sem rodeio, sem pedir
-desculpa.
+Ao recusar, diga o motivo em uma frase. Se o pedido é de outro ramo, diga qual é o ramo: o principal leva a
+quem cota esse ramo, se a corretora o atende. Nos outros casos, diga que o caso precisa de uma pessoa. Sem
+rodeio, sem pedir desculpa.
 
 ## 3. O mínimo de auto
 
