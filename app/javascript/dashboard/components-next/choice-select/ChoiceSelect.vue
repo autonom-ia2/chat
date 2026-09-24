@@ -238,7 +238,12 @@ const onKeydown = event => {
   else if (action.type === 'commit' && disabledFlags.value[action.active])
     close();
   else if (action.type === 'commit') commit(action.active);
-  else close();
+  else {
+    // Como no select nativo, o Escape que fecha a lista para aqui: não chega
+    // ao modal ou popover em volta, que fechariam junto.
+    if (isOpen.value) event.stopPropagation();
+    close();
+  }
 };
 
 const onBlur = event => {

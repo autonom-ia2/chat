@@ -17,6 +17,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Popover from 'dashboard/components-next/popover/Popover.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import CrmKanbanCard from '../components/CrmKanbanCard.vue';
 import CrmCardDrawer from '../components/CrmCardDrawer.vue';
@@ -184,6 +185,35 @@ const linkedOptions = computed(() => [
   { value: 'false', label: t('CRM_KANBAN.LINKED_FILTER.LINKED') },
   { value: 'true', label: t('CRM_KANBAN.LINKED_FILTER.STANDALONE') },
 ]);
+// Filtros com a opção vazia ("Todos"/"Todas") na frente, como no select nativo antigo.
+const withEmptyChoice = (label, options) => [{ value: '', label }, ...options];
+const inboxChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.FILTERS.ALL_FEMININE'), inboxOptions.value)
+);
+const ownerChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.FILTERS.ALL'), agentOptions.value)
+);
+const priorityChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.FILTERS.ALL_FEMININE'), priorityOptions.value)
+);
+const followUpStatusChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.FILTERS.ALL'), followUpStatusOptions.value)
+);
+const responsibleChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.FILTERS.ALL'), responsibleOptions.value)
+);
+const teamChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.FILTERS.ALL'), teamOptions.value)
+);
+const staleChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.FILTERS.STALE_PLACEHOLDER'), staleOptions.value)
+);
+const linkedChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.FILTERS.ALL'), linkedOptions.value)
+);
+const resultChoices = computed(() =>
+  withEmptyChoice(t('CRM_KANBAN.FILTERS.ALL'), resultOptions.value)
+);
 const labelOptions = computed(() =>
   accountLabels.value.map(label => ({
     value: label.id,
@@ -843,6 +873,12 @@ const deleteStageOptions = computed(() =>
   pipelineDrawerStages.value.filter(
     candidate => Number(candidate.id) !== Number(stageToDelete.value?.id)
   )
+);
+const deleteStageChoices = computed(() =>
+  deleteStageOptions.value.map(option => ({
+    value: option.id,
+    label: option.name,
+  }))
 );
 const deleteStageHasCards = computed(() =>
   Boolean(stageToDelete.value?.total_cards_count > 0)
@@ -1747,19 +1783,13 @@ onMounted(async () => {
           <span class="text-xs font-medium text-n-slate-11">
             {{ t('CRM_KANBAN.FILTERS.PIPELINE') }}
           </span>
-          <select
+          <ChoiceSelect
             v-model="currentPipelineId"
-            class="reset-base !mb-0 h-10 w-44 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+            :options="pipelineOptions"
+            :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
             :disabled="!hasPipelines"
-          >
-            <option
-              v-for="pipeline in pipelineOptions"
-              :key="pipeline.value"
-              :value="pipeline.value"
-            >
-              {{ pipeline.label }}
-            </option>
-          </select>
+            class="w-44"
+          />
         </label>
 
         <Button
@@ -1829,120 +1859,80 @@ onMounted(async () => {
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.INBOX') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="filters.inboxId"
-                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.FILTERS.ALL_FEMININE') }}
-                  </option>
-                  <option
-                    v-for="inbox in inboxOptions"
-                    :key="inbox.value"
-                    :value="inbox.value"
-                  >
-                    {{ inbox.label }}
-                  </option>
-                </select>
+                  :options="inboxChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.INBOX')"
+                  compact
+                  class="w-full"
+                />
               </label>
 
               <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.OWNER') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="filters.ownerId"
-                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">{{ t('CRM_KANBAN.FILTERS.ALL') }}</option>
-                  <option
-                    v-for="agent in agentOptions"
-                    :key="agent.value"
-                    :value="agent.value"
-                  >
-                    {{ agent.label }}
-                  </option>
-                </select>
+                  :options="ownerChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.OWNER')"
+                  compact
+                  class="w-full"
+                />
               </label>
 
               <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.PRIORITY') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="filters.priority"
-                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                  :options="priorityChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.PRIORITY')"
+                  compact
+                  class="w-full"
                   @change="applyFilters"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.FILTERS.ALL_FEMININE') }}
-                  </option>
-                  <option
-                    v-for="priority in priorityOptions"
-                    :key="priority.value"
-                    :value="priority.value"
-                  >
-                    {{ priority.label }}
-                  </option>
-                </select>
+                />
               </label>
 
               <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.FOLLOW_UP') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="filters.followUpStatus"
-                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                  :options="followUpStatusChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.FOLLOW_UP')"
+                  compact
+                  class="w-full"
                   @change="applyFilters"
-                >
-                  <option value="">{{ t('CRM_KANBAN.FILTERS.ALL') }}</option>
-                  <option
-                    v-for="status in followUpStatusOptions"
-                    :key="status.value"
-                    :value="status.value"
-                  >
-                    {{ status.label }}
-                  </option>
-                </select>
+                />
               </label>
 
               <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.RESPONSIBLE') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="filters.responsibleKind"
-                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">{{ t('CRM_KANBAN.FILTERS.ALL') }}</option>
-                  <option
-                    v-for="option in responsibleOptions"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
+                  :options="responsibleChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.RESPONSIBLE')"
+                  compact
+                  class="w-full"
+                />
               </label>
 
               <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.TEAM') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="filters.teamId"
-                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">{{ t('CRM_KANBAN.FILTERS.ALL') }}</option>
-                  <option
-                    v-for="team in teamOptions"
-                    :key="team.value"
-                    :value="team.value"
-                  >
-                    {{ team.label }}
-                  </option>
-                </select>
+                  :options="teamChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.TEAM')"
+                  compact
+                  class="w-full"
+                />
               </label>
 
               <div class="grid gap-1">
@@ -2068,40 +2058,26 @@ onMounted(async () => {
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.STALE') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="filters.staleDays"
-                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.FILTERS.STALE_PLACEHOLDER') }}
-                  </option>
-                  <option
-                    v-for="option in staleOptions"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
+                  :options="staleChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.STALE')"
+                  compact
+                  class="w-full"
+                />
               </label>
 
               <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.LINKED') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="filters.standalone"
-                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">{{ t('CRM_KANBAN.FILTERS.ALL') }}</option>
-                  <option
-                    v-for="option in linkedOptions"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
+                  :options="linkedChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.LINKED')"
+                  compact
+                  class="w-full"
+                />
               </label>
 
               <label
@@ -2120,19 +2096,13 @@ onMounted(async () => {
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.RESULT') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="filters.result"
-                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">{{ t('CRM_KANBAN.FILTERS.ALL') }}</option>
-                  <option
-                    v-for="result in resultOptions"
-                    :key="result.value"
-                    :value="result.value"
-                  >
-                    {{ result.label }}
-                  </option>
-                </select>
+                  :options="resultChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.RESULT')"
+                  compact
+                  class="w-full"
+                />
               </label>
 
               <div class="flex items-center justify-between gap-2 pt-1">
@@ -2561,21 +2531,13 @@ onMounted(async () => {
         <span class="text-xs font-medium text-n-slate-11">
           {{ t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_LABEL') }}
         </span>
-        <select
+        <ChoiceSelect
           v-model="deleteStageTargetId"
-          class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-        >
-          <option value="" disabled>
-            {{ t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_PLACEHOLDER') }}
-          </option>
-          <option
-            v-for="option in deleteStageOptions"
-            :key="option.id"
-            :value="option.id"
-          >
-            {{ option.name }}
-          </option>
-        </select>
+          :options="deleteStageChoices"
+          :placeholder="t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_PLACEHOLDER')"
+          :aria-label="t('CRM_KANBAN.CONFIRM.DELETE_STAGE_TARGET_LABEL')"
+          class="w-full"
+        />
       </div>
     </ConfirmModal>
   </main>
