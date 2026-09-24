@@ -1,9 +1,15 @@
 <script setup>
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
+import { decisionMakerChoices } from '../../utils/decisionMakerTypes';
 
 const { t } = useI18n();
 const { form } = useProspectingSearchContext();
+
+// Tipo de decisor: frente de local (#677, E1 frente C).
+const decisionMakerOptions = computed(() => decisionMakerChoices(t));
 </script>
 
 <template>
@@ -30,6 +36,16 @@ const { form } = useProspectingSearchContext();
         min="1"
         max="60"
         class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
+      />
+    </label>
+    <label class="grid gap-1">
+      <span class="text-xs font-medium text-n-slate-11">
+        {{ t('PROSPECTING.DECISION_MAKER.LABEL') }}
+      </span>
+      <ChoiceSelect
+        v-model="form.decision_maker_type"
+        :options="decisionMakerOptions"
+        :aria-label="t('PROSPECTING.DECISION_MAKER.LABEL')"
       />
     </label>
   </div>

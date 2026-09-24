@@ -322,6 +322,7 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
         location_longitude: '-49.2733',
         location_label: 'Curitiba, PR, Brasil',
         filters: { auto_expand_radius: true },
+        decision_maker_type: 'owner',
         advanced_filters: {
           has_website: 'yes',
           has_phone: '',

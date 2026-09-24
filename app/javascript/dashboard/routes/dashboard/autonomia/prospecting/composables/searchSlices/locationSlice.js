@@ -1,6 +1,8 @@
 // Frente de local, país e endereço: o local digitado e confirmado, a área
-// (raio ou área visível do mapa) e o pedaço do pedido que descreve onde buscar.
+// (raio ou área visível do mapa), o erro do Google ao sugerir ou confirmar o
+// local, o tipo de decisor e o pedaço do pedido que descreve onde buscar.
 import { ref } from 'vue';
+import { DEFAULT_DECISION_MAKER_TYPE } from '../../utils/decisionMakerTypes';
 
 export const locationCenter = locationDetails => {
   if (!locationDetails?.latitude || !locationDetails?.longitude) return null;
@@ -40,6 +42,7 @@ export const locationSlice = {
     area_type: 'radius',
     radius_km: 1,
     auto_expand_radius: false,
+    decision_maker_type: DEFAULT_DECISION_MAKER_TYPE,
   }),
   createState: () => ({
     isSuggestingLocations: ref(false),
@@ -47,17 +50,20 @@ export const locationSlice = {
     locationDetails: ref(null),
     confirmedLocation: ref(''),
     previewViewport: ref(null),
+    locationError: ref(''),
   }),
   reset: ({
     locationSuggestions,
     locationDetails,
     confirmedLocation,
     previewViewport,
+    locationError,
   }) => {
     locationSuggestions.value = [];
     locationDetails.value = null;
     confirmedLocation.value = '';
     previewViewport.value = null;
+    locationError.value = '';
   },
   toPayload: state => {
     const { form, locationDetails, selectedLocationLabel } = state;
@@ -77,6 +83,7 @@ export const locationSlice = {
         filters: {
           auto_expand_radius: form.value.auto_expand_radius,
         },
+        decision_maker_type: form.value.decision_maker_type,
       },
     };
   },

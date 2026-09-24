@@ -1,7 +1,10 @@
 // Frente de local: autocomplete do local, confirmação pelo detalhe do Google e
 // a área desenhada no mapa de prévia. O estado, o reset de "Nova busca" e o
 // pedaço do pedido ficam em searchSlices/locationSlice.js.
+// Erro do Google aparece no campo (locationError), com a frase em português
+// que o backend manda; antes a lista sumia e ninguém sabia por quê (#677).
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { locationCenter } from './searchSlices/locationSlice';
 
@@ -9,6 +12,7 @@ const LOCATION_SUGGESTION_DELAY_MS = 280;
 const LOCATION_QUERY_MIN_LENGTH = 3;
 
 export const useSearchLocation = state => {
+  const { t } = useI18n();
   const {
     form,
     locationSuggestions,
@@ -16,8 +20,12 @@ export const useSearchLocation = state => {
     locationDetails,
     confirmedLocation,
     previewViewport,
+    locationError,
   } = state;
   let locationSuggestionTimer;
+
+  const errorMessage = (error, fallback) =>
+    error?.response?.data?.error || fallback;
 
   const fetchLocationSuggestions = () => {
     window.clearTimeout(locationSuggestionTimer);
@@ -33,8 +41,13 @@ export const useSearchLocation = state => {
         const { data } =
           await AutonomiaProspectingAPI.getLocationSuggestions(query);
         locationSuggestions.value = data.payload || [];
-      } catch {
+        locationError.value = '';
+      } catch (error) {
         locationSuggestions.value = [];
+        locationError.value = errorMessage(
+          error,
+          t('PROSPECTING.LOCATION_ERRORS.SUGGESTIONS')
+        );
       } finally {
         isSuggestingLocations.value = false;
       }
@@ -45,6 +58,7 @@ export const useSearchLocation = state => {
     confirmedLocation.value = '';
     locationDetails.value = null;
     previewViewport.value = null;
+    locationError.value = '';
     fetchLocationSuggestions();
   };
 
@@ -75,10 +89,15 @@ export const useSearchLocation = state => {
         confirmedLocation.value = suggestion.text || form.value.location.trim();
       }
       previewViewport.value = null;
-    } catch {
+      locationError.value = '';
+    } catch (error) {
       locationDetails.value = null;
       confirmedLocation.value = '';
       previewViewport.value = null;
+      locationError.value = errorMessage(
+        error,
+        t('PROSPECTING.LOCATION_ERRORS.DETAILS')
+      );
     }
   };
 
