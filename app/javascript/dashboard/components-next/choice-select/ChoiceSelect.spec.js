@@ -170,8 +170,10 @@ describe('ChoiceSelect', () => {
     expect(trigger.attributes('disabled')).toBeDefined();
   });
 
-  it('não impõe largura mínima: quem usa define a largura', () => {
+  it('largura mínima estável fora do compacto, como o select nativo', async () => {
     wrapper = mountSelect();
+    expect(wrapper.classes()).toContain('min-w-40');
+    await wrapper.setProps({ compact: true });
     expect(wrapper.classes()).not.toContain('min-w-40');
   });
 
@@ -248,6 +250,50 @@ describe('ChoiceSelect', () => {
       expect(style.top).toBe('144px');
       expect(style.left).toBe('30px');
       expect(style.minWidth).toBe('200px');
+      expect(style.maxHeight).toBe('320px');
+    });
+
+    describe('com a janela baixa', () => {
+      const { innerHeight } = window;
+      const manyOptions = Array.from({ length: 12 }, (_, index) => ({
+        value: `v${index}`,
+        label: `Opção ${index}`,
+      }));
+      const openAt = async (top, height) => {
+        window.innerHeight = height;
+        wrapper = mountSelect('v0', { options: manyOptions });
+        const trigger = wrapper.get('[role="combobox"]');
+        trigger.element.getBoundingClientRect = () => ({
+          top,
+          bottom: top + 40,
+          left: 30,
+          right: 230,
+          width: 200,
+          height: 40,
+        });
+        await trigger.trigger('click');
+        return wrapper.get('[role="listbox"]').element.style;
+      };
+
+      afterEach(() => {
+        window.innerHeight = innerHeight;
+      });
+
+      it('abre para cima e limita a altura ao espaço disponível', async () => {
+        // 560 px de janela: 280 em cima, 240 embaixo; 12 opções não cabem.
+        const style = await openAt(280, 560);
+        expect(style.top).toBe('');
+        expect(style.bottom).toBe('284px');
+        expect(style.maxHeight).toBe('268px');
+      });
+
+      it('abre para baixo e limita a altura ao espaço disponível', async () => {
+        // 560 px de janela: 320 embaixo, 200 em cima; fica embaixo, com a margem.
+        const style = await openAt(200, 560);
+        expect(style.bottom).toBe('');
+        expect(style.top).toBe('244px');
+        expect(style.maxHeight).toBe('308px');
+      });
     });
   });
 
@@ -305,6 +351,11 @@ describe('ChoiceSelect', () => {
       const trigger = host.get('[role="combobox"]');
       await trigger.trigger('click');
       expect(trigger.attributes('aria-expanded')).toBe('true');
+      // O Vue ignora um evento do mesmo milissegundo em que o handler foi
+      // montado; espera o relógio andar, como num clique de verdade.
+      await new Promise(resolve => {
+        setTimeout(resolve, 2);
+      });
 
       // O jsdom trata a lista (tabindex) como conteúdo interativo e não ativa o
       // label; o Chrome ativa. O contrato é o clique sair cancelado.

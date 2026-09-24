@@ -36,6 +36,8 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   invalid: { type: Boolean, default: false },
   // Altura menor para barras de filtro; a área de toque continua com 44 px.
+  // Fora do compacto, a raiz tem largura mínima (min-w-40), como o select
+  // nativo, que não encolhe até o texto escolhido.
   compact: { type: Boolean, default: false },
 });
 
@@ -103,21 +105,29 @@ const selectedLabel = computed(
 );
 
 // Coordenadas da lista (position: fixed), a partir do botão. Largura mínima é a
-// do botão; opções mais longas alargam a lista até a borda da tela.
+// do botão; opções mais longas alargam a lista até a borda da tela. A altura é
+// limitada ao espaço do lado escolhido: a lista fixa não volta rolando a página,
+// então o que passasse da tela ficaria inalcançável.
 const place = () => {
   const rect = trigger.value?.getBoundingClientRect();
   if (!rect) return;
   const below = window.innerHeight - rect.bottom;
+  const spaceBelow = below - LIST_GAP - VIEWPORT_MARGIN;
+  const spaceAbove = rect.top - LIST_GAP - VIEWPORT_MARGIN;
   const needed = Math.min(
     LIST_MAX_HEIGHT,
     flatOptions.value.length * OPTION_HEIGHT
   );
   // Abre para cima só quando não cabe embaixo e há mais espaço em cima.
-  const opensUpward = below < needed && rect.top > below;
+  const opensUpward = spaceBelow < needed && spaceAbove > spaceBelow;
+  const space = opensUpward ? spaceAbove : spaceBelow;
+  // Uma opção inteira no mínimo, mesmo em tela minúscula.
+  const maxHeight = Math.max(OPTION_HEIGHT, Math.min(LIST_MAX_HEIGHT, space));
   listStyle.value = {
     left: `${rect.left}px`,
     minWidth: `${rect.width}px`,
     maxWidth: `${window.innerWidth - rect.left - VIEWPORT_MARGIN}px`,
+    maxHeight: `${maxHeight}px`,
     ...(opensUpward
       ? { bottom: `${window.innerHeight - rect.top + LIST_GAP}px` }
       : { top: `${rect.bottom + LIST_GAP}px` }),
@@ -255,7 +265,7 @@ onClickOutside(
 </script>
 
 <template>
-  <div ref="root">
+  <div ref="root" :class="{ 'min-w-40': !compact }">
     <button
       ref="trigger"
       type="button"
