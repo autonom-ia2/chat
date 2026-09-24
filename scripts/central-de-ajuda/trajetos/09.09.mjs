@@ -4,13 +4,12 @@
 // app/javascript/dashboard/components-next/Companies/) em 2026-09-24.
 //
 // Trajeto: barra lateral → Empresas → menu de três pontinhos → Adicionar
-// empresa → nome e domínio → Adicionar empresa (salvar) → ficha da empresa
+// empresa → nome e domínio → Salvar empresa → ficha da empresa
 // → aba Contatos → Adicionar contato → busca → Vincular contato.
 //
-// Achado de produto (não corrigido aqui, só registrado): o item do menu
-// "Adicionar empresa" (COMPANIES.ACTIONS.CREATE) e o botão de salvar do
-// diálogo (COMPANIES.CREATE.ACTIONS.SAVE) usam o MESMO texto — "Adicionar
-// empresa" aparece duas vezes na tela em momentos diferentes.
+// O botão de salvar do diálogo (COMPANIES.CREATE.ACTIONS.SAVE) passou a
+// "Salvar empresa" (#650); antes repetia o texto do item de menu. O vídeo
+// publicado ainda mostra o texto antigo até ser regravado.
 
 export const id = '09.09';
 
@@ -85,9 +84,9 @@ export const cenas = [
     zoom: 1.8,
   },
   {
-    legenda: 'Clique em Adicionar empresa',
+    legenda: 'Clique em Salvar empresa',
     acao: 'mover e clicar',
-    alvo: { texto: 'Adicionar empresa' },
+    alvo: { texto: 'Salvar empresa' },
     zoom: 1.6,
     // O clique salva e navega para a ficha da empresa — mesmo ajuste de
     // pausas usado no 09.03 para "Ver detalhes" (o alvo some da tela antes

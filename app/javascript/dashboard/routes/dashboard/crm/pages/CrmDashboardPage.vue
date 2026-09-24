@@ -8,6 +8,7 @@ import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ReportMetricCard from 'dashboard/routes/dashboard/settings/reports/components/ReportMetricCard.vue';
 import BarChart from 'shared/components/charts/BarChart.vue';
 
@@ -97,6 +98,19 @@ const selectedPeriod = computed(
 );
 
 const hasPipelines = computed(() => pipelines.value.length > 0);
+// value em String, como no select nativo antigo (value=String(pipeline.id)).
+const pipelineChoices = computed(() =>
+  pipelines.value.map(pipeline => ({
+    value: String(pipeline.id),
+    label: pipeline.name,
+  }))
+);
+const periodChoices = computed(() =>
+  PERIODS.map(period => ({
+    value: period.key,
+    label: t(`CRM_KANBAN.DASHBOARD.PERIOD.${period.key}`),
+  }))
+);
 
 const requestParams = computed(() => {
   const until = new Date();
@@ -419,33 +433,21 @@ onMounted(async () => {
       <div v-if="hasPipelines" class="flex flex-wrap items-center gap-3">
         <label class="flex items-center gap-2 text-sm text-n-slate-11">
           {{ t('CRM_KANBAN.DASHBOARD.PIPELINE_LABEL') }}
-          <select
+          <ChoiceSelect
             v-model="selectedPipelineId"
-            class="h-9 px-2 text-sm rounded-lg border bg-n-alpha-black2 border-n-weak text-n-slate-12"
-          >
-            <option
-              v-for="pipeline in pipelines"
-              :key="pipeline.id"
-              :value="String(pipeline.id)"
-            >
-              {{ pipeline.name }}
-            </option>
-          </select>
+            :options="pipelineChoices"
+            :aria-label="t('CRM_KANBAN.DASHBOARD.PIPELINE_LABEL')"
+            compact
+          />
         </label>
         <label class="flex items-center gap-2 text-sm text-n-slate-11">
           {{ t('CRM_KANBAN.DASHBOARD.PERIOD_LABEL') }}
-          <select
+          <ChoiceSelect
             v-model="selectedPeriodKey"
-            class="h-9 px-2 text-sm rounded-lg border bg-n-alpha-black2 border-n-weak text-n-slate-12"
-          >
-            <option
-              v-for="period in PERIODS"
-              :key="period.key"
-              :value="period.key"
-            >
-              {{ t(`CRM_KANBAN.DASHBOARD.PERIOD.${period.key}`) }}
-            </option>
-          </select>
+            :options="periodChoices"
+            :aria-label="t('CRM_KANBAN.DASHBOARD.PERIOD_LABEL')"
+            compact
+          />
         </label>
         <Button
           icon="i-lucide-refresh-cw"

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ToggleSwitch from 'dashboard/components-next/switch/Switch.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
   modelValue: { type: Number, default: null },
@@ -28,8 +29,7 @@ const unitOptions = computed(() => [
   { value: 'Days', label: t('CRM_SLA.TIME_UNITS.DAYS') },
 ]);
 
-// The number field and the unit select share THIS class so their box model is
-// byte-identical (same height/border/radius/padding) — they line up exactly.
+// Same height as the unit ChoiceSelect (h-10) so the two line up.
 const fieldClass =
   'reset-base box-border h-10 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand';
 
@@ -86,19 +86,12 @@ const onThresholdInput = event => {
           class="w-24 shrink-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           @input="onThresholdInput"
         />
-        <select
+        <ChoiceSelect
           v-model="unitModel"
-          :class="fieldClass"
-          class="!m-0 w-32 shrink-0 hover:cursor-pointer"
-        >
-          <option
-            v-for="option in unitOptions"
-            :key="option.value"
-            :value="option.value"
-          >
-            {{ option.label }}
-          </option>
-        </select>
+          :options="unitOptions"
+          :aria-label="t('CRM_SLA.TIME_UNIT_LABEL', { metric: label })"
+          class="w-32 shrink-0"
+        />
       </template>
     </div>
     <p

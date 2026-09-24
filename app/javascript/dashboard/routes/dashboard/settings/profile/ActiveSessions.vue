@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { formatDistanceToNow, getUnixTime, parseISO } from 'date-fns';
+import { getUnixTime, parseISO } from 'date-fns';
+import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
 import { useAlert } from 'dashboard/composables';
 import authAPI from 'dashboard/api/auth';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
@@ -10,15 +11,12 @@ import { SESSION_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const exactTimestamp = useExactTimestamp();
 const sessions = ref([]);
 const loading = ref(false);
 
-const relativeTime = dateStr => {
-  if (!dateStr) return '';
-  return formatDistanceToNow(parseISO(dateStr), { addSuffix: true });
-};
+const relativeTime = dateStr => relativeTimeFromISO(dateStr, locale.value);
 
 const exactTime = dateStr =>
   dateStr ? exactTimestamp(getUnixTime(parseISO(dateStr))) : '';

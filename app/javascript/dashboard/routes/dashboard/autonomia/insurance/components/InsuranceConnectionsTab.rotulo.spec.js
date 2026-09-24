@@ -14,7 +14,7 @@ import InsuranceConnectionsTab from './InsuranceConnectionsTab.vue';
 // fiança locatícia é OUTRO produto no portal (id 23). O corretor lia na tela um produto diferente
 // do que ia cotar. O slug não pode mudar — já viajou para o banco — então o rótulo passou a viajar
 // junto, vindo do adapter (`label`), que lê o portal.
-withFullI18n();
+withFullI18n('pt_BR');
 
 const api = vi.hoisted(() => ({
   getConnection: vi.fn(),
@@ -30,6 +30,10 @@ vi.mock('dashboard/composables/useCanManage', async () => {
 
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: api }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('shared/composables/useBranding', async () => {
+  const { ref } = await import('vue');
+  return { useBranding: () => ({ installationName: ref('Hub2You') }) };
+});
 
 const conexaoCom = produto => ({
   provider: 'agger',

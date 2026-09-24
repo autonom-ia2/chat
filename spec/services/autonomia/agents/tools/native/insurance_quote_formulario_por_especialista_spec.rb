@@ -63,7 +63,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(described_class.params_for(lia)).to eq(de_sempre)
       expect(described_class.params_for(lia, especialista: especialista('cotacao_auto'))).to eq(de_sempre)
       expect(described_class.params_for(lia, especialista: proprio)).to eq(de_sempre)
-      expect(builder::ESPECIALISTAS.pluck(:ramo)).to eq(%w[auto residencial])
+      expect(builder::ESPECIALISTAS.pluck(:ramo)).to eq(%w[auto residencial empresarial])
     end
   end
 

@@ -233,12 +233,20 @@ const onKeydown = event => {
     return;
   }
   event.preventDefault();
+  // Esc com a lista aberta só fecha a lista, como no popup do select nativo:
+  // não chega aos atalhos da página (gaveta, modal), que fechariam junto.
+  if (action.type === 'close' && isOpen.value) event.stopPropagation();
   if (action.type === 'open') show(action.active);
   else if (action.type === 'move') active.value = action.active;
   else if (action.type === 'commit' && disabledFlags.value[action.active])
     close();
   else if (action.type === 'commit') commit(action.active);
-  else close();
+  else {
+    // Como no select nativo, o Escape que fecha a lista para aqui: não chega
+    // ao modal ou popover em volta, que fechariam junto.
+    if (isOpen.value) event.stopPropagation();
+    close();
+  }
 };
 
 const onBlur = event => {
@@ -383,7 +391,7 @@ onClickOutside(
             }"
             @pointerdown.prevent
             @pointermove="active = index"
-            @click="commit(index)"
+            @click.prevent="commit(index)"
           >
             <span class="truncate">{{ option.label }}</span>
             <span

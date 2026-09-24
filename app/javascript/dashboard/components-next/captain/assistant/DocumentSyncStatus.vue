@@ -38,7 +38,7 @@ const emit = defineEmits(['retry']);
 
 const exactTimestamp = useExactTimestamp();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const SECONDS_PER_HOUR = 3600;
 
@@ -93,7 +93,7 @@ const label = computed(() => {
   if (isFailed.value) return t('CAPTAIN.DOCUMENTS.SYNC_STATUS.FAILED');
   if (hasBeenSynced.value)
     return t('CAPTAIN.DOCUMENTS.SYNC_STATUS.SYNCED', {
-      time: dynamicTime(props.lastSyncedAt),
+      time: dynamicTime(props.lastSyncedAt, locale.value),
     });
   return t('CAPTAIN.DOCUMENTS.SYNC_STATUS.NEVER_SYNCED');
 });

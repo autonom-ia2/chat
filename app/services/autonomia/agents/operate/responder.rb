@@ -148,6 +148,7 @@ module Autonomia
           return unless released
 
           ::Autonomia::Agents::Operate::EventLogger.handed_off(agent: @agent, conversation: @conversation, result: result)
+          ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation)
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] handoff_signal_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
           nil

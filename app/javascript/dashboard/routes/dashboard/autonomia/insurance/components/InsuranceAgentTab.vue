@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import AutonomiaInsuranceAPI from 'dashboard/api/autonomiaInsurance';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useBranding } from 'shared/composables/useBranding';
 
 // Aba Agente (PRD §18-19). Até 08/09/2026 era um CARTAZ: o botão "Criar Agente de Cotação" apenas
 // navegava para o construtor conversacional, e quem clicasse saía de lá com um agente `custom` sem
@@ -15,6 +16,9 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 // A montagem inteira mora no backend (`Insurance::QuoteAgent::Builder`), porque um agente montado a
 // partir do que a tela mandar seria diferente a cada versão do frontend.
 const { t } = useI18n();
+// Nome da instalação (Hub2You numa stack, Autonomia na outra): nenhuma marca fixa no texto.
+const { installationName } = useBranding();
+const brand = computed(() => ({ installationName: installationName.value }));
 const router = useRouter();
 const canManage = useCanManage('insurance_manage');
 
@@ -116,7 +120,7 @@ const goToAgents = () => {
             {{ t('INSURANCE.AGENT.TITLE') }}
           </h2>
           <p class="text-sm text-n-slate-11">
-            {{ t('INSURANCE.AGENT.DESCRIPTION') }}
+            {{ t('INSURANCE.AGENT.DESCRIPTION', brand) }}
           </p>
         </div>
       </div>
@@ -135,7 +139,7 @@ const goToAgents = () => {
       </ul>
 
       <p class="mt-5 text-xs text-n-slate-11">
-        {{ t('INSURANCE.AGENT.LOCKED_NOTE') }}
+        {{ t('INSURANCE.AGENT.LOCKED_NOTE', brand) }}
       </p>
 
       <!-- Já existe: um por conta, e a tela mostra qual é em vez de oferecer criar de novo. -->

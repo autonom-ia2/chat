@@ -1,9 +1,11 @@
 <script setup>
+import { computed } from 'vue';
 import { useStore } from 'dashboard/composables/store';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import ContactForm from './ContactForm.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -32,6 +34,9 @@ useKeyboardEvents({
     allowOnFocusedInput: true,
   },
 });
+
+// #646 — a gaveta ocupa o canto do lançador do Guia/Copilot; sinaliza que está aberta.
+useFixedPanelPresence(computed(() => props.show));
 </script>
 
 <template>

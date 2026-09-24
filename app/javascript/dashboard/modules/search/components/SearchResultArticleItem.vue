@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
@@ -21,6 +22,8 @@ const props = defineProps({
   updatedAt: { type: Number, default: 0 },
 });
 
+const { locale: uiLocale } = useI18n();
+
 const exactTimestamp = useExactTimestamp();
 
 const MAX_LENGTH = 300;
@@ -33,7 +36,7 @@ const navigateTo = computed(() => {
 
 const updatedAtTime = computed(() => {
   if (!props.updatedAt) return '';
-  return dynamicTime(props.updatedAt);
+  return dynamicTime(props.updatedAt, uiLocale.value);
 });
 
 const truncatedContent = computed(() => {
