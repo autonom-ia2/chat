@@ -51,7 +51,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     render json: {
       payload: {
         search: search_payload(result.search),
-        leads: result.leads.map { |lead| lead_payload(lead) }
+        leads: result.leads.map { |lead| lead_payload(lead, result.search) }
       }
     }, status: :created
   rescue ActiveRecord::RecordInvalid => e
@@ -188,7 +188,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       ),
       cached_from_search_id: search.metadata.to_h['cached_from_search_id']
     }
-    payload['leads'] = leads.map { |lead| lead_payload(lead) } if include_leads
+    payload['leads'] = leads.map { |lead| lead_payload(lead, search) } if include_leads
     payload
   end
 
@@ -199,7 +199,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     leads_scope.where(id: lead_ids).index_by(&:id).values_at(*lead_ids).compact
   end
 
-  def lead_payload(lead)
+  def lead_payload(lead, search = nil)
     lead.as_json(
       only: [
         :id, :provider, :provider_place_id, :name, :phone, :website, :address, :city, :state, :country,
@@ -221,7 +221,15 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       reviews_payload(lead)
     ).merge(
       whatsapp_payload(lead)
+    ).merge(
+      search_rank_payload(lead, search)
     )
+  end
+
+  # Posição do lead nesta busca, guardada nela (#677). Busca anterior a isso não tem: fica a posição do lead.
+  def search_rank_payload(lead, search)
+    rank = search&.metadata.to_h.dig('lead_ranks', lead.id.to_s)
+    rank.nil? ? {} : { 'search_rank' => rank }
   end
 
   def page

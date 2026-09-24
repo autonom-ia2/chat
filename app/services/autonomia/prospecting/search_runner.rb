@@ -41,6 +41,7 @@ class Autonomia::Prospecting::SearchRunner
       search.area_config = area_config_for_radius(provider_result[:radius])
       search.metadata = search.metadata.to_h.merge(
         'lead_ids' => leads.map(&:id),
+        'lead_ranks' => lead_ranks(leads),
         'results_count' => leads.size,
         'search_filters' => search_filters,
         'requested_radius' => radius,
@@ -213,6 +214,12 @@ class Autonomia::Prospecting::SearchRunner
       retried = true
       retry
     end
+  end
+
+  # O lead é um só por conta e o search_rank dele é o da busca mais recente. A busca guarda a posição de cada lead
+  # dela, para o card e o refino por faixa de posição ao reabrir (#677). Prioridade e pontuação ainda são do lead.
+  def lead_ranks(leads)
+    leads.to_h { |lead| [lead.id.to_s, lead.search_rank] }
   end
 
   def lost_race?(error)
@@ -636,6 +643,7 @@ class Autonomia::Prospecting::SearchRunner
       metadata: metadata.merge(crm_target_metadata)
                         .merge(scoring_metadata).merge(
                           'lead_ids' => leads.map(&:id),
+                          'lead_ranks' => search.metadata.to_h['lead_ranks'],
                           'results_count' => leads.size,
                           'cached_from_search_id' => search.id,
                           'search_filters' => search_filters
