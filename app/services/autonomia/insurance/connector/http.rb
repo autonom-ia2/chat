@@ -13,6 +13,10 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   # esse invariante ("a 60s call cannot hold the turn"). O adapter responde `quote/schema` e
   # `quote/validate` sem tocar no portal — o que sobra é o cold start do Lambda.
   CONFERENCIA_TIMEOUT = 10
+  # A BUSCA DE ATIVIDADE NÃO CABE NOS 10 s (conversa 7057, 24/09/2026): cada termo leva ~6 s no portal e a lista das
+  # seguradoras prontas de 2 a 18 s a frio. Mesmo com tudo em paralelo no adapter, medido de 8 a 10 s com o login;
+  # com 10 s de teto a Lia desistia da busca que ia responder.
+  BUSCA_DE_ATIVIDADE_TIMEOUT = 30
 
   KIND_BY_STATUS = {
     400 => :protocol,
@@ -89,7 +93,7 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
   # AS OPÇÕES DE ATIVIDADE DE CADA SEGURADORA (empresarial, chat#641): grátis, sem cálculo, de 1 a 3 termos.
   def atividade_lookup(provider:, session:, product:, termos:)
     invoke("/v1/#{provider}/atividade/lookup", { session: session, product: product, termos: termos },
-           read_timeout: CONFERENCIA_TIMEOUT)
+           read_timeout: BUSCA_DE_ATIVIDADE_TIMEOUT)
   end
 
   # A COTAÇÃO COMO O PORTAL A GRAVOU (entrega 2, termo 8): a leitura de volta que prova que um campo

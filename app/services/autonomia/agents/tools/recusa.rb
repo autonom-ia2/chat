@@ -109,6 +109,8 @@ module Autonomia::Agents::Tools::Recusa
       "faltando=#{campos(extra[:faltando])} detalhe=#{detalhe(extra[:detalhe])} #{recusados(extra[:recusados])}" \
       "descricao=\"#{MOTIVOS.fetch(motivo, SEM_DESCRICAO)}\""
     )
+    # E para a equipe, se a conversa for encaminhada (`NotaDoEncaminhamento`): só o código, nunca dado do cliente.
+    ::Autonomia::Agents::Tools::RecusasRecentes.anotar(Integer(conversa, exception: false), motivo)
     nil
   rescue StandardError
     # Sem logger não há para onde avisar; e a recusa ao modelo vale mais que a nossa linha.

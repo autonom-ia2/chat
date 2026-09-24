@@ -61,16 +61,16 @@ module Autonomia::Insurance::Connector::Mock::Leituras
       )
     end
 
-    { 'porTermo' => validos.map { |termo| { 'termo' => termo, 'porSeguradora' => atividades_do_mock(termo) } } }
+    { 'por_termo' => validos.map { |termo| { 'termo' => termo, 'por_seguradora' => atividades_do_mock(termo) } } }
   end
 
   def atividades_do_mock(termo)
     [
-      { 'insurerCode' => '8', 'insurerName' => 'Porto Seguro',
+      { 'insurer_code' => '8', 'insurer_name' => 'Porto Seguro',
         'opcoes' => [{ 'key' => '484', 'value' => "#{termo.upcase} - TERREO/SOBRADO" },
                      { 'key' => '487', 'value' => "#{termo.upcase} - A PARTIR DO PRIMEIRO ANDAR" }] },
-      { 'insurerCode' => '4', 'insurerName' => 'Hdi', 'opcoes' => [{ 'key' => '700160', 'value' => termo.upcase }] },
-      { 'insurerCode' => '7', 'insurerName' => 'Zurich', 'opcoes' => [] }
+      { 'insurer_code' => '4', 'insurer_name' => 'Hdi', 'opcoes' => [{ 'key' => '700160', 'value' => termo.upcase }] },
+      { 'insurer_code' => '7', 'insurer_name' => 'Zurich', 'opcoes' => [] }
     ]
   end
 

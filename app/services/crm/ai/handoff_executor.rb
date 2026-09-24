@@ -180,6 +180,7 @@ module Crm
           stamp_handoff_metadata!(invited: true, invited_agent: agent)
           log_activity!(agent, event_type: 'ai_handoff_invite')
           registrar('invited', agente: agent)
+          ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation)
           outcome = Result.new(status: :invited, assignee: agent)
         end
         outcome || skip('invite_failed')
@@ -212,6 +213,8 @@ module Crm
         @conversation.bot_handoff!
         # Agente Autonom.ia na caixa? Registra o handoff no histórico dele (aba Desempenho). Best-effort.
         ::Autonomia::Agents::Operate::EventLogger.handed_off_by_inbox(conversation: @conversation, reason: 'human_requested')
+        # O que as ferramentas não conseguiram fazer, para quem assume (conversa 7057). Best-effort.
+        ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation)
         true
       end
 
