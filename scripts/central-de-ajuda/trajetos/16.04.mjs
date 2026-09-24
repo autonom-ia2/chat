@@ -8,24 +8,16 @@
 // liga pelo mesmo caminho que o 16.01 já usa:
 // `Autonomia::Prospecting::Config.enable_for!`, só em dev, idempotente.
 //
-// Chaves do Google: os campos são `type="password"` de origem
-// (ProspectingSettingsPage.vue) — já nascem mascarados, então digitar uma
-// chave de exemplo aqui não viola a regra de "nenhuma chave legível". O
-// vídeo NÃO clica em Rodar busca nem em nada que chame o Google — Salvar
-// só grava a chave (texto) no banco local da conta, não testa contra a
-// API do Google.
+// Tela da E0 (#691): a conta não cola chave nem ajusta limite. As chaves do
+// Google são da plataforma (ENV); a tela só mostra se estão prontas. Para o
+// vídeo mostrar o que o cliente vê em produção ("configuradas"), o servidor
+// local de gravação sobe com GOOGLE_PLACES_API_KEY e GOOGLE_MAPS_BROWSER_API_KEY
+// FICTÍCIAS e o preparar tira a conta do modo de demonstração. O vídeo não
+// dispara busca nem chama o Google.
 //
-// ACHADO DE PRODUTO: "Funil CRM padrão", "Etapa CRM padrão", "Forma
-// padrão de pesquisa" e "Perfil de score" são `<select>` nativos —
-// proibido pela regra do Rodrigo (18/09/2026). O roteiro usa a ação
-// `selecionar` do motor só no primeiro (Funil CRM padrão); os outros três
-// continuam escondidos no DOM quando a aba Score está ativa (a troca de
-// aba é só CSS, v-show) — sem seletor CSS único para distingui-los do
-// select da aba Geral, este roteiro só os MOSTRA, sem interagir.
-//
-// Trajeto: Configurações → Prospecção → aba Geral → Funil CRM padrão →
-// chave de busca de locais → chave de mapa → Limite diário → Enriquecimento
-// manual → Consumo → aba Score → Perfil de score e pesos → Salvar.
+// Trajeto: Configurações → Prospecção → Chaves do Google → Pesquisa de
+// empresa e decisor → Funil CRM padrão → Consumo → aba Score → Perfil de
+// score e pesos → Salvar.
 
 export const id = '16.04';
 
@@ -40,52 +32,42 @@ export async function preparar({ rodarRails }) {
   await rodarRails(`
 conta = Account.find(${login.contaId})
 Autonomia::Prospecting::Config.enable_for!(conta)
+# Tela como o cliente vê em produção: conta fora do modo de demonstração
+# (a chave do Google vem do ENV do servidor local de gravação, fictícia).
+setting = Autonomia::Prospecting::Setting.find_by!(account_id: conta.id)
+setting.update!(provider: 'google_places') unless setting.provider == 'google_places'
 puts "preparo-ok"
 `);
 }
 
 export const cenas = [
   {
-    legenda: 'Configurar chaves, limites e score da Prospecção',
+    legenda: 'Configurar a Prospecção',
     acao: 'ir para',
     url: `/app/accounts/${login.contaId}/settings/prospecting`,
-    aguardarTexto: 'Chave para busca de locais',
+    aguardarTexto: 'Chaves do Google',
     zoom: 1,
     duracaoMs: 2000,
+  },
+  {
+    legenda: 'Confira as Chaves do Google',
+    acao: 'parar',
+    alvo: { texto: 'Chaves do Google' },
+    zoom: 1.8,
+    duracaoMs: 1800,
+  },
+  {
+    legenda: 'Confira a Pesquisa de empresa e decisor',
+    acao: 'parar',
+    alvo: { texto: 'Pesquisa de empresa e decisor' },
+    zoom: 1.8,
+    duracaoMs: 1800,
   },
   {
     legenda: 'Escolha o Funil CRM padrão',
     acao: 'selecionar',
     alvo: { seletor: '[role="combobox"][aria-label="Funil CRM padrão"]' },
     valor: 'Funil Comercial',
-    zoom: 1.8,
-  },
-  {
-    legenda: 'Cole a chave para busca de locais',
-    acao: 'digitar',
-    alvo: { seletor: 'input[placeholder="Cole a chave de busca do Google"]' },
-    texto: ['AIzaSyDESNORTEADA-exemplo-places-0001'],
-    zoom: 1.8,
-  },
-  {
-    legenda: 'Cole a chave para exibir o mapa',
-    acao: 'digitar',
-    alvo: { seletor: 'input[placeholder="Cole a chave do mapa"]' },
-    texto: ['AIzaSyDESNORTEADA-exemplo-maps-0002'],
-    zoom: 1.8,
-  },
-  {
-    legenda: 'Ajuste o Limite diário de buscas',
-    acao: 'digitar',
-    alvo: { seletor: 'input[min="1"]' },
-    limparAntes: true,
-    texto: ['20'],
-    zoom: 1.8,
-  },
-  {
-    legenda: 'Marque Enriquecimento manual',
-    acao: 'mover e clicar',
-    alvo: { seletor: 'input[type="checkbox"]' },
     zoom: 1.8,
   },
   {
@@ -96,11 +78,6 @@ export const cenas = [
     duracaoMs: 1600,
   },
   {
-    // A troca de aba é só CSS (v-show), então os <select> da aba Geral
-    // continuam no DOM, escondidos — document.querySelector('select')
-    // sempre acharia o primeiro (Funil CRM), não o desta aba. Por isso
-    // esta cena só observa o perfil de score, sem interagir com o
-    // <select> — evitar um seletor ambíguo é melhor que um alvo errado.
     legenda: 'Abra a aba Score',
     acao: 'mover e clicar',
     alvo: { texto: 'Score' },
