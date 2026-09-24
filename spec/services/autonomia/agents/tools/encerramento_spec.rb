@@ -60,7 +60,20 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
   end
 
   def textos_na_conversa
-    conversation.messages.reload.where(sender_type: 'AgentBot').filter_map { |m| m.content.presence }
+    conversation.messages.reload.where(sender_type: 'AgentBot', private: false).filter_map { |m| m.content.presence }
+  end
+
+  # NINGUÉM ACEITOU (chat#612): a ferramenta diz que nenhuma trouxe proposta e dá o texto da nota da equipe.
+  def ninguem_aceitou(tool, nota: "Recusas da cotação.\n- Sancor: \"Tipo de veículo não aceito.\"")
+    tool.class_eval do
+      define_method(:sem_aceitacao?) { |_handle| true }
+      define_method(:nota_da_equipe) { |_handle| nota.respond_to?(:call) ? nota.call : nota }
+    end
+    tool
+  end
+
+  def notas_internas
+    conversation.messages.reload.where(private: true).order(:id).to_a
   end
 
   describe 'cada passo cai sozinho, e o desfecho é a última coisa' do
@@ -256,6 +269,31 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       expect(eventos_disparados(run)).to eq(['encerrada_por_prazo'])
     end
 
+    # chat#612: nada falhou, ninguém aceitou. O evento é o neutro, e o motivo vai para a equipe numa nota interna,
+    # que nenhuma passada seguinte duplica.
+    it 'sem nada entregue e ninguem aceitou: sem_aceitacao, e a nota interna para a equipe uma vez so' do
+      run = execucao(handle: { Autonomia::Agents::ToolRun::INTENCOES => 1 })
+      tool = ninguem_aceitou(build_async_tool)
+
+      encerrar(run, tool)
+      described_class.new(run: run.reload, native: tool) { raise 'nao publica' }.encerrar
+
+      expect(eventos_disparados(run)).to eq(['sem_aceitacao'])
+      expect(notas_internas.map(&:content)).to eq(["Recusas da cotação.\n- Sancor: \"Tipo de veículo não aceito.\""])
+      expect(notas_internas.first.content_attributes['autonomia_nota_interna']).to eq(run.id.to_s)
+      expect(textos_na_conversa).to be_empty
+    end
+
+    it 'a nota que levanta nao cala o desfecho' do
+      run = execucao
+      tool = ninguem_aceitou(build_async_tool, nota: -> { raise ActiveRecord::StatementInvalid, 'banco fora' })
+
+      expect { encerrar(run, tool) }.not_to raise_error
+
+      expect(eventos_disparados(run)).to eq(['sem_aceitacao'])
+      expect(notas_internas).to be_empty
+    end
+
     it 'sem nada entregue e com envio incerto, a incerteza' do
       run = execucao(handle: { Autonomia::Agents::ToolRun::INTENCOES => 1 })
 
@@ -334,6 +372,34 @@ RSpec.describe Autonomia::Agents::Tools::Encerramento do
       concluir(run, build_async_tool)
 
       expect(eventos_disparados(run)).to eq(['falhou'])
+      expect(notas_internas).to be_empty
+    end
+
+    it 'ninguem aceitou: sem_aceitacao, e nao falha; a nota vai para a equipe' do
+      run = execucao
+
+      concluir(run, ninguem_aceitou(build_async_tool))
+
+      expect(eventos_disparados(run)).to eq(['sem_aceitacao'])
+      expect(notas_internas.size).to eq(1)
+    end
+
+    # O resultado entregue vence: quem recebeu o comparativo teve proposta, e a nota ainda sai para a equipe.
+    it 'com resultado entregue, conclui mesmo com recusas, e a nota sai' do
+      run = execucao(entregas: 1)
+
+      concluir(run, ninguem_aceitou(build_async_tool(resultado: true)))
+
+      expect(eventos_disparados(run)).to eq(['concluida'])
+      expect(notas_internas.size).to eq(1)
+    end
+
+    it 'a nota que levanta nao sobe da conclusao' do
+      run = execucao
+      tool = ninguem_aceitou(build_async_tool, nota: -> { raise ActiveRecord::StatementInvalid, 'banco fora' })
+
+      expect { concluir(run, tool) }.not_to raise_error
+      expect(eventos_disparados(run)).to eq(['sem_aceitacao'])
     end
 
     it 'com entrega aceita que nao e resultado, nenhum evento' do

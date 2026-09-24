@@ -53,6 +53,7 @@ class Autonomia::Agents::Tools::Encerramento
   def encerrar
     entregou = adquiriu_o_trabalho? && etapa('entregas') { entregar_o_que_resta }
     etapa('evento') { disparar(fecho(entregou)) }
+    etapa('nota') { anotar_para_a_equipe }
     entregou
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{@run.slug} #{e.class}")
@@ -68,6 +69,7 @@ class Autonomia::Agents::Tools::Encerramento
   # chegar ao `finish!`. Engolir aqui fecharia a linha em `done` sem desfecho.
   def concluir(evento = nil)
     disparar(evento.presence || conclusao)
+    etapa('nota') { anotar_para_a_equipe }
     nil
   end
 
@@ -142,6 +144,8 @@ class Autonomia::Agents::Tools::Encerramento
   end
 
   def falha_ou_incerteza
+    return 'sem_aceitacao' if sem_aceitacao?
+
     @run.envio_incerto? ? 'incerta' : 'falhou'
   end
 
@@ -152,6 +156,7 @@ class Autonomia::Agents::Tools::Encerramento
   def conclusao
     return 'valores_guardados' if valores_a_pedir?
     return 'concluida' if resultado_entregue?
+    return 'sem_aceitacao' if sem_aceitacao?
     return 'falhou' if @run.delivered_count.zero?
 
     nil
@@ -175,6 +180,18 @@ class Autonomia::Agents::Tools::Encerramento
   # A ferramenta confirma que o cliente tem resultado? Sem agente não há ferramenta, e a resposta é não.
   def resultado_entregue?
     ferramenta.present? && ferramenta.resultado_entregue?(handle_da_ferramenta)
+  end
+
+  # NINGUÉM ACEITOU? (chat#612.) Então nada falhou: o desfecho é `sem_aceitacao`. Sem agente não há ferramenta, e a
+  # resposta é não.
+  def sem_aceitacao?
+    ferramenta.present? && ferramenta.sem_aceitacao?(handle_da_ferramenta)
+  end
+
+  # O que a equipe precisa saber e o cliente não ouve (chat#612): a nota interna, depois do evento. Não levanta
+  # (`etapa`): a nota é cortesia, e o desfecho já saiu.
+  def anotar_para_a_equipe
+    ::Autonomia::Agents::Tools::NotaInterna.postar(@run, ferramenta.nota_da_equipe(handle_da_ferramenta)) if ferramenta.present?
   end
 
   # A ferramenta guardou resultado que não chegou ao cliente? Sem agente não há ferramenta, e a resposta é não.

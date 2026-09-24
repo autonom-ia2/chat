@@ -472,8 +472,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('bd633e21a8b6ff72fae2d8ff119601d3')
   end
 
+  # chat#612 (23/09/2026): a §G e a §J não contam recusa nem motivo ao cliente; só a instabilidade.
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('8947b30df9e7cf4b07bf46cb60feed2a')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('1fface70b29d1087c78468d6d71be77a')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

@@ -1,20 +1,19 @@
-# OS TEXTOS REAIS E OS DAS REVISÕES DO MOTIVO DE RECUSA (fatia 2 do #420: desde a sétima rodada o motivo vira categoria e
-# nenhum texto do portal vai ao modelo; desde a oitava, a categoria sai só por molde fechado). Usados por
-# `motivo_da_recusa_spec`, `resultado_por_seguradora_spec` e `insurance_quote_result_spec`.
+# OS TEXTOS REAIS E OS DAS REVISÕES DO MOTIVO DE RECUSA (fatia 2 do #420). Desde a chat#612 (23/09/2026) a única
+# categoria é a instabilidade; nenhum texto de recusa chega ao cliente, e o que a seguradora escreveu vai para a equipe.
+# Usados por `motivo_da_recusa_spec`, `resultado_por_seguradora_spec` e `insurance_quote_result_spec`.
 module TextosDoMotivo
-  VEICULO = Autonomia::Insurance::MotivoDaRecusa::VEICULO
   # chat#323: a instabilidade vem do `kind` `passageiro` do conector, sem ler o texto.
   INSTABILIDADE = Autonomia::Insurance::MotivoDaRecusa::INSTABILIDADE
 
   # As 39 mensagens do corpus do conector (`autonomia-adapters`, `origin/main` `ad4372a597`,
   # `test/fixtures/agger/motivos-de-recusa.sanitized.json`): `textoLimpo`, o `kind` e o status que o conector dá a cada
-  # uma, e a categoria que sai daqui. As três de risco que perderam a categoria na oitava rodada estão marcadas.
+  # uma, e a categoria que sai daqui.
   CORPUS = [
     ['Risco sem aceitação para este cenário nesta seguradora.', 'risco', 'declined', nil],
     ['Não temos um seguro disponível para este veículo. Gostaria de fazer uma nova cotação para outro carro?', 'risco', 'declined', nil],
-    ['Cotação não será realizada por motivos técnicos: Veículo acima da idade permitida', 'risco', 'declined', VEICULO],
-    ['Aceitacao Restrita, cobertura auto nao permitida para este modelo.', 'risco', 'declined', VEICULO],
-    ['O veículo não possui aceitação para a categoria tarifária informada.', 'risco', 'declined', VEICULO],
+    ['Cotação não será realizada por motivos técnicos: Veículo acima da idade permitida', 'risco', 'declined', nil],
+    ['Aceitacao Restrita, cobertura auto nao permitida para este modelo.', 'risco', 'declined', nil],
+    ['O veículo não possui aceitação para a categoria tarifária informada.', 'risco', 'declined', nil],
     ['Após análise dos dados do veículo, região de circulação e critérios internos de aceitação, estamos declinando o ' \
      'risco deste orçamento.', 'risco', 'declined', nil],
     ['O sistema de cálculo está indisponível, tente novamente em alguns instantes.', 'passageiro', 'declined', INSTABILIDADE],
@@ -45,14 +44,11 @@ module TextosDoMotivo
      'outro', 'declined', nil],
     ['Profissão deve ser especificada corretamente para que o cálculo prossiga.', 'outro', 'declined', nil],
     ['Ocorreu uma divergencia entre a comissao informada e a comissao permitida.', 'credencial', 'declined', nil],
-    ['Tipo de veículo não aceito.', 'risco', 'declined', VEICULO],
+    ['Tipo de veículo não aceito.', 'risco', 'declined', nil],
     ['Nenhum produto com seguro disponível para exibição.', 'outro', 'declined', nil],
     ['Só é permitida a contratação de [Faróis, Lanternas e Retrovisor] para veículos até 20 anos.', 'outro', 'declined', nil],
-    # Molde fechado (oitava rodada): o código do portal "2005" é palavra fora do molde.
     ['[2005] - -Contratação não permitida - Ano Modelo do Veículo', 'risco', 'declined', nil],
-    # Molde fechado (oitava rodada): "RP" é palavra fora do molde.
     ['Moto de ano/modelo sem aceitação - RP', 'risco', 'declined', nil],
-    # Molde fechado (oitava rodada): o código do portal "2159" é palavra fora do molde.
     ['[2159] - -Contratação não permitida - Categoria do Veículo', 'risco', 'declined', nil],
     ['UC00 - Risco fora das políticas de aceitação As Necessidades do Cliente, não foram salvas com sucesso, selecione nov',
      'risco', 'declined', nil],

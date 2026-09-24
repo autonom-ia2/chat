@@ -226,25 +226,25 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(Autonomia::Agents::ToolRun.where(slug: slug)).to be_empty
     end
 
-    it 'com preço de uma e motivo de outra: as duas falas, com a categoria e sem o texto do portal' do
+    it 'com preço de uma e recusa de outra: as duas falas, sem motivo e sem o texto do portal' do
       cotacao_da_conversa([porto, sancor])
       capturado = modelo(function_call: chamada('Sancor e Porto'))
 
       responder
 
       expect(saida(capturado)).to include('Porto Seguro fez proposta', 'Sancor não fez proposta nesta cotação.',
-                                          ferramenta::MOTIVOS.fetch('veiculo'))
+                                          ferramenta::SEM_MOTIVO)
       expect(saida(capturado)).not_to include(risco['text'])
       expect(saida(capturado)).to include(preco(porto))
     end
 
-    it 'sem preço a mostrar: o modelo recebe a categoria do motivo, e nenhum valor' do
+    it 'sem preço a mostrar: o modelo recebe só que ela não trouxe proposta, e nenhum valor' do
       cotacao_da_conversa([porto, sancor])
       capturado = modelo(function_call: chamada('Sancor'))
 
       responder
 
-      expect(saida(capturado)).to end_with("Sancor não fez proposta nesta cotação. #{ferramenta::MOTIVOS.fetch('veiculo')}")
+      expect(saida(capturado)).to end_with("Sancor não fez proposta nesta cotação. #{ferramenta::SEM_MOTIVO}")
       expect(Autonomia::Agents::ConferenciaDePrecos.valores(saida(capturado))).to be_empty
     end
 

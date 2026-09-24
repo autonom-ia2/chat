@@ -36,6 +36,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
     'incerta' => 'Não foi possível confirmar se o pedido chegou às seguradoras, e nenhuma opção chegou à pessoa até ' \
                  'agora. Diga que não conseguiu confirmar e que vai encaminhar para alguém da equipe conferir, sem afirmar ' \
                  'que não deu, sem oferecer cotar de novo e sem prazo.',
+    # NINGUÉM TROUXE PROPOSTA (chat#612, decisão do CEO de 23/09/2026): a Lia não fala de recusa nem de motivo com o
+    # cliente. O que as seguradoras escreveram vai para a equipe numa nota interna (`NotaDaEquipe`), e a fala dela de
+    # que vai encaminhar é o gatilho da passagem no CRM, como em `falhou`.
+    'sem_aceitacao' => 'A cotação terminou, e nenhuma seguradora trouxe proposta desta vez. Não fale de recusa, de risco, ' \
+                       'de aceitação nem de motivo, e não ofereça cotar de novo. Diga que vai encaminhar para alguém da ' \
+                       'equipe olhar a melhor alternativa, sem prazo.',
     'encerrada_por_prazo' => 'A cotação terminou, e o comparativo em PDF com as opções de quem respondeu já está nesta ' \
                              'conversa. Uma ou mais seguradoras não responderam dentro do tempo e ficaram de fora: foi ' \
                              'instabilidade delas, não recusa do risco, e não é motivo para refazer. Os valores de ' \

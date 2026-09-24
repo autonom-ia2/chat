@@ -103,6 +103,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   include Comparativo
   include Fecho
   include Resultado
+  include NotaDaEquipe
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
   #

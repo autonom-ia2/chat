@@ -2,7 +2,7 @@ require 'rails_helper'
 
 # AS DEZESSETE SEGURADORAS DE UMA COTAÇÃO REAL, na forma que o `Connector::Http` entrega (dados sintéticos:
 # os nomes são os das seguradoras que o portal lista; valores e textos são inventados). Onze cotam com
-# parcelamento, seis recusam pela idade do veículo (um texto do corpus do conector, que sai com categoria).
+# parcelamento, seis recusam pela idade do veículo (um texto do corpus do conector, guardado para a equipe).
 module DezesseteSeguradoras
   COTAM = { '50' => 'Pier', '55' => 'Bp Assinatura', '44' => 'Usebens', '8' => 'Porto Seguro', '20' => 'Suhai',
             '11' => 'Tokio', '47' => 'Justos', '3' => 'Mapfre', '5' => 'Allianz', '26' => 'Ituran', '56' => 'Azul' }.freeze
@@ -53,17 +53,33 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
                                                     'installments' => { 'count' => 10, 'amount' => 211.92 } } })
     end
 
-    it 'guarda sem proposta com a categoria do motivo, e nunca o texto do portal' do
+    # chat#612: a recusa do risco guarda o que a seguradora escreveu, para a nota da equipe, e nenhuma categoria.
+    it 'guarda sem proposta com o texto da recusa, sem categoria' do
       guardado = described_class.unir({}, [recusou('19', 'Sancor', reason: risco)])
 
-      expect(guardado['19']).to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta', 'motivo' => 'veiculo')
-      expect(guardado.to_json).not_to include(risco['text'])
+      expect(guardado['19']).to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta', 'texto_da_recusa' => risco['text'])
     end
 
-    it 'guarda sem proposta e sem motivo quando o kind não é risco nem passageiro' do
+    it 'guarda o texto também quando o kind é outro' do
       guardado = described_class.unir({}, [recusou('19', 'Sancor', reason: risco.merge('kind' => 'outro'))])
 
-      expect(guardado['19']).to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta')
+      expect(guardado['19']).to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta', 'texto_da_recusa' => risco['text'])
+    end
+
+    it 'o texto guardado sai limpo e curto' do
+      longo = { 'kind' => 'risco', 'text' => "  Veículo   sem\naceitação #{'x' * 400}" }
+      texto = described_class.unir({}, [recusou('19', 'Sancor', reason: longo)])['19']['texto_da_recusa']
+
+      expect(texto).to start_with('Veículo sem aceitação x')
+      expect(texto.length).to eq(described_class::MAX_TEXTO)
+    end
+
+    it 'texto que não é String válida não é guardado' do
+      invalido = { 'kind' => 'risco', 'text' => "Tipo de ve\xC3culo" }
+
+      expect(described_class.unir({}, [recusou('19', 'Sancor', reason: invalido)])['19']).to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta')
+      expect(described_class.unir({}, [recusou('19', 'Sancor', reason: { 'kind' => 'risco', 'text' => 42 })])['19'])
+        .to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta')
     end
 
     # chat#323: a seguradora instável guarda a categoria, sem o texto do portal.
@@ -74,8 +90,8 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
       expect(guardado.to_json).not_to include(risco['text'])
     end
 
-    it 'guarda sem proposta e sem motivo quando o texto de risco tem termo de conta' do
-      reason = { 'kind' => 'risco', 'text' => 'Senha expirou. Declinando cálculo.' }
+    it 'a conta da corretora (kind credencial) não guarda texto' do
+      reason = { 'kind' => 'credencial', 'text' => 'Senha expirou. Declinando cálculo.' }
 
       expect(described_class.unir({}, [recusou('19', 'Sancor', reason: reason)])['19'])
         .to eq('nome' => 'Sancor', 'desfecho' => 'sem_proposta')
@@ -89,21 +105,24 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
       expect(guardado.to_json).not_to include('auth_required', 'risco', risco['text'])
     end
 
-    it 'error sem preço é sem proposta, com a categoria do motivo' do
+    it 'error sem preço é sem proposta, sem categoria e sem texto' do
       expect(described_class.unir({}, [recusou('9', 'Ezze', status: 'error', reason: risco)])['9'])
-        .to include('desfecho' => 'sem_proposta', 'motivo' => 'veiculo')
+        .to eq('nome' => 'Ezze', 'desfecho' => 'sem_proposta')
     end
 
-    # NENHUM TEXTO DO PORTAL NO BANCO: o corpus do conector, no status e no kind que o conector dá, e os das revisões.
-    it 'não guarda texto do portal de nenhuma mensagem do corpus nem das revisões' do
-      revisoes = (TextosDoMotivo::CONTA + TextosDoMotivo::PESSOA + TextosDoMotivo::REVISOES).map { |texto| [texto, 'risco', 'declined'] }
-      linhas = TextosDoMotivo::CORPUS.map { |linha| linha.first(3) } + revisoes
+    # O TEXTO SÓ DA RECUSA DO RISCO: o corpus do conector, no status e no kind que o conector dá. Credencial da corretora
+    # e seguradora instável nunca guardam texto.
+    it 'no corpus, guarda o texto só de declined com kind risco ou outro' do
+      linhas = TextosDoMotivo::CORPUS.map { |linha| linha.first(3) }
       ofertas = linhas.each_with_index.map do |(texto, kind, status), i|
         recusou(i.to_s, "Seguradora #{i}", status: status, reason: { 'kind' => kind, 'text' => texto })
       end
-      guardado = described_class.unir({}, ofertas).to_json
+      guardado = described_class.unir({}, ofertas)
+      com_texto = linhas.each_index.select { |i| guardado[i.to_s].key?('texto_da_recusa') }
+      esperado = linhas.each_index.select { |i| linhas[i][2] == 'declined' && described_class::KINDS_COM_TEXTO.include?(linhas[i][1]) }
 
-      expect(linhas.map(&:first).select { |texto| guardado.include?(texto) }).to be_empty
+      expect(com_texto).to eq(esperado)
+      expect(esperado.size).to be < linhas.size
     end
 
     it 'seguradora sem desfecho e quoted sem valor ficam aguardando' do
@@ -119,6 +138,17 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
   end
 
   describe 'a união entre leituras' do
+    # Revisão da chat#634: a recusa que chega primeiro sem texto (ou gravada antes desta versão) não esconde o texto
+    # que vem depois, e a nota da equipe não sai sem aquela seguradora.
+    it 'a recusa que agora traz o texto substitui a guardada sem ele, e não o contrário' do
+      sem_texto = described_class.unir({}, [recusou('19', 'Sancor', status: 'error')])
+      com_texto = described_class.unir(sem_texto, [recusou('19', 'Sancor', reason: risco)])
+      depois = described_class.unir(com_texto, [recusou('19', 'Sancor', status: 'error')])
+
+      expect(com_texto['19']).to include('texto_da_recusa' => risco['text'])
+      expect(depois['19']).to include('texto_da_recusa' => risco['text'])
+    end
+
     it 'mantém a seguradora que a leitura nova não listou' do
       primeira = described_class.unir({}, [cotou('8', 'Porto Seguro', 2119.18), recusou('19', 'Sancor', reason: risco)])
 
@@ -182,13 +212,13 @@ RSpec.describe Autonomia::Insurance::ResultadoPorSeguradora do
       expect(guardado.to_json.bytesize).to be <= 3_000
     end
 
-    # Guarda-se a categoria, e não o texto: o pior caso das recusas é o de dezessete com categoria.
-    it 'dezessete recusas com a categoria do motivo cabem em 2 KB' do
-      ofertas = (1..17).map { |i| recusou(i.to_s, "Seguradora #{i}", reason: risco) }
+    # O pior caso das recusas: dezessete com o texto no limite (`MAX_TEXTO`).
+    it 'dezessete recusas com o texto no limite cabem em 7 KB' do
+      ofertas = (1..17).map { |i| recusou(i.to_s, "Seguradora #{i}", reason: { 'kind' => 'risco', 'text' => 'a' * 500 }) }
       guardado = described_class.unir({}, ofertas)
 
-      expect(guardado.values).to all(include('motivo' => 'veiculo'))
-      expect(guardado.to_json.bytesize).to be <= 2_000
+      expect(guardado.values.map { |entrada| entrada['texto_da_recusa'].length }).to all(eq(described_class::MAX_TEXTO))
+      expect(guardado.to_json.bytesize).to be <= 7_000
     end
   end
 end

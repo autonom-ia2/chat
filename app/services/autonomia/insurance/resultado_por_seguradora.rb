@@ -7,8 +7,9 @@
 # Uma entrada por código de seguradora, sempre com o nome:
 #   - com preço:    { 'nome', 'desfecho' => 'com_preco', 'premio' => { amount, basis, installments } }, mais
 #                   'cobertura' => o que a seguradora cotou (`CoberturaDevolvida`, chat#585) quando a oferta traz;
-#   - sem proposta: { 'nome', 'desfecho' => 'sem_proposta' }, mais 'motivo' => 'veiculo' ou 'regiao' só quando
-#                   `MotivoDaRecusa.categoria` classifica o motivo; o texto do portal nunca é guardado;
+#   - sem proposta: { 'nome', 'desfecho' => 'sem_proposta' }, mais 'motivo' => a categoria quando `MotivoDaRecusa.categoria`
+#                   classifica, e 'texto_da_recusa' => o que a seguradora escreveu, quando ela recusou o risco
+#                   (chat#612, 23/09/2026: vai para a equipe numa nota interna, nunca para o cliente nem para o modelo);
 #   - sem desfecho: { 'nome', 'desfecho' => 'aguardando' }.
 # `auth_required` (credencial da corretora) vira sem proposta e nunca guarda motivo.
 module Autonomia::Insurance::ResultadoPorSeguradora
@@ -26,13 +27,27 @@ module Autonomia::Insurance::ResultadoPorSeguradora
   # Os status de oferta sem preço que são desfecho da seguradora (`QuoteOffers::DESFECHOS` sem `quoted`).
   SEM_PRECO = %w[declined auth_required error].freeze
   CREDENCIAL = 'auth_required'.freeze
+  # O texto da recusa: só de oferta `declined` cujo motivo o conector classificou como do risco ou outro. A conta da
+  # corretora (`credencial`) e a seguradora fora do ar (`passageiro`) não são recusa do risco e não guardam texto.
+  TEXTO = 'texto_da_recusa'.freeze
+  RECUSA = 'declined'.freeze
+  KINDS_COM_TEXTO = %w[risco outro].freeze
+  MAX_TEXTO = 300
 
   module_function
 
   # -> as entradas guardadas unidas com as desta leitura. Código que esta leitura não listou continua.
   def unir(guardado, ofertas)
     anterior = guardado.is_a?(Hash) ? guardado : {}
-    anterior.merge(entradas(ofertas)) { |_codigo, velha, nova| precedencia(nova) > precedencia(velha) ? nova : velha }
+    anterior.merge(entradas(ofertas)) { |_codigo, velha, nova| fica_a_nova?(velha, nova) ? nova : velha }
+  end
+
+  # Desfecho maior vence. No empate fica a guardada, salvo a recusa que agora traz o texto e antes não trazia (revisão
+  # da chat#634): sem ele, a nota da equipe sai sem aquela seguradora.
+  def fica_a_nova?(velha, nova)
+    return precedencia(nova) > precedencia(velha) if precedencia(nova) != precedencia(velha)
+
+    desfecho(nova) == SEM_PROPOSTA && nova.key?(TEXTO) && !velha.key?(TEXTO)
   end
 
   # -> há ao menos uma seguradora com preço guardado?
@@ -68,7 +83,20 @@ module Autonomia::Insurance::ResultadoPorSeguradora
     return entrada if oferta['status'] == CREDENCIAL
 
     categoria = ::Autonomia::Insurance::MotivoDaRecusa.categoria(oferta['reason'])
-    categoria ? entrada.merge('motivo' => categoria) : entrada
+    entrada = entrada.merge('motivo' => categoria) if categoria
+    texto = texto_da_recusa(oferta)
+    texto ? entrada.merge(TEXTO => texto) : entrada
+  end
+
+  # -> o que a seguradora escreveu ao recusar o risco, limpo e curto, ou nil. Só a equipe lê (`InsuranceQuote::NotaDaEquipe`).
+  def texto_da_recusa(oferta)
+    reason = oferta['reason']
+    return unless oferta['status'] == RECUSA && reason.is_a?(Hash) && KINDS_COM_TEXTO.include?(reason['kind'])
+
+    texto = reason['text']
+    return unless texto.is_a?(String) && texto.valid_encoding?
+
+    texto.squish.truncate(MAX_TEXTO).presence
   end
 
   def desfecho(entrada)

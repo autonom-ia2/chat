@@ -8,8 +8,10 @@
 # sido enviado — em 19/09/2026 ela escalou um "o bônus da apólice foi considerado?" que a entrada respondia.
 #
 # DEVOLVE OS DADOS AO MODELO, e quem escreve ao cliente é a Lia (decisão do CEO, 18/09/2026): por seguradora,
-# o nome, o valor com o período e o parcelamento, ou o desfecho e a categoria do motivo (`veiculo`, `regiao`, `instabilidade` ou
-# nenhuma) de quem não fez proposta. Nunca texto do portal. O que ela devolveu fica registrado no turno
+# o nome, o valor com o período e o parcelamento, ou o desfecho de quem não fez proposta, com a instabilidade quando
+# foi ela. RECUSA DO RISCO NÃO SE CONTA AO CLIENTE (decisão do CEO de 23/09/2026, chat#612): a Lia diz só que a
+# seguradora não trouxe proposta desta vez, e o que a seguradora escreveu vai para a equipe numa nota interna
+# (`InsuranceQuote::NotaDaEquipe`). Nunca texto do portal. O que ela devolveu fica registrado no turno
 # (`Tools::Delivery#registrar_resultado`), e o `Answerer` confere a fala contra isso antes de ela sair
 # (`ConferenciaDePrecos`).
 #
@@ -48,17 +50,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   AINDA_CORRENDO = 'A cotação ainda está correndo: podem chegar mais preços.'.freeze
   HA_SEM_PROPOSTA = 'Algumas seguradoras não fizeram proposta: só fale delas se o cliente perguntar.'.freeze
   SEM_BONUS = 'Esta cotação foi feita sem a classe de bônus da apólice atual.'.freeze
-  # O motivo de quem não fez proposta, por categoria (`Insurance::MotivoDaRecusa`). Nunca o texto do portal.
+  # O motivo de quem não fez proposta, por categoria (`Insurance::MotivoDaRecusa`): só a instabilidade, que não é
+  # recusa do risco.
   MOTIVOS = {
-    Motivo::VEICULO => 'Categoria do motivo: veiculo. A recusa foi pelo veículo cotado, e não se sabe qual ' \
-                       'característica: conte com as suas palavras que ela não aceitou o veículo, sem acrescentar detalhe.',
-    Motivo::REGIAO => 'Categoria do motivo: regiao. A recusa foi pela região, e não se sabe mais que isso: conte com ' \
-                      'as suas palavras que ela não atende a região, sem acrescentar detalhe.',
     Motivo::INSTABILIDADE => 'Categoria do motivo: instabilidade. A seguradora estava instável e não respondeu nesta ' \
                              'cotação; não foi recusa do risco. Conte com as suas palavras que ela não conseguiu ' \
                              'responder agora, sem prometer que ela vai cotar depois e sem acrescentar detalhe.'
   }.freeze
-  SEM_MOTIVO = 'Categoria do motivo: nenhuma. Não há motivo que você possa contar: diga só que ela não fez proposta.'.freeze
+  SEM_MOTIVO = 'Não há motivo que você possa contar: diga só que ela não trouxe proposta desta vez, sem falar de ' \
+               'recusa, de risco nem de aceitação.'.freeze
 
   class << self
     def slug
