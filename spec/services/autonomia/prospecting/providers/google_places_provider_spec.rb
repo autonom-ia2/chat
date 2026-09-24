@@ -52,6 +52,8 @@ RSpec.describe Autonomia::Prospecting::Providers::GooglePlacesProvider do
       'Places API (New) has not been used in project 123456789 before or it is disabled. Enable it by visiting ' \
         'https://console.developers.google.com/apis/api/places.googleapis.com/overview?project=123456789'
     end
+    let(:indisponivel) { 'A busca no Google está indisponível no momento. Fale com o suporte.' }
+    let(:sobrecarregado) { 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.' }
 
     def stub_google_error(status, message)
       stub_request(:post, described_class::ENDPOINT).to_return(status: status, body: { error: { message: message } }.to_json)
@@ -62,7 +64,7 @@ RSpec.describe Autonomia::Prospecting::Providers::GooglePlacesProvider do
       allow(Rails.logger).to receive(:warn)
 
       expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError) { |error|
-        expect(error.message).to eq(described_class::UNAVAILABLE_MESSAGE)
+        expect(error.message).to eq(indisponivel)
         expect(error.message).not_to include('project')
       }
       expect(Rails.logger).to have_received(:warn).with(a_string_including('account_id=42', 'status=403', 'project 123456789'))
@@ -71,13 +73,21 @@ RSpec.describe Autonomia::Prospecting::Providers::GooglePlacesProvider do
     it 'diferencia cota estourada (429) de indisponível' do
       stub_google_error(429, 'Quota exceeded for quota metric')
 
-      expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, described_class::BUSY_MESSAGE)
+      expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, sobrecarregado)
     end
 
     it 'não repassa chave vencida (400) ao cliente' do
       stub_google_error(400, 'API key expired. Please renew the API key.')
 
-      expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, described_class::UNAVAILABLE_MESSAGE)
+      expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, indisponivel)
+    end
+
+    it 'responde em português também para conta com locale pt_BR' do
+      stub_google_error(403, service_disabled)
+
+      I18n.with_locale(:pt_BR) do
+        expect { provider.search }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, indisponivel)
+      end
     end
   end
 end

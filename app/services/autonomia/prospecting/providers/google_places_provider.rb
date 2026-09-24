@@ -23,9 +23,9 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   # Teto do Google por chamada. Pedido maior só chega com a paginação da E2.
   MAX_RESULTS_PER_REQUEST = 20
   # A chave é da plataforma (#683): o texto do Google fala do nosso projeto no Google Cloud. Ele fica no log do
-  # servidor, e o cliente recebe um destes.
-  UNAVAILABLE_MESSAGE = 'Google Places is unavailable right now. Please contact support.'.freeze
-  BUSY_MESSAGE = 'Google Places is busy right now. Please try again in a few minutes.'.freeze
+  # servidor, e o cliente recebe um destes, em português, pelo i18n do backend.
+  UNAVAILABLE_MESSAGE_KEY = 'autonomia.prospecting.errors.google_unavailable'.freeze
+  BUSY_MESSAGE_KEY = 'autonomia.prospecting.errors.google_busy'.freeze
 
   attr_reader :api_units
 
@@ -124,8 +124,8 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     Rails.logger.warn(
       "[Prospecting::GooglePlaces] account_id=#{@account_id} status=#{response.code} google_message=#{google_message}"
     )
-    message = response.code.to_i == 429 ? BUSY_MESSAGE : UNAVAILABLE_MESSAGE
-    Autonomia::Prospecting::SearchRunner::ProviderError.new(message)
+    message_key = response.code.to_i == 429 ? BUSY_MESSAGE_KEY : UNAVAILABLE_MESSAGE_KEY
+    Autonomia::Prospecting::SearchRunner::ProviderError.new(I18n.t(message_key))
   end
 
   def google_error_message(response)
