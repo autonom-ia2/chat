@@ -1,17 +1,18 @@
 // Estado compartilhado da tela de busca: refs e derivados que mais de um bloco
-// lê. As ações ficam nos composables useSearch*.
+// lê. O estado de cada frente (local, filtros, modo) mora no pedaço dela, em
+// searchSlices/; aqui ele só é juntado. As ações ficam nos composables useSearch*.
 import { computed, ref } from 'vue';
 import {
   activeAdvancedLeadFiltersCount,
-  defaultAdvancedLeadFilters,
   filterLeadsByAdvancedFilters,
 } from '../utils/advancedLeadFilters';
+import { mergeDisjoint } from '../utils/mergeDisjoint';
 import { sortLeads } from '../utils/sortLeads';
+import { createSliceState, sliceFormDefaults } from './searchSlices';
 
 const createFlags = () => ({
   isLoading: ref(true),
   isSearching: ref(false),
-  isSuggestingLocations: ref(false),
   convertingCrmLeadId: ref(null),
   enrichingLeadId: ref(null),
   verifyingWhatsAppLeadIds: ref([]),
@@ -37,13 +38,8 @@ const createData = () => ({
   crmPipelines: ref([]),
   crmStages: ref([]),
   searchConfigStages: ref([]),
-  locationSuggestions: ref([]),
-  locationDetails: ref(null),
-  confirmedLocation: ref(''),
-  previewViewport: ref(null),
   selectedSearchId: ref(null),
   selectedLeadDetailId: ref(null),
-  sortKey: ref('priority_desc'),
   editingSearchConfigId: ref(null),
   deleteSearchConfirmModal: ref(null),
   deleteSearchConfirmConfig: ref({
@@ -54,15 +50,7 @@ const createData = () => ({
 });
 
 const createForms = settings => {
-  const defaultSearchForm = () => ({
-    query: '',
-    location: '',
-    area_type: 'radius',
-    radius_km: 1,
-    requested_limit: 20,
-    score_mode: settings.value?.search_score_mode || 'gbp',
-    auto_expand_radius: false,
-  });
+  const defaultSearchForm = () => sliceFormDefaults(settings);
 
   return {
     defaultSearchForm,
@@ -71,7 +59,6 @@ const createForms = settings => {
       pipeline_id: '',
       stage_id: '',
     }),
-    advancedFilters: ref(defaultAdvancedLeadFilters()),
     searchConfigForm: ref({
       crm_pipeline_id: '',
       crm_stage_id: '',
@@ -145,11 +132,16 @@ const createSearchDerived = state => ({
 export const createSearchState = () => {
   const flags = createFlags();
   const data = createData();
-  const base = { ...flags, ...data, ...createForms(data.settings) };
+  const base = mergeDisjoint(
+    flags,
+    data,
+    createSliceState(),
+    createForms(data.settings)
+  );
 
-  return {
-    ...base,
-    ...createLeadDerived(base),
-    ...createSearchDerived(base),
-  };
+  return mergeDisjoint(
+    base,
+    createLeadDerived(base),
+    createSearchDerived(base)
+  );
 };

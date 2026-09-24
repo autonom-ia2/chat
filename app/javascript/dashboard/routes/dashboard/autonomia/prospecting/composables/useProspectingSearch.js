@@ -1,15 +1,19 @@
 // Dono do estado da tela de busca da Prospecção. A página chama
 // useProspectingSearch() uma vez; cada bloco da tela lê o mesmo contexto com
-// useProspectingSearchContext().
+// useProspectingSearchContext(). O contexto é juntado com mergeDisjoint: se dois
+// composables devolverem a mesma chave, a montagem quebra em vez de o último
+// sobrescrever o outro em silêncio.
 import { inject, onMounted, provide } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { mergeDisjoint } from '../utils/mergeDisjoint';
 import { createSearchState } from './createSearchState';
 import { useSearchCrm } from './useSearchCrm';
 import { useSearchForm } from './useSearchForm';
 import { useSearchHistory } from './useSearchHistory';
 import { useSearchLeads } from './useSearchLeads';
+import { useSearchLocation } from './useSearchLocation';
 
 const PROSPECTING_SEARCH_KEY = Symbol('prospectingSearch');
 
@@ -29,14 +33,17 @@ export const useProspectingSearch = () => {
     restoreSearchViewState: history.restoreSearchViewState,
   });
 
-  const context = {
-    canManage,
-    ...state,
-    ...crm,
-    ...leadActions,
-    ...history,
-    ...searchForm,
-  };
+  const location = useSearchLocation(state);
+
+  const context = mergeDisjoint(
+    { canManage },
+    state,
+    crm,
+    leadActions,
+    history,
+    searchForm,
+    location
+  );
   provide(PROSPECTING_SEARCH_KEY, context);
 
   onMounted(async () => {

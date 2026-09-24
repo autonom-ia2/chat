@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { alertError } from './searchAlerts';
-import { defaultAdvancedLeadFilters } from '../utils/advancedLeadFilters';
+import { restoreSlices } from './searchSlices';
 
 export const useSearchHistory = (
   state,
@@ -15,8 +15,6 @@ export const useSearchHistory = (
     searchHistoryMeta,
     isLoadingMoreSearches,
     canLoadMoreSearches,
-    advancedFilters,
-    sortKey,
     leads,
     selectedSearchId,
     selectedLeadIds,
@@ -75,16 +73,9 @@ export const useSearchHistory = (
     }
   };
 
-  const normalizeRestoredAdvancedFilters = filters => ({
-    ...defaultAdvancedLeadFilters(),
-    ...(filters || {}),
-  });
-
+  // O que cada frente restaura ao reabrir uma busca mora no pedaço dela.
   const restoreSearchViewState = search => {
-    advancedFilters.value = normalizeRestoredAdvancedFilters(
-      search?.advanced_filters
-    );
-    sortKey.value = search?.sort_key || 'priority_desc';
+    restoreSlices(state, search);
   };
 
   const selectSearchPayload = async payload => {
