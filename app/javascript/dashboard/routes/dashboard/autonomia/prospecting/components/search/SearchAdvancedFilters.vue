@@ -6,14 +6,24 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import LeadFiltersPanel from './filters/LeadFiltersPanel.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
-import { activeAdvancedLeadFiltersCount } from '../../utils/advancedLeadFilters';
+import {
+  activeAdvancedLeadFiltersCount,
+  reachableRankLimit,
+} from '../../utils/advancedLeadFilters';
 
 const { t } = useI18n();
-const { formFilters } = useProspectingSearchContext();
+const { formFilters, form, settings } = useProspectingSearchContext();
 
 const isOpen = ref(false);
 const activeCount = computed(() =>
   activeAdvancedLeadFiltersCount(formFilters.value)
+);
+// A faixa de posição não começa depois do que o Google devolve nesta busca.
+const rankReach = computed(() =>
+  reachableRankLimit({
+    requestedLimit: form.value.requested_limit,
+    isMockProvider: Boolean(settings.value?.mock_provider),
+  })
 );
 
 const applyFilters = next => {
@@ -73,7 +83,11 @@ const applyFilters = next => {
           </button>
         </header>
         <div class="min-h-0 flex-1 overflow-y-auto p-5">
-          <LeadFiltersPanel :filters="formFilters" @apply="applyFilters" />
+          <LeadFiltersPanel
+            :filters="formFilters"
+            :rank-reach="rankReach"
+            @apply="applyFilters"
+          />
         </div>
       </aside>
     </div>

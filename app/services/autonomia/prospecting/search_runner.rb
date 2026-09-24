@@ -68,9 +68,21 @@ class Autonomia::Prospecting::SearchRunner
 
     validate_google_places! if provider_name == 'google_places'
 
-    return if requested_limit <= MAX_REQUESTED_LIMIT
+    if requested_limit > MAX_REQUESTED_LIMIT
+      raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, "must be less than or equal to #{MAX_REQUESTED_LIMIT}"))
+    end
 
-    raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, "must be less than or equal to #{MAX_REQUESTED_LIMIT}"))
+    validate_rank_range!
+  end
+
+  # O provider devolve no máximo expansion_target posições. Cortar todas elas deixa a busca sempre vazia e ainda gasta
+  # as chamadas ao Google (#677). Recusa antes de gravar busca ou cache.
+  def validate_rank_range!
+    outside_top = number_or_nil(advanced_filters['outside_top'])
+    return if outside_top.nil? || outside_top < expansion_target
+
+    message = I18n.t('autonomia.prospecting.errors.rank_out_of_reach', limit: expansion_target)
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, message)
   end
 
   def create_search!
@@ -160,8 +172,12 @@ class Autonomia::Prospecting::SearchRunner
     [requested_limit, Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS_PER_REQUEST].min
   end
 
+  # Falta de chave é da plataforma, não de quem busca: o detalhe vai para o log e a pessoa lê a frase em português.
   def validate_google_places!
-    raise ProviderError, 'Google Places platform API key is not configured' unless @setting.google_places_configured?
+    return if @setting.google_places_configured?
+
+    Rails.logger.warn("[Prospecting::GooglePlaces] search account_id=#{@account.id} GOOGLE_PLACES_API_KEY não configurada")
+    raise ProviderError, I18n.t('autonomia.prospecting.errors.google_unavailable')
   end
 
   # Grava na ordem da chave do lead, não na do Google: duas buscas simultâneas com os mesmos lugares em ordem diferente

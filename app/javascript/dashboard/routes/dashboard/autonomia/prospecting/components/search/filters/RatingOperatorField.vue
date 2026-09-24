@@ -33,19 +33,30 @@ const operatorChoices = computed(() => [
   { value: 'below', label: t('PROSPECTING.SEARCH.FILTER_DRAWER.RATING.BELOW') },
 ]);
 
-const valueChoices = computed(() =>
-  RATING_STEPS.map(value => ({
-    value,
-    label: t('PROSPECTING.SEARCH.FILTER_DRAWER.RATING.STARS', { value }),
-  }))
-);
-
 const ratingValue = computed({
   get: () => (operator.value === 'below' ? ratingMax.value : ratingMin.value),
   set: value => {
     ratingMin.value = operator.value === 'above' ? value : '';
     ratingMax.value = operator.value === 'below' ? value : '';
   },
+});
+
+// A nota da jogada (4,2) não é meia estrela: entra entre as opções para o
+// seletor mostrar o que está filtrando, como o Orth, em vez do placeholder.
+const valueChoices = computed(() => {
+  const current = Number(ratingValue.value);
+  const hasExtra =
+    ratingValue.value !== '' &&
+    !Number.isNaN(current) &&
+    !RATING_STEPS.includes(current);
+  // O valor entra como veio, para bater com o v-model do seletor.
+  const steps = hasExtra
+    ? [...RATING_STEPS, ratingValue.value].sort((a, b) => Number(a) - Number(b))
+    : RATING_STEPS;
+  return steps.map(value => ({
+    value,
+    label: t('PROSPECTING.SEARCH.FILTER_DRAWER.RATING.STARS', { value }),
+  }));
 });
 
 // Trocar o operador leva as estrelas escolhidas para o outro lado.

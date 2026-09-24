@@ -9,6 +9,10 @@ import {
   RANK_SLIDER_MIN,
 } from '../../../utils/advancedLeadFilters';
 
+const props = defineProps({
+  // Maior posição em que a faixa pode começar (a nova busca não alcança além).
+  maxStart: { type: Number, default: RANK_SLIDER_MAX },
+});
 const MIN_SPAN = 1;
 const RANGE_CLASSES =
   'pointer-events-none absolute inset-x-0 h-6 w-full appearance-none bg-transparent ' +
@@ -44,7 +48,7 @@ const minOnTop = computed(() => min.value > RANK_SLIDER_MAX - 5);
 const onMinInput = event => {
   min.value = Math.max(
     RANK_SLIDER_MIN,
-    Math.min(Number(event.target.value), max.value - MIN_SPAN)
+    Math.min(Number(event.target.value), max.value - MIN_SPAN, props.maxStart)
   );
   event.target.value = String(min.value);
 };

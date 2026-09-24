@@ -93,7 +93,7 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
           params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 1 }
         ).perform
       end
-    end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, /platform API key/)
+    end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, 'A busca no Google está indisponível no momento. Fale com o suporte.')
   end
 
   # A chave da plataforma vem só do ambiente (#683): uma InstallationConfig homônima apareceria no superadmin.
@@ -109,7 +109,7 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
           params: { query: 'hotel', location: 'Sao Paulo, SP', requested_limit: 1 }
         ).perform
       end
-    end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, /platform API key/)
+    end.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, 'A busca no Google está indisponível no momento. Fale com o suporte.')
   end
 
   it 'stores the default CRM target in new searches' do
