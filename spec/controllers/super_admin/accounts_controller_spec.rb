@@ -345,6 +345,8 @@ RSpec.describe 'Super Admin accounts API', type: :request do
 
         expect(response).to have_http_status(:success)
         expect(response.body).to include('Enable Autonomia Prospecting', 'Enable Prospecting research')
+        # O aceite da E0 pede os três interruptores no console: módulo, pesquisa e funções personalizadas (#683).
+        expect(response.body).to include('Custom Roles')
         expect(response.body).to include("/super_admin/accounts/#{account.id}/toggle_prospecting_research")
       end
     end
