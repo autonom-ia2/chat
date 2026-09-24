@@ -1,14 +1,11 @@
 import {
-  BRAZIL_PHONE_REGION,
   leadPhoneUrl,
   leadWhatsAppUrl,
   normalizedLeadPhone,
 } from '../../utils/leadPhone';
 
-const PORTUGAL = { dialCode: '351', nationalLengths: [9] };
-
 describe('leadPhone · normalização por região', () => {
-  it('sem região usa o Brasil: DDI 55 para número nacional de 10 ou 11 dígitos', () => {
+  it('sem região usa o Brasil', () => {
     expect(normalizedLeadPhone({ phone: '(41) 99999-0001' })).toBe(
       '+5541999990001'
     );
@@ -20,18 +17,27 @@ describe('leadPhone · normalização por região', () => {
       '+14155550100'
     );
     expect(normalizedLeadPhone({ phone: '' })).toBe('');
-    expect(
-      normalizedLeadPhone({ phone: '4133330002' }, BRAZIL_PHONE_REGION)
-    ).toBe('+554133330002');
+  });
+
+  it('lê o 55 sem +55 como DDD do Rio Grande do Sul', () => {
+    expect(normalizedLeadPhone({ phone: '(55) 99988-7766' })).toBe(
+      '+5555999887766'
+    );
   });
 
   it('com a região da busca aplica o DDI dela ao número nacional', () => {
-    expect(normalizedLeadPhone({ phone: '912 345 678' }, PORTUGAL)).toBe(
+    expect(normalizedLeadPhone({ phone: '912 345 678' }, 'PT')).toBe(
       '+351912345678'
     );
-    expect(normalizedLeadPhone({ phone: '351912345678' }, PORTUGAL)).toBe(
+    expect(normalizedLeadPhone({ phone: '351912345678' }, 'PT')).toBe(
       '+351912345678'
     );
+  });
+
+  it('número inválido não vira link', () => {
+    expect(normalizedLeadPhone({ phone: '1234' })).toBe('');
+    expect(leadPhoneUrl({ phone: '1234' })).toBe('');
+    expect(leadWhatsAppUrl({ phone: '1234' })).toBe('');
   });
 
   it('prefere o número de WhatsApp ao telefone e monta os links', () => {
@@ -42,5 +48,11 @@ describe('leadPhone · normalização por região', () => {
     expect(leadWhatsAppUrl({ ...lead, whatsapp_url: 'https://wa.me/x' })).toBe(
       'https://wa.me/x'
     );
+  });
+
+  it('os links de ligar e de WhatsApp recebem a região da busca', () => {
+    const lead = { phone: '912 345 678' };
+    expect(leadPhoneUrl(lead, 'PT')).toBe('tel:+351912345678');
+    expect(leadWhatsAppUrl(lead, 'PT')).toBe('https://wa.me/351912345678');
   });
 });

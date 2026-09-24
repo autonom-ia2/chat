@@ -85,6 +85,34 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     expect(card.find('input[type="checkbox"]').element.checked).toBe(false);
   });
 
+  it('ligar e WhatsApp usam o país da busca (search_country) para o número nacional', async () => {
+    const search = bakerySearch();
+    const wrapper = await mountSearchPage({
+      settings: settingsFixture({ search_country: 'PT' }),
+      searches: [search],
+      payloads: {
+        11: {
+          search,
+          leads: [
+            sunLead({
+              phone: '912 345 678',
+              whatsapp_verification_status: null,
+              whatsapp_verified: false,
+            }),
+          ],
+        },
+      },
+    });
+    const card = leadCard(wrapper, 'Padaria Sol');
+
+    expect(
+      linkWithText(card, 'PROSPECTING.SEARCH.CALL').attributes('href')
+    ).toBe('tel:+351912345678');
+    expect(
+      linkWithText(card, 'PROSPECTING.SEARCH.WHATSAPP').attributes('href')
+    ).toBe('https://wa.me/351912345678');
+  });
+
   it('lead sem site e com card no CRM: sem link de site, sem WhatsApp e com link do card', async () => {
     const wrapper = await mountSearchPage();
     const card = leadCard(wrapper, 'Pão Quente');

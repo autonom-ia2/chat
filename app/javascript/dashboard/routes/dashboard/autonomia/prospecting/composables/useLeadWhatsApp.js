@@ -2,11 +2,12 @@
 // fila, até WHATSAPP_VERIFICATION_BATCH por vez.
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { normalizedLeadPhone } from '../utils/leadPhone';
+import { phoneRegionFromSettings } from '../utils/phoneContract';
 
 const WHATSAPP_VERIFICATION_BATCH = 25;
 
 export const useLeadWhatsApp = (state, { canManage, replaceLead }) => {
-  const { verifyingWhatsAppLeadIds } = state;
+  const { verifyingWhatsAppLeadIds, settings } = state;
   const whatsappVerificationRequested = new Set();
 
   const isWhatsAppChecking = lead =>
@@ -14,7 +15,7 @@ export const useLeadWhatsApp = (state, { canManage, replaceLead }) => {
 
   const shouldVerifyWhatsApp = lead =>
     lead?.id &&
-    normalizedLeadPhone(lead) &&
+    normalizedLeadPhone(lead, phoneRegionFromSettings(settings.value)) &&
     !lead?.whatsapp_verification_status &&
     !whatsappVerificationRequested.has(Number(lead.id));
 

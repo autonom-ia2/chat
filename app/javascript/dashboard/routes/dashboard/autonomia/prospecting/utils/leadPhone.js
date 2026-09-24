@@ -1,36 +1,24 @@
-// Telefone e WhatsApp do lead: normalização para E.164 e links de contato.
-// Dono: frente de telefone. A regra de DDI vem de um "phoneRegion"; a frente de
-// país só entrega a região da busca, sem editar esta função.
+// Telefone e WhatsApp do lead: E.164 e links de contato pelo contrato único
+// (utils/phoneContract.js). A região é o search_country das configurações
+// (phoneRegionFromSettings); sem ela vale o Brasil.
+import { DEFAULT_PHONE_REGION, parsePhone } from './phoneContract';
 
-// Brasil: DDI 55 e número nacional de 10 (fixo) ou 11 (celular) dígitos.
-export const BRAZIL_PHONE_REGION = Object.freeze({
-  dialCode: '55',
-  nationalLengths: Object.freeze([10, 11]),
-});
+const leadPhoneRaw = lead => lead?.whatsapp_phone || lead?.phone;
 
-export const normalizedLeadPhone = (lead, region = BRAZIL_PHONE_REGION) => {
-  const raw = String(lead?.whatsapp_phone || lead?.phone || '').trim();
-  const digits = raw.replace(/\D/g, '');
-  if (!digits) return '';
-  if (raw.startsWith('+')) return `+${digits}`;
-  if (digits.startsWith(region.dialCode)) return `+${digits}`;
-  if (region.nationalLengths.includes(digits.length)) {
-    return `+${region.dialCode}${digits}`;
-  }
-  return `+${digits}`;
-};
+export const normalizedLeadPhone = (lead, region = DEFAULT_PHONE_REGION) =>
+  parsePhone(leadPhoneRaw(lead), region)?.e164 || '';
 
-export const leadPhoneUrl = lead => {
-  const phone = normalizedLeadPhone(lead);
+export const leadPhoneUrl = (lead, region = DEFAULT_PHONE_REGION) => {
+  const phone = normalizedLeadPhone(lead, region);
   return phone ? `tel:${phone}` : '';
 };
 
-export const leadWhatsAppUrl = lead => {
+export const leadWhatsAppUrl = (lead, region = DEFAULT_PHONE_REGION) => {
   const verifiedUrl = lead?.whatsapp_url;
   if (verifiedUrl) return verifiedUrl;
 
-  const phone = normalizedLeadPhone(lead);
-  return phone ? `https://wa.me/${phone.replace(/\D/g, '')}` : '';
+  const digits = parsePhone(leadPhoneRaw(lead), region)?.digits;
+  return digits ? `https://wa.me/${digits}` : '';
 };
 
 export const isWhatsAppVerified = lead => lead?.whatsapp_verified === true;

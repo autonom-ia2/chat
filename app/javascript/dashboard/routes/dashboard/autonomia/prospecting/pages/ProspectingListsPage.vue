@@ -19,6 +19,12 @@ import {
   priorityTheme,
   priorityValue,
 } from '../utils/prospectingPriority';
+import {
+  leadPhoneUrl as leadPhoneUrlFor,
+  leadWhatsAppUrl as leadWhatsAppUrlFor,
+  normalizedLeadPhone as normalizedLeadPhoneFor,
+} from '../utils/leadPhone';
+import { phoneRegionFromSettings } from '../utils/phoneContract';
 
 const { t } = useI18n();
 const canManage = useCanManage('prospecting_manage');
@@ -183,28 +189,12 @@ const googleMapsLeadUrl = lead => {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 };
 
-const normalizedLeadPhone = lead => {
-  const raw = String(lead?.whatsapp_phone || lead?.phone || '').trim();
-  const digits = raw.replace(/\D/g, '');
-  if (!digits) return '';
-  if (raw.startsWith('+')) return `+${digits}`;
-  if (digits.startsWith('55')) return `+${digits}`;
-  if ([10, 11].includes(digits.length)) return `+55${digits}`;
-  return `+${digits}`;
-};
-
-const leadPhoneUrl = lead => {
-  const phone = normalizedLeadPhone(lead);
-  return phone ? `tel:${phone}` : '';
-};
-
-const leadWhatsAppUrl = lead => {
-  const verifiedUrl = lead?.whatsapp_url;
-  if (verifiedUrl) return verifiedUrl;
-
-  const phone = normalizedLeadPhone(lead);
-  return phone ? `https://wa.me/${phone.replace(/\D/g, '')}` : '';
-};
+// Telefone pelo contrato único (utils/phoneContract.js), com o país da busca da conta.
+const phoneRegion = computed(() => phoneRegionFromSettings(settings.value));
+const normalizedLeadPhone = lead =>
+  normalizedLeadPhoneFor(lead, phoneRegion.value);
+const leadPhoneUrl = lead => leadPhoneUrlFor(lead, phoneRegion.value);
+const leadWhatsAppUrl = lead => leadWhatsAppUrlFor(lead, phoneRegion.value);
 
 const isWhatsAppVerified = leadHasVerifiedWhatsApp;
 const isWhatsAppUnavailable = lead =>
