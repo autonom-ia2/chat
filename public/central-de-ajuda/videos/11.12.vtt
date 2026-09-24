@@ -1,0 +1,33 @@
+WEBVTT
+
+1
+00:00:00.001 --> 00:00:01.863
+Criar um Robô por webhook
+
+2
+00:00:01.863 --> 00:00:05.057
+Clique em Criar Robô
+
+3
+00:00:05.057 --> 00:00:07.589
+Escreva o Nome do Robô
+
+4
+00:00:07.589 --> 00:00:11.038
+Escreva a Descrição
+
+5
+00:00:11.038 --> 00:00:13.334
+Cole a URL do Webhook
+
+6
+00:00:13.334 --> 00:00:20.121
+Clique em Criar um Robô
+
+7
+00:00:20.121 --> 00:00:22.127
+Copie o Token e o Segredo agora
+
+8
+00:00:22.127 --> 00:00:23.922
+Pronto

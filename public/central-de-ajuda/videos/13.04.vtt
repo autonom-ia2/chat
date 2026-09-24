@@ -1,41 +1,53 @@
 WEBVTT
 
 1
-00:00:00.001 --> 00:00:01.007
-Importar uma base de campanha
+00:00:00.000 --> 00:00:01.203
+Importar, confirmar e desfazer uma base
 
 2
-00:00:01.007 --> 00:00:04.184
+00:00:01.203 --> 00:00:04.376
 Abra Contatos
 
 3
-00:00:04.184 --> 00:00:07.293
+00:00:04.376 --> 00:00:07.493
 Abra o menu de três pontinhos
 
 4
-00:00:07.293 --> 00:00:10.518
+00:00:07.493 --> 00:00:10.683
 Clique em Base Campanha
 
 5
-00:00:10.518 --> 00:00:12.291
+00:00:10.683 --> 00:00:12.463
 Dê um nome para a campanha
 
 6
-00:00:12.291 --> 00:00:13.850
-Defina a quantidade de lotes
-
-7
-00:00:13.850 --> 00:00:16.847
+00:00:12.463 --> 00:00:15.559
 Escolha o CSV ou XLSX
 
-8
-00:00:16.847 --> 00:00:18.641
-Confira antes de importar
-
-9
-00:00:18.641 --> 00:00:24.015
+7
+00:00:15.559 --> 00:00:21.433
 Clique em Validar base
 
+8
+00:00:21.433 --> 00:00:22.805
+Sem worker, essa fica Enviada
+
+9
+00:00:22.805 --> 00:00:28.610
+Clique em Importar numa base pronta
+
 10
-00:00:24.015 --> 00:00:26.182
-Sem worker, fica Enviada
+00:00:28.610 --> 00:00:29.689
+A importação entra na fila
+
+11
+00:00:29.689 --> 00:00:32.853
+Clique em Desfazer labels numa base concluída
+
+12
+00:00:32.853 --> 00:00:38.658
+Confirme para desfazer
+
+13
+00:00:38.658 --> 00:00:40.049
+Pronto
