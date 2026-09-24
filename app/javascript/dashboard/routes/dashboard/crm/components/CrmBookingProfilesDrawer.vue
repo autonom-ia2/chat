@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 
@@ -59,6 +60,29 @@ const stagesFor = inbox => {
   if (!pipelineId) return [];
   return stagesByPipeline[String(pipelineId)] || [];
 };
+
+const toChoices = items =>
+  items.map(item => ({ value: item.id, label: item.name }));
+
+const pipelineChoices = computed(() => [
+  { value: '', label: t('CRM_KANBAN.BOOKING.ADMIN.PIPELINE_DEFAULT') },
+  ...toChoices(props.pipelines),
+]);
+
+const stageChoicesFor = inbox => [
+  { value: '', label: t('CRM_KANBAN.BOOKING.ADMIN.STAGE_DEFAULT') },
+  ...toChoices(stagesFor(inbox)),
+];
+
+const assignmentModeChoices = computed(() => [
+  { value: 'fixed', label: t('CRM_KANBAN.BOOKING.ADMIN.MODE_FIXED') },
+  { value: 'per_agent', label: t('CRM_KANBAN.BOOKING.ADMIN.MODE_PER_AGENT') },
+]);
+
+const assigneeChoices = computed(() => [
+  { value: '', label: t('CRM_KANBAN.BOOKING.ADMIN.ASSIGNEE_DEFAULT') },
+  ...toChoices(props.agents),
+]);
 
 const loadStages = async pipelineId => {
   if (!pipelineId || stagesByPipeline[String(pipelineId)]) return;
@@ -462,44 +486,26 @@ useFixedPanelPresence(computed(() => props.show));
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.BOOKING.ADMIN.PIPELINE') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="forms[inbox.id].default_pipeline_id"
-                  class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                  :options="pipelineChoices"
+                  :aria-label="t('CRM_KANBAN.BOOKING.ADMIN.PIPELINE')"
+                  class="w-full"
                   @change="onPipelineChange(inbox)"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.BOOKING.ADMIN.PIPELINE_DEFAULT') }}
-                  </option>
-                  <option
-                    v-for="pipeline in pipelines"
-                    :key="pipeline.id"
-                    :value="pipeline.id"
-                  >
-                    {{ pipeline.name }}
-                  </option>
-                </select>
+                />
               </label>
 
               <label class="grid gap-1">
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.BOOKING.ADMIN.STAGE') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="forms[inbox.id].default_stage_id"
+                  :options="stageChoicesFor(inbox)"
+                  :aria-label="t('CRM_KANBAN.BOOKING.ADMIN.STAGE')"
                   :disabled="!forms[inbox.id].default_pipeline_id"
-                  class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.BOOKING.ADMIN.STAGE_DEFAULT') }}
-                  </option>
-                  <option
-                    v-for="stage in stagesFor(inbox)"
-                    :key="stage.id"
-                    :value="stage.id"
-                  >
-                    {{ stage.name }}
-                  </option>
-                </select>
+                  class="w-full"
+                />
               </label>
 
               <!-- Attribution mode: fixed (one assignee) vs per-agent (one link each) -->
@@ -507,18 +513,13 @@ useFixedPanelPresence(computed(() => props.show));
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.BOOKING.ADMIN.ASSIGNMENT_MODE') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="forms[inbox.id].assignment_mode"
-                  class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                  :options="assignmentModeChoices"
+                  :aria-label="t('CRM_KANBAN.BOOKING.ADMIN.ASSIGNMENT_MODE')"
+                  class="w-full"
                   @change="onAssignmentModeChange(inbox)"
-                >
-                  <option value="fixed">
-                    {{ t('CRM_KANBAN.BOOKING.ADMIN.MODE_FIXED') }}
-                  </option>
-                  <option value="per_agent">
-                    {{ t('CRM_KANBAN.BOOKING.ADMIN.MODE_PER_AGENT') }}
-                  </option>
-                </select>
+                />
               </label>
 
               <!-- Shared mailbox: per-agent availability from CRM instead of free/busy -->
@@ -546,21 +547,12 @@ useFixedPanelPresence(computed(() => props.show));
                 <span class="text-xs font-medium text-n-slate-11">
                   {{ t('CRM_KANBAN.BOOKING.ADMIN.ASSIGNEE') }}
                 </span>
-                <select
+                <ChoiceSelect
                   v-model="forms[inbox.id].default_assignee_id"
-                  class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                >
-                  <option value="">
-                    {{ t('CRM_KANBAN.BOOKING.ADMIN.ASSIGNEE_DEFAULT') }}
-                  </option>
-                  <option
-                    v-for="agent in agents"
-                    :key="agent.id"
-                    :value="agent.id"
-                  >
-                    {{ agent.name }}
-                  </option>
-                </select>
+                  :options="assigneeChoices"
+                  :aria-label="t('CRM_KANBAN.BOOKING.ADMIN.ASSIGNEE')"
+                  class="w-full"
+                />
               </label>
 
               <!-- PER-AGENT: one link per eligible agent (mailbox members) -->

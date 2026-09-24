@@ -256,7 +256,10 @@ const isTypingTarget = el =>
   (el.tagName === 'INPUT' ||
     el.tagName === 'TEXTAREA' ||
     el.tagName === 'SELECT' ||
-    el.isContentEditable);
+    el.isContentEditable ||
+    // O ChoiceSelect busca opção por letra e navega por seta, como o <select>
+    // nativo: gatilho e lista não disparam os atalhos do calendário.
+    !!el.closest?.('[role="combobox"], [role="listbox"]'));
 
 const onKeydown = e => {
   if (props.paused) return;
