@@ -1,66 +1,14 @@
-// Trabalho com os leads da busca aberta: verificação de WhatsApp, card no CRM,
-// enriquecimento, seleção, ações em lote e exportação CSV.
+// Trabalho com os leads da busca aberta: card no CRM, enriquecimento, seleção
+// e ações em lote. WhatsApp (useLeadWhatsApp) e CSV (useLeadCsv) têm arquivo
+// próprio.
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { alertError } from './searchAlerts';
-import { normalizedLeadPhone } from '../utils/leadPhone';
-import { formatLeadAddress } from '../utils/searchFormatters';
-
-const WHATSAPP_VERIFICATION_BATCH = 25;
-const CSV_HEADER = ['name', 'phone', 'website', 'address', 'status', 'source'];
-
-const useWhatsAppVerification = (state, { canManage, replaceLead }) => {
-  const { verifyingWhatsAppLeadIds } = state;
-  const whatsappVerificationRequested = new Set();
-
-  const isWhatsAppChecking = lead =>
-    verifyingWhatsAppLeadIds.value.map(Number).includes(Number(lead?.id));
-
-  const shouldVerifyWhatsApp = lead =>
-    lead?.id &&
-    normalizedLeadPhone(lead) &&
-    !lead?.whatsapp_verification_status &&
-    !whatsappVerificationRequested.has(Number(lead.id));
-
-  async function verifyLeadWhatsApp(lead) {
-    if (!shouldVerifyWhatsApp(lead)) return;
-
-    const leadId = Number(lead.id);
-    whatsappVerificationRequested.add(leadId);
-    verifyingWhatsAppLeadIds.value = [
-      ...verifyingWhatsAppLeadIds.value,
-      leadId,
-    ];
-
-    try {
-      const { data } = await AutonomiaProspectingAPI.verifyLeadWhatsApp(
-        lead.id
-      );
-      replaceLead(data.payload?.lead);
-    } catch {
-      // Falha de WAHA/configuração não deve bloquear o trabalho com o lead.
-    } finally {
-      verifyingWhatsAppLeadIds.value = verifyingWhatsAppLeadIds.value.filter(
-        id => Number(id) !== leadId
-      );
-    }
-  }
-
-  const verifyLeadsWhatsApp = leadsToVerify => {
-    if (!canManage.value) return;
-    leadsToVerify
-      .filter(shouldVerifyWhatsApp)
-      .slice(0, WHATSAPP_VERIFICATION_BATCH)
-      .reduce(
-        (promise, lead) => promise.then(() => verifyLeadWhatsApp(lead)),
-        Promise.resolve()
-      );
-  };
-
-  return { isWhatsAppChecking, verifyLeadsWhatsApp };
-};
+import { mergeDisjoint } from '../utils/mergeDisjoint';
+import { useLeadCsv } from './useLeadCsv';
+import { useLeadWhatsApp } from './useLeadWhatsApp';
 
 const useLeadSelection = state => {
   const { selectedLeadIds, sortedLeads } = state;
@@ -85,41 +33,6 @@ const useLeadSelection = state => {
   };
 
   return { toggleLeadSelection, toggleAllVisibleLeads };
-};
-
-const useLeadCsv = (state, t) => {
-  const { selectedLeadObjects, sortedLeads, selectedSearchId } = state;
-
-  const csvValueFor = (lead, key) => {
-    if (key === 'source') return lead.source_label || lead.provider;
-    if (key === 'address') return formatLeadAddress(lead, t);
-    return lead[key] || '';
-  };
-
-  const exportCsv = () => {
-    const rows = selectedLeadObjects.value.length
-      ? selectedLeadObjects.value
-      : sortedLeads.value;
-    const header = CSV_HEADER;
-    const csvRows = rows.map(lead =>
-      header
-        .map(key => {
-          const value = csvValueFor(lead, key);
-          return `"${String(value).replaceAll('"', '""')}"`;
-        })
-        .join(',')
-    );
-    const blob = new Blob([[header.join(','), ...csvRows].join('\n')], {
-      type: 'text/csv;charset=utf-8;',
-    });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `prospeccao-${selectedSearchId.value || 'leads'}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-
-  return { exportCsv };
 };
 
 export const useSearchLeads = (state, { canManage }) => {
@@ -219,15 +132,17 @@ export const useSearchLeads = (state, { canManage }) => {
   const crmCardUrl = cardId =>
     `/app/accounts/${route.params.accountId}/crm?card_id=${cardId}`;
 
-  return {
-    replaceLead,
-    createCrmCard,
-    enrichLead,
-    runBulkAction,
-    contactUrl,
-    crmCardUrl,
-    ...useWhatsAppVerification(state, { canManage, replaceLead }),
-    ...useLeadSelection(state),
-    ...useLeadCsv(state, t),
-  };
+  return mergeDisjoint(
+    {
+      replaceLead,
+      createCrmCard,
+      enrichLead,
+      runBulkAction,
+      contactUrl,
+      crmCardUrl,
+    },
+    useLeadWhatsApp(state, { canManage, replaceLead }),
+    useLeadSelection(state),
+    useLeadCsv(state, t)
+  );
 };

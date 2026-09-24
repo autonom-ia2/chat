@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ProspectingPriorityRing from '../ProspectingPriorityRing.vue';
+import LeadDetailContact from './LeadDetailContact.vue';
 import LeadDetailScore from './LeadDetailScore.vue';
 import LeadDetailEnrichment from './LeadDetailEnrichment.vue';
 import LeadDetailReviews from './LeadDetailReviews.vue';
@@ -177,23 +178,7 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
           />
 
           <div class="grid gap-3 sm:grid-cols-2">
-            <div class="rounded-md border border-n-weak bg-n-solid-2 p-3">
-              <div class="text-xs font-medium text-n-slate-10">
-                {{ t('PROSPECTING.SEARCH.CONTACT_DATA') }}
-              </div>
-              <div class="mt-2 text-sm text-n-slate-12">
-                {{ selectedLeadDetail.phone || '-' }}
-              </div>
-              <a
-                v-if="selectedLeadDetail.website"
-                :href="selectedLeadDetail.website"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="mt-1 block truncate text-sm text-n-brand underline"
-              >
-                {{ selectedLeadDetail.website }}
-              </a>
-            </div>
+            <LeadDetailContact :lead="selectedLeadDetail" />
             <div class="rounded-md border border-n-weak bg-n-solid-2 p-3">
               <div class="text-xs font-medium text-n-slate-10">
                 {{ t('PROSPECTING.SEARCH.REPUTATION') }}
