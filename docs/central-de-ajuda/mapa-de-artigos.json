@@ -3681,8 +3681,8 @@
      "fontes": [
       "porques: Procurar empresas por região e transformar em contato ou card"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "o vídeo clica em \"Configure a chave do Google Places para ativar sugestões.\", que saiu do i18n"
     },
     {
      "id": "16.02",
@@ -3751,8 +3751,8 @@
      "fontes": [
       "porques: Ajustar chaves, limites e critérios de score da prospecção"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "o vídeo clica em \"Chave para busca de locais\", \"Cole a chave de busca do Google\", \"Cole a chave do mapa\", que saiu do i18n"
     }
    ]
   },
