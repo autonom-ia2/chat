@@ -4000,8 +4000,8 @@
      "requer": null,
      "prints": [],
      "fontes": [],
-     "revisar": false,
-     "nota": "Conceito novo de 23/09, tirado das reuniões de implantação do Rodrigo."
+     "revisar": true,
+     "nota": "evidência sumiu: app/services/autonomia/agents/operate/responder.rb:479"
     }
    ]
   }
