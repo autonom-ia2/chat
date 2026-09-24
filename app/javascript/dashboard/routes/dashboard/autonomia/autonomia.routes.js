@@ -39,6 +39,22 @@ const agentsManageMeta = {
   permissions: ['administrator', 'autonomia_manage'],
 };
 
+// Link direto / F5: o guarda roda antes de a store ter a conta, e o getter volta
+// vazio; sem esperar, a rota mandava para home com o recurso ligado (Cotação em
+// 03/09, Prospecção e Agentes na #675). Carrega a conta antes de decidir. Se ela
+// não carregar, o guarda segue sem conta e redireciona, como antes.
+const contaDaRota = async to => {
+  const accountId = Number(to.params.accountId);
+  const account = store.getters['accounts/getAccount'](accountId);
+  if (account?.id) return account;
+  try {
+    await store.dispatch('accounts/get');
+  } catch {
+    return null;
+  }
+  return store.getters['accounts/getAccount'](accountId);
+};
+
 // Gate POR CONTA (aditivo, ISOLADO): mantém o ENV master (kill-switch global,
 // exposto como window.globalConfig.AUTONOMIA_AGENTS_ENABLED) como pré-condição E
 // exige a conta marcada como habilitada pelo gate isolado, exposto no payload da
@@ -46,11 +62,10 @@ const agentsManageMeta = {
 // Autonomia::Agents::Config.enabled?). NÃO depende do sistema de features do
 // Chatwoot. Com a conta OFF, a rota redireciona para 'home' (recurso invisível,
 // igual ao 404 do backend). Sem regressão: ENV OFF segue bloqueando todas as contas.
-const ensureAutonomiaEnabled = (to, _from, next) => {
+const ensureAutonomiaEnabled = async (to, _from, next) => {
   const masterEnabled =
     window.globalConfig?.AUTONOMIA_AGENTS_ENABLED === 'true';
-  const accountId = Number(to.params.accountId);
-  const account = store.getters['accounts/getAccount'](accountId);
+  const account = masterEnabled ? await contaDaRota(to) : null;
   const accountEnabled = account?.autonomia_agents_enabled === true;
 
   if (masterEnabled && accountEnabled) {
@@ -60,9 +75,8 @@ const ensureAutonomiaEnabled = (to, _from, next) => {
   next({ name: 'home', params: to.params });
 };
 
-const ensureProspectingEnabled = (to, _from, next) => {
-  const accountId = Number(to.params.accountId);
-  const account = store.getters['accounts/getAccount'](accountId);
+const ensureProspectingEnabled = async (to, _from, next) => {
+  const account = await contaDaRota(to);
 
   if (account?.autonomia_prospecting_enabled === true) {
     next();
@@ -74,21 +88,11 @@ const ensureProspectingEnabled = (to, _from, next) => {
 // Módulo Cotação (Insurance): ENV master INSURANCE_QUOTING_ENABLED (kill-switch global,
 // window.globalConfig) E conta marcada pelo SuperAdmin (`autonomia_insurance_enabled` no
 // payload da conta -> Autonomia::Insurance::Config.enabled?). Mesmo contrato do backend.
-// Deep link / F5: o guard roda antes da store ter a conta e o getter volta vazio; sem este await a
-// rota mandava para home mesmo com tudo ligado (visto em produção em 03/09). Carrega a conta antes.
+// Link direto / F5: espera a conta (contaDaRota), como os outros guardas.
 const ensureInsuranceEnabled = async (to, _from, next) => {
   const masterEnabled =
     window.globalConfig?.INSURANCE_QUOTING_ENABLED === 'true';
-  const accountId = Number(to.params.accountId);
-  let account = store.getters['accounts/getAccount'](accountId);
-  if (!account?.id && masterEnabled) {
-    try {
-      await store.dispatch('accounts/get');
-    } catch {
-      // sem conta carregável, cai no redirect abaixo
-    }
-    account = store.getters['accounts/getAccount'](accountId);
-  }
+  const account = masterEnabled ? await contaDaRota(to) : null;
   const accountEnabled = account?.autonomia_insurance_enabled === true;
 
   if (masterEnabled && accountEnabled) {

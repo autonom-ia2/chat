@@ -382,6 +382,7 @@ onClickOutside(
             :id="optionId(index)"
             :key="index"
             role="option"
+            :data-value="String(option.value)"
             :aria-selected="index === selected"
             :aria-disabled="option.disabled || undefined"
             class="flex items-center justify-between gap-2 px-3 text-sm min-h-11"

@@ -89,7 +89,7 @@ export const cenas = [
   {
     legenda: 'Escolha Raio ou Área visível',
     acao: 'selecionar',
-    alvo: { seletor: 'select' },
+    alvo: { seletor: '[role="combobox"][aria-label="Área de busca"]' },
     valor: 'viewport',
     zoom: 1.8,
   },
@@ -106,7 +106,7 @@ export const cenas = [
   {
     legenda: 'Volte para Raio',
     acao: 'selecionar',
-    alvo: { seletor: 'select' },
+    alvo: { seletor: '[role="combobox"][aria-label="Área de busca"]' },
     valor: 'radius',
     zoom: 1.8,
   },
