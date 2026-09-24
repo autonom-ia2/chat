@@ -315,6 +315,21 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
 
         expect(a_request(:post, google_endpoint).with { |req| JSON.parse(req.body)['maxResultCount'] == 20 }).to have_been_made.once
       end
+
+      it 'não expande o raio num pedido de 60 quando o primeiro raio já traz os 20 que o Google entrega' do
+        use_google_places!
+        twenty_places = Array.new(20) { |index| google_place.merge('id' => "places/google-#{index}") }
+        stub_google_places(twenty_places)
+
+        result = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 60, radius: 1000,
+                            filters: { auto_expand_radius: true })
+
+        expect(a_request(:post, google_endpoint)).to have_been_made.once
+        expect(result.search.consumed_api_units).to eq(1)
+        expect(result.search.radius).to eq(1000)
+        expect(result.search.metadata['radius_expanded']).to be(false)
+        expect(result.leads.size).to eq(20)
+      end
     end
 
     describe 'limites de consumo' do

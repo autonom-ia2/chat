@@ -35,9 +35,7 @@ class Autonomia::Prospecting::SearchRunner
 
         [attributes, google_rank]
       end
-      leads = filtered_attributes.map do |attributes, google_rank|
-        upsert_lead!(search, attributes, google_rank: google_rank)
-      end
+      leads = upsert_leads!(search, filtered_attributes)
       assign_priority_positions!(leads)
       search.radius = provider_result[:radius]
       search.area_config = area_config_for_radius(provider_result[:radius])
@@ -103,7 +101,8 @@ class Autonomia::Prospecting::SearchRunner
         area_type: area_type,
         area_config: area_config_value,
         limit: requested_limit,
-        api_key: @setting.google_places_api_key
+        api_key: @setting.google_places_api_key,
+        account_id: @account.id
       )
     else
       Autonomia::Prospecting::Providers::MockProvider.new(
@@ -135,7 +134,7 @@ class Autonomia::Prospecting::SearchRunner
                    else
                      0
                    end
-      break if advanced_filtered_attributes_count(last_attributes) >= requested_limit
+      break if advanced_filtered_attributes_count(last_attributes) >= expansion_target
     end
 
     {
@@ -145,8 +144,25 @@ class Autonomia::Prospecting::SearchRunner
     }
   end
 
+  # O raio só cresce enquanto o provider ainda pode trazer mais. O Google entrega no máximo 20 por chamada: um pedido de
+  # 60 nunca chegaria a 60 e expandiria sempre até o raio máximo, descartando o raio que a pessoa escolheu (#683).
+  def expansion_target
+    return requested_limit unless provider_name == 'google_places'
+
+    [requested_limit, Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS_PER_REQUEST].min
+  end
+
   def validate_google_places!
     raise ProviderError, 'Google Places platform API key is not configured' unless @setting.google_places_configured?
+  end
+
+  # Grava na ordem da chave do lead, não na do Google: duas buscas simultâneas com os mesmos lugares em ordem diferente
+  # travariam as linhas em ordem cruzada, e o Postgres derruba uma delas por deadlock (#683). O resultado volta na ordem
+  # do Google.
+  def upsert_leads!(search, filtered_attributes)
+    filtered_attributes.sort_by { |attributes, _google_rank| dedupe_key_for(attributes) }
+                       .map { |attributes, google_rank| upsert_lead!(search, attributes, google_rank: google_rank) }
+                       .sort_by(&:search_rank)
   end
 
   # Duas buscas sobre o mesmo lugar podem ler "não existe" ao mesmo tempo. Quem perde a corrida no índice único
