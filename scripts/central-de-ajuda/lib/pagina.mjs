@@ -489,7 +489,9 @@ export async function acharOpcaoDoCombobox(
           if (!campo || campo.getAttribute('role') !== 'combobox') return null;
           var lista = document.getElementById(campo.getAttribute('aria-controls'));
           if (!lista) return { pronta: false };
-          var alvo = ${JSON.stringify(valorOuTexto)};
+          // data-value é sempre texto (String do valor): 7, null e true do
+          // roteiro viram '7', 'null' e 'true' para comparar.
+          var alvo = String(${JSON.stringify(valorOuTexto)});
           var opcao = Array.prototype.find.call(
             lista.querySelectorAll('[role="option"]'),
             function (o) {
