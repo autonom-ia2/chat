@@ -1,0 +1,49 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.233
+n8n e integrações de terceiros
+
+2
+00:00:02.233 --> 00:00:04.216
+Gere um token e crie um webhook
+
+3
+00:00:04.216 --> 00:00:10.403
+Clique em Criar token de API do CRM
+
+4
+00:00:10.403 --> 00:00:12.575
+Dê um nome ao token
+
+5
+00:00:12.575 --> 00:00:15.700
+Marque os escopos que o n8n vai usar
+
+6
+00:00:15.700 --> 00:00:17.875
+Pare aqui, antes de criar o token
+
+7
+00:00:17.875 --> 00:00:19.302
+Volte para n8n e crie o webhook
+
+8
+00:00:19.302 --> 00:00:22.457
+Clique em Adicionar novo Webhook
+
+9
+00:00:22.457 --> 00:00:24.285
+Informe a URL do seu n8n
+
+10
+00:00:24.285 --> 00:00:27.412
+Marque os eventos de card do CRM
+
+11
+00:00:27.412 --> 00:00:29.595
+Pare aqui, antes de criar o webhook
+
+12
+00:00:29.595 --> 00:00:31.403
+Pronto
