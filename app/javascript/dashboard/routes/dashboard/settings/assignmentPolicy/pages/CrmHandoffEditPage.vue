@@ -221,7 +221,7 @@ watch(
             :model-value="pipelineId"
             :options="pipelineChoices"
             :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
-            class="w-64 max-w-full"
+            class="w-full max-w-64"
             @change="switchPipeline"
           />
           <div

@@ -108,7 +108,7 @@ const updateIntegration = async () => {
             t('INTEGRATION_SETTINGS.SLACK.SELECT_CHANNEL.OPTION_LABEL')
           "
           compact
-          class="w-56 mr-4"
+          class="mr-4"
         />
         <Button
           teal

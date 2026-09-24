@@ -185,7 +185,7 @@ const setAction = option => {
           </button>
         </div>
 
-        <div
+        <label
           v-if="form.pool_type === 'user'"
           class="mt-1 flex items-center gap-2 text-xs text-n-slate-11"
         >
@@ -194,11 +194,10 @@ const setAction = option => {
             v-model="form.pool_id"
             :options="personChoices"
             :aria-label="t('CRM_KANBAN.HANDOFF_SETTINGS.POOL_USER_SELECT')"
-            compact
-            class="w-56"
+            class="w-full max-w-56"
           />
-        </div>
-        <div
+        </label>
+        <label
           v-else
           class="mt-1 flex items-center gap-2 text-xs text-n-slate-11"
         >
@@ -207,10 +206,9 @@ const setAction = option => {
             v-model="form.mode"
             :options="modeChoices"
             :aria-label="t('CRM_KANBAN.AI_SETTINGS.HANDOFF.MODE')"
-            compact
-            class="w-40"
+            class="w-full"
           />
-        </div>
+        </label>
       </div>
 
       <div
@@ -296,7 +294,7 @@ const setAction = option => {
           </button>
         </div>
 
-        <div
+        <label
           v-if="form.escalation_action === 'escalate'"
           class="mt-1 flex items-center gap-2 text-xs text-n-slate-11"
         >
@@ -305,10 +303,9 @@ const setAction = option => {
             v-model="form.escalation_user_id"
             :options="personChoices"
             :aria-label="t('CRM_KANBAN.HANDOFF_SETTINGS.ESCALATION_USER')"
-            compact
-            class="w-56"
+            class="w-full max-w-56"
           />
-        </div>
+        </label>
       </div>
     </template>
   </div>
