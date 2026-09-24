@@ -56,6 +56,9 @@ module Crm
         return 'disabled' unless settings[:enabled]
         return 'no_conversation' if @conversation.blank?
         return 'already_assigned' if @conversation.assignee_id.present?
+        # Devolvida à IA por um humano e sem nada novo desde então: a "transferência" que a IA leu é a fala antiga,
+        # já atendida (DevolucaoAIa). Um pedido novo, depois da devolução, passa.
+        return 'devolvida_sem_pedido_novo' if Crm::Ai::DevolucaoAIa.sem_mensagem_nova?(@card, @conversation)
         return 'cooldown' if recently_handed_off?
 
         nil
