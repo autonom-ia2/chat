@@ -35,9 +35,9 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   invalid: { type: Boolean, default: false },
-  // Altura menor para barras de filtro; a área de toque continua com 44 px.
-  // Fora do compacto, a raiz tem largura mínima (min-w-40), como o select
-  // nativo, que não encolhe até o texto escolhido.
+  // Altura menor (h-8, como o Input small) para barras de filtro; a área de
+  // toque continua com 44 px. A largura, nos dois tamanhos, é a da maior opção
+  // (como no select nativo), a menos que quem usa defina outra.
   compact: { type: Boolean, default: false },
 });
 
@@ -103,6 +103,17 @@ const selected = computed(() =>
 const selectedLabel = computed(
   () => flatOptions.value[selected.value]?.label ?? props.placeholder
 );
+// Todos os textos que o botão pode mostrar: medidos invisíveis na mesma célula,
+// dão ao campo a largura do maior, estável como a do select nativo.
+const medidas = computed(() =>
+  [props.placeholder, ...flatOptions.value.map(option => option.label)].filter(
+    Boolean
+  )
+);
+// O <label> em volta, se houver: clicar nele com a lista aberta fecha pelo
+// próprio botão (ativação do label), sem o clique-fora fechar antes e o botão
+// reabrir em seguida.
+const ownLabel = computed(() => root.value?.closest('label') ?? null);
 
 // Coordenadas da lista (position: fixed), a partir do botão. Largura mínima é a
 // do botão; opções mais longas alargam a lista até a borda da tela. A altura é
@@ -123,10 +134,20 @@ const place = () => {
   const space = opensUpward ? spaceAbove : spaceBelow;
   // Uma opção inteira no mínimo, mesmo em tela minúscula.
   const maxHeight = Math.max(OPTION_HEIGHT, Math.min(LIST_MAX_HEIGHT, space));
+  // Em RTL a lista se alinha pela direita do botão e cresce para a esquerda.
+  const rtl = getComputedStyle(trigger.value).direction === 'rtl';
+  const horizontal = rtl
+    ? {
+        right: `${window.innerWidth - rect.right}px`,
+        maxWidth: `${rect.right - VIEWPORT_MARGIN}px`,
+      }
+    : {
+        left: `${rect.left}px`,
+        maxWidth: `${window.innerWidth - rect.left - VIEWPORT_MARGIN}px`,
+      };
   listStyle.value = {
-    left: `${rect.left}px`,
+    ...horizontal,
     minWidth: `${rect.width}px`,
-    maxWidth: `${window.innerWidth - rect.left - VIEWPORT_MARGIN}px`,
     maxHeight: `${maxHeight}px`,
     ...(opensUpward
       ? { bottom: `${window.innerHeight - rect.top + LIST_GAP}px` }
@@ -246,15 +267,16 @@ watch(
   { flush: 'post' }
 );
 
-// Enquanto aberta, a lista acompanha o botão em qualquer rolagem (capture pega
-// a das seções internas) e no redimensionamento. A rolagem da própria lista não
-// move o botão.
+// Rolar a página ou uma seção com a lista aberta fecha, como o select nativo
+// (capture pega a rolagem das seções internas); assim a lista nunca fica
+// solta, apontando para um botão que saiu da vista. A rolagem da própria lista
+// não conta. Redimensionar só reposiciona.
 const openWindow = () => (isOpen.value ? window : null);
 useEventListener(
   openWindow,
   'scroll',
   event => {
-    if (event.target !== list.value) place();
+    if (!list.value?.contains(event.target)) close(false);
   },
   { capture: true, passive: true }
 );
@@ -265,12 +287,24 @@ onClickOutside(
   () => {
     if (isOpen.value) close(false);
   },
-  { ignore: [list] }
+  { ignore: [list, ownLabel] }
 );
 </script>
 
 <template>
-  <div ref="root" :class="{ 'min-w-40': !compact }">
+  <div ref="root" class="grid grid-cols-[minmax(0,1fr)]">
+    <!-- Grid de uma célula: o botão e as medidas invisíveis ocupam a mesma
+         célula, e a coluna fica com a largura da maior (minmax(0, 1fr): cabe
+         numa largura definida por quem usa e preenche a linha num formulário). -->
+    <span
+      v-for="(medida, indice) in medidas"
+      :key="indice"
+      data-medida
+      aria-hidden="true"
+      class="invisible h-0 overflow-hidden whitespace-nowrap pl-3 pr-9 text-sm [grid-area:1/1]"
+    >
+      {{ medida }}
+    </span>
     <button
       ref="trigger"
       type="button"
@@ -284,12 +318,12 @@ onClickOutside(
       "
       :aria-invalid="invalid || undefined"
       :disabled="disabled"
-      class="relative flex items-center justify-between w-full gap-2 rounded-lg text-start bg-n-surface-1 text-n-slate-12 outline outline-1 -outline-offset-1 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60 before:absolute before:inset-x-0"
+      class="relative flex items-center justify-between w-full gap-2 [grid-area:1/1] rounded-lg text-start font-normal bg-n-alpha-black2 text-n-slate-12 outline outline-1 -outline-offset-1 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60 before:absolute before:inset-x-0"
       :class="[
         // Altura dos campos do design system (h-10; compacto h-8). O
         // pseudo-elemento leva a área de toque a 44 px nos dois.
         compact
-          ? 'h-8 px-2 text-xs before:-inset-y-1.5'
+          ? 'h-8 px-3 text-sm before:-inset-y-1.5'
           : 'h-10 px-3 text-sm before:-inset-y-0.5',
         invalid
           ? 'outline-n-ruby-9 focus-visible:outline-n-ruby-9'
@@ -316,6 +350,7 @@ onClickOutside(
       popover="manual"
       class="fixed z-50 px-0 py-1 m-0 overflow-y-auto border-0 rounded-lg shadow-lg inset-auto max-h-80 bg-n-solid-2 text-n-slate-12 outline outline-1 outline-n-container"
       :style="listStyle"
+      @pointerdown.prevent
       @click.prevent
     >
       <li

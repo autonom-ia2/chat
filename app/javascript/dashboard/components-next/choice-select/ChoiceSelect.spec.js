@@ -170,11 +170,58 @@ describe('ChoiceSelect', () => {
     expect(trigger.attributes('disabled')).toBeDefined();
   });
 
-  it('largura mínima estável fora do compacto, como o select nativo', async () => {
-    wrapper = mountSelect();
-    expect(wrapper.classes()).toContain('min-w-40');
-    await wrapper.setProps({ compact: true });
+  it('largura estável pela maior opção, como o select nativo, sem mínimo fixo', () => {
+    wrapper = mountSelect('es', { placeholder: 'Escolha um idioma' });
     expect(wrapper.classes()).not.toContain('min-w-40');
+    // Rótulos invisíveis empilhados na mesma célula dão ao botão a largura
+    // da maior opção; a escolhida não faz o campo encolher nem crescer.
+    const medidas = wrapper
+      .findAll('[data-medida]')
+      .map(medida => medida.text());
+    expect(medidas).toEqual([
+      'Escolha um idioma',
+      'Usar padrão da conta',
+      'Português (Brasil)',
+      'Español',
+    ]);
+    wrapper
+      .findAll('[data-medida]')
+      .forEach(medida => expect(medida.attributes('aria-hidden')).toBe('true'));
+  });
+
+  it('mesmo fundo, texto e peso dos campos do design system', async () => {
+    wrapper = mountSelect();
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(trigger.classes()).toContain('bg-n-alpha-black2');
+    expect(trigger.classes()).toContain('font-normal');
+    expect(trigger.classes()).toContain('text-sm');
+    await wrapper.setProps({ compact: true });
+    expect(trigger.classes()).toContain('text-sm');
+    expect(trigger.classes()).not.toContain('text-xs');
+  });
+
+  it('rolagem fora da lista fecha, como o select nativo; a da lista não', async () => {
+    wrapper = mountSelect();
+    const trigger = wrapper.get('[role="combobox"]');
+    await trigger.trigger('click');
+    wrapper.get('[role="listbox"]').element.dispatchEvent(new Event('scroll'));
+    await wrapper.vm.$nextTick();
+    expect(trigger.attributes('aria-expanded')).toBe('true');
+
+    document.dispatchEvent(new Event('scroll'));
+    await wrapper.vm.$nextTick();
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+  });
+
+  it('clique no vazio da lista não tira o foco do campo', async () => {
+    wrapper = mountSelect();
+    await wrapper.get('[role="combobox"]').trigger('click');
+    const pointerdown = new Event('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+    });
+    wrapper.get('[role="listbox"]').element.dispatchEvent(pointerdown);
+    expect(pointerdown.defaultPrevented).toBe(true);
   });
 
   it('altura padrão de 40 px como os campos, área de toque de 44 px', () => {
@@ -367,6 +414,19 @@ describe('ChoiceSelect', () => {
       await host.vm.$nextTick();
       expect(click.defaultPrevented).toBe(true);
       expect(host.vm.value).toBe('es');
+      expect(trigger.attributes('aria-expanded')).toBe('false');
+    });
+
+    it('com a lista aberta, clicar no rótulo fecha (e não fecha-e-reabre)', async () => {
+      mountInLabel();
+      const trigger = host.get('[role="combobox"]');
+      await trigger.trigger('click');
+      await new Promise(resolve => {
+        setTimeout(resolve, 2);
+      });
+      const rotulo = host.get('.rotulo');
+      rotulo.element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      await rotulo.trigger('click');
       expect(trigger.attributes('aria-expanded')).toBe('false');
     });
 
