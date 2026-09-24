@@ -221,16 +221,6 @@ class Autonomia::Insurance::ResultadoDaCotacao
     nao_respondeu_a_tempo?(codigo) ? Guardado::SEM_PROPOSTA : entrada(codigo)['desfecho']
   end
 
-  # -> a categoria do motivo guardada (`MotivoDaRecusa::CATEGORIAS`), ou nil. O que foi guardado fora dessas
-  # categorias não conta como motivo. A seguradora que ainda aguardava quando a cotação acabou não respondeu a
-  # tempo: é instabilidade dela, não recusa do risco (23/09/2026, a Mitsui do residencial).
-  def motivo(codigo)
-    return ::Autonomia::Insurance::MotivoDaRecusa::INSTABILIDADE if nao_respondeu_a_tempo?(codigo)
-
-    guardado = entrada(codigo)['motivo']
-    ::Autonomia::Insurance::MotivoDaRecusa::CATEGORIAS.include?(guardado) ? guardado : nil
-  end
-
   # -> os códigos das seguradoras que `consulta` nomeia, primeiro as do passo 2 e depois as do passo 3:
   #   1. a seguradora cujas palavras do nome aparecem TODAS na consulta ("porto" nomeia "Porto Seguro");
   #   2. entre as do passo 1, sai a de palavras contidas nas de outra ("Bp Assinatura" tira "Bp");

@@ -42,11 +42,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
     'sem_aceitacao' => 'A cotação terminou, e nenhuma seguradora trouxe proposta desta vez. Não fale de recusa, de risco, ' \
                        'de aceitação nem de motivo, e não ofereça cotar de novo. Diga que vai encaminhar para alguém da ' \
                        'equipe olhar a melhor alternativa, sem prazo.',
-    'encerrada_por_prazo' => 'A cotação terminou, e o comparativo em PDF com as opções de quem respondeu já está nesta ' \
-                             'conversa. Uma ou mais seguradoras não responderam dentro do tempo e ficaram de fora: foi ' \
-                             'instabilidade delas, não recusa do risco, e não é motivo para refazer. Os valores de ' \
-                             'cada seguradora estão com o especialista, que os lê sem cotar de novo.'
+    'encerrada_por_prazo' => 'A cotação terminou, e o comparativo em PDF com as opções acabou de ser enviado nesta ' \
+                             'conversa, logo acima. Os valores de cada seguradora estão com o especialista, que os lê ' \
+                             'sem cotar de novo.'
   }.freeze
+  # QUEM FICOU SEM PROPOSTA NÃO É ASSUNTO DO CLIENTE (chat#638, decisão do CEO de 24/09/2026): nem recusa, nem prazo, nem
+  # instabilidade. A frase "não responderam a tempo, não foi recusa do risco" que estava nos fatos chegava ao cliente
+  # quase igual. Quem fica sabendo é a equipe, pela nota interna (`NotaDaEquipe`).
+  SEM_QUEM_FICOU_DE_FORA = 'Não fale de seguradora que ficou sem proposta, nem de prazo, recusa ou motivo.'.freeze
+  COM_RESULTADO = %w[concluida valores_guardados encerrada_por_prazo].freeze
 
   # FORMULÁRIO INDISPONÍVEL (revisão da chat#608): pedir de novo daria a mesma recusa, então não se oferece.
   SEM_FORMULARIO = 'A cotação não pôde ser aberta agora: o formulário deste tipo de seguro não está disponível. Nenhuma ' \
@@ -57,12 +61,6 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
   # abate é decisão de cada seguradora.
   SEM_BONUS = 'Esta renovação foi cotada sem a classe de bônus da apólice atual: os preços são os de quem faz o primeiro ' \
               'seguro. Com a classe de bônus, que está na apólice, a cotação pode ser refeita, e costuma sair melhor.'.freeze
-  COM_SEM_BONUS = %w[concluida valores_guardados encerrada_por_prazo].freeze
-  # A CONCLUSÃO COM SEGURADORA AGUARDANDO (chat#612): a cotação parou de receber resposta e fechou com o que tinha
-  # (`Resultado#parou_de_chegar?`). No `encerrada_por_prazo` o próprio fato já diz isso.
-  FICARAM_DE_FORA = {
-    'concluida' => 'Uma ou mais seguradoras não responderam a tempo e ficaram de fora do comparativo. Não foi recusa do risco.'
-  }.freeze
 
   FALTA_JSON = 'A cotação não foi aberta: os dados do ramo que o especialista mandou não puderam ser lidos. Confira com o ' \
                'especialista o que falta e pergunte à pessoa só o que ninguém disse ainda.'.freeze
@@ -82,8 +80,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
       when 'falta_dado' then fatos_da_falta(handle)
       when 'ramo_desconhecido' then "A cotação não foi aberta. #{self::RAMO_DESCONHECIDO}"
       when 'falhou' then fatos_da_falha(handle)
-      else [FATOS[tipo], (SEM_BONUS if COM_SEM_BONUS.include?(tipo) && handle[self::SEM_BONUS_KEY].present?),
-            (FICARAM_DE_FORA[tipo] if seguradora_aguardando?(handle))].compact.join(' ')
+      else [FATOS[tipo], (SEM_BONUS if COM_RESULTADO.include?(tipo) && handle[self::SEM_BONUS_KEY].present?),
+            (SEM_QUEM_FICOU_DE_FORA if COM_RESULTADO.include?(tipo))].compact.join(' ')
       end
     end
 

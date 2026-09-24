@@ -25,13 +25,6 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
     def resultado_guardado?(handle)
       ::Autonomia::Insurance::ResultadoPorSeguradora.com_preco?(handle.to_h[RESULTADO_KEY])
     end
-
-    # -> alguma seguradora deste handle ficou aguardando resposta? Lido sem instância pelos fatos do evento
-    # (`Eventos`, chat#612): a cotação que parou de receber resposta fecha com ela de fora.
-    def seguradora_aguardando?(handle)
-      aguardando = ::Autonomia::Insurance::ResultadoPorSeguradora::AGUARDANDO
-      handle.to_h[RESULTADO_KEY].to_h.values.any? { |item| item.to_h['desfecho'] == aguardando }
-    end
   end
 
   private

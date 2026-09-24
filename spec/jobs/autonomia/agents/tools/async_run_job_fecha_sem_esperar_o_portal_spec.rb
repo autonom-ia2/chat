@@ -119,7 +119,7 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
   end
 
   def bot_messages
-    conversation.messages.reload.where(sender_type: 'AgentBot').order(:id)
+    conversation.messages.reload.where(sender_type: 'AgentBot', private: false).order(:id)
   end
 
   def bot_contents

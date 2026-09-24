@@ -8,9 +8,9 @@
 # sido enviado — em 19/09/2026 ela escalou um "o bônus da apólice foi considerado?" que a entrada respondia.
 #
 # DEVOLVE OS DADOS AO MODELO, e quem escreve ao cliente é a Lia (decisão do CEO, 18/09/2026): por seguradora,
-# o nome, o valor com o período e o parcelamento, ou o desfecho de quem não fez proposta, com a instabilidade quando
-# foi ela. RECUSA DO RISCO NÃO SE CONTA AO CLIENTE (decisão do CEO de 23/09/2026, chat#612): a Lia diz só que a
-# seguradora não trouxe proposta desta vez, e o que a seguradora escreveu vai para a equipe numa nota interna
+# o nome, o valor com o período e o parcelamento, ou que ela não fez proposta. POR QUE NÃO FEZ NÃO SE CONTA AO CLIENTE
+# (decisões do CEO de 23 e 24/09/2026, chat#612 e #638): nem recusa, nem instabilidade, nem prazo. A Lia diz só que a
+# seguradora não trouxe proposta desta vez; o motivo vai para a equipe numa nota interna
 # (`InsuranceQuote::NotaDaEquipe`). Nunca texto do portal. O que ela devolveu fica registrado no turno
 # (`Tools::Delivery#registrar_resultado`), e o `Answerer` confere a fala contra isso antes de ela sair
 # (`ConferenciaDePrecos`).
@@ -20,7 +20,6 @@
 class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents::Tools::Native::Base
   Resultado = ::Autonomia::Insurance::ResultadoDaCotacao
   Guardado = ::Autonomia::Insurance::ResultadoPorSeguradora
-  Motivo = ::Autonomia::Insurance::MotivoDaRecusa
 
   # O código da recusa sem contexto de entrega (`Tools::Recusa::MOTIVOS`).
   SEM_CONTEXTO = 'lista_indisponivel_nesta_superficie'.freeze
@@ -50,15 +49,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   AINDA_CORRENDO = 'A cotação ainda está correndo: podem chegar mais preços.'.freeze
   HA_SEM_PROPOSTA = 'Algumas seguradoras não fizeram proposta: só fale delas se o cliente perguntar.'.freeze
   SEM_BONUS = 'Esta cotação foi feita sem a classe de bônus da apólice atual.'.freeze
-  # O motivo de quem não fez proposta, por categoria (`Insurance::MotivoDaRecusa`): só a instabilidade, que não é
-  # recusa do risco.
-  MOTIVOS = {
-    Motivo::INSTABILIDADE => 'Categoria do motivo: instabilidade. A seguradora estava instável e não respondeu nesta ' \
-                             'cotação; não foi recusa do risco. Conte com as suas palavras que ela não conseguiu ' \
-                             'responder agora, sem prometer que ela vai cotar depois e sem acrescentar detalhe.'
-  }.freeze
+  # O que a Lia pode dizer de quem não fez proposta, seja qual for o motivo (chat#638).
   SEM_MOTIVO = 'Não há motivo que você possa contar: diga só que ela não trouxe proposta desta vez, sem falar de ' \
-               'recusa, de risco nem de aceitação.'.freeze
+               'recusa, de risco, de aceitação, de prazo nem de instabilidade.'.freeze
 
   class << self
     def slug
@@ -227,7 +220,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     "#{total} #{total == 1 ? 'seguradora fez' : 'seguradoras fizeram'} proposta #{quando}."
   end
 
-  # O que o modelo lê sobre UMA seguradora. `motivo:` falso tira a categoria de quem não fez proposta;
+  # O que o modelo lê sobre UMA seguradora. `motivo:` falso tira a regra de como falar de quem não fez proposta;
   # `cobertura:` verdadeiro acrescenta, na linha seguinte, o que ela cotou (chat#585), e só a pergunta por
   # seguradora a pede. A conferência recebe essa linha à parte (`dados_do_turno`).
   def fala(codigo, motivo: true, cobertura: false)
@@ -235,7 +228,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     case @resultado.desfecho(codigo)
     when Guardado::COM_PRECO then com_preco(nome, codigo, cobertura)
     when Guardado::AGUARDANDO then "#{nome} ainda não respondeu, e a cotação continua correndo."
-    else ["#{nome} não fez proposta nesta cotação.", (MOTIVOS.fetch(@resultado.motivo(codigo), SEM_MOTIVO) if motivo)].compact.join(' ')
+    else ["#{nome} não fez proposta nesta cotação.", (SEM_MOTIVO if motivo)].compact.join(' ')
     end
   end
 

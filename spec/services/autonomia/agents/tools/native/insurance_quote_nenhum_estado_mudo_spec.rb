@@ -182,7 +182,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
 
     def textos_na_conversa
-      conversation.messages.reload.where(sender_type: 'AgentBot').filter_map { |m| m.content.presence }
+      conversation.messages.reload.where(sender_type: 'AgentBot', private: false).filter_map { |m| m.content.presence }
     end
 
     ExecucoesDaCotacao::NOMES.each do |desfalque|
@@ -274,7 +274,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
           passadas(run, 5, 6)
 
           expect(run.status).to eq('running')
-          expect(conversation.messages.reload.where(sender_type: 'AgentBot').map(&:content)).to be_empty
+          expect(conversation.messages.reload.where(sender_type: 'AgentBot', private: false).map(&:content)).to be_empty
           expect(eventos_disparados(run)).to be_empty
         end
       end
@@ -325,7 +325,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     end
 
     def palavras_do_bot
-      conversation.messages.reload.where(sender_type: 'AgentBot').order(:id).map(&:content)
+      conversation.messages.reload.where(sender_type: 'AgentBot', private: false).order(:id).map(&:content)
     end
 
     ExecucoesDaCotacao::NOMES.each do |desfalque|
@@ -415,8 +415,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       texto = described_class.fatos_do_evento('encerrada_por_prazo', Autonomia::Agents::ToolRun.new(handle: {}))
 
       expect(texto).not_to match(/[0-9]/)
-      expect(texto).to include('comparativo em PDF', 'instabilidade delas', 'não é motivo para refazer')
-      expect(texto).not_to include('equipe')
+      expect(texto).to include('comparativo em PDF', described_class::SEM_QUEM_FICOU_DE_FORA)
+      expect(texto).not_to include('equipe', 'instabilidade delas', 'não responderam', 'recusa do risco')
     end
 
     def fatos(tipo, handle: {}, faixa: '')
@@ -436,13 +436,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(formulario).to include('Não ofereça cotar de novo')
     end
 
-    # chat#612: a cotação que fechou porque parou de chegar resposta conta à Lia quem ficou de fora.
-    it 'a conclusão com seguradora aguardando diz que ela ficou de fora; sem ninguém aguardando, não' do
+    # chat#638 (decisão do CEO de 24/09/2026): quem ficou sem proposta não é assunto do cliente, nem por prazo. Todo
+    # desfecho com resultado manda a Lia não falar disso; quem fica sabendo é a equipe, pela nota interna.
+    it 'todo desfecho com resultado manda nao falar de quem ficou sem proposta, e nenhum fala de prazo ou recusa' do
       aguardando = { described_class::RESULTADO_KEY => { '13' => { 'nome' => 'Mitsui', 'desfecho' => 'aguardando' } } }
-      todas = { described_class::RESULTADO_KEY => { '8' => { 'nome' => 'Porto', 'desfecho' => 'com_preco' } } }
 
-      expect(fatos('concluida', handle: aguardando)).to include(described_class::FICARAM_DE_FORA['concluida'])
-      expect(fatos('concluida', handle: todas)).not_to include(described_class::FICARAM_DE_FORA['concluida'])
+      %w[concluida valores_guardados encerrada_por_prazo].each do |tipo|
+        texto = fatos(tipo, handle: aguardando)
+        expect(texto).to include(described_class::SEM_QUEM_FICOU_DE_FORA)
+        expect(texto).not_to include('não responderam', 'a tempo', 'recusa do risco', 'instabilidade')
+      end
     end
 
     it 'os fatos dizem de qual seguro é a notícia' do

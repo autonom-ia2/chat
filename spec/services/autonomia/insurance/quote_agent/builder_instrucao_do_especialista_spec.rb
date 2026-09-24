@@ -468,13 +468,16 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # Pela chat#612 (`6c645afa…` -> `aaf46ad0…`): cada bem é uma cotação, em paralelo, com o nome dele em `item`.
   # Pela chat#624 (`090cf8d4…` -> `bd633e21…`, `aaf46ad0…` -> `8947b30d…`): a apólice em nome de outra pessoa dá as
   # coberturas (não o bônus, os sinistros nem a renovação), e quem renova trocando de bem mantém as da própria; regra do Rodrigo, 23/09/2026.
+  # Pela chat#638 (`bd633e21…` -> `abbed8b0…`): o CPF da pessoa indicada vem dos documentos e cotações da conversa antes
+  # de ser pedido.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('bd633e21a8b6ff72fae2d8ff119601d3')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('abbed8b0703a22842e2a83e7f497f8f2')
   end
 
   # chat#612 (23/09/2026): a §G e a §J não contam recusa nem motivo ao cliente; só a instabilidade.
+  # chat#638 (24/09/2026, `1fface70…` -> `d08359f3…`): nem a instabilidade nem o prazo; o motivo fica com a equipe.
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('1fface70b29d1087c78468d6d71be77a')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('d08359f3f07e358f9923cb5c30d19a37')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

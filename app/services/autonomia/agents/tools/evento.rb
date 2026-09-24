@@ -37,7 +37,7 @@ class Autonomia::Agents::Tools::Evento
     'valores_guardados' => 'a consulta terminou com resultado, mas o arquivo não pôde ser enviado; o resultado está guardado.',
     'falhou' => 'a consulta não pôde ser concluída, e nada chegou à pessoa.',
     'incerta' => 'não foi possível confirmar se a consulta chegou a ser feita, e nada chegou à pessoa.',
-    'encerrada_por_prazo' => 'a consulta terminou pelo tempo, e a pessoa já recebeu o resultado de quem respondeu.',
+    'encerrada_por_prazo' => 'a consulta terminou, e o resultado já foi enviado nesta conversa.',
     # chat#612: nada falhou; nenhuma seguradora trouxe proposta. O motivo fica com a equipe (`Tools::NotaInterna`).
     'sem_aceitacao' => 'a consulta terminou e nenhuma seguradora trouxe proposta; nada chegou à pessoa.'
   }.freeze

@@ -61,18 +61,37 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   describe '#nota_da_equipe' do
-    it 'uma linha por seguradora que recusou escrevendo, com o texto do portal entre aspas' do
+    # chat#638: a equipe recebe o motivo de TODA seguradora sem proposta, porque a Lia não fala de nenhuma delas.
+    it 'uma linha por seguradora sem proposta, com o motivo de cada uma; quem cotou fica de fora' do
       handle = handle_com([cotou('8', 'Porto Seguro'), recusou('19', 'Sancor', text: veiculo), recusou('7', 'Zurich', kind: 'outro'),
-                           recusou('13', 'Mitsui', kind: 'passageiro', text: 'Serviço indisponível')])
+                           recusou('13', 'Mitsui', kind: 'passageiro', text: 'Serviço indisponível'),
+                           recusou('4', 'Hdi', kind: 'credencial', status: 'auth_required'),
+                           { 'insurer' => { 'code' => '47', 'name' => 'Justos' }, 'status' => 'running' }])
 
       linhas = tool.nota_da_equipe(handle).split("\n")
 
       expect(linhas.first).to eq(format(described_class::CABECALHO, cotacao: 'auto, Nivus', run: run.id))
-      expect(linhas.drop(1)).to contain_exactly("- Sancor: \"#{veiculo}\"", '- Zurich: "Tipo de veículo não aceito."')
+      expect(linhas.drop(1)).to contain_exactly(
+        "- Sancor: #{format(described_class::RECUSOU, texto: veiculo)}",
+        "- Zurich: #{format(described_class::RECUSOU, texto: 'Tipo de veículo não aceito.')}",
+        "- Mitsui: #{described_class::INSTAVEL}", "- Hdi: #{described_class::SEM_MOTIVO}",
+        "- Justos: #{described_class::SEM_RESPOSTA}"
+      )
     end
 
-    it 'sem recusa escrita: nil' do
+    # O prazo da rodada 1 (24/09/2026): ninguém recusou por escrito, e ainda assim a equipe precisa saber quem ficou de
+    # fora, porque a Lia não fala disso.
+    it 'sem recusa escrita, a nota sai com quem não respondeu ou estava instável' do
+      handle = handle_com([cotou('8', 'Porto Seguro'), recusou('13', 'Mitsui', kind: 'passageiro'),
+                           { 'insurer' => { 'code' => '47', 'name' => 'Justos' }, 'status' => 'running' }])
+
+      expect(tool.nota_da_equipe(handle).split("\n").drop(1))
+        .to contain_exactly("- Mitsui: #{described_class::INSTAVEL}", "- Justos: #{described_class::SEM_RESPOSTA}")
+    end
+
+    it 'todas com preço, ou nada guardado: nil' do
       expect(tool.nota_da_equipe(handle_com([cotou('8', 'Porto Seguro')]))).to be_nil
+      expect(tool.nota_da_equipe({})).to be_nil
     end
   end
 
@@ -97,7 +116,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
     nota = conversation.messages.reload.where(private: true).sole
     expect(eventos_disparados(run)).to eq(['sem_aceitacao'])
-    expect(nota.content).to include("- Sancor: \"#{veiculo}\"")
+    expect(nota.content).to include("- Sancor: #{format(described_class::RECUSOU, texto: veiculo)}")
     expect(conversation.messages.where(private: false)).to be_empty
   end
 end

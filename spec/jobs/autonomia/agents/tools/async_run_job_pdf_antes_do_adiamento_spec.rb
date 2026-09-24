@@ -102,7 +102,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     primeira + 3
   end
 
-  def bot_messages = conversation.messages.reload.where(sender_type: 'AgentBot').order(:id)
+  # O que o CLIENTE vê: a nota interna da equipe (chat#638) é privada e fica de fora.
+  def bot_messages = conversation.messages.reload.where(sender_type: 'AgentBot', private: false).order(:id)
   def conteudos = bot_messages.map(&:content)
   def anexos = bot_messages.flat_map(&:attachments)
 
