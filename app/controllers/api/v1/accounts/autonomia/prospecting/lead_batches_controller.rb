@@ -1,11 +1,13 @@
 # Descartar e criar contatos em lote (#732, item 10). As rotas ficam em leads/ (POST leads/discard e leads/contacts) e
 # pedem a prospecção (prospecting_manage), como as outras ações do lead; os leads vêm sempre da conta.
 class Api::V1::Accounts::Autonomia::Prospecting::LeadBatchesController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
-  # Descartar, no painel e em lote, sempre com motivo. Devolve os leads como a tela lê.
+  # Descartar, no painel e em lote, sempre com motivo. Devolve os leads como GET leads/:id devolve para essa pessoa:
+  # sem o bloco técnico da nota para quem não é administrador (#732, item 9).
   def discard
     result = ::Autonomia::Prospecting::LeadDiscard.new(account: Current.account, lead_ids: params[:lead_ids], reason: params[:reason]).perform
     leads = leads_scope.includes(*lead_preloads).where(id: result.leads.map(&:id))
-    render json: { payload: { leads: leads.map { |lead| lead_payload_builder.build(lead) }, missing_lead_ids: result.missing_lead_ids } }
+    render json: { payload: { leads: leads.map { |lead| visible_lead_payload(lead_payload_builder.build(lead)) },
+                              missing_lead_ids: result.missing_lead_ids } }
   rescue ::Autonomia::Prospecting::LeadDiscard::Error => e
     render_batch_error('discard', 'lead_discard', e.message, max: ::Autonomia::Prospecting::LeadDiscard::MAX_LEADS)
   end

@@ -83,6 +83,15 @@ RSpec.describe 'Autonomia prospecting score details visibility', type: :request 
     end
   end
 
+  it 'o descarte em lote devolve os leads ao agente sem o bloco técnico' do
+    post "#{base_path}/leads/discard", params: { lead_ids: [lead.id], reason: 'Sem interesse' }, headers: auth_headers(agent), as: :json
+
+    expect(response).to have_http_status(:ok)
+    returned = response.parsed_body.dig('payload', 'leads', 0)
+    expect(returned).to include('status' => 'discarded', 'human_insight' => lead.human_insight)
+    expect(returned).not_to include('score_breakdown', 'negative_factors')
+  end
+
   it 'as configurações dizem à tela quem vê o detalhe da nota' do
     lead_from(admin, "#{base_path}/settings") { |body| expect(body.dig('payload', 'can_view_score_details')).to be(true) }
     lead_from(agent, "#{base_path}/settings") { |body| expect(body.dig('payload', 'can_view_score_details')).to be(false) }
