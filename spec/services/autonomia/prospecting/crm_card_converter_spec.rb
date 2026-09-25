@@ -24,6 +24,7 @@ RSpec.describe Autonomia::Prospecting::CrmCardConverter do
   end
 
   before do
+    stub_prospecting_company_upserter
     allow(Crm::Config).to receive(:enabled?).and_return(true)
   end
 

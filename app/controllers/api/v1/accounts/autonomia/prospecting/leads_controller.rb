@@ -35,27 +35,31 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end
 
+  # Envio individual: o mesmo caminho do lote, com o mesmo resultado por lead (#680). Leva também o lead e o card, que
+  # a tela já lia. `created` agora é a lista do lote, não mais true/false.
   def create_crm_card
-    result = ::Autonomia::Prospecting::CrmCardConverter.new(
-      lead: leads_scope.find(params[:id]),
-      user: Current.user,
-      pipeline_id: crm_card_params.require(:pipeline_id),
-      stage_id: crm_card_params.require(:stage_id)
-    ).perform
+    lead = leads_scope.find(params[:id])
+    result = run_crm_send([lead.id], crm_card_params.require(:pipeline_id), crm_card_params.require(:stage_id))
+    payload = crm_send_payload(result).merge(single_lead_payload(lead.reload))
+    return render json: { payload: payload }, status: result.created.any? ? :created : :ok if result.failed.empty?
 
-    render json: {
-      payload: {
-        lead: lead_payload(result.lead),
-        crm_card: crm_card_payload(result.card),
-        created: result.created
-      }
-    }, status: result.created ? :created : :ok
-  rescue ActionController::ParameterMissing => e
+    render_single_failure(result.failed.first, payload)
+  rescue ActionController::ParameterMissing, ::Autonomia::Prospecting::CrmCardConverter::Error => e
     render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'crm.pipeline_or_stage_not_found' }, status: :not_found
-  rescue ActiveRecord::RecordInvalid => e
-    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
+  # Envio ao CRM em lote (#680): até 30 leads, cada um na própria transação.
+  def create_crm_cards
+    result = run_crm_send(params.require(:lead_ids), params.require(:pipeline_id), params.require(:stage_id))
+    render json: { payload: crm_send_payload(result) }
+  rescue ActionController::ParameterMissing, ::Autonomia::Prospecting::CrmCardBatch::NoLeads
+    render_crm_send_error('no_leads')
+  rescue ::Autonomia::Prospecting::CrmCardBatch::TooManyLeads
+    render_crm_send_error('too_many_leads')
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'crm.pipeline_or_stage_not_found' }, status: :not_found
   rescue ::Autonomia::Prospecting::CrmCardConverter::Error => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
@@ -133,6 +137,31 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     card.as_json(
       only: [:id, :title, :pipeline_id, :stage_id, :contact_id, :status, :source, :created_at, :updated_at]
     )
+  end
+
+  def run_crm_send(lead_ids, pipeline_id, stage_id)
+    ::Autonomia::Prospecting::CrmCardBatch.new(
+      account: Current.account, user: Current.user, lead_ids: lead_ids, pipeline_id: pipeline_id, stage_id: stage_id
+    ).perform
+  end
+
+  def crm_send_payload(result)
+    { created: result.created, existing: result.existing, failed: result.failed }
+  end
+
+  def single_lead_payload(lead)
+    { lead: lead_payload(lead), crm_card: lead.crm_card && crm_card_payload(lead.crm_card) }
+  end
+
+  def render_single_failure(failure, payload)
+    render json: { error: failure[:message], code: failure[:reason_code], payload: payload }, status: :unprocessable_entity
+  end
+
+  def render_crm_send_error(code)
+    render json: {
+      error: I18n.t("autonomia.prospecting.crm_send.errors.#{code}", max: ::Autonomia::Prospecting::CrmCardBatch::MAX_LEADS),
+      code: "prospecting.crm_send.#{code}"
+    }, status: :unprocessable_entity
   end
 
   def crm_card_params

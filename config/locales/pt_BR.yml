@@ -724,6 +724,14 @@ pt_BR:
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
+      crm_send:
+        failures:
+          not_found: 'Lead não encontrado nesta conta.'
+          invalid_data: 'O CRM recusou os dados deste lead. Confira nome e telefone e tente de novo.'
+          unexpected_error: 'Não foi possível enviar este lead agora. Tente de novo; se continuar, fale com o suporte.'
+        errors:
+          no_leads: 'Escolha pelo menos um lead para enviar ao CRM.'
+          too_many_leads: 'Envie até %{max} leads por vez.'
       errors:
         google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'
         google_busy: 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.'
