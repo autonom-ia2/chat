@@ -3703,8 +3703,8 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useSearchLeads.js:59; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useSearchLeads.js:108; evidência sumiu: app/services/autonomia/prospecting/crm_card_converter.rb:22; evidência sumiu: app/javascript/dashboard/i18n/locale/en/prospecting.json:113; texto de tela \"Criar cards\" saiu do i18n"
     },
     {
      "id": "16.03",
