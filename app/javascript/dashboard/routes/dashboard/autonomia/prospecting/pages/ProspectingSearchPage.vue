@@ -9,6 +9,8 @@ import SearchModeBadge from '../components/search/SearchModeBadge.vue';
 import SearchResults from '../components/search/SearchResults.vue';
 import SearchConfigModal from '../components/search/SearchConfigModal.vue';
 import LeadDetailDrawer from '../components/search/LeadDetailDrawer.vue';
+import CrmSendModal from '../components/crm/CrmSendModal.vue';
+import CampaignSelectionModal from '../components/campaign/CampaignSelectionModal.vue';
 import { useProspectingSearch } from '../composables/useProspectingSearch';
 
 const { t } = useI18n();
@@ -18,6 +20,12 @@ const {
   showNewSearch,
   selectedSearchConfig,
   selectedLeadDetail,
+  crmForm,
+  crmSendLeads,
+  closeCrmSend,
+  applyCrmSendResult,
+  campaignLeads,
+  selectedSearch,
   deleteSearchConfirmModal,
   deleteSearchConfirmConfig,
   toggleNewSearch,
@@ -88,6 +96,22 @@ const {
     <SearchConfigModal v-if="selectedSearchConfig && !showNewSearch" />
 
     <LeadDetailDrawer v-if="selectedLeadDetail && !showNewSearch" />
+
+    <CrmSendModal
+      v-if="crmSendLeads"
+      :leads="crmSendLeads"
+      :suggested-pipeline-id="crmForm.pipeline_id"
+      :suggested-stage-id="crmForm.stage_id"
+      @sent="applyCrmSendResult"
+      @close="closeCrmSend"
+    />
+
+    <CampaignSelectionModal
+      v-if="campaignLeads"
+      :leads="campaignLeads"
+      :default-segment-name="selectedSearch?.query || ''"
+      @close="campaignLeads = null"
+    />
 
     <ConfirmModal
       ref="deleteSearchConfirmModal"

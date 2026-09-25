@@ -229,18 +229,24 @@ describe('ProspectingSearchPage · resposta da API mantém os campos da busca', 
       .props('leads')
       .find(lead => lead.id === 101);
 
-  it('criar card no CRM troca o lead sem trocar nota, prioridade e posição', async () => {
+  it('enviar ao CRM grava o card no lead sem trocar nota, prioridade e posição', async () => {
     const wrapper = await mountSearchPage();
-    AutonomiaProspectingAPI.createLeadCrmCard.mockResolvedValue({
+    AutonomiaProspectingAPI.createCrmCards.mockResolvedValue({
       data: {
-        payload: { lead: sunLead({ crm_card_id: 77, ...otherSearchFields }) },
+        payload: {
+          created: [{ lead_id: 101, card_id: 77, contact_id: 900 }],
+          existing: [],
+          failed: [],
+        },
       },
     });
 
     await leadCheckbox(wrapper, 'Padaria Sol').trigger('change');
-    await buttonWithText(wrapper, 'PROSPECTING.SEARCH.BULK_CRM_CARDS').trigger(
+    await buttonWithText(wrapper, 'PROSPECTING.SEARCH.SEND_TO_CRM').trigger(
       'click'
     );
+    await flushPromises();
+    await wrapper.find('[data-test="crm-send-submit"]').trigger('click');
     await flushPromises();
 
     expect(mapLead(wrapper)).toMatchObject({

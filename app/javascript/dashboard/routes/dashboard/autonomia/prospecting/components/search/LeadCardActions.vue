@@ -19,10 +19,8 @@ const {
   settings,
   selectedLeadDetailId,
   enrichingLeadId,
-  convertingCrmLeadId,
-  canCreateCrmCard,
   enrichLead,
-  createCrmCard,
+  openCrmSend,
   contactUrl,
   crmCardUrl,
 } = useProspectingSearchContext();
@@ -124,16 +122,11 @@ const toggleDetails = lead => {
     <button
       v-else-if="canManage"
       type="button"
-      class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-      :disabled="convertingCrmLeadId === lead.id || !canCreateCrmCard"
-      @click="createCrmCard(lead)"
+      class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm"
+      @click="openCrmSend([lead])"
     >
-      <span class="i-lucide-kanban-square size-3.5" />
-      {{
-        convertingCrmLeadId === lead.id
-          ? t('PROSPECTING.SEARCH.CREATING_CRM_CARD')
-          : t('PROSPECTING.SEARCH.CREATE_CRM_CARD')
-      }}
+      <span class="i-lucide-kanban-square size-3.5" aria-hidden="true" />
+      {{ t('PROSPECTING.SEARCH.SEND_TO_CRM') }}
     </button>
   </div>
 </template>

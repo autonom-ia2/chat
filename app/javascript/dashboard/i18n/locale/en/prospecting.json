@@ -62,7 +62,6 @@
       "LOAD_SEARCH": "Could not load this prospect search.",
       "CREATE_SEARCH": "Could not run this prospect search.",
       "CREATE_CONTACT": "Could not create this contact.",
-      "CREATE_CRM_CARD": "Could not create this CRM card.",
       "UPDATE_LEAD": "Could not update this lead.",
       "UPDATE_SEARCH": "Could not update this search.",
       "LOAD_CRM": "Could not load CRM pipelines.",
@@ -110,7 +109,6 @@
       "SELECT_VISIBLE": "Selecionar visíveis",
       "SELECTED_COUNT": "{count} selecionados",
       "BULK_CONTACTS": "Criar contatos",
-      "BULK_CRM_CARDS": "Criar cards",
       "CSV_EXPORT": "CSV",
       "FILTER_BUTTON": "Filtros",
       "OPEN_DETAILS": "Detalhes",
@@ -119,9 +117,6 @@
       "CREATING_CONTACT": "Criando...",
       "CONTACT_CREATED": "Contato criado",
       "OPEN_CONTACT": "Abrir contato",
-      "CREATE_CRM_CARD": "Criar card",
-      "CREATING_CRM_CARD": "Criando...",
-      "CRM_CARD_CREATED": "Card criado",
       "OPEN_CRM_CARD": "Abrir card",
       "ENRICH_LEAD": "Enriquecer",
       "ENRICHED": "Enriquecido",
@@ -408,7 +403,9 @@
         "STATUS": "Status",
         "RESULTS": "Leads",
         "CREATED_AT": "Criada em"
-      }
+      },
+      "SEND_TO_CRM": "Enviar ao CRM",
+      "ADD_TO_CAMPAIGN": "Adicionar à campanha"
     },
     "LISTS": {
       "TITLE": "Listas",
@@ -470,7 +467,8 @@
         "NAME": "Lista",
         "STATUS": "Status",
         "CREATED_AT": "Criada em"
-      }
+      },
+      "SEND_LIST_TO_CRM": "Enviar lista ao CRM"
     },
     "QUALITY": {
       "ALL_STATUSES": "Todos",
@@ -628,7 +626,13 @@
         "RUNNING_HINT": "A pesquisa está confirmando a empresa e o quadro de sócios.",
         "DISABLED": "A pesquisa de empresa e decisor está desligada nesta conta.",
         "FAILED": "A última pesquisa não pôde ser concluída. Tente verificar novamente.",
-        "BLOCKED": "A pesquisa deste lead foi bloqueada."
+        "BLOCKED": "A pesquisa deste lead foi bloqueada.",
+        "USE_AS_CONTACT": "Usar como contato",
+        "USE_AS_CONTACT_LABEL": "Usar {name} como contato",
+        "ADOPTING": "Salvando…",
+        "CURRENT_CONTACT": "Contato atual",
+        "OWNER_ADOPTED": "{name} agora é o decisor e o contato deste lead.",
+        "ADOPT_ERROR": "Não foi possível usar este sócio como contato."
       },
       "NO_DECISION_REASON": {
         "COMPANY_NOT_FOUND": "Nenhuma empresa do cadastro público bate com este lead (nome, telefone, cidade e UF).",
@@ -655,6 +659,67 @@
       },
       "QUEUED_ALERT": "Pesquisa na fila. O resultado aparece aqui sozinho.",
       "REQUEST_ERROR": "Não foi possível pedir a pesquisa."
+    },
+    "CRM_SEND": {
+      "TITLE": "Enviar ao CRM",
+      "PIPELINE": "Funil",
+      "STAGE": "Estágio",
+      "PIPELINE_PLACEHOLDER": "Escolha o funil",
+      "STAGE_PLACEHOLDER": "Escolha o estágio",
+      "CHOOSE_DESTINATION": "Escolha o funil e o estágio para onde os leads vão.",
+      "CONFIRMATION": "Enviando {count} lead(s) para o funil {pipeline}, estágio {stage}.",
+      "LOADING": "Carregando funis...",
+      "EMPTY_TITLE": "Nenhum funil no CRM",
+      "EMPTY_DESCRIPTION": "Os leads entram no CRM como cards de um funil. Crie um funil no CRM e volte aqui para enviar.",
+      "LOAD_ERROR": "Não foi possível carregar os funis do CRM. Confira se o CRM está ligado nesta conta.",
+      "CREATE_PIPELINE": "Criar funil no CRM",
+      "SEND": "Enviar",
+      "SENDING": "Enviando {done} de {total}...",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Fechar",
+      "RESULT": {
+        "SUCCESS_TITLE": "Envio concluído",
+        "PARTIAL_TITLE": "Envio concluído com falhas",
+        "FAILED_TITLE": "Nenhum lead foi enviado",
+        "CREATED": "{count} card(s) criado(s)",
+        "EXISTING": "{count} já estava(m) no CRM",
+        "FAILED": "{count} falha(s)",
+        "FAILED_LIST": "O que não foi enviado",
+        "UNKNOWN_LEAD": "Lead {id}"
+      },
+      "FAILURE_REASONS": {
+        "NOT_FOUND": "Lead não encontrado nesta conta.",
+        "REQUEST_FAILED": "Não foi possível enviar. Tente de novo.",
+        "DEFAULT": "Não foi possível enviar este lead."
+      }
+    },
+    "CAMPAIGN_SELECTION": {
+      "TITLE": "Adicionar à campanha",
+      "SELECTED": "{count} lead(s) selecionado(s).",
+      "RULE": "Entram no segmento os leads prontos para campanha, com WhatsApp verificado e sem bloqueio no contato. Os outros aparecem no resumo, com o motivo.",
+      "CAMPAIGN": "Campanha",
+      "SEGMENT_ONLY": "Só criar o segmento, sem campanha",
+      "SEGMENT_NAME": "Nome do segmento",
+      "CAMPAIGNS_LOAD_ERROR": "Não foi possível carregar as campanhas. Dá para criar só o segmento e ligar a campanha depois.",
+      "SUBMIT": "Adicionar",
+      "SUBMITTING": "Adicionando...",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Fechar",
+      "ERROR": "Não foi possível adicionar os leads à campanha.",
+      "RESULT": {
+        "ELIGIBLE": "{count} lead(s) entraram no segmento {label}.",
+        "CAMPAIGN": "Campanha: {title}",
+        "CONTACTS_CREATED": "{count} contato(s) criado(s) no caminho.",
+        "BLOCKED": "{count} ficaram de fora"
+      },
+      "BLOCK_REASONS": {
+        "NO_PHONE": "Sem telefone",
+        "NO_WHATSAPP": "Sem WhatsApp verificado",
+        "OPTED_OUT": "Pediu para não receber mensagens",
+        "CONTACT_BLOCKED": "Contato bloqueado",
+        "DISCARDED": "Descartado",
+        "DEFAULT": "Não pode entrar na campanha"
+      }
     }
   }
 }

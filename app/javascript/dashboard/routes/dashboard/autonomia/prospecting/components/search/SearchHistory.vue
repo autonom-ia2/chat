@@ -50,7 +50,11 @@ const searchPreset = search => findPreset(search.preset_id);
         </span>
       </div>
     </div>
-    <div v-if="isLoading" class="px-4 py-8 text-sm text-n-slate-11">
+    <!-- Carregando só enquanto não há lista: abrir uma busca não apaga o histórico. -->
+    <div
+      v-if="isLoading && !searches.length"
+      class="px-4 py-8 text-sm text-n-slate-11"
+    >
       {{ t('PROSPECTING.STATES.LOADING') }}
     </div>
     <div v-else-if="!searches.length" class="px-4 py-8 text-sm text-n-slate-11">

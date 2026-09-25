@@ -3,7 +3,8 @@
 // DecisionResearchPanel do Orth: botão Pesquisar / Verificar novamente /
 // Pesquisando…, selos, Quem atende, motivo de não haver decisor, bloco Empresa
 // e mensagens de bloqueio. O pedido sobe por evento; o resultado chega pelo
-// evento prospecting.lead.updated, que troca o lead inteiro.
+// evento prospecting.lead.updated, que troca o lead inteiro. Em Quem atende,
+// cada sócio pode virar o decisor e o contato do lead (Usar como contato, #680).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
@@ -22,9 +23,11 @@ const props = defineProps({
   researchEnabled: { type: Boolean, default: false },
   canManage: { type: Boolean, default: false },
   requesting: { type: Boolean, default: false },
+  // Sócio sendo adotado como contato agora; vazio quando nenhum.
+  adoptingOwnerName: { type: String, default: '' },
 });
 
-const emit = defineEmits(['research']);
+const emit = defineEmits(['research', 'adoptOwner']);
 
 // Estados finais sem decisor em que a tela explica o motivo. Falha e bloqueio
 // têm aviso próprio.
@@ -89,6 +92,13 @@ const qualificationText = qualification => {
   const key = qualificationLabelKey(qualification);
   return key ? t(key) : qualification;
 };
+
+const sameName = (left, right) =>
+  (left || '').trim().toLocaleUpperCase() ===
+  (right || '').trim().toLocaleUpperCase();
+const isCurrentContact = owner =>
+  Boolean(research.value.decision?.name) &&
+  sameName(owner.name, research.value.decision.name);
 
 const ownerLine = owner => {
   const qualification = qualificationText(owner.qualification);
@@ -169,9 +179,39 @@ const requestResearch = async () => {
         <li
           v-for="owner in owners"
           :key="`${owner.name}-${owner.qualification}`"
-          class="break-words text-sm font-medium text-n-slate-12"
+          class="flex flex-wrap items-center justify-between gap-2"
         >
-          {{ ownerLine(owner) }}
+          <span
+            data-test="research-owner-line"
+            class="min-w-0 break-words text-sm font-medium text-n-slate-12"
+          >
+            {{ ownerLine(owner) }}
+          </span>
+          <span
+            v-if="isCurrentContact(owner)"
+            class="rounded-full bg-n-teal-2 px-2 py-0.5 text-xs font-medium text-n-teal-11 ring-1 ring-n-teal-5"
+          >
+            {{ t('PROSPECTING.RESEARCH.PANEL.CURRENT_CONTACT') }}
+          </span>
+          <button
+            v-else-if="canManage"
+            type="button"
+            class="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-2 px-3 text-xs font-medium text-n-slate-12 hover:bg-n-solid-3 disabled:cursor-not-allowed disabled:opacity-60"
+            :aria-label="
+              t('PROSPECTING.RESEARCH.PANEL.USE_AS_CONTACT_LABEL', {
+                name: owner.name,
+              })
+            "
+            :disabled="Boolean(adoptingOwnerName)"
+            @click="emit('adoptOwner', owner)"
+          >
+            <span class="i-lucide-user-check size-3.5" aria-hidden="true" />
+            {{
+              adoptingOwnerName === owner.name
+                ? t('PROSPECTING.RESEARCH.PANEL.ADOPTING')
+                : t('PROSPECTING.RESEARCH.PANEL.USE_AS_CONTACT')
+            }}
+          </button>
         </li>
       </ul>
     </section>
