@@ -560,8 +560,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # Pelas guardas da receita v3, R17 (`15a304f8…` -> `547e5b95…`, 25/09/2026): a §I ganha as seis rodadas de ferramenta
   # para corrigir a recusa grátis da conferência, e a recusa paga de seguradora, que chega fora do turno e não se corrige
   # nelas. As promessas estão em `receita/rodadas_no_manual_spec` (`RodadasNoManual`), ligadas à constante do Runner.
+  # Pelas decisões 1 e 4 do Rodrigo, chat#718 (`547e5b95…` -> `e3894e56…`, 25/09/2026): na §J o campo seguradoras leva
+  # cada nome como a cotação o escreve, e o nome fora dela volta com a lista (promessas em
+  # `builder_instrucao_do_principal_promessas_spec`, `ManualDoPrincipalResultado::PROMESSAS`); na §I, "a conferência é
+  # grátis" vira o que é verdade: a recusa não abre cotação, e conferir de novo com o mesmo documento não repete a
+  # busca paga do segurado (`RodadasNoManual::PROMESSAS_DO_COMUM`, sustentada por `Insurance::BuscaDoSeguradoGuardada`).
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('547e5b95c8cd300d118d47f862407f45')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('e3894e5647bdde1740b67ba6a72e9b95')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

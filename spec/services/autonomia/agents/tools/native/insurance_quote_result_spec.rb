@@ -50,9 +50,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
                                        faixa: linha.fetch(:faixa, 'auto'))
   end
 
-  # -> o que o modelo lê nesta chamada, no turno de `turno` (a `delivery` do exemplo, por padrão).
+  # -> o que o modelo lê nesta chamada, no turno de `turno` (a `delivery` do exemplo, por padrão). `seguradora`: um nome
+  # ou a lista de nomes que o modelo escolheu (chat#718); nil é o resultado inteiro.
   def ao_modelo(seguradora = nil, turno: delivery)
-    described_class.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: turno).call
+    described_class.new(agent: agent, params: { 'seguradoras' => seguradora && Array(seguradora) }, delivery: turno).call
   end
 
   # A linha que o modelo lê de uma seguradora com preço.
@@ -74,7 +75,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   it 'sem contexto de entrega, devolve o erro nomeado e não lê cotação nenhuma' do
     cotacao_com(status: 'done')
 
-    saida = described_class.new(agent: agent, params: { 'seguradora' => nil }).call
+    saida = described_class.new(agent: agent, params: { 'seguradoras' => nil }).call
 
     expect(JSON.parse(saida)).to eq('error' => described_class::SEM_CONTEXTO)
   end
@@ -212,12 +213,22 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(ao_modelo('Justos')).to include('Justos não fez proposta')
     end
 
-    it 'nome que não está na cotação: encerrada, e ainda correndo' do
+    # A LISTA FECHADA (chat#718): o nome fora da cotação volta com os nomes dela, sem valor, para o modelo escolher.
+    it 'nome que não está na cotação: encerrada, e ainda correndo, com a lista fechada' do
       run = cotacao_com(status: 'done')
-      expect(ao_modelo('Azul')).to eq(described_class::NAO_ENCONTRADA)
+      lista = 'Allianz; Mitsui; Porto Seguro; Sancor'
+      expect(ao_modelo('Azul')).to eq(format(described_class::NAO_ENCONTRADA, nomes: lista))
 
       run.update!(status: 'running')
-      expect(ao_modelo('Azul')).to eq(described_class::NAO_ENCONTRADA_AINDA)
+      expect(ao_modelo('Azul')).to eq(format(described_class::NAO_ENCONTRADA_AINDA, nomes: lista))
+    end
+
+    # O NOME PELA METADE NÃO CASA MAIS POR PALAVRA (chat#718): "Porto" não é "Porto Seguro". Volta a lista, e é o modelo
+    # quem escolhe nela na chamada seguinte.
+    it 'nome pela metade: volta a lista, e não o preço de ninguém' do
+      cotacao_com(status: 'done')
+
+      expect(ao_modelo('Porto')).to start_with('Nenhum nome pedido é, exatamente,').and include('Allianz; Mitsui; Porto Seguro; Sancor')
     end
   end
 
@@ -260,7 +271,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     it 'uma seguradora com preço: só ela' do
       cotacao_com(status: 'done')
 
-      texto = ao_modelo('a porto')
+      texto = ao_modelo('porto seguro')
 
       expect(texto).to include(preco(porto), described_class::COMO_ESCREVER)
       expect(texto).not_to include('Allianz')
@@ -269,7 +280,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     it 'uma com preço e uma sem proposta no mesmo pedido: o preço de uma e, da outra, só que não trouxe proposta' do
       cotacao_com(status: 'done')
 
-      texto = ao_modelo('Sancor e Porto')
+      texto = ao_modelo(['Sancor', 'Porto Seguro'])
 
       expect(texto).to include(preco(porto), 'Sancor não fez proposta nesta cotação.', described_class::SEM_MOTIVO)
       expect(texto).not_to include(risco['text'])
@@ -281,7 +292,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     it 'registra no turno o texto, as seguradoras da cotação e o comparativo' do
       cotacao_com(status: 'done')
 
-      texto = ao_modelo('Porto')
+      texto = ao_modelo('Porto Seguro')
 
       expect(delivery.resultado_do_turno.texto).to eq(texto)
       expect(delivery.resultado_do_turno.seguradoras).to contain_exactly('Porto Seguro', 'Allianz', 'Sancor', 'Mitsui')
@@ -292,7 +303,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   # O MODELO NUNCA RECEBE TEXTO DO PORTAL NEM TRAVESSÃO, em nenhum estado.
   it 'nenhum texto ao modelo tem travessão, em nenhum estado' do
     cotacao_com(status: 'running', handle: { cotacao::SEM_BONUS_KEY => true })
-    textos = [nil, 'Porto', 'Allianz', 'Sancor', 'Mitsui', 'Sancor e Porto', 'Azul'].map do |seguradora|
+    textos = [nil, 'Porto Seguro', 'Allianz', 'Sancor', 'Mitsui', ['Sancor', 'Porto Seguro'], 'Azul', %w[Porto Allianz]].map do |seguradora|
       ao_modelo(seguradora, turno: Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil))
     end
 
@@ -306,7 +317,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       cotacao_com(status: 'done')
 
       ao_modelo('Allianz')
-      ao_modelo('Porto')
+      ao_modelo('Porto Seguro')
 
       expect(Autonomia::Agents::ConferenciaDePrecos.valores(delivery.resultado_do_turno.texto)).to include(211_918, 240_255)
     end
@@ -353,8 +364,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     end
   end
 
-  describe 'a procura pelo nome que o cliente escreveu' do
-    # '99' veio sem nome do portal: sem palavra no nome, ela não pode casar com consulta nenhuma.
+  # QUEM ESCOLHE É O MODELO (chat#718): o código só confere a identidade do nome que ele escolheu na lista da cotação.
+  # Nada de palavra solta: "porto" não é "Porto Seguro", e "Bp" não é "Bp Assinatura".
+  describe 'o nome que o modelo escolheu na lista fechada' do
+    # '99' veio sem nome do portal: nome vazio não é escolha.
     let(:nomes) do
       { '8' => 'Porto Seguro', '19' => 'Sancor', '48' => 'Bp', '55' => 'Bp Assinatura', '12' => 'Liberty Site',
         '11' => 'Tokio', '4' => 'Hdi', '99' => '' }
@@ -363,15 +376,29 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     before { cotacao_com(status: 'done', ofertas: nomes.map { |code, name| recusou(code, name) }) }
 
     {
-      'porto' => %w[8], 'Porto Seguro' => %w[8], 'Sancor Seguros' => %w[19], 'HDI' => %w[4], 'bp' => %w[48],
-      'Bp Assinatura' => %w[55], 'a assinatura' => %w[55], 'liberty' => %w[12], 'Liberty e Porto' => %w[8 12],
-      'Tokio Marine' => %w[11], 'Bp e Sancor' => %w[19 48], 'azul' => [], 'seguradora' => [], '' => []
-    }.each do |consulta, codigos|
-      it "«#{consulta}» nomeia #{codigos.inspect}" do
+      'Porto Seguro' => '8', 'porto seguro' => '8', '  Porto   Seguro ' => '8', 'HDI' => '4', 'Bp' => '48',
+      'Bp Assinatura' => '55', 'porto' => nil, 'Sancor Seguros' => nil, 'a assinatura' => nil, 'liberty' => nil,
+      'Liberty e Porto' => nil, 'Tokio Marine' => nil, 'seguradora' => nil, '' => nil, nil => nil
+    }.each do |escolhido, codigo|
+      it "«#{escolhido.inspect}» é #{codigo.inspect}" do
         resultado = Autonomia::Insurance::ResultadoDaCotacao.da_conversa(conversation.id)
 
-        expect(resultado.procurar(consulta)).to match_array(codigos)
+        expect(resultado.codigo_do_nome(escolhido)).to eq(codigo)
       end
+    end
+
+    it 'dois nomes iguais na cotação: nenhum é escolhido, e o modelo pergunta' do
+      Autonomia::Agents::ToolRun.delete_all
+      cotacao_com(status: 'done', ofertas: [recusou('1', 'Azul'), recusou('2', 'Azul')])
+
+      expect(Autonomia::Insurance::ResultadoDaCotacao.da_conversa(conversation.id).codigo_do_nome('Azul')).to be_nil
+    end
+
+    it 'parte dos nomes na lista e parte fora: a que está vem, e a que não está volta com a lista' do
+      texto = ao_modelo(%w[Sancor Porto])
+
+      expect(texto).to include("Sancor não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}")
+      expect(texto).to include(format(described_class::FORA_DA_LISTA, fora: 'Porto', nomes: nomes.values.compact_blank.sort.join('; ')))
     end
   end
 
@@ -448,7 +475,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
     it 'também acompanha a pergunta por uma seguradora' do
       cotacao_pedida_com(renovacao)
 
-      expect(ao_modelo('Porto')).to include('Classe de bônus: 9.')
+      expect(ao_modelo('Porto Seguro')).to include('Classe de bônus: 9.')
     end
 
     # SEM COTAÇÃO, NADA MUDA: não há entrada para resumir, e os estados sem leitura seguem inteiros.
@@ -533,10 +560,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   describe 'o schema' do
     let(:schema) { described_class.openai_schema }
 
-    it 'tem seguradora e produto, os dois opcionais pelo tipo e presentes em required, sem anyOf' do
-      expect(schema[:parameters][:properties].keys).to eq(%w[seguradora produto])
-      expect(schema[:parameters][:required]).to eq(%w[seguradora produto])
-      expect(schema[:parameters][:properties]['seguradora']['type']).to match_array(%w[string null])
+    it 'seguradoras é uma lista de nomes, um por item' do
+      expect(schema[:parameters][:properties]['seguradoras']['items']).to eq('type' => 'string')
+    end
+
+    # A LISTA DE NOMES É DO MODELO (chat#718): um nome por item, cada um como a cotação o escreve, e não um texto só
+    # que o código teria de quebrar.
+    it 'tem seguradoras (lista de nomes) e produto, os dois opcionais pelo tipo e presentes em required, sem anyOf' do
+      expect(schema[:parameters][:properties].keys).to eq(%w[seguradoras produto])
+      expect(schema[:parameters][:required]).to eq(%w[seguradoras produto])
+      expect(schema[:parameters][:properties]['seguradoras']['type']).to match_array(%w[array null])
       expect(schema[:parameters][:properties]['produto']['type']).to match_array(%w[string null])
       expect(schema.to_json).not_to include('anyOf')
       expect(schema[:strict]).to be(true)

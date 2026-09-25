@@ -35,7 +35,9 @@ module TextoAoCliente
     'app/services/autonomia/agents/tools/async_publisher.rb::Autonomia::Agents::Tools::AsyncPublisher#build_message!' =>
       { tipo: :anexo_sem_texto, motivo: 'o arquivo da ferramenta (comparativo, proposta), sem legenda; privado com humano atribuído' },
     'app/services/autonomia/agents/tools/nota_interna.rb::Autonomia::Agents::Tools::NotaInterna#criar' =>
-      { tipo: :nota_privada, motivo: 'a nota da equipe no fecho da cotação' }
+      { tipo: :nota_privada, motivo: 'a nota da equipe no fecho da cotação' },
+    'app/services/autonomia/insurance/nota_na_hora.rb::Autonomia::Insurance::NotaNaHora#criar' =>
+      { tipo: :nota_privada, motivo: 'a falha da cotação sem execução nem passagem (rodadas, laço, proposta), para a equipe na hora' }
   }.freeze
 
   TIPOS = %i[nota_privada anexo_sem_texto fala_do_modelo outro].freeze

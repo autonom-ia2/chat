@@ -119,14 +119,7 @@ module RegexDaReceita
       motivo: 'recusa marcador reservado dentro do horário que a corretora digitou' },
     { arquivo: 'app/services/autonomia/insurance/quote_input.rb', onde: '::Autonomia::Insurance::QuoteInput#digitos',
       tipo: 'literal', trecho: '/\D/', pessoa: :sem_interpretar,
-      motivo: 'só os dígitos do CPF, CNPJ ou CEP que o modelo escreveu; String#delete faria o mesmo sem regex' },
-    # ACHADO PARA O RODRIGO (25/09/2026). As palavras do campo `seguradora`, que o modelo escreve "como a pessoa disse",
-    # são casadas por palavra com os nomes das seguradoras para decidir de qual ela fala (`#procurar`), e as da fala
-    # da Lia, para achar a seguradora citada (`ConferenciaDePrecos#citadas`). Não é lista de intenção, mas decide o
-    # que a pessoa pediu por casamento de palavra, e não pelo modelo. Não corrigido aqui, por regra da tarefa.
-    { arquivo: 'app/services/autonomia/insurance/resultado_da_cotacao.rb',
-      onde: '::Autonomia::Insurance::ResultadoDaCotacao#palavras', tipo: 'literal', trecho: '/[a-z0-9]+/', pessoa: :achado,
-      motivo: 'quebra em palavras o nome de seguradora pedido pela pessoa para casar com os nomes da cotação' }
+      motivo: 'só os dígitos do CPF, CNPJ ou CEP que o modelo escreveu; String#delete faria o mesmo sem regex' }
   ].freeze
 
   PESSOA = %i[nao sem_interpretar achado].freeze
@@ -207,9 +200,12 @@ RSpec.describe 'R18: nada de regex para entender o cliente' do # rubocop:disable
     )
   end
 
-  it 'os achados para o Rodrigo decidir estão marcados, e só eles' do
+  # O ÚNICO ACHADO (`ResultadoDaCotacao#palavras`, que casava por palavra o nome de seguradora pedido pelo cliente) foi
+  # decidido pelo Rodrigo em 25/09/2026 (chat#718): quem escolhe a seguradora é o modelo, na lista fechada da cotação.
+  # Achado novo entra aqui marcado e vai para ele decidir.
+  it 'não há achado aberto para o Rodrigo decidir' do
     achados = RegexDaReceita::EXCECOES.select { |excecao| excecao[:pessoa] == :achado }.map { |excecao| excecao[:onde] }
 
-    expect(achados).to eq(['::Autonomia::Insurance::ResultadoDaCotacao#palavras'])
+    expect(achados).to be_empty
   end
 end

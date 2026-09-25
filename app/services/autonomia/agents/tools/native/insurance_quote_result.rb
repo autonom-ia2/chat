@@ -36,10 +36,17 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   SEM_PRECO_AINDA = 'A cotação ainda está correndo e nenhum preço chegou até agora. Não invente preço nem ' \
                     'seguradora.'.freeze
   SEM_PRECO = 'Nenhuma seguradora fez proposta nesta cotação. Não invente preço nem seguradora.'.freeze
-  NAO_ENCONTRADA = 'Nenhuma seguradora com esse nome está nesta cotação. Não liste as seguradoras: pergunte ao ' \
-                   'cliente de qual ele fala.'.freeze
-  NAO_ENCONTRADA_AINDA = 'Nenhuma seguradora com esse nome apareceu nesta cotação até agora, e ela ainda está ' \
-                         'correndo. Não liste as seguradoras.'.freeze
+  # A LISTA FECHADA (chat#718): quem escolhe a seguradora é o modelo, pelo nome exato da lista da cotação. Nome fora
+  # dela volta com a lista, para ele escolher; se o cliente não falou de nenhuma, a saída é perguntar a ele.
+  NAO_ENCONTRADA = 'Nenhum nome pedido é, exatamente, o de uma seguradora desta cotação. As seguradoras desta cotação ' \
+                   'são: %<nomes>s. Se o cliente falou de uma delas, chame de novo com seguradoras igual ao nome dela, ' \
+                   'escrito exatamente como está aqui. Se não falou de nenhuma, pergunte a ele de qual fala, sem listar ' \
+                   'as seguradoras.'.freeze
+  NAO_ENCONTRADA_AINDA = 'Nenhum nome pedido é, exatamente, o de uma seguradora desta cotação até agora, e ela ainda corre. ' \
+                         'As de até agora: %<nomes>s. Se o cliente falou de uma, chame de novo com o nome dela exato.'.freeze
+  # Parte dos nomes pedidos está na lista e parte não: o que ficou de fora, e a lista para escolher.
+  FORA_DA_LISTA = 'Estes nomes não são, exatamente, os de uma seguradora desta cotação: %<fora>s. As seguradoras desta ' \
+                  'cotação são: %<nomes>s.'.freeze
   # Como a Lia usa os preços desta resposta: regra de conteúdo, e não frase, porque as palavras são dela.
   COMO_ESCREVER = 'Escreva você a resposta ao cliente, com o recorte que ele pediu: as mais baratas, uma ' \
                   'seguradora, só as mensais, o que for. Cada valor e cada nome de seguradora exatamente como ' \
@@ -71,9 +78,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     end
 
     def params
-      [{ 'name' => 'seguradora', 'type' => 'string', 'required' => false,
-         'description' => 'Nome da seguradora que o cliente perguntou, como ele escreveu. Mais de uma: todos ' \
-                          'os nomes neste mesmo campo. null para o resultado inteiro.' },
+      [{ 'name' => 'seguradoras', 'type' => 'array', 'items' => 'string', 'required' => false,
+         'description' => 'As seguradoras de que o cliente perguntou, cada nome escrito exatamente como a cotação o ' \
+                          'escreve. null para o resultado inteiro, que traz o nome de todas.' },
        Resultado::PARAM_PRODUTO]
     end
 
@@ -144,9 +151,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
 
   private
 
-  def seguradora
-    params['seguradora'].to_s.strip.presence
-  end
+  # Os nomes que o modelo escolheu, como ele os escreveu. [] para o resultado inteiro.
+  def seguradoras = Array(params['seguradoras']).map { |nome| nome.to_s.squish }.compact_blank.uniq
 
   # Com mais de um bem cotado na conversa, quem lê precisa saber de qual é esta leitura e que os outros existem: em
   # 23/09/2026 a Lia leu a cotação nova do apartamento e disse que o carro "ainda não tem preços".
@@ -174,7 +180,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     sem_leitura = texto_sem_leitura
     return sem_leitura if sem_leitura
 
-    [(seguradora ? por_seguradora : geral), outros_produtos(conversa)].compact.join("\n")
+    [(seguradoras.any? ? por_seguradora : geral), outros_produtos(conversa)].compact.join("\n")
   end
 
   # -> o resumo da entrada da MESMA execução cujo resultado está sendo lido, ou nil (outro ramo,
@@ -237,12 +243,19 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   end
 
   def por_seguradora
-    codigos = @resultado.procurar(seguradora)
-    return @resultado.correndo? ? NAO_ENCONTRADA_AINDA : NAO_ENCONTRADA if codigos.empty?
+    escolhidos = seguradoras.index_with { |nome| @resultado.codigo_do_nome(nome) }
+    codigos = escolhidos.values.compact.uniq
+    return format(@resultado.correndo? ? NAO_ENCONTRADA_AINDA : NAO_ENCONTRADA, nomes: @resultado.lista_fechada) if codigos.empty?
 
-    partes = [contagem(@resultado.com_preco.size), *codigos.map { |codigo| fala(codigo, cobertura: true) }]
+    partes = [contagem(@resultado.com_preco.size), *codigos.map { |codigo| fala(codigo, cobertura: true) }, fora_da_lista(escolhidos)]
     partes += avisos if @resultado.com_preco(codigos).any?
-    partes.join("\n")
+    partes.compact.join("\n")
+  end
+
+  # Os nomes pedidos que não são de nenhuma seguradora da cotação, com a lista para escolher; nil sem nenhum.
+  def fora_da_lista(escolhidos)
+    fora = escolhidos.select { |_, codigo| codigo.nil? }.keys
+    format(FORA_DA_LISTA, fora: fora.join('; '), nomes: @resultado.lista_fechada) if fora.any?
   end
 
   # O que acompanha os preços: a cotação ainda correndo, a renovação sem bônus, o comparativo já entregue e

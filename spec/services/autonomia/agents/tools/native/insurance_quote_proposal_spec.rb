@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # A PROPOSTA DE UMA SEGURADORA SÓ (entrega 8b do Agente de Cotação, #459): ferramenta síncrona da Lia que acha a
-# cotação da conversa, casa o nome que o cliente disse com o resultado guardado, pede ao portal o PDF daquela
+# cotação da conversa, acha a seguradora que o modelo escolheu na lista fechada dela (chat#718), pede ao portal o PDF daquela
 # seguradora (`quote/proposal` com `insurerCode`) e o publica como ANEXO, sem legenda. O texto ao cliente é da Lia:
 # ao modelo volta só o que aconteceu. Dados sintéticos; o portal é o `Connector::Mock`.
 RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
@@ -91,14 +91,35 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
       expect(ao_modelo).not_to include('http', 'R$', '—')
     end
 
-    it 'pelo nome parcial, em minúsculas e sem acento: "porto" é a Porto Seguro' do
+    it 'pelo nome da lista, sem diferença de caixa nem de espaço' do
       cotacao_da_conversa
 
-      ao_modelo = pedir('porto')
+      ao_modelo = pedir(' porto  seguro ')
 
       expect(connector).to have_received(:quote_proposal).with(hash_including(insurer_code: '8')).once
       expect(mensagens_do_bot.sole.attachments.sole.file.filename.to_s).to eq('Proposta Porto Seguro, placa HIK9383.pdf')
       expect(ao_modelo).to include('Porto Seguro')
+    end
+
+    # QUEM ESCOLHE É O MODELO (chat#718): "porto" não casa mais por palavra. Volta a lista fechada de quem fez proposta,
+    # e na chamada seguinte, com o nome dela, a proposta sai.
+    it 'pelo nome pela metade: volta a lista fechada, e com o nome da lista a proposta sai' do
+      cotacao_da_conversa
+
+      primeira = pedir('porto')
+      segunda = pedir('Porto Seguro')
+
+      expect(primeira).to eq(format(described_class::QUAL, nomes: 'Usebens; Porto Seguro'))
+      expect(segunda).to include('Porto Seguro', 'enviada')
+      expect(connector).to have_received(:quote_proposal).with(hash_including(insurer_code: '8')).once
+    end
+
+    it 'o cliente não nomeou seguradora (null): a lista fechada, e nada ao portal' do
+      cotacao_da_conversa
+
+      expect(pedir(nil)).to eq(format(described_class::QUAL, nomes: 'Usebens; Porto Seguro'))
+      expect(connector).not_to have_received(:quote_proposal)
+      expect(mensagens_do_bot).to be_empty
     end
 
     it 'sem placa, o nome do arquivo leva o ramo' do
@@ -135,7 +156,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
       cotacao_da_conversa
 
       expect do
-        pedir('Porto')
+        pedir('Porto Seguro')
         pedir('Usebens')
       end.not_to change(Autonomia::Agents::ToolRun, :count)
 
@@ -145,7 +166,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
     end
   end
 
-  describe 'o nome não casa com uma seguradora só' do
+  describe 'o nome não é o de uma seguradora da lista' do
     it 'inexistente: devolve os nomes de quem fez proposta, sem valor, e não pede nada ao portal' do
       cotacao_da_conversa
 
@@ -170,11 +191,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
       ofertas.replace([cotou('44', 'Usebens', 1647.82)])
       cotacao_da_conversa(status: 'running')
 
-      expect(pedir('Porto')).to eq(described_class::AINDA_CORRENDO)
+      ao_modelo = pedir('Porto Seguro')
+
+      expect(ao_modelo).to start_with(described_class::AINDA_CORRENDO)
+      expect(ao_modelo).to include(format(described_class::JA_FIZERAM, nomes: 'Usebens'))
       expect(mensagens_do_bot).to be_empty
     end
 
-    it 'ambíguo (mais de uma casa): devolve a lista para o modelo perguntar' do
+    it 'dois nomes num campo só: devolve a lista para o modelo escolher ou perguntar' do
       cotacao_da_conversa
 
       ao_modelo = pedir('Porto ou Usebens')
@@ -223,7 +247,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
 
       expect(ao_modelo).to include('Não deu para gerar a proposta da Usebens agora')
       expect(ao_modelo).not_to include('http', 'exemplo.test')
-      expect(mensagens_do_bot).to be_empty
+      # Ao cliente nada; à equipe, a nota privada na hora (decisão 3, chat#718), também sem a URL.
+      expect(mensagens_do_bot.where(private: false)).to be_empty
+      expect(mensagens_do_bot.sole).to have_attributes(private: true)
+      expect(mensagens_do_bot.sole.content).to include('Usebens', described_class::MOTIVOS_DA_NOTA['nao_publicada'])
+      expect(mensagens_do_bot.sole.content).not_to include('http', 'exemplo.test')
       expect(Rails.logger).not_to have_received(:warn).with(a_string_including('exemplo.test'))
     end
 

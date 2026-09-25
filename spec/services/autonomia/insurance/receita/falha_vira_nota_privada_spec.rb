@@ -18,25 +18,22 @@ module FalhasDaCotacao
     'seguradora sem proposta' => { estado: :coberta, nota: 'Tools::NotaInterna com a NotaDaEquipe, no fecho' },
     'passagem à equipe' => { estado: :coberta_na_passagem, nota: 'NotaDoEncaminhamento, com o que falhou nos últimos 30 min' },
     'IA falhou duas vezes' => { estado: :coberta, nota: 'Operate::AvisoAoAtendente#escalar, no segundo turno de evento que falha' },
-    'especialista esgota as 6 rodadas sem cotar' => { estado: :aberta, nota: nil },
+    'especialista esgota as 6 rodadas sem cotar' => { estado: :coberta, nota: 'Insurance::NotaNaHora, pela RodadasEsgotadas do Runner' },
     'portal fora do ar na abertura (conexão fora)' => { estado: :coberta_na_passagem, nota: 'NotaDoEncaminhamento (conexao_indisponivel)' },
     'tempo esgotado na abertura' => { estado: :coberta, nota: 'Tools::NotaInterna com NotaDaEquipe#nota_do_desfecho (falhou)' },
     'envio sem resposta na abertura' => { estado: :coberta, nota: 'Tools::NotaInterna com NotaDaEquipe#nota_do_desfecho (incerta)' },
     'busca de atividade falha' => { estado: :coberta_na_passagem, nota: 'NotaDoEncaminhamento (busca_de_atividade_indisponivel)' },
     'PDF do comparativo não gerado' => { estado: :coberta,
                                          nota: 'Tools::NotaInterna com NotaDaEquipe#nota_do_desfecho (valores_guardados)' },
-    'PDF da proposta de uma seguradora não gerado' => { estado: :aberta, nota: nil },
-    'conferência em laço' => { estado: :aberta, nota: nil }
+    'PDF da proposta de uma seguradora não gerado' => { estado: :coberta, nota: 'Insurance::NotaNaHora, no FALHOU da proposta' },
+    'conferência em laço' => { estado: :coberta, nota: 'Insurance::NotaNaHora, pela RodadasEsgotadas (EM_LACO)' }
   }.freeze
   ESTADOS = %i[coberta coberta_na_passagem aberta].freeze
 
-  # POR QUE AS ABERTAS FICARAM ABERTAS (25/09/2026). Não é correção pequena no molde das notas que existem:
-  RODADAS = 'O Runner não sabe que as seis rodadas acabaram (o teto é do ResponsesClient, no núcleo do CRM), e a nota ' \
-            'que existe sem execução só sai na passagem. Falta decidir se a equipe recebe nota na hora, sem passagem, ' \
-            'e se isso é falha ou fluxo normal (conferência pedindo outro valor é fluxo normal, e fica fora da nota ' \
-            'do encaminhamento de propósito, revisão da chat#665).'.freeze
-  PROPOSTA = 'A proposta que não sai vai só ao log e ao modelo (FALHOU, que não manda encaminhar). Não passa por ' \
-             'Recusa, então nem na passagem aparece. Falta decidir se é nota na hora ou na passagem.'.freeze
+  # AS TRÊS QUE FICARAM ABERTAS NA PRIMEIRA VERSÃO (seis rodadas esgotadas, conferência em laço e proposta que não sai)
+  # foram decididas pelo Rodrigo em 25/09/2026 (decisão 3, chat#718): nota privada à equipe NA HORA, sem esperar a
+  # passagem (`Insurance::NotaNaHora`). O teto das rodadas continua no núcleo do CRM; quem percebe o esgotamento é o
+  # Runner, que conta as rodadas que executa (`Insurance::RodadasEsgotadas`), e só no especialista de cotação.
 end
 
 RSpec.describe 'R20: toda falha da cotação chega à equipe em nota privada' do # rubocop:disable RSpec/DescribeClass
@@ -256,20 +253,26 @@ RSpec.describe 'R20: toda falha da cotação chega à equipe em nota privada' do
     end
   end
 
-  describe 'as abertas' do
+  # NA HORA, SEM EXECUÇÃO NEM PASSAGEM (decisão 3, chat#718). O modelo é dublado; a conferência recusa de verdade pelo
+  # `precheck` da ferramenta, e o PDF da proposta falha pelo portal dublado.
+  describe 'na hora, sem execução nem passagem' do
+    let(:lia) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote', status: :active,
+                                       enabled: true, instruction: 'Atenda.', config: { 'with_knowledge' => false })
+    end
     let(:specialist) do
-      Autonomia::Agents::Specialist.create!(agent: agent, name: 'Cotação', slug: 'cotacao_auto', description: 'cota auto',
+      Autonomia::Agents::Specialist.create!(agent: lia, name: 'Cotação', slug: 'cotacao_auto', description: 'cota auto',
                                             instruction: 'Você cota.')
     end
     let(:delivery) { Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 7) }
 
     # O modelo dublado chama a cotação uma vez por rodada, nas seis, e a conferência recusa cada uma.
-    def seis_rodadas_recusadas(recusas)
+    def seis_rodadas_recusadas(recusas, especialista: specialist)
       fila = recusas.dup
       nativa = build_async_tool(slug: 'cotar_teste', precheck: -> { fila.shift })
-      allow(specialist).to receive(:tools).and_return([Autonomia::Agents::Tools::Bound.new(agent: agent, native: nativa)])
+      allow(especialista).to receive(:tools).and_return([Autonomia::Agents::Tools::Bound.new(agent: especialista.agent, native: nativa)])
       modelo_de_seis_rodadas
-      Autonomia::Agents::Specialists::Runner.new(specialist: specialist, request: 'cotar', delivery: delivery).call
+      Autonomia::Agents::Specialists::Runner.new(specialist: especialista, request: 'cotar', delivery: delivery).call
     end
 
     def modelo_de_seis_rodadas
@@ -282,34 +285,66 @@ RSpec.describe 'R20: toda falha da cotação chega à equipe em nota privada' do
       allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     end
 
+    def esgotou(ramo = 'auto')
+      format(Autonomia::Insurance::RodadasEsgotadas::RODADAS, rodadas: 6, ramo: ramo)
+    end
+
     it 'especialista esgota as 6 rodadas sem cotar' do
-      pending FalhasDaCotacao::RODADAS
       saida = seis_rodadas_recusadas(Array.new(6) { |i| "Antes de cotar, corrija o campo #{i}." })
 
       expect(saida).to end_with(Autonomia::Agents::Specialists::Runner::COTACAO_NAO_ABERTA)
-      expect(notas).to be_present
+      expect(notas.sole.content).to eq([esgotou, 'Última recusa da conferência: Antes de cotar, corrija o campo 5.'].join("\n"))
+      expect(publicas_nossas).to be_empty
     end
 
     it 'conferência em laço' do
-      pending FalhasDaCotacao::RODADAS
-      saida = seis_rodadas_recusadas(Array.new(6, 'Antes de cotar, corrija: coverage.assistance24h, 2000 não existe.'))
+      recusa = 'Antes de cotar, corrija: coverage.assistance24h, 2000 não existe.'
+      saida = seis_rodadas_recusadas(Array.new(6, recusa))
 
       expect(saida).to end_with(Autonomia::Agents::Specialists::Runner::COTACAO_NAO_ABERTA)
-      expect(notas).to be_present
+      expect(notas.sole.content).to eq([esgotou, format(Autonomia::Insurance::RodadasEsgotadas::EM_LACO, vezes: 6),
+                                        "Última recusa da conferência: #{recusa}"].join("\n"))
+      expect(publicas_nossas).to be_empty
+    end
+
+    it 'o principal chama o especialista de novo no mesmo turno: uma nota só' do
+      seis_rodadas_recusadas(Array.new(6, 'Antes de cotar, corrija o CEP.'))
+      seis_rodadas_recusadas(Array.new(6, 'Antes de cotar, corrija o CEP.'))
+
+      expect(notas.count).to eq(1)
+    end
+
+    it 'cinco rodadas recusadas e a sexta abre: nenhuma nota' do
+      seis_rodadas_recusadas(Array.new(5, 'Antes de cotar, corrija o CEP.'))
+
+      expect(Autonomia::Agents::ToolRun.where(slug: 'cotar_teste').count).to eq(1)
+      expect(notas).to be_empty
+    end
+
+    # SEM REGRESSÃO FORA DA COTAÇÃO: o mesmo esgotamento num especialista de agente que não é o de cotação não deixa nota,
+    # e a saída do Runner é a mesma que era.
+    it 'especialista de outro tipo de agente esgota as 6 rodadas: nada muda, nenhuma nota' do
+      outro = Autonomia::Agents::Specialist.create!(agent: agent, name: 'Agenda', slug: 'agenda', description: 'agenda',
+                                                    instruction: 'Você agenda.')
+
+      saida = seis_rodadas_recusadas(Array.new(6, 'Sem horário.'), especialista: outro)
+
+      expect(saida).to eq("Ainda falta um dado. #{Autonomia::Agents::Specialists::Runner::COTACAO_NAO_ABERTA}")
+      expect(notas).to be_empty
     end
 
     it 'PDF da proposta de uma seguradora não gerado' do
-      pending FalhasDaCotacao::PROPOSTA
       conexao
       portal(quote_proposal: nil)
       allow(Autonomia::Insurance::Connector.client).to receive(:quote_proposal).and_raise(erro(:unavailable))
       execucao(handle: guardado(oferta('8', 'Porto Seguro', 'quoted')).merge('quote_id' => 'q:1')).update!(status: 'done')
+      proposta = Autonomia::Agents::Tools::Native::InsuranceQuoteProposal
 
-      ao_modelo = Autonomia::Agents::Tools::Native::InsuranceQuoteProposal
-                  .new(agent: agent, params: { 'seguradora' => 'Porto' }, delivery: delivery).call
+      ao_modelo = Array.new(2) { proposta.new(agent: agent, params: { 'seguradora' => 'Porto Seguro' }, delivery: delivery).call }
 
-      expect(ao_modelo).to include('Não deu para gerar a proposta')
-      expect(notas).to be_present
+      expect(ao_modelo).to all(include('Não deu para gerar a proposta'))
+      expect(notas.sole.content).to eq(format(proposta::NOTA, nome: 'Porto Seguro', motivo: proposta::MOTIVO_DO_PORTAL))
+      expect(publicas_nossas).to be_empty
     end
   end
 end
