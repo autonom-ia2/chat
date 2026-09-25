@@ -74,8 +74,12 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
   # quatro códigos. As chaves já saem como o `Http` as entrega (nenhuma é camelCase). Regenerar
   # quando o adapter mudar; a mesma lacuna de envelhecimento do de auto (#412) vale aqui.
   SCHEMA_RESIDENCIAL = JSON.parse(File.read(File.expand_path('mock/schema_residencial.json', __dir__))).freeze
-  # O DE EMPRESARIAL, gerado do adapter (chat#641) na branch `feat/ramo-empresarial` (adapters, commit 9b06ec5), com
-  # `AggerAdapter#quoteSchema('empresarial')`, sem credencial e sem rede. Regenerar quando o adapter mudar.
+  # O DE EMPRESARIAL, gerado do adapter (chat#641), sem credencial e sem rede. Regenerado em 25/09/2026 na branch
+  # `feat/empresarial-coberturas-do-cliente` (adapters, commit e3aeb7b), com os dez campos de cobertura do cliente e a
+  # localização que o cliente diz:
+  #   (no autonomia-adapters) npx tsx -e "import {schemaDoRamo} from './src/platforms/agger/ramos/schema.ts';
+  #     console.log(JSON.stringify(schemaDoRamo('18'),null,2))"
+  # Regenerar quando o adapter mudar; a mesma lacuna de envelhecimento do de auto (#412) vale aqui.
   SCHEMA_EMPRESARIAL = JSON.parse(File.read(File.expand_path('mock/schema_empresarial.json', __dir__))).freeze
 
   SCHEMAS = {
