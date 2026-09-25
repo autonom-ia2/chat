@@ -1,12 +1,12 @@
 # Prospecção: paridade com o Orth, as 486 funções
 
-Prestação de contas do épico #676 (E6, #682). Cada função do inventário do plano rev.7 (google-saas `1f8ad9a` x chat2you `1bf71b3fa1`) tem aqui o destino: o PR que entregou, a decisão que tirou do escopo, ou pendente com o motivo. Código conferido na `main` em `732c23da08` (25/09/2026); as 15 funções da própria E6 foram conferidas na branch `feat/682-fechamento`, que junta as frentes A (exportar), B (Listas e tour), C (pt_BR, menu e permissão) e D (este documento). Como a E6 mexe em vários desses arquivos, o número de linha da coluna Conferido já é o da branch: cada referência conferida na `main` foi levada para a linha equivalente na branch, casando o arquivo das duas versões trecho a trecho (37 referências mudaram de linha, nenhuma teve o trecho alterado).
+Prestação de contas do épico #676 (E6, #682). Cada função do inventário do plano rev.7 (google-saas `1f8ad9a` x chat2you `1bf71b3fa1`) tem aqui o destino: o PR que entregou, a decisão que tirou do escopo, ou pendente com o motivo. Código conferido na `main` em `732c23da08` (25/09/2026); as 18 funções da própria E6 foram conferidas na branch `feat/682-fechamento`, que junta as frentes A (exportar), B (Listas e tour), C (pt_BR, menu e permissão), D (este documento) e as correções de LOCAL-42, ENRIQ-57 e ENRIQ-69. Como a E6 mexe em vários desses arquivos, o número de linha da coluna Conferido já é o da branch: cada referência conferida na `main` foi levada para a linha equivalente na branch, casando o arquivo das duas versões trecho a trecho (37 referências mudaram de linha, nenhuma teve o trecho alterado).
 
 ## Resumo
 
 | Destino | Funções |
 |---|---:|
-| **Entregue por PR** | **276** |
+| **Entregue por PR** | **279** |
 | &nbsp;&nbsp;#706 (E2) | 84 |
 | &nbsp;&nbsp;#699 (E1) | 66 |
 | &nbsp;&nbsp;#709 (E3) | 43 |
@@ -19,16 +19,17 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 | &nbsp;&nbsp;#682 (E6): frente B, Listas e tour | 8 |
 | &nbsp;&nbsp;#682 (E6): frente A, exportar | 5 |
 | &nbsp;&nbsp;#682 (E6): frente C, pt_BR | 2 |
+| &nbsp;&nbsp;#682 (E6): defeitos do cliente (LOCAL-42, ENRIQ-57, ENRIQ-69) | 3 |
 | **Preservado (já existia no chat2you)** | **90** |
 | **Movido para outra issue (#705 Central e Guia, #713 recusa)** | **3** |
 | &nbsp;&nbsp;#705 | 3 |
 | **Fora do escopo por decisão** | **29** |
-| **Pendente** | **88** |
+| **Pendente** | **85** |
 | **Total** | **486** |
 
 - **158 funções** têm arquivo e linha conferidos na `main` (`732c23da08`): 164 referências, cada uma aberta e com o trecho esperado na linha, e com o número de linha já levado para a branch da E6. As demais entregues se apoiam no corpo do PR ou na nota da etapa na #705, e isso está dito na linha.
 - **#700** (Guia fora de cima do Aplicar) e **#712** (telefone do cadastro confirma a empresa) corrigem entregas da E1 e da E3 e não têm linha própria no inventário.
-- **#682 (E6)** entregou 15 funções, todas com arquivo e linha conferidos na branch `feat/682-fechamento` (23 referências abertas uma a uma): exportar CSV e Excel pelo servidor, da busca e da lista (frente A); Listas com o mesmo card e painel da busca e o tour guiado (frente B); tela e recusas da prospecção em pt_BR (frente C). O número do PR da E6 entra aqui quando ele for aberto.
+- **#682 (E6)** entregou 18 funções, todas com arquivo e linha conferidos na branch `feat/682-fechamento` (29 referências abertas uma a uma): exportar CSV e Excel pelo servidor, da busca e da lista (frente A); Listas com o mesmo card e painel da busca e o tour guiado (frente B); tela e recusas da prospecção em pt_BR (frente C); e os três defeitos que o cliente sentia, achados na conferência dos pendentes: centro do raio fora do círculo (LOCAL-42), verificação de WhatsApp presa ao número antigo (ENRIQ-69) e busca refeita apagando verificação gravada em paralelo (ENRIQ-57). O número do PR da E6 entra aqui quando ele for aberto.
 - **A E6 também entregou o que o inventário não lista como função própria:** o atalho Configurações no menu Prospecção da barra lateral, visível para administrador ou `prospecting_manage` (`F/utils/prospectingSidebar.js:45`), e os botões Enviar ao CRM e Adicionar à campanha escondidos de quem não tem `Crm::CardPolicy#create?` ou `campaign_manage`, pela mesma regra do servidor (`C/settings_controller.rb:68`; nota em PLAT-48).
 - **Desvios da E6 registrados:** o export deixa de fora a coluna Dist km do Orth e o link de WhatsApp tirado do site sem verificação; o tour marca a visita ao abrir, e não ao concluir como no Orth, e só pede sugestões do Google no clique; a tela de Listas ainda não tem botão de exportar (o cliente da API já tem `exportList`).
 
@@ -37,10 +38,10 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 | Parte | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | Total |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Modo e jogadas | 31 | 10 | 1 | 0 | 3 | 6 | 51 |
-| Onde buscar | 24 | 10 | 2 | 0 | 5 | 9 | 50 |
+| Onde buscar | 24 | 10 | 3 | 0 | 5 | 8 | 50 |
 | Filtros | 24 | 3 | 0 | 0 | 2 | 11 | 40 |
 | Motor da busca | 31 | 12 | 1 | 0 | 3 | 12 | 59 |
-| Enriquecimento e WhatsApp | 37 | 13 | 0 | 0 | 4 | 18 | 72 |
+| Enriquecimento e WhatsApp | 37 | 13 | 2 | 0 | 4 | 16 | 72 |
 | Card do lead e resultados | 33 | 15 | 2 | 0 | 1 | 8 | 59 |
 | Painel do lead e pesquisa | 32 | 6 | 2 | 1 | 2 | 4 | 47 |
 | Ações pós-busca, CRM, campanha e tour | 24 | 11 | 5 | 1 | 4 | 12 | 57 |
@@ -51,14 +52,14 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 | Situação original | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | Total |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | ausente no c2 | 111 | 0 | 8 | 0 | 24 | 44 | 187 |
-| divergente | 95 | 10 | 3 | 1 | 4 | 30 | 143 |
+| divergente | 95 | 10 | 6 | 1 | 4 | 27 | 143 |
 | defasado | 29 | 0 | 4 | 0 | 0 | 4 | 37 |
 | igual | 8 | 40 | 0 | 0 | 1 | 1 | 50 |
 | só no c2 | 18 | 40 | 0 | 2 | 0 | 9 | 69 |
 
 ## O que está pendente e por quê
 
-**O termo de Evidência da #682 está parcial.** Das 486 funções, 88 continuam sem PR e sem decisão que as tire do escopo. Por isso o PR da E6 cita a issue com `Refs #682`, e não com `Closes #682`: a #682 só fecha quando cada pendente abaixo tiver uma etapa dona ou uma decisão registrada. As 34 que esperam decisão vão ao Rodrigo num lote só; as 54 que esperam etapa precisam de issue ou de etapa marcada. Até lá, estas são as funções do Orth que o cliente do chat2you ainda não tem.
+**O termo de Evidência da #682 está parcial.** Das 486 funções, 85 continuam sem PR e sem decisão que as tire do escopo. Por isso o PR da E6 cita a issue com `Refs #682`, e não com `Closes #682`: a #682 só fecha quando cada pendente abaixo tiver uma etapa dona ou uma decisão registrada. As 34 que esperam decisão vão ao Rodrigo num lote só; as 51 que esperam etapa precisam de issue ou de etapa marcada. Até lá, estas são as funções do Orth que o cliente do chat2you ainda não tem.
 
 Os pendentes se dividem em dois tipos. Primeiro, os que **esperam uma decisão do Rodrigo** que nenhuma issue ou PR registra:
 
@@ -76,21 +77,21 @@ Os pendentes se dividem em dois tipos. Primeiro, os que **esperam uma decisão d
 - **Filtros de jogada sem tela (bairro e cidade, avaliações recentes):** FILTRO-13, FILTRO-14.
 - **Log do Rails ou tabela de eventos:** ENRIQ-60.
 
-Segundo, **54 que não dependem de decisão** e ficaram sem etapa dona ou fora do que cada PR fez:
+Segundo, **51 que não dependem de decisão** e ficaram sem etapa dona ou fora do que cada PR fez:
 
 - **Modo e jogadas:** MODO-46, MODO-49.
-- **Onde buscar:** LOCAL-02, LOCAL-06, LOCAL-08, LOCAL-11, LOCAL-42, LOCAL-45, LOCAL-46, LOCAL-48.
+- **Onde buscar:** LOCAL-02, LOCAL-06, LOCAL-08, LOCAL-11, LOCAL-45, LOCAL-46, LOCAL-48.
 - **Filtros:** FILTRO-11, FILTRO-12, FILTRO-15, FILTRO-16, FILTRO-22.
 - **Motor da busca:** MOTOR-04, MOTOR-12, MOTOR-14, MOTOR-26, MOTOR-42, MOTOR-49, MOTOR-51.
 - **Card do lead e resultados:** CARD-37, CARD-42, CARD-43, CARD-48, CARD-51.
 - **Painel do lead e pesquisa:** PAINEL-04, PAINEL-07, PAINEL-30.
-- **Enriquecimento e WhatsApp:** ENRIQ-21, ENRIQ-22, ENRIQ-23, ENRIQ-24, ENRIQ-25, ENRIQ-26, ENRIQ-27, ENRIQ-31, ENRIQ-32, ENRIQ-37, ENRIQ-47, ENRIQ-57, ENRIQ-59, ENRIQ-61, ENRIQ-69.
+- **Enriquecimento e WhatsApp:** ENRIQ-21, ENRIQ-22, ENRIQ-23, ENRIQ-24, ENRIQ-25, ENRIQ-26, ENRIQ-27, ENRIQ-31, ENRIQ-32, ENRIQ-37, ENRIQ-47, ENRIQ-59, ENRIQ-61.
 - **Ações pós-busca, CRM, campanha e tour:** ACAO-15, ACAO-20, ACAO-35, ACAO-36, ACAO-X06, ACAO-X10.
 - **Plataforma, chaves e permissões:** PLAT-29, PLAT-34, PLAT-51.
 
-Somando: 34 esperam decisão e 54 esperam uma etapa.
+Somando: 34 esperam decisão e 51 esperam uma etapa.
 
-Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova foram abertos no código da branch, cada um com arquivo e linha na própria nota: 3 estavam entregues (ENRIQ-56 pelo #706; PAINEL-43 e PLAT-15 pelo #709) e 5 não estavam feitos e passaram a pendente (LOCAL-42, ENRIQ-32, ENRIQ-37, ENRIQ-57, ENRIQ-69). LOCAL-42 e ENRIQ-69 são defeitos que o cliente sente: no modo raio, arrastar a prévia muda o centro da busca sem mudar o círculo; e, depois de uma busca que troca o telefone do lead, o botão de WhatsApp segue com o número verificado antigo.
+Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova foram abertos no código da branch, cada um com arquivo e linha na própria nota: 3 estavam entregues (ENRIQ-56 pelo #706; PAINEL-43 e PLAT-15 pelo #709) e 5 não estavam feitos e passaram a pendente (LOCAL-42, ENRIQ-32, ENRIQ-37, ENRIQ-57, ENRIQ-69). LOCAL-42 e ENRIQ-69 eram defeitos que o cliente sentia: no modo raio, arrastar a prévia mudava o centro da busca sem mudar o círculo; e, depois de uma busca que troca o telefone do lead, o botão de WhatsApp seguia com o número verificado antigo. Os dois e o ENRIQ-57 foram corrigidos na própria E6; ENRIQ-32 e ENRIQ-37 seguem pendentes.
 
 ## Como ler a tabela
 
@@ -199,7 +200,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | LOCAL-39 | Autocomplete em dois campos, cidade e bairro | ausente no c2 | fora (decisão) | Plano rev.7: não portar, é código morto ou legado que a tela atual do Orth não usa. |  |
 | LOCAL-40 | Proxy de foto do Google Places | ausente no c2 | fora (decisão) | Plano rev.7: a busca do Orth não usa o proxy de foto. |  |
 | LOCAL-41 | Geocodificacao reversa (coordenada vira nome e endereco) | ausente no c2 | fora (decisão) | Plano rev.7: fora da busca. |  |
-| LOCAL-42 | O centro da busca por raio e o do local escolhido, nao o do mapa arrastado | divergente | pendente | Conferido: não feito. No modo raio o centro enviado ainda é o da prévia arrastada (`F/composables/searchSlices/locationSlice.js:43`), e o círculo desenhado fica no local escolhido. Sem etapa dona; correção pequena (usar sempre o centro do local no modo raio). | |
+| LOCAL-42 | O centro da busca por raio e o do local escolhido, nao o do mapa arrastado | divergente | #682 (E6) | No modo raio o centro do pedido e o do círculo da prévia saem da mesma função: o do local escolhido ou, numa busca salva reaberta para repetir ou editar, o centro que ela usou, como o `mapCenter` do Orth (`BuscaClient.tsx`). Arrastar a prévia não muda mais a busca; na área visível segue valendo o que a prévia mostra. Testes em `ProspectingSearchPage.form.spec.js` e `.repeat.spec.js`. | `F/composables/searchSlices/locationSlice.js:21`, `F/composables/searchSlices/locationSlice.js:49`, `F/composables/useSearchLocation.js:151` |
 | LOCAL-43 | Buscar no Google desde o primeiro uso, sem provedor simulado por padrao | divergente | #691 (E0) | google_places passou a ser o padrão (migration 20260925100000); conta 17 migrada em produção. |  |
 | LOCAL-44 | Bairro do lead e filtro por bairro e por cidade | ausente no c2 | #699 (E1) | Bairro gravado no lead. O filtro por bairro e cidade não foi portado (ver FILTRO-14). | `S/providers/google_places_provider.rb:168` |
 | LOCAL-45 | Sessao de autocomplete (session token) entre sugestoes e detalhes | divergente | pendente | Não há session token no autocomplete. |  |
@@ -378,7 +379,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ENRIQ-54 | Telefone nacional e internacional guardados e exibidos formatados | divergente | #699 (E1) | Contrato de telefone nos cinco pontos. |  |
 | ENRIQ-55 | Telefone do contato criado no Chatwoot a partir do lead | divergente | #699 (E1) | Mesma normalização no contato; o #714 prefere o WhatsApp verificado. |  |
 | ENRIQ-56 | Lista estruturada de telefones do lead com principal de WhatsApp e gravação atômica | divergente | #706 (E2) | Telefone do Google e WhatsApp do site com verificação própria cada um, o do site vira o principal quando o do Google não é WhatsApp, e a gravação é atômica no jsonb. Diferente do Orth: não é uma lista com rótulo por número. | `S/whatsapp_verifier.rb:7`, `S/lead_payload.rb:83`, `S/whatsapp_verifier.rb:82` |
-| ENRIQ-57 | Gravação final do enriquecimento não apaga telefones gravados em paralelo | divergente | pendente | Conferido: metade feita. A verificação grava só a sua chave no jsonb desde o #706 (`S/whatsapp_verifier.rb:82`), mas a busca refeita ainda regrava o metadata do lead a partir do objeto carregado (`S/search_runner.rb:311`) e pode apagar uma verificação que termine no meio. Sem etapa dona. | |
+| ENRIQ-57 | Gravação final do enriquecimento não apaga telefones gravados em paralelo | divergente | #682 (E6) | A verificação grava só a sua chave no jsonb desde o #706, a gravação final do enriquecimento não toca o metadata (`S/lead_enricher.rb:72`) e agora a busca refeita também soma no banco só as chaves que traz, em vez de regravar o metadata lido antes. Resta um caminho da mesma classe fora do enriquecimento: a pesquisa de empresa e decisor (#679) regrava o metadata inteiro do lead carregado (`S/research/lead_writer.rb:39`) e pode apagar uma verificação que termine no meio dela. Registrado, não corrigido na E6. | `S/search_runner.rb:342`, `S/whatsapp_verifier.rb:88` |
 | ENRIQ-58 | Pular número já verificado e tentar de novo após falha | divergente | #706 (E2) | Nova tentativa quando a verificação falhou. | `S/lead_work_queue.rb:58` |
 | ENRIQ-59 | Observabilidade estruturada do enriquecimento | ausente no c2 | pendente | Sem log estruturado de início, fim e duração do enriquecimento. |  |
 | ENRIQ-60 | Registro de eventos em log de aplicação | divergente | pendente | Log do Rails ou tabela: decisão não registrada. |  |
@@ -390,7 +391,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ENRIQ-66 | WhatsApp verificado aumenta a contactabilidade no score | igual | preservado | Contactabilidade entra na prioridade do Orth no #719. |  |
 | ENRIQ-67 | Testes automatizados de scraper, guarda de URL, telefone e verificação | ausente no c2 | #691 (E0) | Testes de caracterização antes de mexer (#691) e specs do scraper seguro (#706). |  |
 | ENRIQ-68 | Dados do enriquecimento chegam ao CRM e à campanha (e-mail, WhatsApp do site, redes, CNPJ, decisor, resumo) | ausente no c2 | #714 (E4) | E-mail, WhatsApp, redes, CNPJ, decisor e resumo levados ao contato e ao card. | `S/crm_card_converter.rb:65` |
-| ENRIQ-69 | Verificação de WhatsApp amarrada ao número verificado, não ao lead | divergente | pendente | Conferido: não feito. A busca refeita troca o telefone e mantém a verificação antiga no metadata (`S/search_runner.rb:311`), e o botão de WhatsApp usa o número da verificação (`S/lead_payload.rb:46`). Sem etapa dona. | |
+| ENRIQ-69 | Verificação de WhatsApp amarrada ao número verificado, não ao lead | divergente | #682 (E6) | Busca refeita que traz outro telefone (comparado em E.164) tira a verificação antiga do metadata, e o lead volta à fila de verificação da E2 no fim da busca; a do WhatsApp do site e a de um telefone que não mudou ficam. O verificador só grava se o lead ainda tem o número consultado, então uma troca no meio da consulta não recebe o resultado do número antigo. | `S/search_runner.rb:332`, `S/whatsapp_verifier.rb:88` |
 | ENRIQ-70 | Reaproveitamento do enriquecimento em buscas repetidas | igual | preservado |  |  |
 | ENRIQ-71 | Status running sem dono após queda da requisição | divergente | #706 (E2) | ReaperJob devolve running antigo a falha. | `S/lead_work_queue.rb:6` |
 | ENRIQ-72 | Quem pode disparar enriquecimento e verificação | divergente | #706 (E2) | Disparo automático roda no servidor, sem depender de quem abriu a tela. |  |
