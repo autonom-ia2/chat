@@ -63,8 +63,11 @@ A etapa das gems é refeita quando `Gemfile`/`Gemfile.lock` mudam e também quan
 imagem `node:24-alpine` não é fixada por digest, então uma republicação dela invalida o cache das gems mesmo com o
 Gemfile igual. O ganho de ~19 minutos vale para a maior parte dos deploys, não para todos.
 
-A tag `buildcache` ocupa uma das 10 imagens que a lifecycle policy do ECR mantém; como é regravada a cada deploy, ela
-nunca é a mais antiga. As tags do repositório são mutáveis nas duas contas. `ignore-error=true` mantém o deploy de pé
+A tag `buildcache` é regravada a cada deploy e nunca é a mais antiga, mas o manifesto de cache anterior vira uma imagem
+sem tag, e a regra "manter as últimas 10 imagens" conta essas também. Na prática sobram cerca de 5 imagens por SHA em vez
+de 10. O rollback blue-green troca o target group e não depende delas; o redeploy manual de uma versão antiga sim.
+Uma regra de maior prioridade que expire imagens sem tag resolveria (mudança de infra, pendente de OK do Rodrigo).
+O primeiro deploy de cada stack depois desta mudança é lento, porque o cache ainda está vazio: não é regressão. As tags do repositório são mutáveis nas duas contas. `ignore-error=true` mantém o deploy de pé
 se a gravação do cache falhar. O checkout usa `persist-credentials: false`: o `.git` entra no contexto do build (o
 Dockerfile roda `git rev-parse HEAD`), e sem isso o token do checkout ficaria numa camada cacheada.
 
