@@ -16,6 +16,11 @@ RSpec.describe Autonomia::Prospecting::Scoring::Band do
     expect(described_class.code(nil)).to be_nil
   end
 
+  it 'lista as faixas da mais quente para a mais fria e dá a altura de cada uma' do
+    expect(described_class::CODES).to eq(%w[very_hot high warm low])
+    expect(described_class::CODES.map { |code| described_class.rank(code) }).to eq([3, 2, 1, 0])
+  end
+
   it 'dá o título do card de cada faixa' do
     expect(%w[very_hot high warm low].map { |code| described_class.label(code) })
       .to eq(['Lead muito quente', 'Oportunidade alta', 'Lead morno', 'Prioridade baixa'])

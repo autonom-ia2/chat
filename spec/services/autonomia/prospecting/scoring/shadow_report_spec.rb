@@ -25,7 +25,12 @@ RSpec.describe Autonomia::Prospecting::Scoring::ShadowReport do
                                            created_at: created_at, metadata: { 'lead_scoring' => lead_scoring }.merge(metadata))
   end
 
-  it 'conta quem sobe, desce e fica igual pela prioridade, nas buscas do período, e ordena as maiores mudanças' do
+  def matrix(counts = {})
+    codes = %w[very_hot high warm low]
+    codes.index_with { |from| codes.index_with { |to| counts.fetch([from, to], 0) } }
+  end
+
+  it 'conta quem sobe, desce e fica na mesma faixa, nas buscas do período, e ordena as maiores mudanças' do
     alfa = lead('Alfa')
     beta = lead('Beta')
     gama = lead('Gama')
@@ -36,7 +41,8 @@ RSpec.describe Autonomia::Prospecting::Scoring::ShadowReport do
 
     report = described_class.new(account: account, since: 7.days.ago).perform
 
-    expect(report.except(:top10)).to eq(buscas: 2, buscas_sem_sombra: 0, leads: 4, sobem: 2, descem: 1, iguais: 1)
+    expect(report.except(:top10, :matriz)).to eq(buscas: 2, buscas_sem_sombra: 0, leads: 4, sobem: 1, descem: 1, mesma_faixa: 2)
+    expect(report[:matriz]).to eq(matrix(%w[low very_hot] => 1, %w[very_hot high] => 1, %w[high high] => 1, %w[warm warm] => 1))
     expect(report[:top10].first).to eq(
       lead_id: alfa.id, nome: 'Alfa', legacy: 10, orth: 90, faixa_legacy: 'Prioridade baixa', faixa_orth: 'Lead muito quente',
       motivo: 'Orth 90'
@@ -44,12 +50,25 @@ RSpec.describe Autonomia::Prospecting::Scoring::ShadowReport do
     expect(report[:top10].pluck(:nome)).to eq(%w[Alfa Beta Beta Gama])
   end
 
+  # A prioridade é um percentil dentro da busca e muda para quase todo lead; o que a conta vê mudar é a faixa do card.
+  it 'conta como mesma faixa o lead cuja prioridade muda sem trocar de faixa' do
+    alfa = lead('Alfa')
+    beta = lead('Beta')
+    search({ alfa.id.to_s => entry(legacy: 76, orth: 99), beta.id.to_s => entry(legacy: 24, orth: 1) })
+
+    report = described_class.new(account: account, since: 1.day.ago).perform
+
+    expect(report.slice(:sobem, :descem, :mesma_faixa)).to eq(sobem: 0, descem: 0, mesma_faixa: 2)
+    expect(report[:matriz]).to eq(matrix(%w[very_hot very_hot] => 1, %w[low low] => 1))
+    expect(report[:top10].pluck(:nome, :legacy, :orth)).to eq([['Alfa', 76, 99], ['Beta', 24, 1]])
+  end
+
   it 'conta a busca sem nota sombra à parte e não a compara' do
     search({ lead('Alfa').id.to_s => { 'score' => 10.0, 'priority_score' => 10.0 } }, 'score_shadow_error' => 'RuntimeError')
 
     report = described_class.new(account: account, since: 1.day.ago).perform
 
-    expect(report).to eq(buscas: 1, buscas_sem_sombra: 1, leads: 0, sobem: 0, descem: 0, iguais: 0, top10: [])
+    expect(report).to eq(buscas: 1, buscas_sem_sombra: 1, leads: 0, sobem: 0, descem: 0, mesma_faixa: 0, matriz: matrix, top10: [])
   end
 
   it 'não olha buscas de outra conta' do

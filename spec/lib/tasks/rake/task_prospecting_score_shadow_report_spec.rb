@@ -19,10 +19,20 @@ RSpec.describe Rake::Task do
       account: account, user: user, query: 'padaria', provider: 'mock', status: :completed,
       metadata: { 'lead_scoring' => { lead.id.to_s => { 'score' => 20.0, 'priority_score' => 10.0, 'orth' => orth } } }
     )
+    # Faixa legada nas linhas e do Orth nas colunas, com os nomes do card: o lead saiu de baixa e foi para muito quente.
+    matrix = <<~MATRIX
+      Faixa legada (linha) -> faixa do Orth (coluna):
+                         Lead muito quente  Oportunidade alta  Lead morno         Prioridade baixa
+      Lead muito quente  0                  0                  0                  0
+      Oportunidade alta  0                  0                  0                  0
+      Lead morno         0                  0                  0                  0
+      Prioridade baixa   1                  0                  0                  0
+    MATRIX
 
     expect { task.invoke(account.id.to_s, '7') }.to output(
       a_string_including("Conta #{account.id}, últimos 7 dias", 'Buscas comparadas: 1 (sem nota sombra: 0)',
-                         'Leads: 1. Sobem: 1. Descem: 0. Iguais: 0.',
+                         'Leads: 1. Sobem de faixa: 1. Descem de faixa: 0. Mesma faixa: 0.',
+                         matrix,
                          "1. Padaria Alfa (lead #{lead.id}): prioridade 10 -> 90, Prioridade baixa -> Lead muito quente. " \
                          'Oportunidade alta: sem site.')
     ).to_stdout
