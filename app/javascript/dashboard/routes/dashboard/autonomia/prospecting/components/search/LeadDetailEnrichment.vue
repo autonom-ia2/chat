@@ -1,11 +1,22 @@
 <script setup>
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-defineProps({
+const props = defineProps({
   lead: { type: Object, required: true },
 });
 
 const { t } = useI18n();
+
+// Com a pesquisa (#679), decisor e CNPJ do cadastro aparecem no bloco dela; aqui
+// ficam só para lead antigo, sem o bloco research. O CNPJ do site continua
+// quando o cadastro não trouxe nenhum.
+const legacyDecisionName = computed(() =>
+  props.lead.research ? null : props.lead.decision_name
+);
+const siteCnpj = computed(() =>
+  props.lead.research?.company?.cnpj ? null : props.lead.enriched_cnpj
+);
 </script>
 
 <template>
@@ -34,12 +45,12 @@ const { t } = useI18n();
         </div>
       </div>
 
-      <div v-if="lead.decision_name">
+      <div v-if="legacyDecisionName">
         <div class="text-xs font-semibold text-emerald-800">
           {{ t('PROSPECTING.SEARCH.DECISION_MAKER') }}
         </div>
         <div class="mt-1 break-words leading-relaxed">
-          {{ lead.decision_name }}
+          {{ legacyDecisionName }}
           <span v-if="lead.decision_role">
             {{ `· ${lead.decision_role}` }}
           </span>
@@ -53,7 +64,7 @@ const { t } = useI18n();
           lead.enriched_instagram ||
           lead.enriched_facebook ||
           lead.enriched_linkedin ||
-          lead.enriched_cnpj
+          siteCnpj
         "
         class="grid gap-2 sm:grid-cols-2"
       >
@@ -87,11 +98,11 @@ const { t } = useI18n();
           </span>
           {{ lead.enriched_linkedin }}
         </div>
-        <div v-if="lead.enriched_cnpj" class="break-words">
+        <div v-if="siteCnpj" class="break-words">
           <span class="font-semibold">
             {{ `${t('PROSPECTING.SEARCH.ENRICHED_CNPJ')}:` }}
           </span>
-          {{ lead.enriched_cnpj }}
+          {{ siteCnpj }}
         </div>
       </div>
     </div>
