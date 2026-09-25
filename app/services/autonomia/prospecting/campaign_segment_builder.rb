@@ -3,7 +3,6 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
 
   Error = Class.new(StandardError)
 
-  ELIGIBLE_STATUS = 'ready_for_campaign'.freeze
   # Os dois tipos que recebem o segmento pela etiqueta (#732, item 11): a campanha de envio único (Campaign, pelo
   # display_id) e a campanha da API do WhatsApp (WhatsappApiCampaign, pelo id). Sem tipo, é a de envio único, como antes.
   ONE_OFF = 'one_off'.freeze
@@ -55,12 +54,6 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
     )
   end
 
-  # Os leads que entram no segmento. Público para a recusa depois do segmento (SegmentRefusalSync) saber quem mantém a
-  # etiqueta.
-  def eligible_leads
-    @eligible_leads ||= leads.select { |lead| block_reason(lead).nil? }
-  end
-
   # Cada lead que fica fora, com o motivo (#680, ACAO-26/27). Público para a tela explicar mesmo quando ninguém entra.
   def blocked_details
     @blocked_details ||= leads.filter_map do |lead|
@@ -77,56 +70,18 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
     @leads ||= @list.leads.order(:id).to_a
   end
 
+  def eligible_leads
+    @eligible_leads ||= leads.select { |lead| block_reason(lead).nil? }
+  end
+
   def block_reason(lead)
-    @block_reasons ||= leads.to_h { |item| [item.id, compute_block_reason(item)] }
+    @block_reasons ||= leads.to_h { |item| [item.id, eligibility.block_reason(item)] }
     @block_reasons[lead.id]
   end
 
-  # A ordem é a da explicação mais útil: primeiro o que a pessoa decidiu (descarte, pedido para parar, bloqueio),
-  # depois o que falta no lead. Contato bloqueado ou que pediu para parar nunca recebe a etiqueta.
-  # A recusa de outro lead com o mesmo contato, telefone ou e-mail também vale (ConsentVeto).
-  def compute_block_reason(lead)
-    return 'discarded' if lead.discarded?
-    return 'opt_out' if lead.no_consent?
-
-    contact = existing_contact(lead)
-    return 'opt_out' if consent_veto.vetoed?(lead: lead, contact: contact)
-
-    contact_block_reason(contact) || lead_block_reason(lead)
-  end
-
-  def consent_veto
-    @consent_veto ||= Autonomia::Prospecting::ConsentVeto.new(account: @account)
-  end
-
-  def contact_block_reason(contact)
-    return if contact.nil?
-    return 'contact_blocked' if contact.blocked?
-
-    'opt_out' if contact_opted_out?(contact)
-  end
-
-  def lead_block_reason(lead)
-    return 'no_phone' if lead.phone.blank?
-    return 'no_whatsapp' unless whatsapp_verified?(lead)
-
-    'not_ready' unless lead.status == ELIGIBLE_STATUS
-  end
-
-  # O mesmo contato que o ContactConverter vai etiquetar: o do lead ou o que ele acha pelo WhatsApp verificado, pelo
-  # telefone, pelo identificador ou pelo e-mail.
-  def existing_contact(lead)
-    Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user).existing_contact
-  end
-
-  # Quem respondeu "parar" ao follow-up da IA fica marcado no card (Crm::FollowUps::AutoFollowupCanceler).
-  def contact_opted_out?(contact)
-    @account.crm_cards.where(contact_id: contact.id)
-            .exists?(["metadata->'ai'->'auto_followup_state'->>'opted_out' = 'true'"])
-  end
-
-  def whatsapp_verified?(lead)
-    lead.metadata.to_h.dig('whatsapp_verification', 'status') == 'verified'
+  # As regras de quem entra (SegmentEligibility), as mesmas da recusa depois do segmento.
+  def eligibility
+    @eligibility ||= Autonomia::Prospecting::SegmentEligibility.new(account: @account, user: @user)
   end
 
   def ensure_label!

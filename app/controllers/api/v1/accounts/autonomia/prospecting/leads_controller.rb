@@ -14,8 +14,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   def update
     lead = leads_scope.find(params[:id])
     lead.update!(lead_params)
-    # Recusa ou descarte depois do segmento: a etiqueta sai agora, antes de a campanha ler o público por ela.
-    ::Autonomia::Prospecting::SegmentRefusalSync.new(account: Current.account, user: Current.user).perform([lead]) if lead.saved_change_to_status?
+    # Recusa ou descarte depois do segmento: a etiqueta sai no job da Prospecção, antes de a campanha ler o público por ela.
+    ::Autonomia::Prospecting::SegmentRefusalSync.enqueue(account: Current.account, leads: [lead]) if lead.saved_change_to_status?
 
     render json: { payload: lead_payload(lead.reload) }
   rescue ActiveRecord::RecordInvalid => e
