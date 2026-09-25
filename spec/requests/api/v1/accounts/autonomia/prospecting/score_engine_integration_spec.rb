@@ -86,18 +86,24 @@ RSpec.describe 'Autonomia prospecting score engine integration', type: :request 
   end
 
   describe 'relatório de comparação' do
-    it 'conta quem sobe, desce e fica igual pela prioridade que a tela mostrou em cada motor', :aggregate_failures do
+    it 'conta quem sobe, desce e fica na mesma faixa pela prioridade que a tela mostrou em cada motor', :aggregate_failures do
       legacy_leads, = search(prepare(legacy_account, 'legacy'))
       orth_leads, = search(prepare(orth_account, 'orth'))
       deltas = legacy_leads.to_h { |name, lead| [name, orth_leads.fetch(name)['priority_score'].to_f - lead['priority_score'].to_f] }
-      expected = { sobem: deltas.values.count(&:positive?), descem: deltas.values.count(&:negative?), iguais: deltas.values.count(&:zero?) }
+      bands = legacy_leads.to_h do |name, lead|
+        [name, [band.code(lead['priority_score'].to_f), band.code(orth_leads.fetch(name)['priority_score'].to_f)]]
+      end
+      shifts = bands.values.map { |from, to| band.rank(to) - band.rank(from) }
+      expected = { sobem: shifts.count(&:positive?), descem: shifts.count(&:negative?), mesma_faixa: shifts.count(&:zero?) }
+      expected_matrix = band::CODES.index_with { |from| band::CODES.index_with { |to| bands.values.count([from, to]) } }
       expect(expected[:sobem] + expected[:descem]).to be_positive
 
       [legacy_account, orth_account].each do |account|
         report = Autonomia::Prospecting::Scoring::ShadowReport.new(account: account, since: 1.year.ago).perform
 
         expect(report.slice(:buscas, :buscas_sem_sombra, :leads)).to eq(buscas: 1, buscas_sem_sombra: 0, leads: legacy_leads.size)
-        expect(report.slice(:sobem, :descem, :iguais)).to eq(expected)
+        expect(report.slice(:sobem, :descem, :mesma_faixa)).to eq(expected)
+        expect(report[:matriz]).to eq(expected_matrix)
         top = report[:top10].first
         expect(deltas.fetch(top[:nome]).abs).to eq(deltas.values.map(&:abs).max)
         expect(top.slice(:legacy, :orth)).to eq(legacy: legacy_leads.fetch(top[:nome])['priority_score'].to_f.round,
