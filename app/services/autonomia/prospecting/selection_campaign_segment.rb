@@ -1,6 +1,8 @@
-# "Adicionar à campanha" a partir dos leads selecionados (#680, ACAO-25/37). Como no Orth, a seleção vira uma lista
-# (criada ou reusada pelo nome do segmento) e o segmento sai do CampaignSegmentBuilder, o mesmo das Listas. Tudo numa
-# transação: sem ninguém elegível, nem a lista nem a mudança de status ficam gravadas.
+# "Adicionar à campanha" a partir dos leads selecionados (#680, ACAO-25/37). A seleção vira uma lista nova, só com os
+# leads selecionados, e o segmento sai do CampaignSegmentBuilder, o mesmo das Listas. Como no Orth, a audiência é
+# exatamente a seleção: uma lista de mesmo nome (de outro envio ou de outro usuário) nunca é reaproveitada, senão os
+# leads dela ganhariam a etiqueta e entrariam na campanha. Nome repetido ganha um número: "Seleção (2)".
+# Tudo numa transação: sem ninguém elegível, nem a lista nem a mudança de status ficam gravadas.
 class Autonomia::Prospecting::SelectionCampaignSegment
   # O teto do envio em lote do Orth (ACAO-05).
   MAX_LEADS = 500
@@ -32,7 +34,7 @@ class Autonomia::Prospecting::SelectionCampaignSegment
     raise Error, 'prospecting.campaign.too_many_leads' if @lead_ids.size > MAX_LEADS
 
     ActiveRecord::Base.transaction do
-      list = find_or_create_list!
+      list = create_list!
       leads.each { |lead| add_to_list!(list, lead) }
       Result.new(segment: build_segment(list), missing_lead_ids: missing_lead_ids)
     end
@@ -48,8 +50,19 @@ class Autonomia::Prospecting::SelectionCampaignSegment
     @lead_ids - leads.map(&:id)
   end
 
-  def find_or_create_list!
-    @account.autonomia_prospecting_lists.find_or_create_by!(name: @segment_name) { |list| list.user = @user }
+  def create_list!
+    @account.autonomia_prospecting_lists.create!(name: free_name, user: @user)
+  end
+
+  def free_name
+    lists = @account.autonomia_prospecting_lists
+    return @segment_name unless lists.exists?(name: @segment_name)
+
+    taken = lists.where('name LIKE ?', "#{ActiveRecord::Base.sanitize_sql_like(@segment_name)} (%)").pluck(:name).to_set
+    (2..).each do |number|
+      candidate = "#{@segment_name} (#{number})"
+      return candidate unless taken.include?(candidate)
+    end
   end
 
   def add_to_list!(list, lead)

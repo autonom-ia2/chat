@@ -157,18 +157,46 @@ RSpec.describe 'Autonomia prospecting send to CRM and campaign from selection', 
       expect([list['name'], list['lead_ids'].sort]).to eq(['Restaurantes BH', [ready.id, no_whatsapp.id, discarded.id].sort])
     end
 
-    it 'reusa a lista de mesmo nome num segundo envio' do
+    it 'segunda seleção com o mesmo nome é só dela: o lead da primeira não ganha a etiqueta nem entra na campanha nova' do
       first = verified(create_lead(1))
       second = verified(create_lead(2))
+      # Campanha de SMS só agendada: nada é enviado no teste.
+      campaign = create(:campaign, account: account, inbox: create(:channel_sms, account: account).inbox, audience: [],
+                                   scheduled_at: 1.day.from_now)
       post "#{base_url}/campaign_segment", params: { lead_ids: [first.id], segment_name: 'Seleção' },
                                            headers: auth_headers(admin), as: :json
+      first_label = response.parsed_body.dig('payload', 'segment', 'label', 'title')
 
-      post "#{base_url}/campaign_segment", params: { lead_ids: [second.id], segment_name: 'Seleção' },
+      post "#{base_url}/campaign_segment", params: { lead_ids: [second.id], segment_name: 'Seleção', campaign_id: campaign.display_id },
                                            headers: auth_headers(admin), as: :json
 
       expect(response).to have_http_status(:created)
-      expect(account.autonomia_prospecting_lists.where(name: 'Seleção').count).to eq(1)
-      expect(response.parsed_body.dig('payload', 'segment', 'eligible_count')).to eq(2)
+      segment = response.parsed_body.dig('payload', 'segment')
+      expect(segment['eligible_count']).to eq(1)
+      expect(segment['label']['title']).not_to eq(first_label)
+      # Nenhuma etiqueta cruza de uma seleção para a outra.
+      expect([first.reload.contact.label_list, second.reload.contact.label_list]).to eq([[first_label], [segment['label']['title']]])
+      expect(campaign.reload.audience.map { |item| item['id'] }).to eq([segment['label']['id']])
+      expect(response.parsed_body.dig('payload', 'list', 'lead_ids')).to eq([second.id])
+      expect(account.autonomia_prospecting_lists.pluck(:name)).to contain_exactly('Seleção', 'Seleção (2)')
+    end
+
+    it 'nome igual ao de uma lista de outro usuário não põe os leads dela na campanha nem mexe na lista dele' do
+      other_user = create(:user, :administrator, account: account)
+      extra = verified(create_lead(1, status: :ready_for_campaign))
+      other_list = Autonomia::Prospecting::List.create!(account: account, user: other_user, name: 'Clientes VIP')
+      other_list.list_leads.create!(account: account, lead: extra)
+      selected = verified(create_lead(2))
+
+      post "#{base_url}/campaign_segment", params: { lead_ids: [selected.id], segment_name: 'Clientes VIP' },
+                                           headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:created)
+      body = response.parsed_body['payload']
+      expect(body.dig('segment', 'eligible_count')).to eq(1)
+      expect(body.dig('list', 'id')).not_to eq(other_list.id)
+      expect(other_list.reload.leads).to eq([extra])
+      expect(extra.reload.contact).to be_nil
     end
 
     it 'sem ninguém elegível responde 422 com os motivos e não deixa lista para trás' do
