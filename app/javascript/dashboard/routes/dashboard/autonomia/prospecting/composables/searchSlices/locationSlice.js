@@ -15,6 +15,12 @@ export const locationCenter = locationDetails => {
   };
 };
 
+// Centro da busca por raio, o mesmo do círculo da prévia (LOCAL-42). É o do
+// local escolhido; numa busca salva reaberta para repetir ou editar, é o
+// centro que ela usou, como o setMapCenter(area_config.center) do Orth.
+export const radiusCenter = ({ savedRadiusCenter, locationDetails }) =>
+  savedRadiusCenter.value || locationCenter(locationDetails.value);
+
 const radiusInMeters = form => Number(form.value.radius_km) * 1000;
 
 // Desenho que vale para o tipo de área escolhido; o de outro tipo não conta.
@@ -40,15 +46,20 @@ const areaConfig = state => {
   }
 
   const base = {
-    center:
-      previewViewport.value?.center || locationCenter(locationDetails.value),
+    center: radiusCenter(state),
     label,
     place_id: placeId,
     radius: radiusInMeters(form),
   };
 
+  // Área visível: vale o que a prévia mostra, centro e limites. No raio o
+  // centro é o do círculo da prévia; arrastar o mapa não muda a busca.
   if (form.value.area_type === 'viewport') {
-    return { ...base, bounds: previewViewport.value?.bounds };
+    return {
+      ...base,
+      center: previewViewport.value?.center || base.center,
+      bounds: previewViewport.value?.bounds,
+    };
   }
 
   return base;
@@ -68,6 +79,7 @@ const restoreLocationForm = (
     locationSuggestions,
     locationError,
     drawnArea,
+    savedRadiusCenter,
   },
   search
 ) => {
@@ -93,6 +105,8 @@ const restoreLocationForm = (
   previewViewport.value = area.center
     ? { center: area.center, bounds: area.bounds }
     : null;
+  savedRadiusCenter.value =
+    form.value.area_type === 'radius' ? area.center || null : null;
   locationSuggestions.value = [];
   locationError.value = '';
   drawnArea.value = drawnAreaFromSaved(form.value.area_type, area, radius);
@@ -114,6 +128,7 @@ export const locationSlice = {
     previewViewport: ref(null),
     locationError: ref(''),
     drawnArea: ref(null),
+    savedRadiusCenter: ref(null),
   }),
   reset: ({
     locationSuggestions,
@@ -122,6 +137,7 @@ export const locationSlice = {
     previewViewport,
     locationError,
     drawnArea,
+    savedRadiusCenter,
   }) => {
     locationSuggestions.value = [];
     locationDetails.value = null;
@@ -129,6 +145,7 @@ export const locationSlice = {
     previewViewport.value = null;
     locationError.value = '';
     drawnArea.value = null;
+    savedRadiusCenter.value = null;
   },
   restoreForm: (state, search) => restoreLocationForm(state, search),
   toPayload: state => {

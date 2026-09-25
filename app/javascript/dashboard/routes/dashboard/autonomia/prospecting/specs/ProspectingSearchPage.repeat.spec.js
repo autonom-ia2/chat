@@ -5,6 +5,7 @@
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import {
+  MapStub,
   bakerySearch,
   buttonWithTitle,
   choiceSelect,
@@ -273,6 +274,12 @@ describe('ProspectingSearchPage · repetir e editar busca do histórico', () => 
         'modelValue'
       )
     ).toBe('no');
+    // LOCAL-42: o círculo da prévia fica no centro que a busca salva usou,
+    // o mesmo que vai no pedido (como o setMapCenter do Orth ao reabrir).
+    expect(wrapper.findComponent(MapStub).props('center')).toEqual({
+      lat: -25.43,
+      lng: -49.27,
+    });
 
     await wrapper.find('form').trigger('submit');
     await flushPromises();

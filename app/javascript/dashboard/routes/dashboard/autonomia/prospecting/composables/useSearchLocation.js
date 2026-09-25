@@ -6,7 +6,7 @@
 import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
-import { currentDrawnArea, locationCenter } from './searchSlices/locationSlice';
+import { currentDrawnArea, radiusCenter } from './searchSlices/locationSlice';
 import { isDrawnAreaType } from '../utils/drawnArea';
 
 const LOCATION_SUGGESTION_DELAY_MS = 280;
@@ -23,6 +23,7 @@ export const useSearchLocation = state => {
     previewViewport,
     locationError,
     drawnArea,
+    savedRadiusCenter,
   } = state;
   let locationSuggestionTimer;
 
@@ -60,12 +61,14 @@ export const useSearchLocation = state => {
     confirmedLocation.value = '';
     locationDetails.value = null;
     previewViewport.value = null;
+    savedRadiusCenter.value = null;
     drawnArea.value = null;
     locationError.value = '';
     fetchLocationSuggestions();
   };
 
   const fetchLocationDetails = async suggestion => {
+    savedRadiusCenter.value = null;
     if (!suggestion?.place_id) {
       locationDetails.value = suggestion?.text
         ? {
@@ -145,7 +148,7 @@ export const useSearchLocation = state => {
       const drawn = currentDrawnArea(state);
       return drawn?.type === 'circle' ? drawn.config.radius / 1000 : null;
     }),
-    previewMapCenter: computed(() => locationCenter(locationDetails.value)),
+    previewMapCenter: computed(() => radiusCenter(state)),
     previewAreaBounds: computed(() =>
       form.value.area_type === 'viewport' ? previewViewport.value?.bounds : null
     ),

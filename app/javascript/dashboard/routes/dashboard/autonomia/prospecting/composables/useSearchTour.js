@@ -24,6 +24,7 @@ const usePrefill = state => {
     locationDetails,
     previewViewport,
     drawnArea,
+    savedRadiusCenter,
     locationSuggestions,
     locationError,
   } = state;
@@ -40,6 +41,7 @@ const usePrefill = state => {
     locationDetails.value = null;
     previewViewport.value = null;
     drawnArea.value = null;
+    savedRadiusCenter.value = null;
     locationSuggestions.value = [];
     locationError.value = '';
   };
