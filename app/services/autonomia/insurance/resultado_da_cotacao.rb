@@ -10,6 +10,7 @@ class Autonomia::Insurance::ResultadoDaCotacao
   # As execuções de `cotar_seguro` que não contam como a cotação da conversa: trocadas por um pedido novo,
   # descartadas com o turno, barradas pelo operador, ou aceitas e ainda não despachadas.
   FORA = %w[superseded discarded blocked pending].freeze
+  NENHUMA_AINDA = 'nenhuma até agora'.freeze
   # O parâmetro das ferramentas que leem a cotação (`ver_resultado_da_cotacao`, `enviar_proposta_da_seguradora`): com
   # mais de um bem cotado na conversa (chat#612), é ele que diz de qual o cliente fala (`escolha`).
   PARAM_PRODUTO = { 'name' => 'produto', 'type' => 'string', 'required' => false,
@@ -197,8 +198,9 @@ class Autonomia::Insurance::ResultadoDaCotacao
   end
 
   # -> a lista fechada das seguradoras desta cotação (chat#718): o nome de cada uma, em ordem alfabética, sem valor.
+  # Sem nenhuma ainda (a cotação correndo antes da primeira resposta), diz isso, e não uma lista vazia.
   def lista_fechada
-    nomes.sort.join('; ')
+    nomes.sort.join('; ').presence || NENHUMA_AINDA
   end
 
   # -> o comparativo em PDF desta cotação foi aceito pelo publicador? A identidade dele na lista do aceite

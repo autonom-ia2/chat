@@ -223,6 +223,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       expect(ao_modelo('Azul')).to eq(format(described_class::NAO_ENCONTRADA_AINDA, nomes: lista))
     end
 
+    it 'nome pedido com a cotação correndo e nenhuma resposta ainda: diz que não há nenhuma, e não uma lista vazia' do
+      cotacao_com(status: 'running', ofertas: [])
+
+      expect(ao_modelo('Azul')).to eq(format(described_class::NAO_ENCONTRADA_AINDA, nomes: 'nenhuma até agora'))
+    end
+
     # O NOME PELA METADE NÃO CASA MAIS POR PALAVRA (chat#718): "Porto" não é "Porto Seguro". Volta a lista, e é o modelo
     # quem escolhe nela na chamada seguinte.
     it 'nome pela metade: volta a lista, e não o preço de ninguém' do
