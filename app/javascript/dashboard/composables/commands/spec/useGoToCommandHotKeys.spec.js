@@ -101,6 +101,7 @@ describe('useGoToCommandHotKeys', () => {
     useI18n.mockReturnValue({ t: vi.fn(key => key) });
     useRouter.mockReturnValue({
       push: vi.fn(),
+      hasRoute: vi.fn(() => true),
       resolve: vi.fn(({ name, params }) => ({
         name,
         params,
@@ -124,6 +125,32 @@ describe('useGoToCommandHotKeys', () => {
     const { goToCommandHotKeys } = useGoToCommandHotKeys();
     expect(goToCommandHotKeys.value).toBeDefined();
     expect(goToCommandHotKeys.value.length).toBeGreaterThan(0);
+  });
+
+  // Uma rota que o fork removeu (ex.: SLA das configurações) fazia o
+  // router.resolve lançar "No match" e a paleta inteira ficar vazia,
+  // inclusive "Alterar tema".
+  it('pula comando de rota não registrada sem esvaziar a paleta', () => {
+    useRouter.mockReturnValue({
+      push: vi.fn(),
+      hasRoute: vi.fn(name => name !== 'canned_list'),
+      resolve: vi.fn(({ name, params }) => {
+        if (name === 'canned_list') throw new Error('No match for canned_list');
+        return { name, params, meta: ROUTE_META[name] || DEFAULT_META };
+      }),
+    });
+
+    const { goToCommandHotKeys } = useGoToCommandHotKeys();
+    const ids = goToCommandHotKeys.value.map(cmd => cmd.id);
+
+    expect(ids).not.toContain('open_canned_response_settings');
+    expect(ids).toContain('open_account_settings');
+  });
+
+  it('não oferece o SLA das configurações, que o fork não registra', () => {
+    const { goToCommandHotKeys } = useGoToCommandHotKeys();
+    const ids = goToCommandHotKeys.value.map(cmd => cmd.id);
+    expect(ids).not.toContain('open_sla_settings');
   });
 
   it('should filter commands based on feature flags', () => {

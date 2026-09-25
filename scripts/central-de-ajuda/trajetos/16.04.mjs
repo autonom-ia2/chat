@@ -15,9 +15,9 @@
 // FICTÍCIAS e o preparar tira a conta do modo de demonstração. O vídeo não
 // dispara busca nem chama o Google.
 //
-// Trajeto: Configurações → Prospecção → Chaves do Google → Pesquisa de
-// empresa e decisor → Funil CRM padrão → Consumo → aba Score → Perfil de
-// score e pesos → Salvar.
+// Trajeto (a ordem da aba Geral, #677): Configurações → Prospecção → Funil CRM
+// padrão → País da busca → Chaves do Google → Pesquisa de empresa e decisor →
+// Consumo → aba Score → Perfil de score e pesos → Salvar.
 
 export const id = '16.04';
 
@@ -36,6 +36,9 @@ Autonomia::Prospecting::Config.enable_for!(conta)
 # (a chave do Google vem do ENV do servidor local de gravação, fictícia).
 setting = Autonomia::Prospecting::Setting.find_by!(account_id: conta.id)
 setting.update!(provider: 'google_places') unless setting.provider == 'google_places'
+# O vídeo mostra o uso do dia a dia: sem o balão de apresentação do Guia (#697).
+usuario = conta.users.find_by!(name: '${login.usuarioNome}')
+usuario.update!(ui_settings: (usuario.ui_settings || {}).merge('autonomia_guide_intro_seen' => true, 'autonomia_guide_opened' => true))
 puts "preparo-ok"
 `);
 }
@@ -50,6 +53,20 @@ export const cenas = [
     duracaoMs: 2000,
   },
   {
+    legenda: 'Escolha o Funil CRM padrão',
+    acao: 'selecionar',
+    alvo: { seletor: '[role="combobox"][aria-label="Funil CRM padrão"]' },
+    valor: 'Funil Comercial',
+    zoom: 1.8,
+  },
+  {
+    legenda: 'Escolha o País da busca',
+    acao: 'selecionar',
+    alvo: { seletor: '[role="combobox"][aria-label="País da busca"]' },
+    valor: 'BR',
+    zoom: 1.8,
+  },
+  {
     legenda: 'Confira as Chaves do Google',
     acao: 'parar',
     alvo: { texto: 'Chaves do Google' },
@@ -62,13 +79,6 @@ export const cenas = [
     alvo: { texto: 'Pesquisa de empresa e decisor' },
     zoom: 1.8,
     duracaoMs: 1800,
-  },
-  {
-    legenda: 'Escolha o Funil CRM padrão',
-    acao: 'selecionar',
-    alvo: { seletor: '[role="combobox"][aria-label="Funil CRM padrão"]' },
-    valor: 'Funil Comercial',
-    zoom: 1.8,
   },
   {
     legenda: 'Confira o Consumo diário e mensal',

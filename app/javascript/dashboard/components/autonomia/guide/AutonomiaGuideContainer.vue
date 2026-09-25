@@ -9,6 +9,7 @@ import { useWindowSize, useEventListener } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
 import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
+import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import {
   useAutonomiaGuideStore,
   motivoUtilizavel,
@@ -76,11 +77,58 @@ const showPanel = computed(() => isEnabled.value && isPanelOpen.value);
 
 const hasMessages = computed(() => messages.length > 0);
 
-const suggestions = computed(() => [
-  t('AUTONOMIA_GUIDE.SUGGESTIONS.KANBAN'),
-  t('AUTONOMIA_GUIDE.SUGGESTIONS.WHATSAPP'),
-  t('AUTONOMIA_GUIDE.SUGGESTIONS.REPORTS'),
-]);
+// #697 — ao abrir, o painel sugere os artigos da Central sobre a tela aberta (a API já
+// filtra pelo papel e pelos recursos da conta). Sem artigo da tela, ou sem resposta da
+// Central, ficam as sugestões gerais: a lista nunca aparece vazia.
+const MAX_SUGESTOES_DA_TELA = 3;
+const artigosDaCentral = ref([]);
+let centralPedida = false;
+
+const carregarCentral = async () => {
+  if (centralPedida) return;
+  centralPedida = true;
+  try {
+    const { data } = await CentralDeAjudaAPI.get();
+    artigosDaCentral.value = (data?.capitulos || []).flatMap(
+      capitulo => capitulo.artigos || []
+    );
+  } catch {
+    // tenta de novo na próxima abertura; até lá valem as sugestões gerais
+    centralPedida = false;
+  }
+};
+
+const sugestoesGerais = computed(() =>
+  [
+    t('AUTONOMIA_GUIDE.SUGGESTIONS.KANBAN'),
+    t('AUTONOMIA_GUIDE.SUGGESTIONS.WHATSAPP'),
+    t('AUTONOMIA_GUIDE.SUGGESTIONS.REPORTS'),
+  ].map(texto => ({ rotulo: texto, pergunta: texto }))
+);
+
+const sugestoesDaTela = computed(() =>
+  artigosDaCentral.value
+    .filter(artigo => artigo.rota && artigo.rota === route.name)
+    .slice(0, MAX_SUGESTOES_DA_TELA)
+    .map(artigo => ({
+      rotulo: artigo.titulo,
+      pergunta: t('AUTONOMIA_GUIDE.SUGGESTION_ARTICLE', {
+        titulo: artigo.titulo,
+      }),
+    }))
+);
+
+const suggestions = computed(() =>
+  sugestoesDaTela.value.length ? sugestoesDaTela.value : sugestoesGerais.value
+);
+
+watch(
+  showPanel,
+  aberto => {
+    if (aberto) carregarCentral();
+  },
+  { immediate: true }
+);
 
 const scrollToBottom = async () => {
   await nextTick();
@@ -559,14 +607,21 @@ watch(accountId, () => store.reset());
             {{ $t('AUTONOMIA_GUIDE.KICK_OFF') }}
           </p>
           <div class="flex flex-col gap-2 mt-2">
+            <p
+              v-if="sugestoesDaTela.length"
+              class="mb-0 text-xs font-medium text-n-slate-11"
+            >
+              {{ $t('AUTONOMIA_GUIDE.SUGGESTIONS_THIS_SCREEN') }}
+            </p>
             <button
               v-for="(suggestion, i) in suggestions"
               :key="i"
+              data-sugestao
               :disabled="isSending"
               class="text-left text-sm text-n-slate-12 bg-n-alpha-1 hover:bg-n-alpha-2 rounded-lg px-3 py-2 min-h-11 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-              @click="sendMessage(suggestion)"
+              @click="sendMessage(suggestion.pergunta)"
             >
-              {{ suggestion }}
+              {{ suggestion.rotulo }}
             </button>
           </div>
         </div>

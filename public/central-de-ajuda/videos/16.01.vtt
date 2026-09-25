@@ -1,61 +1,93 @@
 WEBVTT
 
 1
-00:00:00.001 --> 00:00:02.608
+00:00:00.001 --> 00:00:02.607
 Montar uma busca de leads
 
 2
-00:00:02.608 --> 00:00:05.759
+00:00:02.607 --> 00:00:05.786
 Abra Prospecção na barra lateral
 
 3
-00:00:05.760 --> 00:00:08.946
+00:00:05.786 --> 00:00:08.955
 Clique em Buscar leads
 
 4
-00:00:08.946 --> 00:00:15.161
+00:00:08.955 --> 00:00:15.119
 Clique em Nova busca
 
 5
-00:00:15.161 --> 00:00:17.167
-Preencha o Termo
+00:00:15.119 --> 00:00:18.418
+O selo no topo mostra o modo da busca
 
 6
-00:00:17.168 --> 00:00:19.339
-Digite a Localização
+00:00:18.418 --> 00:00:20.432
+Preencha o Termo
 
 7
-00:00:19.339 --> 00:00:24.075
-Escolha Raio ou Área visível
+00:00:20.432 --> 00:00:22.608
+Digite a Localização
 
 8
-00:00:24.075 --> 00:00:25.861
-Área visível usa o mapa na hora de buscar
+00:00:22.608 --> 00:00:27.373
+Escolha Raio ou Área visível
 
 9
-00:00:25.861 --> 00:00:30.627
-Volte para Raio
+00:00:27.374 --> 00:00:29.162
+Área visível usa o mapa na hora de buscar
 
 10
-00:00:30.628 --> 00:00:32.461
-Ajuste o raio
+00:00:29.162 --> 00:00:33.923
+Volte para Raio
 
 11
-00:00:32.461 --> 00:00:34.299
-Defina o Limite de resultados
-
-12
-00:00:34.299 --> 00:00:35.886
+00:00:33.923 --> 00:00:38.659
 Escolha a Forma de pesquisa
 
+12
+00:00:38.659 --> 00:00:41.804
+Em Sua jogada, escolha uma estratégia pronta
+
 13
-00:00:35.886 --> 00:00:39.013
-Marque Expandir raio automaticamente
+00:00:41.804 --> 00:00:43.763
+A jogada preenche os filtros por você
 
 14
-00:00:39.013 --> 00:00:40.971
-Pare aqui antes de clicar em Buscar
+00:00:43.763 --> 00:00:45.589
+Ajuste o raio
 
 15
-00:00:40.971 --> 00:00:43.175
+00:00:45.589 --> 00:00:47.420
+Defina o Limite de resultados
+
+16
+00:00:47.420 --> 00:00:49.178
+Tipo de decisor: fica Proprietário
+
+17
+00:00:49.178 --> 00:00:52.297
+Marque Expandir raio automaticamente
+
+18
+00:00:52.297 --> 00:00:55.469
+Clique em Filtros avançados
+
+19
+00:00:55.469 --> 00:00:57.424
+O topo mostra a jogada base e o modo
+
+20
+00:00:57.424 --> 00:01:02.187
+Ajuste um filtro, como Telefone
+
+21
+00:01:02.188 --> 00:01:08.368
+Clique em Aplicar para valer
+
+22
+00:01:08.368 --> 00:01:10.330
+Pare aqui antes de clicar em Buscar
+
+23
+00:01:10.330 --> 00:01:12.538
 Pronto

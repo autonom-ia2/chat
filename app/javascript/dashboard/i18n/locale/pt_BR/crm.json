@@ -1713,6 +1713,14 @@
       "NEW_CONVERSATION": "Iniciar nova conversa",
       "CLOSE": "Fechar o Guia",
       "SEND": "Enviar mensagem"
-    }
+    },
+    "LAUNCHER_LABEL": "Pergunte ao Guia",
+    "INTRO": {
+      "TEXT": "Tem dúvida de como fazer algo? Pergunte aqui: eu explico e levo você até a tela certa.",
+      "OK": "Entendi",
+      "LATER": "Depois"
+    },
+    "SUGGESTIONS_THIS_SCREEN": "Sobre esta tela",
+    "SUGGESTION_ARTICLE": "Me explique: {titulo}"
   }
 }

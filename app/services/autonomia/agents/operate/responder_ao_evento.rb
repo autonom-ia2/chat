@@ -61,7 +61,7 @@ class Autonomia::Agents::Operate::ResponderAoEvento < Autonomia::Agents::Operate
 
   def delivery
     @delivery ||= ::Autonomia::Agents::Tools::Delivery.new(conversation: @conversation, agent_inbox: @agent_inbox,
-                                                           evento: @evento.tipo)
+                                                           evento: @evento.tipo, execucao_do_evento: @evento.run)
   end
 
   def already_replied?
