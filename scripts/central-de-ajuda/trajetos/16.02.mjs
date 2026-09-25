@@ -10,7 +10,8 @@
 // chama a IA/o site do lead de verdade.
 //
 // A checagem de WhatsApp roda sozinha ao abrir a busca
-// (`verifyLeadsWhatsApp`, ver prospecting/composables/useSearchLeads.js) e chama um
+// (`verifyLeadsWhatsApp`, em prospecting/composables/useLeadWhatsApp.js, chamado
+// por useSearchHistory.js) e chama um
 // serviço de fora (WAHA) para qualquer lead sem
 // `metadata['whatsapp_verification']['status']` já preenchido — por isso o
 // preparar grava esse status pronto nos dois leads (evita a chamada, ver
@@ -21,9 +22,15 @@
 // chamada externa) e o segundo monta o arquivo inteiramente no navegador
 // (Blob local, sem request).
 //
-// Trajeto: Prospecção → Buscar leads → busca do histórico → Detalhes de um
-// lead → Enriquecer (só mostrar) → Criar card → Abrir contato/Abrir card →
-// Selecionar visíveis → CSV.
+// Os filtros do refino (quadro do ícone Filtros) só escondem leads da tela, sem
+// request: o lead 2 não tem site, então "Site: Tem" o esconde e "Limpar tudo"
+// o traz de volta antes de Selecionar visíveis e CSV.
+//
+// Trajeto: Prospecção → Buscar leads → busca do histórico → Filtros (Ordenar,
+// Site, Aplicar, Limpar tudo) → Ligar/WhatsApp no card → Enriquecer (só
+// mostrar, no card: com os Detalhes abertos ele fica atrás da gaveta) →
+// Detalhes de um lead → Criar card → Abrir contato/Abrir card → fechar os
+// Detalhes (a gaveta cobre a lista) → Selecionar visíveis → CSV.
 
 export const id = '16.02';
 
@@ -39,6 +46,8 @@ export async function preparar({ rodarRails }) {
 conta = Account.find(${login.contaId})
 usuaria = conta.users.find_by(name: ${JSON.stringify(login.usuarioNome)})
 raise "usuária não encontrada" unless usuaria
+# O vídeo mostra o uso do dia a dia: sem o balão de apresentação do Guia (#697).
+usuaria.update!(ui_settings: (usuaria.ui_settings || {}).merge('autonomia_guide_intro_seen' => true, 'autonomia_guide_opened' => true))
 
 Autonomia::Prospecting::Config.enable_for!(conta)
 
@@ -115,6 +124,60 @@ export const cenas = [
     zoom: 1.6,
   },
   {
+    legenda: 'Clique no ícone de Filtros',
+    acao: 'mover e clicar',
+    alvo: { seletor: 'button[title="Filtros"]' },
+    aguardarTextoDepois: 'Ordenar',
+    zoom: 1.8,
+  },
+  {
+    legenda: 'A ordenação muda a lista na hora',
+    acao: 'parar',
+    alvo: { seletor: '[role="combobox"][aria-label="Ordenar"]' },
+    zoom: 1.8,
+    duracaoMs: 1600,
+  },
+  {
+    legenda: 'Escolha um filtro, como Site',
+    acao: 'selecionar',
+    alvo: { seletor: '[role="combobox"][aria-label="Site"]' },
+    valor: 'yes',
+    zoom: 1.6,
+  },
+  {
+    legenda: 'Aplicar esconde quem não passa',
+    acao: 'mover e clicar',
+    alvo: { texto: 'Aplicar' },
+    zoom: 1.4,
+  },
+  {
+    legenda: 'Para ver todos de novo, abra os Filtros',
+    acao: 'mover e clicar',
+    alvo: { seletor: 'button[title="Filtros"]' },
+    aguardarTextoDepois: 'Limpar tudo',
+    zoom: 1.8,
+  },
+  {
+    legenda: 'Limpar tudo vale na hora',
+    acao: 'mover e clicar',
+    alvo: { texto: 'Limpar tudo' },
+    zoom: 1.6,
+  },
+  {
+    legenda: 'Ligar e WhatsApp ficam no rodapé do card',
+    acao: 'parar',
+    alvo: { texto: 'Ligar' },
+    zoom: 1.8,
+    duracaoMs: 1800,
+  },
+  {
+    legenda: 'Enriquecer busca e-mail, redes e CNPJ',
+    acao: 'parar',
+    alvo: { texto: 'Enriquecer' },
+    zoom: 1.8,
+    duracaoMs: 1600,
+  },
+  {
     legenda: 'Abra os Detalhes de um lead',
     acao: 'mover e clicar',
     alvo: { texto: 'Detalhes' },
@@ -125,13 +188,6 @@ export const cenas = [
     acao: 'parar',
     zoom: 1.4,
     duracaoMs: 1800,
-  },
-  {
-    legenda: 'Enriquecer busca e-mail, redes e CNPJ',
-    acao: 'parar',
-    alvo: { texto: 'Enriquecer' },
-    zoom: 1.8,
-    duracaoMs: 1600,
   },
   {
     legenda: 'Clique em Criar card',
@@ -146,6 +202,12 @@ export const cenas = [
     alvo: { texto: 'Abrir contato' },
     zoom: 1.6,
     duracaoMs: 1800,
+  },
+  {
+    legenda: 'Feche os Detalhes',
+    acao: 'mover e clicar',
+    alvo: { seletor: 'button[title="Fechar detalhes"]' },
+    zoom: 1.6,
   },
   {
     legenda: 'Clique em Selecionar visíveis',
