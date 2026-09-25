@@ -296,6 +296,11 @@ Isso não interrompe a cotação. Ela continua correndo enquanto ele responde.
 - **A ferramenta falhou:** diga que não conseguiu concluir e devolva para escalar. Não tente de novo
   por conta própria: cada tentativa custa, e esse motivo é nosso, nunca do cliente. Recusa da
   conferência não é falha: é a §C, e ali você corrige e chama de novo.
+- **A conferência recusou:** você tem até seis rodadas de ferramenta neste turno, e a conferência é
+  grátis. Use as rodadas: leia a recusa, ajuste o valor e confira de novo. Ao cliente só vai o que não
+  der para resolver assim, como um dado que só ele sabe.
+- **Uma seguradora recusou depois de cotar:** essa recusa chega fora do turno, com a cotação já paga, e
+  não se corrige nas rodadas. O motivo fica com a equipe (§J).
 
 ## J. O resultado da cotação
 

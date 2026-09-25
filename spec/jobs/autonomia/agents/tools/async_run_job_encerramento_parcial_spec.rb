@@ -53,6 +53,20 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     conversation.messages.reload.where(sender_type: 'AgentBot').order(:id).map(&:content)
   end
 
+  # O QUE O CLIENTE RECEBE e o que só a equipe lê (receita v3, R20): desde 25/09/2026 o desfecho sem preço e o sem
+  # comparativo deixam nota privada à equipe (`NotaDaEquipe#nota_do_desfecho`). O cliente continua sem texto nosso.
+  def publicas
+    conversation.messages.reload.where(sender_type: 'AgentBot', private: false).map(&:content)
+  end
+
+  def notas_da_equipe
+    conversation.messages.reload.where(private: true).map(&:content)
+  end
+
+  def nota_do_desfecho(run, tipo)
+    format(cotacao::DESFECHOS.fetch(tipo), cotacao: 'auto', run: run.id)
+  end
+
   # O PREÇO COMO O CLIENTE O LÊ, e o comparativo como o portal o entrega. Os dois são ENTREGAS: o
   # que o Arrange precisa montar não é "o handle diz que saiu", é a MENSAGEM na conversa — é ela
   # que o fecho consulta desde a entrega 8a.
@@ -282,7 +296,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
 
     described_class.new.perform(run.id, 5)
 
-    expect(bot_contents).to be_empty
+    expect(publicas).to be_empty
+    expect(notas_da_equipe).to eq([nota_do_desfecho(run, 'valores_guardados')])
     expect(eventos_disparados(run)).to eq(['valores_guardados'])
   end
 
@@ -299,8 +314,9 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     # Act
     described_class.new.perform(run.id, 5)
 
-    # Assert — nenhuma mensagem, o evento de falha; nada do comparativo
-    expect(bot_contents).to be_empty
+    # Assert — nenhuma mensagem ao cliente, o evento de falha e a nota à equipe; nada do comparativo
+    expect(publicas).to be_empty
+    expect(notas_da_equipe).to eq([nota_do_desfecho(run, 'falhou')])
     expect(eventos_disparados(run)).to eq(['falhou'])
     expect(conversation.messages.reload.none? { |mensagem| mensagem.attachments.any? }).to be(true)
     expect(run.reload).to have_attributes(status: 'failed', delivered_count: 0)
@@ -502,7 +518,8 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     Autonomia::Agents::Tools::ReapStaleRunsJob.new.perform
 
     # Assert
-    expect(bot_contents).to be_empty
+    expect(publicas).to be_empty
+    expect(notas_da_equipe).to eq([nota_do_desfecho(run, 'valores_guardados')])
     expect(eventos_disparados(run)).to eq(['valores_guardados'])
     expect(run.reload).to have_attributes(status: 'failed', failure_code: 'execucao_abandonada')
   end

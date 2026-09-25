@@ -581,9 +581,12 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # Pela chat#612 (`eeba4c92…` -> `a7b67a0e…`): vários bens de uma vez, e a confirmação nomeia os bens.
     # Pela paridade da jornada (`a7b67a0e…` -> `62c2a551…`, 25/09/2026): sai a crase de consultar_<ramo>, e os três
     # travessões viram vírgula e dois pontos, sem mudar o sentido.
+    # Pelas guardas da receita v3, R17 (`62c2a551…` -> `284c977c…`, 25/09/2026): as seis rodadas de ferramenta da Lia no
+    # turno, a recusa grátis da conferência corrigida pelo especialista nas rodadas dele, e a recusa paga de seguradora
+    # fora do turno. As promessas estão em `receita/rodadas_no_manual_spec` (`RodadasNoManual`), ligadas à constante.
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('62c2a551c9b3463e94d48bf486df8ca3')
+      expect(Digest::MD5.hexdigest(secao)).to eq('284c977cf533a996972ee268347eaab4')
     end
 
     it 'não introduz variável para substituir' do

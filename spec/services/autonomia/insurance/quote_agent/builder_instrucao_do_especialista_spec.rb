@@ -557,8 +557,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # nunca chuta a seguradora, e sem apólice cota como seguro novo e avisa uma vez. E, por decisão do Rodrigo, sem a
   # classe de bônus (nem na apólice nem com o cliente) também é seguro novo, nunca bônus 0, com o mesmo aviso.
   # Âncoras trocadas na mesma tabela.
+  # Pelas guardas da receita v3, R17 (`15a304f8…` -> `547e5b95…`, 25/09/2026): a §I ganha as seis rodadas de ferramenta
+  # para corrigir a recusa grátis da conferência, e a recusa paga de seguradora, que chega fora do turno e não se corrige
+  # nelas. As promessas estão em `receita/rodadas_no_manual_spec` (`RodadasNoManual`), ligadas à constante do Runner.
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('15a304f8ef6ff5e61ee5245ac0ad7233')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('547e5b95c8cd300d118d47f862407f45')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer
