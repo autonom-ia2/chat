@@ -249,6 +249,25 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
     end
   end
 
+  # A nota de nome dos candidatos fica no lead também quando a empresa não é achada (#681, frente B).
+  it 'sem empresa grava a maior nota de nome na evidência e a nota de cada candidato' do
+    scores = [{ cnpj: cnpj, name_similarity: 0.61, phone_match: false, city_uf_match: true }]
+    not_found = discovery(:not_found).tap do |result|
+      result.evidence += [{ source: 'bigdatacorp', signal: 'top_name_similarity', value: 0.61 }]
+      result.candidate_scores = scores
+    end
+    allow(research::CnpjDiscovery).to receive(:new) { instance_double(research::CnpjDiscovery, perform: not_found) }
+
+    run
+
+    stored = lead.reload.metadata['research']
+    expect(stored['discovery_evidence']).to include({ 'source' => 'bigdatacorp', 'signal' => 'top_name_similarity', 'value' => 0.61 })
+    expect(stored['candidate_scores']).to eq([{ 'cnpj' => cnpj, 'name_similarity' => 0.61, 'phone_match' => false, 'city_uf_match' => true }])
+    other = create_lead(create(:account), 'places/sorriso')
+    reused = research::Reuse.new(lead: other, requested_role: 'owner').without_company(since: 1.minute.ago)
+    expect(reused.candidate_scores).to eq(stored['candidate_scores'])
+  end
+
   describe 'falha tipada' do
     it 'cadastro fora do ar vira failed com o código, sem perfil' do
       allow(research::Registry).to receive(:fetch).and_return(

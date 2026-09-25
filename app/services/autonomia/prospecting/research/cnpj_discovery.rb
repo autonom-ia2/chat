@@ -19,7 +19,8 @@ class Autonomia::Prospecting::Research::CnpjDiscovery
 
   # status: :found, :not_found, :ambiguous, :not_configured, :failed. company: o objeto que o cadastro devolveu para o CNPJ
   # aceito (para o Runner não consultar de novo), ou nil.
-  Result = Struct.new(:status, :cnpj, :confidence, :evidence, :candidates, :error_code, :company, keyword_init: true)
+  # candidate_scores: por candidato, só CNPJ, nota de nome e se telefone e cidade/UF batem (#681), achada a empresa ou não.
+  Result = Struct.new(:status, :cnpj, :confidence, :evidence, :candidates, :error_code, :company, :candidate_scores, keyword_init: true)
 
   class Failure < StandardError
     attr_reader :code
@@ -76,6 +77,7 @@ class Autonomia::Prospecting::Research::CnpjDiscovery
     hydrated = to_hydrate.to_h { |candidate| [candidate.cnpj, hydrate(candidate)] }
     matcher_candidates = rejected.map { |candidate| Adapter.pre_hydration_matcher_candidate(candidate, site_cnpj: site_cnpj) } +
                          to_hydrate.filter_map { |candidate| adapted(candidate, hydrated[candidate.cnpj][:identity]) }
+    record_candidate_scores(candidates, matcher_candidates)
     match = Research::IdentityMatcher.match(place, matcher_candidates)
     @evidence << signal('matcher', match.reason)
     outcome(match, hydrated)
@@ -128,6 +130,19 @@ class Autonomia::Prospecting::Research::CnpjDiscovery
     adaptation.candidate
   end
 
+  # A nota de nome da BigDataCorp fica também quando nenhum candidato é aceito (#681, frente B): a maior vai na evidência e
+  # a de cada candidato, na ordem do fornecedor, em candidate_scores. Sem nome de empresa ou pessoa.
+  def record_candidate_scores(candidates, matcher_candidates)
+    order = candidates.map(&:cnpj)
+    @candidate_scores = matcher_candidates.sort_by { |candidate| order.index(candidate.cnpj) }.map do |candidate|
+      found = Research::IdentityMatcher.signals(place, candidate)
+      { cnpj: candidate.cnpj, name_similarity: candidate.name_similarity&.round(2), phone_match: found[:phone_exact],
+        city_uf_match: found[:city_uf_match] }
+    end
+    top = @candidate_scores.filter_map { |score| score[:name_similarity] }.max
+    @evidence << signal('bigdatacorp', 'top_name_similarity', top) if top
+  end
+
   def record_site_signal(candidates)
     return unless site_cnpj
 
@@ -164,6 +179,6 @@ class Autonomia::Prospecting::Research::CnpjDiscovery
 
   def result(status, evidence: [], **attributes)
     Result.new(status: status, cnpj: nil, confidence: 0.0, error_code: nil, company: nil, **attributes,
-               evidence: @evidence + evidence, candidates: @candidate_cnpjs || [])
+               evidence: @evidence + evidence, candidates: @candidate_cnpjs || [], candidate_scores: @candidate_scores || [])
   end
 end

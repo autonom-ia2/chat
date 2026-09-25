@@ -11,6 +11,7 @@ class Autonomia::Prospecting::SearchRunner
 
   class UnsupportedProviderError < StandardError; end
   class ProviderError < StandardError; end
+  ScoreEngineError = Autonomia::Prospecting::Scoring::SearchScoring::EngineError
 
   def initialize(account:, user:, params:)
     @account = account
@@ -46,7 +47,7 @@ class Autonomia::Prospecting::SearchRunner
   def persist_results!(search, provider_result)
     ActiveRecord::Base.transaction do
       leads = upsert_leads!(search, accepted_with_rank(provider_result[:attributes]))
-      assign_priority_positions!(leads)
+      score_leads!(leads)
       search.radius = provider_result[:radius]
       search.area_config = area_config_for_radius(provider_result[:radius])
       search.metadata = search.metadata.to_h.merge(results_metadata(leads, provider_result))
@@ -80,7 +81,19 @@ class Autonomia::Prospecting::SearchRunner
       'requested_radius' => radius,
       'radius_expanded' => provider_result[:radius].to_i > radius,
       'partial_results' => provider_result[:partial] == true
-    }
+    }.merge(@score_engine.shadow_error ? { 'score_shadow_error' => @score_engine.shadow_error } : {})
+  end
+
+  # Nota do Orth ao lado da legada em toda busca nova (#681). No motor legado o lead fica como está; virada a conta, o
+  # lead passa a mostrar a do Orth. O que cada lead acrescenta a lead_scoring fica guardado para results_metadata.
+  def score_leads!(leads)
+    assign_priority_positions!(leads)
+    apply_score_engine!(leads)
+  end
+
+  def apply_score_engine!(leads)
+    @score_engine = Autonomia::Prospecting::Scoring::SearchScoring.new(setting: @setting, mode: search_score_mode, filters: advanced_filters)
+    @score_engine_scoring = @score_engine.apply!(leads)
   end
 
   def validate!
@@ -282,7 +295,7 @@ class Autonomia::Prospecting::SearchRunner
           'score_breakdown' => lead.score_breakdown,
           'priority_score' => lead.priority_score&.to_f,
           'priority_position' => lead.priority_position
-        }
+        }.merge(@score_engine_scoring.to_h.fetch(lead.id.to_s, {}))
       ]
     end
   end
@@ -756,11 +769,16 @@ class Autonomia::Prospecting::SearchRunner
         requested_limit,
         search_score_mode,
         search_country,
-        @setting.scoring_mode,
-        @setting.scoring_profile_id,
-        @setting.active_scoring_weights.sort.to_h
+        *scoring_cache_parts
       ].join(':')
     )
+  end
+
+  # Busca feita num motor não serve de cache para o outro. O motor legado não entra na impressão digital, para o cache
+  # que já existe continuar valendo (#681).
+  def scoring_cache_parts
+    parts = [@setting.scoring_mode, @setting.scoring_profile_id, @setting.active_scoring_weights.sort.to_h]
+    @setting.orth_score_engine? ? parts + ['score_engine:orth'] : parts
   end
 
   def cache_expires_at
