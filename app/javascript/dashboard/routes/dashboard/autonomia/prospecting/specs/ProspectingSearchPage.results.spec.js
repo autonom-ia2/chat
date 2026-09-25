@@ -68,31 +68,16 @@ describe('ProspectingSearchPage · resultados', () => {
     expect(wrapper.text()).toContain('PROSPECTING.SEARCH.RESULTS_EMPTY');
   });
 
-  it('oferece as ordens na ordem atual da tela', async () => {
-    const wrapper = await mountSearchPage();
-    await openResultFilters(wrapper);
-
-    const sort = choiceSelect(wrapper, 'PROSPECTING.SEARCH.FIELDS.SORT');
-    expect(sort.props('modelValue')).toBe('priority_desc');
-    expect(sort.props('options').map(option => option.value)).toEqual([
-      'priority_desc',
-      'score_desc',
-      'created_desc',
-      'created_asc',
-      'rating_desc',
-      'reviews_desc',
-      'name_asc',
-    ]);
-  });
-
+  // Mudou de propósito (#678): o seletor escolhe o campo e um botão inverte a
+  // direção (ProspectingSearchPage.sort.spec.js). Cada campo começa na direção
+  // de antes; "Mais antigos" virou Data invertida.
   it.each([
-    ['score_desc', ['Pão Quente', 'Padaria Sol', 'Confeitaria Lua']],
-    ['created_desc', ['Pão Quente', 'Confeitaria Lua', 'Padaria Sol']],
-    ['created_asc', ['Padaria Sol', 'Confeitaria Lua', 'Pão Quente']],
-    ['rating_desc', ['Padaria Sol', 'Confeitaria Lua', 'Pão Quente']],
-    ['reviews_desc', ['Pão Quente', 'Padaria Sol', 'Confeitaria Lua']],
-    ['name_asc', ['Confeitaria Lua', 'Padaria Sol', 'Pão Quente']],
-    ['priority_desc', ['Padaria Sol', 'Pão Quente', 'Confeitaria Lua']],
+    ['score', ['Pão Quente', 'Padaria Sol', 'Confeitaria Lua']],
+    ['created', ['Pão Quente', 'Confeitaria Lua', 'Padaria Sol']],
+    ['rating', ['Padaria Sol', 'Confeitaria Lua', 'Pão Quente']],
+    ['reviews', ['Pão Quente', 'Padaria Sol', 'Confeitaria Lua']],
+    ['name', ['Confeitaria Lua', 'Padaria Sol', 'Pão Quente']],
+    ['priority', ['Padaria Sol', 'Pão Quente', 'Confeitaria Lua']],
   ])('ordena por %s', async (sortKey, expected) => {
     const wrapper = await mountSearchPage();
     await openResultFilters(wrapper);

@@ -322,13 +322,21 @@
         "INACTIVE_GBP": "Perfil com baixa atividade recente"
       },
       "SORT": {
-        "PRIORITY_DESC": "Maior prioridade",
-        "SCORE_DESC": "Maior score",
-        "CREATED_DESC": "Mais recentes",
-        "CREATED_ASC": "Mais antigos",
-        "RATING_DESC": "Melhor avaliação",
-        "REVIEWS_DESC": "Mais avaliações",
-        "NAME_ASC": "Nome A-Z"
+        "FIELDS": {
+          "PRIORITY": "Prioridade",
+          "SCORE": "Score",
+          "RATING": "Avaliação",
+          "REVIEWS": "Número de avaliações",
+          "DISTANCE": "Distância do centro",
+          "GOOGLE_RANK": "Posição no Google",
+          "CREATED": "Data",
+          "NAME": "Nome"
+        },
+        "DIRECTION": {
+          "ASC": "Crescente",
+          "DESC": "Decrescente"
+        },
+        "INVERT": "Inverter a ordem (agora {direction})"
       },
       "FIELDS": {
         "PROVIDER": "Provider",

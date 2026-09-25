@@ -1,53 +1,99 @@
-// Ordenação local dos leads de uma busca, pela chave escolhida na tela.
-const numberValue = (lead, key, fallback = 0) => Number(lead[key] || fallback);
+// Ordenação local dos leads de uma busca (#678): um campo e uma direção,
+// gravados juntos na chave "<campo>_<direção>" (a mesma sort_key que a busca
+// já salvava, como "priority_desc"). Os campos são os do Orth (Prioridade,
+// Score, Rating, Reviews, Distância e Google) mais Data e Nome, que só o
+// chat2you tem. Quem não tem o valor fica no fim nas duas direções.
+import { distanceKm } from './leadDistance';
 
-const compareByPriority = (first, second) => {
-  const firstPosition = numberValue(
-    first,
-    'priority_position',
-    Number.MAX_SAFE_INTEGER
-  );
-  const secondPosition = numberValue(
-    second,
-    'priority_position',
-    Number.MAX_SAFE_INTEGER
-  );
-  if (firstPosition !== secondPosition) {
-    return firstPosition - secondPosition;
-  }
-
-  return (
-    numberValue(second, 'priority_score') - numberValue(first, 'priority_score')
-  );
+const numberOrNull = value => {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 };
 
-const compareBy = (sortKey, first, second) => {
-  if (sortKey === 'priority_desc') return compareByPriority(first, second);
-  if (sortKey === 'score_desc') {
-    return numberValue(second, 'score') - numberValue(first, 'score');
-  }
-  if (sortKey === 'rating_desc') {
-    return numberValue(second, 'rating') - numberValue(first, 'rating');
-  }
-  if (sortKey === 'reviews_desc') {
-    return (
-      numberValue(second, 'reviews_count') - numberValue(first, 'reviews_count')
-    );
-  }
-  if (sortKey === 'name_asc') {
-    return String(first.name || '').localeCompare(String(second.name || ''));
-  }
-  if (sortKey === 'created_asc') {
-    return (
-      new Date(first.created_at).getTime() -
-      new Date(second.created_at).getTime()
-    );
-  }
+const negated = value => (value === null ? null : -value);
 
-  return (
-    new Date(second.created_at).getTime() - new Date(first.created_at).getTime()
-  );
+// value: o que se compara. "desc" põe o maior valor primeiro. Na prioridade a
+// melhor é a 1ª posição, então o valor é a posição com sinal trocado.
+// defaultDirection: a que põe o melhor primeiro ao escolher o campo; distância
+// e Google começam do mais perto e da 1ª posição.
+const FIELDS = {
+  priority: {
+    value: lead => negated(numberOrNull(lead.priority_position)),
+    tieBreak: lead => numberOrNull(lead.priority_score),
+    defaultDirection: 'desc',
+  },
+  score: { value: lead => numberOrNull(lead.score), defaultDirection: 'desc' },
+  rating: {
+    value: lead => numberOrNull(lead.rating),
+    defaultDirection: 'desc',
+  },
+  reviews: {
+    value: lead => numberOrNull(lead.reviews_count),
+    defaultDirection: 'desc',
+  },
+  distance: {
+    value: (lead, { center }) => distanceKm(center, lead),
+    defaultDirection: 'asc',
+  },
+  google_rank: {
+    value: lead => numberOrNull(lead.search_rank),
+    defaultDirection: 'asc',
+  },
+  created: {
+    value: lead => numberOrNull(Date.parse(lead.created_at)),
+    defaultDirection: 'desc',
+  },
+  name: { value: lead => String(lead.name || ''), defaultDirection: 'asc' },
 };
 
-export const sortLeads = (leads, sortKey) =>
-  [...leads].sort((first, second) => compareBy(sortKey, first, second));
+export const SORT_FIELDS = Object.keys(FIELDS);
+export const DEFAULT_SORT_KEY = 'priority_desc';
+const DIRECTIONS = ['asc', 'desc'];
+
+export const defaultSortDirection = field => FIELDS[field].defaultDirection;
+
+export const sortKeyFor = (field, direction) => `${field}_${direction}`;
+
+export const parseSortKey = sortKey => {
+  const key = String(sortKey || '');
+  const separator = key.lastIndexOf('_');
+  const field = key.slice(0, separator);
+  const direction = key.slice(separator + 1);
+  if (separator > 0 && FIELDS[field] && DIRECTIONS.includes(direction)) {
+    return { field, direction };
+  }
+  return parseSortKey(DEFAULT_SORT_KEY);
+};
+
+const compareValues = (first, second) => {
+  if (typeof first === 'string') return first.localeCompare(second);
+  return first - second;
+};
+
+// Sem valor vai para o fim, qualquer que seja a direção.
+const compareWithMissingLast = (first, second, sign) => {
+  if (first === null && second === null) return 0;
+  if (first === null) return 1;
+  if (second === null) return -1;
+  return sign * compareValues(first, second);
+};
+
+export const sortLeads = (leads, sortKey, context = {}) => {
+  const { field, direction } = parseSortKey(sortKey);
+  const { value, tieBreak } = FIELDS[field];
+  const sign = direction === 'asc' ? 1 : -1;
+  const keyed = leads.map(lead => ({
+    lead,
+    value: value(lead, context),
+    tie: tieBreak ? tieBreak(lead) : null,
+  }));
+
+  return keyed
+    .sort(
+      (first, second) =>
+        compareWithMissingLast(first.value, second.value, sign) ||
+        compareWithMissingLast(first.tie, second.tie, sign)
+    )
+    .map(item => item.lead);
+};
