@@ -5,8 +5,9 @@
 # aqui o único chamador (o comparativo) nunca passava o código.
 #
 # Ferramenta SÍNCRONA do principal, no molde de `ver_resultado_da_cotacao`: acha a cotação mais nova da conversa
-# (`Insurance::ResultadoDaCotacao`), casa o nome que o cliente disse com o resultado guardado (`#procurar`: caixa,
-# acento e nome parcial) e, para quem fez proposta, pede o PDF ao portal e o publica na conversa. Nunca abre
+# (`Insurance::ResultadoDaCotacao`), acha a seguradora que o MODELO escolheu na lista fechada da cotação
+# (`#codigos_do_nome`, chat#718: o nome inteiro, e nunca um casamento de palavras) e, para quem fez proposta, pede o PDF
+# ao portal e o publica na conversa. Nome fora da lista volta com a lista, para ele escolher ou perguntar. Nunca abre
 # cotação: duas seguradoras são duas chamadas sobre a mesma cotação.
 #
 # QUEM ESCREVE AO CLIENTE É A LIA (decisão do CEO). O arquivo sai SEM LEGENDA e ao modelo volta só o que
@@ -33,8 +34,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
   SEM_COTACAO = 'Não há cotação nesta conversa com proposta para enviar. Não abra cotação nova por causa deste ' \
                 'pedido e não invente seguradora.'.freeze
   SEM_PRECO = 'Nenhuma seguradora fez proposta nesta cotação, e não há proposta para enviar.'.freeze
-  QUAL = 'Não ficou claro de qual seguradora o cliente quer a proposta. Fizeram proposta nesta cotação: %<nomes>s. ' \
-         'Pergunte a ele qual delas.'.freeze
+  # A LISTA FECHADA (chat#718): quando o nome não é exatamente o de uma seguradora com proposta, o modelo recebe os
+  # nomes e escolhe; se o cliente não nomeou nenhuma delas, a saída é perguntar.
+  QUAL = 'A seguradora pedida não é, pelo nome exato, uma das que fizeram proposta nesta cotação. Fizeram proposta: ' \
+         '%<nomes>s. ' \
+         'Se o cliente pediu uma delas, chame de novo com seguradora igual ao nome dela, escrito exatamente como está ' \
+         'aqui. Se ele não nomeou nenhuma delas, não chame de novo: pergunte a ele qual quer.'.freeze
+  # Com a cotação correndo: as que já fizeram proposta, para o nome escrito diferente não virar "ainda não apareceu".
+  JA_FIZERAM = 'Já fizeram proposta até agora: %<nomes>s. Se o cliente pediu uma delas, chame de novo com seguradora ' \
+               'igual ao nome dela, escrito exatamente como está aqui.'.freeze
   # Sem posição do arquivo na fala (chat#641): no WhatsApp ele pode chegar depois do texto.
   ENVIADA = 'A proposta da %<nome>s foi enviada ao cliente nesta conversa, como arquivo PDF. Escreva você a ' \
             'mensagem que acompanha o arquivo, sem link e sem travessão. ' \
@@ -48,6 +56,13 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
                    'enviado ao cliente: o comparativo chega quando a cotação terminar.'.freeze
   FALHOU = 'Não deu para gerar a proposta da %<nome>s agora. Nada foi enviado ao cliente: não mande link nem ' \
            'invente valor.'.freeze
+  # A NOTA À EQUIPE NA HORA (decisão 3 do Rodrigo, 25/09/2026, chat#718): a proposta que não sai ia só ao log e ao
+  # modelo. Agora quem atende sabe, por mensagem privada (`Insurance::NotaNaHora`), qual seguradora e por quê.
+  NOTA = 'A proposta em PDF da %<nome>s não saiu agora: %<motivo>s. A pessoa pediu essa proposta e ouviu da IA que ' \
+         'não deu para gerar agora; confira no portal e mande a proposta, se for o caso.'.freeze
+  MOTIVOS_DA_NOTA = { 'sem_url' => 'o portal não devolveu o arquivo (ou não havia sessão aberta com ele)',
+                      'nao_publicada' => 'o arquivo não pôde ser baixado ou publicado na conversa' }.freeze
+  MOTIVO_DO_PORTAL = 'o portal respondeu com erro'.freeze
 
   class << self
     def slug
@@ -66,8 +81,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     end
 
     def params
-      [{ 'name' => 'seguradora', 'type' => 'string',
-         'description' => 'Nome da seguradora que o cliente pediu, como ele escreveu.' },
+      [{ 'name' => 'seguradora', 'type' => 'string', 'required' => false,
+         'description' => 'O nome da seguradora que o cliente escolheu, escrito exatamente como a cotação o escreve (como ' \
+                          'veio do especialista ou do comparativo). null quando o cliente não nomeou nenhuma seguradora ' \
+                          'desta cotação.' },
        Resultado::PARAM_PRODUTO]
     end
 
@@ -88,19 +105,26 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     @resultado = Resultado.da_conversa(conversa.id, faixa: escolha.faixa)
     return SEM_COTACAO if @resultado.nil?
 
-    codigos = @resultado.procurar(params['seguradora'].to_s)
-    return qual(codigos) if codigos.size != 1
+    codigos = @resultado.codigos_do_nome(params['seguradora'])
+    return qual if codigos.empty?
 
-    responder(codigos.first)
+    a_responder(codigos).map { |codigo| responder(codigo) }.join("\n")
   end
 
   private
 
-  def qual(codigos)
-    return AINDA_CORRENDO if codigos.empty? && @resultado.correndo?
+  # DUAS SEGURADORAS COM O MESMO NOME NA COTAÇÃO (revisão da chat#718): a lista não as separa, e devolvê-la faria o
+  # modelo chamar de novo com o mesmo nome até acabar as rodadas. Vale a que fez proposta, e se as duas fizeram, as
+  # duas vão, porque é a proposta que o cliente pediu por esse nome; sem proposta nenhuma, a primeira responde.
+  def a_responder(codigos)
+    codigos.select { |codigo| @resultado.desfecho(codigo) == Guardado::COM_PRECO }.presence || codigos.first(1)
+  end
 
-    nomes = @resultado.com_preco.map { |codigo| @resultado.nome(codigo) }
-    nomes.empty? ? SEM_PRECO : format(QUAL, nomes: nomes.to_sentence(two_words_connector: ' e ', last_word_connector: ' e '))
+  def qual
+    nomes = @resultado.com_preco.map { |codigo| @resultado.nome(codigo) }.join('; ')
+    return [AINDA_CORRENDO, (format(JA_FIZERAM, nomes: nomes) if nomes.present?)].compact.join(' ') if @resultado.correndo?
+
+    nomes.empty? ? SEM_PRECO : format(QUAL, nomes: nomes)
   end
 
   def responder(codigo)
@@ -149,7 +173,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
 
   def falhou(nome, motivo)
     Rails.logger.warn("[autonomia][insurance] proposta da seguradora falhou account=#{account.id} #{motivo}")
+    nota_da_falha(nome, motivo)
     format(FALHOU, nome: nome)
+  end
+
+  # Uma nota por seguradora e turno: o modelo que tenta de novo no mesmo turno não duplica a nota. O turno é o
+  # `Delivery#turno`, que existe também no turno de evento (revisão da chat#718): outro turno, outra nota.
+  def nota_da_falha(nome, motivo)
+    texto = format(NOTA, nome: nome, motivo: MOTIVOS_DA_NOTA.fetch(motivo, MOTIVO_DO_PORTAL))
+    ::Autonomia::Insurance::NotaNaHora.postar(delivery&.conversation, texto, chave: "proposta:#{delivery&.turno}:#{nome}")
   end
 
   # "Proposta Usebens, placa HIK9383.pdf", no molde do comparativo (`InsuranceQuote::Comparativo#nome_do_comparativo`):

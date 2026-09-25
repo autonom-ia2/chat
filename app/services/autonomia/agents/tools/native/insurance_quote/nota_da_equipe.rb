@@ -18,6 +18,21 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::NotaDaEquipe
   SEM_RESPOSTA = 'não respondeu até o fim da cotação'.freeze
   CREDENCIAL = 'o portal recusou a credencial da corretora nesta seguradora'.freeze
   SEM_MOTIVO = 'não trouxe proposta, e o portal não disse por quê'.freeze
+  # O DESFECHO QUE A EQUIPE PRECISA SABER (receita v3, R20, 25/09/2026). Nos três, a Lia fala com o cliente sem o
+  # motivo, e até aqui a equipe não recebia nada: a falha ia só para o log. É fato do motor, por evento, e não a
+  # leitura de texto nenhum. `falhou`: nenhum preço chegou ao cliente nem foi guardado; a causa varia (a abertura
+  # falhou, o portal não respondeu, o prazo acabou, o worker morreu com a cotação aberta), e a frase não afirma
+  # nenhuma: manda conferir o portal, onde a cotação pode ter preço. `incerta`: o envio ao portal saiu sem resposta, e a
+  # cotação pode existir lá sem registro nosso (entrega 5). `valores_guardados`: há preço guardado e o comparativo em
+  # PDF não chegou ao cliente.
+  DESFECHOS = {
+    'falhou' => 'A cotação de %<cotacao>s (execução %<run>s) terminou sem nenhum preço para o cliente. Confira no ' \
+                'portal antes de cotar de novo: se ela chegou a abrir, os preços podem estar lá.',
+    'incerta' => 'O envio da cotação de %<cotacao>s (execução %<run>s) ao portal ficou sem resposta: ela pode estar ' \
+                 'aberta no portal sem registro aqui. Confira no portal antes de cotar de novo.',
+    'valores_guardados' => 'O comparativo em PDF da cotação de %<cotacao>s (execução %<run>s) não chegou ao cliente. Os ' \
+                           'preços estão guardados na cotação.'
+  }.freeze
 
   # -> nenhuma seguradora trouxe preço, e ao menos uma recusou escrevendo o motivo? Então o desfecho é
   # `sem_aceitacao`: nada falhou, e a Lia não diz que a cotação não pôde ser feita.
@@ -35,6 +50,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::NotaDaEquipe
 
     cabecalho = format(CABECALHO, cotacao: cotacao_da_nota, run: run.id)
     [cabecalho, *sem_proposta.map { |entrada| "- #{entrada['nome']}: #{motivo_para_a_equipe(entrada)}" }].join("\n")
+  end
+
+  # -> a frase do desfecho para a equipe (`DESFECHOS`), ou nil para os outros desfechos.
+  def nota_do_desfecho(tipo)
+    modelo = DESFECHOS[tipo.to_s]
+    modelo && format(modelo, cotacao: cotacao_da_nota, run: run.id)
   end
 
   private

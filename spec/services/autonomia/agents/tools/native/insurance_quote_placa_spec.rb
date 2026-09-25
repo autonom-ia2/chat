@@ -33,7 +33,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   def tool_no_turno(params)
-    described_class.new(agent: agent, params: { 'item' => 'Carro' }.merge(params), delivery: instance_double(Autonomia::Agents::Tools::Delivery))
+    described_class.new(agent: agent, params: { 'item' => 'Carro' }.merge(params),
+                        delivery: instance_double(Autonomia::Agents::Tools::Delivery, conversation: nil))
   end
 
   def conector_real

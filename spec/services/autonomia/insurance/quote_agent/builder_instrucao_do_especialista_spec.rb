@@ -557,10 +557,22 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # nunca chuta a seguradora, e sem apólice cota como seguro novo e avisa uma vez. E, por decisão do Rodrigo, sem a
   # classe de bônus (nem na apólice nem com o cliente) também é seguro novo, nunca bônus 0, com o mesmo aviso.
   # Âncoras trocadas na mesma tabela.
+  # Pelas guardas da receita v3, R17 (`15a304f8…` -> `547e5b95…`, 25/09/2026): a §I ganha as seis rodadas de ferramenta
+  # para corrigir a recusa grátis da conferência, e a recusa paga de seguradora, que chega fora do turno e não se corrige
+  # nelas. As promessas estão em `receita/rodadas_no_manual_spec` (`RodadasNoManual`), ligadas à constante do Runner.
+  # Pelas decisões 1 e 4 do Rodrigo, chat#718 (`547e5b95…` -> `e3894e56…`, 25/09/2026): na §J o campo seguradoras leva
+  # cada nome como a cotação o escreve, e o nome fora dela volta com a lista (promessas em
+  # `builder_instrucao_do_principal_promessas_spec`, `ManualDoPrincipalResultado::PROMESSAS`); na §I, "a conferência é
+  # grátis" vira o que é verdade: a recusa não abre cotação, e conferir de novo com o mesmo documento não repete a
+  # busca paga do segurado (`RodadasNoManual::PROMESSAS_DO_COMUM`, sustentada por `Insurance::BuscaDoSeguradoGuardada`).
+  # Revisão da chat#718 (`e3894e56…` -> `e468a7e3…`, 25/09/2026): a busca que falhou (`lookup_failed`, adapters#107)
+  # sai de novo, e a §I passa a dizer só o que é verdade: "com o mesmo documento, a busca paga do segurado que já teve
+  # resposta não se repete".
   # chat#641 (`15a304f8…` -> `9691f6c3…`, 25/09/2026): a §K diz que o PDF pode chegar antes ou depois de qualquer
   # mensagem, e que não se diz em que ponto da conversa ele está. A guarda é `builder_posicao_do_anexo_spec`.
+  # Integração de chat#716 com chat#718 no release de 25/09/2026: os dois textos juntos, sem mudança de frase.
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('9691f6c3251eacbc780db0ee771735bb')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('6d2535228428c82ec927058ebc404d82')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

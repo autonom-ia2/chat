@@ -302,7 +302,7 @@ module ManualDoPrincipalResultado
   def no_turno(seguradora, conversa = conversa_com_cotacao)
     agent, conversation = conversa
     delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil, origin_message_id: 1)
-    RESULTADO.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: delivery)
+    RESULTADO.new(agent: agent, params: { 'seguradoras' => seguradora && Array(seguradora) }, delivery: delivery)
   end
 
   # O que o modelo lê, e o que ficou registrado no turno para a conferência da fala.
@@ -318,11 +318,18 @@ module ManualDoPrincipalResultado
       BUILDER::TOOLS_DO_ESPECIALISTA.include?(RESULTADO.slug) && BUILDER::TOOLS_DO_PRINCIPAL.exclude?(RESULTADO.slug) &&
         consultar('Sancor').first.include?('Sancor não fez proposta')
     },
-    # Um campo só para as seguradoras, e a procura acha mais de uma no mesmo texto.
-    'escreva todos os nomes no mesmo campo, numa chamada só.' => lambda {
-      ao_modelo, = consultar('Sancor e Porto')
-      RESULTADO.openai_schema[:parameters][:required].include?('seguradora') &&
+    # A LISTA FECHADA (chat#718): um campo de lista, um nome por item, e as duas numa chamada só.
+    'ponha no campo seguradoras o nome de cada uma' => lambda {
+      ao_modelo, = consultar(['Sancor', 'Porto Seguro'])
+      RESULTADO.openai_schema[:parameters][:properties]['seguradoras']['type'].include?('array') &&
         ao_modelo.include?('Porto Seguro fez proposta') && ao_modelo.include?('Sancor não fez proposta')
+    },
+    # O nome fora da cotação volta com a lista dela, sem preço; com o nome da lista, o preço vem. Quem escolhe é o modelo.
+    'a ferramenta devolve a lista delas: escolha ali a que o principal quis dizer' => lambda {
+      fora, = consultar('Porto')
+      dentro, = consultar('Porto Seguro')
+      fora.include?('Porto Seguro; Sancor') && Autonomia::Agents::ConferenciaDePrecos.valores(fora).empty? &&
+        dentro.include?('Porto Seguro fez proposta: R$ 2.119,18')
     },
     # Pedir os preços não abre execução: a ferramenta é síncrona e do principal, e nenhuma cotação nova é aberta.
     'Pedir os preços não é pedir outra cotação' => lambda {
@@ -345,7 +352,7 @@ module ManualDoPrincipalResultado
     # que foi pedido vem junto (#515). Os dois fatos estão na mão de quem responde.
     '**O pedido e o que voltou são dois fatos.**' => lambda {
       cotou = { 'rental_car' => 'Não', 'property_damage' => 300_000 }
-      consultar('Porto', conversa_com_cotacao(cobertura: cotou)).first.include?('O que Porto Seguro cotou: carro reserva: Não') &&
+      consultar('Porto Seguro', conversa_com_cotacao(cobertura: cotou)).first.include?('O que Porto Seguro cotou: carro reserva: Não') &&
         RESULTADO.private_instance_methods.include?(:entrada_da_cotacao)
     },
     # O "E AÍ?" (#585): com a cotação correndo, o resultado parcial diz quem já cotou e por quanto, e que há mais a chegar.
@@ -370,7 +377,7 @@ module ManualDoPrincipalResultado
       guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir(cotacao.handle[COTACAO::RESULTADO_KEY], [allianz])
       cotacao.update!(handle: cotacao.handle.merge(COTACAO::RESULTADO_KEY => guardado))
       depois = consultar('Allianz', conversa).first
-      antes == RESULTADO::NAO_ENCONTRADA && depois.include?('Allianz fez proposta: R$ 2.402,55 no total') &&
+      antes == format(RESULTADO::NAO_ENCONTRADA, nomes: 'Porto Seguro; Sancor') && depois.include?('Allianz fez proposta: R$ 2.402,55 no total') &&
         Autonomia::Agents::ToolRun.where(slug: RESULTADO.slug).none?
     },
     # Quem não fez proposta só aparece, com a fala fechada, quando o pedido nomeia a seguradora.
@@ -581,9 +588,20 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # Pela chat#612 (`eeba4c92…` -> `a7b67a0e…`): vários bens de uma vez, e a confirmação nomeia os bens.
     # Pela paridade da jornada (`a7b67a0e…` -> `62c2a551…`, 25/09/2026): sai a crase de consultar_<ramo>, e os três
     # travessões viram vírgula e dois pontos, sem mudar o sentido.
+    # Pelas guardas da receita v3, R17 (`62c2a551…` -> `284c977c…`, 25/09/2026): as seis rodadas de ferramenta da Lia no
+    # turno, a recusa grátis da conferência corrigida pelo especialista nas rodadas dele, e a recusa paga de seguradora
+    # fora do turno. As promessas estão em `receita/rodadas_no_manual_spec` (`RodadasNoManual`), ligadas à constante.
+    # Decisão 4, chat#718 (`284c977c…` -> `124816bf…`, 25/09/2026): "a recusa da conferência é grátis" não era toda a
+    # verdade (a conferência pode chamar a busca paga do segurado). Agora: a recusa não abre cotação, e conferir de novo
+    # com o mesmo documento não repete a busca paga, o que `Insurance::BuscaDoSeguradoGuardada` sustenta
+    # (promessa ligada em `RodadasNoManual::PROMESSAS_DA_LIA`).
+    # Revisão da chat#718 (`124816bf…` -> `b3cae4f5…`, 25/09/2026): a busca que falhou (o fornecedor fora, com o sinal
+    # `lookup_failed` da adapters#107) sai de novo, e a frase passa a dizer só o que é verdade: "com o mesmo documento, a
+    # busca paga do segurado que já teve resposta não se repete". A recusa de seguradora vai para a linha seguinte, sem
+    # mudar o sentido.
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('62c2a551c9b3463e94d48bf486df8ca3')
+      expect(Digest::MD5.hexdigest(secao)).to eq('b3cae4f5b7a714f5de0231c92d88e423')
     end
 
     it 'não introduz variável para substituir' do
@@ -625,7 +643,9 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(secao).to be_present
       # chat#638 (`d9b6c6c1…` -> `507f2eab…`): nem instabilidade nem prazo; o motivo de cada uma fica com a equipe.
       # Paridade da jornada (`507f2eab…` -> `53a976b0…`, 25/09/2026): sai a crase de ver_resultado_da_cotacao.
-      expect(Digest::MD5.hexdigest(secao)).to eq('53a976b0b1db27daeb441cb78216fffe')
+      # Lista fechada, chat#718 (`53a976b0…` -> `bf8bf028…`, 25/09/2026): o campo seguradoras leva cada nome como a
+      # cotação o escreve, e o nome fora da cotação volta com a lista para o especialista escolher. Promessas em PROMESSAS.
+      expect(Digest::MD5.hexdigest(secao)).to eq('bf8bf02841043f2402aa41de94891eec')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do
@@ -663,12 +683,27 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(secao).to include('Pedir a proposta não é pedir outra cotação.')
     end
 
+    # QUEM ESCOLHE A SEGURADORA É O MODELO (decisão do Rodrigo, 25/09/2026, chat#718): a frase pede o nome como a cotação
+    # o trouxe e manda escolher na lista que a ferramenta devolve. O que a sustenta: o parâmetro pede o mesmo, e o nome
+    # fora da lista volta com a lista de quem fez proposta, sem nada ao portal (`insurance_quote_proposal_spec`).
+    it 'pede o nome exato da cotação e, fora da lista, a lista para escolher ou perguntar' do
+      proposta = Autonomia::Agents::Tools::Native::InsuranceQuoteProposal
+      expect(secao).to include('o nome dela exatamente como a cotação o trouxe')
+      expect(secao).to include('a ferramenta devolve a lista: escolha nela a que a pessoa quis dizer')
+      expect(proposta.params.first['description']).to include('exatamente como a cotação o escreve')
+      expect(proposta.openai_schema[:parameters][:properties]['seguradora']['type']).to include('null')
+      expect(proposta::QUAL).to include('Fizeram proposta: ', 'pergunte a ele qual quer')
+    end
+
     # Paridade da jornada (`2decd25c…` -> `d845bd66…`, 25/09/2026): o título perde a crase, com o nome intacto.
+    # Lista fechada, chat#718 (`d845bd66…` -> `d252b45d…`, 25/09/2026): o nome "como ela disse" vira o nome exato da
+    # cotação, e o nome fora da lista volta com a lista para escolher ou perguntar.
     # chat#641 (`d845bd66…` -> `b64130ea…`, 25/09/2026): o arquivo pode chegar antes ou depois da mensagem, e a Lia não
     # diz em que ponto da conversa ele está (a fala "está no PDF acima" mentia no WhatsApp).
+    # Integração de chat#716 com chat#718 no release de 25/09/2026: os dois textos juntos, sem mudança de frase.
     it 'mudou? revise este bloco e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('b64130ea1ce77853db5d620c016d3983')
+      expect(Digest::MD5.hexdigest(secao)).to eq('8f7cad3129869c09e4d532f58375e618')
     end
 
     it 'não escreve valor em reais, travessão nem variável para substituir' do

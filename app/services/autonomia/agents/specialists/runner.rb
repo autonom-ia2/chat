@@ -81,6 +81,7 @@ class Autonomia::Agents::Specialists::Runner
     return recusar('especialista_sem_credencial', INDISPONIVEL) if credential.blank?
 
     parsed = generate(credential)
+    avisar_rodadas_esgotadas
     com_situacao(parsed.nil? ? recusar('especialista_sem_resposta', INDISPONIVEL) : format_result(parsed))
   rescue StandardError => e
     # NUNCA ecoar e.message: pode conter o prompt ou a requisição assinada.
@@ -132,15 +133,41 @@ class Autonomia::Agents::Specialists::Runner
 
   # Mesmo contrato do Answerer: cada chamada vira um `function_call_output`. Ferramenta
   # desconhecida não derruba o turno — devolve erro nomeado e o modelo decide o que fazer.
+  # Cada chamada desta rodada devolve [a saída ao modelo, a recusa da ferramenta assíncrona ou nil]; as recusas vão à
+  # contagem das rodadas (`#rodadas`).
   def execute_tool_calls(calls)
     by_slug = specialist_tools.index_by(&:slug)
-    Array(calls).map do |call|
-      tool = by_slug[call['name'].to_s]
-      @tentou_cotar = true if tool&.async?
-      output = tool.present? ? tool.execute(call, delivery: @delivery) : sem_ferramenta(call)
-      { type: 'function_call_output', call_id: call['call_id'],
-        output: output.to_s.truncate(MAX_TOOL_OUTPUT_CHARS) }
-    end
+    resultados = Array(calls).map { |call| executar(by_slug[call['name'].to_s], call) }
+    rodadas.rodada!(resultados.filter_map(&:last))
+    resultados.map(&:first)
+  end
+
+  def executar(tool, call)
+    assincrona = tool&.async?
+    @tentou_cotar = true if assincrona
+    abertas = execucoes_do_turno
+    output = tool.present? ? tool.execute(call, delivery: @delivery) : sem_ferramenta(call)
+    recusa = output if assincrona && execucoes_do_turno == abertas
+    [{ type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(MAX_TOOL_OUTPUT_CHARS) }, recusa]
+  end
+
+  # AS SEIS RODADAS ESGOTADAS SEM COTAÇÃO VIRAM NOTA À EQUIPE NA HORA (chat#718). Quem decide é
+  # `Insurance::RodadasEsgotadas`, que não faz nada fora do especialista de cotação: os outros especialistas não mudam.
+  def rodadas
+    @rodadas ||= ::Autonomia::Insurance::RodadasEsgotadas.new(
+      specialist: @specialist, delivery: @delivery, rodadas: RODADAS_DE_FERRAMENTA
+    )
+  end
+
+  def execucoes_do_turno
+    @delivery&.runs.to_a.size
+  end
+
+  def avisar_rodadas_esgotadas
+    abriu = execucoes_do_turno > @abertas_antes.to_i || @delivery.try(:cotacao_existente?)
+    rodadas.avisar!(tentou_cotar: @tentou_cotar, abriu: abriu)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][specialist] aviso de rodadas falhou specialist=#{@specialist.id} #{e.class}")
   end
 
   # Ferramenta que o especialista não tem: recusa nomeada E REGISTRADA (entrega 6). Foi exatamente
