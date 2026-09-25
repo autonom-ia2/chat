@@ -278,8 +278,8 @@
      "requer": null,
      "prints": [],
      "fontes": [],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/components-next/sidebar/Sidebar.vue:803"
     },
     {
      "id": "01.02",
@@ -2203,7 +2203,7 @@
       "porques: Criar funis, estágios e conectar caixas ao CRM"
      ],
      "revisar": true,
-     "nota": "08.4 está marcado obsoleto no estudo: a mecânica de vínculo caixa↔funil mudou depois de 08/09 (commits ee5d02af3d e 21235ec0e9)."
+     "nota": "08.4 está marcado obsoleto no estudo: a mecânica de vínculo caixa↔funil mudou depois de 08/09 (commits ee5d02af3d e 21235ec0e9).; evidência sumiu: app/javascript/dashboard/components-next/sidebar/Sidebar.vue:973"
     },
     {
      "id": "10.02",
@@ -3047,8 +3047,8 @@
       "porques: Criar campanha de chat ao vivo",
       "porques: Criar campanha SMS"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/components-next/sidebar/Sidebar.vue:1069"
     },
     {
      "id": "13.02",
@@ -3682,8 +3682,8 @@
      "fontes": [
       "porques: Procurar empresas por região e transformar em contato ou card"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/searchSlices/locationSlice.js:18; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/components/search/SearchAdvancedFilters.vue:72"
     },
     {
      "id": "16.02",
@@ -3704,8 +3704,8 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useSearchLeads.js:59; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useSearchLeads.js:108; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useLeadCsv.js:8; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useLeadCsv.js:22; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useLeadCsv.js:23; evidência sumiu: app/javascript/dashboard/i18n/locale/en/prospecting.json:113; evidência sumiu: app/javascript/dashboard/i18n/locale/en/prospecting.json:114; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useLeadCsv.js:25"
     },
     {
      "id": "16.03",
@@ -3728,8 +3728,8 @@
      "fontes": [
       "porques: Juntar leads em listas e preparar um público de campanha"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/pages/ProspectingListsPage.vue:197"
     },
     {
      "id": "16.04",
@@ -3752,8 +3752,8 @@
      "fontes": [
       "porques: Ajustar chaves, limites e critérios de score da prospecção"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/services/autonomia/prospecting/search_runner.rb:8; texto de tela \"Cache TTL\" saiu do i18n"
     }
    ]
   },
