@@ -49,8 +49,13 @@ class Autonomia::Prospecting::WhatsappVerifier
 
   def normalized_phone
     @normalized_phone ||= Autonomia::Prospecting::PhoneContract.e164(
-      @lead.public_send(@source[:attribute]), region: Autonomia::Prospecting::PhoneContract.region_for(@account)
+      checked_number, region: Autonomia::Prospecting::PhoneContract.region_for(@account)
     )
+  end
+
+  # O número como estava no lead quando a consulta começou.
+  def checked_number
+    @checked_number ||= @lead.public_send(@source[:attribute])
   end
 
   def waha_session
@@ -78,9 +83,11 @@ class Autonomia::Prospecting::WhatsappVerifier
   end
 
   # Enriquecimento e verificação rodam em jobs paralelos: gravar só a chave desta verificação no jsonb, sem
-  # reescrever o metadata lido antes (ENRIQ-57).
+  # reescrever o metadata lido antes (ENRIQ-57). E só se o lead ainda tem o número consultado: uma busca que trocou o
+  # telefone no meio já deixou o lead na fila para o número novo (ENRIQ-69).
   def persist!(payload)
-    Autonomia::Prospecting::Lead.where(id: @lead.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+    same_number = Autonomia::Prospecting::Lead.where(id: @lead.id).where(@source[:attribute] => checked_number)
+    same_number.update_all( # rubocop:disable Rails/SkipsModelValidations
       ['metadata = metadata || ?::jsonb, updated_at = ?', { @source[:metadata_key] => payload.compact }.to_json, Time.current]
     )
   end

@@ -39,6 +39,22 @@ RSpec.describe Autonomia::Prospecting::WhatsappVerifier do
     )
   end
 
+  # ENRIQ-69 (#682, E6): a verificação é do número consultado. Se uma busca troca o telefone do lead enquanto o WAHA
+  # responde, o resultado do número antigo não é gravado como se fosse do lead; a verificação do número novo vem da
+  # fila, pela busca que trocou.
+  it 'não grava o resultado quando o telefone do lead mudou durante a consulta' do
+    stub_request(:get, check_url)
+      .with(query: { phone: '+5541999990000', session: 'sessao-prospeccao' })
+      .to_return do
+        Autonomia::Prospecting::Lead.where(id: lead.id).update_all(phone: '(41) 98888-7777') # rubocop:disable Rails/SkipsModelValidations
+        { status: 200, body: { numberExists: true, chatId: '5541999990000@c.us' }.to_json, headers: { 'Content-Type' => 'application/json' } }
+      end
+
+    verify
+
+    expect(lead.reload.metadata).not_to have_key('whatsapp_verification')
+  end
+
   it 'monta o chatId a partir do telefone quando o WAHA não devolve um' do
     stub_check(phone: '+5541999990000', body: { numberExists: 'true' })
 

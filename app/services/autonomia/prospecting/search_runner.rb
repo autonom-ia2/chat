@@ -6,6 +6,9 @@ class Autonomia::Prospecting::SearchRunner
   LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
   # Teto de produto do pedido (#683): 3 páginas de 20 no Google (#678).
   MAX_REQUESTED_LIMIT = Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS
+  # Lead que já existe ganha só as chaves de metadata que a busca traz (ENRIQ-57, ENRIQ-69).
+  METADATA_MERGE_SQL = 'metadata = metadata || ?::jsonb'.freeze
+  METADATA_MERGE_WITHOUT_VERIFICATION_SQL = "metadata = (metadata - 'whatsapp_verification') || ?::jsonb".freeze
 
   Result = Struct.new(:search, :leads, keyword_init: true)
 
@@ -308,15 +311,50 @@ class Autonomia::Prospecting::SearchRunner
   def save_lead!(search, attributes, dedupe_key, google_rank)
     lead = find_existing_lead(attributes, dedupe_key) || Autonomia::Prospecting::Lead.new(account: @account)
     scoring_attributes = score_for(attributes, google_rank)
-    lead_metadata = lead.metadata.to_h.merge(attributes[:metadata].to_h)
+    new_metadata = attributes[:metadata].to_h
+    existing = lead.persisted?
+    stale_verification = existing && stale_whatsapp_verification?(lead, attributes[:phone])
     # Pelo id, não pelo objeto: com o objeto, o inverse_of põe o lead em search.leads, e o lead recusado na corrida
     # (ou inválido) ficaria ali e derrubaria o save! da própria busca.
     lead.assign_attributes(
-      attributes.merge(scoring_attributes).merge(prospect_search_id: search.id, dedupe_key: dedupe_key, search_rank: google_rank,
-                                                 metadata: lead_metadata)
+      attributes.except(:metadata).merge(scoring_attributes)
+                .merge(prospect_search_id: search.id, dedupe_key: dedupe_key, search_rank: google_rank)
     )
+    lead.metadata = lead.metadata.to_h.merge(new_metadata) unless existing
     lead.save!
+    merge_lead_metadata!(lead, new_metadata, drop_whatsapp_verification: stale_verification) if existing
     lead
+  end
+
+  # A verificação de WhatsApp é do número verificado, não do lead (ENRIQ-69): com outro telefone ela deixa de valer,
+  # e sem ela o lead volta à fila de verificação (LeadWorkQueue.after_search). Mesmo número escrito de outro jeito
+  # continua valendo; a marca "queued" fica, porque o job lê o telefone atual do lead.
+  def stale_whatsapp_verification?(lead, new_phone)
+    verification = lead.metadata.to_h['whatsapp_verification'].to_h
+    return false if verification.blank? || verification['status'] == 'queued'
+
+    new_e164 = phone_e164(new_phone)
+    new_e164 != phone_e164(lead.phone) || verification.fetch('phone', new_e164) != new_e164
+  end
+
+  # Lead que já existe: grava só as chaves que a busca traz, sem regravar o metadata lido antes (ENRIQ-57). A
+  # verificação de WhatsApp roda em outro job e pode terminar entre a leitura e a gravação do lead.
+  def merge_lead_metadata!(lead, new_metadata, drop_whatsapp_verification:)
+    return if new_metadata.empty? && !drop_whatsapp_verification
+
+    sql = drop_whatsapp_verification ? METADATA_MERGE_WITHOUT_VERIFICATION_SQL : METADATA_MERGE_SQL
+    scope = Autonomia::Prospecting::Lead.where(id: lead.id)
+    scope.update_all([sql, new_metadata.to_json]) # rubocop:disable Rails/SkipsModelValidations
+    lead.metadata = scope.pick(:metadata)
+    lead.clear_attribute_changes([:metadata])
+  end
+
+  def phone_e164(phone)
+    Autonomia::Prospecting::PhoneContract.e164(phone, region: phone_region)
+  end
+
+  def phone_region
+    @phone_region ||= Autonomia::Prospecting::PhoneContract.region_for(@account)
   end
 
   def score_for(attributes, google_rank)
