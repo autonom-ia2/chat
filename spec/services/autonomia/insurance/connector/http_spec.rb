@@ -252,6 +252,27 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
       expect(texto).to include('carro reserva: Não', 'danos materiais: R$ 500.000,00', 'valor da franquia: R$ 5.795,00')
     end
 
+    # chat#641 (item H da paridade): as importâncias de imóvel, com os nomes que o adapter escreve (adapters, mesma
+    # entrega), chegam ao especialista em reais, e a assistência sim/não do empresarial como sim ou não.
+    it 'a cobertura de imóvel escrita pelo adapter chega em reais ao que o especialista lê' do
+      coverage = { 'fireLightningExplosion' => 300_000, 'electricalDamage' => 30_000, 'theft' => 20_000, 'windstorm' => 15_000,
+                   'vehicleImpact' => 0, 'vehicleImpactWindstorm' => 12_000, 'pipeLeak' => 0, 'rentLoss' => 0, 'collapse' => 0,
+                   'flooding' => 0, 'documentRecovery' => 0, 'electronicEquipment' => 8000, 'civilLiability' => 100_000,
+                   'fixedExpenses' => 60_000, 'glassAmount' => 5000, 'assistance' => true, 'deductibleAmount' => 1500 }
+      resultado = pela_normalizacao(
+        'offers' => [{ 'insurer' => { 'code' => '8', 'name' => 'Porto' }, 'status' => 'quoted',
+                       'premium' => { 'amount' => 1200, 'currency' => 'BRL', 'basis' => 'total' }, 'coverage' => coverage }]
+      )
+
+      guardado = Autonomia::Insurance::ResultadoPorSeguradora.unir({}, resultado['offers'])
+      texto = Autonomia::Insurance::CoberturaDevolvida.texto(guardado['8']['cobertura'])
+
+      expect(guardado['8']['cobertura'].keys.size).to eq(coverage.size)
+      expect(texto).to include('incêndio, raio e explosão: R$ 300.000,00', 'danos elétricos: R$ 30.000,00',
+                               'despesas fixas: R$ 60.000,00', 'responsabilidade civil: R$ 100.000,00', 'vidros: R$ 5.000,00',
+                               'impacto de veículos e vendaval: R$ 12.000,00', 'roubo: R$ 20.000,00', 'assistência: sim')
+    end
+
     it 'o que a busca do segurado não achou chega como a conferência lê' do
       resposta = pela_normalizacao('input' => {}, 'notFound' => %w[insured.birthDate insured.gender])
 

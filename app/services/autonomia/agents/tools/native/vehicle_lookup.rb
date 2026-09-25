@@ -35,7 +35,7 @@ class Autonomia::Agents::Tools::Native::VehicleLookup < Autonomia::Agents::Tools
       'Consulta gratuita da placa no portal da corretora: devolve o modelo, o ano e o TIPO do ' \
         'veículo (carro, moto ou caminhão). Use enquanto ainda está coletando os dados da ' \
         'cotação: confirme o veículo com o cliente pelo nome e pergunte o resto já sabendo o ' \
-        'tipo. Se já tem placa, CPF e CEP, chame cotar_seguro direto com o que sabe — ela ' \
+        'tipo. Se já tem placa, CPF e CEP, chame cotar_seguro direto com o que sabe: ela ' \
         'consulta a placa sozinha e devolve o que ainda faltar.'
     end
 
@@ -76,7 +76,7 @@ class Autonomia::Agents::Tools::Native::VehicleLookup < Autonomia::Agents::Tools
     frase = "#{partes.join(', ')}."
     return frase if tipo.blank?
 
-    "#{frase} Na cotação, escreva `#{CAMPO_DO_TIPO}` = #{tipo}."
+    "#{frase} Na cotação, preencha #{CAMPO_DO_TIPO} com #{tipo}."
   end
 
   # O rótulo vem do schema que o adapter entregou — a mesma lista que o formulário mostra.

@@ -35,8 +35,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
   SEM_PRECO = 'Nenhuma seguradora fez proposta nesta cotação, e não há proposta para enviar.'.freeze
   QUAL = 'Não ficou claro de qual seguradora o cliente quer a proposta. Fizeram proposta nesta cotação: %<nomes>s. ' \
          'Pergunte a ele qual delas.'.freeze
+  # Sem posição do arquivo na fala (chat#641): no WhatsApp ele pode chegar depois do texto.
   ENVIADA = 'A proposta da %<nome>s foi enviada ao cliente nesta conversa, como arquivo PDF. Escreva você a ' \
-            'mensagem que acompanha o arquivo, sem link e sem travessão.'.freeze
+            'mensagem que acompanha o arquivo, sem link e sem travessão. ' \
+            "#{::Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos::ORDEM_DO_ARQUIVO}".freeze
   SEM_PROPOSTA = '%<nome>s não fez proposta nesta cotação, e não há proposta dela para enviar. Nada foi enviado ao ' \
                  'cliente.'.freeze
   AINDA_NAO = '%<nome>s ainda não respondeu, e a cotação continua correndo. Nada foi enviado ao cliente.'.freeze

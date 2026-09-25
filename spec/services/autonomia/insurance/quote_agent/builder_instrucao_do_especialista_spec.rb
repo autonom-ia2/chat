@@ -557,8 +557,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # nunca chuta a seguradora, e sem apólice cota como seguro novo e avisa uma vez. E, por decisão do Rodrigo, sem a
   # classe de bônus (nem na apólice nem com o cliente) também é seguro novo, nunca bônus 0, com o mesmo aviso.
   # Âncoras trocadas na mesma tabela.
+  # chat#641 (`15a304f8…` -> `9691f6c3…`, 25/09/2026): a §K diz que o PDF pode chegar antes ou depois de qualquer
+  # mensagem, e que não se diz em que ponto da conversa ele está. A guarda é `builder_posicao_do_anexo_spec`.
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('15a304f8ef6ff5e61ee5245ac0ad7233')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('9691f6c3251eacbc780db0ee771735bb')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

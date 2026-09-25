@@ -33,8 +33,9 @@ class Autonomia::Agents::Specialists::Runner
   # chegava na ida de FECHAMENTO, já sem ferramenta: o especialista sabia a troca e não podia chamar de
   # novo, e em 21/09/2026 isso virou "vou seguir" sem cotação. Seis, por decisão do Rodrigo no mesmo dia,
   # e SEM o relógio cortar nenhuma: o orçamento cobre cada rodada no teto de uma chamada. O que limita é a
-  # rodada; a guarda de uma execução por turno continua impedindo duas cotações. Roda no ReplyJob, fora
-  # de requisição web.
+  # rodada. Seis rodadas não viram seis cotações do mesmo bem: o `Bound` abre uma execução por bem em cada turno
+  # (a faixa, chat#615), e o mesmo pedido com outro nome também é recusado. Bens diferentes cotam em paralelo, de
+  # propósito. Roda no ReplyJob, fora de requisição web.
   RODADAS_DE_FERRAMENTA = 6
   SEGUNDOS_POR_CHAMADA = 120
   SEGUNDOS_DE_FERRAMENTA = RODADAS_DE_FERRAMENTA * SEGUNDOS_POR_CHAMADA

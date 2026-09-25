@@ -17,7 +17,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Resultado
   # O LIMITE SÓ VALE ONDE FOI MEDIDO (revisão da chat#612). Em auto o silêncio não diz que acabou: numa cotação real
   # de 04/09, 3 de 6 seguradoras cotaram em ~35 s e as outras vieram até os 392 s (`AsyncConfig`). Fechar ali
   # entregaria o comparativo sem a opção que ainda vinha.
-  FECHAM_SEM_NOVIDADE = [::Autonomia::Insurance::EntradaDaCotacao::RESIDENCIAL].freeze
+  # EMPRESARIAL MEDIDO (chat#641, 25/09/2026): 10 cotações reais do ramo 18 com preço, da medição de 24 e 25/09, lidas a
+  # cada ~15 s. Entre um preço novo e o seguinte, no máximo 2 leituras (~30 s); o último chegou até a 10ª leitura
+  # (~2,5 min); e depois dele nenhuma leitura trouxe outro até o fim, em 7 delas parada por 2 a 6 min. A Mitsui,
+  # intermitente no piloto, é o caso do residencial: seguraria o comparativo até o prazo sem nada a trazer.
+  FECHAM_SEM_NOVIDADE = [::Autonomia::Insurance::EntradaDaCotacao::RESIDENCIAL,
+                         ::Autonomia::Insurance::EntradaDaCotacao::EMPRESARIAL].freeze
 
   class_methods do
     # -> este handle tem ao menos uma seguradora com preço guardado? Lido sem instância por

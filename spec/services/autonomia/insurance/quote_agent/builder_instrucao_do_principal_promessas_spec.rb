@@ -664,9 +664,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
 
     # Paridade da jornada (`2decd25c…` -> `d845bd66…`, 25/09/2026): o título perde a crase, com o nome intacto.
+    # chat#641 (`d845bd66…` -> `b64130ea…`, 25/09/2026): o arquivo pode chegar antes ou depois da mensagem, e a Lia não
+    # diz em que ponto da conversa ele está (a fala "está no PDF acima" mentia no WhatsApp).
     it 'mudou? revise este bloco e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('d845bd666177209c6ff0b3b515ca52f7')
+      expect(Digest::MD5.hexdigest(secao)).to eq('b64130ea1ce77853db5d620c016d3983')
     end
 
     it 'não escreve valor em reais, travessão nem variável para substituir' do
@@ -693,7 +695,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'cobre os desfechos que o motor dispara, e manda o preço ao especialista' do
       expect(secao).to include('**Começou:**', '**Falta dado:**', '**Tipo de seguro que não se faz aqui:**',
-                               '**Terminou, com o comparativo acima:**', '**Terminou, com os valores guardados:**',
+                               '**Terminou, com o comparativo enviado:**', '**Terminou, com os valores guardados:**',
                                '**Não deu certo, ou não se sabe se deu:**')
       expect(secao).to include('peça ao especialista; nunca de memória')
     end
@@ -718,8 +720,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # chat#638 (`619d4562…` -> `0530a8a6…`): o comparativo não fala de quem ficou de fora, nem por prazo.
     # Conversa 7057, 24/09/2026 (`0530a8a6…` -> `dac25b9f…`): sem o PDF, a Lia pede os valores ao especialista e os manda
     # na mesma mensagem, em vez de dizer à pessoa que ela pode pedir.
+    # chat#641 (`dac25b9f…` -> `966780d8…`, 25/09/2026): "com o comparativo acima" vira "com o comparativo enviado", e
+    # a Lia não diz em que ponto da conversa o PDF está: no WhatsApp ele chegou depois da fala que o chamava de "acima".
     it 'mudou? revise este bloco e assine aqui' do
-      expect(Digest::MD5.hexdigest(secao)).to eq('dac25b9fa6dd9aff4bfe4dfb30d3c0a5')
+      expect(Digest::MD5.hexdigest(secao)).to eq('966780d8d944be1151dfefa8de963c0b')
     end
 
     it 'não traz frase de exemplo, travessão, valor em reais nem variável' do
