@@ -83,6 +83,33 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     rescue StandardError
       false
     end
+
+    # A REFERÊNCIA DA FALA QUE NINGUÉM LEU NO TURNO (revisão adversarial de 24/09/2026). Quando a Lia escreve valor
+    # sem que esta ferramenta tenha rodado no turno, a conferência compara com o que ela LERIA: o resultado guardado
+    # da cotação mais nova de cada bem da conversa, no mesmo texto de `#call`, mais o que cada seguradora cotou.
+    # `execucao`: a cotação do evento que acionou o turno (`Tools::Delivery#execucao_do_evento`); com preço, é ela a
+    # referência, e não as outras da conversa. -> `ConferenciaDePrecos::Dados`, ou nil quando nenhuma tem preço.
+    def referencia_guardada(conversa_id, agent:, execucao: nil)
+      do_evento = execucao && new(agent: agent).dados_guardados(Resultado.new(execucao))
+      return do_evento if do_evento
+
+      partes = execucoes_com_resultado(conversa_id).filter_map { |run| new(agent: agent).dados_guardados(Resultado.new(run)) }
+      return nil if partes.empty?
+
+      # O comparativo só conta quando TODAS as cotações o entregaram: o recuo "está no PDF" não pode valer para o
+      # bem que ficou sem ele.
+      ::Autonomia::Agents::ConferenciaDePrecos::Dados.new(**partes.drop(1).sum(partes.first).to_h, comparativo: partes.all?(&:comparativo))
+    end
+
+    private
+
+    # A mais nova de cada bem (a mesma que `#call` lê com `produto`), e a mais nova da conversa, que cobre a
+    # execução anterior aos nomes de bem.
+    def execucoes_com_resultado(conversa_id)
+      faixas = Resultado.produtos(conversa_id)
+      runs = faixas.filter_map { |faixa| Resultado.execucao_mais_nova(conversa_id, faixa: faixa) }
+      [*runs, Resultado.execucao_mais_nova(conversa_id)].compact.uniq(&:id)
+    end
   end
 
   # -> o texto ao modelo. Para a conferência da fala fica registrada SÓ A PARTE DOS PREÇOS.
@@ -100,6 +127,19 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
     entrada = @resultado && !texto_sem_leitura ? entrada_da_cotacao : nil
     delivery.registrar_resultado(dados_do_turno(precos))
     [precos, entrada].compact.join("\n")
+  end
+
+  # O que `referencia_guardada` usa de uma cotação: o texto geral, que é o que `#call` devolve sem seguradora, e o
+  # que cada seguradora com preço cotou, à parte (`coberturas`), como na pergunta por seguradora. -> nil sem preço.
+  def dados_guardados(resultado)
+    @resultado = resultado
+    return nil if texto_sem_leitura || resultado.com_preco.empty?
+
+    @coberturas = resultado.com_preco.filter_map do |codigo|
+      cotou = resultado.cobertura(codigo)
+      "O que #{resultado.nome(codigo)} cotou: #{cotou}." if cotou
+    end
+    dados_do_turno(geral)
   end
 
   private
