@@ -20,6 +20,9 @@ on:
       - '!docs/**'
       - '!*.md'
       - '!**/*.md'
+      # .md que o app lê em produção (manuais dos agentes, por exemplo
+      # app/services/autonomia/insurance/quote_agent/instrucoes/) disparam deploy (docs/processo-de-release.md).
+      - 'app/**/*.md'
       - 'lib/operator_guide/**'
       - 'lib/central_de_ajuda/**'
       - 'config/onboarding/**'
@@ -80,6 +83,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # O .git entra no contexto do build (git rev-parse no Dockerfile); sem credencial persistida, nenhum token
+          # vai para uma camada da imagem ou do cache.
+          persist-credentials: false
 
       - name: Log deployment trigger context
         run: |
@@ -115,8 +122,12 @@ jobs:
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.STABLE_IMAGE_TAG }}
-          cache-from: type=gha,scope=chatwoot-autonomia-prod-linux-amd64
-          cache-to: type=gha,mode=min,ignore-error=true,scope=chatwoot-autonomia-prod-linux-amd64
+          # Cache das camadas no próprio ECR de cada stack (tag buildcache), em mode=max: guarda também a etapa
+          # pre-builder, cujo bundle install levava ~19 dos ~24 min do build (medido em 25/09). No ECR não há o limite
+          # de 10 GB do cache do GitHub (já estourado), cada conta AWS fica com o seu, e PR de fork não lê.
+          # ignore-error mantém o deploy de pé se a gravação do cache falhar.
+          cache-from: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache
+          cache-to: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
 
       - name: Publish runtime image parameter
         env:
