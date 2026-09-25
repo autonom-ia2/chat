@@ -10,21 +10,18 @@ RSpec.describe Autonomia::Prospecting::Research::ResearchJob do
   let(:account) { create(:account) }
   let(:discovery) { instance_double(research::CnpjDiscovery) }
   let(:company) do
-    partner_attributes = { name: 'ANA SOUZA', qualification: 'SOCIO ADMINISTRADOR', person_type: 'PF', is_minor: false, entered_on: nil }
-    partner = instance_double(research::Registry::Partner, **partner_attributes, to_h: partner_attributes)
-    instance_double(
-      research::Registry::Company,
+    partner = research::Registry::Partner.build(name: 'ANA SOUZA', qualification: 'SOCIO ADMINISTRADOR', person_type: 'PF')
+    research::Registry::Company.new(
       cnpj: cnpj, legal_name: 'CLINICA SORRISO LTDA', trade_name: nil, registration_status: 'ATIVA', registration_state: 'PR',
-      legal_nature_code: '2062', legal_nature_text: 'Sociedade Empresária Limitada', opened_on: nil, cnae: nil, sources: ['opencnpj'],
-      qsa: [partner]
+      city: 'Curitiba', legal_nature_code: 2062, legal_nature_text: 'Sociedade Empresária Limitada', opened_on: nil, cnae: nil,
+      provider: 'OpenCNPJ', sources: [{ 'provider' => 'OpenCNPJ' }], qsa: [partner]
     )
   end
-  let(:owner) { { name: 'ANA SOUZA', qualification: 'SOCIO ADMINISTRADOR' } }
-  let(:selection) { instance_double(research::OwnerPolicy::Selection, owners: [owner], decision: owner, reason: nil, evidence: :qsa) }
+  let(:owner) { { 'name' => 'ANA SOUZA', 'qualification' => 'Sócio-Administrador' } }
+  let(:selection) { research::OwnerPolicy::Selection.new(owners: [owner], reason: nil, evidence: :qsa) }
 
   def found
-    instance_double(research::CnpjDiscovery::Result, status: :found, cnpj: cnpj, confidence: 0.9, evidence: [], candidates: [cnpj],
-                                                     error_code: nil)
+    research::CnpjDiscovery::Result.new(status: :found, cnpj: cnpj, confidence: 0.9, evidence: [], candidates: [cnpj], error_code: nil)
   end
 
   def create_lead(owner_account, place_id)

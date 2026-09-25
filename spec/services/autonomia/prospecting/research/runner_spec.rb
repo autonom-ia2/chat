@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # Pesquisa de empresa e decisor de um lead (#679, frente C). A descoberta do CNPJ (frente A), o cadastro e a regra do
-# dono (frente B) entram como dublês do contrato: aqui se prova o que a frente C decide e grava.
+# dono (frente B) são as classes reais, com o resultado escolhido por teste: aqui se prova o que a frente C decide e grava.
+# A pesquisa inteira, com HTTP simulado e sem dublê, está em runner_integration_spec.rb.
 RSpec.describe Autonomia::Prospecting::Research::Runner do
   let(:research) { Autonomia::Prospecting::Research }
   let(:cnpj) { '12345678000190' }
@@ -20,33 +21,31 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
     )
   end
 
-  def discovery(status, cnpj: self.cnpj, confidence: 0.92, error_code: nil, candidates: [self.cnpj])
-    instance_double(
-      research::CnpjDiscovery::Result,
-      status: status, cnpj: status == :found ? cnpj : nil, confidence: confidence, error_code: error_code, candidates: candidates,
-      evidence: [{ source: 'bigdatacorp', signal: 'phone_match' }, { source: 'site', signal: 'cnpj_on_site' }]
+  def discovery(status, confidence: 0.92, error_code: nil, company: nil)
+    research::CnpjDiscovery::Result.new(
+      status: status, cnpj: status == :found ? cnpj : nil, confidence: confidence, error_code: error_code, candidates: [cnpj],
+      evidence: [{ source: 'bigdatacorp', signal: 'phone_match' }, { source: 'site', signal: 'cnpj_on_site' }], company: company
     )
   end
 
-  def partner(name, qualification, person_type: 'PF', is_minor: false, extra: {})
-    attributes = { name: name, qualification: qualification, person_type: person_type, is_minor: is_minor,
-                   entered_on: Date.new(2015, 3, 2) }
-    instance_double(research::Registry::Partner, **attributes, to_h: attributes.merge(extra))
+  def partner(name, qualification, person_type: 'PF', is_minor: false)
+    research::Registry::Partner.build(name: name, qualification: qualification, person_type: person_type, is_minor: is_minor,
+                                      entered_on: Date.new(2015, 3, 2))
   end
 
   def registry_company(qsa: nil)
-    instance_double(
-      research::Registry::Company,
+    research::Registry::Company.new(
       cnpj: cnpj, legal_name: 'CLINICA SORRISO LTDA', trade_name: 'Clinica Sorriso', registration_status: 'ATIVA',
-      registration_state: 'PR', legal_nature_code: '2062', legal_nature_text: 'Sociedade Empresária Limitada',
-      opened_on: Date.new(2015, 3, 2), cnae: '8630504', sources: %w[opencnpj brasilapi],
+      registration_state: 'PR', city: 'Curitiba', legal_nature_code: 2062, legal_nature_text: 'Sociedade Empresária Limitada',
+      opened_on: Date.new(2015, 3, 2), cnae: '8630504', provider: 'OpenCNPJ',
+      sources: [{ 'provider' => 'OpenCNPJ', 'url' => "https://api.opencnpj.org/#{cnpj}" }],
       qsa: qsa || [partner('ANA SOUZA', 'SOCIO ADMINISTRADOR'), partner('BRUNO LIMA', 'SOCIO'),
                    partner('SORRISO HOLDING LTDA', 'SOCIO', person_type: 'PJ')]
     )
   end
 
   def owner_selection(owners:, reason: nil, evidence: :qsa)
-    instance_double(research::OwnerPolicy::Selection, owners: owners, decision: owners.first, reason: reason, evidence: evidence)
+    research::OwnerPolicy::Selection.new(owners: owners, reason: reason, evidence: evidence)
   end
 
   def run(target = lead, force: false)
@@ -93,10 +92,22 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
       run
 
       expect(lead.reload.company_profile.qsa).to eq(
-        [{ 'name' => 'ANA SOUZA', 'qualification' => 'SOCIO ADMINISTRADOR', 'entered_on' => '2015-03-02' },
-         { 'name' => 'BRUNO LIMA', 'qualification' => 'SOCIO', 'entered_on' => '2015-03-02' },
-         { 'name' => 'SORRISO HOLDING LTDA', 'qualification' => 'SOCIO', 'entered_on' => '2015-03-02', 'person_type' => 'PJ' }]
+        [{ 'name' => 'ANA SOUZA', 'qualification' => 'Sócio-Administrador', 'entered_on' => '2015-03-02' },
+         { 'name' => 'BRUNO LIMA', 'qualification' => 'Sócio', 'entered_on' => '2015-03-02' },
+         { 'name' => 'SORRISO HOLDING LTDA', 'qualification' => 'Sócio', 'entered_on' => '2015-03-02', 'person_type' => 'PJ' }]
       )
+      expect(lead.company_profile.data).to include('city' => 'Curitiba', 'provider' => 'OpenCNPJ', 'requested_role' => 'owner')
+    end
+
+    it 'usa o cadastro que a descoberta já leu, sem consultar de novo' do
+      allow(research::CnpjDiscovery).to receive(:new) do
+        instance_double(research::CnpjDiscovery, perform: discovery(:found, company: registry_company))
+      end
+
+      run
+
+      expect(research::Registry).not_to have_received(:fetch)
+      expect(lead.reload.company_profile).to have_attributes(cnpj: cnpj, legal_name: 'CLINICA SORRISO LTDA')
     end
 
     it 'nunca grava menor de idade no quadro de sócios, mesmo que a fonte o traga' do
@@ -195,11 +206,15 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
 
   describe 'falha tipada' do
     it 'cadastro fora do ar vira failed com o código, sem perfil' do
-      allow(research::Registry).to receive(:fetch).and_raise(research::Registry::Error.new('registry_unavailable'))
+      allow(research::Registry).to receive(:fetch).and_return(
+        research::Registry::Failure.new(cnpj: cnpj, reason: :providers_exhausted, attempts: [])
+      )
 
       run
 
-      expect(lead.reload).to have_attributes(company_research_status: 'failed', research_error: 'registry_unavailable', company_profile_id: nil)
+      expect(lead.reload).to have_attributes(company_research_status: 'failed', research_error: 'REGISTRY_PROVIDERS_EXHAUSTED',
+                                             company_profile_id: nil)
+      expect(Autonomia::Prospecting::CompanyProfile.count).to eq(0)
     end
 
     it 'Violation de campo de pessoa vinda das fontes vira failed e nada é gravado' do
@@ -213,9 +228,9 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
     end
 
     it 'sócio pessoa física com campo fora da lista fechada levanta Violation na montagem e nada é gravado' do
-      allow(research::Registry).to receive(:fetch).and_return(
-        registry_company(qsa: [partner('ANA SOUZA', 'SOCIO ADMINISTRADOR', extra: { cpf: '***.123.456-**' })])
-      )
+      leaky = instance_double(research::Registry::Partner, is_minor: false, company?: false,
+                                                           storable: { 'name' => 'ANA SOUZA', 'cpf' => '***.123.456-**' })
+      allow(research::Registry).to receive(:fetch).and_return(registry_company(qsa: [leaky]))
 
       run
 

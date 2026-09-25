@@ -3,8 +3,9 @@
 # de custo e crédito (decisão do Rodrigo).
 #
 # Devolve :done (desfecho gravado no lead) ou :waiting (outra pesquisa da mesma empresa está rodando; o job tenta de
-# novo e reaproveita o que ela gravar). Falhas tipadas das frentes A e B viram failed/blocked com o código; o resto
-# sobe para o job, que marca interrupted.
+# novo e reaproveita o que ela gravar). Falhas tipadas das frentes A e B viram failed/blocked com o código: a descoberta
+# devolve Result com error_code, o cadastro devolve Registry::Failure (valor, não exceção). O resto sobe para o job, que
+# marca interrupted.
 class Autonomia::Prospecting::Research::Runner
   R = Autonomia::Prospecting::Research
 
@@ -35,8 +36,6 @@ class Autonomia::Prospecting::Research::Runner
     finish(reusable ? reused(reusable) : discover)
   rescue R::PersonFields::Violation
     finish(R::Outcome.failure('failed', 'person_fields_violation'))
-  rescue R::Registry::Error => e
-    finish(R::Outcome.failure('failed', e.code.presence || 'registry_failed'))
   end
 
   def discover
@@ -50,17 +49,28 @@ class Autonomia::Prospecting::Research::Runner
     end
   end
 
-  # CNPJ achado: o cadastro verificado há menos de 90 dias vale; senão consulta de novo e grava o perfil.
+  # CNPJ achado: o cadastro verificado há menos de 90 dias vale; senão usa o cadastro que a descoberta já leu (a frente A
+  # confere cidade e UF nele antes de aceitar o candidato) ou consulta de novo, e grava o perfil.
   def with_company(discovery)
     cnpj = R::ProfileAttributes.digits(discovery.cnpj)
     profile = Autonomia::Prospecting::CompanyProfile.find_by(cnpj: cnpj)
-    profile = fetch_profile(cnpj) unless fresh_profile?(profile)
+    unless fresh_profile?(profile)
+      company = registry_company(cnpj, discovery.company)
+      return R::Outcome.failure('failed', "REGISTRY_#{company.reason.to_s.upcase}") if company.failed?
+
+      profile = save_profile(company)
+    end
     R::Outcome.with_profile(profile, confidence: discovery.confidence, reused: false, evidence: discovery.evidence,
                                      candidates: discovery.candidates)
   end
 
-  def fetch_profile(cnpj)
-    company = R::Registry.fetch(cnpj)
+  def registry_company(cnpj, known)
+    return known if known.respond_to?(:failed?) && !known.failed? && R::ProfileAttributes.digits(known.cnpj) == cnpj
+
+    R::Registry.fetch(cnpj)
+  end
+
+  def save_profile(company)
     selection = R::OwnerPolicy.select(company: company, requested_role: requested_role)
     attributes = R::ProfileAttributes.build(company, selection: selection, requested_role: requested_role, verified_at: Time.current)
     Autonomia::Prospecting::CompanyProfile.upsert(attributes, unique_by: :cnpj) # rubocop:disable Rails/SkipsModelValidations
