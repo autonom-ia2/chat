@@ -70,7 +70,18 @@ RSpec.describe 'Autonomia prospecting send to CRM and campaign from selection', 
                                     headers: auth_headers(admin), as: :json
 
       expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.crm_send.errors.pipeline_not_found'))
       expect(account.crm_cards.count).to eq(0)
+    end
+
+    it 'CRM desligado responde 422 com texto para a tela, não o código cru' do
+      allow(Crm::Config).to receive(:enabled?).and_return(false)
+
+      send_to_crm([create_lead(1).id])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body.values_at('code', 'error'))
+        .to eq(['prospecting.crm_send.crm_disabled', I18n.t('autonomia.prospecting.crm_send.errors.crm_disabled')])
     end
 
     it 'agente sem permissão da prospecção não envia' do

@@ -32,6 +32,8 @@ const segmentName = ref(props.defaultSegmentName);
 const isSubmitting = ref(false);
 const errorMessage = ref('');
 const segment = ref(null);
+// Recusa sem nenhum elegível: o servidor manda o motivo de cada lead mesmo assim.
+const rejectedLeads = ref([]);
 
 const campaignChoices = computed(() => [
   { value: '', label: t('PROSPECTING.CAMPAIGN_SELECTION.SEGMENT_ONLY') },
@@ -47,18 +49,59 @@ const canSubmit = computed(
   () => Boolean(segmentName.value.trim()) && !isSubmitting.value
 );
 
+// Códigos do servidor (CampaignSegmentBuilder e SelectionCampaignSegment).
+// Código que a tela ainda não conhece usa o texto que o servidor mandou.
 const BLOCK_REASONS = {
   no_phone: () => t('PROSPECTING.CAMPAIGN_SELECTION.BLOCK_REASONS.NO_PHONE'),
   no_whatsapp: () =>
     t('PROSPECTING.CAMPAIGN_SELECTION.BLOCK_REASONS.NO_WHATSAPP'),
-  opted_out: () => t('PROSPECTING.CAMPAIGN_SELECTION.BLOCK_REASONS.OPTED_OUT'),
+  opt_out: () => t('PROSPECTING.CAMPAIGN_SELECTION.BLOCK_REASONS.OPT_OUT'),
   contact_blocked: () =>
     t('PROSPECTING.CAMPAIGN_SELECTION.BLOCK_REASONS.CONTACT_BLOCKED'),
   discarded: () => t('PROSPECTING.CAMPAIGN_SELECTION.BLOCK_REASONS.DISCARDED'),
+  not_ready: () => t('PROSPECTING.CAMPAIGN_SELECTION.BLOCK_REASONS.NOT_READY'),
+  not_found: () => t('PROSPECTING.CAMPAIGN_SELECTION.BLOCK_REASONS.NOT_FOUND'),
 };
 const blockReason = lead =>
   BLOCK_REASONS[lead.reason_code]?.() ||
+  lead.reason ||
   t('PROSPECTING.CAMPAIGN_SELECTION.BLOCK_REASONS.DEFAULT');
+const blockedLabel = lead => {
+  const name =
+    lead.name ||
+    t('PROSPECTING.CAMPAIGN_SELECTION.UNKNOWN_LEAD', { id: lead.id });
+  return `${name} · ${blockReason(lead)}`;
+};
+const blockedLeads = computed(
+  () => segment.value?.blocked_leads || rejectedLeads.value
+);
+
+const ERROR_CODES = {
+  'prospecting.campaign.no_eligible_leads': () =>
+    t('PROSPECTING.CAMPAIGN_SELECTION.ERRORS.NO_ELIGIBLE'),
+  'prospecting.campaign.not_found': () =>
+    t('PROSPECTING.CAMPAIGN_SELECTION.ERRORS.CAMPAIGN_NOT_FOUND'),
+  'prospecting.campaign.campaign_not_active': () =>
+    t('PROSPECTING.CAMPAIGN_SELECTION.ERRORS.CAMPAIGN_NOT_ACTIVE'),
+  'prospecting.campaign.unsupported_campaign': () =>
+    t('PROSPECTING.CAMPAIGN_SELECTION.ERRORS.UNSUPPORTED_CAMPAIGN'),
+  'prospecting.campaign.label_collision_visible_on_sidebar': () =>
+    t('PROSPECTING.CAMPAIGN_SELECTION.ERRORS.LABEL_COLLISION'),
+  'prospecting.campaign.too_many_leads': () =>
+    t('PROSPECTING.CAMPAIGN_SELECTION.ERRORS.TOO_MANY_LEADS'),
+  'prospecting.campaign.empty_selection': () =>
+    t('PROSPECTING.CAMPAIGN_SELECTION.ERRORS.EMPTY_SELECTION'),
+};
+// O servidor manda código em `error` nas recusas do segmento; texto livre
+// (validação do modelo) aparece como veio.
+const errorText = error => {
+  const serverError = error?.response?.data?.error;
+  return (
+    ERROR_CODES[serverError]?.() ||
+    serverError ||
+    t('PROSPECTING.CAMPAIGN_SELECTION.ERROR')
+  );
+};
 
 onMounted(async () => {
   try {
@@ -74,6 +117,7 @@ const submit = async () => {
 
   isSubmitting.value = true;
   errorMessage.value = '';
+  rejectedLeads.value = [];
   try {
     const { data } = await AutonomiaProspectingAPI.addLeadsToCampaign({
       leadIds: props.leads.map(lead => lead.id),
@@ -83,8 +127,9 @@ const submit = async () => {
     segment.value = data.payload.segment;
     emit('done', segment.value);
   } catch (error) {
-    errorMessage.value =
-      error?.response?.data?.error || t('PROSPECTING.CAMPAIGN_SELECTION.ERROR');
+    errorMessage.value = errorText(error);
+    rejectedLeads.value =
+      error?.response?.data?.payload?.segment?.blocked_leads || [];
   } finally {
     isSubmitting.value = false;
   }
@@ -152,29 +197,6 @@ const close = () => {
             }}
           </li>
         </ul>
-        <div v-if="segment.blocked_leads.length" class="grid gap-2">
-          <h3
-            class="text-xs font-semibold uppercase tracking-wide text-n-slate-10"
-          >
-            {{
-              t('PROSPECTING.CAMPAIGN_SELECTION.RESULT.BLOCKED', {
-                count: segment.blocked_leads.length,
-              })
-            }}
-          </h3>
-          <ul
-            class="grid max-h-48 gap-1.5 overflow-y-auto rounded-md border border-n-weak bg-n-solid-2 p-3"
-          >
-            <li
-              v-for="lead in segment.blocked_leads"
-              :key="lead.id"
-              data-test="campaign-blocked"
-              class="break-words text-sm text-n-slate-12"
-            >
-              {{ `${lead.name} · ${blockReason(lead)}` }}
-            </li>
-          </ul>
-        </div>
       </section>
 
       <template v-else>
@@ -225,6 +247,30 @@ const close = () => {
           {{ errorMessage }}
         </p>
       </template>
+
+      <div v-if="blockedLeads.length" class="grid gap-2">
+        <h3
+          class="text-xs font-semibold uppercase tracking-wide text-n-slate-10"
+        >
+          {{
+            t('PROSPECTING.CAMPAIGN_SELECTION.RESULT.BLOCKED', {
+              count: blockedLeads.length,
+            })
+          }}
+        </h3>
+        <ul
+          class="grid max-h-48 gap-1.5 overflow-y-auto rounded-md border border-n-weak bg-n-solid-2 p-3"
+        >
+          <li
+            v-for="lead in blockedLeads"
+            :key="lead.id"
+            data-test="campaign-blocked"
+            class="break-words text-sm text-n-slate-12"
+          >
+            {{ blockedLabel(lead) }}
+          </li>
+        </ul>
+      </div>
 
       <footer class="flex justify-end gap-2">
         <template v-if="!segment">

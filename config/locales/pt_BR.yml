@@ -732,6 +732,8 @@ pt_BR:
         errors:
           no_leads: 'Escolha pelo menos um lead para enviar ao CRM.'
           too_many_leads: 'Envie até %{max} leads por vez.'
+          pipeline_not_found: 'O funil ou o estágio escolhido não existe mais. Escolha outro e envie de novo.'
+          crm_disabled: 'O CRM está desligado nesta conta.'
       campaign_blocked:
         not_found: 'Lead não encontrado nesta conta.'
         discarded: 'Lead descartado.'

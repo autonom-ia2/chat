@@ -65,7 +65,7 @@ const segmentResponse = (extra = {}) => ({
             id: 103,
             name: 'Confeitaria Lua',
             status: 'new',
-            reason_code: 'opted_out',
+            reason_code: 'opt_out',
           },
         ],
         ...extra,
@@ -139,7 +139,7 @@ describe('CampaignSelectionModal', () => {
     const text = result(wrapper).text();
     expect(text).toContain('1 lead(s) entraram no segmento');
     expect(text).toContain('Campanha: Café da manhã');
-    expect(text).toContain('2 ficaram de fora');
+    expect(wrapper.text()).toContain('2 ficaram de fora');
     expect(
       wrapper.findAll('[data-test="campaign-blocked"]').map(item => item.text())
     ).toEqual([
@@ -176,6 +176,74 @@ describe('CampaignSelectionModal', () => {
       'C · Descartado',
       'D · Não pode entrar na campanha',
     ]);
+  });
+
+  it('motivos que só o servidor conhece: lead de outra conta, lead não pronto e código novo com o texto do servidor', async () => {
+    const wrapper = await mountModal();
+    AutonomiaProspectingAPI.addLeadsToCampaign.mockResolvedValue(
+      segmentResponse({
+        blocked_count: 3,
+        blocked_leads: [
+          { id: 900, name: null, reason_code: 'not_found', reason: 'x' },
+          { id: 2, name: 'B', reason_code: 'not_ready', reason: 'y' },
+          {
+            id: 3,
+            name: 'C',
+            reason_code: 'outro_motivo',
+            reason: 'Motivo explicado pelo servidor.',
+          },
+        ],
+      })
+    );
+
+    await submit(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper.findAll('[data-test="campaign-blocked"]').map(item => item.text())
+    ).toEqual([
+      'Lead 900 · Lead não encontrado nesta conta',
+      'B · Ainda não está pronto para campanha',
+      'C · Motivo explicado pelo servidor.',
+    ]);
+  });
+
+  it('ninguém elegível (422 do servidor): diz isso em texto e mostra o motivo de cada lead, sem o código cru', async () => {
+    const wrapper = await mountModal();
+    AutonomiaProspectingAPI.addLeadsToCampaign.mockRejectedValue({
+      response: {
+        status: 422,
+        data: {
+          error: 'prospecting.campaign.no_eligible_leads',
+          payload: {
+            segment: {
+              eligible_count: 0,
+              blocked_count: 1,
+              blocked_leads: [
+                {
+                  id: 101,
+                  name: 'Padaria Sol',
+                  reason_code: 'no_whatsapp',
+                  reason: 'Telefone sem WhatsApp confirmado.',
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+
+    await submit(wrapper).trigger('click');
+    await flushPromises();
+
+    const alert = wrapper.find('[role="alert"]').text();
+    expect(alert).toBe('Nenhum lead da seleção pode entrar na campanha.');
+    expect(wrapper.text()).not.toContain('prospecting.campaign');
+    expect(
+      wrapper.findAll('[data-test="campaign-blocked"]').map(item => item.text())
+    ).toEqual(['Padaria Sol · Sem WhatsApp verificado']);
+    expect(result(wrapper).exists()).toBe(false);
+    expect(wrapper.emitted('done')).toBeUndefined();
   });
 
   it('recusa do servidor aparece na janela, sem resumo de sucesso, e deixa tentar de novo', async () => {

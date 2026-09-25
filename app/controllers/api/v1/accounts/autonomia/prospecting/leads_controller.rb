@@ -54,14 +54,16 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   def create_crm_cards
     result = run_crm_send(params.require(:lead_ids), params.require(:pipeline_id), params.require(:stage_id))
     render json: { payload: crm_send_payload(result) }
-  rescue ActionController::ParameterMissing, ::Autonomia::Prospecting::CrmCardBatch::NoLeads
+  rescue ActionController::ParameterMissing => e
+    render_crm_send_error(e.param.to_s == 'lead_ids' ? 'no_leads' : 'pipeline_not_found')
+  rescue ::Autonomia::Prospecting::CrmCardBatch::NoLeads
     render_crm_send_error('no_leads')
   rescue ::Autonomia::Prospecting::CrmCardBatch::TooManyLeads
     render_crm_send_error('too_many_leads')
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'crm.pipeline_or_stage_not_found' }, status: :not_found
-  rescue ::Autonomia::Prospecting::CrmCardConverter::Error => e
-    render json: { error: e.message }, status: :unprocessable_entity
+    render_crm_send_error('pipeline_not_found', status: :not_found)
+  rescue ::Autonomia::Prospecting::CrmCardConverter::Error
+    render_crm_send_error('crm_disabled')
   end
 
   # "Adicionar à campanha" a partir da seleção (#680, ACAO-25/26/27): a seleção vira lista e segue o segmento das Listas.
@@ -193,11 +195,12 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     }
   end
 
-  def render_crm_send_error(code)
+  # A tela mostra `error` como veio: o texto é sempre do I18n; `code` é para quem trata o caso.
+  def render_crm_send_error(code, status: :unprocessable_entity)
     render json: {
       error: I18n.t("autonomia.prospecting.crm_send.errors.#{code}", max: ::Autonomia::Prospecting::CrmCardBatch::MAX_LEADS),
       code: "prospecting.crm_send.#{code}"
-    }, status: :unprocessable_entity
+    }, status: status
   end
 
   def crm_card_params
