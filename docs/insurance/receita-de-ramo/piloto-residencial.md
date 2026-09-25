@@ -129,3 +129,37 @@ segurar vira pergunta obrigatória e simples, conduzida pelo especialista; o cus
 
 **Veredito:** o piloto passou pelas oito fases. A receita sai de rascunho (versão 2, 24/09), e o próximo ramo,
 empresarial, nasce dela ([piloto-empresarial.md](piloto-empresarial.md)).
+
+## Checklist
+
+Os 26 itens da [receita v3](RECEITA.md#checklist-do-ramo), preenchidos em 25/09/2026 contra a `main` dos dois
+repositórios, os PRs mergeados e este piloto. Item sem prova é `aberto`.
+
+| # | Item | Estado | Evidência |
+|---|---|---|---|
+| R1 | Decisão do Rodrigo, orçamento de cotações do ramo aprovado e descoberta de 04/09 lida | aberto | O orçamento por ramo não existia antes da v3 (25/09) e nenhum teto foi aprovado; a decisão de 22/09 e a leitura da descoberta não estão registradas neste piloto. Falta registrar a decisão e aprovar o teto. |
+| R2 | Jornada de auto preenchida, todas as linhas, sem "depois" | aberto | Este piloto não tem a tabela da jornada de auto para residencial; o levantamento de 22/09 ficou fora do repositório. Falta a tabela, todas as linhas, mostrada ao Rodrigo. |
+| R3 | Mínimo medido: preço na maioria das seguradoras prontas, o resto buscado ou com padrão | ok | adapters#92 (CPF, CEP com número, tipo e valor; nome pelo documento), `test/unit/residencial-dados-minimos.test.ts`; tabelas das rodadas 1 e 2 e da Fase 2 neste piloto (padrão em 10 de 11). |
+| R4 | Catálogo grátis completo: 100% dos parâmetros no schema, com descrição e origem | aberto | `test/unit/ramos-prontos.test.ts` (adapters#79) confere descrição e valores só dos campos declarados, não que o schema cobre todos os parâmetros do portal. Falta cruzar o schema com o catálogo da descoberta. |
+| R5 | Limites pagos por seguradora, por bisseção, priorizados, com data | aberto | Parcial: só a bisseção da Tokio em Registros e Documentos (adapters#86) e os tetos de adapters#84. Falta a tabela por seguradora e cobertura, priorizada e datada. |
+| R6 | Cota pelo caminho do produto, lida de volta, em três faixas de valor, com dado real | aberto | Caminho do produto lido de volta na rodada 2 (adapters#77, conta de teste, dado fictício); não há três faixas registradas com ids de execução nem leitura de volta com dado real. |
+| R7 | Formulário gerado; todo campo atravessa; descrições sem crase nem travessão | ok | chat#592; `spec/services/autonomia/insurance/quote_input_travessia_do_ramo_spec.rb`; `test/unit/ramos-prontos.test.ts` ("sem crase e sem travessão"). |
+| R8 | Ferramenta nova testada com a resposta do `Connector::Http` e o tempo medido | aberto | `http_cep_lookup_spec.rb` (chat#597) testa pelo Http, mas a consulta de CEP usa o teto de 10 s da conferência, sem a latência medida escrita junto; a revisão da chat#597 apontou o teto apertado. |
+| R9 | Travas com saída "não se aplica"; PF e PJ separados; abaixo do mínimo cota com o mínimo | ok | adapters#86; `test/unit/travas-residencial.test.ts` (saída de quem não quer a cobertura, "pessoa física e jurídica conferidas separadamente", "abaixo do mínimo manda cotar com o mínimo"), com mutação no PR. |
+| R10 | Pacote, tetos pela base e ruído do ramo | ok | `PACOTE_POR_OBJETO` (adapters#80), `TETO_PELO_INCENDIO['2']` (adapters#84, #86), medição da Fase 2 neste piloto; ruído: nenhum medido no ramo 2 (`test/unit/paridade-dos-ramos.test.ts`). |
+| R11 | Nenhum fato do cliente fixo no código; o pedido vence o padrão | aberto | O pedido vence o padrão (`residencial-dados-minimos.test.ts`, `numero-do-imovel.test.ts`), mas `CAMPOS_DA_IMPRESSAO['2']` fixa atividade profissional no local = 0, fato do cliente. Falta tratá-lo como campo do cliente ou justificar como escolha. |
+| R12 | Comparativo **e** proposta exclusiva de uma seguradora, abertos e lidos | aberto | Comparativo provado (adapters#90; prova real de 22/09). A proposta de uma seguradora em residencial não foi provada em conversa real. |
+| R13 | Coberturas nos três níveis, provadas com apólice real | aberto | Não houve apólice real de residencial com coberturas; a regra existe (adapters#86, chat#708), sem prova. |
+| R14 | Renovação, se o ramo tem, provada com e sem apólice; ou o motivo de não ter | aberto | Sem apólice provada (execução 100, adapters#105, chat#711); com apólice PENDENTE: não havia apólice de renovação (chat#641). |
+| R15 | Manual no padrão do especialista | aberto | Guarda em PR (`padrao_do_especialista_spec.rb`, branch `feat/guardas-da-receita`, ainda não aberto). |
+| R16 | Manual sem contradição (arquivo, comum, descrições e conferências), sem posição de anexo, promessas ligadas, md5 | aberto | Promessas e md5 em `builder_instrucao_do_especialista_residencial_spec.rb`; o texto sem posição do anexo está na chat#716, sem merge, e a procura de contradição nas descrições do adapter não está registrada. |
+| R17 | Seis rodadas usadas na conferência; recote pago uma vez por valor (quando existir) | aberto | Guarda em PR (`feat/guardas-da-receita`); o recote pago uma vez (opção a) não está implementado. |
+| R18 | Nada de regex para entender o cliente | aberto | Guarda em PR (`sem_regex_spec.rb`, `feat/guardas-da-receita`); no adapter já existe `test/unit/sem-regex-no-codigo.test.ts`. |
+| R19 | Nenhum texto fixo ao cliente; conversa real lida por gente | aberto | Guarda em PR (`sem_texto_fixo_ao_cliente_spec.rb`, `feat/guardas-da-receita`). |
+| R20 | Toda falha do ramo vira nota privada à equipe | aberto | Guarda em PR (`falha_vira_nota_privada_spec.rb`, `feat/guardas-da-receita`). |
+| R21 | Peças em paridade no adapter e no chat, exceções com motivo | aberto | Adapter: `test/unit/paridade-dos-ramos.test.ts` (adapters#104). Chat: guarda em PR (`paridade_das_pecas_spec.rb`, `feat/guardas-da-receita`); itens D, G e H da auditoria em chat#716 e adapters#106, sem merge. |
+| R22 | Especialista nos agentes existentes, só onde a corretora cota | ok | chat#604; `db/migrate/20260922200000_add_residencial_specialist_to_quote_agents.rb`; `builder_especialista_residencial_disponivel_spec.rb`; `builder_ferramentas_por_ramo_spec.rb`. |
+| R23 | Roteiro real: sozinho; depois de outro ramo; dois bens; com auto e residencial; dado mudado entre rodadas | aberto | Provados: sozinho e depois do empresarial (conversa 7057), junto do empresarial na mesma mensagem (conversa 87, execuções 101 e 102). Faltam dois bens do ramo de uma vez e auto na mesma mensagem. |
+| R24 | Bateria de roteamento, também contra os ramos no ar, com veredito do banco | aberto | Nunca rodada, nem os ambíguos nem a conta sem o ramo. |
+| R25 | Recusas conhecidas registradas, com o dono de cada uma | aberto | As recusas estão espalhadas nas rodadas (Mapfre e Tokio nas variantes, Mitsui, Porto, Bradesco), sem a lista com o dono de cada uma. |
+| R26 | Revisão adversarial sem `test/contract`, suíte local lida, mutação; ordem do deploy e vez combinada | aberto | Revisão Opus, suíte (2251 exemplos, 0 falhas) e mutação na chat#604; mutação em adapters#86 e #92. Falta a ordem do deploy e a vez combinada escritas no PR, e o registro de que o revisor não rodou `test/contract`. |
