@@ -59,33 +59,61 @@ RSpec.describe Autonomia::Prospecting::Export do
   describe Autonomia::Prospecting::Export::XlsxFile do
     subject(:xlsx) { described_class.generate(rows) }
 
+    def xml_part(binary, name)
+      Nokogiri::XML(Zip::File.open_buffer(StringIO.new(binary)).read(name))
+    end
+
+    def sheet_cell(binary, ref)
+      xml_part(binary, 'xl/worksheets/sheet1.xml').at_xpath(%(//xmlns:c[@r="#{ref}"]))
+    end
+
+    # Índice, em cellXfs, do estilo com quotePrefix.
+    def quoted_style_index(binary)
+      xml_part(binary, 'xl/styles.xml').xpath('//xmlns:cellXfs/xmlns:xf').index { |xf| %w[1 true].include?(xf['quotePrefix']) }
+    end
+
+    # O CR solto no XML vira quebra de linha (LF) em todo leitor, o Excel inclusive; o resto do texto fica como veio.
     it 'abre como planilha e devolve o texto como foi escrito, sem o apóstrofo do CSV (telefone +55 limpo)' do
       read = read_xlsx(xlsx)
 
       expect(read[0]).to eq(%w[Nome Nota Telefone])
       expect(read[1]).to eq(['=HYPERLINK("http://x")', 87.5, '+55 41 99999-0001'])
-      expect(read[2]).to eq(["@SOMA(A1)\tfim", -25.4284, "-1\rx"])
+      expect(read[2]).to eq(["@SOMA(A1)\tfim", -25.4284, "-1\nx"])
       expect(read[3]).to eq(['Padaria & Cia <Centro> "boa"', 3, '|cmd'])
       expect(read[4]).to eq(['Clínica São João', nil, '%total'])
     end
 
-    it 'tem o estilo quotePrefix e o estilo Normal padrão' do
-      styles = Zip::File.open_buffer(StringIO.new(xlsx)).read('xl/styles.xml')
-
-      expect(styles).to include('<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" quotePrefix="1"/>')
-      expect(styles).to include('<cellStyle name="Normal" xfId="0" builtinId="0"/>')
+    it 'o pacote passa na validação do schema do formato, com e sem linhas' do
+      expect(described_class.package(rows).validate).to be_empty
+      expect(described_class.package(rows.first(1)).validate).to be_empty
     end
 
-    it 'não grava fórmula: todo texto vai como inlineStr, e o que começa como fórmula leva o estilo quotePrefix' do
-      sheet = Zip::File.open_buffer(StringIO.new(xlsx)).read('xl/worksheets/sheet1.xml')
+    it 'não grava fórmula: a célula que começa com "=" sai como texto, com o estilo quotePrefix' do
+      hyperlink = sheet_cell(xlsx, 'A2')
 
-      expect(sheet).not_to include('<f>')
-      expect(sheet).to include('t="inlineStr"')
-      quoted = described_class::QUOTED_STYLE
-      %w[A2 C2 A3 C3 C4 C5].each { |ref| expect(sheet).to include(%(<c r="#{ref}" s="#{quoted}" t="inlineStr">)) }
-      %w[A4 A5].each { |ref| expect(sheet).to include(%(<c r="#{ref}" t="inlineStr">)) }
-      expect(sheet).to include('<c r="B3"><v>-25.4284</v></c>')
-      expect(sheet).not_to include("'+55")
+      expect(xml_part(xlsx, 'xl/worksheets/sheet1.xml').xpath('//xmlns:f')).to be_empty
+      expect(hyperlink['t']).to eq('inlineStr')
+      expect(hyperlink.text).to eq('=HYPERLINK("http://x")')
+      expect(hyperlink['s'].to_i).to eq(quoted_style_index(xlsx))
+    end
+
+    it 'só o texto que começa como fórmula leva o quotePrefix, e número vai como número' do
+      quoted = quoted_style_index(xlsx)
+
+      expect(quoted).to be_present
+      %w[A2 C2 A3 C3 C4 C5].each { |ref| expect(sheet_cell(xlsx, ref)['s'].to_i).to eq(quoted) }
+      %w[A4 A5 B2 B3 B4].each { |ref| expect(sheet_cell(xlsx, ref)['s'].to_i).not_to eq(quoted) }
+      expect(sheet_cell(xlsx, 'B3')['t']).to eq('n')
+      expect(sheet_cell(xlsx, 'B3').text).to eq('-25.4284')
+      expect(xlsx).not_to include("'+55")
+    end
+
+    it 'filtra pelo cabeçalho com uma tabela do Excel, sem o _FilterDatabase que faz o Excel pedir reparo' do
+      table = xml_part(xlsx, 'xl/tables/table1.xml').root
+      workbook = Zip::File.open_buffer(StringIO.new(xlsx)).read('xl/workbook.xml')
+
+      expect(table['ref']).to eq('A1:C5')
+      expect(workbook).not_to include('_xlnm._FilterDatabase')
     end
 
     it 'descarta caractere de controle que o XML não aceita, sem perder o resto do texto' do
