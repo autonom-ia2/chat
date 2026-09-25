@@ -6,6 +6,8 @@
 module Autonomia::Prospecting::Research::Registry::OpenCnpjParser
   Support = Autonomia::Prospecting::Research::Registry::ParserSupport
   PERSON_TYPES = { 2 => 'PF', '2' => 'PF', 1 => 'PJ', '1' => 'PJ', 'PESSOA FISICA' => 'PF', 'PESSOA JURIDICA' => 'PJ' }.freeze
+  # Só o que diz de fato que é fax; texto qualquer ("no", "sim") não descarta o telefone.
+  FAX_MARKS = [true, 'true', '1', 1].freeze
 
   module_function
 
@@ -28,7 +30,7 @@ module Autonomia::Prospecting::Research::Registry::OpenCnpjParser
 
     values.filter_map do |entry|
       entry = Support.record(entry)
-      next if entry.nil? || ActiveModel::Type::Boolean.new.cast(entry['is_fax'])
+      next if entry.nil? || FAX_MARKS.include?(entry['is_fax'])
 
       Support.ddd_phone(entry['ddd'], entry['numero'])
     end

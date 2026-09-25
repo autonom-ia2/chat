@@ -71,6 +71,12 @@ RSpec.describe Autonomia::Prospecting::Research::Registry::ParserSupport, '.phon
       expect(parse('CnpjaParser', cnpja).phones).to eq([])
     end
 
+    it 'só trata como fax o que o OpenCNPJ marca como fax de fato' do
+      payload = fixture('opencnpj-success').merge('telefones' => [{ 'ddd' => '42', 'numero' => '30351935', 'is_fax' => 'no' }])
+
+      expect(parse('OpenCnpjParser', payload).phones).to eq(['554230351935'])
+    end
+
     it 'não repete o DDD quando o número já vem com ele' do
       payload = fixture('cnpja-success').merge('phones' => [{ 'type' => 'LANDLINE', 'area' => '42', 'number' => '4230351935' }])
 
@@ -143,6 +149,20 @@ RSpec.describe Autonomia::Prospecting::Research::Registry::ParserSupport, '.phon
       result = matcher.match(place, [client.call('11444777000161', 0.72), client.call('11222333000181', 0.66)]).to_h
 
       expect(result).to include(decision: :not_found, reason: 'no_qualified_candidate')
+    end
+
+    # O dono fechou o CNPJ antigo e abriu outro com o mesmo telefone: o inativo não tira o sinal do certo.
+    it 'candidato já rejeitado não conta como telefone compartilhado' do
+      build = lambda do |cnpj_value, percentage, status|
+        Autonomia::Prospecting::Research::IdentityMatcher::Candidate.new(
+          cnpj: cnpj_value, name: 'GOES CONTABILIDADE LTDA', city: 'GUARAPUAVA', uf: 'PR', phone: ['554230351935'], domain: nil,
+          status: status, match_score: percentage, name_similarity: percentage
+        )
+      end
+
+      result = matcher.match(place, [build.call('11444777000161', 0.70, 'ATIVA'), build.call('11222333000181', 0.66, 'INATIVA')]).to_h
+
+      expect(result).to include(decision: :accept, accepted_cnpj: '11444777000161')
     end
   end
 end
