@@ -6,6 +6,7 @@ import ProspectingPriorityRing from '../ProspectingPriorityRing.vue';
 import LeadDetailContact from './LeadDetailContact.vue';
 import LeadDetailScore from './LeadDetailScore.vue';
 import LeadDetailEnrichment from './LeadDetailEnrichment.vue';
+import LeadDetailResearch from './LeadDetailResearch.vue';
 import LeadDetailReviews from './LeadDetailReviews.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import {
@@ -35,6 +36,9 @@ const {
   createCrmCard,
   contactUrl,
   crmCardUrl,
+  settings,
+  researchRequestLeadId,
+  requestLeadResearch,
 } = useProspectingSearchContext();
 
 const selectedStageName = computed(() => {
@@ -175,10 +179,20 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
             :lead="selectedLeadDetail"
           />
 
+          <LeadDetailResearch
+            v-if="selectedLeadDetail.research"
+            :lead="selectedLeadDetail"
+            :research-enabled="Boolean(settings?.research_enabled)"
+            :can-manage="canManage"
+            :requesting="researchRequestLeadId === selectedLeadDetail.id"
+            @research="requestLeadResearch(selectedLeadDetail, $event)"
+          />
+
           <LeadDetailEnrichment
             v-if="
               selectedLeadDetail.enrichment_status === 'completed' ||
-              selectedLeadDetail.decision_name ||
+              (!selectedLeadDetail.research &&
+                selectedLeadDetail.decision_name) ||
               selectedLeadDetail.enrichment_summary
             "
             :lead="selectedLeadDetail"
