@@ -28,8 +28,11 @@ module RodadasNoManual
     # A recusa grátis volta ao modelo no mesmo turno, e nada é aberto: é o que deixa conferir de novo sem custo.
     'leia a recusa, ajuste o valor e confira de novo' => -> { recusa_gratis_volta_no_turno? },
     # DECISÃO 4 (chat#718): a conferência pode chamar a busca paga do segurado (`quote/enrich`); repetida com o mesmo
-    # documento na conversa, ela não sai de novo (`Insurance::BuscaDoSeguradoGuardada`).
-    'conferir de novo com o mesmo documento não repete a busca paga do segurado' => -> { busca_paga_uma_vez? },
+    # documento na conversa, a que teve resposta não sai de novo (`Insurance::BuscaDoSeguradoGuardada`). A que falhou
+    # (erro, ou `lookup_failed` do adapter) sai de novo: por isso "que já teve resposta" (revisão da chat#718).
+    'com o mesmo documento, a busca paga do segurado que já teve resposta não se repete' => lambda {
+      busca_paga_uma_vez? && busca_que_falhou_repete?
+    },
     # A cotação paga é assíncrona: a recusa da seguradora chega depois do turno, e o motivo vai para a nota da equipe.
     'essa recusa chega fora do turno, com a cotação já paga' => lambda {
       COTACAO.async? && COTACAO::RECUSOU.include?('recusou e escreveu no portal')
@@ -43,7 +46,9 @@ module RodadasNoManual
     },
     # Quem corrige a recusa é o especialista, nas seis rodadas dele, e a recusa volta no turno.
     'lendo a recusa, ajustando o valor e conferindo de novo' => -> { rodadas_do_especialista == SEIS && recusa_gratis_volta_no_turno? },
-    'conferir de novo com o mesmo documento não repete a busca paga do segurado' => -> { busca_paga_uma_vez? },
+    'com o mesmo documento, a busca paga do segurado que já teve resposta não se repete' => lambda {
+      busca_paga_uma_vez? && busca_que_falhou_repete?
+    },
     'A recusa de uma seguradora é outra coisa: chega fora do turno' => -> { COTACAO.async? }
   }.freeze
 
@@ -114,19 +119,29 @@ RSpec.describe 'R17: as seis rodadas no manual' do # rubocop:disable RSpec/Descr
 
   # A conferência de verdade, duas vezes no mesmo turno, com o documento e sem o nome: a busca paga sai uma vez só.
   def busca_paga_uma_vez?
+    conferir_duas_vezes(lookup_failed: false) == 1
+  end
+
+  # A mesma conferência, com o fornecedor fora (`lookup_failed`): a busca sai nas duas, porque a primeira não teve resposta.
+  def busca_que_falhou_repete?
+    conferir_duas_vezes(lookup_failed: true) == 2
+  end
+
+  # -> quantas vezes a busca paga saiu, ou nil quando a recusa não foi a do nome não achado.
+  def conferir_duas_vezes(lookup_failed:)
     account = create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
     conversation = create(:conversation, account: account)
     agent = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'custom', status: :active,
                                              enabled: true, instruction: 'Atenda.')
-    buscas = portal_que_nao_acha_o_nome(account)
+    buscas = portal_que_nao_acha_o_nome(account, lookup_failed)
     delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil, origin_message_id: 1)
     params = { 'item' => 'Casa', 'produto' => 'residencial', 'cpf' => '04297912678', 'cep' => '01310-100',
                'dados' => { 'configuracoes' => { 'imovelNumero' => '742' } }.to_json }
     recusas = Array.new(2) { RodadasNoManual::COTACAO.new(agent: agent, params: params, delivery: delivery).precheck }
-    recusas.all? { |recusa| recusa.try(:faltando) == ['segurado.nome'] } && Autonomia::Agents::ToolRun.none? && buscas.size == 1
+    buscas.size if recusas.all? { |recusa| recusa.try(:faltando) == ['segurado.nome'] } && Autonomia::Agents::ToolRun.none?
   end
 
-  def portal_que_nao_acha_o_nome(account)
+  def portal_que_nao_acha_o_nome(account, lookup_failed)
     enable_test_encryption!
     conexao = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
     conexao.update!(status: 'ready')
@@ -134,7 +149,7 @@ RSpec.describe 'R17: as seis rodadas no manual' do # rubocop:disable RSpec/Descr
     portal = instance_double(Autonomia::Insurance::Connector::Mock, quote_validate: { 'valido' => true, 'problemas' => [] })
     allow(portal).to receive(:quote_enrich) do
       buscas << :busca
-      { 'input' => {}, 'not_found' => ['segurado.nome'] }
+      { 'input' => {}, 'not_found' => ['segurado.nome'], 'lookup_failed' => lookup_failed }
     end
     allow(Autonomia::Insurance::Connector).to receive(:client).and_return(portal)
     buscas

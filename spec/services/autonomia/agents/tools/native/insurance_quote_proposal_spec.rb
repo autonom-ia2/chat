@@ -101,6 +101,33 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
       expect(ao_modelo).to include('Porto Seguro')
     end
 
+    # DUAS SEGURADORAS COM O MESMO NOME (revisão da chat#718): a lista não as separa, e devolvê-la fazia o modelo chamar
+    # de novo com o mesmo nome até acabar as rodadas. Vai a que fez proposta; se as duas fizeram, as duas.
+    describe 'duas seguradoras de mesmo nome na cotação' do
+      it 'só uma fez proposta: sai a dela, e nada volta com a lista' do
+        ofertas.replace([{ 'insurer' => { 'code' => '3', 'name' => 'Azul' }, 'status' => 'declined' }, cotou('7', 'Azul', 1500.0)])
+        cotacao_da_conversa
+
+        ao_modelo = pedir('Azul')
+
+        expect(connector).to have_received(:quote_proposal).with(hash_including(insurer_code: '7')).once
+        expect(mensagens_do_bot.sole.attachments.size).to eq(1)
+        expect(ao_modelo).to eq(format(described_class::ENVIADA, nome: 'Azul'))
+      end
+
+      it 'as duas fizeram proposta: saem as duas, numa chamada só' do
+        ofertas.replace([cotou('3', 'Azul', 1400.0), cotou('7', 'Azul', 1500.0)])
+        cotacao_da_conversa
+
+        ao_modelo = pedir('Azul')
+
+        expect(connector).to have_received(:quote_proposal).with(hash_including(insurer_code: '3')).once
+        expect(connector).to have_received(:quote_proposal).with(hash_including(insurer_code: '7')).once
+        expect(mensagens_do_bot.count).to eq(2)
+        expect(ao_modelo).to eq(Array.new(2, format(described_class::ENVIADA, nome: 'Azul')).join("\n"))
+      end
+    end
+
     # QUEM ESCOLHE É O MODELO (chat#718): "porto" não casa mais por palavra. Volta a lista fechada de quem fez proposta,
     # e na chamada seguinte, com o nome dela, a proposta sai.
     it 'pelo nome pela metade: volta a lista fechada, e com o nome da lista a proposta sai' do

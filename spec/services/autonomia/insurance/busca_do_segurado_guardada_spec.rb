@@ -110,6 +110,47 @@ RSpec.describe Autonomia::Insurance::BuscaDoSeguradoGuardada do
     expect(chamadas).to eq(2)
   end
 
+  # QUEDA NÃO É "NÃO ACHADO" (revisão da chat#718): o adapter devolve 200 com os campos em `not_found` quando o
+  # fornecedor cai, e desde a adapters#107 diz `lookup_failed`. Guardada, a queda viraria pergunta ao cliente por 24 h.
+  { 'auto' => ['insured.name', :auto], 'residencial' => ['segurado.nome', :residencial],
+    'empresarial' => ['segurado.nome', :empresarial] }.each do |ramo, (campo, dados)|
+    it "#{ramo}: o fornecedor fora (lookup_failed) não fica guardado, e a próxima conferência busca de novo" do
+      allow(connector).to receive(:quote_enrich).and_return('input' => {}, 'not_found' => [campo], 'lookup_failed' => true)
+
+      primeira = conferir(public_send(dados))
+      segunda = conferir(public_send(dados))
+
+      expect(connector).to have_received(:quote_enrich).twice
+      expect([primeira.faltando, segunda.faltando]).to eq([[campo], [campo]])
+    end
+  end
+
+  it 'o fornecedor fora e depois de volta: a segunda busca acha, e a conferência passa' do
+    respostas = [{ 'input' => {}, 'not_found' => ['insured.name'], 'lookup_failed' => true },
+                 { 'input' => {}, 'not_found' => [], 'lookup_failed' => false }]
+    allow(connector).to receive(:quote_enrich) { respostas.shift }
+
+    expect(conferir(auto).faltando).to eq(['insured.name'])
+    expect(conferir(auto)).to be_nil
+  end
+
+  it 'o fornecedor respondeu sem o dado (lookup_failed falso): o não achado fica guardado' do
+    allow(connector).to receive(:quote_enrich).and_return('input' => {}, 'not_found' => ['insured.name'], 'lookup_failed' => false)
+
+    2.times { conferir(auto) }
+
+    expect(connector).to have_received(:quote_enrich).once
+  end
+
+  # O ADAPTER ANTERIOR À adapters#107 não manda o sinal: o chat guarda como guardava, sem piorar nada.
+  it 'adapter sem o sinal: guarda como antes' do
+    allow(connector).to receive(:quote_enrich).and_return('input' => {}, 'not_found' => ['insured.name'])
+
+    2.times { conferir(auto) }
+
+    expect(connector).to have_received(:quote_enrich).once
+  end
+
   it 'sem conversa (Testar, playground), nada é guardado, como antes' do
     allow(connector).to receive(:quote_enrich).and_return('input' => {}, 'not_found' => ['insured.name'])
 

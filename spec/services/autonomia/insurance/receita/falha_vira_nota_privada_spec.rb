@@ -333,6 +333,68 @@ RSpec.describe 'R20: toda falha da cotação chega à equipe em nota privada' do
       expect(notas).to be_empty
     end
 
+    # A CHAVE DA NOTA É O TURNO (revisão da chat#718). O turno de evento não tem mensagem de origem, e com ela na chave
+    # todo evento da conversa dava a mesma chave: a primeira nota bloqueava todas as seguintes. Os turnos aqui são os que
+    # o `Operate::ResponderAoEvento` monta (evento e execução, sem mensagem de origem).
+    describe 'uma nota por ocorrência, nenhuma repetida no mesmo turno' do
+      let(:proposta) { Autonomia::Agents::Tools::Native::InsuranceQuoteProposal }
+      let(:run) { execucao(handle: guardado(oferta('8', 'Porto Seguro', 'quoted')).merge('quote_id' => 'q:1')) }
+
+      before do
+        conexao
+        portal(quote_proposal: nil)
+        allow(Autonomia::Insurance::Connector.client).to receive(:quote_proposal).and_raise(erro(:unavailable))
+        run.update!(status: 'done')
+      end
+
+      def turno_de_evento(tipo)
+        Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, evento: tipo, execucao_do_evento: run)
+      end
+
+      def pedir_proposta(turno)
+        proposta.new(agent: agent, params: { 'seguradora' => 'Porto Seguro' }, delivery: turno).call
+      end
+
+      def esgotar(turno)
+        rodadas = Autonomia::Insurance::RodadasEsgotadas.new(specialist: specialist, delivery: turno, rodadas: 6)
+        6.times { rodadas.rodada!(['Antes de cotar, corrija o CEP.']) }
+        rodadas.avisar!(tentou_cotar: true, abriu: false)
+      end
+
+      it 'a proposta falha em dois eventos: duas notas' do
+        pedir_proposta(turno_de_evento('concluida'))
+        pedir_proposta(turno_de_evento('valores_guardados'))
+
+        expect(notas.count).to eq(2)
+      end
+
+      it 'a proposta falha duas vezes no mesmo evento (a nova tentativa do EventoJob monta outro turno igual): uma nota' do
+        2.times { pedir_proposta(turno_de_evento('concluida')) }
+
+        expect(notas.count).to eq(1)
+      end
+
+      it 'as rodadas se esgotam em dois eventos: duas notas' do
+        esgotar(turno_de_evento('concluida'))
+        esgotar(turno_de_evento('sem_aceitacao'))
+
+        expect(notas.count).to eq(2)
+      end
+
+      it 'as rodadas se esgotam duas vezes no mesmo evento: uma nota' do
+        2.times { esgotar(turno_de_evento('concluida')) }
+
+        expect(notas.count).to eq(1)
+      end
+
+      it 'um turno de mensagem e um de evento: duas notas' do
+        pedir_proposta(delivery)
+        pedir_proposta(turno_de_evento('concluida'))
+
+        expect(notas.count).to eq(2)
+      end
+    end
+
     it 'PDF da proposta de uma seguradora não gerado' do
       conexao
       portal(quote_proposal: nil)

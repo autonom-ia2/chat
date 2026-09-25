@@ -595,9 +595,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # verdade (a conferência pode chamar a busca paga do segurado). Agora: a recusa não abre cotação, e conferir de novo
     # com o mesmo documento não repete a busca paga, o que `Insurance::BuscaDoSeguradoGuardada` sustenta
     # (promessa ligada em `RodadasNoManual::PROMESSAS_DA_LIA`).
+    # Revisão da chat#718 (`124816bf…` -> `b3cae4f5…`, 25/09/2026): a busca que falhou (o fornecedor fora, com o sinal
+    # `lookup_failed` da adapters#107) sai de novo, e a frase passa a dizer só o que é verdade: "com o mesmo documento, a
+    # busca paga do segurado que já teve resposta não se repete". A recusa de seguradora vai para a linha seguinte, sem
+    # mudar o sentido.
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('124816bfa9cecea3ec2d43531599bf74')
+      expect(Digest::MD5.hexdigest(secao)).to eq('b3cae4f5b7a714f5de0231c92d88e423')
     end
 
     it 'não introduz variável para substituir' do

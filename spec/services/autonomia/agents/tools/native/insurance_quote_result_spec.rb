@@ -389,15 +389,28 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
       it "«#{escolhido.inspect}» é #{codigo.inspect}" do
         resultado = Autonomia::Insurance::ResultadoDaCotacao.da_conversa(conversation.id)
 
-        expect(resultado.codigo_do_nome(escolhido)).to eq(codigo)
+        expect(resultado.codigos_do_nome(escolhido)).to eq(Array(codigo))
       end
     end
 
-    it 'dois nomes iguais na cotação: nenhum é escolhido, e o modelo pergunta' do
+    # DOIS NOMES IGUAIS NA COTAÇÃO (revisão da chat#718): os dois códigos voltam, como no casamento antigo. Sem nenhum,
+    # o modelo voltava à lista, achava o mesmo nome e chamava de novo até acabar as rodadas.
+    it 'dois nomes iguais na cotação: os dois códigos voltam' do
       Autonomia::Agents::ToolRun.delete_all
       cotacao_com(status: 'done', ofertas: [recusou('1', 'Azul'), recusou('2', 'Azul')])
 
-      expect(Autonomia::Insurance::ResultadoDaCotacao.da_conversa(conversation.id).codigo_do_nome('Azul')).to be_nil
+      expect(Autonomia::Insurance::ResultadoDaCotacao.da_conversa(conversation.id).codigos_do_nome('Azul')).to eq(%w[1 2])
+    end
+
+    it 'dois nomes iguais: a ferramenta fala das duas, sem devolver a lista (que faria o modelo chamar de novo)' do
+      Autonomia::Agents::ToolRun.delete_all
+      cotacao_com(status: 'done', ofertas: [cotou('1', 'Azul', 1500.0), recusou('2', 'Azul')])
+
+      texto = ao_modelo('Azul')
+
+      expect(texto).to include(preco(cotou('1', 'Azul', 1500.0)))
+      expect(texto).to include("Azul não fez proposta nesta cotação. #{described_class::SEM_MOTIVO}")
+      expect(texto).not_to include('As seguradoras desta cotação são')
     end
 
     it 'parte dos nomes na lista e parte fora: a que está vem, e a que não está volta com a lista' do

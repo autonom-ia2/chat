@@ -83,10 +83,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
     []
   end
 
-  # A busca paga, no adapter: -> os campos do segurado que ela não achou.
+  # A busca paga, no adapter: -> os campos do segurado que ela não achou, e se ela falhou (`lookup_failed`, adapters#107:
+  # a queda do fornecedor volta 200 com os campos em `not_found`, e não pode ser guardada como "não achado").
   def nao_achados_na_busca
-    resposta = connector.quote_enrich(provider: connection.provider, product: produto, input: entrada)
-    Array(resposta.to_h['not_found']).map(&:to_s).select { |campo| campo.start_with?('insured.', 'segurado.') }
+    resposta = connector.quote_enrich(provider: connection.provider, product: produto, input: entrada).to_h
+    nao_achados = Array(resposta['not_found']).map(&:to_s).select { |campo| campo.start_with?('insured.', 'segurado.') }
+    ::Autonomia::Insurance::BuscaDoSeguradoGuardada::Busca.new(nao_achados: nao_achados, falhou: resposta['lookup_failed'] == true)
   end
 
   # Consulta paga só quando falta algo que ela resolve: com documento, e sem os campos que ela busca.

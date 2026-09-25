@@ -7,26 +7,37 @@
 #
 # Aqui fica guardado, por conversa, O QUE A BUSCA NÃO ACHOU: só nomes de campo, nunca o que ela achou (LGPD, revisão da
 # adapters#75), e a chave é um HMAC do produto, do documento e dos campos que faltam, nunca o documento em claro. A
-# mesma conferência com os mesmos dados de busca lê daqui e não chama o adapter. Falha da busca não é guardada: a
-# próxima tenta de novo, como antes. Sem conversa (Testar, playground), nada é guardado.
+# mesma conferência com os mesmos dados de busca lê daqui e não chama o adapter. Sem conversa (Testar, playground),
+# nada é guardado.
+#
+# A BUSCA QUE FALHOU NÃO É GUARDADA: a próxima conferência tenta de novo, como antes. Falha é o erro na chamada ao
+# adapter e, desde a adapters#107, a resposta 200 que diz `lookup_failed` (o fornecedor caiu, estourou o tempo, recusou
+# a credencial ou não está configurado): o adapter devolve os campos em `not_found` mesmo assim, e sem o sinal essa
+# queda ficava guardada 24 horas como "não achado" (revisão da chat#718). O adapter anterior, que não manda o sinal,
+# segue guardado como antes.
 #
 # NUNCA LEVANTA POR CAUSA DO REDIS: sem ele, a busca roda como antes.
 module Autonomia::Insurance::BuscaDoSeguradoGuardada
   CHAVE = 'autonomia:busca_do_segurado:%<conversa>d:%<digest>s'.freeze
   VALIDADE = 24.hours
 
+  # O que a busca devolveu: os campos que ela não achou e se ela falhou (a consulta não se completou).
+  Busca = Struct.new(:nao_achados, :falhou, keyword_init: true)
+
   module_function
 
   # `identidade`: o que decide a resposta da busca (produto, documento, campos que faltam). O bloco faz a busca e
-  # devolve a lista de campos não achados. -> essa lista, guardada ou nova.
+  # devolve uma `Busca`. -> os campos não achados, guardados ou novos.
   def buscar(conversa_id, identidade)
-    return yield if conversa_id.blank?
+    return yield.nao_achados if conversa_id.blank?
 
     chave = format(CHAVE, conversa: conversa_id, digest: digest(identidade))
     guardada = ler(chave)
     return guardada if guardada
 
-    yield.tap { |nao_achados| gravar(chave, nao_achados) }
+    busca = yield
+    gravar(chave, busca.nao_achados) unless busca.falhou
+    busca.nao_achados
   end
 
   def digest(identidade)

@@ -225,13 +225,15 @@ class Autonomia::Insurance::ResultadoDaCotacao
   # disse era quebrado em palavras e casado com os nomes da cotação, e era esse casamento que decidia de qual seguradora
   # ele falava. Agora o modelo escolhe na lista fechada das seguradoras desta cotação (`#nomes`, que as ferramentas
   # devolvem quando o nome não está nela), e aqui só se confere a identidade: o nome inteiro, sem diferença de caixa
-  # nem de espaço. -> o código daquela seguradora, ou nil quando nenhuma (ou mais de uma) tem exatamente esse nome.
-  def codigo_do_nome(escolhido)
+  # nem de espaço. -> os códigos das seguradoras com exatamente esse nome, vazio quando nenhuma tem.
+  #
+  # MAIS DE UM CÓDIGO COM O MESMO NOME volta inteiro, como o casamento antigo fazia (revisão da chat#718): devolver
+  # nada ali mandava o modelo de volta à lista, onde o nome é o mesmo, e ele chamava de novo até acabar as rodadas.
+  def codigos_do_nome(escolhido)
     alvo = escolhido.to_s.squish
-    return nil if alvo.empty?
+    return [] if alvo.empty?
 
-    iguais = entradas.keys.select { |codigo| nome(codigo).to_s.squish.casecmp?(alvo) }
-    iguais.one? ? iguais.first : nil
+    entradas.keys.select { |codigo| nome(codigo).to_s.squish.casecmp?(alvo) }
   end
 
   private

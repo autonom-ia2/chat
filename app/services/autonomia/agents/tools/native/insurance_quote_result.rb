@@ -243,8 +243,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   end
 
   def por_seguradora
-    escolhidos = seguradoras.index_with { |nome| @resultado.codigo_do_nome(nome) }
-    codigos = escolhidos.values.compact.uniq
+    escolhidos = seguradoras.index_with { |nome| @resultado.codigos_do_nome(nome) }
+    codigos = escolhidos.values.flatten.uniq
     return format(@resultado.correndo? ? NAO_ENCONTRADA_AINDA : NAO_ENCONTRADA, nomes: @resultado.lista_fechada) if codigos.empty?
 
     partes = [contagem(@resultado.com_preco.size), *codigos.map { |codigo| fala(codigo, cobertura: true) }, fora_da_lista(escolhidos)]
@@ -254,7 +254,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
 
   # Os nomes pedidos que não são de nenhuma seguradora da cotação, com a lista para escolher; nil sem nenhum.
   def fora_da_lista(escolhidos)
-    fora = escolhidos.select { |_, codigo| codigo.nil? }.keys
+    fora = escolhidos.select { |_, codigos| codigos.empty? }.keys
     format(FORA_DA_LISTA, fora: fora.join('; '), nomes: @resultado.lista_fechada) if fora.any?
   end
 

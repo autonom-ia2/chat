@@ -6,7 +6,7 @@
 #
 # Ferramenta SÍNCRONA do principal, no molde de `ver_resultado_da_cotacao`: acha a cotação mais nova da conversa
 # (`Insurance::ResultadoDaCotacao`), acha a seguradora que o MODELO escolheu na lista fechada da cotação
-# (`#codigo_do_nome`, chat#718: o nome inteiro, e nunca um casamento de palavras) e, para quem fez proposta, pede o PDF
+# (`#codigos_do_nome`, chat#718: o nome inteiro, e nunca um casamento de palavras) e, para quem fez proposta, pede o PDF
 # ao portal e o publica na conversa. Nome fora da lista volta com a lista, para ele escolher ou perguntar. Nunca abre
 # cotação: duas seguradoras são duas chamadas sobre a mesma cotação.
 #
@@ -103,13 +103,20 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     @resultado = Resultado.da_conversa(conversa.id, faixa: escolha.faixa)
     return SEM_COTACAO if @resultado.nil?
 
-    codigo = @resultado.codigo_do_nome(params['seguradora'])
-    return qual if codigo.nil?
+    codigos = @resultado.codigos_do_nome(params['seguradora'])
+    return qual if codigos.empty?
 
-    responder(codigo)
+    a_responder(codigos).map { |codigo| responder(codigo) }.join("\n")
   end
 
   private
+
+  # DUAS SEGURADORAS COM O MESMO NOME NA COTAÇÃO (revisão da chat#718): a lista não as separa, e devolvê-la faria o
+  # modelo chamar de novo com o mesmo nome até acabar as rodadas. Vale a que fez proposta, e se as duas fizeram, as
+  # duas vão, porque é a proposta que o cliente pediu por esse nome; sem proposta nenhuma, a primeira responde.
+  def a_responder(codigos)
+    codigos.select { |codigo| @resultado.desfecho(codigo) == Guardado::COM_PRECO }.presence || codigos.first(1)
+  end
 
   def qual
     nomes = @resultado.com_preco.map { |codigo| @resultado.nome(codigo) }.join('; ')
@@ -168,11 +175,11 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     format(FALHOU, nome: nome)
   end
 
-  # Uma nota por seguradora e turno: o modelo que tenta de novo no mesmo turno não duplica a nota.
+  # Uma nota por seguradora e turno: o modelo que tenta de novo no mesmo turno não duplica a nota. O turno é o
+  # `Delivery#turno`, que existe também no turno de evento (revisão da chat#718): outro turno, outra nota.
   def nota_da_falha(nome, motivo)
     texto = format(NOTA, nome: nome, motivo: MOTIVOS_DA_NOTA.fetch(motivo, MOTIVO_DO_PORTAL))
-    ::Autonomia::Insurance::NotaNaHora.postar(delivery&.conversation, texto,
-                                              chave: "proposta:#{delivery&.origin_message_id}:#{nome}")
+    ::Autonomia::Insurance::NotaNaHora.postar(delivery&.conversation, texto, chave: "proposta:#{delivery&.turno}:#{nome}")
   end
 
   # "Proposta Usebens, placa HIK9383.pdf", no molde do comparativo (`InsuranceQuote::Comparativo#nome_do_comparativo`):

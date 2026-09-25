@@ -33,11 +33,12 @@ class Autonomia::Insurance::RodadasEsgotadas
   end
 
   # No fim do turno do especialista. `abriu`: alguma cotação abriu ou já existia. -> a nota, ou nil.
+  # A chave é o TURNO (`Delivery#turno`), que existe também no turno de evento: com a mensagem de origem, nil ali, a
+  # chave era a mesma em todo evento da conversa, e a segunda falha não tinha nota (revisão da chat#718).
   def avisar!(tentou_cotar:, abriu:)
     return unless @ramo && tentou_cotar && !abriu && @feitas >= @rodadas
 
-    ::Autonomia::Insurance::NotaNaHora.postar(@delivery&.conversation, texto,
-                                              chave: "rodadas:#{@delivery&.origin_message_id}:#{@slug}")
+    ::Autonomia::Insurance::NotaNaHora.postar(@delivery&.conversation, texto, chave: "rodadas:#{@delivery&.turno}:#{@slug}")
   end
 
   private

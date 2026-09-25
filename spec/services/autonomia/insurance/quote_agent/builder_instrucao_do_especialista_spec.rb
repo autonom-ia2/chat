@@ -565,8 +565,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # `builder_instrucao_do_principal_promessas_spec`, `ManualDoPrincipalResultado::PROMESSAS`); na §I, "a conferência é
   # grátis" vira o que é verdade: a recusa não abre cotação, e conferir de novo com o mesmo documento não repete a
   # busca paga do segurado (`RodadasNoManual::PROMESSAS_DO_COMUM`, sustentada por `Insurance::BuscaDoSeguradoGuardada`).
+  # Revisão da chat#718 (`e3894e56…` -> `e468a7e3…`, 25/09/2026): a busca que falhou (`lookup_failed`, adapters#107)
+  # sai de novo, e a §I passa a dizer só o que é verdade: "com o mesmo documento, a busca paga do segurado que já teve
+  # resposta não se repete".
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('e3894e5647bdde1740b67ba6a72e9b95')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('e468a7e3add83e998408acbf519ef3a0')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer
