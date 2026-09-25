@@ -3,9 +3,29 @@ class Autonomia::Prospecting::WhatsappVerifier
 
   Error = Class.new(StandardError)
 
-  def initialize(lead:)
+  # Cada número tem a sua verificação: o telefone do Google e o WhatsApp achado no site (#678).
+  SOURCES = {
+    google: { attribute: :phone, metadata_key: 'whatsapp_verification' },
+    site: { attribute: :enriched_whatsapp, metadata_key: 'site_whatsapp_verification' }
+  }.freeze
+
+  def self.available_for?(account)
+    Waha::Config.enabled? && session_for(account).present?
+  end
+
+  def self.session_for(account)
+    inbox = account.inboxes.where(channel_type: 'Channel::Api').includes(:channel).find do |item|
+      attrs = item.channel.additional_attributes.to_h
+      attrs['provider'] == 'waha' && attrs['session'].present?
+    end
+
+    inbox&.channel&.additional_attributes.to_h['session']
+  end
+
+  def initialize(lead:, source: :google)
     @lead = lead
     @account = lead.account
+    @source = SOURCES.fetch(source)
   end
 
   def perform
@@ -28,43 +48,40 @@ class Autonomia::Prospecting::WhatsappVerifier
   private
 
   def normalized_phone
-    @normalized_phone ||= Autonomia::Prospecting::PhoneContract.e164(@lead.phone, region: Autonomia::Prospecting::PhoneContract.region_for(@account))
+    @normalized_phone ||= Autonomia::Prospecting::PhoneContract.e164(
+      @lead.public_send(@source[:attribute]), region: Autonomia::Prospecting::PhoneContract.region_for(@account)
+    )
   end
 
   def waha_session
-    @waha_session ||= begin
-      inbox = @account.inboxes.where(channel_type: 'Channel::Api').includes(:channel).find do |item|
-        attrs = item.channel.additional_attributes.to_h
-        attrs['provider'] == 'waha' && attrs['session'].present?
-      end
-
-      inbox&.channel&.additional_attributes.to_h['session']
-    end
+    @waha_session ||= self.class.session_for(@account)
   end
 
   def persist_result!(exists:, chat_id:)
-    payload = {
+    persist!(
       'status' => exists ? 'verified' : 'not_whatsapp',
       'phone' => normalized_phone,
       'chat_id' => chat_id,
       'session' => waha_session,
       'checked_at' => Time.current.iso8601
-    }.compact
-
-    @lead.update!(metadata: @lead.metadata.to_h.merge('whatsapp_verification' => payload))
+    )
   end
 
   def persist_failure!(message)
-    payload = {
+    persist!(
       'status' => 'failed',
       'phone' => normalized_phone,
       'session' => waha_session,
       'error' => message.to_s.truncate(300),
       'checked_at' => Time.current.iso8601
-    }.compact
+    )
+  end
 
-    @lead.update!(metadata: @lead.metadata.to_h.merge('whatsapp_verification' => payload))
-  rescue ActiveRecord::RecordInvalid
-    nil
+  # Enriquecimento e verificação rodam em jobs paralelos: gravar só a chave desta verificação no jsonb, sem
+  # reescrever o metadata lido antes (ENRIQ-57).
+  def persist!(payload)
+    Autonomia::Prospecting::Lead.where(id: @lead.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+      ['metadata = metadata || ?::jsonb, updated_at = ?', { @source[:metadata_key] => payload.compact }.to_json, Time.current]
+    )
   end
 end

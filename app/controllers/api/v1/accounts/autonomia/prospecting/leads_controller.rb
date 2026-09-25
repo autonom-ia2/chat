@@ -77,15 +77,16 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
+  # Responde 202 na hora: site + IA rodam no EnrichLeadJob e o lead volta pelo evento prospecting.lead.updated (#678).
   def enrich
-    lead = ::Autonomia::Prospecting::LeadEnricher.new(
-      lead: leads_scope.find(params[:id]),
-      user: Current.user
-    ).perform
+    lead = leads_scope.find(params[:id])
+    return render json: { error: 'prospecting.enrichment.disabled' }, status: :unprocessable_entity unless research_enabled?
 
-    render json: { payload: { lead: lead_payload(lead) } }
-  rescue ::Autonomia::Prospecting::LeadEnricher::Error => e
-    render json: { error: e.message }, status: :unprocessable_entity
+    unless ::Autonomia::Prospecting::LeadWorkQueue.enqueue_enrichment(lead)
+      return render json: { error: I18n.t('autonomia.prospecting.errors.enrichment_in_progress') }, status: :conflict
+    end
+
+    render json: { payload: { lead: lead_payload(lead.reload) } }, status: :accepted
   end
 
   private
@@ -104,28 +105,11 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   end
 
   def lead_payload(lead)
-    lead.as_json(
-      only: [
-        :id, :provider, :provider_place_id, :name, :phone, :website, :address, :city, :state, :country,
-        :latitude, :longitude, :rating, :reviews_count, :category, :status, :discard_reason,
-        :score, :priority_score, :priority_position, :search_rank, :score_breakdown, :negative_factors, :human_insight,
-        :enrichment_status, :enrichment_requested_at, :enrichment_completed_at, :enrichment_source, :enrichment_error,
-        :enriched_data, :decision_name, :decision_role, :decision_confidence, :decision_source_url, :decision_linkedin,
-        :decision_instagram, :enriched_email, :enriched_whatsapp, :enriched_instagram, :enriched_linkedin,
-        :enriched_facebook, :enriched_cnpj, :enrichment_summary,
-        :contact_id, :crm_card_id, :created_at, :updated_at
-      ]
-    ).merge(
-      source_label: lead.provider.to_s.humanize,
-      contact_status: lead.contact_id.present? ? 'created' : 'pending',
-      crm_status: lead.crm_card_id.present? ? 'created' : 'pending'
-    ).merge(
-      advanced_filter_payload(lead)
-    ).merge(
-      reviews_payload(lead)
-    ).merge(
-      whatsapp_payload(lead)
-    )
+    lead_payload_builder.build(lead)
+  end
+
+  def research_enabled?
+    ::Autonomia::Prospecting::Config.research_enabled?(Current.account)
   end
 
   def contact_payload(contact)

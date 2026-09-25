@@ -216,3 +216,10 @@ email_campaign_protection_backfill_reconcile_job:
   cron: '* * * * *'
   class: 'EmailCampaigns::ProtectionBackfillReconcileJob'
   queue: housekeeping
+
+# executed every 5 minutes; Prospecção (#678): lead preso em "em andamento" (enriquecimento ou WhatsApp na fila)
+# há mais de 15 minutos volta a um estado retomável. O worker que morre no meio não deixa o lead travado.
+autonomia_prospecting_reaper_job:
+  cron: '*/5 * * * *'
+  class: 'Autonomia::Prospecting::ReaperJob'
+  queue: scheduled_jobs

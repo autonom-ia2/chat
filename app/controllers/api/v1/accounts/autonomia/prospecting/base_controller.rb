@@ -24,63 +24,21 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     ::Autonomia::Prospecting::Setting.for_account(Current.account)
   end
 
+  # As partes do lead moram em LeadPayload, que o evento ao vivo também usa (#678).
   def whatsapp_payload(lead)
-    verification = lead.metadata.to_h['whatsapp_verification'].to_h
-    status = verification['status']
-    phone = verification['phone'].presence || normalized_lead_phone(lead)
-
-    {
-      whatsapp_verification_status: status,
-      whatsapp_verified: status == 'verified',
-      whatsapp_phone: phone,
-      whatsapp_url: whatsapp_url(status, phone)
-    }
+    lead_payload_builder.whatsapp(lead)
   end
 
   def advanced_filter_payload(lead)
-    raw_payload = lead.raw_payload.to_h
-    current_hours = raw_payload['currentOpeningHours'].to_h
-    regular_hours = raw_payload['regularOpeningHours'].to_h
-
-    {
-      has_photos: Array(raw_payload['photos']).present?,
-      open_now: current_hours.key?('openNow') ? current_hours['openNow'] : nil,
-      opening_hours_summary: Array(current_hours['weekdayDescriptions']).presence ||
-        Array(regular_hours['weekdayDescriptions']).presence,
-      has_opening_hours: opening_hours_registered?(lead, regular_hours)
-    }
-  end
-
-  # Mesmo valor que o motor filtra (coluna gravada pelo provider, #677). Lead gravado antes da coluna usa a regra do
-  # provider sobre o payload guardado: horário cadastrado é ter regularOpeningHours.
-  def opening_hours_registered?(lead, regular_hours)
-    lead.has_opening_hours.nil? ? regular_hours.present? : lead.has_opening_hours
+    lead_payload_builder.advanced_filters(lead)
   end
 
   def reviews_payload(lead)
-    reviews = Array(
-      lead.metadata.to_h['reviews_snapshot'].presence ||
-        lead.raw_payload.to_h['reviews'].presence
-    ).first(5)
-
-    {
-      reviews_snapshot: reviews
-    }
+    lead_payload_builder.reviews(lead)
   end
 
-  def whatsapp_url(status, phone)
-    return unless status == 'verified'
-
-    digits = ::Autonomia::Prospecting::PhoneContract.parse(phone, region: phone_region)&.digits
-    digits && "https://wa.me/#{digits}"
-  end
-
-  def normalized_lead_phone(lead)
-    ::Autonomia::Prospecting::PhoneContract.e164(lead.phone, region: phone_region)
-  end
-
-  # País da busca da conta (settings.metadata['search_country']), lido uma vez por requisição.
-  def phone_region
-    @phone_region ||= ::Autonomia::Prospecting::PhoneContract.region_for(Current.account)
+  # Um por requisição: o país da busca da conta é lido uma vez.
+  def lead_payload_builder
+    @lead_payload_builder ||= ::Autonomia::Prospecting::LeadPayload.new(account: Current.account)
   end
 end

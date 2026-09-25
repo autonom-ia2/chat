@@ -90,8 +90,10 @@ class Autonomia::Prospecting::Lead < ApplicationRecord
   has_many :lists, through: :list_leads, source: :list
 
   enum status: { new_lead: 0, qualified: 1, discarded: 2, no_consent: 3, ready_for_campaign: 4 }
+  # queued: pedido aceito e job na fila (#678). O varredor devolve a failed o que fica preso em queued/running.
   enum enrichment_status: {
     pending: 'pending',
+    queued: 'queued',
     running: 'running',
     completed: 'completed',
     failed: 'failed',
