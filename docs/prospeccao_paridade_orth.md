@@ -1,6 +1,6 @@
 # Prospecção: paridade com o Orth, as 486 funções
 
-Prestação de contas do épico #676 (E6, #682). Cada função do inventário do plano rev.7 (google-saas `1f8ad9a` x chat2you `1bf71b3fa1`) tem aqui o destino: o PR que entregou, a decisão que tirou do escopo, ou pendente com o motivo. Código conferido na `main` em `732c23da08` (25/09/2026); as 15 funções da própria E6 foram conferidas na branch `feat/682-fechamento`, que junta as frentes A (exportar), B (Listas e tour), C (pt_BR, menu e permissão) e D (este documento).
+Prestação de contas do épico #676 (E6, #682). Cada função do inventário do plano rev.7 (google-saas `1f8ad9a` x chat2you `1bf71b3fa1`) tem aqui o destino: o PR que entregou, a decisão que tirou do escopo, ou pendente com o motivo. Código conferido na `main` em `732c23da08` (25/09/2026); as 15 funções da própria E6 foram conferidas na branch `feat/682-fechamento`, que junta as frentes A (exportar), B (Listas e tour), C (pt_BR, menu e permissão) e D (este documento). Como a E6 mexe em vários desses arquivos, o número de linha da coluna Conferido já é o da branch: cada referência conferida na `main` foi levada para a linha equivalente na branch, casando o arquivo das duas versões trecho a trecho (37 referências mudaram de linha, nenhuma teve o trecho alterado).
 
 ## Resumo
 
@@ -27,7 +27,7 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 | **A confirmar** | **8** |
 | **Total** | **486** |
 
-- **155 funções** têm arquivo e linha conferidos na `main` (`732c23da08`): 158 referências, cada uma aberta e com o trecho esperado na linha. As demais entregues se apoiam no corpo do PR ou na nota da etapa na #705, e isso está dito na linha.
+- **155 funções** têm arquivo e linha conferidos na `main` (`732c23da08`): 158 referências, cada uma aberta e com o trecho esperado na linha, e com o número de linha já levado para a branch da E6. As demais entregues se apoiam no corpo do PR ou na nota da etapa na #705, e isso está dito na linha.
 - **#700** (Guia fora de cima do Aplicar) e **#712** (telefone do cadastro confirma a empresa) corrigem entregas da E1 e da E3 e não têm linha própria no inventário.
 - **#682 (E6)** entregou 15 funções, todas com arquivo e linha conferidos na branch `feat/682-fechamento` (23 referências abertas uma a uma): exportar CSV e Excel pelo servidor, da busca e da lista (frente A); Listas com o mesmo card e painel da busca e o tour guiado (frente B); tela e recusas da prospecção em pt_BR (frente C). O número do PR da E6 entra aqui quando ele for aberto.
 - **A E6 também entregou o que o inventário não lista como função própria:** o atalho Configurações no menu Prospecção da barra lateral, visível para administrador ou `prospecting_manage` (`F/utils/prospectingSidebar.js:45`), e os botões Enviar ao CRM e Adicionar à campanha escondidos de quem não tem `Crm::CardPolicy#create?` ou `campaign_manage`, pela mesma regra do servidor (`C/settings_controller.rb:68`; nota em PLAT-48).
@@ -92,7 +92,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 ## Como ler a tabela
 
 - **Destino.** `#NNN (Ex)`: PR que entregou, com a etapa. `preservado`: o inventário mandou manter o que o chat2you já tinha e nenhum PR tirou. `#682 (E6)`: entregue nesta etapa, pela issue enquanto o PR não tem número. `#705`: Central de Ajuda e Guia no lote único do fim. `fora (decisão)`: fora do escopo, com a decisão na nota. `pendente`: não feito, com o motivo. `a confirmar`: sem prova.
-- **Conferido.** Arquivo e linha na `main` (ou na branch `feat/682-fechamento`, para as funções da E6) quando a função foi aberta no código. Abreviações: `S/` = `app/services/autonomia/prospecting/`, `C/` = `app/controllers/api/v1/accounts/autonomia/prospecting/`, `M/` = `app/models/autonomia/prospecting/`, `J/` = `app/jobs/autonomia/prospecting/`, `F/` = `app/javascript/dashboard/routes/dashboard/autonomia/prospecting/`.
+- **Conferido.** Arquivo e linha quando a função foi aberta no código: conferido na `main` (ou na branch `feat/682-fechamento`, para as funções da E6), com o número de linha da branch `feat/682-fechamento`. Abreviações: `S/` = `app/services/autonomia/prospecting/`, `C/` = `app/controllers/api/v1/accounts/autonomia/prospecting/`, `M/` = `app/models/autonomia/prospecting/`, `J/` = `app/jobs/autonomia/prospecting/`, `F/` = `app/javascript/dashboard/routes/dashboard/autonomia/prospecting/`.
 - **Decisões usadas:** as de 24/09 no épico #676 (sem cobrança, créditos, trava nem gate de plano; chaves Google e BigDataCorp nossas; IA só na credencial do Kanban; nota do Orth inteira), as de 25/09 nas issues #679 (não apagar dado, sai a retenção), #680 (recusa no contato vai para a #713), #681 (perfil restrito a contas, pesos próprios mapeados, relevância e posição saem da nota) e #705 (Central e Guia num lote só), e o "não portar" do próprio inventário rev.7 para código morto do Orth.
 
 ## Modo e jogadas (51)
@@ -104,7 +104,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | MODO-03 | Controle de troca do modo na tela de configuração | divergente | #671 (lote #652) | Modo na configuração com ChoiceSelect. O texto explicativo do Orth não foi conferido. | `F/pages/ProspectingSettingsPage.vue:7` |
 | MODO-04 | PUT sem o campo modo preserva o valor salvo | divergente | preservado | PUT sem modo preserva o salvo. |  |
 | MODO-05 | Trocar o modo só para uma busca | só no c2 | #699 (E1) | Modo por busca no formulário, com a grade de jogadas seguindo o modo da busca. | `F/components/search/SearchModeFields.vue:38` |
-| MODO-06 | Selo 'Modo: GMN (atacar lacunas)' / 'Modo: Geral (qualificar leads)' no topo da busca | ausente no c2 | #699 (E1) | Selo de modo no topo: âmbar GMN, verde-azulado Geral. | `F/components/search/SearchModeBadge.vue:36` |
+| MODO-06 | Selo 'Modo: GMN (atacar lacunas)' / 'Modo: Geral (qualificar leads)' no topo da busca | ausente no c2 | #699 (E1) | Selo de modo no topo: âmbar GMN, verde-azulado Geral. | `F/components/search/SearchModeBadge.vue:37` |
 | MODO-07 | Tela de busca lê o modo ao carregar | igual | preservado |  |  |
 | MODO-08 | Seção '1. Sua jogada' na tela de busca | ausente no c2 | #699 (E1) | Seção de jogada no formulário. | `F/components/search/SearchModeFields.vue:8` |
 | MODO-09 | Catálogo de jogadas filtrado pelo modo (3 por modo, 6 no total) | ausente no c2 | #699 (E1) | Catálogo de 6 jogadas, 3 por modo. | `S/search_presets.rb:15` |
@@ -119,7 +119,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | MODO-18 | Ícones SVG das jogadas | ausente no c2 | #699 (E1) | Ícones lucide no card de jogada (SearchPresetCard.vue). |  |
 | MODO-19 | Escolher jogada aplica filtros base; clicar de novo desmarca | ausente no c2 | #699 (E1) | Jogada aplica os filtros dela. | `F/composables/useSearchPresets.js:74` |
 | MODO-20 | Jogada se desmarca quando os filtros divergem dela | ausente no c2 | #699 (E1) | Jogada desmarcada quando um filtro diverge. | `F/composables/useSearchPresets.js:21` |
-| MODO-21 | Jogada enviada ao motor e gravada na busca | ausente no c2 | #699 (E1) | preset_id aceito, validado e gravado no metadata da busca. | `C/searches_controller.rb:118`, `S/search_runner.rb:687` |
+| MODO-21 | Jogada enviada ao motor e gravada na busca | ausente no c2 | #699 (E1) | preset_id aceito, validado e gravado no metadata da busca. | `C/searches_controller.rb:127`, `S/search_runner.rb:688` |
 | MODO-22 | Jogada muda a leitura da nota: filtros ativos zeram ou reduzem pesos | ausente no c2 | #719 (E5) | Filtros ativos zeram ou reduzem pesos (EffectiveWeights). Visível só em conta virada para o motor orth. | `S/scoring/component_score.rb:2` |
 | MODO-23 | Jogadas não mudam a ordenação | igual | preservado |  |  |
 | MODO-24 | Selo 'Jogada base: X · Modo: GMN/Geral' no painel de filtros | ausente no c2 | #699 (E1) | Linha Jogada base e Modo no topo da gaveta. | `F/components/search/filters/FiltersBaseLine.vue:15` |
@@ -132,7 +132,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | MODO-31 | Pesos exibidos por modo na configuração | divergente | #719 (E5) | Aba Score mostra os 6 componentes na conta virada (ProspectingOrthScoreWeights.vue). |  |
 | MODO-32 | Frase de leitura da nota por modo | defasado | #719 (E5) | Frase de leitura por modo. | `S/scoring/human_insight.rb:1` |
 | MODO-33 | Texto do modo no detalhe do lead | ausente no c2 | #719 (E5) | Frase do Orth no detalhe depois da virada (corpo do #719 e nota da E5 na #705). |  |
-| MODO-34 | Tom do selo de estrela no card muda com o modo | ausente no c2 | #706 (E2) | Selo de nota do card lê o modo da busca. | `F/components/search/LeadCard.vue:45` |
+| MODO-34 | Tom do selo de estrela no card muda com o modo | ausente no c2 | #706 (E2) | Selo de nota do card lê o modo da busca. | `F/components/search/LeadCard.vue:48` |
 | MODO-35 | Fator negativo 'inactive_gbp' só no modo GMN | só no c2 | preservado |  | `S/lead_scorer.rb:163` |
 | MODO-36 | Tour guiado com texto por modo | ausente no c2 | #682 (E6) | Tour guiado (frente B): os textos de modo, jogada e decisor mudam entre GMN e Geral. | `F/utils/searchTour.js:13`, `F/utils/searchTour.js:60` |
 | MODO-37 | Modo gravado em cada lead e em cada busca | igual | preservado |  |  |
@@ -145,9 +145,9 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | MODO-44 | IA que sugere nichos, pesos e gera jogadas a partir das ofertas | ausente no c2 | fora (decisão) | Plano rev.7: não portar agora, no Orth não há tela que use. |  |
 | MODO-45 | Diagnóstico de chaves do Google configuradas | igual | #691 (E0) | Chave passou a ser da plataforma; a tela mostra só o estado. | `C/settings_controller.rb:50` |
 | MODO-46 | Assistente lê o modo da empresa | ausente no c2 | pendente | Assistente (Guia) lendo o modo da empresa: sem etapa dona no épico. |  |
-| MODO-47 | Módulo de prospecção liberado por conta pelo superadmin | só no c2 | preservado |  | `config/routes.rb:1077` |
+| MODO-47 | Módulo de prospecção liberado por conta pelo superadmin | só no c2 | preservado |  | `config/routes.rb:1079` |
 | MODO-48 | Pesos de score por jogada salva | ausente no c2 | fora (decisão) | Plano rev.7: não portar pesos por jogada salva. |  |
-| MODO-49 | Perfil de score gravado em cada busca | só no c2 | pendente | O runner ainda aceita scoring_profile_id do cliente; pendência registrada pela E5 na #705. | `S/search_runner.rb:685` |
+| MODO-49 | Perfil de score gravado em cada busca | só no c2 | pendente | O runner ainda aceita scoring_profile_id do cliente; pendência registrada pela E5 na #705. | `S/search_runner.rb:686` |
 | MODO-50 | Um só estado de filtro para formulário de nova busca e para refino dos resultados | divergente | #699 (E1) | Filtros da nova busca e refino da busca aberta deixaram de dividir o estado (corpo do #699). |  |
 | MODO-51 | Detalhes técnicos da nota para o superadmin: modo, pesos contextuais e multiplicador de tração | ausente no c2 | pendente | Bloco técnico só para superadmin com pesos ajustados: decisão pendente (ver PAINEL-32); LeadDetailScore mostra o detalhe a todos. |  |
 
@@ -162,7 +162,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | LOCAL-05 | Obter as coordenadas do local escolhido | igual | preservado | Com idioma e região do país desde o #699. | `S/providers/google_places_location.rb:34` |
 | LOCAL-06 | Geocodificacao de reserva quando a pessoa digita o local e nao escolhe sugestao | ausente no c2 | pendente | Não existe geocodificação de reserva (nenhuma ocorrência de geocod no código da prospecção). |  |
 | LOCAL-07 | Comportamento quando o autocomplete falha ou nao ha chave | divergente | #699 (E1) | Erro visível nas sugestões de local (corpo do #699). A saída pela geocodificação depende de LOCAL-06. |  |
-| LOCAL-08 | Raio em km (entrada e limites) | divergente | pendente | O servidor não corta o raio pedido; só o viés enviado ao Google tem teto. | `S/search_runner.rb:425`, `S/search_area.rb:11` |
+| LOCAL-08 | Raio em km (entrada e limites) | divergente | pendente | O servidor não corta o raio pedido; só o viés enviado ao Google tem teto. | `S/search_runner.rb:426`, `S/search_area.rb:11` |
 | LOCAL-09 | Enviar o raio ao Places como locationBias em circulo | igual | preservado |  |  |
 | LOCAL-10 | Pre-visualizar o raio no mapa antes de buscar | igual | preservado |  |  |
 | LOCAL-11 | Botao mostrar/ocultar mapa da area | ausente no c2 | pendente | Não há botão de mostrar e ocultar o mapa no formulário. |  |
@@ -172,7 +172,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | LOCAL-15 | Desenho livre (poligono) com filtro ponto dentro do poligono | ausente no c2 | #706 (E2) | Polígono com ponto no polígono. | `S/search_area.rb:42` |
 | LOCAL-16 | Texto de ajuda do modo desenhar | ausente no c2 | #706 (E2) | Ajuda do desenho (Desfazer último ponto, Limpar desenho), segundo a nota da E2 na #705. |  |
 | LOCAL-17 | Seletor do tipo de area | divergente | #706 (E2) | Tipos de área sem select nativo. |  |
-| LOCAL-18 | Expansao automatica de raio quando faltam resultados | divergente | pendente | Padrão e teto da expansão de raio pedem decisão do Rodrigo (10 km no Orth, 50 km no c2); não registrada. O c2 segue 2x e 4x até 50 km. | `S/search_runner.rb:549` |
+| LOCAL-18 | Expansao automatica de raio quando faltam resultados | divergente | pendente | Padrão e teto da expansão de raio pedem decisão do Rodrigo (10 km no Orth, 50 km no c2); não registrada. O c2 segue 2x e 4x até 50 km. | `S/search_runner.rb:550` |
 | LOCAL-19 | Registro de que o raio foi expandido | só no c2 | preservado |  | `S/search_runner.rb:82` |
 | LOCAL-20 | Cobrir a area com varias paginas do Places (ate 60 lugares) | ausente no c2 | #706 (E2) | Até 3 páginas de 20. | `S/providers/google_places_provider.rb:29` |
 | LOCAL-21 | Cobertura por tiles (varios centros para passar do limite de 60) | ausente no c2 | fora (decisão) | Plano rev.7: não portar ladrilhos, não rodam no Orth. |  |
@@ -213,13 +213,13 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | FILTRO-01 | Filtro Site: tem ou não tem site (gs hasWebsite, c2 has_website) | igual | #699 (E1) | Site no grupo da gaveta; repeso do peso site veio no #719. | `F/components/search/filters/LeadFiltersPanel.vue:95` |
 | FILTRO-02 | Filtro Telefone: tem ou não tem (gs hasPhone, c2 has_phone) | igual | #699 (E1) | Telefone no grupo Operacional; repeso no #719. |  |
 | FILTRO-03 | Mínimo de reviews (gs userRatingCountMin, c2 reviews_min) | igual | #699 (E1) | Mínimo de avaliações no grupo Qualificação; repeso no #719. |  |
-| FILTRO-04 | Avaliação: 'Acima de' ou 'Abaixo de' N estrelas (gs ratingMin/ratingMax, c2 rating_min/rating_max) | divergente | #699 (E1) | Operador de avaliação; lead sem nota passa no rating_max. | `F/components/search/filters/LeadFiltersPanel.vue:142`, `S/search_runner.rb:490` |
+| FILTRO-04 | Avaliação: 'Acima de' ou 'Abaixo de' N estrelas (gs ratingMin/ratingMax, c2 rating_min/rating_max) | divergente | #699 (E1) | Operador de avaliação; lead sem nota passa no rating_max. | `F/components/search/filters/LeadFiltersPanel.vue:142`, `S/search_runner.rb:491` |
 | FILTRO-05 | Posição máxima no Google (gs searchRankMax, c2 search_rank_max) | defasado | #699 (E1) | Faixa de posição com duas alças. | `F/components/search/filters/RankRangeSlider.vue:2` |
-| FILTRO-06 | Fora do top N no Google (gs outsideTop), alça esquerda do slider, com compensação de coleta | ausente no c2 | #699 (E1) | outside_top no motor. | `S/search_runner.rb:117` |
+| FILTRO-06 | Fora do top N no Google (gs outsideTop), alça esquerda do slider, com compensação de coleta | ausente no c2 | #699 (E1) | outside_top no motor. | `S/search_runner.rb:118` |
 | FILTRO-07 | Janela de rank como preferência + aviso 'ampliamos a janela de rank de X para Y' | ausente no c2 | pendente | Janela de rank rígida ou flexível pede decisão do Rodrigo; não registrada. |  |
-| FILTRO-08 | Filtro 'Tem horário' (gs hasOpeningHours) | ausente no c2 | #699 (E1) | Tem horário. | `S/search_runner.rb:480` |
-| FILTRO-09 | Filtro 'Aberto agora' (gs openNow, c2 open_now) | divergente | #699 (E1) | Aberto agora lido do lugar. | `S/search_runner.rb:479` |
-| FILTRO-10 | Filtro Fotos (gs hasPhotos, c2 has_photos) | divergente | #699 (E1) | Com foto sim e não. | `S/search_runner.rb:508` |
+| FILTRO-08 | Filtro 'Tem horário' (gs hasOpeningHours) | ausente no c2 | #699 (E1) | Tem horário. | `S/search_runner.rb:481` |
+| FILTRO-09 | Filtro 'Aberto agora' (gs openNow, c2 open_now) | divergente | #699 (E1) | Aberto agora lido do lugar. | `S/search_runner.rb:480` |
+| FILTRO-10 | Filtro Fotos (gs hasPhotos, c2 has_photos) | divergente | #699 (E1) | Com foto sim e não. | `S/search_runner.rb:509` |
 | FILTRO-11 | Mínimo de fotos (gs photosMin) | ausente no c2 | pendente | photos_min não existe no motor. |  |
 | FILTRO-12 | Tem reviews (gs hasReviews) | ausente no c2 | pendente | has_reviews não existe no motor. |  |
 | FILTRO-13 | Reviews recentes (gs hasRecentReviews) | ausente no c2 | pendente | Avaliações recentes: sem decisão e sem código. |  |
@@ -228,13 +228,13 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | FILTRO-16 | Score mínimo (gs scoreMin) | ausente no c2 | pendente | score_min não existe no motor. |  |
 | FILTRO-17 | Expansão automática de raio (gs allowRadiusExpansion, c2 auto_expand_radius) | divergente | pendente | Padrão e teto da expansão de raio pedem decisão do Rodrigo (10 km no Orth, 50 km no c2); não registrada. O c2 segue 2x e 4x até 50 km. |  |
 | FILTRO-18 | Total desejado (quantidade de leads por busca) | defasado | #706 (E2) | Total pedido até 60, com o teto de 20 removido no #691. | `S/providers/google_places_provider.rb:26` |
-| FILTRO-19 | Seletor 'Tipo de decisor' no card 'Decisor e quantidade' | ausente no c2 | #699 (E1) | Tipo de decisor enviado e gravado na busca. | `S/search_runner.rb:688` |
+| FILTRO-19 | Seletor 'Tipo de decisor' no card 'Decisor e quantidade' | ausente no c2 | #699 (E1) | Tipo de decisor enviado e gravado na busca. | `S/search_runner.rb:689` |
 | FILTRO-20 | Disponibilidade de cada perfil de decisor vinda do backend, com rótulo 'em breve' | ausente no c2 | #699 (E1) | Perfis com rótulo em breve. A lista é fixa no front (valores do backend), não vem da API. | `F/utils/decisionMakerTypes.js:29` |
 | FILTRO-21 | Tipo de decisor chega ao motor de pesquisa e ao painel do lead | ausente no c2 | #709 (E3) | Tipo de decisor chega à pesquisa. | `S/research/runner.rb:112` |
 | FILTRO-22 | Seletor de decisor desativado quando a pesquisa de decisores não está liberada | ausente no c2 | pendente | O seletor desliga só os perfis sem executor; não olha se a pesquisa está liberada na conta. | `F/utils/decisionMakerTypes.js:30` |
 | FILTRO-23 | Gaveta de filtros avançados em 4 grupos por intenção comercial | defasado | #699 (E1) | Gaveta em 4 grupos. | `F/components/search/filters/LeadFiltersPanel.vue:10` |
 | FILTRO-24 | Rascunho com Aplicar, Limpar tudo e Salvar como jogada na gaveta | defasado | #699 (E1) | Rascunho com Aplicar e Limpar tudo. | `F/components/search/filters/LeadFiltersPanel.vue:3` |
-| FILTRO-25 | Contador de filtros ativos | divergente | #699 (E1) | Contador de filtros ativos. | `F/components/search/SearchAdvancedFilters.vue:21` |
+| FILTRO-25 | Contador de filtros ativos | divergente | #699 (E1) | Contador de filtros ativos. | `F/components/search/SearchAdvancedFilters.vue:25` |
 | FILTRO-26 | Combinação filtro + preset (jogada) | ausente no c2 | #699 (E1) | Merge com jogada e regra de desmarcar. Jogada salva segue pendente (MODO-25). |  |
 | FILTRO-27 | Salvar filtros atuais como jogada, com resumo em etiquetas | ausente no c2 | pendente | Jogada salva depende de decisão do Rodrigo (inventário); nenhuma issue ou PR registra a decisão e não existe tabela de jogadas. |  |
 | FILTRO-28 | Filtros gravados na busca e restaurados ao reabrir ou reexecutar | igual | #706 (E2) | Repetir e Editar restauram filtros, decisor, jogada, quantidade e ordem (nota da E2 na #705). |  |
@@ -264,7 +264,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | MOTOR-07 | Bairro e cidade do lead | divergente | #699 (E1) | Bairro e cidade do addressComponents. | `S/providers/google_places_provider.rb:32` |
 | MOTOR-08 | Posição no Google (search_rank) atribuída antes dos filtros | defasado | #706 (E2) | Posição real de 1 a 60 entre páginas. |  |
 | MOTOR-09 | Filtro 'só até a posição N no Google' (searchRankMax) | igual | preservado | Vale para posições acima de 20 desde o #706. |  |
-| MOTOR-10 | Filtro 'fora do top N' (outsideTop) com coleta ampliada | ausente no c2 | #699 (E1) | outside_top com meta de coleta. | `S/search_runner.rb:118` |
+| MOTOR-10 | Filtro 'fora do top N' (outsideTop) com coleta ampliada | ausente no c2 | #699 (E1) | outside_top com meta de coleta. | `S/search_runner.rb:119` |
 | MOTOR-11 | Soft cap da janela de rank com banner 'ampliamos a janela' | ausente no c2 | pendente | Janela de rank rígida ou flexível: decisão do Rodrigo não registrada. |  |
 | MOTOR-12 | Filtro de score mínimo depois da pontuação (scoreMin) | ausente no c2 | pendente | score_min não existe no motor. |  |
 | MOTOR-13 | Filtros com foto e aberto agora executados no servidor | divergente | #699 (E1) | Foto e aberto agora no servidor, com fixture real. |  |
@@ -278,12 +278,12 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | MOTOR-21 | Ordenar por distância do centro (distance_km) | ausente no c2 | #706 (E2) | Distância. |  |
 | MOTOR-22 | Ordenar por posição no Google | ausente no c2 | #706 (E2) | Posição no Google, começando da 1ª. |  |
 | MOTOR-23 | Inverter a direção da ordenação (crescente/decrescente) | ausente no c2 | #706 (E2) | Botão que inverte a direção (ResultsFiltersPopover.vue). |  |
-| MOTOR-24 | Chave do Google Places usada na busca | divergente | #691 (E0) | Chave da plataforma. | `S/search_runner.rb:250` |
+| MOTOR-24 | Chave do Google Places usada na busca | divergente | #691 (E0) | Chave da plataforma. | `S/search_runner.rb:251` |
 | MOTOR-25 | Contagem de chamadas ao Google por busca | igual | preservado | Soma por página desde o #706. | `S/search_runner.rb:55` |
 | MOTOR-26 | Mostrar 'N chamadas à API' no título dos resultados | ausente no c2 | pendente | A tela não mostra N chamadas nem os selos do cache e do raio ampliado; só o aviso de busca parcial. |  |
 | MOTOR-27 | Agendamento automático da pesquisa de decisor/empresa para todos os leads da busca | ausente no c2 | #709 (E3) | Pesquisa enfileirada ao fim da busca. | `S/research/queue.rb:17` |
 | MOTOR-28 | Tipo de decisor pedido na busca (quem o Radar procura) | ausente no c2 | #699 (E1) | Tipo de decisor na busca, levado à pesquisa no #709. |  |
-| MOTOR-29 | Barra de progresso da pesquisa ('X de Y itens concluídos', 'Solicitados · Google retornou · Persistidos · Agendados') | ausente no c2 | #709 (E3) | Barra X de Y sem texto de créditos. | `F/components/search/SearchResults.vue:163` |
+| MOTOR-29 | Barra de progresso da pesquisa ('X de Y itens concluídos', 'Solicitados · Google retornou · Persistidos · Agendados') | ausente no c2 | #709 (E3) | Barra X de Y sem texto de créditos. | `F/components/search/SearchResults.vue:203` |
 | MOTOR-30 | Verificação automática de WhatsApp dos telefones após a busca | defasado | #706 (E2) | Verificação de WhatsApp em job por lote. | `S/lead_work_queue.rb:46` |
 | MOTOR-31 | O que é gravado em cada lead da busca | defasado | #699 (E1) | Colunas novas no lead (migration 20260925110000). | `S/providers/google_places_provider.rb:189` |
 | MOTOR-32 | O que é gravado na busca | igual | preservado | Com preset_id desde o #699. |  |
@@ -358,9 +358,9 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | ENRIQ-37 | Rota de verificação que só grava se o número existe, com códigos de erro distintos | divergente | a confirmar | Não conferi a separação de número inválido e WAHA indisponível na resposta. |  |
 | ENRIQ-38 | Qual sessão WAHA faz a checagem | divergente | pendente | Pool de sessões nossas ou sessão da conta: decisão do Rodrigo não registrada; o c2 usa a sessão da conta. |  |
 | ENRIQ-39 | Resultado negativo e falha da verificação ficam gravados | só no c2 | preservado |  |  |
-| ENRIQ-40 | Selo WhatsApp verificado ao lado do telefone | divergente | #706 (E2) | Selo verificado ao lado do telefone (LeadPhoneActions.vue). | `F/components/search/LeadCardActions.vue:106` |
+| ENRIQ-40 | Selo WhatsApp verificado ao lado do telefone | divergente | #706 (E2) | Selo verificado ao lado do telefone (LeadPhoneActions.vue). | `F/components/search/LeadCardActions.vue:107` |
 | ENRIQ-41 | Botão WhatsApp em três estados e estado Verificando | igual | preservado |  |  |
-| ENRIQ-42 | Botões de Instagram, Facebook e LinkedIn no card da lista | ausente no c2 | #706 (E2) | Instagram, Facebook e LinkedIn no card. | `F/components/search/LeadCardActions.vue:107` |
+| ENRIQ-42 | Botões de Instagram, Facebook e LinkedIn no card da lista | ausente no c2 | #706 (E2) | Instagram, Facebook e LinkedIn no card. | `F/components/search/LeadCardActions.vue:108` |
 | ENRIQ-43 | Bloco Dados do site com links clicáveis e selo de confiança do WhatsApp | divergente | #706 (E2) | Links clicáveis no painel. O selo de confiança do WhatsApp não existe (ver ENRIQ-22). |  |
 | ENRIQ-44 | Aviso de dados do site pendentes ou em processamento | divergente | #706 (E2) | Card mostra na fila e Enriquecendo. |  |
 | ENRIQ-45 | Atualização ao vivo do lead quando enriquecimento ou verificação termina | ausente no c2 | #706 (E2) | Atualização ao vivo. |  |
@@ -407,7 +407,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | CARD-09 | Chip de telefone (Tem fone/Sem fone) | igual | preservado |  |  |
 | CARD-10 | Chip de fotos (Sem foto, Pouca foto, N fotos) | ausente no c2 | #706 (E2) | Fotos em quatro faixas. |  |
 | CARD-11 | Chip #N Google | igual | preservado |  |  |
-| CARD-12 | Chip de rating | divergente | #706 (E2) | Nota em 4 faixas por modo. | `F/components/search/LeadCard.vue:45` |
+| CARD-12 | Chip de rating | divergente | #706 (E2) | Nota em 4 faixas por modo. | `F/components/search/LeadCard.vue:48` |
 | CARD-13 | Ordem e teto de 4 sinais | divergente | #706 (E2) | Ordem e teto de 4 sinais. |  |
 | CARD-14 | Chip de avaliações (N avaliações) | só no c2 | preservado | Entra só se couber no teto (#706). |  |
 | CARD-15 | Número de telefone exibido no card, formatado | ausente no c2 | #706 (E2) | Telefone formatado no card. |  |
@@ -416,9 +416,9 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | CARD-18 | Normalização do telefone para links wa.me e tel: | divergente | #699 (E1) | PhoneContract no lugar da regex. |  |
 | CARD-19 | Botão Ligar | igual | preservado |  |  |
 | CARD-20 | Verificação automática de WhatsApp ao abrir a busca | só no c2 | #706 (E2) | Verificação passou para o servidor. |  |
-| CARD-21 | Botões Instagram, Facebook, LinkedIn no card | ausente no c2 | #706 (E2) | Redes no rodapé do card. | `F/components/search/LeadCardActions.vue:107` |
-| CARD-22 | Abrir detalhe: card inteiro clicável e botão Abrir | divergente | #706 (E2) | Card inteiro abre e fecha o painel. | `F/components/search/LeadCard.vue:69` |
-| CARD-23 | Realce visual do card aberto | ausente no c2 | #706 (E2) | Card aberto realçado. | `F/components/search/LeadCard.vue:78` |
+| CARD-21 | Botões Instagram, Facebook, LinkedIn no card | ausente no c2 | #706 (E2) | Redes no rodapé do card. | `F/components/search/LeadCardActions.vue:108` |
+| CARD-22 | Abrir detalhe: card inteiro clicável e botão Abrir | divergente | #706 (E2) | Card inteiro abre e fecha o painel. | `F/components/search/LeadCard.vue:72` |
+| CARD-23 | Realce visual do card aberto | ausente no c2 | #706 (E2) | Card aberto realçado. | `F/components/search/LeadCard.vue:81` |
 | CARD-24 | Faixa Já é cliente de <vendedor> até <data> e checkbox bloqueado (lead queimado) | ausente no c2 | pendente | Lead queimado depende de decisão do Rodrigo sobre o modelo (lead por conta x cartão por vendedor); não registrada. |  |
 | CARD-25 | Selos Empresa: <estado> e Decisor: <estado> | ausente no c2 | #709 (E3) | Selos Empresa e Decisor. | `F/components/search/LeadResearchSummary.vue:62` |
 | CARD-26 | Linha Decisor: com estados (Aguardando capacidade, Pesquisa em andamento, não concluída, nome · cargo, Possível decisor, Não confirmado, Pesquisa desativada, Não pesquisado) | divergente | #709 (E3) | Linha do decisor muda com o estado. |  |
@@ -429,14 +429,14 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | CARD-31 | Botão Enriquecer no card | só no c2 | preservado |  |  |
 | CARD-32 | Botão Mapa (abre Google Maps) | só no c2 | #706 (E2) | Mapa abre o googleMapsUri. | `S/lead_payload.rb:97` |
 | CARD-33 | Abrir contato, Abrir card e Criar card no próprio card | só no c2 | #714 (E4) | Criar card virou Enviar ao CRM; Abrir contato e Abrir card ficam. |  |
-| CARD-34 | Checkbox de seleção por card | divergente | #706 (E2) | Checkbox com aria-label. Esconder para queimado depende de CARD-24. | `F/components/search/LeadCard.vue:142` |
+| CARD-34 | Checkbox de seleção por card | divergente | #706 (E2) | Checkbox com aria-label. Esconder para queimado depende de CARD-24. | `F/components/search/LeadCard.vue:146` |
 | CARD-35 | Selecionar todos | divergente | #714 (E4) | Selecionar visíveis coerente com o filtro. |  |
 | CARD-36 | Contador de selecionados | igual | #714 (E4) | Contador igual ao que é enviado. |  |
 | CARD-37 | Limpar seleção | ausente no c2 | pendente | Não existe botão Limpar seleção (BulkActionsBar.vue só tem selecionar visíveis). |  |
 | CARD-38 | Enviar selecionados ao CRM | divergente | #714 (E4) |  |  |
-| CARD-39 | Adicionar selecionados à campanha | ausente no c2 | #714 (E4) | Adicionar à campanha a partir da seleção. | `F/pages/ProspectingSearchPage.vue:13` |
-| CARD-40 | Exportar CSV | defasado | #682 (E6) | CSV do servidor (frente A): BOM UTF-8, ponto e vírgula, 35 colunas; célula que começa com =, +, -, @, %, barra vertical, tab ou CR ganha apóstrofo. Fica de fora a coluna Dist km do Orth. | `S/export/csv_file.rb:9`, `S/export/cell.rb:9` |
-| CARD-41 | Exportar Excel (.xlsx) | ausente no c2 | #682 (E6) | Excel .xlsx mínimo montado com rubyzip (frente A): texto em inlineStr, sem fórmula, mesma neutralização do CSV. | `S/export/xlsx_file.rb:51` |
+| CARD-39 | Adicionar selecionados à campanha | ausente no c2 | #714 (E4) | Adicionar à campanha a partir da seleção. | `F/pages/ProspectingSearchPage.vue:14` |
+| CARD-40 | Exportar CSV | defasado | #682 (E6) | CSV do servidor (frente A): BOM UTF-8, ponto e vírgula, 35 colunas; célula que começa com =, +, -, @, %, barra vertical, tab ou CR ganha apóstrofo. Fica de fora a coluna Dist km do Orth. | `S/export/csv_file.rb:9`, `S/export/cell.rb:14` |
+| CARD-41 | Exportar Excel (.xlsx) | ausente no c2 | #682 (E6) | Excel .xlsx mínimo montado com rubyzip (frente A): texto em inlineStr, sem fórmula; o que começa como fórmula leva o estilo quotePrefix em vez do apóstrofo do CSV, e o telefone +55 sai limpo. | `S/export/xlsx_file.rb:55` |
 | CARD-42 | Aviso de idioma misto do provedor | ausente no c2 | pendente | Não há aviso de idioma misto. |  |
 | CARD-43 | Título com total de resultados e chamadas de API | divergente | pendente | Título não mostra as chamadas à API. |  |
 | CARD-44 | Mapa de resultados com clique no pino abrindo o lead | igual | preservado |  |  |
@@ -460,12 +460,12 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 
 | ID | Capacidade | Situação original | Destino | Nota | Conferido |
 |---|---|---|---|---|---|
-| PAINEL-01 | Componente de pesquisa (DecisionResearchPanel) embutido no drawer do lead, com os blocos Quem atende, Empresa, Pesquisa de decisores e os cards Dados da empresa e Decisores | divergente | #709 (E3) | Bloco de pesquisa no painel. | `F/components/search/LeadDetailDrawer.vue:182` |
+| PAINEL-01 | Componente de pesquisa (DecisionResearchPanel) embutido no drawer do lead, com os blocos Quem atende, Empresa, Pesquisa de decisores e os cards Dados da empresa e Decisores | divergente | #709 (E3) | Bloco de pesquisa no painel. | `F/components/search/LeadDetailDrawer.vue:183` |
 | PAINEL-02 | Resumo da nota: card de prioridade com anel e texto human_insight (ou 'Score base N') | igual | preservado | Texto human_insight do Orth na conta virada (#719). |  |
 | PAINEL-03 | Cabeçalho do drawer: selo G #rank, 'Posição N da sua lista', selo 'Ligar primeiro', nome e endereço | igual | preservado |  |  |
 | PAINEL-04 | Acessibilidade do drawer: role=dialog, aria-modal, foco no botão fechar, trap de Tab, Escape fecha, trava de scroll do body e retorno do foco | defasado | pendente | Painel sem role=dialog, aria-modal, foco e Escape (LeadDetailDrawer.vue). |  |
 | PAINEL-05 | Bloco 'Quem atende': lista de candidatos a decisor (nome · cargo) | divergente | #709 (E3) | Quem atende com o vínculo de cada sócio. |  |
-| PAINEL-06 | Botão 'Usar como contato' por candidato (adota o decisor como contato do lead) | ausente no c2 | #714 (E4) | Usar como contato. | `C/leads_controller.rb:133` |
+| PAINEL-06 | Botão 'Usar como contato' por candidato (adota o decisor como contato do lead) | ausente no c2 | #714 (E4) | Usar como contato. | `C/leads_controller.rb:138` |
 | PAINEL-07 | Candidato vindo de cadastro anterior: aviso 'Dado anterior · verifique novamente para selecionar' | ausente no c2 | pendente | Candidato "dado anterior" não foi criado; o #709 só solta o decisor antigo em dois casos. |  |
 | PAINEL-08 | Bloco Empresa: Razão social | ausente no c2 | #709 (E3) | Razão social. |  |
 | PAINEL-09 | Bloco Empresa: Nome fantasia, mostrado só quando difere da razão social | ausente no c2 | #709 (E3) | Nome fantasia quando difere. |  |
@@ -483,7 +483,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | PAINEL-21 | Estados da pesquisa por capacidade: Não pesquisado, Na fila, Em pesquisa, Aguardando capacidade, Confirmado, Possível, Ambíguo, Nenhum resultado, Falha técnica, Bloqueado | defasado | #709 (E3) | Estados por capacidade (research/states.rb). |  |
 | PAINEL-22 | Atualização ao vivo do painel: Realtime nas projeções, com polling de reserva (5, 10, 20, 30 s) e anúncio aria-live | ausente no c2 | #709 (E3) | Evento lead.updated leva o bloco research. |  |
 | PAINEL-23 | Mensagens de bloqueio: desativada na empresa, provedor não configurado, falha ('A última pesquisa não pôde ser concluída'), lead sem nome (MISSING_COMPANY_NAME) | defasado | #709 (E3) | Mensagens de bloqueio sem código interno. |  |
-| PAINEL-24 | Liga e desliga as capacidades empresa e decisor por conta (radar_ai_feature_settings); as duas precisam estar ligadas para rodar | divergente | #691 (E0) | Interruptor da pesquisa no superadmin. | `config/routes.rb:1078` |
+| PAINEL-24 | Liga e desliga as capacidades empresa e decisor por conta (radar_ai_feature_settings); as duas precisam estar ligadas para rodar | divergente | #691 (E0) | Interruptor da pesquisa no superadmin. | `config/routes.rb:1080` |
 | PAINEL-25 | Reaproveitamento de resultado por 90 dias ('Resultado reutilizado' / 'Pesquisa atualizada em DD/MM/AAAA') | ausente no c2 | #709 (E3) | Reaproveitamento por 90 dias. | `S/research/reuse.rb:7` |
 | PAINEL-26 | Texto de cobrança nos cards (billingCopy), créditos cobrados, 'Cobrança em apuração', 'Saldo insuficiente', 'Orçamento bloqueado', aguardando capacidade por AI_SPEND_* | ausente no c2 | fora (decisão) | Decisão do Rodrigo (24/09): sem cobrança, sem créditos, sem trava de consumo e sem gate de plano. |  |
 | PAINEL-27 | Dados do site: WhatsApp, Instagram, Facebook e LinkedIn como ícones clicáveis, CNPJ do site e estados 'coletando' / erro de acesso | defasado | #706 (E2) | Redes e WhatsApp como links. A coleta ao abrir o painel não existe; ela roda ao fim da busca. |  |
@@ -513,7 +513,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | ID | Capacidade | Situação original | Destino | Nota | Conferido |
 |---|---|---|---|---|---|
 | ACAO-01 | Botão "Enviar ao CRM" na barra de ações em lote, visível quando há leads selecionados | divergente | #714 (E4) | Enviar ao CRM abre a janela. |  |
-| ACAO-02 | Modal de envio com escolha de funil e estágio no momento do envio | ausente no c2 | #714 (E4) | Janela de funil e estágio com ChoiceSelect. | `F/pages/ProspectingSearchPage.vue:12` |
+| ACAO-02 | Modal de envio com escolha de funil e estágio no momento do envio | ausente no c2 | #714 (E4) | Janela de funil e estágio com ChoiceSelect. | `F/pages/ProspectingSearchPage.vue:13` |
 | ACAO-03 | Frase de confirmação "Enviando N lead(s) para o funil X, estágio Y" | ausente no c2 | #714 (E4) | Frase Enviando N lead(s). |  |
 | ACAO-04 | Estado vazio quando a empresa não tem funil: texto explicativo + link "Criar funil no CRM" | ausente no c2 | #714 (E4) | Estado vazio com Criar funil no CRM. |  |
 | ACAO-05 | Motor do envio em lote ao CRM | divergente | #714 (E4) | Lote de até 30, transação por lead. |  |
@@ -526,11 +526,11 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | ACAO-12 | Dedupe no envio ao CRM e reenvio | divergente | #714 (E4) | Um card por lead; reenvio não cria nada novo (aceite da #680). |  |
 | ACAO-13 | Criação/dedupe de contato ao enviar ao CRM | só no c2 | preservado |  |  |
 | ACAO-14 | Normalização do telefone do contato criado | só no c2 | #699 (E1) | Normalização única de telefone. |  |
-| ACAO-15 | Estágio do CRM exibido no drawer do lead | só no c2 | pendente | O painel ainda mostra o estágio da busca, não o do card. | `F/components/search/LeadDetailDrawer.vue:48` |
+| ACAO-15 | Estágio do CRM exibido no drawer do lead | só no c2 | pendente | O painel ainda mostra o estágio da busca, não o do card. | `F/components/search/LeadDetailDrawer.vue:49` |
 | ACAO-16 | Destino de CRM padrão por conta e por busca ("Configurações" da busca) | só no c2 | preservado | Destino da busca vira sugestão da janela (#714). |  |
 | ACAO-17 | Evento/webhook ao criar card pela prospecção | só no c2 | preservado |  |  |
 | ACAO-18 | Automação de estágio ao entrar no CRM | igual | #714 (E4) | Automação de entrada roda uma vez para card novo. | `S/crm_card_converter.rb:79` |
-| ACAO-19 | Permissão e escopo no envio | divergente | #714 (E4) | Servidor exige Crm::CardPolicy#create?; esconder o botão é a frente C desta E6. | `C/base_controller.rb:13` |
+| ACAO-19 | Permissão e escopo no envio | divergente | #714 (E4) | Servidor exige Crm::CardPolicy#create?; esconder o botão é a frente C desta E6. | `C/base_controller.rb:16` |
 | ACAO-20 | Seleção: selecionar todos e limpar seleção | defasado | pendente | Não existe Limpar seleção (ver CARD-37). |  |
 | ACAO-21 | Lead queimado (já é cliente de outro vendedor): selo, bloqueio de seleção e ações | ausente no c2 | pendente | Lead queimado depende de decisão do Rodrigo sobre o modelo (lead por conta x cartão por vendedor); não registrada. |  |
 | ACAO-22 | Liberação manual de lead queimado por admin/gestor | ausente no c2 | pendente | Lead queimado depende de decisão do Rodrigo sobre o modelo (lead por conta x cartão por vendedor); não registrada. |  |
@@ -546,7 +546,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | ACAO-32 | Excluir busca do histórico e "Ver mais" | igual | preservado |  |  |
 | ACAO-33 | Escopo do histórico por usuário/hierarquia | divergente | pendente | Visibilidade por usuário ou hierarquia pede decisão do Rodrigo; não registrada. Hoje tudo é por conta. |  |
 | ACAO-34 | Listas de prospecção: criar, abrir, remover lead | só no c2 | preservado | Listas preservadas; a #682 (E6) troca card e painel pelos da busca e mantém remover da lista e campanha. |  |
-| ACAO-35 | Adicionar lead à lista muda status para ready_for_campaign | só no c2 | pendente | Adicionar à lista ainda muda qualquer status para ready_for_campaign. | `C/lists_controller.rb:27` |
+| ACAO-35 | Adicionar lead à lista muda status para ready_for_campaign | só no c2 | pendente | Adicionar à lista ainda muda qualquer status para ready_for_campaign. | `C/lists_controller.rb:36` |
 | ACAO-36 | Modal "adicionar leads" limitado aos 100 leads mais recentes | só no c2 | pendente | Modal de adicionar leads segue limitado; adicionar à lista direto da busca só existe pelo caminho da campanha (#714). |  |
 | ACAO-37 | Segmento de campanha a partir da lista (etiqueta + campanha one_off) | só no c2 | preservado | Destino de Adicionar à campanha (#714). |  |
 | ACAO-38 | Verificação automática de WhatsApp ao abrir listas | só no c2 | #706 (E2) | Verificação no servidor, inclusive para Listas. |  |
@@ -554,7 +554,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | ACAO-40 | Tour guiado: disparo automático e persistência | ausente no c2 | #682 (E6) | Tour abre sozinho na primeira visita de quem tem prospecting_manage e grava a marca ao abrir (o Orth marca ao concluir ou pular e só abre para empresa sem busca). | `F/composables/useSearchTour.js:128`, `F/utils/searchTour.js:8` |
 | ACAO-41 | Tour: passos de boas-vindas, modo, jogada, decisor com texto por score_mode | ausente no c2 | #682 (E6) | Oito passos: boas-vindas, modo, jogada, local, decisor, filtros, Buscar e resultados; texto por score_mode. | `F/utils/searchTour.js:13`, `F/utils/searchTour.js:30` |
 | ACAO-42 | Tour: pré-preenche busca, espera local confirmado, abre/fecha filtros, espera resultados, fecha sozinho | ausente no c2 | #682 (E6) | Pré-preenche o exemplo, espera o local confirmado, abre e fecha a gaveta de filtros, espera busca com leads e fecha sozinho em 3,5 s; a busca só roda no clique em Buscar. | `F/composables/useSearchTour.js:34`, `F/utils/searchTour.js:9` |
-| ACAO-43 | Botão "Refazer tour" no rodapé | ausente no c2 | #682 (E6) | Refazer tour no rodapé da tela de busca. | `F/pages/ProspectingSearchPage.vue:111` |
+| ACAO-43 | Botão "Refazer tour" no rodapé | ausente no c2 | #682 (E6) | Refazer tour no rodapé da tela de busca. | `F/pages/ProspectingSearchPage.vue:112` |
 | ACAO-44 | Assistente de IA executar a busca, enviar ao CRM ou montar campanha | só no c2 | preservado | Endpoints novos entram no catálogo do Guia; a bateria é da #705. |  |
 | ACAO-45 | Assistente de IA ler configuração de score e progresso do onboarding da busca | divergente | fora (decisão) | Plano rev.7: nada a portar para score; marco de tour depende de ACAO-40. |  |
 | ACAO-46 | Assistente de IA levar à tela de busca | igual | preservado |  |  |
@@ -580,7 +580,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | PLAT-04 | Quem altera a configuração da busca (score, modo GMN, país, chaves) | divergente | preservado | Corte por manage mantido no #719. |  |
 | PLAT-05 | Detalhes técnicos do score no drawer do lead (modo, score bruto, fatores negativos) | ausente no c2 | pendente | Quem vê os detalhes técnicos da nota: decisão não registrada. |  |
 | PLAT-06 | Tour guiado da busca na primeira vez | ausente no c2 | #682 (E6) | Marca prospecting_search_tour_seen_at no ui_settings do usuário. | `F/utils/searchTour.js:8` |
-| PLAT-07 | Gate de plano no botão 'Adicionar à campanha' | divergente | #714 (E4) | Sem gate de plano; exige campaign_manage. | `C/base_controller.rb:29` |
+| PLAT-07 | Gate de plano no botão 'Adicionar à campanha' | divergente | #714 (E4) | Sem gate de plano; pôr numa campanha exige campaign_manage, criar só o segmento pede a prospecção (a janela da busca esconde a escolha da campanha sem campaign_manage). | `C/base_controller.rb:32` |
 | PLAT-08 | Cota e medição de chamadas ao Google Places | divergente | #691 (E0) | Limites fora; consumed_api_units segue como medição. |  |
 | PLAT-09 | Créditos de inteligência (reserva, débito, pacotes, compra, câmbio) | ausente no c2 | fora (decisão) | Decisão do Rodrigo (24/09): sem cobrança, sem créditos, sem trava de consumo e sem gate de plano. |  |
 | PLAT-10 | Modo do score (GMN x geral) gravado por lead | igual | preservado |  |  |
