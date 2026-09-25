@@ -77,6 +77,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'crm.ai_usage.created': this.onCrmAiUsageCreated,
       'email_campaign.ai.ready': this.onEmailCampaignAiReady,
       'email_campaign.ai.failed': this.onEmailCampaignAiFailed,
+      'prospecting.lead.updated': this.onProspectingLeadUpdated,
     };
   }
 
@@ -383,6 +384,14 @@ class ActionCableConnector extends BaseActionCableConnector {
     if (!this.isAValidEvent(data)) return;
 
     emitter.emit(BUS_EVENTS.EMAIL_CAMPAIGN_AI_FAILED, data);
+  };
+
+  // Enriquecimento e WhatsApp rodam em fila no servidor; a tela de busca e a de
+  // listas trocam o lead que chega aqui (#678).
+  onProspectingLeadUpdated = data => {
+    if (!this.isAValidEvent(data)) return;
+
+    emitter.emit(BUS_EVENTS.PROSPECTING_LEAD_UPDATED, data);
   };
 
   onCacheInvalidate = data => {

@@ -8,6 +8,7 @@ import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { alertError } from './searchAlerts';
 import { mergeDisjoint } from '../utils/mergeDisjoint';
 import { useLeadCsv } from './useLeadCsv';
+import { useLeadLiveUpdates } from './useLeadLiveUpdates';
 import { useLeadWhatsApp } from './useLeadWhatsApp';
 
 const useLeadSelection = state => {
@@ -56,6 +57,13 @@ export const useSearchLeads = (state, { canManage }) => {
     );
   };
 
+  // O evento traz o lead da conta; a posição no Google é desta busca e fica.
+  useLeadLiveUpdates(updatedLead => {
+    const current = leads.value.find(item => item.id === updatedLead.id);
+    if (!current) return;
+    replaceLead({ ...updatedLead, search_rank: current.search_rank });
+  });
+
   const createCrmCard = async (lead, options = {}) => {
     if (
       !lead?.id ||
@@ -87,18 +95,18 @@ export const useSearchLeads = (state, { canManage }) => {
     }
   };
 
+  // O servidor aceita o pedido (202) e enriquece em fila; o resultado chega
+  // pelo evento ao vivo (#678). Pedido recusado deixa o lead como estava.
   const enrichLead = async lead => {
     if (!lead?.id || enrichingLeadId.value) return;
 
     enrichingLeadId.value = lead.id;
-    replaceLead({ ...lead, enrichment_status: 'running' });
 
     try {
       const { data } = await AutonomiaProspectingAPI.enrichLead(lead.id);
-      replaceLead(data.payload?.lead);
-      useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_COMPLETED'));
+      replaceLead({ ...data.payload?.lead, search_rank: lead.search_rank });
+      useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_QUEUED'));
     } catch (e) {
-      replaceLead({ ...lead, enrichment_status: 'failed' });
       alertError(e, t('PROSPECTING.ERRORS.ENRICH_LEAD'));
     } finally {
       enrichingLeadId.value = null;

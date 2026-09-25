@@ -17,6 +17,9 @@ export const BUS_EVENTS = {
   // Geração de e-mail por IA (assíncrona) concluída/falhou — toast global + atualização do selo.
   EMAIL_CAMPAIGN_AI_READY: 'EMAIL_CAMPAIGN_AI_READY',
   EMAIL_CAMPAIGN_AI_FAILED: 'EMAIL_CAMPAIGN_AI_FAILED',
+  // Lead da Prospecção mudou no servidor (enriquecimento, WhatsApp): a tela
+  // aberta troca o card e o painel sem recarregar (#678).
+  PROSPECTING_LEAD_UPDATED: 'PROSPECTING_LEAD_UPDATED',
   // Emitted when a realtime card event arrives while a server-only filter
   // (responsible=bot/none, AI-pending) is active and the card cannot be
   // classified client-side; the board page refetches the active view.
