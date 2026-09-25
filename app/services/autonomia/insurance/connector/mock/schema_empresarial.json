@@ -279,6 +279,79 @@
       "origem": "cliente",
       "obrigatorio": false,
       "descricao": "Desmoronamento: queda de paredes, teto ou do imóvel. Fica fora do padrão porque há seguradora que não aceita esta cobertura para alguns negócios. Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "renovacao.seguradoraAnterior",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "valores": {
+        "AXA Seguros": "Axa",
+        "Sancor Seguros do Brasil": "Sancor",
+        "EZZE": "EZZE",
+        "Chubb do Brasil Cia Seg.": "CHUBB",
+        "Sul America Cia Nac. de Seguros": "Sul America Cia Nac. de Seguros",
+        "Icatu Seg. S/A": "Icatu",
+        "Allianz": "Allianz ou Allianz Pacote Econômico",
+        "Yelum Seguradora": "Liberty WS ou Yelum",
+        "Banestes Seguros": "Banestes Seguros",
+        "Bradesco Auto/RE Cia de Seg.": "Bradesco",
+        "Zurich - Minas Brasil": "Zurich",
+        "Cia Excelsior de Seguros": "Cia Excelsior de Seguros",
+        "Porto Seguro Cia Seg. Gerais": "Porto Seguro",
+        "Generali do Brasil Cia Nacional Seg.": "Generali",
+        "Tokio Marine Seguradora S.A": "Tokio ou Tokio Auto Popular",
+        "Mapfre Vera Cruz Seguradora S/A": "Mapfre",
+        "Sompo Seguros": "Sompo ou Sompo WS",
+        "Alfa Seguros e Previdência S.A.": "Alfa",
+        "HDI": "HDI",
+        "Mitsui Marine e Kyoei Fire Seguros S.A": "Mitsui",
+        "Aig Brasil": "Aig Brasil",
+        "Seguro Sura S.A.": "Sura",
+        "Gente Seguradora": "Gente",
+        "Unimed Seguradora S.A": "Unimed Seguradora S.A"
+      },
+      "descricao": "Seguradora do seguro empresarial que o cliente já tem e está renovando, com o nome escrito exatamente como está na lista de valores. Vem da apólice que vence, lida dela quando o cliente a mandar; nunca chute a seguradora. Sem a apólice (o cliente não tem ou não quer mandar), ou com a apólice em nome de outra pessoa, deixe nulo todo o grupo da renovação: o seguro é cotado como novo. Se a seguradora dele não estiver na lista, deixe todo o grupo da renovação nulo e diga a ele que a cotação sai como seguro novo. Valores: AXA Seguros=Axa; Sancor Seguros do Brasil=Sancor; EZZE=EZZE; Chubb do Brasil Cia Seg.=CHUBB; Sul America Cia Nac. de Seguros=Sul America Cia Nac. de Seguros; Icatu Seg. S/A=Icatu; Allianz=Allianz ou Allianz Pacote Econômico; Yelum Seguradora=Liberty WS ou Yelum; Banestes Seguros=Banestes Seguros; Bradesco Auto/RE Cia de Seg.=Bradesco; Zurich - Minas Brasil=Zurich; Cia Excelsior de Seguros=Cia Excelsior de Seguros; Porto Seguro Cia Seg. Gerais=Porto Seguro; Generali do Brasil Cia Nacional Seg.=Generali; Tokio Marine Seguradora S.A=Tokio ou Tokio Auto Popular; Mapfre Vera Cruz Seguradora S/A=Mapfre; Sompo Seguros=Sompo ou Sompo WS; Alfa Seguros e Previdência S.A.=Alfa; HDI=HDI; Mitsui Marine e Kyoei Fire Seguros S.A=Mitsui; Aig Brasil=Aig Brasil; Seguro Sura S.A.=Sura; Gente Seguradora=Gente; Unimed Seguradora S.A=Unimed Seguradora S.A."
+    },
+    {
+      "campo": "renovacao.bonus",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "valores": {
+        "0": "0",
+        "1": "1",
+        "2": "2",
+        "3": "3",
+        "4": "4",
+        "5": "5"
+      },
+      "descricao": "Classe de bônus da apólice que vence, exatamente como está escrita nela. Não recalcule nem converta percentual de cabeça. Obrigatório quando é renovação: vem da apólice que vence. Se ela não trouxer, deixe nulo: a ferramenta avisa o que perguntar. Sem a classe na apólice nem com o cliente, deixe todo o grupo da renovação nulo: sai como seguro novo. Não mande 0 no lugar da classe que falta. Sem o cliente dizer que é renovação, deixe nulo. Valores: 0=0; 1=1; 2=2; 3=3; 4=4; 5=5."
+    },
+    {
+      "campo": "renovacao.sinistros",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "valores": {
+        "0": "Não",
+        "1": "Sim"
+      },
+      "descricao": "Se o cliente acionou o seguro, com algum sinistro, durante a vigência da apólice que vence. Obrigatório quando é renovação: vem da apólice que vence, como está escrito nela. Se ela não trouxer, deixe nulo: a ferramenta avisa o que perguntar. Sem o cliente dizer que é renovação, deixe nulo. Valores: 0=Não; 1=Sim."
+    },
+    {
+      "campo": "renovacao.numeroApolice",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Número da apólice que vence, como está no documento. Vem da apólice que vence; se ela não trouxer, não pergunte, a cotação sai sem ele. Sem o cliente dizer que é renovação, deixe nulo."
+    },
+    {
+      "campo": "renovacao.fimVigencia",
+      "tipo": "texto",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Dia em que termina a vigência da apólice que vence, no formato AAAA-MM-DD. O seguro novo começa nesse mesmo dia. Obrigatório quando é renovação: vem da apólice que vence, como está escrito nela. Se ela não trouxer, deixe nulo: a ferramenta avisa o que perguntar. Sem o cliente dizer que é renovação, deixe nulo."
     }
   ]
 }

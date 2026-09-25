@@ -25,8 +25,8 @@ RSpec.describe Autonomia::Insurance::Parametros do
 
     expect(folhas.keys).to match_array(do_cliente.map { |c| c['campo'] })
     # 18 de antes, mais zona rural e área de risco e as 12 coberturas que o cliente pode pedir, menos o nome, que
-    # vem do CPF (adapters#86 e #92): 31.
-    expect(folhas.size).to eq(31)
+    # vem do CPF (adapters#86 e #92): 31. Mais os cinco da renovação (adapters, commit 5ffa0eb): 36.
+    expect(folhas.size).to eq(36)
     # O valor a segurar é pergunta ao cliente desde adapters#80.
     expect(folhas).to have_key('configuracoes.isDanosIncendioRaioExplosao')
     expect(fora).to include('configuracoes.imovelLogradouro', 'segurado.nome')
@@ -60,10 +60,12 @@ RSpec.describe Autonomia::Insurance::Parametros do
     expect(uso).to eq([1, 8, 10])
   end
 
-  it 'os grupos são os do adapter, com o rótulo genérico: nenhum nome de grupo digitado aqui' do
-    expect(grupos.map { |g| g['name'] }).to eq(%w[segurado configuracoes])
-    expect(grupos.map { |g| g['description'] }).to eq(['Campos de segurado.', 'Campos de configuracoes.'])
-    expect(described_class.new(schema, ramo: true).nomes_dos_grupos).to eq(%w[segurado configuracoes])
+  # A renovação (25/09/2026) é o único grupo de ramo com rótulo escrito aqui: o genérico não dizia que nulo é seguro novo.
+  it 'os grupos são os do adapter; segurado e configuracoes com o rótulo genérico, a renovação com o dela' do
+    expect(grupos.map { |g| g['name'] }).to eq(%w[segurado configuracoes renovacao])
+    expect(grupos.map { |g| g['description'] }).to eq(['Campos de segurado.', 'Campos de configuracoes.',
+                                                       described_class::GRUPOS.fetch('renovacao')])
+    expect(described_class.new(schema, ramo: true).nomes_dos_grupos).to eq(%w[segurado configuracoes renovacao])
   end
 
   describe 'campo novo do adapter que não dá para oferecer quebra, não some' do

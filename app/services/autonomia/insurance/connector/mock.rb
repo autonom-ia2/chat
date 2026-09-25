@@ -73,10 +73,16 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
   # (autonomia-adapters#79), a que publica `descricao` nos 17 campos de cliente e `valores` nos
   # quatro códigos. As chaves já saem como o `Http` as entrega (nenhuma é camelCase). Regenerar
   # quando o adapter mudar; a mesma lacuna de envelhecimento do de auto (#412) vale aqui.
+  # Regenerado em 25/09/2026 na branch `feat/renovacao-residencial-empresarial` (adapters, commit 1fbe7ce), com o
+  # grupo `renovacao` (seguradora anterior, bônus, sinistros, número da apólice e fim da vigência), pelo mesmo
+  # comando do de empresarial abaixo, com '2' no lugar de '18'. O b7c08cc e o 1fbe7ce só trocam a descrição dos
+  # cinco campos do grupo sobre o 5ffa0eb: os dados vêm da apólice, o que perguntar quem diz é a conferência, e sem a
+  # apólice ou sem a classe de bônus o grupo vai nulo (seguro novo).
   SCHEMA_RESIDENCIAL = JSON.parse(File.read(File.expand_path('mock/schema_residencial.json', __dir__))).freeze
   # O DE EMPRESARIAL, gerado do adapter (chat#641), sem credencial e sem rede. Regenerado em 25/09/2026 na branch
-  # `feat/empresarial-coberturas-do-cliente` (adapters, commit e3aeb7b), com os dez campos de cobertura do cliente e a
-  # localização que o cliente diz:
+  # `feat/renovacao-residencial-empresarial` (adapters, commit 1fbe7ce), que soma o grupo `renovacao` aos dez campos
+  # de cobertura do cliente e à localização que o cliente diz (branch `feat/empresarial-coberturas-do-cliente`,
+  # commit e3aeb7b):
   #   (no autonomia-adapters) npx tsx -e "import {schemaDoRamo} from './src/platforms/agger/ramos/schema.ts';
   #     console.log(JSON.stringify(schemaDoRamo('18'),null,2))"
   # Regenerar quando o adapter mudar; a mesma lacuna de envelhecimento do de auto (#412) vale aqui.

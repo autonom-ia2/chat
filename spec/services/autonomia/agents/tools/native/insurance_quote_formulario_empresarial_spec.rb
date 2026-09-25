@@ -39,7 +39,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
 
   it 'o de empresarial vê os campos do ramo e a atividade por seguradora; os outros, não' do
     expect(nomes('cotacao_empresarial')).to eq(described_class.params.pluck('name') - ['dados'] +
-                                                 %w[segurado configuracoes atividades])
+                                                 %w[segurado configuracoes renovacao atividades])
     expect(nomes('cotacao_residencial')).not_to include('atividades')
     expect(described_class.params_for(lia).pluck('name')).not_to include('atividades')
   end
