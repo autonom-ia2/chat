@@ -37,6 +37,17 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     lead_payload_builder.reviews(lead)
   end
 
+  # A lista sem os leads: a mesma nas Listas e na campanha criada a partir da seleção da busca (#680).
+  def list_summary_payload(list)
+    list.as_json(
+      only: [:id, :name, :description, :status, :metadata, :created_at, :updated_at]
+    ).merge(
+      lead_ids: list.leads.pluck(:id),
+      leads_count: list.leads.count,
+      campaign_segment: list.metadata.to_h['campaign_segment']
+    )
+  end
+
   # Um por requisição: o país da busca da conta é lido uma vez.
   def lead_payload_builder
     @lead_payload_builder ||= ::Autonomia::Prospecting::LeadPayload.new(account: Current.account)
