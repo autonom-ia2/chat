@@ -97,15 +97,16 @@ class Autonomia::Prospecting::SearchRunner
   end
 
   def validate!
-    raise ActiveRecord::RecordInvalid.new(search_with_error(:query, "can't be blank")) if query.blank?
-    raise UnsupportedProviderError, 'Unsupported prospecting provider' unless %w[mock google_places].include?(provider_name)
-    raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, 'must be greater than 0')) if requested_limit <= 0
+    # A tela mostra a frase como veio (#682): em :base, sem o nome do atributo em inglês na frente.
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.errors.query_required')) if query.blank?
+    raise UnsupportedProviderError, I18n.t('autonomia.prospecting.errors.unsupported_provider') unless %w[mock google_places].include?(provider_name)
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.errors.limit_invalid')) if requested_limit <= 0
 
     validate_google_places! if provider_name == 'google_places'
     validate_drawn_area!
 
     if requested_limit > MAX_REQUESTED_LIMIT
-      raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, "must be less than or equal to #{MAX_REQUESTED_LIMIT}"))
+      raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.errors.limit_too_high', max: MAX_REQUESTED_LIMIT))
     end
 
     validate_rank_range!

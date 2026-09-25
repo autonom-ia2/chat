@@ -525,14 +525,14 @@ en:
             gbp:
               website: { strong: 'sem site', weak: 'site presente' }
               phone: { strong: 'sem telefone', weak: 'tem telefone' }
-              rating: { strong: 'rating fraco', weak: 'rating bom' }
-              volume: { strong: 'poucas reviews', weak: 'volume saudável' }
+              rating: { strong: 'nota fraca', weak: 'nota boa' }
+              volume: { strong: 'poucas avaliações', weak: 'volume saudável' }
               activity: { strong: 'GMN inativo', weak: 'GMN ativo' }
               photos: { strong: 'sem fotos', weak: 'fotos ok' }
             general:
               website: { strong: 'site', weak: 'sem site' }
               phone: { strong: 'telefone', weak: 'sem telefone' }
-              rating: { strong: 'rating alto', weak: 'rating fraco' }
+              rating: { strong: 'nota alta', weak: 'nota fraca' }
               volume: { strong: 'volume bom', weak: 'pouco volume' }
               activity: { strong: 'ativo', weak: 'pouco ativo' }
               photos: { strong: 'boa presença visual', weak: 'sem fotos' }
@@ -542,11 +542,11 @@ en:
           contacted_days_ago: 'Contatado há %{days}d'
           contacted_recently: 'Contatado recentemente'
           old_reviews:
-            one: 'Última review há %{count} ano'
-            other: 'Última review há %{count} anos'
+            one: 'Última avaliação há %{count} ano'
+            other: 'Última avaliação há %{count} anos'
           low_rating_low_volume:
-            one: 'Rating %{rating} com apenas %{count} review'
-            other: 'Rating %{rating} com apenas %{count} reviews'
+            one: 'Nota %{rating} com apenas %{count} avaliação'
+            other: 'Nota %{rating} com apenas %{count} avaliações'
       crm_send:
         failures:
           not_found: 'Lead não encontrado nesta conta.'
@@ -574,6 +574,15 @@ en:
         not_ready: 'Lead ainda não está pronto para campanha.'
       campaign_errors:
         forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
+        # Recusas do público de campanha (#682): a tela mostra a frase; o código segue em `code`.
+        not_found: 'A campanha escolhida não existe mais. Escolha outra.'
+        empty_list: 'Esta lista ainda não tem leads. Adicione leads antes de criar o público.'
+        no_eligible_leads: 'Nenhum lead da seleção pode entrar na campanha.'
+        label_collision_visible_on_sidebar: 'Já existe uma etiqueta com esse nome no menu. Escolha outro nome para o segmento.'
+        unsupported_campaign: 'Só campanhas de envio único recebem leads da prospecção.'
+        campaign_not_active: 'A campanha escolhida não está ativa. Escolha outra ou crie só o segmento.'
+        too_many_leads: 'Selecione até %{max} leads por vez.'
+        empty_selection: 'Selecione pelo menos um lead.'
       selection_list_name: 'Seleção da busca %{date}'
       score_bands:
         very_hot: 'Lead muito quente'
@@ -596,6 +605,13 @@ en:
         enrichment_in_progress: 'Este lead já está sendo enriquecido. O card se atualiza sozinho quando terminar.'
         research_disabled: 'A pesquisa de empresa e decisor está desligada nesta conta. Fale com o suporte para ligar.'
         owner_not_found: 'Essa pessoa não está entre os sócios que a pesquisa achou para esta empresa. Atualize o painel e escolha um nome da lista.'
+        disabled: 'A Prospecção não está ligada nesta conta. Fale com o suporte.'
+        enrichment_disabled: 'A pesquisa de empresa não está liberada para esta conta. Fale com o suporte.'
+        query_required: 'Informe o segmento ou termo da busca.'
+        limit_invalid: 'Escolha quantos leads a busca deve trazer.'
+        limit_too_high: 'Peça até %{max} leads por busca.'
+        unsupported_provider: 'A fonte de busca desta conta não está disponível. Fale com o suporte.'
+        lead_required: 'Escolha o lead para adicionar à lista.'
   captain:
     copilot_message_required: Message is required
     copilot_error: 'Please connect an assistant to this inbox to use Copilot'

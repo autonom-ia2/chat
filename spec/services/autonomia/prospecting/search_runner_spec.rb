@@ -380,7 +380,9 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
 
       it 'recusa limite zero' do
         expect { run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 0) }
-          .to raise_error(ActiveRecord::RecordInvalid, /greater than 0/)
+          .to raise_error(ActiveRecord::RecordInvalid) { |error|
+            expect(error.record.errors[:base]).to eq([I18n.t('autonomia.prospecting.errors.limit_invalid')])
+          }
       end
 
       it 'aceita 21 e 60 com o max_results_per_search padrão de 20 e recusa 61' do
@@ -389,7 +391,9 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
         expect(run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 21).leads.size).to eq(21)
         expect(run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 60).leads.size).to eq(60)
         expect { run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 61) }
-          .to raise_error(ActiveRecord::RecordInvalid, /less than or equal to 60/)
+          .to raise_error(ActiveRecord::RecordInvalid) { |error|
+            expect(error.record.errors[:base]).to eq([I18n.t('autonomia.prospecting.errors.limit_too_high', max: 60)])
+          }
       end
 
       # Com a paginação (#678) a página é sempre de 20 (pageSize) e o pedido de 60 chega em até 3 páginas.

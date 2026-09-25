@@ -1,7 +1,7 @@
 {
   "PROSPECTING": {
     "STATES": {
-      "LOADING": "Loading..."
+      "LOADING": "Carregando..."
     },
     "SEARCH_COUNTRY": {
       "LABEL": "País da busca",
@@ -58,22 +58,22 @@
       "DETAILS": "Não foi possível confirmar este local agora. Escolha a sugestão de novo."
     },
     "ERRORS": {
-      "LOAD_SEARCHES": "Could not load prospect searches.",
-      "LOAD_SEARCH": "Could not load this prospect search.",
-      "CREATE_SEARCH": "Could not run this prospect search.",
-      "CREATE_CONTACT": "Could not create this contact.",
-      "UPDATE_LEAD": "Could not update this lead.",
-      "UPDATE_SEARCH": "Could not update this search.",
-      "LOAD_CRM": "Could not load CRM pipelines.",
-      "LOAD_LISTS": "Could not load prospect lists.",
-      "LOAD_LIST": "Could not load this prospect list.",
-      "CREATE_LIST": "Could not create this prospect list.",
-      "ADD_LEAD_TO_LIST": "Could not add this lead to the list.",
-      "REMOVE_LEAD_FROM_LIST": "Could not remove this lead from the list.",
+      "LOAD_SEARCHES": "Não foi possível carregar as buscas.",
+      "LOAD_SEARCH": "Não foi possível abrir esta busca.",
+      "CREATE_SEARCH": "Não foi possível fazer esta busca.",
+      "CREATE_CONTACT": "Não foi possível criar este contato.",
+      "UPDATE_LEAD": "Não foi possível atualizar este lead.",
+      "UPDATE_SEARCH": "Não foi possível atualizar esta busca.",
+      "LOAD_CRM": "Não foi possível carregar os funis do CRM.",
+      "LOAD_LISTS": "Não foi possível carregar as listas.",
+      "LOAD_LIST": "Não foi possível abrir esta lista.",
+      "CREATE_LIST": "Não foi possível criar esta lista.",
+      "ADD_LEAD_TO_LIST": "Não foi possível adicionar este lead à lista.",
+      "REMOVE_LEAD_FROM_LIST": "Não foi possível tirar este lead da lista.",
       "CREATE_CAMPAIGN_SEGMENT": "Não foi possível criar o público de campanha.",
-      "LOAD_SETTINGS": "Could not load prospecting settings.",
-      "SAVE_SETTINGS": "Could not save prospecting settings.",
-      "DELETE_SEARCH": "Could not delete this prospect search.",
+      "LOAD_SETTINGS": "Não foi possível carregar as configurações da prospecção.",
+      "SAVE_SETTINGS": "Não foi possível salvar as configurações da prospecção.",
+      "DELETE_SEARCH": "Não foi possível excluir esta busca.",
       "ENRICH_LEAD": "Não foi possível enriquecer este lead."
     },
     "SEARCH": {
@@ -156,7 +156,7 @@
       "OPEN_MAP": "Mapa",
       "MAP_TITLE": "Mapa",
       "MAP_HINT": "Visualização da região e dos leads encontrados.",
-      "MAP_PREVIEW": "Preview do mapa",
+      "MAP_PREVIEW": "Prévia do mapa",
       "MAP_NO_COORDINATES": "Os leads desta busca ainda não possuem coordenadas para posicionar marcadores.",
       "MAP_API_KEY_MISSING": "O mapa ainda não está disponível na plataforma.",
       "MAP_LOAD_ERROR": "Não foi possível carregar o mapa.",
@@ -379,7 +379,7 @@
         "INVERT": "Inverter a ordem (agora {direction})"
       },
       "FIELDS": {
-        "PROVIDER": "Provider",
+        "PROVIDER": "Fonte",
         "QUERY": "Termo",
         "LOCATION": "Localização",
         "AREA_TYPE": "Área de busca",
@@ -404,7 +404,7 @@
       },
       "COLUMNS": {
         "QUERY": "Busca",
-        "PROVIDER": "Provider",
+        "PROVIDER": "Fonte",
         "STATUS": "Status",
         "RESULTS": "Leads",
         "CREATED_AT": "Criada em"
@@ -534,7 +534,7 @@
         "SCORE": "Score"
       },
       "PROVIDERS": {
-        "MOCK": "Mock",
+        "MOCK": "Demonstração",
         "GOOGLE_PLACES": "Google Places"
       },
       "SCORING_MODES": {
@@ -561,7 +561,7 @@
         "SCORING_MODE": "Modo de score",
         "SEARCH_SCORE_MODE": "Forma padrão de pesquisa",
         "SCORING_PROFILE": "Perfil de score",
-        "CACHE_TTL": "Cache TTL"
+        "CACHE_TTL": "Validade do cache (segundos)"
       },
       "PLATFORM": {
         "KEYS_TITLE": "Chaves do Google",

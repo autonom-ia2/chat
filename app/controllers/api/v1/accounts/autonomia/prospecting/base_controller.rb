@@ -4,8 +4,11 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
 
   private
 
+  # A tela mostra `error` como veio: a frase é sempre do I18n; o código de máquina, quando há, vai em `code` (#682).
   def ensure_feature_enabled
-    render json: { error: 'autonomia.prospecting.disabled' }, status: :not_found unless ::Autonomia::Prospecting::Config.enabled?(Current.account)
+    return if ::Autonomia::Prospecting::Config.enabled?(Current.account)
+
+    render json: { error: I18n.t('autonomia.prospecting.errors.disabled'), code: 'autonomia.prospecting.disabled' }, status: :not_found
   end
 
   # Enviar ao CRM cria card e roda a automação de entrada do estágio: exige a mesma permissão de criar card do próprio
@@ -33,6 +36,22 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
   def render_campaign_forbidden
     render json: { error: I18n.t('autonomia.prospecting.campaign_errors.forbidden'), code: 'prospecting.campaign.forbidden' },
            status: :forbidden
+  end
+
+  # Recusa do público de campanha: CampaignSegmentBuilder e SelectionCampaignSegment levantam o código
+  # ('prospecting.campaign.<motivo>'), que segue em `code`; a tela recebe a frase.
+  def render_campaign_error(code, status: :unprocessable_entity, **extra)
+    reason = code.delete_prefix('prospecting.campaign.')
+    message = I18n.t("autonomia.prospecting.campaign_errors.#{reason}", max: ::Autonomia::Prospecting::SelectionCampaignSegment::MAX_LEADS)
+    render json: { error: message, code: code }.merge(extra), status: status
+  end
+
+  # Recusa do envio ao CRM, na busca e no lead (#680, #682).
+  def render_crm_send_error(code, status: :unprocessable_entity)
+    render json: {
+      error: I18n.t("autonomia.prospecting.crm_send.errors.#{code}", max: ::Autonomia::Prospecting::CrmCardBatch::MAX_LEADS),
+      code: "prospecting.crm_send.#{code}"
+    }, status: status
   end
 
   def searches_scope

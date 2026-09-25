@@ -100,7 +100,8 @@ RSpec.describe 'Autonomia prospecting lead enrichment queue', type: :request do
     post path, headers: auth_headers(admin)
 
     expect(response).to have_http_status(:unprocessable_entity)
-    expect(response.parsed_body['error']).to eq('prospecting.enrichment.disabled')
+    expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.errors.enrichment_disabled'))
+    expect(response.parsed_body['code']).to eq('prospecting.enrichment.disabled')
     expect(Autonomia::Prospecting::EnrichLeadJob).not_to have_been_enqueued
     expect(lead.reload).to be_enrichment_pending
   end

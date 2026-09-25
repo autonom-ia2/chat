@@ -73,7 +73,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
 
     render json: { payload: search_payload(search.reload) }
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'crm.pipeline_or_stage_not_found' }, status: :not_found
+    render_crm_send_error('pipeline_not_found', status: :not_found)
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end
