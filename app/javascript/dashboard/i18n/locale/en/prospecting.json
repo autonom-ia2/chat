@@ -198,6 +198,25 @@
       "PRIORITY_POSITION_IN_LIST": "Posição {position} da lista",
       "PRIORITY_FIRST_CALL_SHORT": "Ligar 1º",
       "PRIORITY_FIRST_CALL": "Ligar primeiro",
+      "CARD_SIGNALS": {
+        "HAS_SITE": "Tem site",
+        "NO_SITE": "Sem site",
+        "HAS_PHONE": "Tem fone",
+        "NO_PHONE": "Sem fone",
+        "NO_PHOTO": "Sem foto",
+        "FEW_PHOTOS": "Pouca foto",
+        "PHOTOS": "{count} fotos",
+        "GOOGLE_RANK": "#{rank} Google",
+        "RATING": "★ {value}",
+        "REVIEWS": "{count} avaliações"
+      },
+      "CARD_SOCIAL": {
+        "INSTAGRAM": "Abrir Instagram",
+        "FACEBOOK": "Abrir Facebook",
+        "LINKEDIN": "Abrir LinkedIn"
+      },
+      "SELECT_LEAD": "Selecionar lead",
+      "DESELECT_LEAD": "Desmarcar lead",
       "SCORE_BASE": "Score base {score}",
       "ADDRESS_SEPARATOR": " - ",
       "RATING_LABEL": "{rating} estrelas",

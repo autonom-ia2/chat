@@ -29,6 +29,7 @@ const {
   crmForm,
   selectedLeadDetail,
   selectedLeadDetailId,
+  selectedSearch,
   convertingCrmLeadId,
   canCreateCrmCard,
   createCrmCard,
@@ -47,7 +48,8 @@ const leadPriorityTheme = lead => {
   const priority = leadPriority(lead);
   return priority === null ? null : priorityTheme(priority);
 };
-const leadSignals = lead => leadPrioritySignals(lead);
+const leadSignals = lead =>
+  leadPrioritySignals(lead, { t, scoreMode: selectedSearch.value?.score_mode });
 const formatLeadAddress = lead => formatters.formatLeadAddress(lead, t);
 const googleMapsLeadUrl = lead => formatters.googleMapsLeadUrl(lead, t);
 const { leadReviews, negativeFactors } = detail;

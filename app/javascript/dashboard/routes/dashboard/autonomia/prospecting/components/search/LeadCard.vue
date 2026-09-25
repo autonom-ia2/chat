@@ -1,4 +1,9 @@
 <script setup>
+// Card do lead nos resultados, como o do Orth (ResultsTable.tsx): anel,
+// selos de posição, bairro, sinais, telefone com selo de verificado e ações.
+// O card inteiro abre e fecha o painel; clique em botão, link ou caixa de
+// seleção dentro dele segue com a própria ação.
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ProspectingPriorityRing from '../ProspectingPriorityRing.vue';
 import LeadCardActions from './LeadCardActions.vue';
@@ -8,32 +13,69 @@ import {
   priorityTheme,
   priorityValue,
 } from '../../utils/prospectingPriority';
+import { isWhatsAppVerified, leadPhoneDisplay } from '../../utils/leadPhone';
+import { phoneRegionFromSettings } from '../../utils/phoneContract';
 import * as formatters from '../../utils/searchFormatters';
 
-defineProps({
+const props = defineProps({
   lead: { type: Object, required: true },
 });
 
 const DOT_SEPARATOR = '·';
+const NESTED_INTERACTIVE =
+  'a, button, input, select, textarea, label, [role="checkbox"]';
 
 const { t } = useI18n();
-const { selectedLeadIds, toggleLeadSelection } = useProspectingSearchContext();
+const {
+  selectedLeadIds,
+  toggleLeadSelection,
+  selectedLeadDetailId,
+  selectedSearch,
+  settings,
+} = useProspectingSearchContext();
 
-const leadPriority = lead => priorityValue(lead);
-const leadPriorityTheme = lead => {
-  const priority = leadPriority(lead);
-  return priority === null ? null : priorityTheme(priority);
+const priority = computed(() => priorityValue(props.lead));
+const theme = computed(() =>
+  priority.value === null ? null : priorityTheme(priority.value)
+);
+const signals = computed(() =>
+  leadPrioritySignals(props.lead, {
+    t,
+    scoreMode: selectedSearch.value?.score_mode,
+  })
+);
+const location = computed(
+  () =>
+    props.lead.neighborhood ||
+    formatters.formatLeadAddress(props.lead, t) ||
+    '-'
+);
+const phone = computed(() =>
+  leadPhoneDisplay(props.lead, phoneRegionFromSettings(settings.value))
+);
+const isChecked = computed(() =>
+  selectedLeadIds.value.map(Number).includes(Number(props.lead.id))
+);
+const isOpen = computed(() => selectedLeadDetailId.value === props.lead.id);
+
+const toggleDetails = event => {
+  if (event.target.closest(NESTED_INTERACTIVE)) return;
+  selectedLeadDetailId.value = isOpen.value ? null : props.lead.id;
 };
-const leadSignals = lead => leadPrioritySignals(lead);
-const formatLeadAddress = lead => formatters.formatLeadAddress(lead, t);
 </script>
 
 <template>
   <article
-    class="grid min-w-0 gap-3 overflow-hidden rounded-lg border border-n-weak bg-n-solid-1 text-sm transition-colors hover:border-n-slate-5"
+    class="grid min-w-0 cursor-pointer gap-3 overflow-hidden rounded-lg border bg-n-solid-1 text-sm transition-colors"
+    :class="
+      isOpen
+        ? 'border-n-brand ring-1 ring-n-brand'
+        : 'border-n-weak hover:border-n-slate-5'
+    "
+    @click="toggleDetails"
   >
     <div class="flex min-w-0 items-start gap-3 p-4 pb-2">
-      <ProspectingPriorityRing :priority="leadPriority(lead)" :size="56" />
+      <ProspectingPriorityRing :priority="priority" :size="56" />
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-1.5">
           <span
@@ -73,55 +115,61 @@ const formatLeadAddress = lead => formatters.formatLeadAddress(lead, t);
           class="mt-1 grid min-w-0 max-w-full grid-cols-[auto_auto_minmax(0,1fr)] items-baseline gap-1.5 overflow-hidden"
         >
           <span
-            v-if="leadPriorityTheme(lead)"
+            v-if="theme"
             class="text-xs font-medium"
-            :class="leadPriorityTheme(lead).titleClass"
+            :class="theme.titleClass"
           >
-            {{ leadPriorityTheme(lead).title }}
+            {{ theme.title }}
           </span>
-          <span v-if="leadPriorityTheme(lead)" class="text-n-slate-6">
+          <span v-if="theme" class="text-n-slate-6">
             {{ DOT_SEPARATOR }}
           </span>
           <span class="min-w-0 flex-1 truncate text-sm text-n-slate-10">
-            {{ formatLeadAddress(lead) || '-' }}
+            {{ location }}
           </span>
         </div>
       </div>
       <input
         type="checkbox"
         class="mt-1 size-4 shrink-0"
-        :checked="selectedLeadIds.map(Number).includes(Number(lead.id))"
+        :checked="isChecked"
+        :aria-label="
+          isChecked
+            ? t('PROSPECTING.SEARCH.DESELECT_LEAD')
+            : t('PROSPECTING.SEARCH.SELECT_LEAD')
+        "
         @change="toggleLeadSelection(lead.id)"
       />
     </div>
 
-    <div
-      v-if="leadSignals(lead).length"
-      class="flex flex-wrap gap-1.5 px-4 pb-2"
-    >
-      <a
-        v-for="signal in leadSignals(lead)"
-        v-show="signal.key === 'website' && lead.website"
-        :key="`${signal.key}-link`"
-        :href="lead.website"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium hover:underline"
-        :class="signal.card"
-      >
-        <span :class="[signal.icon, signal.iconClass]" class="size-3" />
-        {{ signal.label }}
-      </a>
-      <span
-        v-for="signal in leadSignals(lead).filter(
-          item => item.key !== 'website' || !lead.website
-        )"
+    <div v-if="signals.length" class="flex flex-wrap gap-1.5 px-4 pb-2">
+      <component
+        :is="signal.href ? 'a' : 'span'"
+        v-for="signal in signals"
         :key="signal.key"
+        :href="signal.href || undefined"
+        :target="signal.href ? '_blank' : undefined"
+        :rel="signal.href ? 'noopener noreferrer' : undefined"
         class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
-        :class="signal.card"
+        :class="[signal.card, { 'hover:underline': signal.href }]"
       >
         <span :class="[signal.icon, signal.iconClass]" class="size-3" />
         {{ signal.label }}
+      </component>
+    </div>
+
+    <div
+      v-if="phone"
+      data-test="lead-phone"
+      class="flex flex-wrap items-center gap-1.5 px-4 pb-2 text-xs"
+    >
+      <span class="font-medium text-n-slate-11">{{ phone }}</span>
+      <span
+        v-if="isWhatsAppVerified(lead)"
+        class="inline-flex items-center gap-0.5 text-[11px] font-medium text-n-teal-11"
+      >
+        <span class="i-lucide-check size-3" />
+        {{ t('PROSPECTING.SEARCH.WHATSAPP_VERIFIED') }}
       </span>
     </div>
 

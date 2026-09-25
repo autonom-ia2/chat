@@ -56,7 +56,7 @@ class Autonomia::Prospecting::LeadPayload
       opening_hours_summary: Array(current_hours['weekdayDescriptions']).presence ||
         Array(regular_hours['weekdayDescriptions']).presence,
       has_opening_hours: opening_hours_registered?(lead, regular_hours)
-    }
+    }.merge(place_card(lead, raw_payload))
   end
 
   def reviews(lead)
@@ -78,6 +78,16 @@ class Autonomia::Prospecting::LeadPayload
     return site if google['status'] != 'verified' && site['status'] == 'verified'
 
     google
+  end
+
+  # Bairro, fotos e link do Maps que o card mostra (#678). As colunas vêm do provider desde a E1; lead gravado antes
+  # delas usa o que o Google devolveu no raw_payload.
+  def place_card(lead, raw_payload)
+    {
+      neighborhood: lead.neighborhood,
+      photo_count: lead.photo_count || Array(raw_payload['photos']).size,
+      google_maps_uri: lead.google_maps_uri.presence || raw_payload['googleMapsUri']
+    }
   end
 
   # Mesmo valor que o motor filtra (coluna gravada pelo provider, #677). Lead gravado antes da coluna usa a regra do

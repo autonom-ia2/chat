@@ -1,5 +1,7 @@
+// Só a prioridade (percentil da busca). O score é outra escala; cair nele
+// mostraria no anel um número que a ordem da fila não usa.
 export const priorityValue = lead => {
-  const value = lead?.priority_score ?? lead?.score;
+  const value = lead?.priority_score;
   if (value === null || value === undefined || value === '') return null;
 
   return Math.max(0, Math.min(100, Math.round(Number(value))));
@@ -79,11 +81,16 @@ const googleRankTone = searchRank => {
   return 'opportunity';
 };
 
-const ratingTone = rating => {
-  if (rating >= 4.5) return 'positive';
+// Como no Orth: no modo GMN (e sem modo) nota alta é oportunidade, porque a
+// ficha já é forte e sobra pouco a vender; no modo Geral é sinal positivo.
+const ratingTone = (rating, scoreMode) => {
+  if (rating >= 4.5) {
+    return scoreMode === 'general' ? 'positive' : 'opportunity';
+  }
   if (rating >= 4) return 'neutral';
+  if (rating >= 3) return 'opportunity';
 
-  return 'opportunity';
+  return 'pain';
 };
 
 const reviewsTone = reviews => {
@@ -93,54 +100,113 @@ const reviewsTone = reviews => {
   return 'opportunity';
 };
 
-export const leadPrioritySignals = lead => {
-  const signals = [];
-  const hasSite = Boolean(lead?.website);
-  const hasPhone = Boolean(lead?.phone);
-  const rating = Number(lead?.rating || 0);
-  const reviews = Number(lead?.reviews_count || 0);
+const FEW_PHOTOS = 5;
+const MANY_PHOTOS = 10;
+const MAX_SIGNALS = 4;
+
+const signal = (key, label, icon, tone, href = null) => ({
+  key,
+  label,
+  icon,
+  href,
+  ...toneClass(tone),
+});
+
+const photosSignal = (photoCount, t) => {
+  if (photoCount === 0) {
+    return signal(
+      'photos',
+      t('PROSPECTING.SEARCH.CARD_SIGNALS.NO_PHOTO'),
+      'i-lucide-image-off',
+      'pain'
+    );
+  }
+  if (photoCount < FEW_PHOTOS) {
+    return signal(
+      'photos',
+      t('PROSPECTING.SEARCH.CARD_SIGNALS.FEW_PHOTOS'),
+      'i-lucide-image',
+      'opportunity'
+    );
+  }
+
+  return signal(
+    'photos',
+    t('PROSPECTING.SEARCH.CARD_SIGNALS.PHOTOS', { count: photoCount }),
+    'i-lucide-image',
+    photoCount < MANY_PHOTOS ? 'neutral' : 'positive'
+  );
+};
+
+const hasValue = value => value !== null && value !== undefined && value !== '';
+
+// Sinais do card como no Orth (priority-utils.tsx deriveSignals): site, fone,
+// fotos e posição no Google; a nota entra se couber e as avaliações (só no
+// chat2you) se ainda sobrar vaga. Sem a contagem de fotos, o chip de fotos não
+// aparece: "Sem foto" seria afirmar o que não sabemos.
+export const leadPrioritySignals = (lead, { t, scoreMode } = {}) => {
+  const website = lead?.website || null;
+  const signals = [
+    signal(
+      'website',
+      website
+        ? t('PROSPECTING.SEARCH.CARD_SIGNALS.HAS_SITE')
+        : t('PROSPECTING.SEARCH.CARD_SIGNALS.NO_SITE'),
+      website ? 'i-lucide-globe' : 'i-lucide-globe-2',
+      website ? 'positive' : 'pain',
+      website
+    ),
+    signal(
+      'phone',
+      lead?.phone
+        ? t('PROSPECTING.SEARCH.CARD_SIGNALS.HAS_PHONE')
+        : t('PROSPECTING.SEARCH.CARD_SIGNALS.NO_PHONE'),
+      lead?.phone ? 'i-lucide-phone' : 'i-lucide-phone-off',
+      lead?.phone ? 'positive' : 'pain'
+    ),
+  ];
+
+  if (hasValue(lead?.photo_count)) {
+    signals.push(photosSignal(Number(lead.photo_count), t));
+  }
+
   const searchRank = Number(lead?.search_rank || 0);
-
-  signals.push({
-    key: 'website',
-    label: hasSite ? 'Abrir site' : 'Sem site',
-    icon: hasSite ? 'i-lucide-globe' : 'i-lucide-globe-2',
-    ...toneClass(hasSite ? 'positive' : 'pain'),
-  });
-
-  signals.push({
-    key: 'phone',
-    label: hasPhone ? 'Tem fone' : 'Sem fone',
-    icon: hasPhone ? 'i-lucide-phone' : 'i-lucide-phone-off',
-    ...toneClass(hasPhone ? 'positive' : 'pain'),
-  });
-
   if (searchRank > 0) {
-    signals.push({
-      key: 'rank',
-      label: `#${searchRank} Google`,
-      icon: 'i-lucide-map-pin',
-      ...toneClass(googleRankTone(searchRank)),
-    });
+    signals.push(
+      signal(
+        'rank',
+        t('PROSPECTING.SEARCH.CARD_SIGNALS.GOOGLE_RANK', { rank: searchRank }),
+        'i-lucide-map-pin',
+        googleRankTone(searchRank)
+      )
+    );
   }
 
-  if (rating > 0 && signals.length < 4) {
-    signals.push({
-      key: 'rating',
-      label: `${rating.toFixed(1)} estrelas`,
-      icon: 'i-lucide-star',
-      ...toneClass(ratingTone(rating)),
-    });
+  const rating = Number(lead?.rating || 0);
+  if (rating > 0 && signals.length < MAX_SIGNALS) {
+    signals.push(
+      signal(
+        'rating',
+        t('PROSPECTING.SEARCH.CARD_SIGNALS.RATING', {
+          value: rating.toFixed(1),
+        }),
+        'i-lucide-star',
+        ratingTone(rating, scoreMode)
+      )
+    );
   }
 
-  if (reviews > 0 && signals.length < 4) {
-    signals.push({
-      key: 'reviews',
-      label: `${reviews} avaliações`,
-      icon: 'i-lucide-message-square-text',
-      ...toneClass(reviewsTone(reviews)),
-    });
+  const reviews = Number(lead?.reviews_count || 0);
+  if (reviews > 0 && signals.length < MAX_SIGNALS) {
+    signals.push(
+      signal(
+        'reviews',
+        t('PROSPECTING.SEARCH.CARD_SIGNALS.REVIEWS', { count: reviews }),
+        'i-lucide-message-square-text',
+        reviewsTone(reviews)
+      )
+    );
   }
 
-  return signals.slice(0, 4);
+  return signals.slice(0, MAX_SIGNALS);
 };

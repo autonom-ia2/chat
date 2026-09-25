@@ -178,7 +178,7 @@ const leadPriorityTheme = lead => {
   const priority = leadPriority(lead);
   return priority === null ? null : priorityTheme(priority);
 };
-const leadSignals = lead => leadPrioritySignals(lead);
+const leadSignals = lead => leadPrioritySignals(lead, { t });
 
 const contactUrl = contactId =>
   `/app/accounts/${route.params.accountId}/contacts/${contactId}`;

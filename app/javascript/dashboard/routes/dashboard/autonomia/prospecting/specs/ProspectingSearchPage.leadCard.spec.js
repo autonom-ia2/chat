@@ -54,13 +54,18 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     expect(card.text()).toContain('Lead muito quente');
     expect(card.text()).toContain(`Rua A, 10${ADDRESS_SEPARATOR}Curitiba PR`);
 
-    const site = linkWithText(card, 'Abrir site');
+    // #678: rótulos por i18n e "Tem site" como no Orth; o chip continua link.
+    const site = linkWithText(card, 'PROSPECTING.SEARCH.CARD_SIGNALS.HAS_SITE');
     expect(site.attributes('href')).toBe('https://sol.com.br');
     expect(site.attributes('target')).toBe('_blank');
     const signals = card
       .findAll('span.rounded-full.border')
       .map(signal => signal.text());
-    expect(signals).toEqual(['Tem fone', '#2 Google', '4.7 estrelas']);
+    expect(signals).toEqual([
+      'PROSPECTING.SEARCH.CARD_SIGNALS.HAS_PHONE',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.GOOGLE_RANK',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.RATING',
+    ]);
 
     expect(
       linkWithText(card, 'PROSPECTING.SEARCH.OPEN_MAP').attributes('href')
@@ -124,13 +129,18 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     expect(card.text()).not.toContain(
       'PROSPECTING.SEARCH.PRIORITY_FIRST_CALL_SHORT'
     );
-    // O v-for dos sinais renderiza um <a> por sinal; só o de site com site aparece.
-    expect(linkWithText(card, 'Sem site').attributes('style')).toContain(
-      'display: none'
-    );
+    // #678: sem site o chip não vira link (antes havia um <a> escondido por sinal).
+    expect(
+      linkWithText(card, 'PROSPECTING.SEARCH.CARD_SIGNALS.NO_SITE')
+    ).toBeUndefined();
     expect(
       card.findAll('span.rounded-full.border').map(signal => signal.text())
-    ).toEqual(['Sem site', 'Tem fone', '#5 Google', '3.9 estrelas']);
+    ).toEqual([
+      'PROSPECTING.SEARCH.CARD_SIGNALS.NO_SITE',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.HAS_PHONE',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.GOOGLE_RANK',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.RATING',
+    ]);
     expect(card.text()).toContain('PROSPECTING.SEARCH.NO_WHATSAPP');
     expect(linkWithText(card, 'PROSPECTING.SEARCH.WHATSAPP')).toBeUndefined();
     expect(

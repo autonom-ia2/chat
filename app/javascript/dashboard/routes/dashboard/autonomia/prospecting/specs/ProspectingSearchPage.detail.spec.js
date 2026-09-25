@@ -80,7 +80,12 @@ describe('ProspectingSearchPage · painel de detalhe do lead', () => {
     expect(panel.text()).toContain('Bem avaliada e sem reservas online');
     expect(
       panel.findAll('span.rounded-full.border').map(signal => signal.text())
-    ).toEqual(['Abrir site', 'Tem fone', '#2 Google', '4.7 estrelas']);
+    ).toEqual([
+      'PROSPECTING.SEARCH.CARD_SIGNALS.HAS_SITE',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.HAS_PHONE',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.GOOGLE_RANK',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.RATING',
+    ]);
 
     expect(panel.text()).toContain('PROSPECTING.SEARCH.SCORE_EVALUATION_TITLE');
     expect(panel.text()).toContain('PROSPECTING.SEARCH.SCORE_VALUE');
