@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
 const props = defineProps({
   apiKey: {
@@ -46,6 +47,7 @@ let map = null;
 let circle = null;
 let rectangle = null;
 let markers = [];
+let clusterer = null;
 let idleListener = null;
 
 const loadGoogleMaps = apiKey => {
@@ -75,6 +77,8 @@ const loadGoogleMaps = apiKey => {
 };
 
 const clearMarkers = () => {
+  if (clusterer) clusterer.clearMarkers();
+  clusterer = null;
   markers.forEach(marker => marker.setMap(null));
   markers = [];
 };
@@ -195,6 +199,10 @@ const renderMap = async () => {
     hasBounds = true;
   }
 
+  // Como no Orth (MapResults.tsx): com mais de um pino, o clusterer junta os
+  // próximos e é ele quem os põe no mapa. O número do pino é a posição do lead
+  // na fila, o mesmo "Posição N" do card.
+  const shouldCluster = leads.length > 1;
   leads.forEach((lead, index) => {
     const position = {
       lat: Number(lead.latitude),
@@ -204,14 +212,15 @@ const renderMap = async () => {
     hasBounds = true;
 
     const marker = new window.google.maps.Marker({
-      map,
+      map: shouldCluster ? undefined : map,
       position,
       title: lead.name || '',
-      label: String(index + 1),
+      label: String(lead.priority_position || index + 1),
     });
     marker.addListener('click', () => emit('selectLead', lead));
     markers.push(marker);
   });
+  if (shouldCluster) clusterer = new MarkerClusterer({ map, markers });
 
   if (center && Number(props.radius || 0) > 0) {
     circle = new window.google.maps.Circle({
