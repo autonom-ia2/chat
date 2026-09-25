@@ -84,8 +84,7 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     expect(enrich.element.disabled).toBe(false);
     expect(enrich.attributes('title')).toBe('PROSPECTING.SEARCH.ENRICH_LEAD');
     expect(
-      buttonWithText(card, 'PROSPECTING.SEARCH.CREATE_CRM_CARD').element
-        .disabled
+      buttonWithText(card, 'PROSPECTING.SEARCH.SEND_TO_CRM').element.disabled
     ).toBe(false);
     expect(card.find('input[type="checkbox"]').element.checked).toBe(false);
   });
@@ -157,7 +156,7 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
       linkWithText(card, 'PROSPECTING.SEARCH.OPEN_CRM_CARD').attributes('href')
     ).toBe('/app/accounts/1/crm?card_id=555');
     expect(
-      buttonWithText(card, 'PROSPECTING.SEARCH.CREATE_CRM_CARD')
+      buttonWithText(card, 'PROSPECTING.SEARCH.SEND_TO_CRM')
     ).toBeUndefined();
     const enrich = buttonWithText(card, 'PROSPECTING.SEARCH.ENRICH_LEAD');
     expect(enrich.element.disabled).toBe(true);
@@ -293,13 +292,13 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
       buttonWithText(card, 'PROSPECTING.SEARCH.ENRICH_LEAD')
     ).toBeUndefined();
     expect(
-      buttonWithText(card, 'PROSPECTING.SEARCH.CREATE_CRM_CARD')
+      buttonWithText(card, 'PROSPECTING.SEARCH.SEND_TO_CRM')
     ).toBeUndefined();
 
     await card.find('input[type="checkbox"]').trigger('change');
     expect(wrapper.text()).toContain('PROSPECTING.SEARCH.SELECTED_COUNT');
     expect(
-      buttonWithText(wrapper, 'PROSPECTING.SEARCH.BULK_CRM_CARDS')
+      buttonWithText(wrapper, 'PROSPECTING.SEARCH.SEND_TO_CRM')
     ).toBeUndefined();
   });
 });

@@ -1,17 +1,16 @@
-// Caracterização das ações em lote (#677): seleção, envio ao CRM e CSV.
+// Caracterização das ações em lote (#677): seleção, envio ao CRM e CSV. O
+// envio em si (janela, lotes e resumo) está em ProspectingSearchPage.crmSend e
+// CrmSendModal (#680).
 import { flushPromises } from '@vue/test-utils';
-import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
-import { useAlert } from 'dashboard/composables';
+import CrmSendModal from '../components/crm/CrmSendModal.vue';
 import {
   bakerySearch,
   buttonWithText,
   buttonWithTitle,
-  deferred,
   hotBreadLead,
   leadCard,
   leadCards,
   mountSearchPage,
-  moonLead,
   settingsFixture,
   sunLead,
 } from './support/searchPageHarness';
@@ -19,7 +18,6 @@ import {
   ADDRESS_SEPARATOR,
   captureCsvDownload,
   leadCheckbox,
-  linkWithText,
   readBlob,
 } from './support/resultsHelpers';
 
@@ -57,7 +55,7 @@ describe('ProspectingSearchPage · ações em lote', () => {
     expect(wrapper.text()).toContain('PROSPECTING.SEARCH.SELECTED_COUNT');
     expect(leadCheckbox(wrapper, 'Pão Quente').element.checked).toBe(true);
     expect(
-      buttonWithText(wrapper, 'PROSPECTING.SEARCH.BULK_CRM_CARDS')
+      buttonWithText(wrapper, 'PROSPECTING.SEARCH.SEND_TO_CRM')
     ).toBeTruthy();
 
     await buttonWithText(wrapper, 'PROSPECTING.SEARCH.SELECT_VISIBLE').trigger(
@@ -80,70 +78,25 @@ describe('ProspectingSearchPage · ações em lote', () => {
     expect(wrapper.text()).not.toContain('PROSPECTING.SEARCH.SELECTED_COUNT');
   });
 
-  it('envia ao CRM em lote só os leads sem card, em sequência, no funil e estágio padrão', async () => {
-    const wrapper = await mountSearchPage();
-    AutonomiaProspectingAPI.createLeadCrmCard.mockImplementation(leadId =>
-      Promise.resolve({
-        data: {
-          payload: {
-            lead: (leadId === 101 ? sunLead : moonLead)({
-              crm_card_id: leadId * 10,
-            }),
-          },
-        },
-      })
-    );
-
-    await buttonWithText(wrapper, 'PROSPECTING.SEARCH.SELECT_VISIBLE').trigger(
-      'click'
-    );
-    await buttonWithText(wrapper, 'PROSPECTING.SEARCH.BULK_CRM_CARDS').trigger(
-      'click'
-    );
-    await flushPromises();
-
-    expect(AutonomiaProspectingAPI.createLeadCrmCard.mock.calls).toEqual([
-      [101, { pipeline_id: 3, stage_id: 31 }],
-      [103, { pipeline_id: 3, stage_id: 31 }],
-    ]);
-    expect(useAlert).toHaveBeenCalledTimes(1);
-    expect(useAlert).toHaveBeenCalledWith(
-      'PROSPECTING.SEARCH.CRM_CARD_CREATED'
-    );
-    expect(
-      linkWithText(
-        leadCard(wrapper, 'Padaria Sol'),
-        'PROSPECTING.SEARCH.OPEN_CRM_CARD'
-      ).attributes('href')
-    ).toBe('/app/accounts/1/crm?card_id=1010');
-  });
-
-  it('usa o funil e o estágio configurados na própria busca', async () => {
+  it('a janela sugere o funil e o estágio configurados na própria busca', async () => {
     const search = bakerySearch({ crm_pipeline_id: 4, crm_stage_id: 41 });
     const wrapper = await mountSearchPage({
       searches: [search],
       payloads: { 11: { search, leads: [sunLead()] } },
     });
-    AutonomiaProspectingAPI.createLeadCrmCard.mockResolvedValue({
-      data: { payload: { lead: sunLead({ crm_card_id: 9 }) } },
-    });
 
     await leadCheckbox(wrapper, 'Padaria Sol').trigger('change');
-    await buttonWithText(wrapper, 'PROSPECTING.SEARCH.BULK_CRM_CARDS').trigger(
+    await buttonWithText(wrapper, 'PROSPECTING.SEARCH.SEND_TO_CRM').trigger(
       'click'
     );
     await flushPromises();
 
-    expect(AutonomiaProspectingAPI.createLeadCrmCard).toHaveBeenCalledWith(
-      101,
-      {
-        pipeline_id: 4,
-        stage_id: 41,
-      }
-    );
+    const modal = wrapper.findComponent(CrmSendModal);
+    expect(modal.props('suggestedPipelineId')).toBe(4);
+    expect(modal.props('suggestedStageId')).toBe(41);
   });
 
-  it('sem funil definido bloqueia o envio ao CRM no lote e no card', async () => {
+  it('sem funil definido a janela abre sem sugestão, para a pessoa escolher', async () => {
     const wrapper = await mountSearchPage({
       settings: settingsFixture({
         default_crm_pipeline_id: null,
@@ -151,76 +104,15 @@ describe('ProspectingSearchPage · ações em lote', () => {
       }),
     });
 
-    await leadCheckbox(wrapper, 'Padaria Sol').trigger('change');
-
-    expect(
-      buttonWithText(wrapper, 'PROSPECTING.SEARCH.BULK_CRM_CARDS').element
-        .disabled
-    ).toBe(true);
-    expect(
-      buttonWithText(
-        leadCard(wrapper, 'Padaria Sol'),
-        'PROSPECTING.SEARCH.CREATE_CRM_CARD'
-      ).element.disabled
-    ).toBe(true);
-  });
-
-  it('cria o card de um lead pelo próprio card e troca o botão pelo link', async () => {
-    const wrapper = await mountSearchPage();
-    AutonomiaProspectingAPI.createLeadCrmCard.mockResolvedValue({
-      data: { payload: { lead: sunLead({ crm_card_id: 777 }) } },
-    });
-
     await buttonWithText(
       leadCard(wrapper, 'Padaria Sol'),
-      'PROSPECTING.SEARCH.CREATE_CRM_CARD'
+      'PROSPECTING.SEARCH.SEND_TO_CRM'
     ).trigger('click');
     await flushPromises();
 
-    expect(AutonomiaProspectingAPI.createLeadCrmCard).toHaveBeenCalledWith(
-      101,
-      {
-        pipeline_id: 3,
-        stage_id: 31,
-      }
-    );
-    expect(useAlert).toHaveBeenCalledWith(
-      'PROSPECTING.SEARCH.CRM_CARD_CREATED'
-    );
-    expect(
-      linkWithText(
-        leadCard(wrapper, 'Padaria Sol'),
-        'PROSPECTING.SEARCH.OPEN_CRM_CARD'
-      ).attributes('href')
-    ).toBe('/app/accounts/1/crm?card_id=777');
-  });
-
-  it('mostra criando enquanto espera e avisa o erro da API ao criar o card', async () => {
-    const wrapper = await mountSearchPage();
-    const pending = deferred();
-    AutonomiaProspectingAPI.createLeadCrmCard.mockReturnValue(pending.promise);
-
-    await buttonWithText(
-      leadCard(wrapper, 'Padaria Sol'),
-      'PROSPECTING.SEARCH.CREATE_CRM_CARD'
-    ).trigger('click');
-    await flushPromises();
-    const creating = buttonWithText(
-      leadCard(wrapper, 'Padaria Sol'),
-      'PROSPECTING.SEARCH.CREATING_CRM_CARD'
-    );
-    expect(creating.element.disabled).toBe(true);
-
-    pending.reject({ response: { data: { error: 'Estágio inválido' } } });
-    await flushPromises();
-
-    expect(useAlert).toHaveBeenCalledWith('Estágio inválido');
-    expect(
-      buttonWithText(
-        leadCard(wrapper, 'Padaria Sol'),
-        'PROSPECTING.SEARCH.CREATE_CRM_CARD'
-      ).element.disabled
-    ).toBe(false);
+    const modal = wrapper.findComponent(CrmSendModal);
+    expect(modal.props('suggestedPipelineId')).toBe('');
+    expect(modal.props('suggestedStageId')).toBe('');
   });
 
   it('exporta CSV de todos os leads visíveis, na ordem da tela', async () => {

@@ -31,9 +31,7 @@ const {
   selectedLeadDetail,
   selectedLeadDetailId,
   selectedSearch,
-  convertingCrmLeadId,
-  canCreateCrmCard,
-  createCrmCard,
+  openCrmSend,
   contactUrl,
   crmCardUrl,
   settings,
@@ -299,13 +297,10 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
         <button
           v-else-if="canManage"
           type="button"
-          class="h-9 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-          :disabled="
-            convertingCrmLeadId === selectedLeadDetail.id || !canCreateCrmCard
-          "
-          @click="createCrmCard(selectedLeadDetail)"
+          class="h-9 rounded-md bg-n-brand px-3 text-sm font-medium text-white"
+          @click="openCrmSend([selectedLeadDetail])"
         >
-          {{ t('PROSPECTING.SEARCH.CREATE_CRM_CARD') }}
+          {{ t('PROSPECTING.SEARCH.SEND_TO_CRM') }}
         </button>
       </footer>
     </aside>

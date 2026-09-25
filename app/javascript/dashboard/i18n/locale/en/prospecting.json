@@ -408,7 +408,8 @@
         "STATUS": "Status",
         "RESULTS": "Leads",
         "CREATED_AT": "Criada em"
-      }
+      },
+      "SEND_TO_CRM": "Enviar ao CRM"
     },
     "LISTS": {
       "TITLE": "Listas",
