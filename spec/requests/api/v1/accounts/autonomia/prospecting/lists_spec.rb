@@ -179,7 +179,8 @@ RSpec.describe 'Autonomia prospecting lists API', type: :request do
          headers: auth_headers(admin)
 
     expect(response).to have_http_status(:unprocessable_entity)
-    expect(response.parsed_body['error']).to eq('prospecting.campaign.no_eligible_leads')
+    expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.campaign_errors.no_eligible_leads'))
+    expect(response.parsed_body['code']).to eq('prospecting.campaign.no_eligible_leads')
     expect(account.labels.where("title LIKE 'prospeccao_%'")).to be_empty
   end
 

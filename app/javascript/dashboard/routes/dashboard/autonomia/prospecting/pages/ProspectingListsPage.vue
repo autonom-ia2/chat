@@ -27,6 +27,7 @@ import {
   normalizedLeadPhone as normalizedLeadPhoneFor,
 } from '../utils/leadPhone';
 import { phoneRegionFromSettings } from '../utils/phoneContract';
+import { canSendToCrm } from '../utils/prospectingPermissions';
 import {
   isLeadEnriched,
   isLeadEnriching as isEnriching,
@@ -196,6 +197,10 @@ const googleMapsLeadUrl = lead => {
 
 // Telefone pelo contrato único (utils/phoneContract.js), com o país da busca da conta.
 const phoneRegion = computed(() => phoneRegionFromSettings(settings.value));
+// Enviar ao CRM pela mesma regra do servidor (Crm::CardPolicy#create?), #682.
+const canSendCrm = computed(() =>
+  canSendToCrm(canManage.value, settings.value)
+);
 const normalizedLeadPhone = lead =>
   normalizedLeadPhoneFor(lead, phoneRegion.value);
 const leadPhoneUrl = lead => leadPhoneUrlFor(lead, phoneRegion.value);
@@ -702,7 +707,7 @@ onMounted(loadPage);
                 class="relative flex shrink-0 items-center gap-2"
               >
                 <button
-                  v-if="canManage"
+                  v-if="canSendCrm"
                   type="button"
                   class="inline-flex h-9 items-center gap-1.5 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                   :disabled="!listLeads.length"
@@ -1162,7 +1167,7 @@ onMounted(loadPage);
                     {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
                   </a>
                   <button
-                    v-else-if="canManage"
+                    v-else-if="canSendCrm"
                     type="button"
                     class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm"
                     @click="crmSendLeads = [lead]"

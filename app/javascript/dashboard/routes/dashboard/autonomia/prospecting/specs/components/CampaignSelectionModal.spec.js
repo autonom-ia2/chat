@@ -214,7 +214,9 @@ describe('CampaignSelectionModal', () => {
       response: {
         status: 422,
         data: {
-          error: 'prospecting.campaign.no_eligible_leads',
+          // #682: a frase do servidor vem em error e o código em code.
+          error: 'Frase do servidor.',
+          code: 'prospecting.campaign.no_eligible_leads',
           payload: {
             segment: {
               eligible_count: 0,

@@ -26,6 +26,7 @@ useFixedPanelPresence(computed(() => true));
 const { t } = useI18n();
 const {
   canManage,
+  canSendToCrm,
   crmStages,
   crmForm,
   selectedLeadDetail,
@@ -303,7 +304,7 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
           {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
         </a>
         <button
-          v-else-if="canManage"
+          v-else-if="canSendToCrm"
           type="button"
           class="h-9 rounded-md bg-n-brand px-3 text-sm font-medium text-white"
           @click="openCrmSend([selectedLeadDetail])"

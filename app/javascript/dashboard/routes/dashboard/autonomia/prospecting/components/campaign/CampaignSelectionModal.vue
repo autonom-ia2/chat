@@ -92,12 +92,12 @@ const ERROR_CODES = {
   'prospecting.campaign.empty_selection': () =>
     t('PROSPECTING.CAMPAIGN_SELECTION.ERRORS.EMPTY_SELECTION'),
 };
-// O servidor manda código em `error` nas recusas do segmento; texto livre
-// (validação do modelo) aparece como veio.
+// Nas recusas do segmento o servidor manda o código em `code` e a frase em
+// `error` (#682); o que não tem código aqui aparece como veio.
 const errorText = error => {
-  const serverError = error?.response?.data?.error;
+  const { code, error: serverError } = error?.response?.data || {};
   return (
-    ERROR_CODES[serverError]?.() ||
+    ERROR_CODES[code]?.() ||
     serverError ||
     t('PROSPECTING.CAMPAIGN_SELECTION.ERROR')
   );

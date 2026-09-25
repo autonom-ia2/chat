@@ -76,7 +76,7 @@ RSpec.describe Autonomia::Prospecting::Scoring::NegativeFactors do
       factor = call(rating: 1.5, reviews_count: 3)[:factors].find { |item| item['key'] == 'low_rating_low_volume' }
 
       expect(factor['points']).to eq(-15)
-      expect(factor['reason']).to eq('Rating 1.5 com apenas 3 reviews')
+      expect(factor['reason']).to eq('Nota 1.5 com apenas 3 avaliações')
     end
 
     it 'não conta com nota 2.0 ou mais, 5 avaliações ou mais, ou zero avaliação' do

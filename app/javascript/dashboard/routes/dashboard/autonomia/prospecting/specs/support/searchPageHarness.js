@@ -73,6 +73,9 @@ export const settingsFixture = (extra = {}) => ({
   scoring_profile_id: 9,
   default_crm_pipeline_id: 3,
   default_crm_stage_id: 31,
+  // Quem abre a tela nos testes pode criar card e mexer em campanha (#682).
+  can_send_to_crm: true,
+  can_manage_campaigns: true,
   ...extra,
 });
 

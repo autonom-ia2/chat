@@ -59,7 +59,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
       scoring_profiles: scoring_profiles_payload(current_setting),
       active_scoring_weights: current_setting.active_scoring_weights,
       usage: usage_payload
-    ).merge(score_engine_payload(current_setting))
+    ).merge(score_engine_payload(current_setting), permissions_payload)
+  end
+
+  # A tela esconde o que o servidor recusaria (#682): Enviar ao CRM pela mesma regra de authorize_crm_card_create! e
+  # Adicionar à campanha pela de authorize_campaign_update!.
+  def permissions_payload
+    { can_send_to_crm: Pundit.policy!(pundit_user, ::Crm::Card).create?, can_manage_campaigns: campaign_manage? }
   end
 
   # Só os globais e os restritos desta conta (#681). O payload não diz a que outras contas um perfil pertence.

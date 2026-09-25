@@ -3,11 +3,15 @@
 // useProspectingSearchContext(). O contexto é juntado com mergeDisjoint: se dois
 // composables devolverem a mesma chave, a montagem quebra em vez de o último
 // sobrescrever o outro em silêncio.
-import { inject, onMounted, provide } from 'vue';
+import { computed, inject, onMounted, provide } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { mergeDisjoint } from '../utils/mergeDisjoint';
+import {
+  canAddToCampaign,
+  canSendToCrm,
+} from '../utils/prospectingPermissions';
 import { createSearchState } from './createSearchState';
 import { useSearchCrm } from './useSearchCrm';
 import { useSearchForm } from './useSearchForm';
@@ -42,8 +46,18 @@ export const useProspectingSearch = () => {
     submitSearch: searchForm.submitSearch,
   });
 
+  const permissions = {
+    canManage,
+    canSendToCrm: computed(() =>
+      canSendToCrm(canManage.value, state.settings.value)
+    ),
+    canAddToCampaign: computed(() =>
+      canAddToCampaign(canManage.value, state.settings.value)
+    ),
+  };
+
   const context = mergeDisjoint(
-    { canManage },
+    permissions,
     state,
     crm,
     leadActions,
