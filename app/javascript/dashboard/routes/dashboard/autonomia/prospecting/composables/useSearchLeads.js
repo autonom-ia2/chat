@@ -1,6 +1,7 @@
-// Trabalho com os leads da busca aberta: card no CRM, enriquecimento, seleção
+// Trabalho com os leads da busca aberta: envio ao CRM, enriquecimento, seleção
 // e ações em lote. WhatsApp (useLeadWhatsApp) e CSV (useLeadCsv) têm arquivo
 // próprio.
+import { watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -52,24 +53,63 @@ const useLeadSelection = state => {
     selectedLeadIds.value = sortedLeads.value.map(lead => lead.id);
   };
 
+  // O contador é o que vai (ACAO-X02): lead que o filtro esconde sai da
+  // seleção, em vez de ficar contado e não ser enviado nem exportado.
+  watch(
+    () => sortedLeads.value.map(lead => Number(lead.id)),
+    visibleIds => {
+      const visible = new Set(visibleIds);
+      const kept = selectedLeadIds.value.filter(id => visible.has(Number(id)));
+      if (kept.length !== selectedLeadIds.value.length) {
+        selectedLeadIds.value = kept;
+      }
+    }
+  );
+
   return { toggleLeadSelection, toggleAllVisibleLeads };
+};
+
+// Janela Enviar ao CRM (#680): abre com os leads escolhidos e aplica o
+// resultado de cada um. Lead que foi (criado ou já existente) ganha o link do
+// card e sai da seleção; o que falhou continua selecionado para tentar de novo.
+const useCrmSend = state => {
+  const { leads, crmSendLeads, selectedLeadIds } = state;
+
+  const openCrmSend = leadsToSend => {
+    crmSendLeads.value = leadsToSend;
+  };
+
+  const closeCrmSend = () => {
+    crmSendLeads.value = null;
+  };
+
+  const applyCrmSendResult = ({ created, existing }) => {
+    const sent = new Map(
+      [...created, ...existing].map(item => [Number(item.lead_id), item])
+    );
+    leads.value = leads.value.map(lead => {
+      const item = sent.get(Number(lead.id));
+      if (!item) return lead;
+      return {
+        ...lead,
+        crm_card_id: item.card_id,
+        contact_id: item.contact_id || lead.contact_id,
+      };
+    });
+    selectedLeadIds.value = selectedLeadIds.value.filter(
+      id => !sent.has(Number(id))
+    );
+  };
+
+  return { openCrmSend, closeCrmSend, applyCrmSendResult };
 };
 
 export const useSearchLeads = (state, { canManage }) => {
   const { t } = useI18n();
   const route = useRoute();
-  const {
-    leads,
-    convertingCrmLeadId,
-    enrichingLeadId,
-    bulkAction,
-    crmForm,
-    canCreateCrmCard,
-    hasSelectedLeads,
-    selectedLeadObjects,
-  } = state;
+  const { leads, enrichingLeadId } = state;
 
-  // Toda resposta da API (evento, enriquecimento, card no CRM, WhatsApp) traz
+  // Toda resposta da API (evento, enriquecimento, pesquisa, WhatsApp) traz
   // o lead da conta, com posição, nota e prioridade da última busca que o
   // tocou. Esses campos são desta busca (#678) e ficam.
   // A pesquisa de empresa e decisor (#679) não regride: resposta atrasada não
@@ -87,37 +127,6 @@ export const useSearchLeads = (state, { canManage }) => {
   };
 
   useLeadLiveUpdates(replaceLead);
-
-  const createCrmCard = async (lead, options = {}) => {
-    if (
-      !lead?.id ||
-      lead.crm_card_id ||
-      convertingCrmLeadId.value ||
-      !canCreateCrmCard.value
-    ) {
-      return;
-    }
-
-    convertingCrmLeadId.value = lead.id;
-
-    try {
-      const { data } = await AutonomiaProspectingAPI.createLeadCrmCard(
-        lead.id,
-        {
-          pipeline_id: crmForm.value.pipeline_id,
-          stage_id: crmForm.value.stage_id,
-        }
-      );
-      replaceLead(data.payload?.lead);
-      if (options.showAlert !== false) {
-        useAlert(t('PROSPECTING.SEARCH.CRM_CARD_CREATED'));
-      }
-    } catch (e) {
-      alertError(e, t('PROSPECTING.ERRORS.CREATE_CRM_CARD'));
-    } finally {
-      convertingCrmLeadId.value = null;
-    }
-  };
 
   // O servidor aceita o pedido (202) e enriquece em fila; o resultado chega
   // pelo evento ao vivo (#678). Pedido recusado deixa o lead como estava.
@@ -137,27 +146,6 @@ export const useSearchLeads = (state, { canManage }) => {
     }
   };
 
-  const runBulkAction = async action => {
-    if (!hasSelectedLeads.value || bulkAction.value) return;
-
-    bulkAction.value = action;
-
-    try {
-      if (action === 'crm_cards') {
-        await selectedLeadObjects.value
-          .filter(item => !item.crm_card_id)
-          .reduce(
-            (promise, lead) =>
-              promise.then(() => createCrmCard(lead, { showAlert: false })),
-            Promise.resolve()
-          );
-        useAlert(t('PROSPECTING.SEARCH.CRM_CARD_CREATED'));
-      }
-    } finally {
-      bulkAction.value = '';
-    }
-  };
-
   const contactUrl = contactId =>
     `/app/accounts/${route.params.accountId}/contacts/${contactId}`;
 
@@ -167,15 +155,14 @@ export const useSearchLeads = (state, { canManage }) => {
   return mergeDisjoint(
     {
       replaceLead,
-      createCrmCard,
       enrichLead,
-      runBulkAction,
       contactUrl,
       crmCardUrl,
     },
     useLeadWhatsApp(state, { canManage, replaceLead }),
     useLeadResearch(state, { replaceLead }),
     useLeadSelection(state),
+    useCrmSend(state),
     useLeadCsv(state, t)
   );
 };

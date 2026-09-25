@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
+  before_action -> { authorize_campaign_update!(campaign_segment_params[:campaign_id]) }, only: [:campaign_segment]
+
   def index
     render json: { payload: lists_scope.order(created_at: :desc).limit(100).map { |list| list_payload(list) } }
   end
@@ -39,12 +41,16 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
   end
 
   def campaign_segment
-    result = ::Autonomia::Prospecting::CampaignSegmentBuilder.new(
+    builder = ::Autonomia::Prospecting::CampaignSegmentBuilder.new(
       list: lists_scope.find(params[:id]),
       user: Current.user,
       campaign_id: campaign_segment_params[:campaign_id],
       segment_name: campaign_segment_params[:segment_name]
-    ).perform
+    )
+    # Lista já na audiência de uma campanha: reaplicar a etiqueta aumenta quem recebe, mesmo sem campaign_id (#680).
+    return render_campaign_forbidden if builder.feeds_existing_campaign? && !campaign_manage?
+
+    result = builder.perform
 
     render json: {
       payload: {
@@ -73,18 +79,11 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
   end
 
   def list_payload(list, include_leads: false)
-    payload = list.as_json(
-      only: [:id, :name, :description, :status, :metadata, :created_at, :updated_at]
-    ).merge(
-      lead_ids: list.leads.pluck(:id),
-      leads_count: list.leads.count,
-      campaign_segment: list.metadata.to_h['campaign_segment']
-    )
-
+    payload = list_summary_payload(list)
     return payload unless include_leads
 
     payload.merge(
-      leads: list.leads.includes(:company_profile).order(created_at: :desc).map { |lead| lead_payload(lead) }
+      leads: list.leads.includes(:company_profile, :contact).order(created_at: :desc).map { |lead| lead_payload(lead) }
     )
   end
 
@@ -117,25 +116,6 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
   end
 
   def campaign_segment_payload(result)
-    {
-      label: {
-        id: result.label.id,
-        title: result.label.title
-      },
-      campaign: result.campaign && {
-        id: result.campaign.display_id,
-        title: result.campaign.title
-      },
-      eligible_count: result.eligible_leads.size,
-      blocked_count: result.blocked_leads.size,
-      created_contacts_count: result.created_contacts_count,
-      blocked_leads: result.blocked_leads.map do |lead|
-        {
-          id: lead.id,
-          name: lead.name,
-          status: lead.status
-        }
-      end
-    }
+    ::Autonomia::Prospecting::CampaignSegmentPayload.build(result)
   end
 end

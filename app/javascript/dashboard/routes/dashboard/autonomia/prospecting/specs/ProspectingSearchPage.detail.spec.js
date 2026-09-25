@@ -168,7 +168,7 @@ describe('ProspectingSearchPage · painel de detalhe do lead', () => {
       linkWithText(panel, 'PROSPECTING.SEARCH.OPEN_CRM_CARD').attributes('href')
     ).toBe('/app/accounts/1/crm?card_id=555');
     expect(
-      buttonWithText(panel, 'PROSPECTING.SEARCH.CREATE_CRM_CARD')
+      buttonWithText(panel, 'PROSPECTING.SEARCH.SEND_TO_CRM')
     ).toBeUndefined();
     expect(
       linkWithText(panel, 'PROSPECTING.SEARCH.OPEN_CONTACT')
@@ -217,26 +217,32 @@ describe('ProspectingSearchPage · painel de detalhe do lead', () => {
     expect(detailPanel(wrapper).exists()).toBe(false);
   });
 
-  it('cria o card no CRM pelo rodapé do painel', async () => {
+  it('envia ao CRM pelo rodapé do painel e troca o botão pelo link do card', async () => {
     const wrapper = await mountSearchPage();
-    AutonomiaProspectingAPI.createLeadCrmCard.mockResolvedValue({
-      data: { payload: { lead: sunLead({ crm_card_id: 321 }) } },
+    AutonomiaProspectingAPI.createCrmCards.mockResolvedValue({
+      data: {
+        payload: {
+          created: [{ lead_id: 101, card_id: 321, contact_id: 900 }],
+          existing: [],
+          failed: [],
+        },
+      },
     });
 
     await openDetails(wrapper, 'Padaria Sol');
     await buttonWithText(
       detailPanel(wrapper),
-      'PROSPECTING.SEARCH.CREATE_CRM_CARD'
+      'PROSPECTING.SEARCH.SEND_TO_CRM'
     ).trigger('click');
     await flushPromises();
+    await wrapper.find('[data-test="crm-send-submit"]').trigger('click');
+    await flushPromises();
 
-    expect(AutonomiaProspectingAPI.createLeadCrmCard).toHaveBeenCalledWith(
-      101,
-      {
-        pipeline_id: 3,
-        stage_id: 31,
-      }
-    );
+    expect(AutonomiaProspectingAPI.createCrmCards).toHaveBeenCalledWith({
+      leadIds: [101],
+      pipelineId: 3,
+      stageId: 31,
+    });
     expect(
       linkWithText(
         detailPanel(wrapper),
@@ -258,7 +264,7 @@ describe('ProspectingSearchPage · painel de detalhe do lead', () => {
     await openDetails(wrapper, 'Padaria Sol');
 
     expect(
-      buttonWithText(detailPanel(wrapper), 'PROSPECTING.SEARCH.CREATE_CRM_CARD')
+      buttonWithText(detailPanel(wrapper), 'PROSPECTING.SEARCH.SEND_TO_CRM')
     ).toBeUndefined();
   });
 });

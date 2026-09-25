@@ -8,10 +8,10 @@ const {
   sortedLeads,
   selectedLeadIds,
   hasSelectedLeads,
-  bulkAction,
-  canCreateCrmCard,
+  selectedLeadObjects,
   toggleAllVisibleLeads,
-  runBulkAction,
+  openCrmSend,
+  campaignLeads,
 } = useProspectingSearchContext();
 </script>
 
@@ -37,11 +37,20 @@ const {
         <button
           v-if="canManage"
           type="button"
-          class="h-7 rounded-md bg-n-brand px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-          :disabled="bulkAction === 'crm_cards' || !canCreateCrmCard"
-          @click="runBulkAction('crm_cards')"
+          class="inline-flex h-7 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-medium text-white"
+          @click="openCrmSend(selectedLeadObjects)"
         >
-          {{ t('PROSPECTING.SEARCH.BULK_CRM_CARDS') }}
+          <span class="i-lucide-kanban-square size-3.5" aria-hidden="true" />
+          {{ t('PROSPECTING.SEARCH.SEND_TO_CRM') }}
+        </button>
+        <button
+          v-if="canManage"
+          type="button"
+          class="inline-flex h-7 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-3 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2"
+          @click="campaignLeads = selectedLeadObjects"
+        >
+          <span class="i-lucide-megaphone size-3.5" aria-hidden="true" />
+          {{ t('PROSPECTING.SEARCH.ADD_TO_CAMPAIGN') }}
         </button>
       </template>
     </div>

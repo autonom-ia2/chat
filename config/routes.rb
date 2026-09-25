@@ -392,6 +392,9 @@ Rails.application.routes.draw do
                 post :whatsapp_verification, on: :member, action: :verify_whatsapp
                 post :enrichment, on: :member, action: :enrich
                 post :research, on: :member
+                post :adopt_owner, on: :member
+                post :crm_cards, on: :collection, action: :create_crm_cards
+                post :campaign_segment, on: :collection, action: :create_campaign_segment
               end
               resources :lists, only: [:index, :show, :create] do
                 post 'leads', on: :member, action: :add_lead

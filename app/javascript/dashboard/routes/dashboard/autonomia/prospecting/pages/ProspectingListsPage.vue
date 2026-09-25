@@ -5,11 +5,11 @@ import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CampaignsAPI from 'dashboard/api/campaigns';
-import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
 import LeadResearchSummary from '../components/search/LeadResearchSummary.vue';
+import CrmSendModal from '../components/crm/CrmSendModal.vue';
 import { useLeadLiveUpdates } from '../composables/useLeadLiveUpdates';
 import {
   activeAdvancedLeadFiltersCount,
@@ -40,7 +40,6 @@ const DOT_SEPARATOR = '·';
 const isLoading = ref(true);
 const isCreating = ref(false);
 const busyLeadId = ref(null);
-const convertingCrmLeadId = ref(null);
 const enrichingLeadId = ref(null);
 const verifyingWhatsAppLeadIds = ref([]);
 const isCreatingCampaignSegment = ref(false);
@@ -50,8 +49,8 @@ const selectedList = ref(null);
 const allLeads = ref([]);
 const campaigns = ref([]);
 const settings = ref(null);
-const crmPipelines = ref([]);
-const crmStages = ref([]);
+// Leads da janela Enviar ao CRM (#680); null com a janela fechada.
+const crmSendLeads = ref(null);
 const addLeadQuery = ref('');
 const showListFilters = ref(false);
 const showAddLeadFilters = ref(false);
@@ -66,10 +65,6 @@ const campaignSegmentForm = ref({
 const form = ref({
   name: '',
   description: '',
-});
-const crmForm = ref({
-  pipeline_id: '',
-  stage_id: '',
 });
 const whatsappVerificationRequested = new Set();
 const listAdvancedFilters = ref(defaultAdvancedLeadFilters());
@@ -119,9 +114,6 @@ const activeAddLeadFiltersCount = computed(() =>
   activeAdvancedLeadFiltersCount(addLeadAdvancedFilters.value)
 );
 const hasSelectedList = computed(() => Boolean(selectedList.value?.id));
-const canCreateCrmCard = computed(() =>
-  Boolean(crmForm.value.pipeline_id && crmForm.value.stage_id)
-);
 const leadHasVerifiedWhatsApp = lead => lead?.whatsapp_verified === true;
 const isLeadEnriching = lead => isEnriching(lead, enrichingLeadId.value);
 const campaignReadyLeads = computed(() =>
@@ -276,35 +268,6 @@ const verifyLeadsWhatsApp = leadsToVerify => {
     );
 };
 
-const fetchCrmStages = async (pipelineId, preferredStageId = '') => {
-  crmStages.value = [];
-  crmForm.value.stage_id = '';
-  if (!pipelineId) return;
-
-  const { data } = await CrmKanbanAPI.getStages(pipelineId);
-  crmStages.value = data.payload || [];
-  crmForm.value.stage_id =
-    preferredStageId ||
-    settings.value?.default_crm_stage_id ||
-    crmStages.value[0]?.id ||
-    '';
-};
-
-const fetchCrmPipelines = async () => {
-  try {
-    const { data } = await CrmKanbanAPI.getPipelines();
-    crmPipelines.value = data.payload || [];
-    crmForm.value.pipeline_id = settings.value?.default_crm_pipeline_id || '';
-    await fetchCrmStages(
-      crmForm.value.pipeline_id,
-      settings.value?.default_crm_stage_id
-    );
-  } catch {
-    crmPipelines.value = [];
-    crmStages.value = [];
-  }
-};
-
 const fetchLists = async () => {
   const { data } = await AutonomiaProspectingAPI.getLists();
   lists.value = data.payload || [];
@@ -350,12 +313,7 @@ const loadPage = async () => {
   isLoading.value = true;
   try {
     await fetchSettings();
-    await Promise.all([
-      fetchLists(),
-      fetchAllLeads(),
-      fetchCrmPipelines(),
-      fetchCampaigns(),
-    ]);
+    await Promise.all([fetchLists(), fetchAllLeads(), fetchCampaigns()]);
     if (lists.value.length) {
       await selectList(lists.value[0]);
     }
@@ -500,28 +458,27 @@ const removeLead = async lead => {
   }
 };
 
-const createCrmCard = async lead => {
-  if (
-    !lead?.id ||
-    lead.crm_card_id ||
-    convertingCrmLeadId.value ||
-    !canCreateCrmCard.value
-  ) {
-    return;
-  }
-
-  convertingCrmLeadId.value = lead.id;
-  try {
-    const { data } = await AutonomiaProspectingAPI.createLeadCrmCard(lead.id, {
-      pipeline_id: crmForm.value.pipeline_id,
-      stage_id: crmForm.value.stage_id,
-    });
-    replaceLead(data.payload?.lead);
-    useAlert(t('PROSPECTING.SEARCH.CRM_CARD_CREATED'));
-  } catch (e) {
-    alertError(e, t('PROSPECTING.ERRORS.CREATE_CRM_CARD'));
-  } finally {
-    convertingCrmLeadId.value = null;
+// Resultado da janela Enviar ao CRM (#680): o que foi ganha o link do card
+// e do contato; o que falhou fica como estava.
+const applyCrmSendResult = ({ created, existing }) => {
+  const sent = new Map(
+    [...created, ...existing].map(item => [Number(item.lead_id), item])
+  );
+  const withCard = lead => {
+    const item = sent.get(Number(lead.id));
+    if (!item) return lead;
+    return {
+      ...lead,
+      crm_card_id: item.card_id,
+      contact_id: item.contact_id || lead.contact_id,
+    };
+  };
+  allLeads.value = allLeads.value.map(withCard);
+  if (selectedList.value?.leads) {
+    selectedList.value = {
+      ...selectedList.value,
+      leads: selectedList.value.leads.map(withCard),
+    };
   }
 };
 
@@ -740,7 +697,23 @@ onMounted(loadPage);
                   {{ selectedList.description }}
                 </p>
               </div>
-              <div v-if="hasSelectedList" class="relative flex shrink-0">
+              <div
+                v-if="hasSelectedList"
+                class="relative flex shrink-0 items-center gap-2"
+              >
+                <button
+                  v-if="canManage"
+                  type="button"
+                  class="inline-flex h-9 items-center gap-1.5 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  :disabled="!listLeads.length"
+                  @click="crmSendLeads = listLeads"
+                >
+                  <span
+                    class="i-lucide-kanban-square size-4"
+                    aria-hidden="true"
+                  />
+                  {{ t('PROSPECTING.LISTS.SEND_LIST_TO_CRM') }}
+                </button>
                 <button
                   type="button"
                   class="relative flex size-9 items-center justify-center rounded-md border border-n-weak text-n-slate-12 hover:bg-n-solid-2"
@@ -1191,18 +1164,14 @@ onMounted(loadPage);
                   <button
                     v-else-if="canManage"
                     type="button"
-                    class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-                    :disabled="
-                      convertingCrmLeadId === lead.id || !canCreateCrmCard
-                    "
-                    @click="createCrmCard(lead)"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm"
+                    @click="crmSendLeads = [lead]"
                   >
-                    <span class="i-lucide-kanban-square size-3.5" />
-                    {{
-                      convertingCrmLeadId === lead.id
-                        ? t('PROSPECTING.SEARCH.CREATING_CRM_CARD')
-                        : t('PROSPECTING.SEARCH.CREATE_CRM_CARD')
-                    }}
+                    <span
+                      class="i-lucide-kanban-square size-3.5"
+                      aria-hidden="true"
+                    />
+                    {{ t('PROSPECTING.SEARCH.SEND_TO_CRM') }}
                   </button>
                   <button
                     v-if="canManage"
@@ -1715,5 +1684,14 @@ onMounted(loadPage);
         </div>
       </section>
     </div>
+
+    <CrmSendModal
+      v-if="crmSendLeads"
+      :leads="crmSendLeads"
+      :suggested-pipeline-id="settings?.default_crm_pipeline_id || ''"
+      :suggested-stage-id="settings?.default_crm_stage_id || ''"
+      @sent="applyCrmSendResult"
+      @close="crmSendLeads = null"
+    />
   </main>
 </template>

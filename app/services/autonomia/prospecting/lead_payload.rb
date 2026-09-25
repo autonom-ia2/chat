@@ -32,9 +32,10 @@ class Autonomia::Prospecting::LeadPayload
     )
   end
 
-  # Pesquisa de empresa e decisor (#679), no formato do contrato com a tela.
+  # Pesquisa de empresa e decisor (#679), no formato do contrato com a tela. Vai junto o nome do contato real do lead
+  # (#680): o selo "Contato atual" do sócio compara com ele, e não com o decisor, que pode não ser o contato.
   def research(lead)
-    { research: Autonomia::Prospecting::Research::Payload.build(lead) }
+    { research: Autonomia::Prospecting::Research::Payload.build(lead), contact_name: lead.contact&.name }
   end
 
   # O botão de WhatsApp usa o telefone do Google; se ele não é WhatsApp e o número achado no site foi

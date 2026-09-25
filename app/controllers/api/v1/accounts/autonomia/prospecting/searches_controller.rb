@@ -49,9 +49,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     ).perform
     # Enriquecer e verificar WhatsApp no servidor, sem depender da aba aberta (#678).
     ::Autonomia::Prospecting::LeadWorkQueue.after_search(account: Current.account, leads: result.leads)
-    # A fila marca 'queued' por update_all: sem reler, a tela recebia 'pending', verificava pela aba os mesmos números
-    # que o job verifica e mostrava Enriquecer livre num lead já na fila.
-    leads = result.leads.each(&:reload)
+    leads = reloaded_leads(result.leads)
 
     render json: {
       payload: {
@@ -203,11 +201,19 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     payload
   end
 
+  # A fila marca 'queued' por update_all: sem reler, a tela recebia 'pending', verificava pela aba os mesmos números
+  # que o job verifica e mostrava Enriquecer livre num lead já na fila. O contato vai junto (nome do contato no lead).
+  def reloaded_leads(leads)
+    leads.each(&:reload).tap do |reloaded|
+      ActiveRecord::Associations::Preloader.new(records: reloaded, associations: :contact).call
+    end
+  end
+
   def leads_for_search(search)
     lead_ids = Array(search.metadata.to_h['lead_ids']).map(&:to_i)
-    return search.leads.includes(:company_profile).order(created_at: :desc) if lead_ids.blank?
+    return search.leads.includes(:company_profile, :contact).order(created_at: :desc) if lead_ids.blank?
 
-    leads_scope.includes(:company_profile).where(id: lead_ids).index_by(&:id).values_at(*lead_ids).compact
+    leads_scope.includes(:company_profile, :contact).where(id: lead_ids).index_by(&:id).values_at(*lead_ids).compact
   end
 
   def lead_payload(lead, search = nil)

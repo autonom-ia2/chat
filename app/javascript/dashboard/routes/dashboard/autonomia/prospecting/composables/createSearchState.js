@@ -15,11 +15,11 @@ import { createSliceState, sliceFormDefaults } from './searchSlices';
 const createFlags = () => ({
   isLoading: ref(true),
   isSearching: ref(false),
-  convertingCrmLeadId: ref(null),
   enrichingLeadId: ref(null),
   researchRequestLeadId: ref(null),
+  // Sócio sendo adotado como contato ({ leadId, name }), #680.
+  adoptingOwner: ref(null),
   verifyingWhatsAppLeadIds: ref([]),
-  bulkAction: ref(''),
   showNewSearch: ref(false),
   showFilters: ref(false),
   deletingSearchId: ref(null),
@@ -28,6 +28,10 @@ const createFlags = () => ({
 
 const createData = () => ({
   selectedLeadIds: ref([]),
+  // Leads da janela Enviar ao CRM (#680); null com a janela fechada.
+  crmSendLeads: ref(null),
+  // Leads da janela Adicionar à campanha (#680); null com a janela fechada.
+  campaignLeads: ref(null),
   searches: ref([]),
   searchHistoryMeta: ref({
     page: 1,
@@ -125,9 +129,6 @@ const createSearchDerived = state => ({
     () =>
       state.searchHistoryMeta.value.has_more &&
       !state.isLoadingMoreSearches.value
-  ),
-  canCreateCrmCard: computed(() =>
-    Boolean(state.crmForm.value.pipeline_id && state.crmForm.value.stage_id)
   ),
   canSearch: computed(
     () =>
