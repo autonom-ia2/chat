@@ -26,6 +26,16 @@ module Autonomia
           IPAddr.new('fe80::/10')
         ].freeze
 
+        # Classifica um endereço JÁ resolvido. Quem conecta num IP fixado (Prospecting::WebsiteScraper, #476) checa o
+        # endereço em que vai conectar com esta mesma regra, em vez de confiar numa segunda resolução do DNS.
+        def self.blocked_ip?(address)
+          ip = IPAddr.new(address.to_s)
+          ip = ip.native if ip.ipv4_mapped?
+          BLOCKED_IP_RANGES.any? { |range| range.include?(ip) }
+        rescue IPAddr::InvalidAddressError
+          true
+        end
+
         def initialize(url)
           @url = url.to_s.strip
         end
@@ -76,11 +86,9 @@ module Autonomia
         end
 
         def blocked_ip?(address, reject_invalid: false)
-          ip = IPAddr.new(address)
-          ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
-          BLOCKED_IP_RANGES.any? { |range| range.include?(ip) }
-        rescue IPAddr::InvalidAddressError
-          reject_invalid
+          return reject_invalid unless ip_address?(address)
+
+          self.class.blocked_ip?(address)
         end
       end
     end
