@@ -213,13 +213,6 @@ const GO_TO_COMMANDS = [
     routeName: 'canned_list',
   },
   {
-    id: 'open_sla_settings',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_SETTINGS_SLA',
-    section: SECTION_SETTINGS,
-    icon: ICON_CLOCK_ALERT,
-    routeName: 'sla_list',
-  },
-  {
     id: 'open_applications_settings',
     title: 'COMMAND_BAR.COMMANDS.GO_TO_SETTINGS_APPLICATIONS',
     section: SECTION_SETTINGS,
@@ -289,8 +282,12 @@ export function useGoToCommandHotKeys(isPaywalled = ref(false)) {
     return !isPaywalled.value || isUpgradePageBypassRoute(route.name);
   };
 
+  // Rota que não está registrada (o fork tirou algumas telas do Chatwoot, como o
+  // SLA das configurações) sai da paleta: router.resolve lançaria "No match" e
+  // derrubaria a paleta inteira, inclusive "Alterar tema".
   const goToCommandHotKeys = computed(() =>
     GO_TO_COMMANDS.flatMap(command => {
+      if (!router.hasRoute(command.routeName)) return [];
       const route = resolveRoute(command);
       if (!isAvailable(route)) return [];
 
