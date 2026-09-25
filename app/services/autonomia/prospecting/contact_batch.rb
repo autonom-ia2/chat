@@ -10,8 +10,10 @@ class Autonomia::Prospecting::ContactBatch
   class TooManyLeads < Error; end
   class NoLeads < Error; end
 
-  def initialize(account:, user:, lead_ids:)
+  # leads_scope: os leads que quem pede enxerga (Visibility, #732 item 6). O controller sempre passa; sem ele, a conta.
+  def initialize(account:, user:, lead_ids:, leads_scope: nil)
     @account = account
+    @leads_scope = leads_scope || Autonomia::Prospecting::Lead.where(account: account)
     @user = user
     @lead_ids = Array(lead_ids).map(&:to_i).uniq
   end
@@ -28,7 +30,7 @@ class Autonomia::Prospecting::ContactBatch
   private
 
   def leads_by_id
-    @leads_by_id ||= Autonomia::Prospecting::Lead.where(account: @account, id: @lead_ids).index_by(&:id)
+    @leads_by_id ||= @leads_scope.where(id: @lead_ids).index_by(&:id)
   end
 
   def convert_lead(lead_id, result)

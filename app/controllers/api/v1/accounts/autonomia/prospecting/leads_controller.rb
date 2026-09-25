@@ -74,11 +74,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
 
   # "Adicionar à campanha" a partir da seleção (#680, ACAO-25/26/27): a seleção vira lista e segue o segmento das Listas.
   def create_campaign_segment
-    result = ::Autonomia::Prospecting::SelectionCampaignSegment.new(
-      account: Current.account, user: Current.user, lead_ids: params[:lead_ids],
-      campaign: { id: params[:campaign_id], type: params[:campaign_type] }, segment_name: params[:segment_name]
-    ).perform
-    render json: { payload: selection_segment_payload(result) }, status: :created
+    render json: { payload: selection_segment_payload(selection_campaign_segment.perform) }, status: :created
   rescue ActiveRecord::RecordNotFound
     render_campaign_error('prospecting.campaign.not_found', status: :not_found)
   rescue ActiveRecord::RecordInvalid => e
@@ -170,10 +166,6 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   # O bloco técnico da nota só vai para o administrador (#732, item 9).
   def lead_payload(lead) = visible_lead_payload(lead_payload_builder.build(lead))
 
-  # O agente só vê e mexe nos leads das próprias buscas e das listas da conta (#732, item 6). Vale para todas as ações
-  # daqui, inclusive as que acham o lead pelo id.
-  def leads_scope = visibility.leads(super)
-
   def research_enabled?
     ::Autonomia::Prospecting::Config.research_enabled?(Current.account)
   end
@@ -188,9 +180,17 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     )
   end
 
+  # Só os leads que a pessoa vê (leads_scope) entram na lista nova; os outros voltam em missing_lead_ids.
+  def selection_campaign_segment
+    ::Autonomia::Prospecting::SelectionCampaignSegment.new(
+      account: Current.account, user: Current.user, lead_ids: params[:lead_ids], leads_scope: leads_scope,
+      campaign: { id: params[:campaign_id], type: params[:campaign_type] }, segment_name: params[:segment_name]
+    )
+  end
+
   def run_crm_send(lead_ids, pipeline_id, stage_id)
     ::Autonomia::Prospecting::CrmCardBatch.new(
-      account: Current.account, user: Current.user, lead_ids: lead_ids, pipeline_id: pipeline_id, stage_id: stage_id
+      account: Current.account, user: Current.user, lead_ids: lead_ids, leads_scope: leads_scope, pipeline_id: pipeline_id, stage_id: stage_id
     ).perform
   end
 

@@ -148,6 +148,83 @@ RSpec.describe 'Autonomia prospecting search visibility', type: :request do
     end
   end
 
+  # As ações em lote e a lista acham o lead pelo id: sem o filtro, o agente descartava, virava contato, mandava ao CRM
+  # ou punha numa lista (e daí passava a ver) o lead da busca de outro agente.
+  describe 'ações em lote sobre o lead da busca de outro agente' do
+    it 'não descarta: o lead volta como não encontrado, sem o payload, e continua como estava' do
+      post "#{base_path}/leads/discard", params: { lead_ids: [other_lead.id], reason: 'Sem interesse' },
+                                         headers: auth_headers(agent), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.dig('payload', 'leads')).to eq([])
+      expect(response.parsed_body.dig('payload', 'missing_lead_ids')).to eq([other_lead.id])
+      expect(other_lead.reload.status).not_to eq('discarded')
+    end
+
+    it 'não cria contato: o lead volta como não encontrado' do
+      post "#{base_path}/leads/contacts", params: { lead_ids: [other_lead.id] }, headers: auth_headers(agent), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.dig('payload', 'created')).to eq([])
+      expect(response.parsed_body.dig('payload', 'failed').pluck('lead_id', 'reason_code')).to eq([[other_lead.id, 'not_found']])
+      expect(other_lead.reload.contact_id).to be_nil
+    end
+
+    it 'não manda ao CRM: o lead volta como não encontrado e nenhum card é criado' do
+      allow(Crm::Config).to receive(:enabled?).and_return(true)
+      pipeline, stage = create_crm_pipeline(account: account, user: admin)
+      crm_agent = agent_with(%w[prospecting_manage crm_manage_cards])
+
+      post "#{base_path}/leads/crm_cards", params: { lead_ids: [other_lead.id], pipeline_id: pipeline.id, stage_id: stage.id },
+                                           headers: auth_headers(crm_agent), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.dig('payload', 'failed').pluck('lead_id', 'reason_code')).to eq([[other_lead.id, 'not_found']])
+      expect(account.crm_cards.count).to eq(0)
+    end
+
+    it 'não põe o lead numa lista pela seleção da campanha, e o lead continua fechado para ele' do
+      other_lead.update!(phone: '+5531999990001', country: 'BR', status: :ready_for_campaign,
+                         metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+5531999990001' } })
+
+      post "#{base_path}/leads/campaign_segment", params: { lead_ids: [other_lead.id], segment_name: 'Seleção' },
+                                                  headers: auth_headers(agent), as: :json
+
+      expect(Autonomia::Prospecting::ListLead.where(prospect_lead_id: other_lead.id)).not_to exist
+      get "#{base_path}/leads/#{other_lead.id}", headers: auth_headers(agent)
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'não põe o lead numa lista pelo id (404), e o lead continua fechado para ele' do
+      list = Autonomia::Prospecting::List.create!(account: account, user: agent, name: 'Minha lista')
+
+      post "#{base_path}/lists/#{list.id}/leads", params: { lead_id: other_lead.id }, headers: auth_headers(agent), as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(list.list_leads).not_to exist
+      get "#{base_path}/leads/#{other_lead.id}", headers: auth_headers(agent)
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'o próprio lead continua descartável e entra na lista' do
+      list = Autonomia::Prospecting::List.create!(account: account, user: agent, name: 'Minha lista')
+
+      post "#{base_path}/lists/#{list.id}/leads", params: { lead_id: own_lead.id }, headers: auth_headers(agent), as: :json
+      expect(response).to have_http_status(:created)
+
+      post "#{base_path}/leads/discard", params: { lead_ids: [own_lead.id], reason: 'Fechou' }, headers: auth_headers(agent), as: :json
+      expect(response.parsed_body.dig('payload', 'leads').pluck('id')).to eq([own_lead.id])
+      expect(own_lead.reload.status).to eq('discarded')
+    end
+
+    it 'o administrador descarta o lead da busca de qualquer agente' do
+      post "#{base_path}/leads/discard", params: { lead_ids: [other_lead.id], reason: 'Duplicado' }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body.dig('payload', 'leads').pluck('id')).to eq([other_lead.id])
+      expect(other_lead.reload.status).to eq('discarded')
+    end
+  end
+
   it 'a busca nova fica com quem a fez' do
     Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'mock')
     allow(Autonomia::Prospecting::LeadWorkQueue).to receive(:after_search)

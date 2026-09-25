@@ -22,8 +22,10 @@ class Autonomia::Prospecting::SelectionCampaignSegment
   end
 
   # campaign: { id:, type: }, a campanha escolhida e o tipo dela (#732, item 11); vazio cria só o segmento.
-  def initialize(account:, user:, lead_ids:, campaign: {}, segment_name: nil)
+  # leads_scope: os leads que quem pede enxerga (Visibility, #732 item 6); o que fica de fora volta em missing_lead_ids.
+  def initialize(account:, user:, lead_ids:, campaign: {}, segment_name: nil, leads_scope: nil) # rubocop:disable Metrics/ParameterLists
     @account = account
+    @leads_scope = leads_scope || Autonomia::Prospecting::Lead.where(account: account)
     @user = user
     @lead_ids = Array(lead_ids).map(&:to_i).uniq
     @campaign = campaign.to_h.symbolize_keys
@@ -44,7 +46,7 @@ class Autonomia::Prospecting::SelectionCampaignSegment
   private
 
   def leads
-    @leads ||= Autonomia::Prospecting::Lead.where(account: @account, id: @lead_ids).order(:id).to_a
+    @leads ||= @leads_scope.where(id: @lead_ids).order(:id).to_a
   end
 
   def missing_lead_ids

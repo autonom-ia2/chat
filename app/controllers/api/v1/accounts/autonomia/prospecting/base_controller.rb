@@ -58,8 +58,11 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     ::Autonomia::Prospecting::Search.where(account: Current.account)
   end
 
+  # O agente só vê e mexe nos leads das próprias buscas e das listas da conta (#732, item 6). Vale para toda ação que
+  # acha o lead pelo id, inclusive os lotes (descartar, contatos, CRM, campanha) e o "adicionar à lista": um lead posto
+  # numa lista fica visível para a conta, então a lista não pode ser o atalho para o lead de outro agente.
   def leads_scope
-    ::Autonomia::Prospecting::Lead.where(account: Current.account)
+    visibility.leads(::Autonomia::Prospecting::Lead.where(account: Current.account))
   end
 
   def lists_scope

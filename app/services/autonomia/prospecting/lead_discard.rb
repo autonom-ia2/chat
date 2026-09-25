@@ -1,6 +1,7 @@
 # Descartar leads (#732, item 10), no painel do lead e em lote, sempre com motivo. Descartado continua visível na busca,
 # marcado, e sai das ações de envio: o CRM (CrmCardBatch), os contatos em lote (ContactBatch) e a campanha
-# (CampaignSegmentBuilder) recusam lead descartado. Lead fora da conta volta como não encontrado, sem ser tocado.
+# (CampaignSegmentBuilder) recusam lead descartado. Lead fora da conta, ou que a pessoa não vê, volta como não
+# encontrado, sem ser tocado.
 class Autonomia::Prospecting::LeadDiscard
   MAX_LEADS = 500
   MAX_REASON_LENGTH = 255
@@ -13,15 +14,16 @@ class Autonomia::Prospecting::LeadDiscard
   class MissingReason < Error; end
   class ReasonTooLong < Error; end
 
-  def initialize(account:, lead_ids:, reason:)
-    @account = account
+  # leads_scope: os leads que quem pede enxerga (Visibility, #732 item 6). O controller sempre passa; sem ele, a conta.
+  def initialize(account:, lead_ids:, reason:, leads_scope: nil)
+    @leads_scope = leads_scope || Autonomia::Prospecting::Lead.where(account: account)
     @lead_ids = Array(lead_ids).map(&:to_i).uniq
     @reason = reason.to_s.strip
   end
 
   def perform
     validate!
-    leads = Autonomia::Prospecting::Lead.where(account: @account, id: @lead_ids).to_a
+    leads = @leads_scope.where(id: @lead_ids).to_a
     Autonomia::Prospecting::Lead.transaction do
       leads.each { |lead| lead.update!(status: :discarded, discard_reason: @reason) }
     end
