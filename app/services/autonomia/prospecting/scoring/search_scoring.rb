@@ -33,9 +33,13 @@ class Autonomia::Prospecting::Scoring::SearchScoring
 
   private
 
+  # A busca chama isto dentro da sua transação. O savepoint desfaz só o que a nota do Orth fez: um erro de SQL nela
+  # aborta a transação no Postgres, e sem o savepoint a busca inteira cairia com PG::InFailedSqlTransaction.
   def orth_entries(leads)
-    Autonomia::Prospecting::Scoring::OrthRanking.new(leads: leads, mode: @mode, weights: @setting.orth_scoring_weights,
-                                                     filters: @filters).perform
+    ActiveRecord::Base.transaction(requires_new: true) do
+      Autonomia::Prospecting::Scoring::OrthRanking.new(leads: leads, mode: @mode, weights: @setting.orth_scoring_weights,
+                                                       filters: @filters).perform
+    end
   rescue StandardError => e
     raise EngineError, "#{e.class.name}: #{e.message}" if @setting.orth_score_engine?
 

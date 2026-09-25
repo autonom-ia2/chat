@@ -27,4 +27,17 @@ RSpec.describe 'Autonomia prospecting legacy score engine characterization', typ
     expect("#{JSON.pretty_generate(legacy_engine_snapshot)}\n").to eq(reference)
     expect(orth_scorer).to have_received(:new).twice
   end
+
+  # A sombra roda dentro da transação da busca. Um erro de SQL nela aborta a transação no Postgres; se não ficar isolado,
+  # o que vem depois falha com PG::InFailedSqlTransaction e a busca da conta legada volta 500.
+  it 'devolve o mesmo payload de antes, byte a byte, com erro de SQL na nota do Orth' do
+    allow(orth_scorer).to receive(:new) do
+      scorer = instance_double(orth_scorer)
+      allow(scorer).to receive(:perform) { ActiveRecord::Base.connection.execute('SELECT 1/0') }
+      scorer
+    end
+
+    expect("#{JSON.pretty_generate(legacy_engine_snapshot)}\n").to eq(reference)
+    expect(orth_scorer).to have_received(:new).twice
+  end
 end
