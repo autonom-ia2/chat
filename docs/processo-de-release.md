@@ -1,6 +1,6 @@
 # Trem de release do chat2you
 
-Combinado em 25/09/2026 entre as sessões Prospecção, Cotação e Material de apoio em vídeo, a pedido do Rodrigo:
+Combinado em 25/09/2026 entre as sessões Prospecção (#676), Cotação e Central/Guia e CRM, a pedido do Rodrigo:
 subir junto o que estiver pronto, com um deploy só, em vez de um deploy de ~40 minutos por PR.
 
 ## Por que existe
@@ -23,6 +23,11 @@ da instância nova e 5,5 minutos o desligamento da antiga.
      `guideRouteRegistry.js`, `mapa-de-artigos.json`, `cobertura.json`, evidências com número de linha) conflitam
      entre PRs. O que mudar entra como commit do próprio lote.
 
+   A lista fixa não cobre tudo. Cada PR declara na descrição os caminhos de spec que tocou (por exemplo
+   `spec/requests/api/v1/accounts/crm`, `spec/enterprise`, `spec/policies`, `routes/dashboard/crm`,
+   `routes/dashboard/campaigns`, `store/modules`, `scripts/central-de-ajuda`), e quem fecha roda a união deles com a
+   lista fixa, mais o lint do CI (`.github/scripts/email-protection-eslint.mjs`) nos arquivos tocados.
+
    Um PR que quebra a bateria sai do lote: o squash dele é revertido no branch do lote (`git revert`), e ele vai no
    próximo, sem segurar os outros nem virar correção às pressas dentro do lote.
 
@@ -44,7 +49,13 @@ da instância nova e 5,5 minutos o desligamento da antiga.
 8. **Issues.** PR mergeado num branch que não é o padrão não fecha issue pelo `Closes #N`. Quem fez cada PR fecha a
    issue depois do merge do lote na `main` e atualiza o Project Autonom.ia Dev.
 9. **Rollback** de um lote: `workflow_dispatch` com `action=rollback` nos dois workflows de deploy (volta para a
-   instância anterior). Um lote com migration tem o rollback do banco escrito antes, no próprio PR do lote.
+   instância anterior). Só volta **um degrau**: a instância de dois deploys atrás é terminada cerca de 5 minutos depois
+   de cada deploy. Para desfazer um lote que já tem outro por cima, o caminho é um lote novo com `git revert`. Um lote
+   com migration tem o rollback do banco escrito antes, no próprio PR do lote.
+10. **Urgência (hotfix).** Um lote de um PR só, com OK do Rodrigo. Respeita a regra 4 (espera os "ok" do lote
+    anterior), mas não espera a janela de 2 horas.
+11. **Limpeza.** Depois do merge do lote na `main`, cada sessão remove as próprias worktrees. Apagar branch remota (a do
+    lote e as dos PRs) segue a regra do `/dev`: precisa do OK do Rodrigo.
 
 ## Melhorias propostas, pendentes de OK do Rodrigo
 
