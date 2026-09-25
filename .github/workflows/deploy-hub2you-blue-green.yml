@@ -20,6 +20,9 @@ on:
       - '!docs/**'
       - '!*.md'
       - '!**/*.md'
+      # .md que o app lê em produção (manuais dos agentes, por exemplo
+      # app/services/autonomia/insurance/quote_agent/instrucoes/) disparam deploy (docs/processo-de-release.md).
+      - 'app/**/*.md'
       - 'lib/operator_guide/**'
       - 'lib/central_de_ajuda/**'
       - 'config/onboarding/**'
@@ -115,8 +118,11 @@ jobs:
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.STABLE_IMAGE_TAG }}
-          cache-from: type=gha,scope=chatwoot-autonomia-hub2you-linux-amd64
-          cache-to: type=gha,mode=min,ignore-error=true,scope=chatwoot-autonomia-hub2you-linux-amd64
+          # As duas stacks montam a mesma imagem (mesmo Dockerfile e plataforma) e dividem o cache. mode=max guarda
+          # também as etapas intermediárias: sem isso o bundle install da etapa pre-builder (~19 dos ~24 min do build,
+          # medido em 25/09) era refeito a cada deploy. ignore-error mantém o deploy de pé se o cache falhar.
+          cache-from: type=gha,scope=chatwoot-prod-linux-amd64
+          cache-to: type=gha,mode=max,ignore-error=true,scope=chatwoot-prod-linux-amd64
 
       - name: Publish runtime image parameter
         env:

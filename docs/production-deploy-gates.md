@@ -6,14 +6,16 @@ automaticamente em push na `main` **exceto** quando o push só altera
 documentação não consome a janela de rollback. Rollback continua
 exclusivamente manual.
 
-**Exceção:** `lib/operator_guide/**` (conhecimento do Guia da Plataforma) e
-`config/onboarding/**` (trilha de onboarding) são lidos pela aplicação em
+**Exceção:** `lib/operator_guide/**` (conhecimento do Guia da Plataforma),
+`lib/central_de_ajuda/**` (Central de Ajuda), `config/onboarding/**` (trilha de
+onboarding) e `app/**/*.md` (manuais que os agentes leem, como
+`app/services/autonomia/insurance/quote_agent/instrucoes/`) são lidos pela aplicação em
 runtime. Mesmo sendo `.md`/`.yml`, mudança nessas pastas **dispara** deploy;
 sem isso, um PR que só atualiza o Guia nunca chegaria a produção (#486).
 
 O filtro é `on.push.paths` com padrões avaliados em ordem (o último que casa
 decide): `**`, `.*`, `.*/**`, `!.github/**`, `!docs/**`, `!*.md`, `!**/*.md`,
-`lib/operator_guide/**`, `config/onboarding/**`. `paths-ignore` não aceita
+`app/**/*.md`, `lib/operator_guide/**`, `lib/central_de_ajuda/**`, `config/onboarding/**`. `paths-ignore` não aceita
 reinclusão com `!`, por isso a troca.
 
 Para executar um dos workflows à mão, o operador precisa:
@@ -48,3 +50,13 @@ alterar AWS, ECR, EC2, ALB e SSM.
 
 Onde moram as variáveis de ambiente de produção, e o que não pode sumir delas:
 [production-env-secrets.md](production-env-secrets.md).
+
+## Cache do build
+
+As duas stacks montam a mesma imagem (`docker/Dockerfile`, `linux/amd64`) e dividem o cache do GitHub Actions no
+escopo `chatwoot-prod-linux-amd64`, em `mode=max`. O modo `max` guarda também as etapas intermediárias do Dockerfile:
+medido em 25/09, o `bundle install` da etapa `pre-builder` levava cerca de 19 dos 24 minutos do build porque o modo
+`min` não o guardava. A etapa só é refeita quando `Gemfile`/`Gemfile.lock` mudam. `ignore-error=true` mantém o deploy
+de pé se o cache falhar ou for despejado pelo limite de 10 GB do repositório. Voltar ao comportamento anterior é
+trocar `mode=max` por `mode=min` e os escopos pelos antigos (`chatwoot-autonomia-prod-linux-amd64` e
+`chatwoot-autonomia-hub2you-linux-amd64`).
