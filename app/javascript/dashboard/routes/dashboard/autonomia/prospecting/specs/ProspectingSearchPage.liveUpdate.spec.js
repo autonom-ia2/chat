@@ -17,6 +17,7 @@ import {
   mountSearchPage,
   sunLead,
 } from './support/searchPageHarness';
+import { leadCheckbox } from './support/resultsHelpers';
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
@@ -201,5 +202,84 @@ describe('ProspectingSearchPage · enriquecer em fila', () => {
         'PROSPECTING.SEARCH.ENRICHED'
       ).element.disabled
     ).toBe(true);
+  });
+});
+
+// Nota, prioridade e posição são desta busca (#678). Criar card no CRM e
+// verificar o WhatsApp pela aba devolvem o lead da conta, com os valores da
+// última busca que o tocou: sem preservar, a busca reaberta mostrava os de outra.
+describe('ProspectingSearchPage · resposta da API mantém os campos da busca', () => {
+  const otherSearchFields = {
+    search_rank: 40,
+    score: 12,
+    priority_score: 5,
+    priority_position: 9,
+    score_breakdown: { components: {} },
+  };
+  const thisSearchFields = () => ({
+    search_rank: 2,
+    score: 70,
+    priority_score: 82,
+    priority_position: 1,
+    score_breakdown: sunLead().score_breakdown,
+  });
+  const mapLead = wrapper =>
+    wrapper
+      .findComponent(MapStub)
+      .props('leads')
+      .find(lead => lead.id === 101);
+
+  it('criar card no CRM troca o lead sem trocar nota, prioridade e posição', async () => {
+    const wrapper = await mountSearchPage();
+    AutonomiaProspectingAPI.createLeadCrmCard.mockResolvedValue({
+      data: {
+        payload: { lead: sunLead({ crm_card_id: 77, ...otherSearchFields }) },
+      },
+    });
+
+    await leadCheckbox(wrapper, 'Padaria Sol').trigger('change');
+    await buttonWithText(wrapper, 'PROSPECTING.SEARCH.BULK_CRM_CARDS').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(mapLead(wrapper)).toMatchObject({
+      crm_card_id: 77,
+      ...thisSearchFields(),
+    });
+  });
+
+  it('verificar o WhatsApp pela aba troca o lead sem trocar nota, prioridade e posição', async () => {
+    const unverified = sunLead({
+      whatsapp_verification_status: null,
+      whatsapp_verified: false,
+    });
+    // Once: o harness troca a resposta padrão ao montar, e a verificação roda
+    // logo que a busca abre.
+    AutonomiaProspectingAPI.verifyLeadWhatsApp.mockResolvedValueOnce({
+      data: {
+        payload: {
+          lead: sunLead({
+            whatsapp_verification_status: 'verified',
+            ...otherSearchFields,
+          }),
+        },
+      },
+    });
+    const wrapper = await mountSearchPage({
+      payloads: {
+        11: { search: bakerySearch(), leads: [unverified] },
+        12: { search: gymSearch(), leads: [] },
+      },
+    });
+    await flushPromises();
+
+    expect(AutonomiaProspectingAPI.verifyLeadWhatsApp).toHaveBeenCalledWith(
+      101
+    );
+    expect(mapLead(wrapper)).toMatchObject({
+      whatsapp_verification_status: 'verified',
+      ...thisSearchFields(),
+    });
   });
 });

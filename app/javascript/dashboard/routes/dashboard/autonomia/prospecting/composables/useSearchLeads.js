@@ -67,25 +67,19 @@ export const useSearchLeads = (state, { canManage }) => {
     selectedLeadObjects,
   } = state;
 
+  // Toda resposta da API (evento, enriquecimento, card no CRM, WhatsApp) traz
+  // o lead da conta, com posição, nota e prioridade da última busca que o
+  // tocou. Esses campos são desta busca (#678) e ficam.
   const replaceLead = updatedLead => {
     if (!updatedLead?.id) return;
     leads.value = leads.value.map(item =>
-      item.id === updatedLead.id ? updatedLead : item
+      item.id === updatedLead.id
+        ? { ...updatedLead, ...pickSearchScopedFields(item) }
+        : item
     );
   };
 
-  // O evento e a resposta do enriquecimento trazem o lead da conta; posição,
-  // nota e prioridade são desta busca (#678) e ficam.
-  const keepSearchFields = (updatedLead, current) => ({
-    ...updatedLead,
-    ...pickSearchScopedFields(current),
-  });
-
-  useLeadLiveUpdates(updatedLead => {
-    const current = leads.value.find(item => item.id === updatedLead.id);
-    if (!current) return;
-    replaceLead(keepSearchFields(updatedLead, current));
-  });
+  useLeadLiveUpdates(replaceLead);
 
   const createCrmCard = async (lead, options = {}) => {
     if (
@@ -127,7 +121,7 @@ export const useSearchLeads = (state, { canManage }) => {
 
     try {
       const { data } = await AutonomiaProspectingAPI.enrichLead(lead.id);
-      replaceLead(keepSearchFields(data.payload?.lead, lead));
+      replaceLead(data.payload?.lead);
       useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_QUEUED'));
     } catch (e) {
       alertError(e, t('PROSPECTING.ERRORS.ENRICH_LEAD'));
