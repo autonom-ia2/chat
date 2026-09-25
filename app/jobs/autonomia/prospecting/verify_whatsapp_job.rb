@@ -1,7 +1,7 @@
 # Verificação de WhatsApp em lote no servidor (#678): o telefone do Google e o WhatsApp achado no site, lead a lead,
 # um lote por vez em cada conta (a sessão WAHA é uma só; consulta em rajada num número é o que o WhatsApp pune).
 class Autonomia::Prospecting::VerifyWhatsappJob < MutexApplicationJob
-  queue_as :low
+  queue_as :prospecting
 
   # 20 leads x até 2 números x timeout do WAHA (20 s) no pior caso; a trava expira sozinha se o worker morrer.
   LOCK_TIMEOUT = 15.minutes

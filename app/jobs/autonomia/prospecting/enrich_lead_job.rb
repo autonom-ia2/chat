@@ -1,7 +1,7 @@
 # Enriquecimento de um lead fora da requisição (#678). O pedido já foi aceito por LeadWorkQueue.enqueue_enrichment,
 # que deixou o lead em queued; este job só roda o que ainda está na fila.
 class Autonomia::Prospecting::EnrichLeadJob < ApplicationJob
-  queue_as :low
+  queue_as :prospecting
 
   INTERRUPTED = 'prospecting.enrichment.interrupted'.freeze
 

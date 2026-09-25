@@ -74,6 +74,26 @@ RSpec.describe 'Autonomia prospecting lead enrichment queue', type: :request do
     expect(Autonomia::Prospecting::EnrichLeadJob).to have_been_enqueued.with(lead.id)
   end
 
+  # Na fila há 20 minutos é só espera (busca grande ou fila cheia): o job ainda vai rodar, pedido novo seria duplicado.
+  it 'recusa pedido novo para lead que só está esperando a vez na fila' do
+    lead.update!(enrichment_status: 'queued', enrichment_requested_at: 20.minutes.ago)
+
+    post path, headers: auth_headers(admin)
+
+    expect(response).to have_http_status(:conflict)
+    expect(Autonomia::Prospecting::EnrichLeadJob).not_to have_been_enqueued
+  end
+
+  it 'aceita de novo um lead na fila há mais tempo do que qualquer espera normal' do
+    lead.update!(enrichment_status: 'queued',
+                 enrichment_requested_at: Autonomia::Prospecting::LeadWorkQueue::QUEUED_STALE_AFTER.ago - 1.minute)
+
+    post path, headers: auth_headers(admin)
+
+    expect(response).to have_http_status(:accepted)
+    expect(Autonomia::Prospecting::EnrichLeadJob).to have_been_enqueued.with(lead.id)
+  end
+
   it 'mantém a recusa da pesquisa desligada pelo superadmin, sem enfileirar' do
     Autonomia::Prospecting::Config.disable_research_for!(account)
 

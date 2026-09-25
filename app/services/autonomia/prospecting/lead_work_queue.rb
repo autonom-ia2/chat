@@ -2,10 +2,13 @@
 # não na requisição nem na aba aberta.
 #
 # A trava é o banco, não a memória do processo (há vários workers e vários pumas): o pedido só entra se a linha
-# ainda não está na fila ou rodando. Uma linha presa há mais de STALE_AFTER conta como livre, e o ReaperJob a
-# devolve a failed para a tela mostrar o botão de novo.
+# ainda não está na fila ou rodando. Uma linha rodando há mais de STALE_AFTER, ou na fila há mais de
+# QUEUED_STALE_AFTER, conta como livre, e o ReaperJob a devolve a failed para a tela mostrar o botão de novo.
 module Autonomia::Prospecting::LeadWorkQueue
   STALE_AFTER = 15.minutes
+  # "queued" é o job esperando a vez na fila, não um worker morto: uma busca de 60 leads com site e IA, ou duas seguidas,
+  # passa fácil de 15 minutos na fila. Só depois desta espera o pedido conta como perdido.
+  QUEUED_STALE_AFTER = 2.hours
   IN_PROGRESS = %w[queued running].freeze
   WHATSAPP_BATCH_SIZE = 20
   WHATSAPP_RETRY_STATUSES = [nil, 'failed'].freeze
@@ -69,6 +72,13 @@ module Autonomia::Prospecting::LeadWorkQueue
     scope = Autonomia::Prospecting::Lead.where(id: lead.id)
     scope.where.not(enrichment_status: IN_PROGRESS)
          .or(scope.where(enrichment_requested_at: nil))
-         .or(scope.where(enrichment_requested_at: ...STALE_AFTER.ago))
+         .or(scope.merge(stale_enrichment))
+  end
+
+  # Rodando há mais de STALE_AFTER é worker que morreu; na fila, só depois de QUEUED_STALE_AFTER.
+  def stale_enrichment(now = Time.current)
+    leads = Autonomia::Prospecting::Lead
+    leads.where(enrichment_status: 'running', enrichment_requested_at: ...(now - STALE_AFTER))
+         .or(leads.where(enrichment_status: 'queued', enrichment_requested_at: ...(now - QUEUED_STALE_AFTER)))
   end
 end

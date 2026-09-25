@@ -23,6 +23,9 @@
   - action_mailbox_routing
   - low
   - scheduled_jobs
+  # Prospecção (#678): enriquecimento (site + IA, até ~90 s cada) e verificação de WhatsApp em lote. Abaixo da
+  # scheduled_jobs para uma busca grande não segurar varredores, agendamentos e follow-ups de todas as contas.
+  - prospecting
   - deferred
   - purgable
   - housekeeping
