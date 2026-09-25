@@ -9,6 +9,7 @@ import {
   CRM_MANAGE_AI_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
   CRM_ADMIN_PERMISSION,
+  CRM_EXPORT_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 
 /**
@@ -70,6 +71,11 @@ export function useCrmPermissions() {
   const canAdminCrm = computed(
     () => isAdmin.value || permissions.value.includes(CRM_ADMIN_PERMISSION)
   );
+  // #722 — planilha da Lista é dado pessoal em lote: como canAdminCrm, o agente
+  // sem função NÃO ganha por padrão (backend: crm_export em PLAIN_AGENT_DENIED_KEYS).
+  const canExportCrm = computed(
+    () => canAdminCrm.value || permissions.value.includes(CRM_EXPORT_PERMISSION)
+  );
 
   return {
     canViewCrm,
@@ -79,5 +85,6 @@ export function useCrmPermissions() {
     canManageAi,
     canViewReports,
     canAdminCrm,
+    canExportCrm,
   };
 }

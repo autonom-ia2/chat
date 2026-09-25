@@ -59,6 +59,7 @@ export const MODULE_GROUPS = [
           'crm_manage_pipelines',
           'crm_manage_ai',
           'crm_admin',
+          'crm_export',
         ],
       },
     ],

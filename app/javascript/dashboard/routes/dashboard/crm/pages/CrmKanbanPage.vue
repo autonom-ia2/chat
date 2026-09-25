@@ -25,6 +25,7 @@ import CrmPipelineDrawer from '../components/CrmPipelineDrawer.vue';
 import CrmInboxSettingsDrawer from '../components/CrmInboxSettingsDrawer.vue';
 import CrmBookingProfilesDrawer from '../components/CrmBookingProfilesDrawer.vue';
 import CrmCardsTable from '../components/list/CrmCardsTable.vue';
+import CrmListExportButton from '../components/list/CrmListExportButton.vue';
 import CrmTableColumnSettings from '../components/list/CrmTableColumnSettings.vue';
 import CrmSavedViews from '../components/list/CrmSavedViews.vue';
 import CrmResultTabs from '../components/list/CrmResultTabs.vue';
@@ -62,8 +63,13 @@ const inboxes = useMapGetter('inboxes/getInboxes');
 const agents = useMapGetter('agents/getAgents');
 const teams = useMapGetter('teams/getTeams');
 const accountLabels = useMapGetter('labels/getLabels');
-const { canManageCards, canMoveCards, canManagePipelines, canManageAi } =
-  useCrmPermissions();
+const {
+  canManageCards,
+  canMoveCards,
+  canManagePipelines,
+  canManageAi,
+  canExportCrm,
+} = useCrmPermissions();
 
 const CRM_CALENDAR_MEETINGS_FEATURE = 'CRM_CALENDAR_MEETINGS_ENABLED';
 const isCrmAiEnabled = computed(
@@ -504,25 +510,29 @@ const hasMoreCards = computed(
   () => cardsList.value.length < (cardsListMeta.value?.count || 0)
 );
 
-const loadCurrentList = async ({ append = false } = {}) => {
-  if (!currentPipelineId.value) return;
-  loadError.value = '';
-  if (!append) listPage.value = 1;
-  // Map the table's column id (e.g. `value`) to the backend sort param the
-  // FilterQuery whitelists (e.g. `value_cents`). Omitted when no sort is active.
+// Map the table's column id (e.g. `value`) to the backend sort param the
+// FilterQuery whitelists (e.g. `value_cents`). Empty when no sort is active.
+// Shared by the list fetch and the Excel export (#722), so both use the same order.
+const listSortParams = computed(() => {
   const activeSort = listSort.value;
   const sortParam = activeSort?.id
     ? COLUMN_TO_SORT_PARAM[activeSort.id]
     : undefined;
+  if (!sortParam) return {};
+  return { sort: sortParam, direction: activeSort.desc ? 'desc' : 'asc' };
+});
+
+const loadCurrentList = async ({ append = false } = {}) => {
+  if (!currentPipelineId.value) return;
+  loadError.value = '';
+  if (!append) listPage.value = 1;
   try {
     await store.dispatch('crmKanban/fetchCardsList', {
       pipelineId: currentPipelineId.value,
       page: listPage.value,
       perPage: listPageSize,
       append,
-      ...(sortParam
-        ? { sort: sortParam, direction: activeSort.desc ? 'desc' : 'asc' }
-        : {}),
+      ...listSortParams.value,
     });
   } catch {
     loadError.value = t('CRM_KANBAN.ERRORS.LOAD');
@@ -2132,17 +2142,24 @@ onMounted(async () => {
           @click="clearFilters"
         />
 
-        <!-- New card sits at the right of the control row. With active filters the
-             row wraps and this button drops to the next line as a whole (never
-             splitting), thanks to flex-wrap + ml-auto. -->
-        <Button
-          v-if="canManageCards && viewMode !== 'calendar'"
-          class="ml-auto"
-          :label="t('CRM_KANBAN.ACTIONS.NEW_CARD')"
-          icon="i-lucide-plus"
-          :disabled="!hasPipelines || isLoading"
-          @click="openCreateDrawer"
-        />
+        <!-- Export (list only, #722) and New card sit together at the right of the
+             control row. With active filters the row wraps and the group drops to
+             the next line as a whole (never splitting), thanks to flex-wrap + ml-auto. -->
+        <div class="ml-auto flex items-center gap-2">
+          <CrmListExportButton
+            v-if="canExportCrm && viewMode === 'list'"
+            :pipeline-id="currentPipelineId"
+            :sort-params="listSortParams"
+            :disabled="!hasPipelines || isLoading"
+          />
+          <Button
+            v-if="canManageCards && viewMode !== 'calendar'"
+            :label="t('CRM_KANBAN.ACTIONS.NEW_CARD')"
+            icon="i-lucide-plus"
+            :disabled="!hasPipelines || isLoading"
+            @click="openCreateDrawer"
+          />
+        </div>
       </div>
 
       <!-- Active-filter chips -->
