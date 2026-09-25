@@ -724,6 +724,45 @@ pt_BR:
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
+      # Nota do Orth (#681): frase de leitura da nota e motivos das penalidades de prioridade.
+      scoring:
+        human_insight:
+          sentence: '%{category}: %{signals}.'
+          categories:
+            gbp:
+              high: 'Oportunidade alta'
+              medium: 'Oportunidade média'
+              low: 'Oportunidade baixa'
+            general:
+              high: 'Lead bem qualificado'
+              medium: 'Lead qualificado'
+              low: 'Qualificação fraca'
+          signals:
+            gbp:
+              website: { strong: 'sem site', weak: 'site presente' }
+              phone: { strong: 'sem telefone', weak: 'tem telefone' }
+              rating: { strong: 'rating fraco', weak: 'rating bom' }
+              volume: { strong: 'poucas reviews', weak: 'volume saudável' }
+              activity: { strong: 'GMN inativo', weak: 'GMN ativo' }
+              photos: { strong: 'sem fotos', weak: 'fotos ok' }
+            general:
+              website: { strong: 'site', weak: 'sem site' }
+              phone: { strong: 'telefone', weak: 'sem telefone' }
+              rating: { strong: 'rating alto', weak: 'rating fraco' }
+              volume: { strong: 'volume bom', weak: 'pouco volume' }
+              activity: { strong: 'ativo', weak: 'pouco ativo' }
+              photos: { strong: 'boa presença visual', weak: 'sem fotos' }
+        negative_factors:
+          already_in_crm: 'Já está no CRM'
+          already_in_funnel: 'Já está no funil "%{name}"'
+          contacted_days_ago: 'Contatado há %{days}d'
+          contacted_recently: 'Contatado recentemente'
+          old_reviews:
+            one: 'Última review há %{count} ano'
+            other: 'Última review há %{count} anos'
+          low_rating_low_volume:
+            one: 'Rating %{rating} com apenas %{count} review'
+            other: 'Rating %{rating} com apenas %{count} reviews'
       crm_send:
         failures:
           not_found: 'Lead não encontrado nesta conta.'
@@ -752,13 +791,21 @@ pt_BR:
       campaign_errors:
         forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
       selection_list_name: 'Seleção da busca %{date}'
+      score_bands:
+        very_hot: 'Lead muito quente'
+        high: 'Oportunidade alta'
+        warm: 'Lead morno'
+        low: 'Prioridade baixa'
       errors:
         google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'
+        score_unavailable: 'A nota da busca está indisponível no momento. Fale com o suporte.'
         google_busy: 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.'
         google_invalid_argument: 'O Google recusou os dados da busca. Confira o termo, o local e a área e tente de novo.'
         google_timeout: 'O Google não respondeu a tempo. Tente de novo em alguns minutos.'
         google_place_not_found: 'O Google não encontrou esse local. Escolha outra sugestão da lista.'
         invalid_search_country: 'Escolha um país da lista.'
+        scoring_profile_unavailable: 'Esse perfil de nota não está disponível para esta conta. Escolha outro da lista.'
+        default_scoring_profile_restricted: 'O perfil padrão vale para todas as contas e não pode ser restrito. Desmarque as contas ou escolha outro perfil como padrão.'
         location_required: 'Escolha um local da lista de sugestões.'
         drawn_area_required: 'Desenhe a área no mapa antes de buscar: um círculo, um retângulo ou um polígono com pelo menos três pontos.'
         rank_out_of_reach: 'O Google traz até %{limit} posições por busca. Comece a faixa de posição em até %{limit}.'

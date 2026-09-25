@@ -283,4 +283,72 @@ RSpec.describe Autonomia::Prospecting::Research::CnpjDiscovery do
     expect(result.evidence.flat_map(&:keys).uniq - %i[source signal value]).to be_empty
     expect(result.evidence.to_json).not_to include('Alfa')
   end
+
+  # Nota de nome da BigDataCorp também sem empresa achada (#681, frente B): a maior nota vai na evidência e cada candidato
+  # leva só CNPJ, nota de nome, telefone e cidade/UF, para calibrar a descoberta. Nome de empresa ou pessoa não entra.
+  describe 'notas dos candidatos' do
+    let(:company_class) do
+      Struct.new(:cnpj, :legal_name, :trade_name, :registration_status, :registration_state, :city, :phones, keyword_init: true)
+    end
+    let(:registry) do
+      {
+        '11222333000181' => company_class.new(cnpj: '11222333000181', legal_name: 'Alfa Oficina Mecanica Ltda', trade_name: 'Alfa Oficina',
+                                              registration_status: 'ATIVA', registration_state: 'SP', city: 'Campinas',
+                                              phones: ['(11) 99900-0001']),
+        '11444777000161' => company_class.new(cnpj: '11444777000161', legal_name: 'Alfa Oficina Centro Ltda', trade_name: 'Alfa Centro',
+                                              registration_status: 'ATIVA', registration_state: 'SP', city: 'Sumare', phones: [])
+      }
+    end
+
+    it 'grava a maior nota de nome e a nota de cada candidato quando nenhum é aceito' do
+      stub_bigdatacorp([row('11222333000181', official: 40, trade: 52), row('11444777000161', official: 61, trade: 30)])
+
+      result = perform
+
+      expect(result.status).to eq(:not_found)
+      expect(result.evidence).to include({ source: 'bigdatacorp', signal: 'top_name_similarity', value: 0.61 })
+      expect(result.candidate_scores).to eq(
+        [{ cnpj: '11222333000181', name_similarity: 0.52, phone_match: true, city_uf_match: true },
+         { cnpj: '11444777000161', name_similarity: 0.61, phone_match: false, city_uf_match: false }]
+      )
+    end
+
+    it 'grava as notas no desfecho ambíguo' do
+      registry['11444777000161'].city = 'Campinas'
+      stub_bigdatacorp([row('11222333000181', official: 70, trade: 88), row('11444777000161', official: 70, trade: 84)])
+
+      result = perform
+
+      expect(result.status).to eq(:ambiguous)
+      expect(result.evidence).to include({ source: 'bigdatacorp', signal: 'top_name_similarity', value: 0.88 })
+      expect(result.candidate_scores.pluck(:name_similarity)).to eq([0.88, 0.84])
+    end
+
+    it 'o candidato rejeitado antes do cadastro entra com a nota da BigDataCorp, sem cidade' do
+      stub_bigdatacorp([row('11222333000181', official: 90, trade: 20, status: 'BAIXADA')])
+
+      result = perform
+
+      expect(result.candidate_scores).to eq([{ cnpj: '11222333000181', name_similarity: 0.9, phone_match: false, city_uf_match: false }])
+      expect(result.evidence).to include({ source: 'bigdatacorp', signal: 'top_name_similarity', value: 0.9 })
+    end
+
+    it 'sem candidato não inventa nota' do
+      stub_bigdatacorp([])
+
+      result = perform
+
+      expect(result.candidate_scores).to eq([])
+      expect(result.evidence.pluck(:signal)).not_to include('top_name_similarity')
+    end
+
+    it 'as notas não levam nome de empresa nem de pessoa' do
+      stub_bigdatacorp([row('11222333000181', official: 40, trade: 52, name: 'Maria da Silva')])
+
+      result = perform
+
+      expect(result.candidate_scores.flat_map(&:keys).uniq).to match_array(%i[cnpj name_similarity phone_match city_uf_match])
+      expect(result.candidate_scores.to_json).not_to include('Maria', 'Alfa')
+    end
+  end
 end

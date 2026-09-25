@@ -38,9 +38,19 @@ class Autonomia::Prospecting::ScoringProfile < ApplicationRecord
 
   belongs_to :created_by, class_name: 'User', optional: true
   belongs_to :updated_by, class_name: 'User', optional: true
+  # Sem conta vinculada o perfil é global; com contas vinculadas, só aparece e só vale para elas (#681).
+  has_many :scoring_profile_accounts, class_name: 'Autonomia::Prospecting::ScoringProfileAccount', inverse_of: :scoring_profile,
+                                      dependent: :delete_all
+  has_many :accounts, through: :scoring_profile_accounts
+
+  scope :available_to, lambda { |account|
+    links = Autonomia::Prospecting::ScoringProfileAccount
+    where.not(id: links.select(:scoring_profile_id)).or(where(id: links.where(account_id: account&.id).select(:scoring_profile_id)))
+  }
 
   validates :name, presence: true
   validate :weights_must_be_supported_numbers
+  validate :default_profile_must_be_global
 
   before_validation :normalize_weights
 
@@ -54,11 +64,26 @@ class Autonomia::Prospecting::ScoringProfile < ApplicationRecord
     where(default: true).first!
   end
 
+  def restricted?
+    account_ids.any?
+  end
+
+  def available_to?(account)
+    !restricted? || account_ids.include?(account&.id)
+  end
+
   def weights_with_defaults
     DEFAULT_WEIGHTS.merge(weights.to_h.slice(*DEFAULT_WEIGHTS.keys))
   end
 
   private
+
+  # O padrão vale para toda conta sem escolha e para quem perde acesso a um perfil restrito: tem de ser global.
+  def default_profile_must_be_global
+    return unless default? && restricted?
+
+    errors.add(:base, I18n.t('autonomia.prospecting.errors.default_scoring_profile_restricted'))
+  end
 
   def normalize_weights
     self.weights = DEFAULT_WEIGHTS.keys.index_with do |key|
