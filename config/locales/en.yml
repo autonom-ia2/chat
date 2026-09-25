@@ -516,6 +516,15 @@ en:
         errors:
           no_leads: 'Escolha pelo menos um lead para enviar ao CRM.'
           too_many_leads: 'Envie até %{max} leads por vez.'
+      campaign_blocked:
+        not_found: 'Lead não encontrado nesta conta.'
+        discarded: 'Lead descartado.'
+        opt_out: 'O contato pediu para não receber mensagens.'
+        contact_blocked: 'O contato está bloqueado no chat2you.'
+        no_phone: 'Lead sem telefone.'
+        no_whatsapp: 'Telefone sem WhatsApp confirmado.'
+        not_ready: 'Lead ainda não está pronto para campanha.'
+      selection_list_name: 'Seleção da busca %{date}'
       errors:
         google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'
         google_busy: 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.'

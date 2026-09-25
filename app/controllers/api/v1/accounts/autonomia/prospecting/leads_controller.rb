@@ -64,6 +64,22 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
+  # "Adicionar à campanha" a partir da seleção (#680, ACAO-25/26/27): a seleção vira lista e segue o segmento das Listas.
+  def create_campaign_segment
+    result = ::Autonomia::Prospecting::SelectionCampaignSegment.new(
+      account: Current.account, user: Current.user, lead_ids: params[:lead_ids],
+      campaign_id: params[:campaign_id], segment_name: params[:segment_name]
+    ).perform
+    render json: { payload: selection_segment_payload(result) }, status: :created
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'prospecting.campaign.not_found' }, status: :not_found
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  rescue ::Autonomia::Prospecting::SelectionCampaignSegment::Error => e
+    segment = ::Autonomia::Prospecting::CampaignSegmentPayload.blocked_only(e.blocked_leads, missing_lead_ids: e.missing_lead_ids)
+    render json: { error: e.message, payload: { segment: segment } }, status: :unprocessable_entity
+  end
+
   def verify_whatsapp
     result = ::Autonomia::Prospecting::WhatsappVerifier.new(
       lead: leads_scope.find(params[:id])
@@ -155,6 +171,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
 
   def render_single_failure(failure, payload)
     render json: { error: failure[:message], code: failure[:reason_code], payload: payload }, status: :unprocessable_entity
+  end
+
+  def selection_segment_payload(result)
+    {
+      list: list_summary_payload(result.segment.list),
+      segment: ::Autonomia::Prospecting::CampaignSegmentPayload.build(result.segment, missing_lead_ids: result.missing_lead_ids)
+    }
   end
 
   def render_crm_send_error(code)

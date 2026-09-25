@@ -73,14 +73,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
   end
 
   def list_payload(list, include_leads: false)
-    payload = list.as_json(
-      only: [:id, :name, :description, :status, :metadata, :created_at, :updated_at]
-    ).merge(
-      lead_ids: list.leads.pluck(:id),
-      leads_count: list.leads.count,
-      campaign_segment: list.metadata.to_h['campaign_segment']
-    )
-
+    payload = list_summary_payload(list)
     return payload unless include_leads
 
     payload.merge(
@@ -117,25 +110,6 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
   end
 
   def campaign_segment_payload(result)
-    {
-      label: {
-        id: result.label.id,
-        title: result.label.title
-      },
-      campaign: result.campaign && {
-        id: result.campaign.display_id,
-        title: result.campaign.title
-      },
-      eligible_count: result.eligible_leads.size,
-      blocked_count: result.blocked_leads.size,
-      created_contacts_count: result.created_contacts_count,
-      blocked_leads: result.blocked_leads.map do |lead|
-        {
-          id: lead.id,
-          name: lead.name,
-          status: lead.status
-        }
-      end
-    }
+    ::Autonomia::Prospecting::CampaignSegmentPayload.build(result)
   end
 end
