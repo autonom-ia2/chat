@@ -397,6 +397,8 @@ Rails.application.routes.draw do
                 post :adopt_owner, on: :member
                 post :crm_cards, on: :collection, action: :create_crm_cards
                 post :campaign_segment, on: :collection, action: :create_campaign_segment
+                post :discard, on: :collection, controller: :lead_batches, action: :discard
+                post :contacts, on: :collection, controller: :lead_batches, action: :contacts
               end
               resources :lists, only: [:index, :show, :create] do
                 post 'leads', on: :member, action: :add_lead

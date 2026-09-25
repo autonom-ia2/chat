@@ -103,6 +103,8 @@ describe('ProspectingSearchPage · enviar ao CRM', () => {
     expect(AutonomiaProspectingAPI.createCrmCards).not.toHaveBeenCalled();
   });
 
+  // #732: Pão Quente já está no CRM (card 555) e fica fora do envio em lote;
+  // como não foi enviado, continua selecionado.
   it('manda os selecionados, troca o botão pelo link do card e tira da seleção só o que foi', async () => {
     const wrapper = await mountSearchPage();
     AutonomiaProspectingAPI.createCrmCards.mockResolvedValue({
@@ -111,7 +113,7 @@ describe('ProspectingSearchPage · enviar ao CRM', () => {
           created: [
             { lead_id: 101, card_id: 1010, contact_id: 900, company_id: 5 },
           ],
-          existing: [{ lead_id: 102, card_id: 555 }],
+          existing: [],
           failed: [
             { lead_id: 103, reason_code: 'invalid', message: 'Sem telefone' },
           ],
@@ -127,7 +129,7 @@ describe('ProspectingSearchPage · enviar ao CRM', () => {
     await submitModal(wrapper);
 
     expect(AutonomiaProspectingAPI.createCrmCards).toHaveBeenCalledWith({
-      leadIds: [101, 102, 103],
+      leadIds: [101, 103],
       pipelineId: 3,
       stageId: 31,
     });
@@ -140,7 +142,7 @@ describe('ProspectingSearchPage · enviar ao CRM', () => {
     expect(
       buttonWithText(leadCard(wrapper, 'Confeitaria Lua'), SEND)
     ).toBeTruthy();
-    expect(wrapper.text()).toContain('1 selecionados');
+    expect(wrapper.text()).toContain('2 selecionados');
     expect(leadCheckbox(wrapper, 'Confeitaria Lua').element.checked).toBe(true);
     expect(useAlert).not.toHaveBeenCalled();
     expect(

@@ -1,0 +1,40 @@
+# Descartar leads (#732, item 10), no painel do lead e em lote, sempre com motivo. Descartado continua visível na busca,
+# marcado, e sai das ações de envio: o CRM (CrmCardBatch), os contatos em lote (ContactBatch) e a campanha
+# (CampaignSegmentBuilder) recusam lead descartado. Lead fora da conta volta como não encontrado, sem ser tocado.
+class Autonomia::Prospecting::LeadDiscard
+  MAX_LEADS = 500
+  MAX_REASON_LENGTH = 255
+
+  Result = Struct.new(:leads, :missing_lead_ids, keyword_init: true)
+
+  class Error < StandardError; end
+  class NoLeads < Error; end
+  class TooManyLeads < Error; end
+  class MissingReason < Error; end
+  class ReasonTooLong < Error; end
+
+  def initialize(account:, lead_ids:, reason:)
+    @account = account
+    @lead_ids = Array(lead_ids).map(&:to_i).uniq
+    @reason = reason.to_s.strip
+  end
+
+  def perform
+    validate!
+    leads = Autonomia::Prospecting::Lead.where(account: @account, id: @lead_ids).to_a
+    Autonomia::Prospecting::Lead.transaction do
+      leads.each { |lead| lead.update!(status: :discarded, discard_reason: @reason) }
+    end
+
+    Result.new(leads: leads, missing_lead_ids: @lead_ids - leads.map(&:id))
+  end
+
+  private
+
+  def validate!
+    raise NoLeads, 'no_leads' if @lead_ids.empty?
+    raise TooManyLeads, 'too_many_leads' if @lead_ids.size > MAX_LEADS
+    raise MissingReason, 'missing_reason' if @reason.empty?
+    raise ReasonTooLong, 'reason_too_long' if @reason.length > MAX_REASON_LENGTH
+  end
+end

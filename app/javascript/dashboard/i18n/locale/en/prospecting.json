@@ -493,6 +493,40 @@
         "ready_for_campaign": "Pronto para campanha"
       }
     },
+    "LEAD_STATUS": {
+      "IN_CRM": "Já está no CRM",
+      "NO_OWNER": "sem responsável",
+      "DISCARDED": "Descartado",
+      "RESTORE": "Desfazer descarte",
+      "RESTORED": "Descarte desfeito. O lead voltou a novo.",
+      "RESTORE_ERROR": "Não foi possível desfazer o descarte."
+    },
+    "DISCARD": {
+      "ACTION": "Descartar",
+      "TITLE": "Descartar leads",
+      "DESCRIPTION": "{count} lead(s) saem do envio ao CRM, dos contatos e da campanha. Continuam na busca, marcados como descartados.",
+      "REASON": "Motivo",
+      "OTHER_REASON": "Escreva o motivo",
+      "REASONS": {
+        "NO_INTEREST": "Sem interesse",
+        "OUT_OF_PROFILE": "Fora do perfil",
+        "ALREADY_CUSTOMER": "Já é cliente",
+        "WRONG_DATA": "Dados errados",
+        "CLOSED": "Empresa fechada",
+        "OTHER": "Outro motivo"
+      },
+      "SUBMIT": "Descartar",
+      "SUBMITTING": "Descartando...",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Fechar",
+      "DONE": "{count} lead(s) descartado(s).",
+      "ERROR": "Não foi possível descartar os leads."
+    },
+    "BULK": {
+      "CRM_EXCLUDED": "{count} já no CRM ou descartado(s) ficam fora do envio.",
+      "CREATING_CONTACTS": "Criando contatos...",
+      "CONTACTS_RESULT": "Contatos: {created} criado(s), {existing} já existia(m), {failed} falha(s)."
+    },
     "SETTINGS": {
       "TITLE": "Prospecção",
       "DESCRIPTION": "Configure o funil padrão, o cache e os critérios de score usados nas buscas de leads.",

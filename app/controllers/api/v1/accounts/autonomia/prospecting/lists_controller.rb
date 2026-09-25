@@ -92,7 +92,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     return payload unless include_leads
 
     payload.merge(
-      leads: list.leads.includes(:company_profile, :contact).order(created_at: :desc).map { |lead| lead_payload(lead) }
+      leads: list.leads.includes(*lead_preloads).order(created_at: :desc).map { |lead| lead_payload(lead) }
     )
   end
 
@@ -121,6 +121,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     ).merge(
       # O decisor da lista é o mesmo da busca: o da pesquisa (#679), nunca o nome que ficou gravado de antes.
       ::Autonomia::Prospecting::LeadPayload.new(account: Current.account).research(lead)
+    ).merge(
+      lead_payload_builder.crm_presence(lead)
     )
   end
 

@@ -552,6 +552,7 @@ en:
           not_found: 'Lead não encontrado nesta conta.'
           invalid_data: 'O CRM recusou os dados deste lead. Confira nome e telefone e tente de novo.'
           unexpected_error: 'Não foi possível enviar este lead agora. Tente de novo; se continuar, fale com o suporte.'
+          discarded: 'Lead descartado. Desfaça o descarte para enviar ao CRM.'
         errors:
           no_leads: 'Escolha pelo menos um lead para enviar ao CRM.'
           too_many_leads: 'Envie até %{max} leads por vez.'
@@ -564,6 +565,22 @@ en:
           decision_with_role: 'Decisor: %{name}, %{role}'
           legal_name: 'Razão social: %{legal_name}'
           cnpj: 'CNPJ: %{cnpj}'
+      # Descartar e criar contatos em lote (#732, item 10).
+      lead_discard:
+        errors:
+          no_leads: 'Escolha pelo menos um lead para descartar.'
+          too_many_leads: 'Descarte até %{max} leads por vez.'
+          missing_reason: 'Informe o motivo do descarte.'
+          reason_too_long: 'O motivo do descarte é longo demais. Resuma em uma frase.'
+      contact_batch:
+        failures:
+          not_found: 'Lead não encontrado nesta conta.'
+          discarded: 'Lead descartado. Desfaça o descarte para criar o contato.'
+          invalid_data: 'O contato foi recusado. Confira nome, telefone e e-mail do lead.'
+          unexpected_error: 'Não foi possível criar este contato agora. Tente de novo; se continuar, fale com o suporte.'
+        errors:
+          no_leads: 'Escolha pelo menos um lead para criar contatos.'
+          too_many_leads: 'Crie até %{max} contatos por vez.'
       campaign_blocked:
         not_found: 'Lead não encontrado nesta conta.'
         discarded: 'Lead descartado.'

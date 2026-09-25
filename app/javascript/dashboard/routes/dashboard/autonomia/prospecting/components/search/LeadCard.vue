@@ -10,6 +10,7 @@ import { useI18n } from 'vue-i18n';
 import ProspectingPriorityRing from '../ProspectingPriorityRing.vue';
 import LeadCardActions from './LeadCardActions.vue';
 import LeadResearchSummary from './LeadResearchSummary.vue';
+import LeadStatusBanner from './LeadStatusBanner.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import {
   leadPrioritySignals,
@@ -17,6 +18,7 @@ import {
   priorityValue,
 } from '../../utils/prospectingPriority';
 import { isWhatsAppVerified, leadPhoneDisplay } from '../../utils/leadPhone';
+import { isLeadDiscarded } from '../../utils/leadCrmPresence';
 import { phoneRegionFromSettings } from '../../utils/phoneContract';
 import * as formatters from '../../utils/searchFormatters';
 
@@ -76,13 +78,15 @@ const toggleDetails = event => {
 <template>
   <article
     class="grid min-w-0 cursor-pointer gap-3 overflow-hidden rounded-lg border bg-n-solid-1 text-sm transition-colors"
-    :class="
+    :class="[
       isOpen
         ? 'border-n-brand ring-1 ring-n-brand'
-        : 'border-n-weak hover:border-n-slate-5'
-    "
+        : 'border-n-weak hover:border-n-slate-5',
+      { 'opacity-75': isLeadDiscarded(lead) },
+    ]"
     @click="toggleDetails"
   >
+    <LeadStatusBanner :lead="lead" />
     <div class="flex min-w-0 items-start gap-3 p-4 pb-2">
       <ProspectingPriorityRing :priority="priority" :size="56" />
       <div class="min-w-0 flex-1">

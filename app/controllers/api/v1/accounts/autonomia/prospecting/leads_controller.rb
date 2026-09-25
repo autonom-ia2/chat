@@ -3,7 +3,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   before_action -> { authorize_campaign_update!(params[:campaign_id]) }, only: [:create_campaign_segment]
 
   def index
-    leads = filtered_leads_scope.includes(:company_profile, :contact).order(created_at: :desc).limit(100)
+    leads = filtered_leads_scope.includes(*lead_preloads).order(created_at: :desc).limit(100)
     render json: { payload: leads.map { |lead| lead_payload(lead) } }
   end
 
