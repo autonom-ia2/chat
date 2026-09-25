@@ -28,7 +28,7 @@ module Autonomia::Prospecting::Research::Registry::OpenCnpjParser
 
     values.filter_map do |entry|
       entry = Support.record(entry)
-      next if entry.nil? || entry['is_fax'] == true
+      next if entry.nil? || ActiveModel::Type::Boolean.new.cast(entry['is_fax'])
 
       Support.ddd_phone(entry['ddd'], entry['numero'])
     end

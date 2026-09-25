@@ -21,13 +21,15 @@ module Autonomia::Prospecting::Research::Registry::CnpjaParser
                   })
   end
 
-  # phones: [{ type, area, number }] (#679).
+  # phones: [{ type, area, number }] (#679). O fax (type FAX) fica de fora.
   def phones(values)
     return [] unless values.is_a?(Array)
 
     values.filter_map do |entry|
       entry = Support.record(entry)
-      entry && Support.ddd_phone(entry['area'], entry['number'])
+      next if entry.nil? || Support.text(entry['type']).to_s.upcase == 'FAX'
+
+      Support.ddd_phone(entry['area'], entry['number'])
     end
   end
 

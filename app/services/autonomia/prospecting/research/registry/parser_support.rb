@@ -10,6 +10,8 @@ module Autonomia::Prospecting::Research::Registry::ParserSupport
   LEGAL_NATURE_CODE_LENGTH = 4
   CNAE_LENGTH = 7
   DATE_LENGTH = 10
+  # Telefone fixo brasileiro com DDD tem 10 dígitos; celular, 11.
+  NATIONAL_NUMBER_WITH_DDD = 10
   QSA_FAILURES = { 'missing' => 'qsa_missing', 'malformed' => 'qsa_malformed' }.freeze
   # Código da faixa etária da Receita (BrasilAPI e OpenCNPJ): 1 = 0 a 12 anos, 2 = 13 a 20 anos.
   MINOR_AGE_CODES = Set[1, 2].freeze
@@ -107,11 +109,15 @@ module Autonomia::Prospecting::Research::Registry::ParserSupport
     end.uniq
   end
 
-  # DDD e número em campos separados (OpenCNPJ, CNPJ.ws, CNPJá) viram um texto só.
+  # DDD e número em campos separados (OpenCNPJ, CNPJ.ws, CNPJá) viram um texto só. Número que já traz o DDD (10 ou 11
+  # dígitos) vale sozinho.
   def ddd_phone(ddd, number)
     ddd = text(ddd.is_a?(Integer) ? ddd.to_s : ddd)
     number = text(number.is_a?(Integer) ? number.to_s : number)
-    ddd && number ? "#{ddd}#{number}" : nil
+    return nil unless number
+    return number if Normalization.digits(number).length >= NATIONAL_NUMBER_WITH_DDD
+
+    ddd ? "#{ddd}#{number}" : nil
   end
 
   # [estado, membros]. Chave ausente é 'missing'; não-lista é 'malformed'; um membro ruim estraga o quadro inteiro.

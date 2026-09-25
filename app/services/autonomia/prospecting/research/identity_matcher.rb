@@ -19,8 +19,12 @@ module Autonomia::Prospecting::Research::IdentityMatcher
 
   module_function
 
+  # Telefone igual ao do lead em mais de um candidato não identifica nenhum: é o telefone de quem cadastra os outros
+  # (escritório de contabilidade no CNPJ dos clientes, central, dono com dois CNPJs). Aí o telefone deixa de ser sinal
+  # forte para todos e vale só o nome, como sem telefone (#679).
   def match(place, candidates)
-    entries = candidates.each_with_index.map { |candidate, index| qualify(place, candidate, index) }
+    entries = qualify_all(place, candidates)
+    entries = qualify_all(Place.new(**place.to_h, phone: nil), candidates) if entries.count { |entry| entry[:phone_exact] } > 1
     qualified = entries.select { |entry| entry[:qualified] }
                        .sort_by { |entry| [-entry[:candidate].match_score, entry[:index]] }
     return unqualified_result(entries) if qualified.empty?
@@ -47,6 +51,10 @@ module Autonomia::Prospecting::Research::IdentityMatcher
     return empty(:rejected, entries.first[:hard_reject]) if entries.any? && entries.all? { |entry| entry[:hard_reject] }
 
     empty(:not_found, 'no_qualified_candidate')
+  end
+
+  def qualify_all(place, candidates)
+    candidates.each_with_index.map { |candidate, index| qualify(place, candidate, index) }
   end
 
   def qualify(place, candidate, index)
