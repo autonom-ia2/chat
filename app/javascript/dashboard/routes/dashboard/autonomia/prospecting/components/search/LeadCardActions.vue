@@ -4,6 +4,10 @@ import LeadPhoneActions from './LeadPhoneActions.vue';
 import LeadSocialLinks from './LeadSocialLinks.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import * as formatters from '../../utils/searchFormatters';
+import {
+  isLeadEnriched,
+  isLeadEnriching as isEnriching,
+} from '../../utils/leadEnrichment';
 
 defineProps({
   lead: { type: Object, required: true },
@@ -23,13 +27,7 @@ const {
   crmCardUrl,
 } = useProspectingSearchContext();
 
-const isLeadEnriched = lead => lead?.enrichment_status === 'completed';
-// Pedido aceito fica na fila do servidor (queued/running, #678) até o evento
-// ao vivo trazer o resultado; o card segue em andamento nesse tempo.
-const ENRICHMENT_IN_PROGRESS = ['queued', 'running'];
-const isLeadEnriching = lead =>
-  enrichingLeadId.value === lead.id ||
-  ENRICHMENT_IN_PROGRESS.includes(lead.enrichment_status);
+const isLeadEnriching = lead => isEnriching(lead, enrichingLeadId.value);
 // Link oficial do lugar no Google quando o provider trouxe; senão, busca por
 // coordenadas ou nome.
 const googleMapsLeadUrl = lead =>

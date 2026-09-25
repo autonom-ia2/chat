@@ -26,6 +26,10 @@ import {
   normalizedLeadPhone as normalizedLeadPhoneFor,
 } from '../utils/leadPhone';
 import { phoneRegionFromSettings } from '../utils/phoneContract';
+import {
+  isLeadEnriched,
+  isLeadEnriching as isEnriching,
+} from '../utils/leadEnrichment';
 
 const { t } = useI18n();
 const canManage = useCanManage('prospecting_manage');
@@ -118,7 +122,7 @@ const canCreateCrmCard = computed(() =>
   Boolean(crmForm.value.pipeline_id && crmForm.value.stage_id)
 );
 const leadHasVerifiedWhatsApp = lead => lead?.whatsapp_verified === true;
-const isLeadEnriched = lead => lead?.enrichment_status === 'completed';
+const isLeadEnriching = lead => isEnriching(lead, enrichingLeadId.value);
 const campaignReadyLeads = computed(() =>
   (selectedList.value?.leads || []).filter(
     lead =>
@@ -1080,7 +1084,7 @@ onMounted(loadPage);
                     "
                     :disabled="
                       isLeadEnriched(lead) ||
-                      enrichingLeadId === lead.id ||
+                      isLeadEnriching(lead) ||
                       !settings?.research_enabled ||
                       !lead.website
                     "
@@ -1098,7 +1102,7 @@ onMounted(loadPage);
                     <span
                       class="size-3.5"
                       :class="
-                        enrichingLeadId === lead.id
+                        isLeadEnriching(lead)
                           ? 'animate-spin rounded-full border-2 border-n-slate-5 border-t-n-slate-11'
                           : isLeadEnriched(lead)
                             ? 'i-lucide-check-circle-2'
@@ -1106,7 +1110,7 @@ onMounted(loadPage);
                       "
                     />
                     {{
-                      enrichingLeadId === lead.id
+                      isLeadEnriching(lead)
                         ? t('PROSPECTING.SEARCH.ENRICHING')
                         : isLeadEnriched(lead)
                           ? t('PROSPECTING.SEARCH.ENRICHED')
