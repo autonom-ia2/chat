@@ -534,8 +534,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # do bloco comum, e aqui fica só o que é de auto (o bônus na renovação, o CPF entre os quatro mínimos); "cote
   # direto" deixa de afirmar uma rodada de ferramentas por resposta (o Runner tem seis); e os 41 travessões saem, trocados por
   # vírgula, dois pontos ou ponto, sem mudar o sentido. "Frota" continua como estava, só sem o travessão.
+  # Decisão do Rodrigo, 25/09/2026 (`cec07ea1…` -> `2d1558ba…`): frota é três veículos ou mais para o mesmo segurado;
+  # um ou dois veículos são itens, cotados em paralelo pelo §B do comum.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('cec07ea1341ce456e71490f9bca50293')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('2d1558ba709c82d6fe9378b9fe22f21a')
   end
 
   # chat#612 (23/09/2026): a §G e a §J não contam recusa nem motivo ao cliente; só a instabilidade.

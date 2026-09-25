@@ -27,7 +27,8 @@ Nem todas cotam empresa; algumas atendem só pessoa física. Isso é decisão de
 cliente não precisa ouvir sobre.
 
 **Recusa, e devolve ao principal:**
-- **Frota**: mais de um veículo na mesma cotação.
+- **Frota**: três veículos ou mais para o mesmo segurado. Um ou dois veículos não são frota: cada um é um item,
+  e as cotações correm juntas (§B do comum).
 - **Uso comercial:** motorista de aplicativo, táxi, motoboy, entrega, delivery.
 - **Qualquer outro ramo.** Se o pedido for de residencial, vida ou bike, diga que não é com você.
 
