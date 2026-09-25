@@ -6,14 +6,16 @@ automaticamente em push na `main` **exceto** quando o push só altera
 documentação não consome a janela de rollback. Rollback continua
 exclusivamente manual.
 
-**Exceção:** `lib/operator_guide/**` (conhecimento do Guia da Plataforma) e
-`config/onboarding/**` (trilha de onboarding) são lidos pela aplicação em
+**Exceção:** `lib/operator_guide/**` (conhecimento do Guia da Plataforma),
+`lib/central_de_ajuda/**` (Central de Ajuda), `config/onboarding/**` (trilha de
+onboarding) e `app/**/*.md` (manuais que os agentes leem, como
+`app/services/autonomia/insurance/quote_agent/instrucoes/`) são lidos pela aplicação em
 runtime. Mesmo sendo `.md`/`.yml`, mudança nessas pastas **dispara** deploy;
 sem isso, um PR que só atualiza o Guia nunca chegaria a produção (#486).
 
 O filtro é `on.push.paths` com padrões avaliados em ordem (o último que casa
 decide): `**`, `.*`, `.*/**`, `!.github/**`, `!docs/**`, `!*.md`, `!**/*.md`,
-`lib/operator_guide/**`, `config/onboarding/**`. `paths-ignore` não aceita
+`app/**/*.md`, `lib/operator_guide/**`, `lib/central_de_ajuda/**`, `config/onboarding/**`. `paths-ignore` não aceita
 reinclusão com `!`, por isso a troca.
 
 Para executar um dos workflows à mão, o operador precisa:
@@ -48,3 +50,26 @@ alterar AWS, ECR, EC2, ALB e SSM.
 
 Onde moram as variáveis de ambiente de produção, e o que não pode sumir delas:
 [production-env-secrets.md](production-env-secrets.md).
+
+## Cache do build
+
+Cada stack guarda o cache das camadas no próprio ECR (tag `buildcache` no repositório `chatwoot-autonomia-prod`
+de cada conta), com `type=registry` e `mode=max`. O modo `max` guarda também as etapas intermediárias do Dockerfile:
+medido em 25/09, o `bundle install` da etapa `pre-builder` levava cerca de 19 dos 24 minutos do build porque o modo
+`min` (cache do GitHub) não o guardava. O cache do GitHub não serve para isso: o repositório já passa do limite de
+10 GB, e o modo `max` despejaria o cache dos testes a cada push; além disso, PR de fork lê esse cache, e o ECR não.
+
+A etapa das gems é refeita quando `Gemfile`/`Gemfile.lock` mudam e também quando muda uma camada anterior a ela. A
+imagem `node:24-alpine` não é fixada por digest, então uma republicação dela invalida o cache das gems mesmo com o
+Gemfile igual. O ganho de ~19 minutos vale para a maior parte dos deploys, não para todos.
+
+A tag `buildcache` é regravada a cada deploy e nunca é a mais antiga, mas o manifesto de cache anterior vira uma imagem
+sem tag, e a regra "manter as últimas 10 imagens" conta essas também. Na prática sobram cerca de 5 imagens por SHA em vez
+de 10. O rollback blue-green troca o target group e não depende delas; o redeploy manual de uma versão antiga sim.
+Uma regra de maior prioridade que expire imagens sem tag resolveria (mudança de infra, pendente de OK do Rodrigo).
+O primeiro deploy de cada stack depois desta mudança é lento, porque o cache ainda está vazio: não é regressão. As tags do repositório são mutáveis nas duas contas. `ignore-error=true` mantém o deploy de pé
+se a gravação do cache falhar. O checkout usa `persist-credentials: false`: o `.git` entra no contexto do build (o
+Dockerfile roda `git rev-parse HEAD`), e sem isso o token do checkout ficaria numa camada cacheada.
+
+Voltar ao comportamento anterior: `cache-from`/`cache-to` com `type=gha`, `mode=min` e os escopos antigos
+(`chatwoot-autonomia-prod-linux-amd64` e `chatwoot-autonomia-hub2you-linux-amd64`).

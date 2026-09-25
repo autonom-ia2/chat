@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (155 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (157 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -488,8 +488,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver gestão e relatório de campanhas de e-mail
 - intent: "Onde vejo a taxa de abertura e de clique das campanhas de e-mail?"; "Onde fica o relatório / métricas das campanhas de e-mail (open rate, click rate)?"; "Como exporto o relatório (CSV) de uma campanha de e-mail?"; "Como comparo o desempenho de campanhas de e-mail?"
-- onde_fica: Sidebar > CRM > Gestão de campanhas
-- rota: `crm_campaign_management_index` - `/app/accounts/:accountId/crm/campaign-management`
+- onde_fica: Sidebar > Campanhas > Gestão de campanhas (último item do grupo, depois de SMS)
+- rota: `crm_campaign_management_index` - `/app/accounts/:accountId/campaigns/management`
 - gate: papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanhas de e-mail já enviadas ou com eventos de entrega.
 - passos: Abra Gestão de campanhas; filtre por todas ou por uma campanha; revise KPIs de enviado, entregue, abertura aproximada, clique, descadastro, bounce e complaint; ajuste intervalo da linha do tempo; exporte CSV quando uma campanha estiver selecionada.
@@ -874,6 +874,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: funil selecionado; modo Lista aberto; filtros, colunas, ordenacao, agrupamento ou densidade ajustados.
 - passos: 1. Abra o CRM em modo Lista; 2. Ajuste filtros, colunas e ordenacao; 3. Clique no botao de visoes salvas; 4. Crie uma nova visao; 5. Escolha visibilidade privada, time ou conta; 6. Aplique a visao quando quiser restaurar a configuracao.
 - gotchas: visoes privadas aparecem so para o dono; visoes de time/conta aparecem para outros usuarios com acesso ao CRM; a visao salva captura configuracao da lista, nao altera cards.
+- nav_target: `crm_kanban_index`
+
+### Exportar a lista do CRM para Excel
+- intent: "Como exporto o CRM para Excel?"; "Como baixo uma planilha dos cards?"; "Da para exportar o funil em CSV?"; "Como tiro os leads do CRM para uma planilha?"
+- onde_fica: Sidebar > CRM > CRM Kanban > alternar para Lista > botao Exportar, ao lado de Novo card
+- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
+- gate: papel `administrator` ou `agent` ou `crm_view`
+- perfil: `administrator` ou custom role com `crm_export` (ou `crm_admin`). Agente sem funcao personalizada NAO exporta, mesmo vendo o CRM: a planilha leva nome, telefone e e-mail dos contatos. Se o perfil nao puder, diga que falta a permissao Exportar a lista do CRM para Excel e que um administrador pode concede-la na funcao personalizada.
+- pre_requisitos: CRM habilitado; funil selecionado; modo Lista aberto.
+- passos: 1. Abra o CRM e troque para Lista; 2. Escolha o funil, a aba de resultado, a busca, os filtros e a ordenacao que quer levar; 3. Clique em Exportar; 4. O navegador baixa um arquivo .xlsx que abre no Excel ou no Google Planilhas.
+- gotchas: so existe na Lista, nao no Kanban nem no Calendario; a planilha segue exatamente o recorte da Lista (funil, aba de resultado, busca, filtros e ordenacao) e traz todos os cards, nao so os carregados na tela; cards e campos que a pessoa nao ve na tela tambem nao saem no arquivo; o formato e Excel (.xlsx), nao CSV.
 - nav_target: `crm_kanban_index`
 
 ### Ordenar e filtrar status da lista de conversas
@@ -1577,13 +1588,23 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver os modelos de mensagem do WhatsApp
 - intent: Onde vejo os modelos do WhatsApp?; Como crio um modelo novo?; Meu modelo foi aprovado mas não aparece aqui, por quê?; Como vejo o modelo antes de usar numa campanha?
-- onde_fica: Configurações > Modelos
+- onde_fica: Configurações > Modelos (a mesma tela também fica em Campanhas > Modelos WhatsApp)
 - rota: `settings_templates` - `/app/accounts/:accountId/settings/templates`
 - gate: papel `administrator`
 - pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
 - passos: 1. Abra Configurações > Modelos; 2. Sincronize os modelos; 3. Filtre por caixa, idioma e tipo; 4. Busque pelo nome ou pelo texto; 5. Abra o modelo para ver status, categoria e caixas.
 - gotchas: esta tela só exibe, porque criar e editar modelo é sempre no provedor, e não há botão de criar aqui; sincronizar fica desligado sem nenhuma caixa de WhatsApp; a sincronização leva alguns minutos e a tela mostra a hora da última tentativa; respondendo só parte das caixas, aparece aviso de sincronização parcial e a lista fica incompleta; modelo ainda não enviado para aprovação não serve para campanha.
 - nav_target: `settings_templates`
+
+### Ver os modelos do WhatsApp pela área de Campanhas
+- intent: Onde vejo os modelos antes de montar uma campanha do WhatsApp?; Quais modelos posso usar na campanha do WhatsApp Oficial?; Onde ficam os modelos do WhatsApp em Campanhas?
+- onde_fica: Sidebar > Campanhas > Modelos WhatsApp, logo antes de WhatsApp Oficial
+- rota: `campaigns_templates_index` - `/app/accounts/:accountId/campaigns/templates`
+- gate: feature flag `campaigns`; papel `administrator`
+- pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
+- passos: 1. Abra Campanhas > Modelos WhatsApp; 2. Sincronize os modelos; 3. Filtre por caixa, idioma e tipo; 4. Confira que o modelo que vai usar está aprovado; 5. Siga para Campanhas > WhatsApp Oficial para montar a campanha.
+- gotchas: é a mesma tela de Configurações > Modelos, só com outro caminho no menu; por enquanto só administrador vê; só exibe e sincroniza, porque criar e editar modelo é sempre no provedor; os modelos das campanhas de e-mail são outra coisa e ficam dentro de cada campanha de e-mail.
+- nav_target: `campaigns_templates_index`
 
 ### Trazer contatos e conversas de outra ferramenta
 - intent: Como trago meus contatos da ferramenta antiga?; Dá para importar o histórico de conversas?; De quais sistemas eu consigo importar?; Posso rodar duas importações ao mesmo tempo?

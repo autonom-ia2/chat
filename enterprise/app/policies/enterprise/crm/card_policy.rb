@@ -5,6 +5,10 @@ module Enterprise::Crm::CardPolicy
     crm_permission?('crm_view')
   end
 
+  def export?
+    crm_permission?('crm_export')
+  end
+
   def show?
     crm_permission?('crm_view') && super
   end

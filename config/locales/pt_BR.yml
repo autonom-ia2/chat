@@ -575,6 +575,44 @@ pt_BR:
   automation:
     system_name: 'Sistema de Automação'
   crm:
+    export:
+      sheet_name: 'Cards'
+      file_prefix: 'crm'
+      title_fallback: 'CRM'
+      subtitle:
+        one: 'Exportado em %{date} · 1 card'
+        other: 'Exportado em %{date} · %{count} cards'
+      columns:
+        title: 'Título'
+        pipeline: 'Funil'
+        stage: 'Etapa'
+        status: 'Status'
+        value: 'Valor'
+        currency: 'Moeda'
+        priority: 'Prioridade'
+        contact: 'Contato'
+        phone: 'Telefone'
+        email: 'E-mail'
+        company: 'Empresa'
+        responsible: 'Responsável'
+        inbox: 'Caixa de entrada'
+        labels: 'Etiquetas'
+        campaign: 'Origem de campanha'
+        created_at: 'Criado em'
+        last_activity_at: 'Última atividade'
+        next_follow_up_at: 'Próximo follow-up'
+        closed_at: 'Fechado em'
+        lost_reason: 'Motivo da perda'
+      statuses:
+        open: 'Aberto'
+        won: 'Ganho'
+        lost: 'Perdido'
+        archived: 'Arquivado'
+      priorities:
+        low: 'Baixa'
+        medium: 'Média'
+        high: 'Alta'
+        urgent: 'Urgente'
     providers:
       teams: 'Microsoft Teams'
       google_meet: 'Google Meet'

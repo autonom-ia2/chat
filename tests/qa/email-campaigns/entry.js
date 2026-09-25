@@ -30,7 +30,7 @@ document.documentElement.classList.toggle(
   'dark',
   params.get('theme') === 'dark'
 );
-const initialRoute = '/app/accounts/436/crm/campaign-management';
+const initialRoute = '/app/accounts/436/campaigns/management';
 history.replaceState(null, '', initialRoute + location.search);
 const router = createRouter({
   history: createMemoryHistory(),

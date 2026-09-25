@@ -30,6 +30,7 @@
 # - 'crm_manage_ai': Can manage CRM AI settings and trigger/accept AI suggestions.
 # - 'crm_view_reports': Can view CRM reports (forward-looking).
 # - 'crm_admin': Umbrella that implies every crm_* permission.
+# - 'crm_export': Can download the CRM list as a spreadsheet (personal data in bulk).
 #
 # Module keys: '<module>_manage' implies '<module>_view' (see Enterprise::AccountUser#permission_granted?).
 # - 'contact_view' / 'knowledge_base_view': read-only access to contacts / help center.
@@ -64,6 +65,7 @@ class CustomRole < ApplicationRecord
     crm_manage_ai
     crm_view_reports
     crm_admin
+    crm_export
     contact_view
     knowledge_base_view
     autonomia_view

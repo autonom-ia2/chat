@@ -159,7 +159,8 @@ const autonomiaAgentsEnabled = computed(
     autonomiaAgentsFlag.value &&
     (isAdministrator.value || hasAnyPermission(AUTONOMIA_PERMISSIONS))
 );
-// CRM Campaign Management reads campaign reports and CTWA links, gated by campaign_view (#452).
+// Campaign Management (in the Campaigns group since #725) reads campaign reports and CTWA links,
+// gated by campaign_view (#452).
 const canViewCampaigns = computed(
   () => isAdministrator.value || hasAnyPermission(CAMPAIGN_PERMISSIONS)
 );
@@ -947,16 +948,6 @@ const menuItems = computed(() => {
                     },
                   ]
                 : []),
-              ...(emailCampaignEnabled.value && canViewCampaigns.value
-                ? [
-                    {
-                      name: 'CRM Campaign Management',
-                      label: t('SIDEBAR.CRM_CAMPAIGN_MANAGEMENT'),
-                      to: accountScopedRoute('crm_campaign_management_index'),
-                      activeOn: ['crm_campaign_management_index'],
-                    },
-                  ]
-                : []),
             ],
           },
         ]
@@ -1046,9 +1037,10 @@ const menuItems = computed(() => {
       name: 'Campaigns',
       label: t('SIDEBAR.CAMPAIGNS'),
       icon: 'i-lucide-megaphone',
-      // Ordem do produto: 1) Campanhas de e-mail, 2) WhatsApp Oficial, 3) WhatsApp API,
-      // 4) Chat ao vivo, 5) SMS. Itens condicionais (e-mail / WhatsApp API) somem da posição
-      // sem afetar a ordem relativa dos demais.
+      // Ordem do produto: 1) Campanhas de e-mail, 2) Modelos WhatsApp, 3) WhatsApp Oficial,
+      // 4) WhatsApp API, 5) Chat ao vivo, 6) SMS, 7) Gestão de campanhas. Itens condicionais
+      // (e-mail / WhatsApp API / Gestão) somem da posição sem afetar a ordem relativa dos demais.
+      // Modelos e Gestão têm endereço próprio em /campaigns (#725): só este grupo fica aceso.
       children: [
         ...(emailCampaignEnabled.value
           ? [
@@ -1059,6 +1051,12 @@ const menuItems = computed(() => {
               },
             ]
           : []),
+        {
+          name: 'Campaign WhatsApp Templates',
+          label: t('SIDEBAR.CAMPAIGN_WHATSAPP_TEMPLATES'),
+          to: accountScopedRoute('campaigns_templates_index'),
+          activeOn: ['campaigns_templates_index'],
+        },
         {
           name: 'WhatsApp',
           label: t('SIDEBAR.WHATSAPP_OFFICIAL'),
@@ -1083,6 +1081,16 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.SMS'),
           to: accountScopedRoute('campaigns_sms_index'),
         },
+        ...(emailCampaignEnabled.value && canViewCampaigns.value
+          ? [
+              {
+                name: 'Campaign Management',
+                label: t('SIDEBAR.CRM_CAMPAIGN_MANAGEMENT'),
+                to: accountScopedRoute('crm_campaign_management_index'),
+                activeOn: ['crm_campaign_management_index'],
+              },
+            ]
+          : []),
       ],
     },
     // Central de Ajuda da plataforma (#501): a tela de leitura, aberta a todas as contas. O editor de

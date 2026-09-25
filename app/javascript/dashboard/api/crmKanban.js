@@ -140,6 +140,14 @@ class CrmKanbanAPI extends ApiClient {
     return axios.get(`${this.url}/cards`, { params });
   }
 
+  // #722 — planilha (.xlsx) da Lista, com os mesmos parâmetros de getCards, sem página.
+  exportCards(params = {}) {
+    return axios.get(`${this.url}/cards/export`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
   createCard(payload) {
     return axios.post(`${this.url}/cards`, { card: payload });
   }

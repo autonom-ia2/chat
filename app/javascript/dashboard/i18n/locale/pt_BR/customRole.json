@@ -46,6 +46,7 @@
       "CRM_MANAGE_AI": "Gerenciar IA do CRM",
       "CRM_VIEW_REPORTS": "Visualizar relatórios do CRM",
       "CRM_ADMIN": "Administrador do CRM (acesso total)",
+      "CRM_EXPORT": "Exportar a lista do CRM para Excel",
       "CONTACT_VIEW": "Ver contatos",
       "KNOWLEDGE_BASE_VIEW": "Ver base de conhecimento",
       "AUTONOMIA_VIEW": "Ver e testar Agentes Autonom.ia",
