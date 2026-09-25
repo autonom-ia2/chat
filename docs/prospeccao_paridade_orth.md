@@ -1,6 +1,6 @@
 # Prospecção: paridade com o Orth, as 486 funções
 
-Prestação de contas do épico #676 (E6, #682). Cada função do inventário do plano rev.7 (google-saas `1f8ad9a` x chat2you `1bf71b3fa1`) tem aqui o destino: o PR que entregou, a decisão que tirou do escopo, ou pendente com o motivo. Código conferido na `main` em `732c23da08` (25/09/2026); as 18 funções da própria E6 foram conferidas na branch `feat/682-fechamento`, que junta as frentes A (exportar), B (Listas e tour), C (pt_BR, menu e permissão), D (este documento) e as correções de LOCAL-42, ENRIQ-57 e ENRIQ-69. Como a E6 mexe em vários desses arquivos, o número de linha da coluna Conferido já é o da branch: cada referência conferida na `main` foi levada para a linha equivalente na branch, casando o arquivo das duas versões trecho a trecho (37 referências mudaram de linha, nenhuma teve o trecho alterado).
+Prestação de contas do épico #676 (E6, #682). Cada função do inventário do plano rev.7 (google-saas `1f8ad9a` x chat2you `1bf71b3fa1`) tem aqui o destino: o PR que entregou, a decisão que tirou do escopo, ou pendente com o motivo. Código conferido na `main` em `732c23da08` (25/09/2026); as 18 funções da própria E6 foram conferidas na branch `feat/682-fechamento`, que junta as frentes A (exportar), B (Listas e tour), C (pt_BR, menu e permissão), D (este documento) e as correções de LOCAL-42, ENRIQ-57 e ENRIQ-69. Como a E6 mexe em vários desses arquivos, o número de linha da coluna Conferido já é o da branch: cada referência conferida na `main` foi levada para a linha equivalente na branch, casando o arquivo das duas versões trecho a trecho (37 referências mudaram de linha, nenhuma teve o trecho alterado). As correções de LOCAL-42, ENRIQ-57 e ENRIQ-69 e a atualização da branch com a main deslocaram mais 35 referências de outras funções; cada uma foi levada para a linha nova e conferida trecho a trecho contra `b5be0da576`.
 
 ## Resumo
 
@@ -29,7 +29,7 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 
 - **158 funções** têm arquivo e linha conferidos na `main` (`732c23da08`): 164 referências, cada uma aberta e com o trecho esperado na linha, e com o número de linha já levado para a branch da E6. As demais entregues se apoiam no corpo do PR ou na nota da etapa na #705, e isso está dito na linha.
 - **#700** (Guia fora de cima do Aplicar) e **#712** (telefone do cadastro confirma a empresa) corrigem entregas da E1 e da E3 e não têm linha própria no inventário.
-- **#682 (E6)** entregou 18 funções, todas com arquivo e linha conferidos na branch `feat/682-fechamento` (29 referências abertas uma a uma): exportar CSV e Excel pelo servidor, da busca e da lista (frente A); Listas com o mesmo card e painel da busca e o tour guiado (frente B); tela e recusas da prospecção em pt_BR (frente C); e os três defeitos que o cliente sentia, achados na conferência dos pendentes: centro do raio fora do círculo (LOCAL-42), verificação de WhatsApp presa ao número antigo (ENRIQ-69) e busca refeita apagando verificação gravada em paralelo (ENRIQ-57). O número do PR da E6 entra aqui quando ele for aberto.
+- **#682 (E6)** entregou 18 funções, todas com arquivo e linha conferidos na branch `feat/682-fechamento` (32 referências abertas uma a uma): exportar CSV e Excel pelo servidor, da busca e da lista (frente A); Listas com o mesmo card e painel da busca e o tour guiado (frente B); tela e recusas da prospecção em pt_BR (frente C); e os três defeitos que o cliente sentia, achados na conferência dos pendentes: centro do raio fora do círculo (LOCAL-42), verificação de WhatsApp presa ao número antigo (ENRIQ-69) e busca refeita apagando verificação gravada em paralelo (ENRIQ-57). O número do PR da E6 entra aqui quando ele for aberto.
 - **A E6 também entregou o que o inventário não lista como função própria:** o atalho Configurações no menu Prospecção da barra lateral, visível para administrador ou `prospecting_manage` (`F/utils/prospectingSidebar.js:45`), e os botões Enviar ao CRM e Adicionar à campanha escondidos de quem não tem `Crm::CardPolicy#create?` ou `campaign_manage`, pela mesma regra do servidor (`C/settings_controller.rb:68`; nota em PLAT-48).
 - **Desvios da E6 registrados:** o export deixa de fora a coluna Dist km do Orth e o link de WhatsApp tirado do site sem verificação; o tour marca a visita ao abrir, e não ao concluir como no Orth, e só pede sugestões do Google no clique; a tela de Listas ainda não tem botão de exportar (o cliente da API já tem `exportList`).
 
@@ -123,7 +123,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | MODO-18 | Ícones SVG das jogadas | ausente no c2 | #699 (E1) | Ícones lucide no card de jogada (SearchPresetCard.vue). |  |
 | MODO-19 | Escolher jogada aplica filtros base; clicar de novo desmarca | ausente no c2 | #699 (E1) | Jogada aplica os filtros dela. | `F/composables/useSearchPresets.js:74` |
 | MODO-20 | Jogada se desmarca quando os filtros divergem dela | ausente no c2 | #699 (E1) | Jogada desmarcada quando um filtro diverge. | `F/composables/useSearchPresets.js:21` |
-| MODO-21 | Jogada enviada ao motor e gravada na busca | ausente no c2 | #699 (E1) | preset_id aceito, validado e gravado no metadata da busca. | `C/searches_controller.rb:127`, `S/search_runner.rb:688` |
+| MODO-21 | Jogada enviada ao motor e gravada na busca | ausente no c2 | #699 (E1) | preset_id aceito, validado e gravado no metadata da busca. | `C/searches_controller.rb:127`, `S/search_runner.rb:727` |
 | MODO-22 | Jogada muda a leitura da nota: filtros ativos zeram ou reduzem pesos | ausente no c2 | #719 (E5) | Filtros ativos zeram ou reduzem pesos (EffectiveWeights). Visível só em conta virada para o motor orth. | `S/scoring/component_score.rb:2` |
 | MODO-23 | Jogadas não mudam a ordenação | igual | preservado |  |  |
 | MODO-24 | Selo 'Jogada base: X · Modo: GMN/Geral' no painel de filtros | ausente no c2 | #699 (E1) | Linha Jogada base e Modo no topo da gaveta. | `F/components/search/filters/FiltersBaseLine.vue:15` |
@@ -140,7 +140,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | MODO-35 | Fator negativo 'inactive_gbp' só no modo GMN | só no c2 | preservado |  | `S/lead_scorer.rb:163` |
 | MODO-36 | Tour guiado com texto por modo | ausente no c2 | #682 (E6) | Tour guiado (frente B): os textos de modo, jogada e decisor mudam entre GMN e Geral. | `F/utils/searchTour.js:13`, `F/utils/searchTour.js:60` |
 | MODO-37 | Modo gravado em cada lead e em cada busca | igual | preservado |  |  |
-| MODO-38 | Modo entra na chave do cache de busca | só no c2 | preservado | Modo e filtros na chave do cache. | `S/search_runner.rb:56` |
+| MODO-38 | Modo entra na chave do cache de busca | só no c2 | preservado | Modo e filtros na chave do cache. | `S/search_runner.rb:70` |
 | MODO-39 | Ofertas de serviço que definem os pesos (7 globais, só no GMN) | divergente | pendente | Ofertas de serviço: opção A ou B pede decisão do Rodrigo; a decisão de 25/09 (#681) trata só de pesos próprios e perfil padrão. |  |
 | MODO-40 | Pesos customizados valem mesmo sem oferta | divergente | preservado |  |  |
 | MODO-41 | Perfis de score globais geridos pelo superadmin | só no c2 | #719 (E5) | Catálogo global preservado e perfil restrito a contas (decisão de 25/09). | `M/scoring_profile_account.rb:22` |
@@ -151,7 +151,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | MODO-46 | Assistente lê o modo da empresa | ausente no c2 | pendente | Assistente (Guia) lendo o modo da empresa: sem etapa dona no épico. |  |
 | MODO-47 | Módulo de prospecção liberado por conta pelo superadmin | só no c2 | preservado |  | `config/routes.rb:1079` |
 | MODO-48 | Pesos de score por jogada salva | ausente no c2 | fora (decisão) | Plano rev.7: não portar pesos por jogada salva. |  |
-| MODO-49 | Perfil de score gravado em cada busca | só no c2 | pendente | O runner ainda aceita scoring_profile_id do cliente; pendência registrada pela E5 na #705. | `S/search_runner.rb:686` |
+| MODO-49 | Perfil de score gravado em cada busca | só no c2 | pendente | O runner ainda aceita scoring_profile_id do cliente; pendência registrada pela E5 na #705. | `S/search_runner.rb:725` |
 | MODO-50 | Um só estado de filtro para formulário de nova busca e para refino dos resultados | divergente | #699 (E1) | Filtros da nova busca e refino da busca aberta deixaram de dividir o estado (corpo do #699). |  |
 | MODO-51 | Detalhes técnicos da nota para o superadmin: modo, pesos contextuais e multiplicador de tração | ausente no c2 | pendente | Bloco técnico só para superadmin com pesos ajustados: decisão pendente (ver PAINEL-32); LeadDetailScore mostra o detalhe a todos. |  |
 
@@ -160,13 +160,13 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ID | Capacidade | Situação original | Destino | Nota | Conferido |
 |---|---|---|---|---|---|
 | LOCAL-01 | Campo de nicho em texto livre, obrigatorio para buscar | igual | preservado |  |  |
-| LOCAL-02 | Montagem do textQuery enviado ao Google Places | divergente | pendente | O textQuery ainda leva o texto do local (registrado em "Fora deste PR" do #706). | `S/providers/google_places_provider.rb:117` |
+| LOCAL-02 | Montagem do textQuery enviado ao Google Places | divergente | pendente | O textQuery ainda leva o texto do local (registrado em "Fora deste PR" do #706). | `S/providers/google_places_provider.rb:119` |
 | LOCAL-03 | Autocomplete de local (sugestoes enquanto digita) | divergente | #699 (E1) | Autocomplete com país e idioma da conta. | `S/providers/google_places_location.rb:57` |
 | LOCAL-04 | Restringir o autocomplete ao pais da conta | ausente no c2 | #699 (E1) |  | `S/providers/google_places_location.rb:52` |
 | LOCAL-05 | Obter as coordenadas do local escolhido | igual | preservado | Com idioma e região do país desde o #699. | `S/providers/google_places_location.rb:34` |
 | LOCAL-06 | Geocodificacao de reserva quando a pessoa digita o local e nao escolhe sugestao | ausente no c2 | pendente | Não existe geocodificação de reserva (nenhuma ocorrência de geocod no código da prospecção). |  |
 | LOCAL-07 | Comportamento quando o autocomplete falha ou nao ha chave | divergente | #699 (E1) | Erro visível nas sugestões de local (corpo do #699). A saída pela geocodificação depende de LOCAL-06. |  |
-| LOCAL-08 | Raio em km (entrada e limites) | divergente | pendente | O servidor não corta o raio pedido; só o viés enviado ao Google tem teto. | `S/search_runner.rb:426`, `S/search_area.rb:11` |
+| LOCAL-08 | Raio em km (entrada e limites) | divergente | pendente | O servidor não corta o raio pedido; só o viés enviado ao Google tem teto. | `S/search_runner.rb:465`, `S/search_area.rb:11` |
 | LOCAL-09 | Enviar o raio ao Places como locationBias em circulo | igual | preservado |  |  |
 | LOCAL-10 | Pre-visualizar o raio no mapa antes de buscar | igual | preservado |  |  |
 | LOCAL-11 | Botao mostrar/ocultar mapa da area | ausente no c2 | pendente | Não há botão de mostrar e ocultar o mapa no formulário. |  |
@@ -176,12 +176,12 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | LOCAL-15 | Desenho livre (poligono) com filtro ponto dentro do poligono | ausente no c2 | #706 (E2) | Polígono com ponto no polígono. | `S/search_area.rb:42` |
 | LOCAL-16 | Texto de ajuda do modo desenhar | ausente no c2 | #706 (E2) | Ajuda do desenho (Desfazer último ponto, Limpar desenho), segundo a nota da E2 na #705. |  |
 | LOCAL-17 | Seletor do tipo de area | divergente | #706 (E2) | Tipos de área sem select nativo. |  |
-| LOCAL-18 | Expansao automatica de raio quando faltam resultados | divergente | pendente | Padrão e teto da expansão de raio pedem decisão do Rodrigo (10 km no Orth, 50 km no c2); não registrada. O c2 segue 2x e 4x até 50 km. | `S/search_runner.rb:550` |
-| LOCAL-19 | Registro de que o raio foi expandido | só no c2 | preservado |  | `S/search_runner.rb:82` |
+| LOCAL-18 | Expansao automatica de raio quando faltam resultados | divergente | pendente | Padrão e teto da expansão de raio pedem decisão do Rodrigo (10 km no Orth, 50 km no c2); não registrada. O c2 segue 2x e 4x até 50 km. | `S/search_runner.rb:589` |
+| LOCAL-19 | Registro de que o raio foi expandido | só no c2 | preservado |  | `S/search_runner.rb:96` |
 | LOCAL-20 | Cobrir a area com varias paginas do Places (ate 60 lugares) | ausente no c2 | #706 (E2) | Até 3 páginas de 20. | `S/providers/google_places_provider.rb:29` |
 | LOCAL-21 | Cobertura por tiles (varios centros para passar do limite de 60) | ausente no c2 | fora (decisão) | Plano rev.7: não portar ladrilhos, não rodam no Orth. |  |
 | LOCAL-22 | Configurar o pais da busca por conta (tela) | ausente no c2 | #699 (E1) | País por conta (metadata search_country, sem coluna nova). | `S/search_country.rb:1` |
-| LOCAL-23 | Idioma e regiao do Places derivados do pais da conta | divergente | #699 (E1) |  | `S/providers/google_places_provider.rb:119` |
+| LOCAL-23 | Idioma e regiao do Places derivados do pais da conta | divergente | #699 (E1) |  | `S/providers/google_places_provider.rb:121` |
 | LOCAL-24 | Pais gravado no lead | divergente | #699 (E1) | Lead deixa de nascer marcado como Brasil (corpo do #699: país por conta). |  |
 | LOCAL-25 | Cidade e UF do lead | só no c2 | #699 (E1) | Cidade e UF do addressComponents, sem regex. | `S/providers/google_places_provider.rb:10` |
 | LOCAL-26 | Log de auditoria de pais invalido ou diferente de BR | ausente no c2 | #699 (E1) | Log de país inválido guardado. | `M/setting.rb:153` |
@@ -195,14 +195,14 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | LOCAL-34 | Provedor simulado (mock) para buscar sem Google | só no c2 | preservado | Mock só para desenvolvimento e teste. | `S/providers/mock_provider.rb:86` |
 | LOCAL-35 | Ordenar resultados por distancia do centro | ausente no c2 | #706 (E2) | Ordenar por distância. | `F/utils/sortLeads.js:6` |
 | LOCAL-36 | Mapa de resultados com marcadores clicaveis | divergente | #706 (E2) | Pinos agrupados. | `F/components/ProspectingGoogleMap.vue:4` |
-| LOCAL-37 | Tour guiado que preenche nicho, local e raio | ausente no c2 | #682 (E6) | Tour pré-preenche nicho, local e raio (exemplo restaurante, Moema, 3 km); sugestão do Google só no clique em "Ver sugestões do local", sem chamada paga automática. | `F/composables/useSearchTour.js:34`, `F/utils/searchTour.js:10` |
+| LOCAL-37 | Tour guiado que preenche nicho, local e raio | ausente no c2 | #682 (E6) | Tour pré-preenche nicho, local e raio (exemplo restaurante, Moema, 3 km); sugestão do Google só no clique em "Ver sugestões do local", sem chamada paga automática. | `F/composables/useSearchTour.js:35`, `F/utils/searchTour.js:10` |
 | LOCAL-38 | Vies da busca pelo endereco da empresa (geocodeCompanyAddress) | ausente no c2 | fora (decisão) | Plano rev.7: não portar, é código morto ou legado que a tela atual do Orth não usa. |  |
 | LOCAL-39 | Autocomplete em dois campos, cidade e bairro | ausente no c2 | fora (decisão) | Plano rev.7: não portar, é código morto ou legado que a tela atual do Orth não usa. |  |
 | LOCAL-40 | Proxy de foto do Google Places | ausente no c2 | fora (decisão) | Plano rev.7: a busca do Orth não usa o proxy de foto. |  |
 | LOCAL-41 | Geocodificacao reversa (coordenada vira nome e endereco) | ausente no c2 | fora (decisão) | Plano rev.7: fora da busca. |  |
 | LOCAL-42 | O centro da busca por raio e o do local escolhido, nao o do mapa arrastado | divergente | #682 (E6) | No modo raio o centro do pedido e o do círculo da prévia saem da mesma função: o do local escolhido ou, numa busca salva reaberta para repetir ou editar, o centro que ela usou, como o `mapCenter` do Orth (`BuscaClient.tsx`). Arrastar a prévia não muda mais a busca; na área visível segue valendo o que a prévia mostra. Testes em `ProspectingSearchPage.form.spec.js` e `.repeat.spec.js`. | `F/composables/searchSlices/locationSlice.js:21`, `F/composables/searchSlices/locationSlice.js:49`, `F/composables/useSearchLocation.js:151` |
 | LOCAL-43 | Buscar no Google desde o primeiro uso, sem provedor simulado por padrao | divergente | #691 (E0) | google_places passou a ser o padrão (migration 20260925100000); conta 17 migrada em produção. |  |
-| LOCAL-44 | Bairro do lead e filtro por bairro e por cidade | ausente no c2 | #699 (E1) | Bairro gravado no lead. O filtro por bairro e cidade não foi portado (ver FILTRO-14). | `S/providers/google_places_provider.rb:168` |
+| LOCAL-44 | Bairro do lead e filtro por bairro e por cidade | ausente no c2 | #699 (E1) | Bairro gravado no lead. O filtro por bairro e cidade não foi portado (ver FILTRO-14). | `S/providers/google_places_provider.rb:186` |
 | LOCAL-45 | Sessao de autocomplete (session token) entre sugestoes e detalhes | divergente | pendente | Não há session token no autocomplete. |  |
 | LOCAL-46 | Escolher sugestao de local pelo teclado | divergente | pendente | Campo de local sem navegação por teclado WAI-ARIA (SearchWhereFields.vue sem keydown nem combobox). |  |
 | LOCAL-47 | Telefone do lead normalizado conforme o pais | divergente | #699 (E1) | Telefone pelo país da conta. | `S/phone_contract.rb:23` |
@@ -217,13 +217,13 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | FILTRO-01 | Filtro Site: tem ou não tem site (gs hasWebsite, c2 has_website) | igual | #699 (E1) | Site no grupo da gaveta; repeso do peso site veio no #719. | `F/components/search/filters/LeadFiltersPanel.vue:95` |
 | FILTRO-02 | Filtro Telefone: tem ou não tem (gs hasPhone, c2 has_phone) | igual | #699 (E1) | Telefone no grupo Operacional; repeso no #719. |  |
 | FILTRO-03 | Mínimo de reviews (gs userRatingCountMin, c2 reviews_min) | igual | #699 (E1) | Mínimo de avaliações no grupo Qualificação; repeso no #719. |  |
-| FILTRO-04 | Avaliação: 'Acima de' ou 'Abaixo de' N estrelas (gs ratingMin/ratingMax, c2 rating_min/rating_max) | divergente | #699 (E1) | Operador de avaliação; lead sem nota passa no rating_max. | `F/components/search/filters/LeadFiltersPanel.vue:142`, `S/search_runner.rb:491` |
+| FILTRO-04 | Avaliação: 'Acima de' ou 'Abaixo de' N estrelas (gs ratingMin/ratingMax, c2 rating_min/rating_max) | divergente | #699 (E1) | Operador de avaliação; lead sem nota passa no rating_max. | `F/components/search/filters/LeadFiltersPanel.vue:142`, `S/search_runner.rb:530` |
 | FILTRO-05 | Posição máxima no Google (gs searchRankMax, c2 search_rank_max) | defasado | #699 (E1) | Faixa de posição com duas alças. | `F/components/search/filters/RankRangeSlider.vue:2` |
-| FILTRO-06 | Fora do top N no Google (gs outsideTop), alça esquerda do slider, com compensação de coleta | ausente no c2 | #699 (E1) | outside_top no motor. | `S/search_runner.rb:118` |
+| FILTRO-06 | Fora do top N no Google (gs outsideTop), alça esquerda do slider, com compensação de coleta | ausente no c2 | #699 (E1) | outside_top no motor. | `S/search_runner.rb:132` |
 | FILTRO-07 | Janela de rank como preferência + aviso 'ampliamos a janela de rank de X para Y' | ausente no c2 | pendente | Janela de rank rígida ou flexível pede decisão do Rodrigo; não registrada. |  |
-| FILTRO-08 | Filtro 'Tem horário' (gs hasOpeningHours) | ausente no c2 | #699 (E1) | Tem horário. | `S/search_runner.rb:481` |
-| FILTRO-09 | Filtro 'Aberto agora' (gs openNow, c2 open_now) | divergente | #699 (E1) | Aberto agora lido do lugar. | `S/search_runner.rb:480` |
-| FILTRO-10 | Filtro Fotos (gs hasPhotos, c2 has_photos) | divergente | #699 (E1) | Com foto sim e não. | `S/search_runner.rb:509` |
+| FILTRO-08 | Filtro 'Tem horário' (gs hasOpeningHours) | ausente no c2 | #699 (E1) | Tem horário. | `S/search_runner.rb:520` |
+| FILTRO-09 | Filtro 'Aberto agora' (gs openNow, c2 open_now) | divergente | #699 (E1) | Aberto agora lido do lugar. | `S/search_runner.rb:519` |
+| FILTRO-10 | Filtro Fotos (gs hasPhotos, c2 has_photos) | divergente | #699 (E1) | Com foto sim e não. | `S/search_runner.rb:548` |
 | FILTRO-11 | Mínimo de fotos (gs photosMin) | ausente no c2 | pendente | photos_min não existe no motor. |  |
 | FILTRO-12 | Tem reviews (gs hasReviews) | ausente no c2 | pendente | has_reviews não existe no motor. |  |
 | FILTRO-13 | Reviews recentes (gs hasRecentReviews) | ausente no c2 | pendente | Avaliações recentes: sem decisão e sem código. |  |
@@ -232,7 +232,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | FILTRO-16 | Score mínimo (gs scoreMin) | ausente no c2 | pendente | score_min não existe no motor. |  |
 | FILTRO-17 | Expansão automática de raio (gs allowRadiusExpansion, c2 auto_expand_radius) | divergente | pendente | Padrão e teto da expansão de raio pedem decisão do Rodrigo (10 km no Orth, 50 km no c2); não registrada. O c2 segue 2x e 4x até 50 km. |  |
 | FILTRO-18 | Total desejado (quantidade de leads por busca) | defasado | #706 (E2) | Total pedido até 60, com o teto de 20 removido no #691. | `S/providers/google_places_provider.rb:26` |
-| FILTRO-19 | Seletor 'Tipo de decisor' no card 'Decisor e quantidade' | ausente no c2 | #699 (E1) | Tipo de decisor enviado e gravado na busca. | `S/search_runner.rb:689` |
+| FILTRO-19 | Seletor 'Tipo de decisor' no card 'Decisor e quantidade' | ausente no c2 | #699 (E1) | Tipo de decisor enviado e gravado na busca. | `S/search_runner.rb:728` |
 | FILTRO-20 | Disponibilidade de cada perfil de decisor vinda do backend, com rótulo 'em breve' | ausente no c2 | #699 (E1) | Perfis com rótulo em breve. A lista é fixa no front (valores do backend), não vem da API. | `F/utils/decisionMakerTypes.js:29` |
 | FILTRO-21 | Tipo de decisor chega ao motor de pesquisa e ao painel do lead | ausente no c2 | #709 (E3) | Tipo de decisor chega à pesquisa. | `S/research/runner.rb:112` |
 | FILTRO-22 | Seletor de decisor desativado quando a pesquisa de decisores não está liberada | ausente no c2 | pendente | O seletor desliga só os perfis sem executor; não olha se a pesquisa está liberada na conta. | `F/utils/decisionMakerTypes.js:30` |
@@ -251,7 +251,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | FILTRO-35 | Os filtros ativos repesam o score: o critério que o filtro já garante deixa de pesar, e os pesos são renormalizados para 100 | ausente no c2 | #719 (E5) | Repeso pelos filtros ativos. | `S/scoring/component_score.rb:4` |
 | FILTRO-36 | O bônus de 'aberto agora' na prioridade é desligado quando o filtro openNow está ativo | divergente | #719 (E5) | Bônus de aberto agora desligado com o filtro. | `S/scoring/priority.rb:20` |
 | FILTRO-37 | Leads 'queimados' (já cliente de outro vendedor da casa) não viram cartão na busca | ausente no c2 | pendente | Lead queimado depende de decisão do Rodrigo sobre o modelo (lead por conta x cartão por vendedor); não registrada. |  |
-| FILTRO-38 | A posição no Google é guardada por busca, e não sobrescrita por buscas seguintes | divergente | #699 (E1) | Nota, posição e prioridade guardadas por busca (corpo do #699; metadata lead_scoring). | `S/search_runner.rb:78` |
+| FILTRO-38 | A posição no Google é guardada por busca, e não sobrescrita por buscas seguintes | divergente | #699 (E1) | Nota, posição e prioridade guardadas por busca (corpo do #699; metadata lead_scoring). | `S/search_runner.rb:92` |
 | FILTRO-39 | Teste do motor de filtros | defasado | #699 (E1) | Filtros provados com resposta real gravada do Google (corpo do #699). |  |
 | FILTRO-40 | Modo 'guaranteed' com ladrilhos (tile-generator) e continuação por nextPageToken | ausente no c2 | fora (decisão) | Plano rev.7: não portar, é código morto ou legado que a tela atual do Orth não usa. |  |
 
@@ -260,15 +260,15 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ID | Capacidade | Situação original | Destino | Nota | Conferido |
 |---|---|---|---|---|---|
 | MOTOR-01 | Paginação no Google Places com pageToken até atingir o total pedido | ausente no c2 | #706 (E2) | Paginação por nextPageToken. | `S/providers/google_places_provider.rb:24` |
-| MOTOR-02 | Teto de leads por busca (60) e tamanho de página (20) | divergente | #706 (E2) | Teto de 60 e página de 20; max_results_per_search deixou de ser lido pelo motor (só o schema o cita). | `S/providers/google_places_provider.rb:118` |
+| MOTOR-02 | Teto de leads por busca (60) e tamanho de página (20) | divergente | #706 (E2) | Teto de 60 e página de 20; max_results_per_search deixou de ser lido pelo motor (só o schema o cita). | `S/providers/google_places_provider.rb:120` |
 | MOTOR-03 | Expansão automática de raio quando faltam resultados | divergente | pendente | Padrão e teto da expansão de raio pedem decisão do Rodrigo (10 km no Orth, 50 km no c2); não registrada. O c2 segue 2x e 4x até 50 km. |  |
 | MOTOR-04 | Texto da consulta enviado ao Google e viés de localização | divergente | pendente | textQuery ainda leva o local (Fora deste PR do #706). |  |
-| MOTOR-05 | País e idioma da busca vindos da configuração da empresa | ausente no c2 | #699 (E1) | País por conta no provider. | `S/providers/google_places_provider.rb:120` |
+| MOTOR-05 | País e idioma da busca vindos da configuração da empresa | ausente no c2 | #699 (E1) | País por conta no provider. | `S/providers/google_places_provider.rb:122` |
 | MOTOR-06 | Campos pedidos ao Google (field mask) | defasado | #699 (E1) | Field mask com addressComponents e googleMapsUri; nextPageToken no #706. |  |
 | MOTOR-07 | Bairro e cidade do lead | divergente | #699 (E1) | Bairro e cidade do addressComponents. | `S/providers/google_places_provider.rb:32` |
 | MOTOR-08 | Posição no Google (search_rank) atribuída antes dos filtros | defasado | #706 (E2) | Posição real de 1 a 60 entre páginas. |  |
 | MOTOR-09 | Filtro 'só até a posição N no Google' (searchRankMax) | igual | preservado | Vale para posições acima de 20 desde o #706. |  |
-| MOTOR-10 | Filtro 'fora do top N' (outsideTop) com coleta ampliada | ausente no c2 | #699 (E1) | outside_top com meta de coleta. | `S/search_runner.rb:119` |
+| MOTOR-10 | Filtro 'fora do top N' (outsideTop) com coleta ampliada | ausente no c2 | #699 (E1) | outside_top com meta de coleta. | `S/search_runner.rb:133` |
 | MOTOR-11 | Soft cap da janela de rank com banner 'ampliamos a janela' | ausente no c2 | pendente | Janela de rank rígida ou flexível: decisão do Rodrigo não registrada. |  |
 | MOTOR-12 | Filtro de score mínimo depois da pontuação (scoreMin) | ausente no c2 | pendente | score_min não existe no motor. |  |
 | MOTOR-13 | Filtros com foto e aberto agora executados no servidor | divergente | #699 (E1) | Foto e aberto agora no servidor, com fixture real. |  |
@@ -282,14 +282,14 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | MOTOR-21 | Ordenar por distância do centro (distance_km) | ausente no c2 | #706 (E2) | Distância. |  |
 | MOTOR-22 | Ordenar por posição no Google | ausente no c2 | #706 (E2) | Posição no Google, começando da 1ª. |  |
 | MOTOR-23 | Inverter a direção da ordenação (crescente/decrescente) | ausente no c2 | #706 (E2) | Botão que inverte a direção (ResultsFiltersPopover.vue). |  |
-| MOTOR-24 | Chave do Google Places usada na busca | divergente | #691 (E0) | Chave da plataforma. | `S/search_runner.rb:251` |
-| MOTOR-25 | Contagem de chamadas ao Google por busca | igual | preservado | Soma por página desde o #706. | `S/search_runner.rb:55` |
+| MOTOR-24 | Chave do Google Places usada na busca | divergente | #691 (E0) | Chave da plataforma. | `S/search_runner.rb:265` |
+| MOTOR-25 | Contagem de chamadas ao Google por busca | igual | preservado | Soma por página desde o #706. | `S/search_runner.rb:69` |
 | MOTOR-26 | Mostrar 'N chamadas à API' no título dos resultados | ausente no c2 | pendente | A tela não mostra N chamadas nem os selos do cache e do raio ampliado; só o aviso de busca parcial. |  |
 | MOTOR-27 | Agendamento automático da pesquisa de decisor/empresa para todos os leads da busca | ausente no c2 | #709 (E3) | Pesquisa enfileirada ao fim da busca. | `S/research/queue.rb:17` |
 | MOTOR-28 | Tipo de decisor pedido na busca (quem o Radar procura) | ausente no c2 | #699 (E1) | Tipo de decisor na busca, levado à pesquisa no #709. |  |
 | MOTOR-29 | Barra de progresso da pesquisa ('X de Y itens concluídos', 'Solicitados · Google retornou · Persistidos · Agendados') | ausente no c2 | #709 (E3) | Barra X de Y sem texto de créditos. | `F/components/search/SearchResults.vue:203` |
 | MOTOR-30 | Verificação automática de WhatsApp dos telefones após a busca | defasado | #706 (E2) | Verificação de WhatsApp em job por lote. | `S/lead_work_queue.rb:46` |
-| MOTOR-31 | O que é gravado em cada lead da busca | defasado | #699 (E1) | Colunas novas no lead (migration 20260925110000). | `S/providers/google_places_provider.rb:189` |
+| MOTOR-31 | O que é gravado em cada lead da busca | defasado | #699 (E1) | Colunas novas no lead (migration 20260925110000). | `S/providers/google_places_provider.rb:207` |
 | MOTOR-32 | O que é gravado na busca | igual | preservado | Com preset_id desde o #699. |  |
 | MOTOR-33 | Continuar a busca (próxima página) na mesma busca | ausente no c2 | fora (decisão) | Plano rev.7: não portar agora; o total vem numa chamada. |  |
 | MOTOR-34 | Cancelar a busca anterior ao disparar outra | divergente | preservado |  |  |
@@ -310,11 +310,11 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | MOTOR-49 | Rota de diagnóstico da chave do Google (só hiper_admin) | ausente no c2 | pendente | Não há botão testar chave no superadmin (opcional no plano). |  |
 | MOTOR-50 | Busca garantida por ladrilhos (oversampling) | ausente no c2 | fora (decisão) | Plano rev.7: não portar, é código morto ou legado que a tela atual do Orth não usa. |  |
 | MOTOR-51 | Limite de raio (0 a 50 km) | defasado | pendente | Raio sem corte no servidor (ver LOCAL-08). |  |
-| MOTOR-52 | Cache devolve busca que falhou (ou ainda pendente) como resultado vazio | só no c2 | #691 (E0) | Cache só de busca concluída; parcial não vira cache. | `S/search_runner.rb:58` |
-| MOTOR-53 | Filtrar antes de cortar no total pedido | divergente | #706 (E2) | Filtro antes do corte. | `S/search_runner.rb:71` |
+| MOTOR-52 | Cache devolve busca que falhou (ou ainda pendente) como resultado vazio | só no c2 | #691 (E0) | Cache só de busca concluída; parcial não vira cache. | `S/search_runner.rb:72` |
+| MOTOR-53 | Filtrar antes de cortar no total pedido | divergente | #706 (E2) | Filtro antes do corte. | `S/search_runner.rb:85` |
 | MOTOR-54 | Pedir o nextPageToken no FieldMask | ausente no c2 | #706 (E2) |  | `S/providers/google_places_provider.rb:24` |
-| MOTOR-55 | Rank, score e Prioridade guardados por busca (não só no lead) | divergente | #706 (E2) | Nota, prioridade e posição por busca no metadata (sem tabela de junção). | `S/search_runner.rb:78` |
-| MOTOR-56 | Chamadas ao Google fora da transação do banco | divergente | #706 (E2) | A transação só envolve o upsert e o save da busca. | `S/search_runner.rb:48` |
+| MOTOR-55 | Rank, score e Prioridade guardados por busca (não só no lead) | divergente | #706 (E2) | Nota, prioridade e posição por busca no metadata (sem tabela de junção). | `S/search_runner.rb:92` |
+| MOTOR-56 | Chamadas ao Google fora da transação do banco | divergente | #706 (E2) | A transação só envolve o upsert e o save da busca. | `S/search_runner.rb:62` |
 | MOTOR-57 | Provider padrão de conta nova | divergente | #691 (E0) | Padrão google_places; mock só em teste e desenvolvimento. |  |
 | MOTOR-58 | Atualização ao vivo de cada lead da lista (site, decisor, WhatsApp) | ausente no c2 | #706 (E2) | Evento prospecting.lead.updated. | `S/lead_payload.rb:2` |
 | MOTOR-59 | Exportar uma busca do histórico gerada no servidor | defasado | #682 (E6) | Export da busca gerado no servidor (frente A): GET .../searches/:id/export?format=csv ou xlsx. | `config/routes.rb:388`, `C/searches_controller.rb:84` |
@@ -330,7 +330,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ENRIQ-05 | Regra de quando refazer o scrape (leadNeedsSiteScrape) | divergente | #706 (E2) | Falha retomável com contador de tentativas. |  |
 | ENRIQ-06 | Site fora do ar ou HTTP de erro conta como falha, não como sucesso | divergente | #706 (E2) | Site fora do ar vira falha. | `S/lead_enricher.rb:178` |
 | ENRIQ-07 | Novo scrape vazio ou com erro não apaga dados capturados antes | ausente no c2 | #706 (E2) | Merge que não apaga o que o enriquecimento anterior achou. | `S/enrichment_merge.rb:8` |
-| ENRIQ-08 | Contador de tentativas de scrape que falharam | ausente no c2 | #706 (E2) | Coluna enrichment_failed_attempts (migration 20260925120000). | `S/enrichment_merge.rb:40` |
+| ENRIQ-08 | Contador de tentativas de scrape que falharam | ausente no c2 | #706 (E2) | Coluna enrichment_failed_attempts (migration 20260925120000). | `S/enrichment_merge.rb:41` |
 | ENRIQ-09 | Motor de leitura do site com navegador headless (renderiza JavaScript) | divergente | pendente | Navegador headless pede decisão do Rodrigo; o scraper continua HTTP. |  |
 | ENRIQ-10 | Tempo limite de abertura do site | divergente | #706 (E2) | Prazo por etapa e total. | `S/safe_page_fetcher.rb:18` |
 | ENRIQ-11 | User agent de navegador real | divergente | #706 (E2) | User agent de navegador. | `S/safe_page_fetcher.rb:19` |
@@ -355,11 +355,11 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ENRIQ-30 | Título, descrição, telefone do site, trecho de texto e links de origem | só no c2 | preservado |  |  |
 | ENRIQ-31 | Diagnóstico do scrape e trace opcional | ausente no c2 | pendente | Contadores de diagnóstico do scrape não existem. |  |
 | ENRIQ-32 | Mensagem de erro de site legível | divergente | pendente | Conferido: não feito. O erro do enriquecimento é gravado (`S/lead_enricher.rb:174`) e vai no payload do lead, mas nenhuma tela o lê nem o traduz. Sem etapa dona. | |
-| ENRIQ-33 | WhatsApp achado no site é verificado no WAHA durante o enriquecimento | ausente no c2 | #706 (E2) | WhatsApp do site verificado. | `S/whatsapp_verifier.rb:9` |
+| ENRIQ-33 | WhatsApp achado no site é verificado no WAHA durante o enriquecimento | ausente no c2 | #706 (E2) | WhatsApp do site verificado. | `S/whatsapp_verifier.rb:10` |
 | ENRIQ-34 | WhatsApp do site confirmado entra na lista de telefones do lead e vira o botão WhatsApp | ausente no c2 | #706 (E2) | Botão WhatsApp e Ligar usam o número do site confirmado (nota da E2 na #705). |  |
 | ENRIQ-35 | Verificação automática do telefone do Google logo após a busca | divergente | #706 (E2) | Verificação no servidor ao fim da busca. |  |
 | ENRIQ-36 | Verificação ao abrir o detalhe, com vários candidatos (Google, internacional, site) | ausente no c2 | #706 (E2) | Candidatos do Google e do site verificados no job, não ao abrir o painel. |  |
-| ENRIQ-37 | Rota de verificação que só grava se o número existe, com códigos de erro distintos | divergente | pendente | Conferido: não feito. Todo erro da verificação volta 422 com a chave do erro (`C/leads_controller.rb:104`); número inválido e WAHA fora não se separam. Sem etapa dona. | |
+| ENRIQ-37 | Rota de verificação que só grava se o número existe, com códigos de erro distintos | divergente | pendente | Conferido: não feito. Todo erro da verificação volta 422 com a chave do erro (`C/leads_controller.rb:105`); número inválido e WAHA fora não se separam. Sem etapa dona. | |
 | ENRIQ-38 | Qual sessão WAHA faz a checagem | divergente | pendente | Pool de sessões nossas ou sessão da conta: decisão do Rodrigo não registrada; o c2 usa a sessão da conta. |  |
 | ENRIQ-39 | Resultado negativo e falha da verificação ficam gravados | só no c2 | preservado |  |  |
 | ENRIQ-40 | Selo WhatsApp verificado ao lado do telefone | divergente | #706 (E2) | Selo verificado ao lado do telefone (LeadPhoneActions.vue). | `F/components/search/LeadCardActions.vue:107` |
@@ -378,8 +378,8 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ENRIQ-53 | Normalização de telefone por biblioteca, com país | divergente | #699 (E1) | telephone_number com país. | `S/phone_contract.rb:2` |
 | ENRIQ-54 | Telefone nacional e internacional guardados e exibidos formatados | divergente | #699 (E1) | Contrato de telefone nos cinco pontos. |  |
 | ENRIQ-55 | Telefone do contato criado no Chatwoot a partir do lead | divergente | #699 (E1) | Mesma normalização no contato; o #714 prefere o WhatsApp verificado. |  |
-| ENRIQ-56 | Lista estruturada de telefones do lead com principal de WhatsApp e gravação atômica | divergente | #706 (E2) | Telefone do Google e WhatsApp do site com verificação própria cada um, o do site vira o principal quando o do Google não é WhatsApp, e a gravação é atômica no jsonb. Diferente do Orth: não é uma lista com rótulo por número. | `S/whatsapp_verifier.rb:7`, `S/lead_payload.rb:83`, `S/whatsapp_verifier.rb:82` |
-| ENRIQ-57 | Gravação final do enriquecimento não apaga telefones gravados em paralelo | divergente | #682 (E6) | A verificação grava só a sua chave no jsonb desde o #706, a gravação final do enriquecimento não toca o metadata (`S/lead_enricher.rb:72`) e agora a busca refeita também soma no banco só as chaves que traz, em vez de regravar o metadata lido antes. Resta um caminho da mesma classe fora do enriquecimento: a pesquisa de empresa e decisor (#679) regrava o metadata inteiro do lead carregado (`S/research/lead_writer.rb:39`) e pode apagar uma verificação que termine no meio dela. Registrado, não corrigido na E6. | `S/search_runner.rb:342`, `S/whatsapp_verifier.rb:88` |
+| ENRIQ-56 | Lista estruturada de telefones do lead com principal de WhatsApp e gravação atômica | divergente | #706 (E2) | Telefone do Google e WhatsApp do site com verificação própria cada um, o do site vira o principal quando o do Google não é WhatsApp, e a gravação é atômica no jsonb. Diferente do Orth: não é uma lista com rótulo por número. | `S/whatsapp_verifier.rb:8`, `S/lead_payload.rb:83`, `S/whatsapp_verifier.rb:94` |
+| ENRIQ-57 | Gravação final do enriquecimento não apaga telefones gravados em paralelo | divergente | #682 (E6) | A verificação grava só a sua chave no jsonb desde o #706, a gravação final do enriquecimento não toca o metadata (`S/lead_enricher.rb:72`) e agora a busca refeita também soma no banco só as chaves que traz, em vez de regravar o metadata lido antes; o verificador grava sob a trava da linha. A pesquisa de empresa e decisor (#679) também regrava o metadata do lead, mas depois de `lock!`, que recarrega a linha travada (`S/research/lead_writer.rb:23`): uma verificação que termina no meio espera a trava e soma a sua chave depois, sem se perder. | `S/search_runner.rb:344`, `S/whatsapp_verifier.rb:94` |
 | ENRIQ-58 | Pular número já verificado e tentar de novo após falha | divergente | #706 (E2) | Nova tentativa quando a verificação falhou. | `S/lead_work_queue.rb:58` |
 | ENRIQ-59 | Observabilidade estruturada do enriquecimento | ausente no c2 | pendente | Sem log estruturado de início, fim e duração do enriquecimento. |  |
 | ENRIQ-60 | Registro de eventos em log de aplicação | divergente | pendente | Log do Rails ou tabela: decisão não registrada. |  |
@@ -391,7 +391,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ENRIQ-66 | WhatsApp verificado aumenta a contactabilidade no score | igual | preservado | Contactabilidade entra na prioridade do Orth no #719. |  |
 | ENRIQ-67 | Testes automatizados de scraper, guarda de URL, telefone e verificação | ausente no c2 | #691 (E0) | Testes de caracterização antes de mexer (#691) e specs do scraper seguro (#706). |  |
 | ENRIQ-68 | Dados do enriquecimento chegam ao CRM e à campanha (e-mail, WhatsApp do site, redes, CNPJ, decisor, resumo) | ausente no c2 | #714 (E4) | E-mail, WhatsApp, redes, CNPJ, decisor e resumo levados ao contato e ao card. | `S/crm_card_converter.rb:65` |
-| ENRIQ-69 | Verificação de WhatsApp amarrada ao número verificado, não ao lead | divergente | #682 (E6) | Busca refeita que traz outro telefone (comparado em E.164) tira a verificação antiga do metadata, e o lead volta à fila de verificação da E2 no fim da busca; a do WhatsApp do site e a de um telefone que não mudou ficam. O verificador só grava se o lead ainda tem o número consultado, então uma troca no meio da consulta não recebe o resultado do número antigo. | `S/search_runner.rb:332`, `S/whatsapp_verifier.rb:88` |
+| ENRIQ-69 | Verificação de WhatsApp amarrada ao número verificado, não ao lead | divergente | #682 (E6) | Busca refeita que traz outro telefone tira a verificação que não é do número novo (E.164), decidido no próprio UPDATE sobre o metadata da hora, e o lead volta à fila de verificação da E2 no fim da busca; a do WhatsApp do site e a de um telefone que não mudou ficam. O verificador só grava se o lead ainda tem o número consultado (E.164, com a linha travada); se o número mudou no meio, solta a marca "queued" antiga e põe o número novo na fila, em vez de deixar o lead em "Verificando" até o reaper, e a verificação manual responde pendente. | `S/search_runner.rb:13`, `S/search_runner.rb:344`, `S/whatsapp_verifier.rb:94`, `S/whatsapp_verifier.rb:109`, `C/leads_controller.rb:102` |
 | ENRIQ-70 | Reaproveitamento do enriquecimento em buscas repetidas | igual | preservado |  |  |
 | ENRIQ-71 | Status running sem dono após queda da requisição | divergente | #706 (E2) | ReaperJob devolve running antigo a falha. | `S/lead_work_queue.rb:6` |
 | ENRIQ-72 | Quem pode disparar enriquecimento e verificação | divergente | #706 (E2) | Disparo automático roda no servidor, sem depender de quem abriu a tela. |  |
@@ -469,7 +469,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | PAINEL-03 | Cabeçalho do drawer: selo G #rank, 'Posição N da sua lista', selo 'Ligar primeiro', nome e endereço | igual | preservado |  |  |
 | PAINEL-04 | Acessibilidade do drawer: role=dialog, aria-modal, foco no botão fechar, trap de Tab, Escape fecha, trava de scroll do body e retorno do foco | defasado | pendente | Painel sem role=dialog, aria-modal, foco e Escape (LeadDetailDrawer.vue). |  |
 | PAINEL-05 | Bloco 'Quem atende': lista de candidatos a decisor (nome · cargo) | divergente | #709 (E3) | Quem atende com o vínculo de cada sócio. |  |
-| PAINEL-06 | Botão 'Usar como contato' por candidato (adota o decisor como contato do lead) | ausente no c2 | #714 (E4) | Usar como contato. | `C/leads_controller.rb:138` |
+| PAINEL-06 | Botão 'Usar como contato' por candidato (adota o decisor como contato do lead) | ausente no c2 | #714 (E4) | Usar como contato. | `C/leads_controller.rb:139` |
 | PAINEL-07 | Candidato vindo de cadastro anterior: aviso 'Dado anterior · verifique novamente para selecionar' | ausente no c2 | pendente | Candidato "dado anterior" não foi criado; o #709 só solta o decisor antigo em dois casos. |  |
 | PAINEL-08 | Bloco Empresa: Razão social | ausente no c2 | #709 (E3) | Razão social. |  |
 | PAINEL-09 | Bloco Empresa: Nome fantasia, mostrado só quando difere da razão social | ausente no c2 | #709 (E3) | Nome fantasia quando difere. |  |
@@ -555,9 +555,9 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ACAO-37 | Segmento de campanha a partir da lista (etiqueta + campanha one_off) | só no c2 | preservado | Destino de Adicionar à campanha (#714). |  |
 | ACAO-38 | Verificação automática de WhatsApp ao abrir listas | só no c2 | #706 (E2) | Verificação no servidor, inclusive para Listas. |  |
 | ACAO-39 | Exportar resultados | defasado | #682 (E6) | Botão de download da busca oferece CSV e Excel pelo servidor, com os selecionados ou os visíveis depois do filtro, na ordem da tela (frente A). A lista também exporta (GET .../lists/:id/export); o botão nas Listas não existe ainda, só exportList no cliente da API. | `F/components/search/SearchResults.vue:31`, `app/javascript/dashboard/api/autonomiaProspecting.js:43`, `config/routes.rb:404` |
-| ACAO-40 | Tour guiado: disparo automático e persistência | ausente no c2 | #682 (E6) | Tour abre sozinho na primeira visita de quem tem prospecting_manage e grava a marca ao abrir (o Orth marca ao concluir ou pular e só abre para empresa sem busca). | `F/composables/useSearchTour.js:128`, `F/utils/searchTour.js:8` |
+| ACAO-40 | Tour guiado: disparo automático e persistência | ausente no c2 | #682 (E6) | Tour abre sozinho na primeira visita de quem tem prospecting_manage e grava a marca ao abrir (o Orth marca ao concluir ou pular e só abre para empresa sem busca). | `F/composables/useSearchTour.js:130`, `F/utils/searchTour.js:8` |
 | ACAO-41 | Tour: passos de boas-vindas, modo, jogada, decisor com texto por score_mode | ausente no c2 | #682 (E6) | Oito passos: boas-vindas, modo, jogada, local, decisor, filtros, Buscar e resultados; texto por score_mode. | `F/utils/searchTour.js:13`, `F/utils/searchTour.js:30` |
-| ACAO-42 | Tour: pré-preenche busca, espera local confirmado, abre/fecha filtros, espera resultados, fecha sozinho | ausente no c2 | #682 (E6) | Pré-preenche o exemplo, espera o local confirmado, abre e fecha a gaveta de filtros, espera busca com leads e fecha sozinho em 3,5 s; a busca só roda no clique em Buscar. | `F/composables/useSearchTour.js:34`, `F/utils/searchTour.js:9` |
+| ACAO-42 | Tour: pré-preenche busca, espera local confirmado, abre/fecha filtros, espera resultados, fecha sozinho | ausente no c2 | #682 (E6) | Pré-preenche o exemplo, espera o local confirmado, abre e fecha a gaveta de filtros, espera busca com leads e fecha sozinho em 3,5 s; a busca só roda no clique em Buscar. | `F/composables/useSearchTour.js:35`, `F/utils/searchTour.js:9` |
 | ACAO-43 | Botão "Refazer tour" no rodapé | ausente no c2 | #682 (E6) | Refazer tour no rodapé da tela de busca. | `F/pages/ProspectingSearchPage.vue:112` |
 | ACAO-44 | Assistente de IA executar a busca, enviar ao CRM ou montar campanha | só no c2 | preservado | Endpoints novos entram no catálogo do Guia; a bateria é da #705. |  |
 | ACAO-45 | Assistente de IA ler configuração de score e progresso do onboarding da busca | divergente | fora (decisão) | Plano rev.7: nada a portar para score; marco de tour depende de ACAO-40. |  |
