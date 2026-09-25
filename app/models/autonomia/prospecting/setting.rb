@@ -63,6 +63,7 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
   validate :score_engine_must_be_supported
   validate :search_country_must_be_supported
   validate :custom_scoring_weights_must_be_supported_numbers
+  validate :scoring_profile_must_be_available_to_account, if: :scoring_profile_id_changed?
   validate :default_crm_records_must_belong_to_account
 
   before_validation :normalize_scoring_configuration
@@ -95,8 +96,11 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
     google_maps_browser_api_key.present?
   end
 
+  # Perfil que o superadmin restringiu a outras contas depois da escolha deixa de valer aqui: a conta cai no padrão (#681).
   def active_scoring_profile
-    scoring_profile || Autonomia::Prospecting::ScoringProfile.default_profile
+    return scoring_profile if scoring_profile&.available_to?(account)
+
+    Autonomia::Prospecting::ScoringProfile.default_profile
   end
 
   def active_scoring_weights
@@ -179,6 +183,13 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
     normalized_custom_scoring_weights.each do |key, value|
       errors.add(:custom_scoring_weights, "#{key} must be between 0 and 100") unless value.to_i.between?(0, 100)
     end
+  end
+
+  # Só na troca de perfil: a conta que já usava um perfil depois restringido continua salvando o resto da configuração.
+  def scoring_profile_must_be_available_to_account
+    return if scoring_profile.blank? || scoring_profile.available_to?(account)
+
+    errors.add(:base, I18n.t('autonomia.prospecting.errors.scoring_profile_unavailable'))
   end
 
   def search_score_mode_must_be_supported

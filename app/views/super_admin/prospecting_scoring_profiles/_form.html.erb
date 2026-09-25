@@ -20,6 +20,27 @@
     Use as default profile
   </label>
 
+  <fieldset class="grid gap-2">
+    <legend class="text-sm font-medium text-slate-700">Restricted to these accounts</legend>
+    <p class="text-xs text-slate-500">
+      Leave every account unchecked to keep the profile global. A restricted profile is listed and used only by the
+      checked accounts; the default profile must stay global.
+    </p>
+    <%= hidden_field_tag 'autonomia_prospecting_scoring_profile[account_ids][]', '', id: nil %>
+    <div class="grid max-h-64 gap-1 overflow-y-auto rounded border border-slate-200 p-3 sm:grid-cols-2">
+      <% @eligible_accounts.each do |account| %>
+        <label class="flex items-center gap-2 text-sm text-slate-700">
+          <%= check_box_tag 'autonomia_prospecting_scoring_profile[account_ids][]', account.id,
+                            @profile.account_ids.include?(account.id), id: "scoring_profile_account_#{account.id}" %>
+          <%= account.name %> <span class="text-xs text-slate-400">#<%= account.id %></span>
+        </label>
+      <% end %>
+      <% if @eligible_accounts.empty? %>
+        <p class="text-sm text-slate-500">No account has Autonomia Prospecting enabled.</p>
+      <% end %>
+    </div>
+  </fieldset>
+
   <div class="grid gap-3 sm:grid-cols-2">
     <% Autonomia::Prospecting::ScoringProfile::DEFAULT_WEIGHTS.each do |key, default_value| %>
       <label class="grid gap-1">
