@@ -295,8 +295,7 @@
           "ANY": "{min} a {max} (qualquer)",
           "RANGE": "{min} a {max}",
           "MIN_ARIA": "Posição mínima no Google",
-          "MAX_ARIA": "Posição máxima no Google",
-          "REACH": "Com essa quantidade, o Google traz até {limit} posições. A faixa começa em até {limit}."
+          "MAX_ARIA": "Posição máxima no Google"
         }
       },
       "SCORE_MODES": {

@@ -2,23 +2,9 @@
 // refino local dos leads já carregados. As regras são as do motor
 // (search_runner.rb#advanced_filter_matches?); mudou lá, muda aqui.
 export const RANK_SLIDER_MIN = 1;
+// A busca pagina até a 60ª posição no Google (#678), além do fim da faixa: a
+// faixa pode começar em qualquer ponto dela.
 export const RANK_SLIDER_MAX = 40;
-// Lugares por busca no Google (GooglePlacesProvider::MAX_RESULTS_PER_REQUEST).
-// Sem a paginação da E2, as posições vão de 1 a min(Quantidade, 20).
-export const GOOGLE_RESULTS_PER_SEARCH = 20;
-
-// Última posição que a nova busca pode trazer. Começar a faixa depois dela
-// deixa a busca sempre vazia, e o motor recusa (search_runner.rb
-// #validate_rank_range!). O provider fictício devolve a Quantidade inteira.
-export const reachableRankLimit = ({ requestedLimit, isMockProvider }) => {
-  const limit = Number(requestedLimit);
-  if (!limit || limit < RANK_SLIDER_MIN) return RANK_SLIDER_MAX;
-
-  const providerLimit = isMockProvider
-    ? limit
-    : Math.min(limit, GOOGLE_RESULTS_PER_SEARCH);
-  return Math.min(providerLimit, RANK_SLIDER_MAX);
-};
 
 export const defaultAdvancedLeadFilters = () => ({
   has_website: '',
