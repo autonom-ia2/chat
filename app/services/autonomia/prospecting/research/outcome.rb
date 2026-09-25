@@ -2,6 +2,7 @@
 # `confidence` é a da identificação da empresa (descoberta do CNPJ), a mesma que o decisor herda.
 Autonomia::Prospecting::Research::Outcome = Struct.new(
   :company_status, :decision_status, :error_code, :no_decision_reason, :profile, :confidence, :evidence, :candidates, :reused,
+  :candidate_scores,
   keyword_init: true
 ) do
   def self.failure(status, error_code)
@@ -11,7 +12,8 @@ Autonomia::Prospecting::Research::Outcome = Struct.new(
   # Sem empresa não há decisor: os dois estados andam juntos.
   def self.without_company(status, reason, discovery)
     new(company_status: status, decision_status: status, no_decision_reason: reason, reused: false,
-        evidence: discovery.evidence, candidates: discovery.candidates, confidence: discovery.confidence)
+        evidence: discovery.evidence, candidates: discovery.candidates, confidence: discovery.confidence,
+        candidate_scores: discovery.candidate_scores)
   end
 
   def self.with_profile(profile, confidence:, reused:, evidence: nil, candidates: nil)
