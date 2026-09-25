@@ -30,9 +30,25 @@ export const formatRadius = (radius, t) => {
   });
 };
 
-export const formatSearchArea = (search, t) => {
-  if (search?.area_type === 'viewport') {
+const DRAWN_AREA_SHORT = {
+  circle: t => t('PROSPECTING.SEARCH.AREA_DRAW.SHORT_CIRCLE'),
+  rectangle: t => t('PROSPECTING.SEARCH.AREA_DRAW.SHORT_RECTANGLE'),
+  polygon: t => t('PROSPECTING.SEARCH.AREA_DRAW.SHORT_POLYGON'),
+};
+
+// Nome curto do tipo de área: resumo da busca e histórico (#678).
+export const formatAreaType = (areaType, t) => {
+  if (DRAWN_AREA_SHORT[areaType]) return DRAWN_AREA_SHORT[areaType](t);
+  if (areaType === 'viewport') {
     return t('PROSPECTING.SEARCH.AREA_VIEWPORT_SHORT');
+  }
+  return t('PROSPECTING.SEARCH.AREA_RADIUS');
+};
+
+export const formatSearchArea = (search, t) => {
+  const areaType = search?.area_type;
+  if (areaType === 'viewport' || DRAWN_AREA_SHORT[areaType]) {
+    return formatAreaType(areaType, t);
   }
 
   return formatRadius(search?.radius || 0, t);

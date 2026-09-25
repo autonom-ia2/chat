@@ -103,9 +103,13 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
 
     const area = choiceSelect(wrapper, 'PROSPECTING.SEARCH.FIELDS.AREA_TYPE');
     expect(area.props('modelValue')).toBe('radius');
+    // Área desenhada (#678, E2 frente B): círculo, retângulo e polígono.
     expect(area.props('options').map(option => option.value)).toEqual([
       'radius',
       'viewport',
+      'circle',
+      'rectangle',
+      'polygon',
     ]);
 
     const mode = choiceSelect(wrapper, 'PROSPECTING.SEARCH.FIELDS.SCORE_MODE');
