@@ -724,6 +724,45 @@ pt_BR:
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
+      # Nota do Orth (#681): frase de leitura da nota e motivos das penalidades de prioridade.
+      scoring:
+        human_insight:
+          sentence: '%{category}: %{signals}.'
+          categories:
+            gbp:
+              high: 'Oportunidade alta'
+              medium: 'Oportunidade média'
+              low: 'Oportunidade baixa'
+            general:
+              high: 'Lead bem qualificado'
+              medium: 'Lead qualificado'
+              low: 'Qualificação fraca'
+          signals:
+            gbp:
+              website: { strong: 'sem site', weak: 'site presente' }
+              phone: { strong: 'sem telefone', weak: 'tem telefone' }
+              rating: { strong: 'rating fraco', weak: 'rating bom' }
+              volume: { strong: 'poucas reviews', weak: 'volume saudável' }
+              activity: { strong: 'GMN inativo', weak: 'GMN ativo' }
+              photos: { strong: 'sem fotos', weak: 'fotos ok' }
+            general:
+              website: { strong: 'site', weak: 'sem site' }
+              phone: { strong: 'telefone', weak: 'sem telefone' }
+              rating: { strong: 'rating alto', weak: 'rating fraco' }
+              volume: { strong: 'volume bom', weak: 'pouco volume' }
+              activity: { strong: 'ativo', weak: 'pouco ativo' }
+              photos: { strong: 'boa presença visual', weak: 'sem fotos' }
+        negative_factors:
+          already_in_crm: 'Já está no CRM'
+          already_in_funnel: 'Já está no funil "%{name}"'
+          contacted_days_ago: 'Contatado há %{days}d'
+          contacted_recently: 'Contatado recentemente'
+          old_reviews:
+            one: 'Última review há %{count} ano'
+            other: 'Última review há %{count} anos'
+          low_rating_low_volume:
+            one: 'Rating %{rating} com apenas %{count} review'
+            other: 'Rating %{rating} com apenas %{count} reviews'
       crm_send:
         failures:
           not_found: 'Lead não encontrado nesta conta.'
