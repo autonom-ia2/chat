@@ -77,6 +77,32 @@ RSpec.describe Autonomia::Prospecting::WhatsappVerifier do
       expect(Autonomia::Prospecting::VerifyWhatsappJob).to have_been_enqueued.with(account.id, [lead.id])
     end
 
+    it 'lead apagado durante a consulta: não grava, não enfileira e não levanta erro' do
+      stub_request(:get, check_url)
+        .with(query: { phone: '+5541999990000', session: 'sessao-prospeccao' })
+        .to_return do
+          Autonomia::Prospecting::Lead.where(id: lead.id).delete_all
+          { status: 200, body: { numberExists: true }.to_json, headers: { 'Content-Type' => 'application/json' } }
+        end
+
+      result = verify
+
+      expect(result.pending).to be(true)
+      expect(result.lead).to be_nil
+      expect(Autonomia::Prospecting::VerifyWhatsappJob).not_to have_been_enqueued
+    end
+
+    it 'lead apagado quando o WAHA falha: não levanta erro' do
+      stub_request(:get, check_url)
+        .with(query: { phone: '+5541999990000', session: 'sessao-prospeccao' })
+        .to_return do
+          Autonomia::Prospecting::Lead.where(id: lead.id).delete_all
+          { status: 500, body: '{}' }
+        end
+
+      expect(verify.pending).to be(true)
+    end
+
     it 'grava quando o telefone só mudou de escrita (mesmo número em E.164)' do
       stub_check_changing_phone_to('+55 41 99999-0000')
 

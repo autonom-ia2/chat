@@ -162,6 +162,22 @@ RSpec.describe 'Autonomia prospecting leads API', type: :request do
       expect(payload['lead']).to include('whatsapp_verification_status' => 'queued', 'whatsapp_verified' => false,
                                          'whatsapp_phone' => '+5511977776666', 'whatsapp_url' => nil)
     end
+
+    it 'lead apagado enquanto o WAHA responde: 404, como o lead que já não existia' do
+      stub_request(:get, 'https://waha.test/api/contacts/check-exists')
+        .with(query: { phone: '+5511999998888', session: 'sessao-prospeccao' })
+        .to_return do
+          Autonomia::Prospecting::Lead.where(id: lead.id).delete_all
+          { status: 200, body: { numberExists: true }.to_json, headers: { 'Content-Type' => 'application/json' } }
+        end
+
+      with_modified_env(waha_env) do
+        post "/api/v1/accounts/#{account.id}/autonomia/prospecting/leads/#{lead.id}/whatsapp_verification",
+             headers: auth_headers(admin)
+      end
+
+      expect(response).to have_http_status(:not_found)
+    end
   end
 
   def auth_headers(user)

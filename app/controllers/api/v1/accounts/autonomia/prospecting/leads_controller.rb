@@ -95,7 +95,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
 
     render json: {
       payload: {
-        lead: lead_payload(result.lead),
+        # Apagado enquanto o WAHA respondia: o mesmo 404 do lead que já não existia.
+        lead: lead_payload(result.lead || raise(ActiveRecord::RecordNotFound)),
         exists: result.exists,
         phone: result.phone,
         # pending: o telefone do lead mudou durante a consulta; nada vale para o número novo, que voltou à fila (ENRIQ-69).

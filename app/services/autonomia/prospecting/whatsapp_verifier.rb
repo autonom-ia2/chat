@@ -91,9 +91,11 @@ class Autonomia::Prospecting::WhatsappVerifier
   # Enriquecimento e verificação rodam em jobs paralelos: gravar só a chave desta verificação no jsonb, sem
   # reescrever o metadata lido antes (ENRIQ-57). E só se o lead ainda tem o número consultado, comparado em E.164 sob
   # a trava da linha, para a busca não trocar o telefone entre a conferência e a gravação (ENRIQ-69). true se gravou.
+  # Lead apagado durante a consulta não tem onde gravar: false, e o lote segue.
   def persist!(payload)
     Autonomia::Prospecting::Lead.transaction do
-      current = Autonomia::Prospecting::Lead.lock.find(@lead.id)
+      current = Autonomia::Prospecting::Lead.lock.find_by(id: @lead.id)
+      next false if current.nil?
       next false unless Autonomia::Prospecting::PhoneContract.e164(current.public_send(@source[:attribute]), region: phone_region) == normalized_phone
 
       Autonomia::Prospecting::Lead.where(id: @lead.id).update_all( # rubocop:disable Rails/SkipsModelValidations
@@ -106,15 +108,17 @@ class Autonomia::Prospecting::WhatsappVerifier
   # O resultado era do número antigo. A marca "queued" da consulta antiga sai, e o telefone do Google volta à fila para
   # o número novo, em vez de ficar em "Verificando" até o ReaperJob; o after_search da busca que trocou não o
   # recoloca, porque "queued" não conta como pendente (LeadWorkQueue.google_phone_pending?).
+  # Lead apagado no meio: nada a recolocar na fila, e o resultado sai sem lead.
   def number_changed_result
     requeue_google_phone! if @source == SOURCES[:google]
-    Result.new(lead: @lead.reload, exists: nil, phone: nil, chat_id: nil, pending: true)
+    Result.new(lead: Autonomia::Prospecting::Lead.find_by(id: @lead.id), exists: nil, phone: nil, chat_id: nil, pending: true)
   end
 
   def requeue_google_phone!
     Autonomia::Prospecting::Lead.where(id: @lead.id)
                                 .where("metadata -> 'whatsapp_verification' ->> 'status' = 'queued'")
                                 .update_all(["metadata = metadata - 'whatsapp_verification', updated_at = ?", Time.current]) # rubocop:disable Rails/SkipsModelValidations
-    Autonomia::Prospecting::LeadWorkQueue.enqueue_whatsapp(@account, [Autonomia::Prospecting::Lead.find(@lead.id)])
+    current = Autonomia::Prospecting::Lead.find_by(id: @lead.id)
+    Autonomia::Prospecting::LeadWorkQueue.enqueue_whatsapp(@account, [current]) if current
   end
 end
