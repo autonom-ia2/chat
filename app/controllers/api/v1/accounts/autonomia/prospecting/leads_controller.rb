@@ -1,6 +1,6 @@
 class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
   def index
-    render json: { payload: filtered_leads_scope.order(created_at: :desc).limit(100).map { |lead| lead_payload(lead) } }
+    render json: { payload: filtered_leads_scope.includes(:company_profile).order(created_at: :desc).limit(100).map { |lead| lead_payload(lead) } }
   end
 
   def show
@@ -86,6 +86,19 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
       return render json: { error: I18n.t('autonomia.prospecting.errors.enrichment_in_progress') }, status: :conflict
     end
 
+    render json: { payload: { lead: lead_payload(lead.reload) } }, status: :accepted
+  end
+
+  # Pesquisa de empresa e decisor (#679): 202 na hora, a pesquisa roda no ResearchJob e o lead volta pelo evento.
+  # `force` é o "verificar novamente": ignora o reaproveitamento. Pedido com o lead já na fila devolve o mesmo pedido.
+  def research
+    lead = leads_scope.find(params[:id])
+    unless research_enabled?
+      return render json: { error: I18n.t('autonomia.prospecting.errors.research_disabled'), code: 'prospecting.research.disabled' },
+                    status: :unprocessable_entity
+    end
+
+    ::Autonomia::Prospecting::Research::Queue.enqueue(lead, force: ActiveModel::Type::Boolean.new.cast(params[:force]) || false)
     render json: { payload: { lead: lead_payload(lead.reload) } }, status: :accepted
   end
 

@@ -197,15 +197,17 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       cached_from_search_id: search.metadata.to_h['cached_from_search_id'],
       partial_results: search.metadata.to_h['partial_results'] == true
     }
+    # Barra de progresso da pesquisa de empresa e decisor (#679), sem texto de crédito.
+    payload['research_progress'] = ::Autonomia::Prospecting::Research::Queue.progress(leads)
     payload['leads'] = leads.map { |lead| lead_payload(lead, search) } if include_leads
     payload
   end
 
   def leads_for_search(search)
     lead_ids = Array(search.metadata.to_h['lead_ids']).map(&:to_i)
-    return search.leads.order(created_at: :desc) if lead_ids.blank?
+    return search.leads.includes(:company_profile).order(created_at: :desc) if lead_ids.blank?
 
-    leads_scope.where(id: lead_ids).index_by(&:id).values_at(*lead_ids).compact
+    leads_scope.includes(:company_profile).where(id: lead_ids).index_by(&:id).values_at(*lead_ids).compact
   end
 
   def lead_payload(lead, search = nil)
@@ -230,6 +232,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       reviews_payload(lead)
     ).merge(
       whatsapp_payload(lead)
+    ).merge(
+      lead_payload_builder.research(lead)
     ).merge(
       search_rank_payload(lead, search)
     ).merge(

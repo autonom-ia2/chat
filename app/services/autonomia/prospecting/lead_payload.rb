@@ -27,7 +27,14 @@ class Autonomia::Prospecting::LeadPayload
       reviews(lead)
     ).merge(
       whatsapp(lead)
+    ).merge(
+      research(lead)
     )
+  end
+
+  # Pesquisa de empresa e decisor (#679), no formato do contrato com a tela.
+  def research(lead)
+    { research: Autonomia::Prospecting::Research::Payload.build(lead) }
   end
 
   # O botão de WhatsApp usa o telefone do Google; se ele não é WhatsApp e o número achado no site foi

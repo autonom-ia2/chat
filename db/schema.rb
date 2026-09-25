@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_25_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_25_140200) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -594,6 +594,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_120000) do
     t.index ["account_id", "provider"], name: "idx_autonomia_insurance_connections_account_provider", unique: true
   end
 
+  create_table "autonomia_prospecting_company_profiles", force: :cascade do |t|
+    t.string "cnpj", limit: 14, null: false
+    t.string "legal_name"
+    t.string "trade_name"
+    t.string "registration_status"
+    t.string "registration_state"
+    t.string "legal_nature_code"
+    t.string "legal_nature_text"
+    t.jsonb "data", default: {}, null: false
+    t.jsonb "qsa", default: [], null: false
+    t.jsonb "owners", default: [], null: false
+    t.jsonb "sources", default: [], null: false
+    t.datetime "verified_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cnpj"], name: "index_autonomia_prospecting_company_profiles_on_cnpj", unique: true
+  end
+
   create_table "autonomia_prospecting_leads", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "prospect_search_id"
@@ -653,6 +671,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_120000) do
     t.boolean "open_now"
     t.boolean "has_opening_hours"
     t.integer "enrichment_failed_attempts", default: 0, null: false
+    t.string "company_research_status", default: "not_researched", null: false
+    t.string "decision_research_status", default: "not_researched", null: false
+    t.datetime "research_requested_at"
+    t.datetime "research_started_at"
+    t.datetime "research_completed_at"
+    t.boolean "research_reused", default: false, null: false
+    t.string "research_error"
+    t.bigint "company_profile_id"
+    t.integer "research_attempts", default: 0, null: false
     t.index ["account_id", "dedupe_key"], name: "index_autonomia_prospecting_leads_on_account_id_and_dedupe_key", unique: true
     t.index ["account_id", "enrichment_completed_at"], name: "idx_autonomia_prospecting_leads_account_enriched_at"
     t.index ["account_id", "enrichment_status"], name: "idx_autonomia_prospecting_leads_account_enrichment"
@@ -662,9 +689,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_120000) do
     t.index ["account_id", "search_rank"], name: "idx_autonomia_prospecting_leads_account_search_rank"
     t.index ["account_id", "status"], name: "index_autonomia_prospecting_leads_on_account_id_and_status"
     t.index ["account_id"], name: "index_autonomia_prospecting_leads_on_account_id"
+    t.index ["company_profile_id"], name: "idx_autonomia_prospecting_leads_company_profile"
+    t.index ["company_research_status"], name: "idx_autonomia_prospecting_leads_research_status", where: "((company_research_status)::text = ANY ((ARRAY['queued'::character varying, 'researching'::character varying, 'waiting_capacity'::character varying])::text[]))"
     t.index ["contact_id"], name: "index_autonomia_prospecting_leads_on_contact_id"
     t.index ["crm_card_id"], name: "index_autonomia_prospecting_leads_on_crm_card_id"
     t.index ["prospect_search_id"], name: "index_autonomia_prospecting_leads_on_search_id"
+    t.index ["provider", "provider_place_id"], name: "idx_autonomia_prospecting_leads_researched_place", where: "(company_profile_id IS NOT NULL)"
   end
 
   create_table "autonomia_prospecting_list_leads", force: :cascade do |t|
@@ -3081,6 +3111,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_120000) do
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
   add_foreign_key "autonomia_insurance_connections", "accounts"
   add_foreign_key "autonomia_prospecting_leads", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_company_profiles", column: "company_profile_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_searches", column: "prospect_search_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_leads", "contacts", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_leads", "crm_cards", on_delete: :nullify

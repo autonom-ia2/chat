@@ -32,10 +32,23 @@ class Autonomia::Prospecting::LeadEnricher
     }
   }.freeze
 
+  # O decisor pela IA (site + busca na web), como era antes da pesquisa de empresa e decisor (#679). Não grava nada:
+  # existe para o gabarito comparar os dois métodos. `confident` é a régua que o enriquecimento usava para gravar.
+  def self.ai_decision(lead)
+    new(lead: lead).ai_decision
+  end
+
   # `user` fica por compatibilidade com o controller; o enriquecimento não depende de quem pediu.
   def initialize(lead:, user: nil)
     @lead = lead
     @user = user
+  end
+
+  def ai_decision
+    decision = enrich_with_ai(scrape_website).slice(*Autonomia::Prospecting::EnrichmentMerge::AI_DECISION_KEYS)
+    confident = decision['decision_name'].present? &&
+                decision['decision_confidence'].to_f >= Autonomia::Prospecting::EnrichmentMerge::CONFIDENT_DECISION
+    decision.merge('confident' => confident)
   end
 
   # Site fora do ar, bloqueado ou vazio, ou nada útil nem do site nem da IA: o lead fica `failed` com o código em

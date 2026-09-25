@@ -7,6 +7,7 @@ class Autonomia::Prospecting::ReaperJob < ApplicationJob
 
   def perform
     reap_enrichment
+    reap_research
     reap_whatsapp
   end
 
@@ -17,6 +18,17 @@ class Autonomia::Prospecting::ReaperJob < ApplicationJob
       reaped = Autonomia::Prospecting::Lead.where(id: lead.id, enrichment_status: lead.enrichment_status).update_all( # rubocop:disable Rails/SkipsModelValidations
         enrichment_status: 'failed', enrichment_completed_at: Time.current, updated_at: Time.current,
         enrichment_error: Autonomia::Prospecting::EnrichLeadJob::INTERRUPTED
+      )
+      Autonomia::Prospecting::LeadBroadcaster.updated(lead.reload) if reaped.positive?
+    end
+  end
+
+  # Pesquisa de empresa e decisor presa (#679): os dois estados voltam a failed, que aceita um pedido novo.
+  def reap_research
+    Autonomia::Prospecting::Research::Queue.stale.find_each do |lead|
+      reaped = Autonomia::Prospecting::Lead.where(id: lead.id, company_research_status: lead.company_research_status).update_all( # rubocop:disable Rails/SkipsModelValidations
+        company_research_status: 'failed', decision_research_status: 'failed', research_completed_at: Time.current,
+        research_error: Autonomia::Prospecting::Research::Queue::INTERRUPTED, updated_at: Time.current
       )
       Autonomia::Prospecting::LeadBroadcaster.updated(lead.reload) if reaped.positive?
     end
