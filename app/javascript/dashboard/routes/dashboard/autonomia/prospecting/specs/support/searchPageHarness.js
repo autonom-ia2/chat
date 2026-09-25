@@ -4,6 +4,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import ProspectingSearchPage from '../../pages/ProspectingSearchPage.vue';
+import { TOUR_ALREADY_SEEN, uiSettingsStore } from './uiSettingsStore';
 
 const HOUR_MS = 60 * 60 * 1000;
 const LOCATION_DEBOUNCE_WAIT_MS = 320;
@@ -264,6 +265,9 @@ export const mountSearchPage = async ({
   searches = [bakerySearch(), gymSearch()],
   meta,
   payloads = defaultPayloads(),
+  // Sem dizer nada, o usuário já viu o tour (#682) e ele não abre sozinho.
+  uiSettings = TOUR_ALREADY_SEEN,
+  store = uiSettingsStore(uiSettings).store,
 } = {}) => {
   confirmation.answer = true;
   confirmation.calls = 0;
@@ -297,6 +301,7 @@ export const mountSearchPage = async ({
 
   const wrapper = mount(ProspectingSearchPage, {
     global: {
+      plugins: [store],
       stubs: {
         ChoiceSelect: ChoiceSelectStub,
         ProspectingGoogleMap: MapStub,

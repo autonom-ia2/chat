@@ -16,6 +16,7 @@ import { useSearchLeads } from './useSearchLeads';
 import { useSearchLocation } from './useSearchLocation';
 import { useSearchPresets } from './useSearchPresets';
 import { useSearchRepeat } from './useSearchRepeat';
+import { useSearchTour } from './useSearchTour';
 
 const PROSPECTING_SEARCH_KEY = Symbol('prospectingSearch');
 
@@ -47,6 +48,11 @@ export const useProspectingSearch = () => {
     applyCrmTarget: crm.applyCrmTarget,
     submitSearch: searchForm.submitSearch,
   });
+  const tour = useSearchTour(state, {
+    canManage,
+    toggleNewSearch: searchForm.toggleNewSearch,
+    handleLocationInput: location.handleLocationInput,
+  });
 
   const context = mergeDisjoint(
     { canManage },
@@ -57,7 +63,8 @@ export const useProspectingSearch = () => {
     searchForm,
     location,
     presets,
-    repeat
+    repeat,
+    tour
   );
   provideProspectingLeadContext(context);
 
@@ -74,6 +81,7 @@ export const useProspectingSearch = () => {
     } finally {
       isLoading.value = false;
     }
+    tour.autoStartTour();
   });
 
   return context;

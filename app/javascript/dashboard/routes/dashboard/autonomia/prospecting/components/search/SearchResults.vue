@@ -62,6 +62,7 @@ const selectedSearchMapRadius = computed(() =>
 
 <template>
   <section
+    data-tour="search-results"
     class="flex min-h-0 flex-col overflow-hidden rounded-lg border border-n-weak bg-n-solid-1"
   >
     <div
