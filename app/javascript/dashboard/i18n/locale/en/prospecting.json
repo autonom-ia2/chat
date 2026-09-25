@@ -62,7 +62,6 @@
       "LOAD_SEARCH": "Could not load this prospect search.",
       "CREATE_SEARCH": "Could not run this prospect search.",
       "CREATE_CONTACT": "Could not create this contact.",
-      "CREATE_CRM_CARD": "Could not create this CRM card.",
       "UPDATE_LEAD": "Could not update this lead.",
       "UPDATE_SEARCH": "Could not update this search.",
       "LOAD_CRM": "Could not load CRM pipelines.",
@@ -110,7 +109,6 @@
       "SELECT_VISIBLE": "Selecionar visíveis",
       "SELECTED_COUNT": "{count} selecionados",
       "BULK_CONTACTS": "Criar contatos",
-      "BULK_CRM_CARDS": "Criar cards",
       "CSV_EXPORT": "CSV",
       "FILTER_BUTTON": "Filtros",
       "OPEN_DETAILS": "Detalhes",
@@ -119,9 +117,6 @@
       "CREATING_CONTACT": "Criando...",
       "CONTACT_CREATED": "Contato criado",
       "OPEN_CONTACT": "Abrir contato",
-      "CREATE_CRM_CARD": "Criar card",
-      "CREATING_CRM_CARD": "Criando...",
-      "CRM_CARD_CREATED": "Card criado",
       "OPEN_CRM_CARD": "Abrir card",
       "ENRICH_LEAD": "Enriquecer",
       "ENRICHED": "Enriquecido",
@@ -471,7 +466,8 @@
         "NAME": "Lista",
         "STATUS": "Status",
         "CREATED_AT": "Criada em"
-      }
+      },
+      "SEND_LIST_TO_CRM": "Enviar lista ao CRM"
     },
     "QUALITY": {
       "ALL_STATUSES": "Todos",

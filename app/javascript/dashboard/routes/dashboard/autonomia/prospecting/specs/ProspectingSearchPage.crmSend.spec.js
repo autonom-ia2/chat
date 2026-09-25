@@ -142,9 +142,7 @@ describe('ProspectingSearchPage · enviar ao CRM', () => {
     ).toBeTruthy();
     expect(wrapper.text()).toContain('1 selecionados');
     expect(leadCheckbox(wrapper, 'Confeitaria Lua').element.checked).toBe(true);
-    expect(useAlert).not.toHaveBeenCalledWith(
-      'PROSPECTING.SEARCH.CRM_CARD_CREATED'
-    );
+    expect(useAlert).not.toHaveBeenCalled();
     expect(
       sendModal(wrapper).find('[data-test="crm-send-summary"]').exists()
     ).toBe(true);
