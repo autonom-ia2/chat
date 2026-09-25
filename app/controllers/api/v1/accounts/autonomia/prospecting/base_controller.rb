@@ -48,6 +48,16 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
       opening_hours_summary: Array(current_hours['weekdayDescriptions']).presence ||
         Array(regular_hours['weekdayDescriptions']).presence,
       has_opening_hours: opening_hours_registered?(lead, regular_hours)
+    }.merge(place_card_payload(lead, raw_payload))
+  end
+
+  # Bairro, fotos e link do Maps que o card mostra (#678). As colunas vêm do provider desde a E1; lead gravado antes
+  # delas usa o que o Google devolveu no raw_payload.
+  def place_card_payload(lead, raw_payload)
+    {
+      neighborhood: lead.neighborhood,
+      photo_count: lead.photo_count || Array(raw_payload['photos']).size,
+      google_maps_uri: lead.google_maps_uri.presence || raw_payload['googleMapsUri']
     }
   end
 
