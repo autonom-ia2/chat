@@ -17,8 +17,15 @@ module Autonomia::Prospecting::Research::Registry::CnpjWsParser
                     uf: Support.nested(establishment['estado'], 'sigla'), nature_code: Support.nested(payload['natureza_juridica'], 'id'),
                     nature_text: Support.nested(payload['natureza_juridica'], 'descricao'),
                     opened_on: establishment['data_inicio_atividade'], cnae: Support.nested(establishment['atividade_principal'], 'id'),
+                    phones: phones(establishment),
                     qsa: Support.qsa(payload, 'socios') { |member| partner(member) }
                   })
+  end
+
+  # ddd1/telefone1 e ddd2/telefone2 do estabelecimento; o fax (ddd_fax/fax) fica de fora (#679).
+  def phones(establishment)
+    [Support.ddd_phone(establishment['ddd1'], establishment['telefone1']),
+     Support.ddd_phone(establishment['ddd2'], establishment['telefone2'])]
   end
 
   def partner(member)

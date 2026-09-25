@@ -71,8 +71,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     it 'vê os campos de cliente de residencial, sem dados e sem nada de auto' do
       params = described_class.params_for(lia, especialista: com_especialista_de_residencial)
 
-      expect(nomes(params)).to eq(nomes(described_class.params) - ['dados'] + %w[segurado configuracoes])
-      expect(params.flat_map { |p| Array(p['properties']) }.size).to eq(31)
+      expect(nomes(params)).to eq(nomes(described_class.params) - ['dados'] + %w[segurado configuracoes renovacao])
+      # 31 do imóvel e do segurado, mais os cinco da renovação (25/09/2026).
+      expect(params.flat_map { |p| Array(p['properties']) }.size).to eq(36)
     end
 
     it 'chega ao modelo pelo catálogo do especialista (Specialist#tools), e o do principal segue o de auto' do

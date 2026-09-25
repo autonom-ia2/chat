@@ -20,11 +20,16 @@ module Autonomia::Prospecting::Research::ProfileAttributes
       cnpj: digits(company.cnpj), legal_name: legal_name(company), trade_name: company.trade_name,
       registration_status: company.registration_status, registration_state: company.registration_state,
       legal_nature_code: company.legal_nature_code&.to_s, legal_nature_text: company.legal_nature_text,
-      data: {
-        'city' => company.city, 'opened_on' => company.opened_on&.to_s, 'cnae' => company.cnae, 'provider' => company.provider,
-        'requested_role' => requested_role, 'no_decision_reason' => selection.reason&.to_s, 'decision_source' => selection.evidence&.to_s
-      },
+      data: data(company, selection, requested_role),
       qsa: partners(company.qsa), owners: owners(selection.owners), sources: Array(company.sources).as_json, verified_at: verified_at
+    }
+  end
+
+  def data(company, selection, requested_role)
+    {
+      'city' => company.city, 'opened_on' => company.opened_on&.to_s, 'cnae' => company.cnae, 'provider' => company.provider,
+      'phones' => Array(company.try(:phones)),
+      'requested_role' => requested_role, 'no_decision_reason' => selection.reason&.to_s, 'decision_source' => selection.evidence&.to_s
     }
   end
 

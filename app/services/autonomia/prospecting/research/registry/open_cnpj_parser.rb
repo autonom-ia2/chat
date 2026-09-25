@@ -6,6 +6,8 @@
 module Autonomia::Prospecting::Research::Registry::OpenCnpjParser
   Support = Autonomia::Prospecting::Research::Registry::ParserSupport
   PERSON_TYPES = { 2 => 'PF', '2' => 'PF', 1 => 'PJ', '1' => 'PJ', 'PESSOA FISICA' => 'PF', 'PESSOA JURIDICA' => 'PJ' }.freeze
+  # Só o que diz de fato que é fax; texto qualquer ("no", "sim") não descarta o telefone.
+  FAX_MARKS = [true, 'true', '1', 1].freeze
 
   module_function
 
@@ -17,8 +19,21 @@ module Autonomia::Prospecting::Research::Registry::OpenCnpjParser
                     cnpj: payload['cnpj'], legal_name: payload['razao_social'], trade_name: payload['nome_fantasia'],
                     status: payload['situacao_cadastral'], city: payload['municipio'], uf: payload['uf'],
                     nature_code: nil, nature_text: payload['natureza_juridica'], opened_on: payload['data_inicio_atividade'],
-                    cnae: payload['cnae_principal'], qsa: Support.qsa(payload, 'QSA') { |member| partner(member) }
+                    cnae: payload['cnae_principal'], phones: phones(payload['telefones']),
+                    qsa: Support.qsa(payload, 'QSA') { |member| partner(member) }
                   })
+  end
+
+  # telefones: [{ ddd, numero, is_fax }]. O fax não é telefone de contato (#679).
+  def phones(values)
+    return [] unless values.is_a?(Array)
+
+    values.filter_map do |entry|
+      entry = Support.record(entry)
+      next if entry.nil? || FAX_MARKS.include?(entry['is_fax'])
+
+      Support.ddd_phone(entry['ddd'], entry['numero'])
+    end
   end
 
   def partner(member)
