@@ -185,10 +185,13 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
             </span>
           </div>
 
+          <!-- Bloco técnico da nota só para o administrador (#732, item 9): o
+            servidor nem manda os componentes para os outros. -->
           <LeadDetailScore
             v-if="
-              scoreBreakdownEntries(selectedLeadDetail).length ||
-              negativeFactors(selectedLeadDetail).length
+              settings?.can_view_score_details &&
+              (scoreBreakdownEntries(selectedLeadDetail).length ||
+                negativeFactors(selectedLeadDetail).length)
             "
             :lead="selectedLeadDetail"
           />

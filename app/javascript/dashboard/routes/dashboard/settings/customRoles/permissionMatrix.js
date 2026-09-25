@@ -74,6 +74,8 @@ export const MODULE_GROUPS = [
       {
         key: 'PROSPECTING',
         levels: { view: 'prospecting_view', manage: 'prospecting_manage' },
+        // Sem esta chave, quem não é administrador vê só as próprias buscas (#732).
+        extras: ['prospecting_view_all_searches'],
       },
       {
         key: 'INSURANCE',
@@ -179,7 +181,10 @@ export const setLevel = (module, level, permissions) => {
   if (module.type === 'conversations')
     return setConversationLevel(level, permissions);
   if (module.type === 'crm') return setCrmLevel(module, level, permissions);
-  const rest = withoutKeys(permissions, keysOf(module));
+  // Trocar entre ver e editar mantém as chaves a mais; sem acesso, sai tudo.
+  const cleared =
+    level === LEVELS.NONE ? keysOf(module) : Object.values(module.levels);
+  const rest = withoutKeys(permissions, cleared);
   const key = module.levels[level];
   return key ? [...rest, key] : rest;
 };

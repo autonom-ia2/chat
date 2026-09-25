@@ -39,6 +39,7 @@
 # - 'inbox_view': view every inbox configuration. 'inbox_manage': create, connect and configure inboxes.
 # - 'canned_response_manage': create, edit and delete canned responses.
 # - 'prospecting_view' / 'prospecting_manage': prospecting searches, leads and lists.
+# - 'prospecting_view_all_searches': see every search of the account (and its leads), not only one's own (#732).
 # - 'insurance_view' / 'insurance_manage': insurance quoting (Cotação) connection and quote agent.
 # - 'automation_view' / 'automation_manage': automation rules.
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
@@ -77,6 +78,7 @@ class CustomRole < ApplicationRecord
     canned_response_manage
     prospecting_view
     prospecting_manage
+    prospecting_view_all_searches
     insurance_view
     insurance_manage
     automation_view

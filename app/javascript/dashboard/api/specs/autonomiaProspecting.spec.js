@@ -87,6 +87,25 @@ describe('#AutonomiaProspectingAPI', () => {
     );
   });
 
+  it('manda o tipo da campanha quando é a da API do WhatsApp (#732)', () => {
+    prospecting.addLeadsToCampaign({
+      leadIds: [1],
+      campaignId: 8,
+      campaignType: 'whatsapp_api',
+      segmentName: 'Padarias',
+    });
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/campaign_segment',
+      {
+        lead_ids: [1],
+        campaign_id: 8,
+        campaign_type: 'whatsapp_api',
+        segment_name: 'Padarias',
+      }
+    );
+  });
+
   it('adota um sócio da pesquisa como contato do lead', () => {
     prospecting.adoptOwner(7, 'MARIA DA SILVA');
 

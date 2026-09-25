@@ -4,32 +4,33 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
   Error = Class.new(StandardError)
 
   ELIGIBLE_STATUS = 'ready_for_campaign'.freeze
+  # Os dois tipos que recebem o segmento pela etiqueta (#732, item 11): a campanha de envio único (Campaign, pelo
+  # display_id) e a campanha da API do WhatsApp (WhatsappApiCampaign, pelo id). Sem tipo, é a de envio único, como antes.
+  ONE_OFF = 'one_off'.freeze
+  WHATSAPP_API = 'whatsapp_api'.freeze
+  CAMPAIGN_TYPES = [ONE_OFF, WHATSAPP_API].freeze
 
-  def initialize(list:, user:, campaign_id: nil, segment_name: nil)
+  def initialize(list:, user:, campaign_id: nil, segment_name: nil, campaign_type: nil)
     @list = list
     @account = list.account
     @user = user
     @campaign_id = campaign_id.presence
+    @campaign_type = campaign_type.presence || ONE_OFF
     @segment_name = segment_name.presence || list.name
   end
 
   # A etiqueta desta lista já está na audiência de alguma campanha da conta. A campanha one-off decide quem recebe pelas
   # etiquetas na hora do envio, então reaplicar a etiqueta aumenta a audiência mesmo sem campaign_id (#680).
+  # A campanha da API do WhatsApp também decide o público pelas etiquetas, ao começar: só a agendada ainda cresce.
   def feeds_existing_campaign?
     label = @account.labels.find_by(title: label_title)
     return false if label.nil?
 
-    @account.campaigns.any? do |campaign|
-      Array(campaign.audience).any? do |item|
-        item = item.to_h.stringify_keys
-        item['type'] == 'Label' && item['id'].to_s == label.id.to_s
-      end
-    end
+    [*@account.campaigns, *@account.whatsapp_api_campaigns.scheduled].any? { |campaign| audience_has_label?(campaign, label) }
   end
 
   def perform
-    raise Error, 'prospecting.campaign.empty_list' if leads.empty?
-    raise Error, 'prospecting.campaign.no_eligible_leads' if eligible_leads.empty?
+    ensure_segment_possible!
 
     created_contacts_count = 0
     label = nil
@@ -163,25 +164,58 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
     contact.save!
   end
 
+  def ensure_segment_possible!
+    raise Error, 'prospecting.campaign.unsupported_campaign' if @campaign_id.present? && CAMPAIGN_TYPES.exclude?(@campaign_type)
+    raise Error, 'prospecting.campaign.empty_list' if leads.empty?
+    raise Error, 'prospecting.campaign.no_eligible_leads' if eligible_leads.empty?
+  end
+
   def attach_to_campaign!(label)
+    return attach_to_whatsapp_api_campaign!(label) if @campaign_type == WHATSAPP_API
+
     campaign = @account.campaigns.find_by!(display_id: @campaign_id)
     raise Error, 'prospecting.campaign.unsupported_campaign' unless campaign.one_off?
     raise Error, 'prospecting.campaign.campaign_not_active' unless campaign.active?
 
+    add_label_to_audience!(campaign, label)
+  end
+
+  # A campanha da API resolve o público quando começa (WhatsappApiCampaigns::Scheduler, sob o mesmo lock): depois disso,
+  # a etiqueta nova não levaria ninguém. Por isso só a agendada recebe o segmento.
+  def attach_to_whatsapp_api_campaign!(label)
+    raise Error, 'prospecting.campaign.unsupported_campaign' unless WhatsappApiCampaigns::Config.enabled?
+
+    campaign = @account.whatsapp_api_campaigns.find(@campaign_id)
+    campaign.with_lock do
+      raise Error, 'prospecting.campaign.campaign_not_active' unless campaign.scheduled?
+
+      add_label_to_audience!(campaign, label)
+    end
+  end
+
+  def add_label_to_audience!(campaign, label)
     audience = Array(campaign.audience).map { |item| item.to_h.stringify_keys }
-    label_audience = { 'type' => 'Label', 'id' => label.id }
-    audience << label_audience unless audience.any? { |item| item['type'] == 'Label' && item['id'].to_i == label.id }
+    audience << { 'type' => 'Label', 'id' => label.id } unless audience_has_label?(campaign, label)
     campaign.update!(audience: audience)
     campaign
   end
 
+  def audience_has_label?(campaign, label)
+    Array(campaign.audience).any? do |item|
+      item = item.to_h.stringify_keys
+      item['type'] == 'Label' && item['id'].to_s == label.id.to_s
+    end
+  end
+
   def persist_segment_metadata!(label, campaign)
     metadata = @list.metadata.to_h
+    reference = Autonomia::Prospecting::CampaignSegmentPayload.campaign(campaign).to_h
     metadata['campaign_segment'] = {
       'label_id' => label.id,
       'label_title' => label.title,
-      'campaign_id' => campaign&.display_id,
-      'campaign_title' => campaign&.title,
+      'campaign_id' => reference[:id],
+      'campaign_type' => reference[:type],
+      'campaign_title' => reference[:title],
       'eligible_count' => eligible_leads.size,
       'blocked_count' => blocked_details.size,
       'generated_by_id' => @user&.id,

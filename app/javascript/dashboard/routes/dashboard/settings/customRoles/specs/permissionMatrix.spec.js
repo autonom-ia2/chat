@@ -83,6 +83,34 @@ describe('permissionMatrix', () => {
     });
   });
 
+  // #732, item 6: "Ver buscas de todos" é uma chave a mais da Prospecção.
+  describe('prospecting', () => {
+    const prospecting = moduleByKey('PROSPECTING');
+
+    it('offers "see everyone searches" once the module has access', () => {
+      expect(visibleExtras(prospecting, [])).toEqual([]);
+      expect(visibleExtras(prospecting, ['prospecting_view'])).toEqual([
+        'prospecting_view_all_searches',
+      ]);
+      expect(
+        toggleExtra(prospecting, 'prospecting_view_all_searches', [
+          'prospecting_view',
+        ])
+      ).toEqual(['prospecting_view', 'prospecting_view_all_searches']);
+    });
+
+    it('keeps the extra when switching between view and edit, and drops it on no access', () => {
+      const withExtra = ['prospecting_view', 'prospecting_view_all_searches'];
+      const managed = setLevel(prospecting, LEVELS.MANAGE, withExtra);
+
+      expect(managed).toEqual([
+        'prospecting_view_all_searches',
+        'prospecting_manage',
+      ]);
+      expect(setLevel(prospecting, LEVELS.NONE, managed)).toEqual([]);
+    });
+  });
+
   it('builds presets from existing keys only', () => {
     const known = MODULES.flatMap(module => [
       ...Object.values(module.levels || {}),

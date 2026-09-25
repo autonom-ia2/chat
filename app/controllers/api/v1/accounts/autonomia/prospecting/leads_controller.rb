@@ -76,7 +76,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   def create_campaign_segment
     result = ::Autonomia::Prospecting::SelectionCampaignSegment.new(
       account: Current.account, user: Current.user, lead_ids: params[:lead_ids],
-      campaign_id: params[:campaign_id], segment_name: params[:segment_name]
+      campaign: { id: params[:campaign_id], type: params[:campaign_type] }, segment_name: params[:segment_name]
     ).perform
     render json: { payload: selection_segment_payload(result) }, status: :created
   rescue ActiveRecord::RecordNotFound
@@ -167,9 +167,12 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     scope.where(status: params[:status])
   end
 
-  def lead_payload(lead)
-    lead_payload_builder.build(lead)
-  end
+  # O bloco técnico da nota só vai para o administrador (#732, item 9).
+  def lead_payload(lead) = visible_lead_payload(lead_payload_builder.build(lead))
+
+  # O agente só vê e mexe nos leads das próprias buscas e das listas da conta (#732, item 6). Vale para todas as ações
+  # daqui, inclusive as que acham o lead pelo id.
+  def leads_scope = visibility.leads(super)
 
   def research_enabled?
     ::Autonomia::Prospecting::Config.research_enabled?(Current.account)
