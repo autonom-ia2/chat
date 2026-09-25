@@ -74,6 +74,10 @@ RSpec.describe Autonomia::Prospecting::Research::ResearchJob do
 
     # A trava é do Postgres (pg_try_advisory_lock), segurada por outra sessão, como a de outro worker do Sidekiq. Conexão
     # própria do pg: na suíte transacional as threads dividem a conexão do teste, e a trava de sessão é reentrante.
+    def place_key(lead)
+      "place:#{lead.provider}:#{lead.provider_place_id}"
+    end
+
     def with_company_lock_held_elsewhere(key)
       config = ActiveRecord::Base.connection_db_config.configuration_hash
       other = PG.connect(host: config[:host], port: config[:port], dbname: config[:database], user: config[:username],
@@ -90,7 +94,9 @@ RSpec.describe Autonomia::Prospecting::Research::ResearchJob do
       enqueue(second)
       clear_enqueued_jobs
 
-      with_company_lock_held_elsewhere(research::CompanyLock.key_for(second)) do
+      # A trava é segurada pela pesquisa do primeiro lead, com a chave do lugar escrita aqui, não calculada pelo código
+      # testado: uma chave que deixe de ser a da empresa (o id do lead, por exemplo) solta o segundo e quebra o teste.
+      with_company_lock_held_elsewhere(place_key(first)) do
         described_class.perform_now(second.id, false)
       end
 
@@ -117,7 +123,8 @@ RSpec.describe Autonomia::Prospecting::Research::ResearchJob do
         end
         enqueue(first)
         enqueue(second)
-        with_company_lock_held_elsewhere(research::CompanyLock.key_for(second)) { described_class.perform_now(second.id, false) }
+        with_company_lock_held_elsewhere(place_key(first)) { described_class.perform_now(second.id, false) }
+        expect(second.reload.company_research_status).to eq('waiting_capacity')
 
         described_class.perform_now(first.id, false)
         described_class.perform_now(second.id, false)
